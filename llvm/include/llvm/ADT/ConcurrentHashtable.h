@@ -27,7 +27,7 @@
 
 namespace llvm {
 
-/// ConcurrentHashTable - is a resizeable concurrent hashtable.
+/// ConcurrentHashTable is a resizeable concurrent hashtable.
 /// The number of resizings limited up to x2^31. This hashtable is
 /// useful to have efficient access to aggregate data(like strings,
 /// type descriptors...) and to keep only single copy of such
@@ -85,7 +85,7 @@ public:
   }
 
   /// \returns key for the specified \p KeyData.
-  static inline const KeyTy &getKey(const KeyDataTy &KeyData) {
+  static inline decltype(auto) getKey(const KeyDataTy &KeyData) {
     return KeyData.getKey();
   }
 

@@ -25,7 +25,12 @@ LLVM_LIBC_FUNCTION(int, vfprintf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
 
+#ifdef LIBC_COPT_PRINTF_MODULAR
+  LIBC_INLINE_ASM(".reloc ., BFD_RELOC_NONE, __printf_float");
+  return vfprintf_internal<true>(stream, format, args);
+#else
   return vfprintf_internal(stream, format, args);
+#endif
 }
 
 } // namespace LIBC_NAMESPACE_DECL

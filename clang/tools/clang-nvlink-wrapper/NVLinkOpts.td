@@ -19,6 +19,10 @@ def cuda_path_EQ : Joined<["--"], "cuda-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the system CUDA path">;
 def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Flags<[WrapperOnlyOption]>,
   MetaVarName<"<dir>">, HelpText<"Set the 'ptxas' path">;
+def Xptxas : Separate<["-", "--"], "Xptxas">, Flags<[WrapperOnlyOption]>,
+  MetaVarName<"<arg>">, HelpText<"Pass <arg> to the 'ptxas' invocation">;
+def Xptxas_EQ : Joined<["-", "--"], "Xptxas=">, Flags<[HelpHidden]>,
+  Alias<Xptxas>;
 
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
@@ -77,8 +81,10 @@ def opt_remarks_filename : Joined<["--", "-"], "plugin-opt=opt-remarks-filename=
   Flags<[WrapperOnlyOption]>, HelpText<"YAML output file for optimization remarks">;
 def opt_remarks_format : Joined<["--", "-"], "plugin-opt=opt-remarks-format=">,
   Flags<[WrapperOnlyOption]>, HelpText<"The format used for serializing remarks (default: YAML)">;
-def opt_remarks_filter : Joined<["--", "-"], "plugin-opt=opt-remarks-filter=">, 
+def opt_remarks_passes : Joined<["--", "-"], "plugin-opt=opt-remarks-passes=">,
   Flags<[WrapperOnlyOption]>, HelpText<"Regex for the passes that need to be serialized to the output file">;
+def opt_remarks_filter : Joined<["--", "-"], "plugin-opt=opt-remarks-filter=">,
+  Flags<[WrapperOnlyOption]>, Alias<opt_remarks_passes>;
 def opt_remarks_with_hotness : Flag<["--", "-"], "plugin-opt=opt-remarks-with-hotness">,
   Flags<[WrapperOnlyOption]>, HelpText<"Include hotness information in the optimization remarks file">;
 

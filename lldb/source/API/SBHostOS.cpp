@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBError.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
@@ -19,9 +20,6 @@
 #include "lldb/Utility/Instrumentation.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
-#if LLDB_ENABLE_PYTHON
-#include "Plugins/ScriptInterpreter/Python/ScriptInterpreterPython.h"
-#endif
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
@@ -40,7 +38,16 @@ SBFileSpec SBHostOS::GetProgramFileSpec() {
 SBFileSpec SBHostOS::GetLLDBPythonPath() {
   LLDB_INSTRUMENT();
 
-  return GetLLDBPath(ePathTypePythonDir);
+  return GetScriptPath(lldb::eScriptLanguagePython);
+}
+
+SBFileSpec SBHostOS::GetScriptPath(lldb::ScriptLanguage language) {
+  LLDB_INSTRUMENT();
+
+  SBFileSpec sb_fspec;
+  sb_fspec.SetFileSpec(
+      PluginManager::GetScriptInterpreterLibraryPath(language));
+  return sb_fspec;
 }
 
 SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
@@ -58,9 +65,8 @@ SBFileSpec SBHostOS::GetLLDBPath(lldb::PathType path_type) {
     fspec = HostInfo::GetHeaderDir();
     break;
   case ePathTypePythonDir:
-#if LLDB_ENABLE_PYTHON
-    fspec = ScriptInterpreterPython::GetPythonDir();
-#endif
+    fspec = PluginManager::GetScriptInterpreterLibraryPath(
+        lldb::eScriptLanguagePython);
     break;
   case ePathTypeLLDBSystemPlugins:
     fspec = HostInfo::GetSystemPluginDir();

@@ -129,6 +129,8 @@ class llvm::WinCOFFWriter {
 
   using symbol_map = DenseMap<MCSymbol const *, COFFSymbol *>;
   using section_map = DenseMap<MCSection const *, COFFSection *>;
+  using section_offset_map =
+      DenseMap<std::pair<MCSection const *, uint64_t>, COFFSymbol *>;
 
   using symbol_list = DenseSet<COFFSymbol *>;
 
@@ -141,11 +143,13 @@ class llvm::WinCOFFWriter {
   // Maps used during object file creation.
   section_map SectionMap;
   symbol_map SymbolMap;
+  section_offset_map SecRelSymbolMap;
 
   symbol_list WeakDefaults;
 
   bool UseBigObj;
   bool UseOffsetLabels = false;
+  unsigned SecRelSymbolCount = 0;
 
 public:
   enum DwoMode {
@@ -168,6 +172,7 @@ public:
 private:
   MCContext &getContext() const { return OWriter.getContext(); }
   COFFSymbol *createSymbol(StringRef Name);
+  COFFSymbol *getOrCreateSecRelSymbol(const MCSymbol &Sym, uint64_t Offset);
   COFFSymbol *getOrCreateCOFFSymbol(const MCSymbol &Sym);
   COFFSection *createSection(StringRef Name);
 
@@ -248,6 +253,33 @@ COFFSymbol *WinCOFFWriter::getOrCreateCOFFSymbol(const MCSymbol &Sym) {
   COFFSymbol *&Ret = SymbolMap[&Sym];
   if (!Ret)
     Ret = createSymbol(Sym.getName());
+  return Ret;
+}
+
+COFFSymbol *WinCOFFWriter::getOrCreateSecRelSymbol(const MCSymbol &Sym,
+                                                   uint64_t Offset) {
+  MCSection *TargetSection = &Sym.getSection();
+  assert(SectionMap.contains(TargetSection) &&
+         "Section must already have been defined in executePostLayoutBinding!");
+
+  COFFSymbol *&Ret = SecRelSymbolMap[{TargetSection, Offset}];
+  if (Ret)
+    return Ret;
+
+  COFFSection *Section = SectionMap[TargetSection];
+  std::string Name;
+  if (Sym.isTemporary() && !Sym.getName().empty() &&
+      Offset == Asm->getSymbolOffset(Sym))
+    Name = Sym.getName().str();
+  else
+    Name =
+        (Twine("$L") + Section->Name + "_secrel_" + Twine(++SecRelSymbolCount))
+            .str();
+
+  Ret = createSymbol(Name);
+  Ret->Section = Section;
+  Ret->Data.StorageClass = COFF::IMAGE_SYM_CLASS_LABEL;
+  Ret->Data.Value = Offset;
   return Ret;
 }
 
@@ -806,7 +838,9 @@ void WinCOFFWriter::reset() {
   Strings.clear();
   SectionMap.clear();
   SymbolMap.clear();
+  SecRelSymbolMap.clear();
   WeakDefaults.clear();
+  SecRelSymbolCount = 0;
 }
 
 void WinCOFFWriter::executePostLayoutBinding() {
@@ -886,9 +920,40 @@ void WinCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
 
   Reloc.Data.SymbolTableIndex = 0;
   Reloc.Data.VirtualAddress = Asm->getFragmentOffset(F);
+  Reloc.Data.Type = OWriter.TargetObjectWriter->getRelocType(
+      getContext(), Target, Fixup, Target.getSubSym(), Asm->getBackend());
 
-  // Turn relocations for temporary symbols into section relocations.
-  if (A.isTemporary() && !SymbolMap[&A]) {
+  bool IsArm64SecRel12 = false;
+  if (COFF::isAnyArm64(Header.Machine)) {
+    switch (Reloc.Data.Type) {
+    case COFF::IMAGE_REL_ARM64_SECREL_HIGH12A:
+    case COFF::IMAGE_REL_ARM64_SECREL_LOW12A:
+    case COFF::IMAGE_REL_ARM64_SECREL_LOW12L:
+      IsArm64SecRel12 = true;
+      break;
+    }
+  }
+
+  bool NeedsSecRelSymbol = false;
+  bool UseSectionSymbol = A.isTemporary() && !SymbolMap.lookup(&A);
+  uint64_t SecRelSymbolOffset = 0;
+  if (IsArm64SecRel12 && A.isInSection()) {
+    uint64_t SecRelFixedValue = FixedValue;
+    if (UseSectionSymbol)
+      SecRelFixedValue += Asm->getSymbolOffset(A);
+    NeedsSecRelSymbol = !isUInt<12>(SecRelFixedValue);
+    SecRelSymbolOffset = Asm->getSymbolOffset(A) + FixedValue;
+  }
+
+  if (NeedsSecRelSymbol) {
+    if (!isUInt<32>(SecRelSymbolOffset)) {
+      getContext().reportError(Fixup.getLoc(),
+                               "relocation addend out of range");
+      return;
+    }
+    Reloc.Symb = getOrCreateSecRelSymbol(A, SecRelSymbolOffset);
+    FixedValue = 0;
+  } else if (UseSectionSymbol) {
     MCSection *TargetSection = &A.getSection();
     assert(
         SectionMap.contains(TargetSection) &&
@@ -920,8 +985,6 @@ void WinCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
   ++Reloc.Symb->Relocations;
 
   Reloc.Data.VirtualAddress += Fixup.getOffset();
-  Reloc.Data.Type = OWriter.TargetObjectWriter->getRelocType(
-      getContext(), Target, Fixup, Target.getSubSym(), Asm->getBackend());
 
   // The *_REL32 relocations are relative to the end of the relocation,
   // not to the start.

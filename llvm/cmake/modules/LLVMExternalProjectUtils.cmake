@@ -9,7 +9,12 @@ function(llvm_ExternalProject_BuildCmd out_var target bin_dir stamp_dir)
   endif()
   if (CMAKE_GENERATOR MATCHES "Make")
     # Use special command for Makefiles to support parallelism.
-    string(JOIN "@" make_cmd "$(MAKE)" "-C" "${bin_dir}" "${target}")
+    # Handle empty target (full build, no target argument).
+    if(target)
+      string(JOIN "@" make_cmd "$(MAKE)" "-C" "${bin_dir}" "${target}")
+    else()
+      string(JOIN "@" make_cmd "$(MAKE)" "-C" "${bin_dir}")
+    endif()
     set(file_lock_script "${LLVM_CMAKE_DIR}/FileLock.cmake")
     set(${out_var} ${CMAKE_COMMAND} "-DLOCK_FILE_PATH=${stamp_dir}/cmake.lock"
                                     "-DCOMMAND=${make_cmd}"
@@ -74,8 +79,8 @@ function(llvm_ExternalProject_Add name source_dir)
   canonicalize_tool_name(${name} nameCanon)
 
   foreach(arg ${ARG_CMAKE_ARGS})
-    if(arg MATCHES "^-DCMAKE_SYSTEM_NAME=")
-      string(REGEX REPLACE "^-DCMAKE_SYSTEM_NAME=(.*)$" "\\1" _cmake_system_name "${arg}")
+    if(arg MATCHES "^-DCMAKE_SYSTEM_NAME(:[^=]*)?=")
+      string(REGEX REPLACE "^-DCMAKE_SYSTEM_NAME(:[^=]*)?=(.*)$" "\\2" _cmake_system_name "${arg}")
     endif()
   endforeach()
 
@@ -94,9 +99,11 @@ function(llvm_ExternalProject_Add name source_dir)
   is_msvc_triple(is_msvc_target "${target_triple}")
 
   if(NOT ARG_TOOLCHAIN_TOOLS)
-    set(ARG_TOOLCHAIN_TOOLS clang)
+    # Targets using C++20 or newer may need module dependency scanning. Build
+    # the scanner before CMake looks for it during compiler detection.
+    set(ARG_TOOLCHAIN_TOOLS clang clang-scan-deps)
     if (ARG_ENABLE_FORTRAN)
-      list(APPEND ARG_TOOLCHAIN_TOOLS flang)
+      list(APPEND ARG_TOOLCHAIN_TOOLS flang-lazy)
     endif ()
     # AIX 64-bit XCOFF and big AR format is not yet supported in some of these tools.
     if(NOT _cmake_system_name STREQUAL "AIX")
@@ -148,7 +155,7 @@ function(llvm_ExternalProject_Add name source_dir)
     set(CLANG_IN_TOOLCHAIN On)
   endif()
 
-  if(flang IN_LIST TOOLCHAIN_TOOLS)
+  if(flang-lazy IN_LIST TOOLCHAIN_TOOLS)
     set(FLANG_IN_TOOLCHAIN On)
   endif()
 
@@ -169,24 +176,35 @@ function(llvm_ExternalProject_Add name source_dir)
     set_target_properties(${name}-clear PROPERTIES FOLDER "${ARG_FOLDER}")
   endif ()
 
-  set(DEFAULT_PASSTHROUGH_VARIABLES
-    LibEdit_INCLUDE_DIRS
-    LibEdit_LIBRARIES
-    ZLIB_INCLUDE_DIR
-    ZLIB_LIBRARY
-    zstd_INCLUDE_DIR
-    zstd_LIBRARY
-    LIBXML2_LIBRARY
-    LIBXML2_INCLUDE_DIR
-    CURL_INCLUDE_DIR
-    CURL_LIBRARY
-    HTTPLIB_INCLUDE_DIR
-    HTTPLIB_HEADER_PATH
-    Python3_EXECUTABLE
-    Python3_LIBRARIES
-    Python3_INCLUDE_DIRS
-    Python3_RPATH
-    )
+  set(DEFAULT_PASSTHROUGH_VARIABLES Python3_EXECUTABLE)
+
+  # Add only if the target matches.
+  # Otherwise LLVMConfig.cmake dependency finding will short-circuit to almost
+  # certainly incompatible host system libraries.
+  # LLVM target triple and the passed triple are assumed to be of the same form
+  # as semantically comparing triples in CMake would be an ordeal.
+  if("${target_triple}" STREQUAL "${LLVM_TARGET_TRIPLE}")
+    list(APPEND DEFAULT_PASSTHROUGH_VARIABLES
+      LibEdit_INCLUDE_DIRS
+      LibEdit_LIBRARIES
+      ZLIB_INCLUDE_DIR
+      ZLIB_LIBRARY
+      ZLIB_LIBRARY_RELEASE
+      ZLIB_LIBRARY_DEBUG
+      zstd_INCLUDE_DIR
+      zstd_LIBRARY
+      LIBXML2_LIBRARY
+      LIBXML2_INCLUDE_DIR
+      CURL_INCLUDE_DIR
+      CURL_LIBRARY
+      HTTPLIB_INCLUDE_DIR
+      HTTPLIB_HEADER_PATH
+      Python3_LIBRARIES
+      Python3_INCLUDE_DIRS
+      Python3_RPATH
+      )
+  endif()
+
   foreach(variable ${DEFAULT_PASSTHROUGH_VARIABLES})
     get_property(is_value_set CACHE ${variable} PROPERTY VALUE SET)
     if(${is_value_set})
@@ -222,6 +240,7 @@ function(llvm_ExternalProject_Add name source_dir)
     endif()
   endforeach()
 
+  set(maybe_configure_environment_modification "")
   if(ARG_USE_TOOLCHAIN AND NOT CMAKE_CROSSCOMPILING)
     if(CLANG_IN_TOOLCHAIN)
       if(is_msvc_target)
@@ -235,7 +254,11 @@ function(llvm_ExternalProject_Add name source_dir)
       endif()
     endif()
     if(FLANG_IN_TOOLCHAIN)
-      list(APPEND compiler_args -DCMAKE_Fortran_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/flang${CMAKE_EXECUTABLE_SUFFIX})
+      # Use fakeflang to not require having all of flang built for the configure step.
+      list(APPEND compiler_args -DCMAKE_Fortran_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/fakeflang${CMAKE_EXECUTABLE_SUFFIX})
+      if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.2)
+        set(maybe_configure_environment_modification CONFIGURE_ENVIRONMENT_MODIFICATION "FLANG_BOOTSTRAP_PROBE=set:1")
+      endif()
     endif()
     if(lld IN_LIST TOOLCHAIN_TOOLS)
       if(is_msvc_target)
@@ -278,8 +301,8 @@ function(llvm_ExternalProject_Add name source_dir)
     if(llvm-mt IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
       list(APPEND compiler_args -DCMAKE_MT=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-mt${CMAKE_EXECUTABLE_SUFFIX})
     endif()
-    if(llvm-rc IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target)
-      list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
+    if(llvm-rc IN_LIST TOOLCHAIN_TOOLS AND is_msvc_target AND CLANG_IN_TOOLCHAIN)
+        list(APPEND compiler_args -DCMAKE_RC_COMPILER=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-rc${CMAKE_EXECUTABLE_SUFFIX})
     endif()
     list(APPEND ARG_DEPENDS ${TOOLCHAIN_TOOLS})
     # Add LLVMgold.so dependency if it is available, as clang may need it for
@@ -345,10 +368,10 @@ function(llvm_ExternalProject_Add name source_dir)
       endforeach()
       string(REPLACE ";" "|" flag_string "${flag_types}")
       foreach(arg ${ARG_CMAKE_ARGS})
-        if(arg MATCHES "^-DCMAKE_(${flag_string})_FLAGS")
+        if(arg MATCHES "^-DCMAKE_(${flag_string})_FLAGS(:[^=]*)?=")
           foreach(type ${flag_types})
-            if(arg MATCHES "^-DCMAKE_${type}_FLAGS")
-              string(REGEX REPLACE "^-DCMAKE_${type}_FLAGS=(.*)$" "\\1" flag_value "${arg}")
+            if(arg MATCHES "^-DCMAKE_${type}_FLAGS(:[^=]*)?=")
+              string(REGEX REPLACE "^-DCMAKE_${type}_FLAGS(:[^=]*)?=(.*)$" "\\2" flag_value "${arg}")
               set(${type}_flag "${${type}_flag} ${flag_value}")
             endif()
           endforeach()
@@ -376,6 +399,14 @@ function(llvm_ExternalProject_Add name source_dir)
 
   if(CMAKE_VERBOSE_MAKEFILE)
     set(verbose -DCMAKE_VERBOSE_MAKEFILE=ON)
+  endif()
+
+  if(CMAKE_GENERATOR MATCHES "Make")
+    # Use the same FileLock for Unix Makefiles to serialize the main build with
+    # EXTRA_TARGETS. This prevents concurrent make invocations from corrupting
+    # shared artifacts in BINARY_DIR.
+    llvm_ExternalProject_BuildCmd(build_cmd "" ${BINARY_DIR} ${STAMP_DIR})
+    set(build_command_arg BUILD_COMMAND ${build_cmd})
   endif()
 
   ExternalProject_Add(${name}
@@ -408,9 +439,12 @@ function(llvm_ExternalProject_Add name source_dir)
                ${cmake_args}
                ${PASSTHROUGH_VARIABLES}
     CMAKE_CACHE_DEFAULT_ARGS ${CMAKE_CACHE_DEFAULT_ARGS}
+    ${build_command_arg}
+    ${maybe_configure_environment_modification}
     INSTALL_COMMAND ""
     STEP_TARGETS configure build
     BUILD_ALWAYS 1
+    CONFIGURE_HANDLED_BY_BUILD 1
     USES_TERMINAL_CONFIGURE 1
     USES_TERMINAL_BUILD 1
     USES_TERMINAL_INSTALL 1

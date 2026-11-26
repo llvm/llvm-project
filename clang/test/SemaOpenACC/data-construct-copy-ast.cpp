@@ -74,6 +74,7 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: pcopy clause
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
+  // CHECK-NEXT: ParenExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
   // CHECK-NEXT: present_or_copy clause modifiers: alwaysin, alwaysout

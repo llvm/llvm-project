@@ -7,11 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Semantics/symbol.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/expression.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <string>
@@ -70,27 +73,79 @@ static void DumpList(llvm::raw_ostream &os, const char *label, const T &list) {
   }
 }
 
+void WithOmpDeclarative::printClauseSet(llvm::raw_ostream &os,
+    const llvm::omp::Clauses &clauses, llvm::omp::Directive dir,
+    parser::CharBlock name) const {
+  auto toLower = parser::ToLowerCaseLetters;
+  size_t idx{0}, size{clauses.count()};
+
+  for (llvm::omp::Clause c : clauses) {
+    llvm::omp::Clause clause = c;
+    // Write to as enter when writing a mod file
+    if (clause == llvm::omp::Clause::OMPC_to && !name.empty()) {
+      clause = llvm::omp::Clause::OMPC_enter;
+    }
+    os << toLower(llvm::omp::getOpenMPClauseName(clause, version_));
+    switch (clause) {
+    case llvm::omp::Clause::OMPC_absent:
+      os << '(';
+      llvm::interleaveComma(
+          ompAssumesAbsent(), os, [&](llvm::omp::Directive directive) {
+            os << llvm::omp::getOpenMPDirectiveName(directive, version_);
+          });
+      os << ')';
+      break;
+    case llvm::omp::Clause::OMPC_atomic_default_mem_order:
+      os << '(' << toLower(EnumToString(*ompAtomicDefaultMemOrder())) << ')';
+      break;
+    case llvm::omp::Clause::OMPC_device_type: {
+      // device_type is carried by several directives; print the value
+      // recorded for the one being emitted.
+      const std::optional<common::OmpDeviceType> &dt{
+          dir == llvm::omp::Directive::OMPD_groupprivate
+              ? ompGroupprivateDeviceType()
+              : ompDeclTargetDeviceType()};
+      os << '(' << toLower(EnumToString(*dt)) << ')';
+      break;
+    }
+    case llvm::omp::Clause::OMPC_enter:
+    case llvm::omp::Clause::OMPC_link:
+      if (!name.empty()) {
+        os << '(' << name.ToString() << ')';
+      }
+      break;
+    case llvm::omp::Clause::OMPC_indirect:
+      os << "(true)";
+      break;
+    default:
+      break;
+    }
+    if (++idx < size) {
+      os << ' ';
+    }
+  }
+}
+
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const WithOmpDeclarative &x) {
-  if (x.has_ompRequires() || x.has_ompAtomicDefaultMemOrder()) {
+  if (const llvm::omp::Clauses &reqs{x.ompRequires()}; reqs.count()) {
     os << " OmpRequirements:(";
-    if (const common::OmpMemoryOrderType *admo{x.ompAtomicDefaultMemOrder()}) {
-      os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(
-                llvm::omp::Clause::OMPC_atomic_default_mem_order))
-         << '(' << parser::ToLowerCaseLetters(EnumToString(*admo)) << ')';
-      if (x.has_ompRequires()) {
-        os << ',';
-      }
-    }
-    if (const WithOmpDeclarative::RequiresClauses *reqs{x.ompRequires()}) {
-      size_t num{0}, size{reqs->count()};
-      reqs->IterateOverMembers([&](llvm::omp::Clause f) {
-        os << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
-        if (++num < size) {
-          os << ',';
-        }
-      });
-    }
+    x.printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
+    os << ')';
+  }
+  if (const llvm::omp::Clauses &assumes{x.ompAssumes()}; assumes.count()) {
+    os << " OmpAssumptions:(";
+    x.printClauseSet(os, assumes, llvm::omp::Directive::OMPD_assumes);
+    os << ')';
+  }
+  if (const llvm::omp::Clauses &dtgt{x.ompDeclTarget()}; dtgt.count()) {
+    os << " OmpDeclareTargetFlags:(";
+    x.printClauseSet(os, dtgt, llvm::omp::Directive::OMPD_declare_target);
+    os << ')';
+  }
+  if (const llvm::omp::Clauses &gp{x.ompGroupprivate()}; gp.count()) {
+    os << " OmpGroupprivateFlags:(";
+    x.printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
     os << ')';
   }
   return os;
@@ -239,6 +294,7 @@ void ObjectEntityDetails::set_shape(const ArraySpec &shape) {
   for (const auto &shapeSpec : shape) {
     shape_.push_back(shapeSpec);
   }
+  shape_.set_rankOneBounds(shape.lboundIsRankOne(), shape.uboundIsRankOne());
 }
 void ObjectEntityDetails::set_coshape(const ArraySpec &coshape) {
   CHECK(coshape_.empty());
@@ -535,6 +591,7 @@ llvm::raw_ostream &operator<<(
   if (x.cudaDataAttr()) {
     os << " cudaDataAttr: " << common::EnumToString(*x.cudaDataAttr());
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
@@ -574,12 +631,14 @@ llvm::raw_ostream &operator<<(
   if (x.isCUDAKernel()) {
     os << " isCUDAKernel";
   }
+  os << static_cast<const WithOmpDeclarative &>(x);
   return os;
 }
 
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const DerivedTypeDetails &x) {
   DumpBool(os, "sequence", x.sequence_);
+  DumpBool(os, "isEnumerationType", x.isEnumerationType_);
   DumpList(os, "components", x.componentNames_);
   return os;
 }
@@ -669,6 +728,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
             for (const auto &object : x.objects()) {
               os << ' ' << object->name();
             }
+            os << static_cast<const WithOmpDeclarative &>(x);
           },
           [&](const TypeParamDetails &x) {
             DumpOptional(os, "type", x.type());
@@ -966,6 +1026,13 @@ bool SymbolOffsetCompare::operator()(
 bool SymbolOffsetCompare::operator()(
     const MutableSymbolRef &x, const MutableSymbolRef &y) const {
   return (*this)(SymbolRef{*x}, SymbolRef{*y});
+}
+
+bool UserReductionDetails::SupportsType(const DeclTypeSpec &type) const {
+  // We have to compare the actual type, not the pointer, as some
+  // types are not guaranteed to be the same object.
+  return llvm::any_of(typeList_,
+      [&](const DeclTypeSpec *t) { return omp::IsTypeCompatible(*t, type); });
 }
 
 } // namespace Fortran::semantics

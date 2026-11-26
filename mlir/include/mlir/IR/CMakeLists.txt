@@ -4,6 +4,8 @@ mlir_tablegen(SymbolInterfacesAttrInterface.h.inc -gen-attr-interface-decls)
 mlir_tablegen(SymbolInterfacesAttrInterface.cpp.inc -gen-attr-interface-defs)
 add_mlir_interface(RegionKindInterface)
 
+add_mlir_type_interface(QuantStorageTypeInterface)
+
 set(LLVM_TARGET_DEFINITIONS OpAsmInterface.td)
 mlir_tablegen(OpAsmAttrInterface.h.inc -gen-attr-interface-decls)
 mlir_tablegen(OpAsmAttrInterface.cpp.inc -gen-attr-interface-defs)
@@ -33,8 +35,10 @@ mlir_tablegen(BuiltinDialectBytecode.cpp.inc -gen-bytecode -bytecode-dialect="Bu
 add_mlir_generic_tablegen_target(MLIRBuiltinDialectBytecodeIncGen)
 
 set(LLVM_TARGET_DEFINITIONS BuiltinLocationAttributes.td)
-mlir_tablegen(BuiltinLocationAttributes.h.inc -gen-attrdef-decls)
-mlir_tablegen(BuiltinLocationAttributes.cpp.inc -gen-attrdef-defs)
+mlir_tablegen(BuiltinLocationAttributes.h.inc -gen-attrdef-decls
+              -attrdefs-registration-name=BuiltinLocation)
+mlir_tablegen(BuiltinLocationAttributes.cpp.inc -gen-attrdef-defs
+              -attrdefs-registration-name=BuiltinLocation)
 add_mlir_generic_tablegen_target(MLIRBuiltinLocationAttributesIncGen)
 
 set(LLVM_TARGET_DEFINITIONS BuiltinOps.td)

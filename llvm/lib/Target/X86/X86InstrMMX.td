@@ -226,28 +226,35 @@ def MMX_MOVQ64mr : MMXI<0x7F, MRMDestMem, (outs), (ins i64mem:$dst, VR64:$src),
 
 def MMX_X86movdq2q : SDNode<"X86ISD::MOVDQ2Q", SDTypeProfile<1, 1,
                             [SDTCisVT<0, x86mmx>, SDTCisVT<1, v2i64>]>>;
+
+// Copies a 64-bit value from the low word of an XMM vector
+// to an MMX vector.
 def MMX_X86movq2dq : SDNode<"X86ISD::MOVQ2DQ", SDTypeProfile<1, 1,
                             [SDTCisVT<0, v2i64>, SDTCisVT<1, x86mmx>]>>;
 
 let SchedRW = [SchedWriteVecMoveLS.XMM.RR] in {
-def MMX_MOVDQ2Qrr : MMXSDIi8<0xD6, MRMSrcReg, (outs VR64:$dst),
-                             (ins VR128:$src), "movdq2q\t{$src, $dst|$dst, $src}",
-                             [(set VR64:$dst,
-                               (x86mmx (MMX_X86movdq2q VR128:$src)))]>;
+def MMX_MOVDQ2Qrr : I<0xD6, MRMSrcReg, (outs VR64:$dst),
+                      (ins VR128:$src), "movdq2q\t{$src, $dst|$dst, $src}",
+                      [(set VR64:$dst,
+                        (x86mmx (MMX_X86movdq2q VR128:$src)))]>,
+                    TB, XD, Requires<[HasMMX, HasSSE2]>;
 
-def MMX_MOVQ2DQrr : MMXS2SIi8<0xD6, MRMSrcReg, (outs VR128:$dst),
-                              (ins VR64:$src), "movq2dq\t{$src, $dst|$dst, $src}",
-                              [(set VR128:$dst,
-                                (v2i64 (MMX_X86movq2dq VR64:$src)))]>;
+def MMX_MOVQ2DQrr : I<0xD6, MRMSrcReg, (outs VR128:$dst),
+                       (ins VR64:$src), "movq2dq\t{$src, $dst|$dst, $src}",
+                       [(set VR128:$dst,
+                         (v2i64 (MMX_X86movq2dq VR64:$src)))]>,
+                    TB, XS, Requires<[HasMMX, HasSSE2]>;
 
 let isCodeGenOnly = 1, hasSideEffects = 1 in {
-def MMX_MOVQ2FR64rr: MMXS2SIi8<0xD6, MRMSrcReg, (outs FR64:$dst),
-                               (ins VR64:$src), "movq2dq\t{$src, $dst|$dst, $src}",
-                               []>;
+def MMX_MOVQ2FR64rr: I<0xD6, MRMSrcReg, (outs FR64:$dst),
+                        (ins VR64:$src), "movq2dq\t{$src, $dst|$dst, $src}",
+                        []>,
+                     TB, XS, Requires<[HasMMX, HasSSE2]>;
 
-def MMX_MOVFR642Qrr: MMXSDIi8<0xD6, MRMSrcReg, (outs VR64:$dst),
-                              (ins FR64:$src), "movdq2q\t{$src, $dst|$dst, $src}",
-                              []>;
+def MMX_MOVFR642Qrr: I<0xD6, MRMSrcReg, (outs VR64:$dst),
+                        (ins FR64:$src), "movdq2q\t{$src, $dst|$dst, $src}",
+                        []>,
+                     TB, XD, Requires<[HasMMX, HasSSE2]>;
 }
 } // SchedRW
 
@@ -458,11 +465,11 @@ defm MMX_PUNPCKLDQ : MMXI_binop_rm_int<0x62, "punpckldq",
 
 // -- Pack Instructions
 defm MMX_PACKSSWB : MMXI_binop_rm_int<0x63, "packsswb", int_x86_mmx_packsswb,
-                                      SchedWriteShuffle.MMX>;
+                                      SchedWritePack.MMX>;
 defm MMX_PACKSSDW : MMXI_binop_rm_int<0x6B, "packssdw", int_x86_mmx_packssdw,
-                                      SchedWriteShuffle.MMX>;
+                                      SchedWritePack.MMX>;
 defm MMX_PACKUSWB : MMXI_binop_rm_int<0x67, "packuswb", int_x86_mmx_packuswb,
-                                      SchedWriteShuffle.MMX>;
+                                      SchedWritePack.MMX>;
 
 // -- Shuffle Instructions
 defm MMX_PSHUFB : SS3I_binop_rm_int_mm<0x00, "pshufb", int_x86_ssse3_pshuf_b,

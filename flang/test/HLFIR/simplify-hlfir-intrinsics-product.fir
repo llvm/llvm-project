@@ -146,7 +146,7 @@ func.func @product_expr_unknown_extent1(%arg0: !hlfir.expr<?x3xf32>) -> !hlfir.e
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 3 : index
 // CHECK:           %[[SHAPE_OF_0:.*]] = hlfir.shape_of %[[ARG0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[ELEMENTAL_0:.*]] = hlfir.elemental %[[SHAPE_0]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xf32> {
 // CHECK:           ^bb0(%[[VAL_0:.*]]: index):
@@ -172,7 +172,7 @@ func.func @product_expr_unknown_extent2(%arg0: !hlfir.expr<?x3xf32>) -> !hlfir.e
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 3 : index
 // CHECK:           %[[SHAPE_OF_0:.*]] = hlfir.shape_of %[[ARG0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[GET_EXTENT_0]] : (index) -> !fir.shape<1>
 // CHECK:           %[[ELEMENTAL_0:.*]] = hlfir.elemental %[[SHAPE_0]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 // CHECK:           ^bb0(%[[VAL_0:.*]]: index):
@@ -199,7 +199,7 @@ func.func @product_scalar_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !fir.ref<!fir
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 3 : index
 // CHECK:           %[[SHAPE_OF_0:.*]] = hlfir.shape_of %[[ARG0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_2]] : (index) -> !fir.shape<1>
 // CHECK:           %[[LOAD_0:.*]] = fir.load %[[ARG1]] : !fir.ref<!fir.logical<1>>
 // CHECK:           %[[ELEMENTAL_0:.*]] = hlfir.elemental %[[SHAPE_0]] unordered : (!fir.shape<1>) -> !hlfir.expr<3xf32> {
@@ -234,7 +234,7 @@ func.func @product_scalar_boxed_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !fir.bo
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant true
 // CHECK:           %[[CONSTANT_3:.*]] = arith.constant 3 : index
 // CHECK:           %[[SHAPE_OF_0:.*]] = hlfir.shape_of %[[ARG0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[CONSTANT_3]] : (index) -> !fir.shape<1>
 // CHECK:           %[[IS_PRESENT_0:.*]] = fir.is_present %[[ARG1]] : (!fir.box<!fir.logical<1>>) -> i1
 // CHECK:           %[[IF_0:.*]] = fir.if %[[IS_PRESENT_0]] -> (!fir.logical<1>) {
@@ -279,7 +279,7 @@ func.func @product_array_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !fir.box<!fir.
 // CHECK:           %[[CONSTANT_3:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK:           %[[CONSTANT_4:.*]] = arith.constant 3 : index
 // CHECK:           %[[SHAPE_OF_0:.*]] = hlfir.shape_of %[[ARG0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[GET_EXTENT_0]] : (index) -> !fir.shape<1>
 // CHECK:           %[[IS_PRESENT_0:.*]] = fir.is_present %[[ARG1]] : (!fir.box<!fir.array<?x3x!fir.logical<1>>>) -> i1
 // CHECK:           %[[ELEMENTAL_0:.*]] = hlfir.elemental %[[SHAPE_0]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
@@ -328,7 +328,7 @@ func.func @product_array_expr_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !hlfir.ex
 // CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1.000000e+00 : f32
 // CHECK:           %[[CONSTANT_2:.*]] = arith.constant 3 : index
 // CHECK:           %[[SHAPE_OF_0:.*]] = hlfir.shape_of %[[ARG0]] : (!hlfir.expr<?x3xf32>) -> !fir.shape<2>
-// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] {dim = 0 : index} : (!fir.shape<2>) -> index
+// CHECK:           %[[GET_EXTENT_0:.*]] = hlfir.get_extent %[[SHAPE_OF_0]] dim(0) : (!fir.shape<2>) -> index
 // CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[GET_EXTENT_0]] : (index) -> !fir.shape<1>
 // CHECK:           %[[ELEMENTAL_0:.*]] = hlfir.elemental %[[SHAPE_0]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 // CHECK:           ^bb0(%[[VAL_0:.*]]: index):
@@ -352,7 +352,7 @@ func.func @product_array_expr_mask(%arg0: !hlfir.expr<?x3xf32>, %mask: !hlfir.ex
 // unordered floating point reduction
 func.func @product_unordered_reduction(%arg0: !hlfir.expr<2x3xf32>) -> !hlfir.expr<3xf32> {
   %cst = arith.constant 1 : i32
-  %res = hlfir.product %arg0 dim %cst {fastmath = #arith.fastmath<reassoc>} : (!hlfir.expr<2x3xf32>, i32) -> !hlfir.expr<3xf32>
+  %res = hlfir.product %arg0 dim %cst fastmath(reassoc) : (!hlfir.expr<2x3xf32>, i32) -> !hlfir.expr<3xf32>
   return %res : !hlfir.expr<3xf32>
 }
 // CHECK-LABEL:   func.func @product_unordered_reduction(

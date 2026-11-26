@@ -34,6 +34,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <variant>
 #include <vector>
 
 // This file is using the LSP syntax for identifier names which is different
@@ -261,6 +262,18 @@ bool fromJSON(const llvm::json::Value &, TextEdit &, llvm::json::Path);
 llvm::json::Value toJSON(const TextEdit &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TextEdit &);
 
+struct InsertReplaceEdit {
+  /// The string to be inserted.
+  std::string newText;
+
+  /// The range if the insert is requested.
+  Range insert;
+
+  /// The range if the replace is requested.
+  Range replace;
+};
+llvm::json::Value toJSON(const InsertReplaceEdit &);
+
 struct ChangeAnnotation {
   /// A human-readable string describing the actual change. The string
   /// is rendered prominent in the user interface.
@@ -417,7 +430,7 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
 // Note, some are not perfect matches and should be improved when this LSP
 // issue is addressed:
 // https://github.com/Microsoft/language-server-protocol/issues/344
-SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind);
+SymbolKind indexSymbolKindToSymbolKind(const index::SymbolInfo &Info);
 
 // Determines the encoding used to measure offsets and lengths of source in LSP.
 enum class OffsetEncoding {
@@ -509,6 +522,10 @@ struct ClientCapabilities {
   /// The documentation format that should be used for textDocument/completion.
   /// textDocument.completion.completionItem.documentationFormat
   MarkupKind CompletionDocumentationFormat = MarkupKind::PlainText;
+
+  /// Client supports insert replace edit to control different behavior if a
+  /// completion item is inserted in the text or should replace text.
+  bool InsertReplace = false;
 
   /// The client has support for completion item label details.
   /// textDocument.completion.completionItem.labelDetailsSupport.
@@ -1115,22 +1132,33 @@ enum class SymbolTag {
   Internal = 6,
   File = 7,
   Static = 8,
-  Abstract = 9,
-  Final = 10,
+  Abstract = 9, // In context of a class and method - this symbol indicates a
+                // pure virtual class or method.
+  Final = 10, // In context of a method - this symbol indicates that the method
+              // cannot be overridden in subclasses.
+              // In context of a class - this symbol indicates that the class is
+              // final and thus cannot be extended.
   Sealed = 11,
   Transient = 12,
   Volatile = 13,
   Synchronized = 14,
-  Virtual = 15,
+  Virtual =
+      15, // In context of a method - this symbol indicates a virtual
+          // method declared and implemented in same class, and thereby it is
+          // not implementing or overriding a method from any base class.
   Nullable = 16,
   NonNull = 17,
   Declaration = 18,
   Definition = 19,
   ReadOnly = 20,
+  Overrides = 21,  // In context of a method - this symbol indicates a method
+                   // overriding a virtual method, implemented in base class.
+  Implements = 22, // In context of a method - this symbol indicates a method
+                   // implementing a pure virtual method from a base class.
 
   // Update as needed
   FirstTag = Deprecated,
-  LastTag = ReadOnly
+  LastTag = Implements
 };
 llvm::json::Value toJSON(SymbolTag);
 /// Represents programming constructs like variables, classes, interfaces etc.
@@ -1372,9 +1400,13 @@ struct CompletionItem {
   /// An edit which is applied to a document when selecting this completion.
   /// When an edit is provided `insertText` is ignored.
   ///
-  /// Note: The range of the edit must be a single line range and it must
-  /// contain the position at which completion has been requested.
-  std::optional<TextEdit> textEdit;
+  /// Note 1: The text edit's range as well as both ranges from an insert
+  /// replace edit must be a single line range and must contain the position
+  /// at which completion has been requested.
+  /// Note 2: If an `InsertReplaceEdit` is returned, the edit's insert range
+  /// must be a prefix of the edit's replace range, meaning it must be
+  /// contained in and starting at the same position.
+  std::optional<std::variant<TextEdit, InsertReplaceEdit>> textEdit;
 
   /// An optional array of additional text edits that are applied when selecting
   /// this completion. Edits must not overlap with the main edit nor with
@@ -1547,6 +1579,9 @@ struct TypeHierarchyItem {
 
   /// The kind of this item.
   SymbolKind kind;
+
+  /// The symbol tags for this item.
+  std::vector<SymbolTag> tags;
 
   /// More detail for this item, e.g. the signature of a function.
   std::optional<std::string> detail;
@@ -2087,16 +2122,6 @@ namespace llvm {
 
 template <> struct DenseMapInfo<clang::clangd::Range> {
   using Range = clang::clangd::Range;
-  static inline Range getEmptyKey() {
-    static clang::clangd::Position Tomb{-1, -1};
-    static Range R{Tomb, Tomb};
-    return R;
-  }
-  static inline Range getTombstoneKey() {
-    static clang::clangd::Position Tomb{-2, -2};
-    static Range R{Tomb, Tomb};
-    return R;
-  }
   static unsigned getHashValue(const Range &Val) {
     return llvm::hash_combine(Val.start.line, Val.start.character, Val.end.line,
                               Val.end.character);

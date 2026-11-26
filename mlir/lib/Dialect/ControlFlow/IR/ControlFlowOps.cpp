@@ -61,10 +61,6 @@ struct ControlFlowInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void ControlFlowDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.cpp.inc"
-      >();
   addInterfaces<ControlFlowInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ControlFlowDialect>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, BranchOp,
@@ -86,7 +82,7 @@ LogicalResult AssertOp::canonicalize(AssertOp op, PatternRewriter &rewriter) {
   return failure();
 }
 
-// This side effect models "program termination". 
+// This side effect models "program termination".
 void AssertOp::getEffects(
     SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
@@ -166,6 +162,14 @@ simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
   if (succ == opParent || !llvm::hasSingleElement(succ->getPredecessors()))
     return failure();
 
+  // If any branch operand is itself a block argument of the successor, merging
+  // would call replaceAllUsesWith(arg, arg) — a no-op — leaving dangling uses
+  // of that argument after the successor block is erased.
+  for (Value operand : op.getOperands())
+    if (auto ba = dyn_cast<BlockArgument>(operand))
+      if (ba.getOwner() == succ)
+        return failure();
+
   // Merge the successor into the current block and erase the branch.
   SmallVector<Value> brOperands(op.getOperands());
   rewriter.eraseOp(op);
@@ -196,9 +200,83 @@ static LogicalResult simplifyPassThroughBr(BranchOp op,
   return success();
 }
 
+/// If all incoming values for a block argument from all predecessors are the
+/// same SSA value, replace uses of the block argument with that value. This
+/// allows the block argument to be removed by dead code elimination.
+///
+///   %c = arith.constant 0 : i32
+///   cf.br ^bb1(%c : i32)      // pred 1
+///   cf.br ^bb1(%c : i32)      // pred 2
+/// ^bb1(%arg0: i32):
+///   use(%arg0)
+/// ->
+/// ^bb1(%arg0: i32):
+///   use(%c)                   // %arg0 has no uses and can be removed
+///
+static LogicalResult simplifyUniformBlockArgs(Block *dest,
+                                              PatternRewriter &rewriter) {
+  if (dest->hasNoPredecessors() ||
+      llvm::hasSingleElement(dest->getPredecessors()))
+    return failure();
+
+  bool changed = false;
+  for (BlockArgument arg : dest->getArguments()) {
+    if (arg.use_empty())
+      continue;
+
+    Value commonValue;
+    for (Block *pred : dest->getPredecessors()) {
+      auto branch = dyn_cast<BranchOpInterface>(pred->getTerminator());
+      if (!branch) {
+        commonValue = Value();
+        break;
+      }
+
+      for (auto [i, succ] : llvm::enumerate(branch->getSuccessors())) {
+        if (succ != dest)
+          continue;
+
+        // Produced operands are modeled by BranchOpInterface as null Values.
+        Value val = branch.getSuccessorOperands(i)[arg.getArgNumber()];
+        if (commonValue && commonValue != val) {
+          commonValue = Value();
+          break;
+        }
+        commonValue = val;
+      }
+
+      if (!commonValue)
+        break;
+    }
+
+    if (commonValue && commonValue != arg) {
+      rewriter.replaceAllUsesWith(arg, commonValue);
+      changed = true;
+    }
+  }
+  return success(changed);
+}
+
+namespace {
+/// Replaces block arguments with a uniform incoming value across all
+/// predecessors, for any op implementing BranchOpInterface.
+struct SimplifyUniformBlockArguments
+    : public OpInterfaceRewritePattern<BranchOpInterface> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(BranchOpInterface op,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    for (Block *succ : op->getSuccessors())
+      changed |= succeeded(simplifyUniformBlockArgs(succ, rewriter));
+    return success(changed);
+  }
+};
+} // namespace
+
 LogicalResult BranchOp::canonicalize(BranchOp op, PatternRewriter &rewriter) {
   return success(succeeded(simplifyBrToBlockWithSinglePred(op, rewriter)) ||
-                 succeeded(simplifyPassThroughBr(op, rewriter)));
+                 succeeded(simplifyPassThroughBr(op, rewriter)) ||
+                 succeeded(simplifyUniformBlockArgs(op.getDest(), rewriter)));
 }
 
 void BranchOp::setDest(Block *block) { return setSuccessor(block); }
@@ -225,7 +303,7 @@ namespace {
 ///  -> br ^bb2
 ///
 struct SimplifyConstCondBranchPred : public OpRewritePattern<CondBranchOp> {
-  using OpRewritePattern<CondBranchOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(CondBranchOp condbr,
                                 PatternRewriter &rewriter) const override {
@@ -447,6 +525,12 @@ struct CondBranchTruthPropagation : public OpRewritePattern<CondBranchOp> {
   }
 };
 
+/// Returns true if `block` contains only `ub.unreachable`.
+static bool isUnreachableBlock(Block *block) {
+  return llvm::hasSingleElement(*block) &&
+         isa<ub::UnreachableOp>(block->getTerminator());
+}
+
 /// If the destination block of a conditional branch contains only
 /// ub.unreachable, unconditionally branch to the other destination.
 struct DropUnreachableCondBranch : public OpRewritePattern<CondBranchOp> {
@@ -458,8 +542,7 @@ struct DropUnreachableCondBranch : public OpRewritePattern<CondBranchOp> {
     // destination.
     Block *trueDest = condbr.getTrueDest();
     Block *falseDest = condbr.getFalseDest();
-    if (llvm::hasSingleElement(*trueDest) &&
-        isa<ub::UnreachableOp>(trueDest->getTerminator())) {
+    if (isUnreachableBlock(trueDest)) {
       rewriter.replaceOpWithNewOp<BranchOp>(condbr, falseDest,
                                             condbr.getFalseOperands());
       return success();
@@ -467,8 +550,7 @@ struct DropUnreachableCondBranch : public OpRewritePattern<CondBranchOp> {
 
     // If the "false" destination is unreachable, branch to the "true"
     // destination.
-    if (llvm::hasSingleElement(*falseDest) &&
-        isa<ub::UnreachableOp>(falseDest->getTerminator())) {
+    if (isUnreachableBlock(falseDest)) {
       rewriter.replaceOpWithNewOp<BranchOp>(condbr, trueDest,
                                             condbr.getTrueOperands());
       return success();
@@ -484,7 +566,8 @@ void CondBranchOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyConstCondBranchPred, SimplifyPassThroughCondBranch,
               SimplifyCondBranchIdenticalSuccessors,
               SimplifyCondBranchFromCondBranchOnSameCondition,
-              CondBranchTruthPropagation, DropUnreachableCondBranch>(context);
+              CondBranchTruthPropagation, DropUnreachableCondBranch,
+              SimplifyUniformBlockArguments>(context);
 }
 
 SuccessorOperands CondBranchOp::getSuccessorOperands(unsigned index) {
@@ -555,8 +638,8 @@ static ParseResult parseSwitchOpCases(
       parser.parseSuccessor(defaultDestination))
     return failure();
   if (succeeded(parser.parseOptionalLParen())) {
-    if (parser.parseOperandList(defaultOperands, OpAsmParser::Delimiter::None,
-                                /*allowResultNumber=*/false) ||
+    if (parser.parseOperandList(defaultOperands,
+                                OpAsmParser::Delimiter::None) ||
         parser.parseColonTypeList(defaultOperandTypes) || parser.parseRParen())
       return failure();
   }
@@ -564,10 +647,15 @@ static ParseResult parseSwitchOpCases(
   SmallVector<APInt> values;
   unsigned bitWidth = flagType.getIntOrFloatBitWidth();
   while (succeeded(parser.parseOptionalComma())) {
-    int64_t value = 0;
+    SMLoc valueLoc = parser.getCurrentLocation();
+    APInt value;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
+    if (value.isNegative() ? !value.isSignedIntN(bitWidth)
+                           : !value.isIntN(bitWidth))
+      return parser.emitError(valueLoc)
+             << "case value is out of range for " << flagType;
+    values.push_back(value.sextOrTrunc(bitWidth));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
@@ -610,7 +698,7 @@ static void printSwitchOpCases(
     p << ',';
     p.printNewline();
     p << "  ";
-    p << it.value().getLimitedValue();
+    p << it.value();
     p << ": ";
     p.printSuccessorAndUseList(caseDestinations[it.index()],
                                caseOperands[it.index()]);
@@ -638,6 +726,24 @@ LogicalResult SwitchOp::verify() {
                          << ") should match number of "
                             "case destinations ("
                          << caseDestinations.size() << ")";
+
+  // A repeated case value has no single destination, and LLVM IR rejects it.
+  if (caseValues) {
+    llvm::SmallDenseMap<APInt, unsigned> firstCase;
+    for (auto [index, value] :
+         llvm::enumerate(caseValues->getValues<APInt>())) {
+      auto [it, inserted] = firstCase.try_emplace(value, index);
+      if (inserted)
+        continue;
+      std::string asSigned = llvm::toString(value, 10, /*Signed=*/true);
+      std::string asUnsigned = llvm::toString(value, 10, /*Signed=*/false);
+      InFlightDiagnostic diag = emitOpError() << "case value " << asSigned;
+      if (asSigned != asUnsigned)
+        diag << " (unsigned " << asUnsigned << ")";
+      return diag << " is repeated (cases " << it->second << " and " << index
+                  << ")";
+    }
+  }
   return success();
 }
 
@@ -713,6 +819,66 @@ dropSwitchCasesThatMatchDefault(SwitchOp op, PatternRewriter &rewriter) {
   rewriter.replaceOpWithNewOp<SwitchOp>(
       op, op.getFlag(), op.getDefaultDestination(), op.getDefaultOperands(),
       newCaseValues, newCaseDestinations, newCaseOperands);
+  return success();
+}
+
+/// Drop cases whose destination block contains only ub.unreachable. If the
+/// default destination is unreachable, the last remaining case becomes the new
+/// default destination, or the switch is replaced by ub.unreachable if no case
+/// remains.
+/// switch %flag : i32, [
+///   default: ^bb1,
+///   42: ^bb2,
+///   43: ^bb3
+/// ]
+/// ^bb3:
+///   ub.unreachable
+/// -> switch %flag : i32, [
+///   default: ^bb1,
+///   42: ^bb2
+/// ]
+static LogicalResult dropUnreachableSwitchCases(SwitchOp op,
+                                                PatternRewriter &rewriter) {
+  std::optional<DenseIntElementsAttr> caseValues = op.getCaseValues();
+  if (!caseValues)
+    return failure();
+
+  SmallVector<APInt> newCaseValues;
+  SmallVector<Block *> newCaseDestinations;
+  SmallVector<ValueRange> newCaseOperands;
+  auto caseDests = op.getCaseDestinations();
+  for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
+    if (isUnreachableBlock(caseDests[it.index()]))
+      continue;
+    newCaseValues.push_back(it.value());
+    newCaseDestinations.push_back(caseDests[it.index()]);
+    newCaseOperands.push_back(op.getCaseOperands(it.index()));
+  }
+
+  Block *defaultDest = op.getDefaultDestination();
+  ValueRange defaultOperands = op.getDefaultOperands();
+  if (isUnreachableBlock(defaultDest)) {
+    // Every destination is unreachable, so the switch itself is unreachable.
+    if (newCaseDestinations.empty()) {
+      rewriter.replaceOpWithNewOp<ub::UnreachableOp>(op);
+      return success();
+    }
+    // Any value not matching a remaining case is undefined behavior, so the
+    // last remaining case can serve as the default destination.
+    defaultDest = newCaseDestinations.pop_back_val();
+    defaultOperands = newCaseOperands.pop_back_val();
+    newCaseValues.pop_back();
+  } else if (newCaseDestinations.size() == caseDests.size()) {
+    return failure();
+  }
+
+  if (newCaseDestinations.empty()) {
+    rewriter.replaceOpWithNewOp<BranchOp>(op, defaultDest, defaultOperands);
+    return success();
+  }
+  rewriter.replaceOpWithNewOp<SwitchOp>(op, op.getFlag(), defaultDest,
+                                        defaultOperands, newCaseValues,
+                                        newCaseDestinations, newCaseOperands);
   return success();
 }
 
@@ -944,10 +1110,12 @@ void SwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
   results.add(&simplifySwitchWithOnlyDefault)
       .add(&dropSwitchCasesThatMatchDefault)
+      .add(&dropUnreachableSwitchCases)
       .add(&simplifyConstSwitchValue)
       .add(&simplifyPassThroughSwitch)
       .add(&simplifySwitchFromSwitchOnSameCondition)
-      .add(&simplifySwitchFromDefaultSwitchOnSameCondition);
+      .add(&simplifySwitchFromDefaultSwitchOnSameCondition)
+      .add<SimplifyUniformBlockArguments>(context);
 }
 
 //===----------------------------------------------------------------------===//

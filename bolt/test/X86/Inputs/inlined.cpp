@@ -18,6 +18,6 @@ int main(int argc, char *argv[]) {
     ans += x - y;
   }
   // padding to make sure question() is inlineable
-  asm("nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;");
+  __asm("nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;nop;");
   return ans;
 }

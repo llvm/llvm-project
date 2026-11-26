@@ -75,7 +75,7 @@ start:
 
 next0:
 ; CHECK-LABEL: next0:
-; CHECK-NOT: llvm.lifetime.end
+; CHECK: llvm.lifetime.end
   call void @llvm.lifetime.end.p0(i64 40, ptr nonnull %a)
   br label %exit1
 

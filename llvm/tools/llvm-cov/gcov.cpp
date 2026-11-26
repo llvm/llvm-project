@@ -12,17 +12,42 @@
 
 #include "llvm/ProfileData/GCOV.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/StringSaver.h"
+#include "llvm/Support/WithColor.h"
 #include <system_error>
 using namespace llvm;
 
+namespace {
+enum ID {
+  OPT_INVALID = 0, // This is not an option ID.
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "GcovOpts.inc"
+#undef OPTION
+};
+
+using namespace llvm::opt;
+#define OPTTABLE_CODE
+#include "GcovOpts.inc"
+
+class GcovOptTable : public opt::OptTable {
+public:
+  GcovOptTable() : OptTable(optionTables()) {
+    setGroupedShortOptions(true);
+    setDashDashParsing(true);
+  }
+};
+} // namespace
+
 static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
-                           const std::string &InputGCNO,
-                           const std::string &InputGCDA, bool DumpGCOV,
-                           const GCOV::Options &Options) {
+                           StringRef InputGCNO, StringRef InputGCDA,
+                           bool DumpGCOV, const GCOV::Options &Options) {
   SmallString<128> CoverageFileStem(ObjectDir);
   if (CoverageFileStem.empty()) {
     // If no directory was specified with -o, look next to the source file.
@@ -35,10 +60,10 @@ static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
     // A file was given. Ignore the source file and look next to this file.
     sys::path::replace_extension(CoverageFileStem, "");
 
-  std::string GCNO =
-      InputGCNO.empty() ? std::string(CoverageFileStem) + ".gcno" : InputGCNO;
-  std::string GCDA =
-      InputGCDA.empty() ? std::string(CoverageFileStem) + ".gcda" : InputGCDA;
+  std::string GCNO = InputGCNO.empty() ? std::string(CoverageFileStem) + ".gcno"
+                                       : InputGCNO.str();
+  std::string GCDA = InputGCDA.empty() ? std::string(CoverageFileStem) + ".gcda"
+                                       : InputGCDA.str();
   GCOVFile GF;
 
   // Open .gcda and .gcda without requiring a NUL terminator. The concurrent
@@ -81,97 +106,44 @@ static void reportCoverage(StringRef SourceFile, StringRef ObjectDir,
 }
 
 int gcovMain(int argc, const char *argv[]) {
-  cl::list<std::string> SourceFiles(cl::Positional, cl::OneOrMore,
-                                    cl::desc("SOURCEFILE"));
+  StringRef ToolName = sys::path::filename(argv[0]);
+  auto Error = [&](const Twine &Msg) {
+    WithColor::error(errs(), ToolName) << Msg << '\n';
+    exit(1);
+  };
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  GcovOptTable Tbl;
+  opt::InputArgList Args =
+      Tbl.parseArgs(argc, const_cast<char **>(argv), OPT_UNKNOWN, Saver, Error);
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(outs(), (ToolName + " [options] SOURCEFILE").str().c_str(),
+                  "LLVM code coverage tool");
+    return 0;
+  }
+  if (Args.hasArg(OPT_version)) {
+    cl::PrintVersionMessage();
+    return 0;
+  }
+  std::vector<std::string> SourceFiles = Args.getAllArgValues(OPT_INPUT);
+  if (SourceFiles.empty())
+    Error("no source file specified");
 
-  cl::opt<bool> AllBlocks("a", cl::Grouping, cl::init(false),
-                          cl::desc("Display all basic blocks"));
-  cl::alias AllBlocksA("all-blocks", cl::aliasopt(AllBlocks));
+  GCOV::Options Options(
+      Args.hasArg(OPT_all_blocks), Args.hasArg(OPT_branch_probabilities),
+      Args.hasArg(OPT_branch_counts), Args.hasArg(OPT_function_summaries),
+      Args.hasArg(OPT_preserve_paths), Args.hasArg(OPT_unconditional_branches),
+      Args.hasArg(OPT_intermediate_format), Args.hasArg(OPT_long_file_names),
+      Args.hasArg(OPT_demangled_names), Args.hasArg(OPT_no_output),
+      Args.hasArg(OPT_relative_only), Args.hasArg(OPT_print_stdout),
+      Args.hasArg(OPT_hash_filenames),
+      Args.getLastArgValue(OPT_source_prefix_EQ).str());
 
-  cl::opt<bool> BranchProb("b", cl::Grouping, cl::init(false),
-                           cl::desc("Display branch probabilities"));
-  cl::alias BranchProbA("branch-probabilities", cl::aliasopt(BranchProb));
-
-  cl::opt<bool> BranchCount("c", cl::Grouping, cl::init(false),
-                            cl::desc("Display branch counts instead "
-                                     "of percentages (requires -b)"));
-  cl::alias BranchCountA("branch-counts", cl::aliasopt(BranchCount));
-
-  cl::opt<bool> LongNames("l", cl::Grouping, cl::init(false),
-                          cl::desc("Prefix filenames with the main file"));
-  cl::alias LongNamesA("long-file-names", cl::aliasopt(LongNames));
-
-  cl::opt<bool> FuncSummary("f", cl::Grouping, cl::init(false),
-                            cl::desc("Show coverage for each function"));
-  cl::alias FuncSummaryA("function-summaries", cl::aliasopt(FuncSummary));
-
-  // Supported by gcov 4.9~8. gcov 9 (GCC r265587) removed --intermediate-format
-  // and -i was changed to mean --json-format. We consider this format still
-  // useful and support -i.
-  cl::opt<bool> Intermediate(
-      "intermediate-format", cl::init(false),
-      cl::desc("Output .gcov in intermediate text format"));
-  cl::alias IntermediateA("i", cl::desc("Alias for --intermediate-format"),
-                          cl::Grouping, cl::NotHidden,
-                          cl::aliasopt(Intermediate));
-
-  cl::opt<bool> Demangle("demangled-names", cl::init(false),
-                         cl::desc("Demangle function names"));
-  cl::alias DemangleA("m", cl::desc("Alias for --demangled-names"),
-                      cl::Grouping, cl::NotHidden, cl::aliasopt(Demangle));
-
-  cl::opt<bool> NoOutput("n", cl::Grouping, cl::init(false),
-                         cl::desc("Do not output any .gcov files"));
-  cl::alias NoOutputA("no-output", cl::aliasopt(NoOutput));
-
-  cl::opt<std::string> ObjectDir(
-      "o", cl::value_desc("DIR|FILE"), cl::init(""),
-      cl::desc("Find objects in DIR or based on FILE's path"));
-  cl::alias ObjectDirA("object-directory", cl::aliasopt(ObjectDir));
-  cl::alias ObjectDirB("object-file", cl::aliasopt(ObjectDir));
-
-  cl::opt<bool> PreservePaths("p", cl::Grouping, cl::init(false),
-                              cl::desc("Preserve path components"));
-  cl::alias PreservePathsA("preserve-paths", cl::aliasopt(PreservePaths));
-
-  cl::opt<bool> RelativeOnly(
-      "r", cl::Grouping,
-      cl::desc("Only dump files with relative paths or absolute paths with the "
-               "prefix specified by -s"));
-  cl::alias RelativeOnlyA("relative-only", cl::aliasopt(RelativeOnly));
-  cl::opt<std::string> SourcePrefix("s", cl::desc("Source prefix to elide"));
-  cl::alias SourcePrefixA("source-prefix", cl::aliasopt(SourcePrefix));
-
-  cl::opt<bool> UseStdout("t", cl::Grouping, cl::init(false),
-                          cl::desc("Print to stdout"));
-  cl::alias UseStdoutA("stdout", cl::aliasopt(UseStdout));
-
-  cl::opt<bool> UncondBranch("u", cl::Grouping, cl::init(false),
-                             cl::desc("Display unconditional branch info "
-                                      "(requires -b)"));
-  cl::alias UncondBranchA("unconditional-branches", cl::aliasopt(UncondBranch));
-
-  cl::opt<bool> HashFilenames("x", cl::Grouping, cl::init(false),
-                              cl::desc("Hash long pathnames"));
-  cl::alias HashFilenamesA("hash-filenames", cl::aliasopt(HashFilenames));
-
-
-  cl::OptionCategory DebugCat("Internal and debugging options");
-  cl::opt<bool> DumpGCOV("dump", cl::init(false), cl::cat(DebugCat),
-                         cl::desc("Dump the gcov file to stderr"));
-  cl::opt<std::string> InputGCNO("gcno", cl::cat(DebugCat), cl::init(""),
-                                 cl::desc("Override inferred gcno file"));
-  cl::opt<std::string> InputGCDA("gcda", cl::cat(DebugCat), cl::init(""),
-                                 cl::desc("Override inferred gcda file"));
-
-  cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
-
-  GCOV::Options Options(AllBlocks, BranchProb, BranchCount, FuncSummary,
-                        PreservePaths, UncondBranch, Intermediate, LongNames,
-                        Demangle, NoOutput, RelativeOnly, UseStdout,
-                        HashFilenames, SourcePrefix);
-
-  for (const auto &SourceFile : SourceFiles)
+  StringRef ObjectDir = Args.getLastArgValue(OPT_object_directory_EQ);
+  StringRef InputGCNO = Args.getLastArgValue(OPT_gcno_EQ);
+  StringRef InputGCDA = Args.getLastArgValue(OPT_gcda_EQ);
+  bool DumpGCOV = Args.hasArg(OPT_dump_gcov);
+  for (const std::string &SourceFile : SourceFiles)
     reportCoverage(SourceFile, ObjectDir, InputGCNO, InputGCDA, DumpGCOV,
                    Options);
   return 0;

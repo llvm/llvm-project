@@ -17,7 +17,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // for internal use in the CPU_ISSET macro
-int __sched_getcpuisset(int cpu, const size_t cpuset_size, cpu_set_t *set);
+int __sched_getcpuisset(int cpu, const size_t cpuset_size,
+                        const cpu_set_t *set);
 
 } // namespace LIBC_NAMESPACE_DECL
 

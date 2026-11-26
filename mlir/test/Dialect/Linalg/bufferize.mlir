@@ -226,3 +226,19 @@ func.func @bufferize_pack(%arg0: tensor<200x127x256xf32>, %arg1: tensor<256x64x2
   return %0 : tensor<256x64x200x2xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @bufferize_unpack(
+// CHECK-SAME:   %[[SRC:.*]]: tensor<256x64x200x2xf32>, %[[DST:.*]]: tensor<200x128x256xf32>) -> tensor<200x128x256xf32> {
+// CHECK-DAG:     %[[SRC_BUF:.*]] = bufferization.to_buffer %[[SRC]] : tensor<256x64x200x2xf32> to memref<256x64x200x2xf32>
+// CHECK-DAG:     %[[DST_BUF:.*]] = memref.alloc() {{.*}} : memref<200x128x256xf32>
+// CHECK-NOT:     memref.copy
+// CHECK:         linalg.unpack %[[SRC_BUF]] outer_dims_perm = [2, 1, 0] inner_dims_pos = [1] inner_tiles = [2] into %[[DST_BUF]] : memref<256x64x200x2xf32> -> memref<200x128x256xf32>
+// CHECK:         %[[RESULT:.*]] = bufferization.to_tensor %[[DST_BUF]] : memref<200x128x256xf32> to tensor<200x128x256xf32>
+// CHECK:         return %[[RESULT]] : tensor<200x128x256xf32>
+func.func @bufferize_unpack(%arg0: tensor<256x64x200x2xf32>, %arg1: tensor<200x128x256xf32>) -> tensor<200x128x256xf32> {
+  %0 = linalg.unpack %arg0 outer_dims_perm = [2, 1, 0]
+      inner_dims_pos = [1] inner_tiles = [2] into %arg1
+      : tensor<256x64x200x2xf32> -> tensor<200x128x256xf32>
+  return %0 : tensor<200x128x256xf32>
+}

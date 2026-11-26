@@ -14,10 +14,10 @@
 namespace llvm {
 
 class FixupStatepointCallerSavedPass
-    : public PassInfoMixin<FixupStatepointCallerSavedPass> {
+    : public OptionalPassInfoMixin<FixupStatepointCallerSavedPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
 };
 
 } // namespace llvm

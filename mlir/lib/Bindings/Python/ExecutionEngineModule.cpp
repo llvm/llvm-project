@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <vector>
+
 #include "mlir-c/ExecutionEngine.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
@@ -83,12 +85,21 @@ NB_MODULE(_mlirExecutionEngine, m) {
           [](PyExecutionEngine &self, PyModule &module, int optLevel,
              const std::vector<std::string> &sharedLibPaths,
              bool enableObjectDump, bool enablePIC) {
-            llvm::SmallVector<MlirStringRef, 4> libPaths;
+            std::vector<MlirStringRef> libPaths;
+            libPaths.reserve(sharedLibPaths.size());
             for (const std::string &path : sharedLibPaths)
               libPaths.push_back({path.c_str(), path.length()});
-            MlirExecutionEngine executionEngine = mlirExecutionEngineCreate(
-                module.get(), optLevel, libPaths.size(), libPaths.data(),
-                enableObjectDump, enablePIC);
+
+            // Access any Python objects before releasing the GIL.
+            MlirModule mlirModule = module.get();
+
+            MlirExecutionEngine executionEngine;
+            {
+              nb::gil_scoped_release release;
+              executionEngine = mlirExecutionEngineCreate(
+                  mlirModule, optLevel, libPaths.size(), libPaths.data(),
+                  enableObjectDump, enablePIC);
+            }
             if (mlirExecutionEngineIsNull(executionEngine))
               throw std::runtime_error(
                   "Failure while creating the ExecutionEngine.");

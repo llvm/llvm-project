@@ -84,7 +84,7 @@
 /// 3.	 2	1.5	0.5	1.0	vaddss  %xmm1, %xmm0, %xmm3
 /// 4.	 2	3.5	0.0	0.0	vaddss  %xmm3, %xmm2, %xmm4
 /// 5.	 2	6.5	0.0	0.0	vaddss  %xmm4, %xmm5, %xmm6
-///      2	2.4	0.6	1.6     <total>
+///      12	2.4	0.6	1.6     <total>
 ///
 /// By comparing column [2] with column [1], we get an idea about how many
 /// cycles were spent in the scheduler's queue due to data dependencies.
@@ -123,6 +123,7 @@ class TimelineView : public InstructionView {
   unsigned CurrentCycle;
   unsigned MaxCycle;
   unsigned LastCycle;
+  float ReservationStationScaleFactor;
 
   struct TimelineViewEntry {
     int CycleDispatched; // A negative value is an "invalid cycle".
@@ -164,7 +165,7 @@ class TimelineView : public InstructionView {
 public:
   TimelineView(const llvm::MCSubtargetInfo &sti, llvm::MCInstPrinter &Printer,
                llvm::ArrayRef<llvm::MCInst> S, unsigned Iterations,
-               unsigned Cycles);
+               unsigned Cycles, float ReservationStationScaleFactor);
 
   // Event handlers.
   void onCycleEnd() override { ++CurrentCycle; }

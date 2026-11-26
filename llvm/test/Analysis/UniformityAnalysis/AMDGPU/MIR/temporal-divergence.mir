@@ -1,12 +1,11 @@
-# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgcn-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu6.00-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 
 ---
 # CHECK-LABEL: MachineUniformityInfo for function:  @temporal_diverge
 name:            temporal_diverge
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
@@ -45,9 +44,7 @@ body:             |
 name:            phi_at_exit
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -103,9 +100,7 @@ body:             |
 name:            phi_after_exit
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -161,9 +156,7 @@ body:             |
 name:            temporal_diverge_inloop
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -215,9 +208,7 @@ body:             |
 name:            temporal_uniform_indivloop
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -269,9 +260,7 @@ body:             |
 name:            temporal_diverge_loopuser
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -324,9 +313,7 @@ body:             |
 name:            temporal_diverge_loopuser_nested
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }

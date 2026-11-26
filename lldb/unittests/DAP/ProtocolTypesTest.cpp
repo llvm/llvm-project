@@ -10,6 +10,7 @@
 #include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
@@ -162,6 +163,35 @@ TEST(ProtocolTypesTest, SourceBreakpoint) {
   EXPECT_EQ(source_breakpoint.mode, deserialized_source_breakpoint->mode);
 }
 
+TEST(ProtocolTypesTest, SourceBreakpointOptionalLogMessage) {
+  for (StringRef json :
+       {R"({"line": 0})", R"({"line": 0, "logMessage": ""})"}) {
+    Expected<SourceBreakpoint> source_breakpoint =
+        parse<SourceBreakpoint>(json);
+    ASSERT_THAT_EXPECTED(source_breakpoint, Succeeded());
+    EXPECT_EQ(source_breakpoint->line, 0u);
+    EXPECT_TRUE(source_breakpoint->logMessage.empty());
+  }
+
+  EXPECT_THAT_EXPECTED(
+      parse<SourceBreakpoint>(R"({"line": 0, "logMessage": null})"), Failed());
+}
+
+TEST(ProtocolTypesTest, SourceBreakpointOptionalHitCondition) {
+  for (StringRef json :
+       {R"({"line": 0})", R"({"line": 0, "hitCondition": ""})"}) {
+    Expected<SourceBreakpoint> source_breakpoint =
+        parse<SourceBreakpoint>(json);
+    ASSERT_THAT_EXPECTED(source_breakpoint, Succeeded());
+    EXPECT_EQ(source_breakpoint->line, 0u);
+    EXPECT_TRUE(source_breakpoint->hitCondition.empty());
+  }
+
+  EXPECT_THAT_EXPECTED(
+      parse<SourceBreakpoint>(R"({"line": 0, "hitCondition": null})"),
+      Failed());
+}
+
 TEST(ProtocolTypesTest, FunctionBreakpoint) {
   FunctionBreakpoint function_breakpoint;
   function_breakpoint.name = "myFunction";
@@ -177,6 +207,21 @@ TEST(ProtocolTypesTest, FunctionBreakpoint) {
             deserialized_function_breakpoint->condition);
   EXPECT_EQ(function_breakpoint.hitCondition,
             deserialized_function_breakpoint->hitCondition);
+}
+
+TEST(ProtocolTypesTest, FunctionBreakpointOptionalHitCondition) {
+  for (StringRef json :
+       {R"({"name": "main"})", R"({"name": "main", "hitCondition": ""})"}) {
+    Expected<FunctionBreakpoint> function_breakpoint =
+        parse<FunctionBreakpoint>(json);
+    ASSERT_THAT_EXPECTED(function_breakpoint, Succeeded());
+    EXPECT_EQ(function_breakpoint->name, "main");
+    EXPECT_TRUE(function_breakpoint->hitCondition.empty());
+  }
+
+  EXPECT_THAT_EXPECTED(
+      parse<FunctionBreakpoint>(R"({"name": "main", "hitCondition": null})"),
+      Failed());
 }
 
 TEST(ProtocolTypesTest, DataBreakpoint) {
@@ -198,6 +243,37 @@ TEST(ProtocolTypesTest, DataBreakpoint) {
             deserialized_data_breakpoint_info->condition);
   EXPECT_EQ(data_breakpoint_info.hitCondition,
             deserialized_data_breakpoint_info->hitCondition);
+}
+
+TEST(ProtocolTypesTest, DataBreakpointOptionalHitCondition) {
+  for (StringRef json :
+       {R"({"dataId": "0/4"})", R"({"dataId": "0/4", "hitCondition": ""})"}) {
+    Expected<DataBreakpoint> data_breakpoint = parse<DataBreakpoint>(json);
+    ASSERT_THAT_EXPECTED(data_breakpoint, Succeeded());
+    EXPECT_EQ(data_breakpoint->dataId, "0/4");
+    EXPECT_TRUE(data_breakpoint->hitCondition.empty());
+  }
+
+  EXPECT_THAT_EXPECTED(
+      parse<DataBreakpoint>(R"({"dataId": "0/4", "hitCondition": null})"),
+      Failed());
+}
+
+TEST(ProtocolTypesTest, InstructionBreakpointOptionalHitCondition) {
+  for (StringRef json :
+       {R"({"instructionReference": "0x1000"})",
+        R"({"instructionReference": "0x1000", "hitCondition": ""})"}) {
+    Expected<InstructionBreakpoint> instruction_breakpoint =
+        parse<InstructionBreakpoint>(json);
+    ASSERT_THAT_EXPECTED(instruction_breakpoint, Succeeded());
+    EXPECT_EQ(instruction_breakpoint->instructionReference, "0x1000");
+    EXPECT_TRUE(instruction_breakpoint->hitCondition.empty());
+  }
+
+  EXPECT_THAT_EXPECTED(
+      parse<InstructionBreakpoint>(
+          R"({"instructionReference": "0x1000", "hitCondition": null})"),
+      Failed());
 }
 
 TEST(ProtocolTypesTest, Capabilities) {
@@ -291,7 +367,7 @@ TEST(ProtocolTypesTest, Scope) {
   Scope scope;
   scope.name = "Locals";
   scope.presentationHint = Scope::eScopePresentationHintLocals;
-  scope.variablesReference = 1;
+  scope.variablesReference = var_ref_t(1);
   scope.namedVariables = 2;
   scope.indexedVariables = std::nullopt;
   scope.expensive = false;
@@ -706,7 +782,7 @@ TEST(ProtocolTypesTest, SetExceptionBreakpointsArguments) {
                                   /*filterOptions=*/testing::IsEmpty())));
   EXPECT_THAT_EXPECTED(
       parse<SetExceptionBreakpointsArguments>(R"({"filters":["abc"]})"),
-      HasValue(testing::FieldsAre(/*filters=*/std::vector<std::string>{"abc"},
+      HasValue(testing::FieldsAre(/*filters=*/std::vector<String>{"abc"},
                                   /*filterOptions=*/testing::IsEmpty())));
   EXPECT_THAT_EXPECTED(
       parse<SetExceptionBreakpointsArguments>(
@@ -758,6 +834,17 @@ TEST(ProtocolTypesTest, StepInTarget) {
   EXPECT_EQ(target.column, deserialized_target->column);
   EXPECT_EQ(target.endLine, deserialized_target->endLine);
   EXPECT_EQ(target.endColumn, deserialized_target->endColumn);
+
+  target.endLine = LLDB_INVALID_LINE_NUMBER;
+  target.endColumn = LLDB_INVALID_COLUMN_NUMBER;
+
+  EXPECT_EQ(R"({
+  "column": 320,
+  "id": 230,
+  "label": "the_function_name",
+  "line": 2
+})",
+            PrettyPrint(target));
 }
 
 TEST(ProtocolTypesTest, ReadMemoryArguments) {
@@ -909,7 +996,7 @@ TEST(ProtocolTypesTest, VariablePresentationHint) {
 TEST(ProtocolTypesTest, Variable) {
   Variable var;
   var.name = "var1";
-  var.variablesReference = 42;
+  var.variablesReference = var_ref_t(42);
   var.value = "value";
   var.type = "type";
 
@@ -954,7 +1041,7 @@ TEST(ProtocolTypesTest, VariablesArguments) {
     }
   })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(expected->variablesReference, 42u);
+  EXPECT_EQ(expected->variablesReference.AsUInt32(), 42U);
   EXPECT_EQ(expected->filter, VariablesArguments::eVariablesFilterIndexed);
   EXPECT_EQ(expected->start, 10u);
   EXPECT_EQ(expected->count, 5u);
@@ -973,12 +1060,12 @@ TEST(ProtocolTypesTest, VariablesArguments) {
 TEST(ProtocolTypesTest, VariablesResponseBody) {
   Variable var1;
   var1.name = "var1";
-  var1.variablesReference = 42;
+  var1.variablesReference = var_ref_t(42);
   var1.value = "<var1-value>";
 
   Variable var2;
   var2.name = "var2";
-  var2.variablesReference = 3;
+  var2.variablesReference = var_ref_t(3);
   var2.value = "<var2-value>";
 
   VariablesResponseBody response{{var1, var2}};
@@ -1113,7 +1200,7 @@ TEST(ProtocolTypesTest, DataBreakpointInfoArguments) {
   })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
   EXPECT_EQ(expected->name, "data");
-  EXPECT_EQ(expected->variablesReference, 8);
+  EXPECT_EQ(expected->variablesReference->AsUInt32(), 8U);
   EXPECT_EQ(expected->frameId, 9u);
   EXPECT_EQ(expected->bytes, 10);
   EXPECT_EQ(expected->asAddress, false);
@@ -1239,6 +1326,23 @@ TEST(ProtocolTypesTest, StackFrame) {
   ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
   EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
 
+  frame.languageSpecificData = json::Object{{"Objective-C runtime version", 2}};
+  expected_frame = parse(R"({
+    "id": 1,
+    "name": "test",
+    "source": {
+      "name": "test.cpp",
+      "sourceReference": 23
+    },
+    "line": 10,
+    "column": 1,
+    "$__lldb_languageSpecificData": {"Objective-C runtime version": 2},
+    "presentationHint": "normal"
+  })");
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
+  frame.languageSpecificData.reset();
+
   frame.id = 2;
   frame.canRestart = true;
   frame.source = std::nullopt;
@@ -1253,6 +1357,26 @@ TEST(ProtocolTypesTest, StackFrame) {
     "canRestart": true,
     "instructionPointerReference": "0x3039",
     "presentationHint": "subtle"
+  })");
+
+  ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());
+  EXPECT_EQ(PrettyPrint(*expected_frame), PrettyPrint(frame));
+
+  frame.id = 3;
+  frame.canRestart = false;
+  frame.instructionPointerReference = LLDB_INVALID_ADDRESS;
+  frame.presentationHint = StackFrame::ePresentationHintNone;
+  frame.moduleId = "2E6A5E9A-1D0C-3B2C-9C3E-8A6F0B1D2E3F";
+  frame.compileUnitId = 7;
+  frame.isOptimized = true;
+  expected_frame = parse(R"({
+    "id": 3,
+    "name": "foo",
+    "line": 0,
+    "column": 0,
+    "moduleId": "2E6A5E9A-1D0C-3B2C-9C3E-8A6F0B1D2E3F",
+    "$__lldb_compileUnitId": 7,
+    "$__lldb_isOptimized": true
   })");
 
   ASSERT_THAT_EXPECTED(expected_frame, llvm::Succeeded());

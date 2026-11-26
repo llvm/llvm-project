@@ -37,12 +37,27 @@ class HexagonHazardRecognizer : public ScheduleHazardRecognizer {
   // resources available (even if the .new version does). To help, the schedule
   // attempts to schedule the .new as soon as possible in the packet.
   SUnit *PrefVectorStoreNew = nullptr;
+  // The activation and weight instructions of the HMX pair being scheduled,
+  // used to prefer the second half once the first half is scheduled.
+  SUnit *Weight = nullptr;
+  SUnit *Activate = nullptr;
+  // The expected second half of the activation/weight pair after the first
+  // half has been emitted, or null if it is unknown.
+  SUnit *HMXPartner = nullptr;
   // The set of registers defined by instructions in the current packet.
   SmallSet<unsigned, 8> RegDefs;
 
   // Return true if the instruction is a store that is converted to a new value
   // store because its value is defined in the same packet.
   bool isNewStore(MachineInstr &MI);
+
+  // Return the HMX instruction that pairs with the activation/weight
+  // instruction \p SU, or null if there is no such successor.
+  SUnit *findHMXPartner(SUnit *SU) const;
+
+  // Return true if instructions other than the pending HMX partner must be
+  // delayed so that the partner is scheduled next to the first half.
+  bool mustWaitForHMXPartner(SUnit *SU) const;
 
 public:
   HexagonHazardRecognizer(const InstrItineraryData *II,
@@ -70,7 +85,7 @@ public:
   /// This callback may be invoked if getHazardType returns NoHazard. If, even
   /// though there is no hazard, it would be better to schedule another
   /// available instruction, this callback should return true.
-  bool ShouldPreferAnother(SUnit *) override;
+  bool ShouldPreferAnother(SUnit *) const override;
 
   /// This callback is invoked whenever the next top-down instruction to be
   /// scheduled cannot issue in the current cycle, either because of latency

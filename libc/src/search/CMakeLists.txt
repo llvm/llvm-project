@@ -24,7 +24,7 @@ add_entrypoint_object(
     libc.src.__support.HashTable.table
     libc.src.__support.HashTable.randomness
     libc.src.errno.errno
-    libc.include.search
+    libc.hdr.types.struct_hsearch_data
 )
 
 add_entrypoint_object(
@@ -51,6 +51,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.ACTION
     libc.hdr.types.ENTRY
+    libc.hdr.types.struct_hsearch_data
     libc.src.__support.HashTable.table
     libc.src.errno.errno
 )
@@ -76,7 +77,7 @@ add_entrypoint_object(
   DEPENDS
     libc.src.errno.errno
     libc.src.__support.HashTable.table
-    libc.include.search
+    libc.hdr.types.struct_hsearch_data
 )
 
 add_entrypoint_object(
@@ -124,4 +125,75 @@ add_entrypoint_object(
     libc.src.__support.CPP.cstddef
     libc.src.__support.memory_size
     libc.src.string.memory_utils.inline_memcpy
+)
+
+add_entrypoint_object(
+  tdelete
+  SRCS
+    tdelete.cpp
+  HDRS
+    tdelete.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.src.__support.weak_avl
+)
+
+add_entrypoint_object(
+  tfind
+  SRCS
+    tfind.cpp
+  HDRS
+    tfind.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.src.__support.weak_avl
+)
+
+add_entrypoint_object(
+  tsearch
+  SRCS
+    tsearch.cpp
+  HDRS
+    tsearch.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.src.__support.weak_avl
+)
+
+add_entrypoint_object(
+  twalk
+  SRCS
+    twalk.cpp
+  HDRS
+    twalk.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.hdr.types.VISIT
+    libc.src.__support.weak_avl
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  twalk_r
+  SRCS
+    twalk_r.cpp
+  HDRS
+    twalk_r.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.hdr.types.VISIT
+    libc.src.__support.weak_avl
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  tdestroy
+  SRCS
+    tdestroy.cpp
+  HDRS
+    tdestroy.h
+  DEPENDS
+    libc.hdr.types.posix_tnode
+    libc.src.__support.weak_avl
+    libc.src.__support.macros.null_check
 )

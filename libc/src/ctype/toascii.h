@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC_CTYPE_TOASCII_H
 
 #include "src/__support/macros/config.h"
+#undef toascii
 
 namespace LIBC_NAMESPACE_DECL {
 

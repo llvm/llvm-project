@@ -10,6 +10,7 @@
 #include <string>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 class _LIBCPP_HIDDEN __future_error_category : public __do_message {
 public:
@@ -49,7 +50,8 @@ const error_category& future_category() noexcept {
     constexpr explicit AvoidDestroyingFutureCategory() : future_error_category() {}
     ~AvoidDestroyingFutureCategory() {}
   };
-  constinit static AvoidDestroyingFutureCategory helper;
+  // Use no-destroy since this removes the function local static guard variable.
+  _LIBCPP_NO_DESTROY constinit static AvoidDestroyingFutureCategory helper;
   return helper.future_error_category;
 }
 
@@ -194,4 +196,5 @@ shared_future<void>& shared_future<void>::operator=(const shared_future& __rhs) 
   return *this;
 }
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

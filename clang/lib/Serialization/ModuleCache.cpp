@@ -8,14 +8,50 @@
 
 #include "clang/Serialization/ModuleCache.h"
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
+#include <chrono>
+
 using namespace clang;
+
+const ModuleCacheDirectory *ModuleCache::getDirectoryPtr(StringRef Path) {
+  auto [ByNameIt, ByNameInserted] = ByPath.insert({Path, nullptr});
+  if (!ByNameIt->second) {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    // If we cannot get status of the module cache directory, try if trying to
+    // create it helps.
+    llvm::sys::fs::file_status Status;
+    if (std::error_code EC = llvm::sys::fs::status(Path, Status)) {
+      // Unless the status failed because the directory does not exist yet.
+      if (EC != std::errc::no_such_file_or_directory)
+        return nullptr;
+      // If we're unable to create the directory.
+      if (llvm::sys::fs::create_directories(Path))
+        return nullptr;
+      // If we're unable to stat the newly created directory.
+      if (llvm::sys::fs::status(Path, Status))
+        return nullptr;
+    }
+
+    llvm::sys::fs::UniqueID UID = Status.getUniqueID();
+    auto [ByUIDIt, ByUIDInserted] = ByUID.insert({UID, nullptr});
+    if (!ByUIDIt->second)
+      ByUIDIt->second = std::make_unique<ModuleCacheDirectory>();
+    ByNameIt->second = ByUIDIt->second.get();
+  }
+  return ByNameIt->second;
+}
 
 /// Write a new timestamp file with the given path.
 static void writeTimestampFile(StringRef TimestampFile) {
@@ -24,14 +60,18 @@ static void writeTimestampFile(StringRef TimestampFile) {
 }
 
 void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
-                           time_t PruneAfter) {
+                           time_t PruneAfter, bool PruneTopLevel,
+                           llvm::function_ref<void(StringRef)> OnPrune) {
   if (PruneInterval <= 0 || PruneAfter <= 0)
     return;
 
   // This is a compiler-internal input/output, let's bypass the sandbox.
   auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
 
-  llvm::SmallString<128> TimestampFile(Path);
+  llvm::SmallString<256> RootPath(Path);
+  (void)llvm::sys::fs::make_absolute(RootPath);
+
+  llvm::SmallString<128> TimestampFile(RootPath);
   llvm::sys::path::append(TimestampFile, "modules.timestamp");
 
   // Try to stat() the timestamp file.
@@ -56,65 +96,199 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   // notice at the same time that the timestamp is out-of-date.
   writeTimestampFile(TimestampFile);
 
+  auto NotifyPruned = [&](StringRef RemovedPath) {
+    if (OnPrune)
+      OnPrune(RemovedPath);
+  };
+
   // Walk the entire module cache, looking for unused module files and module
   // indices.
   std::error_code EC;
-  for (llvm::sys::fs::directory_iterator Dir(Path, EC), DirEnd;
+  auto TryPruneFile = [&](StringRef FilePath) {
+    // We only care about module and global module index files.
+    StringRef Filename = llvm::sys::path::filename(FilePath);
+    StringRef Extension = llvm::sys::path::extension(FilePath);
+    if (Extension != ".pcm" && Extension != ".timestamp" &&
+        Filename != "modules.idx")
+      return;
+
+    // Don't prune the pruning timestamp file.
+    if (Filename == "modules.timestamp")
+      return;
+
+    // Look at this file. If we can't stat it, there's nothing interesting
+    // there.
+    if (llvm::sys::fs::status(FilePath, StatBuf))
+      return;
+
+    // If the file has been used recently enough, leave it there.
+    time_t FileAccessTime = llvm::sys::toTimeT(StatBuf.getLastAccessedTime());
+    if (CurrentTime - FileAccessTime <= PruneAfter)
+      return;
+
+    // Remove the file.
+    if (!llvm::sys::fs::remove(FilePath))
+      NotifyPruned(FilePath);
+
+    // Remove the timestamp file created by implicit module builds.
+    std::string TimestampFilename = FilePath.str() + ".timestamp";
+    if (!llvm::sys::fs::remove(TimestampFilename))
+      NotifyPruned(TimestampFilename);
+  };
+
+  for (llvm::sys::fs::directory_iterator Dir(RootPath, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
-    // If we don't have a directory, there's nothing to look into.
-    if (!llvm::sys::fs::is_directory(Dir->path()))
+    // If we don't have a directory, try to prune it as a file in the root.
+    if (!llvm::sys::fs::is_directory(Dir->path())) {
+      if (PruneTopLevel)
+        TryPruneFile(Dir->path());
       continue;
+    }
 
     // Walk all the files within this directory.
     for (llvm::sys::fs::directory_iterator File(Dir->path(), EC), FileEnd;
-         File != FileEnd && !EC; File.increment(EC)) {
-      // We only care about module and global module index files.
-      StringRef Extension = llvm::sys::path::extension(File->path());
-      if (Extension != ".pcm" && Extension != ".timestamp" &&
-          llvm::sys::path::filename(File->path()) != "modules.idx")
-        continue;
-
-      // Look at this file. If we can't stat it, there's nothing interesting
-      // there.
-      if (llvm::sys::fs::status(File->path(), StatBuf))
-        continue;
-
-      // If the file has been used recently enough, leave it there.
-      time_t FileAccessTime = llvm::sys::toTimeT(StatBuf.getLastAccessedTime());
-      if (CurrentTime - FileAccessTime <= PruneAfter)
-        continue;
-
-      // Remove the file.
-      llvm::sys::fs::remove(File->path());
-
-      // Remove the timestamp file.
-      std::string TimpestampFilename = File->path() + ".timestamp";
-      llvm::sys::fs::remove(TimpestampFilename);
-    }
+         File != FileEnd && !EC; File.increment(EC))
+      TryPruneFile(File->path());
 
     // If we removed all the files in the directory, remove the directory
     // itself.
     if (llvm::sys::fs::directory_iterator(Dir->path(), EC) ==
             llvm::sys::fs::directory_iterator() &&
-        !EC)
-      llvm::sys::fs::remove(Dir->path());
+        !EC) {
+      if (!llvm::sys::fs::remove(Dir->path()))
+        NotifyPruned(Dir->path());
+    }
   }
 }
 
+llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer, off_t &Size,
+                 time_t &ModTime, bool ReadBack) {
+  StringRef Extension = llvm::sys::path::extension(Path);
+  SmallString<128> ModelPath = StringRef(Path).drop_back(Extension.size());
+  ModelPath += "-%%%%%%%%";
+  ModelPath += Extension;
+  ModelPath += ".tmp";
+
+  // The temporary file is removed on discard() and also when crashing, so that
+  // failing to produce the PCM doesn't leave it behind.
+  llvm::ErrorOr<llvm::sys::fs::TempFile> Temp =
+      llvm::sys::fs::TempFile::createWithErrorCode(ModelPath);
+  if (!Temp) {
+    if (Temp.getError() != std::errc::no_such_file_or_directory)
+      return Temp.getError();
+
+    StringRef Dir = llvm::sys::path::parent_path(Path);
+    if (std::error_code InnerEC = llvm::sys::fs::create_directories(Dir))
+      return InnerEC;
+
+    Temp = llvm::sys::fs::TempFile::createWithErrorCode(ModelPath);
+    if (!Temp)
+      return Temp.getError();
+  }
+
+  llvm::sys::fs::file_status Status;
+  std::unique_ptr<llvm::MemoryBuffer> Written;
+  auto WriteContentsAndReadBack = [&]() -> std::error_code {
+    // The file descriptor is owned (and closed) by the temporary file.
+    llvm::raw_fd_ostream OS(Temp->FD, /*shouldClose=*/false);
+    OS << Buffer.getBuffer();
+    // Make sure all contents reach the file before querying its status.
+    OS.flush();
+    if (std::error_code EC = OS.error()) {
+      // Prevent the destructor from reporting a fatal error.
+      OS.clear_error();
+      return EC;
+    }
+    // Using the status from an open file descriptor ensures this is not racy.
+    if (std::error_code EC = llvm::sys::fs::status(Temp->FD, Status))
+      return EC;
+    if (ReadBack) {
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
+          llvm::MemoryBuffer::getOpenFile(
+              llvm::sys::fs::convertFDToNativeFile(Temp->FD), Path,
+              Status.getSize(), /*RequiresNullTerminator=*/false);
+      if (!Buf)
+        return Buf.getError();
+      Written = std::move(*Buf);
+    }
+    return {};
+  };
+
+  if (std::error_code EC = WriteContentsAndReadBack()) {
+    llvm::consumeError(Temp->discard());
+    return EC;
+  }
+
+  // Rename to the final path and close. This preserves both size and
+  // modification time. On failure, the temporary file is removed.
+  if (std::error_code EC = Temp->keepWithErrorCode(Path))
+    return EC;
+
+  Size = Status.getSize();
+  ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+
+  return std::move(Written);
+}
+
+#ifndef _WIN32
+/// The access time of a module file is only refreshed explicitly when it is
+/// older than this interval so we avoid frequent yet unnecessary updates.
+static constexpr std::chrono::seconds AccessTimeRefreshInterval(60);
+#endif
+
+/// Record that the module file open as \p FD has just been used by setting its
+/// access time to now, if it is older than AccessTimeRefreshInterval. Module
+/// cache pruning goes by access time, and file systems don't reliably update it
+/// when a file is read (e.g., Linux relatime).
+static void
+refreshAccessTime([[maybe_unused]] llvm::sys::fs::file_t FD,
+                  [[maybe_unused]] const llvm::sys::fs::file_status &Status) {
+// FIXME: Support Windows. The handle (FD) is opened for reading only, and
+// SetFileTime needs one with FILE_WRITE_ATTRIBUTES access.
+#ifndef _WIN32
+  llvm::sys::TimePoint<> Now = std::chrono::system_clock::now();
+  if (Now - Status.getLastAccessedTime() <= AccessTimeRefreshInterval)
+    return;
+
+  // Keep the modification time: modules importing this one record it.
+  // Go through the descriptor so a module file replaced meanwhile is left
+  // alone.
+  (void)llvm::sys::fs::setLastAccessAndModificationTime(
+      FD.get(), Now, Status.getLastModificationTime());
+#endif
+}
+
+Expected<std::unique_ptr<llvm::MemoryBuffer>>
+clang::readImpl(StringRef FileName, off_t &Size, time_t &ModTime) {
+  Expected<llvm::sys::fs::file_t> FD =
+      llvm::sys::fs::openNativeFileForRead(FileName);
+  if (!FD)
+    return FD.takeError();
+  llvm::scope_exit CloseFD([&FD]() { llvm::sys::fs::closeFile(*FD); });
+  llvm::sys::fs::file_status Status;
+  if (std::error_code EC = llvm::sys::fs::status(*FD, Status))
+    return llvm::errorCodeToError(EC);
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
+      llvm::MemoryBuffer::getOpenFile(*FD, FileName, Status.getSize(),
+                                      /*RequiresNullTerminator=*/false);
+  if (!Buf)
+    return llvm::errorCodeToError(Buf.getError());
+  Size = Status.getSize();
+  ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
+  refreshAccessTime(*FD, Status);
+  return std::move(*Buf);
+}
+
 namespace {
+
+static AtomicLineLogger NoOpLogger;
 class CrossProcessModuleCache : public ModuleCache {
   InMemoryModuleCache InMemory;
 
 public:
-  void prepareForGetLock(StringRef ModuleFilename) override {
-    // This is a compiler-internal input/output, let's bypass the sandbox.
-    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
-
-    // FIXME: Do this in LockFileManager and only if the directory doesn't
-    // exist.
-    StringRef Dir = llvm::sys::path::parent_path(ModuleFilename);
-    llvm::sys::fs::create_directories(Dir);
-  }
+  explicit CrossProcessModuleCache()
+      : ModuleCache(NoOpLogger), InMemory(NoOpLogger) {}
 
   std::unique_ptr<llvm::AdvisoryLock>
   getLock(StringRef ModuleFilename) override {
@@ -160,6 +334,23 @@ public:
   InMemoryModuleCache &getInMemoryModuleCache() override { return InMemory; }
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
+  }
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  write(StringRef Path, std::unique_ptr<llvm::MemoryBuffer> Buffer, off_t &Size,
+        time_t &ModTime) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    return writeImpl(Path, *Buffer, Size, ModTime, /*ReadBack=*/true);
+  }
+
+  Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    // This is a compiler-internal input/output, let's bypass the sandbox.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+    return readImpl(FileName, Size, ModTime);
   }
 };
 } // namespace

@@ -36,37 +36,37 @@ static LabelTestCase g_label_test_cases[] = {
      {},
      {"expected function call label prefix '$__lldb_func' but found "
       "'$__lldb_funcc' instead."}},
-    {"", {}, {"malformed function call label."}},
-    {"foo", {}, {"malformed function call label."}},
-    {"$__lldb_func", {}, {"malformed function call label."}},
-    {"$__lldb_func:", {}, {"malformed function call label."}},
-    {"$__lldb_func:blah", {}, {"malformed function call label."}},
-    {"$__lldb_func:blah:0x0", {}, {"malformed function call label."}},
-    {"$__lldb_func:111:0x0:0x0", {}, {"malformed function call label."}},
+    {"", {}, {"malformed function call label"}},
+    {"foo", {}, {"malformed function call label"}},
+    {"$__lldb_func", {}, {"malformed function call label"}},
+    {"$__lldb_func:", {}, {"malformed function call label"}},
+    {"$__lldb_func:blah", {}, {"malformed function call label"}},
+    {"$__lldb_func:blah:0x0", {}, {"malformed function call label"}},
+    {"$__lldb_func:111:0x0:0x0", {}, {"malformed function call label"}},
     {"$__lldb_func:111:abc:0x0:_Z3foov",
      {},
-     {"failed to parse module ID from 'abc'."}},
+     {"failed to parse module ID from 'abc'"}},
     {"$__lldb_func:111:-1:0x0:_Z3foov",
      {},
-     {"failed to parse module ID from '-1'."}},
+     {"failed to parse module ID from '-1'"}},
     {"$__lldb_func:111:0x0invalid:0x0:_Z3foov",
      {},
-     {"failed to parse module ID from '0x0invalid'."}},
+     {"failed to parse module ID from '0x0invalid'"}},
     {"$__lldb_func:111:0x0 :0x0:_Z3foov",
      {},
-     {"failed to parse module ID from '0x0 '."}},
+     {"failed to parse module ID from '0x0 '"}},
     {"$__lldb_func:blah:0x0:abc:_Z3foov",
      {},
-     {"failed to parse symbol ID from 'abc'."}},
+     {"failed to parse symbol ID from 'abc'"}},
     {"$__lldb_func:blah:0x5:-1:_Z3foov",
      {},
-     {"failed to parse symbol ID from '-1'."}},
+     {"failed to parse symbol ID from '-1'"}},
     {"$__lldb_func:blah:0x5:0x0invalid:_Z3foov",
      {},
-     {"failed to parse symbol ID from '0x0invalid'."}},
+     {"failed to parse symbol ID from '0x0invalid'"}},
     {"$__lldb_func:blah:0x5:0x0 :_Z3foov",
      {},
-     {"failed to parse symbol ID from '0x0 '."}},
+     {"failed to parse symbol ID from '0x0 '"}},
     {"$__lldb_func:blah:0x0:0x0:_Z3foov",
      {
          /*.discriminator=*/"blah",
@@ -133,9 +133,9 @@ TEST(ExpressionTests, ExpressionOptions_Basic) {
   EvaluateExpressionOptions options;
 
   EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
-                       llvm::FailedWithMessage("Option 'foo' does not exist."));
+                       llvm::FailedWithMessage("option 'foo' does not exist"));
   EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
-                       llvm::FailedWithMessage("Option 'bar' does not exist."));
+                       llvm::FailedWithMessage("option 'bar' does not exist"));
 
   EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("foo", true),
                     llvm::Succeeded());
@@ -159,10 +159,10 @@ TEST(ExpressionTests, ExpressionOptions_Basic) {
 
   // Empty option names not allowed.
   EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption(""),
-                       llvm::FailedWithMessage("Option '' does not exist."));
+                       llvm::FailedWithMessage("option '' does not exist"));
   EXPECT_THAT_ERROR(
       options.SetBooleanLanguageOption("", true),
-      llvm::FailedWithMessage("Can't set an option with an empty name."));
+      llvm::FailedWithMessage("can't set an option with an empty name"));
   EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption(""),
-                       llvm::FailedWithMessage("Option '' does not exist."));
+                       llvm::FailedWithMessage("option '' does not exist"));
 }

@@ -24,7 +24,7 @@
 
 #include "usr/include/stdio.h"
 
-// CHECK: Preprocessed source(s) and associated run script(s) are located at:
+// CHECK: PLEASE ATTACH THE FOLLOWING CRASH REPRODUCER FILES TO THE BUG REPORT:
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.m
 // CHECK-NEXT: note: diagnostic msg: {{.*}}.cache
 

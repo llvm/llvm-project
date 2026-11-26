@@ -7,10 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalISelMatchTableExecutorEmitter.h"
-#include "GlobalISelMatchTable.h"
+#include "MatchTable/Matchers.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 
 using namespace llvm;
 using namespace llvm::gi;
+
+static cl::opt<bool>
+    AllowExtendedLLT("gisel-extended-llt",
+                     cl::desc("Generate extended llt names in match tables"),
+                     cl::init(false));
+
+GlobalISelMatchTableExecutorEmitter::GlobalISelMatchTableExecutorEmitter() {
+  LLT::setUseExtended(AllowExtendedLLT);
+}
 
 void GlobalISelMatchTableExecutorEmitter::emitSubtargetFeatureBitsetImpl(
     raw_ostream &OS, ArrayRef<RuleMatcher> Rules) {
@@ -172,12 +183,51 @@ void GlobalISelMatchTableExecutorEmitter::emitMatchTable(
   OS << "\n";
 }
 
+void GlobalISelMatchTableExecutorEmitter::emitLLTForHwModeFn(raw_ostream &OS) {
+  OS << "LLT " << getClassName()
+     << "::getLLTForHwMode(unsigned Index) const {\n";
+  if (LLTByHwModeIDs.empty()) {
+    OS << "  llvm_unreachable(\"Unexpected index\");\n}\n\n";
+    return;
+  }
+
+  // Emit the cases in index order.
+  std::vector<const LLTByHwMode *> Types(LLTByHwModeIDs.size());
+  for (const auto &[Ty, ID] : LLTByHwModeIDs)
+    Types[ID] = &Ty;
+
+  OS << "  switch (Index) {\n"
+     << "  default:\n"
+     << "    llvm_unreachable(\"Unexpected index\");\n";
+  for (const auto &[ID, Ty] : enumerate(Types)) {
+    OS << "  case " << ID << ":\n"
+       << "    switch (HwMode) {\n";
+    if (!Ty->hasDefault())
+      OS << "    default:\n      return LLT();\n";
+    for (const auto &[Mode, LTy] : *Ty) {
+      if (Mode == DefaultMode)
+        OS << "    default:\n";
+      else
+        OS << "    case " << Mode << ":\n";
+      OS << "      return ";
+      if (LTy.get().isValid())
+        LTy.emitCxxConstructorCall(OS);
+      else
+        OS << "LLT()";
+      OS << ";\n";
+    }
+    OS << "    }\n";
+  }
+  OS << "  }\n"
+     << "}\n\n";
+}
+
 void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
     raw_ostream &OS, const MatchTable &Table, ArrayRef<LLTCodeGen> TypeObjects,
     ArrayRef<RuleMatcher> Rules,
     ArrayRef<const Record *> ComplexOperandMatchers,
     ArrayRef<StringRef> CustomOperandRenderers, StringRef IfDefName) {
-  OS << "#ifdef " << IfDefName << "\n";
+  IfDefGuardEmitter If(OS, IfDefName);
   emitTypeObjects(OS, TypeObjects);
   emitSubtargetFeatureBitsetImpl(OS, Rules);
   emitComplexPredicates(OS, ComplexOperandMatchers);
@@ -192,24 +242,24 @@ void GlobalISelMatchTableExecutorEmitter::emitExecutorImpl(
   emitRunCustomAction(OS);
 
   emitMatchTable(OS, Table);
-
-  OS << "#endif // ifdef " << IfDefName << "\n\n";
+  // Must be emitted after the match table since the indices are assigned while
+  // the match table is emitted.
+  emitLLTForHwModeFn(OS);
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitPredicateBitset(
     raw_ostream &OS, StringRef IfDefName) {
   unsigned Size = SubtargetFeatures.size() + HwModes.size();
-  OS << "#ifdef " << IfDefName << "\n"
-     << "const unsigned MAX_SUBTARGET_PREDICATES = " << Size << ";\n"
+  IfDefGuardEmitter IfDef(OS, IfDefName);
+  OS << "const unsigned MAX_SUBTARGET_PREDICATES = " << Size << ";\n"
      << "using PredicateBitset = "
-        "llvm::Bitset<MAX_SUBTARGET_PREDICATES>;\n"
-     << "#endif // ifdef " << IfDefName << "\n\n";
+        "llvm::Bitset<MAX_SUBTARGET_PREDICATES>;\n";
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
     raw_ostream &OS, StringRef IfDefName) {
-  OS << "#ifdef " << IfDefName << "\n"
-     << "  mutable MatcherState State;\n"
+  IfDefGuardEmitter If(OS, IfDefName);
+  OS << "  mutable MatcherState State;\n"
      << "  typedef "
         "ComplexRendererFns("
      << getClassName() << "::*ComplexMatcherMemFn)(MachineOperand &) const;\n"
@@ -232,6 +282,7 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
      << "  bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat "
         "&Imm) const override;\n"
      << "  const uint8_t *getMatchTable() const override;\n"
+     << "  LLT getLLTForHwMode(unsigned Index) const override;\n"
      << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
         ", const MatcherState &State) "
         "const override;\n"
@@ -241,25 +292,24 @@ void GlobalISelMatchTableExecutorEmitter::emitTemporariesDecl(
      << "  bool testSimplePredicate(unsigned PredicateID) const override;\n"
      << "  bool runCustomAction(unsigned FnID, const MatcherState &State, "
         "NewMIVector &OutMIs) "
-        "const override;\n"
-     << "#endif // ifdef " << IfDefName << "\n\n";
+        "const override;\n";
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitTemporariesInit(
     raw_ostream &OS, unsigned MaxTemporaries, StringRef IfDefName) {
-  OS << "#ifdef " << IfDefName << "\n"
-     << ", State(" << MaxTemporaries << "),\n"
-     << "ExecInfo(TypeObjects, NumTypeObjects, FeatureBitsets"
-     << ", ComplexPredicateFns, CustomRenderers)\n"
-     << "#endif // ifdef " << IfDefName << "\n\n";
-
+  {
+    IfDefGuardEmitter If(OS, IfDefName);
+    OS << ", State(" << MaxTemporaries << "),\n"
+       << "ExecInfo(TypeObjects, NumTypeObjects, FeatureBitsets"
+       << ", ComplexPredicateFns, CustomRenderers)\n";
+  }
   emitAdditionalTemporariesInit(OS);
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitPredicatesDecl(
     raw_ostream &OS, StringRef IfDefName) {
-  OS << "#ifdef " << IfDefName << "\n"
-     << "PredicateBitset AvailableModuleFeatures;\n"
+  IfDefGuardEmitter If(OS, IfDefName);
+  OS << "PredicateBitset AvailableModuleFeatures;\n"
      << "mutable PredicateBitset AvailableFunctionFeatures;\n"
      << "PredicateBitset getAvailableFeatures() const {\n"
      << "  return AvailableModuleFeatures | AvailableFunctionFeatures;\n"
@@ -271,14 +321,12 @@ void GlobalISelMatchTableExecutorEmitter::emitPredicatesDecl(
      << "computeAvailableFunctionFeatures(const " << getTarget().getName()
      << "Subtarget *Subtarget,\n"
      << "                                 const MachineFunction *MF) const;\n"
-     << "void setupGeneratedPerFunctionState(MachineFunction &MF) override;\n"
-     << "#endif // ifdef " << IfDefName << "\n";
+     << "void setupGeneratedPerFunctionState(MachineFunction &MF) override;\n";
 }
 
 void GlobalISelMatchTableExecutorEmitter::emitPredicatesInit(
     raw_ostream &OS, StringRef IfDefName) {
-  OS << "#ifdef " << IfDefName << "\n"
-     << "AvailableModuleFeatures(computeAvailableModuleFeatures(&STI)),\n"
-     << "AvailableFunctionFeatures()\n"
-     << "#endif // ifdef " << IfDefName << "\n";
+  IfDefGuardEmitter If(OS, IfDefName);
+  OS << "AvailableModuleFeatures(computeAvailableModuleFeatures(&STI)),\n"
+     << "AvailableFunctionFeatures()\n";
 }

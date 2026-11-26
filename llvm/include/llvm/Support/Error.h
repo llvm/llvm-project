@@ -811,6 +811,29 @@ T cantFail(Expected<T> ValOrErr, const char *Msg = nullptr) {
   }
 }
 
+namespace detail {
+
+template <typename T>
+using compare_nullptr_t = decltype(std::declval<T &>() == nullptr);
+
+template <typename T>
+using is_nullptr_comparable = llvm::is_detected<compare_nullptr_t, T>;
+
+} // namespace detail
+
+/// Calls llvm_unreachable if Pointer is null, otherwise returns the
+/// pointer as is.
+template <typename T,
+          typename = std::enable_if_t<detail::is_nullptr_comparable<T>::value>>
+[[nodiscard]] decltype(auto) checkNotNull(
+    T &&Pointer,
+    const char *Msg = "Expected a non-null pointer but got a null pointer") {
+  assert(Msg);
+  if (Pointer != nullptr)
+    return std::forward<T>(Pointer);
+  llvm_unreachable(Msg);
+}
+
 /// Report a fatal error if ValOrErr is a failure value, otherwise unwraps and
 /// returns the contained reference.
 ///
@@ -1084,21 +1107,14 @@ inline void consumeError(Error Err) {
   handleAllErrors(std::move(Err), [](const ErrorInfoBase &) {});
 }
 
-/// Convert an Expected to an Optional without doing anything. This method
+/// Convert an Expected to an std::optional without doing anything. This method
 /// should be used only where an error can be considered a reasonable and
 /// expected return value.
 ///
 /// Uses of this method are potentially indicative of problems: perhaps the
 /// error should be propagated further, or the error-producer should just
-/// return an Optional in the first place.
+/// return an std::optional in the first place.
 template <typename T> std::optional<T> expectedToOptional(Expected<T> &&E) {
-  if (E)
-    return std::move(*E);
-  consumeError(E.takeError());
-  return std::nullopt;
-}
-
-template <typename T> std::optional<T> expectedToStdOptional(Expected<T> &&E) {
   if (E)
     return std::move(*E);
   consumeError(E.takeError());

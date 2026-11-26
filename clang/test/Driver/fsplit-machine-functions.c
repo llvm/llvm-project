@@ -14,8 +14,8 @@
 // RUN: %clang -### --target=x86_64-linux -flto -fsplit-machine-functions %s 2>&1 | FileCheck %s --check-prefix=LTO
 // RUN: %clang -### --target=x86_64-linux -flto -fsplit-machine-functions -fno-split-machine-functions %s 2>&1 | FileCheck %s --check-prefix=LTO-NEG
 
-// LTO:         "-plugin-opt=-split-machine-functions"
-// LTO-NEG-NOT: "-plugin-opt=-split-machine-functions"
+// LTO:         "-plugin-opt=-function-splitting=all"
+// LTO-NEG-NOT: "-plugin-opt=-function-splitting=all"
 
 // RUN: not %clang -### -c --target=arm-unknown-linux -fsplit-machine-functions %s 2>&1 | FileCheck %s --check-prefix=ERR
 // ERR: error: unsupported option '-fsplit-machine-functions' for target

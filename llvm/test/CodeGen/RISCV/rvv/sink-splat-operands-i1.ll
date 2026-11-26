@@ -14,9 +14,7 @@ define void @sink_splat_vp_and_i1(ptr nocapture %a, i1 zeroext %x, <8 x i1> %m, 
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vlm.v v9, (a0)
-; CHECK-NEXT:    vsetvli zero, a2, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmand.mm v9, v9, v8
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsm.v v9, (a0)
 ; CHECK-NEXT:    addi a0, a0, 1
 ; CHECK-NEXT:    bne a0, a1, .LBB0_1

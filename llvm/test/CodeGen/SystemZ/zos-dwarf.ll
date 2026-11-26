@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=s390x-ibm-zos -emit-gnuas-syntax-on-zos=0 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
 @fortytwo = hidden global i32 42, align 4, !dbg !0
 
@@ -26,6 +26,6 @@ entry:
 !12 = !DILocation(line: 4, column: 21, scope: !8)
 
 ; Check the emitted section definition
-; CHECK: D_ABREV CATTR ALIGN(3),FILL(0),NOLOAD,RMODE(64)
-; CHECK: D_INFO CATTR ALIGN(3),FILL(0),NOLOAD,RMODE(64)
-; CHECK: D_STR CATTR ALIGN(3),FILL(0),NOLOAD,RMODE(64)
+; CHECK: D_ABREV CATTR ALIGN(3),FILL(0),NOLOAD,RENT,RMODE(64)
+; CHECK: D_INFO CATTR ALIGN(3),FILL(0),NOLOAD,RENT,RMODE(64)
+; CHECK: D_STR CATTR ALIGN(3),FILL(0),NOLOAD,RENT,RMODE(64)

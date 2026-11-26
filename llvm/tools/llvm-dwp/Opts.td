@@ -12,7 +12,7 @@ def outputFileName : S<"o", "Specify the output file.">, MetaVarName<"<filename>
 def continueOnCuIndexOverflow : Flag<["-", "--"], "continue-on-cu-index-overflow">;
 def continueOnCuIndexOverflow_EQ : Joined<["-", "--"], "continue-on-cu-index-overflow=">,
   HelpText<"default = continue, This turns an error when offset \n"
-    "\t\tfor .debug_*.dwo sections overfolws into a warning. = soft-stop, This produces a \n"
+    "\t\tfor .debug_*.dwo sections overflows into a warning. = soft-stop, This produces a \n"
     "\t\ttruncated but valid DWP file, discarding any DWO files that would not fit within \n"
     "\t\tthe 32 bit/4GB limits of the format.">,
   Values<"continue,soft-stop">;
@@ -31,3 +31,8 @@ def dwarf64StringOffsets_EQ
                "forces all .debug_str_offsets tables to be emitted as DWARF64. "
                "This is used for testing.">,
       Values<"disabled,enabled,always">;
+
+def prioritizeDiscardPath : Joined<["-", "--"], "prioritize-discard-path=">,
+  HelpText<"In soft-stop mode, prefer discarding DWO files whose real paths start "
+           "with the given prefix when CU index overflow occurs.">,
+  MetaVarName<"<path>">;

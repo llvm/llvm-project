@@ -30,6 +30,44 @@
 
 namespace clang {
 
+// SARIF reportingConfiguration.rank is given to each severity. Notes, remarks
+// and warnings keep the default -1.
+namespace rank {
+constexpr float Error = 50.0f;
+constexpr float Fatal = 100.0f;
+} // namespace rank
+
+SarifResultLevel getSarifResultLevel(DiagnosticsEngine::Level level) {
+  switch (level) {
+  case DiagnosticsEngine::Ignored:
+    llvm_unreachable("Invalid diagnostic type");
+  case DiagnosticsEngine::Note:
+    return SarifResultLevel::Note;
+  case DiagnosticsEngine::Remark:
+    return SarifResultLevel::None;
+  case DiagnosticsEngine::Warning:
+    return SarifResultLevel::Warning;
+  case DiagnosticsEngine::Error:
+  case DiagnosticsEngine::Fatal:
+    return SarifResultLevel::Error;
+  }
+  llvm_unreachable("Un-handled DiagnosticsEngine::Level occured.");
+}
+
+SarifRule addDiagnosticLevelToRule(SarifRule Rule,
+                                   DiagnosticsEngine::Level Level) {
+  SarifReportingConfiguration Config =
+      SarifReportingConfiguration::create().setLevel(
+          getSarifResultLevel(Level));
+
+  if (Level == DiagnosticsEngine::Error)
+    Config = Config.setRank(rank::Error);
+  else if (Level == DiagnosticsEngine::Fatal)
+    Config = Config.setRank(rank::Fatal);
+
+  return Rule.setDefaultConfiguration(Config);
+}
+
 SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                                  DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
@@ -41,12 +79,16 @@ void SARIFDiagnostic::emitDiagnosticMessage(
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
     DiagOrStoredDiag D) {
 
-  const auto *Diag = D.dyn_cast<const Diagnostic *>();
+  const auto *Diag = dyn_cast_if_present<const Diagnostic *>(D);
 
   if (!Diag)
     return;
 
-  SarifRule Rule = SarifRule::create().setRuleId(std::to_string(Diag->getID()));
+  const auto &DiagnosticIDs = *(Diag->getDiags()->getDiagnosticIDs());
+  std::string StableID = DiagnosticIDs.getStableID(Diag->getID());
+  auto LegacyStableIDs = DiagnosticIDs.getLegacyStableIDs(Diag->getID());
+  SarifRule Rule =
+      SarifRule::create().setRuleId(StableID).setDeprecatedIds(LegacyStableIDs);
 
   Rule = addDiagnosticLevelToRule(Rule, Level);
 
@@ -116,29 +158,20 @@ SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
 
   FileID CaretFileID = Loc.getExpansionLoc().getFileID();
 
+  auto &SM = Loc.getManager();
   for (const CharSourceRange Range : Ranges) {
-    // Ignore invalid ranges.
-    if (Range.isInvalid())
+    std::optional<CharSourceRange> FileRange =
+        getExpansionRangeInFile(Range, CaretFileID, SM);
+    if (!FileRange)
       continue;
 
-    auto &SM = Loc.getManager();
-    SourceLocation B = SM.getExpansionLoc(Range.getBegin());
-    CharSourceRange ERange = SM.getExpansionRange(Range.getEnd());
-    SourceLocation E = ERange.getEnd();
-    bool IsTokenRange = ERange.isTokenRange();
-
-    FileIDAndOffset BInfo = SM.getDecomposedLoc(B);
-    FileIDAndOffset EInfo = SM.getDecomposedLoc(E);
-
-    // If the start or end of the range is in another file, just discard
-    // it.
-    if (BInfo.first != CaretFileID || EInfo.first != CaretFileID)
-      continue;
+    SourceLocation B = FileRange->getBegin();
+    SourceLocation E = FileRange->getEnd();
 
     // Add in the length of the token, so that we cover multi-char
     // tokens.
     unsigned TokSize = 0;
-    if (IsTokenRange)
+    if (FileRange->isTokenRange())
       TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
 
     FullSourceLoc BF(B, SM), EF(E, SM);
@@ -153,7 +186,6 @@ SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
     // Text and SARIF diagnostics.
   }
 
-  auto &SM = Loc.getManager();
   auto FID = PLoc.getFileID();
   // Visual Studio 2010 or earlier expects column number to be off by one.
   unsigned int ColNo = (LangOpts.MSCompatibilityVersion &&
@@ -168,34 +200,6 @@ SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
     Locations.push_back(std::move(Range));
 
   return Locations;
-}
-
-SarifRule
-SARIFDiagnostic::addDiagnosticLevelToRule(SarifRule Rule,
-                                          DiagnosticsEngine::Level Level) {
-  auto Config = SarifReportingConfiguration::create();
-
-  switch (Level) {
-  case DiagnosticsEngine::Note:
-    Config = Config.setLevel(SarifResultLevel::Note);
-    break;
-  case DiagnosticsEngine::Remark:
-    Config = Config.setLevel(SarifResultLevel::None);
-    break;
-  case DiagnosticsEngine::Warning:
-    Config = Config.setLevel(SarifResultLevel::Warning);
-    break;
-  case DiagnosticsEngine::Error:
-    Config = Config.setLevel(SarifResultLevel::Error).setRank(50);
-    break;
-  case DiagnosticsEngine::Fatal:
-    Config = Config.setLevel(SarifResultLevel::Error).setRank(100);
-    break;
-  case DiagnosticsEngine::Ignored:
-    assert(false && "Invalid diagnostic type");
-  }
-
-  return Rule.setDefaultConfiguration(Config);
 }
 
 llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,

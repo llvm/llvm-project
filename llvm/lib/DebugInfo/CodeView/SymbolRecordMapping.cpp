@@ -258,6 +258,19 @@ Error SymbolRecordMapping::visitKnownRecord(
 }
 
 Error SymbolRecordMapping::visitKnownRecord(
+    CVSymbol &CVR, DefRangeRegisterRelIndirSym &DefRangeRegisterRelIndir) {
+
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.Register));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.Flags));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.BasePointerOffset));
+  error(IO.mapObject(DefRangeRegisterRelIndir.Hdr.OffsetInUdt));
+  error(mapLocalVariableAddrRange(IO, DefRangeRegisterRelIndir.Range));
+  error(IO.mapVectorTail(DefRangeRegisterRelIndir.Gaps, MapGap()));
+
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(
     CVSymbol &CVR, DefRangeRegisterSym &DefRangeRegister) {
 
   error(IO.mapObject(DefRangeRegister.Hdr.Register));
@@ -445,6 +458,17 @@ Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            RegRelativeIndirSym &RegRelIndir) {
+  error(IO.mapInteger(RegRelIndir.Offset));
+  error(IO.mapInteger(RegRelIndir.Type));
+  error(IO.mapInteger(RegRelIndir.OffsetInUdt));
+  error(IO.mapEnum(RegRelIndir.Register));
+  error(IO.mapStringZ(RegRelIndir.Name));
+
+  return Error::success();
+}
+
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
                                             ThreadLocalDataSym &Data) {
 
   error(IO.mapInteger(Data.Type));
@@ -575,4 +599,13 @@ EncodedFramePtrReg codeview::encodeFramePtrReg(RegisterId Reg, CPUType CPU) {
     break;
   }
   return EncodedFramePtrReg::None;
+}
+
+Error SymbolRecordMapping::visitKnownRecord(CVSymbol &CVR,
+                                            AssociationSym &Assoc) {
+  error(IO.mapEnum(Assoc.AssocKind));
+  error(IO.mapInteger(Assoc.CodeOffset));
+  error(IO.mapInteger(Assoc.Segment));
+
+  return Error::success();
 }

@@ -19,13 +19,13 @@ bool isExpansionLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
   return isFileExtension(SM.getFilename(ExpansionLoc), HeaderFileExtensions);
 }
 
-bool isPresumedLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
+bool isPresumedLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                const FileExtensionsSet &HeaderFileExtensions) {
   const PresumedLoc PresumedLocation = SM.getPresumedLoc(Loc);
   return isFileExtension(PresumedLocation.getFilename(), HeaderFileExtensions);
 }
 
-bool isSpellingLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
+bool isSpellingLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                const FileExtensionsSet &HeaderFileExtensions) {
   const SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
   return isFileExtension(SM.getFilename(SpellingLoc), HeaderFileExtensions);

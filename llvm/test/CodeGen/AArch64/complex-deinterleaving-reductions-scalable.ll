@@ -97,18 +97,14 @@ exit.block:                                     ; preds = %vector.body
 define %"class.std::complex" @complex_mul_nonzero_init_v2f64(ptr %a, ptr %b) {
 ; CHECK-LABEL: complex_mul_nonzero_init_v2f64:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    fmov d1, #1.00000000
-; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    fmov d2, #2.00000000
-; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    cntd x8
 ; CHECK-NEXT:    neg x9, x8
 ; CHECK-NEXT:    mov w10, #100 // =0x64
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    and x9, x9, x10
 ; CHECK-NEXT:    rdvl x10, #2
-; CHECK-NEXT:    sel z1.d, p0, z1.d, z0.d
-; CHECK-NEXT:    sel z2.d, p0, z2.d, z0.d
-; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    zip2 z0.d, z2.d, z1.d
 ; CHECK-NEXT:    zip1 z1.d, z2.d, z1.d
 ; CHECK-NEXT:  .LBB1_1: // %vector.body

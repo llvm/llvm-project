@@ -1988,7 +1988,7 @@ static DecodeStatus DecodeBranchImmInstruction(MCInst &Inst, unsigned Insn,
     Inst.addOperand(MCOperand::createImm(SignExtend32<26>(imm)));
 
   // We already have BL_pred for BL w/ predicate, no need to add addition
-  // predicate opreands for BL
+  // predicate operands for BL
   if (Inst.getOpcode() != ARM::BL)
     if (!Check(S, DecodePredicateOperand(Inst, pred, Address, Decoder)))
       return MCDisassembler::Fail;
@@ -3952,7 +3952,10 @@ static DecodeStatus DecodeThumb2BCCInstruction(MCInst &Inst, unsigned Insn,
     }
 
     unsigned imm = fieldFromInstruction(Insn, 0, 4);
-    return DecodeMemBarrierOption(Inst, imm, Address, Decoder);
+    if (!Check(S, DecodeMemBarrierOption(Inst, imm, Address, Decoder)))
+      return MCDisassembler::Fail;
+    DecodePredicateOperand(Inst, Decoder);
+    return S;
   }
 
   unsigned brtarget = fieldFromInstruction(Insn, 0, 11) << 1;
@@ -6110,7 +6113,7 @@ static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
                                             DecodeStatus Result) {
   switch (MI.getOpcode()) {
     case ARM::HVC: {
-      // HVC is undefined if condition = 0xf otherwise upredictable
+      // HVC is undefined if condition = 0xf otherwise unpredictable
       // if condition != 0xe
       uint32_t Cond = (Insn >> 28) & 0xF;
       if (Cond == 0xF)
@@ -6129,6 +6132,23 @@ static DecodeStatus checkDecodedInstruction(MCInst &MI, uint64_t &Size,
     case ARM::t2SUBrs:
       if (MI.getOperand(0).getReg() == ARM::SP &&
           MI.getOperand(1).getReg() != ARM::SP)
+        return MCDisassembler::SoftFail;
+      return Result;
+    case ARM::t2STRi12:
+    case ARM::t2STRi8:
+    case ARM::t2STRs:
+      // Rt == PC is UNPREDICTABLE.
+      if (MI.getOperand(0).getReg() == ARM::PC)
+        return MCDisassembler::SoftFail;
+      return Result;
+    case ARM::t2STR_PRE:
+    case ARM::t2STR_POST:
+    case ARM::t2STRB_PRE:
+    case ARM::t2STRB_POST:
+    case ARM::t2STRH_PRE:
+    case ARM::t2STRH_POST:
+      // Here Rt is operand 1.
+      if (MI.getOperand(1).getReg() == ARM::PC)
         return MCDisassembler::SoftFail;
       return Result;
     default: return Result;

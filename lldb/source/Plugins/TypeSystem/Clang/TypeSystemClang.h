@@ -75,19 +75,22 @@ public:
 
 /// The implementation of lldb::Type's m_payload field for TypeSystemClang.
 class TypePayloadClang {
-  /// The payload is used for typedefs and ptrauth types.
+  /// The payload is used for typedefs, ptrauth types, and pointer types.
   /// For typedefs, the Layout is as follows:
   /// \verbatim
   /// bit 0..30 ... Owning Module ID.
   /// bit 31 ...... IsCompleteObjCClass.
   /// \endverbatim
   /// For ptrauth types, we store the PointerAuthQualifier as an opaque value.
+  /// For pointer types, we store the address space class of the pointee.
   Type::Payload m_payload = 0;
 
 public:
   TypePayloadClang() = default;
   explicit TypePayloadClang(OptionalClangModuleID owning_module,
                             bool is_complete_objc_class = false);
+  explicit TypePayloadClang(clang::LangAS address_space)
+      : m_payload(static_cast<uint32_t>(address_space)) {}
   explicit TypePayloadClang(uint32_t opaque_payload) : m_payload(opaque_payload) {}
   operator Type::Payload() { return m_payload; }
 
@@ -163,6 +166,8 @@ public:
 
   static void Terminate();
 
+  static void DebuggerInitialize(Debugger &debugger);
+
   static TypeSystemClang *GetASTContext(clang::ASTContext *ast_ctx);
 
   /// Returns the display name of this TypeSystemClang that indicates what
@@ -204,11 +209,6 @@ public:
   void SetMetadata(const clang::Type *object, ClangASTMetadata meta_data);
   std::optional<ClangASTMetadata> GetMetadata(const clang::Decl *object);
   std::optional<ClangASTMetadata> GetMetadata(const clang::Type *object);
-
-  void SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
-                              clang::AccessSpecifier access);
-  clang::AccessSpecifier
-  GetCXXRecordDeclAccess(const clang::CXXRecordDecl *object);
 
   // Basic Types
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
@@ -312,9 +312,6 @@ public:
   static clang::AccessSpecifier
   ConvertAccessTypeToAccessSpecifier(lldb::AccessType access);
 
-  static clang::AccessSpecifier
-  UnifyAccessSpecifiers(clang::AccessSpecifier lhs, clang::AccessSpecifier rhs);
-
   uint32_t GetNumBaseClasses(const clang::CXXRecordDecl *cxx_record_decl,
                              bool omit_empty_base_classes);
 
@@ -334,9 +331,8 @@ public:
 
   CompilerType
   CreateRecordType(clang::DeclContext *decl_ctx,
-                   OptionalClangModuleID owning_module,
-                   lldb::AccessType access_type, llvm::StringRef name, int kind,
-                   lldb::LanguageType language,
+                   OptionalClangModuleID owning_module, llvm::StringRef name,
+                   int kind, lldb::LanguageType language,
                    std::optional<ClangASTMetadata> metadata = std::nullopt,
                    bool exports_symbols = false);
 
@@ -432,10 +428,11 @@ public:
       clang::FunctionDecl *func_decl, clang::FunctionTemplateDecl *Template,
       const TemplateParameterInfos &infos);
 
-  clang::ClassTemplateDecl *CreateClassTemplateDecl(
-      clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-      lldb::AccessType access_type, llvm::StringRef class_name, int kind,
-      const TemplateParameterInfos &infos);
+  clang::ClassTemplateDecl *
+  CreateClassTemplateDecl(clang::DeclContext *decl_ctx,
+                          OptionalClangModuleID owning_module,
+                          llvm::StringRef class_name, int kind,
+                          const TemplateParameterInfos &infos);
 
   clang::TemplateTemplateParmDecl *
   CreateTemplateTemplateParmDecl(const char *template_name);
@@ -517,6 +514,10 @@ public:
   CompilerType GetIntTypeFromBitSize(size_t bit_size, bool is_signed);
 
   CompilerType GetPointerSizedIntType(bool is_signed);
+
+  CompilerType GetPointerDiffType(bool is_signed) override;
+
+  CompilerType GetSizeType() override;
 
   // Floating point functions
 
@@ -678,6 +679,8 @@ public:
 
   bool IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type) override;
 
+  bool IsMemberDataPointerType(lldb::opaque_compiler_type_t type) override;
+
   bool IsBlockPointerType(lldb::opaque_compiler_type_t type,
                           CompilerType *function_pointer_type_ptr) override;
 
@@ -722,6 +725,11 @@ public:
   bool IsTypedefType(lldb::opaque_compiler_type_t type) override;
 
   bool IsVoidType(lldb::opaque_compiler_type_t type) override;
+
+  bool HasPointerAuthQualifier(lldb::opaque_compiler_type_t type) override;
+
+  std::optional<uint32_t>
+  GetTargetAddressSpace(lldb::opaque_compiler_type_t type) const override;
 
   bool CanPassInRegisters(const CompilerType &type) override;
 
@@ -803,6 +811,9 @@ public:
   CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                   uint32_t payload) override;
 
+  CompilerType AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                                       uint32_t address_space) override;
+
   CompilerType AddVolatileModifier(lldb::opaque_compiler_type_t type) override;
 
   CompilerType AddRestrictModifier(lldb::opaque_compiler_type_t type) override;
@@ -841,6 +852,9 @@ public:
   llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
+
+  std::optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type) override;
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override;
 
@@ -896,14 +910,11 @@ public:
                       uint32_t &deref_byte_size, int32_t &deref_byte_offset,
                       ValueObject *valobj, uint64_t &language_flags) override;
 
-  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
-      lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
-      bool transparent_pointers, bool omit_empty_base_classes,
-      bool ignore_array_bounds, std::string &child_name,
-      uint32_t &child_byte_size, int32_t &child_byte_offset,
-      uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-      bool &child_is_base_class, bool &child_is_deref_of_parent,
-      ValueObject *valobj, uint64_t &language_flags) override;
+  llvm::Expected<ChildTypeInfo>
+  GetChildAtIndex(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
+                  size_t idx, bool transparent_pointers,
+                  bool omit_empty_base_classes, bool ignore_array_bounds,
+                  ValueObject *valobj) override;
 
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.
@@ -943,13 +954,10 @@ public:
 
   CompilerType GetTypeForFormatters(void *type) override;
 
-  // DIL
-
   bool IsPromotableIntegerType(lldb::opaque_compiler_type_t type) override;
 
-  llvm::Expected<CompilerType>
-  DoIntegralPromotion(CompilerType from,
-                      ExecutionContextScope *exe_scope) override;
+  CompilerType
+  GetPromotedIntegerType(lldb::opaque_compiler_type_t type) override;
 
 #define LLDB_INVALID_DECL_LEVEL UINT32_MAX
   // LLDB_INVALID_DECL_LEVEL is returned by CountDeclLevels if child_decl_ctx
@@ -963,7 +971,6 @@ public:
   static clang::FieldDecl *AddFieldToRecordType(const CompilerType &type,
                                                 llvm::StringRef name,
                                                 const CompilerType &field_type,
-                                                lldb::AccessType access,
                                                 uint32_t bitfield_bit_size);
 
   static void BuildIndirectFields(const CompilerType &type);
@@ -972,8 +979,7 @@ public:
 
   static clang::VarDecl *AddVariableToRecordType(const CompilerType &type,
                                                  llvm::StringRef name,
-                                                 const CompilerType &var_type,
-                                                 lldb::AccessType access);
+                                                 const CompilerType &var_type);
 
   /// Initializes a variable with an integer value.
   /// \param var The variable to initialize. Must not already have an
@@ -1011,11 +1017,12 @@ public:
       clang::FunctionDecl *context, const clang::FunctionProtoType &prototype,
       const llvm::SmallVector<llvm::StringRef> &param_names);
 
-  clang::CXXMethodDecl *AddMethodToCXXRecordType(
-      lldb::opaque_compiler_type_t type, llvm::StringRef name,
-      llvm::StringRef asm_label, const CompilerType &method_type,
-      lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
-      bool is_explicit, bool is_attr_used, bool is_artificial);
+  clang::CXXMethodDecl *
+  AddMethodToCXXRecordType(lldb::opaque_compiler_type_t type,
+                           llvm::StringRef name, llvm::StringRef asm_label,
+                           const CompilerType &method_type, bool is_virtual,
+                           bool is_static, bool is_inline, bool is_explicit,
+                           bool is_attr_used, bool is_artificial);
 
   void AddMethodOverridesForCXXRecordType(lldb::opaque_compiler_type_t type);
 
@@ -1129,7 +1136,7 @@ public:
 
   clang::ClassTemplateDecl *ParseClassTemplateDecl(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-      lldb::AccessType access_type, const char *parent_name, int tag_decl_kind,
+      const char *parent_name, int tag_decl_kind,
       const TypeSystemClang::TemplateParameterInfos &template_param_infos);
 
   clang::BlockDecl *CreateBlockDeclaration(clang::DeclContext *ctx,
@@ -1243,12 +1250,6 @@ private:
   typedef llvm::DenseMap<const clang::Type *, ClangASTMetadata> TypeMetadataMap;
   /// Maps Types to their associated ClangASTMetadata.
   TypeMetadataMap m_type_metadata;
-
-  typedef llvm::DenseMap<const clang::CXXRecordDecl *, clang::AccessSpecifier>
-      CXXRecordDeclAccessMap;
-  /// Maps CXXRecordDecl to their most recent added method/field's
-  /// AccessSpecifier.
-  CXXRecordDeclAccessMap m_cxx_record_decl_access;
 
   /// The sema associated that is currently used to build this ASTContext.
   /// May be null if we are already done parsing this ASTContext or the

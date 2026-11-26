@@ -219,6 +219,8 @@ inline constexpr bool is_convertible_v = is_convertible<From, To>::value;
 
 template <class...>
 using void_t = void;
+template <class...>
+using __void_t = void;
 
 template <class, class T, class... Args>
 struct is_constructible_ : false_type {};
@@ -605,10 +607,25 @@ struct __optional_destruct_base {
 template <class _Tp>
 struct __optional_storage_base : __optional_destruct_base<_Tp> {
   constexpr bool has_value() const noexcept;
+
+  const _Tp& operator*() const&;
+  _Tp& operator*() &;
+  const _Tp&& operator*() const&&;
+  _Tp&& operator*() &&;
+
+  const _Tp* operator->() const;
+  _Tp* operator->();
+
+  const _Tp& value() const&;
+  _Tp& value() &;
+  const _Tp&& value() const&&;
+  _Tp&& value() &&;
 };
 
+// Note: the inheritance may or may not be private:
+// https://github.com/llvm/llvm-project/issues/187788
 template <typename _Tp>
-class optional : private __optional_storage_base<_Tp> {
+class optional : public __optional_storage_base<_Tp> {
   using __base = __optional_storage_base<_Tp>;
 
  public:
@@ -743,19 +760,6 @@ class optional : private __optional_storage_base<_Tp> {
                                  int> = 0>
   constexpr optional& operator=(optional<_Up>&& __v);
 
-  const _Tp& operator*() const&;
-  _Tp& operator*() &;
-  const _Tp&& operator*() const&&;
-  _Tp&& operator*() &&;
-
-  const _Tp* operator->() const;
-  _Tp* operator->();
-
-  const _Tp& value() const&;
-  _Tp& value() &;
-  const _Tp&& value() const&&;
-  _Tp&& value() &&;
-
   template <typename U>
   constexpr _Tp value_or(U&& v) const&;
   template <typename U>
@@ -814,6 +818,332 @@ template <typename T, typename U>
 constexpr bool operator!=(const T &value, const optional<U> &opt);
 
 } // namespace std
+)";
+
+static constexpr char StdExpectedHeader[] = R"(
+#ifndef STD_EXPECTED_H
+#define STD_EXPECTED_H
+
+namespace std {
+
+template <class E> class unexpected {
+public:
+  unexpected(const unexpected &) = default;
+  unexpected(unexpected &&) = default;
+
+  template <class Err = E> explicit unexpected(Err &&e);
+
+  const E &error() const & noexcept;
+  E &error() & noexcept;
+  const E &&error() const && noexcept;
+  E &&error() && noexcept;
+};
+
+template <class E> unexpected(E) -> unexpected<E>;
+
+struct unexpect_t {
+  explicit unexpect_t() = default;
+};
+
+inline constexpr unexpect_t unexpect{};
+
+template <class T, class E> class expected;
+
+template <class> constexpr bool __is_expected = false;
+template <class T, class E>
+constexpr bool __is_expected<expected<T, E>> = true;
+
+template <class T, class E> class expected {
+public:
+  using value_type = T;
+  using error_type = E;
+  using unexpected_type = unexpected<E>;
+
+  expected();
+  expected(const expected &);
+  expected(expected &&) noexcept;
+
+  template <class U = T> expected(U &&v);
+
+  template <class G> expected(const unexpected<G> &e);
+  template <class G> expected(unexpected<G> &&e);
+
+  template <class... Args>
+  explicit expected(unexpect_t, Args &&...args);
+
+  expected &operator=(const expected &);
+  expected &operator=(expected &&) noexcept;
+
+  const T *operator->() const noexcept;
+  T *operator->() noexcept;
+
+  const T &operator*() const & noexcept;
+  T &operator*() & noexcept;
+  const T &&operator*() const && noexcept;
+  T &&operator*() && noexcept;
+
+  explicit operator bool() const noexcept;
+  bool has_value() const noexcept;
+
+  const T &value() const &;
+  T &value() &;
+  const T &&value() const &&;
+  T &&value() &&;
+
+  const E &error() const & noexcept;
+  E &error() & noexcept;
+  const E &&error() const && noexcept;
+  E &&error() && noexcept;
+
+  template <class U> T value_or(U &&v) const &;
+  template <class U> T value_or(U &&v) &&;
+
+  template <class G> E error_or(G &&e) const &;
+  template <class G> E error_or(G &&e) &&;
+
+  template <class... Args> T &emplace(Args &&...args) noexcept;
+
+  void swap(expected &rhs) noexcept;
+
+  // The comparisons rely on C++20 rewritten candidates for `!=` and for
+  // reversed operands.
+#if __cplusplus >= 202002L
+  template <class T2, class E2>
+  friend bool operator==(const expected &x, const expected<T2, E2> &y);
+
+  template <class T2>
+    requires(!__is_expected<T2>)
+  friend bool operator==(const expected &x, const T2 &v);
+
+  template <class E2>
+  friend bool operator==(const expected &x, const unexpected<E2> &e);
+#endif
+};
+
+template <class E> class expected<void, E> {
+public:
+  using value_type = void;
+  using error_type = E;
+  using unexpected_type = unexpected<E>;
+
+  expected() noexcept;
+  expected(const expected &);
+  expected(expected &&) noexcept;
+
+  template <class G> expected(const unexpected<G> &e);
+  template <class G> expected(unexpected<G> &&e);
+
+  template <class... Args>
+  explicit expected(unexpect_t, Args &&...args);
+
+  expected &operator=(const expected &);
+  expected &operator=(expected &&) noexcept;
+
+  explicit operator bool() const noexcept;
+  bool has_value() const noexcept;
+
+  void operator*() const noexcept;
+
+  void value() const &;
+  void value() &&;
+
+  const E &error() const & noexcept;
+  E &error() & noexcept;
+  const E &&error() const && noexcept;
+  E &&error() && noexcept;
+
+  template <class G> E error_or(G &&e) const &;
+  template <class G> E error_or(G &&e) &&;
+
+  void emplace() noexcept;
+
+  void swap(expected &rhs) noexcept;
+
+#if __cplusplus >= 202002L
+  template <class T2, class E2>
+  friend bool operator==(const expected &x, const expected<T2, E2> &y);
+
+  template <class E2>
+  friend bool operator==(const expected &x, const unexpected<E2> &e);
+#endif
+};
+
+} // namespace std
+
+#endif // STD_EXPECTED_H
+)";
+
+static constexpr char TlExpectedHeader[] = R"(
+#ifndef TL_EXPECTED_H
+#define TL_EXPECTED_H
+
+// Mock of `tl::expected` from https://github.com/TartanLlama/expected.
+//
+// Unlike `std::expected`, it has no `void` specialization and its comparison
+// operators are free functions that are declared for both operand orders,
+// including `operator!=`.
+
+#include "std_type_traits.h"
+
+namespace tl {
+
+template <class T, class E> class expected;
+
+struct in_place_t {
+  explicit in_place_t() = default;
+};
+static constexpr in_place_t in_place{};
+
+template <class E> class unexpected {
+public:
+  unexpected() = delete;
+  explicit unexpected(const E &e);
+  explicit unexpected(E &&e);
+
+  const E &value() const &;
+  E &value() &;
+  E &&value() &&;
+  const E &&value() const &&;
+};
+
+template <class E> unexpected(E) -> unexpected<E>;
+
+template <class E>
+unexpected<typename std::decay<E>::type> make_unexpected(E &&e);
+
+struct unexpect_t {
+  unexpect_t() = default;
+};
+static constexpr unexpect_t unexpect{};
+
+namespace detail {
+
+template <class> constexpr bool is_unexpected = false;
+template <class E> constexpr bool is_unexpected<unexpected<E>> = true;
+
+} // namespace detail
+
+template <class T, class E> class expected {
+public:
+  typedef T value_type;
+  typedef E error_type;
+  typedef unexpected<E> unexpected_type;
+
+  constexpr expected() = default;
+  constexpr expected(const expected &rhs) = default;
+  constexpr expected(expected &&rhs) = default;
+  expected &operator=(const expected &rhs) = default;
+  expected &operator=(expected &&rhs) = default;
+
+  template <class... Args> expected(in_place_t, Args &&...args);
+
+  template <class G> expected(const unexpected<G> &e);
+  template <class G> expected(unexpected<G> &&e);
+
+  template <class... Args> explicit expected(unexpect_t, Args &&...args);
+
+  template <class U, class G,
+            std::enable_if_t<__is_constructible(T, const U &) &&
+                             __is_constructible(E, const G &)> * = nullptr>
+  expected(const expected<U, G> &rhs);
+  template <class U, class G,
+            std::enable_if_t<__is_constructible(T, U &&) &&
+                             __is_constructible(E, G &&)> * = nullptr>
+  expected(expected<U, G> &&rhs);
+
+  template <
+      class U = T,
+      std::enable_if_t<
+          __is_constructible(T, U &&) &&
+          !std::is_same<typename std::decay<U>::type, in_place_t>::value &&
+          !std::is_same<typename std::decay<U>::type, unexpect_t>::value &&
+          !std::is_same<typename std::decay<U>::type, expected>::value &&
+          !detail::is_unexpected<typename std::decay<U>::type>> * = nullptr>
+  expected(U &&v);
+
+  // `G` delays forming `T &`, which is ill-formed for `void`.
+  template <
+      class U = T, class G = T,
+      std::enable_if_t<
+          __is_constructible(T, U &&) && __is_assignable(G &, U &&) &&
+          !std::is_same<typename std::decay<U>::type, expected>::value &&
+          !detail::is_unexpected<typename std::decay<U>::type>> * = nullptr>
+  expected &operator=(U &&v);
+
+  template <class G> expected &operator=(const unexpected<G> &rhs);
+  template <class G> expected &operator=(unexpected<G> &&rhs);
+
+  template <class... Args> void emplace(Args &&...args);
+
+  void swap(expected &rhs);
+
+  const T *operator->() const;
+  T *operator->();
+
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  const U &operator*() const &;
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  U &operator*() &;
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  U &&operator*() &&;
+
+  bool has_value() const noexcept;
+  explicit operator bool() const noexcept;
+
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  const U &value() const &;
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  U &value() &;
+  template <class U = T,
+            std::enable_if_t<!std::is_void<U>::value> * = nullptr>
+  U &&value() &&;
+
+  const E &error() const &;
+  E &error() &;
+  E &&error() &&;
+
+  template <class U> T value_or(U &&v) const &;
+  template <class U> T value_or(U &&v) &&;
+};
+
+template <class T, class E, class U, class F>
+bool operator==(const expected<T, E> &lhs, const expected<U, F> &rhs);
+template <class T, class E, class U, class F>
+bool operator!=(const expected<T, E> &lhs, const expected<U, F> &rhs);
+template <class E, class F>
+bool operator==(const expected<void, E> &lhs, const expected<void, F> &rhs);
+template <class E, class F>
+bool operator!=(const expected<void, E> &lhs, const expected<void, F> &rhs);
+
+template <class T, class E, class U>
+bool operator==(const expected<T, E> &x, const U &v);
+template <class T, class E, class U>
+bool operator==(const U &v, const expected<T, E> &x);
+template <class T, class E, class U>
+bool operator!=(const expected<T, E> &x, const U &v);
+template <class T, class E, class U>
+bool operator!=(const U &v, const expected<T, E> &x);
+
+template <class T, class E>
+bool operator==(const expected<T, E> &x, const unexpected<E> &e);
+template <class T, class E>
+bool operator==(const unexpected<E> &e, const expected<T, E> &x);
+template <class T, class E>
+bool operator!=(const expected<T, E> &x, const unexpected<E> &e);
+template <class T, class E>
+bool operator!=(const unexpected<E> &e, const expected<T, E> &x);
+
+template <class T, class E>
+void swap(expected<T, E> &lhs, expected<T, E> &rhs);
+
+} // namespace tl
+
+#endif // TL_EXPECTED_H
 )";
 
 static constexpr char AbslOptionalHeader[] = R"(
@@ -1713,7 +2043,48 @@ bool operator==(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 template <typename T>
 bool operator!=(const StatusOr<T> &lhs, const StatusOr<T> &rhs);
 
+using StatusBuilder = Status;
+namespace status_macro_internal {
+class ReturnIfErrorAdaptor {
+ public:
+  explicit ReturnIfErrorAdaptor(
+      const absl::Status& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  explicit ReturnIfErrorAdaptor(
+      absl::Status&& status,
+      absl::SourceLocation loc = absl::SourceLocation::current());
+
+  ~ReturnIfErrorAdaptor();
+
+  explicit operator bool() const;
+  StatusBuilder Consume();
+};
+
+ReturnIfErrorAdaptor MacroAdaptor(const absl::Status& s,
+                                         absl::SourceLocation loc);
+ReturnIfErrorAdaptor MacroAdaptor(absl::Status&& s,
+                                         absl::SourceLocation loc);
+}
+
 } // namespace absl
+
+#define ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_ \
+  switch (0)                                           \
+  case 0:                                              \
+  default:  // NOLINT
+
+#define ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return_keyword, \
+                                                          expr)           \
+  ABSL_INTERNAL_STATUS_MACROS_IMPL_ELSE_BLOCKER_                          \
+  if (auto status_macro_internal_adaptor =                                \
+          absl::status_macro_internal::MacroAdaptor(                      \
+              (expr), absl::SourceLocation::current())) {                 \
+  } else /* NOLINT */                                                     \
+    return_keyword status_macro_internal_adaptor.Consume()
+
+#define ABSL_RETURN_IF_ERROR(expr) \
+  ABSL_INTERNAL_STATUS_MACROS_RETURN_IF_ERROR_IMPL_(return, expr)
 
 #endif // STATUSOR_H_
 )cc";
@@ -2000,6 +2371,103 @@ char *Check_LTImpl(const T1 &v1, const T2 &v2, const char *names);
 #endif // ABSL_LOG_H
 )cc";
 
+static constexpr char StdCoroutineHeader[] = R"cc(
+#ifndef COROUTINE_H
+#define COROUTINE_H
+
+#include "std_type_traits.h"
+
+namespace std {
+
+template <class _Tp, class = void>
+struct __coroutine_traits_sfinae {};
+
+template <class _Tp>
+struct __coroutine_traits_sfinae< _Tp, __void_t<typename _Tp::promise_type> > {
+  using promise_type = typename _Tp::promise_type;
+};
+
+template <class _Ret, class... _Args>
+struct coroutine_traits : public __coroutine_traits_sfinae<_Ret> {};
+
+template <class _Promise = void>
+struct coroutine_handle;
+
+template <>
+struct coroutine_handle<void> {
+public:
+  constexpr coroutine_handle() noexcept;
+  constexpr coroutine_handle(nullptr_t) noexcept;
+  coroutine_handle& operator=(nullptr_t) noexcept;
+  constexpr void* address() const noexcept;
+
+  static constexpr coroutine_handle from_address(void* __addr) noexcept;
+
+  // [coroutine.handle.observers], observers
+  constexpr explicit operator bool() const noexcept;
+
+  bool done() const;
+
+  // [coroutine.handle.resumption], resumption
+  void operator()() const;
+
+  void resume() const;
+
+  void destroy() const;
+};
+
+template <class _Promise>
+struct coroutine_handle {
+public:
+  // [coroutine.handle.con], construct/reset
+  constexpr coroutine_handle() noexcept;
+
+  constexpr coroutine_handle(nullptr_t) noexcept;
+
+  static coroutine_handle from_promise(_Promise& __promise);
+  coroutine_handle& operator=(nullptr_t) noexcept;
+
+  // [coroutine.handle.export.import], export/import
+  constexpr void* address() const noexcept;
+
+  static constexpr coroutine_handle from_address(void* __addr) noexcept;
+
+  // [coroutine.handle.conv], conversion
+  constexpr operator coroutine_handle<>() const noexcept;
+
+  // [coroutine.handle.observers], observers
+  constexpr explicit operator bool() const noexcept;
+
+  bool done() const;
+
+  // [coroutine.handle.resumption], resumption
+  void operator()() const;
+
+  void resume() const;
+
+  void destroy() const;
+
+  // [coroutine.handle.promise], promise access
+  _Promise& promise() const;
+};
+
+struct suspend_never {
+  constexpr bool await_ready() const noexcept { return true; }
+  constexpr void await_suspend(coroutine_handle<>) const noexcept {}
+  constexpr void await_resume() const noexcept {}
+};
+
+struct suspend_always {
+  constexpr bool await_ready() const noexcept { return false; }
+  constexpr void await_suspend(coroutine_handle<>) const noexcept {}
+  constexpr void await_resume() const noexcept {}
+};
+
+} // namespace std
+
+#endif // COROUTINE_H
+)cc";
+
 constexpr const char TestingDefsHeader[] = R"cc(
 #pragma clang system_header
 
@@ -2067,6 +2535,16 @@ GTEST_IMPL_CMP_HELPER_(GE)
 GTEST_IMPL_CMP_HELPER_(GT)
 
 #undef GTEST_IMPL_CMP_HELPER_
+
+struct AssertionResultExpectation {
+  AssertionResult assertion_result;
+  bool expected_result;
+
+  explicit operator bool() const {
+    bool converted(assertion_result);
+    return converted == expected_result;
+  }
+};
 
 std::string GetBoolAssertionFailureMessage(
     const AssertionResult &assertion_result, const char *expression_text,
@@ -2192,17 +2670,17 @@ using testing::AssertionResult;
 
 #define GTEST_TEST_BOOLEAN_(expression, text, actual, expected, fail)          \
   GTEST_AMBIGUOUS_ELSE_BLOCKER_                                                \
-  if (const ::testing::AssertionResult gtest_ar_ =                             \
-          ::testing::AssertionResult(expression))                              \
+  if (const ::testing::internal::AssertionResultExpectation gtest_are_ = {     \
+          ::testing::AssertionResult(expression), expected})                   \
     ;                                                                          \
   else                                                                         \
     fail(::testing::internal::GetBoolAssertionFailureMessage(                  \
-             gtest_ar_, text, #actual, #expected)                              \
+             gtest_are_.assertion_result, text, #actual, #expected)            \
              .c_str())
 #define GTEST_ASSERT_TRUE(condition)                                           \
   GTEST_TEST_BOOLEAN_(condition, #condition, false, true, GTEST_FATAL_FAILURE_)
 #define GTEST_ASSERT_FALSE(condition)                                          \
-  GTEST_TEST_BOOLEAN_(!(condition), #condition, true, false,                   \
+  GTEST_TEST_BOOLEAN_(condition, #condition, true, false,                      \
                       GTEST_FATAL_FAILURE_)
 #define ASSERT_TRUE(condition) GTEST_ASSERT_TRUE(condition)
 #define ASSERT_FALSE(condition) GTEST_ASSERT_FALSE(condition)
@@ -2325,6 +2803,24 @@ namespace std {
 }
 )cc";
 
+constexpr const char TaskHeader[] = R"cc(
+#include "std_coroutine.h"
+
+  template<typename T>
+  struct Task {
+    struct promise_type {
+        Task get_return_object();
+        std::suspend_never initial_suspend() noexcept;
+        std::suspend_always final_suspend() noexcept;
+        void return_value(T v);
+        void unhandled_exception();
+    };
+    bool await_ready() const noexcept;
+    T await_resume() noexcept;
+    void await_suspend(std::coroutine_handle<> handle) noexcept;
+  };
+)cc";
+
 std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   std::vector<std::pair<std::string, std::string>> Headers;
   Headers.emplace_back("cstddef.h", CStdDefHeader);
@@ -2333,6 +2829,9 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("std_type_traits.h", StdTypeTraitsHeader);
   Headers.emplace_back("std_utility.h", StdUtilityHeader);
   Headers.emplace_back("std_optional.h", StdOptionalHeader);
+  Headers.emplace_back("std_expected.h", StdExpectedHeader);
+  Headers.emplace_back("tl_expected.h", TlExpectedHeader);
+  Headers.emplace_back("std_coroutine.h", StdCoroutineHeader);
   Headers.emplace_back("absl_type_traits.h", AbslTypeTraitsHeader);
   Headers.emplace_back("absl_optional.h", AbslOptionalHeader);
   Headers.emplace_back("base_optional.h", BaseOptionalHeader);
@@ -2343,6 +2842,8 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("absl_log.h", AbslLogHeader);
   Headers.emplace_back("testing_defs.h", TestingDefsHeader);
   Headers.emplace_back("std_unique_ptr.h", StdUniquePtrHeader);
+  Headers.emplace_back("task.h", TaskHeader);
+
   return Headers;
 }
 

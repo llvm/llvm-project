@@ -1,0 +1,16 @@
+{
+  "id_table": [],
+  "results": [
+    {
+      "analysis_name": "TagsAnalysisResult",
+      "result": {
+        "tags": [
+          "valid",
+          "also-valid",
+          42
+        ]
+      }
+    }
+  ],
+  "type": "WPASuite"
+}

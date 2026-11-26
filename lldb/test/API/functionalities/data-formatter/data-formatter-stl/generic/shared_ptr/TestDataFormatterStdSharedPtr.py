@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
 
     def do_test(self):
         """Test `frame variable` output for `std::shared_ptr` types."""
@@ -28,7 +28,8 @@ class TestCase(TestBase):
         )
 
         self.expect(
-            "frame variable *sp_empty", substrs=["(int) *sp_empty = <parent is NULL>"]
+            "frame variable *sp_empty",
+            patterns=[r"\(int\) \*sp_empty = <parent is NULL>\n\Z"],
         )
 
         valobj = self.expect_var_path(
@@ -113,7 +114,6 @@ class TestCase(TestBase):
         self.expect_var_path("*si.pointer", type="int", value="47")
         self.expect_var_path("si.object", type="int", value="47")
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("ptr_node->value", value="1")
         self.expect_var_path("ptr_node->next->value", value="2")
         self.expect_var_path("(*ptr_node).value", value="1")

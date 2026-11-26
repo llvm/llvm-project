@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/utils.h>
+#include "clc/opencl/utils.h"
 
 #define __CLC_ATOMIC_GENTYPE __CLC_XCONCAT(atomic_, __CLC_GENTYPE)
 
-#define __CLC_BODY <atomic_init.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "atomic_init.inc"
+#include "clc/integer/gentype.inc"
 
-#define __CLC_BODY <atomic_init.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "atomic_init.inc"
+#include "clc/math/gentype.inc"

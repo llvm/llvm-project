@@ -22,6 +22,7 @@
 // operator<=>
 
 #include <__iterator/capacity_aware_iterator.h>
+#include <cassert>
 #include <compare>
 #include <concepts>
 #include <iterator>
@@ -34,10 +35,10 @@ constexpr bool test() {
   int arr[]         = {1, 2, 3, 4};
   constexpr long sz = std::size(arr);
 
-  using CapIter = std::__capacity_aware_iterator<Iter, decltype(arr), sz>;
+  using CapIter = std::__capacity_aware_iterator<Iter, sz>;
 
-  CapIter iter1 = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(arr));
-  CapIter iter2 = std::__make_capacity_aware_iterator<Iter, decltype(arr), sz>(Iter(arr + 4));
+  CapIter iter1 = std::__make_capacity_aware_iterator<Iter, sz>(Iter(arr));
+  CapIter iter2 = std::__make_capacity_aware_iterator<Iter, sz>(Iter(arr + 4));
 
   // operator==
   {

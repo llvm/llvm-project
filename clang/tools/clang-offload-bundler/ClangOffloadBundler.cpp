@@ -31,6 +31,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -61,8 +62,6 @@ static void PrintVersion(raw_ostream &OS) {
 }
 
 int main(int argc, const char **argv) {
-
-  cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
 
   // Mark all our options with this category, everything else (except for
   // -version and -help) will be hidden.
@@ -147,24 +146,20 @@ int main(int argc, const char **argv) {
                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
   cl::opt<int> CompressionLevel(
       "compression-level", cl::desc("Specify the compression level (integer)"),
-      cl::value_desc("n"), cl::Optional, cl::cat(ClangOffloadBundlerCategory));
+      cl::value_desc("n"), cl::cat(ClangOffloadBundlerCategory));
 
   // Process commandline options and report errors
   sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   cl::HideUnrelatedOptions(ClangOffloadBundlerCategory);
   cl::SetVersionPrinter(PrintVersion);
-  cl::ParseCommandLineOptions(
-      argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(
+      LibraryOptions, ArrayRef(argv, argc),
       "A tool to bundle several input files of the specified type <type> \n"
       "referring to the same source file but different targets into a single \n"
       "one. The resulting file can also be unbundled into different files by \n"
       "this tool if -unbundle is provided.\n");
-
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
-  }
 
   /// Class to store bundler options in standard (non-cl::opt) data structures
   // Avoid using cl::opt variables after these assignments when possible
@@ -184,9 +179,11 @@ int main(int argc, const char **argv) {
   if (CompressionLevel.getNumOccurrences() > 0)
     BundlerConfig.CompressionLevel = CompressionLevel;
 
-  BundlerConfig.TargetNames = TargetNames;
-  BundlerConfig.InputFileNames = InputFileNames;
-  BundlerConfig.OutputFileNames = OutputFileNames;
+  BundlerConfig.TargetNames.assign(TargetNames.begin(), TargetNames.end());
+  BundlerConfig.InputFileNames.assign(InputFileNames.begin(),
+                                      InputFileNames.end());
+  BundlerConfig.OutputFileNames.assign(OutputFileNames.begin(),
+                                       OutputFileNames.end());
 
   /// The index of the host input in the list of inputs.
   BundlerConfig.HostInputIndex = ~0u;
@@ -243,7 +240,8 @@ int main(int argc, const char **argv) {
     s.insert(s.end(), InputFileNamesDeprecatedOpt.begin(),
              InputFileNamesDeprecatedOpt.end());
   }
-  BundlerConfig.InputFileNames = InputFileNames;
+  BundlerConfig.InputFileNames.assign(InputFileNames.begin(),
+                                      InputFileNames.end());
 
   if (OutputFileNames.getNumOccurrences() != 0 &&
       OutputFileNamesDeprecatedOpt.getNumOccurrences() != 0) {
@@ -259,7 +257,8 @@ int main(int argc, const char **argv) {
     s.insert(s.end(), OutputFileNamesDeprecatedOpt.begin(),
              OutputFileNamesDeprecatedOpt.end());
   }
-  BundlerConfig.OutputFileNames = OutputFileNames;
+  BundlerConfig.OutputFileNames.assign(OutputFileNames.begin(),
+                                       OutputFileNames.end());
 
   if (ListBundleIDs) {
     if (Unbundle) {
@@ -395,7 +394,8 @@ int main(int argc, const char **argv) {
     ++Index;
   }
 
-  BundlerConfig.TargetNames = StandardizedTargetNames;
+  BundlerConfig.TargetNames.assign(StandardizedTargetNames.begin(),
+                                   StandardizedTargetNames.end());
 
   for (const auto &TargetID : TargetIDs) {
     if (auto ConflictingTID =

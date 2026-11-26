@@ -40,8 +40,8 @@ static cl::opt<bool>
 
 /// Adapted from llvm::PassBuilder::buildInlinerPipeline
 static ModuleInlinerWrapperPass
-buildInlinePasses(llvm::OptimizationLevel Level) {
-  InlineParams IP = getInlineParams(200);
+buildInlinePasses(llvm::LLVMContext &Context, llvm::OptimizationLevel Level) {
+  InlineParams IP = getInlineParams(Context, 200);
   ModuleInlinerWrapperPass MIWP(IP);
 
   // Require the GlobalsAA analysis for the module so we can query it within
@@ -69,7 +69,8 @@ buildInlinePasses(llvm::OptimizationLevel Level) {
 }
 
 FunctionPassManager
-polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
+polly::buildCanonicalicationPassesForNPM(llvm::LLVMContext &Context,
+                                         llvm::ModulePassManager &MPM,
                                          llvm::OptimizationLevel Level) {
   FunctionPassManager FPM;
 
@@ -83,13 +84,13 @@ polly::buildCanonicalicationPassesForNPM(llvm::ModulePassManager &MPM,
   FPM.addPass(ReassociatePass());
   {
     LoopPassManager LPM;
-    LPM.addPass(LoopRotatePass(Level != OptimizationLevel::Oz));
+    LPM.addPass(LoopRotatePass());
     FPM.addPass(createFunctionToLoopPassAdaptor<LoopPassManager>(
         std::move(LPM), /*UseMemorySSA=*/false));
   }
   if (PollyInliner) {
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-    MPM.addPass(buildInlinePasses(Level));
+    MPM.addPass(buildInlinePasses(Context, Level));
     FPM = FunctionPassManager();
 
     FPM.addPass(PromotePass());

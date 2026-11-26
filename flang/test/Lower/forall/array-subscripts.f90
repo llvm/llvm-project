@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
   ! Make sure we use array values for subscripts that are arrays on the lhs so
   ! that copy-in/copy-out works correctly.
@@ -8,14 +8,26 @@
   end forall
 end
 
-! CHECK-LABEL: func @_QQmain
-! CHECK: %[[a:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.array<4x4xi32>>
-! CHECK: %[[a1:.*]] = fir.array_load %[[a]](%{{.*}}) : (!fir.ref<!fir.array<4x4xi32>>, !fir.shape<2>) -> !fir.array<4x4xi32>
-! CHECK: %[[a2:.*]] = fir.array_load %[[a]](%{{.*}}) : (!fir.ref<!fir.array<4x4xi32>>, !fir.shape<2>) -> !fir.array<4x4xi32>
-! CHECK: %[[a3:.*]] = fir.array_load %[[a]](%{{.*}}) : (!fir.ref<!fir.array<4x4xi32>>, !fir.shape<2>) -> !fir.array<4x4xi32>
-! CHECK: %[[av:.*]] = fir.do_loop
-! CHECK: fir.do_loop
-! CHECK: = fir.array_fetch %[[a2]], %{{.*}}, %{{.*}} : (!fir.array<4x4xi32>, index, index) -> i32
-! CHECK: = fir.array_fetch %[[a3]], %{{.*}}, %{{.*}} : (!fir.array<4x4xi32>, index, index) -> i32
-! CHECK: = fir.array_update %{{.*}}, %{{.*}}, %{{.*}} : (!fir.array<4x4xi32>, i32, index, index) -> !fir.array<4x4xi32>
-! CHECK: fir.array_merge_store %[[a1]], %[[av]] to %[[a]] : !fir.array<4x4xi32>, !fir.array<4x4xi32>, !fir.ref<!fir.array<4x4xi32>>
+! CHECK-LABEL: func.func @_QQmain() {
+! CHECK: %[[A_ADDR:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.array<4x4xi32>>
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_ADDR]]
+! CHECK: hlfir.forall lb {
+! CHECK: hlfir.yield %{{.*}} : i32
+! CHECK: } ub {
+! CHECK: hlfir.yield %{{.*}} : i32
+! CHECK: }  (%[[I_ARG:.*]]: i32) {
+! CHECK:   %[[I_REF:.*]] = hlfir.forall_index "i" %[[I_ARG]]
+! CHECK:   hlfir.forall lb {
+! CHECK:   hlfir.yield %{{.*}} : i32
+! CHECK:   } ub {
+! CHECK:   hlfir.yield %{{.*}} : i32
+! CHECK:   }  (%[[J_ARG:.*]]: i32) {
+! CHECK:     %[[J_REF:.*]] = hlfir.forall_index "j" %[[J_ARG]]
+! CHECK:     hlfir.region_assign {
+! CHECK:       hlfir.yield %{{.*}} : i32
+! CHECK:     } to {
+! CHECK:       hlfir.designate %[[A]]#0 ({{.*}}, {{.*}})
+! CHECK:       hlfir.yield %{{.*}} : !fir.ref<i32>
+! CHECK:     }
+! CHECK:   }
+! CHECK: }

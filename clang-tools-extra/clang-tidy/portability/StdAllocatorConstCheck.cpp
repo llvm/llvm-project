@@ -15,13 +15,13 @@ namespace clang::tidy::portability {
 
 void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
   // Match std::allocator<const T>.
-  auto AllocatorConst = qualType(hasCanonicalType(
+  const auto AllocatorConst = qualType(hasCanonicalType(
       recordType(hasDeclaration(classTemplateSpecializationDecl(
           hasName("::std::allocator"),
           hasTemplateArgument(0,
                               refersToType(qualType(isConstQualified()))))))));
 
-  auto HasContainerName =
+  const auto HasContainerName =
       hasAnyName("::std::vector", "::std::deque", "::std::list",
                  "::std::multiset", "::std::set", "::std::unordered_multiset",
                  "::std::unordered_set", "::absl::flat_hash_set");
@@ -54,13 +54,7 @@ void StdAllocatorConstCheck::registerMatchers(MatchFinder *Finder) {
 
 void StdAllocatorConstCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *T = Result.Nodes.getNodeAs<TypeLoc>("type_loc");
-  if (!T)
-    return;
-  // Exclude TypeLoc matches in STL headers.
-  if (isSystem(Result.Context->getSourceManager().getFileCharacteristic(
-          T->getBeginLoc())))
-    return;
-
+  assert(T);
   diag(T->getBeginLoc(),
        "container using std::allocator<const T> is a deprecated libc++ "
        "extension; remove const for compatibility with other standard "

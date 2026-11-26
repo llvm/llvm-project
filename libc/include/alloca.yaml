@@ -1,0 +1,8 @@
+header: alloca.h
+standards:
+  - gnu
+merge_yaml_files:
+  - stdlib-alloca.yaml
+enums: []
+objects: []
+functions: []

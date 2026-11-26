@@ -9,12 +9,9 @@
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Types.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Compiler.h"
 
 using namespace mlir;
@@ -102,6 +99,36 @@ DiagnosedSilenceableFailure
 transform::AnyParamType::checkPayload(Location loc,
                                       ArrayRef<Attribute> payload) const {
   return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
+// transform::NormalizedOpType
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::NormalizedOpType::checkPayload(Location loc,
+                                          ArrayRef<Operation *> payload) const {
+  // Only check payloads that are not already guaranteeing the required forms.
+  SmallVector<Operation *> payloadsToCheck =
+      llvm::filter_to_vector(payload, [this](Operation *op) {
+        auto normalFormCheckedOp = dyn_cast<NormalFormCheckedOpInterface>(op);
+        if (!normalFormCheckedOp)
+          return true;
+
+        SmallVector<NormalFormAttrInterface> checkedNormalForms;
+        normalFormCheckedOp.getCheckedNormalForms(checkedNormalForms);
+        return !llvm::all_of(
+            this->getNormalForms(), [&](NormalFormAttrInterface form) {
+              return llvm::is_contained(checkedNormalForms, form);
+            });
+      });
+  return detail::checkNormalForms(getNormalForms(), payloadsToCheck);
+}
+
+LogicalResult transform::NormalizedOpType::verify(
+    function_ref<InFlightDiagnostic()> emitError,
+    ArrayRef<NormalFormAttrInterface> normalForms) {
+  return detail::verifyNormalFormList(emitError, normalForms);
 }
 
 //===----------------------------------------------------------------------===//

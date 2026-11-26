@@ -8,8 +8,6 @@
 
 #include "GNUstepObjCRuntime.h"
 
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Expression/UtilityFunction.h"
@@ -44,7 +42,7 @@ static bool CanModuleBeGNUstepObjCLibrary(const ModuleSP &module_sp,
   const FileSpec &module_file_spec = module_sp->GetFileSpec();
   if (!module_file_spec)
     return false;
-  llvm::StringRef filename = module_file_spec.GetFilename().GetStringRef();
+  llvm::StringRef filename = module_file_spec.GetFilename();
   if (TT.isOSBinFormatELF())
     return filename.starts_with("libobjc.so");
   if (TT.isOSWindows())

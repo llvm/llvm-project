@@ -308,7 +308,7 @@ public:
 
   using LocationVec = SmallVector<Location, 8>;
   using LiveOutVec = SmallVector<LiveOutReg, 8>;
-  using ConstantPool = MapVector<uint64_t, uint64_t>;
+  using ConstantPool = MapVector<int64_t, int64_t>;
 
   struct FunctionInfo {
     uint64_t StackSize = 0;

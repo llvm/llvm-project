@@ -14,6 +14,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -55,7 +56,7 @@ const char *SBSymbol::GetName() const {
 
   const char *name = nullptr;
   if (m_opaque_ptr)
-    name = m_opaque_ptr->GetName().AsCString();
+    name = StringPool::GetSystemPool().InternNonEmpty(m_opaque_ptr->GetName());
 
   return name;
 }
@@ -65,7 +66,8 @@ const char *SBSymbol::GetDisplayName() const {
 
   const char *name = nullptr;
   if (m_opaque_ptr)
-    name = m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
+    name = StringPool::GetSystemPool().InternNonEmpty(
+        m_opaque_ptr->GetMangled().GetDisplayDemangledName());
 
   return name;
 }
@@ -75,7 +77,8 @@ const char *SBSymbol::GetMangledName() const {
 
   const char *name = nullptr;
   if (m_opaque_ptr)
-    name = m_opaque_ptr->GetMangled().GetMangledName().AsCString();
+    name = StringPool::GetSystemPool().InternNonEmpty(
+        m_opaque_ptr->GetMangled().GetMangledName());
   return name;
 }
 
@@ -85,7 +88,8 @@ const char *SBSymbol::GetBaseName() const {
   if (!m_opaque_ptr)
     return nullptr;
 
-  return m_opaque_ptr->GetMangled().GetBaseName().AsCString();
+  return StringPool::GetSystemPool().InternNonEmpty(
+      m_opaque_ptr->GetMangled().GetBaseName());
 }
 
 bool SBSymbol::operator==(const SBSymbol &rhs) const {
@@ -126,9 +130,11 @@ SBInstructionList SBSymbol::GetInstructions(SBTarget target,
   SBInstructionList sb_instructions;
   if (m_opaque_ptr) {
     TargetSP target_sp(target.GetSP());
-    std::unique_lock<std::recursive_mutex> lock;
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
     if (target_sp && m_opaque_ptr->ValueIsAddress()) {
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
       const Address &symbol_addr = m_opaque_ptr->GetAddressRef();
       ModuleSP module_sp = symbol_addr.GetModule();
       if (module_sp) {

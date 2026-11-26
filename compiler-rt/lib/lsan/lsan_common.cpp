@@ -121,6 +121,13 @@ static const char kStdSuppressions[] =
 #  if SANITIZER_APPLE
     // For Darwin and os_log/os_trace: https://reviews.llvm.org/D35173
     "leak:*_os_trace*\n"
+#    if SANITIZER_ARM64
+    // Apple Aarch64 leaks in dyld on startup.
+    // See https://github.com/llvm/llvm-project/issues/115992.
+    "leak:*_fetchInitializingClassList*\n"
+    // Apple Aarch64 leaks when using thread locals.
+    "leak:*dyld4::RuntimeState::_instantiateTLVs*\n"
+#    endif
 #  endif
     // TLS leak in some glibc versions, described in
     // https://sourceware.org/bugzilla/show_bug.cgi?id=12650.
@@ -443,6 +450,20 @@ static void ProcessThreadRegistry(Frontier *frontier) {
   }
 }
 
+#    if !SANITIZER_ANDROID
+static bool IsDTLSAccessible(uptr beg, uptr end) {
+  // A dlclose()-d module's DTLS block may be freed and unmapped lazily without
+  // updating dtv. A small block is checked whole with a single write; for a
+  // larger one only the ends are probed.
+  // FIXME: A freed but still mapped block is scanned too, which may hide leaks.
+  // Clearing dtv entries on free would fix this.
+  uptr size = end - beg;
+  if (size <= GetPageSizeCached())
+    return IsAccessibleMemoryRange(beg, size);
+  return IsAccessibleMemoryRange(beg, 1) && IsAccessibleMemoryRange(end - 1, 1);
+}
+#    endif
+
 // Scans thread data (stacks and TLS) for heap pointers.
 template <class Accessor>
 static void ProcessThread(ThreadID os_id, uptr sp,
@@ -540,10 +561,17 @@ static void ProcessThread(ThreadID os_id, uptr sp,
         uptr dtls_beg = dtv.beg;
         uptr dtls_end = dtls_beg + dtv.size;
         if (dtls_beg < dtls_end) {
-          LOG_THREADS("DTLS %d at %p-%p.\n", id, (void *)dtls_beg,
-                      (void *)dtls_end);
-          ScanForPointers(dtls_beg, dtls_end, frontier, "DTLS", kReachable,
-                          accessor);
+          if (IsDTLSAccessible(dtls_beg, dtls_end)) {
+            LOG_THREADS("DTLS %d at %p-%p.\n", id, (void*)dtls_beg,
+                        (void*)dtls_end);
+            ScanForPointers(dtls_beg, dtls_end, frontier, "DTLS", kReachable,
+                            accessor);
+          } else {
+            // A dlclose()-d module's DTLS block might have been lazily freed
+            // and unmapped without updating dtv, leaving an inaccessible range.
+            LOG_THREADS("DTLS %d at %p-%p is not accessible.\n", id,
+                        (void*)dtls_beg, (void*)dtls_end);
+          }
         }
       });
     } else {
@@ -890,6 +918,9 @@ static bool CheckForLeaksOnce() {
       Report(
           "HINT: LeakSanitizer does not work under ptrace (strace, gdb, "
           "etc)\n");
+      Report(
+          "HINT: LeakSanitizer requires ptrace_scope to be disabled (e.g. echo "
+          "0 > /proc/sys/kernel/yama/ptrace_scope)\n");
       Die();
     }
     LeakReport leak_report;

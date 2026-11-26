@@ -62,20 +62,21 @@ static void defaultDiagHandler(const SMDiagnostic &SMD, bool, const SourceMgr &,
   SMD.print(nullptr, errs());
 }
 
-MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
-                     const MCRegisterInfo *mri, const MCSubtargetInfo *msti,
-                     const SourceMgr *mgr, MCTargetOptions const *TargetOpts,
-                     bool DoAutoReset, StringRef Swift5ReflSegmentName)
+MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo &mai,
+                     const MCRegisterInfo &mri, const MCSubtargetInfo &msti,
+                     const SourceMgr *mgr, bool DoAutoReset,
+                     StringRef Swift5ReflSegmentName)
     : Swift5ReflectionSegmentName(Swift5ReflSegmentName), TT(TheTriple),
       SrcMgr(mgr), InlineSrcMgr(nullptr), DiagHandler(defaultDiagHandler),
-      MAI(mai), MRI(mri), MSTI(msti), Symbols(Allocator),
+      MAI(mai), MRI(&mri), MSTI(&msti), Symbols(Allocator),
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
-      AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
-  SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
+      ELFUniquingMap(Allocator), AutoReset(DoAutoReset) {
+  const MCTargetOptions &TO = getTargetOptions();
+  SaveTempLabels = TO.MCSaveTempLabels;
   if (SaveTempLabels)
     setUseNamesOnTempLabels(true);
-  SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
+  SecureLogFile = TO.AsSecureLogFile;
 
   if (SrcMgr && SrcMgr->getNumBuffers())
     MainFileName = std::string(SrcMgr->getMemoryBuffer(SrcMgr->getMainFileID())
@@ -86,7 +87,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     Env = IsMachO;
     break;
   case Triple::COFF:
-    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI()) {
+    if (!TheTriple.isOSWindowsOrUEFI()) {
       reportFatalUsageError(
           "cannot initialize MC for non-Windows COFF object files");
     }
@@ -115,6 +116,10 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     report_fatal_error("Cannot initialize MC for unknown object file format.");
     break;
   }
+}
+
+const MCTargetOptions &MCContext::getTargetOptions() const {
+  return MAI.getTargetOptions();
 }
 
 MCContext::~MCContext() {
@@ -154,9 +159,10 @@ void MCContext::reset() {
 
   CVContext.reset();
 
-  MCSubtargetAllocator.DestroyAll();
+  SubtargetCopies.clear();
   InlineAsmUsedLabelNames.clear();
   Symbols.clear();
+  ELFUniquingMap.clear();
   Allocator.Reset();
   Instances.clear();
   CompilationDir.clear();
@@ -169,14 +175,12 @@ void MCContext::reset() {
   CurrentDwarfLoc = MCDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0);
 
   MachOUniquingMap.clear();
-  ELFUniquingMap.clear();
   GOFFUniquingMap.clear();
   COFFUniquingMap.clear();
   WasmUniquingMap.clear();
   XCOFFUniquingMap.clear();
   DXCUniquingMap.clear();
 
-  RelSecNames.clear();
   MacroMap.clear();
   ELFEntrySizeMap.clear();
   ELFSeenGenericMergeableSections.clear();
@@ -208,7 +212,7 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
 
   MCSymbolTableEntry &Entry = getSymbolTableEntry(NameRef);
   if (!Entry.second.Symbol) {
-    bool IsRenamable = NameRef.starts_with(MAI->getPrivateGlobalPrefix());
+    bool IsRenamable = NameRef.starts_with(MAI.getInternalSymbolPrefix());
     bool IsTemporary = IsRenamable && !SaveTempLabels;
     if (!Entry.second.Used) {
       Entry.second.Used = true;
@@ -253,17 +257,17 @@ MCSymbol *MCContext::parseSymbol(const Twine &Name) {
 
 MCSymbol *MCContext::getOrCreateFrameAllocSymbol(const Twine &FuncName,
                                                  unsigned Idx) {
-  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + FuncName +
+  return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + FuncName +
                            "$frame_escape_" + Twine(Idx));
 }
 
 MCSymbol *MCContext::getOrCreateParentFrameOffsetSymbol(const Twine &FuncName) {
-  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + FuncName +
+  return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + FuncName +
                            "$parent_frame_offset");
 }
 
 MCSymbol *MCContext::getOrCreateLSDASymbol(const Twine &FuncName) {
-  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + "__ehtable$" +
+  return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + "__ehtable$" +
                            FuncName);
 }
 
@@ -360,23 +364,23 @@ MCSymbol *MCContext::createRenamableSymbol(const Twine &Name,
 MCSymbol *MCContext::createTempSymbol(const Twine &Name, bool AlwaysAddSuffix) {
   if (!UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, /*IsTemporary=*/true);
-  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name,
+  return createRenamableSymbol(MAI.getInternalSymbolPrefix() + Name,
                                AlwaysAddSuffix, /*IsTemporary=*/true);
 }
 
 MCSymbol *MCContext::createNamedTempSymbol(const Twine &Name) {
-  return createRenamableSymbol(MAI->getPrivateGlobalPrefix() + Name, true,
+  return createRenamableSymbol(MAI.getInternalSymbolPrefix() + Name, true,
                                /*IsTemporary=*/!SaveTempLabels);
 }
 
 MCSymbol *MCContext::createBlockSymbol(const Twine &Name, bool AlwaysEmit) {
   if (AlwaysEmit)
-    return getOrCreateSymbol(MAI->getPrivateLabelPrefix() + Name);
+    return getOrCreateSymbol(MAI.getInternalSymbolPrefix() + Name);
 
   bool IsTemporary = !SaveTempLabels;
   if (IsTemporary && !UseNamesOnTempLabels)
     return createSymbolImpl(nullptr, IsTemporary);
-  return createRenamableSymbol(MAI->getPrivateLabelPrefix() + Name,
+  return createRenamableSymbol(MAI.getInternalSymbolPrefix() + Name,
                                /*AlwaysAddSuffix=*/false, IsTemporary);
 }
 
@@ -385,7 +389,7 @@ MCSymbol *MCContext::createLinkerPrivateTempSymbol() {
 }
 
 MCSymbol *MCContext::createLinkerPrivateSymbol(const Twine &Name) {
-  return createRenamableSymbol(MAI->getLinkerPrivateGlobalPrefix() + Name,
+  return createRenamableSymbol(MAI.getLinkerPrivateGlobalPrefix() + Name,
                                /*AlwaysAddSuffix=*/true,
                                /*IsTemporary=*/false);
 }
@@ -444,8 +448,12 @@ Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
   auto &SymEntry = getSymbolTableEntry(Section);
   MCSymbol *Sym = SymEntry.second.Symbol;
   if (Sym && Sym->isDefined() &&
-      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym))
+      (!Sym->isInSection() || Sym->getSection().getBeginSymbol() != Sym)) {
     reportError(SMLoc(), "invalid symbol redefinition");
+    // Don't reuse the conflicting symbol (e.g. an equated symbol from `x=0`)
+    // as a section symbol, which would cause a crash in changeSection.
+    Sym = nullptr;
+  }
   // Use the symbol's index to track if it has been used as a section symbol.
   // Set to -1 to catch potential bugs if misused as a symbol index.
   if (Sym && Sym->getIndex() != -1u) {
@@ -491,7 +499,7 @@ MCSymbolXCOFF *MCContext::createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
       OriginalName.starts_with("_Renamed.."))
     reportError(SMLoc(), "invalid symbol name from source");
 
-  if (MAI->isValidUnquotedName(OriginalName))
+  if (MAI.isValidUnquotedName(OriginalName))
     return new (Name, *this) MCSymbolXCOFF(Name, IsTemporary);
 
   // Now we have a name that contains invalid character(s) for XCOFF symbol.
@@ -509,7 +517,7 @@ MCSymbolXCOFF *MCContext::createXCOFFSymbolImpl(const MCSymbolTableEntry *Name,
   // Append the hex values of '_' and invalid characters with "_Renamed..";
   // at the same time replace invalid characters with '_'.
   for (char &C : InvalidName) {
-    if (!MAI->isAcceptableChar(C) || C == '_') {
+    if (!MAI.isAcceptableChar(C) || C == '_') {
       raw_svector_ostream(ValidName).write_hex(C);
       C = '_';
     }
@@ -583,17 +591,15 @@ MCSectionELF *
 MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
                                unsigned EntrySize, const MCSymbolELF *Group,
                                const MCSectionELF *RelInfoSection) {
-  StringMap<bool>::iterator I;
-  bool Inserted;
-  std::tie(I, Inserted) = RelSecNames.insert(std::make_pair(Name.str(), true));
-
-  return createELFSectionImpl(
-      I->getKey(), Type, Flags, EntrySize, Group, true, true,
+  SmallString<128> Buffer;
+  StringRef SectionName = allocateString(Name.toStringRef(Buffer));
+  return new (ELFAllocator.Allocate()) MCSectionELF(
+      SectionName, Type, Flags, EntrySize, Group, true, true, nullptr,
       static_cast<const MCSymbolELF *>(RelInfoSection->getBeginSymbol()));
 }
 
 MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
-                                            const Twine &Suffix, unsigned Type,
+                                            StringRef Suffix, unsigned Type,
                                             unsigned Flags,
                                             unsigned EntrySize) {
   return getELFSection(Prefix + "." + Suffix, Type, Flags, EntrySize, Suffix,
@@ -602,11 +608,11 @@ MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
 
 MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
-                                       const Twine &Group, bool IsComdat,
+                                       StringRef Group, bool IsComdat,
                                        unsigned UniqueID,
                                        const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *GroupSym = nullptr;
-  if (!Group.isTriviallyEmpty() && !Group.str().empty())
+  if (!Group.empty())
     GroupSym = static_cast<MCSymbolELF *>(getOrCreateSymbol(Group));
 
   return getELFSection(Section, Type, Flags, EntrySize, GroupSym, IsComdat,
@@ -676,9 +682,10 @@ MCSectionELF *MCContext::createELFGroupSection(const MCSymbolELF *Group,
 void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
                                               unsigned Flags, unsigned UniqueID,
                                               unsigned EntrySize) {
+  CachedHashStringRef Key(SectionName);
   bool IsMergeable = Flags & ELF::SHF_MERGE;
   if (UniqueID == MCSection::NonUniqueID) {
-    ELFSeenGenericMergeableSections.insert(SectionName);
+    ELFSeenGenericMergeableSections.insert(Key);
     // Minor performance optimization: avoid hash map lookup in
     // isELFGenericMergeableSection, which will return true for SectionName.
     IsMergeable = true;
@@ -688,9 +695,10 @@ void MCContext::recordELFMergeableSectionInfo(StringRef SectionName,
   // section name we enter their Unique ID into the ELFEntrySizeMap so that
   // compatible globals can be assigned to the same section.
 
-  if (IsMergeable || isELFGenericMergeableSection(SectionName)) {
-    ELFEntrySizeMap.insert(std::make_pair(
-        std::make_tuple(SectionName, Flags, EntrySize), UniqueID));
+  if (IsMergeable || isELFImplicitMergeableSectionNamePrefix(SectionName) ||
+      ELFSeenGenericMergeableSections.contains(Key)) {
+    ELFEntrySizeMap.insert(
+        std::make_pair(std::make_tuple(Key, Flags, EntrySize), UniqueID));
   }
 }
 
@@ -701,13 +709,15 @@ bool MCContext::isELFImplicitMergeableSectionNamePrefix(StringRef SectionName) {
 
 bool MCContext::isELFGenericMergeableSection(StringRef SectionName) {
   return isELFImplicitMergeableSectionNamePrefix(SectionName) ||
-         ELFSeenGenericMergeableSections.count(SectionName);
+         ELFSeenGenericMergeableSections.contains(
+             CachedHashStringRef(SectionName));
 }
 
 std::optional<unsigned>
 MCContext::getELFUniqueIDForEntsize(StringRef SectionName, unsigned Flags,
                                     unsigned EntrySize) {
-  auto I = ELFEntrySizeMap.find(std::make_tuple(SectionName, Flags, EntrySize));
+  auto I = ELFEntrySizeMap.find(
+      std::make_tuple(CachedHashStringRef(SectionName), Flags, EntrySize));
   return (I != ELFEntrySizeMap.end()) ? std::optional<unsigned>(I->second)
                                       : std::nullopt;
 }
@@ -816,10 +826,10 @@ MCSectionCOFF *MCContext::getAssociativeCOFFSection(MCSectionCOFF *Sec,
 }
 
 MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
-                                         unsigned Flags, const Twine &Group,
+                                         unsigned Flags, StringRef Group,
                                          unsigned UniqueID) {
   MCSymbolWasm *GroupSym = nullptr;
-  if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
+  if (!Group.empty()) {
     GroupSym = static_cast<MCSymbolWasm *>(getOrCreateSymbol(Group));
     GroupSym->setComdat(true);
     if (K.isMetadata() && !GroupSym->getType().has_value()) {
@@ -940,7 +950,7 @@ MCSectionDXContainer *MCContext::getDXContainerSection(StringRef Section,
 }
 
 MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
-  return *new (MCSubtargetAllocator.Allocate()) MCSubtargetInfo(STI);
+  return *SubtargetCopies.emplace_back(STI.clone());
 }
 
 void MCContext::addDebugPrefixMapEntry(const std::string &From,
@@ -984,15 +994,11 @@ void MCContext::RemapDebugPaths() {
 //===----------------------------------------------------------------------===//
 
 EmitDwarfUnwindType MCContext::emitDwarfUnwindInfo() const {
-  if (!TargetOptions)
-    return EmitDwarfUnwindType::Default;
-  return TargetOptions->EmitDwarfUnwind;
+  return getTargetOptions().EmitDwarfUnwind;
 }
 
 bool MCContext::emitCompactUnwindNonCanonical() const {
-  if (TargetOptions)
-    return TargetOptions->EmitCompactUnwindNonCanonical;
-  return false;
+  return getTargetOptions().EmitCompactUnwindNonCanonical;
 }
 
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
@@ -1076,6 +1082,8 @@ CodeViewContext &MCContext::getCVContext() {
 
 void MCContext::diagnose(const SMDiagnostic &SMD) {
   assert(DiagHandler && "MCContext::DiagHandler is not set");
+  if (SMD.getKind() == SourceMgr::DK_Error)
+    HadError = true;
   bool UseInlineSrcMgr = false;
   const SourceMgr *SMP = nullptr;
   if (SrcMgr) {
@@ -1127,9 +1135,9 @@ void MCContext::reportError(SMLoc Loc, const Twine &Msg) {
 }
 
 void MCContext::reportWarning(SMLoc Loc, const Twine &Msg) {
-  if (TargetOptions && TargetOptions->MCNoWarn)
+  if (getTargetOptions().MCNoWarn)
     return;
-  if (TargetOptions && TargetOptions->MCFatalWarnings) {
+  if (getTargetOptions().MCFatalWarnings) {
     reportError(Loc, Msg);
   } else {
     reportCommon(Loc, [&](SMDiagnostic &D, const SourceMgr *SMP) {

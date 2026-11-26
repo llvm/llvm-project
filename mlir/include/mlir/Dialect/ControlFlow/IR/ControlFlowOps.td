@@ -22,6 +22,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def ControlFlow_Dialect : Dialect {
   let name = "cf";
   let cppNamespace = "::mlir::cf";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = ["arith::ArithDialect"];
   let description = [{
     This dialect contains low-level, i.e. non-region based, control flow
@@ -263,7 +264,7 @@ def SwitchOp : CF_Op<"switch",
   }];
 
   let arguments = (ins
-    AnyInteger:$flag,
+    AnySignlessInteger:$flag,
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
     OptionalAttr<AnyIntElementsAttr>:$case_values,

@@ -30,6 +30,10 @@ def XSfmmVTypeOp : RISCVOp {
   }];
 }
 
+// TWiden operand should be named $twiden for getNamedOperandIdx.
+// ATK operand should be named $atk for getNamedOperandIdx.
+// ATM operand should be named $atm for getNamedOperandIdx.
+// ATN operand should be named $atn for getNamedOperandIdx.
 def twiden : RISCVOp {
   let OperandType = "OPERAND_XSFMM_TWIDEN";
 }
@@ -251,7 +255,7 @@ let Predicates = [HasVendorXSfmm32a16fOrXSfmm32a32fOrXSfmm64a64f] in {
   let Uses = [FRM], mayRaiseFPException = true in
   def SF_MM_F_F   : SFInstMatmulF<(outs), (ins TRM2:$rd, VR:$vs2, VR:$vs1),
                                   "sf.mm.f.f", "$rd, $vs2, $vs1">;
-} // Predicates = [HasVendorXSfmm32a16fOrXSfmm64a32fOrXSfmm64a64f]
+} // Predicates = [HasVendorXSfmm32a16fOrXSfmm32a32fOrXSfmm64a64f]
 
 let Predicates = [HasVendorXSfmm32a8i] in {
   foreach a = I8Encodes in

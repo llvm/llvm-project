@@ -39,7 +39,7 @@
 ; RUN:   | FileCheck -check-prefix=DEFAULTCLUSTER %s
 
 define i32 @store_clustering_1(ptr nocapture %p, i32 %v) {
-; NOCLUSTER: ********** MI Scheduling **********
+; NOCLUSTER: Current Schedule Region
 ; NOCLUSTER-LABEL: store_clustering_1:%bb.0
 ; NOCLUSTER: *** Final schedule for %bb.0 ***
 ; NOCLUSTER: SU(2):   SW %1:gpr, %0:gpr, 12 :: (store (s32) into %ir.arrayidx0)
@@ -47,7 +47,7 @@ define i32 @store_clustering_1(ptr nocapture %p, i32 %v) {
 ; NOCLUSTER: SU(4):   SW %1:gpr, %0:gpr, 4 :: (store (s32) into %ir.arrayidx2)
 ; NOCLUSTER: SU(5):   SW %1:gpr, %0:gpr, 16 :: (store (s32) into %ir.arrayidx3)
 ;
-; STCLUSTER: ********** MI Scheduling **********
+; STCLUSTER: Current Schedule Region
 ; STCLUSTER-LABEL: store_clustering_1:%bb.0
 ; STCLUSTER: *** Final schedule for %bb.0 ***
 ; STCLUSTER: SU(4):   SW %1:gpr, %0:gpr, 4 :: (store (s32) into %ir.arrayidx2)
@@ -55,7 +55,7 @@ define i32 @store_clustering_1(ptr nocapture %p, i32 %v) {
 ; STCLUSTER: SU(2):   SW %1:gpr, %0:gpr, 12 :: (store (s32) into %ir.arrayidx0)
 ; STCLUSTER: SU(5):   SW %1:gpr, %0:gpr, 16 :: (store (s32) into %ir.arrayidx3)
 ;
-; LDCLUSTER: ********** MI Scheduling **********
+; LDCLUSTER: Current Schedule Region
 ; LDCLUSTER-LABEL: store_clustering_1:%bb.0
 ; LDCLUSTER: *** Final schedule for %bb.0 ***
 ; LDCLUSTER: SU(2):   SW %1:gpr, %0:gpr, 12 :: (store (s32) into %ir.arrayidx0)
@@ -63,7 +63,7 @@ define i32 @store_clustering_1(ptr nocapture %p, i32 %v) {
 ; LDCLUSTER: SU(4):   SW %1:gpr, %0:gpr, 4 :: (store (s32) into %ir.arrayidx2)
 ; LDCLUSTER: SU(5):   SW %1:gpr, %0:gpr, 16 :: (store (s32) into %ir.arrayidx3)
 ;
-; DEFAULTCLUSTER: ********** MI Scheduling **********
+; DEFAULTCLUSTER: Current Schedule Region
 ; DEFAULTCLUSTER-LABEL: store_clustering_1:%bb.0
 ; DEFAULTCLUSTER: *** Final schedule for %bb.0 ***
 ; DEFAULTCLUSTER: SU(4):   SW %1:gpr, %0:gpr, 4 :: (store (s32) into %ir.arrayidx2)

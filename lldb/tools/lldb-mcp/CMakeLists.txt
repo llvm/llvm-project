@@ -1,15 +1,21 @@
 add_lldb_tool(lldb-mcp
   lldb-mcp.cpp
+  Multiplexer.cpp
 
   LINK_COMPONENTS
-    Option
     Support
   LINK_LIBS
-    liblldb
-    lldbInitialization
     lldbHost
     lldbProtocolMCP
+    lldbUtility
+    liblldb
   )
+
+# lldb-mcp hosts debug sessions in its own process. It drives the debug engine
+# through the public SB API in liblldb, but also links a few internal libraries
+# (transport, host) directly, so guard against liblldb interposing their
+# symbols, the same as lldb-dap.
+lldb_prevent_liblldb_symbol_interposition(lldb-mcp)
 
 if(APPLE)
   configure_file(
@@ -23,7 +29,7 @@ endif()
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.
   # The installed framework can be in different locations.
-  lldb_setup_rpaths(lldb-mcp
+  lldb_add_rpaths(lldb-mcp
     BUILD_RPATH
       "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
     INSTALL_RPATH

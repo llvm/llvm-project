@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRGPUPipelines
   GPUToNVVMPipeline.cpp
+  GPUToROCDLPipeline.cpp
   GPUToXeVMPipeline.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -12,17 +13,28 @@ add_mlir_dialect_library(MLIRGPUPipelines
   MLIRTransforms
   MLIRLinalgTransforms
   MLIRAffineToStandard
+  MLIRAMDGPUToROCDL
+  MLIRArithToLLVM
+  MLIRArithTransforms
+  MLIRFuncToLLVM
+  MLIRGPUNVVMTransforms
+  MLIRGPUROCDLTransforms
   MLIRGPUToLLVMSPV
   MLIRGPUToNVVMTransforms
+  MLIRGPUToROCDLTransforms
+  MLIRGPUTransforms
+  MLIRGPUXeVMTransforms
   MLIRIndexToLLVM
   MLIRMathToLLVM
   MLIRMathToXeVM
+  MLIRMathTransforms
   MLIRNVGPUToNVVM
   MLIRNVVMToLLVM
   MLIRReconcileUnrealizedCasts
   MLIRSCFToControlFlow
   MLIRVectorToLLVMPass
   MLIRVectorToSCF
+  MLIRVectorToXeGPU
   MLIRXeGPUTransforms
   MLIRXeGPUToXeVM
   MLIRXeVMToLLVM

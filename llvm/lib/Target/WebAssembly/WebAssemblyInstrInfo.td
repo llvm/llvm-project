@@ -18,6 +18,11 @@
 def IsPIC     : Predicate<"TM.isPositionIndependent()">;
 def IsNotPIC  : Predicate<"!TM.isPositionIndependent()">;
 
+def HasAcquireReleaseAtomics :
+    Predicate<"Subtarget->hasAcquireReleaseAtomics()">,
+    AssemblerPredicate<(all_of FeatureAcquireReleaseAtomics),
+                       "acquire-release-atomics">;
+
 def HasAddr32 : Predicate<"!Subtarget->hasAddr64()">;
 
 def HasAddr64 : Predicate<"Subtarget->hasAddr64()">;
@@ -72,7 +77,7 @@ def HasNontrappingFPToInt :
 
 def NotHasNontrappingFPToInt :
     Predicate<"!Subtarget->hasNontrappingFPToInt()">,
-    AssemblerPredicate<(all_of (not FeatureNontrappingFPToInt)),
+    AssemblerPredicate<(none_of FeatureNontrappingFPToInt),
                        "nontrapping-fptoint">;
 
 def HasReferenceTypes :
@@ -230,6 +235,12 @@ def tag_op : Operand<i32>;
 
 } // OperandType = "OPERAND_P2ALIGN"
 
+let OperandType = "OPERAND_MEMORDER" in {
+def MemOrder : Operand<i32> {
+  let PrintMethod = "printWebAssemblyMemOrderOperand";
+}
+} // OperandType = "OPERAND_MEMORDER"
+
 let OperandType = "OPERAND_SIGNATURE" in
 def Signature : Operand<i32> {
   let PrintMethod = "printWebAssemblySignatureOperand";
@@ -247,7 +258,7 @@ def bool_node : PatLeaf<(i32 I32:$cond), [{
 
 /// Floating point constants
 def fpimm0    : PatLeaf<(fpimm), [{
-  return N->isExactlyValue(+0.0);
+  return N->isPosZero();
 }]>;
 
 //===----------------------------------------------------------------------===//

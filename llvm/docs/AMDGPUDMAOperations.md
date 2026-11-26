@@ -1,0 +1,223 @@
+(amdgpu-dma-operations)=
+
+# AMDGPU DMA Operations
+
+
+## Introduction
+
+DMA (or "Direct Memory Access") operations transfer data between different kinds
+of memory directly without occupying registers in the invoking wave. They are
+usually {ref}`asynchronous<amdgpu-async-operations>` asynchronous, and require
+the user to explicitly track completion using
+{ref}`asyncmarks<amdgpu-async-operations>`.
+
+All DMA operations support the same cache modifiers as ordinary load/store
+operations from registers. They cannot be performed atomically.
+
+### GFX9 DMA
+
+Each GFX9 DMA instruction has a synchronous counterpart (e.g.,
+`@llvm.amdgcn.load.to.lds` for `@llvm.amdgcn.load.async.to.lds`). The
+synchronous variants perform the same operation, but the compiler automatically
+ensures completion before their side-effects are used.
+
+GFX9 DMA instructions implement volatile (via `aux/cpol` bit 31) and
+nontemporal (via metadata) as if they were loads from the global address space.
+
+#### Flat/Global Addressing
+
+```llvm
+void @llvm.amdgcn.load[.async].to.lds.pN(
+    ptr addrspace(N) %src,      ; base pointer to load from (per-lane)
+    ptr addrspace(3) %lds_base, ; LDS base pointer (wave-uniform)
+    i32 immarg %size,           ; data byte size (immediate): 1/2/4 (12/16 for gfx950)
+    i32 immarg %offset,         ; offset (immediate) applied to both src and LDS address
+    i32 immarg %cpol)           ; cache policy (immediate)
+```
+
+Loads data from global memory to LDS. The data size can be 1, 2, or 4 bytes
+(gfx950 also allows 12 or 16 bytes). The LDS address is implicitly offset by
+`4 * lane_id` bytes for sizes up to 4 bytes, and by `16 * lane_id` bytes
+for larger sizes.
+
+The `%lds_base` pointer must be wave-uniform.
+
+The source pointer is overloaded on address space. Supported address spaces are
+flat (0), global (1), and buffer fat pointer (7).
+
+`@llvm.amdgcn.load[.async].to.lds.p7` (buffer pointer) is lowered to
+`@llvm.amdgcn.raw.ptr.buffer.load[.async].lds` before instruction selection.
+
+```llvm
+void @llvm.amdgcn.global.load[.async].lds(
+    ptr addrspace(1) %src,      ; global base pointer to load from (per-lane)
+    ptr addrspace(3) %lds_base, ; LDS base pointer (wave-uniform)
+    i32 immarg %size,           ; data byte size (immediate): 1/2/4 (12/16 for gfx950)
+    i32 immarg %offset,         ; offset (immediate) applied to both global and LDS address
+    i32 immarg %cpol)           ; cache policy (immediate)
+```
+
+This is identical to `@llvm.amdgcn.load[.async].to.lds.p1`.
+
+#### Buffer Addressing
+
+```llvm
+void @llvm.amdgcn.{raw|struct}[.ptr].buffer.load[.async].lds(
+    %rsrc,                      ; buffer resource descriptor (wave-uniform):
+                                ;   <4 x i32> or ptr addrspace(8)
+    ptr addrspace(3) %lds_base, ; LDS base pointer (wave-uniform)
+    i32 immarg %size,           ; data byte size (immediate): 1/2/4 (12/16 for gfx950)
+    [i32 %vindex,]              ; buffer index (per-lane, struct variants only)
+    i32 %voffset,               ; offset (per-lane, included in bounds checking)
+    i32 %soffset,               ; offset (wave-uniform, excluded from bounds checking)
+    i32 immarg %offset,         ; offset (immediate, included in bounds checking)
+    i32 immarg %cpol)           ; cache policy (immediate)
+```
+
+Loads data from a buffer resource to LDS.
+
+The `%lds_base` pointer must be wave-uniform.
+
+The intrinsics differ in two orthogonal ways:
+
+- **raw** vs **struct**: The `struct` variants add a `%vindex` argument for
+  indexed buffer addressing.
+- **ptr** vs non-ptr: The `ptr` variants use `ptr addrspace(8)` for the
+  buffer resource descriptor; the non-ptr variants use `<4 x i32>`.
+
+### GFX1250
+
+GFX1250 LDS DMA instructions implement nontemporal (via metadata) as if they
+were loads from the global address space. Tensor DMA instructions do not support
+volatile or nontemporal.
+
+#### Global Addressing
+
+```llvm
+void @llvm.amdgcn.{global|cluster}.load.async.to.lds.b<N>(
+    ptr addrspace(1) %src,      ; global base pointer to load from (per-lane)
+    ptr addrspace(3) %lds_base, ; LDS base pointer (per-lane)
+    i32 immarg %offset,         ; offset (immediate) applied to both global and LDS address
+    i32 immarg %cpol,           ; cache policy (immediate)
+    [i32 %mask])                ; workgroup multicast mask, cluster variants only (wave-uniform, in M0)
+```
+
+Loads data from global memory to LDS. The `%offset` is applied to both the
+global and LDS addresses.
+
+```llvm
+void @llvm.amdgcn.global.store.async.from.lds.b<N>(
+    ptr addrspace(1) %dst,      ; global base pointer to store to (per-lane)
+    ptr addrspace(3) %lds_base, ; LDS base pointer to load from (per-lane)
+    i32 immarg %offset,         ; offset (immediate) applied to both global and LDS address
+    i32 immarg %cpol)           ; cache policy (immediate)
+```
+
+Stores data from LDS to global memory.
+
+The bit-size encoded in the name can be 8, 32, 64 or 128.
+
+(amdgpu-cluster-multicast-dma)=
+
+#### Cluster Multicast Loads
+
+The `.cluster` variant is a *multicast load* that allows workgroups in a
+{ref}`cluster <amdgpu-clusters>` to reuse data from the same global load and
+write it into their respective LDS. Each lane in a wave supplies its own global
+source address and LDS destination address.
+
+The mask is wave-uniform and passed in the `M0` register:
+
+- Bits `[15:0]` are the *workgroup multicast mask*: bit `i` indicates the
+  workgroup with cluster index `i`. Each workgroup that wants to participate in
+  the multicast must set its own bit and all participating workgroups must
+  supply an identical mask. If the mask is all-zero, the operation is performed
+  as an ordinary load.
+- Bit `[16]` selects the timeout behavior. When clear, a target-defined timeout
+  is used: operations arriving within that window may return data from the same
+  global load. When set, an *early timeout* is used: outstanding loads are
+  completed as soon as data is available.
+
+Completion is tracked using {ref}`asyncmarks<amdgpu-async-operations>`. Each
+participating thread receives a copy of the loaded data into its own workgroup's
+LDS at `%lds_base` plus `%offset`. In the memory model, this behaves in the same
+way as an equivalent non-multicast operation (except as noted in
+{ref}`amdgpu-multicast-false-sharing`).
+
+Completion of a multicast load operation does not establish any synchronization
+with the participating workgroups. The application must separately synchronize
+across the participating workgroups if required.
+
+##### Reuse of Global Load Data
+
+Two multicast load operations are candidates for returning data from the same
+global load if they satisfy the following necessary conditions:
+- The bytes in global memory accessed by the two operations fall within the
+  same naturally aligned range of 256 bytes.
+- Either both loads originate from converged dynamic instances in the same wave,
+  or they originate from different participating workgroups.
+
+Convergence implies that within a wave, the global load is not reused across two
+multicast loads performed by the same thread, or two multicast loads performed
+by different threads but at different points in the execution.
+
+Whether the global load is reused for two operations depends on implementation
+details such as target-defined matching criteria, timeout, availability of
+tracking slots, etc.
+
+##### Target Support
+
+The `cluster` variants are only available on targets that have the
+`mcast-load-insts` subtarget feature (e.g., GFX1250). Using them on any other
+target is not supported. Note that this feature is distinct from workgroup
+cluster support itself: a target may support clusters without providing these
+multicast load instructions.
+
+On the `gfx1250-strict` subtarget, the mask is always forced to zero and no
+multicast occurs, regardless of the value supplied.
+
+(amdgpu-multicast-false-sharing)=
+
+##### False Sharing on GFX1250 and GFX1251
+
+On `gfx1250` and `gfx1251`, multicast loads are tracked in naturally aligned
+blocks of 256 bytes, and the tracking itself is not managed by the usual cache
+invalidation mechanisms. It is possible for a multicast load to return stale
+data that was originally loaded by a different multicast load accessing the same
+block of bytes. This can happen even in a program with no data race, and the
+usual release/acquire synchronization may not be sufficient to prevent it. This
+behaviour is specific to gfx1250 and gfx1251 architectures.
+
+These stale reads cannot happen in a program that satisfies at least one of the
+following sufficient conditions:
+
+1. Memory locations accessed by multicast loads are not modified during the
+   lifetime of the dispatch that is executing those loads.
+2. The program is race free when assuming that every multicast load is extended
+   to an entire naturally aligned block of 256 bytes.
+
+#### Tensor Addressing
+
+```llvm
+void @llvm.amdgcn.tensor.{load.to|store.from}.lds(
+    <4 x i32> %desc0,          ; D# group 0
+    <8 x i32> %desc1,          ; D# group 1
+    <4 x i32> %desc2,          ; D# group 2 (zero-init for D# up to 2D)
+    <4 x i32> %desc3,          ; D# group 3 (zero-init for D# up to 2D)
+    <8 x i32> %desc4,          ; D# group 4 (reserved, use zeroinitializer)
+    i32 immarg %cpol)          ; cache policy (immediate)
+```
+
+Loads or stores data between global memory and LDS using a tensor descriptor
+(D#). The descriptor is split across multiple groups. GFX1250 supports up to 4
+descriptor groups; `%desc4` is reserved for future targets and must be
+zero-initialized.
+
+The descriptor carries global and LDS addresses in integer vectors. These
+intrinsics may access ordinary memory; their effects are not limited to
+pointer arguments or inaccessible memory.
+
+Despite the absence of `.async` in their names, these intrinsics are
+asynchronous.
+
+All arguments must be wave-uniform.

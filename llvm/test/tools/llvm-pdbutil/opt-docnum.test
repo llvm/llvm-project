@@ -1,0 +1,62 @@
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t-first-default.pdb
+# RUN: llvm-pdbutil dump --publics %t-first-default.pdb | FileCheck --check-prefix=CHECK-FIRST %s
+
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t-first.pdb --docnum=1
+# RUN: llvm-pdbutil dump --publics %t-first.pdb | FileCheck --check-prefix=CHECK-FIRST %s
+
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t-second.pdb --docnum=2
+# RUN: llvm-pdbutil dump --publics %t-second.pdb | FileCheck --check-prefix=CHECK-SECOND %s
+
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t-third.pdb --docnum=3
+# RUN: llvm-pdbutil dump --publics %t-third.pdb | FileCheck --check-prefix=CHECK-THIRD %s
+
+# RUN: not llvm-pdbutil yaml2pdb %s --pdb=%t-err.pdb --docnum=4 2>&1 | FileCheck --check-prefix=CHECK-ERR-4TH %s
+# RUN: not llvm-pdbutil yaml2pdb %s --pdb=%t-err.pdb --docnum=0 2>&1 | FileCheck --check-prefix=CHECK-ERR-0TH %s
+
+# CHECK-FIRST: S_PUB32 [size = 24] `firstDoc`
+# CHECK-FIRST-NOT: secondDoc
+# CHECK-FIRST-NOT: thirdDoc
+
+# CHECK-SECOND-NOT: firstDoc
+# CHECK-SECOND: S_PUB32 [size = 24] `secondDoc`
+# CHECK-SECOND-NOT: thirdDoc
+
+# CHECK-THIRD-NOT: firstDoc
+# CHECK-THIRD-NOT: secondDoc
+# CHECK-THIRD: S_PUB32 [size = 24] `thirdDoc`
+
+# CHECK-ERR-0TH: document numbers are 1-based, there is no 0th document
+# CHECK-ERR-4TH: cannot find the 4th document
+
+---
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          0
+        Segment:         1
+        Name:            'firstDoc'
+...
+
+---
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          0
+        Segment:         1
+        Name:            'secondDoc'
+...
+
+---
+PublicsStream:
+  Records:
+    - Kind:            S_PUB32
+      PublicSym32:
+        Flags:           [ Function ]
+        Offset:          0
+        Segment:         1
+        Name:            'thirdDoc'
+...

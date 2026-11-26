@@ -1,10 +1,10 @@
 ; RUN: opt -passes=mem2reg %s -S -o - | FileCheck %s
 
-;; Check that mem2reg removes dbg.value(%local, DIExpression(DW_OP_deref...))
+;; Check that mem2reg converts dbg.value(%local, DIExpression(DW_OP_deref...))
 ;; that instcombine LowerDbgDeclare inserted before the call to 'esc' when
-;; promoting the alloca %local after 'esc' has been inlined. Without this we
-;; provide no location for 'local', even though it is provably constant
-;; throughout after inlining.
+;; promoting the alloca %local after 'esc' has been inlined, so 'local' takes
+;; the value stored by the inlined 'esc' (null + 4).
+;; The 'c' variable is killed, as the pointer no longer exists.
 ;;
 ;; $ clang reduce.c -O2 -g -emit-llvm -S -o tmp.ll -Xclang -disable-llvm-passes
 ;; $ opt tmp.ll -o - -instcombine -inline -S
@@ -21,14 +21,19 @@
 ; CHECK: define dso_local void @fun()
 ; CHECK-NEXT: entry:
 ; CHECK-NEXT: #dbg_value(ptr null, ![[LOCAL:[0-9]+]], !DIExpression(),
+; CHECK-NEXT: #dbg_value(ptr null, ![[LOCAL]], !DIExpression(),
+; CHECK-NEXT: #dbg_value(ptr poison, ![[C:[0-9]+]], !DIExpression(),
+; CHECK-NOT: #dbg_value({{.*}}, ![[LOCAL]]
+; CHECK: [[ADD:%.*]] = getelementptr inbounds i8, ptr null, i64 4
+; CHECK-NEXT: #dbg_value(ptr [[ADD]], ![[LOCAL]], !DIExpression(),
 ; CHECK-NOT: #dbg_value({{.*}}, ![[LOCAL]]
 ; CHECK: ![[LOCAL]] = !DILocalVariable(name: "local",
+; CHECK: ![[C]] = !DILocalVariable(name: "c",
 
 define dso_local void @fun() !dbg !7 {
 entry:
   %local = alloca ptr, align 8
-  %0 = bitcast ptr %local to ptr, !dbg !14
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %0) #3, !dbg !14
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %local) #3, !dbg !14
   call void @llvm.dbg.value(metadata ptr null, metadata !11, metadata !DIExpression()), !dbg !15
   store ptr null, ptr %local, align 8, !dbg !16
   call void @llvm.dbg.value(metadata ptr %local, metadata !11, metadata !DIExpression(DW_OP_deref)), !dbg !15
@@ -37,8 +42,7 @@ entry:
   %1 = load ptr, ptr %local, align 8, !dbg !29
   %add.ptr.i = getelementptr inbounds i8, ptr %1, i64 4, !dbg !29
   store ptr %add.ptr.i, ptr %local, align 8, !dbg !29
-  %2 = bitcast ptr %local to ptr, !dbg !30
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %2) #3, !dbg !30
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %local) #3, !dbg !30
   ret void, !dbg !30
 }
 

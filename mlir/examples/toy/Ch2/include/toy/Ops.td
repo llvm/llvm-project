@@ -23,6 +23,8 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Toy_Dialect : Dialect {
   let name = "toy";
   let cppNamespace = "::mlir::toy";
+  let useDefaultOperationRegistration = 1;
+  let hasInitializer = 0;
 }
 
 // Base class for toy dialect operations. This operation inherits from the base
@@ -113,7 +115,7 @@ def AddOp : Toy_Op<"add"> {
 //===----------------------------------------------------------------------===//
 
 def FuncOp : Toy_Op<"func", [
-    FunctionOpInterface, IsolatedFromAbove
+    SymbolName, SymbolVisibility, FunctionOpInterface, IsolatedFromAbove
   ]> {
   let summary = "user defined function operation";
   let description = [{
@@ -134,6 +136,7 @@ def FuncOp : Toy_Op<"func", [
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility,
     TypeAttrOf<FunctionType>:$function_type,
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs

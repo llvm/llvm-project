@@ -1,4 +1,4 @@
-; RUN: llc -emit-gnuas-syntax-on-zos=false < %s -mtriple=s390x-ibm-zos | \
+; RUN: llc < %s -mtriple=s390x-ibm-zos | \
 ; RUN: FileCheck --check-prefixes=CHECK %s
 
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 22, ptr @cfuncctor, ptr null }]
@@ -8,12 +8,12 @@
 ; CHECK: 	.xtor.22
 ; CHECK: 	DC XL4'7FFF0017'
 ; Check direct relocation and low bit on ctor.
-; CHECK:        DC AD(QD(stdin#S)+XL8'0')
+; CHECK:        DC AD(QD(stdin#S)+XL8'0000000000000000')
 ; CHECK: 	DC XL8'0000000000000000'
 ; CHECK:        DC XL4'7FFF0017'
 ; CHECK:        DC XL8'0000000000000000'
 ; Check direct relocation and low bit on dtor.
-; CHECK:        DC AD(QD(stdin#S)+XL8'16')
+; CHECK:        DC AD(QD(stdin#S)+XL8'0000000000000010')
 
 ; Check for function descriptors in ADA section:
 ; CHECK:        * Offset 0 function descriptor of cfuncctor

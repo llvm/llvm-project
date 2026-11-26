@@ -6,7 +6,6 @@
 // RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic --check-prefix=EIGHT
 
 // REQUIRES: gpu
-// XFAIL: intelgpu
 
 #define N 128
 

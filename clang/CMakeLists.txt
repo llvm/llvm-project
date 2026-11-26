@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.31.0)
 set(LLVM_SUBPROJECT_TITLE "Clang")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
@@ -147,9 +147,9 @@ if(CLANG_BUILT_STANDALONE)
 
       get_errc_messages(LLVM_LIT_ERRC_MESSAGES)
 
-      # On Win32 hosts, provide an option to specify the path to the GnuWin32 tools.
+      # On Win32 hosts, provide an option to specify the path to the Unix tools.
       if( WIN32 AND NOT CYGWIN )
-        set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to GnuWin32 tools")
+        set(LLVM_LIT_TOOLS_DIR "" CACHE PATH "Path to Unix tools for Windows")
       endif()
     else()
       set(LLVM_INCLUDE_TESTS OFF)
@@ -182,15 +182,25 @@ if(CLANG_ENABLE_LIBXML2)
   endif()
 endif()
 
+# Standalone builds don't inherit this flag from the llvm/CMakeLists, so set it
+# here.
+if(CLANG_BUILT_STANDALONE)
+  option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" OFF)
+endif()
+
 if(CLANG_ENABLE_CIR)
   if (CLANG_BUILT_STANDALONE)
     message(FATAL_ERROR
       "ClangIR is not yet supported in the standalone build.")
   endif()
-  if (NOT "${LLVM_ENABLE_PROJECTS}" MATCHES "MLIR|mlir")
+  if (NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
     message(FATAL_ERROR
-      "Cannot build ClangIR without MLIR in LLVM_ENABLE_PROJECTS")
+      "Cannot build ClangIR without MLIR enabled")
   endif()
+  # Number of translation units the TableGen-generated CIR operation
+  # definitions are split into. Shared by the CIROps.td TableGen invocations
+  # and the MLIRCIR library sources.
+  set(CLANG_CIR_OP_SHARD_COUNT 8)
 endif()
 
 include(CheckIncludeFile)
@@ -212,6 +222,16 @@ if( CLANG_HAVE_DLFCN_H )
   cmake_pop_check_state()
 endif()
 
+if(NOT DEFINED CLANG_HAVE_EMUTLS_GET_ADDRESS)
+  include(CheckCXXSourceCompiles)
+  check_cxx_source_compiles([[
+    extern "C" void *__emutls_get_address(void *);
+    int main() {
+      return __emutls_get_address((void *)0) != (void *)0;
+    }
+  ]] CLANG_HAVE_EMUTLS_GET_ADDRESS)
+endif()
+
 set(CLANG_RESOURCE_DIR "" CACHE STRING
   "Relative directory from the Clang binary to its resource files.")
 
@@ -227,6 +247,44 @@ if(GCC_INSTALL_PREFIX AND NOT USE_DEPRECATED_GCC_INSTALL_PREFIX)
     "configuration files (https://clang.llvm.org/docs/UsersManual.html#configuration-files)"
     "to specify the default --gcc-install-dir= or --gcc-triple=. --gcc-toolchain= is discouraged. "
     "See https://github.com/llvm/llvm-project/pull/77537 for detail.")
+endif()
+
+cmake_dependent_option(CLANG_USE_XCSELECT "Use libxcselect to find the macOS SDK." OFF "APPLE" OFF)
+
+if(CLANG_USE_XCSELECT)
+  if(DEFAULT_SYSROOT)
+    message(FATAL_ERROR "Setting DEFAULT_SYSROOT is incompatible with CLANG_USE_XCSELECT.")
+  endif()
+
+  check_include_file(xcselect.h CLANG_HAVE_XCSELECT_H)
+  if(NOT CLANG_HAVE_XCSELECT_H)
+    message(FATAL_ERROR "CLANG_USE_XCSELECT is enabled but xcselect.h was not found.")
+  endif()
+
+  include(CheckSymbolExists)
+  list(APPEND CMAKE_REQUIRED_LIBRARIES xcselect)
+  check_symbol_exists(xcselect_host_sdk_path xcselect.h CLANG_HAVE_XCSELECT_HOST_SDK_PATH)
+  list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES xcselect)
+
+  if(NOT CLANG_HAVE_XCSELECT_HOST_SDK_PATH)
+    message(FATAL_ERROR "CLANG_USE_XCSELECT is enabled but either libxcselect is not available "
+      "or it is missing xcselect_host_sdk_path.")
+  endif()
+
+  set(XCSELECT_VALID_POLICIES LATEST MATCHING_ONLY MATCHING_PREFERRED)
+  set(CLANG_XCSELECT_HOST_SDK_POLICY "LATEST" CACHE STRING
+    "Policy to use for xcselect. One of: ${XCSELECT_VALID_POLICIES}")
+  set_property(CACHE CLANG_XCSELECT_HOST_SDK_POLICY PROPERTY STRINGS ${XCSELECT_VALID_POLICIES})
+  string(TOUPPER ${CLANG_XCSELECT_HOST_SDK_POLICY} CLANG_XCSELECT_HOST_SDK_POLICY)
+  list(JOIN XCSELECT_VALID_POLICIES "|" XCSELECT_POLICY_REGEX)
+
+  if(NOT CLANG_XCSELECT_HOST_SDK_POLICY MATCHES "^XCSELECT_HOST_SDK_POLICY_(${XCSELECT_POLICY_REGEX})$")
+    if(NOT CLANG_XCSELECT_HOST_SDK_POLICY IN_LIST XCSELECT_VALID_POLICIES)
+      message(FATAL_ERROR
+        "CLANG_XCSELECT_HOST_SDK_POLICY (${CLANG_XCSELECT_HOST_SDK_POLICY}) must be one of: ${XCSELECT_VALID_POLICIES}")
+    endif()
+    set(CLANG_XCSELECT_HOST_SDK_POLICY "XCSELECT_HOST_SDK_POLICY_${CLANG_XCSELECT_HOST_SDK_POLICY}")
+  endif()
 endif()
 
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
@@ -256,13 +314,14 @@ if (NOT(CLANG_DEFAULT_CXX_STDLIB STREQUAL "" OR
 endif()
 
 set(CLANG_DEFAULT_RTLIB "" CACHE STRING
-  "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)")
+  "Default runtime library to use (\"none\", \"libgcc\" or \"compiler-rt\", empty for platform default)")
 if (NOT(CLANG_DEFAULT_RTLIB STREQUAL "" OR
+        CLANG_DEFAULT_RTLIB STREQUAL "none" OR
         CLANG_DEFAULT_RTLIB STREQUAL "libgcc" OR
         CLANG_DEFAULT_RTLIB STREQUAL "compiler-rt"))
   message(WARNING "Resetting default rtlib to use platform default")
   set(CLANG_DEFAULT_RTLIB "" CACHE STRING
-    "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)" FORCE)
+    "Default runtime library to use (\"none\", \"libgcc\" or \"compiler-rt\", empty for platform default)" FORCE)
 endif()
 
 set(CLANG_DEFAULT_UNWINDLIB "" CACHE STRING
@@ -306,7 +365,15 @@ set(CLANG_VENDOR_UTI "org.llvm.clang" CACHE STRING
 set(CLANG_PYTHON_BINDINGS_VERSIONS "" CACHE STRING
     "Python versions to install libclang python bindings for")
 
-set(CLANG_LINK_CLANG_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
+if(LLVM_LINK_LLVM_DYLIB AND NOT MSVC)
+  # We can't rely on default visibility with MSVC. libClang should have its own
+  # annotation (CLANG_ABI) and have its API properly annotated for exports on
+  # Windows too. See https://github.com/llvm/llvm-project/issues/238871
+  set(CLANG_LINK_CLANG_DYLIB_DEFAULT 1)
+else()
+  set(CLANG_LINK_CLANG_DYLIB_DEFAULT 0)
+endif()
+set(CLANG_LINK_CLANG_DYLIB ${CLANG_LINK_CLANG_DYLIB_DEFAULT} CACHE BOOL
     "Link tools against libclang-cpp.so")
 
 if (NOT LLVM_LINK_LLVM_DYLIB AND CLANG_LINK_CLANG_DYLIB)
@@ -356,7 +423,7 @@ configure_file(
 
 # Add appropriate flags for GCC
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common -Woverloaded-virtual")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common")
 
   # Enable -pedantic for Clang even if it's not enabled for LLVM.
   if (NOT LLVM_ENABLE_PEDANTIC)
@@ -369,9 +436,14 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
-set(HOST_LINK_VERSION)
-if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+set(HOST_LINK_VERSION "" CACHE STRING "Host linker version on Darwin")
+get_filename_component(CLANG_LINKER_NAME "${CMAKE_LINKER}" NAME)
+if (APPLE AND NOT HOST_LINK_VERSION AND NOT CLANG_LINKER_NAME MATCHES "lld")
   get_darwin_linker_version(HOST_LINK_VERSION)
+  set(HOST_LINK_VERSION "${HOST_LINK_VERSION}" CACHE STRING "Host linker version on Darwin" FORCE)
+endif()
+unset(CLANG_LINKER_NAME)
+if (HOST_LINK_VERSION)
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 
@@ -451,6 +523,9 @@ option(CLANG_ENABLE_STATIC_ANALYZER
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
 
+option(CLANG_USE_EXPERIMENTAL_CONST_INTERP
+  "Use the new experimental constant interpreter for compile-time evaluation." OFF)
+
 if (DEFINED CLANG_ENABLE_ARCMT)
   set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
   message(DEPRECATION "'CLANG_ENABLE_ARCMT' is deprecated as ARCMigrate has been removed from Clang. Please use 'CLANG_ENABLE_OBJC_REWRITER' instead to enable or disable the Objective-C rewriter.")
@@ -474,10 +549,6 @@ mark_as_advanced(CLANG_EXECUTABLE_VERSION LIBCLANG_LIBRARY_VERSION)
 option(CLANG_INCLUDE_TESTS
        "Generate build targets for the Clang unit tests."
        ${LLVM_INCLUDE_TESTS})
-
-option(CLANG_ENABLE_HLSL "Include HLSL build products" Off)
-# While HLSL support is experimental this should stay hidden.
-mark_as_advanced(CLANG_ENABLE_HLSL)
 
 add_subdirectory(utils/TableGen)
 
@@ -508,7 +579,12 @@ add_subdirectory(tools)
 add_subdirectory(runtime)
 
 option(CLANG_BUILD_EXAMPLES "Build CLANG example programs by default." OFF)
-add_subdirectory(examples)
+option(CLANG_INCLUDE_EXAMPLES
+       "Generate build targets for the Clang examples."
+       ${LLVM_INCLUDE_EXAMPLES})
+if (CLANG_INCLUDE_EXAMPLES)
+  add_subdirectory(examples)
+endif()
 
 if(APPLE)
   # this line is needed as a cleanup to ensure that any CMakeCaches with the old
@@ -547,8 +623,9 @@ if( CLANG_INCLUDE_TESTS )
   if(CLANG_BUILT_STANDALONE)
     umbrella_lit_testsuite_end(check-all)
   endif()
-  add_subdirectory(utils/perf-training)
 endif()
+
+add_subdirectory(utils/perf-training)
 
 option(CLANG_INCLUDE_DOCS "Generate build targets for the Clang docs."
   ${LLVM_INCLUDE_DOCS})
@@ -576,6 +653,43 @@ if(CLANG_LIBS)
       add_dependencies(install-clang-libraries-stripped install-${lib}-stripped)
     endif()
   endforeach()
+endif()
+
+# ClangIR's MLIR dependency is excluded from the aggregate build and install.
+# Promote and install only the MLIR targets reachable from Clang's SDK, along
+# with the headers needed to consume those targets. If Clang itself is an
+# implicit Flang dependency, Flang packages the required targets instead.
+if(CLANG_ENABLE_CIR AND "mlir" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS AND
+   NOT "clang" IN_LIST LLVM_DEPENDENCY_ONLY_PROJECTS)
+  get_property(clang_exports GLOBAL PROPERTY CLANG_EXPORTS)
+  llvm_install_dependency_target_closure(
+    PROJECT Clang
+    COMPONENT clang-dependencies
+    ROOT_TARGETS ${clang_exports})
+
+  if(NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+    get_target_property(mlir_source_dir mlir-headers SOURCE_DIR)
+    get_target_property(mlir_binary_dir mlir-headers BINARY_DIR)
+    install(DIRECTORY
+      "${mlir_source_dir}/include/mlir"
+      "${mlir_source_dir}/include/mlir-c"
+      "${mlir_binary_dir}/include/mlir"
+      "${mlir_binary_dir}/include/mlir-c"
+      DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+      COMPONENT clang-dependency-headers
+      OPTIONAL
+      FILES_MATCHING
+      PATTERN "*.def"
+      PATTERN "*.h"
+      PATTERN "*.gen"
+      PATTERN "*.inc"
+      PATTERN "*.td"
+      PATTERN "CMakeFiles" EXCLUDE)
+  endif()
+  if(NOT LLVM_ENABLE_IDE)
+    add_llvm_install_targets(install-clang-dependency-headers
+      DEPENDS clang-dependencies COMPONENT clang-dependency-headers)
+  endif()
 endif()
 
 add_subdirectory(cmake/modules)
@@ -649,13 +763,13 @@ if (CLANG_ENABLE_BOOTSTRAP)
     elseif(MSVC)
       add_dependencies(clang-bootstrap-deps llvm-lib)
       set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-lib)
-    elseif(NOT WIN32)
+    elseif((NOT WIN32) OR MINGW)
       add_dependencies(clang-bootstrap-deps llvm-ar llvm-ranlib)
-      if(NOT BOOTSTRAP_LLVM_ENABLE_LLD AND LLVM_BINUTILS_INCDIR)
+      if(NOT WIN32 AND NOT BOOTSTRAP_LLVM_ENABLE_LLD AND LLVM_BINUTILS_INCDIR)
         add_dependencies(clang-bootstrap-deps LLVMgold)
       endif()
-      set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar)
-      set(${CLANG_STAGE}_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib)
+      set(${CLANG_STAGE}_AR -DCMAKE_AR=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ar${CMAKE_EXECUTABLE_SUFFIX})
+      set(${CLANG_STAGE}_RANLIB -DCMAKE_RANLIB=${LLVM_RUNTIME_OUTPUT_INTDIR}/llvm-ranlib${CMAKE_EXECUTABLE_SUFFIX})
     endif()
   endif()
 
@@ -686,6 +800,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
     LLVM_VERSION_MAJOR
     LLVM_VERSION_MINOR
     LLVM_VERSION_PATCH
+    LLVM_VERSIONED_DYLIB_NAME_ON_DARWIN
+    LLVM_UNVERSIONED_LIBCLANG_ON_DARWIN
+    LLVM_UNVERSIONED_LIBLTO_ON_DARWIN
     CLANG_VERSION_MAJOR
     CLANG_VERSION_MINOR
     CLANG_VERSION_PATCHLEVEL
@@ -711,9 +828,9 @@ if (CLANG_ENABLE_BOOTSTRAP)
     endif()
   endif()
 
-  set(C_COMPILER "clang")
-  set(CXX_COMPILER "clang++")
-  if(WIN32)
+  set(C_COMPILER "clang${CMAKE_EXECUTABLE_SUFFIX}")
+  set(CXX_COMPILER "clang++${CMAKE_EXECUTABLE_SUFFIX}")
+  if(WIN32 AND NOT MINGW)
     set(C_COMPILER "clang-cl.exe")
     set(CXX_COMPILER "clang-cl.exe")
   endif()
@@ -727,7 +844,7 @@ if (CLANG_ENABLE_BOOTSTRAP)
   # cmake requires CMAKE_LINKER to be specified if the compiler is MSVC-like,
   # otherwise it defaults the linker to be link.exe.
   if(BOOTSTRAP_LLVM_ENABLE_LLD)
-    if((WIN32 AND NOT BOOTSTRAP_CMAKE_SYSTEM_NAME) OR BOOTSTRAP_CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    if((NOT MINGW) AND ((WIN32 AND NOT BOOTSTRAP_CMAKE_SYSTEM_NAME) OR BOOTSTRAP_CMAKE_SYSTEM_NAME STREQUAL "Windows"))
       set(${CLANG_STAGE}_LINKER -DCMAKE_LINKER=${LLVM_RUNTIME_OUTPUT_INTDIR}/lld-link${CMAKE_EXECUTABLE_SUFFIX})
     endif()
   endif()
@@ -765,11 +882,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
   if(LLVM_BUILD_INSTRUMENTED)
     string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
     if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
-      add_dependencies(clang-bootstrap-deps generate-sprofdata)
-      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata)
+      set(PGO_OPT_SPROFDATA "${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata" CACHE STRING "")
+      set(PGO_OPT_SPROFDATA_PROVIDER generate-sprofdata CACHE STRING "")
+      add_dependencies(clang-bootstrap-deps ${PGO_OPT_SPROFDATA_PROVIDER})
+      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${PGO_OPT_SPROFDATA})
     else()
-      add_dependencies(clang-bootstrap-deps generate-profdata)
-      set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+      set(PGO_OPT_PROFDATA "${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata" CACHE STRING "")
+      set(PGO_OPT_PROFDATA_PROVIDER generate-profdata CACHE STRING "")
+      add_dependencies(clang-bootstrap-deps ${PGO_OPT_PROFDATA_PROVIDER})
+      set(PGO_OPT -DLLVM_PROFDATA_FILE=${PGO_OPT_PROFDATA})
     endif()
     # Use the current tools for LTO instead of the instrumented ones
     list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH
@@ -790,7 +911,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
   # Populate the passthrough variables
   foreach(variableName ${CLANG_BOOTSTRAP_PASSTHROUGH} ${_BOOTSTRAP_DEFAULT_PASSTHROUGH})
     if(DEFINED ${variableName})
-      if("${${variableName}}" STREQUAL "")
+      if(variableName STREQUAL "LLVM_ENABLE_PROJECTS")
+        # Forward only requested roots; the next stage re-adds dependencies.
+        set(llvm_enable_projects "${LLVM_ENABLE_PROJECTS}")
+        if(DEFINED LLVM_REQUESTED_PROJECTS)
+          set(llvm_enable_projects "${LLVM_REQUESTED_PROJECTS}")
+        endif()
+        string(REPLACE ";" "|" value "${llvm_enable_projects}")
+        unset(llvm_enable_projects)
+      elseif("${${variableName}}" STREQUAL "")
         set(value "")
       else()
         string(REPLACE ";" "|" value "${${variableName}}")

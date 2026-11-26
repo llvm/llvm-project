@@ -5,7 +5,7 @@
 ; CHECK: LV: Found an estimated cost of 1 for VF 1 For instruction:   %shift = ashr i32 %val, %k
 ; CHECK: Cost of 2 for VF 2: WIDEN ir<%shift> = ashr ir<%val>, ir<%k>
 ; CHECK: Cost of 2 for VF 4: WIDEN ir<%shift> = ashr ir<%val>, ir<%k>
-define void @foo(ptr nocapture %p, i32 %k) local_unnamed_addr {
+define void @foo(ptr nocapture %p, i32 %k) {
 entry:
   br label %body
 
@@ -50,9 +50,9 @@ exit:
 
 define i64 @sdiv_arg_outer_iv(ptr noalias %dst, ptr %src) {
 ; CHECK: 'sdiv_arg_outer_iv'
-; CHECK: Cost of 0 for VF 2: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
-; CHECK: Cost of 0 for VF 4: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
-; CHECK: Cost of 0 for VF 8: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
+; CHECK: Cost of 4 for VF 2: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
+; CHECK: Cost of 4 for VF 4: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
+; CHECK: Cost of 4 for VF 8: CLONE ir<%div> = sdiv ir<%add.offset>, ir<8>
 ; CHECK: Cost of 0 for VF 16: REPLICATE ir<%div> = sdiv ir<%add.offset>, ir<8>
 entry:
   br label %outer.header

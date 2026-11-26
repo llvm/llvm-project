@@ -37,15 +37,19 @@ void FuncAnalysisState::startFunctionAnalysis(FuncOp funcOp) {
       aliasingReturnVals.try_emplace(funcOp, IndexToIndexListMapping());
   auto createdRead = readBbArgs.try_emplace(funcOp, BbArgIndexSet());
   auto createdWritten = writtenBbArgs.try_emplace(funcOp, BbArgIndexSet());
+  auto createdWritable = writableReturnVals.try_emplace(funcOp);
   (void)createdEquiv;
   (void)createdAliasingResults;
   (void)createdRead;
   (void)createdWritten;
+  (void)createdWritable;
 #ifndef NDEBUG
   assert(createdEquiv.second && "equivalence info exists already");
   assert(createdAliasingResults.second && "aliasing info exists already");
   assert(createdRead.second && "bbarg access info exists already");
   assert(createdWritten.second && "bbarg access info exists already");
+  assert(createdWritable.second &&
+         "return value writability info exists already");
 #endif // NDEBUG
 }
 
@@ -54,8 +58,8 @@ void FuncAnalysisState::startFunctionAnalysis(FuncOp funcOp) {
 static mlir::Attribute
 getDefaultMemorySpace(const BufferizationOptions &options,
                       TensorLikeType type) {
-  if (auto tensorType = dyn_cast<TensorType>(type)) {
-    return *options.defaultMemorySpaceFn(tensorType);
+  if (isa<TensorType>(type)) {
+    return *options.defaultMemorySpaceFn(type);
   }
   return nullptr;
 }
@@ -73,7 +77,7 @@ getBufferizedFunctionArgType(FuncOp funcOp, int64_t index,
   // Note: For builtin tensors there is additional logic related to layout.
   if (auto tensorType = dyn_cast<TensorType>(type)) {
     BufferLikeType memrefType = options.functionArgTypeConverterFn(
-        type, *options.defaultMemorySpaceFn(tensorType), funcOp, options);
+        type, *options.defaultMemorySpaceFn(type), funcOp, options);
 
     auto layoutAttr = funcOp.getArgAttrOfType<MemRefLayoutAttrInterface>(
         index, BufferizationDialect::kBufferLayoutAttrName);
@@ -101,12 +105,14 @@ static FuncOp getCalledFunction(CallOpInterface callOp,
 /// Return the FuncOp called by `callOp`.
 static FuncOp getCalledFunction(CallOpInterface callOp,
                                 const AnalysisState &state) {
-  auto &oneShotAnalysisState = static_cast<const OneShotAnalysisState &>(state);
-
-  if (auto *funcAnalysisState =
-          oneShotAnalysisState.getExtension<FuncAnalysisState>()) {
-    // Use the cached symbol tables.
-    return getCalledFunction(callOp, funcAnalysisState->symbolTables);
+  if (isa<OneShotAnalysisState>(state)) {
+    auto &oneShotAnalysisState =
+        static_cast<const OneShotAnalysisState &>(state);
+    if (auto *funcAnalysisState =
+            oneShotAnalysisState.getExtension<FuncAnalysisState>()) {
+      // Use the cached symbol tables.
+      return getCalledFunction(callOp, funcAnalysisState->symbolTables);
+    }
   }
 
   SymbolTableCollection symbolTables;
@@ -223,6 +229,21 @@ struct CallOpInterface
     return result;
   }
 
+  bool isWritable(Operation *op, Value value,
+                  const AnalysisState &state) const {
+    auto callOp = cast<func::CallOp>(op);
+    FuncOp funcOp = getCalledFunction(callOp, state);
+    assert(funcOp && "expected CallOp to a FuncOp");
+
+    // Unknown or not yet analyzed functions may return read-only buffers.
+    if (getFuncOpAnalysisState(state, funcOp) != FuncOpAnalysisState::Analyzed)
+      return false;
+
+    const FuncAnalysisState &funcState = getFuncAnalysisState(state);
+    return funcState.writableReturnVals.lookup(funcOp).contains(
+        cast<OpResult>(value).getResultNumber());
+  }
+
   FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 const BufferizationState &state,
@@ -320,8 +341,9 @@ struct CallOpInterface
         auto memrefDstType = dyn_cast<MemRefType>(bufferType);
         assert(memrefDstType &&
                "buffer layout not supported on unranked tensors");
-        FailureOr<Value> replacement = bufferization::castOrReallocMemRefValue(
-            rewriter, buffer, memrefDstType, options);
+        FailureOr<Value> replacement =
+            bufferization::castOrReallocMemRefValue(rewriter, buffer,
+                                                    memrefDstType, options);
         if (failed(replacement))
           return failure();
         buffer = *replacement;
@@ -330,10 +352,10 @@ struct CallOpInterface
     }
 
     // 3. Create the new CallOp.
-    Operation *newCallOp =
-        func::CallOp::create(rewriter, callOp.getLoc(), funcOp.getSymName(),
-                             resultTypes, newOperands);
-    newCallOp->setAttrs(callOp->getAttrs());
+    func::CallOp newCallOp =
+        func::CallOp::create(rewriter, callOp.getLoc(), resultTypes,
+                             newOperands, callOp.getProperties(),
+                             callOp->getDiscardableAttrDictionary().getValue());
 
     // 4. Replace the old op with the new op.
     replaceOpWithBufferizedValues(rewriter, callOp, newCallOp->getResults());

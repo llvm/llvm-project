@@ -35,6 +35,8 @@ raw_ostream &llvm::operator<<(raw_ostream &Out, const VersionTuple &V) {
     Out << '.' << *Subminor;
   if (std::optional<unsigned> Build = V.getBuild())
     Out << '.' << *Build;
+  if (std::optional<unsigned> Subbuild = V.getSubbuild())
+    Out << '.' << *Subbuild;
   return Out;
 }
 
@@ -61,7 +63,7 @@ static bool parseInt(StringRef &input, unsigned &value) {
 }
 
 bool VersionTuple::tryParse(StringRef input) {
-  unsigned major = 0, minor = 0, micro = 0, build = 0;
+  unsigned major = 0, minor = 0, subminor = 0, build = 0, subbuild = 0;
 
   // Parse the major version, [0-9]+
   if (parseInt(input, major))
@@ -84,32 +86,49 @@ bool VersionTuple::tryParse(StringRef input) {
     return false;
   }
 
-  // If we're not done, parse the micro version, \.[0-9]+
+  // If we're not done, parse the subminor version, \.[0-9]+
   if (!input.consume_front("."))
     return true;
-  if (parseInt(input, micro))
+  if (parseInt(input, subminor))
     return true;
 
   if (input.empty()) {
-    *this = VersionTuple(major, minor, micro);
+    *this = VersionTuple(major, minor, subminor);
     return false;
   }
 
-  // If we're not done, parse the micro version, \.[0-9]+
+  // If we're not done, parse the build version, \.[0-9]+
   if (!input.consume_front("."))
     return true;
   if (parseInt(input, build))
+    return true;
+  if (build >= 1024 * 1024)
+    return true;
+
+  if (input.empty()) {
+    *this = VersionTuple(major, minor, subminor, build);
+    return false;
+  }
+
+  // And the subbuild version, \.[0-9]+
+  if (!input.consume_front("."))
+    return true;
+  if (parseInt(input, subbuild))
+    return true;
+  if (subbuild >= 1024)
     return true;
 
   // If we have characters left over, it's an error.
   if (!input.empty())
     return true;
 
-  *this = VersionTuple(major, minor, micro, build);
+  *this = VersionTuple(major, minor, subminor, build, subbuild);
   return false;
 }
 
 VersionTuple VersionTuple::withMajorReplaced(unsigned NewMajor) const {
+  if (HasSubbuild)
+    return VersionTuple(NewMajor, Minor, Subminor, Build, Subbuild);
   if (HasBuild)
     return VersionTuple(NewMajor, Minor, Subminor, Build);
   if (HasSubminor)

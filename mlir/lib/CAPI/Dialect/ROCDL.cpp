@@ -8,6 +8,6 @@
 
 #include "mlir-c/Dialect/ROCDL.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialectDecl.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(ROCDL, rocdl, mlir::ROCDL::ROCDLDialect)

@@ -131,7 +131,7 @@ int main(int argc, const char **argv) {
   auto ExpectedParser =
       CommonOptionsParser::create(argc, argv, FindAllSymbolsCategory);
   if (!ExpectedParser) {
-    llvm::errs() << ExpectedParser.takeError();
+    llvm::errs() << llvm::toString(ExpectedParser.takeError());
     return 1;
   }
 

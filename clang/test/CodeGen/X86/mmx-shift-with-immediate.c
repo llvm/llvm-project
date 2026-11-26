@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple i386 -target-feature +sse2 %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple i386 -target-feature +sse2 %s -o - | FileCheck %s %}
 #include <mmintrin.h>
 
 void shift(__m64 a, __m64 b, int c) {

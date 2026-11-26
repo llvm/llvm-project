@@ -13,6 +13,7 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -40,11 +41,17 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
@@ -60,10 +67,15 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Expression/Expression.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -114,9 +126,9 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          lldb_private::Language::LanguageIsCPlusPlus(language) ||
          lldb_private::Language::LanguageIsObjC(language) ||
          lldb_private::Language::LanguageIsPascal(language) ||
-         // Use Clang for Rust until there is a proper language plugin for it
+         // Use Clang for Rust until there is a Rust type system
          language == eLanguageTypeRust ||
-         // Use Clang for D until there is a proper language plugin for it
+         // Use Clang for D until there is a D type system
          language == eLanguageTypeD ||
          // Open Dylan compiler debug info is designed to be Clang-compatible
          language == eLanguageTypeDylan;
@@ -242,8 +254,13 @@ static lldb::addr_t GetVTableAddress(Process &process,
 
     vbtable_ptr_addr += vbtable_ptr_offset;
 
-    Status err;
-    return process.ReadPointerFromMemory(vbtable_ptr_addr, err);
+    llvm::Expected<lldb::addr_t> vbtable_ptr_addr_or_err =
+        process.ReadPointerFromMemory(vbtable_ptr_addr);
+    if (!vbtable_ptr_addr_or_err) {
+      llvm::consumeError(vbtable_ptr_addr_or_err.takeError());
+      return LLDB_INVALID_ADDRESS;
+    }
+    return *vbtable_ptr_addr_or_err;
   }
 
   // We have an object already read from process memory,
@@ -312,6 +329,8 @@ static bool GetVBaseBitOffset(VTableContextBase &vtable_ctx,
   if (base_offset == INT64_MAX)
     return false;
 
+  if (vtable_ctx.isMicrosoft())
+    base_offset += record_layout.getVBPtrOffset().getQuantity();
   bit_offset = base_offset * 8;
 
   return true;
@@ -576,14 +595,85 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForExpressions() {
   return languages;
 }
 
+namespace {
+class CommandObjectTargetModulesDumpClangPCMInfo : public CommandObjectParsed {
+public:
+  CommandObjectTargetModulesDumpClangPCMInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target modules dump pcm-info",
+            "Dump information about the given clang module (pcm).") {
+    // Take a single file argument.
+    AddSimpleArgumentList(eArgTypeFilename);
+  }
+
+  ~CommandObjectTargetModulesDumpClangPCMInfo() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument",
+                                   m_cmd_name.c_str());
+      return;
+    }
+
+    const char *pcm_path = command.GetArgumentAtIndex(0);
+    const FileSpec pcm_file{pcm_path};
+
+    if (pcm_file.GetFileNameExtension() != ".pcm") {
+      result.AppendError("file must have a .pcm extension");
+      return;
+    }
+
+    if (!FileSystem::Instance().Exists(pcm_file)) {
+      result.AppendError("pcm file does not exist");
+      return;
+    }
+
+    const char *clang_args[] = {"clang", pcm_path};
+    clang::CompilerInstance compiler(clang::createInvocation(clang_args));
+    compiler.setVirtualFileSystem(
+        FileSystem::Instance().GetVirtualFileSystem());
+    compiler.createDiagnostics();
+
+    // Pass empty deleter to not attempt to free memory that was allocated
+    // outside of the current scope, possibly statically.
+    std::shared_ptr<llvm::raw_ostream> Out(
+        &result.GetOutputStream().AsRawOstream(), [](llvm::raw_ostream *) {});
+    clang::DumpModuleInfoAction dump_module_info(Out);
+    // DumpModuleInfoAction requires ObjectFilePCHContainerReader.
+    compiler.getPCHContainerOperations()->registerReader(
+        std::make_unique<clang::ObjectFilePCHContainerReader>());
+
+    if (compiler.ExecuteAction(dump_module_info))
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+} // namespace
+
 void TypeSystemClang::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "clang base AST context plug-in", CreateInstance,
-      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions());
+      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions(),
+      DebuggerInitialize);
+
+  llvm::SmallString<128> path;
+  if (clang::driver::Driver::getDefaultModuleCachePath(path))
+    ModuleList::GetGlobalModuleListProperties().SetClangModulesCachePath(
+        FileSpec(path));
 }
 
 void TypeSystemClang::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
+}
+
+void TypeSystemClang::DebuggerInitialize(Debugger &debugger) {
+  CommandInterpreter &interpreter = debugger.GetCommandInterpreter();
+  llvm::StringRef parent = "target modules dump";
+  if (CommandObject *dump = interpreter.GetCommandObjectForCommand(parent))
+    dump->LoadSubCommand(
+        "pcm-info",
+        std::make_shared<CommandObjectTargetModulesDumpClangPCMInfo>(
+            interpreter));
 }
 
 void TypeSystemClang::Finalize() {
@@ -694,7 +784,7 @@ void TypeSystemClang::CreateASTContext() {
             m_target_triple)
             .str();
 
-    LLDB_LOG(GetLog(LLDBLog::Expressions), err.c_str());
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", err);
 
     static std::once_flag s_uninitialized_target_warning;
     Debugger::ReportWarning(std::move(err), /*debugger_id=*/std::nullopt,
@@ -1267,9 +1357,8 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
 
 CompilerType TypeSystemClang::CreateRecordType(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    AccessType access_type, llvm::StringRef name, int kind,
-    LanguageType language, std::optional<ClangASTMetadata> metadata,
-    bool exports_symbols) {
+    llvm::StringRef name, int kind, LanguageType language,
+    std::optional<ClangASTMetadata> metadata, bool exports_symbols) {
   ASTContext &ast = getASTContext();
 
   if (decl_ctx == nullptr)
@@ -1324,11 +1413,16 @@ CompilerType TypeSystemClang::CreateRecordType(
       decl->setAnonymousStructOrUnion(true);
   }
 
+  if (Language::LanguageIsRust(language)) {
+    if (!metadata)
+      metadata = ClangASTMetadata();
+    metadata->SetLanguageType(Language::GetPrimaryLanguage(language));
+  }
+
   if (metadata)
     SetMetadata(decl, *metadata);
 
-  if (access_type != eAccessNone)
-    decl->setAccess(ConvertAccessTypeToAccessSpecifier(access_type));
+  decl->setAccess(AS_public);
 
   if (decl_ctx)
     decl_ctx->addDecl(decl);
@@ -1348,29 +1442,6 @@ QualType GetValueParamType(const clang::TemplateArgument &argument) {
     return argument.getStructuralValueType();
   default:
     return {};
-  }
-}
-
-void AddAccessSpecifierDecl(clang::CXXRecordDecl *cxx_record_decl,
-                            ASTContext &ct,
-                            clang::AccessSpecifier previous_access,
-                            clang::AccessSpecifier access_specifier) {
-  if (!cxx_record_decl->isClass() && !cxx_record_decl->isStruct())
-    return;
-  if (previous_access != access_specifier) {
-    // For struct, don't add AS_public if it's the first AccessSpecDecl.
-    // For class, don't add AS_private if it's the first AccessSpecDecl.
-    if ((cxx_record_decl->isStruct() &&
-         previous_access == clang::AccessSpecifier::AS_none &&
-         access_specifier == clang::AccessSpecifier::AS_public) ||
-        (cxx_record_decl->isClass() &&
-         previous_access == clang::AccessSpecifier::AS_none &&
-         access_specifier == clang::AccessSpecifier::AS_private)) {
-      return;
-    }
-    cxx_record_decl->addDecl(
-        AccessSpecDecl::Create(ct, access_specifier, cxx_record_decl,
-                               SourceLocation(), SourceLocation()));
   }
 }
 } // namespace
@@ -1462,11 +1533,7 @@ clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
     // TODO: verify which decl context we should put template_param_decls into..
     template_param_decls[i]->setDeclContext(func_decl);
   }
-  // Function templates inside a record need to have an access specifier.
-  // It doesn't matter what access specifier we give the template as LLDB
-  // anyway allows accessing everything inside a record.
-  if (decl_ctx->isRecord())
-    func_tmpl_decl->setAccess(clang::AccessSpecifier::AS_public);
+  func_tmpl_decl->setAccess(clang::AccessSpecifier::AS_public);
 
   return func_tmpl_decl;
 }
@@ -1478,7 +1545,7 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
       func_decl->getASTContext(), infos.GetArgs());
 
   func_decl->setFunctionTemplateSpecialization(func_tmpl_decl,
-                                               template_args_ptr, nullptr);
+                                               template_args_ptr, {});
 }
 
 /// Returns true if the given template parameter can represent the given value.
@@ -1579,7 +1646,7 @@ static bool ClassTemplateAllowsToInstantiationArgs(
 
 ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
     DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    lldb::AccessType access_type, llvm::StringRef class_name, int kind,
+    llvm::StringRef class_name, int kind,
     const TemplateParameterInfos &template_param_infos) {
   ASTContext &ast = getASTContext();
 
@@ -1641,9 +1708,7 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   template_cxx_decl->setDescribedClassTemplate(class_template_decl);
   SetOwningModule(class_template_decl, owning_module);
 
-  if (access_type != eAccessNone)
-    class_template_decl->setAccess(
-        ConvertAccessTypeToAccessSpecifier(access_type));
+  class_template_decl->setAccess(AS_public);
 
   decl_ctx->addDecl(class_template_decl);
 
@@ -1662,6 +1727,8 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
+  template_param_infos.SetParameterPack(
+      std::make_unique<TemplateParameterInfos>());
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
       ast, template_param_infos, template_param_decls);
 
@@ -1701,11 +1768,11 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
-  void *insert_pos = nullptr;
-  if (class_template_decl->findSpecialization(args, insert_pos))
+  llvm::FoldingSetInsertToken insert_token;
+  if (class_template_decl->findSpecialization(args, insert_token))
     return nullptr;
   class_template_decl->AddSpecialization(class_template_specialization_decl,
-                                         insert_pos);
+                                         insert_token);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
 
@@ -1774,20 +1841,6 @@ bool TypeSystemClang::CheckOverloadedOperatorKindParameterCount(
     break;
   }
   return false;
-}
-
-clang::AccessSpecifier
-TypeSystemClang::UnifyAccessSpecifiers(clang::AccessSpecifier lhs,
-                                       clang::AccessSpecifier rhs) {
-  // Make the access equal to the stricter of the field and the nested field's
-  // access
-  if (lhs == AS_none || rhs == AS_none)
-    return AS_none;
-  if (lhs == AS_private || rhs == AS_private)
-    return AS_private;
-  if (lhs == AS_protected || rhs == AS_protected)
-    return AS_protected;
-  return AS_public;
 }
 
 bool TypeSystemClang::FieldIsBitfield(FieldDecl *field,
@@ -2329,13 +2382,12 @@ CompilerType TypeSystemClang::CreateStructForIdentifier(
     return type;
   }
 
-  type = CreateRecordType(
-      nullptr, OptionalClangModuleID(), lldb::eAccessPublic, type_name,
-      llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
+  type = CreateRecordType(nullptr, OptionalClangModuleID(), type_name,
+                          llvm::to_underlying(clang::TagTypeKind::Struct),
+                          lldb::eLanguageTypeC);
   StartTagDeclarationDefinition(type);
   for (const auto &field : type_fields)
-    AddFieldToRecordType(type, field.first, field.second, lldb::eAccessPublic,
-                         0);
+    AddFieldToRecordType(type, field.first, field.second, 0);
   if (packed)
     SetIsPacked(type);
   CompleteTagDeclarationDefinition(type);
@@ -2387,7 +2439,7 @@ CompilerType TypeSystemClang::CreateEnumerationType(
   // TODO: check if we should be setting the promotion type too?
   enum_decl->setIntegerType(ClangUtil::GetQualType(integer_clang_type));
 
-  enum_decl->setAccess(AS_public); // TODO respect what's in the debug info
+  enum_decl->setAccess(AS_public);
 
   return GetType(ast.getCanonicalTagType(enum_decl));
 }
@@ -2445,6 +2497,24 @@ CompilerType TypeSystemClang::GetPointerSizedIntType(bool is_signed) {
 
   return GetIntTypeFromBitSize(
       getASTContext().getTypeSize(getASTContext().VoidPtrTy), is_signed);
+}
+
+CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  if (is_signed)
+    return GetType(getASTContext().getPointerDiffType());
+  return GetType(getASTContext().getUnsignedPointerDiffType());
+}
+
+CompilerType TypeSystemClang::GetSizeType() {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  return GetType(getASTContext().getSizeType());
 }
 
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
@@ -2564,22 +2634,6 @@ TypeSystemClang::GetMetadata(const clang::Type *object) {
   return std::nullopt;
 }
 
-void TypeSystemClang::SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
-                                             clang::AccessSpecifier access) {
-  if (access == clang::AccessSpecifier::AS_none)
-    m_cxx_record_decl_access.erase(object);
-  else
-    m_cxx_record_decl_access[object] = access;
-}
-
-clang::AccessSpecifier
-TypeSystemClang::GetCXXRecordDeclAccess(const clang::CXXRecordDecl *object) {
-  auto It = m_cxx_record_decl_access.find(object);
-  if (It != m_cxx_record_decl_access.end())
-    return It->second;
-  return clang::AccessSpecifier::AS_none;
-}
-
 clang::DeclContext *
 TypeSystemClang::GetDeclContextForType(const CompilerType &type) {
   return GetDeclContextForType(ClangUtil::GetQualType(type));
@@ -2657,7 +2711,7 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::RecordType *
-GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
+GetCompleteRecordType(const clang::ASTContext *ast, clang::QualType qual_type) {
   assert(qual_type->isRecordType());
 
   const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
@@ -2698,7 +2752,7 @@ GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
+static const clang::EnumType *GetCompleteEnumType(const clang::ASTContext *ast,
                                                   clang::QualType qual_type) {
   assert(qual_type->isEnumeralType());
   assert(ast);
@@ -2731,7 +2785,7 @@ static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::ObjCObjectType *
-GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
+GetCompleteObjCObjectType(const clang::ASTContext *ast, QualType qual_type) {
   assert(qual_type->isObjCObjectType());
   assert(ast);
 
@@ -2762,7 +2816,7 @@ GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
   return objc_class_type;
 }
 
-static bool GetCompleteQualType(clang::ASTContext *ast,
+static bool GetCompleteQualType(const clang::ASTContext *ast,
                                 clang::QualType qual_type) {
   qual_type = RemoveWrappingTypes(qual_type);
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -2818,23 +2872,6 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
   }
 
   return true;
-}
-
-static clang::ObjCIvarDecl::AccessControl
-ConvertAccessTypeToObjCIvarAccessControl(AccessType access) {
-  switch (access) {
-  case eAccessNone:
-    return clang::ObjCIvarDecl::None;
-  case eAccessPublic:
-    return clang::ObjCIvarDecl::Public;
-  case eAccessPrivate:
-    return clang::ObjCIvarDecl::Private;
-  case eAccessProtected:
-    return clang::ObjCIvarDecl::Protected;
-  case eAccessPackage:
-    return clang::ObjCIvarDecl::Package;
-  }
-  return clang::ObjCIvarDecl::None;
 }
 
 // Tests
@@ -3236,6 +3273,15 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
   };
 
   return IsTypeImpl(type, isMemberFunctionPointerType);
+}
+
+bool TypeSystemClang::IsMemberDataPointerType(
+    lldb::opaque_compiler_type_t type) {
+  auto isMemberDataPointerType = [](clang::QualType qual_type) {
+    return qual_type->isMemberDataPointerType();
+  };
+
+  return IsTypeImpl(type, isMemberDataPointerType);
 }
 
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
@@ -3703,6 +3749,23 @@ bool TypeSystemClang::IsVoidType(lldb::opaque_compiler_type_t type) {
   return GetCanonicalQualType(type)->isVoidType();
 }
 
+bool TypeSystemClang::HasPointerAuthQualifier(
+    lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
+  return GetCanonicalQualType(type).getPointerAuth().isPresent();
+}
+
+std::optional<uint32_t> TypeSystemClang::GetTargetAddressSpace(
+    lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return std::nullopt;
+  clang::LangAS as = GetCanonicalQualType(type).getAddressSpace();
+  if (!clang::isTargetAddressSpace(as))
+    return std::nullopt;
+  return clang::toTargetAddressSpace(as);
+}
+
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
   if (auto *record_decl =
       TypeSystemClang::GetAsRecordDecl(type)) {
@@ -4056,12 +4119,24 @@ TypeSystemClang::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
   if (qual_type->isAnyPointerType()) {
     if (qual_type->isObjCObjectPointerType())
       return lldb::eLanguageTypeObjC;
-    if (qual_type->getPointeeCXXRecordDecl())
+    if (qual_type->getPointeeCXXRecordDecl()) {
+      if (std::optional<ClangASTMetadata> meta_data =
+              GetMetadata(qual_type->getPointeeCXXRecordDecl());
+          meta_data &&
+          meta_data->GetLanguageType() != lldb::eLanguageTypeUnknown)
+        return meta_data->GetLanguageType();
       return lldb::eLanguageTypeC_plus_plus;
+    }
 
     clang::QualType pointee_type(qual_type->getPointeeType());
-    if (pointee_type->getPointeeCXXRecordDecl())
+    if (pointee_type->getPointeeCXXRecordDecl()) {
+      if (std::optional<ClangASTMetadata> meta_data =
+              GetMetadata(pointee_type->getPointeeCXXRecordDecl());
+          meta_data &&
+          meta_data->GetLanguageType() != lldb::eLanguageTypeUnknown)
+        return meta_data->GetLanguageType();
       return lldb::eLanguageTypeC_plus_plus;
+    }
     if (pointee_type->isObjCObjectOrInterfaceType())
       return lldb::eLanguageTypeObjC;
     if (pointee_type->isObjCClassType())
@@ -4072,8 +4147,14 @@ TypeSystemClang::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
   } else {
     if (qual_type->isObjCObjectOrInterfaceType())
       return lldb::eLanguageTypeObjC;
-    if (qual_type->getAsCXXRecordDecl())
+    if (qual_type->getAsCXXRecordDecl()) {
+      if (std::optional<ClangASTMetadata> meta_data =
+              GetMetadata(qual_type->getAsCXXRecordDecl());
+          meta_data &&
+          meta_data->GetLanguageType() != lldb::eLanguageTypeUnknown)
+        return meta_data->GetLanguageType();
       return lldb::eLanguageTypeC_plus_plus;
+    }
     switch (qual_type->getTypeClass()) {
     default:
       break;
@@ -4149,6 +4230,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
   case clang::Type::FunctionNoProto:
@@ -4177,6 +4261,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   // Ext-Int is just an integer type.
   case clang::Type::BitInt:
   case clang::Type::DependentBitInt:
+  case clang::Type::OverflowBehavior:
     return lldb::eTypeClassBuiltin;
   case clang::Type::ObjCObjectPointer:
     return lldb::eTypeClassObjCObjectPointer;
@@ -4636,6 +4721,18 @@ TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType
+TypeSystemClang::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                                         uint32_t address_space) {
+  assert(type);
+  assert(address_space <= clang::Qualifiers::MaxAddressSpace);
+  clang::QualType qual_type = GetQualType(type);
+  auto lang_as = static_cast<clang::LangAS>(address_space);
+  if (lang_as == clang::LangAS::Default || qual_type.hasAddressSpace())
+    return GetType(qual_type);
+  return GetType(getASTContext().getAddrSpaceQualType(qual_type, lang_as));
+}
+
+CompilerType
 TypeSystemClang::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));
@@ -4689,7 +4786,7 @@ CompilerType TypeSystemClang::CreateTypedef(
     if (tdecl && !tdecl->getIdentifier() && !tdecl->getTypedefNameForAnonDecl())
       tdecl->setTypedefNameForAnonDecl(decl);
 
-    decl->setAccess(clang::AS_public); // TODO respect proper access specifier
+    decl->setAccess(clang::AS_public);
 
     // Get a uniqued clang::QualType for the typedef decl type
     NestedNameSpecifier Qualifier =
@@ -4768,20 +4865,19 @@ TypeSystemClang::GetObjCBitSize(QualType qual_type,
         return *bit_size;
     }
   } else {
-    static bool g_printed = false;
-    if (!g_printed) {
+    static std::once_flag g_once_flag;
+    std::call_once(g_once_flag, [&] {
       StreamString s;
       DumpTypeDescription(qual_type.getAsOpaquePtr(), s);
-
-      llvm::outs() << "warning: trying to determine the size of type ";
-      llvm::outs() << s.GetString() << "\n";
-      llvm::outs() << "without a valid ExecutionContext. this is not "
-                      "reliable. please file a bug against LLDB.\n";
-      llvm::outs() << "backtrace:\n";
-      llvm::sys::PrintStackTrace(llvm::outs());
-      llvm::outs() << "\n";
-      g_printed = true;
-    }
+      std::string backtrace;
+      llvm::raw_string_ostream os(backtrace);
+      llvm::sys::PrintStackTrace(os);
+      Debugger::ReportInternalError(
+          llvm::formatv("determining the size of type {0} without a valid "
+                        "ExecutionContext is not reliable\n{1}",
+                        s.GetString(), llvm::StringRef(backtrace).rtrim())
+              .str());
+    });
   }
 
   return getASTContext().getTypeSize(qual_type) +
@@ -4826,6 +4922,13 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
       GetTypeName(type, base_name_only).AsCString(""));
 }
 
+std::optional<uint64_t>
+TypeSystemClang::GetByteStride(lldb::opaque_compiler_type_t type) {
+  // In C/C++/Objective-C, sizeof already includes any tail padding, so the
+  // stride is the same as the size.
+  return llvm::expectedToOptional(GetByteSize(type, nullptr));
+}
+
 std::optional<size_t>
 TypeSystemClang::GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                                  ExecutionContextScope *exe_scope) {
@@ -4852,6 +4955,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
 
   case clang::Type::UnaryTransform:
     break;
@@ -4875,6 +4981,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::BitInt:
   case clang::Type::DependentBitInt:
+  case clang::Type::OverflowBehavior:
     return qual_type->isUnsignedIntegerType() ? lldb::eEncodingUint
                                               : lldb::eEncodingSint;
 
@@ -4950,6 +5057,12 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::NullPtr:
+      return lldb::eEncodingUint;
+
+    case clang::BuiltinType::MetaInfo:
+      // HLSL -- Packed Types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::Kind::ARCUnbridgedCast:
@@ -5052,6 +5165,11 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
       break;
+
+      // SPIR-V builtin types.
+#define SPIRV_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may
@@ -5153,6 +5271,9 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
 
@@ -5175,6 +5296,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::BitInt:
   case clang::Type::DependentBitInt:
+  case clang::Type::OverflowBehavior:
     return qual_type->isUnsignedIntegerType() ? lldb::eFormatUnsigned
                                               : lldb::eFormatDecimal;
 
@@ -5576,7 +5698,7 @@ void TypeSystemClang::ForEachEnumerator(
       for (enum_pos = enum_decl->enumerator_begin(),
           enum_end_pos = enum_decl->enumerator_end();
            enum_pos != enum_end_pos; ++enum_pos) {
-        ConstString name(enum_pos->getNameAsString().c_str());
+        ConstString name(enum_pos->getNameAsString());
         if (!callback(integer_type, name, enum_pos->getInitVal()))
           break;
       }
@@ -6192,26 +6314,40 @@ llvm::Expected<CompilerType> TypeSystemClang::GetDereferencedType(
                     IsArrayType(type, nullptr, nullptr, nullptr);
   if (!type_valid)
     return llvm::createStringError("not a pointer, reference or array type");
-  uint32_t child_bitfield_bit_size = 0;
-  uint32_t child_bitfield_bit_offset = 0;
-  bool child_is_base_class;
-  bool child_is_deref_of_parent;
-  return GetChildCompilerTypeAtIndex(
-      type, exe_ctx, 0, false, true, false, deref_name, deref_byte_size,
-      deref_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-      child_is_base_class, child_is_deref_of_parent, valobj, language_flags);
+  llvm::Expected<ChildTypeInfo> child =
+      GetChildAtIndex(type, exe_ctx, 0, /*transparent_pointers=*/false,
+                      /*omit_empty_base_classes=*/true,
+                      /*ignore_array_bounds=*/false, valobj);
+  if (!child)
+    return child.takeError();
+  deref_name = child->name;
+  deref_byte_size = child->byte_size;
+  deref_byte_offset = child->byte_offset;
+  language_flags = child->language_flags;
+  return child->type;
 }
 
-llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
+llvm::Expected<ChildTypeInfo> TypeSystemClang::GetChildAtIndex(
     lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
     bool transparent_pointers, bool omit_empty_base_classes,
-    bool ignore_array_bounds, std::string &child_name,
-    uint32_t &child_byte_size, int32_t &child_byte_offset,
-    uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-    bool &child_is_base_class, bool &child_is_deref_of_parent,
-    ValueObject *valobj, uint64_t &language_flags) {
+    bool ignore_array_bounds, ValueObject *valobj) {
   if (!type)
     return llvm::createStringError("invalid type");
+
+  ChildTypeInfo child;
+  auto with_type = [&child](CompilerType child_type) {
+    child.type = child_type;
+    return std::move(child);
+  };
+  auto get_pointee_child =
+      [&](CompilerType pointee) -> llvm::Expected<ChildTypeInfo> {
+    llvm::Expected<ChildTypeInfo> pointee_child = pointee.GetChildAtIndex(
+        exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+        ignore_array_bounds, valobj);
+    if (pointee_child)
+      pointee_child->is_deref_of_parent = false;
+    return pointee_child;
+  };
 
   auto get_exe_scope = [&exe_ctx]() {
     return exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
@@ -6221,10 +6357,6 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       RemoveWrappingTypes(GetCanonicalQualType(type)));
   const clang::Type::TypeClass parent_type_class =
       parent_qual_type->getTypeClass();
-  child_bitfield_bit_size = 0;
-  child_bitfield_bit_offset = 0;
-  child_is_base_class = false;
-  language_flags = 0;
 
   auto num_children_or_err =
       GetNumChildren(type, omit_empty_base_classes, exe_ctx);
@@ -6241,11 +6373,11 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
     switch (llvm::cast<clang::BuiltinType>(parent_qual_type)->getKind()) {
     case clang::BuiltinType::ObjCId:
     case clang::BuiltinType::ObjCClass:
-      child_name = "isa";
-      child_byte_size =
+      child.name = "isa";
+      child.byte_size =
           getASTContext().getTypeSize(getASTContext().ObjCBuiltinClassTy) /
           CHAR_BIT;
-      return GetType(getASTContext().ObjCBuiltinClassTy);
+      return with_type(GetType(getASTContext().ObjCBuiltinClassTy));
 
     default:
       break;
@@ -6314,9 +6446,9 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
                          8;
 
           // Base classes should be a multiple of 8 bits in size
-          child_byte_offset = bit_offset / 8;
+          child.byte_offset = bit_offset / 8;
           CompilerType base_class_clang_type = GetType(base_class->getType());
-          child_name = base_class_clang_type.GetTypeName().AsCString("");
+          child.name = base_class_clang_type.GetTypeName().AsCString("");
           auto size_or_err = base_class_clang_type.GetBitSize(get_exe_scope());
           if (!size_or_err)
             return llvm::joinErrors(
@@ -6327,9 +6459,9 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
 
           // Base classes bit sizes should be a multiple of 8 bits in size
           assert(base_class_clang_type_bit_size % 8 == 0);
-          child_byte_size = base_class_clang_type_bit_size / 8;
-          child_is_base_class = true;
-          return base_class_clang_type;
+          child.byte_size = base_class_clang_type_bit_size / 8;
+          child.is_base_class = true;
+          return with_type(base_class_clang_type);
         }
         // We don't increment the child index in the for loop since we might
         // be skipping empty base classes
@@ -6345,7 +6477,7 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       if (idx == child_idx) {
         // Print the member type if requested
         // Print the member name and equal sign
-        child_name.assign(field->getNameAsString());
+        child.name.assign(field->getNameAsString());
 
         // Figure out the type byte size (field_type_info.first) and
         // alignment (field_type_info.second) from the AST context.
@@ -6357,22 +6489,22 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
               llvm::createStringError("no size info for field"),
               size_or_err.takeError());
 
-        child_byte_size = *size_or_err;
-        const uint32_t child_bit_size = child_byte_size * 8;
+        child.byte_size = *size_or_err;
+        const uint32_t child_bit_size = child.byte_size * 8;
 
         // Figure out the field offset within the current struct/union/class
         // type
         bit_offset = record_layout.getFieldOffset(field_idx);
-        if (FieldIsBitfield(*field, child_bitfield_bit_size)) {
-          child_bitfield_bit_offset = bit_offset % child_bit_size;
+        if (FieldIsBitfield(*field, child.bitfield_bit_size)) {
+          child.bitfield_bit_offset = bit_offset % child_bit_size;
           const uint32_t child_bit_offset =
-              bit_offset - child_bitfield_bit_offset;
-          child_byte_offset = child_bit_offset / 8;
+              bit_offset - child.bitfield_bit_offset;
+          child.byte_offset = child_bit_offset / 8;
         } else {
-          child_byte_offset = bit_offset / 8;
+          child.byte_offset = bit_offset / 8;
         }
 
-        return field_clang_type;
+        return with_type(field_clang_type);
       }
     }
   } break;
@@ -6404,23 +6536,22 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       if (omit_empty_base_classes) {
         CompilerType base_class_clang_type = GetType(
             getASTContext().getObjCInterfaceType(superclass_interface_decl));
-        if (llvm::expectedToStdOptional(base_class_clang_type.GetNumChildren(
-                                            omit_empty_base_classes, exe_ctx))
+        if (llvm::expectedToOptional(base_class_clang_type.GetNumChildren(
+                                         omit_empty_base_classes, exe_ctx))
                 .value_or(0) > 0) {
           if (idx == 0) {
             clang::QualType ivar_qual_type(getASTContext().getObjCInterfaceType(
                 superclass_interface_decl));
 
-            child_name.assign(superclass_interface_decl->getNameAsString());
+            child.name.assign(superclass_interface_decl->getNameAsString());
 
             clang::TypeInfo ivar_type_info =
                 getASTContext().getTypeInfo(ivar_qual_type.getTypePtr());
 
-            child_byte_size = ivar_type_info.Width / 8;
-            child_byte_offset = 0;
-            child_is_base_class = true;
+            child.byte_size = ivar_type_info.Width / 8;
+            child.is_base_class = true;
 
-            return GetType(ivar_qual_type);
+            return with_type(GetType(ivar_qual_type));
           }
 
           ++child_idx;
@@ -6442,12 +6573,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
 
           clang::QualType ivar_qual_type(ivar_decl->getType());
 
-          child_name.assign(ivar_decl->getNameAsString());
+          child.name.assign(ivar_decl->getNameAsString());
 
           clang::TypeInfo ivar_type_info =
               getASTContext().getTypeInfo(ivar_qual_type.getTypePtr());
 
-          child_byte_size = ivar_type_info.Width / 8;
+          child.byte_size = ivar_type_info.Width / 8;
 
           // Figure out the field offset within the current
           // struct/union/class type For ObjC objects, we can't trust the
@@ -6456,7 +6587,7 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           // from the changing size of base classes that are newer than
           // this class. So if we have a process around that we can ask
           // about this object, do so.
-          child_byte_offset = LLDB_INVALID_IVAR_OFFSET;
+          child.byte_offset = LLDB_INVALID_IVAR_OFFSET;
           Process *process = nullptr;
           if (exe_ctx)
             process = exe_ctx->GetProcessPtr();
@@ -6465,7 +6596,7 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
                 ObjCLanguageRuntime::Get(*process);
             if (objc_runtime != nullptr) {
               CompilerType parent_ast_type = GetType(parent_qual_type);
-              child_byte_offset = objc_runtime->GetByteOffsetForIvar(
+              child.byte_offset = objc_runtime->GetByteOffsetForIvar(
                   parent_ast_type, ivar_decl->getNameAsString().c_str());
             }
           }
@@ -6474,11 +6605,11 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           // twice...
           bit_offset = INT32_MAX;
 
-          if (child_byte_offset ==
+          if (child.byte_offset ==
               static_cast<int32_t>(LLDB_INVALID_IVAR_OFFSET)) {
             bit_offset =
                 interface_layout.getFieldOffset(child_idx - superclass_idx);
-            child_byte_offset = bit_offset / 8;
+            child.byte_offset = bit_offset / 8;
           }
 
           // Note, the ObjC Ivar Byte offset is just that, it doesn't
@@ -6487,14 +6618,14 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
           // offset from, we still need to get the bit offset for
           // bitfields from the layout.
 
-          if (FieldIsBitfield(ivar_decl, child_bitfield_bit_size)) {
+          if (FieldIsBitfield(ivar_decl, child.bitfield_bit_size)) {
             if (bit_offset == INT32_MAX)
               bit_offset =
                   interface_layout.getFieldOffset(child_idx - superclass_idx);
 
-            child_bitfield_bit_offset = bit_offset % 8;
+            child.bitfield_bit_offset = bit_offset % 8;
           }
-          return GetType(ivar_qual_type);
+          return with_type(GetType(ivar_qual_type));
         }
         ++child_idx;
       }
@@ -6507,21 +6638,14 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
     CompilerType pointee_clang_type(GetPointeeType(type));
 
     if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
-      child_is_deref_of_parent = false;
-      bool tmp_child_is_deref_of_parent = false;
-      return pointee_clang_type.GetChildCompilerTypeAtIndex(
-          exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, tmp_child_is_deref_of_parent, valobj,
-          language_flags);
+      return get_pointee_child(pointee_clang_type);
     } else {
-      child_is_deref_of_parent = true;
+      child.is_deref_of_parent = true;
       const char *parent_name =
           valobj ? valobj->GetName().GetCString() : nullptr;
       if (parent_name) {
-        child_name.assign(1, '*');
-        child_name += parent_name;
+        child.name.assign(1, '*');
+        child.name += parent_name;
       }
 
       // We have a pointer to an simple type
@@ -6529,9 +6653,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
         auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
         if (!size_or_err)
           return size_or_err.takeError();
-        child_byte_size = *size_or_err;
-        child_byte_offset = 0;
-        return pointee_clang_type;
+        child.byte_size = *size_or_err;
+        return with_type(pointee_clang_type);
       }
     }
   } break;
@@ -6552,13 +6675,13 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
     char element_name[64];
     ::snprintf(element_name, sizeof(element_name), "[%" PRIu64 "]",
                static_cast<uint64_t>(idx));
-    child_name.assign(element_name);
+    child.name.assign(element_name);
     auto size_or_err = element_type.GetByteSize(get_exe_scope());
     if (!size_or_err)
       return size_or_err.takeError();
-    child_byte_size = *size_or_err;
-    child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-    return element_type;
+    child.byte_size = *size_or_err;
+    child.byte_offset = (int32_t)idx * (int32_t)child.byte_size;
+    return with_type(element_type);
   }
   case clang::Type::ConstantArray:
   case clang::Type::IncompleteArray: {
@@ -6571,13 +6694,13 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
     if (!element_type.GetCompleteType())
       return llvm::createStringError("cannot complete type");
 
-    child_name = std::string(llvm::formatv("[{0}]", idx));
+    child.name = std::string(llvm::formatv("[{0}]", idx));
     auto size_or_err = element_type.GetByteSize(get_exe_scope());
     if (!size_or_err)
       return size_or_err.takeError();
-    child_byte_size = *size_or_err;
-    child_byte_offset = (int32_t)idx * (int32_t)child_byte_size;
-    return element_type;
+    child.byte_size = *size_or_err;
+    child.byte_offset = (int32_t)idx * (int32_t)child.byte_size;
+    return with_type(element_type);
   }
   case clang::Type::Pointer: {
     CompilerType pointee_clang_type(GetPointeeType(type));
@@ -6587,21 +6710,14 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       return llvm::createStringError("cannot dereference void *");
 
     if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
-      child_is_deref_of_parent = false;
-      bool tmp_child_is_deref_of_parent = false;
-      return pointee_clang_type.GetChildCompilerTypeAtIndex(
-          exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, tmp_child_is_deref_of_parent, valobj,
-          language_flags);
+      return get_pointee_child(pointee_clang_type);
     }
-    child_is_deref_of_parent = true;
+    child.is_deref_of_parent = true;
 
     const char *parent_name = valobj ? valobj->GetName().GetCString() : nullptr;
     if (parent_name) {
-      child_name.assign(1, '*');
-      child_name += parent_name;
+      child.name.assign(1, '*');
+      child.name += parent_name;
     }
 
     // We have a pointer to an simple type
@@ -6609,9 +6725,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
       if (!size_or_err)
         return size_or_err.takeError();
-      child_byte_size = *size_or_err;
-      child_byte_offset = 0;
-      return pointee_clang_type;
+      child.byte_size = *size_or_err;
+      return with_type(pointee_clang_type);
     }
     break;
   }
@@ -6625,19 +6740,12 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
             RemoveWrappingTypes(GetQualType(type)).getTypePtr());
     CompilerType pointee_clang_type = GetType(reference_type->getPointeeType());
     if (transparent_pointers && pointee_clang_type.IsAggregateType()) {
-      child_is_deref_of_parent = false;
-      bool tmp_child_is_deref_of_parent = false;
-      return pointee_clang_type.GetChildCompilerTypeAtIndex(
-          exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, tmp_child_is_deref_of_parent, valobj,
-          language_flags);
+      return get_pointee_child(pointee_clang_type);
     }
     const char *parent_name = valobj ? valobj->GetName().GetCString() : nullptr;
     if (parent_name) {
-      child_name.assign(1, '&');
-      child_name += parent_name;
+      child.name.assign(1, '&');
+      child.name += parent_name;
     }
 
     // We have a pointer to an simple type
@@ -6645,9 +6753,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       auto size_or_err = pointee_clang_type.GetByteSize(get_exe_scope());
       if (!size_or_err)
         return size_or_err.takeError();
-      child_byte_size = *size_or_err;
-      child_byte_offset = 0;
-      return pointee_clang_type;
+      child.byte_size = *size_or_err;
+      return with_type(pointee_clang_type);
     }
   } break;
 
@@ -7070,8 +7177,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
     }
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 CompilerType
@@ -7317,98 +7423,16 @@ CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
 
 bool TypeSystemClang::IsPromotableIntegerType(
     lldb::opaque_compiler_type_t type) {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  bool is_signed = false;
-  bool isUnscopedEnumerationType =
-      IsEnumerationType(type, is_signed) && !IsScopedEnumerationType(type);
-  if (isUnscopedEnumerationType)
-    return true;
-
-  switch (GetBasicTypeEnumeration(type)) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-
-  llvm_unreachable("All cases handled above.");
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  return getASTContext().isPromotableIntegerType(qual_type);
 }
 
-llvm::Expected<CompilerType>
-TypeSystemClang::DoIntegralPromotion(CompilerType from,
-                                     ExecutionContextScope *exe_scope) {
-  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
-    return from;
-
-  if (!from.IsPromotableIntegerType())
-    return from;
-
-  if (from.IsUnscopedEnumerationType()) {
-    EnumDecl *enum_decl = GetAsEnumDecl(from);
-    CompilerType promotion_type = GetType(enum_decl->getPromotionType());
-    return DoIntegralPromotion(promotion_type, exe_scope);
-  }
-
-  lldb::BasicType builtin_type =
-      from.GetCanonicalType().GetBasicTypeEnumeration();
-  uint64_t from_size = 0;
-  if (builtin_type == lldb::eBasicTypeWChar ||
-      builtin_type == lldb::eBasicTypeSignedWChar ||
-      builtin_type == lldb::eBasicTypeUnsignedWChar ||
-      builtin_type == lldb::eBasicTypeChar16 ||
-      builtin_type == lldb::eBasicTypeChar32) {
-    // Find the type that can hold the entire range of values for our type.
-    bool is_signed = from.IsSigned();
-    llvm::Expected<uint64_t> from_size = from.GetByteSize(exe_scope);
-    if (!from_size)
-      return from_size.takeError();
-    CompilerType promote_types[] = {
-        GetBasicTypeFromAST(lldb::eBasicTypeInt),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt),
-        GetBasicTypeFromAST(lldb::eBasicTypeLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeLongLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLongLong),
-    };
-    for (CompilerType &type : promote_types) {
-      llvm::Expected<uint64_t> byte_size = type.GetByteSize(exe_scope);
-      if (!byte_size)
-        return byte_size.takeError();
-      if (*from_size < *byte_size ||
-          (*from_size == *byte_size && is_signed == type.IsSigned())) {
-        return type;
-      }
-    }
-    llvm_unreachable("char type should fit into long long");
-  }
-
-  // Here we can promote only to "int" or "unsigned int".
-  CompilerType int_type = GetBasicTypeFromAST(lldb::eBasicTypeInt);
-  llvm::Expected<uint64_t> int_byte_size = int_type.GetByteSize(exe_scope);
-  if (!int_byte_size)
-    return int_byte_size.takeError();
-
-  // Signed integer types can be safely promoted to "int".
-  if (from.IsSigned()) {
-    return int_type;
-  }
-  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
-  // their entire value range.
-  return (from_size == *int_byte_size)
-             ? GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt)
-             : int_type;
+CompilerType
+TypeSystemClang::GetPromotedIntegerType(lldb::opaque_compiler_type_t type) {
+  if (!IsPromotableIntegerType(type))
+    return CompilerType();
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  return GetType(getASTContext().getPromotedIntegerType(qual_type));
 }
 
 clang::EnumDecl *TypeSystemClang::GetAsEnumDecl(const CompilerType &type) {
@@ -7457,8 +7481,7 @@ TypeSystemClang::GetAsObjCInterfaceDecl(const CompilerType &type) {
 
 clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     const CompilerType &type, llvm::StringRef name,
-    const CompilerType &field_clang_type, AccessType access,
-    uint32_t bitfield_bit_size) {
+    const CompilerType &field_clang_type, uint32_t bitfield_bit_size) {
   if (!type.IsValid() || !field_clang_type.IsValid())
     return nullptr;
   auto ast = type.GetTypeSystem<TypeSystemClang>();
@@ -7474,9 +7497,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
   clang::Expr *bit_width = nullptr;
   if (bitfield_bit_size != 0) {
     if (clang_ast.IntTy.isNull()) {
-      LLDB_LOG(
-          GetLog(LLDBLog::Expressions),
-          "{0} failed: builtin ASTContext types have not been initialized");
+      LLDB_LOG(GetLog(LLDBLog::Expressions),
+               "builtin ASTContext types have not been initialized");
       return nullptr;
     }
 
@@ -7514,17 +7536,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     }
 
     if (field) {
-      clang::AccessSpecifier access_specifier =
-          TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access);
-      field->setAccess(access_specifier);
+      field->setAccess(AS_public);
 
-      if (clang::CXXRecordDecl *cxx_record_decl =
-              llvm::dyn_cast<CXXRecordDecl>(record_decl)) {
-        AddAccessSpecifierDecl(cxx_record_decl, ast->getASTContext(),
-                               ast->GetCXXRecordDeclAccess(cxx_record_decl),
-                               access_specifier);
-        ast->SetCXXRecordDeclAccess(cxx_record_decl, access_specifier);
-      }
       record_decl->addDecl(field);
 
       VerifyDecl(field);
@@ -7543,7 +7556,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
       ivar->setDeclContext(class_interface_decl);
       ivar->setDeclName(ident);
       ivar->setType(ClangUtil::GetQualType(field_clang_type));
-      ivar->setAccessControl(ConvertAccessTypeToObjCIvarAccessControl(access));
+      ivar->setAccessControl(ObjCIvarDecl::AccessControl::Public);
       if (bit_width)
         ivar->setBitWidth(bit_width);
       ivar->setSynthesize(is_synthesized);
@@ -7615,8 +7628,7 @@ void TypeSystemClang::BuildIndirectFields(const CompilerType &type) {
 
           indirect_field->setImplicit();
 
-          indirect_field->setAccess(TypeSystemClang::UnifyAccessSpecifiers(
-              field_pos->getAccess(), nested_field_decl->getAccess()));
+          indirect_field->setAccess(AS_public);
 
           indirect_fields.push_back(indirect_field);
         } else if (clang::IndirectFieldDecl *nested_indirect_field_decl =
@@ -7646,8 +7658,7 @@ void TypeSystemClang::BuildIndirectFields(const CompilerType &type) {
 
           indirect_field->setImplicit();
 
-          indirect_field->setAccess(TypeSystemClang::UnifyAccessSpecifiers(
-              field_pos->getAccess(), nested_indirect_field_decl->getAccess()));
+          indirect_field->setAccess(AS_public);
 
           indirect_fields.push_back(indirect_field);
         }
@@ -7684,9 +7695,10 @@ void TypeSystemClang::SetIsPacked(const CompilerType &type) {
   }
 }
 
-clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
-    const CompilerType &type, llvm::StringRef name,
-    const CompilerType &var_type, AccessType access) {
+clang::VarDecl *
+TypeSystemClang::AddVariableToRecordType(const CompilerType &type,
+                                         llvm::StringRef name,
+                                         const CompilerType &var_type) {
   if (!type.IsValid() || !var_type.IsValid())
     return nullptr;
 
@@ -7713,8 +7725,7 @@ clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
   if (!var_decl)
     return nullptr;
 
-  var_decl->setAccess(
-      TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access));
+  var_decl->setAccess(AS_public);
   record_decl->addDecl(var_decl);
 
   VerifyDecl(var_decl);
@@ -7787,8 +7798,8 @@ TypeSystemClang::CreateParameterDeclarations(
 clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     lldb::opaque_compiler_type_t type, llvm::StringRef name,
     llvm::StringRef asm_label, const CompilerType &method_clang_type,
-    lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
-    bool is_explicit, bool is_attr_used, bool is_artificial) {
+    bool is_virtual, bool is_static, bool is_inline, bool is_explicit,
+    bool is_attr_used, bool is_artificial) {
   if (!type || !method_clang_type.IsValid() || name.empty())
     return nullptr;
 
@@ -7910,10 +7921,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   }
   SetMemberOwningModule(cxx_method_decl, cxx_record_decl);
 
-  clang::AccessSpecifier access_specifier =
-      TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access);
-
-  cxx_method_decl->setAccess(access_specifier);
+  cxx_method_decl->setAccess(AS_public);
   cxx_method_decl->setVirtualAsWritten(is_virtual);
 
   if (is_attr_used)
@@ -7927,11 +7935,6 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   // have names, so we omit them when creating the ParmVarDecls.
   cxx_method_decl->setParams(CreateParameterDeclarations(
       cxx_method_decl, *method_function_prototype, /*parameter_names=*/{}));
-
-  AddAccessSpecifierDecl(cxx_record_decl, getASTContext(),
-                         GetCXXRecordDeclAccess(cxx_record_decl),
-                         access_specifier);
-  SetCXXRecordDeclAccess(cxx_record_decl, access_specifier);
 
   cxx_record_decl->addDecl(cxx_method_decl);
 
@@ -8491,8 +8494,6 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
       cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
       cxx_record_decl->setHasExternalLexicalStorage(false);
       cxx_record_decl->setHasExternalVisibleStorage(false);
-      lldb_ast->SetCXXRecordDeclAccess(cxx_record_decl,
-                                       clang::AccessSpecifier::AS_none);
       return true;
     }
   }
@@ -8630,14 +8631,19 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 namespace {
 struct ScopedASTColor {
   ScopedASTColor(clang::ASTContext &ast, bool show_colors)
-      : ast(ast), old_show_colors(ast.getDiagnostics().getShowColors()) {
-    ast.getDiagnostics().setShowColors(show_colors);
+      : ast(ast),
+        old_show_colors(
+            ast.getDiagnostics().getDiagnosticOptions().getShowColors()) {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(
+        show_colors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off);
   }
 
-  ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
+  ~ScopedASTColor() {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(old_show_colors);
+  }
 
   clang::ASTContext &ast;
-  const bool old_show_colors;
+  const clang::ShowColorsKind old_show_colors;
 };
 } // namespace
 
@@ -8647,6 +8653,7 @@ void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
 
   auto consumer =
       clang::CreateASTDumper(output, filter,
+                             /*FilterPath=*/"",
                              /*DumpDecls=*/true,
                              /*Deserialize=*/false,
                              /*DumpLookups=*/false,
@@ -8674,7 +8681,7 @@ void TypeSystemClang::DumpFromSymbolFile(Stream &s,
       if (symbol_name != type->GetName().GetStringRef())
         continue;
 
-    s << type->GetName().AsCString() << "\n";
+    s << type->GetName() << "\n";
 
     CompilerType full_type = type->GetFullCompilerType();
     if (clang::TagDecl *tag_decl = GetAsTagDecl(full_type)) {
@@ -8858,7 +8865,7 @@ bool TypeSystemClang::DumpTypeValue(
         case eFormatBoolean:
         case eFormatBinary:
         case eFormatComplex:
-        case eFormatCString: // NULL terminated C strings
+        case eFormatCString: // null-terminated C strings
         case eFormatDecimal:
         case eFormatEnum:
         case eFormatHex:
@@ -8918,12 +8925,6 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, s, level);
-
-  CompilerType ct(weak_from_this(), type);
-  const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
-  if (std::optional<ClangASTMetadata> metadata = GetMetadata(clang_type)) {
-    metadata->Dump(&s);
-  }
 }
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
@@ -9012,7 +9013,25 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     if (buf.size() > 0) {
       s.Write(buf.data(), buf.size());
     }
-}
+
+    if (level == eDescriptionLevelVerbose) {
+      std::optional<ClangASTMetadata> metadata =
+          GetMetadata(qual_type.getTypePtr());
+      if (metadata) {
+        s << "type-metadata = ";
+        metadata->Dump(&s);
+      }
+
+      metadata.reset();
+      if (const clang::TagDecl *tag = qual_type->getAsTagDecl())
+        metadata = GetMetadata(tag);
+
+      if (metadata) {
+        s << "decl-metadata = ";
+        metadata->Dump(&s);
+      }
+    }
+  }
 }
 
 void TypeSystemClang::DumpTypeName(const CompilerType &type) {
@@ -9082,7 +9101,7 @@ void TypeSystemClang::DumpTypeName(const CompilerType &type) {
 
 clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    lldb::AccessType access_type, const char *parent_name, int tag_decl_kind,
+    const char *parent_name, int tag_decl_kind,
     const TypeSystemClang::TemplateParameterInfos &template_param_infos) {
   if (template_param_infos.IsValid()) {
     std::string template_basename(parent_name);
@@ -9090,7 +9109,7 @@ clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
     if (auto i = template_basename.find('<'); i != std::string::npos)
       template_basename.erase(i);
 
-    return CreateClassTemplateDecl(decl_ctx, owning_module, access_type,
+    return CreateClassTemplateDecl(decl_ctx, owning_module,
                                    template_basename.c_str(), tag_decl_kind,
                                    template_param_infos);
   }

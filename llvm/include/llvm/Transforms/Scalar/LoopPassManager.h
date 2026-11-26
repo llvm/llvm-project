@@ -54,7 +54,7 @@ namespace llvm {
 class LPMUpdater;
 class PassInstrumentation;
 
-namespace {
+namespace detail {
 
 template <typename PassT>
 using HasRunOnLoopT = decltype(std::declval<PassT>().run(
@@ -62,7 +62,7 @@ using HasRunOnLoopT = decltype(std::declval<PassT>().run(
     std::declval<LoopStandardAnalysisResults &>(),
     std::declval<LPMUpdater &>()));
 
-} // namespace
+} // namespace detail
 
 // Explicit specialization and instantiation declarations for the pass manager.
 // See the comments on the definition of the specialization for details on how
@@ -70,7 +70,7 @@ using HasRunOnLoopT = decltype(std::declval<PassT>().run(
 template <>
 class PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
                   LPMUpdater &>
-    : public PassInfoMixin<
+    : public RequiredPassInfoMixin<
           PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
                       LPMUpdater &>> {
 public:
@@ -106,30 +106,22 @@ public:
   /// to the end of \var IsLoopNestPass so we can easily identify the types of
   /// passes in the pass manager later.
   template <typename PassT> LLVM_ATTRIBUTE_MINSIZE void addPass(PassT &&Pass) {
-    if constexpr (is_detected<HasRunOnLoopT, PassT>::value) {
+    if constexpr (is_detected<detail::HasRunOnLoopT, PassT>::value) {
       using LoopPassModelT =
           detail::PassModel<Loop, PassT, LoopAnalysisManager,
                             LoopStandardAnalysisResults &, LPMUpdater &>;
       IsLoopNestPass.push_back(false);
-      // Do not use make_unique or emplace_back, they cause too many template
-      // instantiations, causing terrible compile times.
-      LoopPasses.push_back(std::unique_ptr<LoopPassConceptT>(
-          new LoopPassModelT(std::forward<PassT>(Pass))));
+      LoopPasses.push_back(LoopPassModelT::create(std::move(Pass)));
     } else {
       using LoopNestPassModelT =
           detail::PassModel<LoopNest, PassT, LoopAnalysisManager,
                             LoopStandardAnalysisResults &, LPMUpdater &>;
       IsLoopNestPass.push_back(true);
-      // Do not use make_unique or emplace_back, they cause too many template
-      // instantiations, causing terrible compile times.
-      LoopNestPasses.push_back(std::unique_ptr<LoopNestPassConceptT>(
-          new LoopNestPassModelT(std::forward<PassT>(Pass))));
+      LoopNestPasses.push_back(LoopNestPassModelT::create(std::move(Pass)));
     }
   }
 
   bool isEmpty() const { return LoopPasses.empty() && LoopNestPasses.empty(); }
-
-  static bool isRequired() { return true; }
 
   size_t getNumLoopPasses() const { return LoopPasses.size(); }
   size_t getNumLoopNestPasses() const { return LoopNestPasses.size(); }
@@ -145,8 +137,8 @@ protected:
   // BitVector that identifies whether the passes are loop passes or loop-nest
   // passes (true for loop-nest passes).
   BitVector IsLoopNestPass;
-  std::vector<std::unique_ptr<LoopPassConceptT>> LoopPasses;
-  std::vector<std::unique_ptr<LoopNestPassConceptT>> LoopNestPasses;
+  std::vector<LoopPassConceptT::unique_ptr> LoopPasses;
+  std::vector<LoopNestPassConceptT::unique_ptr> LoopNestPasses;
 
   /// Run either a loop pass or a loop-nest pass. Returns `std::nullopt` if
   /// PassInstrumentation's BeforePass returns false. Otherwise, returns the
@@ -186,7 +178,7 @@ typedef PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
 template <typename AnalysisT>
 struct RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
                            LoopStandardAnalysisResults &, LPMUpdater &>
-    : PassInfoMixin<
+    : OptionalPassInfoMixin<
           RequireAnalysisPass<AnalysisT, Loop, LoopAnalysisManager,
                               LoopStandardAnalysisResults &, LPMUpdater &>> {
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
@@ -396,13 +388,13 @@ std::optional<PreservedAnalyses> LoopPassManager::runSinglePass(
 /// \fn createLoopFunctionToLoopPassAdaptor to see when loop mode and loop-nest
 /// mode are used.
 class FunctionToLoopPassAdaptor
-    : public PassInfoMixin<FunctionToLoopPassAdaptor> {
+    : public RequiredPassInfoMixin<FunctionToLoopPassAdaptor> {
 public:
   using PassConceptT =
       detail::PassConcept<Loop, LoopAnalysisManager,
                           LoopStandardAnalysisResults &, LPMUpdater &>;
 
-  explicit FunctionToLoopPassAdaptor(std::unique_ptr<PassConceptT> Pass,
+  explicit FunctionToLoopPassAdaptor(PassConceptT::unique_ptr Pass,
                                      bool UseMemorySSA = false,
                                      bool LoopNestMode = false)
       : Pass(std::move(Pass)), UseMemorySSA(UseMemorySSA),
@@ -417,12 +409,10 @@ public:
   printPipeline(raw_ostream &OS,
                 function_ref<StringRef(StringRef)> MapClassName2PassName);
 
-  static bool isRequired() { return true; }
-
   bool isLoopNestMode() const { return LoopNestMode; }
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
 
   FunctionPassManager LoopCanonicalizationFPM;
 
@@ -440,28 +430,20 @@ private:
 template <typename LoopPassT>
 inline FunctionToLoopPassAdaptor
 createFunctionToLoopPassAdaptor(LoopPassT &&Pass, bool UseMemorySSA = false) {
-  if constexpr (is_detected<HasRunOnLoopT, LoopPassT>::value) {
+  if constexpr (is_detected<detail::HasRunOnLoopT, LoopPassT>::value) {
     using PassModelT =
         detail::PassModel<Loop, LoopPassT, LoopAnalysisManager,
                           LoopStandardAnalysisResults &, LPMUpdater &>;
-    // Do not use make_unique, it causes too many template instantiations,
-    // causing terrible compile times.
-    return FunctionToLoopPassAdaptor(
-        std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
-            new PassModelT(std::forward<LoopPassT>(Pass))),
-        UseMemorySSA, false);
+    return FunctionToLoopPassAdaptor(PassModelT::create(std::move(Pass)),
+                                     UseMemorySSA, false);
   } else {
     LoopPassManager LPM;
-    LPM.addPass(std::forward<LoopPassT>(Pass));
+    LPM.addPass(std::move(Pass));
     using PassModelT =
         detail::PassModel<Loop, LoopPassManager, LoopAnalysisManager,
                           LoopStandardAnalysisResults &, LPMUpdater &>;
-    // Do not use make_unique, it causes too many template instantiations,
-    // causing terrible compile times.
-    return FunctionToLoopPassAdaptor(
-        std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
-            new PassModelT(std::move(LPM))),
-        UseMemorySSA, true);
+    return FunctionToLoopPassAdaptor(PassModelT::create(std::move(LPM)),
+                                     UseMemorySSA, true);
   }
 }
 
@@ -477,16 +459,12 @@ createFunctionToLoopPassAdaptor<LoopPassManager>(LoopPassManager &&LPM,
       detail::PassModel<Loop, LoopPassManager, LoopAnalysisManager,
                         LoopStandardAnalysisResults &, LPMUpdater &>;
   bool LoopNestMode = (LPM.getNumLoopPasses() == 0);
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
-  return FunctionToLoopPassAdaptor(
-      std::unique_ptr<FunctionToLoopPassAdaptor::PassConceptT>(
-          new PassModelT(std::move(LPM))),
-      UseMemorySSA, LoopNestMode);
+  return FunctionToLoopPassAdaptor(PassModelT::create(std::move(LPM)),
+                                   UseMemorySSA, LoopNestMode);
 }
 
 /// Pass for printing a loop's contents as textual IR.
-class PrintLoopPass : public PassInfoMixin<PrintLoopPass> {
+class PrintLoopPass : public RequiredPassInfoMixin<PrintLoopPass> {
   raw_ostream &OS;
   std::string Banner;
 

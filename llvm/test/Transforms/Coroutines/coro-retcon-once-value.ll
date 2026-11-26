@@ -144,20 +144,18 @@ declare void @print(i32)
 ;
 ; CHECK-LABEL: @test.f(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = alloca [8 x i8], align 8
-; CHECK-NEXT:    store ptr [[ARRAY:%.*]], ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[LOAD_I:%.*]] = load i32, ptr [[ARRAY]], align 4
-; CHECK-NEXT:    [[LOAD_POS_I:%.*]] = icmp sgt i32 [[LOAD_I]], 0
-; CHECK-NEXT:    [[SPEC_SELECT_I:%.*]] = select i1 [[LOAD_POS_I]], ptr @f.resume.0, ptr @f.resume.1
+; CHECK-NEXT:    [[LOAD_I:%.*]] = load i32, ptr [[ARRAY:%.*]], align 4
 ; CHECK-NEXT:    [[SPEC_SELECT4_I:%.*]] = tail call i32 @llvm.smax.i32(i32 [[LOAD_I]], i32 0)
 ; CHECK-NEXT:    tail call void @print(i32 [[SPEC_SELECT4_I]])
-; CHECK-NEXT:    call void [[SPEC_SELECT_I]](ptr nonnull [[TMP0]], i1 zeroext false)
+; CHECK-NEXT:    [[LOAD_POS_I_INV:%.*]] = icmp sgt i32 [[LOAD_I]], 0
+; CHECK-NEXT:    [[DOT:%.*]] = select i1 [[LOAD_POS_I_INV]], i32 0, i32 10
+; CHECK-NEXT:    store i32 [[DOT]], ptr [[ARRAY]], align 4, !noalias [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:  PostSpill:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 16)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call ptr @allocate(i32 12)
 ; CHECK-NEXT:    store ptr [[TMP0]], ptr [[BUFFER:%.*]], align 8
 ; CHECK-NEXT:    [[VAL_SPILL_ADDR:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0]], i64 8
 ; CHECK-NEXT:    store i32 [[VAL:%.*]], ptr [[VAL_SPILL_ADDR]], align 4

@@ -24,6 +24,18 @@
 namespace clang {
 namespace targets {
 
+// Linux/m68k ("old") uses the ABI from Sun Microsystems a.out
+// for m68k, and uses 16-bit alignments for int/long/pointers.
+//
+// NetBSD/m68k uses the ABI from SVR4 for m68k,
+// which uses 32-bit alignments for int/long/pointers.
+//
+// Ref. https://github.com/M680x0/issues/issues/13 and
+// https://github.com/llvm/llvm-project/issues/199826
+//
+// Arguably this ought to respect -malign-int, as suggested
+// above, this code doesn't so far.
+
 M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
                                const TargetOptions &Opts)
     : TargetInfo(Triple), TargetOpts(Opts) {
@@ -32,12 +44,15 @@ M68kTargetInfo::M68kTargetInfo(const llvm::Triple &Triple,
   SizeType = UnsignedInt;
   PtrDiffType = SignedInt;
   IntPtrType = SignedInt;
-  IntAlign = LongAlign = PointerAlign = 16;
+  if (getTriple().isOSNetBSD()) {
+    IntAlign = LongAlign = PointerAlign = 32;
+  } else {
+    IntAlign = LongAlign = PointerAlign = 16;
+  }
 }
 
-bool M68kTargetInfo::setCPU(const std::string &Name) {
-  StringRef N = Name;
-  CPU = llvm::StringSwitch<CPUKind>(N)
+bool M68kTargetInfo::setCPU(StringRef Name) {
+  CPU = llvm::StringSwitch<CPUKind>(Name)
             .Case("generic", CK_68000)
             .Case("M68000", CK_68000)
             .Case("M68010", CK_68010)
@@ -47,6 +62,12 @@ bool M68kTargetInfo::setCPU(const std::string &Name) {
             .Case("M68060", CK_68060)
             .Default(CK_Unknown);
   return CPU != CK_Unknown;
+}
+
+void M68kTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  Values.append(
+      {"generic", "M68000", "M68010", "M68020", "M68030", "M68040", "M68060"});
 }
 
 void M68kTargetInfo::getTargetDefines(const LangOptions &Opts,

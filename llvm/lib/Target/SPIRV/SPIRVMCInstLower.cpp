@@ -13,6 +13,7 @@
 
 #include "SPIRVMCInstLower.h"
 #include "SPIRVModuleAnalysis.h"
+#include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Constants.h"
@@ -21,7 +22,7 @@ using namespace llvm;
 
 void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
                              SPIRV::ModuleAnalysisInfo *MAI) const {
-  OutMI.setOpcode(MI->getOpcode());
+  OutMI.setOpcode(MI->isPHI() ? SPIRV::OpPhi : MI->getOpcode());
   // Propagate previously set flags
   if (MI->getAsmPrinterFlags() & SPIRV::ASM_PRINTER_WIDTH16)
     OutMI.setFlags(SPIRV::INST_PRINTER_WIDTH16);
@@ -35,15 +36,16 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
     default:
       llvm_unreachable("unknown operand type");
     case MachineOperand::MO_GlobalAddress: {
-      MCRegister FuncReg = MAI->getFuncReg(dyn_cast<Function>(MO.getGlobal()));
-      if (!FuncReg.isValid()) {
+      MCRegister Reg =
+          MAI->getGlobalObjReg(dyn_cast<GlobalObject>(MO.getGlobal()));
+      if (!Reg.isValid()) {
         std::string DiagMsg;
         raw_string_ostream OS(DiagMsg);
         MI->print(OS);
-        DiagMsg = "Unknown function in:" + DiagMsg;
+        DiagMsg = "Unknown global object in:" + DiagMsg;
         report_fatal_error(DiagMsg.c_str());
       }
-      MCOp = MCOperand::createReg(FuncReg);
+      MCOp = MCOperand::createReg(Reg);
       break;
     }
     case MachineOperand::MO_MachineBasicBlock:
@@ -70,5 +72,16 @@ void SPIRVMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI,
     }
 
     OutMI.addOperand(MCOp);
+
+    // OpPhi takes the result type right after the result.
+    if (i == 0 && MI->isPHI()) {
+      SPIRVGlobalRegistry *GR =
+          MF->getSubtarget<SPIRVSubtarget>().getSPIRVGlobalRegistry();
+      Register TypeReg =
+          GR->getSPIRVTypeID(GR->getSPIRVTypeForVReg(MO.getReg(), MF));
+      MCRegister TypeAlias = MAI->getRegisterAlias(MF, TypeReg);
+      assert(TypeAlias.isValid() && "OpPhi result type has no global ID");
+      OutMI.addOperand(MCOperand::createReg(TypeAlias));
+    }
   }
 }

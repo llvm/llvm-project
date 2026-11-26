@@ -6,7 +6,7 @@
 ; CHECK: .section .debug_info
 ; CHECK:      .b8 103                                 // DW_AT_name
 ; CHECK-NEXT: .b8 0
-; CHECK-NEXT: .b32 55                                 // DW_AT_type
+; CHECK-NEXT: .b32 54                                 // DW_AT_type
 ; CHECK-NEXT: .b8 1                                   // DW_AT_decl_file
 ; CHECK-NEXT: .b8 1                                   // DW_AT_decl_line
 ; CHECK-NEXT: .b8 8                                   // DW_AT_address_class

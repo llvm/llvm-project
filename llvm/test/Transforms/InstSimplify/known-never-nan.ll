@@ -340,10 +340,7 @@ define i1 @uitofp_add(i32 %arg0) {
 
 define i1 @uitofp_add_big(i1024 %arg0) {
 ; CHECK-LABEL: @uitofp_add_big(
-; CHECK-NEXT:    [[OP:%.*]] = uitofp i1024 [[ARG0:%.*]] to double
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[OP]], [[OP]]
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[ADD]], [[ADD]]
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %op = uitofp i1024 %arg0 to double
   %add = fadd double %op, %op
@@ -554,16 +551,36 @@ unwind:
   resume ptr null
 }
 
+; tan(x) is never NaN when x is finite and not NaN (tan(±Inf) = NaN).
+define i1 @isKnownNeverNaN_tan_nonan_noinf(double nofpclass(nan inf) %x) {
+; CHECK-LABEL: @isKnownNeverNaN_tan_nonan_noinf(
+; CHECK-NEXT:    ret i1 false
+;
+  %e = call double @llvm.tan.f64(double %x)
+  %r = fcmp uno double %e, 0.0
+  ret i1 %r
+}
+
+; atan2 is never NaN when neither operand is NaN.
+define i1 @isKnownNeverNaN_atan2_nonan(double nofpclass(nan) %x, double nofpclass(nan) %y) {
+; CHECK-LABEL: @isKnownNeverNaN_atan2_nonan(
+; CHECK-NEXT:    ret i1 false
+;
+  %e = call double @llvm.atan2.f64(double %x, double %y)
+  %r = fcmp uno double %e, 0.0
+  ret i1 %r
+}
+
 ; This should not fold to false because fmul 0 * inf = nan
 define i1 @issue63316(i64 %arg) {
 ; CHECK-LABEL: @issue63316(
 ; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[SITOFP]], 0x7FF0000000000000
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[SITOFP]], +inf
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %sitofp = sitofp i64 %arg to float
-  %fmul = fmul float %sitofp, 0x7FF0000000000000
+  %fmul = fmul float %sitofp, +inf
   %fcmp = fcmp uno float %fmul, 0.000000e+00
   ret i1 %fcmp
 }
@@ -571,12 +588,71 @@ define i1 @issue63316(i64 %arg) {
 define i1 @issue63316_commute(i64 %arg) {
 ; CHECK-LABEL: @issue63316_commute(
 ; CHECK-NEXT:    [[SITOFP:%.*]] = sitofp i64 [[ARG:%.*]] to float
-; CHECK-NEXT:    [[FMUL:%.*]] = fmul float 0x7FF0000000000000, [[SITOFP]]
+; CHECK-NEXT:    [[FMUL:%.*]] = fmul float +inf, [[SITOFP]]
 ; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno float [[FMUL]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %sitofp = sitofp i64 %arg to float
-  %fmul = fmul float 0x7FF0000000000000, %sitofp
+  %fmul = fmul float +inf, %sitofp
   %fcmp = fcmp uno float %fmul, 0.000000e+00
+  ret i1 %fcmp
+}
+
+; nofpclass(inf) on the result does not mean the operands are not infinite.
+; +0.0 * +inf is NaN, so the compare must not fold.
+define i1 @fma_ret_noinf_zero_times_inf(i32 %arg) {
+; CHECK-LABEL: @fma_ret_noinf_zero_times_inf(
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[ARG:%.*]] to double
+; CHECK-NEXT:    [[FMA:%.*]] = call nofpclass(inf) double @llvm.fma.f64(double [[UITOFP]], double +inf, double +inf)
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno double [[FMA]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %uitofp = uitofp i32 %arg to double
+  %fma = call nofpclass(inf) double @llvm.fma.f64(double %uitofp, double +inf, double +inf)
+  %fcmp = fcmp uno double %fma, 0.000000e+00
+  ret i1 %fcmp
+}
+
+define i1 @fmuladd_ret_noinf_zero_times_inf(i32 %arg) {
+; CHECK-LABEL: @fmuladd_ret_noinf_zero_times_inf(
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[ARG:%.*]] to double
+; CHECK-NEXT:    [[FMULADD:%.*]] = call nofpclass(inf) double @llvm.fmuladd.f64(double [[UITOFP]], double +inf, double +inf)
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno double [[FMULADD]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %uitofp = uitofp i32 %arg to double
+  %fmuladd = call nofpclass(inf) double @llvm.fmuladd.f64(double %uitofp, double +inf, double +inf)
+  %fcmp = fcmp uno double %fmuladd, 0.000000e+00
+  ret i1 %fcmp
+}
+
+; fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) are NaN.
+define i1 @fma_square_ret_noinf_inf_minus_inf(double noundef nofpclass(nan) %arg) {
+; CHECK-LABEL: @fma_square_ret_noinf_inf_minus_inf(
+; CHECK-NEXT:    [[FMA:%.*]] = call nofpclass(inf) double @llvm.fma.f64(double [[ARG:%.*]], double [[ARG]], double -inf)
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno double [[FMA]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
+;
+  %fma = call nofpclass(inf) double @llvm.fma.f64(double %arg, double %arg, double -inf)
+  %fcmp = fcmp uno double %fma, 0.000000e+00
+  ret i1 %fcmp
+}
+
+; ninf does restrict the operands.
+define i1 @fma_ninf_nonan_srcs(double nofpclass(nan) %arg0, double nofpclass(nan) %arg1, double nofpclass(nan) %arg2) {
+; CHECK-LABEL: @fma_ninf_nonan_srcs(
+; CHECK-NEXT:    ret i1 false
+;
+  %fma = call ninf double @llvm.fma.f64(double %arg0, double %arg1, double %arg2)
+  %fcmp = fcmp uno double %fma, 0.000000e+00
+  ret i1 %fcmp
+}
+
+define i1 @fma_square_ninf_nonan_srcs(double noundef nofpclass(nan) %arg0, double nofpclass(nan) %arg1) {
+; CHECK-LABEL: @fma_square_ninf_nonan_srcs(
+; CHECK-NEXT:    ret i1 false
+;
+  %fma = call ninf double @llvm.fma.f64(double %arg0, double %arg0, double %arg1)
+  %fcmp = fcmp uno double %fma, 0.000000e+00
   ret i1 %fcmp
 }

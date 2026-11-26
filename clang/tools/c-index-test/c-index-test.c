@@ -36,7 +36,9 @@ extern int indextest_perform_shell_execution(const char *command_line);
 /* Utility functions.                                                         */
 /******************************************************************************/
 
-#ifdef _MSC_VER
+#ifdef __MVS__
+#include <libgen.h>
+#elif _MSC_VER
 char *basename(const char* path)
 {
     char* base1 = (char*)strrchr(path, '/');
@@ -1240,7 +1242,15 @@ static CXString GetCursorSource(CXCursor Cursor) {
     clang_disposeString(source);
     return createCXString("<invalid loc>");
   }
+#ifdef __MVS__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored                                               \
+    "-Wincompatible-pointer-types-discards-qualifiers"
+#endif
   b = basename(clang_getCString(source));
+#ifdef __MVS__
+#pragma clang diagnostic pop
+#endif
   result = duplicateCXString(b);
   clang_disposeString(source);
   return result;
@@ -3099,19 +3109,14 @@ static void inspect_print_cursor(CXCursor Cursor) {
 
   {
     CXModule mod = clang_Cursor_getModule(Cursor);
-    CXFile astFile;
-    CXString name, astFilename;
+    CXString name;
     unsigned i, numHeaders;
     if (mod) {
-      astFile = clang_Module_getASTFile(mod);
-      astFilename = clang_getFileName(astFile);
       name = clang_Module_getFullName(mod);
       numHeaders = clang_Module_getNumTopLevelHeaders(TU, mod);
-      printf(" ModuleName=%s (%s) system=%d Headers(%d):",
-             clang_getCString(name), clang_getCString(astFilename),
+      printf(" ModuleName=%s system=%d Headers(%d):", clang_getCString(name),
              clang_Module_isSystem(mod), numHeaders);
       clang_disposeString(name);
-      clang_disposeString(astFilename);
       for (i = 0; i < numHeaders; ++i) {
         CXFile file = clang_Module_getTopLevelHeader(TU, mod, i);
         CXString filename = clang_getFileName(file);

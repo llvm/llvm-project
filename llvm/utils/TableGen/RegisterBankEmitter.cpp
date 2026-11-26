@@ -14,7 +14,6 @@
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/InfoByHwMode.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
@@ -205,10 +204,11 @@ static void visitRegisterBankClasses(
     // More precisely, PossibleSubclass is a subreg-class iff Reg:SubIdx is in
     // PossibleSubclass for all registers Reg from RC using any
     // subregister-index SubReg
+    if (!PossibleSubclass.hasSuperRegClass(RC))
+      continue;
+
     for (const auto &SubIdx : RegisterClassHierarchy.getSubRegIndices()) {
-      BitVector BV(RegisterClassHierarchy.getRegClasses().size());
-      PossibleSubclass.getSuperRegClasses(&SubIdx, BV);
-      if (BV.test(RC->EnumValue)) {
+      if (PossibleSubclass.hasSuperRegClass(&SubIdx, RC)) {
         std::string TmpKind2 = (Twine(TmpKind) + " " + RC->getName() +
                                 " class-with-subregs: " + RC->getName())
                                    .str();
@@ -271,12 +271,8 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   unsigned NumModeIds = CGH.getNumModeIds();
   OS << "const unsigned " << TargetName << "GenRegisterBankInfo::Sizes[] = {\n";
   for (unsigned M = 0; M < NumModeIds; ++M) {
-    OS << "    // Mode = " << M << " (";
-    if (M == DefaultMode)
-      OS << "Default";
-    else
-      OS << CGH.getMode(M).Name;
-    OS << ")\n";
+    OS << "    // Mode = " << M << " ("
+       << CGH.getModeName(M, /*IncludeDefault=*/true) << ")\n";
     for (const auto &Bank : Banks) {
       const CodeGenRegisterClass &RC = *Bank.getRCWithLargestRegSize(M);
       unsigned Size = RC.RSI.get(M).SpillSize;
@@ -409,6 +405,9 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
 
     Banks.push_back(Bank);
   }
+
+  if (Banks.empty())
+    PrintFatalError("No register banks defined");
 
   // Warn about ambiguous MIR caused by register bank/class name clashes.
   Timer.startTimer("Warn ambiguous");

@@ -12,6 +12,7 @@
 // [range.adjacent.iterator#2] If the invocation of any non-const member function of `iterator` exits via an
 // exception, the iterator acquires a singular value.
 
+#include <cassert>
 #include <ranges>
 
 #include <tuple>

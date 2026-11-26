@@ -54,6 +54,13 @@ std::string Constraint::getConditionTemplate() const {
   return getPredicate().getCondition();
 }
 
+std::vector<StringRef> Constraint::getCppIncludes() const {
+  // Only type and attribute constraints have the field.
+  if (!def->getValue("cppIncludes"))
+    return {};
+  return def->getValueAsListOfStrings("cppIncludes");
+}
+
 StringRef Constraint::getSummary() const {
   if (std::optional<StringRef> summary =
           def->getValueAsOptionalString("summary"))
@@ -125,33 +132,13 @@ AppliedConstraint::AppliedConstraint(Constraint &&constraint,
     : constraint(constraint), self(std::string(self)),
       entities(std::move(entities)) {}
 
-Constraint DenseMapInfo<Constraint>::getEmptyKey() {
-  return Constraint(RecordDenseMapInfo::getEmptyKey(),
-                    Constraint::CK_Uncategorized);
-}
-
-Constraint DenseMapInfo<Constraint>::getTombstoneKey() {
-  return Constraint(RecordDenseMapInfo::getTombstoneKey(),
-                    Constraint::CK_Uncategorized);
-}
-
 unsigned DenseMapInfo<Constraint>::getHashValue(Constraint constraint) {
-  if (constraint == getEmptyKey())
-    return RecordDenseMapInfo::getHashValue(RecordDenseMapInfo::getEmptyKey());
-  if (constraint == getTombstoneKey()) {
-    return RecordDenseMapInfo::getHashValue(
-        RecordDenseMapInfo::getTombstoneKey());
-  }
   return llvm::hash_combine(constraint.getPredicate(), constraint.getSummary());
 }
 
 bool DenseMapInfo<Constraint>::isEqual(Constraint lhs, Constraint rhs) {
   if (lhs == rhs)
     return true;
-  if (lhs == getEmptyKey() || lhs == getTombstoneKey())
-    return false;
-  if (rhs == getEmptyKey() || rhs == getTombstoneKey())
-    return false;
   return lhs.getPredicate() == rhs.getPredicate() &&
          lhs.getSummary() == rhs.getSummary();
 }

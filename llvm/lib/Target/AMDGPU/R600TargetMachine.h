@@ -16,6 +16,7 @@
 
 #include "AMDGPUTargetMachine.h"
 #include "R600Subtarget.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
@@ -29,6 +30,18 @@ class R600TargetMachine final : public AMDGPUTargetMachine {
 private:
   mutable StringMap<std::unique_ptr<R600Subtarget>> SubtargetMap;
 
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute GPU, FS;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return GPU == RHS.GPU && FS == RHS.FS;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<R600Subtarget, SubtargetAttrs> LastSubtarget;
+
 public:
   R600TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                     StringRef FS, const TargetOptions &Options,
@@ -38,10 +51,10 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                             raw_pwrite_stream *DwoOut,
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opt,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
                              PassInstrumentationCallbacks *PIC) override;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;

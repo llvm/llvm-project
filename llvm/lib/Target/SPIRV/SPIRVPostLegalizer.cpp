@@ -17,48 +17,70 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
-#include <stack>
 
 #define DEBUG_TYPE "spirv-postlegalizer"
 
 using namespace llvm;
 
 namespace {
-class SPIRVPostLegalizer : public MachineFunctionPass {
+class SPIRVPostLegalizerLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  SPIRVPostLegalizer() : MachineFunctionPass(ID) {}
+  SPIRVPostLegalizerLegacy() : MachineFunctionPass(ID) {}
   bool runOnMachineFunction(MachineFunction &MF) override;
+  MachineFunctionProperties getSetProperties() const override {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
 };
 } // namespace
 
 namespace llvm {
 //  Defined in SPIRVPreLegalizer.cpp.
-extern void updateRegType(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+extern void updateRegType(Register Reg, Type *Ty, SPIRVTypeInst SpirvTy,
                           SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
                           MachineRegisterInfo &MRI);
 extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR,
-                         SPIRVType *KnownResType);
+                         SPIRVTypeInst KnownResType);
 } // namespace llvm
 
-static SPIRVType *deduceIntTypeFromResult(Register ResVReg,
-                                          MachineIRBuilder &MIB,
-                                          SPIRVGlobalRegistry *GR) {
+static SPIRVTypeInst deduceIntTypeFromResult(Register ResVReg,
+                                             MachineIRBuilder &MIB,
+                                             SPIRVGlobalRegistry *GR) {
   const LLT &Ty = MIB.getMRI()->getType(ResVReg);
-  return GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
+  SPIRVTypeInst ScalarType =
+      GR->getOrCreateSPIRVIntegerType(Ty.getScalarSizeInBits(), MIB);
+  if (Ty.isVector())
+    return GR->getOrCreateSPIRVVectorType(ScalarType, Ty.getNumElements(), MIB,
+                                          false);
+  return ScalarType;
 }
 
-static SPIRVType *deduceTypeFromSingleOperand(MachineInstr *I,
-                                              MachineIRBuilder &MIB,
-                                              SPIRVGlobalRegistry *GR,
-                                              unsigned OpIdx) {
+static SPIRVTypeInst deduceFloatTypeFromLLT(LLT Ty, MachineIRBuilder &MIB,
+                                            SPIRVGlobalRegistry *GR) {
+  Type *IRTy = Type::getFloatingPointTy(
+      MIB.getContext(), getFltSemanticForLLT(Ty.getScalarType()));
+  if (Ty.isVector())
+    IRTy = FixedVectorType::get(IRTy, Ty.getNumElements());
+  return GR->getOrCreateSPIRVType(IRTy, MIB, SPIRV::AccessQualifier::ReadWrite,
+                                  false);
+}
+
+static SPIRVTypeInst deduceTypeFromSingleOperand(MachineInstr *I,
+                                                 MachineIRBuilder &MIB,
+                                                 SPIRVGlobalRegistry *GR,
+                                                 unsigned OpIdx) {
   Register OpReg = I->getOperand(OpIdx).getReg();
-  if (SPIRVType *OpType = GR->getSPIRVTypeForVReg(OpReg)) {
-    if (SPIRVType *CompType = GR->getScalarOrVectorComponentType(OpType)) {
+  if (SPIRVTypeInst OpType = GR->getSPIRVTypeForVReg(OpReg)) {
+    if (SPIRVTypeInst CompType = GR->getScalarOrVectorComponentType(OpType)) {
       Register ResVReg = I->getOperand(0).getReg();
       const LLT &ResLLT = MIB.getMRI()->getType(ResVReg);
       if (ResLLT.isVector())
@@ -70,13 +92,14 @@ static SPIRVType *deduceTypeFromSingleOperand(MachineInstr *I,
   return nullptr;
 }
 
-static SPIRVType *deduceTypeFromOperandRange(MachineInstr *I,
-                                             MachineIRBuilder &MIB,
-                                             SPIRVGlobalRegistry *GR,
-                                             unsigned StartOp, unsigned EndOp) {
-  SPIRVType *ResType = nullptr;
+static SPIRVTypeInst deduceTypeFromOperandRange(MachineInstr *I,
+                                                MachineIRBuilder &MIB,
+                                                SPIRVGlobalRegistry *GR,
+                                                unsigned StartOp,
+                                                unsigned EndOp) {
+  SPIRVTypeInst ResType = nullptr;
   for (unsigned i = StartOp; i < EndOp; ++i) {
-    if (SPIRVType *Type = deduceTypeFromSingleOperand(I, MIB, GR, i)) {
+    if (SPIRVTypeInst Type = deduceTypeFromSingleOperand(I, MIB, GR, i)) {
 #ifdef EXPENSIVE_CHECKS
       assert(!ResType || Type == ResType && "Conflicting type from operands.");
       ResType = Type;
@@ -88,15 +111,15 @@ static SPIRVType *deduceTypeFromOperandRange(MachineInstr *I,
   return ResType;
 }
 
-static SPIRVType *deduceTypeFromResultRegister(MachineInstr *Use,
-                                               Register UseRegister,
-                                               SPIRVGlobalRegistry *GR,
-                                               MachineIRBuilder &MIB) {
+static SPIRVTypeInst deduceTypeFromResultRegister(MachineInstr *Use,
+                                                  Register UseRegister,
+                                                  SPIRVGlobalRegistry *GR,
+                                                  MachineIRBuilder &MIB) {
   for (const MachineOperand &MO : Use->defs()) {
     if (!MO.isReg())
       continue;
-    if (SPIRVType *OpType = GR->getSPIRVTypeForVReg(MO.getReg())) {
-      if (SPIRVType *CompType = GR->getScalarOrVectorComponentType(OpType)) {
+    if (SPIRVTypeInst OpType = GR->getSPIRVTypeForVReg(MO.getReg())) {
+      if (SPIRVTypeInst CompType = GR->getScalarOrVectorComponentType(OpType)) {
         const LLT &ResLLT = MIB.getMRI()->getType(UseRegister);
         if (ResLLT.isVector())
           return GR->getOrCreateSPIRVVectorType(
@@ -108,15 +131,15 @@ static SPIRVType *deduceTypeFromResultRegister(MachineInstr *Use,
   return nullptr;
 }
 
-static SPIRVType *deducePointerTypeFromResultRegister(MachineInstr *Use,
-                                                      Register UseRegister,
-                                                      SPIRVGlobalRegistry *GR,
-                                                      MachineIRBuilder &MIB) {
+static SPIRVTypeInst
+deducePointerTypeFromResultRegister(MachineInstr *Use, Register UseRegister,
+                                    SPIRVGlobalRegistry *GR,
+                                    MachineIRBuilder &MIB) {
   assert(Use->getOpcode() == TargetOpcode::G_LOAD ||
          Use->getOpcode() == TargetOpcode::G_STORE);
 
   Register ValueReg = Use->getOperand(0).getReg();
-  SPIRVType *ValueType = GR->getSPIRVTypeForVReg(ValueReg);
+  SPIRVTypeInst ValueType = GR->getSPIRVTypeForVReg(ValueReg);
   if (!ValueType)
     return nullptr;
 
@@ -124,30 +147,32 @@ static SPIRVType *deducePointerTypeFromResultRegister(MachineInstr *Use,
                                          SPIRV::StorageClass::Function);
 }
 
-static SPIRVType *deduceTypeFromPointerOperand(MachineInstr *Use,
-                                               Register UseRegister,
-                                               SPIRVGlobalRegistry *GR,
-                                               MachineIRBuilder &MIB) {
+static SPIRVTypeInst deduceTypeFromPointerOperand(MachineInstr *Use,
+                                                  Register UseRegister,
+                                                  SPIRVGlobalRegistry *GR,
+                                                  MachineIRBuilder &MIB) {
   assert(Use->getOpcode() == TargetOpcode::G_LOAD ||
          Use->getOpcode() == TargetOpcode::G_STORE);
 
   Register PtrReg = Use->getOperand(1).getReg();
-  SPIRVType *PtrType = GR->getSPIRVTypeForVReg(PtrReg);
+  SPIRVTypeInst PtrType = GR->getSPIRVTypeForVReg(PtrReg);
   if (!PtrType)
     return nullptr;
 
   return GR->getPointeeType(PtrType);
 }
 
-static SPIRVType *deduceTypeFromUses(Register Reg, MachineFunction &MF,
-                                     SPIRVGlobalRegistry *GR,
-                                     MachineIRBuilder &MIB) {
+static SPIRVTypeInst deduceTypeFromUses(Register Reg, MachineFunction &MF,
+                                        SPIRVGlobalRegistry *GR,
+                                        MachineIRBuilder &MIB) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   for (MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
-    SPIRVType *ResType = nullptr;
+    SPIRVTypeInst ResType = nullptr;
     LLVM_DEBUG(dbgs() << "Looking at use " << Use);
     switch (Use.getOpcode()) {
     case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_CONCAT_VECTORS:
+    case TargetOpcode::G_SHUFFLE_VECTOR:
     case TargetOpcode::G_EXTRACT_VECTOR_ELT:
     case TargetOpcode::G_UNMERGE_VALUES:
     case TargetOpcode::G_ADD:
@@ -157,15 +182,13 @@ static SPIRVType *deduceTypeFromUses(Register Reg, MachineFunction &MF,
     case TargetOpcode::G_UDIV:
     case TargetOpcode::G_SREM:
     case TargetOpcode::G_UREM:
-    case TargetOpcode::G_FADD:
-    case TargetOpcode::G_FSUB:
-    case TargetOpcode::G_FMUL:
-    case TargetOpcode::G_FDIV:
-    case TargetOpcode::G_FREM:
-    case TargetOpcode::G_FMA:
     case TargetOpcode::COPY:
-    case TargetOpcode::G_STRICT_FMA:
       ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
+      break;
+    case TargetOpcode::G_SELECT:
+      if (Reg == Use.getOperand(2).getReg() ||
+          Reg == Use.getOperand(3).getReg())
+        ResType = deduceTypeFromResultRegister(&Use, Reg, GR, MIB);
       break;
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_STORE:
@@ -195,17 +218,17 @@ static SPIRVType *deduceTypeFromUses(Register Reg, MachineFunction &MF,
   return nullptr;
 }
 
-static SPIRVType *deduceGEPType(MachineInstr *I, SPIRVGlobalRegistry *GR,
-                                MachineIRBuilder &MIB) {
+static SPIRVTypeInst deduceGEPType(MachineInstr *I, SPIRVGlobalRegistry *GR,
+                                   MachineIRBuilder &MIB) {
   LLVM_DEBUG(dbgs() << "Deducing GEP type for: " << *I);
   Register PtrReg = I->getOperand(3).getReg();
-  SPIRVType *PtrType = GR->getSPIRVTypeForVReg(PtrReg);
+  SPIRVTypeInst PtrType = GR->getSPIRVTypeForVReg(PtrReg);
   if (!PtrType) {
     LLVM_DEBUG(dbgs() << "  Could not get type for pointer operand.\n");
     return nullptr;
   }
 
-  SPIRVType *PointeeType = GR->getPointeeType(PtrType);
+  SPIRVTypeInst PointeeType = GR->getPointeeType(PtrType);
   if (!PointeeType) {
     LLVM_DEBUG(dbgs() << "  Could not get pointee type from pointer type.\n");
     return nullptr;
@@ -221,7 +244,8 @@ static SPIRVType *deduceGEPType(MachineInstr *I, SPIRVGlobalRegistry *GR,
     switch (PointeeType->getOpcode()) {
     case SPIRV::OpTypeArray:
     case SPIRV::OpTypeRuntimeArray:
-    case SPIRV::OpTypeVector: {
+    case SPIRV::OpTypeVector:
+    case SPIRV::OpTypeVectorIdEXT: {
       Register ElemTypeReg = PointeeType->getOperand(1).getReg();
       PointeeType = GR->getSPIRVTypeForVReg(ElemTypeReg);
       break;
@@ -262,40 +286,63 @@ static SPIRVType *deduceGEPType(MachineInstr *I, SPIRVGlobalRegistry *GR,
   LLVM_DEBUG(dbgs() << "  Final pointee type: " << *PointeeType);
 
   SPIRV::StorageClass::StorageClass SC = GR->getPointerStorageClass(PtrType);
-  SPIRVType *Res = GR->getOrCreateSPIRVPointerType(PointeeType, MIB, SC);
+  SPIRVTypeInst Res = GR->getOrCreateSPIRVPointerType(PointeeType, MIB, SC);
   LLVM_DEBUG(dbgs() << "  Deduced GEP type: " << *Res);
   return Res;
 }
 
-static SPIRVType *deduceResultTypeFromOperands(MachineInstr *I,
-                                               SPIRVGlobalRegistry *GR,
-                                               MachineIRBuilder &MIB) {
+static SPIRVTypeInst deduceResultTypeFromOperands(MachineInstr *I,
+                                                  SPIRVGlobalRegistry *GR,
+                                                  MachineIRBuilder &MIB) {
   Register ResVReg = I->getOperand(0).getReg();
   switch (I->getOpcode()) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_ANYEXT:
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
+  case TargetOpcode::G_TRUNC:
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_FPTOUI:
     return deduceIntTypeFromResult(ResVReg, MIB, GR);
   case TargetOpcode::G_BUILD_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, I->getNumOperands());
   case TargetOpcode::G_SHUFFLE_VECTOR:
     return deduceTypeFromOperandRange(I, MIB, GR, 1, 3);
+  case TargetOpcode::G_SELECT:
+    return deduceTypeFromOperandRange(I, MIB, GR, 2, 4);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   case TargetOpcode::G_INTRINSIC: {
     auto IntrinsicID = cast<GIntrinsic>(I)->getIntrinsicID();
     if (IntrinsicID == Intrinsic::spv_gep)
       return deduceGEPType(I, GR, MIB);
+    if (IntrinsicID == Intrinsic::spv_extractelt)
+      return deduceTypeFromSingleOperand(I, MIB, GR, 2);
     break;
   }
   case TargetOpcode::G_LOAD: {
-    SPIRVType *PtrType = deduceTypeFromSingleOperand(I, MIB, GR, 1);
+    SPIRVTypeInst PtrType = deduceTypeFromSingleOperand(I, MIB, GR, 1);
     return PtrType ? GR->getPointeeType(PtrType) : nullptr;
+  }
+  case TargetOpcode::G_PHI: {
+    for (unsigned Idx = 1; Idx < I->getNumOperands(); Idx += 2) {
+      Register OpReg = I->getOperand(Idx).getReg();
+      if (SPIRVTypeInst OpType = GR->getSPIRVTypeForVReg(OpReg))
+        return OpType;
+    }
+    return nullptr;
   }
   default:
     if (I->getNumDefs() == 1 && I->getNumOperands() > 1 &&
-        I->getOperand(1).isReg())
+        I->getOperand(1).isReg()) {
+      // Integer results of float operands, e.g. G_BITCAST or G_LROUND.
+      Register OpReg = I->getOperand(1).getReg();
+      LLT ResLLT = MIB.getMRI()->getType(ResVReg);
+      if ((ResLLT.isInteger() || ResLLT.isIntegerVector()) &&
+          GR->getSPIRVTypeForVReg(OpReg) &&
+          GR->isScalarOrVectorOfType(OpReg, SPIRV::OpTypeFloat))
+        return deduceIntTypeFromResult(ResVReg, MIB, GR);
       return deduceTypeFromSingleOperand(I, MIB, GR, 1);
+    }
   }
   return nullptr;
 }
@@ -305,10 +352,10 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
                                            MachineIRBuilder &MIB) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register SrcReg = I->getOperand(I->getNumOperands() - 1).getReg();
-  SPIRVType *ScalarType = nullptr;
-  if (SPIRVType *DefType = GR->getSPIRVTypeForVReg(SrcReg)) {
-    assert(DefType->getOpcode() == SPIRV::OpTypeVector);
-    ScalarType = GR->getSPIRVTypeForVReg(DefType->getOperand(1).getReg());
+  SPIRVTypeInst ScalarType = nullptr;
+  if (SPIRVTypeInst DefType = GR->getSPIRVTypeForVReg(SrcReg)) {
+    assert(isVectorType(DefType));
+    ScalarType = GR->getScalarOrVectorComponentType(DefType);
   }
 
   if (!ScalarType) {
@@ -333,7 +380,7 @@ static bool deduceAndAssignTypeForGUnmerge(MachineInstr *I, MachineFunction &MF,
       continue;
 
     LLT DefLLT = MRI.getType(DefReg);
-    SPIRVType *ResType =
+    SPIRVTypeInst ResType =
         DefLLT.isVector()
             ? GR->getOrCreateSPIRVVectorType(
                   ScalarType, DefLLT.getNumElements(), *I,
@@ -357,8 +404,12 @@ static bool deduceAndAssignSpirvType(MachineInstr *I, MachineFunction &MF,
   if (I->getOpcode() == TargetOpcode::G_UNMERGE_VALUES)
     return deduceAndAssignTypeForGUnmerge(I, MF, GR, MIB);
 
+  // Def 0 is typed, leave any other defs to the default typing.
+  if (GR->getSPIRVTypeForVReg(ResVReg))
+    return false;
+
   LLVM_DEBUG(dbgs() << "Inferring type from operands\n");
-  SPIRVType *ResType = deduceResultTypeFromOperands(I, GR, MIB);
+  SPIRVTypeInst ResType = deduceResultTypeFromOperands(I, GR, MIB);
   if (!ResType) {
     LLVM_DEBUG(dbgs() << "Inferring type from uses\n");
     ResType = deduceTypeFromUses(ResVReg, MF, GR, MIB);
@@ -368,12 +419,7 @@ static bool deduceAndAssignSpirvType(MachineInstr *I, MachineFunction &MF,
     return false;
 
   LLVM_DEBUG(dbgs() << "Assigned type to " << *I << ": " << *ResType);
-  GR->assignSPIRVTypeToVReg(ResType, ResVReg, MF);
-
-  if (!MRI.getRegClassOrNull(ResVReg)) {
-    LLVM_DEBUG(dbgs() << "Updating the register class.\n");
-    setRegClassType(ResVReg, ResType, GR, &MRI, *GR->CurMF, true);
-  }
+  setRegClassType(ResVReg, ResType, GR, &MRI, MF);
   return true;
 }
 
@@ -405,15 +451,36 @@ static bool requiresSpirvType(MachineInstr &I, SPIRVGlobalRegistry *GR,
   return true;
 }
 
+// Returns true if every def of I has a SPIR-V type afterwards.
+static bool assignTypesFromFloatLLTs(MachineInstr &I, SPIRVGlobalRegistry *GR,
+                                     MachineRegisterInfo &MRI) {
+  bool AllTyped = true;
+  for (const MachineOperand &Def : I.defs()) {
+    Register Reg = Def.getReg();
+    LLT RegTy = MRI.getType(Reg);
+    if (GR->getSPIRVTypeForVReg(Reg))
+      continue;
+    if (!RegTy.isFloatOrFloatVector()) {
+      AllTyped = false;
+      continue;
+    }
+    MachineIRBuilder MIB(I);
+    SPIRVTypeInst Ty = deduceFloatTypeFromLLT(RegTy, MIB, GR);
+    LLVM_DEBUG(dbgs() << "Assigned type from LLT to " << I << ": " << *Ty);
+    setRegClassType(Reg, Ty, GR, &MRI, *I.getMF());
+  }
+  return AllTyped;
+}
+
 static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
                                                 SPIRVGlobalRegistry *GR) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<MachineInstr *, 8> Worklist;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &I : MBB) {
-      if (requiresSpirvType(I, GR, MRI)) {
+      if (requiresSpirvType(I, GR, MRI) &&
+          !assignTypesFromFloatLLTs(I, GR, MRI))
         Worklist.push_back(&I);
-      }
     }
   }
 
@@ -453,9 +520,9 @@ static void registerSpirvTypeForNewInstructions(MachineFunction &MF,
       if (GR->getSPIRVTypeForVReg(ResVReg))
         continue;
       const LLT &ResLLT = MRI.getType(ResVReg);
-      SPIRVType *ResType = nullptr;
+      SPIRVTypeInst ResType = nullptr;
       if (ResLLT.isVector()) {
-        SPIRVType *CompType = GR->getOrCreateSPIRVIntegerType(
+        SPIRVTypeInst CompType = GR->getOrCreateSPIRVIntegerType(
             ResLLT.getElementType().getSizeInBits(), MIB);
         ResType = GR->getOrCreateSPIRVVectorType(
             CompType, ResLLT.getNumElements(), MIB, false);
@@ -477,13 +544,15 @@ static bool hasAssignType(Register Reg, MachineRegisterInfo &MRI) {
 }
 
 static void generateAssignType(MachineInstr &MI, Register ResultRegister,
-                               SPIRVType *ResultType, SPIRVGlobalRegistry *GR,
+                               SPIRVTypeInst ResultType,
+                               SPIRVGlobalRegistry *GR,
                                MachineRegisterInfo &MRI) {
   LLVM_DEBUG(dbgs() << "  Adding ASSIGN_TYPE for ResultRegister: "
                     << printReg(ResultRegister, MRI.getTargetRegisterInfo())
                     << " with type: " << *ResultType);
   MachineIRBuilder MIB(MI);
   updateRegType(ResultRegister, nullptr, ResultType, GR, MIB, MRI);
+  MIB.setInsertPt(*MI.getParent(), std::next(MI.getIterator()));
 
   // Tablegen definition assumes SPIRV::ASSIGN_TYPE pseudo-instruction is
   // present after each auto-folded instruction to take a type reference
@@ -533,44 +602,13 @@ static void ensureAssignTypeForTypeFolding(MachineFunction &MF,
         continue;
       }
 
-      SPIRVType *ResultType = GR->getSPIRVTypeForVReg(ResultRegister);
-      assert(ResultType);
+      SPIRVTypeInst ResultType = GR->getSPIRVTypeForVReg(ResultRegister);
       generateAssignType(MI, ResultRegister, ResultType, GR, MRI);
     }
   }
 }
 
-// Do a preorder traversal of the CFG starting from the BB |Start|.
-// point. Calls |op| on each basic block encountered during the traversal.
-void visit(MachineFunction &MF, MachineBasicBlock &Start,
-           std::function<void(MachineBasicBlock *)> op) {
-  std::stack<MachineBasicBlock *> ToVisit;
-  SmallPtrSet<MachineBasicBlock *, 8> Seen;
-
-  ToVisit.push(&Start);
-  Seen.insert(ToVisit.top());
-  while (ToVisit.size() != 0) {
-    MachineBasicBlock *MBB = ToVisit.top();
-    ToVisit.pop();
-
-    op(MBB);
-
-    for (auto Succ : MBB->successors()) {
-      if (Seen.contains(Succ))
-        continue;
-      ToVisit.push(Succ);
-      Seen.insert(Succ);
-    }
-  }
-}
-
-// Do a preorder traversal of the CFG starting from the given function's entry
-// point. Calls |op| on each basic block encountered during the traversal.
-void visit(MachineFunction &MF, std::function<void(MachineBasicBlock *)> op) {
-  visit(MF, *MF.begin(), std::move(op));
-}
-
-bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
+static bool runPostLegalizer(MachineFunction &MF) {
   // Initialize the type registry.
   const SPIRVSubtarget &ST = MF.getSubtarget<SPIRVSubtarget>();
   SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
@@ -580,11 +618,23 @@ bool SPIRVPostLegalizer::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-INITIALIZE_PASS(SPIRVPostLegalizer, DEBUG_TYPE, "SPIRV post legalizer", false,
-                false)
+INITIALIZE_PASS(SPIRVPostLegalizerLegacy, DEBUG_TYPE, "SPIRV post legalizer",
+                false, false)
 
-char SPIRVPostLegalizer::ID = 0;
+char SPIRVPostLegalizerLegacy::ID = 0;
 
-FunctionPass *llvm::createSPIRVPostLegalizerPass() {
-  return new SPIRVPostLegalizer();
+FunctionPass *llvm::createSPIRVPostLegalizerLegacyPass() {
+  return new SPIRVPostLegalizerLegacy();
+}
+
+bool SPIRVPostLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runPostLegalizer(MF);
+}
+
+PreservedAnalyses
+SPIRVPostLegalizerPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  return runPostLegalizer(MF) ? getMachineFunctionPassPreservedAnalyses()
+                              : PreservedAnalyses::all();
 }

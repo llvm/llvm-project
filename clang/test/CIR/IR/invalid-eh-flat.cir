@@ -49,7 +49,7 @@ cir.func @eh_dispatch_catch_all_and_unwind(%eh_token: !cir.eh_token) {
 ^bb3:
   cir.return
 ^bb4:
-  cir.resume
+  cir.resume %eh_token : !cir.eh_token
 }
 
 }
@@ -78,7 +78,7 @@ cir.func @eh_dispatch_unwind_and_catch_all(%eh_token: !cir.eh_token) {
 ^bb2:
   cir.return
 ^bb3:
-  cir.resume
+  cir.resume %eh_token : !cir.eh_token
 ^bb4:
   cir.return
 }
@@ -109,9 +109,9 @@ cir.func @eh_dispatch_duplicate_unwind(%eh_token: !cir.eh_token) {
 ^bb2:
   cir.return
 ^bb3:
-  cir.resume
+  cir.resume %eh_token : !cir.eh_token
 ^bb4:
-  cir.resume
+  cir.resume %eh_token : !cir.eh_token
 }
 
 }

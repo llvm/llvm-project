@@ -9,8 +9,6 @@
 // NetBSD does not support LC_TIME at the moment
 // XFAIL: netbsd
 
-// XFAIL: LIBCXX-FREEBSD-FIXME
-
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ru_RU.UTF-8
@@ -25,6 +23,7 @@
 
 #include <cassert>
 #include <ctime>
+#include <ios>
 #include <locale>
 
 #include "test_macros.h"
@@ -102,7 +101,7 @@ int main(int, char**)
 #elif defined(_AIX)
         const char in[] = "31 d""\xC3\xA9""c. 2061 ""\xC3\xA0"" 23:55:59";
 #else
-        const char in[] = "Sam 31 d""\xC3\xA9""c 23:55:59 2061";
+        const char in[] = "sam. 31 d""\xC3\xA9""c. 23:55:59 2061";
 #endif
         err = std::ios_base::goodbit;
         t = std::tm();
@@ -195,7 +194,7 @@ int main(int, char**)
         const char in[] = "2061" "\xE5\xB9\xB4" "12" "\xE6\x9C\x88" "31"
                           "\xE6\x97\xA5";
 #else
-        const char in[] = "\xE5\x85\xAD 12/31 23:55:59 2061";
+        const char in[] = "\xE5\x85\xAD 12\xE6\x9C\x88/31 23:55:59 2061";
 #endif
         err = std::ios_base::goodbit;
         t = std::tm();

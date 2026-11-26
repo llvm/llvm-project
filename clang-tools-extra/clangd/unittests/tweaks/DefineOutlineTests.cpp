@@ -65,9 +65,6 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
   FileName = "Test.hpp";
   // Not available unless function name or fully body is selected.
   EXPECT_UNAVAILABLE(R"cpp(
-    // Not a definition
-    vo^i[[d^ ^f]]^oo();
-
     [[vo^id ]]foo[[()]] {[[
       [[(void)(5+3);
       return;]]
@@ -100,10 +97,9 @@ TEST_F(DefineOutlineTest, TriggersOnFunctionDecl) {
       return;
     }]]]])cpp");
 
-  // Not available on defaulted/deleted members.
+  // Not available on deleted members.
   EXPECT_UNAVAILABLE(R"cpp(
     class Foo {
-      Fo^o() = default;
       F^oo(const Foo&) = delete;
     };)cpp");
 
@@ -164,11 +160,23 @@ TEST_F(DefineOutlineTest, ApplyTest) {
     llvm::StringRef ExpectedHeader;
     llvm::StringRef ExpectedSource;
   } Cases[] = {
-      // Simple check
+      // Simple check: Move
       {
           "void fo^o() { return; }",
           "void foo() ;",
           "void foo() { return; }",
+      },
+      // Simple check: Create
+      {
+          "void fo^o(int i = 5);",
+          "void foo(int i = 5);",
+          "void foo(int i ) {}",
+      },
+      // Simple check: Create with return value
+      {
+          "int fo^o();",
+          "int foo();",
+          "int foo() { return {}; }",
       },
       // Inline specifier.
       {
@@ -239,9 +247,21 @@ TEST_F(DefineOutlineTest, ApplyTest) {
                 Foo(T z) __attribute__((weak)) ;
                 int bar;
               };template <typename T>
-inline Foo<T>::Foo(T z) __attribute__((weak)) : bar(2){}
+inline Foo<T>::Foo(T z)  : bar(2){}
 )cpp",
           ""},
+      // Default ctor
+      {
+          R"cpp(
+              class Foo {
+                F^oo() = default;
+              };)cpp",
+          R"cpp(
+              class Foo {
+                Foo() ;
+              };)cpp",
+          "Foo::Foo() = default;",
+      },
       // Virt specifiers.
       {
           R"cpp(
@@ -443,6 +463,327 @@ inline T Foo<T>::bar(const T& t, const U& u) { return {}; }
       EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
                                    testPath("Test.cpp"), Case.ExpectedSource)));
     }
+  }
+}
+
+TEST_F(DefineOutlineTest, BasicAttributeTests) {
+  ExtraFiles["Test.cpp"] = "";
+  FileName = "Test.hpp";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      // C++11 attribute list
+      {
+          R"cpp(
+            struct A {
+              [ [nodiscard, deprecated("no")] ] int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              [ [nodiscard, deprecated("no")] ] int foo() ;
+            };
+)cpp",
+          " int A::foo() { return 0; }\n"},
+      // GNU attribute list
+      {
+          R"cpp(
+            struct A {
+              __attribute__((noinline, annotate("bar"))) static int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              __attribute__((noinline, annotate("bar"))) static int foo() ;
+            };
+)cpp",
+          "  int A::foo() { return 0; }\n"},
+      // Attribute at the end of the function declarator
+      {
+          R"cpp(
+            struct A {
+              int ^foo() __attribute__((noinline)) { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              int foo() __attribute__((noinline)) ;
+            };
+)cpp",
+          "int A::foo()  { return 0; }\n"},
+      // Mixed attributes
+      {
+          R"cpp(
+            struct A {
+              __attribute__((noinline)) [ [nodiscard] ] int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              __attribute__((noinline)) [ [nodiscard] ] int foo() ;
+            };
+)cpp",
+          "  int A::foo() { return 0; }\n"},
+      // Attributes with namespaces
+      {
+          R"cpp(
+            struct A {
+              [ [clang::noinline] ] int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              [ [clang::noinline] ] int foo() ;
+            };
+)cpp",
+          " int A::foo() { return 0; }\n"},
+      {
+          R"cpp(
+            struct A {
+              [ [using clang: noinline, annotate("x")] ] int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              [ [using clang: noinline, annotate("x")] ] int foo() ;
+            };
+)cpp",
+          " int A::foo() { return 0; }\n"},
+      // Unknown attributes (not part of the AST, so they are not removed)
+      {
+          R"cpp(
+            struct A {
+              [ [unknown] ] int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              [ [unknown] ] int foo() ;
+            };
+)cpp",
+          "[ [unknown] ] int A::foo() { return 0; }\n"},
+      // Unknown and known attribute in one list
+      {
+          R"cpp(
+            struct A {
+              [ [unknown, nodiscard] ] int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              [ [unknown, nodiscard] ] int foo() ;
+            };
+)cpp",
+          " int A::foo() { return 0; }\n"},
+      // Attribute defined as macro
+      {
+          R"cpp(
+            #define NOINLINE __attribute__((noinline))
+            struct A {
+              NOINLINE int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            #define NOINLINE __attribute__((noinline))
+            struct A {
+              NOINLINE int foo() ;
+            };
+)cpp",
+          "NOINLINE int A::foo() { return 0; }\n"},
+      // Comment between attribute and type
+      {
+          R"cpp(
+            struct A {
+              [ [nodiscard] ] /*keep me*/ int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              [ [nodiscard] ] /*keep me*/ int foo() ;
+            };
+)cpp",
+          " /*keep me*/ int A::foo() { return 0; }\n"},
+      // Trailing attribute with nested parentheses
+      {
+          R"cpp(
+            struct A {
+              void ^foo() __attribute__((__annotate__(("test")))) {}
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              void foo() __attribute__((__annotate__(("test")))) ;
+            };
+)cpp",
+          "void A::foo()  {}\n"},
+  };
+  for (const auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    llvm::StringMap<std::string> EditedFiles;
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, AttributesForMultiVersionFunctions) {
+  FileName = "Test.hpp";
+  ExtraFiles["Test.cpp"] = "";
+  ExtraArgs.push_back("--target=x86_64-unknown-linux-gnu");
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      // Multiversion functions (e.g. target, cpu_specific)
+      {
+          R"cpp(
+            struct A {
+              __attribute__((target("default"))) int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              __attribute__((target("default"))) int foo() ;
+            };
+)cpp",
+          R"cpp(__attribute__((target("default"))) int A::foo() { return 0; }
+)cpp"},
+      // attribute cpu_specific
+      {
+          R"cpp(
+            struct A {
+              __attribute__((cpu_specific(atom))) int ^foo() { return 1; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              __attribute__((cpu_specific(atom))) int foo() ;
+            };
+)cpp",
+          "__attribute__((cpu_specific(atom))) int A::foo() { return 1; }\n"},
+  };
+  for (auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    llvm::StringMap<std::string> EditedFiles;
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, NonInheritableAttributes) {
+  FileName = "Test.hpp";
+  ExtraFiles["Test.cpp"] = "";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      // abi_tag is not inheritable. Drop nothing, even other attributes in the
+      // same list.
+      {
+          R"cpp(
+            struct A {
+              __attribute__((abi_tag("x"), noinline)) int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              __attribute__((abi_tag("x"), noinline)) int foo() ;
+            };
+)cpp",
+          "__attribute__((abi_tag(\"x\"), noinline)) int A::foo() { return 0; "
+          "}\n"},
+  };
+  for (auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    llvm::StringMap<std::string> EditedFiles;
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, AttributesRequiredOnDefinition) {
+  FileName = "Test.hpp";
+  ExtraFiles["Test.cpp"] = "";
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {
+          R"cpp(
+            struct A {
+              int ^foo(int i) __attribute__((enable_if(i > 0, "x"))) { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              int foo(int i) __attribute__((enable_if(i > 0, "x"))) ;
+            };
+)cpp",
+          "int A::foo(int i) __attribute__((enable_if(i > 0, \"x\"))) { return "
+          "0; }\n"},
+      {
+          R"cpp(
+            struct A {
+              __attribute__((overloadable)) int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              __attribute__((overloadable)) int foo() ;
+            };
+)cpp",
+          "__attribute__((overloadable)) int A::foo() { return 0; }\n"},
+  };
+  for (auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    llvm::StringMap<std::string> EditedFiles;
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
+  }
+}
+
+TEST_F(DefineOutlineTest, DeclspecAttributes) {
+  FileName = "Test.hpp";
+  ExtraFiles["Test.cpp"] = "";
+  ExtraArgs.push_back("-fdeclspec");
+
+  struct {
+    llvm::StringRef Test;
+    llvm::StringRef ExpectedHeader;
+    llvm::StringRef ExpectedSource;
+  } Cases[] = {
+      {
+          R"cpp(
+            struct A {
+              __declspec(noinline) int ^foo() { return 0; }
+            };
+)cpp",
+          R"cpp(
+            struct A {
+              __declspec(noinline) int foo() ;
+            };
+)cpp",
+          " int A::foo() { return 0; }\n"},
+  };
+
+  for (auto &Case : Cases) {
+    SCOPED_TRACE(Case.Test);
+    llvm::StringMap<std::string> EditedFiles;
+    EXPECT_EQ(apply(Case.Test, &EditedFiles), Case.ExpectedHeader);
+    EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
+                                 testPath("Test.cpp"), Case.ExpectedSource)));
   }
 }
 

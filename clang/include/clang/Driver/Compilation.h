@@ -10,11 +10,13 @@
 #define LLVM_CLANG_DRIVER_COMPILATION_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include <cassert>
@@ -82,19 +84,26 @@ class Compilation {
   /// architecture, and device offload kind.
   struct TCArgsKey final {
     const ToolChain *TC = nullptr;
-    StringRef BoundArch;
+    BoundArch BoundArchitecture;
     Action::OffloadKind DeviceOffloadKind = Action::OFK_None;
 
-    TCArgsKey(const ToolChain *TC, StringRef BoundArch,
+    TCArgsKey(const ToolChain *TC, BoundArch BA,
               Action::OffloadKind DeviceOffloadKind)
-        : TC(TC), BoundArch(BoundArch), DeviceOffloadKind(DeviceOffloadKind) {}
+        : TC(TC), BoundArchitecture(BA), DeviceOffloadKind(DeviceOffloadKind) {}
 
     bool operator<(const TCArgsKey &K) const {
-      return std::tie(TC, BoundArch, DeviceOffloadKind) <
-             std::tie(K.TC, K.BoundArch, K.DeviceOffloadKind);
+      return std::tie(TC, BoundArchitecture, DeviceOffloadKind) <
+             std::tie(K.TC, K.BoundArchitecture, K.DeviceOffloadKind);
     }
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
+
+  /// Maps a device toolchain and an IGCA target, e.g. igca_30r, to the Intel
+  /// GPUs from --offload-arch that share that target, e.g. xe-mtl-h and
+  /// xe-mtl-u. Each list is sorted and has no duplicates.
+  llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
+                 llvm::SmallVector<StringRef, 2>>
+      IGCADevices;
 
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
@@ -125,6 +134,10 @@ class Compilation {
 
   /// Whether to keep temporary files regardless of -save-temps.
   bool ForceKeepTempFiles = false;
+
+  /// The bound architecture currently being built, if any. Set around
+  /// ConstructJob calls so addCommand can stamp it onto each new Command.
+  BoundArch CurrentBoundArch;
 
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
@@ -211,7 +224,13 @@ public:
   JobList &getJobs() { return Jobs; }
   const JobList &getJobs() const { return Jobs; }
 
-  void addCommand(std::unique_ptr<Command> C) { Jobs.addJob(std::move(C)); }
+  void addCommand(std::unique_ptr<Command> Cmd) {
+    Cmd->setBoundArch(CurrentBoundArch);
+    Jobs.addJob(std::move(Cmd));
+  }
+
+  BoundArch getCurrentBoundArch() const { return CurrentBoundArch; }
+  void setCurrentBoundArch(BoundArch BA) { CurrentBoundArch = BA; }
 
   llvm::opt::ArgStringList &getTempFiles() { return TempFiles; }
   const llvm::opt::ArgStringList &getTempFiles() const { return TempFiles; }
@@ -238,12 +257,21 @@ public:
   /// If a device offloading kind is specified, a translation specific for that
   /// kind is performed, if any.
   ///
-  /// \param BoundArch - The bound architecture name, or 0.
+  /// \param BA - The bound architecture.
   /// \param DeviceOffloadKind - The offload device kind that should be used in
   /// the translation, if any.
   const llvm::opt::DerivedArgList &
-  getArgsForToolChain(const ToolChain *TC, StringRef BoundArch,
+  getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                       Action::OffloadKind DeviceOffloadKind);
+
+  /// Add the Intel GPU \p Device to the GPUs of the IGCA target \p Target for
+  /// the device toolchain \p TC.
+  void addIGCADevice(const ToolChain *TC, StringRef Target, StringRef Device);
+
+  /// \return the Intel GPUs of the IGCA target \p Target for the device
+  /// toolchain \p TC, sorted, or an empty list if there are none.
+  ArrayRef<StringRef> getIGCADevices(const ToolChain *TC,
+                                     StringRef Target) const;
 
   /// addTempFile - Add a file to remove on exit, and returns its
   /// argument.

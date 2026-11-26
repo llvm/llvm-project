@@ -4,9 +4,9 @@
 
 ; CHECK-DAG: %[[FLOAT:[0-9]+]] = OpTypeFloat 32
 ; CHECK-DAG: %[[VEC3:[0-9]+]] = OpTypeVector %[[FLOAT]] 3
-; CHECK-DAG: %[[I8:[0-9]+]] = OpTypeInt 8 0
-; CHECK-DAG: %[[STRUCT_PAD:[0-9]+]] = OpTypeStruct %[[VEC3]] %[[I8]]
+; The 4-byte padding is modeled as a 32-bit member.
 ; CHECK-DAG: %[[UINT:[0-9]+]] = OpTypeInt 32 0
+; CHECK-DAG: %[[STRUCT_PAD:[0-9]+]] = OpTypeStruct %[[VEC3]] %[[UINT]]
 ; CHECK-DAG: %[[CONST_3:[0-9]+]] = OpConstant %[[UINT]] 3
 ; CHECK-DAG: %[[ARRAY:[0-9]+]] = OpTypeArray %[[STRUCT_PAD]] %[[CONST_3]]
 ; CHECK-DAG: %[[CBLAYOUT:[0-9]+]] = OpTypeStruct %[[ARRAY]]
@@ -17,11 +17,9 @@
 ; CHECK-DAG: %[[MYCBUFFER:[0-9]+]] = OpVariable %[[PTR_WRAPPER]] Uniform
 
 
-; TODO(168401): This array stride and offset of element 1 are incorrect. This
-; is an issue with how 3 element vectors are handled.
-; CHECK-DAG: OpDecorate %[[ARRAY]] ArrayStride 20
+; CHECK-DAG: OpDecorate %[[ARRAY]] ArrayStride 16
 ; CHECK-DAG: OpMemberDecorate %[[STRUCT_PAD]] 0 Offset 0
-; CHECK-DAG: OpMemberDecorate %[[STRUCT_PAD]] 1 Offset 16
+; CHECK-DAG: OpMemberDecorate %[[STRUCT_PAD]] 1 Offset 12
 ; CHECK-DAG: OpMemberDecorate %[[WRAPPER]] 0 Offset 0
 ; CHECK-DAG: OpDecorate %[[WRAPPER]] Block
 %__cblayout_MyCBuffer = type <{ <{ [2 x <{ <3 x float>, target("spirv.Padding", 4) }>], <3 x float> }> }>
@@ -46,14 +44,13 @@ entry:
 ; CHECK: %[[IDX:[0-9]+]] = OpUMod %[[UINT]] {{%[0-9]+}} %[[CONST_3]]
   %rem.i = urem i32 %1, 3
 
-; CHECK: %[[IDX_CONV:[0-9]+]] = OpUConvert {{.*}} %[[IDX]]
   %idxprom.i = zext nneg i32 %rem.i to i64
 
-; CHECK: %[[PTR_ELEM:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[ACCESS_ARRAY]] %[[IDX_CONV]]
+; CHECK: %[[PTR_ELEM:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[ACCESS_ARRAY]] %[[IDX]]
   %cbufferidx.i = getelementptr <{ <3 x float>, target("spirv.Padding", 4) }>, ptr addrspace(12) @myArray, i64 %idxprom.i
 
 ; CHECK: %[[PTR_FIELD:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[PTR_ELEM]] {{.*}}
-; CHECK: %[[VAL_VEC3:[0-9]+]] = OpLoad %[[VEC3]] %[[PTR_FIELD]] Aligned 16
+; CHECK: %[[VAL_VEC3:[0-9]+]] = OpLoad %[[VEC3]] %[[PTR_FIELD]]
   %2 = load <3 x float>, ptr addrspace(12) %cbufferidx.i, align 16
 
   %3 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v3f32_12_1t(target("spirv.VulkanBuffer", [0 x <3 x float>], 12, 1) %0, i32 %1)

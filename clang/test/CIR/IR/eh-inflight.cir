@@ -37,4 +37,24 @@ cir.func dso_local @inflight_exception_with_catch_type_list() {
 // CHECK:  cir.return
 // CHECK:}
 
+cir.func dso_local @inflight_exception_with_catch_all() {
+  %exception_ptr, %type_id = cir.eh.inflight_exception catch_all
+  cir.return
+}
+
+// CHECK: cir.func dso_local @inflight_exception_with_catch_all() {
+// CHECK:  %exception_ptr, %type_id = cir.eh.inflight_exception catch_all
+// CHECK:  cir.return
+// CHECK:}
+
+cir.func dso_local @inflight_exception_with_catch_all_and_type_list() {
+  %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
+  cir.return
+}
+
+// CHECK: cir.func dso_local @inflight_exception_with_catch_all_and_type_list() {
+// CHECK:  %exception_ptr, %type_id = cir.eh.inflight_exception catch_all [@_ZTIi]
+// CHECK:  cir.return
+// CHECK:}
+
 }

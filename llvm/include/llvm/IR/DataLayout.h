@@ -95,6 +95,8 @@ public:
     bool HasExternalState;
     // Symbolic name of the address space.
     std::string AddrSpaceName;
+    /// The null pointer bit representation for this address space.
+    APInt NullPtrValue;
 
     LLVM_ABI bool operator==(const PointerSpec &Other) const;
   };
@@ -108,6 +110,7 @@ public:
 
 private:
   bool BigEndian = false;
+  bool VectorsAreElementAligned = false;
 
   unsigned AllocaAddrSpace = 0;
   unsigned ProgramAddrSpace = 0;
@@ -163,13 +166,16 @@ private:
   void setPointerSpec(uint32_t AddrSpace, uint32_t BitWidth, Align ABIAlign,
                       Align PrefAlign, uint32_t IndexBitWidth,
                       bool HasUnstableRepr, bool HasExternalState,
-                      StringRef AddrSpaceName);
+                      StringRef AddrSpaceName, APInt NullPtrValue);
 
   /// Internal helper to get alignment for integer of given bitwidth.
   LLVM_ABI Align getIntegerAlignment(uint32_t BitWidth, bool abi_or_pref) const;
 
   /// Internal helper method that returns requested alignment for type.
   Align getAlignment(Type *Ty, bool abi_or_pref) const;
+
+  /// getTypeAllocSize for types other than integers and pointers.
+  TypeSize getAggregateOrOtherTypeAllocSize(Type *Ty) const;
 
   /// Attempts to parse primitive specification ('i', 'f', or 'v').
   Error parsePrimitiveSpec(StringRef Spec);
@@ -213,6 +219,9 @@ public:
   /// Layout endianness...
   bool isLittleEndian() const { return !BigEndian; }
   bool isBigEndian() const { return BigEndian; }
+
+  /// Whether vectors are element aligned, rather than naturally aligned.
+  bool vectorsAreElementAligned() const { return VectorsAreElementAligned; }
 
   /// Returns the string representation of the DataLayout.
   ///
@@ -299,7 +308,7 @@ public:
     llvm_unreachable("invalid mangling mode");
   }
 
-  StringRef getPrivateGlobalPrefix() const {
+  StringRef getInternalSymbolPrefix() const {
     switch (ManglingMode) {
     case MM_None:
       return "";
@@ -436,6 +445,11 @@ public:
   bool hasExternalState(Type *Ty) const {
     auto *PTy = dyn_cast<PointerType>(Ty->getScalarType());
     return PTy && hasExternalState(PTy->getPointerAddressSpace());
+  }
+
+  /// Returns the null pointer bit pattern for the given address space.
+  APInt getNullPtrValue(unsigned AS) const {
+    return getPointerSpec(AS).NullPtrValue;
   }
 
   /// Returns whether passes must avoid introducing `inttoptr` instructions
@@ -637,6 +651,11 @@ public:
   /// This is always at least as good as the ABI alignment.
   LLVM_ABI Align getPrefTypeAlign(Type *Ty) const;
 
+  /// Returns a byte type with the same size of a pointer in the given address
+  /// space.
+  LLVM_ABI ByteType *getBytePtrType(LLVMContext &C,
+                                    unsigned AddressSpace = 0) const;
+
   /// Returns an integer type with size at least as big as that of a
   /// pointer in the given address space.
   LLVM_ABI IntegerType *getIntPtrType(LLVMContext &C,
@@ -645,6 +664,10 @@ public:
   /// Returns an integer (vector of integer) type with size at least as
   /// big as that of a pointer of the given pointer (vector of pointer) type.
   LLVM_ABI Type *getIntPtrType(Type *) const;
+
+  /// Returns a byte (vector of byte) type with the same size of a pointer of
+  /// the given pointer (vector of pointer) type.
+  LLVM_ABI Type *getBytePtrType(Type *) const;
 
   /// Returns the smallest integer type with size at least as big as
   /// Width bits.
@@ -784,6 +807,8 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
   case Type::StructTyID:
     // Get the layout annotation... which is lazily created on demand.
     return getStructLayout(cast<StructType>(Ty))->getSizeInBits();
+  case Type::ByteTyID:
+    return TypeSize::getFixed(Ty->getByteBitWidth());
   case Type::IntegerTyID:
     return TypeSize::getFixed(Ty->getIntegerBitWidth());
   case Type::HalfTyID:

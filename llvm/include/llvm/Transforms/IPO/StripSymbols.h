@@ -27,23 +27,24 @@
 
 namespace llvm {
 
-struct StripSymbolsPass : PassInfoMixin<StripSymbolsPass> {
+struct StripSymbolsPass : OptionalPassInfoMixin<StripSymbolsPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct StripNonDebugSymbolsPass : PassInfoMixin<StripNonDebugSymbolsPass> {
+struct StripNonDebugSymbolsPass
+    : OptionalPassInfoMixin<StripNonDebugSymbolsPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct StripDebugDeclarePass : PassInfoMixin<StripDebugDeclarePass> {
+struct StripDebugDeclarePass : OptionalPassInfoMixin<StripDebugDeclarePass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct StripDeadDebugInfoPass : PassInfoMixin<StripDeadDebugInfoPass> {
+struct StripDeadDebugInfoPass : OptionalPassInfoMixin<StripDeadDebugInfoPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct StripDeadCGProfilePass : PassInfoMixin<StripDeadCGProfilePass> {
+struct StripDeadCGProfilePass : OptionalPassInfoMixin<StripDeadCGProfilePass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

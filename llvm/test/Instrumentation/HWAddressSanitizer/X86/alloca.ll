@@ -168,10 +168,10 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; INLINE-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP32]]
 ; INLINE-NEXT:    [[TMP34:%.*]] = load i8, ptr [[TMP33]], align 1
 ; INLINE-NEXT:    [[TMP35:%.*]] = icmp ne i8 [[TMP30]], [[TMP34]]
-; INLINE-NEXT:    br i1 [[TMP35]], label [[TMP36:%.*]], label [[TMP50:%.*]], !prof [[PROF1:![0-9]+]]
+; INLINE-NEXT:    br i1 [[TMP35]], label [[TMP36:%.*]], label [[TMP50:%.*]], !prof [[PROF2:![0-9]+]]
 ; INLINE:       36:
 ; INLINE-NEXT:    [[TMP37:%.*]] = icmp ugt i8 [[TMP34]], 15
-; INLINE-NEXT:    br i1 [[TMP37]], label [[TMP38:%.*]], label [[TMP39:%.*]], !prof [[PROF1]]
+; INLINE-NEXT:    br i1 [[TMP37]], label [[TMP38:%.*]], label [[TMP39:%.*]], !prof [[PROF2]]
 ; INLINE:       38:
 ; INLINE-NEXT:    call void asm sideeffect "int3\0Anopl 80([[RAX:%.*]])", "{rdi}"(i64 [[TMP28]])
 ; INLINE-NEXT:    unreachable
@@ -180,13 +180,13 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; INLINE-NEXT:    [[TMP41:%.*]] = trunc i64 [[TMP40]] to i8
 ; INLINE-NEXT:    [[TMP42:%.*]] = add i8 [[TMP41]], 0
 ; INLINE-NEXT:    [[TMP43:%.*]] = icmp uge i8 [[TMP42]], [[TMP34]]
-; INLINE-NEXT:    br i1 [[TMP43]], label [[TMP38]], label [[TMP44:%.*]], !prof [[PROF1]]
+; INLINE-NEXT:    br i1 [[TMP43]], label [[TMP38]], label [[TMP44:%.*]], !prof [[PROF2]]
 ; INLINE:       44:
 ; INLINE-NEXT:    [[TMP45:%.*]] = or i64 [[TMP31]], 15
 ; INLINE-NEXT:    [[TMP46:%.*]] = inttoptr i64 [[TMP45]] to ptr
 ; INLINE-NEXT:    [[TMP47:%.*]] = load i8, ptr [[TMP46]], align 1
 ; INLINE-NEXT:    [[TMP48:%.*]] = icmp ne i8 [[TMP30]], [[TMP47]]
-; INLINE-NEXT:    br i1 [[TMP48]], label [[TMP38]], label [[TMP49:%.*]], !prof [[PROF1]]
+; INLINE-NEXT:    br i1 [[TMP48]], label [[TMP38]], label [[TMP49:%.*]], !prof [[PROF2]]
 ; INLINE:       49:
 ; INLINE-NEXT:    br label [[TMP50]]
 ; INLINE:       50:

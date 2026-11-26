@@ -1,6 +1,6 @@
 ; The test checks that Module splitting does not treat declarations as entry points.
 
-; RUN: llvm-split -split-by-category=module-id -S < %s -o %t1
+; RUN: llvm-split -split-by-category=attribute --category-attribute=module-id -S < %s -o %t1
 ; RUN: FileCheck %s -input-file=%t1_0.ll --check-prefix CHECK-MODULE-ID0
 ; RUN: FileCheck %s -input-file=%t1_1.ll --check-prefix CHECK-MODULE-ID1
 

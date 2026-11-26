@@ -12,14 +12,15 @@ define i32 @test(i1 %arg_1, i32 %arg_2) {
 ; CHECK-NEXT:    .cfi_offset ra, -4
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    .cfi_offset s1, -12
+; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:    andi s1, a0, 1
-; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    mv s0, a1
 ; CHECK-NEXT:    bnez s1, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    li s0, 1
 ; CHECK-NEXT:  .LBB0_2: # %entry
 ; CHECK-NEXT:    li a1, 7
+; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    call __udivsi3
 ; CHECK-NEXT:    bnez s1, .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %entry

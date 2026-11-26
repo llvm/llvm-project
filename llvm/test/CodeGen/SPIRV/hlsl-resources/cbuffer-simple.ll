@@ -45,11 +45,11 @@ entry:
   %3 = insertelement <4 x float> <float poison, float poison, float 0.000000e+00, float 1.000000e+00>, float %conv.i, i64 0
   %vecinit5.i = insertelement <4 x float> %3, float %conv2.i, i64 1
 
-; CHECK: %[[VAL_VEC4:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_VEC4_ACCESS]] Aligned 16
+; CHECK: %[[VAL_VEC4:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_VEC4_ACCESS]]
   %4 = load <4 x float>, ptr addrspace(12) @color, align 16
   %mul.i = fmul reassoc nnan ninf nsz arcp afn <4 x float> %vecinit5.i, %4
 
-; CHECK: %[[VAL_FLOAT:[0-9]+]] = OpLoad %[[FLOAT]] %[[PTR_FLOAT_ACCESS]] Aligned 4
+; CHECK: %[[VAL_FLOAT:[0-9]+]] = OpLoad %[[FLOAT]] %[[PTR_FLOAT_ACCESS]]
   %5 = load float, ptr addrspace(12) @factor, align 4
 
   %splat.splatinsert.i = insertelement <4 x float> poison, float %5, i64 0

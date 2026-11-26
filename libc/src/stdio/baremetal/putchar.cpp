@@ -13,6 +13,7 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/stdio/baremetal/file_internal.h"
+#include "src/stdio/stdout.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -26,7 +27,7 @@ LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
     // The stream should be in an error state in this case.
     return EOF;
   }
-  return 0;
+  return static_cast<int>(uc);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

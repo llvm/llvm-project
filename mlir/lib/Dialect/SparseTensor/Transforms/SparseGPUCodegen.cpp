@@ -27,6 +27,8 @@
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::sparse_tensor;
@@ -48,8 +50,8 @@ enum class CuSparseFormat {
 
 /// Marks the given top module as a GPU container module.
 static void markAsGPUContainer(ModuleOp topModule) {
-  topModule->setAttr(gpu::GPUDialect::getContainerModuleAttrName(),
-                     UnitAttr::get(topModule->getContext()));
+  topModule->setDiscardableAttr(gpu::GPUDialect::getContainerModuleAttrName(),
+                                UnitAttr::get(topModule->getContext()));
 }
 
 /// Constructs a new GPU module (for GPU kernels) inside the given top module,
@@ -82,8 +84,7 @@ static gpu::GPUFuncOp genGPUFunc(OpBuilder &builder, gpu::GPUModuleOp gpuModule,
   FunctionType type = FunctionType::get(gpuModule->getContext(), argsTp, {});
   auto gpuFunc =
       gpu::GPUFuncOp::create(builder, gpuModule->getLoc(), kernelName, type);
-  gpuFunc->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
-                   builder.getUnitAttr());
+  gpuFunc.setKernel(true);
   return gpuFunc;
 }
 
@@ -245,23 +246,34 @@ static Value genParametersIn(OpBuilder &builder, Location loc,
 /// Finalizes the outlined arguments. The output buffer is copied depending
 /// on the kernel token and then deallocated. All other buffers are simply
 /// deallocated. Then we wait for all operations to complete.
+///
+/// `copyBack` maps 1:1 to the `buffers` array. It tracks which buffers were
+/// mutated by the kernel and require a device-to-host copy. An empty
+/// `copyBack` array implies no buffers are "copied back".
 static void genParametersOut(OpBuilder &builder, Location loc, Value out,
                              Value kernelToken, SmallVectorImpl<Value> &scalars,
                              SmallVectorImpl<Value> &buffers,
                              SmallVectorImpl<Value> &args,
-                             SmallVectorImpl<Value> &tokens) {
+                             SmallVectorImpl<Value> &tokens,
+                             ArrayRef<bool> copyBack) {
   unsigned base = scalars.size();
+
+  // `args` stores scalars followed by buffers. `base` is the index of the first
+  // buffer. `bufIdx` maps the current buffer to its exact 1:1 counterpart in
+  // the `copyBack` mask.
   for (unsigned i = base, e = args.size(); i < e; i++) {
+    unsigned bufIdx = i - base;
     Value firstToken;
-    if (i == base) {
-      // Assumed output parameter: unregister or copy-out.
-      if (out) {
+
+    // Checks if the current buffer needs a device-to-host copy.
+    if (copyBack[bufIdx]) {
+      if (out && bufIdx == 0) {
         genHostUnregisterMemref(builder, loc, out);
         out = Value();
         continue;
       }
       firstToken =
-          genCopyMemRef(builder, loc, buffers[0], args[i], kernelToken);
+          genCopyMemRef(builder, loc, buffers[bufIdx], args[i], kernelToken);
     } else {
       firstToken = genFirstWait(builder, loc);
     }
@@ -557,13 +569,26 @@ static Operation *genSpMat(OpBuilder &builder, Location loc,
                                   bCols, bNum, bSz, bSz, rowA, colA, valA);
 }
 
+/// Returns whether the operation swaps matrix dimensions.
+static bool isTransposed(gpu::TransposeMode mode) {
+  switch (mode) {
+  case gpu::TransposeMode::NON_TRANSPOSE:
+    return false;
+  case gpu::TransposeMode::TRANSPOSE:
+  case gpu::TransposeMode::CONJUGATE_TRANSPOSE:
+    return true;
+  }
+  llvm_unreachable("unhandled transpose mode");
+}
+
 /// Match and rewrite SpMV kernel.
 static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
-                                 linalg::GenericOp op, bool enableRT) {
+                                 linalg::GenericOp op, bool enableRT,
+                                 gpu::TransposeMode modeA) {
   Location loc = op.getLoc();
   Value a = op.getOperand(0);
   Value x = op.getOperand(1);
-  Value y = op.getOperand(2); // we have y = Ax
+  Value y = op.getOperand(2); // we have y = op(A)x
   SmallVector<Value> tokens;
 
   // Only admissible sparse matrix format and dense vectors (no BSR).
@@ -579,8 +604,11 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   //   x : memX           -> vecX
   //   y : memY           -> vecY
   Value nseA = NumberOfEntriesOp::create(rewriter, loc, a);
-  Value szY = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
-  Value szX = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
+  Value rows = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
+  Value cols = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
+  bool isTranspose = isTransposed(modeA);
+  Value szX = isTranspose ? rows : cols;
+  Value szY = isTranspose ? cols : rows;
   Value memR = genFirstPosOrCrds(rewriter, loc, a, format, enableRT);
   Value memC = genSecondCrds(rewriter, loc, a, format, enableRT); // or empty
   Value memV = ToValuesOp::create(rewriter, loc, a);
@@ -601,7 +629,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   Operation *spGenA =
-      genSpMat(rewriter, loc, aTp, spmatHandleTp, tokenTp, token, szY, szX,
+      genSpMat(rewriter, loc, aTp, spmatHandleTp, tokenTp, token, rows, cols,
                nseA, rowA, colA, valA, format, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
@@ -617,7 +645,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 
   // Precompute buffersize for SpMV.
   auto bufferComp = gpu::SpMVBufferSizeOp::create(
-      rewriter, loc, indexTp, tokenTp, token, spMatA, dnX, dnY,
+      rewriter, loc, indexTp, tokenTp, token, modeA, spMatA, dnX, dnY,
       /*computeType=*/dnYType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -626,9 +654,9 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   token = buf.getAsyncToken();
 
   // Perform the SpMV.
-  auto spmvComp =
-      gpu::SpMVOp::create(rewriter, loc, tokenTp, token, spMatA, dnX, dnY,
-                          /*computeType=*/dnYType, buffer);
+  auto spmvComp = gpu::SpMVOp::create(rewriter, loc, tokenTp, token, modeA,
+                                      spMatA, dnX, dnY,
+                                      /*computeType=*/dnYType, buffer);
   token = spmvComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -657,11 +685,13 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 
 /// Match and rewrite SpMM kernel.
 static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
-                                 linalg::GenericOp op, bool enableRT) {
+                                 linalg::GenericOp op, bool enableRT,
+                                 gpu::TransposeMode modeA,
+                                 gpu::TransposeMode modeB) {
   Location loc = op.getLoc();
   Value a = op.getOperand(0);
   Value b = op.getOperand(1);
-  Value c = op.getOperand(2); // we have C = AB
+  Value c = op.getOperand(2); // we have C = op(A)op(B)
   SmallVector<Value> tokens;
 
   // Only admissible sparse matrix format and dense matrices (no BSR).
@@ -677,9 +707,15 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   //   b : bufB           -> matB
   //   c : bufC           -> matC
   Value nseA = NumberOfEntriesOp::create(rewriter, loc, a);
-  Value szm = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
-  Value szk = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
-  Value szn = linalg::createOrFoldDimOp(rewriter, loc, b, 1);
+  Value rows = linalg::createOrFoldDimOp(rewriter, loc, a, 0);
+  Value cols = linalg::createOrFoldDimOp(rewriter, loc, a, 1);
+  bool isTransposeA = isTransposed(modeA);
+  bool isTransposeB = isTransposed(modeB);
+  Value szm = isTransposeA ? cols : rows;
+  Value szk = isTransposeA ? rows : cols;
+  Value szn = linalg::createOrFoldDimOp(rewriter, loc, b, isTransposeB ? 0 : 1);
+  SmallVector<Value> bSizes = isTransposeB ? SmallVector<Value>{szn, szk}
+                                           : SmallVector<Value>{szk, szn};
   Value memR = genFirstPosOrCrds(rewriter, loc, a, format, enableRT);
   Value memC = genSecondCrds(rewriter, loc, a, format, enableRT); // or empty
   Value memV = ToValuesOp::create(rewriter, loc, a);
@@ -700,13 +736,12 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   Operation *spGenA =
-      genSpMat(rewriter, loc, aTp, spMatHandleTp, tokenTp, token, szm, szk,
+      genSpMat(rewriter, loc, aTp, spMatHandleTp, tokenTp, token, rows, cols,
                nseA, rowA, colA, valA, format, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
-  auto dmatB =
-      gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp, tokenTp,
-                                    token, matB, SmallVector<Value>{szk, szn});
+  auto dmatB = gpu::CreateDnTensorOp::create(rewriter, loc, dnTensorHandleTp,
+                                             tokenTp, token, matB, bSizes);
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
   auto dmatC =
@@ -718,7 +753,7 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
 
   // Precompute buffersize for SpMM.
   auto bufferComp = gpu::SpMMBufferSizeOp::create(
-      rewriter, loc, indexTp, tokenTp, token, spMatA, dnB, dnC,
+      rewriter, loc, indexTp, tokenTp, token, modeA, modeB, spMatA, dnB, dnC,
       /*computeType=*/dmatCType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -728,9 +763,9 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
 
   // Perform the SpMM.
-  auto spmmComp =
-      gpu::SpMMOp::create(rewriter, loc, tokenTp, token, spMatA, dnB, dnC,
-                          /*computeType=*/dnCType, buffer);
+  auto spmmComp = gpu::SpMMOp::create(rewriter, loc, tokenTp, token, modeA,
+                                      modeB, spMatA, dnB, dnC,
+                                      /*computeType=*/dnCType, buffer);
   token = spmmComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -1177,7 +1212,8 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
     // of the form
     //   forall (i = 0; i < N; i++)
     // so that cyclic scheduling over the threads is easy.
-    if (!forallOp->hasAttr(LoopEmitter::getLoopEmitterLoopAttrName()) ||
+    if (!forallOp->hasDiscardableAttr(
+            LoopEmitter::getLoopEmitterLoopAttrName()) ||
         forallOp.getNumReductions() != 0 || forallOp.getNumLoops() != 1 ||
         !matchPattern(forallOp.getLowerBound()[0], m_Zero()) ||
         !matchPattern(forallOp.getStep()[0], m_One()))
@@ -1202,15 +1238,36 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
     SmallVector<Value> constants;
     SmallVector<Value> scalars;
     SmallVector<Value> buffers;
+    // A boolean mask aligned 1:1 with the `buffers` array, tracking which
+    // of those buffers were mutated by the loop. If true, the corresponding
+    // buffer needs to be "copied back" using a device-to-host copy.
+    SmallVector<bool> copyBack;
     for (Value val : invariants) {
       Type tp = val.getType();
       if (val.getDefiningOp<arith::ConstantOp>())
         constants.push_back(val);
       else if (isa<FloatType>(tp) || tp.isIntOrIndex())
         scalars.push_back(val);
-      else if (isa<MemRefType>(tp))
+      else if (isa<MemRefType>(tp)) {
         buffers.push_back(val);
-      else
+
+        // Determine if the buffer needs to be "copied back" from device
+        // to host by checking for `memref.store` and the write memory effect.
+        bool isWrite = false;
+        for (Operation *user : val.getUsers()) {
+          if (isa<memref::StoreOp>(user)) {
+            isWrite = true;
+            break;
+          }
+          if (auto memInterface = dyn_cast<MemoryEffectOpInterface>(user)) {
+            if (memInterface.getEffectOnValue<MemoryEffects::Write>(val)) {
+              isWrite = true;
+              break;
+            }
+          }
+        }
+        copyBack.push_back(isWrite);
+      } else
         return failure(); // don't know how to share
     }
     // Pass outlined non-constant values.
@@ -1239,7 +1296,7 @@ struct ForallRewriter : public OpRewritePattern<scf::ParallelOp> {
         genLaunchGPUFunc(rewriter, gpuFunc, args, tokens, numThreads);
     // Finalize the outlined arguments.
     genParametersOut(rewriter, loc, out, kernelToken, scalars, buffers, args,
-                     tokens);
+                     tokens, copyBack);
     genBlockingWait(rewriter, loc, tokens);
     rewriter.eraseOp(forallOp);
     return success();
@@ -1265,6 +1322,11 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
                                 PatternRewriter &rewriter) const override {
     if (op.getNumDpsInits() != 1)
       return failure(); // reject multi-output
+    // The rewrites below query the sparse tensor encoding of the operands,
+    // which is only defined for ranked tensor types. Reject buffer semantics
+    // rather than casting a memref operand to a tensor type.
+    if (!op.hasPureTensorSemantics())
+      return failure();
 
     const unsigned numLoops = op.getNumLoops();
     const unsigned numTensors = op->getNumOperands();
@@ -1285,8 +1347,14 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
     if (numLoops == 2 && numTensors == 3 &&
         linalg::isParallelIterator(iteratorTypes[0]) &&
         linalg::isReductionIterator(iteratorTypes[1]) &&
-        maps == infer({{i, j}, {j}, {i}}) && matchSumOfMultOfArgs(op)) {
-      return rewriteSpMV(rewriter, op, enableRT);
+        matchSumOfMultOfArgs(op)) {
+      if (maps == infer({{i, j}, {j}, {i}}))
+        return rewriteSpMV(rewriter, op, enableRT,
+                           gpu::TransposeMode::NON_TRANSPOSE);
+      // TODO: recognize conjugate transpose patterns for SpMV.
+      if (maps == infer({{j, i}, {j}, {i}}))
+        return rewriteSpMV(rewriter, op, enableRT,
+                           gpu::TransposeMode::TRANSPOSE);
     }
 
     // Recognize a SpGEMM, 2:4-SpMM, or SpMM kernel.
@@ -1294,12 +1362,30 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
         linalg::isParallelIterator(iteratorTypes[0]) &&
         linalg::isParallelIterator(iteratorTypes[1]) &&
         linalg::isReductionIterator(iteratorTypes[2]) &&
-        maps == infer({{i, k}, {k, j}, {i, j}}) && matchSumOfMultOfArgs(op)) {
-      if (!isDenseTensor(op.getOperand(0)) && !isDenseTensor(op.getOperand(1)))
-        return rewriteSpGEMM(rewriter, op, enableRT);
-      if (isConversionInto24(op.getOperand(0)))
-        return rewrite2To4SpMM(rewriter, op);
-      return rewriteSpMM(rewriter, op, enableRT);
+        matchSumOfMultOfArgs(op)) {
+      if (maps == infer({{i, k}, {k, j}, {i, j}})) {
+        if (!isDenseTensor(op.getOperand(0)) &&
+            !isDenseTensor(op.getOperand(1)))
+          return rewriteSpGEMM(rewriter, op, enableRT);
+        if (isConversionInto24(op.getOperand(0)))
+          return rewrite2To4SpMM(rewriter, op);
+        return rewriteSpMM(rewriter, op, enableRT,
+                           gpu::TransposeMode::NON_TRANSPOSE,
+                           gpu::TransposeMode::NON_TRANSPOSE);
+      }
+      // TODO: recognize conjugate transpose patterns for either SpMM input.
+      if (maps == infer({{k, i}, {k, j}, {i, j}}))
+        return rewriteSpMM(rewriter, op, enableRT,
+                           gpu::TransposeMode::TRANSPOSE,
+                           gpu::TransposeMode::NON_TRANSPOSE);
+      if (maps == infer({{i, k}, {j, k}, {i, j}}))
+        return rewriteSpMM(rewriter, op, enableRT,
+                           gpu::TransposeMode::NON_TRANSPOSE,
+                           gpu::TransposeMode::TRANSPOSE);
+      if (maps == infer({{k, i}, {j, k}, {i, j}}))
+        return rewriteSpMM(rewriter, op, enableRT,
+                           gpu::TransposeMode::TRANSPOSE,
+                           gpu::TransposeMode::TRANSPOSE);
     }
 
     // Recognize a SDDMM kernel.

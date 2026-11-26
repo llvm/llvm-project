@@ -176,6 +176,7 @@ void DebugInfoFinder::reset() {
   GVs.clear();
   TYs.clear();
   Scopes.clear();
+  Macros.clear();
   NodesSeen.clear();
 }
 
@@ -196,13 +197,8 @@ void DebugInfoFinder::processModule(const Module &M) {
 void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
   if (!addCompileUnit(CU))
     return;
-  for (auto *DIG : CU->getGlobalVariables()) {
-    if (!addGlobalVariable(DIG))
-      continue;
-    auto *GV = DIG->getVariable();
-    processScope(GV->getScope());
-    processType(GV->getType());
-  }
+  for (auto *GVE : CU->getGlobalVariables())
+    processGlobalVariableExpression(GVE);
   for (auto *ET : CU->getEnumTypes())
     processType(ET);
   for (auto *RT : CU->getRetainedTypes())
@@ -212,6 +208,18 @@ void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
       processSubprogram(cast<DISubprogram>(RT));
   for (auto *Import : CU->getImportedEntities())
     processImportedEntity(Import);
+  for (auto *Macro : CU->getMacros())
+    processMacroNode(Macro, nullptr);
+}
+
+void DebugInfoFinder::processGlobalVariableExpression(
+    DIGlobalVariableExpression *GVE) {
+  if (!addGlobalVariable(GVE))
+    return;
+  auto *GV = GVE->getVariable();
+  processScope(GV->getScope());
+  processType(GV->getType());
+  processType(GV->getStaticDataMemberDeclaration());
 }
 
 void DebugInfoFinder::processInstruction(const Module &M,
@@ -239,6 +247,11 @@ void DebugInfoFinder::processDbgRecord(const Module &M, const DbgRecord &DR) {
   processLocation(M, DR.getDebugLoc().get());
 }
 
+void DebugInfoFinder::processVariable(DIVariable *DV) {
+  if (auto *DLV = dyn_cast_or_null<DILocalVariable>(DV))
+    processVariable(DLV);
+}
+
 void DebugInfoFinder::processType(DIType *DT) {
   if (!addType(DT))
     return;
@@ -250,12 +263,57 @@ void DebugInfoFinder::processType(DIType *DT) {
   }
   if (auto *DCT = dyn_cast<DICompositeType>(DT)) {
     processType(DCT->getBaseType());
+    processType(DCT->getVTableHolder());
+    processType(DCT->getDiscriminator());
+    processType(DCT->getSpecification());
+    processVariable(DCT->getDataLocation());
+    processVariable(DCT->getAssociated());
+    processVariable(DCT->getAllocated());
     for (Metadata *D : DCT->getElements()) {
       if (auto *T = dyn_cast<DIType>(D))
         processType(T);
       else if (auto *SP = dyn_cast<DISubprogram>(D))
         processSubprogram(SP);
+      else if (auto *P = dyn_cast<DIProperty>(D))
+        processType(P->getType());
+      else if (auto *SR = dyn_cast_or_null<DISubrange>(D)) {
+        auto VisitBound = [&](DISubrange::BoundType Bound) {
+          if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))
+            processVariable(BV);
+        };
+        VisitBound(SR->getLowerBound());
+        VisitBound(SR->getCount());
+        VisitBound(SR->getUpperBound());
+        VisitBound(SR->getStride());
+      } else if (auto *GSR = dyn_cast_or_null<DIGenericSubrange>(D)) {
+        auto VisitBound = [&](DIGenericSubrange::BoundType Bound) {
+          if (auto *BV = dyn_cast_if_present<DIVariable *>(Bound))
+            processVariable(BV);
+        };
+        VisitBound(GSR->getLowerBound());
+        VisitBound(GSR->getCount());
+        VisitBound(GSR->getUpperBound());
+        VisitBound(GSR->getStride());
+      }
     }
+    return;
+  }
+  if (auto *ST = dyn_cast<DIStringType>(DT)) {
+    processVariable(ST->getStringLength());
+    return;
+  }
+  if (auto *SRT = dyn_cast<DISubrangeType>(DT)) {
+    processType(SRT->getBaseType());
+    auto VisitBound = [&](DISubrangeType::BoundType Bound) {
+      if (auto *V = dyn_cast_if_present<DIVariable *>(Bound))
+        processVariable(V);
+      else if (auto *T = dyn_cast_if_present<DIDerivedType *>(Bound))
+        processType(T);
+    };
+    VisitBound(SRT->getLowerBound());
+    VisitBound(SRT->getUpperBound());
+    VisitBound(SRT->getStride());
+    VisitBound(SRT->getBias());
     return;
   }
   if (auto *DDT = dyn_cast<DIDerivedType>(DT)) {
@@ -273,6 +331,36 @@ void DebugInfoFinder::processImportedEntity(const DIImportedEntity *Import) {
     processScope(NS->getScope());
   else if (auto *M = dyn_cast<DIModule>(Entity))
     processScope(M->getScope());
+}
+
+/// Process a macro debug info node (DIMacroNode).
+///
+/// A DIMacroNode is one of two types:
+///   - DIMacro: A single macro definition. Add it to the Macros list along with
+///     its containing DIMacroFile.
+///   - DIMacroFile: A file containing macros. Recursively process all nested
+///     macro nodes within it (avoiding duplicates by tracking visited nodes).
+void DebugInfoFinder::processMacroNode(DIMacroNode *Macro,
+                                       DIMacroFile *CurrentMacroFile) {
+  if (!Macro)
+    return;
+
+  if (auto *M = dyn_cast<DIMacro>(Macro)) {
+    addMacro(M, CurrentMacroFile);
+    return;
+  }
+
+  auto *MF = dyn_cast<DIMacroFile>(Macro);
+  assert(MF &&
+         "Expected a DIMacroFile (it can't be any other type at this point)");
+
+  // Check if we've already seen this macro file to avoid infinite recursion
+  if (!NodesSeen.insert(MF).second)
+    return;
+
+  // Recursively process nested macros in the macro file
+  for (auto *Element : MF->getElements())
+    processMacroNode(Element, MF);
 }
 
 void DebugInfoFinder::processScope(DIScope *Scope) {
@@ -326,7 +414,12 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   SP->forEachRetainedNode(
       [this](DILocalVariable *LV) { processVariable(LV); }, [](DILabel *L) {},
       [this](DIImportedEntity *IE) { processImportedEntity(IE); },
-      [this](DIType *T) { processType(T); });
+      [this](DIType *T) { processType(T); },
+      [this](auto *GVE) { return processGlobalVariableExpression(GVE); });
+
+  // Not reached through the scope, type, or retained nodes.
+  if (DISubprogram *Decl = SP->getDeclaration())
+    processSubprogram(Decl);
 }
 
 void DebugInfoFinder::processVariable(const DILocalVariable *DV) {
@@ -386,6 +479,17 @@ bool DebugInfoFinder::addScope(DIScope *Scope) {
   if (!NodesSeen.insert(Scope).second)
     return false;
   Scopes.push_back(Scope);
+  return true;
+}
+
+bool DebugInfoFinder::addMacro(DIMacro *Macro, DIMacroFile *MacroFile) {
+  if (!Macro)
+    return false;
+
+  if (!NodesSeen.insert(Macro).second)
+    return false;
+
+  Macros.push_back(std::make_pair(Macro, MacroFile));
   return true;
 }
 
@@ -581,6 +685,10 @@ bool llvm::stripDebugInfo(Function &F) {
     Changed = true;
     F.setSubprogram(nullptr);
   }
+  if (F.hasMetadata(LLVMContext::MD_flmd)) {
+    Changed = true;
+    F.setFLContext(nullptr);
+  }
 
   DenseMap<MDNode *, MDNode *> LoopIDsMap;
   for (BasicBlock &BB : F) {
@@ -602,6 +710,8 @@ bool llvm::stripDebugInfo(Function &F) {
         I.setMetadata("heapallocsite", nullptr);
         // DIAssignID are debug info metadata primitives.
         I.setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+        // Call targets point to DISubprograms.
+        I.setMetadata(LLVMContext::MD_call_target, nullptr);
       }
       I.dropDbgRecords();
     }
@@ -684,7 +794,6 @@ private:
   // Create a new DISubprogram, to replace the one given.
   DISubprogram *getReplacementSubprogram(DISubprogram *MDS) {
     auto *FileAndScope = cast_or_null<DIFile>(map(MDS->getFile()));
-    StringRef LinkageName = MDS->getName().empty() ? MDS->getLinkageName() : "";
     DISubprogram *Declaration = nullptr;
     auto *Type = cast_or_null<DISubroutineType>(map(MDS->getType()));
     DIType *ContainingType =
@@ -692,6 +801,10 @@ private:
     auto *Unit = cast_or_null<DICompileUnit>(map(MDS->getUnit()));
     auto Variables = nullptr;
     auto TemplateParams = nullptr;
+    // Keep linkage names for profiling CUs, as -gline-tables-only does.
+    StringRef LinkageName;
+    if (MDS->getName().empty() || (Unit && Unit->getDebugInfoForProfiling()))
+      LinkageName = MDS->getLinkageName();
 
     // Make a distinct DISubprogram, for situations that warrant it.
     auto distinctMDSubprogram = [&]() {
@@ -754,11 +867,16 @@ private:
   DILocation *getReplacementMDLocation(DILocation *MLD) {
     auto *Scope = map(MLD->getScope());
     auto *InlinedAt = map(MLD->getInlinedAt());
+    // Intermediate-IR layers are line-table data (a line/column in a DIFile),
+    // so they survive the downgrade to line-tables-only.
+    Metadata *IRLayers = map(MLD->getRawIRLayers());
     if (MLD->isDistinct())
-      return DILocation::getDistinct(MLD->getContext(), MLD->getLine(),
-                                     MLD->getColumn(), Scope, InlinedAt);
+      return DILocation::getDistinct(
+          MLD->getContext(), MLD->getLine(), MLD->getColumn(), Scope, InlinedAt,
+          /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0, IRLayers);
     return DILocation::get(MLD->getContext(), MLD->getLine(), MLD->getColumn(),
-                           Scope, InlinedAt);
+                           Scope, InlinedAt, /*ImplicitCode=*/false,
+                           /*AtomGroup=*/0, /*AtomRank=*/0, IRLayers);
   }
 
   /// Create a new generic MDNode, to replace the one given
@@ -789,6 +907,11 @@ private:
       if (auto *CU = dyn_cast<DICompileUnit>(N))
         return getReplacementCU(CU);
       if (isa<DIFile>(N))
+        return N;
+      // Intermediate-IR layer nodes hold only a kind string and a DIFile, so
+      // none of their content is part of the type hierarchy being stripped.
+      // Return them as they are to preserve their node types.
+      if (isa<DILayerLoc>(N) || isa<DILayerLocList>(N))
         return N;
       if (auto *MDLB = dyn_cast<DILexicalBlockBase>(N))
         // Remap to our referenced scope (recursively).
@@ -893,8 +1016,12 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           MDNode *InlinedAt = DL.getInlinedAt();
           Scope = remap(Scope);
           InlinedAt = remap(InlinedAt);
+          // Layers need no remapping (Mapper maps them to themselves), but they
+          // do need carrying over -- they are line-table data.
           return DILocation::get(M.getContext(), DL.getLine(), DL.getCol(),
-                                 Scope, InlinedAt);
+                                 Scope, InlinedAt, /*ImplicitCode=*/false,
+                                 /*AtomGroup=*/0, /*AtomRank=*/0,
+                                 DL.getRawIRLayers());
         };
 
         if (I.getDebugLoc() != DebugLoc())
@@ -907,9 +1034,13 @@ bool llvm::stripNonLineTableDebugInfo(Module &M) {
           return MD;
         });
 
-        // Strip heapallocsite attachments, they point into the DIType system.
-        if (I.hasMetadataOtherThanDebugLoc())
+        // Strip attachments that refer to non-line-table debug info:
+        // heapallocsite points into the DIType system, call_target to a
+        // DISubprogram.
+        if (I.hasMetadataOtherThanDebugLoc()) {
           I.setMetadata("heapallocsite", nullptr);
+          I.setMetadata(LLVMContext::MD_call_target, nullptr);
+        }
 
         // Strip any DbgRecords attached.
         I.dropDbgRecords();
@@ -1776,70 +1907,42 @@ LLVMMetadataRef LLVMDIBuilderCreateTempGlobalVariableFwdDecl(
 LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordBefore(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMValueRef Instr) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
+  DbgRecord *DbgInst = unwrap(Builder)->insertDeclare(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL),
       Instr ? InsertPosition(unwrap<Instruction>(Instr)->getIterator())
             : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMDbgRecordRef LLVMDIBuilderInsertDeclareRecordAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Storage, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DL, LLVMBasicBlockRef Block) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDeclare(
+  DbgRecord *DbgInst = unwrap(Builder)->insertDeclare(
       unwrap(Storage), unwrap<DILocalVariable>(VarInfo),
       unwrap<DIExpression>(Expr), unwrap<DILocation>(DL), unwrap(Block));
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordBefore(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMValueRef Instr) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
+  DbgRecord *DbgInst = unwrap(Builder)->insertDbgValue(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc),
       Instr ? InsertPosition(unwrap<Instruction>(Instr)->getIterator())
             : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMDbgRecordRef LLVMDIBuilderInsertDbgValueRecordAtEnd(
     LLVMDIBuilderRef Builder, LLVMValueRef Val, LLVMMetadataRef VarInfo,
     LLVMMetadataRef Expr, LLVMMetadataRef DebugLoc, LLVMBasicBlockRef Block) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertDbgValueIntrinsic(
+  DbgRecord *DbgInst = unwrap(Builder)->insertDbgValue(
       unwrap(Val), unwrap<DILocalVariable>(VarInfo), unwrap<DIExpression>(Expr),
       unwrap<DILocation>(DebugLoc),
       Block ? InsertPosition(unwrap(Block)->end()) : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMMetadataRef LLVMDIBuilderCreateAutoVariable(
@@ -1898,7 +2001,7 @@ LLVMMetadataRef LLVMInstructionGetDebugLoc(LLVMValueRef Inst) {
 
 void LLVMInstructionSetDebugLoc(LLVMValueRef Inst, LLVMMetadataRef Loc) {
   if (Loc)
-    unwrap<Instruction>(Inst)->setDebugLoc(DebugLoc(unwrap<MDNode>(Loc)));
+    unwrap<Instruction>(Inst)->setDebugLoc(DebugLoc(unwrap<DILocation>(Loc)));
   else
     unwrap<Instruction>(Inst)->setDebugLoc(DebugLoc());
 }
@@ -1918,36 +2021,22 @@ LLVMDbgRecordRef LLVMDIBuilderInsertLabelBefore(LLVMDIBuilderRef Builder,
                                                 LLVMMetadataRef LabelInfo,
                                                 LLVMMetadataRef Location,
                                                 LLVMValueRef InsertBefore) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertLabel(
+  DbgRecord *DbgInst = unwrap(Builder)->insertLabel(
       unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
       InsertBefore
           ? InsertPosition(unwrap<Instruction>(InsertBefore)->getIterator())
           : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMDbgRecordRef LLVMDIBuilderInsertLabelAtEnd(LLVMDIBuilderRef Builder,
                                                LLVMMetadataRef LabelInfo,
                                                LLVMMetadataRef Location,
                                                LLVMBasicBlockRef InsertAtEnd) {
-  DbgInstPtr DbgInst = unwrap(Builder)->insertLabel(
+  DbgRecord *DbgInst = unwrap(Builder)->insertLabel(
       unwrapDI<DILabel>(LabelInfo), unwrapDI<DILocation>(Location),
       InsertAtEnd ? InsertPosition(unwrap(InsertAtEnd)->end()) : nullptr);
-  // This assert will fail if the module is in the old debug info format.
-  // This function should only be called if the module is in the new
-  // debug info format.
-  // See https://llvm.org/docs/RemoveDIsDebugInfo.html#c-api-changes,
-  // LLVMIsNewDbgInfoFormat, and LLVMSetIsNewDbgInfoFormat for more info.
-  assert(isa<DbgRecord *>(DbgInst) &&
-         "Function unexpectedly in old debug info format");
-  return wrap(cast<DbgRecord *>(DbgInst));
+  return wrap(DbgInst);
 }
 
 LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
@@ -1959,18 +2048,6 @@ LLVMMetadataKind LLVMGetMetadataKind(LLVMMetadataRef Metadata) {
   default:
     return (LLVMMetadataKind)LLVMGenericDINodeMetadataKind;
   }
-}
-
-AssignmentInstRange at::getAssignmentInsts(DIAssignID *ID) {
-  assert(ID && "Expected non-null ID");
-  LLVMContext &Ctx = ID->getContext();
-  auto &Map = Ctx.pImpl->AssignmentIDToInstrs;
-
-  auto MapIt = Map.find(ID);
-  if (MapIt == Map.end())
-    return make_range(nullptr, nullptr);
-
-  return make_range(MapIt->second.begin(), MapIt->second.end());
 }
 
 void at::deleteAssignmentMarkers(const Instruction *Inst) {
@@ -1988,7 +2065,9 @@ void at::RAUW(DIAssignID *Old, DIAssignID *New) {
   for (auto *I : InstVec)
     I->setMetadata(LLVMContext::MD_DIAssignID, New);
 
-  Old->replaceAllUsesWith(New);
+  for (DbgVariableRecord *DVR :
+       SmallVector<DbgVariableRecord *>(Old->getRecords()))
+    DVR->setAssignId(New);
 }
 
 void at::deleteAll(Function *F) {
@@ -2077,7 +2156,8 @@ getAssignmentInfoImpl(const DataLayout &DL, const Value *StoreDest,
   if (OffsetInBytes == UINT64_MAX)
     return std::nullopt;
   if (const auto *Alloca = dyn_cast<AllocaInst>(Base))
-    return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
+    if (!Alloca->isScalable())
+      return AssignmentInfo(DL, Alloca, OffsetInBytes * 8, SizeInBits);
   return std::nullopt;
 }
 
@@ -2288,7 +2368,7 @@ bool AssignmentTrackingPass::runOnFunction(Function &F) {
   // Note: trackAssignments doesn't respect dbg.declare's IR positions (as it
   // doesn't "understand" dbg.declares). However, this doesn't appear to break
   // any rules given this description of dbg.declare from
-  // llvm/docs/SourceLevelDebugging.rst:
+  // llvm/docs/SourceLevelDebugging.md:
   //
   //   It is not control-dependent, meaning that if a call to llvm.dbg.declare
   //   exists and has a valid location argument, that address is considered to
@@ -2330,7 +2410,7 @@ static void setAssignmentTrackingModuleFlag(Module &M) {
 
 static bool getAssignmentTrackingModuleFlag(const Module &M) {
   Metadata *Value = M.getModuleFlag(AssignmentTrackingModuleFlag);
-  return Value && !cast<ConstantAsMetadata>(Value)->getValue()->isZeroValue();
+  return Value && !cast<ConstantAsMetadata>(Value)->getValue()->isNullValue();
 }
 
 bool llvm::isAssignmentTrackingEnabled(const Module &M) {

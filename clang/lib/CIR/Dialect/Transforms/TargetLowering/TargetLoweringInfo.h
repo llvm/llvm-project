@@ -15,6 +15,12 @@
 #define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_TARGETLOWERINGINFO_H
 
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include <memory>
+#include <string>
+
+namespace llvm {
+class Triple;
+} // namespace llvm
 
 namespace cir {
 
@@ -24,7 +30,25 @@ public:
 
   virtual cir::SyncScopeKind
   convertSyncScope(cir::SyncScopeKind syncScope) const;
+
+  virtual unsigned
+  getTargetAddrSpaceFromCIRAddrSpace(cir::LangAddressSpace addrSpace) const {
+    return 0;
+  };
 };
+
+/// Select target lowering rules without constructing language or ABI state.
+std::unique_ptr<TargetLoweringInfo>
+createTargetLoweringInfo(const llvm::Triple &triple);
+
+// Target-specific factory functions.
+std::unique_ptr<TargetLoweringInfo> createAMDGPUTargetLoweringInfo();
+
+std::unique_ptr<TargetLoweringInfo> createNVPTXTargetLoweringInfo();
+
+std::unique_ptr<TargetLoweringInfo> createCommonSPIRTargetLoweringInfo();
+
+std::unique_ptr<TargetLoweringInfo> createSPIRVTargetLoweringInfo();
 
 } // namespace cir
 

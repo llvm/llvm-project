@@ -17,6 +17,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
+#include <cinttypes>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -185,7 +186,7 @@ void ValueObjectPrinter::SetupMostSpecializedValue() {
 const char *ValueObjectPrinter::GetRootNameForDisplay() {
   const char *root_valobj_name =
       m_options.m_root_valobj_name.empty()
-          ? GetMostSpecializedValue().GetName().AsCString()
+          ? GetMostSpecializedValue().GetName().AsCString(nullptr)
           : m_options.m_root_valobj_name.c_str();
   return root_valobj_name ? root_valobj_name : "";
 }
@@ -274,7 +275,7 @@ void ValueObjectPrinter::PrintDecl() {
   if (show_type) {
     // Some ValueObjects don't have types (like registers sets). Only print the
     // type if there is one to print
-    ConstString type_name;
+    llvm::StringRef type_name;
     if (m_compiler_type.IsValid()) {
       type_name = m_options.m_use_type_display_name
                       ? valobj.GetDisplayTypeName()
@@ -283,18 +284,16 @@ void ValueObjectPrinter::PrintDecl() {
       // only show an invalid type name if the user explicitly triggered
       // show_type
       if (m_options.m_show_types)
-        type_name = ConstString("<invalid type>");
+        type_name = "<invalid type>";
     }
 
-    if (type_name) {
-      std::string type_name_str(type_name.GetCString());
+    if (!type_name.empty()) {
       if (m_options.m_hide_pointer_value) {
-        for (auto iter = type_name_str.find(" *"); iter != std::string::npos;
-             iter = type_name_str.find(" *")) {
-          type_name_str.erase(iter, 2);
+        while (type_name.starts_with(" *")) {
+          type_name = type_name.drop_front(2);
         }
       }
-      typeName << type_name_str.c_str();
+      typeName << type_name;
     }
   }
 
@@ -322,8 +321,8 @@ void ValueObjectPrinter::PrintDecl() {
   }
 
   if (m_options.m_decl_printing_helper) {
-    ConstString type_name_cstr(typeName.GetString());
-    ConstString var_name_cstr(varName.GetString());
+    llvm::StringRef type_name(typeName.GetString());
+    llvm::StringRef var_name(varName.GetString());
 
     DumpValueObjectOptions decl_print_options = m_options;
     // Pass printing helpers an option object that indicates whether the name
@@ -331,7 +330,7 @@ void ValueObjectPrinter::PrintDecl() {
     decl_print_options.SetHideName(!ShouldShowName());
 
     StreamString dest_stream;
-    if (m_options.m_decl_printing_helper(type_name_cstr, var_name_cstr,
+    if (m_options.m_decl_printing_helper(type_name, var_name,
                                          decl_print_options, dest_stream)) {
       decl_printed = true;
       m_stream->PutCString(dest_stream.GetString());
@@ -345,7 +344,7 @@ void ValueObjectPrinter::PrintDecl() {
     if (!varName.Empty())
       m_stream->Printf("%s =", varName.GetData());
     else if (ShouldShowName())
-      m_stream->Printf(" =");
+      m_stream->PutCString(" =");
   }
 }
 
@@ -446,12 +445,12 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
       // combination means "could not resolve a type" and the default failure
       // mode is quite ugly
       if (!m_compiler_type.IsValid()) {
-        m_stream->Printf(" <could not resolve type>");
+        m_stream->PutCString(" <could not resolve type>");
         return false;
       }
 
       error_printed = true;
-      m_stream->Printf(" <%s>\n", m_error.c_str());
+      m_stream->Printf(" <%s>", m_error.c_str());
     } else {
       // Make sure we have a value and make sure the summary didn't specify
       // that the value should not be printed - and do not print the value if
@@ -470,6 +469,9 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
         if (m_options.m_hide_pointer_value &&
             IsPointerValue(valobj.GetCompilerType())) {
         } else {
+          if (auto stripped = valobj.GetStrippedPointerValue(
+                  valobj.GetPointerValue().address))
+            m_stream->Printf(" (actual=0x%" PRIx64 ")", *stripped);
           if (ShouldShowName())
             m_stream->PutChar(' ');
           m_stream->PutCString(m_value);
@@ -792,8 +794,8 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
           m_stream->PutCString(", ");
         did_print_children = true;
         if (!hide_names) {
-          const char *name = child_sp.get()->GetName().AsCString();
-          if (name && *name) {
+          llvm::StringRef name = child_sp.get()->GetName().GetStringRef();
+          if (!name.empty()) {
             m_stream->PutCString(name);
             m_stream->PutCString(" = ");
           }

@@ -1,8 +1,5 @@
-// RUN: rm -rf %t
-// RUN: mkdir %t
-// RUN: cp %S/Inputs/unnecessary-value-param/header.h %t/header.h
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t/temp -- -- -I %t
-// RUN: diff %t/header.h %S/Inputs/unnecessary-value-param/header-fixed.h
+// RUN: %check_clang_tidy -check-header %S/Inputs/unnecessary-value-param/header.h \
+// RUN:   %s performance-unnecessary-value-param %t
 
 #include "header.h"
 

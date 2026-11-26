@@ -7,7 +7,6 @@ define <3 x i64> @long3() {
 ; CHECK-LABEL: long3(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b64 [func_retval0+16], 0;
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {0, 0};
@@ -19,7 +18,6 @@ define <2 x i64> @long2() {
 ; CHECK-LABEL: long2(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {0, 0};
 ; CHECK-NEXT:    ret;
@@ -30,7 +28,6 @@ define <1 x i64> @long1() {
 ; CHECK-LABEL: long1(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b64 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -40,7 +37,6 @@ define <1 x i64> @long1() {
 define <5 x i32> @int5() {
 ; CHECK-LABEL: int5(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0+16], 0;
@@ -53,7 +49,6 @@ define <4 x i32> @int4() {
 ; CHECK-LABEL: int4(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {0, 0, 0, 0};
 ; CHECK-NEXT:    ret;
@@ -63,7 +58,6 @@ define <4 x i32> @int4() {
 define <3 x i32> @int3() {
 ; CHECK-LABEL: int3(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0+8], 0;
@@ -76,7 +70,6 @@ define <2 x i32> @int2() {
 ; CHECK-LABEL: int2(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0, 0};
 ; CHECK-NEXT:    ret;
@@ -87,7 +80,6 @@ define <1 x i32> @int1() {
 ; CHECK-LABEL: int1(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -97,7 +89,6 @@ define <1 x i32> @int1() {
 define <9 x i16> @short9() {
 ; CHECK-LABEL: short9(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b16 [func_retval0+16], 0;
@@ -111,7 +102,6 @@ define <8 x i16> @short8() {
 ; CHECK-LABEL: short8(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {0, 0, 0, 0};
 ; CHECK-NEXT:    ret;
@@ -121,7 +111,6 @@ define <8 x i16> @short8() {
 define <7 x i16> @short7() {
 ; CHECK-LABEL: short7(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b16 [func_retval0+12], 0;
@@ -135,7 +124,6 @@ define <5 x i16> @short5() {
 ; CHECK-LABEL: short5(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b16 [func_retval0+8], 0;
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0, 0};
@@ -147,7 +135,6 @@ define <4 x i16> @short4() {
 ; CHECK-LABEL: short4(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0, 0};
 ; CHECK-NEXT:    ret;
@@ -157,7 +144,6 @@ define <4 x i16> @short4() {
 define <3 x i16> @short3() {
 ; CHECK-LABEL: short3(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b16 [func_retval0+4], 0;
@@ -170,7 +156,6 @@ define <2 x i16> @short2() {
 ; CHECK-LABEL: short2(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -181,7 +166,6 @@ define <1 x i16> @short1() {
 ; CHECK-LABEL: short1(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b16 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -191,7 +175,6 @@ define <1 x i16> @short1() {
 define <17 x i8> @byte17() {
 ; CHECK-LABEL: byte17(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+16], 0;
@@ -205,7 +188,6 @@ define <16 x i8> @byte16() {
 ; CHECK-LABEL: byte16(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {0, 0, 0, 0};
 ; CHECK-NEXT:    ret;
@@ -215,7 +197,6 @@ define <16 x i8> @byte16() {
 define <15 x i8> @byte15() {
 ; CHECK-LABEL: byte15(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+14], 0;
@@ -230,7 +211,6 @@ define <9 x i8> @byte9() {
 ; CHECK-LABEL: byte9(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+8], 0;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], 0;
@@ -242,7 +222,6 @@ define <8 x i8> @byte8() {
 ; CHECK-LABEL: byte8(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {0, 0};
 ; CHECK-NEXT:    ret;
@@ -252,7 +231,6 @@ define <8 x i8> @byte8() {
 define <7 x i8> @byte7() {
 ; CHECK-LABEL: byte7(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+6], 0;
@@ -266,7 +244,6 @@ define <5 x i8> @byte5() {
 ; CHECK-LABEL: byte5(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+4], 0;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
@@ -278,7 +255,6 @@ define <4 x i8> @byte4() {
 ; CHECK-LABEL: byte4(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -288,7 +264,6 @@ define <4 x i8> @byte4() {
 define <3 x i8> @byte3() {
 ; CHECK-LABEL: byte3(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b32 [func_retval0], 0;
@@ -300,7 +275,6 @@ define <2 x i8> @byte2() {
 ; CHECK-LABEL: byte2(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0], {0, 0};
 ; CHECK-NEXT:    ret;
@@ -311,7 +285,6 @@ define <1 x i8> @byte1() {
 ; CHECK-LABEL: byte1(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0], 0;
 ; CHECK-NEXT:    ret;
@@ -321,7 +294,6 @@ define <1 x i8> @byte1() {
 define <17 x i1> @bit17() {
 ; CHECK-LABEL: bit17(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+16], 0;
@@ -336,7 +308,6 @@ define <17 x i1> @bit17() {
 define <16 x i1> @bit16() {
 ; CHECK-LABEL: bit16(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+14], {0, 0};
@@ -355,7 +326,6 @@ define <15 x i1> @bit15() {
 ; CHECK-LABEL: bit15(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+14], 0;
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+12], {0, 0};
@@ -373,7 +343,6 @@ define <9 x i1> @bit9() {
 ; CHECK-LABEL: bit9(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+8], 0;
 ; CHECK-NEXT:    st.param.v2.b8 [func_retval0+6], {0, 0};
@@ -387,7 +356,6 @@ define <9 x i1> @bit9() {
 define <8 x i1> @bit8() {
 ; CHECK-LABEL: bit8(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+7], 0;
@@ -406,7 +374,6 @@ define <7 x i1> @bit7() {
 ; CHECK-LABEL: bit7(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+6], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+5], 0;
@@ -423,7 +390,6 @@ define <5 x i1> @bit5() {
 ; CHECK-LABEL: bit5(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+4], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+3], 0;
@@ -438,7 +404,6 @@ define <4 x i1> @bit4() {
 ; CHECK-LABEL: bit4(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+3], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+2], 0;
@@ -452,7 +417,6 @@ define <3 x i1> @bit3() {
 ; CHECK-LABEL: bit3(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+2], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0+1], 0;
@@ -465,7 +429,6 @@ define <2 x i1> @bit2() {
 ; CHECK-LABEL: bit2(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0+1], 0;
 ; CHECK-NEXT:    st.param.b8 [func_retval0], 0;
@@ -476,7 +439,6 @@ define <2 x i1> @bit2() {
 define <1 x i1> @bit1() {
 ; CHECK-LABEL: bit1(
 ; CHECK:       {
-; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    st.param.b8 [func_retval0], 0;

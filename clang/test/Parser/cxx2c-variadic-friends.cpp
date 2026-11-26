@@ -30,6 +30,7 @@ struct E { template<class T> class Nested; };
 template<class... Ts> // expected-note {{template parameter is declared here}}
 struct VS {
   friend Ts...;
+  friend Ts...[0];
 
   friend class Ts...; // expected-error {{declaration of 'Ts' shadows template parameter}}
   // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
@@ -56,13 +57,15 @@ struct VS {
   template<bool... Bs>
   friend class E<Bs>::Nested...; // expected-error {{friend declaration expands pack 'Bs' that is declared it its own template parameter list}}
 
-  // FIXME: Both of these should be valid, but we can't handle these at
-  // the moment because the NNS is dependent.
   template<class ...T>
-  friend class TS<Ts>::Nested...; // expected-warning {{dependent nested name specifier 'TS<Ts>' for friend template declaration is not supported; ignoring this friend declaration}}
+  friend class TS<Ts>::Nested...;
 
   template<class T>
-  friend class D<T, Ts>::Nested...; // expected-warning {{dependent nested name specifier 'D<T, Ts>' for friend class declaration is not supported; turning off access control for 'VS'}}
+  friend class D<T, Ts>::Nested...;
+
+  template<class T>
+  friend class Ts...[0]::Nested...;
+  // expected-error@-1 {{a pack indexing specifier cannot be used in a nested name specifier of a friend declaration}}
 };
 
 namespace length_mismatch {

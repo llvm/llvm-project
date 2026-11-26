@@ -40,7 +40,7 @@ cc_test(
 
 cc_library(
     name = "ast_matchers_tests_hdrs",
-    testonly = 1,
+    testonly = True,
     hdrs = glob(
         ["ASTMatchers/*.h"],
         allow_empty = False,
@@ -98,7 +98,7 @@ cc_test(
 
 cc_library(
     name = "dataflow_testing_support",
-    testonly = 1,
+    testonly = True,
     srcs = ["Analysis/FlowSensitive/TestingSupport.cpp"],
     hdrs = ["Analysis/FlowSensitive/TestingSupport.h"],
     deps = [
@@ -116,8 +116,15 @@ cc_library(
 )
 
 cc_library(
+    name = "dataflow_mock_headers",
+    testonly = True,
+    srcs = ["Analysis/FlowSensitive/MockHeaders.cpp"],
+    hdrs = ["Analysis/FlowSensitive/MockHeaders.h"],
+)
+
+cc_library(
     name = "dataflow_solver_test",
-    testonly = 1,
+    testonly = True,
     hdrs = ["Analysis/FlowSensitive/SolverTest.h"],
     deps = [
         ":dataflow_testing_support",
@@ -155,8 +162,31 @@ cc_test(
     ],
 )
 
+cc_library(
+    name = "unchecked_statusor_access_model_test_fixture",
+    testonly = True,
+    srcs = ["Analysis/FlowSensitive/UncheckedStatusOrAccessModelTestFixture.cpp"],
+    hdrs = ["Analysis/FlowSensitive/UncheckedStatusOrAccessModelTestFixture.h"],
+    deps = [
+        ":dataflow_mock_headers",
+        ":dataflow_testing_support",
+        "//clang:analysis",
+        "//clang:ast",
+        "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:tooling",
+        "//llvm:Support",
+        "//llvm:TestingADT",
+        "//llvm:TestingAnnotations",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
+        "//third-party/unittest:gtest",
+    ],
+)
+
 cc_test(
     name = "analysis_flow_sensitive_tests",
+    size = "medium",
     srcs = glob(
         [
             "Analysis/FlowSensitive/*.cpp",
@@ -164,6 +194,7 @@ cc_test(
         ],
         allow_empty = False,
     ),
+    shard_count = 20,
     deps = [
         "//clang:analysis",
         "//clang:ast",
@@ -196,6 +227,7 @@ cc_test(
         "//clang:frontend",
         "//clang:lex",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TestingSupport",
         "//llvm:config",
         "//third-party/unittest:gmock",
@@ -222,6 +254,8 @@ cc_test(
         "//clang:lex",
         "//clang:parse",
         "//clang:sema",
+        "//clang:testing",
+        "//llvm:ABI",
         "//llvm:Core",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -274,7 +308,9 @@ cc_test(
         "//clang:lex",
         "//clang:sema",
         "//clang:serialization",
+        "//clang:static_analyzer_core_options",
         "//clang:tooling",
+        "//llvm:Core",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
@@ -345,6 +381,7 @@ cc_test(
         "//clang:parse",
         "//clang:sema",
         "//clang:tooling",
+        "//llvm:Support",
         "//llvm:TestingAnnotations",
         "//llvm:TestingSupport",
         "//third-party/unittest:gmock",
@@ -355,7 +392,7 @@ cc_test(
 
 cc_library(
     name = "static_analyzer_test_headers",
-    testonly = 1,
+    testonly = True,
     hdrs = glob(
         ["StaticAnalyzer/*.h"],
         allow_empty = False,
@@ -403,7 +440,7 @@ cc_test(
 
 cc_library(
     name = "tooling_tests_hdrs",
-    testonly = 1,
+    testonly = True,
     hdrs = glob(
         ["Tooling/*.h"],
         allow_empty = False,
@@ -460,7 +497,7 @@ cc_test(
 # expected by the `tooling_recursive_ast_visitor_tests`.
 cc_library(
     name = "tooling_recursive_ast_visitor_tests_tooling_hdrs",
-    testonly = 1,
+    testonly = True,
     hdrs = glob(
         ["Tooling/*.h"],
         allow_empty = False,
@@ -570,6 +607,7 @@ cc_test(
         "//clang:ast",
         "//clang:crosstu",
         "//clang:frontend",
+        "//clang:static_analyzer_core_options",
         "//clang:tooling",
         "//llvm:Support",
         "//third-party/unittest:gtest",
@@ -594,6 +632,7 @@ cc_test(
         "//clang:basic",
         "//clang:driver",
         "//clang:frontend",
+        "//clang:options",
         "//llvm:FrontendDebug",
         "//llvm:MC",
         "//llvm:Support",
@@ -646,11 +685,13 @@ cc_test(
     ),
     deps = [
         "//clang:ast",
+        "//clang:ast_matchers",
         "//clang:basic",
         "//clang:frontend",
         "//clang:index",
         "//clang:lex",
         "//clang:tooling",
+        "//clang:unified_symbol_resolution",
         "//llvm:Support",
         "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
@@ -699,7 +740,9 @@ cc_test(
         "//clang:lex",
         "//clang:parse",
         "//clang:sema",
+        "//llvm:BitWriter",
         "//llvm:LineEditor",
+        "//llvm:Linker",
         "//llvm:MC",
         "//llvm:OrcJIT",
         "//llvm:OrcShared",
@@ -721,6 +764,7 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//clang:ast",
         "//clang:ast_matchers",
         "//clang:basic",
         "//clang:driver",
@@ -743,9 +787,39 @@ cc_test(
         allow_empty = False,
     ),
     deps = [
+        "//clang:ast",
         "//clang:frontend",
         "//clang:lex",
         "//llvm:Support",
+        "//third-party/unittest:gtest",
+        "//third-party/unittest:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "scalable_static_analysis_tests",
+    size = "small",
+    srcs = glob([
+        "ScalableStaticAnalysis/**/*.cpp",
+        "ScalableStaticAnalysis/**/*.h",
+    ]),
+    features = ["-layering_check"],  # #include "../../lib/ScalableStaticAnalysis/Core/ModelStringConversions.h"
+    includes = ["ScalableStaticAnalysis"],
+    deps = [
+        "//clang:ast",
+        "//clang:ast_matchers",
+        "//clang:basic",
+        "//clang:frontend",
+        "//clang:lex",
+        "//clang:scalable_static_analysis_analyses",
+        "//clang:scalable_static_analysis_core",
+        "//clang:scalable_static_analysis_frontend",
+        "//clang:scalable_static_analysis_source_transformation",
+        "//clang:support",
+        "//clang:tooling",
+        "//llvm:Support",
+        "//llvm:TestingSupport",
+        "//third-party/unittest:gmock",
         "//third-party/unittest:gtest",
         "//third-party/unittest:gtest_main",
     ],

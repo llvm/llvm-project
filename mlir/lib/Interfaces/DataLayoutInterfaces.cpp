@@ -552,6 +552,18 @@ static T cachedLookup(Type t, DenseMap<Type, T> &cache,
   return result.first->second;
 }
 
+bool mlir::DataLayout::hasExactTypeEntry(Type type) const {
+  checkValid();
+  if (!originalLayout)
+    return false;
+  return cachedLookup<bool>(type, typeEntries, [&](Type ty) {
+    return llvm::any_of(
+        originalLayout.getEntries(), [ty](DataLayoutEntryInterface entry) {
+          return llvm::dyn_cast_if_present<Type>(entry.getKey()) == ty;
+        });
+  });
+}
+
 llvm::TypeSize mlir::DataLayout::getTypeSize(Type t) const {
   checkValid();
   return cachedLookup<llvm::TypeSize>(t, sizes, [&](Type ty) {
@@ -574,6 +586,10 @@ llvm::TypeSize mlir::DataLayout::getTypeSizeInBits(Type t) const {
       return iface.getTypeSizeInBits(ty, *this, list);
     return detail::getDefaultTypeSizeInBits(ty, *this, list);
   });
+}
+
+llvm::TypeSize mlir::DataLayout::getTypeAllocSize(Type t) const {
+  return llvm::alignTo(getTypeSize(t), getTypeABIAlignment(t));
 }
 
 uint64_t mlir::DataLayout::getTypeABIAlignment(Type t) const {
@@ -810,10 +826,15 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
     if (isa<IndexType>(sampleType)) {
       assert(kvp.second.size() == 1 &&
              "expected one data layout entry for non-parametric 'index' type");
-      if (!isa<IntegerAttr>(kvp.second.front().getValue()))
+      auto width = dyn_cast<IntegerAttr>(kvp.second.front().getValue());
+      if (!width)
         return emitError(loc)
                << "expected integer attribute in the data layout entry for "
                << sampleType;
+      if (width.getValue().isZero() ||
+          width.getValue().ugt(IntegerType::kMaxWidth))
+        return emitError(loc) << "index bit width must be between 1 and "
+                              << IntegerType::kMaxWidth;
       continue;
     }
 

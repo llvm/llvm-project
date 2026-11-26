@@ -20,6 +20,7 @@
 #include "SPIRVTargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
+#include "llvm/Support/SPIRVAddrSpace.h"
 
 namespace llvm {
 class SPIRVTTIImpl final : public BasicTTIImplBase<SPIRVTTIImpl> {
@@ -49,11 +50,18 @@ public:
     return TTI::PSK_FastHardware;
   }
 
+  bool hasBranchDivergence(const Function *F = nullptr) const override {
+    // Shader and OpenCL work-items execute divergently across invocations.
+    return true;
+  }
+
+  ValueUniformity getValueUniformity(const Value *V) const override;
+
   unsigned getFlatAddressSpace() const override {
     // Clang has 2 distinct address space maps. One where
-    // default=4=Generic, and one with default=0=Function. This depends on the
+    // default=Generic, and one with default=Function. This depends on the
     // environment.
-    return ST->isShader() ? 0 : 4;
+    return ST->isShader() ? SPIRVAS::Function : SPIRVAS::Generic;
   }
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
                                   Intrinsic::ID IID) const override;
@@ -61,6 +69,18 @@ public:
                                           Value *NewV) const override;
 
   bool allowVectorElementIndexingUsingGEP() const override { return false; }
+
+  bool isLegalMaskedGather(Type *DataType, Align Alignment) const override;
+  bool isLegalMaskedScatter(Type *DataType, Align Alignment) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 };
 
 } // namespace llvm

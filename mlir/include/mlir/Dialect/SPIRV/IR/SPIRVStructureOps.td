@@ -28,6 +28,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
     [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
      InFunctionScope, Pure]> {
   let summary = "Get the address of a global variable.";
 
@@ -62,6 +63,8 @@ def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
   let builders = [OpBuilder<(ins "spirv::GlobalVariableOp":$var)>];
 
   let assemblyFormat = "$variable attr-dict `:` type($pointer)";
+
+  let hasVerifier = 0;
 }
 
 // -----
@@ -103,6 +106,7 @@ def SPIRV_ConstantOp : SPIRV_Op<"Constant",
     %0 = spirv.Constant true
     %1 = spirv.Constant dense<[2.0, 3.0]> : vector<2xf32>
     %2 = spirv.Constant [dense<3.0> : vector<2xf32>] : !spirv.array<1xvector<2xf32>>
+    %3 = spirv.Constant #spirv.null : !spirv.ptr<i32, CrossWorkgroup>
     ```
 
     TODO: support constant structs
@@ -279,7 +283,7 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
 
   let results = (outs);
 
-  let hasVerifier = 0;
+  let hasVerifier = 1;
 
   let autogenSerialization = 0;
 
@@ -290,8 +294,74 @@ def SPIRV_ExecutionModeOp : SPIRV_Op<"ExecutionMode", [InModuleScope]> {
 
 // -----
 
+def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = [{
+    Declare an execution mode for an entry point, using <id>s as Extra
+    Operands.
+  }];
+
+  let description = [{
+    Entry Point must be the Entry Point <id> operand of an OpEntryPoint
+    instruction.
+
+    Mode is the execution mode. See Execution Mode.
+
+    This instruction is only valid if the Mode operand is an execution mode
+    that takes Extra Operands that are <id> operands. Otherwise, use
+    OpExecutionMode.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    execution-mode ::= "Invocations" | "SpacingEqual" |
+                           <and other SPIR-V execution modes...>
+    execution-mode-id-op ::= `spirv.ExecutionMode ` ssa-use execution-mode
+                              symbol-reference (`, ` symbol-reference)*
+    ```
+
+    #### Example:
+
+    ```mlir
+    spirv.ExecutionModeId @foo "LocalSizeId" @var0, @var1, @var2
+    spirv.ExecutionModeId @bar "LocalSizeHintId" @x, @y, @z
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_2>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    FlatSymbolRefAttr:$fn,
+    SPIRV_ExecutionModeAttr:$execution_mode, 
+    SymbolRefArrayAttr:$values
+  );
+
+  let results = (outs);
+  
+  let hasVerifier = 1;
+  
+  let autogenSerialization = 0;
+
+  let builders = [OpBuilder<(ins "spirv::FuncOp":$function,
+                                 "spirv::ExecutionMode":$executionMode,
+                                 "ArrayRef<Attribute>":$params),
+                            [{
+      build($_builder, $_state,
+            SymbolRefAttr::get(function),
+            ExecutionModeAttr::get($_builder.getContext(), executionMode),
+            $_builder.getArrayAttr(params));
+    }]>];
+}
+
+// -----
+
 def SPIRV_FuncOp : SPIRV_Op<"func", [
-    AutomaticAllocationScope, FunctionOpInterface,
+    AutomaticAllocationScope, SymbolName, SymbolVisibility, FunctionOpInterface,
     InModuleScope, IsolatedFromAbove
   ]> {
   let summary = "Declare or define a function";
@@ -353,7 +423,8 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
     OptionalAttr<DictArrayAttr>:$res_attrs,
     StrAttr:$sym_name,
     SPIRV_FunctionControlAttr:$function_control,
-    OptionalAttr<SPIRV_LinkageAttributesAttr>:$linkage_attributes
+    OptionalAttr<SPIRV_LinkageAttributesAttr>:$linkage_attributes,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let results = (outs);
@@ -399,7 +470,9 @@ def SPIRV_FuncOp : SPIRV_Op<"func", [
 
 // -----
 
-def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [InModuleScope, Symbol]> {
+def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [
+    InModuleScope, SymbolName, SymbolVisibility, Symbol,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = [{
     Allocate an object in memory at module scope. The object is
     referenced using a symbol name.
@@ -452,7 +525,8 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [InModuleScope, Symbol]>
     OptionalAttr<I32Attr>:$binding,
     OptionalAttr<I32Attr>:$descriptor_set,
     OptionalAttr<StrAttr>:$built_in,
-    OptionalAttr<SPIRV_LinkageAttributesAttr>:$linkage_attributes
+    OptionalAttr<SPIRV_LinkageAttributesAttr>:$linkage_attributes,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let results = (outs);
@@ -502,7 +576,7 @@ def SPIRV_GlobalVariableOp : SPIRV_Op<"GlobalVariable", [InModuleScope, Symbol]>
 
 def SPIRV_ModuleOp : SPIRV_Op<"module",
     [IsolatedFromAbove, NoRegionArguments, NoTerminator,
-     SingleBlock, SymbolTable, Symbol]> {
+     SingleBlock, SymbolTable, SymbolName, SymbolVisibility, Symbol]> {
   let summary = "The top-level op that defines a SPIR-V module";
 
   let description = [{
@@ -551,7 +625,8 @@ def SPIRV_ModuleOp : SPIRV_Op<"module",
     SPIRV_AddressingModelAttr:$addressing_model,
     SPIRV_MemoryModelAttr:$memory_model,
     OptionalAttr<SPIRV_VerCapExtAttr>:$vce_triple,
-    OptionalAttr<StrAttr>:$sym_name
+    OptionalAttr<StrAttr>:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let results = (outs);
@@ -589,7 +664,8 @@ def SPIRV_ModuleOp : SPIRV_Op<"module",
 
 // -----
 
-def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [Pure]> {
+def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>, Pure]> {
   let summary = "Reference a specialization constant.";
 
   let description = [{
@@ -622,11 +698,15 @@ def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [Pure]> {
   let autogenSerialization = 0;
 
   let assemblyFormat = "$spec_const attr-dict `:` type($reference)";
+
+  let hasVerifier = 0;
 }
 
 // -----
 
-def SPIRV_SpecConstantOp : SPIRV_Op<"SpecConstant", [InModuleScope, Symbol]> {
+def SPIRV_SpecConstantOp
+    : SPIRV_Op<"SpecConstant", [InModuleScope, SymbolName, SymbolVisibility,
+                                Symbol]> {
   let summary = [{
     Declare a new integer-type or floating-point-type scalar specialization
     constant.
@@ -664,7 +744,8 @@ def SPIRV_SpecConstantOp : SPIRV_Op<"SpecConstant", [InModuleScope, Symbol]> {
 
   let arguments = (ins
     StrAttr:$sym_name,
-    TypedAttrInterface:$default_value
+    TypedAttrInterface:$default_value,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let results = (outs);
@@ -677,7 +758,8 @@ def SPIRV_SpecConstantOp : SPIRV_Op<"SpecConstant", [InModuleScope, Symbol]> {
 // -----
 
 def SPIRV_SpecConstantCompositeOp : SPIRV_Op<"SpecConstantComposite", [
-    InModuleScope, Symbol]> {
+    InModuleScope, SymbolName, SymbolVisibility, Symbol,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Declare a new composite specialization constant.";
 
   let description = [{
@@ -718,7 +800,8 @@ def SPIRV_SpecConstantCompositeOp : SPIRV_Op<"SpecConstantComposite", [
   let arguments = (ins
     TypeAttr:$type,
     StrAttr:$sym_name,
-    SymbolRefArrayAttr:$constituents
+    SymbolRefArrayAttr:$constituents,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let results = (outs);
@@ -730,7 +813,10 @@ def SPIRV_SpecConstantCompositeOp : SPIRV_Op<"SpecConstantComposite", [
 
 // -----
 
-def SPIRV_EXTSpecConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"SpecConstantCompositeReplicate", [InModuleScope, Symbol]> {
+def SPIRV_EXTSpecConstantCompositeReplicateOp
+    : SPIRV_ExtVendorOp<"SpecConstantCompositeReplicate",
+                        [InModuleScope, SymbolName, SymbolVisibility, Symbol,
+                         DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Declare a new replicated composite specialization constant op.";
 
   let description = [{
@@ -757,7 +843,8 @@ def SPIRV_EXTSpecConstantCompositeReplicateOp : SPIRV_ExtVendorOp<"SpecConstantC
   let arguments = (ins
     TypeAttr:$type,
     StrAttr:$sym_name,
-    SymbolRefAttr:$constituent
+    SymbolRefAttr:$constituent,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
   let results = (outs);

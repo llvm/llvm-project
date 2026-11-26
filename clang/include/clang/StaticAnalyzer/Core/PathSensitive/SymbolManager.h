@@ -41,7 +41,7 @@ class BasicValueFactory;
 class StoreManager;
 
 ///A symbol representing the value stored at a MemRegion.
-class SymbolRegionValue : public SymbolData {
+class SymbolRegionValue final : public SymbolData {
   const TypedValueRegion *R;
 
   friend class SymExprAllocator;
@@ -79,20 +79,19 @@ public:
 
 /// A symbol representing the result of an expression in the case when we do
 /// not know anything about what the expression is.
-class SymbolConjured : public SymbolData {
+class SymbolConjured final : public SymbolData {
   ConstCFGElementRef Elem;
   QualType T;
   unsigned Count;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   const void *SymbolTag;
 
   friend class SymExprAllocator;
-  SymbolConjured(SymbolID sym, ConstCFGElementRef elem,
-                 const LocationContext *lctx, QualType t, unsigned count,
-                 const void *symbolTag)
-      : SymbolData(ClassKind, sym), Elem(elem), T(t), Count(count), LCtx(lctx),
+  SymbolConjured(SymbolID sym, ConstCFGElementRef elem, const StackFrame *SF,
+                 QualType t, unsigned count, const void *symbolTag)
+      : SymbolData(ClassKind, sym), Elem(elem), T(t), Count(count), SF(SF),
         SymbolTag(symbolTag) {
-    assert(lctx);
+    assert(SF);
     assert(isValidTypeForSymbol(t));
   }
 
@@ -113,18 +112,18 @@ public:
   void dumpToStream(raw_ostream &os) const override;
 
   static void Profile(llvm::FoldingSetNodeID &profile, ConstCFGElementRef Elem,
-                      const LocationContext *LCtx, QualType T, unsigned Count,
+                      const StackFrame *SF, QualType T, unsigned Count,
                       const void *SymbolTag) {
     profile.AddInteger((unsigned)ClassKind);
     profile.Add(Elem);
-    profile.AddPointer(LCtx);
+    profile.AddPointer(SF);
     profile.Add(T);
     profile.AddInteger(Count);
     profile.AddPointer(SymbolTag);
   }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
-    Profile(profile, Elem, LCtx, T, Count, SymbolTag);
+    Profile(profile, Elem, SF, T, Count, SymbolTag);
   }
 
   // Implement isa<T> support.
@@ -135,7 +134,7 @@ public:
 
 /// A symbol representing the value of a MemRegion whose parent region has
 /// symbolic value.
-class SymbolDerived : public SymbolData {
+class SymbolDerived final : public SymbolData {
   SymbolRef parentSymbol;
   const TypedValueRegion *R;
 
@@ -180,7 +179,7 @@ public:
 /// SymbolExtent - Represents the extent (size in bytes) of a bounded region.
 ///  Clients should not ask the SymbolManager for a region's extent. Always use
 ///  SubRegion::getExtent instead -- the value returned may not be a symbol.
-class SymbolExtent : public SymbolData {
+class SymbolExtent final : public SymbolData {
   const SubRegion *R;
 
   friend class SymExprAllocator;
@@ -218,11 +217,11 @@ public:
 ///  Metadata symbols remain live as long as they are marked as in use before
 ///  dead-symbol sweeping AND their associated regions are still alive.
 ///  Intended for use by checkers.
-class SymbolMetadata : public SymbolData {
+class SymbolMetadata final : public SymbolData {
   const MemRegion* R;
   const Stmt *S;
   QualType T;
-  const LocationContext *LCtx;
+  const StackFrame *SF;
   /// Count can be used to differentiate regions corresponding to
   /// different loop iterations, thus, making the symbol path-dependent.
   unsigned Count;
@@ -230,13 +229,13 @@ class SymbolMetadata : public SymbolData {
 
   friend class SymExprAllocator;
   SymbolMetadata(SymbolID sym, const MemRegion *r, const Stmt *s, QualType t,
-                 const LocationContext *LCtx, unsigned count, const void *tag)
-      : SymbolData(ClassKind, sym), R(r), S(s), T(t), LCtx(LCtx), Count(count),
+                 const StackFrame *SF, unsigned count, const void *tag)
+      : SymbolData(ClassKind, sym), R(r), S(s), T(t), SF(SF), Count(count),
         Tag(tag) {
     assert(r);
     assert(s);
     assert(isValidTypeForSymbol(t));
-    assert(LCtx);
+    assert(SF);
     assert(tag);
   }
 
@@ -248,7 +247,7 @@ class SymbolMetadata : public SymbolData {
     const Stmt *getStmt() const { return S; }
 
     LLVM_ATTRIBUTE_RETURNS_NONNULL
-    const LocationContext *getLocationContext() const { return LCtx; }
+    const StackFrame *getStackFrame() const { return SF; }
 
     unsigned getCount() const { return Count; }
 
@@ -262,19 +261,19 @@ class SymbolMetadata : public SymbolData {
     void dumpToStream(raw_ostream &os) const override;
 
     static void Profile(llvm::FoldingSetNodeID &profile, const MemRegion *R,
-                        const Stmt *S, QualType T, const LocationContext *LCtx,
+                        const Stmt *S, QualType T, const StackFrame *SF,
                         unsigned Count, const void *Tag) {
       profile.AddInteger((unsigned)ClassKind);
       profile.AddPointer(R);
       profile.AddPointer(S);
       profile.Add(T);
-      profile.AddPointer(LCtx);
+      profile.AddPointer(SF);
       profile.AddInteger(Count);
       profile.AddPointer(Tag);
     }
 
   void Profile(llvm::FoldingSetNodeID& profile) override {
-    Profile(profile, R, S, T, LCtx, Count, Tag);
+    Profile(profile, R, S, T, SF, Count, Tag);
   }
 
   // Implement isa<T> support.
@@ -284,7 +283,7 @@ class SymbolMetadata : public SymbolData {
 };
 
 /// Represents a cast expression.
-class SymbolCast : public SymExpr {
+class SymbolCast final : public SymExpr {
   const SymExpr *Operand;
 
   /// Type of the operand.
@@ -335,15 +334,17 @@ public:
 };
 
 /// Represents a symbolic expression involving a unary operator.
-class UnarySymExpr : public SymExpr {
+class UnarySymExpr final : public SymExpr {
+  // Declared first so that it can use the tail padding of SymExpr.
+  LLVM_PREFERRED_TYPE(UnaryOperatorKind)
+  unsigned Op : 8;
   const SymExpr *Operand;
-  UnaryOperator::Opcode Op;
   QualType T;
 
   friend class SymExprAllocator;
   UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
                QualType T)
-      : SymExpr(ClassKind, Sym), Operand(In), Op(Op), T(T) {
+      : SymExpr(ClassKind, Sym), Op(Op), Operand(In), T(T) {
     // Note, some unary operators are modeled as a binary operator. E.g. ++x is
     // modeled as x + 1.
     assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
@@ -362,7 +363,9 @@ public:
   }
 
   const SymExpr *getOperand() const { return Operand; }
-  UnaryOperator::Opcode getOpcode() const { return Op; }
+  UnaryOperator::Opcode getOpcode() const {
+    return static_cast<UnaryOperator::Opcode>(Op);
+  }
   QualType getType() const override { return T; }
 
   void dumpToStream(raw_ostream &os) const override;
@@ -376,7 +379,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) override {
-    Profile(ID, Operand, Op, T);
+    Profile(ID, Operand, getOpcode(), T);
   }
 
   // Implement isa<T> support.
@@ -387,7 +390,9 @@ public:
 
 /// Represents a symbolic expression involving a binary operator
 class BinarySymExpr : public SymExpr {
-  BinaryOperator::Opcode Op;
+  // Uses the tail padding of SymExpr.
+  LLVM_PREFERRED_TYPE(BinaryOperatorKind)
+  unsigned Op : 8;
   QualType T;
 
 protected:
@@ -405,7 +410,9 @@ public:
   // generation of virtual functions.
   QualType getType() const override { return T; }
 
-  BinaryOperator::Opcode getOpcode() const { return Op; }
+  BinaryOperator::Opcode getOpcode() const {
+    return static_cast<BinaryOperator::Opcode>(Op);
+  }
 
   // Implement isa<T> support.
   static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
@@ -431,7 +438,7 @@ protected:
 
 /// Template implementation for all binary symbolic expressions
 template <class LHSTYPE, class RHSTYPE, SymExpr::Kind ClassK>
-class BinarySymExprImpl : public BinarySymExpr {
+class BinarySymExprImpl final : public BinarySymExpr {
   LHSTYPE LHS;
   RHSTYPE RHS;
 
@@ -535,11 +542,11 @@ public:
   const SymExprT *acquire(Args &&...args);
 
   const SymbolConjured *conjureSymbol(ConstCFGElementRef Elem,
-                                      const LocationContext *LCtx, QualType T,
+                                      const StackFrame *SF, QualType T,
                                       unsigned VisitCount,
                                       const void *SymbolTag = nullptr) {
 
-    return acquire<SymbolConjured>(Elem, LCtx, T, VisitCount, SymbolTag);
+    return acquire<SymbolConjured>(Elem, SF, T, VisitCount, SymbolTag);
   }
 
   QualType getType(const SymExpr *SE) const {
@@ -578,7 +585,7 @@ class SymbolReaper {
   // lazyCompoundVal.
   RegionSetTy LazilyCopiedRegionRoots;
 
-  const StackFrameContext *LCtx;
+  const StackFrame *SF;
   const Stmt *Loc;
   SymbolManager& SymMgr;
   StoreRef reapedStore;
@@ -586,22 +593,21 @@ class SymbolReaper {
 
 public:
   /// Construct a reaper object, which removes everything which is not
-  /// live before we execute statement s in the given location context.
+  /// live before we execute statements in the given stack frame.
   ///
-  /// If the statement is NULL, everything is this and parent contexts is
+  /// If the statement is NULL, everything in this and parent stack frames are
   /// considered live.
-  /// If the stack frame context is NULL, everything on stack is considered
-  /// dead.
-  SymbolReaper(const StackFrameContext *Ctx, const Stmt *s,
-               SymbolManager &symmgr, StoreManager &storeMgr)
-      : LCtx(Ctx), Loc(s), SymMgr(symmgr), reapedStore(nullptr, storeMgr) {}
+  /// If the stack frame is NULL, everything on stack is considered dead.
+  SymbolReaper(const StackFrame *SF, const Stmt *s, SymbolManager &symmgr,
+               StoreManager &storeMgr)
+      : SF(SF), Loc(s), SymMgr(symmgr), reapedStore(nullptr, storeMgr) {}
 
   /// It might return null.
-  const LocationContext *getLocationContext() const { return LCtx; }
+  const StackFrame *getStackFrame() const { return SF; }
 
-  bool isLive(SymbolRef sym);
+  bool isLive(SymbolRef Sym);
   bool isLiveRegion(const MemRegion *region);
-  bool isLive(const Expr *ExprVal, const LocationContext *LCtx) const;
+  bool isLive(const Expr *ExprVal, const StackFrame *SF) const;
   bool isLive(const VarRegion *VR, bool includeStoreBindings = false) const;
 
   /// Unconditionally marks a symbol as live.
@@ -609,7 +615,7 @@ public:
   /// This should never be
   /// used by checkers, only by the state infrastructure such as the store and
   /// environment. Checkers should instead use metadata symbols and markInUse.
-  void markLive(SymbolRef sym);
+  void markLive(SymbolRef Sym);
 
   /// Marks a symbol as important to a checker.
   ///
@@ -638,7 +644,7 @@ public:
 
   /// Set to the value of the symbolic store after
   /// StoreManager::removeDeadBindings has been called.
-  void setReapedStore(StoreRef st) { reapedStore = st; }
+  void setReapedStore(StoreRef st) { reapedStore = std::move(st); }
 
 private:
   bool isLazilyCopiedRegion(const MemRegion *region) const;
@@ -647,8 +653,8 @@ private:
   // is readable.
   bool isReadableRegion(const MemRegion *region);
 
-  /// Mark the symbols dependent on the input symbol as live.
-  void markDependentsLive(SymbolRef sym);
+  /// Mark the symbols dependent on the live symbol \p LI as live.
+  void markDependentsLive(SymbolMapTy::iterator LI);
 };
 
 class SymbolVisitor {
@@ -677,11 +683,11 @@ template <typename T, typename... Args>
 const T *SymbolManager::acquire(Args &&...args) {
   llvm::FoldingSetNodeID profile;
   T::Profile(profile, args...);
-  void *InsertPos;
-  SymExpr *SD = DataSet.FindNodeOrInsertPos(profile, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  SymExpr *SD = DataSet.lookup(profile, InsertToken);
   if (!SD) {
     SD = Alloc.make<T>(std::forward<Args>(args)...);
-    DataSet.InsertNode(SD, InsertPos);
+    DataSet.insert(SD, InsertToken);
   }
   return cast<T>(SD);
 }

@@ -380,7 +380,7 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; SSE-NEXT:    callq __extendhfsf2@PLT
 ; SSE-NEXT:    ucomiss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; SSE-NEXT:    cmovbl %ebp, %ebx
-; SSE-NEXT:    pinsrw $0, %ebx, %xmm0
+; SSE-NEXT:    movd %ebx, %xmm0
 ; SSE-NEXT:    addq $40, %rsp
 ; SSE-NEXT:    popq %rbx
 ; SSE-NEXT:    popq %rbp
@@ -402,7 +402,7 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX-NEXT:    callq __extendhfsf2@PLT
 ; AVX-NEXT:    vucomiss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
 ; AVX-NEXT:    cmovbl %ebp, %ebx
-; AVX-NEXT:    vpinsrw $0, %ebx, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %ebx, %xmm0
 ; AVX-NEXT:    addq $40, %rsp
 ; AVX-NEXT:    popq %rbx
 ; AVX-NEXT:    popq %rbp
@@ -414,9 +414,8 @@ define half @test_v2f16(<2 x half> %a0) nounwind {
 ; AVX512F-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm2
 ; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm3
-; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    vucomiss %xmm3, %xmm2
-; AVX512F-NEXT:    sbbl %eax, %eax
+; AVX512F-NEXT:    setb %al
 ; AVX512F-NEXT:    kmovd %eax, %k1
 ; AVX512F-NEXT:    vmovdqu16 %zmm0, %zmm1 {%k1}
 ; AVX512F-NEXT:    vmovdqa %xmm1, %xmm0

@@ -116,7 +116,7 @@ static void createRetPHINode(Instruction *OrigInst, Instruction *NewInst,
   if (OrigInst->getType()->isVoidTy() || OrigInst->use_empty())
     return;
 
-  Builder.SetInsertPoint(MergeBlock, MergeBlock->begin());
+  Builder.SetInsertPoint(MergeBlock->begin());
   PHINode *Phi = Builder.CreatePHI(OrigInst->getType(), 0);
   SmallVector<User *, 16> UsersToUpdate(OrigInst->users());
   for (User *U : UsersToUpdate)
@@ -385,11 +385,14 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
 
   IRBuilder<> Builder(&CB);
 
-  // Create the compare. The called value and callee must have the same type to
-  // be compared.
-  if (CB.getCalledOperand()->getType() != Callee->getType())
-    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
+  // Create the compare.
   auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
+
+  // The address comparison has made the callee's address significant.
+  // Strip unnamed_addr so the symbol is recorded as address-significant
+  // and kept unique by the linker.
+  if (auto *GV = dyn_cast<GlobalValue>(Callee->stripPointerCasts()))
+    GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
 
   return versionCallSiteWithCond(CB, Cond, BranchWeights);
 }
@@ -410,6 +413,19 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
         *FailureReason = "Return type mismatch";
       return false;
     }
+
+  // Capture components that are captured through only the return value require
+  // a pointer return type.
+  if (!FuncRetTy->isPointerTy()) {
+    for (unsigned I = 0, E = CB.arg_size(); I != E; ++I) {
+      CaptureInfo CI = CB.getParamAttributes(I).getCaptureInfo();
+      if (capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents())) {
+        if (FailureReason)
+          *FailureReason = "captures(ret: ...) with non-pointer return type";
+        return false;
+      }
+    }
+  }
 
   // The number of formal arguments of the callee.
   unsigned NumParams = Callee->getFunctionType()->getNumParams();
@@ -616,11 +632,11 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
   IndirectBBIns->setIndex(IndirectID);
   IndirectBBIns->insertInto(&IndirectBB, IndirectBB.getFirstInsertionPt());
 
-  const GlobalValue::GUID CalleeGUID = AssignGUIDPass::getGUID(Callee);
+  const GlobalValue::GUID CalleeGUID = Callee.getGUID();
   const uint32_t NewCountersSize = IndirectID + 1;
 
   auto ProfileUpdater = [&](PGOCtxProfContext &Ctx) {
-    assert(Ctx.guid() == AssignGUIDPass::getGUID(Caller));
+    assert(Ctx.guid() == Caller.getGUID());
     assert(NewCountersSize - 2 == Ctx.counters().size());
     // All the ctx-es belonging to a function must have the same size counters.
     Ctx.resizeCounters(NewCountersSize);
@@ -655,7 +671,6 @@ CallBase *llvm::promoteCallWithIfThenElse(CallBase &CB, Function &Callee,
     // times, and the indirect BB, IndirectCount times
     Ctx.counters()[DirectID] = DirectCount;
     Ctx.counters()[IndirectID] = IndirectCount;
-
   };
   CtxProf.update(ProfileUpdater, Caller);
   return &DirectCall;
@@ -668,8 +683,15 @@ CallBase &llvm::promoteCallWithVTableCmp(CallBase &CB, Instruction *VPtr,
   assert(!AddressPoints.empty() && "Caller should guarantee");
   IRBuilder<> Builder(&CB);
   SmallVector<Value *, 2> ICmps;
-  for (auto &AddressPoint : AddressPoints)
+  for (auto &AddressPoint : AddressPoints) {
     ICmps.push_back(Builder.CreateICmpEQ(VPtr, AddressPoint));
+    // The address comparison has made the vtable address significant.
+    // Strip unnamed_addr so the vtable is recorded as address-significant
+    // and kept unique by the linker.
+    if (auto *GV =
+            dyn_cast<GlobalValue>(AddressPoint->stripInBoundsConstantOffsets()))
+      GV->setUnnamedAddr(GlobalValue::UnnamedAddr::None);
+  }
 
   // TODO: Perform tree height reduction if the number of ICmps is high.
   Value *Cond = Builder.CreateOr(ICmps);

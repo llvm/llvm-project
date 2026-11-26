@@ -51,7 +51,8 @@ public:
   /// the analysis functions to take previous instructions into account.
   /// Whenever state becomes irrelevant (e.g., when starting to disassemble a
   /// new function), clients should call resetState to clear it.
-  virtual void updateState(const MCInst &Inst, uint64_t Addr) {}
+  virtual void updateState(const MCInst &Inst, const MCSubtargetInfo *STI,
+                           uint64_t Addr) {}
 
   virtual bool isBranch(const MCInst &Inst) const {
     return Info->get(Inst.getOpcode()).isBranch();

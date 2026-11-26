@@ -15,6 +15,7 @@
 #include "MCTargetDesc/PPCMCAsmInfo.h"
 #include "PPCELFStreamer.h"
 #include "PPCMCAsmInfo.h"
+#include "PPCMCOptions.h"
 #include "PPCTargetStreamer.h"
 #include "PPCXCOFFStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
@@ -40,6 +41,7 @@
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -58,6 +60,9 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "PPCGenRegisterInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "PPCMCOptions.inc"
 
 /// stripRegisterPrefix - This method strips the character prefix from a
 /// register name so that only the number is left.  Used by for linux asm.
@@ -155,8 +160,7 @@ static MCInstrInfo *createPPCMCInstrInfo() {
 }
 
 static MCRegisterInfo *createPPCMCRegisterInfo(const Triple &TT) {
-  bool isPPC64 =
-      (TT.getArch() == Triple::ppc64 || TT.getArch() == Triple::ppc64le);
+  bool isPPC64 = TT.isPPC64();
   unsigned Flavour = isPPC64 ? 0 : 1;
   unsigned RA = isPPC64 ? PPC::LR8 : PPC::LR;
 
@@ -183,14 +187,13 @@ static MCSubtargetInfo *createPPCMCSubtargetInfo(const Triple &TT,
 static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
                                      const Triple &TheTriple,
                                      const MCTargetOptions &Options) {
-  bool isPPC64 = (TheTriple.getArch() == Triple::ppc64 ||
-                  TheTriple.getArch() == Triple::ppc64le);
+  bool isPPC64 = TheTriple.isPPC64();
 
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatXCOFF())
-    MAI = new PPCXCOFFMCAsmInfo(isPPC64, TheTriple);
+    MAI = new PPCXCOFFMCAsmInfo(isPPC64, TheTriple, Options);
   else
-    MAI = new PPCELFMCAsmInfo(isPPC64, TheTriple);
+    MAI = new PPCELFMCAsmInfo(isPPC64, TheTriple, Options);
 
   // Initial state of the frame pointer is R1.
   unsigned Reg = isPPC64 ? PPC::X1 : PPC::R1;
@@ -226,7 +229,7 @@ public:
           Kind == PPC::S_AIX_TLSIE || Kind == PPC::S_AIX_TLSLE ||
           Kind == PPC::S_AIX_TLSLD || Kind == PPC::S_AIX_TLSML)
         OS << "\t.tc " << TCSym->getName() << "," << S.getName() << "@"
-           << getContext().getAsmInfo()->getSpecifierName(Kind) << '\n';
+           << getContext().getAsmInfo().getSpecifierName(Kind) << '\n';
       else
         OS << "\t.tc " << TCSym->getName() << "," << S.getName() << '\n';
 
@@ -251,12 +254,12 @@ public:
   }
 
   void emitLocalEntry(MCSymbolELF *S, const MCExpr *LocalOffset) override {
-    const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
+    const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
 
     OS << "\t.localentry\t";
     S->print(OS, MAI);
     OS << ", ";
-    MAI->printExpr(OS, *LocalOffset);
+    MAI.printExpr(OS, *LocalOffset);
     OS << '\n';
   }
 };
@@ -396,8 +399,8 @@ public:
   PPCTargetXCOFFStreamer(MCStreamer &S) : PPCTargetStreamer(S) {}
 
   void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
-    const MCAsmInfo *MAI = Streamer.getContext().getAsmInfo();
-    const unsigned PointerSize = MAI->getCodePointerSize();
+    const MCAsmInfo &MAI = Streamer.getContext().getAsmInfo();
+    const unsigned PointerSize = MAI.getCodePointerSize();
     Streamer.emitValueToAlignment(Align(PointerSize));
     Streamer.emitValue(MCSymbolRefExpr::create(&S, Kind, Streamer.getContext()),
                        PointerSize);
@@ -474,6 +477,7 @@ static MCInstrAnalysis *createPPCMCInstrAnalysis(const MCInstrInfo *Info) {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializePowerPCTargetMC() {
+  static opt::RegisterLibraryOptions<PPCMCOptions> O;
   for (Target *T : {&getThePPC32Target(), &getThePPC32LETarget(),
                     &getThePPC64Target(), &getThePPC64LETarget()}) {
     // Register the MC asm info.

@@ -23,7 +23,7 @@ transformations and analysis, and a compact serialized form suitable for storage
 and transport. The different forms all describe the same semantic content. This
 document describes the human-readable textual form.
 
-[TOC]
+\[TOC\]
 
 ## High-Level Structure
 
@@ -180,7 +180,6 @@ string-literal  ::= `"` [^"\n\f\v\r]* `"`   TODO: define escaping rules
 Not listed here, but MLIR does support comments. They use standard BCPL syntax,
 starting with a `//` and going until the end of the line.
 
-
 ### Top level Productions
 
 ```
@@ -188,8 +187,8 @@ starting with a `//` and going until the end of the line.
 toplevel := (operation | attribute-alias-def | type-alias-def)*
 ```
 
-The production `toplevel` is the top level production that is parsed by any parsing
-consuming the MLIR syntax. [Operations](#operations),
+The production `toplevel` is the top level production that is parsed by any
+parsing consuming the MLIR syntax. [Operations](#operations),
 [Attribute aliases](#attribute-value-aliases), and [Type aliases](#type-aliases)
 can be declared on the toplevel.
 
@@ -233,7 +232,7 @@ body. Particular operations may further limit which identifiers are in scope in
 their regions. For instance, the scope of values in a region with
 [SSA control flow semantics](#control-flow-and-ssacfg-regions) is constrained
 according to the standard definition of
-[SSA dominance](https://en.wikipedia.org/wiki/Dominator_\(graph_theory\)).
+[SSA dominance](<https://en.wikipedia.org/wiki/Dominator_(graph_theory)>).
 Another example is the [IsolatedFromAbove trait](Traits/#isolatedfromabove),
 which restricts directly accessing values defined in containing regions.
 
@@ -257,12 +256,12 @@ between, and within, different dialects.
 
 A few of the dialects supported by MLIR:
 
-*   [Affine dialect](Dialects/Affine.md)
-*   [Func dialect](Dialects/Func.md)
-*   [GPU dialect](Dialects/GPU.md)
-*   [LLVM dialect](Dialects/LLVM.md)
-*   [SPIR-V dialect](Dialects/SPIR-V.md)
-*   [Vector dialect](Dialects/Vector.md)
+- [Affine dialect](Dialects/Affine.md)
+- [Func dialect](Dialects/Func.md)
+- [GPU dialect](Dialects/GPU.md)
+- [LLVM dialect](Dialects/LLVM.md)
+- [SPIR-V dialect](Dialects/SPIR-V.md)
+- [Vector dialect](Dialects/Vector.md)
 
 ### Target specific operations
 
@@ -319,8 +318,8 @@ identified by a unique string (e.g. `dim`, `tf.Conv2d`, `x86.repmovsb`,
 has storage for [properties](#properties), has a dictionary of
 [attributes](#attributes), has zero or more successors, and zero or more
 enclosed [regions](#regions). The generic printing form includes all these
-elements literally, with a function type to indicate the types of the
-results and operands.
+elements literally, with a function type to indicate the types of the results
+and operands.
 
 Example:
 
@@ -371,8 +370,10 @@ block-arg-list ::= `(` value-id-and-type-list? `)`
 A *Block* is a list of operations. In
 [SSACFG regions](#control-flow-and-ssacfg-regions), each block represents a
 compiler [basic block](https://en.wikipedia.org/wiki/Basic_block) where
-instructions inside the block are executed in order and terminator operations
-implement control flow branches between basic blocks.
+instructions inside the block are executed in order. Terminator operations mark
+the end of a block and describe the block's possible continuations, such as
+branches to other blocks in the same region, returns/yields to the containing
+operation, or no continuation at all (e.g. `ub.unreachable`).
 
 The last operation in a block must be a
 [terminator operation](#control-flow-and-ssacfg-regions). A region with a single
@@ -424,12 +425,12 @@ func.func @simple(i64, i1) -> i64 {
 **Context:** The "block argument" representation eliminates a number of special
 cases from the IR compared to traditional "PHI nodes are operations" SSA IRs
 (like LLVM). For example, the
-[parallel copy semantics](https://ieeexplore.ieee.org/document/4907656)
-of SSA is immediately apparent, and function arguments are no longer a special
-case: they become arguments to the entry block
-[[more rationale](Rationale/Rationale.md/#block-arguments-vs-phi-nodes)]. Blocks
-are also a fundamental concept that cannot be represented by operations because
-values defined in an operation cannot be accessed outside the operation.
+[parallel copy semantics](https://ieeexplore.ieee.org/document/4907656) of SSA
+is immediately apparent, and function arguments are no longer a special case:
+they become arguments to the entry block
+\[[more rationale](Rationale/Rationale.md/#block-arguments-vs-phi-nodes)\].
+Blocks are also a fundamental concept that cannot be represented by operations
+because values defined in an operation cannot be accessed outside the operation.
 
 ## Regions
 
@@ -440,8 +441,9 @@ region is not imposed by the IR. Instead, the containing operation defines the
 semantics of the regions it contains. MLIR currently defines two kinds of
 regions: [SSACFG regions](#control-flow-and-ssacfg-regions), which describe
 control flow between blocks, and [Graph regions](#graph-regions), which do not
-require control flow between blocks. The kinds of regions within an operation are
-described using the [RegionKindInterface](Interfaces.md/#regionkindinterfaces).
+require control flow between blocks. The kinds of regions within an operation
+are described using the
+[RegionKindInterface](Interfaces.md/#regionkindinterfaces).
 
 Regions do not have a name or an address, only the blocks contained in a region
 do. Regions must be contained within operations and have no type or attributes.
@@ -463,10 +465,9 @@ arguments must match the result types of the function signature. Similarly, the
 function arguments must match the types and count of the region arguments. In
 general, operations with regions can define these correspondences arbitrarily.
 
-An *entry block* is a block with no label and no arguments that may occur at
-the beginning of a region. It enables a common pattern of using a region to
-open a new scope.
-
+An *entry block* is a block with no label and no arguments that may occur at the
+beginning of a region. It enables a common pattern of using a region to open a
+new scope.
 
 ### Value Scoping
 
@@ -478,8 +479,7 @@ the enclosing region, if any. By default, operations inside a region can
 reference values defined outside of the region whenever it would have been legal
 for operands of the enclosing operation to reference those values, but this can
 be restricted using traits, such as
-[OpTrait::IsolatedFromAbove](Traits/#isolatedfromabove), or a custom
-verifier.
+[OpTrait::IsolatedFromAbove](Traits/#isolatedfromabove), or a custom verifier.
 
 Example:
 
@@ -504,26 +504,28 @@ in a region can never be used outside of the region.
 In MLIR, control flow semantics of a region is indicated by
 [RegionKind::SSACFG](Interfaces.md/#regionkindinterfaces). Informally, these
 regions support semantics where operations in a region 'execute sequentially'.
-Before an operation executes, its operands have well-defined values. After an
-operation executes, the operands have the same values and results also have
-well-defined values. After an operation executes, the next operation in the
-block executes until the operation is the terminator operation at the end of a
-block, in which case some other operation will execute. The determination of the
+Before an operation executes, its operands have well-defined values. If the
+operation produces results and the operation returns, those results also have
+well-defined values. Execution then proceeds to the next operation in the block
+until the terminator operation at the end of the block is reached; the
+terminator determines the next continuation, if any. The determination of the
 next instruction to execute is the 'passing of control flow'.
 
 In general, when control flow is passed to an operation, MLIR does not restrict
 when control flow enters or exits the regions contained in that operation.
 However, when control flow enters a region, it always begins in the first block
 of the region, called the *entry* block. Terminator operations ending each block
-represent control flow by explicitly specifying the successor blocks of the
-block. Control flow can only pass to one of the specified successor blocks as in
-a `branch` operation, or back to the containing operation as in a `return`
-operation. Terminator operations without successors can only pass control back
-to the containing operation. Within these restrictions, the particular semantics
-of terminator operations is determined by the specific dialect operations
-involved. Blocks (other than the entry block) that are not listed as a successor
-of a terminator operation are defined to be unreachable and can be removed
-without affecting the semantics of the containing operation.
+represent possible continuations. Successors explicitly specify destination
+blocks, so control flow within the region can only pass to one of the specified
+successor blocks, as in a `branch` operation. When a terminator has no
+successors, it may pass 1) control back to the containing operation, as in a
+`return` operation, or 2) define that control flow does not continue, as in
+`ub.unreachable`. Terminators without successors therefore do not necessarily
+imply a return to the containing operation, the specific dialect operation
+determines the terminator's semantics. Blocks (other than the entry block) that
+are not listed as a successor of any terminator operation are defined to be
+unreachable and can be removed without affecting the semantics of the
+containing operation.
 
 Although control flow always enters a region through the entry block, control
 flow may exit a region through any block with an appropriate terminator. The
@@ -532,7 +534,10 @@ Single-Entry-Multiple-Exit (SEME) regions, possibly flowing through different
 blocks in the region and exiting through any block with a `return` operation.
 This behavior is similar to that of a function body in most programming
 languages. In addition, control flow may also not reach the end of a block or
-region, for example if a function call does not return.
+region, for example if a function call does not return. Such an operation
+prevents control flow from reaching later operations, but does not remove the
+structural requirement that the block must end with a terminator unless the
+enclosing operation opts out with `NoTerminator`.
 
 Example:
 
@@ -707,9 +712,9 @@ dialect-type-contents ::= dialect-type-body
                             | [^\[<({\]>)}\0]+
 ```
 
-Dialect types are generally specified in an opaque form, where the contents
-of the type are defined within a body wrapped with the dialect namespace
-and `<>`. Consider the following examples:
+Dialect types are generally specified in an opaque form, where the contents of
+the type are defined within a body wrapped with the dialect namespace and `<>`.
+Consider the following examples:
 
 ```mlir
 // A tensorflow string type.
@@ -733,13 +738,42 @@ part of the syntax into an equivalent, but lighter weight form:
 !foo.something<abcd>
 ```
 
-See [here](DefiningDialects/AttributesAndTypes.md) to learn how to define dialect types.
+See [here](DefiningDialects/AttributesAndTypes.md) to learn how to define
+dialect types.
 
 ### Builtin Types
 
 The [builtin dialect](Dialects/Builtin.md) defines a set of types that are
 directly usable by any other dialect in MLIR. These types cover a range from
 primitive integer and floating-point types, function types, and more.
+
+### Token Type
+
+A *token* is an SSA value of the builtin parameterless, opaque `token` type.
+It carries no runtime data. Given a use of a token SSA value, its definition
+is guaranteed to be the semantic producer of the token. Generic transformations
+must preserve this invariant: they may not introduce a forwarding step between
+a use and its producer, nor retarget a use to a producer with different
+semantics. New uses of a token can be introduced safely. As a consequence:
+
+1. A token must not appear as a forwarded value. E.g., it cannot be used as a
+   successor operand of a `BranchOpInterface` op.
+2. A token cannot constant-fold. No constant of token type exists.
+3. The presence of tokens has no effect on standard transformations such as
+   CSE, DCE or hoisting.
+4. Use of a token is side-effect free: a token user follows the usual
+   `isTriviallyDead()` rules.
+
+These properties mirror what LLVM IR already documents for its own
+[`token` type](https://llvm.org/docs/LangRef.html#token-type).
+
+Operations must opt in to producing or consuming tokens with
+`TokenProducerTrait` and `TokenConsumerTrait`.
+
+Note: Because tokens are SSA values, they cannot cross `IsolatedFromAbove`
+region boundaries.
+
+See [Tokens](Tokens.md) for details on ODS integration and examples.
 
 ## Properties
 
@@ -761,29 +795,28 @@ attribute-value ::= attribute-alias | dialect-attribute | builtin-attribute
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`cmpi` operation](Dialects/ArithOps.md/#arithcmpi-arithcmpiop). Each operation has an
-attribute dictionary, which associates a set of attribute names to attribute
-values. MLIR's builtin dialect provides a rich set of
+[`cmpi` operation](Dialects/ArithOps.md/#arithcmpi-arithcmpiop). Each operation
+has an attribute dictionary, which associates a set of attribute names to
+attribute values. MLIR's builtin dialect provides a rich set of
 [builtin attribute values](#builtin-attribute-values) out of the box (such as
 arrays, dictionaries, strings, etc.). Additionally, dialects can define their
 own [dialect attribute values](#dialect-attribute-values).
 
 For dialects which haven't adopted properties yet, the top-level attribute
-dictionary attached to an operation has special semantics. The attribute
-entries are considered to be of two different kinds based on whether their
-dictionary key has a dialect prefix:
+dictionary attached to an operation has special semantics. The attribute entries
+are considered to be of two different kinds based on whether their dictionary
+key has a dialect prefix:
 
--   *inherent attributes* are inherent to the definition of an operation's
-    semantics. The operation itself is expected to verify the consistency of
-    these attributes. An example is the `predicate` attribute of the
-    `arith.cmpi` op. These attributes must have names that do not start with a
-    dialect prefix.
+- *inherent attributes* are inherent to the definition of an operation's
+  semantics. The operation itself is expected to verify the consistency of these
+  attributes. An example is the `predicate` attribute of the `arith.cmpi` op.
+  These attributes must have names that do not start with a dialect prefix.
 
--   *discardable attributes* have semantics defined externally to the operation
-    itself, but must be compatible with the operations's semantics. These
-    attributes must have names that start with a dialect prefix. The dialect
-    indicated by the dialect prefix is expected to verify these attributes. An
-    example is the `gpu.container_module` attribute.
+- *discardable attributes* have semantics defined externally to the operation
+  itself, but must be compatible with the operations's semantics. These
+  attributes must have names that start with a dialect prefix. The dialect
+  indicated by the dialect prefix is expected to verify these attributes. An
+  example is the `gpu.container_module` attribute.
 
 Note that attribute values are allowed to themselves be dictionary attributes,
 but only the top-level dictionary attribute attached to the operation is subject
@@ -851,15 +884,16 @@ and `<>`. Consider the following examples:
 #foo<"a123^^^" + bar>
 ```
 
-Dialect attributes that are simple enough may use a prettier format, which unwraps
-part of the syntax into an equivalent, but lighter weight form:
+Dialect attributes that are simple enough may use a prettier format, which
+unwraps part of the syntax into an equivalent, but lighter weight form:
 
 ```mlir
 // A string attribute.
 #foo.string<"">
 ```
 
-See [here](DefiningDialects/AttributesAndTypes.md) on how to define dialect attribute values.
+See [here](DefiningDialects/AttributesAndTypes.md) on how to define dialect
+attribute values.
 
 ### Builtin Attribute Values
 

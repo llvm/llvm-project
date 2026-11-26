@@ -45,7 +45,7 @@ define internal spir_func void @foo() #0 {
 
   store float 0.0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
-; CHECK:               OpStore %[[#tmp]] %[[#float_0]] Aligned 4
+; CHECK:               OpStore %[[#tmp]] %[[#float_0]]
 
   ret void
 }
@@ -56,7 +56,7 @@ define internal spir_func void @bar() #0 {
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]]
-; CHECK:               OpStore %[[#tmp]] %[[#uint_0]] Aligned 4
+; CHECK:               OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void
 }
@@ -67,7 +67,7 @@ define internal spir_func void @baz() #0 {
 
   store float 0.0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#float_fp]] %[[#var]] %[[#uint_0]]
-; CHECK:               OpStore %[[#tmp]] %[[#float_0]] Aligned 4
+; CHECK:               OpStore %[[#tmp]] %[[#float_0]]
 
   ret void
 }
@@ -75,7 +75,7 @@ define internal spir_func void @baz() #0 {
 define internal spir_func void @biz() #0 {
   store float 0.0, ptr addrspace(10) @gsfuf, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#float_pp]] %[[#gsfuf]] %[[#uint_0]]
-; CHECK:               OpStore %[[#tmp]] %[[#float_0]] Aligned 4
+; CHECK:               OpStore %[[#tmp]] %[[#float_0]]
 
   ret void
 }
@@ -86,7 +86,7 @@ define internal spir_func void @nested_store() #0 {
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]] %[[#uint_0]]
-; CHECK:               OpStore %[[#tmp]] %[[#uint_0]] Aligned 4
+; CHECK:               OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void
 }
@@ -97,7 +97,7 @@ define internal spir_func void @nested_store_vector() #0 {
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]]
-; CHECK:               OpStore %[[#tmp]] %[[#uint_0]] Aligned 4
+; CHECK:               OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void
 }
@@ -108,7 +108,7 @@ define internal spir_func void @nested_array_vector() #0 {
 
   store i32 0, ptr %1, align 4
 ; CHECK: %[[#tmp:]]  = OpInBoundsAccessChain %[[#uint_fp]] %[[#var]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]]
-; CHECK:               OpStore %[[#tmp]] %[[#uint_0]] Aligned 4
+; CHECK:               OpStore %[[#tmp]] %[[#uint_0]]
 
   ret void
 }

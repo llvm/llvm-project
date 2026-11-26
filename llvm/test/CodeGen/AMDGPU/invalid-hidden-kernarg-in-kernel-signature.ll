@@ -1,7 +1,7 @@
-; RUN: not llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn--amdhsa -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefixes=ERROR,GISEL %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn--amdhsa -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
-; RUN: not llc -global-isel=1 -global-isel-abort=2 -amdgpu-ir-lower-kernel-arguments=0 -mtriple=amdgcn--amdhsa -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefixes=ERROR,GISEL %s
-; RUN: not llc -global-isel=0 -amdgpu-ir-lower-kernel-arguments=0 -mtriple=amdgcn--amdhsa -mcpu=gfx942 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.42--amdhsa < %s 2>&1 | FileCheck -check-prefixes=ERROR,GISEL %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu9.42--amdhsa < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -global-isel=1 -global-isel-abort=2 -amdgpu-ir-lower-kernel-arguments=0 -mtriple=amdgpu9.42--amdhsa < %s 2>&1 | FileCheck -check-prefixes=ERROR,GISEL %s
+; RUN: not llc -global-isel=0 -amdgpu-ir-lower-kernel-arguments=0 -mtriple=amdgpu9.42--amdhsa < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 define amdgpu_kernel void @no_free_sgprs_block_count_x_no_preload_diag(ptr addrspace(1) inreg %out, i512 inreg, i32 inreg "amdgpu-hidden-argument" %_hidden_block_count_x) #0 {
 ; GISEL: warning: Instruction selection used fallback path for no_free_sgprs_block_count_x_no_preload_diag
@@ -18,4 +18,4 @@ define amdgpu_kernel void @preloadremainder_z_no_preload_diag(ptr addrspace(1) i
   ret void
 }
 
-attributes #0 = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+attributes #0 = { "amdgpu-agpr-alloc"="0" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }

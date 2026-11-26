@@ -279,7 +279,7 @@ Expected<Profile> xray::loadProfile(StringRef Filename) {
 
   Profile P;
   uint64_t Offset = 0;
-  DataExtractor Extractor(Data, true, 8);
+  DataExtractor Extractor(Data, true);
 
   // For each block we get from the file:
   while (Offset != MappedFile.size()) {

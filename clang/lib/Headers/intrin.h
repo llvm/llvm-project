@@ -44,8 +44,10 @@
 
 #if __x86_64__
 #define __LPTRINT_TYPE__ __int64
+#define __IPTRINT_TYPE__ __int64
 #else
 #define __LPTRINT_TYPE__ long
+#define __IPTRINT_TYPE__ int
 #endif
 
 #ifdef __cplusplus
@@ -95,12 +97,12 @@ void __outdword(unsigned short, unsigned long);
 void __outdwordstring(unsigned short, unsigned long *, unsigned long);
 void __outword(unsigned short, unsigned short);
 void __outwordstring(unsigned short, unsigned short *, unsigned long);
-unsigned long __readcr0(void);
-unsigned long __readcr2(void);
+unsigned __LPTRINT_TYPE__ __readcr0(void);
+unsigned __LPTRINT_TYPE__ __readcr2(void);
 unsigned __LPTRINT_TYPE__ __readcr3(void);
 unsigned __LPTRINT_TYPE__ __readcr4(void);
-unsigned __int64 __readcr8(void);
-unsigned int __readdr(unsigned int);
+unsigned __LPTRINT_TYPE__ __readcr8(void);
+unsigned __IPTRINT_TYPE__ __readdr(unsigned int);
 #ifdef __i386__
 unsigned char __readfsbyte(unsigned long);
 unsigned short __readfsword(unsigned long);
@@ -126,11 +128,12 @@ unsigned __int64 __ull_rshift(unsigned __int64, int);
 void __vmx_off(void);
 void __vmx_vmptrst(unsigned __int64 *);
 void __wbinvd(void);
-void __writecr0(unsigned int);
-void __writecr3(unsigned __INTPTR_TYPE__);
-void __writecr4(unsigned __INTPTR_TYPE__);
-void __writecr8(unsigned __int64);
-void __writedr(unsigned int, unsigned int);
+void __writecr0(unsigned __IPTRINT_TYPE__);
+void __writecr2(unsigned __IPTRINT_TYPE__);
+void __writecr3(unsigned __IPTRINT_TYPE__);
+void __writecr4(unsigned __IPTRINT_TYPE__);
+void __writecr8(unsigned __IPTRINT_TYPE__);
+void __writedr(unsigned int, unsigned __IPTRINT_TYPE__);
 void __writefsbyte(unsigned long, unsigned char);
 void __writefsdword(unsigned long, unsigned long);
 void __writefsqword(unsigned long, unsigned __int64);
@@ -370,10 +373,50 @@ static __inline__ void __DEFAULT_FN_ATTRS __nop(void) {
 #endif
 
 /*----------------------------------------------------------------------------*\
+|* MS ARM and AArch64 specific
+\*----------------------------------------------------------------------------*/
+#if defined(__arm__) || defined(__aarch64__) || defined(__arm64ec__)
+long _InterlockedAdd(long volatile *, long);
+long _InterlockedAdd_acq(long volatile *, long);
+long _InterlockedAdd_nf(long volatile *, long);
+long _InterlockedAdd_rel(long volatile *, long);
+__int64 _InterlockedAdd64(__int64 volatile *, __int64);
+__int64 _InterlockedAdd64_acq(__int64 volatile *, __int64);
+__int64 _InterlockedAdd64_nf(__int64 volatile *, __int64);
+__int64 _InterlockedAdd64_rel(__int64 volatile *, __int64);
+
+double _CopyDoubleFromInt64(__int64);
+float _CopyFloatFromInt32(__int32);
+__int32 _CopyInt32FromFloat(float);
+__int64 _CopyInt64FromDouble(double);
+
+unsigned int _CountLeadingOnes(unsigned long);
+unsigned int _CountLeadingOnes64(unsigned __int64);
+unsigned int _CountLeadingSigns(long);
+unsigned int _CountLeadingSigns64(__int64);
+unsigned int _CountOneBits(unsigned long);
+unsigned int _CountOneBits64(unsigned __int64);
+
+void __cdecl __prefetch(const void *);
+#endif
+
+/*----------------------------------------------------------------------------*\
+|* MS ARM specific
+\*----------------------------------------------------------------------------*/
+#if defined(__arm__)
+long _MulHigh(long, long);
+unsigned long _MulUnsignedHigh(unsigned long, unsigned long);
+int _ReadStatusReg(int);
+#endif
+
+/*----------------------------------------------------------------------------*\
 |* MS AArch64 specific
 \*----------------------------------------------------------------------------*/
 #if defined(__aarch64__) || defined(__arm64ec__)
 unsigned __int64 __getReg(int);
+double __getRegFp(int _Reg);
+void __setReg(int, unsigned __int64);
+void __setRegFp(int, double);
 unsigned char _interlockedbittestandreset_acq(long volatile *, long);
 unsigned char _interlockedbittestandreset_nf(long volatile *, long);
 unsigned char _interlockedbittestandreset_rel(long volatile *, long);
@@ -386,14 +429,6 @@ unsigned char _interlockedbittestandset_rel(long volatile *, long);
 unsigned char _interlockedbittestandset64_acq(__int64 volatile *, __int64);
 unsigned char _interlockedbittestandset64_nf(__int64 volatile *, __int64);
 unsigned char _interlockedbittestandset64_rel(__int64 volatile *, __int64);
-long _InterlockedAdd(long volatile *, long);
-long _InterlockedAdd_acq(long volatile *, long);
-long _InterlockedAdd_nf(long volatile *, long);
-long _InterlockedAdd_rel(long volatile *, long);
-__int64 _InterlockedAdd64(__int64 volatile *, __int64);
-__int64 _InterlockedAdd64_acq(__int64 volatile *, __int64);
-__int64 _InterlockedAdd64_nf(__int64 volatile *, __int64);
-__int64 _InterlockedAdd64_rel(__int64 volatile *, __int64);
 __int64 _ReadStatusReg(int);
 void _WriteStatusReg(int, __int64);
 unsigned int __sys(int, __int64);
@@ -427,21 +462,11 @@ void __incx18word(unsigned long offset);
 void __incx18dword(unsigned long offset);
 void __incx18qword(unsigned long offset);
 
-double _CopyDoubleFromInt64(__int64);
-float _CopyFloatFromInt32(__int32);
-__int32 _CopyInt32FromFloat(float);
-__int64 _CopyInt64FromDouble(double);
-
-unsigned int _CountLeadingOnes(unsigned long);
-unsigned int _CountLeadingOnes64(unsigned __int64);
-unsigned int _CountLeadingSigns(long);
-unsigned int _CountLeadingSigns64(__int64);
-unsigned int _CountOneBits(unsigned long);
-unsigned int _CountOneBits64(unsigned __int64);
-
 unsigned int __hlt(unsigned int, ...);
+unsigned int __hvc(unsigned int, ...);
+unsigned int __svc(unsigned int, ...);
 
-void __cdecl __prefetch(const void *);
+void __cdecl __prefetch2(const void *, unsigned char);
 
 #endif
 
@@ -474,7 +499,7 @@ static __inline__ unsigned __LPTRINT_TYPE__ __DEFAULT_FN_ATTRS __readcr3(void) {
 }
 
 static __inline__ void __DEFAULT_FN_ATTRS
-__writecr3(unsigned __INTPTR_TYPE__ __cr3_val) {
+__writecr3(unsigned __IPTRINT_TYPE__ __cr3_val) {
   __asm__ ("mov {%0, %%cr3|cr3, %0}" : : "r"(__cr3_val) : "memory");
 }
 #endif
@@ -484,6 +509,7 @@ __writecr3(unsigned __INTPTR_TYPE__ __cr3_val) {
 #endif
 
 #undef __LPTRINT_TYPE__
+#undef __IPTRINT_TYPE__
 
 #undef __DEFAULT_FN_ATTRS
 

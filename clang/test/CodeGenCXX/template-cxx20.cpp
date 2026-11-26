@@ -20,5 +20,16 @@ namespace GH161029_regression1 {
   void h() {
     g<decltype([](auto) -> void { s.U(); }), 0>();
   }
-  // CHECK: call void @_ZN20GH161029_regression11SINS_6TagSetINS_1EELS2_0EEEE1UEv
+  // CHECK-DAG: call void @_ZN20GH161029_regression11SINS_6TagSetINS_1EELS2_0EEEE1UEv
+}
+
+namespace GH177807 {
+  template<int &G> void foo() {
+    [](auto ...A) {
+      (((void)A, G), ...) = 1234;
+    }(0);
+  }
+  int i = 0;
+  template void foo<i>();
+  // CHECK-DAG: store i32 1234, ptr @_ZN8GH1778071iE, align 4
 }

@@ -160,10 +160,6 @@ def MxBrCond  : SDNode<"M68kISD::BRCOND",      MxSDT_BrCond, [SDNPHasChain]>;
 // operand, usually produced by a CMP instruction.
 def MxSetCC   : SDNode<"M68kISD::SETCC",       MxSDT_SetCC>;
 
-// Same as SETCC except it's materialized with a subx and the value is all
-// one's or all zero's.
-def MxSetCC_C : SDNode<"M68kISD::SETCC_CARRY", MxSDT_SetCC_C>;
-
 // For allocating variable amounts of stack space when using
 // segmented stacks. Check if the current stacklet has enough space, and
 // falls back to heap allocation if not.
@@ -189,6 +185,19 @@ def MxSize32 : MxSize<32, "l", "long">;
 def MxSizeF32 : MxSize<32, "s", "f32">;
 def MxSizeF64 : MxSize<64, "d", "f64">;
 def MxSizeF80 : MxSize<80, "x", "f80">;
+
+// Special immediate values.
+let OperandType = "OPERAND_IMMEDIATE" in {
+def scaleimm : Operand<i8> {
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (!MCOp.evaluateAsConstantImm(Imm))
+      return false;
+    // Can only be 1, 2, 4, or, 8
+    return Imm > 0 && Imm < 16 && isPowerOf2_64(Imm);
+  }];
+}
+}
 
 class MxOpClass<string name,
                 list<AsmOperandClass> superClasses = []> : AsmOperandClass {
@@ -375,8 +384,12 @@ def MxAL8      : MxMemOp<(ops OtherVT), MxSize8,  "b", "printAL8Mem",  MxAddr8>;
 def MxAL16     : MxMemOp<(ops OtherVT), MxSize16, "b", "printAL16Mem", MxAddr16>;
 def MxAL32     : MxMemOp<(ops OtherVT), MxSize32, "b", "printAL32Mem", MxAddr32>;
 
-def MxPCD : MxOpClass<"PCD">;
-def MxPCI : MxOpClass<"PCI">;
+def MxPCD   : MxOpClass<"PCD">;
+def MxPCI   : MxOpClass<"PCI">;
+let RenderMethod = "addPCIBDOperands" in {
+def MxPCIBD32Class : MxOpClass<"PCIBD32">;
+def MxPCIBD16Class : MxOpClass<"PCIBD16", [MxPCIBD32Class]>;
+}
 
 let OperandType = "OPERAND_PCREL" in {
 foreach size = ["8", "16", "32"] in {
@@ -396,6 +409,14 @@ def MxPCD # size : MxMemOp<(ops i16imm), ResSize,  "q", "printPCD"#size#"Mem", M
 // a program reference.
 def MxPCI # size : MxMemOp<(ops i8imm:$disp, XR32:$index), ResSize,  "k", "printPCI"#size#"Mem", MxPCI>;
 } // foreach size
+
+// PROGRAM COUNTER WITH INDEX (BASE DISPLACEMENT)
+let MCOperandPredicate = [{ return STI.hasFeature(M68k::FeatureISA20); }] in {
+  def MxPCIBD32 : MxMemOp<(ops i32imm:$disp, XR32:$index, scaleimm:$scale), ?,
+                          "l", "printPCIBD32Mem", MxPCIBD32Class>;
+  def MxPCIBD16 : MxMemOp<(ops i32imm:$disp, XR16:$index, scaleimm:$scale), ?,
+                          "L", "printPCIBD16Mem", MxPCIBD16Class>;
+} // let MCOperandPredicate
 } // OPERAND_PCREL
 
 def MxImm : AsmOperandClass {
@@ -465,6 +486,9 @@ def IsPIC        : Predicate<"TM.isPositionIndependent()">;
 def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
 
 // ISA versions
+def IsM68000 : Predicate<"Subtarget->isM68000()">,
+                            AssemblerPredicate<(all_of FeatureISA00)>;
+
 foreach i = [0,1,2,4,6] in
 def AtLeastM680 # i # "0" : Predicate<"Subtarget->atLeastM680"#i#"0()">,
                             AssemblerPredicate<(all_of
@@ -502,7 +526,7 @@ def MxCONDle  : PatLeaf<(i8 15)>; // Less or Equal
 // Complex Patterns
 //===----------------------------------------------------------------------===//
 
-// NOTE Though this CP is not strictly necessarily it will simplify instruciton
+// NOTE Though this CP is not strictly necessarily it will simplify instruction
 // definitions
 let WantsParent = true in {
   def MxCP_ARI   : ComplexPattern<iPTR, 1, "SelectARI">;
@@ -524,6 +548,8 @@ let WantsParent = true in {
                                   [add, sub, mul, or, shl]>;
 
   def MxCP_PCI   : ComplexPattern<iPTR, 2, "SelectPCI",
+                                  [add, sub, mul, or, shl]>;
+  def MxCP_PCIBD : ComplexPattern<iPTR, 3, "SelectPCIBD",
                                   [add, sub, mul, or, shl]>;
 }
 
@@ -739,6 +765,14 @@ foreach size = [8, 16, 32] in {
   // (i,PC,Xn)
   def MxOp#size#AddrMode_k
     : MxOpBundle<size, !cast<MxOperand>("MxPCI"#size), MxCP_PCI>;
+
+  // (i,PC,Xn.L*SCALE)
+  def MxOp#size#AddrMode_l
+    : MxOpBundle<size, MxPCIBD32, MxCP_PCIBD>;
+
+  // (i,PC,Xn.W*SCALE)
+  def MxOp#size#AddrMode_L
+    : MxOpBundle<size, MxPCIBD16, MxCP_PCIBD>;
 
   // #imm
   def MxOp#size#AddrMode_i

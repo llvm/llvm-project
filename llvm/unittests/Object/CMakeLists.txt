@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
+  MC
   Object
   ObjectYAML
   TargetParser
@@ -20,6 +21,7 @@ add_llvm_unittest(ObjectTests
   OffloadingBundleTest.cpp
   SymbolSizeTest.cpp
   SymbolicFileTest.cpp
+  WindowsMachineFlagTest.cpp
   XCOFFObjectFileTest.cpp
   )
 

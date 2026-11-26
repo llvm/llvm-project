@@ -89,6 +89,8 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("plucky", Distro::UbuntuPlucky)
                     .Case("questing", Distro::UbuntuQuesting)
                     .Case("resolute", Distro::UbuntuResolute)
+                    .Case("stonking", Distro::UbuntuStonking)
+                    .Case("tenacious", Distro::UbuntuTenacious)
                     .Default(Distro::UnknownDistro);
   return Version;
 }
@@ -224,7 +226,7 @@ static Distro::DistroType GetDistro(llvm::vfs::FileSystem &VFS,
   if (onRealFS) {
     // If we're backed by a real file system, perform
     // the detection only once and save the result.
-    static Distro::DistroType LinuxDistro = DetectDistro(VFS);
+    static const Distro::DistroType LinuxDistro = DetectDistro(VFS);
     return LinuxDistro;
   }
   // This is mostly for passing tests which uses llvm::vfs::InMemoryFileSystem,

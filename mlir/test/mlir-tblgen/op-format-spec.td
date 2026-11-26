@@ -152,6 +152,10 @@ def OIListCustom : TestFormat_Op<[{
         | `nowait`
         | `reduction` custom<ReductionClause>($arg1, type($arg1))) attr-dict
 }], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
+def OIListWithSeparator : TestFormat_Op<[{
+  oilist<`,`>( `keyword` $arg0 `:` type($arg0)
+             | `otherkeyword` $arg1 `:` type($arg1)) attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
 
 //===----------------------------------------------------------------------===//
 // Optional Groups
@@ -175,7 +179,7 @@ def StringValid : TestFormat_Op<[{ custom<Foo>("foo") attr-dict }]>;
 
 // CHECK-NOT: error:
 def VariableValidA : TestFormat_Op<[{
-  $attr `:` attr-dict
+  ($attr^)? `:` attr-dict
 }]>, Arguments<(ins OptionalAttr<I1Attr>:$attr)>;
 def VariableValidB : TestFormat_Op<[{
   (`foo` $attr^)? `:` attr-dict

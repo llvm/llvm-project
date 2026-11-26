@@ -34,7 +34,6 @@
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -42,6 +41,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -72,30 +72,6 @@ STATISTIC(NumEXTSWAndSLDICombined,
 STATISTIC(NumLoadImmZeroFoldedAndRemoved,
           "Number of LI(8) reg, 0 that are folded to r0 and removed");
 
-static cl::opt<bool>
-FixedPointRegToImm("ppc-reg-to-imm-fixed-point", cl::Hidden, cl::init(true),
-                   cl::desc("Iterate to a fixed point when attempting to "
-                            "convert reg-reg instructions to reg-imm"));
-
-static cl::opt<bool>
-ConvertRegReg("ppc-convert-rr-to-ri", cl::Hidden, cl::init(true),
-              cl::desc("Convert eligible reg+reg instructions to reg+imm"));
-
-static cl::opt<bool>
-    EnableSExtElimination("ppc-eliminate-signext",
-                          cl::desc("enable elimination of sign-extensions"),
-                          cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    EnableZExtElimination("ppc-eliminate-zeroext",
-                          cl::desc("enable elimination of zero-extensions"),
-                          cl::init(true), cl::Hidden);
-
-static cl::opt<bool>
-    EnableTrapOptimization("ppc-opt-conditional-trap",
-                           cl::desc("enable optimization of conditional traps"),
-                           cl::init(false), cl::Hidden);
-
 DEBUG_COUNTER(
     PeepholeXToICounter, "ppc-xtoi-peephole",
     "Controls whether PPC reg+reg to reg+imm peephole is performed on a MI");
@@ -111,7 +87,6 @@ struct PPCMIPeephole : public MachineFunctionPass {
   const PPCInstrInfo *TII;
   MachineFunction *MF;
   MachineRegisterInfo *MRI;
-  LiveVariables *LV;
 
   PPCMIPeephole() : MachineFunctionPass(ID) {}
 
@@ -138,10 +113,10 @@ private:
                       MachineInstr *MI);
 
   // A number of transformations will eliminate the definition of a register
-  // as all of its uses will be removed. However, this leaves a register
-  // without a definition for LiveVariables. Such transformations should
-  // use this function to provide a dummy definition of the register that
-  // will simply be removed by DCE.
+  // as all of its uses will be removed. However, this can leave a register
+  // used with no reaching definition until DCE removes the dead uses. Such
+  // transformations should use this function to provide a dummy definition of
+  // the register that will simply be removed by DCE.
   void addDummyDef(MachineBasicBlock &MBB, MachineInstr *At, Register Reg) {
     BuildMI(MBB, At, At->getDebugLoc(), TII->get(PPC::IMPLICIT_DEF), Reg);
   }
@@ -151,16 +126,14 @@ private:
                               Register Dst);
 
 public:
-
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<LiveVariablesWrapperPass>();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<LiveVariablesWrapperPass>();
     AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -174,13 +147,7 @@ public:
            "TOC pointer used in a function using PC-Relative addressing!");
     if (skipFunction(MF.getFunction()))
       return false;
-    bool Changed = simplifyCode();
-#ifndef NDEBUG
-    if (Changed)
-      MF.verify(this, "Error in PowerPC MI Peephole optimization, compile with "
-                      "-mllvm -disable-ppc-peephole");
-#endif
-    return Changed;
+    return simplifyCode();
   }
 };
 
@@ -200,7 +167,6 @@ void PPCMIPeephole::initialize(MachineFunction &MFParm) {
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
   MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
-  LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   EntryFreq = MBFI->getEntryFreq();
   TII = MF->getSubtarget<PPCSubtarget>().getInstrInfo();
   RegsToUpdate.clear();
@@ -458,13 +424,14 @@ void PPCMIPeephole::convertUnprimedAccPHIs(
 
 // Perform peephole optimizations.
 bool PPCMIPeephole::simplifyCode() {
+  const PPCOptions &CLOpts = MF->getSubtarget<PPCSubtarget>().getCLOpts();
   bool Simplified = false;
   bool TrapOpt = false;
   MachineInstr* ToErase = nullptr;
   std::map<MachineInstr *, bool> TOCSaves;
   const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
   NumFunctionsEnteredInMIPeephole++;
-  if (ConvertRegReg) {
+  if (CLOpts.convert_rr_to_ri) {
     // Fixed-point conversion of reg/reg instructions fed by load-immediate
     // into reg/imm instructions. FIXME: This is expensive, control it with
     // an option.
@@ -499,15 +466,14 @@ bool PPCMIPeephole::simplifyCode() {
           Simplified = true;
         }
       }
-    } while (SomethingChanged && FixedPointRegToImm);
+    } while (SomethingChanged && CLOpts.reg_to_imm_fixed_point);
   }
 
-  // Since we are deleting this instruction, we need to run LiveVariables
-  // on any of its definitions that are marked as needing an update since
-  // we can't run LiveVariables on a deleted register. This only needs
-  // to be done for defs since uses will have their own defining
-  // instructions so we won't be running LiveVariables on a deleted reg.
-  auto recomputeLVForDyingInstr = [&]() {
+  // Since we are deleting this instruction, clear the kill flags on any of its
+  // definitions that are marked as needing an update: the transforms only ever
+  // invalidate kill flags by removing uses (turning a non-last use into the
+  // last one), so a conservative clear is sufficient.
+  auto clearKillsForDyingInstr = [&]() {
     if (RegsToUpdate.empty())
       return;
     for (MachineOperand &MO : ToErase->operands()) {
@@ -520,7 +486,8 @@ bool PPCMIPeephole::simplifyCode() {
       // a def of an invalid register as the instruction is going away.
       if (!MRI->getUniqueVRegDef(RegToUpdate))
         MO.setReg(PPC::NoRegister);
-      LV->recomputeForSingleDefVirtReg(RegToUpdate);
+      for (MachineOperand &Def : MRI->def_operands(RegToUpdate))
+        Def.setIsDead(false);
     }
   };
 
@@ -532,14 +499,14 @@ bool PPCMIPeephole::simplifyCode() {
       if (ToErase) {
         LLVM_DEBUG(dbgs() << "Deleting instruction: ");
         LLVM_DEBUG(ToErase->dump());
-        recomputeLVForDyingInstr();
+        clearKillsForDyingInstr();
         ToErase->eraseFromParent();
         ToErase = nullptr;
       }
       // If a conditional trap instruction got optimized to an
       // unconditional trap, eliminate all the instructions after
       // the trap.
-      if (EnableTrapOptimization && TrapOpt) {
+      if (CLOpts.opt_conditional_trap && TrapOpt) {
         ToErase = &MI;
         continue;
       }
@@ -889,6 +856,8 @@ bool PPCMIPeephole::simplifyCode() {
             LLVM_DEBUG(dbgs() << "Changing splat immediate from " << SplatImm
                               << " to " << NewElem << " in instruction: ");
             LLVM_DEBUG(MI.dump());
+            if (!MRI->constrainRegClass(ShiftOp1, &PPC::VRRCRegClass))
+              llvm_unreachable("Can't fail because vrrc is subset of vsrc");
             addRegToUpdate(MI.getOperand(OpNo).getReg());
             addRegToUpdate(ShiftOp1);
             MI.getOperand(OpNo).setReg(ShiftOp1);
@@ -962,7 +931,8 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::EXTSH:
       case PPC::EXTSH8:
       case PPC::EXTSH8_32_64: {
-        if (!EnableSExtElimination) break;
+        if (!CLOpts.eliminate_signext)
+          break;
         Register NarrowReg = MI.getOperand(1).getReg();
         if (!NarrowReg.isVirtual())
           break;
@@ -1013,7 +983,8 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::EXTSW:
       case PPC::EXTSW_32:
       case PPC::EXTSW_32_64: {
-        if (!EnableSExtElimination) break;
+        if (!CLOpts.eliminate_signext)
+          break;
         Register NarrowReg = MI.getOperand(1).getReg();
         if (!NarrowReg.isVirtual())
           break;
@@ -1021,8 +992,17 @@ bool PPCMIPeephole::simplifyCode() {
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
         unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
-        // just do a sign-extending load.
-        if (SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX) {
+        // just do a sign-extending load. The source may be a 32-bit gprc load
+        // consumed directly, or a 64-bit g8rc load consumed through its sub_32
+        // subregister.
+        bool SrcIsGPRCWordZextLoad =
+            SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX;
+        bool SrcIsG8RCWordZextLoad =
+            SrcOpcode == PPC::LWZ8 || SrcOpcode == PPC::LWZX8;
+        unsigned NarrowSubReg = MI.getOperand(1).getSubReg();
+
+        if ((!NarrowSubReg && SrcIsGPRCWordZextLoad) ||
+            (NarrowSubReg == PPC::sub_32 && SrcIsG8RCWordZextLoad)) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
 
@@ -1048,7 +1028,8 @@ bool PPCMIPeephole::simplifyCode() {
           // Likewise if the source is X-Form the new opcode should also be
           // X-Form.
           unsigned Opc = PPC::LWA_32;
-          bool SourceIsXForm = SrcOpcode == PPC::LWZX;
+          bool SourceIsXForm =
+              SrcOpcode == PPC::LWZX || SrcOpcode == PPC::LWZX8;
           bool MIIs64Bit = MI.getOpcode() == PPC::EXTSW ||
             MI.getOpcode() == PPC::EXTSW_32_64;
 
@@ -1090,18 +1071,31 @@ bool PPCMIPeephole::simplifyCode() {
           // chain used to deduce sign extension to eliminate the 'extsw' will
           // need to be promoted to 64-bit pseudo instructions when the 'extsw'
           // is eliminated.
-          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0, LV);
+          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0);
 
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
-          Register TmpReg =
-              MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
-          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::IMPLICIT_DEF),
-                  TmpReg);
-          BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::INSERT_SUBREG),
-                  MI.getOperand(0).getReg())
-              .addReg(TmpReg)
-              .addReg(NarrowReg)
-              .addImm(PPC::sub_32);
+
+          unsigned NarrowSubReg = MI.getOperand(1).getSubReg();
+          if (NarrowSubReg) {
+            // The input reads a subregister of a wider register which we can
+            // use directly by dropping the subreg.
+            assert(NarrowSubReg == PPC::sub_32 &&
+                   "EXTSW_32_64 input must read the sub_32 subregister");
+            BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
+                    MI.getOperand(0).getReg())
+                .addReg(NarrowReg);
+          } else {
+            Register TmpReg =
+                MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);
+            BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::IMPLICIT_DEF),
+                    TmpReg);
+            BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::INSERT_SUBREG),
+                    MI.getOperand(0).getReg())
+                .addReg(TmpReg)
+                .addReg(NarrowReg)
+                .addImm(PPC::sub_32);
+            addRegToUpdate(NarrowReg);
+          }
           ToErase = &MI;
           Simplified = true;
           NumEliminatedSExt++;
@@ -1115,7 +1109,8 @@ bool PPCMIPeephole::simplifyCode() {
         //   %6 = COPY %5:sub_32; (optional)
         //   %8 = IMPLICIT_DEF;
         //   %7<def,tied1> = INSERT_SUBREG %8<tied0>, %6, sub_32;
-        if (!EnableZExtElimination) break;
+        if (!CLOpts.eliminate_zeroext)
+          break;
 
         if (MI.getOperand(2).getImm() != 0)
           break;
@@ -1343,7 +1338,8 @@ bool PPCMIPeephole::simplifyCode() {
       case PPC::TWI:
       case PPC::TD:
       case PPC::TW: {
-        if (!EnableTrapOptimization) break;
+        if (!CLOpts.opt_conditional_trap)
+          break;
         MachineInstr *LiMI1 = getVRegDefOrNull(&MI.getOperand(1), MRI);
         MachineInstr *LiMI2 = getVRegDefOrNull(&MI.getOperand(2), MRI);
         bool IsOperand2Immediate = MI.getOperand(2).isImm();
@@ -1388,12 +1384,12 @@ bool PPCMIPeephole::simplifyCode() {
     // If the last instruction was marked for elimination,
     // remove it now.
     if (ToErase) {
-      recomputeLVForDyingInstr();
+      clearKillsForDyingInstr();
       ToErase->eraseFromParent();
       ToErase = nullptr;
     }
     // Reset TrapOpt to false at the end of the basic block.
-    if (EnableTrapOptimization)
+    if (CLOpts.opt_conditional_trap)
       TrapOpt = false;
   }
 
@@ -1407,11 +1403,15 @@ bool PPCMIPeephole::simplifyCode() {
   Simplified |= eliminateRedundantCompare();
 
   // If we have made any modifications and added any registers to the set of
-  // registers for which we need to update the kill flags, do so by recomputing
-  // LiveVariables for those registers.
+  // registers whose liveness flags may now be stale, clear those flags. A
+  // transform may remove a use (leaving a stale kill on an earlier use) or add
+  // a use of a previously dead def (leaving a stale dead flag), so clear both
+  // kinds conservatively.
   for (Register Reg : RegsToUpdate) {
-    if (!MRI->reg_empty(Reg))
-      LV->recomputeForSingleDefVirtReg(Reg);
+    if (MRI->reg_empty(Reg))
+      continue;
+    for (MachineOperand &Def : MRI->def_operands(Reg))
+      Def.setIsDead(false);
   }
   return Simplified;
 }
@@ -2076,7 +2076,6 @@ INITIALIZE_PASS_BEGIN(PPCMIPeephole, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LiveVariablesWrapperPass)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
                     "PowerPC MI Peephole Optimization", false, false)
 

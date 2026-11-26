@@ -15,6 +15,7 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCTargetOptions.h"
 
 using namespace llvm;
 
@@ -55,7 +56,8 @@ bool MCAsmInfoDarwin::isSectionAtomizableBySymbols(
   }
 }
 
-MCAsmInfoDarwin::MCAsmInfoDarwin() {
+MCAsmInfoDarwin::MCAsmInfoDarwin(const MCTargetOptions &Options)
+    : MCAsmInfo(Options) {
   // Common settings for all Darwin targets.
   // Syntax:
   LinkerPrivateGlobalPrefix = "l";
@@ -82,7 +84,7 @@ MCAsmInfoDarwin::MCAsmInfoDarwin() {
   HasDotTypeDotSizeDirective = false;
   HasNoDeadStrip = true;
 
-  DwarfUsesRelocationsAcrossSections = false;
+  DwarfUsesRelocationsAcrossSections = Options.MachORelocatableDwarf;
   SetDirectiveSuppressesReloc = true;
 }
 

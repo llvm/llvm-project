@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx1010 | FileCheck %s --check-prefixes=CHECK
+; RUN: llc < %s -mtriple=amdgpu10.10--amdpal | FileCheck %s --check-prefixes=CHECK
 
 ; This used to cause a circular chain dependency during
 ; SelectionDAG instruction scheduling.

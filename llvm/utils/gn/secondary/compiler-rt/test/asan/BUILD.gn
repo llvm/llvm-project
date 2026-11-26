@@ -26,7 +26,7 @@ write_cmake_config("lit_site_cfg") {
     values += [
       "ASAN_TEST_APPLE_TARGET_IS_HOST_PYBOOL=1",
       "ASAN_TEST_DYNAMIC=1",
-     ]
+    ]
   } else {
     values += [
       "ASAN_TEST_APPLE_TARGET_IS_HOST_PYBOOL=0",
@@ -41,7 +41,6 @@ if (current_toolchain != host_toolchain) {
       ":lit_site_cfg",
       "//compiler-rt/include($host_toolchain)",
       "//compiler-rt/lib/asan",
-      "//compiler-rt/lib/asan:ignorelist($host_toolchain)",
       "//compiler-rt/lib/profile",
       "//compiler-rt/test:lit_common_configured",
       "//llvm/tools/llvm-nm($host_toolchain)",

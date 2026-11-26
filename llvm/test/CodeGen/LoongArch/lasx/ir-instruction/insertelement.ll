@@ -35,7 +35,7 @@ define void @insert_32xi8_upper(ptr %src, ptr %dst, i8 %in) nounwind {
 define void @insert_32xi8_undef(ptr %dst, i8 %in) nounwind {
 ; CHECK-LABEL: insert_32xi8_undef:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 1
+; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = insertelement <32 x i8> poison, i8 %in, i32 1
@@ -46,8 +46,7 @@ define void @insert_32xi8_undef(ptr %dst, i8 %in) nounwind {
 define void @insert_32xi8_undef_upper(ptr %dst, i8 %in) nounwind {
 ; CHECK-LABEL: insert_32xi8_undef_upper:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a1, 6
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
+; CHECK-NEXT:    xvreplgr2vr.b $xr0, $a1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = insertelement <32 x i8> poison, i8 %in, i32 22
@@ -88,7 +87,7 @@ define void @insert_16xi16_upper(ptr %src, ptr %dst, i16 %in) nounwind {
 define void @insert_16xi16_undef(ptr %dst, i16 %in) nounwind {
 ; CHECK-LABEL: insert_16xi16_undef:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 1
+; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = insertelement <16 x i16> poison, i16 %in, i32 1
@@ -99,8 +98,7 @@ define void @insert_16xi16_undef(ptr %dst, i16 %in) nounwind {
 define void @insert_16xi16_undef_upper(ptr %dst, i16 %in) nounwind {
 ; CHECK-LABEL: insert_16xi16_undef_upper:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a1, 2
-; CHECK-NEXT:    xvpermi.q $xr0, $xr0, 2
+; CHECK-NEXT:    xvreplgr2vr.h $xr0, $a1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v = insertelement <16 x i16> poison, i16 %in, i32 10
@@ -268,7 +266,7 @@ define void @insert_4xi64_idx(ptr %src, ptr %dst, i64 %in, i32 %idx) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a5, %pc_hi20(.LCPI15_0)
 ; LA32-NEXT:    xvld $xr0, $a5, %pc_lo12(.LCPI15_0)
-; LA32-NEXT:    add.w $a4, $a4, $a4
+; LA32-NEXT:    slli.w $a4, $a4, 1
 ; LA32-NEXT:    xvld $xr1, $a0, 0
 ; LA32-NEXT:    xvreplgr2vr.w $xr2, $a4
 ; LA32-NEXT:    xvseq.w $xr2, $xr2, $xr0

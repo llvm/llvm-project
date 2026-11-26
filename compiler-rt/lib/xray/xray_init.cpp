@@ -252,11 +252,15 @@ __xray_deregister_dso(int32_t ObjId) XRAY_NEVER_INSTRUMENT {
 // Only add the preinit array initialization if the sanitizers can.
 __attribute__((section(".preinit_array"),
                used)) void (*__local_xray_preinit)(void) = __xray_init;
-#else
-// If we cannot use the .preinit_array section, we should instead use dynamic
-// initialisation.
-__attribute__ ((constructor (0)))
-static void __local_xray_dyninit() {
+#endif
+
+// Always register a constructor as well.  On platforms where .preinit_array
+// works (glibc), __xray_init will have already run and the constructor returns
+// immediately.  On platforms where .preinit_array is not processed (e.g. musl),
+// the constructor ensures __xray_init runs before other .init_array entries
+// that depend on XRay flags being initialized.
+#if !defined(XRAY_NO_PREINIT)
+__attribute__((constructor(0))) static void __local_xray_dyninit() {
   __xray_init();
 }
 #endif

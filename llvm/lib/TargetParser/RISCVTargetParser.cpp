@@ -117,6 +117,9 @@ void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
     if (IsRV64 == C.is64Bit())
       Values.emplace_back(C.Name);
   }
+
+  llvm::sort(Values,
+             [](StringRef A, StringRef B) { return A.compare_numeric(B) < 0; });
 }
 
 void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
@@ -126,6 +129,9 @@ void fillValidTuneCPUArchList(SmallVectorImpl<StringRef> &Values, bool IsRV64) {
   }
 #define TUNE_PROC(ENUM, NAME) Values.emplace_back(StringRef(NAME));
 #include "llvm/TargetParser/RISCVTargetParserDef.inc"
+
+  llvm::sort(Values,
+             [](StringRef A, StringRef B) { return A.compare_numeric(B) < 0; });
 }
 
 // This function is currently used by IREE, so it's not dead code.
@@ -387,6 +393,95 @@ unsigned encodeXSfmmVType(unsigned SEW, unsigned Widen, bool AltFmt) {
   unsigned VTypeI = (VSEWBits << 3) | AltFmt << 8 | TWiden << 9;
   return VTypeI;
 }
+
+namespace IME {
+static void assertValidXLenForVType(unsigned XLen) {
+  assert((XLen == 32 || XLen == 64) && "Invalid XLEN");
+}
+
+static unsigned getLambdaShift(unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return XLen - 4;
+}
+
+static unsigned getAltFmtAShift(unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return XLen - 6;
+}
+
+static unsigned getAltFmtBShift(unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return XLen - 7;
+}
+
+static unsigned getBSShift(unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return XLen - 5;
+}
+
+unsigned encodeLambda(unsigned Lambda) {
+  assert(isValidLambda(Lambda) && "Invalid IME lambda");
+  if (Lambda == 0)
+    return 0;
+  return Log2_32(Lambda) + 1;
+}
+
+std::optional<unsigned> decodeLambda(unsigned Encoding) {
+  assert(Encoding < 8 && "Invalid IME lambda encoding");
+  if (Encoding == 0)
+    return std::nullopt;
+  return 1U << (Encoding - 1);
+}
+
+uint64_t getVTypeFieldsMask(unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return (0x7ULL << getLambdaShift(XLen)) | (1ULL << getAltFmtAShift(XLen)) |
+         (1ULL << getAltFmtBShift(XLen)) | (1ULL << getBSShift(XLen));
+}
+
+uint64_t encodeVTypeFields(unsigned XLen, unsigned Lambda, bool AltFmtA,
+                           bool AltFmtB, bool BlockSize16) {
+  assertValidXLenForVType(XLen);
+  uint64_t VType = uint64_t(encodeLambda(Lambda)) << getLambdaShift(XLen);
+  if (AltFmtA)
+    VType |= 1ULL << getAltFmtAShift(XLen);
+  if (AltFmtB)
+    VType |= 1ULL << getAltFmtBShift(XLen);
+  if (BlockSize16)
+    VType |= 1ULL << getBSShift(XLen);
+  return VType;
+}
+
+uint64_t addVTypeFields(uint64_t VType, unsigned XLen, unsigned Lambda,
+                        bool AltFmtA, bool AltFmtB, bool BlockSize16) {
+  return (VType & ~getVTypeFieldsMask(XLen)) |
+         encodeVTypeFields(XLen, Lambda, AltFmtA, AltFmtB, BlockSize16);
+}
+
+unsigned getLambdaEncoding(uint64_t VType, unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return (VType >> getLambdaShift(XLen)) & 0x7;
+}
+
+std::optional<unsigned> getLambda(uint64_t VType, unsigned XLen) {
+  return decodeLambda(getLambdaEncoding(VType, XLen));
+}
+
+bool isAltFmtA(uint64_t VType, unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return VType & (1ULL << getAltFmtAShift(XLen));
+}
+
+bool isAltFmtB(uint64_t VType, unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return VType & (1ULL << getAltFmtBShift(XLen));
+}
+
+bool isBlockSize16(uint64_t VType, unsigned XLen) {
+  assertValidXLenForVType(XLen);
+  return VType & (1ULL << getBSShift(XLen));
+}
+} // namespace IME
 
 std::pair<unsigned, bool> decodeVLMUL(VLMUL VLMul) {
   switch (VLMul) {

@@ -20,6 +20,7 @@ include "mlir/IR/OpBase.td"
 
 def MIFDialect : Dialect {
   let name = "mif";
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   let summary = "Multi-Image Fortran dialect";
 
@@ -32,6 +33,8 @@ def MIFDialect : Dialect {
   }];
 
   let cppNamespace = "::mif";
+  let useDefaultOperationRegistration = 1;
+  let hasInitializer = 0;
   let dependentDialects = ["fir::FIROpsDialect"];
 }
 

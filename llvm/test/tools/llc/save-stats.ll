@@ -1,4 +1,4 @@
-; REQUIRES: asserts
+; REQUIRES: asserts, default_triple
 
 ; Ensure the test runs in a temp directory. See https://github.com/llvm/llvm-project/pull/167403#event-20848739526
 ; RUN: rm -rf %t.dir && mkdir -p %t.dir && cd %t.dir
@@ -12,7 +12,7 @@
 ; CHECK: "asm-printer.EmittedInsts":
 ; CHECK: }
 
-; INVALID_ARG: {{.*}}llc{{.*}}: for the --save-stats option: Cannot find option named 'invalid'!
+; INVALID_ARG: {{.*}}llc{{.*}}: invalid value 'invalid' in '--save-stats=invalid'
 define i32 @func() {
   ret i32 0
 }

@@ -5,6 +5,15 @@
 ; Test musttail support for MIPS
 
 define dso_local i32 @callee_args(i32 %a, i32 %b, i32 %c) {
+; MIPS32-LABEL: callee_args:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    move $2, $4
+;
+; MIPS64-LABEL: callee_args:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    sll $2, $4, 0
   ret i32 %a;
 }
 
@@ -25,6 +34,15 @@ define i32 @test_musttail_args(i32 %x, i32 %y, i32 %z) {
 ; Test musttail with many arguments that spill to stack (involves memory)
 ; MIPS O32 ABI: first 4 args in $a0-$a3, rest on stack
 define hidden i32 @many_args_callee(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h) {
+; MIPS32-LABEL: many_args_callee:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    move $2, $4
+;
+; MIPS64-LABEL: many_args_callee:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    sll $2, $4, 0
   ret i32 %a
 }
 
@@ -53,6 +71,17 @@ define i32 @test_musttail_many_args(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 
 %struct.large = type { i32, i32, i32, i32, i32, i32, i32, i32 }
 
 define hidden i32 @callee_with_struct(%struct.large %s, i32 %x) {
+; MIPS32-LABEL: callee_with_struct:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    lw $2, 32($sp)
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+;
+; MIPS64-LABEL: callee_with_struct:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    lw $2, 4($sp)
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    nop
   ret i32 %x
 }
 
@@ -82,6 +111,15 @@ define i32 @test_musttail_struct(%struct.large %s, i32 %x) {
 
 ; Test musttail with mixed int and float arguments that use stack
 define hidden float @mixed_args_callee(i32 %a, float %b, i32 %c, float %d, i32 %e, float %f) {
+; MIPS32-LABEL: mixed_args_callee:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    mtc1 $5, $f0
+;
+; MIPS64-LABEL: mixed_args_callee:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    mov.s $f0, $f13
   ret float %b
 }
 

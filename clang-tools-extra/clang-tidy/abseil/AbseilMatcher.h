@@ -33,7 +33,7 @@ namespace clang::ast_matchers {
 AST_POLYMORPHIC_MATCHER(
     isInAbseilFile, AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc,
                                                     NestedNameSpecifierLoc)) {
-  auto &SourceManager = Finder->getASTContext().getSourceManager();
+  const auto &SourceManager = Finder->getASTContext().getSourceManager();
   const SourceLocation Loc = SourceManager.getSpellingLoc(Node.getBeginLoc());
   if (Loc.isInvalid())
     return false;

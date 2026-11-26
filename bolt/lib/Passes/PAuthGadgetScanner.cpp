@@ -1553,6 +1553,11 @@ collectRegsToTrack(ArrayRef<PartialReport<MCPhysReg>> Reports) {
 
 void FunctionAnalysisContext::findUnsafeUses(
     SmallVector<PartialReport<MCPhysReg>> &Reports) {
+  const auto HandledDetectors =
+      opts::GS_PTRAUTH_ALL_MASK & ~opts::GS_PTRAUTH_AUTH_ORACLES;
+  if (!(EnabledDetectors & HandledDetectors))
+    return;
+
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, {});
   LLVM_DEBUG(dbgs() << "Running src register safety analysis...\n");
   Analysis->run();
@@ -1617,19 +1622,22 @@ void FunctionAnalysisContext::findUnsafeUses(
       return;
     }
 
-    if (auto Report = shouldReportReturnGadget(BC, Inst, S))
-      Reports.push_back(*Report);
-
-    if (PacRetGadgetsOnly)
-      return;
-
-    if (auto Report = shouldReportUnsafeTailCall(BC, BF, Inst, S))
-      Reports.push_back(*Report);
-
-    if (auto Report = shouldReportCallGadget(BC, Inst, S))
-      Reports.push_back(*Report);
-    if (auto Report = shouldReportSigningOracle(BC, Inst, S))
-      Reports.push_back(*Report);
+    if (EnabledDetectors & opts::GS_PTRAUTH_RETURN_TARGETS) {
+      if (auto Report = shouldReportReturnGadget(BC, Inst, S))
+        Reports.push_back(*Report);
+    }
+    if (EnabledDetectors & opts::GS_PTRAUTH_TAIL_CALLS) {
+      if (auto Report = shouldReportUnsafeTailCall(BC, BF, Inst, S))
+        Reports.push_back(*Report);
+    }
+    if (EnabledDetectors & opts::GS_PTRAUTH_BRANCH_AND_CALL_TARGETS) {
+      if (auto Report = shouldReportCallGadget(BC, Inst, S))
+        Reports.push_back(*Report);
+    }
+    if (EnabledDetectors & opts::GS_PTRAUTH_SIGN_ORACLES) {
+      if (auto Report = shouldReportSigningOracle(BC, Inst, S))
+        Reports.push_back(*Report);
+    }
   });
 }
 
@@ -1660,8 +1668,10 @@ void FunctionAnalysisContext::augmentUnsafeUseReports(
 
 void FunctionAnalysisContext::findUnsafeDefs(
     SmallVector<PartialReport<MCPhysReg>> &Reports) {
-  if (PacRetGadgetsOnly)
+  const auto HandledDetectors = opts::GS_PTRAUTH_AUTH_ORACLES;
+  if (!(EnabledDetectors & HandledDetectors))
     return;
+
   if (AuthTrapsOnFailure)
     return;
 
@@ -1719,6 +1729,15 @@ void FunctionAnalysisContext::handleSimpleReports(
   llvm::erase_if(Reports, [](const auto &R) { return !R.RequestedDetails; });
 }
 
+FunctionAnalysisContext::FunctionAnalysisContext(
+    BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId,
+    opts::GadgetKindBitmask EnabledDetectors)
+    : BC(BF.getBinaryContext()), BF(BF), AllocatorId(AllocatorId),
+      EnabledDetectors(EnabledDetectors) {
+  assert(!(EnabledDetectors & ~opts::GS_PTRAUTH_ALL_MASK) &&
+         "Unrelated detectors requested");
+}
+
 void FunctionAnalysisContext::run() {
   LLVM_DEBUG({
     dbgs() << "Analyzing function " << BF.getPrintName()
@@ -1741,7 +1760,7 @@ void FunctionAnalysisContext::run() {
 
 void Analysis::runOnFunction(BinaryFunction &BF,
                              MCPlusBuilder::AllocatorIdTy AllocatorId) {
-  FunctionAnalysisContext FA(BF, AllocatorId, PacRetGadgetsOnly);
+  FunctionAnalysisContext FA(BF, AllocatorId, EnabledDetectors);
   FA.run();
 
   const FunctionAnalysisResult &FAR = FA.getResult();
@@ -1847,6 +1866,12 @@ void LeakageInfo::print(raw_ostream &OS, const MCInstReference Location) const {
 void GenericDiagnostic::generateReport(raw_ostream &OS,
                                        const BinaryContext &BC) const {
   printBasicInfo(OS, BC, Text);
+}
+
+Analysis::Analysis(opts::GadgetKindBitmask EnabledDetectors)
+    : BinaryFunctionPass(false), EnabledDetectors(EnabledDetectors) {
+  assert(!(EnabledDetectors & ~opts::GS_PTRAUTH_ALL_MASK) &&
+         "Unrelated detectors requested");
 }
 
 Error Analysis::runOnFunctions(BinaryContext &BC) {

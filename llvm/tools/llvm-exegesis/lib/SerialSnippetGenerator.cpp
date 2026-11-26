@@ -11,7 +11,6 @@
 #include "CodeTemplate.h"
 #include "MCInstrDescView.h"
 #include "Target.h"
-#include <algorithm>
 #include <numeric>
 #include <vector>
 
@@ -133,7 +132,7 @@ static void appendCodeTemplates(const LLVMState &State,
       unsigned ScratchMemoryRegister = ET.getScratchMemoryRegister(
           State.getTargetMachine().getTargetTriple());
       const llvm::MCRegisterClass &RegClass =
-          State.getTargetMachine().getMCRegisterInfo()->getRegClass(
+          State.getTargetMachine().getMCRegisterInfo().getRegClass(
               DefOp.getExplicitOperandInfo().RegClass);
 
       // Register classes of def operand and memory operand must be the same

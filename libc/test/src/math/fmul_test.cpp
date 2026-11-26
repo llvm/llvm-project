@@ -13,9 +13,9 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-LIST_MUL_TESTS(float, double, LIBC_NAMESPACE::fmul)
+LIST_MUL_TESTS(Fmul, float, double, LIBC_NAMESPACE::fmul)
 
-TEST_F(LlvmLibcMulTest, SpecialInputs) {
+TEST_F(LlvmLibcFmulTest, SpecialInputs) {
   namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
   double INPUTS[][2] = {
       {0x1.0100010002p8, 0x1.fffcp14},

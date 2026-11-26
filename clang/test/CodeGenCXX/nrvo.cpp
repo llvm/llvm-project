@@ -88,7 +88,7 @@ X test0() { // http://wg21.link/p2025r2#ex-2
 // CHECK-NEXT:    store i1 false, ptr [[NRVO]], align 1
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    store i1 true, ptr [[NRVO]], align 1
@@ -119,7 +119,7 @@ X test0() { // http://wg21.link/p2025r2#ex-2
 // CHECK-EH-03-NEXT:    store i1 false, ptr [[NRVO]], align 1
 // CHECK-EH-03-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    store i1 true, ptr [[NRVO]], align 1
@@ -150,7 +150,7 @@ X test0() { // http://wg21.link/p2025r2#ex-2
 // CHECK-EH-11-NEXT:    store i1 false, ptr [[NRVO]], align 1
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    store i1 true, ptr [[NRVO]], align 1
@@ -189,7 +189,7 @@ X test1(bool B) {
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[Y]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    call void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[Y]])
@@ -221,7 +221,7 @@ X test1(bool B) {
 // CHECK-EH-03-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-03:       invoke.cont:
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    invoke void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[Y]])
@@ -295,7 +295,7 @@ X test1(bool B) {
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-11:       invoke.cont:
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    invoke void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[Y]])
@@ -358,7 +358,7 @@ X test2(bool B) {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -395,7 +395,7 @@ X test2(bool B) {
 // CHECK-EH-03-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-03-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -432,7 +432,7 @@ X test2(bool B) {
 // CHECK-EH-11-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-11-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -482,7 +482,7 @@ extern "C" void exit(int) throw();
 // CHECK-NEXT:    store i1 false, ptr [[NRVO]], align 1
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    store i1 true, ptr [[NRVO]], align 1
@@ -507,6 +507,8 @@ extern "C" void exit(int) throw();
 // CHECK-NEXT:    call void @exit(i32 noundef 1) #[[ATTR4]]
 // CHECK-NEXT:    call void @llvm.trap()
 // CHECK-NEXT:    unreachable
+// CHECK:       1:
+// CHECK-NEXT:    unreachable
 // CHECK:       return:
 // CHECK-NEXT:    ret void
 // CHECK:       unreachable:
@@ -524,7 +526,7 @@ extern "C" void exit(int) throw();
 // CHECK-EH-03-NEXT:    store i1 false, ptr [[NRVO]], align 1
 // CHECK-EH-03-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    store i1 true, ptr [[NRVO]], align 1
@@ -549,6 +551,8 @@ extern "C" void exit(int) throw();
 // CHECK-EH-03-NEXT:    call void @exit(i32 noundef 1) #[[ATTR7:[0-9]+]]
 // CHECK-EH-03-NEXT:    call void @llvm.trap()
 // CHECK-EH-03-NEXT:    unreachable
+// CHECK-EH-03:       1:
+// CHECK-EH-03-NEXT:    unreachable
 // CHECK-EH-03:       return:
 // CHECK-EH-03-NEXT:    ret void
 // CHECK-EH-03:       unreachable:
@@ -566,7 +570,7 @@ extern "C" void exit(int) throw();
 // CHECK-EH-11-NEXT:    store i1 false, ptr [[NRVO]], align 1
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    store i1 true, ptr [[NRVO]], align 1
@@ -590,6 +594,8 @@ extern "C" void exit(int) throw();
 // CHECK-EH-11:       cleanup.cont:
 // CHECK-EH-11-NEXT:    call void @exit(i32 noundef 1) #[[ATTR6]]
 // CHECK-EH-11-NEXT:    call void @llvm.trap()
+// CHECK-EH-11-NEXT:    unreachable
+// CHECK-EH-11:       1:
 // CHECK-EH-11-NEXT:    unreachable
 // CHECK-EH-11:       return:
 // CHECK-EH-11-NEXT:    ret void
@@ -628,7 +634,7 @@ void may_throw();
 // CHECK-EH-03-NEXT:    br label [[CATCH_DISPATCH:%.*]]
 // CHECK-EH-03:       catch.dispatch:
 // CHECK-EH-03-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK-EH-03-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI1X) #[[ATTR7]]
+// CHECK-EH-03-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI1X)
 // CHECK-EH-03-NEXT:    [[MATCHES:%.*]] = icmp eq i32 [[SEL]], [[TMP3]]
 // CHECK-EH-03-NEXT:    br i1 [[MATCHES]], label [[CATCH:%.*]], label [[EH_RESUME:%.*]]
 // CHECK-EH-03:       catch:
@@ -673,6 +679,8 @@ void may_throw();
 // CHECK-EH-03:       try.cont:
 // CHECK-EH-03-NEXT:    call void @llvm.trap()
 // CHECK-EH-03-NEXT:    unreachable
+// CHECK-EH-03:       12:
+// CHECK-EH-03-NEXT:    unreachable
 // CHECK-EH-03:       eh.resume:
 // CHECK-EH-03-NEXT:    [[EXN8:%.*]] = load ptr, ptr [[EXN_SLOT]], align 4
 // CHECK-EH-03-NEXT:    [[SEL9:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
@@ -680,10 +688,10 @@ void may_throw();
 // CHECK-EH-03-NEXT:    [[LPAD_VAL10:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL9]], 1
 // CHECK-EH-03-NEXT:    resume { ptr, i32 } [[LPAD_VAL10]]
 // CHECK-EH-03:       terminate.lpad:
-// CHECK-EH-03-NEXT:    [[TMP12:%.*]] = landingpad { ptr, i32 }
+// CHECK-EH-03-NEXT:    [[TMP13:%.*]] = landingpad { ptr, i32 }
 // CHECK-EH-03-NEXT:            catch ptr null
-// CHECK-EH-03-NEXT:    [[TMP13:%.*]] = extractvalue { ptr, i32 } [[TMP12]], 0
-// CHECK-EH-03-NEXT:    call void @__clang_call_terminate(ptr [[TMP13]]) #[[ATTR6]]
+// CHECK-EH-03-NEXT:    [[TMP14:%.*]] = extractvalue { ptr, i32 } [[TMP13]], 0
+// CHECK-EH-03-NEXT:    call void @__clang_call_terminate(ptr [[TMP14]]) #[[ATTR6]]
 // CHECK-EH-03-NEXT:    unreachable
 //
 // CHECK-EH-11-LABEL: @_Z5test5v(
@@ -707,7 +715,7 @@ void may_throw();
 // CHECK-EH-11-NEXT:    br label [[CATCH_DISPATCH:%.*]]
 // CHECK-EH-11:       catch.dispatch:
 // CHECK-EH-11-NEXT:    [[SEL:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
-// CHECK-EH-11-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI1X) #[[ATTR6]]
+// CHECK-EH-11-NEXT:    [[TMP3:%.*]] = call i32 @llvm.eh.typeid.for.p0(ptr @_ZTI1X)
 // CHECK-EH-11-NEXT:    [[MATCHES:%.*]] = icmp eq i32 [[SEL]], [[TMP3]]
 // CHECK-EH-11-NEXT:    br i1 [[MATCHES]], label [[CATCH:%.*]], label [[EH_RESUME:%.*]]
 // CHECK-EH-11:       catch:
@@ -738,6 +746,8 @@ void may_throw();
 // CHECK-EH-11:       try.cont:
 // CHECK-EH-11-NEXT:    call void @llvm.trap()
 // CHECK-EH-11-NEXT:    unreachable
+// CHECK-EH-11:       9:
+// CHECK-EH-11-NEXT:    unreachable
 // CHECK-EH-11:       eh.resume:
 // CHECK-EH-11-NEXT:    [[EXN5:%.*]] = load ptr, ptr [[EXN_SLOT]], align 4
 // CHECK-EH-11-NEXT:    [[SEL6:%.*]] = load i32, ptr [[EHSELECTOR_SLOT]], align 4
@@ -745,10 +755,10 @@ void may_throw();
 // CHECK-EH-11-NEXT:    [[LPAD_VAL7:%.*]] = insertvalue { ptr, i32 } [[LPAD_VAL]], i32 [[SEL6]], 1
 // CHECK-EH-11-NEXT:    resume { ptr, i32 } [[LPAD_VAL7]]
 // CHECK-EH-11:       terminate.lpad:
-// CHECK-EH-11-NEXT:    [[TMP9:%.*]] = landingpad { ptr, i32 }
+// CHECK-EH-11-NEXT:    [[TMP10:%.*]] = landingpad { ptr, i32 }
 // CHECK-EH-11-NEXT:            catch ptr null
-// CHECK-EH-11-NEXT:    [[TMP10:%.*]] = extractvalue { ptr, i32 } [[TMP9]], 0
-// CHECK-EH-11-NEXT:    call void @__clang_call_terminate(ptr [[TMP10]]) #[[ATTR7:[0-9]+]]
+// CHECK-EH-11-NEXT:    [[TMP11:%.*]] = extractvalue { ptr, i32 } [[TMP10]], 0
+// CHECK-EH-11-NEXT:    call void @__clang_call_terminate(ptr [[TMP11]]) #[[ATTR7:[0-9]+]]
 // CHECK-EH-11-NEXT:    unreachable
 //
 X test5() { // http://wg21.link/p2025r2#ex-14
@@ -850,7 +860,7 @@ X test6() {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -878,7 +888,7 @@ X test6() {
 // CHECK-EH-03-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-03-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -906,7 +916,7 @@ X test6() {
 // CHECK-EH-11-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-11-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -943,7 +953,7 @@ X test7(bool b) {
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -980,7 +990,7 @@ X test7(bool b) {
 // CHECK-EH-03-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-03-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -1017,7 +1027,7 @@ X test7(bool b) {
 // CHECK-EH-11-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-11-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -1062,6 +1072,8 @@ X test8(bool b) {
 // CHECK-NEXT:    call void @_ZN1YIiE1fEv(ptr dead_on_unwind writable sret([[STRUCT_Y]]) align 1 [[TMP]])
 // CHECK-NEXT:    call void @llvm.trap()
 // CHECK-NEXT:    unreachable
+// CHECK:       0:
+// CHECK-NEXT:    unreachable
 //
 // CHECK-EH-03-LABEL: @_Z5test9v(
 // CHECK-EH-03-NEXT:  entry:
@@ -1071,6 +1083,8 @@ X test8(bool b) {
 // CHECK-EH-03-NEXT:    call void @_ZN1YIiE1fEv(ptr dead_on_unwind writable sret([[STRUCT_Y]]) align 1 [[TMP]])
 // CHECK-EH-03-NEXT:    call void @llvm.trap()
 // CHECK-EH-03-NEXT:    unreachable
+// CHECK-EH-03:       0:
+// CHECK-EH-03-NEXT:    unreachable
 //
 // CHECK-EH-11-LABEL: @_Z5test9v(
 // CHECK-EH-11-NEXT:  entry:
@@ -1079,6 +1093,8 @@ X test8(bool b) {
 // CHECK-EH-11-NEXT:    store ptr [[AGG_RESULT:%.*]], ptr [[RESULT_PTR]], align 4
 // CHECK-EH-11-NEXT:    call void @_ZN1YIiE1fEv(ptr dead_on_unwind writable sret([[STRUCT_Y]]) align 1 [[TMP]])
 // CHECK-EH-11-NEXT:    call void @llvm.trap()
+// CHECK-EH-11-NEXT:    unreachable
+// CHECK-EH-11:       0:
 // CHECK-EH-11-NEXT:    unreachable
 //
 Y<int> test9() {
@@ -1096,7 +1112,7 @@ Y<int> test9() {
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    call void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[X]])
@@ -1123,7 +1139,7 @@ Y<int> test9() {
 // CHECK-EH-03-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-03-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    invoke void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[X]])
@@ -1177,7 +1193,7 @@ Y<int> test9() {
 // CHECK-EH-11-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    invoke void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[X]])
@@ -1229,7 +1245,7 @@ X test10(bool b) { // http://wg21.link/p2025r2#ex-3
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
@@ -1256,7 +1272,7 @@ X test10(bool b) { // http://wg21.link/p2025r2#ex-3
 // CHECK-EH-03-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-03-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    invoke void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
@@ -1310,7 +1326,7 @@ X test10(bool b) { // http://wg21.link/p2025r2#ex-3
 // CHECK-EH-11-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    invoke void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
@@ -1364,7 +1380,7 @@ X test11(bool b) { // http://wg21.link/p2025r2#ex-5
 // CHECK-NEXT:    store i1 false, ptr [[NRVO]], align 1
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    store i32 2, ptr [[CLEANUP_DEST_SLOT]], align 4
@@ -1407,7 +1423,7 @@ X test11(bool b) { // http://wg21.link/p2025r2#ex-5
 // CHECK-EH-03-NEXT:    store i1 false, ptr [[NRVO]], align 1
 // CHECK-EH-03-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    store i32 2, ptr [[CLEANUP_DEST_SLOT]], align 4
@@ -1450,7 +1466,7 @@ X test11(bool b) { // http://wg21.link/p2025r2#ex-5
 // CHECK-EH-11-NEXT:    store i1 false, ptr [[NRVO]], align 1
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    store i32 2, ptr [[CLEANUP_DEST_SLOT]], align 4
@@ -1498,7 +1514,7 @@ X test12(bool b) { // http://wg21.link/p2025r2#ex-6
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
@@ -1526,7 +1542,7 @@ X test12(bool b) { // http://wg21.link/p2025r2#ex-6
 // CHECK-EH-03-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-03-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
@@ -1554,7 +1570,7 @@ X test12(bool b) { // http://wg21.link/p2025r2#ex-6
 // CHECK-EH-11-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-11-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
@@ -1592,7 +1608,7 @@ X test13(bool b) { // http://wg21.link/p2025r2#ex-7
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    call void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[X]])
@@ -1628,7 +1644,7 @@ X test13(bool b) { // http://wg21.link/p2025r2#ex-7
 // CHECK-EH-03-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-03-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    invoke void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[X]])
@@ -1693,7 +1709,7 @@ X test13(bool b) { // http://wg21.link/p2025r2#ex-7
 // CHECK-EH-11-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    invoke void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[X]])
@@ -1754,7 +1770,7 @@ X test14(bool b) { // http://wg21.link/p2025r2#ex-8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    call void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[X]])
@@ -1790,7 +1806,7 @@ X test14(bool b) { // http://wg21.link/p2025r2#ex-8
 // CHECK-EH-03-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-03-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    invoke void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[X]])
@@ -1855,7 +1871,7 @@ X test14(bool b) { // http://wg21.link/p2025r2#ex-8
 // CHECK-EH-11-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[X]])
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    invoke void @_ZN1XC1ERKS_(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]], ptr noundef nonnull align 1 dereferenceable(1) [[X]])
@@ -1918,7 +1934,7 @@ X test15(bool b) { // http://wg21.link/p2025r2#ex-15
 // CHECK-EH-11-NEXT:    invoke void @"_ZZ6test16vENK3$_0clEv"(ptr dead_on_unwind writable sret([[CLASS_X]]) align 1 [[AGG_TMP]], ptr noundef nonnull align 4 dereferenceable(4) [[REF_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]
 // CHECK-EH-11:       invoke.cont:
-// CHECK-EH-11-NEXT:    invoke void @_Z8ConsumeX1X(ptr noundef [[AGG_TMP]])
+// CHECK-EH-11-NEXT:    invoke void @_Z8ConsumeX1X(ptr nofreeobj noundef align 1 dereferenceable(1) [[AGG_TMP]])
 // CHECK-EH-11-NEXT:            to label [[INVOKE_CONT2:%.*]] unwind label [[LPAD1:%.*]]
 // CHECK-EH-11:       invoke.cont2:
 // CHECK-EH-11-NEXT:    call void @_ZN1XD1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_TMP]]) #[[ATTR6]]
@@ -2005,7 +2021,7 @@ void test16() { // http://wg21.link/p2025r2#ex-9
 // CHECK-NEXT:    br i1 [[CMP9]], label [[IF_THEN10:%.*]], label [[IF_END11:%.*]]
 // CHECK:       if.then10:
 // CHECK-NEXT:    store i32 3, ptr [[CLEANUP_DEST_SLOT]], align 4
-// CHECK-NEXT:    br label [[CLEANUP]], !llvm.loop [[LOOP3:![0-9]+]]
+// CHECK-NEXT:    br label [[CLEANUP]], !llvm.loop [[LOOP2:![0-9]+]]
 // CHECK:       if.end11:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-NEXT:    [[CMP12:%.*]] = icmp eq i32 [[TMP4]], 3
@@ -2047,7 +2063,7 @@ void test16() { // http://wg21.link/p2025r2#ex-9
 // CHECK-NEXT:      i32 2, label [[IMPOSSIBLE]]
 // CHECK-NEXT:    ]
 // CHECK:       cleanup.cont:
-// CHECK-NEXT:    br label [[WHILE_BODY]], !llvm.loop [[LOOP3]]
+// CHECK-NEXT:    br label [[WHILE_BODY]], !llvm.loop [[LOOP2]]
 // CHECK:       while.end:
 // CHECK-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-NEXT:    br label [[RETURN]]
@@ -2197,7 +2213,7 @@ void test16() { // http://wg21.link/p2025r2#ex-9
 // CHECK-EH-11-NEXT:    br i1 [[CMP9]], label [[IF_THEN10:%.*]], label [[IF_END11:%.*]]
 // CHECK-EH-11:       if.then10:
 // CHECK-EH-11-NEXT:    store i32 3, ptr [[CLEANUP_DEST_SLOT]], align 4
-// CHECK-EH-11-NEXT:    br label [[CLEANUP]], !llvm.loop [[LOOP4:![0-9]+]]
+// CHECK-EH-11-NEXT:    br label [[CLEANUP]], !llvm.loop [[LOOP3:![0-9]+]]
 // CHECK-EH-11:       if.end11:
 // CHECK-EH-11-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I_ADDR]], align 4
 // CHECK-EH-11-NEXT:    [[CMP12:%.*]] = icmp eq i32 [[TMP4]], 3
@@ -2239,7 +2255,7 @@ void test16() { // http://wg21.link/p2025r2#ex-9
 // CHECK-EH-11-NEXT:      i32 2, label [[IMPOSSIBLE]]
 // CHECK-EH-11-NEXT:    ]
 // CHECK-EH-11:       cleanup.cont:
-// CHECK-EH-11-NEXT:    br label [[WHILE_BODY]], !llvm.loop [[LOOP4]]
+// CHECK-EH-11-NEXT:    br label [[WHILE_BODY]], !llvm.loop [[LOOP3]]
 // CHECK-EH-11:       while.end:
 // CHECK-EH-11-NEXT:    call void @_ZN1XC1Ev(ptr noundef nonnull align 1 dereferenceable(1) [[AGG_RESULT]])
 // CHECK-EH-11-NEXT:    br label [[RETURN]]
@@ -2740,7 +2756,7 @@ X test22() { // http://wg21.link/p2025r2#ex-19
 // CHECK-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK:       if.then:
 // CHECK-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -2773,7 +2789,7 @@ X test22() { // http://wg21.link/p2025r2#ex-19
 // CHECK-EH-03-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-03-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-03-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-03-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-03-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-03:       if.then:
 // CHECK-EH-03-NEXT:    store i1 false, ptr [[NRVO]], align 1
@@ -2831,7 +2847,7 @@ X test22() { // http://wg21.link/p2025r2#ex-19
 // CHECK-EH-11-NEXT:    [[STOREDV:%.*]] = zext i1 [[B:%.*]] to i8
 // CHECK-EH-11-NEXT:    store i8 [[STOREDV]], ptr [[B_ADDR]], align 1
 // CHECK-EH-11-NEXT:    [[TMP0:%.*]] = load i8, ptr [[B_ADDR]], align 1
-// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-EH-11-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-EH-11-NEXT:    br i1 [[LOADEDV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 // CHECK-EH-11:       if.then:
 // CHECK-EH-11-NEXT:    store i1 false, ptr [[NRVO]], align 1

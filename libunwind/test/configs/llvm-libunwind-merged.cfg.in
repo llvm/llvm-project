@@ -8,11 +8,20 @@ lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 compile_flags = []
 link_flags = []
 
+if @HAVE_GETAUXVAL@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_GETAUXVAL')
+
+if @HAVE_ELF_AUX_INFO@:
+    compile_flags.append('-D_LIBUNWIND_HAVE_ELF_AUX_INFO')
+
 if @LIBUNWIND_ENABLE_CET@:
     compile_flags.append('-fcf-protection=full')
 
 if @LIBUNWIND_ENABLE_GCS@:
     compile_flags.append('-mbranch-protection=standard')
+
+if @HAVE_CFI_SET_RA_STATE@:
+    compile_flags.append('-DHAVE_CFI_SET_RA_STATE')
 
 # On ELF platforms, link tests with -Wl,--export-dynamic if supported by the linker.
 if len('@CMAKE_EXE_EXPORTS_CXX_FLAG@'):
@@ -29,7 +38,7 @@ config.substitutions.append(('%{flags}',
     '-isysroot {}'.format(local_sysroot) if local_sysroot else ''
 ))
 config.substitutions.append(('%{compile_flags}',
-    '-nostdinc++ -I %{{include}} {}'.format(' '.join(compile_flags))
+    '-nostdinc++ -I %{{include}} -I %{{libcxx}}/test/support {}'.format(' '.join(compile_flags))
 ))
 config.substitutions.append(('%{link_flags}',
     '-L %{{lib}} -Wl,-rpath,%{{lib}} -lc++ {}'.format(' '.join(link_flags))

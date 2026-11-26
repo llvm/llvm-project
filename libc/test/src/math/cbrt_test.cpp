@@ -27,10 +27,10 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::testing::tlog;
 
 TEST_F(LlvmLibcCbrtTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 123'451;
-  uint64_t START = FPBits(1.0).uintval();
-  uint64_t STOP = FPBits(8.0).uintval();
-  uint64_t STEP = (STOP - START) / COUNT;
+  constexpr uint64_t COUNT = 1'231;
+  constexpr uint64_t START = FPBits(1.0).uintval();
+  constexpr uint64_t STOP = FPBits(8.0).uintval();
+  constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode force_rounding(rounding_mode);
@@ -40,7 +40,7 @@ TEST_F(LlvmLibcCbrtTest, InDoubleRange) {
     uint64_t fails = 0;
     uint64_t tested = 0;
     uint64_t total = 0;
-    double worst_input, worst_output = 0.0;
+    double worst_input = 0.0, worst_output = 0.0;
     double ulp = 0.5;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {

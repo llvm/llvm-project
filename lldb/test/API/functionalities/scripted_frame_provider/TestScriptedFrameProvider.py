@@ -10,6 +10,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
 from lldbsuite.test import lldbutil
 
+
+@requireNotWasm("multithreaded C++ inferior; wasm has no threads or exceptions")
 class ScriptedFrameProviderTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -129,6 +131,53 @@ class ScriptedFrameProviderTestCase(TestBase):
         frame_n_plus_1 = thread.GetFrameAtIndex(new_frame_count - 1)
         self.assertEqual(frame_n_plus_1.GetPC(), 0x10)
 
+    def test_scripted_frame_thread_member(self):
+        """Test that ScriptedFrame.thread is correctly set via GetThreadByID.
+
+        This is a regression test for a bug where ScriptedFrame.__init__ used
+        GetThreadByIndexID(tid) instead of GetThreadByID(tid). Since thread ID
+        and index ID differ, the wrong API would produce an invalid thread.
+        """
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        error = lldb.SBError()
+        provider_id = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ThreadValidatingFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+        self.assertNotEqual(provider_id, 0, "Provider ID should be non-zero")
+
+        # The ThreadValidatingFrame encodes thread validity in its function name.
+        frame0 = thread.GetFrameAtIndex(0)
+        func_name = frame0.GetFunctionName()
+
+        # If GetThreadByIndexID were used instead of GetThreadByID, the thread
+        # would be invalid and the function name would be "thread_INVALID".
+        self.assertNotEqual(
+            func_name,
+            "thread_INVALID",
+            "ScriptedFrame.thread should be valid "
+            "(GetThreadByID vs GetThreadByIndexID)",
+        )
+        self.assertIn("thread_valid_id_", func_name)
+
+        # Verify the encoded thread ID matches the actual thread ID.
+        expected_tid = thread.GetThreadID()
+        self.assertIn(
+            hex(expected_tid),
+            func_name,
+            f"ScriptedFrame.thread ID should match: expected {expected_tid:#x} "
+            f"in '{func_name}'",
+        )
+
     def test_scripted_frame_objects(self):
         """Test that provider can return ScriptedFrame objects."""
         self.build()
@@ -170,6 +219,34 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertEqual(frame2.GetFunctionName(), "custom_scripted_frame_2")
         self.assertEqual(frame2.GetPC(), 0x7000)
         self.assertTrue(frame2.IsSynthetic(), "Frame should be marked as synthetic")
+
+    @skipIf(oslist=["linux"], archs=no_match(["i386", "x86_64"]))
+    def test_expression_at_frame_without_variables(self):
+        """Test evaluating an expression at a scripted frame whose
+        get_variables() returns None."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        error = lldb.SBError()
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.DefaultVariablesFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertSuccess(error)
+
+        frame = thread.GetFrameAtIndex(0)
+        self.assertEqual(frame.GetFunctionName(), "no_variables")
+        self.assertEqual(frame.GetVariables(True, True, True, True).GetSize(), 0)
+
+        value = frame.EvaluateExpression("1 + 1")
+        self.assertSuccess(value.GetError())
+        self.assertEqual(value.GetValueAsSigned(), 2)
 
     def test_applies_to_thread(self):
         """Test that applies_to_thread filters which threads get the provider."""
@@ -772,19 +849,92 @@ class ScriptedFrameProviderTestCase(TestBase):
         # Check that we can get variables from this frame.
         frame0 = thread.GetFrameAtIndex(0)
         self.assertIsNotNone(frame0)
-        # Get every variable visible at this point
-        variables = frame0.GetVariables(True, True, True, False)
+
+        # Ensure that we can get synthetic variables with `SetIncludeSynthetic`.
+        options = lldb.SBVariablesOptions()
+        options.SetIncludeSynthetic(True)
+        variables = frame0.GetVariables(options)
+        self.assertFalse(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 0)
+
+        options.SetIncludeLocals(True)
+        variables = frame0.GetVariables(options)
         self.assertTrue(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 2)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "variable_in_main")
+        self.assertEqual(variables.GetValueAtIndex(1).name, "_handler_one")
+
+        # Ensure that we get synthetic variables in the other overloads.
+        # (arguments, locals, statics, in_scope_only)
+        variables = frame0.GetVariables(False, False, False, False)
+        self.assertFalse(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 0)
+        variables = frame0.GetVariables(False, True, False, False)
+        self.assertTrue(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 2)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "variable_in_main")
+        self.assertEqual(variables.GetValueAtIndex(1).name, "_handler_one")
+
+        # (arguments, locals, statics, in_scope_only, use_dynamic)
+        variables = frame0.GetVariables(
+            False, True, False, False, lldb.eNoDynamicValues
+        )
+        self.assertTrue(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 2)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "variable_in_main")
+        self.assertEqual(variables.GetValueAtIndex(1).name, "_handler_one")
+
+        # Synthetic variables are always in scope.
+        variables = frame0.GetVariables(False, False, False, True)
+        self.assertFalse(variables.IsValid())
+        self.assertEqual(variables.GetSize(), 0)
+        variables = frame0.GetVariables(False, True, False, True)
+        self.assertTrue(variables.IsValid())
+        # We don't see `variable_in_main` here, because it doesn't have the synthetic flag.
         self.assertEqual(variables.GetSize(), 1)
+        self.assertEqual(variables.GetValueAtIndex(0).name, "_handler_one")
+
+        # A variable reports the ValueType the frame classified it as, not the
+        # one that follows from how its ValueObject was built. `_handler_one`
+        # comes from an expression, so the two differ.
+        self.assertEqual(
+            variables.GetValueAtIndex(0).GetValueType(),
+            lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag,
+        )
+        # Classifying a variable must not cost its data or its type.
+        self.assertEqual(variables.GetValueAtIndex(0).GetValueAsUnsigned(), 1)
+        self.assertEqual(variables.GetValueAtIndex(0).GetTypeName(), "uint32_t")
+        # Reaching the same variable by name has to agree with the enumeration.
+        self.assertEqual(
+            frame0.FindVariable("_handler_one").GetValueType(),
+            lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag,
+        )
+        self.assertEqual(frame0.FindVariable("_handler_one").GetValueAsUnsigned(), 1)
+
+        # Check the `frame variable` command(s) handle synthetic variables the
+        # way we expect by printing them.
+        self.expect("frame var", substrs=["variable_in_main", "_handler_one"])
+
+        # Then, try and run it without synthetic variables and ensure we don't
+        # get any, but we still get the others.
+        interp = self.dbg.GetCommandInterpreter()
+        command_result = lldb.SBCommandReturnObject()
+        result = interp.HandleCommand("frame var -e", command_result)
+        self.assertEqual(
+            result, lldb.eReturnStatusSuccessFinishResult, "frame var -e didn't succeed"
+        )
+        output = command_result.GetOutput()
+        self.assertIn("variable_in_main", output, "Didn't find a regular variable")
+        self.assertNotIn("_handler_one", output, "Found an synthetic variable")
 
         # Check that we can get values from paths. `_handler_one` is a special
         # value we provide through only our expression handler in the frame
-        # implementation.
+        # implementation. We can't evaluate expressions on the special value
+        # just because the test implementation doesn't handle it, and we
+        # delegate all expression handling to the implementation.
         one = frame0.GetValueForVariablePath("_handler_one")
         self.assertEqual(one.unsigned, 1)
-        var = frame0.GetValueForVariablePath("variable_in_main")
-        # The names won't necessarily match, but the values should (the frame renames the SBValue)
-        self.assertEqual(var.unsigned, variables.GetValueAtIndex(0).unsigned)
+        # Ensure I can still access and do arithmetic on regular variables.
         varp1 = frame0.GetValueForVariablePath("variable_in_main + 1")
         self.assertEqual(varp1.unsigned, 124)
 
@@ -875,8 +1025,6 @@ class ScriptedFrameProviderTestCase(TestBase):
         5. SBFrame references from removed provider don't crash when accessed.
         """
         self.build()
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target.IsValid(), "Target should be valid")
 
         # Import the test frame provider.
         script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
@@ -884,8 +1032,9 @@ class ScriptedFrameProviderTestCase(TestBase):
 
         # Set up breakpoints at the return statements in foo, bar, and baz.
         # This ensures local variables are initialized.
-        bp_foo = target.BreakpointCreateBySourceRegex(
-            "Break in foo", lldb.SBFileSpec(self.source)
+        # We should hit the foo breakpoint first.
+        target, process, thread, bp_foo = lldbutil.run_to_source_breakpoint(
+            self, "Break in foo", lldb.SBFileSpec(self.source)
         )
         bp_bar = target.BreakpointCreateBySourceRegex(
             "Break in bar", lldb.SBFileSpec(self.source)
@@ -897,17 +1046,6 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(bp_foo.IsValid(), "Breakpoint at foo should be valid")
         self.assertTrue(bp_bar.IsValid(), "Breakpoint at bar should be valid")
         self.assertTrue(bp_baz.IsValid(), "Breakpoint at baz should be valid")
-
-        # Launch the process.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), "Process should be valid")
-
-        # We should hit the foo breakpoint first.
-        self.assertEqual(
-            process.GetState(), lldb.eStateStopped, "Process should be stopped at foo"
-        )
-        thread = process.GetSelectedThread()
-        self.assertIsNotNone(thread, "Should have a selected thread")
 
         # Register the provider at foo breakpoint.
         error = lldb.SBError()
@@ -1187,3 +1325,29 @@ class ScriptedFrameProviderTestCase(TestBase):
             expected_thread_ids,
             "All threads should broadcast eBroadcastBitStackChanged on clear",
         )
+
+    def test_incremental_fetch_synthetic_frame_identity(self):
+        """Test that incrementally fetched PC-less synthetic frames each get a
+        unique StackID so they resolve to the correct frame."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        error = lldb.SBError()
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.PythonSourceFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertSuccess(error)
+
+        # Fetch frames one at a time to trigger separate FetchFramesUpTo calls.
+        frame0 = thread.GetFrameAtIndex(0)
+        frame1 = thread.GetFrameAtIndex(1)
+
+        self.assertEqual(frame0.GetFunctionName(), "compute_fibonacci")
+        self.assertEqual(frame1.GetFunctionName(), "process_data")

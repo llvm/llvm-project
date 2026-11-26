@@ -31,10 +31,10 @@ class LazyCallGraph;
 class AMDGPUPerfHintAnalysis {
 public:
   struct FuncInfo {
-    unsigned MemInstCost;
-    unsigned InstCost;
-    unsigned IAMInstCost;      // Indirect access memory instruction count
-    unsigned LSMInstCost;      // Large stride memory instruction count
+    uint64_t MemInstCost;
+    uint64_t InstCost;
+    uint64_t IAMInstCost;      // Indirect access memory instruction count
+    uint64_t LSMInstCost;      // Large stride memory instruction count
     bool HasDenseGlobalMemAcc; // Set if at least 1 basic block has relatively
                                // high global memory access
     FuncInfo()
@@ -62,7 +62,7 @@ public:
 };
 
 struct AMDGPUPerfHintAnalysisPass
-    : public PassInfoMixin<AMDGPUPerfHintAnalysisPass> {
+    : public OptionalPassInfoMixin<AMDGPUPerfHintAnalysisPass> {
   const GCNTargetMachine &TM;
   std::unique_ptr<AMDGPUPerfHintAnalysis> Impl;
 

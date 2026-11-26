@@ -1,3 +1,15 @@
+include(MLGOLower)
+mlgo_lower_models(
+  "${LLVM_MLGO_MODELS}"
+  "${LLVM_MLGO_MLIR_OPT}"
+  "${LLVM_MLGO_MLIR_TRANSLATE}"
+  regalloc
+  llvm/CodeGen
+  RegAllocEvictModels
+  "../Analysis/models/regalloc-eviction-test-model.inc"
+  "${LLVM_MAIN_SRC_DIR}/../mlir/test/Integration/Dialect/EmitC/regalloc-eviction-test-model-tosa.mlir"
+  MLDeps
+)
 if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   include(TensorFlowCompile)
   set(LLVM_RAEVICT_MODEL_PATH_DEFAULT "models/regalloc-eviction")
@@ -22,6 +34,14 @@ if (DEFINED LLVM_HAVE_TF_AOT OR LLVM_HAVE_TFLITE)
   endif()
 endif()
 
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS CodeGenOptions.td)
+llvm_tablegen(CodeGenOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(CodeGenOptionsTableGen)
+set(LLVM_TARGET_DEFINITIONS CodeGenToolOptions.td)
+llvm_tablegen(CodeGenToolOptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(CodeGenToolOptionsTableGen)
+
 add_llvm_component_library(LLVMCodeGen
   AggressiveAntiDepBreaker.cpp
   AllocationOrder.cpp
@@ -37,13 +57,13 @@ add_llvm_component_library(LLVMCodeGen
   BasicBlockSectionsProfileReader.cpp
   BasicBlockMatchingAndInference.cpp
   CalcSpillWeights.cpp
-  CallBrPrepare.cpp
   CallingConvLower.cpp
   CFGuardLongjmp.cpp
   CFIFixup.cpp
   CFIInstrInserter.cpp
   CodeGen.cpp
   CodeGenCommonISel.cpp
+  CodeGenOptions.cpp
   CodeGenPrepare.cpp
   CommandFlags.cpp
   ComplexDeinterleavingPass.cpp
@@ -58,7 +78,6 @@ add_llvm_component_library(LLVMCodeGen
   EHContGuardTargets.cpp
   ExecutionDomainFix.cpp
   ExpandIRInsts.cpp
-  ExpandMemCmp.cpp
   ExpandPostRAPseudos.cpp
   ExpandReductions.cpp
   ExpandVectorPredication.cpp
@@ -78,6 +97,7 @@ add_llvm_component_library(LLVMCodeGen
   ImplicitNullChecks.cpp
   IndirectBrExpandPass.cpp
   InitUndef.cpp
+  InlineAsmPrepare.cpp
   InlineSpiller.cpp
   InsertCodePrefetch.cpp
   InterferenceCache.cpp
@@ -102,7 +122,6 @@ add_llvm_component_library(LLVMCodeGen
   LiveRegMatrix.cpp
   LiveRegUnits.cpp
   LiveStacks.cpp
-  LiveVariables.cpp
   CodeGenTargetMachineImpl.cpp
   LocalStackSlotAllocation.cpp
   LoopTraversal.cpp
@@ -128,7 +147,7 @@ add_llvm_component_library(LLVMCodeGen
   MachineFunction.cpp
   MachineFunctionPass.cpp
   MachineFunctionPrinterPass.cpp
-  MachineFunctionSplitter.cpp
+  MachineIDFSSAUpdater.cpp
   MachineInstrBundle.cpp
   MachineInstr.cpp
   MachineLateInstrsCleanup.cpp
@@ -197,6 +216,7 @@ add_llvm_component_library(LLVMCodeGen
   RegisterPressure.cpp
   RegisterScavenging.cpp
   GCEmptyBasicBlocks.cpp
+  Rematerializer.cpp
   RemoveRedundantDebugValues.cpp
   RenameIndependentSubregs.cpp
   MachineStableHash.cpp
@@ -241,7 +261,6 @@ add_llvm_component_library(LLVMCodeGen
   TargetInstrInfo.cpp
   TargetLoweringBase.cpp
   TargetLoweringObjectFileImpl.cpp
-  TargetOptionsImpl.cpp
   TargetPassConfig.cpp
   TargetRegisterInfo.cpp
   TargetSchedule.cpp
@@ -267,9 +286,14 @@ add_llvm_component_library(LLVMCodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen/PBQP
 
+  PRECOMPILE_HEADERS
+  [["llvm/CodeGen/pch.h"]]
+
   LINK_LIBS ${LLVM_PTHREAD_LIB} ${MLLinkDeps}
 
   DEPENDS
+  CodeGenOptionsTableGen
+  CodeGenToolOptionsTableGen
   intrinsics_gen
   vt_gen
   ${MLDeps}
@@ -283,6 +307,7 @@ add_llvm_component_library(LLVMCodeGen
   Core
   MC
   ObjCARC
+  Option
   ProfileData
   Scalar
   Support

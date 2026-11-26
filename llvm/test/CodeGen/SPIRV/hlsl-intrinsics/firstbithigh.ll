@@ -113,15 +113,17 @@ entry:
 ; CHECK-LABEL: Begin function firstbituhigh_i64
 define noundef i32 @firstbituhigh_i64(i64 noundef %a) {
 entry:
-; CHECK: [[a64:%.+]] = OpFunctionParameter [[u64_t]]
-; CHECK: [[a32x2:%.+]] = OpBitcast [[u32x2_t]] [[a64]]
-; CHECK: [[lsb_bits:%.+]] = OpExtInst [[u32x2_t]] [[glsl_450_ext]] FindUMsb [[a32x2]]
-; CHECK: [[high_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_0]]
-; CHECK: [[low_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_1]]
-; CHECK: [[should_use_low:%.+]] = OpIEqual [[bool_t]] [[high_bits]] [[const_neg1]]
-; CHECK: [[ans_bits:%.+]] = OpSelect [[u32_t]] [[should_use_low]] [[low_bits]] [[high_bits]]
-; CHECK: [[ans_offset:%.+]] = OpSelect [[u32_t]] [[should_use_low]] [[const_0]] [[const_32]]
-; CHECK: [[ret:%.+]] = OpIAdd [[u32_t]] [[ans_offset]] [[ans_bits]]
+; CHECK: [[param:%.+]] = OpFunctionParameter [[u64_t]]
+; CHECK: [[bitcast:%.+]] = OpBitcast [[u32x2_t]] [[param]]
+; CHECK: [[lsb_bits:%.+]] = OpExtInst [[u32x2_t]] [[glsl_450_ext]] FindUMsb [[bitcast]]
+; CHECK: [[high_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_1]]
+; CHECK: [[low_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_0]]
+; CHECK: [[low_not_neg1:%.+]] = OpINotEqual [[bool_t]] [[low_bits]] [[const_neg1]]
+; CHECK: [[high_not_neg1:%.+]] = OpINotEqual [[bool_t]] [[high_bits]] [[const_neg1]]
+; CHECK: [[sel0:%.+]] = OpSelect [[u32_t]] [[low_not_neg1]] [[low_bits]] [[const_neg1]]
+; CHECK: [[ans_bits:%.+]] = OpSelect [[u32_t]] [[high_not_neg1]] [[high_bits]] [[sel0]]
+; CHECK: [[ans_offset:%.+]] = OpSelect [[u32_t]] [[high_not_neg1]] [[const_32]] [[const_0]]
+; CHECK: [[ret:%.+]] = OpIAdd [[u32_t]] [[ans_bits]] [[ans_offset]]
 ; CHECK: OpReturnValue [[ret]]
   %elt.firstbituhigh = call i32 @llvm.spv.firstbituhigh.i64(i64 %a)
   ret i32 %elt.firstbituhigh
@@ -130,15 +132,17 @@ entry:
 ; CHECK-LABEL: Begin function firstbituhigh_v2xi64
 define noundef <2 x i32> @firstbituhigh_v2xi64(<2 x i64> noundef %a) {
 entry:
-; CHECK: [[a64x2:%.+]] = OpFunctionParameter [[u64x2_t]]
-; CHECK: [[a32x4:%.+]] = OpBitcast [[u32x4_t]] [[a64x2]]
-; CHECK: [[lsb_bits:%.+]] = OpExtInst [[u32x4_t]] [[glsl_450_ext]] FindUMsb [[a32x4]]
-; CHECK: [[high_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[lsb_bits]] [[lsb_bits]] 0 2
-; CHECK: [[low_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[lsb_bits]] [[lsb_bits]] 1 3
-; CHECK: [[should_use_low:%.+]] = OpIEqual [[boolx2_t]] [[high_bits]] [[const_neg1x2]]
-; CHECK: [[ans_bits:%.+]] = OpSelect [[u32x2_t]] [[should_use_low]] [[low_bits]] [[high_bits]]
-; CHECK: [[ans_offset:%.+]] = OpSelect [[u32x2_t]] [[should_use_low]] [[const_0x2]] [[const_32x2]]
-; CHECK: [[ret:%.+]] = OpIAdd [[u32x2_t]] [[ans_offset]] [[ans_bits]]
+; CHECK: [[param:%.+]] = OpFunctionParameter [[u64x2_t]]
+; CHECK: [[bitcast:%.+]] = OpBitcast [[u32x4_t]] [[param]]
+; CHECK: [[lsb_bits:%.+]] = OpExtInst [[u32x4_t]] [[glsl_450_ext]] FindUMsb [[bitcast]]
+; CHECK: [[high_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[lsb_bits]] [[lsb_bits]] 1 3
+; CHECK: [[low_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[lsb_bits]] [[lsb_bits]] 0 2
+; CHECK: [[low_not_neg1:%.+]] = OpINotEqual [[boolx2_t]] [[low_bits]] [[const_neg1x2]]
+; CHECK: [[high_not_neg1:%.+]] = OpINotEqual [[boolx2_t]] [[high_bits]] [[const_neg1x2]]
+; CHECK: [[sel0:%.+]] = OpSelect [[u32x2_t]] [[low_not_neg1]] [[low_bits]] [[const_neg1x2]]
+; CHECK: [[ans_bits:%.+]] = OpSelect [[u32x2_t]] [[high_not_neg1]] [[high_bits]] [[sel0]]
+; CHECK: [[ans_offset:%.+]] = OpSelect [[u32x2_t]] [[high_not_neg1]] [[const_32x2]] [[const_0x2]]
+; CHECK: [[ret:%.+]] = OpIAdd [[u32x2_t]] [[ans_bits]] [[ans_offset]]
 ; CHECK: OpReturnValue [[ret]]
   %elt.firstbituhigh = call <2 x i32> @llvm.spv.firstbituhigh.v2i64(<2 x i64> %a)
   ret <2 x i32> %elt.firstbituhigh
@@ -147,37 +151,32 @@ entry:
 ; CHECK-LABEL: Begin function firstbituhigh_v3xi64
 define noundef <3 x i32> @firstbituhigh_v3xi64(<3 x i64> noundef %a) {
 entry:
-; Preamble
 ; CHECK: [[a:%.+]] = OpFunctionParameter [[u64x3_t]]
-
-; Extract first 2 components from %a
 ; CHECK: [[pt1:%.+]] = OpVectorShuffle [[u64x2_t]] [[a]] [[a]] 0 1
-
-; Do firstbituhigh on the first 2 components
 ; CHECK: [[pt1_cast:%.+]] = OpBitcast [[u32x4_t]] [[pt1]]
 ; CHECK: [[pt1_lsb_bits:%.+]] = OpExtInst [[u32x4_t]] [[glsl_450_ext]] FindUMsb [[pt1_cast]]
-; CHECK: [[pt1_high_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt1_lsb_bits]] [[pt1_lsb_bits]] 0 2
-; CHECK: [[pt1_low_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt1_lsb_bits]] [[pt1_lsb_bits]] 1 3
-; CHECK: [[pt1_should_use_low:%.+]] = OpIEqual [[boolx2_t]] [[pt1_high_bits]] [[const_neg1x2]]
-; CHECK: [[pt1_ans_bits:%.+]] = OpSelect [[u32x2_t]] [[pt1_should_use_low]] [[pt1_low_bits]] [[pt1_high_bits]]
-; CHECK: [[pt1_ans_offset:%.+]] = OpSelect [[u32x2_t]] [[pt1_should_use_low]] [[const_0x2]] [[const_32x2]]
-; CHECK: [[pt1_res:%.+]] = OpIAdd [[u32x2_t]] [[pt1_ans_offset]] [[pt1_ans_bits]]
+; CHECK: [[pt1_high_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt1_lsb_bits]] [[pt1_lsb_bits]] 1 3
+; CHECK: [[pt1_low_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt1_lsb_bits]] [[pt1_lsb_bits]] 0 2
+; CHECK: [[pt1_low_not_neg1:%.+]] = OpINotEqual [[boolx2_t]] [[pt1_low_bits]] [[const_neg1x2]]
+; CHECK: [[pt1_high_not_neg1:%.+]] = OpINotEqual [[boolx2_t]] [[pt1_high_bits]] [[const_neg1x2]]
+; CHECK: [[pt1_sel0:%.+]] = OpSelect [[u32x2_t]] [[pt1_low_not_neg1]] [[pt1_low_bits]] [[const_neg1x2]]
+; CHECK: [[pt1_ans_bits:%.+]] = OpSelect [[u32x2_t]] [[pt1_high_not_neg1]] [[pt1_high_bits]] [[pt1_sel0]]
+; CHECK: [[pt1_ans_offset:%.+]] = OpSelect [[u32x2_t]] [[pt1_high_not_neg1]] [[const_32x2]] [[const_0x2]]
+; CHECK: [[pt1_ret:%.+]] = OpIAdd [[u32x2_t]] [[pt1_ans_bits]] [[pt1_ans_offset]]
 
-; Extract the last component from %a
 ; CHECK: [[pt2:%.+]] = OpVectorExtractDynamic [[u64_t]] [[a]] [[const_2]]
 
-; Do firstbituhigh on the last component
 ; CHECK: [[pt2_cast:%.+]] = OpBitcast [[u32x2_t]] [[pt2]]
 ; CHECK: [[pt2_lsb_bits:%.+]] = OpExtInst [[u32x2_t]] [[glsl_450_ext]] FindUMsb [[pt2_cast]]
-; CHECK: [[pt2_high_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[pt2_lsb_bits]] [[const_0]]
-; CHECK: [[pt2_low_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[pt2_lsb_bits]] [[const_1]]
-; CHECK: [[pt2_should_use_low:%.+]] = OpIEqual [[bool_t]] [[pt2_high_bits]] [[const_neg1]]
-; CHECK: [[pt2_ans_bits:%.+]] = OpSelect [[u32_t]] [[pt2_should_use_low]] [[pt2_low_bits]] [[pt2_high_bits]]
-; CHECK: [[pt2_ans_offset:%.+]] = OpSelect [[u32_t]] [[pt2_should_use_low]] [[const_0]] [[const_32]]
-; CHECK: [[pt2_res:%.+]] = OpIAdd [[u32_t]] [[pt2_ans_offset]] [[pt2_ans_bits]]
-
-; Merge the parts into the final i32x3 and return it
-; CHECK: [[ret:%.+]] = OpCompositeConstruct [[u32x3_t]] [[pt1_res]] [[pt2_res]]
+; CHECK: [[pt2_high_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[pt2_lsb_bits]] [[const_1]]
+; CHECK: [[pt2_low_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[pt2_lsb_bits]] [[const_0]]
+; CHECK: [[pt2_low_not_neg1:%.+]] = OpINotEqual [[bool_t]] [[pt2_low_bits]] [[const_neg1]]
+; CHECK: [[pt2_high_not_neg1:%.+]] = OpINotEqual [[bool_t]] [[pt2_high_bits]] [[const_neg1]]
+; CHECK: [[pt2_sel0:%.+]] = OpSelect [[u32_t]] [[pt2_low_not_neg1]] [[pt2_low_bits]] [[const_neg1]]
+; CHECK: [[pt2_ans_bits:%.+]] = OpSelect [[u32_t]] [[pt2_high_not_neg1]] [[pt2_high_bits]] [[pt2_sel0]]
+; CHECK: [[pt2_ans_offset:%.+]] = OpSelect [[u32_t]] [[pt2_high_not_neg1]] [[const_32]] [[const_0]]
+; CHECK: [[pt2_ret:%.+]] = OpIAdd [[u32_t]] [[pt2_ans_bits]] [[pt2_ans_offset]]
+; CHECK: [[ret:%.+]] = OpCompositeConstruct [[u32x3_t]] [[pt1_ret]] [[pt2_ret]]
 ; CHECK: OpReturnValue [[ret]]
   %elt.firstbituhigh = call <3 x i32> @llvm.spv.firstbituhigh.v3i64(<3 x i64> %a)
   ret <3 x i32> %elt.firstbituhigh
@@ -186,37 +185,33 @@ entry:
 ; CHECK-LABEL: Begin function firstbituhigh_v4xi64
 define noundef <4 x i32> @firstbituhigh_v4xi64(<4 x i64> noundef %a) {
 entry:
-; Preamble
 ; CHECK: [[a:%.+]] = OpFunctionParameter [[u64x4_t]]
-
-; Extract first 2 components from %a
 ; CHECK: [[pt1:%.+]] = OpVectorShuffle [[u64x2_t]] [[a]] [[a]] 0 1
 
-; Do firstbituhigh on the first 2 components
 ; CHECK: [[pt1_cast:%.+]] = OpBitcast [[u32x4_t]] [[pt1]]
 ; CHECK: [[pt1_lsb_bits:%.+]] = OpExtInst [[u32x4_t]] [[glsl_450_ext]] FindUMsb [[pt1_cast]]
-; CHECK: [[pt1_high_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt1_lsb_bits]] [[pt1_lsb_bits]] 0 2
-; CHECK: [[pt1_low_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt1_lsb_bits]] [[pt1_lsb_bits]] 1 3
-; CHECK: [[pt1_should_use_low:%.+]] = OpIEqual [[boolx2_t]] [[pt1_high_bits]] [[const_neg1x2]]
-; CHECK: [[pt1_ans_bits:%.+]] = OpSelect [[u32x2_t]] [[pt1_should_use_low]] [[pt1_low_bits]] [[pt1_high_bits]]
-; CHECK: [[pt1_ans_offset:%.+]] = OpSelect [[u32x2_t]] [[pt1_should_use_low]] [[const_0x2]] [[const_32x2]]
-; CHECK: [[pt1_res:%.+]] = OpIAdd [[u32x2_t]] [[pt1_ans_offset]] [[pt1_ans_bits]]
+; CHECK: [[pt1_high_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt1_lsb_bits]] [[pt1_lsb_bits]] 1 3
+; CHECK: [[pt1_low_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt1_lsb_bits]] [[pt1_lsb_bits]] 0 2
+; CHECK: [[pt1_low_not_neg1:%.+]] = OpINotEqual [[boolx2_t]] [[pt1_low_bits]] [[const_neg1x2]]
+; CHECK: [[pt1_high_not_neg1:%.+]] = OpINotEqual [[boolx2_t]] [[pt1_high_bits]] [[const_neg1x2]]
+; CHECK: [[pt1_sel0:%.+]] = OpSelect [[u32x2_t]] [[pt1_low_not_neg1]] [[pt1_low_bits]] [[const_neg1x2]]
+; CHECK: [[pt1_ans_bits:%.+]] = OpSelect [[u32x2_t]] [[pt1_high_not_neg1]] [[pt1_high_bits]] [[pt1_sel0]]
+; CHECK: [[pt1_ans_offset:%.+]] = OpSelect [[u32x2_t]] [[pt1_high_not_neg1]] [[const_32x2]] [[const_0x2]]
+; CHECK: [[pt1_ret:%.+]] = OpIAdd [[u32x2_t]] [[pt1_ans_bits]] [[pt1_ans_offset]]
 
-; Extract last 2 components from %a
 ; CHECK: [[pt2:%.+]] = OpVectorShuffle [[u64x2_t]] [[a]] [[a]] 2 3
 
-; Do firstbituhigh on the last 2 components
 ; CHECK: [[pt2_cast:%.+]] = OpBitcast [[u32x4_t]] [[pt2]]
 ; CHECK: [[pt2_lsb_bits:%.+]] = OpExtInst [[u32x4_t]] [[glsl_450_ext]] FindUMsb [[pt2_cast]]
-; CHECK: [[pt2_high_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt2_lsb_bits]] [[pt2_lsb_bits]] 0 2
-; CHECK: [[pt2_low_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt2_lsb_bits]] [[pt2_lsb_bits]] 1 3
-; CHECK: [[pt2_should_use_low:%.+]] = OpIEqual [[boolx2_t]] [[pt2_high_bits]] [[const_neg1x2]]
-; CHECK: [[pt2_ans_bits:%.+]] = OpSelect [[u32x2_t]] [[pt2_should_use_low]] [[pt2_low_bits]] [[pt2_high_bits]]
-; CHECK: [[pt2_ans_offset:%.+]] = OpSelect [[u32x2_t]] [[pt2_should_use_low]] [[const_0x2]] [[const_32x2]]
-; CHECK: [[pt2_res:%.+]] = OpIAdd [[u32x2_t]] [[pt2_ans_offset]] [[pt2_ans_bits]]
-
-; Merge the parts into the final i32x4 and return it
-; CHECK: [[ret:%.+]] = OpCompositeConstruct [[u32x4_t]] [[pt1_res]] [[pt2_res]]
+; CHECK: [[pt2_high_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt2_lsb_bits]] [[pt2_lsb_bits]] 1 3
+; CHECK: [[pt2_low_bits:%.+]] = OpVectorShuffle [[u32x2_t]] [[pt2_lsb_bits]] [[pt2_lsb_bits]] 0 2
+; CHECK: [[pt2_low_not_neg1:%.+]] = OpINotEqual [[boolx2_t]] [[pt2_low_bits]] [[const_neg1x2]]
+; CHECK: [[pt2_high_not_neg1:%.+]] = OpINotEqual [[boolx2_t]] [[pt2_high_bits]] [[const_neg1x2]]
+; CHECK: [[pt2_sel0:%.+]] = OpSelect [[u32x2_t]] [[pt2_low_not_neg1]] [[pt2_low_bits]] [[const_neg1x2]]
+; CHECK: [[pt2_ans_bits:%.+]] = OpSelect [[u32x2_t]] [[pt2_high_not_neg1]] [[pt2_high_bits]] [[pt2_sel0]]
+; CHECK: [[pt2_ans_offset:%.+]] = OpSelect [[u32x2_t]] [[pt2_high_not_neg1]] [[const_32x2]] [[const_0x2]]
+; CHECK: [[pt2_ret:%.+]] = OpIAdd [[u32x2_t]] [[pt2_ans_bits]] [[pt2_ans_offset]]
+; CHECK: [[ret:%.+]] = OpCompositeConstruct [[u32x4_t]] [[pt1_ret]] [[pt2_ret]]
 ; CHECK: OpReturnValue [[ret]]
   %elt.firstbituhigh = call <4 x i32> @llvm.spv.firstbituhigh.v4i64(<4 x i64> %a)
   ret <4 x i32> %elt.firstbituhigh
@@ -246,15 +241,17 @@ entry:
 ; CHECK-LABEL: Begin function firstbitshigh_i64
 define noundef i32 @firstbitshigh_i64(i64 noundef %a) {
 entry:
-; CHECK: [[a64:%.+]] = OpFunctionParameter [[u64_t]]
-; CHECK: [[a32x2:%.+]] = OpBitcast [[u32x2_t]] [[a64]]
-; CHECK: [[lsb_bits:%.+]] = OpExtInst [[u32x2_t]] [[glsl_450_ext]] FindSMsb [[a32x2]]
-; CHECK: [[high_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_0]]
-; CHECK: [[low_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_1]]
-; CHECK: [[should_use_low:%.+]] = OpIEqual [[bool_t]] [[high_bits]] [[const_neg1]]
-; CHECK: [[ans_bits:%.+]] = OpSelect [[u32_t]] [[should_use_low]] [[low_bits]] [[high_bits]]
-; CHECK: [[ans_offset:%.+]] = OpSelect [[u32_t]] [[should_use_low]] [[const_0]] [[const_32]]
-; CHECK: [[ret:%.+]] = OpIAdd [[u32_t]] [[ans_offset]] [[ans_bits]]
+; CHECK: [[param:%.+]] = OpFunctionParameter [[u64_t]]
+; CHECK: [[bitcast:%.+]] = OpBitcast [[u32x2_t]] [[param]]
+; CHECK: [[lsb_bits:%.+]] = OpExtInst [[u32x2_t]] [[glsl_450_ext]] FindSMsb [[bitcast]]
+; CHECK: [[high_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_1]]
+; CHECK: [[low_bits:%.+]] = OpVectorExtractDynamic [[u32_t]] [[lsb_bits]] [[const_0]]
+; CHECK: [[low_not_neg1:%.+]] = OpINotEqual [[bool_t]] [[low_bits]] [[const_neg1]]
+; CHECK: [[high_not_neg1:%.+]] = OpINotEqual [[bool_t]] [[high_bits]] [[const_neg1]]
+; CHECK: [[sel0:%.+]] = OpSelect [[u32_t]] [[low_not_neg1]] [[low_bits]] [[const_neg1]]
+; CHECK: [[ans_bits:%.+]] = OpSelect [[u32_t]] [[high_not_neg1]] [[high_bits]] [[sel0]]
+; CHECK: [[ans_offset:%.+]] = OpSelect [[u32_t]] [[high_not_neg1]] [[const_32]] [[const_0]]
+; CHECK: [[ret:%.+]] = OpIAdd [[u32_t]] [[ans_bits]] [[ans_offset]]
 ; CHECK: OpReturnValue [[ret]]
   %elt.firstbitshigh = call i32 @llvm.spv.firstbitshigh.i64(i64 %a)
   ret i32 %elt.firstbitshigh

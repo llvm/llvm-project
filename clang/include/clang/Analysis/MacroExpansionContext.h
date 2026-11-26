@@ -96,13 +96,6 @@ public:
   std::optional<StringRef>
   getOriginalText(SourceLocation MacroExpansionLoc) const;
 
-  /// \param MacroExpansionLoc Must be the expansion location of a macro.
-  /// \return A formatted representation of the textual representation of the
-  ///         token sequence which was substituted in place of the macro.
-  ///         If no macro was expanded at that location, returns std::nullopt.
-  std::optional<StringRef>
-  getFormattedExpandedText(SourceLocation MacroExpansionLoc) const;
-
   LLVM_DUMP_METHOD void dumpExpansionRangesToStream(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dumpExpandedTextsToStream(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dumpExpansionRanges() const;
@@ -113,7 +106,6 @@ private:
   using MacroExpansionText = SmallString<40>;
   using ExpansionMap = llvm::DenseMap<SourceLocation, MacroExpansionText>;
   using ExpansionRangeMap = llvm::DenseMap<SourceLocation, SourceLocation>;
-  using FormattedExpansionMap = llvm::DenseMap<SourceLocation, std::string>;
 
   /// Associates the textual representation of the expanded tokens at the given
   /// macro expansion location.
@@ -122,9 +114,6 @@ private:
   /// Tracks which source location was the last affected by any macro
   /// substitution starting from a given macro expansion location.
   ExpansionRangeMap ExpansionRanges;
-
-  /// Caches formatted macro expansions keyed by expansion location.
-  mutable FormattedExpansionMap FormattedExpandedTokens;
 
   Preprocessor *PP = nullptr;
   SourceManager *SM = nullptr;

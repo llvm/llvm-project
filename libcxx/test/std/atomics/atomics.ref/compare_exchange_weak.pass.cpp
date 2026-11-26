@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -32,11 +33,11 @@ struct TestCompareExchangeWeak {
       std::atomic_ref<T> const a(x);
 
       T t(T(1));
-      std::same_as<bool> decltype(auto) y = a.compare_exchange_weak(t, T(2));
-      assert(y == true);
+      while (!a.compare_exchange_weak(t, T(2))) {
+      }
       assert(a == T(2));
       assert(t == T(1));
-      y = a.compare_exchange_weak(t, T(3));
+      std::same_as<bool> decltype(auto) y = a.compare_exchange_weak(t, T(3));
       assert(y == false);
       assert(a == T(2));
       assert(t == T(2));
@@ -48,11 +49,11 @@ struct TestCompareExchangeWeak {
       std::atomic_ref<T> const a(x);
 
       T t(T(1));
-      std::same_as<bool> decltype(auto) y = a.compare_exchange_weak(t, T(2), std::memory_order_seq_cst);
-      assert(y == true);
+      while (!a.compare_exchange_weak(t, T(2), std::memory_order_seq_cst)) {
+      }
       assert(a == T(2));
       assert(t == T(1));
-      y = a.compare_exchange_weak(t, T(3), std::memory_order_seq_cst);
+      std::same_as<bool> decltype(auto) y = a.compare_exchange_weak(t, T(3), std::memory_order_seq_cst);
       assert(y == false);
       assert(a == T(2));
       assert(t == T(2));
@@ -64,12 +65,12 @@ struct TestCompareExchangeWeak {
       std::atomic_ref<T> const a(x);
 
       T t(T(1));
-      std::same_as<bool> decltype(auto) y =
-          a.compare_exchange_weak(t, T(2), std::memory_order_release, std::memory_order_relaxed);
-      assert(y == true);
+      while (!a.compare_exchange_weak(t, T(2), std::memory_order_release, std::memory_order_relaxed)) {
+      }
       assert(a == T(2));
       assert(t == T(1));
-      y = a.compare_exchange_weak(t, T(3), std::memory_order_release, std::memory_order_relaxed);
+      std::same_as<bool> decltype(auto) y =
+          a.compare_exchange_weak(t, T(3), std::memory_order_release, std::memory_order_relaxed);
       assert(y == false);
       assert(a == T(2));
       assert(t == T(2));

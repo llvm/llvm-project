@@ -1076,8 +1076,7 @@ define <16 x i8> @test_vaddhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) 
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    addhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vaddhn.i.i = add <8 x i16> %a, %b
@@ -1101,8 +1100,7 @@ define <8 x i16> @test_vaddhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    addhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vaddhn.i.i = add <4 x i32> %a, %b
@@ -1126,8 +1124,7 @@ define <4 x i32> @test_vaddhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    addhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vaddhn.i.i = add <2 x i64> %a, %b
@@ -1151,8 +1148,7 @@ define <16 x i8> @test_vaddhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) 
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    addhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vaddhn.i.i = add <8 x i16> %a, %b
@@ -1176,8 +1172,7 @@ define <8 x i16> @test_vaddhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    addhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vaddhn.i.i = add <4 x i32> %a, %b
@@ -1201,8 +1196,7 @@ define <4 x i32> @test_vaddhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    addhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vaddhn.i.i = add <2 x i64> %a, %b
@@ -1286,8 +1280,7 @@ define <16 x i8> @test_vraddhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    raddhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vraddhn2.i.i = tail call <8 x i8> @llvm.aarch64.neon.raddhn.v8i8(<8 x i16> %a, <8 x i16> %b)
@@ -1309,8 +1302,7 @@ define <8 x i16> @test_vraddhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    raddhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vraddhn2.i.i = tail call <4 x i16> @llvm.aarch64.neon.raddhn.v4i16(<4 x i32> %a, <4 x i32> %b)
@@ -1332,8 +1324,7 @@ define <4 x i32> @test_vraddhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    raddhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vraddhn2.i.i = tail call <2 x i32> @llvm.aarch64.neon.raddhn.v2i32(<2 x i64> %a, <2 x i64> %b)
@@ -1355,8 +1346,7 @@ define <16 x i8> @test_vraddhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    raddhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vraddhn2.i.i = tail call <8 x i8> @llvm.aarch64.neon.raddhn.v8i8(<8 x i16> %a, <8 x i16> %b)
@@ -1378,8 +1368,7 @@ define <8 x i16> @test_vraddhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    raddhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vraddhn2.i.i = tail call <4 x i16> @llvm.aarch64.neon.raddhn.v4i16(<4 x i32> %a, <4 x i32> %b)
@@ -1401,8 +1390,7 @@ define <4 x i32> @test_vraddhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    raddhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vraddhn2.i.i = tail call <2 x i32> @llvm.aarch64.neon.raddhn.v2i32(<2 x i64> %a, <2 x i64> %b)
@@ -1496,8 +1484,7 @@ define <16 x i8> @test_vsubhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) 
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    subhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vsubhn.i.i = sub <8 x i16> %a, %b
@@ -1521,8 +1508,7 @@ define <8 x i16> @test_vsubhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    subhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vsubhn.i.i = sub <4 x i32> %a, %b
@@ -1546,8 +1532,7 @@ define <4 x i32> @test_vsubhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    subhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vsubhn.i.i = sub <2 x i64> %a, %b
@@ -1571,8 +1556,7 @@ define <16 x i8> @test_vsubhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b) 
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    subhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vsubhn.i.i = sub <8 x i16> %a, %b
@@ -1596,8 +1580,7 @@ define <8 x i16> @test_vsubhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    subhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vsubhn.i.i = sub <4 x i32> %a, %b
@@ -1621,8 +1604,7 @@ define <4 x i32> @test_vsubhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    subhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vsubhn.i.i = sub <2 x i64> %a, %b
@@ -1706,8 +1688,7 @@ define <16 x i8> @test_vrsubhn_high_s16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    rsubhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vrsubhn2.i.i = tail call <8 x i8> @llvm.aarch64.neon.rsubhn.v8i8(<8 x i16> %a, <8 x i16> %b)
@@ -1729,8 +1710,7 @@ define <8 x i16> @test_vrsubhn_high_s32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    rsubhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vrsubhn2.i.i = tail call <4 x i16> @llvm.aarch64.neon.rsubhn.v4i16(<4 x i32> %a, <4 x i32> %b)
@@ -1752,8 +1732,7 @@ define <4 x i32> @test_vrsubhn_high_s64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    rsubhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vrsubhn2.i.i = tail call <2 x i32> @llvm.aarch64.neon.rsubhn.v2i32(<2 x i64> %a, <2 x i64> %b)
@@ -1775,8 +1754,7 @@ define <16 x i8> @test_vrsubhn_high_u16(<8 x i8> %r, <8 x i16> %a, <8 x i16> %b)
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    rsubhn v1.8b, v1.8h, v2.8h
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vrsubhn2.i.i = tail call <8 x i8> @llvm.aarch64.neon.rsubhn.v8i8(<8 x i16> %a, <8 x i16> %b)
@@ -1798,8 +1776,7 @@ define <8 x i16> @test_vrsubhn_high_u32(<4 x i16> %r, <4 x i32> %a, <4 x i32> %b
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    rsubhn v1.4h, v1.4s, v2.4s
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vrsubhn2.i.i = tail call <4 x i16> @llvm.aarch64.neon.rsubhn.v4i16(<4 x i32> %a, <4 x i32> %b)
@@ -1821,8 +1798,7 @@ define <4 x i32> @test_vrsubhn_high_u64(<2 x i32> %r, <2 x i64> %a, <2 x i64> %b
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    rsubhn v1.2s, v1.2d, v2.2d
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    fmov x8, d1
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    ret
 entry:
   %vrsubhn2.i.i = tail call <2 x i32> @llvm.aarch64.neon.rsubhn.v2i32(<2 x i64> %a, <2 x i64> %b)

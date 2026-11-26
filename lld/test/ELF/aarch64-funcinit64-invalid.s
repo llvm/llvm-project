@@ -5,11 +5,11 @@
 
 .rodata
 # ERR: error: relocation R_AARCH64_FUNCINIT64 cannot be used against local symbol
-.8byte func@FUNCINIT
+.8byte %funcinit(func)
 
 .data
 # ERR: error: relocation R_AARCH64_FUNCINIT64 cannot be used against ifunc symbol 'ifunc'
-.8byte ifunc@FUNCINIT
+.8byte %funcinit(ifunc)
 
 .text
 func:

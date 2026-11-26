@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
-#include <cstdlib>
 
 #define DEBUG_TYPE "gi-combiner"
 
@@ -48,8 +47,7 @@ bool CombinerHelper::constantFoldICmp(const GICmp &ICmp,
   MatchInfo = [=](MachineIRBuilder &B) {
     if (Result)
       B.buildConstant(Dst, getICmpTrueVal(getTargetLowering(),
-                                          /*IsVector=*/DstTy.isVector(),
-                                          /*IsFP=*/false));
+                                          /*IsVector=*/DstTy.isVector()));
     else
       B.buildConstant(Dst, 0);
   };
@@ -79,8 +77,7 @@ bool CombinerHelper::constantFoldFCmp(const GFCmp &FCmp,
   MatchInfo = [=](MachineIRBuilder &B) {
     if (Result)
       B.buildConstant(Dst, getICmpTrueVal(getTargetLowering(),
-                                          /*IsVector=*/DstTy.isVector(),
-                                          /*IsFP=*/true));
+                                          /*IsVector=*/DstTy.isVector()));
     else
       B.buildConstant(Dst, 0);
   };

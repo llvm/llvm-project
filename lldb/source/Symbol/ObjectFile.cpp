@@ -36,12 +36,8 @@ static ObjectFileSP
 CreateObjectFromContainer(const lldb::ModuleSP &module_sp, const FileSpec *file,
                           lldb::offset_t file_offset, lldb::offset_t file_size,
                           DataBufferSP data_sp, lldb::offset_t &data_offset) {
-  ObjectContainerCreateInstance callback;
-  for (uint32_t idx = 0;
-       (callback = PluginManager::GetObjectContainerCreateCallbackAtIndex(
-            idx)) != nullptr;
-       ++idx) {
-    std::unique_ptr<ObjectContainer> object_container_up(callback(
+  for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
+    std::unique_ptr<ObjectContainer> object_container_up(cbs.create_callback(
         module_sp, data_sp, data_offset, file, file_offset, file_size));
     if (object_container_up)
       return object_container_up->GetObjectFile(file);
@@ -70,10 +66,11 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
 
   if (!extractor_sp || !extractor_sp->HasData()) {
     const bool file_exists = FileSystem::Instance().Exists(*file);
+    const bool module_has_name = !module_sp->GetObjectName().empty();
     // We have an object name which most likely means we have a .o file in
     // a static archive (.a file). Try and see if we have a cached archive
     // first without reading any data first
-    if (file_exists && module_sp->GetObjectName()) {
+    if (file_exists && module_has_name) {
       ObjectFileSP object_file_sp = CreateObjectFromContainer(
           module_sp, file, file_offset, file_size, DataBufferSP(), data_offset);
       if (object_file_sp)
@@ -100,14 +97,14 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
     module_sp->GetFileSpec().GetPath(path_with_object);
 
     FileSpec archive_file;
-    ConstString archive_object;
+    llvm::StringRef archive_object;
     const bool must_exist = true;
     if (ObjectFile::SplitArchivePathWithObject(path_with_object, archive_file,
                                                archive_object, must_exist)) {
       file_size = FileSystem::Instance().GetByteSize(archive_file);
       if (file_size > 0) {
         file = &archive_file;
-        module_sp->SetFileSpecAndObjectName(archive_file, archive_object);
+        module_sp->SetFileSpecAndObjectName(archive_file, archive_object.str());
         // Check if this is a object container by iterating through all
         // object container plugin instances and then trying to get an
         // object file from the container plugins since we had a name.
@@ -115,9 +112,9 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
         // ANY data in case there is data cached in the container plug-ins
         // (like BSD archives caching the contained objects within an
         // file).
-        ObjectFileSP object_file_sp = CreateObjectFromContainer(
-            module_sp, file, file_offset, file_size,
-            extractor_sp->GetSharedDataBuffer(), data_offset);
+        ObjectFileSP object_file_sp =
+            CreateObjectFromContainer(module_sp, file, file_offset, file_size,
+                                      DataBufferSP(), data_offset);
         if (object_file_sp)
           return object_file_sp;
         // We failed to find any cached object files in the container plug-
@@ -132,13 +129,13 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
   if (extractor_sp && extractor_sp->HasData()) {
     // Check if this is a normal object file by iterating through all
     // object file plugin instances.
-    ObjectFileCreateInstance callback;
-    for (uint32_t idx = 0;
-         (callback = PluginManager::GetObjectFileCreateCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
-      ObjectFileSP object_file_sp(callback(module_sp, extractor_sp, data_offset,
-                                           file, file_offset, file_size));
+    for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
+      // Make a copy of the extractor in case any plugin modifies it while
+      // processing.
+      DataExtractorSP extractor_copy_sp = extractor_sp->Clone();
+      ObjectFileSP object_file_sp(
+          cbs.create_callback(module_sp, extractor_copy_sp, data_offset, file,
+                              file_offset, file_size));
       if (object_file_sp.get())
         return object_file_sp;
     }
@@ -170,18 +167,14 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
                        "0x%" PRIx64 ")",
                        module_sp->GetFileSpec().GetPath().c_str(),
                        static_cast<void *>(process_sp.get()), header_addr);
-    uint32_t idx;
 
     // Check if this is a normal object file by iterating through all object
     // file plugin instances.
-    ObjectFileCreateMemoryInstance create_callback;
-    for (idx = 0;
-         (create_callback =
-              PluginManager::GetObjectFileCreateMemoryCallbackAtIndex(idx)) !=
-         nullptr;
-         ++idx) {
-      object_file_sp.reset(
-          create_callback(module_sp, data_sp, process_sp, header_addr));
+    for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
+      if (!cbs.create_memory_callback)
+        continue;
+      object_file_sp.reset(cbs.create_memory_callback(module_sp, data_sp,
+                                                      process_sp, header_addr));
       if (object_file_sp.get())
         return object_file_sp;
     }
@@ -202,11 +195,9 @@ bool ObjectFile::IsObjectFile(lldb_private::FileSpec file_spec) {
       extractor_sp, data_offset));
 }
 
-size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
-                                           lldb::offset_t file_offset,
-                                           lldb::offset_t file_size,
-                                           ModuleSpecList &specs,
-                                           DataExtractorSP extractor_sp) {
+ModuleSpecList ObjectFile::GetModuleSpecifications(
+    const FileSpec &file, lldb::offset_t file_offset, lldb::offset_t file_size,
+    DataExtractorSP extractor_sp) {
   if (!extractor_sp)
     extractor_sp = std::make_shared<DataExtractor>();
   if (!extractor_sp->HasData()) {
@@ -221,45 +212,38 @@ size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
       if (actual_file_size > file_offset)
         file_size = actual_file_size - file_offset;
     }
-    return ObjectFile::GetModuleSpecifications(file,         // file spec
-                                               extractor_sp, // data bytes
-                                               0,            // data offset
-                                               file_offset,  // file offset
-                                               file_size,    // file length
-                                               specs);
+    return ObjectFile::GetModuleSpecifications(file, extractor_sp, file_offset,
+                                               file_size);
   }
-  return 0;
+  return {};
 }
 
-size_t ObjectFile::GetModuleSpecifications(
+ModuleSpecList ObjectFile::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
-  ObjectFileGetModuleSpecifications callback;
-  uint32_t i;
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
+  ModuleSpecList specs;
+
+  // A container can be embedded in an otherwise valid object file. Preserve
+  // the object file's specifications and also query the container plug-ins.
+
   // Try the ObjectFile plug-ins
-  for (i = 0;
-       (callback =
-            PluginManager::GetObjectFileGetModuleSpecificationsCallbackAtIndex(
-                i)) != nullptr;
-       ++i) {
-    if (callback(file, extractor_sp, data_offset, file_offset, file_size,
-                 specs) > 0)
-      return specs.GetSize() - initial_count;
+  for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
+    ModuleSpecList object_specs = cbs.get_module_specifications(
+        file, extractor_sp, file_offset, file_size);
+    if (object_specs.GetSize() > 0) {
+      specs.Append(object_specs);
+      break;
+    }
   }
 
   // Try the ObjectContainer plug-ins
-  for (i = 0;
-       (callback = PluginManager::
-            GetObjectContainerGetModuleSpecificationsCallbackAtIndex(i)) !=
-       nullptr;
-       ++i) {
-    if (callback(file, extractor_sp, data_offset, file_offset, file_size,
-                 specs) > 0)
-      return specs.GetSize() - initial_count;
+  for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
+    ModuleSpecList container_specs = cbs.get_module_specifications(
+        file, extractor_sp, file_offset, file_size);
+    if (container_specs.GetSize() > 0)
+      specs.Append(container_specs);
   }
-  return 0;
+  return specs;
 }
 
 ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
@@ -272,7 +256,8 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
       m_type(eTypeInvalid), m_strata(eStrataInvalid),
       m_file_offset(file_offset), m_length(length),
       m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(),
-      m_memory_addr(LLDB_INVALID_ADDRESS), m_sections_up(), m_symtab_up(),
+      m_memory_addr(LLDB_INVALID_ADDRESS),
+      m_disable_memory_symtab_caching(false), m_sections_up(), m_symtab_up(),
       m_symtab_once_up(new llvm::once_flag()) {
   if (file_spec_ptr)
     m_file = *file_spec_ptr;
@@ -299,8 +284,8 @@ ObjectFile::ObjectFile(const lldb::ModuleSP &module_sp,
     : ModuleChild(module_sp), m_file(), m_type(eTypeInvalid),
       m_strata(eStrataInvalid), m_file_offset(0), m_length(0),
       m_data_nsp(std::make_shared<DataExtractor>()), m_process_wp(process_sp),
-      m_memory_addr(header_addr), m_sections_up(), m_symtab_up(),
-      m_symtab_once_up(new llvm::once_flag()) {
+      m_memory_addr(header_addr), m_disable_memory_symtab_caching(false),
+      m_sections_up(), m_symtab_up(), m_symtab_once_up(new llvm::once_flag()) {
   if (header_extractor_sp && header_extractor_sp->HasData())
     m_data_nsp = header_extractor_sp;
   Log *log = GetLog(LLDBLog::Object);
@@ -403,6 +388,7 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
           case eSectionTypeELFRelocationEntries:
           case eSectionTypeELFDynamicLinkInfo:
           case eSectionTypeWasmName:
+          case eSectionTypeWasmGlobal:
           case eSectionTypeOther:
             return AddressClass::eUnknown;
           case eSectionTypeAbsoluteAddress:
@@ -474,6 +460,8 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
         return AddressClass::eRuntime;
       case eSymbolTypeReExported:
         return AddressClass::eRuntime;
+      case eSymbolTypeASTFile:
+        return AddressClass::eDebug;
       }
     }
   }
@@ -514,7 +502,6 @@ size_t ObjectFile::ReadSectionData(Section *section,
                                    lldb::offset_t section_offset, void *dst,
                                    size_t dst_len) {
   assert(section);
-  section_offset *= section->GetTargetByteSize();
 
   // If some other objectfile owns this data, pass this to them.
   if (section->GetObjectFile() != this)
@@ -597,19 +584,21 @@ size_t ObjectFile::ReadSectionData(Section *section,
 
 bool ObjectFile::SplitArchivePathWithObject(llvm::StringRef path_with_object,
                                             FileSpec &archive_file,
-                                            ConstString &archive_object,
+                                            llvm::StringRef &archive_object,
                                             bool must_exist) {
   size_t len = path_with_object.size();
   if (len < 2 || path_with_object.back() != ')')
     return false;
-  llvm::StringRef archive = path_with_object.substr(0, path_with_object.rfind('('));
+  llvm::StringRef archive =
+      path_with_object.substr(0, path_with_object.rfind('('));
   if (archive.empty())
     return false;
-  llvm::StringRef object = path_with_object.substr(archive.size() + 1).drop_back();
+  llvm::StringRef object =
+      path_with_object.substr(archive.size() + 1).drop_back();
   archive_file.SetFile(archive, FileSpec::Style::native);
   if (must_exist && !FileSystem::Instance().Exists(archive_file))
     return false;
-  archive_object.SetString(object);
+  archive_object = object;
   return true;
 }
 
@@ -628,17 +617,17 @@ void ObjectFile::ClearSymtab() {
 }
 
 SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
-  if (m_sections_up == nullptr) {
-    if (update_module_section_list) {
-      ModuleSP module_sp(GetModule());
-      if (module_sp) {
-        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-        CreateSections(*module_sp->GetUnifiedSectionList());
-      }
-    } else {
-      SectionList unified_section_list;
-      CreateSections(unified_section_list);
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  if (m_sections_up)
+    return m_sections_up.get();
+  if (update_module_section_list) {
+    if (ModuleSP module_sp = GetModule()) {
+      std::lock_guard<std::recursive_mutex> guard(module_sp->m_sections_mutex);
+      CreateSections(*module_sp->GetUnifiedSectionList());
     }
+  } else {
+    SectionList unified_section_list;
+    CreateSections(unified_section_list);
   }
   return m_sections_up.get();
 }
@@ -820,6 +809,7 @@ Symtab *ObjectFile::GetSymtab(bool can_create) {
       if (!m_symtab_up->LoadFromCache()) {
         ElapsedTime elapsed(module_sp->GetSymtabParseTime());
         ParseSymtab(*m_symtab_up);
+        m_symtab_up->SetWasParsedFromObjectFile();
         m_symtab_up->Finalize();
       }
     });
@@ -838,11 +828,11 @@ uint32_t ObjectFile::GetCacheHash() {
 
 std::string ObjectFile::GetObjectName() const {
   if (ModuleSP module_sp = GetModule())
-    if (ConstString object_name = module_sp->GetObjectName())
-      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename().GetString(),
-                           object_name.GetString())
+    if (llvm::StringRef object_name = module_sp->GetObjectName();
+        !object_name.empty())
+      return llvm::formatv("{0}({1})", GetFileSpec().GetFilename(), object_name)
           .str();
-  return GetFileSpec().GetFilename().GetString();
+  return GetFileSpec().GetFilename().str();
 }
 
 namespace llvm {

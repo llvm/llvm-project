@@ -16,7 +16,7 @@ entry:
   %x1.1 = load i32, ptr @g_x1, !tbaa !3
   %ref1 = getelementptr inbounds [128 x i8], ptr %buffer, i32 0, i32 %x1.1
   store i8 42, ptr %ref1
-  %id = call token @llvm.coro.id(i32 0, ptr %promise, ptr null, ptr null)
+  %id = call token @llvm.coro.id(i32 0, ptr %promise, ptr @f, ptr null)
   %need.alloc = call i1 @llvm.coro.alloc(token %id)
   br i1 %need.alloc, label %dyn.alloc, label %begin
 

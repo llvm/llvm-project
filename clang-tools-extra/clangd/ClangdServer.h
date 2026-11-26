@@ -98,6 +98,8 @@ public:
   createConfiguredContextProvider(const config::Provider *Provider,
                                   ClangdServer::Callbacks *);
 
+  enum class SkipPreambleBuildPolicy { Never, Modules, Always };
+
   struct Options {
     /// To process requests asynchronously, ClangdServer spawns worker threads.
     /// If this is zero, no threads are spawned. All work is done on the calling
@@ -143,10 +145,6 @@ public:
     /// If there is no particular file (e.g. project loading) then it is empty.
     std::function<Context(PathRef)> ContextProvider;
 
-    /// The Options provider to use when running clang-tidy. If null, clang-tidy
-    /// checks will be disabled.
-    TidyProviderRef ClangTidyProvider;
-
     /// Clangd's workspace root. Relevant for "workspace" operations not bound
     /// to a particular file.
     /// FIXME: If not set, should use the current working directory.
@@ -190,6 +188,11 @@ public:
 
     // If true, parse emplace-like functions in the preamble.
     bool PreambleParseForwardingFunctions = true;
+
+    // If Always, discard preamble during update
+    // If Modules, only discard when modules are required
+    SkipPreambleBuildPolicy SkipPreambleBuild =
+        SkipPreambleBuildPolicy::Modules;
 
     /// Whether include fixer insertions for Objective-C code should use #import
     /// instead of #include.
@@ -482,6 +485,8 @@ private:
   }
   const ThreadsafeFS &TFS;
 
+  void adjustParseInputs(ParseInputs &Inputs, PathRef File) const;
+
   Path ResourceDir;
   // The index used to look up symbols. This could be:
   //   - null (all index functionality is optional)
@@ -498,15 +503,14 @@ private:
   // Manage module files.
   ModulesBuilder *ModulesManager = nullptr;
 
-  // When set, provides clang-tidy options for a specific file.
-  TidyProviderRef ClangTidyProvider;
-
   bool UseDirtyHeaders = false;
 
   // Whether the client supports folding only complete lines.
   bool LineFoldingOnly = false;
 
   bool PreambleParseForwardingFunctions = true;
+
+  SkipPreambleBuildPolicy SkipPreambleBuild = {};
 
   bool ImportInsertions = false;
 
@@ -528,6 +532,7 @@ private:
   DraftStore DraftMgr;
 
   std::unique_ptr<ThreadsafeFS> DirtyFS;
+  std::function<Context(PathRef)> ContextProvider;
 };
 
 } // namespace clangd

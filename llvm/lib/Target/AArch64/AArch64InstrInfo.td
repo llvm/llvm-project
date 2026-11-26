@@ -215,30 +215,39 @@ def HasSVEBFSCALE    : Predicate<"Subtarget->isNonStreamingSVEorSME2Available() 
                                  AssemblerPredicateWithAll<(all_of FeatureSVEBFSCALE), "sve-bfscale">;
 def HasSVE_F16F32MM  : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_F16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_F16F32MM), "sve-f16f32mm">;
-def HasPCDPHINT      : Predicate<"Subtarget->hasPCDPHINT()">,
-                                 AssemblerPredicateWithAll<(all_of FeaturePCDPHINT), "pcdphint">;
 def HasLSUI          : Predicate<"Subtarget->hasLSUI()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSUI), "lsui">;
 def HasOCCMO         : Predicate<"Subtarget->hasOCCMO()">,
                                  AssemblerPredicateWithAll<(all_of FeatureOCCMO), "occmo">;
-def HasCMH           : Predicate<"Subtarget->hasCMH()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureCMH), "cmh">;
+def HasHINTE         : Predicate<"Subtarget->hasHINTE()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureHINTE), "hinte">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
-def HasSVE2p2        : Predicate<"Subtarget->hasSVE2p2()">,
+def NoLSCP           : Predicate<"!Subtarget->hasLSCP()">;
+def HasSVE2p2        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p2), "sve2p2">;
 def HasSVE_B16MM     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_B16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_B16MM), "sve-b16mm">;
-def HasF16MM         : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasF16MM()">,
+def HasF16MM         : Predicate<"Subtarget->hasF16MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16MM), "f16mm">;
-def HasSVE2p3        : Predicate<"Subtarget->hasSVE2p3()">,
+def HasSVE2p3        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p3), "sve2p3">;
-def HasSME2p3        : Predicate<"Subtarget->hasSME2p3()">,
+def HasSME2p3        : Predicate<"Subtarget->isStreaming() && Subtarget->hasSME2p3()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p3), "sme2p3">;
 def HasF16F32DOT     : Predicate<"Subtarget->hasF16F32DOT()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16F32DOT), "f16f32dot">;
 def HasF16F32MM      : Predicate<"Subtarget->hasF16F32MM()">,
                                  AssemblerPredicateWithAll<(all_of FeatureF16F32MM), "f16f32mm">;
+def HasCFLT          : Predicate<"Subtarget->hasCFLT()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureCFLT), "cflt">;
+def HasLSC64B        : Predicate<"Subtarget->hasLSC64B()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureLSC64B), "lsc64b">;
+def HasSVE_LRCPC     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_LRCPC()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSVE_LRCPC), "sve-lrcpc">;
+def HasSMEF16F8F16   : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF16F8F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF16F8F16), "sme-f16f8f16">;
+def HasFPv2          : Predicate<"Subtarget->hasFPv2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFPv2), "fpv2">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -318,6 +327,11 @@ def HasNonStreamingSVE2p2_or_SME2p2
                 AssemblerPredicateWithAll<(any_of FeatureSVE2p2, FeatureSME2p2),
                 "sme2p2 or sve2p2">;
 
+def HasNonStreamingMatMulFP64_or_SVE_PERM256
+    : Predicate<"(Subtarget->isSVEorStreamingSVEAvailable()  && Subtarget->hasSVE_PERM256()) || (Subtarget->isSVEAvailable() && Subtarget->hasMatMulFP64())">,
+                AssemblerPredicateWithAll<(any_of FeatureMatMulFP64, FeatureSVE_PERM256),
+                "f64mm or sve-perm256">;
+
 def HasSMEF16F16_or_SMEF8F16
     : Predicate<"Subtarget->isStreaming() && (Subtarget->hasSMEF16F16() || Subtarget->hasSMEF8F16())">,
                 AssemblerPredicateWithAll<(any_of FeatureSMEF16F16, FeatureSMEF8F16),
@@ -328,9 +342,9 @@ def HasSMEF16F16_or_SMEF8F16
 def HasNEONandIsStreamingSafe
     : Predicate<"Subtarget->hasNEON()">,
       AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
-// A subset of NEON instructions are legal in Streaming SVE mode only with +sme2p2.
-def HasNEONandIsSME2p2StreamingSafe
-                     : Predicate<"Subtarget->isNeonAvailable() || (Subtarget->hasNEON() && Subtarget->hasSME2p2())">,
+// A subset of NEON instructions are legal in Streaming SVE mode only with +fprcvt.
+def HasNEONandIsFPRCVTStreamingSafe
+                     : Predicate<"Subtarget->isNeonAvailable() || (Subtarget->hasNEON() && Subtarget->hasFPRCVT())">,
                                  AssemblerPredicateWithAll<(any_of FeatureNEON), "neon">;
 def HasRCPC          : Predicate<"Subtarget->hasRCPC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureRCPC), "rcpc">;
@@ -399,8 +413,6 @@ def HasCPA           : Predicate<"Subtarget->hasCPA()">,
                                  AssemblerPredicateWithAll<(all_of FeatureCPA), "cpa">;
 def HasTLBID         : Predicate<"Subtarget->hasTLBID()">,
                                  AssemblerPredicateWithAll<(all_of FeatureTLBID), "tlbid">;
-def HasMPAMv2        : Predicate<"Subtarget->hasMPAMv2()">,
-                                 AssemblerPredicateWithAll<(all_of FeatureMPAMv2), "mpamv2">;
 def HasMTETC         : Predicate<"Subtarget->hasMTETC()">,
                                  AssemblerPredicateWithAll<(all_of FeatureMTETC), "mtetc">;
 def HasGCIE          : Predicate<"Subtarget->hasGCIE()">,
@@ -421,7 +433,7 @@ def UseAlternateSExtLoadCVTF32
 
 def UseNegativeImmediates
                      : Predicate<"false">,
-                                 AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
+                                 AssemblerPredicate<(none_of FeatureNoNegativeImmediates),
                                  "NegativeImmediates">;
 
 def UseScalarIncVL   : Predicate<"Subtarget->useScalarIncVL()">;
@@ -440,6 +452,10 @@ def AArch64LocalRecover : SDNode<"ISD::LOCAL_RECOVER",
 
 def AllowMisalignedMemAccesses
                     : Predicate<"!Subtarget->requiresStrictAlign()">;
+def DisallowMisalignedMemAccesses
+                    : Predicate<"Subtarget->requiresStrictAlign()">;
+def IsBEOrDisallowMisalignedMemAccesses
+    : Predicate<"!Subtarget->isLittleEndian() || Subtarget->requiresStrictAlign()">;
 
 def UseWzrToVecMove : Predicate<"Subtarget->useWzrToVecMove()">;
 
@@ -513,6 +529,9 @@ def SDT_AArch64Insr  : SDTypeProfile<1, 2, [SDTCisVec<0>]>;
 def SDT_AArch64Zip   : SDTypeProfile<1, 2, [SDTCisVec<0>,
                                           SDTCisSameAs<0, 1>,
                                           SDTCisSameAs<0, 2>]>;
+def SDT_AArch64Addhn : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                                            SDTCisSameAs<1, 2>,
+                                            SDTCisOpSmallerThanOp<0, 1>]>;
 def SDT_AArch64MOVIedit : SDTypeProfile<1, 1, [SDTCisInt<1>]>;
 def SDT_AArch64MOVIshift : SDTypeProfile<1, 2, [SDTCisInt<1>, SDTCisInt<2>]>;
 def SDT_AArch64vecimm : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
@@ -528,11 +547,7 @@ def SDT_AArch64vshiftinsert : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisInt<3>,
                                                  SDTCisSameAs<0,1>,
                                                  SDTCisSameAs<0,2>]>;
 
-def SDT_AArch64unvec : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0,1>]>;
-def SDT_AArch64fcmpz : SDTypeProfile<1, 1, []>;
 def SDT_AArch64fcmp  : SDTypeProfile<1, 2, [SDTCisSameAs<1,2>]>;
-def SDT_AArch64binvec : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0,1>,
-                                           SDTCisSameAs<0,2>]>;
 def SDT_AArch64trivec : SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisSameAs<0,1>,
                                            SDTCisSameAs<0,2>,
                                            SDTCisSameAs<0,3>]>;
@@ -542,16 +557,13 @@ def SDT_AArch64RANGE_PREFETCH: SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisPtrT
 
 def SDT_AArch64ITOF  : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>;
 
-def SDT_AArch64TLSDescCall : SDTypeProfile<0, -2, [SDTCisPtrTy<0>,
-                                                 SDTCisPtrTy<1>]>;
-
 def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
 def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64ldiapp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64ldp_acq : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64stilp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64stp_rel : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 
 // Generates the general dynamic sequences, i.e.
@@ -586,7 +598,8 @@ def nonext_masked_load :
           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
          cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-         !cast<MaskedLoadSDNode>(N)->isNonTemporal();
+         !cast<MaskedLoadSDNode>(N)->isNonTemporal() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 // Any/Zero extending masked load fragments.
 def azext_masked_load :
@@ -594,44 +607,52 @@ def azext_masked_load :
           (masked_ld node:$ptr, undef, node:$pred, node:$def),[{
   return (cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::EXTLOAD ||
           cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::ZEXTLOAD) &&
-         cast<MaskedLoadSDNode>(N)->isUnindexed();
+         cast<MaskedLoadSDNode>(N)->isUnindexed() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i16 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def azext_masked_load_i32 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (azext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 // Sign extending masked load fragments.
 def sext_masked_load :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
   return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::SEXTLOAD &&
-         cast<MaskedLoadSDNode>(N)->isUnindexed();
+         cast<MaskedLoadSDNode>(N)->isUnindexed() &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i8 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i8 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i16 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i16 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 def sext_masked_load_i32 :
   PatFrag<(ops node:$ptr, node:$pred, node:$def),
           (sext_masked_load node:$ptr, node:$pred, node:$def), [{
-  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32;
+  return cast<MaskedLoadSDNode>(N)->getMemoryVT().getScalarType() == MVT::i32 &&
+         !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 
 def non_temporal_load :
@@ -639,7 +660,8 @@ def non_temporal_load :
            (masked_ld node:$ptr, undef, node:$pred, node:$def), [{
    return cast<MaskedLoadSDNode>(N)->getExtensionType() == ISD::NON_EXTLOAD &&
           cast<MaskedLoadSDNode>(N)->isUnindexed() &&
-          cast<MaskedLoadSDNode>(N)->isNonTemporal();
+          cast<MaskedLoadSDNode>(N)->isNonTemporal() &&
+          !cast<MaskedLoadSDNode>(N)->isExpandingLoad();
 }]>;
 
 // non-truncating masked store fragment.
@@ -771,6 +793,35 @@ def topbitsallzero64: PatLeaf<(i64 GPR64:$src), [{
   }]> {
   let GISelLeafPredicateCode = [{ 
     return VT && VT->maskedValueIsZero(Reg, APInt::getHighBitsSet(64, 63)); }];
+}
+
+// Loads and stores with a minimum alignment.
+class load_aligned<int align_bytes> : PatFrag<(ops node:$ptr), (unindexedload node:$ptr)> {
+  let IsLoad = true;
+  let IsNonExtLoad = true;
+  let MinAlignment = align_bytes;
+}
+class store_aligned<int align_bytes> : PatFrag<(ops node:$val, node:$ptr),
+                    (unindexedstore node:$val, node:$ptr)> {
+  let IsStore = true;
+  let IsTruncStore = false;
+  let MinAlignment = align_bytes;
+}
+class pre_store_aligned<int align_bytes> : PatFrag<(ops node:$val, node:$base, node:$offset),
+                        (istore node:$val, node:$base, node:$offset), [{
+  ISD::MemIndexedMode AM = cast<StoreSDNode>(N)->getAddressingMode();
+  Align A = cast<StoreSDNode>(N)->getAlign();
+  return (AM == ISD::PRE_INC || AM == ISD::PRE_DEC) && A >= }] # align_bytes # [{;
+}]> {
+  let MinAlignment = align_bytes;
+}
+class post_store_aligned<int align_bytes> : PatFrag<(ops node:$val, node:$ptr, node:$offset),
+                         (istore node:$val, node:$ptr, node:$offset), [{
+  ISD::MemIndexedMode AM = cast<StoreSDNode>(N)->getAddressingMode();
+  Align A = cast<StoreSDNode>(N)->getAlign();
+  return (AM == ISD::POST_INC || AM == ISD::POST_DEC) && A >= }] # align_bytes # [{;
+}]> {
+  let MinAlignment = align_bytes;
 }
 
 // Node definitions.
@@ -961,6 +1012,9 @@ def AArch64vsri : SDNode<"AArch64ISD::VSRI", SDT_AArch64vshiftinsert>;
 // element must be identical.
 def AArch64bsp: SDNode<"AArch64ISD::BSP", SDT_AArch64trivec>;
 
+// AArch64ISD::CMTST node: result is all-ones per lane where (X & Y) != 0.
+def AArch64cmtst: SDNode<"AArch64ISD::CMTST", SDT_AArch64Zip>;
+
 def AArch64cmeq : PatFrag<(ops node:$lhs, node:$rhs),
                           (setcc node:$lhs, node:$rhs, SETEQ)>;
 def AArch64cmge : PatFrag<(ops node:$lhs, node:$rhs),
@@ -988,9 +1042,6 @@ def AArch64cmlez : PatFrag<(ops node:$lhs),
                            (setcc immAllZerosV, node:$lhs, SETGE)>;
 def AArch64cmltz : PatFrag<(ops node:$lhs),
                            (setcc immAllZerosV, node:$lhs, SETGT)>;
-
-def AArch64cmtst : PatFrag<(ops node:$LHS, node:$RHS),
-                           (vnot (AArch64cmeqz (and node:$LHS, node:$RHS)))>;
 
 def AArch64fcmeqz : PatFrag<(ops node:$lhs),
                             (AArch64fcmeq node:$lhs, immAllZerosV)>;
@@ -1032,12 +1083,21 @@ def AArch64sqrshl:  SDNode<"AArch64ISD::SQRSHL",  SDTFPBinOp>;
 def AArch64sqshl:   SDNode<"AArch64ISD::SQSHL",   SDTFPBinOp>;
 def AArch64sqsub:   SDNode<"AArch64ISD::SQSUB",   SDTFPBinOp>;
 def AArch64uqadd:   SDNode<"AArch64ISD::UQADD",   SDTFPBinOp>;
+def AArch64suqadd:  SDNode<"AArch64ISD::SUQADD",  SDTFPBinOp>;
+def AArch64usqadd:  SDNode<"AArch64ISD::USQADD",  SDTFPBinOp>;
 def AArch64uqrshl:  SDNode<"AArch64ISD::UQRSHL",  SDTFPBinOp>;
 def AArch64uqshl:   SDNode<"AArch64ISD::UQSHL",   SDTFPBinOp>;
 def AArch64uqsub:   SDNode<"AArch64ISD::UQSUB",   SDTFPBinOp>;
 def AArch64sqdmull: SDNode<"AArch64ISD::SQDMULL",
                            SDTypeProfile<1, 2, [ SDTCisSameAs<1, 2>,
                            SDTCisFP<0>, SDTCisFP<1>]>>;
+// Scalar integer operations use FP types; vectors retain their integer types.
+def AArch64sqabs:   SDNode<"AArch64ISD::SQABS",
+                          SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>>;
+def AArch64sqabsv : PatFrags<(ops node:$Rn),
+                            [(int_aarch64_neon_sqabs node:$Rn),
+                             (AArch64sqabs node:$Rn)]>;
+def AArch64sqneg:   SDNode<"AArch64ISD::SQNEG",   SDTFPUnaryOp>;
 def AArch64sqshrun: SDNode<"AArch64ISD::SQSHRUN", SDTFPTruncRoundOp>;
 def AArch64sqrshrun: SDNode<"AArch64ISD::SQRSHRUN", SDTFPTruncRoundOp>;
 def AArch64sqshrn: SDNode<"AArch64ISD::SQSHRN", SDTFPTruncRoundOp>;
@@ -1115,6 +1175,8 @@ def AArch64usdot    : SDNode<"AArch64ISD::USDOT", SDT_AArch64Dot>;
 def AArch64saddv    : SDNode<"AArch64ISD::SADDV", SDT_AArch64UnaryVec>;
 def AArch64uaddv    : SDNode<"AArch64ISD::UADDV", SDT_AArch64UnaryVec>;
 
+def AArch64addhn     : SDNode<"AArch64ISD::ADDHN", SDT_AArch64Addhn>;
+
 // Vector across-lanes min/max
 // Only the lower result lane is defined.
 def AArch64sminv    : SDNode<"AArch64ISD::SMINV", SDT_AArch64UnaryVec>;
@@ -1182,10 +1244,11 @@ def AArch64uunpkhi : SDNode<"AArch64ISD::UUNPKHI", SDT_AArch64unpk>;
 def AArch64uunpklo : SDNode<"AArch64ISD::UUNPKLO", SDT_AArch64unpk>;
 
 def AArch64ldp : SDNode<"AArch64ISD::LDP", SDT_AArch64ldp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ldiapp : SDNode<"AArch64ISD::LDIAPP", SDT_AArch64ldiapp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ldp_acq : SDNode<"AArch64ISD::LDP_ACQ", SDT_AArch64ldp_acq, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ldap : SDNode<"AArch64ISD::LDAP", SDT_AArch64ldp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64ldnp : SDNode<"AArch64ISD::LDNP", SDT_AArch64ldnp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64stilp : SDNode<"AArch64ISD::STILP", SDT_AArch64stilp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64stp_rel : SDNode<"AArch64ISD::STP_REL", SDT_AArch64stp_rel, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
@@ -1227,6 +1290,9 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
 // res = cttz.elts(pg, op)
 def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 2,
                              [SDTCisInt<0>, SDTCVecEltisVT<1,i1>, SDTCisSameAs<1,2>]>, []>;
+def AArch64CttzEltsZeroPoison
+    : SDNode<"AArch64ISD::CTTZ_ELTS_ZERO_POISON", SDTypeProfile<1, 2,
+             [SDTCisInt<0>, SDTCVecEltisVT<1,i1>, SDTCisSameAs<1,2>]>, []>;
 
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
@@ -1293,19 +1359,6 @@ def AArch64gldnt1_index_merge_zero
 def AArch64gld1q_index_merge_zero
   : SDNode<"AArch64ISD::GLD1Q_INDEX_MERGE_ZERO", SDTypeProfile<1, 4, []>,
            [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-
-// Match add node and also treat an 'or' node is as an 'add' if the or'ed operands
-// have no common bits.
-def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
-                         [(add node:$lhs, node:$rhs), (or node:$lhs, node:$rhs)],[{
-   if (Op.getOpcode() == ISD::ADD)
-     return true;
-   return CurDAG->isADDLike(Op);
-}]> {
-  let GISelPredicateCode = [{
-     return mi_match(MI, MRI, m_GAddLike(m_Reg(), m_Reg()));
-  }];
-}
 
 // Match mul with enough sign-bits. Can be reduced to a smaller mul operand.
 def smullwithsignbits : PatFrag<(ops node:$l, node:$r), (mul node:$l, node:$r), [{
@@ -1423,6 +1476,15 @@ def PROBED_STACKALLOC_DYN : Pseudo<(outs),
 
 } // Defs = [SP, NZCV], Uses = [SP] in
 } // hasSideEffects = 1, isCodeGenOnly = 1
+
+// Read of an allocatable register by name (e.g. the MSVC __getReg/__getRegFp
+// intrinsics, lowered from llvm.read[_volatile]_register).
+let hasSideEffects = 1, mayLoad = 1, Size = 4, isCodeGenOnly = 1 in {
+def READ_REGISTER_GPR64 : Pseudo<(outs GPR64:$Rt), (ins i32imm:$reg), []>,
+                          Sched<[]>;
+def READ_REGISTER_FPR64 : Pseudo<(outs FPR64:$Rt), (ins i32imm:$reg), []>,
+                          Sched<[]>;
+}
 
 let isReMaterializable = 1, isCodeGenOnly = 1 in {
 // FIXME: The following pseudo instructions are only needed because remat
@@ -1565,13 +1627,16 @@ let hasSideEffects = 1, isCodeGenOnly = 1, isTerminator = 1, isBarrier = 1 in {
 //===----------------------------------------------------------------------===//
 
 def HINT : HintI<"hint">;
-def : InstAlias<"yield",(HINT 0b001)>;
-def : InstAlias<"wfe",  (HINT 0b010)>;
-def : InstAlias<"wfi",  (HINT 0b011)>;
-def : InstAlias<"sev",  (HINT 0b100)>;
-def : InstAlias<"sevl", (HINT 0b101)>;
-def : InstAlias<"dgh",  (HINT 0b110)>;
-def : InstAlias<"esb",  (HINT 0b10000)>, Requires<[HasRAS]>;
+let Predicates = [HasHINTE] in
+def HINTE : HintE<"hinte">;
+
+def : InstAlias<"yield",(HINT 1)>;
+def : InstAlias<"wfe",  (HINT 2)>;
+def : InstAlias<"wfi",  (HINT 3)>;
+def : InstAlias<"sev",  (HINT 4)>;
+def : InstAlias<"sevl", (HINT 5)>;
+def : InstAlias<"dgh",  (HINT 6)>;
+def : InstAlias<"esb",  (HINT 16)>, Requires<[HasRAS]>;
 def : InstAlias<"csdb", (HINT 20)>;
 
 let CRm = 0b0000, hasSideEffects = 0 in
@@ -1579,22 +1644,33 @@ def NOP : SystemNoOperands<0b000, "hint\t#0">;
 
 def : InstAlias<"nop", (NOP)>;
 
-let Predicates = [HasPCDPHINT] in {
-    def STSHH: STSHHI;
-}
+def : InstAlias<"stshh keep", (HINT 48), 1>;
+def : InstAlias<"stshh strm", (HINT 49), 1>;
+def : InstAlias<"shuh", (HINT 50), 1>;
+def : InstAlias<"shuh ph", (HINT 51), 1>;
+def : InstAlias<"stcph", (HINT 52), 1>;
+def : InstAlias<"srls", (HINT 54)>;
+def : InstAlias<"srls stshstrm", (HINT 55)>;
+def : InstAlias<"slbnd", (HINT 56)>;
 
 // In order to be able to write readable assembly, LLVM should accept assembly
 // inputs that use Branch Target Identification mnemonics, even with BTI disabled.
 // However, in order to be compatible with other assemblers (e.g. GAS), LLVM
 // should not emit these mnemonics unless BTI is enabled.
 def : InstAlias<"bti",  (HINT 32), 0>;
-def : InstAlias<"bti $op", (HINT btihint_op:$op), 0>;
+def : InstAlias<"bti r",  (HINT 32), 0>;
+def : InstAlias<"bti c",  (HINT 34), 0>;
+def : InstAlias<"bti j",  (HINT 36), 0>;
+def : InstAlias<"bti jc", (HINT 38), 0>;
 def : InstAlias<"bti r", (HINT 32)>, Requires<[HasBTIE]>;
 def : InstAlias<"bti",  (HINT 32)>, Requires<[HasBTI]>;
-def : InstAlias<"bti $op", (HINT btihint_op:$op)>, Requires<[HasBTI]>;
+def : InstAlias<"bti c",  (HINT 34)>, Requires<[HasBTI]>;
+def : InstAlias<"bti j",  (HINT 36)>, Requires<[HasBTI]>;
+def : InstAlias<"bti jc", (HINT 38)>, Requires<[HasBTI]>;
 
 // v8.2a Statistical Profiling extension
-def : InstAlias<"psb $op",  (HINT psbhint_op:$op)>, Requires<[HasSPE]>;
+def : InstAlias<"psb csync", (HINT 17), 1>, Requires<[HasSPE]>;
+def : InstAlias<"tsb csync", (HINT 18), 1>, Requires<[HasTRACEV8_4]>;
 
 // As far as LLVM is concerned this writes to the system's exclusive monitors.
 let mayLoad = 1, mayStore = 1 in
@@ -1612,12 +1688,6 @@ def DSB   : CRmSystemI<barrier_op, 0b100, "dsb",
 def ISB   : CRmSystemI<barrier_op, 0b110, "isb",
                        [(int_aarch64_isb (i32 imm32_0_15:$CRm))]>;
 
-def TSB   : CRmSystemI<barrier_op, 0b010, "tsb", []> {
-  let CRm        = 0b0010;
-  let Inst{12}   = 0;
-  let Predicates = [HasTRACEV8_4];
-}
-
 def DSBnXS  : CRmSystemI<barrier_nxs_op, 0b001, "dsb"> {
   let CRm{1-0}   = 0b11;
   let Inst{9-8}  = 0b10;
@@ -1628,16 +1698,6 @@ let Predicates = [HasWFxT] in {
 def WFET : RegInputSystemI<0b0000, 0b000, "wfet">;
 def WFIT : RegInputSystemI<0b0000, 0b001, "wfit">;
 }
-
-// Branch Record Buffer two-word mnemonic instructions
-class BRBEI<bits<3> op2, string keyword>
-    : SimpleSystemI<0, (ins), "brb", keyword>, Sched<[WriteSys]> {
-  let Inst{31-8} = 0b110101010000100101110010;
-  let Inst{7-5} = op2;
-  let Predicates = [HasBRBE];
-}
-def BRB_IALL: BRBEI<0b100, "\tiall">;
-def BRB_INJ:  BRBEI<0b101, "\tinj">;
 
 }
 
@@ -1754,6 +1814,10 @@ def BFCVTN2      : SIMD_BFCVTN2;
 
 def : Pat<(concat_vectors (v4bf16 V64:$Rd), (any_fpround (v4f32 V128:$Rn))),
           (BFCVTN2 (v8bf16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub)), V128:$Rn)>;
+
+def : Pat<(v4f32 (partial_reduce_fmla v4f32:$acc, v8bf16:$LHS, v8bf16:$RHS)),
+          (BFMLALT (BFMLALB v4f32:$acc, V128:$LHS, V128:$RHS),
+              V128:$LHS, V128:$RHS)>;
 }
 
 let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in {
@@ -1809,6 +1873,13 @@ defm FMLALlane  : SIMDThreeSameVectorFMLIndex<0, 0b0000, "fmlal", int_aarch64_ne
 defm FMLSLlane  : SIMDThreeSameVectorFMLIndex<0, 0b0100, "fmlsl", int_aarch64_neon_fmlsl>;
 defm FMLAL2lane : SIMDThreeSameVectorFMLIndex<1, 0b1000, "fmlal2", int_aarch64_neon_fmlal2>;
 defm FMLSL2lane : SIMDThreeSameVectorFMLIndex<1, 0b1100, "fmlsl2", int_aarch64_neon_fmlsl2>;
+
+def : Pat<(v2f32 (partial_reduce_fmla v2f32:$acc, v4f16:$LHS, v4f16:$RHS)),
+          (FMLAL2v4f16 (FMLALv4f16 v2f32:$acc, V64:$LHS, V64:$RHS),
+              V64:$LHS, V64:$RHS)>;
+def : Pat<(v4f32 (partial_reduce_fmla v4f32:$acc, v8f16:$LHS, v8f16:$RHS)),
+          (FMLAL2v8f16 (FMLALv8f16 v4f32:$acc, V128:$LHS, V128:$RHS),
+              V128:$LHS, V128:$RHS)>;
 }
 
 // Armv8.2-A Crypto extensions
@@ -2071,10 +2142,23 @@ def PAUTH_PROLOGUE : Pseudo<(outs), (ins), []>, Sched<[]> {
   // duplicated.
   let isNotDuplicable = 1;
 }
+
 // Insertion point of LR authentication code.
 // The RET terminator of the containing machine basic block may be replaced
 // with a combined RETA(A|B) instruction when rewriting this Pseudo.
+//
+// In the case where PAuthLR is requested but the subtarget lacks PAuthLR
+// instructions, this pseudo clobbers X16. Insert this instruction with the
+// AArch64InstrInfo::createPauthEpilogueInstr method that adds an implicit-def
+// operand as needed.
 def PAUTH_EPILOGUE : Pseudo<(outs), (ins), []>, Sched<[]>;
+
+// Like PAUTH_EPILOGUE, but for use before the epilogue proper, where it
+// authenticates the return address in LR, which the epilogue then leaves alone.
+// The SP the return address was signed with must already be in X16, and the
+// signed return address in X17 if the authentication sequence works on that
+// (see AArch64PAuth::authenticatesLRViaX17), or else in LR.
+def PAUTH_EPILOGUE_ENTRY_SP : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
 // These pointer authentication instructions require armv8.3a
@@ -2267,6 +2351,8 @@ let Predicates = [HasPAuth] in {
                (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64noip:$AUTAddrDisc,
                     i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
                []>, Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X16 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2274,6 +2360,29 @@ let Predicates = [HasPAuth] in {
     let Size = 48;
     let Defs = [X16,X17,NZCV];
     let Uses = [X16];
+  }
+
+  // AUT a pointer using a PC-blended discriminator and re-PAC with different
+  // keys/data. This directly manipulates x16/x17, which are the only registers
+  // certain OSs guarantee are safe to use for sensitive operations.
+  // Additionally, it uses fixed implicit registers x15/x16/x17 for the AUT as
+  // AUTI[AB]171615 is the only instruction that can do the three-input-operand
+  // AUT, unlike the other PAuth-related pseudos (AUTx16x17, AUTPAC) where
+  // the register operands are structurally necessary.
+  def AUTPCPAC
+      : Pseudo<(outs),
+               (ins i32imm:$AUTKey,
+                    i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc),
+               []>, Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X17 which is
+    // early-clobbered.
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 48;
+    let Defs = [X17,X15,X16,NZCV];
+    let Uses = [X15,X16,X17];
   }
 
   // Similiar to AUTPAC, except a 32bit value is loaded at Addend offset from
@@ -2287,6 +2396,8 @@ let Predicates = [HasPAuth] in {
                    i64imm:$Addend),
                []>,
         Sched<[WriteI, ReadI]> {
+    // Thanks to its register class, $PACAddrDisc never aliases X16 which is
+    // early-clobbered.
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2538,19 +2649,26 @@ def MSR_FPSR : Pseudo<(outs), (ins GPR64:$val),
                PseudoInstExpansion<(MSR 0xda21, GPR64:$val)>,
                Sched<[WriteSys]>;
 
-let Defs = [FPMR] in
+let Uses = [FPMR], Defs = [FPMR, NZCV], usesCustomInserter = 1 in
 def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
                       [(int_aarch64_set_fpmr i64:$val)]>,
-               PseudoInstExpansion<(MSR 0xda22, GPR64:$val)>,
                Sched<[WriteSys]>;
 
 // Generic system instructions
-def SYSxt  : SystemXtI<0, "sys">;
+def SYSxt  : SystemXtI<"sys">;
 def SYSLxt : SystemLXtI<1, "sysl">;
 
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
-                (SYSxt imm0_7:$op1, sys_cr_op:$Cn,
-                 sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
+                (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,
+                 sys_cr_op:$Cm, timm32_0_7:$op2, XZR)>;
+def : InstAlias<"apas $Xt",
+                (SYSxt 6, 7, 0, 0, GPR64:$Xt), 2>;
+def : InstAlias<"brb\tiall",
+                (SYSxt 1, 7, 2, 4, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"brb\tinj",
+                (SYSxt 1, 7, 2, 5, XZR), 2>, Requires<[HasBRBE]>;
+def : InstAlias<"trcit $Rt",
+                (SYSxt 3, 7, 2, 7, GPR64:$Rt), 2>, Requires<[HasITE]>;
 
 
 //===----------------------------------------------------------------------===//
@@ -2674,16 +2792,6 @@ def : Pat<(i64 i64imm_32bit:$src),
 }
 
 // Materialize FP constants via MOVi32imm/MOVi64imm (MachO large code model).
-def bitcast_fpimm_to_i32 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i32);
-}]>;
-
-def bitcast_fpimm_to_i64 : SDNodeXForm<fpimm, [{
-return CurDAG->getTargetConstant(
-  N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
-}]>;
-
 
 def : Pat<(f32 fpimm:$in),
   (COPY_TO_REGCLASS (MOVi32imm (bitcast_fpimm_to_i32 f32:$in)), FPR32)>;
@@ -2760,6 +2868,12 @@ def copyFromSP: PatLeaf<(i64 GPR64:$src), [{
          cast<RegisterSDNode>(N->getOperand(1))->getReg() == AArch64::SP;
 }]>;
 
+// Pseudo instruction for stack guard cookie unmixing (epilogue).
+// This will be expanded post-RA to use FP directly, avoiding an extra mov.
+// Pattern matching for this will be done via custom C++ code during instruction selection.
+def STACK_GUARD_UNMIX : Pseudo<(outs GPR64:$dst), (ins GPR64:$stored_val), []>,
+                        Sched<[]>;
+
 // Use SUBS instead of SUB to enable CSE between SUBS and SUB.
 def : Pat<(sub GPR32sp:$Rn, addsub_shifted_imm32:$imm),
           (SUBSWri GPR32sp:$Rn, addsub_shifted_imm32:$imm)>;
@@ -2810,6 +2924,17 @@ def : Pat<(AArch64sub_flag GPR64:$Rn, neg_addsub_shifted_imm64:$imm),
           (ADDSXri GPR64:$Rn, neg_addsub_shifted_imm64:$imm)>;
 }
 
+def negate_imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(-N->getAPIntValue(), SDLoc(N), N->getValueType(0));
+}]>;
+def neg_cheaper_imm32 : PatLeaf<(i32 imm), [{ return isWorthNegatingImm(Op); }], negate_imm>;
+def neg_cheaper_imm64 : PatLeaf<(i64 imm), [{ return isWorthNegatingImm(Op); }], negate_imm>;
+
+// Prefer (sub x, -c) over (add x, c) if -c is cheaper to materialise than c.
+def : Pat<(add GPR32:$Rn, neg_cheaper_imm32:$imm),
+          (SUBSWrr GPR32:$Rn, (MOVi32imm neg_cheaper_imm32:$imm))>;
+def : Pat<(add GPR64:$Rn, neg_cheaper_imm64:$imm),
+          (SUBSXrr GPR64:$Rn, (MOVi64imm neg_cheaper_imm64:$imm))>;
 
 def trunc_isWorthFoldingALU : PatFrag<(ops node:$src), (trunc $src)> {
   let PredicateCode = [{ return isWorthFoldingALU(SDValue(N, 0)); }];
@@ -2896,9 +3021,9 @@ def : Pat<(i64 (mul (ineg GPR64:$Rn), GPR64:$Rm)),
 } // AddedComplexity = 5
 
 let AddedComplexity = 5 in {
-def SMADDLrrr : WideMulAccum<0, 0b001, "smaddl", add, sext>;
+def SMADDLrrr : WideMulAccum<0, 0b001, "smaddl", add_like, sext>;
 def SMSUBLrrr : WideMulAccum<1, 0b001, "smsubl", sub, sext>;
-def UMADDLrrr : WideMulAccum<0, 0b101, "umaddl", add, zext>;
+def UMADDLrrr : WideMulAccum<0, 0b101, "umaddl", add_like, zext>;
 def UMSUBLrrr : WideMulAccum<1, 0b101, "umsubl", sub, zext>;
 
 def : Pat<(i64 (mul (sext_inreg GPR64:$Rn, i32), (sext_inreg GPR64:$Rm, i32))),
@@ -2935,11 +3060,11 @@ def : Pat<(i64 (ineg (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)))),
           (SMSUBLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
                      (MOVi32imm (trunc_imm imm:$C)), XZR)>;
 
-def : Pat<(i64 (add (mul (sext GPR32:$Rn), (s64imm_32bit:$C)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul (sext GPR32:$Rn), (s64imm_32bit:$C)), GPR64:$Ra)),
           (SMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
-def : Pat<(i64 (add (mul (zext GPR32:$Rn), (i64imm_32bit:$C)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul (zext GPR32:$Rn), (i64imm_32bit:$C)), GPR64:$Ra)),
           (UMADDLrrr GPR32:$Rn, (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
-def : Pat<(i64 (add (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
+def : Pat<(i64 (add_like (mul (sext_inreg GPR64:$Rn, i32), (s64imm_32bit:$C)),
                     GPR64:$Ra)),
           (SMADDLrrr (i32 (EXTRACT_SUBREG GPR64:$Rn, sub_32)),
                      (MOVi32imm (trunc_imm imm:$C)), GPR64:$Ra)>;
@@ -2958,9 +3083,9 @@ def : Pat<(i64 (smullwithsignbits GPR64:$Rn, GPR64:$Rm)),
 def : Pat<(i64 (smullwithsignbits GPR64:$Rn, (sext GPR32:$Rm))),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, XZR)>;
 
-def : Pat<(i64 (add (smullwithsignbits GPR64:$Rn, GPR64:$Rm), GPR64:$Ra)),
+def : Pat<(i64 (add_like (smullwithsignbits GPR64:$Rn, GPR64:$Rm), GPR64:$Ra)),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), (EXTRACT_SUBREG GPR64:$Rm, sub_32), GPR64:$Ra)>;
-def : Pat<(i64 (add (smullwithsignbits GPR64:$Rn, (sext GPR32:$Rm)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (smullwithsignbits GPR64:$Rn, (sext GPR32:$Rm)), GPR64:$Ra)),
           (SMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, GPR64:$Ra)>;
 
 def : Pat<(i64 (ineg (smullwithsignbits GPR64:$Rn, GPR64:$Rm))),
@@ -2978,9 +3103,9 @@ def : Pat<(i64 (mul top32Zero:$Rn, top32Zero:$Rm)),
 def : Pat<(i64 (mul top32Zero:$Rn, (zext GPR32:$Rm))),
           (UMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, XZR)>;
 
-def : Pat<(i64 (add (mul top32Zero:$Rn, top32Zero:$Rm), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul top32Zero:$Rn, top32Zero:$Rm), GPR64:$Ra)),
           (UMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), (EXTRACT_SUBREG GPR64:$Rm, sub_32), GPR64:$Ra)>;
-def : Pat<(i64 (add (mul top32Zero:$Rn, (zext GPR32:$Rm)), GPR64:$Ra)),
+def : Pat<(i64 (add_like (mul top32Zero:$Rn, (zext GPR32:$Rm)), GPR64:$Ra)),
           (UMADDLrrr (EXTRACT_SUBREG GPR64:$Rn, sub_32), $Rm, GPR64:$Ra)>;
 
 def : Pat<(i64 (ineg (mul top32Zero:$Rn, top32Zero:$Rm))),
@@ -3079,9 +3204,6 @@ let Predicates = [HasLSUI] in {
   defm : STOPregisterLSUI<"sttclr","LDTCLR">; // STTCLRx
   defm : STOPregisterLSUI<"sttset","LDTSET">; // STTSETx
 }
-
-// v9.6-a FEAT_RME_GPC3
-def APAS : APASI;
 
 // v8.1 atomic LD<OP>(register). Performs load and then ST<OP>(register)
 defm LDADD   : LDOPregister<0b000, "add", 0, 0, "">;
@@ -3260,7 +3382,6 @@ def : InstAlias<"mov $dst, $imm", (ORRWri GPR32sp:$dst, WZR,
 def : InstAlias<"mov $dst, $imm", (ORRXri GPR64sp:$dst, XZR,
                                           logical_imm64:$imm), 0>;
 
-
 // (register)
 defm ANDS : LogicalRegS<0b11, 0, "ands", AArch64and_flag>;
 defm BICS : LogicalRegS<0b11, 1, "bics",
@@ -3315,6 +3436,10 @@ def : InstAlias<"tst $src1, $src2$sh",
                 (ANDSXrs XZR, GPR64:$src1,
                          (logical_shifted_reg64 GPR64:$src2, logical_shift64:$sh)), 2>;
 
+def : Pat<(or (not GPR32:$Wm), (i32 imm:$x)),
+          (ORNWrr (MOVi32imm imm:$x), GPR32:$Wm)>;
+def : Pat<(or (not GPR64:$Xm), (i64 imm:$x)),
+          (ORNXrr (MOVi64imm imm:$x), GPR64:$Xm)>;
 
 def : Pat<(not GPR32:$Wm), (ORNWrr WZR, GPR32:$Wm)>;
 def : Pat<(not GPR64:$Xm), (ORNXrr XZR, GPR64:$Xm)>;
@@ -3323,11 +3448,23 @@ def : Pat<(not logical_shifted_reg32:$Rm_and_shift),
 def : Pat<(not logical_shifted_reg64:$Rm_and_shift),
           (ORNXrs XZR, logical_shifted_reg64:$Rm_and_shift)>;
 
+// Use the 32-bit logical immediate encoding when the high 32 bits are zero.
+def logical_imm32_only64 : IntImmLeaf<i64, [{
+  uint64_t V = Imm.getZExtValue();
+  return V <= 0xffffffffULL &&
+         AArch64_AM::isLogicalImmediate(V, 32) &&
+         !AArch64_AM::isLogicalImmediate(V, 64);
+}]>;
+
+let AddedComplexity = 6 in
+def : Pat<(i64 (and GPR64:$Rn, logical_imm32_only64:$mask)),
+          (SUBREG_TO_REG (ANDWri (EXTRACT_SUBREG GPR64:$Rn, sub_32),
+                                  (logical_imm32_XFORM imm:$mask)), sub_32)>;
+
 // Emit (and 0xFFFFFFFF) as a ORRWrr move which may be eliminated.
 let AddedComplexity = 6 in
 def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
           (SUBREG_TO_REG (ORRWrr WZR, (EXTRACT_SUBREG GPR64:$Rn, sub_32)), sub_32)>;
-
 
 //===----------------------------------------------------------------------===//
 // One operand data processing instructions.
@@ -3501,7 +3638,7 @@ defm CCMP : CondComparison<1, "ccmp", AArch64ccmp>;
 //===----------------------------------------------------------------------===//
 defm CSEL  : CondSelect<0, 0b00, "csel">;
 
-def inc : PatFrag<(ops node:$in), (add_and_or_is_add node:$in, 1)>;
+def inc : PatFrag<(ops node:$in), (add_like node:$in, 1)>;
 defm CSINC : CondSelectOp<0, 0b01, "csinc", inc>;
 defm CSINV : CondSelectOp<1, 0b00, "csinv", not>;
 defm CSNEG : CondSelectOp<1, 0b01, "csneg", ineg>;
@@ -3544,9 +3681,9 @@ def : Pat<(AArch64csel (i32 -1), GPR32:$fval, (i32 imm:$cc), NZCV),
 def : Pat<(AArch64csel (i64 -1), GPR64:$fval, (i32 imm:$cc), NZCV),
           (CSINVXr GPR64:$fval, XZR, (i32 (inv_cond_XFORM imm:$cc)))>;
 
-def : Pat<(add_and_or_is_add GPR32:$val, (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
+def : Pat<(add_like GPR32:$val, (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
           (CSINCWr GPR32:$val, GPR32:$val, (i32 imm:$cc))>;
-def : Pat<(add_and_or_is_add GPR64:$val, (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
+def : Pat<(add_like GPR64:$val, (zext (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV))),
           (CSINCXr GPR64:$val, GPR64:$val, (i32 imm:$cc))>;
 
 def : Pat<(or (topbitsallzero32:$val), (AArch64csel (i32 0), (i32 1), (i32 imm:$cc), NZCV)),
@@ -3682,6 +3819,14 @@ def TLSDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
   let AsmString = ".tlsdesccall $sym";
 }
 
+// This is a directive-like pseudo-instruction. The purpose is to insert an
+// R_AARCH64_AUTH_TLSDESC_CALL relocation at the offset of the following instruction
+// (which in the usual case is a BLRAA).
+let hasSideEffects = 1 in
+def TLSAUTHDESCCALL : Pseudo<(outs), (ins i64imm:$sym), []>, Sched<[]> {
+  let AsmString = ".tlsauthdesccall $sym";
+}
+
 // Pseudo instruction to tell the streamer to emit a 'B' character into the
 // augmentation string.
 def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
@@ -3689,6 +3834,11 @@ def EMITBKEY : Pseudo<(outs), (ins), []>, Sched<[]> {}
 // Pseudo instruction to tell the streamer to emit a 'G' character into the
 // augmentation string.
 def EMITMTETAGGED : Pseudo<(outs), (ins), []>, Sched<[]> {}
+
+// Pseudo instruction to tell the streamer to emit an 'N' character into the
+// augmentation string, indicating that non hint-space FEAT_PAuth_LR
+// instructions are used for signing/authenticating the return address.
+def EMITNONHINTED : Pseudo<(outs), (ins), []>, Sched<[]> {}
 
 // FIXME: maybe the scratch register used shouldn't be fixed to X1?
 // FIXME: can "hasSideEffects be dropped?
@@ -3747,6 +3897,17 @@ def : Pat<(AArch64call texternalsym:$func), (BL texternalsym:$func)>;
 //===----------------------------------------------------------------------===//
 // Exception generation instructions.
 //===----------------------------------------------------------------------===//
+
+// Nodes for the HVC/SVC exception-generating calls.  The single operand is the
+// 16-bit instruction immediate; the argument registers, clobber mask and glue
+// are attached as variadic operands during lowering.
+def AArch64hvc : SDNode<"AArch64ISD::HVC", SDTypeProfile<0, 1, [SDTCisInt<0>]>,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic,
+                         SDNPMayLoad, SDNPMayStore]>;
+def AArch64svc : SDNode<"AArch64ISD::SVC", SDTypeProfile<0, 1, [SDTCisInt<0>]>,
+                        [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue, SDNPVariadic,
+                         SDNPMayLoad, SDNPMayStore]>;
+
 let isTrap = 1 in {
 def BRK   : ExceptionGeneration<0b001, 0b00, "brk",
                                 [(int_aarch64_break timm32_0_65535:$imm)]>;
@@ -3756,9 +3917,18 @@ def DCPS2 : ExceptionGeneration<0b101, 0b10, "dcps2">;
 def DCPS3 : ExceptionGeneration<0b101, 0b11, "dcps3">, Requires<[HasEL3]>;
 def HLT   : ExceptionGeneration<0b010, 0b00, "hlt",
                                 [(int_aarch64_hlt timm32_0_65535:$imm)]>;
+// Following the Microsoft __hvc/__svc calling convention (a software
+// convention, not an architectural rule), HVC and SVC pass up to four arguments
+// in X0-X3 and return a value in X0.  They are therefore selected from the
+// AArch64hvc/AArch64svc nodes (built by LowerINTRINSIC_W_CHAIN) rather than a
+// plain intrinsic pattern, and define X0 for the result.
+let mayLoad = 1, mayStore = 1, Defs = [X0] in
 def HVC   : ExceptionGeneration<0b000, 0b10, "hvc">;
 def SMC   : ExceptionGeneration<0b000, 0b11, "smc">, Requires<[HasEL3]>;
+let mayLoad = 1, mayStore = 1, Defs = [X0] in
 def SVC   : ExceptionGeneration<0b000, 0b01, "svc">;
+def : Pat<(AArch64hvc timm32_0_65535:$imm), (HVC timm32_0_65535:$imm)>;
+def : Pat<(AArch64svc timm32_0_65535:$imm), (SVC timm32_0_65535:$imm)>;
 
 // DCPSn defaults to an immediate operand of zero if unspecified.
 def : InstAlias<"dcps1", (DCPS1 0)>;
@@ -3775,6 +3945,14 @@ let Predicates = [HasLSCP] in {
 defm LDAP  : LoadAcquirePairOffset<0b0101, "ldap">;
 defm LDAPP : LoadAcquirePairOffset<0b0111, "ldapp">;
 defm STLP  : StoreAcquirePairOffset<0b0101, "stlp">;
+
+let AddedComplexity = 1 in {
+def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
+          (STLPi GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
+def : Pat<(AArch64ldap GPR64sp:$Rn), (LDAPi GPR64sp:$Rn)>;
+def : Pat<(AArch64ldp_acq GPR64sp:$Rn), (LDAPPi GPR64sp:$Rn)>;
+}
+
 }
 
 // Pair (indexed, offset)
@@ -3865,43 +4043,48 @@ defm LDRSW  : Load32RO<0b10, 0, 0b10, GPR64, "ldrsw", i64, sextloadi32>;
 // Pre-fetch.
 defm PRFM : PrefetchRO<0b11, 0, 0b10, "prfm">;
 
-// Match all load 64 bits width whose type is compatible with FPR64
 multiclass VecROLoadPat<ROAddrMode ro, ValueType VecTy,
-                        Instruction LOADW, Instruction LOADX> {
+                        Instruction LOADW, Instruction LOADX,
+                        int vector_align, list<Predicate> preds> {
+  let Predicates = !listconcat([AllowMisalignedMemAccesses], preds) in {
+    def : Pat<(VecTy (load (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend))),
+              (LOADW GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
 
-  def : Pat<(VecTy (load (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend))),
-            (LOADW GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
+    def : Pat<(VecTy (load (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend))),
+              (LOADX GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
+  }
+  let Predicates = !listconcat([DisallowMisalignedMemAccesses], preds) in {
+    def : Pat<(VecTy (load_aligned<vector_align> (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend))),
+              (LOADW GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
 
-  def : Pat<(VecTy (load (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend))),
-            (LOADX GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
+    def : Pat<(VecTy (load_aligned<vector_align> (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend))),
+              (LOADX GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
+  }
 }
 
+// We must do vector loads with LD1 in big-endian, or when the alignment is
+// less than the size of the vector.
+
+// Match all load 64 bits width whose type is compatible with FPR64
 let AddedComplexity = 10 in {
-let Predicates = [IsLE] in {
-  // We must do vector loads with LD1 in big-endian.
-  defm : VecROLoadPat<ro64, v2i32, LDRDroW, LDRDroX>;
-  defm : VecROLoadPat<ro64, v2f32, LDRDroW, LDRDroX>;
-  defm : VecROLoadPat<ro64, v8i8,  LDRDroW, LDRDroX>;
-  defm : VecROLoadPat<ro64, v4i16, LDRDroW, LDRDroX>;
-  defm : VecROLoadPat<ro64, v4f16, LDRDroW, LDRDroX>;
-  defm : VecROLoadPat<ro64, v4bf16, LDRDroW, LDRDroX>;
-}
-
-defm : VecROLoadPat<ro64, v1i64,  LDRDroW, LDRDroX>;
-defm : VecROLoadPat<ro64, v1f64,  LDRDroW, LDRDroX>;
+defm : VecROLoadPat<ro64, v2i32, LDRDroW, LDRDroX, 8, [IsLE]>;
+defm : VecROLoadPat<ro64, v2f32, LDRDroW, LDRDroX, 8, [IsLE]>;
+defm : VecROLoadPat<ro64, v8i8,  LDRDroW, LDRDroX, 8, [IsLE]>;
+defm : VecROLoadPat<ro64, v4i16, LDRDroW, LDRDroX, 8, [IsLE]>;
+defm : VecROLoadPat<ro64, v4f16, LDRDroW, LDRDroX, 8, [IsLE]>;
+defm : VecROLoadPat<ro64, v4bf16, LDRDroW, LDRDroX, 8, [IsLE]>;
+defm : VecROLoadPat<ro64, v1i64,  LDRDroW, LDRDroX, 8, []>;
+defm : VecROLoadPat<ro64, v1f64,  LDRDroW, LDRDroX, 8, []>;
 
 // Match all load 128 bits width whose type is compatible with FPR128
-let Predicates = [IsLE] in {
-  // We must do vector loads with LD1 in big-endian.
-  defm : VecROLoadPat<ro128, v2i64,  LDRQroW, LDRQroX>;
-  defm : VecROLoadPat<ro128, v2f64,  LDRQroW, LDRQroX>;
-  defm : VecROLoadPat<ro128, v4i32,  LDRQroW, LDRQroX>;
-  defm : VecROLoadPat<ro128, v4f32,  LDRQroW, LDRQroX>;
-  defm : VecROLoadPat<ro128, v8i16,  LDRQroW, LDRQroX>;
-  defm : VecROLoadPat<ro128, v8f16,  LDRQroW, LDRQroX>;
-  defm : VecROLoadPat<ro128, v8bf16,  LDRQroW, LDRQroX>;
-  defm : VecROLoadPat<ro128, v16i8,  LDRQroW, LDRQroX>;
-}
+defm : VecROLoadPat<ro128, v2i64,  LDRQroW, LDRQroX, 16, [IsLE]>;
+defm : VecROLoadPat<ro128, v2f64,  LDRQroW, LDRQroX, 16, [IsLE]>;
+defm : VecROLoadPat<ro128, v4i32,  LDRQroW, LDRQroX, 16, [IsLE]>;
+defm : VecROLoadPat<ro128, v4f32,  LDRQroW, LDRQroX, 16, [IsLE]>;
+defm : VecROLoadPat<ro128, v8i16,  LDRQroW, LDRQroX, 16, [IsLE]>;
+defm : VecROLoadPat<ro128, v8f16,  LDRQroW, LDRQroX, 16, [IsLE]>;
+defm : VecROLoadPat<ro128, v8bf16,  LDRQroW, LDRQroX, 16, [IsLE]>;
+defm : VecROLoadPat<ro128, v16i8,  LDRQroW, LDRQroX, 16, [IsLE]>;
 } // AddedComplexity = 10
 
 // zextload -> i64
@@ -3984,9 +4167,12 @@ defm LDRQ : LoadUI<0b00, 1, 0b11, FPR128Op, uimm12s16, "ldr",
 def : Pat <(bf16 (load (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))),
            (LDRHui GPR64sp:$Rn, uimm12s2:$offset)>;
 
+// We must use LD1 to perform vector loads in big-endian, or when the
+// alignment is less than the vector size.
+
+let AddedComplexity = 10 in {
 // Match all load 64 bits width whose type is compatible with FPR64
-let Predicates = [IsLE] in {
-  // We must use LD1 to perform vector loads in big-endian.
+let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(v2f32 (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
             (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
   def : Pat<(v8i8 (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
@@ -4005,9 +4191,23 @@ def : Pat<(v1f64 (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
 def : Pat<(v1i64 (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
           (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
 
+let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
+  def : Pat<(v2f32 (load_aligned<8> (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
+            (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(v8i8 (load_aligned<8> (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
+            (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(v4i16 (load_aligned<8> (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
+            (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(v2i32 (load_aligned<8> (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
+            (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(v4f16 (load_aligned<8> (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
+            (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(v4bf16 (load_aligned<8> (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))),
+            (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
+}
+
 // Match all load 128 bits width whose type is compatible with FPR128
-let Predicates = [IsLE] in {
-  // We must use LD1 to perform vector loads in big-endian.
+let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(v4f32 (load (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
             (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
   def : Pat<(v2f64 (load (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
@@ -4027,6 +4227,26 @@ let Predicates = [IsLE] in {
 }
 def : Pat<(f128  (load (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
           (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
+
+let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
+  def : Pat<(v4f32 (load_aligned<16> (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
+            (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(v2f64 (load_aligned<16> (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
+            (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(v16i8 (load_aligned<16> (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
+            (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(v8i16 (load_aligned<16> (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
+            (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(v4i32 (load_aligned<16> (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
+            (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(v2i64 (load_aligned<16> (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
+            (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(v8f16 (load_aligned<16> (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
+            (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(v8bf16 (load_aligned<16> (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset))),
+            (LDRQui GPR64sp:$Rn, uimm12s16:$offset)>;
+}
+} // AddedComplexity = 10
 
 defm LDRHH : LoadUI<0b01, 0, 0b01, GPR32, uimm12s2, "ldrh",
                     [(set GPR32:$Rt,
@@ -4181,8 +4401,9 @@ defm LDURBB
 def : Pat <(bf16 (load (am_unscaled16 GPR64sp:$Rn, simm9:$offset))),
            (LDURHi GPR64sp:$Rn, simm9:$offset)>;
 
+let AddedComplexity = 10 in {
 // Match all load 64 bits width whose type is compatible with FPR64
-let Predicates = [IsLE] in {
+let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(v2f32 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
             (LDURDi GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(v2i32 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
@@ -4193,14 +4414,31 @@ let Predicates = [IsLE] in {
             (LDURDi GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(v4f16 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
             (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v4bf16 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
+            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
 }
 def : Pat<(v1f64 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
           (LDURDi GPR64sp:$Rn, simm9:$offset)>;
 def : Pat<(v1i64 (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
           (LDURDi GPR64sp:$Rn, simm9:$offset)>;
 
+let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
+  def : Pat<(v2f32 (load_aligned<8> (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
+            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v2i32 (load_aligned<8> (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
+            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v4i16 (load_aligned<8> (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
+            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v8i8 (load_aligned<8> (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
+            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v4f16 (load_aligned<8> (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
+            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v4bf16 (load_aligned<8> (am_unscaled64 GPR64sp:$Rn, simm9:$offset))),
+            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
+}
+
 // Match all load 128 bits width whose type is compatible with FPR128
-let Predicates = [IsLE] in {
+let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(v2f64 (load (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
             (LDURQi GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(v2i64 (load (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
@@ -4215,7 +4453,29 @@ let Predicates = [IsLE] in {
             (LDURQi GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(v8f16 (load (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
             (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v8bf16 (load (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
 }
+
+let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
+  def : Pat<(v2f64 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v2i64 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v4f32 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v4i32 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v8i16 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v16i8 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v8f16 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(v8bf16 (load_aligned<16> (am_unscaled128 GPR64sp:$Rn, simm9:$offset))),
+            (LDURQi GPR64sp:$Rn, simm9:$offset)>;
+}
+} // AddedComplexity = 10
 
 //  anyext -> zext
 def : Pat<(i32 (extloadi16 (am_unscaled16 GPR64sp:$Rn, simm9:$offset))),
@@ -4355,7 +4615,8 @@ multiclass LoadInsertVTPatterns<SDPatternOperator LoadOp, ValueType VT, ValueTyp
                                 Instruction LoadInst, Instruction UnscaledLoadInst,
                                 Instruction ROWLoadInst, Instruction ROXLoadInst,
                                 ROAddrMode ro, ComplexPattern Addr, ComplexPattern UnscaledAddr,
-                                Operand AddrImm, SubRegIndex SubReg> {
+                                Operand AddrImm, SubRegIndex SubReg,
+                                SDPatternOperator VecInsFrag> {
   // Scaled
   def : Pat <(vector_insert (VT immAllZerosV),
                 (ScalarVT (LoadOp (Addr GPR64sp:$Rn, AddrImm:$offset))), (i64 0)),
@@ -4374,74 +4635,85 @@ multiclass LoadInsertVTPatterns<SDPatternOperator LoadOp, ValueType VT, ValueTyp
              (SUBREG_TO_REG (ROXLoadInst GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend), SubReg)>;
 
   // Undef equivalents of the patterns above.
-  def : Pat <(VT (vec_ins_or_scal_vec
+  def : Pat <(VT (VecInsFrag
                 (ScalarVT (LoadOp (Addr GPR64sp:$Rn, AddrImm:$offset))))),
             (SUBREG_TO_REG (LoadInst GPR64sp:$Rn, AddrImm:$offset), SubReg)>;
-  def : Pat <(VT (vec_ins_or_scal_vec
+  def : Pat <(VT (VecInsFrag
                  (ScalarVT (LoadOp (UnscaledAddr GPR64sp:$Rn, simm9:$offset))))),
              (SUBREG_TO_REG (UnscaledLoadInst GPR64sp:$Rn, simm9:$offset), SubReg)>;
-  def : Pat <(VT (vec_ins_or_scal_vec
+  def : Pat <(VT (VecInsFrag
                  (ScalarVT (LoadOp (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend))))),
              (SUBREG_TO_REG (ROWLoadInst GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend), SubReg)>;
-  def : Pat <(VT (vec_ins_or_scal_vec
+  def : Pat <(VT (VecInsFrag
                  (ScalarVT (LoadOp (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend))))),
              (SUBREG_TO_REG (ROXLoadInst GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend), SubReg)>;
 }
 
 multiclass LoadInsertPatterns<SDPatternOperator LoadOp, ValueType VT, ValueType HVT, ValueType SVT,
-                              ValueType ScalarVT, Instruction LoadInst, Instruction UnscaledLoadInst,
-                              Instruction ROWLoadInst, Instruction ROXLoadInst,
-                              ROAddrMode ro, ComplexPattern Addr, ComplexPattern UnscaledAddr,
-                              Operand AddrImm, SubRegIndex SubReg> {
+                              ValueType ScalarVT, SDPatternOperator VecInsVT,
+                              SDPatternOperator VecInsHVT, Instruction LoadInst,
+                              Instruction UnscaledLoadInst, Instruction ROWLoadInst,
+                              Instruction ROXLoadInst, ROAddrMode ro, ComplexPattern Addr,
+                              ComplexPattern UnscaledAddr, Operand AddrImm, SubRegIndex SubReg
+                              > {
   defm : LoadInsertVTPatterns<LoadOp, VT, ScalarVT, LoadInst, UnscaledLoadInst, ROWLoadInst,
-                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg>;
+                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg, VecInsVT>;
   defm : LoadInsertVTPatterns<LoadOp, HVT, ScalarVT, LoadInst, UnscaledLoadInst, ROWLoadInst,
-                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg>;
+                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg, VecInsHVT>;
   defm : LoadInsertVTPatterns<LoadOp, SVT, ScalarVT, LoadInst, UnscaledLoadInst, ROWLoadInst,
-                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg>;
+                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg, vec_ins_or_scal_vec>;
 }
 
 // Accept i8 scalar argument in GlobalISel.
 defm : LoadInsertPatterns<load,       v16i8,  v8i8,   nxv16i8,  i8,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRBui, LDURBi, LDRBroW, LDRBroX,
                           ro8, am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
 defm : LoadInsertPatterns<extloadi8,  v16i8,  v8i8,   nxv16i8,  i32,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRBui, LDURBi, LDRBroW, LDRBroX,
                           ro8, am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
 defm : LoadInsertPatterns<extloadi16, v8i16,  v4i16,  nxv8i16,  i32,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRHui, LDURHi, LDRHroW, LDRHroX,
                           ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
 defm : LoadInsertPatterns<load,       v4i32,  v2i32,  nxv4i32,  i32,
+                          vec_ins_or_scal_vec_v4f32, vec_ins_or_scal_vec_v2f32,
                           LDRSui, LDURSi, LDRSroW, LDRSroX,
                           ro32, am_indexed32, am_unscaled32, uimm12s4, ssub>;
 defm : LoadInsertPatterns<load,       v2i64,  isVoid, nxv2i64,  i64,
+                          vec_ins_or_scal_vec_v2f64, null_frag,
                           LDRDui, LDURDi, LDRDroW, LDRDroX,
                           ro64, am_indexed64, am_unscaled64, uimm12s8, dsub>;
 defm : LoadInsertPatterns<load,       v8f16,  v4f16,  nxv8f16,  f16,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRHui, LDURHi, LDRHroW, LDRHroX,
                           ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
 defm : LoadInsertPatterns<load,       v8bf16, v4bf16, nxv8bf16, bf16,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRHui, LDURHi, LDRHroW, LDRHroX,
                           ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
 defm : LoadInsertPatterns<load,       v4f32,  v2f32,  nxv4f32,  f32,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRSui, LDURSi, LDRSroW, LDRSroX,
                           ro32, am_indexed32, am_unscaled32, uimm12s4, ssub>;
 defm : LoadInsertPatterns<load,       v2f64,  isVoid, nxv2f64,  f64,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRDui, LDURDi, LDRDroW, LDRDroX,
                           ro64, am_indexed64, am_unscaled64, uimm12s8, dsub>;
 
 // Extra patterns for v1f64 scalar_to_vector(load), which need to avoid the
 // SUBREG_TO_REG used above.
-def : Pat <(v1i64 (scalar_to_vector (i64
+def : Pat <(v1i64 (scalar_to_vector_v1f64 (i64
                (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))))),
            (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
-def : Pat <(v1i64 (scalar_to_vector (i64
+def : Pat <(v1i64 (scalar_to_vector_v1f64 (i64
                (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))))),
            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
-def : Pat <(v1i64 (scalar_to_vector (i64
+def : Pat <(v1i64 (scalar_to_vector_v1f64 (i64
                (load (ro64.Wpat GPR64sp:$Rn, GPR32:$Rm, ro64.Wext:$extend))))),
            (LDRDroW GPR64sp:$Rn, GPR32:$Rm, ro64.Wext:$extend)>;
-def : Pat <(v1i64 (scalar_to_vector (i64
+def : Pat <(v1i64 (scalar_to_vector_v1f64 (i64
                (load (ro64.Xpat GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend))))),
            (LDRDroX GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend)>;
 
@@ -4490,6 +4762,7 @@ multiclass ExtLoad8_16_32AllModes<ValueType OutTy, ValueType InnerTy,
 }
 
 // Instantiate bitconvert patterns for floating-point types.
+
 defm : ExtLoad8_16AllModes<f32, i32, bitconvert, zextloadi8, zextloadi16>;
 defm : ExtLoad8_16_32AllModes<f64, i64, bitconvert, zextloadi8, zextloadi16, zextloadi32>;
 
@@ -4498,10 +4771,10 @@ defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, zextloadi8, zextloadi16
 defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, extloadi8, extloadi16>;
 defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, zextloadi8, zextloadi16>;
 defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, extloadi8, extloadi16>;
-defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector, zextloadi8, zextloadi16>;
-defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector, extloadi8, extloadi16>;
-defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector, zextloadi8, zextloadi16, zextloadi32>;
-defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector, extloadi8, extloadi16, extloadi32>;
+defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_v4f32, zextloadi8, zextloadi16>;
+defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_v4f32, extloadi8, extloadi16>;
+defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_v2f64, zextloadi8, zextloadi16, zextloadi32>;
+defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_v2f64, extloadi8, extloadi16, extloadi32>;
 
 // Pre-fetch.
 defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
@@ -4709,44 +4982,54 @@ let AddedComplexity = 10 in {
   defm : TruncStoreFrom64ROPat<ro32, truncstorei32, STRWroW,  STRWroX>;
 }
 
-multiclass VecROStorePat<ROAddrMode ro, ValueType VecTy, RegisterClass FPR,
-                         Instruction STRW, Instruction STRX> {
-  def : Pat<(store (VecTy FPR:$Rt),
-                   (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)),
-            (STRW FPR:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
 
-  def : Pat<(store (VecTy FPR:$Rt),
-                   (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)),
-            (STRX FPR:$Rt, GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
+multiclass VecROStorePat<ROAddrMode ro, ValueType VecTy, RegisterClass FPR,
+                         Instruction STRW, Instruction STRX, int align_bytes,
+                         list<Predicate> preds> {
+  let Predicates = !listconcat([AllowMisalignedMemAccesses], preds) in {
+    def : Pat<(store (VecTy FPR:$Rt),
+                     (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)),
+              (STRW FPR:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
+
+    def : Pat<(store (VecTy FPR:$Rt),
+                     (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)),
+              (STRX FPR:$Rt, GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
+  }
+
+  let Predicates = !listconcat([DisallowMisalignedMemAccesses], preds) in {
+    def : Pat<(store_aligned<align_bytes> (VecTy FPR:$Rt),
+                     (ro.Wpat GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)),
+              (STRW FPR:$Rt, GPR64sp:$Rn, GPR32:$Rm, ro.Wext:$extend)>;
+
+    def : Pat<(store_aligned<align_bytes> (VecTy FPR:$Rt),
+                     (ro.Xpat GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)),
+              (STRX FPR:$Rt, GPR64sp:$Rn, GPR64:$Rm, ro.Xext:$extend)>;
+  }
 }
 
+// We must use ST1 to store vectors in big-endian, or when the alignment is
+// less than the size of the vector.
 let AddedComplexity = 10 in {
 // Match all store 64 bits width whose type is compatible with FPR64
-let Predicates = [IsLE] in {
-  // We must use ST1 to store vectors in big-endian.
-  defm : VecROStorePat<ro64, v2i32, FPR64, STRDroW, STRDroX>;
-  defm : VecROStorePat<ro64, v2f32, FPR64, STRDroW, STRDroX>;
-  defm : VecROStorePat<ro64, v4i16, FPR64, STRDroW, STRDroX>;
-  defm : VecROStorePat<ro64, v8i8, FPR64, STRDroW, STRDroX>;
-  defm : VecROStorePat<ro64, v4f16, FPR64, STRDroW, STRDroX>;
-  defm : VecROStorePat<ro64, v4bf16, FPR64, STRDroW, STRDroX>;
-}
+defm : VecROStorePat<ro64, v2i32, FPR64, STRDroW, STRDroX, 8, [IsLE]>;
+defm : VecROStorePat<ro64, v2f32, FPR64, STRDroW, STRDroX, 8, [IsLE]>;
+defm : VecROStorePat<ro64, v4i16, FPR64, STRDroW, STRDroX, 8, [IsLE]>;
+defm : VecROStorePat<ro64, v8i8, FPR64, STRDroW, STRDroX, 8, [IsLE]>;
+defm : VecROStorePat<ro64, v4f16, FPR64, STRDroW, STRDroX, 8, [IsLE]>;
+defm : VecROStorePat<ro64, v4bf16, FPR64, STRDroW, STRDroX, 8, [IsLE]>;
 
-defm : VecROStorePat<ro64, v1i64, FPR64, STRDroW, STRDroX>;
-defm : VecROStorePat<ro64, v1f64, FPR64, STRDroW, STRDroX>;
+defm : VecROStorePat<ro64, v1i64, FPR64, STRDroW, STRDroX, 8, []>;
+defm : VecROStorePat<ro64, v1f64, FPR64, STRDroW, STRDroX, 8, []>;
 
 // Match all store 128 bits width whose type is compatible with FPR128
-let Predicates = [IsLE, UseSTRQro] in {
-  // We must use ST1 to store vectors in big-endian.
-  defm : VecROStorePat<ro128, v2i64, FPR128, STRQroW, STRQroX>;
-  defm : VecROStorePat<ro128, v2f64, FPR128, STRQroW, STRQroX>;
-  defm : VecROStorePat<ro128, v4i32, FPR128, STRQroW, STRQroX>;
-  defm : VecROStorePat<ro128, v4f32, FPR128, STRQroW, STRQroX>;
-  defm : VecROStorePat<ro128, v8i16, FPR128, STRQroW, STRQroX>;
-  defm : VecROStorePat<ro128, v16i8, FPR128, STRQroW, STRQroX>;
-  defm : VecROStorePat<ro128, v8f16, FPR128, STRQroW, STRQroX>;
-  defm : VecROStorePat<ro128, v8bf16, FPR128, STRQroW, STRQroX>;
-}
+defm : VecROStorePat<ro128, v2i64, FPR128, STRQroW, STRQroX, 16, [IsLE, UseSTRQro]>;
+defm : VecROStorePat<ro128, v2f64, FPR128, STRQroW, STRQroX, 16, [IsLE, UseSTRQro]>;
+defm : VecROStorePat<ro128, v4i32, FPR128, STRQroW, STRQroX, 16, [IsLE, UseSTRQro]>;
+defm : VecROStorePat<ro128, v4f32, FPR128, STRQroW, STRQroX, 16, [IsLE, UseSTRQro]>;
+defm : VecROStorePat<ro128, v8i16, FPR128, STRQroW, STRQroX, 16, [IsLE, UseSTRQro]>;
+defm : VecROStorePat<ro128, v16i8, FPR128, STRQroW, STRQroX, 16, [IsLE, UseSTRQro]>;
+defm : VecROStorePat<ro128, v8f16, FPR128, STRQroW, STRQroX, 16, [IsLE, UseSTRQro]>;
+defm : VecROStorePat<ro128, v8bf16, FPR128, STRQroW, STRQroX, 16, [IsLE, UseSTRQro]>;
 } // AddedComplexity = 10
 
 // Match stores from lane 0 to the appropriate subreg's store.
@@ -4816,6 +5099,10 @@ def : Pat<(store (bf16 FPR16Op:$Rt),
 
 let AddedComplexity = 10 in {
 
+// We must use ST1 to store vectors in big-endian, or when the aligmnment is
+// less than the size of the vector.
+
+let AddedComplexity = 10 in {
 // Match all store 64 bits width whose type is compatible with FPR64
 def : Pat<(store (v1i64 FPR64:$Rt),
                  (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
@@ -4824,8 +5111,7 @@ def : Pat<(store (v1f64 FPR64:$Rt),
                  (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
           (STRDui FPR64:$Rt, GPR64sp:$Rn, uimm12s8:$offset)>;
 
-let Predicates = [IsLE] in {
-  // We must use ST1 to store vectors in big-endian.
+let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(store (v2f32 FPR64:$Rt),
                    (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
             (STRDui FPR64:$Rt, GPR64sp:$Rn, uimm12s8:$offset)>;
@@ -4846,13 +5132,33 @@ let Predicates = [IsLE] in {
             (STRDui FPR64:$Rt, GPR64sp:$Rn, uimm12s8:$offset)>;
 }
 
+let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
+  def : Pat<(store_aligned<8> (v2f32 FPR64:$Rt),
+                   (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
+            (STRDui FPR64:$Rt, GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(store_aligned<8> (v8i8 FPR64:$Rt),
+                   (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
+            (STRDui FPR64:$Rt, GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(store_aligned<8> (v4i16 FPR64:$Rt),
+                   (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
+            (STRDui FPR64:$Rt, GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(store_aligned<8> (v2i32 FPR64:$Rt),
+                   (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
+            (STRDui FPR64:$Rt, GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(store_aligned<8> (v4f16 FPR64:$Rt),
+                   (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
+            (STRDui FPR64:$Rt, GPR64sp:$Rn, uimm12s8:$offset)>;
+  def : Pat<(store_aligned<8> (v4bf16 FPR64:$Rt),
+                   (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset)),
+            (STRDui FPR64:$Rt, GPR64sp:$Rn, uimm12s8:$offset)>;
+}
+
 // Match all store 128 bits width whose type is compatible with FPR128
 def : Pat<(store (f128  FPR128:$Rt),
                  (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
           (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
 
-let Predicates = [IsLE] in {
-  // We must use ST1 to store vectors in big-endian.
+let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(store (v4f32 FPR128:$Rt),
                    (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
             (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
@@ -4878,6 +5184,34 @@ let Predicates = [IsLE] in {
                    (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
             (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
 }
+
+let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
+  def : Pat<(store_aligned<16> (v4f32 FPR128:$Rt),
+                   (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
+            (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(store_aligned<16> (v2f64 FPR128:$Rt),
+                   (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
+            (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(store_aligned<16> (v16i8 FPR128:$Rt),
+                   (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
+            (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(store_aligned<16> (v8i16 FPR128:$Rt),
+                   (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
+            (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(store_aligned<16> (v4i32 FPR128:$Rt),
+                   (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
+            (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(store_aligned<16> (v2i64 FPR128:$Rt),
+                   (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
+            (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(store_aligned<16> (v8f16 FPR128:$Rt),
+                   (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
+            (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
+  def : Pat<(store_aligned<16> (v8bf16 FPR128:$Rt),
+                   (am_indexed128 GPR64sp:$Rn, uimm12s16:$offset)),
+            (STRQui FPR128:$Rt, GPR64sp:$Rn, uimm12s16:$offset)>;
+}
+} // AddedComplexity = 10
 
 // truncstorei32 of f64 bitcasted to i64
 def : Pat<(truncstorei32 (i64 (bitconvert (f64 FPR64:$Rt))), (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset)),
@@ -4995,8 +5329,9 @@ def : Pat<(store (v1i64 FPR64:$Rt), (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
 
 let AddedComplexity = 10 in {
 
-let Predicates = [IsLE] in {
-  // We must use ST1 to store vectors in big-endian.
+// We must use ST1 to store vectors in big-endian, or when the alignment is
+// less than the size of the vector.
+let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(store (v2f32 FPR64:$Rt),
                    (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
             (STURDi FPR64:$Rt, GPR64sp:$Rn, simm9:$offset)>;
@@ -5017,12 +5352,34 @@ let Predicates = [IsLE] in {
             (STURDi FPR64:$Rt, GPR64sp:$Rn, simm9:$offset)>;
 }
 
+let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
+  def : Pat<(store_aligned<8> (v2f32 FPR64:$Rt),
+                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
+            (STURDi FPR64:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<8> (v8i8 FPR64:$Rt),
+                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
+            (STURDi FPR64:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<8> (v4i16 FPR64:$Rt),
+                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
+            (STURDi FPR64:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<8> (v2i32 FPR64:$Rt),
+                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
+            (STURDi FPR64:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<8> (v4f16 FPR64:$Rt),
+                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
+            (STURDi FPR64:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<8> (v4bf16 FPR64:$Rt),
+                   (am_unscaled64 GPR64sp:$Rn, simm9:$offset)),
+            (STURDi FPR64:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+}
+
 // Match all store 128 bits width whose type is compatible with FPR128
 def : Pat<(store (f128 FPR128:$Rt), (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
           (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
 
-let Predicates = [IsLE] in {
-  // We must use ST1 to store vectors in big-endian.
+// We must use ST1 to store vectors in big-endian, or when the alignment is
+// less than the size of the vector.
+let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   def : Pat<(store (v4f32 FPR128:$Rt),
                    (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
             (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
@@ -5048,6 +5405,36 @@ let Predicates = [IsLE] in {
                    (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
             (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
   def : Pat<(store (v8bf16 FPR128:$Rt),
+                   (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
+            (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+}
+
+let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
+  def : Pat<(store_aligned<16> (v4f32 FPR128:$Rt),
+                   (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
+            (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<16> (v2f64 FPR128:$Rt),
+                   (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
+            (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<16> (v16i8 FPR128:$Rt),
+                   (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
+            (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<16> (v8i16 FPR128:$Rt),
+                   (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
+            (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<16> (v4i32 FPR128:$Rt),
+                   (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
+            (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<16> (v2i64 FPR128:$Rt),
+                   (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
+            (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<16> (v2f64 FPR128:$Rt),
+                   (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
+            (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<16> (v8f16 FPR128:$Rt),
+                   (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
+            (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
+  def : Pat<(store_aligned<16> (v8bf16 FPR128:$Rt),
                    (am_unscaled128 GPR64sp:$Rn, simm9:$offset)),
             (STURQi FPR128:$Rt, GPR64sp:$Rn, simm9:$offset)>;
 }
@@ -5147,39 +5534,77 @@ def : Pat<(pre_truncsti8 GPR64:$Rt, GPR64sp:$addr, simm9:$off),
   (STRBBpre (EXTRACT_SUBREG GPR64:$Rt, sub_32), GPR64sp:$addr,
             simm9:$off)>;
 
-def : Pat<(pre_store (v8i8 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v4i16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v2i32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v2f32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v1i64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v1f64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v4f16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v4bf16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+let Predicates = [AllowMisalignedMemAccesses] in {
+  def : Pat<(pre_store (v8i8 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v4i16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v2i32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v2f32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v1i64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v1f64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v4f16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v4bf16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
 
-def : Pat<(pre_store (v16i8 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v8i16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v4i32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v4f32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v2i64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v2f64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
-def : Pat<(pre_store (v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
-          (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v16i8 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v8i16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v4i32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v4f32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v2i64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v2f64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store (v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+}
+
+let Predicates = [DisallowMisalignedMemAccesses] in {
+  def : Pat<(pre_store_aligned<8> (v8i8 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<8> (v4i16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<8> (v2i32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<8> (v2f32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<8> (v1i64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<8> (v1f64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<8> (v4f16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<8> (v4bf16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpre FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+
+  def : Pat<(pre_store_aligned<16> (v16i8 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<16> (v8i16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<16> (v4i32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<16> (v4f32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<16> (v2i64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<16> (v2f64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<16> (v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(pre_store_aligned<16> (v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpre FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+}
 
 //---
 // (immediate post-indexed)
@@ -5210,7 +5635,8 @@ def : Pat<(post_truncsti8 GPR64:$Rt, GPR64sp:$addr, simm9:$off),
 def : Pat<(post_store (bf16 FPR16:$Rt), GPR64sp:$addr, simm9:$off),
           (STRHpost FPR16:$Rt, GPR64sp:$addr, simm9:$off)>;
 
-let Predicates = [IsLE] in {
+let AddedComplexity = 10 in {
+let Predicates = [IsLE, AllowMisalignedMemAccesses] in {
   // We must use ST1 to store vectors in big-endian.
   def : Pat<(post_store(v8i8 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
             (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
@@ -5246,6 +5672,44 @@ let Predicates = [IsLE] in {
   def : Pat<(post_store(v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
             (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
 }
+
+let Predicates = [IsLE, DisallowMisalignedMemAccesses] in {
+  // We must use ST1 to store vectors in big-endian.
+  def : Pat<(post_store_aligned<8> (v8i8 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<8> (v4i16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<8> (v2i32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<8> (v2f32 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<8> (v1i64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<8> (v1f64 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<8> (v4f16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<8> (v4bf16 FPR64:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRDpost FPR64:$Rt, GPR64sp:$addr, simm9:$off)>;
+
+  def : Pat<(post_store_aligned<16> (v16i8 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<16> (v8i16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<16> (v4i32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<16> (v4f32 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<16> (v2i64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<16> (v2f64 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<16> (v8f16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+  def : Pat<(post_store_aligned<16> (v8bf16 FPR128:$Rt), GPR64sp:$addr, simm9:$off),
+            (STRQpost FPR128:$Rt, GPR64sp:$addr, simm9:$off)>;
+}
+} // AddedComplexity = 10
 
 //===----------------------------------------------------------------------===//
 // Load/store exclusive instructions.
@@ -5360,7 +5824,7 @@ defm FCVTZU : FPToIntegerUnscaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 defm FCVTZS : FPToIntegerScaled<0b11, 0b000, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : FPToIntegerScaled<0b11, 0b001, "fcvtzu", any_fp_to_uint>;
 
-let Predicates = [HasNEON, HasFPRCVT] in{
+let Predicates = [HasFPRCVT] in{
   defm FCVTAS : FPToIntegerSIMDScalar<0b11, 0b010, "fcvtas", int_aarch64_neon_fcvtas>;
   defm FCVTAU : FPToIntegerSIMDScalar<0b11, 0b011, "fcvtau", int_aarch64_neon_fcvtau>;
   defm FCVTMS : FPToIntegerSIMDScalar<0b10, 0b100, "fcvtms", int_aarch64_neon_fcvtms>;
@@ -5403,7 +5867,7 @@ def : Pat<(i64 (any_llround f64:$Rn)),
 defm SCVTF : IntegerToFP<0b00, 0b010, "scvtf", any_sint_to_fp>;
 defm UCVTF : IntegerToFP<0b00, 0b011, "ucvtf", any_uint_to_fp>;
 
-let Predicates = [HasNEON, HasFPRCVT] in {
+let Predicates = [HasFPRCVT] in {
   defm SCVTF : IntegerToFPSIMDScalar<0b11, 0b100, "scvtf", any_sint_to_fp>;
   defm UCVTF : IntegerToFPSIMDScalar<0b11, 0b101, "ucvtf", any_uint_to_fp>;
 
@@ -5412,34 +5876,6 @@ let Predicates = [HasNEON, HasFPRCVT] in {
   def : Pat<(v1f64 (extract_subvector (v2f64 (uint_to_fp (v2i64 (zext (v2i32 V64:$Rn))))), (i64 0))),
           (UCVTFDSr (EXTRACT_SUBREG V64:$Rn, ssub))>;
 }
-
-def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
-          (SCVTFSWHri GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
-def : Pat<(f32 (fdiv (f32 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f32_i32:$scale)),
-          (SCVTFSWSri GPR32:$Rn, fixedpoint_f32_i32:$scale)>;
-def : Pat<(f64 (fdiv (f64 (any_sint_to_fp (i32 GPR32:$Rn))), fixedpoint_f64_i32:$scale)),
-          (SCVTFSWDri GPR32:$Rn, fixedpoint_f64_i32:$scale)>;
-
-def : Pat<(f16 (fdiv (f16 (any_sint_to_fp (i64 GPR64:$Rn))), fixedpoint_f16_i64:$scale)),
-          (SCVTFSXHri GPR64:$Rn, fixedpoint_f16_i64:$scale)>;
-def : Pat<(f32 (fdiv (f32 (any_sint_to_fp (i64 GPR64:$Rn))), fixedpoint_f32_i64:$scale)),
-          (SCVTFSXSri GPR64:$Rn, fixedpoint_f32_i64:$scale)>;
-def : Pat<(f64 (fdiv (f64 (any_sint_to_fp (i64 GPR64:$Rn))), fixedpoint_f64_i64:$scale)),
-          (SCVTFSXDri GPR64:$Rn, fixedpoint_f64_i64:$scale)>;
-
-def : Pat<(f16 (fdiv (f16 (any_uint_to_fp (i64 GPR64:$Rn))), fixedpoint_f16_i64:$scale)),
-          (UCVTFSXHri GPR64:$Rn, fixedpoint_f16_i64:$scale)>;
-def : Pat<(f32 (fdiv (f32 (any_uint_to_fp (i64 GPR64:$Rn))), fixedpoint_f32_i64:$scale)),
-          (UCVTFSXSri GPR64:$Rn, fixedpoint_f32_i64:$scale)>;
-def : Pat<(f64 (fdiv (f64 (any_uint_to_fp (i64 GPR64:$Rn))), fixedpoint_f64_i64:$scale)),
-          (UCVTFSXDri GPR64:$Rn, fixedpoint_f64_i64:$scale)>;
-
-def : Pat<(f16 (fdiv (f16 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
-          (UCVTFSWHri GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
-def : Pat<(f32 (fdiv (f32 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f32_i32:$scale)),
-          (UCVTFSWSri GPR32:$Rn, fixedpoint_f32_i32:$scale)>;
-def : Pat<(f64 (fdiv (f64 (any_uint_to_fp (i32 GPR32:$Rn))), fixedpoint_f64_i32:$scale)),
-          (UCVTFSWDri GPR32:$Rn, fixedpoint_f64_i32:$scale)>;
 
 //===----------------------------------------------------------------------===//
 // Unscaled integer to floating point conversion instruction.
@@ -5546,6 +5982,13 @@ def : Pat<(i64 (any_llrint f32:$Rn)),
 def : Pat<(i64 (any_llrint f64:$Rn)),
           (FCVTZSUXDr (FRINTXDr f64:$Rn))>;
 
+let Predicates = [HasFullFP16] in {
+  def : Pat<(bf16 (fabs (bf16 FPR16:$Rn))),
+            (bf16 (FABSHr (bf16 FPR16:$Rn)))>;
+  def : Pat<(bf16 (fneg (bf16 FPR16:$Rn))),
+            (bf16 (FNEGHr (bf16 FPR16:$Rn)))>;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point two operand instructions.
 //===----------------------------------------------------------------------===//
@@ -5563,6 +6006,15 @@ defm FMUL   : TwoOperandFPData<0b0000, "fmul", any_fmul>;
 defm FNMUL  : TwoOperandFPDataNeg<0b1000, "fnmul", any_fmul>;
 }
 defm FSUB   : TwoOperandFPData<0b0011, "fsub", any_fsub>;
+
+let Predicates = [HasFPv2] in {
+defm FMAXINM   : TwoOperandFPData<0b1010, "fmaxinm">;
+defm FMAXMG    : TwoOperandFPData<0b1100, "fmaxmg">;
+defm FMAXMGINM : TwoOperandFPData<0b1110, "fmaxmginm">;
+defm FMININM   : TwoOperandFPData<0b1011, "fmininm">;
+defm FMINMG    : TwoOperandFPData<0b1101, "fminmg">;
+defm FMINMGINM : TwoOperandFPData<0b1111, "fminmginm">;
+}
 
 multiclass FMULScalarFromIndexedLane0Patterns<string inst,
                                               string inst_f16_suffix,
@@ -5679,6 +6131,11 @@ def : Pat<(f64 (fma (fneg FPR64:$Rn), FPR64:$Rm, (fneg FPR64:$Ra))),
 defm FCMPE : FPComparison<1, "fcmpe", AArch64strict_fcmpe>;
 defm FCMP  : FPComparison<0, "fcmp", AArch64any_fcmp>;
 
+let Predicates = [HasFPv2] in {
+defm FCMTL   : FPTotalOrderComparison<0, "fcmtl">;
+defm FCMTLMG : FPTotalOrderComparison<1, "fcmtlmg">;
+}
+
 //===----------------------------------------------------------------------===//
 // Floating point conditional comparison instructions.
 //===----------------------------------------------------------------------===//
@@ -5713,6 +6170,10 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
 //===----------------------------------------------------------------------===//
 // Instructions used for emitting unwind opcodes on ARM64 Windows.
 //===----------------------------------------------------------------------===//
+let isMeta = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0, Size = 0 in {
+  def SEH_EndC : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
+
 let isPseudo = 1 in {
   def SEH_StackAlloc : Pseudo<(outs), (ins i32imm:$size), []>, Sched<[]>;
   def SEH_SaveFPLR : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
@@ -5734,6 +6195,8 @@ let isPseudo = 1 in {
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_SaveAnyRegI : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegIP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveAnyRegQ : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$offs), []>, Sched<[]>;
+  def SEH_SaveAnyRegQX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQP : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_SaveAnyRegQPX : Pseudo<(outs), (ins i32imm:$reg0, i32imm:$reg1, i32imm:$offs), []>, Sched<[]>;
   def SEH_AllocZ : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
@@ -5810,11 +6273,6 @@ defm FCMLT  : SIMDFPCmpTwoVector<0, 1, 0b01110, "fcmlt", AArch64fcmltz>;
 defm FCVTAS : SIMDTwoVectorFPToInt<0,0,0b11100, "fcvtas",int_aarch64_neon_fcvtas>;
 defm FCVTAU : SIMDTwoVectorFPToInt<1,0,0b11100, "fcvtau",int_aarch64_neon_fcvtau>;
 defm FCVTL  : SIMDFPWidenTwoVector<0, 0, 0b10111, "fcvtl">;
-def : Pat<(v4f32 (int_aarch64_neon_vcvthf2fp (v4i16 V64:$Rn))),
-          (FCVTLv4i16 V64:$Rn)>;
-def : Pat<(v4f32 (int_aarch64_neon_vcvthf2fp (extract_subvector (v8i16 V128:$Rn),
-                                                                (i64 4)))),
-          (FCVTLv8i16 V128:$Rn)>;
 def : Pat<(v2f64 (any_fpextend (v2f32 V64:$Rn))),
           (FCVTLv2i32 V64:$Rn)>;
 def : Pat<(v2f64 (any_fpextend (v2f32 (extract_high_v4f32 (v4f32 V128:$Rn))))),
@@ -5823,17 +6281,11 @@ def : Pat<(v4f32 (any_fpextend (v4f16 V64:$Rn))),
           (FCVTLv4i16 V64:$Rn)>;
 def : Pat<(v4f32 (any_fpextend (v4f16 (extract_high_v8f16 (v8f16 V128:$Rn))))),
           (FCVTLv8i16 V128:$Rn)>;
-
 defm FCVTMS : SIMDTwoVectorFPToInt<0,0,0b11011, "fcvtms",int_aarch64_neon_fcvtms>;
 defm FCVTMU : SIMDTwoVectorFPToInt<1,0,0b11011, "fcvtmu",int_aarch64_neon_fcvtmu>;
 defm FCVTNS : SIMDTwoVectorFPToInt<0,0,0b11010, "fcvtns",int_aarch64_neon_fcvtns>;
 defm FCVTNU : SIMDTwoVectorFPToInt<1,0,0b11010, "fcvtnu",int_aarch64_neon_fcvtnu>;
 defm FCVTN  : SIMDFPNarrowTwoVector<0, 0, 0b10110, "fcvtn">;
-def : Pat<(v4i16 (int_aarch64_neon_vcvtfp2hf (v4f32 V128:$Rn))),
-          (FCVTNv4i16 V128:$Rn)>;
-def : Pat<(concat_vectors V64:$Rd,
-                          (v4i16 (int_aarch64_neon_vcvtfp2hf (v4f32 V128:$Rn)))),
-          (FCVTNv8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), V128:$Rn)>;
 def : Pat<(v2f32 (any_fpround (v2f64 V128:$Rn))),
           (FCVTNv2i32 V128:$Rn)>;
 def : Pat<(v4f16 (any_fpround (v4f32 V128:$Rn))),
@@ -5848,39 +6300,29 @@ defm FCVTXN : SIMDFPInexactCvtTwoVector<1, 0, 0b10110, "fcvtxn",
                                         AArch64fcvtxnv>;
 defm FCVTZS : SIMDTwoVectorFPToInt<0, 1, 0b11011, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : SIMDTwoVectorFPToInt<1, 1, 0b11011, "fcvtzu", any_fp_to_uint>;
-
 // AArch64's FCVT instructions saturate when out of range.
-multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string INST> {
-  let Predicates = [HasFullFP16] in {
+multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, string INST> {
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16] in {
   def : Pat<(v4i16 (to_int_sat v4f16:$Rn, i16)),
             (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
   def : Pat<(v8i16 (to_int_sat v8f16:$Rn, i16)),
             (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
-
-  def : Pat<(v4i16 (to_int_sat_gi v4f16:$Rn)),
-            (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
-  def : Pat<(v8i16 (to_int_sat_gi v8f16:$Rn)),
-            (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
   }
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def : Pat<(v2i32 (to_int_sat v2f32:$Rn, i32)),
             (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
   def : Pat<(v4i32 (to_int_sat v4f32:$Rn, i32)),
             (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
   def : Pat<(v2i64 (to_int_sat v2f64:$Rn, i64)),
             (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
-
-  def : Pat<(v2i32 (to_int_sat_gi v2f32:$Rn)),
-            (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
-  def : Pat<(v4i32 (to_int_sat_gi v4f32:$Rn)),
-            (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
-  def : Pat<(v2i64 (to_int_sat_gi v2f64:$Rn)),
-            (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
+  }
 }
-defm : SIMDTwoVectorFPToIntSatPats<fp_to_sint_sat, fp_to_sint_sat_gi, "FCVTZS">;
-defm : SIMDTwoVectorFPToIntSatPats<fp_to_uint_sat, fp_to_uint_sat_gi, "FCVTZU">;
+
+defm : SIMDTwoVectorFPToIntSatPats<fp_to_sint_sat, "FCVTZS">;
+defm : SIMDTwoVectorFPToIntSatPats<fp_to_uint_sat, "FCVTZU">;
 
 // Fused round + convert to int patterns for vectors
-multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_gi, SDNode round, string INST> {
+multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode to_int_sat, SDNode round, string INST> {
   let Predicates = [HasFullFP16] in {
     def : Pat<(v4i16 (to_int (round v4f16:$Rn))),
               (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
@@ -5890,11 +6332,6 @@ multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode to_int_sat, SDNod
     def : Pat<(v4i16 (to_int_sat (round v4f16:$Rn), i16)),
               (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
     def : Pat<(v8i16 (to_int_sat (round v8f16:$Rn), i16)),
-              (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
-
-    def : Pat<(v4i16 (to_int_sat_gi (round v4f16:$Rn))),
-              (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
-    def : Pat<(v8i16 (to_int_sat_gi (round v8f16:$Rn))),
               (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
   }
   def : Pat<(v2i32 (to_int (round v2f32:$Rn))),
@@ -5910,26 +6347,20 @@ multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode to_int_sat, SDNod
             (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
   def : Pat<(v2i64 (to_int_sat (round v2f64:$Rn), i64)),
             (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
-
-  def : Pat<(v2i32 (to_int_sat_gi (round v2f32:$Rn))),
-            (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
-  def : Pat<(v4i32 (to_int_sat_gi (round v4f32:$Rn))),
-            (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
-  def : Pat<(v2i64 (to_int_sat_gi (round v2f64:$Rn))),
-            (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
 }
 
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,      "FCVTPS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,      "FCVTPU">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor,     "FCVTMS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor,     "FCVTMU">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc,     "FCVTZS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc,     "FCVTZU">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround,     "FCVTAS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround,     "FCVTAU">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, froundeven, "FCVTNS">;
-defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, froundeven, "FCVTNU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fceil,      "FCVTPS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fceil,      "FCVTPU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, ffloor,     "FCVTMS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, ffloor,     "FCVTMU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, ftrunc,     "FCVTZS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, ftrunc,     "FCVTZU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fround,     "FCVTAS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fround,     "FCVTAU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, froundeven, "FCVTNS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, froundeven, "FCVTNU">;
 
+let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
 def : Pat<(v4i16 (int_aarch64_neon_fcvtzs v4f16:$Rn)), (FCVTZSv4f16 $Rn)>;
 def : Pat<(v8i16 (int_aarch64_neon_fcvtzs v8f16:$Rn)), (FCVTZSv8f16 $Rn)>;
 def : Pat<(v2i32 (int_aarch64_neon_fcvtzs v2f32:$Rn)), (FCVTZSv2f32 $Rn)>;
@@ -5941,6 +6372,7 @@ def : Pat<(v8i16 (int_aarch64_neon_fcvtzu v8f16:$Rn)), (FCVTZUv8f16 $Rn)>;
 def : Pat<(v2i32 (int_aarch64_neon_fcvtzu v2f32:$Rn)), (FCVTZUv2f32 $Rn)>;
 def : Pat<(v4i32 (int_aarch64_neon_fcvtzu v4f32:$Rn)), (FCVTZUv4f32 $Rn)>;
 def : Pat<(v2i64 (int_aarch64_neon_fcvtzu v2f64:$Rn)), (FCVTZUv2f64 $Rn)>;
+}
 
 defm FNEG   : SIMDTwoVectorFPNoException<1, 1, 0b01111, "fneg", fneg>;
 defm FRECPE : SIMDTwoVectorFP<0, 1, 0b11101, "frecpe", int_aarch64_neon_frecpe>;
@@ -5972,6 +6404,17 @@ def : InstAlias<"mvn{ $Vd.16b, $Vn.16b|.16b $Vd, $Vn}",
                 (NOTv16i8 V128:$Vd, V128:$Vn)>;
 }
 
+let Predicates = [HasFullFP16] in {
+  def : Pat<(v4bf16 (fabs (v4bf16 V64:$Rn))),
+            (v4bf16 (FABSv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fabs (v8bf16 V128:$Rn))),
+            (v8bf16 (FABSv8f16 (v8bf16 V128:$Rn)))>;
+  def : Pat<(v4bf16 (fneg (v4bf16 V64:$Rn))),
+            (v4bf16 (FNEGv4f16 (v4bf16 V64:$Rn)))>;
+  def : Pat<(v8bf16 (fneg (v8bf16 V128:$Rn))),
+            (v8bf16 (FNEGv8f16 (v8bf16 V128:$Rn)))>;
+}
+
 def : Pat<(vnot (v4i16 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
 def : Pat<(vnot (v8i16 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
 def : Pat<(vnot (v2i32 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
@@ -5980,7 +6423,7 @@ def : Pat<(vnot (v1i64 V64:$Rn)),  (NOTv8i8  V64:$Rn)>;
 def : Pat<(vnot (v2i64 V128:$Rn)), (NOTv16i8 V128:$Rn)>;
 
 defm RBIT   : SIMDTwoVectorB<1, 0b01, 0b00101, "rbit", bitreverse>;
-defm REV16  : SIMDTwoVectorB<0, 0b00, 0b00001, "rev16", AArch64rev16>;
+defm REV16  : SIMDTwoVectorB<0, 0b00, 0b00001, "rev16", null_frag>;
 defm REV32  : SIMDTwoVectorBH<1, 0b00000, "rev32", AArch64rev32>;
 defm REV64  : SIMDTwoVectorBHS<0, 0b00000, "rev64", AArch64rev64>;
 defm SADALP : SIMDLongTwoVectorTied<0, 0b00110, "sadalp",
@@ -5988,7 +6431,7 @@ defm SADALP : SIMDLongTwoVectorTied<0, 0b00110, "sadalp",
 defm SADDLP : SIMDLongTwoVector<0, 0b00010, "saddlp", AArch64saddlp>;
 defm SCVTF  : SIMDTwoVectorIntToFP<0, 0, 0b11101, "scvtf", any_sint_to_fp>;
 defm SHLL   : SIMDVectorLShiftLongBySizeBHS;
-defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
+defm SQABS  : SIMDTwoVectorBHSD<0, 0b00111, "sqabs", AArch64sqabsv>;
 defm SQNEG  : SIMDTwoVectorBHSD<1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
 defm SQXTN  : SIMDMixedTwoVector<0, 0b10100, "sqxtn", truncssat_s>;
 defm SQXTUN : SIMDMixedTwoVector<1, 0b10010, "sqxtun", truncssat_u>;
@@ -6002,6 +6445,31 @@ defm URECPE : SIMDTwoVectorS<0, 1, 0b11100, "urecpe", int_aarch64_neon_urecpe>;
 defm URSQRTE: SIMDTwoVectorS<1, 1, 0b11100, "ursqrte", int_aarch64_neon_ursqrte>;
 defm USQADD : SIMDTwoVectorBHSDTied<1, 0b00011, "usqadd",int_aarch64_neon_usqadd>;
 defm XTN    : SIMDMixedTwoVector<0, 0b10010, "xtn", trunc>;
+
+// Patterns for plain partial add reductions, which lower to [SU]ADALP.
+multiclass SelectVectorPartialReduceAdd<ValueType DstVT, ValueType SrcVT, dag immOneV> {
+  def : Pat<(DstVT (partial_reduce_smla DstVT:$Acc, SrcVT:$Input, (SrcVT immOneV))),
+            (!cast<Instruction>("SADALP" # SrcVT # "_" # DstVT) $Acc, $Input)>;
+
+  def : Pat<(DstVT (partial_reduce_umla DstVT:$Acc, SrcVT:$Input, (SrcVT immOneV))),
+            (!cast<Instruction>("UADALP" # SrcVT # "_" # DstVT) $Acc, $Input)>;
+
+  // A zero accumulator has nothing to add to so it lowers to [SU]ADDLP.
+  def : Pat<(DstVT (partial_reduce_smla (DstVT immAllZerosV), SrcVT:$Input,
+                                        (SrcVT immOneV))),
+            (!cast<Instruction>("SADDLP" # SrcVT # "_" # DstVT) $Input)>;
+
+  def : Pat<(DstVT (partial_reduce_umla (DstVT immAllZerosV), SrcVT:$Input,
+                                        (SrcVT immOneV))),
+            (!cast<Instruction>("UADDLP" # SrcVT # "_" # DstVT) $Input)>;
+}
+
+defm : SelectVectorPartialReduceAdd<v4i16, v8i8, (AArch64movi (i32 1))>;
+defm : SelectVectorPartialReduceAdd<v2i32, v4i16, (AArch64movi_shift (i32 1), (i32 0))>;
+defm : SelectVectorPartialReduceAdd<v1i64, v2i32, (AArch64movi_shift (i32 1), (i32 0))>;
+defm : SelectVectorPartialReduceAdd<v8i16, v16i8, (AArch64movi (i32 1))>;
+defm : SelectVectorPartialReduceAdd<v4i32, v8i16, (AArch64movi_shift (i32 1), (i32 0))>;
+defm : SelectVectorPartialReduceAdd<v2i64, v4i32, (AArch64movi_shift (i32 1), (i32 0))>;
 
 def : Pat<(v4f16  (AArch64rev32 V64:$Rn)),  (REV32v4i16 V64:$Rn)>;
 def : Pat<(v4f16  (AArch64rev64 V64:$Rn)),  (REV64v4i16 V64:$Rn)>;
@@ -6107,6 +6575,8 @@ def : Pat<(v2f64 (fmaxnum_ieee (v2f64 V128:$Rn), (v2f64 V128:$Rm))),
           (v2f64 (FMAXNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rm)))>;
 def : Pat<(v2f64 (fcanonicalize (v2f64 V128:$Rn))),
           (v2f64 (FMINNMv2f64 (v2f64 V128:$Rn), (v2f64 V128:$Rn)))>;
+def : Pat<(v1f64 (fcanonicalize (v1f64 V64:$Rn))),
+          (v1f64 (FMINNMDrr (v1f64 FPR64:$Rn), (v1f64 FPR64:$Rn)))>;
 def : Pat<(v4f32 (fminnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
           (v4f32 (FMINNMv4f32 (v4f32 V128:$Rn), (v4f32 V128:$Rm)))>;
 def : Pat<(v4f32 (fmaxnum_ieee (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
@@ -6157,7 +6627,7 @@ defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
 let isCommutable = 1 in
 defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", clmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
-      TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
+      TriOpFrag<(add_like node:$LHS, (abds node:$MHS, node:$RHS))> >;
 defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", abds>;
 defm SHADD    : SIMDThreeSameVectorBHS<0,0b00000,"shadd", avgfloors>;
 defm SHSUB    : SIMDThreeSameVectorBHS<0,0b00100,"shsub", int_aarch64_neon_shsub>;
@@ -6176,7 +6646,7 @@ defm SRSHL    : SIMDThreeSameVector<0,0b01010,"srshl", int_aarch64_neon_srshl>;
 defm SSHL     : SIMDThreeSameVector<0,0b01000,"sshl", int_aarch64_neon_sshl>;
 defm SUB      : SIMDThreeSameVector<1,0b10000,"sub", sub>;
 defm UABA     : SIMDThreeSameVectorBHSTied<1, 0b01111, "uaba",
-      TriOpFrag<(add node:$LHS, (abdu node:$MHS, node:$RHS))> >;
+      TriOpFrag<(add_like node:$LHS, (abdu node:$MHS, node:$RHS))> >;
 defm UABD     : SIMDThreeSameVectorBHS<1,0b01110,"uabd", abdu>;
 defm UHADD    : SIMDThreeSameVectorBHS<1,0b00000,"uhadd", avgflooru>;
 defm UHSUB    : SIMDThreeSameVectorBHS<1,0b00100,"uhsub", int_aarch64_neon_uhsub>;
@@ -6205,7 +6675,11 @@ defm ORN : SIMDLogicalThreeVector<0, 0b11, "orn",
 defm ORR : SIMDLogicalThreeVector<0, 0b10, "orr", or>;
 
 // Pseudo bitwise select pattern BSP.
-// It is expanded into BSL/BIT/BIF after register allocation.
+// It is expanded into BSL/BIT/BIF after register allocation. When SVE2
+// instructions are available, BSPv16i8 may also be expanded into
+// MOVPRFX + SVE2 BSL. Unlike most V128 instructions, it should not be assumed
+// that the BSPv16i8 pseudo zeroes the upper bits (above bit 127) of the
+// overlaying Z register as the SVE expansion code does not guarantee this.
 defm BSP : SIMDLogicalThreeVectorPseudo<TriOpFrag<(or (and node:$LHS, node:$MHS),
                                                       (and (vnot node:$LHS), node:$RHS))>>;
 defm BSL : SIMDLogicalThreeVectorTied<1, 0b01, "bsl">;
@@ -6594,12 +7068,24 @@ defm SQDMULL  : SIMDThreeScalarMixedHS<0, 0b11010, "sqdmull",
 defm SQDMLAL  : SIMDThreeScalarMixedTiedHS<0, 0b10010, "sqdmlal">;
 defm SQDMLSL  : SIMDThreeScalarMixedTiedHS<0, 0b10110, "sqdmlsl">;
 
+def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
+                                          (i32 FPR32:$Rm)),
+          (SQDMULLi32 FPR32:$Rn, FPR32:$Rm)>;
+
 def : Pat<(f64 (AArch64sqadd FPR64:$Rd,
                 (AArch64sqdmull FPR32:$Rn, FPR32:$Rm))),
           (SQDMLALi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 
+def : Pat<(i64 (int_aarch64_neon_sqadd (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn, FPR32:$Rm))),
+          (SQDMLALi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+
 def : Pat<(f64 (AArch64sqsub FPR64:$Rd,
                (AArch64sqdmull FPR32:$Rn, FPR32:$Rm))),
+          (SQDMLSLi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
+
+def : Pat<(i64 (int_aarch64_neon_sqsub (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn, FPR32:$Rm))),
           (SQDMLSLi32 FPR64:$Rd, FPR32:$Rn, FPR32:$Rm)>;
 
 //===----------------------------------------------------------------------===//
@@ -6628,22 +7114,54 @@ defm FCVTPU : SIMDFPTwoScalar<   1, 1, 0b11010, "fcvtpu", int_aarch64_neon_fcvtp
 def  FCVTXNv1i64 : SIMDInexactCvtTwoScalar<0b10110, "fcvtxn">;
 defm FCVTZS : SIMDFPTwoScalar<   0, 1, 0b11011, "fcvtzs", any_fp_to_sint>;
 defm FCVTZU : SIMDFPTwoScalar<   1, 1, 0b11011, "fcvtzu", any_fp_to_uint>;
-defm FRECPE : SIMDFPTwoScalar<   0, 1, 0b11101, "frecpe">;
-defm FRECPX : SIMDFPTwoScalar<   0, 1, 0b11111, "frecpx">;
-defm FRSQRTE : SIMDFPTwoScalar<  1, 1, 0b11101, "frsqrte">;
+defm FCVTZS : SIMDFPScalarRShift<0, 0b11111, "fcvtzs">;
+defm FCVTZU : SIMDFPScalarRShift<1, 0b11111, "fcvtzu">;
+defm FRECPE : SIMDFPTwoScalarNonCVT<   0, 1, 0b11101, "frecpe">;
+defm FRECPX : SIMDFPTwoScalarNonCVT<   0, 1, 0b11111, "frecpx">;
+defm FRSQRTE : SIMDFPTwoScalarNonCVT<  1, 1, 0b11101, "frsqrte">;
 defm NEG    : SIMDTwoScalarD<    1, 0b01011, "neg",
                                  UnOpFrag<(sub immAllZerosV, node:$LHS)> >;
 defm SCVTF  : SIMDFPTwoScalarCVT<   0, 0, 0b11101, "scvtf", AArch64sitof>;
-defm SQABS  : SIMDTwoScalarBHSD< 0, 0b00111, "sqabs", int_aarch64_neon_sqabs>;
-defm SQNEG  : SIMDTwoScalarBHSD< 1, 0b00111, "sqneg", int_aarch64_neon_sqneg>;
+defm SQABS  : SIMDTwoScalarBHSD< 0, 0b00111, "sqabs", AArch64sqabs, int_aarch64_neon_sqabs>;
+defm SQNEG  : SIMDTwoScalarBHSD< 1, 0b00111, "sqneg", AArch64sqneg, int_aarch64_neon_sqneg>;
 defm SQXTN  : SIMDTwoScalarMixedBHS< 0, 0b10100, "sqxtn", int_aarch64_neon_scalar_sqxtn>;
 defm SQXTUN : SIMDTwoScalarMixedBHS< 1, 0b10010, "sqxtun", int_aarch64_neon_scalar_sqxtun>;
-defm SUQADD : SIMDTwoScalarBHSDTied< 0, 0b00011, "suqadd",
+defm SUQADD : SIMDTwoScalarBHSDTied< 0, 0b00011, "suqadd", AArch64suqadd,
                                      int_aarch64_neon_suqadd>;
 defm UCVTF  : SIMDFPTwoScalarCVT<   1, 0, 0b11101, "ucvtf", AArch64uitof>;
 defm UQXTN  : SIMDTwoScalarMixedBHS<1, 0b10100, "uqxtn", int_aarch64_neon_scalar_uqxtn>;
-defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd",
+defm USQADD : SIMDTwoScalarBHSDTied< 1, 0b00011, "usqadd", AArch64usqadd,
                                     int_aarch64_neon_usqadd>;
+
+let Predicates = [HasNEON] in
+def : Pat<(v1i64 (AArch64sqabs (v1i64 FPR64:$Rn))),
+          (SQABSv1i64 FPR64:$Rn)>;
+
+// Scalar i32 -> i64 extend
+def : Pat<(i32 (int_aarch64_neon_scalar_uqxtn (i64 FPR64:$Rn))),
+          (i32 (UQXTNv1i32 FPR64:$Rn))>;
+def : Pat<(i32 (int_aarch64_neon_scalar_sqxtn (i64 FPR64:$Rn))),
+          (i32 (SQXTNv1i32 FPR64:$Rn))>;
+def : Pat<(i32 (int_aarch64_neon_scalar_sqxtun (i64 FPR64:$Rn))),
+          (i32 (SQXTUNv1i32 FPR64:$Rn))>;
+
+// ssub_sat(0, R) -> sqneg(R)
+def : Pat<(v16i8 (ssubsat immAllZerosV, V128:$reg)),
+          (v16i8 (SQNEGv16i8 V128:$reg))>;
+def : Pat<(v8i16 (ssubsat immAllZerosV, V128:$reg)),
+          (v8i16 (SQNEGv8i16 V128:$reg))>;
+def : Pat<(v4i32 (ssubsat immAllZerosV, V128:$reg)),
+          (v4i32 (SQNEGv4i32 V128:$reg))>;
+def : Pat<(v2i64 (ssubsat immAllZerosV, V128:$reg)),
+          (v2i64 (SQNEGv2i64 V128:$reg))>;
+def : Pat<(v8i8 (ssubsat immAllZerosV, V64:$reg)),
+          (v8i8 (SQNEGv8i8 V64:$reg))>;
+def : Pat<(v4i16 (ssubsat immAllZerosV, V64:$reg)),
+          (v4i16 (SQNEGv4i16 V64:$reg))>;
+def : Pat<(v2i32 (ssubsat immAllZerosV, V64:$reg)),
+          (v2i32 (SQNEGv2i32 V64:$reg))>;
+def : Pat<(v1i64 (ssubsat immAllZerosV, V64:$reg)),
+          (v1i64 (SQNEGv1i64 V64:$reg))>;
 
 // Floating-point conversion patterns.
 multiclass IntegerToFPSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
@@ -6677,11 +7195,12 @@ multiclass FPToIntegerSIMDScalarPatterns<SDPatternOperator OpN, string INST> {
   def : Pat<(f64 (bitconvert (i64 (OpN (f32 FPR32:$Rn))))),
             (!cast<Instruction>(INST # DSr) FPR32:$Rn)>;
   }
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def : Pat<(f32 (bitconvert (i32 (OpN (f32 FPR32:$Rn))))),
             (!cast<Instruction>(INST # v1i32) FPR32:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (OpN (f64 FPR64:$Rn))))),
             (!cast<Instruction>(INST # v1i64) FPR64:$Rn)>;
-            
+  }
 }
 defm: FPToIntegerSIMDScalarPatterns<int_aarch64_neon_fcvtas, "FCVTAS">;
 defm: FPToIntegerSIMDScalarPatterns<int_aarch64_neon_fcvtau, "FCVTAU">;
@@ -6712,8 +7231,11 @@ multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
   def : Pat<(i64 (round f32:$Rn)), (!cast<Instruction>(INST # DSr) $Rn)>;
   def : Pat<(i32 (round f64:$Rn)), (!cast<Instruction>(INST # SDr) $Rn)>;
   }
+ 
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def : Pat<(i32 (round f32:$Rn)), (!cast<Instruction>(INST # v1i32) $Rn)>;
   def : Pat<(i64 (round f64:$Rn)), (!cast<Instruction>(INST # v1i64) $Rn)>;
+  }
 
   let Predicates = [HasFPRCVT] in {
   def : Pat<(f32 (bitconvert (i32 (round f16:$Rn)))), 
@@ -6725,32 +7247,83 @@ multiclass FPToIntegerIntPats<Intrinsic round, string INST> {
   def : Pat<(f32 (bitconvert (i32 (round f64:$Rn)))), 
             (!cast<Instruction>(INST # SDr) $Rn)>;
   }
+
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def : Pat<(f32 (bitconvert (i32 (round f32:$Rn)))), 
             (!cast<Instruction>(INST # v1i32) $Rn)>;
   def : Pat<(f64 (bitconvert (i64 (round f64:$Rn)))), 
             (!cast<Instruction>(INST # v1i64) $Rn)>;
-
-  let Predicates = [HasFullFP16] in {
-  def : Pat<(i32 (round (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
-            (!cast<Instruction>(INST # SWHri) $Rn, $scale)>;
-  def : Pat<(i64 (round (fmul f16:$Rn, fixedpoint_f16_i64:$scale))),
-            (!cast<Instruction>(INST # SXHri) $Rn, $scale)>;
   }
-  def : Pat<(i32 (round (fmul f32:$Rn, fixedpoint_f32_i32:$scale))),
-            (!cast<Instruction>(INST # SWSri) $Rn, $scale)>;
-  def : Pat<(i64 (round (fmul f32:$Rn, fixedpoint_f32_i64:$scale))),
-            (!cast<Instruction>(INST # SXSri) $Rn, $scale)>;
-  def : Pat<(i32 (round (fmul f64:$Rn, fixedpoint_f64_i32:$scale))),
-            (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
-  def : Pat<(i64 (round (fmul f64:$Rn, fixedpoint_f64_i64:$scale))),
-            (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
 }
 
 defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzs, "FCVTZS">;
 defm : FPToIntegerIntPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
 
+// This thing just allows us to change the type of the node produced. The imm
+// value we want is already in V from SelectCVTFixedPointVec.
+def fixedpoint_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
+                              GISDNodeXFormEquiv<fixedpoint_xform>;
+def fixedpoint_recip_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_recip_xform
+    : GICustomOperandRenderer<"renderFixedPointRecipXForm">,
+      GISDNodeXFormEquiv<fixedpoint_recip_xform>;
+
+def gi_fixedpoint_f16_i32 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<32>">,
+                            GIComplexPatternEquiv<fixedpoint_f16_i32>;
+def gi_fixedpoint_f16_i64 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<64>">,
+                            GIComplexPatternEquiv<fixedpoint_f16_i64>;
+def gi_fixedpoint_f32_i32 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<32>">,
+                            GIComplexPatternEquiv<fixedpoint_f32_i32>;
+def gi_fixedpoint_f32_i64 : GIComplexOperandMatcher<s32, "selectCVTFixedPoint<64>">,
+                            GIComplexPatternEquiv<fixedpoint_f32_i64>;
+def gi_fixedpoint_f64_i32 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<32>">,
+                            GIComplexPatternEquiv<fixedpoint_f64_i32>;
+def gi_fixedpoint_f64_i64 : GIComplexOperandMatcher<s64, "selectCVTFixedPoint<64>">,
+                            GIComplexPatternEquiv<fixedpoint_f64_i64>;
+
+def gi_fixedpoint_recip_f32_i32
+    : GIComplexOperandMatcher<s32, "selectCVTFixedPosRecipOperand<32>">,
+      GIComplexPatternEquiv<fixedpoint_recip_f32_i32>;
+def gi_fixedpoint_recip_f64_i64
+    : GIComplexOperandMatcher<s64, "selectCVTFixedPosRecipOperand<64>">,
+      GIComplexPatternEquiv<fixedpoint_recip_f64_i64>;
+
+multiclass FPToIntegerFmulPats<SDPatternOperator round, string INST> { 
+  let Predicates = [HasFullFP16] in {
+  def : Pat<(i32 (round (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
+            (!cast<Instruction>(INST # SWHri) $Rn, fixedpoint_f16_i32:$scale)>;
+  def : Pat<(i64 (round (fmul f16:$Rn, fixedpoint_f16_i64:$scale))),
+            (!cast<Instruction>(INST # SXHri) $Rn, fixedpoint_f16_i64:$scale)>;
+  }
+  def : Pat<(i32 (round (fmul f32:$Rn, fixedpoint_f32_i32:$scale))),
+            (!cast<Instruction>(INST # SWSri) $Rn, fixedpoint_f32_i32:$scale)>;
+  def : Pat<(i64 (round (fmul f32:$Rn, fixedpoint_f32_i64:$scale))),
+            (!cast<Instruction>(INST # SXSri) $Rn, fixedpoint_f32_i64:$scale)>;
+  def : Pat<(i32 (round (fmul f64:$Rn, fixedpoint_f64_i32:$scale))),
+            (!cast<Instruction>(INST # SWDri) $Rn, fixedpoint_f64_i32:$scale)>;
+  def : Pat<(i64 (round (fmul f64:$Rn, fixedpoint_f64_i64:$scale))),
+            (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
+
+  def : Pat<(f32 (bitconvert (i32 (round (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale))))),
+      (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (bitconvert (i64 (round (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale))))),
+      (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
+}
+
+defm : FPToIntegerFmulPats<any_fp_to_sint, "FCVTZS">;
+defm : FPToIntegerFmulPats<any_fp_to_uint, "FCVTZU">;
+defm : FPToIntegerFmulPats<int_aarch64_neon_fcvtzs, "FCVTZS">;
+defm : FPToIntegerFmulPats<int_aarch64_neon_fcvtzu, "FCVTZU">;
+
 // AArch64's FCVT instructions saturate when out of range.
-multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string INST> {
+multiclass FPToIntegerSatPats<SDNode to_int_sat, string INST> {
   let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (to_int_sat f16:$Rn, i32)),
             (!cast<Instruction>(INST # UWHr) f16:$Rn)>;
@@ -6766,37 +7339,25 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string IN
   def : Pat<(i64 (to_int_sat f64:$Rn, i64)),
             (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
 
-  let Predicates = [HasFullFP16] in {
-  def : Pat<(i32 (to_int_sat_gi f16:$Rn)),
-            (!cast<Instruction>(INST # UWHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f16:$Rn)),
-            (!cast<Instruction>(INST # UXHr) f16:$Rn)>;
-  }
-  def : Pat<(i32 (to_int_sat_gi f32:$Rn)),
-            (!cast<Instruction>(INST # UWSr) f32:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f32:$Rn)),
-            (!cast<Instruction>(INST # UXSr) f32:$Rn)>;
-  def : Pat<(i32 (to_int_sat_gi f64:$Rn)),
-            (!cast<Instruction>(INST # UWDr) f64:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f64:$Rn)),
-            (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
-
   // For global-isel we can use register classes to determine
   // which FCVT instruction to use.
   let Predicates = [HasFPRCVT] in {
-  def : Pat<(i32 (to_int_sat_gi f16:$Rn)),
+  def : Pat<(i32 (to_int_sat f16:$Rn, i32)),
             (!cast<Instruction>(INST # SHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f16:$Rn)),
+  def : Pat<(i64 (to_int_sat f16:$Rn, i64)),
             (!cast<Instruction>(INST # DHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f32:$Rn)),
+  def : Pat<(i64 (to_int_sat f32:$Rn, i64)),
             (!cast<Instruction>(INST # DSr) f32:$Rn)>;
-  def : Pat<(i32 (to_int_sat_gi f64:$Rn)),
+  def : Pat<(i32 (to_int_sat f64:$Rn, i32)),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
   }
-  def : Pat<(i32 (to_int_sat_gi f32:$Rn)),
+
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
+  def : Pat<(i32 (to_int_sat f32:$Rn, i32)),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi f64:$Rn)),
+  def : Pat<(i64 (to_int_sat f64:$Rn, i64)),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
+  }
 
   let Predicates = [HasFPRCVT] in {
   def : Pat<(f32 (bitconvert (i32 (to_int_sat f16:$Rn, i32)))),
@@ -6808,46 +7369,39 @@ multiclass FPToIntegerSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, string IN
   def : Pat<(f32 (bitconvert (i32 (to_int_sat f64:$Rn, i32)))),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
   }
+
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def : Pat<(f32 (bitconvert (i32 (to_int_sat f32:$Rn, i32)))),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (to_int_sat f64:$Rn, i64)))),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
+  }
 
   let Predicates = [HasFullFP16] in {
   def : Pat<(i32 (to_int_sat (fmul f16:$Rn, fixedpoint_f16_i32:$scale), i32)),
-            (!cast<Instruction>(INST # SWHri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SWHri) $Rn, fixedpoint_f16_i32:$scale)>;
   def : Pat<(i64 (to_int_sat (fmul f16:$Rn, fixedpoint_f16_i64:$scale), i64)),
-            (!cast<Instruction>(INST # SXHri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SXHri) $Rn, fixedpoint_f16_i64:$scale)>;
   }
   def : Pat<(i32 (to_int_sat (fmul f32:$Rn, fixedpoint_f32_i32:$scale), i32)),
-            (!cast<Instruction>(INST # SWSri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SWSri) $Rn, fixedpoint_f32_i32:$scale)>;
   def : Pat<(i64 (to_int_sat (fmul f32:$Rn, fixedpoint_f32_i64:$scale), i64)),
-            (!cast<Instruction>(INST # SXSri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SXSri) $Rn, fixedpoint_f32_i64:$scale)>;
   def : Pat<(i32 (to_int_sat (fmul f64:$Rn, fixedpoint_f64_i32:$scale), i32)),
-            (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SWDri) $Rn, fixedpoint_f64_i32:$scale)>;
   def : Pat<(i64 (to_int_sat (fmul f64:$Rn, fixedpoint_f64_i64:$scale), i64)),
-            (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
-
-  let Predicates = [HasFullFP16] in {
-  def : Pat<(i32 (to_int_sat_gi (fmul f16:$Rn, fixedpoint_f16_i32:$scale))),
-            (!cast<Instruction>(INST # SWHri) $Rn, $scale)>;
-  def : Pat<(i64 (to_int_sat_gi (fmul f16:$Rn, fixedpoint_f16_i64:$scale))),
-            (!cast<Instruction>(INST # SXHri) $Rn, $scale)>;
-  }
-  def : Pat<(i32 (to_int_sat_gi (fmul f32:$Rn, fixedpoint_f32_i32:$scale))),
-            (!cast<Instruction>(INST # SWSri) $Rn, $scale)>;
-  def : Pat<(i64 (to_int_sat_gi (fmul f32:$Rn, fixedpoint_f32_i64:$scale))),
-            (!cast<Instruction>(INST # SXSri) $Rn, $scale)>;
-  def : Pat<(i32 (to_int_sat_gi (fmul f64:$Rn, fixedpoint_f64_i32:$scale))),
-            (!cast<Instruction>(INST # SWDri) $Rn, $scale)>;
-  def : Pat<(i64 (to_int_sat_gi (fmul f64:$Rn, fixedpoint_f64_i64:$scale))),
-            (!cast<Instruction>(INST # SXDri) $Rn, $scale)>;
+            (!cast<Instruction>(INST # SXDri) $Rn, fixedpoint_f64_i64:$scale)>;
+  
+  def : Pat<(f32 (bitconvert (i32 (to_int_sat (fmul FPR32:$Rn, fixedpoint_f32_i32:$scale), i32)))),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (bitconvert (i64 (to_int_sat (fmul FPR64:$Rn, fixedpoint_f64_i64:$scale), i64)))),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
 }
 
-defm : FPToIntegerSatPats<fp_to_sint_sat, fp_to_sint_sat_gi, "FCVTZS">;
-defm : FPToIntegerSatPats<fp_to_uint_sat, fp_to_uint_sat_gi, "FCVTZU">;
+defm : FPToIntegerSatPats<fp_to_sint_sat, "FCVTZS">;
+defm : FPToIntegerSatPats<fp_to_uint_sat, "FCVTZU">;
 
-multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_gi, SDNode round, string INST> {
+multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode round, string INST> {
   def : Pat<(i32 (to_int (round f32:$Rn))),
             (!cast<Instruction>(INST # UWSr) f32:$Rn)>;
   def : Pat<(i64 (to_int (round f32:$Rn))),
@@ -6876,10 +7430,13 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
   def : Pat<(f32 (bitconvert (i32 (to_int (round f64:$Rn))))),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
   }
+
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def : Pat<(f32 (bitconvert (i32 (to_int (round f32:$Rn))))),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (to_int (round f64:$Rn))))),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
+  }
 
   // These instructions saturate like fp_to_[su]int_sat.
   let Predicates = [HasFullFP16] in {
@@ -6897,38 +7454,26 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
   def : Pat<(i64 (to_int_sat (round f64:$Rn), i64)),
             (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
 
-  let Predicates = [HasFullFP16] in {
-  def : Pat<(i32 (to_int_sat_gi (round f16:$Rn))),
-            (!cast<Instruction>(INST # UWHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f16:$Rn))),
-            (!cast<Instruction>(INST # UXHr) f16:$Rn)>;
-  }
-  def : Pat<(i32 (to_int_sat_gi (round f32:$Rn))),
-            (!cast<Instruction>(INST # UWSr) f32:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f32:$Rn))),
-            (!cast<Instruction>(INST # UXSr) f32:$Rn)>;
-  def : Pat<(i32 (to_int_sat_gi (round f64:$Rn))),
-            (!cast<Instruction>(INST # UWDr) f64:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f64:$Rn))),
-            (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
-
   // For global-isel we can use register classes to determine
   // which FCVT instruction to use.
   let Predicates = [HasFPRCVT] in {
-  def : Pat<(i32 (to_int_sat_gi (round f16:$Rn))),
+  def : Pat<(i32 (to_int_sat (round f16:$Rn), i32)),
             (!cast<Instruction>(INST # SHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f16:$Rn))),
+  def : Pat<(i64 (to_int_sat (round f16:$Rn), i64)),
             (!cast<Instruction>(INST # DHr) f16:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f32:$Rn))),
+  def : Pat<(i64 (to_int_sat (round f32:$Rn), i64)),
             (!cast<Instruction>(INST # DSr) f32:$Rn)>;
-  def : Pat<(i32 (to_int_sat_gi (round f64:$Rn))),
+  def : Pat<(i32 (to_int_sat (round f64:$Rn), i32)),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
   }
-  def : Pat<(i32 (to_int_sat_gi (round f32:$Rn))),
+
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
+  def : Pat<(i32 (to_int_sat (round f32:$Rn), i32)),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
-  def : Pat<(i64 (to_int_sat_gi (round f64:$Rn))),
+  def : Pat<(i64 (to_int_sat (round f64:$Rn), i64)),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
-            
+  }
+
   let Predicates = [HasFPRCVT] in {
   def : Pat<(f32 (bitconvert (i32 (to_int_sat (round f16:$Rn), i32)))),
             (!cast<Instruction>(INST # SHr) f16:$Rn)>;
@@ -6939,22 +7484,24 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
   def : Pat<(f32 (bitconvert (i32 (to_int_sat (round f64:$Rn), i32)))),
             (!cast<Instruction>(INST # SDr) f64:$Rn)>;
   }
+  let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
   def : Pat<(f32 (bitconvert (i32 (to_int_sat (round f32:$Rn), i32)))),
             (!cast<Instruction>(INST # v1i32) f32:$Rn)>;
   def : Pat<(f64 (bitconvert (i64 (to_int_sat (round f64:$Rn), i64)))),
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
+  }
 }
 
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,      "FCVTPS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,      "FCVTPU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor,     "FCVTMS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor,     "FCVTMU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc,     "FCVTZS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc,     "FCVTZU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround,     "FCVTAS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround,     "FCVTAU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, froundeven, "FCVTNS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, froundeven, "FCVTNU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fceil,      "FCVTPS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fceil,      "FCVTPU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, ffloor,     "FCVTMS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, ffloor,     "FCVTMU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, ftrunc,     "FCVTZS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, ftrunc,     "FCVTZU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fround,     "FCVTAS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fround,     "FCVTAU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, froundeven, "FCVTNS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, froundeven, "FCVTNU">;
 
 // For global-isel we can use register classes to determine
 // which FCVT instruction to use.
@@ -7046,9 +7593,9 @@ def : Pat<(f64 (bitconvert (i64 (any_llrint f64:$Rn)))),
 
 
 // f16 -> s16 conversions
-let Predicates = [HasFullFP16] in {
-def : Pat<(i16(fp_to_sint_sat_gi f16:$Rn)), (FCVTZSv1f16 f16:$Rn)>;
-def : Pat<(i16(fp_to_uint_sat_gi f16:$Rn)), (FCVTZUv1f16 f16:$Rn)>;
+let Predicates = [HasFullFP16, HasNEONandIsFPRCVTStreamingSafe] in {
+def : Pat<(i16(fp_to_sint_sat f16:$Rn, i16)), (FCVTZSv1f16 f16:$Rn)>;
+def : Pat<(i16(fp_to_uint_sat f16:$Rn, i16)), (FCVTZUv1f16 f16:$Rn)>;
 }
 
 def : Pat<(v1i64 (AArch64vashr (v1i64 V64:$Rn), (i32 63))),
@@ -7059,7 +7606,7 @@ class F16ToI16ScalarPat<SDNode cvt_isd, BaseSIMDTwoScalar instr>
     : Pat<(f32 (cvt_isd (f16 FPR16:$Rn))),
      (f32 (SUBREG_TO_REG (instr FPR16:$Rn), hsub))>;
 
-let Predicates = [HasFullFP16] in {
+let Predicates = [HasFullFP16, HasNEONandIsFPRCVTStreamingSafe] in {
 def : F16ToI16ScalarPat<AArch64fcvtzs_half, FCVTZSv1f16>;
 def : F16ToI16ScalarPat<AArch64fcvtzu_half, FCVTZUv1f16>;
 def : F16ToI16ScalarPat<AArch64fcvtas_half, FCVTASv1f16>;
@@ -7076,7 +7623,7 @@ def : F16ToI16ScalarPat<AArch64fcvtpu_half, FCVTPUv1f16>;
 let Predicates = [HasNEONandIsStreamingSafe, HasBF16] in
 def : Pat<(bf16 (any_fpround (f64 FPR64:$Rn))),
           (BFCVT (FCVTXNv1i64 $Rn))>;
-
+let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
 def : Pat<(v1i64 (int_aarch64_neon_fcvtas (v1f64 FPR64:$Rn))),
           (FCVTASv1i64 FPR64:$Rn)>;
 def : Pat<(v1i64 (int_aarch64_neon_fcvtau (v1f64 FPR64:$Rn))),
@@ -7097,7 +7644,7 @@ def : Pat<(v1i64 (int_aarch64_neon_fcvtzs (v1f64 FPR64:$Rn))),
           (FCVTZSv1i64 FPR64:$Rn)>;
 def : Pat<(v1i64 (int_aarch64_neon_fcvtzu (v1f64 FPR64:$Rn))),
           (FCVTZUv1i64 FPR64:$Rn)>;
-
+}
 def : Pat<(f16 (int_aarch64_neon_frecpe (f16 FPR16:$Rn))),
           (FRECPEv1f16 FPR16:$Rn)>;
 def : Pat<(f32 (int_aarch64_neon_frecpe (f32 FPR32:$Rn))),
@@ -7178,7 +7725,8 @@ let HasOneUse = 1 in {
 def any_fp_to_sint_oneuse: PatFrag<(ops node:$src0), (any_fp_to_sint $src0)>;
 def any_fp_to_uint_oneuse: PatFrag<(ops node:$src0), (any_fp_to_uint $src0)>;
 }
-let Predicates = [HasNEONandIsSME2p2StreamingSafe] in {
+
+let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
 def : Pat<(f64 (any_sint_to_fp (i64 (any_fp_to_sint_oneuse f64:$Rn)))),
           (SCVTFv1i64 (i64 (FCVTZSv1i64 f64:$Rn)))>;
 def : Pat<(f32 (any_sint_to_fp (i32 (any_fp_to_sint_oneuse f32:$Rn)))),
@@ -7188,7 +7736,7 @@ def : Pat<(f64 (any_uint_to_fp (i64 (any_fp_to_uint_oneuse f64:$Rn)))),
 def : Pat<(f32 (any_uint_to_fp (i32 (any_fp_to_uint_oneuse f32:$Rn)))),
           (UCVTFv1i32 (i32 (FCVTZUv1i32 f32:$Rn)))>;
 
-let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
+let Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (any_sint_to_fp (i32 (any_fp_to_sint_oneuse f16:$Rn)))),
           (SCVTFv1i16 (f16 (FCVTZSv1f16 f16:$Rn)))>;
 def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint_oneuse f16:$Rn)))),
@@ -7217,10 +7765,9 @@ def : Pat<(f64 (sint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
 
 def : Pat<(f64 (uint_to_fp (i64 (vector_extract (v2i64 FPR128:$Rn), (i64 0))))),
           (UCVTFv1i64 (i64 (EXTRACT_SUBREG (v2i64 FPR128:$Rn), dsub)))>;
-
 // fp16: integer extraction from vector must be at least 32-bits to be legal.
 // Actual extraction result is then an in-reg sign-extension of lower 16-bits.
-let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
+let Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16] in {
 def : Pat<(f16 (sint_to_fp (i32 (sext_inreg (i32 (vector_extract
                 (v8i16 FPR128:$Rn), (i64 0))), i16)))),
           (SCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
@@ -7230,6 +7777,8 @@ def : Pat<(f16 (uint_to_fp (i32 (and (i32 (vector_extract
                 (v8i16 FPR128:$Rn), (i64 0))), (i32 65535))))),
           (UCVTFv1i16 (f16 (EXTRACT_SUBREG (v8i16 FPR128:$Rn), hsub)))>;
 }
+
+} // let Predicates = [HasNEONandIsFPRCVTStreamingSafe]
 
 // If an integer is about to be converted to a floating point value,
 // just load it on the floating point unit.
@@ -7254,7 +7803,7 @@ multiclass UIntToFPROLoadPat<ValueType DstTy, ValueType SrcTy,
                                  sub))>;
 }
 
-let Predicates = [HasNEONandIsSME2p2StreamingSafe, HasFullFP16] in {
+let Predicates = [HasNEONandIsFPRCVTStreamingSafe, HasFullFP16] in {
 defm : UIntToFPROLoadPat<f16, i32, zextloadi8,
                          UCVTFv1i16, ro8, LDRBroW, LDRBroX, bsub>;
 def : Pat <(f16 (uint_to_fp (i32
@@ -7267,6 +7816,7 @@ def : Pat <(f16 (uint_to_fp (i32
                           (LDURBi GPR64sp:$Rn, simm9:$offset), bsub))>;
 }
 
+let Predicates = [HasNEONandIsFPRCVTStreamingSafe] in {
 defm : UIntToFPROLoadPat<f32, i32, zextloadi8,
                          UCVTFv1i32, ro8, LDRBroW, LDRBroX, bsub>;
 def : Pat <(f32 (uint_to_fp (i32
@@ -7330,20 +7880,21 @@ def : Pat <(f64 (uint_to_fp (i32
                           (LDURSi GPR64sp:$Rn, simm9:$offset), ssub))>;
 // 64-bits -> double are handled in target specific dag combine:
 // performIntToFpCombine.
-} // let Predicates = [HasNEON]
+
+} // let Predicates = [HasNEONandIsFPRCVTStreamingSafe]
 
 //===----------------------------------------------------------------------===//
 // Advanced SIMD three different-sized vector instructions.
 //===----------------------------------------------------------------------===//
 
-defm ADDHN   : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", int_aarch64_neon_addhn>;
+defm ADDHN   : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", AArch64addhn>;
 defm SUBHN   : SIMDNarrowThreeVectorBHS<0,0b0110,"subhn", int_aarch64_neon_subhn>;
 defm RADDHN  : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn>;
 defm RSUBHN  : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn>;
 let isCommutable = 1 in
 defm PMULL   : SIMDDifferentThreeVectorBD<0,0b1110,"pmull", AArch64pmull>;
 defm SABAL   : SIMDLongThreeVectorTiedBHS<0,0b0101,"sabal",
-                 TriOpFrag<(add node:$LHS, (zext (abds node:$MHS, node:$RHS)))>>;
+                 TriOpFrag<(add_like node:$LHS, (zext (abds node:$MHS, node:$RHS)))>>;
 defm SABDL   : SIMDLongThreeVectorBHS<0, 0b0111, "sabdl",
                  BinOpFrag<(zext (abds node:$LHS, node:$RHS))>>;
 defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
@@ -7351,7 +7902,7 @@ defm SADDL   : SIMDLongThreeVectorBHS<   0, 0b0000, "saddl",
 defm SADDW   : SIMDWideThreeVectorBHS<   0, 0b0001, "saddw",
                  BinOpFrag<(add node:$LHS, (sext node:$RHS))>>;
 defm SMLAL   : SIMDLongThreeVectorTiedBHS<0, 0b1000, "smlal",
-                 TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL   : SIMDLongThreeVectorTiedBHS<0, 0b1010, "smlsl",
                  TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL   : SIMDLongThreeVectorBHS<0, 0b1100, "smull", AArch64smull>;
@@ -7364,7 +7915,7 @@ defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
 defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
                  BinOpFrag<(sub node:$LHS, (sext node:$RHS))>>;
 defm UABAL   : SIMDLongThreeVectorTiedBHS<1, 0b0101, "uabal",
-                 TriOpFrag<(add node:$LHS, (zext (abdu node:$MHS, node:$RHS)))>>;
+                 TriOpFrag<(add_like node:$LHS, (zext (abdu node:$MHS, node:$RHS)))>>;
 defm UABDL   : SIMDLongThreeVectorBHS<1, 0b0111, "uabdl",
                  BinOpFrag<(zext (abdu node:$LHS, node:$RHS))>>;
 defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
@@ -7372,7 +7923,7 @@ defm UADDL   : SIMDLongThreeVectorBHS<1, 0b0000, "uaddl",
 defm UADDW   : SIMDWideThreeVectorBHS<1, 0b0001, "uaddw",
                  BinOpFrag<(add node:$LHS, (zanyext node:$RHS))>>;
 defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
-                 TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+                 TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
                  TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
@@ -7388,7 +7939,7 @@ multiclass Neon_mul_acc_widen_patterns<SDPatternOperator opnode, SDPatternOperat
   def : Pat<(v4i16 (opnode
                     V64:$Ra,
                     (v4i16 (extract_subvector
-                            (vecopnode (v8i8 V64:$Rn),(v8i8 V64:$Rm)),
+                            (v8i16 (vecopnode (v8i8 V64:$Rn),(v8i8 V64:$Rm))),
                             (i64 0))))),
              (EXTRACT_SUBREG (v8i16 (INST8B
                                      (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), V64:$Ra, dsub),
@@ -7396,7 +7947,7 @@ multiclass Neon_mul_acc_widen_patterns<SDPatternOperator opnode, SDPatternOperat
   def : Pat<(v2i32 (opnode
                     V64:$Ra,
                     (v2i32 (extract_subvector
-                            (vecopnode (v4i16 V64:$Rn),(v4i16 V64:$Rm)),
+                            (v4i32 (vecopnode (v4i16 V64:$Rn),(v4i16 V64:$Rm))),
                             (i64 0))))),
              (EXTRACT_SUBREG (v4i32 (INST4H
                                      (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), V64:$Ra, dsub),
@@ -7404,7 +7955,7 @@ multiclass Neon_mul_acc_widen_patterns<SDPatternOperator opnode, SDPatternOperat
   def : Pat<(v1i64 (opnode
                     V64:$Ra,
                     (v1i64 (extract_subvector
-                            (vecopnode (v2i32 V64:$Rn),(v2i32 V64:$Rm)),
+                            (v2i64 (vecopnode (v2i32 V64:$Rn),(v2i32 V64:$Rm))),
                             (i64 0))))),
              (EXTRACT_SUBREG (v2i64 (INST2S
                                      (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), V64:$Ra, dsub),
@@ -7489,6 +8040,29 @@ defm : AddSubHNPatterns<ADDHNv2i64_v2i32, ADDHNv2i64_v4i32,
                         SUBHNv2i64_v2i32, SUBHNv2i64_v4i32,
                         v2i32, v2i64, 32>;
 
+def : Pat<(v8i8 (trunc (AArch64vlshr (v8i16 V128:$Rn), (i32 7)))),
+          (ADDHNv8i16_v8i8 V128:$Rn, V128:$Rn)>;
+def : Pat<(v4i16 (trunc (AArch64vlshr (v4i32 V128:$Rn), (i32 15)))),
+          (ADDHNv4i32_v4i16 V128:$Rn, V128:$Rn)>;
+def : Pat<(v2i32 (trunc (AArch64vlshr (v2i64 V128:$Rn), (i32 31)))),
+          (ADDHNv2i64_v2i32 V128:$Rn, V128:$Rn)>;
+
+def : Pat<(v16i8 (concat_vectors (v8i8 V64:$Rd),
+                                 (trunc (AArch64vlshr (v8i16 V128:$Rn),
+                                                      (i32 7))))),
+          (ADDHNv8i16_v16i8 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+def : Pat<(v8i16 (concat_vectors (v4i16 V64:$Rd),
+                                 (trunc (AArch64vlshr (v4i32 V128:$Rn),
+                                                      (i32 15))))),
+          (ADDHNv4i32_v8i16 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+def : Pat<(v4i32 (concat_vectors (v2i32 V64:$Rd),
+                                 (trunc (AArch64vlshr (v2i64 V128:$Rn),
+                                                      (i32 31))))),
+          (ADDHNv2i64_v4i32 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
+                           V128:$Rn, V128:$Rn)>;
+
 //----------------------------------------------------------------------------
 // AdvSIMD bitwise extract from vector instruction.
 //----------------------------------------------------------------------------
@@ -7503,10 +8077,6 @@ multiclass ExtPat<ValueType VT64, ValueType VT128, int N> {
             (EXTv8i8 V64:$Rn, V64:$Rm, imm:$imm)>;
   def : Pat<(VT128 (AArch64ext V128:$Rn, V128:$Rm, (i32 imm:$imm))),
             (EXTv16i8 V128:$Rn, V128:$Rm, imm:$imm)>;
-  // We use EXT to handle extract_subvector to copy the upper 64-bits of a
-  // 128-bit vector.
-  def : Pat<(VT64 (extract_subvector V128:$Rn, (i64 N))),
-            (EXTRACT_SUBREG (EXTv16i8 V128:$Rn, V128:$Rn, 8), dsub)>;
   // A 64-bit EXT of two halves of the same 128-bit register can be done as a
   // single 128-bit EXT.
   def : Pat<(VT64 (AArch64ext (extract_subvector V128:$Rn, (i64 0)),
@@ -7797,12 +8367,12 @@ def : Pat<(v8bf16 (AArch64dup (bf16 FPR16:$Rn))),
             (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)), FPR16:$Rn, hsub),
             (i64 0)))>;
 
-// Patterns for importing fpr i8 G_DUP under GISel.
-def : Pat<(v8i8 (AArch64dup (i8 FPR8:$Rn))),
+// Patterns for importing fpr i8 G_SPLAT_VECTOR under GISel.
+def : Pat<(v8i8 (splat_vector (i8 FPR8:$Rn))),
           (v8i8 (DUPv8i8lane
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
             (i64 0)))>;
-def : Pat<(v16i8 (AArch64dup (i8 FPR8:$Rn))),
+def : Pat<(v16i8 (splat_vector (i8 FPR8:$Rn))),
           (v16i8 (DUPv16i8lane
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)), FPR8:$Rn, bsub),
             (i64 0)))>;
@@ -7901,6 +8471,28 @@ def : Pat<(i64 (and (i64 (anyext (i32 (vector_extract (v8i16 V128:$Rn),
           (SUBREG_TO_REG (i32 (UMOVvi16 V128:$Rn, VectorIndexH:$idx)), sub_32)>;
 
 defm INS : SIMDIns;
+
+// Patterns for v2i64/v1i64 clmul->pmull
+let Predicates = [HasAES] in {
+  def : Pat<(clmul v1i64:$Rn, v1i64:$Rm),
+            (v1i64 (EXTRACT_SUBREG (v2i64 (PMULLv1i64 $Rn, $Rm)),
+                                           dsub))>;
+  def : Pat<(clmul v2i64:$Rn, v2i64:$Rm),
+            (v2i64 (INSvi64lane (v2i64 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, dsub)),
+                                                   (v1i64 (EXTRACT_SUBREG $Rm, dsub)))),
+                                (i64 1),
+                                (v2i64 (PMULLv2i64 $Rn, $Rm)),
+                                (i64 0)))>;
+
+  def : Pat<(clmulh v1i64:$Rn, v1i64:$Rm),
+            (EXTRACT_SUBREG (v2i64 (EXTv16i8 (v2i64 (PMULLv1i64 $Rn, $Rm)),
+                                             (v2i64 (PMULLv1i64 $Rn, $Rm)),
+                                             8)), dsub)>;
+  def : Pat<(clmulh v2i64:$Rn, v2i64:$Rm),
+            (ZIP2v2i64 (v2i64 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, dsub)),
+                                          (v1i64 (EXTRACT_SUBREG $Rm, dsub)))),
+                       (v2i64 (PMULLv2i64 $Rn, $Rm)))>;
+}
 
 def : Pat<(v16i8 (vec_ins_or_scal_vec GPR32:$Rn)),
           (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS GPR32:$Rn, FPR32)), ssub)>;
@@ -8162,7 +8754,8 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 
 // Patterns for i8/i16 -> v2i32/v4i16 lane moves via insert and extract that go via i32.
 multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType OutVT,
-                                    Instruction INS, Instruction DUP, SubRegIndex DUPSub,
+                                    SDPatternOperator ScalToVec, Instruction INS, 
+                                    Instruction DUP, SubRegIndex DUPSub,
                                     SDNodeXForm VecIndexMult> {
   // VT64->OutVT
   def : Pat<(OutVT (vector_insert (OutVT V64:$src),
@@ -8172,7 +8765,7 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               (INS (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$src, dsub), (VecIndexMult imm:$Immd),
                    (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
               dsub)>;
-  def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))))),
+  def : Pat<(OutVT (ScalToVec (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
               (VT128 (SUBREG_TO_REG
                 (DUP (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
@@ -8187,7 +8780,7 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               (INS (SUBREG_TO_REG V64:$src, dsub), (VecIndexMult imm:$Immd),
                    V128:$Rn, imm:$Immn),
               dsub)>;
-  def : Pat<(OutVT (scalar_to_vector (i32 (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))))),
+  def : Pat<(OutVT (ScalToVec (i32 (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
               (VT128 (SUBREG_TO_REG
                 (DUP V128:$Rn, imm:$Immn),
@@ -8195,16 +8788,85 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               dsub)>;
 }
 
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, INSvi8lane, DUPi8, bsub, VecIndex_x2>;
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
-defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, scalar_to_vector, INSvi8lane, DUPi8, bsub, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, scalar_to_vector_v2f32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
+defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, scalar_to_vector_v2f32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
+
+
+let Predicates = [HasFullFP16] in {
+  def : Pat<(v8i16 (vector_insert immAllZerosV,
+              (i32 (vector_extract
+                (v8i16 V128:$Rn),
+                (i64 0))),
+              (i64 0))),
+            (v8i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v8i16 V128:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v8f16 (vector_insert immAllZerosV,
+              (f16 (vector_extract
+                (v8f16 V128:$Rn),
+                (i64 0))),
+              (i64 0))),
+            (v8f16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v8f16 V128:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v8bf16 (vector_insert immAllZerosV,
+              (bf16 (vector_extract
+                (v8bf16 V128:$Rn),
+                (i64 0))),
+              (i64 0))),
+            (v8bf16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v8bf16 V128:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v4i16 (vector_insert immAllZerosV,
+            (i32 (vector_extract
+                (v8i16 (insert_subvector (v8i16 undef),
+                  (v4i16 V64:$Rn), (i64 0))),
+                (i64 0))),
+              (i64 0))),
+            (v4i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v4i16 V64:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v4i16 (vector_insert immAllZerosV,
+            (i32 (vector_extract
+                (v8i16 (bitconvert
+                  (v8f16 (insert_subvector (v8f16 undef),
+                    (v4f16 V64:$Rn), (i64 0))))),
+                (i64 0))),
+              (i64 0))),
+            (v4i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v4f16 V64:$Rn), hsub))),
+              hsub))>;
+
+  def : Pat<(v4i16 (vector_insert immAllZerosV,
+              (i32 (vector_extract
+                (v8i16 (bitconvert
+                  (v8bf16 (insert_subvector (v8bf16 undef),
+                    (v4bf16 V64:$Rn), (i64 0))))),
+                (i64 0))),
+              (i64 0))),
+            (v4i16 (SUBREG_TO_REG
+              (FMOVHr (f16 (EXTRACT_SUBREG (v4bf16 V64:$Rn), hsub))),
+              hsub))>;
+}
+
+// extract from lane 0 and insert into lane 0 of a zero vector
+// is equivalent to clearing upper bits of a register, we can use fmov
+def : Pat<(v4i32 (vector_insert immAllZerosV, (i32 (vector_extract (v4i32 V128:$Rn), (i64 0))), (i64 0))),
+          (v4i32 (SUBREG_TO_REG (FMOVSr (EXTRACT_SUBREG (v4i32 V128:$Rn), ssub)), ssub))>;
+def : Pat<(v4f32 (vector_insert immAllZerosV, (f32 (vector_extract (v4f32 V128:$Rn), (i64 0))), (i64 0))),
+          (v4f32 (SUBREG_TO_REG (FMOVSr (EXTRACT_SUBREG (v4f32 V128:$Rn), ssub)), ssub))>;
 
 // bitcast of an extract
 // f32 bitcast(vector_extract(v4i32 src, 0)) -> EXTRACT_SUBREG(src)
 def : Pat<(f32 (bitconvert (i32 (vector_extract v16i8:$src, (i64 0))))),
-          (EXTRACT_SUBREG V128:$src, bsub)>;
+          (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f32 (bitconvert (i32 (vector_extract v8i16:$src, (i64 0))))),
-          (EXTRACT_SUBREG V128:$src, hsub)>;
+          (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f32 (bitconvert (i32 (vector_extract v4i32:$src, (i64 0))))),
           (EXTRACT_SUBREG V128:$src, ssub)>;
 def : Pat<(f64 (bitconvert (i64 (vector_extract v2i64:$src, (i64 0))))),
@@ -8292,18 +8954,74 @@ defm FMAXV   : SIMDFPAcrossLanes<0b01111, 0, "fmaxv", AArch64fmaxv>;
 defm FMINNMV : SIMDFPAcrossLanes<0b01100, 1, "fminnmv", AArch64fminnmv>;
 defm FMINV   : SIMDFPAcrossLanes<0b01111, 1, "fminv", AArch64fminv>;
 
-def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (sext (v8i8 V64:$op))))), (i64 0))),
-          (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (SADDLVv8i8v V64:$op), hsub)), ssub)>;
-def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (zext (v8i8 V64:$op))))), (i64 0))),
-          (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (UADDLVv8i8v V64:$op), hsub)), ssub)>;
-def : Pat<(v8i16 (AArch64uaddv (v8i16 (sext (v8i8 V64:$op))))),
-          (v8i16 (SUBREG_TO_REG (SADDLVv8i8v V64:$op), hsub))>;
-def : Pat<(v8i16 (AArch64uaddv (v8i16 (zext (v8i8 V64:$op))))),
-          (v8i16 (SUBREG_TO_REG (UADDLVv8i8v V64:$op), hsub))>;
-def : Pat<(v4i32 (AArch64uaddv (v4i32 (sext (v4i16 V64:$op))))),
-          (v4i32 (SUBREG_TO_REG (SADDLVv4i16v V64:$op), ssub))>;
-def : Pat<(v4i32 (AArch64uaddv (v4i32 (zext (v4i16 V64:$op))))),
-          (v4i32 (SUBREG_TO_REG (UADDLVv4i16v V64:$op), ssub))>;
+multiclass SIMDAcrossLanesFPIntrinsic<string baseOpc,
+                                      SDPatternOperator opNode> {
+  // Reductions have the unused lanes set to zero. Inserting the reduction's
+  // result into lane zero of a zero vector is therefore redundant.
+  let Predicates = [HasFullFP16] in {
+    foreach DstTy = [v4f16, v8f16] in {
+      def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
+                        (f16 (opNode (v4f16 V64:$Rn))), (i64 0))),
+                (DstTy (SUBREG_TO_REG
+                  (!cast<Instruction>(baseOpc # "Vv4i16v") V64:$Rn),
+                  hsub))>;
+      def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
+                        (f16 (opNode (v8f16 V128:$Rn))), (i64 0))),
+                (DstTy (SUBREG_TO_REG
+                  (!cast<Instruction>(baseOpc # "Vv8i16v") V128:$Rn),
+                  hsub))>;
+    }
+  }
+  foreach DstTy = [v2f32, v4f32] in {
+    def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
+                      (f32 (opNode (v2f32 V64:$Rn))), (i64 0))),
+              (DstTy (SUBREG_TO_REG
+                (!cast<Instruction>(baseOpc # "Pv2i32p") V64:$Rn),
+                ssub))>;
+    def : Pat<(DstTy (vector_insert (DstTy immAllZerosV),
+                      (f32 (opNode (v4f32 V128:$Rn))), (i64 0))),
+              (DstTy (SUBREG_TO_REG
+                (!cast<Instruction>(baseOpc # "Vv4i32v") V128:$Rn),
+                ssub))>;
+  }
+}
+
+defm : SIMDAcrossLanesFPIntrinsic<"FMAX", AArch64fmaxv>;
+defm : SIMDAcrossLanesFPIntrinsic<"FMIN", AArch64fminv>;
+defm : SIMDAcrossLanesFPIntrinsic<"FMAXNM", AArch64fmaxnmv>;
+defm : SIMDAcrossLanesFPIntrinsic<"FMINNM", AArch64fminnmv>;
+
+multiclass SIMDAcrossLaneLongReductionExt<string Opc, SDPatternOperator ext> {
+  def : Pat<(i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (ext (v8i8 V64:$op))))), (i64 0))),
+            (EXTRACT_SUBREG (v8i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i8v") V64:$op), hsub)), ssub)>;
+
+  def : Pat<(v8i16 (AArch64uaddv (v8i16 (ext (v8i8 V64:$op))))),
+          (v8i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i8v") V64:$op), hsub))>;
+  def : Pat<(v4i32 (AArch64uaddv (v4i32 (ext (v4i16 V64:$op))))),
+          (v4i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v4i16v") V64:$op), ssub))>;
+
+  // ADDLV reduction unused lanes are set to zero. Inserting into a zero vector is redundant
+  def : Pat<(v4i16 (vector_insert (v4i16 immAllZerosV),
+            (i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (ext (v8i8 V64:$Rn))))),
+            (i64 0))), (i64 0))),
+          (v4i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i8v") V64:$Rn), hsub))>;
+  def : Pat<(v8i16 (vector_insert (v8i16 immAllZerosV),
+            (i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (ext (v8i8 V64:$Rn))))),
+            (i64 0))), (i64 0))),
+          (v8i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i8v") V64:$Rn), hsub))>;
+  def : Pat<(v2i32 (vector_insert (v2i32 immAllZerosV),
+            (i32 (vector_extract (v4i32 (AArch64uaddv (v4i32 (ext (v4i16 V64:$Rn))))),
+            (i64 0))), (i64 0))),
+          (v2i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v4i16v") V64:$Rn), ssub))>;
+  def : Pat<(v4i32 (vector_insert (v4i32 immAllZerosV),
+            (i32 (vector_extract (v4i32 (AArch64uaddv (v4i32 (ext (v4i16 V64:$Rn))))),
+            (i64 0))), (i64 0))),
+          (v4i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v4i16v") V64:$Rn), ssub))>;
+}
+
+defm : SIMDAcrossLaneLongReductionExt<"UADDLV", zext>;
+defm : SIMDAcrossLaneLongReductionExt<"UADDLV", anyext>;
+defm : SIMDAcrossLaneLongReductionExt<"SADDLV", sext>;
 
 multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> {
   // Patterns for addv(addlp(x)) ==> addlv
@@ -8317,6 +9035,28 @@ multiclass SIMDAcrossLaneLongPairIntrinsic<string Opc, SDPatternOperator addlp> 
               (!cast<Instruction>(Opc#"v16i8v") V128:$op), hsub), ssub)>;
   def : Pat<(v4i32 (AArch64uaddv (v4i32 (addlp (v8i16 V128:$op))))),
             (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)), (!cast<Instruction>(Opc#"v8i16v") V128:$op), ssub)>;
+
+  // ADDLV reduction's unused lanes are set to zero. Inserting into a zero vector is redundant
+  def : Pat<(v4i16 (vector_insert (v4i16 immAllZerosV),
+              (i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (addlp (v16i8 V128:$Rn))))),
+              (i64 0))), (i64 0))),
+            (v4i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v16i8v") V128:$Rn), hsub))>;
+  def : Pat<(v8i16 (vector_insert (v8i16 immAllZerosV),
+              (i32 (vector_extract (v8i16 (AArch64uaddv (v8i16 (addlp (v16i8 V128:$Rn))))),
+              (i64 0))), (i64 0))),
+            (v8i16 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v16i8v") V128:$Rn), hsub))>;
+  def : Pat<(v2i32 (vector_insert (v2i32 immAllZerosV),
+              (i32 (vector_extract (v4i32 (AArch64uaddv (v4i32 (addlp (v8i16 V128:$Rn))))),
+              (i64 0))), (i64 0))),
+            (v2i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i16v") V128:$Rn), ssub))>;
+  def : Pat<(v4i32 (vector_insert (v4i32 immAllZerosV),
+              (i32 (vector_extract (v4i32 (AArch64uaddv (v4i32 (addlp (v8i16 V128:$Rn))))),
+              (i64 0))), (i64 0))),
+            (v4i32 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v8i16v") V128:$Rn), ssub))>;
+  def : Pat<(v2i64 (concat_vectors
+              (v1i64 (extract_subvector (v2i64 (AArch64uaddv (v2i64 (addlp (v4i32 V128:$Rn))))), (i64 0))),
+              (v1i64 immAllZerosV))),
+            (v2i64 (SUBREG_TO_REG (!cast<Instruction>(Opc#"v4i32v") V128:$Rn), dsub))>;
 
   // Patterns for addp(addlp(x)) ==> addlv
   def : Pat<(v2i32 (AArch64uaddv (v2i32 (addlp (v4i16 V64:$op))))),
@@ -8386,75 +9126,123 @@ multiclass SIMDAcrossLanesIntrinsic<string baseOpc,
 // directly match the latter to the instruction.
 def : Pat<(v8i8 (opNode V64:$Rn)),
           (INSERT_SUBREG (v8i8 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn), bsub)>;
 def : Pat<(v16i8 (opNode V128:$Rn)),
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn), bsub)>;
 def : Pat<(v4i16 (opNode V64:$Rn)),
           (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn), hsub)>;
 def : Pat<(v8i16 (opNode V128:$Rn)),
           (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn), hsub)>;
 def : Pat<(v4i32 (opNode V128:$Rn)),
           (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-           (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn), ssub)>;
+           (!cast<Instruction>(!strconcat(baseOpc, "Vv4i32v")) V128:$Rn), ssub)>;
 
 
 // If none did, fallback to the explicit patterns, consuming the vector_extract.
-def : Pat<(i32 (vector_extract (insert_subvector undef, (v8i8 (opNode V64:$Rn)),
+def : Pat<(i32 (vector_extract (insert_subvector (v16i8 undef), (v8i8 (opNode V64:$Rn)),
             (i64 0)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v8i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn),
             bsub), ssub)>;
 def : Pat<(i32 (vector_extract (v16i8 (opNode V128:$Rn)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn),
             bsub), ssub)>;
-def : Pat<(i32 (vector_extract (insert_subvector undef,
+def : Pat<(i32 (vector_extract (insert_subvector (v8i16 undef),
             (v4i16 (opNode V64:$Rn)), (i64 0)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v4i16 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn),
             hsub), ssub)>;
 def : Pat<(i32 (vector_extract (v8i16 (opNode V128:$Rn)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v8i16 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn),
             hsub), ssub)>;
 def : Pat<(i32 (vector_extract (v4i32 (opNode V128:$Rn)), (i64 0))),
           (EXTRACT_SUBREG (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv4i32v")) V128:$Rn),
             ssub), ssub)>;
 
+// Reductions have the unused lanes set to zero. Inserting the reduction's
+// result into lane zero of a zero vector is therefore redundant.
+foreach DstTy = [v8i8, v16i8] in {
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v16i8 (opNode V128:$Rn)), (i64 0))),
+                      (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn), bsub))>;
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v16i8 (insert_subvector undef,
+                      (v8i8 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn), bsub))>;
 }
+foreach DstTy = [v4i16, v8i16] in {
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v8i16 (opNode V128:$Rn)), (i64 0))),
+                      (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn), hsub))>;
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v8i16 (insert_subvector undef,
+                      (v4i16 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn), hsub))>;
+}
+foreach DstTy = [v2i32, v4i32] in {
+  def : Pat<(DstTy (vector_insert immAllZerosV,
+                      (i32 (vector_extract (v4i32 (opNode V128:$Rn)), (i64 0))),
+                      (i64 0))),
+            (DstTy (SUBREG_TO_REG (!cast<Instruction>(!strconcat(baseOpc, "Vv4i32v")) V128:$Rn), ssub))>;
+}
+
+// Use pairwise equivalent instructions for v2i32 inputs, with a zero vector
+// as second operand to clear the unused result lanes.
+def : Pat<(v2i32 (vector_insert immAllZerosV:$zeros,
+                    (i32 (vector_extract (v4i32 (insert_subvector undef,
+                    (v2i32 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
+          (!cast<Instruction>(baseOpc # "Pv2i32") V64:$Rn, V64:$zeros)>;
+
+def : Pat<(v4i32 (vector_insert immAllZerosV:$zeros,
+                    (i32 (vector_extract (v4i32 (insert_subvector undef,
+                    (v2i32 (opNode V64:$Rn)), (i64 0))), (i64 0))), (i64 0))),
+          (v4i32 (SUBREG_TO_REG (!cast<Instruction>(baseOpc # "Pv2i32") V64:$Rn,
+                    (EXTRACT_SUBREG V128:$zeros, dsub)), dsub))>;
+}
+// Reductions have the unused lanes set to zero. Inserting the reduction's
+// result into lane zero of a zero vector is therefore redundant.
+def : Pat<(v2i64 (concat_vectors (v1i64 (extract_subvector (v2i64 ( AArch64uaddv (v2i64 V128:$Rn))), (i64 0))),
+                                 immAllZerosV)),
+          (v2i64 (SUBREG_TO_REG (ADDPv2i64p V128:$Rn), dsub))>;
+
+
 
 multiclass SIMDAcrossLanesSignedIntrinsic<string baseOpc,
                                           SDPatternOperator opNode>
     : SIMDAcrossLanesIntrinsic<baseOpc, opNode> {
 // If there is a sign extension after this intrinsic, consume it as smov already
 // performed it
-def : Pat<(i32 (sext_inreg (i32 (vector_extract (insert_subvector undef,
+def : Pat<(i32 (sext_inreg (i32 (vector_extract (insert_subvector (v16i8 undef),
             (opNode (v8i8 V64:$Rn)), (i64 0)), (i64 0))), i8)),
           (i32 (SMOVvi8to32
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-              (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
+              (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn), bsub),
             (i64 0)))>;
 def : Pat<(i32 (sext_inreg (i32 (vector_extract
             (opNode (v16i8 V128:$Rn)), (i64 0))), i8)),
           (i32 (SMOVvi8to32
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-             (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
+             (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn), bsub),
             (i64 0)))>;
-def : Pat<(i32 (sext_inreg (i32 (vector_extract (insert_subvector undef,
+def : Pat<(i32 (sext_inreg (i32 (vector_extract (insert_subvector (v8i16 undef),
             (opNode (v4i16 V64:$Rn)), (i64 0)), (i64 0))), i16)),
           (i32 (SMOVvi16to32
            (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn), hsub),
            (i64 0)))>;
 def : Pat<(i32 (sext_inreg (i32 (vector_extract
             (opNode (v8i16 V128:$Rn)), (i64 0))), i16)),
           (i32 (SMOVvi16to32
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-             (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub),
+             (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn), hsub),
             (i64 0)))>;
 }
 
@@ -8463,29 +9251,29 @@ multiclass SIMDAcrossLanesUnsignedIntrinsic<string baseOpc,
     : SIMDAcrossLanesIntrinsic<baseOpc, opNode> {
 // If there is a masking operation keeping only what has been actually
 // generated, consume it.
-def : Pat<(i32 (and (i32 (vector_extract (insert_subvector undef,
+def : Pat<(i32 (and (i32 (vector_extract (insert_subvector (v16i8 undef),
             (opNode (v8i8 V64:$Rn)), (i64 0)), (i64 0))), maski8_or_more)),
       (i32 (EXTRACT_SUBREG
         (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-          (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) V64:$Rn), bsub),
+          (!cast<Instruction>(!strconcat(baseOpc, "Vv8i8v")) V64:$Rn), bsub),
         ssub))>;
 def : Pat<(i32 (and (i32 (vector_extract (opNode (v16i8 V128:$Rn)), (i64 0))),
             maski8_or_more)),
         (i32 (EXTRACT_SUBREG
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v16i8v")) V128:$Rn), bsub),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv16i8v")) V128:$Rn), bsub),
           ssub))>;
-def : Pat<(i32 (and (i32 (vector_extract (insert_subvector undef,
+def : Pat<(i32 (and (i32 (vector_extract (insert_subvector (v8i16 undef),
             (opNode (v4i16 V64:$Rn)), (i64 0)), (i64 0))), maski16_or_more)),
           (i32 (EXTRACT_SUBREG
             (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-              (!cast<Instruction>(!strconcat(baseOpc, "v4i16v")) V64:$Rn), hsub),
+              (!cast<Instruction>(!strconcat(baseOpc, "Vv4i16v")) V64:$Rn), hsub),
             ssub))>;
 def : Pat<(i32 (and (i32 (vector_extract (opNode (v8i16 V128:$Rn)), (i64 0))),
             maski16_or_more)),
         (i32 (EXTRACT_SUBREG
           (INSERT_SUBREG (v16i8 (IMPLICIT_DEF)),
-            (!cast<Instruction>(!strconcat(baseOpc, "v8i16v")) V128:$Rn), hsub),
+            (!cast<Instruction>(!strconcat(baseOpc, "Vv8i16v")) V128:$Rn), hsub),
           ssub))>;
 }
 
@@ -8505,29 +9293,29 @@ def : Pat<(i32 (vecreduce_add (v4i32 V128:$Rn))),
 def : Pat<(i64 (vecreduce_add (v2i64 V128:$Rn))),
           (i64 (ADDPv2i64p V128:$Rn))>;
 
-defm : SIMDAcrossLanesSignedIntrinsic<"ADDV",  AArch64saddv>;
+defm : SIMDAcrossLanesSignedIntrinsic<"ADD",  AArch64saddv>;
 // vaddv_[su]32 is special; -> ADDP Vd.2S,Vn.2S,Vm.2S; return Vd.s[0];Vn==Vm
 def : Pat<(v2i32 (AArch64saddv (v2i32 V64:$Rn))),
           (ADDPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesUnsignedIntrinsic<"ADDV", AArch64uaddv>;
+defm : SIMDAcrossLanesUnsignedIntrinsic<"ADD", AArch64uaddv>;
 // vaddv_[su]32 is special; -> ADDP Vd.2S,Vn.2S,Vm.2S; return Vd.s[0];Vn==Vm
 def : Pat<(v2i32 (AArch64uaddv (v2i32 V64:$Rn))),
           (ADDPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesSignedIntrinsic<"SMAXV", AArch64smaxv>;
+defm : SIMDAcrossLanesSignedIntrinsic<"SMAX", AArch64smaxv>;
 def : Pat<(v2i32 (AArch64smaxv (v2i32 V64:$Rn))),
           (SMAXPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesSignedIntrinsic<"SMINV", AArch64sminv>;
+defm : SIMDAcrossLanesSignedIntrinsic<"SMIN", AArch64sminv>;
 def : Pat<(v2i32 (AArch64sminv (v2i32 V64:$Rn))),
           (SMINPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesUnsignedIntrinsic<"UMAXV", AArch64umaxv>;
+defm : SIMDAcrossLanesUnsignedIntrinsic<"UMAX", AArch64umaxv>;
 def : Pat<(v2i32 (AArch64umaxv (v2i32 V64:$Rn))),
           (UMAXPv2i32 V64:$Rn, V64:$Rn)>;
 
-defm : SIMDAcrossLanesUnsignedIntrinsic<"UMINV", AArch64uminv>;
+defm : SIMDAcrossLanesUnsignedIntrinsic<"UMIN", AArch64uminv>;
 def : Pat<(v2i32 (AArch64uminv (v2i32 V64:$Rn))),
           (UMINPv2i32 V64:$Rn, V64:$Rn)>;
 
@@ -8574,6 +9362,61 @@ def : Pat<(v2i64 (AArch64saddlv (v2i32 V64:$Rn))),
 // The UADDLV v2i32 gets mapped to UADDLP.
 def : Pat<(v2i64 (AArch64uaddlv (v2i32 V64:$Rn))),
           (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLPv2i32_v1i64 V64:$Rn), dsub))>;
+
+// uaddlp from shuffle + zext
+def : Pat<(add (AArch64bici (v8i16 V128:$src), (i32 255), (i32 8)),
+               (AArch64vlshr (v8i16 V128:$src), (i32 8))),
+          (UADDLPv16i8_v8i16 V128:$src)>;
+
+let Predicates = [IsLE] in
+def : Pat<(add (and (v4i32 V128:$src),
+                    (v4i32 (bitconvert (v2i64 (AArch64movi_edit (i32 51)))))),
+               (AArch64vlshr (v4i32 V128:$src), (i32 16))),
+          (UADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (v2i64 (zext (v2i32 (AArch64zip1 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
+                                         (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+               (v2i64 (zext (v2i32 (AArch64zip2 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
+                                         (v2i32 (extract_subvector v4i32:$src, (i64 2)))))))),
+          (UADDLPv4i32_v2i64 V128:$src)>;
+
+// uaddlp from zext + shuffle
+def : Pat<(add (AArch64uzp1 (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 8)))))),
+               (AArch64uzp2 (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (zext (v8i8 (extract_subvector v16i8:$src, (i64 8))))))),
+          (UADDLPv16i8_v8i16 V128:$src)>;
+
+def : Pat<(add (AArch64uzp1 (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 4)))))),
+               (AArch64uzp2 (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (zext (v4i16 (extract_subvector v8i16:$src, (i64 4))))))),
+          (UADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (AArch64zip1 (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 2)))))),
+               (AArch64zip2 (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (zext (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+          (UADDLPv4i32_v2i64 V128:$src)>;
+
+// saddlp from sext + shuffle
+def : Pat<(add (AArch64uzp1 (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 8)))))),
+               (AArch64uzp2 (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 0))))),
+                            (v8i16 (sext (v8i8 (extract_subvector v16i8:$src, (i64 8))))))),
+          (SADDLPv16i8_v8i16 V128:$src)>;
+
+def : Pat<(add (AArch64uzp1 (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 4)))))),
+               (AArch64uzp2 (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 0))))),
+                            (v4i32 (sext (v4i16 (extract_subvector v8i16:$src, (i64 4))))))),
+          (SADDLPv8i16_v4i32 V128:$src)>;
+
+def : Pat<(add (AArch64zip1 (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 2)))))),
+               (AArch64zip2 (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 0))))),
+                            (v2i64 (sext (v2i32 (extract_subvector v4i32:$src, (i64 2))))))),
+          (SADDLPv4i32_v2i64 V128:$src)>;
 
 //------------------------------------------------------------------------------
 // AdvSIMD modified immediate instructions
@@ -8649,6 +9492,8 @@ def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1110, V128,
                    [(set (v2i64 V128:$Rd), (AArch64movi_edit imm0_255:$imm8))]>;
 
 let Predicates = [HasNEON] in {
+def : Pat<(f128 fpimm0), (f128 (MOVIv2d_ns (i32 0)))>;
+
 def : Pat<(v2i64 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v4i32 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v8i16 immAllZerosV), (MOVIv2d_ns (i32 0))>;
@@ -8787,25 +9632,25 @@ def MVNIv4s_msl   : SIMDModifiedImmMoveMSL<1, 1, {1,1,0,?}, V128, "mvni", ".4s",
 }
 
 // SABA patterns for add(x, abs(y)) -> saba(x, y, 0)
-def : Pat<(v8i8 (add V64:$Vn, (abs V64:$Vm))),
+def : Pat<(v8i8 (add_like V64:$Vn, (abs V64:$Vm))),
           (SABAv8i8 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v4i16 (add V64:$Vn, (abs V64:$Vm))),
+def : Pat<(v4i16 (add_like V64:$Vn, (abs V64:$Vm))),
           (SABAv4i16 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v2i32 (add V64:$Vn, (abs V64:$Vm))),
+def : Pat<(v2i32 (add_like V64:$Vn, (abs V64:$Vm))),
           (SABAv2i32 V64:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v16i8 (add V128:$Vn, (abs V128:$Vm))),
+def : Pat<(v16i8 (add_like V128:$Vn, (abs V128:$Vm))),
           (SABAv16i8 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
-def : Pat<(v8i16 (add V128:$Vn, (abs V128:$Vm))),
+def : Pat<(v8i16 (add_like V128:$Vn, (abs V128:$Vm))),
           (SABAv8i16 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
-def : Pat<(v4i32 (add V128:$Vn, (abs V128:$Vm))),
+def : Pat<(v4i32 (add_like V128:$Vn, (abs V128:$Vm))),
           (SABAv4i32 V128:$Vn, V128:$Vm, (MOVIv2d_ns (i32 0)))>;
 
 // SABAL patterns for add(x, zext(abs(y))) -> sabal(x, y, 0)
-def : Pat<(v8i16 (add V128:$Vn, (zext (abs (v8i8 V64:$Vm))))),
+def : Pat<(v8i16 (add_like V128:$Vn, (zext (abs (v8i8 V64:$Vm))))),
           (SABALv8i8_v8i16 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v4i32 (add V128:$Vn, (zext (abs (v4i16 V64:$Vm))))),
+def : Pat<(v4i32 (add_like V128:$Vn, (zext (abs (v4i16 V64:$Vm))))),
           (SABALv4i16_v4i32 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
-def : Pat<(v2i64 (add V128:$Vn, (zext (abs (v2i32 V64:$Vm))))),
+def : Pat<(v2i64 (add_like V128:$Vn, (zext (abs (v2i32 V64:$Vm))))),
           (SABALv2i32_v2i64 V128:$Vn, V64:$Vm, (EXTRACT_SUBREG (MOVIv2d_ns (i32 0)), dsub))>;
 
 
@@ -8918,6 +9763,88 @@ defm : FMLSIndexedAfterNegPatterns<
 defm : FMLSIndexedAfterNegPatterns<
            TriOpFrag<(any_fma node:$MHS, node:$RHS, node:$LHS)> >;
 
+// Vector FNMUL: -(x * y) -> FMLS(-0.0, x, y), by-element for a splat y.
+// AArch64 has no vector FNMUL, so -(x * y) needs an FNEG on top of the FMUL.
+// FMLS folds it in, and the MOVI has no input dependency, so the FNEG leaves
+// the dependency chain.  The consumed FNEG/FMUL has to be single-use, or it
+// stays live and the MOVI is added rather than substituted.
+// Like the scalar FNMUL patterns above this changes the sign of a NaN result
+// (FMLS negates its multiplicand); LangRef leaves that sign non-deterministic.
+// Plain fmul only: the two forms agree only when negation commutes with
+// rounding, which fails for the directed modes constrained FP can run under.
+// Only f32 and f16 are covered; f64 -0.0 is not a MOVI immediate.
+let HasOneUse = 1 in {
+  def fneg_oneuse : PatFrag<(ops node:$src), (fneg node:$src)>;
+  def fmul_oneuse : PatFrag<(ops node:$lhs, node:$rhs),
+                            (fmul node:$lhs, node:$rhs)>;
+}
+
+// -(Rn * Rm) in all its forms.  Only the by-element patterns below look at
+// splats; they take Rm apart for the lane operand, so Rn is bound to the FNEG'd
+// operand -- the one a split FNEG+FMUL materializes anyway.  Both FMUL orders
+// are listed because TableGen's commuted copies sort after these.
+def fnmul_frags : PatFrags<(ops node:$Rn, node:$Rm),
+                           [(fneg (fmul_oneuse node:$Rn, node:$Rm)),
+                            (fmul (fneg_oneuse node:$Rn), node:$Rm),
+                            (fmul node:$Rm, (fneg_oneuse node:$Rn)),
+                            // Lane slot for the FNEG'd operand, when it is the
+                            // only splat.
+                            (fmul node:$Rn, (fneg_oneuse node:$Rm))]>;
+
+let Predicates = [HasNEON, HasFullFP16] in {
+  def : Pat<(v8f16 (fnmul_frags (v8f16 V128:$Rn),
+                                (v8f16 (AArch64duplane16 (v8f16 V128_lo:$Rm),
+                                                         VectorIndexH:$idx)))),
+            (FMLSv8i16_indexed (MOVIv8i16 (i32 128), (i32 8)), V128:$Rn,
+                               V128_lo:$Rm, VectorIndexH:$idx)>;
+  def : Pat<(v8f16 (fnmul_frags (v8f16 V128:$Rn),
+                                (v8f16 (AArch64dup (f16 FPR16Op_lo:$Rm))))),
+            (FMLSv8i16_indexed (MOVIv8i16 (i32 128), (i32 8)), V128:$Rn,
+                               (SUBREG_TO_REG (f16 FPR16Op_lo:$Rm), hsub),
+                               (i64 0))>;
+  def : Pat<(v4f16 (fnmul_frags (v4f16 V64:$Rn),
+                                (v4f16 (AArch64duplane16 (v8f16 V128_lo:$Rm),
+                                                         VectorIndexH:$idx)))),
+            (FMLSv4i16_indexed (MOVIv4i16 (i32 128), (i32 8)), V64:$Rn,
+                               V128_lo:$Rm, VectorIndexH:$idx)>;
+  def : Pat<(v4f16 (fnmul_frags (v4f16 V64:$Rn),
+                                (v4f16 (AArch64dup (f16 FPR16Op_lo:$Rm))))),
+            (FMLSv4i16_indexed (MOVIv4i16 (i32 128), (i32 8)), V64:$Rn,
+                               (SUBREG_TO_REG (f16 FPR16Op_lo:$Rm), hsub),
+                               (i64 0))>;
+
+  def : Pat<(v8f16 (fnmul_frags (v8f16 V128:$Rn), (v8f16 V128:$Rm))),
+            (FMLSv8f16 (MOVIv8i16 (i32 128), (i32 8)), V128:$Rn, V128:$Rm)>;
+  def : Pat<(v4f16 (fnmul_frags (v4f16 V64:$Rn), (v4f16 V64:$Rm))),
+            (FMLSv4f16 (MOVIv4i16 (i32 128), (i32 8)), V64:$Rn, V64:$Rm)>;
+}
+
+let Predicates = [HasNEON] in {
+  def : Pat<(v4f32 (fnmul_frags (v4f32 V128:$Rn),
+                                (v4f32 (AArch64duplane32 (v4f32 V128:$Rm),
+                                                         VectorIndexS:$idx)))),
+            (FMLSv4i32_indexed (MOVIv4i32 (i32 128), (i32 24)), V128:$Rn,
+                               V128:$Rm, VectorIndexS:$idx)>;
+  def : Pat<(v4f32 (fnmul_frags (v4f32 V128:$Rn),
+                                (v4f32 (AArch64dup (f32 FPR32Op:$Rm))))),
+            (FMLSv4i32_indexed (MOVIv4i32 (i32 128), (i32 24)), V128:$Rn,
+                               (SUBREG_TO_REG FPR32Op:$Rm, ssub), (i64 0))>;
+  def : Pat<(v2f32 (fnmul_frags (v2f32 V64:$Rn),
+                                (v2f32 (AArch64duplane32 (v4f32 V128:$Rm),
+                                                         VectorIndexS:$idx)))),
+            (FMLSv2i32_indexed (MOVIv2i32 (i32 128), (i32 24)), V64:$Rn,
+                               V128:$Rm, VectorIndexS:$idx)>;
+  def : Pat<(v2f32 (fnmul_frags (v2f32 V64:$Rn),
+                                (v2f32 (AArch64dup (f32 FPR32Op:$Rm))))),
+            (FMLSv2i32_indexed (MOVIv2i32 (i32 128), (i32 24)), V64:$Rn,
+                               (SUBREG_TO_REG FPR32Op:$Rm, ssub), (i64 0))>;
+
+  def : Pat<(v4f32 (fnmul_frags (v4f32 V128:$Rn), (v4f32 V128:$Rm))),
+            (FMLSv4f32 (MOVIv4i32 (i32 128), (i32 24)), V128:$Rn, V128:$Rm)>;
+  def : Pat<(v2f32 (fnmul_frags (v2f32 V64:$Rn), (v2f32 V64:$Rm))),
+            (FMLSv2f32 (MOVIv2i32 (i32 128), (i32 24)), V64:$Rn, V64:$Rm)>;
+}
+
 defm FMULX : SIMDFPIndexed<1, 0b1001, "fmulx", int_aarch64_neon_fmulx>;
 defm FMUL  : SIMDFPIndexed<0, 0b1001, "fmul", any_fmul>;
 
@@ -8948,7 +9875,7 @@ defm MLS   : SIMDVectorIndexedHSTied<1, 0b0100, "mls", null_frag>;
 
 defm MUL   : SIMDVectorIndexedHS<0, 0b1000, "mul", mul>;
 defm SMLAL : SIMDVectorIndexedLongSDTied<0, 0b0010, "smlal",
-    TriOpFrag<(add node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMLSL : SIMDVectorIndexedLongSDTied<0, 0b0110, "smlsl",
     TriOpFrag<(sub node:$LHS, (AArch64smull node:$MHS, node:$RHS))>>;
 defm SMULL : SIMDVectorIndexedLongSD<0, 0b1010, "smull", AArch64smull>;
@@ -8962,56 +9889,175 @@ defm SQRDMLSH : SIMDIndexedSQRDMLxHSDTied<1, 0b1111, "sqrdmlsh",
                                           AArch64sqrdmlsh, int_aarch64_neon_sqrdmlsh>;
 defm SQDMULL : SIMDIndexedLongSD<0, 0b1011, "sqdmull", int_aarch64_neon_sqdmull>;
 defm UMLAL   : SIMDVectorIndexedLongSDTied<1, 0b0010, "umlal",
-    TriOpFrag<(add node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
+    TriOpFrag<(add_like node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMLSL   : SIMDVectorIndexedLongSDTied<1, 0b0110, "umlsl",
     TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDVectorIndexedLongSD<1, 0b1010, "umull", AArch64umull>;
 
 // A scalar sqdmull with the second operand being a vector lane can be
 // handled directly with the indexed instruction encoding.
-def : Pat<(int_aarch64_neon_sqdmulls_scalar (i32 FPR32:$Rn),
-                                          (vector_extract (v4i32 V128:$Vm),
-                                                           VectorIndexS:$idx)),
+def : Pat<(f64 (AArch64sqdmull FPR32:$Rn,
+                               (f32 (bitconvert (i32 (vector_extract (v4i32 V128:$Vm),
+                                                           VectorIndexS:$idx)))))),
           (SQDMULLv1i64_indexed FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
+
+def : Pat<(i64 (int_aarch64_neon_sqadd (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn,
+                                          (vector_extract (v4i32 V128:$Vm),
+                                                           VectorIndexS:$idx)))),
+          (SQDMLALv1i64_indexed FPR64:$Rd, FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
+
+def : Pat<(i64 (int_aarch64_neon_sqsub (i64 FPR64:$Rd),
+                (int_aarch64_neon_sqdmulls_scalar FPR32:$Rn,
+                                          (vector_extract (v4i32 V128:$Vm),
+                                                           VectorIndexS:$idx)))),
+          (SQDMLSLv1i64_indexed FPR64:$Rd, FPR32:$Rn, V128:$Vm, VectorIndexS:$idx)>;
 
 //----------------------------------------------------------------------------
 // AdvSIMD scalar shift instructions
 //----------------------------------------------------------------------------
-defm FCVTZS : SIMDFPScalarRShift<0, 0b11111, "fcvtzs">;
-defm FCVTZU : SIMDFPScalarRShift<1, 0b11111, "fcvtzu">;
 defm SCVTF  : SIMDFPScalarRShift<0, 0b11100, "scvtf">;
 defm UCVTF  : SIMDFPScalarRShift<1, 0b11100, "ucvtf">;
-// Codegen patterns for the above. We don't put these directly on the
+
+// Transformation for SIMD shift imm to fixed point imm for FPR-to-GPR result.
+def fixedpoint_scalar_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_scalar_xform
+    : GICustomOperandRenderer<"renderFixedPointScalarXForm">,
+      GISDNodeXFormEquiv<fixedpoint_scalar_xform>;
+
+multiclass IntegerToFPScalarPats<SDPatternOperator OpNode, string INST> {
+  def : Pat<(f16 (fdiv (f16 (OpNode (i32 GPR32:$Rn))), fixedpoint_f16_i32:$scale)),
+            (!cast<Instruction>(INST # "SWHri") GPR32:$Rn, fixedpoint_f16_i32:$scale)>;
+  def : Pat<(f32 (fdiv (f32 (OpNode (i32 GPR32:$Rn))), fixedpoint_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "SWSri") GPR32:$Rn, fixedpoint_f32_i32:$scale)>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i32 GPR32:$Rn))), fixedpoint_f64_i32:$scale)),
+            (!cast<Instruction>(INST # "SWDri") GPR32:$Rn, fixedpoint_f64_i32:$scale)>;
+  def : Pat<(f16 (fdiv (f16 (OpNode (i64 GPR64:$Rn))), fixedpoint_f16_i64:$scale)),
+            (!cast<Instruction>(INST # "SXHri") GPR64:$Rn, fixedpoint_f16_i64:$scale)>;
+  def : Pat<(f32 (fdiv (f32 (OpNode (i64 GPR64:$Rn))), fixedpoint_f32_i64:$scale)),
+            (!cast<Instruction>(INST # "SXSri") GPR64:$Rn, fixedpoint_f32_i64:$scale)>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i64 GPR64:$Rn))), fixedpoint_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "SXDri") GPR64:$Rn, fixedpoint_f64_i64:$scale)>;
+
+  // Expect the integer operand to be in FPR register. The AdvSIMD scalar
+  // shifted conversion forms are same-width, so only i32->f32 and i64->f64
+  // can use them for generic integer-to-fp fixed-point conversions.
+  def : Pat<(f32 (fmul (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_recip_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_recip_xform fixedpoint_recip_f32_i32:$scale))>;
+  def : Pat<(f64 (fmul (f64 (OpNode (i64 (bitconvert (f64 FPR64:$Rn))))), fixedpoint_recip_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_recip_xform fixedpoint_recip_f64_i64:$scale))>;
+
+  def : Pat<(f32 (fdiv (f32 (OpNode (i32 (bitconvert (f32 FPR32:$Rn))))), fixedpoint_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn, (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i64 (bitconvert (f64 FPR64:$Rn))))), fixedpoint_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn, (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
+}
+
+defm : IntegerToFPScalarPats<any_sint_to_fp, "SCVTF">;
+defm : IntegerToFPScalarPats<any_uint_to_fp, "UCVTF">;
+
+multiclass FPToFixedScalarPats<SDPatternOperator OpN, string INST > {
+  // Allow integer result to remain in GPR register.
+  def : Pat<(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)),
+          (!cast<Instruction>(INST # "SWSri") FPR32:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
+  def : Pat<(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)),
+          (!cast<Instruction>(INST # "SXDri") FPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
+
+  // Explicit Bitcast results kept in FP/SIMD registers.
+  def : Pat<(f32 (bitconvert(i32 (OpN FPR32:$Rn, vecshiftR32:$imm)))),
+          (!cast<Instruction>(INST # "s") FPR32:$Rn, vecshiftR32:$imm)>;
+  def : Pat<(f64 (bitconvert(i64 (OpN (f64 FPR64:$Rn), vecshiftR64:$imm)))),
+          (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
+          
+  def : Pat<(v1i64 (OpN (v1f64 FPR64:$Rn), vecshiftR64:$imm)),
+          (!cast<Instruction>(INST # "d") FPR64:$Rn, vecshiftR64:$imm)>;
+  def : Pat<(i32 (OpN (f16 FPR16:$Rn), vecshiftR32:$imm)),
+          (i32 (INSERT_SUBREG
+            (i32 (IMPLICIT_DEF)),
+            (!cast<Instruction>(INST # "h") FPR16:$Rn, vecshiftR32:$imm),
+            hsub))>;
+  def : Pat<(i64 (OpN (f16 FPR16:$Rn), vecshiftR64:$imm)),
+            (i64 (INSERT_SUBREG
+              (i64 (IMPLICIT_DEF)),
+              (!cast<Instruction>(INST # "h") FPR16:$Rn, vecshiftR64:$imm),
+              hsub))>;
+}
+defm : FPToFixedScalarPats<int_aarch64_neon_vcvtfp2fxs, "FCVTZS">;
+defm : FPToFixedScalarPats<int_aarch64_neon_vcvtfp2fxu, "FCVTZU">;
+
+// Codegen patterns for SCVTF and UCVTF. We don't put these directly on the
 // instructions because TableGen's type inference can't handle the truth.
 // Having the same base pattern for fp <--> int totally freaks it out.
-def : Pat<(int_aarch64_neon_vcvtfp2fxs FPR32:$Rn, vecshiftR32:$imm),
-          (FCVTZSs FPR32:$Rn, vecshiftR32:$imm)>;
-def : Pat<(int_aarch64_neon_vcvtfp2fxu FPR32:$Rn, vecshiftR32:$imm),
-          (FCVTZUs FPR32:$Rn, vecshiftR32:$imm)>;
-def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxs (f64 FPR64:$Rn), vecshiftR64:$imm)),
-          (FCVTZSd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxu (f64 FPR64:$Rn), vecshiftR64:$imm)),
-          (FCVTZUd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(v1i64 (int_aarch64_neon_vcvtfp2fxs (v1f64 FPR64:$Rn),
-                                            vecshiftR64:$imm)),
-          (FCVTZSd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(v1i64 (int_aarch64_neon_vcvtfp2fxu (v1f64 FPR64:$Rn),
-                                            vecshiftR64:$imm)),
-          (FCVTZUd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR32:$imm),
+def : Pat<(int_aarch64_neon_vcvtfxu2fp (i32 (bitconvert (f32 FPR32:$Rn))), vecshiftR32:$imm),
           (UCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
-def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn), vecshiftR64:$imm)),
+def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp (i64 (bitconvert (f64 FPR64:$Rn))),
+                                            vecshiftR64:$imm)),
           (UCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
 def : Pat<(v1f64 (int_aarch64_neon_vcvtfxs2fp (v1i64 FPR64:$Rn),
                                             vecshiftR64:$imm)),
           (SCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
-def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp (i64 FPR64:$Rn), vecshiftR64:$imm)),
+def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp (i64 (bitconvert (f64 FPR64:$Rn))),
+                                            vecshiftR64:$imm)),
           (SCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
 def : Pat<(v1f64 (int_aarch64_neon_vcvtfxu2fp (v1i64 FPR64:$Rn),
                                             vecshiftR64:$imm)),
           (UCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
+def : Pat<(int_aarch64_neon_vcvtfxs2fp (i32 (bitconvert (f32 FPR32:$Rn))), vecshiftR32:$imm),
+          (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+
+def : Pat<(int_aarch64_neon_vcvtfxu2fp
+            (i32 (vector_extract (v16i8 V128:$Rn), (i64 0))),
+            vecshiftR32:$imm),
+          (UCVTFs (EXTRACT_SUBREG V128:$Rn, ssub), vecshiftR32:$imm)>;
+def : Pat<(int_aarch64_neon_vcvtfxu2fp
+            (i32 (vector_extract (v8i16 V128:$Rn), (i64 0))),
+            vecshiftR32:$imm),
+          (UCVTFs (EXTRACT_SUBREG V128:$Rn, ssub), vecshiftR32:$imm)>;
+
+def : Pat<(f32 (int_aarch64_neon_vcvtfxs2fp GPR32:$Rn, vecshiftR32:$imm)),
+          (SCVTFSWSri GPR32:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
+def : Pat<(f32 (int_aarch64_neon_vcvtfxu2fp GPR32:$Rn, vecshiftR32:$imm)),
+          (UCVTFSWSri GPR32:$Rn, (fixedpoint_scalar_xform vecshiftR32:$imm))>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp GPR64:$Rn, vecshiftR64:$imm)),
+          (SCVTFSXDri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp GPR64:$Rn, vecshiftR64:$imm)),
+          (UCVTFSXDri GPR64:$Rn, (fixedpoint_scalar_xform vecshiftR64:$imm))>;
+
+def : Pat<(int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR32:$imm),
+          (UCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn),
+                                                vecshiftR64:$imm)),
+          (UCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
+def : Pat<(f64 (int_aarch64_neon_vcvtfxs2fp (i64 FPR64:$Rn),
+                                                vecshiftR64:$imm)),
+          (SCVTFd FPR64:$Rn, vecshiftR64:$imm)>;
 def : Pat<(int_aarch64_neon_vcvtfxs2fp FPR32:$Rn, vecshiftR32:$imm),
           (SCVTFs FPR32:$Rn, vecshiftR32:$imm)>;
+
+multiclass GIIntegerToFPScalarPats<SDPatternOperator OpNode, string INST> {
+  def : Pat<(f32 (fmul (f32 (OpNode (i32 FPR32:$Rn))),
+                         fixedpoint_recip_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn,
+              (fixedpoint_recip_xform fixedpoint_recip_f32_i32:$scale))>;
+  def : Pat<(f64 (fmul (f64 (OpNode (i64 FPR64:$Rn))),
+                         fixedpoint_recip_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn,
+              (fixedpoint_recip_xform fixedpoint_recip_f64_i64:$scale))>;
+  def : Pat<(f32 (fdiv (f32 (OpNode (i32 FPR32:$Rn))),
+                         fixedpoint_f32_i32:$scale)),
+            (!cast<Instruction>(INST # "s") FPR32:$Rn,
+              (fixedpoint_xform fixedpoint_f32_i32:$scale))>;
+  def : Pat<(f64 (fdiv (f64 (OpNode (i64 FPR64:$Rn))),
+                         fixedpoint_f64_i64:$scale)),
+            (!cast<Instruction>(INST # "d") FPR64:$Rn,
+              (fixedpoint_xform fixedpoint_f64_i64:$scale))>;
+}
+
+defm : GIIntegerToFPScalarPats<any_sint_to_fp, "SCVTF">;
+defm : GIIntegerToFPScalarPats<any_uint_to_fp, "UCVTF">;
 
 // Patterns for FP16 Intrinsics - requires reg copy to/from as i16s not supported.
 
@@ -9029,26 +10075,6 @@ def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp FPR32:$Rn, vecshiftR16:$imm)),
           (UCVTFh (f16 (EXTRACT_SUBREG FPR32:$Rn, hsub)), vecshiftR16:$imm)>;
 def : Pat<(f16 (int_aarch64_neon_vcvtfxu2fp (i64 FPR64:$Rn), vecshiftR16:$imm)),
           (UCVTFh (f16 (EXTRACT_SUBREG FPR64:$Rn, hsub)), vecshiftR16:$imm)>;
-def : Pat<(i32 (int_aarch64_neon_vcvtfp2fxs (f16 FPR16:$Rn), vecshiftR32:$imm)),
-          (i32 (INSERT_SUBREG
-            (i32 (IMPLICIT_DEF)),
-            (FCVTZSh FPR16:$Rn, vecshiftR32:$imm),
-            hsub))>;
-def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxs (f16 FPR16:$Rn), vecshiftR64:$imm)),
-          (i64 (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)),
-            (FCVTZSh FPR16:$Rn, vecshiftR64:$imm),
-            hsub))>;
-def : Pat<(i32 (int_aarch64_neon_vcvtfp2fxu (f16 FPR16:$Rn), vecshiftR32:$imm)),
-          (i32 (INSERT_SUBREG
-            (i32 (IMPLICIT_DEF)),
-            (FCVTZUh FPR16:$Rn, vecshiftR32:$imm),
-            hsub))>;
-def : Pat<(i64 (int_aarch64_neon_vcvtfp2fxu (f16 FPR16:$Rn), vecshiftR64:$imm)),
-          (i64 (INSERT_SUBREG
-            (i64 (IMPLICIT_DEF)),
-            (FCVTZUh FPR16:$Rn, vecshiftR64:$imm),
-            hsub))>;
 def : Pat<(i32 (int_aarch64_neon_facge (f16 FPR16:$Rn), (f16 FPR16:$Rm))),
           (i32 (INSERT_SUBREG
             (i32 (IMPLICIT_DEF)),
@@ -9079,7 +10105,7 @@ defm SRSRA    : SIMDScalarRShiftDTied<   0, 0b00110, "srsra",
                    (AArch64srshri node:$MHS, node:$RHS))>>;
 defm SSHR     : SIMDScalarRShiftD<   0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA     : SIMDScalarRShiftDTied<   0, 0b00010, "ssra",
-    TriOpFrag<(add_and_or_is_add node:$LHS,
+    TriOpFrag<(add_like node:$LHS,
                    (AArch64vashr node:$MHS, node:$RHS))>>;
 defm UQRSHRN  : SIMDScalarRShiftBHS< 1, 0b10011, "uqrshrn",
                                      AArch64uqrshrn, int_aarch64_neon_uqrshrn>;
@@ -9092,7 +10118,7 @@ defm URSRA    : SIMDScalarRShiftDTied<   1, 0b00110, "ursra",
                    (AArch64urshri node:$MHS, node:$RHS))>>;
 defm USHR     : SIMDScalarRShiftD<   1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA     : SIMDScalarRShiftDTied<   1, 0b00010, "usra",
-    TriOpFrag<(add_and_or_is_add node:$LHS,
+    TriOpFrag<(add_like node:$LHS,
                    (AArch64vlshr node:$MHS, node:$RHS))>>;
 
 //----------------------------------------------------------------------------
@@ -9111,14 +10137,6 @@ class fixedpoint_vec_f32<ValueType FloatVT>
     : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<32>">;
 class fixedpoint_vec_f16<ValueType FloatVT>
     : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<16>">;
-// This thing just allows us to change the type of the node produced. The imm
-// value we want is already in V from SelectCVTFixedPointVec.
-def fixedpoint_vec_xform : SDNodeXForm<timm, [{
-  (void)N;
-  return V;
-}]>;
-def gi_fixedpoint_vec_xform : GICustomOperandRenderer<"renderFixedPointXForm">,
-  GISDNodeXFormEquiv<fixedpoint_vec_xform>;
 
 def fixedpoint_v2f64 : fixedpoint_vec_f64<v2f64>;
 def fixedpoint_v2f32 : fixedpoint_vec_f32<v2f32>;
@@ -9159,32 +10177,24 @@ multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOpe
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
   def : Pat<(IVT (fp_to_sint_sat (FVT (fadd RC:$Vn, RC:$Vn)), ScalarVT)),
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
-  def : Pat<(IVT (fp_to_sint_sat_gi (FVT (fadd RC:$Vn, RC:$Vn)))),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
 
   // fptoui(fadd(x, x)) -> FCVTZU_shift x, 1
   def : Pat<(IVT (fp_to_uint (FVT (fadd RC:$Vn, RC:$Vn)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
   def : Pat<(IVT (fp_to_uint_sat (FVT (fadd RC:$Vn, RC:$Vn)), ScalarVT)),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
-  def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fadd RC:$Vn, RC:$Vn)))),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
 
   // fptosi(fmul(x, power2)) -> FCVTZS_shift x, log2(power2)
   def : Pat<(IVT (fp_to_sint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_sint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
-  def : Pat<(IVT (fp_to_sint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
-            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
 
   // fptoui(fmul(x, power2)) -> FCVTZU_shift x, log2(power2)
   def : Pat<(IVT (fp_to_uint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
   def : Pat<(IVT (fp_to_uint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
-  def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
-            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_xform fixedpoint:$scale))>;
 }
 
 let Predicates = [HasNEON] in {
@@ -9195,6 +10205,53 @@ defm : FCVTPat<v4f32, v4i32, i32, V128, fixedpoint_v4f32>;
 let Predicates = [HasNEON, HasFullFP16] in {
 defm : FCVTPat<v4f16, v4i16, i16, V64, fixedpoint_v4f16>;
 defm : FCVTPat<v8f16, v8i16, i16, V128, fixedpoint_v8f16>;
+}
+
+// fmul(sitofp(x), 1/2^N) -> scvtf(x, N), fmul(uitofp(x), 1/2^N) -> ucvtf(x, N)
+class fixedpoint_recip_vec_f64<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<64>">;
+class fixedpoint_recip_vec_f32<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<32>">;
+class fixedpoint_recip_vec_f16<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<16>">;
+def fixedpoint_recip_vec_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+def gi_fixedpoint_recip_vec_xform
+    : GICustomOperandRenderer<"renderFixedPointRecipXForm">,
+      GISDNodeXFormEquiv<fixedpoint_recip_vec_xform>;
+
+def fixedpoint_recip_v2f64 : fixedpoint_recip_vec_f64<v2f64>;
+def fixedpoint_recip_v2f32 : fixedpoint_recip_vec_f32<v2f32>;
+def fixedpoint_recip_v4f32 : fixedpoint_recip_vec_f32<v4f32>;
+def fixedpoint_recip_v4f16 : fixedpoint_recip_vec_f16<v4f16>;
+def fixedpoint_recip_v8f16 : fixedpoint_recip_vec_f16<v8f16>;
+
+def gi_fixedpoint_recip_v2f64
+    : GIComplexOperandMatcher<v2s64, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v2f64>;
+def gi_fixedpoint_recip_v2f32
+    : GIComplexOperandMatcher<v2s32, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v2f32>;
+def gi_fixedpoint_recip_v4f32
+    : GIComplexOperandMatcher<v4s32, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v4f32>;
+def gi_fixedpoint_recip_v4f16
+    : GIComplexOperandMatcher<v4s16, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v4f16>;
+def gi_fixedpoint_recip_v8f16
+    : GIComplexOperandMatcher<v8s16, "selectCVTFixedPosRecipOperandVec">,
+      GIComplexPatternEquiv<fixedpoint_recip_v8f16>;
+
+multiclass CVTFRecipPat<ValueType FVT, ValueType IVT,
+                        RegisterOperand RC, ComplexPattern fixedpoint> {
+  def : Pat<(FVT (fmul (sint_to_fp (IVT RC:$Rn)), fixedpoint:$scale)),
+            (!cast<Instruction>("SCVTF"#IVT#"_shift") RC:$Rn,
+                (fixedpoint_recip_vec_xform fixedpoint:$scale))>;
+  def : Pat<(FVT (fmul (uint_to_fp (IVT RC:$Rn)), fixedpoint:$scale)),
+            (!cast<Instruction>("UCVTF"#IVT#"_shift") RC:$Rn,
+                (fixedpoint_recip_vec_xform fixedpoint:$scale))>;
 }
 
 // X << 1 ==> X + X
@@ -9233,7 +10290,7 @@ defm SSHLL   : SIMDVectorLShiftLongBHSD<0, 0b10100, "sshll",
 
 defm SSHR    : SIMDVectorRShiftBHSD<0, 0b00000, "sshr", AArch64vashr>;
 defm SSRA    : SIMDVectorRShiftBHSDTied<0, 0b00010, "ssra",
-                TriOpFrag<(add_and_or_is_add node:$LHS, (AArch64vashr node:$MHS, node:$RHS))>>;
+                TriOpFrag<(add_like node:$LHS, (AArch64vashr_oneuse node:$MHS, node:$RHS))>>;
 defm UCVTF   : SIMDVectorRShiftToFP<1, 0b11100, "ucvtf",
                         int_aarch64_neon_vcvtfxu2fp>;
 defm UQRSHRN : SIMDVectorRShiftNarrowBHS<1, 0b10011, "uqrshrn",
@@ -9249,11 +10306,21 @@ defm USHLL   : SIMDVectorLShiftLongBHSD<1, 0b10100, "ushll",
                 BinOpFrag<(AArch64vshl (zext node:$LHS), node:$RHS)>>;
 defm USHR    : SIMDVectorRShiftBHSD<1, 0b00000, "ushr", AArch64vlshr>;
 defm USRA    : SIMDVectorRShiftBHSDTied<1, 0b00010, "usra",
-                TriOpFrag<(add_and_or_is_add node:$LHS, (AArch64vlshr node:$MHS, node:$RHS))> >;
+                TriOpFrag<(add_like node:$LHS, (AArch64vlshr_oneuse node:$MHS, node:$RHS))> >;
+
+let Predicates = [HasNEON] in {
+defm : CVTFRecipPat<v2f64, v2i64, V128, fixedpoint_recip_v2f64>;
+defm : CVTFRecipPat<v2f32, v2i32, V64, fixedpoint_recip_v2f32>;
+defm : CVTFRecipPat<v4f32, v4i32, V128, fixedpoint_recip_v4f32>;
+}
+let Predicates = [HasNEON, HasFullFP16] in {
+defm : CVTFRecipPat<v4f16, v4i16, V64, fixedpoint_recip_v4f16>;
+defm : CVTFRecipPat<v8f16, v8i16, V128, fixedpoint_recip_v8f16>;
+}
 
 def VImm0080:         PatLeaf<(AArch64movi_shift (i32 128), (i32 0))>;
 def VImm00008000:     PatLeaf<(AArch64movi_shift (i32 128), (i32 8))>;
-def VImm0000000080000000: PatLeaf<(AArch64NvCast (v2f64 (fneg (AArch64NvCast (v4i32 (AArch64movi_shift (i32 128), (i32 24)))))))>;
+def VImm0000000080000000: PatLeaf<(bitconvert (v2f64 (fneg (bitconvert (v4i32 (AArch64movi_shift (i32 128), (i32 24)))))))>;
 
 // RADDHN patterns for when RSHRN shifts by half the size of the vector element
 def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))),
@@ -9261,6 +10328,7 @@ def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))
 def : Pat<(v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), VImm00008000), (i32 16)))),
           (RADDHNv4i32_v4i16 V128:$Vn, (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
+let Predicates = [IsLE] in
 def : Pat<(v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))),
           (RADDHNv2i64_v2i32 V128:$Vn, (v2i64 (MOVIv2d_ns (i32 0))))>;
 def : Pat<(v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))),
@@ -9284,6 +10352,7 @@ def : Pat<(v8i16 (concat_vectors
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
+let Predicates = [IsLE] in
 def : Pat<(v4i32 (concat_vectors
                  (v2i32 V64:$Vd),
                  (v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))))),
@@ -9335,19 +10404,42 @@ def : Pat<(v4i32 (concat_vectors (v2i32 V64:$Rd),
           (SHRNv4i32_shift (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub),
                            V128:$Rn, vecshiftR32Narrow:$imm)>;
 
-def : Pat<(shl (v8i16 (zext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
-          (USHLLv8i8_shift V64:$Rm, (i32 imm32_0_7:$size))>;
-def : Pat<(shl (v4i32 (zext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
-          (USHLLv4i16_shift V64:$Rm, (i32 imm32_0_15:$size))>;
-def : Pat<(shl (v2i64 (zext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
-          (USHLLv2i32_shift V64:$Rm, (trunc_imm imm0_31:$size))>;
+multiclass WidenShiftImmPats<string inst, SDPatternOperator ext> {
+  def : Pat<(shl (v8i16 (ext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (!cast<Instruction>(inst#"v8i8_shift") V64:$Rm, (i32 imm32_0_7:$size))>;
+  def : Pat<(shl (v4i32 (ext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (!cast<Instruction>(inst#"v4i16_shift") V64:$Rm, (i32 imm32_0_15:$size))>;
+  def : Pat<(shl (v2i64 (ext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (!cast<Instruction>(inst#"v2i32_shift") V64:$Rm, (trunc_imm imm0_31:$size))>;
 
-def : Pat<(shl (v8i16 (sext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
-          (SSHLLv8i8_shift V64:$Rm, (i32 imm32_0_7:$size))>;
-def : Pat<(shl (v4i32 (sext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
-          (SSHLLv4i16_shift V64:$Rm, (i32 imm32_0_15:$size))>;
-def : Pat<(shl (v2i64 (sext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
-          (SSHLLv2i32_shift V64:$Rm, (trunc_imm imm0_31:$size))>;
+  def : Pat<(shl (v8i16 (ext (extract_high_v16i8 (v16i8 V128:$Rn)))), (v8i16 (AArch64dup (i32 imm32_0_7:$size)))),
+          (!cast<Instruction>(inst#"v16i8_shift") V128:$Rn, (i32 imm32_0_7:$size))>;
+  def : Pat<(shl (v4i32 (ext (extract_high_v8i16 (v8i16 V128:$Rn)))), (v4i32 (AArch64dup (i32 imm32_0_15:$size)))),
+          (!cast<Instruction>(inst#"v8i16_shift") V128:$Rn, (i32 imm32_0_15:$size))>;
+  def : Pat<(shl (v2i64 (ext (extract_high_v4i32 (v4i32 V128:$Rn)))), (v2i64 (AArch64dup (i64 imm0_31:$size)))),
+          (!cast<Instruction>(inst#"v4i32_shift") V128:$Rn, (trunc_imm imm0_31:$size))>;
+}
+defm : WidenShiftImmPats<"SSHLL", sext>;
+defm : WidenShiftImmPats<"USHLL", zext>;
+defm : WidenShiftImmPats<"USHLL", anyext>;
+
+multiclass WidenShiftFullWidthPats<SDPatternOperator ext> {
+  def : Pat<(shl (v8i16 (ext (v8i8 V64:$Rm))), (v8i16 (AArch64dup (i32 8)))),
+          (SHLLv8i8 V64:$Rm)>;
+  def : Pat<(shl (v4i32 (ext (v4i16 V64:$Rm))), (v4i32 (AArch64dup (i32 16)))),
+          (SHLLv4i16 V64:$Rm)>;
+  def : Pat<(shl (v2i64 (ext (v2i32 V64:$Rm))), (v2i64 (AArch64dup (i64 32)))),
+          (SHLLv2i32 V64:$Rm)>;
+  def : Pat<(shl (v8i16 (ext (extract_high_v16i8 (v16i8 V128:$Rn)))), (v8i16 (AArch64dup (i32 8)))),
+          (SHLLv16i8 V128:$Rn)>;
+  def : Pat<(shl (v4i32 (ext (extract_high_v8i16 (v8i16 V128:$Rn)))), (v4i32 (AArch64dup (i32 16)))),
+          (SHLLv8i16 V128:$Rn)>;
+  def : Pat<(shl (v2i64 (ext (extract_high_v4i32 (v4i32 V128:$Rn)))), (v2i64 (AArch64dup (i64 32)))),
+          (SHLLv4i32 V128:$Rn)>;
+}
+defm : WidenShiftFullWidthPats<zext>;
+defm : WidenShiftFullWidthPats<sext>;
+defm : WidenShiftFullWidthPats<anyext>;
 
 // Vector sign and zero extensions are implemented with SSHLL and USSHLL.
 // Anyexts are implemented as zexts.
@@ -9653,7 +10745,7 @@ class St1PostPat<ValueType ty, Instruction INST, int off>
     : Pat<(post_store ty:$Vt, GPR64sp:$Rn, (i64 off)),
           (INST ty:$Vt, GPR64sp:$Rn, XZR)>;
 
-let Predicates = [IsBE] in {
+let Predicates = [IsBEOrDisallowMisalignedMemAccesses] in {
   def : St1PostPat<v16i8, ST1Onev16b_POST, 16>;
   def : St1PostPat<v8i16, ST1Onev8h_POST, 16>;
   def : St1PostPat<v4i32, ST1Onev4s_POST, 16>;
@@ -9804,14 +10896,15 @@ def : Ld1Lane64IdxOpPat<extloadi8, VectorIndexH, v4i16, i32, LD1i8, VectorIndexH
 // scalar_to_vector + insert_subvector instead of insert_vector_elt.
 let Predicates = [HasNEON] in {
   class Ld1Lane128FirstElm<ValueType ResultTy, ValueType VecTy,
-                          SDPatternOperator ExtLoad, Instruction LD1>
-    : Pat<(ResultTy (vec_ins_or_scal_vec (i32 (ExtLoad GPR64sp:$Rn)))),
+                          SDPatternOperator ExtLoad, SDPatternOperator VecInsNode, 
+                          Instruction LD1>
+    : Pat<(ResultTy (VecInsNode (i32 (ExtLoad GPR64sp:$Rn)))),
             (ResultTy (EXTRACT_SUBREG
               (LD1 (VecTy (IMPLICIT_DEF)), 0, GPR64sp:$Rn), dsub))>;
 
-  def : Ld1Lane128FirstElm<v2i32, v8i16, extloadi16, LD1i16>;
-  def : Ld1Lane128FirstElm<v2i32, v16i8, extloadi8, LD1i8>;
-  def : Ld1Lane128FirstElm<v4i16, v16i8, extloadi8, LD1i8>;
+  def : Ld1Lane128FirstElm<v2i32, v8i16, extloadi16, vec_ins_or_scal_vec_v2f32, LD1i16>;
+  def : Ld1Lane128FirstElm<v2i32, v16i8, extloadi8, vec_ins_or_scal_vec_v2f32, LD1i8>;
+  def : Ld1Lane128FirstElm<v4i16, v16i8, extloadi8, vec_ins_or_scal_vec, LD1i8>;
 }
 class Ld1Lane64Pat<SDPatternOperator scalar_load, Operand VecIndex,
                    ValueType VTy, ValueType STy, Instruction LD1>
@@ -9927,6 +11020,29 @@ defm : St1LanePost128Pat<post_store, VectorIndexD, v2f64, f64, ST1i64_POST, 8>;
 defm : St1LanePost128Pat<post_store, VectorIndexH, v8f16, f16, ST1i16_POST, 2>;
 defm : St1LanePost128Pat<post_store, VectorIndexH, v8bf16, bf16, ST1i16_POST, 2>;
 
+let AddedComplexity = 19 in
+class St1Lane128SubvecPat<ValueType VTy, ComplexPattern extract_high>
+  : Pat<(store (extract_high (VTy V128:$Vt)), GPR64sp:$Rn),
+        (ST1i64 V128:$Vt, 1, GPR64sp:$Rn)>;
+
+let Predicates = [IsLE] in {
+def : St1Lane128SubvecPat<v16i8, extract_high_v16i8>;
+def : St1Lane128SubvecPat<v8i16, extract_high_v8i16>;
+def : St1Lane128SubvecPat<v4i32, extract_high_v4i32>;
+def : St1Lane128SubvecPat<v8f16, extract_high_v8f16>;
+def : St1Lane128SubvecPat<v8bf16, extract_high_v8bf16>;
+def : St1Lane128SubvecPat<v4f32, extract_high_v4f32>;
+}
+def : St1Lane128SubvecPat<v2i64, extract_high_v2i64>;
+def : St1Lane128SubvecPat<v2f64, extract_high_v2f64>;
+
+// Truncating post-inc stores from lane 0 of v4i32/v2i64.
+defm : St1LanePost128Pat<post_truncsti8, VectorIndex0, v4i32, i32, ST1i8_POST, 1>;
+defm : St1LanePost128Pat<post_truncsti16, VectorIndex0, v4i32, i32, ST1i16_POST, 2>;
+defm : St1LanePost128Pat<post_truncsti8, VectorIndex0, v2i64, i64, ST1i8_POST, 1>;
+defm : St1LanePost128Pat<post_truncsti16, VectorIndex0, v2i64, i64, ST1i16_POST, 2>;
+defm : St1LanePost128Pat<post_truncsti32, VectorIndex0, v2i64, i64, ST1i32_POST, 4>;
+
 let mayStore = 1, hasSideEffects = 0 in {
 defm ST2 : SIMDStSingleB<1, 0b000,       "st2", VecListTwob,   GPR64pi2>;
 defm ST2 : SIMDStSingleH<1, 0b010, 0,    "st2", VecListTwoh,   GPR64pi4>;
@@ -10005,7 +11121,7 @@ def SHA256SU0rr : SHATiedInstVV<0b0010, "sha256su0",int_aarch64_crypto_sha256su0
 // FIXME: Like for X86, these should go in their own separate .td file.
 
 // For an anyext, we don't care what the high bits are, so we can perform an
-// INSERT_SUBREF into an IMPLICIT_DEF.
+// INSERT_SUBREG into an IMPLICIT_DEF.
 def : Pat<(i64 (anyext GPR32:$src)),
           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$src, sub_32)>;
 
@@ -10050,6 +11166,21 @@ def : Pat<(shl (i64 (zext GPR32:$Rn)), (i64 imm0_63:$imm)),
                    (i64 (i64shift_a        imm0_63:$imm)),
                    (i64 (i64shift_sext_i32 imm0_63:$imm)))>;
 
+def : Pat<(i64 (sext (shl GPR32:$Rn, (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a imm0_31:$imm)),
+                   (i64 (i32shift_b imm0_31:$imm)))>;
+
+def : Pat<(i64 (sext (shl (sext_inreg GPR32:$Rn, i8), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a imm0_31:$imm)),
+                   (i64 (i32shift_sext_i8 imm0_31:$imm)))>;
+
+def : Pat<(i64 (sext (shl (sext_inreg GPR32:$Rn, i16), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 (i64shift_a imm0_31:$imm)),
+                   (i64 (i32shift_sext_i16 imm0_31:$imm)))>;
+
 // sra patterns have an AddedComplexity of 10, so make sure we have a higher
 // AddedComplexity for the following patterns since we want to match sext + sra
 // patterns before we attempt to match a single sra node.
@@ -10071,6 +11202,18 @@ def : Pat<(sra (i64 (sext GPR32:$Rn)), (i64 imm0_31:$imm)),
           (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
                    (i64 imm0_31:$imm), 31)>;
 } // AddedComplexity = 20
+
+def : Pat<(i64 (sext (sra GPR32:$Rn, (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 imm0_31:$imm), 31)>;
+
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i8), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 imm0_31:$imm), 7)>;
+
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i16), (i64 imm0_31:$imm)))),
+          (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
+                   (i64 imm0_31:$imm), 15)>;
 
 // To truncate, we can simply extract from a subregister.
 def : Pat<(i32 (trunc GPR64sp:$src)),
@@ -10135,6 +11278,27 @@ def : Pat<(v2i32 (AArch64sqdmulh (v2i32 V64:$Rn), (v2i32 V64:$Rm))),
 def : Pat<(v8i16 (AArch64sqdmulh (v8i16 V128:$Rn), (v8i16 V128:$Rm))),
           (SQDMULHv8i16 V128:$Rn, V128:$Rm)>;
 def : Pat<(v4i32 (AArch64sqdmulh (v4i32 V128:$Rn), (v4i32 V128:$Rm))),
+          (SQDMULHv4i32 V128:$Rn, V128:$Rm)>;
+
+def AArch64sqdmulhPat : PatFrag<(ops node:$Rn, node:$Rm, node:$offset),
+                                (truncssat_s (AArch64vashr (AArch64smull node:$Rn, node:$Rm), node:$offset))>;
+def : Pat<(v4i16 (AArch64sqdmulhPat (v4i16 V64:$Rn), (v4i16 V64:$Rm), (i32 15))),
+          (SQDMULHv4i16 V64:$Rn, V64:$Rm)>;
+def : Pat<(v2i32 (AArch64sqdmulhPat (v2i32 V64:$Rn), (v2i32 V64:$Rm), (i32 31))),
+          (SQDMULHv2i32 V64:$Rn, V64:$Rm)>;
+def : Pat<(v8i16 (concat_vectors (v4i16 (AArch64sqdmulhPat (v4i16 (extract_subvector V128:$Rn, (i64 0))),
+                                                           (v4i16 (extract_subvector V128:$Rm, (i64 0))),
+                                                           (i32 15))),
+                                 (v4i16 (AArch64sqdmulhPat (v4i16 (extract_subvector V128:$Rn, (i64 4))),
+                                                           (v4i16 (extract_subvector V128:$Rm, (i64 4))),
+                                                           (i32 15))))),
+          (SQDMULHv8i16 V128:$Rn, V128:$Rm)>;
+def : Pat<(v4i32 (concat_vectors (v2i32 (AArch64sqdmulhPat (v2i32 (extract_subvector V128:$Rn, (i64 0))),
+                                                           (v2i32 (extract_subvector V128:$Rm, (i64 0))),
+                                                           (i32 31))),
+                                 (v2i32 (AArch64sqdmulhPat (v2i32 (extract_subvector V128:$Rn, (i64 2))),
+                                                           (v2i32 (extract_subvector V128:$Rm, (i64 2))),
+                                                           (i32 31))))),
           (SQDMULHv4i32 V128:$Rn, V128:$Rm)>;
 
 // Conversions within AdvSIMD types in the same register size are free.
@@ -10780,14 +11944,22 @@ def : Pat<(v1i64 (extract_subvector V128:$Rn, (i64 0))),
 def : Pat<(v1f64 (extract_subvector V128:$Rn, (i64 0))),
            (EXTRACT_SUBREG V128:$Rn, dsub)>;
 
-def : Pat<(v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
-def : Pat<(v4i16 (extract_subvector (v8i16 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
-def : Pat<(v2i32 (extract_subvector (v4i32 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
+def : Pat<(v8i8 (extract_subvector (v16i8 FPR128:$Rn), (i64 8))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v4i16 (extract_subvector (v8i16 FPR128:$Rn), (i64 4))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v2i32 (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
+          (DUPi64 FPR128:$Rn, 1)>;
 def : Pat<(v1i64 (extract_subvector (v2i64 FPR128:$Rn), (i64 1))),
-          (EXTRACT_SUBREG (DUPv2i64lane FPR128:$Rn, 1), dsub)>;
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v4bf16 (extract_subvector (v8bf16 FPR128:$Rn), (i64 4))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 4))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v2f32 (extract_subvector (v4f32 FPR128:$Rn), (i64 2))),
+          (DUPi64 FPR128:$Rn, 1)>;
+def : Pat<(v1f64 (extract_subvector (v2f64 FPR128:$Rn), (i64 1))),
+          (DUPi64 FPR128:$Rn, 1)>;
 
 // A 64-bit subvector insert to the first 128-bit vector position
 // is a subregister copy that needs no instruction.
@@ -10815,9 +11987,9 @@ defm : InsertSubvectorUndef<i64>;
 
 // Use pair-wise add instructions when summing up the lanes for v2f64, v2i64
 // or v2f32.
-def : Pat<(i64 (add (vector_extract (v2i64 FPR128:$Rn), (i64 0)),
-                    (vector_extract (v2i64 FPR128:$Rn), (i64 1)))),
-           (i64 (ADDPv2i64p (v2i64 FPR128:$Rn)))>;
+def : Pat<(i64 (add_like (vector_extract (v2i64 FPR128:$Rn), (i64 0)),
+                         (vector_extract (v2i64 FPR128:$Rn), (i64 1)))),
+          (i64 (ADDPv2i64p (v2i64 FPR128:$Rn)))>;
 def : Pat<(f64 (any_fadd (vector_extract (v2f64 FPR128:$Rn), (i64 0)),
                          (vector_extract (v2f64 FPR128:$Rn), (i64 1)))),
            (f64 (FADDPv2i64p (v2f64 FPR128:$Rn)))>;
@@ -10850,42 +12022,103 @@ def : Pat<(AArch64faddp (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 0))),
                         (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 4)))),
           (v4f16 (EXTRACT_SUBREG (FADDPv8f16 $Rn, $Rn), dsub))>;
 
-// add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
-def : Pat<(v2i64 (add (AArch64zip1 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)),
-                      (AArch64zip2 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)))),
-          (v2i64 (ADDPv2i64 $Rn, $Rm))>;
-def : Pat<(v4i32 (add (AArch64uzp1 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)),
-                      (AArch64uzp2 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)))),
-          (v4i32 (ADDPv4i32 $Rn, $Rm))>;
-def : Pat<(v8i16 (add (AArch64uzp1 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)),
-                      (AArch64uzp2 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)))),
-          (v8i16 (ADDPv8i16 $Rn, $Rm))>;
-def : Pat<(v16i8 (add (AArch64uzp1 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)),
-                      (AArch64uzp2 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)))),
-          (v16i8 (ADDPv16i8 $Rn, $Rm))>;
+multiclass PairwiseUZPBinOp<SDPatternOperator Op, ValueType VT,
+                            RegisterClass RC, Instruction Inst> {
+  def : Pat<(VT (Op (AArch64uzp1 (VT RC:$Rn), (VT RC:$Rm)),
+                   (AArch64uzp2 (VT RC:$Rn), (VT RC:$Rm)))),
+            (VT (Inst $Rn, $Rm))>;
+}
 
-def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
-                      (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
+multiclass PairwiseZIPBinOp<SDPatternOperator Op, ValueType VT,
+                            RegisterClass RC, Instruction Inst> {
+  def : Pat<(VT (Op (AArch64zip1 (VT RC:$Rn), (VT RC:$Rm)),
+                   (AArch64zip2 (VT RC:$Rn), (VT RC:$Rm)))),
+            (VT (Inst $Rn, $Rm))>;
+}
+
+// add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
+defm : PairwiseZIPBinOp<add_like, v2i64, FPR128, ADDPv2i64>;
+defm : PairwiseZIPBinOp<add_like, v2i32, FPR64,  ADDPv2i32>;
+defm : PairwiseUZPBinOp<add_like, v4i32, FPR128, ADDPv4i32>;
+defm : PairwiseUZPBinOp<add_like, v4i16, FPR64,  ADDPv4i16>;
+defm : PairwiseUZPBinOp<add_like, v8i16, FPR128, ADDPv8i16>;
+defm : PairwiseUZPBinOp<add_like, v8i8,  FPR64,  ADDPv8i8>;
+defm : PairwiseUZPBinOp<add_like, v16i8, FPR128, ADDPv16i8>;
+
+def : Pat<(v2i32 (add_like (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                        (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
+                           (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                        (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
           (EXTRACT_SUBREG (ADDPv4i32 $Rn, $Rn), dsub)>;
-def : Pat<(v4i16 (add (trunc (v4i32 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
+def : Pat<(v4i16 (add_like (trunc (v4i32 (bitconvert FPR128:$Rn))),
+                           (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv8i16 $Rn, $Rn), dsub)>;
-def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
+def : Pat<(v8i8  (add_like (trunc (v8i16 (bitconvert FPR128:$Rn))),
+                           (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
 
-def : Pat<(v2f64 (fadd (AArch64zip1 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)),
-                       (AArch64zip2 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)))),
-          (v2f64 (FADDPv2f64 $Rn, $Rm))>;
-def : Pat<(v4f32 (fadd (AArch64uzp1 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)),
-                       (AArch64uzp2 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)))),
-          (v4f32 (FADDPv4f32 $Rn, $Rm))>;
-let Predicates = [HasFullFP16] in
-def : Pat<(v8f16 (fadd (AArch64uzp1 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)),
-                       (AArch64uzp2 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)))),
-          (v8f16 (FADDPv8f16 $Rn, $Rm))>;
+multiclass PairwiseXtnUzp2BinOpWide<SDPatternOperator Op, ValueType VT,
+                                    ValueType HalfVT, ValueType WideEltVT,
+                                    Instruction Inst> {
+  def : Pat<(VT (Op (VT (concat_vectors
+                          (HalfVT (trunc (WideEltVT (bitconvert (VT FPR128:$Rn))))),
+                          (HalfVT undef))),
+                    (VT (AArch64uzp2 (VT FPR128:$Rn), (VT undef))))),
+            (Inst $Rn, $Rn)>;
+}
+
+defm : PairwiseXtnUzp2BinOpWide<add_like, v16i8, v8i8,  v8i16, ADDPv16i8>;
+defm : PairwiseXtnUzp2BinOpWide<add_like, v8i16, v4i16, v4i32, ADDPv8i16>;
+defm : PairwiseXtnUzp2BinOpWide<add_like, v4i32, v2i32, v2i64, ADDPv4i32>;
+
+defm : PairwiseZIPBinOp<fadd, v2f64, FPR128, FADDPv2f64>;
+defm : PairwiseZIPBinOp<fadd, v2f32, FPR64,  FADDPv2f32>;
+defm : PairwiseUZPBinOp<fadd, v4f32, FPR128, FADDPv4f32>;
+let Predicates = [HasFullFP16] in {
+  defm : PairwiseUZPBinOp<fadd, v4f16, FPR64,  FADDPv4f16>;
+  defm : PairwiseUZPBinOp<fadd, v8f16, FPR128, FADDPv8f16>;
+}
+
+defm : PairwiseZIPBinOp<umax, v2i32, FPR64,  UMAXPv2i32>;
+defm : PairwiseUZPBinOp<umax, v4i32, FPR128, UMAXPv4i32>;
+defm : PairwiseUZPBinOp<umax, v4i16, FPR64,  UMAXPv4i16>;
+defm : PairwiseUZPBinOp<umax, v8i16, FPR128, UMAXPv8i16>;
+defm : PairwiseUZPBinOp<umax, v8i8,  FPR64,  UMAXPv8i8>;
+defm : PairwiseUZPBinOp<umax, v16i8, FPR128, UMAXPv16i8>;
+
+defm : PairwiseZIPBinOp<umin, v2i32, FPR64,  UMINPv2i32>;
+defm : PairwiseUZPBinOp<umin, v4i32, FPR128, UMINPv4i32>;
+defm : PairwiseUZPBinOp<umin, v4i16, FPR64,  UMINPv4i16>;
+defm : PairwiseUZPBinOp<umin, v8i16, FPR128, UMINPv8i16>;
+defm : PairwiseUZPBinOp<umin, v8i8,  FPR64,  UMINPv8i8>;
+defm : PairwiseUZPBinOp<umin, v16i8, FPR128, UMINPv16i8>;
+
+defm : PairwiseZIPBinOp<smax, v2i32, FPR64,  SMAXPv2i32>;
+defm : PairwiseUZPBinOp<smax, v4i32, FPR128, SMAXPv4i32>;
+defm : PairwiseUZPBinOp<smax, v4i16, FPR64,  SMAXPv4i16>;
+defm : PairwiseUZPBinOp<smax, v8i16, FPR128, SMAXPv8i16>;
+defm : PairwiseUZPBinOp<smax, v8i8,  FPR64,  SMAXPv8i8>;
+defm : PairwiseUZPBinOp<smax, v16i8, FPR128, SMAXPv16i8>;
+
+defm : PairwiseZIPBinOp<smin, v2i32, FPR64,  SMINPv2i32>;
+defm : PairwiseUZPBinOp<smin, v4i32, FPR128, SMINPv4i32>;
+defm : PairwiseUZPBinOp<smin, v4i16, FPR64,  SMINPv4i16>;
+defm : PairwiseUZPBinOp<smin, v8i16, FPR128, SMINPv8i16>;
+defm : PairwiseUZPBinOp<smin, v8i8,  FPR64,  SMINPv8i8>;
+defm : PairwiseUZPBinOp<smin, v16i8, FPR128, SMINPv16i8>;
+
+
+defm : PairwiseZIPBinOp<any_fmaximum, v2f64, FPR128, FMAXPv2f64>;
+defm : PairwiseZIPBinOp<any_fmaximum, v2f32, FPR64,  FMAXPv2f32>;
+defm : PairwiseUZPBinOp<any_fmaximum, v4f32, FPR128, FMAXPv4f32>;
+defm : PairwiseUZPBinOp<any_fmaximum, v4f16, FPR64,  FMAXPv4f16>;
+defm : PairwiseUZPBinOp<any_fmaximum, v8f16, FPR128, FMAXPv8f16>;
+
+defm : PairwiseZIPBinOp<any_fminimum, v2f64, FPR128, FMINPv2f64>;
+defm : PairwiseZIPBinOp<any_fminimum, v2f32, FPR64,  FMINPv2f32>;
+defm : PairwiseUZPBinOp<any_fminimum, v4f32, FPR128, FMINPv4f32>;
+defm : PairwiseUZPBinOp<any_fminimum, v4f16, FPR64,  FMINPv4f16>;
+defm : PairwiseUZPBinOp<any_fminimum, v8f16, FPR128, FMINPv8f16>;
 
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
@@ -10903,8 +12136,8 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 //
 // Currently we only support NT stores lowering for little-endian targets.
 //
-// Coordinated with STNP constraints in `AArch64TargetLowering::LowerNTStore`
-// and `AArch64TTIImpl::isLegalNTStore`.
+// Coordinated with STNP constraints in `LowerNTStore`
+// and `isLegalNTStore` from `AArch64ISelLowering.cpp`.
 //
 // Currently, STNP lowering can only either keep or increase code size, thus
 // we predicate it to not apply when optimizing for code size.
@@ -11131,14 +12364,12 @@ foreach i = 0-7 in {
 }
 
 let Predicates = [HasLS64] in {
-  let mayLoad = 1 in
-  def LD64B: LoadStore64B<0b101, "ld64b", (ins GPR64sp:$Rn),
-                                          (outs GPR64x8:$Rt)>;
-  let mayStore = 1 in
-  def ST64B: LoadStore64B<0b001, "st64b", (ins GPR64x8:$Rt, GPR64sp:$Rn),
-                                          (outs)>;
-  def ST64BV:   Store64BV<0b011, "st64bv">;
-  def ST64BV0:  Store64BV<0b010, "st64bv0">;
+  defm LD64B: LoadStore64B<0b00, 0b101, "ld64b", 1, 0, (ins GPR64sp:$Rn),
+                                           (outs GPR64x8:$Rt)>;
+  defm ST64B: LoadStore64B<0b00, 0b001, "st64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn),
+                                           (outs)>;
+  def ST64BV:   Store64BV<0b00, 0b011, "st64bv">;
+  def ST64BV0:  Store64BV<0b00, 0b010, "st64bv0">;
 
   class ST64BPattern<Intrinsic intrinsic, Instruction instruction>
     : Pat<(intrinsic GPR64sp:$addr, GPR64:$x0, GPR64:$x1, GPR64:$x2, GPR64:$x3, GPR64:$x4, GPR64:$x5, GPR64:$x6, GPR64:$x7),
@@ -11147,6 +12378,13 @@ let Predicates = [HasLS64] in {
   def : ST64BPattern<int_aarch64_st64b, ST64B>;
   def : ST64BPattern<int_aarch64_st64bv, ST64BV>;
   def : ST64BPattern<int_aarch64_st64bv0, ST64BV0>;
+}
+
+let Predicates = [HasLS64, HasLSC64B] in {
+  defm LDA64B:  LoadStore64B<0b10, 0b101, "lda64b", 1, 0, (ins GPR64sp:$Rn), (outs GPR64x8:$Rt)>;
+  defm STL64B:  LoadStore64B<0b01, 0b001, "stl64b", 0, 1, (ins GPR64x8:$Rt, GPR64sp:$Rn), (outs)>;
+  def STL64BV:  Store64BV<0b01, 0b011, "stl64bv">;
+  def STL64BV0: Store64BV<0b01, 0b010, "stl64bv0">;
 }
 
 let Predicates = [HasMOPS] in {
@@ -11265,7 +12503,7 @@ defm UMIN : ComparisonOp<1, 1, "umin", umin>, Requires<[HasCSSC]>;
 def RPRFM:
     I<(outs), (ins rprfop:$Rt, GPR64:$Rm, GPR64sp:$Rn),
       "rprfm", "\t$Rt, $Rm, [$Rn]", "", []>,
-    Sched<[]> {
+    Sched<[WriteLD]> {
   bits<6> Rt;
   bits<5> Rn;
   bits<5> Rm;
@@ -11323,8 +12561,9 @@ let Predicates = [HasRCPC3] in {
   def LDIAPPW:     BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
   def LDIAPPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
 
-  def : Pat<(AArch64ldiapp GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
-  def : Pat<(AArch64stilp GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
+  def : Pat<(AArch64ldp_acq GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
+  def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
+            (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
 
   // Aliases for when offset=0
   def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPW GPR32: $Rt, GPR32: $Rt2, GPR64sp:$Rn)>;
@@ -11361,39 +12600,37 @@ let Predicates = [HasRCPC3, HasNEON] in {
 //===----------------------------------------------------------------------===//
 // 128-bit System Instructions (FEAT_SYSINSTR128)
 //===----------------------------------------------------------------------===//
-let Predicates = [HasD128] in {
-  def SYSPxt  : SystemPXtI<0, "sysp">;
+def SYSPxt  : SystemPXtI<0, "sysp">;
 
-  def SYSPxt_XZR
-    : BaseSystemI<0, (outs),
-        (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, SyspXzrPairOperand:$xzr_pair),
-        "sysp", "\t$op1, $Cn, $Cm, $op2, $xzr_pair">,
-      Sched<[WriteSys]>
-  {
-    // Had to use a custom decoder because tablegen interprets this as having 4 fields (why?)
-    // and therefore autogenerates a decoder that builds an MC representation that has 4 fields
-    // (decodeToMCInst), but when printing we expect the MC representation to have 5 fields (one
-    // extra for the XZR) because AArch64InstPrinter::printInstruction in AArch64GenAsmWriter.inc
-    // is based off of the asm template (maybe) and therefore wants to print 5 operands.
-    // I could add a bits<5> xzr_pair. But without a way to constrain it to 0b11111 here it would
-    // overlap with the main SYSP instruction.
-    let DecoderMethod = "DecodeSyspXzrInstruction";
-    bits<3> op1;
-    bits<4> Cn;
-    bits<4> Cm;
-    bits<3> op2;
-    let Inst{22}    = 0b1; // override BaseSystemI
-    let Inst{20-19} = 0b01;
-    let Inst{18-16} = op1;
-    let Inst{15-12} = Cn;
-    let Inst{11-8}  = Cm;
-    let Inst{7-5}   = op2;
-    let Inst{4-0}   = 0b11111;
-  }
-
-  def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
-                  (SYSPxt_XZR imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
+def SYSPxt_XZR
+  : BaseSystemI<0, (outs),
+      (ins imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, SyspXzrPairOperand:$xzr_pair),
+      "sysp", "\t$op1, $Cn, $Cm, $op2, $xzr_pair">,
+    Sched<[WriteSys]>
+{
+  // Had to use a custom decoder because tablegen interprets this as having 4 fields (why?)
+  // and therefore autogenerates a decoder that builds an MC representation that has 4 fields
+  // (decodeToMCInst), but when printing we expect the MC representation to have 5 fields (one
+  // extra for the XZR) because AArch64InstPrinter::printInstruction in AArch64GenAsmWriter.inc
+  // is based off of the asm template (maybe) and therefore wants to print 5 operands.
+  // I could add a bits<5> xzr_pair. But without a way to constrain it to 0b11111 here it would
+  // overlap with the main SYSP instruction.
+  let DecoderMethod = "DecodeSyspXzrInstruction";
+  bits<3> op1;
+  bits<4> Cn;
+  bits<4> Cm;
+  bits<3> op2;
+  let Inst{22}    = 0b1; // override BaseSystemI
+  let Inst{20-19} = 0b01;
+  let Inst{18-16} = op1;
+  let Inst{15-12} = Cn;
+  let Inst{11-8}  = Cm;
+  let Inst{7-5}   = op2;
+  let Inst{4-0}   = 0b11111;
 }
+
+def : InstAlias<"sysp $op1, $Cn, $Cm, $op2",
+                (SYSPxt_XZR imm0_7:$op1, sys_cr_op:$Cn, sys_cr_op:$Cm, imm0_7:$op2, XZR)>;
 
 //---
 // 128-bit System Registers (FEAT_SYSREG128)
@@ -11412,22 +12649,20 @@ let Predicates = [HasD128] in {
 //
 // ...where t is even (X0, X2, etc).
 
-let Predicates = [HasD128] in {
-  def MRRS : RtSystemI128<1,
-    (outs MrrsMssrPairClassOperand:$Rt), (ins mrs_sysreg_op:$systemreg),
-    "mrrs", "\t$Rt, $systemreg">
-  {
-    bits<16> systemreg;
-    let Inst{20-5} = systemreg;
-  }
+def MRRS : RtSystemI128<1,
+  (outs MrrsMssrPairClassOperand:$Rt), (ins mrs_sysreg_op:$systemreg),
+  "mrrs", "\t$Rt, $systemreg">
+{
+  bits<16> systemreg;
+  let Inst{20-5} = systemreg;
+}
 
-  def MSRR : RtSystemI128<0,
-    (outs),  (ins msr_sysreg_op:$systemreg, MrrsMssrPairClassOperand:$Rt),
-    "msrr", "\t$systemreg, $Rt">
-  {
-    bits<16> systemreg;
-    let Inst{20-5} = systemreg;
-  }
+def MSRR : RtSystemI128<0,
+  (outs),  (ins msr_sysreg_op:$systemreg, MrrsMssrPairClassOperand:$Rt),
+  "msrr", "\t$systemreg, $Rt">
+{
+  bits<16> systemreg;
+  let Inst{20-5} = systemreg;
 }
 
 //===----------------------------===//
@@ -11518,97 +12753,6 @@ let Predicates = [HasCPA] in {
   def : Pat<(ptradd GPR64:$Ra, (mul GPR64:$Rn, (ineg GPR64:$Rm))),
             (MSUBPT GPR64:$Rn, GPR64:$Rm, GPR64:$Ra)>;
 }
-
-def round_v4fp32_to_v4bf16 :
-  OutPatFrag<(ops node:$Rn),
-             // NaN? Round : Quiet(NaN)
-             (BSPv16i8 (FCMEQv4f32 $Rn, $Rn),
-                       (ADDv4i32
-                         (ADDv4i32 $Rn,
-                           // Extract the LSB of the fp32 *truncated* to bf16.
-                           (ANDv16i8 (USHRv4i32_shift V128:$Rn, (i32 16)),
-                                     (MOVIv4i32 (i32 1), (i32 0)))),
-                         // Bias which will help us break ties correctly.
-                         (MOVIv4s_msl (i32 127), (i32 264))),
-                       // Set the quiet bit in the NaN.
-                       (ORRv4i32 $Rn, (i32 64), (i32 16)))>;
-
-multiclass PromoteUnaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst> {
-  let Predicates = [HasNoFullFP16] in
-  def : Pat<(InOp (v8f16 V128:$Rn)),
-            (v8f16 (FCVTNv8i16
-              (INSERT_SUBREG (IMPLICIT_DEF),
-                             (v4f16 (FCVTNv4i16
-                               (v4f32 (OutInst
-                                 (v4f32 (FCVTLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))))))),
-               dsub),
-              (v4f32 (OutInst (v4f32 (FCVTLv8i16 V128:$Rn))))))>;
-
-  let Predicates = [HasBF16] in
-  def : Pat<(InOp (v8bf16 V128:$Rn)),
-            (v8bf16 (BFCVTN2
-              (INSERT_SUBREG (IMPLICIT_DEF),
-                (v4bf16 (BFCVTN
-                  (v4f32 (OutInst
-                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))))))),
-                dsub),
-              (v4f32 (OutInst (v4f32 (SHLLv8i16 V128:$Rn))))))>;
-
-  let Predicates = [HasNoBF16] in
-  def : Pat<(InOp (v8bf16 V128:$Rn)),
-            (UZP2v8i16
-              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub))))))),
-              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv8i16 V128:$Rn))))))>;
-}
-defm : PromoteUnaryv8f16Tov4f32<any_fceil,  	FRINTPv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_ffloor, 	FRINTMv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_fnearbyint, FRINTIv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_fround, 	FRINTAv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_froundeven, FRINTNv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_frint,  	FRINTXv4f32>;
-defm : PromoteUnaryv8f16Tov4f32<any_ftrunc, 	FRINTZv4f32>;
-
-multiclass PromoteBinaryv8f16Tov4f32<SDPatternOperator InOp, Instruction OutInst> {
-  let Predicates = [HasNoFullFP16] in
-  def : Pat<(InOp (v8f16 V128:$Rn), (v8f16 V128:$Rm)),
-            (v8f16 (FCVTNv8i16
-              (INSERT_SUBREG (IMPLICIT_DEF),
-                             (v4f16 (FCVTNv4i16
-                               (v4f32 (OutInst
-                                 (v4f32 (FCVTLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
-                                 (v4f32 (FCVTLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub)))))))),
-               dsub),
-              (v4f32 (OutInst (v4f32 (FCVTLv8i16 V128:$Rn)),
-                              (v4f32 (FCVTLv8i16 V128:$Rm))))))>;
-
-  let Predicates = [HasBF16] in
-  def : Pat<(InOp (v8bf16 V128:$Rn), (v8bf16 V128:$Rm)),
-            (v8bf16 (BFCVTN2
-              (INSERT_SUBREG (IMPLICIT_DEF),
-                (v4bf16 (BFCVTN
-                  (v4f32 (OutInst
-                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
-                    (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub)))))))),
-                dsub),
-              (v4f32 (OutInst (v4f32 (SHLLv8i16 V128:$Rn)),
-                              (v4f32 (SHLLv8i16 V128:$Rm))))))>;
-
-  let Predicates = [HasNoBF16] in
-  def : Pat<(InOp (v8bf16 V128:$Rn), (v8bf16 V128:$Rm)),
-            (UZP2v8i16
-              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rn, dsub)))),
-                  (v4f32 (SHLLv4i16 (v4i16 (EXTRACT_SUBREG V128:$Rm, dsub))))))),
-              (round_v4fp32_to_v4bf16 (v4f32 (OutInst
-                  (v4f32 (SHLLv8i16 V128:$Rn)),
-                  (v4f32 (SHLLv8i16 V128:$Rm))))))>;
-}
-defm : PromoteBinaryv8f16Tov4f32<any_fadd, FADDv4f32>;
-defm : PromoteBinaryv8f16Tov4f32<any_fdiv, FDIVv4f32>;
-defm : PromoteBinaryv8f16Tov4f32<any_fmul, FMULv4f32>;
-defm : PromoteBinaryv8f16Tov4f32<any_fsub, FSUBv4f32>;
 
 //===----------------------------------------------------------------------===//
 // Compare and Branch (FEAT_CMPBR)
@@ -11771,27 +12915,18 @@ let Predicates = [HasLSFE] in {
 }
 
 let Predicates = [HasF16F32DOT] in {
-  defm FDOT :SIMDThreeSameVectorFDot<"fdot">;
+  defm FDOT :SIMDThreeSameVectorFDot<"fdot", partial_reduce_fmla>;
   defm FDOTlane: SIMDThreeSameVectorFDOTIndex<"fdot">;
 }
 
 let Predicates = [HasF16MM] in
-  defm FMMLA : SIMDThreeSameVectorFMLA<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFMLA<"fmmla", int_aarch64_neon_fmmla>;
 
 let Predicates = [HasF16F32MM] in
-  defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla">;
+  defm FMMLA : SIMDThreeSameVectorFMLAWiden<"fmmla", int_aarch64_neon_fmmla>;
 
 let Uses = [FPMR, FPCR] in
   defm FMMLA : SIMDThreeSameVectorFP8MatrixMul<"fmmla", int_aarch64_neon_fmmla>;
-
-//===----------------------------------------------------------------------===//
-// Contention Management Hints (FEAT_CMH)
-//===----------------------------------------------------------------------===//
-
-let Predicates = [HasCMH] in {
-  defm SHUH  : SHUH<"shuh">;       // Shared Update Hint instruction
-  def STCPH  : STCPHInst<"stcph">; // Store Concurrent Priority Hint instruction
-}
 
 //===----------------------------------------------------------------------===//
 // Permission Overlays Extension 2 (FEAT_S1POE2)
@@ -11811,6 +12946,53 @@ let Predicates = [HasS1POE2] in {
 let Predicates = [HasTEV] in {
   defm TENTER : TENTER<"tenter">;
   defm TEXIT : TEXIT<"texit">;
+}
+
+//===-----------------------------------------------------===//
+// Conditional Fault instructions (FEAT_CFLT)
+//===-----------------------------------------------------===//
+let Predicates = [HasCFLT] in {
+  def FLTcc : BaseCondFLT;
+
+  defm CFLTEQ : CFLTReg<0b110, "cflteq">;
+  defm CFLTEQ : CFLTImm<0b100, "cflteq", simm9>;
+
+  defm CFLTNE : CFLTReg<0b111, "cfltne">;
+  defm CFLTNE : CFLTImm<0b101, "cfltne", simm9>;
+
+  defm CFLTGT : CFLTReg<0b000, "cfltgt">;
+  defm CFLTGT : CFLTImm<0b000, "cfltgt", simm9>;
+
+  defm CFLTGE : CFLTReg<0b001, "cfltge">;
+  defm CFLTLT : CFLTImm<0b001, "cfltlt", simm9>;
+
+  defm CFLTHI : CFLTReg<0b010, "cflthi">;
+  defm CFLTHI : CFLTImm<0b010, "cflthi", uimm9>;
+
+  defm CFLTHS : CFLTReg<0b011, "cflths">;
+  defm CFLTLO : CFLTImm<0b011, "cfltlo", uimm9>;
+
+  defm : CFLTImmAlias<"cfltge", "CFLTGT", simm9p1>;
+  defm : CFLTImmAlias<"cflths", "CFLTHI", uimm9p1>;
+  defm : CFLTImmAlias<"cfltle", "CFLTLT", simm9m1>;
+  defm : CFLTImmAlias<"cfltls", "CFLTLO", uimm9m1>;
+
+  defm : CFLTRegAlias<"cfltle", "CFLTGE">;
+  defm : CFLTRegAlias<"cfltlo", "CFLTHI">;
+  defm : CFLTRegAlias<"cfltls", "CFLTHS">;
+  defm : CFLTRegAlias<"cfltlt", "CFLTGT">;
+
+  def : InstAlias<"cfltnz\t$reason, $Rt",
+                  (CFLTNEWi imm0_3:$reason, GPR32:$Rt, 0), 0>;
+  def : InstAlias<"cfltnz\t$reason, $Rt",
+                  (CFLTNEXi imm0_3:$reason, GPR64:$Rt, 0), 0>;
+  def : InstAlias<"cfltz\t$reason, $Rt",
+                  (CFLTEQWi imm0_3:$reason, GPR32:$Rt, 0), 0>;
+  def : InstAlias<"cfltz\t$reason, $Rt",
+                  (CFLTEQXi imm0_3:$reason, GPR64:$Rt, 0), 0>;
+
+  defm TFLTZ  : TFLT<0, "tfltz">;
+  defm TFLTNZ : TFLT<1, "tfltnz">;
 }
 
 include "AArch64InstrAtomics.td"

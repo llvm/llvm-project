@@ -8,10 +8,15 @@
 
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/EmitCModelRunner.h"
 #include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
+#include "llvm/IR/DiagnosticHandler.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/DiagnosticPrinter.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -64,6 +69,9 @@ public:
       return nullptr;
     }
   }
+  virtual int arg_size(int Index) {
+    return (Index == 0 || Index == 1) ? sizeof(int64_t) : 0;
+  }
 };
 
 class AdditionAOTModel final : public MockAOTModelBase {
@@ -114,8 +122,25 @@ public:
       return Selector;
     return getModel()->arg_data(Index);
   }
+  int arg_size(int Index) {
+    if (Index == 2)
+      return sizeof(Selector);
+    return getModel()->arg_size(Index);
+  }
   void *result_data(int RIndex) { return getModel()->result_data(RIndex); }
   void Run() { getModel()->Run(); }
+};
+
+class MockEmitCModel final {
+  int64_t A = 0;
+  int64_t B = 0;
+
+public:
+  std::map<std::string, void *> reflectionMap;
+
+  MockEmitCModel() : reflectionMap{{"a", &A}, {"b", &B}} {}
+
+  int64_t operator()() { return A - B; }
 };
 
 static EmbeddedModelRunnerOptions makeOptions() {
@@ -192,10 +217,53 @@ TEST(ReleaseModeRunner, ExtraFeaturesOutOfOrder) {
   EXPECT_EQ(*Evaluator->getTensor<int64_t>(2), -3);
 }
 
+namespace {
+struct CountingDiagnosticHandler : public DiagnosticHandler {
+  unsigned NumErrors = 0;
+  bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    if (DI.getSeverity() == DS_Error)
+      ++NumErrors;
+    return true;
+  }
+};
+
+struct AbortOnErrorDiagnosticHandler : public DiagnosticHandler {
+  bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    DiagnosticPrinterRawOStream DP(errs());
+    errs() << LLVMContext::getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
+    DI.print(DP);
+    errs() << '\n';
+    if (DI.getSeverity() == DS_Error)
+      std::abort();
+    return true;
+  }
+};
+} // namespace
+
+// A spec wider than what the model was compiled for must not be given the model
+// buffer. One error is reported for the whole runner, not one per tensor.
+TEST(ReleaseModeRunner, ShapeMismatch) {
+  LLVMContext Ctx;
+  auto Handler = std::make_unique<CountingDiagnosticHandler>();
+  auto *HandlerPtr = Handler.get();
+  Ctx.setDiagnosticHandler(std::move(Handler));
+  std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {4}),
+                                 TensorSpec::createSpec<int64_t>("b", {4})};
+  ReleaseModeModelRunner<AdditionAOTModel> Evaluator(Ctx, Inputs, "",
+                                                     makeOptions());
+  EXPECT_FALSE(Evaluator.isValid());
+  EXPECT_EQ(HandlerPtr->NumErrors, 1u);
+  // The scratch buffers are sized after the requested specs.
+  for (int64_t I = 0; I < 4; ++I)
+    Evaluator.getTensor<int64_t>(0)[I] = I;
+  EXPECT_EQ(Evaluator.getTensor<int64_t>(0)[3], 3);
+}
+
 // We expect an error to be reported early if the user tried to specify a model
 // selector, but the model in fact doesn't support that.
 TEST(ReleaseModelRunner, ModelSelectorNoInputFeaturePresent) {
   LLVMContext Ctx;
+  Ctx.setDiagnosticHandler(std::make_unique<AbortOnErrorDiagnosticHandler>());
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
   EXPECT_DEATH((void)std::make_unique<ReleaseModeModelRunner<AdditionAOTModel>>(
@@ -206,6 +274,7 @@ TEST(ReleaseModelRunner, ModelSelectorNoInputFeaturePresent) {
 
 TEST(ReleaseModelRunner, ModelSelectorNoSelectorGiven) {
   LLVMContext Ctx;
+  Ctx.setDiagnosticHandler(std::make_unique<AbortOnErrorDiagnosticHandler>());
   std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
                                  TensorSpec::createSpec<int64_t>("b", {1})};
   EXPECT_DEATH(
@@ -240,6 +309,50 @@ TEST(ReleaseModelRunner, ModelSelector) {
 
   // Asking for a model that's not supported isn't handled by our infra and we
   // expect the model implementation to fail at a point.
+}
+
+TEST(EmitCModelRunner, NormalUse) {
+  LLVMContext Ctx;
+  std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
+                                 TensorSpec::createSpec<int64_t>("b", {1})};
+  auto Evaluator =
+      std::make_unique<EmitCModelRunner<MockEmitCModel>>(Ctx, Inputs);
+  EXPECT_TRUE(EmitCModelRunner<MockEmitCModel>::classof(Evaluator.get()));
+  EXPECT_EQ(Evaluator->getKind(), MLModelRunner::Kind::Release);
+  *Evaluator->getTensor<int64_t>(0) = 10;
+  *Evaluator->getTensor<int64_t>(1) = 3;
+  EXPECT_EQ(Evaluator->evaluate<int64_t>(), 7);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(0), 10);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(1), 3);
+}
+
+TEST(EmitCModelRunner, ExtraFeatures) {
+  LLVMContext Ctx;
+  std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
+                                 TensorSpec::createSpec<int64_t>("b", {1}),
+                                 TensorSpec::createSpec<int64_t>("c", {1})};
+  auto Evaluator =
+      std::make_unique<EmitCModelRunner<MockEmitCModel>>(Ctx, Inputs);
+  *Evaluator->getTensor<int64_t>(0) = 10;
+  *Evaluator->getTensor<int64_t>(1) = 3;
+  *Evaluator->getTensor<int64_t>(2) = -5;
+  EXPECT_EQ(Evaluator->evaluate<int64_t>(), 7);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(0), 10);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(1), 3);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(2), -5);
+}
+
+TEST(EmitCModelRunner, ExtraFeaturesOutOfOrder) {
+  LLVMContext Ctx;
+  std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("b", {1}),
+                                 TensorSpec::createSpec<int64_t>("a", {1})};
+  auto Evaluator =
+      std::make_unique<EmitCModelRunner<MockEmitCModel>>(Ctx, Inputs);
+  *Evaluator->getTensor<int64_t>(0) = 3;        // b
+  *Evaluator->getTensor<int64_t>(1) = 10;       // a
+  EXPECT_EQ(Evaluator->evaluate<int64_t>(), 7); // a - b = 10 - 3 = 7
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(0), 3);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(1), 10);
 }
 
 #if defined(LLVM_ON_UNIX)

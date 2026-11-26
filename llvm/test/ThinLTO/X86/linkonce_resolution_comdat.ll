@@ -4,7 +4,7 @@
 ; as well since it is in the same comdat of g.
 ; RUN: opt -module-summary %s -o %t1.bc
 ; RUN: opt -module-summary %p/Inputs/linkonce_resolution_comdat.ll -o %t2.bc
-; RUN: llvm-lto -thinlto-action=run -disable-thinlto-funcattrs=0 %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -exported-symbol=h -thinlto-save-temps=%t3.
+; RUN: llvm-lto -thinlto-action=run -thinlto-funcattrs %t1.bc %t2.bc -exported-symbol=f -exported-symbol=g -exported-symbol=h -thinlto-save-temps=%t3.
 
 ; RUN: llvm-dis %t3.0.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT1
 ; RUN: llvm-dis %t3.1.3.imported.bc -o - | FileCheck %s --check-prefix=IMPORT2
@@ -12,14 +12,14 @@
 ; from second module is preempted and converted to available_externally and
 ; removed from comdat.
 ; IMPORT1: @g_private = private global i32 43, comdat($g)
-; IMPORT1: define weak_odr i32 @f(ptr %0) unnamed_addr [[ATTR:#[0-9]+]] comdat {
-; IMPORT1: define weak_odr i32 @g() unnamed_addr [[ATTR]] comdat {
-; IMPORT1: define internal void @g_internal() unnamed_addr comdat($g) {
+; IMPORT1: define weak_odr i32 @f(ptr %0) unnamed_addr [[ATTR:#[0-9]+]] comdat
+; IMPORT1: define weak_odr i32 @g() unnamed_addr [[ATTR]] comdat
+; IMPORT1: define internal void @g_internal() unnamed_addr comdat($g)
 
-; IMPORT2: @g_private = available_externally dso_local global i32 41{{$}}
-; IMPORT2: define available_externally i32 @f(ptr %0) unnamed_addr [[ATTR:#[0-9]+]] {
-; IMPORT2: define available_externally i32 @g() unnamed_addr [[ATTR]] {
-; IMPORT2: define available_externally dso_local void @g_internal() unnamed_addr {
+; IMPORT2: @g_private = available_externally dso_local global i32 41, !guid !0{{$}}
+; IMPORT2: define available_externally i32 @f(ptr %0) unnamed_addr [[ATTR:#[0-9]+]]
+; IMPORT2: define available_externally i32 @g() unnamed_addr [[ATTR]]
+; IMPORT2: define available_externally dso_local void @g_internal() unnamed_addr
 
 ; CHECK-DAG: attributes [[ATTR]] = { norecurse nounwind }
 

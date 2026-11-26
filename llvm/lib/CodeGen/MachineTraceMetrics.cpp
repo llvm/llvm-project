@@ -482,15 +482,19 @@ struct LoopBounds {
 
 } // end anonymous namespace
 
-// Specialize po_iterator_storage in order to prune the post-order traversal so
-// it is limited to the current loop and doesn't traverse the loop back edges.
-template <> class llvm::po_iterator_storage<LoopBounds, true> {
+// Restrict the post-order traversal to the current loop and don't traverse the
+// loop back edges.
+template <typename GraphT>
+class LoopBoundsPostOrderTraversal
+    : public PostOrderTraversalBase<LoopBoundsPostOrderTraversal<GraphT>,
+                                    GraphTraits<GraphT>> {
   LoopBounds &LB;
 
 public:
-  po_iterator_storage(LoopBounds &lb) : LB(lb) {}
-
-  void finishPostorder(const MachineBasicBlock*) {}
+  LoopBoundsPostOrderTraversal(const MachineBasicBlock *Start, LoopBounds &LB)
+      : LB(LB) {
+    this->init(Start);
+  }
 
   bool insertEdge(std::optional<const MachineBasicBlock *> From,
                   const MachineBasicBlock *To) {
@@ -525,7 +529,9 @@ void MachineTraceMetrics::Ensemble::computeTrace(const MachineBasicBlock *MBB) {
   // Run an upwards post-order search for the trace start.
   Bounds.Downward = false;
   Bounds.Visited.clear();
-  for (const auto *I : inverse_post_order_ext(MBB, Bounds)) {
+  for (const auto *I :
+       LoopBoundsPostOrderTraversal<Inverse<const MachineBasicBlock *>>(
+           MBB, Bounds)) {
     LLVM_DEBUG(dbgs() << "  pred for " << printMBBReference(*I) << ": ");
     TraceBlockInfo &TBI = BlockInfo[I->getNumber()];
     // All the predecessors have been visited, pick the preferred one.
@@ -543,7 +549,8 @@ void MachineTraceMetrics::Ensemble::computeTrace(const MachineBasicBlock *MBB) {
   // Run a downwards post-order search for the trace end.
   Bounds.Downward = true;
   Bounds.Visited.clear();
-  for (const auto *I : post_order_ext(MBB, Bounds)) {
+  for (const auto *I :
+       LoopBoundsPostOrderTraversal<const MachineBasicBlock *>(MBB, Bounds)) {
     LLVM_DEBUG(dbgs() << "  succ for " << printMBBReference(*I) << ": ");
     TraceBlockInfo &TBI = BlockInfo[I->getNumber()];
     // All the successors have been visited, pick the preferred one.

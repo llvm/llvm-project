@@ -16,7 +16,7 @@ func.func @split_vector_transfer_read_2d(%A: memref<?x8xf32>, %i: index, %j: ind
   //  CHECK-DAG: %[[c8:.*]] = arith.constant 8 : index
   //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
   // alloca for boundary full tile
-  //      CHECK: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
+  //      CHECK: %[[alloc:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      CHECK: %[[d0:.*]] = memref.dim %[[A]], %[[c0]] : memref<?x8xf32>
@@ -64,7 +64,7 @@ func.func @split_vector_transfer_read_strided_2d(
   //  CHECK-DAG: %[[c8:.*]] = arith.constant 8 : index
   //  CHECK-DAG: %[[c0:.*]] = arith.constant 0 : index
   // alloca for boundary full tile
-  //      CHECK: %[[alloc:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
+  //      CHECK: %[[alloc:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
   // %i + 4 <= dim(%A, 0)
   //      CHECK: %[[idx0:.*]] = affine.apply #[[$map_p4]]()[%[[i]]]
   //      CHECK: %[[cmp0:.*]] = arith.cmpi sle, %[[idx0]], %[[c7]] : index
@@ -160,7 +160,7 @@ func.func @split_vector_transfer_write_2d(%V: vector<4x8xf32>, %A: memref<?x8xf3
 // CHECK-DAG:       %[[C8:.*]] = arith.constant 8 : index
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[CT:.*]] = arith.constant true
-// CHECK:           %[[TEMP:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
+// CHECK:           %[[TEMP:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
 // CHECK:           %[[VAL_8:.*]] = affine.apply #[[MAP0]]()[%[[I]]]
 // CHECK:           %[[DIM0:.*]] = memref.dim %[[DEST]], %[[C0]] : memref<?x8xf32>
 // CHECK:           %[[DIM0_IN:.*]] = arith.cmpi sle, %[[VAL_8]], %[[DIM0]] : index
@@ -224,7 +224,7 @@ func.func @split_vector_transfer_write_strided_2d(
 // CHECK-DAG:       %[[C8:.*]] = arith.constant 8 : index
 // CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[CT:.*]] = arith.constant true
-// CHECK:           %[[TEMP:.*]] = memref.alloca() {alignment = 32 : i64} : memref<4x8xf32>
+// CHECK:           %[[TEMP:.*]] = memref.alloca() alignment = 32 : memref<4x8xf32>
 // CHECK:           %[[DIM0:.*]] = affine.apply #[[MAP1]]()[%[[I]]]
 // CHECK:           %[[DIM0_IN:.*]] = arith.cmpi sle, %[[DIM0]], %[[C7]] : index
 // CHECK:           %[[DIM1:.*]] = affine.apply #[[MAP2]]()[%[[J]]]
@@ -338,6 +338,31 @@ func.func @transfer_read_within_scf_for(%A : memref<?x?xf32>, %lb : index, %ub :
     func.call @fake_side_effecting_fun(%0) : (vector<2x2xf32>) -> ()
   }
   return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
+}
+
+// -----
+
+// Transfers masked by an enclosing vector.mask are not split.
+
+// CHECK-LABEL: func @negative_split_masked
+//   CHECK-NOT:   memref.alloca
+//       CHECK:   vector.mask {{.*}} { vector.transfer_read
+func.func @negative_split_masked(%A: memref<?x8xf32>, %i: index, %j: index, %m: vector<4x8xi1>) -> vector<4x8xf32> {
+  %f0 = arith.constant 0.0 : f32
+  %r = vector.mask %m {
+    vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32>, vector<4x8xf32>
+  } : vector<4x8xi1> -> vector<4x8xf32>
+  return %r : vector<4x8xf32>
 }
 
 module attributes {transform.with_named_sequence} {

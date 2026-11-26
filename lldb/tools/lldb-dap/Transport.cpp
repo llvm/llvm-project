@@ -17,9 +17,9 @@ using namespace lldb_private;
 
 namespace lldb_dap {
 
-Transport::Transport(lldb_dap::Log &log, lldb::IOObjectSP input,
-                     lldb::IOObjectSP output)
-    : HTTPDelimitedJSONTransport(input, output), m_log(log) {}
+Transport::Transport(lldb_dap::Log &log, lldb_private::MainLoop &loop,
+                     lldb::IOObjectSP input, lldb::IOObjectSP output)
+    : HTTPDelimitedJSONTransport(loop, input, output), m_log(log) {}
 
 void Transport::Log(llvm::StringRef message) {
   // Emit the message directly, since this log was forwarded.

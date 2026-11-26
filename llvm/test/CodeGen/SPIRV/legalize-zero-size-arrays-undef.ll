@@ -3,6 +3,6 @@
 
 ; Test that poision initializers are legalized correctly to a pointer.
 
-@nested_zero_array = global [2 x [0 x i32]] poison
+@nested_zero_array = addrspace(1) global [2 x [0 x i32]] poison
 
-; CHECK: @nested_zero_array = global ptr addrspace(4) poison
+; CHECK: @nested_zero_array = addrspace(1) global ptr addrspace(4) poison

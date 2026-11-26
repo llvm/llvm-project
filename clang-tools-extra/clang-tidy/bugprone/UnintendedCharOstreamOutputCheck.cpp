@@ -90,7 +90,7 @@ void UnintendedCharOstreamOutputCheck::check(
   const QualType T = Value->getType();
   const Type *UnqualifiedDesugaredType = T->getUnqualifiedDesugaredType();
 
-  const llvm::StringRef CastType = CastTypeName.value_or(
+  const StringRef CastType = CastTypeName.value_or(
       UnqualifiedDesugaredType->isSpecificBuiltinType(BuiltinType::SChar)
           ? "int"
           : "unsigned int");

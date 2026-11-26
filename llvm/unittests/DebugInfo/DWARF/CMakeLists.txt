@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   AsmPrinter
   BinaryFormat
   CodeGenTypes
+  Core
   DebugInfoDWARF
   DebugInfoDWARFLowLevel
   MC
@@ -29,6 +30,7 @@ add_llvm_unittest(DebugInfoDWARFTests
   DWARFFormValueTest.cpp
   DWARFListTableTest.cpp
   DWARFLocationExpressionTest.cpp
+  DWARFVerifierTest.cpp
   )
 
 target_link_libraries(DebugInfoDWARFTests PRIVATE LLVMTestingSupport)

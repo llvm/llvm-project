@@ -12,13 +12,16 @@
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsType.h"
 
 namespace mlir {
 namespace acc {
 
-std::string OpenACCSupport::getVariableName(Value v) {
+std::string OpenACCSupport::getVariableName(Value v,
+                                            VariableNameConfig config) {
   if (impl)
-    return impl->getVariableName(v);
+    return impl->getVariableName(v, config);
   return acc::getVariableName(v);
 }
 
@@ -35,18 +38,13 @@ std::string OpenACCSupport::getRecipeName(RecipeKind kind, Type type,
   return recipeName;
 }
 
-InFlightDiagnostic OpenACCSupport::emitNYI(Location loc, const Twine &message) {
-  if (impl)
-    return impl->emitNYI(loc, message);
-  return mlir::emitError(loc, "not yet implemented: " + message);
-}
-
 remark::detail::InFlightRemark
-OpenACCSupport::emitRemark(Operation *op, const Twine &message,
+OpenACCSupport::emitRemark(Operation *op,
+                           std::function<std::string()> messageFn,
                            llvm::StringRef category) {
   if (impl)
-    return impl->emitRemark(op, message, category);
-  return acc::emitRemark(op, message, category);
+    return impl->emitRemark(op, std::move(messageFn), category);
+  return acc::emitRemark(op, messageFn(), category);
 }
 
 bool OpenACCSupport::isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
@@ -56,10 +54,19 @@ bool OpenACCSupport::isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
   return acc::isValidSymbolUse(user, symbol, definingOpPtr);
 }
 
-bool OpenACCSupport::isValidValueUse(Value v, Region &region) {
+bool OpenACCSupport::isValidValueUse(Value v, Region &region,
+                                     SymbolTableCollection *symbolTables) {
   if (impl)
-    return impl->isValidValueUse(v, region);
-  return acc::isValidValueUse(v, region);
+    return impl->isValidValueUse(v, region, symbolTables);
+  return acc::isValidValueUse(v, region, symbolTables);
+}
+
+std::optional<gpu::GPUModuleOp>
+OpenACCSupport::getOrCreateGPUModule(ModuleOp mod, bool create,
+                                     llvm::StringRef name) {
+  if (impl)
+    return impl->getOrCreateGPUModule(mod, create, name);
+  return acc::getOrCreateGPUModule(mod, create, name);
 }
 
 } // namespace acc

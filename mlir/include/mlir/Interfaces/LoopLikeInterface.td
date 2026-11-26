@@ -35,8 +35,10 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       serve as the region iter_arg of the next iteration.
 
     If one of the respective interface methods is implemented, so must the other
-    two. The interface verifier ensures that the number of types of the region
-    iter_args, init values and yielded values match.
+    two. The interface verifier ensures that the number of region iter_args,
+    init values and yielded values match. Note: the types are not required to
+    strictly match; if the op also implements `RegionBranchOpInterface`, type
+    compatibility is deferred to that interface's `areTypesCompatible` hook.
 
     Optionally, "loop results" can be exposed through this interface. These are
     the values that are returned from the loop op when there are no more
@@ -46,6 +48,7 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     region iter_args.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/LoopLikeInterface.h"];
 
   let methods = [
     InterfaceMethod<[{
@@ -60,7 +63,8 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       /*args=*/(ins "::mlir::Value ":$value),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return !$_op->isAncestor(value.getParentRegion()->getParentOp());
+        ::mlir::Region *region = value.getParentRegion();
+        return !region || !region->isAttached() || !$_op->isAncestor(region->getParentOp());
       }]
     >,
     InterfaceMethod<[{
@@ -484,7 +488,9 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
 // Traits
 //===----------------------------------------------------------------------===//
 
-// Op contains a region with parallel execution semantics
-def HasParallelRegion : NativeOpTrait<"HasParallelRegion">;
+// Op contains a region that may have parallel execution semantics.
+def HasParallelRegion : NativeOpTrait<"HasParallelRegion"> {
+  let cppIncludes = ["mlir/Interfaces/LoopLikeInterface.h"];
+}
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE

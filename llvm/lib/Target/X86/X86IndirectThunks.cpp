@@ -31,10 +31,13 @@
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -52,7 +55,6 @@ static const char EDIRetpolineName[] = "__llvm_retpoline_edi";
 static const char LVIThunkNamePrefix[] = "__llvm_lvi_thunk_";
 static const char R11LVIThunkName[] = "__llvm_lvi_thunk_r11";
 
-namespace {
 struct RetpolineThunkInserter : ThunkInserter<RetpolineThunkInserter> {
   const char *getThunkPrefix() { return RetpolineNamePrefix; }
   bool mayUseThunk(const MachineFunction &MF) {
@@ -98,12 +100,14 @@ struct LVIThunkInserter : ThunkInserter<LVIThunkInserter> {
   }
 };
 
-class X86IndirectThunks
+namespace {
+
+class X86IndirectThunksLegacy
     : public ThunkInserterPass<RetpolineThunkInserter, LVIThunkInserter> {
 public:
   static char ID;
 
-  X86IndirectThunks() : ThunkInserterPass(ID) {}
+  X86IndirectThunksLegacy() : ThunkInserterPass(ID) {}
 
   StringRef getPassName() const override { return "X86 Indirect Thunks"; }
 };
@@ -125,7 +129,7 @@ bool RetpolineThunkInserter::insertThunks(MachineModuleInfo &MMI,
 }
 
 void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
-  bool Is64Bit = MF.getTarget().getTargetTriple().isX86_64();
+  bool Is64Bit = MF.getFunction().getParent()->getTargetTriple().isX86_64();
   Register ThunkReg;
   if (Is64Bit) {
     assert(MF.getName() == "__llvm_retpoline_r11" &&
@@ -227,16 +231,38 @@ void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
   // Insert return address clobber
   const unsigned MovOpc = Is64Bit ? X86::MOV64mr : X86::MOV32mr;
   const Register SPReg = Is64Bit ? X86::RSP : X86::ESP;
-  addRegOffset(BuildMI(CallTarget, DebugLoc(), TII->get(MovOpc)), SPReg, false,
-               0)
+  addRegOffset(BuildMI(CallTarget, DebugLoc(), TII->get(MovOpc)), SPReg, 0)
       .addReg(ThunkReg);
 
   CallTarget->back().setPreInstrSymbol(MF, TargetSym);
   BuildMI(CallTarget, DebugLoc(), TII->get(RetOpc));
 }
 
-FunctionPass *llvm::createX86IndirectThunksPass() {
-  return new X86IndirectThunks();
+FunctionPass *llvm::createX86IndirectThunksLegacyPass() {
+  return new X86IndirectThunksLegacy();
 }
 
-char X86IndirectThunks::ID = 0;
+char X86IndirectThunksLegacy::ID = 0;
+
+X86IndirectThunksPass::X86IndirectThunksPass()
+    : RetpolineInserter(std::make_unique<RetpolineThunkInserter>()),
+      LVIInserter(std::make_unique<LVIThunkInserter>()) {}
+X86IndirectThunksPass::X86IndirectThunksPass(X86IndirectThunksPass &&) =
+    default;
+X86IndirectThunksPass::~X86IndirectThunksPass() = default;
+
+PreservedAnalyses
+X86IndirectThunksPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  MachineModuleAnalysis::Result *MMI =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<MachineModuleAnalysis>(
+              *MF.getFunction().getParent());
+  assert(MMI && "MachineModuleAnalysis must be available");
+
+  bool Changed = RetpolineInserter->run(MMI->getMMI(), MF);
+  Changed |= LVIInserter->run(MMI->getMMI(), MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
+}

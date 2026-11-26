@@ -16,7 +16,6 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
@@ -29,7 +28,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -119,21 +117,7 @@ struct ShardInlinerinterface : public DialectInlinerInterface {
 // Shard dialect
 //===----------------------------------------------------------------------===//
 
-void ShardDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Shard/IR/ShardOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Shard/IR/ShardAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Shard/IR/ShardTypes.cpp.inc"
-      >();
-  addInterface<ShardInlinerinterface>();
-}
+void ShardDialect::initialize() { addInterface<ShardInlinerinterface>(); }
 
 Operation *ShardDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
@@ -631,8 +615,12 @@ public:
     bool modified = succeeded(foldDynamicIndexList(mixedHalos, true)) ||
                     succeeded(foldDynamicIndexList(mixedOffs, true));
 
-    auto [staticHalos, dynamicHalos] = decomposeMixedValues(mixedHalos);
-    auto [staticOffs, dynamicOffs] = decomposeMixedValues(mixedOffs);
+    auto decomposedHalos = decomposeMixedValues(mixedHalos);
+    auto staticHalos = decomposedHalos.first;
+    auto dynamicHalos = decomposedHalos.second;
+    auto decomposedOffs = decomposeMixedValues(mixedOffs);
+    auto staticOffs = decomposedOffs.first;
+    auto dynamicOffs = decomposedOffs.second;
 
     if (dynamicHalos.empty() && !staticHalos.empty()) {
       if (staticHalos[0] == 0 && llvm::all_equal(staticHalos)) {
@@ -666,11 +654,12 @@ public:
       return failure();
     }
 
-    op.setStaticHaloSizes(staticHalos);
-    op.getDynamicHaloSizesMutable().assign(dynamicHalos);
-    op.setStaticShardedDimsOffsets(staticOffs);
-    op.getDynamicShardedDimsOffsetsMutable().assign(dynamicOffs);
-
+    b.modifyOpInPlace(op, [&]() {
+      op.setStaticHaloSizes(staticHalos);
+      op.getDynamicHaloSizesMutable().assign(dynamicHalos);
+      op.setStaticShardedDimsOffsets(staticOffs);
+      op.getDynamicShardedDimsOffsetsMutable().assign(dynamicOffs);
+    });
     return success();
   }
 };
@@ -747,6 +736,29 @@ bool Sharding::operator==(const Sharding &rhs) const {
 }
 
 bool Sharding::operator!=(const Sharding &rhs) const { return !(*this == rhs); }
+
+llvm::raw_ostream &mlir::shard::operator<<(llvm::raw_ostream &os,
+                                           const Sharding &sharding) {
+  os << "Sharding<grid=" << sharding.getGrid() << ", split_axes=[";
+  llvm::interleaveComma(sharding.getSplitAxes(), os, [&](GridAxesAttr axes) {
+    os << "[";
+    llvm::interleaveComma(axes.asArrayRef(), os);
+    os << "]";
+  });
+  os << "]";
+  if (!sharding.getStaticHaloSizes().empty()) {
+    os << ", halo_sizes=[";
+    llvm::interleaveComma(sharding.getStaticHaloSizes(), os);
+    os << "]";
+  }
+  if (!sharding.getStaticShardedDimsOffsets().empty()) {
+    os << ", sharded_dims_offsets=[";
+    llvm::interleaveComma(sharding.getStaticShardedDimsOffsets(), os);
+    os << "]";
+  }
+  os << ">";
+  return os;
+}
 
 Sharding::Sharding(::mlir::FlatSymbolRefAttr grid) : grid(grid) {}
 
@@ -842,7 +854,9 @@ public:
     for (auto &use : value.getUses()) {
       if (use.getOwner() != op.getOperation()) {
         auto otherOp = dyn_cast<ShardOp>(use.getOwner());
-        if (!otherOp || !otherOp->isBeforeInBlock(op)) {
+        // Only fold duplicates in the same block; isBeforeInBlock requires it.
+        if (!otherOp || otherOp->getBlock() != op->getBlock() ||
+            !otherOp->isBeforeInBlock(op)) {
           return failure();
         }
         // Create a Sharding object for the current and the other ShardOp
@@ -854,7 +868,8 @@ public:
           b.eraseOp(op.getOperation());
         } else {
           // use the other sharding as input for op
-          op.getSrcMutable().assign(otherOp.getResult());
+          b.modifyOpInPlace(
+              op, [&]() { op.getSrcMutable().assign(otherOp.getResult()); });
         }
         return success();
       }
@@ -1056,6 +1071,17 @@ static LogicalResult verifyAllToAllOperandAndResultShape(
     ArrayRef<GridAxis> gridAxes, ArrayRef<int64_t> gridShape) {
   ShapedType operandType = cast<ShapedType>(operand.getType());
   ShapedType resultType = cast<ShapedType>(result.getType());
+  auto operandRank = operandType.getRank();
+  if (splitAxis < 0 || splitAxis >= operandRank) {
+    return emitError(result.getLoc())
+           << "split_axis " << splitAxis << " is out of bounds [0, "
+           << operandRank << ").";
+  }
+  if (concatAxis < 0 || concatAxis >= operandRank) {
+    return emitError(result.getLoc())
+           << "concat_axis " << concatAxis << " is out of bounds [0, "
+           << operandRank << ").";
+  }
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
     if ((axis != splitAxis && axis != concatAxis) || splitAxis == concatAxis) {
       if (failed(verifyDimensionCompatibility(
@@ -1098,9 +1124,16 @@ static LogicalResult verifyAllToAllOperandAndResultShape(
 
 static LogicalResult verifyScatterOrSliceOperandAndResultShape(
     Value operand, Value result, int64_t tensorAxis,
-    ArrayRef<GridAxis> gridAxes, ArrayRef<int64_t> gridShape) {
+    StringRef tensorAxisAttrName, ArrayRef<GridAxis> gridAxes,
+    ArrayRef<int64_t> gridShape) {
   ShapedType operandType = cast<ShapedType>(operand.getType());
   ShapedType resultType = cast<ShapedType>(result.getType());
+  auto operandRank = operandType.getRank();
+  if (tensorAxis < 0 || tensorAxis >= operandRank) {
+    return emitError(result.getLoc())
+           << tensorAxisAttrName << " " << tensorAxis
+           << " is out of bounds [0, " << operandRank << ").";
+  }
   for (int64_t axis = 0; axis < operandType.getRank(); ++axis) {
     if (axis != tensorAxis) {
       if (failed(verifyDimensionCompatibility(
@@ -1212,8 +1245,8 @@ LogicalResult AllSliceOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
   return verifyScatterOrSliceOperandAndResultShape(
-      getOperand(), getResult(), getSliceAxis().getSExtValue(), getGridAxes(),
-      grid.value().getShape());
+      getOperand(), getResult(), getSliceAxis().getSExtValue(), "slice_axis",
+      getGridAxes(), grid.value().getShape());
 }
 
 void AllSliceOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -1393,8 +1426,8 @@ ReduceScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   }
 
   return verifyScatterOrSliceOperandAndResultShape(
-      getOperand(), getResult(), getScatterAxis().getSExtValue(), getGridAxes(),
-      grid.value().getShape());
+      getOperand(), getResult(), getScatterDim().getSExtValue(), "scatter_dim",
+      getGridAxes(), grid.value().getShape());
 }
 
 void ReduceScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -1422,10 +1455,10 @@ LogicalResult ScatterOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return failure();
   }
 
-  auto scatterAxis = getScatterAxis().getSExtValue();
-  return verifyScatterOrSliceOperandAndResultShape(getInput(), getResult(),
-                                                   scatterAxis, getGridAxes(),
-                                                   grid.value().getShape());
+  auto scatterDim = getScatterDim().getSExtValue();
+  return verifyScatterOrSliceOperandAndResultShape(
+      getInput(), getResult(), scatterDim, "scatter_dim", getGridAxes(),
+      grid.value().getShape());
 }
 
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &patterns,

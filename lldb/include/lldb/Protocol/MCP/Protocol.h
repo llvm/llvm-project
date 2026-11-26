@@ -25,6 +25,10 @@ namespace lldb_protocol::mcp {
 
 static llvm::StringLiteral kProtocolVersion = "2024-11-05";
 
+/// Version reported by LLDB's MCP server. The function avoids having to include
+/// the version header.
+llvm::StringLiteral GetServerVersion();
+
 /// A Request or Response 'id'.
 ///
 /// NOTE: This differs from the JSON-RPC 2.0 spec. The MCP spec says this must

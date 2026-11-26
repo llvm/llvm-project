@@ -52,6 +52,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include <cassert>
 #include <cstddef>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -714,6 +715,12 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// as they do not refer to a file.
   std::vector<SrcMgr::ContentCache*> MemBufferInfos;
 
+  /// Per-FileID content caches for aliased file references.
+  ///
+  /// These caches preserve the spelling used for a particular include while
+  /// sharing file contents with the canonical cache in \c FileInfos.
+  std::vector<SrcMgr::ContentCache *> FileIDContentCaches;
+
   /// The table of SLocEntries that are local to this module.
   ///
   /// Positive FileIDs are indexes into this table. Entry 0 indicates an invalid
@@ -1205,9 +1212,14 @@ public:
   /// Given \p Loc, if it is a macro location return the expansion
   /// location or the spelling location, depending on if it comes from a
   /// macro argument or not.
-  SourceLocation getFileLoc(SourceLocation Loc) const {
+  ///
+  /// If resolving \p Loc requires walking through more than \p MaxDepth
+  /// macro expansions, an invalid location is returned instead.
+  SourceLocation
+  getFileLoc(SourceLocation Loc,
+             unsigned MaxDepth = std::numeric_limits<unsigned>::max()) const {
     if (Loc.isFileID()) return Loc;
-    return getFileLocSlowCase(Loc);
+    return getFileLocSlowCase(Loc, MaxDepth);
   }
 
   /// Return the start/end of the expansion information for an
@@ -1524,6 +1536,15 @@ public:
       return false;
     StringRef Filename(Presumed.getFilename());
     return Filename == "<scratch space>";
+  }
+
+  /// Returns whether \p Loc is located in a <module-includes> file.
+  bool isWrittenInModuleIncludes(SourceLocation Loc) const {
+    PresumedLoc Presumed = getPresumedLoc(Loc);
+    if (Presumed.isInvalid())
+      return false;
+    StringRef Filename(Presumed.getFilename());
+    return Filename == "<module-includes>";
   }
 
   /// Returns whether \p Loc is located in a built-in or command line source.
@@ -1972,14 +1993,29 @@ private:
 
   SourceLocation getExpansionLocSlowCase(SourceLocation Loc) const;
   SourceLocation getSpellingLocSlowCase(SourceLocation Loc) const;
-  SourceLocation getFileLocSlowCase(SourceLocation Loc) const;
+  SourceLocation getFileLocSlowCase(SourceLocation Loc,
+                                    unsigned MaxDepth) const;
+
+  /// A chunk of a macro argument expansion that was spelled in the file whose
+  /// macro argument cache is being computed: \c Length bytes at
+  /// \c ExpansionOffset in the expansion were spelled at \c FileOffset.
+  struct MacroArgFileChunk {
+    unsigned ExpansionOffset;
+    unsigned FileOffset;
+    unsigned Length;
+  };
+  using MacroArgFileChunks = SmallVector<MacroArgFileChunk, 1>;
+  /// The file chunks of each macro argument expansion FileID, relative to the
+  /// start of the FileID, while computing one file's macro argument cache.
+  using MacroArgFileChunksMap = llvm::DenseMap<int, MacroArgFileChunks>;
 
   void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;
-  void associateFileChunkWithMacroArgExp(MacroArgsMap &MacroArgsCache,
-                                         FileID FID,
-                                         SourceLocation SpellLoc,
-                                         SourceLocation ExpansionLoc,
-                                         unsigned ExpansionLength) const;
+  const MacroArgFileChunks &
+  getMacroArgFileChunks(MacroArgFileChunksMap &ChunksByFileID, FileID FID,
+                        FileID MacroArgFID) const;
+  MacroArgFileChunks
+  computeMacroArgFileChunks(MacroArgFileChunksMap &ChunksByFileID, FileID FID,
+                            SourceLocation SpellLoc, unsigned Length) const;
   void updateSlocUsageStats() const;
 };
 
@@ -1990,10 +2026,10 @@ class BeforeThanCompare;
 /// Compare two source locations.
 template<>
 class BeforeThanCompare<SourceLocation> {
-  SourceManager &SM;
+  const SourceManager &SM;
 
 public:
-  explicit BeforeThanCompare(SourceManager &SM) : SM(SM) {}
+  explicit BeforeThanCompare(const SourceManager &SM) : SM(SM) {}
 
   bool operator()(SourceLocation LHS, SourceLocation RHS) const {
     return SM.isBeforeInTranslationUnit(LHS, RHS);
@@ -2003,10 +2039,10 @@ public:
 /// Compare two non-overlapping source ranges.
 template<>
 class BeforeThanCompare<SourceRange> {
-  SourceManager &SM;
+  const SourceManager &SM;
 
 public:
-  explicit BeforeThanCompare(SourceManager &SM) : SM(SM) {}
+  explicit BeforeThanCompare(const SourceManager &SM) : SM(SM) {}
 
   bool operator()(SourceRange LHS, SourceRange RHS) const {
     return SM.isBeforeInTranslationUnit(LHS.getBegin(), RHS.getBegin());

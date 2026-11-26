@@ -32,7 +32,7 @@ struct Bfloat16DivChecker : public virtual LIBC_NAMESPACE::testing::Test {
     uint64_t failed = 0;
     do {
       BFloat16 x = FPBits(xbits).get_val();
-      uint16_t ybits = xbits;
+      uint16_t ybits = y_start;
       do {
         BFloat16 y = FPBits(ybits).get_val();
         mpfr::BinaryInput<BFloat16> input{x, y};
@@ -62,4 +62,12 @@ TEST_F(LlvmLibcBfloat16ExhaustiveDivTest, PositiveRange) {
 
 TEST_F(LlvmLibcBfloat16ExhaustiveDivTest, NegativeRange) {
   test_full_range_all_roundings(NEG_START, NEG_STOP, NEG_START, NEG_STOP);
+}
+
+TEST_F(LlvmLibcBfloat16ExhaustiveDivTest, PositiveNegative) {
+  test_full_range_all_roundings(POS_START, POS_STOP, NEG_START, NEG_STOP);
+}
+
+TEST_F(LlvmLibcBfloat16ExhaustiveDivTest, NegativePositive) {
+  test_full_range_all_roundings(NEG_START, NEG_STOP, POS_START, POS_STOP);
 }

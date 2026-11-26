@@ -2,6 +2,7 @@
 
 shard.grid @grid_1d(shape = 2)
 shard.grid @grid_1d_dynamic(shape = ?)
+shard.grid @grid_3d(shape = 2x2x2)
 
 // CHECK-LABEL: func @same_source_and_target_sharding
 func.func @same_source_and_target_sharding(
@@ -153,7 +154,7 @@ func.func @unshard_dynamic_axis(
 
 // CHECK-LABEL: func @unshard_static_axis_on_dynamic_grid_axis
 func.func @unshard_static_axis_on_dynamic_grid_axis(
-// CHECK-SAME: %[[ARG:.*]]: tensor<10x14xf32>  
+// CHECK-SAME: %[[ARG:.*]]: tensor<10x14xf32>
   %arg0: tensor<10x14xf32>
 ) -> tensor<10x14xf32> {
   // CHECK: %[[SOURCE_SHARD:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : tensor<10x14xf32> to tensor<?x14xf32>
@@ -165,4 +166,60 @@ func.func @unshard_static_axis_on_dynamic_grid_axis(
   %1 = shard.shard %0 to %s1 annotate_for_users : tensor<10x14xf32>
   // CHECK: return %[[RES]] : tensor<10x14xf32>
   return %1 : tensor<10x14xf32>
+}
+
+// MoveLastSplitAxisPattern: [[0, 1], [2]] -> [[0], [1, 2]]
+// Source shard: 8/(2*2) x 16/2 = 2x8; after all_to_all(axis=1): 4x4
+// CHECK-LABEL: func @move_last_split_axis_to_front_of_target_dim
+func.func @move_last_split_axis_to_front_of_target_dim(
+  // CHECK-SAME: %[[ARG:.*]]: tensor<8x16xf32>
+  %arg0: tensor<8x16xf32>
+) -> tensor<8x16xf32> {
+  // CHECK: %[[SOURCE_SHARD:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : tensor<8x16xf32> to tensor<2x8xf32>
+  // CHECK: %[[ALL_TO_ALL:.*]] = shard.all_to_all %[[SOURCE_SHARD]] on @grid_3d grid_axes = [1] split_axis = 1 concat_axis = 0 : tensor<2x8xf32> -> tensor<4x4xf32>
+  // CHECK: %[[RES:.*]] = builtin.unrealized_conversion_cast %[[ALL_TO_ALL]] : tensor<4x4xf32> to tensor<8x16xf32>
+  %s0 = shard.sharding @grid_3d split_axes = [[0, 1], [2]] : !shard.sharding
+  %0 = shard.shard %arg0 to %s0 : tensor<8x16xf32>
+  %s1 = shard.sharding @grid_3d split_axes = [[0], [1, 2]] : !shard.sharding
+  %1 = shard.shard %0 to %s1 annotate_for_users : tensor<8x16xf32>
+  // CHECK: return %[[RES]] : tensor<8x16xf32>
+  return %1 : tensor<8x16xf32>
+}
+
+// MoveLastSplitAxisPattern with tgtTensorDim < srcTensorDim:
+// [[0], [1, 2]] -> [[2, 0], [1]] (axis 2 moved from dim 1 to front of dim 0)
+// Source shard: 8/2 x 16/(2*2) = 4x4; after all_to_all(axis=2): 2x8
+// CHECK-LABEL: func @move_last_split_axis_to_lower_dim
+func.func @move_last_split_axis_to_lower_dim(
+  // CHECK-SAME: %[[ARG:.*]]: tensor<8x16xf32>
+  %arg0: tensor<8x16xf32>
+) -> tensor<8x16xf32> {
+  // CHECK: %[[SOURCE_SHARD:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : tensor<8x16xf32> to tensor<4x4xf32>
+  // CHECK: %[[ALL_TO_ALL:.*]] = shard.all_to_all %[[SOURCE_SHARD]] on @grid_3d grid_axes = [2] split_axis = 0 concat_axis = 1 : tensor<4x4xf32> -> tensor<2x8xf32>
+  // CHECK: %[[RES:.*]] = builtin.unrealized_conversion_cast %[[ALL_TO_ALL]] : tensor<2x8xf32> to tensor<8x16xf32>
+  %s0 = shard.sharding @grid_3d split_axes = [[0], [1, 2]] : !shard.sharding
+  %0 = shard.shard %arg0 to %s0 : tensor<8x16xf32>
+  %s1 = shard.sharding @grid_3d split_axes = [[2, 0], [1]] : !shard.sharding
+  %1 = shard.shard %0 to %s1 annotate_for_users : tensor<8x16xf32>
+  // CHECK: return %[[RES]] : tensor<8x16xf32>
+  return %1 : tensor<8x16xf32>
+}
+
+// MoveLastSplitAxisPattern where source has no axes at tgtTensorDim:
+// [[0, 1]] -> [[0], [1]] (tgtTensorDim has empty source)
+// Source shard: 8/(2*2) x 16 = 2x16; after all_to_all(axis=1): 4x8
+// CHECK-LABEL: func @move_last_split_axis_empty_source_at_target_dim
+func.func @move_last_split_axis_empty_source_at_target_dim(
+  // CHECK-SAME: %[[ARG:.*]]: tensor<8x16xf32>
+  %arg0: tensor<8x16xf32>
+) -> tensor<8x16xf32> {
+  // CHECK: %[[SOURCE_SHARD:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : tensor<8x16xf32> to tensor<2x16xf32>
+  // CHECK: %[[ALL_TO_ALL:.*]] = shard.all_to_all %[[SOURCE_SHARD]] on @grid_3d grid_axes = [1] split_axis = 1 concat_axis = 0 : tensor<2x16xf32> -> tensor<4x8xf32>
+  // CHECK: %[[RES:.*]] = builtin.unrealized_conversion_cast %[[ALL_TO_ALL]] : tensor<4x8xf32> to tensor<8x16xf32>
+  %s0 = shard.sharding @grid_3d split_axes = [[0, 1]] : !shard.sharding
+  %0 = shard.shard %arg0 to %s0 : tensor<8x16xf32>
+  %s1 = shard.sharding @grid_3d split_axes = [[0], [1]] : !shard.sharding
+  %1 = shard.shard %0 to %s1 annotate_for_users : tensor<8x16xf32>
+  // CHECK: return %[[RES]] : tensor<8x16xf32>
+  return %1 : tensor<8x16xf32>
 }

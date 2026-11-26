@@ -39,8 +39,8 @@ namespace clang::tidy::utils {
 /// It also considers structs with fields of record types like
 /// `struct T { S s; };`. In this case, there would be designators of the
 /// form `.s.i` and `.s.j` in the returned map.
-llvm::DenseMap<clang::SourceLocation, std::string>
-getUnwrittenDesignators(const clang::InitListExpr *Syn);
+llvm::DenseMap<SourceLocation, std::string>
+getUnwrittenDesignators(const InitListExpr *Syn);
 
 } // namespace clang::tidy::utils
 

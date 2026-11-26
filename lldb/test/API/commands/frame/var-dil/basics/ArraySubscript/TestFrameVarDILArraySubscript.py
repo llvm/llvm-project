@@ -13,11 +13,9 @@ class TestFrameVarDILArraySubscript(TestBase):
 
     def test_subscript(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
-
-        self.runCmd("settings set target.experimental.use-DIL true")
 
         # Test int[] and int*
         self.expect_var_path("int_arr[0]", value="1")
@@ -87,13 +85,28 @@ class TestFrameVarDILArraySubscript(TestBase):
             substrs=["subscript of pointer to incomplete type 'void'"],
         )
 
+        # Check that subscription is not allowed in simple mode, but allowed in legacy mode
+        frame = thread.GetFrameAtIndex(0)
+        simple = frame.GetValueForVariablePathWithMode(
+            "int_arr[0]", lldb.eDILModeSimple
+        )
+        simple_other = frame.var_with_mode("int_arr[0]", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode(
+            "int_arr[0]", lldb.eDILModeLegacy
+        )
+        legacy_other = frame.var_with_mode("int_arr[0]", lldb.eDILModeLegacy)
+
+        self.assertFailure(simple.GetError())
+        self.assertFailure(simple_other.GetError())
+        self.assertSuccess(legacy.GetError())
+        self.assertSuccess(legacy_other.GetError())
+
     def test_subscript_synthetic(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.runCmd("script from myArraySynthProvider import *")
         self.runCmd("type synth add -l myArraySynthProvider myArray")
 

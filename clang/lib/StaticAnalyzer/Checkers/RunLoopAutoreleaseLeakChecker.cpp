@@ -82,9 +82,8 @@ static void emitDiagnostics(BoundNodes &Match,
                             BugReporter &BR,
                             AnalysisManager &AM,
                             const RunLoopAutoreleaseLeakChecker *Checker) {
-
-  assert(D->hasBody());
   const Stmt *DeclBody = D->getBody();
+  assert(DeclBody);
 
   AnalysisDeclContext *ADC = AM.getAnalysisDeclContext(D);
 
@@ -193,8 +192,8 @@ checkTempObjectsInNoPool(const Decl *D, AnalysisManager &AM, BugReporter &BR,
 }
 
 void RunLoopAutoreleaseLeakChecker::checkASTCodeBody(const Decl *D,
-                        AnalysisManager &AM,
-                        BugReporter &BR) const {
+                                                     AnalysisManager &AM,
+                                                     BugReporter &BR) const {
   checkTempObjectsInSamePool(D, AM, BR, this);
   checkTempObjectsInNoPool(D, AM, BR, this);
 }
@@ -204,5 +203,5 @@ void ento::registerRunLoopAutoreleaseLeakChecker(CheckerManager &mgr) {
 }
 
 bool ento::shouldRegisterRunLoopAutoreleaseLeakChecker(const CheckerManager &mgr) {
-  return true;
+  return mgr.getLangOpts().ObjC;
 }

@@ -7,8 +7,10 @@ add_llvm_component_library(LLVMMCJIT
   LINK_COMPONENTS
   Core
   ExecutionEngine
+  MC
   Object
   RuntimeDyld
   Support
   Target
+  TargetParser
   )

@@ -608,18 +608,18 @@ unsigned getOpenACCScopeFlags(OpenACCDirectiveKind DirKind) {
   case OpenACCDirectiveKind::Kernels:
     // Mark this as a BreakScope/ContinueScope as well as a compute construct
     // so that we can diagnose trying to 'break'/'continue' inside of one.
-    return Scope::BreakScope | Scope::ContinueScope |
+    return Scope::BreakScope | Scope::ContinueScope | Scope::DeclScope |
            Scope::OpenACCComputeConstructScope;
   case OpenACCDirectiveKind::ParallelLoop:
   case OpenACCDirectiveKind::SerialLoop:
   case OpenACCDirectiveKind::KernelsLoop:
     // Mark this as a BreakScope/ContinueScope as well as a compute construct
     // so that we can diagnose trying to 'break'/'continue' inside of one.
-    return Scope::BreakScope | Scope::ContinueScope |
+    return Scope::BreakScope | Scope::ContinueScope | Scope::DeclScope |
            Scope::OpenACCComputeConstructScope |
            Scope::OpenACCLoopConstructScope;
   case OpenACCDirectiveKind::Loop:
-    return Scope::OpenACCLoopConstructScope;
+    return Scope::DeclScope | Scope::OpenACCLoopConstructScope;
   case OpenACCDirectiveKind::Data:
   case OpenACCDirectiveKind::EnterData:
   case OpenACCDirectiveKind::ExitData:
@@ -656,9 +656,9 @@ Parser::OpenACCClauseParseResult Parser::OpenACCSuccess(OpenACCClause *Clause) {
 
 ExprResult Parser::ParseOpenACCConditionExpr() {
   // FIXME: It isn't clear if the spec saying 'condition' means the same as
-  // it does in an if/while/etc (See ParseCXXCondition), however as it was
-  // written with Fortran/C in mind, we're going to assume it just means an
-  // 'expression evaluating to boolean'.
+  // it does in an if/while/etc (See ParseCondition), however as it was written
+  // with Fortran/C in mind, we're going to assume it just means an 'expression
+  // evaluating to boolean'.
   ExprResult ER = ParseExpression();
 
   if (!ER.isUsable())
@@ -1377,10 +1377,10 @@ ExprResult Parser::ParseOpenACCIDExpression() {
     Name.setIdentifier(FuncName.getIdentifierInfo(), ConsumeToken());
 
     // Ensure this is a valid identifier. We don't accept causing implicit
-    // function declarations per the spec, so always claim to not have trailing
-    // L Paren.
+    // function declarations per the spec, so always claim that this isn't
+    // a call.
     Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
-                                    Name, /*HasTrailingLParen=*/false,
+                                    Name, /*IsCall=*/false,
                                     /*isAddressOfOperand=*/false);
   }
 
@@ -1682,7 +1682,9 @@ StmtResult Parser::ParseOpenACCDirectiveStmt() {
         getActions().OpenACC(), DirInfo.DirKind, DirInfo.DirLoc, {},
         DirInfo.Clauses);
     ParsingOpenACCDirectiveRAII DirScope(*this, /*Value=*/false);
-    ParseScope ACCScope(this, getOpenACCScopeFlags(DirInfo.DirKind));
+
+    unsigned scopeFlags = getOpenACCScopeFlags(DirInfo.DirKind);
+    ParseScope ACCScope(this, scopeFlags, /*EnteredScope=*/scopeFlags != 0);
 
     AssocStmt = getActions().OpenACC().ActOnAssociatedStmt(
         DirInfo.StartLoc, DirInfo.DirKind, DirInfo.AtomicKind, DirInfo.Clauses,

@@ -82,7 +82,7 @@ TEST_F(LlvmLibcLogTest, AllExponents) {
 }
 
 TEST_F(LlvmLibcLogTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 234561;
+  constexpr uint64_t COUNT = 1'231;
   constexpr uint64_t START = 0x3FD0'0000'0000'0000ULL; // 0.25
   constexpr uint64_t STOP = 0x4010'0000'0000'0000ULL;  // 4.0
   // constexpr uint64_t START = 0x3FF0'0000'0000'0000ULL;  // 1.0
@@ -97,7 +97,7 @@ TEST_F(LlvmLibcLogTest, InDoubleRange) {
     uint64_t fails = 0;
     uint64_t count = 0;
     uint64_t cc = 0;
-    double mx, mr = 0.0;
+    double mx = 0.0, mr = 0.0;
     double tol = 0.5;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {

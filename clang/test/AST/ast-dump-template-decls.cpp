@@ -33,7 +33,7 @@ void c<float, int>(float, int);
 template <typename Ty, template<typename> typename Uy>
 // CHECK: FunctionTemplateDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+4]]:18> col:6 d
 // CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <line:[[@LINE-2]]:11, col:20> col:20 referenced typename depth 0 index 0 Ty
-// CHECK-NEXT: TemplateTemplateParmDecl 0x{{[^ ]*}} <col:24, col:52> col:52 depth 0 index 1 Uy
+// CHECK-NEXT: TemplateTemplateParmDecl 0x{{[^ ]*}} <col:24, col:52> col:52 referenced depth 0 index 1 Uy
 // CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <col:33> col:41 typename depth 1 index 0
 void d(Ty, Uy<Ty>);
 
@@ -94,7 +94,7 @@ template <decltype(auto)>
 struct U {};
 
 template <typename Ty>
-// CHECK: ClassTemplateDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+7]]:1> line:[[@LINE+2]]:8 V
+// CHECK: ClassTemplateDecl 0x{{[^ ]*}} <line:[[@LINE-1]]:1, line:[[@LINE+7]]:1> line:[[@LINE+2]]:8 referenced V
 // CHECK-NEXT: TemplateTypeParmDecl 0x{{[^ ]*}} <line:[[@LINE-2]]:11, col:20> col:20 typename depth 0 index 0 Ty
 struct V {
   template <typename Uy>
@@ -188,6 +188,7 @@ int unTempl<int>;
 template<>
 float unTempl<float> = 1;
 // CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:24> col:7 unTempl 'float'
+// CHECK-NEXT: |-value: Float 1.000000e+00
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: `-ImplicitCastExpr 0x{{[^ ]*}} <col:24> 'float' <IntegralToFloating>
@@ -213,6 +214,7 @@ int binTempl<int, U>;
 template<class U>
 float binTempl<float, U> = 1;
 // CHECK:      VarTemplatePartialSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:28> col:7 binTempl 'float'
+// CHECK-NEXT: |-value: Float 1.000000e+00
 // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:10, col:16> col:16 referenced class depth 0 index 0 U
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
@@ -232,6 +234,7 @@ int binTempl<int, int>;
 template<>
 float binTempl<float, float> = 1;
 // CHECK:      VarTemplateSpecializationDecl 0x{{[^ ]*}} <line:{{[0-9]+}}:1, line:{{[0-9]+}}:32> col:7 binTempl 'float'
+// CHECK-NEXT: |-value: Float 1.000000e+00
 // CHECK-NEXT: |-TemplateArgument type 'float'
 // CHECK-NEXT: | `-BuiltinType 0x{{[^ ]*}} 'float'
 // CHECK-NEXT: |-TemplateArgument type 'float'

@@ -14,7 +14,7 @@
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Pass/Pass.h"
@@ -39,14 +39,14 @@ public:
 
 void ConvertSPIRVToLLVMPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
+  ModuleOp moduleOp = getOperation();
 
   LowerToLLVMOptions options(&getContext());
 
   LLVMTypeConverter converter(&getContext(), options);
 
   // Encode global variable's descriptor set and binding if they exist.
-  encodeBindAttribute(module);
+  encodeBindAttribute(moduleOp);
 
   RewritePatternSet patterns(context);
 
@@ -62,12 +62,15 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
 
   if (clientAPI != spirv::ClientAPI::OpenCL &&
       clientAPI != spirv::ClientAPI::Unknown)
-    getOperation()->emitWarning()
+    emitWarning(moduleOp.getLoc())
         << "address space mapping for client '"
         << spirv::stringifyClientAPI(clientAPI) << "' not implemented";
 
   // Set `ModuleOp` as legal for `spirv.module` conversion.
   target.addLegalOp<ModuleOp>();
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+  ConversionConfig config;
+  config.allowPatternRollback = allowPatternRollback;
+  if (failed(applyPartialConversion(moduleOp, target, std::move(patterns),
+                                    config)))
     signalPassFailure();
 }

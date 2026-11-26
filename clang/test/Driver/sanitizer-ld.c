@@ -115,7 +115,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_freebsd_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-FREEBSD
 //
-// CHECK-ASAN-FREEBSD: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-FREEBSD: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-FREEBSD-NOT: "-lc"
 // CHECK-ASAN-FREEBSD: freebsd{{/|\\+}}libclang_rt.asan_static.a"
 // CHECK-ASAN-FREEBSD: freebsd{{/|\\+}}libclang_rt.asan.a"
@@ -130,7 +130,7 @@
 // RUN:     --sysroot=%S/Inputs/basic_freebsd_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-FREEBSD-LDL
 //
-// CHECK-ASAN-FREEBSD-LDL: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
+// CHECK-ASAN-FREEBSD-LDL: "{{(.*[^.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"
 // CHECK-ASAN-FREEBSD-LDL-NOT: "-ldl"
 // CHECK-ASAN-FREEBSD-LDL: "--whole-archive" "{{.*}}libclang_rt.asan_static.a" "--no-whole-archive"
 // CHECK-ASAN-FREEBSD-LDL: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
@@ -371,6 +371,16 @@
 // CHECK-TYSAN-DARWIN-CXX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-TYSAN-DARWIN-CXX: libclang_rt.tysan_osx_dynamic.dylib
 // CHECK-TYSAN-DARWIN-CXX-NOT: -lc++abi
+
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=hexagon-unknown-linux-musl -fuse-ld=ld \
+// RUN:     -fsanitize=type \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-TYSAN-HEXAGON
+//
+// CHECK-TYSAN-HEXAGON: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.lld)?(.exe)?}}"
+// CHECK-TYSAN-HEXAGON: "--whole-archive" "{{.*}}libclang_rt.tysan{{[^.]*}}.a" "--no-whole-archive"
 
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -stdlib=platform -lstdc++ \
@@ -1007,16 +1017,25 @@
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld -fsanitize=safe-stack \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
-// RUN:   | %{filecheck} --check-prefix=CHECK-SAFESTACK-LINUX
+// RUN:   | %{filecheck} --check-prefixes=CHECK-SAFESTACK-LINUX,CHECK-SAFESTACK-LINUX-ENABLED
+//
+// RUN: %clang -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -fsanitize=safe-stack -fno-sanitize=safe-stack \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefixes=CHECK-SAFESTACK-LINUX,CHECK-SAFESTACK-LINUX-DISABLED
 //
 // CHECK-SAFESTACK-LINUX: "{{(.*[^-.0-9A-Z_a-z])?}}ld{{(.exe)?}}"
-// CHECK-SAFESTACK-LINUX-NOT: "-lc"
-// CHECK-SAFESTACK-LINUX-NOT: whole-archive
-// CHECK-SAFESTACK-LINUX: "-u" "__safestack_init"
-// CHECK-SAFESTACK-LINUX: libclang_rt.safestack.a"
-// CHECK-SAFESTACK-LINUX: "-lpthread"
-// CHECK-SAFESTACK-LINUX: "-ldl"
-// CHECK-SAFESTACK-LINUX: "-lresolv"
+// CHECK-SAFESTACK-LINUX-ENABLED-NOT: "-lc"
+// CHECK-SAFESTACK-LINUX-ENABLED-NOT: whole-archive
+// CHECK-SAFESTACK-LINUX-ENABLED: "-u" "__safestack_init"
+// CHECK-SAFESTACK-LINUX-ENABLED: libclang_rt.safestack.a"
+// CHECK-SAFESTACK-LINUX-ENABLED: "-lpthread"
+// CHECK-SAFESTACK-LINUX-ENABLED: "-ldl"
+// CHECK-SAFESTACK-LINUX-ENABLED: "-lresolv"
+// CHECK-SAFESTACK-LINUX-DISABLED-NOT: "-u" "__safestack_init"
+// CHECK-SAFESTACK-LINUX-DISABLED-NOT: libclang_rt.safestack.a"
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -1200,6 +1219,14 @@
 // CHECK-AUBSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
 // CHECK-AUBSAN-PS5: -lSceAddressSanitizer_nosubmission_stub_weak
 
+// RUN: not %clang -fsanitize=realtime -### %s 2>&1 \
+// RUN:     --target=x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:   | %{filecheck} --check-prefix=CHECK-RTSAN-PS5
+// CHECK-RTSAN-PS5: --dependent-lib=libSceRealtimeSanitizer_nosubmission_stub_weak.a
+// CHECK-RTSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
+// CHECK-RTSAN-PS5: -lSceRealtimeSanitizer_nosubmission_stub_weak
+
 // RUN: not %clang -fsanitize=address,undefined -### %s 2>&1 \
 // RUN:     --target=x86_64-scei-ps4 -fuse-ld=ld \
 // RUN:     -shared \
@@ -1213,6 +1240,26 @@
 // RUN:     -nostdlib \
 // RUN:   | %{filecheck} --check-prefix=CHECK-NOLIB-PS5
 // CHECK-NOLIB-PS5-NOT: SceAddressSanitizer_nosubmission_stub_weak
+
+// RUN: not %clang -fsanitize=type %s -### -o %t.o 2>&1 \
+// RUN:     --target=x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:   | %{filecheck} --check-prefix=CHECK-TYSAN-PS5
+//
+// CHECK-TYSAN-PS5: --dependent-lib=libSceTypeSanitizer_nosubmission_stub_weak.a
+// CHECK-TYSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
+// CHECK-TYSAN-PS5: -lSceTypeSanitizer_nosubmission_stub_weak
+
+// RUN: not %clang -fsanitize=type,undefined -### %s 2>&1 \
+// RUN:     --target=x86_64-sie-ps5 -fuse-ld=ld \
+// RUN:     -shared \
+// RUN:   | %{filecheck} --check-prefix=CHECK-UBTYSAN-PS5
+//
+// CHECK-UBTYSAN-PS5-NOT: --dependent-lib=libSceUBSanitizer_nosubmission_stub_weak.a
+// CHECK-UBTYSAN-PS5: --dependent-lib=libSceTypeSanitizer_nosubmission_stub_weak.a
+// CHECK-UBTYSAN-PS5-NOT: --dependent-lib=libSceUBSanitizer_nosubmission_stub_weak.a
+// CHECK-UBTYSAN-PS5: "{{.*}}ld{{(.gold)?(.exe)?}}"
+// CHECK-UBTYSAN-PS5: -lSceTypeSanitizer_nosubmission_stub_weak
 
 // RUN: %clang -fsanitize=scudo -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \
@@ -1393,3 +1440,13 @@
 // RUN:   | %{filecheck} --check-prefix=CHECK-RELOCATABLE-LINK-TSAN-RTLIB
 //
 // CHECK-RELOCATABLE-LINK-TSAN-RTLIB-NOT: "{{.*}}tsan{{.*}}"
+
+// RUN: %clang -fsanitize=fuzzer,address -shared-libsan -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | FileCheck %s --check-prefix=CHECK-FUZZER-WITH-SHARED-ASAN-ORDER
+//
+// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER: "{{.*}}libclang_rt.asan.so"
+// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER-SAME: "--whole-archive" "{{.*}}libclang_rt.fuzzer.a" "--no-whole-archive"
+// CHECK-FUZZER-WITH-SHARED-ASAN-ORDER-SAME: "-l{{(std)?}}c++"

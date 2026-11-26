@@ -20,6 +20,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/Basic/Module.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
@@ -804,7 +805,7 @@ private:
                    const T *>                                                  \
   getNode() const {                                                            \
     assertHoldsState();                                                        \
-    return Callback.getInt() == (Index) ? Node##Index.dyn_cast<const T *>()    \
+    return Callback.getInt() == (Index) ? dyn_cast<const T *>(Node##Index)     \
                                         : nullptr;                             \
   }
 
@@ -1048,13 +1049,15 @@ private:
     const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     auto &Matchers = this->Matchers->DeclOrStmt;
+    // traverseIgnored() only ever replaces expressions.
+    const bool IsExpr = DynNode.get<Expr>() != nullptr;
     for (unsigned short I : Filter) {
       auto &MP = Matchers[I];
       if (EnableCheckProfiling)
         Timer.setBucket(&TimeByBucket[MP.second->getID()]);
       BoundNodesTreeBuilder Builder;
 
-      {
+      if (IsExpr) {
         TraversalKindScope RAII(getASTContext(), MP.first.getTraversalKind());
         if (getASTContext().getParentMapContext().traverseIgnored(DynNode) !=
             DynNode)
@@ -1511,6 +1514,9 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   if (shouldSkipNode(DeclNode))
     return true;
 
+  if (Options.SkipDeclsInModules && DeclNode->isInAnotherModuleUnit())
+    return true;
+
   bool ScopedTraversal =
       TraversingASTNodeNotSpelledInSource || DeclNode->isImplicit();
   bool ScopedChildren = TraversingASTChildrenNotSpelledInSource;
@@ -1654,6 +1660,16 @@ private:
 } // end namespace
 } // end namespace internal
 
+template <typename T>
+static internal::Matcher<T>
+adjustTraversalKind(const internal::Matcher<T> &NodeMatch,
+                    MatchFinder::MatchCallback *Action) {
+  if (Action)
+    if (std::optional<TraversalKind> TK = Action->getCheckTraversalKind())
+      return traverse(*TK, NodeMatch);
+  return NodeMatch;
+}
+
 MatchFinder::MatchResult::MatchResult(const BoundNodes &Nodes,
                                       ASTContext *Context)
   : Nodes(Nodes), Context(Context),
@@ -1669,67 +1685,61 @@ MatchFinder::~MatchFinder() {}
 
 void MatchFinder::addMatcher(const DeclarationMatcher &NodeMatch,
                              MatchCallback *Action) {
-  std::optional<TraversalKind> TK;
-  if (Action)
-    TK = Action->getCheckTraversalKind();
-  if (TK)
-    Matchers.DeclOrStmt.emplace_back(traverse(*TK, NodeMatch), Action);
-  else
-    Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
+  Matchers.DeclOrStmt.emplace_back(adjustTraversalKind(NodeMatch, Action),
+                                   Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const TypeMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.Type.emplace_back(NodeMatch, Action);
+  Matchers.Type.emplace_back(adjustTraversalKind(NodeMatch, Action), Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const StatementMatcher &NodeMatch,
                              MatchCallback *Action) {
-  std::optional<TraversalKind> TK;
-  if (Action)
-    TK = Action->getCheckTraversalKind();
-  if (TK)
-    Matchers.DeclOrStmt.emplace_back(traverse(*TK, NodeMatch), Action);
-  else
-    Matchers.DeclOrStmt.emplace_back(NodeMatch, Action);
+  Matchers.DeclOrStmt.emplace_back(adjustTraversalKind(NodeMatch, Action),
+                                   Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const NestedNameSpecifierMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.NestedNameSpecifier.emplace_back(NodeMatch, Action);
+  Matchers.NestedNameSpecifier.emplace_back(
+      adjustTraversalKind(NodeMatch, Action), Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const NestedNameSpecifierLocMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.NestedNameSpecifierLoc.emplace_back(NodeMatch, Action);
+  Matchers.NestedNameSpecifierLoc.emplace_back(
+      adjustTraversalKind(NodeMatch, Action), Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const TypeLocMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.TypeLoc.emplace_back(NodeMatch, Action);
+  Matchers.TypeLoc.emplace_back(adjustTraversalKind(NodeMatch, Action), Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const CXXCtorInitializerMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.CtorInit.emplace_back(NodeMatch, Action);
+  Matchers.CtorInit.emplace_back(adjustTraversalKind(NodeMatch, Action),
+                                 Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const TemplateArgumentLocMatcher &NodeMatch,
                              MatchCallback *Action) {
-  Matchers.TemplateArgumentLoc.emplace_back(NodeMatch, Action);
+  Matchers.TemplateArgumentLoc.emplace_back(
+      adjustTraversalKind(NodeMatch, Action), Action);
   Matchers.AllCallbacks.insert(Action);
 }
 
 void MatchFinder::addMatcher(const AttrMatcher &AttrMatch,
                              MatchCallback *Action) {
-  Matchers.Attr.emplace_back(AttrMatch, Action);
+  Matchers.Attr.emplace_back(adjustTraversalKind(AttrMatch, Action), Action);
   Matchers.AllCallbacks.insert(Action);
 }
 

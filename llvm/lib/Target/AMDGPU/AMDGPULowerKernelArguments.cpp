@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
-#include "AMDGPUAsanInstrumentation.h"
 #include "GCNSubtarget.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CaptureTracking.h"
@@ -31,7 +30,6 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
-#include <string>
 
 #define DEBUG_TYPE "amdgpu-lower-kernel-arguments"
 
@@ -83,10 +81,13 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
   if (NoAliasArgs.empty())
     return;
 
-  // Add alias scopes for each noalias argument.
+  // Add alias scopes for each noalias argument. The scopes are disjoint, since
+  // an access based on one noalias argument can't modify memory an access based
+  // on another one reads.
   MDBuilder MDB(F.getContext());
   DenseMap<const Argument *, MDNode *> NewScopes;
-  MDNode *NewDomain = MDB.createAnonymousAliasScopeDomain(F.getName());
+  MDNode *NewDomain =
+      MDB.createAnonymousAliasScopeDomain(F.getName(), /*DisjointScopes=*/true);
 
   for (unsigned I = 0u; I < NoAliasArgs.size(); ++I) {
     const Argument *Arg = NoAliasArgs[I];
@@ -100,12 +101,20 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
     // If instruction accesses memory, collect its pointer arguments.
     Instruction *I = &(*Inst);
     SmallVector<const Value *, 2u> PtrArgs;
+    // May reach a noalias argument via a copy captured before the call.
+    bool IsUnrestrictedCall = false;
 
     if (std::optional<MemoryLocation> MO = MemoryLocation::getOrNone(I))
       PtrArgs.push_back(MO->Ptr);
     else if (const CallBase *Call = dyn_cast<CallBase>(I)) {
-      if (Call->doesNotAccessMemory())
+      MemoryEffects ME = Call->getMemoryEffects();
+      if (ME.doesNotAccessMemory())
         continue;
+
+      // Inaccessible memory cannot alias any IR-visible pointer.
+      if (ME.onlyAccessesInaccessibleMem())
+        continue;
+      IsUnrestrictedCall = !ME.onlyAccessesArgPointees();
 
       for (Value *Arg : Call->args()) {
         if (!Arg->getType()->isPointerTy())
@@ -113,10 +122,10 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
 
         PtrArgs.push_back(Arg);
       }
-    }
-
-    if (PtrArgs.empty())
+    } else {
+      // Not a memory access and not a call — nothing to annotate.
       continue;
+    }
 
     // Collect underlying objects of pointer arguments.
     SmallVector<Metadata *, 4u> Scopes;
@@ -143,25 +152,42 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
       } else
         UsesAliasingPtr = true;
 
-      if (isEscapeSource(Val))
+      if (isEscapeSource(Val)) {
+        // Can only alias a noalias argument if captured beforehand.
         RequiresNoCaptureBefore = true;
-      else if (!isa<Argument>(Val) && isIdentifiedObject(Val))
+      } else if (!isa<Argument>(Val) && !isIdentifiedObject(Val)) {
+        // Unknown provenance: assume nothing.
         UsesUnknownObject = true;
+      }
     }
 
     if (UsesUnknownObject)
       continue;
 
-    // Collect noalias scopes for instruction.
-    for (const Argument *Arg : NoAliasArgs) {
-      if (ObjSet.contains(Arg))
-        continue;
+    if (IsUnrestrictedCall)
+      RequiresNoCaptureBefore = true;
 
-      if (!RequiresNoCaptureBefore ||
-          !capturesAnything(PointerMayBeCapturedBefore(
-              Arg, false, I, &DT, false, CaptureComponents::Provenance)))
-        NoAliases.push_back(NewScopes[Arg]);
-    }
+    // Collect scopes for alias.scope metadata. Skip unrestricted calls: they
+    // may touch memory beyond their pointer arguments' pointees.
+    if (!UsesAliasingPtr && !IsUnrestrictedCall)
+      for (const Argument *Arg : NoAliasArgs) {
+        if (ObjSet.count(Arg))
+          Scopes.push_back(NewScopes[Arg]);
+      }
+
+    // Collect noalias scopes for the instruction not implied by its scopes.
+    // Scopes is only non-empty when no underlying object is an escape source
+    // and the instruction isn't an unrestricted call.
+    if (Scopes.empty())
+      for (const Argument *Arg : NoAliasArgs) {
+        if (ObjSet.contains(Arg))
+          continue;
+
+        if (!RequiresNoCaptureBefore ||
+            !capturesAnything(PointerMayBeCapturedBefore(
+                Arg, false, I, &DT, false, CaptureComponents::Provenance)))
+          NoAliases.push_back(NewScopes[Arg]);
+      }
 
     // Add noalias metadata to instruction.
     if (!NoAliases.empty()) {
@@ -170,13 +196,6 @@ static void addAliasScopeMetadata(Function &F, const DataLayout &DL,
                               MDNode::get(F.getContext(), NoAliases));
       Inst->setMetadata(LLVMContext::MD_noalias, NewMD);
     }
-
-    // Collect scopes for alias.scope metadata.
-    if (!UsesAliasingPtr)
-      for (const Argument *Arg : NoAliasArgs) {
-        if (ObjSet.count(Arg))
-          Scopes.push_back(NewScopes[Arg]);
-      }
 
     // Add alias.scope metadata to instruction.
     if (!Scopes.empty()) {
@@ -198,7 +217,7 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
   LLVMContext &Ctx = F.getContext();
   const DataLayout &DL = F.getDataLayout();
   BasicBlock &EntryBlock = *F.begin();
-  IRBuilder<> Builder(&EntryBlock, getInsertPt(EntryBlock));
+  IRBuilder<> Builder(getInsertPt(EntryBlock));
 
   const Align KernArgBaseAlign(16); // FIXME: Increase if necessary
   const uint64_t BaseOffset = ST.getExplicitKernelArgOffset();
@@ -209,16 +228,16 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
   if (TotalKernArgSize == 0)
     return false;
 
-  CallInst *KernArgSegment =
-      Builder.CreateIntrinsic(Intrinsic::amdgcn_kernarg_segment_ptr, {},
-                              nullptr, F.getName() + ".kernarg.segment");
+  CallInst *KernArgSegment = Builder.CreateIntrinsicWithoutFolding(
+      Intrinsic::amdgcn_kernarg_segment_ptr, {}, nullptr,
+      F.getName() + ".kernarg.segment");
   KernArgSegment->addRetAttr(Attribute::NonNull);
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
   uint64_t ExplicitArgOffset = 0;
 
-  addAliasScopeMetadata(F, F.getParent()->getDataLayout(), DT);
+  addAliasScopeMetadata(F, F.getDataLayout(), DT);
 
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
@@ -304,14 +323,22 @@ static bool lowerKernelArguments(Function &F, const TargetMachine &TM,
 
     MDBuilder MDB(Ctx);
 
-    if (Arg.hasAttribute(Attribute::NoUndef))
+    if (Arg.hasAttribute(Attribute::NoUndef) && AdjustedArgTy == ArgTy)
       Load->setMetadata(LLVMContext::MD_noundef, MDNode::get(Ctx, {}));
 
-    if (Arg.hasAttribute(Attribute::Range)) {
+    if (Arg.hasAttribute(Attribute::Range) && AdjustedArgTy == ArgTy) {
       const ConstantRange &Range =
           Arg.getAttribute(Attribute::Range).getValueAsConstantRange();
       Load->setMetadata(LLVMContext::MD_range,
                         MDB.createRange(Range.getLower(), Range.getUpper()));
+    }
+
+    if (Arg.hasAttribute(Attribute::NoFPClass) && AdjustedArgTy == ArgTy) {
+      FPClassTest Mask = Arg.getNoFPClass();
+      Load->setMetadata(
+          LLVMContext::MD_nofpclass,
+          MDNode::get(Ctx, ConstantAsMetadata::get(
+                               ConstantInt::get(Type::getInt32Ty(Ctx), Mask))));
     }
 
     if (isa<PointerType>(ArgTy)) {

@@ -19,7 +19,7 @@ class TestCase(TestBase):
                 "(Pair) pair = (f = 2, e = 3)",
             ],
         )
-        self.filecheck(f"platform shell cat {log}", __file__, f"-check-prefix=CHECK-VO")
+        self.filecheck_log(log, __file__, f"-check-prefix=CHECK-VO")
         # CHECK-VO: Object description fallback due to error: not a pointer type
 
         self.expect(
@@ -29,7 +29,5 @@ class TestCase(TestBase):
                 "(Pair)  (f = 2, e = 3)",
             ],
         )
-        self.filecheck(
-            f"platform shell cat {log}", __file__, f"-check-prefix=CHECK-EXPR"
-        )
+        self.filecheck_log(log, __file__, f"-check-prefix=CHECK-EXPR")
         # CHECK-EXPR: Object description fallback due to error: not a pointer type

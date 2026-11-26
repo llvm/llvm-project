@@ -1,6 +1,7 @@
 ; RUN: not llc -O0 -mtriple=spirv32-unknown-unknown %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_uniform_group_instructions %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_uniform_group_instructions %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-ERROR: LLVM ERROR: __spirv_GroupBitwiseAndKHR: the builtin requires the following SPIR-V extension: SPV_KHR_uniform_group_instructions
 
@@ -14,23 +15,23 @@
 ; CHECK-DAG: %[[ConstFloat:[0-9]+]] = OpConstantNull %[[TyFloat]]
 ; CHECK-DAG: %[[ConstBool:[0-9]+]] = OpConstantFalse %[[TyBool]]
 
-; CHECK: OpGroupBitwiseAndKHR %[[TyInt]]   %[[Scope]] 0 %[[ConstInt]]
-; CHECK: OpGroupBitwiseOrKHR  %[[TyInt]]   %[[Scope]] 0 %[[ConstInt]]
-; CHECK: OpGroupBitwiseXorKHR %[[TyInt]]   %[[Scope]] 0 %[[ConstInt]]
-; CHECK: OpGroupLogicalAndKHR %[[TyBool]]  %[[Scope]] 0 %[[ConstBool]]
-; CHECK: OpGroupLogicalOrKHR  %[[TyBool]]  %[[Scope]] 0 %[[ConstBool]]
-; CHECK: OpGroupLogicalXorKHR %[[TyBool]]  %[[Scope]] 0 %[[ConstBool]]
-; CHECK: OpGroupIMulKHR       %[[TyInt]]   %[[Scope]] 0 %[[ConstInt]]
-; CHECK: OpGroupFMulKHR       %[[TyFloat]] %[[Scope]] 0 %[[ConstFloat]]
+; CHECK: OpGroupBitwiseAndKHR %[[TyInt]]   %[[Scope]] Reduce %[[ConstInt]]
+; CHECK: OpGroupBitwiseOrKHR  %[[TyInt]]   %[[Scope]] Reduce %[[ConstInt]]
+; CHECK: OpGroupBitwiseXorKHR %[[TyInt]]   %[[Scope]] Reduce %[[ConstInt]]
+; CHECK: OpGroupLogicalAndKHR %[[TyBool]]  %[[Scope]] Reduce %[[ConstBool]]
+; CHECK: OpGroupLogicalOrKHR  %[[TyBool]]  %[[Scope]] Reduce %[[ConstBool]]
+; CHECK: OpGroupLogicalXorKHR %[[TyBool]]  %[[Scope]] Reduce %[[ConstBool]]
+; CHECK: OpGroupIMulKHR       %[[TyInt]]   %[[Scope]] Reduce %[[ConstInt]]
+; CHECK: OpGroupFMulKHR       %[[TyFloat]] %[[Scope]] Reduce %[[ConstFloat]]
 
-; CHECK: OpGroupBitwiseAndKHR %[[TyInt]]   %[[Scope]] 0 %[[ConstInt]]
-; CHECK: OpGroupBitwiseOrKHR  %[[TyInt]]   %[[Scope]] 0 %[[ConstInt]]
-; CHECK: OpGroupBitwiseXorKHR %[[TyInt]]   %[[Scope]] 0 %[[ConstInt]]
-; CHECK: OpGroupLogicalAndKHR %[[TyBool]]  %[[Scope]] 0 %[[ConstBool]]
-; CHECK: OpGroupLogicalOrKHR  %[[TyBool]]  %[[Scope]] 0 %[[ConstBool]]
-; CHECK: OpGroupLogicalXorKHR %[[TyBool]]  %[[Scope]] 0 %[[ConstBool]]
-; CHECK: OpGroupIMulKHR       %[[TyInt]]   %[[Scope]] 0 %[[ConstInt]]
-; CHECK: OpGroupFMulKHR       %[[TyFloat]] %[[Scope]] 0 %[[ConstFloat]]
+; CHECK: OpGroupBitwiseAndKHR %[[TyInt]]   %[[Scope]] Reduce %[[ConstInt]]
+; CHECK: OpGroupBitwiseOrKHR  %[[TyInt]]   %[[Scope]] Reduce %[[ConstInt]]
+; CHECK: OpGroupBitwiseXorKHR %[[TyInt]]   %[[Scope]] Reduce %[[ConstInt]]
+; CHECK: OpGroupLogicalAndKHR %[[TyBool]]  %[[Scope]] Reduce %[[ConstBool]]
+; CHECK: OpGroupLogicalOrKHR  %[[TyBool]]  %[[Scope]] Reduce %[[ConstBool]]
+; CHECK: OpGroupLogicalXorKHR %[[TyBool]]  %[[Scope]] Reduce %[[ConstBool]]
+; CHECK: OpGroupIMulKHR       %[[TyInt]]   %[[Scope]] Reduce %[[ConstInt]]
+; CHECK: OpGroupFMulKHR       %[[TyFloat]] %[[Scope]] Reduce %[[ConstFloat]]
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64"
 target triple = "spir64-unknown-unknown"

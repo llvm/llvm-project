@@ -8,8 +8,7 @@
 // The SuspendCrossingInfo maintains data that allows to answer a question
 // whether given two BasicBlocks A and B there is a path from A to B that
 // passes through a suspend point. Note, SuspendCrossingInfo is invalidated
-// by changes to the CFG including adding/removing BBs due to its use of BB
-// ptrs in the BlockToIndexMapping.
+// by changes to the block numbering.
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TRANSFORMS_COROUTINES_SUSPENDCROSSINGINFO_H
@@ -23,32 +22,11 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Coroutines/CoroInstr.h"
+#include "llvm/Transforms/Coroutines/CoroShape.h"
 
 namespace llvm {
 
 class ModuleSlotTracker;
-
-// Provides two way mapping between the blocks and numbers.
-class BlockToIndexMapping {
-  SmallVector<BasicBlock *, 32> V;
-
-public:
-  size_t size() const { return V.size(); }
-
-  BlockToIndexMapping(Function &F) {
-    for (BasicBlock &BB : F)
-      V.push_back(&BB);
-    llvm::sort(V);
-  }
-
-  size_t blockToIndex(BasicBlock const *BB) const {
-    auto *I = llvm::lower_bound(V, BB);
-    assert(I != V.end() && *I == BB && "BasicBlockNumberng: Unknown block");
-    return I - V.begin();
-  }
-
-  BasicBlock *indexToBlock(unsigned Index) const { return V[Index]; }
-};
 
 // The SuspendCrossingInfo maintains data that allows to answer a question
 // whether given two BasicBlocks A and B there is a path from A to B that
@@ -60,32 +38,36 @@ public:
 //   Kills: a bit vector which contains a set of indices of blocks that can
 //          reach block 'i' but there is a path crossing a suspend point
 //          not repeating 'i' (path to 'i' without cycles containing 'i').
-//   Suspend: a boolean indicating whether block 'i' contains a suspend point.
-//   End: a boolean indicating whether block 'i' contains a coro.end intrinsic.
+//   AlwaysKill: a boolean indicating whether block 'i' always propagate kills.
+//   NeverKill: a boolean indicating whether block 'i' never propagate kills.
 //   KillLoop: There is a path from 'i' to 'i' not otherwise repeating 'i' that
 //             crosses a suspend point.
 //
 class SuspendCrossingInfo {
-  BlockToIndexMapping Mapping;
-
   struct BlockData {
     BitVector Consumes;
     BitVector Kills;
-    bool Suspend = false;
-    bool End = false;
     bool KillLoop = false;
     bool Changed = false;
+
+  private:
+    bool AlwaysKill = false;
+    bool NeverKill = false;
+
+  public:
+    bool isAlwaysKill() const { return AlwaysKill; }
+    bool isNeverKill() const { return NeverKill; }
+    void setAlwaysKill() {
+      AlwaysKill = true;
+      NeverKill = false;
+    }
+    void setNeverKill() {
+      AlwaysKill = false;
+      NeverKill = true;
+    }
   };
+  [[maybe_unused]] Function *F;
   SmallVector<BlockData, 32> Block;
-
-  iterator_range<pred_iterator> predecessors(BlockData const &BD) const {
-    BasicBlock *BB = Mapping.indexToBlock(&BD - &Block[0]);
-    return llvm::predecessors(BB);
-  }
-
-  BlockData &getBlockData(BasicBlock *BB) {
-    return Block[Mapping.blockToIndex(BB)];
-  }
 
   /// Compute the BlockData for the current function in one iteration.
   /// Initialize - Whether this is the first iteration, we can optimize
@@ -104,9 +86,7 @@ public:
 #endif
 
   LLVM_ABI
-  SuspendCrossingInfo(Function &F,
-                      const SmallVectorImpl<AnyCoroSuspendInst *> &CoroSuspends,
-                      const SmallVectorImpl<AnyCoroEndInst *> &CoroEnds);
+  SuspendCrossingInfo(Function &F, const coro::Shape &Shape);
 
   /// Returns true if there is a path from \p From to \p To crossing a suspend
   /// point without crossing \p From a 2nd time.

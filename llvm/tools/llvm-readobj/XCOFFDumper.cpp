@@ -205,9 +205,8 @@ void XCOFFDumper::printLoaderSectionHeader(uintptr_t LoaderSectionAddr) {
   }
 }
 
-const EnumEntry<XCOFF::StorageClass> SymStorageClass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::StorageClass> SymStorageClassDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
     ECase(C_NULL),  ECase(C_AUTO),    ECase(C_EXT),     ECase(C_STAT),
     ECase(C_REG),   ECase(C_EXTDEF),  ECase(C_LABEL),   ECase(C_ULABEL),
     ECase(C_MOS),   ECase(C_ARG),     ECase(C_STRTAG),  ECase(C_MOU),
@@ -223,6 +222,7 @@ const EnumEntry<XCOFF::StorageClass> SymStorageClass[] = {
     ECase(C_STTLS), ECase(C_EFCN)
 #undef ECase
 };
+constexpr auto SymStorageClass = BUILD_ENUM_STRINGS(SymStorageClassDefs);
 
 template <typename LoaderSectionSymbolEntry, typename LoaderSectionHeader>
 void XCOFFDumper::printLoaderSectionSymbolsHelper(uintptr_t LoaderSectionAddr) {
@@ -258,7 +258,7 @@ void XCOFFDumper::printLoaderSectionSymbolsHelper(uintptr_t LoaderSectionAddr) {
     W.printHex("SymbolType", LoadSecSymEntPtr->SymbolType);
     W.printEnum("StorageClass",
                 static_cast<uint8_t>(LoadSecSymEntPtr->StorageClass),
-                ArrayRef(SymStorageClass));
+                EnumStrings(SymStorageClass));
     W.printHex("ImportFileID", LoadSecSymEntPtr->ImportFileID);
     W.printNumber("ParameterTypeCheck", LoadSecSymEntPtr->ParameterTypeCheck);
   }
@@ -274,9 +274,8 @@ void XCOFFDumper::printLoaderSectionSymbols(uintptr_t LoaderSectionAddr) {
                                     LoaderSectionHeader32>(LoaderSectionAddr);
 }
 
-const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::RelocationType> RelocationTypeNameclassDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
     ECase(R_POS),    ECase(R_RL),     ECase(R_RLA),    ECase(R_NEG),
     ECase(R_REL),    ECase(R_TOC),    ECase(R_TRL),    ECase(R_TRLA),
     ECase(R_GL),     ECase(R_TCL),    ECase(R_REF),    ECase(R_BA),
@@ -285,6 +284,8 @@ const EnumEntry<XCOFF::RelocationType> RelocationTypeNameclass[] = {
     ECase(R_TLSML),  ECase(R_TOCU),   ECase(R_TOCL)
 #undef ECase
 };
+constexpr auto RelocationTypeNameclass =
+    BUILD_ENUM_STRINGS(RelocationTypeNameclassDefs);
 
 // From the XCOFF specification: there are five implicit external symbols, one
 // each for the .text, .data, .bss, .tdata, and .tbss sections. These symbols
@@ -334,7 +335,7 @@ void XCOFFDumper::printLoaderSectionRelocationEntry(
     W.printNumber("FixupBitValue", IsFixupIndicated(Info) ? 1 : 0);
     W.printNumber("Length", GetRelocatedLength(Info));
     W.printEnum("Type", static_cast<uint8_t>(Type),
-                ArrayRef(RelocationTypeNameclass));
+                EnumStrings(RelocationTypeNameclass));
     W.printNumber("SectionNumber", LoaderSecRelEntPtr->SectionNum);
   } else {
     W.startLine() << format_hex(LoaderSecRelEntPtr->VirtualAddr,
@@ -475,7 +476,8 @@ template <typename RelTy> void XCOFFDumper::printRelocation(RelTy Reloc) {
     W.printString("IsSigned", Reloc.isRelocationSigned() ? "Yes" : "No");
     W.printNumber("FixupBitValue", Reloc.isFixupIndicated() ? 1 : 0);
     W.printNumber("Length", Reloc.getRelocatedLength());
-    W.printEnum("Type", (uint8_t)Reloc.Type, ArrayRef(RelocationTypeNameclass));
+    W.printEnum("Type", (uint8_t)Reloc.Type,
+                EnumStrings(RelocationTypeNameclass));
   } else {
     raw_ostream &OS = W.startLine();
     OS << W.hex(Reloc.VirtualAddress) << " " << RelocName << " "
@@ -516,20 +518,20 @@ void XCOFFDumper::printRelocations(ArrayRef<Shdr> Sections) {
   }
 }
 
-const EnumEntry<XCOFF::CFileStringType> FileStringType[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::CFileStringType> FileStringTypeDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
     ECase(XFT_FN), ECase(XFT_CT), ECase(XFT_CV), ECase(XFT_CD)
 #undef ECase
 };
+constexpr auto FileStringType = BUILD_ENUM_STRINGS(FileStringTypeDefs);
 
-const EnumEntry<XCOFF::SymbolAuxType> SymAuxType[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::SymbolAuxType> SymAuxTypeDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
     ECase(AUX_EXCEPT), ECase(AUX_FCN), ECase(AUX_SYM), ECase(AUX_FILE),
     ECase(AUX_CSECT),  ECase(AUX_SECT)
 #undef ECase
 };
+constexpr auto SymAuxType = BUILD_ENUM_STRINGS(SymAuxTypeDefs);
 
 void XCOFFDumper::printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr) {
   assert((!Obj.is64Bit() || AuxEntPtr->AuxType == XCOFF::AUX_FILE) &&
@@ -541,17 +543,16 @@ void XCOFFDumper::printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr) {
                 Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
   W.printString("Name", FileName);
   W.printEnum("Type", static_cast<uint8_t>(AuxEntPtr->Type),
-              ArrayRef(FileStringType));
+              EnumStrings(FileStringType));
   if (Obj.is64Bit()) {
     W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
-                ArrayRef(SymAuxType));
+                EnumStrings(SymAuxType));
   }
 }
 
-static const EnumEntry<XCOFF::StorageMappingClass> CsectStorageMappingClass[] =
-    {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::StorageMappingClass>
+    CsectStorageMappingClassDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
         ECase(XMC_PR), ECase(XMC_RO), ECase(XMC_DB),   ECase(XMC_GL),
         ECase(XMC_XO), ECase(XMC_SV), ECase(XMC_SV64), ECase(XMC_SV3264),
         ECase(XMC_TI), ECase(XMC_TB), ECase(XMC_RW),   ECase(XMC_TC0),
@@ -560,13 +561,16 @@ static const EnumEntry<XCOFF::StorageMappingClass> CsectStorageMappingClass[] =
         ECase(XMC_TE)
 #undef ECase
 };
+constexpr auto CsectStorageMappingClass =
+    BUILD_ENUM_STRINGS(CsectStorageMappingClassDefs);
 
-const EnumEntry<XCOFF::SymbolType> CsectSymbolTypeClass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::SymbolType> CsectSymbolTypeClassDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
     ECase(XTY_ER), ECase(XTY_SD), ECase(XTY_LD), ECase(XTY_CM)
 #undef ECase
 };
+constexpr auto CsectSymbolTypeClass =
+    BUILD_ENUM_STRINGS(CsectSymbolTypeClassDefs);
 
 void XCOFFDumper::printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef) {
   assert((!Obj.is64Bit() || AuxEntRef.getAuxType64() == XCOFF::AUX_CSECT) &&
@@ -582,14 +586,14 @@ void XCOFFDumper::printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef) {
   // Print out symbol alignment and type.
   W.printNumber("SymbolAlignmentLog2", AuxEntRef.getAlignmentLog2());
   W.printEnum("SymbolType", AuxEntRef.getSymbolType(),
-              ArrayRef(CsectSymbolTypeClass));
+              EnumStrings(CsectSymbolTypeClass));
   W.printEnum("StorageMappingClass",
               static_cast<uint8_t>(AuxEntRef.getStorageMappingClass()),
-              ArrayRef(CsectStorageMappingClass));
+              EnumStrings(CsectStorageMappingClass));
 
   if (Obj.is64Bit()) {
     W.printEnum("Auxiliary Type", static_cast<uint8_t>(XCOFF::AUX_CSECT),
-                ArrayRef(SymAuxType));
+                EnumStrings(SymAuxType));
   } else {
     W.printHex("StabInfoIndex", AuxEntRef.getStabInfoIndex32());
     W.printHex("StabSectNum", AuxEntRef.getStabSectNum32());
@@ -621,7 +625,7 @@ void XCOFFDumper::printExceptionAuxEnt(const XCOFFExceptionAuxEnt *AuxEntPtr) {
   W.printHex("SizeOfFunction", AuxEntPtr->SizeOfFunction);
   W.printNumber("SymbolIndexOfNextBeyond", AuxEntPtr->SymIdxOfNextBeyond);
   W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
-              ArrayRef(SymAuxType));
+              EnumStrings(SymAuxType));
 }
 
 void XCOFFDumper::printFunctionAuxEnt(const XCOFFFunctionAuxEnt32 *AuxEntPtr) {
@@ -646,7 +650,7 @@ void XCOFFDumper::printFunctionAuxEnt(const XCOFFFunctionAuxEnt64 *AuxEntPtr) {
   W.printHex("PointerToLineNum", AuxEntPtr->PtrToLineNum);
   W.printNumber("SymbolIndexOfNextBeyond", AuxEntPtr->SymIdxOfNextBeyond);
   W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
-              ArrayRef(SymAuxType));
+              EnumStrings(SymAuxType));
 }
 
 void XCOFFDumper::printBlockAuxEnt(const XCOFFBlockAuxEnt32 *AuxEntPtr) {
@@ -667,7 +671,7 @@ void XCOFFDumper::printBlockAuxEnt(const XCOFFBlockAuxEnt64 *AuxEntPtr) {
                 Obj.getSymbolIndex(reinterpret_cast<uintptr_t>(AuxEntPtr)));
   W.printHex("LineNumber", AuxEntPtr->LineNum);
   W.printEnum("Auxiliary Type", static_cast<uint8_t>(AuxEntPtr->AuxType),
-              ArrayRef(SymAuxType));
+              EnumStrings(SymAuxType));
 }
 
 template <typename T>
@@ -679,7 +683,7 @@ void XCOFFDumper::printSectAuxEntForDWARF(const T *AuxEntPtr) {
   W.printNumber("NumberOfRelocEntries", AuxEntPtr->NumberOfRelocEnt);
   if (Obj.is64Bit())
     W.printEnum("Auxiliary Type", static_cast<uint8_t>(XCOFF::AUX_SECT),
-                ArrayRef(SymAuxType));
+                EnumStrings(SymAuxType));
 }
 
 static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
@@ -717,16 +721,15 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
   }
 }
 
-const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::CFileLangId> CFileLangIdClassDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
     ECase(TB_C), ECase(TB_Fortran), ECase(TB_CPLUSPLUS)
 #undef ECase
 };
+constexpr auto CFileLangIdClass = BUILD_ENUM_STRINGS(CFileLangIdClassDefs);
 
-const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::CFileCpuId> CFileCpuIdClassDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
     ECase(TCPU_INVALID), ECase(TCPU_PPC),  ECase(TCPU_PPC64), ECase(TCPU_COM),
     ECase(TCPU_PWR),     ECase(TCPU_ANY),  ECase(TCPU_601),   ECase(TCPU_603),
     ECase(TCPU_604),     ECase(TCPU_620),  ECase(TCPU_A35),   ECase(TCPU_970),
@@ -735,6 +738,7 @@ const EnumEntry<XCOFF::CFileCpuId> CFileCpuIdClass[] = {
     ECase(TCPU_PWRX)
 #undef ECase
 };
+constexpr auto CFileCpuIdClass = BUILD_ENUM_STRINGS(CFileCpuIdClassDefs);
 
 template <typename T> const T *XCOFFDumper::getAuxEntPtr(uintptr_t AuxAddress) {
   const T *AuxEntPtr = reinterpret_cast<const T *>(AuxAddress);
@@ -776,14 +780,14 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
   W.printString("Section", SectionName);
   if (SymbolClass == XCOFF::C_FILE) {
     W.printEnum("Source Language ID", SymbolEntRef.getLanguageIdForCFile(),
-                ArrayRef(CFileLangIdClass));
+                EnumStrings(CFileLangIdClass));
     W.printEnum("CPU Version ID", SymbolEntRef.getCPUTypeIddForCFile(),
-                ArrayRef(CFileCpuIdClass));
+                EnumStrings(CFileCpuIdClass));
   } else
     W.printHex("Type", SymbolEntRef.getSymbolType());
 
   W.printEnum("StorageClass", static_cast<uint8_t>(SymbolClass),
-              ArrayRef(SymStorageClass));
+              EnumStrings(SymStorageClass));
   W.printNumber("NumberOfAuxEntries", NumberOfAuxEntries);
 
   if (NumberOfAuxEntries == 0)
@@ -792,8 +796,7 @@ void XCOFFDumper::printSymbol(const SymbolRef &S) {
   auto checkNumOfAux = [=] {
     if (NumberOfAuxEntries > 1)
       reportUniqueWarning("the " +
-                          enumToString(static_cast<uint8_t>(SymbolClass),
-                                       ArrayRef(SymStorageClass)) +
+                          EnumStrings(SymStorageClass).toString(SymbolClass) +
                           " symbol at index " + Twine(SymbolIdx) +
                           " should not have more than 1 "
                           "auxiliary entry");
@@ -987,9 +990,8 @@ void XCOFFDumper::printNeededLibraries() {
   }
 }
 
-const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::SectionTypeFlags> SectionTypeFlagsNamesDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
     ECase(STYP_PAD),    ECase(STYP_DWARF), ECase(STYP_TEXT),
     ECase(STYP_DATA),   ECase(STYP_BSS),   ECase(STYP_EXCEPT),
     ECase(STYP_INFO),   ECase(STYP_TDATA), ECase(STYP_TBSS),
@@ -997,17 +999,20 @@ const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
     ECase(STYP_OVRFLO)
 #undef ECase
 };
+constexpr auto SectionTypeFlagsNames =
+    BUILD_ENUM_STRINGS(SectionTypeFlagsNamesDefs);
 
-const EnumEntry<XCOFF::DwarfSectionSubtypeFlags>
-    DWARFSectionSubtypeFlagsNames[] = {
-#define ECase(X)                                                               \
-  { #X, XCOFF::X }
+constexpr EnumStringDef<XCOFF::DwarfSectionSubtypeFlags>
+    DWARFSectionSubtypeFlagsNamesDefs[] = {
+#define ECase(X) {{#X}, XCOFF::X}
         ECase(SSUBTYP_DWINFO),  ECase(SSUBTYP_DWLINE),  ECase(SSUBTYP_DWPBNMS),
         ECase(SSUBTYP_DWPBTYP), ECase(SSUBTYP_DWARNGE), ECase(SSUBTYP_DWABREV),
         ECase(SSUBTYP_DWSTR),   ECase(SSUBTYP_DWRNGES), ECase(SSUBTYP_DWLOC),
         ECase(SSUBTYP_DWFRAME), ECase(SSUBTYP_DWMAC)
 #undef ECase
 };
+constexpr auto DWARFSectionSubtypeFlagsNames =
+    BUILD_ENUM_STRINGS(DWARFSectionSubtypeFlagsNamesDefs);
 
 template <typename T>
 void XCOFFDumper::printOverflowSectionHeader(T &Sec) const {
@@ -1225,10 +1230,10 @@ void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
     if (Sec.isReservedSectionType())
       W.printHex("Flags", "Reserved", SectionType);
     else {
-      W.printEnum("Type", SectionType, ArrayRef(SectionTypeFlagsNames));
+      W.printEnum("Type", SectionType, EnumStrings(SectionTypeFlagsNames));
       if (SectionType == XCOFF::STYP_DWARF) {
         W.printEnum("DWARFSubType", SectionSubtype,
-                    ArrayRef(DWARFSectionSubtypeFlagsNames));
+                    EnumStrings(DWARFSectionSubtypeFlagsNames));
       }
     }
   }

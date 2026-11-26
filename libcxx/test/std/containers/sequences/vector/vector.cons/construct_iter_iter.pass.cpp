@@ -14,6 +14,7 @@
 #include <vector>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -82,7 +83,9 @@ TEST_CONSTEXPR_CXX20 void basic_test_cases() {
   // Regression test for https://llvm.org/PR47497
   {
     std::vector<int> v1({}, forward_iterator<const int*>{});
+    (void)v1;
     std::vector<int> v2(forward_iterator<const int*>{}, {});
+    (void)v2;
   }
 #endif
 }
@@ -136,10 +139,12 @@ void test_ctor_under_alloc() {
     {
       ExpectConstructGuard<int&> G(1);
       C v(It(arr1), It(std::end(arr1)));
+      (void)v;
     }
     {
       ExpectConstructGuard<int&> G(3);
       C v(It(arr2), It(std::end(arr2)));
+      (void)v;
     }
   }
   {
@@ -148,6 +153,7 @@ void test_ctor_under_alloc() {
     {
       ExpectConstructGuard<int&> G(1);
       C v(It(arr1), It(std::end(arr1)));
+      (void)v;
     }
     {
       //ExpectConstructGuard<int&> G(3);
@@ -162,11 +168,13 @@ void test_ctor_under_alloc() {
     {
       Alloc::construct_called = false;
       C v(arr1, arr1 + 1);
+      (void)v;
       assert(Alloc::construct_called);
     }
     {
       Alloc::construct_called = false;
       C v(arr2, arr2 + 3);
+      (void)v;
       assert(Alloc::construct_called);
     }
   }
@@ -176,11 +184,13 @@ void test_ctor_under_alloc() {
     {
       Alloc::construct_called = false;
       C v(arr1, arr1 + 1);
+      (void)v;
       assert(Alloc::construct_called);
     }
     {
       Alloc::construct_called = false;
       C v(arr2, arr2 + 3);
+      (void)v;
       assert(Alloc::construct_called);
     }
   }

@@ -23,15 +23,15 @@ AST_MATCHER(CXXRecordDecl, hasBases) {
 
 bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
   const CXXRecordDecl *const Node = Base.getType()->getAsCXXRecordDecl();
-  if (!Node)
+  if (!Node || !Node->hasDefinition())
     return true;
-
-  assert(Node->isCompleteDefinition());
 
   // Short circuit the lookup if we have analyzed this record before.
   if (const auto CachedValue = InterfaceMap.find(Node);
       CachedValue != InterfaceMap.end())
     return CachedValue->second;
+
+  InterfaceMap.try_emplace(Node, false);
 
   // To be an interface, a class must have...
   const bool CurrentClassIsInterface =
@@ -47,7 +47,7 @@ bool MultipleInheritanceCheck::isInterface(const CXXBaseSpecifier &Base) {
         return M->isUserProvided() && !M->isPureVirtual() && !M->isStatic();
       });
 
-  InterfaceMap.try_emplace(Node, CurrentClassIsInterface);
+  InterfaceMap[Node] = CurrentClassIsInterface;
   return CurrentClassIsInterface;
 }
 
@@ -58,16 +58,35 @@ void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
 
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   const auto &D = *Result.Nodes.getNodeAs<CXXRecordDecl>("decl");
-  // Check to see if the class inherits from multiple concrete classes.
-  unsigned NumConcrete =
-      llvm::count_if(D.bases(), [&](const CXXBaseSpecifier &I) {
-        return !I.isVirtual() && !isInterface(I);
-      });
+  // Collect the direct and virtual concrete bases of the class.
+  SmallVector<const CXXRecordDecl *> DirectConcreteBases;
+  for (const CXXBaseSpecifier &Base : D.bases())
+    if (!Base.isVirtual() && !isInterface(Base))
+      DirectConcreteBases.push_back(Base.getType()->getAsCXXRecordDecl());
 
-  // Check virtual bases to see if there is more than one concrete
-  // non-virtual base.
+  SmallVector<const CXXRecordDecl *> VirtualConcreteBases;
+  for (const CXXBaseSpecifier &VBase : D.vbases())
+    if (!isInterface(VBase))
+      VirtualConcreteBases.push_back(VBase.getType()->getAsCXXRecordDecl());
+
+  unsigned NumConcrete = DirectConcreteBases.size();
+
+  // Count only virtual concrete bases that introduce an additional
+  // implementation base, skipping those already represented by a more derived
+  // concrete base.
   NumConcrete += llvm::count_if(
-      D.vbases(), [&](const CXXBaseSpecifier &V) { return !isInterface(V); });
+      VirtualConcreteBases, [&](const CXXRecordDecl *VirtualBase) {
+        const bool HiddenByMoreDerivedVirtualBase = llvm::any_of(
+            VirtualConcreteBases, [&](const CXXRecordDecl *OtherVirtualBase) {
+              return VirtualBase != OtherVirtualBase &&
+                     OtherVirtualBase->isVirtuallyDerivedFrom(VirtualBase);
+            });
+        const bool HiddenByDirectConcreteBase = llvm::any_of(
+            DirectConcreteBases, [&](const CXXRecordDecl *DirectBase) {
+              return DirectBase->isVirtuallyDerivedFrom(VirtualBase);
+            });
+        return !HiddenByMoreDerivedVirtualBase && !HiddenByDirectConcreteBase;
+      });
 
   if (NumConcrete > 1)
     diag(D.getBeginLoc(), "inheriting multiple classes that aren't "

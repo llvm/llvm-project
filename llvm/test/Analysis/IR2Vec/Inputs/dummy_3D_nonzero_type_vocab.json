@@ -1,7 +1,8 @@
 {
     "Opcodes": {
         "Ret": [0, 0, 0],
-        "Br": [0, 0, 0],
+        "UncondBr": [0, 0, 0],
+        "CondBr": [0, 0, 0],
         "Switch": [0, 0, 0],
         "IndirectBr": [0, 0, 0],
         "Invoke": [0, 0, 0],
@@ -87,6 +88,7 @@
         "Function": [0, 0, 0],
         "Pointer": [0, 0, 0],
         "Constant": [0, 0, 0],
-        "Variable": [0, 0, 0]
+        "Variable": [0, 0, 0],
+        "Label": [0, 0, 0]
     }
 }

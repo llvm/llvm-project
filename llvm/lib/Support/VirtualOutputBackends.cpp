@@ -22,7 +22,6 @@
 #include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/VirtualOutputConfig.h"
 #include "llvm/Support/VirtualOutputError.h"
@@ -131,11 +130,8 @@ vfs::makeMirroringOutputBackend(IntrusiveRefCntPtr<OutputBackend> Backend1,
                     std::unique_ptr<OutputFileImpl> F2)
         : PreferredBufferSize(std::max(F1->getOS().GetBufferSize(),
                                        F1->getOS().GetBufferSize())),
-          F1(std::move(F1)), F2(std::move(F2)) {
-      // Don't double buffer.
-      this->F1->getOS().SetUnbuffered();
-      this->F2->getOS().SetUnbuffered();
-    }
+          F1(std::move(F1)), F2(std::move(F2)) {}
+
     size_t PreferredBufferSize;
     std::unique_ptr<OutputFileImpl> F1;
     std::unique_ptr<OutputFileImpl> F2;
@@ -306,8 +302,8 @@ Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
   assert(OutputPath != "-" && "Unexpected request for FD of stdout");
 
   // Disable temporary file for other non-regular files, and if we get a status
-  // object, also check if we can write and disable write-through buffers if
-  // appropriate.
+  // object, also check if in append mode we can write and disable write-through
+  // buffers if appropriate.
   if (Config.getAtomicWrite()) {
     sys::fs::file_status Status;
     sys::fs::status(OutputPath, Status);
@@ -315,8 +311,12 @@ Error OnDiskOutputFile::initializeFile(std::optional<int> &FD) {
       if (!sys::fs::is_regular_file(Status))
         Config.setNoAtomicWrite();
 
-      // Fail now if we can't write to the final destination.
-      if (!sys::fs::can_write(OutputPath))
+      // In append mode, we will open the file for writing which will need write
+      // permission. Fail now if it is already clear that we can't write to the
+      // final destination.
+      // In non-append mode, we will delete and replace the file. Permission
+      // bits of the file itself are irrelevant in this case.
+      if (Config.getAppend() && !sys::fs::can_write(OutputPath))
         return make_error<OutputError>(
             OutputPath,
             std::make_error_code(std::errc::operation_not_permitted));
@@ -368,18 +368,6 @@ Error OnDiskOutputFile::initializeStream() {
 }
 
 namespace {
-class OpenFileRAII {
-  static const int InvalidFd = -1;
-
-public:
-  int Fd = InvalidFd;
-
-  ~OpenFileRAII() {
-    if (Fd != InvalidFd)
-      llvm::sys::Process::SafelyCloseFileDescriptor(Fd);
-  }
-};
-
 enum class FileDifference : uint8_t {
   /// The source and destination paths refer to the exact same file.
   IdenticalFile,
@@ -397,54 +385,61 @@ areFilesDifferent(const llvm::Twine &Source, const llvm::Twine &Destination) {
   if (sys::fs::equivalent(Source, Destination))
     return FileDifference::IdenticalFile;
 
-  OpenFileRAII SourceFile;
-  sys::fs::file_status SourceStatus;
+  Expected<sys::fs::file_t> SourceFile = sys::fs::openNativeFileForRead(Source);
   // If we can't open the source file, fail.
-  if (std::error_code EC = sys::fs::openFileForRead(Source, SourceFile.Fd))
-    return convertToOutputError(Source, EC);
+  if (!SourceFile)
+    return convertToOutputError(Source,
+                                errorToErrorCode(SourceFile.takeError()));
 
-  // If we can't stat the source file, fail.
-  if (std::error_code EC = sys::fs::status(SourceFile.Fd, SourceStatus))
-    return convertToOutputError(Source, EC);
+  llvm::scope_exit CloseSourceFile([&]() { sys::fs::closeFile(*SourceFile); });
 
-  OpenFileRAII DestFile;
-  sys::fs::file_status DestStatus;
+  ErrorOr<uint64_t> SourceSize = sys::fs::file_size(*SourceFile);
+  // If we can't get the the source size, fail.
+  if (!SourceSize)
+    return convertToOutputError(Source, SourceSize.getError());
+
+  Expected<sys::fs::file_t> DestFile =
+      sys::fs::openNativeFileForRead(Destination);
   // If we can't open the destination file, report different.
-  if (std::error_code Error =
-          sys::fs::openFileForRead(Destination, DestFile.Fd))
+  if (!DestFile) {
+    consumeError(DestFile.takeError());
     return FileDifference::DifferentContents;
+  }
 
-  // If we can't open the destination file, report different.
-  if (std::error_code Error = sys::fs::status(DestFile.Fd, DestStatus))
+  llvm::scope_exit CloseDestFile([&]() { sys::fs::closeFile(*DestFile); });
+
+  ErrorOr<uint64_t> DestSize = sys::fs::file_size(*DestFile);
+  // If we can't get the destination size, report different.
+  if (!DestSize)
     return FileDifference::DifferentContents;
 
   // If the files are different sizes, they must be different.
-  uint64_t Size = SourceStatus.getSize();
-  if (Size != DestStatus.getSize())
+  if (*SourceSize != *DestSize)
     return FileDifference::DifferentContents;
 
   // If both files are zero size, they must be the same.
-  if (Size == 0)
+  if (*SourceSize == 0)
     return FileDifference::SameContents;
 
   // The two files match in size, so we have to compare the bytes to determine
   // if they're the same.
   std::error_code SourceRegionErr;
   sys::fs::mapped_file_region SourceRegion(
-      sys::fs::convertFDToNativeFile(SourceFile.Fd),
-      sys::fs::mapped_file_region::readonly, Size, 0, SourceRegionErr);
+      *SourceFile, sys::fs::mapped_file_region::readonly, *SourceSize, 0,
+      SourceRegionErr);
   if (SourceRegionErr)
     return convertToOutputError(Source, SourceRegionErr);
 
   std::error_code DestRegionErr;
-  sys::fs::mapped_file_region DestRegion(
-      sys::fs::convertFDToNativeFile(DestFile.Fd),
-      sys::fs::mapped_file_region::readonly, Size, 0, DestRegionErr);
+  sys::fs::mapped_file_region DestRegion(*DestFile,
+                                         sys::fs::mapped_file_region::readonly,
+                                         *DestSize, 0, DestRegionErr);
 
   if (DestRegionErr)
     return FileDifference::DifferentContents;
 
-  if (memcmp(SourceRegion.const_data(), DestRegion.const_data(), Size) != 0)
+  if (memcmp(SourceRegion.const_data(), DestRegion.const_data(), *SourceSize) !=
+      0)
     return FileDifference::DifferentContents;
 
   return FileDifference::SameContents;
@@ -496,7 +491,7 @@ Error OnDiskOutputFile::keep() {
       if (Error Err = Lock.tryLock().moveInto(Owned)) {
         // If we error acquiring a lock, we cannot ensure appends
         // to the trace file are atomic - cannot ensure output correctness.
-        Lock.unsafeMaybeUnlock();
+        Lock.unsafeUnlock();
         return convertToOutputError(
             OutputPath, std::make_error_code(std::errc::no_lock_available));
       }
@@ -508,7 +503,7 @@ Error OnDiskOutputFile::keep() {
           return convertToOutputError(OutputPath, EC);
         Out << (*Content)->getBuffer();
         Out.close();
-        Lock.unsafeMaybeUnlock();
+        Lock.unsafeUnlock();
         if (Out.has_error())
           return convertToOutputError(OutputPath, Out.error());
         // Remove temp file and done.
@@ -528,7 +523,7 @@ Error OnDiskOutputFile::keep() {
         // the lock, causing other waiting processes to time-out. Let's clear
         // the lock and try again right away. If we do start seeing compiler
         // hangs in this location, we will need to re-consider.
-        Lock.unsafeMaybeUnlock();
+        Lock.unsafeUnlock();
         continue;
       }
       }

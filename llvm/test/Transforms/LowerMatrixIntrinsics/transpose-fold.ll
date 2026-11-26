@@ -19,7 +19,7 @@ define void @reshape(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP5]], double [[TMP6]], i64 1
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[OUT]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[OUT]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    ret void
 ;

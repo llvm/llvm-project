@@ -1,7 +1,7 @@
 
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -target-cpu core2 -fopenmp -fopenmp-version=50 -x c -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-apple-darwin10 -target-cpu core2 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-apple-darwin10 -target-cpu core2 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-50 %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-apple-darwin10 -target-cpu core2 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -target-cpu core2 -fopenmp-simd -fopenmp-version=50 -x c -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-apple-darwin10 -target-cpu core2 -emit-pch -o %t %s
@@ -261,7 +261,7 @@ int main(void) {
 #pragma omp atomic capture
   {ldx = ldx * ldv; dv = ldx;}
 // CHECK: [[EXPR_RE:%.+]] = load i32, ptr @{{.+}}
-// CHECK: [[EXPR_IM:%.+]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @{{.+}}, i32 0, i32 1)
+// CHECK: [[EXPR_IM:%.+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4)
 // CHECK: call void @__atomic_load(i64 noundef 8, ptr noundef [[X_ADDR:@.+]], ptr noundef [[EXPECTED_ADDR:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
@@ -280,11 +280,11 @@ int main(void) {
 // CHECK: [[RE_CAST:%.+]] = sitofp i32 [[NEW_RE]] to float
 // CHECK: [[IM_CAST:%.+]] = sitofp i32 [[NEW_IM]] to float
 // CHECK: store float [[RE_CAST]], ptr @{{.+}},
-// CHECK: store float [[IM_CAST]], ptr getelementptr inbounds nuw ({ float, float }, ptr @{{.+}}, i32 0, i32 1),
+// CHECK: store float [[IM_CAST]], ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4),
 #pragma omp atomic capture
   cfv = cix = civ / cix;
 // CHECK: [[EXPR_RE:%.+]] = load float, ptr @{{.+}}
-// CHECK: [[EXPR_IM:%.+]] = load float, ptr getelementptr inbounds nuw ({ float, float }, ptr @{{.+}}, i32 0, i32 1)
+// CHECK: [[EXPR_IM:%.+]] = load float, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4)
 // CHECK: call void @__atomic_load(i64 noundef 8, ptr noundef [[X_ADDR:@.+]], ptr noundef [[EXPECTED_ADDR:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
@@ -303,11 +303,11 @@ int main(void) {
 // CHECK: [[RE_CAST:%.+]] = fptosi float [[X_RE_OLD]] to i32
 // CHECK: [[IM_CAST:%.+]] = fptosi float [[X_IM_OLD]] to i32
 // CHECK: store i32 [[RE_CAST]], ptr @{{.+}},
-// CHECK: store i32 [[IM_CAST]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @{{.+}}, i32 0, i32 1),
+// CHECK: store i32 [[IM_CAST]], ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4),
 #pragma omp atomic capture
   {civ = cfx; cfx = cfv + cfx;}
 // CHECK: [[EXPR_RE:%.+]] = load double, ptr @{{.+}}
-// CHECK: [[EXPR_IM:%.+]] = load double, ptr getelementptr inbounds nuw ({ double, double }, ptr @{{.+}}, i32 0, i32 1)
+// CHECK: [[EXPR_IM:%.+]] = load double, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 8)
 // CHECK: call void @__atomic_load(i64 noundef 16, ptr noundef [[X_ADDR:@.+]], ptr noundef [[EXPECTED_ADDR:%.+]], i32 noundef 5)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
@@ -326,12 +326,12 @@ int main(void) {
 // CHECK: [[RE_CAST:%.+]] = fptrunc double [[NEW_RE]] to float
 // CHECK: [[IM_CAST:%.+]] = fptrunc double [[NEW_IM]] to float
 // CHECK: store float [[RE_CAST]], ptr @{{.+}},
-// CHECK: store float [[IM_CAST]], ptr getelementptr inbounds nuw ({ float, float }, ptr @{{.+}}, i32 0, i32 1),
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK: store float [[IM_CAST]], ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4),
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture seq_cst
   {cdx = cdx - cdv; cfv = cdx;}
 // CHECK: [[BV:%.+]] = load i8, ptr @{{.+}}
-// CHECK: [[BOOL:%.+]] = trunc i8 [[BV]] to i1
+// CHECK: [[BOOL:%.+]] = icmp ne i8 [[BV]], 0
 // CHECK: [[EXPR:%.+]] = zext i1 [[BOOL]] to i64
 // CHECK: [[OLD:%.+]] = atomicrmw and ptr @{{.+}}, i64 [[EXPR]] monotonic, align 8
 // CHECK: [[DESIRED:%.+]] = and i64 [[OLD]], [[EXPR]]
@@ -344,7 +344,7 @@ int main(void) {
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[EXPECTED:%.+]] = phi i8 [ [[X]], %{{.+}} ], [ [[OLD_X:%.+]], %[[CONT]] ]
-// CHECK: [[OLD_BOOL:%.+]] = trunc i8 [[EXPECTED]] to i1
+// CHECK: [[OLD_BOOL:%.+]] = icmp ne i8 [[EXPECTED]], 0
 // CHECK: [[X_RVAL:%.+]] = zext i1 [[OLD_BOOL]] to i32
 // CHECK: [[AND:%.+]] = and i32 [[EXPR]], [[X_RVAL]]
 // CHECK: [[CAST:%.+]] = icmp ne i32 [[AND]], 0
@@ -377,7 +377,7 @@ int main(void) {
 // CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store i8 [[NEW]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture, seq_cst
   {cx = cx >> ucv; cv = cx;}
 // CHECK: [[SV:%.+]]  = load i16, ptr @{{.+}},
@@ -420,7 +420,7 @@ int main(void) {
 // CHECK: [[OLD:%.+]] = atomicrmw or ptr @{{.+}}, i32 [[EXPR]] seq_cst, align 4
 // CHECK: [[DESIRED:%.+]] = or i32 [[EXPR]], [[OLD]]
 // CHECK: store i32 [[DESIRED]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic seq_cst, capture
   {uix = iv | uix; uiv = uix;}
 // CHECK: [[EXPR:%.+]] = load i32, ptr @{{.+}}
@@ -446,7 +446,7 @@ int main(void) {
 // CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store i32 [[OLD_RE]], ptr @{{.+}},
-// CHECK: store i32 [[OLD_IM]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @{{.+}}, i32 0, i32 1),
+// CHECK: store i32 [[OLD_IM]], ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4),
 #pragma omp atomic capture
   {civ = cix; cix = lv + cix;}
 // CHECK: [[ULV:%.+]] = load i64, ptr @{{.+}},
@@ -522,7 +522,7 @@ int main(void) {
 // CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store i32 [[NEW_RE]], ptr @{{.+}},
-// CHECK: store i32 [[NEW_IM]], ptr getelementptr inbounds nuw ({ i32, i32 }, ptr @{{.+}}, i32 0, i32 1),
+// CHECK: store i32 [[NEW_IM]], ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4),
 #pragma omp atomic capture
   {cix = fv / cix; civ = cix;}
 // CHECK: [[EXPR:%.+]] = load double, ptr @{{.+}},
@@ -549,11 +549,11 @@ int main(void) {
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[EXPECTED:%.+]] = phi i8 [ [[XI8]], %{{.+}} ], [ [[OLD_X:%.+]], %[[CONT]] ]
-// CHECK: [[BOOL_EXPECTED:%.+]] = trunc i8 [[EXPECTED]] to i1
+// CHECK: [[BOOL_EXPECTED:%.+]] = icmp ne i8 [[EXPECTED]], 0
 // CHECK: [[CONV:%.+]] = zext i1 [[BOOL_EXPECTED]] to i32
 // CHECK: [[X_RVAL:%.+]] = sitofp i32 [[CONV]] to x86_fp80
 // CHECK: [[MUL:%.+]] = fmul x86_fp80 [[EXPR]], [[X_RVAL]]
-// CHECK: [[BOOL_DESIRED:%.+]] = fcmp une x86_fp80 [[MUL]], 0xK00000000000000000000
+// CHECK: [[BOOL_DESIRED:%.+]] = fcmp une x86_fp80 [[MUL]], 0.000000e+00
 // CHECK: [[DESIRED:%.+]] = zext i1 [[BOOL_DESIRED]] to i8
 // CHECK: store i8 [[DESIRED]], ptr [[TEMP:%.+]],
 // CHECK: [[DESIRED:%.+]] = load i8, ptr [[TEMP]],
@@ -567,12 +567,12 @@ int main(void) {
 #pragma omp atomic capture
   {bv = bx; bx = ldv * bx;}
 // CHECK: [[EXPR_RE:%.+]] = load i32, ptr [[CIV_ADDR:@.+]],
-// CHECK: [[EXPR_IM:%.+]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr [[CIV_ADDR]], i32 0, i32 1),
+// CHECK: [[EXPR_IM:%.+]] = load i32, ptr getelementptr inbounds nuw (i8, ptr [[CIV_ADDR]], i64 4),
 // CHECK: [[XI8:%.+]] = load atomic i8, ptr [[X_ADDR:@.+]] monotonic, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[EXPECTED:%.+]] = phi i8 [ [[XI8]], %{{.+}} ], [ [[OLD_X:%.+]], %[[CONT]] ]
-// CHECK: [[BOOL_EXPECTED:%.+]] = trunc i8 [[EXPECTED]] to i1
+// CHECK: [[BOOL_EXPECTED:%.+]] = icmp ne i8 [[EXPECTED]], 0
 // CHECK: [[X_RVAL:%.+]] = zext i1 [[BOOL_EXPECTED]] to i32
 // CHECK: [[SUB_RE:%.+]] = sub i32 [[EXPR_RE:%.+]], [[X_RVAL]]
 // CHECK: [[SUB_IM:%.+]] = sub i32 [[EXPR_IM:%.+]], 0
@@ -617,7 +617,7 @@ int main(void) {
 #pragma omp atomic capture
   {int4x[sv] |= bv; iv = int4x[sv];}
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i32, ptr getelementptr (i8, ptr @{{.+}}, i64 4) monotonic, align 4
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i32, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4) monotonic, align 4
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i32 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -635,7 +635,7 @@ int main(void) {
 // CHECK: [[BF_SET:%.+]] = or i32 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i32 [[BF_SET]], ptr [[TEMP1]],
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i32, ptr [[TEMP1]],
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr (i8, ptr @{{.+}}, i64 4), i32 [[OLD_BF_VALUE]], i32 [[NEW_BF_VALUE]] monotonic monotonic, align 4
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4), i32 [[OLD_BF_VALUE]], i32 [[NEW_BF_VALUE]] monotonic monotonic, align 4
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i32, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i32, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
@@ -644,7 +644,7 @@ int main(void) {
 #pragma omp atomic capture
   iv = bfx.a = bfx.a - ldv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: call void @__atomic_load(i64 noundef 4, ptr noundef getelementptr (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP:%.+]], i32 noundef 0)
+// CHECK: call void @__atomic_load(i64 noundef 4, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD:%.+]] = load i32, ptr [[LDTEMP]],
@@ -662,7 +662,7 @@ int main(void) {
 // CHECK: [[BF_CLEAR:%.+]] = and i32 [[NEW_VAL]], -2147483648
 // CHECK: or i32 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i32 %{{.+}}, ptr [[TEMP1]]
-// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 4, ptr noundef getelementptr (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP]], ptr noundef [[TEMP1]], i32 noundef 0, i32 noundef 0)
+// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 4, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4), ptr noundef [[LDTEMP]], ptr noundef [[TEMP1]], i32 noundef 0, i32 noundef 0)
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store i32 [[A_ASHR]], ptr @{{.+}},
@@ -696,7 +696,7 @@ int main(void) {
 #pragma omp atomic capture
   {bfx2.a -= ldv; iv = bfx2.a;}
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr (i8, ptr @{{.+}}, i64 3) monotonic, align 1
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 3) monotonic, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i8 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -716,7 +716,7 @@ int main(void) {
 // CHECK: or i8 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i8 %{{.+}}, ptr [[BITCAST_NEW]]
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i8, ptr [[BITCAST_NEW]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr (i8, ptr @{{.+}}, i64 3), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 3), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i8, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
@@ -753,7 +753,7 @@ int main(void) {
 #pragma omp atomic capture
   {iv = bfx3.a; bfx3.a /= ldv;}
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: call void @__atomic_load(i64 noundef 3, ptr noundef getelementptr (i8, ptr @{{.+}}, i64 1), ptr noundef [[LDTEMP:%.+]], i32 noundef 0)
+// CHECK: call void @__atomic_load(i64 noundef 3, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 1), ptr noundef [[LDTEMP:%.+]], i32 noundef 0)
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD:%.+]] = load i24, ptr [[LDTEMP]],
@@ -774,7 +774,7 @@ int main(void) {
 // CHECK: [[BF_CLEAR:%.+]] = and i24 [[BF_LD]], -131065
 // CHECK: or i24 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i24 %{{.+}}, ptr [[BITCAST2]]
-// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 3, ptr noundef getelementptr (i8, ptr @{{.+}}, i64 1), ptr noundef [[LDTEMP]], ptr noundef [[BITCAST2]], i32 noundef 0, i32 noundef 0)
+// CHECK: [[FAIL_SUCCESS:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 3, ptr noundef getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 1), ptr noundef [[LDTEMP]], ptr noundef [[BITCAST2]], i32 noundef 0, i32 noundef 0)
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store i32 [[NEW_VAL]], ptr @{{.+}},
@@ -811,7 +811,7 @@ int main(void) {
 #pragma omp atomic relaxed capture
   iv = bfx4.a = bfx4.a * ldv;
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1) monotonic, align 1
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 2) monotonic, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i8 [ [[PREV_VALUE]], %{{.+}} ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -831,7 +831,7 @@ int main(void) {
 // CHECK: or i8 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i8 %{{.+}}, ptr [[BITCAST1]]
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i8, ptr [[BITCAST1]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 2), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] monotonic monotonic, align 1
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i8, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
@@ -866,11 +866,11 @@ int main(void) {
 // CHECK: [[EXIT]]
 // CHECK: [[NEW_VAL:%.+]] = trunc i64 [[CONV]] to i32
 // CHECK: store i32 [[NEW_VAL]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture release
   {bfx4.b /= ldv; iv = bfx4.b;}
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
-// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1) acquire, align 1
+// CHECK: [[PREV_VALUE:%.+]] = load atomic i8, ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 2) acquire, align 1
 // CHECK: br label %[[CONT:.+]]
 // CHECK: [[CONT]]
 // CHECK: [[OLD_BF_VALUE:%.+]] = phi i8 [ [[PREV_VALUE]], %[[EXIT]] ], [ [[FAILED_OLD_VAL:%.+]], %[[CONT]] ]
@@ -890,14 +890,14 @@ int main(void) {
 // CHECK: or i8 [[BF_CLEAR]], [[BF_VALUE]]
 // CHECK: store i8 %{{.+}}, ptr [[BITCAST1]]
 // CHECK: [[NEW_BF_VALUE:%.+]] = load i8, ptr [[BITCAST1]]
-// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (%struct.BitFields4_packed, ptr @{{.+}}, i32 0, i32 1), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] acquire acquire, align 1
+// CHECK: [[RES:%.+]] = cmpxchg ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 2), i8 [[OLD_BF_VALUE]], i8 [[NEW_BF_VALUE]] acquire acquire, align 1
 // CHECK: [[FAILED_OLD_VAL]] = extractvalue { i8, i1 } [[RES]], 0
 // CHECK: [[FAIL_SUCCESS:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: [[NEW_VAL_I32:%.+]] = trunc i64 [[NEW_VAL]] to i32
 // CHECK: store i32 [[NEW_VAL_I32]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture acquire
   iv = bfx4_packed.b += ldv;
 // CHECK: load i64, ptr
@@ -922,7 +922,7 @@ int main(void) {
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store float [[X]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture acq_rel
   {fv = float2x.x; float2x.x = ulv - float2x.x;}
 // CHECK: [[EXPR:%.+]] = load double, ptr @{{.+}},
@@ -932,7 +932,7 @@ int main(void) {
 // CHECK: [[NEW_VAL:%.+]] = fptosi double [[DIV]] to i32
 // CHECK: call void @llvm.write_register.i32([[REG]], i32 [[NEW_VAL]])
 // CHECK: store i32 [[NEW_VAL]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture seq_cst
   {rix = dv / rix; iv = rix;}
 // CHECK: [[OLD_VAL:%.+]] = atomicrmw xchg ptr @{{.+}}, i32 5 monotonic, align 4

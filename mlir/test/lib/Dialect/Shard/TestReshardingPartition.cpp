@@ -1,4 +1,4 @@
-//===- TestSimplification.cpp - Test simplification -----------------------===//
+//===- TestReshardingPartition.cpp - Test resharding partition ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/Shard/IR/ShardOps.h"
 #include "mlir/Dialect/Shard/Transforms/Partition.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -40,7 +39,7 @@ struct TestReshardingRewritePattern : OpRewritePattern<ShardOp> {
         op, cast<ShardingOp>(op.getSharding().getDefiningOp()).getGridAttr());
 
     bool foundUser = false;
-    for (auto user : op->getUsers()) {
+    for (auto *user : op->getUsers()) {
       if (auto targetShardOp = llvm::dyn_cast<ShardOp>(user)) {
         if (targetShardOp.getAnnotateForUsers() &&
             grid == symbolTable.lookupNearestSymbolFrom<shard::GridOp>(
@@ -58,7 +57,7 @@ struct TestReshardingRewritePattern : OpRewritePattern<ShardOp> {
       return failure();
     }
 
-    for (auto user : op->getUsers()) {
+    for (auto *user : op->getUsers()) {
       auto targetShardOp = llvm::dyn_cast<ShardOp>(user);
       if (!targetShardOp || !targetShardOp.getAnnotateForUsers() ||
           symbolTable.lookupNearestSymbolFrom<shard::GridOp>(

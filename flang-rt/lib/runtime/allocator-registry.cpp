@@ -38,5 +38,21 @@ RT_API_ATTRS FreeFct AllocatorRegistry::GetDeallocator(int pos) {
   INTERNAL_CHECK(f != nullptr);
   return f;
 }
+
+RT_API_ATTRS void *AllocatorRegistry::Allocate(int pos, std::size_t size,
+    std::size_t alignment, std::int64_t *asyncObject) {
+  if (pos == kDefaultAllocator) {
+    return MallocWrapper(size, alignment, asyncObject);
+  }
+  return GetAllocator(pos)(size, alignment, asyncObject);
+}
+
+RT_API_ATTRS void AllocatorRegistry::Deallocate(int pos, void *p) {
+  if (pos == kDefaultAllocator) {
+    std::free(p);
+  } else {
+    GetDeallocator(pos)(p);
+  }
+}
 RT_OFFLOAD_API_GROUP_END
 } // namespace Fortran::runtime

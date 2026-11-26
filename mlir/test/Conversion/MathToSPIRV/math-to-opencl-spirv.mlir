@@ -20,14 +20,12 @@ func.func @float32_unary_scalar(%arg0: f32) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.CL.log %[[ADDONE]]
   %5 = math.log1p %arg0 : f32
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant 1.44269502 : f32
-  // CHECK: %[[LOG0:.+]] = spirv.CL.log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.CL.log2 %{{.*}}: f32
   %6 = math.log2 %arg0 : f32
-  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant 0.434294492 : f32
-  // CHECK: %[[LOG1:.+]] = spirv.CL.log {{.+}}
-  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  // CHECK: spirv.CL.log10 %{{.*}}: f32
   %7 = math.log10 %arg0 : f32
+  // CHECK: spirv.CL.exp2 %{{.*}}: f32
+  %exp2_scalar = math.exp2 %arg0 : f32
   // CHECK: spirv.CL.rint %{{.*}}: f32
   %8 = math.roundeven %arg0 : f32
   // CHECK: spirv.CL.rsqrt %{{.*}}: f32
@@ -46,6 +44,8 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %15 = math.floor %arg0 : f32
   // CHECK: spirv.CL.erf %{{.*}}: f32
   %16 = math.erf %arg0 : f32
+  // CHECK: spirv.CL.erfc %{{.*}}: f32
+  %erfc = math.erfc %arg0 : f32
   // CHECK: spirv.CL.round %{{.*}}: f32
   %17 = math.round %arg0 : f32
   // CHECK: spirv.CL.tan %{{.*}}: f32
@@ -64,6 +64,10 @@ func.func @float32_unary_scalar(%arg0: f32) {
   %24 = math.acosh %arg0 : f32
   // CHECK: spirv.CL.atanh %{{.*}}: f32
   %25 = math.atanh %arg0 : f32
+  // CHECK: spirv.CL.trunc %{{.*}}: f32
+  %26 = math.trunc %arg0 : f32
+  // CHECK: spirv.CL.cbrt %{{.*}}: f32
+  %27 = math.cbrt %arg0 : f32
   return
 }
 
@@ -85,14 +89,12 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   // CHECK: %[[ADDONE:.+]] = spirv.FAdd %[[ONE]], %{{.+}}
   // CHECK: spirv.CL.log %[[ADDONE]]
   %5 = math.log1p %arg0 : vector<3xf32>
-  // CHECK: %[[LOG2_RECIPROCAL:.+]] = spirv.Constant dense<1.44269502> : vector<3xf32>
-  // CHECK: %[[LOG0:.+]] = spirv.CL.log {{.+}}
-  // CHECK: spirv.FMul %[[LOG0]], %[[LOG2_RECIPROCAL]]
+  // CHECK: spirv.CL.log2 %{{.*}}: vector<3xf32>
   %6 = math.log2 %arg0 : vector<3xf32>
-  // CHECK: %[[LOG10_RECIPROCAL:.+]] = spirv.Constant dense<0.434294492> : vector<3xf32>
-  // CHECK: %[[LOG1:.+]] = spirv.CL.log {{.+}}
-  // CHECK: spirv.FMul %[[LOG1]], %[[LOG10_RECIPROCAL]]
+  // CHECK: spirv.CL.log10 %{{.*}}: vector<3xf32>
   %7 = math.log10 %arg0 : vector<3xf32>
+  // CHECK: spirv.CL.exp2 %{{.*}}: vector<3xf32>
+  %exp2_vec = math.exp2 %arg0 : vector<3xf32>
   // CHECK: spirv.CL.rint %{{.*}}: vector<3xf32>
   %8 = math.roundeven %arg0 : vector<3xf32>
   // CHECK: spirv.CL.rsqrt %{{.*}}: vector<3xf32>
@@ -119,6 +121,8 @@ func.func @float32_unary_vector(%arg0: vector<3xf32>) {
   %19 = math.acosh %arg0 : vector<3xf32>
   // CHECK: spirv.CL.atanh %{{.*}}: vector<3xf32>
   %20 = math.atanh %arg0 : vector<3xf32>
+  // CHECK: spirv.CL.trunc %{{.*}}: vector<3xf32>
+  %21 = math.trunc %arg0 : vector<3xf32>
   return
 }
 
@@ -128,6 +132,8 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   %0 = math.atan2 %lhs, %rhs : f32
   // CHECK: spirv.CL.pow %{{.*}}: f32
   %1 = math.powf %lhs, %rhs : f32
+  // CHECK: spirv.CL.copysign %{{.*}}, %{{.*}}: f32
+  %copysign = math.copysign %lhs, %rhs : f32
   return
 }
 
@@ -137,7 +143,23 @@ func.func @float32_binary_vector(%lhs: vector<4xf32>, %rhs: vector<4xf32>) {
   %0 = math.atan2 %lhs, %rhs : vector<4xf32>
   // CHECK: spirv.CL.pow %{{.*}}: vector<4xf32>
   %1 = math.powf %lhs, %rhs : vector<4xf32>
+  // CHECK: spirv.CL.copysign %{{.*}}, %{{.*}}: vector<4xf32>
+  %copysign = math.copysign %lhs, %rhs : vector<4xf32>
   return
+}
+
+// CHECK-LABEL: @fpowi_scalar
+func.func @fpowi_scalar(%base: f32, %power: i32) -> f32 {
+  // CHECK: spirv.CL.pown %{{.*}}, %{{.*}} : f32, i32 -> f32
+  %0 = math.fpowi %base, %power : f32, i32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @fpowi_vector
+func.func @fpowi_vector(%base: vector<4xf32>, %power: vector<4xi32>) -> vector<4xf32> {
+  // CHECK: spirv.CL.pown %{{.*}}, %{{.*}} : vector<4xf32>, vector<4xi32> -> vector<4xf32>
+  %0 = math.fpowi %base, %power : vector<4xf32>, vector<4xi32>
+  return %0 : vector<4xf32>
 }
 
 // CHECK-LABEL: @float32_ternary_scalar
@@ -159,7 +181,56 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
 func.func @int_unary(%arg0: i32) {
   // CHECK: spirv.CL.s_abs %{{.*}}
   %0 = math.absi %arg0 : i32
+  // CHECK: spirv.CL.clz %{{.*}} : i32
+  %1 = math.ctlz %arg0 : i32
+  // CHECK: spirv.CL.ctz %{{.*}} : i32
+  %2 = math.cttz %arg0 : i32
   return
+}
+
+// CHECK-LABEL: @int_unary_vector
+func.func @int_unary_vector(%arg0: vector<2xi32>) {
+  // CHECK: spirv.CL.clz %{{.*}} : vector<2xi32>
+  %0 = math.ctlz %arg0 : vector<2xi32>
+  // CHECK: spirv.CL.ctz %{{.*}} : vector<2xi32>
+  %1 = math.cttz %arg0 : vector<2xi32>
+  return
+}
+
+// CHECK-LABEL: @cttz_i1
+func.func @cttz_i1(%arg0: i1) -> i1 {
+  // CHECK: [[RESULT:%.*]] = spirv.LogicalNot %arg0 : i1
+  // CHECK: return [[RESULT]] : i1
+  %0 = math.cttz %arg0 : i1
+  return %0 : i1
+}
+
+// CHECK-LABEL: @cttz_i1_vector
+func.func @cttz_i1_vector(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // CHECK: [[RESULT:%.*]] = spirv.LogicalNot %arg0 : vector<2xi1>
+  // CHECK: return [[RESULT]] : vector<2xi1>
+  %0 = math.cttz %arg0 : vector<2xi1>
+  return %0 : vector<2xi1>
+}
+
+// CHECK-LABEL: @cttz_index
+func.func @cttz_index(%arg0: index) -> index {
+  // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : index to i32
+  // CHECK: [[RESULT:%.*]] = spirv.CL.ctz [[INPUT]] : i32
+  // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast [[RESULT]] : i32 to index
+  // CHECK: return [[CAST]] : index
+  %0 = math.cttz %arg0 : index
+  return %0 : index
+}
+
+// CHECK-LABEL: @cttz_index_vector
+func.func @cttz_index_vector(%arg0: vector<2xindex>) -> vector<2xindex> {
+  // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : vector<2xindex> to vector<2xi32>
+  // CHECK: [[RESULT:%.*]] = spirv.CL.ctz [[INPUT]] : vector<2xi32>
+  // CHECK: [[CAST:%.*]] = builtin.unrealized_conversion_cast [[RESULT]] : vector<2xi32> to vector<2xindex>
+  // CHECK: return [[CAST]] : vector<2xindex>
+  %0 = math.cttz %arg0 : vector<2xindex>
+  return %0 : vector<2xindex>
 }
 
 } // end module
@@ -215,3 +286,64 @@ func.func @tensor_1d(%arg0: tensor<2xf32>) {
 }
 
 } // end module
+
+// -----
+
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>> } {
+
+// CHECK-LABEL: @sincos_scalar
+func.func @sincos_scalar(%arg0: f32) {
+  // CHECK: %[[SIN:.+]] = spirv.CL.sin %{{.*}}: f32
+  // CHECK: %[[COS:.+]] = spirv.CL.cos %{{.*}}: f32
+  %sin, %cos = math.sincos %arg0 : f32
+  return
+}
+
+// CHECK-LABEL: @sincos_vector
+func.func @sincos_vector(%arg0: vector<3xf32>) {
+  // CHECK: %[[SIN:.+]] = spirv.CL.sin %{{.*}}: vector<3xf32>
+  // CHECK: %[[COS:.+]] = spirv.CL.cos %{{.*}}: vector<3xf32>
+  %sin, %cos = math.sincos %arg0 : vector<3xf32>
+  return
+}
+
+} // end module
+
+// -----
+
+// Emulating narrow types must preserve cttz(0) == source bit width.
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>> } {
+  // CHECK-LABEL: @cttz_emulated_i8
+  func.func @cttz_emulated_i8(%arg0: i8) -> i8 {
+    // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : i8 to i32
+    // CHECK: [[SENTINEL:%.*]] = spirv.Constant 256 : i32
+    // CHECK: [[BOUNDED:%.*]] = spirv.BitwiseOr [[INPUT]], [[SENTINEL]] : i32
+    // CHECK: spirv.CL.ctz [[BOUNDED]] : i32
+    %0 = math.cttz %arg0 : i8
+    return %0 : i8
+  }
+  // CHECK-LABEL: @cttz_emulated_vector
+  func.func @cttz_emulated_vector(%arg0: vector<2xi16>) -> vector<2xi16> {
+    // CHECK: [[INPUT:%.*]] = builtin.unrealized_conversion_cast %arg0 : vector<2xi16> to vector<2xi32>
+    // CHECK: [[SENTINEL:%.*]] = spirv.Constant dense<65536> : vector<2xi32>
+    // CHECK: [[BOUNDED:%.*]] = spirv.BitwiseOr [[INPUT]], [[SENTINEL]] : vector<2xi32>
+    // CHECK: spirv.CL.ctz [[BOUNDED]] : vector<2xi32>
+    %0 = math.cttz %arg0 : vector<2xi16>
+    return %0 : vector<2xi16>
+  }
+}
+
+// -----
+
+module attributes { spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel, Int8, Int16, Int64], []>, #spirv.resource_limits<>> } {
+  // CHECK-LABEL: @cttz_native_widths
+  func.func @cttz_native_widths(%a: i8, %b: vector<2xi16>, %c: i64) {
+    // CHECK: spirv.CL.ctz %{{.*}} : i8
+    %0 = math.cttz %a : i8
+    // CHECK: spirv.CL.ctz %{{.*}} : vector<2xi16>
+    %1 = math.cttz %b : vector<2xi16>
+    // CHECK: spirv.CL.ctz %{{.*}} : i64
+    %2 = math.cttz %c : i64
+    return
+  }
+}

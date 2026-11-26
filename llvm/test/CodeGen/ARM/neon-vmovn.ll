@@ -11,9 +11,8 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn32_trunc1(<4 x i32> %src1, <4 x i32> %src
 ; CHECK-LABEL: vmovn32_trunc1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vzip.32 q0, q1
-; CHECK-NEXT:    vmovn.i32 d17, q1
-; CHECK-NEXT:    vmovn.i32 d16, q0
-; CHECK-NEXT:    vorr q0, q8, q8
+; CHECK-NEXT:    vmovn.i32 d0, q0
+; CHECK-NEXT:    vmovn.i32 d1, q1
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn32_trunc1:
@@ -21,9 +20,9 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn32_trunc1(<4 x i32> %src1, <4 x i32> %src
 ; CHECKBE-NEXT:    vrev64.32 q8, q1
 ; CHECKBE-NEXT:    vrev64.32 q9, q0
 ; CHECKBE-NEXT:    vzip.32 q9, q8
-; CHECKBE-NEXT:    vmovn.i32 d17, q8
-; CHECKBE-NEXT:    vmovn.i32 d16, q9
-; CHECKBE-NEXT:    vrev64.16 q0, q8
+; CHECKBE-NEXT:    vmovn.i32 d18, q9
+; CHECKBE-NEXT:    vmovn.i32 d19, q8
+; CHECKBE-NEXT:    vrev64.16 q0, q9
 ; CHECKBE-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <4 x i32> %src1, <4 x i32> %src2, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
@@ -35,8 +34,9 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn32_trunc2(<4 x i32> %src1, <4 x i32> %src
 ; CHECK-LABEL: vmovn32_trunc2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vzip.32 q1, q0
-; CHECK-NEXT:    vmovn.i32 d1, q0
-; CHECK-NEXT:    vmovn.i32 d0, q1
+; CHECK-NEXT:    vmovn.i32 d16, q1
+; CHECK-NEXT:    vmovn.i32 d17, q0
+; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn32_trunc2:
@@ -44,9 +44,9 @@ define arm_aapcs_vfpcc <8 x i16> @vmovn32_trunc2(<4 x i32> %src1, <4 x i32> %src
 ; CHECKBE-NEXT:    vrev64.32 q8, q0
 ; CHECKBE-NEXT:    vrev64.32 q9, q1
 ; CHECKBE-NEXT:    vzip.32 q9, q8
-; CHECKBE-NEXT:    vmovn.i32 d17, q8
-; CHECKBE-NEXT:    vmovn.i32 d16, q9
-; CHECKBE-NEXT:    vrev64.16 q0, q8
+; CHECKBE-NEXT:    vmovn.i32 d18, q9
+; CHECKBE-NEXT:    vmovn.i32 d19, q8
+; CHECKBE-NEXT:    vrev64.16 q0, q9
 ; CHECKBE-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <4 x i32> %src1, <4 x i32> %src2, <8 x i32> <i32 4, i32 0, i32 5, i32 1, i32 6, i32 2, i32 7, i32 3>
@@ -58,9 +58,8 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn16_trunc1(<8 x i16> %src1, <8 x i16> %src
 ; CHECK-LABEL: vmovn16_trunc1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vzip.16 q0, q1
-; CHECK-NEXT:    vmovn.i16 d17, q1
-; CHECK-NEXT:    vmovn.i16 d16, q0
-; CHECK-NEXT:    vorr q0, q8, q8
+; CHECK-NEXT:    vmovn.i16 d0, q0
+; CHECK-NEXT:    vmovn.i16 d1, q1
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_trunc1:
@@ -68,9 +67,9 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn16_trunc1(<8 x i16> %src1, <8 x i16> %src
 ; CHECKBE-NEXT:    vrev64.16 q8, q1
 ; CHECKBE-NEXT:    vrev64.16 q9, q0
 ; CHECKBE-NEXT:    vzip.16 q9, q8
-; CHECKBE-NEXT:    vmovn.i16 d17, q8
-; CHECKBE-NEXT:    vmovn.i16 d16, q9
-; CHECKBE-NEXT:    vrev64.8 q0, q8
+; CHECKBE-NEXT:    vmovn.i16 d18, q9
+; CHECKBE-NEXT:    vmovn.i16 d19, q8
+; CHECKBE-NEXT:    vrev64.8 q0, q9
 ; CHECKBE-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <8 x i16> %src1, <8 x i16> %src2, <16 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11, i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
@@ -82,8 +81,9 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn16_trunc2(<8 x i16> %src1, <8 x i16> %src
 ; CHECK-LABEL: vmovn16_trunc2:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vzip.16 q1, q0
-; CHECK-NEXT:    vmovn.i16 d1, q0
-; CHECK-NEXT:    vmovn.i16 d0, q1
+; CHECK-NEXT:    vmovn.i16 d16, q1
+; CHECK-NEXT:    vmovn.i16 d17, q0
+; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_trunc2:
@@ -91,9 +91,9 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn16_trunc2(<8 x i16> %src1, <8 x i16> %src
 ; CHECKBE-NEXT:    vrev64.16 q8, q0
 ; CHECKBE-NEXT:    vrev64.16 q9, q1
 ; CHECKBE-NEXT:    vzip.16 q9, q8
-; CHECKBE-NEXT:    vmovn.i16 d17, q8
-; CHECKBE-NEXT:    vmovn.i16 d16, q9
-; CHECKBE-NEXT:    vrev64.8 q0, q8
+; CHECKBE-NEXT:    vmovn.i16 d18, q9
+; CHECKBE-NEXT:    vmovn.i16 d19, q8
+; CHECKBE-NEXT:    vrev64.8 q0, q9
 ; CHECKBE-NEXT:    bx lr
 entry:
   %strided.vec = shufflevector <8 x i16> %src1, <8 x i16> %src2, <16 x i32> <i32 8, i32 0, i32 9, i32 1, i32 10, i32 2, i32 11, i32 3, i32 12, i32 4, i32 13, i32 5, i32 14, i32 6, i32 15, i32 7>
@@ -372,23 +372,23 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmovn16_b1(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_b1:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vrev32.16 d16, d1
-; CHECK-NEXT:    vrev32.16 d17, d0
-; CHECK-NEXT:    vtrn.16 d16, d3
-; CHECK-NEXT:    vtrn.16 d17, d2
+; CHECK-NEXT:    vrev32.16 d16, d0
+; CHECK-NEXT:    vrev32.16 d17, d1
+; CHECK-NEXT:    vtrn.16 d16, d2
+; CHECK-NEXT:    vtrn.16 d17, d3
 ; CHECK-NEXT:    vorr q0, q1, q1
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b1:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.16 d16, d1
-; CHECKBE-NEXT:    vrev64.16 d17, d0
-; CHECKBE-NEXT:    vrev64.16 d19, d3
-; CHECKBE-NEXT:    vrev32.16 d16, d16
+; CHECKBE-NEXT:    vrev64.16 d16, d0
+; CHECKBE-NEXT:    vrev64.16 d17, d1
 ; CHECKBE-NEXT:    vrev64.16 d18, d2
+; CHECKBE-NEXT:    vrev32.16 d16, d16
+; CHECKBE-NEXT:    vrev64.16 d19, d3
 ; CHECKBE-NEXT:    vrev32.16 d17, d17
-; CHECKBE-NEXT:    vtrn.16 d16, d19
-; CHECKBE-NEXT:    vtrn.16 d17, d18
+; CHECKBE-NEXT:    vtrn.16 d16, d18
+; CHECKBE-NEXT:    vtrn.16 d17, d19
 ; CHECKBE-NEXT:    vrev64.16 q0, q9
 ; CHECKBE-NEXT:    bx lr
 entry:
@@ -399,27 +399,27 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmovn16_b2(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_b2:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vorr d17, d3, d3
-; CHECK-NEXT:    vtrn.16 d17, d1
 ; CHECK-NEXT:    vorr d16, d2, d2
 ; CHECK-NEXT:    vtrn.16 d16, d0
-; CHECK-NEXT:    vtrn.16 d3, d17
+; CHECK-NEXT:    vorr d17, d3, d3
+; CHECK-NEXT:    vtrn.16 d17, d1
 ; CHECK-NEXT:    vtrn.16 d2, d16
+; CHECK-NEXT:    vtrn.16 d3, d17
 ; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b2:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.16 d17, d3
-; CHECKBE-NEXT:    vorr d21, d17, d17
-; CHECKBE-NEXT:    vrev64.16 d16, d1
-; CHECKBE-NEXT:    vrev64.16 d19, d2
-; CHECKBE-NEXT:    vrev64.16 d18, d0
-; CHECKBE-NEXT:    vtrn.16 d21, d16
-; CHECKBE-NEXT:    vorr d20, d19, d19
-; CHECKBE-NEXT:    vtrn.16 d20, d18
-; CHECKBE-NEXT:    vtrn.16 d17, d21
-; CHECKBE-NEXT:    vtrn.16 d19, d20
+; CHECKBE-NEXT:    vrev64.16 d17, d2
+; CHECKBE-NEXT:    vorr d20, d17, d17
+; CHECKBE-NEXT:    vrev64.16 d16, d0
+; CHECKBE-NEXT:    vrev64.16 d19, d3
+; CHECKBE-NEXT:    vrev64.16 d18, d1
+; CHECKBE-NEXT:    vtrn.16 d20, d16
+; CHECKBE-NEXT:    vorr d21, d19, d19
+; CHECKBE-NEXT:    vtrn.16 d21, d18
+; CHECKBE-NEXT:    vtrn.16 d17, d20
+; CHECKBE-NEXT:    vtrn.16 d19, d21
 ; CHECKBE-NEXT:    vrev64.16 q0, q10
 ; CHECKBE-NEXT:    bx lr
 entry:
@@ -430,27 +430,27 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmovn16_b3(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_b3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vorr d17, d1, d1
-; CHECK-NEXT:    vtrn.16 d17, d3
 ; CHECK-NEXT:    vorr d16, d0, d0
 ; CHECK-NEXT:    vtrn.16 d16, d2
-; CHECK-NEXT:    vtrn.16 d1, d17
+; CHECK-NEXT:    vorr d17, d1, d1
+; CHECK-NEXT:    vtrn.16 d17, d3
 ; CHECK-NEXT:    vtrn.16 d0, d16
+; CHECK-NEXT:    vtrn.16 d1, d17
 ; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b3:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.16 d17, d1
-; CHECKBE-NEXT:    vorr d21, d17, d17
-; CHECKBE-NEXT:    vrev64.16 d16, d3
-; CHECKBE-NEXT:    vrev64.16 d19, d0
-; CHECKBE-NEXT:    vrev64.16 d18, d2
-; CHECKBE-NEXT:    vtrn.16 d21, d16
-; CHECKBE-NEXT:    vorr d20, d19, d19
-; CHECKBE-NEXT:    vtrn.16 d20, d18
-; CHECKBE-NEXT:    vtrn.16 d17, d21
-; CHECKBE-NEXT:    vtrn.16 d19, d20
+; CHECKBE-NEXT:    vrev64.16 d17, d0
+; CHECKBE-NEXT:    vorr d20, d17, d17
+; CHECKBE-NEXT:    vrev64.16 d16, d2
+; CHECKBE-NEXT:    vrev64.16 d19, d1
+; CHECKBE-NEXT:    vrev64.16 d18, d3
+; CHECKBE-NEXT:    vtrn.16 d20, d16
+; CHECKBE-NEXT:    vorr d21, d19, d19
+; CHECKBE-NEXT:    vtrn.16 d21, d18
+; CHECKBE-NEXT:    vtrn.16 d17, d20
+; CHECKBE-NEXT:    vtrn.16 d19, d21
 ; CHECKBE-NEXT:    vrev64.16 q0, q10
 ; CHECKBE-NEXT:    bx lr
 entry:
@@ -461,22 +461,22 @@ entry:
 define arm_aapcs_vfpcc <8 x i16> @vmovn16_b4(<8 x i16> %src1, <8 x i16> %src2) {
 ; CHECK-LABEL: vmovn16_b4:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vrev32.16 d16, d3
-; CHECK-NEXT:    vrev32.16 d17, d2
-; CHECK-NEXT:    vtrn.16 d16, d1
-; CHECK-NEXT:    vtrn.16 d17, d0
+; CHECK-NEXT:    vrev32.16 d16, d2
+; CHECK-NEXT:    vrev32.16 d17, d3
+; CHECK-NEXT:    vtrn.16 d16, d0
+; CHECK-NEXT:    vtrn.16 d17, d1
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: vmovn16_b4:
 ; CHECKBE:       @ %bb.0: @ %entry
-; CHECKBE-NEXT:    vrev64.16 d16, d3
-; CHECKBE-NEXT:    vrev64.16 d17, d2
-; CHECKBE-NEXT:    vrev64.16 d19, d1
-; CHECKBE-NEXT:    vrev32.16 d16, d16
+; CHECKBE-NEXT:    vrev64.16 d16, d2
+; CHECKBE-NEXT:    vrev64.16 d17, d3
 ; CHECKBE-NEXT:    vrev64.16 d18, d0
+; CHECKBE-NEXT:    vrev32.16 d16, d16
+; CHECKBE-NEXT:    vrev64.16 d19, d1
 ; CHECKBE-NEXT:    vrev32.16 d17, d17
-; CHECKBE-NEXT:    vtrn.16 d16, d19
-; CHECKBE-NEXT:    vtrn.16 d17, d18
+; CHECKBE-NEXT:    vtrn.16 d16, d18
+; CHECKBE-NEXT:    vtrn.16 d17, d19
 ; CHECKBE-NEXT:    vrev64.16 q0, q9
 ; CHECKBE-NEXT:    bx lr
 entry:
@@ -525,12 +525,14 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vmovn8_t1(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: vmovn8_t1:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $d1_d2_d3 def $d1_d2_d3
 ; CHECK-NEXT:    vorr q2, q0, q0
-; CHECK-NEXT:    vldr d16, .LCPI24_0
+; CHECK-NEXT:    vldr d18, .LCPI24_0
+; CHECK-NEXT:    vorr d1, d4, d4
 ; CHECK-NEXT:    vorr d6, d3, d3
-; CHECK-NEXT:    vtbl.8 d1, {d5, d6}, d16
-; CHECK-NEXT:    vorr d5, d2, d2
-; CHECK-NEXT:    vtbl.8 d0, {d4, d5}, d16
+; CHECK-NEXT:    vtbl.8 d16, {d1, d2}, d18
+; CHECK-NEXT:    vtbl.8 d17, {d5, d6}, d18
+; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
 ; CHECK-NEXT:  @ %bb.1:
@@ -547,13 +549,13 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn8_t1(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECKBE-LABEL: vmovn8_t1:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vldr d16, .LCPI24_0
-; CHECKBE-NEXT:    vrev64.8 d19, d3
-; CHECKBE-NEXT:    vrev64.8 d21, d2
-; CHECKBE-NEXT:    vrev64.8 d18, d1
+; CHECKBE-NEXT:    vrev64.8 d19, d2
+; CHECKBE-NEXT:    vrev64.8 d21, d3
+; CHECKBE-NEXT:    vrev64.8 d18, d0
 ; CHECKBE-NEXT:    vrev64.8 d16, d16
-; CHECKBE-NEXT:    vrev64.8 d20, d0
-; CHECKBE-NEXT:    vtbl.8 d19, {d18, d19}, d16
-; CHECKBE-NEXT:    vtbl.8 d18, {d20, d21}, d16
+; CHECKBE-NEXT:    vrev64.8 d20, d1
+; CHECKBE-NEXT:    vtbl.8 d18, {d18, d19}, d16
+; CHECKBE-NEXT:    vtbl.8 d19, {d20, d21}, d16
 ; CHECKBE-NEXT:    vrev64.8 q0, q9
 ; CHECKBE-NEXT:    bx lr
 ; CHECKBE-NEXT:    .p2align 3
@@ -575,13 +577,13 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vmovn8_t2(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: vmovn8_t2:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vorr q3, q0, q0
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 def $d2_d3_d4
-; CHECK-NEXT:    vldr d18, .LCPI25_0
-; CHECK-NEXT:    vorr d4, d1, d1
-; CHECK-NEXT:    vtbl.8 d17, {d3, d4}, d18
-; CHECK-NEXT:    vorr d3, d0, d0
-; CHECK-NEXT:    vtbl.8 d16, {d2, d3}, d18
-; CHECK-NEXT:    vorr q0, q8, q8
+; CHECK-NEXT:    vldr d16, .LCPI25_0
+; CHECK-NEXT:    vorr d5, d2, d2
+; CHECK-NEXT:    vorr d4, d7, d7
+; CHECK-NEXT:    vtbl.8 d0, {d5, d6}, d16
+; CHECK-NEXT:    vtbl.8 d1, {d3, d4}, d16
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
 ; CHECK-NEXT:  @ %bb.1:
@@ -598,13 +600,13 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn8_t2(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECKBE-LABEL: vmovn8_t2:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vldr d16, .LCPI25_0
-; CHECKBE-NEXT:    vrev64.8 d19, d1
-; CHECKBE-NEXT:    vrev64.8 d21, d0
-; CHECKBE-NEXT:    vrev64.8 d18, d3
+; CHECKBE-NEXT:    vrev64.8 d19, d0
+; CHECKBE-NEXT:    vrev64.8 d21, d1
+; CHECKBE-NEXT:    vrev64.8 d18, d2
 ; CHECKBE-NEXT:    vrev64.8 d16, d16
-; CHECKBE-NEXT:    vrev64.8 d20, d2
-; CHECKBE-NEXT:    vtbl.8 d19, {d18, d19}, d16
-; CHECKBE-NEXT:    vtbl.8 d18, {d20, d21}, d16
+; CHECKBE-NEXT:    vrev64.8 d20, d3
+; CHECKBE-NEXT:    vtbl.8 d18, {d18, d19}, d16
+; CHECKBE-NEXT:    vtbl.8 d19, {d20, d21}, d16
 ; CHECKBE-NEXT:    vrev64.8 q0, q9
 ; CHECKBE-NEXT:    bx lr
 ; CHECKBE-NEXT:    .p2align 3
@@ -626,12 +628,14 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vmovn8_t3(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: vmovn8_t3:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $d1_d2_d3 def $d1_d2_d3
 ; CHECK-NEXT:    vorr q2, q0, q0
-; CHECK-NEXT:    vldr d16, .LCPI26_0
+; CHECK-NEXT:    vldr d18, .LCPI26_0
+; CHECK-NEXT:    vorr d1, d4, d4
 ; CHECK-NEXT:    vorr d6, d3, d3
-; CHECK-NEXT:    vtbl.8 d1, {d5, d6}, d16
-; CHECK-NEXT:    vorr d5, d2, d2
-; CHECK-NEXT:    vtbl.8 d0, {d4, d5}, d16
+; CHECK-NEXT:    vtbl.8 d16, {d1, d2}, d18
+; CHECK-NEXT:    vtbl.8 d17, {d5, d6}, d18
+; CHECK-NEXT:    vorr q0, q8, q8
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
 ; CHECK-NEXT:  @ %bb.1:
@@ -648,13 +652,13 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn8_t3(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECKBE-LABEL: vmovn8_t3:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vldr d16, .LCPI26_0
-; CHECKBE-NEXT:    vrev64.8 d19, d3
-; CHECKBE-NEXT:    vrev64.8 d21, d2
-; CHECKBE-NEXT:    vrev64.8 d18, d1
+; CHECKBE-NEXT:    vrev64.8 d19, d2
+; CHECKBE-NEXT:    vrev64.8 d21, d3
+; CHECKBE-NEXT:    vrev64.8 d18, d0
 ; CHECKBE-NEXT:    vrev64.8 d16, d16
-; CHECKBE-NEXT:    vrev64.8 d20, d0
-; CHECKBE-NEXT:    vtbl.8 d19, {d18, d19}, d16
-; CHECKBE-NEXT:    vtbl.8 d18, {d20, d21}, d16
+; CHECKBE-NEXT:    vrev64.8 d20, d1
+; CHECKBE-NEXT:    vtbl.8 d18, {d18, d19}, d16
+; CHECKBE-NEXT:    vtbl.8 d19, {d20, d21}, d16
 ; CHECKBE-NEXT:    vrev64.8 q0, q9
 ; CHECKBE-NEXT:    bx lr
 ; CHECKBE-NEXT:    .p2align 3
@@ -676,13 +680,13 @@ entry:
 define arm_aapcs_vfpcc <16 x i8> @vmovn8_t4(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: vmovn8_t4:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vorr q3, q0, q0
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 def $d2_d3_d4
-; CHECK-NEXT:    vldr d18, .LCPI27_0
-; CHECK-NEXT:    vorr d4, d1, d1
-; CHECK-NEXT:    vtbl.8 d17, {d3, d4}, d18
-; CHECK-NEXT:    vorr d3, d0, d0
-; CHECK-NEXT:    vtbl.8 d16, {d2, d3}, d18
-; CHECK-NEXT:    vorr q0, q8, q8
+; CHECK-NEXT:    vldr d16, .LCPI27_0
+; CHECK-NEXT:    vorr d5, d2, d2
+; CHECK-NEXT:    vorr d4, d7, d7
+; CHECK-NEXT:    vtbl.8 d0, {d5, d6}, d16
+; CHECK-NEXT:    vtbl.8 d1, {d3, d4}, d16
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
 ; CHECK-NEXT:  @ %bb.1:
@@ -699,13 +703,13 @@ define arm_aapcs_vfpcc <16 x i8> @vmovn8_t4(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECKBE-LABEL: vmovn8_t4:
 ; CHECKBE:       @ %bb.0: @ %entry
 ; CHECKBE-NEXT:    vldr d16, .LCPI27_0
-; CHECKBE-NEXT:    vrev64.8 d19, d1
-; CHECKBE-NEXT:    vrev64.8 d21, d0
-; CHECKBE-NEXT:    vrev64.8 d18, d3
+; CHECKBE-NEXT:    vrev64.8 d19, d0
+; CHECKBE-NEXT:    vrev64.8 d21, d1
+; CHECKBE-NEXT:    vrev64.8 d18, d2
 ; CHECKBE-NEXT:    vrev64.8 d16, d16
-; CHECKBE-NEXT:    vrev64.8 d20, d2
-; CHECKBE-NEXT:    vtbl.8 d19, {d18, d19}, d16
-; CHECKBE-NEXT:    vtbl.8 d18, {d20, d21}, d16
+; CHECKBE-NEXT:    vrev64.8 d20, d3
+; CHECKBE-NEXT:    vtbl.8 d18, {d18, d19}, d16
+; CHECKBE-NEXT:    vtbl.8 d19, {d20, d21}, d16
 ; CHECKBE-NEXT:    vrev64.8 q0, q9
 ; CHECKBE-NEXT:    bx lr
 ; CHECKBE-NEXT:    .p2align 3

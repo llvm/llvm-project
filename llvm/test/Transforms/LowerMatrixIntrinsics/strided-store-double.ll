@@ -6,7 +6,7 @@ define void @strided_store_3x2(<6 x double> %in, ptr %out) {
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <6 x double> [[IN:%.*]], <6 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[IN]], <6 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    store <3 x double> [[SPLIT]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[OUT]], i64 5
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 5
 ; CHECK-NEXT:    store <3 x double> [[SPLIT1]], ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -19,10 +19,10 @@ define void @strided_store_3x2_nonconst_stride(<6 x double> %in, i64 %stride, pt
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <6 x double> [[IN:%.*]], <6 x double> poison, <3 x i32> <i32 0, i32 1, i32 2>
 ; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[IN]], <6 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE:%.*]]
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[OUT:%.*]], i64 [[VEC_START]]
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[OUT:%.*]], i64 [[VEC_START]]
 ; CHECK-NEXT:    store <3 x double> [[SPLIT]], ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[VEC_START2:%.*]] = mul i64 1, [[STRIDE]]
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[OUT]], i64 [[VEC_START2]]
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 [[VEC_START2]]
 ; CHECK-NEXT:    store <3 x double> [[SPLIT1]], ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -36,10 +36,10 @@ define void @strided_store_3x2_nonconst_i32_stride(<6 x double> %in, i32 %stride
 ; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <6 x double> [[IN]], <6 x double> poison, <3 x i32> <i32 3, i32 4, i32 5>
 ; CHECK-NEXT:    [[STRIDE_CAST:%.*]] = zext i32 [[STRIDE:%.*]] to i64
 ; CHECK-NEXT:    [[VEC_START:%.*]] = mul i64 0, [[STRIDE_CAST]]
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[OUT:%.*]], i64 [[VEC_START]]
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[OUT:%.*]], i64 [[VEC_START]]
 ; CHECK-NEXT:    store <3 x double> [[SPLIT]], ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[VEC_START2:%.*]] = mul i64 1, [[STRIDE_CAST]]
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[OUT]], i64 [[VEC_START2]]
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 [[VEC_START2]]
 ; CHECK-NEXT:    store <3 x double> [[SPLIT1]], ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -55,13 +55,13 @@ define void @strided_store_2x3(<10 x double> %in, ptr %out) {
 ; CHECK-NEXT:    [[SPLIT3:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> poison, <2 x i32> <i32 6, i32 7>
 ; CHECK-NEXT:    [[SPLIT4:%.*]] = shufflevector <10 x double> [[IN]], <10 x double> poison, <2 x i32> <i32 8, i32 9>
 ; CHECK-NEXT:    store <2 x double> [[SPLIT]], ptr [[OUT:%.*]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[OUT]], i64 4
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 4
 ; CHECK-NEXT:    store <2 x double> [[SPLIT1]], ptr [[VEC_GEP]], align 8
-; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr double, ptr [[OUT]], i64 8
+; CHECK-NEXT:    [[VEC_GEP5:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 8
 ; CHECK-NEXT:    store <2 x double> [[SPLIT2]], ptr [[VEC_GEP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr double, ptr [[OUT]], i64 12
+; CHECK-NEXT:    [[VEC_GEP6:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 12
 ; CHECK-NEXT:    store <2 x double> [[SPLIT3]], ptr [[VEC_GEP6]], align 8
-; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr double, ptr [[OUT]], i64 16
+; CHECK-NEXT:    [[VEC_GEP7:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 16
 ; CHECK-NEXT:    store <2 x double> [[SPLIT4]], ptr [[VEC_GEP7]], align 8
 ; CHECK-NEXT:    ret void
 ;

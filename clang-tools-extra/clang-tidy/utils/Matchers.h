@@ -22,6 +22,18 @@ AST_MATCHER(BinaryOperator, isRelationalOperator) {
 
 AST_MATCHER(BinaryOperator, isEqualityOperator) { return Node.isEqualityOp(); }
 
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+
+AST_MATCHER(FunctionDecl, isOverloadedOperator) {
+  return Node.isOverloadedOperator();
+}
+
+AST_MATCHER(Decl, isOutOfLine) { return Node.isOutOfLine(); }
+
+AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
+
+AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
+
 AST_MATCHER(QualType, isExpensiveToCopy) {
   std::optional<bool> IsExpensive =
       utils::type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
@@ -82,9 +94,8 @@ class MatchesAnyListedRegexNameMatcher
 public:
   explicit MatchesAnyListedRegexNameMatcher(
       llvm::ArrayRef<StringRef> NameList) {
-    std::transform(
-        NameList.begin(), NameList.end(), std::back_inserter(NameMatchers),
-        [](const llvm::StringRef Name) { return NameMatcher(Name); });
+    llvm::transform(NameList, std::back_inserter(NameMatchers),
+                    [](const StringRef Name) { return NameMatcher(Name); });
   }
 
   class NameMatcher {
@@ -103,7 +114,7 @@ public:
     MatchMode Mode;
 
   public:
-    NameMatcher(const llvm::StringRef Regex)
+    NameMatcher(const StringRef Regex)
         : Regex(Regex), Mode(determineMatchMode(Regex)) {}
 
     bool match(const NamedDecl &ND) const {
@@ -120,10 +131,10 @@ public:
     }
 
   private:
-    MatchMode determineMatchMode(llvm::StringRef Regex) {
-      if (Regex.starts_with(":") || Regex.starts_with("^:"))
+    MatchMode determineMatchMode(StringRef Regex) {
+      if (Regex.starts_with(':') || Regex.starts_with("^:"))
         return MatchMode::MatchFullyQualified;
-      return Regex.contains(":") ? MatchMode::MatchQualified
+      return Regex.contains(':') ? MatchMode::MatchQualified
                                  : MatchMode::MatchUnqualified;
     }
   };
@@ -163,7 +174,7 @@ struct NotIdenticalStatementsPredicate {
 // to ID node.
 AST_MATCHER_P(Stmt, isStatementIdenticalToBoundNode, std::string, ID) {
   const NotIdenticalStatementsPredicate Predicate{
-      ID, ::clang::DynTypedNode::create(Node), &(Finder->getASTContext())};
+      ID, ::clang::DynTypedNode::create(Node), &Finder->getASTContext()};
   return Builder->removeBindings(Predicate);
 }
 

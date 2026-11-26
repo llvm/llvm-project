@@ -1162,7 +1162,7 @@ bool IntegerRelation::gaussianEliminate() {
       equalities.normalizeRow(i);
     }
     for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
-      eliminateFromConstraint(this, i, *pivotRow, firstVar, 0, false);
+      eliminateFromConstraint(this, i, *pivotRow, firstVar, firstVar, false);
       inequalities.normalizeRow(i);
     }
     gcdTightenInequalities();
@@ -1231,13 +1231,21 @@ void IntegerRelation::removeRedundantConstraints() {
   gcdTightenInequalities();
   Simplex simplex(*this);
   simplex.detectRedundant();
+  removeRedundantConstraintsFromSimplex(simplex, /*offset=*/0);
+}
+
+void IntegerRelation::removeRedundantConstraintsFromSimplex(
+    const Simplex &simplex, unsigned offset) {
+  unsigned numIneqs = getNumInequalities();
+  assert(offset + numIneqs + 2 * getNumEqualities() <=
+             simplex.getNumConstraints() &&
+         "simplex does not contain all constraints of this relation");
 
   unsigned pos = 0;
-  unsigned numIneqs = getNumInequalities();
   // Scan to get rid of all inequalities marked redundant, in-place. In Simplex,
   // the first constraints added are the inequalities.
   for (unsigned r = 0; r < numIneqs; r++) {
-    if (!simplex.isMarkedRedundant(r))
+    if (!simplex.isMarkedRedundant(offset + r))
       inequalities.copyRow(r, pos++);
   }
   inequalities.resizeVertically(pos);
@@ -1248,8 +1256,8 @@ void IntegerRelation::removeRedundantConstraints() {
   // redundant.
   pos = 0;
   for (unsigned r = 0, e = getNumEqualities(); r < e; r++) {
-    if (!(simplex.isMarkedRedundant(numIneqs + 2 * r) &&
-          simplex.isMarkedRedundant(numIneqs + 2 * r + 1)))
+    if (!(simplex.isMarkedRedundant(offset + numIneqs + 2 * r) &&
+          simplex.isMarkedRedundant(offset + numIneqs + 2 * r + 1)))
       equalities.copyRow(r, pos++);
   }
   equalities.resizeVertically(pos);
@@ -2573,6 +2581,9 @@ void IntegerRelation::compose(const IntegerRelation &rel) {
 
   // Project out B in R1.
   convertVarKind(VarKind::Range, 0, numBVars, VarKind::Local);
+
+  // Eliminate local variables
+  removeRedundantLocalVars();
 }
 
 void IntegerRelation::applyDomain(const IntegerRelation &rel) {
@@ -2643,8 +2654,12 @@ bool IntegerRelation::isFullDim() {
   if (getNumEqualities() > 0)
     return false;
 
-  // The polytope is full-dimensional iff it is not flat along any of the
-  // inequality directions.
+  // The polytope is full-dimensional iff it is not flat along every
+  // inequality directions that involve at least one variable.
+  //
+  // To check this, we first remove inequalities involving no variables,
+  // which is done in the following function.
+  removeTrivialRedundancy();
   Simplex simplex(*this);
   return llvm::none_of(llvm::seq<int>(getNumInequalities()), [&](int i) {
     return simplex.isFlatAlong(getInequality(i));
@@ -2737,7 +2752,9 @@ void IntegerRelation::print(raw_ostream &os) const {
   os << '\n';
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void IntegerRelation::dump() const { print(llvm::errs()); }
+#endif
 
 unsigned IntegerPolyhedron::insertVar(VarKind kind, unsigned pos,
                                       unsigned num) {

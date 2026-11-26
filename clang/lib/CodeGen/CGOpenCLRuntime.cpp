@@ -53,14 +53,6 @@ llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {
   if (llvm::Type *PipeTy = CGM.getTargetCodeGenInfo().getOpenCLType(CGM, T))
     return PipeTy;
 
-  if (T->isReadOnly())
-    return getPipeType(T, "opencl.pipe_ro_t", PipeROTy);
-  else
-    return getPipeType(T, "opencl.pipe_wo_t", PipeWOTy);
-}
-
-llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T, StringRef Name,
-                                         llvm::Type *&PipeTy) {
   if (!PipeTy)
     PipeTy = getPointerType(T);
   return PipeTy;

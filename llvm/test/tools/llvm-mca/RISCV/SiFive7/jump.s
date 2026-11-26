@@ -75,4 +75,4 @@ ret
 # CHECK-NEXT: 2.     1     0.0    0.0    0.0       jr	a0
 # CHECK-NEXT: 3.     1     0.0    0.0    0.0       jalr	t0, a0
 # CHECK-NEXT: 4.     1     0.0    0.0    0.0       ret
-# CHECK-NEXT:        1     0.0    0.0    0.0       <total>
+# CHECK-NEXT:        5     0.0    0.0    0.0       <total>

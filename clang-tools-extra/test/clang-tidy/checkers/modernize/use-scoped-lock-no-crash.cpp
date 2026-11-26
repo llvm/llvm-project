@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++17-or-later -expect-clang-tidy-error %s modernize-use-scoped-lock %t -- -- -isystem %clang_tidy_headers
+// RUN: %check_clang_tidy -std=c++17-or-later -expect-clang-tidy-error %s modernize-use-scoped-lock %t
 
 #include <mutex>
 

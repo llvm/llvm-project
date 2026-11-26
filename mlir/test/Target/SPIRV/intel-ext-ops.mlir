@@ -60,6 +60,99 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, TensorF
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.MaskedGather / MaskedScatter
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, MaskedGatherScatterINTEL], [SPV_INTEL_masked_gather_scatter]> {
+  // CHECK-LABEL: @masked_gather_f32
+  spirv.func @masked_gather_f32(
+      %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %fill : vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32> -> vector<4xf32>
+    %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+         : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xf32> -> vector<4xf32>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @masked_gather_i32
+  spirv.func @masked_gather_i32(
+      %ptrs : vector<4x!spirv.ptr<i32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %fill : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.INTEL.MaskedGather {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xi32> -> vector<4xi32>
+    %0 = spirv.INTEL.MaskedGather %ptrs, %alignment, %mask, %fill
+         : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xi32> -> vector<4xi32>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @masked_scatter_f32
+  spirv.func @masked_scatter_f32(
+      %ptrs : vector<4x!spirv.ptr<f32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %values : vector<4xf32>) "None" {
+    // CHECK: spirv.INTEL.MaskedScatter {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xf32>
+    spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+         : vector<4x!spirv.ptr<f32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xf32>
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @masked_scatter_i32
+  spirv.func @masked_scatter_i32(
+      %ptrs : vector<4x!spirv.ptr<i32, CrossWorkgroup>>,
+      %alignment : i32,
+      %mask : vector<4xi1>,
+      %values : vector<4xi32>) "None" {
+    // CHECK: spirv.INTEL.MaskedScatter {{%.*}}, {{%.*}}, {{%.*}}, {{%.*}} : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32, vector<4xi1>, vector<4xi32>
+    spirv.INTEL.MaskedScatter %ptrs, %alignment, %mask, %values
+         : vector<4x!spirv.ptr<i32, CrossWorkgroup>>, i32,
+           vector<4xi1>, vector<4xi32>
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Function pointer type
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, FunctionPointersINTEL], [SPV_INTEL_function_pointers]> {
+  // CHECK-LABEL: @function_pointer_type
+  // CHECK-SAME: !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, {{%.*}}: !spirv.ptr<() -> (), Function>
+  spirv.func @function_pointer_type(%arg0 : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, %arg1 : !spirv.ptr<() -> (), Function>) "None" {
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.FunctionPointerCall
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, FunctionPointersINTEL], [SPV_INTEL_function_pointers]> {
+  // CHECK-LABEL: @function_pointer_call
+  // CHECK-SAME: ([[FP:%.*]]: !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, [[VFP:%.*]]: !spirv.ptr<() -> (), CodeSectionINTEL>, [[ARG0:%.*]]: i32, [[ARG1:%.*]]: f32)
+  spirv.func @function_pointer_call(%fp : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, %vfp : !spirv.ptr<() -> (), CodeSectionINTEL>, %arg0 : i32, %arg1 : f32) -> i32 "None" {
+    // CHECK: [[RES:%.*]] = spirv.INTEL.FunctionPointerCall [[FP]]([[ARG0]], [[ARG1]]) : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, (i32, f32) -> i32
+    %0 = spirv.INTEL.FunctionPointerCall %fp(%arg0, %arg1) : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, (i32, f32) -> i32
+    // CHECK: spirv.INTEL.FunctionPointerCall [[VFP]]() : !spirv.ptr<() -> (), CodeSectionINTEL>, () -> ()
+    spirv.INTEL.FunctionPointerCall %vfp() : !spirv.ptr<() -> (), CodeSectionINTEL>, () -> ()
+    // CHECK: spirv.ReturnValue [[RES]] : i32
+    spirv.ReturnValue %0 : i32
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.SplitBarrier
 //===----------------------------------------------------------------------===//
 

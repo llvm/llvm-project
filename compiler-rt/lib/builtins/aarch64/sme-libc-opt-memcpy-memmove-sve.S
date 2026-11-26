@@ -12,7 +12,7 @@
 ///
 /// These implementations depend on unaligned access support.
 ///
-/// Routines taken from libc/AOR_v20.02/string/aarch64.
+/// Routines based on Arm Optimized Routines, in string/aarch64.
 ///
 //===----------------------------------------------------------------------===//
 

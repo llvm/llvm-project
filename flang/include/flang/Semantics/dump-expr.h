@@ -149,6 +149,7 @@ private:
     Outdent();
   }
   void Show(const evaluate::DescriptorInquiry &x);
+  void Show(const evaluate::RankOneBoundElement &x);
   void Show(const evaluate::SpecificIntrinsic &);
   void Show(const evaluate::ProcedureDesignator &x);
   void Show(const evaluate::ActualArgument &x);
@@ -201,6 +202,19 @@ private:
     Show(op.right());
     Outdent();
   }
+  template <typename T> void Show(const evaluate::ConditionalExpr<T> &x) {
+    Indent("conditional expr "s + std::string(TypeOf<T>::name));
+    Indent("condition");
+    Show(x.condition());
+    Outdent();
+    Indent("then");
+    Show(x.thenValue());
+    Outdent();
+    Indent("else");
+    Show(x.elseValue());
+    Outdent();
+    Outdent();
+  }
   void Show(const evaluate::Relational<evaluate::SomeType> &x);
   template <typename T> void Show(const evaluate::Expr<T> &x) {
     Indent("expr <"s + std::string(TypeOf<T>::name) + ">"s);
@@ -219,14 +233,12 @@ private:
 
 LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::Expr<evaluate::SomeType> &x);
 LLVM_DUMP_METHOD void DumpEvExpr(
-    const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 4>> &x);
-LLVM_DUMP_METHOD void DumpEvExpr(
-    const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer, 8>> &x);
+    const evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>> &x);
 LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::ArrayRef &x);
 LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::DataRef &x);
 LLVM_DUMP_METHOD void DumpEvExpr(const evaluate::Substring &x);
 LLVM_DUMP_METHOD void DumpEvExpr(
-    const evaluate::Designator<evaluate::Type<common::TypeCategory::Integer, 4>>
+    const evaluate::Designator<evaluate::Type<common::TypeCategory::Integer>>
         &x);
 
 } // namespace Fortran::semantics

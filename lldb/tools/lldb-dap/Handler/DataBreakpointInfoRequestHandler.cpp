@@ -41,8 +41,11 @@ llvm::Expected<protocol::DataBreakpointInfoResponseBody>
 DataBreakpointInfoRequestHandler::Run(
     const protocol::DataBreakpointInfoArguments &args) const {
   protocol::DataBreakpointInfoResponseBody response;
-  lldb::SBValue variable = dap.variables.FindVariable(
-      args.variablesReference.value_or(0), args.name);
+  const var_ref_t arg_var_ref =
+      args.variablesReference.value_or(var_ref_t::k_no_child);
+
+  lldb::SBValue variable =
+      dap.reference_storage.FindVariable(arg_var_ref, args.name);
   std::string addr, size;
 
   bool is_data_ok = true;
@@ -61,8 +64,11 @@ DataBreakpointInfoRequestHandler::Run(
       size = llvm::utostr(byte_size);
     }
   } else if (lldb::SBFrame frame = dap.GetLLDBFrame(args.frameId);
-             args.variablesReference.value_or(0) == 0 && frame.IsValid()) {
-    lldb::SBValue value = frame.EvaluateExpression(args.name.c_str());
+             arg_var_ref.Reference() == 0 && frame.IsValid()) {
+    lldb::SBValue value = frame.GetValueForVariablePathWithMode(
+        args.name.c_str(), lldb::eDILModeFull, lldb::eDynamicDontRunTarget);
+    if (!value)
+      value = frame.EvaluateExpression(args.name.c_str());
     if (value.GetError().Fail()) {
       lldb::SBError error = value.GetError();
       const char *error_cstr = error.GetCString();
@@ -91,13 +97,13 @@ DataBreakpointInfoRequestHandler::Run(
     size = llvm::utostr(args.bytes.value_or(dap.target.GetAddressByteSize()));
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     if (llvm::StringRef(args.name).getAsInteger<lldb::addr_t>(0, load_addr))
-      return llvm::make_error<DAPError>(args.name + " is not a valid address",
-                                        llvm::inconvertibleErrorCode(), false);
+      return llvm::make_error<DAPError>(
+          args.name.str() + " is not a valid address", false);
     addr = llvm::utohexstr(load_addr);
     if (!IsRW(dap, load_addr))
       return llvm::make_error<DAPError>("memory region for address " + addr +
                                             " has no read or write permissions",
-                                        llvm::inconvertibleErrorCode(), false);
+                                        false);
   } else {
     is_data_ok = false;
     response.description = "variable not found: " + args.name;

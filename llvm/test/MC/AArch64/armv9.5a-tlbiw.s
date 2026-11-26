@@ -1,15 +1,15 @@
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+tlbiw,+xs < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+tlbiw < %s \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 // RUN: not llvm-mc -triple=aarch64 -show-encoding < %s 2>&1 \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ERROR
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+tlbiw,+xs < %s \
-// RUN:        | llvm-objdump -d --mattr=+tlbiw,+xs --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
-// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+tlbiw,+xs < %s \
-// RUN:   | llvm-objdump -d --mattr=-tlbiw,-xs --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+tlbiw < %s \
+// RUN:        | llvm-objdump -d --mattr=+tlbiw --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-INST
+// RUN: llvm-mc -triple=aarch64 -filetype=obj -mattr=+tlbiw < %s \
+// RUN:   | llvm-objdump -d --mattr=-tlbiw --no-print-imm-hex - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 // Disassemble encoding and check the re-encoding (-show-encoding) matches.
-// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+tlbiw,+xs < %s \
+// RUN: llvm-mc -triple=aarch64 -show-encoding -mattr=+tlbiw < %s \
 // RUN:        | sed '/.text/d' | sed 's/.*encoding: //g' \
-// RUN:        | llvm-mc -triple=aarch64 -mattr=+tlbiw,+xs -disassemble -show-encoding \
+// RUN:        | llvm-mc -triple=aarch64 -mattr=+tlbiw -disassemble -show-encoding \
 // RUN:        | FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 
 
@@ -34,17 +34,17 @@ tlbi VMALLWS2E1OS
 tlbi VMALLWS2E1nXS
 // CHECK-INST: tlbi vmallws2e1nxs
 // CHECK-ENCODING: encoding: [0x5f,0x96,0x0c,0xd5]
-// CHECK-ERROR: :[[@LINE-3]]:6: error: TLBI VMALLWS2E1nXS requires: xs, tlbiw
+// CHECK-ERROR: :[[@LINE-3]]:6: error: TLBI VMALLWS2E1nXS requires: tlbiw
 // CHECK-UNKNOWN:  d50c965f      sys #4, c9, c6, #2
 
 tlbi VMALLWS2E1ISnXS
 // CHECK-INST: tlbi vmallws2e1isnxs
 // CHECK-ENCODING: encoding: [0x5f,0x92,0x0c,0xd5]
-// CHECK-ERROR: :[[@LINE-3]]:6: error: TLBI VMALLWS2E1ISnXS requires: xs, tlbiw
+// CHECK-ERROR: :[[@LINE-3]]:6: error: TLBI VMALLWS2E1ISnXS requires: tlbiw
 // CHECK-UNKNOWN:  d50c925f      sys #4, c9, c2, #2
 
 tlbi VMALLWS2E1OSnXS
 // CHECK-INST: tlbi vmallws2e1osnxs
 // CHECK-ENCODING: encoding: [0x5f,0x95,0x0c,0xd5]
-// CHECK-ERROR: :[[@LINE-3]]:6: error: TLBI VMALLWS2E1OSnXS requires: xs, tlbiw
+// CHECK-ERROR: :[[@LINE-3]]:6: error: TLBI VMALLWS2E1OSnXS requires: tlbiw
 // CHECK-UNKNOWN:  d50c955f      sys #4, c9, c5, #2

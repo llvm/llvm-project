@@ -42,20 +42,17 @@ end
 !CHECK: %[[V4:[0-9]+]] = fir.load %[[VAL_X]]#0 : !fir.ref<i32>
 !CHECK: %[[V5:[0-9]+]] = fir.load %[[VAL_X]]#0 : !fir.ref<i32>
 !CHECK: %[[V6:[0-9]+]] = fir.is_present %[[VAL_Y]]#0 : (!fir.ref<i32>) -> i1
-!CHECK: %[[V7:[0-9]+]] = arith.cmpi slt, %[[V4]], %[[V5]] : i32
-!CHECK: %[[V8:[0-9]+]] = arith.select %[[V7]], %[[V4]], %[[V5]] : i32
+!CHECK: %[[V8:[0-9]+]] = arith.minsi %[[V4]], %[[V5]] : i32
 !CHECK: %[[V9:[0-9]+]] = fir.if %[[V6]] -> (i32) {
 !CHECK:   %[[V10:[0-9]+]] = fir.load %[[VAL_Y]]#0 : !fir.ref<i32>
-!CHECK:   %[[V11:[0-9]+]] = arith.cmpi slt, %[[V8]], %[[V10]] : i32
-!CHECK:   %[[V12:[0-9]+]] = arith.select %[[V11]], %[[V8]], %[[V10]] : i32
+!CHECK:   %[[V12:[0-9]+]] = arith.minsi %[[V8]], %[[V10]] : i32
 !CHECK:   fir.result %[[V12]] : i32
 !CHECK: } else {
 !CHECK:   fir.result %[[V8]] : i32
 !CHECK: }
 !CHECK: omp.atomic.update memory_order(relaxed) %[[VAL_A]]#0 : !fir.ref<i32> {
 !CHECK: ^bb0(%[[ARG:[a-z0-9]+]]: i32):
-!CHECK:   %[[V10:[0-9]+]] = arith.cmpi slt, %[[ARG]], %[[V9]] : i32
-!CHECK:   %[[V11:[0-9]+]] = arith.select %[[V10]], %[[ARG]], %[[V9]] : i32
+!CHECK:   %[[V11:[0-9]+]] = arith.minsi %[[ARG]], %[[V9]] : i32
 !CHECK:   omp.yield(%[[V11]] : i32)
 !CHECK: }
 

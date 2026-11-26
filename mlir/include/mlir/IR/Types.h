@@ -159,7 +159,9 @@ public:
   /// Print the current type.
   void print(raw_ostream &os) const;
   void print(raw_ostream &os, AsmState &state) const;
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
   friend ::llvm::hash_code hash_value(Type arg);
 
@@ -313,14 +315,6 @@ namespace llvm {
 // Type hash just like pointers.
 template <>
 struct DenseMapInfo<mlir::Type> {
-  static mlir::Type getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlir::Type(static_cast<mlir::Type::ImplType *>(pointer));
-  }
-  static mlir::Type getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlir::Type(static_cast<mlir::Type::ImplType *>(pointer));
-  }
   static unsigned getHashValue(mlir::Type val) { return mlir::hash_value(val); }
   static bool isEqual(mlir::Type LHS, mlir::Type RHS) { return LHS == RHS; }
 };
@@ -328,14 +322,6 @@ template <typename T>
 struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<mlir::Type, T>::value &&
                                         !mlir::detail::IsInterface<T>::value>>
     : public DenseMapInfo<mlir::Type> {
-  static T getEmptyKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getEmptyKey();
-    return T::getFromOpaquePointer(pointer);
-  }
-  static T getTombstoneKey() {
-    const void *pointer = llvm::DenseMapInfo<const void *>::getTombstoneKey();
-    return T::getFromOpaquePointer(pointer);
-  }
 };
 
 /// We align TypeStorage by 8, so allow LLVM to steal the low bits.

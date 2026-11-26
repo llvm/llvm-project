@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=bonaire < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02--amdhsa -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.04--amdhsa < %s | FileCheck -check-prefix=CI -check-prefix=GCN %s
 
 ; FIXME: Need to handle non-uniform case for function below (load without gep).
 ; GCN-LABEL: {{^}}v_test_sub_i16:

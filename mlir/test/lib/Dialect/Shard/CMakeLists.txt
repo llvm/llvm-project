@@ -2,7 +2,6 @@
 add_mlir_library(MLIRShardTest
   TestOpLowering.cpp
   TestReshardingPartition.cpp
-  TestSimplifications.cpp
 
   EXCLUDE_FROM_LIBMLIR
   )

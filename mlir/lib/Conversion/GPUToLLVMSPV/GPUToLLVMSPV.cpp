@@ -18,7 +18,10 @@
 #include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -138,6 +141,8 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
           memFenceFlag = memFenceFlag | localMemFenceFlag;
           break;
         case gpu::AddressSpace::Private:
+        case gpu::AddressSpace::Constant:
+          // Private is thread-local, constant is read-only; no fencing needed.
           break;
         }
       }
@@ -304,11 +309,10 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
     return parentFunc.getIntelReqdSubGroupSize();
   }
 
-  static bool hasValidWidth(gpu::ShuffleOp op) {
+  static bool hasValidWidth(gpu::ShuffleOp op, int subgroupSize) {
     llvm::APInt val;
     Value width = op.getWidth();
-    return matchPattern(width, m_ConstantInt(&val)) &&
-           val == getSubgroupSize(op);
+    return matchPattern(width, m_ConstantInt(&val)) && val == subgroupSize;
   }
 
   static Value bitcastOrExtBeforeShuffle(Value oldVal, Location loc,
@@ -345,7 +349,8 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
   LogicalResult
   matchAndRewrite(gpu::ShuffleOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    if (!hasValidWidth(op))
+    auto maybeSubgroupSize = getSubgroupSize(op);
+    if (maybeSubgroupSize && !hasValidWidth(op, maybeSubgroupSize.value()))
       return rewriter.notifyMatchFailure(
           op, "shuffle width and subgroup size mismatch");
 

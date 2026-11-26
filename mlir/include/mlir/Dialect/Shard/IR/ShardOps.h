@@ -9,15 +9,12 @@
 #ifndef MLIR_DIALECT_SHARD_IR_SHARDOPS_H
 #define MLIR_DIALECT_SHARD_IR_SHARDOPS_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
-#include "mlir/Interfaces/DestinationStyleOpInterface.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
@@ -78,6 +75,15 @@ public:
   bool equalHaloSizes(const Sharding &rhs) const;
   bool equalShardSizes(const Sharding &rhs) const;
 };
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Sharding &sharding);
+
+inline Diagnostic &operator<<(Diagnostic &diag, const Sharding &sharding) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  os << sharding;
+  return diag << os.str();
+}
 
 } // namespace shard
 } // namespace mlir
@@ -181,8 +187,8 @@ inline int64_t gatherDimension(int64_t dimSize, int64_t shardCount) {
   return dimSize * shardCount;
 }
 
-// Return the sharded shape `shape` according ot sharding `sharding`.
-// The shape for the tensor on each device in the grid.
+// Return the per-device sharded type for `shape` based on `sharding`.
+// This is the tensor shape on each grid partition.
 // Example:
 // On a 2x4x? grid with split axes = [[0], [1], [2]] the shape ?x5x1 would
 // result in a shape for each shard of ?x2x?.

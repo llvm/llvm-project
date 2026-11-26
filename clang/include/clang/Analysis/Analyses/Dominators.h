@@ -167,7 +167,7 @@ public:
   }
 
   /// Releases the memory held by the dominator tree.
-  virtual void releaseMemory() { DT.reset(); }
+  void releaseMemory() { DT.reset(); }
 
   /// Converts the dominator tree to human readable form.
   virtual void print(raw_ostream &OS, const llvm::Module* M= nullptr) const {
@@ -184,33 +184,6 @@ using CFGPostDomTree = CFGDominatorTreeImpl</*IsPostDom*/ true>;
 
 template<> void CFGDominatorTreeImpl<true>::anchor();
 template<> void CFGDominatorTreeImpl<false>::anchor();
-
-} // end of namespace clang
-
-namespace llvm {
-namespace IDFCalculatorDetail {
-
-/// Specialize ChildrenGetterTy to skip nullpointer successors.
-template <bool IsPostDom>
-struct ChildrenGetterTy<clang::CFGBlock, IsPostDom> {
-  using NodeRef = typename GraphTraits<clang::CFGBlock *>::NodeRef;
-  using ChildrenTy = SmallVector<NodeRef, 8>;
-
-  ChildrenTy get(const NodeRef &N) {
-    using OrderedNodeTy =
-        typename IDFCalculatorBase<clang::CFGBlock, IsPostDom>::OrderedNodeTy;
-
-    auto Children = children<OrderedNodeTy>(N);
-    ChildrenTy Ret{Children.begin(), Children.end()};
-    llvm::erase(Ret, nullptr);
-    return Ret;
-  }
-};
-
-} // end of namespace IDFCalculatorDetail
-} // end of namespace llvm
-
-namespace clang {
 
 class ControlDependencyCalculator : public ManagedAnalysis {
   using IDFCalculator = llvm::IDFCalculatorBase<CFGBlock, /*IsPostDom=*/true>;

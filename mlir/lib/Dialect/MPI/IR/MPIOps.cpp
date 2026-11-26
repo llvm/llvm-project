@@ -9,13 +9,26 @@
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Dialect/MPI/IR/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
 
 using namespace mlir;
 using namespace mlir::mpi;
 
+//===----------------------------------------------------------------------===//
+// Verifiers
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::mpi::ReduceScatterBlockOp::verify() {
+  if (getSendbuf().getType().getElementType() !=
+      getRecvbuf().getType().getElementType())
+    return emitOpError("sendbuf and recvbuf must have the same element type");
+  return success();
+}
+
 namespace {
+
+//===----------------------------------------------------------------------===//
+// Canonicalization patterns
+//===----------------------------------------------------------------------===//
 
 // If input memref has dynamic shape and is a cast and if the cast's input has
 // static shape, fold the cast's static input into the given operation.
@@ -37,7 +50,7 @@ struct FoldCast final : public mlir::OpRewritePattern<OpT> {
     if (!src.getType().hasStaticShape()) {
       return mlir::failure();
     }
-    op.getRefMutable().assign(src);
+    b.modifyOpInPlace(op, [&]() { op.getRefMutable().assign(src); });
     return mlir::success();
   }
 };

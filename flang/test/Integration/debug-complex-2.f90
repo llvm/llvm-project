@@ -6,7 +6,7 @@ complex function fn(a)
     fn = a
 end function
 
-! CHECK-DAG: ![[CMPLX:.*]] = !DIBasicType(name: "complex", size: 64, encoding: DW_ATE_complex_float)
+! CHECK-DAG: ![[CMPLX:.*]] = !DIBasicType(name: "complex(kind=4)", size: 64, encoding: DW_ATE_complex_float)
 ! CHECK-DAG: ![[SR_TY:.*]] = !DISubroutineType(cc: DW_CC_normal, types: ![[TYPES:.*]])
 ! CHECK-DAG: ![[TYPES]] = !{![[CMPLX]], ![[CMPLX]]}
 ! CHECK-DAG: !DISubprogram(name: "fn"{{.*}}type: ![[SR_TY]]{{.*}})

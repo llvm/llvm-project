@@ -8,25 +8,17 @@
 
 #include "src/unistd/unlinkat.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/unlinkat.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 
-#include "hdr/fcntl_macros.h"
-#include <sys/syscall.h> // For syscall numbers.
-
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, unlinkat, (int dfd, const char *path, int flags)) {
-#ifdef SYS_unlinkat
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_unlinkat, dfd, path, flags);
-#else
-#error "unlinkat syscalls not available."
-#endif
-
-  if (ret < 0) {
-    libc_errno = -ret;
+  ErrorOr<int> ret = linux_syscalls::unlinkat(dfd, path, flags);
+  if (!ret) {
+    libc_errno = ret.error();
     return -1;
   }
   return 0;

@@ -12,8 +12,8 @@
 
 // class map
 
-// pair<iterator,iterator>             equal_range(const key_type& k);
-// pair<const_iterator,const_iterator> equal_range(const key_type& k) const;
+// pair<iterator,iterator>             equal_range(const key_type& k); // constexpr since C++26
+// pair<const_iterator,const_iterator> equal_range(const key_type& k) const; // constexpr since C++26
 //
 //   The member function templates find, count, lower_bound, upper_bound, and
 // equal_range shall not participate in overload resolution unless the
@@ -25,7 +25,7 @@
 #include "test_macros.h"
 #include "is_transparent.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::map<int, double, transparent_less> M;
     typedef std::pair<typename M::iterator, typename M::iterator> P;
@@ -47,6 +47,13 @@ int main(int, char**) {
     P result = example.equal_range(C2Int{5});
     assert(result.first == result.second);
   }
+  return true;
+}
 
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

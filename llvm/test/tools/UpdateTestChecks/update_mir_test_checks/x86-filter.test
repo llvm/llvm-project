@@ -1,0 +1,17 @@
+# REQUIRES: x86-registered-target
+
+## Check that --filter works properly.
+# RUN: cp -f %S/Inputs/x86-filter.mir %t.mir && %update_mir_test_checks --filter="sub_" %t.mir
+# RUN: diff -u %t.mir %S/Inputs/x86-filter.mir.filter.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_mir_test_checks --filter="sub_" %t.mir
+# RUN: diff -u %t.mir %S/Inputs/x86-filter.mir.filter.expected
+
+## Check that --filter-out works properly.
+# RUN: cp -f %S/Inputs/x86-filter.mir %t.mir && %update_mir_test_checks --filter-out="sub_" %t.mir
+# RUN: diff -u %t.mir %S/Inputs/x86-filter.mir.filter-out.expected
+
+## Check that running the script again does not change the result:
+# RUN: %update_mir_test_checks --filter-out="sub_" %t.mir
+# RUN: diff -u %t.mir %S/Inputs/x86-filter.mir.filter-out.expected

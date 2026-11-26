@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prologepilog,aarch64-expand-pseudo %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prolog-epilog,aarch64-expand-pseudo %s -o - | FileCheck %s
 
 # CHECK: renamable $x8 = IRG $sp, $xzr
 
@@ -24,13 +24,13 @@ body:             |
   bb.0.entry:
     renamable $x8 = IRGstack $sp, $xzr
 
-    renamable $x0 = TAGPstack %stack.0, 0, killed renamable $x8, 0
-    renamable $x0 = TAGPstack %stack.0, 5, killed renamable $x8, 0
-    renamable $x0 = TAGPstack %stack.0, 63, killed renamable $x8, 0
-    renamable $x0 = TAGPstack %stack.0, 64, killed renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, 0, renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, 5, renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, 63, renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, 64, renamable $x8, 0
 
-    renamable $x0 = TAGPstack %stack.0, -5, killed renamable $x8, 0
-    renamable $x0 = TAGPstack %stack.0, -63, killed renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, -5, renamable $x8, 0
+    renamable $x0 = TAGPstack %stack.0, -63, renamable $x8, 0
     renamable $x0 = TAGPstack %stack.0, -64, killed renamable $x8, 0
     RET_ReallyLR
 

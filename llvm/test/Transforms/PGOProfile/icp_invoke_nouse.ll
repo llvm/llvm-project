@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @_ZTISt9exception = external constant ptr
 @pfptr = global ptr null, align 8
 
-define internal i32 @_ZL4bar1v() !PGOFuncName !0 {
+define internal i32 @_ZL4bar1v() !guid !0 {
 entry:
   ret i32 100 
 }
@@ -64,5 +64,5 @@ declare ptr @__cxa_begin_catch(ptr) local_unnamed_addr
 
 declare void @__cxa_end_catch() local_unnamed_addr
 
-!0 = !{!"invoke.ll:_ZL4bar1v"}
+!0 = !{i64 -2732222848796217051}
 !1 = !{!"VP", i32 0, i64 10000, i64 -2732222848796217051, i64 10000}

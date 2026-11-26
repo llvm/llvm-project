@@ -30,6 +30,7 @@
 #define MLIR_DIALECT_OPENACC_TRANSFORMS_ACCSPECIALIZEPATTERNS_H
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsLoop.h"
 #include "mlir/IR/PatternMatch.h"
 
 namespace mlir {
@@ -48,6 +49,16 @@ class ACCOpReplaceWithVarConversion : public OpRewritePattern<OpTy> {
 public:
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
+    // Defer if any user validates its operands as data entry ops (e.g.
+    // acc.data, acc.parallel, acc.declare_enter). Replacing the data entry
+    // op before these are processed would leave them with an invalid operand
+    // and fail IR verification.
+    for (Operation *user : op->getUsers()) {
+      if (isa<acc::DataOp, acc::HostDataOp, acc::KernelEnvironmentOp,
+              acc::ParallelOp, acc::SerialOp, acc::KernelsOp,
+              acc::DeclareEnterOp, acc::EnterDataOp>(user))
+        return failure();
+    }
     // Replace this op with its var operand; it's possible the op has no uses
     // if the op that had previously used it was already converted.
     if (op->use_empty())
@@ -75,9 +86,10 @@ public:
 
 /// Pattern to unwrap a region from an ACC op and erase the wrapper.
 /// Moves the region's contents to the parent block and removes the wrapper op.
-/// Used for structured data constructs (acc.data, acc.host_data,
-/// acc.kernel_environment, acc.declare) and compute constructs (acc.parallel,
-/// acc.serial, acc.kernels).
+/// A multi-block region is wrapped in scf.execute_region instead, since its
+/// blocks cannot be moved into the parent block. Used for structured data
+/// constructs (acc.data, acc.host_data, acc.kernel_environment, acc.declare)
+/// and compute constructs (acc.parallel, acc.serial, acc.kernels).
 template <typename OpTy>
 class ACCRegionUnwrapConversion : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
@@ -85,8 +97,20 @@ class ACCRegionUnwrapConversion : public OpRewritePattern<OpTy> {
 public:
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
-    assert(op.getRegion().hasOneBlock() && "expected one block");
-    Block *block = &op.getRegion().front();
+    Region &region = op.getRegion();
+    if (region.empty()) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+    if (!region.hasOneBlock()) {
+      rewriter.setInsertionPoint(op);
+      IRMapping mapping;
+      wrapMultiBlockRegionWithSCFExecuteRegion(region, mapping, op.getLoc(),
+                                               rewriter);
+      rewriter.eraseOp(op);
+      return success();
+    }
+    Block *block = &region.front();
     // Erase the terminator (acc.yield or acc.terminator) before unwrapping
     rewriter.eraseOp(block->getTerminator());
     rewriter.inlineBlockBefore(block, op);

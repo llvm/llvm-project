@@ -52,6 +52,20 @@ struct Mapping {
   static const uptr kAppMemMsk = ~0xC00000000000ULL;
   static const uptr kPtrShift = 3;
 };
+#elif defined(__hexagon__)
+// Hexagon is a 32-bit architecture. Each shadow entry is a 4-byte pointer
+// (PtrShift=2). The shadow occupies 4x the masked app memory range.
+// With a 28-bit mask (256MB of app addresses), the shadow is 1GB at
+// 0x80000000-0xBFFFFFFF. App addresses that differ only in bits 28-31
+// will alias in the shadow; in practice this means code/heap (low addresses)
+// and stack (~0x40000000) may share shadow entries, which can cause
+// false positives in rare cases.
+struct Mapping {
+  static const uptr kShadowAddr = 0x80000000u;
+  static const uptr kAppAddr = 0xC0000000u;
+  static const uptr kAppMemMsk = ~0xF0000000u;
+  static const uptr kPtrShift = 2;
+};
 #else
 #error "TySan not supported for this platform!"
 #endif

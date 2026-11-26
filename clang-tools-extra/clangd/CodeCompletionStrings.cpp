@@ -127,11 +127,12 @@ std::string getDeclComment(const ASTContext &Ctx, const NamedDecl &Decl) {
     // not write them into PCH, because they are racy and slow to load.
     assert(!Ctx.getSourceManager().isLoadedSourceLocation(RC->getBeginLoc()));
 
-    comments::FullComment *FC = RC->parse(Ctx, /*PP=*/nullptr, ND);
-    if (!FC)
+    std::string DeclDoc =
+        RC->getFormattedText(Ctx.getSourceManager(), Ctx.getDiagnostics());
+    if (!looksLikeDocComment(DeclDoc))
       return "";
 
-    SymbolDocCommentVisitor V(FC, Ctx.getLangOpts().CommentOpts);
+    SymbolDocCommentVisitor V(DeclDoc, Ctx.getLangOpts().CommentOpts);
     std::string RawDoc;
     llvm::raw_string_ostream OS(RawDoc);
 

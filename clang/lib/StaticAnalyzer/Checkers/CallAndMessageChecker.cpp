@@ -164,7 +164,7 @@ private:
 
 void CallAndMessageChecker::emitBadCall(const BugType &BT, CheckerContext &C,
                                         const Expr *BadE) {
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
 
@@ -321,12 +321,27 @@ bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
   const SVal PointeeV = State->getSVal(SValMemRegion, PointeeT);
   const Expr *ArgEx = Call.getArgExpr(ArgumentNumber);
 
+  auto DescribeArgument = [ParamT, PointeeT,
+                           &Call](bool ArgIsStruct) -> std::string {
+    if (PointeeT.isConstQualified())
+      return llvm::formatv(
+          "this argument is const{0} and {1} input data of the function",
+          ParamT->isPointerType() ? " pointer" : "",
+          ArgIsStruct ? "may contain" : "is likely");
+    else
+      return llvm::formatv(
+          "function '{0}' expects {1}this argument to be initialized",
+          cast<NamedDecl>(Call.getDecl())->getNameAsString(),
+          ParamT->isPointerType() ? "memory pointed to by " : "");
+  };
+
   if (PointeeV.isUndef()) {
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       std::string Msg = llvm::formatv(
-          "{0}{1} function call argument is {2} uninitialized value",
+          "{0}{1} function call argument {2} an uninitialized value; {3}",
           ArgumentNumber + 1, llvm::getOrdinalSuffix(ArgumentNumber + 1),
-          ParamT->isPointerType() ? "a pointer to" : "an");
+          ParamT->isPointerType() ? "points to" : "is",
+          DescribeArgument(/*ArgIsStruct=*/false));
       auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
       R->addRange(Call.getArgSourceRange(ArgumentNumber));
       if (ArgEx)
@@ -344,11 +359,12 @@ bool CallAndMessageChecker::uninitRefOrPointer(CheckerContext &C, SVal V,
                              D->getStore(), AllowPartialInitializedness);
 
     if (F.Find(D->getRegion())) {
-      if (ExplodedNode *N = C.generateErrorNode()) {
+      if (ExplodedNode *N = C.addSink()) {
         std::string Msg = llvm::formatv(
-            "{0}{1} function call argument {2} an uninitialized value{3}",
+            "{0}{1} function call argument {2} an uninitialized value{3}; {4}",
             (ArgumentNumber + 1), llvm::getOrdinalSuffix(ArgumentNumber + 1),
-            ParamT->isPointerType() ? "points to" : "references", F.FieldChain);
+            ParamT->isPointerType() ? "points to" : "is", F.FieldChain,
+            DescribeArgument(/*ArgIsStruct=*/true));
         auto R = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
         R->addRange(Call.getArgSourceRange(ArgumentNumber));
         if (ArgEx)
@@ -375,7 +391,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(
       C.addSink();
       return true;
     }
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       // Generate a report for this bug.
       SmallString<200> Buf;
       llvm::raw_svector_ostream Os(Buf);
@@ -404,7 +420,7 @@ bool CallAndMessageChecker::PreVisitProcessArg(
         C.addSink();
         return true;
       }
-      if (ExplodedNode *N = C.generateErrorNode()) {
+      if (ExplodedNode *N = C.addSink()) {
         std::string Msg = llvm::formatv(
             "Passed-by-value struct argument contains uninitialized data{0}",
             F.FieldChain);
@@ -430,8 +446,7 @@ ProgramStateRef CallAndMessageChecker::checkFunctionPointerCall(
     const CallExpr *CE, CheckerContext &C, ProgramStateRef State) const {
 
   const Expr *Callee = CE->getCallee()->IgnoreParens();
-  const LocationContext *LCtx = C.getLocationContext();
-  SVal L = State->getSVal(Callee, LCtx);
+  SVal L = State->getSVal(Callee, C.getStackFrame());
 
   if (L.isUndef()) {
     if (!ChecksEnabled[CK_FunctionPointer]) {
@@ -471,7 +486,7 @@ ProgramStateRef CallAndMessageChecker::checkParameterCount(
     return nullptr;
   }
 
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return nullptr;
 
@@ -535,7 +550,7 @@ CallAndMessageChecker::checkCXXDeallocation(const CXXDeallocatorCall *DC,
   }
 
   StringRef Desc;
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return nullptr;
   if (DE->isArrayFormAsWritten())
@@ -617,7 +632,7 @@ void CallAndMessageChecker::checkPreObjCMessage(const ObjCMethodCall &msg,
       C.addSink();
       return;
     }
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       const BugType *BT = nullptr;
       switch (msg.getMessageKind()) {
       case OCM_Message:
@@ -700,18 +715,18 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
   // return different values depending on the return type and the architecture.
   QualType RetTy = Msg.getResultType();
   CanQualType CanRetTy = Ctx.getCanonicalType(RetTy);
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
 
   if (CanRetTy->isStructureOrClassType()) {
     // Structure returns are safe since the compiler zeroes them out.
     SVal V = C.getSValBuilder().makeZeroVal(RetTy);
-    C.addTransition(state->BindExpr(Msg.getOriginExpr(), LCtx, V));
+    C.addTransition(state->BindExpr(Msg.getOriginExpr(), SF, V));
     return;
   }
 
   // Other cases: check if sizeof(return type) > sizeof(void*)
-  if (CanRetTy != Ctx.VoidTy && C.getLocationContext()->getParentMap()
-                                  .isConsumedExpr(Msg.getOriginExpr())) {
+  if (CanRetTy != Ctx.VoidTy &&
+      C.getStackFrame()->getParentMap().isConsumedExpr(Msg.getOriginExpr())) {
     // Compute: sizeof(void *) and sizeof(return type)
     const uint64_t voidPtrSize = Ctx.getTypeSize(Ctx.VoidPtrTy);
     const uint64_t returnTypeSize = Ctx.getTypeSize(CanRetTy);
@@ -724,7 +739,7 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
             Ctx.LongDoubleTy == CanRetTy ||
             Ctx.LongLongTy == CanRetTy ||
             Ctx.UnsignedLongLongTy == CanRetTy)))) {
-      if (ExplodedNode *N = C.generateErrorNode(state))
+      if (ExplodedNode *N = C.addSink(state))
         emitNilReceiverBug(C, Msg, N);
       return;
     }
@@ -743,7 +758,7 @@ void CallAndMessageChecker::HandleNilReceiver(CheckerContext &C,
     // of this case unless we have *a lot* more knowledge.
     //
     SVal V = C.getSValBuilder().makeZeroVal(RetTy);
-    C.addTransition(state->BindExpr(Msg.getOriginExpr(), LCtx, V));
+    C.addTransition(state->BindExpr(Msg.getOriginExpr(), SF, V));
     return;
   }
 

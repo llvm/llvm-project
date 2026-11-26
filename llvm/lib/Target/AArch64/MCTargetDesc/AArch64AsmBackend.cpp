@@ -10,6 +10,7 @@
 #include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -81,8 +82,6 @@ public:
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 
@@ -349,18 +348,19 @@ AArch64AsmBackend::getFixupKind(StringRef Name) const {
   if (!TheTriple.isOSBinFormatELF())
     return std::nullopt;
 
-  unsigned Type = llvm::StringSwitch<unsigned>(Name)
-#define ELF_RELOC(X, Y)  .Case(#X, Y)
+  constexpr llvm::EnumStringDef<uint16_t> TypesDefs[] = {
+#define ELF_RELOC(X, Y) {{#X}, Y},
 #include "llvm/BinaryFormat/ELFRelocs/AArch64.def"
 #undef ELF_RELOC
-                      .Case("BFD_RELOC_NONE", ELF::R_AARCH64_NONE)
-                      .Case("BFD_RELOC_16", ELF::R_AARCH64_ABS16)
-                      .Case("BFD_RELOC_32", ELF::R_AARCH64_ABS32)
-                      .Case("BFD_RELOC_64", ELF::R_AARCH64_ABS64)
-                      .Default(-1u);
-  if (Type == -1u)
-    return std::nullopt;
-  return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
+      {{"BFD_RELOC_NONE"}, ELF::R_AARCH64_NONE},
+      {{"BFD_RELOC_16"}, ELF::R_AARCH64_ABS16},
+      {{"BFD_RELOC_32"}, ELF::R_AARCH64_ABS32},
+      {{"BFD_RELOC_64"}, ELF::R_AARCH64_ABS64},
+  };
+  static constexpr auto Types = BUILD_ENUM_STRINGS(TypesDefs);
+  if (const auto *E = llvm::EnumStrings(Types).fromString(Name))
+    return static_cast<MCFixupKind>(FirstLiteralRelocationKind + E->value());
+  return std::nullopt;
 }
 
 /// getFixupKindContainereSizeInBytes - The number of bytes of the
@@ -497,15 +497,6 @@ void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   }
 }
 
-bool AArch64AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                             uint64_t Value) const {
-  // FIXME:  This isn't correct for AArch64. Just moving the "generic" logic
-  // into the targets for now.
-  //
-  // Relax if the value is too big for a (signed) i8.
-  return int64_t(Value) != int64_t(int8_t(Value));
-}
-
 bool AArch64AsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                      const MCSubtargetInfo *STI) const {
   // If the count is not 4-byte aligned, we must be writing data into the text
@@ -586,9 +577,16 @@ public:
   /// Generate the compact unwind encoding from the CFI directives.
   uint64_t generateCompactUnwindEncoding(const MCDwarfFrameInfo *FI,
                                          const MCContext *Ctxt) const override {
+    if (Ctxt->emitDwarfUnwindInfo() == EmitDwarfUnwindType::DwarfOnly)
+      return CU::UNWIND_ARM64_MODE_DWARF;
+
     // MTE-tagged frames must use DWARF unwinding because compact unwind
     // doesn't handle MTE tags
     if (FI->IsMTETaggedFrame)
+      return CU::UNWIND_ARM64_MODE_DWARF;
+
+    // Signal frames cannot be encoded in compact unwind.
+    if (FI->IsSignalFrame)
       return CU::UNWIND_ARM64_MODE_DWARF;
 
     ArrayRef<MCCFIInstruction> Instrs = FI->Instructions;
@@ -728,6 +726,9 @@ public:
 
         break;
       }
+      case MCCFIInstruction::OpLLVMSetRAState:
+        // .cfi_set_ra_state is not yet supported in Compact Unwind.
+        return CU::UNWIND_ARM64_MODE_DWARF;
       }
     }
 

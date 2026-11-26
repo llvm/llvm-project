@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file -convert-spirv-to-llvm -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -split-input-file -convert-spirv-to-llvm='allow-pattern-rollback=0' -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Array type
@@ -9,6 +10,9 @@ spirv.func @array(!spirv.array<16 x f32>, !spirv.array< 32 x vector<4xf32> >) "N
 
 // CHECK-LABEL: @array_with_natural_stride(!llvm.array<16 x f32>)
 spirv.func @array_with_natural_stride(!spirv.array<16 x f32, stride=4>) "None"
+
+// CHECK-LABEL: @array_of_strided_array(!llvm.array<3 x array<4 x f32>>)
+spirv.func @array_of_strided_array(!spirv.array<3 x !spirv.array<4 x f32, stride=4>, stride=16>) "None"
 
 //===----------------------------------------------------------------------===//
 // Pointer type
@@ -34,11 +38,14 @@ spirv.func @runtime_array_scalar(!spirv.rtarray<f32>) "None"
 // Struct type
 //===----------------------------------------------------------------------===//
 
-// CHECK-LABEL: @struct(!llvm.struct<packed (f64)>)
+// CHECK-LABEL: @struct(!llvm.struct<(f64)>)
 spirv.func @struct(!spirv.struct<(f64)>) "None"
 
-// CHECK-LABEL: @struct_nested(!llvm.struct<packed (i32, struct<packed (i64, i32)>)>)
+// CHECK-LABEL: @struct_nested(!llvm.struct<(i32, struct<(i64, i32)>)>)
 spirv.func @struct_nested(!spirv.struct<(i32, !spirv.struct<(i64, i32)>)>) "None"
+
+// CHECK-LABEL: @struct_cpacked(!llvm.struct<packed (i8, i32)>)
+spirv.func @struct_cpacked(!spirv.struct<(i8, i32), CPacked>) "None"
 
 // CHECK-LABEL: @struct_with_natural_offset(!llvm.struct<(i8, i32)>)
 spirv.func @struct_with_natural_offset(!spirv.struct<(i8[0], i32[4])>) "None"

@@ -1,4 +1,5 @@
 !RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-tables-only -fopenmp %s -o - | FileCheck %s
+!RUN: %flang_fc1 -emit-llvm -debug-info-kind=line-directives-only -fopenmp %s -o - | FileCheck %s
 
 ! Test that this file builds without an error.
 

@@ -12,6 +12,7 @@
 #include "hdr/types/FILE.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
+#include "src/stdio/stdout.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
@@ -19,7 +20,8 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   unsigned char uc = static_cast<unsigned char>(c);
 
-  auto result = LIBC_NAMESPACE::stdout->write(&uc, 1);
+  auto result = reinterpret_cast<LIBC_NAMESPACE::File *>(LIBC_NAMESPACE::stdout)
+                    ->write(&uc, 1);
   if (result.has_error())
     libc_errno = result.error;
   size_t written = result.value;
@@ -28,7 +30,7 @@ LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
     // The stream should be in an error state in this case.
     return EOF;
   }
-  return 0;
+  return static_cast<int>(uc);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

@@ -24,4 +24,4 @@ getProcFile(const llvm::Twine &file);
 
 } // namespace lldb_private
 
-#endif // #ifndef LLDB_HOST_POSIX_SUPPORT_H
+#endif // LLDB_HOST_POSIX_SUPPORT_H

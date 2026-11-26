@@ -2,6 +2,7 @@
 architecture and/or the platform dependent nature of the tests. """
 
 # System modules
+import functools
 import itertools
 import json
 import re
@@ -104,6 +105,8 @@ def finalize_build_dictionary(dictionary):
         "windows": "Windows_NT",
         "macosx": "Darwin",
         "darwin": "Darwin",
+        "wasip1": "WASI",
+        "wasi": "WASI",
     }
 
     if dictionary is None:
@@ -124,8 +127,11 @@ def finalize_build_dictionary(dictionary):
 def _get_platform_os(p):
     # Use the triple to determine the platform if set.
     triple = p.GetTriple()
-    if triple:
-        platform = triple.split("-")[2]
+    if not triple:
+        triple = getattr(configuration, "triple", None) or ""
+    parts = triple.split("-")
+    if len(parts) >= 3:
+        platform = parts[2]
         if platform.startswith("freebsd"):
             platform = "freebsd"
         elif platform.startswith("netbsd"):
@@ -133,6 +139,8 @@ def _get_platform_os(p):
         elif platform.startswith("openbsd"):
             platform = "openbsd"
         return platform
+    if len(parts) >= 2:
+        return parts[1]
 
     return ""
 
@@ -154,8 +162,12 @@ def getPlatform():
         dot = platform.find(".")
         if dot != -1:
             platform = platform[:dot]
+        # Normalize SDK-style names to the canonical lldb platform names
+        # used elsewhere in the test infra (lldbplatform.__name_lookup, etc.).
         if platform == "iphoneos":
             platform = "ios"
+        elif platform == "appletvos":
+            platform = "tvos"
         return platform
 
     return _get_platform_os(lldb.selected_platform)
@@ -166,11 +178,27 @@ def platformIsDarwin():
     return getPlatform() in getDarwinOSTriples()
 
 
+def getDarwinEmbeddedKernelVersion():
+    """Returns the major kernel version of the remote device via 'uname -r'."""
+    shell_cmd = lldb.SBPlatformShellCommand("uname -r")
+    err = lldb.selected_platform.Run(shell_cmd)
+    if err.Success():
+        output = shell_cmd.GetOutput()
+        if output:
+            try:
+                return int(output.strip().split(".")[0])
+            except ValueError:
+                pass
+    return 0
+
+
 def findMainThreadCheckerDylib():
     if not platformIsDarwin():
         return ""
 
     if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        if getDarwinEmbeddedKernelVersion() > 25:
+            return "/usr/lib/libMainThreadChecker.dylib"
         return "/Developer/usr/lib/libMainThreadChecker.dylib"
 
     with os.popen("xcode-select -p") as output:
@@ -187,6 +215,8 @@ def findBacktraceRecordingDylib():
         return ""
 
     if getPlatform() in lldbplatform.translate(lldbplatform.darwin_embedded):
+        if getDarwinEmbeddedKernelVersion() > 25:
+            return "/usr/lib/libBacktraceRecording.dylib"
         return "/Developer/usr/lib/libBacktraceRecording.dylib"
 
     with os.popen("xcode-select -p") as output:
@@ -208,6 +238,9 @@ class _PlatformContext(object):
         self.shlib_path_separator = shlib_path_separator
         self.shlib_prefix = shlib_prefix
         self.shlib_extension = shlib_extension
+
+    def getFullLibName(self, base_name):
+        return f"{self.shlib_prefix}{base_name}.{self.shlib_extension}"
 
 
 def createPlatformContext():
@@ -270,7 +303,7 @@ def getLLDBArchitecture():
             "file " + lldbtest_config.lldbExec,
         ]
 
-        output = subprocess.check_output(command)
+        output = subprocess.check_output(command, stderr=subprocess.PIPE)
         str = output.decode()
 
         for line in str.splitlines():
@@ -288,17 +321,24 @@ def getCompiler():
     return module.getCompiler()
 
 
-def getCompilerVersion():
-    """Returns a string that represents the compiler version.
-    Supports: llvm, clang.
-    """
+# The compiler version doesn't change during a test run.
+@functools.lru_cache(maxsize=None)
+def _getCompilerVersionImpl(compiler):
+    """Returns the version string of the given compiler."""
     version_output = subprocess.check_output(
-        [getCompiler(), "--version"], errors="replace"
+        [compiler, "--version"], stderr=subprocess.PIPE, errors="replace"
     )
     m = re.search("version ([0-9.]+)", version_output)
     if m:
         return m.group(1)
     return "unknown"
+
+
+def getCompilerVersion():
+    """Returns a string that represents the compiler version.
+    Supports: llvm, clang.
+    """
+    return _getCompilerVersionImpl(getCompiler())
 
 
 def getWindowsVersion():
@@ -326,7 +366,7 @@ def getDwarfVersion():
         return str(configuration.dwarf_version)
     if "clang" in getCompiler():
         try:
-            triple = builder_module().getTriple(getArchitecture())
+            triple = builder_module().getTriple()
             target = ["-target", triple] if triple else []
             driver_output = subprocess.check_output(
                 [getCompiler()] + target + "-g -c -x c - -o - -###".split(),

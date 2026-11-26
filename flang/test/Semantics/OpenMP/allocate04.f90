@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=50
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive
 ! Only the allocator clause is allowed on the allocate directive
@@ -14,7 +14,7 @@ use iso_c_binding
   type(c_ptr), pointer :: p
   integer :: x, y, z
 
-  !ERROR: PRIVATE clause is not allowed on the ALLOCATE directive
+  !ERROR: PRIVATE clause is not allowed on ALLOCATE directive
   !$omp allocate(y) private(y)
   !ERROR: A list item in a declarative ALLOCATE cannot have the ALLOCATABLE or POINTER attribute
   !$omp allocate(p)

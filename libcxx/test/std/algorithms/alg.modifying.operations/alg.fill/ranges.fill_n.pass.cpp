@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstdint>
 #include <deque>
 #include <ranges>
 #include <string>
@@ -49,6 +50,14 @@ constexpr void test_iterators() {
     std::array<int, 0> a;
     auto ret = std::ranges::fill_n(It(a.data()), 0, 1);
     assert(base(ret) == a.data());
+  }
+
+  { // A negative count is a no-op that returns the unchanged iterator.
+    // Regression test for https://llvm.org/PR193613.
+    int a[3]                            = {-1, -2, -3};
+    std::same_as<It> decltype(auto) ret = std::ranges::fill_n(It(a), -5, 1);
+    assert(base(ret) == a);
+    assert(a[0] == -1 && a[1] == -2 && a[2] == -3);
   }
 }
 
@@ -96,6 +105,13 @@ constexpr bool test_vector_bool(std::size_t N) {
       std::ranges::fill_n(std::ranges::end(expected) - 4, 4, false);
       assert(in == expected);
     }
+  }
+
+  { // Negative count test
+    std::vector<bool> v(N, false);
+    auto r = std::ranges::fill_n(v.begin(), -5, true);
+    assert(r == v.begin());
+    assert(v == std::vector<bool>(N, false));
   }
 
   return true;

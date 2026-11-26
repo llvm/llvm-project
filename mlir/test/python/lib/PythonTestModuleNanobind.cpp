@@ -139,6 +139,13 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
   // clang-format on
 
   m.def(
+      "register_rendezvous_pass",
+      []() { mlirPythonTestRegisterRendezvousPass(); },
+      "Registers the test-python-rendezvous pass used by concurrency tests.");
+
+  m.def("emit_linked_remarks", &mlirPythonTestEmitLinkedRemarks);
+
+  m.def(
       "test_diagnostics_with_errors_and_notes",
       [](DefaultingPyMlirContext ctx) {
         mlir::python::CollectDiagnosticsToStringScope handler(ctx.get()->get());
@@ -147,9 +154,46 @@ NB_MODULE(_mlirPythonTestNanobind, m) {
       },
       nb::arg("context").none() = nb::none());
 
+  // Reproducer for the failed assertion `_PyType_LookupRef` triggered by
+  // `NanobindAdaptors.h::from_python` type casters.
+  //
+  // Two overloads of the same function: one takes `MlirOperation`, the other
+  // takes `MlirModule`. When called with an `ir.Module`:
+  //
+  //   1. nanobind tries overload 1 (`MlirOperation`). `from_python` calls
+  //      `mlirApiObjectToCapsule` (succeeds — `Module` has `_CAPIPtr`), then
+  //      `mlirPythonCapsuleToOperation`, whose `PyCapsule_GetPointer` fails on
+  //      the capsule-name mismatch and sets `PyErr_Occurred()`.
+  //      `from_python` returns false.
+  //
+  //   If `PyErr` is still set and assertions are enabled:
+  //   2. nanobind tries overload 2 (`MlirModule`).  `from_python` calls
+  //      `mlirApiObjectToCapsule` --> `nanobind::getattr(obj, "_CAPIPtr")` -->
+  //      CPython's `_PyType_LookupRef` --> `assert(!PyErr_Occurred())` -->
+  //      `SIGABRT`.
+  //
+  //   If `PyErr_Clear` is called after failed capsule conversion:
+  //   2. `PyErr` is clear --> overload 2 succeeds --> returns "module".
+  m.def(
+      "take_module_or_operation",
+      [](MlirOperation) { return std::string("operation"); }, nb::arg("arg"));
+  m.def(
+      "take_module_or_operation",
+      [](MlirModule) { return std::string("module"); }, nb::arg("arg"));
+
   using namespace python_test;
   PyTestAttr::bind(m);
   PyTestType::bind(m);
   PyTestIntegerRankedTensorType::bind(m);
+  // `bind` registers `TestIntegerRankedTensorType` as the type caster for the
+  // builtin `RankedTensorType` TypeID. Its isa check only accepts integer
+  // element types, so every other ranked tensor type would then fail to
+  // downcast as soon as this module is imported. Restore the builtin caster;
+  // tests opt into the custom caster explicitly via `register_type_caster`.
+  PyGlobals::get().registerTypeCaster(
+      mlirRankedTensorTypeGetTypeID(),
+      nb::cast<nb::callable>(nb::cpp_function(
+          [](PyType pyType) { return PyRankedTensorType(pyType); })),
+      /*replace=*/true);
   PyTestTensorValue::bind(m);
 }

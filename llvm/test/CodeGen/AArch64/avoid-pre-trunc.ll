@@ -107,20 +107,20 @@ define <4 x i32> @lower_trunc_4xi32(i64 %a, i64 %b, i64 %c, i64 %d) {
 define <8 x i32> @lower_trunc_8xi32(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h) {
 ; CHECK-LABEL: lower_trunc_8xi32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x6
-; CHECK-NEXT:    fmov d1, x4
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    fmov d1, x6
 ; CHECK-NEXT:    fmov d2, x2
-; CHECK-NEXT:    fmov d3, x0
-; CHECK-NEXT:    mov v0.d[1], x7
-; CHECK-NEXT:    mov v1.d[1], x5
+; CHECK-NEXT:    fmov d3, x4
+; CHECK-NEXT:    mov v1.d[1], x7
 ; CHECK-NEXT:    mov v2.d[1], x3
-; CHECK-NEXT:    mov v3.d[1], x1
-; CHECK-NEXT:    uzp1 v1.4s, v1.4s, v0.4s
-; CHECK-NEXT:    uzp1 v2.4s, v3.4s, v2.4s
-; CHECK-NEXT:    add v3.4s, v1.4s, v1.4s
-; CHECK-NEXT:    add v0.4s, v2.4s, v2.4s
-; CHECK-NEXT:    eor v1.16b, v1.16b, v3.16b
-; CHECK-NEXT:    eor v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    mov v0.d[1], x1
+; CHECK-NEXT:    mov v3.d[1], x5
+; CHECK-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    uzp1 v1.4s, v3.4s, v1.4s
+; CHECK-NEXT:    add v3.4s, v0.4s, v0.4s
+; CHECK-NEXT:    add v2.4s, v1.4s, v1.4s
+; CHECK-NEXT:    eor v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    eor v1.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
   %a1 = insertelement <8 x i64> poison, i64 %a, i64 0
   %b1 = insertelement <8 x i64> %a1, i64 %b, i64 1

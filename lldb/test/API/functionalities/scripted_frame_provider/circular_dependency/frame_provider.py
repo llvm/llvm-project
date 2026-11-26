@@ -100,3 +100,63 @@ class ScriptedFrameObjectProvider(ScriptedFrameProvider):
             return idx
 
         return None
+
+
+class HandleCommandInInitProvider(ScriptedFrameProvider):
+    """
+    Provider that calls HandleCommand during __init__.
+
+    This reproduces the circular dependency by running a command that
+    accesses the thread's stack frames while the provider is being
+    initialized (i.e. while the SyntheticStackFrameList is being built).
+    Before the fix, HandleCommand("bt") would call Thread::GetStackFrameList()
+    which would try to create the SyntheticStackFrameList again -> deadlock.
+    """
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+        # Running "bt" during init triggers frame access on the thread,
+        # which before the fix would cause a circular dependency.
+        result = lldb.SBCommandReturnObject()
+        self.thread.GetProcess().GetTarget().GetDebugger().GetCommandInterpreter().HandleCommand(
+            "bt", result
+        )
+        self.init_succeeded = result.Succeeded()
+
+    @staticmethod
+    def get_description():
+        return "Provider that calls HandleCommand('bt') in __init__"
+
+    def get_frame_at_index(self, idx):
+        if idx < len(self.input_frames):
+            return idx
+        return None
+
+
+class EvaluateExpressionInGetFrameProvider(ScriptedFrameProvider):
+    """
+    Provider that calls EvaluateExpression in get_frame_at_index.
+
+    This reproduces the circular dependency by evaluating an expression
+    that accesses the thread's stack frames while the provider is fetching
+    frames. Before the fix, EvaluateExpression would call
+    Thread::GetStackFrameList() which would re-enter the
+    SyntheticStackFrameList -> circular dependency.
+    """
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+
+    @staticmethod
+    def get_description():
+        return "Provider that calls EvaluateExpression in get_frame_at_index"
+
+    def get_frame_at_index(self, idx):
+        if idx < len(self.input_frames):
+            frame = self.input_frames[idx]
+            # Evaluating an expression that calls a function triggers frame
+            # access on the thread, which before the fix would cause a
+            # circular dependency.
+            frame.EvaluateExpression("baz()")
+            return idx
+        return None

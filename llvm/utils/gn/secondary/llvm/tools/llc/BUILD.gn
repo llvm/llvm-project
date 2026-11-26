@@ -1,5 +1,7 @@
 executable("llc") {
   deps = [
+    "//llvm/include/llvm/Analysis:TargetLibraryInfo",
+    "//llvm/include/llvm/IR:public_tablegen",
     "//llvm/lib/Analysis",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/AsmPrinter",
@@ -30,4 +32,5 @@ executable("llc") {
     # Corresponds to export_executable_symbols() in cmake.
     ldflags = [ "-rdynamic" ]
   }
+  configs -= [ "//llvm/utils/gn/build:no_exported_symbols" ]
 }

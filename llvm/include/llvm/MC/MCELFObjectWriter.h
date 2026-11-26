@@ -50,7 +50,7 @@ struct ELFRelocationEntry {
   LLVM_DUMP_METHOD void dump() const { print(errs()); }
 };
 
-class MCELFObjectTargetWriter : public MCObjectTargetWriter {
+class LLVM_ABI MCELFObjectTargetWriter : public MCObjectTargetWriter {
   const uint8_t OSABI;
   const uint8_t ABIVersion;
   const uint16_t EMachine;
@@ -139,7 +139,7 @@ public:
   }
 };
 
-class ELFObjectWriter final : public MCObjectWriter {
+class LLVM_ABI ELFObjectWriter final : public MCObjectWriter {
   unsigned ELFHeaderEFlags = 0;
 
 public:
@@ -181,7 +181,7 @@ public:
   uint64_t writeObject() override;
 
   bool hasRelocationAddend() const;
-  bool usesRela(const MCTargetOptions *TO, const MCSectionELF &Sec) const;
+  bool usesRela(const MCTargetOptions &TO, const MCSectionELF &Sec) const;
 
   bool useSectionSymbol(const MCValue &Val, const MCSymbolELF *Sym, uint64_t C,
                         unsigned Type) const;

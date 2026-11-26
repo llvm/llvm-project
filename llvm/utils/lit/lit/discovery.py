@@ -68,7 +68,7 @@ def getTestSuite(item, litConfig, cache):
         cfg.load_from_path(cfgpath, litConfig)
         source_root = util.abs_path_preserve_drive(cfg.test_source_root or path)
         exec_root = util.abs_path_preserve_drive(cfg.test_exec_root or path)
-        return Test.TestSuite(cfg.name, source_root, exec_root, cfg), ()
+        return Test.TestSuite(cfg.name, source_root, exec_root, cfg, litConfig), ()
 
     def search(path):
         # Check for an already instantiated test suite.

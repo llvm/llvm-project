@@ -31,16 +31,18 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := row & 0xffff
-/// row_chunk := ((row >> 16) & 0xffff) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.f32[i] := CONVERT_INT32_TO_FP32(tsrc.row[row_index].dword[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := row & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.f32[i] := CONVERT_INT32_TO_FP32(tsrc.row[row_index].dword[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -65,16 +67,18 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := imm8 & 0x3f
-/// row_chunk := (imm8 >> 6) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.f32[i] := CONVERT_INT32_TO_FP32(tsrc.row[row_index].dword[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := imm8 & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.f32[i] := CONVERT_INT32_TO_FP32(tsrc.row[row_index].dword[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -100,17 +104,19 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := row & 0xffff
-/// row_chunk := ((row >> 16) & 0xffff) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.word[2*i+0] := 0
-///         dst.bf16[2*i+1] := CONVERT_FP32_TO_BF16(tsrc.row[row_index].fp32[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := row & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.word[2*i+0] := 0
+///             dst.bf16[2*i+1] := CONVERT_FP32_TO_BF16(tsrc.row[row_index].fp32[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -137,17 +143,19 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := imm8 & 0x3f
-/// row_chunk := (imm8 >> 6) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.word[2*i+0] := 0
-///         dst.bf16[2*i+1] := CONVERT_FP32_TO_BF16(tsrc.row[row_index].fp32[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := imm8 & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.word[2*i+0] := 0
+///             dst.bf16[2*i+1] := CONVERT_FP32_TO_BF16(tsrc.row[row_index].fp32[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -174,17 +182,19 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := row & 0xffff
-/// row_chunk := ((row >> 16) & 0xffff) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.word[2*i+1] := 0
-///         dst.bf16[2*i+0] := CONVERT_FP32_TO_BF16(tsrc.row[row_index].fp32[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := row & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.word[2*i+1] := 0
+///             dst.bf16[2*i+0] := CONVERT_FP32_TO_BF16(tsrc.row[row_index].fp32[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -211,17 +221,19 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := imm8 & 0x3f
-/// row_chunk := (imm8 >> 6) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.word[2*i+1] := 0
-///         dst.bf16[2*i+0] := CONVERT_FP32_TO_BF16(tsrc.row[row_index].fp32[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := imm8 & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.word[2*i+1] := 0
+///             dst.bf16[2*i+0] := CONVERT_FP32_TO_BF16(tsrc.row[row_index].fp32[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -248,17 +260,19 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := row & 0xffff
-/// row_chunk := ((row >> 16) & 0xffff) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.word[2*i+0] := 0
-///         dst.fp16[2*i+1] := CONVERT_FP32_TO_FP16(tsrc.row[row_index].fp32[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := row & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.word[2*i+0] := 0
+///             dst.fp16[2*i+1] := CONVERT_FP32_TO_FP16(tsrc.row[row_index].fp32[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -284,17 +298,19 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := imm8 & 0x3f
-/// row_chunk := (imm8 >> 6) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.word[2*i+0] := 0
-///         dst.fp16[2*i+1] := CONVERT_FP32_TO_FP16(tsrc.row[row_index].fp32[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := imm8 & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.word[2*i+0] := 0
+///             dst.fp16[2*i+1] := CONVERT_FP32_TO_FP16(tsrc.row[row_index].fp32[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -321,17 +337,19 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := row & 0xffff
-/// row_chunk := ((row >> 16) & 0xffff) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.word[2*i+1] := 0
-///         dst.fp16[2*i+0] := CONVERT_FP32_TO_FP16(tsrc.row[row_index].fp32[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := row & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.word[2*i+1] := 0
+///             dst.fp16[2*i+0] := CONVERT_FP32_TO_FP16(tsrc.row[row_index].fp32[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -357,17 +375,19 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL >> 3
-/// row_index := imm8 & 0x3f
-/// row_chunk := (imm8 >> 6) * VL_bytes
-/// FOR i := 0 TO (VL_bytes / 4) - 1
-///     IF i + row_chunk / 4 >= tsrc.colsb / 4
-///         dst.dword[i] := 0
-///     ELSE
-///         dst.word[2*i+1] := 0
-///         dst.fp16[2*i+0] := CONVERT_FP32_TO_FP16(tsrc.row[row_index].fp32[row_chunk/4+i], RNE)
-///     FI
-/// ENDFOR
-/// dst[MAX_VL-1:VL] := 0
+/// row_index := imm8 & 0xf
+/// IF row_index >= tsrc.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes / 4) - 1
+///         IF i >= tsrc.colsb / 4
+///             dst.dword[i] := 0
+///         ELSE
+///             dst.word[2*i+1] := 0
+///             dst.fp16[2*i+0] := CONVERT_FP32_TO_FP16(tsrc.row[row_index].fp32[i], RNE)
+///         FI
+///     ENDFOR
+/// FI
 /// zero_tileconfig_start()
 /// \endcode
 ///
@@ -401,14 +421,17 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL>>3
-/// row_index := b&0xffff
-/// row_chunk := ((b>>16)&0xffff) * VL_bytes
-/// FOR i := 0 TO (VL_bytes-1)
-///     IF (row_chunk + i >= a.colsb)
-///             dst.byte[i] := 0
-///     ELSE
-///             dst.byte[i] := a.row[row_index].byte[row_chunk+i]
-/// ENDFOR
+/// row_index := b&0xf
+/// IF row_index >= a.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes-1)
+///         IF (i >= a.colsb)
+///                 dst.byte[i] := 0
+///         ELSE
+///                 dst.byte[i] := a.row[row_index].byte[i]
+///     ENDFOR
+/// FI
 /// \endcode
 #define _tile_movrow(a, b) ((__m512i)__builtin_ia32_tilemovrow(a, b))
 
@@ -433,14 +456,17 @@
 /// \code{.operation}
 /// VL := 512
 /// VL_bytes := VL>>3
-/// row_index := b&0x3f
-/// row_chunk := (b>>6) * VL_bytes
-/// FOR i := 0 TO (VL_bytes-1)
-///     IF (row_chunk + i >= a.colsb)
-///             dst.byte[i] := 0
-///     ELSE
-///             dst.byte[i] := a.row[row_index].byte[row_chunk+i]
-/// ENDFOR
+/// row_index := b&0xf
+/// IF row_index >= a.rows
+///     dst[VL-1:0] := 0
+/// ELSE
+///     FOR i := 0 TO (VL_bytes-1)
+///         IF (i >= a.colsb)
+///                 dst.byte[i] := 0
+///         ELSE
+///                 dst.byte[i] := a.row[row_index].byte[i]
+///     ENDFOR
+/// FI
 /// \endcode
 #define _tile_movrowi(a, b) ((__m512i)__builtin_ia32_tilemovrowi(a, b))
 

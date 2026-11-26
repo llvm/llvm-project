@@ -4,8 +4,8 @@
 define void @src_test_xor_and_identity_mismatch(i32 %a, i32 %b, ptr %dst) {
 ; CHECK-LABEL: define void @src_test_xor_and_identity_mismatch(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], ptr [[DST:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B]], i32 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[A]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> [[TMP1]], i32 [[B]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void

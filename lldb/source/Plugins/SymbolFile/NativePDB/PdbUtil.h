@@ -113,7 +113,7 @@ struct VariableInfo {
   llvm::StringRef name;
   llvm::codeview::TypeIndex type;
   DWARFExpressionList location;
-  bool is_param;
+  bool is_param = false;
 };
 
 llvm::pdb::PDB_SymType CVSymToPDBSym(llvm::codeview::SymbolKind kind);
@@ -160,6 +160,8 @@ GetCompilerTypeForSimpleKind(llvm::codeview::SimpleTypeKind kind);
 PdbTypeSymId GetBestPossibleDecl(PdbTypeSymId id, llvm::pdb::TpiStream &tpi);
 
 size_t GetSizeOfType(PdbTypeSymId id, llvm::pdb::TpiStream &tpi);
+
+std::optional<PdbTypeSymId> GetFunctionType(llvm::codeview::CVSymbol symbol);
 
 } // namespace npdb
 } // namespace lldb_private

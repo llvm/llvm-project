@@ -55,6 +55,20 @@ extern "C" {
 #pragma omp end declare variant
 #endif
 
+#ifdef __SPIRV__
+#pragma omp begin declare variant match(                                       \
+        device = {arch(spirv64)}, implementation = {extension(match_any)})
+
+#define __OPENMP_SPIRV__
+
+/// Include declarations for libdevice functions.
+#include <__clang_spirv_libdevice_declares.h>
+
+#undef __OPENMP_SPIRV__
+
+#pragma omp end declare variant
+#endif
+
 #ifdef __cplusplus
 } // extern "C"
 #endif

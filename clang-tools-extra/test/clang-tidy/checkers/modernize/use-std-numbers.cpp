@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -check-suffix=ALL -std=c++20 %s modernize-use-std-numbers %t
-// RUN: %check_clang_tidy -check-suffix=ALL,IMPRECISE -std=c++20 %s modernize-use-std-numbers %t -- -config="{CheckOptions: { modernize-use-std-numbers.DiffThreshold: 0.01 }}"
+// RUN: %check_clang_tidy -check-suffix=ALL -std=c++20-or-later %s modernize-use-std-numbers %t
+// RUN: %check_clang_tidy -check-suffix=ALL,IMPRECISE -std=c++20-or-later %s modernize-use-std-numbers %t -- -config="{CheckOptions: { modernize-use-std-numbers.DiffThreshold: 0.01 }}"
 
 // CHECK-FIXES-ALL: #include <numbers>
 

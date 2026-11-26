@@ -493,8 +493,8 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; ATOM-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; ATOM-NEXT:    pcmpeqd %xmm2, %xmm2
 ; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; ATOM-NEXT:    paddd %xmm2, %xmm0
 ; ATOM-NEXT:    paddd %xmm2, %xmm1
+; ATOM-NEXT:    paddd %xmm2, %xmm0
 ; ATOM-NEXT:    movq %xmm1, 16(%rsi)
 ; ATOM-NEXT:    movdqa %xmm0, (%rsi)
 ; ATOM-NEXT:    retq
@@ -2219,8 +2219,7 @@ define i56 @select_undef_rhs(i64 %x, i1 %cmp) {
 ; ATHLON-LABEL: select_undef_rhs:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    movzwl %cx, %edx
+; ATHLON-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: select_undef_rhs:
@@ -2253,8 +2252,7 @@ define i56 @select_undef_lhs(i64 %x, i1 %cmp) {
 ; ATHLON-LABEL: select_undef_lhs:
 ; ATHLON:       ## %bb.0:
 ; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    movzwl %cx, %edx
+; ATHLON-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
 ; ATHLON-NEXT:    retl
 ;
 ; MCU-LABEL: select_undef_lhs:

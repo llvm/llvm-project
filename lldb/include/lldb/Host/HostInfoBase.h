@@ -18,9 +18,11 @@
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Threading.h"
 
 #include <cstdint>
 
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -30,37 +32,47 @@ class FileSpec;
 
 struct SharedCacheImageInfo {
   SharedCacheImageInfo()
-      : m_uuid(), m_extractor_sp(), m_create_data_extractor(nullptr),
-        m_image_baton(nullptr) {}
-  SharedCacheImageInfo(UUID uuid, lldb::DataExtractorSP extractor_sp)
-      : m_uuid(uuid), m_extractor_sp(extractor_sp),
-        m_create_data_extractor(nullptr), m_image_baton(nullptr) {}
+      : m_filename(), m_uuid(), m_extractor_sp(),
+        m_create_data_extractor(nullptr), m_image_baton(nullptr), m_lazy() {}
+  SharedCacheImageInfo(std::string filename, UUID uuid,
+                       lldb::DataExtractorSP extractor_sp)
+      : m_filename(std::move(filename)), m_uuid(uuid),
+        m_extractor_sp(extractor_sp), m_create_data_extractor(nullptr),
+        m_image_baton(nullptr), m_lazy() {}
   SharedCacheImageInfo(
-      UUID uuid, lldb::DataExtractorSP (*create_data_extractor)(void *image),
+      std::string filename, UUID uuid,
+      lldb::DataExtractorSP (*create_data_extractor)(void *image),
       void *image_baton)
-      : m_uuid(uuid), m_extractor_sp(),
+      : m_filename(std::move(filename)), m_uuid(uuid), m_extractor_sp(),
         m_create_data_extractor(create_data_extractor),
-        m_image_baton(image_baton) {}
+        m_image_baton(image_baton), m_lazy(std::make_shared<LazyExtractor>()) {}
 
+  /// Copies share the extractor, which is created at most once.
   lldb::DataExtractorSP GetExtractor() {
-    if (!m_extractor_sp && m_image_baton)
-      m_extractor_sp = m_create_data_extractor(m_image_baton);
+    if (m_lazy) {
+      llvm::call_once(m_lazy->once, [&] {
+        m_lazy->extractor_sp = m_create_data_extractor(m_image_baton);
+      });
+      return m_lazy->extractor_sp;
+    }
     return m_extractor_sp;
   }
+  llvm::StringRef GetFilename() const { return m_filename; }
   const UUID &GetUUID() const { return m_uuid; }
-  void *GetImageBaton();
-  void SetExtractor(lldb::DataExtractorSP extractor_sp) {
-    m_extractor_sp = extractor_sp;
-  }
-  void SetImageBaton(void *image_baton) { m_image_baton = image_baton; }
-  void SetDataExtractorCreateFunction(
-      lldb::DataExtractorSP (*create_data_extractor)(void *image));
+  void *GetImageBaton() const { return m_image_baton; }
 
 private:
+  struct LazyExtractor {
+    llvm::once_flag once;
+    lldb::DataExtractorSP extractor_sp;
+  };
+
+  std::string m_filename;
   UUID m_uuid;
   lldb::DataExtractorSP m_extractor_sp;
   lldb::DataExtractorSP (*m_create_data_extractor)(void *image);
   void *m_image_baton;
+  std::shared_ptr<LazyExtractor> m_lazy;
 };
 
 namespace {
@@ -92,8 +104,10 @@ public:
   /// (optionally) replace it with a file spec pointing to a more canonical
   /// copy.
   using SharedLibraryDirectoryHelper = void(FileSpec &this_file);
+  static void
+  SetSharedLibraryDirectoryHelper(SharedLibraryDirectoryHelper *helper);
 
-  static void Initialize(SharedLibraryDirectoryHelper *helper = nullptr);
+  static void Initialize();
   static void Terminate();
 
   /// Gets the host target triple.
@@ -183,11 +197,67 @@ public:
     return llvm::errorCodeToError(llvm::errc::no_such_file_or_directory);
   }
 
-  /// Return information about module \p image_name if it is loaded in
+  /// Return information about module \p filepath if it is loaded in
   /// the current process's address space.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name) {
+  GetSharedCacheImageInfo(llvm::StringRef filepath,
+                          lldb::SymbolSharedCacheUse sc_mode) {
     return {};
+  }
+
+  /// Return information about module \p uuid if it is loaded in
+  /// the current process's address space.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(const UUID &uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
+    return {};
+  }
+
+  /// Return information about module \p filepath, if it is loaded in
+  /// the current process's address space using shared cache \p sc_uuid.
+  /// The shared cache must have been previously indexed.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(llvm::StringRef filepath, const UUID &sc_uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
+    return {};
+  }
+
+  /// Return information about module \p uuid, if it is loaded in
+  /// the current process's address space using shared cache \p sc_uuid.
+  /// The shared cache must have been previously indexed.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(const UUID &uuid, const UUID &sc_uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
+    return {};
+  }
+
+  /// Scan the files in a shared cache, if the filepath and uuid match
+  /// on the debug host.
+  /// Returns false if the shared cache filepath did not exist, or uuid
+  /// did not match.
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
+                                    lldb::SymbolSharedCacheUse sc_mode) {
+    return false;
   }
 
   /// Returns the distribution id of the host
@@ -199,7 +269,9 @@ public:
   static llvm::StringRef GetDistributionId() { return llvm::StringRef(); }
 
 protected:
-  static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);
+  static bool
+  ComputeSharedLibraryDirectory(FileSpec &file_spec,
+                                SharedLibraryDirectoryHelper *helper);
   static bool ComputeSupportExeDirectory(FileSpec &file_spec);
   static bool ComputeProcessTempFileDirectory(FileSpec &file_spec);
   static bool ComputeGlobalTempFileDirectory(FileSpec &file_spec);

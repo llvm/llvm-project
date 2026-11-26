@@ -26,7 +26,6 @@ LLVM_LIBC_FUNCTION(::FILE *, fopen,
         inline_memcpy(buffer->data, mode, internal::string_length(mode) + 1);
       },
       [&](rpc::Buffer *buffer, uint32_t) { file = buffer->data[0]; });
-  port.close();
 
   return reinterpret_cast<FILE *>(file);
 }

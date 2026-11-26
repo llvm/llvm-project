@@ -18,11 +18,11 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/PDLExtension/PDLExtensionOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -893,6 +893,56 @@ mlir::test::TestTypeConverterOp::getTypeConverter() {
   return std::make_unique<TestTypeConverter>();
 }
 
+DiagnosedSilenceableFailure
+mlir::transform::TestSingleBlockNormalFormAttr::checkOperation(
+    Operation *op) const {
+  auto check = [](Operation *nested) {
+    for (Region &region : nested->getRegions())
+      if (!region.hasOneBlock())
+        return failure();
+
+    return success();
+  };
+
+  auto wrapResult = [&](Location loc, LogicalResult result) {
+    if (failed(result)) {
+      return emitSilenceableFailure(loc)
+             << "normal form " << getMnemonic()
+             << " requires payload operations to have a single region";
+    }
+    return DiagnosedSilenceableFailure::success();
+  };
+
+  if (!getCheckNested().getValue())
+    return wrapResult(op->getLoc(), check(op));
+
+  Location loc = op->getLoc();
+  WalkResult walkResult = op->walk<WalkOrder::PreOrder>([&](Operation *nested) {
+    if (failed(check(nested))) {
+      loc = nested->getLoc();
+      return WalkResult::interrupt();
+    }
+    return WalkResult::advance();
+  });
+  return wrapResult(loc, failure(walkResult.wasInterrupted()));
+}
+
+DiagnosedSilenceableFailure
+mlir::transform::TestCountingNormalFormAttr::checkOperation(
+    Operation *op) const {
+  // Record the number of invocations of this check on `op` as a discardable
+  // integer attribute. Tests that need to detect redundant checks can simply
+  // `FileCheck` the printed IR for the expected count.
+  Builder builder(op->getContext());
+  StringAttr counterName =
+      builder.getStringAttr("test.counting_normal_form_count");
+  unsigned count = 0;
+  if (auto prev = op->getAttrOfType<IntegerAttr>(counterName))
+    count = prev.getValue().getZExtValue();
+  op->setDiscardableAttr(counterName, builder.getI64IntegerAttr(count + 1));
+  return DiagnosedSilenceableFailure::success();
+}
+
 namespace {
 /// Test extension of the Transform dialect. Registers additional ops and
 /// declares PDL as dependent dialect since the additional ops are using PDL
@@ -912,6 +962,10 @@ public:
 #define GET_OP_LIST
 #include "TestTransformDialectExtension.cpp.inc"
                          >();
+    registerAttributes<
+#define GET_ATTRDEF_LIST
+#include "TestTransformDialectExtensionAttrs.cpp.inc"
+        >();
     registerTypes<
 #define GET_TYPEDEF_LIST
 #include "TestTransformDialectExtensionTypes.cpp.inc"
@@ -920,7 +974,7 @@ public:
     auto verboseConstraint = [](PatternRewriter &rewriter, PDLResultList &,
                                 ArrayRef<PDLValue> pdlValues) {
       for (const PDLValue &pdlValue : pdlValues) {
-        if (Operation *op = pdlValue.dyn_cast<Operation *>()) {
+        if (Operation *op = dyn_cast_if_present<Operation *>(pdlValue)) {
           op->emitWarning() << "from PDL constraint";
         }
       }
@@ -943,6 +997,14 @@ public:
 generatedTypeParser(AsmParser &parser, StringRef *mnemonic, Type &value);
 [[maybe_unused]] static LogicalResult generatedTypePrinter(Type def,
                                                            AsmPrinter &printer);
+[[maybe_unused]] static OptionalParseResult
+generatedAttributeParser(AsmParser &parser, StringRef *mnemonic, Type type,
+                         Attribute &value);
+[[maybe_unused]] static LogicalResult
+generatedAttributePrinter(Attribute def, AsmPrinter &printer);
+
+#define GET_ATTRDEF_CLASSES
+#include "TestTransformDialectExtensionAttrs.cpp.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "TestTransformDialectExtensionTypes.cpp.inc"

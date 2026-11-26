@@ -15,6 +15,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class TestFunctionCallFromObjectFile(TestBase):
     def test_lib1(self):
         self.build()

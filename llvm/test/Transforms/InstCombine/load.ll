@@ -21,7 +21,7 @@ define i32 @test1() {
 
 define float @test2() {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    ret float 0x3FF3B2FEC0000000
+; CHECK-NEXT:    ret float 1.231200e+00
 ;
   %A = getelementptr [2 x { i32, float }], ptr @Y, i64 0, i64 1, i32 1		; <ptr> [#uses=1]
   %B = load float, ptr %A		; <float> [#uses=1]
@@ -56,11 +56,9 @@ define i32 @test5(i1 %C) {
   ret i32 %Z
 }
 
-; FIXME: Constants should be allowed for this optimization.
 define i32 @test5_asan(i1 %C) sanitize_address {
 ; CHECK-LABEL: @test5_asan(
-; CHECK-NEXT:    [[Y:%.*]] = select i1 [[C:%.*]], ptr @X, ptr @X2
-; CHECK-NEXT:    [[Z:%.*]] = load i32, ptr [[Y]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = select i1 [[C:%.*]], i32 42, i32 47
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %Y = select i1 %C, ptr @X, ptr @X2		; <ptr> [#uses=1]
@@ -91,7 +89,7 @@ define i32 @load_gep_null_not_inbounds(i64 %X) {
 define i32 @test7_no_null_opt(i32 %X) #0 {
 ; CHECK-LABEL: @test7_no_null_opt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[V:%.*]] = getelementptr i32, ptr null, i64 [[TMP1]]
+; CHECK-NEXT:    [[V:%.*]] = getelementptr [4 x i8], ptr null, i64 [[TMP1]]
 ; CHECK-NEXT:    [[R:%.*]] = load i32, ptr [[V]], align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -414,13 +412,13 @@ define i16 @load_from_zero_with_dynamic_offset(i64 %idx) {
   ret i16 %v
 }
 
-declare ptr @llvm.strip.invariant.group.p0(ptr %p)
+declare ptr @llvm.launder.invariant.group.p0(ptr %p)
 
-define i32 @load_via_strip_invariant_group() {
-; CHECK-LABEL: @load_via_strip_invariant_group(
+define i32 @load_via_launder_invariant_group() {
+; CHECK-LABEL: @load_via_launder_invariant_group(
 ; CHECK-NEXT:    ret i32 37
 ;
-  %a = call ptr @llvm.strip.invariant.group.p0(ptr @Y)
+  %a = call ptr @llvm.launder.invariant.group.p0(ptr @Y)
   %b = getelementptr i8, ptr %a, i64 8
   %d = load i32, ptr %b
   ret i32 %d
@@ -455,7 +453,7 @@ define i32 @load_select_with_null_gep(i1 %cond, ptr %p, i64 %off) {
 define i16 @load_select_with_null_gep2(i1 %cond, ptr %p, i64 %x) {
 ; CHECK-LABEL: @load_select_with_null_gep2(
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 -2
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i8], ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    ret i16 [[RES]]
 ;
@@ -469,8 +467,8 @@ define i16 @load_select_with_null_gep2(i1 %cond, ptr %p, i64 %x) {
 define i16 @load_select_with_null_gep3(i1 %cond, ptr %p, i64 %x, i64 %y) {
 ; CHECK-LABEL: @load_select_with_null_gep3(
 ; CHECK-NEXT:    [[INVARIANT_GEP:%.*]] = getelementptr i8, ptr [[SEL:%.*]], i64 -2
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i16, ptr [[GEP]], i64 [[Y:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i8], ptr [[INVARIANT_GEP]], i64 [[X:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [2 x i8], ptr [[GEP]], i64 [[Y:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = load i16, ptr [[GEP2]], align 2
 ; CHECK-NEXT:    ret i16 [[RES]]
 ;

@@ -10,7 +10,7 @@ target triple = "wasm32-unknown-unknown"
 declare void @foo()
 declare void @bar(ptr)
 declare i32 @baz()
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: noreturn
 declare void @llvm.wasm.rethrow() #0
 

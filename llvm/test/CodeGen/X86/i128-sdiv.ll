@@ -13,8 +13,8 @@ define i128 @test1(i128 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 36(%ebp), %ecx
+; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    sarl $31, %esi
 ; X86-NEXT:    movl %esi, %edx

@@ -1,7 +1,8 @@
 {
     "Opcodes": {
         "Ret": [1, 2],
-        "Br": [3, 4],
+        "UncondBr": [3, 4],
+        "CondBr": [3, 4],
         "Switch": [5, 6],
         "IndirectBr": [7, 8],
         "Invoke": [9, 10],
@@ -88,6 +89,7 @@
         "Pointer": [3, 4],
         "Constant": [5, 6],
         "Variable": [7, 8],
+        "Label": [61, 62],
         "FCMP_false": [9, 10],
         "FCMP_oeq": [11, 12], 
         "FCMP_ogt": [13, 14], 

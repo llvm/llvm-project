@@ -36,14 +36,14 @@ entry:
 ; CHECK: %[[#ptr2:]] = OpInBoundsAccessChain %[[#ptr_StorageBuffer_uint]] %[[#b:]] %[[#uint_0]] %[[#uint_0]] %[[#uint_3]] %[[#uint_1]]
   %ptr2 = getelementptr inbounds %S2, ptr %casted, i64 0, i32 0, i32 0, i32 3, i32 1
 
-; CHECK: OpStore %[[#ptr2]] %[[#uint_10]] Aligned 4
+; CHECK: OpStore %[[#ptr2]] %[[#uint_10]]
   store i32 10, ptr %ptr2, align 4
 
 ; Another store, but this time using LLVM's ability to load the first element
 ; without an explicit GEP. The backend has to determine the ptr type and
 ; generate the appropriate access chain.
 ; CHECK: %[[#ptr3:]] = OpInBoundsAccessChain %[[#ptr_StorageBuffer_uint]] %[[#b:]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]] %[[#uint_0]]
-; CHECK: OpStore %[[#ptr3]] %[[#uint_11]] Aligned 4
+; CHECK: OpStore %[[#ptr3]] %[[#uint_11]]
   store i32 11, ptr %casted, align 4
   ret void
 }

@@ -22,7 +22,7 @@ function(clang_tablegen)
 
   set( CLANG_TABLEGEN_ARGUMENTS "" )
   set( LLVM_TARGET_DEFINITIONS ${CTG_SOURCE} )
-  tablegen(CLANG ${CTG_UNPARSED_ARGUMENTS} ${CLANG_TABLEGEN_ARGUMENTS})
+  tablegen_internal(CLANG ${CTG_UNPARSED_ARGUMENTS} ${CLANG_TABLEGEN_ARGUMENTS})
 
   if(CTG_TARGET)
     add_public_tablegen_target(${CTG_TARGET})
@@ -30,16 +30,18 @@ function(clang_tablegen)
   endif()
 endfunction(clang_tablegen)
 
-macro(set_clang_windows_version_resource_properties name)
-  if(DEFINED windows_resource_file)
-    set_windows_version_resource_properties(${name} ${windows_resource_file}
+function(set_clang_windows_version_resource_properties name)
+  get_target_property(resource_file ${name} LLVM_WINDOWS_VERSION_RESOURCE_FILE)
+  if(resource_file)
+    set_windows_version_resource_properties(${name} ${resource_file}
       VERSION_MAJOR ${CLANG_VERSION_MAJOR}
       VERSION_MINOR ${CLANG_VERSION_MINOR}
       VERSION_PATCHLEVEL ${CLANG_VERSION_PATCHLEVEL}
       VERSION_STRING "${CLANG_VERSION}"
-      PRODUCT_NAME "clang")
+      PRODUCT_NAME "clang"
+      ${ARGN})
   endif()
-endmacro()
+endfunction()
 
 macro(add_clang_subdirectory name)
   add_llvm_subdirectory(CLANG TOOL ${name})
@@ -48,7 +50,7 @@ endmacro()
 macro(add_clang_library name)
   cmake_parse_arguments(ARG
     "SHARED;STATIC;INSTALL_WITH_TOOLCHAIN"
-    ""
+    "FILE_DESCRIPTION"
     "ADDITIONAL_HEADERS"
     ${ARGN})
   set(srcs)
@@ -108,7 +110,7 @@ macro(add_clang_library name)
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
-  if(MSVC AND NOT CLANG_LINK_CLANG_DYLIB)
+  if((WIN32 AND NOT MINGW) AND NOT CLANG_LINK_CLANG_DYLIB)
     # Make sure all consumers also turn off visibility macros so they're not
     # trying to dllimport symbols.
     target_compile_definitions(${name} PUBLIC CLANG_BUILD_STATIC)
@@ -153,7 +155,8 @@ macro(add_clang_library name)
     endif()
   endforeach()
 
-  set_clang_windows_version_resource_properties(${name})
+  set_clang_windows_version_resource_properties(${name}
+    FILE_DESCRIPTION "${ARG_FILE_DESCRIPTION}")
 endmacro(add_clang_library)
 
 macro(add_clang_executable name)
@@ -217,7 +220,7 @@ endmacro()
 
 function(clang_target_link_libraries target type)
   if (TARGET obj.${target})
-    target_link_libraries(obj.${target} ${ARGN})
+    target_link_libraries(obj.${target} ${type} ${ARGN})
   endif()
 
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)

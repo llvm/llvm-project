@@ -13,7 +13,6 @@
 #include "llvm/DWARFLinker/AddressesMap.h"
 #include "llvm/DWARFLinker/Parallel/DWARFLinker.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 
 namespace llvm {
@@ -26,7 +25,9 @@ public:
   DebugLineSectionEmitter(const Triple &TheTriple, DwarfUnit &U)
       : TheTriple(TheTriple), U(U) {}
 
-  Error emit(const DWARFDebugLine::LineTable &LineTable) {
+  Error emit(const DWARFDebugLine::LineTable &LineTable,
+             ArrayRef<uint64_t> OrigRowIndices = {},
+             DenseMap<uint64_t, uint64_t> *RowIndexToSeqStartOffset = nullptr) {
     // FIXME: remove dependence on MCDwarfLineAddr::encode.
     // As we reuse MCDwarfLineAddr::encode, we need to create/initialize
     // some MC* classes.
@@ -45,7 +46,8 @@ public:
     emitLineTablePrologue(LineTable.Prologue, OutSection);
 
     // Emit rows.
-    emitLineTableRows(LineTable, OutSection);
+    emitLineTableRows(LineTable, OutSection, OrigRowIndices,
+                      RowIndexToSeqStartOffset);
     uint64_t OffsetAfterEnd = OutSection.OS.tell();
 
     // Update unit length field with actual length value.
@@ -79,7 +81,6 @@ private:
                                "no register info for target %s",
                                TripleName.c_str());
 
-    MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
     MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
     if (!MAI)
       return createStringError(std::errc::invalid_argument,
@@ -91,8 +92,8 @@ private:
                                "no subtarget info for target %s",
                                TripleName.c_str());
 
-    MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
-                           nullptr, true, "__DWARF"));
+    MC.reset(
+        new MCContext(TheTriple, *MAI, *MRI, *MSTI, nullptr, true, "__DWARF"));
 
     return Error::success();
   }
@@ -134,7 +135,7 @@ private:
         return;
       }
 
-      Section.emitString(Include.getForm(), *IncludeStr);
+      emitPath(Section, Include.getForm(), *IncludeStr);
     }
     // The last entry is followed by a single null byte.
     Section.emitIntVal(0, 1);
@@ -149,7 +150,7 @@ private:
 
       // A null-terminated string containing the full or relative path name of a
       // source file.
-      Section.emitString(File.Name.getForm(), *FileNameStr);
+      emitPath(Section, File.Name.getForm(), *FileNameStr);
 
       // An unsigned LEB128 number representing the directory index of a
       // directory in the include_directories section.
@@ -190,7 +191,7 @@ private:
         return;
       }
 
-      Section.emitString(Include.getForm(), *IncludeStr);
+      emitPath(Section, Include.getForm(), *IncludeStr);
     }
 
     bool HasChecksums = P.ContentTypes.HasMD5;
@@ -241,7 +242,7 @@ private:
 
       // A null-terminated string containing the full or relative path name of a
       // source file.
-      Section.emitString(FileNameForm, *FileNameStr);
+      emitPath(Section, FileNameForm, *FileNameStr);
       encodeULEB128(File.DirIdx, Section.OS);
 
       if (HasChecksums) {
@@ -292,8 +293,10 @@ private:
       emitLineTablePrologueV5IncludeAndFileTable(P, Section);
   }
 
-  void emitLineTableRows(const DWARFDebugLine::LineTable &LineTable,
-                         SectionDescriptor &Section) {
+  void emitLineTableRows(
+      const DWARFDebugLine::LineTable &LineTable, SectionDescriptor &Section,
+      ArrayRef<uint64_t> OrigRowIndices = {},
+      DenseMap<uint64_t, uint64_t> *RowIndexToSeqStartOffset = nullptr) {
 
     MCDwarfLineTableParams Params;
     Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
@@ -321,10 +324,21 @@ private:
     uint64_t Address = -1ULL;
 
     unsigned RowsSinceLastSequence = 0;
+    // Offset of the DW_LNE_set_address opcode that opens the sequence
+    // currently being emitted. Recorded per input row index so that
+    // DW_AT_LLVM_stmt_sequence attributes can be resolved by row — which
+    // is collision-free under ICF, unlike keying by output address.
+    uint64_t CurrentSeqStartOffset = 0;
+    constexpr uint64_t InvalidRowIndex = std::numeric_limits<uint64_t>::max();
+    assert(
+        (!RowIndexToSeqStartOffset ||
+         OrigRowIndices.size() == LineTable.Rows.size()) &&
+        "OrigRowIndices must be supplied alongside RowIndexToSeqStartOffset");
 
-    for (const DWARFDebugLine::Row &Row : LineTable.Rows) {
+    for (auto [Idx, Row] : llvm::enumerate(LineTable.Rows)) {
       int64_t AddressDelta;
       if (Address == -1ULL) {
+        CurrentSeqStartOffset = Section.OS.tell();
         Section.emitIntVal(dwarf::DW_LNS_extended_op, 1);
         encodeULEB128(Section.getFormParams().AddrSize + 1, Section.OS);
         Section.emitIntVal(dwarf::DW_LNE_set_address, 1);
@@ -334,6 +348,11 @@ private:
       } else {
         AddressDelta =
             (Row.Address.Address - Address) / LineTable.Prologue.MinInstLength;
+      }
+      if (RowIndexToSeqStartOffset) {
+        uint64_t InputRowIdx = OrigRowIndices[Idx];
+        if (InputRowIdx != InvalidRowIndex)
+          (*RowIndexToSeqStartOffset)[InputRowIdx] = CurrentSeqStartOffset;
       }
 
       // FIXME: code copied and transformed from
@@ -416,9 +435,17 @@ private:
     }
   }
 
+  /// Emit \p Path, a path from the input line table, as a string of form
+  /// \p Form.
+  void emitPath(SectionDescriptor &Section, dwarf::Form Form,
+                const char *Path) {
+    Section.emitString(Form, U.remapPath(Path).c_str());
+  }
+
   Triple TheTriple;
   DwarfUnit &U;
 
+  MCTargetOptions MCOptions;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCContext> MC;

@@ -22,7 +22,7 @@ function func(x, n, init)
 !CHECK: !$OMP DECLARE REDUCTION(red_add:INTEGER(KIND=4_4): omp_out=omp_out+omp_in) INITIA&
 !CHECKL !$OMP&LIZER(initme(omp_priv,0))
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'red_add'
@@ -64,7 +64,7 @@ function func(x, n, init)
 !PARSE-TREE: | Expr = 'init'
 !PARSE-TREE: | | Designator -> DataRef -> Name = 'init'
 !PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE: | OmpBeginLoopDirective
+!PARSE-TREE: | OmpBeginDirective
 !PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = simd
 !PARSE-TREE: | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 !PARSE-TREE: | | | Modifier -> OmpReductionIdentifier -> ProcedureDesignator -> Name = 'red_add'
@@ -94,7 +94,7 @@ program main
   print *, "sum of thread numbers is ", my_var
 end program main
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OpenMPDeclareReductionConstruct -> OmpDirectiveSpecification
+!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpDeclareReductionDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = declare reduction
 !PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpReductionSpecifier
 !PARSE-TREE: | | OmpReductionIdentifier -> ProcedureDesignator -> Name = 'my_add_red'

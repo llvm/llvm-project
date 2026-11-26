@@ -28,8 +28,8 @@ namespace lldb {
 #ifndef SWIG
 class LLDB_API SBInputReader {
 public:
-  SBInputReader() = default;
-  ~SBInputReader() = default;
+  SBInputReader();
+  ~SBInputReader();
 
   SBError Initialize(lldb::SBDebugger &sb_debugger,
                      unsigned long (*callback)(void *, lldb::SBInputReader *,
@@ -134,6 +134,10 @@ public:
   ///
   /// Similar to Initialize(), but returns an error if initialization fails.
   static lldb::SBError InitializeWithErrorHandling();
+
+  /// InitializeWithErrorHandling() with options. LLDB is left uninitialized if
+  /// one cannot be honored.
+  static lldb::SBError Initialize(const lldb::SBInitializationOptions &options);
 
   /// Configure LLDB to print a stack trace when it crashes.
   static void PrintStackTraceOnError();
@@ -437,7 +441,8 @@ public:
   /// Get information about a script interpreter as structured data.
   SBStructuredData GetScriptInterpreterInfo(ScriptLanguage language);
 
-  /// Get the LLDB version string.
+  /// Get the LLDB version string. Plugins can augment this string. To
+  /// get the full string, call this after SBDebugger::Initialize().
   static const char *GetVersionString();
 
   /// Convert a state type to a string.
@@ -517,13 +522,21 @@ public:
   uint32_t GetTerminalWidth() const;
 
   /// Set the terminal width.
+  LLDB_DEPRECATED_FIXME("Use SetTerminalDimensions",
+                        "SetTerminalDimensions(uint32_t, uint32_t)")
   void SetTerminalWidth(uint32_t term_width);
 
   /// Get the terminal height.
   uint32_t GetTerminalHeight() const;
 
   /// Set the terminal height.
+  LLDB_DEPRECATED_FIXME("Use SetTerminalDimensions",
+                        "SetTerminalDimensions(uint32_t, uint32_t)")
   void SetTerminalHeight(uint32_t term_height);
+
+  /// Set the terminal width and height together. Prefer this over the
+  /// single-axis setters when both are known, e.g. when handling a resize.
+  void SetTerminalDimensions(uint32_t term_width, uint32_t term_height);
 
   /// Get the unique ID of this debugger.
   lldb::user_id_t GetID();
@@ -670,6 +683,7 @@ public:
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::ScriptInterpreterBridge;
   friend class lldb_private::SystemInitializerFull;
 
   SBDebugger(const lldb::DebuggerSP &debugger_sp);

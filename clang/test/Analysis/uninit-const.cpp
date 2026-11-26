@@ -38,8 +38,8 @@ int f9(void) {
                  // a pointer to an uninitialized value is stored.
   ptr = new int; // expected-note{{Storing uninitialized value}}
                  // expected-note@-1{{Value assigned to 'ptr'}}
-  doStuff_uninit(ptr); // expected-warning{{1st function call argument is a pointer to uninitialized value [core.CallAndMessage]}}
-                       // expected-note@-1{{1st function call argument is a pointer to uninitialized value}}
+  doStuff_uninit(ptr); // expected-warning{{1st function call argument points to an uninitialized value; this argument is const pointer and is likely input data of the function [core.CallAndMessage]}}
+                       // expected-note@-1{{1st function call argument points to an uninitialized value;}}
   delete ptr;
   return 0;
 }
@@ -111,8 +111,8 @@ void f6(void) {
 void f5(void) {
   int t;               // expected-note {{'t' declared without an initial value}}
   int* tp = &t;        // expected-note {{'tp' initialized here}}
-  doStuff_uninit(tp);  // expected-warning {{1st function call argument is a pointer to uninitialized value}}
-                       // expected-note@-1 {{1st function call argument is a pointer to uninitialized value}}
+  doStuff_uninit(tp);  // expected-warning {{1st function call argument points to an uninitialized value;}}
+                       // expected-note@-1 {{1st function call argument points to an uninitialized value;}}
 }
 
 
@@ -139,6 +139,6 @@ void f1(void) {
 
 void f_uninit(void) {
       int x;               // expected-note {{'x' declared without an initial value}}
-      doStuff_uninit(&x);  // expected-warning {{1st function call argument is a pointer to uninitialized value}}
-                           // expected-note@-1 {{1st function call argument is a pointer to uninitialized value}}
+      doStuff_uninit(&x);  // expected-warning {{1st function call argument points to an uninitialized value;}}
+                           // expected-note@-1 {{1st function call argument points to an uninitialized value;}}
 }

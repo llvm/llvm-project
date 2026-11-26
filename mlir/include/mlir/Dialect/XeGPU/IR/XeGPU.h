@@ -10,11 +10,10 @@
 #define MLIR_DIALECT_XEGPU_IR_XEGPU_H
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithAttributes.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
@@ -27,6 +26,10 @@ class TensorDescType;
 class DistributeLayoutAttr;
 class LayoutAttr;
 class SliceAttr;
+
+/// Specifies the level of a layout hierarchy for comparison or propagation.
+enum class LayoutKind { Lane, InstData, Subgroup };
+
 } // namespace xegpu
 } // namespace mlir
 

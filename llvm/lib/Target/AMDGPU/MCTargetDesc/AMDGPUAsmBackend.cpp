@@ -10,7 +10,6 @@
 #include "MCTargetDesc/AMDGPUFixupKinds.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -21,7 +20,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -34,8 +33,9 @@ public:
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool IsResolved) override;
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override;
+  bool fixupNeedsRelaxationAdvanced(const MCFragment &, const MCFixup &,
+                                    const MCValue &, uint64_t,
+                                    bool) const override;
 
   void relaxInstruction(MCInst &Inst,
                         const MCSubtargetInfo &STI) const override;
@@ -62,8 +62,13 @@ void AMDGPUAsmBackend::relaxInstruction(MCInst &Inst,
   Inst = std::move(Res);
 }
 
-bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
-                                            uint64_t Value) const {
+bool AMDGPUAsmBackend::fixupNeedsRelaxationAdvanced(const MCFragment &,
+                                                    const MCFixup &Fixup,
+                                                    const MCValue &,
+                                                    uint64_t Value,
+                                                    bool Resolved) const {
+  if (!Resolved)
+    return true;
   // if the branch target has an offset of x3f this needs to be relaxed to
   // add a s_nop 0 immediately after branch to effectively increment offset
   // for hardware workaround in gfx1010
@@ -86,6 +91,8 @@ static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {
   case AMDGPU::fixup_si_sopp_br:
     return 2;
+  case AMDGPU::fixup_si_smem_pcrel:
+    return 3;
   case FK_SecRel_1:
   case FK_Data_1:
     return 1;
@@ -115,6 +122,19 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
       Ctx->reportError(Fixup.getLoc(), "branch size exceeds simm16");
 
     return BrImm;
+  }
+  case AMDGPU::fixup_si_smem_pcrel: {
+    // SignedValue is label - (PC + 4): the fixup sits at byte 4 of the
+    // instruction. s_prefetch_inst_pc_rel is 8 bytes and the field is a signed
+    // byte offset from the next instruction, so subtract the remaining 4.
+    int64_t OffImm = SignedValue - 4;
+
+    if (Ctx && !isInt<24>(OffImm)) {
+      Ctx->reportError(Fixup.getLoc(),
+                       "prefetch offset exceeds 24-bit signed range");
+    }
+
+    return OffImm;
   }
   case FK_Data_1:
   case FK_Data_2:
@@ -164,8 +184,8 @@ AMDGPUAsmBackend::getFixupKind(StringRef Name) const {
                   .Case("BFD_RELOC_NONE", ELF::R_AMDGPU_NONE)
                   .Case("BFD_RELOC_32", ELF::R_AMDGPU_ABS32)
                   .Case("BFD_RELOC_64", ELF::R_AMDGPU_ABS64)
-                  .Default(-1u);
-  if (Type != -1u)
+                  .Default(~0u);
+  if (Type != ~0u)
     return static_cast<MCFixupKind>(FirstLiteralRelocationKind + Type);
   return std::nullopt;
 }
@@ -174,6 +194,7 @@ MCFixupKindInfo AMDGPUAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   const static MCFixupKindInfo Infos[AMDGPU::NumTargetFixupKinds] = {
       // name                   offset bits  flags
       {"fixup_si_sopp_br", 0, 16, 0},
+      {"fixup_si_smem_pcrel", 0, 24, 0},
   };
 
   if (mc::isRelocation(Kind))
@@ -197,7 +218,7 @@ bool AMDGPUAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   // be writing data into the text section (otherwise we have unaligned
   // instructions, and thus have far bigger problems), so just write zeros
   // instead.
-  unsigned MinInstAlignment = getContext().getAsmInfo()->getMinInstAlignment();
+  unsigned MinInstAlignment = getContext().getAsmInfo().getMinInstAlignment();
   OS.write_zeros(Count % MinInstAlignment);
 
   // We are properly aligned, so write NOPs as requested.

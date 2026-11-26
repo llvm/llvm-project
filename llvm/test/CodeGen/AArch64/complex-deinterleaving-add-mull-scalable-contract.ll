@@ -202,29 +202,30 @@ entry:
 define <vscale x 4 x double> @mul_add_rot_mull(<vscale x 4 x double> %a, <vscale x 4 x double> %b, <vscale x 4 x double> %c, <vscale x 4 x double> %d) {
 ; CHECK-LABEL: mul_add_rot_mull:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp2 z24.d, z4.d, z5.d
-; CHECK-NEXT:    movi v25.2d, #0000000000000000
-; CHECK-NEXT:    uzp1 z4.d, z4.d, z5.d
+; CHECK-NEXT:    movi v24.2d, #0000000000000000
+; CHECK-NEXT:    uzp1 z25.d, z4.d, z5.d
+; CHECK-NEXT:    uzp2 z4.d, z4.d, z5.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    mov z26.d, z24.d
-; CHECK-NEXT:    and z25.d, z25.d, #0x7fffffffffffffff
+; CHECK-NEXT:    movprfx z5, z4
+; CHECK-NEXT:    and z5.d, z5.d, #0x8000000000000000
+; CHECK-NEXT:    movprfx z26, z25
 ; CHECK-NEXT:    and z26.d, z26.d, #0x8000000000000000
-; CHECK-NEXT:    orr z5.d, z25.d, z26.d
-; CHECK-NEXT:    fadd z5.d, z4.d, z5.d
-; CHECK-NEXT:    and z4.d, z4.d, #0x8000000000000000
-; CHECK-NEXT:    orr z4.d, z25.d, z4.d
-; CHECK-NEXT:    uzp2 z25.d, z0.d, z1.d
+; CHECK-NEXT:    and z24.d, z24.d, #0x7fffffffffffffff
+; CHECK-NEXT:    orr z5.d, z24.d, z5.d
+; CHECK-NEXT:    orr z24.d, z24.d, z26.d
+; CHECK-NEXT:    uzp2 z26.d, z0.d, z1.d
 ; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
 ; CHECK-NEXT:    uzp2 z1.d, z2.d, z3.d
 ; CHECK-NEXT:    uzp1 z2.d, z2.d, z3.d
-; CHECK-NEXT:    fsub z4.d, z4.d, z24.d
+; CHECK-NEXT:    fadd z5.d, z25.d, z5.d
+; CHECK-NEXT:    fsub z4.d, z24.d, z4.d
 ; CHECK-NEXT:    uzp2 z24.d, z6.d, z7.d
+; CHECK-NEXT:    fmul z25.d, z0.d, z1.d
+; CHECK-NEXT:    fmul z1.d, z26.d, z1.d
 ; CHECK-NEXT:    uzp1 z6.d, z6.d, z7.d
-; CHECK-NEXT:    fmul z26.d, z0.d, z1.d
-; CHECK-NEXT:    fmul z1.d, z25.d, z1.d
 ; CHECK-NEXT:    fmul z3.d, z4.d, z24.d
 ; CHECK-NEXT:    fmul z24.d, z5.d, z24.d
-; CHECK-NEXT:    fmad z25.d, p0/m, z2.d, z26.d
+; CHECK-NEXT:    fmla z25.d, p0/m, z26.d, z2.d
 ; CHECK-NEXT:    fnmsb z0.d, p0/m, z2.d, z1.d
 ; CHECK-NEXT:    fmla z3.d, p0/m, z6.d, z5.d
 ; CHECK-NEXT:    fnmsb z4.d, p0/m, z6.d, z24.d

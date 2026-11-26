@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CompilerType.h"
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -21,6 +20,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <iterator>
 #include <mutex>
@@ -177,6 +177,13 @@ bool CompilerType::IsMemberFunctionPointerType() const {
   return false;
 }
 
+bool CompilerType::IsMemberDataPointerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsMemberDataPointerType(m_type);
+  return false;
+}
+
 bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
@@ -311,18 +318,18 @@ bool CompilerType::IsVoidType() const {
   return false;
 }
 
-bool CompilerType::IsPointerToScalarType() const {
-  if (!IsValid())
-    return false;
-
-  return IsPointerType() && GetPointeeType().IsScalarType();
+bool CompilerType::HasPointerAuthQualifier() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->HasPointerAuthQualifier(m_type);
+  return false;
 }
 
-bool CompilerType::IsArrayOfScalarType() const {
-  CompilerType element_type;
-  if (IsArrayType(&element_type))
-    return element_type.IsScalarType();
-  return false;
+std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTargetAddressSpace(m_type);
+  return std::nullopt;
 }
 
 bool CompilerType::IsBeingDefined() const {
@@ -681,6 +688,14 @@ CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
   return CompilerType();
 }
 
+CompilerType
+CompilerType::AddAddressSpaceModifier(uint32_t address_space) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddAddressSpaceModifier(m_type, address_space);
+  return CompilerType();
+}
+
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -755,7 +770,7 @@ CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetBitSize(m_type, exe_scope);
-  return llvm::createStringError("Invalid type: Cannot determine size");
+  return llvm::createStringError("invalid type: cannot determine size");
 }
 
 llvm::Expected<uint64_t>
@@ -764,6 +779,13 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   if (!bit_size_or_err)
     return bit_size_or_err.takeError();
   return (*bit_size_or_err + 7) / 8;
+}
+
+std::optional<uint64_t> CompilerType::GetByteStride() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetByteStride(m_type);
+  return {};
 }
 
 std::optional<size_t>
@@ -884,23 +906,16 @@ llvm::Expected<CompilerType> CompilerType::GetDereferencedType(
   return CompilerType();
 }
 
-llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
+llvm::Expected<ChildTypeInfo> CompilerType::GetChildAtIndex(
     ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
     bool omit_empty_base_classes, bool ignore_array_bounds,
-    std::string &child_name, uint32_t &child_byte_size,
-    int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
-    uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
-    bool &child_is_deref_of_parent, ValueObject *valobj,
-    uint64_t &language_flags) const {
+    ValueObject *valobj) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetChildCompilerTypeAtIndex(
+      return type_system_sp->GetChildAtIndex(
           m_type, exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, valobj,
-          language_flags);
-  return CompilerType();
+          ignore_array_bounds, valobj);
+  return ChildTypeInfo();
 }
 
 // Look for a child member (doesn't include base classes, but it does include
@@ -996,6 +1011,13 @@ CompilerType CompilerType::GetTypeForFormatters() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::GetPromotedIntegerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPromotedIntegerType(m_type);
+  return CompilerType();
+}
+
 LazyBool CompilerType::ShouldPrintAsOneLiner(ValueObject *valobj) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -1022,8 +1044,7 @@ CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
                                                      omit_empty_base_classes);
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 // Dumping types

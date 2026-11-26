@@ -10,8 +10,8 @@
 // RUN:   --no-gpu-bundle-output --offload-arch=gfx900,gfx1030 -O3 -x hip %s \
 // RUN:   2>&1 | FileCheck %s --check-prefixes=COMPILER,GFX1030,GFX900,OFFLOAD,NOBUNDLE
 
-// BUNDLE: clang-offload-bundler
-// NOBUNDLE-NOT: clang-offload-bundler
+// BUNDLE: llvm-offload-binary
+// NOBUNDLE-NOT: llvm-offload-binary
 
 // COM: sanity checks
 // COMPILER: compiler

@@ -1,0 +1,38 @@
+add_entrypoint_object(
+  freeaddrinfo
+  SRCS
+    freeaddrinfo.cpp
+  HDRS
+    freeaddrinfo.h
+  DEPENDS
+    libc.hdr.types.struct_addrinfo
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  gai_strerror
+  SRCS
+    gai_strerror.cpp
+  HDRS
+    gai_strerror.h
+  DEPENDS
+    libc.hdr.netdb_macros
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  getaddrinfo
+  SRCS
+    getaddrinfo.cpp
+  HDRS
+    getaddrinfo.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.netdb_macros
+    libc.hdr.types.struct_addrinfo
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)

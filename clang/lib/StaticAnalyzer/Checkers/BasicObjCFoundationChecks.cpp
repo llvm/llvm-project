@@ -70,16 +70,12 @@ enum FoundationClass {
 
 static FoundationClass findKnownClass(const ObjCInterfaceDecl *ID,
                                       bool IncludeSuperclasses = true) {
-  static llvm::StringMap<FoundationClass> Classes;
-  if (Classes.empty()) {
-    Classes["NSArray"] = FC_NSArray;
-    Classes["NSDictionary"] = FC_NSDictionary;
-    Classes["NSEnumerator"] = FC_NSEnumerator;
-    Classes["NSNull"] = FC_NSNull;
-    Classes["NSOrderedSet"] = FC_NSOrderedSet;
-    Classes["NSSet"] = FC_NSSet;
-    Classes["NSString"] = FC_NSString;
-  }
+  static const llvm::StringMap<FoundationClass> Classes{
+      {"NSArray", FC_NSArray},           {"NSDictionary", FC_NSDictionary},
+      {"NSEnumerator", FC_NSEnumerator}, {"NSNull", FC_NSNull},
+      {"NSOrderedSet", FC_NSOrderedSet}, {"NSSet", FC_NSSet},
+      {"NSString", FC_NSString},
+  };
 
   // FIXME: Should we cache this at all?
   FoundationClass result = Classes.lookup(ID->getIdentifier()->getName());
@@ -139,7 +135,7 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
 
   // If it's known to be null.
   if (!NonNull && Null) {
-    if (ExplodedNode *N = C.generateErrorNode()) {
+    if (ExplodedNode *N = C.addSink()) {
       generateBugReport(N, Msg, E->getSourceRange(), E, C);
       return;
     }
@@ -148,7 +144,7 @@ void NilArgChecker::warnIfNilExpr(const Expr *E,
   // If it might be null, assume that it cannot after this operation.
   if (Null) {
     // One needs to make sure the pointer is non-null to be used here.
-    if (ExplodedNode *N = C.generateSink(Null, C.getPredecessor())) {
+    if (ExplodedNode *N = C.addSink(Null)) {
       dispatchEvent({*Location, /*IsLoad=*/false, N, &C.getBugReporter(),
                      /*IsDirectDereference=*/false});
     }
@@ -171,7 +167,7 @@ void NilArgChecker::warnIfNilArg(CheckerContext &C,
   // an unwanted state split if two or more non-fatal errors are thrown
   // within the same checker callback. For now we don't want to, but
   // it'll need to be fixed if we ever want to.
-  if (ExplodedNode *N = C.generateErrorNode()) {
+  if (ExplodedNode *N = C.addSink()) {
     SmallString<128> sbuf;
     llvm::raw_svector_ostream os(sbuf);
 
@@ -428,8 +424,7 @@ static const char* GetCFNumberTypeStr(uint64_t i) {
 #endif
 
 void CFNumberChecker::checkPreStmt(const CallExpr *CE,
-                                         CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
+                                   CheckerContext &C) const {
   const FunctionDecl *FD = C.getCalleeDecl(CE);
   if (!FD)
     return;
@@ -564,7 +559,7 @@ void CFRetainReleaseChecker::checkPreCall(const CallEvent &Call,
   std::tie(stateNonNull, stateNull) = state->assume(*DefArgVal);
 
   if (!stateNonNull) {
-    ExplodedNode *N = C.generateErrorNode(stateNull);
+    ExplodedNode *N = C.addSink(stateNull);
     if (!N)
       return;
 
@@ -880,7 +875,7 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
   if (!isKnownNonNilCollectionType(FCS->getCollection()->getType()))
     return State;
 
-  const LocationContext *LCtx = C.getLocationContext();
+  const StackFrame *SF = C.getStackFrame();
   const Stmt *Element = FCS->getElement();
 
   // FIXME: Copied from ExprEngineObjC.
@@ -888,9 +883,9 @@ static ProgramStateRef checkElementNonNil(CheckerContext &C,
   if (const DeclStmt *DS = dyn_cast<DeclStmt>(Element)) {
     const VarDecl *ElemDecl = cast<VarDecl>(DS->getSingleDecl());
     assert(ElemDecl->getInit() == nullptr);
-    ElementLoc = State->getLValue(ElemDecl, LCtx);
-  } else {
-    ElementLoc = State->getSVal(Element, LCtx).getAs<Loc>();
+    ElementLoc = State->getLValue(ElemDecl, SF);
+  } else if (const auto *E = dyn_cast<Expr>(Element)) {
+    ElementLoc = State->getSVal(E, SF).getAs<Loc>();
   }
 
   if (!ElementLoc)
@@ -970,7 +965,7 @@ void ObjCLoopChecker::checkPostStmt(const ObjCForCollectionStmt *FCS,
   ProgramStateRef State = C.getState();
 
   // Check if this is the branch for the end of the loop.
-  if (!ExprEngine::hasMoreIteration(State, FCS, C.getLocationContext())) {
+  if (!ExprEngine::hasMoreIteration(State, FCS, C.getStackFrame())) {
     if (!alreadyExecutedAtLeastOneLoopIteration(C.getPredecessor(), FCS))
       State = assumeCollectionNonEmpty(C, State, FCS, /*Assumption*/false);
 
@@ -982,7 +977,7 @@ void ObjCLoopChecker::checkPostStmt(const ObjCForCollectionStmt *FCS,
   }
 
   if (!State)
-    C.generateSink(C.getState(), C.getPredecessor());
+    C.addSink();
   else if (State != C.getState())
     C.addTransition(State);
 }

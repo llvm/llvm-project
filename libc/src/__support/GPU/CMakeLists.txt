@@ -7,12 +7,17 @@ add_header_library(
   utils
   HDRS
     utils.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
-  fixedstack
+  fixedbuffer
   HDRS
-    fixedstack.h
+    fixedbuffer.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.atomic
 )
 
 add_object_library(
@@ -29,5 +34,5 @@ add_object_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     .utils
-    .fixedstack
+    .fixedbuffer
 )

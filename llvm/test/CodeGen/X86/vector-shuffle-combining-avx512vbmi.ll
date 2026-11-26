@@ -215,11 +215,8 @@ define <64 x i8> @combine_vpermi2var_constant_v64i8_with_mask_commute(<64 x i8> 
 define <32 x i8> @concat_vpermt2var_v16i8(<32 x i8> %x0, <32 x i8> %x1) {
 ; CHECK-LABEL: concat_vpermt2var_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,17,2,18,4,19,6,21,8,23,10,25,12,27,14,29]
-; CHECK-NEXT:    vpermi2b %xmm1, %xmm0, %xmm2
-; CHECK-NEXT:    vmovdqa {{.*#+}} xmm3 = [16,49,18,50,20,51,22,53,24,55,26,57,28,59,30,61]
-; CHECK-NEXT:    vpermi2b %ymm1, %ymm0, %ymm3
-; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm0
+; CHECK-NEXT:    vmovdqa {{.*#+}} ymm2 = [0,33,2,34,4,35,6,37,8,39,10,41,12,43,14,45,16,49,18,50,20,51,22,53,24,55,26,57,28,59,30,61]
+; CHECK-NEXT:    vpermt2b %ymm1, %ymm2, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %l0 = shufflevector <32 x i8> %x0, <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %l1 = shufflevector <32 x i8> %x1, <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>

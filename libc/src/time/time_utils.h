@@ -1,14 +1,20 @@
-//===-- Collection of utils for mktime and friends --------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Collection of utils for mktime and friends.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 #define LLVM_LIBC_SRC_TIME_TIME_UTILS_H
 
+#include "hdr/errno_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_tm.h"
@@ -16,109 +22,87 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
+#include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
-#include "time_constants.h"
+#include "src/time/time_constants.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace time_utils {
 
-// calculates the seconds from the epoch for tm_in. Does not update the struct,
-// you must call update_from_seconds for that.
+/// Calculates the seconds from the epoch for tm_in.
+/// Does not update the struct, call update_from_seconds for that.
+///
+/// \param tm_out Pointer to the tm structure to read.
+/// \return The epoch time on success, or nullopt on failure.
 cpp::optional<time_t> mktime_internal(const tm *tm_out);
 
-// Update the "tm" structure's year, month, etc. members from seconds.
-// "total_seconds" is the number of seconds since January 1st, 1970.
-int64_t update_from_seconds(time_t total_seconds, tm *tm);
-
-// TODO(michaelrj): move these functions to use ErrorOr instead of setting
-// errno. They always accompany a specific return value so we only need the one
-// variable.
-
-// POSIX.1-2017 requires this.
-LIBC_INLINE time_t out_of_range() {
+// EOVERFLOW is a POSIX extension and might not be defined on targets that only
+// support the C standard (e.g. generic baremetal). The C standard does not
+// require setting errno on overflow for time functions, but POSIX does.
+// We map it to ERANGE on non-POSIX targets to provide consistent error
+// reporting while remaining compliant.
 #ifdef EOVERFLOW
-  // For non-POSIX uses of the standard C time functions, where EOVERFLOW is
-  // not defined, it's OK not to set errno at all. The plain C standard doesn't
-  // require it.
-  libc_errno = EOVERFLOW;
+constexpr int TIME_OVERFLOW = EOVERFLOW;
+#else
+constexpr int TIME_OVERFLOW = ERANGE;
 #endif
-  return time_constants::OUT_OF_RANGE_RETURN_VALUE;
-}
 
-LIBC_INLINE void invalid_value() { libc_errno = EINVAL; }
+/// Update the "tm" structure's year, month, etc. members from seconds.
+///
+/// \param total_seconds The number of seconds since January 1st, 1970.
+/// \param tm Pointer to the tm structure to update.
+/// \return void on success, or error code on failure.
+ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm);
 
-LIBC_INLINE char *asctime(const tm *timeptr, char *buffer,
-                          size_t bufferLength) {
-  if (timeptr == nullptr || buffer == nullptr) {
-    invalid_value();
-    return nullptr;
-  }
-  if (timeptr->tm_wday < 0 ||
-      timeptr->tm_wday > (time_constants::DAYS_PER_WEEK - 1)) {
-    invalid_value();
-    return nullptr;
-  }
-  if (timeptr->tm_mon < 0 ||
-      timeptr->tm_mon > (time_constants::MONTHS_PER_YEAR - 1)) {
-    invalid_value();
-    return nullptr;
-  }
-
-  // TODO(michaelr): move this to use the strftime machinery
-  // equivalent to strftime(buffer, bufferLength, "%a %b %T %Y\n", timeptr)
-  int written_size = __builtin_snprintf(
-      buffer, bufferLength, "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
-      time_constants::WEEK_DAY_NAMES[timeptr->tm_wday].data(),
-      time_constants::MONTH_NAMES[timeptr->tm_mon].data(), timeptr->tm_mday,
-      timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec,
-      time_constants::TIME_YEAR_BASE + timeptr->tm_year);
-  if (written_size < 0)
-    return nullptr;
-  if (static_cast<size_t>(written_size) >= bufferLength) {
-    out_of_range();
-    return nullptr;
-  }
-  return buffer;
-}
-
-LIBC_INLINE tm *gmtime_internal(const time_t *timer, tm *result) {
+LIBC_INLINE ErrorOr<tm *> gmtime_internal(const time_t *timer, tm *result) {
   time_t seconds = *timer;
-  // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(seconds, result) < 0) {
-    out_of_range();
-    return nullptr;
+  auto status = update_from_seconds(seconds, result);
+  if (!status) {
+    return cpp::unexpected(status.error());
   }
+
+#if defined(__linux__)
+  result->tm_gmtoff = 0;
+  result->tm_zone = "GMT";
+#endif
 
   return result;
 }
 
-LIBC_INLINE tm *localtime_internal(const time_t *timer, tm *result) {
+LIBC_INLINE ErrorOr<tm *> localtime_internal(const time_t *timer, tm *result) {
   time_t seconds = *timer;
-  // Update the tm structure's year, month, day, etc. from seconds.
-  if (update_from_seconds(seconds, result) < 0) {
-    out_of_range();
-    return nullptr;
+  auto status = update_from_seconds(seconds, result);
+  if (!status) {
+    return cpp::unexpected(status.error());
   }
 
   // TODO(zimirza): implement timezone database
+#if defined(__linux__)
+  result->tm_gmtoff = 0;
+  result->tm_zone = "UTC";
+#endif
 
   return result;
 }
 
-LIBC_INLINE tm *localtime(const time_t *t_ptr) {
+LIBC_INLINE ErrorOr<tm *> localtime(const time_t *t_ptr) {
+  if (t_ptr == nullptr)
+    return cpp::unexpected(EINVAL);
   static tm result;
   return time_utils::localtime_internal(t_ptr, &result);
 }
 
-// Returns number of years from (1, year).
-LIBC_INLINE constexpr int64_t get_num_of_leap_years_before(int64_t year) {
-  return (year / 4) - (year / 100) + (year / 400);
-}
-
 // Returns True if year is a leap year.
+// Uses the Drepper-Neri-Schneider algorithm (version 3).
+// https://www.benjoffe.com/fast-leap-year#drepper-neri-schneider
+//
+// % 25 is faster than % 100 on modern compilers. False positives (years
+// divisible by 25 but not 100) are harmless: the & 15 check only differs
+// from & 3 when the year truly is a century year, and non-century years
+// that happen to be divisible by 25 always pass both checks identically.
 LIBC_INLINE constexpr bool is_leap_year(const int64_t year) {
-  return (((year) % 4) == 0 && (((year) % 100) != 0 || ((year) % 400) == 0));
+  const bool is_mul_25 = (year % 25 == 0);
+  return (year & (is_mul_25 ? 15 : 3)) == 0;
 }
 
 LIBC_INLINE constexpr int get_days_in_year(const int year) {
@@ -126,11 +110,88 @@ LIBC_INLINE constexpr int get_days_in_year(const int year) {
                             : time_constants::DAYS_PER_NON_LEAP_YEAR;
 }
 
+// Returns the day of the week [0=Sun, 1=Mon, ..., 6=Sat] for a count of days
+// since the Unix epoch (1970-01-01, a Thursday), i.e. (unix_days + 4) mod 7
+// with a non-negative result.
+//
+// Uses Ben Joffe's "Unreasonably Fast Mul-Add-Shift" algorithm (Article 5).
+// https://www.benjoffe.com/fast-day-of-week
+//
+// Since 7 = 2^3 - 1 is a Mersenne number, x mod 7 == floor(x * 8 / 7) mod 8.
+// Multiplying by M = ceil(2^64 / 7) and keeping the low 64 bits places
+// floor(x * 8 / 7) mod 8 in the top 3 bits; the final mod 8 is free. Adding Z
+// before the shift rotates the result so that day 0 maps to Thursday (4).
+//
+// Valid for unix_days in [-230471710930685136, 230696890912053658], which is
+// about +/-631 trillion years and far exceeds the range accepted by
+// update_from_seconds (about +/-7.9e11 days).
+LIBC_INLINE constexpr int get_weekday(const int64_t unix_days) {
+  // M = ceil(2^64 / 7).
+  constexpr uint64_t M = (UINT64_MAX / time_constants::DAYS_PER_WEEK) + 1;
+  // Z rotates the result so that day 0 maps to Thursday: its top 3 bits
+  // (0x9492 >> 13 == 4) encode Thursday, and the remaining low bits are a
+  // rounding bias (from Joffe's article) that positions the window of exact
+  // results to give the valid range documented above.
+  constexpr uint64_t Z = 0x9492ULL << 48;
+  return static_cast<int>((static_cast<uint64_t>(unix_days) * M + Z) >> 61);
+}
+
+// Hour, minute and second within a day.
+struct TimeOfDay {
+  // Hour of the day [0, 23].
+  int hour;
+  // Minute of the hour [0, 59].
+  int minute;
+  // Second of the minute [0, 59].
+  int second;
+};
+
+// Splits the number of seconds elapsed within a day [0, 86399] into hours,
+// minutes and seconds.
+//
+// Uses Ben Joffe's "V2 - Fixed-Point Hi/Low Bits" algorithm (Article 6).
+// https://www.benjoffe.com/fast-time-of-day
+//
+// Instead of the sequential chain hour -> remainder -> minute -> second, both
+// fixed-point products are computed directly from seconds_of_day so they can
+// run in parallel:
+//   - The high 32 bits of seconds_of_day * ceil(2^32 / 3600) are the hour,
+//     and the low 32 bits are the fraction of the current hour elapsed;
+//     scaling that fraction by 60 yields the minute.
+//   - The low 32 bits of seconds_of_day * ceil(2^32 / 60) are the fraction of
+//     the current minute elapsed; scaling it by 60 yields the second.
+//
+// This compiles to four multiplications (two pairs that can overlap) and no
+// division.
+// Valid for seconds_of_day in [0, 2255818] (up to 626:36:58), which covers a
+// full day with a wide margin.
+LIBC_INLINE constexpr TimeOfDay get_time_of_day(const uint32_t seconds_of_day) {
+  // H_MUL = ceil(2^32 / 3600) = 1193047.
+  constexpr uint64_t H_MUL =
+      ((1ULL << 32) / time_constants::SECONDS_PER_HOUR) + 1;
+  // M_MUL = ceil(2^32 / 60) = 71582789.
+  constexpr uint64_t M_MUL =
+      ((1ULL << 32) / time_constants::SECONDS_PER_MIN) + 1;
+  const uint64_t HOUR_PRODUCT = static_cast<uint64_t>(seconds_of_day) * H_MUL;
+  const uint32_t MINUTE_FRACTION = static_cast<uint32_t>(HOUR_PRODUCT);
+  const uint32_t SECOND_FRACTION =
+      static_cast<uint32_t>(seconds_of_day * M_MUL);
+  return {static_cast<int>(HOUR_PRODUCT >> 32),
+          static_cast<int>((static_cast<uint64_t>(MINUTE_FRACTION) *
+                            time_constants::MINUTES_PER_HOUR) >>
+                           32),
+          static_cast<int>((static_cast<uint64_t>(SECOND_FRACTION) *
+                            time_constants::SECONDS_PER_MIN) >>
+                           32)};
+}
+
 // This is a helper class that takes a struct tm and lets you inspect its
 // values. Where relevant, results are bounds checked and returned as optionals.
-// This class does not, however, do data normalization except where necessary.
-// It will faithfully return a date of 9999-99-99, even though that makes no
-// sense.
+/// Class to read fields from tm structure.
+///
+/// This class does not, however, do data normalization except where necessary.
+/// It will faithfully return a date of 9999-99-99, even though that makes no
+/// sense.
 class TMReader final {
   const tm *timeptr;
 
@@ -172,9 +233,15 @@ public:
     return "PM";
   }
 
+  /// Get timezone name.
+  ///
+  /// \return Timezone name string, or empty string if not set.
   LIBC_INLINE constexpr cpp::string_view get_timezone_name() const {
-    // TODO: timezone support
+#if defined(__linux__)
+    return timeptr->tm_zone ? timeptr->tm_zone : "";
+#else
     return "UTC";
+#endif
   }
 
   // Numbers
@@ -338,18 +405,33 @@ public:
     return BASE_YEAR + IS_NEXT_YEAR;
   }
 
-  LIBC_INLINE time_t get_epoch() const {
+  /// Get epoch time.
+  ///
+  /// \return Epoch time in seconds on success, or TIME_OVERFLOW on failure.
+  LIBC_INLINE ErrorOr<time_t> get_epoch() const {
     auto seconds = mktime_internal(timeptr);
-    return seconds ? *seconds : time_utils::out_of_range();
+    if (!seconds)
+      return cpp::unexpected(TIME_OVERFLOW);
+    return *seconds;
   }
 
-  // returns the timezone offset in microwave time:
-  // return (hours * 100) + minutes;
-  // This means that a shift of -4:30 is returned as -430, simplifying
-  // conversion.
+  /// Get timezone offset.
+  ///
+  /// The offset is returned in microwave time: (hours * 100) + minutes.
+  /// For example, -04:30 is returned as -430.
+  ///
+  /// \return Timezone offset in microwave time.
   LIBC_INLINE constexpr int get_timezone_offset() const {
-    // TODO: timezone support
+#if defined(__linux__)
+    // TODO: This relies on tm_gmtoff which is currently initialized to 0
+    // by localtime/gmtime until timezone database is implemented.
+    int64_t seconds = timeptr->tm_gmtoff;
+    int64_t hours = seconds / 3600;
+    int64_t minutes = (seconds % 3600) / 60;
+    return static_cast<int>((hours * 100) + minutes);
+#else
     return 0;
+#endif
   }
 };
 

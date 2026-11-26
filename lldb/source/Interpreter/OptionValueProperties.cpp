@@ -23,14 +23,21 @@ using namespace lldb_private;
 OptionValueProperties::OptionValueProperties(llvm::StringRef name)
     : m_name(name.str()) {}
 
-void OptionValueProperties::Initialize(const PropertyDefinitions &defs) {
-  for (const auto &definition : defs) {
+void OptionValueProperties::Initialize(
+    const PropertyCollectionDefinition &defs) {
+  for (const auto &definition : defs.definitions) {
     Property property(definition);
     assert(property.IsValid());
     m_name_to_index.insert({property.GetName(), m_properties.size()});
     property.GetValue()->SetParent(shared_from_this());
     m_properties.push_back(property);
   }
+  SetExpectedPath(defs.expected_path.str());
+}
+
+void OptionValueProperties::SetExpectedPath(std::string path) {
+  assert(m_expected_path.empty() || m_expected_path == path);
+  m_expected_path = path;
 }
 
 void OptionValueProperties::SetValueChangedCallback(
@@ -47,6 +54,15 @@ void OptionValueProperties::AppendProperty(llvm::StringRef name,
   m_name_to_index.insert({name, m_properties.size()});
   m_properties.push_back(property);
   value_sp->SetParent(shared_from_this());
+
+#ifndef NDEBUG
+  OptionValueProperties *properties = value_sp->GetAsProperties();
+  if (properties) {
+    assert(value_sp->GetName() == name);
+    assert(properties->VerifyPath() &&
+           "Mismatch between parents from TableGen and actual parents");
+  }
+#endif
 }
 
 lldb::OptionValueSP
@@ -287,7 +303,7 @@ OptionValueString *OptionValueProperties::GetPropertyAtIndexAsOptionValueString(
   return nullptr;
 }
 
-void OptionValueProperties::Clear() {
+void OptionValueProperties::ClearImpl() {
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i)
     m_properties[i].GetValue()->Clear();
@@ -320,18 +336,34 @@ Status OptionValueProperties::SetValueFromString(llvm::StringRef value,
 
 void OptionValueProperties::DumpValue(const ExecutionContext *exe_ctx,
                                       Stream &strm, uint32_t dump_mask) {
+  const bool include_deprecated = dump_mask & eDumpOptionIncludeDeprecated;
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i) {
     const Property *property = GetPropertyAtIndex(i, exe_ctx);
     if (property) {
       OptionValue *option_value = property->GetValue().get();
       assert(option_value);
+      // Skip unmodified settings if only changed ones were requested, and
+      // unmodified deprecated settings unless those were requested.
+      if (((dump_mask & eDumpOptionOnlyChanged) ||
+           property->IsHidden(include_deprecated)) &&
+          option_value->IsDefault())
+        continue;
       const bool transparent_value = option_value->ValueIsTransparent();
       property->Dump(exe_ctx, strm, dump_mask);
       if (!transparent_value)
         strm.EOL();
     }
   }
+}
+
+bool OptionValueProperties::IsDefault() const {
+  for (const Property &property : m_properties) {
+    if (OptionValue *value = property.GetValue().get())
+      if (!value->IsDefault())
+        return false;
+  }
+  return true;
 }
 
 llvm::json::Value
@@ -356,19 +388,26 @@ Status OptionValueProperties::DumpPropertyValue(const ExecutionContext *exe_ctx,
                                                 uint32_t dump_mask,
                                                 bool is_json) {
   Status error;
-  lldb::OptionValueSP value_sp(GetSubValue(exe_ctx, property_path, error));
+  // Look up the Property, not just its value, so a deprecated setting can be
+  // tagged. Paths into a value ("target.env-vars[FOO]") don't name a Property,
+  // so for those only look up the value.
+  const Property *property = GetPropertyAtPath(exe_ctx, property_path);
+  lldb::OptionValueSP value_sp =
+      property ? property->GetValue()
+               : GetSubValue(exe_ctx, property_path, error);
   if (value_sp) {
     if (!value_sp->ValueIsTransparent()) {
-      if (dump_mask & eDumpOptionName)
+      if (dump_mask & eDumpOptionName) {
         strm.PutCString(property_path);
-      if (dump_mask & ~eDumpOptionName)
+        if (property)
+          property->DumpDeprecatedTag(strm, dump_mask);
+      }
+      if (dump_mask & ~(eDumpOptionName | eDumpGroupFilter))
         strm.PutChar(' ');
     }
-    if (is_json) {
-      strm.Printf(
-          "%s",
-          llvm::formatv("{0:2}", value_sp->ToJSON(exe_ctx)).str().c_str());
-    } else
+    if (is_json)
+      strm << llvm::formatv("{0:2}", value_sp->ToJSON(exe_ctx));
+    else
       value_sp->DumpValue(exe_ctx, strm, dump_mask);
   }
   return error;
@@ -423,57 +462,74 @@ OptionValueProperties::GetPropertyAtPath(const ExecutionContext *exe_ctx,
   if (sub_name.empty() || !property)
     return property;
 
-  if (sub_name[0] == '.') {
-    OptionValueProperties *sub_properties =
-        property->GetValue()->GetAsProperties();
-    if (sub_properties)
-      return sub_properties->GetPropertyAtPath(exe_ctx, sub_name.drop_front());
-  }
+  if (sub_name[0] != '.')
+    return nullptr;
+  OptionValueProperties *sub_properties =
+      property->GetValue()->GetAsProperties();
+  if (!sub_properties)
+    return nullptr;
+  sub_name = sub_name.drop_front();
+  if (const Property *sub_property =
+          sub_properties->GetPropertyAtPath(exe_ctx, sub_name))
+    return sub_property;
+  // Like GetSubValue, resolve "foo.experimental.bar" to "foo.bar" when the
+  // experimental setting has moved out of the experimental collection.
+  if (sub_name.consume_front(Properties::GetExperimentalSettingsName()) &&
+      sub_name.consume_front("."))
+    return sub_properties->GetPropertyAtPath(exe_ctx, sub_name);
   return nullptr;
 }
 
 void OptionValueProperties::DumpAllDescriptions(CommandInterpreter &interpreter,
-                                                Stream &strm) const {
+                                                Stream &strm,
+                                                bool include_deprecated) const {
   size_t max_name_len = 0;
   const size_t num_properties = m_properties.size();
   for (size_t i = 0; i < num_properties; ++i) {
     const Property *property = ProtectedGetPropertyAtIndex(i);
-    if (property)
+    if (property && !property->IsHidden(include_deprecated))
       max_name_len = std::max<size_t>(property->GetName().size(), max_name_len);
   }
   for (size_t i = 0; i < num_properties; ++i) {
     const Property *property = ProtectedGetPropertyAtIndex(i);
-    if (property)
-      property->DumpDescription(interpreter, strm, max_name_len, false);
+    if (property && !property->IsHidden(include_deprecated))
+      property->DumpDescription(interpreter, strm, max_name_len, false,
+                                include_deprecated);
   }
 }
 
 void OptionValueProperties::Apropos(
-    llvm::StringRef keyword,
-    std::vector<const Property *> &matching_properties) const {
+    llvm::StringRef keyword, std::vector<const Property *> &matching_properties,
+    std::vector<const Property *> &matching_property_paths) const {
   const size_t num_properties = m_properties.size();
-  StreamString strm;
   for (size_t i = 0; i < num_properties; ++i) {
     const Property *property = ProtectedGetPropertyAtIndex(i);
-    if (property) {
-      const OptionValueProperties *properties =
-          property->GetValue()->GetAsProperties();
-      if (properties) {
-        properties->Apropos(keyword, matching_properties);
-      } else {
-        bool match = false;
-        llvm::StringRef name = property->GetName();
-        if (name.contains_insensitive(keyword))
-          match = true;
-        else {
-          llvm::StringRef desc = property->GetDescription();
-          if (desc.contains_insensitive(keyword))
-            match = true;
-        }
-        if (match) {
-          matching_properties.push_back(property);
-        }
-      }
+    if (!property)
+      continue;
+
+    const OptionValueProperties *properties =
+        property->GetValue()->GetAsProperties();
+    if (properties)
+      properties->Apropos(keyword, matching_properties,
+                          matching_property_paths);
+
+    bool matched = false;
+
+    if (llvm::StringRef name = property->GetName();
+        !matched && name.contains_insensitive(keyword))
+      matched = true;
+
+    if (llvm::StringRef desc = property->GetDescription();
+        !matched && desc.contains_insensitive(keyword))
+      matched = true;
+
+    if (!matched)
+      continue;
+
+    if (properties) {
+      matching_property_paths.push_back(property);
+    } else {
+      matching_properties.push_back(property);
     }
   }
 }
@@ -488,4 +544,25 @@ OptionValueProperties::GetSubProperty(const ExecutionContext *exe_ctx,
       return ov_properties->shared_from_this();
   }
   return lldb::OptionValuePropertiesSP();
+}
+
+bool OptionValueProperties::VerifyPath() {
+  OptionValueSP parent = GetParent();
+  if (!parent) {
+    // Only the top level value should have an empty path.
+    return m_expected_path.empty();
+  }
+  OptionValueProperties *parent_properties = parent->GetAsProperties();
+  if (!parent_properties)
+    return false;
+
+  auto [prefix, expected_name] = llvm::StringRef(m_expected_path).rsplit('.');
+
+  if (expected_name.empty()) {
+    // There is no dot, so the parent should be the top-level (core properties).
+    return parent_properties->m_expected_path.empty() && GetName() == prefix;
+  }
+
+  return parent_properties->m_expected_path == prefix &&
+         GetName() == expected_name;
 }

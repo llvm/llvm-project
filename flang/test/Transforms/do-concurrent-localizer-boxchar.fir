@@ -19,12 +19,12 @@ fir.local {type = local} @_QFtestEx_private_boxchar_c8xU : !fir.boxchar<1> init 
 func.func @_QPtest(%arg0: !fir.boxchar<1> {fir.bindc_name = "x"}) {
   %0 = fir.dummy_scope : !fir.dscope
   %1:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
-  %2:2 = hlfir.declare %1#0 typeparams %1#1 dummy_scope %0 {uniq_name = "_QFtestEx"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+  %2:2 = hlfir.declare %1#0 typeparams %1#1 dummy_scope %0 uniq_name("_QFtestEx") : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
   %c1 = arith.constant 1 : index
   %c10 = arith.constant 10 : index
   fir.do_concurrent {
     %5 = fir.alloca i32 {bindc_name = "i"}
-    %6:2 = hlfir.declare %5 {uniq_name = "_QFtestEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+    %6:2 = hlfir.declare %5 uniq_name("_QFtestEi") : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     fir.do_concurrent.loop (%arg1) = (%c1) to (%c10) step (%c1) local(@_QFtestEx_private_boxchar_c8xU %2#0 -> %arg2 : !fir.boxchar<1>) {
       %7 = fir.convert %arg1 : (index) -> i32
       fir.store %7 to %6#0 : !fir.ref<i32>
@@ -34,7 +34,7 @@ func.func @_QPtest(%arg0: !fir.boxchar<1> {fir.bindc_name = "x"}) {
   return
 }
 
-// CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtestEx"}
+// CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %{{.*}} uniq_name("_QFtestEx")
 // CHECK: fir.do_loop %{{.*}} = %{{.*}} unordered {
 // CHECK:   %[[X_UNBOX:.*]]:2 = fir.unboxchar %[[X_DECL:.*]]#0
 

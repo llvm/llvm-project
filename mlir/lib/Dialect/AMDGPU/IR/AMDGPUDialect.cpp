@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -34,11 +35,12 @@ struct AMDGPUInlinerInterface final : DialectInlinerInterface {
 } // namespace
 
 void AMDGPUDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/AMDGPU/IR/AMDGPU.cpp.inc"
-      >();
-  registerTypes();
-  registerAttributes();
   addInterfaces<AMDGPUInlinerInterface>();
+  declarePromisedInterfaces<
+      memref::IndexedAccessOpInterface, TransposeLoadOp, GlobalTransposeLoadOp,
+      MakeDmaDescriptorOp, MakeGatherDmaDescriptorOp, DsBarrierInitOp,
+      DsBarrierPollStateOp, DsAsyncBarrierArriveOp, DsBarrierArriveOp>();
+  declarePromisedInterfaces<memref::IndexedMemCopyOpInterface, GatherToLDSOp,
+                            GlobalLoadAsyncToLDSOp, MakeDmaBaseOp,
+                            MakeGatherDmaBaseOp>();
 }

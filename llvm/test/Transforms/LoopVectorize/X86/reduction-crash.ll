@@ -24,7 +24,7 @@ define void @pr15344(ptr noalias %ar, ptr noalias %ar2, i32 %exit.limit, i1 %con
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[EXIT_LIMIT]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[EXIT_LIMIT]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[EXIT_LIMIT]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
@@ -34,9 +34,9 @@ define void @pr15344(ptr noalias %ar, ptr noalias %ar2, i32 %exit.limit, i1 %con
 ; CHECK-NEXT:    [[TMP2]] = fadd fast <2 x double> [[VEC_PHI]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP3]] = fadd fast <2 x double> [[VEC_PHI2]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[AR2]], i32 [[INDEX]]
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds float, ptr [[TMP4]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP4]], i32 8
 ; CHECK-NEXT:    store <2 x float> splat (float 2.000000e+00), ptr [[TMP4]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    store <2 x float> splat (float 2.000000e+00), ptr [[TMP6]], align 4, !alias.scope [[META0]], !noalias [[META3]]
+; CHECK-NEXT:    store <2 x float> splat (float 2.000000e+00), ptr [[TMP9]], align 4, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

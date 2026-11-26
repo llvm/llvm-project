@@ -1,0 +1,42 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "FortranSemantics",
+    srcs = glob([
+        "*.cpp",
+        "*.h",
+    ]),
+    # check-acc-structure.h includes "llvm/Frontend/OpenACC/ACC.inc", which
+    # lives in `srcs` of //llvm:FrontendOpenACC. See //flang/lib/Parser
+    # BUILD.bazel for the same rationale.
+    features = ["-layering_check"],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:EvaluateHeaders",
+        "//flang:ParserHeaders",
+        "//flang:RuntimeHeaders",
+        "//flang:SemanticsHeaders",
+        "//flang:SupportHeaders",
+        "//flang/include/flang/Optimizer/Support:FIRSupportHeaders",
+        "//flang/lib/Evaluate:FortranEvaluate",
+        "//flang/lib/Parser:FortranParser",
+        "//flang/lib/Support:FortranSupport",
+        "//llvm:FrontendOpenACC",
+        "//llvm:FrontendOpenMP",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)

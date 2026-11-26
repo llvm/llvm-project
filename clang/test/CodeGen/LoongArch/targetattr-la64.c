@@ -84,6 +84,5 @@ void archLa464tuneLa664() {}
 // CHECK: attributes #[[ATTR7]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+64bit" "tune-cpu"="la464" }
 // CHECK: attributes #[[ATTR8]] = { noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="la464" "target-features"="+64bit,+d,+f,+lasx,+lsx,+ual" "tune-cpu"="la664" }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

@@ -22,7 +22,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr float cospif(float x) {
+LIBC_INLINE float cospif(float x) {
   using namespace sincosf_utils_internal;
   using FPBits = typename fputil::FPBits<float>;
 
@@ -56,9 +56,9 @@ LIBC_INLINE constexpr float cospif(float x) {
   if (LIBC_UNLIKELY(x_abs < 0x38A2'F984U)) {
 
 #if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
-    return fputil::multiply_add(xbits.get_val(), -0x1.0p-25f, 1.0f);
+    return fputil::sub_multiply(1.0f, xbits.get_val(), 0x1.0p-25f);
 #else
-    return static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, 1.0));
+    return static_cast<float>(fputil::sub_multiply(1.0, xd, 0x1.0p-25));
 #endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
   }
 
@@ -99,12 +99,12 @@ LIBC_INLINE constexpr float cospif(float x) {
     return 0.0f;
   }
 
-  return static_cast<float>(fputil::multiply_add(
-      sin_y, -sin_k, fputil::multiply_add(cosm1_y, cos_k, cos_k)));
+  return static_cast<float>(fputil::sub_multiply(
+      fputil::multiply_add(cosm1_y, cos_k, cos_k), sin_y, sin_k));
 }
 
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSHF_H
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_COSPIF_H

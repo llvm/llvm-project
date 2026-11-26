@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CodeGen/ModuleBuilder.h"
+#include "CGCXXABI.h"
 #include "CGDebugInfo.h"
 #include "CodeGenModule.h"
 #include "clang/AST/ASTContext.h"
@@ -131,6 +132,11 @@ namespace {
       return Builder->GetAddrOfGlobal(global, ForDefinition_t(isForDefinition));
     }
 
+    llvm::Constant *GetAddrOfVTable(BaseSubobject subobject,
+                                    const CXXRecordDecl *decl) {
+      return Builder->getCXXABI().getVTableAddressPoint(subobject, decl);
+    }
+
     llvm::Module *StartModule(llvm::StringRef ModuleName,
                               llvm::LLVMContext &C) {
       assert(!M && "Replacing existing Module?");
@@ -228,8 +234,9 @@ namespace {
 
       // Provide some coverage mapping even for methods that aren't emitted.
       // Don't do this for templated classes though, as they may not be
-      // instantiable.
-      if (!D->getLexicalDeclContext()->isDependentContext())
+      // instantiable. Also skip consteval methods as they are never emitted.
+      if (!D->getLexicalDeclContext()->isDependentContext() &&
+          !D->getAsFunction()->isImmediateFunction())
         Builder->AddDeferredUnusedCoverageMapping(D);
     }
 
@@ -260,6 +267,21 @@ namespace {
           }
         }
       }
+
+      // Emit dllexport inherited constructors. These are synthesized during
+      // Sema (in checkClassLevelDLLAttribute) but have no written definition,
+      // so they must be emitted now while visiting the class definition.
+      if (auto *RD = dyn_cast<CXXRecordDecl>(D);
+          RD && RD->hasAttr<DLLExportAttr>()) {
+        for (Decl *Member : RD->decls()) {
+          if (auto *CD = dyn_cast<CXXConstructorDecl>(Member)) {
+            if (CD->getInheritedConstructor() && CD->hasAttr<DLLExportAttr>() &&
+                !CD->isDeleted())
+              Builder->EmitTopLevelDecl(CD);
+          }
+        }
+      }
+
       // For OpenMP emit declare reduction functions, if required.
       if (Ctx->getLangOpts().OpenMP) {
         for (Decl *Member : D->decls()) {
@@ -362,6 +384,11 @@ llvm::Constant *CodeGenerator::GetAddrOfGlobal(GlobalDecl global,
            ->GetAddrOfGlobal(global, isForDefinition);
 }
 
+llvm::Constant *CodeGenerator::GetAddrOfVTable(BaseSubobject base,
+                                               const CXXRecordDecl *decl) {
+  return static_cast<CodeGeneratorImpl *>(this)->GetAddrOfVTable(base, decl);
+}
+
 llvm::Module *CodeGenerator::StartModule(llvm::StringRef ModuleName,
                                          llvm::LLVMContext &C) {
   return static_cast<CodeGeneratorImpl*>(this)->StartModule(ModuleName, C);
@@ -393,7 +420,7 @@ namespace clang {
 namespace CodeGen {
 std::optional<std::pair<StringRef, StringRef>>
 DemangleTrapReasonInDebugInfo(StringRef FuncName) {
-  static auto TrapRegex =
+  static const auto TrapRegex =
       llvm::Regex(llvm::formatv("^{0}\\$(.*)\\$(.*)$", ClangTrapPrefix).str());
   llvm::SmallVector<llvm::StringRef, 3> Matches;
   std::string *ErrorPtr = nullptr;

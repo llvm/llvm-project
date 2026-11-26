@@ -1,5 +1,6 @@
 add_lldb_unittest(SymbolFileDWARFTests
   DWARFASTParserClangTests.cpp
+  DWARFASTParserFortranTests.cpp
   DWARFDebugNamesIndexTest.cpp
   DWARFDIETest.cpp
   DWARFIndexCachingTest.cpp
@@ -19,6 +20,7 @@ add_lldb_unittest(SymbolFileDWARFTests
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbPluginTypeSystemClang
+    lldbPluginTypeSystemFortran
     lldbPluginPlatformMacOSX
     lldbUtilityHelpers
     lldbSymbolHelpers
@@ -28,6 +30,7 @@ add_lldb_unittest(SymbolFileDWARFTests
 set(test_inputs
    test-dwarf.exe
    DW_AT_default_value-test.yaml
-   DW_AT_spec_decl_exists-test.yaml)
+   DW_AT_spec_decl_exists-test.yaml
+   DW_TAG_variant_rust-test.yaml)
 
 add_unittest_inputs(SymbolFileDWARFTests "${test_inputs}")

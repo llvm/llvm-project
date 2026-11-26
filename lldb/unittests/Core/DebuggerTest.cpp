@@ -12,6 +12,8 @@
 #include "TestingSupport/TestUtilities.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Target/ExecutionContext.h"
+#include "llvm/ADT/STLExtras.h"
 #include "gtest/gtest.h"
 
 using namespace lldb;
@@ -49,4 +51,56 @@ TEST_F(DebuggerTest, TestSettings) {
   EXPECT_EQ(debugger_sp->GetStatuslineFormat().string, "foo");
 
   Debugger::Destroy(debugger_sp);
+}
+
+TEST_F(DebuggerTest,
+       SelectedExecutionContextUsesDummyTargetWhenNoTargetSelected) {
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+
+  // No targets have been added, so no target is selected.
+  ASSERT_EQ(debugger_sp->GetTargetList().GetSelectedTarget().get(), nullptr);
+
+  Target &dummy_target = debugger_sp->GetDummyTarget();
+
+  {
+    ExecutionContextRef exe_ctx_ref =
+        debugger_sp->GetSelectedExecutionContextRef(
+            /*adopt_dummy_target=*/true);
+    EXPECT_EQ(exe_ctx_ref.GetTargetSP().get(), &dummy_target);
+
+    ExecutionContext exe_ctx =
+        debugger_sp->GetSelectedExecutionContext(/*adopt_dummy_target=*/true);
+    EXPECT_EQ(exe_ctx.GetTargetPtr(), &dummy_target);
+  }
+
+  {
+    ExecutionContextRef exe_ctx_ref =
+        debugger_sp->GetSelectedExecutionContextRef(
+            /*adopt_dummy_target=*/false);
+    EXPECT_EQ(exe_ctx_ref.GetTargetSP().get(), nullptr);
+
+    ExecutionContext exe_ctx =
+        debugger_sp->GetSelectedExecutionContext(/*adopt_dummy_target=*/false);
+    EXPECT_EQ(exe_ctx.GetTargetPtr(), nullptr);
+  }
+
+  Debugger::Destroy(debugger_sp);
+}
+
+TEST_F(DebuggerTest, DebuggerIterable) {
+  DebuggerSP debugger_a = Debugger::CreateInstance();
+  DebuggerSP debugger_b = Debugger::CreateInstance();
+
+  Debugger::DebuggerList debuggers;
+  for (const DebuggerSP &debugger_sp : Debugger::Debuggers())
+    debuggers.push_back(debugger_sp);
+
+  EXPECT_TRUE(llvm::is_contained(debuggers, debugger_a));
+  EXPECT_TRUE(llvm::is_contained(debuggers, debugger_b));
+
+  // This would deadlock/crash if the debugger list mutex was still held.
+  EXPECT_EQ(Debugger::GetNumDebuggers(), debuggers.size());
+
+  Debugger::Destroy(debugger_a);
+  Debugger::Destroy(debugger_b);
 }

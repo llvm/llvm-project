@@ -8,8 +8,8 @@ define void @test(ptr %quat, float %call13) {
 ; CHECK-SAME: ptr [[QUAT:%.*]], float [[CALL13:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[CALL121:%.*]] = load volatile float, ptr null, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[CALL13]], i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[CALL121]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[CALL13]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[CALL121]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP1]], <2 x float> zeroinitializer, <2 x float> zeroinitializer)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x float> [[TMP2]], <float 0.000000e+00, float -0.000000e+00>
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> <i32 1, i32 1>

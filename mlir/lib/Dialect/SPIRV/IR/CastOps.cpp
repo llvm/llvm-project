@@ -15,19 +15,34 @@
 #include "SPIRVOpUtils.h"
 #include "SPIRVParsingUtils.h"
 
+#include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir::spirv::AttrNames;
 
 namespace mlir::spirv {
+LogicalResult BitcastExtractEXTOp::verify() {
+  Type baseType = getBase().getType();
+  Type resultType = getResult().getType();
+  auto baseVector = dyn_cast<VectorType>(baseType);
+  auto resultVector = dyn_cast<VectorType>(resultType);
+  if (!baseVector != !resultVector ||
+      (baseVector &&
+       baseVector.getNumElements() != resultVector.getNumElements()))
+    return emitOpError(
+        "base and result must have the same number of components");
 
-static LogicalResult verifyCastOp(Operation *op,
-                                  bool requireSameBitWidth = true,
-                                  bool skipBitWidthCheck = false) {
-  // Some CastOps have no limit on bit widths for result and operand type.
-  if (skipBitWidthCheck)
-    return success();
+  Type baseElement = getElementTypeOrSelf(baseType);
+  Type resultElement = getElementTypeOrSelf(resultType);
+  if (baseElement.getIntOrFloatBitWidth() <=
+      resultElement.getIntOrFloatBitWidth())
+    return emitOpError(
+        "result components must be narrower than base components");
+  return success();
+}
 
+static FailureOr<std::pair<Type, Type>>
+getCastOpOperandAndResultElementType(Operation *op) {
   Type operandType = op->getOperand(0).getType();
   Type resultType = op->getResult(0).getType();
 
@@ -49,8 +64,26 @@ static LogicalResult verifyCastOp(Operation *op,
             return {operandType, resultType};
           });
 
-  if (!operandElemTy || !resultElemTy)
-    return op->emitOpError("incompatible operand and result types");
+  if (!operandElemTy || !resultElemTy) {
+    op->emitOpError("incompatible operand and result types");
+    return failure();
+  }
+
+  return TypePair{operandElemTy, resultElemTy};
+}
+
+static LogicalResult verifyCastOp(Operation *op,
+                                  bool requireSameBitWidth = true,
+                                  bool skipBitWidthCheck = false) {
+  // Some CastOps have no limit on bit widths for result and operand type.
+  if (skipBitWidthCheck)
+    return success();
+
+  FailureOr<std::pair<Type, Type>> elemTypes =
+      getCastOpOperandAndResultElementType(op);
+  if (failed(elemTypes))
+    return failure();
+  auto [operandElemTy, resultElemTy] = *elemTypes;
 
   unsigned operandTypeBitWidth = operandElemTy.getIntOrFloatBitWidth();
   unsigned resultTypeBitWidth = resultElemTy.getIntOrFloatBitWidth();
@@ -87,6 +120,36 @@ LogicalResult BitcastOp::verify() {
   if (operandType == resultType) {
     return emitError("result type must be different from operand type");
   }
+
+  auto operandCoopMatrixType =
+      dyn_cast<spirv::CooperativeMatrixType>(operandType);
+  auto resultCoopMatrixType =
+      dyn_cast<spirv::CooperativeMatrixType>(resultType);
+  if (operandCoopMatrixType || resultCoopMatrixType) {
+    if (!operandCoopMatrixType || !resultCoopMatrixType)
+      return emitError("unhandled bit cast conversion from cooperative matrix "
+                       "type to non-cooperative matrix type");
+
+    if (operandCoopMatrixType.getRows() != resultCoopMatrixType.getRows() ||
+        operandCoopMatrixType.getColumns() != resultCoopMatrixType.getColumns())
+      return emitError("cooperative matrix dimensions must match");
+
+    if (operandCoopMatrixType.getScope() != resultCoopMatrixType.getScope())
+      return emitError("cooperative matrix scope must match");
+
+    if (operandCoopMatrixType.getUse() != resultCoopMatrixType.getUse())
+      return emitError("cooperative matrix use must match");
+
+    unsigned operandBitWidth =
+        getBitWidth(operandCoopMatrixType.getElementType());
+    unsigned resultBitWidth =
+        getBitWidth(resultCoopMatrixType.getElementType());
+    if (operandBitWidth != resultBitWidth)
+      return emitOpError("mismatch in result and operand type bitwidth");
+
+    return success();
+  }
+
   if (isa<spirv::PointerType>(operandType) &&
       !isa<spirv::PointerType>(resultType)) {
     return emitError(
@@ -136,7 +199,7 @@ LogicalResult ConvertUToPtrOp::verify() {
   auto operandType = cast<spirv::ScalarType>(getOperand().getType());
   auto resultType = cast<spirv::PointerType>(getResult().getType());
   if (!operandType || !operandType.isSignlessInteger())
-    return emitError("result must be a scalar type of unsigned integer");
+    return emitError("operand must be a scalar type of unsigned integer");
   auto spirvModule = (*this)->getParentOfType<spirv::ModuleOp>();
   if (!spirvModule)
     return success();
@@ -274,7 +337,22 @@ LogicalResult ConvertUToFOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult spirv::FConvertOp::verify() {
-  return verifyCastOp(*this, /*requireSameBitWidth=*/false);
+  // The SPIR-V spec requires the component type to differ, not the bit
+  // width: "The component type must not equal the component type in Result
+  // Type." (OpFConvert, section 3.42.11). This allows converting between
+  // same-width encodings such as f16 and bf16.
+  FailureOr<std::pair<Type, Type>> elemTypes =
+      getCastOpOperandAndResultElementType(*this);
+  if (failed(elemTypes))
+    return failure();
+  auto [operandElemTy, resultElemTy] = *elemTypes;
+
+  if (operandElemTy == resultElemTy) {
+    return emitOpError("expected different component types for operand type "
+                       "and result type, but provided ")
+           << operandElemTy << " and " << resultElemTy;
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

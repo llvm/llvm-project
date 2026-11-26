@@ -40,8 +40,10 @@ WebAssemblySelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool IsVolatile,
+    bool AlwaysInline, bool &IsTailCall, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
+  IsTailCall = false;
   auto &ST = DAG.getMachineFunction().getSubtarget<WebAssemblySubtarget>();
   if (!ST.hasBulkMemoryOpt())
     return SDValue();
@@ -59,17 +61,19 @@ SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemcpy(
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemmove(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Op1, SDValue Op2,
-    SDValue Op3, Align Alignment, bool IsVolatile,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
-  return EmitTargetCodeForMemcpy(DAG, DL, Chain, Op1, Op2, Op3,
-                                 Alignment, IsVolatile, false,
+    SDValue Op3, Align DstAlign, Align SrcAlign, bool IsVolatile,
+    bool &IsTailCall, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
+  return EmitTargetCodeForMemcpy(DAG, DL, Chain, Op1, Op2, Op3, DstAlign,
+                                 SrcAlign, IsVolatile, false, IsTailCall,
                                  DstPtrInfo, SrcPtrInfo);
 }
 
 SDValue WebAssemblySelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Chain, SDValue Dst, SDValue Val,
     SDValue Size, Align Alignment, bool IsVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo) const {
+    bool &IsTailCall, MachinePointerInfo DstPtrInfo) const {
+  IsTailCall = false;
   auto &ST = DAG.getMachineFunction().getSubtarget<WebAssemblySubtarget>();
   if (!ST.hasBulkMemoryOpt())
     return SDValue();

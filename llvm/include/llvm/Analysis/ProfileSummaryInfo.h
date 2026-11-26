@@ -26,6 +26,7 @@
 #include <optional>
 
 namespace llvm {
+struct AnalysisOptions;
 class BlockFrequencyInfo;
 class MachineFunction;
 
@@ -41,6 +42,7 @@ class MachineFunction;
 // units. This would require making this depend on BFI.
 class ProfileSummaryInfo {
 private:
+  const AnalysisOptions &Opts;
   const Module *M;
   std::unique_ptr<ProfileSummary> Summary;
   void computeThresholds();
@@ -61,7 +63,7 @@ private:
   mutable DenseMap<int, uint64_t> ThresholdCache;
 
 public:
-  ProfileSummaryInfo(const Module &M) : M(&M) { refresh(); }
+  LLVM_ABI ProfileSummaryInfo(const Module &M);
   ProfileSummaryInfo(ProfileSummaryInfo &&Arg) = default;
 
   /// If a summary is provided as argument, use that. Otherwise,
@@ -102,8 +104,7 @@ public:
 
   /// Returns the profile count for \p CallInst.
   LLVM_ABI std::optional<uint64_t>
-  getProfileCount(const CallBase &CallInst, BlockFrequencyInfo *BFI,
-                  bool AllowSynthetic = false) const;
+  getProfileCount(const CallBase &CallInst, BlockFrequencyInfo *BFI) const;
   /// Returns true if module \c M has partial-profile sample profile.
   LLVM_ABI bool hasPartialSampleProfile() const;
   /// Returns true if the working set size of the code is considered huge.
@@ -114,22 +115,36 @@ public:
   /// either means it is not hot or it is unknown whether it is hot or not (for
   /// example, no profile data is available).
   template <typename FuncT> bool isFunctionEntryHot(const FuncT *F) const {
-    if (!F || !hasProfileSummary())
+    if (!F)
       return false;
-    std::optional<Function::ProfileCount> FunctionCount = getEntryCount(F);
+    // The hot attribute is a manual alternative to profile data, and takes
+    // precedence over it. Check it before the profile summary so that it is
+    // also honored when no profile is available.
+    if (hasHotAttr(F))
+      return true;
+    if (!hasProfileSummary())
+      return false;
+    std::optional<uint64_t> FunctionCount = getEntryCount(F);
     // FIXME: The heuristic used below for determining hotness is based on
     // preliminary SPEC tuning for inliner. This will eventually be a
     // convenience method that calls isHotCount.
-    return FunctionCount && isHotCount(FunctionCount->getCount());
+    return FunctionCount && isHotCount(*FunctionCount);
   }
 
   /// Returns true if \p F contains hot code.
   template <typename FuncT, typename BFIT>
   bool isFunctionHotInCallGraph(const FuncT *F, BFIT &BFI) const {
-    if (!F || !hasProfileSummary())
+    if (!F)
+      return false;
+    // The hot attribute is a manual alternative to profile data, and takes
+    // precedence over it. Check it before the profile summary so that it is
+    // also honored when no profile is available.
+    if (hasHotAttr(F))
+      return true;
+    if (!hasProfileSummary())
       return false;
     if (auto FunctionCount = getEntryCount(F))
-      if (isHotCount(FunctionCount->getCount()))
+      if (isHotCount(*FunctionCount))
         return true;
 
     if (auto TotalCallCount = getTotalCallCount(F))
@@ -146,10 +161,17 @@ public:
   /// Returns true if \p F contains only cold code.
   template <typename FuncT, typename BFIT>
   bool isFunctionColdInCallGraph(const FuncT *F, BFIT &BFI) const {
-    if (!F || !hasProfileSummary())
+    if (!F)
+      return false;
+    // The hot attribute is a manual alternative to profile data, and takes
+    // precedence over it. Check it before the profile summary so that it is
+    // also honored when no profile is available.
+    if (hasHotAttr(F))
+      return false;
+    if (!hasProfileSummary())
       return false;
     if (auto FunctionCount = getEntryCount(F))
-      if (!isColdCount(FunctionCount->getCount()))
+      if (!isColdCount(*FunctionCount))
         return false;
 
     if (auto TotalCallCount = getTotalCallCount(F))
@@ -279,11 +301,9 @@ private:
     if (!F || !hasProfileSummary())
       return false;
     if (auto FunctionCount = getEntryCount(F)) {
-      if (isHot &&
-          isHotCountNthPercentile(PercentileCutoff, FunctionCount->getCount()))
+      if (isHot && isHotCountNthPercentile(PercentileCutoff, *FunctionCount))
         return true;
-      if (!isHot && !isColdCountNthPercentile(PercentileCutoff,
-                                              FunctionCount->getCount()))
+      if (!isHot && !isColdCountNthPercentile(PercentileCutoff, *FunctionCount))
         return false;
     }
     if (auto TotalCallCount = getTotalCallCount(F)) {
@@ -309,7 +329,7 @@ private:
   bool isHotOrColdBlockNthPercentile(int PercentileCutoff, const BBType *BB,
                                      BFIT *BFI) const {
     auto Count = BFI->getBlockProfileCount(BB);
-    if (isHot)
+    if constexpr (isHot)
       return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
     else
       return Count && isColdCountNthPercentile(PercentileCutoff, *Count);
@@ -320,15 +340,21 @@ private:
                                      BlockFrequency BlockFreq,
                                      BFIT *BFI) const {
     auto Count = BFI->getProfileCountFromFreq(BlockFreq);
-    if (isHot)
+    if constexpr (isHot)
       return Count && isHotCountNthPercentile(PercentileCutoff, *Count);
     else
       return Count && isColdCountNthPercentile(PercentileCutoff, *Count);
   }
 
   template <typename FuncT>
-  std::optional<Function::ProfileCount> getEntryCount(const FuncT *F) const {
+  std::optional<uint64_t> getEntryCount(const FuncT *F) const {
     return F->getEntryCount();
+  }
+
+  /// Returns true if \p F is annotated with the hot attribute, which takes
+  /// precedence over any profile information.
+  template <typename FuncT> bool hasHotAttr(const FuncT *F) const {
+    return F->hasFnAttribute(Attribute::Hot);
   }
 };
 
@@ -346,12 +372,15 @@ ProfileSummaryInfo::getTotalCallCount<Function>(const Function *F) const {
   return TotalCallCount;
 }
 
-// Declare template specialization for llvm::MachineFunction. Do not implement
+// Declare template specializations for llvm::MachineFunction. Do not implement
 // here, because we cannot include MachineFunction header here, that would break
 // dependency rules.
 template <>
-std::optional<Function::ProfileCount>
-ProfileSummaryInfo::getEntryCount<MachineFunction>(
+std::optional<uint64_t> ProfileSummaryInfo::getEntryCount<MachineFunction>(
+    const MachineFunction *F) const;
+
+template <>
+bool ProfileSummaryInfo::hasHotAttr<MachineFunction>(
     const MachineFunction *F) const;
 
 /// An analysis pass based on legacy pass manager to deliver ProfileSummaryInfo.
@@ -387,13 +416,12 @@ private:
 
 /// Printer pass that uses \c ProfileSummaryAnalysis.
 class ProfileSummaryPrinterPass
-    : public PassInfoMixin<ProfileSummaryPrinterPass> {
+    : public RequiredPassInfoMixin<ProfileSummaryPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit ProfileSummaryPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 } // end namespace llvm

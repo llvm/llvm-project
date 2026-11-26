@@ -19,27 +19,7 @@ class ObjCSBTypeTestCase(TestBase):
     def test(self):
         """Test SBType for ObjC classes."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Create the breakpoint inside function 'main'.
-        breakpoint = target.BreakpointCreateByLocation("main.m", self.line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # Get Frame #0.
-        self.assertState(process.GetState(), lldb.eStateStopped)
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(),
-            "There should be a thread stopped due to breakpoint condition",
-        )
+        lldbutil.run_to_line_breakpoint(self, lldb.SBFileSpec("main.m"), self.line)
 
         aBar = self.frame().FindVariable("aBar")
         aBarType = aBar.GetType()

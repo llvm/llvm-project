@@ -38,6 +38,7 @@ template <> struct ScalarEnumerationTraits<AMXProgModelEnum> {
 
 struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   AMXProgModelEnum AMXProgModel;
+  bool HasVAStartSaveXMMRegs = false;
 
   X86MachineFunctionInfo() = default;
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
@@ -49,6 +50,7 @@ struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<X86MachineFunctionInfo> {
   static void mapping(IO &YamlIO, X86MachineFunctionInfo &MFI) {
     YamlIO.mapOptional("amxProgModel", MFI.AMXProgModel);
+    YamlIO.mapOptional("hasVAStartSaveXMMRegs", MFI.HasVAStartSaveXMMRegs);
   }
 };
 } // end namespace yaml
@@ -120,6 +122,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// of pushes to pass function parameters.
   bool HasPushSequences = false;
 
+  /// True if the function contains a VASTART_SAVE_XMM_REGS pseudo.
+  bool HasVAStartSaveXMMRegs = false;
+
   /// True if the function recovers from an SEH exception, and therefore needs
   /// to spill and restore the frame pointer.
   bool HasSEHFramePtrSave = false;
@@ -148,9 +153,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// addr]. If so, bit 60 of the in-memory frame pointer will be 1 to enable
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
-
-  /// Adjust stack for push2/pop2
-  bool PadForPush2Pop2 = false;
 
   /// Candidate registers for push2/pop2
   std::set<Register> CandidatesForPush2Pop2;
@@ -200,6 +202,9 @@ public:
   bool getHasPushSequences() const { return HasPushSequences; }
   void setHasPushSequences(bool HasPush) { HasPushSequences = HasPush; }
 
+  bool getHasVAStartSaveXMMRegs() const { return HasVAStartSaveXMMRegs; }
+  void setHasVAStartSaveXMMRegs(bool Has) { HasVAStartSaveXMMRegs = Has; }
+
   bool getRestoreBasePointer() const { return RestoreBasePointerOffset!=0; }
   void setRestoreBasePointer(const MachineFunction *MF);
   void setRestoreBasePointer(unsigned CalleeSavedFrameSize) {
@@ -211,9 +216,7 @@ public:
   const DenseMap<int, unsigned>& getWinEHXMMSlotInfo() const {
     return WinEHXMMSlotInfo; }
 
-  unsigned getCalleeSavedFrameSize() const {
-    return CalleeSavedFrameSize + 8 * padForPush2Pop2();
-  }
+  unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned bytes) { CalleeSavedFrameSize = bytes; }
 
   unsigned getBytesToPopOnReturn() const { return BytesToPopOnReturn; }
@@ -283,9 +286,6 @@ public:
 
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
   void setHasSwiftAsyncContext(bool v) { HasSwiftAsyncContext = v; }
-
-  bool padForPush2Pop2() const { return PadForPush2Pop2; }
-  void setPadForPush2Pop2(bool V) { PadForPush2Pop2 = V; }
 
   bool isCandidateForPush2Pop2(Register Reg) const {
     return CandidatesForPush2Pop2.find(Reg) != CandidatesForPush2Pop2.end();

@@ -43,8 +43,9 @@ subroutine check_binary_ops()
 ! CHECK:    %[[VAL_37:.*]] = hlfir.apply %[[VAL_29]], %[[ARG0]] : (!hlfir.expr<10xi32>, index) -> i32
 ! CHECK:    %[[VAL_38:.*]]:3 = hlfir.associate %[[VAL_37]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 ! CHECK:    %[[VAL_39:.*]] = fir.call @_QPelem_func(%[[VAL_38]]#0) {{.*}} : (!fir.ref<i32>) -> i32
+! CHECK:    hlfir.yield_element %[[VAL_39]] : i32 cleanup {
 ! CHECK:    hlfir.end_associate %[[VAL_38]]#1, %[[VAL_38]]#2 : !fir.ref<i32>, i1
-! CHECK:    hlfir.yield_element %[[VAL_39]] : i32
+! CHECK:             }
 ! CHECK:  }
 end subroutine
 
@@ -114,8 +115,7 @@ subroutine check_exteremum()
 ! CHECK:    %[[VAL_38:.*]] = hlfir.designate %{{.*}} (%[[ARG0]])  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
 ! CHECK:    %[[VAL_39:.*]] = fir.load %[[VAL_37]] : !fir.ref<i32>
 ! CHECK:    %[[VAL_40:.*]] = fir.load %[[VAL_38]] : !fir.ref<i32>
-! CHECK:    %[[VAL_41:.*]] = arith.cmpi slt, %[[VAL_39]], %[[VAL_40]] : i32
-! CHECK:    %[[VAL_42:.*]] = arith.select %[[VAL_41]], %[[VAL_39]], %[[VAL_40]] : i32
+! CHECK:    %[[VAL_42:.*]] = arith.minsi %[[VAL_39]], %[[VAL_40]] : i32
 ! CHECK:    hlfir.yield_element %[[VAL_42]] : i32
 ! CHECK:  }
 ! CHECK:  %[[VAL_30:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32> {
@@ -157,11 +157,8 @@ subroutine check_logical_binary_ops()
 ! CHECK:    %[[VAL_38:.*]] = hlfir.designate %{{.*}} (%[[ARG0]])  : (!fir.ref<!fir.array<10x!fir.logical<8>>>, index) -> !fir.ref<!fir.logical<8>>
 ! CHECK:    %[[VAL_39:.*]] = fir.load %[[VAL_37]] : !fir.ref<!fir.logical<8>>
 ! CHECK:    %[[VAL_40:.*]] = fir.load %[[VAL_38]] : !fir.ref<!fir.logical<8>>
-! CHECK:    %[[VAL_41:.*]] = fir.convert %[[VAL_39]] : (!fir.logical<8>) -> i1
-! CHECK:    %[[VAL_42:.*]] = fir.convert %[[VAL_40]] : (!fir.logical<8>) -> i1
-! CHECK:    %[[VAL_43:.*]] = arith.cmpi eq, %[[VAL_41]], %[[VAL_42]] : i1
-! CHECK:    %[[VAL_44:.*]] = fir.convert %[[VAL_43]] : (i1) -> !fir.logical<8>
-! CHECK:    hlfir.yield_element %[[VAL_44]] : !fir.logical<8>
+! CHECK:    %[[VAL_41:.*]] = fir.eqv %[[VAL_39]], %[[VAL_40]] : !fir.logical<8>
+! CHECK:    hlfir.yield_element %[[VAL_41]] : !fir.logical<8>
 ! CHECK:  }
 ! CHECK:  %[[VAL_30:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32> {
 ! CHECK:  ^bb0(%[[ARG0:.*]]: index):
@@ -298,8 +295,9 @@ subroutine check_parentheses_derived(a)
 ! CHECK:    %[[VAL_50:.*]] = hlfir.apply %[[VAL_42]], %[[ARG1]] : (!hlfir.expr<?x!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, index) -> !hlfir.expr<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>
 ! CHECK:    %[[VAL_51:.*]]:3 = hlfir.associate %[[VAL_50]] {adapt.valuebyref} : (!hlfir.expr<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>) -> (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, !fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, i1)
 ! CHECK:    %[[VAL_52:.*]] = fir.call @_QPelem_func_derived(%[[VAL_51]]#0) {{.*}} : (!fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>) -> i32
+! CHECK:    hlfir.yield_element %[[VAL_52]] : i32 cleanup {
 ! CHECK:    hlfir.end_associate %[[VAL_51]]#1, %[[VAL_51]]#2 : !fir.ref<!fir.type<_QMtest_opsFcheck_parentheses_derivedTt{i:i32}>>, i1
-! CHECK:    hlfir.yield_element %[[VAL_52]] : i32
+! CHECK:             }
 ! CHECK:  }
 end subroutine
 end module

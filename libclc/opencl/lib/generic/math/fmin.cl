@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/math/clc_fmin.h>
+#include "clc/math/clc_fmin.h"
 
 #define __CLC_FUNCTION fmin
-#define __CLC_BODY <clc/shared/binary_def_with_scalar_second_arg.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc/shared/binary_def_with_scalar_second_arg.inc"
+#include "clc/math/gentype.inc"

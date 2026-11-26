@@ -26,15 +26,6 @@ add_mlir_upstream_c_api_library(MLIRCAPIAMDGPU
   MLIRAMDGPUTransforms
 )
 
-add_mlir_upstream_c_api_library(MLIRCAPIAMX
-  AMX.cpp
-
-  PARTIAL_SOURCES_INTENDED
-  LINK_LIBS PUBLIC
-  MLIRCAPIIR
-  MLIRAMXDialect
-)
-
 add_mlir_upstream_c_api_library(MLIRCAPIArith
   Arith.cpp
   ArithPasses.cpp
@@ -167,10 +158,18 @@ add_mlir_upstream_c_api_library(MLIRCAPIGPU
   PARTIAL_SOURCES_INTENDED
   DEPENDS
   MLIRGPUPassIncGen
+  MLIRGPUNVVMPassIncGen
+  MLIRGPUROCDLPassIncGen
+  MLIRGPUSPIRVPassIncGen
+  MLIRGPUXeVMPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
+  MLIRGPUNVVMTransforms
+  MLIRGPUROCDLTransforms
+  MLIRGPUSPIRVTransforms
   MLIRGPUTransforms
+  MLIRGPUXeVMTransforms
   MLIRPass
 )
 
@@ -300,6 +299,8 @@ add_mlir_upstream_c_api_library(MLIRCAPIOpenACC
 
   LINK_LIBS PUBLIC
   MLIRCAPIIR
+  MLIRGPUDialect
+  MLIROpenACCAllExtensions
   MLIROpenACCDialect
   MLIROpenACCTransforms
 )
@@ -517,13 +518,13 @@ add_mlir_upstream_c_api_library(MLIRCAPIWasmSSA
   MLIRWasmSSADialect
 )
 
-add_mlir_upstream_c_api_library(MLIRCAPIX86Vector
-  X86Vector.cpp
+add_mlir_upstream_c_api_library(MLIRCAPIX86
+  X86.cpp
 
   PARTIAL_SOURCES_INTENDED
   LINK_LIBS PUBLIC
   MLIRCAPIIR
-  MLIRX86VectorDialect
+  MLIRX86Dialect
 )
 
 add_mlir_upstream_c_api_library(MLIRCAPIXeGPU

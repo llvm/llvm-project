@@ -26,7 +26,6 @@ static void test_add_simple() {
         [&](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
           cnt = reinterpret_cast<uint64_t *>(buffer->data)[0];
         });
-    port.close();
   }
   ASSERT_TRUE(cnt == num_additions && "Incorrect sum");
 }
@@ -38,10 +37,9 @@ static void test_noop(uint8_t data) {
   port.send([=](LIBC_NAMESPACE::rpc::Buffer *buffer, uint32_t) {
     buffer->data[0] = data;
   });
-  port.close();
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   test_add_simple();
 
   if (gpu::get_thread_id() % 2)

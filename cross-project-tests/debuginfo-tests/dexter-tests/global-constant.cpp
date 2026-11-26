@@ -1,7 +1,8 @@
 // REQUIRES: system-windows
 //
 // RUN: %clang_cl /Z7 /Zi %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w --binary %t --debugger 'dbgeng' -- %s
+// RUN: %dexter --use-heuristic --fail-lt 1.0 -w --binary %t \
+// RUN:   --debugger 'dbgeng' -- %s
 
 // Check that global constants have debug info.
 

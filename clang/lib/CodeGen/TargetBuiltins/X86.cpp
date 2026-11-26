@@ -12,6 +12,7 @@
 
 #include "CGBuiltin.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -19,40 +20,6 @@
 using namespace clang;
 using namespace CodeGen;
 using namespace llvm;
-
-static std::optional<CodeGenFunction::MSVCIntrin>
-translateX86ToMsvcIntrin(unsigned BuiltinID) {
-  using MSVCIntrin = CodeGenFunction::MSVCIntrin;
-  switch (BuiltinID) {
-  default:
-    return std::nullopt;
-  case clang::X86::BI_BitScanForward:
-  case clang::X86::BI_BitScanForward64:
-    return MSVCIntrin::_BitScanForward;
-  case clang::X86::BI_BitScanReverse:
-  case clang::X86::BI_BitScanReverse64:
-    return MSVCIntrin::_BitScanReverse;
-  case clang::X86::BI_InterlockedAnd64:
-    return MSVCIntrin::_InterlockedAnd;
-  case clang::X86::BI_InterlockedCompareExchange128:
-    return MSVCIntrin::_InterlockedCompareExchange128;
-  case clang::X86::BI_InterlockedExchange64:
-    return MSVCIntrin::_InterlockedExchange;
-  case clang::X86::BI_InterlockedExchangeAdd64:
-    return MSVCIntrin::_InterlockedExchangeAdd;
-  case clang::X86::BI_InterlockedExchangeSub64:
-    return MSVCIntrin::_InterlockedExchangeSub;
-  case clang::X86::BI_InterlockedOr64:
-    return MSVCIntrin::_InterlockedOr;
-  case clang::X86::BI_InterlockedXor64:
-    return MSVCIntrin::_InterlockedXor;
-  case clang::X86::BI_InterlockedDecrement64:
-    return MSVCIntrin::_InterlockedDecrement;
-  case clang::X86::BI_InterlockedIncrement64:
-    return MSVCIntrin::_InterlockedIncrement;
-  }
-  llvm_unreachable("must return from switch");
-}
 
 // Convert the mask from an integer type to a vector of i1.
 static Value *getMaskVecValue(CodeGenFunction &CGF, Value *Mask,
@@ -161,9 +128,8 @@ static Value *EmitX86ExpandLoad(CodeGenFunction &CGF,
   Value *MaskVec = getMaskVecValue(
       CGF, Ops[2], cast<FixedVectorType>(ResultTy)->getNumElements());
 
-  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_expandload,
-                                           ResultTy);
-  return CGF.Builder.CreateCall(F, { Ptr, MaskVec, Ops[1] });
+  return CGF.Builder.CreateMaskedExpandLoad(ResultTy, Ptr, MaybeAlign(),
+                                            MaskVec, Ops[1]);
 }
 
 static Value *EmitX86CompressExpand(CodeGenFunction &CGF,
@@ -186,9 +152,8 @@ static Value *EmitX86CompressStore(CodeGenFunction &CGF,
 
   Value *MaskVec = getMaskVecValue(CGF, Ops[2], ResultTy->getNumElements());
 
-  llvm::Function *F = CGF.CGM.getIntrinsic(Intrinsic::masked_compressstore,
-                                           ResultTy);
-  return CGF.Builder.CreateCall(F, { Ops[1], Ptr, MaskVec });
+  return CGF.Builder.CreateMaskedCompressStore(Ops[1], Ptr, MaybeAlign(),
+                                               MaskVec);
 }
 
 static Value *EmitX86MaskLogic(CodeGenFunction &CGF, Instruction::BinaryOps Opc,
@@ -684,18 +649,11 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
   cast<llvm::GlobalValue>(CpuModel)->setDSOLocal(true);
 
   // Calculate the index needed to access the correct field based on the
-  // range. Also adjust the expected value.
+  // range. ABI_VALUE matches with compiler-rt/libgcc values.
   auto [Index, Value] = StringSwitch<std::pair<unsigned, unsigned>>(CPUStr)
-#define X86_VENDOR(ENUM, STRING)                                               \
-  .Case(STRING, {0u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_TYPE_ALIAS(ENUM, ALIAS)                                        \
-  .Case(ALIAS, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_TYPE(ENUM, STR)                                                \
-  .Case(STR, {1u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_SUBTYPE_ALIAS(ENUM, ALIAS)                                     \
-  .Case(ALIAS, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
-#define X86_CPU_SUBTYPE(ENUM, STR)                                             \
-  .Case(STR, {2u, static_cast<unsigned>(llvm::X86::ENUM)})
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE) .Case(STRING, {0u, ABI_VALUE})
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, {1u, ABI_VALUE})
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) .Case(STR, {2u, ABI_VALUE})
 #include "llvm/TargetParser/X86TargetParser.def"
                                .Default({0, 0});
   assert(Value != 0 && "Invalid CPUStr passed to CpuIs");
@@ -801,7 +759,8 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
 
   // Handle MSVC intrinsics before argument evaluation to prevent double
   // evaluation.
-  if (std::optional<MSVCIntrin> MsvcIntId = translateX86ToMsvcIntrin(BuiltinID))
+  if (std::optional<CodeGenUtils::MSVCIntrin> MsvcIntId =
+          CodeGenUtils::translateX86ToMsvcIntrin(BuiltinID))
     return EmitMSVCBuiltinExpr(*MsvcIntId, E);
 
   SmallVector<Value*, 4> Ops;
@@ -1024,14 +983,14 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
   }
   case X86::BI_mm_setcsr:
   case X86::BI__builtin_ia32_ldmxcsr: {
-    RawAddress Tmp = CreateMemTemp(E->getArg(0)->getType());
+    RawAddress Tmp = CreateMemTempWithoutCast(E->getArg(0)->getType());
     Builder.CreateStore(Ops[0], Tmp);
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse_ldmxcsr),
                               Tmp.getPointer());
   }
   case X86::BI_mm_getcsr:
   case X86::BI__builtin_ia32_stmxcsr: {
-    RawAddress Tmp = CreateMemTemp(E->getType());
+    RawAddress Tmp = CreateMemTempWithoutCast(E->getType());
     Builder.CreateCall(CGM.getIntrinsic(Intrinsic::x86_sse_stmxcsr),
                        Tmp.getPointer());
     return Builder.CreateLoad(Tmp, "stmxcsr");
@@ -2371,6 +2330,20 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     }
   }
 
+  case X86::BI__builtin_ia32_pmulhw128:
+  case X86::BI__builtin_ia32_pmulhw256:
+  case X86::BI__builtin_ia32_pmulhw512: {
+    Function *F = CGM.getIntrinsic(Intrinsic::smulh, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0], Ops[1]});
+  }
+
+  case X86::BI__builtin_ia32_pmulhuw128:
+  case X86::BI__builtin_ia32_pmulhuw256:
+  case X86::BI__builtin_ia32_pmulhuw512: {
+    Function *F = CGM.getIntrinsic(Intrinsic::umulh, Ops[0]->getType());
+    return Builder.CreateCall(F, {Ops[0], Ops[1]});
+  }
+
   case X86::BI__builtin_ia32_pmuludq128:
   case X86::BI__builtin_ia32_pmuludq256:
   case X86::BI__builtin_ia32_pmuludq512:
@@ -3005,12 +2978,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     std::swap(Ops[0], Ops[1]);
     Ops[2] = Builder.CreateZExt(Ops[2], Int64Ty);
     return Builder.CreateCall(F, Ops);
-  }
-  case X86::BI_ReadWriteBarrier:
-  case X86::BI_ReadBarrier:
-  case X86::BI_WriteBarrier: {
-    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
-                               llvm::SyncScope::SingleThread);
   }
 
   case X86::BI_AddressOfReturnAddress: {

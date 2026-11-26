@@ -1,14 +1,14 @@
-add_custom_target(libc_setjmp_unittests)
+add_libc_testsuite(libc-setjmp-tests)
 
 # Skip setjmp tests under sanitizers
 if(LLVM_USE_SANITIZER)
   return()
 endif()
 
-add_libc_unittest(
+add_libc_test(
   setjmp_test
   SUITE
-    libc_setjmp_unittests
+    libc-setjmp-tests
   SRCS
     setjmp_test.cpp
   CXX_STANDARD
@@ -18,10 +18,10 @@ add_libc_unittest(
     libc.src.setjmp.setjmp
 )
 
-add_libc_unittest(
+add_libc_test(
   sigsetjmp_test
   SUITE
-    libc_setjmp_unittests
+    libc-setjmp-tests
   SRCS
     sigsetjmp_test.cpp
   CXX_STANDARD

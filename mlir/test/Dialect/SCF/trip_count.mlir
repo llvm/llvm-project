@@ -663,7 +663,7 @@ func.func @trip_count_arith_add_negative_nuw_loop_unsigned(%lb : i32) -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %c4_i32 = arith.constant 4 : i32
   %c-16_i32 = arith.constant -16 : i32
-  // CHECK: "test.trip-count" = 0
+  // CHECK: "test.trip-count" = 1073741820
   %ub = arith.addi %lb, %c-16_i32 overflow<nuw> : i32
   %1 = scf.for unsigned %arg0 = %lb to %ub step %c4_i32 iter_args(%arg1 = %c0_i32) -> (i32)  : i32 {
     scf.yield %arg0 : i32
@@ -677,7 +677,7 @@ func.func @trip_count_arith_add_negative_nuw_loop_unsigned(%lb : i32) -> i32 {
 func.func @trip_count_arith_add_negative_nuw_loop_unsigned_step_dyn(%lb : i32, %step : i32) -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %c-16_i32 = arith.constant -16 : i32
-  // CHECK: "test.trip-count" = 0
+  // CHECK: "test.trip-count" = "none"
   %ub = arith.addi %lb, %c-16_i32 overflow<nuw> : i32
   %1 = scf.for unsigned %arg0 = %lb to %ub step %step iter_args(%arg1 = %c0_i32) -> (i32)  : i32 {
     scf.yield %arg0 : i32
@@ -763,6 +763,24 @@ func.func @trip_count_i8_signed_crossing_zero(%a : i32, %b : i32) -> i32 {
   // Signed i32 from -128 to 127, crossing zero
   // CHECK: "test.trip-count" = 255
   %r = scf.for %i = %c-128 to %c127 step %c1 iter_args(%0 = %a) -> i32 : i32 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_signed_overflow_fix(
+func.func @trip_count_i8_signed_overflow_fix(%a : i32, %b : i32) -> i32 {
+  %c-128 = arith.constant -128 : i8
+  %c127 = arith.constant 127 : i8
+  %c1 = arith.constant 1 : i8
+
+  // Signed i8 from -128 to 127: tests overflow fix
+  // Without the fix, computing (127 - (-128)) would overflow in i8.
+  // The trip count should be 255, but will be printed as -1 in i8 signed format.
+  // CHECK: "test.trip-count" = -1 : i8
+  %r = scf.for %i = %c-128 to %c127 step %c1 iter_args(%0 = %a) -> i32 : i8 {
     scf.yield %b : i32
   }
   return %r : i32

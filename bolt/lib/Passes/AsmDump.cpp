@@ -131,8 +131,8 @@ void dumpFunction(const BinaryFunction &BF) {
   BinaryContext::IndependentCodeEmitter MCEInstance =
       BC.createIndependentMCCodeEmitter();
   MCContext *LocalCtx = MCEInstance.LocalCtx.get();
-  std::unique_ptr<MCAsmBackend> MAB(
-      BC.TheTarget->createMCAsmBackend(*BC.STI, *BC.MRI, MCTargetOptions()));
+  std::unique_ptr<MCAsmBackend> MAB(BC.TheTarget->createMCAsmBackend(
+      *BC.STI, *BC.MRI, BC.Ctx->getTargetOptions()));
   int AsmPrinterVariant = BC.AsmInfo->getAssemblerDialect();
   std::unique_ptr<MCInstPrinter> InstructionPrinter(
       BC.TheTarget->createMCInstPrinter(*BC.TheTriple, AsmPrinterVariant,
@@ -142,7 +142,7 @@ void dumpFunction(const BinaryFunction &BF) {
   std::unique_ptr<MCStreamer> AsmStreamer(createAsmStreamer(
       *LocalCtx, std::move(FOut), std::move(InstructionPrinter),
       std::move(MCEInstance.MCE), std::move(MAB)));
-  AsmStreamer->initSections(true, *BC.STI);
+  AsmStreamer->initSections(*BC.STI);
   std::unique_ptr<TargetMachine> TM(BC.TheTarget->createTargetMachine(
       *BC.TheTriple, "", "", TargetOptions(), std::nullopt));
   std::unique_ptr<AsmPrinter> MAP(

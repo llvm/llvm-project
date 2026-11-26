@@ -4,7 +4,9 @@ set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES
   TypeSystem
 )
 
-add_subdirectory(ClangCommon)
 add_subdirectory(CPlusPlus)
 add_subdirectory(ObjC)
 add_subdirectory(ObjCPlusPlus)
+add_subdirectory(Fortran)
+add_subdirectory(Rust)
+add_subdirectory(D)

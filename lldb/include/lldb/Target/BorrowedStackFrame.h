@@ -78,15 +78,18 @@ public:
   lldb::RegisterContextSP GetRegisterContext() override;
 
   VariableList *GetVariableList(bool get_file_globals,
+                                bool include_synthetic_vars,
                                 Status *error_ptr) override;
 
   lldb::VariableListSP
   GetInScopeVariableList(bool get_file_globals,
+                         bool include_synthetic_vars = true,
                          bool must_have_valid_location = false) override;
 
   lldb::ValueObjectSP GetValueForVariableExpressionPath(
       llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
-      uint32_t options, lldb::VariableSP &var_sp, Status &error) override;
+      uint32_t options, lldb::VariableSP &var_sp, Status &error,
+      lldb::DILMode mode = lldb::eDILModeFull) override;
 
   bool HasDebugInformation() override;
 
@@ -118,12 +121,15 @@ public:
 
   lldb::ValueObjectSP GuessValueForAddress(lldb::addr_t addr) override;
 
-  lldb::ValueObjectSP GuessValueForRegisterAndOffset(ConstString reg,
+  lldb::ValueObjectSP GuessValueForRegisterAndOffset(llvm::StringRef reg,
                                                      int64_t offset) override;
 
   StructuredData::ObjectSP GetLanguageSpecificData() override;
 
   lldb::RecognizedStackFrameSP GetRecognizedFrame() override;
+
+  llvm::Expected<lldb::ThreadPlanSP>
+  GetThreadPlanForStepType(lldb::StepType step_type) override;
 
   /// Get the underlying borrowed frame.
   lldb::StackFrameSP GetBorrowedFrame() const;

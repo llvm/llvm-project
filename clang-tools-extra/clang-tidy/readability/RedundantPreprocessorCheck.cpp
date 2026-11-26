@@ -14,7 +14,43 @@
 
 namespace clang::tidy::readability {
 
+static StringRef getConditionText(SourceLocation Loc, const SourceManager &SM,
+                                  const LangOptions &LangOpts) {
+  bool Invalid = false;
+  const FileID FID = SM.getFileID(Loc);
+  const StringRef Buffer = SM.getBufferData(FID, &Invalid);
+  if (Invalid)
+    return {};
+
+  // Initialize a raw lexer starting exactly at the condition's location
+  Lexer RawLexer(SM.getLocForStartOfFile(FID), LangOpts, Buffer.begin(),
+                 SM.getCharacterData(Loc), Buffer.end());
+  RawLexer.SetCommentRetentionState(true);
+
+  Token Tok;
+  // Lex the 'if' token itself
+  RawLexer.LexFromRawLexer(Tok);
+
+  const unsigned StartOffset = SM.getFileOffset(Tok.getEndLoc());
+  unsigned EndOffset = StartOffset;
+
+  // Lex tokens until we hit the start of a new line or EOF.
+  // The lexer handles backslash line continuations automatically.
+  while (!RawLexer.LexFromRawLexer(Tok)) {
+    if (Tok.isAtStartOfLine() || Tok.is(tok::eof))
+      break;
+    EndOffset = SM.getFileOffset(Tok.getLocation()) + Tok.getLength();
+  }
+
+  if (EndOffset <= StartOffset)
+    return {};
+
+  // Extract the raw text from the buffer to preserve original spacing
+  return Buffer.substr(StartOffset, EndOffset - StartOffset).trim();
+}
+
 namespace {
+
 /// Information about an opening preprocessor directive.
 struct PreprocessorEntry {
   SourceLocation Loc;
@@ -37,8 +73,7 @@ public:
   void If(SourceLocation Loc, SourceRange ConditionRange,
           ConditionValueKind ConditionValue) override {
     const StringRef Condition =
-        Lexer::getSourceText(CharSourceRange::getTokenRange(ConditionRange),
-                             PP.getSourceManager(), PP.getLangOpts());
+        getConditionText(Loc, PP.getSourceManager(), PP.getLangOpts());
     checkMacroRedundancy(Loc, Condition, IfStack, DK_If, DK_If, true);
   }
 

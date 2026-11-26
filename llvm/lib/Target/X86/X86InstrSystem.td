@@ -601,10 +601,19 @@ let Predicates = [HasEGPR, In64BitMode] in {
   } // Defs SSP
 } // SchedRW
 
-let SchedRW = [WriteSystem] in {
+// ENDBR32/ENDBR64 execute as NOPs: they only mark valid indirect branch
+// targets for CET and are NOPs on processors without CET support.
+let SchedRW = [WriteNop] in {
     def ENDBR64 : I<0x1E, MRM_FA, (outs), (ins), "endbr64", []>, TB, XS;
     def ENDBR32 : I<0x1E, MRM_FB, (outs), (ins), "endbr32", []>, TB, XS;
 } // SchedRW
+
+//===----------------------------------------------------------------------===//
+// Indirect Branch History Fence
+let SchedRW = [WriteFence] in {
+  def IBHF : RI<0x1E, MRM_F8, (outs), (ins), "ibhf", []>, TB, XS,
+                Requires<[In64BitMode]>;
+}
 
 //===----------------------------------------------------------------------===//
 // XSAVE instructions

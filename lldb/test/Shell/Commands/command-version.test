@@ -1,6 +1,7 @@
 RUN: %lldb -b -o 'version -v' | FileCheck %s
 
 CHECK: lldb version
-CHECK: xml: {{yes|no}}
+# Configuration keys should be printed in alphabetical order.
 CHECK: python: {{yes|no}}
 CHECK: targets: [{{.*}}]
+CHECK: xml: {{yes|no}}

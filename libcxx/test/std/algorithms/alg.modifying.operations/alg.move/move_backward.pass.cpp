@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <iterator>
 #include <memory>
 #include <vector>

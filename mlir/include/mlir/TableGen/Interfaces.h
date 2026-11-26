@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
+#include <vector>
 
 namespace llvm {
 class Init;
@@ -46,6 +47,9 @@ public:
 
   // Return if this method is static.
   bool isStatic() const;
+
+  // Return if the method is a pure virtual one.
+  bool isPureVirtual() const;
 
   // Return if the method is only a declaration.
   bool isDeclaration() const;
@@ -97,6 +101,9 @@ public:
 
   // Return the C++ namespace of this interface.
   StringRef getCppNamespace() const;
+
+  // Return the C++ headers declaring this interface.
+  std::vector<StringRef> getCppIncludes() const;
 
   // Return the methods of this interface.
   ArrayRef<InterfaceMethod> getMethods() const;

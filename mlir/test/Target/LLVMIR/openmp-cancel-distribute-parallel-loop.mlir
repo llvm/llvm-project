@@ -25,7 +25,7 @@ llvm.func @cancel_distribute_parallel_do(%lb : i32, %ub : i32, %step : i32) {
 // CHECK:       omp_loop.exit:
 // CHECK:         call void @__kmpc_for_static_fini(
 // CHECK:         %[[VAL_106:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
-// CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_106]])
+// CHECK:         call void @__kmpc_barrier(ptr @3, i32 %[[VAL_106]])
 // CHECK:         br label %omp_loop.after
 // CHECK:       omp_loop.after:
 // CHECK:         br label %omp.region.cont6

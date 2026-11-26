@@ -28,8 +28,9 @@ namespace llvm {
 HANDLE
 llvm_execute_on_thread_impl(unsigned(__stdcall *ThreadFunc)(void *), void *Arg,
                             std::optional<unsigned> StackSizeInBytes) {
-  HANDLE hThread = (HANDLE)::_beginthreadex(NULL, StackSizeInBytes.value_or(0),
-                                            ThreadFunc, Arg, 0, NULL);
+  HANDLE hThread =
+      (HANDLE)::_beginthreadex(NULL, StackSizeInBytes.value_or(0), ThreadFunc,
+                               Arg, STACK_SIZE_PARAM_IS_A_RESERVATION, NULL);
 
   if (!hThread)
     ReportLastErrorFatal("_beginthreadex failed");
@@ -49,7 +50,15 @@ void llvm_thread_detach_impl(HANDLE hThread) {
     ReportLastErrorFatal("CloseHandle failed");
 }
 
-DWORD llvm_thread_get_id_impl(HANDLE hThread) { return ::GetThreadId(hThread); }
+DWORD llvm_thread_get_id_impl(HANDLE hThread) {
+  // AppVerifier (runtime verification tool from Windows SDK) reports an error
+  // when GetThreadId(NULL) is called. Suppress this by manually checking for
+  // NULL. Return 0 as this is what's returned (by documentation) if
+  // GetThreadId() fails.
+  if (!hThread)
+    return 0;
+  return ::GetThreadId(hThread);
+}
 
 DWORD llvm_thread_get_current_id_impl() { return ::GetCurrentThreadId(); }
 
@@ -117,8 +126,8 @@ llvm::set_thread_priority(ThreadPriority Priority) {
         _In_reads_bytes_(ThreadInformationSize) PVOID ThreadInformation,
         ULONG ThreadInformationSize);
     static const auto pfnSetThreadInformation =
-        (SetThreadInformation_t)::GetProcAddress(kernelM,
-                                                 "SetThreadInformation");
+        (SetThreadInformation_t)(void *)::GetProcAddress(
+            kernelM, "SetThreadInformation");
     if (pfnSetThreadInformation) {
       auto setThreadInformation = [](ULONG ControlMaskAndStateMask) {
         THREAD_POWER_THROTTLING_STATE state{};

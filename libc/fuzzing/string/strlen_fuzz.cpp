@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strlen.h"
-#include <cstdint>
-#include <cstring>
+#include <stdint.h>
+#include <string.h>
 
 // always null terminate the data
 extern "C" size_t LLVMFuzzerMutate(uint8_t *data, size_t size, size_t max_size);

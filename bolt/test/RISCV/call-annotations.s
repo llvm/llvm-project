@@ -28,12 +28,12 @@ f:
 // CHECK:      jr a0 # TAILCALL  # Offset: 0
 
 // CHECK-LABEL: Binary Function "_start" after fix-riscv-calls {
-// CHECK:      call f # Offset: 0
+// CHECK:      call f # Offset: 4
 // CHECK-NEXT: call f # Offset: 8
 // CHECK-NEXT: tail f # TAILCALL   # Offset: 12
 
 // CHECK-LABEL: Binary Function "long_tail" after fix-riscv-calls {
-// CHECK:      tail f # TAILCALL   # Offset: 4
+// CHECK:      tail f # TAILCALL   # Offset: 8
 
 // CHECK-LABEL: Binary Function "compressed_tail" after fix-riscv-calls {
 // CHECK:      jr a0 # TAILCALL  # Offset: 0

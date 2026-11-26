@@ -13,7 +13,7 @@ define i32 @mla_i32(ptr noalias nocapture readonly %A, ptr noalias nocapture rea
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -45,7 +45,7 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %res.010 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i32 %i.011
@@ -60,7 +60,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %res.0.lcssa
 }
@@ -74,7 +74,7 @@ define i32 @mla_i8(ptr noalias nocapture readonly %A, ptr noalias nocapture read
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 15
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 16
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -106,7 +106,7 @@ entry:
   %cmp9 = icmp sgt i32 %n, 0
   br i1 %cmp9, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.011 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %res.010 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i8, ptr %A, i32 %i.011
@@ -121,7 +121,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !6
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %res.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %res.0.lcssa
 }
@@ -135,7 +135,7 @@ define i32 @add_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -162,7 +162,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -172,7 +172,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -186,7 +186,7 @@ define i32 @mul_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -213,7 +213,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 1, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -223,7 +223,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 1, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -237,7 +237,7 @@ define i32 @and_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -264,7 +264,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 4294967295, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -274,7 +274,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 4294967295, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -288,7 +288,7 @@ define i32 @or_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -315,7 +315,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -325,7 +325,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -339,7 +339,7 @@ define i32 @xor_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -366,7 +366,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
@@ -376,7 +376,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -390,7 +390,7 @@ define float @fadd_f32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -417,7 +417,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi float [ %add, %for.body ], [ 0.0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.08
@@ -427,7 +427,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi float [ 0.0, %entry ], [ %add, %for.body ]
   ret float %r.0.lcssa
 }
@@ -441,7 +441,7 @@ define float @fmul_f32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i32 [[N]], 3
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N_RND_UP]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N_RND_UP]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -468,7 +468,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi float [ %add, %for.body ], [ 1.0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.08
@@ -478,7 +478,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi float [ 1.0, %entry ], [ %add, %for.body ]
   ret float %r.0.lcssa
 }
@@ -492,7 +492,7 @@ define i32 @smin_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -500,8 +500,7 @@ define i32 @smin_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 2147483647), [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP4]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
@@ -518,8 +517,7 @@ define i32 @smin_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[R_07:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[R_07]], [[TMP7]]
-; CHECK-NEXT:    [[ADD]] = select i1 [[C]], i32 [[R_07]], i32 [[TMP7]]
+; CHECK-NEXT:    [[ADD]] = call i32 @llvm.smin.i32(i32 [[R_07]], i32 [[TMP7]])
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -534,18 +532,17 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 2147483647, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
   %0 = load i32, ptr %arrayidx, align 4
-  %c = icmp slt i32 %r.07, %0
-  %add = select i1 %c, i32 %r.07, i32 %0
+  %add = call i32 @llvm.smin(i32 %r.07, i32 %0)
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 2147483647, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -559,7 +556,7 @@ define i32 @smax_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -567,8 +564,7 @@ define i32 @smax_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -2147483648), [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP4]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
@@ -585,8 +581,7 @@ define i32 @smax_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[R_07:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[R_07]], [[TMP7]]
-; CHECK-NEXT:    [[ADD]] = select i1 [[C]], i32 [[R_07]], i32 [[TMP7]]
+; CHECK-NEXT:    [[ADD]] = call i32 @llvm.smax.i32(i32 [[R_07]], i32 [[TMP7]])
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
@@ -601,18 +596,17 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ -2147483648, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
   %0 = load i32, ptr %arrayidx, align 4
-  %c = icmp sgt i32 %r.07, %0
-  %add = select i1 %c, i32 %r.07, i32 %0
+  %add = call i32 @llvm.smax(i32 %r.07, i32 %0)
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ -2147483648, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -626,7 +620,7 @@ define i32 @umin_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -634,8 +628,7 @@ define i32 @umin_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -1), [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP4]] = call <4 x i32> @llvm.umin.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
@@ -652,8 +645,7 @@ define i32 @umin_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[R_07:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[R_07]], [[TMP7]]
-; CHECK-NEXT:    [[ADD]] = select i1 [[C]], i32 [[R_07]], i32 [[TMP7]]
+; CHECK-NEXT:    [[ADD]] = call i32 @llvm.umin.i32(i32 [[R_07]], i32 [[TMP7]])
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
@@ -668,18 +660,17 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 4294967295, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
   %0 = load i32, ptr %arrayidx, align 4
-  %c = icmp ult i32 %r.07, %0
-  %add = select i1 %c, i32 %r.07, i32 %0
+  %add = call i32 @llvm.umin(i32 %r.07, i32 %0)
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 4294967295, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -693,7 +684,7 @@ define i32 @umax_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -701,8 +692,7 @@ define i32 @umax_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP3]], <4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP4]] = call <4 x i32> @llvm.umax.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
@@ -719,8 +709,7 @@ define i32 @umax_i32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[R_07:%.*]] = phi i32 [ [[ADD:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[C:%.*]] = icmp ugt i32 [[R_07]], [[TMP7]]
-; CHECK-NEXT:    [[ADD]] = select i1 [[C]], i32 [[R_07]], i32 [[TMP7]]
+; CHECK-NEXT:    [[ADD]] = call i32 @llvm.umax.i32(i32 [[R_07]], i32 [[TMP7]])
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
@@ -735,18 +724,17 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.08
   %0 = load i32, ptr %arrayidx, align 4
-  %c = icmp ugt i32 %r.07, %0
-  %add = select i1 %c, i32 %r.07, i32 %0
+  %add = call i32 @llvm.umax(i32 %r.07, i32 %0)
   %inc = add nuw nsw i32 %i.08, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi i32 [ 0, %entry ], [ %add, %for.body ]
   ret i32 %r.0.lcssa
 }
@@ -757,19 +745,53 @@ define float @fmin_f32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP19:%.*]] = and i32 [[N]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[TMP19]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float 1.000000e+03), [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x float> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ult <4 x float> [[VEC_PHI]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp uno <4 x float> [[TMP3]], [[TMP3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x float> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <4 x i32> [[TMP12]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i1> [[TMP5]], [[TMP13]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP6]], i32 [[INDEX]], i32 [[N_VEC]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call nnan float @llvm.vector.reduce.fmin.v4f32(<4 x float> [[TMP9]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP6]], true
+; CHECK-NEXT:    [[TMP18:%.*]] = and i1 [[CMP_N]], [[TMP17]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ 1.000000e+03, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[R_07:%.*]] = phi float [ [[ADD:%.*]], [[FOR_BODY]] ], [ 1.000000e+03, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i32 [[I_08]]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY1]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[R_07:%.*]] = phi float [ [[ADD:%.*]], [[FOR_BODY1]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = fcmp ult float [[R_07]], [[TMP0]]
 ; CHECK-NEXT:    [[ADD]] = select i1 [[C]], float [[R_07]], float [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY1]], !llvm.loop [[LOOP20:![0-9]+]]
 ; CHECK:       for.cond.cleanup.loopexit:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[FOR_BODY1]] ], [ [[TMP11]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi float [ 1.000000e+03, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
@@ -779,7 +801,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi float [ %add, %for.body ], [ 1000.0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.08
@@ -790,7 +812,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi float [ 1000.0, %entry ], [ %add, %for.body ]
   ret float %r.0.lcssa
 }
@@ -801,19 +823,53 @@ define float @fmax_f32(ptr nocapture readonly %x, i32 %n) #0 {
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP19:%.*]] = and i32 [[N]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[TMP19]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP4:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i32 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x float> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp fast ugt <4 x float> [[VEC_PHI]], [[TMP3]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP3]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = fcmp uno <4 x float> [[TMP3]], [[TMP3]]
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x float> [[TMP3]] to <4 x i32>
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq <4 x i32> [[TMP12]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[TMP14:%.*]] = or <4 x i1> [[TMP5]], [[TMP13]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP14]])
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP6]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP4]]
+; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP6]], i32 [[INDEX]], i32 [[N_VEC]]
+; CHECK-NEXT:    [[TMP11:%.*]] = call nnan float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[TMP9]])
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP17:%.*]] = xor i1 [[TMP6]], true
+; CHECK-NEXT:    [[TMP18:%.*]] = and i1 [[CMP_N]], [[TMP17]]
+; CHECK-NEXT:    br i1 [[TMP18]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[SCALAR_PH]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP10]], [[MIDDLE_BLOCK]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP11]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
+; CHECK-NEXT:    br label [[FOR_BODY1:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[R_07:%.*]] = phi float [ [[ADD:%.*]], [[FOR_BODY]] ], [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[X:%.*]], i32 [[I_08]]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY1]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[R_07:%.*]] = phi float [ [[ADD:%.*]], [[FOR_BODY1]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[X]], i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = fcmp fast ugt float [[R_07]], [[TMP0]]
 ; CHECK-NEXT:    [[ADD]] = select i1 [[C]], float [[R_07]], float [[TMP0]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]], label [[FOR_BODY]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY1]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       for.cond.cleanup.loopexit:
-; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ADD_LCSSA:%.*]] = phi float [ [[ADD]], [[FOR_BODY1]] ], [ [[TMP11]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[R_0_LCSSA:%.*]] = phi float [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[ADD_LCSSA]], [[FOR_COND_CLEANUP_LOOPEXIT]] ]
@@ -823,7 +879,7 @@ entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %i.08 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %r.07 = phi float [ %add, %for.body ], [ 0.0, %entry ]
   %arrayidx = getelementptr inbounds float, ptr %x, i32 %i.08
@@ -834,7 +890,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %r.0.lcssa = phi float [ 0.0, %entry ], [ %add, %for.body ]
   ret float %r.0.lcssa
 }
@@ -869,15 +925,15 @@ entry:
   %cmp7 = icmp sgt i32 %n, 0
   br i1 %cmp7, label %for.body.lr.ph, label %for.cond.cleanup
 
-for.body.lr.ph:                                   ; preds = %entry
+for.body.lr.ph:
   %conv1 = sext i32 %y to i64
   br label %for.body
 
-for.cond.cleanup:                                 ; preds = %for.body, %entry
+for.cond.cleanup:
   %s.0.lcssa = phi i64 [ 0, %entry ], [ %add, %for.body ]
   ret i64 %s.0.lcssa
 
-for.body:                                         ; preds = %for.body.lr.ph, %for.body
+for.body:
   %i.09 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %s.08 = phi i64 [ 0, %for.body.lr.ph ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.09

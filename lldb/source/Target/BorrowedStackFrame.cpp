@@ -20,8 +20,8 @@ BorrowedStackFrame::BorrowedStackFrame(
           borrowed_frame_sp->GetThread(), new_frame_index,
           borrowed_frame_sp->GetConcreteFrameIndex(),
           borrowed_frame_sp->GetRegisterContextSP(),
-          borrowed_frame_sp->GetStackID().GetPC(),
           borrowed_frame_sp->GetStackID().GetCallFrameAddressWithoutMetadata(),
+          borrowed_frame_sp->GetStackID().GetPC(),
           borrowed_frame_sp->m_behaves_like_zeroth_frame,
           &borrowed_frame_sp->GetSymbolContext(eSymbolContextEverything)),
       m_borrowed_frame_sp(borrowed_frame_sp),
@@ -86,22 +86,25 @@ RegisterContextSP BorrowedStackFrame::GetRegisterContext() {
 }
 
 VariableList *BorrowedStackFrame::GetVariableList(bool get_file_globals,
+                                                  bool include_synthetic_vars,
                                                   Status *error_ptr) {
-  return m_borrowed_frame_sp->GetVariableList(get_file_globals, error_ptr);
+  return m_borrowed_frame_sp->GetVariableList(
+      get_file_globals, include_synthetic_vars, error_ptr);
 }
 
 VariableListSP
 BorrowedStackFrame::GetInScopeVariableList(bool get_file_globals,
+                                           bool include_synthetic_vars,
                                            bool must_have_valid_location) {
-  return m_borrowed_frame_sp->GetInScopeVariableList(get_file_globals,
-                                                     must_have_valid_location);
+  return m_borrowed_frame_sp->GetInScopeVariableList(
+      get_file_globals, include_synthetic_vars, must_have_valid_location);
 }
 
 ValueObjectSP BorrowedStackFrame::GetValueForVariableExpressionPath(
     llvm::StringRef var_expr, DynamicValueType use_dynamic, uint32_t options,
-    VariableSP &var_sp, Status &error) {
+    VariableSP &var_sp, Status &error, lldb::DILMode mode) {
   return m_borrowed_frame_sp->GetValueForVariableExpressionPath(
-      var_expr, use_dynamic, options, var_sp, error);
+      var_expr, use_dynamic, options, var_sp, error, mode);
 }
 
 bool BorrowedStackFrame::HasDebugInformation() {
@@ -136,6 +139,11 @@ bool BorrowedStackFrame::IsArtificial() const {
 
 bool BorrowedStackFrame::IsHidden() { return m_borrowed_frame_sp->IsHidden(); }
 
+llvm::Expected<lldb::ThreadPlanSP>
+BorrowedStackFrame::GetThreadPlanForStepType(lldb::StepType step_type) {
+  return m_borrowed_frame_sp->GetThreadPlanForStepType(step_type);
+}
+
 const char *BorrowedStackFrame::GetFunctionName() {
   return m_borrowed_frame_sp->GetFunctionName();
 }
@@ -161,7 +169,7 @@ ValueObjectSP BorrowedStackFrame::GuessValueForAddress(addr_t addr) {
 }
 
 ValueObjectSP
-BorrowedStackFrame::GuessValueForRegisterAndOffset(ConstString reg,
+BorrowedStackFrame::GuessValueForRegisterAndOffset(llvm::StringRef reg,
                                                    int64_t offset) {
   return m_borrowed_frame_sp->GuessValueForRegisterAndOffset(reg, offset);
 }

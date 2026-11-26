@@ -168,4 +168,4 @@ int one;
         self.assertEqual(location1, location1_2)
         self.assertNotEqual(location1, location2)
         self.assertNotEqual(location1, file2_location1)
-        self.assertNotEqual(location1, "foo")
+        self.assertFalse(location1 == "foo")

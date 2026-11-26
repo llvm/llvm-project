@@ -86,7 +86,7 @@ def testTraverseOpRegionBlockIterators():
     # CHECK:           OP 1: func.return
     walk_operations("", op)
 
-    # CHECK:    Region iter: <mlir.{{.+}}.RegionIterator
+    # CHECK:    Region iter: <iterator
     # CHECK:     Block iter: <mlir.{{.+}}.BlockIterator
     # CHECK: Operation iter: <mlir.{{.+}}.OperationIterator
     print("   Region iter:", iter(op.regions))
@@ -108,6 +108,17 @@ def testTraverseOpRegionBlockIterators():
     except IndexError as e:
         # CHECK: attempt to access out of bounds operation
         print(e)
+
+    # Verify that iterating a sliced region list yields the correct
+    # number of elements (i.e. respects length and step).
+    with Location.unknown(ctx):
+        op4 = Operation.create("custom.op", regions=4)
+        r = op4.regions
+        assert len(list(r[:])) == 4
+        assert len(list(r[1:])) == 3
+        assert len(list(r[::2])) == 2
+        assert len(list(r[1:3])) == 2
+        assert len(list(r[::-1])) == 4
 
 
 # Verify index based traversal of the op/region/block hierarchy.
@@ -1220,6 +1231,160 @@ def testOperationHash():
             assert hash(op2) == hash(custom_op2)
 
 
+# CHECK-LABEL: TEST: test_structural_equivalence
+@run
+def test_structural_equivalence():
+    ctx = Context()
+    with ctx:
+        module = Module.parse(
+            r"""
+        func.func @f() -> i32 {
+          %0 = arith.constant 42 : i32
+          %1 = arith.constant 42 : i32
+          %2 = arith.constant 7 : i32
+          %3 = arith.subi %0, %2 : i32
+          %4 = arith.subi %0, %2 : i32
+          %5 = arith.subi %0, %2 {dialect.discardable} : i32
+          %6 = arith.addi %0, %2 : i32
+          %7 = arith.addi %2, %0 : i32
+          return %0 : i32
+        }
+      """,
+            ctx,
+        )
+        operations = list(module.body.operations[0].regions[0].blocks[0].operations)
+        c42a, c42b, c7, sub3, sub4, sub5, add6, add7, *_ = operations
+
+        assert not c42a.is_structurally_equivalent(c42b)
+        assert c42a.is_structurally_equivalent(
+            c42b, OperationEquivalenceFlags.IGNORE_LOCATIONS
+        )
+
+        assert not c42a.is_structurally_equivalent(
+            c7, OperationEquivalenceFlags.IGNORE_LOCATIONS
+        )
+
+        assert c42a.is_structurally_equivalent(
+            c42a, OperationEquivalenceFlags.IGNORE_LOCATIONS
+        )
+
+        assert sub3.is_structurally_equivalent(
+            sub4, OperationEquivalenceFlags.IGNORE_LOCATIONS
+        )
+
+        assert not c42a.is_structurally_equivalent(
+            sub3, OperationEquivalenceFlags.IGNORE_LOCATIONS
+        )
+
+        discardable_flags = (
+            OperationEquivalenceFlags.IGNORE_LOCATIONS
+            | OperationEquivalenceFlags.IGNORE_DISCARDABLE_ATTRS
+        )
+
+        assert not sub3.is_structurally_equivalent(
+            sub5, OperationEquivalenceFlags.IGNORE_LOCATIONS
+        )
+        assert sub3.is_structurally_equivalent(sub5, discardable_flags)
+
+        assert add6.is_structurally_equivalent(
+            add7, OperationEquivalenceFlags.IGNORE_LOCATIONS
+        )
+        assert not add6.is_structurally_equivalent(
+            add7,
+            OperationEquivalenceFlags.IGNORE_LOCATIONS
+            | OperationEquivalenceFlags.IGNORE_COMMUTATIVITY,
+        )
+
+        properties_flags = (
+            OperationEquivalenceFlags.IGNORE_LOCATIONS
+            | OperationEquivalenceFlags.IGNORE_PROPERTIES
+        )
+
+        assert c42a.is_structurally_equivalent(c7, properties_flags)
+
+        # CHECK: structural equivalence passed
+        print("structural equivalence passed")
+
+
+# CHECK-LABEL: TEST: test_structural_hash
+@run
+def test_structural_hash():
+    ctx = Context()
+    with ctx:
+        module = Module.parse(
+            r"""
+        func.func @f() -> i32 {
+          %0 = arith.constant 42 : i32
+          %1 = arith.constant 42 : i32
+          %2 = arith.constant 7 : i32
+          %3 = arith.subi %0, %2 : i32
+          %4 = arith.subi %0, %2 : i32
+          %5 = arith.subi %0, %2 {dialect.discardable} : i32
+          %6 = arith.addi %0, %2 : i32
+          %7 = arith.addi %2, %0 : i32
+          return %0 : i32
+        }
+      """,
+            ctx,
+        )
+        operations = list(module.body.operations[0].regions[0].blocks[0].operations)
+        c42a, c42b, c7, sub3, sub4, sub5, add6, add7, *_ = operations
+
+        discardable_flags = (
+            OperationEquivalenceFlags.IGNORE_LOCATIONS
+            | OperationEquivalenceFlags.IGNORE_DISCARDABLE_ATTRS
+        )
+
+        properties_flags = (
+            OperationEquivalenceFlags.IGNORE_LOCATIONS
+            | OperationEquivalenceFlags.IGNORE_PROPERTIES
+        )
+
+        c42a_hash = c42a.structural_hash()
+        c42b_hash = c42b.structural_hash()
+        assert c42a_hash != c42b_hash
+
+        c42a_hash = c42a.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        c42b_hash = c42b.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        assert c42a_hash == c42b_hash
+
+        sub3_hash = sub3.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        sub5_hash = sub5.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        assert sub3_hash != sub5_hash
+
+        sub3_hash = sub3.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        sub4_hash = sub4.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        assert sub3_hash == sub4_hash
+
+        sub3_hash = sub3.structural_hash(discardable_flags)
+        sub5_hash = sub5.structural_hash(discardable_flags)
+        assert sub3_hash == sub5_hash
+
+        add6_hash = add6.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        add7_hash = add7.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        assert add6_hash == add7_hash
+
+        commutative_flags = (
+            OperationEquivalenceFlags.IGNORE_LOCATIONS
+            | OperationEquivalenceFlags.IGNORE_COMMUTATIVITY
+        )
+
+        add6_hash = add6.structural_hash(commutative_flags)
+        add7_hash = add7.structural_hash(commutative_flags)
+        assert add6_hash != add7_hash
+
+        c42a_hash = c42a.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        c7_hash = c7.structural_hash(OperationEquivalenceFlags.IGNORE_LOCATIONS)
+        assert c42a_hash != c7_hash
+
+        c42a_hash = c42a.structural_hash(properties_flags)
+        c7_hash = c7.structural_hash(properties_flags)
+        assert c42a_hash == c7_hash
+
+        # CHECK: structural hash passed
+        print("structural hash passed")
+
+
 # CHECK-LABEL: TEST: testOperationParse
 @run
 def testOperationParse():
@@ -1324,6 +1489,73 @@ def testOpWalk():
     except RuntimeError:
         print("Exception raised")
 
+    # Test op_class filter: only visits ops of the requested type.
+    module = Module.parse(
+        r"""
+    module {
+      func.func @f() {
+        func.return
+      }
+      func.func @g() {
+        func.return
+      }
+      arith.constant dense<0> : tensor<i32>
+    }
+  """,
+        ctx,
+    )
+
+    # CHECK-NEXT: only FuncOp visited: True
+    only_funcs = True
+
+    def check_type(op):
+        nonlocal only_funcs
+        if not isinstance(op.opview, func.FuncOp):
+            only_funcs = False
+        return WalkResult.ADVANCE
+
+    module.operation.walk(check_type, op_class=func.FuncOp)
+    print(f"only FuncOp visited: {only_funcs}")
+
+    # CHECK-NEXT: interrupted after: 1
+    seen = []
+
+    def stop_after_first(op):
+        seen.append(op.opview)
+        return WalkResult.INTERRUPT
+
+    module.operation.walk(stop_after_first, op_class=func.FuncOp)
+    print(f"interrupted after: {len(seen)}")
+
+    # CHECK-NEXT: never called: True
+    called = False
+
+    def should_not_run(op):
+        nonlocal called
+        called = True
+        return WalkResult.ADVANCE
+
+    module.operation.walk(should_not_run, op_class=scf.ForOp)
+    print(f"never called: {not called}")
+
+    # CHECK-NEXT: collected func.FuncOp: ['"f"', '"g"']
+    collected = []
+
+    def collect(op):
+        collected.append(op.opview)
+        return WalkResult.ADVANCE
+
+    module.operation.walk(collect, op_class=func.FuncOp)
+    assert all(isinstance(r, func.FuncOp) for r in collected)
+    print(f"collected func.FuncOp: {[str(r.name) for r in collected]}")
+
+    # Test op_class with walk_order: pre-order visits FuncOps in source order.
+    # CHECK-NEXT: pre-order FuncOp names: ['"f"', '"g"']
+    collected.clear()
+    module.operation.walk(collect, WalkOrder.PRE_ORDER, op_class=func.FuncOp)
+    assert all(isinstance(r, func.FuncOp) for r in collected)
+    print(f"pre-order FuncOp names: {[str(r.name) for r in collected]}")
+
 
 # CHECK-LABEL: TEST: testOpReplaceUsesWith
 @run
@@ -1391,3 +1623,94 @@ def testIndexSwitch():
                 assert len([i for i in switch_op.caseRegions]) == 3
                 assert len(switch_op.caseRegions[1:]) == 2
                 assert len([i for i in switch_op.caseRegions[1:]]) == 2
+
+
+# CHECK-LABEL: TEST: testGetParentOfType
+@run
+def testGetParentOfType():
+    with Context() as ctx, Location.unknown():
+        ctx.allow_unregistered_dialects = True
+        idx = IndexType.get()
+        # Build: func.func -> scf.for -> custom.base_op
+        func_op: func.FuncOp = func.FuncOp("test_fn", ([], []))
+        with InsertionPoint(func_op.add_entry_block()):
+            lower_bound = arith.ConstantOp(idx, 0)
+            upper_bound = arith.ConstantOp(idx, 10)
+            step = arith.ConstantOp(idx, 1)
+            for_op: scf.ForOp = scf.ForOp(lower_bound, upper_bound, step)
+            with InsertionPoint(for_op.body):
+                base_op: Operation = Operation.create("custom.base_op")
+                scf.YieldOp([])
+            func.ReturnOp([])
+
+        # CHECK: get_parent_of_type detached->func.func: None
+        detached: Operation = Operation.create("custom.detached")
+        res = get_parent_of_type(detached, func.FuncOp)
+        print(f"get_parent_of_type detached->func.func: {res}")
+        assert res is None
+
+        # CHECK: get_parent_of_type base_op->func.func: func.func
+        res = get_parent_of_type(base_op, func.FuncOp)
+        print(f"get_parent_of_type base_op->func.func: {res.operation.name}")
+        assert isinstance(res, func.FuncOp)
+
+        # CHECK: get_parent_of_type func_op->func.func: None
+        res = get_parent_of_type(func_op, func.FuncOp)
+        print(f"get_parent_of_type func_op->func.func: {res}")
+        assert res is None
+
+        # CHECK: get_parent_of_type base_op->scf.if: None
+        res = get_parent_of_type(base_op, scf.IfOp)
+        print(f"get_parent_of_type base_op->scf.if: {res}")
+        assert res is None
+
+        try:
+            get_parent_of_type(base_op, int)
+            assert False, "expected TypeError"
+        except TypeError:
+            pass
+
+
+# CHECK-LABEL: TEST: test_get_ops_of_type
+@run
+def test_get_ops_of_type():
+    with Context(), Location.unknown():
+        module = Module.parse(
+            r"""
+    module {
+      func.func @f() {
+        func.return
+      }
+      func.func @g() {
+        func.return
+      }
+    }
+  """
+        )
+
+        # CHECK: get_ops_of_type func.func count: 2
+        results = get_ops_of_type(module, func.FuncOp)
+        print(f"get_ops_of_type func.func count: {len(results)}")
+        assert len(results) == 2
+        assert all(isinstance(r, func.FuncOp) for r in results)
+
+        # CHECK: get_ops_of_type scf.for count: 0
+        results = get_ops_of_type(module, scf.ForOp)
+        print(f"get_ops_of_type scf.for count: {len(results)}")
+        assert len(results) == 0
+
+        # CHECK: get_ops_of_type func_op->func.ReturnOp count: 1
+        # Accepts OpView as root.
+        func_op = get_ops_of_type(module, func.FuncOp)[0]
+        results = get_ops_of_type(func_op, func.ReturnOp)
+        print(f"get_ops_of_type func_op->func.ReturnOp count: {len(results)}")
+        assert len(results) == 1
+        assert isinstance(results[0], func.ReturnOp)
+
+        # CHECK: get_ops_of_type no filter count: 5
+        # No op_class collects all ops.
+        results = get_ops_of_type(module)
+        print(f"get_ops_of_type no filter count: {len(results)}")
+        assert len(results) == 5
+        assert any(isinstance(r, func.FuncOp) for r in results)
+        assert any(isinstance(r, func.ReturnOp) for r in results)

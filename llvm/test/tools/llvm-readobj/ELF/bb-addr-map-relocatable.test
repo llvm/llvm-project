@@ -155,7 +155,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=3 -o %t3.o
 # RUN: llvm-readobj %t3.o --bb-addr-map 2>&1 | FileCheck %s --check-prefix=MISSING-RELOCATION -DFILE=%t3.o
 
-# MISSING-RELOCATION: warning: '[[FILE]]': unable to dump SHT_LLVM_BB_ADDR_MAP section with index 2: failed to get relocation data for offset: 2 in section SHT_LLVM_BB_ADDR_MAP section with index 2
+# MISSING-RELOCATION: warning: '[[FILE]]': unable to dump BB addr map section: failed to get relocation data for offset: 2 in SHT_LLVM_BB_ADDR_MAP section with index 2
 
 ## Check that if we have a missing relocated section, we fail and give the
 ## appropriate warning.

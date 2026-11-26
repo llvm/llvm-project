@@ -33,9 +33,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 26
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _ElementType, size_t _ByteAlignment>
 struct aligned_accessor {
@@ -52,35 +52,34 @@ struct aligned_accessor {
 
   static constexpr size_t byte_alignment = _ByteAlignment;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr aligned_accessor() noexcept = default;
+  constexpr aligned_accessor() noexcept = default;
 
   template <class _OtherElementType, size_t _OtherByteAlignment>
     requires(is_convertible_v<_OtherElementType (*)[], element_type (*)[]> && _OtherByteAlignment >= byte_alignment)
-  _LIBCPP_HIDE_FROM_ABI constexpr aligned_accessor(aligned_accessor<_OtherElementType, _OtherByteAlignment>) noexcept {}
+  constexpr aligned_accessor(aligned_accessor<_OtherElementType, _OtherByteAlignment>) noexcept {}
 
   template <class _OtherElementType>
     requires(is_convertible_v<_OtherElementType (*)[], element_type (*)[]>)
-  _LIBCPP_HIDE_FROM_ABI explicit constexpr aligned_accessor(default_accessor<_OtherElementType>) noexcept {}
+  explicit constexpr aligned_accessor(default_accessor<_OtherElementType>) noexcept {}
 
   template <class _OtherElementType>
     requires(is_convertible_v<element_type (*)[], _OtherElementType (*)[]>)
-  _LIBCPP_HIDE_FROM_ABI constexpr operator default_accessor<_OtherElementType>() const noexcept {
+  constexpr operator default_accessor<_OtherElementType>() const noexcept {
     return {};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reference access(data_handle_type __p, size_t __i) const noexcept {
+  constexpr reference access(data_handle_type __p, size_t __i) const noexcept {
     return std::assume_aligned<byte_alignment>(__p)[__i];
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr typename offset_policy::data_handle_type
-  offset(data_handle_type __p, size_t __i) const noexcept {
+  constexpr typename offset_policy::data_handle_type offset(data_handle_type __p, size_t __i) const noexcept {
     return std::assume_aligned<byte_alignment>(__p) + __i;
   }
 };
 
-#endif // _LIBCPP_STD_VER >= 26
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_POP_MACROS
 

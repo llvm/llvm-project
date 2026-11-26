@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple s390x-ibm-linux -emit-llvm -fzvector -o - %s \
 // RUN:   -Wno-undefined-internal 2>&1 | FileCheck  %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple s390x-ibm-linux -emit-llvm -fzvector -o - %s   -Wno-undefined-internal 2>&1 | FileCheck  %s %}
 //
 // Test that the "s390x-visible-vector-ABI" module flag is not emitted.
 

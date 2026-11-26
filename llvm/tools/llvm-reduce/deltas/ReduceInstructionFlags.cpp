@@ -45,6 +45,9 @@ void llvm::reduceInstructionFlagsDeltaPass(Oracle &O,
       } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
         if (ICmp->hasSameSign() && !O.shouldKeep())
           ICmp->setSameSign(false);
+      } else if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
+        if (ASC->hasNonNull() && !O.shouldKeep())
+          ASC->setNonNull(false);
       } else if (auto *GEP = dyn_cast<GetElementPtrInst>(&I)) {
         GEPNoWrapFlags NW = GEP->getNoWrapFlags();
         if (NW.isInBounds() && !O.shouldKeep())

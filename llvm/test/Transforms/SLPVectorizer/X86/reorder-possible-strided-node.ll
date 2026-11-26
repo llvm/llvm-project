@@ -13,8 +13,8 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP9]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP9]], i64 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP12]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[TMP7]]
@@ -74,8 +74,8 @@ define void @test1() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 2
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP9]], i32 3
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[TMP9]], i64 3
 ; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i32> [[TMP10]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP12]], <4 x i32> [[TMP14]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i32> [[TMP1]], [[TMP7]]
@@ -137,8 +137,8 @@ define void @test_div() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP4]], i64 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> [[TMP12]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP1]], [[TMP7]]
@@ -198,8 +198,8 @@ define void @test_rem() {
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 null, <8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP8]], <8 x i32> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[ARRAYIDX22]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 2
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP4]], i32 3
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[TMP4]], i64 3
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> [[TMP12]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul <4 x i32> [[TMP1]], [[TMP7]]

@@ -20,7 +20,7 @@ define double @func2(double %a, double %b) {
 
 define fp128 @func3(fp128 %a, fp128 %b) {
 ; CHECK-LABEL: func3:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s4, __divtf3@lo
 ; CHECK-NEXT:    and %s4, %s4, (32)0
 ; CHECK-NEXT:    lea.sl %s12, __divtf3@hi(, %s4)
@@ -52,7 +52,7 @@ define double @func5(double %a) {
 
 define fp128 @func6(fp128 %a) {
 ; CHECK-LABEL: func6:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s4, .LCPI{{[0-9]+}}_0@hi(, %s2)
@@ -92,7 +92,7 @@ define double @func8(double %a) {
 ; Function Attrs: norecurse nounwind readnone
 define fp128 @func9(fp128 %a) {
 ; CHECK-LABEL: func9:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s2, .LCPI{{[0-9]+}}_0@lo
 ; CHECK-NEXT:    and %s2, %s2, (32)0
 ; CHECK-NEXT:    lea.sl %s4, .LCPI{{[0-9]+}}_0@hi(, %s2)

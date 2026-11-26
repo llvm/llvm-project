@@ -33,6 +33,12 @@
 # CHECK-U:      Section:
 # CHECK-U-SAME:          .text
 
+## When the definition is not available, the error references the object file,
+## not <internal>.
+# RUN: not ld.lld -u foo %t1.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK-UERR
+# CHECK-UERR:      error: undefined symbol: foo
+# CHECK-UERR-NEXT: >>> referenced by {{.*}}1.o
+
 .weak foo
 call foo@PLT
 

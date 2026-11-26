@@ -97,7 +97,7 @@ uint64_t SymbolFileDWARFDwo::GetDebugInfoSize(bool load_all_debug_info) {
 }
 
 bool SymbolFileDWARFDwo::ParseVendorDWARFOpcode(
-    uint8_t op, const DataExtractor &opcodes, lldb::offset_t &offset,
+    uint8_t op, const llvm::DataExtractor &opcodes, lldb::offset_t &offset,
     RegisterContext *reg_ctx, lldb::RegisterKind reg_kind,
     std::vector<Value> &stack) const {
   return GetBaseSymbolFile().ParseVendorDWARFOpcode(op, opcodes, offset,
@@ -156,6 +156,12 @@ void SymbolFileDWARFDwo::FindGlobalVariables(
     uint32_t max_matches, VariableList &variables) {
   GetBaseSymbolFile().FindGlobalVariables(name, parent_decl_ctx, max_matches,
                                           variables);
+}
+
+// Parse time is added to the module's symbol file, so this file's own
+// m_parse_time is left unused.
+StatsDuration &SymbolFileDWARFDwo::GetDebugInfoParseTimeRef() {
+  return GetBaseSymbolFile().GetDebugInfoParseTimeRef();
 }
 
 bool SymbolFileDWARFDwo::GetDebugInfoIndexWasLoadedFromCache() const {

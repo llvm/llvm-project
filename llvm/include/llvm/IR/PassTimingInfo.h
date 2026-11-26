@@ -21,13 +21,23 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Timer.h"
 #include <memory>
-#include <utility>
 
 namespace llvm {
 
 class Pass;
 class PassInstrumentationCallbacks;
 class raw_ostream;
+
+/// If the user specifies the -time-passes argument on an LLVM tool command line
+/// then the value of this boolean will be true, otherwise false.
+/// This is the storage for the -time-passes option.
+LLVM_ABI extern bool TimePassesIsEnabled;
+/// If TimePassesPerRun is true, there would be one line of report for
+/// each pass invocation.
+/// If TimePassesPerRun is false, there would be only one line of
+/// report for each pass (even there are more than one pass objects).
+/// (For new pass manager only)
+LLVM_ABI extern bool TimePassesPerRun;
 
 /// If -time-passes has been specified, report the timings immediately and then
 /// reset the timers to zero. By default it uses the stream created by
@@ -42,11 +52,6 @@ LLVM_ABI Timer *getPassTimer(Pass *);
 /// execution time. They collect timing info into individual timers as
 /// passes are being run.
 class TimePassesHandler {
-  /// Value of this type is capable of uniquely identifying pass invocations.
-  /// It is a pair of string Pass-Identifier (which for now is common
-  /// to all the instance of a given pass) + sequential invocation counter.
-  using PassInvocationID = std::pair<StringRef, unsigned>;
-
   /// Groups of timers for passes and analyses.
   TimerGroup &PassTG =
       NamedRegionTimer::getNamedTimerGroup(PassGroupName, PassGroupDesc);

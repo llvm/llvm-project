@@ -258,6 +258,11 @@ public:
   DeploymentInfo GetDeploymentInfo(const struct load_command &,
                                    uint64_t load_command_address,
                                    bool is_executable);
+  // command_data contains the validated command prefix, or is null when that
+  // optional prefix could not be read from the inferior.
+  DeploymentInfo GetDeploymentInfo(const struct load_command &,
+                                   const uint8_t *command_data,
+                                   bool is_executable);
   static std::optional<std::string> GetPlatformString(unsigned char platform);
   bool GetMachOInformationFromMemory(uint32_t platform,
                                      nub_addr_t mach_o_header_addr,
@@ -265,7 +270,7 @@ public:
                                      struct mach_o_information &inf);
   JSONGenerator::ObjectSP FormatDynamicLibrariesIntoJSON(
       const std::vector<struct binary_image_information> &image_infos,
-      bool report_load_commands);
+      DNBBinaryInformationLevel info_level);
   uint32_t GetPlatform();
   /// Get the runtime platform from DYLD via SPI.
   uint32_t GetProcessPlatformViaDYLDSPI();
@@ -279,13 +284,15 @@ public:
       std::vector<struct binary_image_information> &image_infos);
   JSONGenerator::ObjectSP
   GetLibrariesInfoForAddresses(nub_process_t pid,
+                               DNBBinaryInformationLevel info_level,
                                std::vector<uint64_t> &macho_addresses);
   JSONGenerator::ObjectSP
   GetAllLoadedLibrariesInfos(nub_process_t pid,
-                             bool fetch_report_load_commands);
+                             DNBBinaryInformationLevel info_level);
   bool GetDebugserverSharedCacheInfo(uuid_t &uuid,
                                      std::string &shared_cache_path);
-  bool GetInferiorSharedCacheFilepath(std::string &inferior_sc_path);
+  bool GetInferiorSharedCacheFilepathAndSize(std::string &inferior_sc_path,
+                                             uint64_t &size);
   JSONGenerator::ObjectSP GetInferiorSharedCacheInfo(nub_process_t pid);
 
   nub_size_t GetNumThreads() const;
@@ -483,6 +490,7 @@ private:
   void *(*m_dyld_process_snapshot_get_shared_cache)(void *snapshot);
   void (*m_dyld_shared_cache_for_each_file)(
       void *cache, void (^block)(const char *file_path));
+  uint64_t (*m_dyld_shared_cache_get_mapped_size)(void *cache);
   void (*m_dyld_process_snapshot_dispose)(void *snapshot);
   void (*m_dyld_process_dispose)(void *process);
   void (*m_dyld_process_info_for_each_image)(

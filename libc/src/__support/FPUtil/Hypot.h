@@ -9,15 +9,19 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_HYPOT_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_HYPOT_H
 
-#include "BasicOperations.h"
-#include "FEnvImpl.h"
-#include "FPBits.h"
-#include "cast.h"
-#include "rounding_mode.h"
+#include "hdr/fenv_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/type_traits.h"
-#include "src/__support/common.h"
+#include "src/__support/FPUtil/FEnvImpl.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/except_value_utils.h"
+#include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/types.h"
 #include "src/__support/uint128.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -105,7 +109,7 @@ template <> struct DoubleLength<uint64_t> {
 //   - HYPOT(x, y) is NaN if x or y is NaN.
 //
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
-LIBC_INLINE T hypot(T x, T y) {
+LIBC_INLINE constexpr T hypot(T x, T y) {
   using FPBits_t = FPBits<T>;
   using StorageType = typename FPBits<T>::StorageType;
   using DStorageType = typename DoubleLength<StorageType>::Type;
@@ -150,8 +154,8 @@ LIBC_INLINE T hypot(T x, T y) {
   uint64_t out_exp = a_exp;
   StorageType a_mant = a_bits.get_mantissa();
   StorageType b_mant = b_bits.get_mantissa();
-  DStorageType a_mant_sq, b_mant_sq;
-  bool sticky_bits;
+  DStorageType a_mant_sq{}, b_mant_sq{};
+  bool sticky_bits{};
 
   // Add an extra bit to simplify the final rounding bit computation.
   constexpr StorageType ONE = StorageType(1) << (FPBits_t::FRACTION_LEN + 1);
@@ -159,8 +163,8 @@ LIBC_INLINE T hypot(T x, T y) {
   a_mant <<= 1;
   b_mant <<= 1;
 
-  StorageType leading_one;
-  int y_mant_width;
+  StorageType leading_one{};
+  int y_mant_width{};
   if (a_exp != 0) {
     leading_one = ONE;
     a_mant |= ONE;
@@ -198,12 +202,8 @@ LIBC_INLINE T hypot(T x, T y) {
       sticky_bits = sticky_bits || ((sum & 0x3U) != 0);
       sum >>= 2;
       ++out_exp;
-      if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
-        if (int round_mode = quick_get_round();
-            round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
-          return FPBits_t::inf().get_val();
-        return FPBits_t::max_normal().get_val();
-      }
+      if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT)
+        return set_overflow<T>();
     } else {
       // For denormal result, we simply move the leading bit of the result to
       // the left by 1.
@@ -218,8 +218,8 @@ LIBC_INLINE T hypot(T x, T y) {
 
   for (StorageType current_bit = leading_one >> 1; current_bit;
        current_bit >>= 1) {
-    r = static_cast<StorageType>((r << 1)) +
-        ((tail_bits & current_bit) ? 1 : 0);
+    r = static_cast<StorageType>((r << 1) +
+                                 ((tail_bits & current_bit) ? 1 : 0));
     StorageType tmp = static_cast<StorageType>((y_new << 1)) +
                       current_bit; // 2*y_new(n - 1) + 2^(-n)
     if (r >= tmp) {
@@ -231,6 +231,9 @@ LIBC_INLINE T hypot(T x, T y) {
   bool round_bit = y_new & StorageType(1);
   bool lsb = y_new & StorageType(2);
 
+  if ((out_exp == 0) && (round_bit || sticky_bits || (r != 0)))
+    raise_underflow_except_if_required<T>();
+
   if (y_new >= ONE) {
     y_new -= ONE;
 
@@ -241,6 +244,11 @@ LIBC_INLINE T hypot(T x, T y) {
 
   y_new >>= 1;
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  // Round to the nearest, tie to even.
+  if (round_bit && (lsb || sticky_bits || (r != 0)))
+    ++y_new;
+#else
   // Round to the nearest, tie to even.
   int round_mode = quick_get_round();
   switch (round_mode) {
@@ -254,21 +262,21 @@ LIBC_INLINE T hypot(T x, T y) {
       ++y_new;
     break;
   }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
   if (y_new >= (ONE >> 1)) {
     y_new -= ONE >> 1;
     ++out_exp;
-    if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT) {
-      if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
-        return FPBits_t::inf().get_val();
-      return FPBits_t::max_normal().get_val();
-    }
+    if (out_exp >= FPBits_t::MAX_BIASED_EXPONENT)
+      return set_overflow<T>();
   }
 
   y_new |= static_cast<StorageType>(out_exp) << FPBits_t::FRACTION_LEN;
 
-  if (!(round_bit || sticky_bits || (r != 0)))
-    fputil::clear_except_if_required(FE_INEXACT);
+  // TODO: We should only clear FE_INEXACT except if it's not set at the
+  // start of the function.
+  // if (!(round_bit || sticky_bits || (r != 0)))
+  //   fputil::clear_except_if_required(FE_INEXACT);
 
   return cpp::bit_cast<T>(y_new);
 }

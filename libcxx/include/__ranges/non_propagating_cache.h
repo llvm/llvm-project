@@ -14,16 +14,18 @@
 #include <__iterator/concepts.h>        // indirectly_readable
 #include <__iterator/iterator_traits.h> // iter_reference_t
 #include <__memory/addressof.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/optional.h>
+#include <__type_traits/is_object.h>
 #include <__utility/forward.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 // __non_propagating_cache is a helper type that allows storing an optional value in it,
@@ -44,51 +46,48 @@ class __non_propagating_cache {
   // constructing the contained type from an iterator.
   struct __wrapper {
     template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __wrapper(__forward_tag, _Args&&... __args)
-        : __t_(std::forward<_Args>(__args)...) {}
+    constexpr explicit __wrapper(__forward_tag, _Args&&... __args) : __t_(std::forward<_Args>(__args)...) {}
     template <class _Fn>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __wrapper(__from_tag, _Fn const& __f) : __t_(__f()) {}
+    constexpr explicit __wrapper(__from_tag, _Fn const& __f) : __t_(__f()) {}
     _Tp __t_;
   };
 
   optional<__wrapper> __value_ = nullopt;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __non_propagating_cache() = default;
+  __non_propagating_cache() = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __non_propagating_cache(__non_propagating_cache const&) noexcept
-      : __value_(nullopt) {}
+  constexpr __non_propagating_cache(__non_propagating_cache const&) noexcept : __value_(nullopt) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __non_propagating_cache(__non_propagating_cache&& __other) noexcept
-      : __value_(nullopt) {
+  constexpr __non_propagating_cache(__non_propagating_cache&& __other) noexcept : __value_(nullopt) {
     __other.__value_.reset();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __non_propagating_cache& operator=(__non_propagating_cache const& __other) noexcept {
+  constexpr __non_propagating_cache& operator=(__non_propagating_cache const& __other) noexcept {
     if (this != std::addressof(__other)) {
       __value_.reset();
     }
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __non_propagating_cache& operator=(__non_propagating_cache&& __other) noexcept {
+  constexpr __non_propagating_cache& operator=(__non_propagating_cache&& __other) noexcept {
     __value_.reset();
     __other.__value_.reset();
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() { return __value_->__t_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& operator*() const { return __value_->__t_; }
+  constexpr _Tp& operator*() { return __value_->__t_; }
+  constexpr _Tp const& operator*() const { return __value_->__t_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool __has_value() const { return __value_.has_value(); }
+  constexpr bool __has_value() const { return __value_.has_value(); }
 
   template <class _Fn>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& __emplace_from(_Fn const& __f) {
+  constexpr _Tp& __emplace_from(_Fn const& __f) {
     return __value_.emplace(__from_tag{}, __f).__t_;
   }
 
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& __emplace(_Args&&... __args) {
+  constexpr _Tp& __emplace(_Args&&... __args) {
     return __value_.emplace(__forward_tag{}, std::forward<_Args>(__args)...).__t_;
   }
 };
@@ -96,8 +95,8 @@ public:
 struct __empty_cache {};
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___RANGES_NON_PROPAGATING_CACHE_H

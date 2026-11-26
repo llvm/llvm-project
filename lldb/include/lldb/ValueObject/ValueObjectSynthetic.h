@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETICFILTER_H
-#define LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETICFILTER_H
+#ifndef LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETIC_H
+#define LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETIC_H
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/ConstString.h"
@@ -128,6 +128,8 @@ public:
                     GetExpressionPathFormat epformat =
                         eGetExpressionPathFormatDereferencePointers) override;
 
+  SyntheticChildrenFrontEnd *GetSyntheticChildrenFrontEnd() override;
+
 protected:
   bool UpdateValue() override;
 
@@ -175,10 +177,14 @@ private:
 
   void CopyValueData(ValueObject *source);
 
+  /// Warn, once per session, that the provider returned a child that our
+  /// ClusterManager does not own.
+  void WarnAboutForeignChild(ValueObject &child, bool is_root);
+
   ValueObjectSynthetic(const ValueObjectSynthetic &) = delete;
   const ValueObjectSynthetic &operator=(const ValueObjectSynthetic &) = delete;
 };
 
 } // namespace lldb_private
 
-#endif // LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETICFILTER_H
+#endif // LLDB_VALUEOBJECT_VALUEOBJECTSYNTHETIC_H

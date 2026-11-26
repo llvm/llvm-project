@@ -10,4 +10,5 @@
 
 #include "src/math/f16sqrtf128.h"
 
-LIST_NARROWING_SQRT_TESTS(float16, float128, LIBC_NAMESPACE::f16sqrtf128)
+LIST_NARROWING_SQRT_TESTS(F16sqrtf128, float16, float128,
+                          LIBC_NAMESPACE::f16sqrtf128)

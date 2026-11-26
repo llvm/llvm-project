@@ -5,6 +5,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 import json
+import os
 
 
 class TargetSymbolsFileJSON(TestBase):
@@ -14,6 +15,7 @@ class TargetSymbolsFileJSON(TestBase):
 
     @no_debug_info_test
     @skipIfWindows  # No 'strip'
+    @skipIfWasm  # Wasm modules have no UUID
     def test_symbol_file_json_address(self):
         """Test that 'target symbols add' can load the symbols from a JSON file using file addresses."""
 
@@ -92,6 +94,25 @@ class TargetSymbolsFileJSON(TestBase):
         self.assertTrue(stripped_foo_symbol.IsValid())
         self.assertTrue(stripped_bar_symbol.IsValid())
         self.assertEqual(main_bp.num_locations, 1)
+
+        # The JSON symbol file added its symbols to the object file's symtab.
+        self.assertTrue(
+            stripped_module.GetSymtabState() & lldb.eSymtabStateSymbolFileAddedSymbols
+        )
+        self.assertFalse(
+            unstripped_module.GetSymtabState() & lldb.eSymtabStateSymbolFileAddedSymbols
+        )
+        self.expect("image list -F -b stripped.out", patterns=[r"\] FS stripped\.out"])
+
+        self.runCmd("statistics dump --all-targets")
+        stats = json.loads(self.res.GetOutput())
+        added_symbols = {
+            os.path.basename(m["path"]): m["symbolTableSymbolFileAddedSymbols"]
+            for m in stats["modules"]
+        }
+        self.assertTrue(added_symbols["stripped.out"])
+        self.assertFalse(added_symbols["a.out"])
+        self.assertEqual(stats["totalSymbolTablesSymbolFileAddedSymbols"], 1)
 
         # Ensure the file address matches between the stripped and unstripped target.
         self.assertEqual(

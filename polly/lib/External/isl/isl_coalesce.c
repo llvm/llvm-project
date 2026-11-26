@@ -4202,6 +4202,7 @@ __isl_give isl_map *isl_map_coalesce(__isl_take isl_map *map)
 	struct isl_coalesce_info *info = NULL;
 
 	map = isl_map_remove_empty_parts(map);
+	map = isl_map_remove_obvious_duplicates(map);
 	if (!map)
 		return NULL;
 

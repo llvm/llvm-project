@@ -10,9 +10,9 @@
 /// This pass creates a unified init and fini kernel with the required metadata
 //===----------------------------------------------------------------------===//
 
-#include "NVPTXCtorDtorLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
+#include "NVPTXSubtarget.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
@@ -22,23 +22,13 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/NVVMAttributes.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-lower-ctor-dtor"
-
-static cl::opt<std::string>
-    GlobalStr("nvptx-lower-global-ctor-dtor-id",
-              cl::desc("Override unique ID of ctor/dtor globals."),
-              cl::init(""), cl::Hidden);
-
-static cl::opt<bool>
-    CreateKernels("nvptx-emit-init-fini-kernel",
-                  cl::desc("Emit kernels to call ctor/dtor globals."),
-                  cl::init(true), cl::Hidden);
 
 namespace {
 
@@ -51,8 +41,8 @@ static std::string getHash(StringRef Str) {
 }
 
 static void addKernelAttrs(Function *F) {
-  F->addFnAttr("nvvm.maxclusterrank", "1");
-  F->addFnAttr("nvvm.maxntid", "1");
+  F->addFnAttr(NVVMAttr::MaxClusterRank, "1");
+  F->addFnAttr(NVVMAttr::MaxNTID, "1");
   F->setCallingConv(CallingConv::PTX_Kernel);
 }
 
@@ -98,6 +88,7 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   LLVMContext &C = M.getContext();
 
   IRBuilder<> IRB(BasicBlock::Create(C, "entry", &F));
+  IRB.disableGEPCanonicalization();
   auto *LoopBB = BasicBlock::Create(C, "while.entry", &F);
   auto *ExitBB = BasicBlock::Create(C, "while.end", &F);
   Type *PtrTy = IRB.getPtrTy(llvm::ADDRESS_SPACE_GLOBAL);
@@ -138,20 +129,13 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   Value *BeginVal = IRB.CreateLoad(Begin->getType(), Begin, "begin");
   Value *EndVal = IRB.CreateLoad(Begin->getType(), End, "stop");
   if (!IsCtor) {
-    auto *BeginInt = IRB.CreatePtrToInt(BeginVal, IntegerType::getInt64Ty(C));
-    auto *EndInt = IRB.CreatePtrToInt(EndVal, IntegerType::getInt64Ty(C));
-    auto *SubInst = IRB.CreateSub(EndInt, BeginInt);
-    auto *Offset = IRB.CreateAShr(
-        SubInst, ConstantInt::get(IntegerType::getInt64Ty(C), 3), "offset",
-        /*IsExact=*/true);
-    auto *ValuePtr = IRB.CreateGEP(PointerType::get(C, 0), BeginVal,
-                                   ArrayRef<Value *>({Offset}));
-    EndVal = BeginVal;
+    Value *OldBeginVal = BeginVal;
     BeginVal =
-        IRB.CreateInBoundsGEP(PointerType::get(C, 0), ValuePtr,
+        IRB.CreateInBoundsGEP(PointerType::get(C, 0), EndVal,
                               ArrayRef<Value *>(ConstantInt::getAllOnesValue(
                                   IntegerType::getInt64Ty(C))),
                               "start");
+    EndVal = OldBeginVal;
   }
   IRB.CreateCondBr(
       IRB.CreateCmp(IsCtor ? ICmpInst::ICMP_NE : ICmpInst::ICMP_UGE, BeginVal,
@@ -173,8 +157,8 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   IRB.CreateRetVoid();
 }
 
-static bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
-                                    bool IsCtor) {
+static bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV, bool IsCtor,
+                                    const NVPTXOptions &CLOpts) {
   ConstantArray *GA = dyn_cast<ConstantArray>(GV->getInitializer());
   if (!GA || GA->getNumOperands() == 0)
     return false;
@@ -188,8 +172,9 @@ static bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
     uint64_t Priority = cast<ConstantInt>(CS->getOperand(0))->getSExtValue();
     std::string PriorityStr = "." + std::to_string(Priority);
     // We append a semi-unique hash and the priority to the global name.
-    std::string GlobalID =
-        !GlobalStr.empty() ? GlobalStr : getHash(M.getSourceFileName());
+    std::string GlobalID = CLOpts.lower_global_ctor_dtor_id.empty()
+                               ? getHash(M.getSourceFileName())
+                               : CLOpts.lower_global_ctor_dtor_id.str();
     std::string NameStr =
         ((IsCtor ? "__init_array_object_" : "__fini_array_object_") +
          F->getName() + "_" + GlobalID + "_" + std::to_string(Priority))
@@ -212,16 +197,16 @@ static bool createInitOrFiniGlobals(Module &M, GlobalVariable *GV,
   return true;
 }
 
-static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
-                                   bool IsCtor) {
+static bool createInitOrFiniKernel(Module &M, StringRef GlobalName, bool IsCtor,
+                                   const NVPTXOptions &CLOpts) {
   GlobalVariable *GV = M.getGlobalVariable(GlobalName);
   if (!GV || !GV->hasInitializer())
     return false;
 
-  if (!createInitOrFiniGlobals(M, GV, IsCtor))
+  if (!createInitOrFiniGlobals(M, GV, IsCtor, CLOpts))
     return false;
 
-  if (!CreateKernels)
+  if (!CLOpts.emit_init_fini_kernel)
     return true;
 
   Function *InitOrFiniKernel = createInitOrFiniKernelFunction(M, IsCtor);
@@ -235,9 +220,12 @@ static bool createInitOrFiniKernel(Module &M, StringRef GlobalName,
 }
 
 static bool lowerCtorsAndDtors(Module &M) {
+  const NVPTXOptions &CLOpts = getNVPTXOptions(M);
   bool Modified = false;
-  Modified |= createInitOrFiniKernel(M, "llvm.global_ctors", /*IsCtor =*/true);
-  Modified |= createInitOrFiniKernel(M, "llvm.global_dtors", /*IsCtor =*/false);
+  Modified |=
+      createInitOrFiniKernel(M, "llvm.global_ctors", /*IsCtor =*/true, CLOpts);
+  Modified |=
+      createInitOrFiniKernel(M, "llvm.global_dtors", /*IsCtor =*/false, CLOpts);
   return Modified;
 }
 
@@ -251,7 +239,7 @@ public:
 } // End anonymous namespace
 
 PreservedAnalyses NVPTXCtorDtorLoweringPass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
+                                                 ModuleAnalysisManager &MAM) {
   return lowerCtorsAndDtors(M) ? PreservedAnalyses::none()
                                : PreservedAnalyses::all();
 }

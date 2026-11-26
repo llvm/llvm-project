@@ -24,8 +24,8 @@ define void @main(i1 %arg) {
 ; CHECK:       cond.true48.us:
 ; CHECK-NEXT:    br i1 [[ARG]], label [[COND_TRUE63_US:%.*]], label [[COND_FALSE66_US:%.*]]
 ; CHECK:       cond.false66.us:
-; CHECK-NEXT:    store <2 x double> <double 0x404900049667B5F2, double 0x404E0515D587DA7B>, ptr undef, align 8
-; CHECK-NEXT:    store <2 x double> <double 2.000000e-07, double 0x3F91A436DC4B6CE6>, ptr [[AGG_TMP101211_SROA_0_0_IDX]], align 8
+; CHECK-NEXT:    store <2 x double> <double f0x404900049667B5F2, double f0x404E0515D587DA7B>, ptr undef, align 8
+; CHECK-NEXT:    store <2 x double> <double 2.000000e-07, double f0x3F91A436DC4B6CE6>, ptr [[AGG_TMP101211_SROA_0_0_IDX]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK:       cond.true63.us:
 ; CHECK-NEXT:    unreachable
@@ -93,7 +93,7 @@ define void @test(i1 %arg) {
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[IF_THEN78:%.*]], label [[IF_THEN38:%.*]]
 ; CHECK:       if.then38:
 ; CHECK-NEXT:    [[AGG_TMP74663_SROA_0_0_IDX:%.*]] = getelementptr inbounds [[STRUCT_RAY:%.*]], ptr undef, i64 0, i32 1, i32 0
-; CHECK-NEXT:    store <2 x double> <double 0x3FFA356C1D8A7F76, double 0x3FFDC4F38B38BEF4>, ptr [[AGG_TMP74663_SROA_0_0_IDX]], align 8
+; CHECK-NEXT:    store <2 x double> <double f0x3FFA356C1D8A7F76, double f0x3FFDC4F38B38BEF4>, ptr [[AGG_TMP74663_SROA_0_0_IDX]], align 8
 ; CHECK-NEXT:    br label [[IF_THEN78]]
 ; CHECK:       if.then78:
 ; CHECK-NEXT:    ret void

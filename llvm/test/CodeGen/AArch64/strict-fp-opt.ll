@@ -6,7 +6,6 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for unused_div_round_dynamic
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for add_twice_fpexcept_strict
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for add_twice_round_dynamic
-; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for set_rounding
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for set_rounding_fpexcept_strict
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for set_rounding_round_dynamic
 

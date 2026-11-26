@@ -44,12 +44,14 @@ WatchpointAlgorithms::AtomizeWatchpointRequest(
   }
 
   Log *log = GetLog(LLDBLog::Watchpoints);
-  LLDB_LOGV(log, "AtomizeWatchpointRequest user request addr {0:x} size {1}",
-            addr, size);
+  LLDB_LOG_VERBOSE(log,
+                   "AtomizeWatchpointRequest user request addr {0:x} size {1}",
+                   addr, size);
   std::vector<WatchpointResourceSP> resources;
   for (Region &ent : entries) {
-    LLDB_LOGV(log, "AtomizeWatchpointRequest creating resource {0:x} size {1}",
-              ent.addr, ent.size);
+    LLDB_LOG_VERBOSE(
+        log, "AtomizeWatchpointRequest creating resource {0:x} size {1}",
+        ent.addr, ent.size);
     WatchpointResourceSP wp_res_sp =
         std::make_shared<WatchpointResource>(ent.addr, ent.size, read, write);
     resources.push_back(wp_res_sp);
@@ -78,11 +80,11 @@ WatchpointAlgorithms::PowerOf2Watchpoints(addr_t user_addr, size_t user_size,
                                           uint32_t address_byte_size) {
 
   Log *log = GetLog(LLDBLog::Watchpoints);
-  LLDB_LOGV(log,
-            "AtomizeWatchpointRequest user request addr {0:x} size {1} "
-            "min_byte_size {2}, max_byte_size {3}, address_byte_size {4}",
-            user_addr, user_size, min_byte_size, max_byte_size,
-            address_byte_size);
+  LLDB_LOG_VERBOSE(
+      log,
+      "AtomizeWatchpointRequest user request addr {0:x} size {1} "
+      "min_byte_size {2}, max_byte_size {3}, address_byte_size {4}",
+      user_addr, user_size, min_byte_size, max_byte_size, address_byte_size);
 
   // Can't watch zero bytes.
   if (user_size == 0)

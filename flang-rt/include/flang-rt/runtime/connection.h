@@ -25,6 +25,14 @@ enum class Access { Sequential, Direct, Stream };
 // These characteristics of a connection are immutable after being
 // established in an OPEN statement.
 struct ConnectionAttributes {
+  // See common::ResetWithDefinedPayload(): the optionals below are read through
+  // short-circuit predicates that compilers may if-convert, so their payload
+  // storage is written once here to keep memory checkers quiet.
+  RT_API_ATTRS ConnectionAttributes() {
+    common::ResetWithDefinedPayload(isUnformatted);
+    common::ResetWithDefinedPayload(openRecl);
+  }
+
   Access access{Access::Sequential}; // ACCESS='SEQUENTIAL', 'DIRECT', 'STREAM'
   common::optional<bool> isUnformatted; // FORM='UNFORMATTED' if true
   bool isUTF8{false}; // ENCODING='UTF-8'
@@ -45,6 +53,12 @@ struct ConnectionAttributes {
 };
 
 struct ConnectionState : public ConnectionAttributes {
+  RT_API_ATTRS ConnectionState() {
+    common::ResetWithDefinedPayload(recordLength);
+    common::ResetWithDefinedPayload(leftTabLimit);
+    common::ResetWithDefinedPayload(endfileRecordNumber);
+  }
+
   RT_API_ATTRS bool IsAtEOF() const {
     // true when read has hit EOF or endfile record
     return endfileRecordNumber && currentRecordNumber >= *endfileRecordNumber;

@@ -63,7 +63,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineLoopUtils.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -468,8 +467,7 @@ namespace {
     MachineFunction           *MF = nullptr;
     MachineLoopInfo           *MLI = nullptr;
     ReachingDefInfo *RDI = nullptr;
-    const ARMBaseInstrInfo    *TII = nullptr;
-    MachineRegisterInfo       *MRI = nullptr;
+    const ARMBaseInstrInfo *TII = nullptr;
     const TargetRegisterInfo  *TRI = nullptr;
     std::unique_ptr<ARMBasicBlockUtils> BBUtils = nullptr;
 
@@ -685,10 +683,11 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     // before entering the loop.
     auto CannotProvideElements = [this](MachineBasicBlock *MBB,
                                         MCRegister NumElements) {
-      if (MBB->empty())
+      auto Back = MBB->getLastNonDebugInstr();
+      if (Back == MBB->end())
         return false;
       // NumElements is redefined in this block.
-      if (RDI.hasLocalDefBefore(&MBB->back(), NumElements))
+      if (RDI.hasLocalDefBefore(&*Back, NumElements))
         return true;
 
       // Don't continue searching up through multiple predecessors.
@@ -1305,7 +1304,6 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   RDI = &getAnalysis<ReachingDefInfoWrapperPass>().getRDI();
   MF->getProperties().setTracksLiveness();
-  MRI = &MF->getRegInfo();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   BBUtils = std::make_unique<ARMBasicBlockUtils>(*MF);
@@ -1474,7 +1472,7 @@ void ARMLowOverheadLoops::RevertLoopEndDec(MachineInstr *MI) const {
   MIB.add(MI->getOperand(1));
   MIB.addImm(1);
   MIB.addImm(ARMCC::AL);
-  MIB.addReg(ARM::NoRegister);
+  MIB.addReg(Register());
   MIB.addReg(ARM::CPSR);
   MIB->getOperand(5).setIsDef(true);
 

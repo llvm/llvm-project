@@ -56,15 +56,16 @@ public:
     size_t UncompressedFileSize;
     uint64_t Hash;
 
-    static llvm::Expected<CompressedBundleHeader> tryParse(llvm::StringRef);
+    LLVM_ABI static llvm::Expected<CompressedBundleHeader>
+        tryParse(llvm::StringRef);
   };
 
   static inline const uint16_t DefaultVersion = 3;
 
-  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  LLVM_ABI static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   compress(llvm::compression::Params P, const llvm::MemoryBuffer &Input,
            uint16_t Version, raw_ostream *VerboseStream = nullptr);
-  static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  LLVM_ABI static llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   decompress(const llvm::MemoryBuffer &Input,
              raw_ostream *VerboseStream = nullptr);
 };
@@ -210,8 +211,8 @@ LLVM_ABI Error extractOffloadBundleFatBinary(
 
 /// Extract code object memory from the given \p Source object file at \p Offset
 /// and of \p Size, and copy into \p OutputFileName.
-LLVM_ABI Error extractCodeObject(const ObjectFile &Source, int64_t Offset,
-                                 int64_t Size, StringRef OutputFileName);
+LLVM_ABI Error extractCodeObject(const ObjectFile &Source, size_t Offset,
+                                 size_t Size, StringRef OutputFileName);
 
 /// Extract code object memory from the given \p Source object file at \p Offset
 /// and of \p Size, and copy into \p OutputFileName.

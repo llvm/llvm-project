@@ -207,6 +207,7 @@ patterns:
             \\binteldialect\\b|\
             \\binternal\\b|\
             \\bjumptable\\b|\
+            \\blikely_module_local\\b|\
             \\blinkonce\\b|\
             \\blinkonce_odr\\b|\
             \\blocal_unnamed_addr\\b|\
@@ -229,7 +230,9 @@ patterns:
             \\bnofree\\b|\
             \\bnoimplicitfloat\\b|\
             \\bnoinline\\b|\
+            \\bnoipa\\b|\
             \\bnomerge\\b|\
+            \\bnooutline\\b|\
             \\bnonlazybind\\b|\
             \\bnonnull\\b|\
             \\bnoprofile\\b|\
@@ -291,7 +294,6 @@ patterns:
             \\bunnamed_addr\\b|\
             \\bunordered\\b|\
             \\buselistorder\\b|\
-            \\buselistorder_bb\\b|\
             \\buwtable\\b|\
             \\bvolatile\\b|\
             \\bweak\\b|\

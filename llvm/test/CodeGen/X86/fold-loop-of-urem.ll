@@ -786,41 +786,38 @@ for.body:
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
 }
 
-define void @simple_urem_skip_const_rem_amt(i32 %N) nounwind {
-; CHECK-LABEL: simple_urem_skip_const_rem_amt:
+define void @simple_urem_const_rem_amt(i32 %N) nounwind {
+; CHECK-LABEL: simple_urem_const_rem_amt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    je .LBB13_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    pushq %rbp
+; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl %edi, %ebx
 ; CHECK-NEXT:    addl $-4, %ebx
 ; CHECK-NEXT:    movl $4, %ebp
-; CHECK-NEXT:    movl $2938661835, %r14d # imm = 0xAF286BCB
+; CHECK-NEXT:    xorl %r14d, %r14d
+; CHECK-NEXT:    movl $4, %r15d
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB13_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:    imulq %r14, %rax
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movl %ebp, %ecx
-; CHECK-NEXT:    subl %eax, %ecx
-; CHECK-NEXT:    shrl %ecx
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    shrl $4, %ecx
-; CHECK-NEXT:    leal (%rcx,%rcx,8), %eax
-; CHECK-NEXT:    leal (%rcx,%rax,2), %eax
 ; CHECK-NEXT:    movl %ebp, %edi
-; CHECK-NEXT:    subl %eax, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:    incl %ebp
+; CHECK-NEXT:    cmpl $19, %ebp
+; CHECK-NEXT:    cmovel %r14d, %ebp
+; CHECK-NEXT:    incl %r15d
 ; CHECK-NEXT:    decl %ebx
 ; CHECK-NEXT:    jne .LBB13_2
 ; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:  .LBB13_4: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
@@ -979,10 +976,14 @@ define void @simple_urem_fail_bad_loop(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    jne .LBB16_4
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    xorl %r14d, %r14d
-; CHECK-NEXT:  .LBB16_2: # %for.cond
 ; CHECK-NEXT:    cmpl %ebp, %r14d
-; CHECK-NEXT:    jae .LBB16_5
-; CHECK-NEXT:  # %bb.3: # %for.body
+; CHECK-NEXT:    jb .LBB16_3
+; CHECK-NEXT:  .LBB16_5: # %for.end
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %rbp
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB16_3: # %for.body
 ; CHECK-NEXT:    movl %r14d, %edi
 ; CHECK-NEXT:    xorl $1, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
@@ -993,12 +994,9 @@ define void @simple_urem_fail_bad_loop(i32 %N, i32 %rem_amt) nounwind {
 ; CHECK-NEXT:    movl %edx, %edi
 ; CHECK-NEXT:    callq use.i32@PLT
 ; CHECK-NEXT:    incl %r14d
-; CHECK-NEXT:    jmp .LBB16_2
-; CHECK-NEXT:  .LBB16_5: # %for.end
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %rbp
-; CHECK-NEXT:    retq
+; CHECK-NEXT:    cmpl %ebp, %r14d
+; CHECK-NEXT:    jb .LBB16_3
+; CHECK-NEXT:    jmp .LBB16_5
 entry:
   %call = call i32 @get.i32()
   %tobool.not = icmp eq i32 %call, 0

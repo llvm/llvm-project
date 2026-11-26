@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/Type.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -94,6 +96,46 @@ public:
 };
 
 enum class CheckingMode { Forbidden, Required };
+
+TEST_F(LoadSpecLazilyTest, ConceptSpecializationInExceptionSpecification) {
+  GenerateModuleInterface("M", R"cpp(
+export module M;
+template <class> concept C = true;
+template <class T> int fn() noexcept(C<T>);
+template <class T> int gn() noexcept(!C<T>);
+export using t = decltype(fn<int>());
+export using u = decltype(gn<int>());
+  )cpp");
+
+  auto AST = buildASTFromCodeWithArgs(
+      "import M;\nt x;\nu y;",
+      {"-std=c++20", "-fprebuilt-module-path=" + TestDir.str().str()});
+  ASSERT_TRUE(AST);
+  ASSERT_FALSE(AST->getDiagnostics().hasErrorOccurred());
+  ASTContext &Ctx = AST->getASTContext();
+
+  // Reading C<int>'s substituted argument loads fn<int>, including its
+  // exception specification, before the argument has been populated. If
+  // constructing the function type profiles C<int> at that point, its
+  // FoldingSet key changes once deserialization completes.
+  SmallVector<const FunctionProtoType *, 4> Types;
+  bool SawNoexceptTrue = false, SawNoexceptFalse = false;
+  for (const auto *T : Ctx.getTypes()) {
+    const auto *F = dyn_cast<FunctionProtoType>(T);
+    if (F && (F->getExceptionSpecType() == EST_NoexceptTrue ||
+              F->getExceptionSpecType() == EST_NoexceptFalse)) {
+      SawNoexceptTrue |= F->getExceptionSpecType() == EST_NoexceptTrue;
+      SawNoexceptFalse |= F->getExceptionSpecType() == EST_NoexceptFalse;
+      Types.push_back(F);
+    }
+  }
+  EXPECT_TRUE(SawNoexceptTrue);
+  EXPECT_TRUE(SawNoexceptFalse);
+  for (const FunctionProtoType *F : Types)
+    EXPECT_EQ(F, Ctx.getFunctionType(F->getReturnType(), F->getParamTypes(),
+                                     F->getExtProtoInfo())
+                     .getTypePtr());
+}
 
 class DeclsReaderListener : public ASTDeserializationListener {
   StringRef SpeficiedName;

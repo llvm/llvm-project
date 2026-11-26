@@ -1423,14 +1423,14 @@ define i64 @f20u64(double %x) #0 {
 ;
 ; AVX1-LABEL: f20u64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vmovsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
-; AVX1-NEXT:    vcomisd %xmm1, %xmm0
-; AVX1-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vmovsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
+; AVX1-NEXT:    vcomisd %xmm2, %xmm0
+; AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    jb .LBB25_2
 ; AVX1-NEXT:  # %bb.1: # %entry
-; AVX1-NEXT:    vmovapd %xmm1, %xmm2
+; AVX1-NEXT:    vmovapd %xmm2, %xmm1
 ; AVX1-NEXT:  .LBB25_2: # %entry
-; AVX1-NEXT:    vsubsd %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vcvttsd2si %xmm0, %rcx
 ; AVX1-NEXT:    setae %al
 ; AVX1-NEXT:    movzbl %al, %eax
@@ -2250,13 +2250,13 @@ define double @sifdl(i64 %x) #0 {
 ;
 ; X86-SSE-LABEL: sifdl:
 ; X86-SSE:       # %bb.0: # %entry
-; X86-SSE-NEXT:    subl $12, %esp
-; X86-SSE-NEXT:    .cfi_def_cfa_offset 16
+; X86-SSE-NEXT:    subl $8, %esp
+; X86-SSE-NEXT:    .cfi_def_cfa_offset 12
 ; X86-SSE-NEXT:    fildll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fstpl (%esp)
 ; X86-SSE-NEXT:    fldl (%esp)
 ; X86-SSE-NEXT:    wait
-; X86-SSE-NEXT:    addl $12, %esp
+; X86-SSE-NEXT:    addl $8, %esp
 ; X86-SSE-NEXT:    .cfi_def_cfa_offset 4
 ; X86-SSE-NEXT:    retl
 ;

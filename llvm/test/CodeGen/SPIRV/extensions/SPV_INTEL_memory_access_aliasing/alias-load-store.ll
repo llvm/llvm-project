@@ -2,18 +2,19 @@
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - | FileCheck %s --check-prefix=CHECK-EXT
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-NO-EXT
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_memory_access_aliasing %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-EXT: OpCapability MemoryAccessAliasingINTEL
 ; CHECK-EXT: OpExtension "SPV_INTEL_memory_access_aliasing"
 ; CHECK-EXT: %[[#Domain1:]] = OpAliasDomainDeclINTEL
-; CHECK-EXT: %[[#Scope1:]] = OpAliasScopeDeclINTEL %[[#Domain1]]
-; CHECK-EXT: %[[#List1:]] = OpAliasScopeListDeclINTEL %[[#Scope1]]
 ; CHECK-EXT: %[[#Domain2:]] = OpAliasDomainDeclINTEL
-; CHECK-EXT: %[[#Scope2:]] = OpAliasScopeDeclINTEL %[[#Domain2]]
-; CHECK-EXT: %[[#List2:]] = OpAliasScopeListDeclINTEL %[[#Scope2]]
 ; CHECK-EXT: %[[#Domain3:]] = OpAliasDomainDeclINTEL
-; CHECK-EXT: %[[#Scope2:]] = OpAliasScopeDeclINTEL %[[#Domain3]]
-; CHECK-EXT: %[[#List3:]] = OpAliasScopeListDeclINTEL %[[#Scope2]]
+; CHECK-EXT: %[[#Scope1:]] = OpAliasScopeDeclINTEL %[[#Domain1]]
+; CHECK-EXT: %[[#Scope2:]] = OpAliasScopeDeclINTEL %[[#Domain2]]
+; CHECK-EXT: %[[#Scope3:]] = OpAliasScopeDeclINTEL %[[#Domain3]]
+; CHECK-EXT: %[[#List1:]] = OpAliasScopeListDeclINTEL %[[#Scope1]]
+; CHECK-EXT: %[[#List2:]] = OpAliasScopeListDeclINTEL %[[#Scope2]]
+; CHECK-EXT: %[[#List3:]] = OpAliasScopeListDeclINTEL %[[#Scope3]]
 
 ; CHECK-EXT: %[[#]] = OpLoad %[[#]] %[[#]] Aligned|AliasScopeINTELMask 4 %[[#List2]]
 ; CHECK-EXT: %[[#]] = OpLoad %[[#]] %[[#]] Aligned|AliasScopeINTELMask|NoAliasINTELMask 4 %[[#List2]] %[[#List1]]
@@ -56,10 +57,10 @@ entry:
 
 !1 = !{!2}
 !2 = distinct !{!2, !3, !"foo: %this"}
-!3 = distinct !{!3, !"foo"}
+!3 = distinct !{!3, i1 false, !"foo"}
 !4 = !{!5}
 !5 = distinct !{!5, !6, !"boo: %this"}
-!6 = distinct !{!6, !"boo"}
+!6 = distinct !{!6, i1 false, !"boo"}
 !7 = !{!8}
 !8 = distinct !{!8, !9, !"foo: %this"}
-!9 = distinct !{!9, !"foo"}
+!9 = distinct !{!9, i1 false, !"foo"}

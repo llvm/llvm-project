@@ -1,5 +1,5 @@
 # REQUIRES: python, system-windows
-# RUN: %python %s %lldb-dap > %t.out 2>&1
+# RUN: %python %s lldb-dap > %t.out 2>&1
 # RUN: FileCheck %s --check-prefix=ERROR --allow-empty < %t.out
 
 # ERROR-NOT: DAP session error:

@@ -63,7 +63,7 @@ for.inc.3:
   ret void
 }
 
-define internal fastcc i32 @cond(i32 %i) #1 !prof !29 !PGOFuncName !36 {
+define internal fastcc i32 @cond(i32 %i) #1 !prof !29 {
 entry:
   %rem = srem i32 %i, 2
   ret i32 %rem
@@ -108,4 +108,3 @@ attributes #1 = { inlinehint noinline }
 !33 = !{!"omnipotent char", !34, i64 0}
 !34 = !{!"Simple C/C++ TBAA"}
 !35 = !{!"branch_weights", i32 400001, i32 399999}
-!36 = !{!"csfdo_bar.c:cond"}

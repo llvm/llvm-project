@@ -1,52 +1,25 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+xsmtvdot < %s 2>&1 \
-# RUN:     | FileCheck %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+xsmtvdot < %s 2>&1 \
-# RUN:     | FileCheck %s
+# RUN: llvm-mc --verify -triple riscv64 -mattr=+xsmtvdot < %s
 
 # NoSlide
-smt.vmadot   v1, v2, v2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
-smt.vmadotu  v1, v2, v2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
-smt.vmadotsu v1, v2, v2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
-smt.vmadotus v1, v2, v2 # CHECK: :[[@LINE]]:14: error: invalid operand for instruction
+smt.vmadot   v1, v2, v4 // expected-error:14 {{operand must be the start of a valid M2 vector register group}}
 
-# Slide = 1
-smt.vmadot1   v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot1u  v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot1su v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot1us v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot1   v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot1u  v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot1su v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot1us v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot1   v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot1u  v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot1su v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot1us v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+smt.vmadot   v2, v2, v4 // expected-error:14 {{the destination vector register group cannot overlap the source vector register group}}
 
-# Slide = 2
-smt.vmadot2   v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot2u  v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot2su v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot2us v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot2   v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot2u  v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot2su v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot2us v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot2   v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot2u  v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot2su v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot2us v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+smt.vmadot   v4, v2, v4 // expected-error:14 {{the destination vector register group cannot overlap the source vector register group}}
 
-# Slide = 3
-smt.vmadot3   v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot3u  v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot3su v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot3us v1, v2, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot3   v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot3u  v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot3su v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot3us v2, v1, v2 # CHECK: :[[@LINE]]:19: error: invalid operand for instruction
-smt.vmadot3   v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot3u  v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot3su v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
-smt.vmadot3us v1, v3, v2 # CHECK: :[[@LINE]]:15: error: invalid operand for instruction
+smt.vmadot   v2, v3, v4 // expected-error:14 {{the destination vector register group cannot overlap the source vector register group}}
+
+smt.vmadot   v2, v4, v3 // expected-error:14 {{the destination vector register group cannot overlap the source vector register group}}
+
+# slide
+smt.vmadot1   v1, v2, v2 // expected-error:15 {{operand must be the start of a valid M2 vector register group}}
+
+smt.vmadot1   v2, v5, v4 // expected-error:19 {{operand must be the start of a valid M2 vector register group}}
+
+smt.vmadot1   v2, v2, v4 // expected-error:15 {{the destination vector register group cannot overlap the source vector register group}}
+
+smt.vmadot1   v2, v4, v2 // expected-error:15 {{the destination vector register group cannot overlap the source vector register group}}
+
+smt.vmadot1   v0, v1, v2 // expected-error:19 {{operand must be the start of a valid M2 vector register group}}
+
+smt.vmadot1   v0, v2, v1 // expected-error:15 {{the destination vector register group cannot overlap the source vector register group}}

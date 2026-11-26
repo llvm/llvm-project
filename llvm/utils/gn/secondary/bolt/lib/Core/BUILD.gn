@@ -25,6 +25,7 @@ static_library("Core") {
     "BinaryFunctionCallGraph.cpp",
     "BinaryFunctionProfile.cpp",
     "BinarySection.cpp",
+    "BranchLivenessInfo.cpp",
     "CallGraph.cpp",
     "CallGraphWalker.cpp",
     "DIEBuilder.cpp",

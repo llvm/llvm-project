@@ -85,7 +85,7 @@ void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
     // Dst may have children modeled from other derived types than SrcType, e.g.
     // after casts of Dst to other types derived from DstType. Only copy the
     // children and synthetic fields present in both Dst and SrcType.
-    const FieldSet FieldsInSrcType =
+    const FieldSet &FieldsInSrcType =
         Env.getDataflowAnalysisContext().getModeledFields(SrcType);
     for (auto [Field, DstFieldLoc] : Dst.children())
       if (const auto *FieldAsFieldDecl = dyn_cast<FieldDecl>(Field);
@@ -103,7 +103,7 @@ void copyRecord(RecordStorageLocation &Src, RecordStorageLocation &Dst,
     // after other casts of Src to those types (likely in different branches,
     // but without flow-condition-dependent field modeling). Only copy the
     // children and synthetic fields of Src that are present in DstType.
-    const FieldSet FieldsInDstType =
+    const FieldSet &FieldsInDstType =
         Env.getDataflowAnalysisContext().getModeledFields(DstType);
     for (auto [Field, SrcFieldLoc] : Src.children()) {
       if (const auto *FieldAsFieldDecl = dyn_cast<FieldDecl>(Field);

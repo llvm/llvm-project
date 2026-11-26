@@ -19,6 +19,7 @@
 #ifndef LLVM_TRANSFORMS_IPO_DEADARGUMENTELIMINATION_H
 #define LLVM_TRANSFORMS_IPO_DEADARGUMENTELIMINATION_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Function.h"
@@ -36,7 +37,7 @@ class Value;
 
 /// Eliminate dead arguments (and return values) from functions.
 class DeadArgumentEliminationPass
-    : public PassInfoMixin<DeadArgumentEliminationPass> {
+    : public OptionalPassInfoMixin<DeadArgumentEliminationPass> {
 public:
   /// Struct that represents (part of) either a return value or a function
   /// argument.  Used so that arguments and return values can be used
@@ -72,10 +73,7 @@ public:
   /// (in Uses) will never be marked alive and will thus become dead in the end.
   enum Liveness { Live, MaybeLive };
 
-  DeadArgumentEliminationPass(bool ShouldHackArguments = false)
-      : ShouldHackArguments(ShouldHackArguments) {}
-
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
   /// Convenience wrapper
   RetOrArg createRet(const Function *F, unsigned Idx) {
@@ -119,11 +117,15 @@ public:
 
   using UseVector = SmallVector<RetOrArg, 5>;
 
-  /// This allows this pass to do double-duty as the dead arg hacking pass
-  /// (used only by bugpoint).
-  bool ShouldHackArguments = false;
-
 private:
+  FunctionAnalysisManager *FAM = nullptr;
+
+  /// The functions whose bodies were changed.
+  SmallSetVector<Function *, 8> ChangedFunctions;
+
+  /// Erase \p F, which was replaced by \p NF, and its analyses.
+  void eraseReplacedFunction(Function &F, const Function &NF);
+
   Liveness markIfNotLive(RetOrArg Use, UseVector &MaybeLiveUses);
   Liveness surveyUse(const Use *U, UseVector &MaybeLiveUses,
                      unsigned RetValNum = -1U);

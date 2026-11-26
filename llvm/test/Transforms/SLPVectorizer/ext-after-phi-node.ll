@@ -9,9 +9,9 @@ define double @test() {
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ poison, [[BB9:%.*]] ], [ zeroinitializer, [[BB:%.*]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ zeroinitializer, [[BB9]] ], [ zeroinitializer, [[BB]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP0]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP5]] to i64
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[TMP6]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> zeroinitializer, <2 x i64> [[TMP2]], <2 x i32> <i32 3, i32 1>

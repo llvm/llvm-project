@@ -33,10 +33,10 @@ contains
         real, parameter :: m = 7.0
         logical, parameter :: l = .false.
         integer, dimension(3), parameter :: a = [1, 2, 3]
-        !ERROR: 'n' must be a variable
-        !ERROR: 'm' must be a variable
-        !ERROR: 'l' must be a variable
-        !ERROR: 'a' must be a variable
+        !ERROR: 'n' must be a variable list item
+        !ERROR: 'm' must be a variable list item
+        !ERROR: 'l' must be a variable list item
+        !ERROR: 'a' must be a variable list item
         !$omp parallel private(n, m, l, a)
             print *, n, m, l, a
         !$omp end parallel

@@ -48,3 +48,26 @@ loop.latch:
 loop.exit:
   ret void
 }
+
+; CHECK-LABEL: @unreachable_switch(
+; CHECK: entry:
+; CHECK-NOT: irr.guard:
+define void @unreachable_switch(i32 %n, i1 %arg) {
+entry:
+  switch i32 %n, label %loop.body []
+
+loop.body:
+  switch i32 %n, label %inner.block []
+
+unreachable.block:
+  switch i32 %n, label %inner.block []
+
+inner.block:
+  switch i1 %arg, label %loop.exit [ i1 0, label %loop.latch ]
+
+loop.latch:
+  switch i32 %n, label %loop.body []
+
+loop.exit:
+  ret void
+}

@@ -377,7 +377,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "    ddddddddddddd> {\n"
                "}");
 
-  Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
+  Style.PackParameters.BinPack = FormatStyle::BPPS_OnePerLine;
   Style.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   verifyFormat("@interface eeeeeeeeeeeee () <\n"
                "    eeeeeeeeeeeee,\n"
@@ -411,7 +411,7 @@ TEST_F(FormatTestObjC, FormatObjCInterface) {
                "+ (id)init;\n"
                "@end");
   Style.ColumnLimit = 40;
-  // BinPackParameters should be BPPS_BinPack by default.
+  // PackParameters.BinPack should be BPPS_BinPack by default.
   verifyFormat("void eeeeeeee(int eeeee, int eeeee,\n"
                "              int eeeee, int eeeee);");
   // ObjCBinPackProtocolList should be BPS_Never by default.
@@ -1801,6 +1801,22 @@ TEST_F(FormatTestObjC, AttributesOnObjCProperty) {
       "@property(weak) id delegate __attribute__((X)) ATTRIBUTE_MACRO(X);");
   verifyFormat(
       "@property(weak) id delegate ATTRIBUTE_MACRO(X) __attribute__((X));");
+}
+
+TEST_F(FormatTestObjC, NoCrashOnStrayMethodSign) {
+  verifyNoCrash("@interface;\n"
+                "-");
+  verifyNoCrash("@interface Foo\n"
+                "-");
+  verifyNoCrash("@interface Foo\n"
+                "+");
+  verifyNoCrash("@implementation Foo\n"
+                "-");
+  verifyNoCrash("@interface Foo\n"
+                "-\n"
+                "@end");
+  verifyNoCrash("@interface Foo\n"
+                "- ;");
 }
 
 } // end namespace

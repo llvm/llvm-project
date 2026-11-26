@@ -26,7 +26,6 @@ static cl::OptionCategory StokeOptCategory("STOKE pass options");
 static cl::opt<std::string>
 StokeOutputDataFilename("stoke-out",
   cl::desc("output data (.csv) for Stoke's use"),
-  cl::Optional,
   cl::cat(StokeOptCategory));
 }
 
@@ -45,7 +44,6 @@ void getRegNameFromBitVec(const BinaryContext &BC, const BitVector &RegV,
 
 void StokeInfo::checkInstr(const BinaryFunction &BF, StokeFuncInfo &FuncInfo) {
   MCPlusBuilder *MIB = BF.getBinaryContext().MIB.get();
-  BitVector RegV(NumRegs, false);
   for (const BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     if (BB->empty())
       continue;
@@ -146,6 +144,11 @@ bool StokeInfo::checkFunction(BinaryFunction &BF, DataflowInfoManager &DInfo,
 }
 
 Error StokeInfo::runOnFunctions(BinaryContext &BC) {
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is specific to X86\n";
+    exit(1);
+  }
+
   BC.outs() << "STOKE-INFO: begin of stoke pass\n";
 
   std::ofstream Outfile;

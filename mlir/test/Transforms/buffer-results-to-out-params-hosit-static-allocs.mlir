@@ -49,3 +49,81 @@ func.func private @return_arg(%arg0: memref<128x256xf32>, %arg1: memref<128x256x
   "test.source"(%arg0, %arg1)  : (memref<128x256xf32>, memref<128x256xf32>) -> ()
   return %arg0 : memref<128x256xf32>
 }
+
+// CHECK-LABEL: func.func private @duplicate_return_value(
+// CHECK-SAME:    %[[ARG0:.*]]: memref<4xf32>, %[[ARG1:.*]]: memref<4xf32>) {
+// CHECK-NOT:     memref.alloc
+// CHECK:         memref.copy %[[ARG0]], %[[ARG1]] : memref<4xf32> to memref<4xf32>
+// CHECK:         return
+func.func private @duplicate_return_value()
+    -> (memref<4xf32>, memref<4xf32>) {
+  %a = memref.alloc() : memref<4xf32>
+  return %a, %a : memref<4xf32>, memref<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func private @multiple_duplicate_returns(
+// CHECK-SAME:    %[[COND:.*]]: i1, %[[OUT0:.*]]: memref<4xf32>, %[[OUT1:.*]]: memref<4xf32>) {
+// CHECK:        cf.cond_br %[[COND]], ^[[THEN:.*]], ^[[ELSE:.*]]
+// CHECK:      ^[[THEN]]:
+// CHECK:        memref.copy %[[OUT0]], %[[OUT1]] : memref<4xf32> to memref<4xf32>
+// CHECK:        return
+// CHECK:      ^[[ELSE]]:
+// CHECK:        memref.copy %[[OUT0]], %[[OUT1]] : memref<4xf32> to memref<4xf32>
+// CHECK:        return
+func.func private @multiple_duplicate_returns(%cond: i1)
+    -> (memref<4xf32>, memref<4xf32>) {
+  %a = memref.alloc() : memref<4xf32>
+  cf.cond_br %cond, ^then, ^else
+^then:
+  return %a, %a : memref<4xf32>, memref<4xf32>
+^else:
+  return %a, %a : memref<4xf32>, memref<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func private @multiple_returns_with_non_alloc(
+// CHECK-SAME:    %[[INPUT:.*]]: memref<4xf32>, %{{.*}}: i1, %[[OUT0:.*]]: memref<4xf32>, %[[OUT1:.*]]: memref<4xf32>) {
+// CHECK:        cf.cond_br %{{.*}}, ^[[THEN:.*]], ^[[ELSE:.*]]
+// CHECK:      ^[[THEN]]:
+// CHECK:        memref.copy %[[OUT0]], %[[OUT1]] : memref<4xf32> to memref<4xf32>
+// CHECK:        return
+// CHECK:      ^[[ELSE]]:
+// CHECK:        memref.copy %[[INPUT]], %[[OUT0]] : memref<4xf32> to memref<4xf32>
+// CHECK:        memref.copy %[[INPUT]], %[[OUT1]] : memref<4xf32> to memref<4xf32>
+// CHECK:        return
+func.func private @multiple_returns_with_non_alloc(%input: memref<4xf32>, %cond: i1)
+    -> (memref<4xf32>, memref<4xf32>) {
+  %a = memref.alloc() : memref<4xf32>
+  cf.cond_br %cond, ^then, ^else
+^then:
+  return %a, %a : memref<4xf32>, memref<4xf32>
+^else:
+  return %input, %input : memref<4xf32>, memref<4xf32>
+}
+
+// -----
+
+// memref.realloc and bufferization.clone copy data into their result. They
+// must not be replaced by the out parameter; the result is copied instead.
+// CHECK-LABEL: func.func private @realloc_not_hoisted(
+// CHECK-SAME:    %[[SRC:.*]]: memref<4xf32>, %[[OUT:.*]]: memref<8xf32>) {
+// CHECK:         %[[REALLOC:.*]] = memref.realloc %[[SRC]] : memref<4xf32> to memref<8xf32>
+// CHECK:         memref.copy %[[REALLOC]], %[[OUT]] : memref<8xf32> to memref<8xf32>
+// CHECK:         return
+func.func private @realloc_not_hoisted(%src: memref<4xf32>) -> memref<8xf32> {
+  %0 = memref.realloc %src : memref<4xf32> to memref<8xf32>
+  return %0 : memref<8xf32>
+}
+
+// CHECK-LABEL: func.func private @clone_not_hoisted(
+// CHECK-SAME:    %[[SRC:.*]]: memref<4xf32>, %[[OUT:.*]]: memref<4xf32>) {
+// CHECK:         %[[CLONE:.*]] = bufferization.clone %[[SRC]] : memref<4xf32> to memref<4xf32>
+// CHECK:         memref.copy %[[CLONE]], %[[OUT]] : memref<4xf32> to memref<4xf32>
+// CHECK:         return
+func.func private @clone_not_hoisted(%src: memref<4xf32>) -> memref<4xf32> {
+  %0 = bufferization.clone %src : memref<4xf32> to memref<4xf32>
+  return %0 : memref<4xf32>
+}

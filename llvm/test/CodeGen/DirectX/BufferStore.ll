@@ -162,6 +162,31 @@ define void @store_scalarized_floats(float %data0, float %data1, float %data2, f
   ret void
 }
 
+; Leading literals are folded into the constant base of the insertelement
+; chain, so those components come from the base rather than an insert.
+; CHECK-LABEL: define void @store_constant_base_floats
+define void @store_constant_base_floats(float %data1, i32 %index) {
+  %buffer = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+      @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f32_1_0_0(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  %vec.upto1 = insertelement <4 x float> <float 1.0, float poison, float poison, float poison>, float %data1, i64 1
+  %vec.upto2 = insertelement <4 x float> %vec.upto1, float 2.0, i64 2
+  %vec = insertelement <4 x float> %vec.upto2, float 3.0, i64 3
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: call void @dx.op.bufferStore.f32(i32 69, %dx.types.Handle %{{.*}}, i32 %index, i32 undef, float 1.000000e+00, float %data1, float 2.000000e+00, float 3.000000e+00, i8 15)
+  call void @llvm.dx.resource.store.typedbuffer(
+      target("dx.TypedBuffer", <4 x float>, 1, 0, 0) %buffer,
+      i32 %index, <4 x float> %vec)
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: ret void
+  ret void
+}
+
 define void @storef64(<2 x i32> %0) {
   ; CHECK: [[B1:%.*]] = call %dx.types.Handle @dx.op.createHandleFromBinding(i32 217,
   ; CHECK: [[BA:%.*]] = call %dx.types.Handle @dx.op.annotateHandle(i32 216, %dx.types.Handle [[B1]]
@@ -202,3 +227,13 @@ define void @storev2f64(<4 x i32> %0) {
       <4 x i32> %0)
   ret void
 }
+
+; CHECK-DAG: declare %dx.types.Handle @dx.op.createHandleFromBinding(i32, %dx.types.ResBind, i32, i1) #[[#ATTR0:]]
+; CHECK-DAG: declare %dx.types.Handle @dx.op.annotateHandle(i32, %dx.types.Handle, %dx.types.ResourceProperties) #[[#ATTR0]]
+; CHECK-DAG: declare void @dx.op.bufferStore.i32(i32, %dx.types.Handle, i32, i32, i32, i32, i32, i32, i8) #[[#ATTR1:]]
+; CHECK-DAG: declare void @dx.op.bufferStore.i16(i32, %dx.types.Handle, i32, i32, i16, i16, i16, i16, i8) #[[#ATTR1]]
+; CHECK-DAG: declare void @dx.op.bufferStore.f16(i32, %dx.types.Handle, i32, i32, half, half, half, half, i8) #[[#ATTR1]]
+; CHECK-DAG: declare void @dx.op.bufferStore.f32(i32, %dx.types.Handle, i32, i32, float, float, float, float, i8) #[[#ATTR1]]
+
+; CHECK-DAG: attributes #[[#ATTR0]] = { nounwind memory(none) }
+; CHECK-DAG: attributes #[[#ATTR1]] = { nounwind }

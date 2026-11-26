@@ -25,8 +25,8 @@ void check_note_at_correct_open(void) {
   fclose(F2);
   rewind(F1);
 }
-// expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
-// expected-note@-2 {{Opened stream never closed. Potential resource leak}}
+// expected-warning@-1 {{Opened stream never closed; potential resource leak}}
+// expected-note@-2 {{Opened stream never closed; potential resource leak}}
 
 void check_note_fopen(void) {
   FILE *F = fopen("file", "r"); // expected-note {{Stream opened here}}
@@ -36,8 +36,8 @@ void check_note_fopen(void) {
     // expected-note@-2 {{Taking false branch}}
     return;
 }
-// expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
-// expected-note@-2 {{Opened stream never closed. Potential resource leak}}
+// expected-warning@-1 {{Opened stream never closed; potential resource leak}}
+// expected-note@-2 {{Opened stream never closed; potential resource leak}}
 
 void check_note_freopen(void) {
   FILE *F = fopen("file", "r"); // expected-note {{Stream opened here}}
@@ -53,8 +53,8 @@ void check_note_freopen(void) {
     // expected-note@-2 {{Taking false branch}}
     return;
 }
-// expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
-// expected-note@-2 {{Opened stream never closed. Potential resource leak}}
+// expected-warning@-1 {{Opened stream never closed; potential resource leak}}
+// expected-note@-2 {{Opened stream never closed; potential resource leak}}
 
 void check_note_fdopen(int fd) {
   FILE *F = fdopen(fd, "r"); // expected-note {{Stream opened here}}
@@ -64,8 +64,8 @@ void check_note_fdopen(int fd) {
     // expected-note@-2 {{Taking false branch}}
     return;
 }
-// expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
-// expected-note@-2 {{Opened stream never closed. Potential resource leak}}
+// expected-warning@-1 {{Opened stream never closed; potential resource leak}}
+// expected-note@-2 {{Opened stream never closed; potential resource leak}}
 
 void check_note_leak_2(int c) {
   FILE *F1 = fopen("foo1.c", "r"); // expected-note {{Stream opened here}}
@@ -92,10 +92,10 @@ void check_note_leak_2(int c) {
     // expected-note@-3 {{Assuming 'c' is not equal to 0}}
     // expected-note@-4 {{Taking true branch}}
     return;
-  // expected-warning@-1 {{Opened stream never closed. Potential resource leak}}
-  // expected-note@-2 {{Opened stream never closed. Potential resource leak}}
-  // expected-warning@-3 {{Opened stream never closed. Potential resource leak}}
-  // expected-note@-4 {{Opened stream never closed. Potential resource leak}}
+  // expected-warning@-1 {{Opened stream never closed; potential resource leak}}
+  // expected-note@-2 {{Opened stream never closed; potential resource leak}}
+  // expected-warning@-3 {{Opened stream never closed; potential resource leak}}
+  // expected-note@-4 {{Opened stream never closed; potential resource leak}}
   fclose(F1);
   fclose(F2);
 }
@@ -124,8 +124,8 @@ void check_eof_notes_feof_after_feof(void) {
     clearerr(F);
     fread(Buf, 1, 1, F);   // expected-note {{Assuming stream reaches end-of-file here}}
     if (feof(F)) {         // expected-note {{Taking true branch}}
-      fread(Buf, 1, 1, F); // expected-warning {{Read function called when stream is in EOF state. Function has no effect}}
-      // expected-note@-1 {{Read function called when stream is in EOF state. Function has no effect}}
+      fread(Buf, 1, 1, F); // expected-warning {{Read function called when stream is in EOF state; function has no effect}}
+      // expected-note@-1 {{Read function called when stream is in EOF state; function has no effect}}
     }
   }
   fclose(F);
@@ -148,8 +148,8 @@ void check_eof_notes_feof_after_no_feof(void) {
   }
   fread(Buf, 1, 1, F);   // expected-note {{Assuming stream reaches end-of-file here}}
   if (feof(F)) {         // expected-note {{Taking true branch}}
-    fread(Buf, 1, 1, F); // expected-warning {{Read function called when stream is in EOF state. Function has no effect}}
-    // expected-note@-1 {{Read function called when stream is in EOF state. Function has no effect}}
+    fread(Buf, 1, 1, F); // expected-warning {{Read function called when stream is in EOF state; function has no effect}}
+    // expected-note@-1 {{Read function called when stream is in EOF state; function has no effect}}
   }
   fclose(F);
 }
@@ -163,8 +163,8 @@ void check_eof_notes_feof_or_no_error(void) {
   int RRet = fread(Buf, 1, 1, F); // expected-note {{Assuming stream reaches end-of-file here}}
   if (ferror(F)) {                // expected-note {{Taking false branch}}
   } else {
-    fread(Buf, 1, 1, F); // expected-warning {{Read function called when stream is in EOF state. Function has no effect}}
-    // expected-note@-1 {{Read function called when stream is in EOF state. Function has no effect}}
+    fread(Buf, 1, 1, F); // expected-warning {{Read function called when stream is in EOF state; function has no effect}}
+    // expected-note@-1 {{Read function called when stream is in EOF state; function has no effect}}
   }
   fclose(F);
 }
@@ -180,8 +180,8 @@ void check_indeterminate_notes(void) {
                      // expected-note {{'R' is >= 0}}
     fgetc(F);        // expected-note {{Assuming this stream operation fails}}
     if (ferror(F))   // expected-note {{Taking true branch}}
-      fgetc(F);      // expected-warning {{File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior}} \
-                     // expected-note {{File position of the stream might be 'indeterminate' after a failed operation. Can cause undefined behavior}}
+      fgetc(F);      // expected-warning {{File position of the stream might be 'indeterminate' after a failed operation; can cause undefined behavior}} \
+                     // expected-note {{File position of the stream might be 'indeterminate' after a failed operation; can cause undefined behavior}}
   }
   fclose(F);
 }

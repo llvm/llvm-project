@@ -48,11 +48,6 @@ uintptr_t GetCurrentProcess(void);
 #include <unistd.h>
 #endif
 
-#if defined(__linux__) && defined(__riscv)
-// to get platform-specific syscall definitions
-#include <linux/unistd.h>
-#endif
-
 // The compiler generates calls to __clear_cache() when creating
 // trampoline functions on the stack for use with nested functions.
 // It is expected to invalidate the instruction cache for the
@@ -99,10 +94,10 @@ void __clear_cache(void *start, void *end) {
 #elif defined(__mips__)
   const uintptr_t start_int = (uintptr_t)start;
   const uintptr_t end_int = (uintptr_t)end;
+#if defined(__linux__) && __mips_isa_rev >= 6
   uintptr_t synci_step;
   __asm__ volatile("rdhwr %0, $1" : "=r"(synci_step));
   if (synci_step != 0) {
-#if __mips_isa_rev >= 6
     for (uintptr_t p = start_int; p < end_int; p += synci_step)
       __asm__ volatile("synci 0(%0)" : : "r"(p));
 
@@ -113,6 +108,7 @@ void __clear_cache(void *start, void *end) {
                      "jr.hb $at\n"
                      "move $at, $0\n"
                      ".set at");
+  }
 #elif defined(__linux__) || defined(__OpenBSD__)
     // Pre-R6 may not be globalized. And some implementations may give strange
     // synci_step. So, let's use libc call for it.
@@ -122,7 +118,6 @@ void __clear_cache(void *start, void *end) {
     (void)end_int;
     compilerrt_abort();
 #endif
-  }
 #elif defined(__aarch64__) && !defined(__APPLE__)
   uint64_t xstart = (uint64_t)(uintptr_t)start;
   uint64_t xend = (uint64_t)(uintptr_t)end;
@@ -185,6 +180,10 @@ void __clear_cache(void *start, void *end) {
   for (uintptr_t dword = start_dword; dword < end_dword; dword += dword_size)
     __asm__ volatile("flush %0" : : "r"(dword));
 #elif defined(__riscv) && defined(__linux__)
+  // Inlined for the same reason as __ARM_NR_cacheflush above.
+#ifndef __NR_riscv_flush_icache
+#define __NR_riscv_flush_icache 259
+#endif
   // See: arch/riscv/include/asm/cacheflush.h, arch/riscv/kernel/sys_riscv.c
   register void *start_reg __asm("a0") = start;
   const register void *end_reg __asm("a1") = end;
@@ -204,6 +203,24 @@ void __clear_cache(void *start, void *end) {
   sysarch(RISCV_SYNC_ICACHE, &arg);
 #elif defined(__ve__)
   __asm__ volatile("fencec 2");
+#elif defined(__hexagon__)
+  // Hexagon has separate instruction and data caches.
+  const size_t line_size = __GCC_DESTRUCTIVE_SIZE;
+  const uintptr_t mask = ~(line_size - 1);
+  const uintptr_t start_line = (uintptr_t)start & mask;
+  const uintptr_t end_addr = (uintptr_t)end;
+
+  // Clean and invalidate data cache to push new code to memory and
+  // invalidate stale lines in the L2 cache.
+  for (uintptr_t addr = start_line; addr < end_addr; addr += line_size)
+    __builtin_HEXAGON_Y2_dccleaninva((void *)addr);
+
+  // Invalidate instruction cache so it re-fetches from memory.
+  for (uintptr_t addr = start_line; addr < end_addr; addr += line_size)
+    __asm__ volatile("icinva(%[a])" : : [a] "r"((void *)addr));
+
+  // Instruction sync barrier ensures subsequent fetches see the new code.
+  __asm__ volatile("isync");
 #else
 #if __APPLE__
   // On Darwin, sys_icache_invalidate() provides this functionality

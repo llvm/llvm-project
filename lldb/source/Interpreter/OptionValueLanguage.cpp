@@ -59,7 +59,7 @@ Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
     } else {
       StreamString error_strm;
       error_strm.Printf("invalid language type '%s', ", value.str().c_str());
-      error_strm.Printf("valid values are:\n");
+      error_strm.PutCString("valid values are:\n");
       for (int bit : languages_for_types.bitvector.set_bits()) {
         auto language = (LanguageType)bit;
         error_strm.Printf("    %s\n",

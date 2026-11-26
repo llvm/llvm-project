@@ -62,7 +62,7 @@ createLoongArchMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
 static MCAsmInfo *createLoongArchMCAsmInfo(const MCRegisterInfo &MRI,
                                            const Triple &TT,
                                            const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new LoongArchMCAsmInfo(TT);
+  MCAsmInfo *MAI = new LoongArchMCAsmInfo(TT, Options);
 
   // Initial state of the frame pointer is sp(r3).
   unsigned SP = MRI.getDwarfRegNum(LoongArch::R3, true);
@@ -91,6 +91,10 @@ static MCTargetStreamer *
 createLoongArchAsmTargetStreamer(MCStreamer &S, formatted_raw_ostream &OS,
                                  MCInstPrinter *InstPrint) {
   return new LoongArchTargetAsmStreamer(S, OS);
+}
+
+static MCTargetStreamer *createLoongArchNullTargetStreamer(MCStreamer &S) {
+  return new LoongArchTargetStreamer(S);
 }
 
 namespace {
@@ -139,7 +143,8 @@ public:
 
   void resetState() override { GPRValidMask.reset(); }
 
-  void updateState(const MCInst &Inst, uint64_t Addr) override {
+  void updateState(const MCInst &Inst, const MCSubtargetInfo *STI,
+                   uint64_t Addr) override {
     // Terminators mark the end of a basic block which means the sequentially
     // next instruction will be the first of another basic block and the current
     // state will typically not be valid anymore. For calls, we assume all
@@ -266,6 +271,54 @@ public:
              Inst.getOperand(1).getReg() != LoongArch::R1;
     }
   }
+
+  /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const MCSubtargetInfo &STI) const override {
+    uint32_t LoadInsnOpCode;
+    if (const Triple &T = STI.getTargetTriple(); T.isLoongArch64())
+      LoadInsnOpCode = 0x28c00000; // ld.d
+    else if (T.isLoongArch32())
+      LoadInsnOpCode = 0x28800000; // ld.w
+    else
+      return {};
+
+    constexpr uint64_t FirstEntryAt = 32, EntrySize = 16;
+    if (PltContents.size() < FirstEntryAt + EntrySize)
+      return {};
+
+    std::vector<std::pair<uint64_t, uint64_t>> Results;
+    for (uint64_t EntryStart = FirstEntryAt,
+                  EntryStartEnd = PltContents.size() - EntrySize;
+         EntryStart <= EntryStartEnd; EntryStart += EntrySize) {
+      // mold uses pcalau12i, while ld and lld both use pcaddu12i.
+      const uint32_t PcaddInsn =
+          support::endian::read32le(PltContents.data() + EntryStart);
+      if (((PcaddInsn & 0xfe000000) != 0x1a000000) &&
+          ((PcaddInsn & 0xfe000000) != 0x1c000000))
+        continue;
+
+      const uint32_t LoadInsn =
+          support::endian::read32le(PltContents.data() + EntryStart + 4);
+      if ((LoadInsn & 0xffc00000) != LoadInsnOpCode)
+        continue;
+
+      if (((LoadInsn >> 5) & 0x1f) != (PcaddInsn & 0x1f))
+        continue;
+      uint64_t tmp =
+          PltSectionVA + EntryStart + SignExtend64<32>(PcaddInsn >> 5 << 12);
+      uint64_t GotPltSlotVA =
+          ((PcaddInsn & 0xfe000000) == 0x1c000000)
+              ? tmp + SignExtend64<12>(LoadInsn >> 10)
+              : (tmp >> 12 << 12) + SignExtend64<12>(LoadInsn >> 10);
+      if (STI.getTargetTriple().isLoongArch32())
+        GotPltSlotVA = uint32_t(GotPltSlotVA);
+      Results.emplace_back(PltSectionVA + EntryStart, GotPltSlotVA);
+    }
+
+    return Results;
+  }
 };
 
 } // end namespace
@@ -300,5 +353,7 @@ LLVMInitializeLoongArchTargetMC() {
         *T, createLoongArchObjectTargetStreamer);
     TargetRegistry::RegisterAsmTargetStreamer(*T,
                                               createLoongArchAsmTargetStreamer);
+    TargetRegistry::RegisterNullTargetStreamer(
+        *T, createLoongArchNullTargetStreamer);
   }
 }

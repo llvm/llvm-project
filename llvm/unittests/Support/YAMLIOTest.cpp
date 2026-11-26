@@ -78,7 +78,7 @@ namespace yaml {
 TEST(YAMLIO, TestMapRead) {
   FooBar doc;
   {
-    Input yin("---\nfoo:  3\nbar:  5\n...\n");
+    Input yin("---\nfoo:  3\nbar:  5\n...");
     yin >> doc;
 
     EXPECT_FALSE(yin.error());
@@ -1211,12 +1211,12 @@ TEST(YAMLIO, TestReadWriteMultilineStringType) {
     yin >> map2;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_EQ(map2.name.str, "An Item\n");
-    EXPECT_EQ(map2.description.str, "Hello\nWorld\n");
+    EXPECT_EQ(map2.name.str, "An Item");
+    EXPECT_EQ(map2.description.str, "Hello\nWorld");
     EXPECT_EQ(map2.ingredients.str, "SubItem 1\nSub Item 2\n\nSub Item 3\n");
-    EXPECT_EQ(map2.recipes.str, "\n\nTest 1\n");
+    EXPECT_EQ(map2.recipes.str, "\n\nTest 1\n\n\n");
     EXPECT_TRUE(map2.warningLabels.str.empty());
-    EXPECT_TRUE(map2.documentation.str.empty());
+    EXPECT_EQ(map2.documentation.str, "\n\n");
     EXPECT_EQ(map2.price, 350);
   }
 }
@@ -1248,7 +1248,7 @@ TEST(YAMLIO, TestReadWriteBlockScalarDocuments) {
 
     EXPECT_FALSE(yin.error());
     EXPECT_EQ(documents2.size(), size_t(1));
-    EXPECT_EQ(documents2[0].str, "Hello\nWorld\n");
+    EXPECT_EQ(documents2[0].str, "Hello\nWorld");
   }
 }
 
@@ -1268,7 +1268,7 @@ TEST(YAMLIO, TestReadWriteBlockScalarValue) {
     yin >> doc;
 
     EXPECT_FALSE(yin.error());
-    EXPECT_EQ(doc.str, "Just a block\nscalar doc\n");
+    EXPECT_EQ(doc.str, "Just a block\nscalar doc");
   }
 }
 
@@ -1294,12 +1294,63 @@ TEST(YAMLIO, TestScalarAfterBlockScalar) {
   Output yout(ostr);
   yout << v;
   EXPECT_EQ(output, R"(---
-- block_scalac:     |
+- block_scalac:     |-
     AA
     BB
   scalar:          a
 ...
 )");
+}
+
+TEST(YAMLIO, TestBlockScalarFallsBackToQuoted) {
+  // A literal block scalar cannot hold these values, so they are written as
+  // double-quoted scalars instead.
+  std::vector<V> v{V{}};
+  v[0].doc.str = "AA\n\x01ZZ";
+  v[0].str = "a";
+  std::string output;
+  {
+    llvm::raw_string_ostream ostr(output);
+    Output yout(ostr);
+    yout << v;
+  }
+  EXPECT_EQ(output, R"(---
+- block_scalac:    "AA\n\x01ZZ"
+  scalar:          a
+...
+)");
+
+  // U+0085 (NEL) and U+2028 (LS) are line breaks to a YAML 1.1 reader, and
+  // U+0080 is a C1 control. They are spelled as UTF-8 bytes because \u escapes
+  // in narrow literals follow the compiler's execution charset (e.g. MSVC on
+  // Windows). The literals are split so 'B' is not read as a hex digit.
+  llvm::StringRef Vals[] = {"AA\n\x01ZZ",
+                            "AA\r\nBB",
+                            "  AA\nBB",
+                            "\n  AA\nBB",
+                            "AA\n\xC2\x85"
+                            "BB",
+                            "AA\n\xE2\x80\xA8"
+                            "BB",
+                            "AA\n\xC2\x80"
+                            "BB"};
+  for (llvm::StringRef Val : Vals) {
+    std::string intermediate;
+    {
+      MultilineStringType doc;
+      doc.str = Val.str();
+      llvm::raw_string_ostream ostr(intermediate);
+      Output yout(ostr);
+      yout << doc;
+    }
+    EXPECT_TRUE(llvm::StringRef(intermediate).starts_with("---\n\""))
+        << intermediate;
+    Input yin(intermediate);
+    MultilineStringType doc;
+    yin >> doc;
+    EXPECT_FALSE(yin.error()) << intermediate;
+    EXPECT_EQ(doc.str, Val) << intermediate;
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -2886,6 +2937,107 @@ TEST(YAMLIO, TestEmptySequenceWrite) {
     Output yout(OS);
     yout << seq;
     EXPECT_EQ(str, "---\n[]\n...\n");
+  }
+}
+
+TEST(YAMLIO, TestScalarAlias) {
+  FooBar doc;
+  {
+    Input yin("---\nfoo: &three 3\nbar: *three\n...\n");
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(doc.foo, 3);
+    EXPECT_EQ(doc.bar, 3);
+  }
+
+  {
+    auto testDiagnostic = [](const llvm::SMDiagnostic &Error, void *) {
+      EXPECT_EQ(Error.getMessage(), "undefined alias 'unknown'");
+    };
+    Input yin("---\nfoo: &anchor 3\nbar: *unknown\n...\n", nullptr,
+              testDiagnostic);
+    yin >> doc;
+    EXPECT_TRUE(!!yin.error());
+  }
+}
+
+TEST(YAMLIO, TestBlockScalarAliases) {
+  std::vector<std::string> doc;
+  {
+    Input yin(R"(---
+      - &alias |
+        some
+        multi
+        line
+        string
+      - *alias
+    ...
+    )");
+
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    ASSERT_EQ(doc.size(), 2ul);
+    EXPECT_EQ(doc[0], "some\nmulti\nline\nstring\n");
+    EXPECT_EQ(doc[1], doc[0]);
+  }
+}
+
+TEST(YAMLIO, TestMapAlias) {
+  {
+    FooBarContainer cont;
+
+    Input yin(R"(---
+      fbs:
+        - foo: 13
+          bar: &anchor 42
+        - &seq_elmt
+          foo: &anchor 19
+          bar: *anchor
+        - *seq_elmt
+    ...
+    )");
+    yin >> cont;
+    EXPECT_FALSE(yin.error());
+
+    auto &fbs = cont.fbs;
+    EXPECT_EQ(fbs.size(), 3ul);
+    EXPECT_EQ(fbs[0].foo, 13);
+    EXPECT_EQ(fbs[0].bar, 42);
+    EXPECT_EQ(fbs[1].foo, 19);
+    EXPECT_EQ(fbs[1].bar, 19);
+    EXPECT_EQ(fbs[2].foo, fbs[1].foo);
+    EXPECT_EQ(fbs[2].bar, fbs[1].bar);
+  }
+
+  {
+    FooBarMapMap cont;
+    Input yin(R"(---
+      fbm:
+        one: &forty_two
+          foo: 42
+          bar: 42
+        forty_two: *forty_two
+        precedence: &forty_two
+          foo: 13
+          bar: 42
+        not_forty_two: *forty_two
+    ...
+    )");
+    auto &fbm = cont.fbm;
+    yin >> cont;
+    EXPECT_FALSE(yin.error());
+
+    EXPECT_EQ(fbm.size(), 4ul);
+    EXPECT_EQ(fbm["one"].foo, 42);
+    EXPECT_EQ(fbm["one"].bar, 42);
+    EXPECT_EQ(fbm["forty_two"].foo, 42);
+    EXPECT_EQ(fbm["forty_two"].bar, 42);
+    EXPECT_EQ(fbm["precedence"].foo, 13);
+    EXPECT_EQ(fbm["precedence"].bar, 42);
+    EXPECT_EQ(fbm["not_forty_two"].foo, 13);
+    EXPECT_EQ(fbm["not_forty_two"].bar, 42);
   }
 }
 

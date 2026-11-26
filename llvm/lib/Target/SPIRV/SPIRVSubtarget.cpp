@@ -11,12 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVSubtarget.h"
+
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRV.h"
 #include "SPIRVCommandLine.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
 #include "SPIRVRegisterBankInfo.h"
 #include "SPIRVTargetMachine.h"
+
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
@@ -27,22 +31,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "SPIRVGenSubtargetInfo.inc"
 
-static cl::opt<bool>
-    SPVTranslatorCompat("translator-compatibility-mode",
-                        cl::desc("SPIR-V Translator compatibility mode"),
-                        cl::Optional, cl::init(false));
-
-static cl::opt<std::set<SPIRV::Extension::Extension>, false,
-               SPIRVExtensionsParser>
-    Extensions("spirv-ext",
-               cl::desc("Specify list of enabled SPIR-V extensions"));
-
-// Provides access to the cl::opt<...> `Extensions` variable from outside of the
-// module.
-void SPIRVSubtarget::addExtensionsToClOpt(
-    const std::set<SPIRV::Extension::Extension> &AllowList) {
-  Extensions.insert(AllowList.begin(), AllowList.end());
-}
+#define OPTIONS_STRUCT_DEFS
+#include "SPIRVOptions.inc"
 
 // Compare version numbers, but allow 0 to mean unspecified.
 static bool isAtLeastVer(VersionTuple Target, VersionTuple VerToCompareTo) {
@@ -53,7 +43,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      PointerSize(TM.getPointerSizeInBits(/* AS= */ 0)),
+      CLOpts(TM.getCLOpts()), PointerSize(TM.getPointerSizeInBits(/*AS=*/0)),
       InstrInfo(initSubtargetDependencies(CPU, FS)), FrameLowering(*this),
       TLInfo(TM, *this), TargetTriple(TT) {
   switch (TT.getSubArch()) {
@@ -89,23 +79,38 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   // Set the environment based on the target triple.
   if (TargetTriple.getOS() == Triple::Vulkan)
     Env = Shader;
-  else if (TargetTriple.getEnvironment() == Triple::OpenCL ||
-           TargetTriple.getVendor() == Triple::AMD)
+  else if (TargetTriple.getOS() == Triple::OpenCL ||
+           TargetTriple.getVendor() == Triple::AMD ||
+           TargetTriple.getOS() == Triple::ChipStar)
     Env = Kernel;
   else
     Env = Unknown;
 
+  ExtensionSet Extensions;
+  if (Error E = SPIRVExtensionsParser::parse(CLOpts.ext, Extensions,
+                                             DisabledExtensions))
+    reportFatalUsageError(std::move(E));
+
   // Set the default extensions based on the target triple.
-  if (TargetTriple.getVendor() == Triple::Intel)
+  if (TargetTriple.getVendor() == Triple::Intel) {
     Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
+    Extensions.insert(
+        SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
+  }
   if (TargetTriple.getVendor() == Triple::AMD)
-    Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple);
+    Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple,
+                                                           DisabledExtensions);
 
   // The order of initialization is important.
   initAvailableExtensions(Extensions);
   initAvailableExtInstSets();
 
-  GR = std::make_unique<SPIRVGlobalRegistry>(PointerSize);
+  // FIXME: The GlobalRegistry does not belong in the subtarget, see issue
+  // #223774. The DataLayout is a property of the module and in principle
+  // depends on program state. It just happens SPIRV currently doesn't use
+  // target-abi names.
+  GR = std::make_unique<SPIRVGlobalRegistry>(
+      DataLayout(TargetTriple.computeDataLayout()));
   CallLoweringInfo = std::make_unique<SPIRVCallLowering>(TLInfo, GR.get());
   InlineAsmInfo = std::make_unique<SPIRVInlineAsmLowering>(TLInfo);
   Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
@@ -149,7 +154,8 @@ bool SPIRVSubtarget::isAtLeastOpenCLVer(VersionTuple VerToCompareTo) const {
 // If the SPIR-V version is >= 1.4 we can call OpPtrEqual and OpPtrNotEqual.
 // In SPIR-V Translator compatibility mode this feature is not available.
 bool SPIRVSubtarget::canDirectlyComparePointers() const {
-  return !SPVTranslatorCompat && isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
+  return !CLOpts.translator_compatibility_mode &&
+         isAtLeastVer(SPIRVVersion, VersionTuple(1, 4));
 }
 
 void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
@@ -158,6 +164,12 @@ void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
     AvailableExtInstSets.insert(
         SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax);
   }
+}
+
+void SPIRVSubtarget::accountForNonSemanticDebugBreak() {
+  if (isAtLeastSPIRVVer(VersionTuple(1, 6)) ||
+      canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info))
+    AvailableExtInstSets.insert(SPIRV::InstructionSet::NonSemantic_DebugBreak);
 }
 
 // TODO: use command line args for this rather than just defaults.
@@ -171,6 +183,7 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
 
   // Handle extended instruction sets from extensions.
   accountForAMDShaderTrinaryMinmax();
+  accountForNonSemanticDebugBreak();
 }
 
 void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
@@ -189,6 +202,8 @@ void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
 }
 
 void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
+  *GR = SPIRVGlobalRegistry(M.getDataLayout());
+
   if (Env != Unknown) {
     assert(!(isKernel() && any_of(M,
                                   [](const Function &F) {
@@ -198,11 +213,34 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
     return;
   }
 
-  bool HasShaderAttr = false;
-  for (const Function &F : M) {
-    if (F.hasFnAttribute("hlsl.shader")) {
-      HasShaderAttr = true;
-      break;
+  bool HasShaderAttr = any_of(
+      M, [](const Function &F) { return F.hasFnAttribute("hlsl.shader"); });
+
+  if (!HasShaderAttr) {
+    if (auto *MemModel = M.getNamedMetadata("spirv.MemoryModel")) {
+      if (MemModel->getNumOperands() == 0)
+        report_fatal_error("Invalid spirv.MemoryModel metadata");
+      auto *MemMD = MemModel->getOperand(0);
+      if (MemMD->getNumOperands() < 2)
+        report_fatal_error("Invalid spirv.MemoryModel operand");
+      unsigned MemModelVal =
+          mdconst::extract<ConstantInt>(MemMD->getOperand(1))->getZExtValue();
+      switch (MemModelVal) {
+      case SPIRV::MemoryModel::Simple:
+      case SPIRV::MemoryModel::GLSL450:
+        HasShaderAttr = true;
+        break;
+      case SPIRV::MemoryModel::VulkanKHR:
+        HasShaderAttr = true;
+        AvailableExtensions.insert(
+            SPIRV::Extension::SPV_KHR_vulkan_memory_model);
+        break;
+      case SPIRV::MemoryModel::OpenCL:
+        break;
+      default:
+        report_fatal_error(
+            "Unknown memory model in spirv.MemoryModel metadata");
+      }
     }
   }
 
@@ -211,10 +249,11 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
 
 // Set available extensions after SPIRVSubtarget is created.
 void SPIRVSubtarget::initAvailableExtensions(
-    const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
+    const ExtensionSet &AllowedExtIds) {
   AvailableExtensions.clear();
-  const std::set<SPIRV::Extension::Extension> &ValidExtensions =
-      SPIRVExtensionsParser::getValidExtensions(TargetTriple);
+  const ExtensionSet &ValidExtensions =
+      SPIRVExtensionsParser::getValidExtensions(TargetTriple,
+                                                DisabledExtensions);
 
   for (const auto &Ext : AllowedExtIds) {
     if (ValidExtensions.count(Ext))
@@ -222,4 +261,5 @@ void SPIRVSubtarget::initAvailableExtensions(
   }
 
   accountForAMDShaderTrinaryMinmax();
+  accountForNonSemanticDebugBreak();
 }

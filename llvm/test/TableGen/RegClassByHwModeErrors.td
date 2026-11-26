@@ -66,8 +66,7 @@ def PTR_ZERO_SMALL : TestInstruction {
 /// This should fail since X0 is not necessarily part of PtrRC.
 def : CompressPat<(PTR_MOV PtrRC:$dst, X0),
                   (PTR_ZERO_SMALL PtrRC:$dst)>;
-// CHECK: [[#@LINE-2]]:1: error: cannot resolve HwMode for PtrRC
-// CHECK: Common.td:7:5: note: PtrRC defined here
+// CHECK: [[#@LINE-2]]:1: error: Error in Dag '(PTR_MOV PtrRC:$dst, X0)': Register 'X0' is not in register class 'PtrRC'
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }
 

@@ -10,6 +10,10 @@
 
 include_guard(GLOBAL)
 
+if(TARGET runtimes-libc-headers)
+  return()
+endif()
+
 set(RUNTIMES_SUPPORTED_C_LIBRARIES system llvm-libc picolibc newlib)
 set(RUNTIMES_USE_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${RUNTIMES_SUPPORTED_C_LIBRARIES}.")
 if (NOT "${RUNTIMES_USE_LIBC}" IN_LIST RUNTIMES_SUPPORTED_C_LIBRARIES)
@@ -31,7 +35,9 @@ elseif (RUNTIMES_USE_LIBC STREQUAL "llvm-libc")
   if(CXX_SUPPORTS_NOSTDLIBINC_FLAG)
     target_compile_options(runtimes-libc-headers INTERFACE "-nostdlibinc")
     if(LIBC_KERNEL_HEADERS)
-      target_compile_options(runtimes-libc-headers INTERFACE "-idirafter${LIBC_KERNEL_HEADERS}")
+      foreach(path IN LISTS LIBC_KERNEL_HEADERS)
+        target_compile_options(runtimes-libc-headers INTERFACE "-idirafter${path}")
+      endforeach()
     endif()
   endif()
 

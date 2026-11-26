@@ -11,15 +11,15 @@
 /// thing happening.
 ///
 /// To give a use case: Imagine you have a file, very large, and you
-/// are trying to understand the minimal transformation that breaks it. Bugpoint
-/// and bisection is often helpful here in narrowing it down to a specific pass,
-/// but it's still a very large file, and a very complicated pass to try to
-/// debug.  That is where debug counting steps in.  You can instrument the pass
-/// with a debug counter before it does a certain thing, and depending on the
-/// counts, it will either execute that thing or not.  The debug counter itself
-/// consists of a list of chunks (inclusive numeric intervals). `shouldExecute`
-/// returns true iff the list is empty or the current count is in one of the
-/// chunks.
+/// are trying to understand the minimal transformation that breaks it.
+/// llvm-reduce and bisection is often helpful here in narrowing it down to a
+/// specific pass, but it's still a very large file, and a very complicated pass
+/// to try to debug.  That is where debug counting steps in.  You can instrument
+/// the pass with a debug counter before it does a certain thing, and depending
+/// on the counts, it will either execute that thing or not.  The debug counter
+/// itself consists of a list of chunks (inclusive numeric intervals).
+/// `shouldExecute` returns true iff the list is empty or the current count is
+/// in one of the chunks.
 ///
 /// Note that a counter set to a negative number will always execute. For a
 /// concrete example, during predicateinfo creation, the renaming pass replaces
@@ -78,15 +78,18 @@ public:
     CounterInfo(StringRef Name, StringRef Desc) : Name(Name), Desc(Desc) {
       DebugCounter::registerCounter(this);
     }
+
+    void reset() {
+      Active = false;
+      IsSet = false;
+      Count = 0;
+      CurrChunkIdx = 0;
+      Chunks.clear();
+    }
   };
 
   LLVM_ABI static void
   printChunks(raw_ostream &OS, ArrayRef<IntegerInclusiveInterval> Intervals);
-
-  /// Return true on parsing error and print the error message on the
-  /// llvm::errs()
-  LLVM_ABI static bool
-  parseChunks(StringRef Str, IntegerInclusiveIntervalUtils::IntervalList &Res);
 
   /// Returns a reference to the singleton instance.
   LLVM_ABI static DebugCounter &instance();
@@ -165,9 +168,14 @@ public:
       Counter->Active = true;
   }
 
+  void resetAllCounters() {
+    for (auto &[_, Counter] : Counters)
+      Counter->reset();
+  }
+
 protected:
   void addCounter(CounterInfo *Info) { Counters[Info->Name] = Info; }
-  bool handleCounterIncrement(CounterInfo &Info);
+  LLVM_ABI bool handleCounterIncrement(CounterInfo &Info);
 
   MapVector<StringRef, CounterInfo *> Counters;
 

@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm %s -o - | FileCheck --check-prefixes=COMMON,CHECK %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -emit-llvm %s -o - | FileCheck --check-prefixes=COMMON,CHECK %s
 
 // Derived from CodeGenCUDA/amdgpu-kernel-arg-pointer-type.cu by deleting references to HOST
 // The original test passes the result through opt O2, but that seems to introduce invalid

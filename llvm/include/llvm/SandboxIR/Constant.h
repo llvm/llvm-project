@@ -61,6 +61,7 @@ public:
   void verify() const override {
     assert(isa<llvm::Constant>(Val) && "Expected Constant!");
   }
+  hash_code hash() const override { return User::hashHelper(); }
   void dumpOS(raw_ostream &OS) const override;
 #endif
 };
@@ -773,7 +774,8 @@ class ConstantPointerNull final : public Constant {
 public:
   LLVM_ABI static ConstantPointerNull *get(PointerType *Ty);
 
-  LLVM_ABI PointerType *getType() const;
+  LLVM_ABI Type *getType() const;
+  LLVM_ABI PointerType *getPointerType() const;
 
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
@@ -1420,6 +1422,10 @@ class ConstantExpr : public Constant {
   friend class Context; // For constructor.
 
 public:
+  LLVM_ABI static Constant *getPtrToInt(Constant *C, Type *Ty);
+  LLVM_ABI static Constant *getIntToPtr(Constant *C, Type *Ty);
+  LLVM_ABI static Constant *getBitCast(Constant *C, Type *Ty);
+
   /// For isa/dyn_cast.
   static bool classof(const sandboxir::Value *From) {
     return From->getSubclassID() == ClassID::ConstantExpr;

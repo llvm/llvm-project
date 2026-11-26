@@ -177,21 +177,12 @@ void X86MachObjectWriter::RecordX86_64Relocation(
       return;
     }
 
-    // A subtraction expression where either symbol is undefined is a
-    // non-relocatable expression.
-    if (A->isUndefined() || B->isUndefined()) {
-      StringRef Name = A->isUndefined() ? A->getName() : B->getName();
-      reportError(
-          Fixup.getLoc(),
-          "unsupported relocation with subtraction expression, symbol '" +
-              Name + "' can not be undefined in a subtraction expression");
-      return;
-    }
-
-    Value += Writer->getSymbolAddress(*A) -
-             (!A_Base ? 0 : Writer->getSymbolAddress(*A_Base));
-    Value -= Writer->getSymbolAddress(*B) -
-             (!B_Base ? 0 : Writer->getSymbolAddress(*B_Base));
+    if (!A->isUndefined())
+      Value += Writer->getSymbolAddress(*A) -
+               (!A_Base ? 0 : Writer->getSymbolAddress(*A_Base));
+    if (!B->isUndefined())
+      Value -= Writer->getSymbolAddress(*B) -
+               (!B_Base ? 0 : Writer->getSymbolAddress(*B_Base));
 
     if (!A_Base)
       Index = A->getFragment()->getParent()->getOrdinal() + 1;
@@ -394,7 +385,7 @@ bool X86MachObjectWriter::recordScatteredRelocation(MachObjectWriter *Writer,
     // we're hosed. It's an unfortunate limitation of the MachO format.
     if (FixupOffset > 0xffffff) {
       char Buffer[32];
-      format("0x%x", FixupOffset).print(Buffer, sizeof(Buffer));
+      format("0x%x", FixupOffset).snprint(Buffer, sizeof(Buffer));
       reportError(Fixup.getLoc(), Twine("Section too large, can't encode "
                                         "r_address (") +
                                       Buffer +

@@ -21,11 +21,10 @@ for line in sys.stdin:
         r'\1\2\3 {test.ptr ="\2"} : ',
         line,
     )
-    line = re.sub(
-        r'(hlfir.declare .*uniq_name =.*E)(test_var_\w*)"',
-        r'\1\2", test.ptr ="\2"',
-        line,
-    )
+    if "hlfir.declare " in line:
+        match = re.search(r'uniq_name\(".*E(test_var_\w*)"\)', line)
+        if match:
+            line = line.replace(" : (", f' {{test.ptr = "{match.group(1)}"}} : (', 1)
     line, count = re.subn(
         r"(fir.box_addr.*) :",
         rf'\1 {{test.ptr ="box_addr_{box_addr_counter}"}} :',

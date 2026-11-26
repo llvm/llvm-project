@@ -1,14 +1,18 @@
 #include "CIRGenTypes.h"
 
+#include "CIRGenCXXABI.h"
+#include "CIRGenCall.h"
 #include "CIRGenFunctionInfo.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/BuiltinTypes.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
 
 #include <cassert>
 
@@ -69,14 +73,14 @@ bool CIRGenTypes::isFuncTypeConvertible(const FunctionType *ft) {
 mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
   assert(qft.isCanonical());
   const FunctionType *ft = cast<FunctionType>(qft.getTypePtr());
-  // First, check whether we can build the full function type. If the function
-  // type depends on an incomplete type (e.g. a struct or enum), we cannot lower
-  // the function type.
-  if (!isFuncTypeConvertible(ft)) {
-    cgm.errorNYI(SourceLocation(), "function type involving an incomplete type",
-                 qft);
-    return cir::FuncType::get(SmallVector<mlir::Type, 1>{}, cgm.voidTy);
-  }
+
+  // In classic codegen, if the function type depends on an incomplete type
+  // (e.g. a struct or enum), it cannot lower the function type due to ABI
+  // handling requirements and returns a placeholder. In CIR, ABI handling is
+  // deferred until after codegen, and record types are identified by name, so
+  // incomplete record type references in the function type will automatically
+  // see the complete type once the record is defined. We can always produce a
+  // proper function type here.
 
   const CIRGenFunctionInfo *fi;
   if (const auto *fpt = dyn_cast<FunctionProtoType>(ft)) {
@@ -152,6 +156,12 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   if (cgt.isRecordLayoutComplete(key))
     return true;
 
+  // Check the cross-call cache. This avoids redundant recursive field walks
+  // for the same record types across different convertRecordDeclType calls
+  // during a single layout phase.
+  if (cgt.isCachedSafeToConvert(key))
+    return true;
+
   // If this type is currently being laid out, we can't recursively compile it.
   if (cgt.isRecordBeingLaidOut(key))
     return false;
@@ -175,6 +185,10 @@ isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt,
   for (const FieldDecl *field : rd->fields())
     if (!isSafeToConvert(field->getType(), cgt, alreadyChecked))
       return false;
+
+  // Cache the positive result. This will be cleared when recordsBeingLaidOut
+  // changes.
+  cgt.cacheSafeToConvert(key);
 
   // If there are no problems, lets do it.
   return true;
@@ -215,6 +229,15 @@ static bool isSafeToConvert(const RecordDecl *rd, CIRGenTypes &cgt) {
   return isSafeToConvert(rd, cgt, alreadyChecked);
 }
 
+bool CIRGenModule::isPaddedAtomicType(QualType type) {
+  return isPaddedAtomicType(type->castAs<AtomicType>());
+}
+
+bool CIRGenModule::isPaddedAtomicType(const AtomicType *type) {
+  return astContext.getTypeSize(type) !=
+         astContext.getTypeSize(type->getValueType());
+}
+
 /// Lay out a tagged decl type like struct or union.
 mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
@@ -246,6 +269,9 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   (void)insertResult;
   assert(insertResult && "isSafeToCovert() should have caught this.");
 
+  // Invalidate the safety cache since recordsBeingLaidOut changed.
+  safeToConvertCache.clear();
+
   // Force conversion of non-virtual base classes recursively.
   if (const auto *cxxRecordDecl = dyn_cast<CXXRecordDecl>(rd)) {
     for (const auto &base : cxxRecordDecl->bases()) {
@@ -265,9 +291,8 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   (void)eraseResult;
   assert(eraseResult && "record not in RecordsBeingLaidOut set?");
 
-  // If this record blocked a FunctionType conversion, then recompute whatever
-  // was derived from that.
-  assert(!cir::MissingFeatures::skippedLayout());
+  // Invalidate the safety cache since recordsBeingLaidOut changed.
+  safeToConvertCache.clear();
 
   // If we're done converting the outer-most record, then convert any deferred
   // records as well.
@@ -278,9 +303,37 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *rd) {
   return entry;
 }
 
+static cir::VectorAbiKind getCIRVectorAbiKind(clang::VectorKind kind) {
+  switch (kind) {
+  case VectorKind::SveFixedLengthData:
+    return cir::VectorAbiKind::SVEData;
+  case VectorKind::SveFixedLengthPredicate:
+    return cir::VectorAbiKind::SVEPredicate;
+  default:
+    // Most vector kinds aren't needed during code generation. RISC-V vector
+    // kinds will be needed for ABI lowering.
+    assert(!cir::MissingFeatures::riscvVectorKinds());
+    return cir::VectorAbiKind::Generic;
+  }
+}
+
 mlir::Type CIRGenTypes::convertType(QualType type) {
   type = astContext.getCanonicalType(type);
   const Type *ty = type.getTypePtr();
+
+  if (astContext.getLangOpts().CUDAIsDevice) {
+    if (type->isCUDADeviceBuiltinSurfaceType()) {
+      if (mlir::Type ty =
+              cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinSurfaceDeviceType())
+        return ty;
+    } else if (type->isCUDADeviceBuiltinTextureType()) {
+      if (mlir::Type ty =
+              cgm.getTargetCIRGenInfo().getCUDADeviceBuiltinTextureDeviceType())
+        return ty;
+
+      assert(!cir::MissingFeatures::cudaTextureType());
+    }
+  }
 
   // Process record types before the type cache lookup.
   if (const auto *recordType = dyn_cast<RecordType>(type))
@@ -320,59 +373,51 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::SChar:
     case BuiltinType::Short:
     case BuiltinType::WChar_S:
+    case BuiltinType::Accum:
+    case BuiltinType::Fract:
+    case BuiltinType::LongAccum:
+    case BuiltinType::LongFract:
+    case BuiltinType::ShortAccum:
+    case BuiltinType::ShortFract:
+    // Saturated signed types.
+    case BuiltinType::SatAccum:
+    case BuiltinType::SatFract:
+    case BuiltinType::SatLongAccum:
+    case BuiltinType::SatLongFract:
+    case BuiltinType::SatShortAccum:
+    case BuiltinType::SatShortFract:
       resultType =
           cir::IntType::get(&getMLIRContext(), astContext.getTypeSize(ty),
                             /*isSigned=*/true);
       break;
 
-    // SVE types
-    case BuiltinType::SveInt8:
-      resultType =
-          cir::VectorType::get(builder.getSInt8Ty(), 16, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveUint8:
-      resultType =
-          cir::VectorType::get(builder.getUInt8Ty(), 16, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveInt16:
-      resultType =
-          cir::VectorType::get(builder.getSInt16Ty(), 8, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveUint16:
-      resultType =
-          cir::VectorType::get(builder.getUInt16Ty(), 8, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveFloat16:
-      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
-                                        /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveBFloat16:
-      resultType = cir::VectorType::get(builder.getFp16Ty(), 8,
-                                        /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveInt32:
-      resultType =
-          cir::VectorType::get(builder.getSInt32Ty(), 4, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveUint32:
-      resultType =
-          cir::VectorType::get(builder.getUInt32Ty(), 4, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveFloat32:
-      resultType = cir::VectorType::get(builder.getSingleTy(), 4,
-                                        /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveInt64:
-      resultType =
-          cir::VectorType::get(builder.getSInt64Ty(), 2, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveUint64:
-      resultType =
-          cir::VectorType::get(builder.getUInt64Ty(), 2, /*is_scalable=*/true);
-      break;
-    case BuiltinType::SveFloat64:
-      resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
-                                        /*is_scalable=*/true);
+      // SVE data and predicate types.
+#define SVE_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                    \
+  case BuiltinType::Id:
+#define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
+  case BuiltinType::Id:
+#include "clang/Basic/AArch64ACLETypes.def"
+      {
+        ASTContext::BuiltinVectorTypeInfo info =
+            astContext.getBuiltinVectorTypeInfo(cast<BuiltinType>(ty));
+        if (info.NumVectors != 1) {
+          cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
+          resultType = cgm.sInt32Ty;
+          break;
+        }
+        // A predicate holds one bit per lane.
+        bool isPredicate = info.ElementType->isBooleanType();
+        mlir::Type eltTy =
+            isPredicate ? builder.getUIntNTy(1) : convertType(info.ElementType);
+        resultType =
+            cir::VectorType::get(eltTy, info.EC,
+                                 isPredicate ? cir::VectorAbiKind::SVEPredicate
+                                             : cir::VectorAbiKind::SVEData);
+        break;
+      }
+
+    case BuiltinType::SveCount:
+      resultType = cir::SveCountType::get(&getMLIRContext());
       break;
 
     // Unsigned integral types.
@@ -387,6 +432,19 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::ULongLong:
     case BuiltinType::UShort:
     case BuiltinType::WChar_U:
+    case BuiltinType::UAccum:
+    case BuiltinType::UFract:
+    case BuiltinType::ULongAccum:
+    case BuiltinType::ULongFract:
+    case BuiltinType::UShortAccum:
+    case BuiltinType::UShortFract:
+    // Saturated unsigned types.
+    case BuiltinType::SatUAccum:
+    case BuiltinType::SatUFract:
+    case BuiltinType::SatULongAccum:
+    case BuiltinType::SatULongFract:
+    case BuiltinType::SatUShortAccum:
+    case BuiltinType::SatUShortFract:
       resultType =
           cir::IntType::get(&getMLIRContext(), astContext.getTypeSize(ty),
                             /*isSigned=*/false);
@@ -397,16 +455,13 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.fP16Ty;
       break;
     case BuiltinType::Half:
-      if (astContext.getLangOpts().NativeHalfType ||
-          !astContext.getTargetInfo().useFP16ConversionIntrinsics()) {
-        resultType = cgm.fP16Ty;
-      } else {
-        cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
-        resultType = cgm.sInt32Ty;
-      }
+      resultType = cgm.fP16Ty;
       break;
     case BuiltinType::BFloat16:
       resultType = cgm.bFloat16Ty;
+      break;
+    case BuiltinType::MFloat8:
+      resultType = cgm.mFloat8Ty;
       break;
     case BuiltinType::Float:
       assert(&astContext.getFloatTypeSemantics(type) ==
@@ -440,6 +495,25 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = builder.getVoidPtrTy();
       break;
 
+#define AMDGPU_OPAQUE_PTR_TYPE(Name, Id, SingletonId, Width, Align, AS)        \
+  case BuiltinType::Id: {                                                      \
+    if (BuiltinType::Id == BuiltinType::AMDGPUTexture) {                       \
+      resultType = cir::VectorType::getFixed(builder.getSInt32Ty(), 8);        \
+    } else {                                                                   \
+      resultType = builder.getPointerTo(                                       \
+          cgm.voidTy,                                                          \
+          cir::TargetAddressSpaceAttr::get(&getMLIRContext(), AS));            \
+    }                                                                          \
+    break;                                                                     \
+  }
+#define AMDGPU_NAMED_BARRIER_TYPE(Name, Id, SingletonId, Width, Align, Scope)  \
+  case BuiltinType::Id:                                                        \
+    llvm_unreachable("NYI");
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
+  case BuiltinType::Id:                                                        \
+    llvm_unreachable("NYI");
+#include "clang/Basic/AMDGPUTypes.def"
+
     default:
       cgm.errorNYI(SourceLocation(), "processing of built-in type", type);
       resultType = cgm.sInt32Ty;
@@ -460,7 +534,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const ReferenceType *refTy = cast<ReferenceType>(ty);
     QualType elemTy = refTy->getPointeeType();
     auto pointeeType = convertTypeForMem(elemTy);
-    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
+    resultType =
+        builder.getPointerTo(pointeeType, getPointerAddressSpace(elemTy));
     assert(resultType && "Cannot get pointer type?");
     break;
   }
@@ -468,18 +543,21 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Pointer: {
     const PointerType *ptrTy = cast<PointerType>(ty);
     QualType elemTy = ptrTy->getPointeeType();
-    assert(!elemTy->isConstantMatrixType() && "not implemented");
-
     mlir::Type pointeeType = convertType(elemTy);
 
-    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
+    resultType =
+        builder.getPointerTo(pointeeType, getPointerAddressSpace(elemTy));
     break;
   }
 
   case Type::VariableArray: {
     const VariableArrayType *a = cast<VariableArrayType>(ty);
-    if (a->getIndexTypeCVRQualifiers() != 0)
-      cgm.errorNYI(SourceLocation(), "non trivial array types", type);
+    // CVR index qualifiers are ONLY valid on parameter arrays, which are
+    // automatically decayed to pointer, so they can't reach here.  All other
+    // uses (outside of a top-level function parameter) is rejected by Sema, so
+    // we don't have to worry about these reaching here.
+    assert(a->getIndexTypeCVRQualifiers() == 0 &&
+           "Parameter types cannot make it here");
     // VLAs resolve to the innermost element type; this matches
     // the return of alloca, and there isn't any obviously better choice.
     resultType = convertTypeForMem(a->getElementType());
@@ -488,9 +566,12 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::IncompleteArray: {
     const IncompleteArrayType *arrTy = cast<IncompleteArrayType>(ty);
-    if (arrTy->getIndexTypeCVRQualifiers() != 0)
-      cgm.errorNYI(SourceLocation(), "non trivial array types", type);
-
+    // CVR index qualifiers are ONLY valid on parameter arrays, which are
+    // automatically decayed to pointer, so they can't reach here.  All other
+    // uses (outside of a top-level function parameter) is rejected by Sema, so
+    // we don't have to worry about these reaching here.
+    assert(arrTy->getIndexTypeCVRQualifiers() == 0 &&
+           "Parameter types cannot make it here");
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
     // int X[] -> [0 x int], unless the element type is not sized.  If it is
     // unsized (e.g. an incomplete record) just use [0 x i8].
@@ -518,7 +599,17 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::Vector: {
     const VectorType *vec = cast<VectorType>(ty);
     const mlir::Type elemTy = convertType(vec->getElementType());
-    resultType = cir::VectorType::get(elemTy, vec->getNumElements());
+    resultType =
+        cir::VectorType::getFixed(elemTy, vec->getNumElements(),
+                                  getCIRVectorAbiKind(vec->getVectorKind()));
+    break;
+  }
+
+  case Type::ConstantMatrix: {
+    const ConstantMatrixType *mt = cast<ConstantMatrixType>(ty);
+    const mlir::Type elemTy = convertType(mt->getElementType());
+    resultType =
+        cir::MatrixType::get(elemTy, mt->getNumRows(), mt->getNumColumns());
     break;
   }
 
@@ -536,13 +627,17 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::MemberPointer: {
     const auto *mpt = cast<MemberPointerType>(ty);
 
-    mlir::Type memberTy = convertType(mpt->getPointeeType());
+    NestedNameSpecifier mptNNS = mpt->getQualifier();
     auto clsTy = mlir::cast<cir::RecordType>(
-        convertType(QualType(mpt->getQualifier().getAsType(), 0)));
+        convertType(QualType(mptNNS.getAsType(), 0)));
     if (mpt->isMemberDataPointer()) {
+      mlir::Type memberTy = convertType(mpt->getPointeeType());
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      auto memberFuncTy = mlir::cast<cir::FuncType>(memberTy);
+      auto memberFuncTy = getFunctionType(cgm.getTypes().arrangeCXXMethodType(
+          mptNNS.getAsRecordDecl(),
+          mpt->getPointeeType()->getAs<clang::FunctionProtoType>(),
+          /*methodDecl=*/nullptr));
       resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;
@@ -555,13 +650,12 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
   case Type::BitInt: {
     const auto *bitIntTy = cast<BitIntType>(type);
-    if (bitIntTy->getNumBits() > cir::IntType::maxBitwidth()) {
-      cgm.errorNYI(SourceLocation(), "large _BitInt type", type);
-      resultType = cgm.sInt32Ty;
-    } else {
-      resultType = cir::IntType::get(&getMLIRContext(), bitIntTy->getNumBits(),
-                                     bitIntTy->isSigned());
-    }
+    unsigned numBits = bitIntTy->getNumBits();
+    assert(numBits <= cir::IntType::maxBitwidth() &&
+           "_BitInt width exceeds CIR IntType maximum");
+    resultType =
+        cir::IntType::get(&getMLIRContext(), numBits, bitIntTy->isSigned(),
+                          /*isBitInt=*/true);
     break;
   }
 
@@ -573,7 +667,15 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     uint64_t valueSize = astContext.getTypeSize(valueType);
     uint64_t atomicSize = astContext.getTypeSize(ty);
     if (valueSize != atomicSize) {
-      cgm.errorNYI("convertType: atomic type value size != atomic size");
+      assert(valueSize < atomicSize);
+      auto paddingArray =
+          cir::ArrayType::get(cgm.sInt8Ty, (atomicSize - valueSize) / 8);
+      mlir::Type elements[] = {resultType, paddingArray};
+      cir::RecordMemberKind kinds[] = {cir::RecordMemberKind::Data,
+                                       cir::RecordMemberKind::Pad};
+      resultType =
+          cir::StructType::get(&getMLIRContext(), /*members=*/elements,
+                               /*packed=*/false, /*is_class=*/false, kinds);
     }
 
     break;
@@ -594,7 +696,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
-  assert(!qualType->isConstantMatrixType() && "Matrix types NYI");
+  if (astContext.getLangOpts().HLSL && qualType->isConstantMatrixType()) {
+    if (isMatrixRowMajor(astContext.getLangOpts(), qualType)) {
+      cgm.errorNYI("convertTypeForMem: HLSL & Matrix row major");
+    }
+  }
 
   mlir::Type convertedType = convertType(qualType);
 
@@ -630,7 +736,7 @@ CIRGenTypes::getCIRGenRecordLayout(const RecordDecl *rd) {
 }
 
 bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
-  if (t->getAs<PointerType>())
+  if (t->getAs<PointerType>() || t->isNullPtrType())
     return astContext.getTargetNullPointerValue(t) == 0;
 
   if (const auto *at = astContext.getAsArrayType(t)) {
@@ -640,16 +746,19 @@ bool CIRGenTypes::isZeroInitializable(clang::QualType t) {
     if (const auto *cat = dyn_cast<ConstantArrayType>(at))
       if (astContext.getConstantArrayElementCount(cat) == 0)
         return true;
+
+    t = astContext.getBaseElementType(t);
   }
 
   if (const auto *rd = t->getAsRecordDecl())
     return isZeroInitializable(rd);
 
-  if (t->getAs<MemberPointerType>()) {
-    cgm.errorNYI(SourceLocation(), "isZeroInitializable for MemberPointerType",
-                 t);
-    return false;
-  }
+  if (const auto *mpt = t->getAs<MemberPointerType>())
+    return theCXXABI.isZeroInitializable(mpt);
+
+  if (t->getAs<HLSLInlineSpirvType>())
+    cgm.errorNYI(SourceLocation(),
+                 "isZeroInitializable for HLSLInlineSpirvType");
 
   return true;
 }
@@ -658,17 +767,75 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
   return getCIRGenRecordLayout(rd).isZeroInitializable();
 }
 
+bool CIRGenTypes::isPointerZeroInitializable(clang::QualType t) {
+  assert((t->isAnyPointerType() || t->isBlockPointerType() ||
+          t->isNullPtrType()) &&
+         "Invalid type");
+  return isZeroInitializable(t);
+}
+
+cir::CallingConv
+CIRGenTypes::clangCallConvToCIRCallConv(clang::CallingConv cc) {
+  switch (cc) {
+  case CC_C:
+    // SPIR/SPIR-V lowers the default CC to spir_func, not plain C.
+    if (cgm.getTriple().isSPIROrSPIRV())
+      return cir::CallingConv::SpirFunction;
+    return cir::CallingConv::C;
+  case CC_DeviceKernel:
+    return cgm.getTargetCIRGenInfo().getDeviceKernelCallingConv();
+  default:
+    // TODO(cir): Support the remaining target-specific calling conventions.
+    cgm.errorNYI(SourceLocation(), "calling convention",
+                 FunctionType::getNameForCallConv(cc));
+    return cir::CallingConv::C;
+  }
+}
+
+/// Whether a by-value ABI type is `_Atomic` or contains an `_Atomic` member.
+/// Pointers and references are not walked: `_Atomic(T)*` is just a pointer.
+static bool typeContainsAtomicForABI(QualType ty, ASTContext &ctx) {
+  ty = ty.getCanonicalType().getUnqualifiedType();
+  if (ty->isAtomicType())
+    return true;
+
+  if (const ArrayType *arrayTy = ctx.getAsArrayType(ty))
+    return typeContainsAtomicForABI(arrayTy->getElementType(), ctx);
+
+  const RecordDecl *rd = ty->getAsRecordDecl();
+  if (!rd || !rd->getDefinition())
+    return false;
+
+  if (const CXXRecordDecl *cxxRD = dyn_cast<CXXRecordDecl>(rd)) {
+    for (const CXXBaseSpecifier &base : cxxRD->bases())
+      if (typeContainsAtomicForABI(base.getType(), ctx))
+        return true;
+  }
+
+  for (const FieldDecl *field : rd->fields())
+    if (typeContainsAtomicForABI(field->getType(), ctx))
+      return true;
+  return false;
+}
+
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
-    CanQualType returnType, llvm::ArrayRef<CanQualType> argTypes,
-    FunctionType::ExtInfo info, RequiredArgs required) {
+    CanQualType returnType, bool isInstanceMethod,
+    llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
+    RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
+  auto containsAtomic = [&](CanQualType t) {
+    return typeContainsAtomicForABI(t, astContext);
+  };
+  if (containsAtomic(returnType) || llvm::any_of(argTypes, containsAtomic))
+    cgm.errorNYI("passing or returning atomic types");
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, info, required, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
+                              argTypes);
 
-  void *insertPos = nullptr;
-  CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
+  llvm::FoldingSetInsertToken insertToken;
+  CIRGenFunctionInfo *fi = functionInfos.lookup(id, insertToken);
   if (fi) {
     // We found a matching function info based on id. These asserts verify that
     // it really is a match.
@@ -679,13 +846,28 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
     return *fi;
   }
 
-  assert(!cir::MissingFeatures::opCallCallConv());
+  cir::CallingConv cirCC = clangCallConvToCIRCallConv(info.getCC());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, returnType, argTypes, required);
-  functionInfos.InsertNode(fi, insertPos);
+  fi = CIRGenFunctionInfo::create(cirCC, info, isInstanceMethod, returnType,
+                                  argTypes, required);
+  functionInfos.insert(fi, insertToken);
 
   return *fi;
+}
+
+const CIRGenFunctionInfo &
+CIRGenTypes::arrangeDeviceKernelCallerDeclaration(QualType resultType,
+                                                  const FunctionArgList &args) {
+  SmallVector<CanQualType, 16> argTypes;
+  for (const VarDecl *arg : args)
+    argTypes.push_back(astContext.getCanonicalParamType(arg->getType()));
+
+  // Classic CodeGen passes FnInfoOpts::None here; that is the no-op case, so
+  // nothing is needed even once CIR models FnInfoOpts.
+  return arrangeCIRFunctionInfo(
+      resultType->getCanonicalTypeUnqualified(), /*isInstanceMethod=*/false,
+      argTypes, FunctionType::ExtInfo(CC_DeviceKernel), RequiredArgs::All);
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeGlobalDeclaration(GlobalDecl gd) {
@@ -737,4 +919,31 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If necessary, provide the full definition of a type only used with a
   // declaration so far.
   assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+mlir::ptr::MemorySpaceAttrInterface
+CIRGenTypes::getPointerAddressSpace(clang::QualType pointeeTy) const {
+  // An explicit source address space is carried directly.
+  if (pointeeTy.getAddressSpace() != LangAS::Default)
+    return cir::toCIRAddressSpaceAttr(getMLIRContext(),
+                                      pointeeTy.getAddressSpace());
+
+  // Resolve a default-address-space pointee through getTargetAddressSpace, as
+  // classic CodeGen does. This is only non-zero for languages that default to
+  // a non-default address space (e.g. generic for SYCL device data), and uses
+  // the program address space for functions.
+  unsigned targetAS = getTargetAddressSpace(pointeeTy);
+  if (targetAS == 0)
+    return {};
+  return cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
+}
+
+unsigned CIRGenTypes::getTargetAddressSpace(QualType ty) const {
+  // Return the address space for the type. If the type is a
+  // function type without an address space qualifier, the
+  // program address space is used. Otherwise, the target picks
+  // the best address space based on the type information
+  return ty->isFunctionType() && !ty.hasAddressSpace()
+             ? cgm.getDataLayout().getProgramAddressSpace()
+             : getASTContext().getTargetAddressSpace(ty.getAddressSpace());
 }

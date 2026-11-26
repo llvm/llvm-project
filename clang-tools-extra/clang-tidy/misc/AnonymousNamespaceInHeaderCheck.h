@@ -29,9 +29,6 @@ public:
   }
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
-
-private:
-  FileExtensionsSet HeaderFileExtensions;
 };
 
 } // namespace clang::tidy::misc

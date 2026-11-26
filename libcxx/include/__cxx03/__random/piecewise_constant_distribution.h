@@ -9,8 +9,10 @@
 #ifndef _LIBCPP___CXX03___RANDOM_PIECEWISE_CONSTANT_DISTRIBUTION_H
 #define _LIBCPP___CXX03___RANDOM_PIECEWISE_CONSTANT_DISTRIBUTION_H
 
+#include <__cxx03/__algorithm/copy_n.h>
 #include <__cxx03/__algorithm/upper_bound.h>
 #include <__cxx03/__config>
+#include <__cxx03/__iterator/back_insert_iterator.h>
 #include <__cxx03/__random/is_valid.h>
 #include <__cxx03/__random/uniform_real_distribution.h>
 #include <__cxx03/iosfwd>
@@ -178,8 +180,7 @@ piecewise_constant_distribution<_RealType>::param_type::param_type(
     __areas_.assign(1, 0.0);
   } else {
     __densities_.reserve(__b_.size() - 1);
-    for (size_t __i = 0; __i < __b_.size() - 1; ++__i, ++__f_w)
-      __densities_.push_back(*__f_w);
+    std::copy_n(__f_w, __b_.size() - 1, std::back_inserter(__densities_));
     __init();
   }
 }

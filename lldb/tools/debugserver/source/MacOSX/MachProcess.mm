@@ -19,6 +19,7 @@
 #include <mach/mach.h>
 #include <mach/task.h>
 #include <pthread.h>
+#include <setjmp.h>
 #include <signal.h>
 #include <spawn.h>
 #include <sys/fcntl.h>
@@ -31,7 +32,9 @@
 #include <uuid/uuid.h>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <limits>
 #include <map>
 #include <unordered_set>
 
@@ -538,6 +541,7 @@ MachProcess::MachProcess()
       m_dyld_process_snapshot_create_for_process(nullptr),
       m_dyld_process_snapshot_get_shared_cache(nullptr),
       m_dyld_shared_cache_for_each_file(nullptr),
+      m_dyld_shared_cache_get_mapped_size(nullptr),
       m_dyld_process_snapshot_dispose(nullptr), m_dyld_process_dispose(nullptr),
       m_dyld_process_info_for_each_image(nullptr),
       m_dyld_process_info_release(nullptr),
@@ -559,6 +563,8 @@ MachProcess::MachProcess()
   m_dyld_shared_cache_for_each_file =
       (void (*)(void *, void (^)(const char *)))dlsym(
           RTLD_DEFAULT, "dyld_shared_cache_for_each_file");
+  m_dyld_shared_cache_get_mapped_size = (uint64_t(*)(void *))dlsym(
+      RTLD_DEFAULT, "dyld_shared_cache_get_mapped_size");
   m_dyld_process_snapshot_dispose =
       (void (*)(void *))dlsym(RTLD_DEFAULT, "dyld_process_snapshot_dispose");
   m_dyld_process_dispose =
@@ -662,9 +668,42 @@ nub_addr_t MachProcess::GetTSDAddressForThread(
       plo_pthread_tsd_entry_size);
 }
 
+static constexpr size_t max_deployment_command_size = std::max({
+    sizeof(struct version_min_command),
+#if defined(LC_BUILD_VERSION)
+    sizeof(struct build_version_command),
+#endif
+});
+
 MachProcess::DeploymentInfo
 MachProcess::GetDeploymentInfo(const struct load_command &lc,
                                uint64_t load_command_address,
+                               bool is_executable) {
+  size_t command_size = 0;
+  switch (lc.cmd & ~LC_REQ_DYLD) {
+  case LC_VERSION_MIN_IPHONEOS:
+  case LC_VERSION_MIN_MACOSX:
+  case LC_VERSION_MIN_TVOS:
+  case LC_VERSION_MIN_WATCHOS:
+    command_size = sizeof(struct version_min_command);
+    break;
+#if defined(LC_BUILD_VERSION)
+  case LC_BUILD_VERSION:
+    command_size = sizeof(struct build_version_command);
+    break;
+#endif
+  }
+  std::array<uint8_t, max_deployment_command_size> command_data;
+  const uint8_t *data = nullptr;
+  if (command_size && ReadMemory(load_command_address, command_size,
+                                 command_data.data()) == command_size)
+    data = command_data.data();
+  return GetDeploymentInfo(lc, data, is_executable);
+}
+
+MachProcess::DeploymentInfo
+MachProcess::GetDeploymentInfo(const struct load_command &lc,
+                               const uint8_t *command_data,
                                bool is_executable) {
   DeploymentInfo info;
   uint32_t cmd = lc.cmd & ~LC_REQ_DYLD;
@@ -672,10 +711,10 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
   // Handle the older LC_VERSION load commands, which don't
   // distinguish between simulator and real hardware.
   auto handle_version_min = [&](char platform) {
-    struct version_min_command vers_cmd;
-    if (ReadMemory(load_command_address, sizeof(struct version_min_command),
-                   &vers_cmd) != sizeof(struct version_min_command))
+    if (!command_data)
       return;
+    struct version_min_command vers_cmd;
+    memcpy(&vers_cmd, command_data, sizeof(vers_cmd));
     info.platform = platform;
     info.major_version = vers_cmd.version >> 16;
     info.minor_version = (vers_cmd.version >> 8) & 0xffu;
@@ -719,10 +758,10 @@ MachProcess::GetDeploymentInfo(const struct load_command &lc,
     break;
 #if defined(LC_BUILD_VERSION)
   case LC_BUILD_VERSION: {
-    struct build_version_command build_vers;
-    if (ReadMemory(load_command_address, sizeof(struct build_version_command),
-                   &build_vers) != sizeof(struct build_version_command))
+    if (!command_data)
       break;
+    struct build_version_command build_vers;
+    memcpy(&build_vers, command_data, sizeof(build_vers));
     info.platform = build_vers.platform;
     info.major_version = build_vers.minos >> 16;
     info.minor_version = (build_vers.minos >> 8) & 0xffu;
@@ -810,6 +849,10 @@ bool MachProcess::GetMachOInformationFromMemory(
     uint32_t dyld_platform, nub_addr_t mach_o_header_addr, int wordsize,
     struct mach_o_information &inf) {
   uint64_t load_cmds_p;
+  const size_t header_size = wordsize == 4 ? sizeof(struct mach_header)
+                                           : sizeof(struct mach_header_64);
+  if (mach_o_header_addr > std::numeric_limits<nub_addr_t>::max() - header_size)
+    return false;
 
   if (wordsize == 4) {
     struct mach_header header;
@@ -849,18 +892,83 @@ bool MachProcess::GetMachOInformationFromMemory(
     inf.mach_header.sizeofcmds = header.sizeofcmds;
     inf.mach_header.flags = header.flags;
   }
+  const uint64_t load_cmds_size = inf.mach_header.sizeofcmds;
+  if (inf.mach_header.ncmds > load_cmds_size / sizeof(struct load_command) ||
+      load_cmds_p > std::numeric_limits<nub_addr_t>::max() - load_cmds_size)
+    return false;
+  const nub_addr_t load_cmds_end = load_cmds_p + load_cmds_size;
+
+  // Cache only a bounded part of this image's load commands. A large valid
+  // region needs more refills, rather than an allocation based on sizeofcmds.
+  std::array<uint8_t, 16 * 1024> cache;
+  nub_addr_t cache_address = load_cmds_p;
+  size_t cache_size = 0;
+  auto read_command = [&](nub_addr_t address, size_t size, void *destination) {
+    if (address > load_cmds_end || size > load_cmds_end - address)
+      return false;
+    if (address < cache_address || address - cache_address > cache_size ||
+        size > cache_size - (address - cache_address)) {
+      cache_address = address;
+      const size_t requested =
+          std::min<uint64_t>(cache.size(), load_cmds_end - address);
+      cache_size = ReadMemory(address, requested, cache.data());
+      if (cache_size < size) {
+        // An unknown command's payload need not be readable. If a bulk read
+        // crosses unreadable memory, still try the exact required prefix.
+        return ReadMemory(address, size, destination) == size;
+      }
+    }
+    memcpy(destination, cache.data() + (address - cache_address), size);
+    return true;
+  };
+
+  // Reserve space for the largest fixed command prefix read below.
+  constexpr size_t max_command_prefix_size = std::max({
+      sizeof(struct load_command),
+      sizeof(struct segment_command),
+      sizeof(struct segment_command_64),
+      sizeof(struct uuid_command),
+      max_deployment_command_size,
+  });
   for (uint32_t j = 0; j < inf.mach_header.ncmds; j++) {
     struct load_command lc;
-    if (ReadMemory(load_cmds_p, sizeof(struct load_command), &lc) !=
-        sizeof(struct load_command)) {
+    if (!read_command(load_cmds_p, sizeof(lc), &lc))
       return false;
-    }
-    if (lc.cmd == LC_SEGMENT) {
-      struct segment_command seg;
-      if (ReadMemory(load_cmds_p, sizeof(struct segment_command), &seg) !=
-          sizeof(struct segment_command)) {
-        return false;
+    if (lc.cmdsize < sizeof(lc) || lc.cmdsize > load_cmds_end - load_cmds_p)
+      return false;
+
+    size_t command_size = sizeof(lc);
+    if (lc.cmd == LC_SEGMENT)
+      command_size = sizeof(struct segment_command);
+    else if (lc.cmd == LC_SEGMENT_64)
+      command_size = sizeof(struct segment_command_64);
+    else if (lc.cmd == LC_UUID)
+      command_size = sizeof(struct uuid_command);
+    else {
+      switch (lc.cmd & ~LC_REQ_DYLD) {
+      case LC_VERSION_MIN_IPHONEOS:
+      case LC_VERSION_MIN_MACOSX:
+      case LC_VERSION_MIN_TVOS:
+      case LC_VERSION_MIN_WATCHOS:
+        command_size = sizeof(struct version_min_command);
+        break;
+#if defined(LC_BUILD_VERSION)
+      case LC_BUILD_VERSION:
+        command_size = sizeof(struct build_version_command);
+        break;
+#endif
       }
+    }
+    if (command_size > lc.cmdsize)
+      return false;
+    std::array<uint8_t, max_command_prefix_size> command_data;
+    const bool have_command_data =
+        read_command(load_cmds_p, command_size, command_data.data());
+    if (lc.cmd == LC_SEGMENT) {
+      if (!have_command_data)
+        return false;
+      struct segment_command seg;
+      memcpy(&seg, command_data.data(), sizeof(seg));
       struct mach_o_segment this_seg;
       char name[17];
       ::memset(name, 0, sizeof(name));
@@ -879,11 +987,10 @@ bool MachProcess::GetMachOInformationFromMemory(
         m_task.TaskWillExecProcessesSuspended();
     }
     if (lc.cmd == LC_SEGMENT_64) {
-      struct segment_command_64 seg;
-      if (ReadMemory(load_cmds_p, sizeof(struct segment_command_64), &seg) !=
-          sizeof(struct segment_command_64)) {
+      if (!have_command_data)
         return false;
-      }
+      struct segment_command_64 seg;
+      memcpy(&seg, command_data.data(), sizeof(seg));
       struct mach_o_segment this_seg;
       char name[17];
       ::memset(name, 0, sizeof(name));
@@ -901,14 +1008,14 @@ bool MachProcess::GetMachOInformationFromMemory(
       if (this_seg.name == "ExecExtraSuspend")
         m_task.TaskWillExecProcessesSuspended();
     }
-    if (lc.cmd == LC_UUID) {
+    if (lc.cmd == LC_UUID && have_command_data) {
       struct uuid_command uuidcmd;
-      if (ReadMemory(load_cmds_p, sizeof(struct uuid_command), &uuidcmd) ==
-          sizeof(struct uuid_command))
-        uuid_copy(inf.uuid, uuidcmd.uuid);
+      memcpy(&uuidcmd, command_data.data(), sizeof(uuidcmd));
+      uuid_copy(inf.uuid, uuidcmd.uuid);
     }
     if (DeploymentInfo deployment_info = GetDeploymentInfo(
-            lc, load_cmds_p, inf.mach_header.filetype == MH_EXECUTE)) {
+            lc, have_command_data ? command_data.data() : nullptr,
+            inf.mach_header.filetype == MH_EXECUTE)) {
       std::optional<std::string> lc_platform =
           GetPlatformString(deployment_info.platform);
       if (dyld_platform != PLATFORM_MACCATALYST &&
@@ -950,7 +1057,7 @@ bool MachProcess::GetMachOInformationFromMemory(
 // with all the details we want to send to lldb.
 JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     const std::vector<struct binary_image_information> &image_infos,
-    bool report_load_commands) {
+    DNBBinaryInformationLevel info_level) {
 
   JSONGenerator::ArraySP image_infos_array_sp(new JSONGenerator::Array());
 
@@ -960,19 +1067,20 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     // If we should report the Mach-O header and load commands,
     // and those were unreadable, don't report anything about this
     // binary.
-    if (report_load_commands && !image_infos[i].is_valid_mach_header)
+    if (info_level == eBinaryInformationLevelFull &&
+        !image_infos[i].is_valid_mach_header)
       continue;
     JSONGenerator::DictionarySP image_info_dict_sp(
         new JSONGenerator::Dictionary());
     image_info_dict_sp->AddIntegerItem("load_address",
                                        image_infos[i].load_address);
-    // TODO: lldb currently rejects a response without this, but it
-    // is always zero from dyld.  It can be removed once we've had time
-    // for lldb's that require it to be present are obsolete.
-    image_info_dict_sp->AddIntegerItem("mod_date", 0);
-    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+    if (info_level == eBinaryInformationLevelAddrOnly) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
-    if (!report_load_commands) {
+    image_info_dict_sp->AddStringItem("pathname", image_infos[i].filename);
+    if (info_level == eBinaryInformationLevelAddrName) {
       image_infos_array_sp->AddItem(image_info_dict_sp);
       continue;
     }
@@ -980,6 +1088,10 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
     uuid_string_t uuidstr;
     uuid_unparse_upper(image_infos[i].macho_info.uuid, uuidstr);
     image_info_dict_sp->AddStringItem("uuid", uuidstr);
+    if (info_level == eBinaryInformationLevelAddrNameUUID) {
+      image_infos_array_sp->AddItem(image_info_dict_sp);
+      continue;
+    }
 
     if (!image_infos[i].macho_info.min_version_os_name.empty() &&
         !image_infos[i].macho_info.min_version_os_version.empty()) {
@@ -1003,6 +1115,12 @@ JSONGenerator::ObjectSP MachProcess::FormatDynamicLibrariesIntoJSON(
         "filetype", image_infos[i].macho_info.mach_header.filetype);
     mach_header_dict_sp->AddIntegerItem ("flags", 
                          image_infos[i].macho_info.mach_header.flags);
+    int mh_size = image_infos[i].macho_info.mach_header.magic == MH_MAGIC
+                      ? sizeof(mach_header)
+                      : sizeof(mach_header_64);
+    mach_header_dict_sp->AddIntegerItem(
+        "sizeof_mh_and_loadcmds",
+        mh_size + image_infos[i].macho_info.mach_header.sizeofcmds);
 
     //          DynamicLoaderMacOSX doesn't currently need these fields, so
     //          don't send them.
@@ -1116,12 +1234,12 @@ void MachProcess::GetAllLoadedBinariesViaDYLDSPI(
 // macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP
 MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
-                                        bool report_load_commands) {
+                                        DNBBinaryInformationLevel info_level) {
 
   int pointer_size = GetInferiorAddrSize(pid);
   std::vector<struct binary_image_information> image_infos;
   GetAllLoadedBinariesViaDYLDSPI(image_infos);
-  if (report_load_commands) {
+  if (info_level == eBinaryInformationLevelFull) {
     uint32_t platform = GetPlatform();
     const size_t image_count = image_infos.size();
     for (size_t i = 0; i < image_count; i++) {
@@ -1132,7 +1250,7 @@ MachProcess::GetAllLoadedLibrariesInfos(nub_process_t pid,
       }
     }
   }
-  return FormatDynamicLibrariesIntoJSON(image_infos, report_load_commands);
+  return FormatDynamicLibrariesIntoJSON(image_infos, info_level);
 }
 
 std::optional<std::pair<cpu_type_t, cpu_subtype_t>>
@@ -1156,7 +1274,8 @@ MachProcess::GetMainBinaryCPUTypes(nub_process_t pid) {
 // using the
 // dyld SPIs that exist in macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
 JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
-    nub_process_t pid, std::vector<uint64_t> &macho_addresses) {
+    nub_process_t pid, DNBBinaryInformationLevel info_level,
+    std::vector<uint64_t> &macho_addresses) {
 
   int pointer_size = GetInferiorAddrSize(pid);
 
@@ -1199,8 +1318,7 @@ JSONGenerator::ObjectSP MachProcess::GetLibrariesInfoForAddresses(
         image_infos[i].is_valid_mach_header = true;
       }
     }
-    return FormatDynamicLibrariesIntoJSON(image_infos,
-                                          /* report_load_commands =  */ true);
+    return FormatDynamicLibrariesIntoJSON(image_infos, info_level);
 }
 
 bool MachProcess::GetDebugserverSharedCacheInfo(
@@ -1229,15 +1347,15 @@ bool MachProcess::GetDebugserverSharedCacheInfo(
   return false;
 }
 
-bool MachProcess::GetInferiorSharedCacheFilepath(
-    std::string &inferior_sc_path) {
+bool MachProcess::GetInferiorSharedCacheFilepathAndSize(
+    std::string &inferior_sc_path, uint64_t &size) {
   inferior_sc_path.clear();
 
   if (!m_dyld_process_create_for_task ||
       !m_dyld_process_snapshot_create_for_process ||
       !m_dyld_process_snapshot_get_shared_cache ||
       !m_dyld_shared_cache_for_each_file || !m_dyld_process_snapshot_dispose ||
-      !m_dyld_process_dispose)
+      !m_dyld_shared_cache_get_mapped_size || !m_dyld_process_dispose)
     return false;
 
   __block std::string sc_path;
@@ -1261,6 +1379,8 @@ bool MachProcess::GetInferiorSharedCacheFilepath(
     done = true;
     sc_path = path;
   });
+  size = m_dyld_shared_cache_get_mapped_size(cache);
+
   m_dyld_process_snapshot_dispose(snapshot);
   m_dyld_process_dispose(process);
 
@@ -1301,26 +1421,28 @@ MachProcess::GetInferiorSharedCacheInfo(nub_process_t pid) {
     }
   }
 
-  // If debugserver and the inferior are have the same cache UUID,
-  // use the simple call to get the filepath to debugserver's shared
-  // cache, return that.
-  uuid_t debugserver_sc_uuid;
-  std::string debugserver_sc_path;
-  bool found_sc_filepath = false;
-  if (GetDebugserverSharedCacheInfo(debugserver_sc_uuid, debugserver_sc_path)) {
-    if (uuid_compare(inferior_sc_uuid, debugserver_sc_uuid) == 0 &&
-        !debugserver_sc_path.empty()) {
-      reply_sp->AddStringItem("shared_cache_path", debugserver_sc_path);
-      found_sc_filepath = true;
-    }
-  }
 
   // Use SPI that are only available on newer OSes to fetch the
   // filepath of the shared cache of the inferior, if available.
-  if (!found_sc_filepath) {
-    std::string inferior_sc_path;
-    if (GetInferiorSharedCacheFilepath(inferior_sc_path))
-      reply_sp->AddStringItem("shared_cache_path", inferior_sc_path);
+  std::string inferior_sc_path;
+  uint64_t size;
+  if (GetInferiorSharedCacheFilepathAndSize(inferior_sc_path, size)) {
+    reply_sp->AddStringItem("shared_cache_path", inferior_sc_path);
+    reply_sp->AddIntegerItem("shared_cache_size", size);
+  } else {
+    // If debugserver and the inferior are have the same cache UUID,
+    // use the simple call to get the filepath to debugserver's shared
+    // cache, return that.  Can't get the shared cache size this way,
+    // currently.
+    uuid_t debugserver_sc_uuid;
+    std::string debugserver_sc_path;
+    if (GetDebugserverSharedCacheInfo(debugserver_sc_uuid,
+                                      debugserver_sc_path)) {
+      if (uuid_compare(inferior_sc_uuid, debugserver_sc_uuid) == 0 &&
+          !debugserver_sc_path.empty()) {
+        reply_sp->AddStringItem("shared_cache_path", debugserver_sc_path);
+      }
+    }
   }
 
   return reply_sp;
@@ -2794,7 +2916,7 @@ void *MachProcess::STDIOThread(void *arg) {
     } else if (num_set_fds == 0) {
     } else {
       char s[1024];
-      s[sizeof(s) - 1] = '\0'; // Ensure we have NULL termination
+      s[sizeof(s) - 1] = '\0'; // Ensure we have null termination
       ssize_t bytes_read = 0;
       if (stdout_fd >= 0 && FD_ISSET(stdout_fd, &read_fds)) {
         do {
@@ -2918,11 +3040,79 @@ void *MachProcess::ProfileThread(void *arg) {
   return NULL;
 }
 
+namespace {
+// The XNU kernel enforces ptrace(PT_DENY_ATTACH) by delivering a SIGSEGV to the
+// process that tries to attach, while it is still inside the ptrace() syscall.
+// That kills debugserver outright instead of failing the call with an error.
+// This leaves lldb unable to tell the user why the attach failed. The condition
+// can't be detected up front because the target's P_LNOATTACH flag isn't
+// exposed to userspace, so instead we install a temporary SIGSEGV handler
+// around the ptrace() call and jump back out of it if the signal fires, turning
+// the fatal signal into a clean error.
+
+sigjmp_buf g_deny_attach_jmpbuf;
+// Only act on the SIGSEGV if it arrives on the thread that armed the guard
+// while a PT_ATTACHEXC call is in flight; anything else is a genuine crash.
+volatile sig_atomic_t g_deny_attach_armed = 0;
+pthread_t g_deny_attach_thread;
+
+void DenyAttachSIGSEGVHandler(int signo) {
+  if (g_deny_attach_armed &&
+      pthread_equal(pthread_self(), g_deny_attach_thread)) {
+    g_deny_attach_armed = 0;
+    siglongjmp(g_deny_attach_jmpbuf, 1);
+  }
+  // Not the deny-attach case: restore the default disposition and re-raise so a
+  // real crash is still reported the usual way.
+  signal(signo, SIG_DFL);
+  raise(signo);
+}
+
+// Wrapper around ptrace(PT_ATTACHEXC, pid) that survives the SIGSEGV the kernel
+// sends when `pid` has called ptrace(PT_DENY_ATTACH). On a normal attach it
+// behaves exactly like ptrace() (returning its result with errno set). If the
+// attach is rejected via the deny-attach signal it sets `denied_attach` and
+// returns -1 with errno set to EPERM.
+int PTraceAttachExcDenyAttachSafe(pid_t pid, bool &denied_attach) {
+  denied_attach = false;
+
+  struct sigaction new_action = {};
+  struct sigaction old_action = {};
+  new_action.sa_handler = DenyAttachSIGSEGVHandler;
+  sigemptyset(&new_action.sa_mask);
+  // SA_NODEFER so a genuine fault inside the handler crashes normally instead
+  // of deadlocking with SIGSEGV blocked.
+  new_action.sa_flags = SA_NODEFER;
+
+  if (::sigaction(SIGSEGV, &new_action, &old_action) != 0) {
+    // Couldn't install the handler; fall back to the unguarded call.
+    return ::ptrace(PT_ATTACHEXC, pid, 0, 0);
+  }
+
+  g_deny_attach_thread = pthread_self();
+  int result;
+  int saved_errno;
+  if (sigsetjmp(g_deny_attach_jmpbuf, 1) == 0) {
+    g_deny_attach_armed = 1;
+    result = ::ptrace(PT_ATTACHEXC, pid, 0, 0);
+    saved_errno = errno;
+    g_deny_attach_armed = 0;
+  } else {
+    // The kernel delivered SIGSEGV: the target denied the attach.
+    denied_attach = true;
+    result = -1;
+    saved_errno = EPERM;
+  }
+
+  ::sigaction(SIGSEGV, &old_action, nullptr);
+  errno = saved_errno;
+  return result;
+}
+} // namespace
+
 pid_t MachProcess::AttachForDebug(
-    pid_t pid, 
-    const RNBContext::IgnoredExceptions &ignored_exceptions, 
-    char *err_str,
-    size_t err_len) {
+    pid_t pid, const RNBContext::IgnoredExceptions &ignored_exceptions,
+    char *err_str, size_t err_len) {
   // Clear out and clean up from any current state
   Clear();
   if (pid != 0) {
@@ -2955,7 +3145,8 @@ pid_t MachProcess::AttachForDebug(
     DNBLog("[LaunchAttach] (%d) About to ptrace(PT_ATTACHEXC, %d)...", getpid(),
            pid);
     errno = 0;
-    int ptrace_result = ::ptrace(PT_ATTACHEXC, pid, 0, 0);
+    bool denied_attach = false;
+    int ptrace_result = PTraceAttachExcDenyAttachSafe(pid, denied_attach);
     int ptrace_errno = errno;
     DNBLog("[LaunchAttach] (%d) Completed ptrace(PT_ATTACHEXC, %d) == %d",
            getpid(), pid, ptrace_result);
@@ -2972,6 +3163,18 @@ pid_t MachProcess::AttachForDebug(
       m_flags |= eMachProcessFlagsAttached;
       DNBLogThreadedIf(LOG_PROCESS, "successfully attached to pid %d", pid);
       return m_pid;
+    } else if (denied_attach) {
+      // The target denied being debugged via ptrace(PT_DENY_ATTACH). The kernel
+      // would normally kill debugserver for attempting this; we caught the
+      // signal instead, so report a useful error rather than crashing.
+      snprintf(err_str, err_len,
+               "cannot attach to process %d because it has disabled debugging "
+               "via ptrace(PT_DENY_ATTACH). Attach earlier, put a breakpoint "
+               "on ptrace and return 0.",
+               pid);
+      DNBLogError("[LaunchAttach] (%d) MachProcess::AttachForDebug pid %d "
+                  "denied attach via ptrace(PT_DENY_ATTACH)",
+                  getpid(), pid);
     } else {
       ::snprintf(err_str, err_len, "%s", err.AsString());
       DNBLogError(
@@ -3650,24 +3853,27 @@ pid_t MachProcess::PosixSpawnChildForPTraceDebugging(
     size_t ocount = 0;
     bool slice_preference_set = false;
 
-    if (cpu_subtype != 0) {
-      typedef int (*posix_spawnattr_setarchpref_np_t)(
-          posix_spawnattr_t *, size_t, cpu_type_t *, cpu_subtype_t *, size_t *);
-      posix_spawnattr_setarchpref_np_t posix_spawnattr_setarchpref_np_fn =
-          (posix_spawnattr_setarchpref_np_t)dlsym(
-              RTLD_DEFAULT, "posix_spawnattr_setarchpref_np");
-      if (posix_spawnattr_setarchpref_np_fn) {
-        err.SetError((*posix_spawnattr_setarchpref_np_fn)(
-            &attr, 1, &cpu_type, &cpu_subtype, &ocount));
-        slice_preference_set = err.Success();
-        if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
-          err.LogThreaded(
-              "::posix_spawnattr_setarchpref_np ( &attr, 1, cpu_type = "
-              "0x%8.8x, cpu_subtype = 0x%8.8x, count => %llu )",
-              cpu_type, cpu_subtype, (uint64_t)ocount);
-        if (err.Fail() != 0 || ocount != 1)
-          return INVALID_NUB_PROCESS;
-      }
+    typedef int (*posix_spawnattr_setarchpref_np_t)(
+        posix_spawnattr_t *, size_t, cpu_type_t *, cpu_subtype_t *, size_t *);
+    posix_spawnattr_setarchpref_np_t posix_spawnattr_setarchpref_np_fn =
+        (posix_spawnattr_setarchpref_np_t)dlsym(
+            RTLD_DEFAULT, "posix_spawnattr_setarchpref_np");
+    if (posix_spawnattr_setarchpref_np_fn) {
+      // The kernel matches subtypes exactly. Fall back to any subtype for
+      // binaries without the requested slice.
+      cpu_type_t cpu_types[] = {cpu_type, cpu_type};
+      cpu_subtype_t cpu_subtypes[] = {cpu_subtype, CPU_SUBTYPE_ANY};
+      const size_t count = std::size(cpu_types);
+      err.SetError((*posix_spawnattr_setarchpref_np_fn)(&attr, count, cpu_types,
+                                                        cpu_subtypes, &ocount));
+      slice_preference_set = err.Success();
+      if (err.Fail() || DNBLogCheckLogBit(LOG_PROCESS))
+        err.LogThreaded(
+            "::posix_spawnattr_setarchpref_np ( &attr, %zu, cpu_type = "
+            "0x%8.8x, cpu_subtype = 0x%8.8x, count => %llu )",
+            count, cpu_type, cpu_subtype, (uint64_t)ocount);
+      if (err.Fail() != 0 || ocount != count)
+        return INVALID_NUB_PROCESS;
     }
 
     if (!slice_preference_set) {

@@ -1,8 +1,6 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv1.6-vulkan1.3-library %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv1.6-vulkan1.3-library %s -o - -filetype=obj | spirv-val %}
 
-target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
-
 @.str.scalarblock = private unnamed_addr constant [12 x i8] c"ScalarBlock\00", align 1
 @.str.buffervar = private unnamed_addr constant [10 x i8] c"BufferVar\00", align 1
 @.str.arraybuffervar = private unnamed_addr constant [15 x i8] c"ArrayBufferVar\00", align 1
@@ -16,10 +14,10 @@ target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:
 ; CHECK-DAG: OpDecorate [[ScalarBlock]] Block
 ; CHECK-DAG: OpMemberDecorate [[ScalarBlock]] 0 NonWritable
 ; CHECK-DAG: OpMemberDecorate [[T_explicit:%[0-9]+]] 0 Offset 0
-; CHECK-DAG: OpMemberDecorate [[T_explicit]] 1 Offset 16
-; CHECK-DAG: OpDecorate [[T_array_explicit:%[0-9]+]] ArrayStride 32
+; CHECK-DAG: OpMemberDecorate [[T_explicit]] 1 Offset 4
+; CHECK-DAG: OpDecorate [[T_array_explicit:%[0-9]+]] ArrayStride 16
 ; CHECK-DAG: OpMemberDecorate [[S_explicit:%[0-9]+]] 0 Offset 0
-; CHECK-DAG: OpDecorate [[S_array_explicit:%[0-9]+]] ArrayStride 320
+; CHECK-DAG: OpDecorate [[S_array_explicit:%[0-9]+]] ArrayStride 160
 ; CHECK-DAG: OpMemberDecorate [[block:%[0-9]+]] 0 Offset 0
 ; CHECK-DAG: OpDecorate [[block]] Block
 ; CHECK-DAG: OpMemberDecorate [[block]] 0 NonWritable
@@ -74,7 +72,7 @@ entry:
 ; CHECK-NEXT: [[ptr:%[0-9]+]] = OpAccessChain [[storagebuffer_int_ptr]] [[handle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %handle, i32 1)
 
-; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[uint]] [[ptr]] Aligned 4
+; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[uint]] [[ptr]]
   %1 = load i32, ptr addrspace(11) %0, align 4
 
 ; CHECK-NEXT: OpReturnValue [[ld]]
@@ -88,7 +86,7 @@ define external %struct.S @private_load() {
 ; CHECK-NEXT: OpLabel
 entry:
 
-; CHECK: [[ld:%[0-9]+]] = OpLoad [[S]] [[private_var]] Aligned 4
+; CHECK: [[ld:%[0-9]+]] = OpLoad [[S]] [[private_var]]
   %1 = load %struct.S, ptr addrspace(10) @private, align 4
 
 ; CHECK-NEXT: OpReturnValue [[ld]]
@@ -102,7 +100,7 @@ define external %struct.S @storage_buffer_load() {
 ; CHECK-NEXT: OpLabel
 entry:
 
-; CHECK: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[storage_buffer]] Aligned 4
+; CHECK: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[storage_buffer]]
 ; CHECK-NEXT: [[copy:%[0-9]+]] = OpCopyLogical [[S]] [[ld]]
   %1 = load %struct.S, ptr addrspace(11) @storage_buffer, align 4
 
@@ -122,7 +120,7 @@ entry:
 ; CHECK-NEXT: [[ptr:%[0-9]+]] = OpAccessChain [[storagebuffer_S_ptr]] [[handle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) %handle, i32 1)
 
-; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[ptr]] Aligned 4
+; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[ptr]]
 ; CHECK-NEXT: [[copy:%[0-9]+]] = OpCopyLogical [[S]] [[ld]]
   %1 = load %struct.S, ptr addrspace(11) %0, align 4
 
@@ -143,7 +141,7 @@ entry:
 ; CHECK-NEXT: [[ptr:%[0-9]+]] = OpAccessChain [[storagebuffer_S_ptr]] [[handle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 0) %handle, i32 1)
 
-; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[ptr]] Aligned 4
+; CHECK-NEXT: [[ld:%[0-9]+]] = OpLoad [[S_explicit]] [[ptr]]
 ; CHECK-NEXT: [[copy:%[0-9]+]] = OpCopyLogical [[S]] [[ld]]
   %1 = load %struct.S, ptr addrspace(11) %0, align 4
 

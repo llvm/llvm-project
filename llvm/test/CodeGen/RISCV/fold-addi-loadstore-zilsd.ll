@@ -35,11 +35,9 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi sp, sp, -32
 ; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s3, 12(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw s4, 8(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw s4, 24(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    blez a1, .LBB2_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.lr.ph
 ; CHECK-NEXT:    mv s2, a2
@@ -52,21 +50,18 @@ define double @fold_addi_from_different_bb(i32 %k, i32 %n, ptr %a) nounwind {
 ; CHECK-NEXT:    mv a0, s2
 ; CHECK-NEXT:    call f
 ; CHECK-NEXT:    ld a0, 8(s4)
-; CHECK-NEXT:    addi s3, s3, -1
 ; CHECK-NEXT:    fadd.d s0, a0, s0
+; CHECK-NEXT:    addi s3, s3, -1
 ; CHECK-NEXT:    bnez s3, .LBB2_2
 ; CHECK-NEXT:    j .LBB2_4
 ; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    fmv.d s0, zero
 ; CHECK-NEXT:  .LBB2_4: # %for.cond.cleanup
-; CHECK-NEXT:    mv a0, s0
-; CHECK-NEXT:    mv a1, s1
+; CHECK-NEXT:    fmv.d a0, s0
 ; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s2, 16(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s3, 12(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw s4, 8(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw s4, 24(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 32
 ; CHECK-NEXT:    ret
 entry:
@@ -98,8 +93,8 @@ define void @split_offset(ptr %dest, double %x) {
 ; CHECK-LABEL: split_offset:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    addi a0, a0, 2047
 ; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    addi a0, a0, 2047
 ; CHECK-NEXT:    sd a2, 1(a0)
 ; CHECK-NEXT:    sd a2, 9(a0)
 ; CHECK-NEXT:    sd a2, 17(a0)

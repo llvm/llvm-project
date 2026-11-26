@@ -286,13 +286,23 @@ int main(int argc, char **argv) {
       std::this_thread::sleep_for(
           std::chrono::seconds(sleep_seconds_remaining));
 
+    } else if (consume_front(arg, "waitfile:")) {
+      // Wait for the test framework to create this file. Attach tests use it
+      // to keep the process alive until the debugger has attached, because a
+      // fixed sleep can run out before the debugger gets there. Give up after
+      // 5 minutes so that a process whose test was killed still exits.
+      auto deadline =
+          std::chrono::steady_clock::now() + std::chrono::minutes(5);
+      while (!std::ifstream(arg) && std::chrono::steady_clock::now() < deadline)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
     } else if (consume_front(arg, "set-message:")) {
       // Copy the contents after "set-message:" to the g_message buffer.
       // Used for reading inferior memory and verifying contents match
       // expectations.
       strncpy(g_message, arg.c_str(), sizeof(g_message));
 
-      // Ensure we're null terminated.
+      // Ensure we're null-terminated.
       g_message[sizeof(g_message) - 1] = '\0';
 
     } else if (consume_front(arg, "print-message:")) {
@@ -330,6 +340,9 @@ int main(int argc, char **argv) {
         func_p = swap_chars;
 
       std::lock_guard<std::mutex> lock(g_print_mutex);
+#if defined(__arm64e__)
+      func_p = __builtin_ptrauth_strip(func_p, /*ptrauth_key_asib*/ 1);
+#endif
       printf("code address: %p\n", func_p);
     } else if (consume_front(arg, "call-function:")) {
       void (*func_p)() = nullptr;
@@ -399,6 +412,8 @@ int main(int argc, char **argv) {
     } else {
       // Treat the argument as text for stdout.
       printf("%s\n", argv[i]);
+      // Make the test more reliable on Windows.
+      fflush(stdout);
     }
   }
 

@@ -9,8 +9,20 @@
 #include "TestOps.td"
 #include "mlir/Interfaces/CastInterfaces.td"
 
+Constraint TestConstraintWithNamedOpOperand(testOp: Op<test.op_a>) [{
+    return success();
+}];
+
+
 /// A simple pattern that matches and replaces an operation.
 Pattern TestSimplePattern => replace op<test.simple> with op<test.success>;
 
 // Test the import of interfaces.
 Pattern TestInterface => replace _: CastOpInterface with op<test.success>;
+
+// Test application of constraint.
+Pattern {
+  let op = op<test.op_a>(input: Value);
+  TestConstraintWithNamedOpOperand(op);
+  replace op with op<test.success>;
+}

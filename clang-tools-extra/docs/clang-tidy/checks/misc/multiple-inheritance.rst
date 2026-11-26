@@ -42,8 +42,3 @@ A class that inherits from a pure virtual is allowed:
     virtual int foo() override { return 0; }
     virtual int bar() override { return 0; }
   };
-
-References
-----------
-
-See the features disallowed in Fuchsia at https://fuchsia.dev/fuchsia-src/development/languages/c-cpp/cxx?hl=en

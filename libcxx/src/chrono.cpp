@@ -20,7 +20,6 @@
 #  include <__support/ibm/gettod_zos.h> // gettimeofdayMonotonic
 #endif
 
-#include "include/apple_availability.h"
 #include <time.h> // clock_gettime and CLOCK_{MONOTONIC,REALTIME,MONOTONIC_RAW}
 
 #if __has_include(<unistd.h>)
@@ -42,14 +41,14 @@
 #  define _LIBCPP_HAS_CLOCK_GETTIME
 #endif
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define VC_EXTRA_LEAN
 #  include <windows.h>
 #  if _WIN32_WINNT >= _WIN32_WINNT_WIN8
 #    include <winapifamily.h>
 #  endif
-#endif // defined(_LIBCPP_WIN32API)
+#endif // _WIN32
 
 #if defined(__Fuchsia__)
 #  include <zircon/syscalls.h>
@@ -64,6 +63,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
@@ -71,7 +71,7 @@ namespace chrono {
 // system_clock
 //
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 
 #  if _WIN32_WINNT < _WIN32_WINNT_WIN8
 
@@ -184,7 +184,7 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
   return steady_clock::time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 
-#  elif defined(_LIBCPP_WIN32API)
+#  elif defined(_WIN32)
 
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms644905(v=vs.85).aspx says:
 //    If the function fails, the return value is zero. <snip>
@@ -262,4 +262,5 @@ steady_clock::time_point steady_clock::now() noexcept { return __libcpp_steady_c
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

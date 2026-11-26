@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/internal/clc.h>
+#include "clc/internal/clc.h"
 
-#define __CLC_BODY <clc_bitselect.inc>
-#include <clc/integer/gentype.inc>
+#define __CLC_BODY "clc_bitselect.inc"
+#include "clc/integer/gentype.inc"
 
 #define __CLC_FLOAT_BITSELECT(f_type, i_type, width)                           \
   _CLC_OVERLOAD _CLC_DEF f_type##width __clc_bitselect(                        \

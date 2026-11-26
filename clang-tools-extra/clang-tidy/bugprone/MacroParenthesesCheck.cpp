@@ -53,7 +53,7 @@ static bool isSurroundedRight(const Token &T) {
 static bool isKeyword(const Token &T) {
   // FIXME: better matching of keywords to avoid false positives.
   return T.isOneOf(tok::kw_if, tok::kw_case, tok::kw_const, tok::kw_volatile,
-                   tok::kw_struct);
+                   tok::kw_struct, tok::kw_using);
 }
 
 /// Warning is written when one of these operators are not within parentheses.
@@ -99,7 +99,7 @@ static bool possibleVarDecl(const MacroInfo *MI, const Token *Tok) {
          isVarDeclKeyword(*Tok);
 }
 
-static StringRef getMacroText(const MacroInfo *MI, Preprocessor *PP) {
+static StringRef getMacroText(const MacroInfo *MI, const Preprocessor *PP) {
   if (MI->tokens_empty())
     return {};
   return Lexer::getSourceText(
@@ -147,26 +147,26 @@ void MacroParenthesesPPCallbacks::replacementList(const Token &MacroNameTok,
       if (std::prev(TE)->is(tok::star))
         return;
 
-      Loc = Tok.getLocation();
+      Loc = Lexer::AdvanceToTokenCharacter(
+          Tok.getLocation(), 0, PP->getSourceManager(), PP->getLangOpts());
     }
   }
   if (Loc.isValid()) {
     const Token &Last = *std::prev(MI->tokens_end());
+    const SourceLocation Begin = Lexer::AdvanceToTokenCharacter(
+        MI->tokens_begin()->getLocation(), 0, PP->getSourceManager(),
+        PP->getLangOpts());
     if (PP->getSourceManager().isWrittenInCommandLineFile(Loc)) {
       Check->diag(Loc, "macro replacement list should be enclosed in "
                        "parentheses; macro '%0' defined as '%1'")
           << PP->getSpelling(MacroNameTok) << getMacroText(MI, PP)
-          << FixItHint::CreateInsertion(MI->tokens_begin()->getLocation(), "(")
-          << FixItHint::CreateInsertion(Last.getLocation().getLocWithOffset(
-                                            PP->getSpelling(Last).length()),
-                                        ")");
+          << FixItHint::CreateInsertion(Begin, "(")
+          << FixItHint::CreateInsertion(Last.getEndLoc(), ")");
     } else {
       Check->diag(Loc,
                   "macro replacement list should be enclosed in parentheses")
-          << FixItHint::CreateInsertion(MI->tokens_begin()->getLocation(), "(")
-          << FixItHint::CreateInsertion(Last.getLocation().getLocWithOffset(
-                                            PP->getSpelling(Last).length()),
-                                        ")");
+          << FixItHint::CreateInsertion(Begin, "(")
+          << FixItHint::CreateInsertion(Last.getEndLoc(), ")");
     }
   }
 }
@@ -278,12 +278,12 @@ void MacroParenthesesPPCallbacks::argument(const Token &MacroNameTok,
       continue;
 
     if (!FoundGoto) {
-      Check->diag(Tok.getLocation(), "macro argument should be enclosed in "
-                                     "parentheses")
-          << FixItHint::CreateInsertion(Tok.getLocation(), "(")
-          << FixItHint::CreateInsertion(Tok.getLocation().getLocWithOffset(
-                                            PP->getSpelling(Tok).length()),
-                                        ")");
+      // A token can start with an escaped newline or contain one internally.
+      const SourceLocation Begin = Lexer::AdvanceToTokenCharacter(
+          Tok.getLocation(), 0, PP->getSourceManager(), PP->getLangOpts());
+      Check->diag(Begin, "macro argument should be enclosed in parentheses")
+          << FixItHint::CreateInsertion(Begin, "(")
+          << FixItHint::CreateInsertion(Tok.getEndLoc(), ")");
     }
 
     FoundGoto = false;

@@ -68,7 +68,7 @@
 #    endif
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
 #    ifndef __cpp_lib_syncbuf
@@ -83,6 +83,21 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM
+#    ifndef __cpp_lib_syncbuf
+#      error "__cpp_lib_syncbuf should be defined in c++29"
+#    endif
+#    if __cpp_lib_syncbuf != 201803L
+#      error "__cpp_lib_syncbuf should have the value 201803L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_syncbuf
+#      error "__cpp_lib_syncbuf should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_SYNCSTREAM' is not met!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

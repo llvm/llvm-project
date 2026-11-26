@@ -18,6 +18,9 @@
 #ifndef SEGV_BNDERR
 #define SEGV_BNDERR 3
 #endif
+#ifndef SEGV_PKUERR
+#define SEGV_PKUERR 4
+#endif
 #ifndef SEGV_MTEAERR
 #define SEGV_MTEAERR 8
 #endif
@@ -116,9 +119,9 @@ void LinuxSignals::Reset() {
   ADD_LINUX_SIGNAL(6,      "SIGABRT",      false,    true,   true,   "abort()/IOT trap", "SIGIOT");
 
   ADD_LINUX_SIGNAL(7,      "SIGBUS",       false,    true,   true,   "bus error");
-  ADD_SIGCODE(SIGBUS, 7, BUS_ADRALN, 1, "illegal alignment");
-  ADD_SIGCODE(SIGBUS, 7, BUS_ADRERR, 2, "illegal address");
-  ADD_SIGCODE(SIGBUS, 7, BUS_OBJERR, 3, "hardware error");
+  ADD_SIGCODE(SIGBUS, 7, BUS_ADRALN, 1, "illegal alignment", SignalCodePrintOption::Address);
+  ADD_SIGCODE(SIGBUS, 7, BUS_ADRERR, 2, "illegal address", SignalCodePrintOption::Address);
+  ADD_SIGCODE(SIGBUS, 7, BUS_OBJERR, 3, "hardware error", SignalCodePrintOption::Address);
 
   ADD_LINUX_SIGNAL(8,      "SIGFPE",       false,    true,   true,   "floating point exception");
   ADD_SIGCODE(SIGFPE, 8, FPE_INTDIV, 1, "integer divide by zero");
@@ -137,6 +140,7 @@ void LinuxSignals::Reset() {
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MAPERR,  1, "address not mapped to object", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_ACCERR,  2, "invalid permissions for mapped object", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_BNDERR,  3, "failed address bounds checks", SignalCodePrintOption::Bounds);
+  ADD_SIGCODE(SIGSEGV, 11, SEGV_PKUERR,  4, "failed protection key checks", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTEAERR, 8, "async tag check fault");
   ADD_SIGCODE(SIGSEGV, 11, SEGV_MTESERR, 9, "sync tag check fault", SignalCodePrintOption::Address);
   ADD_SIGCODE(SIGSEGV, 11, SEGV_CPERR,  10, "control protection fault");

@@ -25,8 +25,6 @@ endif()
 
 message(STATUS "Found system-installed LLVM ${LLVM_PACKAGE_VERSION} with headers in ${LLVM_INCLUDE_DIRS}")
 
-set(CMAKE_CXX_STANDARD 20)
-
 # Link only against clangTidy itself, not anything that clangTidy uses; otherwise we run setup code multiple times
 # which results in clang-tidy crashing
 set_target_properties(clangTidy PROPERTIES INTERFACE_LINK_LIBRARIES "")
@@ -90,6 +88,7 @@ message(STATUS "Clang-tidy tests are enabled.")
 
 set(SOURCES
     abi_tag_on_virtual.cpp
+    empty_namespaces.cpp
     header_exportable_declarations.cpp
     hide_from_abi.cpp
     internal_ftm_use.cpp

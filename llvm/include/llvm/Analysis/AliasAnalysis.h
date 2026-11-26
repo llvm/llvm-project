@@ -39,6 +39,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
@@ -57,6 +58,7 @@ class AtomicCmpXchgInst;
 class BasicBlock;
 class CatchPadInst;
 class CatchReturnInst;
+class CycleInfo;
 class DominatorTree;
 class FenceInst;
 class LoopInfo;
@@ -154,48 +156,72 @@ struct LLVM_ABI CaptureAnalysis {
   /// are also considered.
   ///
   /// If I is nullptr, then captures at any point will be considered.
-  virtual CaptureComponents
-  getCapturesBefore(const Value *Object, const Instruction *I, bool OrAt) = 0;
+  virtual CaptureComponents getCapturesBefore(const Value *Object,
+                                              const Instruction *I, bool OrAt,
+                                              bool ReturnCaptures) = 0;
 };
 
 /// Context-free CaptureAnalysis provider, which computes and caches whether an
 /// object is captured in the function at all, but does not distinguish whether
 /// it was captured before or after the context instruction.
 class LLVM_ABI SimpleCaptureAnalysis final : public CaptureAnalysis {
-  SmallDenseMap<const Value *, CaptureComponents, 8> IsCapturedCache;
+  SmallDenseMap<const Value *, CaptureResult, 8> IsCapturedCache;
 
 public:
   CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
-                                      bool OrAt) override;
+                                      bool OrAt, bool ReturnCaptures) override;
 };
 
 /// Context-sensitive CaptureAnalysis provider, which computes and caches the
 /// earliest common dominator closure of all captures. It provides a good
 /// approximation to a precise "captures before" analysis.
+///
+/// Users must call removeInstruction() and insertPotentialCapture() on IR
+/// changes. The CFG must not gain paths between existing blocks and blocks
+/// must not be renumbered.
 class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   DominatorTree &DT;
   const LoopInfo *LI;
+  const CycleInfo *CI;
 
   /// Map from identified local object to an instruction before which it does
   /// not escape (or nullptr if it never escapes) and the possible components
   /// that may be captured (by any instruction, not necessarily the earliest
   /// one). The "earliest" instruction may be a conservative approximation,
   /// e.g. the first instruction in the function is always a legal choice.
-  DenseMap<const Value *, std::pair<Instruction *, CaptureComponents>>
+  DenseMap<const Value *, std::pair<Instruction *, CaptureResult>>
       EarliestEscapes;
 
   /// Reverse map from instruction to the objects it is the earliest escape for.
   /// This is used for cache invalidation purposes.
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
+  /// Cached result of Function::callsFunctionThatReturnsTwice(), used to
+  /// account for longjmp re-entry paths not visible to the forward CFG.
+  std::optional<bool> CallsReturnsTwiceFn;
+
+  /// Cached reachability between block numbers.
+  DenseMap<std::pair<unsigned, unsigned>, bool> IsReachableCache;
+
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
+
+  /// Whether the function contains a call that may return twice (e.g., setjmp).
+  bool callsReturnsTwiceFn();
+
 public:
-  EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr)
-      : DT(DT), LI(LI) {}
+  EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr,
+                         const CycleInfo *CI = nullptr);
 
   CaptureComponents getCapturesBefore(const Value *Object, const Instruction *I,
-                                      bool OrAt) override;
+                                      bool OrAt, bool ReturnCaptures) override;
 
   void removeInstruction(Instruction *I);
+
+  /// Notify the analysis that \p I is about to be inserted or moved.
+  /// If \p I may capture a pointer, any cached earliest escape may no longer
+  /// precede all captures, so the whole cache is dropped.
+  void insertPotentialCapture(const Instruction *I);
 };
 
 /// Cache key for BasicAA results. It only includes the pointer and size from
@@ -212,14 +238,6 @@ struct AACacheLoc {
 };
 
 template <> struct DenseMapInfo<AACacheLoc> {
-  static inline AACacheLoc getEmptyKey() {
-    return {DenseMapInfo<AACacheLoc::PtrTy>::getEmptyKey(),
-            DenseMapInfo<LocationSize>::getEmptyKey()};
-  }
-  static inline AACacheLoc getTombstoneKey() {
-    return {DenseMapInfo<AACacheLoc::PtrTy>::getTombstoneKey(),
-            DenseMapInfo<LocationSize>::getTombstoneKey()};
-  }
   static unsigned getHashValue(const AACacheLoc &Val) {
     return DenseMapInfo<AACacheLoc::PtrTy>::getHashValue(Val.Ptr) ^
            DenseMapInfo<LocationSize>::getHashValue(Val.Size);
@@ -301,6 +319,9 @@ public:
   /// Whether alias analysis is allowed to use the dominator tree, for use by
   /// passes that lazily update the DT while performing AA queries.
   bool UseDominatorTree = true;
+
+  /// Whether ephemeral values should be allowed when checking assumes.
+  bool AllowEphemerals = true;
 
   AAQueryInfo(AAResults &AAR, CaptureAnalysis *CA) : AAR(AAR), CA(CA) {}
 };
@@ -459,21 +480,6 @@ public:
     return getMemoryEffects(Call).doesNotAccessMemory();
   }
 
-  /// Checks if the specified function is known to never read or write memory.
-  ///
-  /// Note that if the function only reads from known-constant memory, it is
-  /// also legal to return true. Also, function that unwind the stack are legal
-  /// for this predicate.
-  ///
-  /// Many optimizations (such as CSE and LICM) can be performed on such calls
-  /// to such functions without worrying about aliasing properties, and many
-  /// functions have this property (e.g. 'sin' and 'cos').
-  ///
-  /// This property corresponds to the GCC 'const' attribute.
-  bool doesNotAccessMemory(const Function *F) {
-    return getMemoryEffects(F).doesNotAccessMemory();
-  }
-
   /// Checks if the specified call is known to only read from non-volatile
   /// memory (or not access memory at all).
   ///
@@ -485,19 +491,6 @@ public:
   /// This property corresponds to the GCC 'pure' attribute.
   bool onlyReadsMemory(const CallBase *Call) {
     return getMemoryEffects(Call).onlyReadsMemory();
-  }
-
-  /// Checks if the specified function is known to only read from non-volatile
-  /// memory (or not access memory at all).
-  ///
-  /// Functions that unwind the stack are legal for this predicate.
-  ///
-  /// This property allows many common optimizations to be performed in the
-  /// absence of interfering store instructions, such as CSE of strlen calls.
-  ///
-  /// This property corresponds to the GCC 'pure' attribute.
-  bool onlyReadsMemory(const Function *F) {
-    return getMemoryEffects(F).onlyReadsMemory();
   }
 
   /// Check whether or not an instruction may read or write the optionally
@@ -531,22 +524,6 @@ public:
   LLVM_ABI ModRefInfo getModRefInfo(const Instruction *I1,
                                     const Instruction *I2);
 
-  /// Return information about whether a particular call site modifies
-  /// or reads the specified memory location \p MemLoc before instruction \p I
-  /// in a BasicBlock.
-  ModRefInfo callCapturesBefore(const Instruction *I,
-                                const MemoryLocation &MemLoc,
-                                DominatorTree *DT) {
-    SimpleAAQueryInfo AAQIP(*this);
-    return callCapturesBefore(I, MemLoc, DT, AAQIP);
-  }
-
-  /// A convenience wrapper to synthesize a memory location.
-  ModRefInfo callCapturesBefore(const Instruction *I, const Value *P,
-                                LocationSize Size, DominatorTree *DT) {
-    return callCapturesBefore(I, MemoryLocation(P, Size), DT);
-  }
-
   /// @}
   //===--------------------------------------------------------------------===//
   /// \name Higher level methods for querying mod/ref information.
@@ -556,12 +533,6 @@ public:
   /// modify the location Loc.
   LLVM_ABI bool canBasicBlockModify(const BasicBlock &BB,
                                     const MemoryLocation &Loc);
-
-  /// A convenience wrapper synthesizing a memory location.
-  bool canBasicBlockModify(const BasicBlock &BB, const Value *P,
-                           LocationSize Size) {
-    return canBasicBlockModify(BB, MemoryLocation(P, Size));
-  }
 
   /// Check if it is possible for the execution of the specified instructions
   /// to mod\ref (according to the mode) the location Loc.
@@ -573,19 +544,13 @@ public:
                                           const MemoryLocation &Loc,
                                           const ModRefInfo Mode);
 
-  /// A convenience wrapper synthesizing a memory location.
-  bool canInstructionRangeModRef(const Instruction &I1, const Instruction &I2,
-                                 const Value *Ptr, LocationSize Size,
-                                 const ModRefInfo Mode) {
-    return canInstructionRangeModRef(I1, I2, MemoryLocation(Ptr, Size), Mode);
-  }
-
   // CtxI can be nullptr, in which case the query is whether or not the aliasing
   // relationship holds through the entire function.
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI = nullptr);
-  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M);
+  LLVM_ABI AliasResult aliasErrno(const MemoryLocation &Loc,
+                                  const Instruction *CtxI);
 
   LLVM_ABI ModRefInfo getModRefInfoMask(const MemoryLocation &Loc,
                                         AAQueryInfo &AAQI,
@@ -641,9 +606,9 @@ private:
 
   const TargetLibraryInfo &TLI;
 
-  std::vector<std::unique_ptr<Concept>> AAs;
+  SmallVector<std::unique_ptr<Concept>, 4> AAs;
 
-  std::vector<AnalysisKey *> AADeps;
+  SmallVector<AnalysisKey *, 4> AADeps;
 
   friend class BatchAAResults;
 };
@@ -658,6 +623,8 @@ class BatchAAResults {
   AAResults &AA;
   AAQueryInfo AAQI;
   SimpleCaptureAnalysis SimpleCA;
+
+  friend class BatchAACrossIterationScope;
 
 public:
   BatchAAResults(AAResults &AAR) : AA(AAR), AAQI(AAR, &SimpleCA) {}
@@ -683,6 +650,9 @@ public:
   }
   ModRefInfo getModRefInfo(const Instruction *I, const CallBase *Call2) {
     return AA.getModRefInfo(I, Call2, AAQI);
+  }
+  ModRefInfo getModRefInfo(const Instruction *I, const Instruction *I2) {
+    return AA.getModRefInfo(I, I2, AAQI);
   }
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
     return AA.getArgModRefInfo(Call, ArgIdx);
@@ -714,6 +684,21 @@ public:
 
   /// Disable the use of the dominator tree during alias analysis queries.
   void disableDominatorTree() { AAQI.UseDominatorTree = false; }
+};
+
+/// Temporarily set the cross iteration mode on a BatchAA instance.
+class BatchAACrossIterationScope {
+  BatchAAResults &BAA;
+  bool OrigCrossIteration;
+
+public:
+  BatchAACrossIterationScope(BatchAAResults &BAA, bool CrossIteration)
+      : BAA(BAA), OrigCrossIteration(BAA.AAQI.MayBeCrossIteration) {
+    BAA.AAQI.MayBeCrossIteration = CrossIteration;
+  }
+  ~BatchAACrossIterationScope() {
+    BAA.AAQI.MayBeCrossIteration = OrigCrossIteration;
+  }
 };
 
 /// Temporary typedef for legacy code that uses a generic \c AliasAnalysis
@@ -748,7 +733,7 @@ public:
   /// Returns an AliasResult indicating whether a specific memory location
   /// aliases errno.
   virtual AliasResult aliasErrno(const MemoryLocation &Loc,
-                                 const Module *M) = 0;
+                                 const Instruction *CtxI) = 0;
 
   /// @}
   //===--------------------------------------------------------------------===//
@@ -790,6 +775,12 @@ public:
   virtual ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
                                    AAQueryInfo &AAQI) = 0;
 
+  /// getModRefInfo (for fences) - Return information about whether
+  /// a particular fence modifies or reads the specified memory location.
+  virtual ModRefInfo getModRefInfo(const FenceInst *F,
+                                   const MemoryLocation &Loc,
+                                   AAQueryInfo &AAQI) = 0;
+
   /// @}
 };
 
@@ -811,8 +802,9 @@ public:
     return Result.alias(LocA, LocB, AAQI, CtxI);
   }
 
-  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) override {
-    return Result.aliasErrno(Loc, M);
+  AliasResult aliasErrno(const MemoryLocation &Loc,
+                         const Instruction *CtxI) override {
+    return Result.aliasErrno(Loc, CtxI);
   }
 
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
@@ -842,6 +834,11 @@ public:
                            AAQueryInfo &AAQI) override {
     return Result.getModRefInfo(Call1, Call2, AAQI);
   }
+
+  ModRefInfo getModRefInfo(const FenceInst *F, const MemoryLocation &Loc,
+                           AAQueryInfo &AAQI) override {
+    return Result.getModRefInfo(F, Loc, AAQI);
+  }
 };
 
 /// A base class to help implement the function alias analysis results concept.
@@ -870,7 +867,7 @@ public:
     return AliasResult::MayAlias;
   }
 
-  AliasResult aliasErrno(const MemoryLocation &Loc, const Module *M) {
+  AliasResult aliasErrno(const MemoryLocation &Loc, const Instruction *CtxI) {
     return AliasResult::MayAlias;
   }
 
@@ -897,6 +894,11 @@ public:
   }
 
   ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
+                           AAQueryInfo &AAQI) {
+    return ModRefInfo::ModRef;
+  }
+
+  ModRefInfo getModRefInfo(const FenceInst *F, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI) {
     return ModRefInfo::ModRef;
   }
@@ -953,6 +955,11 @@ LLVM_ABI bool isNotVisibleOnUnwind(const Value *Object,
 /// loads.
 LLVM_ABI bool isWritableObject(const Value *Object,
                                bool &ExplicitlyDereferenceableOnly);
+
+/// Get ModRefInfo for a synchronizing operation, such as a fence or stronger
+/// than monotonic atomic load/store.
+LLVM_ABI ModRefInfo getSyncEffects(AAResults *AA, const MemoryLocation &Loc,
+                                   AAQueryInfo &AAQI);
 
 /// A manager for alias analyses.
 ///
@@ -1078,7 +1085,8 @@ struct ExternalAAWrapperPass : ImmutablePass {
 /// function, and the AAResults object to populate. This should be used when
 /// setting up a custom pass pipeline to inject a hook into the AA results.
 LLVM_ABI ImmutablePass *createExternalAAWrapperPass(
-    std::function<void(Pass &, Function &, AAResults &)> Callback);
+    std::function<void(Pass &, Function &, AAResults &)> Callback,
+    bool RunEarly = false);
 
 } // end namespace llvm
 

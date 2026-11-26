@@ -55,14 +55,12 @@ entry:
 define cc 11 void @foo(i64 %hp, i64 %p, i64 %arg0, i64 %arg1, i64 %arg2, i64 %arg3) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $48, %rsp
-; CHECK-NEXT:    movq %r15, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rbp, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r8, (%rsp)
-; CHECK-NEXT:    addq $48, %rsp
+; CHECK-NEXT:    movq %r15, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rbp, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    jmp bar@PLT # TAILCALL
 entry:
   %hp_var   = alloca i64

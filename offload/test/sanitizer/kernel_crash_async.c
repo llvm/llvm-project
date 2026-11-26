@@ -12,7 +12,8 @@
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: x86_64-unknown-linux-gnu
 // UNSUPPORTED: s390x-ibm-linux-gnu
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 
@@ -34,4 +35,4 @@ int main(void) {
 // TRACE: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-7]])
 // TRACE:     launchKernel
 //
-// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-13]])
+// CHECK: Kernel {{.*}} (__omp_offloading_{{.*}}_main_l[[@LINE-10]])

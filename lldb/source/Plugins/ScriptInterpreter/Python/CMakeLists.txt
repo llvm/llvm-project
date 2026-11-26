@@ -14,29 +14,120 @@ if(NOT LLDB_PYTHON_EXE_RELATIVE_PATH)
 endif()
 add_definitions(-DLLDB_PYTHON_EXE_RELATIVE_PATH="${LLDB_PYTHON_EXE_RELATIVE_PATH}")
 
-
 if (LLDB_ENABLE_LIBEDIT)
   list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
 endif()
 
-add_subdirectory(Interfaces)
-
-add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
+set(python_plugin_sources
   PythonDataObjects.cpp
   PythonReadline.cpp
   ScriptInterpreterPython.cpp
 
-  LINK_COMPONENTS
-    Support
-  LINK_LIBS
-    lldbBreakpoint
-    lldbCore
-    lldbDataFormatters
-    lldbHost
-    lldbInterpreter
-    lldbTarget
-    lldbValueObject
-    lldbPluginScriptInterpreterPythonInterfaces
-    ${Python3_LIBRARIES}
-    ${LLDB_LIBEDIT_LIBS}
+  Interfaces/OperatingSystemPythonInterface.cpp
+  Interfaces/ScriptInterpreterPythonInterfaces.cpp
+  Interfaces/ScriptedFramePythonInterface.cpp
+  Interfaces/ScriptedFrameProviderPythonInterface.cpp
+  Interfaces/ScriptedPlatformPythonInterface.cpp
+  Interfaces/ScriptedProcessPythonInterface.cpp
+  Interfaces/ScriptedPythonInterface.cpp
+  Interfaces/ScriptedHookPythonInterface.cpp
+  Interfaces/ScriptedBreakpointPythonInterface.cpp
+  Interfaces/ScriptedCommandPythonInterface.cpp
+  Interfaces/ScriptedStackFrameRecognizerPythonInterface.cpp
+  Interfaces/ScriptedStringSummaryPythonInterface.cpp
+  Interfaces/ScriptedSyntheticChildrenPythonInterface.cpp
+  Interfaces/ScriptedThreadPlanPythonInterface.cpp
+  Interfaces/ScriptedThreadPythonInterface.cpp
+)
+
+if (WIN32)
+  # Add the library directories to allow Python to use #pragma comment(lib, "python3.lib").
+  # FIXME: We should use Python3_SABI_LIBRARY_DIRS here, but this requires CMake 3.26.
+  set(PYTHON_SABI_LIBRARY_DIRS ${Python3_LIBRARY_DIRS})
+endif()
+
+if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+  # Shared library loaded at runtime by PluginManager. Private lldb symbols are
+  # resolved via liblldb's re-exports, so lldb_private libs aren't linked here.
+  # Python is dlopen'd at runtime by ScriptInterpreterRuntimeLoader, so the
+  # plugin is built with allow-undefined-symbol semantics on POSIX.
+  lldb_add_scriptinterpreter_dynamic_library(
+    lldbPluginScriptInterpreterPython
+    ${python_plugin_sources}
+    LINK_LIBS
+      ${LLDB_LIBEDIT_LIBS}
+      liblldb
   )
+  add_python_wrapper(lldbPluginScriptInterpreterPython)
+
+  if (APPLE)
+    target_link_options(lldbPluginScriptInterpreterPython PRIVATE
+      "LINKER:-undefined,dynamic_lookup")
+    set_target_properties(lldbPluginScriptInterpreterPython PROPERTIES
+      INSTALL_NAME_DIR "@rpath/SharedFrameworks/LLDB.framework/Versions/A"
+    )
+  elseif (UNIX)
+    target_link_options(lldbPluginScriptInterpreterPython PRIVATE
+      "LINKER:--unresolved-symbols=ignore-all")
+  else()
+    message(SEND_ERROR "LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS is not supported on Windows")
+  endif()
+
+  # Static variant linked directly by unit tests. Separate compilation is
+  # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address
+  # shared between the test binary and the plugin code.
+  add_lldb_library(lldbStaticScriptInterpreterPython
+    ${python_plugin_sources}
+    LINK_COMPONENTS
+      Support
+    LINK_LIBS
+      lldbBreakpoint
+      lldbCore
+      lldbDataFormatters
+      lldbHost
+      lldbInterpreter
+      lldbTarget
+      lldbValueObject
+      ${Python3_LIBRARIES}
+      ${LLDB_LIBEDIT_LIBS}
+  )
+  target_include_directories(lldbStaticScriptInterpreterPython
+    PUBLIC ${Python3_INCLUDE_DIRS})
+  target_link_directories(lldbStaticScriptInterpreterPython
+    PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
+else()
+  if (WIN32 AND LLDB_ENABLE_PYTHON_LIMITED_API)
+    if (MINGW)
+      if (NOT Python3_SABI_LIBRARIES)
+        message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API on MinGW requires the Python stable ABI library (libpython3.dll.a)")
+      endif()
+      set(python_link_libs ${Python3_SABI_LIBRARIES})
+    else()
+      # On Windows in MSVC mode, with the limited API, the Python import
+      # library is selected via #pragma comment(lib, ...) in pyconfig.h
+      # based on Py_LIMITED_API.
+    endif()
+  else()
+    # On all other platforms, always link Python3_LIBRARIES explicitly.
+    set(python_link_libs ${Python3_LIBRARIES})
+  endif()
+  add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
+    ${python_plugin_sources}
+    LINK_COMPONENTS
+      Support
+    LINK_LIBS
+      lldbBreakpoint
+      lldbCore
+      lldbDataFormatters
+      lldbHost
+      lldbInterpreter
+      lldbTarget
+      lldbValueObject
+      ${python_link_libs}
+      ${LLDB_LIBEDIT_LIBS}
+  )
+  target_link_directories(lldbPluginScriptInterpreterPython PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
+endif()
+
+target_include_directories(lldbPluginScriptInterpreterPython
+  PUBLIC ${Python3_INCLUDE_DIRS})

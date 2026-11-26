@@ -14,8 +14,12 @@
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMVectorOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMMmaOps.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Types.h"
 
@@ -128,9 +132,16 @@ struct WmmaLoadOpToNVVMLowering
         cast<MemRefType>(subgroupMmaLoadMatrixOp.getSrcMemref().getType()),
         adaptor.getSrcMemref(), adaptor.getIndices());
 
+    // The NVVM op takes the leading dimension as an `i32`. Reject a value that
+    // does not fit rather than silently truncating it.
+    int64_t leadDimension =
+        subgroupMmaLoadMatrixOp.getLeadDimension().getSExtValue();
+    if (!llvm::isInt<32>(leadDimension))
+      return rewriter.notifyMatchFailure(
+          op, "leading dimension does not fit into an i32");
     Value leadingDim = LLVM::ConstantOp::create(
         rewriter, loc, rewriter.getI32Type(),
-        subgroupMmaLoadMatrixOp.getLeadDimensionAttr());
+        rewriter.getI32IntegerAttr(static_cast<int32_t>(leadDimension)));
     rewriter.replaceOpWithNewOp<NVVM::WMMALoadOp>(
         op, resType, dataPtr, leadingDim, m, n, k, layout, eltype, frag);
     return success();
@@ -183,9 +194,16 @@ struct WmmaStoreOpToNVVMLowering
         rewriter, loc,
         cast<MemRefType>(subgroupMmaStoreMatrixOp.getDstMemref().getType()),
         adaptor.getDstMemref(), adaptor.getIndices());
+    // The NVVM op takes the leading dimension as an `i32`. Reject a value that
+    // does not fit rather than silently truncating it.
+    int64_t leadDimension =
+        subgroupMmaStoreMatrixOp.getLeadDimension().getSExtValue();
+    if (!llvm::isInt<32>(leadDimension))
+      return rewriter.notifyMatchFailure(
+          op, "leading dimension does not fit into an i32");
     Value leadingDim = LLVM::ConstantOp::create(
         rewriter, loc, rewriter.getI32Type(),
-        subgroupMmaStoreMatrixOp.getLeadDimensionAttr());
+        rewriter.getI32IntegerAttr(static_cast<int32_t>(leadDimension)));
     rewriter.replaceOpWithNewOp<NVVM::WMMAStoreOp>(
         op, dataPtr, m, n, k, layout, eltype, storeOpOperands, leadingDim);
     return success();

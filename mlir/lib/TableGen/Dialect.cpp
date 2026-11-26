@@ -62,6 +62,10 @@ std::optional<StringRef> Dialect::getExtraClassDeclaration() const {
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
+bool Dialect::useStrictPropertiesInAssemblyFormat() const {
+  return def->getValueAsBit("useStrictPropertiesInAssemblyFormat");
+}
+
 bool Dialect::hasCanonicalizer() const {
   return def->getValueAsBit("hasCanonicalizer");
 }
@@ -90,6 +94,22 @@ bool Dialect::hasOperationInterfaceFallback() const {
   return def->getValueAsBit("hasOperationInterfaceFallback");
 }
 
+bool Dialect::hasInitializer() const {
+  return def->getValueAsBit("hasInitializer");
+}
+
+bool Dialect::useDefaultAttributeRegistration() const {
+  return def->getValueAsBit("useDefaultAttributeRegistration");
+}
+
+bool Dialect::useDefaultTypeRegistration() const {
+  return def->getValueAsBit("useDefaultTypeRegistration");
+}
+
+bool Dialect::useDefaultOperationRegistration() const {
+  return def->getValueAsBit("useDefaultOperationRegistration");
+}
+
 bool Dialect::useDefaultAttributePrinterParser() const {
   return def->getValueAsBit("useDefaultAttributePrinterParser");
 }
@@ -100,10 +120,6 @@ bool Dialect::useDefaultTypePrinterParser() const {
 
 bool Dialect::isExtensible() const {
   return def->getValueAsBit("isExtensible");
-}
-
-bool Dialect::usePropertiesForAttributes() const {
-  return def->getValueAsBit("usePropertiesForAttributes");
 }
 
 const llvm::DagInit *Dialect::getDiscardableAttributes() const {

@@ -24,10 +24,11 @@ LanaiSelectionDAGInfo::LanaiSelectionDAGInfo()
 
 SDValue LanaiSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG & /*DAG*/, const SDLoc & /*dl*/, SDValue /*Chain*/,
-    SDValue /*Dst*/, SDValue /*Src*/, SDValue Size, Align /*Alignment*/,
-    bool /*isVolatile*/, bool /*AlwaysInline*/,
-    MachinePointerInfo /*DstPtrInfo*/,
+    SDValue /*Dst*/, SDValue /*Src*/, SDValue Size, Align /*DstAlign*/,
+    Align /*SrcAlign*/, bool /*isVolatile*/, bool /*AlwaysInline*/,
+    bool &IsTailCall, MachinePointerInfo /*DstPtrInfo*/,
     MachinePointerInfo /*SrcPtrInfo*/) const {
+  IsTailCall = false;
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (!ConstantSize)
     return SDValue();

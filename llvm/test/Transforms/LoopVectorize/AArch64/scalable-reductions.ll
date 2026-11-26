@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize -prefer-predicate-over-epilogue=scalar-epilogue -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize \
+; RUN: opt < %s -passes=loop-vectorize -tail-folding-policy=dont-fold-tail -pass-remarks=loop-vectorize -pass-remarks-analysis=loop-vectorize \
 ; RUN:   -pass-remarks-missed=loop-vectorize -mtriple aarch64-unknown-linux-gnu -mattr=+sve,+bf16 -S 2>%t | FileCheck %s -check-prefix=CHECK
 ; RUN: cat %t | FileCheck %s -check-prefix=CHECK-REMARK
 
@@ -7,7 +7,7 @@
 ; ADD
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define i32 @add(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
+define i32 @add(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @add
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x i32>
@@ -20,7 +20,7 @@ define i32 @add(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %add, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -30,14 +30,14 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %add
 }
 
 ; OR
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define i32 @or(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
+define i32 @or(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @or
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x i32>
@@ -50,7 +50,7 @@ define i32 @or(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %or, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -60,14 +60,14 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %or
 }
 
 ; AND
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define i32 @and(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
+define i32 @and(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @and
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x i32>
@@ -80,7 +80,7 @@ define i32 @and(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %and, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -90,14 +90,14 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %and
 }
 
 ; XOR
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define i32 @xor(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
+define i32 @xor(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @xor
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x i32>
@@ -110,7 +110,7 @@ define i32 @xor(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %xor, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -120,35 +120,32 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %xor
 }
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
 ; SMIN
 
-define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
+define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @smin
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x i32>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x i32>
-; CHECK: %[[ICMP1:.*]] = icmp slt <vscale x 8 x i32> %[[LOAD1]]
-; CHECK: %[[ICMP2:.*]] = icmp slt <vscale x 8 x i32> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[ICMP1]], <vscale x 8 x i32> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[ICMP2]], <vscale x 8 x i32> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = call <vscale x 8 x i32> @llvm.smin
+; CHECK: %[[SEL2:.*]] = call <vscale x 8 x i32> @llvm.smin
 ; CHECK: middle.block:
 ; CHECK: %[[RDX:.*]] = call <vscale x 8 x i32> @llvm.smin.nxv8i32(<vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]])
 ; CHECK-NEXT: call i32 @llvm.vector.reduce.smin.nxv8i32(<vscale x 8 x i32>  %[[RDX]])
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
-  %cmp.i = icmp slt i32 %0, %sum.010
-  %.sroa.speculated = select i1 %cmp.i, i32 %0, i32 %sum.010
+  %.sroa.speculated = call i32 @llvm.smin(i32 %0, i32 %sum.010)
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -160,28 +157,25 @@ for.end:
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
 ; UMAX
 
-define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
+define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @umax
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x i32>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x i32>
-; CHECK: %[[ICMP1:.*]] = icmp ugt <vscale x 8 x i32> %[[LOAD1]]
-; CHECK: %[[ICMP2:.*]] = icmp ugt <vscale x 8 x i32> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[ICMP1]], <vscale x 8 x i32> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[ICMP2]], <vscale x 8 x i32> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = call <vscale x 8 x i32> @llvm.umax
+; CHECK: %[[SEL2:.*]] = call <vscale x 8 x i32> @llvm.umax
 ; CHECK: middle.block:
 ; CHECK: %[[RDX:.*]] = call <vscale x 8 x i32> @llvm.umax.nxv8i32(<vscale x 8 x i32> %[[SEL1]], <vscale x 8 x i32> %[[SEL2]])
 ; CHECK-NEXT: call i32 @llvm.vector.reduce.umax.nxv8i32(<vscale x 8 x i32>  %[[RDX]])
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
-  %cmp.i = icmp ugt i32 %0, %sum.010
-  %.sroa.speculated = select i1 %cmp.i, i32 %0, i32 %sum.010
+  %.sroa.speculated = call i32 @llvm.umax(i32 %0, i32 %sum.010)
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -193,7 +187,7 @@ for.end:
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
 ; FADD (FAST)
 
-define float @fadd_fast(ptr noalias nocapture readonly %a, i64 %n) {
+define float @fadd_fast(ptr noalias nocapture readonly %a, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @fadd_fast
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>
@@ -222,7 +216,7 @@ for.end:
 
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
 ; CHECK-REMARK: vectorized loop (vectorization width: 8, interleaved count: 2)
-define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) {
+define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @fadd_fast_bfloat
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <8 x bfloat>
@@ -231,7 +225,7 @@ define bfloat @fadd_fast_bfloat(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK: %[[FADD2:.*]] = fadd fast <8 x bfloat> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[RDX:.*]] = fadd fast <8 x bfloat> %[[FADD2]], %[[FADD1]]
-; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0xR0000, <8 x bfloat> %[[RDX]])
+; CHECK: call fast bfloat @llvm.vector.reduce.fadd.v8bf16(bfloat 0.000000e+00, <8 x bfloat> %[[RDX]])
 entry:
   br label %for.body
 
@@ -252,15 +246,15 @@ for.end:
 ; FMIN (FAST)
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define float @fmin_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
+define float @fmin_fast(ptr noalias nocapture readonly %a, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @fmin_fast
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[FCMP1:.*]] = fcmp fast olt <vscale x 8 x float> %[[LOAD1]]
 ; CHECK: %[[FCMP2:.*]] = fcmp fast olt <vscale x 8 x float> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[FCMP:.*]] = fcmp fast olt <vscale x 8 x float> %[[SEL1]], %[[SEL2]]
 ; CHECK-NEXT: %[[SEL:.*]] = select fast <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x float> %[[SEL1]], <vscale x 8 x float> %[[SEL2]]
@@ -274,7 +268,7 @@ for.body:
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp.i = fcmp fast olt float %0, %sum.07
-  %.sroa.speculated = select i1 %cmp.i, float %0, float %sum.07
+  %.sroa.speculated = select nnan nsz i1 %cmp.i, float %0, float %sum.07
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -286,15 +280,15 @@ for.end:
 ; FMAX (FAST)
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define float @fmax_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
+define float @fmax_fast(ptr noalias nocapture readonly %a, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @fmax_fast
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 8 x float>
 ; CHECK: %[[FCMP1:.*]] = fcmp fast ogt <vscale x 8 x float> %[[LOAD1]]
 ; CHECK: %[[FCMP2:.*]] = fcmp fast ogt <vscale x 8 x float> %[[LOAD2]]
-; CHECK: %[[SEL1:.*]] = select <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
-; CHECK: %[[SEL2:.*]] = select <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
+; CHECK: %[[SEL1:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP1]], <vscale x 8 x float> %[[LOAD1]]
+; CHECK: %[[SEL2:.*]] = select nnan nsz <vscale x 8 x i1> %[[FCMP2]], <vscale x 8 x float> %[[LOAD2]]
 ; CHECK: middle.block:
 ; CHECK: %[[FCMP:.*]] = fcmp fast ogt <vscale x 8 x float> %[[SEL1]], %[[SEL2]]
 ; CHECK-NEXT: %[[SEL:.*]] = select fast <vscale x 8 x i1> %[[FCMP]], <vscale x 8 x float> %[[SEL1]], <vscale x 8 x float> %[[SEL2]]
@@ -308,7 +302,7 @@ for.body:
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
   %cmp.i = fcmp fast ogt float %0, %sum.07
-  %.sroa.speculated = select i1 %cmp.i, float %0, float %sum.07
+  %.sroa.speculated = select nnan nsz i1 %cmp.i, float %0, float %sum.07
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
@@ -319,17 +313,23 @@ for.end:
 
 ; ADD (with reduction stored in invariant address)
 
-; CHECK-REMARK: vectorized loop (vectorization width: vscale x 4, interleaved count: 2)
-define void @invariant_store(ptr %dst, ptr readonly %src) {
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 4, interleaved count: 4)
+define void @invariant_store(ptr %dst, ptr readonly %src) vscale_range(1,16) {
 ; CHECK-LABEL: @invariant_store
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 4 x i32>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 4 x i32>
+; CHECK: %[[LOAD3:.*]] = load <vscale x 4 x i32>
+; CHECK: %[[LOAD4:.*]] = load <vscale x 4 x i32>
 ; CHECK: %[[ADD1:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD1]]
 ; CHECK: %[[ADD2:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD2]]
+; CHECK: %[[ADD3:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD3]]
+; CHECK: %[[ADD4:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD4]]
 ; CHECK: middle.block:
-; CHECK: %[[ADD:.*]] = add <vscale x 4 x i32> %[[ADD2]], %[[ADD1]]
-; CHECK-NEXT: %[[SUM:.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %[[ADD]])
+; CHECK: %[[ADD5:.*]] = add <vscale x 4 x i32> %[[ADD2]], %[[ADD1]]
+; CHECK: %[[ADD6:.*]] = add <vscale x 4 x i32> %[[ADD3]], %[[ADD5]]
+; CHECK: %[[ADD7:.*]] = add <vscale x 4 x i32> %[[ADD4]], %[[ADD6]]
+; CHECK-NEXT: %[[SUM:.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %[[ADD7]])
 ; CHECK-NEXT: store i32 %[[SUM]], ptr %gep.dst, align 4
 entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
@@ -354,7 +354,7 @@ for.cond.cleanup:
 ; ADD (with reduction of i1)
 
 ; CHECK-REMARK: vectorized loop (vectorization width: vscale x 8, interleaved count: 2)
-define i1 @add_trunc_i32_i1(ptr nocapture %src, i64 %N) {
+define i1 @add_trunc_i32_i1(ptr nocapture %src, i64 %N) vscale_range(1,16) {
 ; CHECK-LABEL: @add_trunc_i32_i1
 ; CHECK: vector.body:
 ; CHECK: %[[PHI1:.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %{{.*}} ], [ [[XOR1:%.+]], %vector.body ]
@@ -388,7 +388,7 @@ for.end:
 
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
 ; CHECK-REMARK: vectorized loop (vectorization width: 4, interleaved count: 2)
-define i32 @mul(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
+define i32 @mul(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @mul
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <4 x i32>
@@ -401,7 +401,7 @@ define i32 @mul(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 entry:
   br label %for.body
 
-for.body:                                         ; preds = %entry, %for.body
+for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
   %sum.07 = phi i32 [ 2, %entry ], [ %mul, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
@@ -411,7 +411,7 @@ for.body:                                         ; preds = %entry, %for.body
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body, !llvm.loop !0
 
-for.end:                                 ; preds = %for.body, %entry
+for.end:
   ret i32 %mul
 }
 
@@ -419,7 +419,7 @@ for.end:                                 ; preds = %for.body, %entry
 ; CHECK-REMARK: Scalable vectorization not supported for the reduction operations found in this loop.
 ; CHECK-REMARK: Ignoring user-specified interleave count due to possibly unsafe dependencies in the loop.
 ; CHECK-REMARK: vectorized loop (vectorization width: 4, interleaved count: 1)
-define i32 @memory_dependence(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) {
+define i32 @memory_dependence(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: @memory_dependence
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <4 x i32>
@@ -451,10 +451,9 @@ for.end:
   ret i32 %mul
 }
 
-attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
 
 !0 = distinct !{!0, !1, !2, !3, !4}
 !1 = !{!"llvm.loop.vectorize.width", i32 8}
-!2 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!2 = !{!"llvm.loop.vectorize.scalable.enable"}
 !3 = !{!"llvm.loop.interleave.count", i32 2}
-!4 = !{!"llvm.loop.vectorize.enable", i1 true}
+!4 = !{!"llvm.loop.vectorize.enable"}

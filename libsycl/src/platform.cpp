@@ -6,11 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <sycl/__impl/device.hpp>
 #include <sycl/__impl/platform.hpp>
 
+#include <detail/context_impl.hpp>
+#include <detail/device_impl.hpp>
 #include <detail/platform_impl.hpp>
 
-#include <stdexcept>
+#include <cassert>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -20,16 +23,30 @@ std::vector<platform> platform::get_platforms() {
   auto &PlatformImpls = detail::PlatformImpl::getPlatforms();
   std::vector<platform> Platforms;
   Platforms.reserve(PlatformImpls.size());
-  for (auto &PlatformImpl : PlatformImpls) {
-    platform Platform = detail::createSyclObjFromImpl<platform>(*PlatformImpl);
-    Platforms.push_back(std::move(Platform));
-  }
+  for (const auto &Impl : PlatformImpls)
+    Platforms.emplace_back(detail::createSyclObjFromImpl<platform>(*Impl));
   return Platforms;
 }
+
+std::vector<device> platform::get_devices(info::device_type type) const {
+  std::vector<device> Devices;
+  impl->iterateDevices(type, [&Devices](detail::DeviceImpl *DevImpl) {
+    assert(DevImpl && "Device impl can't be nullptr");
+    Devices.push_back(detail::createSyclObjFromImpl<device>(*DevImpl));
+  });
+
+  return Devices;
+}
+
+bool platform::has(aspect asp) const { return impl->has(asp); }
 
 template <typename Param>
 detail::is_platform_info_desc_t<Param> platform::get_info() const {
   return impl->getInfo<Param>();
+}
+
+context platform::khr_get_default_context() const {
+  return detail::createSyclObjFromImpl<context>(impl->getDefaultContext());
 }
 
 #define _LIBSYCL_EXPORT_GET_INFO(Desc)                                         \

@@ -10,8 +10,49 @@
 #include "clang/Basic/SourceManager.h"
 #include <optional>
 #include <utility>
+#include <vector>
 
 namespace clang::tidy::utils::lexer {
+
+StringRef getTokenName(const Token &Tok) {
+  if (Tok.is(tok::raw_identifier))
+    return Tok.getRawIdentifier();
+  if (const IdentifierInfo *Info = Tok.getIdentifierInfo())
+    return Info->getName();
+  return {};
+}
+
+std::vector<Token> getRawTokens(CharSourceRange Range, const SourceManager &SM,
+                                const LangOptions &LangOpts) {
+  if (Range.isInvalid())
+    return {};
+
+  const CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, LangOpts);
+  if (FileRange.isInvalid())
+    return {};
+
+  bool Invalid = false;
+  const StringRef Text =
+      Lexer::getSourceText(FileRange, SM, LangOpts, &Invalid);
+  if (Invalid || Text.empty())
+    return {};
+
+  const auto [File, BeginOffset] = SM.getDecomposedLoc(FileRange.getBegin());
+  const StringRef Buffer = SM.getBufferData(File, &Invalid);
+  if (Invalid || BeginOffset + Text.size() > Buffer.size())
+    return {};
+
+  Lexer RawLexer(SM.getLocForStartOfFile(File), LangOpts, Buffer.begin(),
+                 Buffer.begin() + BeginOffset, Buffer.end());
+  const size_t EndOffset = BeginOffset + Text.size();
+  std::vector<Token> Tokens;
+  Token Tok;
+  while (!RawLexer.LexFromRawLexer(Tok) && Tok.isNot(tok::eof) &&
+         SM.getFileOffset(Tok.getLocation()) < EndOffset)
+    Tokens.push_back(Tok);
+  return Tokens;
+}
 
 std::pair<std::optional<Token>, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
@@ -99,6 +140,139 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
   return false;
 }
 
+namespace {
+enum class CommentCollectionMode { AllComments, TrailingComments };
+} // namespace
+
+static std::vector<CommentToken>
+collectCommentsInRange(CharSourceRange Range, const SourceManager &SM,
+                       const LangOptions &LangOpts,
+                       CommentCollectionMode Mode) {
+  std::vector<CommentToken> Comments;
+  if (Range.isInvalid())
+    return Comments;
+
+  const CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, LangOpts);
+  if (FileRange.isInvalid())
+    return Comments;
+
+  const std::pair<FileID, unsigned> BeginLoc =
+      SM.getDecomposedLoc(FileRange.getBegin());
+  const std::pair<FileID, unsigned> EndLoc =
+      SM.getDecomposedLoc(FileRange.getEnd());
+
+  if (BeginLoc.first != EndLoc.first)
+    return Comments;
+
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(BeginLoc.first, &Invalid);
+  if (Invalid)
+    return Comments;
+
+  const char *StrData = Buffer.data() + BeginLoc.second;
+
+  Lexer TheLexer(SM.getLocForStartOfFile(BeginLoc.first), LangOpts,
+                 Buffer.begin(), StrData, Buffer.end());
+  // Use raw lexing with comment retention so we can see comment tokens without
+  // preprocessing or macro expansion effects.
+  TheLexer.SetCommentRetentionState(true);
+
+  while (true) {
+    Token Tok;
+    if (TheLexer.LexFromRawLexer(Tok))
+      break;
+    if (Tok.is(tok::eof) || Tok.getLocation() == FileRange.getEnd() ||
+        SM.isBeforeInTranslationUnit(FileRange.getEnd(), Tok.getLocation()))
+      break;
+
+    if (Tok.is(tok::comment)) {
+      const std::pair<FileID, unsigned> CommentLoc =
+          SM.getDecomposedLoc(Tok.getLocation());
+      assert(CommentLoc.first == BeginLoc.first);
+      Comments.emplace_back(CommentToken{
+          Tok.getLocation(),
+          StringRef(Buffer.begin() + CommentLoc.second, Tok.getLength()),
+      });
+    } else if (Mode == CommentCollectionMode::TrailingComments) {
+      // Clear comments found before the different token, e.g. comma. Callers
+      // use this to retrieve only the contiguous comment block that directly
+      // precedes a token of interest.
+      Comments.clear();
+    }
+  }
+
+  return Comments;
+}
+
+std::vector<CommentToken> getCommentsInRange(CharSourceRange Range,
+                                             const SourceManager &SM,
+                                             const LangOptions &LangOpts) {
+  return collectCommentsInRange(Range, SM, LangOpts,
+                                CommentCollectionMode::AllComments);
+}
+
+std::vector<CommentToken>
+getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
+                           const LangOptions &LangOpts) {
+  return collectCommentsInRange(Range, SM, LangOpts,
+                                CommentCollectionMode::TrailingComments);
+}
+
+CharSourceRange
+findTokenTextInRange(CharSourceRange Range, const SourceManager &SM,
+                     const LangOptions &LangOpts,
+                     llvm::function_ref<bool(const Token &)> Pred) {
+  if (Range.isInvalid())
+    return {};
+
+  // Normalize to a file-based char range so raw lexing can operate on one
+  // contiguous buffer and reject unmappable (e.g. macro) ranges.
+  const CharSourceRange FileRange =
+      Lexer::makeFileCharRange(Range, SM, LangOpts);
+  if (FileRange.isInvalid())
+    return {};
+
+  const auto [BeginFID, BeginOffset] =
+      SM.getDecomposedLoc(FileRange.getBegin());
+  const auto [EndFID, EndOffset] = SM.getDecomposedLoc(FileRange.getEnd());
+  if (BeginFID != EndFID || BeginOffset > EndOffset)
+    return {};
+
+  bool Invalid = false;
+  const StringRef Buffer = SM.getBufferData(BeginFID, &Invalid);
+  if (Invalid)
+    return {};
+
+  const char *LexStart = Buffer.data() + BeginOffset;
+  // Re-lex raw tokens in the bounded file buffer while preserving comments so
+  // callers can match tokens regardless of interleaved comments.
+  Lexer TheLexer(SM.getLocForStartOfFile(BeginFID), LangOpts, Buffer.begin(),
+                 LexStart, Buffer.end());
+  TheLexer.SetCommentRetentionState(true);
+
+  while (true) {
+    Token Tok;
+    if (TheLexer.LexFromRawLexer(Tok))
+      return {};
+
+    if (Tok.is(tok::eof) || Tok.getLocation() == FileRange.getEnd() ||
+        SM.isBeforeInTranslationUnit(FileRange.getEnd(), Tok.getLocation()))
+      return {};
+
+    if (!Pred(Tok))
+      continue;
+
+    Token NextTok;
+    if (TheLexer.LexFromRawLexer(NextTok))
+      return {};
+    // Return a char range ending at the next token start so trailing trivia of
+    // the matched token is included (useful for fix-it removals).
+    return CharSourceRange::getCharRange(Tok.getLocation(),
+                                         NextTok.getLocation());
+  }
+}
+
 std::optional<Token> getQualifyingToken(tok::TokenKind TK,
                                         CharSourceRange Range,
                                         const ASTContext &Context,
@@ -124,11 +298,11 @@ std::optional<Token> getQualifyingToken(tok::TokenKind TK,
       Tok.setIdentifierInfo(&Info);
       Tok.setKind(Info.getTokenID());
     }
-    if (Tok.is(tok::less))
+    if (Tok.is(tok::less)) {
       SawTemplate = true;
-    else if (Tok.isOneOf(tok::greater, tok::greatergreater))
+    } else if (Tok.isOneOf(tok::greater, tok::greatergreater)) {
       LastMatchAfterTemplate = std::nullopt;
-    else if (Tok.is(TK)) {
+    } else if (Tok.is(TK)) {
       if (SawTemplate)
         LastMatchAfterTemplate = Tok;
       else

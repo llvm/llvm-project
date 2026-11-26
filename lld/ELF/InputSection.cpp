@@ -61,10 +61,11 @@ InputSectionBase::InputSectionBase(InputFile *file, StringRef name,
                   entsize),
       bss(0), decodedCrel(0), keepUnique(0), nopFiller(0),
       content_(data.data()), size(data.size()) {
-  // In order to reduce memory allocation, we assume that mergeable
-  // sections are smaller than 4 GiB, which is not an unreasonable
-  // assumption as of 2017.
-  if (sectionKind == SectionBase::Merge && content().size() > UINT32_MAX)
+  // In order to reduce memory allocation, we assume that mergeable and
+  // .eh_frame sections are smaller than 4 GiB.
+  if ((sectionKind == SectionBase::Merge ||
+       sectionKind == SectionBase::EHFrame) &&
+      content().size() > UINT32_MAX)
     ErrAlways(getCtx()) << this << ": section too large";
 
   // The ELF spec states that a value of 0 means the section has
@@ -118,21 +119,21 @@ size_t InputSectionBase::getSize() const {
 }
 
 template <class ELFT>
-static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
-                          size_t size) {
-  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(sec.content_);
-  auto compressed = ArrayRef<uint8_t>(sec.content_, sec.compressedSize)
-                        .slice(sizeof(typename ELFT::Chdr));
+static void decompressAux(Ctx &ctx, const InputSectionBase &sec,
+                          ArrayRef<uint8_t> in, uint8_t *out, size_t size) {
+  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(in.data());
+  in = in.slice(sizeof(typename ELFT::Chdr));
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
-                    ? compression::zlib::decompress(compressed, out, size)
-                    : compression::zstd::decompress(compressed, out, size))
+                    ? compression::zlib::decompress(in, out, size)
+                    : compression::zstd::decompress(in, out, size))
     Err(ctx) << &sec << ": decompress failed: " << std::move(e);
 }
 
 void InputSectionBase::decompress() const {
   Ctx &ctx = getCtx();
   uint8_t *buf = makeThreadLocalN<uint8_t>(size);
-  invokeELFT(decompressAux, ctx, *this, buf, size);
+  invokeELFT(decompressAux, ctx, *this, ArrayRef(content_, compressedSize), buf,
+             size);
   content_ = buf;
   compressed = false;
 }
@@ -233,6 +234,12 @@ uint64_t SectionBase::getVA(uint64_t offset) const {
   return (out ? out->addr : 0) + getOffset(offset);
 }
 
+uint64_t SectionBase::getRelocVA(uint64_t offset) const {
+  if (auto *es = dyn_cast<EhInputSection>(this))
+    return es->getParent()->getVA(offset);
+  return getVA(offset);
+}
+
 OutputSection *SectionBase::getOutputSection() {
   InputSection *sec;
   if (auto *isec = dyn_cast<InputSection>(this))
@@ -261,25 +268,37 @@ void InputSectionBase::parseCompressedHeader(Ctx &ctx) {
 
   auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(content().data());
   if (hdr->ch_type == ELFCOMPRESS_ZLIB) {
-    if (!compression::zlib::isAvailable())
+    if (!compression::zlib::isAvailable()) {
       ErrAlways(ctx) << this
                      << " is compressed with ELFCOMPRESS_ZLIB, but lld is "
                         "not built with zlib support";
+      return;
+    }
   } else if (hdr->ch_type == ELFCOMPRESS_ZSTD) {
-    if (!compression::zstd::isAvailable())
+    if (!compression::zstd::isAvailable()) {
       ErrAlways(ctx) << this
                      << " is compressed with ELFCOMPRESS_ZSTD, but lld is "
                         "not built with zstd support";
+      return;
+    }
   } else {
     ErrAlways(ctx) << this << ": unsupported compression type ("
                    << uint32_t(hdr->ch_type) << ")";
     return;
   }
 
-  compressed = true;
-  compressedSize = size;
-  size = hdr->ch_size;
   addralign = std::max<uint32_t>(hdr->ch_addralign, 1);
+  // SHF_ALLOC sections are read via content() and use jumpInstrMod/relaxAux,
+  // which overlap compressedSize. Decompress now.
+  if (flags & SHF_ALLOC) {
+    uint8_t *buf = makeThreadLocalN<uint8_t>(hdr->ch_size);
+    decompressAux<ELFT>(ctx, *this, content(), buf, hdr->ch_size);
+    content_ = buf;
+  } else {
+    compressed = true;
+    compressedSize = size;
+  }
+  size = hdr->ch_size;
 }
 
 InputSection *InputSectionBase::getLinkOrderDep() const {
@@ -780,9 +799,8 @@ static int64_t getTlsTpOffset(Ctx &ctx, const Symbol &s) {
     return s.getVA(ctx, 0) + (tls->p_vaddr & (tls->p_align - 1)) - 0x7000;
   case EM_LOONGARCH:
   case EM_RISCV:
-    // See the comment in handleTlsRelocation. For TLSDESC=>IE,
-    // R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} also reach here. While
-    // `tls` may be null, the return value is ignored.
+    // For TLSDESC=>IE, R_RISCV_TLSDESC_{LOAD_LO12,ADD_LO12_I,CALL} reference
+    // a non-TLS label and reach here.
     if (s.type != STT_TLS)
       return 0;
     return s.getVA(ctx, 0) + (tls->p_vaddr & (tls->p_align - 1));
@@ -806,7 +824,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   switch (r.expr) {
   case R_ABS:
   case R_DTPREL:
-  case R_RELAX_TLS_LD_TO_LE_ABS:
   case R_RELAX_GOT_PC_NOPIC:
   case RE_AARCH64_AUTH:
   case RE_RISCV_ADD:
@@ -821,8 +838,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case RE_ARM_SBREL:
     return r.sym->getVA(ctx, a) - getARMStaticBase(*r.sym);
   case R_GOT:
-  case RE_AARCH64_AUTH_GOT:
-  case R_RELAX_TLS_GD_TO_IE_ABS:
     return r.sym->getGotVA(ctx) + a;
   case RE_LOONGARCH_GOT:
     // The LoongArch TLS GD relocs reuse the R_LARCH_GOT_PC_LO12 reloc r.type
@@ -837,33 +852,25 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_GOTPLTONLY_PC:
     return ctx.in.gotPlt->getVA() + a - p;
   case R_GOTREL:
-  case RE_PPC64_RELAX_TOC:
     return r.sym->getVA(ctx, a) - ctx.in.got->getVA();
   case R_GOTPLTREL:
     return r.sym->getVA(ctx, a) - ctx.in.gotPlt->getVA();
   case R_GOTPLT:
-  case R_RELAX_TLS_GD_TO_IE_GOTPLT:
     return r.sym->getGotVA(ctx) + a - ctx.in.gotPlt->getVA();
   case R_TLSLD_GOT_OFF:
   case R_GOT_OFF:
-  case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
     return r.sym->getGotOffset(ctx) + a;
   case RE_AARCH64_GOT_PAGE_PC:
-  case RE_AARCH64_AUTH_GOT_PAGE_PC:
-  case RE_AARCH64_RELAX_TLS_GD_TO_IE_PAGE_PC:
     return getAArch64Page(r.sym->getGotVA(ctx) + a) - getAArch64Page(p);
   case RE_AARCH64_GOT_PAGE:
     return r.sym->getGotVA(ctx) + a - getAArch64Page(ctx.in.got->getVA());
   case R_GOT_PC:
-  case RE_AARCH64_AUTH_GOT_PC:
-  case R_RELAX_TLS_GD_TO_IE:
     return r.sym->getGotVA(ctx) + a - p;
   case R_GOTPLT_GOTREL:
     return r.sym->getGotPltVA(ctx) + a - ctx.in.got->getVA();
   case R_GOTPLT_PC:
     return r.sym->getGotPltVA(ctx) + a - p;
   case RE_LOONGARCH_GOT_PAGE_PC:
-  case RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC:
     if (r.sym->hasFlag(NEEDS_TLSGD))
       return getLoongArchPageDelta(ctx.in.got->getGlobalDynAddr(*r.sym) + a, p,
                                    r.type);
@@ -994,11 +1001,7 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case RE_PPC64_TOCBASE:
     return getPPC64TocBase(ctx) + a;
   case R_RELAX_GOT_PC:
-  case RE_PPC64_RELAX_GOT_PC:
     return r.sym->getVA(ctx, a) - p;
-  case R_RELAX_TLS_GD_TO_LE:
-  case R_RELAX_TLS_IE_TO_LE:
-  case R_RELAX_TLS_LD_TO_LE:
   case R_TPREL:
     // It is not very clear what to return if the symbol is undefined. With
     // --noinhibit-exec, even a non-weak undefined reference may reach here.
@@ -1007,7 +1010,6 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
     if (r.sym->isUndefined())
       return a;
     return getTlsTpOffset(ctx, *r.sym) + a;
-  case R_RELAX_TLS_GD_TO_LE_NEG:
   case R_TPREL_NEG:
     if (r.sym->isUndefined())
       return a;
@@ -1015,14 +1017,12 @@ uint64_t InputSectionBase::getRelocTargetVA(Ctx &ctx, const Relocation &r,
   case R_SIZE:
     return r.sym->getSize() + a;
   case R_TLSDESC:
-  case RE_AARCH64_AUTH_TLSDESC:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a;
   case R_TLSDESC_PC:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - p;
   case R_TLSDESC_GOTPLT:
     return ctx.in.got->getTlsDescAddr(*r.sym) + a - ctx.in.gotPlt->getVA();
   case RE_AARCH64_TLSDESC_PAGE:
-  case RE_AARCH64_AUTH_TLSDESC_PAGE:
     return getAArch64Page(ctx.in.got->getTlsDescAddr(*r.sym) + a) -
            getAArch64Page(p);
   case RE_LOONGARCH_TLSDESC_PAGE_PC:
@@ -1112,7 +1112,7 @@ void InputSection::relocateNonAlloc(Ctx &ctx, uint8_t *buf,
         continue;
       }
       Err(ctx) << getLocation(offset)
-               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128";
+               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_ULEB128";
       return;
     }
 
@@ -1346,16 +1346,9 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // If this is a compressed section, uncompress section contents directly
   // to the buffer.
   if (compressed) {
-    auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(content_);
-    auto compressed = ArrayRef<uint8_t>(content_, compressedSize)
-                          .slice(sizeof(typename ELFT::Chdr));
-    size_t size = this->size;
-    if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
-                      ? compression::zlib::decompress(compressed, buf, size)
-                      : compression::zstd::decompress(compressed, buf, size))
-      Err(ctx) << this << ": decompress failed: " << std::move(e);
-    uint8_t *bufEnd = buf + size;
-    relocate<ELFT>(ctx, buf, bufEnd);
+    decompressAux<ELFT>(ctx, *this, ArrayRef(content_, compressedSize), buf,
+                        size);
+    relocate<ELFT>(ctx, buf, buf + size);
     return;
   }
 
@@ -1367,16 +1360,6 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
 
 void InputSection::replace(InputSection *other) {
   addralign = std::max(addralign, other->addralign);
-
-  // When a section is replaced with another section that was allocated to
-  // another partition, the replacement section (and its associated sections)
-  // need to be placed in the main partition so that both partitions will be
-  // able to access it.
-  if (partition != other->partition) {
-    partition = 1;
-    for (InputSection *isec : dependentSections)
-      isec->partition = 1;
-  }
 
   other->repl = repl;
   other->markDead();
@@ -1442,7 +1425,18 @@ template <class ELFT> void EhInputSection::split() {
     unsigned firstRel = -1;
     if (relI != rels.size() && rels[relI].offset < off + size)
       firstRel = relI;
-    (id == 0 ? cies : fdes).emplace_back(off, this, size, firstRel);
+    if (id == 0) {
+      cies.emplace_back(off, size, firstRel, -1);
+    } else {
+      auto cieOff = off + 4 - id;
+      auto it = partition_point(
+          cies, [=](const EhSectionPiece &p) { return p.inputOff < cieOff; });
+      if (it == cies.end() || it->inputOff != cieOff) {
+        msg = "invalid CIE reference";
+        break;
+      }
+      fdes.emplace_back(off, size, firstRel, it - cies.begin());
+    }
     d = d.slice(size);
   }
   if (msg)
@@ -1560,16 +1554,29 @@ void MergeInputSection::splitIntoPieces() {
 }
 
 SectionPiece &MergeInputSection::getSectionPiece(uint64_t offset) {
-  if (content().size() <= offset) {
-    Err(getCtx()) << this << ": offset is outside the section";
-    return pieces[0];
-  }
-  return partition_point(
-      pieces, [=](SectionPiece p) { return p.inputOff <= offset; })[-1];
+  // Pre-resolved by splitSections: pieceIdx + 1 in upper bits,
+  // intra-piece offset in lower bits.
+  if (uint32_t idx = offset >> mergeValueShift)
+    return pieces[idx - 1];
+  assert(offset < content().size());
+  // For non-string fixed-size records, piece index = offset / entsize.
+  if (!(flags & SHF_STRINGS))
+    return pieces[offset / entsize];
+  // Find the last piece whose inputOff <= offset. Prefer a conditional move
+  // to a mispredicated branch.
+  SectionPiece *p = pieces.data();
+  for (size_t n = pieces.size(); n > 1; n -= n / 2)
+    p = LLVM_UNPREDICTABLE(p[n / 2].inputOff <= offset) ? p + n / 2 : p;
+  return *p;
 }
 
 // Return the offset in an output section for a given input offset.
 uint64_t MergeInputSection::getParentOffset(uint64_t offset) const {
+  // Pre-resolved by splitSections: pieceIdx + 1 in upper bits,
+  // intra-piece offset in lower bits.
+  if (uint32_t idx = offset >> mergeValueShift)
+    return pieces[idx - 1].outputOff +
+           (offset & llvm::maskTrailingOnes<uint64_t>(mergeValueShift));
   const SectionPiece &piece = getSectionPiece(offset);
   return piece.outputOff + (offset - piece.inputOff);
 }

@@ -4,9 +4,9 @@
 define i8 @cls_i8(i8 %x) {
 ; CHECK-LABEL: cls_i8:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    sext.b a0, a0
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i8 %x, 7
@@ -19,9 +19,9 @@ define i8 @cls_i8(i8 %x) {
 define i8 @cls_i8_2(i8 %x) {
 ; CHECK-LABEL: cls_i8_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    sext.b a0, a0
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    li a1, 24
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i8 %x, 7
@@ -35,9 +35,9 @@ define i8 @cls_i8_2(i8 %x) {
 define i16 @cls_i16(i16 %x) {
 ; CHECK-LABEL: cls_i16:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    sext.h a0, a0
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i16 %x, 15
@@ -50,9 +50,9 @@ define i16 @cls_i16(i16 %x) {
 define i16 @cls_i16_2(i16 %x) {
 ; CHECK-LABEL: cls_i16_2:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    sext.h a0, a0
 ; CHECK-NEXT:    clsw a0, a0
-; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    subw a0, a0, a1
 ; CHECK-NEXT:    ret
   %a = ashr i16 %x, 15
@@ -111,4 +111,27 @@ define i64 @cls_i64_2(i64 %x) {
   %d = or i64 %c, 1
   %e = call i64 @llvm.ctlz.i64(i64 %d, i1 true)
   ret i64 %e
+}
+
+; Check that the range max in ctls cls knownbits
+; is not set to 32. If it is, then ori disappears.
+define i64 @cls_i64_not_32(i64 %x) {
+; CHECK-LABEL: cls_i64_not_32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    srai a1, a0, 16
+; CHECK-NEXT:    srai a0, a0, 63
+; CHECK-NEXT:    xor a0, a1, a0
+; CHECK-NEXT:    slli a0, a0, 1
+; CHECK-NEXT:    ori a0, a0, 1
+; CHECK-NEXT:    clz a0, a0
+; CHECK-NEXT:    ori a0, a0, 16
+; CHECK-NEXT:    ret
+  %val = ashr i64 %x, 16
+  %a = ashr i64 %val, 63
+  %b = xor i64 %val, %a
+  %c = shl i64 %b, 1
+  %d = or i64 %c, 1
+  %e = call i64 @llvm.ctlz.i64(i64 %d, i1 true)
+  %f = or i64 %e, 16
+  ret i64 %f
 }

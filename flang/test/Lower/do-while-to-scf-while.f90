@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir -hlfir=false -lower-do-while-to-scf-while %s -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -lower-do-while-to-scf-while %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPsimple_do_while()
 ! CHECK: scf.while
@@ -85,3 +85,20 @@ subroutine do_while_goto_internal_backedge()
   print *, "sum=", sum
 end subroutine do_while_goto_internal_backedge
 
+! CHECK-LABEL:   func.func @_QPtest_after_unstructured(
+! CHECK:  scf.while
+! CHECK-NOT: cf.br
+! CHECK: return
+subroutine test_after_unstructured(cdt, switch)
+  logical :: cdt, eval
+  integer :: switch, i = 1
+  if (cdt) then
+    select case (switch)
+      case (0)
+        call print1()
+    end select
+  end if
+  do while(eval(i))
+    call incr(i)
+  end do
+end subroutine

@@ -10,6 +10,7 @@
 
 #include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_INLINE_VAR
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
+#include "src/__support/macros/is_defined.h"
 #include "src/string/memory_utils/op_generic.h"
 #include "src/string/memory_utils/op_x86.h"
 #include "src/string/memory_utils/utils.h" // Ptr, CPtr

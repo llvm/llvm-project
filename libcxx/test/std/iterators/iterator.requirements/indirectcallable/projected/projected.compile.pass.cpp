@@ -13,6 +13,7 @@
 #include <iterator>
 
 #include <concepts>
+#include <cstddef>
 #include <functional>
 
 #include "test_iterators.h"

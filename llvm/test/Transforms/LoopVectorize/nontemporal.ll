@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=4 -force-vector-interleave=1 -S | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
@@ -8,10 +8,10 @@ entry:
   %cmp.4 = icmp sgt i32 %N, 0
   br i1 %cmp.4, label %for.body.preheader, label %for.end
 
-for.body.preheader:                               ; preds = %entry
+for.body.preheader:
   br label %for.body
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
 
 ; Check that we don't lose !nontemporal hint when attempting vectorizing of loads.
@@ -35,10 +35,10 @@ for.body:                                         ; preds = %for.body.preheader,
   %exitcond = icmp eq i32 %lftr.wideiv, %N
   br i1 %exitcond, label %for.end.loopexit, label %for.body
 
-for.end.loopexit:                                 ; preds = %for.body
+for.end.loopexit:
   br label %for.end
 
-for.end:                                          ; preds = %for.end.loopexit, %entry
+for.end:
 ; CHECK: ret void
   ret void
 }

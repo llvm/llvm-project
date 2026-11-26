@@ -359,7 +359,14 @@ static bool CC_X86_64_I128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 
   static const MCPhysReg Regs[] = {X86::RDI, X86::RSI, X86::RDX,
                                    X86::RCX, X86::R8,  X86::R9};
-  ArrayRef<MCPhysReg> Allocated = State.AllocateRegBlock(Regs, NumRegs);
+  static const MCPhysReg PreserveNoneRegs[] = {
+      X86::R12, X86::R13, X86::R14, X86::R15, X86::RDI, X86::RSI,
+      X86::RDX, X86::RCX, X86::R8,  X86::R9,  X86::R11, X86::RAX};
+  ArrayRef<MCPhysReg> RegList =
+      State.getCallingConv() == CallingConv::PreserveNone
+          ? ArrayRef(PreserveNoneRegs)
+          : ArrayRef(Regs);
+  ArrayRef<MCPhysReg> Allocated = State.AllocateRegBlock(RegList, NumRegs);
   if (!Allocated.empty()) {
     PendingMembers[0].convertToReg(Allocated[0]);
     PendingMembers[1].convertToReg(Allocated[1]);
@@ -406,4 +413,5 @@ static bool CC_X86_32_I128_FP128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 }
 
 // Provides entry points of CC_X86 and RetCC_X86.
+#define GET_CALLING_CONV_IMPL
 #include "X86GenCallingConv.inc"

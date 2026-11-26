@@ -25,7 +25,6 @@ define ptx_kernel void @kernel_func() {
 ; NO-TRAP-UNREACHABLE-LABEL: kernel_func(
 ; NO-TRAP-UNREACHABLE:       {
 ; NO-TRAP-UNREACHABLE-EMPTY:
-; NO-TRAP-UNREACHABLE-EMPTY:
 ; NO-TRAP-UNREACHABLE-NEXT:  // %bb.0:
 ; NO-TRAP-UNREACHABLE-NEXT:    { // callseq 0, 0
 ; NO-TRAP-UNREACHABLE-NEXT:    call.uni throw, ();
@@ -36,7 +35,6 @@ define ptx_kernel void @kernel_func() {
 ;
 ; NO-TRAP-AFTER-NORETURN-LABEL: kernel_func(
 ; NO-TRAP-AFTER-NORETURN:       {
-; NO-TRAP-AFTER-NORETURN-EMPTY:
 ; NO-TRAP-AFTER-NORETURN-EMPTY:
 ; NO-TRAP-AFTER-NORETURN-NEXT:  // %bb.0:
 ; NO-TRAP-AFTER-NORETURN-NEXT:    { // callseq 0, 0
@@ -50,7 +48,6 @@ define ptx_kernel void @kernel_func() {
 ; TRAP-LABEL: kernel_func(
 ; TRAP:       {
 ; TRAP-EMPTY:
-; TRAP-EMPTY:
 ; TRAP-NEXT:  // %bb.0:
 ; TRAP-NEXT:    { // callseq 0, 0
 ; TRAP-NEXT:    call.uni throw, ();
@@ -59,7 +56,6 @@ define ptx_kernel void @kernel_func() {
 ;
 ; BUG-FIXED-LABEL: kernel_func(
 ; BUG-FIXED:       {
-; BUG-FIXED-EMPTY:
 ; BUG-FIXED-EMPTY:
 ; BUG-FIXED-NEXT:  // %bb.0:
 ; BUG-FIXED-NEXT:    { // callseq 0, 0
@@ -74,13 +70,11 @@ define void @kernel_func_2() {
 ; CHECK-LABEL: kernel_func_2(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    trap; exit;
 ;
 ; BUG-FIXED-LABEL: kernel_func_2(
 ; BUG-FIXED:       {
-; BUG-FIXED-EMPTY:
 ; BUG-FIXED-EMPTY:
 ; BUG-FIXED-NEXT:  // %bb.0:
 ; BUG-FIXED-NEXT:    trap;

@@ -34,14 +34,14 @@ export void call8() {
 // vector splat from vector of length 1
 // CHECK-LABEL: define void {{.*}}call1
 // CHECK: [[B:%.*]] = alloca <1 x float>, align 4
-// CHECK-NEXT: [[A:%.*]] = alloca <4 x i32>, align 16
+// CHECK-NEXT: [[A:%.*]] = alloca <4 x i32>, align 4
 // CHECK-NEXT: store <1 x float> splat (float 1.000000e+00), ptr [[B]], align 4
 // CHECK-NEXT: [[L:%.*]] = load <1 x float>, ptr [[B]], align 4
 // CHECK-NEXT: [[VL:%.*]] = extractelement <1 x float> [[L]], i32 0
 // CHECK-NEXT: [[C:%.*]] = fptosi float [[VL]] to i32
 // CHECK-NEXT: [[SI:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
 // CHECK-NEXT: [[S:%.*]] = shufflevector <4 x i32> [[SI]], <4 x i32> poison, <4 x i32> zeroinitializer
-// CHECK-NEXT: store <4 x i32> [[S]], ptr [[A]], align 16
+// CHECK-NEXT: store <4 x i32> [[S]], ptr [[A]], align 4
 export void call1() {
   float1 B = {1.0};
   int4 A = (int4)B;
@@ -61,7 +61,7 @@ struct S {
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
 // CHECK-NEXT: store i32 [[L]], ptr [[G1]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[L]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[L]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call3(int A) {
   S s = (S)A;
@@ -77,11 +77,44 @@ export void call3(int A) {
 // CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
 // CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
 // CHECK-NEXT: store i32 [[VL]], ptr [[G1]], align 4
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[VL]] to float
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[VL]] to float
 // CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
 export void call5() {
   int1 A = {1};
   S s = (S)A;
+}
+
+// vector splat from 1x1 matrix
+// CHECK-LABEL: define void {{.*}}call9
+// CHECK: [[M:%.*]] = alloca [1 x <1 x float>], align 4
+// CHECK-NEXT: [[A:%.*]] = alloca <4 x i32>, align 4
+// CHECK-NEXT: store <1 x float> {{.*}}, ptr [[M]], align 4
+// CHECK-NEXT: [[L:%.*]] = load <1 x float>, ptr [[M]], align 4
+// CHECK-NEXT: [[ML:%.*]] = extractelement <1 x float> [[L]], i32 0
+// CHECK-NEXT: [[C:%.*]] = fptosi float [[ML]] to i32
+// CHECK-NEXT: [[SI:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
+// CHECK-NEXT: [[S:%.*]] = shufflevector <4 x i32> [[SI]], <4 x i32> poison, <4 x i32> zeroinitializer
+// CHECK-NEXT: store <4 x i32> [[S]], ptr [[A]], align 4
+export void call9() {
+  float1x1 M = {1.0};
+  int4 A = (int4)M;
+}
+
+// struct splat from 1x1 matrix
+// CHECK-LABEL: define void {{.*}}call10
+// CHECK: [[M:%.*]] = alloca [1 x <1 x i32>], align 4
+// CHECK-NEXT: [[s:%.*]] = alloca %struct.S, align 1
+// CHECK-NEXT: store <1 x i32> splat (i32 1), ptr [[M]], align 4
+// CHECK-NEXT: [[L:%.*]] = load <1 x i32>, ptr [[M]], align 4
+// CHECK-NEXT: [[ML:%.*]] = extractelement <1 x i32> [[L]], i32 0
+// CHECK-NEXT: [[G1:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 0
+// CHECK-NEXT: [[G2:%.*]] = getelementptr inbounds %struct.S, ptr [[s]], i32 0, i32 1
+// CHECK-NEXT: store i32 [[ML]], ptr [[G1]], align 4
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[ML]] to float
+// CHECK-NEXT: store float [[C]], ptr [[G2]], align 4
+export void call10() {
+  int1x1 M = {1};
+  S s = (S)M;
 }
 
 struct BFields {
@@ -106,7 +139,7 @@ struct Derived : BFields {
 // CHECK-NEXT: [[Gep1:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 0, i32 0
 // CHECK-NEXT: [[Gep2:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 0, i32 2
 // CHECK-NEXT: [[Gep3:%.*]] = getelementptr inbounds %struct.Derived, ptr [[D]], i32 0, i32 1
-// CHECK-NEXT: [[C:%.*]] = sitofp i32 [[B]] to double
+// CHECK-NEXT: [[C:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[B]] to double
 // CHECK-NEXT: store double [[C]], ptr [[Gep1]], align 8
 // CHECK-NEXT: [[H:%.*]] = trunc i32 [[B]] to i24
 // CHECK-NEXT: [[BFL:%.*]] = load i24, ptr [[E]], align 1
@@ -114,7 +147,7 @@ struct Derived : BFields {
 // CHECK-NEXT: [[BFC:%.*]] = and i24 [[BFL]], -32768
 // CHECK-NEXT: [[BFS:%.*]] = or i24 [[BFC]], [[BFV]]
 // CHECK-NEXT: store i24 [[BFS]], ptr [[E]], align 1
-// CHECK-NEXT: [[C4:%.*]] = sitofp i32 [[B]] to float
+// CHECK-NEXT: [[C4:%.*]] = sitofp reassoc nnan ninf nsz arcp afn i32 [[B]] to float
 // CHECK-NEXT: store float [[C4]], ptr [[Gep2]], align 4
 // CHECK-NEXT: store i32 [[B]], ptr [[Gep3]], align 4
 // CHECK-NEXT: ret void

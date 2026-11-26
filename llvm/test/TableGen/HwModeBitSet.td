@@ -77,22 +77,22 @@ def XPairsClass : MyClass<64, [untyped], (add XPairs)>;
 // Modes who are not controlling Register related features will be manipulated
 // the same as DefaultMode.
 // CHECK-REG-LABEL: RegisterClass XRegs:
-// CHECK-REG: SpillSize: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
-// CHECK-REG: SpillAlignment: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: SpillSize: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: SpillAlignment: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 // CHECK-REG: Regs: X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15
 
 // CHECK-REG-LABEL: RegisterClass XPairsClass:
-// CHECK-REG: SpillSize: { Default:64 TestMode:128 TestMode1:64 TestMode2:64 }
-// CHECK-REG: SpillAlignment: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: SpillSize: { DefaultMode:64 TestMode:128 TestMode1:64 TestMode2:64 }
+// CHECK-REG: SpillAlignment: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 // CHECK-REG: CoveredBySubRegs: 1
 // CHECK-REG: Regs: X0_X1 X2_X3 X4_X5 X6_X7 X8_X9 X10_X11 X12_X13 X14_X15
 
 // CHECK-REG-LABEL: SubRegIndex sub_even:
-// CHECK-REG: Offset: { Default:0 TestMode:0 TestMode1:0 TestMode2:0 }
-// CHECK-REG: Size: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: Offset: { DefaultMode:0 TestMode:0 TestMode1:0 TestMode2:0 }
+// CHECK-REG: Size: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 // CHECK-REG-LABEL: SubRegIndex sub_odd:
-// CHECK-REG: Offset: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
-// CHECK-REG: Size: { Default:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: Offset: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
+// CHECK-REG: Size: { DefaultMode:32 TestMode:64 TestMode1:32 TestMode2:32 }
 
 //============================================================================//
 //--------------------- Encoding/Decoding parts ------------------------------//
@@ -128,6 +128,16 @@ def foo : Instruction {
   let AsmString = "foo  $factor";
 }
 
+// CHECK-SUBTARGET-LABEL: struct TestTargetGenMCSubtargetInfo : public MCSubtargetInfo {
+// CHECK-SUBTARGET:         explicit TestTargetGenMCSubtargetInfo(const MCSubtargetInfo &STI)
+// CHECK-SUBTARGET-NEXT:        : MCSubtargetInfo(STI) {}
+// CHECK-SUBTARGET-EMPTY:
+// CHECK-SUBTARGET-NEXT:    std::unique_ptr<MCSubtargetInfo> clone() const final {
+// CHECK-SUBTARGET-NEXT:      return std::make_unique<TestTargetGenMCSubtargetInfo>(*this);
+// CHECK-SUBTARGET-NEXT:    }
+// CHECK-SUBTARGET:         unsigned getHwModeSet() const final;
+// CHECK-SUBTARGET-NEXT:    unsigned getHwMode(enum HwModeType type = HwMode_Default) const final;
+// CHECK-SUBTARGET-NEXT:  };
 // CHECK-SUBTARGET-LABEL:  unsigned TestTargetGenMCSubtargetInfo::getHwModeSet() const {
 // CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const FeatureBitset &FB = getFeatureBits();
 // CHECK-SUBTARGET-NEXT:    // Collect HwModes and store them as a bit set.
@@ -137,7 +147,19 @@ def foo : Instruction {
 // CHECK-SUBTARGET-NEXT:    if (FB[TestTarget::Feat1] && FB[TestTarget::Feat2]) Modes |= (1 << 2);
 // CHECK-SUBTARGET-NEXT:    return Modes;
 // CHECK-SUBTARGET-NEXT:  }
+// CHECK-SUBTARGET-LABEL: namespace TestTarget_MC {
+// CHECK-SUBTARGET:       std::unique_ptr<MCSubtargetInfo> cloneSubtargetInfo(const MCSubtargetInfo &STI) {
+// CHECK-SUBTARGET-NEXT:    return std::make_unique<TestTargetGenMCSubtargetInfo>(STI);
+// CHECK-SUBTARGET-NEXT:  }
+// CHECK-SUBTARGET:       } // namespace TestTarget_MC
 
+// CHECK-SUBTARGET-LABEL: struct TestTargetGenSubtargetInfo : public TargetSubtargetInfo {
+// CHECK-SUBTARGET:         std::unique_ptr<MCSubtargetInfo> clone() const final;
+// CHECK-SUBTARGET:         unsigned getHwModeSet() const final;
+// CHECK-SUBTARGET-NEXT:    unsigned getHwMode(enum HwModeType type = HwMode_Default) const final;
+// CHECK-SUBTARGET-LABEL: std::unique_ptr<MCSubtargetInfo> TestTargetGenSubtargetInfo::clone() const {
+// CHECK-SUBTARGET-NEXT:    return TestTarget_MC::cloneSubtargetInfo(*this);
+// CHECK-SUBTARGET-NEXT:  } // TestTargetGenSubtargetInfo::clone
 // CHECK-SUBTARGET-LABEL: unsigned TestTargetGenSubtargetInfo::getHwModeSet() const {
 // CHECK-SUBTARGET{LITERAL}:[[maybe_unused]] const auto *Subtarget =
 // CHECK-SUBTARGET-NEXT:        static_cast<const TestTargetSubtarget *>(this);

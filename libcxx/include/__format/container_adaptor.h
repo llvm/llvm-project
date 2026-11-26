@@ -15,7 +15,7 @@
 #endif
 
 #include <__config>
-#include <__format/concepts.h>
+#include <__format/formattable.h>
 #include <__format/formatter.h>
 #include <__format/range_default_formatter.h>
 #include <__fwd/queue.h>
@@ -24,9 +24,9 @@
 #include <__type_traits/is_const.h>
 #include <__type_traits/maybe_const.h>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 23
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [container.adaptors.format] only specifies the library should provide the
 // formatter specializations, not which header should provide them.
@@ -43,13 +43,12 @@ private:
 
 public:
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+  constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     return __underlying_.parse(__ctx);
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
-  format(__maybe_const_adaptor& __adaptor, _FormatContext& __ctx) const {
+  typename _FormatContext::iterator format(__maybe_const_adaptor& __adaptor, _FormatContext& __ctx) const {
     return __underlying_.format(__adaptor.__get_container(), __ctx);
   }
 };
@@ -66,8 +65,8 @@ template <class _CharT, class _Tp, formattable<_CharT> _Container>
 struct formatter<stack<_Tp, _Container>, _CharT>
     : public __formatter_container_adaptor<stack<_Tp, _Container>, _CharT> {};
 
-#endif // _LIBCPP_STD_VER >= 23
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
 
 #endif // _LIBCPP___FORMAT_CONTAINER_ADAPTOR_H

@@ -45,20 +45,7 @@
 #define TASK_DETACHABLE 1
 #define TASK_UNDETACHABLE 0
 
-#define KMP_CANCEL_THREADS
 #define KMP_THREAD_ATTR
-
-// Android does not have pthread_cancel.  Undefine KMP_CANCEL_THREADS if being
-// built on Android
-#if defined(__ANDROID__)
-#undef KMP_CANCEL_THREADS
-#endif
-
-// Some WASI targets (e.g., wasm32-wasi-threads) do not support thread
-// cancellation.
-#if KMP_OS_WASI
-#undef KMP_CANCEL_THREADS
-#endif
 
 #if !KMP_OS_WASI
 #include <signal.h>
@@ -1072,6 +1059,7 @@ extern omp_memspace_handle_t const omp_large_cap_mem_space;
 extern omp_memspace_handle_t const omp_const_mem_space;
 extern omp_memspace_handle_t const omp_high_bw_mem_space;
 extern omp_memspace_handle_t const omp_low_lat_mem_space;
+extern omp_memspace_handle_t const omp_cgroup_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_host_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_shared_mem_space;
 extern omp_memspace_handle_t const llvm_omp_target_device_mem_space;
@@ -1097,6 +1085,19 @@ extern omp_allocator_handle_t const llvm_omp_target_shared_mem_alloc;
 extern omp_allocator_handle_t const llvm_omp_target_device_mem_alloc;
 extern omp_allocator_handle_t const kmp_max_mem_alloc;
 extern omp_allocator_handle_t __kmp_def_allocator;
+
+typedef enum omp_access_t {
+  omp_access_cgroup = 0,
+  omp_access_pteam = 1
+} omp_access_t;
+
+// declare the host API entry points for the Fortran interface to pick 'em up
+extern void *omp_get_dyn_gprivate_ptr(size_t offset, omp_access_t access_group);
+extern void *omp_get_dyn_gprivate_nofb_ptr(size_t offset,
+                                           omp_access_t access_group);
+extern size_t omp_get_dyn_gprivate_size(omp_access_t access_group);
+extern omp_memspace_handle_t
+omp_get_dyn_gprivate_memspace(omp_access_t access_group);
 
 // end of duplicate type definitions from omp.h
 #endif
@@ -2630,27 +2631,7 @@ typedef struct {
   } ed;
 } kmp_event_t;
 
-#if OMPX_TASKGRAPH
-// Initial number of allocated nodes while recording
-#define INIT_MAPSIZE 50
-
-typedef struct kmp_taskgraph_flags { /*This needs to be exactly 32 bits */
-  unsigned nowait : 1;
-  unsigned re_record : 1;
-  unsigned reserved : 30;
-} kmp_taskgraph_flags_t;
-
-/// Represents a TDG node
-typedef struct kmp_node_info {
-  kmp_task_t *task; // Pointer to the actual task
-  kmp_int32 *successors; // Array of the succesors ids
-  kmp_int32 nsuccessors; // Number of succesors of the node
-  std::atomic<kmp_int32>
-      npredecessors_counter; // Number of predessors on the fly
-  kmp_int32 npredecessors; // Total number of predecessors
-  kmp_int32 successors_size; // Number of allocated succesors ids
-  kmp_taskdata_t *parent_task; // Parent implicit task
-} kmp_node_info_t;
+#if OMP_TASKGRAPH_EXPERIMENTAL
 
 /// Represent a TDG's current status
 typedef enum kmp_tdg_status {
@@ -2659,43 +2640,12 @@ typedef enum kmp_tdg_status {
   KMP_TDG_READY = 2
 } kmp_tdg_status_t;
 
-/// Structure that contains a TDG
-typedef struct kmp_tdg_info {
-  kmp_int32 tdg_id; // Unique idenfifier of the TDG
-  kmp_taskgraph_flags_t tdg_flags; // Flags related to a TDG
-  kmp_int32 map_size; // Number of allocated TDG nodes
-  kmp_int32 num_roots; // Number of roots tasks int the TDG
-  kmp_int32 *root_tasks; // Array of tasks identifiers that are roots
-  kmp_node_info_t *record_map; // Array of TDG nodes
-  kmp_tdg_status_t tdg_status =
-      KMP_TDG_NONE; // Status of the TDG (recording, ready...)
-  std::atomic<kmp_int32> num_tasks; // Number of TDG nodes
-  kmp_bootstrap_lock_t
-      graph_lock; // Protect graph attributes when updated via taskloop_recur
-  // Taskloop reduction related
-  void *rec_taskred_data; // Data to pass to __kmpc_task_reduction_init or
-                          // __kmpc_taskred_init
-  kmp_int32 rec_num_taskred;
-} kmp_tdg_info_t;
-
-extern int __kmp_tdg_dot;
-extern kmp_int32 __kmp_max_tdgs;
-extern kmp_tdg_info_t **__kmp_global_tdgs;
-extern kmp_int32 __kmp_curr_tdg_idx;
-extern kmp_int32 __kmp_successors_size;
-extern std::atomic<kmp_int32> __kmp_tdg_task_id;
-extern kmp_int32 __kmp_num_tdg;
 #endif
 
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
   /* Same fields as in the #else branch, but in reverse order */
-#if OMPX_TASKGRAPH
-  unsigned reserved31 : 4;
-  unsigned onced : 1;
-#else
   unsigned reserved31 : 5;
-#endif
   unsigned hidden_helper : 1;
   unsigned target : 1;
   unsigned native : 1;
@@ -2751,12 +2701,7 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
   unsigned target : 1;
   unsigned hidden_helper : 1; /* 1 == hidden helper task */
-#if OMPX_TASKGRAPH
-  unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
-  unsigned reserved31 : 4; /* reserved for library use */
-#else
   unsigned reserved31 : 5; /* reserved for library use */
-#endif
 #endif
 } kmp_tasking_flags_t;
 
@@ -2806,10 +2751,7 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
 #endif
-#if OMPX_TASKGRAPH
-  bool is_taskgraph = 0; // whether the task is within a TDG
-  kmp_tdg_info_t *tdg; // used to associate task with a TDG
-  kmp_int32 td_tdg_task_id; // local task id in its TDG
+#if OMP_TASKGRAPH_EXPERIMENTAL
 #endif
   kmp_target_data_t td_target_data;
 }; // struct kmp_taskdata
@@ -3901,7 +3843,8 @@ extern void __kmp_check_stack_overlap(kmp_info_t *thr);
 extern void __kmp_expand_host_name(char *buffer, size_t size);
 extern void __kmp_expand_file_name(char *result, size_t rlen, char *pattern);
 
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64 || (KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM))
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64 ||                                         \
+    (KMP_OS_WINDOWS && (KMP_ARCH_AARCH64 || KMP_ARCH_ARM || KMP_ARCH_ARM64EC))
 extern void
 __kmp_initialize_system_tick(void); /* Initialize timer tick value */
 #endif
@@ -4111,6 +4054,7 @@ void kmpc_set_blocktime(int arg);
 void ompc_set_nested(int flag);
 void ompc_set_dynamic(int flag);
 void ompc_set_num_threads(int arg);
+void kmpc_set_num_threads_8(kmp_int64 arg);
 
 extern void __kmp_push_current_task_to_thread(kmp_info_t *this_thr,
                                               kmp_team_t *team, int tid);
@@ -4208,7 +4152,40 @@ KMP_EXPORT void __kmpc_fork_call_if(ident_t *loc, kmp_int32 nargs,
 KMP_EXPORT void __kmpc_serialized_parallel(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_serialized_parallel(ident_t *, kmp_int32 global_tid);
 
+// Values of the order and scope arguments of __kmpc_flush_explicit. They are
+// the compiler's __ATOMIC_* and __MEMORY_SCOPE_* values.
+enum kmp_flush_order {
+  kmp_flush_order_relaxed = 0,
+  kmp_flush_order_consume = 1, // Completes the encoding; never emitted.
+  kmp_flush_order_acquire = 2,
+  kmp_flush_order_release = 3,
+  kmp_flush_order_acq_rel = 4,
+  kmp_flush_order_seq_cst = 5
+};
+enum kmp_flush_scope {
+  kmp_flush_scope_all = 0, // memscope(all)
+  kmp_flush_scope_device = 1, // memscope(device)
+  kmp_flush_scope_cgroup = 2 // memscope(cgroup)
+};
+#ifdef __ATOMIC_SEQ_CST
+static_assert(kmp_flush_order_relaxed == __ATOMIC_RELAXED &&
+                  kmp_flush_order_consume == __ATOMIC_CONSUME &&
+                  kmp_flush_order_acquire == __ATOMIC_ACQUIRE &&
+                  kmp_flush_order_release == __ATOMIC_RELEASE &&
+                  kmp_flush_order_acq_rel == __ATOMIC_ACQ_REL &&
+                  kmp_flush_order_seq_cst == __ATOMIC_SEQ_CST,
+              "kmp_flush_order must match the __ATOMIC_* values");
+#endif
+#ifdef __MEMORY_SCOPE_SYSTEM
+static_assert(kmp_flush_scope_all == __MEMORY_SCOPE_SYSTEM &&
+                  kmp_flush_scope_device == __MEMORY_SCOPE_DEVICE &&
+                  kmp_flush_scope_cgroup == __MEMORY_SCOPE_WRKGRP,
+              "kmp_flush_scope must match the __MEMORY_SCOPE_* values");
+#endif
+
 KMP_EXPORT void __kmpc_flush(ident_t *);
+KMP_EXPORT void __kmpc_flush_explicit(ident_t *, kmp_int32 order,
+                                      kmp_int32 scope);
 KMP_EXPORT void __kmpc_barrier(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT kmp_int32 __kmpc_master(ident_t *, kmp_int32 global_tid);
 KMP_EXPORT void __kmpc_end_master(ident_t *, kmp_int32 global_tid);
@@ -4383,20 +4360,7 @@ KMP_EXPORT void __kmpc_init_lock_with_hint(ident_t *loc, kmp_int32 gtid,
 KMP_EXPORT void __kmpc_init_nest_lock_with_hint(ident_t *loc, kmp_int32 gtid,
                                                 void **user_lock,
                                                 uintptr_t hint);
-
-#if OMPX_TASKGRAPH
-// Taskgraph's Record & Replay mechanism
-// __kmp_tdg_is_recording: check whether a given TDG is recording
-// status: the tdg's current status
-static inline bool __kmp_tdg_is_recording(kmp_tdg_status_t status) {
-  return status == KMP_TDG_RECORDING;
-}
-
-KMP_EXPORT kmp_int32 __kmpc_start_record_task(ident_t *loc, kmp_int32 gtid,
-                                              kmp_int32 input_flags,
-                                              kmp_int32 tdg_id);
-KMP_EXPORT void __kmpc_end_record_task(ident_t *loc, kmp_int32 gtid,
-                                       kmp_int32 input_flags, kmp_int32 tdg_id);
+#if OMP_TASKGRAPH_EXPERIMENTAL
 #endif
 /* Interface to fast scalable reduce methods routines */
 

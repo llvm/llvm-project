@@ -9,7 +9,11 @@
 #ifndef LLVM_CLANG_ANALYZER_WEBKIT_DIAGPRINTUTILS_H
 #define LLVM_CLANG_ANALYZER_WEBKIT_DIAGPRINTUTILS_H
 
+#include "ASTUtils.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclObjC.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -29,6 +33,23 @@ void printQuotedName(llvm::raw_ostream &Os, const NamedDeclDerivedT &D) {
   D->getNameForDiagnostic(Os, D->getASTContext().getPrintingPolicy(),
                           /*Qualified=*/false);
   Os << "'";
+}
+
+inline void printTypeName(llvm::raw_ostream &Os, const QualType QT) {
+  auto *Type = QT.getTypePtr();
+  assert(Type);
+  if (auto *CXXRD = Type->getPointeeCXXRecordDecl()) {
+    printQuotedQualifiedName(Os, CXXRD);
+    return;
+  }
+  if (auto *ObjCDecl = getObjCDeclFromObjCPtr(Type)) {
+    printQuotedQualifiedName(Os, ObjCDecl);
+    return;
+  }
+  if (!Type->isPointerOrReferenceType()) {
+    if (auto *RD = Type->getAsRecordDecl())
+      printQuotedQualifiedName(Os, RD);
+  }
 }
 
 } // namespace clang

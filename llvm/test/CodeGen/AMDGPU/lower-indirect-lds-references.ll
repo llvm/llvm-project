@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgpu-- -passes=amdgpu-lower-module-lds < %s | FileCheck %s
 
 ; Tests that the LDS lowering pass handles indirect references to LDS GVs; i.e.
 ; that it lowers to accesses into the generated LDS struct if these references
@@ -41,5 +41,5 @@ define void @directly_load_lds() {
 ; CHECK: }
 
 ; CHECK: define void @directly_load_lds() {
-; CHECK:   load ptr, {{.*}} (%[[LDS_STRUCT_TY]], {{.*}} @[[LDS_STRUCT]], i32 0, i32 1)
+; CHECK:   load ptr, {{.*}} (i8, {{.*}} @[[LDS_STRUCT]], i32 16)
 ; CHECK: }

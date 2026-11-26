@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Compare, class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 __is_sorted_until(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) {
   if (__first != __last) {
     _ForwardIterator __i = __first;
@@ -34,13 +34,13 @@ __is_sorted_until(_ForwardIterator __first, _ForwardIterator __last, _Compare __
 }
 
 template <class _ForwardIterator, class _Compare>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 is_sorted_until(_ForwardIterator __first, _ForwardIterator __last, _Compare __comp) {
   return std::__is_sorted_until<__comp_ref_type<_Compare> >(__first, __last, __comp);
 }
 
 template <class _ForwardIterator>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 is_sorted_until(_ForwardIterator __first, _ForwardIterator __last) {
   return std::is_sorted_until(__first, __last, __less<>());
 }

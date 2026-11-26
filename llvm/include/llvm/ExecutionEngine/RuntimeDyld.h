@@ -123,6 +123,7 @@ public:
 
     /// Allocate a memory block of (at least) the given size to be used for
     /// thread-local storage (TLS).
+    /// Return a null InitializationImage if allocation is unsupported or fails.
     virtual TLSSection allocateTLSSection(uintptr_t Size, unsigned Alignment,
                                           unsigned SectionID,
                                           StringRef SectionName);

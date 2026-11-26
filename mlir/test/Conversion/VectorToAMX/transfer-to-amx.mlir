@@ -38,7 +38,7 @@ func.func @transfers_static_dims(%A: memref<64x32x16x2xf16>,
 // CHECK-SAME:    {{\[}}%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]{{\]}}
 // CHECK:       %[[A_PACKED_DIM_COLLAPSE:.+]] = memref.collapse_shape %[[A_SUBVIEW]]
 // CHECK-SAME:    {{\[}}[0], [1], [2, 3]] : memref<1x4x8x2xf16{{.*}}into memref<1x4x16xf16
-// CHECK:       %[[A_TILE:.+]] = amx.tile_load %[[A_PACKED_DIM_COLLAPSE]]
+// CHECK:       %[[A_TILE:.+]] = x86.amx.tile_load %[[A_PACKED_DIM_COLLAPSE]]
 // CHECK-SAME:    {{\[}}%[[C0]], %[[C0]], %[[C0]]{{\]}}
 // CHECK-NOT:   vector.transfer_read %[[A]]
 
@@ -47,25 +47,25 @@ func.func @transfers_static_dims(%A: memref<64x32x16x2xf16>,
 // CHECK-SAME:    {{\[}}%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]{{\]}}
 // CHECK:       %[[B_PACKED_DIM_COLLAPSE:.+]] = memref.collapse_shape %[[B_SUBVIEW]]
 // CHECK-SAME:    {{\[}}[0], [1], [2, 3]] : memref<1x8x16x2xf16{{.*}}into memref<1x8x32xf16
-// CHECK:       %[[B_TILE:.+]] = amx.tile_load %[[B_PACKED_DIM_COLLAPSE]]
+// CHECK:       %[[B_TILE:.+]] = x86.amx.tile_load %[[B_PACKED_DIM_COLLAPSE]]
 // CHECK-SAME:    {{\[}}%[[C0]], %[[C0]], %[[C0]]{{\]}}
 // CHECK-NOT:   vector.transfer_read %[[B]]
 
 /// Load C into an AMX tile
 // CHECK:       %[[C_SUBVIEW:.+]] = memref.subview %[[C]]
 // CHECK-SAME:    {{\[}}%[[IDX]], %[[IDX]]{{\]}}
-// CHECK:       %[[C_TILE:.+]] = amx.tile_load %[[C_SUBVIEW]]
+// CHECK:       %[[C_TILE:.+]] = x86.amx.tile_load %[[C_SUBVIEW]]
 // CHECK-SAME:    {{\[}}%[[C0]], %[[C0]]{{\]}}
 // CHECK-NOT:   vector.transfer_read %[[C]]
 
 /// Perform tile multiplication
-// CHECK:       %[[RES:.+]] = amx.tile_mulf
+// CHECK:       %[[RES:.+]] = x86.amx.tile_mulf
 // CHECK-SAME:    %[[A_TILE]], %[[B_TILE]], %[[C_TILE]]
 
 /// Store the result back
 // CHECK:       %[[RES_SUBVIEW:.+]] = memref.subview %[[C]]
 // CHECK-SAME:    {{\[}}%[[IDX]], %[[IDX]]{{\]}}
-// CHECK:       amx.tile_store %[[RES_SUBVIEW]]{{\[}}%[[C0]], %[[C0]]{{\]}}, %[[RES]]
+// CHECK:       x86.amx.tile_store %[[RES_SUBVIEW]]{{\[}}%[[C0]], %[[C0]]{{\]}}, %[[RES]]
 // CHECK-NOT:   vector.transfer_write{{.*}}%[[C]]
 
 // -----
@@ -130,17 +130,17 @@ func.func @transfer_read_multiple_users(%C: memref<64x64xf32>,
 
 /// Load to AMX tile directly from buffer.
 // CHECK: %[[C_SUBVIEW:.+]] = memref.subview %[[C]]
-// CHECK: %[[C_TILE:.+]] = amx.tile_load %[[C_SUBVIEW]]
+// CHECK: %[[C_TILE:.+]] = x86.amx.tile_load %[[C_SUBVIEW]]
 
 /// Vector read remains to load data for the other non-AMX consumer.
 // CHECK: %[[C_VEC:.+]] = vector.transfer_read %[[C]]
 
 /// Contraction uses the directly loaded tile.
-// CHECK: %[[TILE_MUL:.+]] = amx.tile_mulf{{.*}}%[[C_TILE]]
+// CHECK: %[[TILE_MUL:.+]] = x86.amx.tile_mulf{{.*}}%[[C_TILE]]
 
 /// Consumer uses original C value and the updated one after contraction.
 // CHECK: %[[RES_BUF:.+]] = memref.alloca
-// CHECK: amx.tile_store %[[RES_BUF]]
+// CHECK: x86.amx.tile_store %[[RES_BUF]]
 // CHECK: %[[RES_VEC:.+]] = vector.transfer_read %[[RES_BUF]]
 // CHECK: %[[VEC_MUL:.+]] = arith.mulf %[[C_VEC]], %[[RES_VEC]]
 
@@ -168,7 +168,7 @@ func.func @negative_contract_multiple_users(%C: memref<64x64xf32>,
 
 // CHECK-LABEL: @negative_contract_multiple_users(
 // CHECK-SAME:    %[[C:.+]]: memref<64x64xf32>
-// CHECK:     %[[TILE_MUL:.+]] = amx.tile_mulf
+// CHECK:     %[[TILE_MUL:.+]] = x86.amx.tile_mulf
 // CHECK: vector.transfer_write{{.*}}%[[C]]
 
 // -----
@@ -353,3 +353,50 @@ func.func @negative_buffer_non_packed_source_shape(%A: memref<8x64x64xf16>,
 // CHECK-LABEL: @negative_buffer_non_packed_source_shape(
 // CHECK-SAME:    %[[A:.+]]: memref<8x64x64xf16>
 // CHECK: vector.transfer_read %[[A]]
+
+// -----
+
+#map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
+#map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
+#map2 = affine_map<(m, n, k, vnni) -> (m, n)>
+func.func @negative_masked(%C: memref<64x64xf32>,
+    %vecA: vector<4x8x2xf16>, %vecB: vector<8x16x2xf16>,
+    %vecC: vector<4x16xf32>, %idx: index, %mask: vector<4x16xi1>) {
+  %vecD = vector.contract
+    {kind = #vector.kind<add>,
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
+    %vecA, %vecB, %vecC : vector<4x8x2xf16>, vector<8x16x2xf16> into vector<4x16xf32>
+  vector.mask %mask {
+    vector.transfer_write %vecD, %C[%idx, %idx]
+      {in_bounds = [true, true]} : vector<4x16xf32>, memref<64x64xf32>
+  } : vector<4x16xi1>
+  return
+}
+
+// CHECK-LABEL: @negative_masked(
+// CHECK-SAME:    %[[C:.+]]: memref<64x64xf32>
+// CHECK: vector.mask
+// CHECK:   vector.transfer_write{{.*}}%[[C]]
+
+// -----
+
+#map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
+#map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
+#map2 = affine_map<(m, n, k, vnni) -> (m, n)>
+func.func @negative_with_mask(%C: memref<64x64xf32>,
+    %vecA: vector<4x8x2xf16>, %vecB: vector<8x16x2xf16>,
+    %vecC: vector<4x16xf32>, %idx: index, %mask: vector<4x16xi1>) {
+  %vecD = vector.contract
+    {kind = #vector.kind<add>,
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction", "reduction"]}
+    %vecA, %vecB, %vecC : vector<4x8x2xf16>, vector<8x16x2xf16> into vector<4x16xf32>
+  vector.transfer_write %vecD, %C[%idx, %idx], %mask
+    {in_bounds = [true, true]} : vector<4x16xf32>, memref<64x64xf32>
+  return
+}
+
+// CHECK-LABEL: @negative_with_mask(
+// CHECK-SAME:    %[[C:.+]]: memref<64x64xf32>
+// CHECK: vector.transfer_write{{.*}}%[[C]]

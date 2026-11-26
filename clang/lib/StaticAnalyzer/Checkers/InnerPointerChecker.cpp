@@ -76,8 +76,6 @@ public:
                                      BugReporterContext &BRC,
                                      PathSensitiveBugReport &BR) override;
 
-    // FIXME: Scan the map once in the visitor's constructor and do a direct
-    // lookup by region.
     bool isSymbolTracked(ProgramStateRef State, SymbolRef Sym) {
       RawPtrMapTy Map = State->get<RawPtrMap>();
       for (const auto &Entry : Map) {
@@ -311,8 +309,7 @@ PathDiagnosticPieceRef InnerPointerChecker::InnerPointerBRVisitor::VisitNode(
   SmallString<256> Buf;
   llvm::raw_svector_ostream OS(Buf);
   OS << "Pointer to inner buffer of '" << ObjTy << "' obtained here";
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(), true);
 }
 

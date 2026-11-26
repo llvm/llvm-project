@@ -154,8 +154,8 @@ define <1 x i64> @llround_v1i64_v1f32(<1 x float> %x) nounwind {
 ; RV32-NEXT:    fsrmi a0, 4
 ; RV32-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV32-NEXT:    vfwcvt.x.f.v v9, v8
-; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: llround_v1i64_v1f32:
@@ -163,8 +163,8 @@ define <1 x i64> @llround_v1i64_v1f32(<1 x float> %x) nounwind {
 ; RV64-NEXT:    fsrmi a0, 4
 ; RV64-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; RV64-NEXT:    vfwcvt.x.f.v v9, v8
-; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv1r.v v8, v9
+; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    ret
   %a = call <1 x i64> @llvm.llround.v1i64.v1f32(<1 x float> %x)
   ret <1 x i64> %a
@@ -176,8 +176,8 @@ define <2 x i64> @llround_v2i64_v2f32(<2 x float> %x) nounwind {
 ; RV32-NEXT:    fsrmi a0, 4
 ; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32-NEXT:    vfwcvt.x.f.v v9, v8
-; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    vmv1r.v v8, v9
+; RV32-NEXT:    fsrm a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: llround_v2i64_v2f32:
@@ -185,8 +185,8 @@ define <2 x i64> @llround_v2i64_v2f32(<2 x float> %x) nounwind {
 ; RV64-NEXT:    fsrmi a0, 4
 ; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV64-NEXT:    vfwcvt.x.f.v v9, v8
-; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    vmv1r.v v8, v9
+; RV64-NEXT:    fsrm a0
 ; RV64-NEXT:    ret
   %a = call <2 x i64> @llvm.llround.v2i64.v2f32(<2 x float> %x)
   ret <2 x i64> %a

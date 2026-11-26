@@ -30,6 +30,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/RunCodeGen.h"
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/Error.h"
@@ -199,20 +200,25 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
-static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
-                                PassBuilder &PB) {
+static ArrayRef<PassPlugin *> getPassPlugins(const Config &Conf) {
+  // lto::LTO::run() loaded plugins requested by file. Direct callers must pass
+  // them pre-loaded.
+  assert(Conf.PassPluginFilenames.empty() &&
+         "Pass-plugins must be loaded before running LTO backends");
+  return Conf.LoadedPassPlugins;
+}
+
+// Call pass builder registration callbacks for all pass-plugins
+static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
+  // Static built-in plugins
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
-  // Load requested pass plugins and let them register pass builder callbacks
-  for (auto &PluginFN : PassPlugins) {
-    auto PassPlugin = PassPlugin::Load(PluginFN);
-    if (!PassPlugin)
-      reportFatalUsageError(PassPlugin.takeError());
-    PassPlugin->registerPassBuilderCallbacks(PB);
-  }
+  // Dynamic plugins
+  for (const PassPlugin *Plugin : getPassPlugins(Conf))
+    Plugin->registerPassBuilderCallbacks(PB);
 }
 
 static std::unique_ptr<TargetMachine>
@@ -240,6 +246,7 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
   if (TargetOpts.MCOptions.ABIName.empty()) {
     TargetOpts.MCOptions.ABIName = M.getTargetABIFromMD();
   }
+  TargetOpts.MCOptions.LibraryOptions = &M.getContext().getLibraryOptions();
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, Conf.CPU, Features.getString(), TargetOpts, RelocModel,
@@ -256,7 +263,8 @@ createTargetMachine(const Config &Conf, const Target *TheTarget, Module &M) {
 static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
                            unsigned OptLevel, bool IsThinLTO,
                            ModuleSummaryIndex *ExportSummary,
-                           const ModuleSummaryIndex *ImportSummary) {
+                           const ModuleSummaryIndex *ImportSummary,
+                           const DenseSet<StringRef> &BitcodeLibFuncs) {
   std::optional<PGOOptions> PGOOpt;
   if (!Conf.SampleProfile.empty())
     PGOOpt = PGOOptions(Conf.SampleProfile, "", Conf.ProfileRemapping,
@@ -290,14 +298,28 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager,
                               Conf.VerifyEach);
   SI.registerCallbacks(PIC, &MAM);
-  PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
+  PassBuilder PB(Mod.getContext(), TM, Conf.PTO, PGOOpt, &PIC);
 
-  RegisterPassPlugins(Conf.PassPlugins, PB);
+  RegisterPassPlugins(Conf, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       new TargetLibraryInfoImpl(TM->getTargetTriple(), TM->Options.VecLib));
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
+
+  // Determine whether or not its safe to emit calls to each libfunc. Libfuncs
+  // that might have been present in the current LTO unit, but are not, have
+  // lost their only opportunity to be defined, and calls must not be emitted to
+  // them.
+  // FIXME: BitcodeLibFuncs isn't yet set for distributed ThinLTO.
+  TargetLibraryInfo TLI(*TLII);
+  for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs); I != E;
+       ++I) {
+    LibFunc F = static_cast<LibFunc>(I);
+    if (BitcodeLibFuncs.contains(TLI.getName(F)))
+      TLII->setUnavailable(F);
+  }
+
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
   // Parse a custom AA pipeline if asked to.
@@ -317,6 +339,9 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   PB.registerFunctionAnalyses(FAM);
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  if (Conf.PassBuilderCallback)
+    Conf.PassBuilderCallback(PB);
 
   ModulePassManager MPM;
 
@@ -357,7 +382,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   if (!Conf.DisableVerify)
     MPM.addPass(VerifierPass());
 
-  if (PrintPipelinePasses) {
+  if (PB.getPrintPipelinePasses()) {
     std::string PipelineStr;
     raw_string_ostream OS(PipelineStr);
     MPM.printPipeline(OS, [&PIC](StringRef ClassName) {
@@ -381,7 +406,8 @@ static bool isEmptyModule(const Module &Mod) {
 bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
               bool IsThinLTO, ModuleSummaryIndex *ExportSummary,
               const ModuleSummaryIndex *ImportSummary,
-              const std::vector<uint8_t> &CmdArgs) {
+              const std::vector<uint8_t> &CmdArgs,
+              ArrayRef<StringRef> BitcodeLibFuncs) {
   llvm::TimeTraceScope timeScope("opt");
   if (EmbedBitcode == LTOBitcodeEmbedding::EmbedPostMergePreOptimized) {
     // FIXME: the motivation for capturing post-merge bitcode and command line
@@ -406,9 +432,11 @@ bool lto::opt(const Config &Conf, TargetMachine *TM, unsigned Task, Module &Mod,
   // analysis in the case of a ThinLTO build where this might be an empty
   // regular LTO combined module, with a large combined index from ThinLTO.
   if (!isEmptyModule(Mod)) {
+    DenseSet<StringRef> BitcodeLibFuncsSet(BitcodeLibFuncs.begin(),
+                                           BitcodeLibFuncs.end());
     // FIXME: Plumb the combined index into the new pass manager.
     runNewPMPasses(Conf, Mod, TM, Conf.OptLevel, IsThinLTO, ExportSummary,
-                   ImportSummary);
+                   ImportSummary, BitcodeLibFuncsSet);
   }
   return !Conf.PostOptModuleHook || Conf.PostOptModuleHook(Task, Mod);
 }
@@ -426,27 +454,13 @@ static void codegen(const Config &Conf, TargetMachine *TM,
                                /*EmbedCmdline*/ false,
                                /*CmdArgs*/ std::vector<uint8_t>());
 
-  std::unique_ptr<ToolOutputFile> DwoOut;
   SmallString<1024> DwoFile(Conf.SplitDwarfOutput);
   if (!Conf.DwoDir.empty()) {
-    std::error_code EC;
-    if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
-      report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
-                         ": " + EC.message());
-
     DwoFile = Conf.DwoDir;
     sys::path::append(DwoFile, std::to_string(Task) + ".dwo");
     TM->Options.MCOptions.SplitDwarfFile = std::string(DwoFile);
   } else
     TM->Options.MCOptions.SplitDwarfFile = Conf.SplitDwarfFile;
-
-  if (!DwoFile.empty()) {
-    std::error_code EC;
-    DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
-    if (EC)
-      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
-                         EC.message());
-  }
 
   Expected<std::unique_ptr<CachedFileStream>> StreamOrErr =
       AddStream(Task, Mod.getModuleIdentifier());
@@ -455,38 +469,44 @@ static void codegen(const Config &Conf, TargetMachine *TM,
   std::unique_ptr<CachedFileStream> &Stream = *StreamOrErr;
   TM->Options.ObjectFilenameForDebug = Stream->ObjectPathName;
 
-  // Create the codegen pipeline in its own scope so it gets deleted before
-  // Stream->commit() is called. The commit function of CacheStream deletes
-  // the raw stream, which is too early as streamers (e.g. MCAsmStreamer)
-  // keep the pointer and may use it until their destruction. See #138194.
-  {
-    legacy::PassManager CodeGenPasses;
-    TargetLibraryInfoImpl TLII(Mod.getTargetTriple(), TM->Options.VecLib);
-    CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
-    CodeGenPasses.add(new RuntimeLibraryInfoWrapper(
-        Mod.getTargetTriple(), TM->Options.ExceptionModel,
-        TM->Options.FloatABIType, TM->Options.EABIVersion,
-        TM->Options.MCOptions.ABIName, TM->Options.VecLib));
+  std::unique_ptr<ToolOutputFile> DwoOut;
+  if (!DwoFile.empty()) {
+    if (!Conf.DwoDir.empty())
+      if (auto EC = llvm::sys::fs::create_directories(Conf.DwoDir))
+        report_fatal_error(Twine("Failed to create directory ") + Conf.DwoDir +
+                           ": " + EC.message());
 
-    // No need to make index available if the module is empty.
-    // In theory these passes should not use the index for an empty
-    // module, however, this guards against doing any unnecessary summary-based
-    // analysis in the case of a ThinLTO build where this might be an empty
-    // regular LTO combined module, with a large combined index from ThinLTO.
-    if (!isEmptyModule(Mod))
-      CodeGenPasses.add(
-          createImmutableModuleSummaryIndexWrapperPass(&CombinedIndex));
-    if (Conf.PreCodeGenPassesHook)
-      Conf.PreCodeGenPassesHook(CodeGenPasses);
-    if (TM->addPassesToEmitFile(CodeGenPasses, *Stream->OS,
-                                DwoOut ? &DwoOut->os() : nullptr,
-                                Conf.CGFileType))
-      report_fatal_error("Failed to setup codegen");
-    CodeGenPasses.run(Mod);
-
-    if (DwoOut)
-      DwoOut->keep();
+    std::error_code EC;
+    DwoOut = std::make_unique<ToolOutputFile>(DwoFile, EC, sys::fs::OF_None);
+    if (EC)
+      report_fatal_error(Twine("Failed to open ") + DwoFile + ": " +
+                         EC.message());
   }
+
+  const ModuleSummaryIndex *MSI =
+      !isEmptyModule(Mod) ? &CombinedIndex : nullptr;
+
+  // Allow plugins to handle or even take over code generation entirely.
+  for (const PassPlugin *Plugin : getPassPlugins(Conf)) {
+    if (Plugin->invokePreCodeGenCallback(
+            *TM, Mod, *Stream->OS, DwoOut ? &DwoOut->os() : nullptr,
+            Conf.CGFileType, /*DisableVerify=*/true,
+            /*DisableSimplifyLibCalls=*/false, MSI, vfs::getRealFileSystem())) {
+      if (DwoOut)
+        DwoOut->keep();
+      if (Error Err = Stream->commit())
+        report_fatal_error(std::move(Err));
+      return;
+    }
+  }
+
+  if (runCodeGenPipeline(*TM, Mod, *Stream->OS,
+                         DwoOut ? &DwoOut->os() : nullptr, Conf.CGFileType,
+                         /*DisableVerify=*/true,
+                         /*DisableSimplifyLibCalls=*/false, MSI))
+    report_fatal_error("Failed to run codegen");
+  if (DwoOut)
+    DwoOut->keep();
 
   if (Error Err = Stream->commit())
     report_fatal_error(std::move(Err));
@@ -574,7 +594,8 @@ Error lto::finalizeOptimizationRemarks(LLVMRemarkFileHandle DiagOutputFile) {
 
 Error lto::backend(const Config &C, AddStreamFn AddStream,
                    unsigned ParallelCodeGenParallelismLevel, Module &Mod,
-                   ModuleSummaryIndex &CombinedIndex) {
+                   ModuleSummaryIndex &CombinedIndex,
+                   ArrayRef<StringRef> BitcodeLibFuncs) {
   llvm::TimeTraceScope timeScope("LTO backend");
   Expected<const Target *> TOrErr = initAndLookupTarget(C, Mod);
   if (!TOrErr)
@@ -586,7 +607,7 @@ Error lto::backend(const Config &C, AddStreamFn AddStream,
   if (!C.CodeGenOnly) {
     if (!opt(C, TM.get(), 0, Mod, /*IsThinLTO=*/false,
              /*ExportSummary=*/&CombinedIndex, /*ImportSummary=*/nullptr,
-             /*CmdArgs*/ std::vector<uint8_t>()))
+             /*CmdArgs*/ std::vector<uint8_t>(), BitcodeLibFuncs))
       return Error::success();
   }
 
@@ -603,12 +624,18 @@ static void dropDeadSymbols(Module &Mod, const GVSummaryMapTy &DefinedGlobals,
                             const ModuleSummaryIndex &Index) {
   llvm::TimeTraceScope timeScope("Drop dead symbols");
   std::vector<GlobalValue*> DeadGVs;
-  for (auto &GV : Mod.global_values())
-    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(GV.getGUID()))
+
+  for (auto &GV : Mod.global_values()) {
+    auto GUID = GV.getGUIDIfAssigned();
+    if (!GUID)
+      continue;
+
+    if (GlobalValueSummary *GVS = DefinedGlobals.lookup(*GUID))
       if (!Index.isGlobalValueLive(GVS)) {
         DeadGVs.push_back(&GV);
         convertToDeclaration(GV);
       }
+  }
 
   // Now that all dead bodies have been dropped, delete the actual objects
   // themselves when possible.
@@ -626,7 +653,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
                        const FunctionImporter::ImportMapTy &ImportList,
                        const GVSummaryMapTy &DefinedGlobals,
                        MapVector<StringRef, BitcodeModule> *ModuleMap,
-                       bool CodeGenOnly, AddStreamFn IRAddStream,
+                       bool CodeGenOnly, ArrayRef<StringRef> BitcodeLibFuncs,
+                       AddStreamFn IRAddStream,
                        const std::vector<uint8_t> &CmdArgs) {
   llvm::TimeTraceScope timeScope("Thin backend", Mod.getModuleIdentifier());
   Expected<const Target *> TOrErr = initAndLookupTarget(Conf, Mod);
@@ -665,7 +693,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
         // Perform optimization and code generation for ThinLTO.
         if (!opt(Conf, TM, Task, Mod, /*IsThinLTO=*/true,
                  /*ExportSummary=*/nullptr, /*ImportSummary=*/&CombinedIndex,
-                 CmdArgs))
+                 CmdArgs, BitcodeLibFuncs))
           return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));
 
         // Save the current module before the first codegen round.
@@ -685,7 +713,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   // When linking an ELF shared object, dso_local should be dropped. We
   // conservatively do this for -fpic.
   bool ClearDSOLocalOnDeclarations =
-      TM->getTargetTriple().isOSBinFormatELF() &&
+      Mod.getTargetTriple().isOSBinFormatELF() &&
       TM->getRelocationModel() != Reloc::Static &&
       Mod.getPIELevel() == PIELevel::Default;
   renameModuleForThinLTO(Mod, CombinedIndex, ClearDSOLocalOnDeclarations);
@@ -748,7 +776,8 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
   }
 
   // Do this after any importing so that imported code is updated.
-  updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility());
+  updatePublicTypeTestCalls(Mod, CombinedIndex.withWholeProgramVisibility(),
+                            CombinedIndex.withSpeculativeDevirt());
 
   if (Conf.PostImportModuleHook && !Conf.PostImportModuleHook(Task, Mod))
     return finalizeOptimizationRemarks(std::move(DiagnosticOutputFile));

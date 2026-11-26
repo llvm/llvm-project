@@ -16,11 +16,16 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H
 
+#include <functional>
 #include <list>
+#include <optional>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/PostMortemProcess.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/Status.h"
 
 #include "Plugins/ObjectFile/ELF/ELFHeader.h"
@@ -78,11 +83,11 @@ public:
   bool WarnBeforeDetach() const override { return false; }
 
   // Process Memory
-  size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    lldb_private::Status &error) override;
+  bool ShouldUseMemoryCache(
+      const lldb_private::ProcessAddress &process_addr) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
+  size_t DoReadMemory(const lldb_private::ProcessAddress &addr, void *buf,
+                      size_t size, lldb_private::Status &error) override;
 
   // We do not implement DoReadMemoryTags. Instead all the work is done in
   // ReadMemoryTags which avoids having to unpack and repack tags.
@@ -96,6 +101,7 @@ public:
   // Returns AUXV structure found in the core file
   lldb_private::DataExtractor GetAuxvData() override;
 
+  std::optional<Process::CoreArgs> GetCoreFileArgs() override;
   bool GetProcessInfo(lldb_private::ProcessInstanceInfo &info) override;
 
 protected:
@@ -114,16 +120,39 @@ private:
   struct NT_FILE_Entry {
     lldb::addr_t start;
     lldb::addr_t end;
-    lldb::addr_t file_ofs;
+    /// The byte file offset in the original file on disk where this region was
+    /// copied from when it was loaded into the process.
+    lldb::addr_t original_file_offset;
     std::string path;
+
+    /// Convert a file offset for a NT_FILE_Entry into a load address.
+    ///
+    /// Caution must be used to only use NT_FILE_Entry objects whose path
+    /// matches the file that you want a load address from since each
+    /// NT_FILE_Entry has the original file offset for each different file.
+    /// Use GetNTFileEntriesForMatchingPath(const std::string &path) to get a
+    /// list of matching file entries before using this method.
+    ///
+    /// \param[in] file_offset The file offset within the original file.
+    ///
+    /// \returns std::nullopt if the file offset isn't in this entry, or a valid
+    ///   load address if it does match.
+    std::optional<lldb::addr_t>
+    GetLoadAddressForFileOffset(lldb::addr_t file_offset) const {
+      if (start >= end)
+        return std::nullopt;
+      const lldb::addr_t entry_size = end - start;
+      const lldb::addr_t end_file_offset = original_file_offset + entry_size;
+      if (original_file_offset <= file_offset && file_offset < end_file_offset)
+        return start + (file_offset - original_file_offset);
+      return std::nullopt;
+    }
   };
 
   // For ProcessElfCore only
   typedef lldb_private::Range<lldb::addr_t, lldb::addr_t> FileRange;
   typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, FileRange>
       VMRangeToFileOffset;
-  typedef lldb_private::RangeDataVector<lldb::addr_t, lldb::addr_t, uint32_t>
-      VMRangeToPermissions;
 
   lldb::ModuleSP m_core_module_sp;
   std::string m_dyld_plugin_name;
@@ -140,8 +169,8 @@ private:
   // Address ranges found in the core
   VMRangeToFileOffset m_core_aranges;
 
-  // Permissions for all ranges
-  VMRangeToPermissions m_core_range_infos;
+  // Information for all mapped ranges, ordered by address.
+  std::set<lldb_private::MemoryRegionInfo, std::less<>> m_core_range_infos;
 
   // Memory tag ranges found in the core
   VMRangeToFileOffset m_core_tag_ranges;
@@ -155,6 +184,8 @@ private:
   // Executable name found from the ELF PRPSINFO
   std::string m_executable_name;
 
+  // Command line args found from the ELF PRPSINFO (pr_psargs)
+  Process::CoreArgs m_process_args;
   // Parse thread(s) data structures(prstatus, prpsinfo) from given NOTE segment
   llvm::Error ParseThreadContextsFromNoteSegment(
       const elf::ELFProgramHeader &segment_header,
@@ -166,13 +197,22 @@ private:
   // Populate gnu uuid for each NT_FILE entry
   void UpdateBuildIdForNTFileEntries();
 
-  lldb_private::UUID FindModuleUUID(const llvm::StringRef path) override;
+  // Complete memory region information after all program headers are parsed.
+  void FinalizeMemoryRegionInfos();
 
-  // Returns the main executable path.
-  std::string GetMainExecutablePath();
+  bool FindModuleUUID(lldb_private::ModuleSpec &spec) override;
+
+  // Extract the executable module spec for the executable in this core file.
+  bool GetMainExecutableModuleSpec(lldb_private::ModuleSpec &exe_spec);
 
   // Returns the value of certain type of note of a given start address
   lldb_private::UUID FindBuidIdInCoreMemory(lldb::addr_t address);
+
+  // Returns the address at which file_offset of the file whose ELF header is
+  // at elf_header_addr is mapped, using the NT_FILE mappings at or above it.
+  std::optional<lldb::addr_t>
+  FindAddressForFileOffset(lldb::addr_t elf_header_addr,
+                           lldb::addr_t file_offset);
 
   // Parse a contiguous address range of the process from LOAD segment
   lldb::addr_t
@@ -188,6 +228,20 @@ private:
   llvm::Error parseNetBSDNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
   llvm::Error parseOpenBSDNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
   llvm::Error parseLinuxNotes(llvm::ArrayRef<lldb_private::CoreNote> notes);
+
+  /// Find the NT_FILE entry that contains an address.
+  std::optional<NT_FILE_Entry>
+  GetNTFileEntryContainingAddress(lldb::addr_t addr);
+
+  /// Gets all of the NT_FILE entries that match the specified entry's path.
+  ///
+  /// This can be useful when trying to track down file offsets for a given file
+  /// and where they ended up in core file memory.
+  std::vector<ProcessElfCore::NT_FILE_Entry>
+  GetNTFileEntriesForMatchingPath(const std::string &path);
+
+  /// Intelligently find the NT_FILE entry for the executable's ELF header.
+  std::optional<NT_FILE_Entry> GetNTFileEntryForExecutableELFHeader();
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_PROCESSELFCORE_H

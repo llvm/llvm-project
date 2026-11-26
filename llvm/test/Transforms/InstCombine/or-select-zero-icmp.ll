@@ -18,8 +18,7 @@ define i32 @basic(i32 %a, i32 %b) {
 define i32 @swap_operand_order(i32 %x, i32 %y) {
 ; CHECK-LABEL: @swap_operand_order(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = or i32 [[X]], [[SEL]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 [[Y:%.*]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %cmp = icmp eq i32 %x, 0
@@ -60,8 +59,7 @@ define i32 @negative_wrong_predicate(i32 %a, i32 %b) {
 define i32 @cmp_swapped(i32 %x, i32 %y) {
 ; CHECK-LABEL: @cmp_swapped(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[Y:%.*]], i32 0
-; CHECK-NEXT:    [[RES:%.*]] = or i32 [[X]], [[SEL]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[CMP]], i32 [[Y:%.*]], i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %cmp = icmp eq i32 0, %x

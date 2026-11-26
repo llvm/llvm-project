@@ -12,9 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "RISCVTargetMachine.h"
+#include "RISCVSubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
@@ -25,26 +30,12 @@ using namespace llvm;
 #define RISCV_MERGE_BASE_OFFSET_NAME "RISC-V Merge Base Offset"
 namespace {
 
-class RISCVMergeBaseOffsetOpt : public MachineFunctionPass {
-  const RISCVSubtarget *ST = nullptr;
-  MachineRegisterInfo *MRI;
-
+class RISCVMergeBaseOffsetLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  bool runOnMachineFunction(MachineFunction &Fn) override;
-  bool detectFoldable(MachineInstr &Hi, MachineInstr *&Lo);
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-  bool detectAndFoldOffset(MachineInstr &Hi, MachineInstr &Lo);
-  bool foldOffset(MachineInstr &Hi, MachineInstr &Lo, MachineInstr &Tail,
-                  int64_t Offset);
-  bool foldLargeOffset(MachineInstr &Hi, MachineInstr &Lo,
-                       MachineInstr &TailAdd, Register GSReg);
-  bool foldShiftedOffset(MachineInstr &Hi, MachineInstr &Lo,
-                         MachineInstr &TailShXAdd, Register GSReg);
-
-  bool foldIntoMemoryOps(MachineInstr &Hi, MachineInstr &Lo);
-
-  RISCVMergeBaseOffsetOpt() : MachineFunctionPass(ID) {}
+  RISCVMergeBaseOffsetLegacy() : MachineFunctionPass(ID) {}
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setIsSSA();
@@ -61,8 +52,8 @@ public:
 };
 } // end anonymous namespace
 
-char RISCVMergeBaseOffsetOpt::ID = 0;
-INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
+char RISCVMergeBaseOffsetLegacy::ID = 0;
+INITIALIZE_PASS(RISCVMergeBaseOffsetLegacy, DEBUG_TYPE,
                 RISCV_MERGE_BASE_OFFSET_NAME, false, false)
 
 // Detect either of the patterns:
@@ -83,8 +74,8 @@ INITIALIZE_PASS(RISCVMergeBaseOffsetOpt, DEBUG_TYPE,
 //    2) The address operands have the appropriate type, reflecting the
 //       lowering of a global address or constant pool using medlow or medany.
 //    3) The offset value in the Global Address or Constant Pool is 0.
-bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
-                                             MachineInstr *&Lo) {
+static bool detectFoldable(MachineInstr &Hi, MachineInstr *&Lo,
+                           MachineRegisterInfo *MRI) {
   auto HiOpc = Hi.getOpcode();
   if (HiOpc != RISCV::LUI && HiOpc != RISCV::AUIPC &&
       HiOpc != RISCV::PseudoMovAddr && HiOpc != RISCV::QC_E_LI)
@@ -147,8 +138,8 @@ bool RISCVMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi,
 // Update the offset in Hi and Lo instructions.
 // Delete the tail instruction and update all the uses to use the
 // output from Lo.
-bool RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
-                                         MachineInstr &Tail, int64_t Offset) {
+static bool foldOffset(MachineInstr &Hi, MachineInstr &Lo, MachineInstr &Tail,
+                       int64_t Offset, MachineRegisterInfo *MRI) {
   assert(isInt<32>(Offset) && "Unexpected offset");
 
   // If Hi is an AUIPC, don't fold the offset if it is outside the bounds of
@@ -161,6 +152,18 @@ bool RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
     if (!Ty->isSized() || Offset < 0 ||
         (uint64_t)Offset > GV->getDataLayout().getTypeAllocSize(Ty))
       return false;
+  }
+
+  // Salvage the debug users of Lo's result by subtracting the offset again.
+  SmallVector<uint64_t, 3> UndoOffset;
+  DIExpression::appendOffset(UndoOffset, -Offset);
+  for (MachineOperand &MO : MRI->use_operands(Lo.getOperand(0).getReg())) {
+    MachineInstr &DbgMI = *MO.getParent();
+    if (!DbgMI.isDebugValue())
+      continue;
+    DbgMI.getDebugExpressionOp().setMetadata(
+        DIExpression::appendOpsToArg(DbgMI.getDebugExpression(), UndoOffset,
+                                     DbgMI.getDebugOperandIndex(&MO)));
   }
 
   // Put the offset back in Hi and the Lo
@@ -198,17 +201,17 @@ bool RISCVMergeBaseOffsetOpt::foldOffset(MachineInstr &Hi, MachineInstr &Lo,
 //                      \                                    /
 //                       \                                  /
 //                         TailAdd: add  vreg4, vreg2, voff
-bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
-                                              MachineInstr &Lo,
-                                              MachineInstr &TailAdd,
-                                              Register GAReg) {
+static bool foldLargeOffset(MachineInstr &Hi, MachineInstr &Lo,
+                            MachineInstr &TailAdd, Register GAReg,
+                            MachineRegisterInfo *MRI,
+                            const RISCVSubtarget *ST) {
   assert((TailAdd.getOpcode() == RISCV::ADD) && "Expected ADD instruction!");
   Register Rs = TailAdd.getOperand(1).getReg();
   Register Rt = TailAdd.getOperand(2).getReg();
   Register Reg = Rs == GAReg ? Rt : Rs;
 
   // Can't fold if the register has more than one use.
-  if (!Reg.isVirtual() || !MRI->hasOneUse(Reg))
+  if (!Reg.isVirtual() || !MRI->hasOneNonDBGUse(Reg))
     return false;
   // This can point to an ADDI(W) or a LUI:
   MachineInstr &OffsetTail = *MRI->getVRegDef(Reg);
@@ -219,13 +222,16 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     MachineOperand &AddiImmOp = OffsetTail.getOperand(2);
     if (AddiImmOp.getTargetFlags() != RISCVII::MO_None)
       return false;
+    // Make sure this isn't something weird like a frame index.
+    if (!OffsetTail.getOperand(1).isReg())
+      return false;
     Register AddiReg = OffsetTail.getOperand(1).getReg();
     int64_t OffLo = AddiImmOp.getImm();
 
     // Handle rs1 of ADDI is X0.
     if (AddiReg == RISCV::X0) {
       LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail);
-      if (!foldOffset(Hi, Lo, TailAdd, OffLo))
+      if (!foldOffset(Hi, Lo, TailAdd, OffLo, MRI))
         return false;
       OffsetTail.eraseFromParent();
       return true;
@@ -235,7 +241,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     MachineOperand &LuiImmOp = OffsetLui.getOperand(1);
     if (OffsetLui.getOpcode() != RISCV::LUI ||
         LuiImmOp.getTargetFlags() != RISCVII::MO_None ||
-        !MRI->hasOneUse(OffsetLui.getOperand(0).getReg()))
+        !MRI->hasOneNonDBGUse(OffsetLui.getOperand(0).getReg()))
       return false;
     int64_t Offset = SignExtend64<32>(LuiImmOp.getImm() << 12);
     Offset += OffLo;
@@ -247,7 +253,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
       return false;
     LLVM_DEBUG(dbgs() << "  Offset Instrs: " << OffsetTail
                       << "                 " << OffsetLui);
-    if (!foldOffset(Hi, Lo, TailAdd, Offset))
+    if (!foldOffset(Hi, Lo, TailAdd, Offset, MRI))
       return false;
     OffsetTail.eraseFromParent();
     OffsetLui.eraseFromParent();
@@ -257,7 +263,7 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
     // exists.
     LLVM_DEBUG(dbgs() << "  Offset Instr: " << OffsetTail);
     int64_t Offset = SignExtend64<32>(OffsetTail.getOperand(1).getImm() << 12);
-    if (!foldOffset(Hi, Lo, TailAdd, Offset))
+    if (!foldOffset(Hi, Lo, TailAdd, Offset, MRI))
       return false;
     OffsetTail.eraseFromParent();
     return true;
@@ -276,10 +282,9 @@ bool RISCVMergeBaseOffsetOpt::foldLargeOffset(MachineInstr &Hi,
 // Lo:         addi    vreg2, vreg1, %lo(s)
 // OffsetTail: addi    voff, x0, C
 // TailAdd:    shXadd  vreg4, voff, vreg2
-bool RISCVMergeBaseOffsetOpt::foldShiftedOffset(MachineInstr &Hi,
-                                                MachineInstr &Lo,
-                                                MachineInstr &TailShXAdd,
-                                                Register GAReg) {
+static bool foldShiftedOffset(MachineInstr &Hi, MachineInstr &Lo,
+                              MachineInstr &TailShXAdd, Register GAReg,
+                              MachineRegisterInfo *MRI) {
   assert((TailShXAdd.getOpcode() == RISCV::SH1ADD ||
           TailShXAdd.getOpcode() == RISCV::SH2ADD ||
           TailShXAdd.getOpcode() == RISCV::SH3ADD) &&
@@ -292,7 +297,7 @@ bool RISCVMergeBaseOffsetOpt::foldShiftedOffset(MachineInstr &Hi,
   Register Rs1 = TailShXAdd.getOperand(1).getReg();
 
   // Can't fold if the register has more than one use.
-  if (!Rs1.isVirtual() || !MRI->hasOneUse(Rs1))
+  if (!Rs1.isVirtual() || !MRI->hasOneNonDBGUse(Rs1))
     return false;
   // This can point to an ADDI X0, C.
   MachineInstr &OffsetTail = *MRI->getVRegDef(Rs1);
@@ -317,27 +322,28 @@ bool RISCVMergeBaseOffsetOpt::foldShiftedOffset(MachineInstr &Hi,
   Offset = (uint64_t)Offset << ShAmt;
 
   LLVM_DEBUG(dbgs() << "  Offset Instr: " << OffsetTail);
-  if (!foldOffset(Hi, Lo, TailShXAdd, Offset))
+  if (!foldOffset(Hi, Lo, TailShXAdd, Offset, MRI))
     return false;
   OffsetTail.eraseFromParent();
   return true;
 }
 
-bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
-                                                  MachineInstr &Lo) {
+static bool detectAndFoldOffset(MachineInstr &Hi, MachineInstr &Lo,
+                                MachineRegisterInfo *MRI,
+                                const RISCVSubtarget *ST) {
   Register DestReg = Lo.getOperand(0).getReg();
 
   // Look for arithmetic instructions we can get an offset from.
   // We might be able to remove the arithmetic instructions by folding the
   // offset into the LUI+ADDI.
-  if (!MRI->hasOneUse(DestReg))
+  if (!MRI->hasOneNonDBGUse(DestReg))
     return false;
 
   // Lo has only one use.
-  MachineInstr &Tail = *MRI->use_instr_begin(DestReg);
+  MachineInstr &Tail = *MRI->use_instr_nodbg_begin(DestReg);
   switch (Tail.getOpcode()) {
   default:
-    LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr:"
+    LLVM_DEBUG(dbgs() << "Don't know how to get offset from this instr: "
                       << Tail);
     break;
   case RISCV::ADDI:
@@ -348,12 +354,12 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
     if (Tail.getOpcode() == RISCV::ADDI) {
       // We might have two ADDIs in a row.
       Register TailDestReg = Tail.getOperand(0).getReg();
-      if (MRI->hasOneUse(TailDestReg)) {
-        MachineInstr &TailTail = *MRI->use_instr_begin(TailDestReg);
+      if (MRI->hasOneNonDBGUse(TailDestReg)) {
+        MachineInstr &TailTail = *MRI->use_instr_nodbg_begin(TailDestReg);
         if (TailTail.getOpcode() == RISCV::ADDI) {
           Offset += TailTail.getOperand(2).getImm();
           LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
-          if (!foldOffset(Hi, Lo, TailTail, Offset))
+          if (!foldOffset(Hi, Lo, TailTail, Offset, MRI))
             return false;
           Tail.eraseFromParent();
           return true;
@@ -362,7 +368,7 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
     }
 
     LLVM_DEBUG(dbgs() << "  Offset Instr: " << Tail);
-    return foldOffset(Hi, Lo, Tail, Offset);
+    return foldOffset(Hi, Lo, Tail, Offset, MRI);
   }
   case RISCV::ADD:
     // The offset is too large to fit in the immediate field of ADDI.
@@ -373,21 +379,45 @@ bool RISCVMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi,
     //    both hi 20 and lo 12 bits.
     // 2) LUI (offset20)
     //    This happens in case the lower 12 bits of the offset are zeros.
-    return foldLargeOffset(Hi, Lo, Tail, DestReg);
+    return foldLargeOffset(Hi, Lo, Tail, DestReg, MRI, ST);
   case RISCV::SH1ADD:
   case RISCV::SH2ADD:
   case RISCV::SH3ADD:
     // The offset is too large to fit in the immediate field of ADDI.
     // It may be encoded as (SH2ADD (ADDI X0, C), DestReg) or
     // (SH3ADD (ADDI X0, C), DestReg).
-    return foldShiftedOffset(Hi, Lo, Tail, DestReg);
+    return foldShiftedOffset(Hi, Lo, Tail, DestReg, MRI);
   }
 
   return false;
 }
 
-bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
-                                                MachineInstr &Lo) {
+static void overwriteMachineOperandInPlace(MachineOperand &MO,
+                                           const MachineOperand &ImmOp) {
+  switch (ImmOp.getType()) {
+  case MachineOperand::MO_ConstantPoolIndex:
+    MO.ChangeToCPI(ImmOp.getIndex(), ImmOp.getOffset(), ImmOp.getTargetFlags());
+    break;
+  case MachineOperand::MO_GlobalAddress:
+    MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(), ImmOp.getTargetFlags());
+    break;
+  case MachineOperand::MO_MCSymbol:
+    MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
+    MO.setOffset(ImmOp.getOffset());
+    break;
+  case MachineOperand::MO_BlockAddress:
+    MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
+                  ImmOp.getTargetFlags());
+    break;
+  default:
+    report_fatal_error("unsupported machine operand type");
+    break;
+  }
+}
+
+static bool foldIntoMemoryOps(MachineInstr &Hi, MachineInstr &Lo,
+                              MachineRegisterInfo *MRI,
+                              const RISCVSubtarget *ST) {
   Register DestReg = Lo.getOperand(0).getReg();
 
   // If all the uses are memory ops with the same offset, we can transform:
@@ -408,7 +438,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   std::optional<int64_t> CommonOffset;
   DenseMap<const MachineInstr *, SmallVector<unsigned>>
       InlineAsmMemoryOpIndexesMap;
-  for (const MachineInstr &UseMI : MRI->use_instructions(DestReg)) {
+  for (const MachineInstr &UseMI : MRI->use_nodbg_instructions(DestReg)) {
     switch (UseMI.getOpcode()) {
     default:
       LLVM_DEBUG(dbgs() << "Not a load or store instruction: " << UseMI);
@@ -445,6 +475,34 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
              "Expected base address use");
       // All load/store instructions must use the same offset.
       int64_t Offset = UseMI.getOperand(2).getImm();
+      if (CommonOffset && Offset != CommonOffset)
+        return false;
+      CommonOffset = Offset;
+      break;
+    }
+    case RISCV::PseudoCCLD:
+    case RISCV::PseudoCCLW:
+    case RISCV::PseudoCCLWU:
+    case RISCV::PseudoCCLH:
+    case RISCV::PseudoCCLHU:
+    case RISCV::PseudoCCLB:
+    case RISCV::PseudoCCLBU: {
+      // The SFB Pseudos are like their non-SFB counterparts but have more
+      // operands.
+      if (UseMI.getOperand(2).isFI())
+        return false;
+      // Register defined by Lo should not be the (tied) false value, or a
+      // register used in the branch predicate.
+      if (DestReg == UseMI.getOperand(1).getReg() ||
+          DestReg == UseMI.getOperand(5).getReg())
+        return false;
+      if (UseMI.getOperand(6).isReg() &&
+          DestReg == UseMI.getOperand(6).getReg())
+        return false;
+      assert(DestReg == UseMI.getOperand(2).getReg() &&
+             "Expected base address use");
+      // All load/store instructions must use the same offset.
+      int64_t Offset = UseMI.getOperand(3).getImm();
       if (CommonOffset && Offset != CommonOffset)
         return false;
       CommonOffset = Offset;
@@ -503,6 +561,9 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     }
   }
 
+  if (!CommonOffset)
+    return false;
+
   // We found a common offset.
   // Update the offsets in global address lowering.
   // We may have already folded some arithmetic so we need to add to any
@@ -514,6 +575,10 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   // We can only fold simm32 offsets.
   if (!isInt<32>(NewOffset))
     return false;
+
+  // Folding changes the value represented by DestReg, so its debug users can
+  // no longer describe the same address.
+  MRI->markUsesInDebugValueAsUndef(DestReg);
 
   Hi.getOperand(1).setOffset(NewOffset);
   MachineOperand &ImmOp =
@@ -531,36 +596,63 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 
   // Update the immediate in the load/store instructions to add the offset.
   for (MachineInstr &UseMI :
-       llvm::make_early_inc_range(MRI->use_instructions(DestReg))) {
+       llvm::make_early_inc_range(MRI->use_nodbg_instructions(DestReg))) {
     if (UseMI.getOpcode() == RISCV::INLINEASM ||
         UseMI.getOpcode() == RISCV::INLINEASM_BR) {
       auto &InlineAsmMemoryOpIndexes = InlineAsmMemoryOpIndexesMap[&UseMI];
       for (unsigned I : InlineAsmMemoryOpIndexes) {
         MachineOperand &MO = UseMI.getOperand(I + 1);
-        switch (ImmOp.getType()) {
-        case MachineOperand::MO_GlobalAddress:
-          MO.ChangeToGA(ImmOp.getGlobal(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        case MachineOperand::MO_MCSymbol:
-          MO.ChangeToMCSymbol(ImmOp.getMCSymbol(), ImmOp.getTargetFlags());
-          MO.setOffset(ImmOp.getOffset());
-          break;
-        case MachineOperand::MO_BlockAddress:
-          MO.ChangeToBA(ImmOp.getBlockAddress(), ImmOp.getOffset(),
-                        ImmOp.getTargetFlags());
-          break;
-        default:
-          report_fatal_error("unsupported machine operand type");
-          break;
-        }
+        overwriteMachineOperandInPlace(MO, ImmOp);
       }
     } else {
+      unsigned ImmIdx;
+      switch (UseMI.getOpcode()) {
+      case RISCV::INLINEASM:
+      case RISCV::INLINEASM_BR:
+        llvm_unreachable("Should have been dealt with before this else");
+      case RISCV::PseudoCCLD:
+      case RISCV::PseudoCCLW:
+      case RISCV::PseudoCCLWU:
+      case RISCV::PseudoCCLH:
+      case RISCV::PseudoCCLHU:
+      case RISCV::PseudoCCLB:
+      case RISCV::PseudoCCLBU:
+        ImmIdx = 3;
+        break;
+      case RISCV::LB:
+      case RISCV::LH:
+      case RISCV::LH_INX:
+      case RISCV::LW:
+      case RISCV::LW_INX:
+      case RISCV::LBU:
+      case RISCV::LHU:
+      case RISCV::LWU:
+      case RISCV::LD:
+      case RISCV::LD_RV32:
+      case RISCV::FLH:
+      case RISCV::FLW:
+      case RISCV::FLD:
+      case RISCV::SB:
+      case RISCV::SH:
+      case RISCV::SH_INX:
+      case RISCV::SW:
+      case RISCV::SW_INX:
+      case RISCV::SD:
+      case RISCV::SD_RV32:
+      case RISCV::FSH:
+      case RISCV::FSW:
+      case RISCV::FSD:
+        ImmIdx = 2;
+        break;
+      default:
+        llvm_unreachable("Unknown Instruction");
+      }
+
+      MachineOperand &MO = UseMI.getOperand(ImmIdx);
       if (Hi.getOpcode() == RISCV::QC_E_LI) {
-        UseMI.getOperand(2).ChangeToImmediate(0);
+        MO.ChangeToImmediate(0);
       } else {
-        UseMI.removeOperand(2);
-        UseMI.addOperand(ImmOp);
+        overwriteMachineOperandInPlace(MO, ImmOp);
       }
     }
   }
@@ -575,22 +667,137 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
   return true;
 }
 
-bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
+// Try to fold sequences of the form:
+//   Hi/lo:    qc.e.li vreg1, s           -> qc.e.li vreg1, s+imm
+//   TailAdd:  shxadd vreg2, vreg3, vreg1 -> deleted
+//   Tail:     lx vreg4, imm(vreg2)       -> qc.lrx vreg4, vreg1, vreg3, (1-7)
+static bool foldShxaddIntoScaledMemory(MachineInstr &Hi, MachineInstr &Lo,
+                                       MachineRegisterInfo *MRI,
+                                       const RISCVSubtarget *ST) {
+  if (!ST->hasVendorXqcisls() || ST->is64Bit())
     return false;
 
-  ST = &Fn.getSubtarget<RISCVSubtarget>();
+  if (Hi.getOpcode() != RISCV::QC_E_LI)
+    return false;
+
+  Register BaseReg = Hi.getOperand(0).getReg();
+  if (!BaseReg.isVirtual() || !MRI->hasOneUse(BaseReg))
+    return false;
+
+  MachineInstr &ShxAdd = *MRI->use_instr_begin(BaseReg);
+  unsigned ShxOpc = ShxAdd.getOpcode();
+  unsigned ShAmt = 0;
+  switch (ShxOpc) {
+  default:
+    return false;
+  case RISCV::SH1ADD:
+    ShAmt = 1;
+    break;
+  case RISCV::SH2ADD:
+    ShAmt = 2;
+    break;
+  case RISCV::SH3ADD:
+    ShAmt = 3;
+    break;
+  case RISCV::QC_SHLADD:
+    uint8_t ShlImm = ShxAdd.getOperand(3).getImm();
+    if (ShlImm > 7)
+      return false;
+    ShAmt = ShlImm;
+    break;
+  }
+
+  // shxadd Rd, Rs1, Rs2
+  Register ScaledReg = ShxAdd.getOperand(0).getReg();
+  Register IndexReg = ShxAdd.getOperand(1).getReg();
+
+  if (!IndexReg.isVirtual())
+    return false;
+
+  if (ShxAdd.getOperand(2).getReg() != BaseReg)
+    return false;
+
+  if (!ScaledReg.isVirtual() || !MRI->hasOneUse(ScaledReg))
+    return false;
+
+  MachineInstr &TailMem = *MRI->use_instr_begin(ScaledReg);
+  unsigned Opc = TailMem.getOpcode();
+  unsigned NewOpc = 0;
+
+  switch (Opc) {
+  case RISCV::LB:
+    NewOpc = RISCV::QC_LRB;
+    break;
+  case RISCV::LBU:
+    NewOpc = RISCV::QC_LRBU;
+    break;
+  case RISCV::LH:
+    NewOpc = RISCV::QC_LRH;
+    break;
+  case RISCV::LHU:
+    NewOpc = RISCV::QC_LRHU;
+    break;
+  case RISCV::LW:
+    NewOpc = RISCV::QC_LRW;
+    break;
+  case RISCV::SB:
+    NewOpc = RISCV::QC_SRB;
+    break;
+  case RISCV::SH:
+    NewOpc = RISCV::QC_SRH;
+    break;
+  case RISCV::SW:
+    NewOpc = RISCV::QC_SRW;
+    break;
+  default:
+    return false;
+  }
+
+  if (!TailMem.getOperand(1).isReg() ||
+      TailMem.getOperand(1).getReg() != ScaledReg)
+    return false;
+  if (!TailMem.getOperand(2).isImm())
+    return false;
+  int64_t Imm = TailMem.getOperand(2).getImm();
+
+  // Update QC_E_LI offset.
+  int64_t NewOffset = SignExtend64<32>(Hi.getOperand(1).getOffset() + Imm);
+
+  Hi.getOperand(1).setOffset(NewOffset);
+
+  // Build scaled load/store.
+  auto *TII = ST->getInstrInfo();
+  auto *MBB = TailMem.getParent();
+
+  // Ensure index register satisfies GPRNoX0 class required by QC_LR*/QC_SR*.
+  MRI->constrainRegClass(IndexReg, &RISCV::GPRNoX0RegClass);
+
+  BuildMI(*MBB, TailMem, TailMem.getDebugLoc(), TII->get(NewOpc))
+      .add(TailMem.getOperand(0))
+      .addReg(BaseReg, getKillRegState(ShxAdd.getOperand(2).isKill()))
+      .addReg(IndexReg, getKillRegState(ShxAdd.getOperand(1).isKill()))
+      .addImm(ShAmt)
+      .cloneMemRefs(TailMem);
+
+  TailMem.eraseFromParent();
+  ShxAdd.eraseFromParent();
+  return true;
+}
+
+static bool runMergeBaseOffset(MachineFunction &Fn) {
+  const RISCVSubtarget *ST = &Fn.getSubtarget<RISCVSubtarget>();
 
   bool MadeChange = false;
-  MRI = &Fn.getRegInfo();
+  MachineRegisterInfo *MRI = &Fn.getRegInfo();
   for (MachineBasicBlock &MBB : Fn) {
     LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
     for (MachineInstr &Hi : MBB) {
       MachineInstr *Lo = nullptr;
-      if (!detectFoldable(Hi, Lo))
+      if (!detectFoldable(Hi, Lo, MRI))
         continue;
-      MadeChange |= detectAndFoldOffset(Hi, *Lo);
-      MadeChange |= foldIntoMemoryOps(Hi, *Lo);
+      MadeChange |= detectAndFoldOffset(Hi, *Lo, MRI, ST);
+      MadeChange |= foldIntoMemoryOps(Hi, *Lo, MRI, ST);
+      MadeChange |= foldShxaddIntoScaledMemory(Hi, *Lo, MRI, ST);
     }
   }
 
@@ -598,6 +805,20 @@ bool RISCVMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
 }
 
 /// Returns an instance of the Merge Base Offset Optimization pass.
-FunctionPass *llvm::createRISCVMergeBaseOffsetOptPass() {
-  return new RISCVMergeBaseOffsetOpt();
+FunctionPass *llvm::createRISCVMergeBaseOffsetLegacyPass() {
+  return new RISCVMergeBaseOffsetLegacy();
+}
+
+bool RISCVMergeBaseOffsetLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runMergeBaseOffset(MF);
+}
+
+PreservedAnalyses
+RISCVMergeBaseOffsetPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &MFAM) {
+  return runMergeBaseOffset(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                      .preserveSet<CFGAnalyses>()
+                                : PreservedAnalyses::all();
 }

@@ -258,11 +258,10 @@ def testGetDenseElementsInteger4():
 @run
 def testGetDenseElementsBool():
     with Context():
-        bool_array = np.array([[1, 0, 1], [0, 1, 0]], dtype=np.bool_)
-        array = np.packbits(bool_array, axis=None, bitorder="little")
-        attr = DenseElementsAttr.get(
-            array, type=IntegerType.get_signless(1), shape=bool_array.shape
+        bool_array = np.array(
+            [[True, False, True], [False, True, False]], dtype=np.bool_
         )
+        attr = DenseElementsAttr.get(bool_array)
         # CHECK: dense<{{\[}}[true, false, true], [false, true, false]]> : tensor<2x3xi1>
         print(attr)
 
@@ -620,6 +619,22 @@ def testGetDenseResourceElementsAttr():
     # CHECK: BACKING MEMORY DELETED
     # CHECK: EXIT FUNCTION
     print("EXIT FUNCTION")
+
+
+# CHECK-LABEL: TEST: testGetDenseResourceElementsAttrScalar
+@run
+def testGetDenseResourceElementsAttrScalar():
+    with Context(), Location.unknown():
+        element_type = IntegerType.get_signless(64)
+        tensor_type = RankedTensorType.get((), element_type)
+        resource = DenseResourceElementsAttr.get_from_buffer(
+            memoryview(np.array(42, dtype=np.int64)), "scalar", tensor_type
+        )
+        module = Module.create()
+        module.operation.attributes["test.resource"] = resource
+        # CHECK: test.resource = dense_resource<scalar> : tensor<i64>
+        # CHECK: scalar: "0x080000002A00000000000000"
+        print(module)
 
 
 # CHECK-LABEL: TEST: testDanglingResource

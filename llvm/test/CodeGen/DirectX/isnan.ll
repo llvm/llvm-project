@@ -5,7 +5,8 @@
 
 define noundef i1 @isnan_float(float noundef %a) {
 entry:
-  ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f32(i32 8, float %{{.*}}) #[[#ATTR:]]
+  ; CHECK-LABEL: @isnan_float
+  ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f32(i32 8, float %{{.*}})
   ; SMOLDCHECK: call i1 @llvm.dx.isnan.f32(float %{{.*}})
   %dx.isnan = call i1 @llvm.dx.isnan.f32(float %a)
   ret i1 %dx.isnan
@@ -13,7 +14,8 @@ entry:
 
 define noundef i1 @isnan_half(half noundef %a) {
 entry:
-  ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f16(i32 8, half %{{.*}}) #[[#ATTR]]
+  ; CHECK-LABEL: @isnan_half
+  ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f16(i32 8, half %{{.*}})
   ; SMOLDCHECK: [[BITCAST:%.*]] = bitcast half %{{.*}} to i16
   ; SMOLDCHECK: [[ANDHIGH:%.*]] = and i16 [[BITCAST]], 31744
   ; SMOLDCHECK: [[CMPHIGH:%.*]] = icmp eq i16 [[ANDHIGH]], 31744
@@ -26,6 +28,7 @@ entry:
 
 define noundef <4 x i1> @isnan_half4(<4 x half> noundef %p0) {
 entry:
+  ; CHECK-LABEL: @isnan_half4
   ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f16(i32 8, half
   ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f16(i32 8, half
   ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f16(i32 8, half
@@ -42,6 +45,7 @@ entry:
 
 define noundef <3 x i1> @isnan_float3(<3 x float> noundef %p0) {
 entry:
+  ; CHECK-LABEL: @isnan_float3
   ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f32(i32 8, float
   ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f32(i32 8, float
   ; SM69CHECK: call i1 @dx.op.isSpecialFloat.f32(i32 8, float
@@ -50,4 +54,6 @@ entry:
   ret <3 x i1> %hlsl.isnan
 }
 
-; CHECK: attributes #{{[0-9]*}} = {{{.*}} memory(none) {{.*}}}
+; SM69CHECK-DAG: declare i1 @dx.op.isSpecialFloat.f32(i32, float) #[[#ATTR0:]]
+; SM69CHECK-DAG: declare i1 @dx.op.isSpecialFloat.f16(i32, half) #[[#ATTR0]]
+; SM69CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }

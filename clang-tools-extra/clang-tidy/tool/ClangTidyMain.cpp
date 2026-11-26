@@ -18,10 +18,10 @@
 #include "../ClangTidy.h"
 #include "../ClangTidyForceLinker.h" // IWYU pragma: keep
 #include "../GlobList.h"
-#include "../utils/OptionsUtils.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h" // IWYU pragma: keep
 #include "llvm/Support/Process.h"
@@ -312,6 +312,14 @@ code with clang-apply-replacements.
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
 
+static cl::opt<std::string> SarifExport("experimental-sarif-export", desc(R"(
+File in which to store diagnostics in SARIF format.
+Use '-' to write to stdout instead of the
+usual diagnostic output.
+)"),
+                                        cl::value_desc("filename"),
+                                        cl::cat(ClangTidyCategory));
+
 static cl::opt<bool> Quiet("quiet", desc(R"(
 Run clang-tidy in quiet mode. This suppresses
 printing statistics about ignored warnings and
@@ -437,7 +445,7 @@ createOptionsProvider(llvm::IntrusiveRefCntPtr<vfs::FileSystem> FS) {
   if (RemovedArgs.getNumOccurrences() > 0)
     OverrideOptions.RemovedArgs = RemovedArgs;
 
-  auto LoadConfig =
+  const auto LoadConfig =
       [&](StringRef Configuration,
           StringRef Source) -> std::unique_ptr<ClangTidyOptionsProvider> {
     llvm::ErrorOr<ClangTidyOptions> ParsedConfig =
@@ -502,7 +510,7 @@ getVfsFromFile(const std::string &OverlayFile, vfs::FileSystem &BaseFS) {
 static StringRef closest(StringRef Value, const StringSet<> &Allowed) {
   unsigned MaxEdit = 5U;
   StringRef Closest;
-  for (auto Item : Allowed.keys()) {
+  for (const auto Item : Allowed.keys()) {
     const unsigned Cur = Value.edit_distance_insensitive(Item, true, MaxEdit);
     if (Cur < MaxEdit) {
       Closest = Item;
@@ -524,15 +532,15 @@ static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
     if (llvm::none_of(AllChecks.keys(),
                       [&Item](StringRef S) { return Item.Regex.match(S); })) {
       AnyInvalid = true;
-      if (Item.Text.contains('*'))
+      if (Item.Text.contains('*')) {
         llvm::WithColor::warning(llvm::errs(), Source)
             << "check glob '" << Item.Text << "' doesn't match any known check"
             << VerifyConfigWarningEnd;
-      else {
+      } else {
         llvm::raw_ostream &Output =
             llvm::WithColor::warning(llvm::errs(), Source)
             << "unknown check '" << Item.Text << '\'';
-        const llvm::StringRef Closest = closest(Item.Text, AllChecks);
+        const StringRef Closest = closest(Item.Text, AllChecks);
         if (!Closest.empty())
           Output << "; did you mean '" << Closest << '\'';
         Output << VerifyConfigWarningEnd;
@@ -566,13 +574,13 @@ static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
                           const ClangTidyOptions::OptionMap &OptionMap,
                           StringRef Source) {
   bool AnyInvalid = false;
-  for (auto Key : OptionMap.keys()) {
+  for (const auto Key : OptionMap.keys()) {
     if (ValidOptions.contains(Key))
       continue;
     AnyInvalid = true;
     auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
                    << "unknown check option '" << Key << '\'';
-    const llvm::StringRef Closest = closest(Key, ValidOptions);
+    const StringRef Closest = closest(Key, ValidOptions);
     if (!Closest.empty())
       Output << "; did you mean '" << Closest << '\'';
     Output << VerifyConfigWarningEnd;
@@ -580,7 +588,7 @@ static bool verifyOptions(const llvm::StringSet<> &ValidOptions,
   return AnyInvalid;
 }
 
-static SmallString<256> makeAbsolute(llvm::StringRef Input) {
+static SmallString<256> makeAbsolute(StringRef Input) {
   if (Input.empty())
     return {};
   SmallString<256> AbsolutePath(Input);
@@ -635,6 +643,15 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
+  if (!SarifExport.empty() && SarifExport == ExportFixes &&
+      !llvm::sys::fs::equivalent(SarifExport, ExportFixes)) {
+    llvm::errs() << "Error: --experimental-sarif-export and --export-fixes "
+                    "cannot write to "
+                    "the same output '"
+                 << SarifExport << "'.\n";
+    return 1;
+  }
+
   const llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS =
       createBaseFS();
   if (!BaseFS)
@@ -661,8 +678,8 @@ int clangTidyMain(int argc, const char **argv) {
 
   if (ExplainConfig) {
     // FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
-    std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
-        RawOptions = OptionsProvider->getRawOptions(FilePath);
+    std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
+        OptionsProvider->getRawOptions(FilePath);
     for (const std::string &Check : EnabledChecks) {
       for (const auto &[Opts, Source] : llvm::reverse(RawOptions)) {
         if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
@@ -719,11 +736,7 @@ int clangTidyMain(int argc, const char **argv) {
     return 0;
   }
 
-  if (EnabledChecks.empty()) {
-    if (AllowNoChecks) {
-      llvm::outs() << "No checks enabled.\n";
-      return 0;
-    }
+  if (EnabledChecks.empty() && !AllowNoChecks) {
     llvm::errs() << "Error: no checks enabled.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
     return 1;
@@ -733,6 +746,19 @@ int clangTidyMain(int argc, const char **argv) {
     llvm::errs() << "Error: no input files specified.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
     return 1;
+  }
+
+  // Checked after the informational modes so they never truncate the file.
+  if (!SarifExport.empty() && SarifExport != "-") {
+    std::error_code EC;
+    {
+      const llvm::raw_fd_ostream OS(SarifExport, EC, llvm::sys::fs::OF_Text);
+    }
+    if (EC) {
+      llvm::errs() << "Error opening SARIF export file '" << SarifExport
+                   << "': " << EC.message() << '\n';
+      return 1;
+    }
   }
 
   llvm::InitializeAllTargetInfos();
@@ -759,7 +785,7 @@ int clangTidyMain(int argc, const char **argv) {
   unsigned WErrorCount = 0;
 
   handleErrors(Errors, Context, DisableFixes ? FB_NoFix : Behaviour,
-               WErrorCount, BaseFS);
+               WErrorCount, BaseFS, SarifExport);
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;

@@ -17,6 +17,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Analysis/FlowSensitive/ASTOps.h"
 #include "clang/Analysis/FlowSensitive/AdornedCFG.h"
@@ -54,6 +55,20 @@ struct SimpleLogicalContext {
   llvm::DenseMap<Atom, llvm::DenseSet<Atom>> TokenDeps;
 };
 
+/// Selects the boolean model used to represent and reason about path
+/// conditions and boolean values in `Environment`.
+enum class BoolModelKind {
+  /// Full boolean formula tracking backed by a SAT solver.
+  SAT,
+  /// Lightweight model that tracks known truth assignments for atoms (e.g.,
+  /// for each `assume()`) and unresolved assumed formulas, propagating forced
+  /// assignments and evaluating queries directly without invoking a SAT
+  /// solver.
+  /// Join operations are more conservative than in the SAT model (intersecting
+  /// known facts instead of encoding a disjunctive case split).
+  Simple,
+};
+
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
@@ -69,6 +84,9 @@ public:
     /// (This is always non-null within an AnalysisContext, the framework
     /// provides a fallback no-op logger).
     Logger *Log = nullptr;
+
+    /// Which boolean model to use in `Environment`.
+    BoolModelKind BoolModel = BoolModelKind::SAT;
   };
 
   /// Constructs a dataflow analysis context.
@@ -79,7 +97,8 @@ public:
   DataflowAnalysisContext(std::unique_ptr<Solver> S,
                           Options Opts = Options{
                               /*ContextSensitiveOpts=*/std::nullopt,
-                              /*Logger=*/nullptr})
+                              /*Logger=*/nullptr,
+                              /*BoolModel=*/BoolModelKind::SAT})
       : DataflowAnalysisContext(*S, std::move(S), Opts) {}
 
   /// Constructs a dataflow analysis context.
@@ -89,7 +108,8 @@ public:
   ///  `S` must outlive the `DataflowAnalysisContext`.
   DataflowAnalysisContext(Solver &S, Options Opts = Options{
                                          /*ContextSensitiveOpts=*/std::nullopt,
-                                         /*Logger=*/nullptr})
+                                         /*Logger=*/nullptr,
+                                         /*BoolModel=*/BoolModelKind::SAT})
       : DataflowAnalysisContext(S, nullptr, Opts) {}
 
   ~DataflowAnalysisContext();
@@ -207,8 +227,9 @@ public:
   Solver::Result querySolver(llvm::SetVector<const Formula *> Constraints);
 
   /// Returns the fields of `Type`, limited to the set of fields modeled by this
-  /// context.
-  FieldSet getModeledFields(QualType Type);
+  /// context. The returned reference is valid for the lifetime of the context,
+  /// or until `addModeledFields()` is called.
+  const FieldSet &getModeledFields(QualType Type);
 
   /// Returns the names and types of the synthetic fields for the given record
   /// type.
@@ -240,13 +261,7 @@ private:
   friend class Environment;
 
   struct NullableQualTypeDenseMapInfo : private llvm::DenseMapInfo<QualType> {
-    static QualType getEmptyKey() {
-      // Allow a NULL `QualType` by using a different value as the empty key.
-      return QualType::getFromOpaquePtr(reinterpret_cast<Type *>(1));
-    }
-
     using DenseMapInfo::getHashValue;
-    using DenseMapInfo::getTombstoneKey;
     using DenseMapInfo::isEqual;
   };
 
@@ -262,7 +277,11 @@ private:
   /// `Tokens` in the dependency graph.
   llvm::DenseSet<Atom> collectDependencies(llvm::DenseSet<Atom> Tokens) const;
 
-  // Extends the set of modeled field declarations.
+  /// Computes and returns the fields of `Type`, limited to the set of fields
+  /// modeled by this context.
+  FieldSet computeModeledFields(QualType Type);
+
+  /// Extends the set of modeled field declarations.
   void addModeledFields(const FieldSet &Fields);
 
   /// Adds all constraints of the flow condition identified by `Token` and all
@@ -326,8 +345,15 @@ private:
 
   llvm::DenseMap<const FunctionDecl *, AdornedCFG> FunctionContexts;
 
-  // Fields modeled by environments covered by this context.
+  // Fields (from any record Type) modeled by environments using this context.
+  // The set may only contain fields that are referenced in the scope of
+  // the environments (but it is up to the environment what is relevant to
+  // model).
   FieldSet ModeledFields;
+
+  // A lazily-computed and cached version of ModeledFields that is split by
+  // record Type.
+  llvm::DenseMap<QualType, std::unique_ptr<FieldSet>> CachedModeledFields;
 
   std::unique_ptr<Logger> LogOwner; // If created via flags.
 

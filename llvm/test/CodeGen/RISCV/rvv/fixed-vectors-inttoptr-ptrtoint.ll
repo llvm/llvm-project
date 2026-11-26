@@ -4,9 +4,9 @@
 define <4 x ptr> @inttoptr_v4p0_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: inttoptr_v4p0_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv1r.v v10, v8
-; CHECK-NEXT:    vzext.vf2 v8, v10, v0.t
+; CHECK-NEXT:    vzext.vf2 v8, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x ptr> @llvm.vp.inttoptr.v4p0.v4i32(<4 x i32> %va, <4 x i1> %m, i32 %evl)
   ret <4 x ptr> %v
@@ -23,8 +23,8 @@ define <4 x ptr> @inttoptr_v4p0_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %e
 define <4 x i32> @ptrtoint_v4i32_v4p0(<4 x ptr> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: ptrtoint_v4i32_v4p0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
-; CHECK-NEXT:    vnsrl.wi v10, v8, 0, v0.t
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vnsrl.wi v10, v8, 0
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x i32> @llvm.vp.ptrtoint.v4i32.v4p0(<4 x ptr> %va, <4 x i1> %m, i32 %evl)

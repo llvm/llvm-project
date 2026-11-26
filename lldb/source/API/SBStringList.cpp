@@ -8,8 +8,10 @@
 
 #include "lldb/API/SBStringList.h"
 #include "Utils.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StringList.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -113,7 +115,8 @@ const char *SBStringList::GetStringAtIndex(size_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
   if (IsValid()) {
-    return ConstString(m_opaque_up->GetStringAtIndex(idx)).GetCString();
+    return StringPool::GetSystemPool().Intern(
+        m_opaque_up->GetStringAtIndex(idx));
   }
   return nullptr;
 }
@@ -122,7 +125,8 @@ const char *SBStringList::GetStringAtIndex(size_t idx) const {
   LLDB_INSTRUMENT_VA(this, idx);
 
   if (IsValid()) {
-    return ConstString(m_opaque_up->GetStringAtIndex(idx)).GetCString();
+    return StringPool::GetSystemPool().Intern(
+        m_opaque_up->GetStringAtIndex(idx));
   }
   return nullptr;
 }

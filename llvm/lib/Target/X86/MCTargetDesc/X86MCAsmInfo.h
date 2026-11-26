@@ -26,11 +26,13 @@ class X86MCAsmInfoDarwin : public MCAsmInfoDarwin {
   virtual void anchor();
 
 public:
-  explicit X86MCAsmInfoDarwin(const Triple &Triple);
+  explicit X86MCAsmInfoDarwin(const Triple &Triple,
+                              const MCTargetOptions &Options);
 };
 
 struct X86_64MCAsmInfoDarwin : public X86MCAsmInfoDarwin {
-  explicit X86_64MCAsmInfoDarwin(const Triple &Triple);
+  explicit X86_64MCAsmInfoDarwin(const Triple &Triple,
+                                 const MCTargetOptions &Options);
   const MCExpr *
   getExprForPersonalitySymbol(const MCSymbol *Sym, unsigned Encoding,
                               MCStreamer &Streamer) const override;
@@ -40,28 +42,32 @@ class X86ELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit X86ELFMCAsmInfo(const Triple &Triple);
+  explicit X86ELFMCAsmInfo(const Triple &Triple,
+                           const MCTargetOptions &Options);
 };
 
 class X86MCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
   void anchor() override;
 
 public:
-  explicit X86MCAsmInfoMicrosoft(const Triple &Triple);
+  explicit X86MCAsmInfoMicrosoft(const Triple &Triple,
+                                 const MCTargetOptions &Options);
 };
 
 class X86MCAsmInfoMicrosoftMASM : public X86MCAsmInfoMicrosoft {
   void anchor() override;
 
 public:
-  explicit X86MCAsmInfoMicrosoftMASM(const Triple &Triple);
+  explicit X86MCAsmInfoMicrosoftMASM(const Triple &Triple,
+                                     const MCTargetOptions &Options);
 };
 
 class X86MCAsmInfoGNUCOFF : public MCAsmInfoGNUCOFF {
   void anchor() override;
 
 public:
-  explicit X86MCAsmInfoGNUCOFF(const Triple &Triple);
+  explicit X86MCAsmInfoGNUCOFF(const Triple &Triple,
+                               const MCTargetOptions &Options);
 };
 
 namespace X86 {

@@ -1,4 +1,4 @@
-; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa-walker>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Ensuring that external functions without attributes are MemoryDefs
 
@@ -49,5 +49,18 @@ if.end:
 ; CHECK: MemoryUse(3)
 ; CHECK-NEXT: call void @readEverything()
   call void @readEverything()
+  ret void
+}
+
+declare void @fn(ptr %p)
+
+define void @baz(ptr %p) {
+; CHECK:      1 = MemoryDef(liveOnEntry)
+; CHECK-NEXT: call void @fn(ptr %p)
+  call void @fn(ptr %p) memory(argmem: read, inaccessiblemem: readwrite)
+
+; CHECK:      MemoryUse(liveOnEntry)
+; CHECK-NEXT: call void @fn(ptr %p)
+  call void @fn(ptr %p) memory(argmem: read)
   ret void
 }

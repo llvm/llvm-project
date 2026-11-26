@@ -36,6 +36,7 @@
 
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
 #include <iterator>
 #include <optional>
@@ -104,7 +105,7 @@ private:
   using StackElement = std::pair<NodeRef, std::optional<ChildItTy>>;
 
   // VisitStack - Used to maintain the ordering.  Top = current block
-  std::vector<StackElement> VisitStack;
+  SmallVector<StackElement, 8> VisitStack;
 
   inline df_iterator(NodeRef Node) {
     this->Visited.insert(Node);
@@ -207,12 +208,11 @@ public:
     return this->Visited.contains(Node);
   }
 
-  /// getPathLength - Return the length of the path from the entry node to the
-  /// current node, counting both nodes.
+  /// Return the length of the path from the entry node to the current node,
+  /// counting both nodes.
   unsigned getPathLength() const { return VisitStack.size(); }
 
-  /// getPath - Return the n'th node in the path from the entry node to the
-  /// current node.
+  /// Return the n'th node in the path from the entry node to the current node.
   NodeRef getPath(unsigned n) const { return VisitStack[n].first; }
 };
 

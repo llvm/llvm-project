@@ -50,9 +50,9 @@ TEST_F(LlvmLibcExpm1Test, TrickyInputs) {
 
 TEST_F(LlvmLibcExpm1Test, InDoubleRange) {
   constexpr uint64_t COUNT = 1'231;
-  uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0.25).uintval();
-  uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(4.0).uintval();
-  uint64_t STEP = (STOP - START) / COUNT;
+  constexpr uint64_t START = FPBits(0.25).uintval();
+  constexpr uint64_t STOP = FPBits(4.0).uintval();
+  constexpr uint64_t STEP = (STOP - START) / COUNT;
 
   auto test = [&](mpfr::RoundingMode rounding_mode) {
     mpfr::ForceRoundingMode __r(rounding_mode);
@@ -62,7 +62,7 @@ TEST_F(LlvmLibcExpm1Test, InDoubleRange) {
     uint64_t fails = 0;
     uint64_t count = 0;
     uint64_t cc = 0;
-    double mx, mr = 0.0;
+    double mx = 0.0, mr = 0.0;
     double tol = 0.5;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {

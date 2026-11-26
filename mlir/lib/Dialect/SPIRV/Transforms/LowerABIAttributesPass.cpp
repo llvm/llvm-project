@@ -117,8 +117,8 @@ createGlobalVarForGraphEntryPoint(OpBuilder &builder, spirv::GraphARMOp graphOp,
 static LogicalResult
 getInterfaceVariables(mlir::FunctionOpInterface funcOp,
                       SmallVectorImpl<Attribute> &interfaceVars) {
-  auto module = funcOp->getParentOfType<spirv::ModuleOp>();
-  if (!module) {
+  auto moduleOp = funcOp->getParentOfType<spirv::ModuleOp>();
+  if (!moduleOp) {
     return failure();
   }
   spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(funcOp);
@@ -130,8 +130,8 @@ getInterfaceVariables(mlir::FunctionOpInterface funcOp,
   // call graph and collect all the interfaces. For now, just traverse the
   // instructions in this function.
   funcOp.walk([&](spirv::AddressOfOp addressOfOp) {
-    auto var =
-        module.lookupSymbol<spirv::GlobalVariableOp>(addressOfOp.getVariable());
+    auto var = moduleOp.lookupSymbol<spirv::GlobalVariableOp>(
+        addressOfOp.getVariable());
     // Per SPIR-V spec: "Before version 1.4, the interface's
     // storage classes are limited to the Input and Output storage classes.
     // Starting with version 1.4, the interface's storage classes are all
@@ -158,7 +158,8 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
                                             OpBuilder &builder) {
   auto entryPointAttrName = spirv::getEntryPointABIAttrName();
   auto entryPointAttr =
-      funcOp->getAttrOfType<spirv::EntryPointABIAttr>(entryPointAttrName);
+      funcOp->getDiscardableAttrOfType<spirv::EntryPointABIAttr>(
+          entryPointAttrName);
   if (!entryPointAttr) {
     return failure();
   }
@@ -228,9 +229,9 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
   }
   if (entryPointAttr.getWorkgroupSize() || entryPointAttr.getSubgroupSize() ||
       entryPointAttr.getTargetWidth())
-    funcOp->setAttr(entryPointAttrName, entryPointAttr);
+    funcOp->setDiscardableAttr(entryPointAttrName, entryPointAttr);
   else
-    funcOp->removeAttr(entryPointAttrName);
+    funcOp->removeDiscardableAttr(entryPointAttrName);
   return success();
 }
 
@@ -259,7 +260,7 @@ public:
 class ProcessGraphInterfaceVarABI final
     : public OpConversionPattern<spirv::GraphARMOp> {
 public:
-  using OpConversionPattern::OpConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(spirv::GraphARMOp graphOp, OpAdaptor adaptor,
@@ -277,7 +278,7 @@ class LowerABIAttributesPass final
 LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     spirv::FuncOp funcOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  if (!funcOp->getAttrOfType<spirv::EntryPointABIAttr>(
+  if (!funcOp->getDiscardableAttrOfType<spirv::EntryPointABIAttr>(
           spirv::getEntryPointABIAttrName())) {
     // TODO: Non-entry point functions are not handled.
     return failure();
@@ -399,12 +400,12 @@ LogicalResult ProcessGraphInterfaceVarABI::matchAndRewrite(
 void LowerABIAttributesPass::runOnOperation() {
   // Uses the signature conversion methodology of the dialect conversion
   // framework to implement the conversion.
-  spirv::ModuleOp module = getOperation();
+  spirv::ModuleOp moduleOp = getOperation();
   MLIRContext *context = &getContext();
 
-  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(module);
+  spirv::TargetEnvAttr targetEnvAttr = spirv::lookupTargetEnv(moduleOp);
   if (!targetEnvAttr) {
-    module->emitOpError("missing SPIR-V target env attribute");
+    moduleOp->emitOpError("missing SPIR-V target env attribute");
     return signalPassFailure();
   }
   spirv::TargetEnv targetEnv(targetEnvAttr);
@@ -449,7 +450,7 @@ void LowerABIAttributesPass::runOnOperation() {
     return op->getDialect()->getNamespace() ==
            spirv::SPIRVDialect::getDialectNamespace();
   });
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+  if (failed(applyPartialConversion(moduleOp, target, std::move(patterns))))
     return signalPassFailure();
 
   // Walks over all the FuncOps in spirv::ModuleOp to lower the entry point
@@ -457,8 +458,9 @@ void LowerABIAttributesPass::runOnOperation() {
   OpBuilder builder(context);
   SmallVector<spirv::FuncOp, 1> entryPointFns;
   auto entryPointAttrName = spirv::getEntryPointABIAttrName();
-  module.walk([&](spirv::FuncOp funcOp) {
-    if (funcOp->getAttrOfType<spirv::EntryPointABIAttr>(entryPointAttrName)) {
+  moduleOp.walk([&](spirv::FuncOp funcOp) {
+    if (funcOp->getDiscardableAttrOfType<spirv::EntryPointABIAttr>(
+            entryPointAttrName)) {
       entryPointFns.push_back(funcOp);
     }
   });

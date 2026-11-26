@@ -15,7 +15,6 @@
 // CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
-// CHECK-NEXT: core.FixedAddressDereference
 // CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
@@ -56,6 +55,7 @@
 // CHECK-NEXT: unix.cstring.BadSizeArg
 // CHECK-NEXT: unix.cstring.NotNullTerminated
 // CHECK-NEXT: unix.cstring.NullArg
+// CHECK-NEXT: unix.cstring.UninitializedRead
 
 int main() {
   int i;

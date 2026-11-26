@@ -7,7 +7,7 @@ from lldbsuite.test.lldbtest import *
 
 
 class TestBuildMethod(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
 
     def test(self):
         self.build()

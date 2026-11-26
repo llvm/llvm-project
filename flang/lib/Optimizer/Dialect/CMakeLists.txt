@@ -4,8 +4,11 @@ add_subdirectory(FIRCG)
 add_subdirectory(MIF)
 
 add_flang_library(FIRDialect
+  CUDAKernelOpInterface.cpp
   FIRAttr.cpp
+  FIRBoxUtils.cpp
   FIRDialect.cpp
+  FIRMemRefOpsInterfaces.cpp
   FIROperationMoveOpInterface.cpp
   FIROps.cpp
   FIRType.cpp
@@ -16,6 +19,7 @@ add_flang_library(FIRDialect
 
   DEPENDS
   CanonicalizationPatternsIncGen
+  CUDAKernelOpInterfaceIncGen
   FIROperationMoveOpInterfaceIncGen
   FIROpsIncGen
   FIRSafeTempArrayCopyAttrInterfaceIncGen
@@ -36,8 +40,12 @@ add_flang_library(FIRDialect
 
   MLIR_LIBS
   MLIRArithDialect
+  MLIRGPUDialect
+  MLIRMemRefDialect
+  MLIROpenACCDialect
+  MLIROpenACCUtils
+  MLIROpenMPDialect
   MLIRBuiltinToLLVMIRTranslation
-  MLIROpenMPToLLVM
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport
 )

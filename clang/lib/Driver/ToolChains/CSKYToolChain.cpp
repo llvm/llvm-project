@@ -75,6 +75,7 @@ CSKYToolChain::GetUnwindLibType(const llvm::opt::ArgList &Args) const {
 
 void CSKYToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
                                           llvm::opt::ArgStringList &CC1Args,
+                                          BoundArch BA,
                                           Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 }
@@ -147,13 +148,12 @@ void CSKY::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   bool WantCRTs =
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles);
 
-  const char *crtbegin, *crtend;
+  const char *crtbegin = nullptr, *crtend = nullptr;
   auto RuntimeLib = ToolChain.GetRuntimeLibType(Args);
   if (RuntimeLib == ToolChain::RLT_Libgcc) {
     crtbegin = "crtbegin.o";
     crtend = "crtend.o";
-  } else {
-    assert(RuntimeLib == ToolChain::RLT_CompilerRT);
+  } else if (RuntimeLib == ToolChain::RLT_CompilerRT) {
     crtbegin = ToolChain.getCompilerRTArgString(Args, "crtbegin",
                                                 ToolChain::FT_Object);
     crtend =
@@ -163,7 +163,8 @@ void CSKY::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (WantCRTs) {
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crt0.o")));
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crti.o")));
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
+    if (crtbegin)
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtbegin)));
   }
 
   Args.AddAllArgs(CmdArgs, options::OPT_L);
@@ -190,7 +191,8 @@ void CSKY::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (WantCRTs) {
-    CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
+    if (crtend)
+      CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath(crtend)));
     CmdArgs.push_back(Args.MakeArgString(ToolChain.GetFilePath("crtn.o")));
   }
 

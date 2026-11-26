@@ -7,7 +7,7 @@
 
 # RUN: %lldb -b -o 'image dump symtab' %t.obj 2>&1 | FileCheck %s
 
-# CHECK: warning: (x86_64) {{.*}}.obj No LZMA support found for reading .gnu_debugdata section
+# CHECK: warning: (x86_64) {{.*}}.obj no LZMA support found for reading .gnu_debugdata section
 
 --- !ELF
 FileHeader:

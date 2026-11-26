@@ -85,6 +85,11 @@ class StaticInterfaceMethod<string desc, string retTy, string methodName,
     : InterfaceMethod<desc, retTy, methodName, args, methodBody,
                       defaultImplementation>;
 
+// This class represents a pure virtual interface method.
+class PureVirtualInterfaceMethod<string desc, string retTy, string methodName,
+                            dag args = (ins)>
+    : InterfaceMethod<desc, retTy, methodName, args>;
+
 // This class represents a interface method declaration.
 class InterfaceMethodDeclaration<string desc, string retTy, string methodName,
                             dag args = (ins)>
@@ -103,6 +108,11 @@ class Interface<string name, list<Interface> baseInterfacesArg = []> {
   // To specify nested namespaces, use "::" as the delimiter, e.g., given
   // "A::B", ops will be placed in `namespace A { namespace B { <def> } }`.
   string cppNamespace = "";
+
+  // The C++ headers declaring this interface, as written in an `#include`
+  // directive. Generated declarations of any entity using this interface
+  // include these headers.
+  list<string> cppIncludes = [];
 
   // The list of methods defined by this interface.
   list<InterfaceMethod> methods = [];
@@ -177,6 +187,7 @@ class DeclareAttrInterfaceMethods<AttrInterface interface,
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
     let baseInterfaces = interface.baseInterfaces;
+    let cppIncludes = interface.cppIncludes;
 }
 class DeclareOpInterfaceMethods<OpInterface interface,
                                 list<string> overridenMethods = []>
@@ -187,6 +198,7 @@ class DeclareOpInterfaceMethods<OpInterface interface,
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
     let baseInterfaces = interface.baseInterfaces;
+    let cppIncludes = interface.cppIncludes;
 }
 class DeclareTypeInterfaceMethods<TypeInterface interface,
                                   list<string> overridenMethods = []>
@@ -197,6 +209,7 @@ class DeclareTypeInterfaceMethods<TypeInterface interface,
     let cppNamespace = interface.cppNamespace;
     let methods = interface.methods;
     let baseInterfaces = interface.baseInterfaces;
+    let cppIncludes = interface.cppIncludes;
 }
 
 #endif // INTERFACES_TD

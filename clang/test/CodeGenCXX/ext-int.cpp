@@ -67,6 +67,18 @@ struct HasBitIntMiddle {
 };
 // CHECK: %struct.HasBitIntMiddle = type { i32, i64, i32 }
 
+// Check array filler lowering.
+namespace gh189643 {
+_BitInt(129) arr[2] = {};
+// LIN64: {{.*}}arr{{.*}} = {{.*}}global [2 x [24 x i8]] zeroinitializer
+// LIN32: {{.*}}arr{{.*}} = {{.*}}global [2 x [20 x i8]] zeroinitializer
+// WIN: {{.*}}arr{{.*}} = {{.*}}global [2 x [24 x i8]] zeroinitializer
+_BitInt(129) arr2[10] = {1};
+// LIN64: {{.*}}arr2{{.*}} = {{.*}}global <{ <{ i8, [23 x i8] }>, [9 x <{ i8, [23 x i8] }>] }> <{ <{ i8, [23 x i8] }> <{ i8 1, [23 x i8] zeroinitializer }>, [9 x <{ i8, [23 x i8] }>] zeroinitializer }>
+// LIN32: {{.*}}arr2{{.*}} = {{.*}}global <{ <{ i8, [19 x i8] }>, [9 x <{ i8, [19 x i8] }>] }> <{ <{ i8, [19 x i8] }> <{ i8 1, [19 x i8] zeroinitializer }>, [9 x <{ i8, [19 x i8] }>] zeroinitializer }>
+// WIN: {{.*}}arr2{{.*}} = {{.*}}global <{ <{ i8, [23 x i8] }>, [9 x <{ i8, [23 x i8] }>] }> <{ <{ i8, [23 x i8] }> <{ i8 1, [23 x i8] zeroinitializer }>, [9 x <{ i8, [23 x i8] }>] zeroinitializer }>
+}
+
 // Force emitting of the above structs.
 void StructEmit() {
   BitFieldsByte A;
@@ -99,14 +111,14 @@ void BitfieldAssignment() {
 }
 
 unsigned _BitInt(33) ManglingTestRetParam(unsigned _BitInt(33) Param) {
-// LIN64: define{{.*}} i64 @_Z20ManglingTestRetParamDU33_(i64 %
+// LIN64: define{{.*}} i33 @_Z20ManglingTestRetParamDU33_(i64 %
 // LIN32: define{{.*}} i33 @_Z20ManglingTestRetParamDU33_(i33 %
 // WIN: define dso_local i33 @"?ManglingTestRetParam@@YAU?$_UBitInt@$0CB@@__clang@@U12@@Z"(i33
   return 0;
 }
 
 _BitInt(33) ManglingTestRetParam(_BitInt(33) Param) {
-// LIN64: define{{.*}} i64 @_Z20ManglingTestRetParamDB33_(i64 %
+// LIN64: define{{.*}} i33 @_Z20ManglingTestRetParamDB33_(i64 %
 // LIN32: define{{.*}} i33 @_Z20ManglingTestRetParamDB33_(i33 %
 // WIN: define dso_local i33 @"?ManglingTestRetParam@@YAU?$_BitInt@$0CB@@__clang@@U12@@Z"(i33
   return 0;
@@ -138,9 +150,9 @@ void ManglingInstantiator() {
   // LIN: call void @_Z16ManglingTestNTTPILDB99_993EEvv()
   // WIN: call void @"??$ManglingTestNTTP@$0DOB@@@YAXXZ"()
   ManglingDependent<4>();
-  // LIN: call signext i4 @_Z17ManglingDependentILi4EEDTtlDBT__EEv()
+  // LIN: call i4 @_Z17ManglingDependentILi4EEDTtlDBT__EEv()
   // WIN64: call i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
-  // WIN32: call signext i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
+  // WIN32: call i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
   uint16_t4 V;
   ManglingTestTemplateParam(V);
   // LIN: call void @_Z25ManglingTestTemplateParamIDv4_DU16_EvRT_(ptr
@@ -606,6 +618,50 @@ uint2_t2 TestBitIntVector2x2Alloca(uint2_t2 v1, uint2_t2 v2) {
   return v1 + v2;
 }
 
+typedef _BitInt(512) vint512_t3 __attribute__((ext_vector_type(3)));
+typedef _BitInt(256) vint256_t2 __attribute__((vector_size(64)));
+typedef unsigned _BitInt(256) uvint256_t2 __attribute__((vector_size(64)));
+
+vint512_t3 VectorCompareGTZero(vint512_t3 a) {
+  // CHECK: %[[CMP:.+]] = icmp sgt <3 x i512> %{{.+}}, zeroinitializer
+  // CHECK: %[[SEXT:.+]] = sext <3 x i1> %[[CMP]] to <3 x i512>
+  return a > 0;
+}
+
+vint256_t2 VectorCompareEQ(vint256_t2 a, vint256_t2 b) {
+  // CHECK: %[[CMP:.+]] = icmp eq <2 x i256> %{{.+}}, %{{.+}}
+  // CHECK: %[[SEXT:.+]] = sext <2 x i1> %[[CMP]] to <2 x i256>
+  return a == b;
+}
+
+vint256_t2 VectorCompareULT(uvint256_t2 a, uvint256_t2 b) {
+  // CHECK: %[[CMP:.+]] = icmp ult <2 x i256> %{{.+}}, %{{.+}}
+  // CHECK: %[[SEXT:.+]] = sext <2 x i1> %[[CMP]] to <2 x i256>
+  return a < b;
+}
+
+vint512_t3 VectorLogicalNot(vint512_t3 a) {
+  // CHECK: %[[CMP:.+]] = icmp eq <3 x i512> %{{.+}}, zeroinitializer
+  // CHECK: %[[SEXT:.+]] = sext <3 x i1> %[[CMP]] to <3 x i512>
+  return !a;
+}
+
+vint256_t2 VectorLogicalAnd(vint256_t2 a, vint256_t2 b) {
+  // CHECK: %[[LHS:.+]] = icmp ne <2 x i256> %{{.+}}, zeroinitializer
+  // CHECK: %[[RHS:.+]] = icmp ne <2 x i256> %{{.+}}, zeroinitializer
+  // CHECK: %[[AND:.+]] = and <2 x i1> %[[LHS]], %[[RHS]]
+  // CHECK: %[[SEXT:.+]] = sext <2 x i1> %[[AND]] to <2 x i256>
+  return a && b;
+}
+
+vint512_t3 VectorSelect(vint512_t3 a, vint512_t3 b, vint512_t3 c) {
+  // CHECK: %[[CMP:.+]] = icmp slt <3 x i512> %{{.+}}, zeroinitializer
+  // CHECK: %[[SEXT:.+]] = sext <3 x i1> %[[CMP]] to <3 x i512>
+  // CHECK: %[[COND:.+]] = icmp slt <3 x i512> %[[SEXT]], zeroinitializer
+  // CHECK: select <3 x i1> %[[COND]], <3 x i512> %{{.+}}, <3 x i512> %{{.+}}
+  return a < 0 ? b : c;
+}
+
 // Ensure that these types don't alias the normal int types.
 void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
               unsigned _BitInt(sizeof(int) * 8) ExtUInt,
@@ -616,6 +672,24 @@ void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
   ExtInt = 5;
   ExtUInt = 5;
   Other = 5;
+}
+
+namespace gh189643 {
+void test() {
+// LIN: define{{.*}} void @_ZN8gh1896434testEv()
+// WIN: define dso_local void @"?test@gh189643@@YAXXZ"()
+_BitInt(140) arr3[2] = {};
+// LIN64: %[[ARR3:.+]] = alloca [2 x [24 x i8]], align 16
+// LIN32: %[[ARR3:.+]] = alloca [2 x [20 x i8]], align 4
+// WIN: %[[ARR3:.+]] = alloca [2 x [24 x i8]],
+_BitInt(239) arr4[10] = {1};
+// CHECK: %[[ARR4:.+]] = alloca [10 x i256],
+// LIN64: call void @llvm.memset{{.+}}(ptr align 16 %[[ARR3]], i8 0, i64 48,
+// LIN32: call void @llvm.memset{{.+}}(ptr align 4 %[[ARR3]], i8 0, i32 40,
+// WIN: call void @llvm.memset{{.+}}(ptr {{.*}} %[[ARR3]], i8 0, {{.*}} 48,
+// CHECK: call void @llvm.memset{{.+}}(ptr {{.*}} %[[ARR4]], i8 0, {{.*}} 320,
+// CHECK: store i256 1, ptr {{.*}}
+}
 }
 
 // NoNewStructPathTBAA-DAG: ![[CHAR_TBAA_ROOT:.+]] = !{!"omnipotent char", ![[TBAA_ROOT:.+]], i64 0}

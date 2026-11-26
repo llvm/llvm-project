@@ -10,8 +10,8 @@
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/ValueObject/ValueObject.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <memory>
 #include <vector>
@@ -32,7 +32,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
   bool GetSummary(Stream &stream, const TypeSummaryOptions &options);
 
@@ -94,7 +94,7 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
   if (!ptr_obj)
     return lldb::ChildCacheState::eRefetch;
 
-  m_ptr_obj = ptr_obj->Clone(ConstString("pointer")).get();
+  m_ptr_obj = ptr_obj->Clone("pointer").get();
 
   // Add a 'deleter' child if there was a non-empty deleter type specified.
   //
@@ -106,7 +106,7 @@ lldb::ChildCacheState LibStdcppUniquePtrSyntheticFrontEnd::Update() {
       llvm::expectedToOptional(ptr_obj->GetByteSize()).value_or(0)) {
     ValueObjectSP del_obj = tuple_frontend->GetChildAtIndex(1);
     if (del_obj)
-      m_del_obj = del_obj->Clone(ConstString("deleter")).get();
+      m_del_obj = del_obj->Clone("deleter").get();
   }
 
   return lldb::ChildCacheState::eRefetch;
@@ -138,15 +138,15 @@ LibStdcppUniquePtrSyntheticFrontEnd::CalculateNumChildren() {
 }
 
 llvm::Expected<size_t>
-LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+LibStdcppUniquePtrSyntheticFrontEnd::GetIndexOfChildWithName(
+    llvm::StringRef name) {
   if (name == "ptr" || name == "pointer")
     return 0;
   if (name == "del" || name == "deleter")
     return 1;
   if (name == "obj" || name == "object" || name == "$$dereference$$")
     return 2;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool LibStdcppUniquePtrSyntheticFrontEnd::GetSummary(

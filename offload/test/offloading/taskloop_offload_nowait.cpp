@@ -1,7 +1,6 @@
 // RUN: %libomptarget-compilexx-and-run-generic
 
 // REQUIRES: gpu
-// XFAIL: intelgpu
 
 #include <cmath>
 #include <cstdlib>

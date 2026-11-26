@@ -27,7 +27,9 @@ typeContainsPointer(QualType T,
                     llvm::SmallPtrSet<const RecordDecl *, 4> &VisitedRD,
                     bool &IncompleteType) {
   QualType CanonicalType = T.getCanonicalType();
-  if (CanonicalType->isPointerType())
+  if (CanonicalType->isAnyPointerType() || CanonicalType->isReferenceType() ||
+      CanonicalType->isMemberFunctionPointerType() ||
+      CanonicalType->isBlockPointerType())
     return true; // base case
 
   // Look through typedef chain to check for special types.
@@ -44,6 +46,11 @@ typeContainsPointer(QualType T,
   // The type is an array; check the element type.
   if (const ArrayType *AT = dyn_cast<ArrayType>(CanonicalType))
     return typeContainsPointer(AT->getElementType(), VisitedRD, IncompleteType);
+
+  // The type is an atomic type.
+  if (const AtomicType *AT = dyn_cast<AtomicType>(CanonicalType))
+    return typeContainsPointer(AT->getValueType(), VisitedRD, IncompleteType);
+
   // The type is a struct, class, or union.
   if (const RecordDecl *RD = CanonicalType->getAsRecordDecl()) {
     if (!RD->isCompleteDefinition()) {

@@ -631,8 +631,7 @@ define void @v16i16_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvseq.h $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.b $xr1, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvxori.b $xr0, $xr0, 255
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %a0
@@ -649,8 +648,7 @@ define void @v8i32_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvseq.w $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.b $xr1, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvxori.b $xr0, $xr0, 255
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %a0
@@ -667,8 +665,7 @@ define void @v4i64_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
 ; CHECK-NEXT:    xvld $xr1, $a2, 0
 ; CHECK-NEXT:    xvseq.d $xr0, $xr0, $xr1
-; CHECK-NEXT:    xvrepli.b $xr1, -1
-; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvxori.b $xr0, $xr0, 255
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %a0

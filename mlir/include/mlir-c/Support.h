@@ -156,6 +156,10 @@ MLIR_CAPI_EXPORTED MlirLlvmThreadPool mlirLlvmThreadPoolCreate(void);
 /// Destroy an LLVM thread pool.
 MLIR_CAPI_EXPORTED void mlirLlvmThreadPoolDestroy(MlirLlvmThreadPool pool);
 
+/// Returns the maximum number of threads in the thread pool.
+MLIR_CAPI_EXPORTED int
+mlirLlvmThreadPoolGetMaxConcurrency(MlirLlvmThreadPool pool);
+
 //===----------------------------------------------------------------------===//
 // MlirLlvmRawFdOStream.
 //===----------------------------------------------------------------------===//

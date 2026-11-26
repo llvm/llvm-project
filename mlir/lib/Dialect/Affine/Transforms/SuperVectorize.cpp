@@ -126,6 +126,9 @@ using namespace vector;
 /// In the future, these operations will expose a contract to constrain the
 /// search on vectorization patterns and sizes.
 ///
+/// Each transfer is emitted under a `vector.mask` that enables the lanes inside
+/// the memref. The examples in this file leave the mask out.
+///
 /// Occurrence of super-vectorization in the compiler flow:
 /// =======================================================
 /// This is an active area of investigation. We start with 2 remarks to position
@@ -808,16 +811,14 @@ void VectorizationState::registerOpVectorReplacement(Operation *replaced,
 /// scalar version still exists after vectorization), like uniforms.
 ///
 /// Example:
-///   * 'replaced': block argument or operation outside of the vectorized loop.
+///   * 'replaced': block argument or operation result defined outside of the
+///     vectorized loop.
 ///   * 'replacement': %0 = vector.broadcast %1 : f32 to vector<128xf32>
 void VectorizationState::registerValueVectorReplacement(
     Value replaced, Operation *replacement) {
   assert(replacement->getNumResults() == 1 &&
          "Expected single-result replacement");
-  if (Operation *defOp = replaced.getDefiningOp())
-    registerOpVectorReplacement(defOp, replacement);
-  else
-    registerValueVectorReplacementImpl(replaced, replacement->getResult(0));
+  registerValueVectorReplacementImpl(replaced, replacement->getResult(0));
 }
 
 /// Registers the vector replacement of a block argument (e.g., iter_args).
@@ -889,6 +890,16 @@ void VectorizationState::getScalarValueReplacementsFor(
 static void eraseLoopNest(AffineForOp forOp) {
   LLVM_DEBUG(dbgs() << "[early-vect]+++++ erasing:\n" << forOp << "\n");
   forOp.erase();
+}
+
+/// Recursively erases the users of the results of 'op'.
+static void eraseUsers(Operation *op) {
+  while (!op->use_empty()) {
+    Operation *user = *op->user_begin();
+    eraseUsers(user);
+    LLVM_DEBUG(dbgs() << "[early-vect]+++++ erasing user:\n" << *user << "\n");
+    user->erase();
+  }
 }
 
 /// Erases the scalar loop nest after its successful vectorization.
@@ -965,6 +976,19 @@ static arith::ConstantOp vectorizeConstant(arith::ConstantOp constOp,
 
   // Register vector replacement for future uses in the scope.
   state.registerOpVectorReplacement(constOp, newConstOp);
+
+  // Index-typed constants are also used as scalar indices in vectorized memory
+  // operations (e.g., as operands to vector.transfer_read/write). Register a
+  // scalar replacement so that getScalarValueReplacementsFor can find a live
+  // value in the vectorized loop body instead of falling back to the original
+  // constant, which will be erased along with the scalar loop.
+  if (isa<IndexType>(scalarTy)) {
+    auto scalarConstOp = arith::ConstantOp::create(
+        state.builder, constOp.getLoc(), constOp.getValue());
+    state.registerValueScalarReplacement(constOp.getResult(),
+                                         scalarConstOp.getResult());
+  }
+
   return newConstOp;
 }
 
@@ -1252,9 +1276,11 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
-  auto transfer = vector::TransferReadOp::create(
-      state.builder, loadOp.getLoc(), vectorType, loadOp.getMemRef(), indices,
-      /*padding=*/std::nullopt, permutationMap);
+  Value transferVal = createReadOrMaskedRead(
+      state.builder, loadOp.getLoc(), loadOp.getMemRef(), vectorType,
+      /*padValue=*/std::nullopt, /*useInBoundsInsteadOfMasking=*/false, indices,
+      permutationMap);
+  Operation *transfer = transferVal.getDefiningOp();
 
   // Register replacement for future uses in the scope.
   state.registerOpVectorReplacement(loadOp, transfer);
@@ -1299,10 +1325,20 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ permutationMap: ");
   LLVM_DEBUG(permutationMap.print(dbgs()));
 
-  auto transfer = vector::TransferWriteOp::create(
+  // A transfer_write with a broadcast dimension (constant expr in the
+  // permutation map) is invalid. Bail out to avoid producing invalid IR.
+  if (llvm::any_of(permutationMap.getResults(),
+                   llvm::IsaPred<AffineConstantExpr>)) {
+    LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ store permutation map has "
+                         "broadcast dims, bailing out\n");
+    return nullptr;
+  }
+
+  Operation *transfer = createWriteOrMaskedWrite(
       state.builder, storeOp.getLoc(), vectorValue, storeOp.getMemRef(),
-      indices, permutationMap);
-  LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << transfer);
+      SmallVector<Value>(indices.begin(), indices.end()),
+      /*useInBoundsInsteadOfMasking=*/false, permutationMap);
+  LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << *transfer);
 
   // Register replacement for future uses in the scope.
   state.registerOpVectorReplacement(storeOp, transfer);
@@ -1383,10 +1419,17 @@ static Operation *vectorizeAffineForOp(AffineForOp forOp,
     }
   }
 
+  // Replace bound operands with their scalar replacements. This is required
+  // when the bounds reference an outer loop's induction variable, which will
+  // be replaced (and eventually erased) once the scalar loop nest is removed.
+  SmallVector<Value, 8> lbOperands, ubOperands;
+  state.getScalarValueReplacementsFor(forOp.getLowerBoundOperands(),
+                                      lbOperands);
+  state.getScalarValueReplacementsFor(forOp.getUpperBoundOperands(),
+                                      ubOperands);
   auto vecForOp = AffineForOp::create(
-      state.builder, forOp.getLoc(), forOp.getLowerBoundOperands(),
-      forOp.getLowerBoundMap(), forOp.getUpperBoundOperands(),
-      forOp.getUpperBoundMap(), newStep, vecIterOperands,
+      state.builder, forOp.getLoc(), lbOperands, forOp.getLowerBoundMap(),
+      ubOperands, forOp.getUpperBoundMap(), newStep, vecIterOperands,
       /*bodyBuilder=*/[](OpBuilder &, Location, Value, ValueRange) {
         // Make sure we don't create a default terminator in the loop body as
         // the proper terminator will be added during vectorization.
@@ -1472,9 +1515,11 @@ static Operation *widenOp(Operation *op, VectorizationState &state) {
   // name that works both in scalar mode and vector mode.
   // TODO: Is it worth considering an Operation.clone operation which
   // changes the type so we can promote an Operation with less boilerplate?
-  Operation *vecOp =
-      state.builder.create(op->getLoc(), op->getName().getIdentifier(),
-                           vectorOperands, vectorTypes, op->getAttrs());
+  OperationState vecState(op->getLoc(), op->getName(), vectorOperands,
+                          vectorTypes,
+                          op->getDiscardableAttrDictionary().getValue());
+  vecState.propertiesAttr = op->getPropertiesAsAttribute();
+  Operation *vecOp = state.builder.create(vecState);
   state.registerOpVectorReplacement(op, vecOp);
   return vecOp;
 }
@@ -1636,10 +1681,13 @@ vectorizeLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
   if (opVecResult.wasInterrupted()) {
     LLVM_DEBUG(dbgs() << "[early-vect]+++++ failed vectorization for: "
                       << rootLoop << "\n");
-    // Erase vector loop nest if it was created.
+    // Erase vector loop nest if it was created, and all its users.
     auto vecRootLoopIt = state.opVectorReplacement.find(rootLoop);
-    if (vecRootLoopIt != state.opVectorReplacement.end())
-      eraseLoopNest(cast<AffineForOp>(vecRootLoopIt->second));
+    if (vecRootLoopIt != state.opVectorReplacement.end()) {
+      auto vecRootLoop = cast<AffineForOp>(vecRootLoopIt->second);
+      eraseUsers(vecRootLoop);
+      eraseLoopNest(vecRootLoop);
+    }
 
     return failure();
   }
@@ -1809,6 +1857,17 @@ void affine::vectorizeChildAffineLoops(
 /// predetermined patterns.
 void Vectorize::runOnOperation() {
   func::FuncOp f = getOperation();
+  if (vectorSizes.empty()) {
+    f.emitError("The 'virtual-vector-size' option must be specified.");
+    return signalPassFailure();
+  }
+
+  if (llvm::any_of(vectorSizes, [](int64_t size) { return size <= 0; })) {
+    f.emitError(
+        "The 'virtual-vector-size' option must contain only positive values.");
+    return signalPassFailure();
+  }
+
   if (!fastestVaryingPattern.empty() &&
       fastestVaryingPattern.size() != vectorSizes.size()) {
     f.emitRemark("Fastest varying pattern specified with different size than "
@@ -1818,11 +1877,6 @@ void Vectorize::runOnOperation() {
 
   if (vectorizeReductions && vectorSizes.size() != 1) {
     f.emitError("Vectorizing reductions is supported only for 1-D vectors.");
-    return signalPassFailure();
-  }
-
-  if (llvm::any_of(vectorSizes, [](int64_t size) { return size <= 0; })) {
-    f.emitError("Vectorization factor must be greater than zero.");
     return signalPassFailure();
   }
 

@@ -44,7 +44,7 @@ def ImmThreeAsmOperand : AsmOperandClass {
 def immthree : RISCVOp {
   let ParserMatchClass = ImmThreeAsmOperand;
   let OperandType = "OPERAND_THREE";
-  let DecoderMethod = "decodeImmThreeOperand";
+  let DecoderMethod = "decodeFixedImmOperand<3>";
 }
 
 def ImmFourAsmOperand : AsmOperandClass {
@@ -57,10 +57,20 @@ def ImmFourAsmOperand : AsmOperandClass {
 def immfour : RISCVOp {
   let ParserMatchClass = ImmFourAsmOperand;
   let OperandType = "OPERAND_FOUR";
-  let DecoderMethod = "decodeImmFourOperand";
+  let DecoderMethod = "decodeFixedImmOperand<4>";
 }
 
 def tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
+
+def th_memidx_rs1 : RegisterOperand<GPR> {
+  let DecoderMethod = "decodeTHMemIdxRs1Operand";
+  let hasCompleteDecoder = false;
+}
+
+def th_mempair_rs1 : RegisterOperand<GPR> {
+  let DecoderMethod = "decodeTHMemPairRs1Operand";
+  let hasCompleteDecoder = false;
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -162,7 +172,7 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class THLoadPair<bits<5> funct5, string opcodestr, Operand consttype>
   : RVInstRBase<0b100, OPC_CUSTOM_0,
                 (outs GPR:$rd, GPR:$rs2),
-                (ins GPR:$rs1, uimm2:$uimm2, consttype:$const3or4),
+                (ins th_mempair_rs1:$rs1, uimm2:$uimm2, consttype:$const3or4),
                  opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
   bits<2> uimm2;
   bits<0> const3or4;
@@ -217,7 +227,7 @@ class THLoadIndexed<RegisterClass Ty, bits<5> funct5, string opcodestr>
 
 class THLoadUpdate<bits<5> funct5, string opcodestr>
     : RVInstIBase<0b100, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
-                  (ins GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
+                  (ins th_memidx_rs1:$rs1, simm5:$simm5, uimm2:$uimm2),
                   opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
   bits<5> simm5;
   bits<2> uimm2;
@@ -257,13 +267,13 @@ class THStoreUpdate<bits<5> funct5, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 multiclass THVdotVMAQA_VX<string opcodestr, bits<6> funct6> {
-  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
+  let VS1VS2Constraint = WidenV in
   def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>;
 }
 
 multiclass THVdotVMAQA<string opcodestr, bits<6> funct6>
     : THVdotVMAQA_VX<opcodestr, funct6> {
-  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
+  let VS1VS2Constraint = WidenV in
   def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv", EarlyClobber=1>;
 }
 
@@ -557,22 +567,22 @@ multiclass VPatTernaryVMAQA_VV_VX<string intrinsic, string instruction,
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasVendorXTHeadBa] in {
-def : Pat<(add_like_non_imm12 (shl GPR:$rs2, uimm2:$uimm2), (XLenVT GPR:$rs1)),
+def : Pat<(riscv_add_like_non_imm12 (shl GPR:$rs2, uimm2:$uimm2), (XLenVT GPR:$rs1)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 def : Pat<(XLenVT (riscv_shl_add GPR:$rs2, tuimm2:$uimm2, GPR:$rs1)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, tuimm2:$uimm2)>;
 
 // Reuse complex patterns from StdExtZba
-def : Pat<(add_like_non_imm12 sh1add_op:$rs2, (XLenVT GPR:$rs1)),
+def : Pat<(riscv_add_like_non_imm12 sh1add_op:$rs2, (XLenVT GPR:$rs1)),
           (TH_ADDSL GPR:$rs1, sh1add_op:$rs2, 1)>;
-def : Pat<(add_like_non_imm12 sh2add_op:$rs2, (XLenVT GPR:$rs1)),
+def : Pat<(riscv_add_like_non_imm12 sh2add_op:$rs2, (XLenVT GPR:$rs1)),
           (TH_ADDSL GPR:$rs1, sh2add_op:$rs2, 2)>;
-def : Pat<(add_like_non_imm12 sh3add_op:$rs2, (XLenVT GPR:$rs1)),
+def : Pat<(riscv_add_like_non_imm12 sh3add_op:$rs2, (XLenVT GPR:$rs1)),
           (TH_ADDSL GPR:$rs1, sh3add_op:$rs2, 3)>;
 
-def : Pat<(add_like (XLenVT GPR:$r), CSImm12MulBy4:$i),
+def : Pat<(riscv_add_like (XLenVT GPR:$r), CSImm12MulBy4:$i),
           (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), CSImm12MulBy4:$i)), 2)>;
-def : Pat<(add_like (XLenVT GPR:$r), CSImm12MulBy8:$i),
+def : Pat<(riscv_add_like (XLenVT GPR:$r), CSImm12MulBy8:$i),
           (TH_ADDSL GPR:$r, (XLenVT (ADDI (XLenVT X0), CSImm12MulBy8:$i)), 3)>;
 } // Predicates = [HasVendorXTHeadBa]
 

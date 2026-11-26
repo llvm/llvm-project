@@ -108,6 +108,29 @@ static cl::opt<bool, true> XPollyProcessUnprofitable(
         "Process scops that are unlikely to benefit from Polly optimizations."),
     cl::location(PollyProcessUnprofitable), cl::cat(PollyCategory));
 
+/// Bypass some of Polly's profitability checks that might harm
+/// loops from getting annotated with vectorize (see
+/// PollyOptimizeForVectorization).
+bool polly::PollyDetectForVectorization;
+static cl::opt<bool, true> XPollyDetectForVectorization(
+    "polly-detect-for-vectorization",
+    cl::desc("Bypass some Polly profitability checks for vectorization"),
+    cl::location(PollyDetectForVectorization), cl::init(false),
+    cl::cat(PollyCategory));
+
+/// Bypass some of Polly's profitability checks and add vectorize.enable
+/// metadata to vectorizable loops after analyses.
+///
+/// Combines -polly-detect-for-vectorization and
+/// -polly-annotate-metadata-vectorize
+bool polly::PollyOptimizeForVectorization;
+static cl::opt<bool, true> XPollyOptimizeForVectorization(
+    "polly-optimize-for-vectorization",
+    cl::desc("Make the profitability heuristic consider vectorization "
+             "opportunities"),
+    cl::location(PollyOptimizeForVectorization), cl::init(false),
+    cl::cat(PollyCategory));
+
 static cl::list<std::string> OnlyFunctions(
     "polly-only-func",
     cl::desc("Only run on functions that match a regex. "
@@ -486,8 +509,7 @@ bool ScopDetection::onlyValidRequiredInvariantLoads(
 
     for (auto NonAffineRegion : Context.NonAffineSubRegionSet) {
       if (isSafeToLoadUnconditionally(Load->getPointerOperand(),
-                                      Load->getType(), Load->getAlign(), DL,
-                                      nullptr))
+                                      Load->getType(), Load->getAlign(), DL))
         continue;
 
       if (NonAffineRegion->contains(Load) &&
@@ -571,7 +593,7 @@ bool ScopDetection::isValidSwitch(BasicBlock &BB, SwitchInst *SI,
                                      ConditionSCEV, ConditionSCEV, SI);
 }
 
-bool ScopDetection::isValidBranch(BasicBlock &BB, BranchInst *BI,
+bool ScopDetection::isValidBranch(BasicBlock &BB, CondBrInst *BI,
                                   Value *Condition, bool IsLoopBranch,
                                   DetectionContext &Context) {
   // Constant integer conditions are always affine.
@@ -665,22 +687,24 @@ bool ScopDetection::isValidCFG(BasicBlock &BB, bool IsLoopBranch,
   if (isa<ReturnInst>(TI) && CurRegion.isTopLevelRegion())
     return true;
 
-  Value *Condition = getConditionFromTerminator(TI);
+  if (isa<UncondBrInst>(TI))
+    return true;
 
-  if (!Condition)
-    return invalid<ReportInvalidTerminator>(Context, /*Assert=*/true, &BB);
-
-  // UndefValue is not allowed as condition.
-  if (isa<UndefValue>(Condition))
-    return invalid<ReportUndefCond>(Context, /*Assert=*/true, TI, &BB);
-
-  if (BranchInst *BI = dyn_cast<BranchInst>(TI))
+  if (auto *BI = dyn_cast<CondBrInst>(TI)) {
+    Value *Condition = BI->getCondition();
+    if (isa<UndefValue>(Condition))
+      return invalid<ReportUndefCond>(Context, /*Assert=*/true, TI, &BB);
     return isValidBranch(BB, BI, Condition, IsLoopBranch, Context);
+  }
 
-  SwitchInst *SI = dyn_cast<SwitchInst>(TI);
-  assert(SI && "Terminator was neither branch nor switch");
+  if (auto *SI = dyn_cast<SwitchInst>(TI)) {
+    Value *Condition = SI->getCondition();
+    if (isa<UndefValue>(Condition))
+      return invalid<ReportUndefCond>(Context, /*Assert=*/true, TI, &BB);
+    return isValidSwitch(BB, SI, Condition, IsLoopBranch, Context);
+  }
 
-  return isValidSwitch(BB, SI, Condition, IsLoopBranch, Context);
+  return invalid<ReportInvalidTerminator>(Context, /*Assert=*/true, &BB);
 }
 
 bool ScopDetection::isValidCallInst(CallInst &CI,
@@ -870,7 +894,9 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
     std::vector<const SCEV *> MaxTerms;
     SCEVRemoveMax::rewrite(Pair.second, SE, &MaxTerms);
     if (!MaxTerms.empty()) {
-      Terms.insert(Terms.begin(), MaxTerms.begin(), MaxTerms.end());
+      for (const SCEV *Max : MaxTerms)
+        Terms.push_back(
+            SE.getTruncateOrSignExtend(Max, Pair.second->getType()));
       continue;
     }
     // In case the outermost expression is a plain add, we check if any of its
@@ -886,7 +912,7 @@ ScopDetection::getDelinearizationTerms(DetectionContext &Context,
         if (auto *AF2 = dyn_cast<SCEVAddRecExpr>(Op))
           collectParametricTerms(SE, AF2, Terms);
         if (auto *AF2 = dyn_cast<SCEVMulExpr>(Op)) {
-          SmallVector<const SCEV *, 0> Operands;
+          SmallVector<SCEVUse, 0> Operands;
 
           for (const SCEV *MulOp : AF2->operands()) {
             if (auto *Const = dyn_cast<SCEVConstant>(MulOp))
@@ -1415,7 +1441,7 @@ ScopDetection::countBeneficialLoops(Region *R, ScalarEvolution &SE,
   }
 
   auto SubLoops =
-      L ? L->getSubLoopsVector() : std::vector<Loop *>(LI.begin(), LI.end());
+      L ? L->getSubLoops() : std::vector<Loop *>(LI.begin(), LI.end());
 
   for (auto &SubLoop : SubLoops)
     if (R->contains(SubLoop)) {
@@ -1734,6 +1760,14 @@ bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
   if (PollyProcessUnprofitable)
+    return true;
+
+  // Skip these checks when polly is attempting to add vectorization
+  // metadata as they reject some beneficial cases
+  //
+  // TODO: Add some checks related to vectorization too instead of
+  // only skipping existing checks
+  if (PollyDetectForVectorization || PollyOptimizeForVectorization)
     return true;
 
   // We can probably not do a lot on scops that only write or only read

@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-class AMDGPUMachineFunction;
+class AMDGPUMachineFunctionInfo;
 class AMDGPUSubtarget;
 struct ArgDescriptor;
 
@@ -45,12 +45,22 @@ public:
   /// original size will not change the value.
   static unsigned numBitsSigned(SDValue Op, SelectionDAG &DAG);
 
+  /// \returns The known bits of a 24-bit multiply (MUL_U24/MUL_I24) with a
+  /// \p BitWidth wide result, given the known bits of its operands. Only the
+  /// low 24 bits of each operand are used, zero- or sign-extended depending on
+  /// \p IsSigned.
+  static KnownBits computeKnownBitsForMul24(const KnownBits &LHSKnown,
+                                            const KnownBits &RHSKnown,
+                                            unsigned BitWidth, bool IsSigned,
+                                            bool SelfMultiply);
+
 protected:
   SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   /// Split a vector store into multiple scalar stores.
   /// \returns The resulting chain.
 
+  SDValue LowerCTLS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFCEIL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFTRUNC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFRINT(SDValue Op, SelectionDAG &DAG) const;
@@ -63,8 +73,6 @@ protected:
   static bool allowApproxFunc(const SelectionDAG &DAG, SDNodeFlags Flags);
   static bool needsDenormHandlingF32(const SelectionDAG &DAG, SDValue Src,
                                      SDNodeFlags Flags);
-  SDValue getIsLtSmallestNormal(SelectionDAG &DAG, SDValue Op,
-                                SDNodeFlags Flags) const;
   SDValue getIsFinite(SelectionDAG &DAG, SDValue Op, SDNodeFlags Flags) const;
   std::pair<SDValue, SDValue> getScaledLogInput(SelectionDAG &DAG,
                                                 const SDLoc SL, SDValue Op,
@@ -72,7 +80,6 @@ protected:
 
   SDValue LowerFLOG2(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOGCommon(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFLOG10(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFLOGUnsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                           bool IsLog10, SDNodeFlags Flags) const;
   SDValue lowerFEXP2(SDValue Op, SelectionDAG &DAG) const;
@@ -85,13 +92,17 @@ protected:
   SDValue lowerFEXP10Unsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                             SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFEXPF64(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFPOW(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerCTLZResults(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerCTLZ_CTTZ(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerINT_TO_FP16(SDValue Op, SelectionDAG &DAG, EVT FP16Ty) const;
   SDValue LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG, bool Signed) const;
+  SDValue lowerINT_TO_FPImpl(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
 
@@ -106,7 +117,9 @@ protected:
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
-  bool shouldCombineMemoryType(EVT VT) const;
+  /// Check whether value Val can be supported by v_mov_b64, for the current
+  /// target.
+  bool isInt64ImmLegal(SDNode *Val, SelectionDAG &DAG) const;
   SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAssertSZExtCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -134,20 +147,20 @@ protected:
   getConstantNegateCost(const ConstantFPSDNode *C) const;
 
   bool isConstantCostlierToNegate(SDValue N) const;
-  bool isConstantCheaperToNegate(SDValue N) const;
   SDValue performFNegCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFAbsCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performRcpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
 
-  virtual SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
+  virtual SDValue LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;
+
+  SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
 
   /// Return 64-bit value Op as two 32-bit integers.
   std::pair<SDValue, SDValue> split64BitValue(SDValue Op,
                                               SelectionDAG &DAG) const;
-  SDValue getLoHalf64(SDValue Op, SelectionDAG &DAG) const;
   SDValue getHiHalf64(SDValue Op, SelectionDAG &DAG) const;
 
   /// Split a vector type into two parts. The first part is a power of two
@@ -171,10 +184,9 @@ protected:
   /// Split a vector store into 2 stores of half the vector.
   SDValue SplitVectorStore(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSDIVREM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerUDIVREM(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerDIVREM24(SDValue Op, SelectionDAG &DAG, bool sign) const;
+  SDValue LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG, bool sign) const;
   void LowerUDIVREM64(SDValue Op, SelectionDAG &DAG,
                                     SmallVectorImpl<SDValue> &Results) const;
 
@@ -185,8 +197,6 @@ protected:
 public:
   AMDGPUTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI,
                        const AMDGPUSubtarget &AMDGPUSTI);
-
-  bool mayIgnoreSignedZero(SDValue Op) const;
 
   static inline SDValue stripBitcast(SDValue Val) {
     return Val.getOpcode() == ISD::BITCAST ? Val.getOperand(0) : Val;
@@ -219,14 +229,15 @@ public:
   unsigned getVectorIdxWidth(const DataLayout &) const override;
   bool isSelectSupported(SelectSupportKind) const override;
 
-  bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                    bool ForCodeSize) const override;
+  FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                             bool ForCodeSize) const override;
   bool ShouldShrinkFPConstant(EVT VT) const override;
   bool shouldReduceLoadWidth(SDNode *Load, ISD::LoadExtType ExtType, EVT ExtVT,
                              std::optional<unsigned> ByteOffset) const override;
 
   bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
                                const MachineMemOperand &MMO) const final;
+  bool shouldCombineMemoryType(EVT VT) const;
 
   bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT,
                                     unsigned NumElem,
@@ -248,6 +259,10 @@ public:
 
   AtomicExpansionKind shouldCastAtomicRMWIInIR(AtomicRMWInst *) const override {
     return AtomicExpansionKind::None;
+  }
+
+  bool shouldIssueAtomicLoadForAtomicEmulationLoop() const override {
+    return false;
   }
 
   static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
@@ -272,17 +287,29 @@ public:
   SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op,
+                                         const APInt &OriginalDemandedBits,
+                                         const APInt &OriginalDemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
+
   void ReplaceNodeResults(SDNode * N,
                           SmallVectorImpl<SDValue> &Results,
                           SelectionDAG &DAG) const override;
 
   SDValue combineFMinMaxLegacyImpl(const SDLoc &DL, EVT VT, SDValue LHS,
                                    SDValue RHS, SDValue True, SDValue False,
-                                   SDValue CC, DAGCombinerInfo &DCI) const;
+                                   SDValue CC, SDNodeFlags Flags,
+                                   DAGCombinerInfo &DCI) const;
 
+  /// \p Flags must be the select flags, not the compare (SELECT_CC
+  /// flags come from the fcmp and say nothing about the selected value).
   SDValue combineFMinMaxLegacy(const SDLoc &DL, EVT VT, SDValue LHS,
                                SDValue RHS, SDValue True, SDValue False,
-                               SDValue CC, DAGCombinerInfo &DCI) const;
+                               SDValue CC, SDNodeFlags Flags,
+                               DAGCombinerInfo &DCI) const;
 
   // FIXME: Turn off MergeConsecutiveStores() before Instruction Selection for
   // AMDGPU.  Commit r319036,
@@ -325,11 +352,9 @@ public:
                                             const MachineRegisterInfo &MRI,
                                             unsigned Depth = 0) const override;
 
-  bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
-                                           const APInt &DemandedElts,
-                                           const SelectionDAG &DAG,
-                                           bool PoisonOnly, bool ConsiderFlags,
-                                           unsigned Depth) const override;
+  bool canCreateUndefOrPoisonForTargetNode(
+      SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
+      UndefPoisonKind Kind, bool ConsiderFlags, unsigned Depth) const override;
 
   bool isKnownNeverNaNForTargetNode(SDValue Op, const APInt &DemandedElts,
                                     const SelectionDAG &DAG, bool SNaN = false,
@@ -407,6 +432,15 @@ public:
     return true;
   }
 };
+
+/// Strip fabs/fneg/fcopysign from a value to get the underlying source.
+/// Useful for comparing values where sign doesn't matter (e.g., frexp).
+inline SDValue peekFPSignOps(SDValue Val) {
+  while (Val.getOpcode() == ISD::FNEG || Val.getOpcode() == ISD::FABS ||
+         Val.getOpcode() == ISD::FCOPYSIGN)
+    Val = Val.getOperand(0);
+  return Val;
+}
 
 } // End namespace llvm
 

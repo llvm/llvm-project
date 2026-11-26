@@ -638,593 +638,593 @@ vfwredusum.vs v8, v8, v8
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      14    13.00                        14    Andes45VALU[13]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      18    17.00                        18    Andes45VALU[17]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VALU[7]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDAND_VS                 vredand.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VREDAND_VS                 vredand.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      14    13.00                        14    Andes45VALU[13]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      18    17.00                        18    Andes45VALU[17]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VALU[7]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VREDMAXU_VS                vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      14    13.00                        14    Andes45VALU[13]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      18    17.00                        18    Andes45VALU[17]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VALU[7]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMAX_VS                 vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VREDMAX_VS                 vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      14    13.00                        14    Andes45VALU[13]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      18    17.00                        18    Andes45VALU[17]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VALU[7]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMINU_VS                vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VREDMINU_VS                vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      14    13.00                        14    Andes45VALU[13]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      18    17.00                        18    Andes45VALU[17]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VALU[7]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDMIN_VS                 vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VREDMIN_VS                 vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      14    13.00                        14    Andes45VALU[13]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      18    17.00                        18    Andes45VALU[17]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VALU[7]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDOR_VS                  vredor.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VREDOR_VS                  vredor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      14    13.00                        14    Andes45VALU[13]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      18    17.00                        18    Andes45VALU[17]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VALU[7]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDSUM_VS                 vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VREDSUM_VS                 vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      14    13.00                        14    Andes45VALU[13]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      18    17.00                        18    Andes45VALU[17]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VALU[7]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VREDXOR_VS                 vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VREDXOR_VS                 vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      25    24.00                        25    Andes45VALU[24]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      24    23.00                        24    Andes45VALU[23]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  1      23    22.00                        23    Andes45VALU[22]                            VWREDSUMU_VS               vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VALU[12]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VALU[16]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      25    24.00                        25    Andes45VALU[24]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VALU[9]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VALU[11]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VALU[15]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      24    23.00                        24    Andes45VALU[23]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VALU[8]                             VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VALU[10]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VALU[14]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VALU                                VWREDSUM_VS                vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  1      23    22.00                        23    Andes45VALU[22]                            VWREDSUM_VS                vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VFMIS[9]                            VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VFMIS[9]                            VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VFMIS[9]                            VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VFMIS[10]                           VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VFMIS[12]                           VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VFMIS[16]                           VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VFMIS[8]                            VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VFMIS[8]                            VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VFMIS[9]                            VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VFMIS[11]                           VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VFMIS[15]                           VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VFMIS[7]                            VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VFMIS[8]                            VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VFMIS[10]                           VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMAX_VS                vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VFMIS[14]                           VFREDMAX_VS                vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VFMIS[9]                            VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VFMIS[9]                            VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VFMIS[9]                            VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VFMIS[10]                           VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      13    12.00                        13    Andes45VFMIS[12]                           VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      17    16.00                        17    Andes45VFMIS[16]                           VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VFMIS[8]                            VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VFMIS[8]                            VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      10    9.00                         10    Andes45VFMIS[9]                            VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      12    11.00                        12    Andes45VFMIS[11]                           VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      16    15.00                        16    Andes45VFMIS[15]                           VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      8     7.00                         8     Andes45VFMIS[7]                            VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      9     8.00                         9     Andes45VFMIS[8]                            VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      11    10.00                        11    Andes45VFMIS[10]                           VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VFMIS                               VFREDMIN_VS                vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  1      15    14.00                        15    Andes45VFMIS[14]                           VFREDMIN_VS                vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      130   125.00                       130   Andes45VMAC[125]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      130   125.00                       130   Andes45VMAC[125]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      130   125.00                       130   Andes45VMAC[125]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      258   253.00                       258   Andes45VMAC[253]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      514   509.00                       514   Andes45VMAC[509]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      1026  1021.00                      1026  Andes45VMAC[1021]                          VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      66    61.00                        66    Andes45VMAC[61]                            VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      66    61.00                        66    Andes45VMAC[61]                            VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      130   125.00                       130   Andes45VMAC[125]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      258   253.00                       258   Andes45VMAC[253]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      514   509.00                       514   Andes45VMAC[509]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      34    29.00                        34    Andes45VMAC[29]                            VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      66    61.00                        66    Andes45VMAC[61]                            VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      130   125.00                       130   Andes45VMAC[125]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      258   253.00                       258   Andes45VMAC[253]                           VFREDOSUM_VS               vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      26    21.00                        26    Andes45VMAC[21]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      26    21.00                        26    Andes45VMAC[21]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      26    21.00                        26    Andes45VMAC[21]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      30    25.00                        30    Andes45VMAC[25]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      38    33.00                        38    Andes45VMAC[33]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      54    49.00                        54    Andes45VMAC[49]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      22    17.00                        22    Andes45VMAC[17]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      22    17.00                        22    Andes45VMAC[17]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      26    21.00                        26    Andes45VMAC[21]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      34    29.00                        34    Andes45VMAC[29]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      50    45.00                        50    Andes45VMAC[45]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      18    13.00                        18    Andes45VMAC[13]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      22    17.00                        22    Andes45VMAC[17]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      30    25.00                        30    Andes45VMAC[25]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      46    41.00                        46    Andes45VMAC[41]                            VFREDUSUM_VS               vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      130   125.00                       130   Andes45VMAC[125]                           VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      130   125.00                       130   Andes45VMAC[125]                           VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      130   125.00                       130   Andes45VMAC[125]                           VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      258   253.00                       258   Andes45VMAC[253]                           VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      514   509.00                       514   Andes45VMAC[509]                           VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      1026  1021.00                      1026  Andes45VMAC[1021]                          VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      66    61.00                        66    Andes45VMAC[61]                            VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      66    61.00                        66    Andes45VMAC[61]                            VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      130   125.00                       130   Andes45VMAC[125]                           VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      258   253.00                       258   Andes45VMAC[253]                           VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  1      514   509.00                       514   Andes45VMAC[509]                           VFWREDOSUM_VS              vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      26    21.00                        26    Andes45VMAC[21]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      26    21.00                        26    Andes45VMAC[21]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      26    21.00                        26    Andes45VMAC[21]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      34    29.00                        34    Andes45VMAC[29]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      50    45.00                        50    Andes45VMAC[45]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      82    77.00                        82    Andes45VMAC[77]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      22    17.00                        22    Andes45VMAC[17]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      22    17.00                        22    Andes45VMAC[17]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      30    25.00                        30    Andes45VMAC[25]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      46    41.00                        46    Andes45VMAC[41]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  1      1     1.00                         1     Andes45VMAC                                VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  1      78    73.00                        78    Andes45VMAC[73]                            VFWREDUSUM_VS              vfwredusum.vs	v8, v8, v8
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - Andes45ALU
@@ -1247,595 +1247,595 @@ vfwredusum.vs v8, v8, v8
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -     294.00  -      -      -      -      -      -     212.00  -      -     30.00   -     52.00   -      -
+# CHECK-NEXT:  -      -     294.00  -      -      -      -      -      -     2348.00  -     -     310.00  -     7584.00  -     -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     13.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     17.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     7.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vredand.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     13.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     17.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     7.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vredmaxu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     13.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     17.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     7.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     13.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     17.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     7.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vredminu.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     13.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     17.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     7.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     13.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     17.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     7.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vredor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     13.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     17.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     7.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vredsum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     13.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     17.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     7.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vredxor.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     24.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     23.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     22.00   -      -      -      -      -      -      -     vwredsumu.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, mf8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     16.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e8, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     24.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     9.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     11.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     15.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     23.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     8.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     10.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     14.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     22.00   -      -      -      -      -      -      -     vwredsum.vs	v8, v16, v24
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     10.00   -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     12.00   -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     11.00   -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     15.00   -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00    -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     10.00   -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmax.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     14.00   -      -      -      -     vfredmax.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     10.00   -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     12.00   -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     9.00    -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     11.00   -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     15.00   -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     7.00    -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     10.00   -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -     vfredmin.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     14.00   -      -      -      -     vfredmin.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     125.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     125.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     125.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     253.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     509.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1021.00  -     -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     61.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     61.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     125.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     253.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     509.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     29.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     61.00   -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     125.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     253.00  -      -     vfredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     21.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     21.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     21.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     25.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     33.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     49.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     17.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     17.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     21.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     29.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     45.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     13.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     17.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     25.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     41.00   -      -     vfredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     125.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     125.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     125.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     253.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     509.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1021.00  -     -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     61.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     61.00   -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     125.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     253.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredosum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     509.00  -      -     vfwredosum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     21.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     21.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     21.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     29.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     45.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     77.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     17.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     17.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     25.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     41.00   -      -     vfwredusum.vs	v8, v8, v8
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -     vfwredusum.vs	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -     73.00   -      -     vfwredusum.vs	v8, v8, v8

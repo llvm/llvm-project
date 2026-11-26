@@ -18,7 +18,9 @@ include "mlir/IR/TensorEncoding.td"
 // All of the sparse tensor attributes will extend this class.
 class SparseTensor_Attr<string name,
                         list<Trait> traits = []>
-    : AttrDef<SparseTensor_Dialect, name, traits>;
+    : AttrDef<SparseTensor_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/SparseTensor/IR/SparseTensor.h"];
+}
 
 //===----------------------------------------------------------------------===//
 // A simple bitset attribute wrapped around a single int64_t to encode a set of
@@ -125,6 +127,10 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     loops operate on sparse storage formats rather than tensors with a sparsity
     encoding. Compiler passes that run before this sparsifier pass need to be aware
     of the semantics of tensor types with such a sparsity encoding.
+
+    This encoding can only be applied to tensors with supported primary element
+    types (e.g., `f16`, `f32`, `f64`, `bf16`, `i8`, `i16`, `i32`, `i64`, and
+    complex variants of `f32` and `f64`).
 
     In this encoding, we use **dimension** to refer to the axes of the semantic tensor,
     and **level** to refer to the axes of the actual storage format, i.e., the

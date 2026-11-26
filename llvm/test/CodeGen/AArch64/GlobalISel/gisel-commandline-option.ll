@@ -41,7 +41,7 @@
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -aarch64-enable-global-isel-at-O=-1 \
-; RUN:   | FileCheck %s --check-prefix NOT-ENABLED
+; RUN:   | FileCheck %s --check-prefix DISABLED
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
@@ -58,7 +58,7 @@
 ; ENABLED-O1-NEXT: Function Alias Analysis Results
 ; ENABLED:       IRTranslator
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT:  Analysis for ComputingKnownBits
+; ENABLED-O1-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
 ; ENABLED-O1-NEXT:  Analysis containing CSE Info
 ; ENABLED-O1-NEXT:  PreLegalizerCombiner

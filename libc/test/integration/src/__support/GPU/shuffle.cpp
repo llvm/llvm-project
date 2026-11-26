@@ -16,14 +16,14 @@ using namespace LIBC_NAMESPACE;
 // Each iteration reduces the width, so it will broadcast to a subset we check.
 static void test_shuffle() {
   uint64_t mask = gpu::get_lane_mask();
-  EXPECT_EQ(cpp::popcount(mask), gpu::get_lane_size());
+  EXPECT_EQ(static_cast<uint32_t>(cpp::popcount(mask)), gpu::get_lane_size());
 
   uint32_t x = gpu::get_lane_id();
   for (uint32_t width = gpu::get_lane_size(); width > 0; width /= 2)
     EXPECT_EQ(gpu::shuffle(mask, 0, x, width), (x / width) * width);
 }
 
-TEST_MAIN(int argc, char **argv, char **envp) {
+TEST_MAIN(int, char **, char **) {
   if (gpu::get_thread_id() >= gpu::get_lane_size())
     return 0;
 

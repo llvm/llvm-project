@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=armv6-eabi %s -o - | FileCheck %s --check-prefixes=CHECK,ARMV6
 ; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+dsp %s -o - | FileCheck %s --check-prefixes=CHECK,THUMB
 
-define arm_aapcs_vfpcc i32 @usat_lsl(i32 %num){
+define i32 @usat_lsl(i32 %num){
 ; CHECK-LABEL: usat_lsl:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    usat r0, #7, r0, lsl #2
@@ -13,7 +13,7 @@ entry:
   ret i32 %0
 }
 
-define arm_aapcs_vfpcc i32 @usat_asr(i32 %num){
+define i32 @usat_asr(i32 %num){
 ; CHECK-LABEL: usat_asr:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    usat r0, #7, r0, asr #2
@@ -24,7 +24,7 @@ entry:
   ret i32 %0
 }
 
-define arm_aapcs_vfpcc i32 @usat_lsl2(i32 %num){
+define i32 @usat_lsl2(i32 %num){
 ; ARMV6-LABEL: usat_lsl2:
 ; ARMV6:       @ %bb.0: @ %entry
 ; ARMV6-NEXT:    lsl r0, r0, #15
@@ -52,7 +52,7 @@ entry:
   ret i32 %3
 }
 
-define arm_aapcs_vfpcc i32 @usat_asr2(i32 %num){
+define i32 @usat_asr2(i32 %num){
 ; ARMV6-LABEL: usat_asr2:
 ; ARMV6:       @ %bb.0: @ %entry
 ; ARMV6-NEXT:    asr r1, r0, #15

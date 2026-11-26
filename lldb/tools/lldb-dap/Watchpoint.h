@@ -34,6 +34,10 @@ public:
 
   lldb::addr_t GetAddress() const { return m_addr; }
 
+  lldb::watch_id_t GetID() { return m_wp.GetID(); }
+
+  bool HasSameSizeAndType(const Watchpoint &wp) const;
+
 protected:
   lldb::addr_t m_addr;
   size_t m_size;

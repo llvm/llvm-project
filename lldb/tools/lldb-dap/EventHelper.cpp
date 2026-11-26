@@ -25,26 +25,21 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBPlatform.h"
+#include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/API/SBUnixSignals.h"
+#include "lldb/Host/PosixApi.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 #include <mutex>
 #include <utility>
-
-#if defined(_WIN32)
-#define NOMINMAX
-#include <windows.h>
-
-#ifndef PATH_MAX
-#define PATH_MAX MAX_PATH
-#endif
-#endif
 
 using namespace llvm;
 
@@ -178,12 +173,43 @@ void SendProcessEvent(DAP &dap, LaunchMethod launch_method) {
   dap.SendJSON(llvm::json::Value(std::move(event)));
 }
 
+static std::string GetSignalName(lldb::SBThread &thread) {
+  if (thread.GetStopReasonDataCount() == 0)
+    return {};
+
+  const int32_t signo =
+      static_cast<int32_t>(thread.GetStopReasonDataAtIndex(0));
+  lldb::SBUnixSignals signals = thread.GetProcess().GetUnixSignals();
+  if (const char *name = signals.GetSignalAsCString(signo))
+    return name;
+  return llvm::formatv("signal {0}", signo).str();
+}
+
+static std::string GetInstrumentationRuntimeName(lldb::SBThread &thread) {
+  lldb::SBStream stream;
+  if (!thread.GetStopReasonExtendedInfoAsJSON(stream))
+    return {};
+
+  llvm::Expected<llvm::json::Value> report =
+      llvm::json::parse({stream.GetData(), stream.GetSize()});
+  if (!report) {
+    llvm::consumeError(report.takeError());
+    return {};
+  }
+
+  const llvm::json::Object *obj = report->getAsObject();
+  if (!obj)
+    return {};
+  return obj->getString("instrumentation_class").value_or("").str();
+}
+
 static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
                              bool all_threads_stopped, bool preserve_focus) {
   protocol::StoppedEventBody body;
+  body.reason = protocol::eStoppedReasonPause;
   if (on_entry) {
     body.reason = protocol::eStoppedReasonEntry;
-  } else {
+  } else if (thread.IsValid()) {
     switch (thread.GetStopReason()) {
     case lldb::eStopReasonTrace:
     case lldb::eStopReasonPlanComplete:
@@ -214,14 +240,22 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
     } break;
     case lldb::eStopReasonWatchpoint: {
       body.reason = protocol::eStoppedReasonDataBreakpoint;
-      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
+      lldb::break_id_t bp_id =
+          ApplyWatchpointMask(thread.GetStopReasonDataAtIndex(0));
       body.hitBreakpointIds.push_back(bp_id);
       body.text = llvm::formatv("data breakpoint {0}", bp_id).str();
     } break;
+    // DAP lacks stopped reasons for signals and instrumentation.
     case lldb::eStopReasonSignal:
+      body.reason = protocol::eStoppedReasonException;
+      body.text = GetSignalName(thread);
+      break;
     case lldb::eStopReasonException:
+      body.reason = protocol::eStoppedReasonException;
+      break;
     case lldb::eStopReasonInstrumentation:
       body.reason = protocol::eStoppedReasonException;
+      body.text = GetInstrumentationRuntimeName(thread);
       break;
     case lldb::eStopReasonExec:
     case lldb::eStopReasonFork:
@@ -230,18 +264,20 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
       body.reason = protocol::eStoppedReasonEntry;
       break;
     case lldb::eStopReasonInterrupt:
+    case lldb::eStopReasonDynamicLoader:
       body.reason = protocol::eStoppedReasonPause;
       break;
     case lldb::eStopReasonThreadExiting:
     case lldb::eStopReasonInvalid:
     case lldb::eStopReasonNone:
-      return;
+      break;
     }
+
+    lldb::SBStream description;
+    thread.GetStopDescription(description);
+    body.description = {description.GetData(), description.GetSize()};
   }
   lldb::tid_t tid = thread.GetThreadID();
-  lldb::SBStream description;
-  thread.GetStopDescription(description);
-  body.description = {description.GetData(), description.GetSize()};
   body.threadId = tid;
   body.allThreadsStopped = all_threads_stopped;
   body.preserveFocusHint = preserve_focus;
@@ -266,7 +302,8 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
   llvm::DenseSet<lldb::tid_t> old_thread_ids;
   old_thread_ids.swap(dap.thread_ids);
 
-  lldb::tid_t focused_tid = LLDB_INVALID_THREAD_ID;
+  lldb::SBThread focused_thread;
+  std::vector<lldb::SBThread> stopped_threads;
   for (auto thread : process) {
     // Collect all known thread ids for sending thread events.
     dap.thread_ids.insert(thread.GetThreadID());
@@ -274,22 +311,31 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
     if (!ThreadHasStopReason(thread))
       continue;
 
-    // When we stop, report allThreadsStopped for the *first* stopped thread to
-    // ensure the list of stopped threads is up to date.
-    bool first_stop = focused_tid == LLDB_INVALID_THREAD_ID;
-    SendStoppedEvent(dap, thread, on_entry, /*all_threads_stopped=*/first_stop,
-                     /*preserve_focus=*/!first_stop);
-
-    // Default focus to the first stopped thread.
-    if (focused_tid == LLDB_INVALID_THREAD_ID)
-      focused_tid = thread.GetThreadID();
+    // Focus on the first stopped thread
+    if (!focused_thread.IsValid())
+      focused_thread = thread;
+    else
+      stopped_threads.push_back(thread);
   }
 
-  if (focused_tid == LLDB_INVALID_THREAD_ID)
+  // If no stopped threads were detected, fallback to the selected thread.
+  if (!focused_thread)
+    focused_thread = process.GetSelectedThread();
+
+  if (!focused_thread)
     return make_error<DAPError>("no stopped threads");
 
+  // Send stopped events for each thread thats stopped.
+  for (auto thread : stopped_threads)
+    SendStoppedEvent(dap, thread, on_entry, /*all_threads_stopped=*/false,
+                     /*preserve_focus=*/true);
+
+  // Notify the focused thread last to ensure the UI is focused correctly.
+  SendStoppedEvent(dap, focused_thread, on_entry, /*all_threads_stopped=*/true,
+                   /*preserve_focus=*/false);
+
   // Update focused thread.
-  dap.focus_tid = focused_tid;
+  dap.focus_tid = focused_thread.GetThreadID();
 
   for (const auto &tid : old_thread_ids)
     if (!dap.thread_ids.contains(tid))
@@ -462,7 +508,7 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
 
     // NOTE: Both mutexes must be acquired to prevent deadlock when
     // handling `modules_request`, which also requires both locks.
-    lldb::SBMutex api_mutex = dap->GetAPIMutex();
+    lldb::SBMutex api_mutex = target.GetAPIMutex();
     const std::scoped_lock<lldb::SBMutex, std::mutex> guard(api_mutex,
                                                             dap->modules_mutex);
     for (uint32_t i = 0; i < num_modules; ++i) {
@@ -470,7 +516,7 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
           lldb::SBTarget::GetModuleAtIndexFromEvent(i, event);
 
       std::optional<protocol::Module> p_module =
-          CreateModule(dap->target, module, remove_module);
+          CreateModule(target, module, remove_module);
       if (!p_module)
         continue;
 
@@ -512,8 +558,14 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
     // IDs. The new DAP instance will use these IDs to find the existing
     // debugger and target via FindDebuggerWithID and
     // FindTargetByGloballyUniqueID.
+
+    // Per the DAP specification, the configuration of a startDebugging request
+    // holds the arguments passed to the new debug session. The arguments must
+    // only contain properties understood by the `launch` or `attach` requests
+    // of the debug adapter and they must not contain any client-specific
+    // properties (e.g. `type`) or client-specific features (e.g. substitutable
+    // 'variables').
     llvm::json::Object configuration;
-    configuration.try_emplace("type", "lldb");
     configuration.try_emplace("name", created_target.GetTargetSessionName());
 
     json::Object session{{"targetId", created_target.GetGloballyUniqueID()},
@@ -615,7 +667,7 @@ static void HandleDiagnosticEvent(const lldb::SBEvent &event, Log &log) {
     std::string type = GetStringValue(data.GetValueForKey("type"));
     std::string message = GetStringValue(data.GetValueForKey("message"));
     dap_instance->SendOutput(OutputType::Important,
-                             llvm::formatv("{0}: {1}", type, message).str());
+                             llvm::formatv("{0}: {1}\n", type, message).str());
   }
 }
 
@@ -645,17 +697,9 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
   llvm::set_thread_name(thread_name);
 
   lldb::SBListener listener = debugger.GetListener();
-  broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
-  debugger.GetBroadcaster().AddListener(
-      listener, lldb::eBroadcastBitError | lldb::eBroadcastBitWarning);
-
-  // listen for thread events.
-  listener.StartListeningForEventClass(
-      debugger, lldb::SBThread::GetBroadcasterClassName(),
-      lldb::SBThread::eBroadcastBitStackChanged);
-
   lldb::SBEvent event;
   bool done = false;
+
   while (!done) {
     if (!listener.WaitForEvent(UINT32_MAX, event))
       continue;
@@ -678,6 +722,7 @@ void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
       }
     }
   }
+  DAP_LOG(log, "Stopped Event Thread.");
 }
 
 } // namespace lldb_dap

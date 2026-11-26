@@ -747,7 +747,7 @@ static __isl_give isl_set *intersect_stride_constraint(__isl_take isl_set *set,
 
 	if (!build)
 		return isl_set_free(set);
-	if (!isl_ast_build_has_stride(build, build->depth))
+	if (!isl_ast_build_has_stride(build))
 		return set;
 
 	stride = isl_ast_build_get_stride_constraint(build);
@@ -1344,7 +1344,7 @@ __isl_give isl_set *isl_ast_build_get_stride_constraint(
 
 	pos = build->depth;
 
-	if (!isl_ast_build_has_stride(build, pos))
+	if (!isl_ast_build_has_stride(build))
 		return isl_set_universe(isl_ast_build_get_space(build, 1));
 
 	stride = isl_ast_build_get_stride(build, pos);
@@ -1384,7 +1384,7 @@ __isl_give isl_multi_aff *isl_ast_build_get_stride_expansion(
 	space = isl_space_map_from_set(space);
 	ma = isl_multi_aff_identity(space);
 
-	if (!isl_ast_build_has_stride(build, pos))
+	if (!isl_ast_build_has_stride(build))
 		return ma;
 
 	offset = isl_ast_build_get_offset(build, pos);
@@ -1407,7 +1407,7 @@ __isl_give isl_ast_build *isl_ast_build_include_stride(
 
 	if (!build)
 		return NULL;
-	if (!isl_ast_build_has_stride(build, build->depth))
+	if (!isl_ast_build_has_stride(build))
 		return build;
 	build = isl_ast_build_cow(build);
 	if (!build)
@@ -1927,14 +1927,16 @@ isl_bool isl_ast_build_aff_is_nonneg(__isl_keep isl_ast_build *build,
 	return empty;
 }
 
-/* Does the dimension at (internal) position "pos" have a non-trivial stride?
+/* Does the dimension at the current depth have a non-trivial stride?
  */
-isl_bool isl_ast_build_has_stride(__isl_keep isl_ast_build *build, int pos)
+isl_bool isl_ast_build_has_stride(__isl_keep isl_ast_build *build)
 {
 	isl_val *v;
 	isl_bool has_stride;
+	isl_size pos;
 
-	if (!build)
+	pos = isl_ast_build_get_depth(build);
+	if (pos < 0)
 		return isl_bool_error;
 
 	v = isl_vec_get_element_val(build->strides, pos);

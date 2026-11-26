@@ -310,3 +310,168 @@ void test() {
 }
 
 }
+
+namespace GH179118 {
+
+namespace std {
+
+template <bool __v> struct integral_constant {
+  static constexpr bool value = __v;
+};
+
+template <typename _Tp, typename... _Args>
+using __is_constructible_impl =
+    integral_constant<__is_constructible(_Tp, _Args...)>;
+
+template <typename _Tp, typename... _Args>
+struct is_constructible : public std::__is_constructible_impl<_Tp, _Args...> {};
+
+template <bool> struct _cond {
+  template <typename Then, typename> using invoke = Then;
+};
+template <> struct _cond<false> {
+  template <typename, typename Else> using invoke = Else;
+};
+
+template <bool If, typename Then, typename Else>
+using conditional_t = typename _cond<If>::template invoke<Then, Else>;
+
+template <bool, class _Tp = void> struct enable_if;
+template <class _Tp> struct enable_if<true, _Tp> {
+  typedef _Tp type;
+};
+template <bool _Bp, class _Tp = void>
+using enable_if_t = typename enable_if<_Bp, _Tp>::type;
+
+} // namespace std
+
+namespace base {
+
+template <typename...> struct disjunction {};
+template <typename B1, typename... Bn>
+struct disjunction<B1, Bn...>
+    : std::conditional_t<B1::value, B1, disjunction<>> {};
+template <typename> class Optional;
+
+namespace internal {
+template <typename T, typename U>
+using IsConvertibleFromOptional =
+    disjunction<std::is_constructible<T, Optional<U> &>>;
+template <typename T, typename U>
+using IsAssignableFromOptional = IsConvertibleFromOptional<T, U>;
+} // namespace internal
+
+template <typename T> class Optional {
+public:
+  Optional(Optional &&);
+
+  template <typename U,
+            std::enable_if_t<internal::IsConvertibleFromOptional<T, U>::value> =
+                false>
+  Optional(Optional<U>);
+
+  Optional(const Optional &);
+  void operator=(Optional &&);
+
+  template <typename U>
+  std::enable_if_t<std::is_constructible<T, U>::value> operator=(U &&);
+
+  template <typename U>
+  std::enable_if_t<internal::IsAssignableFromOptional<T, U>::Optional>
+  operator=(Optional<U>);
+};
+
+} // namespace base
+
+struct LayoutUnit {
+  template <typename IntegerType> LayoutUnit(IntegerType);
+};
+
+static_assert(
+    std::is_constructible<LayoutUnit, base::Optional<LayoutUnit> &>::value, "");
+
+}
+
+namespace GH49197 {
+
+template<typename>
+struct indirect_int {
+	using type = int;
+};
+
+struct s {};
+
+void operator+(s, int);
+
+template<typename T>
+void operator+(typename indirect_int<T>::type, T);
+
+void test() {
+	s() + 1;
+}
+
+}
+
+#if __cplusplus >= 202002L
+
+namespace GH126855 {
+
+enum { shift = 1 };
+
+template<typename T>
+concept AnyConcept = requires
+{
+    { T::Function() };
+};
+
+template<AnyConcept T>
+inline T& operator<<(T& t, char value)
+{
+    return t;
+}
+
+int main()
+{
+    return 1 << shift;
+}
+
+}
+
+namespace GH128902 {
+
+struct FloatWrapper
+{
+  double Data;
+
+  constexpr FloatWrapper() = default;
+
+  constexpr FloatWrapper(double const Data_) :
+    Data{Data_} {}
+
+  constexpr operator double const &() const
+    { return Data; }
+
+  constexpr operator double &()
+    { return Data; }
+};
+
+
+template<typename T>
+concept CExpr = false;
+
+template<CExpr T>
+int operator +(T const &lhs, int const rhs)
+  { return 6; }
+
+int main()
+{
+  FloatWrapper u;
+
+  u = 2.0 + u;
+
+  return 0;
+}
+
+}
+
+#endif

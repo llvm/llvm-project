@@ -15,12 +15,16 @@
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/tuple.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility/integer_sequence.h"
+#include "src/__support/endian_internal.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
 #include <stddef.h>
 
@@ -47,6 +51,9 @@ LIBC_INLINE_VAR constexpr size_t native_vector_size = 16 / sizeof(T);
 template <typename T> LIBC_INLINE constexpr size_t native_vector_size = 1;
 #endif
 
+template <typename T>
+using get_as_integer_type_t = unsigned _BitInt(sizeof(T) * CHAR_BIT);
+
 } // namespace internal
 
 // Type aliases.
@@ -56,6 +63,8 @@ template <typename T, size_t N = internal::native_vector_size<T>>
 using simd = T [[clang::ext_vector_type(N)]];
 template <typename T>
 using simd_mask = simd<bool, internal::native_vector_size<T>>;
+template <typename T, size_t N = internal::native_vector_size<T>>
+using simd_bitmask = internal::get_as_integer_type_t<simd<bool, N>>;
 
 // Type trait helpers.
 template <typename T>
@@ -81,9 +90,6 @@ template <typename T, size_t N> struct simd_element_type<simd<T, N>> {
 template <typename T>
 using simd_element_type_t = typename simd_element_type<T>::type;
 namespace internal {
-
-template <typename T>
-using get_as_integer_type_t = unsigned _BitInt(sizeof(T) * CHAR_BIT);
 
 template <typename T> LIBC_INLINE constexpr T poison() {
   return __builtin_nondeterministic_value(T());
@@ -191,6 +197,40 @@ LIBC_INLINE constexpr static int find_last_set(simd<T, N> v) {
   constexpr size_t size = simd_size_v<simd<T, N>>;
   return size - 1 - __builtin_clzg(simd_cast<bool>(v));
 }
+template <size_t N>
+LIBC_INLINE constexpr static auto to_bitmask(const simd<bool, N> &m) {
+  using bitmask_t = internal::get_as_integer_type_t<simd<bool, N>>;
+  if constexpr (N == sizeof(simd<bool, N>) * CHAR_BIT) {
+    // Bitcasts can only be used safely here if they fit an integer type,
+    // otherwise the unused bits are poison.
+    if constexpr (Endian::IS_LITTLE) {
+      return cpp::bit_cast<bitmask_t>(m);
+    } else {
+      return __builtin_elementwise_bitreverse(cpp::bit_cast<bitmask_t>(m));
+    }
+  } else {
+    bitmask_t res = 0;
+    for (size_t i = 0; i < N; ++i)
+      res |= static_cast<bitmask_t>(m[i]) << i;
+    return res;
+  }
+}
+template <size_t N>
+LIBC_INLINE constexpr static simd<bool, N>
+from_bitmask(internal::get_as_integer_type_t<simd<bool, N>> bm) {
+  if constexpr (N == sizeof(simd<bool, N>) * CHAR_BIT) {
+    if constexpr (Endian::IS_LITTLE) {
+      return cpp::bit_cast<simd<bool, N>>(bm);
+    } else {
+      return cpp::bit_cast<simd<bool, N>>(__builtin_elementwise_bitreverse(bm));
+    }
+  } else {
+    simd<bool, N> res{};
+    for (size_t i = 0; i < N; ++i)
+      res[i] = (bm >> i) & 1;
+    return res;
+  }
+}
 
 // Elementwise operations.
 template <typename T, size_t N>
@@ -207,9 +247,22 @@ LIBC_INLINE constexpr static simd<T, N> abs(simd<T, N> x) {
   return __builtin_elementwise_abs(x);
 }
 template <typename T, size_t N>
-LIBC_INLINE constexpr static simd<T, N> fma(simd<T, N> x, simd<T, N> y,
-                                            simd<T, N> z) {
-  return __builtin_elementwise_fma(x, y, z);
+LIBC_INLINE constexpr static simd<T, N> multiply_add(simd<T, N> x, simd<T, N> y,
+                                                     simd<T, N> z) {
+#if __has_builtin(__builtin_elementwise_fma)
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
+  if constexpr (cpp::is_same_v<T, float>)
+    return __builtin_elementwise_fma(x, y, z);
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+  if constexpr (cpp::is_same_v<T, double>)
+    return __builtin_elementwise_fma(x, y, z);
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+#endif // __has_builtin(__builtin_elementwise_fma)
+
+  simd<T, N> mul = x * y;
+  return mul + z;
 }
 template <typename T, size_t N>
 LIBC_INLINE constexpr static simd<T, N> ceil(simd<T, N> x) {
@@ -288,7 +341,8 @@ LIBC_INLINE constexpr static T hmax(simd<T, N> v) {
 
 // Accessor helpers.
 template <typename T>
-LIBC_INLINE T constexpr static load(const void *ptr, bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS
+    LIBC_INLINE T constexpr static load(const void *ptr, bool aligned = false) {
   if (aligned)
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   T tmp;
@@ -297,13 +351,14 @@ LIBC_INLINE T constexpr static load(const void *ptr, bool aligned = false) {
   return tmp;
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static void store(T v, void *ptr, bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static void
+store(T v, void *ptr, bool aligned = false) {
   if (aligned)
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   __builtin_memcpy_inline(ptr, &v, sizeof(T));
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static T
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static T
 load_masked(simd<bool, simd_size_v<T>> mask, const void *ptr,
             T passthru = internal::poison<T>(), bool aligned = false) {
   if (aligned)
@@ -312,33 +367,34 @@ load_masked(simd<bool, simd_size_v<T>> mask, const void *ptr,
       mask, reinterpret_cast<const simd_element_type_t<T> *>(ptr), passthru);
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static void store_masked(simd<bool, simd_size_v<T>> mask,
-                                               T v, void *ptr,
-                                               bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static void
+store_masked(simd<bool, simd_size_v<T>> mask, T v, void *ptr,
+             bool aligned = false) {
   if (aligned)
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   __builtin_masked_store(mask, v,
                          reinterpret_cast<simd_element_type_t<T> *>(ptr));
 }
 template <typename T, typename Idx, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static T gather(simd<bool, simd_size_v<T>> mask, Idx idx,
-                                      const void *base, bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static T
+gather(simd<bool, simd_size_v<T>> mask, Idx idx, const void *base,
+       bool aligned = false) {
   if (aligned)
     base = __builtin_assume_aligned(base, alignof(T));
   return __builtin_masked_gather(
       mask, idx, reinterpret_cast<const simd_element_type_t<T> *>(base));
 }
 template <typename T, typename Idx, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static void scatter(simd<bool, simd_size_v<T>> mask,
-                                          Idx idx, T v, void *base,
-                                          bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static void
+scatter(simd<bool, simd_size_v<T>> mask, Idx idx, T v, void *base,
+        bool aligned = false) {
   if (aligned)
     base = __builtin_assume_aligned(base, alignof(T));
   __builtin_masked_scatter(mask, idx, v,
                            reinterpret_cast<simd_element_type_t<T> *>(base));
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static T
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static T
 expand(simd<bool, simd_size_v<T>> mask, const void *ptr,
        T passthru = internal::poison<T>(), bool aligned = false) {
   if (aligned)
@@ -347,8 +403,9 @@ expand(simd<bool, simd_size_v<T>> mask, const void *ptr,
       mask, reinterpret_cast<const simd_element_type_t<T> *>(ptr), passthru);
 }
 template <typename T, internal::enable_if_simd_t<T> = 0>
-LIBC_INLINE constexpr static void compress(simd<bool, simd_size_v<T>> mask, T v,
-                                           void *ptr, bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE constexpr static void
+compress(simd<bool, simd_size_v<T>> mask, T v, void *ptr,
+         bool aligned = false) {
   if (aligned)
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   __builtin_masked_compress_store(
@@ -399,6 +456,16 @@ LIBC_INLINE constexpr static auto concat(cpp::simd<T, N> x, cpp::simd<T, M> y,
 template <size_t... Sizes, typename T, size_t N> auto split(cpp::simd<T, N> x) {
   static_assert((... + Sizes) == N, "split sizes must sum to vector size");
   return internal::split<T, N, 0, Sizes...>(x);
+}
+
+// Scalar to vector function helper.
+template <typename T, size_t N, typename F>
+LIBC_INLINE static cpp::simd<T, N> map(cpp::simd<T, N> v, F f) {
+  cpp::simd<T, N> r;
+  LIBC_LOOP_UNROLL
+  for (size_t i = 0; i < N; ++i)
+    r[i] = f(v[i]);
+  return r;
 }
 
 // TODO: where expressions, scalar overloads, ABI types.

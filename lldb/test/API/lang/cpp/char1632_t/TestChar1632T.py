@@ -28,22 +28,17 @@ class Char1632TestCase(TestBase):
     def test(self):
         """Test that the C++11 support for char16_t and char32_t works correctly."""
         self.build()
-        exe = self.getBuildArtifact("a.out")
-
-        # Create a target by the debugger.
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set breakpoints
-        for line in self.lines:
-            lldbutil.run_break_set_by_file_and_line(self, "main.cpp", line)
 
         # Now launch the process, and do not stop at entry point and stop at
         # breakpoint1
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        _, _, _, bkpt = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp", False), self.lines[0]
+        )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
 
-        if not process:
-            self.fail("SBTarget.Launch() failed")
+        # Set breakpoints
+        for line in self.lines[1:]:
+            lldbutil.run_break_set_by_file_and_line(self, "main.cpp", line)
 
         if self.TraceOn():
             self.runCmd("frame variable")
@@ -80,6 +75,12 @@ class Char1632TestCase(TestBase):
             substrs=['u"ﺸﺵۻ"', 'U"ЕЙРГЖО"'],
         )
 
+        # Check that embedded zeros show up in arrays
+        self.expect_var_path("aZero16", summary='u"I\\0have\\0zeros"')
+        self.expect_var_path("cZero16", summary='u"I"')
+        self.expect_var_path("aZero32", summary='U"I\\0have\\0zeros"')
+        self.expect_var_path("cZero32", summary='U"I"')
+
         self.runCmd("next")  # step to after the string is nullified
 
         # check that we don't crash on NULL
@@ -111,10 +112,8 @@ class Char1632TestCase(TestBase):
 
         # check that zero values are properly handles
         self.expect_expr("cs16_zero", result_summary="U+0000 u'\\0'")
-        self.expect_expr("cs32_zero", result_summary="U+0x00000000 U'\\0'")
+        self.expect_expr("cs32_zero", result_summary="U+0000 U'\\0'")
 
         # Check that we can run expressions that return charN_t
         self.expect_expr("u'a'", result_type="char16_t", result_summary="U+0061 u'a'")
-        self.expect_expr(
-            "U'a'", result_type="char32_t", result_summary="U+0x00000061 U'a'"
-        )
+        self.expect_expr("U'a'", result_type="char32_t", result_summary="U+0061 U'a'")

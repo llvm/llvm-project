@@ -43,10 +43,6 @@ struct MemRefInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void mlir::memref::MemRefDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/MemRef/IR/MemRefOps.cpp.inc"
-      >();
   addInterfaces<MemRefInlinerInterface>();
   declarePromisedInterface<ConvertToEmitCPatternInterface, MemRefDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, MemRefDialect>();
@@ -55,8 +51,9 @@ void mlir::memref::MemRefDialect::initialize() {
   declarePromisedInterfaces<RuntimeVerifiableOpInterface, AssumeAlignmentOp,
                             AtomicRMWOp, CastOp, CopyOp, DimOp, ExpandShapeOp,
                             GenericAtomicRMWOp, LoadOp, StoreOp, SubViewOp>();
-  declarePromisedInterfaces<ValueBoundsOpInterface, AllocOp, AllocaOp, CastOp,
-                            DimOp, GetGlobalOp, RankOp, SubViewOp>();
+  declarePromisedInterfaces<
+      ValueBoundsOpInterface, AllocOp, AllocaOp, AssumeAlignmentOp, CastOp,
+      DimOp, ExtractStridedMetadataOp, GetGlobalOp, RankOp, SubViewOp>();
   declarePromisedInterface<DestructurableTypeInterface, MemRefType>();
 }
 

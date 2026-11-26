@@ -50,7 +50,7 @@ struct MainThreadCheckerReport {
   std::string selector;
 };
 
-// See `ReportRetriever::RetrieveReportData`.
+// See `InstrumentationRuntimeASan::RetrieveReportData`.
 struct ASanReport {
   std::string description;
   lldb::addr_t address = LLDB_INVALID_ADDRESS;
@@ -130,7 +130,7 @@ static bool fromJSON(const json::Value &params, RuntimeInstrumentReport &report,
 
 } // end namespace
 
-static raw_ostream &operator<<(raw_ostream &OS, UBSanReport &report) {
+static raw_ostream &operator<<(raw_ostream &OS, const UBSanReport &report) {
   if (!report.filename.empty()) {
     OS << report.filename;
     if (report.line != LLDB_INVALID_LINE_NUMBER) {
@@ -151,7 +151,7 @@ static raw_ostream &operator<<(raw_ostream &OS, UBSanReport &report) {
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
-                               MainThreadCheckerReport &report) {
+                               const MainThreadCheckerReport &report) {
   if (!report.description.empty())
     OS << report.description << "\n";
 
@@ -163,7 +163,7 @@ static raw_ostream &operator<<(raw_ostream &OS,
   return OS;
 }
 
-static raw_ostream &operator<<(raw_ostream &OS, ASanReport &report) {
+static raw_ostream &operator<<(raw_ostream &OS, const ASanReport &report) {
   if (!report.stop_type.empty())
     OS << report.stop_type << ": ";
   if (!report.description.empty())
@@ -183,8 +183,8 @@ static raw_ostream &operator<<(raw_ostream &OS, ASanReport &report) {
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
-                               RuntimeInstrumentReport &report) {
-  std::visit([&](auto &r) { OS << r; }, report);
+                               const RuntimeInstrumentReport &report) {
+  std::visit([&](const auto &r) { OS << r; }, report);
   return OS;
 }
 
@@ -231,6 +231,25 @@ static std::string FormatExtendedStopInfo(lldb::SBThread &thread) {
   // Check if we can improve the formatting of the raw JSON report.
   if (report) {
     OS << *report;
+    std::visit(
+        [&](auto &&report) {
+          using T = std::decay_t<decltype(report)>;
+          if constexpr (std::is_same_v<T, ASanReport>) {
+            lldb::addr_t address = report.address;
+            lldb::SBProcess process = thread.GetProcess();
+            lldb::SBThreadCollection history_threads =
+                process.GetHistoryThreads(address);
+            lldb::SBStream stream;
+            OS << "Memory history associated with address: 0x"
+               << llvm::utohexstr(address) << "\n";
+            for (const auto history_thread : history_threads) {
+              if (history_thread.GetStatus(stream))
+                OS << stream << "\n";
+              stream.Clear();
+            }
+          }
+        },
+        *report);
   } else {
     consumeError(report.takeError());
     OS << stream;
@@ -252,6 +271,34 @@ static std::string FormatCrashReport(lldb::SBThread &thread) {
   return report;
 }
 
+static std::optional<json::Value> ParseJSON(DAP &dap, lldb::SBStream &stream) {
+  Expected<json::Value> value =
+      json::parse({stream.GetData(), stream.GetSize()});
+  if (!value) {
+    DAP_LOG_ERROR(dap.log, value.takeError(), "invalid JSON: {0}");
+    return std::nullopt;
+  }
+  return std::move(*value);
+}
+
+static std::optional<json::Value> GetExtendedStopInfo(DAP &dap,
+                                                      lldb::SBThread &thread) {
+  lldb::SBStream stream;
+  if (!thread.GetStopReasonExtendedInfoAsJSON(stream))
+    return std::nullopt;
+  return ParseJSON(dap, stream);
+}
+
+static std::optional<json::Value>
+GetExtendedCrashInformation(DAP &dap, lldb::SBThread &thread) {
+  lldb::SBStructuredData crash_info =
+      thread.GetProcess().GetExtendedCrashInformation();
+  lldb::SBStream stream;
+  if (!crash_info || crash_info.GetAsJSON(stream).Fail())
+    return std::nullopt;
+  return ParseJSON(dap, stream);
+}
+
 static std::string FormatStackTrace(lldb::SBThread &thread) {
   std::string stack_trace;
   raw_string_ostream OS(stack_trace);
@@ -268,14 +315,17 @@ static std::optional<ExceptionDetails> FormatException(lldb::SBThread &thread) {
     return {};
 
   ExceptionDetails details;
-  raw_string_ostream OS(details.message);
 
   if (const char *name = exception.GetName())
     details.evaluateName = name;
   if (const char *typeName = exception.GetDisplayTypeName())
     details.typeName = typeName;
 
+  std::string message;
+  raw_string_ostream OS(message);
   OS << exception;
+
+  details.message = std::move(message);
 
   if (lldb::SBThread exception_backtrace =
           thread.GetCurrentExceptionBacktrace())
@@ -316,22 +366,25 @@ ExceptionInfoRequestHandler::Run(const ExceptionInfoArguments &args) const {
   body.breakMode = eExceptionBreakModeAlways;
   body.exceptionId = FormatExceptionId(dap, thread);
   body.details = FormatException(thread);
-
-  raw_string_ostream OS(body.description);
-  OS << FormatStopDescription(thread);
+  body.description = FormatStopDescription(thread);
 
   if (std::string stop_info = FormatExtendedStopInfo(thread);
       !stop_info.empty())
-    OS << "\n\n" << stop_info;
+    body.description += formatv("\n\n{0}", stop_info);
 
   if (std::string crash_report = FormatCrashReport(thread);
       !crash_report.empty())
-    OS << "\n\n" << crash_report;
+    body.description += formatv("\n\n{0}", crash_report);
+
+  // Clients that interpret these themselves shouldn't have to parse them back
+  // out of the description.
+  body.lldbExtStopReasonExtendedInfo = GetExtendedStopInfo(dap, thread);
+  body.lldbExtExtendedCrashInformation =
+      GetExtendedCrashInformation(dap, thread);
 
   lldb::SBProcess process = thread.GetProcess();
   for (uint32_t idx = 0; idx < lldb::eNumInstrumentationRuntimeTypes; idx++) {
-    lldb::InstrumentationRuntimeType type =
-        static_cast<lldb::InstrumentationRuntimeType>(idx);
+    auto type = static_cast<lldb::InstrumentationRuntimeType>(idx);
     if (!process.IsInstrumentationRuntimePresent(type))
       continue;
 

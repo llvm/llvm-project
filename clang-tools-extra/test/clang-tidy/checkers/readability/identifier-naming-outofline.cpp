@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-identifier-naming %t -std=c++20 \
+// RUN: %check_clang_tidy %s readability-identifier-naming %t -std=c++20-or-later \
 // RUN:   --config='{CheckOptions: { \
 // RUN:     readability-identifier-naming.MethodCase: CamelCase, \
 // RUN:  }}'

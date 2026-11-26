@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/modff.h"
-#include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/modff.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, modff, (float x, float *iptr)) {
-  return fputil::modf(x, *iptr);
+  return math::modff(x, iptr);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

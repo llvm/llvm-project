@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -target x86_64-pc-linux-gnu -I %clang_tidy_headers
+// RUN: %check_clang_tidy %s readability-uppercase-literal-suffix %t -- -- -target x86_64-pc-linux-gnu
 
 #include "integral_constant.h"
 
@@ -131,4 +131,9 @@ void macros() {
   // CHECK-FIXES: static constexpr auto m0 = PASSTHROUGH(1.F);
   static_assert(is_same<decltype(m0), const float>::value, "");
   static_assert(m0 == 1.0F, "");
+}
+
+long double operator""_f(long double);
+void user_defined_literals() {
+  1.0_f;
 }

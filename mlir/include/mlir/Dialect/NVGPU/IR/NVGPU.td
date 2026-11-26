@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_NVGPU_IR_NVGPU_TD
 #define MLIR_DIALECT_NVGPU_IR_NVGPU_TD
 
+include "mlir/Dialect/LLVMIR/NVVMDialect.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
@@ -18,6 +19,8 @@ include "mlir/IR/EnumAttr.td"
 def NVGPU_Dialect : Dialect {
   let name = "nvgpu";
   let cppNamespace = "::mlir::nvgpu";
+  let useDefaultOperationRegistration = 1;
+  let dependentDialects = ["NVVM::NVVMDialect"];
   let description = [{
     The `NVGPU` dialect provides a bridge between higher-level target-agnostic
     dialects (GPU and Vector) and the lower-level target-specific dialect
@@ -26,8 +29,8 @@ def NVGPU_Dialect : Dialect {
     and Vector for memory and target-specific register operands, respectively.
   }];
 
-  let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasTypes = 1;
+  let hasAttributes = 1;
   
   let extraClassDeclaration = [{
     /// Return true if the given MemRefType has an integer address

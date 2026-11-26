@@ -39,12 +39,12 @@ cmovael %eax, %ecx
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      1259
+# CHECK-NEXT: Total Cycles:      1007
 # CHECK-NEXT: Total uOps:        3000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    2.38
-# CHECK-NEXT: IPC:               1.59
+# CHECK-NEXT: uOps Per Cycle:    2.98
+# CHECK-NEXT: IPC:               1.99
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -56,7 +56,7 @@ cmovael %eax, %ecx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     1.00                        sbbl	%eax, %eax
+# CHECK-NEXT:  1      1     0.25                        sbbl	%eax, %eax
 # CHECK-NEXT:  2      4     1.00                        mulxl	%eax, %eax, %eax
 
 # CHECK:      Resources:
@@ -86,11 +86,11 @@ cmovael %eax, %ecx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     1.25   1.25   1.25   1.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     0.33   1.00   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -     1.25   0.25   1.25   1.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbl	%eax, %eax
+# CHECK-NEXT:  -      -      -     0.33    -     0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbl	%eax, %eax
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxl	%eax, %eax, %eax
 
 # CHECK:      Timeline view:
@@ -110,18 +110,18 @@ cmovael %eax, %ecx
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.5    0.5    1.5       sbbl	%eax, %eax
 # CHECK-NEXT: 1.     2     2.5    0.0    0.0       mulxl	%eax, %eax, %eax
-# CHECK-NEXT:        2     2.0    0.3    0.8       <total>
+# CHECK-NEXT:        4     2.0    0.3    0.8       <total>
 
 # CHECK:      [1] Code Region
 
 # CHECK:      Iterations:        1000
 # CHECK-NEXT: Instructions:      2000
-# CHECK-NEXT: Total Cycles:      1259
+# CHECK-NEXT: Total Cycles:      1007
 # CHECK-NEXT: Total uOps:        3000
 
 # CHECK:      Dispatch Width:    6
-# CHECK-NEXT: uOps Per Cycle:    2.38
-# CHECK-NEXT: IPC:               1.59
+# CHECK-NEXT: uOps Per Cycle:    2.98
+# CHECK-NEXT: IPC:               1.99
 # CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
@@ -133,7 +133,7 @@ cmovael %eax, %ecx
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     1.00                        sbbq	%rax, %rax
+# CHECK-NEXT:  1      1     0.25                        sbbq	%rax, %rax
 # CHECK-NEXT:  2      4     1.00                        mulxq	%rax, %rax, %rax
 
 # CHECK:      Resources:
@@ -163,11 +163,11 @@ cmovael %eax, %ecx
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT:  -      -      -     1.25   1.25   1.25   1.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -     0.33   1.00   0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
-# CHECK-NEXT:  -      -      -     1.25   0.25   1.25   1.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbq	%rax, %rax
+# CHECK-NEXT:  -      -      -     0.33    -     0.33   0.33    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     sbbq	%rax, %rax
 # CHECK-NEXT:  -      -      -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     mulxq	%rax, %rax, %rax
 
 # CHECK:      Timeline view:
@@ -187,7 +187,7 @@ cmovael %eax, %ecx
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     2     1.5    0.5    1.5       sbbq	%rax, %rax
 # CHECK-NEXT: 1.     2     2.5    0.0    0.0       mulxq	%rax, %rax, %rax
-# CHECK-NEXT:        2     2.0    0.3    0.8       <total>
+# CHECK-NEXT:        4     2.0    0.3    0.8       <total>
 
 # CHECK:      [2] Code Region
 
@@ -270,7 +270,7 @@ cmovael %eax, %ecx
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxl	%eax, %eax, %eax
 # CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpl	%eax, %eax
 # CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovael	%eax, %ecx
-# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
+# CHECK-NEXT:        6     3.2    0.2    2.2       <total>
 
 # CHECK:      [3] Code Region
 
@@ -353,7 +353,7 @@ cmovael %eax, %ecx
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxq	%rax, %rax, %rax
 # CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpq	%rax, %rax
 # CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovaeq	%rax, %rcx
-# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
+# CHECK-NEXT:        6     3.2    0.2    2.2       <total>
 
 # CHECK:      [4] Code Region
 
@@ -436,7 +436,7 @@ cmovael %eax, %ecx
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxl	%eax, %eax, %eax
 # CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpw	%ax, %ax
 # CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovael	%eax, %ecx
-# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
+# CHECK-NEXT:        6     3.2    0.2    2.2       <total>
 
 # CHECK:      [5] Code Region
 
@@ -519,4 +519,4 @@ cmovael %eax, %ecx
 # CHECK-NEXT: 0.     2     3.0    0.5    0.0       mulxl	%eax, %eax, %eax
 # CHECK-NEXT: 1.     2     0.0    0.0    6.5       cmpb	%al, %al
 # CHECK-NEXT: 2.     2     6.5    0.0    0.0       cmovael	%eax, %ecx
-# CHECK-NEXT:        2     3.2    0.2    2.2       <total>
+# CHECK-NEXT:        6     3.2    0.2    2.2       <total>

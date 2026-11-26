@@ -92,3 +92,19 @@ irdl.dialect @test_dialect {
 }
 
 // -----
+
+irdl.dialect @test_dialect {
+  // expected-error@+1 {{name of type is empty}}
+  irdl.type @"" {
+    %0 = irdl.any
+  }
+}
+
+// -----
+
+irdl.dialect @test_dialect {
+  // expected-error@+1 {{name of attribute is empty}}
+  irdl.attribute @"" {
+    %0 = irdl.any
+  }
+}

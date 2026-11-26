@@ -81,7 +81,7 @@ public:
               loopBlockArgIface.getReductionBlockArgsStart());
         }
 
-        loopOp.removeReductionModAttr();
+        loopOp.removeReductionModsAttr();
         loopOp.getReductionVarsMutable().clear();
         loopOp.removeReductionByrefAttr();
         loopOp.removeReductionSymsAttr();
@@ -272,12 +272,12 @@ private:
       clauseOps.privateSyms.assign(privateSyms->begin(), privateSyms->end());
 
     Fortran::common::openmp::EntryBlockArgs args;
-    args.priv.vars = clauseOps.privateVars;
+    args.privVars = clauseOps.privateVars;
 
     if constexpr (!std::is_same_v<OpOperandsTy,
                                   mlir::omp::DistributeOperands>) {
       populateReductionClauseOps(loopOp, clauseOps);
-      args.reduction.vars = clauseOps.reductionVars;
+      args.reductionVars = clauseOps.reductionVars;
     }
 
     auto wrapperOp = OpTy::create(rewriter, loopOp.getLoc(), clauseOps);
@@ -305,7 +305,7 @@ private:
                                            privateSyms->end());
 
     Fortran::common::openmp::EntryBlockArgs parallelArgs;
-    parallelArgs.priv.vars = parallelClauseOps.privateVars;
+    parallelArgs.privVars = parallelClauseOps.privateVars;
 
     auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loopOp.getLoc(),
                                                     parallelClauseOps);
@@ -323,7 +323,7 @@ private:
     mlir::omp::WsloopOperands wsloopClauseOps;
     populateReductionClauseOps(loopOp, wsloopClauseOps);
     Fortran::common::openmp::EntryBlockArgs wsloopArgs;
-    wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
+    wsloopArgs.reductionVars = wsloopClauseOps.reductionVars;
 
     auto wsloopOp =
         mlir::omp::WsloopOp::create(rewriter, loopOp.getLoc(), wsloopClauseOps);
@@ -355,7 +355,8 @@ private:
   void
   populateReductionClauseOps(mlir::omp::LoopOp loopOp,
                              mlir::omp::ReductionClauseOps &clauseOps) const {
-    clauseOps.reductionMod = loopOp.getReductionModAttr();
+    if (auto mods = loopOp.getReductionModsAttr())
+      llvm::append_range(clauseOps.reductionMods, mods);
     clauseOps.reductionVars = loopOp.getReductionVars();
 
     std::optional<mlir::ArrayAttr> reductionSyms = loopOp.getReductionSyms();
@@ -453,7 +454,7 @@ public:
     mlir::omp::LoopOp nestedLoopOp = tryToFindNestedLoopWithReduction(teamsOp);
 
     rewriter.modifyOpInPlace(teamsOp, [&]() {
-      teamsOp.setReductionMod(nestedLoopOp.getReductionMod());
+      teamsOp.setReductionModsAttr(nestedLoopOp.getReductionModsAttr());
       teamsOp.getReductionVarsMutable().assign(nestedLoopOp.getReductionVars());
       teamsOp.setReductionByref(nestedLoopOp.getReductionByref());
       teamsOp.setReductionSymsAttr(nestedLoopOp.getReductionSymsAttr());

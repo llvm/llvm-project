@@ -484,6 +484,25 @@ static void test_box_hull(isl::ctx ctx)
 	});
 }
 
+/* Perform some coalescing tests.
+ */
+static void test_coalesce(isl::ctx ctx)
+{
+	/* The following sequence can result in the same basic set
+	 * appearing multiple times in the coalesced set.
+	 * Check that the presence of such duplicates
+	 * does not cause internal errors.
+	 */
+	isl::set a(ctx, "[g, t] -> { [i] : "
+		"(exists (e0 = floor((1 + g)/2): 2e0 = 1 + g and 0 < i <= -t)) "
+		"or (exists (e0 = floor((1 + g)/2): i = 0 and 2e0 = 1 + g)) }");
+	a = a.coalesce();
+	isl::set b (ctx, "[g, t] -> { [i] : "
+		"(exists (e0 = floor((g)/2): 2e0 = g and 0 < i <= -t)) or "
+		"(exists (e0 = floor((g)/2): i = 0 and 2e0 = g)) }");
+	b.unite(a).unite(a).coalesce();
+}
+
 /* Perform some basic intersection tests.
  */
 static void test_intersect(isl::ctx ctx)
@@ -967,6 +986,7 @@ static std::vector<std::pair<const char *, void (*)(isl::ctx)>> tests =
 	{ "preimage", &test_preimage },
 	{ "fixed power", &test_fixed_power },
 	{ "box hull", &test_box_hull },
+	{ "coalesce", &test_coalesce },
 	{ "intersect", &test_intersect },
 	{ "lexmin", &test_lexmin },
 	{ "gist", &test_gist },

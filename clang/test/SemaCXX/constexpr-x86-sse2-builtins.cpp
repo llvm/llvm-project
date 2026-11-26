@@ -77,3 +77,119 @@ constexpr __m128 r = _mm_cvtpd_ps(a);
 // expected-note@-3 {{in call to '_mm_cvtpd_ps({1.000000e-310, 0.000000e+00})'}}
 }
 }
+
+namespace Test_mm_min_ps {
+namespace OK {
+constexpr __m128 a = { 1.0f, 2.0f, 3.0f, 4.0f };
+constexpr __m128 b = { 4.0f, 3.0f, 2.0f, 1.0f };
+TEST_CONSTEXPR(match_m128(_mm_min_ps(a, b), 1.0f, 2.0f, 2.0f, 1.0f));
+}
+namespace NaN_A {
+constexpr __m128 a = { __builtin_nanf(""), 2.0f, 3.0f, 4.0f };
+constexpr __m128 b = { 4.0f, 3.0f, 2.0f, 1.0f };
+constexpr __m128 r = _mm_min_ps(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace Inf_B {
+constexpr __m128 a = { 1.0f, 2.0f, 3.0f, 4.0f };
+constexpr __m128 b = { 4.0f, 3.0f, -__builtin_huge_valf(), 1.0f };
+constexpr __m128 r = _mm_min_ps(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace Denormal_A {
+constexpr __m128 a = { 1e-40f, 2.0f, 3.0f, 4.0f };
+constexpr __m128 b = { 4.0f, 3.0f, 2.0f, 1.0f };
+constexpr __m128 r = _mm_min_ps(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+}
+
+namespace Test_mm_max_ps {
+namespace OK {
+constexpr __m128 a = { 1.0f, 2.0f, 3.0f, 4.0f };
+constexpr __m128 b = { 4.0f, 3.0f, 2.0f, 1.0f };
+TEST_CONSTEXPR(match_m128(_mm_max_ps(a, b), 4.0f, 3.0f, 3.0f, 4.0f));
+}
+namespace NaN_B {
+constexpr __m128 a = { 1.0f, 2.0f, 3.0f, 4.0f };
+constexpr __m128 b = { 4.0f, __builtin_nanf(""), 2.0f, 1.0f };
+constexpr __m128 r = _mm_max_ps(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace Inf_A {
+constexpr __m128 a = { __builtin_huge_valf(), 2.0f, 3.0f, 4.0f };
+constexpr __m128 b = { 4.0f, 3.0f, 2.0f, 1.0f };
+constexpr __m128 r = _mm_max_ps(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+}
+
+namespace Test_mm_min_pd {
+namespace OK {
+constexpr __m128d a = { 1.0, 2.0 };
+constexpr __m128d b = { 2.0, 1.0 };
+TEST_CONSTEXPR(match_m128d(_mm_min_pd(a, b), 1.0, 1.0));
+}
+namespace NaN_A {
+constexpr __m128d a = { __builtin_nan(""), 2.0 };
+constexpr __m128d b = { 2.0, 1.0 };
+constexpr __m128d r = _mm_min_pd(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace NaN_B {
+constexpr __m128d a = { 1.0, 2.0 };
+constexpr __m128d b = { 2.0, __builtin_nan("") };
+constexpr __m128d r = _mm_min_pd(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace Inf_A {
+constexpr __m128d a = { __builtin_huge_val(), 2.0 };
+constexpr __m128d b = { 2.0, 1.0 };
+constexpr __m128d r = _mm_min_pd(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace Inf_B {
+constexpr __m128d a = { 1.0, 2.0 };
+constexpr __m128d b = { 2.0, -__builtin_huge_val() };
+constexpr __m128d r = _mm_min_pd(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace Denormal_A {
+constexpr __m128d a = { 1e-310, 2.0 };
+constexpr __m128d b = { 2.0, 1.0 };
+constexpr __m128d r = _mm_min_pd(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace Denormal_B {
+constexpr __m128d a = { 1.0, 2.0 };
+constexpr __m128d b = { 2.0, -1e-310 };
+constexpr __m128d r = _mm_min_pd(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+}
+
+namespace Test_mm_max_pd {
+namespace OK {
+constexpr __m128d a = { 1.0, 2.0 };
+constexpr __m128d b = { 2.0, 1.0 };
+TEST_CONSTEXPR(match_m128d(_mm_max_pd(a, b), 2.0, 2.0));
+}
+namespace NaN_A {
+constexpr __m128d a = { __builtin_nan(""), 2.0 };
+constexpr __m128d b = { 2.0, 1.0 };
+constexpr __m128d r = _mm_max_pd(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace Inf_A {
+constexpr __m128d a = { __builtin_huge_val(), 2.0 };
+constexpr __m128d b = { 2.0, 1.0 };
+constexpr __m128d r = _mm_max_pd(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+namespace Denormal_A {
+constexpr __m128d a = { 1e-310, 2.0 };
+constexpr __m128d b = { 2.0, 1.0 };
+constexpr __m128d r = _mm_max_pd(a, b);
+// expected-error@-1 {{must be initialized by a constant expression}}
+}
+}

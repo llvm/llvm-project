@@ -11,6 +11,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Analysis/RetainSummaryManager.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
@@ -122,11 +123,13 @@ public:
 
   bool isAdoptFnName(const std::string &Name) const {
     return isAdoptNS(Name) || Name == "adoptCF" || Name == "adoptCFArc" ||
+           Name == "adoptCFNullable" || Name == "adoptCFNullableArc" ||
            Name == "adoptOSObject" || Name == "adoptOSObjectArc";
   }
 
   bool isAdoptNS(const std::string &Name) const {
-    return Name == "adoptNS" || Name == "adoptNSArc";
+    return Name == "adoptNS" || Name == "adoptNSArc" ||
+           Name == "adoptNSNullable" || Name == "adoptNSNullableArc";
   }
 
   void visitCallExpr(const CallExpr *CE, const Decl *DeclWithIssue) const {
@@ -576,10 +579,9 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     Os << "Incorrect use of " << Name
-       << ". The argument is +0 and results in an use-after-free";
+       << "; the argument is +0 and results in an use-after-free";
     if (condition)
       Os << " " << condition;
-    Os << ".";
 
     assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
@@ -597,10 +599,9 @@ public:
     llvm::raw_svector_ostream Os(Buf);
 
     Os << "Incorrect use of " << Name
-       << ". The argument is +1 and results in a memory leak";
+       << "; the argument is +1 and results in a memory leak";
     if (condition)
       Os << " " << condition;
-    Os << ".";
 
     assert(BR && "expected nonnull BugReporter");
     PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),

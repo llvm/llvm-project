@@ -27,6 +27,13 @@ void test_local_std_array() {
   std::array<int, 4> a;
 }
 
+struct HasStdArrayMember {
+  // CHECK-MESSAGES: warning: constructor does not initialize these fields: Number
+  HasStdArrayMember() {}
+  std::array<int, 4> StdArray;
+  int Number;
+};
+
 struct OnlyArray {
   int a[4];
 };

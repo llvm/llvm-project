@@ -9,12 +9,15 @@ RUN: opt -thinlto-bc t2.ll -o t2.bc
 ; Generate fake object files for mock.py to return.
 RUN: touch t1.o t2.o
 
+RUN: mkdir cache
+
 ; Perform DTLTO and generate a time trace. mock.py does not do any compilation,
 ; instead it simply writes the contents of the object files supplied on the
 ; command line into the output object files in job order.
 RUN: llvm-lto2 run t1.bc t2.bc -o t.o \
 RUN:   -dtlto-distributor=%python \
 RUN:   -dtlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py,t1.o,t2.o \
+RUN:   --cache-dir=cache \
 RUN:   --time-trace --time-trace-granularity=0 --time-trace-file=%t.json \
 RUN:   -r=t1.bc,t1,px \
 RUN:   -r=t2.bc,t2,px
@@ -23,6 +26,14 @@ RUN: %python filter_order_and_pprint.py %t.json | FileCheck %s
 ## Check that DTLTO events are recorded.
 CHECK-NOT:  "name"
 CHECK:      "name": "Add DTLTO files to the link"
+CHECK-SAME:   "pid": [[#PID:]],
+CHECK-NEXT: "name": "Add input for DTLTO"
+CHECK-SAME:   "pid": [[#PID:]],
+CHECK-NEXT: "name": "Add input for DTLTO"
+CHECK-SAME:   "pid": [[#PID:]],
+CHECK-NEXT: "name": "Check cache for DTLTO"
+CHECK-SAME:   "pid": [[#PID:]],
+CHECK-NEXT: "name": "Check cache for DTLTO"
 CHECK-SAME:   "pid": [[#PID:]],
 CHECK-NEXT: "name": "Emit DTLTO JSON"
 CHECK-NEXT: "name": "Emit individual index for DTLTO"
@@ -33,6 +44,10 @@ CHECK-NEXT: "name": "Execute DTLTO distributor", "{{.*}}"
 CHECK-NEXT: "name": "Remove DTLTO temporary files"
 CHECK-NEXT: "name": "Total Add DTLTO files to the link"
 CHECK-SAME:   "count": 1,
+CHECK-NEXT: "name": "Total Add input for DTLTO"
+CHECK-SAME:   "count": 2,
+CHECK-NEXT: "name": "Total Check cache for DTLTO"
+CHECK-SAME:   "count": 2,
 CHECK-NEXT: "name": "Total Emit DTLTO JSON"
 CHECK-SAME:   "count": 1,
 CHECK-NEXT: "name": "Total Emit individual index for DTLTO"

@@ -12,7 +12,6 @@
 TEST_CLANG_DIAGNOSTIC_IGNORED("-Wprivate-header")
 #include <__type_traits/conjunction.h>
 #include <__type_traits/disjunction.h>
-#include <__type_traits/is_valid_expansion.h>
 #include <__type_traits/negation.h>
 #include <cassert>
 #include <type_traits>
@@ -75,15 +74,6 @@ template <class T, class U>
 using FuncCallable = decltype(std::declval<T>().func(std::declval<U>()));
 template <class T>
 using BadCheck = typename T::DOES_NOT_EXIST;
-
-void test_is_valid_trait() {
-  static_assert(std::_IsValidExpansion<HasFooData, MemberTest>::value, "");
-  static_assert(!std::_IsValidExpansion<HasFooType, MemberTest>::value, "");
-  static_assert(!std::_IsValidExpansion<HasFooData, MemberTest2>::value, "");
-  static_assert(std::_IsValidExpansion<HasFooType, MemberTest2>::value, "");
-  static_assert(std::_IsValidExpansion<FuncCallable, MemberTest, int>::value, "");
-  static_assert(!std::_IsValidExpansion<FuncCallable, MemberTest, void*>::value, "");
-}
 
 int main(int, char**) {
   return 0;

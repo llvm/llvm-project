@@ -8,14 +8,12 @@
 
 #include <utility>
 
-#include "TestAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
-using namespace test;
 
 // Helper to print one scalar value, force int8_t to print as integer instead of
 // char.
@@ -35,7 +33,12 @@ struct TestElementsAttrInterface
   }
   void runOnOperation() override {
     getOperation().walk([&](Operation *op) {
-      for (NamedAttribute attr : op->getAttrs()) {
+      NamedAttrList attrs(op->getDiscardableAttrDictionary());
+      if (op->getPropertiesStorageSize())
+        op->getName().walkInherentAttrs(
+            op,
+            [&](StringRef name, Attribute &attr) { attrs.append(name, attr); });
+      for (NamedAttribute attr : attrs) {
         auto elementsAttr = dyn_cast<ElementsAttr>(attr.getValue());
         if (!elementsAttr)
           continue;

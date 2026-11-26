@@ -1,10 +1,11 @@
-# REQUIRES: x86
+# REQUIRES: x86 && llvm-64-bits
 
 ## Test that .eh_frame_hdr uses DW_EH_PE_sdata8 instead of DW_EH_PE_sdata4 when
 ## eh_frame_ptr or a table entry exceeds the 32-bit range.
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 a.s --large-code-model -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 dup.s --large-code-model -o dup.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64 bad.s -o bad.o
 
 ## Case 1: .text at high address - pcRel exceeds 32-bit range.
@@ -19,6 +20,11 @@
 ## to stabilize.
 # RUN: ld.lld -pie --eh-frame-hdr -z pack-relative-relocs -T 3.lds a.o -o out3
 # RUN: llvm-objdump -s -j .eh_frame_hdr out3 | FileCheck %s --check-prefix=CHECK3
+
+## Case 4: Two FDEs share a PC. The table keeps one entry and, like the sdata4
+## table, reserves room for every live FDE.
+# RUN: ld.lld --eh-frame-hdr -T 1.lds dup.o -o out4
+# RUN: llvm-objdump -s -j .eh_frame_hdr out4 | FileCheck %s --check-prefix=CHECK4
 
 ## Header: version=1, eh_frame_ptr_enc=0x1C (pcrel|sdata8),
 ##         fde_count_enc=0x03 (udata4), table_enc=0x3C (datarel|sdata8)
@@ -36,6 +42,11 @@
 # CHECK2-EMPTY:
 # CHECK3:      011c033c 2c000000 00000000 02000000
 # CHECK3-NEXT: 00800000 01000000 48000000 00000000
+# CHECK4:      section .eh_frame_hdr:
+# CHECK4-NEXT: 011c033c 2c000000 00000000 01000000
+# CHECK4-NEXT: 00100000 01000000 68000000 00000000
+# CHECK4-NEXT: 00000000 00000000 00000000 00000000
+# CHECK4-EMPTY:
 
 ## A corrupted .eh_frame reports exactly one error (not duplicated by the loop).
 # RUN: not ld.lld --eh-frame-hdr -T 1.lds a.o bad.o 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
@@ -65,12 +76,24 @@ _start:
 ## the previous bitmap entry, requiring a third RELR entry.
 .dc.a __ehdr_start
 
+#--- dup.s
+.text
+.global _start
+_start:
+ .cfi_startproc
+ .cfi_endproc
+ .cfi_startproc
+ nop
+ .cfi_endproc
+
 #--- 1.lds
+## Use AT() to place output sections with huge addresses in separate PT_LOAD
+## segments, avoiding a huge PT_LOAD whose sparse file size would exceed 4GiB.
 SECTIONS {
   . = 0x1000;
   .eh_frame_hdr : {}
   .eh_frame : {}
-  .text 0x100002000 : {}
+  .text 0x100002000 : AT(0x2000) {}
 }
 
 #--- 2.lds
@@ -78,7 +101,7 @@ SECTIONS {
   . = 0x1000;
   .text : {}
   .eh_frame_hdr : {}
-  .eh_frame 0x100002000 : {}
+  .eh_frame 0x100002000 : AT(0x2000) {}
 }
 
 #--- 3.lds
@@ -95,7 +118,7 @@ SECTIONS {
   .relr.dyn : {}
   .data : { *(.data) . += 63*8-40 + SIZEOF(.eh_frame_hdr); *(.data.*) }
   . = SIZEOF(.relr.dyn) > 16 ? 0x100008000 : 0x3000;
-  .text : {}
+  .text : AT(0x2000) {}
   ASSERT(SIZEOF(.relr.dyn) > 16, ".relr.dyn size should increase from 16 to 24")
 }
 

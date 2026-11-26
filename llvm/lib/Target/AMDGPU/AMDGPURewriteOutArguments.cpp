@@ -44,32 +44,20 @@
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/Analysis/MemorySSA.h"
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/IR/AttributeMask.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "amdgpu-rewrite-out-arguments"
 
 using namespace llvm;
-
-static cl::opt<bool> AnyAddressSpace(
-  "amdgpu-any-address-space-out-arguments",
-  cl::desc("Replace pointer out arguments with "
-           "struct returns for non-private address space"),
-  cl::Hidden,
-  cl::init(false));
-
-static cl::opt<unsigned> MaxNumRetRegs(
-  "amdgpu-max-return-arg-num-regs",
-  cl::desc("Approximately limit number of return registers for replacing out arguments"),
-  cl::Hidden,
-  cl::init(16));
 
 STATISTIC(NumOutArgumentsReplaced,
           "Number out arguments moved to struct return values");
@@ -80,8 +68,11 @@ namespace {
 
 class AMDGPURewriteOutArguments : public FunctionPass {
 private:
+  const AMDGPUOptions *CLOpts = nullptr;
   const DataLayout *DL = nullptr;
-  MemoryDependenceResults *MDA = nullptr;
+  MemorySSA *MSSA = nullptr;
+  MemorySSAUpdater *MSSAU = nullptr;
+  AAResults *AA = nullptr;
 
   Type *getStoredType(Value &Arg) const;
   Type *getOutArgumentType(Argument &Arg) const;
@@ -92,7 +83,8 @@ public:
   AMDGPURewriteOutArguments() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<MemoryDependenceWrapperPass>();
+    AU.addRequired<MemorySSAWrapperPass>();
+    AU.addRequired<AAResultsWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
 
@@ -104,7 +96,7 @@ public:
 
 INITIALIZE_PASS_BEGIN(AMDGPURewriteOutArguments, DEBUG_TYPE,
                       "AMDGPU Rewrite Out Arguments", false, false)
-INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_END(AMDGPURewriteOutArguments, DEBUG_TYPE,
                     "AMDGPU Rewrite Out Arguments", false, false)
 
@@ -148,12 +140,13 @@ Type *AMDGPURewriteOutArguments::getStoredType(Value &Arg) const {
 }
 
 Type *AMDGPURewriteOutArguments::getOutArgumentType(Argument &Arg) const {
-  const unsigned MaxOutArgSizeBytes = 4 * MaxNumRetRegs;
+  const unsigned MaxOutArgSizeBytes = 4 * CLOpts->max_return_arg_num_regs;
   PointerType *ArgTy = dyn_cast<PointerType>(Arg.getType());
 
   // TODO: It might be useful for any out arguments, not just privates.
-  if (!ArgTy || (ArgTy->getAddressSpace() != DL->getAllocaAddrSpace() &&
-                 !AnyAddressSpace) ||
+  if (!ArgTy ||
+      (ArgTy->getAddressSpace() != DL->getAllocaAddrSpace() &&
+       !CLOpts->any_address_space_out_arguments) ||
       Arg.hasByValAttr() || Arg.hasStructRetAttr()) {
     return nullptr;
   }
@@ -170,19 +163,65 @@ bool AMDGPURewriteOutArguments::doInitialization(Module &M) {
   return false;
 }
 
+static StoreInst *findStoreForOutArgument(BasicBlock *BB, Argument *OutArg,
+                                          MemorySSA &MSSA,
+                                          BatchAAResults &BAA) {
+  MemoryLocation ArgLoc = MemoryLocation::getBeforeOrAfter(OutArg);
+  const auto *Accesses = MSSA.getBlockAccesses(BB);
+  if (!Accesses)
+    return nullptr;
+
+  for (const MemoryAccess &Access : reverse(*Accesses)) {
+    const auto *UseOrDef = dyn_cast<MemoryUseOrDef>(&Access);
+    if (!UseOrDef)
+      continue;
+
+    Instruction *I = UseOrDef->getMemoryInst();
+
+    // Return the must-alias store to the out argument.
+    if (auto *Store = dyn_cast<StoreInst>(I))
+      if (Store->getPointerOperand() == OutArg)
+        return Store;
+
+    if (auto *FI = dyn_cast<FenceInst>(I))
+      if (FI->getOrdering() == AtomicOrdering::Release)
+        continue;
+
+    if (auto *LI = dyn_cast<LoadInst>(I)) {
+      if (LI->isAtomic()) {
+        // May-alias reads with monotonic ordering are ignored.
+        if (isStrongerThan(LI->getOrdering(), AtomicOrdering::Monotonic))
+          return nullptr;
+        continue;
+      }
+    }
+
+    // Any other memory access that may read or write the location prevents the
+    // rewrite.
+    if (isModOrRefSet(BAA.getModRefInfo(I, ArgLoc)))
+      return nullptr;
+  }
+
+  return nullptr;
+}
+
 bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (skipFunction(F))
     return false;
+
+  CLOpts = &F.getContext().getLibraryOptions().get<AMDGPUOptions>();
+  const unsigned MaxNumRetRegs = CLOpts->max_return_arg_num_regs;
 
   // TODO: Could probably handle variadic functions.
   if (F.isVarArg() || F.hasStructRetAttr() ||
       AMDGPU::isEntryFunctionCC(F.getCallingConv()))
     return false;
 
-  MDA = &getAnalysis<MemoryDependenceWrapperPass>().getMemDep();
-
   unsigned ReturnNumRegs = 0;
-  SmallDenseMap<int, Type *, 4> OutArgIndexes;
+  // Maps an out-argument number to its field index in the return struct.
+  // Fields are in processing order, which the retry loop below can reorder
+  // relative to argument order, so the index must be tracked, not recomputed.
+  SmallDenseMap<unsigned, unsigned, 4> OutArgIndexes;
   SmallVector<Type *, 4> ReturnTypes;
   Type *RetTy = F.getReturnType();
   if (!RetTy->isVoidTy()) {
@@ -219,6 +258,13 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   if (Returns.empty())
     return false;
 
+  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
+
+  BatchAAResults BatchAA(*AA);
+  MemorySSAUpdater MSSAUpdater(MSSA);
+  MSSAU = &MSSAUpdater;
+
   bool Changing;
 
   do {
@@ -226,11 +272,10 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
     // Keep retrying if we are able to successfully eliminate an argument. This
     // helps with cases with multiple arguments which may alias, such as in a
-    // sincos implementation. If we have 2 stores to arguments, on the first
-    // attempt the MDA query will succeed for the second store but not the
-    // first. On the second iteration we've removed that out clobbering argument
-    // (by effectively moving it into another function) and will find the second
-    // argument is OK to move.
+    // sincos implementation. With 2 stores to may-aliasing arguments, MDA
+    // returns the second store for the first argument too; the identity guard
+    // below rejects it, and a later iteration folds the first argument once the
+    // second store has been removed.
     for (const auto &Pair : OutArgs) {
       bool ThisReplaceable = true;
       SmallVector<std::pair<ReturnInst *, StoreInst *>, 4> ReplaceableStores;
@@ -252,12 +297,7 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
       for (ReturnInst *RI : Returns) {
         BasicBlock *BB = RI->getParent();
 
-        MemDepResult Q = MDA->getPointerDependencyFrom(
-            MemoryLocation::getBeforeOrAfter(OutArg), true, BB->end(), BB, RI);
-        StoreInst *SI = nullptr;
-        if (Q.isDef())
-          SI = dyn_cast<StoreInst>(Q.getInst());
-
+        StoreInst *SI = findStoreForOutArgument(BB, OutArg, *MSSA, BatchAA);
         if (SI) {
           LLVM_DEBUG(dbgs() << "Found out argument store: " << *SI << '\n');
           ReplaceableStores.emplace_back(RI, SI);
@@ -284,12 +324,13 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
         }
 
         ValVec.emplace_back(OutArg, ReplVal);
+        MSSAU->removeMemoryAccess(Store.second);
         Store.second->eraseFromParent();
       }
 
       if (ThisReplaceable) {
+        OutArgIndexes.insert({OutArg->getArgNo(), ReturnTypes.size()});
         ReturnTypes.push_back(ArgTy);
-        OutArgIndexes.insert({OutArg->getArgNo(), ArgTy});
         ++NumOutArgumentsReplaced;
         Changing = true;
       }
@@ -318,31 +359,30 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   // off any return attributes, e.g. zeroext doesn't make sense with a struct.
   NewFunc->stealArgumentListFrom(F);
 
-  AttributeMask RetAttrs;
-  RetAttrs.addAttribute(Attribute::SExt);
-  RetAttrs.addAttribute(Attribute::ZExt);
-  RetAttrs.addAttribute(Attribute::NoAlias);
-  NewFunc->removeRetAttrs(RetAttrs);
+  NewFunc->removeRetAttrs(AttributeFuncs::typeIncompatible(
+      NewRetTy, NewFunc->getAttributes().getRetAttrs()));
   // TODO: How to preserve metadata?
 
   // Move the body of the function into the new rewritten function, and replace
   // this function with a stub.
   NewFunc->splice(NewFunc->begin(), &F);
 
-  for (std::pair<ReturnInst *, ReplacementVec> &Replacement : Replacements) {
+  for (auto &Replacement : Replacements) {
     ReturnInst *RI = Replacement.first;
     IRBuilder<> B(RI);
     B.SetCurrentDebugLocation(RI->getDebugLoc());
 
-    int RetIdx = 0;
     Value *NewRetVal = PoisonValue::get(NewRetTy);
 
     Value *RetVal = RI->getReturnValue();
     if (RetVal)
-      NewRetVal = B.CreateInsertValue(NewRetVal, RetVal, RetIdx++);
+      NewRetVal = B.CreateInsertValue(NewRetVal, RetVal, 0);
 
-    for (std::pair<Argument *, Value *> ReturnPoint : Replacement.second)
-      NewRetVal = B.CreateInsertValue(NewRetVal, ReturnPoint.second, RetIdx++);
+    // Use OutArgIndexes so body and stub agree on the field for each argument.
+    for (std::pair<Argument *, Value *> ReturnPoint : Replacement.second) {
+      unsigned FieldIdx = OutArgIndexes.lookup(ReturnPoint.first->getArgNo());
+      NewRetVal = B.CreateInsertValue(NewRetVal, ReturnPoint.second, FieldIdx);
+    }
 
     if (RetVal)
       RI->setOperand(0, NewRetVal);
@@ -367,17 +407,17 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   IRBuilder<> B(StubBB);
   CallInst *StubCall = B.CreateCall(NewFunc, StubCallArgs);
 
-  int RetIdx = RetTy->isVoidTy() ? 0 : 1;
   for (Argument &Arg : F.args()) {
     auto It = OutArgIndexes.find(Arg.getArgNo());
     if (It == OutArgIndexes.end())
       continue;
 
-    Type *EltTy = It->second;
+    unsigned FieldIdx = It->second;
+    Type *EltTy = NewRetTy->getElementType(FieldIdx);
     const auto Align =
         DL->getValueOrABITypeAlignment(Arg.getParamAlign(), EltTy);
 
-    Value *Val = B.CreateExtractValue(StubCall, RetIdx++);
+    Value *Val = B.CreateExtractValue(StubCall, FieldIdx);
     B.CreateAlignedStore(Val, &Arg, Align);
   }
 
@@ -392,8 +432,4 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
 
   ++NumOutArgumentFunctionsReplaced;
   return true;
-}
-
-FunctionPass *llvm::createAMDGPURewriteOutArgumentsPass() {
-  return new AMDGPURewriteOutArguments();
 }

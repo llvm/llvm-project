@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -verify -fnative-half-type -fnative-int16-type %s
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-library -verify %s
 // RUN: %clang_cc1 -triple spirv-linux-vulkan-library -verify -fnative-half-type -fnative-int16-type %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.4-library -fexperimental-new-constant-interpreter -verify -fnative-half-type -fnative-int16-type %s
+// RUN: %clang_cc1 -triple spirv-linux-vulkan-library -fexperimental-new-constant-interpreter -verify %s
+// RUN: %clang_cc1 -triple spirv-linux-vulkan-library -fexperimental-new-constant-interpreter -verify -fnative-half-type -fnative-int16-type %s
 
 // expected-no-diagnostics
 #ifdef __HLSL_ENABLE_16_BIT

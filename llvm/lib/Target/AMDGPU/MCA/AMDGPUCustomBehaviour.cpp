@@ -18,6 +18,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 namespace llvm::mca {
 
@@ -46,7 +47,7 @@ void AMDGPUInstrPostProcess::postProcessInstruction(Instruction &Inst,
 // which are lost during the MCInst -> mca::Instruction lowering.
 void AMDGPUInstrPostProcess::processWaitCnt(Instruction &Inst,
                                             const MCInst &MCI) {
-  for (int Idx = 0, N = MCI.size(); Idx < N; Idx++) {
+  for (unsigned Idx = 0, N = MCI.getNumOperands(); Idx < N; Idx++) {
     MCAOperand Op;
     const MCOperand &MCOp = MCI.getOperand(Idx);
     if (MCOp.isReg()) {
@@ -201,21 +202,22 @@ void AMDGPUCustomBehaviour::computeWaitCnt(const InstRef &IR, unsigned &Vmcnt,
                            << MCII.getName(Opcode) << " will be completely "
                            << "ignored. So the wait may not be accurate.\n";
     }
+    unsigned ImmEnc = static_cast<unsigned>(OpImm->getImm());
     switch (Opcode) {
     // Redundant switch so I don't have to repeat the code above
     // for each case. There are more clever ways to avoid this
     // extra switch and anyone can feel free to implement one of them.
     case AMDGPU::S_WAITCNT_EXPCNT_gfx10:
-      Expcnt = OpImm->getImm();
+      Expcnt = ImmEnc;
       break;
     case AMDGPU::S_WAITCNT_LGKMCNT_gfx10:
-      Lgkmcnt = OpImm->getImm();
+      Lgkmcnt = ImmEnc;
       break;
     case AMDGPU::S_WAITCNT_VMCNT_gfx10:
-      Vmcnt = OpImm->getImm();
+      Vmcnt = ImmEnc;
       break;
     case AMDGPU::S_WAITCNT_VSCNT_gfx10:
-      Vscnt = OpImm->getImm();
+      Vscnt = ImmEnc;
       break;
     }
     return;
@@ -223,7 +225,7 @@ void AMDGPUCustomBehaviour::computeWaitCnt(const InstRef &IR, unsigned &Vmcnt,
   case AMDGPU::S_WAITCNT_gfx10:
   case AMDGPU::S_WAITCNT_gfx6_gfx7:
   case AMDGPU::S_WAITCNT_vi:
-    unsigned WaitCnt = Inst.getOperand(0)->getImm();
+    unsigned WaitCnt = static_cast<unsigned>(Inst.getOperand(0)->getImm());
     AMDGPU::decodeWaitcnt(IV, WaitCnt, Vmcnt, Expcnt, Lgkmcnt);
     return;
   }
@@ -245,15 +247,14 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
 
   for (const auto &EN : llvm::enumerate(SrcMgr.getInstructions())) {
     const std::unique_ptr<Instruction> &Inst = EN.value();
-    unsigned Index = EN.index();
+    size_t Index = EN.index();
     unsigned Opcode = Inst->getOpcode();
     const MCInstrDesc &MCID = MCII.get(Opcode);
-    if ((MCID.TSFlags & SIInstrFlags::DS) &&
-        (MCID.TSFlags & SIInstrFlags::LGKM_CNT)) {
+    if (SIInstrFlags::isDS(MCID) && SIInstrFlags::usesLGKM_CNT(MCID)) {
       InstrWaitCntInfo[Index].LgkmCnt = true;
       if (isAlwaysGDS(Opcode) || hasModifiersSet(Inst, AMDGPU::OpName::gds))
         InstrWaitCntInfo[Index].ExpCnt = true;
-    } else if (MCID.TSFlags & SIInstrFlags::FLAT) {
+    } else if (SIInstrFlags::isFLAT(MCID)) {
       // We conservatively assume that mayAccessVMEMThroughFlat(Inst)
       // and mayAccessLDSThroughFlat(Inst) would both return true for this
       // instruction. We have to do this because those functions use
@@ -261,16 +262,16 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
       InstrWaitCntInfo[Index].LgkmCnt = true;
       if (!STI.hasFeature(AMDGPU::FeatureVscnt))
         InstrWaitCntInfo[Index].VmCnt = true;
-      else if (MCID.mayLoad() && !(MCID.TSFlags & SIInstrFlags::IsAtomicNoRet))
+      else if (MCID.mayLoad() && !SIInstrFlags::isAtomicNoRet(MCID))
         InstrWaitCntInfo[Index].VmCnt = true;
       else
         InstrWaitCntInfo[Index].VsCnt = true;
-    } else if (isVMEM(MCID) && !AMDGPU::getMUBUFIsBufferInv(Opcode)) {
+    } else if (SIInstrFlags::isVMEM(MCID) &&
+               !AMDGPU::getMUBUFIsBufferInv(Opcode)) {
       if (!STI.hasFeature(AMDGPU::FeatureVscnt))
         InstrWaitCntInfo[Index].VmCnt = true;
-      else if ((MCID.mayLoad() &&
-                !(MCID.TSFlags & SIInstrFlags::IsAtomicNoRet)) ||
-               ((MCID.TSFlags & SIInstrFlags::MIMG) && !MCID.mayLoad() &&
+      else if ((MCID.mayLoad() && !SIInstrFlags::isAtomicNoRet(MCID)) ||
+               (SIInstrFlags::isMIMG(MCID) && !MCID.mayLoad() &&
                 !MCID.mayStore()))
         InstrWaitCntInfo[Index].VmCnt = true;
       else if (MCID.mayStore())
@@ -280,12 +281,11 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
       // GCNTarget.vmemWriteNeedsExpWaitcnt()
       // which is defined as
       // { return getGeneration() < SEA_ISLANDS; }
-      if (IV.Major < 7 &&
-          (MCID.mayStore() || (MCID.TSFlags & SIInstrFlags::IsAtomicRet)))
+      if (IV.Major < 7 && (MCID.mayStore() || SIInstrFlags::isAtomicRet(MCID)))
         InstrWaitCntInfo[Index].ExpCnt = true;
-    } else if (MCID.TSFlags & SIInstrFlags::SMRD) {
+    } else if (SIInstrFlags::isSMRD(MCID)) {
       InstrWaitCntInfo[Index].LgkmCnt = true;
-    } else if (MCID.TSFlags & SIInstrFlags::EXP) {
+    } else if (SIInstrFlags::isEXP(MCID)) {
       InstrWaitCntInfo[Index].ExpCnt = true;
     } else {
       switch (Opcode) {
@@ -298,13 +298,6 @@ void AMDGPUCustomBehaviour::generateWaitCntInfo() {
       }
     }
   }
-}
-
-// taken from SIInstrInfo::isVMEM()
-bool AMDGPUCustomBehaviour::isVMEM(const MCInstrDesc &MCID) {
-  return MCID.TSFlags & SIInstrFlags::MUBUF ||
-         MCID.TSFlags & SIInstrFlags::MTBUF ||
-         MCID.TSFlags & SIInstrFlags::MIMG || MCID.TSFlags & SIInstrFlags::FLAT;
 }
 
 // taken from SIInstrInfo::hasModifiersSet()
@@ -321,17 +314,12 @@ bool AMDGPUCustomBehaviour::hasModifiersSet(
   return true;
 }
 
-// taken from SIInstrInfo::isGWS()
-bool AMDGPUCustomBehaviour::isGWS(uint16_t Opcode) const {
-  const MCInstrDesc &MCID = MCII.get(Opcode);
-  return MCID.TSFlags & SIInstrFlags::GWS;
-}
-
 // taken from SIInstrInfo::isAlwaysGDS()
-bool AMDGPUCustomBehaviour::isAlwaysGDS(uint16_t Opcode) const {
+bool AMDGPUCustomBehaviour::isAlwaysGDS(uint32_t Opcode) const {
   return Opcode == AMDGPU::DS_ORDERED_COUNT ||
          Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
-         Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
+         Opcode == AMDGPU::DS_SUB_GS_REG_RTN ||
+         SIInstrFlags::isGWS(MCII, Opcode);
 }
 
 } // namespace llvm::mca
@@ -364,5 +352,10 @@ LLVMInitializeAMDGPUTargetMCA() {
   TargetRegistry::RegisterCustomBehaviour(getTheGCNTarget(),
                                           createAMDGPUCustomBehaviour);
   TargetRegistry::RegisterInstrPostProcess(getTheGCNTarget(),
+                                           createAMDGPUInstrPostProcess);
+
+  TargetRegistry::RegisterCustomBehaviour(getTheGCNLegacyTarget(),
+                                          createAMDGPUCustomBehaviour);
+  TargetRegistry::RegisterInstrPostProcess(getTheGCNLegacyTarget(),
                                            createAMDGPUInstrPostProcess);
 }

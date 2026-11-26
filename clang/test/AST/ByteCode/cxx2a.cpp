@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=ref,both %s
+// RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=ref,both      %s
 // RUN: %clang_cc1 -std=c++2a -fsyntax-only -fcxx-exceptions -verify=expected,both %s -fexperimental-new-constant-interpreter
 
 
@@ -52,6 +52,61 @@ namespace Covariant {
   constexpr Covariant3 cb;
   constexpr const Covariant1 *cb1 = &cb;
   static_assert(cb1->f()->a == 'Z');
+}
+
+namespace Covariant2 {
+  struct NonZeroOffset { int padding = 123; };
+
+  struct A {};
+  struct B : NonZeroOffset, A {};
+  struct C : NonZeroOffset, A {};
+  struct D : B, C {};
+
+  struct Covariant1 {
+    D d;
+    virtual const A *f() const;
+  };
+  struct Covariant2 : Covariant1 {
+    virtual const C *f() const;
+  };
+  struct Covariant3 : Covariant2 {
+    constexpr virtual const D *f() const { return &this->d; }
+  };
+
+  constexpr Covariant3 cc;
+  constexpr const Covariant1 *cc1 = &cc;
+
+  static_assert(cc1->f() == (C*)&cc.d);
+}
+
+namespace Covariant3 {
+  struct NonZeroOffset { int padding = 123; };
+
+  struct A {};
+  struct B : NonZeroOffset, A {};
+  struct C : NonZeroOffset, A {};
+  struct D : B, C {};
+  struct E : D {};
+
+  struct Covariant1 {
+    E e;
+    virtual const A *f() const;
+  };
+  struct Covariant2 : Covariant1 {
+    virtual const C *f() const;
+  };
+  struct Covariant3 : Covariant2 {
+    virtual const D *f() const;
+  };
+
+  struct Covariant4 : Covariant3 {
+    constexpr virtual const E *f() const { return &this->e; }
+  };
+
+  constexpr Covariant4 cc;
+  constexpr const Covariant1 *cc1 = &cc;
+
+  static_assert(cc1->f() == (C*)&cc.e);
 }
 
 namespace DtorOrder {
@@ -210,7 +265,8 @@ namespace PureVirtual {
 namespace Dtor {
   constexpr bool pseudo(bool read, bool recreate) {
     using T = bool;
-    bool b = false; // both-note {{lifetime has already ended}}
+    bool b = false; // both-note {{lifetime has already ended}} \
+                    // both-note {{declared here}}
     // This evaluates the store to 'b'...
     (b = true).~T();
     // ... and ends the lifetime of the object.
@@ -252,4 +308,63 @@ namespace DependentRequiresExpr {
   };
 
   template <class T> using P = p<T>::type; // both-note {{while checking a default template argument}}
+}
+
+namespace PseudoDtorOnGlobal {
+  struct A {
+    int m;
+    mutable int n;
+    constexpr int f() const { return m; }
+    constexpr int g() const { return n; }
+  };
+
+  constexpr A a = {1, 2};
+  using T = int;
+  constexpr void destroy2() { // both-error {{never produces a constant expression}}
+    a.m.~T(); // both-note {{cannot modify an object that is visible outside}}
+  }
+}
+
+namespace UninitializedAndLifetime {
+  struct A { int n; };
+  constexpr void use_after_destroy() {
+    A a; // both-note {{declared here}}
+    a.~A();
+    A b = a; // both-note {{in call}} \
+             // both-note {{read of object outside its lifetime}}
+  }
+  static_assert((use_after_destroy(), true)); // both-error {{not an integral constant expression}} \
+                                              // both-note {{in call}}
+}
+
+namespace UnionNoActivate {
+  struct A { int n; };
+  struct B { A a; };
+  constexpr A a = (A() = B().a);
+
+  union C {
+    int n;
+    A a;
+  };
+  constexpr bool g() { // both-error {{never produces a constant expression}}
+    C c = {.n = 1};
+    c.a.operator=(B{2}.a); // both-note 2{{member call on member 'a' of union with active member 'n' is not allowed in a constant expression}}
+    return c.a.n == 2;
+  }
+  static_assert(g()); // both-error {{constant expression}} both-note {{in call}}
+}
+
+namespace UninitializedMemberFromConsteval {
+  struct A {
+    int x; // both-note {{subobject declared here}}
+    consteval A() { x = 4; }
+    consteval A(const A &) {}
+  };
+  void f() {
+    auto b = [] { // both-error {{call to immediate function}} \
+                  // both-note {{subobject 'x' is not initialized}}
+      auto z = [a = A()] {};
+      return z;
+    }();
+  }
 }

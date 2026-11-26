@@ -101,7 +101,7 @@ template <class BaseT> class RISCVSnippetGenerator : public BaseT {
       return 128U;
     if (isOpcodeAvailableIn(Opcode, {Feature_HasStdExtZvkshBit}))
       return 256U;
-    if (isOpcodeAvailableIn(Opcode, {Feature_HasStdExtZvknhaOrZvknhbBit}))
+    if (isOpcodeAvailableIn(Opcode, {Feature_HasStdExtZvknhaBit}))
       // In Zvknh[ab], when SEW=64 is used (i.e. Zvknhb), EGW is 256.
       // Otherwise it's 128.
       return SEW == 64 ? 256U : 128U;
@@ -400,14 +400,14 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
         using namespace RISCV_MC;
         if (isOpcodeAvailableIn(BaseOpcode, {Feature_HasStdExtZvkgBit,
                                              Feature_HasStdExtZvknedBit,
-                                             Feature_HasStdExtZvknhaOrZvknhbBit,
+                                             Feature_HasStdExtZvknhaBit,
                                              Feature_HasStdExtZvksedBit,
                                              Feature_HasStdExtZvkshBit})) {
           if (*SEW != 32)
             // Zvknhb supports SEW=64 as well.
             if (*SEW != 64 || !STI.hasFeature(RISCV::FeatureStdExtZvknhb) ||
                 !isOpcodeAvailableIn(BaseOpcode,
-                                     {Feature_HasStdExtZvknhaOrZvknhbBit})) {
+                                     {Feature_HasStdExtZvknhaBit})) {
               SEW = SEWCandidates.erase(SEW);
               continue;
             }
@@ -497,8 +497,6 @@ void RISCVSnippetGenerator<BaseT>::annotateWithVType(
   std::string ConfigStr;
   SmallVector<std::pair<const Operand *, MCOperand>, 4> ValueAssignments;
   for (const auto &[RM, AVL, Log2SEW, Policy] : Combinations) {
-    InstructionTemplate IT(&Instr);
-
     ListSeparator LS;
     ConfigStr = "vtype = {";
     raw_string_ostream SS(ConfigStr);
@@ -739,16 +737,16 @@ public:
   void addTargetSpecificPasses(PassManagerBase &PM) const override {
     // Turn AVL operand of physical registers into virtual registers.
     PM.add(exegesis::createRISCVPreprocessingPass());
-    PM.add(createRISCVInsertVSETVLIPass());
+    PM.add(createRISCVInsertVSETVLILegacyPass());
     // Setting up the correct FRM.
-    PM.add(createRISCVInsertReadWriteCSRPass());
-    PM.add(createRISCVInsertWriteVXRMPass());
+    PM.add(createRISCVInsertReadWriteCSRLegacyPass());
+    PM.add(createRISCVInsertWriteVXRMLegacyPass());
     // This will assign physical register to the result of VSETVLI instructions
     // that produce VLMAX.
     PM.add(exegesis::createRISCVPostprocessingPass());
     // PseudoRET will be expanded by RISCVAsmPrinter; we have to expand
     // PseudoMovImm with RISCVPostRAExpandPseudoPass though.
-    PM.add(createRISCVPostRAExpandPseudoPass());
+    PM.add(createRISCVExpandPseudoPostRALegacyPass());
   }
 };
 

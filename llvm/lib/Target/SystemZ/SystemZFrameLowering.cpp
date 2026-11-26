@@ -64,8 +64,7 @@ SystemZFrameLowering::SystemZFrameLowering(StackDirection D, Align StackAl,
 
 std::unique_ptr<SystemZFrameLowering>
 SystemZFrameLowering::create(const SystemZSubtarget &STI) {
-  unsigned PtrSz =
-      STI.getTargetLowering()->getTargetMachine().getPointerSize(0);
+  unsigned PtrSz = 8;
   if (STI.isTargetXPLINK64())
     return std::make_unique<SystemZXPLINKFrameLowering>(PtrSz);
   return std::make_unique<SystemZELFFrameLowering>(PtrSz);
@@ -160,6 +159,35 @@ bool SystemZFrameLowering::hasReservedCallFrame(
   // we're using a frame pointer. Similarly, 64-bit XPLINK requires 96 bytes
   // of stack space for the register save area.
   return true;
+}
+
+void SystemZFrameLowering::emitIncrement(MachineBasicBlock &MBB,
+                                         MachineBasicBlock::iterator &MBBI,
+                                         const DebugLoc &DL, Register Reg,
+                                         int64_t NumBytes,
+                                         const TargetInstrInfo *TII) const {
+  while (NumBytes) {
+    unsigned Opcode;
+    int64_t ThisVal = NumBytes;
+    if (isInt<16>(NumBytes))
+      Opcode = SystemZ::AGHI;
+    else {
+      Opcode = SystemZ::AGFI;
+      // Make sure we maintain stack alignment.
+      int64_t MinVal = -uint64_t(1) << 31;
+      int64_t MaxVal = (int64_t(1) << 31) - getStackAlignment();
+      if (ThisVal < MinVal)
+        ThisVal = MinVal;
+      else if (ThisVal > MaxVal)
+        ThisVal = MaxVal;
+    }
+    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII->get(Opcode), Reg)
+                           .addReg(Reg)
+                           .addImm(ThisVal);
+    // The CC implicit def is dead.
+    MI->getOperand(3).setIsDead();
+    NumBytes -= ThisVal;
+  }
 }
 
 bool SystemZELFFrameLowering::assignCalleeSavedSpillSlots(
@@ -474,34 +502,6 @@ void SystemZELFFrameLowering::processFunctionBeforeFrameFinalized(
       MO.setIsKill(false);
 }
 
-// Emit instructions before MBBI (in MBB) to add NumBytes to Reg.
-static void emitIncrement(MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator &MBBI, const DebugLoc &DL,
-                          Register Reg, int64_t NumBytes,
-                          const TargetInstrInfo *TII) {
-  while (NumBytes) {
-    unsigned Opcode;
-    int64_t ThisVal = NumBytes;
-    if (isInt<16>(NumBytes))
-      Opcode = SystemZ::AGHI;
-    else {
-      Opcode = SystemZ::AGFI;
-      // Make sure we maintain 8-byte stack alignment.
-      int64_t MinVal = -uint64_t(1) << 31;
-      int64_t MaxVal = (int64_t(1) << 31) - 8;
-      if (ThisVal < MinVal)
-        ThisVal = MinVal;
-      else if (ThisVal > MaxVal)
-        ThisVal = MaxVal;
-    }
-    MachineInstr *MI = BuildMI(MBB, MBBI, DL, TII->get(Opcode), Reg)
-      .addReg(Reg).addImm(ThisVal);
-    // The CC implicit def is dead.
-    MI->getOperand(3).setIsDead();
-    NumBytes -= ThisVal;
-  }
-}
-
 // Add CFI for the new CFA offset.
 static void buildCFAOffs(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI,
@@ -800,9 +800,12 @@ void SystemZELFFrameLowering::inlineStackProbe(
     MachineMemOperand *MMO = MF.getMachineMemOperand(MachinePointerInfo(),
       MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad, 8, Align(1));
     BuildMI(InsMBB, InsPt, DL, ZII->get(SystemZ::CG))
-      .addReg(SystemZ::R0D, RegState::Undef)
-      .addReg(SystemZ::R15D).addImm(Size - 8).addReg(0)
-      .addMemOperand(MMO);
+        .addReg(SystemZ::R0D, RegState::Undef)
+        .addReg(SystemZ::R15D)
+        .addImm(Size - 8)
+        .addReg(0)
+        .setOperandDead(4)
+        .addMemOperand(MMO);
   };
 
   bool StoreBackchain = MF.getSubtarget<SystemZSubtarget>().hasBackChain();
@@ -863,7 +866,7 @@ void SystemZELFFrameLowering::inlineStackProbe(
 }
 
 bool SystemZELFFrameLowering::hasFPImpl(const MachineFunction &MF) const {
-  return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
+  return (MF.disableFramePointerElim() ||
           MF.getFrameInfo().hasVarSizedObjects());
 }
 
@@ -1240,6 +1243,7 @@ bool SystemZXPLINKFrameLowering::restoreCalleeSavedRegisters(
 void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
                                               MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
+  unsigned InstCount = MBB.size();
   const SystemZSubtarget &Subtarget = MF.getSubtarget<SystemZSubtarget>();
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -1349,6 +1353,16 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
       if (!MBB.isLiveIn(Reg))
         MBB.addLiveIn(Reg);
     }
+  }
+
+  // Check if any new instructions were inserted. If not, it means no there is
+  // no prologue and thus no need for a fence. The fence is required because
+  // moving instructions inside the prologue might violate some of the rules
+  // required to hold for prologues, for example the maximum lengths of the
+  // prologue code. See all rules at
+  // https://www.ibm.com/docs/en/zos/3.1.0?topic=SSLTBW_3.1.0/com.ibm.zos.v3r1.ceev100/cee1v2319.html
+  if (InstCount < MBB.size()) {
+    BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::FENCE));
   }
 }
 
@@ -1542,7 +1556,11 @@ void SystemZXPLINKFrameLowering::determineFrameLayout(
       static_cast<SystemZXPLINK64Registers *>(Subtarget.getSpecialRegisters());
 
   uint64_t StackSize = MFFrame.getStackSize();
-  if (StackSize == 0)
+  // A function which saves callee-saved registers needs a register save area of
+  // its own, even if it has no other stack objects. Otherwise the registers are
+  // stored relative to the unchanged stack pointer, i.e. into the save area of
+  // the caller's DSA.
+  if (StackSize == 0 && MFFrame.getCalleeSavedInfo().empty())
     return;
 
   // Add the size of the register save area and the reserved area to the size.

@@ -60,8 +60,8 @@ int main(int argc, const char *argv[]) {
 // CHECK:  NSNumber *fortyTwoUnsigned = ((NSNumber *(*)(Class, SEL, unsigned int))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithUnsignedInt:"), 42U);
 // CHECK:  NSNumber *fortyTwoLong = ((NSNumber *(*)(Class, SEL, long))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithLong:"), 42L);
 // CHECK:  NSNumber *fortyTwoLongLong = ((NSNumber *(*)(Class, SEL, long long))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithLongLong:"), 42LL);
-// CHECK:  NSNumber *piFloat = ((NSNumber *(*)(Class, SEL, float))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithFloat:"), 3.14159274F);
-// CHECK:  NSNumber *piDouble = ((NSNumber *(*)(Class, SEL, double))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithDouble:"), 3.1415926535000001);
+// CHECK:  NSNumber *piFloat = ((NSNumber *(*)(Class, SEL, float))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithFloat:"), 3.1415927F);
+// CHECK:  NSNumber *piDouble = ((NSNumber *(*)(Class, SEL, double))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithDouble:"), 3.1415926535);
 // CHECK:  NSNumber *yesNumber = ((NSNumber *(*)(Class, SEL, BOOL))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithBool:"), true);
 // CHECK:  NSNumber *noNumber = ((NSNumber *(*)(Class, SEL, BOOL))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithBool:"), false);
 // CHECK:  NSNumber *trueNumber = ((NSNumber *(*)(Class, SEL, BOOL))(void *)objc_msgSend)(objc_getClass("NSNumber"), sel_registerName("numberWithBool:"), true);

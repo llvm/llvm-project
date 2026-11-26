@@ -24,17 +24,18 @@ add_extra_unittest(ClangTidyTests
   DeclRefExprUtilsTest.cpp
   IncludeCleanerTest.cpp
   IncludeInserterTest.cpp
+  LexerUtilsTest.cpp
   GlobListTest.cpp
   GoogleModuleTest.cpp
   LLVMModuleTest.cpp
   ModernizeModuleTest.cpp
   NamespaceAliaserTest.cpp
-  ObjCModuleTest.cpp
   OptionsProviderTest.cpp
   OverlappingReplacementsTest.cpp
   UsingInserterTest.cpp
   ReadabilityModuleTest.cpp
   TransformerClangTidyCheckTest.cpp
+  TypeTraitsTest.cpp
   )
 
 clang_target_link_libraries(ClangTidyTests

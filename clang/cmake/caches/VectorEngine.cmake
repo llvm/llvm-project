@@ -66,14 +66,6 @@ set(RUNTIMES_ve-unknown-linux-gnu_LIBCXXABI_USE_COMPILER_RT TRUE CACHE BOOL "")
 # VE uses Compiler-RT from libcxx.
 set(RUNTIMES_ve-unknown-linux-gnu_LIBCXX_USE_COMPILER_RT TRUE CACHE BOOL "")
 
-# Pretended standalone build for OpenMP since OpenMP doesn't support
-# LLVM_ENABLE_PER_TARGET_RUNTIME_DIR yet.
-#   - Use OPENMP_STANDALONE_BUILD
-#   - Define OPENMP_LIBDIR_SUFFIX to pretend per-target openmp directory
-#   - Define OPENMP_LLVM_TOOLS_DIR for test
-set(RUNTIMES_x86_64-unknown-linux-gnu_OPENMP_STANDALONE_BUILD ON CACHE BOOL "")
-set(RUNTIMES_ve-unknown-linux-gnu_OPENMP_STANDALONE_BUILD ON CACHE BOOL "")
-
 # Specify LIBDIR_SUFFIX for OpenMP to install them at following directories.
 #   install/lib/clang/${VERSION}/lib/x86_64-unknown-linux-gnu
 #   install/lib/clang/${VERSION}/lib/ve-unknown-linux-gnu

@@ -131,7 +131,8 @@ public:
                                                   : mlir::SymbolRefAttr{},
                                               newResultTypes, newOperands);
       // Copy all the attributes from the old to new op.
-      newOp->setAttrs(callOp->getAttrs());
+      newOp->copyProperties(callOp->getPropertiesStorage());
+      newOp->setDiscardableAttrs(callOp->getDiscardableAttrDictionary());
       rewriter.replaceOp(callOp, newOp);
 
       for (auto a : allocas) {

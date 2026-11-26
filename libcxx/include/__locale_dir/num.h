@@ -19,12 +19,14 @@
 #include <__iterator/istreambuf_iterator.h>
 #include <__iterator/ostreambuf_iterator.h>
 #include <__locale_dir/check_grouping.h>
-#include <__locale_dir/get_c_locale.h>
+#include <__locale_dir/ctype.h>
+#include <__locale_dir/locale.h>
 #include <__locale_dir/pad_and_output.h>
 #include <__locale_dir/scan_keyword.h>
 #include <__memory/unique_ptr.h>
 #include <__system_error/errc.h>
 #include <__type_traits/is_signed.h>
+#include <__utility/checked_int.h>
 #include <cerrno>
 #include <ios>
 #include <streambuf>
@@ -42,6 +44,105 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
+// template <class charT> class numpunct
+
+template <class _CharT>
+class numpunct;
+
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct<char> : public locale::facet {
+public:
+  typedef char char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct(size_t __refs = 0);
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
+
+  static locale::id id;
+
+protected:
+  ~numpunct() override;
+  virtual char_type do_decimal_point() const;
+  virtual char_type do_thousands_sep() const;
+  virtual string do_grouping() const;
+  virtual string_type do_truename() const;
+  virtual string_type do_falsename() const;
+
+  char_type __decimal_point_;
+  char_type __thousands_sep_;
+  string __grouping_;
+};
+
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct<wchar_t> : public locale::facet {
+public:
+  typedef wchar_t char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct(size_t __refs = 0);
+
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type decimal_point() const { return do_decimal_point(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type thousands_sep() const { return do_thousands_sep(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string grouping() const { return do_grouping(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type truename() const { return do_truename(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI string_type falsename() const { return do_falsename(); }
+
+  static locale::id id;
+
+protected:
+  ~numpunct() override;
+  virtual char_type do_decimal_point() const;
+  virtual char_type do_thousands_sep() const;
+  virtual string do_grouping() const;
+  virtual string_type do_truename() const;
+  virtual string_type do_falsename() const;
+
+  char_type __decimal_point_;
+  char_type __thousands_sep_;
+  string __grouping_;
+};
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+// template <class charT> class numpunct_byname
+
+template <class _CharT>
+class numpunct_byname;
+
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<char> : public numpunct<char> {
+public:
+  typedef char char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct_byname(const char* __nm, size_t __refs = 0);
+  explicit numpunct_byname(const string& __nm, size_t __refs = 0);
+
+protected:
+  ~numpunct_byname() override;
+};
+
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
+template <>
+class _LIBCPP_EXPORTED_FROM_ABI numpunct_byname<wchar_t> : public numpunct<wchar_t> {
+public:
+  typedef wchar_t char_type;
+  typedef basic_string<char_type> string_type;
+
+  explicit numpunct_byname(const char* __nm, size_t __refs = 0);
+  explicit numpunct_byname(const string& __nm, size_t __refs = 0);
+
+protected:
+  ~numpunct_byname() override;
+};
+#  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 struct _LIBCPP_EXPORTED_FROM_ABI __num_get_base {
   static const int __num_get_buf_sz = 40;
@@ -95,9 +196,8 @@ struct __num_get : protected __num_get_base {
       _LIBCPP_DIAGNOSTIC_PUSH
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
       using __vec   = __simd_vector<char, 32>;
-      __vec __chars = std::__broadcast<__vec>(__val);
       __vec __cmp   = std::__partial_load<__vec, __int_chr_cnt>(__atoms);
-      auto __res    = __chars == __cmp;
+      auto __res    = __vec(__val) == __cmp;
       if (std::__none_of(__res))
         return __int_chr_cnt;
       return std::min(__int_chr_cnt, std::__find_first_set(__res));
@@ -114,8 +214,7 @@ struct __num_get : protected __num_get_base {
 private:
   template <typename _Tp>
   _LIBCPP_HIDE_FROM_ABI const _Tp* __do_widen_p(ios_base& __iob, _Tp* __atoms) const {
-    locale __loc = __iob.getloc();
-    use_facet<ctype<_Tp> >(__loc).widen(__src, __src + __int_chr_cnt, __atoms);
+    use_facet<ctype<_Tp> >(__iob.__getloc()).widen(__src, __src + __int_chr_cnt, __atoms);
     return __atoms;
   }
 
@@ -129,7 +228,7 @@ private:
 template <class _CharT>
 string __num_get<_CharT>::__stage2_float_prep(
     ios_base& __iob, _CharT* __atoms, _CharT& __decimal_point, _CharT& __thousands_sep) {
-  locale __loc = __iob.getloc();
+  const locale& __loc = __iob.__getloc();
   std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + __fp_chr_cnt, __atoms);
   const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
   __decimal_point              = __np.decimal_point();
@@ -203,30 +302,12 @@ extern template struct _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __num_get<wchar_t>;
 #  endif
 
 template <class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Tp __do_strtod(const char* __a, char** __p2);
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI float __do_strtod<float>(const char* __a, char** __p2) {
-  return __locale::__strtof(__a, __p2, _LIBCPP_GET_C_LOCALE);
-}
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI double __do_strtod<double>(const char* __a, char** __p2) {
-  return __locale::__strtod(__a, __p2, _LIBCPP_GET_C_LOCALE);
-}
-
-template <>
-inline _LIBCPP_HIDE_FROM_ABI long double __do_strtod<long double>(const char* __a, char** __p2) {
-  return __locale::__strtold(__a, __p2, _LIBCPP_GET_C_LOCALE);
-}
-
-template <class _Tp>
 _LIBCPP_HIDE_FROM_ABI _Tp __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err) {
   if (__a != __a_end) {
     __libcpp_remove_reference_t<decltype(errno)> __save_errno = errno;
     errno                                                     = 0;
     char* __p2;
-    _Tp __ld                                                     = std::__do_strtod<_Tp>(__a, &__p2);
+    _Tp __ld                                                     = __locale::__str_to_float_c_locale<_Tp>(__a, &__p2);
     __libcpp_remove_reference_t<decltype(errno)> __current_errno = errno;
     if (__current_errno == 0)
       errno = __save_errno;
@@ -384,14 +465,14 @@ protected:
     using _Unsigned = __make_unsigned_t<_MaybeSigned>;
 
     // Stage 1
-    int __base = this->__get_base(__iob);
+    unsigned char __base = this->__get_base(__iob);
 
     // Stages 2 & 3
     // These are combined into a single step where we parse the characters and calculate the value in one go instead of
     // storing the relevant characters first (in an allocated buffer) and parse the characters after we extracted them.
     // This makes the whole process significantly faster, since we avoid potential allocations and copies.
 
-    const auto& __numpunct    = use_facet<numpunct<_CharT> >(__iob.getloc());
+    const auto& __numpunct    = use_facet<numpunct<_CharT> >(__iob.__getloc());
     char_type __thousands_sep = __numpunct.thousands_sep();
     string __grouping         = __numpunct.grouping();
 
@@ -474,8 +555,7 @@ protected:
     }
 
     // Calculate the actual number
-    _Unsigned __val   = 0;
-    bool __overflowed = false;
+    __checked_int<_Unsigned> __val(0);
     for (; __first != __last; ++__first) {
       auto __c = *__first;
       if (!__grouping.empty() && __c == __thousands_sep) {
@@ -493,9 +573,7 @@ protected:
         __offset -= 6;
       if (__offset >= __base)
         break;
-      // __val = (__val * __base) + __offset
-      __overflowed |= __builtin_mul_overflow(__val, __base, std::addressof(__val)) ||
-                      __builtin_add_overflow(__val, __offset, std::addressof(__val));
+      __val        = (__val * __base) + static_cast<unsigned short>(__offset);
       __parsed_num = true;
       ++__dc;
     }
@@ -503,29 +581,29 @@ protected:
     if (!__parsed_num) {
       __err |= ios_base::failbit;
       __v = 0;
-    } else if (__overflowed) {
+    } else if (__val.__overflowed()) {
       __err |= ios_base::failbit;
       __v = is_signed<_MaybeSigned>::value && __negate
               ? numeric_limits<_MaybeSigned>::min()
               : numeric_limits<_MaybeSigned>::max();
-    } else if (!__negate) {
-      if (__val > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max())) {
+    } else if (auto __value = __val.__value(); !__negate) {
+      if (__value > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max())) {
         __err |= ios_base::failbit;
         __v = numeric_limits<_MaybeSigned>::max();
       } else {
-        __v = __val;
+        __v = __value;
       }
     } else if (is_signed<_MaybeSigned>::value) {
-      if (__val > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
+      if (__value > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
         __err |= ios_base::failbit;
         __v = numeric_limits<_MaybeSigned>::min();
-      } else if (__val == static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
+      } else if (__value == static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
         __v = numeric_limits<_MaybeSigned>::min();
       } else {
-        __v = -__val;
+        __v = -__value;
       }
     } else {
-      __v = -__val;
+      __v = -__value;
     }
 
     if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)
@@ -609,8 +687,8 @@ _InputIterator num_get<_CharT, _InputIterator>::do_get(
     }
     return __b;
   }
-  const ctype<_CharT>& __ct    = std::use_facet<ctype<_CharT> >(__iob.getloc());
-  const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__iob.getloc());
+  const ctype<_CharT>& __ct    = std::use_facet<ctype<_CharT> >(__iob.__getloc());
+  const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__iob.__getloc());
   typedef typename numpunct<_CharT>::string_type string_type;
   const string_type __names[2] = {__np.truename(), __np.falsename()};
   const string_type* __i       = std::__scan_keyword(__b, __e, __names, __names + 2, __ct, __err);
@@ -831,7 +909,7 @@ _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, bool __v) const {
   if ((__iob.flags() & ios_base::boolalpha) == 0)
     return do_put(__s, __iob, __fl, (unsigned long)__v);
-  const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.getloc());
+  const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.__getloc());
   typedef typename numpunct<char_type>::string_type string_type;
   string_type __nm = __v ? __np.truename() : __np.falsename();
   return std::copy(__nm.begin(), __nm.end(), __s);
@@ -901,7 +979,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   char_type __o[2 * (__buffer_size - 1) - 1];
   char_type* __op; // pad here
   char_type* __oe; // end of output
-  this->__widen_and_group_int(__char_buffer, __np, __res.__ptr, __o, __op, __oe, __iob.getloc());
+  this->__widen_and_group_int(__char_buffer, __np, __res.__ptr, __o, __op, __oe, __iob.__getloc());
   // [__o, __oe) contains thousands_sep'd wide number
   // Stage 3 & 4
   return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);
@@ -946,15 +1024,15 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wformat-nonliteral")
   if (__specify_precision)
-    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, __locale::__get_c_locale(), __fmt, (int)__iob.precision(), __v);
   else
-    __nc = __locale::__snprintf(__nb, __nbuf, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+    __nc = __locale::__snprintf(__nb, __nbuf, __locale::__get_c_locale(), __fmt, __v);
   unique_ptr<char, void (*)(void*)> __nbh(nullptr, free);
   if (__nc > static_cast<int>(__nbuf - 1)) {
     if (__specify_precision)
-      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, (int)__iob.precision(), __v);
+      __nc = __locale::__asprintf(&__nb, __locale::__get_c_locale(), __fmt, (int)__iob.precision(), __v);
     else
-      __nc = __locale::__asprintf(&__nb, _LIBCPP_GET_C_LOCALE, __fmt, __v);
+      __nc = __locale::__asprintf(&__nb, __locale::__get_c_locale(), __fmt, __v);
     if (__nc == -1)
       std::__throw_bad_alloc();
     __nbh.reset(__nb);
@@ -974,7 +1052,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   }
   char_type* __op; // pad here
   char_type* __oe; // end of output
-  this->__widen_and_group_float(__nb, __np, __ne, __ob, __op, __oe, __iob.getloc());
+  this->__widen_and_group_float(__nb, __np, __ne, __ob, __op, __oe, __iob.__getloc());
   // [__o, __oe) contains thousands_sep'd wide number
   // Stage 3 & 4
   __s = std::__pad_and_output(__s, __ob, __op, __oe, __iob, __fl);
@@ -1008,6 +1086,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS num_put<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

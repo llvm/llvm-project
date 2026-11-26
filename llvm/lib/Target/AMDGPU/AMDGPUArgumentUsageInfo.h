@@ -10,27 +10,21 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUARGUMENTUSAGEINFO_H
 
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/Register.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
+#include "llvm/IR/CallingConv.h"
 #include <variant>
 
 namespace llvm {
 
-void initializeAMDGPUArgumentUsageInfoWrapperLegacyPass(PassRegistry &);
-
-class Function;
 class LLT;
 class raw_ostream;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 struct ArgDescriptor {
 private:
   friend struct AMDGPUFunctionArgInfo;
-  friend class AMDGPUArgumentUsageInfo;
 
   std::variant<std::monostate, MCRegister, unsigned> Val;
 
@@ -169,73 +163,12 @@ struct AMDGPUFunctionArgInfo {
   std::tuple<const ArgDescriptor *, const TargetRegisterClass *, LLT>
   getPreloadedValue(PreloadedValue Value) const;
 
+  /// Returns the register a non-entry function with calling convention \p CC
+  /// expects the private segment buffer in.
+  static MCRegister getPrivateSegmentBufferReg(CallingConv::ID CC);
+
   static AMDGPUFunctionArgInfo fixedABILayout();
-};
-
-class AMDGPUArgumentUsageInfo {
-private:
-  DenseMap<const Function *, AMDGPUFunctionArgInfo> ArgInfoMap;
-
-public:
-  static const AMDGPUFunctionArgInfo ExternFunctionInfo;
   static const AMDGPUFunctionArgInfo FixedABIFunctionInfo;
-
-  void print(raw_ostream &OS, const Module *M = nullptr) const;
-
-  void clear() { ArgInfoMap.clear(); }
-
-  void setFuncArgInfo(const Function &F, const AMDGPUFunctionArgInfo &ArgInfo) {
-    ArgInfoMap[&F] = ArgInfo;
-  }
-
-  const AMDGPUFunctionArgInfo &lookupFuncArgInfo(const Function &F) const;
-
-  bool invalidate(Module &M, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &Inv);
-};
-
-class AMDGPUArgumentUsageInfoWrapperLegacy : public ImmutablePass {
-  std::unique_ptr<AMDGPUArgumentUsageInfo> AUIP;
-
-public:
-  static char ID;
-
-  AMDGPUArgumentUsageInfoWrapperLegacy() : ImmutablePass(ID) {
-    initializeAMDGPUArgumentUsageInfoWrapperLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  AMDGPUArgumentUsageInfo &getArgUsageInfo() { return *AUIP; }
-  const AMDGPUArgumentUsageInfo &getArgUsageInfo() const { return *AUIP; }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-  bool doInitialization(Module &M) override {
-    AUIP = std::make_unique<AMDGPUArgumentUsageInfo>();
-    return false;
-  }
-
-  bool doFinalization(Module &M) override {
-    AUIP->clear();
-    return false;
-  }
-
-  void print(raw_ostream &OS, const Module *M = nullptr) const override {
-    AUIP->print(OS, M);
-  }
-};
-
-class AMDGPUArgumentUsageAnalysis
-    : public AnalysisInfoMixin<AMDGPUArgumentUsageAnalysis> {
-  friend AnalysisInfoMixin<AMDGPUArgumentUsageAnalysis>;
-  static AnalysisKey Key;
-
-public:
-  using Result = AMDGPUArgumentUsageInfo;
-
-  AMDGPUArgumentUsageInfo run(Module &M, ModuleAnalysisManager &);
 };
 
 } // end namespace llvm

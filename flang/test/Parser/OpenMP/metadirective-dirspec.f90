@@ -26,7 +26,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = allocate
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f01(x)
@@ -40,7 +40,8 @@ end
 !UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: CRITICAL(x))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
+!PARSE-TREE:  OpenMPConstruct -> OpenMPStandaloneConstruct -> OmpMetadirectiveDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = metadirective
 !PARSE-TREE: | OmpClauseList -> OmpClause -> When -> OmpWhenClause
 !PARSE-TREE: | | Modifier -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | | OmpTraitSetSelectorName -> Value = User
@@ -52,7 +53,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = critical
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f02
@@ -187,7 +188,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare simd
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f04'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'f04'
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: ImplicitPart ->
 
@@ -212,7 +213,7 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = declare target
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'f05'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'f05'
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: ImplicitPart ->
 
@@ -227,7 +228,8 @@ end
 !UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: FLUSH(x, y))
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpMetadirectiveDirective
+!PARSE-TREE: OpenMPConstruct -> OpenMPStandaloneConstruct -> OmpMetadirectiveDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = metadirective
 !PARSE-TREE: | OmpClauseList -> OmpClause -> When -> OmpWhenClause
 !PARSE-TREE: | | Modifier -> OmpContextSelectorSpecification -> OmpTraitSetSelector
 !PARSE-TREE: | | | OmpTraitSetSelectorName -> Value = User
@@ -239,8 +241,8 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = flush
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | | | | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'y'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | | | | OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'y'
 !PARSE-TREE: | | | OmpClauseList ->
 
 subroutine f07
@@ -266,5 +268,60 @@ end
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = threadprivate
-!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 't'
+!PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 't'
 !PARSE-TREE: | | | OmpClauseList ->
+
+subroutine f08
+  !$omp metadirective when(user={condition(.true.)}: barrier)
+end
+
+!UNPARSE: SUBROUTINE f08
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: BARRIER)
+!UNPARSE: END SUBROUTINE
+
+!PARSE-TREE: OpenMPConstruct -> OpenMPStandaloneConstruct -> OmpMetadirectiveDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = metadirective
+!PARSE-TREE: | OmpClauseList -> OmpClause -> When -> OmpWhenClause
+!PARSE-TREE: | | Modifier -> OmpContextSelectorSpecification -> OmpTraitSetSelector
+!PARSE-TREE: | | | OmpTraitSetSelectorName -> Value = User
+!PARSE-TREE: | | | OmpTraitSelector
+!PARSE-TREE: | | | | OmpTraitSelectorName -> Value = Condition
+!PARSE-TREE: | | | | Properties
+!PARSE-TREE: | | | | | OmpTraitProperty -> Scalar -> Expr = '.true._4'
+!PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
+!PARSE-TREE: | | | | | | | bool = 'true'
+!PARSE-TREE: | | OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = barrier
+!PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = {}
+!PARSE-TREE: | Flags = {}
+
+subroutine f09
+  !$omp metadirective when(user={condition(.true.)}: nothing) &
+  !$omp & otherwise(nothing)
+end
+
+!UNPARSE: SUBROUTINE f09
+!UNPARSE: !$OMP METADIRECTIVE WHEN(USER={CONDITION(.true._4)}: NOTHING) OTHERWISE(NOTHING)
+!UNPARSE: END SUBROUTINE
+
+!PARSE-TREE: OpenMPConstruct -> OpenMPStandaloneConstruct -> OmpMetadirectiveDirective -> OmpDirectiveSpecification
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = metadirective
+!PARSE-TREE: | OmpClauseList -> OmpClause -> When -> OmpWhenClause
+!PARSE-TREE: | | Modifier -> OmpContextSelectorSpecification -> OmpTraitSetSelector
+!PARSE-TREE: | | | OmpTraitSetSelectorName -> Value = User
+!PARSE-TREE: | | | OmpTraitSelector
+!PARSE-TREE: | | | | OmpTraitSelectorName -> Value = Condition
+!PARSE-TREE: | | | | Properties
+!PARSE-TREE: | | | | | OmpTraitProperty -> Scalar -> Expr = '.true._4'
+!PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
+!PARSE-TREE: | | | | | | | bool = 'true'
+!PARSE-TREE: | | OmpDirectiveSpecification
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = nothing
+!PARSE-TREE: | | | OmpClauseList ->
+!PARSE-TREE: | | | Flags = {}
+!PARSE-TREE: | OmpClause -> Otherwise -> OmpOtherwiseClause -> OmpDirectiveSpecification
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = nothing
+!PARSE-TREE: | | OmpClauseList ->
+!PARSE-TREE: | | Flags = {}
+!PARSE-TREE: | Flags = {}

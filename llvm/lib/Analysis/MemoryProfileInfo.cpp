@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains utilities to analyze memory profile information.
+// This file contains utilities to analyze memory profile information for
+// profile-guided memory optimization (MemPGO).
 //
 //===----------------------------------------------------------------------===//
 
@@ -54,6 +55,12 @@ cl::opt<unsigned> MinPercentMaxColdSize(
     "memprof-min-percent-max-cold-size", cl::init(100), cl::Hidden,
     cl::desc("Min percent of max cold bytes for critical cold context"));
 
+// Use this to keep the context size information in the memprof metadata for use
+// in remarks.
+cl::opt<bool> MemProfKeepContextSizeInfo(
+    "memprof-keep-context-size-info", cl::init(false), cl::Hidden,
+    cl::desc("Keep context size information in memprof metadata"));
+
 LLVM_ABI cl::opt<bool> MemProfUseAmbiguousAttributes(
     "memprof-ambiguous-attributes", cl::init(true), cl::Hidden,
     cl::desc("Apply ambiguous memprof attribute to ambiguous allocations"));
@@ -61,7 +68,8 @@ LLVM_ABI cl::opt<bool> MemProfUseAmbiguousAttributes(
 } // end namespace llvm
 
 bool llvm::memprof::metadataIncludesAllContextSizeInfo() {
-  return MemProfReportHintedSizes || MinClonedColdBytePercent < 100;
+  return MemProfReportHintedSizes || MemProfKeepContextSizeInfo ||
+         MinClonedColdBytePercent < 100;
 }
 
 bool llvm::memprof::metadataMayIncludeContextSizeInfo() {
@@ -107,6 +115,8 @@ AllocationType llvm::memprof::getMIBAllocType(const MDNode *MIB) {
 }
 
 std::string llvm::memprof::getAllocTypeAttributeString(AllocationType Type) {
+  if (isAmbiguousAllocType((uint8_t)Type))
+    return "ambiguous";
   switch (Type) {
   case AllocationType::NotCold:
     return "notcold";
@@ -127,6 +137,12 @@ bool llvm::memprof::hasSingleAllocType(uint8_t AllocTypes) {
   const unsigned NumAllocTypes = llvm::popcount(AllocTypes);
   assert(NumAllocTypes != 0);
   return NumAllocTypes == 1;
+}
+
+bool llvm::memprof::isAmbiguousAllocType(uint8_t AllocTypes) {
+  const uint8_t BothTypes =
+      (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold;
+  return (AllocTypes & BothTypes) == BothTypes;
 }
 
 void llvm::memprof::removeAnyExistingAmbiguousAttribute(CallBase *CB) {
@@ -518,28 +534,47 @@ void CallStackTrie::addSingleAllocTypeAttribute(CallBase *CI, AllocationType AT,
   // to an unambiguous one.
   removeAnyExistingAmbiguousAttribute(CI);
   CI->addFnAttr(A);
-  if (MemProfReportHintedSizes) {
-    std::vector<ContextSizeTypePair> ContextInfo;
-    collectContextInfo(Alloc, ContextInfo);
-    for (const auto &[CSI, OrigAT] : ContextInfo) {
-      const auto &[FullStackId, TotalSize] = CSI;
-      // If the original alloc type is not the one being applied as the hint,
-      // report that we ignored this context.
-      if (AT != OrigAT) {
+
+  std::vector<ContextSizeTypePair> ContextInfo;
+  collectContextInfo(Alloc, ContextInfo);
+
+  // If we don't have context size info, just emit a single remark for this
+  // allocation.
+  if (ContextInfo.empty()) {
+    if (ORE)
+      ORE->emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CI)
+                << ore::NV("AllocationCall", CI) << " in function "
+                << ore::NV("Caller", CI->getFunction())
+                << " marked with memprof allocation attribute "
+                << ore::NV("Attribute", AllocTypeString));
+    return;
+  }
+
+  // Emit remarks or stderr reporting if requested.
+  for (const auto &[CSI, OrigAT] : ContextInfo) {
+    const auto &[FullStackId, TotalSize] = CSI;
+    // If the original alloc type is not the one being applied as the hint,
+    // then don't report that it was hinted. Optionally report that we ignored
+    // this context.
+    if (AT != OrigAT) {
+      if (MemProfReportHintedSizes)
         emitIgnoredNonColdContextMessage("ignored", FullStackId, "", TotalSize);
-        continue;
-      }
+      continue;
+    }
+    if (MemProfReportHintedSizes)
       errs() << "MemProf hinting: Total size for full allocation context hash "
              << FullStackId << " and " << Descriptor << " alloc type "
              << getAllocTypeAttributeString(AT) << ": " << TotalSize << "\n";
-    }
+    if (ORE)
+      ORE->emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CI)
+                << ore::NV("AllocationCall", CI) << " in function "
+                << ore::NV("Caller", CI->getFunction())
+                << " marked with memprof allocation attribute "
+                << ore::NV("Attribute", AllocTypeString)
+                << " for full allocation context hash "
+                << ore::NV("FullStackId", FullStackId) << " with total size "
+                << ore::NV("TotalSize", TotalSize));
   }
-  if (ORE)
-    ORE->emit(OptimizationRemark(DEBUG_TYPE, "MemprofAttribute", CI)
-              << ore::NV("AllocationCall", CI) << " in function "
-              << ore::NV("Caller", CI->getFunction())
-              << " marked with memprof allocation attribute "
-              << ore::NV("Attribute", AllocTypeString));
 }
 
 // Build and attach the minimal necessary MIB metadata. If the alloc has a

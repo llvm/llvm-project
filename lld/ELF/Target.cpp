@@ -24,7 +24,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Target.h"
-#include "Arch/RISCVInternalRelocations.h"
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "RelocScan.h"
@@ -41,14 +40,6 @@ using namespace lld::elf;
 
 std::string elf::toStr(Ctx &ctx, RelType type) {
   StringRef s = getELFRelocationTypeName(ctx.arg.emachine, type);
-  if (ctx.arg.emachine == EM_RISCV && s == "Unknown") {
-    auto VendorString = getRISCVVendorString(type);
-    if (VendorString)
-      s = getRISCVVendorRelocationTypeName(type & ~INTERNAL_RISCV_VENDOR_MASK,
-                                           *VendorString);
-    if (s == "Unknown")
-      return ("Unknown vendor-specific (" + Twine(type) + ")").str();
-  }
   if (s == "Unknown")
     return ("Unknown (" + Twine(type) + ")").str();
   return std::string(s);
@@ -147,10 +138,6 @@ bool TargetInfo::adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
 
 bool TargetInfo::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   return true;
-}
-
-RelExpr TargetInfo::adjustTlsExpr(RelType type, RelExpr expr) const {
-  return expr;
 }
 
 RelExpr TargetInfo::adjustGotPcExpr(RelType type, int64_t addend,

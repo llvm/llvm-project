@@ -20,7 +20,7 @@ using namespace clang::ast_matchers;
 namespace {
 /// A branch in a switch may consist of several statements; while a branch in
 /// an if/else if/else chain is one statement (which may be a CompoundStmt).
-using SwitchBranch = llvm::SmallVector<const Stmt *, 2>;
+using SwitchBranch = SmallVector<const Stmt *, 2>;
 } // anonymous namespace
 
 /// Determines if the bodies of two branches in a switch statements are Type I
@@ -125,7 +125,7 @@ static bool isIdenticalStmt(const ASTContext &Ctx, const Stmt *Stmt1,
       return false;
     // If either expression comes from a macro then don't warn even if
     // the expressions are identical.
-    if ((Expr1->getExprLoc().isMacroID()) || (Expr2->getExprLoc().isMacroID()))
+    if (Expr1->getExprLoc().isMacroID() || Expr2->getExprLoc().isMacroID())
       return false;
 
     // If all children of two expressions are identical, return true.
@@ -305,7 +305,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
 
     // This is the complicated case when we start an if/else if/else chain.
     // To find all the duplicates, we collect all the branches into a vector.
-    llvm::SmallVector<const Stmt *, 4> Branches;
+    SmallVector<const Stmt *, 4> Branches;
     const IfStmt *Cur = IS;
     while (true) {
       // Store the `then` branch.
@@ -388,7 +388,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
     // (`case:` or `default:`) children of Body; that is, we ignore `case:` or
     // `default:` labels embedded inside other statements and we do not follow
     // the effects of `break` and other manipulation of the control-flow.
-    llvm::SmallVector<SwitchBranch, 4> Branches;
+    SmallVector<SwitchBranch, 4> Branches;
     for (const Stmt *S : Body->body()) {
       // If this is a `case` or `default`, we start a new, empty branch.
       if (isa<SwitchCase>(S))
@@ -402,7 +402,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         Branches.back().push_back(S);
     }
 
-    auto *End = Branches.end();
+    const auto *End = Branches.end();
     auto *BeginCurrent = Branches.begin();
     while (BeginCurrent < End) {
       if (isFallthroughSwitchBranch(*BeginCurrent)) {

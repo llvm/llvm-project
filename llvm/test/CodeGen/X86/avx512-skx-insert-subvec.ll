@@ -209,3 +209,24 @@ define i8 @test15(<2 x i64> %x) {
   %c = bitcast <8 x i1> %b to i8
   ret i8 %c
 }
+
+; Ensure multiple uses of mask source doesn't cause infinite loop
+define <16 x i8> @test_insert_subvector_v8i1_v16i1(i8 %a0) {
+; CHECK-LABEL: test_insert_subvector_v8i1_v16i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorb $1, %dil
+; CHECK-NEXT:    kmovd %edi, %k1
+; CHECK-NEXT:    kmovb %k1, %k2
+; CHECK-NEXT:    vmovdqu8 0, %xmm0 {%k2} {z}
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmovdqu64 %zmm1, 0 {%k1}
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %xor = xor i8 %a0, 1
+  %zext = zext i8 %xor to i16
+  %mask16 = bitcast i16 %zext to <16 x i1>
+  %load = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr null, <16 x i1> %mask16, <16 x i8> zeroinitializer)
+  %mask8 = bitcast i8 %xor to <8 x i1>
+  call void @llvm.masked.store.v8i64.p0(<8 x i64> zeroinitializer, ptr null, <8 x i1> %mask8)
+  ret <16 x i8> %load
+}

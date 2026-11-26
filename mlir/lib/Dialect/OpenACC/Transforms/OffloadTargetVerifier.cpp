@@ -54,6 +54,7 @@
 #include "mlir/Analysis/Liveness.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/IR/SymbolTable.h"
@@ -71,11 +72,15 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 class OffloadTargetVerifier
     : public acc::impl::OffloadTargetVerifierBase<OffloadTargetVerifier> {
 public:
   using OffloadTargetVerifierBase::OffloadTargetVerifierBase;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    OffloadTargetVerifierBase::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
 
   /// Returns true if the target device type corresponds to host execution.
   bool isHostTarget() const {
@@ -118,6 +123,16 @@ public:
     return invalidSymsList;
   }
 
+  /// Retrieve variable names for the given values.
+  static SmallVector<std::string>
+  getVariableNames(ArrayRef<Value> values, acc::OpenACCSupport &accSupport) {
+    SmallVector<std::string> names;
+    names.reserve(values.size());
+    for (Value value : values)
+      names.push_back(accSupport.getVariableName(value));
+    return names;
+  }
+
   /// Check if the region has illegal live-in values.
   bool hasIllegalLiveInValues(Operation *regionOp,
                               acc::OpenACCSupport &accSupport) const {
@@ -131,18 +146,33 @@ public:
     bool hasIllegalValues = !invalidValues.empty();
 
     if (hasIllegalValues) {
+      SmallVector<std::string> invalidVarNames =
+          getVariableNames(invalidValues, accSupport);
+
       if (softCheck) {
         // Emit warnings for each illegal value.
         auto diag = regionOp->emitWarning("offload target verifier: ")
                     << invalidValues.size() << " illegal live-in value(s)";
-        for (auto [idx, invalidValue] : llvm::enumerate(invalidValues)) {
-          diag.attachNote(invalidValue.getLoc()) << "value: " << invalidValue;
+        for (auto [invalidValue, name] :
+             llvm::zip(invalidValues, invalidVarNames)) {
+          if (name.empty()) {
+            diag.attachNote(invalidValue.getLoc()) << "value: " << invalidValue;
+          } else {
+            diag.attachNote(invalidValue.getLoc())
+                << "value: " << invalidValue << ", name: " << name;
+          }
         }
       } else {
-        accSupport.emitNYI(regionOp->getLoc(),
-                           "offload target verifier failed due to " +
-                               Twine(invalidValues.size()) +
-                               " illegal live-in value(s)");
+        std::string message = "offload target verifier failed due to " +
+                              std::to_string(invalidValues.size()) +
+                              " illegal live-in value(s)";
+        SmallVector<std::string> availableVarNames;
+        for (const std::string &name : invalidVarNames)
+          if (!name.empty())
+            availableVarNames.push_back(name);
+        if (!availableVarNames.empty())
+          message += " including: " + llvm::join(availableVarNames, ", ");
+        accSupport.emitNYI(regionOp->getLoc(), message);
       }
     }
 
@@ -230,5 +260,4 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "Exit OffloadTargetVerifier()\n");
   }
 };
-
 } // namespace

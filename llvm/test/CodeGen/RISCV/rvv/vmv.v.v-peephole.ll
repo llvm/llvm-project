@@ -49,8 +49,9 @@ define <vscale x 4 x i32> @vadd_same_passthru(<vscale x 4 x i32> %passthru, <vsc
 define <vscale x 4 x i32> @unfoldable_diff_avl_unknown(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, iXLen %vl1, iXLen %vl2) {
 ; CHECK-LABEL: unfoldable_diff_avl_unknown:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v14, v8
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vadd.vv v14, v10, v12
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; CHECK-NEXT:    vmv.v.v v8, v14
@@ -255,4 +256,18 @@ define <vscale x 4 x float> @commute_vfmadd(<vscale x 4 x float> %passthru, <vsc
   %v = call <vscale x 4 x float> @llvm.riscv.vfmadd(<vscale x 4 x float> %a, <vscale x 4 x float> %b, <vscale x 4 x float> %passthru, iXLen 7, iXLen %vl, iXLen 3)
   %w = call <vscale x 4 x float> @llvm.riscv.vmv.v.v(<vscale x 4 x float> %passthru, <vscale x 4 x float> %v, iXLen %vl)
   ret <vscale x 4 x float> %w
+}
+
+; vlm.v has a mask destination (EEW=1). This test previously asserted in
+; getDestLog2EEW.
+define <vscale x 1 x i8> @vlm_vmv(ptr %p, iXLen %vl) {
+; CHECK-LABEL: vlm_vmv:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vlm.v v8, (a0)
+; CHECK-NEXT:    ret
+  %m = call <vscale x 8 x i1> @llvm.riscv.vlm(ptr %p, iXLen %vl)
+  %b = bitcast <vscale x 8 x i1> %m to <vscale x 1 x i8>
+  %v = call <vscale x 1 x i8> @llvm.riscv.vmv.v.v(<vscale x 1 x i8> poison, <vscale x 1 x i8> %b, iXLen %vl)
+  ret <vscale x 1 x i8> %v
 }

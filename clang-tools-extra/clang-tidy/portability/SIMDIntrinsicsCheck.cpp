@@ -91,8 +91,7 @@ void SIMDIntrinsicsCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(callExpr(callee(functionDecl(
                                   matchesName("^::(_mm_|_mm256_|_mm512_|vec_)"),
-                                  isVectorFunction())),
-                              unless(isExpansionInSystemHeader()))
+                                  isVectorFunction())))
                          .bind("call"),
                      this);
 }

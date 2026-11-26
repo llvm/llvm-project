@@ -139,17 +139,13 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-NEXT:    .cfi_offset %r13, -56
 ; SOFT-FLOAT-NEXT:    .cfi_offset %r14, -48
 ; SOFT-FLOAT-NEXT:    .cfi_offset %r15, -40
-; SOFT-FLOAT-NEXT:    aghi %r15, -176
-; SOFT-FLOAT-NEXT:    .cfi_def_cfa_offset 336
-; SOFT-FLOAT-NEXT:    llgf %r0, 388(%r15)
-; SOFT-FLOAT-NEXT:    stg %r0, 168(%r15) # 8-byte Spill
-; SOFT-FLOAT-NEXT:    llgf %r0, 380(%r15)
-; SOFT-FLOAT-NEXT:    stg %r0, 160(%r15) # 8-byte Spill
-; SOFT-FLOAT-NEXT:    llgf %r11, 372(%r15)
-; SOFT-FLOAT-NEXT:    llgf %r10, 364(%r15)
-; SOFT-FLOAT-NEXT:    llgf %r8, 340(%r15)
-; SOFT-FLOAT-NEXT:    llgf %r0, 356(%r15)
-; SOFT-FLOAT-NEXT:    llgf %r7, 348(%r15)
+; SOFT-FLOAT-NEXT:    aghi %r15, -160
+; SOFT-FLOAT-NEXT:    .cfi_def_cfa_offset 320
+; SOFT-FLOAT-NEXT:    llgf %r11, 356(%r15)
+; SOFT-FLOAT-NEXT:    llgf %r10, 348(%r15)
+; SOFT-FLOAT-NEXT:    llgf %r8, 324(%r15)
+; SOFT-FLOAT-NEXT:    llgf %r0, 340(%r15)
+; SOFT-FLOAT-NEXT:    llgf %r7, 332(%r15)
 ; SOFT-FLOAT-NEXT:    llgfr %r1, %r5
 ; SOFT-FLOAT-NEXT:    lr %r9, %r4
 ; SOFT-FLOAT-NEXT:    lr %r13, %r3
@@ -180,18 +176,18 @@ define <4 x float> @fmuladd_contract_v4f32(<4 x float> %a, <4 x float> %b, <4 x 
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r12, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r13
-; SOFT-FLOAT-NEXT:    lg %r3, 160(%r15) # 8-byte Reload
+; SOFT-FLOAT-NEXT:    llgf %r3, 364(%r15)
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r13, %r2
 ; SOFT-FLOAT-NEXT:    lgr %r2, %r9
-; SOFT-FLOAT-NEXT:    lg %r3, 168(%r15) # 8-byte Reload
+; SOFT-FLOAT-NEXT:    llgf %r3, 372(%r15)
 ; SOFT-FLOAT-NEXT:    brasl %r14, __addsf3@PLT
 ; SOFT-FLOAT-NEXT:    lgr %r5, %r2
 ; SOFT-FLOAT-NEXT:    lr %r2, %r10
 ; SOFT-FLOAT-NEXT:    lr %r3, %r12
 ; SOFT-FLOAT-NEXT:    lr %r4, %r13
 ; SOFT-FLOAT-NEXT:    # kill: def $r5l killed $r5l killed $r5d
-; SOFT-FLOAT-NEXT:    lmg %r7, %r15, 232(%r15)
+; SOFT-FLOAT-NEXT:    lmg %r7, %r15, 216(%r15)
 ; SOFT-FLOAT-NEXT:    br %r14
   %product = fmul contract <4 x float> %a, %b
   %result = fadd contract <4 x float> %product, %c

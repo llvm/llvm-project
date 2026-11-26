@@ -16,7 +16,8 @@ target triple = "x86_64-apple-macosx10.10.0"
 
 ;; Module-level assembly
 module asm "beep boop"
-; CHECK: module asm "beep boop"
+; CHECK: module asm
+; CHECK-NEXT: "beep boop"
 
 ;; Comdats
 $comdat.any = comdat any
@@ -38,7 +39,7 @@ $comdat.samesize = comdat samesize
 @const.int = constant i32 zeroinitializer
 ; CHECK: @const.int = constant i32 0
 @const.float = constant double 0.0
-; CHECK: @const.float = constant double 0.0
+; CHECK: @const.float = constant double 0.000000e+00
 @const.null = constant ptr null
 ; CHECK: @const.null = constant ptr null
 %const.struct.type = type { i32, i8, i64 }
@@ -56,7 +57,7 @@ $comdat.samesize = comdat samesize
 @constant.array.i32 = constant [3 x i32] [i32 -0, i32 1, i32 0]
 ; CHECK: @constant.array.i64 = constant [3 x i64] [i64 0, i64 1, i64 0]
 @constant.array.i64 = constant [3 x i64] [i64 -0, i64 1, i64 0]
-; CHECK: @constant.array.f16 = constant [3 x half] [half 0xH8000, half 0xH3C00, half 0xH0000]
+; CHECK: @constant.array.f16 = constant [3 x half] [half -0.000000e+00, half 1.000000e+00, half 0.000000e+00]
 @constant.array.f16 = constant [3 x half] [half -0.0, half 1.0, half 0.0]
 ; CHECK: @constant.array.f32 = constant [3 x float] [float -0.000000e+00, float 1.000000e+00, float 0.000000e+00]
 @constant.array.f32 = constant [3 x float] [float -0.0, float 1.0, float 0.0]
@@ -71,7 +72,7 @@ $comdat.samesize = comdat samesize
 @constant.vector.i32 = constant <3 x i32> <i32 -0, i32 1, i32 0>
 ; CHECK: @constant.vector.i64 = constant <3 x i64> <i64 0, i64 1, i64 0>
 @constant.vector.i64 = constant <3 x i64> <i64 -0, i64 1, i64 0>
-; CHECK: @constant.vector.f16 = constant <3 x half> <half 0xH8000, half 0xH3C00, half 0xH0000>
+; CHECK: @constant.vector.f16 = constant <3 x half> <half -0.000000e+00, half 1.000000e+00, half 0.000000e+00>
 @constant.vector.f16 = constant <3 x half> <half -0.0, half 1.0, half 0.0>
 ; CHECK: @constant.vector.f32 = constant <3 x float> <float -0.000000e+00, float 1.000000e+00, float 0.000000e+00>
 @constant.vector.f32 = constant <3 x float> <float -0.0, float 1.0, float 0.0>
@@ -486,6 +487,10 @@ declare cc85 void @f.cc85()
 ; CHECK: declare avr_signalcc void @f.cc85()
 declare avr_signalcc void @f.avr_signalcc()
 ; CHECK: declare avr_signalcc void @f.avr_signalcc()
+declare cc86 void @f.cc86()
+; CHECK: declare avr_builtincc void @f.cc86()
+declare avr_builtincc void @f.avr_builtincc()
+; CHECK: declare avr_builtincc void @f.avr_builtincc()
 declare cc87 void @f.cc87()
 ; CHECK: declare amdgpu_vs void @f.cc87()
 declare amdgpu_vs void @f.amdgpu_vs()
@@ -520,6 +525,10 @@ declare cc96 void @f.cc96()
 ; CHECK: declare amdgpu_es void @f.cc96()
 declare amdgpu_es void @f.amdgpu_es()
 ; CHECK: declare amdgpu_es void @f.amdgpu_es()
+declare cc99 void @f.cc99()
+; CHECK: declare wasm_emscripten_invokecc void @f.cc99()
+declare wasm_emscripten_invokecc void @f.wasm_emscripten_invokecc()
+; CHECK: declare wasm_emscripten_invokecc void @f.wasm_emscripten_invokecc()
 declare cc112 void @f.cc112()
 ; CHECK: declare riscv_vls_cc(32) void @f.cc112()
 declare cc113 void @f.cc113()
@@ -763,6 +772,24 @@ declare void @f.align4() align 4
 declare void @f.align8() align 8
 ; CHECK: declare void @f.align8() align 8
 
+; Functions -- prefalign
+define void @f.prefalign2() prefalign(2) {
+  ret void
+}
+; CHECK: define void @f.prefalign2() prefalign(2)
+define void @f.prefalign4() prefalign(4) {
+  ret void
+}
+; CHECK: define void @f.prefalign4() prefalign(4)
+define void @f.prefalign8() prefalign(8) {
+  ret void
+}
+; CHECK: define void @f.prefalign8() prefalign(8)
+define void @f.prefalign4294967296() prefalign(4294967296) {
+  ret void
+}
+; CHECK: define void @f.prefalign4294967296() prefalign(4294967296)
+
 ; Functions -- GC
 declare void @f.gcshadow() gc "shadow-stack"
 ; CHECK: declare void @f.gcshadow() gc "shadow-stack"
@@ -845,8 +872,12 @@ define void @atomics(ptr %word) {
   ;; Atomic w/o alignment
   %atomicrmw_no_align.xchg = atomicrmw xchg ptr %word, i32 12 monotonic
   ; CHECK: %atomicrmw_no_align.xchg = atomicrmw xchg ptr %word, i32 12 monotonic
+  %atomicrmw_no_align.vector.xchg = atomicrmw xchg ptr %word, <2 x i16> <i16 12, i16 13> monotonic
+  ; CHECK: %atomicrmw_no_align.vector.xchg = atomicrmw xchg ptr %word, <2 x i16> <i16 12, i16 13> monotonic
   %atomicrmw_no_align.add = atomicrmw add ptr %word, i32 13 monotonic
   ; CHECK: %atomicrmw_no_align.add = atomicrmw add ptr %word, i32 13 monotonic
+  %atomicrmw_no_align.vector.add = atomicrmw add ptr %word, <2 x i16> <i16 13, i16 14> monotonic
+  ; CHECK: %atomicrmw_no_align.vector.add = atomicrmw add ptr %word, <2 x i16> <i16 13, i16 14> monotonic
   %atomicrmw_no_align.sub = atomicrmw sub ptr %word, i32 14 monotonic
   ; CHECK: %atomicrmw_no_align.sub = atomicrmw sub ptr %word, i32 14 monotonic
   %atomicrmw_no_align.and = atomicrmw and ptr %word, i32 15 monotonic
@@ -937,6 +968,12 @@ define void @fp_atomics(ptr %word) {
 ; CHECK: %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.000000e+00 monotonic
   %atomicrmw.fminimum = atomicrmw fminimum ptr %word, float 1.0 monotonic
 
+; CHECK: %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fmaximumnum = atomicrmw fmaximumnum ptr %word, float 1.0 monotonic
+
+; CHECK: %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.000000e+00 monotonic
+  %atomicrmw.fminimumnum = atomicrmw fminimumnum ptr %word, float 1.0 monotonic
+
   ret void
 }
 
@@ -999,6 +1036,28 @@ define void @usub_cond_usub_sat_atomics(ptr %word) {
 define void @pointer_atomics(ptr %word) {
 ; CHECK: %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
   %atomicrmw.xchg = atomicrmw xchg ptr %word, ptr null monotonic
+  ret void
+}
+
+define void @elementwise_atomics(ptr %word, <4 x i32> %ival, <4 x float> %fval) {
+; CHECK: %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+  %atomicrmw.add = atomicrmw elementwise add ptr %word, <4 x i32> %ival monotonic, align 16
+
+; CHECK: %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval acq_rel, align 16
+  %atomicrmw.fadd = atomicrmw elementwise fadd ptr %word, <4 x float> %fval acq_rel, align 16
+
+; CHECK: %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
+  %load.elementwise = load atomic elementwise <4 x i32>, ptr %word monotonic, align 4
+
+; CHECK: %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word acquire, align 4
+  %load.elementwise.volatile = load atomic volatile elementwise <4 x float>, ptr %word acquire, align 4
+
+; CHECK: store atomic elementwise <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %word monotonic, align 4
+  store atomic elementwise <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %word monotonic, align 4
+
+; CHECK: store atomic volatile elementwise <4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>, ptr %word monotonic, align 4
+  store atomic volatile elementwise <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, ptr %word monotonic, align 4
+
   ret void
 }
 
@@ -1246,6 +1305,48 @@ define void @fastmathflags_fptrunc(float %op1) {
   ret void
 }
 
+; CHECK-LABEL: fastmathflags_uitofp(
+define void @fastmathflags_uitofp(i32 %op1) {
+  %f.nnan = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.nnan = uitofp nnan i32 %op1 to float
+  %f.ninf = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.ninf = uitofp nnan i32 %op1 to float
+  %f.nsz = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.nsz = uitofp nnan i32 %op1 to float
+  %f.arcp = uitofp nnan i32 %op1 to float
+  ; CHECK: %f.arcp = uitofp nnan i32 %op1 to float
+  %f.contract = uitofp contract i32 %op1 to float
+  ; CHECK: %f.contract = uitofp contract i32 %op1 to float
+  %f.afn = uitofp afn i32 %op1 to float
+  ; CHECK: %f.afn = uitofp afn i32 %op1 to float
+  %f.reassoc = uitofp reassoc i32 %op1 to float
+  ; CHECK: %f.reassoc = uitofp reassoc i32 %op1 to float
+  %f.fast = uitofp fast i32 %op1 to float
+  ; CHECK: %f.fast = uitofp fast i32 %op1 to float
+  ret void
+}
+
+; CHECK-LABEL: fastmathflags_sitofp(
+define void @fastmathflags_sitofp(i32 %op1) {
+  %f.nnan = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.nnan = sitofp nnan i32 %op1 to float
+  %f.ninf = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.ninf = sitofp nnan i32 %op1 to float
+  %f.nsz = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.nsz = sitofp nnan i32 %op1 to float
+  %f.arcp = sitofp nnan i32 %op1 to float
+  ; CHECK: %f.arcp = sitofp nnan i32 %op1 to float
+  %f.contract = sitofp contract i32 %op1 to float
+  ; CHECK: %f.contract = sitofp contract i32 %op1 to float
+  %f.afn = sitofp afn i32 %op1 to float
+  ; CHECK: %f.afn = sitofp afn i32 %op1 to float
+  %f.reassoc = sitofp reassoc i32 %op1 to float
+  ; CHECK: %f.reassoc = sitofp reassoc i32 %op1 to float
+  %f.fast = sitofp fast i32 %op1 to float
+  ; CHECK: %f.fast = sitofp fast i32 %op1 to float
+  ret void
+}
+
 ;; Type System
 %opaquety = type opaque
 define void @typesystem() {
@@ -1270,6 +1371,8 @@ define void @typesystem() {
   ; CHECK: %t9 = alloca <4 x i32>
   %t10 = alloca <vscale x 4 x i32>
   ; CHECK: %t10 = alloca <vscale x 4 x i32>
+  %t11 = alloca b8
+  ; CHECK: %t11 = alloca b8
 
   ret void
 }
@@ -1530,6 +1633,33 @@ define void @instructions.bitwise_binops(i8 %op1, i8 %op2) {
   ret void
 }
 
+; Instructions -- Byte Operations
+define void @instructions.byteops(b32 %v32, b64 %v64, i8 %v8, i16 %v16, i32 %off) {
+  bitinsert b32 %v32, i8 %v8, i32 3
+  ; CHECK: bitinsert b32 %v32, i8 %v8, i32 3
+  bitinsert b32 %v32, i16 %v16, i32 %off
+  ; CHECK: bitinsert b32 %v32, i16 %v16, i32 %off
+  bitextract i8, b32 %v32, i32 24
+  ; CHECK: bitextract i8, b32 %v32, i32 24
+  bitextract i16, b32 %v32, i32 %off
+  ; CHECK: bitextract i16, b32 %v32, i32 %off
+  bitextract i8, b64 %v64, i32 0
+  ; CHECK: bitextract i8, b64 %v64, i32 0
+  ret void
+}
+
+define void @instructions.byteops.vector(<2 x b32> %v32, <2 x i8> %v8, <2 x i32> %off) {
+  bitinsert <2 x b32> %v32, <2 x i8> %v8, <2 x i32> splat (i32 8)
+  ; CHECK: bitinsert <2 x b32> %v32, <2 x i8> %v8, <2 x i32> splat (i32 8)
+  bitinsert <2 x b32> %v32, <2 x i8> %v8, <2 x i32> %off
+  ; CHECK: bitinsert <2 x b32> %v32, <2 x i8> %v8, <2 x i32> %off
+  bitextract <2 x i8>, <2 x b32> %v32, <2 x i32> <i32 0, i32 24>
+  ; CHECK: bitextract <2 x i8>, <2 x b32> %v32, <2 x i32> <i32 0, i32 24>
+  bitextract <2 x i8>, <2 x b32> %v32, <2 x i32> %off
+  ; CHECK: bitextract <2 x i8>, <2 x b32> %v32, <2 x i32> %off
+  ret void
+}
+
 ; Instructions -- Vector Operations
 define void @instructions.vectorops(<4 x float> %vec, <4 x float> %vec2) {
   extractelement <4 x float> %vec, i8 0
@@ -1589,6 +1719,10 @@ define void @instructions.aggregateops({ i8, i32 } %up, <{ i8, i32 }> %p,
 !7 = !{i32 1}
 !8 = !{}
 !9 = !{i64 4}
+!10 = !{i32 0, !11}
+!11 = !{!"nvvm.l1_eviction", !"first", !"nvvm.l2_prefetch_size", i32 128}
+!12 = !{i32 1, !13}
+!13 = !{!"nvvm.l1_eviction", !"last"}
 define void @instructions.memops(ptr %base) {
   alloca i32, i8 4, align 4
   ; CHECK: alloca i32, i8 4, align 4
@@ -1599,17 +1733,21 @@ define void @instructions.memops(ptr %base) {
   ; CHECK: load ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
   ; CHECK: load volatile ptr, ptr %base, align 8, !invariant.load !7, !nontemporal !8, !nonnull !8, !dereferenceable !9, !dereferenceable_or_null !9
+  load ptr, ptr %base, align 8, !mem.cache_hint !10
+  ; CHECK: load ptr, ptr %base, align 8, !mem.cache_hint !10
 
   store ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store ptr null, ptr %base, align 4, !nontemporal !8
   store volatile ptr null, ptr %base, align 4, !nontemporal !8
   ; CHECK: store volatile ptr null, ptr %base, align 4, !nontemporal !8
+  store ptr null, ptr %base, align 4, !mem.cache_hint !12
+  ; CHECK: store ptr null, ptr %base, align 4, !mem.cache_hint !12
 
   ret void
 }
 
 ; Instructions -- Conversion Operations
-define void @instructions.conversions() {
+define void @instructions.conversions(ptr %pop) {
   trunc i32 -1 to i1
   ; CHECK: trunc i32 -1 to i1
   zext i32 -1 to i64
@@ -1644,6 +1782,8 @@ define void @instructions.conversions() {
   ; CHECK: bitcast i32 0 to i32
   addrspacecast ptr null to ptr addrspace(1)
   ; CHECK: addrspacecast ptr null to ptr addrspace(1)
+  addrspacecast nonnull ptr %pop to ptr addrspace(1)
+  ; CHECK: addrspacecast nonnull ptr %pop to ptr addrspace(1)
 
   ret void
 }
@@ -1722,7 +1862,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #87
+  ; CHECK: call void @f.nobuiltin() #88
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -1858,21 +1998,21 @@ declare i64 @llvm.readcyclecounter()
 declare void @llvm.clear_cache(ptr, ptr)
 declare void @llvm.instrprof_increment(ptr, i64, i32, i32)
 
-!10 = !{!"rax"}
+!14 = !{!"rax"}
 define void @intrinsics.codegen() {
   call ptr @llvm.returnaddress(i32 1)
-  ; CHECK: call ptr @llvm.returnaddress(i32 1)
+  ; CHECK: call ptr @llvm.returnaddress.p0(i32 1)
   call ptr @llvm.frameaddress(i32 1)
   ; CHECK: call ptr @llvm.frameaddress.p0(i32 1)
 
-  call i32 @llvm.read_register.i32(metadata !10)
-  ; CHECK: call i32 @llvm.read_register.i32(metadata !10)
-  call i64 @llvm.read_register.i64(metadata !10)
-  ; CHECK: call i64 @llvm.read_register.i64(metadata !10)
-  call void @llvm.write_register.i32(metadata !10, i32 0)
-  ; CHECK: call void @llvm.write_register.i32(metadata !10, i32 0)
-  call void @llvm.write_register.i64(metadata !10, i64 0)
-  ; CHECK: call void @llvm.write_register.i64(metadata !10, i64 0)
+  call i32 @llvm.read_register.i32(metadata !14)
+  ; CHECK: call i32 @llvm.read_register.i32(metadata !14)
+  call i64 @llvm.read_register.i64(metadata !14)
+  ; CHECK: call i64 @llvm.read_register.i64(metadata !14)
+  call void @llvm.write_register.i32(metadata !14, i32 0)
+  ; CHECK: call void @llvm.write_register.i32(metadata !14, i32 0)
+  call void @llvm.write_register.i64(metadata !14, i64 0)
+  ; CHECK: call void @llvm.write_register.i64(metadata !14, i64 0)
 
   %stack = call ptr @llvm.stacksave()
   ; CHECK: %stack = call ptr @llvm.stacksave.p0()
@@ -1889,7 +2029,7 @@ define void @intrinsics.codegen() {
   ; CHECK: call i64 @llvm.readcyclecounter()
 
   call void @llvm.clear_cache(ptr null, ptr null)
-  ; CHECK: call void @llvm.clear_cache(ptr null, ptr null)
+  ; CHECK: call void @llvm.clear_cache.p0(ptr null, ptr null)
 
   call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)
   ; CHECK: call void @llvm.instrprof_increment(ptr null, i64 0, i32 0, i32 0)
@@ -1918,10 +2058,10 @@ define void @intrinsics.localrecover() {
 
 ; We need this function to provide `uses' for some metadata tests.
 define void @misc.metadata() {
-  call void @f1(), !srcloc !11
-  call void @f1(), !srcloc !12
-  call void @f1(), !srcloc !13
-  call void @f1(), !srcloc !14
+  call void @f1(), !srcloc !15
+  call void @f1(), !srcloc !16
+  call void @f1(), !srcloc !17
+  call void @f1(), !srcloc !18
   ret void
 }
 
@@ -2431,6 +2571,9 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
   ret void
 }
 
+declare void @f.sanitize_concurrency() sanitize_concurrency
+; CHECK: declare void @f.sanitize_concurrency() #87
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }
@@ -2518,7 +2661,8 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
 ; CHECK: attributes #84 = { denormal_fpenv(float: dynamic|positivezero) }
 ; CHECK: attributes #85 = { denormal_fpenv(float: dynamic) }
 ; CHECK: attributes #86 = { denormal_fpenv(preservesign, float: dynamic) }
-; CHECK: attributes #87 = { builtin }
+; CHECK: attributes #87 = { sanitize_concurrency }
+; CHECK: attributes #88 = { builtin }
 
 ;; Metadata
 
@@ -2542,11 +2686,11 @@ define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() d
 ; CHECK: !6 = !{i32 6, !"mod6", !0}
 
 ; Metadata -- Check `distinct'
-!11 = distinct !{}
-; CHECK: !11 = distinct !{}
-!12 = distinct !{}
-; CHECK: !12 = distinct !{}
-!13 = !{!11}
-; CHECK: !13 = !{!11}
-!14 = !{!12}
-; CHECK: !14 = !{!12}
+!15 = distinct !{}
+; CHECK: !15 = distinct !{}
+!16 = distinct !{}
+; CHECK: !16 = distinct !{}
+!17 = !{!15}
+; CHECK: !17 = !{!15}
+!18 = !{!16}
+; CHECK: !18 = !{!16}

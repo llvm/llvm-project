@@ -19,3 +19,35 @@
 // RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:   %s 2>&1 | FileCheck %s --check-prefix=CHECK-GENERIC
 // CHECK-GENERIC: -mlink-builtin-bitcode{{.*}}resource_dir_with_per_target_subdir{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa{{/|\\\\}}libclc.bc
+
+// RUN: %clang -### -target amdgcn-amd-amdhsa-llvm \
+// RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDGPU-LLVM-ENV
+// AMDGPU-LLVM-ENV: -mlink-builtin-bitcode{{.*}}resource_dir_with_per_target_subdir{{/|\\\\}}lib{{/|\\\\}}amdgcn-amd-amdhsa-llvm{{/|\\\\}}libclc.bc
+
+
+// RUN: %clang -### -target amdgcn-amd-amdhsa-llvm --no-offloadlib \
+// RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB
+// AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB-NOT: libclc.bc
+
+// Try with -nostdlib instead of --no-offloadlib
+// RUN: %clang -### -target amdgcn-amd-amdhsa-llvm -nostdlib \
+// RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB
+// AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB-NOT: libclc.bc
+
+// Try with -nodefaultlibs instead of -nostdlib
+// RUN: %clang -### -target amdgcn-amd-amdhsa-llvm -nodefaultlibs \
+// RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB
+// AMDGPU-LLVM-ENV-NO-OFFLOAD-LIB-NOT: libclc.bc
+
+// With amdgcn-amd-amdhsa and --libclc-lib, should use libclc and NOT link ROCm device libs
+// RUN: %clang -### -target amdgcn-amd-amdhsa --libclc-lib=:%S/Inputs/libclc/libclc.bc \
+// RUN:   -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:   %s 2>&1 | FileCheck %s --check-prefix=AMDHSA-LIBCLC
+// AMDHSA-LIBCLC: -mlink-builtin-bitcode{{.*}}Inputs{{/|\\\\}}libclc{{/|\\\\}}libclc.bc
+// AMDHSA-LIBCLC-NOT: ocml
+// AMDHSA-LIBCLC-NOT: ockl
+// AMDHSA-LIBCLC-NOT: oclc

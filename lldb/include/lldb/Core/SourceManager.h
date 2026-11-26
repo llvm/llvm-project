@@ -11,6 +11,7 @@
 
 #include "lldb/Utility/Checksum.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Locked.h"
 #include "lldb/Utility/SupportFile.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-forward.h"
@@ -23,6 +24,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <shared_mutex>
 #include <string>
 #include <vector>
 
@@ -45,9 +47,10 @@ public:
     bool ModificationTimeIsStale() const;
     bool PathRemappingIsStale() const;
 
-    size_t DisplaySourceLines(uint32_t line, std::optional<size_t> column,
-                              uint32_t context_before, uint32_t context_after,
-                              Stream *s);
+    size_t DisplaySourceLines(
+        uint32_t line, std::optional<size_t> column, uint32_t context_before,
+        uint32_t context_after, Stream *s,
+        lldb::LanguageType language_type = lldb::eLanguageTypeUnknown);
     void FindLinesMatchingRegex(RegularExpression &regex, uint32_t start_line,
                                 uint32_t end_line,
                                 std::vector<uint32_t> &match_lines);
@@ -103,7 +106,12 @@ public:
     uint32_t m_source_map_mod_id = 0;
     lldb::DataBufferSP m_data_sp;
     typedef std::vector<uint32_t> LineOffsets;
-    LineOffsets m_offsets;
+
+    /// The line offsets for this file.
+    /// This member that is computed after this File was created, so write
+    /// access can happen from several threads..
+    Guarded<LineOffsets, std::shared_mutex> m_offsets;
+
     lldb::DebuggerWP m_debugger_wp;
     lldb::TargetWP m_target_wp;
 
@@ -166,16 +174,20 @@ public:
       SupportFileNSP support_file_nsp, uint32_t line, uint32_t column,
       uint32_t context_before, uint32_t context_after,
       const char *current_line_cstr, Stream *s,
-      const SymbolContextList *bp_locs = nullptr);
+      const SymbolContextList *bp_locs = nullptr,
+      lldb::LanguageType language_type = lldb::eLanguageTypeUnknown);
 
   // This variant uses the last file we visited.
   size_t DisplaySourceLinesWithLineNumbersUsingLastFile(
       uint32_t start_line, uint32_t count, uint32_t curr_line, uint32_t column,
       const char *current_line_cstr, Stream *s,
-      const SymbolContextList *bp_locs = nullptr);
+      const SymbolContextList *bp_locs = nullptr,
+      lldb::LanguageType language_type = lldb::eLanguageTypeUnknown);
 
-  size_t DisplayMoreWithLineNumbers(Stream *s, uint32_t count, bool reverse,
-                                    const SymbolContextList *bp_locs = nullptr);
+  size_t DisplayMoreWithLineNumbers(
+      Stream *s, uint32_t count, bool reverse,
+      const SymbolContextList *bp_locs = nullptr,
+      lldb::LanguageType language_type = lldb::eLanguageTypeUnknown);
 
   bool SetDefaultFileAndLine(SupportFileNSP support_file_nsp, uint32_t line);
 

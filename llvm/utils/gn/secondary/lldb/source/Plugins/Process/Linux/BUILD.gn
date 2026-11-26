@@ -4,6 +4,7 @@ static_library("Linux") {
   deps = [
     "//lldb/source/Core",
     "//lldb/source/Host",
+    "//lldb/source/Plugins/Register/Native",
     "//lldb/source/Plugins/Process/POSIX",
     "//lldb/source/Plugins/Process/Utility",
     "//lldb/source/Symbol",
@@ -30,7 +31,7 @@ static_library("Linux") {
     "NativeRegisterContextLinux_ppc64le.cpp",
     "NativeRegisterContextLinux_riscv64.cpp",
     "NativeRegisterContextLinux_s390x.cpp",
-    "NativeRegisterContextLinux_x86_64.cpp",
+    "NativeRegisterContextLinux_x86.cpp",
     "NativeThreadLinux.cpp",
     "Perf.cpp",
     "Procfs.cpp",

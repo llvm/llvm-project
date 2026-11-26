@@ -128,6 +128,44 @@ func.func @matmul_1d_grid_static_tensors_reduction_iterator_sharding(
 
 // -----
 
+shard.grid @grid_1d(shape = 3)
+
+// CHECK-LABEL: func @generic_1d_grid_static_tensors_andi_reduction_iterator_sharding
+func.func @generic_1d_grid_static_tensors_andi_reduction_iterator_sharding(
+  // CHECK-SAME: %[[IN:[A-Za-z0-9_]+]]: tensor<4x2xi8>,
+  %in: tensor<4x6xi8>,
+  // CHECK-SAME: %[[DPS_OUT:[A-Za-z0-9_]+]]: tensor<4xi8>
+  %dps_out: tensor<4xi8>
+// CHECK-SAME: -> tensor<4xi8> {
+) -> tensor<4xi8> {
+  %sharding = shard.sharding @grid_1d split_axes = [[], [0]] : !shard.sharding
+  %in_sharded1 = shard.shard %in to %sharding : tensor<4x6xi8>
+  %in_sharded2 = shard.shard %in_sharded1 to %sharding annotate_for_users : tensor<4x6xi8>
+  %sharding2 = shard.sharding @grid_1d split_axes = [[]] : !shard.sharding
+  %dps_out_sharded1 = shard.shard %dps_out to %sharding2 : tensor<4xi8>
+  %dps_out_sharded2 = shard.shard %dps_out_sharded1 to %sharding2 annotate_for_users : tensor<4xi8>
+  // CHECK: %[[SHARDED_GENERIC:.*]] = linalg.generic
+  // CHECK-SAME: ins(%[[IN]] : tensor<4x2xi8>)
+  // CHECK: } -> tensor<4xi8>
+  // CHECK: %[[ALL_REDUCED:.*]] = shard.all_reduce %[[SHARDED_GENERIC]] on @grid_1d grid_axes = [0] reduction = bitwise_and : tensor<4xi8> -> tensor<4xi8>
+  %res = linalg.generic {
+      indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                       affine_map<(d0, d1) -> (d0)>],
+      iterator_types = ["parallel", "reduction"]
+    } ins(%in_sharded2 : tensor<4x6xi8>)
+      outs(%dps_out_sharded2 : tensor<4xi8>) {
+    ^bb0(%in_scalar: i8, %out_scalar: i8):
+      %res_scalar = arith.andi %in_scalar, %out_scalar : i8
+      linalg.yield %res_scalar : i8
+    } -> tensor<4xi8>
+  %res_sharded1 = shard.shard %res to %sharding2 : tensor<4xi8>
+  %res_sharded2 = shard.shard %res_sharded1 to %sharding2 annotate_for_users : tensor<4xi8>
+  // CHECK: return %[[ALL_REDUCED]] : tensor<4xi8>
+  return %res_sharded2 : tensor<4xi8>
+}
+
+// -----
+
 shard.grid @grid_1d(shape = 4)
 
 // CHECK-LABEL: func @matmul_1d_grid_static_tensors_parallel_iterator_unsplit_last_axis

@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/WinEHPrepare.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -23,13 +24,14 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/EHPersonalities.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -42,29 +44,65 @@ using namespace llvm;
 
 #define DEBUG_TYPE "win-eh-prepare"
 
-static cl::opt<bool> DisableDemotion(
-    "disable-demotion", cl::Hidden,
-    cl::desc(
-        "Clone multicolor basic blocks but do not demote cross scopes"),
-    cl::init(false));
+static bool isMalformedCatchpad(const CatchPadInst *CPI,
+                                EHPersonality Personality) {
+  switch (Personality) {
+  case EHPersonality::MSVC_CXX: {
+    if (CPI->arg_size() != 3)
+      return true;
 
-static cl::opt<bool> DisableCleanups(
-    "disable-cleanups", cl::Hidden,
-    cl::desc("Do not remove implausible terminators or other similar cleanups"),
-    cl::init(false));
+    Constant *TypeInfo = dyn_cast<Constant>(CPI->getArgOperand(0));
+    if (!TypeInfo)
+      return true;
+    if (!TypeInfo->isNullValue() &&
+        !isa<GlobalVariable>(TypeInfo->stripPointerCasts()))
+      return true;
 
-// TODO: Remove this option when we fully migrate to new pass manager
-static cl::opt<bool> DemoteCatchSwitchPHIOnlyOpt(
-    "demote-catchswitch-only", cl::Hidden,
-    cl::desc("Demote catchswitch BBs only (for wasm EH)"), cl::init(false));
+    if (!isa<ConstantInt>(CPI->getArgOperand(1)))
+      return true;
+
+    return false;
+  }
+  case EHPersonality::MSVC_X86SEH:
+  case EHPersonality::MSVC_TableSEH: {
+    if (CPI->arg_size() == 0)
+      return true;
+
+    Constant *FilterOrNull = dyn_cast<Constant>(CPI->getArgOperand(0));
+    if (!FilterOrNull)
+      return true;
+
+    Constant *Filter = FilterOrNull->stripPointerCasts();
+    if (!Filter->isNullValue() && !isa<Function>(Filter))
+      return true;
+
+    return false;
+  }
+  case EHPersonality::CoreCLR: {
+    if (CPI->arg_size() == 0)
+      return true;
+
+    if (!isa<ConstantInt>(CPI->getArgOperand(0)))
+      return true;
+
+    return false;
+  }
+  case EHPersonality::Wasm_CXX:
+  case EHPersonality::Wasm_D:
+    if (CPI->arg_size() == 1 && !isa<Constant>(CPI->getArgOperand(0)))
+      return true;
+
+    return false;
+  default:
+    llvm_unreachable("Unsupported Personality for WinEH");
+  }
+}
 
 namespace {
 
 class WinEHPrepareImpl {
 public:
-  WinEHPrepareImpl(bool DemoteCatchSwitchPHIOnly)
-      : DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
-
+  explicit WinEHPrepareImpl(const CodeGenOptions &Opts) : Opts(Opts) {}
   bool runOnFunction(Function &Fn);
 
 private:
@@ -80,11 +118,15 @@ private:
 
   bool demotePHIsOnFunclets(Function &F, bool DemoteCatchSwitchPHIOnly);
   bool cloneCommonBlocks(Function &F);
+  bool removeMalformedCatchswitch(Value *FuncletToken);
   bool removeImplausibleInstructions(Function &F);
   bool cleanupPreparedFunclets(Function &F);
   void verifyPreparedFunclets(Function &F);
 
-  bool DemoteCatchSwitchPHIOnly;
+  const CodeGenOptions &Opts;
+
+  // True for Wasm C++ personalities.
+  bool DemoteCatchSwitchPHIOnly = false;
 
   // All fields are reset by runOnFunction.
   EHPersonality Personality = EHPersonality::Unknown;
@@ -95,20 +137,17 @@ private:
 };
 
 class WinEHPrepare : public FunctionPass {
-  bool DemoteCatchSwitchPHIOnly;
-
 public:
   static char ID; // Pass identification, replacement for typeid.
 
-  WinEHPrepare(bool DemoteCatchSwitchPHIOnly = false)
-      : FunctionPass(ID), DemoteCatchSwitchPHIOnly(DemoteCatchSwitchPHIOnly) {}
+  WinEHPrepare() : FunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Windows exception handling preparation";
   }
 
   bool runOnFunction(Function &Fn) override {
-    return WinEHPrepareImpl(DemoteCatchSwitchPHIOnly).runOnFunction(Fn);
+    return WinEHPrepareImpl(getCodeGenOptions(Fn)).runOnFunction(Fn);
   }
 };
 
@@ -116,7 +155,7 @@ public:
 
 PreservedAnalyses WinEHPreparePass::run(Function &F,
                                         FunctionAnalysisManager &) {
-  bool Changed = WinEHPrepareImpl(DemoteCatchSwitchPHIOnly).runOnFunction(F);
+  bool Changed = WinEHPrepareImpl(getCodeGenOptions(F)).runOnFunction(F);
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }
 
@@ -124,9 +163,7 @@ char WinEHPrepare::ID = 0;
 INITIALIZE_PASS(WinEHPrepare, DEBUG_TYPE, "Prepare Windows exceptions", false,
                 false)
 
-FunctionPass *llvm::createWinEHPass(bool DemoteCatchSwitchPHIOnly) {
-  return new WinEHPrepare(DemoteCatchSwitchPHIOnly);
-}
+FunctionPass *llvm::createWinEHPass() { return new WinEHPrepare(); }
 
 bool WinEHPrepareImpl::runOnFunction(Function &Fn) {
   if (!Fn.hasPersonalityFn())
@@ -138,6 +175,11 @@ bool WinEHPrepareImpl::runOnFunction(Function &Fn) {
   // Do nothing if this is not a scope-based personality.
   if (!isScopedEHPersonality(Personality))
     return false;
+
+  // Funclet personalities outline catch/cleanup bodies, so every funclet PHI
+  // must be demoted. A scoped-but-non-funclet personality (Wasm) keeps its pads
+  // inline and only needs the catchswitch dispatch PHIs demoted.
+  DemoteCatchSwitchPHIOnly = !isFuncletEHPersonality(Personality);
 
   DL = &Fn.getDataLayout();
   return prepareExplicitEH(Fn);
@@ -162,6 +204,8 @@ static void addTryBlockMapEntry(WinEHFuncInfo &FuncInfo, int TryLow,
   assert(TBME.TryLow <= TBME.TryHigh);
   for (const CatchPadInst *CPI : Handlers) {
     WinEHHandlerType HT;
+    assert(!isMalformedCatchpad(CPI, EHPersonality::MSVC_CXX) &&
+           "Malformed CatchPadInst not caught by win-eh-prepare");
     Constant *TypeInfo = cast<Constant>(CPI->getArgOperand(0));
     if (TypeInfo->isNullValue())
       HT.TypeDescriptor = nullptr;
@@ -324,6 +368,9 @@ void llvm::calculateSEHStateForAsynchEH(const BasicBlock *BB, int State,
     EHInfo.BlockToStateMap[BB] = State; // Record state
 
     if (isa<CatchPadInst>(It) && isa<CatchReturnInst>(TI)) {
+      assert(!isMalformedCatchpad(cast<CatchPadInst>(It),
+                                  EHPersonality::MSVC_X86SEH) &&
+             "Malformed CatchPadInst not caught by win-eh-prepare");
       const Constant *FilterOrNull = cast<Constant>(
           cast<CatchPadInst>(It)->getArgOperand(0)->stripPointerCasts());
       const Function *Filter = dyn_cast<Function>(FilterOrNull);
@@ -514,6 +561,8 @@ static void calculateSEHStateNumbers(WinEHFuncInfo &FuncInfo,
     const auto *CatchPad =
         cast<CatchPadInst>((*CatchSwitch->handler_begin())->getFirstNonPHIIt());
     const BasicBlock *CatchPadBB = CatchPad->getParent();
+    assert(!isMalformedCatchpad(CatchPad, EHPersonality::MSVC_X86SEH) &&
+           "Malformed CatchPadInst not caught by win-eh-prepare");
     const Constant *FilterOrNull =
         cast<Constant>(CatchPad->getArgOperand(0)->stripPointerCasts());
     const Function *Filter = dyn_cast<Function>(FilterOrNull);
@@ -730,6 +779,8 @@ void llvm::calculateClrEHStateNumbers(const Function *Fn,
         // Create the entry for this catch with the appropriate handler
         // properties.
         const auto *Catch = cast<CatchPadInst>(CatchBlock->getFirstNonPHIIt());
+        assert(!isMalformedCatchpad(Catch, EHPersonality::CoreCLR) &&
+               "Malformed CatchPadInst not caught by win-eh-prepare");
         uint32_t TypeToken = static_cast<uint32_t>(
             cast<ConstantInt>(Catch->getArgOperand(0))->getZExtValue());
         CatchState =
@@ -913,6 +964,58 @@ bool WinEHPrepareImpl::demotePHIsOnFunclets(Function &F,
   return Changed;
 }
 
+bool WinEHPrepareImpl::removeMalformedCatchswitch(Value *FuncletToken) {
+  // If a catchpad is malformed, the whole catchswitch is invalidated
+  // therefore, make all of its catchpads unreachable
+  CatchPadInst *CatchPad = dyn_cast<CatchPadInst>(FuncletToken);
+
+  if (!CatchPad)
+    return false;
+
+  if (!isMalformedCatchpad(CatchPad, Personality))
+    return false;
+
+  CatchPad->getContext().diagnose(DiagnosticInfoGenericWithLoc(
+      "catchpad with unexpected arguments", *CatchPad->getParent()->getParent(),
+      CatchPad->getDebugLoc()));
+
+  CatchSwitchInst *CatchSwitch = CatchPad->getCatchSwitch();
+  for (BasicBlock *Handler : CatchSwitch->handlers()) {
+    if (CatchPadInst *CPI =
+            dyn_cast<CatchPadInst>(Handler->getFirstNonPHIIt())) {
+      LLVMContext &CTX = CPI->getContext();
+      IRBuilder<> Builder(CPI);
+
+      // default values for the CatchPad's args
+      SmallVector<Value *, 3> args;
+      Value *nullPtr = ConstantPointerNull::get(PointerType::getUnqual(CTX));
+      Value *constantZero = ConstantInt::get(Type::getInt32Ty(CTX), 0);
+      switch (Personality) {
+      case EHPersonality::MSVC_CXX:
+        args = {nullPtr, constantZero, nullPtr};
+        break;
+      case EHPersonality::MSVC_X86SEH:
+      case EHPersonality::MSVC_TableSEH:
+      case EHPersonality::Wasm_CXX:
+      case EHPersonality::Wasm_D:
+        args = {nullPtr};
+        break;
+      case EHPersonality::CoreCLR:
+        args = {constantZero};
+        break;
+      default:
+        llvm_unreachable("Unsupported Personality for WinEH");
+      };
+      Value *NewCatchPad =
+          Builder.CreateCatchPad(CPI->getParentPad(), args, CPI->getName());
+      CPI->replaceAllUsesWith(NewCatchPad);
+      changeToUnreachable(CPI);
+    }
+  }
+
+  return true;
+}
+
 bool WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
   bool Changed = false;
 
@@ -925,8 +1028,10 @@ bool WinEHPrepareImpl::cloneCommonBlocks(Function &F) {
     Value *FuncletToken;
     if (FuncletPadBB == &F.getEntryBlock())
       FuncletToken = ConstantTokenNone::get(F.getContext());
-    else
+    else {
       FuncletToken = &*FuncletPadBB->getFirstNonPHIIt();
+      Changed |= removeMalformedCatchswitch(FuncletToken);
+    }
 
     std::vector<std::pair<BasicBlock *, BasicBlock *>> Orig2Clone;
     ValueToValueMapTy VMap;
@@ -1227,7 +1332,8 @@ void WinEHPrepareImpl::verifyPreparedFunclets(Function &F) {
       report_fatal_error("Uncolored BB!");
     if (NumColors > 1)
       report_fatal_error("Multicolor BB!");
-    assert((DisableDemotion || !(BB.isEHPad() && isa<PHINode>(BB.begin()))) &&
+    assert((!Opts.win_eh_prepare_demotion ||
+            !(BB.isEHPad() && isa<PHINode>(BB.begin()))) &&
            "EH Pad still has a PHI!");
   }
 }
@@ -1244,11 +1350,10 @@ bool WinEHPrepareImpl::prepareExplicitEH(Function &F) {
 
   Changed |= cloneCommonBlocks(F);
 
-  if (!DisableDemotion)
-    Changed |= demotePHIsOnFunclets(F, DemoteCatchSwitchPHIOnly ||
-                                           DemoteCatchSwitchPHIOnlyOpt);
+  if (Opts.win_eh_prepare_demotion)
+    Changed |= demotePHIsOnFunclets(F, DemoteCatchSwitchPHIOnly);
 
-  if (!DisableCleanups) {
+  if (Opts.win_eh_prepare_cleanups) {
     assert(!verifyFunction(F, &dbgs()));
     Changed |= removeImplausibleInstructions(F);
 
@@ -1396,12 +1501,12 @@ void WinEHPrepareImpl::replaceUseWithLoad(
       //     br label %PHIBlock
       // So move the terminators to each others' blocks and swap their
       // successors.
-      BranchInst *Goto = cast<BranchInst>(IncomingBlock->getTerminator());
+      UncondBrInst *Goto = cast<UncondBrInst>(IncomingBlock->getTerminator());
       Goto->removeFromParent();
       CatchRet->removeFromParent();
       CatchRet->insertInto(IncomingBlock, IncomingBlock->end());
       Goto->insertInto(NewBlock, NewBlock->end());
-      Goto->setSuccessor(0, PHIBlock);
+      Goto->setSuccessor(PHIBlock);
       CatchRet->setSuccessor(NewBlock);
       // Update the color mapping for the newly split edge.
       // Grab a reference to the ColorVector to be inserted before getting the

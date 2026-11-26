@@ -205,7 +205,7 @@ define i32 @sub_lshr_not(i32 %x) {
 ; CHECK-LABEL: sub_lshr_not:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    srwi 3, 3, 31
-; CHECK-NEXT:    ori 3, 3, 42
+; CHECK-NEXT:    addi 3, 3, 42
 ; CHECK-NEXT:    blr
   %not = xor i32 %x, -1
   %sh = lshr i32 %not, 31

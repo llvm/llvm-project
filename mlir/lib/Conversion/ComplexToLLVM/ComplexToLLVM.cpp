@@ -8,14 +8,16 @@
 
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
 
-#include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
+#include "mlir/Conversion/ArithAttrToLLVM/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ComplexCommon/DivisionConverter.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMFloatIntrinsicOps.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTCOMPLEXTOLLVMPASS
@@ -83,7 +85,7 @@ struct AbsOpConversion : public ConvertOpToLLVMPattern<complex::AbsOp> {
         rewriter, loc, LLVM::FMulOp::create(rewriter, loc, real, real, fmf),
         LLVM::FMulOp::create(rewriter, loc, imag, imag, fmf), fmf);
 
-    rewriter.replaceOpWithNewOp<LLVM::SqrtOp>(op, sqNorm);
+    rewriter.replaceOpWithNewOp<LLVM::SqrtOp>(op, sqNorm, fmf);
     return success();
   }
 };
@@ -96,8 +98,8 @@ struct ConstantOpLowering : public ConvertOpToLLVMPattern<complex::ConstantOp> {
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::oneToOneRewrite(
         op, LLVM::ConstantOp::getOperationName(), adaptor.getOperands(),
-        op->getAttrs(), /*propAttr=*/Attribute{}, *getTypeConverter(),
-        rewriter);
+        op->getDiscardableAttrDictionary().getValue(),
+        op->getPropertiesAsAttribute(), *getTypeConverter(), rewriter);
   }
 };
 
@@ -151,8 +153,8 @@ struct ImOpConversion : public ConvertOpToLLVMPattern<complex::ImOp> {
 };
 
 struct BinaryComplexOperands {
-  std::complex<Value> lhs;
-  std::complex<Value> rhs;
+  mlir::Complex<Value> lhs;
+  mlir::Complex<Value> rhs;
 };
 
 template <typename OpTy>
@@ -279,13 +281,37 @@ struct MulOpConversion : public ConvertOpToLLVMPattern<complex::MulOp> {
     Value lhsRe = arg.lhs.real();
     Value lhsIm = arg.lhs.imag();
 
-    Value real = LLVM::FSubOp::create(
-        rewriter, loc, LLVM::FMulOp::create(rewriter, loc, rhsRe, lhsRe, fmf),
-        LLVM::FMulOp::create(rewriter, loc, rhsIm, lhsIm, fmf), fmf);
+    Value real;
+    Value imag;
+    if (arith::bitEnumContainsAll(complexFMFAttr.getValue(),
+                                  arith::FastMathFlags::contract)) {
+      Value lhsImagTimesRhsImag =
+          LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsIm, fmf);
+      Value negLhsImagTimesRhsImag =
+          LLVM::FNegOp::create(rewriter, loc, lhsImagTimesRhsImag, fmf);
+      real = LLVM::FMAOp::create(rewriter, loc, lhsRe, rhsRe,
+                                 negLhsImagTimesRhsImag, fmf);
 
-    Value imag = LLVM::FAddOp::create(
-        rewriter, loc, LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRe, fmf),
-        LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsIm, fmf), fmf);
+      Value lhsImagTimesRhsReal =
+          LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRe, fmf);
+      imag = LLVM::FMAOp::create(rewriter, loc, lhsRe, rhsIm,
+                                 lhsImagTimesRhsReal, fmf);
+    } else {
+      Value lhsRealTimesRhsReal =
+          LLVM::FMulOp::create(rewriter, loc, rhsRe, lhsRe, fmf);
+      Value lhsImagTimesRhsImag =
+          LLVM::FMulOp::create(rewriter, loc, rhsIm, lhsIm, fmf);
+      Value lhsImagTimesRhsReal =
+          LLVM::FMulOp::create(rewriter, loc, lhsIm, rhsRe, fmf);
+      Value lhsRealTimesRhsImag =
+          LLVM::FMulOp::create(rewriter, loc, lhsRe, rhsIm, fmf);
+
+      real = LLVM::FSubOp::create(rewriter, loc, lhsRealTimesRhsReal,
+                                  lhsImagTimesRhsImag, fmf);
+
+      imag = LLVM::FAddOp::create(rewriter, loc, lhsImagTimesRhsReal,
+                                  lhsRealTimesRhsImag, fmf);
+    }
 
     result.setReal(rewriter, loc, real);
     result.setImaginary(rewriter, loc, imag);
@@ -375,7 +401,9 @@ void ConvertComplexToLLVMPass::runOnOperation() {
 namespace {
 /// Implement the interface to convert MemRef to LLVM.
 struct ComplexToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  ComplexToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

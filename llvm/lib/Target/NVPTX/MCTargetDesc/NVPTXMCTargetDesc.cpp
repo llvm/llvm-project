@@ -24,6 +24,7 @@
 using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
+#define GET_INSTRINFO_NAMED_OPS
 #define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "NVPTXGenInstrInfo.inc"
 
@@ -62,9 +63,9 @@ static MCInstPrinter *createNVPTXMCInstPrinter(const Triple &T,
 }
 
 static MCTargetStreamer *createTargetAsmStreamer(MCStreamer &S,
-                                                 formatted_raw_ostream &,
+                                                 formatted_raw_ostream &OS,
                                                  MCInstPrinter *) {
-  return new NVPTXAsmTargetStreamer(S);
+  return new NVPTXAsmTargetStreamer(S, OS);
 }
 
 static MCTargetStreamer *createNullTargetStreamer(MCStreamer &S) {

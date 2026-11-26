@@ -67,9 +67,9 @@ addPartialRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
       continue;
 
     lldb_private::DynamicRegisterInfo::Register new_reg{
-        lldb_private::ConstString(subreg->subreg_name),
-        lldb_private::ConstString(),
-        lldb_private::ConstString("supplementary registers"),
+        subreg->subreg_name.str(),
+        "",
+        "supplementary registers",
         subreg_size,
         LLDB_INVALID_INDEX32,
         encoding,
@@ -108,9 +108,9 @@ addCombinedRegisters(std::vector<DynamicRegisterInfo::Register> &regs,
       continue;
 
     lldb_private::DynamicRegisterInfo::Register new_reg{
-        lldb_private::ConstString(regdata1->subreg_name),
-        lldb_private::ConstString(),
-        lldb_private::ConstString("supplementary registers"),
+        regdata1->subreg_name.str(),
+        "",
+        "supplementary registers",
         base_size * 2,
         LLDB_INVALID_INDEX32,
         encoding,
@@ -205,11 +205,10 @@ void ABIX86::AugmentRegisterInfo(
   if (!process_sp)
     return;
 
-  uint32_t gpr_base_size =
-      process_sp->GetTarget().GetArchitecture().GetAddressByteSize();
+  uint32_t gpr_base_size = Is64Bit() ? 8 : 4;
 
   // primary map from a base register to its subregisters
-  BaseRegToRegsMap base_reg_map = makeBaseRegMap(gpr_base_size == 8);
+  BaseRegToRegsMap base_reg_map = makeBaseRegMap(Is64Bit());
   // set used for fast matching of register names to subregisters
   llvm::SmallDenseSet<llvm::StringRef, 64> subreg_name_set;
   // convenience array providing access to all subregisters of given kind,
@@ -224,7 +223,7 @@ void ABIX86::AugmentRegisterInfo(
 
   // iterate over all registers
   for (const auto &x : llvm::enumerate(regs)) {
-    llvm::StringRef reg_name = x.value().name.GetStringRef();
+    llvm::StringRef reg_name = x.value().name;
     // abort if at least one sub-register is already present
     if (llvm::is_contained(subreg_name_set, reg_name))
       return;

@@ -44,12 +44,10 @@ public:
                  lldb::offset_t data_offset, const lldb_private::FileSpec *file,
                  lldb::offset_t offset, lldb::offset_t length);
 
-  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataExtractorSP &extractor_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t length,
-                                        lldb_private::ModuleSpecList &specs);
+  static lldb_private::ModuleSpecList
+  GetModuleSpecifications(const lldb_private::FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t length);
 
   // Member Functions
   bool ParseHeader() override;
@@ -74,7 +72,7 @@ protected:
     lldb::offset_t Extract(const lldb_private::DataExtractor &data,
                            lldb::offset_t offset);
     /// Object name in the archive.
-    lldb_private::ConstString ar_name;
+    std::string ar_name;
 
     /// Object modification time in the archive.
     uint32_t modification_time = 0;

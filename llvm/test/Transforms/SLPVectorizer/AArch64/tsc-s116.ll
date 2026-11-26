@@ -21,7 +21,7 @@ define void @s116_modified(ptr %a) {
 ; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 0, i32 2, i32 3, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP2]], float [[LD0]], i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP2]], float [[LD0]], i64 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul fast <4 x float> [[TMP6]], [[TMP7]]
 ; CHECK-NEXT:    store <4 x float> [[TMP8]], ptr [[GEP1]], align 4

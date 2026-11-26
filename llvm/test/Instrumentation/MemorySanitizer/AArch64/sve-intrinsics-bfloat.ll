@@ -10,7 +10,7 @@
 ; - llvm.aarch64.sve.bfmlalb.lane.v2
 ; - llvm.aarch64.sve.bfmlalt
 ; - llvm.aarch64.sve.bfmlalt.lane.v2
-; - llvm.aarch64.sve.bfmmla
+; - llvm.aarch64.sve.fmmla.nxv4f32.nxv8bf16
 ; - llvm.aarch64.sve.convert.from.svbool.nxv4i1
 ; - llvm.aarch64.sve.convert.to.svbool.nxv8i1
 ; - llvm.aarch64.sve.fcvt.bf16f32.v2
@@ -304,11 +304,11 @@ define <vscale x 4 x float> @bfmmla_f32(<vscale x 4 x float> %a, <vscale x 8 x b
 ; CHECK-LABEL: define <vscale x 4 x float> @bfmmla_f32(
 ; CHECK-SAME: <vscale x 4 x float> [[A:%.*]], <vscale x 8 x bfloat> [[B:%.*]], <vscale x 8 x bfloat> [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.bfmmla(<vscale x 4 x float> [[A]], <vscale x 8 x bfloat> [[B]], <vscale x 8 x bfloat> [[C]])
+; CHECK-NEXT:    [[OUT:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.fmmla.nxv4f32.nxv8bf16(<vscale x 4 x float> [[A]], <vscale x 8 x bfloat> [[B]], <vscale x 8 x bfloat> [[C]])
 ; CHECK-NEXT:    store <vscale x 4 x i32> zeroinitializer, ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <vscale x 4 x float> [[OUT]]
 ;
-  %out = call <vscale x 4 x float> @llvm.aarch64.sve.bfmmla(<vscale x 4 x float> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c)
+  %out = call <vscale x 4 x float> @llvm.aarch64.sve.fmmla.nxv4f32.nxv8bf16(<vscale x 4 x float> %a, <vscale x 8 x bfloat> %b, <vscale x 8 x bfloat> %c)
   ret <vscale x 4 x float> %out
 }
 
@@ -372,7 +372,7 @@ declare <vscale x 4 x float> @llvm.aarch64.sve.bfmlalb(<vscale x 4 x float>, <vs
 declare <vscale x 4 x float> @llvm.aarch64.sve.bfmlalb.lane.v2(<vscale x 4 x float>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, i32)
 declare <vscale x 4 x float> @llvm.aarch64.sve.bfmlalt(<vscale x 4 x float>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
 declare <vscale x 4 x float> @llvm.aarch64.sve.bfmlalt.lane.v2(<vscale x 4 x float>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, i32)
-declare <vscale x 4 x float> @llvm.aarch64.sve.bfmmla(<vscale x 4 x float>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
+declare <vscale x 4 x float> @llvm.aarch64.sve.fmmla.nxv4f32.nxv8bf16(<vscale x 4 x float>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)
 declare <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32(<vscale x 8 x bfloat>, <vscale x 8 x i1>, <vscale x 4 x float>)
 declare <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvt.bf16f32.v2(<vscale x 8 x bfloat>, <vscale x 4 x i1>, <vscale x 4 x float>)
 declare <vscale x 8 x bfloat> @llvm.aarch64.sve.fcvtnt.bf16f32(<vscale x 8 x bfloat>, <vscale x 8 x i1>, <vscale x 4 x float>)

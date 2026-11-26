@@ -36,9 +36,9 @@ namespace std {
 #    pragma GCC system_header
 #  endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 class source_location {
   // The names source_location::__impl, _M_file_name, _M_function_name, _M_line, and _M_column
@@ -65,25 +65,17 @@ public:
     __sl.__ptr_ = static_cast<const __impl*>(__ptr);
     return __sl;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr source_location() noexcept = default;
+  constexpr source_location() noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr uint_least32_t line() const noexcept {
-    return __ptr_ != nullptr ? __ptr_->_M_line : 0;
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr uint_least32_t column() const noexcept {
-    return __ptr_ != nullptr ? __ptr_->_M_column : 0;
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr const char* file_name() const noexcept {
-    return __ptr_ != nullptr ? __ptr_->_M_file_name : "";
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr const char* function_name() const noexcept {
-    return __ptr_ != nullptr ? __ptr_->_M_function_name : "";
-  }
+  constexpr uint_least32_t line() const noexcept { return __ptr_ != nullptr ? __ptr_->_M_line : 0; }
+  constexpr uint_least32_t column() const noexcept { return __ptr_ != nullptr ? __ptr_->_M_column : 0; }
+  constexpr const char* file_name() const noexcept { return __ptr_ != nullptr ? __ptr_->_M_file_name : ""; }
+  constexpr const char* function_name() const noexcept { return __ptr_ != nullptr ? __ptr_->_M_function_name : ""; }
 };
 
-#  endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_STD_VER >= 20
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

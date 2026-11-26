@@ -128,42 +128,42 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 ; CHECK:      DW_TAG_variable
 ; CHECK-NEXT:   DW_AT_name  ("external_var0")
 ; CHECK:        DW_AT_external  (true)
-; NOPIC:        DW_AT_location  (DW_OP_addrx 0x0)
-; PIC:          DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x0, DW_OP_plus)
-
-; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_name  ("external_var1")
-; CHECK:        DW_AT_external  (true)
 ; NOPIC:        DW_AT_location  (DW_OP_addrx 0x1)
 ; PIC:          DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x1, DW_OP_plus)
 
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_name  ("internal_var0")
+; CHECK-NEXT:   DW_AT_name  ("external_var1")
+; CHECK:        DW_AT_external  (true)
 ; NOPIC:        DW_AT_location  (DW_OP_addrx 0x2)
 ; PIC:          DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x2, DW_OP_plus)
 
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_name  ("internal_var1")
+; CHECK-NEXT:   DW_AT_name  ("internal_var0")
 ; NOPIC:        DW_AT_location  (DW_OP_addrx 0x3)
 ; PIC:          DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x3, DW_OP_plus)
 
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_name  ("external_tls_var0")
-; CHECK:        DW_AT_external  (true)
-; CHECK:        DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x4, DW_OP_plus)
+; CHECK-NEXT:   DW_AT_name  ("internal_var1")
+; NOPIC:        DW_AT_location  (DW_OP_addrx 0x4)
+; PIC:          DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x4, DW_OP_plus)
 
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_name  ("external_tls_var1")
+; CHECK-NEXT:   DW_AT_name  ("external_tls_var0")
 ; CHECK:        DW_AT_external  (true)
 ; CHECK:        DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x5, DW_OP_plus)
 
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_name  ("internal_tls_var0")
+; CHECK-NEXT:   DW_AT_name  ("external_tls_var1")
+; CHECK:        DW_AT_external  (true)
 ; CHECK:        DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x6, DW_OP_plus)
 
 ; CHECK:      DW_TAG_variable
-; CHECK-NEXT:   DW_AT_name  ("internal_tls_var1")
+; CHECK-NEXT:   DW_AT_name  ("internal_tls_var0")
 ; CHECK:        DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x7, DW_OP_plus)
+
+; CHECK:      DW_TAG_variable
+; CHECK-NEXT:   DW_AT_name  ("internal_tls_var1")
+; CHECK:        DW_AT_location  (DW_OP_WASM_location 0x3 0x{{[0-9]+}}, DW_OP_addrx 0x8, DW_OP_plus)
 
 ; In non-split DWARF, .debug_info section contains relocations referring to
 ; __stack_pointer, __tls_base, and __memory_base (if used)

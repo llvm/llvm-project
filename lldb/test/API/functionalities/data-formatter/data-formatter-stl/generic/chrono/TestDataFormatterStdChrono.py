@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdChronoDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self):
         """Test that that file and class static variables display correctly."""
         isNotWindowsHost = lldbplatformutil.getHostPlatform() != "windows"

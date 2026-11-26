@@ -149,7 +149,7 @@ public:
         StringRef Arch =
             Attr.CPU.empty() ? CGM.getTarget().getTargetOpts().CPU : Attr.CPU;
         if (!CGM.getTarget().validateBranchProtection(
-                Attr.BranchProtection, Arch, BPI, CGM.getLangOpts(), DiagMsg)) {
+                Attr, BPI, CGM.getLangOpts(), DiagMsg)) {
           CGM.getDiags().Report(
               D->getLocation(),
               diag::warn_target_unsupported_branch_protection_attribute)
@@ -353,8 +353,7 @@ bool ARMABIInfo::shouldIgnoreEmptyArg(QualType Ty) const {
     return true;
 
   // Clang 19.0 and earlier always ignored empty struct arguments in C++ mode.
-  if (getContext().getLangOpts().getClangABICompat() <=
-      LangOptions::ClangABI::Ver19)
+  if (getContext().getLangOpts().isCompatibleWith(LangOptions::ClangABI::Ver19))
     return true;
 
   // Otherwise, they are passed as if they have a size of 1 byte.

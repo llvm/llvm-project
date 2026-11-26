@@ -17,7 +17,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Triple.h"
-#include <cctype>
 
 using namespace llvm;
 
@@ -89,6 +88,7 @@ unsigned ARM::parseArchVersion(StringRef Arch) {
   case ArchKind::ARMV9_5A:
   case ArchKind::ARMV9_6A:
   case ArchKind::ARMV9_7A:
+  case ArchKind::ARMV9_8A:
     return 9;
   case ArchKind::INVALID:
     return 0;
@@ -129,6 +129,7 @@ static ARM::ProfileKind getProfileKind(ARM::ArchKind AK) {
   case ARM::ArchKind::ARMV9_5A:
   case ARM::ArchKind::ARMV9_6A:
   case ARM::ArchKind::ARMV9_7A:
+  case ARM::ArchKind::ARMV9_8A:
     return ARM::ProfileKind::A;
   case ARM::ArchKind::ARMV4:
   case ARM::ArchKind::ARMV4T:

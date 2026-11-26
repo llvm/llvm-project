@@ -73,7 +73,9 @@ void mlir::math::populateExtendToSupportedTypesTypeConverter(
       });
   typeConverter.addTargetMaterialization(
       [](OpBuilder &b, Type target, ValueRange input, Location loc) {
-        auto extFOp = arith::ExtFOp::create(b, loc, target, input);
+        auto extFOp = arith::ExtFOp::create(b, loc, TypeRange{target},
+                                            ValueRange{input.front()},
+                                            arith::ExtFOp::Properties{});
         extFOp.setFastmath(arith::FastMathFlags::contract);
         return extFOp;
       });
@@ -124,28 +126,25 @@ void ExtendToSupportedTypesPass::runOnOperation() {
   MLIRContext *ctx = &getContext();
 
   // Parse target type
-  std::optional<Type> maybeTargetType =
-      arith::parseFloatType(ctx, targetTypeStr);
-  if (!maybeTargetType.has_value()) {
+  FloatType targetType = arith::parseFloatType(ctx, targetTypeStr);
+  if (!targetType) {
     emitError(UnknownLoc::get(ctx), "could not map target type '" +
                                         targetTypeStr +
                                         "' to a known floating-point type");
     return signalPassFailure();
   }
-  Type targetType = maybeTargetType.value();
 
   // Parse source types
   llvm::SetVector<Type> sourceTypes;
   for (const auto &extraTypeStr : extraTypeStrs) {
-    std::optional<FloatType> maybeExtraType =
-        arith::parseFloatType(ctx, extraTypeStr);
-    if (!maybeExtraType.has_value()) {
+    FloatType extraType = arith::parseFloatType(ctx, extraTypeStr);
+    if (!extraType) {
       emitError(UnknownLoc::get(ctx), "could not map source type '" +
                                           extraTypeStr +
                                           "' to a known floating-point type");
       return signalPassFailure();
     }
-    sourceTypes.insert(maybeExtraType.value());
+    sourceTypes.insert(extraType);
   }
   // f64 and f32 are implicitly supported
   Builder b(ctx);

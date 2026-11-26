@@ -1,0 +1,23 @@
+// Test the --verbose flag on the `static-library create` subcommand.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// RUN: clang-ssaf-linker static-library create --verbose \
+// RUN:     %S/Inputs/tu-1.json %S/Inputs/tu-2.json -o %t/libv.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines
+
+// CHECK:      note: - Creating StaticLibrary started.
+// CHECK-NEXT: note:   - Validating input.
+// CHECK-NEXT: note:     - Validated output path '{{.*}}libv.json'.
+// CHECK-NEXT: note:     - Validated 2 input summary paths.
+// CHECK-NEXT: note:     - Namespace name: 'libv'.
+// CHECK-NEXT: note:   - Bundling StaticLibrary objects.
+// CHECK-NEXT: note:     - Bundling members.
+// CHECK-NEXT: note:       - [1/2] Reading '{{.*}}tu-1.json'.
+// CHECK-NEXT: note:       - [1/2] Assembling '{{.*}}tu-1.json'.
+// CHECK-NEXT: note:       - [2/2] Reading '{{.*}}tu-2.json'.
+// CHECK-NEXT: note:       - [2/2] Assembling '{{.*}}tu-2.json'.
+// CHECK-NEXT: note:     - Target triple: 'arm64-apple-macosx'.
+// CHECK-NEXT: note:     - Writing StaticLibrary to '{{.*}}libv.json'.
+// CHECK-NEXT: note: - Creating StaticLibrary finished.

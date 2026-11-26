@@ -1,11 +1,11 @@
 ; RUN: llc -mtriple=riscv32 --code-model=small \
-; RUN:    -stop-after riscv-prera-expand-pseudo %s -o %t.mir
-; RUN: llc -mtriple=riscv32 -run-pass riscv-expand-pseudo %t.mir -o - | \
+; RUN:    -stop-after riscv-expand-pseudo-pre-ra %s -o %t.mir
+; RUN: llc -mtriple=riscv32 -run-pass riscv-expand-pseudo-pre-emit %t.mir -o - | \
 ; RUN:   FileCheck %s -check-prefix=RV32-SMALL
 ;
 ; RUN: llc -mtriple=riscv32 --code-model=medium --relocation-model=pic \
-; RUN:   -stop-after riscv-prera-expand-pseudo %s -o %t.mir
-; RUN: llc -mtriple=riscv32 -run-pass riscv-expand-pseudo %t.mir -o - | \
+; RUN:   -stop-after riscv-expand-pseudo-pre-ra %s -o %t.mir
+; RUN: llc -mtriple=riscv32 -run-pass riscv-expand-pseudo-pre-emit %t.mir -o - | \
 ; RUN:   FileCheck %s -check-prefix=RV32-MED
 
 ; This tests the RISC-V-specific serialization and deserialization of
