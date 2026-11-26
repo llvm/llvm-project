@@ -2431,8 +2431,12 @@ private:
 
   /// Try to split Pred LHS RHS into logical conjunctions (and's) and try to
   /// prove them individually.
-  bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS,
-                                    SCEVUse RHS);
+  bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
+                                    unsigned Depth);
+
+  /// Implementation of isKnownPredicate.
+  bool isKnownPredicateImpl(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
+                            unsigned Depth);
 
   /// Try to match the Expr as "(L + R)<Flags>".
   bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R, SCEVFlags &Flags);
