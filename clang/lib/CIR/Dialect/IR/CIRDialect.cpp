@@ -4854,6 +4854,13 @@ LogicalResult cir::LdexpOp::verify() {
   return success();
 }
 
+LogicalResult cir::Exp10Op::verify() {
+  if (getFenvAttr())
+    return emitOpError()
+           << "cannot have an FP environment: LLVM has no constrained exp10";
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // LoadOp, GetBitfieldOp and MatrixColumnMajorLoadOp
 //===----------------------------------------------------------------------===//

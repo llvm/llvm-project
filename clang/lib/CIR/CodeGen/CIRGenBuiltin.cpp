@@ -862,8 +862,14 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   case Builtin::BI__builtin_exp10f16:
   case Builtin::BI__builtin_exp10l:
   case Builtin::BI__builtin_exp10f128:
-  case Builtin::BI__builtin_elementwise_exp10:
-    return emitUnaryMaybeConstrainedFPBuiltin<cir::Exp10Op>(cgf, *e);
+  case Builtin::BI__builtin_elementwise_exp10: {
+    // LLVM has no constrained exp10 intrinsic, so a constrained FP environment
+    // falls back to the library call, as in classic codegen.
+    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, e);
+    if (cgf.getBuilder().getIsFPConstrained())
+      break;
+    return emitUnaryFPBuiltin<cir::Exp10Op>(cgf, *e);
+  }
   case Builtin::BIfabs:
   case Builtin::BIfabsf:
   case Builtin::BIfabsl:

@@ -1,0 +1,9 @@
+// RUN: cir-opt %s -verify-diagnostics
+
+module {
+  cir.func @exp10_fenv(%a: !cir.double) {
+    // expected-error @below {{cannot have an FP environment: LLVM has no constrained exp10}}
+    %0 = cir.exp10 %a : !cir.double fenv<strict_except = true>
+    cir.return
+  }
+}
