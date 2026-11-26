@@ -153,6 +153,10 @@ public:
                    bool HasMinSize = false,
                    bool EnableSRLTSubregToRegMitigation = false);
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isAArch64();
+  }
+
   const AArch64Options &getCLOpts() const { return CLOpts; }
 
 // Getters for SubtargetFeatures defined in tablegen

@@ -79,6 +79,10 @@ public:
 
   ~M68kSubtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().getArch() == Triple::m68k;
+  }
+
   const M68kOptions &getCLOpts() const { return CLOpts; }
 
   /// Parses features string setting specified subtarget options.  Definition

@@ -39,6 +39,10 @@ public:
   AVRSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const AVRTargetMachine &TM);
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isAVR();
+  }
+
   const AVRInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const TargetFrameLowering *getFrameLowering() const override {
     return &FrameLowering;

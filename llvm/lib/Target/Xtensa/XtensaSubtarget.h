@@ -48,6 +48,10 @@ public:
 
   ~XtensaSubtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().getArch() == Triple::xtensa;
+  }
+
   const Triple &getTargetTriple() const { return TargetTriple; }
 
   const TargetFrameLowering *getFrameLowering() const override {

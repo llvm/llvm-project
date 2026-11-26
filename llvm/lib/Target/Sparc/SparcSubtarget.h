@@ -56,6 +56,10 @@ public:
 
   ~SparcSubtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isSPARC();
+  }
+
   const SparcOptions &getCLOpts() const { return CLOpts; }
 
   const SparcInstrInfo *getInstrInfo() const override { return &InstrInfo; }

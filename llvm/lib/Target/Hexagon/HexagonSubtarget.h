@@ -128,6 +128,10 @@ public:
   HexagonSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                    const TargetMachine &TM);
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().getArch() == Triple::hexagon;
+  }
+
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool isEnvironmentMusl() const {
     return TargetTriple.getEnvironment() == Triple::Musl;

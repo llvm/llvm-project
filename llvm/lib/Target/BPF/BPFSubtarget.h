@@ -87,6 +87,10 @@ public:
   BPFSubtarget(const Triple &TT, const std::string &CPU, const std::string &FS,
                const TargetMachine &TM);
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isBPF();
+  }
+
   BPFSubtarget &initializeSubtargetDependencies(StringRef CPU, StringRef FS);
 
   // ParseSubtargetFeatures - Parses features string setting specified

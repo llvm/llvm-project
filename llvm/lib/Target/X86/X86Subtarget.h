@@ -128,6 +128,10 @@ public:
                unsigned RequiredVectorWidth);
   ~X86Subtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isX86();
+  }
+
   const X86Options &getCLOpts() const { return CLOpts; }
 
   const X86TargetLowering *getTargetLowering() const override {

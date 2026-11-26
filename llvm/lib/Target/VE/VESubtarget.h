@@ -49,6 +49,10 @@ public:
 
   ~VESubtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isVE();
+  }
+
   const VEInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const VEFrameLowering *getFrameLowering() const override {
     return &FrameLowering;

@@ -222,6 +222,10 @@ public:
                FloatABI::ABIType FloatABI, ARM::ARMABI ABI,
                bool MinSize = false, DenormalMode DM = DenormalMode::getIEEE());
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isARM() || ST->getTargetTriple().isThumb();
+  }
+
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.
   unsigned getMaxInlineSizeThreshold() const {

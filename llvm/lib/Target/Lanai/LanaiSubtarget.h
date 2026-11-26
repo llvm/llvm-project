@@ -39,6 +39,10 @@ public:
                  const TargetOptions &Options, CodeModel::Model CodeModel,
                  CodeGenOptLevel OptLevel);
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().getArch() == Triple::lanai;
+  }
+
   const LanaiOptions &getCLOpts() const { return CLOpts; }
 
   // ParseSubtargetFeatures - Parses features string setting specified

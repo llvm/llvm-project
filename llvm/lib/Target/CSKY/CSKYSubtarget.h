@@ -114,6 +114,10 @@ public:
 
   ~CSKYSubtarget() override;
 
+  static bool classof(const TargetSubtargetInfo *ST) {
+    return ST->getTargetTriple().isCSKY();
+  }
+
   const CSKYFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
   }
