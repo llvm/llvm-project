@@ -16,7 +16,7 @@
 
 constexpr std::size_t test_pointer() {
   typedef int* T;
-  typedef support::constexpr_hash<T> H;
+  using H = support::constexpr_hash<T>;
 
   //expected-error@+2 {{call to deleted constructor}}
   //expected-error@+1 {{ does not provide a call operator}}
@@ -25,7 +25,7 @@ constexpr std::size_t test_pointer() {
 
 int main(int, char**) {
   typedef int* T;
-  typedef support::constexpr_hash<T> H;
+  using H = support::constexpr_hash<T>;
 
   //expected-error@+2 {{call to deleted constructor}}
   //expected-error@+1 {{ does not provide a call operator}}

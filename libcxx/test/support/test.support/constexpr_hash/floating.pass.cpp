@@ -24,7 +24,7 @@ constexpr void test() {
   test_hash_disabled<volatile T, support::constexpr_hash<volatile T>>();
   test_hash_disabled<const volatile T, support::constexpr_hash<const volatile T>>();
 
-  typedef support::constexpr_hash<T> H;
+  using H = support::constexpr_hash<T>;
   ASSERT_NOEXCEPT(H()(T()));
   H h;
 
@@ -65,7 +65,8 @@ constexpr bool test_with_hash() {
 }
 
 int main(int, char**) {
-  assert(test_with_hash());
+  test_with_hash();
   static_assert(test_with_hash());
+
   return 0;
 }

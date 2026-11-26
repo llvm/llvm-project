@@ -20,7 +20,7 @@
 
 template <class T>
 constexpr void test() {
-  typedef support::constexpr_hash<T> H;
+  using H = support::constexpr_hash<T>;
 
   ASSERT_NOEXCEPT(H()(T()));
   H h;
@@ -33,7 +33,7 @@ constexpr void test() {
 
 constexpr void test_nullptr() {
   typedef std::nullptr_t T;
-  typedef support::constexpr_hash<T> H;
+  using H = support::constexpr_hash<T>;
 
   ASSERT_NOEXCEPT(H()(T()));
 }
@@ -44,8 +44,7 @@ constexpr bool test_with_hash() {
 }
 
 int main(int, char**) {
-  assert(test_with_hash());
-
+  test_with_hash();
   static_assert(test_with_hash());
 
   return 0;
