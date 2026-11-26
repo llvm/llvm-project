@@ -86,6 +86,8 @@ public:
   // Produces a view of the specified shard.
   _LIBCPP_HIDE_FROM_ABI __bitset_view __shard(size_t __shard_idx) const noexcept {
     _LIBCPP_ASSERT_INTERNAL(__shard_idx < __shards_count_, "__shard_idx must be within bounds");
+    // NB! Reaching for size_ts beyond the bounds of the underlying __aligned_cache_line is technically an UB,
+    // but this is mostly theoretical.
     return {reinterpret_cast<size_t*>(__bits_.get()) + __shard_idx * __words_per_shard_, __words_per_shard_};
   }
 
