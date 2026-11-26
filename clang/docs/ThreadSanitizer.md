@@ -633,8 +633,8 @@ calls to `main` with `__wrap_main` and provides access to the original
   - int
   - 10000
   - Maximum number of scheduling decisions per iteration. If exceeded, the
-    iteration is aborted and simulation returns an error. Prevents infinite
-    loops or excessive scheduling overhead.
+    simulation reports the iteration and terminates the process. Prevents
+    infinite loops or excessive scheduling overhead.
 * - `simulate_schedule_probability`
   - int
   - 20

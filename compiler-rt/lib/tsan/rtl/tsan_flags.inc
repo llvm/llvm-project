@@ -130,7 +130,7 @@ TSAN_FLAG(int, simulate_start_iteration, 0,
           "reproducing specific iteration failures.")
 TSAN_FLAG(int, simulate_max_depth, 10000,
           "Maximum scheduling depth per iteration. If exceeded, the "
-          "simulation returns an error after the iteration completes")
+          "simulation reports an error and terminates the process")
 TSAN_FLAG(int, simulate_schedule_probability, 20,
           "Probability (0-100%) of actually performing a context switch at "
           "each scheduling point. Lower values allow threads to complete more "

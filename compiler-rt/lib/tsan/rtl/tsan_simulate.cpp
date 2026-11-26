@@ -44,7 +44,6 @@ static constexpr int kMaxSimThreads = 64;
 
 static int sim_current_iteration = 0;
 
-static atomic_uint32_t sim_max_depth_hit;
 static atomic_uint32_t sim_race_detected;
 
 void SimulateReportUnsupportedImpl(const char* func_name) {
@@ -78,13 +77,14 @@ void SimulateReportDeadlock() {
   Die();
 }
 
-static void SimulateReportThreadsStillRunning(int max_steps) {
-  Printf(
-      "ThreadSanitizer: simulation error - threads still running %d "
-      "scheduling points after the callback returned at iteration %d\n"
-      "Threads created by the callback must finish without further action "
-      "from the callback thread.\n",
-      max_steps, sim_current_iteration);
+static void SimulateReportMaxDepth(int max_depth, bool after_callback) {
+  Printf("ThreadSanitizer: simulation hit max depth %d at iteration %d\n",
+         max_depth, sim_current_iteration);
+  if (after_callback)
+    Printf(
+        "Threads created by the callback were still running after the "
+        "callback returned. They must finish without further action from the "
+        "callback thread.\n");
   Printf(
       "ThreadSanitizer: to reproduce, set "
       "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=%d\n",
@@ -193,7 +193,6 @@ class SimScheduler {
     thread_count_ = 0;
     depth_ = 0;
     callback_waiter_ = -1;
-    steps_after_callback_ = 0;
     internal_memset(threads_, 0, sizeof(threads_));
     mutex_waitsets_.Reset();
     cond_waitsets_.Reset();
@@ -210,18 +209,11 @@ class SimScheduler {
   // Called by the currently running thread. May randomly switch to another
   // runnable thread.
   void Schedule(int caller_idx) {
-    CountStepAfterCallback();
-    if (atomic_load_relaxed(&sim_max_depth_hit))
-      return;
-
     CHECK_EQ(caller_idx, current_);
 
     int max_depth = flags()->simulate_max_depth;
-    if (++depth_ > max_depth) {
-      atomic_store_relaxed(&sim_max_depth_hit, 1);
-      Printf("ThreadSanitizer: simulation hit max depth %d at iteration %d\n",
-             max_depth, sim_current_iteration);
-    }
+    if (++depth_ > max_depth)
+      SimulateReportMaxDepth(max_depth, callback_waiter_ >= 0);
 
     int runnable = CountRunnable();
     if (runnable <= 1)
@@ -296,7 +288,6 @@ class SimScheduler {
     CHECK_EQ(caller_idx, current_);
     threads_[caller_idx].state = SimThread::WaitingForThreads;
     callback_waiter_ = caller_idx;
-    steps_after_callback_ = 0;
 
     if (CountRunnable() > 0) {
       PickNextAndWake();
@@ -307,17 +298,6 @@ class SimScheduler {
 
     callback_waiter_ = -1;
     threads_[caller_idx].state = SimThread::Finished;
-  }
-
-  // Called from Schedule(), so it counts the same scheduling points as depth_.
-  // Bounds the scheduling points reached after the callback returned by
-  // simulate_max_depth, independently of whether depth_ already exceeded it.
-  void CountStepAfterCallback() {
-    if (callback_waiter_ < 0)
-      return;
-    int max_steps = flags()->simulate_max_depth;
-    if (++steps_after_callback_ > max_steps)
-      SimulateReportThreadsStillRunning(max_steps);
   }
 
   // ------- Blocking-call support -------
@@ -527,7 +507,6 @@ class SimScheduler {
   int depth_;
   // Index of the thread in WaitForThreadsAfterCallback, or -1.
   int callback_waiter_ = -1;
-  int steps_after_callback_ = 0;
 
   // Resource waitsets: map from resource address to waitset.
   WaitsetMap mutex_waitsets_;
@@ -640,18 +619,6 @@ void SimulateCondBroadcastImpl(uptr cond_addr) {
 }
 
 int CheckForErrors(int iter, int start_iter) {
-  if (atomic_load_relaxed(&sim_max_depth_hit)) {
-    Printf(
-        "ThreadSanitizer: to reproduce, set "
-        "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=%d\n",
-        iter);
-    Printf(
-        "ThreadSanitizer: simulation stopped due to max depth after %d "
-        "iterations\n",
-        iter - start_iter + 1);
-    return -1;
-  }
-
   if (atomic_load_relaxed(&sim_race_detected)) {
     Printf(
         "ThreadSanitizer: to reproduce, set "
@@ -728,7 +695,6 @@ int SimulateRun(void (*callback)(void*), void* arg) {
     return -1;
   }
 
-  atomic_store_relaxed(&sim_max_depth_hit, 0);
   atomic_store_relaxed(&sim_race_detected, 0);
 
   int iterations = flags()->simulate_iterations;

@@ -39,14 +39,12 @@ namespace __tsan {
 //
 // Errors include
 //  - Pre-existing threads when simulation was started
-//  - Max simulation depth hit
 //  - Race detected
 //
 // The following errors result in program termination via Die()
 //  - Deadlock detected (all simulated threads were blocked)
 //  - Unsupported interceptor called
-//  - Threads still running simulate_max_depth scheduling points after the
-//    callback returned
+//  - More than simulate_max_depth scheduling points in an iteration
 int SimulateRun(void (*callback)(void*), void* arg);
 
 extern bool sim_active;
