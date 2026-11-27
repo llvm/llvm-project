@@ -88,6 +88,75 @@ let Command = "uuid" in {
                   Desc<"A module UUID value.">;
 }
 
+let Command = "value object display" in {
+  def value_object_display_depth
+      : Option<"depth", "D">,
+        Group<1>,
+        Arg<"Count">,
+        Desc<"Set the max recurse depth when dumping aggregate types (default "
+             "is infinity).">;
+  def value_object_display_dynamic_type
+      : Option<"dynamic-type", "d">,
+        Group<1>,
+        EnumArg<"DynamicValueType">,
+        Desc<"Show the object as its full dynamic type, not its static type, "
+             "if available.">;
+  def value_object_display_element_count
+      : Option<"element-count", "Z">,
+        Group<1>,
+        Arg<"Count">,
+        Desc<"Treat the result of the expression as if its type is an array "
+             "of this many values.">;
+  def value_object_display_flat
+      : Option<"flat", "F">,
+        Group<1>,
+        Desc<"Display results in a flat format that uses expression paths for "
+             "each variable or member.">;
+  def value_object_display_location
+      : Option<"location", "L">,
+        Group<1>,
+        Desc<"Show variable location information.">;
+  def value_object_display_no_summary_depth
+      : Option<"no-summary-depth", "Y">,
+        Group<1>,
+        OptionalArg<"Count">,
+        Desc<"Set the depth at which omitting summary information stops "
+             "(default is 1).">;
+  def value_object_display_object_description
+      : Option<"object-description", "O">,
+        Group<1>,
+        Desc<"Display using a language-specific description API, if "
+             "possible.">;
+  def value_object_display_ptr_depth
+      : Option<"ptr-depth", "P">,
+        Group<1>,
+        Arg<"Count">,
+        Desc<"The number of pointers to be traversed when dumping values "
+             "(default is zero).">;
+  def value_object_display_raw_output
+      : Option<"raw-output", "R">,
+        Group<1>,
+        Desc<"Don't use formatting options.">;
+  def value_object_display_show_all_children
+      : Option<"show-all-children", "A">,
+        Group<1>,
+        Desc<"Ignore the upper bound on the number of children to show.">;
+  def value_object_display_show_types
+      : Option<"show-types", "T">,
+        Group<1>,
+        Desc<"Show variable types when dumping values.">;
+  def value_object_display_synthetic_type
+      : Option<"synthetic-type", "S">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"Show the object obeying its synthetic provider, if available.">;
+  def value_object_display_validate
+      : Option<"validate", "V">,
+        Group<1>,
+        Arg<"Boolean">,
+        Desc<"Show results of type validators.">;
+}
+
 // OptionGroupVariable::GetDefinitions() omits the frame-only options by
 // dropping the leading elements, so their def names must sort first.
 let Command = "variable" in {

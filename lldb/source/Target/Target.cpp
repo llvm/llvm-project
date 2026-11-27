@@ -5038,29 +5038,6 @@ void Target::RunModuleHooks(bool is_load) {
   output_sp->Flush();
 }
 
-static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
-    {
-        eNoDynamicValues,
-        "no-dynamic-values",
-        "Don't calculate the dynamic type of values",
-    },
-    {
-        eDynamicCanRunTarget,
-        "run-target",
-        "Calculate the dynamic type of values "
-        "even if you have to run the target.",
-    },
-    {
-        eDynamicDontRunTarget,
-        "no-run-target",
-        "Calculate the dynamic type of values, but don't run the target.",
-    },
-};
-
-OptionEnumValues lldb_private::GetDynamicValueTypes() {
-  return OptionEnumValues(g_dynamic_value_types);
-}
-
 static constexpr OptionEnumValueElement g_inline_breakpoint_enums[] = {
     {
         eInlineBreakpointsNever,

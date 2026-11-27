@@ -253,6 +253,25 @@ static constexpr OptionEnumValueElement g_breakpoint_condition_mode[] = {
      "Use DIL to evaluate the condition, and if it fails, "
      "fall back to UserExpression."}};
 
+static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
+    {
+        lldb::eNoDynamicValues,
+        "no-dynamic-values",
+        "Don't calculate the dynamic type of values",
+    },
+    {
+        lldb::eDynamicCanRunTarget,
+        "run-target",
+        "Calculate the dynamic type of values "
+        "even if you have to run the target.",
+    },
+    {
+        lldb::eDynamicDontRunTarget,
+        "no-run-target",
+        "Calculate the dynamic type of values, but don't run the target.",
+    },
+};
+
 static constexpr OptionEnumValueElement g_watch_type[] = {
     {
         OptionGroupWatchpoint::eWatchRead,
@@ -400,6 +419,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypePluginDomain, "plugin-domain", lldb::CompletionType::eNoCompletion, g_plugin_domain_values, { nullptr, false }, "The domain to apply the plugin operation to." },
     { lldb::eArgTypeBreakpointResolverMask, "resolver-mask", lldb::CompletionType::eNoCompletion, g_resolver_mask_values, { nullptr, false }, "Specify the breakpoint resolver type your override will handle. Can be specified more than once to specify a mask of resolver types." },
     { lldb::eArgTypeScriptedExtension, "scripting-extension", lldb::CompletionType::eScriptedExtensionCompletion, {}, { ScriptedExtensionHelpTextCallback, false }, nullptr },
+    { lldb::eArgTypeDynamicValueType, "dynamic-value-type", lldb::CompletionType::eNoCompletion, g_dynamic_value_types, { nullptr, false }, "Whether to calculate the dynamic type of values, and whether the target may be run to do so." },
     // clang-format on
 };
 
