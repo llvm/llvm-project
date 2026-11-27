@@ -946,6 +946,64 @@ struct WhileOpInterface
       conditionOp.getArgsMutable().assign(beforeYieldValues);
     });
 
+    // Update "after" region. A value yielded here becomes a "before" region
+    // bbArg in the next iteration, where it may be written to in-place. It
+    // must therefore not alias any value that is still visible at that point:
+    //   - a value defined outside of the loop, or
+    //   - a value that is yielded into another slot. (Two loop-carried values
+    //     must not alias, so that a write to one of them does not modify the
+    //     other.)
+    // Values allocated inside the loop do not alias anything defined outside
+    // of the loop; not copying them preserves `allow-return-allocs-from-loops`.
+    auto yieldOp = whileOp.getYieldOp();
+    const auto &oneShotState =
+        static_cast<const OneShotAnalysisState &>(analysisState);
+
+    rewriter.setInsertionPoint(yieldOp);
+    SmallVector<Value> afterYieldValues;
+    // The values that are yielded without a copy so far.
+    SmallVector<Value> yieldedWithoutCopy;
+    for (int64_t idx = 0;
+         idx < static_cast<int64_t>(yieldOp.getResults().size()); ++idx) {
+      Value value = yieldOp.getResults()[idx];
+      if (!isa<TensorLikeType>(value.getType())) {
+        afterYieldValues.push_back(value);
+        continue;
+      }
+      // A value that may alias a value that is already yielded without a copy
+      // must be copied as well. Otherwise, two loop-carried values would
+      // alias.
+      bool mayAliasYielded = llvm::any_of(yieldedWithoutCopy, [&](Value other) {
+        return oneShotState.areAliasingBufferizedValues(value, other);
+      });
+      // The value can be yielded without a copy if it is the loop-carried
+      // value of this slot (same check as for the "before" region above) or if
+      // it is known not to alias anything defined outside of the loop (e.g.,
+      // an allocation inside the loop).
+      if (!mayAliasYielded &&
+          ((equivalentYieldsAfter.contains(idx) &&
+            equivalentYieldsBefore.contains(idx)) ||
+           doesNotAliasExternalValue(
+               value, &whileOp.getAfter(),
+               /*exceptions=*/ValueRange(whileOp.getAfterArguments()),
+               oneShotState))) {
+        afterYieldValues.push_back(value);
+        yieldedWithoutCopy.push_back(value);
+        continue;
+      }
+      // The value may alias another loop-carried value or a value defined
+      // outside of the loop. Yield a copy instead.
+      FailureOr<Value> alloc = allocateTensorForShapedValue(
+          rewriter, yieldOp.getLoc(), value, analysisState.getOptions(),
+          bufferizationState);
+      if (failed(alloc))
+        return failure();
+      afterYieldValues.push_back(*alloc);
+    }
+    rewriter.modifyOpInPlace(yieldOp, [&]() {
+      yieldOp.getResultsMutable().assign(afterYieldValues);
+    });
+
     return success();
   }
 

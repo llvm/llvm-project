@@ -108,6 +108,84 @@ func.func @scf_while_non_equiv_condition_and_body(%A: tensor<5xi1>,
 
 // -----
 
+// The "after" region yields tensors that are defined outside of the loop: an
+// allocation and a constant. Both must be copied: They are passed to the
+// "before" region in the next iteration, which may write to them in-place.
+
+// CHECK-LABEL: func @scf_while_yield_external(
+func.func @scf_while_yield_external() -> (tensor<4xf32>, tensor<4xf32>) {
+  %true = arith.constant true
+  %c0 = arith.constant 0 : index
+  %c100 = arith.constant 100.0 : f32
+  // CHECK: %[[cst:.*]] = arith.constant dense<7.000000e+00> : tensor<4xf32>
+  %cst = arith.constant dense<7.0> : tensor<4xf32>
+  %A = bufferization.alloc_tensor() : tensor<4xf32>
+  %B = bufferization.alloc_tensor() : tensor<4xf32>
+  // CHECK: %[[ext:.*]] = bufferization.alloc_tensor() copy(%[[cst]]) : tensor<4xf32>
+  %ext = bufferization.alloc_tensor() copy(%cst) : tensor<4xf32>
+  // CHECK: scf.while
+  %r:2 = scf.while (%w0 = %A, %w1 = %B) : (tensor<4xf32>, tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+    %w0w = tensor.insert %c100 into %w0[%c0] : tensor<4xf32>
+    scf.condition(%true) %w0w, %w1 : tensor<4xf32>, tensor<4xf32>
+  } do {
+  ^bb0(%b0: tensor<4xf32>, %b1: tensor<4xf32>):
+    // CHECK: %[[ext_copy:.*]] = bufferization.alloc_tensor() copy(%[[ext]]) : tensor<4xf32>
+    // CHECK: %[[cst_copy:.*]] = bufferization.alloc_tensor() copy(%[[cst]]) : tensor<4xf32>
+    // CHECK: scf.yield %[[ext_copy]], %[[cst_copy]]
+    scf.yield %ext, %cst : tensor<4xf32>, tensor<4xf32>
+  }
+  return %r#0, %r#1 : tensor<4xf32>, tensor<4xf32>
+}
+
+// -----
+
+// The "after" region yields a tensor that is allocated inside the loop. It does
+// not alias any value defined outside of the loop, so it can be yielded without
+// a copy (allow-return-allocs-from-loops).
+
+// CHECK-LABEL: func @scf_while_yield_alloc(
+func.func @scf_while_yield_alloc() -> tensor<4xf32> {
+  %true = arith.constant true
+  %A = bufferization.alloc_tensor() : tensor<4xf32>
+  %r = scf.while (%w = %A) : (tensor<4xf32>) -> tensor<4xf32> {
+    // CHECK: scf.condition
+    scf.condition(%true) %w : tensor<4xf32>
+  } do {
+  ^bb0(%b: tensor<4xf32>):
+    // CHECK: %[[alloc:.*]] = bufferization.alloc_tensor() : tensor<4xf32>
+    %new = bufferization.alloc_tensor() : tensor<4xf32>
+    // CHECK: scf.yield %[[alloc]]
+    scf.yield %new : tensor<4xf32>
+  }
+  return %r : tensor<4xf32>
+}
+
+// -----
+
+// Two slots yield the same loop-carried tensor. One of them must be copied so
+// that the two loop-carried values do not alias in the next iteration.
+
+// CHECK-LABEL: func @scf_while_yield_same_value(
+func.func @scf_while_yield_same_value() -> (tensor<4xf32>, tensor<4xf32>) {
+  %true = arith.constant true
+  %A = bufferization.alloc_tensor() : tensor<4xf32>
+  %B = bufferization.alloc_tensor() : tensor<4xf32>
+  %r:2 = scf.while (%w0 = %A, %w1 = %B) : (tensor<4xf32>, tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+    // CHECK: scf.condition
+    scf.condition(%true) %w0, %w1 : tensor<4xf32>, tensor<4xf32>
+  } do {
+  ^bb0(%b0: tensor<4xf32>, %b1: tensor<4xf32>):
+    // CHECK: } do {
+    // CHECK: ^bb0(%[[b0:.*]]: tensor<4xf32>, %[[b1:.*]]: tensor<4xf32>):
+    // CHECK: %[[copy:.*]] = bufferization.alloc_tensor() copy(%[[b1]]) : tensor<4xf32>
+    // CHECK: scf.yield %[[b1]], %[[copy]]
+    scf.yield %b1, %b1 : tensor<4xf32>, tensor<4xf32>
+  }
+  return %r#0, %r#1 : tensor<4xf32>, tensor<4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @scf_forall_out_of_place(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<100xf32>, %[[arg1:.*]]: tensor<100xf32>
 // CHECK-FUNC-LABEL: func @scf_forall_out_of_place(
