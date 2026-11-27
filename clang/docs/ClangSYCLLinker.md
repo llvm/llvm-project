@@ -30,30 +30,37 @@ be passed down to downstream AOT compilation tools like 'ocloc' and 'opencl-aot'
 
 ```console
 OVERVIEW: A utility that wraps around the SYCL device code linking process.
-This enables LLVM IR linking, post-linking and code generation for SPIR-V
-JIT and AOT targets.
+This enables LLVM IR linking, post-linking and code generation for SPIR-V JIT and AOT targets.
 
 USAGE: clang-sycl-linker [options] <input bitcode files>
 
 OPTIONS:
-  --arch <value>                Specify the name of the target architecture.
-  --dry-run                     Print generated commands without running.
-  -help-hidden                  Display all available options
-  -help                         Display available options (--help-hidden for more)
-  -L <dir>                      Add <dir> to the library search path
-  -l <libname>                  Search for library <libname>
-  --whole-archive               Include all archive members in the link
-  --no-whole-archive            Only include archive members that resolve undefined symbols (default)
-  -u <symbol>                   Force undefined symbol during linking
-  --module-split-mode=<mode>    Module split mode: 'translation_unit' (default), 'kernel', or 'link_unit'
-  --ocloc-options=<value>       Options passed to ocloc for Intel GPU AOT compilation
-  --opencl-aot-options=<value>  Options passed to opencl-aot for Intel CPU AOT compilation
-  -o <path>                     Path to file to write output
-  --save-temps                  Save intermediate results
-  --triple <value>              Specify the target triple.
-  --version                     Display the version number and exit
-  -v                            Print verbose information
-  -spirv-dump-device-code=<dir> Directory to dump SPIR-V IR code into
+  --arch=<arch>           The device architecture
+  --code=<device>         Specify a real device to compile ahead of time for. Can be repeated. Without it, a real --arch is compiled ahead of time and a virtual one is kept for just-in-time compilation.
+  --dry-run               Print generated commands without running.
+  -help-hidden            Display all available options
+  -help                   Display available options (--help-hidden for more)
+  -L <dir>                Add <dir> to the library search path
+  -l <libname>            Search for library <libname>
+  --module-split-mode=<mode>
+                          SYCL device code module split mode. Valid values:
+                          - 'translation_unit' (default) emits one device image per translation unit that contains at least one entry point;
+                          - 'kernel' emits one device image per kernel function;
+                          - 'link_unit' emits one device image per linking unit.
+  --no-whole-archive      Disable --whole-archive for the following inputs (default state)
+  --ocloc-options=<value> Options passed to ocloc for Intel GPU AOT compilation
+  --opencl-aot-options=<value>
+                          Options passed to opencl-aot for Intel CPU AOT compilation
+  -o <path>               Path to file to write output
+  --print-linked-module   Print the linked module's IR for testing
+  --save-temps            Save intermediate results
+  --spirv-dump-device-code=<value>
+                          Path to the folder where the tool dumps SPIR-V device code. Other formats aren't dumped.
+  --triple=<triple>       The device target triple
+  -u <symbol>             Force undefined symbol during linking
+  --version               Display the version number and exit
+  -v                      Print verbose information
+  --whole-archive         Include all archive members in the link
 ```
 
 ## Library Linking
@@ -63,14 +70,14 @@ using `llvm-ar` and linked using the `-l` option:
 
 ```console
 llvm-ar rc libdevice.a func1.bc func2.bc func3.bc
-clang-sycl-linker input.bc -l device -L /path/to/libs
+clang-sycl-linker input.bc -l device -L /path/to/libs -o output.bin
 ```
 
 The linker supports standard archive library search semantics:
 
 - `-l <name>` searches for `lib<name>.a` in the directories specified by `-L`
 - `-l :<exact-name>` searches for the exact filename in the `-L` paths
-- Absolute paths can be passed as positional arguments: `clang-sycl-linker input.bc /path/to/libdevice.a`
+- Absolute paths can be passed as positional arguments: `clang-sycl-linker input.bc /path/to/libdevice.a -o output.bin`
 
 By default, archive linking is **lazy** - only archive members (individual `.bc` files)
 that resolve undefined symbols are extracted and linked. This happens at file
@@ -83,14 +90,14 @@ To force extraction of all archive members regardless of symbol resolution, use
 `--whole-archive`:
 
 ```console
-clang-sycl-linker input.bc --whole-archive -l device --no-whole-archive -l other
+clang-sycl-linker input.bc --whole-archive -l device --no-whole-archive -l other -o output.bin
 ```
 
 The `-u <symbol>` option can be used to force a symbol to be undefined, which
 can trigger extraction of archive members that define that symbol:
 
 ```console
-clang-sycl-linker input.bc -u my_init_function -l device
+clang-sycl-linker input.bc -u my_init_function -l device -o output.bin
 ```
 
 ## Examples
@@ -105,7 +112,22 @@ linked device images that are ready to be wrapped and linked with host code to
 generate the final executable.
 
 ```console
-clang-sycl-linker --triple spirv64 --arch xe-bmg-g21 input.bc
+clang-sycl-linker --triple=spirv64 --arch=xe-bmg-g21 input.bc -o output.bin
+```
+
+### Specifying a virtual architecture and real devices
+
+`--arch` can name a virtual architecture, which several real devices share.
+`--code` then names the real devices to compile the device code for ahead of
+time.
+
+For example, for an IGCA target, such as `igca_30r`, the device image is
+compiled ahead of time for the Intel GPUs given with `--code`, with a single
+ocloc call, or, if no `--code` is given, kept as SPIR-V to be compiled just in
+time by the runtime:
+
+```console
+clang-sycl-linker --triple=spirv64 --arch=igca_30r --code=xe-mtl-u --code=xe-mtl-h input.bc -o output.bin
 ```
 
 ### Linking with Device Libraries
@@ -118,12 +140,12 @@ llvm-ar rc libmath.a sin.bc cos.bc tan.bc
 llvm-ar rc libutils.a helper1.bc helper2.bc
 
 # Link with lazy loading (only needed members extracted)
-clang-sycl-linker --triple spirv64 kernel.bc -l math -l utils -L /path/to/libs -o kernel.spv
+clang-sycl-linker --triple=spirv64 kernel.bc -l math -l utils -L /path/to/libs -o kernel.spv
 
 # Force all members to be included from libmath.a
-clang-sycl-linker --triple spirv64 kernel.bc --whole-archive -l math --no-whole-archive -l utils -L /path/to/libs -o kernel.spv
+clang-sycl-linker --triple=spirv64 kernel.bc --whole-archive -l math --no-whole-archive -l utils -L /path/to/libs -o kernel.spv
 
 # Use exact archive filename or absolute path
-clang-sycl-linker --triple spirv64 kernel.bc -l :libmath.a -L /path/to/libs -o kernel.spv
-clang-sycl-linker --triple spirv64 kernel.bc /absolute/path/libmath.a -o kernel.spv
+clang-sycl-linker --triple=spirv64 kernel.bc -l :libmath.a -L /path/to/libs -o kernel.spv
+clang-sycl-linker --triple=spirv64 kernel.bc /absolute/path/libmath.a -o kernel.spv
 ```

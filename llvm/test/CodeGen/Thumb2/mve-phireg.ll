@@ -154,39 +154,39 @@ define dso_local i32 @e() #0 {
 ; CHECK-NEXT:    vdup.32 q7, r3
 ; CHECK-NEXT:    vmov s5, r3
 ; CHECK-NEXT:    vldr s4, .LCPI1_0
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r4
 ; CHECK-NEXT:    vmov q6[2], q6[0], r3, r5
 ; CHECK-NEXT:    vmov q0, q7
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r4
-; CHECK-NEXT:    vmov q6[3], q6[1], r3, r2
+; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    vmov q4, q7
+; CHECK-NEXT:    mov.w r12, #4
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r2
 ; CHECK-NEXT:    vmov.32 q0[0], r2
 ; CHECK-NEXT:    vmov.32 q7[1], r2
+; CHECK-NEXT:    vmov.f32 s6, s5
+; CHECK-NEXT:    vmov q6[3], q6[1], r3, r2
 ; CHECK-NEXT:    vmov s21, r2
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r2
+; CHECK-NEXT:    vstrw.32 q2, [sp, #76]
 ; CHECK-NEXT:    vmov.f32 s20, s4
 ; CHECK-NEXT:    movs r1, #64
 ; CHECK-NEXT:    vmov.f32 s22, s5
-; CHECK-NEXT:    str r0, [sp, #24]
+; CHECK-NEXT:    str.w r8, [sp, #28]
 ; CHECK-NEXT:    vmov.f32 s23, s7
+; CHECK-NEXT:    strh.w r12, [sp, #390]
+; CHECK-NEXT:    str r0, [sp, #24]
+; CHECK-NEXT:    vstrw.32 q1, [sp, #44]
 ; CHECK-NEXT:    str r6, [r0]
-; CHECK-NEXT:    str r0, [r0]
 ; CHECK-NEXT:    vstrw.32 q5, [r0]
+; CHECK-NEXT:    str r0, [r0]
 ; CHECK-NEXT:    vstrw.32 q7, [r0]
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    vstrw.32 q6, [r0]
-; CHECK-NEXT:    mov.w r8, #0
-; CHECK-NEXT:    vmov q3[2], q3[0], r3, r3
-; CHECK-NEXT:    vstrw.32 q2, [sp, #76]
 ; CHECK-NEXT:    vmov q2[2], q2[0], r4, r3
-; CHECK-NEXT:    mov.w r12, #4
+; CHECK-NEXT:    vmov q3[2], q3[0], r3, r3
 ; CHECK-NEXT:    vmov q2[3], q2[1], r2, r4
-; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    vmov q3[3], q3[1], r4, r5
 ; CHECK-NEXT:    vmov.32 q4[0], r8
 ; CHECK-NEXT:    @ implicit-def: $r2
-; CHECK-NEXT:    str.w r8, [sp, #28]
-; CHECK-NEXT:    vstrw.32 q1, [sp, #44]
-; CHECK-NEXT:    strh.w r12, [sp, #390]
 ; CHECK-NEXT:    wlstp.8 lr, r1, .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmov.i32 q0, #0x0

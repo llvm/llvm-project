@@ -43,7 +43,7 @@
 // CPP-LABEL: @_Z15test_svnand_b_zu10__SVBool_tS_S_(
 svbool_t test_svnand_b_z(svbool_t pg, svbool_t op1, svbool_t op2) MODE_ATTR
 {
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.nand.z" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<[16] x !cir.int<u, 1>>, !cir.vector<[16] x !cir.int<u, 1>>, !cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[16] x !cir.int<u, 1>>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.nand.z" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[OP1:%.*]], <vscale x 16 x i1> [[OP2:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.nand.z.nxv16i1(<vscale x 16 x i1> [[PG]], <vscale x 16 x i1> [[OP1]], <vscale x 16 x i1> [[OP2]])

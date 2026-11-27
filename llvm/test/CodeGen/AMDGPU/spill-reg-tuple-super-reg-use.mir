@@ -6,7 +6,6 @@
 
 ---
 name: spill_sgpr128_use_subreg
-tracksRegLiveness: true
 machineFunctionInfo:
   hasSpilledSGPRs: true
   scratchRSrcReg: $sgpr100_sgpr101_sgpr102_sgpr103
@@ -53,7 +52,6 @@ body:             |
 
 ---
 name: spill_sgpr128_use_kill
-tracksRegLiveness: true
 machineFunctionInfo:
   hasSpilledSGPRs: true
   scratchRSrcReg: $sgpr100_sgpr101_sgpr102_sgpr103
@@ -97,7 +95,6 @@ body:             |
 
 ---
 name: spill_vgpr128_use_subreg
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr100_sgpr101_sgpr102_sgpr103
   stackPtrOffsetReg: $sgpr32
@@ -131,7 +128,6 @@ body:             |
 
 ---
 name: spill_vgpr128_use_kill
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr100_sgpr101_sgpr102_sgpr103
   stackPtrOffsetReg: $sgpr32

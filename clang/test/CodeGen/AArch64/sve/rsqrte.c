@@ -43,7 +43,7 @@
 // CPP-LABEL: @_Z17test_svrsqrte_f16u13__SVFloat16_t(
 svfloat16_t test_svrsqrte_f16(svfloat16_t op) MODE_ATTR
 {
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.frsqrte.x" %{{.*}} : (!cir.vector<[8] x !cir.f16>) -> !cir.vector<[8] x !cir.f16>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.frsqrte.x" %{{.*}} : (!cir.vector<[8] x !cir.f16, sve_data>) -> !cir.vector<[8] x !cir.f16, sve_data>
 
 // LLVM-SAME: <vscale x 8 x half> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 8 x half> @llvm.aarch64.sve.frsqrte.x.nxv8f16(<vscale x 8 x half> [[OP]])
@@ -55,7 +55,7 @@ svfloat16_t test_svrsqrte_f16(svfloat16_t op) MODE_ATTR
 // CPP-LABEL: @_Z17test_svrsqrte_f32u13__SVFloat32_t(
 svfloat32_t test_svrsqrte_f32(svfloat32_t op) MODE_ATTR
 {
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.frsqrte.x" %{{.*}} : (!cir.vector<[4] x !cir.float>) -> !cir.vector<[4] x !cir.float>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.frsqrte.x" %{{.*}} : (!cir.vector<[4] x !cir.float, sve_data>) -> !cir.vector<[4] x !cir.float, sve_data>
 
 // LLVM-SAME: <vscale x 4 x float> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 4 x float> @llvm.aarch64.sve.frsqrte.x.nxv4f32(<vscale x 4 x float> [[OP]])
@@ -67,7 +67,7 @@ svfloat32_t test_svrsqrte_f32(svfloat32_t op) MODE_ATTR
 // CPP-LABEL: @_Z17test_svrsqrte_f64u13__SVFloat64_t(
 svfloat64_t test_svrsqrte_f64(svfloat64_t op) MODE_ATTR
 {
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.frsqrte.x" %{{.*}} : (!cir.vector<[2] x !cir.double>) -> !cir.vector<[2] x !cir.double>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.frsqrte.x" %{{.*}} : (!cir.vector<[2] x !cir.double, sve_data>) -> !cir.vector<[2] x !cir.double, sve_data>
 
 // LLVM-SAME: <vscale x 2 x double> [[OP:%.*]])
 // LLVM:    [[TMP0:%.*]] = call <vscale x 2 x double> @llvm.aarch64.sve.frsqrte.x.nxv2f64(<vscale x 2 x double> [[OP]])

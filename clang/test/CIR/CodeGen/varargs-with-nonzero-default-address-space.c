@@ -1,10 +1,13 @@
-// RUN: %clang_cc1 -triple spirv64-unknown-unknown -fcuda-is-device -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -fcuda-is-device -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple spirv64-unknown-unknown -fcuda-is-device -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple spirv64-unknown-unknown -fcuda-is-device -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM,LLVMCIR
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown -fcuda-is-device -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// RUN: not %clang_cc1 -triple spirv64-unknown-unknown -fcuda-is-device -fclangir -emit-llvm %s -o /dev/null 2>&1 | FileCheck %s -check-prefix=NYI
 
+// NYI: error: 'cir.va_arg' op not yet implemented in CallConvLowering for SPIR-V
+//
 // TODO(cir): Add aggregate va_arg once va_arg ABI lowering supports SPIR-V.
 int testva(int n, ...) {
   __builtin_va_list ap;

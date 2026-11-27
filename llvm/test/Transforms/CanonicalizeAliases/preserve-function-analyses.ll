@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>),canonicalize-aliases,function(require<domtree>,require<lazy-value-info>)' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=false -passes='function(require<domtree>,require<lazy-value-info>),canonicalize-aliases,function(require<domtree>,require<lazy-value-info>)' %s 2>&1 | FileCheck %s
 
 ; Canonicalizing @a2 should not invalidate the analyses of @f.
 

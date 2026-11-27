@@ -62,6 +62,12 @@ struct GPUToNVVMPipelineOptions
       *this, "allow-pattern-rollback",
       llvm::cl::desc("Allow pattern rollback during dialect conversion"),
       llvm::cl::init(true)};
+  PassOptions::Option<unsigned> defaultCtorPriority{
+      *this, "default-ctor-priority",
+      llvm::cl::desc("Priority of the global constructor and destructor that "
+                     "load and unload the GPU binary, for GPU modules that do "
+                     "not specify one."),
+      llvm::cl::init(123)};
 };
 
 /// Options for the gpu to rocdl pipeline.

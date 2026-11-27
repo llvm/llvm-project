@@ -267,6 +267,28 @@ public:
 
 } // end anonymous namespace
 
+[[maybe_unused]] static bool hasAtomicLibcallLowering(unsigned Opc) {
+  switch (Opc) {
+  case ISD::ATOMIC_FENCE:
+  case ISD::ATOMIC_SWAP:
+  case ISD::ATOMIC_CMP_SWAP:
+  case ISD::ATOMIC_LOAD_ADD:
+  case ISD::ATOMIC_LOAD_SUB:
+  case ISD::ATOMIC_LOAD_AND:
+  case ISD::ATOMIC_LOAD_CLR:
+  case ISD::ATOMIC_LOAD_OR:
+  case ISD::ATOMIC_LOAD_XOR:
+  case ISD::ATOMIC_LOAD_NAND:
+  case ISD::ATOMIC_LOAD_MIN:
+  case ISD::ATOMIC_LOAD_MAX:
+  case ISD::ATOMIC_LOAD_UMIN:
+  case ISD::ATOMIC_LOAD_UMAX:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Helper function that generates an MMO that considers the alignment of the
 // stack, and the size of the stack object
 static MachineMemOperand *getStackAlignedMMO(SDValue StackPtr,
@@ -1402,6 +1424,9 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
     case TargetLowering::Expand:
       if (ExpandNode(Node))
         return;
+      assert((Action != TargetLowering::Expand ||
+              !hasAtomicLibcallLowering(Node->getOpcode())) &&
+             "atomic operations lowered to calls must use LibCall");
       [[fallthrough]];
     case TargetLowering::LibCall:
       ConvertNodeToLibcall(Node);
@@ -4397,7 +4422,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp1 = Node->getOperand(0 + Offset);
     Tmp2 = Node->getOperand(1 + Offset);
     Tmp3 = Node->getOperand(2 + Offset);
-    EVT OpVT = Tmp1.getValueType();
     bool Legalized =
         TLI.LegalizeSetCCCondCode(DAG, Node->getValueType(0), Tmp1, Tmp2, Tmp3,
                                   NeedInvert, dl, Chain, IsSignaling);
@@ -4417,13 +4441,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       }
 
       // If we expanded the SETCC by inverting the condition code, then wrap
-      // the existing SETCC in a NOT to restore the intended condition. The
-      // true value comes from the boolean contents of the compared operand
-      // type, which can differ from those of the result type.
+      // the existing SETCC in a NOT to restore the intended condition.
       if (NeedInvert) {
-        EVT ResVT = Tmp1.getValueType();
-        Tmp1 = DAG.getNode(ISD::XOR, dl, ResVT, Tmp1,
-                           DAG.getBoolConstant(true, dl, ResVT, OpVT));
+        Tmp1 = DAG.getLogicalNOT(dl, Tmp1, Tmp1->getValueType(0));
       }
 
       Results.push_back(Tmp1);

@@ -6,7 +6,6 @@
 
 ---
 name:            machinesink_loop_vgpr_out_of_divergent_loop
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   frameOffsetReg:  '$sgpr33'
@@ -117,7 +116,6 @@ body:             |
 # could be legally sunk.
 ---
 name:            machinesink_loop_sgpr_out_of_divergent_loop
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   frameOffsetReg:  '$sgpr33'

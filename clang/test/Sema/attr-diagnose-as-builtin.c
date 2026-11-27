@@ -78,6 +78,10 @@ extern void explicit_bzero(void *dst, size_t n);
 extern size_t fread_unlocked(void *ptr, size_t size, size_t nmemb, FILE *stream);
 extern size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 extern char *fgets_unlocked(char *s, int size, FILE *stream);
+extern int getlogin_r(char *name, size_t namesize);
+extern int ttyname_r(int fd, char *buf, size_t buflen);
+extern int ptsname_r(int fd, char *buf, size_t buflen);
+extern size_t confstr(int name, char *buf, size_t len);
 
 #ifdef __cplusplus
 }
@@ -133,6 +137,27 @@ void warn_my_stdio_unlocked(FILE *fp) {
   my_fgets_unlocked(0, buf, 4, fp);
   my_fgets_unlocked(0, buf, 5, fp); // expected-warning{{'fgets_unlocked' size argument is too large; destination buffer has size 4, but size argument is 5}}
   my_fgets_unlocked(0, buf, -1, fp); // expected-warning{{'fgets_unlocked' size argument is negative}}
+}
+
+int my_getlogin_r(int extra, char *name, size_t namesize)
+    __attribute__((diagnose_as_builtin(getlogin_r, 2, 3)));
+int my_ttyname_r(int extra, int fd, char *buf, size_t buflen)
+    __attribute__((diagnose_as_builtin(ttyname_r, 2, 3, 4)));
+int my_ptsname_r(int extra, int fd, char *buf, size_t buflen)
+    __attribute__((diagnose_as_builtin(ptsname_r, 2, 3, 4)));
+size_t my_confstr(int extra, int name, char *buf, size_t len)
+    __attribute__((diagnose_as_builtin(confstr, 2, 3, 4)));
+
+void warn_my_posix_getters(int fd, int name) {
+  char buf[10];
+  my_getlogin_r(0, buf, 10);
+  my_getlogin_r(0, buf, 11); // expected-warning{{'getlogin_r' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  my_ttyname_r(0, fd, buf, 10);
+  my_ttyname_r(0, fd, buf, 11); // expected-warning{{'ttyname_r' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  my_ptsname_r(0, fd, buf, 10);
+  my_ptsname_r(0, fd, buf, 11); // expected-warning{{'ptsname_r' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  my_confstr(0, name, buf, 10);
+  my_confstr(0, name, buf, 11); // expected-warning{{'confstr' size argument is too large; destination buffer has size 10, but size argument is 11}}
 }
 
 #ifdef __cplusplus

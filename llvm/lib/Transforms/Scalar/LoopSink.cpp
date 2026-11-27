@@ -239,6 +239,8 @@ sinkInstruction(const ScalarOptions &Opts, Loop &L, Instruction &I,
   }
 
   BasicBlock *MoveBB = *SortedBBsToSinkInto.begin();
+  // I is moved rather than erased, drop it if it is a cached earliest escape.
+  Deps.EEA.removeInstruction(&I);
   // FIXME: Optimize the efficiency for cloned value replacement. The current
   //        implementation is O(SortedBBsToSinkInto.size() * I.num_uses()).
   for (BasicBlock *N : ArrayRef(SortedBBsToSinkInto).drop_front(1)) {
@@ -381,7 +383,8 @@ PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
       continue;
 
     MemorySSAUpdater MSSAU(&MSSA);
-    SinkAndHoistDependencies Deps{AA, DT, MSSAU, /*ORE=*/nullptr};
+    EarliestEscapeAnalysis EEA(DT, &LI);
+    SinkAndHoistDependencies Deps{AA, DT, MSSAU, EEA, /*ORE=*/nullptr};
     // Note that we don't pass SCEV here because it is only used to invalidate
     // loops in SCEV and we don't preserve (or request) SCEV at all making that
     // unnecessary.

@@ -14,6 +14,7 @@
 #include "LoongArchFrameLowering.h"
 #include "LoongArchSelectionDAGInfo.h"
 #include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
 
@@ -117,4 +118,14 @@ LoongArchSubtarget::~LoongArchSubtarget() = default;
 
 const SelectionDAGTargetInfo *LoongArchSubtarget::getSelectionDAGInfo() const {
   return TSInfo.get();
+}
+
+void LoongArchSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  // We usually compute max call frame size after ISel. Do the computation now
+  // if the .mir file didn't specify it. Note that this will probably give you
+  // bogus values after PEI has eliminated the callframe setup/destroy pseudo
+  // instructions, specify explicitly if you need it to be correct.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.isMaxCallFrameSizeComputed())
+    MFI.computeMaxCallFrameSize(MF);
 }

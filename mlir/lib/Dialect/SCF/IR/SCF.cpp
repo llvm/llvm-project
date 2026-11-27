@@ -79,10 +79,6 @@ struct SCFInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void SCFDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/SCF/IR/SCFOps.cpp.inc"
-      >();
   addInterfaces<SCFInlinerInterface>();
   declarePromisedInterface<ConvertToEmitCPatternInterface, SCFDialect>();
   declarePromisedInterfaces<bufferization::BufferDeallocationOpInterface,
@@ -3744,6 +3740,78 @@ struct WhileConditionTruth : public OpRewritePattern<WhileOp> {
   }
 };
 
+/// Simplify values that the condition forwards as a select on the condition:
+/// the do block only runs if the condition is true, and the loop only exits if
+/// it is false.
+///
+/// %res = scf.while (..) : (...) -> (i32, ...) {
+///   %condition = call @evaluate_condition() : () -> i1
+///   %v = arith.select %condition, %a, %b : i32
+///   scf.condition(%condition) %v, ... : i32, ...
+/// } do {
+/// ^bb0(%arg0: i32, ...):
+///   use(%arg0)
+///   ...
+/// }
+/// use(%res#0)
+///
+/// becomes, if %a and %b are defined outside of the loop,
+///
+/// %res = scf.while (..) : (...) -> (i32, ...) {
+///   %condition = call @evaluate_condition() : () -> i1
+///   %v = arith.select %condition, %a, %b : i32
+///   scf.condition(%condition) %a, ... : i32, ...
+/// } do {
+/// ^bb0(%arg0: i32, ...):
+///   use(%a)
+///   ...
+/// }
+/// use(%b)
+///
+/// More generally, once either the loop result or the do block argument has no
+/// uses, the condition forwards the value seen by the remaining uses (%a or %b)
+/// instead of the select, which may then fold away.
+struct WhileConditionSelect : public OpRewritePattern<WhileOp> {
+  using OpRewritePattern<WhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(WhileOp op,
+                                PatternRewriter &rewriter) const override {
+    ConditionOp term = op.getConditionOp();
+    Value condition = term.getCondition();
+    bool changed = false;
+    for (auto [idx, arg, afterArg, result] : llvm::enumerate(
+             term.getArgs(), op.getAfterArguments(), op.getResults())) {
+      auto select = arg.getDefiningOp<arith::SelectOp>();
+      if (!select || select.getCondition() != condition)
+        continue;
+      Value trueValue = select.getTrueValue();
+      Value falseValue = select.getFalseValue();
+      if (!afterArg.use_empty() && op.isDefinedOutsideOfLoop(trueValue)) {
+        rewriter.replaceAllUsesWith(afterArg, trueValue);
+        changed = true;
+      }
+      if (!result.use_empty() && falseValue != result &&
+          op.isDefinedOutsideOfLoop(falseValue)) {
+        rewriter.replaceAllUsesWith(result, falseValue);
+        changed = true;
+      }
+      // Forward the value that the remaining uses see.
+      Value forwarded;
+      if (result.use_empty())
+        forwarded = trueValue;
+      else if (afterArg.use_empty())
+        forwarded = falseValue;
+      if (forwarded && forwarded != arg) {
+        size_t condIdx = idx;
+        rewriter.modifyOpInPlace(
+            term, [&] { term.getArgsMutable()[condIdx].set(forwarded); });
+        changed = true;
+      }
+    }
+    return success(changed);
+  }
+};
+
 /// Replace operations equivalent to the condition in the do block with true,
 /// since otherwise the block would not be evaluated.
 ///
@@ -3898,8 +3966,8 @@ struct WhileOpAlignBeforeArgs : public OpRewritePattern<WhileOp> {
 
 void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.add<WhileConditionTruth, WhileCmpCond, WhileOpAlignBeforeArgs,
-              WhileMoveIfDown>(context);
+  results.add<WhileConditionTruth, WhileConditionSelect, WhileCmpCond,
+              WhileOpAlignBeforeArgs, WhileMoveIfDown>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, WhileOp::getOperationName());
   populateRegionBranchOpInterfaceInliningPattern(results,

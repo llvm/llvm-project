@@ -1,0 +1,3 @@
+# Mentions none of the documentation diagnostics.
+[unused-variable]
+src:*

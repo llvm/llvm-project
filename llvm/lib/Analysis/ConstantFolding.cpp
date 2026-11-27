@@ -2238,6 +2238,7 @@ static bool canConstantFoldIntrinsic(Intrinsic::ID ID, bool IsStrictFP) {
   case Intrinsic::experimental_constrained_fmul:
   case Intrinsic::experimental_constrained_fdiv:
   case Intrinsic::experimental_constrained_frem:
+  case Intrinsic::experimental_constrained_fpext:
   case Intrinsic::experimental_constrained_ceil:
   case Intrinsic::experimental_constrained_floor:
   case Intrinsic::experimental_constrained_round:
@@ -2372,6 +2373,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F,
   case LibFunc_sinhf:
   case LibFunc_sinh_finite:
   case LibFunc_sinhf_finite:
+  case LibFunc_strlen:
   case LibFunc_sqrt:
   case LibFunc_sqrtf:
   case LibFunc_tan:
@@ -2799,6 +2801,21 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
 
   if (auto *Op = dyn_cast<ConstantFP>(Operands[0])) {
     APFloat U = Op->getValueAPF();
+
+    // fpext is exact in every rounding mode, so the only exception it can
+    // raise is invalid for a signaling NaN input. Handle it before the type
+    // check below so fp128 and x86_fp80 results are folded too.
+    if (IntrinsicID == Intrinsic::experimental_constrained_fpext) {
+      const auto *CI = dyn_cast_if_present<ConstrainedFPIntrinsic>(Call);
+      if (!CI)
+        return nullptr;
+      bool LosesInfo;
+      APFloat::opStatus St = U.convert(
+          Ty->getFltSemantics(), APFloat::rmNearestTiesToEven, &LosesInfo);
+      if (!mayFoldConstrained(const_cast<ConstrainedFPIntrinsic *>(CI), St))
+        return nullptr;
+      return ConstantFP::get(Ty->getContext(), U);
+    }
 
     if (IntrinsicID == Intrinsic::wasm_trunc_signed ||
         IntrinsicID == Intrinsic::wasm_trunc_unsigned) {
@@ -3497,6 +3514,22 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return ConstantInt::get(Ty, 1);
     }
   }
+
+  if (IntrinsicID != Intrinsic::not_intrinsic || !TLI)
+    return nullptr;
+
+  LibFunc Func = TLI->getLibFunc(Name);
+  if (Func == NotLibFunc || !TLI->has(Func))
+    return nullptr;
+
+  if (Func != LibFunc_strlen)
+    return nullptr;
+
+  if (isa<PoisonValue>(Operands[0]))
+    return PoisonValue::get(Ty);
+
+  if (uint64_t Len = GetStringLength(Operands[0]))
+    return ConstantInt::get(Ty, Len - 1);
 
   return nullptr;
 }

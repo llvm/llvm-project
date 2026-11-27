@@ -4868,10 +4868,10 @@ define void @test_shl_i512_const_zero(ptr %result, ptr %input) {
 ; SDAG-NEXT:    ldr q0, [x1]
 ; SDAG-NEXT:    ldp x11, x10, [x1, #16]
 ; SDAG-NEXT:    ldp x13, x12, [x1, #32]
-; SDAG-NEXT:    str q0, [x0]
 ; SDAG-NEXT:    stp x9, x8, [x0, #48]
 ; SDAG-NEXT:    stp x11, x10, [x0, #16]
 ; SDAG-NEXT:    stp x13, x12, [x0, #32]
+; SDAG-NEXT:    str q0, [x0]
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_shl_i512_const_zero:
@@ -4899,10 +4899,10 @@ define void @test_lshr_i512_const_zero(ptr %result, ptr %input) {
 ; SDAG-NEXT:    ldr q0, [x1]
 ; SDAG-NEXT:    ldp x11, x10, [x1, #16]
 ; SDAG-NEXT:    ldp x13, x12, [x1, #32]
-; SDAG-NEXT:    str q0, [x0]
 ; SDAG-NEXT:    stp x9, x8, [x0, #48]
 ; SDAG-NEXT:    stp x11, x10, [x0, #16]
 ; SDAG-NEXT:    stp x13, x12, [x0, #32]
+; SDAG-NEXT:    str q0, [x0]
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_lshr_i512_const_zero:
@@ -4930,10 +4930,10 @@ define void @test_ashr_i512_const_zero(ptr %result, ptr %input) {
 ; SDAG-NEXT:    ldr q0, [x1]
 ; SDAG-NEXT:    ldp x11, x10, [x1, #16]
 ; SDAG-NEXT:    ldp x13, x12, [x1, #32]
-; SDAG-NEXT:    str q0, [x0]
 ; SDAG-NEXT:    stp x9, x8, [x0, #48]
 ; SDAG-NEXT:    stp x11, x10, [x0, #16]
 ; SDAG-NEXT:    stp x13, x12, [x0, #32]
+; SDAG-NEXT:    str q0, [x0]
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_ashr_i512_const_zero:
@@ -5133,10 +5133,10 @@ define void @test_lshr_i512_const_64(ptr %result, ptr %input) {
 ; SDAG-NEXT:    ldur q0, [x1, #8]
 ; SDAG-NEXT:    ldp x10, x9, [x1, #24]
 ; SDAG-NEXT:    ldr x12, [x1, #40]
-; SDAG-NEXT:    str q0, [x0]
 ; SDAG-NEXT:    stp x8, xzr, [x0, #48]
 ; SDAG-NEXT:    stp x12, x11, [x0, #32]
 ; SDAG-NEXT:    stp x10, x9, [x0, #16]
+; SDAG-NEXT:    str q0, [x0]
 ; SDAG-NEXT:    ret
 ;
 ; GISEL-LABEL: test_lshr_i512_const_64:
@@ -5145,10 +5145,10 @@ define void @test_lshr_i512_const_64(ptr %result, ptr %input) {
 ; GISEL-NEXT:    ldr x14, [x1, #56]
 ; GISEL-NEXT:    ldp x10, x11, [x1, #24]
 ; GISEL-NEXT:    ldp x12, x13, [x1, #40]
-; GISEL-NEXT:    stp x14, xzr, [x0, #48]
 ; GISEL-NEXT:    stp x8, x9, [x0]
 ; GISEL-NEXT:    stp x10, x11, [x0, #16]
 ; GISEL-NEXT:    stp x12, x13, [x0, #32]
+; GISEL-NEXT:    stp x14, xzr, [x0, #48]
 ; GISEL-NEXT:    ret
 entry:
   %input_val = load i512, ptr %input, align 64

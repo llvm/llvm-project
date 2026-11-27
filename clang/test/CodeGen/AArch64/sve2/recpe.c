@@ -35,8 +35,8 @@
 // CPP-LABEL: @_Z18test_svrecpe_u32_zu10__SVBool_tu12__SVUint32_t(
 svuint32_t test_svrecpe_u32_z(svbool_t pg, svuint32_t op)
 {
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} : (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.urecpe" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<[4] x !u32i>, !cir.vector<[4] x !cir.int<u, 1>>, !cir.vector<[4] x !u32i>) -> !cir.vector<[4] x !u32i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} : (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.urecpe" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<[4] x !u32i, sve_data>, !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[4] x !u32i, sve_data>) -> !cir.vector<[4] x !u32i, sve_data>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[OP:%.*]])
 // LLVM:    [[PG4:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
@@ -49,8 +49,8 @@ svuint32_t test_svrecpe_u32_z(svbool_t pg, svuint32_t op)
 // CPP-LABEL: @_Z18test_svrecpe_u32_mu12__SVUint32_tu10__SVBool_tS_(
 svuint32_t test_svrecpe_u32_m(svuint32_t inactive, svbool_t pg, svuint32_t op)
 {
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} : (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.urecpe" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<[4] x !u32i>, !cir.vector<[4] x !cir.int<u, 1>>, !cir.vector<[4] x !u32i>) -> !cir.vector<[4] x !u32i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} : (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.urecpe" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<[4] x !u32i, sve_data>, !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[4] x !u32i, sve_data>) -> !cir.vector<[4] x !u32i, sve_data>
 
 // LLVM-SAME: <vscale x 4 x i32> [[INACTIVE:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[OP:%.*]])
 // LLVM:    [[PG4:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])
@@ -63,8 +63,8 @@ svuint32_t test_svrecpe_u32_m(svuint32_t inactive, svbool_t pg, svuint32_t op)
 // CPP-LABEL: @_Z18test_svrecpe_u32_xu10__SVBool_tu12__SVUint32_t(
 svuint32_t test_svrecpe_u32_x(svbool_t pg, svuint32_t op)
 {
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} : (!cir.vector<[16] x !cir.int<u, 1>>) -> !cir.vector<[4] x !cir.int<u, 1>>
-// CIR:           cir.call_llvm_intrinsic "aarch64.sve.urecpe" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<[4] x !u32i>, !cir.vector<[4] x !cir.int<u, 1>>, !cir.vector<[4] x !u32i>) -> !cir.vector<[4] x !u32i>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.convert.from.svbool" %{{.*}} : (!cir.vector<[16] x !cir.int<u, 1>, sve_predicate>) -> !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>
+// CIR:           cir.call_llvm_intrinsic "aarch64.sve.urecpe" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<[4] x !u32i, sve_data>, !cir.vector<[4] x !cir.int<u, 1>, sve_predicate>, !cir.vector<[4] x !u32i, sve_data>) -> !cir.vector<[4] x !u32i, sve_data>
 
 // LLVM-SAME: <vscale x 16 x i1> [[PG:%.*]], <vscale x 4 x i32> [[OP:%.*]])
 // LLVM:    [[PG4:%.*]] = call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG]])

@@ -23,25 +23,11 @@
 using namespace clang;
 using namespace ento;
 
-namespace clang { namespace  ento {
-/// Increments the number of times this state is referenced.
-
-void ProgramStateRetain(const ProgramState *state) {
-  ++const_cast<ProgramState*>(state)->refCount;
+void ProgramStateManager::freeState(ProgramState *State) {
+  StateSet.erase(State);
+  State->~ProgramState();
+  freeStates.push_back(State);
 }
-
-/// Decrement the number of times this state is referenced.
-void ProgramStateRelease(const ProgramState *state) {
-  assert(state->refCount > 0);
-  ProgramState *s = const_cast<ProgramState*>(state);
-  if (--s->refCount == 0) {
-    ProgramStateManager &Mgr = s->getStateManager();
-    Mgr.StateSet.erase(s);
-    s->~ProgramState();
-    Mgr.freeStates.push_back(s);
-  }
-}
-}}
 
 ProgramState::ProgramState(ProgramStateManager *mgr, const Environment& env,
                  StoreRef st, GenericDataMap gdm)
@@ -57,6 +43,13 @@ ProgramState::ProgramState(const ProgramState &RHS)
     : stateMgr(RHS.stateMgr), Env(RHS.Env), store(RHS.store), GDM(RHS.GDM),
       PosteriorlyOverconstrained(RHS.PosteriorlyOverconstrained), refCount(0) {
   stateMgr->getStoreManager().incrementReferenceCount(store);
+}
+
+ProgramState::ProgramState(ProgramState &&RHS)
+    : stateMgr(RHS.stateMgr), Env(std::move(RHS.Env)), store(RHS.store),
+      GDM(std::move(RHS.GDM)),
+      PosteriorlyOverconstrained(RHS.PosteriorlyOverconstrained), refCount(0) {
+  RHS.store = nullptr;
 }
 
 ProgramState::~ProgramState() {
@@ -104,9 +97,9 @@ ProgramStateRef ProgramStateManager::removeDeadBindingsFromEnvironmentAndStore(
   StoreRef newStore =
       StoreMgr->removeDeadBindings(NewState.getStore(), SF, SymReaper);
   NewState.setStore(newStore);
-  SymReaper.setReapedStore(newStore);
+  SymReaper.setReapedStore(std::move(newStore));
 
-  return getPersistentState(NewState);
+  return getPersistentState(std::move(NewState));
 }
 
 ProgramStateRef ProgramState::bindLoc(Loc LV, SVal V, const StackFrame *SF,
@@ -301,7 +294,7 @@ ProgramStateRef ProgramState::BindExpr(const Expr *E, const StackFrame *SF,
 
   ProgramState NewSt = *this;
   NewSt.Env = std::move(NewEnv);
-  return getStateManager().getPersistentState(NewSt);
+  return getStateManager().getPersistentState(std::move(NewSt));
 }
 
 [[nodiscard]] std::pair<ProgramStateRef, ProgramStateRef>
@@ -388,7 +381,7 @@ ProgramStateRef ProgramStateManager::getInitialState(const StackFrame *InitSF) {
                      StoreMgr->getInitialStore(InitSF),
                      GDMFactory.getEmptyMap());
 
-  return getPersistentState(State);
+  return getPersistentState(std::move(State));
 }
 
 ProgramStateRef ProgramStateManager::getPersistentStateWithGDM(
@@ -396,10 +389,10 @@ ProgramStateRef ProgramStateManager::getPersistentStateWithGDM(
                                                      ProgramStateRef GDMState) {
   ProgramState NewState(*FromState);
   NewState.GDM = GDMState->GDM;
-  return getPersistentState(NewState);
+  return getPersistentState(std::move(NewState));
 }
 
-ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
+ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &&State) {
 
   llvm::FoldingSetNodeID ID;
   State.Profile(ID);
@@ -416,7 +409,7 @@ ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
   else {
     newState = Alloc.Allocate<ProgramState>();
   }
-  new (newState) ProgramState(State);
+  new (newState) ProgramState(std::move(State));
   StateSet.insert(newState, InsertToken);
   return newState;
 }
@@ -424,7 +417,7 @@ ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
 ProgramStateRef ProgramState::makeWithStore(const StoreRef &store) const {
   ProgramState NewSt(*this);
   NewSt.setStore(store);
-  return getStateManager().getPersistentState(NewSt);
+  return getStateManager().getPersistentState(std::move(NewSt));
 }
 
 ProgramStateRef ProgramState::makeWithStore(const BindResult &BindRes) const {
@@ -442,7 +435,7 @@ ProgramStateRef ProgramState::makeWithStore(const BindResult &BindRes) const {
 ProgramStateRef ProgramState::cloneAsPosteriorlyOverconstrained() const {
   ProgramState NewSt(*this);
   NewSt.PosteriorlyOverconstrained = true;
-  return getStateManager().getPersistentState(NewSt);
+  return getStateManager().getPersistentState(std::move(NewSt));
 }
 
 void ProgramState::setStore(const StoreRef &newStore) {
@@ -553,8 +546,8 @@ ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, const void *Key,
     return St;
 
   ProgramState NewSt = *St;
-  NewSt.GDM = M2;
-  return getPersistentState(NewSt);
+  NewSt.GDM = std::move(M2);
+  return getPersistentState(std::move(NewSt));
 }
 
 ProgramStateRef ProgramStateManager::removeGDM(ProgramStateRef state,
@@ -566,8 +559,8 @@ ProgramStateRef ProgramStateManager::removeGDM(ProgramStateRef state,
     return state;
 
   ProgramState NewState = *state;
-  NewState.GDM = NewM;
-  return getPersistentState(NewState);
+  NewState.GDM = std::move(NewM);
+  return getPersistentState(std::move(NewState));
 }
 
 bool ScanReachableSymbols::scan(nonloc::LazyCompoundVal val) {

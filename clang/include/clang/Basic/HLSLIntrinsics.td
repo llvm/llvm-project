@@ -1190,7 +1190,7 @@ This function uses the following formula: X * 2^Exp
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
+  let VaryingMatDims = AllMatDims;
 }
 
 // Returns the length of the specified floating-point vector.
@@ -1231,7 +1231,6 @@ can equivalently be written as x + s(y-x).
   let ParamNames = ["x", "y", "s"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 def hlsl_lit_float : HLSLBuiltin<"lit"> {

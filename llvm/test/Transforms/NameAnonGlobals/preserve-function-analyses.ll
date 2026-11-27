@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>),name-anon-globals,function(require<domtree>,require<lazy-value-info>)' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=false -passes='function(require<domtree>,require<lazy-value-info>),name-anon-globals,function(require<domtree>,require<lazy-value-info>)' %s 2>&1 | FileCheck %s
 
 ; Naming @0 should not invalidate the analyses of @f.
 

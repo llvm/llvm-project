@@ -210,6 +210,8 @@ struct LegacyLICMPass : public LoopPass {
     auto *SE = getAnalysisIfAvailable<ScalarEvolutionWrapperPass>();
     MemorySSA *MSSA = &getAnalysis<MemorySSAWrapperPass>().getMSSA();
     MemorySSAUpdater MSSAU(MSSA);
+    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    EarliestEscapeAnalysis EEA(MSSA->getDomTree(), &LI);
     // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
     // pass. Function analyses need to be preserved across loop transformations
     // but ORE cannot be preserved (see comment before the pass definition).
@@ -220,9 +222,10 @@ struct LegacyLICMPass : public LoopPass {
     LICMDependencies Deps{
         SinkAndHoistDependencies{
             getAnalysis<AAResultsWrapperPass>().getAAResults(),
-            getAnalysis<DominatorTreeWrapperPass>().getDomTree(), MSSAU, &ORE},
+            getAnalysis<DominatorTreeWrapperPass>().getDomTree(), MSSAU, EEA,
+            &ORE},
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(*F),
-        getAnalysis<LoopInfoWrapperPass>().getLoopInfo(),
+        LI,
         getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(*F),
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(*F),
         SE ? &SE->getSE() : nullptr,
@@ -261,7 +264,8 @@ PreservedAnalyses LICMPass::run(Loop &L, LoopAnalysisManager &AM,
 
   MemorySSAUpdater MSSAU(AR.MSSA);
   ICFLoopSafetyInfo SafetyInfo(&L);
-  SinkAndHoistDependencies SHDeps{AR.AA, AR.DT, MSSAU, &ORE};
+  EarliestEscapeAnalysis EEA(AR.DT, &AR.LI);
+  SinkAndHoistDependencies SHDeps{AR.AA, AR.DT, MSSAU, EEA, &ORE};
   LICMDependencies Deps{SHDeps, AR.AC,  AR.LI,     AR.TLI,
                         AR.TTI, &AR.SE, SafetyInfo};
   LoopInvariantCodeMotion LICM(getScalarOptions(L), Opts);
@@ -298,7 +302,8 @@ PreservedAnalyses LNICMPass::run(LoopNest &LN, LoopAnalysisManager &AM,
   MemorySSAUpdater MSSAU(AR.MSSA);
   Loop &OutermostLoop = LN.getOutermostLoop();
   ICFLoopSafetyInfo SafetyInfo(&OutermostLoop);
-  SinkAndHoistDependencies SHDeps{AR.AA, AR.DT, MSSAU, &ORE};
+  EarliestEscapeAnalysis EEA(AR.DT, &AR.LI);
+  SinkAndHoistDependencies SHDeps{AR.AA, AR.DT, MSSAU, EEA, &ORE};
   LICMDependencies Deps{SHDeps, AR.AC,  AR.LI,     AR.TLI,
                         AR.TTI, &AR.SE, SafetyInfo};
   LoopInvariantCodeMotion LICM(getScalarOptions(OutermostLoop), Opts);
@@ -1170,14 +1175,22 @@ static Instruction *cloneInstructionInExitBlock(
   return New;
 }
 
-static void eraseInstruction(Instruction &I, const LICMDependencies &Deps) {
+static void removeInstructionFromDeps(Instruction &I,
+                                      const LICMDependencies &Deps) {
   Deps.MSSAU.removeMemoryAccess(&I);
   Deps.SafetyInfo.removeInstruction(&I);
+  Deps.EEA.removeInstruction(&I);
+}
+
+static void eraseInstruction(Instruction &I, const LICMDependencies &Deps) {
+  removeInstructionFromDeps(I, Deps);
   I.eraseFromParent();
 }
 
 static void moveInstructionBefore(Instruction &I, BasicBlock::iterator Dest,
                                   const LICMDependencies &Deps) {
+  // Moving a capture may invalidate the cached earliest escapes.
+  Deps.EEA.insertPotentialCapture(&I);
   Deps.SafetyInfo.removeInstruction(&I);
   Deps.SafetyInfo.insertInstructionTo(&I, Dest->getParent());
   I.moveBefore(*Dest->getParent(), Dest);
@@ -1573,8 +1586,7 @@ public:
   }
 
   void instructionDeleted(Instruction *I) const override {
-    Deps.SafetyInfo.removeInstruction(I);
-    Deps.MSSAU.removeMemoryAccess(I);
+    removeInstructionFromDeps(*I, Deps);
   }
 
   bool shouldDelete(Instruction *I) const override {
@@ -2029,7 +2041,7 @@ static SmallVector<PointersAndHasReadsOutsideSet, 0> collectPromotionCandidates(
     const LICMDependencies &Deps,
     const SmallPtrSetImpl<const MDNode *> &LoopLocalAliasScopes, Loop *L) {
   MemorySSA *MSSA = Deps.MSSAU.getMemorySSA();
-  BatchAAResults BatchAA(Deps.AA);
+  BatchAAResults BatchAA(Deps.AA, &Deps.EEA);
   AliasSetTracker AST(BatchAA);
 
   // Only conditionally executed stores need this, so compute it on demand to
@@ -2118,7 +2130,7 @@ static bool noConflictingReadWrites(Instruction *I, Loop *CurLoop,
 
   MemorySSA *MSSA = Deps.MSSAU.getMemorySSA();
   auto *IMD = MSSA->getMemoryAccess(I);
-  BatchAAResults BAA(Deps.AA);
+  BatchAAResults BAA(Deps.AA, &Deps.EEA);
   auto *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, IMD);
   // Make sure there are no clobbers inside the loop.
   if (!MSSA->isLiveOnEntryDef(Source) && CurLoop->contains(Source->getBlock()))
@@ -2165,7 +2177,7 @@ static bool pointerInvalidatedByLoop(const SinkAndHoistDependencies &Deps,
     // 2) the earliest access is at the loop header,
     // if the memory loaded is the phi node
 
-    BatchAAResults BAA(MSSA->getAA());
+    BatchAAResults BAA(MSSA->getAA(), &Deps.EEA);
     MemoryAccess *Source = getClobberingMemoryAccess(*MSSA, BAA, Flags, MU);
     return !MSSA->isLiveOnEntryDef(Source) &&
            CurLoop->contains(Source->getBlock()) &&
