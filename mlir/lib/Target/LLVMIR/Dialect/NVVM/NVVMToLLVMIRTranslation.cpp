@@ -634,60 +634,21 @@ void NVVM::SparseCompressOp::lowerToLLVMIR(Operation &op,
   mt.mapValue(compressedData) = builder.CreateExtractValue(result, 1);
 }
 
-// Emits a call to a tcgen05.ld{.red}.spcompress intrinsic, whose results are
-// {metadata, data, extraResultTys...}, and maps the metadata and data results.
-// Returns the call so that the caller can map the remaining results.
+// Emits a call to a tcgen05.ld{.red}.spcompress intrinsic. The intrinsics are
+// overloaded on their result types, so the result struct is built from the
+// op's results: {metadata, data[, redVal]}. A single-register metadata bundle
+// is always returned as i32 by the intrinsic.
 static llvm::Value *createTcgen05LdSPCompressCall(
-    llvm::Intrinsic::ID id, Value metadata, Value data,
-    ArrayRef<llvm::Type *> extraResultTys, ArrayRef<llvm::Value *> args,
+    llvm::Intrinsic::ID id, ArrayRef<llvm::Value *> args, Operation &op,
     LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   SmallVector<llvm::Type *, 3> resultTys = {
-      getSPMetadataType(metadata.getType(), builder),
-      mt.convertType(data.getType())};
-  llvm::append_range(resultTys, extraResultTys);
+      getSPMetadataType(op.getResult(0).getType(), builder)};
+  for (Type type : llvm::drop_begin(op.getResultTypes()))
+    resultTys.push_back(mt.convertType(type));
 
-  llvm::Value *result = createIntrinsicCall(
+  return createIntrinsicCall(
       builder, id, llvm::StructType::get(builder.getContext(), resultTys),
       args);
-
-  mt.mapValue(metadata) =
-      builder.CreateBitCast(builder.CreateExtractValue(result, 0),
-                            mt.convertType(metadata.getType()));
-  mt.mapValue(data) = builder.CreateExtractValue(result, 1);
-  return result;
-}
-
-// Returns the row_op immediate of the tcgen05.ld{.red}.spcompress intrinsics:
-// 0 for min and 1 for max.
-static llvm::Value *getTcgen05LdSPCompressRowOp(NVVM::ReductionKind op,
-                                                llvm::IRBuilderBase &builder) {
-  return builder.getInt32(op == NVVM::ReductionKind::MAX ? 1 : 0);
-}
-
-void NVVM::Tcgen05LdSPCompressOp::lowerToLLVMIR(Operation &op,
-                                                LLVM::ModuleTranslation &mt,
-                                                llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::Tcgen05LdSPCompressOp>(op);
-  createTcgen05LdSPCompressCall(
-      llvm::Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b, thisOp.getMetadata(),
-      thisOp.getData(), /*extraResultTys=*/{},
-      {mt.lookupValue(thisOp.getAddr()),
-       getTcgen05LdSPCompressRowOp(thisOp.getOp(), builder),
-       builder.getInt1(thisOp.getAbs())},
-      mt, builder);
-}
-
-void NVVM::Tcgen05LdRedSPCompressOp::lowerToLLVMIR(
-    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
-  auto thisOp = cast<NVVM::Tcgen05LdRedSPCompressOp>(op);
-  llvm::Value *result = createTcgen05LdSPCompressCall(
-      llvm::Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b,
-      thisOp.getMetadata(), thisOp.getData(), {builder.getFloatTy()},
-      {mt.lookupValue(thisOp.getAddr()),
-       getTcgen05LdSPCompressRowOp(thisOp.getOp(), builder),
-       builder.getInt1(thisOp.getAbs()), builder.getInt1(thisOp.getNan())},
-      mt, builder);
-  mt.mapValue(thisOp.getRedVal()) = builder.CreateExtractValue(result, 2);
 }
 
 void NVVM::SparseDecompressOp::lowerToLLVMIR(Operation &op,

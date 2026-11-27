@@ -90,32 +90,32 @@
 // CHECK:         ret void
 // CHECK:       }
 llvm.func @nvvm_tcgen05_ld_spcompress(%addr : !llvm.ptr<6>) {
-  %m0, %d0 = nvvm.tcgen05.ld.spcompress min %addr : i32, vector<2xf32>
-  %m1, %d1 = nvvm.tcgen05.ld.spcompress min %addr abs = true : i32, vector<2xf32>
-  %m2, %d2 = nvvm.tcgen05.ld.spcompress max %addr : i32, vector<2xf32>
-  %m3, %d3 = nvvm.tcgen05.ld.spcompress max %addr abs = true : i32, vector<2xf32>
-  %m4, %d4 = nvvm.tcgen05.ld.spcompress min %addr : i32, vector<4xf32>
-  %m5, %d5 = nvvm.tcgen05.ld.spcompress min %addr abs = true : i32, vector<4xf32>
-  %m6, %d6 = nvvm.tcgen05.ld.spcompress max %addr : i32, vector<4xf32>
-  %m7, %d7 = nvvm.tcgen05.ld.spcompress max %addr abs = true : i32, vector<4xf32>
-  %m8, %d8 = nvvm.tcgen05.ld.spcompress min %addr : i32, vector<8xf32>
-  %m9, %d9 = nvvm.tcgen05.ld.spcompress min %addr abs = true : i32, vector<8xf32>
-  %m10, %d10 = nvvm.tcgen05.ld.spcompress max %addr : i32, vector<8xf32>
-  %m11, %d11 = nvvm.tcgen05.ld.spcompress max %addr abs = true : i32, vector<8xf32>
-  %m12, %d12 = nvvm.tcgen05.ld.spcompress min %addr : i32, vector<16xf32>
-  %m13, %d13 = nvvm.tcgen05.ld.spcompress min %addr abs = true : i32, vector<16xf32>
-  %m14, %d14 = nvvm.tcgen05.ld.spcompress max %addr : i32, vector<16xf32>
-  %m15, %d15 = nvvm.tcgen05.ld.spcompress max %addr abs = true : i32, vector<16xf32>
-  %m16, %d16 = nvvm.tcgen05.ld.spcompress min %addr : vector<2xi32>, vector<32xf32>
-  %m17, %d17 = nvvm.tcgen05.ld.spcompress min %addr abs = true : vector<2xi32>, vector<32xf32>
-  %m18, %d18 = nvvm.tcgen05.ld.spcompress max %addr : vector<2xi32>, vector<32xf32>
-  %m19, %d19 = nvvm.tcgen05.ld.spcompress max %addr abs = true : vector<2xi32>, vector<32xf32>
-  %m20, %d20 = nvvm.tcgen05.ld.spcompress min %addr : vector<4xi32>, vector<64xf32>
-  %m21, %d21 = nvvm.tcgen05.ld.spcompress min %addr abs = true : vector<4xi32>, vector<64xf32>
-  %m22, %d22 = nvvm.tcgen05.ld.spcompress max %addr : vector<4xi32>, vector<64xf32>
-  %m23, %d23 = nvvm.tcgen05.ld.spcompress max %addr abs = true : vector<4xi32>, vector<64xf32>
+  %m0, %d0 = nvvm.tcgen05.ld.red.spcompress min %addr : i32, vector<2xf32>
+  %m1, %d1 = nvvm.tcgen05.ld.red.spcompress min %addr abs = true : i32, vector<2xf32>
+  %m2, %d2 = nvvm.tcgen05.ld.red.spcompress max %addr : i32, vector<2xf32>
+  %m3, %d3 = nvvm.tcgen05.ld.red.spcompress max %addr abs = true : i32, vector<2xf32>
+  %m4, %d4 = nvvm.tcgen05.ld.red.spcompress min %addr : i32, vector<4xf32>
+  %m5, %d5 = nvvm.tcgen05.ld.red.spcompress min %addr abs = true : i32, vector<4xf32>
+  %m6, %d6 = nvvm.tcgen05.ld.red.spcompress max %addr : i32, vector<4xf32>
+  %m7, %d7 = nvvm.tcgen05.ld.red.spcompress max %addr abs = true : i32, vector<4xf32>
+  %m8, %d8 = nvvm.tcgen05.ld.red.spcompress min %addr : i32, vector<8xf32>
+  %m9, %d9 = nvvm.tcgen05.ld.red.spcompress min %addr abs = true : i32, vector<8xf32>
+  %m10, %d10 = nvvm.tcgen05.ld.red.spcompress max %addr : i32, vector<8xf32>
+  %m11, %d11 = nvvm.tcgen05.ld.red.spcompress max %addr abs = true : i32, vector<8xf32>
+  %m12, %d12 = nvvm.tcgen05.ld.red.spcompress min %addr : i32, vector<16xf32>
+  %m13, %d13 = nvvm.tcgen05.ld.red.spcompress min %addr abs = true : i32, vector<16xf32>
+  %m14, %d14 = nvvm.tcgen05.ld.red.spcompress max %addr : i32, vector<16xf32>
+  %m15, %d15 = nvvm.tcgen05.ld.red.spcompress max %addr abs = true : i32, vector<16xf32>
+  %m16, %d16 = nvvm.tcgen05.ld.red.spcompress min %addr : vector<2xi32>, vector<32xf32>
+  %m17, %d17 = nvvm.tcgen05.ld.red.spcompress min %addr abs = true : vector<2xi32>, vector<32xf32>
+  %m18, %d18 = nvvm.tcgen05.ld.red.spcompress max %addr : vector<2xi32>, vector<32xf32>
+  %m19, %d19 = nvvm.tcgen05.ld.red.spcompress max %addr abs = true : vector<2xi32>, vector<32xf32>
+  %m20, %d20 = nvvm.tcgen05.ld.red.spcompress min %addr : vector<4xi32>, vector<64xf32>
+  %m21, %d21 = nvvm.tcgen05.ld.red.spcompress min %addr abs = true : vector<4xi32>, vector<64xf32>
+  %m22, %d22 = nvvm.tcgen05.ld.red.spcompress max %addr : vector<4xi32>, vector<64xf32>
+  %m23, %d23 = nvvm.tcgen05.ld.red.spcompress max %addr abs = true : vector<4xi32>, vector<64xf32>
 
   // A single metadata register may also be vector<1xi32>.
-  %mv1, %dv1 = nvvm.tcgen05.ld.spcompress min %addr : vector<1xi32>, vector<2xf32>
+  %mv1, %dv1 = nvvm.tcgen05.ld.red.spcompress min %addr : vector<1xi32>, vector<2xf32>
   llvm.return
 }

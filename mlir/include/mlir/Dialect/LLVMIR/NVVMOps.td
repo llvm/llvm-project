@@ -5750,7 +5750,7 @@ def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
 }
 
 //===----------------------------------------------------------------------===//
-// NVVM tcgen05.ld.spcompress and tcgen05.ld.red.spcompress Ops
+// NVVM tcgen05.ld{.red}.spcompress Op
 //===----------------------------------------------------------------------===//
 
 // Reduction kind restricted to min and max.
@@ -5766,34 +5766,45 @@ defvar Tcgen05LdSPCompressMetadataType = AnyTypeOf<[I32,
 defvar Tcgen05LdSPCompressDataType =
     FixedVectorOfRankAndLengthAndType<[1], [2, 4, 8, 16, 32, 64], [F32]>;
 
-def NVVM_Tcgen05LdSPCompressOp : NVVM_Op<"tcgen05.ld.spcompress",
-                                         [NVVMRequiresSMa<[107]>]> {
-  let summary = "Tcgen05 tensor memory load and 2:4 sparse compress";
+def NVVM_Tcgen05LdRedSPCompressOp : NVVM_Op<"tcgen05.ld.red.spcompress",
+                                            [NVVMRequiresSMa<[107]>]> {
+  let summary =
+      "Tcgen05 tensor memory load and 2:4 sparse compress, with optional reduce";
   let arguments = (ins
+    LLVM_PointerTensor:$addr,
     ReductionKindMinMaxAttr:$op,
     DefaultValuedAttr<BoolAttr, "false">:$abs,
-    LLVM_PointerTensor:$addr
+    DefaultValuedAttr<BoolAttr, "false">:$nan
   );
 
   let results = (outs Tcgen05LdSPCompressMetadataType:$metadata,
-                      Tcgen05LdSPCompressDataType:$data);
+                      Tcgen05LdSPCompressDataType:$data,
+                      Optional<F32>:$redVal);
 
   let assemblyFormat = [{
-    enum($op) $addr oilist(`abs` `=` $abs) attr-dict
-    `:` type($metadata) `,` type($data)
+    enum($op) $addr oilist(`abs` `=` $abs | `nan` `=` $nan) attr-dict
+    `:` type($metadata) `,` type($data) (`,` type($redVal)^)?
   }];
 
   let description = [{
-    Instruction `tcgen05.ld.spcompress` asynchronously loads `32x32b.num` f32
-    elements from the Tensor Memory at the location specified by the 32-bit
-    address operand `addr`, collectively across all threads of the warp, and
-    compresses them in-line using the 2:4 structured sparsity pattern: two out
-    of every four loaded elements are returned in `data`, and their 2-bit
-    indices are returned in `metadata`.
+    The `nvvm.tcgen05.ld.red.spcompress` op models both the
+    `tcgen05.ld.spcompress` and the `tcgen05.ld.red.spcompress` instructions.
+    It asynchronously loads `32x32b.num` f32 elements from the Tensor Memory at
+    the location specified by the 32-bit address operand `addr`, collectively
+    across all threads of the warp, and compresses them in-line using the 2:4
+    structured sparsity pattern: two out of every four loaded elements are
+    returned in `data`, and their 2-bit indices are returned in `metadata`.
 
     The two elements kept from each group of four are selected by the row
     operation `op` (`min` or `max`). If `abs` is true, the elements are compared
     by their absolute values. NaN elements are always preserved.
+
+    If the optional result `redVal` is present, the op lowers to
+    `tcgen05.ld.red.spcompress`: the loaded elements are additionally reduced
+    across columns in each lane with the same operation `op`, and the result is
+    returned in `redVal`. If `abs` is true, the absolute values are used for the
+    reduction as well. `nan` only applies to the reduction, so it requires
+    `redVal`; the compression always preserves NaN elements.
 
     The repeat factor `num` is inferred from the length of `data`, and
     `metadata` must occupy `ceil(num / 32)` 32-bit registers. A single register
@@ -5816,69 +5827,11 @@ def NVVM_Tcgen05LdSPCompressOp : NVVM_Op<"tcgen05.ld.spcompress",
 
     Example:
     ```mlir
-      %metadata, %data = nvvm.tcgen05.ld.spcompress max %addr abs = true
+      // tcgen05.ld.spcompress
+      %metadata, %data = nvvm.tcgen05.ld.red.spcompress max %addr abs = true
         : i32, vector<2xf32>
-    ```
 
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld)
-  }];
-
-  let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static void lowerToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
-                              llvm::IRBuilderBase &builder);
-  }];
-
-  string llvmBuilder = [{
-    NVVM::Tcgen05LdSPCompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
-  }];
-}
-
-def NVVM_Tcgen05LdRedSPCompressOp : NVVM_Op<"tcgen05.ld.red.spcompress",
-                                            [NVVMRequiresSMa<[107]>]> {
-  let summary =
-      "Tcgen05 tensor memory load, reduce and 2:4 sparse compress";
-  let arguments = (ins
-    ReductionKindMinMaxAttr:$op,
-    DefaultValuedAttr<BoolAttr, "false">:$abs,
-    DefaultValuedAttr<BoolAttr, "false">:$nan,
-    LLVM_PointerTensor:$addr
-  );
-
-  let results = (outs Tcgen05LdSPCompressMetadataType:$metadata,
-                      Tcgen05LdSPCompressDataType:$data,
-                      F32:$redVal);
-
-  let assemblyFormat = [{
-    enum($op) $addr oilist(`abs` `=` $abs | `nan` `=` $nan) attr-dict
-    `:` type($metadata) `,` type($data) `,` type($redVal)
-  }];
-
-  let description = [{
-    Instruction `tcgen05.ld.red.spcompress` behaves like
-    `tcgen05.ld.spcompress`: it asynchronously loads `32x32b.num` f32 elements
-    from the Tensor Memory at the location specified by the 32-bit address
-    operand `addr`, collectively across all threads of the warp, and compresses
-    them in-line using the 2:4 structured sparsity pattern. Two out of every
-    four loaded elements are returned in `data`, and their 2-bit indices are
-    returned in `metadata`.
-
-    In addition, the loaded elements are reduced across columns in each lane
-    with the same operation `op` (`min` or `max`), and the result is returned
-    in `redVal`. If `abs` is true, the absolute values of the elements are used
-    both for the selection and for the reduction. `nan` only applies to the
-    reduction; the compression always preserves NaN elements.
-
-    The repeat factor `num` is inferred from the length of `data`, and
-    `metadata` must occupy `ceil(num / 32)` 32-bit registers, as described for
-    `nvvm.tcgen05.ld.spcompress`.
-
-    All the threads in the warp must specify the same value of `addr`, which
-    must be the base address of the collective load operation.
-
-    Example:
-    ```mlir
+      // tcgen05.ld.red.spcompress
       %metadata, %data, %redval = nvvm.tcgen05.ld.red.spcompress min %addr
         abs = true nan = true : vector<2xi32>, vector<32xf32>, f32
     ```
@@ -5889,13 +5842,23 @@ def NVVM_Tcgen05LdRedSPCompressOp : NVVM_Op<"tcgen05.ld.red.spcompress",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static void lowerToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
-                              llvm::IRBuilderBase &builder);
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    NVVM::Tcgen05LdRedSPCompressOp::lowerToLLVMIR(*op, moduleTranslation,
-                                                  builder);
+    auto [id, args] = NVVM::Tcgen05LdRedSPCompressOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    llvm::Value *result = createTcgen05LdSPCompressCall(
+        id, args, *op, moduleTranslation, builder);
+    $metadata = builder.CreateBitCast(
+        builder.CreateExtractValue(result, {0}),
+        moduleTranslation.convertType(op.getMetadata().getType()));
+    $data = builder.CreateExtractValue(result, {1});
+    if (Value redVal = op.getRedVal())
+      moduleTranslation.mapValue(redVal) =
+          builder.CreateExtractValue(result, {2});
   }];
 }
 

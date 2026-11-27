@@ -1121,24 +1121,37 @@ LogicalResult Tcgen05LdRedOp::verify() {
 // tcgen05.ld{.red}.spcompress loads 32x32b.num elements and keeps two of every
 // four of them in data. Each kept element has a 2-bit index in metadata, which
 // therefore occupies ceil(num / 32) 32-bit registers.
-static LogicalResult verifyTcgen05LdSPCompress(Operation *op, Value metadata,
-                                               Value data) {
-  unsigned num = 2 * cast<VectorType>(data.getType()).getNumElements();
+LogicalResult Tcgen05LdRedSPCompressOp::verify() {
+  unsigned num = 2 * cast<VectorType>(getData().getType()).getNumElements();
   unsigned expectedRegs = llvm::divideCeil(num, 32);
-  auto metadataTy = dyn_cast<VectorType>(metadata.getType());
+  auto metadataTy = dyn_cast<VectorType>(getMetadata().getType());
   unsigned numRegs = metadataTy ? metadataTy.getNumElements() : 1;
   if (numRegs != expectedRegs)
-    return op->emitOpError("expects metadata to occupy ")
+    return emitOpError("expects metadata to occupy ")
            << expectedRegs << " 32-bit register(s) for repeat factor x" << num;
+
+  // nan only applies to the reduction.
+  if (getNan() && !getRedVal())
+    return emitOpError("nan requires the reduction result redVal");
   return success();
 }
 
-LogicalResult Tcgen05LdSPCompressOp::verify() {
-  return verifyTcgen05LdSPCompress(*this, getMetadata(), getData());
-}
+mlir::NVVM::IDArgPair NVVM::Tcgen05LdRedSPCompressOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05LdRedSPCompressOp>(op);
+  bool isRed = static_cast<bool>(thisOp.getRedVal());
 
-LogicalResult Tcgen05LdRedSPCompressOp::verify() {
-  return verifyTcgen05LdSPCompress(*this, getMetadata(), getData());
+  llvm::SmallVector<llvm::Value *> args = {
+      mt.lookupValue(thisOp.getAddr()),
+      // row_op: 0 for min and 1 for max.
+      builder.getInt32(thisOp.getOp() == NVVM::ReductionKind::MAX ? 1 : 0),
+      builder.getInt1(thisOp.getAbs())};
+  if (isRed)
+    args.push_back(builder.getInt1(thisOp.getNan()));
+
+  return {isRed ? llvm::Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b
+                : llvm::Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b,
+          args};
 }
 
 #define GET_OP_CLASSES
