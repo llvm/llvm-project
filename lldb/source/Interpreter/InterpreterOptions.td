@@ -9,6 +9,20 @@ let Command = "architecture" in {
                           Desc<"Specify the architecture for the target.">;
 }
 
+// OptionGroupMemoryTag picks one of the two variants below.
+let Command = "memory tag" in {
+  def memory_tag_show_tags : Option<"show-tags", "\\x02">,
+                             Group<1>,
+                             Desc<"Include memory tags in output.">;
+}
+
+let Command = "memory tag binary" in {
+  def memory_tag_binary_show_tags
+      : Option<"show-tags", "\\x02">,
+        Group<1>,
+        Desc<"Include memory tags in output (does not apply to binary output).">;
+}
+
 let Command = "output file" in {
   def output_file_outfile : Option<"outfile", "o">,
                             Group<1>,
