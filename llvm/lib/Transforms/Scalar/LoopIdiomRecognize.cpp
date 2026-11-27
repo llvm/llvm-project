@@ -2590,7 +2590,7 @@ static bool detectPopcountIdiom(Loop *CurLoop, BasicBlock *PreCondBB,
       // Check if the result of the instruction is live of the loop.
       bool LiveOutLoop = false;
       for (Instruction *U : Inst.users()) {
-        if ((U)->getParent() != LoopEntry) {
+        if (U->getParent() != LoopEntry) {
           LiveOutLoop = true;
           break;
         }
