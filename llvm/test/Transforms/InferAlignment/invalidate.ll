@@ -6,8 +6,7 @@
 ; RUN:     | FileCheck %s --check-prefix=IC
 
 ; PM: Running pass: InferAlignmentPass on changed_rauw
-; PM-DAG: Invalidating analysis: DemandedBitsAnalysis on changed_rauw
-; PM-DAG: Invalidating analysis: LoopAccessAnalysis on changed_rauw
+; PM: Invalidating analysis: DemandedBitsAnalysis on changed_rauw
 
 ; PM: Running pass: InferAlignmentPass on changed_align
 ; PM: Invalidating analysis: DemandedBitsAnalysis on changed_align
