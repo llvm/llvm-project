@@ -80,8 +80,6 @@ struct AllocFnsTy {
 };
 
 // clang-format off
-// FIXME: certain users need more information. E.g., SimplifyLibCalls needs to
-// know which functions are nounwind, noalias, nocapture parameters, etc.
 static const std::pair<LibFunc, AllocFnsTy> AllocationFnData[] = {
     {LibFunc_strdup,                                          {StrDupLike, 1, -1, -1}},
     {LibFunc_dunder_strdup,                                   {StrDupLike, 1, -1, -1}},
