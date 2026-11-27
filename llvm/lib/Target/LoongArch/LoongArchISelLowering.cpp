@@ -7534,13 +7534,16 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
       Cmp.hasOneUse()) {
     ISD::CondCode CC = cast<CondCodeSDNode>(Cmp.getOperand(2))->get();
     EVT VT = N->getValueType(0);
+    EVT CmpVT = Cmp.getOperand(0).getValueType();
     SDLoc DL(N);
     if (auto *CLHS = dyn_cast<ConstantSDNode>(Cmp.getOperand(0))) {
       // (xor (setcc C, y, setlt), 1) -> (setcc y, C + 1, setlt)
-      APInt C1 = CLHS->getAPIntValue() + 1;
-      if (CC == ISD::SETLT && C1.isSignedIntN(12))
+      APInt C = CLHS->getAPIntValue();
+      // C == INT_MAX would wrap C + 1 and change the result.
+      if (CC == ISD::SETLT && C != APInt::getSignedMaxValue(C.getBitWidth()) &&
+          (C + 1).isSignedIntN(12))
         return DAG.getSetCC(DL, VT, Cmp.getOperand(1),
-                            DAG.getConstant(C1, DL, VT), ISD::SETLT);
+                            DAG.getConstant(C + 1, DL, CmpVT), ISD::SETLT);
     } else if (auto *CRHS = dyn_cast<ConstantSDNode>(Cmp.getOperand(1))) {
       APInt C = CRHS->getAPIntValue();
       APInt C1 = C + 1;
@@ -7550,11 +7553,11 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
       // extra xori.  Exclude C == INT_MAX (the increment would wrap).
       if (CC == ISD::SETGT && C != APInt::getSignedMaxValue(C.getBitWidth()))
         return DAG.getSetCC(DL, VT, Cmp.getOperand(0),
-                            DAG.getConstant(C1, DL, VT), ISD::SETLT);
+                            DAG.getConstant(C1, DL, CmpVT), ISD::SETLT);
       // (xor (setcc x, C, setugt), 1) -> (setcc x, C + 1, setult)
       if (CC == ISD::SETUGT && !C.isAllOnes())
         return DAG.getSetCC(DL, VT, Cmp.getOperand(0),
-                            DAG.getConstant(C1, DL, VT), ISD::SETULT);
+                            DAG.getConstant(C1, DL, CmpVT), ISD::SETULT);
     }
   }
 

@@ -369,3 +369,36 @@ define i64 @sext_not_sge_lhs(i64 %x) {
   ret i64 %m
 }
 
+
+; The xor result is i64 while the compare operands are i32; the folded
+; constant must keep the compare operand type.
+define i64 @setcc_fold_i32_ugt_const(i32 %x) {
+; CHECK-LABEL: setcc_fold_i32_ugt_const:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.w $a0, $a0, 0
+; CHECK-NEXT:    sltui $a0, $a0, 6
+; CHECK-NEXT:    sub.d $a0, $zero, $a0
+; CHECK-NEXT:    ret
+  %c = icmp ugt i32 %x, 5
+  %z = zext i1 %c to i64
+  %n = xor i64 %z, 1
+  %s = shl i64 %n, 63
+  %r = ashr i64 %s, 63
+  ret i64 %r
+}
+
+; C + 1 wraps for C == signed max; this must not fold to a compare against
+; the wrapped constant.
+define i64 @setcc_fold_i8_slt_max(i8 %x) {
+; CHECK-LABEL: setcc_fold_i8_slt_max:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.w $a0, $zero, -1
+; CHECK-NEXT:    ret
+  %c = icmp slt i8 127, %x
+  %z = sext i1 %c to i8
+  %x1 = xor i8 %z, 1
+  %x2 = shl i8 %x1, 7
+  %r = ashr i8 %x2, 7
+  %e = sext i8 %r to i64
+  ret i64 %e
+}
