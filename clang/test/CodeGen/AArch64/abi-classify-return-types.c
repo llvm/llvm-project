@@ -67,7 +67,7 @@ void* ret_void_ptr() { return &gi; }
 // CHECK: define{{.*}} ptr @ret_void_ptr
 
 typedef float fx2x2_t __attribute__((matrix_type(2, 2)));
-fx2x2_t ret_matrix() { return (fx2x2_t){1.0f, 2.0f, 3.0f, 4.0f}; }
+fx2x2_t ret_matrix() { fx2x2_t m; return m; }
 // CHECK: define{{.*}} <4 x float> @ret_matrix
 
 _BitInt(7) ret_bitint7(void) { return 0; }
