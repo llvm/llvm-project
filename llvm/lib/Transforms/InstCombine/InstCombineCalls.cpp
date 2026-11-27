@@ -2043,7 +2043,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(CI, V);
   }
 
-  if (Value *FreedOp = getFreedOperand(&CI, &TLI))
+  if (Value *FreedOp = getFreedOperand(&CI))
     return visitFree(CI, FreedOp);
 
   // If the caller function (i.e. us, the function that contains this CallInst)
@@ -5180,7 +5180,7 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   }
 
   // Add alignment attribute if alignment is a power of two constant.
-  Value *Alignment = getAllocAlignment(&Call, TLI);
+  Value *Alignment = getAllocAlignment(&Call);
   if (!Alignment)
     return Changed;
 
@@ -5384,7 +5384,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
     return NewCall;
   }
 
-  if (isRemovableAlloc(&Call, &TLI))
+  if (isRemovableAlloc(&Call))
     return visitAllocSite(Call);
 
   // Handle intrinsics which can be used in both call and invoke context.
@@ -5661,8 +5661,10 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
     // type. Note that we made sure all incompatible ones are safe to drop.
     AttributeMask IncompatibleAttrs = AttributeFuncs::typeIncompatible(
         ParamTy, CallerPAL.getParamAttrs(i), AttributeFuncs::ASK_SAFE_TO_DROP);
-    ArgAttrs.push_back(
-        CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs));
+    AttributeSet ParamAttrs =
+        CallerPAL.getParamAttrs(i).removeAttributes(Ctx, IncompatibleAttrs);
+    ArgAttrs.push_back(AttributeFuncs::dropRetOnlyCaptureComponents(
+        Ctx, ParamAttrs, NewRetTy));
   }
 
   // If the function takes more arguments than the call was taking, add them

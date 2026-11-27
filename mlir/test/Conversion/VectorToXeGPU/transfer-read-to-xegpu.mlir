@@ -726,7 +726,7 @@ gpu.func @load_out_of_bounds_unit_2D_vector(%source: memref<8x16xf32>,
 
 // -----
 gpu.module @xevm_module {
-gpu.func @no_load_masked(%source : memref<4xf32>,
+gpu.func @no_load_with_mask(%source : memref<4xf32>,
     %offset : index) -> vector<4xf32> {
   %c0 = arith.constant 0.0 : f32
   %mask = arith.constant dense<[0, 1, 0, 1]> : vector<4xi1>
@@ -735,7 +735,7 @@ gpu.func @no_load_masked(%source : memref<4xf32>,
   gpu.return %0 : vector<4xf32>
 }
 
-// CHECK-LABEL:  @no_load_masked(
+// CHECK-LABEL:  @no_load_with_mask(
 // CHECK:        vector.transfer_read
 }
 
@@ -1005,4 +1005,21 @@ gpu.func @transpose_1x1024x24x64(
 // CHECK:     arith.muli %block_id_x, %[[C65536]] : index
 // CHECK:     arith.muli %{{.+}}, %[[C64]] : index
 // CHECK:     xegpu.store {{.*}}
+}
+
+// -----
+gpu.module @xevm_module {
+gpu.func @no_load_masked(%source : memref<4xf32>,
+    %offset : index, %mask : vector<4xi1>) -> vector<4xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.mask %mask {
+    vector.transfer_read %source[%offset], %c0
+      : memref<4xf32>, vector<4xf32>
+  } : vector<4xi1> -> vector<4xf32>
+  gpu.return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL:  @no_load_masked(
+// CHECK:        vector.mask
+// CHECK:          vector.transfer_read
 }

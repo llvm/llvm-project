@@ -1140,6 +1140,10 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
                           : (FalseValI->getOperand(1) == Y ? 1 : 2),
                       FrY);
   }
+  // Drop poison-generating annotations (e.g. range) on calls, but preserve
+  // flags on mul/idiv since 0*y cannot overflow and 0/y remains exact.
+  if (isa<CallBase>(FalseValI))
+    FalseValI->dropPoisonGeneratingAnnotations();
   return IC.replaceInstUsesWith(SI, FalseValI);
 }
 

@@ -1596,7 +1596,6 @@ def : InstRW<[Zn4WriteSHIFTrr], (instregex
         "(V?)P(SLL|SRL|SRA)(D|Q|W|DQ)(Y?|Z?|Z128?|Z256?)(rr|rrk|rrkz)",
         "(V?)P(SLL|SRL|SRA)DQYri",
         "(V?)P(SLL|SRL)DQ(Z?|Z256?)ri",
-        "(V?)P(SHUFB)(Y|Z|Z128|Z256?)(rr|rrk|rrkz)",
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z?|Z128?|Z256?)(rr|rrk|rrkz)",
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z256?)(ri|rik|rikz)",
         "(V?)P(ROL|ROR)(D|Q)(Z?|Z128?)(ri|rik|rikz)",

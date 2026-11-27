@@ -2771,7 +2771,6 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
                                     const SimplifyQuery &Q) {
   assert(LHS->getType() == RHS->getType() && "Must have same types");
   const DataLayout &DL = Q.DL;
-  const TargetLibraryInfo *TLI = Q.TLI;
 
   // We fold equality and unsigned predicates on pointer comparisons, but forbid
   // signed predicates since a GEP with inbounds could cross the sign boundary.
@@ -2861,9 +2860,9 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
     // the other operand can not be based on the alloc - if it were, then
     // the cmp itself would be a capture.
     Value *MI = nullptr;
-    if (isAllocLikeFn(LHS, TLI) && llvm::isKnownNonZero(RHS, Q))
+    if (isAllocLikeFn(LHS) && llvm::isKnownNonZero(RHS, Q))
       MI = LHS;
-    else if (isAllocLikeFn(RHS, TLI) && llvm::isKnownNonZero(LHS, Q))
+    else if (isAllocLikeFn(RHS) && llvm::isKnownNonZero(LHS, Q))
       MI = RHS;
     if (MI) {
       // FIXME: This is incorrect, see PR54002. While we can assume that the

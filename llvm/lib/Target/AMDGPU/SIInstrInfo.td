@@ -1325,7 +1325,7 @@ def A16 : NamedBitOperand<"a16">;
 def D16 : NamedBitOperand<"d16">;
 def LWE : NamedBitOperand<"lwe">;
 def exp_compr : NamedBitOperand<"compr", "ExpCompr", 1>;
-def exp_vm : NamedBitOperand<"vm", "ExpVM", 1>;
+def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
 // The MTBUF format modifier, as in "s[0:3], s1 format:[BUF_FMT_32_FLOAT]".
 def format : CustomOperand<1, "Format", i8> {

@@ -302,6 +302,19 @@ static LogicalResult getOpIndexSet(Operation *op,
                                    FlatAffineValueConstraints *indexSet) {
   SmallVector<Operation *, 4> ops;
   getEnclosingAffineOps(*op, &ops);
+
+  // getIndexSet(ops, indexSet) will add constraints only for for the then
+  // block, so if op is part of the else block, then the indexSet ends up being
+  // wrong. So instead, any AffineIfOp where op is in the else block is removed.
+  //
+  // TODO: make memory dependence check able to handle the complement of the
+  //       AffineIfOp integer set.
+  llvm::erase_if(ops, [&](Operation *affineOp) {
+    auto ifOp = dyn_cast<AffineIfOp>(affineOp);
+    return ifOp && ifOp.hasElse() &&
+           ifOp.getElseRegion().isAncestor(op->getParentRegion());
+  });
+
   return getIndexSet(ops, indexSet);
 }
 
