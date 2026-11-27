@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-xegpu-to-xevm -split-input-file %s | FileCheck %s --implicit-check-not='arith.{{(extui|extsi|trunci)}} {{.*}}xi4>' --implicit-check-not=arith.ori --implicit-check-not=xegpu.lane_shuffle
+// RUN: mlir-opt -convert-xegpu-to-xevm -split-input-file %s | FileCheck %s --implicit-check-not='arith.{{(extui|extsi|trunci|uitofp|sitofp)}} {{.*}}xi4>' --implicit-check-not=arith.ori --implicit-check-not=xegpu.lane_shuffle
 
 
 // Hoist only the i4-to-i8 part of the extension before the shuffle. Extending
@@ -179,5 +179,47 @@ gpu.func @pack_shared_extsi(%a: vector<2xi8>) -> (vector<4xi8>, vector<4xi32>) {
   %r0 = arith.extsi %shuffled : vector<4xi4> to vector<4xi8>
   %r1 = arith.extsi %shuffled : vector<4xi4> to vector<4xi32>
   gpu.return %r0, %r1 : vector<4xi8>, vector<4xi32>
+}
+}
+
+// -----
+
+// Without a lane shuffle, an i4 to float conversion is expanded like an
+// extension: the nibbles are unpacked to i8, then converted. This is the
+// dequantization without a zero point, sitofp(extui(i4)) folded into
+// uitofp(i4).
+gpu.module @test {
+// CHECK-LABEL: gpu.func @uitofp_i4
+// CHECK-SAME: %[[SRC:.*]]: vector<8xi8>
+gpu.func @uitofp_i4(%a: vector<8xi8>) -> vector<16xf16> {
+  // CHECK: %[[MASK:.*]] = arith.constant dense<15> : vector<8xi8>
+  // CHECK: %[[LOW:.*]] = arith.andi %[[SRC]], %[[MASK]] : vector<8xi8>
+  // CHECK: %[[SHIFT:.*]] = arith.constant dense<4> : vector<8xi8>
+  // CHECK: %[[HIGH:.*]] = arith.shrui %[[SRC]], %[[SHIFT]] : vector<8xi8>
+  // CHECK: %[[BYTES:.*]] = vector.shuffle %[[LOW]], %[[HIGH]] [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15] : vector<8xi8>, vector<8xi8>
+  // CHECK: %[[RES:.*]] = arith.uitofp %[[BYTES]] : vector<16xi8> to vector<16xf16>
+  // CHECK: gpu.return %[[RES]] : vector<16xf16>
+  %nibbles = vector.bitcast %a : vector<8xi8> to vector<16xi4>
+  %res = arith.uitofp %nibbles : vector<16xi4> to vector<16xf16>
+  gpu.return %res : vector<16xf16>
+}
+}
+
+// -----
+
+gpu.module @test {
+// CHECK-LABEL: gpu.func @sitofp_i4
+// CHECK-SAME: %[[SRC:.*]]: vector<8xi8>
+gpu.func @sitofp_i4(%a: vector<8xi8>) -> vector<16xf16> {
+  // CHECK: %[[SHIFT:.*]] = arith.constant dense<4> : vector<8xi8>
+  // CHECK: %[[LEFT:.*]] = arith.shli %[[SRC]], %[[SHIFT]] : vector<8xi8>
+  // CHECK: %[[LOW:.*]] = arith.shrsi %[[LEFT]], %{{.*}} : vector<8xi8>
+  // CHECK: %[[HIGH:.*]] = arith.shrsi %[[SRC]], %{{.*}} : vector<8xi8>
+  // CHECK: %[[BYTES:.*]] = vector.shuffle %[[LOW]], %[[HIGH]] [0, 8, 1, 9, 2, 10, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15] : vector<8xi8>, vector<8xi8>
+  // CHECK: %[[RES:.*]] = arith.sitofp %[[BYTES]] : vector<16xi8> to vector<16xf16>
+  // CHECK: gpu.return %[[RES]] : vector<16xf16>
+  %nibbles = vector.bitcast %a : vector<8xi8> to vector<16xi4>
+  %res = arith.sitofp %nibbles : vector<16xi4> to vector<16xf16>
+  gpu.return %res : vector<16xf16>
 }
 }
