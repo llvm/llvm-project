@@ -978,13 +978,16 @@ X86SpeculativeLoadHardeningImpl::tracePredStateThroughIndirectBranches(
       report_fatal_error("Memory operand jumps should have been unfolded!");
 
     case X86::JMP16r:
+    case X86::JMP16r_NT:
       report_fatal_error(
           "Support for 16-bit indirect branches is not implemented.");
     case X86::JMP32r:
+    case X86::JMP32r_NT:
       report_fatal_error(
           "Support for 32-bit indirect branches is not implemented.");
 
     case X86::JMP64r:
+    case X86::JMP64r_NT:
       TargetReg = TI.getOperand(0).getReg();
     }
 
