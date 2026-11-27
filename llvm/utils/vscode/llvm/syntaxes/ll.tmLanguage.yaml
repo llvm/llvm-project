@@ -262,6 +262,7 @@ patterns:
             \\bsafestack\\b|\
             \\bsanitize_address\\b|\
             \\bsanitize_alloc_token\\b|\
+            \\bsanitize_device_address\\b|\
             \\bsanitize_hwaddress\\b|\
             \\bsanitize_memory\\b|\
             \\bsanitize_memtag\\b|\

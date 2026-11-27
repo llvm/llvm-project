@@ -72,12 +72,12 @@ entry:
 ; attributes to preserve
 attributes #0 = {
   inlinehint minsize noduplicate noimplicitfloat norecurse noredzone nounwind
-  nonlazybind optsize safestack sanitize_address sanitize_hwaddress sanitize_memory
-  sanitize_thread ssp sspreq sspstrong uwtable "foo"="bar"
+  nonlazybind optsize safestack sanitize_address sanitize_device_address
+  sanitize_hwaddress sanitize_memory sanitize_thread ssp sspreq sspstrong uwtable "foo"="bar"
   "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
 
 ; CHECK: attributes [[FN_ATTRS0]] = { sanitize_concurrency ssp
-; CHECK: attributes [[FN_ATTRS]] = { inlinehint minsize noduplicate noimplicitfloat norecurse noredzone nounwind nonlazybind optsize safestack sanitize_address sanitize_hwaddress sanitize_memory sanitize_thread ssp sspreq sspstrong uwtable "foo"="bar" "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
+; CHECK: attributes [[FN_ATTRS]] = { inlinehint minsize noduplicate noimplicitfloat norecurse noredzone nounwind nonlazybind optsize safestack sanitize_address sanitize_device_address sanitize_hwaddress sanitize_memory sanitize_thread ssp sspreq sspstrong uwtable "foo"="bar" "patchable-function"="prologue-short-redirect" "probe-stack"="_foo_guard" "stack-probe-size"="4096" }
 
 ; attributes to drop
 attributes #1 = {

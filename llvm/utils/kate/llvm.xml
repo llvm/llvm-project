@@ -122,6 +122,7 @@
       <item> readnone </item>
       <item> readonly </item>
       <item> safestack </item>
+      <item> sanitize_device_address </item>
       <item> sanitize_hwaddress </item>
       <item> sanitize_memtag </item>
       <item> shadowcallstack </item>
