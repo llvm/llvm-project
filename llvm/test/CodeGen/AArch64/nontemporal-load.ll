@@ -12,7 +12,7 @@ define <4 x double> @test_ldnp_v4f64(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <4 x double>, ptr %A, align 8, !nontemporal !0
+  %lv = load <4 x double>, ptr %A, align 16, !nontemporal !0
   ret <4 x double> %lv
 }
 
@@ -26,7 +26,7 @@ define <4 x i64> @test_ldnp_v4i64(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <4 x i64>, ptr %A, align 8, !nontemporal !0
+  %lv = load <4 x i64>, ptr %A, align 16, !nontemporal !0
   ret <4 x i64> %lv
 }
 
@@ -40,7 +40,7 @@ define <8 x i32> @test_ldnp_v8i32(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <8 x i32>, ptr %A, align 8, !nontemporal !0
+  %lv = load <8 x i32>, ptr %A, align 16, !nontemporal !0
   ret <8 x i32> %lv
 }
 
@@ -54,7 +54,7 @@ define <8 x float> @test_ldnp_v8f32(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <8 x float>, ptr %A, align 8, !nontemporal !0
+  %lv = load <8 x float>, ptr %A, align 16, !nontemporal !0
   ret <8 x float> %lv
 }
 
@@ -68,7 +68,7 @@ define <16 x i16> @test_ldnp_v16i16(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <16 x i16>, ptr %A, align 8, !nontemporal !0
+  %lv = load <16 x i16>, ptr %A, align 16, !nontemporal !0
   ret <16 x i16> %lv
 }
 
@@ -82,7 +82,7 @@ define <16 x half> @test_ldnp_v16f16(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <16 x half>, ptr %A, align 8, !nontemporal !0
+  %lv = load <16 x half>, ptr %A, align 16, !nontemporal !0
   ret <16 x half> %lv
 }
 
@@ -96,7 +96,7 @@ define <16 x bfloat> @test_ldnp_v16bf16(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <16 x bfloat>, ptr %A, align 8, !nontemporal !0
+  %lv = load <16 x bfloat>, ptr %A, align 16, !nontemporal !0
   ret <16 x bfloat> %lv
 }
 
@@ -110,7 +110,7 @@ define <32 x i8> @test_ldnp_v32i8(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <32 x i8>, ptr %A, align 8, !nontemporal !0
+  %lv = load <32 x i8>, ptr %A, align 16, !nontemporal !0
   ret <32 x i8> %lv
 }
 
@@ -124,7 +124,7 @@ define <4 x i32> @test_ldnp_v4i32(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load<4 x i32>, ptr %A, align 8, !nontemporal !0
+  %lv = load<4 x i32>, ptr %A, align 16, !nontemporal !0
   ret <4 x i32> %lv
 }
 
@@ -138,7 +138,7 @@ define <4 x float> @test_ldnp_v4f32(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load<4 x float>, ptr %A, align 8, !nontemporal !0
+  %lv = load<4 x float>, ptr %A, align 16, !nontemporal !0
   ret <4 x float> %lv
 }
 
@@ -152,7 +152,7 @@ define <8 x i16> @test_ldnp_v8i16(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <8 x i16>, ptr %A, align 8, !nontemporal !0
+  %lv = load <8 x i16>, ptr %A, align 16, !nontemporal !0
   ret <8 x i16> %lv
 }
 
@@ -166,7 +166,7 @@ define <16 x i8> @test_ldnp_v16i8(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <16 x i8>, ptr %A, align 8, !nontemporal !0
+  %lv = load <16 x i8>, ptr %A, align 16, !nontemporal !0
   ret <16 x i8> %lv
 }
 define <2 x double> @test_ldnp_v2f64(ptr %A) {
@@ -179,7 +179,7 @@ define <2 x double> @test_ldnp_v2f64(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr q0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <2 x double>, ptr %A, align 8, !nontemporal !0
+  %lv = load <2 x double>, ptr %A, align 16, !nontemporal !0
   ret <2 x double> %lv
 }
 
@@ -193,7 +193,7 @@ define <2 x i32> @test_ldnp_v2i32(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <2 x i32>, ptr %A, align 8, !nontemporal !0
+  %lv = load <2 x i32>, ptr %A, align 16, !nontemporal !0
   ret <2 x i32> %lv
 }
 
@@ -207,7 +207,7 @@ define <2 x float> @test_ldnp_v2f32(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <2 x float>, ptr %A, align 8, !nontemporal !0
+  %lv = load <2 x float>, ptr %A, align 16, !nontemporal !0
   ret <2 x float> %lv
 }
 
@@ -221,7 +221,7 @@ define <4 x i16> @test_ldnp_v4i16(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <4 x i16>, ptr %A, align 8, !nontemporal !0
+  %lv = load <4 x i16>, ptr %A, align 16, !nontemporal !0
   ret <4 x i16> %lv
 }
 
@@ -235,7 +235,7 @@ define <8 x i8> @test_ldnp_v8i8(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <8 x i8>, ptr %A, align 8, !nontemporal !0
+  %lv = load <8 x i8>, ptr %A, align 16, !nontemporal !0
   ret <8 x i8> %lv
 }
 
@@ -249,7 +249,7 @@ define <1 x double> @test_ldnp_v1f64(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <1 x double>, ptr %A, align 8, !nontemporal !0
+  %lv = load <1 x double>, ptr %A, align 16, !nontemporal !0
   ret <1 x double> %lv
 }
 
@@ -263,7 +263,7 @@ define <1 x i64> @test_ldnp_v1i64(ptr %A) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ldr d0, [x0]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <1 x i64>, ptr %A, align 8, !nontemporal !0
+  %lv = load <1 x i64>, ptr %A, align 16, !nontemporal !0
   ret <1 x i64> %lv
 }
 
@@ -279,7 +279,7 @@ define <32 x i16> @test_ldnp_v32i16(ptr %A) {
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <32 x i16>, ptr %A, align 8, !nontemporal !0
+  %lv = load <32 x i16>, ptr %A, align 16, !nontemporal !0
   ret <32 x i16> %lv
 }
 
@@ -295,7 +295,7 @@ define <32 x half> @test_ldnp_v32f16(ptr %A) {
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <32 x half>, ptr %A, align 8, !nontemporal !0
+  %lv = load <32 x half>, ptr %A, align 16, !nontemporal !0
   ret <32 x half> %lv
 }
 
@@ -311,7 +311,7 @@ define <16 x i32> @test_ldnp_v16i32(ptr %A) {
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <16 x i32>, ptr %A, align 8, !nontemporal !0
+  %lv = load <16 x i32>, ptr %A, align 16, !nontemporal !0
   ret <16 x i32> %lv
 }
 
@@ -327,7 +327,7 @@ define <16 x float> @test_ldnp_v16f32(ptr %A) {
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0]
 ; CHECK-BE-NEXT:    ldp q2, q3, [x0, #32]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <16 x float>, ptr %A, align 8, !nontemporal !0
+  %lv = load <16 x float>, ptr %A, align 16, !nontemporal !0
   ret <16 x float> %lv
 }
 
@@ -361,7 +361,7 @@ define <17 x float> @test_ldnp_v17f32(ptr %A) {
 ; CHECK-BE-NEXT:    st1 { v4.4s }, [x10]
 ; CHECK-BE-NEXT:    st1 { v3.4s }, [x8]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <17 x float>, ptr %A, align 8, !nontemporal !0
+  %lv = load <17 x float>, ptr %A, align 16, !nontemporal !0
   ret <17 x float> %lv
 }
 
@@ -455,7 +455,7 @@ define <33 x double> @test_ldnp_v33f64(ptr %A) {
 ; CHECK-BE-NEXT:    st1 { v1.2d }, [x9]
 ; CHECK-BE-NEXT:    st1 { v0.2d }, [x8]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <33 x double>, ptr %A, align 8, !nontemporal !0
+  %lv = load <33 x double>, ptr %A, align 16, !nontemporal !0
   ret <33 x double> %lv
 }
 
@@ -479,7 +479,7 @@ define <33 x i8> @test_ldnp_v33i8(ptr %A) {
 ; CHECK-BE-NEXT:    add x8, x8, #16
 ; CHECK-BE-NEXT:    st1 { v1.16b }, [x8]
 ; CHECK-BE-NEXT:    ret
-  %lv = load<33 x i8>, ptr %A, align 8, !nontemporal !0
+  %lv = load<33 x i8>, ptr %A, align 16, !nontemporal !0
   ret <33 x i8> %lv
 }
 
@@ -519,7 +519,7 @@ define <4 x i65> @test_ldnp_v4i65(ptr %A) {
 ; CHECK-BE-NEXT:    extr x5, x12, x11, #1
 ; CHECK-BE-NEXT:    and x6, x11, #0x1
 ; CHECK-BE-NEXT:    ret
-  %lv = load <4 x i65>, ptr %A, align 8, !nontemporal !0
+  %lv = load <4 x i65>, ptr %A, align 16, !nontemporal !0
   ret <4 x i65> %lv
 }
 
@@ -548,7 +548,7 @@ define <4 x i63> @test_ldnp_v4i63(ptr %A) {
 ; CHECK-BE-NEXT:    and x1, x12, #0x7fffffffffffffff
 ; CHECK-BE-NEXT:    and x2, x8, #0x7fffffffffffffff
 ; CHECK-BE-NEXT:    ret
-  %lv = load <4 x i63>, ptr %A, align 8, !nontemporal !0
+  %lv = load <4 x i63>, ptr %A, align 16, !nontemporal !0
   ret <4 x i63> %lv
 }
 
@@ -575,7 +575,7 @@ define <5 x double> @test_ldnp_v5f64(ptr %A) {
 ; CHECK-BE-NEXT:    mov d3, v2.d[1]
 ; CHECK-BE-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-BE-NEXT:    ret
-  %lv = load<5 x double>, ptr %A, align 8, !nontemporal !0
+  %lv = load<5 x double>, ptr %A, align 16, !nontemporal !0
   ret <5 x double> %lv
 }
 
@@ -595,7 +595,7 @@ define <16 x i64> @test_ldnp_v16i64(ptr %A) {
 ; CHECK-BE-NEXT:    ldp q4, q5, [x0, #64]
 ; CHECK-BE-NEXT:    ldp q6, q7, [x0, #96]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <16 x i64>, ptr %A, align 8, !nontemporal !0
+  %lv = load <16 x i64>, ptr %A, align 16, !nontemporal !0
   ret <16 x i64> %lv
 }
 
@@ -615,7 +615,7 @@ define <16 x double> @test_ldnp_v16f64(ptr %A) {
 ; CHECK-BE-NEXT:    ldp q4, q5, [x0, #64]
 ; CHECK-BE-NEXT:    ldp q6, q7, [x0, #96]
 ; CHECK-BE-NEXT:    ret
-  %lv = load <16 x double>, ptr %A, align 8, !nontemporal !0
+  %lv = load <16 x double>, ptr %A, align 16, !nontemporal !0
   ret <16 x double> %lv
 }
 
@@ -639,7 +639,7 @@ define <vscale x 20 x float> @test_ldnp_v20f32_vscale(ptr %A) {
 ; CHECK-BE-NEXT:    ldnt1w { z3.s }, p0/z, [x0, #3, mul vl]
 ; CHECK-BE-NEXT:    ldnt1w { z4.s }, p0/z, [x0, #4, mul vl]
 ; CHECK-BE-NEXT:    ret
-  %lv = load<vscale x 20 x float>, ptr %A, align 8, !nontemporal !0
+  %lv = load<vscale x 20 x float>, ptr %A, align 16, !nontemporal !0
   ret <vscale x 20 x float> %lv
 }
 
@@ -654,7 +654,7 @@ define <4 x double> @test_ldnp_v4f64_offset(ptr %A) {
 ; CHECK-BE-NEXT:    ldp q0, q1, [x0, #32]
 ; CHECK-BE-NEXT:    ret
   %addr = getelementptr i8, ptr %A, i32 32
-  %lv = load <4 x double>, ptr %addr, align 8, !nontemporal !0
+  %lv = load <4 x double>, ptr %addr, align 16, !nontemporal !0
   ret <4 x double> %lv
 }
 
