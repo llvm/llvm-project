@@ -1248,6 +1248,25 @@ bool AVRTargetLowering::isOffsetFoldingLegal(
   return true;
 }
 
+void AVRTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+                                                      SDNode *Node) const {
+  switch (MI.getOpcode()) {
+  // They may be expanded into a sequence that computes the new SP in R31R30
+  // (see AVRFrameLowering::eliminateCallFramePseudoInstr). If this
+  // happens, we need to add R31R30 into this instruction's defs, so that the
+  // register allocator doesn't keep any value in it across this instruction.
+  case AVR::ADJCALLSTACKDOWN:
+  case AVR::ADJCALLSTACKUP:
+    if (MI.getOperand(0).getImm() != 0)
+      MI.addOperand(MachineOperand::CreateReg(AVR::R31R30, /*isDef=*/true,
+                                              /*isImp=*/true, /*isKill=*/false,
+                                              /*isDead=*/true));
+    break;
+  default:
+    assert(false && "Unexpected instruction with a post-isel hook");
+  }
+}
+
 //===----------------------------------------------------------------------===//
 //             Formal Arguments Calling Convention Implementation
 //===----------------------------------------------------------------------===//
