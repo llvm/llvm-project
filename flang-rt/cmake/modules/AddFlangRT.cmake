@@ -257,10 +257,6 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE -fno-lto)
     endif ()
 
-    if (FORTRAN_SUPPORTS_REAL16)
-      target_compile_definitions(${tgtname} PRIVATE FLANG_SUPPORT_R16=1)
-    endif ()
-
     # Use compiler-specific options to disable exceptions and RTTI.
     if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
       target_compile_options(${tgtname} PRIVATE

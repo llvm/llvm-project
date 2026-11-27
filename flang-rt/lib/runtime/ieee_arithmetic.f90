@@ -172,9 +172,9 @@ module ieee_arithmetic
   G(1) G(2) G(4) G(8)
 
 ! Note that a REAL kind can be disabled using -fdisable-real-N even though the
-! platform supports it. The intrinsic module must mode the definitions
-! available if enabled but also error it disabled. Flang has an exception for
-! this file that skips the definitions using disabled kinds.
+! platform supports it. The intrinsic module must make the definitions
+! available if enabled but also not error it disabled. Flang has an exception
+! for this ieee_arithmetic that ignores the error for disabled kinds.
 #if __x86_64__
 #define SPECIFICS_R(G) \
   G(2) G(3) G(4) G(8) G(10) G(16)
