@@ -2012,9 +2012,10 @@ void SPIRVNonSemanticDebugHandler::beginInstruction(const MachineInstr *MI) {
 // The spec requires DebugDeclare's Variable operand to be "the <id> of an
 // OpVariable instruction that defines the local variable". MIR has no
 // DBG_DECLARE, so what this looks for is an indirect DBG_VALUE whose location
-// register an OpVariable defines.
+// register an OpVariable defines. \p AllowUntypedVariable allows an exception
+// and also accepts an OpUntypedVariableKHR.
 static std::optional<Register>
-getDebugDeclareStorageReg(const MachineInstr &MI) {
+getDebugDeclareStorageReg(const MachineInstr &MI, bool AllowUntypedVariable) {
   // #dbg_declare is an indirect DBG_VALUE in MIR; #dbg_value is normally a
   // direct one except for the variadic case.
   if (!MI.isIndirectDebugValue())
@@ -2026,8 +2027,8 @@ getDebugDeclareStorageReg(const MachineInstr &MI) {
   if (!LocReg.isVirtual())
     return std::nullopt;
 
-  // DebugDeclare can only encode the address of an OpVariable.
-  // Other legitimate #dbg_declare cannot be encoded.
+  // DebugDeclare can only encode the address of an OpVariable (or
+  // OpUntypedVariableKHR). Other legitimate #dbg_declare cannot be encoded.
   // Examples: an access chain for a field, an OpFunctionParameter for a byval
   // argument, or a module-scope constant for a null or fixed address.
 
@@ -2036,7 +2037,9 @@ getDebugDeclareStorageReg(const MachineInstr &MI) {
   // because LiveDebugVariables normally clears it, but this pipeline has no
   // register allocation, so LiveDebugVariables never runs.
   const MachineInstr *Def = MI.getMF()->getRegInfo().getUniqueVRegDef(LocReg);
-  if (!Def || Def->getOpcode() != SPIRV::OpVariable)
+  if (!Def || (Def->getOpcode() != SPIRV::OpVariable &&
+               !(AllowUntypedVariable &&
+                 Def->getOpcode() == SPIRV::OpUntypedVariableKHR)))
     return std::nullopt;
 
   return LocReg;
@@ -2213,9 +2216,10 @@ void SPIRVNonSemanticDebugHandler::resolveDebugRecord(
                                                                   : &MI;
 
   // A #dbg_declare reaches Machine IR as an indirect DBG_VALUE. Its storage is
-  // an OpVariable in the entry block, so it is in the output by the time any
-  // record naming it is reached.
-  if (std::optional<Register> LocReg = getDebugDeclareStorageReg(MI)) {
+  // an OpVariable (or OpUntypedVariableKHR) in the entry block, so it is in the
+  // output by the time any record naming it is reached.
+  if (std::optional<Register> LocReg = getDebugDeclareStorageReg(
+          MI, CLOpts.debug_declare_untyped_variable)) {
     MCRegister StorageReg = MAI.getRegisterAlias(&MF, *LocReg);
     if (StorageReg.isValid())
       placeRecord(SPIRV::NonSemanticExtInst::DebugDeclare, MI, StorageReg,
