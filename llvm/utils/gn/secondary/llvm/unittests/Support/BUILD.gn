@@ -79,6 +79,7 @@ unittest("SupportTests") {
     "ParallelTest.cpp",
     "Path.cpp",
     "PerThreadBumpPtrAllocatorTest.cpp",
+    "PrefixMapperTest.cpp",
     "ProcessTest.cpp",
     "ProgramStackTest.cpp",
     "ProgramTest.cpp",

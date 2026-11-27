@@ -691,7 +691,7 @@ bool MachineInstr::isIdenticalTo(const MachineInstr &Other,
     assert(Other.isBundle() && "Expected that both instructions are bundles.");
     MachineBasicBlock::const_instr_iterator I1 = getIterator();
     MachineBasicBlock::const_instr_iterator I2 = Other.getIterator();
-    // Loop until we analysed the last intruction inside at least one of the
+    // Loop until we analysed the last instruction inside at least one of the
     // bundles.
     while (I1->isBundledWithSucc() && I2->isBundledWithSucc()) {
       ++I1;
@@ -1236,6 +1236,9 @@ const unsigned TiedMax = 15;
 /// The tied def must be one of the first TiedMax operands on a normal
 /// instruction. INLINEASM instructions allow more tied defs.
 ///
+/// A tied use and def of the same virtual register must use the same
+/// subregister index.
+///
 void MachineInstr::tieOperands(unsigned DefIdx, unsigned UseIdx) {
   MachineOperand &DefMO = getOperand(DefIdx);
   MachineOperand &UseMO = getOperand(UseIdx);
@@ -1766,7 +1769,8 @@ LLT MachineInstr::getTypeToPrint(unsigned OpIdx, SmallBitVector &PrintedTypes,
   if (!OpInfo.isGenericType())
     return MRI.getType(Op.getReg());
 
-  if (PrintedTypes[OpInfo.getGenericTypeIndex()])
+  // The MIR parser requires a type on every generic register definition.
+  if (PrintedTypes[OpInfo.getGenericTypeIndex()] && !Op.isDef())
     return LLT{};
 
   LLT TypeToPrint = MRI.getType(Op.getReg());
@@ -2005,14 +2009,15 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << F.getKindName();
 
       unsigned RCID;
-      if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID)) {
+      if (!F.isImmKind() && !F.isMemKind() && !F.isFuncKind() &&
+          F.hasRegClassConstraint(RCID)) {
         if (TRI) {
           OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
         } else
           OS << ":RC" << RCID;
       }
 
-      if (F.isMemKind()) {
+      if (F.isMemKind() || F.isFuncKind()) {
         const InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
         OS << ":" << InlineAsm::getMemConstraintName(MCID);
       }

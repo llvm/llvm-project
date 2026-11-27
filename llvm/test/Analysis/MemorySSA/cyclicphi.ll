@@ -1,4 +1,4 @@
-; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa-walker>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 
 %struct.hoge = type { i32, %struct.widget }
 %struct.widget = type { i64 }

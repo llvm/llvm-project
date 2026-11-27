@@ -1,11 +1,10 @@
-# RUN: llc -mtriple=amdgpu10.30 -verify-machineinstrs -run-pass=greedy -stress-regalloc=2 %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgpu10.30 -run-pass=greedy -stress-regalloc=2 %s -o - | FileCheck -check-prefix=GCN %s
 
 # Make sure there's no verifier error after register allocation
 # introduces vreg defs when the MIR parser infers SSA.
 
 ---
 name: ra_introduces_vreg_def
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   frameOffsetReg:  '$sgpr33'

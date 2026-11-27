@@ -85,6 +85,7 @@ private:
   atomic_uptr Precedence = {};
 
   typename Allocator::SizeClassAllocatorT SizeClassAllocator GUARDED_BY(Mutex);
+  [[no_unique_address]]
   typename Allocator::QuarantineCacheT QuarantineCache GUARDED_BY(Mutex);
 };
 

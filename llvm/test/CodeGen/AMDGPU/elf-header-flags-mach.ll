@@ -1,19 +1,3 @@
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=r600 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,R600 %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=r630 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,R630 %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=rs880 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,RS880 %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=rv670 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,RV670 %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=rv710 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,RV710 %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=rv730 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,RV730 %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=rv770 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,RV770 %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=cedar < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,CEDAR %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=cypress < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,CYPRESS %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=juniper < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,JUNIPER %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=redwood < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,REDWOOD %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=sumo < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,SUMO %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=barts < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,BARTS %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=caicos < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,CAICOS %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=cayman < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,CAYMAN %s
-; RUN: llc -filetype=obj -mtriple=r600 -mcpu=turks < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-R600,TURKS %s
 ; RUN: llc -filetype=obj -mtriple=amdgpu6.00 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX600 %s
 ; RUN: llc -filetype=obj -mtriple=amdgpu6.01 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX601 %s
 ; RUN: llc -filetype=obj -mtriple=amdgpu6.02 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX602 %s
@@ -81,31 +65,11 @@
 ; FIXME: With the default attributes the eflags are not accurate for
 ; xnack and sramecc. Subsequent Target-ID patches will address this.
 
-; ARCH-R600: Format: elf32-amdgpu
-; ARCH-R600: Arch: r600
-; ARCH-R600: AddressSize: 32bit
-
 ; ARCH-GCN: Format: elf64-amdgpu
 ; ARCH-GCN: Arch: amdgpu
 ; ARCH-GCN: AddressSize: 64bit
 
 ; ALL:         Flags [
-; R600:          EF_AMDGPU_MACH_R600_R600     (0x1)
-; R630:          EF_AMDGPU_MACH_R600_R630     (0x2)
-; RS880:         EF_AMDGPU_MACH_R600_RS880    (0x3)
-; RV670:         EF_AMDGPU_MACH_R600_RV670    (0x4)
-; RV710:         EF_AMDGPU_MACH_R600_RV710    (0x5)
-; RV730:         EF_AMDGPU_MACH_R600_RV730    (0x6)
-; RV770:         EF_AMDGPU_MACH_R600_RV770    (0x7)
-; CEDAR:         EF_AMDGPU_MACH_R600_CEDAR    (0x8)
-; CYPRESS:       EF_AMDGPU_MACH_R600_CYPRESS  (0x9)
-; JUNIPER:       EF_AMDGPU_MACH_R600_JUNIPER  (0xA)
-; REDWOOD:       EF_AMDGPU_MACH_R600_REDWOOD  (0xB)
-; SUMO:          EF_AMDGPU_MACH_R600_SUMO     (0xC)
-; BARTS:         EF_AMDGPU_MACH_R600_BARTS    (0xD)
-; CAICOS:        EF_AMDGPU_MACH_R600_CAICOS   (0xE)
-; CAYMAN:        EF_AMDGPU_MACH_R600_CAYMAN   (0xF)
-; TURKS:         EF_AMDGPU_MACH_R600_TURKS    (0x10)
 ; GFX600:        EF_AMDGPU_MACH_AMDGCN_GFX600 (0x20)
 ; GFX601:        EF_AMDGPU_MACH_AMDGCN_GFX601 (0x21)
 ; GFX602:        EF_AMDGPU_MACH_AMDGCN_GFX602 (0x3A)

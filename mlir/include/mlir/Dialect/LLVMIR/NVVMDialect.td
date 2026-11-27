@@ -19,6 +19,7 @@ include "mlir/IR/DialectBase.td"
 def NVVM_Dialect : Dialect {
   let name = "nvvm";
   let cppNamespace = "::mlir::NVVM";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = ["LLVM::LLVMDialect"];
   let hasOperationAttrVerify = 1;
 
@@ -88,7 +89,7 @@ def NVVM_Dialect : Dialect {
                                            NamedAttribute argAttr) override;
   }];
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 #endif // NVVMIR_DIALECT

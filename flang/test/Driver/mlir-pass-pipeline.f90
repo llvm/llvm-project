@@ -128,7 +128,7 @@ end program
 
 ! ALL-NEXT: 'func.func' Pipeline
 ! ALL-NEXT:   CudaHeapAllocPromotion
-! ALL-NEXT:   MemoryAllocationOpt
+! ALL-NEXT:   AllocationPlacement
 
 ! ALL-NEXT: Inliner
 ! ALL-NEXT: SimplifyRegionLite
@@ -138,6 +138,7 @@ end program
 
 ! O2-NEXT: 'func.func' Pipeline
 ! O2-NEXT:   LoopInvariantCodeMotion
+! O2-NEXT:   LoopIdiomRecognize
 
 ! ALL-NEXT: PolymorphicOpConversion
 ! ALL-NEXT: 'func.func' Pipeline

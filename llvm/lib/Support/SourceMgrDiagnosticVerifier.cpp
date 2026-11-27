@@ -7,13 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SourceMgrDiagnosticVerifier.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-/// Given a diagnostic kind, return a human readable string for it.
-static StringRef getDiagKindStr(SourceMgr::DiagKind kind) {
+void SourceMgrDiagnosticVerifier::printMessage(raw_ostream &os,
+                                               const SourceMgr &mgr, SMLoc loc,
+                                               const Twine &msg,
+                                               ArrayRef<SMRange> ranges) {
+  mgr.printIncludeStackForDiagnostic(loc, os);
+  mgr.GetMessage(loc, SourceMgr::DK_Error, msg, ranges).print(nullptr, os);
+}
+
+StringRef
+SourceMgrDiagnosticVerifier::getDiagKindStr(SourceMgr::DiagKind kind) {
   switch (kind) {
   case SourceMgr::DK_Note:
     return "note";
@@ -32,9 +41,9 @@ bool SourceMgrDiagnosticVerifier::ExpectedDiag::emitError(
   if (fileLoc.isValid()) {
     SMRange range(fileLoc, SMLoc::getFromPointer(fileLoc.getPointer() +
                                                  substring.size()));
-    mgr.PrintMessage(os, fileLoc, SourceMgr::DK_Error, msg, range);
+    printMessage(os, mgr, fileLoc, msg, range);
   } else {
-    mgr.PrintMessage(os, fileLoc, SourceMgr::DK_Error, msg);
+    printMessage(os, mgr, fileLoc, msg);
   }
   return false;
 }
@@ -80,6 +89,26 @@ bool SourceMgrDiagnosticVerifier::ExpectedDiag::computeRegex(raw_ostream &os,
   return true;
 }
 
+static Regex buildExpectedRegex(ArrayRef<StringRef> prefixes) {
+  assert(!prefixes.empty() && "Diagnostic verifier needs at least one prefix");
+  std::string pattern = "(^|[^[:alnum:]_-])(";
+  llvm::interleave(
+      prefixes,
+      [&](StringRef prefix) {
+        assert(!prefix.empty() && "Diagnostic verifier prefix cannot be empty");
+        pattern += Regex::escape(prefix);
+      },
+      [&] { pattern += '|'; });
+  pattern += ")-(error|note|remark|warning)(-re)?"
+             "( *@([+-][0-9]+|above|below|unknown))?(:([0-9]+))?"
+             "( *@times\\(([0-9]+)\\))? *{{(.*)}}$";
+  return Regex(pattern);
+}
+
+SourceMgrDiagnosticVerifier::SourceMgrDiagnosticVerifier(
+    ArrayRef<StringRef> prefixes)
+    : expected(buildExpectedRegex(prefixes)) {}
+
 MutableArrayRef<SourceMgrDiagnosticVerifier::ExpectedDiag>
 SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
                                                   SourceMgr &mgr,
@@ -99,7 +128,7 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
   SmallVector<StringRef, 100> lines;
   buf->getBuffer().split(lines, '\n');
   for (unsigned lineNo = 0, e = lines.size(); lineNo < e; ++lineNo) {
-    SmallVector<StringRef, 4> matches;
+    SmallVector<StringRef, 12> matches;
     if (!expected.match(lines[lineNo].rtrim(), &matches)) {
       // Check for designators that apply to this line.
       if (!designatorsForNextLine.empty()) {
@@ -111,32 +140,45 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
       continue;
     }
 
-    // Point to the start of expected-*.
-    SMLoc expectedStart = SMLoc::getFromPointer(matches[0].data());
+    // Point to the start of <prefix>-<kind>.
+    SMLoc expectedStart = SMLoc::getFromPointer(matches[2].data());
 
     SourceMgr::DiagKind kind;
-    if (matches[1] == "error")
+    if (matches[3] == "error")
       kind = SourceMgr::DK_Error;
-    else if (matches[1] == "warning")
+    else if (matches[3] == "warning")
       kind = SourceMgr::DK_Warning;
-    else if (matches[1] == "remark")
+    else if (matches[3] == "remark")
       kind = SourceMgr::DK_Remark;
     else {
-      assert(matches[1] == "note");
+      assert(matches[3] == "note");
       kind = SourceMgr::DK_Note;
     }
-    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[5]);
+    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[11]);
 
     // Check to see if this is a regex match, i.e. it includes the `-re`.
-    if (!matches[2].empty() && !record.computeRegex(os, mgr)) {
+    if (!matches[4].empty() && !record.computeRegex(os, mgr)) {
       ok = false;
       continue;
     }
 
-    StringRef offsetMatch = matches[3];
-    if (!offsetMatch.empty()) {
-      offsetMatch = offsetMatch.drop_front(1);
+    if (!matches[8].empty() &&
+        (matches[8].getAsInteger(10, record.colNo) || record.colNo == 0)) {
+      record.emitError(os, mgr, "invalid column '" + matches[7] + "'");
+      ok = false;
+      continue;
+    }
 
+    if (!matches[10].empty() &&
+        (matches[10].getAsInteger(10, record.numExpected) ||
+         record.numExpected == 0)) {
+      record.emitError(os, mgr, "invalid count '" + matches[10] + "'");
+      ok = false;
+      continue;
+    }
+
+    StringRef offsetMatch = matches[6];
+    if (!offsetMatch.empty()) {
       // Get the integer value without the @ and +/- prefix.
       if (offsetMatch[0] == '+' || offsetMatch[0] == '-') {
         int offset;
@@ -147,6 +189,11 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
         else
           record.lineNo -= offset;
       } else if (offsetMatch.consume_front("unknown")) {
+        if (record.colNo != 0) {
+          record.emitError(os, mgr, "cannot specify a column with '@unknown'");
+          ok = false;
+          continue;
+        }
         // This is matching unknown locations.
         record.fileLoc = SMLoc();
         expectedUnknownLocDiags.emplace_back(std::move(record));
@@ -179,11 +226,10 @@ SourceMgrDiagnosticVerifier::getExpectedDiags(StringRef bufName) {
   return std::nullopt;
 }
 
-SourceMgrDiagnosticVerifier::MatchResult
-SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
-                                     SourceMgr::DiagKind kind, bool hasLoc,
-                                     const MemoryBuffer *buf, unsigned lineNo,
-                                     StringRef message, bool reportUnexpected) {
+SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
+    raw_ostream &os, SourceMgr &mgr, SourceMgr::DiagKind kind, bool hasLoc,
+    const MemoryBuffer *buf, unsigned lineNo, unsigned colNo, StringRef message,
+    bool reportUnexpected) {
   MutableArrayRef<ExpectedDiag> diags;
   if (hasLoc) {
     // If the buffer couldn't be resolved, `diags` stays empty: a diagnostic
@@ -202,21 +248,21 @@ SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
   // If we find something that is close then emit a more specific error.
   ExpectedDiag *nearMiss = nullptr;
 
-  // If this was an expected error, remember that we saw it and return.
   for (auto &e : diags) {
     // File line must match (unless it's an unknown location).
     if (hasLoc && e.lineNo != lineNo)
       continue;
-    if (e.match(message)) {
-      if (e.kind == kind) {
-        e.matched = true;
-        return MatchResult::Matched;
-      }
-
-      // If this only differs based on the diagnostic kind, then consider it
-      // to be a near miss.
-      nearMiss = &e;
+    if (hasLoc && e.colNo != 0 && e.colNo != colNo)
+      continue;
+    if (e.numSeen == e.numExpected || !e.match(message))
+      continue;
+    if (e.kind == kind) {
+      ++e.numSeen;
+      return MatchResult::Matched;
     }
+    // If this only differs based on the diagnostic kind, then consider it
+    // to be a near miss.
+    nearMiss = &e;
   }
 
   if (!reportUnexpected)
@@ -226,10 +272,10 @@ SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
 
   // Otherwise, emit an error for the near miss.
   if (nearMiss) {
-    mgr.PrintMessage(os, nearMiss->fileLoc, SourceMgr::DK_Error,
-                     "'" + getDiagKindStr(kind) +
-                         "' diagnostic emitted when expecting a '" +
-                         getDiagKindStr(nearMiss->kind) + "'");
+    printMessage(os, mgr, nearMiss->fileLoc,
+                 "'" + getDiagKindStr(kind) +
+                     "' diagnostic emitted when expecting a '" +
+                     getDiagKindStr(nearMiss->kind) + "'");
     return MatchResult::NearMiss;
   }
   return MatchResult::Unexpected;
@@ -238,12 +284,19 @@ SourceMgrDiagnosticVerifier::process(raw_ostream &os, SourceMgr &mgr,
 bool SourceMgrDiagnosticVerifier::verify(raw_ostream &os, SourceMgr &mgr) {
   // Verify that all expected errors were seen.
   auto checkExpectedDiags = [&](ExpectedDiag &diag) {
-    if (!diag.matched) {
+    if (diag.numSeen == diag.numExpected)
+      return;
+    std::string expectedMsg = ("expected " + getDiagKindStr(diag.kind) + " \"" +
+                               diag.substring + "\"")
+                                  .str();
+    if (diag.numExpected == 1)
+      diag.emitError(os, mgr, expectedMsg + " was not produced");
+    else
       diag.emitError(os, mgr,
-                     "expected " + getDiagKindStr(diag.kind) + " \"" +
-                         diag.substring + "\" was not produced");
-      ok = false;
-    }
+                     expectedMsg + " was produced " + Twine(diag.numSeen) +
+                         " times (expected " + Twine(diag.numExpected) +
+                         " times)");
+    ok = false;
   };
   for (auto &expectedDiagsPair : expectedDiagsPerFile)
     for (auto &diag : expectedDiagsPair.second)
@@ -251,5 +304,6 @@ bool SourceMgrDiagnosticVerifier::verify(raw_ostream &os, SourceMgr &mgr) {
   for (auto &diag : expectedUnknownLocDiags)
     checkExpectedDiags(diag);
   expectedDiagsPerFile.clear();
+  expectedUnknownLocDiags.clear();
   return ok;
 }

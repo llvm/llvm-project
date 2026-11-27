@@ -2,7 +2,7 @@
 ! by a newline; BACKSPACE must be able to reposition over such a record.
 
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
+! RUN: %t | FileCheck %s
 
 ! CHECK: PASS: unterm1
 ! CHECK: PASS: unterm2

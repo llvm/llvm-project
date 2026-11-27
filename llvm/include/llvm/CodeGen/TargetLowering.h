@@ -47,6 +47,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Alignment.h"
@@ -215,6 +216,10 @@ public:
 
 /// This base class for TargetLowering contains the SelectionDAG-independent
 /// parts that can be used from the rest of CodeGen.
+///
+/// Virtual methods here should express a fundamental property of the
+/// target. These should be reusable in different contexts, and not be used to
+/// control a specific transformation.
 class LLVM_ABI TargetLoweringBase {
 public:
   /// This enum indicates whether operations are valid for a target, and if not,
@@ -1039,18 +1044,17 @@ public:
   /// selects between the two kinds.  For example on X86 a scalar boolean should
   /// be zero extended from i1, while the elements of a vector of booleans
   /// should be sign extended from i1.
-  ///
-  /// Some cpus also treat floating point types the same way as they treat
-  /// vectors instead of the way they treat scalars.
-  BooleanContent getBooleanContents(bool isVec, bool isFloat) const {
-    if (isVec)
-      return BooleanVectorContents;
-    return isFloat ? BooleanFloatContents : BooleanContents;
+  BooleanContent getBooleanContents(bool isVec) const {
+    return isVec ? BooleanVectorContents : BooleanContents;
   }
 
   BooleanContent getBooleanContents(EVT Type) const {
-    return getBooleanContents(Type.isVector(), Type.isFloatingPoint());
+    return getBooleanContents(Type.isVector());
   }
+
+  // MVT::SimpleValueType would otherwise convert to bool and pick the isVec
+  // overload. Use getBooleanContents(EVT) or pass isVec.
+  BooleanContent getBooleanContents(MVT::SimpleValueType) const = delete;
 
   /// Promote the given target boolean to a target boolean of the given type.
   /// A target boolean is an integer value, not necessarily of type i1, the bits
@@ -1225,6 +1229,18 @@ public:
     }
   }
 
+  /// For vector types that are widened, this returns the type reached by
+  /// widening repeatedly, i.e. the first type whose action is not
+  /// TypeWidenVector. Unlike getLegalTypeToTransformTo, this does not follow
+  /// other actions, so the result may still be illegal (e.g. if it is split).
+  /// For vector types that are not widened, this is an identity function.
+  EVT getTypeToWidenTo(LLVMContext &Context, EVT VT) const {
+    assert(VT.isVector());
+    while (getTypeAction(Context, VT) == TypeWidenVector)
+      VT = getTypeToTransformTo(Context, VT);
+    return VT;
+  }
+
   /// Vector types are broken down into some number of legal first class types.
   /// For example, EVT::v8f32 maps to 2 EVT::v4f32 with Altivec or SSE1, or 8
   /// promoted EVT::f64 values with the X86 FP stack.  Similarly, EVT::v2i64
@@ -1272,6 +1288,14 @@ public:
     // value representing memory location
     PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
 
+    // Cache hint metadata for this memory access.
+    const MDNode *memCacheHint = nullptr;
+
+    void setPointerOperand(const CallBase &I, unsigned ArgNo) {
+      ptrVal = I.getArgOperand(ArgNo);
+      memCacheHint = getMemCacheHint(I, ArgNo);
+    }
+
     // Fallback address space for use if ptrVal is nullptr. std::nullopt means
     // unknown address space.
     std::optional<unsigned> fallbackAddressSpace;
@@ -1314,6 +1338,12 @@ public:
     return FPImmAction::ConstantPool;
   }
 
+  /// \copydoc getFPImmAction(const APFloat&,EVT,bool) const
+  virtual FPImmAction getFPImmAction(const APFloat & /*Imm*/, LLT /*Ty*/,
+                                     bool ForCodeSize = false) const {
+    return FPImmAction::ConstantPool;
+  }
+
   /// Returns true if the specified FP immediate can be materialized without a
   /// load from the constant pool.
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -1328,12 +1358,6 @@ public:
   virtual bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const {
     return true;
   }
-
-  /// Returns true if the operation can trap for the value type.
-  ///
-  /// VT must be a legal type. By default, we optimistically assume most
-  /// operations don't trap except for integer divide and remainder.
-  virtual bool canOpTrap(unsigned Op, EVT VT) const;
 
   /// Similar to isShuffleMaskLegal. Targets can use this to indicate if there
   /// is a suitable VECTOR_SHUFFLE that can be used to replace a VAND with a
@@ -1786,6 +1810,10 @@ public:
                                            EVT InputVT) const {
     assert(Opc == ISD::PARTIAL_REDUCE_SMLA || Opc == ISD::PARTIAL_REDUCE_UMLA ||
            Opc == ISD::PARTIAL_REDUCE_SUMLA || Opc == ISD::PARTIAL_REDUCE_FMLA);
+    // If the inputs aren't simple (e.g. non-power-of-two element type), just
+    // expand.
+    if (!AccVT.isSimple() || !InputVT.isSimple())
+      return Expand;
     PartialReduceActionTypes Key = {Opc, AccVT.getSimpleVT().SimpleTy,
                                     InputVT.getSimpleVT().SimpleTy};
     auto It = PartialReduceMLAActions.find(Key);
@@ -2249,10 +2277,17 @@ public:
                                   const LibcallLoweringInfo &Libcalls) const;
 
 protected:
-  Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
-                                            bool UseTLS) const;
+  Value *
+  getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
+                                     const LibcallLoweringInfo &Libcalls) const;
 
 public:
+  /// Emits a call to the libcall returning the address of the unsafe stack
+  /// pointer. Returns nullptr if the libcall is unavailable.
+  Value *
+  getSafeStackPointerAddressCall(IRBuilderBase &IRB,
+                                 const LibcallLoweringInfo &Libcalls) const;
+
   /// Returns the target-specific address of the unsafe stack pointer.
   virtual Value *
   getSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -2532,7 +2567,8 @@ public:
 
   /// Returns how the given (atomic) load should be expanded by the
   /// IR-level AtomicExpand pass.
-  virtual AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+  virtual AtomicExpansionKind
+  shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
     return AtomicExpansionKind::None;
   }
 
@@ -2547,7 +2583,8 @@ public:
   /// Returns how the given (atomic) store should be expanded by the IR-level
   /// AtomicExpand pass into. For instance AtomicExpansionKind::CustomExpand
   /// will try to use an atomicrmw xchg.
-  virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  virtual AtomicExpansionKind
+  shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }
 
@@ -2716,19 +2753,9 @@ public:
   // the derived class constructor to configure this object for the target.
   //
 protected:
-  /// Specify how the target extends the result of integer and floating point
-  /// boolean values from i1 to a wider type.  See getBooleanContents.
-  void setBooleanContents(BooleanContent Ty) {
-    BooleanContents = Ty;
-    BooleanFloatContents = Ty;
-  }
-
-  /// Specify how the target extends the result of integer and floating point
-  /// boolean values from i1 to a wider type.  See getBooleanContents.
-  void setBooleanContents(BooleanContent IntTy, BooleanContent FloatTy) {
-    BooleanContents = IntTy;
-    BooleanFloatContents = FloatTy;
-  }
+  /// Specify how the target extends the result of a boolean value from i1 to a
+  /// wider type.  See getBooleanContents.
+  void setBooleanContents(BooleanContent Ty) { BooleanContents = Ty; }
 
   /// Specify how the target extends the result of a vector boolean value from a
   /// vector of i1 to a wider type.  See getBooleanContents.
@@ -3190,7 +3217,6 @@ public:
     case ISD::SADDO:
     case ISD::UADDO:
     case ISD::ADDC:
-    case ISD::ADDE:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
     case ISD::FMINNUM:
@@ -3821,14 +3847,6 @@ public:
     return RTLIB::RuntimeLibcallsInfo::getLibcallImplName(Call);
   }
 
-  RTLIB::LibcallImpl getMemcpyImpl() const { return Libcalls.getMemcpyImpl(); }
-
-  /// Get the CallingConv that should be used for the specified libcall
-  /// implementation.
-  CallingConv::ID getLibcallImplCallingConv(RTLIB::LibcallImpl Call) const {
-    return Libcalls.getLibcallImplCallingConv(Call);
-  }
-
   /// Get the CallingConv that should be used for the specified libcall.
   // FIXME: Remove this wrapper and directly use the used LibcallImpl
   CallingConv::ID getLibcallCallingConv(RTLIB::Libcall Call) const {
@@ -3875,10 +3893,6 @@ private:
   /// Information about the contents of the high-bits in boolean values held in
   /// a type wider than i1. See getBooleanContents.
   BooleanContent BooleanContents;
-
-  /// Information about the contents of the high-bits in boolean values held in
-  /// a type wider than i1. See getBooleanContents.
-  BooleanContent BooleanFloatContents;
 
   /// Information about the contents of the high-bits in boolean vector values
   /// when the element type is wider than i1. See getBooleanContents.
@@ -4345,6 +4359,14 @@ public:
     return false;
   }
 
+  /// Return true if a function used as an inline asm address operand (e.g.
+  /// "p", or a call target that isInlineAsmTargetBranch() recognizes) can be
+  /// the bare function symbol, in an operand of kind InlineAsm::Kind::Func.
+  /// The target then has to select the symbol as an address and print it with
+  /// AsmPrinter::PrintAsmOperand(). Otherwise the function's address is
+  /// computed like that of any other global.
+  virtual bool supportsInlineAsmFuncOperands() const { return false; }
+
   bool isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
                             SDValue &Chain) const;
 
@@ -4385,10 +4407,7 @@ public:
                                           EVT RetVT, ArrayRef<SDValue> Ops,
                                           MakeLibCallOptions CallOptions,
                                           const SDLoc &dl,
-                                          SDValue Chain = SDValue()) const {
-    return makeLibCall(DAG, getLibcallImpl(LC), RetVT, Ops, CallOptions, dl,
-                       Chain);
-  }
+                                          SDValue Chain = SDValue()) const;
 
   /// Build a call argument list for \p FuncTy, taking the argument node values
   /// from \p Ops and the parameter types and ABI attributes from \p FuncTy and
@@ -5786,6 +5805,13 @@ public:
   /// \returns The expansion if successful, SDValue() otherwise
   SDValue expandCLMUL(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand MODF node into fractional and integer parts.
+  /// \param N Node to expand
+  /// \param Results Vector to store the resulting fractional and integer parts
+  /// \returns true if the node has been expanded, false if it has not
+  bool expandMODF(SDNode *N, SelectionDAG &DAG,
+                  SmallVectorImpl<SDValue> &Results) const;
+
   /// Expand parallel bit extract (compress).
   /// \param N Node to expand
   /// \returns The expansion if successful, SDValue() otherwise
@@ -6124,6 +6150,9 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_SHUFFLE_VAR into variable-index element extracts.
+  SDValue expandVECTOR_SHUFFLE_VAR(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand a CTTZ_ELTS or CTTZ_ELTS_ZERO_POISON by calculating (VL - i) for
   /// each active lane (i), getting the maximum and subtracting it from VL.

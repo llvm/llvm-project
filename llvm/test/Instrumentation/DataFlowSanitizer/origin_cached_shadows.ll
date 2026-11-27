@@ -44,7 +44,7 @@ define void @cached_shadows(double %arg) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = load i32, ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[TMP18:%.*]] = load i64, ptr [[TMP14]], align 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = shl i64 [[TMP18]], 32
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP16]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[TMP16]], i64 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = load i32, ptr [[TMP20]], align 8
 ; CHECK-NEXT:    [[TMP22:%.*]] = lshr i64 [[TMP18]], 32
 ; CHECK-NEXT:    [[TMP23:%.*]] = or i64 [[TMP18]], [[TMP22]]
@@ -65,7 +65,7 @@ define void @cached_shadows(double %arg) {
 ; CHECK-NEXT:    [[TMP36:%.*]] = load i32, ptr [[TMP35]], align 8
 ; CHECK-NEXT:    [[TMP37:%.*]] = load i64, ptr [[TMP33]], align 1
 ; CHECK-NEXT:    [[TMP38:%.*]] = shl i64 [[TMP37]], 32
-; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i32, ptr [[TMP35]], i64 1
+; CHECK-NEXT:    [[TMP39:%.*]] = getelementptr i8, ptr [[TMP35]], i64 4
 ; CHECK-NEXT:    [[TMP40:%.*]] = load i32, ptr [[TMP39]], align 8
 ; CHECK-NEXT:    [[TMP41:%.*]] = lshr i64 [[TMP37]], 32
 ; CHECK-NEXT:    [[TMP42:%.*]] = or i64 [[TMP37]], [[TMP41]]
@@ -101,7 +101,7 @@ define void @cached_shadows(double %arg) {
 ; CHECK-NEXT:    [[TMP63:%.*]] = insertelement <8 x i8> [[TMP62]], i8 [[TMP47]], i32 5
 ; CHECK-NEXT:    [[TMP64:%.*]] = insertelement <8 x i8> [[TMP63]], i8 [[TMP47]], i32 6
 ; CHECK-NEXT:    [[TMP65:%.*]] = insertelement <8 x i8> [[TMP64]], i8 [[TMP47]], i32 7
-; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr <8 x i8>, ptr [[TMP55]], i32 0
+; CHECK-NEXT:    [[TMP66:%.*]] = getelementptr i8, ptr [[TMP55]], i64 0
 ; CHECK-NEXT:    store <8 x i8> [[TMP65]], ptr [[TMP66]], align 1
 ; CHECK-NEXT:    [[_DFSCMP:%.*]] = icmp ne i8 [[TMP47]], 0
 ; CHECK-NEXT:    br i1 [[_DFSCMP]], label %[[BB67:.*]], label %[[BB72:.*]], !prof [[PROF1:![0-9]+]]

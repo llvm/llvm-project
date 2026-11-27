@@ -91,11 +91,33 @@ define i32 @pat3_swap(i32 %a, i32 %b) nounwind {
   ret i32 %or
 }
 
+define i32 @pat3_complementary(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: pat3_complementary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bstrins.w $a0, $a1, 15, 0
+; CHECK-NEXT:    ret
+  %high = and i32 %a, -65536
+  %low = and i32 %b, 65535
+  %or = or i32 %low, %high
+  ret i32 %or
+}
+
+define i32 @pat3_complementary_swap(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: pat3_complementary_swap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bstrins.w $a0, $a1, 15, 0
+; CHECK-NEXT:    ret
+  %high = and i32 %a, -65536
+  %low = and i32 %b, 65535
+  %or = or i32 %high, %low
+  ret i32 %or
+}
+
 define i32 @pat3_positive_mask0(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: pat3_positive_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli.w $a1, $a1, 28
-; CHECK-NEXT:    bstrins.w $a0, $a1, 31, 28
+; CHECK-NEXT:    bstrins.w $a1, $a0, 27, 0
+; CHECK-NEXT:    move $a0, $a1
 ; CHECK-NEXT:    ret
   %and1 = and i32 %a, 268435455  ; 0x0fffffff
   %and2 = and i32 %b, 4026531840 ; 0xf0000000

@@ -42,8 +42,8 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; PREDICATE-EMPTY:
 ; PREDICATE-NEXT:    if.then:
 ; PREDICATE-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
-; PREDICATE-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
-; PREDICATE-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
+; PREDICATE-NEXT:      EMIT ir<%t> = trunc ir<%add> to i16
+; PREDICATE-NEXT:      EMIT ir<%ext> = sext ir<%t> to i64
 ; PREDICATE-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
 ; PREDICATE-NEXT:      EMIT store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; PREDICATE-NEXT:    Successor(s): latch
@@ -85,14 +85,14 @@ define void @predicated_block(ptr noalias %a, ptr noalias %idx) {
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    if.then:
 ; CONSTRUCT-NEXT:      EMIT ir<%add> = add ir<%i>, ir<1>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
-; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%add> to i16
-; CONSTRUCT-NEXT:      EMIT-SCALAR ir<%ext> = sext ir<%t> to i64
+; CONSTRUCT-NEXT:      EMIT ir<%t> = trunc ir<%add> to i16
+; CONSTRUCT-NEXT:      EMIT ir<%ext> = sext ir<%t> to i64
 ; CONSTRUCT-NEXT:      EMIT ir<%gep.a> = getelementptr inbounds ir<%a>, ir<%ext>
 ; CONSTRUCT-NEXT:      REPLICATE store ir<%add>, ir<%gep.a>, ir<%cmp> (!vplan.execution.frequency 4611686018427387903 (25%))
 ; CONSTRUCT-NEXT:    Successor(s): latch
 ; CONSTRUCT-EMPTY:
 ; CONSTRUCT-NEXT:    latch:
-; CONSTRUCT-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CONSTRUCT-NEXT:      CLONE ir<%iv.next> = add ir<%iv>, ir<1>
 ; CONSTRUCT-NEXT:      CLONE ir<%ec> = icmp eq ir<%iv.next>, ir<1024>
 ; CONSTRUCT-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CONSTRUCT-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
@@ -296,7 +296,7 @@ define void @selects(ptr noalias %a, ptr noalias %b, i1 %c, i64 %n) {
 ; CONSTRUCT-NEXT:      CLONE ir<%gep.b> = getelementptr inbounds ir<%b>, ir<%iv>
 ; CONSTRUCT-NEXT:      vp<[[VP6:%[0-9]+]]> = vector-pointer inbounds i32, ir<%gep.b>, ir<1>
 ; CONSTRUCT-NEXT:      WIDEN store vp<[[VP6]]>, ir<%sel.uniform>
-; CONSTRUCT-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CONSTRUCT-NEXT:      CLONE ir<%iv.next> = add ir<%iv>, ir<1>
 ; CONSTRUCT-NEXT:      CLONE ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
 ; CONSTRUCT-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CONSTRUCT-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>

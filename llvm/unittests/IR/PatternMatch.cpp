@@ -1968,21 +1968,21 @@ TEST_F(PatternMatchTest, FloatingPointFNeg) {
   Value *Match;
 
   // Test FNeg(1.0)
-  EXPECT_TRUE(match(V, m_FNeg(m_Value(Match))));
+  EXPECT_TRUE(match(V, m_FNegOrFSubNegZero(m_Value(Match))));
   EXPECT_EQ(One, Match);
 
   // Test FSub(-0.0, 1.0)
-  EXPECT_TRUE(match(V1, m_FNeg(m_Value(Match))));
+  EXPECT_TRUE(match(V1, m_FNegOrFSubNegZero(m_Value(Match))));
   EXPECT_EQ(One, Match);
 
   // Test FSub(0.0, 1.0)
-  EXPECT_FALSE(match(V2, m_FNeg(m_Value(Match))));
+  EXPECT_FALSE(match(V2, m_FNegOrFSubNegZero(m_Value(Match))));
   cast<Instruction>(V2)->setHasNoSignedZeros(true);
-  EXPECT_TRUE(match(V2, m_FNeg(m_Value(Match))));
+  EXPECT_TRUE(match(V2, m_FNegOrFSubNegZero(m_Value(Match))));
   EXPECT_EQ(One, Match);
 
   // Test FAdd(-0.0, 1.0)
-  EXPECT_FALSE(match(V3, m_FNeg(m_Value(Match))));
+  EXPECT_FALSE(match(V3, m_FNegOrFSubNegZero(m_Value(Match))));
 }
 
 TEST_F(PatternMatchTest, CondBranchTest) {
@@ -2751,24 +2751,26 @@ TEST_F(PatternMatchTest, ConstExpr) {
 }
 
 TEST_F(PatternMatchTest, PtrAdd) {
+  DataLayout DL;
   Type *PtrTy = PointerType::getUnqual(Ctx);
   Type *IdxTy = Type::getInt64Ty(Ctx);
   Constant *Null = Constant::getNullValue(PtrTy);
   Constant *Offset = ConstantInt::get(IdxTy, 42);
   Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
+  IRB.disableGEPCanonicalization();
   Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
   Value *PtrAddConst = ConstantExpr::getPtrAdd(Null, Offset);
 
   Value *A, *B;
-  EXPECT_TRUE(match(PtrAdd, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_TRUE(match(PtrAdd, m_PtrAdd(DL, m_Value(A), m_Value(B))));
   EXPECT_EQ(A, Null);
   EXPECT_EQ(B, Offset);
 
-  EXPECT_TRUE(match(PtrAddConst, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_TRUE(match(PtrAddConst, m_PtrAdd(DL, m_Value(A), m_Value(B))));
   EXPECT_EQ(A, Null);
   EXPECT_EQ(B, Offset);
 
-  EXPECT_FALSE(match(OtherGEP, m_PtrAdd(m_Value(A), m_Value(B))));
+  EXPECT_FALSE(match(OtherGEP, m_PtrAdd(DL, m_Value(A), m_Value(B))));
 }
 
 TEST_F(PatternMatchTest, ShiftOrSelf) {

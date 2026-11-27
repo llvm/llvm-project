@@ -22,12 +22,11 @@
   }
 
   attributes #0 = { "amdgpu-waves-per-eu"="10,10" }
----
+...
 
 ---
 name:            recolor_impossible_hint
 alignment:       1
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vreg_256, preferred-register: '$vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7' }
   - { id: 1, class: vreg_256, preferred-register: '$vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8' }

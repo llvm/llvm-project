@@ -243,3 +243,21 @@ define i16 @negative_multiuse_and(ptr %p) nounwind {
   %result = or i16 %hi.shift, %lo.ext
   ret i16 %result
 }
+
+; PR244804: The high i64 parts of %mask fold to 0 late, leaving an OR of unfolded `and X, 0` nodes.
+define i1 @negative_all_bytes_zero(i320 %x, i1 %b) {
+; CHECK-LABEL: negative_all_bytes_zero:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    negl %edi
+; CHECK-NEXT:    andl $1, %r9d
+; CHECK-NEXT:    movl $2, %eax
+; CHECK-NEXT:    subl %r9d, %eax
+; CHECK-NEXT:    testl %eax, %edi
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    retq
+  %neg = sub i320 0, %x
+  %mask = select i1 %b, i320 1, i320 2
+  %and = and i320 %neg, %mask
+  %cmp = icmp ne i320 %and, 0
+  ret i1 %cmp
+}

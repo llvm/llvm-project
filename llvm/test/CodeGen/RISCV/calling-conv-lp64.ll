@@ -83,6 +83,7 @@ define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) 
 ; RV64I-FPELIM-LABEL: callee_float_on_stack:
 ; RV64I-FPELIM:       # %bb.0:
 ; RV64I-FPELIM-NEXT:    lw a0, 0(sp)
+; RV64I-FPELIM-NEXT:    add a0, a6, a0
 ; RV64I-FPELIM-NEXT:    ret
 ;
 ; RV64I-WITHFP-LABEL: callee_float_on_stack:
@@ -92,6 +93,7 @@ define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) 
 ; RV64I-WITHFP-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64I-WITHFP-NEXT:    addi s0, sp, 16
 ; RV64I-WITHFP-NEXT:    lw a0, 16(sp)
+; RV64I-WITHFP-NEXT:    add a0, a6, a0
 ; RV64I-WITHFP-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-WITHFP-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-WITHFP-NEXT:    addi sp, sp, 16
@@ -100,7 +102,7 @@ define i64 @callee_float_on_stack(i128 %a, i128 %b, i128 %c, i128 %d, float %e) 
   %2 = bitcast float %e to i32
   %3 = sext i32 %2 to i64
   %4 = add i64 %1, %3
-  ret i64 %3
+  ret i64 %4
 }
 
 define i64 @caller_float_on_stack() nounwind {

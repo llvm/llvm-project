@@ -452,7 +452,7 @@ class VOP_MADMK <ValueType vt> : VOP_MADK_Base<vt> {
   field dag Ins32 = !if(!eq(vt.Size, 32),
                         (ins VSrc_f32:$src0, ImmOpType:$imm, VGPR_32:$src1),
                         !if(!eq(vt.Size, 64),
-                            (ins VSrc_f64:$src0, ImmOpType:$imm, VReg_64:$src1),
+                            (ins VSrc_f64:$src0, ImmOpType:$imm, VReg_64_AlignTarget:$src1),
                             (ins VSrc_f16:$src0, ImmOpType:$imm, VGPR_32:$src1)));
   field dag InsVOPDX = (ins VSrc_f32:$src0X, ImmOpType:$imm, VGPR_32:$vsrc1X);
   let InsVOPDX_immX = (ins VSrc_f32:$src0X, ImmOpType:$immX, VGPR_32:$vsrc1X);
@@ -950,7 +950,7 @@ defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
 let isCommutable = 0 in
 defm V_SUB_U64 : VOP2Inst <"v_sub_nc_u64", VOP_I64_I64_I64_ARITH>;
 } // End SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit], GFX1250BlockingCycles = 2, HasGFX1250BlockingCycles = true
-let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble],
+let SubtargetPredicate = HasVMulU64Inst, SchedRW = [WriteDouble],
     GFX1250BlockingCycles = 32, HasGFX1250BlockingCycles = true in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isReMaterializable = 1
@@ -2874,15 +2874,14 @@ let DecoderNamespace = "GFX90A" in {
           let DecoderNamespace = "GFX9";
         }
   }
-} // End AssemblerPredicate = isGFX90APlus, DecoderNamespace = "GFX90A"
+} // End DecoderNamespace = "GFX90A"
 
 let SubtargetPredicate = HasFmacF64Inst, OtherPredicates = [isGFX9Only] in {
   defm V_FMAC_F64       : VOP2_Real_e32e64_gfx90a <0x4>;
 } // End SubtargetPredicate = HasFmacF64Inst
 
-let IsSingle = 1 in {
+let AssemblerPredicate = isGFX90APlus, IsSingle = 1 in
   defm V_MUL_LEGACY_F32 : VOP2_Real_e64_gfx90a <0x2a1>;
-}
 
 let SubtargetPredicate = HasFmaakFmamkF32Insts in {
 defm V_FMAMK_F32        : VOP2_Real_MADK_gfx940 <0x17>;

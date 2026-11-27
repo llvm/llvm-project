@@ -98,7 +98,7 @@ define void @test2(ptr %this) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL1_I_I:%.*]] = tail call i1 @test2_fn4(i8 undef)
 ; CHECK-NEXT:    br i1 [[CALL1_I_I]], label [[COND_TRUE_I_I:%.*]], label [[COMMON_RET:%.*]]
-; CHECK:       cond.true.i.i:
+; CHECK:       test2_fn3.exit.i:
 ; CHECK-NEXT:    [[CALL2_I_I:%.*]] = load i64, ptr inttoptr (i64 8 to ptr), align 8
 ; CHECK-NEXT:    [[COND38:%.*]] = icmp eq i64 [[CALL2_I_I]], 13
 ; CHECK-NEXT:    br i1 [[COND38]], label [[TEST2_FN2_EXIT14:%.*]], label [[COMMON_RET]]

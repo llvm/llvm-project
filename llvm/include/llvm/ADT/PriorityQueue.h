@@ -14,6 +14,7 @@
 #ifndef LLVM_ADT_PRIORITYQUEUE_H
 #define LLVM_ADT_PRIORITYQUEUE_H
 
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <queue>
 
@@ -22,10 +23,10 @@ namespace llvm {
 /// PriorityQueue - This class behaves like std::priority_queue and
 /// provides a few additional convenience functions.
 ///
-template<class T,
-         class Sequence = std::vector<T>,
-         class Compare = std::less<typename Sequence::value_type> >
-class PriorityQueue : public std::priority_queue<T, Sequence, Compare> {
+template <class T, class Sequence = std::vector<T>,
+          class Compare = std::less<typename Sequence::value_type>>
+class LLVM_ATTRIBUTE_WARN_UNUSED PriorityQueue
+    : public std::priority_queue<T, Sequence, Compare> {
 public:
   explicit PriorityQueue(const Compare &compare = Compare(),
                          const Sequence &sequence = Sequence())

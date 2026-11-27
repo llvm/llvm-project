@@ -197,7 +197,6 @@ public:
   Instruction *visitLandingPadInst(LandingPadInst &LI);
   Instruction *visitVAEndInst(VAEndInst &I);
   Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI);
-  bool freezeOtherUses(FreezeInst &FI);
   Instruction *foldFreezeIntoRecurrence(FreezeInst &I, PHINode *PN);
   Instruction *visitFreeze(FreezeInst &I);
 
@@ -561,6 +560,11 @@ public:
   Value *SimplifySelectsFeedingBinaryOp(BinaryOperator &I, Value *LHS,
                                         Value *RHS);
 
+  /// Given that \p CondVal is known to be \p CondIsTrue, try to simplify
+  /// \p SI to one of its arms.
+  Value *simplifyNestedSelectsUsingImpliedCond(SelectInst &SI, Value *CondVal,
+                                               bool CondIsTrue);
+
   // If `I` has operand `(ctpop (not x))`, fold `I` with `(sub nuw nsw
   // BitWidth(x), (ctpop x))`.
   Instruction *tryFoldInstWithCtpopWithNot(Instruction *I);
@@ -738,10 +742,8 @@ public:
   Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,
                               const ICmpInst &I);
   bool foldAllocaCmp(AllocaInst *Alloca);
-  Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
-                                            GetElementPtrInst *GEP,
-                                            CmpPredicate Pred, Constant *RHSC,
-                                            Instruction &CtxI,
+  Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI, CmpPredicate Pred,
+                                            Constant *RHSC, Instruction &CtxI,
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);
@@ -759,6 +761,10 @@ public:
   Instruction *foldICmpInstWithConstantNotInt(ICmpInst &Cmp);
   Instruction *foldICmpInstWithConstantAllowPoison(ICmpInst &Cmp,
                                                    const APInt &C);
+  /// Match Op0 Pred Op1 on binops with a removable common operand.
+  bool matchCommonBinOpOperands(Value *Op0, Value *Op1, CmpInst::Predicate Pred,
+                                Value *&LHS, Value *&RHS,
+                                const SimplifyQuery &Q);
   Instruction *foldICmpBinOp(ICmpInst &Cmp, const SimplifyQuery &SQ);
   Instruction *foldICmpWithMinMax(Instruction &I, MinMaxIntrinsic *MinMax,
                                   Value *Z, CmpPredicate Pred);

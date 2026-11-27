@@ -16,6 +16,8 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MathExtras.h"
 #include <optional>
 
@@ -196,6 +198,68 @@ static void verifySPDecompress(VerifierSupport &VS, CallBase &Call) {
         "invalid llvm.nvvm.spdecompress layout", &Call);
 }
 
+// tcgen05.ld{.red}.spcompress reads 32x32b.num f32 elements per thread and
+// keeps two of every four of them in cdata.
+static void verifyTcgen05LdSPCompress(VerifierSupport &VS, Intrinsic::ID ID,
+                                      CallBase &Call) {
+  StringRef Name = Intrinsic::getBaseName(ID);
+  auto *ResultTy = cast<StructType>(Call.getType());
+  auto MDataRegs = getSPMetadataRegisters(ResultTy->getElementType(0));
+  auto *CDataTy = dyn_cast<FixedVectorType>(ResultTy->getElementType(1));
+  Check(MDataRegs && CDataTy && CDataTy->getElementType()->isFloatTy(),
+        formatv("invalid {} result type", Name), &Call);
+
+  // The repeat factor num is .x4, .x8, ..., .x128 and selects num / 2
+  // elements, each of which has a 2-bit (.b2) index in mdata.
+  unsigned RepeatFactor = 2 * CDataTy->getNumElements();
+  Check(isPowerOf2_32(RepeatFactor) && RepeatFactor >= 4 &&
+            RepeatFactor <= 128 && *MDataRegs == divideCeil(RepeatFactor, 32),
+        formatv("invalid {} layout", Name), &Call);
+}
+
+// Returns true if the NVVM fadd/fmul/fma intrinsic with the given operand type
+// and rounding mode corresponds to a PTX instruction.
+//
+// TODO: Replace this with explicit type constraints on the intrinsic
+// definitions once https://github.com/llvm/llvm-project/pull/172442 lands.
+static bool isSupportedFPArith(Intrinsic::ID ID, Type *Ty,
+                               APFloat::roundingMode RoundingMode) {
+  const bool IsVector = Ty->isVectorTy();
+  const auto *VTy = dyn_cast<FixedVectorType>(Ty);
+  if (IsVector && (!VTy || VTy->getNumElements() != 2))
+    return false;
+
+  const bool IsRN = RoundingMode == APFloat::rmNearestTiesToEven;
+  const bool IsFTZ = nvvm::FPArithShouldFTZ(ID);
+  const bool IsSat = nvvm::FPArithIsSaturating(ID);
+  const bool IsRelu = nvvm::FPArithIsRelu(ID);
+  switch (Ty->getScalarType()->getTypeID()) {
+  case Type::HalfTyID:
+    return IsRN;
+  case Type::BFloatTyID:
+    return IsRN && !IsSat && !IsFTZ;
+  case Type::FloatTyID:
+    return !IsRelu && !(IsVector && IsSat);
+  case Type::DoubleTyID:
+    return !IsVector && !IsSat && !IsFTZ && !IsRelu;
+  default:
+    return false;
+  }
+}
+
+static void verifyFPArith(VerifierSupport &VS, Intrinsic::ID ID,
+                          CallBase &Call) {
+  // The rounding mode is the trailing operand of all these intrinsics.
+  const APFloat::roundingMode RoundingMode =
+      nvvm::GetRoundingModeFromImmArg(Call.getArgOperand(Call.arg_size() - 1));
+  Type *Ty = Call.getType();
+  Check(isSupportedFPArith(ID, Ty, RoundingMode),
+        formatv("{} with rounding mode {} and operand type {} is not supported",
+                Intrinsic::getBaseName(ID),
+                nvvm::GetRoundingModeName(RoundingMode), *Ty),
+        &Call);
+}
+
 void llvm::verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
                                    CallBase &Call) {
   switch (ID) {
@@ -206,6 +270,26 @@ void llvm::verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     return;
   case Intrinsic::nvvm_spdecompress:
     verifySPDecompress(VS, Call);
+    return;
+  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
+  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b:
+    verifyTcgen05LdSPCompress(VS, ID, Call);
+    return;
+  case Intrinsic::nvvm_fadd:
+  case Intrinsic::nvvm_fadd_ftz:
+  case Intrinsic::nvvm_fadd_sat:
+  case Intrinsic::nvvm_fadd_ftz_sat:
+  case Intrinsic::nvvm_fma:
+  case Intrinsic::nvvm_fma_ftz:
+  case Intrinsic::nvvm_fma_sat:
+  case Intrinsic::nvvm_fma_ftz_sat:
+  case Intrinsic::nvvm_fma_relu:
+  case Intrinsic::nvvm_fma_ftz_relu:
+  case Intrinsic::nvvm_fmul:
+  case Intrinsic::nvvm_fmul_ftz:
+  case Intrinsic::nvvm_fmul_sat:
+  case Intrinsic::nvvm_fmul_ftz_sat:
+    verifyFPArith(VS, ID, Call);
     return;
   }
 }

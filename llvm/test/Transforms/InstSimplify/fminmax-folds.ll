@@ -891,28 +891,22 @@ define void @minmax_minmax_xy_maxmin_yx(double %x, double %y, ptr %minnum_res, p
 ;###############################################################
 define void @minmax_minmax_minmax_xy_z_x(float %x, float %y, float %z, ptr %minnum_res, ptr %maxnum_res, ptr %minimum_res, ptr %maximum_res, ptr %minimumnum_res, ptr %maximumnum_res) {
 ; CHECK-LABEL: @minmax_minmax_minmax_xy_z_x(
-; CHECK-NEXT:    [[MINNUM_XY:%.*]] = call float @llvm.minnum.f32(float [[X:%.*]], float [[Y:%.*]])
-; CHECK-NEXT:    [[MINNUM_XYZ:%.*]] = call float @llvm.minnum.f32(float [[MINNUM_XY]], float [[Z:%.*]])
-; CHECK-NEXT:    [[MINNUM_NESTED:%.*]] = call float @llvm.minnum.f32(float [[MINNUM_XYZ]], float [[X]])
+; CHECK-NEXT:    [[MINNUM_XYZ:%.*]] = call float @llvm.minnum.f32(float [[MINNUM_XY:%.*]], float [[Z:%.*]])
+; CHECK-NEXT:    [[MINNUM_NESTED:%.*]] = call float @llvm.minnum.f32(float [[MINNUM_XYZ]], float [[X:%.*]])
 ; CHECK-NEXT:    store float [[MINNUM_NESTED]], ptr [[MINNUM_RES:%.*]], align 4
-; CHECK-NEXT:    [[MAXNUM_XY:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
-; CHECK-NEXT:    [[MAXNUM_XYZ:%.*]] = call float @llvm.maxnum.f32(float [[MAXNUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MAXNUM_XYZ:%.*]] = call float @llvm.maxnum.f32(float [[MINNUM_XY]], float [[Z]])
 ; CHECK-NEXT:    [[MAXNUM_NESTED:%.*]] = call float @llvm.maxnum.f32(float [[MAXNUM_XYZ]], float [[X]])
 ; CHECK-NEXT:    store float [[MAXNUM_NESTED]], ptr [[MAXNUM_RES:%.*]], align 4
-; CHECK-NEXT:    [[MINIMUM_XY:%.*]] = call float @llvm.minimum.f32(float [[X]], float [[Y]])
-; CHECK-NEXT:    [[MINIMUM_XYZ:%.*]] = call float @llvm.minimum.f32(float [[MINIMUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MINIMUM_XYZ:%.*]] = call float @llvm.minimum.f32(float [[MINNUM_XY]], float [[Z]])
 ; CHECK-NEXT:    [[MINIMUM_NESTED:%.*]] = call float @llvm.minimum.f32(float [[MINIMUM_XYZ]], float [[X]])
 ; CHECK-NEXT:    store float [[MINIMUM_NESTED]], ptr [[MINIMUM_RES:%.*]], align 4
-; CHECK-NEXT:    [[MAXIMUM_XY:%.*]] = call float @llvm.maximum.f32(float [[X]], float [[Y]])
-; CHECK-NEXT:    [[MAXIMUM_XYZ:%.*]] = call float @llvm.maximum.f32(float [[MAXIMUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MAXIMUM_XYZ:%.*]] = call float @llvm.maximum.f32(float [[MINNUM_XY]], float [[Z]])
 ; CHECK-NEXT:    [[MAXIMUM_NESTED:%.*]] = call float @llvm.maximum.f32(float [[MAXIMUM_XYZ]], float [[X]])
 ; CHECK-NEXT:    store float [[MAXIMUM_NESTED]], ptr [[MAXIMUM_RES:%.*]], align 4
-; CHECK-NEXT:    [[MINIMUMNUM_XY:%.*]] = call float @llvm.minimumnum.f32(float [[X]], float [[Y]])
-; CHECK-NEXT:    [[MINIMUMNUM_XYZ:%.*]] = call float @llvm.minimumnum.f32(float [[MINIMUMNUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MINIMUMNUM_XYZ:%.*]] = call float @llvm.minimumnum.f32(float [[MINNUM_XY]], float [[Z]])
 ; CHECK-NEXT:    [[MINIMUMNUM_NESTED:%.*]] = call float @llvm.minimumnum.f32(float [[MINIMUMNUM_XYZ]], float [[X]])
 ; CHECK-NEXT:    store float [[MINIMUMNUM_NESTED]], ptr [[MINIMUMNUM_RES:%.*]], align 4
-; CHECK-NEXT:    [[MAXIMUMNUM_XY:%.*]] = call float @llvm.maximumnum.f32(float [[X]], float [[Y]])
-; CHECK-NEXT:    [[MAXIMUMNUM_XYZ:%.*]] = call float @llvm.maximumnum.f32(float [[MAXIMUMNUM_XY]], float [[Z]])
+; CHECK-NEXT:    [[MAXIMUMNUM_XYZ:%.*]] = call float @llvm.maximumnum.f32(float [[MINNUM_XY]], float [[Z]])
 ; CHECK-NEXT:    [[MAXIMUMNUM_NESTED:%.*]] = call float @llvm.maximumnum.f32(float [[MAXIMUMNUM_XYZ]], float [[X]])
 ; CHECK-NEXT:    store float [[MAXIMUMNUM_NESTED]], ptr [[MAXIMUMNUM_RES:%.*]], align 4
 ; CHECK-NEXT:    ret void
@@ -951,9 +945,8 @@ define void @minmax_minmax_minmax_xy_z_x(float %x, float %y, float %z, ptr %minn
 
 define <2 x float> @minimum_x_minimum_z_minimum_yx_v2f32(<2 x float> %x, <2 x float> %y, <2 x float> %z) {
 ; CHECK-LABEL: @minimum_x_minimum_z_minimum_yx_v2f32(
-; CHECK-NEXT:    [[YX:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[Y:%.*]], <2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[ZYX:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[Z:%.*]], <2 x float> [[YX]])
-; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X]], <2 x float> [[ZYX]])
+; CHECK-NEXT:    [[ZYX:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[Z:%.*]], <2 x float> [[YX:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call <2 x float> @llvm.minimum.v2f32(<2 x float> [[X:%.*]], <2 x float> [[ZYX]])
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %yx = call <2 x float> @llvm.minimum.v2f32(<2 x float> %y, <2 x float> %x)
@@ -964,10 +957,8 @@ define <2 x float> @minimum_x_minimum_z_minimum_yx_v2f32(<2 x float> %x, <2 x fl
 
 define double @minimumnum_minimumnum_xy_z_maximumnum_yx(double %x, double %y, double %z) {
 ; CHECK-LABEL: @minimumnum_minimumnum_xy_z_maximumnum_yx(
-; CHECK-NEXT:    [[XY:%.*]] = call double @llvm.minimumnum.f64(double [[X:%.*]], double [[Y:%.*]])
-; CHECK-NEXT:    [[XYZ:%.*]] = call double @llvm.minimumnum.f64(double [[XY]], double [[Z:%.*]])
-; CHECK-NEXT:    [[YX:%.*]] = call double @llvm.maximumnum.f64(double [[Y]], double [[X]])
-; CHECK-NEXT:    [[R:%.*]] = call double @llvm.minimumnum.f64(double [[XYZ]], double [[YX]])
+; CHECK-NEXT:    [[XYZ:%.*]] = call double @llvm.minimumnum.f64(double [[XY:%.*]], double [[Z:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.minimumnum.f64(double [[XYZ]], double [[YX:%.*]])
 ; CHECK-NEXT:    ret double [[R]]
 ;
   %xy = call double @llvm.minimumnum.f64(double %x, double %y)
@@ -979,11 +970,10 @@ define double @minimumnum_minimumnum_xy_z_maximumnum_yx(double %x, double %y, do
 
 define float @maximumnum_shared_op_depth4(float %x, float %a, float %b, float %c, float %d) {
 ; CHECK-LABEL: @maximumnum_shared_op_depth4(
-; CHECK-NEXT:    [[M1:%.*]] = call float @llvm.maximumnum.f32(float [[X:%.*]], float [[A:%.*]])
-; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximumnum.f32(float [[M1]], float [[B:%.*]])
+; CHECK-NEXT:    [[M2:%.*]] = call float @llvm.maximumnum.f32(float [[M1:%.*]], float [[B:%.*]])
 ; CHECK-NEXT:    [[M3:%.*]] = call float @llvm.maximumnum.f32(float [[M2]], float [[C:%.*]])
 ; CHECK-NEXT:    [[M4:%.*]] = call float @llvm.maximumnum.f32(float [[M3]], float [[D:%.*]])
-; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[M4]], float [[X]])
+; CHECK-NEXT:    [[R:%.*]] = call float @llvm.maximumnum.f32(float [[M4]], float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %m1 = call float @llvm.maximumnum.f32(float %x, float %a)

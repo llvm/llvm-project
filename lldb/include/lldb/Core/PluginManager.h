@@ -345,7 +345,13 @@ public:
 
   static bool UnregisterPlugin(LanguageCreateInstance create_callback);
 
-  static llvm::SmallVector<LanguageCreateInstance> GetLanguageCreateCallbacks();
+  /// Returns the instance of the enabled language plugin that supports
+  /// \p language, creating it on first use, or nullptr if there is none.
+  static Language *GetLanguageInstance(lldb::LanguageType language);
+
+  /// Returns GetLanguageInstance() for every language type that an enabled
+  /// language plugin supports, in language type order.
+  static std::vector<Language *> GetAllLanguageInstances();
 
   // LanguageRuntime
   static bool RegisterPlugin(
@@ -476,6 +482,16 @@ public:
   static lldb::ScriptInterpreterSP
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
+
+  /// Records why no script interpreter for \p script_lang could be
+  /// registered, for the fallback interpreter to report in its place. Success
+  /// clears the recorded error.
+  static void SetScriptInterpreterError(lldb::ScriptLanguage script_lang,
+                                        llvm::Error error);
+
+  /// Returns the error recorded for \p script_lang, or success.
+  static llvm::Error
+  GetScriptInterpreterError(lldb::ScriptLanguage script_lang);
 
   static FileSpec
   GetScriptInterpreterLibraryPath(lldb::ScriptLanguage script_lang);

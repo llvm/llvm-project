@@ -20,7 +20,10 @@ tablegen("ARMGenFastISel") {
 
 tablegen("ARMGenGlobalISel") {
   visibility = [ ":LLVMARMCodeGen" ]
-  args = [ "-gen-global-isel" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
   td_file = "ARM.td"
 }
 
@@ -86,6 +89,7 @@ static_library("LLVMARMCodeGen") {
   sources = [
     "A15SDOptimizer.cpp",
     "ARMAsmPrinter.cpp",
+    "ARMAvoidTrailingCall.cpp",
     "ARMBaseInstrInfo.cpp",
     "ARMBaseRegisterInfo.cpp",
     "ARMBasicBlockInfo.cpp",

@@ -134,8 +134,8 @@ contains
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_optional_data2(
 ! CHECK-SAME: %[[A:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "a", fir.optional}, %[[N:.*]]: !fir.ref<i32> {fir.bindc_name = "n"}) {
 ! CHECK: %[[DECL_A:.*]]:2 = hlfir.declare %[[A]](%{{.*}}) dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMopenacc_boundsFacc_optional_data2Ea") fortran_attrs<optional> : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
-! CHECK: %[[NO_CREATE:.*]] = acc.nocreate varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%{{[0-9]+}}) name("a") -> !fir.ref<!fir.array<?xf32>>
-! CHECK: acc.data dataOperands(%[[NO_CREATE]] : !fir.ref<!fir.array<?xf32>>) {
+! CHECK: %[[NO_CREATE:.*]] = acc.nocreate var(%[[DECL_A]]#0 : !fir.box<!fir.array<?xf32>>) bounds(%{{[0-9]+}}) name("a") -> !fir.box<!fir.array<?xf32>>
+! CHECK: acc.data dataOperands(%[[NO_CREATE]] : !fir.box<!fir.array<?xf32>>) {
 
   subroutine acc_optional_data3(a, n)
     integer :: n
@@ -155,8 +155,20 @@ contains
 ! CHECK:   fir.result %c0{{.*}} : index
 ! CHECK: }
 ! CHECK: %[[BOUNDS:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%[[STRIDE]] : index) startIdx(%c1 : index) strideInBytes(true)
-! CHECK: %[[NOCREATE:.*]] = acc.nocreate varPtr(%[[DECL_A]]#1 : !fir.ref<!fir.array<?xf32>>) bounds(%[[BOUNDS]]) name("a(1:n)") -> !fir.ref<!fir.array<?xf32>>
-! CHECK: acc.data dataOperands(%[[NOCREATE]] : !fir.ref<!fir.array<?xf32>>) {
+! CHECK: %[[NOCREATE:.*]] = acc.nocreate var(%[[DECL_A]]#0 : !fir.box<!fir.array<?xf32>>) bounds(%[[BOUNDS]]) name("a(1:n)") -> !fir.box<!fir.array<?xf32>>
+! CHECK: acc.data dataOperands(%[[NOCREATE]] : !fir.box<!fir.array<?xf32>>) {
+
+  subroutine acc_optional_char(s)
+    character(*), optional :: s
+    !$acc data copyin(s)
+    !$acc end data
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_optional_char(
+! CHECK: %[[DECL_S:.*]]:2 = hlfir.declare %{{.*}} typeparams %{{.*}} dummy_scope %{{[0-9]+}} arg {{[0-9]+}} uniq_name("_QMopenacc_boundsFacc_optional_charEs") fortran_attrs<optional> : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK: %[[BOUNDS:.*]] = acc.bounds
+! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[DECL_S]]#1 : !fir.ref<!fir.char<1,?>>) bounds(%[[BOUNDS]]) name("s") -> !fir.ref<!fir.char<1,?>>
+! CHECK: acc.data dataOperands(%[[COPYIN]] : !fir.ref<!fir.char<1,?>>) {
 
   subroutine acc_explicit_shape_3d(arr)
     real :: arr(1000,100,10)

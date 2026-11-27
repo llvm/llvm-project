@@ -1,4 +1,3 @@
-! REQUIRES: flang
 ! RUN: %flang %flags %openmp_flags %s -o %t.exe
 ! RUN: %t.exe
 

@@ -91,10 +91,11 @@ TargetMachine::~TargetMachine() = default;
 /// In addition, SCE debugger does not have the feature implemented, so prefer
 /// not to emit the debug entry values in that case.
 /// The EnableDebugEntryValues can be used for the testing purposes.
-bool TargetMachine::shouldEmitDebugEntryValues() const {
-  return (SupportsDebugEntryValues &&
-          Options.DebuggerTuning != DebuggerKind::SCE) ||
-         Options.EnableDebugEntryValues;
+bool TargetMachine::shouldEmitDebugEntryValues(DebuggerKind Tuning) const {
+  // Only the explicitly-set "debugger-tuning" module flag suppresses entry
+  // values.
+  return Options.EnableDebugEntryValues ||
+         (SupportsDebugEntryValues && Tuning != DebuggerKind::SCE);
 }
 
 Expected<std::unique_ptr<MCStreamer>>
@@ -188,6 +189,11 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
+    // Check the size before getKindForGlobal() below, which may walk the
+    // global's entire initializer.
+    const DataLayout &DL = GV->getDataLayout();
+    if (!isLargeDataSize(GV->getGlobalSize(DL)))
+      return false;
     // Linkers do not currently support PT_GNU_RELRO for SHF_X86_64_LARGE
     // sections; that would require the linker to emit more than one
     // PT_GNU_RELRO because large sections are discontiguous by design, and most
@@ -201,8 +207,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
         TargetLoweringObjectFile::getKindForGlobal(GV, *this)
             .isReadOnlyWithRel())
       return false;
-    const DataLayout &DL = GV->getDataLayout();
-    return isLargeDataSize(GV->getGlobalSize(DL));
+    return true;
   }
 
   return false;

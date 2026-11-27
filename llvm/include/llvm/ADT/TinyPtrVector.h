@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -22,32 +23,40 @@ namespace llvm {
 /// normally 0 or 1 element in a vector, but is general enough to go beyond that
 /// when required.
 ///
-/// NOTE: This container doesn't allow you to store a null pointer into it.
-///
-template <typename EltTy>
-class TinyPtrVector {
+template <typename EltTy> class LLVM_ATTRIBUTE_WARN_UNUSED TinyPtrVector {
 public:
   using VecTy = SmallVector<EltTy, 4>;
   using value_type = typename VecTy::value_type;
-  // EltTy must be the first pointer type so that is<EltTy> is true for the
-  // default-constructed PtrUnion. This allows an empty TinyPtrVector to
-  // naturally vend a begin/end iterator of type EltTy* without an additional
-  // check for the empty state.
+  // A TinyPtrVector has three different possible representations internally:
+  // - A null VecTy *. This is an empty vector.
+  // - An EltTy. This is a one-element vector.
+  // - A non-null VecTy *. This is a pointer to a SmallVector (which may have
+  //   any number of elements, including zero or one).
+  //
+  // EltTy must be the first pointer type so we can expose begin()/end()
+  // for a one-element vector using getAddrOfPtr1().
   using PtrUnion = PointerUnion<EltTy, VecTy *>;
 
 private:
+  static constexpr VecTy *EmptyVal = nullptr;
+
+  bool isEmptyForm() const { return isa<VecTy *>(Val) && !cast<VecTy *>(Val); }
+  bool isSingleElementForm() const { return isa<EltTy>(Val); }
+  bool isMultiElementForm() const { return dyn_cast<VecTy *>(Val); }
+
   PtrUnion Val;
 
 public:
-  TinyPtrVector() = default;
+  // FIXME: Add a constructor to PtrUnion that allows marking this constexpr.
+  TinyPtrVector() : Val(EmptyVal) {}
 
   ~TinyPtrVector() {
-    if (VecTy *V = dyn_cast_if_present<VecTy *>(Val))
+    if (VecTy *V = dyn_cast<VecTy *>(Val))
       delete V;
   }
 
   TinyPtrVector(const TinyPtrVector &RHS) : Val(RHS.Val) {
-    if (VecTy *V = dyn_cast_if_present<VecTy *>(Val))
+    if (VecTy *V = dyn_cast<VecTy *>(Val))
       Val = new VecTy(*V);
   }
 
@@ -61,7 +70,7 @@ public:
 
     // Try to squeeze into the single slot. If it won't fit, allocate a copied
     // vector.
-    if (isa<EltTy>(Val)) {
+    if (!isMultiElementForm()) {
       if (RHS.size() == 1)
         Val = RHS.front();
       else
@@ -70,7 +79,7 @@ public:
     }
 
     // If we have a full vector allocated, try to re-use it.
-    if (isa<EltTy>(RHS.Val)) {
+    if (RHS.isSingleElementForm()) {
       cast<VecTy *>(Val)->clear();
       cast<VecTy *>(Val)->push_back(RHS.front());
     } else {
@@ -79,9 +88,7 @@ public:
     return *this;
   }
 
-  TinyPtrVector(TinyPtrVector &&RHS) : Val(RHS.Val) {
-    RHS.Val = (EltTy)nullptr;
-  }
+  TinyPtrVector(TinyPtrVector &&RHS) : Val(RHS.Val) { RHS.Val = EmptyVal; }
 
   TinyPtrVector &operator=(TinyPtrVector &&RHS) {
     if (this == &RHS)
@@ -94,54 +101,56 @@ public:
     // If this vector has been allocated on the heap, re-use it if cheap. If it
     // would require more copying, just delete it and we'll steal the other
     // side.
-    if (VecTy *V = dyn_cast_if_present<VecTy *>(Val)) {
+    if (VecTy *V = dyn_cast<VecTy *>(Val)) {
       if (isa<EltTy>(RHS.Val)) {
         V->clear();
         V->push_back(RHS.front());
-        RHS.Val = EltTy();
+        RHS.Val = EmptyVal;
         return *this;
       }
       delete V;
     }
 
     Val = RHS.Val;
-    RHS.Val = EltTy();
+    RHS.Val = EmptyVal;
     return *this;
   }
 
   TinyPtrVector(std::initializer_list<EltTy> IL)
-      : Val(IL.size() == 0
-                ? PtrUnion()
-                : IL.size() == 1 ? PtrUnion(*IL.begin())
-                                 : PtrUnion(new VecTy(IL.begin(), IL.end()))) {}
+      : Val(IL.size() == 0   ? PtrUnion(EmptyVal)
+            : IL.size() == 1 ? PtrUnion(*IL.begin())
+                             : PtrUnion(new VecTy(IL.begin(), IL.end()))) {}
 
   /// Constructor from an ArrayRef.
   ///
   /// This also is a constructor for individual array elements due to the single
   /// element constructor for ArrayRef.
   explicit TinyPtrVector(ArrayRef<EltTy> Elts)
-      : Val(Elts.empty()
-                ? PtrUnion()
-                : Elts.size() == 1
-                      ? PtrUnion(Elts[0])
-                      : PtrUnion(new VecTy(Elts.begin(), Elts.end()))) {}
+      : Val(Elts.empty() ? PtrUnion(EmptyVal)
+            : Elts.size() == 1
+                ? PtrUnion(Elts[0])
+                : PtrUnion(new VecTy(Elts.begin(), Elts.end()))) {}
 
   TinyPtrVector(size_t Count, EltTy Value)
-      : Val(Count == 0 ? PtrUnion()
-                       : Count == 1 ? PtrUnion(Value)
-                                    : PtrUnion(new VecTy(Count, Value))) {}
+      : Val(Count == 0   ? PtrUnion(EmptyVal)
+            : Count == 1 ? PtrUnion(Value)
+                         : PtrUnion(new VecTy(Count, Value))) {}
 
   bool empty() const {
     // This vector can be empty if it contains no element, or if it
     // contains a pointer to an empty vector.
-    if (isa<EltTy>(Val))
-      return Val.isNull();
+    if (isSingleElementForm())
+      return false;
+    if (isEmptyForm())
+      return true;
     return cast<VecTy *>(Val)->empty();
   }
 
   unsigned size() const {
-    if (isa<EltTy>(Val))
-      return Val.isNull() ? 0 : 1;
+    if (isSingleElementForm())
+      return 1;
+    if (isEmptyForm())
+      return 0;
     return cast<VecTy *>(Val)->size();
   }
 
@@ -151,15 +160,25 @@ public:
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
   iterator begin() {
-    if (isa<EltTy>(Val))
+    if (isSingleElementForm())
       return Val.getAddrOfPtr1();
+
+    if (isEmptyForm()) {
+      // Any valid pointer with correct alignment works here. Using the same
+      // value as the one-element case slightly reduces the complexity of the
+      // generated code.
+      return reinterpret_cast<EltTy *>(this);
+    }
 
     return cast<VecTy *>(Val)->begin();
   }
 
   iterator end() {
-    if (isa<EltTy>(Val))
-      return begin() + (Val.isNull() ? 0 : 1);
+    if (isSingleElementForm())
+      return begin() + 1;
+
+    if (isEmptyForm())
+      return begin();
 
     return cast<VecTy *>(Val)->end();
   }
@@ -187,8 +206,8 @@ public:
   const EltTy *data() const { return begin(); }
 
   EltTy operator[](unsigned i) const {
-    assert(!Val.isNull() && "can't index into an empty vector");
-    if (isa<EltTy>(Val)) {
+    assert(!empty() && "vector empty");
+    if (isSingleElementForm()) {
       assert(i == 0 && "tinyvector index out of range");
       return cast<EltTy>(Val);
     }
@@ -199,28 +218,27 @@ public:
 
   EltTy front() const {
     assert(!empty() && "vector empty");
-    if (isa<EltTy>(Val))
+    if (isSingleElementForm())
       return cast<EltTy>(Val);
     return cast<VecTy *>(Val)->front();
   }
 
   EltTy back() const {
     assert(!empty() && "vector empty");
-    if (isa<EltTy>(Val))
+    if (isSingleElementForm())
       return cast<EltTy>(Val);
     return cast<VecTy *>(Val)->back();
   }
 
   void push_back(EltTy NewVal) {
     // If we have nothing, add something.
-    if (Val.isNull()) {
+    if (isEmptyForm()) {
       Val = NewVal;
-      assert(!Val.isNull() && "Can't add a null value");
       return;
     }
 
     // If we have a single value, convert to a vector.
-    if (isa<EltTy>(Val)) {
+    if (isSingleElementForm()) {
       EltTy V = cast<EltTy>(Val);
       Val = new VecTy({V, NewVal});
       return;
@@ -232,17 +250,18 @@ public:
 
   void pop_back() {
     // If we have a single value, convert to empty.
-    if (isa<EltTy>(Val))
-      Val = EltTy();
+    assert(!empty() && "vector empty");
+    if (isSingleElementForm())
+      Val = EmptyVal;
     else
       cast<VecTy *>(Val)->pop_back();
   }
 
   void clear() {
     // If we have a single value, convert to empty.
-    if (isa<EltTy>(Val)) {
-      Val = EltTy();
-    } else {
+    if (isSingleElementForm()) {
+      Val = EmptyVal;
+    } else if (cast<VecTy *>(Val)) {
       // If we have a vector form, just clear it.
       cast<VecTy *>(Val)->clear();
     }
@@ -253,9 +272,9 @@ public:
     assert(I < end() && "Erasing at past-the-end iterator.");
 
     // If we have a single value, convert to empty.
-    if (isa<EltTy>(Val)) {
+    if (isSingleElementForm()) {
       if (I == begin())
-        Val = EltTy();
+        Val = EmptyVal;
     } else {
       // multiple items in a vector; just do the erase, there is no
       // benefit to collapsing back to a pointer
@@ -269,10 +288,10 @@ public:
     assert(S <= E && "Trying to erase invalid range.");
     assert(E <= end() && "Trying to erase past the end.");
 
-    if (isa<EltTy>(Val)) {
+    if (isSingleElementForm()) {
       if (S == begin() && S != E)
-        Val = EltTy();
-    } else {
+        Val = EmptyVal;
+    } else if (isMultiElementForm()) {
       return cast<VecTy *>(Val)->erase(S, E);
     }
     return end();
@@ -285,8 +304,7 @@ public:
       push_back(Elt);
       return std::prev(end());
     }
-    assert(!Val.isNull() && "Null value with non-end insert iterator.");
-    if (isa<EltTy>(Val)) {
+    if (isSingleElementForm()) {
       EltTy V = cast<EltTy>(Val);
       assert(I == begin());
       Val = Elt;
@@ -304,16 +322,15 @@ public:
     if (From == To)
       return I;
 
-    // If we have a single value, convert to a vector.
     ptrdiff_t Offset = I - begin();
-    if (Val.isNull()) {
+    if (isEmptyForm()) {
       if (std::next(From) == To) {
         Val = *From;
         return begin();
       }
 
       Val = new VecTy();
-    } else if (isa<EltTy>(Val)) {
+    } else if (isSingleElementForm()) {
       EltTy V = cast<EltTy>(Val);
       Val = new VecTy();
       cast<VecTy *>(Val)->push_back(V);

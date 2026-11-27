@@ -167,7 +167,6 @@ add_libc_test(
     strdup_test.cpp
   DEPENDS
     libc.src.string.strdup
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
@@ -383,6 +382,17 @@ add_libc_test(
     memset_explicit_test.cpp
   DEPENDS
     libc.src.string.memset_explicit
+)
+
+add_libc_test(
+  string_length_test
+  SUITE
+    libc-string-tests
+  SRCS
+    string_length_test.cpp
+  DEPENDS
+    libc.src.string.string_length
+    libc.hdr.stdint_proxy
 )
 
 add_libc_multi_impl_test(memcmp libc-string-tests SRCS memcmp_test.cpp)

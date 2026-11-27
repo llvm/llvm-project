@@ -20,6 +20,7 @@ template<class T>
 
 #define ATOMIC_BOOL_LOCK_FREE see below
 #define ATOMIC_CHAR_LOCK_FREE see below
+#define ATOMIC_CHAR8_T_LOCK_FREE see below
 #define ATOMIC_CHAR16_T_LOCK_FREE see below
 #define ATOMIC_CHAR32_T_LOCK_FREE see below
 #define ATOMIC_WCHAR_T_LOCK_FREE see below

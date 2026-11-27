@@ -12,7 +12,6 @@
 #include "DWARFLinkerCompileUnit.h"
 #include "DWARFLinkerGlobalData.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
@@ -21,7 +20,6 @@ class DWARFDebugInfoEntry;
 namespace dwarf_linker {
 namespace parallel {
 struct LinkContext;
-class TypeTableUnit;
 class CompileUnit;
 
 /// The helper class to build type name based on DIE properties.
@@ -132,7 +130,7 @@ protected:
   void addValueName(UnitEntryPairTy InputUnitEntryPair, dwarf::Attribute Attr);
 
   /// Buffer keeping bult name.
-  SmallString<1000> SyntheticName;
+  TypeKey SyntheticName;
 
   /// Digests of the contents of unnamed types, by DIE.
   DenseMap<const DWARFDebugInfoEntry *, std::string> ContentsDigests;

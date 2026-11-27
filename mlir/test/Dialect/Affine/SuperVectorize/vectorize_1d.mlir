@@ -48,7 +48,7 @@ func.func @vec1d_2(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 
 // CHECK:for [[IV3:%[a-zA-Z0-9]+]] = 0 to [[ARG_M]] step 128
 // CHECK-NEXT: %[[CST:.*]] = ub.poison : f32
-// CHECK-NEXT: {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %[[CST]] : memref<?x?xf32>, vector<128xf32>
+// CHECK:      {{.*}} = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %[[CST]] {in_bounds = [true]} : memref<?x?xf32>, vector<128xf32> }
    affine.for %i3 = 0 to %M { // vectorized
      %a3 = affine.load %A[%c0, %i3] : memref<?x?xf32>
    }
@@ -77,7 +77,7 @@ func.func @vec1d_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK-NEXT:   %[[APP9_0:[0-9a-zA-Z_]+]] = affine.apply {{.*}}([[IV9]], [[IV8]])
 // CHECK-NEXT:   %[[APP9_1:[0-9a-zA-Z_]+]] = affine.apply {{.*}}([[IV9]], [[IV8]])
 // CHECK-NEXT:   %[[CST:.*]] = ub.poison : f32
-// CHECK-NEXT:   {{.*}} = vector.transfer_read %{{.*}}[%[[APP9_0]], %[[APP9_1]]], %[[CST]] : memref<?x?xf32>, vector<128xf32>
+// CHECK:        {{.*}} = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%[[APP9_0]], %[[APP9_1]]], %[[CST]] {in_bounds = [true]} : memref<?x?xf32>, vector<128xf32> }
    affine.for %i8 = 0 to %M { // vectorized
      affine.for %i9 = 0 to %N {
        %a9 = affine.load %A[%i9, %i8 + %i9] : memref<?x?xf32>
@@ -98,7 +98,7 @@ func.func @vector_add_2d(%M : index, %N : index) -> f32 {
   affine.for %i0 = 0 to %M {
     affine.for %i1 = 0 to %N {
       // CHECK: %[[C1:.*]] = arith.constant dense<1.000000e+00> : vector<128xf32>
-      // CHECK: vector.transfer_write %[[C1]], {{.*}} : vector<128xf32>, memref<?x?xf32>
+      // CHECK: vector.mask %{{.*}} { vector.transfer_write %[[C1]], {{.*}} : vector<128xf32>, memref<?x?xf32> }
       // non-scoped %f1
       affine.store %f1, %A[%i0, %i1] : memref<?x?xf32, 0>
     }
@@ -106,7 +106,7 @@ func.func @vector_add_2d(%M : index, %N : index) -> f32 {
   affine.for %i2 = 0 to %M {
     affine.for %i3 = 0 to %N {
       // CHECK: %[[C3:.*]] = arith.constant dense<2.000000e+00> : vector<128xf32>
-      // CHECK: vector.transfer_write %[[C3]], {{.*}} : vector<128xf32>, memref<?x?xf32>
+      // CHECK: vector.mask %{{.*}} { vector.transfer_write %[[C3]], {{.*}} : vector<128xf32>, memref<?x?xf32> }
       // non-scoped %f2
       affine.store %f2, %B[%i2, %i3] : memref<?x?xf32, 0>
     }
@@ -115,13 +115,13 @@ func.func @vector_add_2d(%M : index, %N : index) -> f32 {
     affine.for %i5 = 0 to %N {
       // CHECK: %[[SPLAT2:.*]] = arith.constant dense<2.000000e+00> : vector<128xf32>
       // CHECK: %[[SPLAT1:.*]] = arith.constant dense<1.000000e+00> : vector<128xf32>
-      // CHECK: %[[A5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
-      // CHECK: %[[B5:.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
+      // CHECK: %[[A5:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} {in_bounds = [true]} : memref<?x?xf32>, vector<128xf32> }
+      // CHECK: %[[B5:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[{{.*}}], %{{[a-zA-Z0-9_]*}} {in_bounds = [true]} : memref<?x?xf32>, vector<128xf32> }
       // CHECK: %[[S5:.*]] = arith.addf %[[A5]], %[[B5]] fastmath<nnan> {test.marker} : vector<128xf32>
       // CHECK: %[[S6:.*]] = arith.addf %[[S5]], %[[SPLAT1]] : vector<128xf32>
       // CHECK: %[[S7:.*]] = arith.addf %[[S5]], %[[SPLAT2]] : vector<128xf32>
       // CHECK: %[[S8:.*]] = arith.addf %[[S7]], %[[S6]] : vector<128xf32>
-      // CHECK: vector.transfer_write %[[S8]], {{.*}} : vector<128xf32>, memref<?x?xf32>
+      // CHECK: vector.mask %{{.*}} { vector.transfer_write %[[S8]], {{.*}} : vector<128xf32>, memref<?x?xf32> }
       %a5 = affine.load %A[%i4, %i5] : memref<?x?xf32, 0>
       %b5 = affine.load %B[%i4, %i5] : memref<?x?xf32, 0>
       %s5 = arith.addf %a5, %b5 fastmath<nnan> {test.marker} : f32
@@ -150,11 +150,11 @@ func.func @vec_constant_with_two_users(%M : index, %N : index) -> (f32, f32) {
   affine.for %i0 = 0 to %M { // vectorized
     // CHECK:      %[[C1:.*]] = arith.constant dense<1.000000e+00> : vector<128xf32>
     // CHECK-NEXT: affine.for
-    // CHECK-NEXT:   vector.transfer_write %[[C1]], {{.*}} : vector<128xf32>, memref<?x?xf32>
+    // CHECK:        vector.mask %{{.*}} { vector.transfer_write %[[C1]], {{.*}} : vector<128xf32>, memref<?x?xf32> }
     affine.for %i1 = 0 to %N {
       affine.store %f1, %A[%i1, %i0] : memref<?x?xf32, 0>
     }
-    // CHECK: vector.transfer_write %[[C1]], {{.*}} : vector<128xf32>, memref<?xf32>
+    // CHECK: vector.mask %{{.*}} { vector.transfer_write %[[C1]], {{.*}} : vector<128xf32>, memref<?xf32> }
     affine.store %f1, %B[%i0] : memref<?xf32, 0>
   }
   %c12 = arith.constant 12 : index
@@ -171,7 +171,7 @@ func.func @vec_block_arg(%A : memref<32x512xi32>) {
   // CHECK-NEXT:   affine.for %[[IV1:[0-9a-zA-Z_]+]] = 0 to 32 {
   // CHECK-NEXT:     %[[BROADCAST:.*]] = vector.broadcast %[[IV1]] : index to vector<128xindex>
   // CHECK-NEXT:     %[[CAST:.*]] = arith.index_cast %[[BROADCAST]] : vector<128xindex> to vector<128xi32>
-  // CHECK-NEXT:     vector.transfer_write %[[CAST]], {{.*}}[%[[IV1]], %[[IV0]]] {in_bounds = [true]} : vector<128xi32>, memref<32x512xi32>
+  // CHECK:          vector.mask %{{.*}} { vector.transfer_write %[[CAST]], {{.*}}[%[[IV1]], %[[IV0]]] {in_bounds = [true]} : vector<128xi32>, memref<32x512xi32> }
   affine.for %i = 0 to 512 {  // vectorized
     affine.for %j = 0 to 32 {
       %idx = arith.index_cast %j : index to i32
@@ -197,7 +197,7 @@ func.func @vec_block_arg_2(%A : memref<?x512xindex>) {
   // CHECK-NEXT:       %[[BROADCAST2:.*]] = vector.broadcast %[[IV2]] : index to vector<128xindex>
   // CHECK-NEXT:       %[[INDEX1:.*]] = affine.apply #[[$map0]](%[[IV0]], %[[IV2]], %[[IV1]])
   // CHECK-NEXT:       %[[INDEX2:.*]] = affine.apply #[[$map1]](%[[IV0]], %[[IV2]], %[[IV1]])
-  // CHECK:            %[[LOAD:.*]] = vector.transfer_read %{{.*}}[%[[INDEX1]], %[[INDEX2]]], %{{.*}} : memref<?x512xindex>, vector<128xindex>
+  // CHECK:            %[[LOAD:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%[[INDEX1]], %[[INDEX2]]], %{{.*}} : memref<?x512xindex>, vector<128xindex> }
   // CHECK-NEXT:       arith.muli %[[BROADCAST1]], %[[LOAD]] : vector<128xindex>
   // CHECK-NEXT:       arith.addi %{{.*}}, %[[BROADCAST2]] : vector<128xindex>
   // CHECK:          }
@@ -281,7 +281,7 @@ func.func @vec_rejected_3(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
 // CHECK:for [[IV4:%[0-9a-zA-Z_]+]] = 0 to [[ARG_M]] step 128 {
 // CHECK-NEXT:   for [[IV5:%[0-9a-zA-Z_]*]] = 0 to [[ARG_N]] {
 // CHECK-NEXT:     %{{.*}} = ub.poison : f32
-// CHECK-NEXT:     {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{[a-zA-Z0-9_]*}} : memref<?x?xf32>, vector<128xf32>
+// CHECK:          {{.*}} = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}], %{{[a-zA-Z0-9_]*}} {in_bounds = [true]} : memref<?x?xf32>, vector<128xf32> }
    affine.for %i4 = 0 to %M { // vectorized
      affine.for %i5 = 0 to %N { // not vectorized, would vectorize with --test-fastest-varying=1
        %a5 = affine.load %A[%i5, %i4] : memref<?x?xf32>
@@ -592,11 +592,11 @@ func.func @vec_non_vecdim_reduction(%in: memref<128x256xf32>, %out: memref<256xf
 // CHECK:       affine.for %{{.*}} = 0 to 256 step 128 {
 // CHECK:         %[[vzero:.*]] = arith.constant dense<0.000000e+00> : vector<128xf32>
 // CHECK:         %[[final_red:.*]] = affine.for %{{.*}} = 0 to 128 iter_args(%[[red_iter:.*]] = %[[vzero]]) -> (vector<128xf32>) {
-// CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32>
+// CHECK:           %[[ld:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32> }
 // CHECK:           %[[add:.*]] = arith.addf %[[red_iter]], %[[ld]] : vector<128xf32>
 // CHECK:           affine.yield %[[add]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         vector.transfer_write %[[final_red]], %{{.*}} : vector<128xf32>, memref<256xf32>
+// CHECK:         vector.mask %{{.*}} { vector.transfer_write %[[final_red]], %{{.*}} : vector<128xf32>, memref<256xf32> }
 // CHECK:       }
 
 // -----
@@ -628,14 +628,14 @@ func.func @vec_non_vecdim_reductions(%in0: memref<128x256xf32>, %in1: memref<128
 // CHECK:         %[[vzero:.*]] = arith.constant dense<0.000000e+00> : vector<128xf32>
 // CHECK:         %[[reds:.*]]:2 = affine.for %{{.*}} = 0 to 128
 // CHECK-SAME:      iter_args(%[[red_iter0:.*]] = %[[vzero]], %[[red_iter1:.*]] = %[[vone]]) -> (vector<128xf32>, vector<128xi32>) {
-// CHECK:           %[[ld0:.*]] = vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32>
+// CHECK:           %[[ld0:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32> }
 // CHECK:           %[[add:.*]] = arith.addf %[[red_iter0]], %[[ld0]] : vector<128xf32>
-// CHECK:           %[[ld1:.*]] = vector.transfer_read %{{.*}} : memref<128x256xi32>, vector<128xi32>
+// CHECK:           %[[ld1:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}} : memref<128x256xi32>, vector<128xi32> }
 // CHECK:           %[[mul:.*]] = arith.muli %[[red_iter1]], %[[ld1]] : vector<128xi32>
 // CHECK:           affine.yield %[[add]], %[[mul]] : vector<128xf32>, vector<128xi32>
 // CHECK:         }
-// CHECK:         vector.transfer_write %[[reds]]#0, %{{.*}} : vector<128xf32>, memref<256xf32>
-// CHECK:         vector.transfer_write %[[reds]]#1, %{{.*}} : vector<128xi32>, memref<256xi32>
+// CHECK:         vector.mask %{{.*}} { vector.transfer_write %[[reds]]#0, %{{.*}} : vector<128xf32>, memref<256xf32> }
+// CHECK:         vector.mask %{{.*}} { vector.transfer_write %[[reds]]#1, %{{.*}} : vector<128xi32>, memref<256xi32> }
 // CHECK:       }
 
 // -----
@@ -658,10 +658,10 @@ func.func @vec_no_vecdim_last_value(%in: memref<128x256xf32>, %out: memref<256xf
 // CHECK:       affine.for %{{.*}} = 0 to 256 step 128 {
 // CHECK:         %[[vzero:.*]] = arith.constant dense<0.000000e+00> : vector<128xf32>
 // CHECK:         %[[last_val:.*]] = affine.for %{{.*}} = 0 to 128 iter_args(%[[last_iter:.*]] = %[[vzero]]) -> (vector<128xf32>) {
-// CHECK:           %[[ld:.*]] = vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32>
+// CHECK:           %[[ld:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}} : memref<128x256xf32>, vector<128xf32> }
 // CHECK:           affine.yield %[[ld]] : vector<128xf32>
 // CHECK:         }
-// CHECK:         vector.transfer_write %[[last_val]], %{{.*}} : vector<128xf32>, memref<256xf32>
+// CHECK:         vector.mask %{{.*}} { vector.transfer_write %[[last_val]], %{{.*}} : vector<128xf32>, memref<256xf32> }
 // CHECK:       }
 
 // -----
@@ -712,7 +712,7 @@ func.func @vec_non_scalar_type() {
 // CHECK:       affine.for %[[IV:.*]] = 0 to 8 step 128 {
 // CHECK-DAG:     %[[CST_VEC:.*]] = arith.constant dense<0> : vector<128xi32>
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
-// CHECK:         vector.transfer_write %[[CST_VEC]], %{{.*}}[%[[C0]], %[[IV]]] : vector<128xi32>, memref<1x8xi32>
+// CHECK:         vector.mask %{{.*}} { vector.transfer_write %[[CST_VEC]], %{{.*}}[%[[C0]], %[[IV]]] {in_bounds = [true]} : vector<128xi32>, memref<1x8xi32> }
 // CHECK:       }
 func.func @index_const_inside_loop(%mem: memref<1x8xi32>) {
   affine.for %arg0 = 0 to 8 {

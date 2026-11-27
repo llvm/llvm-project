@@ -864,6 +864,13 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
         data.Push(llvm::APSInt::get(size));
         break;
       }
+      case sel_get_byte_stride: {
+        TYPE_CHECK(Type);
+        auto type = data.Pop<CompilerType>();
+        uint64_t stride = type.GetByteStride().value_or(0);
+        data.Push(llvm::APSInt::get(stride));
+        break;
+      }
       case sel_create_child_at_offset: {
         TYPE_CHECK(Object, String, Integer, Type);
         auto type = data.Pop<CompilerType>();
@@ -871,6 +878,17 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
         ConstString name(data.Pop<std::string>());
         POP_VALOBJ(valobj);
         data.Push(valobj->GetSyntheticChildAtOffset(offset, type, true, name));
+        break;
+      }
+      case sel_create_value_from_address: {
+        TYPE_CHECK(Object, String, Integer, Type);
+        auto type = data.Pop<CompilerType>();
+        auto address = data.Pop<llvm::APSInt>().getLimitedValue();
+        auto name = data.Pop<std::string>();
+        POP_VALOBJ(valobj);
+        ExecutionContext exe_ctx(valobj->GetExecutionContextRef());
+        data.Push(valobj->CreateChildValueObjectFromAddress(name, address,
+                                                            exe_ctx, type));
         break;
       }
       case sel_strlen: {

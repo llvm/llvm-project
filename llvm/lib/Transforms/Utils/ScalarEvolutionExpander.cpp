@@ -193,24 +193,13 @@ void SCEVExpander::eraseDeadInstructions(Value *Root) {
 
 BasicBlock::iterator
 SCEVExpander::GetOptimalInsertionPointForCastOf(Value *V) const {
-  // Cast the argument at the beginning of the entry block, after
-  // any bitcasts of other arguments.
-  if (Argument *A = dyn_cast<Argument>(V)) {
-    BasicBlock::iterator IP = A->getParent()->getEntryBlock().begin();
-    while ((isa<BitCastInst>(IP) &&
-            isa<Argument>(cast<BitCastInst>(IP)->getOperand(0)) &&
-            cast<BitCastInst>(IP)->getOperand(0) != A))
-      ++IP;
-    return IP;
-  }
-
   // Cast the instruction immediately after the instruction.
   if (Instruction *I = dyn_cast<Instruction>(V))
     return findInsertPointAfter(I, &*Builder.GetInsertPoint());
 
-  // Otherwise, this must be some kind of a constant,
+  // Otherwise, this must be a constant or argument,
   // so let's plop this cast into the function's entry block.
-  assert(isa<Constant>(V) &&
+  assert((isa<Constant, Argument>(V)) &&
          "Expected the cast argument to be a global/constant");
   return Builder.GetInsertBlock()
       ->getParent()
@@ -530,7 +519,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   const SCEV *URemRHS = nullptr;
   if (match(S, m_scev_URem(m_SCEV(URemLHS), m_SCEV(URemRHS), SE))) {
     Value *LHS = expand(URemLHS);
-    Value *RHS = expand(URemRHS);
+    Value *RHS = expandDivisor(URemRHS);
     return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagNone,
                        /*IsSafeToHoist*/ false);
   }
@@ -726,23 +715,28 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
                          SCEV::FlagNone, /*IsSafeToHoist*/ true);
   }
 
-  const SCEV *RHSExpr = S->getRHS();
-  Value *RHS = expand(RHSExpr);
-  if (SafeUDivMode) {
-    bool GuaranteedNotPoison =
-        ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
-    if (!GuaranteedNotPoison)
-      RHS = Builder.CreateFreeze(RHS);
-
-    // We need an umax if either RHSExpr is not known to be zero, or if it is
-    // not guaranteed to be non-poison. In the later case, the frozen poison may
-    // be 0.
-    if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
-      RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
-                                    {RHS, ConstantInt::get(RHS->getType(), 1)});
-  }
+  Value *RHS = expandDivisor(S->getRHS());
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagNone,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
+}
+
+Value *SCEVExpander::expandDivisor(const SCEV *Divisor) {
+  Value *V = expand(Divisor);
+  if (!SafeDivisorMode)
+    return V;
+
+  bool GuaranteedNotPoison =
+      ScalarEvolution::isGuaranteedNotToBePoison(Divisor);
+  if (!GuaranteedNotPoison)
+    V = Builder.CreateFreeze(V);
+
+  // We need an umax if either Divisor is not known to be non-zero, or if it is
+  // not guaranteed to be non-poison. In the latter case, the frozen poison may
+  // be 0.
+  if (!SE.isKnownNonZero(Divisor) || !GuaranteedNotPoison)
+    V = Builder.CreateIntrinsic(V->getType(), Intrinsic::umax,
+                                {V, ConstantInt::get(V->getType(), 1)});
+  return V;
 }
 
 /// Determine if this is a well-behaved chain of instructions leading back to
@@ -975,34 +969,6 @@ static bool canBeCheaplyTransformed(ScalarEvolution &SE,
   return false;
 }
 
-static bool IsIncrementNSW(ScalarEvolution &SE, const SCEVAddRecExpr *AR) {
-  if (!isa<IntegerType>(AR->getType()))
-    return false;
-
-  unsigned BitWidth = cast<IntegerType>(AR->getType())->getBitWidth();
-  Type *WideTy = IntegerType::get(AR->getType()->getContext(), BitWidth * 2);
-  const SCEV *Step = AR->getStepRecurrence(SE);
-  const SCEV *OpAfterExtend = SE.getAddExpr(SE.getSignExtendExpr(Step, WideTy),
-                                            SE.getSignExtendExpr(AR, WideTy));
-  const SCEV *ExtendAfterOp =
-    SE.getSignExtendExpr(SE.getAddExpr(AR, Step), WideTy);
-  return ExtendAfterOp == OpAfterExtend;
-}
-
-static bool IsIncrementNUW(ScalarEvolution &SE, const SCEVAddRecExpr *AR) {
-  if (!isa<IntegerType>(AR->getType()))
-    return false;
-
-  unsigned BitWidth = cast<IntegerType>(AR->getType())->getBitWidth();
-  Type *WideTy = IntegerType::get(AR->getType()->getContext(), BitWidth * 2);
-  const SCEV *Step = AR->getStepRecurrence(SE);
-  const SCEV *OpAfterExtend = SE.getAddExpr(SE.getZeroExtendExpr(Step, WideTy),
-                                            SE.getZeroExtendExpr(AR, WideTy));
-  const SCEV *ExtendAfterOp =
-    SE.getZeroExtendExpr(SE.getAddExpr(AR, Step), WideTy);
-  return ExtendAfterOp == OpAfterExtend;
-}
-
 /// getAddRecExprPHILiterally - Helper for expandAddRecExprLiterally. Expand
 /// the base addrec, which is the addrec without any non-loop-dominating
 /// values, and return the PHI.
@@ -1137,11 +1103,15 @@ SCEVExpander::getAddRecExprPHILiterally(const SCEVAddRecExpr *Normalized,
   // Expand the step somewhere that dominates the loop header.
   Value *StepV = expand(Step, L->getHeader()->getFirstInsertionPt());
 
-  // The no-wrap behavior proved by IsIncrement(NUW|NSW) is only applicable if
-  // we actually do emit an addition.  It does not apply if we emit a
-  // subtraction.
-  bool IncrementIsNUW = !useSubtract && IsIncrementNUW(SE, Normalized);
-  bool IncrementIsNSW = !useSubtract && IsIncrementNSW(SE, Normalized);
+  // The no-wrap behavior proved here is only applicable if we actually do emit
+  // an addition.  It does not apply if we emit a subtraction.
+  bool CanHaveNoWrap = !useSubtract && ExpandTy->isIntegerTy();
+  bool IncrementIsNUW =
+      CanHaveNoWrap &&
+      SE.willNotOverflow(Instruction::Add, /*Signed=*/false, Normalized, Step);
+  bool IncrementIsNSW =
+      CanHaveNoWrap &&
+      SE.willNotOverflow(Instruction::Add, /*Signed=*/true, Normalized, Step);
 
   // Create the PHI.
   BasicBlock *Header = L->getHeader();
@@ -1535,14 +1505,14 @@ SCEVExpander::visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> S) {
 Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
                                       Intrinsic::ID IntrinID, Twine Name,
                                       bool IsSequential) {
-  bool PrevSafeMode = SafeUDivMode;
-  SafeUDivMode |= IsSequential;
+  bool PrevSafeMode = SafeDivisorMode;
+  SafeDivisorMode |= IsSequential;
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   if (IsSequential)
     LHS = Builder.CreateFreeze(LHS);
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
-    SafeUDivMode = (IsSequential && i != 0) || PrevSafeMode;
+    SafeDivisorMode = (IsSequential && i != 0) || PrevSafeMode;
     Value *RHS = expand(S->getOperand(i));
     if (IsSequential && i != 0)
       RHS = Builder.CreateFreeze(RHS);
@@ -1558,7 +1528,7 @@ Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
     }
     LHS = Sel;
   }
-  SafeUDivMode = PrevSafeMode;
+  SafeDivisorMode = PrevSafeMode;
   return LHS;
 }
 

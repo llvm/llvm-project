@@ -17,8 +17,6 @@ class TestFrameVarDILArraySubscript(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         # Test int[] and int*
         self.expect_var_path("int_arr[0]", value="1")
         self.expect_var_path("int_ptr[1]", value="2")
@@ -109,7 +107,6 @@ class TestFrameVarDILArraySubscript(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.runCmd("script from myArraySynthProvider import *")
         self.runCmd("type synth add -l myArraySynthProvider myArray")
 
