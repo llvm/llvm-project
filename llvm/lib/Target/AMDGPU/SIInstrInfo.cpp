@@ -10680,7 +10680,8 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case TargetOpcode::INLINEASM_BR: {
     const MachineFunction *MF = MI.getMF();
     const char *AsmStr = MI.getOperand(0).getSymbolName();
-    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo(), &ST);
+    unsigned MaxLen = AMDGPU::getMaxInstLength(ST);
+    return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo(), MaxLen);
   }
   default:
     if (MI.isMetaInstruction())
