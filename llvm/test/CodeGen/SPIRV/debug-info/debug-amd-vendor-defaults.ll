@@ -1,39 +1,60 @@
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=false %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OFF --implicit-check-not=OpExtInstWithForwardRefsKHR --implicit-check-not=DebugDeclare
-; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ON
-; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-lexical-block-discriminator-scope=false --spirv-debug-scope-forward-refs=false --spirv-debug-declare-untyped-variable=false %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-OFF --implicit-check-not=OpExtInstWithForwardRefsKHR --implicit-check-not=DebugDeclare
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction --spirv-debug-lexical-block-discriminator-scope --spirv-debug-scope-forward-refs --spirv-debug-declare-untyped-variable %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-ON
+; AMD triples enable the NSDI debug options by default, but an explicit option
+; takes precedence.
 
-; AMD triples enable -spirv-debug-lexical-block-discriminator-scope,
-; -spirv-debug-scope-forward-refs and -spirv-debug-declare-untyped-variable by
-; default, but an explicit option still takes precedence.
-;
+; Non-AMD triple: only forward refs are on by default.
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=false %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LB-OFF,CHECK-FWD-OFF --implicit-check-not=OpExtInstWithForwardRefsKHR --implicit-check-not=DebugDeclare
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction --spirv-debug-scope-forward-refs=false %s -o - -filetype=obj | spirv-val %}
+; Non-AMD triple: forward refs only, with no option given.
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LB-OFF,CHECK-FWD-ON --implicit-check-not=DebugDeclare
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction %s -o - -filetype=obj | spirv-val %}
+; Non-AMD triple: everything enabled explicitly.
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction --spirv-debug-lexical-block-discriminator-scope --spirv-debug-scope-forward-refs --spirv-debug-declare-untyped-variable %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LB-ON,CHECK-FWD-ON,CHECK-DECL-ON
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction --spirv-debug-lexical-block-discriminator-scope %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=CHECK-VAL-LB-ON %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info,+SPV_KHR_untyped_pointers,+SPV_KHR_relaxed_extended_instruction --spirv-debug-declare-untyped-variable %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=CHECK-VAL-DECL-ON %}
 
-; CHECK-ON:     OpExtension "SPV_KHR_relaxed_extended_instruction"
+; AMD triple: everything is on by default.
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LB-ON,CHECK-FWD-ON,CHECK-DECL-ON
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=CHECK-VAL-VOID %}
+; AMD triple: every option explicitly turned off.
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-lexical-block-discriminator-scope=false --spirv-debug-scope-forward-refs=false --spirv-debug-declare-untyped-variable=false %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LB-OFF,CHECK-FWD-OFF --implicit-check-not=OpExtInstWithForwardRefsKHR --implicit-check-not=DebugDeclare
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-lexical-block-discriminator-scope=false --spirv-debug-scope-forward-refs=false --spirv-debug-declare-untyped-variable=false %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=CHECK-VAL-VOID %}
+; AMD triple: turning off one option leaves the other two on.
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-lexical-block-discriminator-scope=false %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LB-OFF,CHECK-FWD-ON,CHECK-DECL-ON
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-lexical-block-discriminator-scope=false %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=CHECK-VAL-VOID %}
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-scope-forward-refs=false %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LB-ON,CHECK-FWD-OFF,CHECK-DECL-ON --implicit-check-not=OpExtInstWithForwardRefsKHR
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-scope-forward-refs=false %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=CHECK-VAL-VOID %}
+; RUN: llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-declare-untyped-variable=false %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-LB-ON,CHECK-FWD-ON --implicit-check-not=DebugDeclare
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-amd-amdhsa --spirv-debug-declare-untyped-variable=false %s -o - -filetype=obj | not spirv-val 2>&1 | FileCheck %s --check-prefix=CHECK-VAL-VOID %}
+
+; CHECK-FWD-ON:       OpExtension "SPV_KHR_relaxed_extended_instruction"
 ; CHECK-DAG:    [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG:    [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG:    [[STR_S:%[0-9]+]] = OpString "S"
 ; CHECK-DAG:    [[STR_X:%[0-9]+]] = OpString "x"
-; CHECK-ON-DAG: [[STR_NEXT:%[0-9]+]] = OpString "next"
+; CHECK-FWD-ON-DAG:   [[STR_NEXT:%[0-9]+]] = OpString "next"
 
 ; CHECK: [[LB:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLexicalBlock
 ; CHECK: [[DISC:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLexicalBlockDiscriminator {{%[0-9]+}} {{%[0-9]+}} [[LB]]
 
 ; CHECK:     [[MEM_X:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeMember [[STR_X]]
-; CHECK-OFF: [[COMP:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeComposite [[STR_S]] {{.*}} [[MEM_X]]{{$}}
-; CHECK-OFF: OpExtInst [[VOID]] [[EXT]] DebugTypePointer [[COMP]]
-; CHECK-ON:  [[PTR:%[0-9]+]] = OpExtInstWithForwardRefsKHR [[VOID]] [[EXT]] DebugTypePointer [[COMP:%[0-9]+]]
-; CHECK-ON:  [[MEM_NEXT:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeMember [[STR_NEXT]] [[PTR]]
-; CHECK-ON:  [[COMP]] = OpExtInst [[VOID]] [[EXT]] DebugTypeComposite [[STR_S]] {{.*}} [[MEM_X]] [[MEM_NEXT]]{{$}}
+; CHECK-FWD-OFF:  [[COMP:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeComposite [[STR_S]] {{.*}} [[MEM_X]]{{$}}
+; CHECK-FWD-OFF:  OpExtInst [[VOID]] [[EXT]] DebugTypePointer [[COMP]]
+; CHECK-FWD-ON:   [[PTR:%[0-9]+]] = OpExtInstWithForwardRefsKHR [[VOID]] [[EXT]] DebugTypePointer [[COMP:%[0-9]+]]
+; CHECK-FWD-ON:   [[MEM_NEXT:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeMember [[STR_NEXT]] [[PTR]]
+; CHECK-FWD-ON:   [[COMP]] = OpExtInst [[VOID]] [[EXT]] DebugTypeComposite [[STR_S]] {{.*}} [[MEM_X]] [[MEM_NEXT]]{{$}}
 
 ; CHECK:    [[LV:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[STR_X]]
 ; CHECK:    [[VAR:%[0-9]+]] = OpUntypedVariableKHR {{%[0-9]+}} Function
-; CHECK-ON: OpExtInst [[VOID]] [[EXT]] DebugDeclare [[LV]] [[VAR]]
+; CHECK-DECL-ON: OpExtInst [[VOID]] [[EXT]] DebugDeclare [[LV]] [[VAR]]
+; CHECK-VAL-LB-ON: error: {{.*}}NonSemantic.Shader.DebugInfo.100 DebugScope: expected operand Scope must be a result id of a lexical scope
+; CHECK-VAL-DECL-ON: error: {{.*}}NonSemantic.Shader.DebugInfo.100 DebugDeclare: expected operand Variable must be a result id of OpVariable or OpFunctionParameter
+; CHECK-VAL-VOID: error: {{.*}}Duplicate non-aggregate type declarations are not allowed. Opcode: TypeVoid
 
-; CHECK-OFF-NOT: DebugScope [[DISC]]
-; CHECK-OFF:     OpExtInst [[VOID]] [[EXT]] DebugScope [[LB]]
-; CHECK-OFF-NOT: DebugScope [[DISC]]
-; CHECK-ON:      OpExtInst [[VOID]] [[EXT]] DebugScope [[DISC]]
-; CHECK-ON-NOT:  DebugScope [[LB]]
+; CHECK-LB-OFF-NOT: DebugScope [[DISC]]
+; CHECK-LB-OFF:     OpExtInst [[VOID]] [[EXT]] DebugScope [[LB]]
+; CHECK-LB-OFF-NOT: DebugScope [[DISC]]
+; CHECK-LB-ON:      OpExtInst [[VOID]] [[EXT]] DebugScope [[DISC]]
+; CHECK-LB-ON-NOT:  DebugScope [[LB]]
 
 define spir_func i32 @foo(i32 %N) !dbg !6 {
 entry:
