@@ -132,9 +132,9 @@ TSAN_FLAG(int, simulate_max_depth, 10000,
           "Maximum scheduling depth per iteration. If exceeded, the "
           "simulation reports an error and terminates the process")
 TSAN_FLAG(int, simulate_schedule_probability, 20,
-          "Probability (0-100%) of actually performing a context switch at "
-          "each scheduling point. Lower values allow threads to complete more "
-          "operations before switching.")
+          "Probability (0-100%) of invoking the scheduler at each scheduling "
+          "point. The scheduler picks a random runnable thread, which may be "
+          "the current one. At 0, threads switch only when they block.")
 TSAN_FLAG(bool, simulate_print_schedule_stacks, false,
           "Print stack trace at each simulation scheduling point. Useful for "
           "understanding the exact interleavings, but it generates significant "

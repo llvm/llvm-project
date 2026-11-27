@@ -44,6 +44,15 @@ static constexpr int kMaxSimThreads = 64;
 
 static int sim_current_iteration = 0;
 
+static void PrintReproduceHint(int iteration) {
+  Printf(
+      "ThreadSanitizer: to reproduce, set "
+      "TSAN_OPTIONS=simulate_scheduler=%s:simulate_start_iteration=%d:"
+      "simulate_schedule_probability=%d\n",
+      flags()->simulate_scheduler, iteration,
+      flags()->simulate_schedule_probability);
+}
+
 static atomic_uint32_t sim_race_detected;
 
 void SimulateReportUnsupportedImpl(const char* func_name) {
@@ -52,10 +61,7 @@ void SimulateReportUnsupportedImpl(const char* func_name) {
       "%s at iteration %d\n"
       "Simulation does not support this synchronization primitive.\n",
       func_name, sim_current_iteration);
-  Printf(
-      "ThreadSanitizer: to reproduce, set "
-      "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=%d\n",
-      sim_current_iteration);
+  PrintReproduceHint(sim_current_iteration);
   Die();
 }
 
@@ -70,10 +76,7 @@ void SimulateReportDeadlock() {
       "ThreadSanitizer: deadlock detected at iteration %d - all threads are "
       "blocked\n",
       sim_current_iteration);
-  Printf(
-      "ThreadSanitizer: to reproduce, set "
-      "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=%d\n",
-      sim_current_iteration);
+  PrintReproduceHint(sim_current_iteration);
   Die();
 }
 
@@ -85,10 +88,7 @@ static void SimulateReportMaxDepth(int max_depth, bool after_callback) {
         "Threads created by the callback were still running after the "
         "callback returned. They must finish without further action from the "
         "callback thread.\n");
-  Printf(
-      "ThreadSanitizer: to reproduce, set "
-      "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=%d\n",
-      sim_current_iteration);
+  PrintReproduceHint(sim_current_iteration);
   Die();
 }
 
@@ -406,13 +406,13 @@ class SimScheduler {
   }
 
   bool ShouldSchedule() {
-    int schedule_probability_ = flags()->simulate_schedule_probability;
-    if (schedule_probability_ >= 100)
+    int schedule_probability = flags()->simulate_schedule_probability;
+    if (schedule_probability >= 100)
       return true;
-    if (schedule_probability_ <= 0)
+    if (schedule_probability <= 0)
       return false;
     u32 rand_val = RandN(&rng_state_, 100);
-    return rand_val < static_cast<u32>(schedule_probability_);
+    return rand_val < static_cast<u32>(schedule_probability);
   }
 
  private:
@@ -620,10 +620,7 @@ void SimulateCondBroadcastImpl(uptr cond_addr) {
 
 int CheckForErrors(int iter, int start_iter) {
   if (atomic_load_relaxed(&sim_race_detected)) {
-    Printf(
-        "ThreadSanitizer: to reproduce, set "
-        "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=%d\n",
-        iter);
+    PrintReproduceHint(iter);
     Printf(
         "ThreadSanitizer: simulation stopped due to race detection after %d "
         "iterations\n",
@@ -646,11 +643,7 @@ int CheckForErrors(int iter, int start_iter) {
         &has_leak);
     if (has_leak) {
       Printf("ThreadSanitizer: thread leak detected at iteration %d\n", iter);
-      Printf(
-          "ThreadSanitizer: to reproduce, set "
-          "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration="
-          "%d\n",
-          iter);
+      PrintReproduceHint(iter);
       Printf(
           "ThreadSanitizer: simulation stopped due to thread leak after %d "
           "iterations\n",

@@ -34,5 +34,5 @@ int main() {
 }
 
 // CHECK: ThreadSanitizer: simulation hit max depth 100 at iteration 0
-// CHECK: ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=0
+// CHECK: ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=0:simulate_schedule_probability=100{{$}}
 // CHECK-NOT: result=

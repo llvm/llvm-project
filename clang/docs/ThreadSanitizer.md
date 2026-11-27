@@ -501,8 +501,8 @@ Simulation is not useful for running full applications, and will likely not
 work in these scenarios. The code run in simulation should almost always be a
 small unit test exercising very specific functionality.
 
-When enabled via the `__tsan_simulate()` API, the simulation scheduler runs
-the program's concurrent code multiple times (iterations), choosing different
+When the `simulate_scheduler` flag is set, `__tsan_simulate()` runs the
+program's concurrent code multiple times (iterations), choosing different
 thread interleavings in each iteration. The scheduler injects context switches
 at synchronization points (atomic operations, mutex operations, thread lifecycle
 events) to maximize coverage of possible execution orderings. If a data race is
@@ -515,7 +515,11 @@ To use simulation, wrap the concurrent code you want to test in a callback
 function and invoke it through the `__tsan_simulate()` API:
 
 ```c
+#include <pthread.h>
+
 extern "C" int __tsan_simulate(void (*callback)(void *), void *arg);
+
+void *thread_func(void *arg) { /* ... */ return NULL; }
 
 void test_concurrent_code(void *arg) {
   // Create threads, run concurrent operations
@@ -627,8 +631,9 @@ calls to `main` with `__wrap_main` and provides access to the original
   - int
   - 0
   - Starting iteration number. Useful for reproducing specific iteration
-    failures. Set this to the iteration number reported when a race was found
-    to reproduce that exact interleaving.
+    failures. Set this to the iteration number reported when a race was found,
+    with the same `simulate_schedule_probability`, to reproduce that exact
+    interleaving. The reported reproduction hint includes both.
 * - `simulate_max_depth`
   - int
   - 10000
@@ -638,10 +643,11 @@ calls to `main` with `__wrap_main` and provides access to the original
 * - `simulate_schedule_probability`
   - int
   - 20
-  - Probability (0-100%) of performing a context switch at each scheduling
-    point. Lower values (e.g., 0) disable context switching, allowing threads
-    to run more sequentially. Useful for comparing simulation results against
-    sequential execution.
+  - Probability (0-100%) of invoking the scheduler at each scheduling point.
+    The scheduler picks a random runnable thread, which may be the current
+    one. At 0, threads switch only when they block (mutex, condition variable,
+    join, or exit), so they run more sequentially. Useful for comparing
+    simulation results against sequential execution.
 * - `simulate_print_schedule_stacks`
   - bool
   - false
@@ -694,7 +700,7 @@ Run with simulation enabled:
 
 ```console
 $ TSAN_OPTIONS=simulate_scheduler=random:simulate_iterations=50 ./a.out
-ThreadSanitizer: simulation starting (iterations 0..999, max_depth=10000, scheduler=random)
+ThreadSanitizer: simulation starting (iterations 0..49, max_depth=10000, scheduler=random)
 ==================
 WARNING: ThreadSanitizer: data race
   Write of size 4 at 0x... by thread T1:
@@ -704,7 +710,7 @@ WARNING: ThreadSanitizer: data race
     #0 thread_func test.c:12
 ==================
 ThreadSanitizer: data race detected at iteration 4
-ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=4
+ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=4:simulate_schedule_probability=20
 ThreadSanitizer: simulation stopped due to race detection after 5 iterations
 ```
 
@@ -767,5 +773,5 @@ Run with simulation:
 $ TSAN_OPTIONS=simulate_scheduler=random:simulate_iterations=2 ./deadlock
 ThreadSanitizer: simulation starting (iterations 0..1, max_depth=10000, scheduler=random)
 ThreadSanitizer: deadlock detected at iteration 0 - all threads are blocked
-ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=0
+ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=0:simulate_schedule_probability=20
 ```
