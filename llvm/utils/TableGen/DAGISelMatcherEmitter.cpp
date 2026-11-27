@@ -238,9 +238,13 @@ private:
     for (auto &[VT, IdxAndCount] : ValueTypeMap)
       Entries.push_back(&IdxAndCount);
 
-    // Sort by count descending.
-    llvm::sort(Entries,
-               [](EntryPtr A, EntryPtr B) { return A->second > B->second; });
+    // Sort by count descending. Entries with the same count keep the order in
+    // which they were first used, which is the order of their current indices.
+    llvm::sort(Entries, [](EntryPtr A, EntryPtr B) {
+      if (A->second != B->second)
+        return A->second > B->second;
+      return A->first < B->first;
+    });
 
     // Assign new indices (1-based) in frequency order.
     for (unsigned NewIdx = 0; NewIdx < Entries.size(); ++NewIdx)
