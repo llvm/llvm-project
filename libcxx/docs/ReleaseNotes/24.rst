@@ -63,6 +63,9 @@ Improvements and New Features
 
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
 
+- Reduction algorithms (``std::reduce`` and ``std::transform_reduce``) are now up to ~4X faster when reducing
+  floating-point numbers.
+
 Deprecations and Removals
 -------------------------
 
