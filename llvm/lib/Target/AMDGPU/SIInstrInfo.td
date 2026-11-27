@@ -1251,12 +1251,12 @@ class NamedIntOperand<string prefix, bit Optional = 1, string name = NAME>
                     !if(AlwaysPrint, "true", "false")#"); }";
 }
 
-class NamedBitOperand<string Id, string Name = NAME, bit AlwaysIgnoreNegative = 0>
+class NamedBitOperand<string Id, string Name = NAME>
     : CustomOperand<1, Name, i1> {
   let PredicateMethod = "isImmTy<AMDGPUOperand::"#ImmTy#">";
   let ParserMethod =
     "[this](OperandVector &Operands) -> ParseStatus { "#
-    "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy# !if(AlwaysIgnoreNegative, ", true", ", false")#"); }";
+    "return parseNamedBit(\""#Id#"\", Operands, AMDGPUOperand::"#ImmTy#"); }";
   let PrintMethod = "[this](const MCInst *MI, unsigned OpNo, "#
     "const MCSubtargetInfo &STI, raw_ostream &O) { "#
     "printNamedBit(MI, OpNo, O, \""#Id#"\"); }";
@@ -1324,7 +1324,7 @@ def R128A16 : CustomOperand<1, type=i1>;
 def A16 : NamedBitOperand<"a16">;
 def D16 : NamedBitOperand<"d16">;
 def LWE : NamedBitOperand<"lwe">;
-def exp_compr : NamedBitOperand<"compr", "ExpCompr", 1>;
+def exp_compr : NamedBitOperand<"compr", "ExpCompr">;
 def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
 // The MTBUF format modifier, as in "s[0:3], s1 format:[BUF_FMT_32_FLOAT]".
