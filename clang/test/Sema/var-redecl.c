@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,c23 -std=c23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,c23 -std=c23 -fexperimental-new-constant-interpreter %s
 
 int outer1; // expected-note{{previous definition is here}}
 extern int outer2; // expected-note{{previous declaration is here}}
@@ -68,3 +70,25 @@ void f(int x) { // expected-note {{previous definition is here}}
 extern int b[];
 void g20(void) { extern int b[3]; } // expected-note{{previous declaration is here}}
 void g21(void) { extern int b[4]; } // expected-error{{redeclaration of 'b' with a different type: 'int[4]' vs 'int[3]'}}
+
+// GH227733: an invalid redefinition used to suppress the type merge in
+// MergeVarDecl, so a later redeclaration with a mismatched type was accepted,
+// which crashed the constant evaluator when the variable was used.
+#if __STDC_VERSION__ >= 202311L
+constexpr char e = 1; // c23-note 2 {{previous definition is here}}
+constexpr char e = 1; // c23-error {{redefinition of 'e'}}
+constexpr unsigned e; // c23-error {{redefinition of 'e' with a different type: 'const unsigned int' vs 'const char'}}
+int x = e;
+#endif
+
+// The same, but where every declaration in the redeclaration chain is invalid.
+invalid_type_1 v; // expected-error{{unknown type name 'invalid_type_1'}}
+invalid_type_2 v; // expected-error{{unknown type name 'invalid_type_2'}}
+extern int v;
+void test_v(void) { int y = v; }
+
+// A valid declaration, an invalid one, then a valid one, then a use.
+extern int w;
+invalid_type_3 w; // expected-error{{unknown type name 'invalid_type_3'}}
+extern int w;
+void test_w(void) { int z = w; }
