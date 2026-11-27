@@ -341,7 +341,7 @@ formatIncremental(llvm::StringRef OriginalCode, unsigned OriginalCursor,
   unsigned FormattedCursorStart =
                FormattingChanges.getShiftedCodePosition(Cursor),
            FormattedCursorEnd = FormattingChanges.getShiftedCodePosition(
-               Cursor + Incremental.CursorPlaceholder.size());
+               Cursor + Incremental.CursorPlaceholder.size(), false);
   tooling::Replacements RemoveCursorPlaceholder(
       tooling::Replacement(Filename, FormattedCursorStart,
                            FormattedCursorEnd - FormattedCursorStart, ""));
