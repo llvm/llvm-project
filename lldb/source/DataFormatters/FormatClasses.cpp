@@ -21,17 +21,16 @@ FormattersMatchData::FormattersMatchData(ValueObject &valobj,
                                          lldb::DynamicValueType use_dynamic)
     : m_valobj(valobj), m_dynamic_value_type(use_dynamic),
       m_formatters_match_vector({}, false), m_type_for_cache(),
-      m_candidate_languages() {
+      m_language(valobj.GetObjectRuntimeLanguage()), m_candidate_languages() {
   m_type_for_cache = FormatManager::GetTypeForCache(valobj, use_dynamic);
-  m_candidate_languages =
-      FormatManager::GetCandidateLanguages(valobj.GetObjectRuntimeLanguage());
+  m_candidate_languages = FormatManager::GetCandidateLanguages(m_language);
 }
 
 FormattersMatchVector FormattersMatchData::GetMatchesVector() {
   if (!m_formatters_match_vector.second) {
     m_formatters_match_vector.second = true;
-    m_formatters_match_vector.first =
-        FormatManager::GetPossibleMatches(m_valobj, m_dynamic_value_type);
+    m_formatters_match_vector.first = FormatManager::GetPossibleMatches(
+        m_valobj, m_dynamic_value_type, m_candidate_languages);
   }
   return m_formatters_match_vector.first;
 }

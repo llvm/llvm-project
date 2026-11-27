@@ -137,6 +137,9 @@ public:
 
   CandidateLanguagesVector GetCandidateLanguages();
 
+  /// The value's runtime language.
+  lldb::LanguageType GetLanguage() const { return m_language; }
+
   ValueObject &GetValueObject();
 
   lldb::DynamicValueType GetDynamicValueType();
@@ -146,6 +149,7 @@ private:
   lldb::DynamicValueType m_dynamic_value_type;
   std::pair<FormattersMatchVector, bool> m_formatters_match_vector;
   std::string m_type_for_cache;
+  lldb::LanguageType m_language;
   CandidateLanguagesVector m_candidate_languages;
 };
 
