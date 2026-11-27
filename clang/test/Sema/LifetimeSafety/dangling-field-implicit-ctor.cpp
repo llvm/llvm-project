@@ -47,3 +47,25 @@ struct SafeLiteral {
   std::string_view v = "literal";
 };
 void use_safe() { SafeLiteral c; (void)c; }
+
+// A type that has origins only because a lifetimebound function returns it,
+// returned by such a call in a default member initializer.
+struct MyObj {};
+struct View {
+  const MyObj *p;
+};
+View makeView(const MyObj &obj [[clang::lifetimebound]]);
+
+struct ImplicitCtorView {
+  View view{makeView(MyObj{})}; // expected-warning {{stack memory associated with temporary object escapes to the field 'view' which will dangle}}
+                                // expected-note@-1 {{result of call to 'makeView' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+                                // expected-note@-2 {{this field dangles}}
+};
+void use_implicit_view() { ImplicitCtorView c; (void)c; } // perfunc-note {{in implicit default constructor for 'ImplicitCtorView' first required here}}
+
+struct UserCtorView {
+  View view{makeView(MyObj{})}; // expected-warning {{stack memory associated with temporary object escapes to the field 'view' which will dangle}}
+                                // expected-note@-1 {{result of call to 'makeView' aliases the storage of temporary object because parameter 'obj' is marked as lifetimebound}}
+                                // expected-note@-2 {{this field dangles}}
+  UserCtorView() {}
+};

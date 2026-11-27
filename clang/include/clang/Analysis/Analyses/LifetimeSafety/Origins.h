@@ -24,6 +24,10 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace clang {
+class CFG;
+} // namespace clang
+
 namespace clang::lifetimes::internal {
 
 using OriginID = utils::ID<struct OriginTag>;
@@ -135,7 +139,8 @@ bool doesDeclHaveStorage(const ValueDecl *D);
 /// variables and expressions.
 class OriginManager {
 public:
-  OriginManager(const AnalysisDeclContext &AC, llvm::BumpPtrAllocator &Alloc);
+  OriginManager(const AnalysisDeclContext &AC, const CFG &Cfg,
+                llvm::BumpPtrAllocator &Alloc);
 
   /// Gets or creates the OriginList for a given ValueDecl.
   ///
@@ -213,10 +218,10 @@ private:
 
   void initializeThisOrigins(const Decl *D);
 
-  /// Pre-scans the function body (and constructor init lists) to discover
-  /// return types of lifetime-annotated calls (currently
-  /// [[clang::lifetimebound]]), registering them for origin tracking.
-  void collectLifetimeAnnotatedOriginTypes(const AnalysisDeclContext &AC);
+  /// Pre-scans the calls in the CFG to discover return types of
+  /// lifetime-annotated calls (currently [[clang::lifetimebound]]),
+  /// registering them for origin tracking.
+  void collectLifetimeAnnotatedOriginTypes(const CFG &Cfg);
   void registerLifetimeAnnotatedOriginType(QualType QT);
 
   ASTContext &AST;
