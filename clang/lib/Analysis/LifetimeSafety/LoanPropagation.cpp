@@ -220,6 +220,8 @@ public:
       // Only explore predecessor blocks where the target loan is present in the
       // current origin.
       for (const CFGBlock *PredBlock : CurrBlock->preds()) {
+        if (!PredBlock)
+          continue;
         SearchState NextState = {PredBlock, CurrOID};
         if (getLoans(getOutState(PredBlock), CurrOID).contains(TargetLoan) &&
             VistedStates.insert(NextState).second)
