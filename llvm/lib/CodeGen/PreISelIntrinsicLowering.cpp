@@ -853,7 +853,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
           return false;
         bool Strict =
             CI->getIntrinsicID() == Intrinsic::experimental_constrained_powi;
-        const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
+        const TargetLowering *TL = TM.getSubtargetImpl(F)->getTargetLowering();
         // Do not bypass targets with a native vector FPOWI lowering. Unlike
         // other vector math operations, there is no vector powi libcall.
         if (TL->isOperationLegalOrCustom(
