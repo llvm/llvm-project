@@ -691,8 +691,50 @@ done:
   ret void
 }
 
+; OPT-LABEL: @test_no_sink_ds_append(
+; OPT: entry:
+; OPT-NEXT: %gep = getelementptr i32, ptr addrspace(2) %gds, i32 7
+; OPT: if:
+; OPT-NEXT: %val = call i32 @llvm.amdgcn.ds.append.p2(ptr addrspace(2) %gep, i1 false)
+define amdgpu_kernel void @test_no_sink_ds_append(ptr addrspace(2) %gds, ptr addrspace(1) %out) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(2) %gds, i32 7
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %cmp = icmp eq i32 %tid, 0
+  br i1 %cmp, label %endif, label %if
+
+if:
+  %val = call i32 @llvm.amdgcn.ds.append.p2(ptr addrspace(2) %gep, i1 false)
+  br label %endif
+
+endif:
+  %res = phi i32 [ %val, %if ], [ 0, %entry ]
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+; OPT-LABEL: @test_no_sink_ds_consume(
+; OPT: entry:
+; OPT-NEXT: %gep = getelementptr i32, ptr addrspace(2) %gds, i32 7
+; OPT: if:
+; OPT-NEXT: %val = call i32 @llvm.amdgcn.ds.consume.p2(ptr addrspace(2) %gep, i1 false)
+define amdgpu_kernel void @test_no_sink_ds_consume(ptr addrspace(2) %gds, ptr addrspace(1) %out) {
+entry:
+  %gep = getelementptr i32, ptr addrspace(2) %gds, i32 7
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
+  %cmp = icmp eq i32 %tid, 0
+  br i1 %cmp, label %endif, label %if
+
+if:
+  %val = call i32 @llvm.amdgcn.ds.consume.p2(ptr addrspace(2) %gep, i1 false)
+  br label %endif
+
+endif:
+  %res = phi i32 [ %val, %if ], [ 0, %entry ]
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
 
 attributes #0 = { nounwind readnone }
-attributes #1 = { nounwind }
-attributes #2 = { nounwind argmemonly }
