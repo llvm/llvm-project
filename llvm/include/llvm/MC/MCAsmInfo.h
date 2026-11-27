@@ -741,9 +741,7 @@ public:
   }
 
   /// Set whether assembly (inline or otherwise) should be parsed.
-  void setUseIntegratedAssembler(bool Value) {
-    UseIntegratedAssembler = Value;
-  }
+  void setUseIntegratedAssembler(bool Value) { UseIntegratedAssembler = Value; }
 
   /// Set whether target want to use AsmParser to parse inlineasm.
   void setParseInlineAsmUsingAsmParser(bool Value) {
