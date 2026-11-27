@@ -153,7 +153,7 @@ exit:
 ; dies at the MOV32rr.
 declare i64 @get()
 
-define i64 @trunc_zext_cross_block() {
+define i64 @trunc_zext_cross_block() nounwind {
 ; ELIM-LABEL: trunc_zext_cross_block:
 ; ELIM:       # %bb.0: # %entry
 ; ELIM-NEXT:    pushq %rax
