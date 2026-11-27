@@ -20,6 +20,8 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "clang/UnifiedSymbolResolution/USRGeneration.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -38,45 +40,21 @@ extern "C" int indextest_perform_shell_execution(const char *command_line);
 
 namespace {
 
-enum class ActionType {
-  None,
-  PrintSourceSymbols,
+using namespace llvm::opt;
+enum ID {
+  OPT_INVALID = 0,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
 };
 
-namespace options {
+#define OPTTABLE_CODE
+#include "Opts.inc"
 
-static cl::OptionCategory IndexTestCoreCategory("index-test-core options");
-
-static cl::opt<ActionType>
-Action(cl::desc("Action:"), cl::init(ActionType::None),
-       cl::values(
-          clEnumValN(ActionType::PrintSourceSymbols,
-                     "print-source-symbols", "Print symbols from source")),
-       cl::cat(IndexTestCoreCategory));
-
-static cl::extrahelp MoreHelp(
-  "\nAdd \"-- <compiler arguments>\" at the end to setup the compiler "
-  "invocation\n"
-);
-
-static cl::opt<bool>
-DumpModuleImports("dump-imported-module-files",
-               cl::desc("Print symbols and input files from imported modules"));
-
-static cl::opt<bool>
-IncludeLocals("include-locals", cl::desc("Print local symbols"));
-
-static cl::opt<bool> IgnoreMacros("ignore-macros",
-                                  cl::desc("Skip indexing macros"));
-
-static cl::opt<std::string>
-ModuleFilePath("module-file",
-               cl::desc("Path to module file to print symbols from"));
-static cl::opt<std::string>
-  ModuleFormat("fmodule-format", cl::init("raw"),
-        cl::desc("Container format for clang modules and PCH, 'raw' or 'obj'"));
-
-}
+class IndexTestCoreOptTable : public OptTable {
+public:
+  IndexTestCoreOptTable() : OptTable(optionTables()) {}
+};
 } // anonymous namespace
 
 static void printSymbolInfo(SymbolInfo SymInfo, raw_ostream &OS);
@@ -362,29 +340,43 @@ int indextest_core_main(int argc, const char **argv) {
     argc = DoubleDash - argv;
   }
 
-  cl::HideUnrelatedOptions(options::IndexTestCoreCategory);
-  cl::ParseCommandLineOptions(argc, argv, "index-test-core");
+  BumpPtrAllocator Alloc;
+  StringSaver Saver(Alloc);
+  IndexTestCoreOptTable Tbl;
+  opt::InputArgList Args = Tbl.parseArgs(argc, const_cast<char **>(argv),
+                                         OPT_UNKNOWN, Saver, [](StringRef Msg) {
+                                           errs() << "error: " << Msg << '\n';
+                                           exit(1);
+                                         });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(outs(), "c-index-test core [options]", "index-test-core");
+    outs() << "\nAdd \"-- <compiler arguments>\" at the end to setup the "
+              "compiler invocation\n";
+    return 0;
+  }
+  if (const opt::Arg *A = Args.getLastArg(OPT_INPUT)) {
+    errs() << "error: unexpected positional argument '" << A->getAsString(Args)
+           << "'\n";
+    return 1;
+  }
 
-  if (options::Action == ActionType::None) {
+  if (!Args.hasArg(OPT_print_source_symbols)) {
     errs() << "error: action required; pass '-help' for options\n";
     return 1;
   }
 
-  if (options::Action == ActionType::PrintSourceSymbols) {
-    if (!options::ModuleFilePath.empty()) {
-      return printSourceSymbolsFromModule(options::ModuleFilePath,
-                                          options::ModuleFormat);
-    }
-    if (CompArgs.empty()) {
-      errs() << "error: missing compiler args; pass '-- <compiler arguments>'\n";
-      return 1;
-    }
-    return printSourceSymbols(Executable.c_str(), CompArgs,
-                              options::DumpModuleImports,
-                              options::IncludeLocals, options::IgnoreMacros);
+  std::string ModuleFilePath = Args.getLastArgValue(OPT_module_file).str();
+  if (!ModuleFilePath.empty()) {
+    return printSourceSymbolsFromModule(
+        ModuleFilePath, Args.getLastArgValue(OPT_fmodule_format, "raw"));
   }
-
-  return 0;
+  if (CompArgs.empty()) {
+    errs() << "error: missing compiler args; pass '-- <compiler arguments>'\n";
+    return 1;
+  }
+  return printSourceSymbols(
+      Executable.c_str(), CompArgs, Args.hasArg(OPT_dump_imported_module_files),
+      Args.hasArg(OPT_include_locals), Args.hasArg(OPT_ignore_macros));
 }
 
 //===----------------------------------------------------------------------===//

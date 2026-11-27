@@ -2544,6 +2544,15 @@ filegroup(
     ],
 )
 
+gentbl_cc_library(
+    name = "CIndexTestOptsTableGen",
+    strip_include_prefix = "tools/c-index-test",
+    tbl_outs = {"tools/c-index-test/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/c-index-test/Opts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_binary(
     name = "c-index-test",
     testonly = True,
@@ -2560,6 +2569,7 @@ cc_binary(
     }),
     stamp = 0,
     deps = [
+        ":CIndexTestOptsTableGen",
         ":ast",
         ":basic",
         ":codegen",
@@ -2573,6 +2583,7 @@ cc_binary(
         ":unified_symbol_resolution",
         "//llvm:Core",
         "//llvm:MC",
+        "//llvm:Option",
         "//llvm:Support",
         "//third-party:libxml2",
     ],
