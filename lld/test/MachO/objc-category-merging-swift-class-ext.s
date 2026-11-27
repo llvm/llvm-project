@@ -3,7 +3,7 @@
 
 ############ Test swift category merging into @objc class, with protocol ############
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-macos -o cat_swift.o %s
-# RUN: %lld -arch arm64 -dylib -o cat_swift.dylib cat_swift.o -objc_category_merging
+# RUN: %lld -arch arm64 -dylib -o cat_swift.dylib cat_swift.o -objc_category_merging -no_objc_relative_method_lists
 # RUN: llvm-objdump --objc-meta-data --macho cat_swift.dylib | FileCheck %s --check-prefixes=CHECK-MERGE
 
 
