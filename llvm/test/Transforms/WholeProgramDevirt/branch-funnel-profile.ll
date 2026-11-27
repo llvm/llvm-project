@@ -19,12 +19,12 @@
 ; NORETP: define internal void @branch_funnel.1(ptr nest %0, ...) !prof ![[PROF1]]
 ; NORETP: ![[PROF1]] = !{!"unknown", !"wholeprogramdevirt"}
 
-; O3: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof ![[PROF1:[0-9]+]]
-; O3: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof ![[PROF1]]
-; O3: define internal void @branch_funnel(ptr nest %0, ...) unnamed_addr #5 !prof ![[PROF2:[0-9]+]]
-; O3: define internal void @branch_funnel.1(ptr nest %0, ...) unnamed_addr #5 !prof ![[PROF2]]
-; O3: define hidden void @__typeid_typeid3_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof ![[PROF3:[0-9]+]]
-; O3: define hidden void @__typeid_typeid3_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr #5 !prof ![[PROF3]]
+; O3: define hidden void @__typeid_typeid1_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr !prof ![[PROF1:[0-9]+]]
+; O3: define hidden void @__typeid_typeid1_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr !prof ![[PROF1]]
+; O3: define internal void @branch_funnel(ptr nest %0, ...) unnamed_addr !prof ![[PROF2:[0-9]+]]
+; O3: define internal void @branch_funnel.1(ptr nest %0, ...) unnamed_addr !prof ![[PROF2]]
+; O3: define hidden void @__typeid_typeid3_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr !prof ![[PROF3:[0-9]+]]
+; O3: define hidden void @__typeid_typeid3_rv_0_branch_funnel(ptr nest %0, ...) local_unnamed_addr !prof ![[PROF3]]
 ; O3: ![[PROF2]] = !{!"function_entry_count", i64 1000}
 ; O3: ![[PROF1]] = !{!"function_entry_count", i64 3000}
 ; O3: ![[PROF3]] = !{!"unknown", !"wholeprogramdevirt"}
