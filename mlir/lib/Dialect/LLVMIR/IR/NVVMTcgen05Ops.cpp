@@ -1114,5 +1114,32 @@ LogicalResult Tcgen05LdRedOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.ld{.red}.spcompress functions
+//===----------------------------------------------------------------------===//
+
+// tcgen05.ld{.red}.spcompress loads 32x32b.num elements and keeps two of every
+// four of them in data. Each kept element has a 2-bit index in metadata, which
+// therefore occupies ceil(num / 32) 32-bit registers.
+static LogicalResult verifyTcgen05LdSPCompress(Operation *op, Value metadata,
+                                               Value data) {
+  unsigned num = 2 * cast<VectorType>(data.getType()).getNumElements();
+  unsigned expectedRegs = llvm::divideCeil(num, 32);
+  auto metadataTy = dyn_cast<VectorType>(metadata.getType());
+  unsigned numRegs = metadataTy ? metadataTy.getNumElements() : 1;
+  if (numRegs != expectedRegs)
+    return op->emitOpError("expects metadata to occupy ")
+           << expectedRegs << " 32-bit register(s) for repeat factor x" << num;
+  return success();
+}
+
+LogicalResult Tcgen05LdSPCompressOp::verify() {
+  return verifyTcgen05LdSPCompress(*this, getMetadata(), getData());
+}
+
+LogicalResult Tcgen05LdRedSPCompressOp::verify() {
+  return verifyTcgen05LdSPCompress(*this, getMetadata(), getData());
+}
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMTcgen05Ops.cpp.inc"
