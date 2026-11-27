@@ -55,8 +55,8 @@ define dso_local signext i32 @caller(i32 signext %a, i32 signext %b, i32 signext
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    ld r4, 40(r1) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld r6, 32(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    mr r5, r0
+; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    bl callee
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addi r1, r1, 192

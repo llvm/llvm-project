@@ -60,6 +60,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVPreLegalizerCombinerLegacyPass(PR);
   initializeSPIRVLegalizePointerCastLegacyPass(PR);
   initializeSPIRVLegalizeZeroSizeArraysLegacyPass(PR);
+  initializeSPIRVLowerDynamicLocalMemoryLegacyPass(PR);
   initializeSPIRVRegularizerLegacyPass(PR);
   initializeSPIRVPreLegalizerLegacyPass(PR);
   initializeSPIRVPostLegalizerLegacyPass(PR);
@@ -225,6 +226,16 @@ bool SPIRVTargetMachine::parseMachineFunctionInfo(
       return Diagnose(Entry.Type, "expected a SPIR-V type register");
     GR->assignSPIRVTypeToVReg(TypeMI, RegInfo->VReg, MF);
   }
+  if (!YamlMFI.LastInsertedType.Value.empty()) {
+    VRegInfo *RegInfo;
+    if (ParseVReg(YamlMFI.LastInsertedType, RegInfo))
+      return true;
+    MachineInstr *MI = MRI.getUniqueVRegDef(RegInfo->VReg);
+    if (!MI)
+      return Diagnose(YamlMFI.LastInsertedType,
+                      "virtual register is not defined");
+    GR->setLastInsertedType(MF, MI);
+  }
   GR->restoreFromMIR(MF);
   return false;
 }
@@ -249,6 +260,11 @@ void SPIRVPassConfig::addIRPasses() {
 
   addPass(createSPIRVRegularizerPass());
   addPass(createSPIRVCtorDtorLoweringLegacyPass());
+  // LowerDynamicLocalMemoryPass must run after ctor/dtor lowering:
+  // the kernels CtorDtorLowering creates also need the trailing dynamic local
+  // memory argument, since runtimes pass it to every kernel of a module using
+  // such memory.
+  addPass(createSPIRVLowerDynamicLocalMemoryPass(TM));
   addPass(createSPIRVPrepareFunctionsPass(TM));
   addPass(createSPIRVPrepareGlobalsPass());
 }

@@ -38,12 +38,6 @@
 
 using namespace llvm;
 
-namespace WebAssembly {
-extern cl::opt<bool> WasmDisableExplicitLocals;
-} // namespace WebAssembly
-
-using llvm::WebAssembly::WasmDisableExplicitLocals;
-
 namespace {
 
 class WebAssemblyCodeGenPassBuilder : public CodeGenPassBuilder {
@@ -255,7 +249,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(WebAssemblyCFGStackifyPass(), PMW);
 
   // Insert explicit local.get and local.set operators.
-  if (!WasmDisableExplicitLocals)
+  if (getTM().getCLOpts().emit_explicit_locals)
     addMachineFunctionPass(WebAssemblyExplicitLocalsPass(), PMW);
 
   // Lower br_unless into br_if.
@@ -269,7 +263,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(WebAssemblyRegNumberingPass(), PMW);
 
   // Fix debug_values whose defs have been stackified.
-  if (!WasmDisableExplicitLocals)
+  if (getTM().getCLOpts().emit_explicit_locals)
     addMachineFunctionPass(WebAssemblyDebugFixupPass(), PMW);
 
   // Collect information to prepare for MC lowering / asm printing.

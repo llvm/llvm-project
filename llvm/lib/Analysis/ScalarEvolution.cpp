@@ -4722,8 +4722,7 @@ static void PushDefUseChildren(Instruction *I,
                                SmallVectorImpl<Instruction *> &Worklist,
                                SmallPtrSetImpl<Instruction *> &Visited) {
   // Push the def-use children onto the Worklist stack.
-  for (User *U : I->users()) {
-    auto *UserInsn = cast<Instruction>(U);
+  for (Instruction *UserInsn : I->users()) {
     if (Visited.insert(UserInsn).second)
       Worklist.push_back(UserInsn);
   }
@@ -7301,6 +7300,10 @@ bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
 }
 
 bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
+  // Use flags only hold where the expression is used, so Op may be poison
+  // elsewhere if it or any of its operands carries them.
+  if (Op->getCanonical() != Op)
+    return false;
   SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ true);
   visitAll(Op, PC);
   return PC.MaybePoison.empty();

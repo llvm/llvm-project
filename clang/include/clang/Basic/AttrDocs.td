@@ -3105,20 +3105,27 @@ in the same way.
 If an enumerator does not exist in the kernel, libbpf poisons the instruction
 that loads its relocated value, and the verifier rejects the program if that
 instruction is reachable. A relocated case label is compared before the switch,
-so the program is rejected if the switch is reachable. A case label cannot have
-an existence check, so compare an enumerator that may not exist in an `if`
-instead, e.g., with libbpf's `bpf_core_enum_value_exists()`:
+so the program is rejected if the switch is reachable. An explicit
+`__builtin_preserve_enum_value()` call is relocated in a case label in the same
+way, so a case label can check whether an enumerator exists, e.g., with
+libbpf's `bpf_core_enum_value_exists()`:
 
 ```c
-if (bpf_core_enum_value_exists(enum E, B) && x == B)
-  return 1;
 switch (x) {
 case A:
   return 2;
+case bpf_core_enum_value_exists(enum E, B) ? B : -1:
+  return 1;
 default:
   return 0;
 }
 ```
+
+The relocated value of `B` is only loaded if `B` exists, and otherwise the case
+compares `x` with `-1`, so `-1` should not be a value of `x`. The local value of
+an explicit call, i.e., 1 for `bpf_core_enum_value_exists()` and the value in
+the local enum for `bpf_core_enum_value()`, is used for the checks above. An
+explicit call requires -g, as elsewhere.
 
 The `default:` label handles the enumerators that the kernel has but the local
 enum does not. `-fbpf-no-enum-reloc=` below is not an alternative for an enum
@@ -3348,12 +3355,21 @@ the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
 Permissible values for this parameter are `machine`, `supervisor`,
-`rnmi`, `qci-nest`, `qci-nonest`, `SiFive-CLIC-preemptible`, and
-`SiFive-CLIC-stack-swap`. If there is no parameter, then it defaults to
-`machine`.
+`rnmi`, `preemptible`, `push-pop`, `qci-nest`, `qci-nonest`,
+`SiFive-CLIC-preemptible`, and `SiFive-CLIC-stack-swap`. If there is no
+parameter, then it defaults to `machine`.
 
 The `rnmi` value is used for resumable non-maskable interrupts. It requires the
 standard Smrnmi extension.
+
+The `preemptible` and `push-pop` values are used with the ACLIC fast Interrupt
+extensions. The `preemptible` value requires `Smnip` for machine-mode
+interrupts or `Ssnip` for supervisor-mode interrupts. It saves the interrupt
+status and exception PC before re-enabling interrupts. The `push-pop` value
+requires `Smip` for machine-mode interrupts or `Ssip` for supervisor-mode
+interrupts. It assumes that `a0`-`a5` were saved by the interrupt trap and
+returns with `mipopret` or `sipopret`. These values may be combined with each
+other and with either `machine` or `supervisor`.
 
 The `qci-nest` and `qci-nonest` values require Qualcomm's Xqciint extension
 and are used for Machine-mode Interrupts and Machine-mode Non-maskable
@@ -3378,6 +3394,7 @@ to be emitted. In case of repeated declarations, the last one prevails.
 References:
 - [GCC RISC-V Attributes](https://gcc.gnu.org/onlinedocs/gcc/RISC-V-Function-Attributes.html)
 - [The RISC-V Instruction Set Manual Volume II: Privileged Architecture Version 1.10](https://docs.riscv.org/reference/isa/v1.10/_attachments/riscv-privileged.pdf)
+- [RISC-V Fast Interrupt v0.20](https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.20)
 - [Xqci extension v0.13](https://github.com/quic/riscv-unified-db/releases/tag/Xqci-0.13.0)
 - [SiFive Interrupt Cookbook Version 1.2](https://sifive.cdn.prismic.io/sifive/d1984d2b-c9b9-4c91-8de0-d68a5e64fa0f_sifive-interrupt-cookbook-v1p2.pdf)
   }];

@@ -1765,7 +1765,7 @@ auto SPIRVNonSemanticDebugHandler::emitDebugTypedef(
     const DIDerivedType *TD, MCRegister VoidTypeReg, MCRegister I32TypeReg,
     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI)
     -> EmitResult<PreparedScope> {
-  EmitResult<MCRegister> Base = getOrCreateDebugScope(TD->getBaseType());
+  EmitResult<MCRegister> Base = getOrCreateDebugTypeOrNone(TD->getBaseType());
   if (!Base)
     return EmitResult<PreparedScope>::failure(Base);
 

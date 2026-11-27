@@ -52,9 +52,9 @@ define void @test() sanitize_hwaddress personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    [[TMP22:%.*]] = and i64 [[TMP21]], 72057594037927935
 ; CHECK-NEXT:    [[TMP23:%.*]] = lshr i64 [[TMP22]], 4
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP23]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP24]], i32 0
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP24]], i64 0
 ; CHECK-NEXT:    store i8 4, ptr [[TMP25]], align 1
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[X]], i64 15
 ; CHECK-NEXT:    store i8 [[TMP20]], ptr [[TMP26]], align 1
 ; CHECK-NEXT:    invoke void @mayFail(ptr [[X_HWASAN]])
 ; CHECK-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[LPAD:%.*]]

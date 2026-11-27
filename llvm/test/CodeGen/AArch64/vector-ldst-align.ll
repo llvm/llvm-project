@@ -5248,20 +5248,21 @@ define void @store_v4i32_align2(ptr %ptr, <4 x i32> %val) {
 ; STRICTALIGN-NEXT:    .cfi_def_cfa_offset 16
 ; STRICTALIGN-NEXT:    ldr x8, [sp]
 ; STRICTALIGN-NEXT:    strh w8, [x0]
-; STRICTALIGN-NEXT:    lsr x9, x8, #48
 ; STRICTALIGN-NEXT:    lsr x10, x8, #32
+; STRICTALIGN-NEXT:    lsr x9, x8, #48
 ; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
 ; STRICTALIGN-NEXT:    lsr x8, x8, #16
-; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    lsr x8, x11, #48
 ; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
-; STRICTALIGN-NEXT:    lsr x9, x11, #32
-; STRICTALIGN-NEXT:    strh w11, [x0, #8]!
-; STRICTALIGN-NEXT:    strh w8, [x0, #6]
-; STRICTALIGN-NEXT:    strh w9, [x0, #4]
+; STRICTALIGN-NEXT:    lsr x10, x11, #48
+; STRICTALIGN-NEXT:    strh w9, [x0, #6]
+; STRICTALIGN-NEXT:    mov x9, x0
+; STRICTALIGN-NEXT:    strh w11, [x9, #8]!
+; STRICTALIGN-NEXT:    lsr x12, x11, #32
+; STRICTALIGN-NEXT:    strh w10, [x9, #6]
+; STRICTALIGN-NEXT:    lsr x10, x11, #16
+; STRICTALIGN-NEXT:    strh w12, [x9, #4]
+; STRICTALIGN-NEXT:    strh w10, [x0, #10]
+; STRICTALIGN-NEXT:    strh w8, [x0, #2]
 ; STRICTALIGN-NEXT:    add sp, sp, #16
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -5451,18 +5452,18 @@ define void @store_v4i32_align2_post16(ptr %ptr, <4 x i32> %val, ptr %writeback)
 ; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
 ; STRICTALIGN-NEXT:    lsr x8, x8, #16
 ; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
 ; STRICTALIGN-NEXT:    mov x9, x0
+; STRICTALIGN-NEXT:    strh w10, [x0, #4]
+; STRICTALIGN-NEXT:    lsr x10, x11, #48
+; STRICTALIGN-NEXT:    lsr x12, x11, #32
 ; STRICTALIGN-NEXT:    strh w11, [x9, #8]!
-; STRICTALIGN-NEXT:    strh w8, [x9, #6]
-; STRICTALIGN-NEXT:    add x8, x0, #16
-; STRICTALIGN-NEXT:    strh w10, [x9, #4]
-; STRICTALIGN-NEXT:    str x8, [x1]
+; STRICTALIGN-NEXT:    lsr x11, x11, #16
+; STRICTALIGN-NEXT:    strh w10, [x9, #6]
+; STRICTALIGN-NEXT:    strh w12, [x9, #4]
+; STRICTALIGN-NEXT:    add x9, x0, #16
+; STRICTALIGN-NEXT:    strh w11, [x0, #10]
+; STRICTALIGN-NEXT:    strh w8, [x0, #2]
+; STRICTALIGN-NEXT:    str x9, [x1]
 ; STRICTALIGN-NEXT:    add sp, sp, #16
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -5727,18 +5728,18 @@ define void @store_v4i32_align2_post32(ptr %ptr, <4 x i32> %val, ptr %writeback)
 ; STRICTALIGN-NEXT:    ldr x11, [sp, #8]
 ; STRICTALIGN-NEXT:    lsr x8, x8, #16
 ; STRICTALIGN-NEXT:    strh w9, [x0, #6]
-; STRICTALIGN-NEXT:    lsr x9, x11, #16
-; STRICTALIGN-NEXT:    strh w8, [x0, #2]
-; STRICTALIGN-NEXT:    lsr x8, x11, #48
-; STRICTALIGN-NEXT:    strh w10, [x0, #4]
-; STRICTALIGN-NEXT:    lsr x10, x11, #32
-; STRICTALIGN-NEXT:    strh w9, [x0, #10]
 ; STRICTALIGN-NEXT:    mov x9, x0
+; STRICTALIGN-NEXT:    strh w10, [x0, #4]
+; STRICTALIGN-NEXT:    lsr x10, x11, #48
+; STRICTALIGN-NEXT:    lsr x12, x11, #32
 ; STRICTALIGN-NEXT:    strh w11, [x9, #8]!
-; STRICTALIGN-NEXT:    strh w8, [x9, #6]
-; STRICTALIGN-NEXT:    add x8, x0, #32
-; STRICTALIGN-NEXT:    strh w10, [x9, #4]
-; STRICTALIGN-NEXT:    str x8, [x1]
+; STRICTALIGN-NEXT:    lsr x11, x11, #16
+; STRICTALIGN-NEXT:    strh w10, [x9, #6]
+; STRICTALIGN-NEXT:    strh w12, [x9, #4]
+; STRICTALIGN-NEXT:    add x9, x0, #32
+; STRICTALIGN-NEXT:    strh w11, [x0, #10]
+; STRICTALIGN-NEXT:    strh w8, [x0, #2]
+; STRICTALIGN-NEXT:    str x9, [x1]
 ; STRICTALIGN-NEXT:    add sp, sp, #16
 ; STRICTALIGN-NEXT:    ret
 ;
@@ -7371,8 +7372,8 @@ define void @store_v2i64_align4_pre16(ptr %ptr, <2 x i64> %val, ptr %writeback) 
 ; STRICTALIGN-NEXT:    lsr x8, x8, #32
 ; STRICTALIGN-NEXT:    ldr x9, [sp, #8]
 ; STRICTALIGN-NEXT:    lsr x10, x9, #32
-; STRICTALIGN-NEXT:    stp w8, w9, [x0, #4]
-; STRICTALIGN-NEXT:    str w10, [x0, #12]
+; STRICTALIGN-NEXT:    stp w9, w10, [x0, #8]
+; STRICTALIGN-NEXT:    str w8, [x0, #4]
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    add sp, sp, #16
 ; STRICTALIGN-NEXT:    ret
@@ -7388,13 +7389,13 @@ define void @store_v2i64_align4_pre16(ptr %ptr, <2 x i64> %val, ptr %writeback) 
 ; STRICTALIGN-BE:       // %bb.0:
 ; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
 ; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x10, [sp]
-; STRICTALIGN-BE-NEXT:    lsr x9, x10, #32
+; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
+; STRICTALIGN-BE-NEXT:    lsr x9, x8, #32
 ; STRICTALIGN-BE-NEXT:    str w9, [x0, #16]!
 ; STRICTALIGN-BE-NEXT:    ldr x9, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-BE-NEXT:    str w9, [x0, #12]
-; STRICTALIGN-BE-NEXT:    stp w10, w8, [x0, #4]
+; STRICTALIGN-BE-NEXT:    lsr x10, x9, #32
+; STRICTALIGN-BE-NEXT:    stp w10, w9, [x0, #8]
+; STRICTALIGN-BE-NEXT:    str w8, [x0, #4]
 ; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    add sp, sp, #16
 ; STRICTALIGN-BE-NEXT:    ret
@@ -7571,8 +7572,8 @@ define void @store_v2i64_align4_pre32(ptr %ptr, <2 x i64> %val, ptr %writeback) 
 ; STRICTALIGN-NEXT:    lsr x8, x8, #32
 ; STRICTALIGN-NEXT:    ldr x9, [sp, #8]
 ; STRICTALIGN-NEXT:    lsr x10, x9, #32
-; STRICTALIGN-NEXT:    stp w8, w9, [x0, #4]
-; STRICTALIGN-NEXT:    str w10, [x0, #12]
+; STRICTALIGN-NEXT:    stp w9, w10, [x0, #8]
+; STRICTALIGN-NEXT:    str w8, [x0, #4]
 ; STRICTALIGN-NEXT:    str x0, [x1]
 ; STRICTALIGN-NEXT:    add sp, sp, #16
 ; STRICTALIGN-NEXT:    ret
@@ -7588,13 +7589,13 @@ define void @store_v2i64_align4_pre32(ptr %ptr, <2 x i64> %val, ptr %writeback) 
 ; STRICTALIGN-BE:       // %bb.0:
 ; STRICTALIGN-BE-NEXT:    str q0, [sp, #-16]!
 ; STRICTALIGN-BE-NEXT:    .cfi_def_cfa_offset 16
-; STRICTALIGN-BE-NEXT:    ldr x10, [sp]
-; STRICTALIGN-BE-NEXT:    lsr x9, x10, #32
+; STRICTALIGN-BE-NEXT:    ldr x8, [sp]
+; STRICTALIGN-BE-NEXT:    lsr x9, x8, #32
 ; STRICTALIGN-BE-NEXT:    str w9, [x0, #32]!
 ; STRICTALIGN-BE-NEXT:    ldr x9, [sp, #8]
-; STRICTALIGN-BE-NEXT:    lsr x8, x9, #32
-; STRICTALIGN-BE-NEXT:    str w9, [x0, #12]
-; STRICTALIGN-BE-NEXT:    stp w10, w8, [x0, #4]
+; STRICTALIGN-BE-NEXT:    lsr x10, x9, #32
+; STRICTALIGN-BE-NEXT:    stp w10, w9, [x0, #8]
+; STRICTALIGN-BE-NEXT:    str w8, [x0, #4]
 ; STRICTALIGN-BE-NEXT:    str x0, [x1]
 ; STRICTALIGN-BE-NEXT:    add sp, sp, #16
 ; STRICTALIGN-BE-NEXT:    ret

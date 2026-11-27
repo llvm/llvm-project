@@ -253,6 +253,14 @@ LLVM_ABI bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
                                      APInt &DemandedLHS, APInt &DemandedRHS,
                                      bool AllowUndefElts = false);
 
+/// Transform the demanded elements of the result of \p Shuf into the demanded
+/// elements of its two operands. For fixed-length vectors, returns false if a
+/// demanded mask element is poison. For scalable vectors, both operands are
+/// assumed to be fully demanded.
+LLVM_ABI bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
+                                     const APInt &DemandedElts,
+                                     APInt &DemandedLHS, APInt &DemandedRHS);
+
 /// Does this shuffle mask represent either one slide shuffle or a pair of
 /// two slide shuffles, combined with a select on some constant vector mask?
 /// A slide is a shuffle mask which shifts some set of elements up or down

@@ -8,7 +8,6 @@
 
 ---
 name: remat_early_clobber_partial_def
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: remat_early_clobber_partial_def
   ; CHECK: bb.0:

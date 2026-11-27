@@ -39,14 +39,12 @@ public:
   public:
     typedef chi_squared_distribution distribution_type;
 
-    _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __n = 1) : __n_(__n) {}
+    explicit param_type(result_type __n = 1) : __n_(__n) {}
 
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type n() const { return __n_; }
+    [[__nodiscard__]] result_type n() const { return __n_; }
 
-    friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
-      return __x.__n_ == __y.__n_;
-    }
-    friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+    friend bool operator==(const param_type& __x, const param_type& __y) { return __x.__n_ == __y.__n_; }
+    friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
   };
 
 private:
@@ -55,45 +53,43 @@ private:
 public:
   // constructor and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI chi_squared_distribution() : chi_squared_distribution(1) {}
-  _LIBCPP_HIDE_FROM_ABI explicit chi_squared_distribution(result_type __n) : __p_(param_type(__n)) {}
+  chi_squared_distribution() : chi_squared_distribution(1) {}
+  explicit chi_squared_distribution(result_type __n) : __p_(param_type(__n)) {}
 #else
-  _LIBCPP_HIDE_FROM_ABI explicit chi_squared_distribution(result_type __n = 1) : __p_(param_type(__n)) {}
+  explicit chi_squared_distribution(result_type __n = 1) : __p_(param_type(__n)) {}
 #endif
-  _LIBCPP_HIDE_FROM_ABI explicit chi_squared_distribution(const param_type& __p) : __p_(__p) {}
-  _LIBCPP_HIDE_FROM_ABI void reset() {}
+  explicit chi_squared_distribution(const param_type& __p) : __p_(__p) {}
+  void reset() {}
 
   // generating functions
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g, const param_type& __p) {
     return gamma_distribution<result_type>(__p.n() / 2, 2)(__g);
   }
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type n() const { return __p_.n(); }
+  [[__nodiscard__]] result_type n() const { return __p_.n(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
-  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
+  [[__nodiscard__]] param_type param() const { return __p_; }
+  void param(const param_type& __p) { __p_ = __p; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::infinity(); }
+  [[__nodiscard__]] result_type min() const { return 0; }
+  [[__nodiscard__]] result_type max() const { return numeric_limits<result_type>::infinity(); }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool
-  operator==(const chi_squared_distribution& __x, const chi_squared_distribution& __y) {
+  friend bool operator==(const chi_squared_distribution& __x, const chi_squared_distribution& __y) {
     return __x.__p_ == __y.__p_;
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool
-  operator!=(const chi_squared_distribution& __x, const chi_squared_distribution& __y) {
+  friend bool operator!=(const chi_squared_distribution& __x, const chi_squared_distribution& __y) {
     return !(__x == __y);
   }
 };
 
 template <class _CharT, class _Traits, class _RT>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const chi_squared_distribution<_RT>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _OStream;
@@ -103,8 +99,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const chi_squared_distribution<
 }
 
 template <class _CharT, class _Traits, class _RT>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, chi_squared_distribution<_RT>& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, chi_squared_distribution<_RT>& __x) {
   typedef chi_squared_distribution<_RT> _Eng;
   typedef typename _Eng::result_type result_type;
   typedef typename _Eng::param_type param_type;

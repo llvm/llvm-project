@@ -64,41 +64,34 @@ static Expected<SymbolLookupResult> syncLookup(NativeDylibManager &NDM,
 
 TEST(NativeDylibManagerTest, Create) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ST;
-  ASSERT_THAT_EXPECTED(NativeDylibManager::Create(S, ST), Succeeded());
+  NativeDylibManager NDM(S);
 }
 
 TEST(NativeDylibManagerTest, Load) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = NativeDylibManager::Create(S, ST);
-  ASSERT_THAT_EXPECTED(NDM, Succeeded());
+  NativeDylibManager NDM(S);
 
-  EXPECT_THAT_EXPECTED(syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH),
+  EXPECT_THAT_EXPECTED(syncLoad(NDM, ORC_RT_TEST_DYLIB_PATH),
                        HasValue(Ne(nullptr)));
 }
 
 TEST(NativeDylibManagerTest, LoadNonExistent) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = NativeDylibManager::Create(S, ST);
-  ASSERT_THAT_EXPECTED(NDM, Succeeded());
+  NativeDylibManager NDM(S);
 
-  EXPECT_THAT_EXPECTED(syncLoad(**NDM, "/no/such/library.dylib"), Failed());
+  EXPECT_THAT_EXPECTED(syncLoad(NDM, "/no/such/library.dylib"), Failed());
 }
 
 TEST(NativeDylibManagerTest, LoadEmptyPathReturnsGlobalHandle) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = NativeDylibManager::Create(S, ST);
-  ASSERT_THAT_EXPECTED(NDM, Succeeded());
+  NativeDylibManager NDM(S);
 
   // The global handle's value is implementation-defined, so verify by looking
   // up through it.
-  auto Handle = syncLoad(**NDM, "");
+  auto Handle = syncLoad(NDM, "");
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
-  auto Result = syncLookup(**NDM, *Handle, {{MANGLED("malloc"), Req}});
+  auto Result = syncLookup(NDM, *Handle, {{MANGLED("malloc"), Req}});
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_EQ(Result->size(), 1U);
   ASSERT_TRUE((*Result)[0].has_value())
@@ -108,15 +101,13 @@ TEST(NativeDylibManagerTest, LoadEmptyPathReturnsGlobalHandle) {
 
 TEST(NativeDylibManagerTest, LookupSingleSymbol) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = NativeDylibManager::Create(S, ST);
-  ASSERT_THAT_EXPECTED(NDM, Succeeded());
+  NativeDylibManager NDM(S);
 
-  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
+  auto Handle = syncLoad(NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
-  auto Result = syncLookup(**NDM, *Handle,
-                           {{MANGLED("orc_rt_test_dylib_return42"), Req}});
+  auto Result =
+      syncLookup(NDM, *Handle, {{MANGLED("orc_rt_test_dylib_return42"), Req}});
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_EQ(Result->size(), 1U);
   ASSERT_TRUE((*Result)[0].has_value());
@@ -129,14 +120,12 @@ TEST(NativeDylibManagerTest, LookupSingleSymbol) {
 
 TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = NativeDylibManager::Create(S, ST);
-  ASSERT_THAT_EXPECTED(NDM, Succeeded());
+  NativeDylibManager NDM(S);
 
-  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
+  auto Handle = syncLoad(NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
-  auto Result = syncLookup(**NDM, *Handle,
+  auto Result = syncLookup(NDM, *Handle,
                            {{MANGLED("orc_rt_test_dylib_return42"), Req},
                             {MANGLED("orc_rt_test_dylib_return7"), Req}});
   ASSERT_THAT_EXPECTED(Result, Succeeded());
@@ -154,14 +143,12 @@ TEST(NativeDylibManagerTest, LookupMultipleSymbols) {
 
 TEST(NativeDylibManagerTest, LookupWeakMissingSymbol) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = NativeDylibManager::Create(S, ST);
-  ASSERT_THAT_EXPECTED(NDM, Succeeded());
+  NativeDylibManager NDM(S);
 
-  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
+  auto Handle = syncLoad(NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
-  auto Result = syncLookup(**NDM, *Handle, {{MANGLED("no_such_symbol"), Weak}});
+  auto Result = syncLookup(NDM, *Handle, {{MANGLED("no_such_symbol"), Weak}});
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_EQ(Result->size(), 1U);
   ASSERT_TRUE((*Result)[0].has_value())
@@ -171,14 +158,12 @@ TEST(NativeDylibManagerTest, LookupWeakMissingSymbol) {
 
 TEST(NativeDylibManagerTest, LookupRequiredMissingSymbol) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = NativeDylibManager::Create(S, ST);
-  ASSERT_THAT_EXPECTED(NDM, Succeeded());
+  NativeDylibManager NDM(S);
 
-  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
+  auto Handle = syncLoad(NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
-  auto Result = syncLookup(**NDM, *Handle, {{MANGLED("no_such_symbol"), Req}});
+  auto Result = syncLookup(NDM, *Handle, {{MANGLED("no_such_symbol"), Req}});
   ASSERT_THAT_EXPECTED(Result, Succeeded());
   ASSERT_EQ(Result->size(), 1U);
   EXPECT_FALSE((*Result)[0].has_value())
@@ -187,14 +172,12 @@ TEST(NativeDylibManagerTest, LookupRequiredMissingSymbol) {
 
 TEST(NativeDylibManagerTest, LookupMixedRequiredAndWeak) {
   Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  SimpleSymbolTable ST;
-  auto NDM = NativeDylibManager::Create(S, ST);
-  ASSERT_THAT_EXPECTED(NDM, Succeeded());
+  NativeDylibManager NDM(S);
 
-  auto Handle = syncLoad(**NDM, ORC_RT_TEST_DYLIB_PATH);
+  auto Handle = syncLoad(NDM, ORC_RT_TEST_DYLIB_PATH);
   ASSERT_THAT_EXPECTED(Handle, Succeeded());
 
-  auto Result = syncLookup(**NDM, *Handle,
+  auto Result = syncLookup(NDM, *Handle,
                            {{MANGLED("orc_rt_test_dylib_return42"), Req},
                             {MANGLED("no_such_symbol"), Weak}});
   ASSERT_THAT_EXPECTED(Result, Succeeded());

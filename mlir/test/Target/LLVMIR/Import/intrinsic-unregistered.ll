@@ -14,6 +14,18 @@ define dso_local void @t0(ptr %a) {
 
 ; // -----
 
+declare i64 @llvm.aarch64.ldxr.p0(ptr)
+
+define dso_local void @strictfp_call(ptr %a) strictfp {
+  %x = call i64 @llvm.aarch64.ldxr.p0(ptr elementtype(i8) %a) strictfp
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @strictfp_call
+; CHECK:   llvm.call_intrinsic "llvm.aarch64.ldxr.p0"({{.*}}) {strictfp} : (!llvm.ptr {llvm.elementtype = i8}) -> i64
+
+; // -----
+
 declare <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8>, <8 x i8>)
 
 define dso_local <8 x i8> @t1(<8 x i8> %lhs, <8 x i8> %rhs) {

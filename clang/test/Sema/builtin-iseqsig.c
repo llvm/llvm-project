@@ -16,7 +16,7 @@ int ok(float f, double d, long double ld, int i) {
 }
 
 int bad(int i, float f) {
-  return __builtin_iseqsig(i, i) + // expected-error {{ordered compare requires two args of floating point type ('int' and 'int')}}
+  return __builtin_iseqsig(i, i) + // expected-error {{floating point comparison requires two arguments of floating point type ('int' and 'int')}}
          __builtin_iseqsig(f) +    // expected-error {{too few arguments to function call, expected 2, have 1}}
          __builtin_iseqsig(f, f, f); // expected-error {{too many arguments to function call, expected 2, have 3}}
 }

@@ -457,6 +457,17 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
   for more information.
 
+- Added experimental `-fmodules-driver` option to enable explicit module
+  builds using C++20 named modules or Clang modules, managed by the Clang
+  driver. This also supports the C++ standard library modules.
+
+- Added `-Rmodules-driver` option to emit remarks for `-fmodules-driver`,
+  such as the build graph with module dependencies as a DOT graph.
+
+- Added `-fpass-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the pass
+  plugin named `<plugin>`, as `opt -plugin-arg=<plugin>,<arg>` does. It reaches
+  plugins loaded with `-fpass-plugin=` and statically linked ones such as Polly.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -603,11 +614,6 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   before C23. They stay in `-Wc23-extensions` and are still reported under
   `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
   type itself is already handled.
-
-- `-Wuninitialized` no longer warns about an uninitialized variable passed to
-  `__builtin_classify_type`, `__builtin_constant_p`,
-  `__builtin_infer_alloc_token` or `__builtin_os_log_format_buffer_size`,
-  none of which depends on its arguments' values.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
@@ -990,6 +996,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 - Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
+- Fixed conversion to a C23 enumeration with an underlying type of `bool`, which truncated the value instead of converting it like `bool` (e.g. `(enum E : bool)2` was 0 instead of 1). This also affected compound assignment and increment. (#GH241289)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -1339,6 +1346,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed bugs where Clang could apply an incorrectly high alignment to a vptr
   load within a virtual function thunk. (#GH242501)
 
+- Fixed a crash when template substitution produces an invalid controlling type
+  for `_Generic`. (#GH242122)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1372,6 +1382,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   compilation.
 
 #### Miscellaneous Clang Crashes Fixed
+
+- Fixed a crash during code generation when builtin templates such as
+  `__type_pack_element` or `__make_integer_seq` were used as template
+  template arguments of emitted entities. (#GH232739)
 
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
@@ -1494,6 +1508,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
   identifier outside that context.
 
+- More MSVC intrinsics are now available on 32-bit Arm, such as
+  `_CountLeadingZeros`, `_InterlockedAdd` and `_MulHigh`.
+
 - Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT
   stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
@@ -1507,6 +1524,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
+
+- `_AddressOfReturnAddress` is now available on 32-bit Arm.
 
 - Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
   so ``/FUNCTIONPADMIN`` didn't pad their functions.
@@ -1525,6 +1544,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   longer searched.
 
 #### RISC-V Support
+
+- Added CodeGen support for the ACLIC v0.20 `preemptible` and `push-pop`
+  interrupt attribute kinds.
 
 - Fixed a bug where the `interrupt` attribute did not accept `machine` together
   with both `SiFive-CLIC-preemptible` and `SiFive-CLIC-stack-swap`.
@@ -1686,6 +1708,16 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Improvements
 
+- The analyzer is faster and uses less memory. On a random sample of 20 LLVM
+  and Clang source files, analyzed with the default checkers of
+  `clang --analyze` on an Apple M2 Max, analysis takes 25% less time and 7%
+  less peak memory on average (geometric mean; 9-40% less time and 2-14% less
+  memory per file), with unchanged results. (#GH244626, #GH244655, #GH244659,
+  #GH244748, #GH244771, #GH244841, #GH244843, #GH244845, #GH244848, #GH244849,
+  #GH244863, #GH244865, #GH244866, #GH245070, #GH245071, #GH245166, #GH245167,
+  #GH245630, #GH245674, #GH245795, #GH245798, #GH246072, #GH246313, #GH246433,
+  #GH246441, #GH246446, #GH246458)
+
 - The user can opt in to analyze functions coming from files participating in
   unity or jumbo builds as analysis entry points with
   `-analyzer-config unitybuild-file-extensions=<file-extensions>`.
@@ -1772,8 +1804,14 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   - A loop transformation (`tile`, `unroll`, `interchange`, ...) that consumes
     another tile's intra-tile loop.
 
+- The `acquire`, `release` and `acq_rel` clauses of the `flush` directive now
+  take effect. On GPUs a flush is emitted as a fence of the requested ordering.
+  On the host, a flush other than a seq_cst flush needs an OpenMP runtime from
+  this release.
 - Added parsing and semantic support for `dims` modifier in `num_teams`,
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
+- Array shaping expressions can now be the base of array sections in the `to`
+  and `from` clauses of `target update`. (#GH136294)
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper
   are now propagated onto the maps the mapper expands to.
 - Mapping of expressions with base-pointers through a user-defined mapper (e.g.

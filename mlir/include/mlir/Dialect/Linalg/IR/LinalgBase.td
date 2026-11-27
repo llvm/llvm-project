@@ -35,6 +35,7 @@ def Linalg_Dialect : Dialect {
     the op semantics.
   }];
   let cppNamespace = "::mlir::linalg";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = [
     "arith::ArithDialect",
     "affine::AffineDialect",
@@ -61,6 +62,11 @@ def Linalg_Dialect : Dialect {
       llvm::StringMap<RegionBuilderFunType> namedStructuredOpRegionBuilders;
   }];
 }
+
+// The op partitions of the dialect, generated from LinalgAllOps.td.
+def Linalg_CorePartition : Partition<"Core">;
+def Linalg_StructuredPartition : Partition<"Structured">;
+def Linalg_RelayoutPartition : Partition<"Relayout">;
 
 // Define the attribute enums matching elementwise op kind (e.g., add).
 def ElementwiseKindAttr : EnumAttr<Linalg_Dialect,

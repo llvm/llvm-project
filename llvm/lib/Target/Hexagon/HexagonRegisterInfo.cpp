@@ -43,15 +43,6 @@ using namespace llvm;
 
 extern cl::opt<QFloatMode> QFloatModeValue;
 
-static cl::opt<unsigned> FrameIndexSearchRange(
-    "hexagon-frame-index-search-range", cl::init(32), cl::Hidden,
-    cl::desc("Limit on instruction search range in frame index elimination"));
-
-static cl::opt<unsigned> FrameIndexReuseLimit(
-    "hexagon-frame-index-reuse-limit", cl::init(~0), cl::Hidden,
-    cl::desc("Limit on the number of reused registers in frame index "
-    "elimination"));
-
 HexagonRegisterInfo::HexagonRegisterInfo(unsigned HwMode)
     : HexagonGenRegisterInfo(Hexagon::R31, 0/*DwarfFlavor*/, 0/*EHFlavor*/,
                              0/*PC*/, HwMode) {}
@@ -386,8 +377,9 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // This will give us a chance to avoid creating a new register.
     Register ReuseBP;
 
-    if (ReuseCount < FrameIndexReuseLimit) {
-      unsigned SearchCount = 0, SearchRange = FrameIndexSearchRange;
+    if (ReuseCount < HST.getCLOpts().frame_index_reuse_limit) {
+      unsigned SearchCount = 0,
+               SearchRange = HST.getCLOpts().frame_index_search_range;
       SmallSet<Register,2> SeenVRegs;
       bool PassedCall = false;
       LiveRegUnits Defs(*this), Uses(*this);

@@ -305,6 +305,41 @@ def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
   ];
 }
 
+def ACCLoopCollapse : Pass<"acc-loop-collapse", "mlir::func::FuncOp"> {
+  let summary = "Collapse multi-dimensional parallel loops";
+  let description = [{
+    This pass collapses each multi-dimensional `scf.parallel` loop inside an
+    `acc.compute_region` into a one-dimensional `scf.parallel` loop whose
+    iteration space is the product of the original ones. Loops outside an
+    `acc.compute_region` are left unchanged. The original induction variables
+    are recovered from the collapsed one with remainder and division
+    operations. Reductions of the original loop are carried over to the
+    collapsed loop.
+
+    The number of collapsed dimensions is recorded in `acc.collapse_count`.
+
+    Example:
+    ```
+    // Before:
+    scf.parallel (%i, %j) = (%c0, %c0) to (%c10, %c20) step (%c1, %c1) {
+      ...
+    } {acc.par_dims = #acc<par_dims[block_x]>}
+
+    // After:
+    scf.parallel (%ij) = (%c0) to (%c200) step (%c1) {
+      %j = arith.remsi %ij, %c20 : index
+      %i = arith.divsi %ij, %c20 : index
+      ...
+    } {acc.collapse_count = 2 : i64, acc.par_dims = #acc<par_dims[block_x]>}
+    ```
+  }];
+  let dependentDialects = [
+    "mlir::affine::AffineDialect",
+    "mlir::arith::ArithDialect",
+    "mlir::scf::SCFDialect"
+  ];
+}
+
 def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::FuncOp"> {
   let summary = "Strip OpenACC constructs inside device code";
   let description = [{

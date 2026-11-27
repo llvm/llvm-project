@@ -14,7 +14,7 @@
 #include <__configuration/abi.h>
 #include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
-#include <__type_traits/is_trivially_destructible.h>
+#include <__type_traits/is_destructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

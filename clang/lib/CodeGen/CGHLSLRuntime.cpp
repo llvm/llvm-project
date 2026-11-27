@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
+#include "llvm/Frontend/HLSL/HLSLUtils.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/IR/Constants.h"
@@ -1007,18 +1008,6 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   LayoutTypes[StructType] = LayoutTy;
 }
 
-static std::array<uint32_t, 3> parseNumThreads(StringRef NumThreads) {
-  SmallVector<StringRef, 3> Dimensions;
-  NumThreads.split(Dimensions, ',');
-  assert(Dimensions.size() == 3 && "expected three numthreads dimensions");
-  std::array<uint32_t, 3> Threads;
-  for (auto [Dimension, Thread] : llvm::zip(Dimensions, Threads)) {
-    [[maybe_unused]] bool Invalid = Dimension.getAsInteger(10, Thread);
-    assert(!Invalid && "expected an integer numthreads dimension");
-  }
-  return Threads;
-}
-
 static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
   llvm::Module &M = CGM.getModule();
   Function *QuadAll =
@@ -1036,8 +1025,9 @@ static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
 
     Attribute NumThreadsAttr = F->getFnAttribute("hlsl.numthreads");
     if (NumThreadsAttr.isValid()) {
-      std::array<uint32_t, 3> Threads =
-          parseNumThreads(NumThreadsAttr.getValueAsString());
+      std::array<uint32_t, 3> Threads;
+      llvm::hlsl::parseThreadCounts(NumThreadsAttr.getValueAsString(),
+                                    Threads[0], Threads[1], Threads[2]);
       bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
       // QuadAll needs derivative groups for SPIR-V compute entry points.
       // Linear groups need complete sets of four threads. Quad groups need
@@ -1318,7 +1308,14 @@ llvm::Value *CGHLSLRuntime::emitSPIRVUserSemanticLoad(
 static void createSPIRVOutputStore(
     IRBuilder<> &B, llvm::Module &M, llvm::Value *Source, const Twine &Name,
     llvm::hlsl::SPIRVInterfaceDecoration Decoration, unsigned Operand,
-    llvm::hlsl::InterpolationMode InterpMode) {
+    llvm::hlsl::InterpolationMode InterpMode, bool IsSigned = false) {
+  // Integer built-ins are 32-bit scalars in Vulkan. Narrower HLSL
+  // declarations are extended before they are written to the built-in.
+  llvm::Type *Ty = Source->getType();
+  if (Decoration == llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn &&
+      Ty->isIntegerTy() && Ty->getIntegerBitWidth() < 32)
+    Source = IsSigned ? B.CreateSExt(Source, B.getInt32Ty())
+                      : B.CreateZExt(Source, B.getInt32Ty());
   auto *GV = new llvm::GlobalVariable(
       M, Source->getType(), /* isConstant= */ false,
       llvm::GlobalValue::ExternalLinkage,
@@ -1458,7 +1455,8 @@ static llvm::hlsl::SemanticSignatureElement createSemanticSignatureElement(
   // and a signed declaration reads the same value. DXIL signatures require an
   // unsigned component type.
   if (Kind == llvm::dxbc::PSV::SemanticKind::SampleIndex ||
-      Kind == llvm::dxbc::PSV::SemanticKind::PrimitiveID) {
+      Kind == llvm::dxbc::PSV::SemanticKind::PrimitiveID ||
+      Kind == llvm::dxbc::PSV::SemanticKind::StencilRef) {
     if (CompType == llvm::dxil::ElementType::I16)
       CompType = llvm::dxil::ElementType::U16;
     else if (CompType == llvm::dxil::ElementType::I32)
@@ -1947,6 +1945,8 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     llvm::dxbc::PSV::SemanticKind SemanticKind,
     llvm::Triple::EnvironmentType Stage, std::optional<unsigned> Index,
     SemanticSignatures &Signature, llvm::hlsl::InterpolationMode InterpMode) {
+  const bool IsSignedInt =
+      getSemanticLeafType(Decl)->isSignedIntegerOrEnumerationType();
   switch (SemanticKind) {
   case llvm::dxbc::PSV::SemanticKind::Position:
     assert(llvm::is_contained({llvm::Triple::Vertex, llvm::Triple::Hull,
@@ -1968,6 +1968,24 @@ void CGHLSLRuntime::emitSystemSemanticStore(
                              Semantic->getAttrName()->getName(),
                              llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
                              /* Position */ 0, InterpMode);
+      return;
+    }
+    break;
+  case llvm::dxbc::PSV::SemanticKind::StencilRef:
+    assert(Stage == llvm::Triple::Pixel &&
+           "SV_StencilRef is in an unavailable stage and should have been "
+           "diagnosed by Sema");
+    // The stencil reference is stored to an output element that is not
+    // packed into the render-target rows.
+    if (CGM.getTarget().getTriple().isDXIL()) {
+      emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
+      return;
+    }
+    if (CGM.getTarget().getTriple().isSPIRV()) {
+      createSPIRVOutputStore(
+          B, CGM.getModule(), Source, Semantic->getAttrName()->getName(),
+          llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+          /* FragStencilRefEXT */ 5014, InterpMode, IsSignedInt);
       return;
     }
     break;
