@@ -5249,7 +5249,7 @@ bool SROA::presplitLoadsAndStores(AllocaInst &AI, AllocaSlices &AS) {
         Stores.push_back(SI);
       } else if (auto *MTI = dyn_cast<MemTransferInst>(I)) {
         // Don't pre-split if the slice is too large.
-        if (!MTI->getDataLayout().fitsInLegalInteger(S.size()))
+        if (!MTI->getDataLayout().fitsInLegalInteger(S.size() * 8))
           continue;
         // Both operands of a memory transfer may have a slice, and we want the
         // instruction to only appear once in MemTransfers. Therefore for the
