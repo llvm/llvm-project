@@ -1245,23 +1245,27 @@ void OrcLoongArch64::writeIndirectStubsBlock(
   }
 }
 
-// z10, z196 and zEC12 predate the vector facility (introduced with z13).
-// Any other name, including "generic" for unrecognised models, is assumed to
-// have it, since skipping the save there would silently drop vector arguments.
+// z10, z196, zEC12 and "generic" lack the vector facility. Any other host CPU
+// name is assumed to have it, since skipping the save on a vector-capable
+// machine would silently corrupt vector arguments.
 static bool hostHasVectorFacility() {
-  StringRef CPU = sys::getHostCPUName();
-  return !(CPU == "z10" || CPU == "z196" || CPU == "zEC12");
+  static const bool HasVector = [] {
+    StringRef CPU = sys::getHostCPUName();
+    return !(CPU == "z10" || CPU == "z196" || CPU == "zEC12" ||
+             CPU == "generic");
+  }();
+  return HasVector;
 }
 
 void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
                                    ExecutorAddr ResolverTargetAddress,
                                    ExecutorAddr ReentryFnAddr,
                                    ExecutorAddr ReentryCtxAddr) {
-  // Frame: 296 bytes below the incoming %r15.
+  // Frame: 288 bytes below the incoming %r15.
   //   0..159(%r15):   outgoing area for the reenter call
-  //   168..295(%r15): vector argument register save area (%v24-%v31)
-  //   312..423(%r15): caller's GPR save area, %r2..%r15  (16 + 296)
-  //   424..455(%r15): caller's FPR save area, %f0/%f2/%f4/%f6 (128 + 296)
+  //   160..287(%r15): vector argument register save area (%v24-%v31)
+  //   304..415(%r15): caller's GPR save area, %r2..%r15  (16 + 288)
+  //   416..447(%r15): caller's FPR save area, %f0/%f2/%f4/%f6 (128 + 288)
   //
   // On entry %r1 = trampoline + 8 and %r14 = original caller's return address.
   // reenter(%r2 = ReentryCtxAddr, %r3 = trampoline address = %r1 - 8).
@@ -1277,14 +1281,14 @@ void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
   // clang-format off
   const uint8_t ResolverCodeTemplate[] = {
       0xeb, 0x2f, 0xf0, 0x10, 0x00, 0x24, // 0x00: stmg %r2, %r15, 16(%r15)
-      0xa7, 0xfb, 0xfe, 0xd8,             // 0x06: aghi %r15, -296
-      0x60, 0x00, 0xf1, 0xa8,             // 0x0a: std  %f0, 424(%r15)
-      0x60, 0x20, 0xf1, 0xb0,             // 0x0e: std  %f2, 432(%r15)
-      0x60, 0x40, 0xf1, 0xb8,             // 0x12: std  %f4, 440(%r15)
-      0x60, 0x60, 0xf1, 0xc0,             // 0x16: std  %f6, 448(%r15)
+      0xa7, 0xfb, 0xfe, 0xe0,             // 0x06: aghi %r15, -288
+      0x60, 0x00, 0xf1, 0xa0,             // 0x0a: std  %f0, 416(%r15)
+      0x60, 0x20, 0xf1, 0xa8,             // 0x0e: std  %f2, 424(%r15)
+      0x60, 0x40, 0xf1, 0xb0,             // 0x12: std  %f4, 432(%r15)
+      0x60, 0x60, 0xf1, 0xb8,             // 0x16: std  %f6, 440(%r15)
 
-      // 0x1a: vstm %v24, %v31, 168(%r15) OR 6-byte NOP
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      // 0x1a: vstm %v24, %v31, 160(%r15) OR 6-byte NOP for pre-z13
+      0xe7, 0x8f, 0xf0, 0xa0, 0x0c, 0x3e,
 
       0xb9, 0x04, 0x00, 0x31,             // 0x20: lgr   %r3, %r1
       0xa7, 0x3b, 0xff, 0xf8,             // 0x24: aghi  %r3, -8
@@ -1292,15 +1296,15 @@ void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
       0xc4, 0x18, 0x00, 0x00, 0x00, 0x19, // 0x2e: lgrl  %r1, Lfn (disp = 0x19)
       0x0d, 0xe1,                         // 0x34: basr  %r14, %r1
 
-      // 0x36: vlm %v24, %v31, 168(%r15) OR 6-byte NOP
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      // 0x36: vlm %v24, %v31, 160(%r15) OR 6-byte NOP for pre-z13
+      0xe7, 0x8f, 0xf0, 0xa0, 0x0c, 0x36,
 
-      0x68, 0x00, 0xf1, 0xa8,             // 0x3c: ld    %f0, 424(%r15)
-      0x68, 0x20, 0xf1, 0xb0,             // 0x40: ld    %f2, 432(%r15)
-      0x68, 0x40, 0xf1, 0xb8,             // 0x44: ld    %f4, 440(%r15)
-      0x68, 0x60, 0xf1, 0xc0,             // 0x48: ld    %f6, 448(%r15)
+      0x68, 0x00, 0xf1, 0xa0,             // 0x3c: ld    %f0, 416(%r15)
+      0x68, 0x20, 0xf1, 0xa8,             // 0x40: ld    %f2, 424(%r15)
+      0x68, 0x40, 0xf1, 0xb0,             // 0x44: ld    %f4, 432(%r15)
+      0x68, 0x60, 0xf1, 0xb8,             // 0x48: ld    %f6, 440(%r15)
       0xb9, 0x04, 0x00, 0x12,             // 0x4c: lgr   %r1, %r2
-      0xeb, 0x2f, 0xf1, 0x38, 0x00, 0x04, // 0x50: lmg   %r2, %r15, 312(%r15)
+      0xeb, 0x2f, 0xf1, 0x30, 0x00, 0x04, // 0x50: lmg   %r2, %r15, 304(%r15)
       0x07, 0xf1,                         // 0x56: br    %r1
 
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x58: Lctx
@@ -1314,19 +1318,12 @@ void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
   uint8_t ResolverCode[ResolverCodeSize];
   memcpy(ResolverCode, ResolverCodeTemplate, ResolverCodeSize);
 
-  bool HasVector = hostHasVectorFacility();
-
-  const unsigned VstmOffset = 0x1a;
-  const unsigned VlmOffset = 0x36;
-
-  if (HasVector) {
-    const uint8_t VstmCode[] = {0xe7, 0x8f, 0xf0, 0xa8, 0x0c, 0x3e};
-    const uint8_t VlmCode[] = {0xe7, 0x8f, 0xf0, 0xa8, 0x0c, 0x36};
-    memcpy(ResolverCode + VstmOffset, VstmCode, sizeof(VstmCode));
-    memcpy(ResolverCode + VlmOffset, VlmCode, sizeof(VlmCode));
-  } else {
-    // BRCL 0, 0 (6-byte NOP)
+  // The template assumes the vector facility. Without it, overwrite the two
+  // vector transfers with 6-byte no-ops (BRCL 0, 0).
+  if (!hostHasVectorFacility()) {
     const uint8_t NopCode[] = {0xc0, 0x04, 0x00, 0x00, 0x00, 0x00};
+    const unsigned VstmOffset = 0x1a;
+    const unsigned VlmOffset = 0x36;
     memcpy(ResolverCode + VstmOffset, NopCode, sizeof(NopCode));
     memcpy(ResolverCode + VlmOffset, NopCode, sizeof(NopCode));
   }
