@@ -17,8 +17,8 @@
 ; RUN:     -amdgpu-avgpr-banking=0 -debug-only=machine-scheduler %s -o - 2>&1 \
 ; RUN:     | FileCheck %s -check-prefixes=NOBANK,NOSPILL
 
-; Nearly all of this kernel's vector pressure sits in av_* values, which the
-; register allocator may place in either the ArchVGPR or the AGPR bank.
+; Many of this kernel's vector values are av_* values, which the register
+; allocator may place in either the ArchVGPR or the AGPR bank.
 ;
 ; The IR is shared with coexec-rewrite-mfma.ll, reduced there from a
 ; Triton-generated GEMM with 30 MFMAs in a phi-carried loop.
@@ -26,13 +26,13 @@
 ; BANK: Region register pressure: VGPRs: {{[0-9]+}} (AV: {{[0-9]+}}) AGPRs: {{[0-9]+}}
 ; NOBANK: Region register pressure: VGPRs: {{[0-9]+}} (AV: {{[0-9]+}}) AGPRs: {{[0-9]+}}
 
-; The two stages report these in either order depending on the tracker in use.
-; NOBANK-DAG: Region is known to spill
-; NOBANK-DAG: Reverting scheduling for region
-
-; The checks above are what the scheduler predicts. Neither configuration
-; spills in the end.
+; EarlyMachineLICM counts the av_* copies of the MFMA operands as VGPR pressure
+; and keeps most of them in the loop, so no configuration predicts a spill.
+; The kernel reaches the occupancy of 6 that "amdgpu-waves-per-eu" allows and
+; does not spill. avgpr-banking.mir checks the spill predictions with and
+; without banking on this kernel with the copies hoisted out of the loop.
 ; NOSPILL: ScratchSize: 0
+; NOSPILL: Occupancy: 6
 
 define amdgpu_kernel void @mfma_loop_high_av_pressure() #0 {
 entry:
@@ -205,4 +205,4 @@ loop:                                                ; preds = %loop, %entry
 
 declare <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.f16(<8 x half>, <8 x half>, <4 x float>, i32 immarg, i32 immarg, i32 immarg)
 
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,6" }

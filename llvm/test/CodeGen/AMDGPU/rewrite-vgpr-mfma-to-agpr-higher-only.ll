@@ -6,16 +6,21 @@
 ; whole-wave copies to use AGPR0 and AGPR1. The rewrite must still find
 ; the higher AGPRs assigned to per-lane values and let an MFMA accumulate
 ; directly in AGPRs.
+;
+; Now that the scheduler counts AV registers, the whole-wave copies no longer
+; use AGPR0 and AGPR1 in this function.
+; rewrite-vgpr-mfma-to-agpr-higher-only.mir starts after the scheduler with
+; the schedule that still has them there.
 define amdgpu_kernel void @rewrite_with_higher_agprs(ptr addrspace(1) %out, ptr addrspace(4) %uniforms, <8 x half> %input, i32 %iterations) #0 {
 ; CHECK-LABEL: rewrite_with_higher_agprs:
-; CHECK:    v_accvgpr_write_b32 a1, v15
-; CHECK:    v_accvgpr_write_b32 a0, v15
-; CHECK:    v_mfma_f32_16x16x32_f16 v[2:5], a[2:5], a[2:5], v[2:5]
-; CHECK:    v_mfma_f32_16x16x32_f16 v[10:13], a[2:5], a[2:5], v[10:13]
-; CHECK:    v_mfma_f32_16x16x32_f16 v[6:9], a[2:5], a[2:5], v[6:9]
-; CHECK:    v_mfma_f32_16x16x32_f16 a[10:13], a[2:5], a[2:5], a[10:13]
-; CHECK:    v_accvgpr_read_b32 v15, a1
-; CHECK:    v_accvgpr_read_b32 v15, a0
+; CHECK:    v_accvgpr_write_b32 a0, v2
+; CHECK:    v_accvgpr_write_b32 a1, v3
+; CHECK:    v_accvgpr_write_b32 a0, s40
+; CHECK:    v_accvgpr_write_b32 a1, s41
+; CHECK:    v_mfma_f32_16x16x32_f16 v[2:5], a[0:3], a[0:3], v[2:5]
+; CHECK:    v_mfma_f32_16x16x32_f16 v[10:13], a[0:3], a[0:3], v[10:13]
+; CHECK:    v_mfma_f32_16x16x32_f16 v[6:9], a[0:3], a[0:3], v[6:9]
+; CHECK:    v_mfma_f32_16x16x32_f16 a[4:7], a[0:3], a[0:3], a[4:7]
 entry:
   %lane = call i32 @llvm.amdgcn.workitem.id.x()
   %lane.offset = mul i32 %lane, 96

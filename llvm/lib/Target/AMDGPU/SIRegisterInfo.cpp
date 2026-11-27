@@ -4235,6 +4235,19 @@ const int *SIRegisterInfo::getRegUnitPressureSets(MCRegUnit RegUnit) const {
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
 }
 
+const int *
+SIRegisterInfo::getRegClassPressureSets(const TargetRegisterClass *RC) const {
+  // TableGen gives no pressure set to a class with both VGPRs and AGPRs, so
+  // RegPressureTracker would not count AV virtual registers at all. Count
+  // them as VGPRs: an AV class allocates VGPRs first, and GCNRegPressure
+  // charges AV registers to VGPRs unless it spreads them over both banks
+  // (-amdgpu-avgpr-banking).
+  if (isVectorSuperClass(RC))
+    return AMDGPUGenRegisterInfo::getRegClassPressureSets(
+        &AMDGPU::VGPR_32RegClass);
+  return AMDGPUGenRegisterInfo::getRegClassPressureSets(RC);
+}
+
 bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
                                            ArrayRef<MCPhysReg> Order,
                                            SmallSetVector<MCPhysReg, 16> &Hints,

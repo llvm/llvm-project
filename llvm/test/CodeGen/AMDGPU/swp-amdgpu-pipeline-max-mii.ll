@@ -1,10 +1,14 @@
 ; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -enable-pipeliner -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=DEFAULT
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -enable-pipeliner -pipeliner-max-mii=64 -pass-remarks-analysis=pipeliner %s -filetype=null 2>&1 | FileCheck %s --check-prefix=RAISED
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -enable-pipeliner -pipeliner-max-mii=64 \
+; RUN:     -pipeliner-register-pressure=0 -pass-remarks-analysis=pipeliner %s \
+; RUN:     -filetype=null 2>&1 | FileCheck %s --check-prefix=RAISED
 
 ; This loop's MII is 32: two independent accumulators each issue one MFMA per
 ; iteration, and each MFMA holds the XDL pipe for 16 cycles (res=32). That
 ; exceeds the generic default cap of 27. At default, pipeliner aborts and
-; only a raised cap lets it schedule.
+; only a raised cap lets it schedule. The raised run turns the register
+; pressure limit off: the pipelined loop keeps about 67 VGPRs live, over the
+; limit of 64 here, and this test is about the MII cap.
 ; DEFAULT: Minimal Initiation Interval too large: 32 > 27
 ; RAISED: Schedule found with Initiation Interval
 
