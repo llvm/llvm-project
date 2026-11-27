@@ -30,6 +30,8 @@
 #include <array>
 #include <cassert>
 #include <concepts>
+#include <functional>
+#include <ranges>
 
 #include "almost_satisfies_types.h"
 #include "MoveOnly.h"
@@ -538,6 +540,17 @@ constexpr bool test() {
       std::ranges::set_difference(r1, r2, out.data(), comp);
       assert(std::ranges::equal(out, std::array{2}, {}, &Data::data));
     }
+  }
+
+  // Check that proj1 is only applied to elements of the first range and proj2 only to elements of the second range.
+  {
+    std::array r1{0, 1, 2, 3, 4};
+    std::array r2{0, 0, 0, 1, 1};
+    auto proj1 = [](int x) { return x * 2; };
+
+    std::array<int, r1.size() + r2.size()> out{};
+    auto result = std::ranges::set_difference(r1, r2, out.data(), {}, proj1, std::identity{});
+    assert(std::ranges::equal(std::ranges::subrange(out.data(), result.out), std::array{1, 2, 3, 4}));
   }
 
   return true;
