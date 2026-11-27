@@ -5540,27 +5540,27 @@ define void @masked_load_v8i64(ptr %ap, ptr %bp, ptr %c) #0 {
 ; VBITS_GE_256-NEXT:    mov z0.d, p1/z, #-1 // =0xffffffffffffffff
 ; VBITS_GE_256-NEXT:    ptrue p1.s, vl4
 ; VBITS_GE_256-NEXT:    mov z1.d, p2/z, #-1 // =0xffffffffffffffff
+; VBITS_GE_256-NEXT:    ptrue p2.d, vl2
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
 ; VBITS_GE_256-NEXT:    uzp1 z1.s, z1.s, z1.s
 ; VBITS_GE_256-NEXT:    splice z1.s, p1, z1.s, z0.s
 ; VBITS_GE_256-NEXT:    ptrue p1.d
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z1.h, z1.h
 ; VBITS_GE_256-NEXT:    ldr q1, [x8, :lo12:.LCPI10_0]
-; VBITS_GE_256-NEXT:    adrp x8, .LCPI10_1
-; VBITS_GE_256-NEXT:    add x8, x8, :lo12:.LCPI10_1
 ; VBITS_GE_256-NEXT:    and v0.16b, v0.16b, v1.16b
-; VBITS_GE_256-NEXT:    addv h1, v0.8h
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; VBITS_GE_256-NEXT:    fmov w8, s1
+; VBITS_GE_256-NEXT:    addv h0, v0.8h
+; VBITS_GE_256-NEXT:    fmov w8, s0
 ; VBITS_GE_256-NEXT:    tbz w8, #0, .LBB10_2
 ; VBITS_GE_256-NEXT:  // %bb.1: // %cond.load
-; VBITS_GE_256-NEXT:    ld1rd { z2.d }, p1/z, [x0]
-; VBITS_GE_256-NEXT:    mov z1.d, z0.d
+; VBITS_GE_256-NEXT:    movi v1.2d, #0000000000000000
+; VBITS_GE_256-NEXT:    ld1rd { z0.d }, p1/z, [x0]
 ; VBITS_GE_256-NEXT:    add x0, x0, #8
-; VBITS_GE_256-NEXT:    mov z0.d, z2.d
+; VBITS_GE_256-NEXT:    splice z1.d, p2, z1.d, z1.d
 ; VBITS_GE_256-NEXT:    tbnz w8, #1, .LBB10_3
 ; VBITS_GE_256-NEXT:    b .LBB10_4
 ; VBITS_GE_256-NEXT:  .LBB10_2:
+; VBITS_GE_256-NEXT:    movi v0.2d, #0000000000000000
+; VBITS_GE_256-NEXT:    splice z0.d, p2, z0.d, z0.d
 ; VBITS_GE_256-NEXT:    mov z1.d, z0.d
 ; VBITS_GE_256-NEXT:    tbz w8, #1, .LBB10_4
 ; VBITS_GE_256-NEXT:  .LBB10_3: // %cond.load1

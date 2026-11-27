@@ -194,11 +194,14 @@ define void @test_revhv32i16(ptr %a) #0 {
 define void @test_rev_elts_fail(ptr %a) #1 {
 ; CHECK-LABEL: test_rev_elts_fail:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI11_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI11_0
-; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    ldr z1, [x8]
-; CHECK-NEXT:    tbl z0.d, { z0.d }, z1.d
+; CHECK-NEXT:    index z0.d, #0, #-1
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    add z1.d, z1.d, #3 // =0x3
+; CHECK-NEXT:    add z0.d, z0.d, #1 // =0x1
+; CHECK-NEXT:    splice z0.d, p0, z0.d, z1.d
+; CHECK-NEXT:    ldr z1, [x0]
+; CHECK-NEXT:    tbl z0.d, { z1.d }, z0.d
 ; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %tmp1 = load <4 x i64>, ptr %a

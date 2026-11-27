@@ -141,52 +141,53 @@ define void @load_factor4(ptr %ptr) #0 {
 ;
 ; CHECK-IADISABLED-LABEL: load_factor4:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x0, #3, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z1, [x0, #2, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z2, [x0, #3, mul vl]
 ; CHECK-IADISABLED-NEXT:    ptrue p0.d, vl2
-; CHECK-IADISABLED-NEXT:    ldr z3, [x0, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x0]
-; CHECK-IADISABLED-NEXT:    mov v2.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    zip1 z5.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    trn1 z6.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    mov z7.d, z3.d[3]
-; CHECK-IADISABLED-NEXT:    trn2 z0.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    trn2 z16.d, z4.d, z3.d
-; CHECK-IADISABLED-NEXT:    mov v2.d[1], v1.d[0]
-; CHECK-IADISABLED-NEXT:    zip1 z1.d, z4.d, z3.d
-; CHECK-IADISABLED-NEXT:    zip2 z3.d, z4.d, z3.d
-; CHECK-IADISABLED-NEXT:    fmov x8, d7
-; CHECK-IADISABLED-NEXT:    mov z4.d, z4.d[3]
-; CHECK-IADISABLED-NEXT:    mov z17.d, z5.d[3]
-; CHECK-IADISABLED-NEXT:    mov z18.d, z6.d[3]
-; CHECK-IADISABLED-NEXT:    mov z6.d, z6.d[2]
-; CHECK-IADISABLED-NEXT:    mov z5.d, z5.d[2]
-; CHECK-IADISABLED-NEXT:    mov v1.d[1], v1.d[1]
-; CHECK-IADISABLED-NEXT:    mov v16.d[1], v16.d[1]
-; CHECK-IADISABLED-NEXT:    mov v3.d[1], v3.d[1]
-; CHECK-IADISABLED-NEXT:    splice z2.d, p0, z2.d, z2.d
-; CHECK-IADISABLED-NEXT:    fmov x9, d17
-; CHECK-IADISABLED-NEXT:    mov z17.d, z0.d[3]
-; CHECK-IADISABLED-NEXT:    mov v4.d[1], x8
-; CHECK-IADISABLED-NEXT:    fmov x8, d18
-; CHECK-IADISABLED-NEXT:    mov z0.d, z0.d[2]
-; CHECK-IADISABLED-NEXT:    mov v5.d[1], x9
-; CHECK-IADISABLED-NEXT:    mov z7.d, z2.d[3]
-; CHECK-IADISABLED-NEXT:    mov z2.d, z2.d[2]
+; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z3, [x0]
+; CHECK-IADISABLED-NEXT:    mov v4.16b, v1.16b
+; CHECK-IADISABLED-NEXT:    zip1 z7.d, z1.d, z2.d
+; CHECK-IADISABLED-NEXT:    trn1 z16.d, z1.d, z2.d
+; CHECK-IADISABLED-NEXT:    mov z5.d, z0.d[3]
+; CHECK-IADISABLED-NEXT:    mov z6.d, z3.d[3]
+; CHECK-IADISABLED-NEXT:    trn2 z1.d, z1.d, z2.d
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], v2.d[0]
+; CHECK-IADISABLED-NEXT:    mov z17.d, z7.d[3]
+; CHECK-IADISABLED-NEXT:    zip1 z2.d, z3.d, z0.d
+; CHECK-IADISABLED-NEXT:    fmov x8, d5
+; CHECK-IADISABLED-NEXT:    trn2 z5.d, z3.d, z0.d
+; CHECK-IADISABLED-NEXT:    zip2 z0.d, z3.d, z0.d
+; CHECK-IADISABLED-NEXT:    mov z3.d, z16.d[3]
+; CHECK-IADISABLED-NEXT:    mov z7.d, z7.d[2]
+; CHECK-IADISABLED-NEXT:    mov z16.d, z16.d[2]
+; CHECK-IADISABLED-NEXT:    mov v2.d[1], v2.d[1]
+; CHECK-IADISABLED-NEXT:    splice z4.d, p0, z4.d, z4.d
 ; CHECK-IADISABLED-NEXT:    mov v6.d[1], x8
 ; CHECK-IADISABLED-NEXT:    fmov x8, d17
-; CHECK-IADISABLED-NEXT:    mov v4.d[1], v4.d[1]
-; CHECK-IADISABLED-NEXT:    fmov x10, d7
-; CHECK-IADISABLED-NEXT:    splice z16.d, p0, z16.d, z5.d
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], x8
-; CHECK-IADISABLED-NEXT:    splice z3.d, p0, z3.d, z6.d
-; CHECK-IADISABLED-NEXT:    mov v2.d[1], x10
-; CHECK-IADISABLED-NEXT:    splice z4.d, p0, z4.d, z0.d
-; CHECK-IADISABLED-NEXT:    splice z1.d, p0, z1.d, z2.d
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
+; CHECK-IADISABLED-NEXT:    mov z17.d, z1.d[3]
+; CHECK-IADISABLED-NEXT:    fmov x9, d3
+; CHECK-IADISABLED-NEXT:    mov z1.d, z1.d[2]
+; CHECK-IADISABLED-NEXT:    mov v5.d[1], v5.d[1]
+; CHECK-IADISABLED-NEXT:    mov v7.d[1], x8
+; CHECK-IADISABLED-NEXT:    mov z18.d, z4.d[3]
+; CHECK-IADISABLED-NEXT:    mov z4.d, z4.d[2]
+; CHECK-IADISABLED-NEXT:    splice z6.d, p0, z6.d, z0.d
+; CHECK-IADISABLED-NEXT:    fmov x8, d17
+; CHECK-IADISABLED-NEXT:    mov v16.d[1], x9
+; CHECK-IADISABLED-NEXT:    mov v0.d[1], v0.d[1]
+; CHECK-IADISABLED-NEXT:    fmov x10, d18
+; CHECK-IADISABLED-NEXT:    splice z5.d, p0, z5.d, z7.d
+; CHECK-IADISABLED-NEXT:    mov v1.d[1], x8
+; CHECK-IADISABLED-NEXT:    mov v6.d[1], v6.d[1]
+; CHECK-IADISABLED-NEXT:    splice z0.d, p0, z0.d, z16.d
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], x10
+; CHECK-IADISABLED-NEXT:    splice z6.d, p0, z6.d, z1.d
+; CHECK-IADISABLED-NEXT:    splice z2.d, p0, z2.d, z4.d
+; CHECK-IADISABLED-NEXT:    // fake_use: $z2
+; CHECK-IADISABLED-NEXT:    // fake_use: $z5
+; CHECK-IADISABLED-NEXT:    // fake_use: $z0
+; CHECK-IADISABLED-NEXT:    // fake_use: $z6
 ; CHECK-IADISABLED-NEXT:    ret
   %interleaved.vec = load <16 x i64>, ptr %ptr, align 4
   %v0 = shufflevector <16 x i64> %interleaved.vec, <16 x i64> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -412,27 +413,28 @@ define void @load_ptrvec_factor3(ptr %ptr) #0 {
 ; CHECK-IADISABLED-NEXT:    mov v0.d[1], v1.d[1]
 ; CHECK-IADISABLED-NEXT:    mov v4.d[1], x8
 ; CHECK-IADISABLED-NEXT:    mov v3.d[1], v1.d[0]
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], v0.d[1]
+; CHECK-IADISABLED-NEXT:    mov z1.d, z6.d[2]
+; CHECK-IADISABLED-NEXT:    splice z0.d, p0, z0.d, z0.d
+; CHECK-IADISABLED-NEXT:    fmov x8, d1
 ; CHECK-IADISABLED-NEXT:    splice z4.d, p0, z4.d, z5.d
 ; CHECK-IADISABLED-NEXT:    splice z3.d, p0, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    mov z2.d, z6.d[2]
-; CHECK-IADISABLED-NEXT:    mov z5.d, z6.d[3]
+; CHECK-IADISABLED-NEXT:    mov z2.d, z6.d[3]
+; CHECK-IADISABLED-NEXT:    mov v0.d[1], v0.d[1]
+; CHECK-IADISABLED-NEXT:    mov z7.d, z4.d[2]
+; CHECK-IADISABLED-NEXT:    mov v1.16b, v4.16b
+; CHECK-IADISABLED-NEXT:    mov z5.d, z3.d[2]
+; CHECK-IADISABLED-NEXT:    mov v1.d[1], v4.d[1]
+; CHECK-IADISABLED-NEXT:    mov v7.d[1], v6.d[1]
+; CHECK-IADISABLED-NEXT:    mov v5.d[1], x8
 ; CHECK-IADISABLED-NEXT:    fmov x8, d2
-; CHECK-IADISABLED-NEXT:    mov z1.d, z4.d[2]
-; CHECK-IADISABLED-NEXT:    mov v2.16b, v4.16b
-; CHECK-IADISABLED-NEXT:    mov z7.d, z3.d[2]
-; CHECK-IADISABLED-NEXT:    mov v2.d[1], v4.d[1]
-; CHECK-IADISABLED-NEXT:    mov v1.d[1], v6.d[1]
-; CHECK-IADISABLED-NEXT:    mov v7.d[1], x8
-; CHECK-IADISABLED-NEXT:    fmov x8, d5
-; CHECK-IADISABLED-NEXT:    mov v4.16b, v3.16b
-; CHECK-IADISABLED-NEXT:    mov v4.d[1], v3.d[1]
+; CHECK-IADISABLED-NEXT:    mov v2.16b, v3.16b
+; CHECK-IADISABLED-NEXT:    mov v2.d[1], v3.d[1]
 ; CHECK-IADISABLED-NEXT:    mov v6.d[1], x8
-; CHECK-IADISABLED-NEXT:    splice z2.d, p0, z2.d, z1.d
-; CHECK-IADISABLED-NEXT:    splice z4.d, p0, z4.d, z7.d
+; CHECK-IADISABLED-NEXT:    splice z1.d, p0, z1.d, z7.d
+; CHECK-IADISABLED-NEXT:    splice z2.d, p0, z2.d, z5.d
 ; CHECK-IADISABLED-NEXT:    splice z0.d, p0, z0.d, z6.d
+; CHECK-IADISABLED-NEXT:    // fake_use: $z1
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z0
 ; CHECK-IADISABLED-NEXT:    ret
   %interleaved.vec = load <12 x ptr>, ptr %ptr, align 4
@@ -458,52 +460,53 @@ define void @load_ptrvec_factor4(ptr %ptr) #0 {
 ;
 ; CHECK-IADISABLED-LABEL: load_ptrvec_factor4:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x0, #3, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z1, [x0, #2, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z2, [x0, #3, mul vl]
 ; CHECK-IADISABLED-NEXT:    ptrue p0.d, vl2
-; CHECK-IADISABLED-NEXT:    ldr z3, [x0, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z4, [x0]
-; CHECK-IADISABLED-NEXT:    mov v2.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    zip1 z5.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    trn1 z6.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    mov z7.d, z3.d[3]
-; CHECK-IADISABLED-NEXT:    trn2 z0.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    trn2 z16.d, z4.d, z3.d
-; CHECK-IADISABLED-NEXT:    mov v2.d[1], v1.d[0]
-; CHECK-IADISABLED-NEXT:    zip1 z1.d, z4.d, z3.d
-; CHECK-IADISABLED-NEXT:    zip2 z3.d, z4.d, z3.d
-; CHECK-IADISABLED-NEXT:    fmov x8, d7
-; CHECK-IADISABLED-NEXT:    mov z4.d, z4.d[3]
-; CHECK-IADISABLED-NEXT:    mov z17.d, z5.d[3]
-; CHECK-IADISABLED-NEXT:    mov z18.d, z6.d[3]
-; CHECK-IADISABLED-NEXT:    mov z6.d, z6.d[2]
-; CHECK-IADISABLED-NEXT:    mov z5.d, z5.d[2]
-; CHECK-IADISABLED-NEXT:    mov v1.d[1], v1.d[1]
-; CHECK-IADISABLED-NEXT:    mov v16.d[1], v16.d[1]
-; CHECK-IADISABLED-NEXT:    mov v3.d[1], v3.d[1]
-; CHECK-IADISABLED-NEXT:    splice z2.d, p0, z2.d, z2.d
-; CHECK-IADISABLED-NEXT:    fmov x9, d17
-; CHECK-IADISABLED-NEXT:    mov z17.d, z0.d[3]
-; CHECK-IADISABLED-NEXT:    mov v4.d[1], x8
-; CHECK-IADISABLED-NEXT:    fmov x8, d18
-; CHECK-IADISABLED-NEXT:    mov z0.d, z0.d[2]
-; CHECK-IADISABLED-NEXT:    mov v5.d[1], x9
-; CHECK-IADISABLED-NEXT:    mov z7.d, z2.d[3]
-; CHECK-IADISABLED-NEXT:    mov z2.d, z2.d[2]
+; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z3, [x0]
+; CHECK-IADISABLED-NEXT:    mov v4.16b, v1.16b
+; CHECK-IADISABLED-NEXT:    zip1 z7.d, z1.d, z2.d
+; CHECK-IADISABLED-NEXT:    trn1 z16.d, z1.d, z2.d
+; CHECK-IADISABLED-NEXT:    mov z5.d, z0.d[3]
+; CHECK-IADISABLED-NEXT:    mov z6.d, z3.d[3]
+; CHECK-IADISABLED-NEXT:    trn2 z1.d, z1.d, z2.d
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], v2.d[0]
+; CHECK-IADISABLED-NEXT:    mov z17.d, z7.d[3]
+; CHECK-IADISABLED-NEXT:    zip1 z2.d, z3.d, z0.d
+; CHECK-IADISABLED-NEXT:    fmov x8, d5
+; CHECK-IADISABLED-NEXT:    trn2 z5.d, z3.d, z0.d
+; CHECK-IADISABLED-NEXT:    zip2 z0.d, z3.d, z0.d
+; CHECK-IADISABLED-NEXT:    mov z3.d, z16.d[3]
+; CHECK-IADISABLED-NEXT:    mov z7.d, z7.d[2]
+; CHECK-IADISABLED-NEXT:    mov z16.d, z16.d[2]
+; CHECK-IADISABLED-NEXT:    mov v2.d[1], v2.d[1]
+; CHECK-IADISABLED-NEXT:    splice z4.d, p0, z4.d, z4.d
 ; CHECK-IADISABLED-NEXT:    mov v6.d[1], x8
 ; CHECK-IADISABLED-NEXT:    fmov x8, d17
-; CHECK-IADISABLED-NEXT:    mov v4.d[1], v4.d[1]
-; CHECK-IADISABLED-NEXT:    fmov x10, d7
-; CHECK-IADISABLED-NEXT:    splice z16.d, p0, z16.d, z5.d
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], x8
-; CHECK-IADISABLED-NEXT:    splice z3.d, p0, z3.d, z6.d
-; CHECK-IADISABLED-NEXT:    mov v2.d[1], x10
-; CHECK-IADISABLED-NEXT:    splice z4.d, p0, z4.d, z0.d
-; CHECK-IADISABLED-NEXT:    splice z1.d, p0, z1.d, z2.d
-; CHECK-IADISABLED-NEXT:    // fake_use: $z1
-; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z3
-; CHECK-IADISABLED-NEXT:    // fake_use: $z4
+; CHECK-IADISABLED-NEXT:    mov z17.d, z1.d[3]
+; CHECK-IADISABLED-NEXT:    fmov x9, d3
+; CHECK-IADISABLED-NEXT:    mov z1.d, z1.d[2]
+; CHECK-IADISABLED-NEXT:    mov v5.d[1], v5.d[1]
+; CHECK-IADISABLED-NEXT:    mov v7.d[1], x8
+; CHECK-IADISABLED-NEXT:    mov z18.d, z4.d[3]
+; CHECK-IADISABLED-NEXT:    mov z4.d, z4.d[2]
+; CHECK-IADISABLED-NEXT:    splice z6.d, p0, z6.d, z0.d
+; CHECK-IADISABLED-NEXT:    fmov x8, d17
+; CHECK-IADISABLED-NEXT:    mov v16.d[1], x9
+; CHECK-IADISABLED-NEXT:    mov v0.d[1], v0.d[1]
+; CHECK-IADISABLED-NEXT:    fmov x10, d18
+; CHECK-IADISABLED-NEXT:    splice z5.d, p0, z5.d, z7.d
+; CHECK-IADISABLED-NEXT:    mov v1.d[1], x8
+; CHECK-IADISABLED-NEXT:    mov v6.d[1], v6.d[1]
+; CHECK-IADISABLED-NEXT:    splice z0.d, p0, z0.d, z16.d
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], x10
+; CHECK-IADISABLED-NEXT:    splice z6.d, p0, z6.d, z1.d
+; CHECK-IADISABLED-NEXT:    splice z2.d, p0, z2.d, z4.d
+; CHECK-IADISABLED-NEXT:    // fake_use: $z2
+; CHECK-IADISABLED-NEXT:    // fake_use: $z5
+; CHECK-IADISABLED-NEXT:    // fake_use: $z0
+; CHECK-IADISABLED-NEXT:    // fake_use: $z6
 ; CHECK-IADISABLED-NEXT:    ret
   %interleaved.vec = load <16 x ptr>, ptr %ptr, align 4
   %v0 = shufflevector <16 x ptr> %interleaved.vec, <16 x ptr> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
@@ -533,18 +536,19 @@ define void @store_ptrvec_factor2(ptr %ptr, <4 x ptr> %v0, <4 x ptr> %v1) #0 {
 ;
 ; CHECK-IADISABLED-LABEL: store_ptrvec_factor2:
 ; CHECK-IADISABLED:       // %bb.0:
+; CHECK-IADISABLED-NEXT:    index z4.d, #0, #2
 ; CHECK-IADISABLED-NEXT:    ptrue p0.d, vl2
 ; CHECK-IADISABLED-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-IADISABLED-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-IADISABLED-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-IADISABLED-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI9_0
-; CHECK-IADISABLED-NEXT:    add x8, x8, :lo12:.LCPI9_0
 ; CHECK-IADISABLED-NEXT:    splice z1.d, p0, z1.d, z3.d
 ; CHECK-IADISABLED-NEXT:    splice z0.d, p0, z0.d, z2.d
-; CHECK-IADISABLED-NEXT:    ldr z3, [x8]
-; CHECK-IADISABLED-NEXT:    tbl z1.d, { z1.d }, z3.d
-; CHECK-IADISABLED-NEXT:    tbl z0.d, { z0.d }, z3.d
+; CHECK-IADISABLED-NEXT:    movprfx z5, z4
+; CHECK-IADISABLED-NEXT:    orr z5.d, z5.d, #0x1
+; CHECK-IADISABLED-NEXT:    splice z4.d, p0, z4.d, z5.d
+; CHECK-IADISABLED-NEXT:    tbl z1.d, { z1.d }, z4.d
+; CHECK-IADISABLED-NEXT:    tbl z0.d, { z0.d }, z4.d
 ; CHECK-IADISABLED-NEXT:    str z1, [x0, #1, mul vl]
 ; CHECK-IADISABLED-NEXT:    str z0, [x0]
 ; CHECK-IADISABLED-NEXT:    ret
@@ -709,6 +713,7 @@ define void @store_factor2_wide(ptr %ptr, <8 x i64> %v0, <8 x i64> %v1) #0 {
 ;
 ; CHECK-IADISABLED-LABEL: store_factor2_wide:
 ; CHECK-IADISABLED:       // %bb.0:
+; CHECK-IADISABLED-NEXT:    index z16.d, #0, #2
 ; CHECK-IADISABLED-NEXT:    ptrue p0.d, vl2
 ; CHECK-IADISABLED-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-IADISABLED-NEXT:    // kill: def $q2 killed $q2 def $z2
@@ -718,17 +723,17 @@ define void @store_factor2_wide(ptr %ptr, <8 x i64> %v0, <8 x i64> %v1) #0 {
 ; CHECK-IADISABLED-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-IADISABLED-NEXT:    // kill: def $q5 killed $q5 def $z5
 ; CHECK-IADISABLED-NEXT:    // kill: def $q4 killed $q4 def $z4
-; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI13_0
-; CHECK-IADISABLED-NEXT:    add x8, x8, :lo12:.LCPI13_0
 ; CHECK-IADISABLED-NEXT:    splice z3.d, p0, z3.d, z7.d
 ; CHECK-IADISABLED-NEXT:    splice z2.d, p0, z2.d, z6.d
 ; CHECK-IADISABLED-NEXT:    splice z1.d, p0, z1.d, z5.d
 ; CHECK-IADISABLED-NEXT:    splice z0.d, p0, z0.d, z4.d
-; CHECK-IADISABLED-NEXT:    ldr z7, [x8]
-; CHECK-IADISABLED-NEXT:    tbl z3.d, { z3.d }, z7.d
-; CHECK-IADISABLED-NEXT:    tbl z2.d, { z2.d }, z7.d
-; CHECK-IADISABLED-NEXT:    tbl z1.d, { z1.d }, z7.d
-; CHECK-IADISABLED-NEXT:    tbl z0.d, { z0.d }, z7.d
+; CHECK-IADISABLED-NEXT:    movprfx z17, z16
+; CHECK-IADISABLED-NEXT:    orr z17.d, z17.d, #0x1
+; CHECK-IADISABLED-NEXT:    splice z16.d, p0, z16.d, z17.d
+; CHECK-IADISABLED-NEXT:    tbl z3.d, { z3.d }, z16.d
+; CHECK-IADISABLED-NEXT:    tbl z2.d, { z2.d }, z16.d
+; CHECK-IADISABLED-NEXT:    tbl z1.d, { z1.d }, z16.d
+; CHECK-IADISABLED-NEXT:    tbl z0.d, { z0.d }, z16.d
 ; CHECK-IADISABLED-NEXT:    str z3, [x0, #3, mul vl]
 ; CHECK-IADISABLED-NEXT:    str z2, [x0, #2, mul vl]
 ; CHECK-IADISABLED-NEXT:    str z1, [x0, #1, mul vl]
@@ -859,22 +864,23 @@ define void @store_min_not_max(ptr %ptr, <4 x i64> %v0, <4 x i64> %v1) #1 {
 ;
 ; CHECK-IADISABLED-LABEL: store_min_not_max:
 ; CHECK-IADISABLED:       // %bb.0:
+; CHECK-IADISABLED-NEXT:    index z4.d, #0, #2
 ; CHECK-IADISABLED-NEXT:    ptrue p0.d, vl2
 ; CHECK-IADISABLED-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-IADISABLED-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-IADISABLED-NEXT:    // kill: def $q3 killed $q3 def $z3
 ; CHECK-IADISABLED-NEXT:    // kill: def $q2 killed $q2 def $z2
-; CHECK-IADISABLED-NEXT:    adrp x8, .LCPI17_0
-; CHECK-IADISABLED-NEXT:    add x8, x8, :lo12:.LCPI17_0
-; CHECK-IADISABLED-NEXT:    ptrue p1.d, vl4
+; CHECK-IADISABLED-NEXT:    mov x8, #4 // =0x4
 ; CHECK-IADISABLED-NEXT:    splice z1.d, p0, z1.d, z3.d
 ; CHECK-IADISABLED-NEXT:    splice z0.d, p0, z0.d, z2.d
-; CHECK-IADISABLED-NEXT:    ld1d { z2.d }, p1/z, [x8]
-; CHECK-IADISABLED-NEXT:    mov x8, #4 // =0x4
-; CHECK-IADISABLED-NEXT:    tbl z1.d, { z1.d }, z2.d
-; CHECK-IADISABLED-NEXT:    tbl z0.d, { z0.d }, z2.d
-; CHECK-IADISABLED-NEXT:    st1d { z1.d }, p1, [x0, x8, lsl #3]
-; CHECK-IADISABLED-NEXT:    st1d { z0.d }, p1, [x0]
+; CHECK-IADISABLED-NEXT:    movprfx z5, z4
+; CHECK-IADISABLED-NEXT:    orr z5.d, z5.d, #0x1
+; CHECK-IADISABLED-NEXT:    splice z4.d, p0, z4.d, z5.d
+; CHECK-IADISABLED-NEXT:    ptrue p0.d, vl4
+; CHECK-IADISABLED-NEXT:    tbl z1.d, { z1.d }, z4.d
+; CHECK-IADISABLED-NEXT:    tbl z0.d, { z0.d }, z4.d
+; CHECK-IADISABLED-NEXT:    st1d { z1.d }, p0, [x0, x8, lsl #3]
+; CHECK-IADISABLED-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-IADISABLED-NEXT:    ret
   %interleaved.vec = shufflevector <4 x i64> %v0, <4 x i64> %v1, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   store <8 x i64> %interleaved.vec, ptr %ptr, align 4
@@ -962,47 +968,48 @@ define void @load_double_factor4(ptr %ptr) #0 {
 ;
 ; CHECK-IADISABLED-LABEL: load_double_factor4:
 ; CHECK-IADISABLED:       // %bb.0:
-; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #2, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z1, [x0, #3, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z2, [x0, #2, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z3, [x0, #3, mul vl]
 ; CHECK-IADISABLED-NEXT:    ptrue p0.d, vl2
-; CHECK-IADISABLED-NEXT:    ldr z2, [x0, #1, mul vl]
-; CHECK-IADISABLED-NEXT:    ldr z3, [x0]
-; CHECK-IADISABLED-NEXT:    mov v4.16b, v0.16b
-; CHECK-IADISABLED-NEXT:    zip1 z5.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    trn1 z6.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    trn2 z0.d, z0.d, z1.d
-; CHECK-IADISABLED-NEXT:    mov z7.d, z3.d[3]
-; CHECK-IADISABLED-NEXT:    zip1 z16.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    trn2 z17.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    mov v4.d[1], v1.d[0]
-; CHECK-IADISABLED-NEXT:    mov z1.d, z2.d[3]
-; CHECK-IADISABLED-NEXT:    mov z18.d, z5.d[3]
+; CHECK-IADISABLED-NEXT:    ldr z0, [x0, #1, mul vl]
+; CHECK-IADISABLED-NEXT:    ldr z1, [x0]
+; CHECK-IADISABLED-NEXT:    mov v4.16b, v2.16b
+; CHECK-IADISABLED-NEXT:    zip1 z7.d, z2.d, z3.d
+; CHECK-IADISABLED-NEXT:    mov z5.d, z0.d[3]
+; CHECK-IADISABLED-NEXT:    mov z6.d, z1.d[3]
+; CHECK-IADISABLED-NEXT:    trn2 z16.d, z1.d, z0.d
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], v3.d[0]
+; CHECK-IADISABLED-NEXT:    mov z17.d, z7.d[3]
+; CHECK-IADISABLED-NEXT:    mov z7.d, z7.d[2]
+; CHECK-IADISABLED-NEXT:    mov v6.d[1], v5.d[0]
+; CHECK-IADISABLED-NEXT:    trn1 z5.d, z2.d, z3.d
+; CHECK-IADISABLED-NEXT:    trn2 z2.d, z2.d, z3.d
+; CHECK-IADISABLED-NEXT:    zip1 z3.d, z1.d, z0.d
 ; CHECK-IADISABLED-NEXT:    mov v16.d[1], v16.d[1]
-; CHECK-IADISABLED-NEXT:    mov z5.d, z5.d[2]
-; CHECK-IADISABLED-NEXT:    zip2 z2.d, z3.d, z2.d
-; CHECK-IADISABLED-NEXT:    mov z3.d, z0.d[3]
-; CHECK-IADISABLED-NEXT:    mov z0.d, z0.d[2]
-; CHECK-IADISABLED-NEXT:    mov v17.d[1], v17.d[1]
-; CHECK-IADISABLED-NEXT:    mov v7.d[1], v1.d[0]
-; CHECK-IADISABLED-NEXT:    mov z1.d, z6.d[3]
-; CHECK-IADISABLED-NEXT:    mov z6.d, z6.d[2]
+; CHECK-IADISABLED-NEXT:    mov v7.d[1], v17.d[0]
 ; CHECK-IADISABLED-NEXT:    splice z4.d, p0, z4.d, z4.d
-; CHECK-IADISABLED-NEXT:    mov v5.d[1], v18.d[0]
-; CHECK-IADISABLED-NEXT:    mov v2.d[1], v2.d[1]
-; CHECK-IADISABLED-NEXT:    mov v0.d[1], v3.d[0]
-; CHECK-IADISABLED-NEXT:    mov v6.d[1], v1.d[0]
-; CHECK-IADISABLED-NEXT:    mov v7.d[1], v7.d[1]
-; CHECK-IADISABLED-NEXT:    mov z19.d, z4.d[3]
+; CHECK-IADISABLED-NEXT:    mov z19.d, z5.d[3]
+; CHECK-IADISABLED-NEXT:    mov z5.d, z5.d[2]
+; CHECK-IADISABLED-NEXT:    splice z6.d, p0, z6.d, z0.d
+; CHECK-IADISABLED-NEXT:    mov v3.d[1], v3.d[1]
+; CHECK-IADISABLED-NEXT:    zip2 z0.d, z1.d, z0.d
+; CHECK-IADISABLED-NEXT:    mov z1.d, z2.d[3]
+; CHECK-IADISABLED-NEXT:    mov z2.d, z2.d[2]
+; CHECK-IADISABLED-NEXT:    mov v5.d[1], v19.d[0]
+; CHECK-IADISABLED-NEXT:    splice z16.d, p0, z16.d, z7.d
+; CHECK-IADISABLED-NEXT:    mov z18.d, z4.d[3]
 ; CHECK-IADISABLED-NEXT:    mov z4.d, z4.d[2]
-; CHECK-IADISABLED-NEXT:    splice z17.d, p0, z17.d, z5.d
-; CHECK-IADISABLED-NEXT:    splice z2.d, p0, z2.d, z6.d
-; CHECK-IADISABLED-NEXT:    mov v4.d[1], v19.d[0]
-; CHECK-IADISABLED-NEXT:    splice z7.d, p0, z7.d, z0.d
-; CHECK-IADISABLED-NEXT:    splice z16.d, p0, z16.d, z4.d
+; CHECK-IADISABLED-NEXT:    mov v0.d[1], v0.d[1]
+; CHECK-IADISABLED-NEXT:    mov v6.d[1], v6.d[1]
+; CHECK-IADISABLED-NEXT:    mov v2.d[1], v1.d[0]
+; CHECK-IADISABLED-NEXT:    mov v4.d[1], v18.d[0]
+; CHECK-IADISABLED-NEXT:    splice z0.d, p0, z0.d, z5.d
+; CHECK-IADISABLED-NEXT:    splice z6.d, p0, z6.d, z2.d
+; CHECK-IADISABLED-NEXT:    splice z3.d, p0, z3.d, z4.d
+; CHECK-IADISABLED-NEXT:    // fake_use: $z3
 ; CHECK-IADISABLED-NEXT:    // fake_use: $z16
-; CHECK-IADISABLED-NEXT:    // fake_use: $z17
-; CHECK-IADISABLED-NEXT:    // fake_use: $z2
-; CHECK-IADISABLED-NEXT:    // fake_use: $z7
+; CHECK-IADISABLED-NEXT:    // fake_use: $z0
+; CHECK-IADISABLED-NEXT:    // fake_use: $z6
 ; CHECK-IADISABLED-NEXT:    ret
   %interleaved.vec = load <16 x double>, ptr %ptr, align 4
   %v0 = shufflevector <16 x double> %interleaved.vec, <16 x double> poison, <4 x i32> <i32 0, i32 4, i32 8, i32 12>

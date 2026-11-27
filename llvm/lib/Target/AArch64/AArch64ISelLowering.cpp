@@ -17155,7 +17155,10 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   }
 
   unsigned NumElems = VT.getVectorNumElements();
-  if (!VT.isPow2VectorType() || NumElems <= 1 || BVN->isConstant())
+  auto IsWiderThanNEON = VT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock;
+  if (!VT.isPow2VectorType() || NumElems <= 1 ||
+      (!IsWiderThanNEON && // ConstantBuildVector only supports NEON vectors
+       BVN->isConstant()))
     return SDValue();
 
   auto IsExtractElt = [](SDValue Op) {
@@ -17171,29 +17174,17 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   // Split vectors wider than 128b into 128b parts and splice them
   // together. This improves codegen by using NEON+SVE for cases when
   // BUILD_VECTOR lowering fallback to stack materialization.
-  auto IsWiderThanNEON = VT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock;
   if (Subtarget->isNeonAvailable() && IsWiderThanNEON) {
-    assert(VT.isPow2VectorType() && "Expected a power-of-two vector");
-
-    auto BuildAndSplice128BitParts = [&](EVT PartVT, ArrayRef<SDValue> Ops,
-                                         auto &&Self) -> SDValue {
-      if (PartVT.getFixedSizeInBits() <= AArch64::SVEBitsPerBlock) {
-        SDValue Part = DAG.getBuildVector(PartVT, DL, Ops);
-        return convertToScalableVector(DAG, ContainerVT, Part);
-      }
-
-      EVT HalfVT = PartVT.getHalfNumVectorElementsVT(*DAG.getContext());
-      SDValue Lo = Self(HalfVT, Ops.take_front(Ops.size() / 2), Self);
-      SDValue Hi = Self(HalfVT, Ops.drop_front(Ops.size() / 2), Self);
-
-      SDValue Pg = getPredicateForFixedLengthVector(DAG, DL, HalfVT);
-      return DAG.getNode(AArch64ISD::SPLICE, DL, ContainerVT, Pg, Lo, Hi);
-    };
-
-    SmallVector<SDValue, 8> Ops(Op->op_values());
-    SDValue Result =
-        BuildAndSplice128BitParts(VT, Ops, BuildAndSplice128BitParts);
-    return convertFromScalableVector(DAG, VT, Result);
+    ArrayRef Ops(Op->op_begin(), Op->op_end());
+    EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+    ArrayRef OpsLo = Ops.take_front(Ops.size() / 2);
+    ArrayRef OpsHi = Ops.drop_front(Ops.size() / 2);
+    SDValue Lo = DAG.getBuildVector(HalfVT, DL, OpsLo);
+    SDValue Hi = DAG.getBuildVector(HalfVT, DL, OpsHi);
+    // Add a NVCAST to prevent (concat(build_vector, build_vector)) ->
+    // build_vector fold.
+    Hi = DAG.getNode(AArch64ISD::NVCAST, DL, HalfVT, Hi);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
   }
 
   if (IsWiderThanNEON)
