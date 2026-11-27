@@ -17,9 +17,12 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
 
 #define DEBUG_TYPE "codegen-common"
@@ -246,6 +249,84 @@ static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
   return &Trunc.getOperand(1);
 }
 
+static uint64_t getDwarfOpForICmpPred(CmpInst::Predicate Pred) {
+  switch (Pred) {
+  case CmpInst::ICMP_EQ:
+    return dwarf::DW_OP_eq;
+  case CmpInst::ICMP_NE:
+    return dwarf::DW_OP_ne;
+  case CmpInst::ICMP_UGT:
+  case CmpInst::ICMP_SGT:
+    return dwarf::DW_OP_gt;
+  case CmpInst::ICMP_UGE:
+  case CmpInst::ICMP_SGE:
+    return dwarf::DW_OP_ge;
+  case CmpInst::ICMP_ULT:
+  case CmpInst::ICMP_SLT:
+    return dwarf::DW_OP_lt;
+  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_SLE:
+    return dwarf::DW_OP_le;
+  default:
+    return 0;
+  }
+}
+
+static MachineOperand *getSalvageOpsForICmp(const MachineRegisterInfo &MRI,
+                                            MachineInstr &ICmp,
+                                            SmallVectorImpl<uint64_t> &Ops) {
+  assert(ICmp.getOpcode() == TargetOpcode::G_ICMP && "Must be a G_ICMP");
+
+  LLT DstTy = MRI.getType(ICmp.getOperand(0).getReg());
+  LLT SrcTy = MRI.getType(ICmp.getOperand(2).getReg());
+  if (!DstTy.isScalar() || !(SrcTy.isScalar() || SrcTy.isPointer()))
+    return nullptr;
+
+  const MachineFunction &MF = *ICmp.getMF();
+  // DWARF comparisons produce 1 for true.
+  if (DstTy.getSizeInBits() != 1 &&
+      MF.getSubtarget().getTargetLowering()->getBooleanContents(false, false) !=
+          TargetLoweringBase::ZeroOrOneBooleanContent)
+    return nullptr;
+
+  const MachineInstr *RHS = MRI.getVRegDef(ICmp.getOperand(3).getReg());
+  if (!RHS || RHS->getOpcode() != TargetOpcode::G_CONSTANT)
+    return nullptr;
+
+  auto Pred =
+      static_cast<CmpInst::Predicate>(ICmp.getOperand(1).getPredicate());
+  uint64_t DwarfOp = getDwarfOpForICmpPred(Pred);
+  if (!DwarfOp)
+    return nullptr;
+
+  // DWARF compares values of the address-sized generic type as signed.
+  unsigned AddrBits = MF.getDataLayout().getPointerSizeInBits();
+  unsigned Bits = SrcTy.getSizeInBits();
+  if (Bits > AddrBits || AddrBits > 64)
+    return nullptr;
+
+  APInt C = RHS->getOperand(1).getCImm()->getValue().zextOrTrunc(Bits);
+  if (ICmpInst::isSigned(Pred)) {
+    C = C.sext(AddrBits);
+    if (Bits < AddrBits)
+      Ops.append({dwarf::DW_OP_constu, AddrBits - Bits, dwarf::DW_OP_shl,
+                  dwarf::DW_OP_constu, AddrBits - Bits, dwarf::DW_OP_shra});
+  } else {
+    C = C.zext(AddrBits);
+    if (Bits < AddrBits) {
+      Ops.append({dwarf::DW_OP_constu, maskTrailingOnes<uint64_t>(Bits),
+                  dwarf::DW_OP_and});
+    } else if (!ICmpInst::isEquality(Pred)) {
+      APInt SignBit = APInt::getSignMask(AddrBits);
+      Ops.append(
+          {dwarf::DW_OP_constu, SignBit.getZExtValue(), dwarf::DW_OP_xor});
+      C ^= SignBit;
+    }
+  }
+  Ops.append({dwarf::DW_OP_constu, C.getZExtValue(), DwarfOp});
+  return &ICmp.getOperand(2);
+}
+
 static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
                                             MachineInstr &MI,
                                             SmallVectorImpl<uint64_t> &Ops) {
@@ -255,6 +336,8 @@ static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
   case TargetOpcode::COPY:
   case TargetOpcode::G_BITCAST:
     return getSalvageOpsForCopy(MRI, MI);
+  case TargetOpcode::G_ICMP:
+    return getSalvageOpsForICmp(MRI, MI, Ops);
   default:
     return nullptr;
   }
