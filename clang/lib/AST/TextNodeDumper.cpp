@@ -2168,14 +2168,13 @@ void TextNodeDumper::VisitVectorType(const VectorType *T) {
   case VectorKind::SveFixedLengthPredicate:
     OS << " fixed-length sve predicate vector";
     break;
-  case VectorKind::RVVFixedLengthData:
-    OS << " fixed-length rvv data vector";
-    break;
-  case VectorKind::RVVFixedLengthMask:
-  case VectorKind::RVVFixedLengthMask_1:
-  case VectorKind::RVVFixedLengthMask_2:
-  case VectorKind::RVVFixedLengthMask_4:
-    OS << " fixed-length rvv mask vector";
+  default:
+    assert(isRVVFixedLengthVectorKind(T->getVectorKind()) &&
+           "unexpected vector kind");
+    OS << (isRVVFixedLengthMaskVectorKind(T->getVectorKind())
+               ? " fixed-length rvv mask vector ratio "
+               : " fixed-length rvv data vector lmul ")
+       << getRVVFixedLengthString(T->getVectorKind());
     break;
   }
   OS << " " << T->getNumElements();
@@ -2650,15 +2649,9 @@ void TextNodeDumper::VisitVarDecl(const VarDecl *D) {
     dumpPointer(Instance);
   }
 
-  if (D->hasInit()) {
-    const Expr *E = D->getInit();
-    // Only dump the value of constexpr VarDecls for now.
-    if (E && !E->isValueDependent() && D->isConstexpr() &&
-        !D->getType()->isDependentType()) {
-      const APValue *Value = D->evaluateValue();
-      if (Value)
-        AddChild("value", [=] { Visit(*Value, E->getType()); });
-    }
+  if (const Expr *Init = D->getInit()) {
+    if (const APValue *V = D->getEvaluatedValue())
+      AddChild("value", [=] { Visit(*V, Init->getType()); });
   }
 
   if (!D->getDescribedVarTemplate()) {

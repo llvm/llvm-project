@@ -24,6 +24,7 @@
 #include "RISCVRegisterInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -474,13 +475,14 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       if (!MO.isReg())
         OS << 'i';
       return false;
-    case 'N': // Print the register encoding as an integer (0-31)
+    case 'N': { // Print the register encoding as an integer (0-31)
       if (!MO.isReg())
         return true;
 
       const RISCVRegisterInfo *TRI = STI->getRegisterInfo();
       OS << TRI->getEncodingValue(MO.getReg());
       return false;
+    }
     }
   }
 
@@ -655,7 +657,7 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   StringRef ABIName = M.getTargetABIFromMD();
   if (!ABIName.empty()) {
     RISCVABI::ABI ABI = RISCVABI::getTargetABI(ABIName);
-    if (ABI == RISCVABI::ABI_Unknown) {
+    if (ABI == RISCVABI::ABI::Unknown) {
       M.getContext().emitError(Twine('\'') + ABIName +
                                "' is not a recognized ABI for this target");
     } else {
@@ -753,19 +755,28 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   // temporary register as the check is immediately followed by the
   // call. The check defaults to X6/X7, but can fall back to X28-X31 if
   // needed.
-  unsigned ScratchRegs[] = {RISCV::X6, RISCV::X7};
-  unsigned NextReg = RISCV::X28;
-  auto isRegAvailable = [&](unsigned Reg) {
-    return Reg != AddrReg && !STI->isRegisterReservedByUser(Reg);
+  MCRegister ScratchRegs[] = {RISCV::X6, RISCV::X7};
+  static const MCPhysReg FallbackRegArray[] = {RISCV::X28, RISCV::X29,
+                                               RISCV::X30, RISCV::X31};
+  ArrayRef<MCPhysReg> FallbackRegs(FallbackRegArray);
+  auto isRegAvailable = [&](MCRegister Reg) {
+    // If cf-protection=branch is enabled, x7 is reserved for the zicfilp
+    // extension and cannot be used as scratch register.
+    if (Reg == RISCV::X7 && MI.getMF()
+                                ->getInfo<RISCVMachineFunctionInfo>()
+                                ->hasCFProtectionBranch())
+      return false;
+    return AddrReg != Reg && !STI->isRegisterReservedByUser(Reg);
   };
   for (auto &Reg : ScratchRegs) {
     if (isRegAvailable(Reg))
       continue;
-    while (!isRegAvailable(NextReg))
-      ++NextReg;
-    Reg = NextReg++;
-    if (Reg > RISCV::X31)
+    const MCPhysReg *It = find_if(FallbackRegs, isRegAvailable);
+    if (It == FallbackRegs.end())
       report_fatal_error("Unable to find scratch registers for KCFI_CHECK");
+    Reg = *It;
+    // Don't hand out the same fallback register twice.
+    FallbackRegs = FallbackRegs.drop_front(It - FallbackRegs.begin() + 1);
   }
 
   if (AddrReg == RISCV::X0) {

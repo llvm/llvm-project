@@ -1,11 +1,10 @@
-# RUN: not --crash llc -o - -mtriple=amdgpu6.00 -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -o - -mtriple=amdgpu6.00 -run-pass=none %s 2>&1 | FileCheck %s
 
 ---
 name:            test_intrinsic_w_side_effects
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0:

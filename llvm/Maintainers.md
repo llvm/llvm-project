@@ -135,6 +135,11 @@ jgorbe@google.com (email), [slackito](https://github.com/slackito) (GitHub)
 Philip Reames \
 listmail@philipreames.com (email), [preames](https://github.com/preames) (GitHub)
 
+#### SeparateConstOffsetFromGEP
+
+Krzysztof Drewniak \
+krzysdrewniak@gmail.com, Krzysztof.Drewniak@amd.com (email), [krzysz00](https://github.com/krzysz00) (Github)
+
 #### SLPVectorizer
 
 Alexey Bataev \
@@ -247,12 +252,16 @@ peter.smith@arm.com (email), [smithp35](https://github.com/smithp35) (GitHub) \
 Oliver Stannard (esp. assembly/dissassembly) \
 oliver.stannard@arm.com (email), [ostannard](https://github.com/ostannard) (GitHub) \
 Ties Stuij (Arm GlobalISel and early arch support) \
-ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub)
+ties.stuij@arm.com (email), [stuij](https://github.com/stuij) (GitHub) \
+Asher Dobrescu (esp. scheduling models) \
+ash.dobrescu@arm.com (email), [Asher8118](https://github.com/Asher8118) (GitHub)
 
 #### AMDGPU backend
 
 Matt Arsenault \
 Matthew.Arsenault@amd.com, arsenm2@gmail.com (email), [arsenm](https://github.com/arsenm) (GitHub)
+Krzysztof Drewniak (AMDGPULowerBufferFatPointers and other buffer-related issues) \
+krzysdrewniak@gmail.com, Krzysztof.Drewniak@amd.com (email), [krzysz00](https://github.com/krzysz00) (Github)
 
 #### ARC backend
 

@@ -15,7 +15,7 @@ int g3() {
 }
 
 // CIR: cir.func{{.*}} @_Z2g3v() -> (!s32i{{.*}}){{.*}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[FN_ADDR:.*]] = cir.alloca "fn" {{.*}} init : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>
 // CIR:   %[[LAM_ALLOCA:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<![[REC_LAM_G3:[^>]*]]>
 // CIR:   %[[TASK:.*]] = cir.alloca "task" {{.*}} init : !cir.ptr<!s32i>
@@ -39,7 +39,7 @@ int g3() {
 
 // lambda operator int (*)(int const&)()
 // CIR:   cir.func no_inline alignment(2) internal private dso_local @_ZZ2g3vENK3$_0cvPFiRKiEEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G3]]> {{.*}}) -> (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>{{.*}}){{.*}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>
 // CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_G3]]>>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]]
@@ -110,7 +110,7 @@ void use_void_lambda() {
 
 // lambda operator void (*)(int)()
 // CIR: cir.func no_inline alignment(2) internal private dso_local @_ZZ15use_void_lambdavENK3$_0cvPFDaT_EIiEEv(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_VOID_LAMBDA]]> {{.*}}) -> (!cir.ptr<!cir.func<(!s32i)>>{{.*}})
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i)>>>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!cir.func<(!s32i)>>>
 // CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_VOID_LAMBDA]]>>
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ALLOCA]]
@@ -121,7 +121,7 @@ void use_void_lambda() {
 
 // lambda invoker
 // CIR: cir.func no_inline alignment(2) internal private dso_local @_ZZ2g3vEN3$_08__invokeERKi(%[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}}) -> (!s32i{{.*}}) {{.*}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval"
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init const
 // CIR:   %[[LAM_ALLOCA:.*]] = cir.alloca "unused.capture" {{.*}} : !cir.ptr<![[REC_LAM_G3]]>
 // CIR:   cir.store %[[REF_I_ARG]], %[[REF_I_ALLOCA]]
@@ -133,7 +133,7 @@ void use_void_lambda() {
 
 // lambda operator()
 // CIR: cir.func no_inline lambda alignment(2) internal private dso_local @_ZZ2g3vENK3$_0clERKi(%[[THIS_ARG:.*]]: !cir.ptr<![[REC_LAM_G3]]> {{.*}}, %[[REF_I_ARG:.*]]: !cir.ptr<!s32i> {{.*}})
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval"
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<![[REC_LAM_G3]]>>
 // CIR:   %[[REF_I_ALLOCA:.*]] = cir.alloca "i" {{.*}} init const
 // CIR:   cir.store %[[THIS_ARG]], %[[THIS_ALLOCA]]

@@ -215,22 +215,29 @@ struct AliasAnalysis {
       /// MustAlias.
       bool isApproximate{false};
 
+      /// Whether steps may be missing from the start of the path: different
+      /// paths of region branch predecessors are merged into an empty path,
+      /// and the steps after the merge are appended to it.
+      bool isIncomplete{false};
+
       /// The storage-associated (EQUIVALENCE/COMMON) declaration crossed by
       /// the path, if any. Objects of the same type may partially overlap
       /// only through storage association, so component steps are only
       /// compared between paths crossing the same such declaration.
       mlir::Operation *storageDecl{nullptr};
 
-      /// Return true if any step is a PointerDeref.
-      bool hasPointerDeref() const {
-        return llvm::any_of(steps, [](const PathStep &s) {
-          return s.kind == PathStep::Kind::PointerDeref;
-        });
+      /// Return true if any step is a PointerDeref, or if the path is
+      /// incomplete, since the missing steps may include one.
+      bool mayHavePointerDeref() const {
+        return isIncomplete || llvm::any_of(steps, [](const PathStep &s) {
+                 return s.kind == PathStep::Kind::PointerDeref;
+               });
       }
 
       bool operator==(const AccessPath &o) const {
         return isApproximate == o.isApproximate &&
-               storageDecl == o.storageDecl && steps == o.steps;
+               isIncomplete == o.isIncomplete && storageDecl == o.storageDecl &&
+               steps == o.steps;
       }
       bool operator!=(const AccessPath &o) const { return !(*this == o); }
 
@@ -466,6 +473,23 @@ private:
   /// snapshot so the returned Source represents "declare-as-root,
   /// original-query-as-leaf".
   Source buildSourceAtDeclare(const Source::ScopedOrigin &so);
+
+  /// The part of alias(Source, Source, mlir::Value, mlir::Value) that
+  /// compares the sources. \p lhs and \p rhs are only used to find the
+  /// enclosing symbol table and to recognize derived types with pointer
+  /// components. Their types are not used to tell the address of a
+  /// descriptor from the address of data, so a source may describe the data
+  /// that the descriptor at \p lhs or \p rhs describes.
+  mlir::AliasResult aliasSources(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+                                 mlir::Value rhs);
+
+  /// Return true if a call may access \p var through its actual argument
+  /// \p arg: \p var is a TARGET or POINTER, which a pointer reachable from
+  /// \p arg may give access to, \p var may alias \p arg or, if \p arg is the
+  /// address of a descriptor, the data that the descriptor describes. Only
+  /// the attributes of \p varSrc, the source of \p var, are used.
+  bool mayAccessThroughArgument(mlir::Value arg, mlir::Value var,
+                                const Source &varSrc);
 
   /// Return the dummy_scope SSA value governing \p declareOp.
   /// Prefers the declare's explicit getDummyScope() operand; otherwise

@@ -1306,8 +1306,10 @@ getExplicitVisibilityAux(const NamedDecl *ND,
   }
 
   // The visibility of a template is stored in the templated decl.
-  if (const auto *TD = dyn_cast<TemplateDecl>(ND))
-    return getVisibilityOf(TD->getTemplatedDecl(), kind);
+  if (const auto *TD = dyn_cast<TemplateDecl>(ND)) {
+    if (const NamedDecl *Templated = TD->getTemplatedDecl())
+      return getVisibilityOf(Templated, kind);
+  }
 
   return std::nullopt;
 }
@@ -3119,8 +3121,6 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.HasSkippedBody = false;
   FunctionDeclBits.WillHaveBody = false;
   FunctionDeclBits.IsMultiVersion = false;
-  FunctionDeclBits.DeductionCandidateKind =
-      static_cast<unsigned char>(DeductionCandidate::Normal);
   FunctionDeclBits.HasODRHash = false;
   FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
 
@@ -3166,6 +3166,7 @@ FunctionDecl::DefaultedOrDeletedFunctionInfo::Create(
 
 void FunctionDecl::setDefaultedOrDeletedInfo(
     DefaultedOrDeletedFunctionInfo *Info) {
+  assert(Info && "expected defaulted or deleted function info");
   assert(!FunctionDeclBits.HasDefaultedOrDeletedInfo && "already have this");
   assert(!Body && "can't replace function body with defaulted function info");
 
@@ -3326,7 +3327,20 @@ FunctionDecl::getDefaultedFunctionKind() const {
       return CXXSpecialMemberKind::Destructor;
   }
 
+  // Only the postfix forms of ++ and -- can be defaulted. They are
+  // distinguished from the prefix forms by their trailing 'int' parameter, so
+  // they have exactly two parameters including implicit or explicit 'this'.
   switch (getDeclName().getCXXOverloadedOperator()) {
+  case OO_PlusPlus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Increment;
+    break;
+
+  case OO_MinusMinus:
+    if (getNumParamsIncludingThis() == 2)
+      return PostfixOperatorKind::Decrement;
+    break;
+
   case OO_EqualEqual:
     return DefaultedComparisonKind::Equal;
 
@@ -5533,7 +5547,6 @@ unsigned RecordDecl::getODRHash() {
 BlockDecl::BlockDecl(DeclContext *DC, SourceLocation CaretLoc)
     : Decl(Block, DC, CaretLoc), DeclContext(Block) {
   setIsVariadic(false);
-  setCapturesCXXThis(false);
   setBlockMissingReturnType(true);
   setIsConversionFromLambda(false);
   setDoesNotEscape(false);
@@ -5552,8 +5565,8 @@ void BlockDecl::setParams(ArrayRef<ParmVarDecl *> NewParamInfo) {
 }
 
 void BlockDecl::setCaptures(ASTContext &Context, ArrayRef<Capture> Captures,
-                            bool CapturesCXXThis) {
-  this->setCapturesCXXThis(CapturesCXXThis);
+                            QualType CXXThisType) {
+  this->CXXThisType = CXXThisType;
   this->NumCaptures = Captures.size();
 
   if (Captures.empty()) {

@@ -216,3 +216,56 @@ join2:
   %phi = phi i8 [ 0, %join1 ], [ %y, %else2 ]
   ret i8 %phi
 }
+
+@g = global i32 0
+
+; Replacing the PN w/ the incoming non-constant (%p) is fine here, as we are merely
+; comparing addresses (icmp doesn't inspect the provenance of pointer %phi).
+define i1 @common_value_phi_global_valid_replacement(ptr %p, ptr %q) {
+; CHECK-LABEL: @common_value_phi_global_valid_replacement(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[P:%.*]], @g
+; CHECK-NEXT:    br i1 [[C]], label [[JOIN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[RV:%.*]] = icmp eq ptr [[P]], [[Q:%.*]]
+; CHECK-NEXT:    ret i1 [[RV]]
+;
+entry:
+  %c = icmp eq ptr %p, @g
+  br i1 %c, label %join, label %else
+
+else:
+  br label %join
+
+join:
+  %phi = phi ptr [ @g, %entry ], [ %p, %else ]
+  %rv = icmp eq ptr %phi, %q
+  ret i1 %rv
+}
+
+; The PN cannot be simplified here to %x (the common value), as on the edge through
+; which the constant 1 flows into the PN (i.e., entry to join), %x is known zero, not one.
+define i32 @common_value_phi_wrong_constant(i32 %x) {
+; CHECK-LABEL: @common_value_phi_wrong_constant(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[C]], label [[JOIN:%.*]], label [[ELSE:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[X]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[PHI]]
+;
+entry:
+  %c = icmp eq i32 %x, 0
+  br i1 %c, label %join, label %else
+
+else:
+  br label %join
+
+join:
+  %phi = phi i32 [ 1, %entry ], [ %x, %else ]
+  ret i32 %phi
+}

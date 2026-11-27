@@ -667,12 +667,6 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
     if (From.isVirtual() && To.isVirtual())
       MRI.constrainRegClass(To, MRI.getRegClass(From));
     // Replace it.
-
-    // Replacing one register with another won't touch the kill flags.
-    // We need to conservatively clear the kill flags as a kill on the old
-    // register might dominate existing uses of the new register.
-    if (!MRI.use_empty(To))
-      MRI.clearKillFlags(From);
     MRI.replaceRegWith(From, To);
   }
 
@@ -1156,7 +1150,8 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
     CurDAG->viewGraph("scheduler input for " + BlockName);
 
   // Schedule machine code.
-  ScheduleDAGSDNodes *Scheduler = CreateScheduler();
+  if (!Scheduler)
+    Scheduler.reset(CreateScheduler());
   {
     NamedRegionTimer T("sched", "Instruction Scheduling", GroupName,
                        GroupDescription, TimePassesIsEnabled);
@@ -1182,13 +1177,6 @@ void SelectionDAGISel::CodeGenAndEmitDAG() {
   // update PHI nodes later on.
   if (FirstMBB != LastMBB)
     SDB->UpdateSplitBlock(FirstMBB, LastMBB);
-
-  // Free the scheduler state.
-  {
-    NamedRegionTimer T("cleanup", "Instruction Scheduling Cleanup", GroupName,
-                       GroupDescription, TimePassesIsEnabled);
-    delete Scheduler;
-  }
 
   // Free the SelectionDAG state, now that we're finished with it.
   CurDAG->clear();
@@ -1652,6 +1640,7 @@ static void processSingleLocVars(FunctionLoweringInfo &FuncInfo,
 }
 
 void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
+  assert(!Scheduler && "scheduler leaked from previous function");
   FastISelFailed = false;
   // Initialize the Fast-ISel state, if needed.
   FastISel *FastIS = nullptr;
@@ -1964,6 +1953,7 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   SwiftError->propagateVRegs();
 
   delete FastIS;
+  Scheduler.reset();
   SDB->clearDanglingDebugInfo();
   SDB->SPDescriptor.resetPerFunctionState();
 }
@@ -3840,6 +3830,43 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                         << '\n');
       continue;
     }
+    case OPC_SwitchChildInteger: {
+      unsigned ChildNo = MatcherTable[MatcherIndex++];
+      [[maybe_unused]] unsigned SwitchStart = MatcherIndex - 2;
+      // The match fails if the child is missing or not a constant.
+      std::optional<int64_t> ChildVal;
+      if (ChildNo < N.getNumOperands()) {
+        if (auto *C = dyn_cast<ConstantSDNode>(N.getOperand(ChildNo)))
+          ChildVal = C->getAPIntValue().trySExtValue();
+      }
+
+      unsigned CaseSize;
+      while (true) {
+        // Get the size of this case.
+        CaseSize = MatcherTable[MatcherIndex++];
+        if (CaseSize & 128)
+          CaseSize = GetVBR(CaseSize, MatcherTable, MatcherIndex);
+        if (CaseSize == 0)
+          break;
+
+        int64_t CaseVal = GetSignedVBR(MatcherTable, MatcherIndex);
+
+        // If the value matches, then we will execute this case.
+        if (ChildVal == CaseVal)
+          break;
+
+        // Otherwise, skip over this case.
+        MatcherIndex += CaseSize;
+      }
+
+      // If no cases matched, bail out.
+      if (CaseSize == 0)
+        break;
+
+      LLVM_DEBUG(dbgs() << "  ChildIntegerSwitch[" << ChildNo << "] from "
+                        << SwitchStart << " to " << MatcherIndex << '\n');
+      continue;
+    }
     case OPC_CheckChild0Type:
     case OPC_CheckChild1Type:
     case OPC_CheckChild2Type:
@@ -3940,11 +3967,11 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       if (!::CheckOrImm(MatcherTable, MatcherIndex, N, *this)) break;
       continue;
     case OPC_CheckImmAllOnesV:
-      if (!ISD::isConstantSplatVectorAllOnes(N.getNode()))
+      if (!ISD::isConstantSplatVectorAllOnes(N))
         break;
       continue;
     case OPC_CheckImmAllZerosV:
-      if (!ISD::isConstantSplatVectorAllZeros(N.getNode()))
+      if (!ISD::isConstantSplatVectorAllZeros(N))
         break;
       continue;
     case OPC_CheckUndef:
@@ -4596,6 +4623,39 @@ bool SelectionDAGISel::isOrEquivalentToAdd(const SDNode *N) const {
     return (Off >= 0) && (((A.value() - 1) & Off) == unsigned(Off));
   }
   return false;
+}
+
+bool SelectionDAGISel::selectShiftAmountMask(SDValue N, unsigned ShiftWidth,
+                                             SDValue &ShAmt) const {
+  assert(isPowerOf2_32(ShiftWidth) && "Unexpected max shift amount!");
+  unsigned ShiftBits = Log2_32(ShiftWidth);
+
+  // A truncation that keeps the low ShiftBits bits doesn't change the bits the
+  // shift reads.
+  if (N.getOpcode() == ISD::TRUNCATE &&
+      N.getScalarValueSizeInBits() >= ShiftBits)
+    N = N.getOperand(0);
+
+  if (N.getOpcode() != ISD::AND || !isa<ConstantSDNode>(N.getOperand(1)))
+    return false;
+
+  const APInt &AndMask = N.getConstantOperandAPInt(1);
+  if (AndMask.getBitWidth() < ShiftBits)
+    return false;
+
+  // Since the max shift amount is a power of 2 we can subtract 1 to make a
+  // mask that covers the bits needed to represent all shift amounts.
+  APInt ShMask(AndMask.getBitWidth(), ShiftWidth - 1);
+  if (!ShMask.isSubsetOf(AndMask)) {
+    // SimplifyDemandedBits may have optimized the mask so try restoring any
+    // bits that are known zero.
+    KnownBits Known = CurDAG->computeKnownBits(N.getOperand(0));
+    if (!ShMask.isSubsetOf(AndMask | Known.Zero))
+      return false;
+  }
+
+  ShAmt = N.getOperand(0);
+  return true;
 }
 
 void SelectionDAGISel::CannotYetSelect(SDNode *N) {

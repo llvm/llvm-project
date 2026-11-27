@@ -28,9 +28,9 @@ Symbol *SymbolTable::find(CachedHashStringRef cachedName) {
   return symVector[it->second];
 }
 
-std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
+std::pair<Symbol *, bool> SymbolTable::insert(CachedHashStringRef name,
                                               const InputFile *file) {
-  auto p = symMap.insert({CachedHashStringRef(name), (int)symVector.size()});
+  auto p = symMap.insert({name, (int)symVector.size()});
 
   Symbol *sym;
   if (!p.second) {
@@ -48,15 +48,13 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
 
 namespace {
 struct DuplicateSymbolDiag {
-  // Pair containing source location and source file
-  const std::pair<std::string, std::string> src1;
-  const std::pair<std::string, std::string> src2;
+  const InputFile *file1;
+  const InputSection *isec1;
+  uint64_t value1;
+  const InputFile *file2;
+  const InputSection *isec2;
+  uint64_t value2;
   const Symbol *sym;
-
-  DuplicateSymbolDiag(const std::pair<std::string, std::string> src1,
-                      const std::pair<std::string, std::string> src2,
-                      const Symbol *sym)
-      : src1(src1), src2(src2), sym(sym) {}
 };
 SmallVector<DuplicateSymbolDiag> dupSymDiags;
 } // namespace
@@ -99,14 +97,15 @@ static void transplantSymbolsAtOffset(InputSection *fromIsec,
   });
 }
 
-Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
-                                 InputSection *isec, uint64_t value,
-                                 uint64_t size, bool isWeakDef,
+Defined *SymbolTable::addDefined(CachedHashStringRef hashedName,
+                                 InputFile *file, InputSection *isec,
+                                 uint64_t value, uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern,
                                  bool isReferencedDynamically, bool noDeadStrip,
                                  bool isWeakDefCanBeHidden, bool isCold) {
+  StringRef name = hashedName.val();
   bool overridesWeakDef = false;
-  auto [s, wasInserted] = insert(name, file);
+  auto [s, wasInserted] = insert(hashedName, file);
 
   assert(!file || !isa<BitcodeFile>(file) || !isec);
 
@@ -146,13 +145,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                       value);
         }
       } else {
-        std::string srcLoc1 = defined->getSourceLocation();
-        std::string srcLoc2 = isec ? isec->getSourceLocation(value) : "";
-        std::string srcFile1 = toString(defined->getFile());
-        std::string srcFile2 = toString(file);
-
-        dupSymDiags.push_back({make_pair(srcLoc1, srcFile1),
-                               make_pair(srcLoc2, srcFile2), defined});
+        dupSymDiags.push_back({defined->getFile(), defined->originalIsec,
+                               defined->value, file, isec, value, defined});
       }
 
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
@@ -228,14 +222,14 @@ Defined *SymbolTable::aliasDefined(Defined *src, StringRef target,
                     src->weakDefCanBeHidden, src->cold);
 }
 
-Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
+Symbol *SymbolTable::addUndefined(CachedHashStringRef name, InputFile *file,
                                   bool isWeakRef) {
   auto [s, wasInserted] = insert(name, file);
 
   RefState refState = isWeakRef ? RefState::Weak : RefState::Strong;
 
   if (wasInserted)
-    replaceSymbol<Undefined>(s, name, file, refState,
+    replaceSymbol<Undefined>(s, name.val(), file, refState,
                              /*wasBitcodeSymbol=*/false);
   else if (auto *lazy = dyn_cast<LazyArchive>(s))
     lazy->fetchArchiveMember();
@@ -248,8 +242,9 @@ Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
   return s;
 }
 
-Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
-                               uint32_t align, bool isPrivateExtern) {
+Symbol *SymbolTable::addCommon(CachedHashStringRef name, InputFile *file,
+                               uint64_t size, uint32_t align,
+                               bool isPrivateExtern) {
   auto [s, wasInserted] = insert(name, file);
 
   if (!wasInserted) {
@@ -263,7 +258,8 @@ Symbol *SymbolTable::addCommon(StringRef name, InputFile *file, uint64_t size,
     // a name conflict, we fall through to the replaceSymbol() call below.
   }
 
-  replaceSymbol<CommonSymbol>(s, name, file, size, align, isPrivateExtern);
+  replaceSymbol<CommonSymbol>(s, name.val(), file, size, align,
+                              isPrivateExtern);
   return s;
 }
 
@@ -319,19 +315,19 @@ Symbol *SymbolTable::addLazyArchive(StringRef name, ArchiveFile *file,
   return s;
 }
 
-Symbol *SymbolTable::addLazyObject(StringRef name, InputFile &file) {
+Symbol *SymbolTable::addLazyObject(CachedHashStringRef name, InputFile &file) {
   auto [s, wasInserted] = insert(name, &file);
 
   if (wasInserted) {
-    replaceSymbol<LazyObject>(s, file, name);
+    replaceSymbol<LazyObject>(s, file, name.val());
   } else if (isa<Undefined>(s)) {
-    extract(file, name);
+    extract(file, name.val());
   } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
     if (dysym->isWeakDef()) {
       if (dysym->getRefState() != RefState::Unreferenced)
-        extract(file, name);
+        extract(file, name.val());
       else
-        replaceSymbol<LazyObject>(s, file, name);
+        replaceSymbol<LazyObject>(s, file, name.val());
     }
   }
   return s;
@@ -474,14 +470,23 @@ MapVector<const Undefined *, UndefinedDiag> undefs;
 void macho::reportPendingDuplicateSymbols() {
   for (const auto &duplicate : dupSymDiags) {
     if (!config->deadStripDuplicates || duplicate.sym->isLive()) {
+      StringRef name = duplicate.sym->getName();
+      std::string srcLoc1 =
+          duplicate.isec1
+              ? duplicate.isec1->getSourceLocation(duplicate.value1, name)
+              : "";
+      std::string srcLoc2 =
+          duplicate.isec2
+              ? duplicate.isec2->getSourceLocation(duplicate.value2, name)
+              : "";
       std::string message =
           "duplicate symbol: " + toString(*duplicate.sym) + "\n>>> defined in ";
-      if (!duplicate.src1.first.empty())
-        message += duplicate.src1.first + "\n>>>            ";
-      message += duplicate.src1.second + "\n>>> defined in ";
-      if (!duplicate.src2.first.empty())
-        message += duplicate.src2.first + "\n>>>            ";
-      error(message + duplicate.src2.second);
+      if (!srcLoc1.empty())
+        message += srcLoc1 + "\n>>>            ";
+      message += toString(duplicate.file1) + "\n>>> defined in ";
+      if (!srcLoc2.empty())
+        message += srcLoc2 + "\n>>>            ";
+      error(message + toString(duplicate.file2));
     }
   }
 }

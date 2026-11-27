@@ -51,6 +51,14 @@ LLVM_C_ABI void LLVMParseCommandLineOptions(int argc, const char *const *argv,
                                             const char *Overview);
 
 /**
+ * Like LLVMParseCommandLineOptions() but returns non-zero and sets
+ * *ErrorMessage on error. Use LLVMDisposeMessage to free the error message.
+ */
+LLVM_C_ABI LLVMBool
+LLVMParseCommandLineOptionsWithError(int argc, const char *const *argv,
+                                     const char *Overview, char **ErrorMessage);
+
+/**
  * This function will search through all previously loaded dynamic
  * libraries for the symbol \p symbolName. If it is found, the address of
  * that symbol is returned. If not, null is returned.

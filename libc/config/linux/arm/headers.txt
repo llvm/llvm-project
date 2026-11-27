@@ -29,8 +29,11 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.wctype
     libc.include.sys_eventfd
     libc.include.sys_inotify
+    libc.include.sys_klog
+    libc.include.sys_mount
     libc.include.sys_param
     libc.include.sys_personality
+    libc.include.sys_swap
     libc.include.sys_sysinfo
     libc.include.sys_unistd
     # Disabled due to epoll_wait syscalls not being available on this platform.

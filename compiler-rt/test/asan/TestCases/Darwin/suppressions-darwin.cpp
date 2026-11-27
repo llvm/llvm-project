@@ -1,3 +1,7 @@
+// Certain calls from the simulator shared cache (e.g. to memcpy) are not
+// interposable on 27.0-27.2 simulators, so ASan misses the overflow.
+// XFAIL: iossim-dyld-interpose-bug
+
 // Check that without suppressions, we catch the issue.
 // RUN: %clangxx_asan -O0 %s -o %t -framework Foundation
 // RUN: not %run %t 2>&1 | FileCheck --check-prefix=CHECK-CRASH %s

@@ -19,6 +19,12 @@
 //
 // REQUIRES: gpu
 // UNSUPPORTED: intelgpu
+//
+// FIXME: Under concurrent GPU load, ROCr's blit kernel queue can lose a copy
+// packet, which occasionally makes this test hang on AMDGPU. Re-enable it once
+// fixed. Until then, kernel_launch_environment_dyn_gprivate.c covers the KLE of
+// concurrent launches on AMDGPU.
+// UNSUPPORTED: amdgpu
 
 #include <omp.h>
 #include <stdio.h>
@@ -31,12 +37,13 @@ static long expected(int k) { return (long)(k + 1) * N; }
 
 static int check(const char *Phase, long *Results) {
   int Errors = 0;
-  for (int k = 0; k < NUM_LAUNCHES; k++)
+  for (int k = 0; k < NUM_LAUNCHES; k++) {
     if (Results[k] != expected(k)) {
       fprintf(stderr, "%s: launch %d reduced to %ld, expected %ld\n", Phase, k,
               Results[k], expected(k));
       Errors++;
     }
+  }
   return Errors;
 }
 

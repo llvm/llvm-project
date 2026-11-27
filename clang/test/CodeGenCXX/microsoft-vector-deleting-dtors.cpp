@@ -123,8 +123,8 @@ void kernelTest() {
 // X86-NEXT:   %[[HOWMANYBYTES:.*]] = mul i32 4, %[[HOWMANY]]
 // X64-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i64 %[[HOWMANYBYTES]], 8
 // X86-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i32 %[[HOWMANYBYTES]], 4
-// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
-// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
+// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr allocptr noundef %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
+// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr allocptr noundef %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
 // CHECK-NEXT:   br label %delete.end
 // CHECK: vdtor.call:
 // CHECK-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[LPTR]]
@@ -158,7 +158,7 @@ void kernelTest() {
 // CLANG21: arraydestroy.done1:
 // CLANG21-NEXT:   %3 = mul i64 8, %2
 // CLANG21-NEXT:   %4 = add i64 %3, 8
-// CLANG21-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %1, i64 noundef %4)
+// CLANG21-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr allocptr noundef %1, i64 noundef %4)
 // CLANG21-NEXT:   br label %delete.end2
 
 // Definition of S::foo, check that it has vector deleting destructor call
@@ -183,8 +183,8 @@ void kernelTest() {
 // X86-NEXT:   %[[HOWMANYBYTES:.*]] = mul i32 4, %[[HOWMANY]]
 // X64-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i64 %[[HOWMANYBYTES]], 8
 // X86-NEXT:   %[[ADDCOOKIESIZE:.*]] = add i32 %[[HOWMANYBYTES]], 4
-// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
-// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
+// X64-NEXT:   call void @"??_V@YAXPEAX_K@Z"(ptr allocptr noundef %[[COOKIEGEP]], i64 noundef %[[ADDCOOKIESIZE]])
+// X86-NEXT:   call void @"??_V@YAXPAXI@Z"(ptr allocptr noundef %[[COOKIEGEP]], i32 noundef %[[ADDCOOKIESIZE]])
 // CHECK-NEXT:   br label %delete.end
 // CHECK: vdtor.call:                                       ; preds = %delete.notnull
 // CHECK-NEXT:   %[[VTABLE:.*]] = load ptr, ptr %[[DEL_PTR]]
@@ -200,7 +200,7 @@ void kernelTest() {
 // which here lands before the deleting-destructor helpers. Verify it traps
 // (the fallback path is unreachable at runtime once a real forwarding body is
 // linked in).
-// X64: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64: define linkonce_odr void @"?__empty_global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // X64-NEXT: call void @llvm.trap()
 // X64-NEXT: unreachable
 
@@ -248,8 +248,8 @@ void kernelTest() {
 // X86-NEXT:  %[[ARRSZ:.*]] = mul i32 4, %[[HOWMANY]]
 // X64-NEXT:  %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // X86-NEXT:  %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %[[COOKIEGEP]], i64 noundef %[[TOTALSZ]])
-// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %[[COOKIEGEP]], i32 noundef %[[TOTALSZ]])
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr allocptr noundef %[[COOKIEGEP]], i64 noundef %[[TOTALSZ]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr allocptr noundef %[[COOKIEGEP]], i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
 // X64-NEXT:   call void @"??1Parrot@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %[[LTHIS]])
@@ -258,8 +258,8 @@ void kernelTest() {
 // CHECK-NEXT:   %[[ISFIRSTBITZERO:.*]] = icmp eq i32 %[[FIRSTBIT]], 0
 // CHECK-NEXT:   br i1 %[[ISFIRSTBITZERO]], label %dtor.continue, label %dtor.call_delete
 // CHECK: dtor.call_delete:
-// X64-NEXT:     call void @"??3@YAXPEAX_K@Z"(ptr noundef %[[LTHIS]], i64 noundef 8)
-// X86-NEXT:     call void @"??3@YAXPAXI@Z"(ptr noundef %[[LTHIS]], i32 noundef 4)
+// X64-NEXT:     call void @"??3@YAXPEAX_K@Z"(ptr allocptr noundef %[[LTHIS]], i64 noundef 8)
+// X86-NEXT:     call void @"??3@YAXPAXI@Z"(ptr allocptr noundef %[[LTHIS]], i32 noundef 4)
 // CHECK-NEXT:   br label %dtor.continue
 // CHECK: dtor.continue:
 // CHECK-NEXT:   %[[LOADRET:.*]] = load ptr, ptr %[[RET]]
@@ -287,8 +287,8 @@ void kernelTest() {
 // X86-NEXT: %[[ARRSZ:.*]] = mul i32 4, %[[COOKIE:.*]]
 // X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// X64-NEXT: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
-// X86-NEXT: call void @"?__global_array_delete@@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
+// X64-NEXT: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT: call void @"?__global_array_delete@@YAXPAXI@Z"(ptr allocptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:   br label %dtor.continue
 
 // Test that when a class provides its own operator delete, the deleting
@@ -299,14 +299,14 @@ void kernelTest() {
 // X64-LABEL: define weak dso_local noundef ptr @"??_EKernelDerived@@UEAAPEAXI@Z"
 // Verify the array delete path in the VDD uses __global_array_delete.
 // X64: dtor.call_glob_delete_after_array_destroy:
-// X64: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef %{{.*}})
+// X64: call void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %{{.*}}, i64 noundef %{{.*}})
 // Verify the scalar deleting dtor uses __global_delete, not ::operator delete.
 // X64: dtor.call_delete:
 // X64-NEXT:  %[[FLAGCHECK:.*]] = and i32 %should_call_delete2, 4
 // X64-NEXT:  %[[ISGLOB:.*]] = icmp eq i32 %[[FLAGCHECK]], 0
 // X64-NEXT:  br i1 %[[ISGLOB]], label %dtor.call_class_delete, label %dtor.call_glob_delete
 // X64: dtor.call_glob_delete:
-// X64-NEXT:  call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 8)
+// X64-NEXT:  call void @"?__global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %{{.*}}, i64 noundef 8)
 // X64: dtor.call_class_delete:
 // X64-NEXT:  call void @"??3KernelBase@@SAXPEAX@Z"(ptr noundef %{{.*}})
 
@@ -371,8 +371,8 @@ void foobartest() {
 // X86-NEXT: %[[ARRSZ:.*]] = mul i32 8, %[[COOKIE:.*]]
 // X64-NEXT: %[[TOTALSZ:.*]] = add i64 %[[ARRSZ]], 8
 // X86-NEXT: %[[TOTALSZ:.*]] = add i32 %[[ARRSZ]], 4
-// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr noundef %2, i64 noundef %[[TOTALSZ]])
-// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr noundef %2, i32 noundef %[[TOTALSZ]])
+// X64-NEXT:  call void @"??_V@YAXPEAX_K@Z"(ptr allocptr noundef %2, i64 noundef %[[TOTALSZ]])
+// X86-NEXT:  call void @"??_V@YAXPAXI@Z"(ptr allocptr noundef %2, i32 noundef %[[TOTALSZ]])
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.scalar:
 // X64-NEXT:  call void @"??1Derived@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(16) dereferenceable(16) %this1)
@@ -381,8 +381,8 @@ void foobartest() {
 // CHECK-NEXT:  %9 = icmp eq i32 %8, 0
 // CHECK-NEXT:  br i1 %9, label %dtor.continue, label %dtor.call_delete
 // CHECK: dtor.call_delete:
-// X64-NEXT:  call void @"??3@YAXPEAX_K@Z"(ptr noundef %this1, i64 noundef 16)
-// X86-NEXT:  call void @"??3@YAXPAXI@Z"(ptr noundef %this1, i32 noundef 8)
+// X64-NEXT:  call void @"??3@YAXPEAX_K@Z"(ptr allocptr noundef %this1, i64 noundef 16)
+// X86-NEXT:  call void @"??3@YAXPAXI@Z"(ptr allocptr noundef %this1, i32 noundef 8)
 // CHECK-NEXT:  br label %dtor.continue
 // CHECK: dtor.continue:
 // CHECK-NEXT:  %10 = load ptr, ptr %retval
@@ -397,9 +397,9 @@ void foobartest() {
 // is used in the TU, both wrappers get real forwarding bodies: the array
 // __global_array_delete forwards to ::operator delete[] (??_V@) and the scalar
 // __global_delete forwards to ::operator delete (??3@).
-// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64: define linkonce_odr void @"?__global_array_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // X64-NEXT: call void @"??_V@YAXPEAX_K@Z"(ptr %0, i64 %1)
-// X64: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %0, i64 noundef %1)
+// X64: define linkonce_odr void @"?__global_delete@@YAXPEAX_K@Z"(ptr allocptr noundef %0, i64 noundef %1)
 // X64-NEXT: call void @"??3@YAXPEAX_K@Z"(ptr %0, i64 %1)
 
 // CLANG21-NOT: __global_delete

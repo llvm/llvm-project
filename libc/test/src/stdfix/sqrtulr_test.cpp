@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SqrtTest.h"
+#include "test/src/stdfix/SqrtTest.h"
 
 #include "src/stdfix/sqrtulr.h"
 
-LIST_SQRT_TESTS(unsigned long fract, LIBC_NAMESPACE::sqrtulr);
+LIST_SQRT_TESTS(unsigned long fract, unsigned long fract,
+                LIBC_NAMESPACE::sqrtulr);

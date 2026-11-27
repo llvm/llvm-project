@@ -18,11 +18,18 @@ tablegen("SystemZGenSDNodeInfo") {
   td_file = "SystemZ.td"
 }
 
+tablegen("SystemZOptions") {
+  visibility = [ ":LLVMSystemZCodeGen" ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "SystemZOptions.td"
+}
+
 static_library("LLVMSystemZCodeGen") {
   deps = [
     ":SystemZGenCallingConv",
     ":SystemZGenDAGISel",
     ":SystemZGenSDNodeInfo",
+    ":SystemZOptions",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -32,6 +39,7 @@ static_library("LLVMSystemZCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -42,6 +50,7 @@ static_library("LLVMSystemZCodeGen") {
     "SystemZAlignGlobals.cpp",
     "SystemZAsmPrinter.cpp",
     "SystemZCallingConv.cpp",
+    "SystemZCodeGenPassBuilder.cpp",
     "SystemZConstantPoolValue.cpp",
     "SystemZCopyPhysRegs.cpp",
     "SystemZELFAsmPrinter.cpp",

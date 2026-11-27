@@ -171,3 +171,19 @@ struct ViewWithMember {
   ViewWithMember(const char *data [[clang::lifetimebound]]) : mData(data) {}
   const char *mData;
 };
+
+// No warning. It may also escape through a base or delegating initializer.
+struct ViewFromBase : ViewWithMember {
+  ViewFromBase(const char *data [[clang::lifetimebound]]) : ViewWithMember(data) {}
+};
+struct ViewDelegating {
+  ViewDelegating(const char *data [[clang::lifetimebound]], int) : mData(data) {}
+  ViewDelegating(const char *data [[clang::lifetimebound]]) : ViewDelegating(data, 0) {}
+  const char *mData;
+};
+
+struct NotStoringBase { NotStoringBase(const char *); };
+struct ViewFromNonStoringBase : NotStoringBase {
+  ViewFromNonStoringBase(const char *data [[clang::lifetimebound]]) // expected-warning {{could not verify that the return value can be lifetime bound to 'data'}}
+      : NotStoringBase(data) {}
+};

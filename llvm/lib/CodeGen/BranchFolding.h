@@ -19,6 +19,7 @@
 namespace llvm {
 
 class BasicBlock;
+struct CodeGenOptions;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineLoopInfo;
@@ -123,6 +124,7 @@ class TargetRegisterInfo;
     };
     std::vector<SameTailElt> SameTails;
 
+    const CodeGenOptions *Opts = nullptr;
     bool AfterBlockPlacement = false;
     bool EnableTailMerge = false;
     bool EnableHoistCommonCode = false;

@@ -54,7 +54,7 @@ inline int word_guard() {
 }
 
 // CIR: cir.func {{.*}} @_Z10word_guardv()
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[B:.*]] = cir.get_global static_local @_ZZ10word_guardvE1b : !cir.ptr<!s32i>
 // CIR:   %[[GUARD:.*]] = cir.get_global @_ZGVZ10word_guardvE1b : !cir.ptr<!s64i>
 // CIR:   %[[GUARD_BYTE_PTR:.*]] = cir.cast bitcast %[[GUARD]] : !cir.ptr<!s64i> -> !cir.ptr<!s8i>

@@ -68,6 +68,7 @@ using namespace object;
 
 namespace bolt {
 
+class BinaryBasicBlock;
 class BinaryFunction;
 
 using BinaryFunctionListType = std::vector<BinaryFunction *>;
@@ -425,6 +426,9 @@ public:
   using binary_data_const_iterator = BinaryDataMapType::const_iterator;
   BinaryDataMapType BinaryDataMap;
 
+  /// Subset of BinaryDataMap holding vtables, see BinaryData::isVTable().
+  BinaryDataMapType VTableMap;
+
   using FilteredBinaryDataConstIterator =
       FilterIterator<binary_data_const_iterator>;
   using FilteredBinaryDataIterator = FilterIterator<binary_data_iterator>;
@@ -532,6 +536,10 @@ public:
 
   /// Deregister JumpTable registered at a given \p Address and delete it.
   void deleteJumpTable(uint64_t Address);
+
+  /// Remove \p BF from parents of the jump table at \p Address. Delete the
+  /// jump table if it has no parents left.
+  void detachJumpTable(BinaryFunction &BF, uint64_t Address);
 
   unsigned getDWARFEncodingSize(unsigned Encoding) {
     if (Encoding == dwarf::DW_EH_PE_omit)
@@ -892,6 +900,9 @@ public:
   bool UseCompactAligner{true};
   bool X86AlignBranchBoundaryHotOnly{true};
 
+  /// Return whether to emit alignment for a basic block.
+  bool shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const;
+
   /// Fold \p Alignment into the running max for the main code section (when
   /// \p InMainSection) and/or the cold code section (when \p InColdSection),
   /// reflecting which output section(s) the object is emitted into. Safe to
@@ -1064,6 +1075,7 @@ public:
     for (auto &Entry : BinaryDataMap)
       delete Entry.second;
     BinaryDataMap.clear();
+    VTableMap.clear();
   }
 
   /// Process \p Address reference from code in function \BF.
@@ -1138,6 +1150,11 @@ public:
     return const_cast<BinaryData *>(
         getBinaryDataContainingAddressImpl(Address));
   }
+
+  /// Return the vtable containing \p Address or nullptr. Unlike
+  /// getBinaryDataContainingAddress(), symbols that start inside the vtable,
+  /// such as WPD __typeid_* aliases, do not hide it.
+  const BinaryData *getVTableContainingAddress(uint64_t Address) const;
 
   /// Return BinaryData for the given \p Name or nullptr if no
   /// global symbol with that name exists.

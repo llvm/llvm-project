@@ -1,5 +1,9 @@
 // Needs chmod
 // UNSUPPORTED: system-windows
+// On macOS CI, running the fake offload-arch can take longer than
+// CLANG_TOOLCHAIN_PROGRAM_TIMEOUT, see
+// https://github.com/llvm/llvm-project/issues/238903.
+// UNSUPPORTED: system-darwin
 // XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: mkdir -p %t
@@ -14,7 +18,7 @@
 // RUN:   --offload-arch=native --offload-arch-tool=%t/offload_arch_sm_70_gfx906_gfx90a_xe_pvc \
 // RUN:   -c %s 2>&1 | FileCheck %s
 // CHECK-NOT: "device-sycl ({{amdgpu|nvptx}}
-// CHECK: offload, "device-sycl (spirv64-unknown-unknown:xe-pvc)"
+// CHECK: offload, "device-sycl (spirv64-unknown-unknown:igca_20ca)"
 // CHECK-NOT: "device-sycl ({{amdgpu|nvptx}}
 
 /// Without an Intel GPU, SYCL reports that no GPU was found, as HIP and CUDA

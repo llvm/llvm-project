@@ -8,6 +8,7 @@ add_mlir_dialect_library(MLIRArmSVETransforms
   MLIRArmSVEPassIncGen
 
   LINK_LIBS PUBLIC
+  MLIRArithDialect
   MLIRArmSVEDialect
   MLIRFuncDialect
   MLIRVectorDialect

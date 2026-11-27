@@ -12,6 +12,7 @@
 
 #include "flang/Lower/IO.h"
 #include "flang/Common/uint128.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Lower/Allocatable.h"
@@ -698,9 +699,8 @@ struct NonSimpleCallFinder
 };
 } // namespace
 
-// A bound or retained subscript is evaluated once for the collapsed section
-// rather than once per source-loop iteration, so it must not depend on the loop
-// variable, hide a non-SIMPLE call that could read it, or read a volatile.
+// A retained subscript is evaluated once rather than per iteration, so it must
+// not reference the loop variable, a volatile, or a non-SIMPLE function.
 template <typename A>
 static bool
 ioExprUnsafeForSingleEvaluation(const A &expr,
@@ -729,9 +729,15 @@ struct CollapsedImpliedDo {
   Fortran::lower::SomeExpr section;
   const Fortran::semantics::Symbol *loopSym;
   Fortran::lower::SomeExpr loopLowerValue;
+  Fortran::lower::SomeExpr loopUpperValue;
   Fortran::lower::SomeExpr loopStepValue;
 };
 } // namespace
+
+// Ac-do-variables for the section's bounds, named so no Fortran name clashes.
+static constexpr llvm::StringLiteral ioSectionLowerName{".lb"};
+static constexpr llvm::StringLiteral ioSectionUpperName{".ub"};
+static constexpr llvm::StringLiteral ioSectionStepName{".st"};
 
 /// Try to recognize a (single-level) io-implied-do as an equivalent contiguous
 /// array section. Returns the section expression on success, std::nullopt
@@ -791,22 +797,24 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
   if (!lowerExpr || !upperExpr || (control.Step() && !stepExpr))
     return std::nullopt;
 
-  // Lower and step are re-evaluated after the transfer to rebuild the loop
-  // variable's final value, so an unsafe bound could change the trip count or
-  // the stored result relative to the source loop.
+  // Not needed for correctness, as the source loop also evaluates bounds once
+  // (F2023 11.1.7.4.1); kept conservatively to limit which loops collapse.
   for (const Fortran::lower::SomeExpr *bound : {lowerExpr, upperExpr, stepExpr})
     if (bound && ioExprUnsafeForSingleEvaluation(*bound, *loopSym))
       return std::nullopt;
 
   // The io-implied-do bounds and index are scalar integer expressions
-  // (enforced by semantics), so each narrows to Expr<SomeInteger>
+  // (enforced by semantics), so each narrows to
+  // Expr<Type<TypeCategory::Integer>>
   auto toSubscript = [](const Fortran::lower::SomeExpr &expr) {
     return Fortran::evaluate::ConvertToType<
         Fortran::evaluate::SubscriptInteger>(
-        Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>{
+        Fortran::evaluate::SubscriptIntegerKind,
+        Fortran::evaluate::Expr<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer>>{
             DEREF(Fortran::evaluate::UnwrapExpr<
-                  Fortran::evaluate::Expr<Fortran::evaluate::SomeInteger>>(
-                expr))});
+                  Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                      Fortran::common::TypeCategory::Integer>>>(expr))});
   };
   Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> lowerSub =
       toSubscript(*lowerExpr);
@@ -816,13 +824,26 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
       stepSub;
   if (stepExpr)
     stepSub = toSubscript(*stepExpr);
-  // Retain the lower bound and step so the loop variable's final value can be
-  // rebuilt later as `lower + tripCount * step`.
+  // Lowered once and shared by the trip count, section, and final value.
   Fortran::lower::SomeExpr loopLowerValue =
       Fortran::evaluate::AsGenericExpr(Fortran::evaluate::ExtentExpr{lowerSub});
+  Fortran::lower::SomeExpr loopUpperValue =
+      Fortran::evaluate::AsGenericExpr(Fortran::evaluate::ExtentExpr{upperSub});
   Fortran::lower::SomeExpr loopStepValue = Fortran::evaluate::AsGenericExpr(
       stepSub ? Fortran::evaluate::ExtentExpr{*stepSub}
-              : Fortran::evaluate::ExtentExpr{1});
+              : Fortran::evaluate::MakeExtentExpr(1));
+  // A non-constant bound reaches the section only through its placeholder.
+  auto sectionBound =
+      [](const Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>
+             &bound,
+         llvm::StringRef name)
+      -> Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> {
+    if (Fortran::evaluate::IsConstantExpr(bound))
+      return bound;
+    return Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>{
+        Fortran::evaluate::ImpliedDoIndex{
+            Fortran::parser::CharBlock{name.data(), name.size()}}};
+  };
 
   Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger> loopSubExpr =
       toSubscript(Fortran::evaluate::AsGenericExpr(*loopSym).value());
@@ -842,15 +863,15 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
       if (foundLoopSubscript)
         return std::nullopt; // loop variable used in more than one subscript
       foundLoopSubscript = true;
-      newSubscripts.emplace_back(
-          Fortran::evaluate::Subscript{Fortran::evaluate::Triplet{
-              std::optional<
-                  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>{
-                  lowerSub},
-              std::optional<
-                  Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>{
-                  upperSub},
-              std::move(stepSub)}});
+      std::optional<
+          Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>
+          sectionStep;
+      if (stepSub)
+        sectionStep = sectionBound(*stepSub, ioSectionStepName);
+      newSubscripts.emplace_back(Fortran::evaluate::Subscript{
+          Fortran::evaluate::Triplet{sectionBound(lowerSub, ioSectionLowerName),
+                                     sectionBound(upperSub, ioSectionUpperName),
+                                     std::move(sectionStep)}});
     } else {
       // Every other subscript is retained and evaluated once for the collapsed
       // section instead of once per iteration; it must be scalar and safe to
@@ -882,57 +903,22 @@ matchContiguousImpliedDo(const ImpliedDo &impliedDo, bool isInput) {
           Fortran::evaluate::DataRef{std::move(sectionRef)})
           .value();
 
-  return CollapsedImpliedDo{std::move(section), loopSym,
-                            std::move(loopLowerValue),
-                            std::move(loopStepValue)};
+  return CollapsedImpliedDo{
+      std::move(section), loopSym, std::move(loopLowerValue),
+      std::move(loopUpperValue), std::move(loopStepValue)};
 }
 
-/// Store into the io-implied-do variable the value it would hold after a normal
-/// loop
-static void
-genImpliedDoLoopVarFinalValue(Fortran::lower::AbstractConverter &converter,
-                              const CollapsedImpliedDo &collapsed,
-                              mlir::Value sectionBox,
-                              Fortran::lower::StatementContext &stmtCtx) {
-  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  mlir::Location loc = converter.getCurrentLocation();
-  mlir::Type idxTy = builder.getIndexType();
-  // The collapsed section is rank one and its extent is exactly the loop trip
-  // count, so reuse it rather than recomputing the count from the bounds.
-  mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-  auto dims = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
-                                     sectionBox, zero);
-  mlir::Value tripCount = dims.getResult(1);
-  mlir::Value lower = builder.createConvert(
-      loc, idxTy,
-      fir::getBase(converter.genExprValue(collapsed.loopLowerValue, stmtCtx)));
-  mlir::Value step = builder.createConvert(
-      loc, idxTy,
-      fir::getBase(converter.genExprValue(collapsed.loopStepValue, stmtCtx)));
-  mlir::Value finalValue = mlir::arith::AddIOp::create(
-      builder, loc, lower,
-      mlir::arith::MulIOp::create(builder, loc, tripCount, step));
-  mlir::Value loopVar = fir::getBase(converter.genExprAddr(
-      Fortran::evaluate::AsGenericExpr(*collapsed.loopSym).value(), stmtCtx));
-  mlir::Value stored = builder.createConvert(
-      loc, fir::unwrapRefType(loopVar.getType()), finalValue);
-  fir::StoreOp::create(builder, loc, stored, loopVar);
-}
-
-/// A zero-trip io-implied-do transfers nothing, and its section may designate
-/// an unallocated array whose descriptor has a null base, so the descriptor
-/// call must be skipped when the section is empty to match the per-element
-/// loop.
+/// Emit \p genCall, which builds and transfers the section, only when
+/// \p tripCount is positive: a zero-trip implied-do evaluates no subscripts.
+/// \p genCall uses its own StatementContext so cleanups stay inside the guard.
 static void genGuardedCollapsedTransfer(fir::FirOpBuilder &builder,
                                         mlir::Location loc,
-                                        mlir::Value sectionBox,
+                                        mlir::Value tripCount,
                                         llvm::function_ref<void()> genCall) {
   mlir::Type idxTy = builder.getIndexType();
   mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
-  auto dims = fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
-                                     sectionBox, zero);
   mlir::Value hasElements = mlir::arith::CmpIOp::create(
-      builder, loc, mlir::arith::CmpIPredicate::sgt, dims.getResult(1), zero);
+      builder, loc, mlir::arith::CmpIPredicate::sgt, tripCount, zero);
   builder.genIfThen(loc, hasElements).genThen(genCall).end();
 }
 
@@ -1134,31 +1120,56 @@ tryCollapseContiguousImpliedDo(Fortran::lower::AbstractConverter &converter,
   mlir::Location loc = converter.getCurrentLocation();
   Fortran::lower::StatementContext stmtCtx;
   mlir::Type itemTy = converter.genType(collapsed->section);
+  mlir::Type idxTy = builder.getIndexType();
+  auto genBound = [&](const Fortran::lower::SomeExpr &bound) {
+    return builder.createConvert(
+        loc, idxTy, fir::getBase(converter.genExprValue(bound, stmtCtx)));
+  };
+  mlir::Value lower = genBound(collapsed->loopLowerValue);
+  mlir::Value upper = genBound(collapsed->loopUpperValue);
+  mlir::Value step = genBound(collapsed->loopStepValue);
+  mlir::Value tripCount =
+      builder.genExtentFromTriplet(loc, lower, upper, step, idxTy);
+  auto genSectionBox = [&](Fortran::lower::StatementContext &guardCtx) {
+    Fortran::lower::SymMap &symMap = converter.getSymbolMap();
+    symMap.pushImpliedDoBinding(ioSectionLowerName, lower);
+    symMap.pushImpliedDoBinding(ioSectionUpperName, upper);
+    symMap.pushImpliedDoBinding(ioSectionStepName, step);
+    fir::ExtendedValue box =
+        converter.genExprBox(loc, collapsed->section, guardCtx);
+    for (int i = 0; i < 3; ++i)
+      symMap.popImpliedDoBinding();
+    return box;
+  };
   if constexpr (isInput) {
     mlir::func::FuncOp inputFunc =
         getInputFunc(loc, builder, itemTy, /*isFormatted=*/false);
-    fir::ExtendedValue itemExv =
-        converter.genExprBox(loc, collapsed->section, stmtCtx);
-    genImpliedDoLoopVarFinalValue(converter, *collapsed, fir::getBase(itemExv),
-                                  stmtCtx);
-    genGuardedCollapsedTransfer(builder, loc, fir::getBase(itemExv), [&]() {
+    genGuardedCollapsedTransfer(builder, loc, tripCount, [&]() {
+      Fortran::lower::StatementContext guardCtx;
+      fir::ExtendedValue itemExv = genSectionBox(guardCtx);
       createIoRuntimeCallForItem(converter, loc, inputFunc, cookie, itemExv);
     });
   } else {
     mlir::func::FuncOp outputFunc =
         getOutputFunc(loc, builder, itemTy, /*isFormatted=*/false);
     mlir::Type argType = outputFunc.getFunctionType().getInput(1);
-    mlir::Value box =
-        fir::getBase(converter.genExprBox(loc, collapsed->section, stmtCtx));
-    llvm::SmallVector<mlir::Value> args = {
-        cookie, builder.createConvertWithVolatileCast(loc, argType, box)};
-    if (containsDerivedType(itemTy))
-      args.push_back(getNonTbpDefinedIoTableAddr(converter));
-    genGuardedCollapsedTransfer(builder, loc, box, [&]() {
+    genGuardedCollapsedTransfer(builder, loc, tripCount, [&]() {
+      Fortran::lower::StatementContext guardCtx;
+      mlir::Value box = fir::getBase(genSectionBox(guardCtx));
+      llvm::SmallVector<mlir::Value> args = {
+          cookie, builder.createConvertWithVolatileCast(loc, argType, box)};
+      if (containsDerivedType(itemTy))
+        args.push_back(getNonTbpDefinedIoTableAddr(converter));
       fir::CallOp::create(builder, loc, outputFunc, args);
     });
-    genImpliedDoLoopVarFinalValue(converter, *collapsed, box, stmtCtx);
   }
+  // Leave the do-variable with the value the per-element loop would.
+  mlir::Value finalValue = mlir::arith::AddIOp::create(
+      builder, loc, lower,
+      mlir::arith::MulIOp::create(builder, loc, tripCount, step));
+  mlir::Value loopVar = fir::getBase(converter.genExprAddr(
+      Fortran::evaluate::AsGenericExpr(*collapsed->loopSym).value(), stmtCtx));
+  builder.createStoreWithConvert(loc, finalValue, loopVar);
   return true;
 }
 

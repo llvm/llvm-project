@@ -92,6 +92,14 @@ def interleave_store : GICombineRule<
   (apply [{ applyInterleavingStore(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
+def combine_mul_cmlt : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_MUL $dst, $src1, $src2):$root,
+        [{ return AArch64GISelUtils::matchCombineMulCMLT(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ AArch64GISelUtils::applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       select_zero_true,
@@ -109,6 +117,7 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       simplify_uaddo,
                                       memcpy_family_combines,
                                       emit_bzero,
+                                      combine_mul_cmlt,
                                       deinterleave_load, interleave_store]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
@@ -200,6 +209,22 @@ def vashr_vlshr_imm : GICombineRule<
           [{ return matchVAshrLshrImm(*${mi}, MRI, ${matchinfo}); }]),
   (apply [{ applyVAshrLshrImm(*${mi}, MRI, ${matchinfo}); }])
 >;
+
+// Lower a vector shift right by a non-immediate amount to SSHL/USHL of the
+// negated amount, so the negation folds away when the amount is constant.
+def vashr_to_sshl : GICombineRule<
+  (defs root:$dst),
+  (match (G_ASHR $dst, $src, $amt):$mi,
+         [{ return matchVAshrLshrToSShl(*${mi}, MRI); }]),
+  (apply (G_SUB $neg, 0, $amt),
+         (int_aarch64_neon_sshl $dst, $src, $neg))>;
+
+def vlshr_to_ushl : GICombineRule<
+  (defs root:$dst),
+  (match (G_LSHR $dst, $src, $amt):$mi,
+         [{ return matchVAshrLshrToSShl(*${mi}, MRI); }]),
+  (apply (G_SUB $neg, 0, $amt),
+         (int_aarch64_neon_ushl $dst, $src, $neg))>;
 
 def form_duplane_matchdata :
   GIDefMatchData<"std::pair<unsigned, int>">;
@@ -426,14 +451,6 @@ def trunc_or_to_addhn : GICombineRule<
   (apply (G_ADDHN $dst, $src1, $src2))
 >;
 
-// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
-def combine_mul_cmlt : GICombineRule<
-  (defs root:$root, register_matchinfo:$matchinfo),
-  (match (G_MUL $dst, $src1, $src2):$root,
-        [{ return matchCombineMulCMLT(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
->;
-
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -460,6 +477,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
+                        mul_by_zero_one_vector,
                         mul_const, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,
@@ -479,5 +497,6 @@ def AArch64PostLegalizerCombiner
                         extmultomull, subaddmulreassoc, truncsat_combines,
                         lshr_of_trunc_of_lshr,
                         funnel_shift_from_or_shift_constants_are_legal,
-                        simplify_demanded_bits]> {
+                        vashr_to_sshl, vlshr_to_ushl, simplify_demanded_bits,
+                        sdiv_by_const]> {
 }

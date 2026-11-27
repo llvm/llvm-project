@@ -12,15 +12,5 @@
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h"
 
-#include "mlir/IR/DialectImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
-
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
-
-void mlir::amdgpu::AMDGPUDialect::registerTypes() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.cpp.inc"
-      >();
-}

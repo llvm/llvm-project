@@ -37,7 +37,7 @@ enum : uint32_t {
   FAT_CIGAM_64 = 0xBFBAFECAu
 };
 
-enum HeaderFileType {
+enum HeaderFileType : uint32_t {
   // Constants for the "filetype" field in llvm::MachO::mach_header and
   // llvm::MachO::mach_header_64
   MH_OBJECT = 0x1u,

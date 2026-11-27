@@ -17,8 +17,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -139,6 +139,7 @@ private:
   bool foldShuffleOfSelects(Instruction &I);
   bool foldShuffleOfCastops(Instruction &I);
   bool foldShuffleOfShuffles(Instruction &I);
+  bool foldShuffleOfAdjacentLoads(Instruction &I);
   bool foldPermuteOfIntrinsic(Instruction &I);
   bool foldShufflesOfLengthChangingShuffles(Instruction &I);
   bool foldShuffleOfIntrinsics(Instruction &I);
@@ -2306,6 +2307,9 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     Align ScalarOpAlignment =
         computeAlignmentAfterScalarization(LI->getAlign(), ElemType, Idx, *DL);
     NewLoad->setAlignment(ScalarOpAlignment);
+    NewLoad->copyMetadata(*LI,
+                          {LLVMContext::MD_mmra, LLVMContext::MD_nontemporal,
+                           LLVMContext::MD_mem_cache_hint});
 
     if (auto *ConstIdx = dyn_cast<ConstantInt>(Idx)) {
       size_t Offset = ConstIdx->getZExtValue() * DL->getTypeStoreSize(ElemType);
@@ -3738,7 +3742,7 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
     unsigned NumElts =
         cast<FixedVectorType>(FrontV->getType())->getNumElements();
     SmallVector<Value *> Values(Item.size() / NumElts, nullptr);
-    for (unsigned S = 0; S < Values.size(); ++S)
+    for (size_t S = 0; S < Values.size(); ++S)
       Values[S] = Item[S * NumElts].first;
 
     while (Values.size() > 1) {
@@ -6247,26 +6251,40 @@ static SmallVector<Value *, 8> getInstrOperandsAtIdx(ArrayRef<Value *> Members,
 
 /// Check whether the tree of elementwise operations each feeding \p Members
 /// can be rebuilt at the interleaved width.
-static bool canWidenDeinterleavedOperations(const VectorizeOptions &Opts,
-                                            ArrayRef<Value *> Members,
-                                            unsigned &NumScanned) {
+static bool canWidenDeinterleavedOperations(
+    const VectorizeOptions &Opts, ArrayRef<Value *> Members,
+    DenseSet<Value *> &Visited, SmallPtrSetImpl<User *> &UndroppableUsers) {
   unsigned Factor = Members.size();
   if (getCommonDeinterleavedSource(Members))
     return true;
-  if (NumScanned + Factor > Opts.vector_combine_max_scan_instrs)
+
+  if (all_of(Members, [&](Value *V) { return Visited.count(V); }))
+    return true;
+
+  if (Visited.size() + Factor > Opts.vector_combine_max_scan_instrs)
     return false;
-  NumScanned += Factor;
+
+  auto addUndroppableUsers = [&](Value *V) {
+    for (User *U : V->users()) {
+      if (U->isDroppable())
+        continue;
+      UndroppableUsers.insert(U);
+    }
+  };
 
   auto *FirstInst = dyn_cast<Instruction>(Members.front());
-  if (!FirstInst || !isSupportedElementwise(FirstInst) ||
-      !FirstInst->getSingleUndroppableUse())
+  if (!FirstInst || !isSupportedElementwise(FirstInst))
     return false;
+  if (Visited.insert(FirstInst).second && !FirstInst->getSingleUndroppableUse())
+    addUndroppableUsers(FirstInst);
 
   for (Value *Member : Members.drop_front()) {
     auto *Inst = dyn_cast<Instruction>(Member);
-    if (!Inst || !Inst->getSingleUndroppableUse() ||
+    if (!Inst ||
         !FirstInst->isSameOperationAs(Inst, Instruction::CompareCallTargets))
       return false;
+    if (Visited.insert(Inst).second && !Inst->getSingleUndroppableUse())
+      addUndroppableUsers(Inst);
   }
 
   // Scalars operands should be equal among all members.
@@ -6274,7 +6292,8 @@ static bool canWidenDeinterleavedOperations(const VectorizeOptions &Opts,
   for (unsigned Op = 0, E = getNumDataOperands(FirstInst); Op != E; ++Op) {
     SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
     if (!getCommonSplatValue(Operands) &&
-        !canWidenDeinterleavedOperations(Opts, Operands, NumScanned))
+        !canWidenDeinterleavedOperations(Opts, Operands, Visited,
+                                         UndroppableUsers))
       return false;
   }
   return true;
@@ -6303,13 +6322,18 @@ static Value *createWideInstruction(Instruction *NarrowInst,
   llvm_unreachable("Unsupported instruction");
 }
 
-static Value *widenDeinterleavedOperations(ArrayRef<Value *> Members,
-                                           ElementCount WideEC,
-                                           IRBuilderBase &Builder) {
+static Value *widenDeinterleavedOperations(
+    const SmallVector<Value *, 8> &Members, ElementCount WideEC,
+    IRBuilderBase &Builder,
+    DenseMap<SmallVector<Value *, 8>, Value *> &WideValueCache) {
+  if (Value *WideValue = WideValueCache.lookup(Members))
+    return WideValue;
+
   if (auto *Deinterleave = getCommonDeinterleavedSource(Members)) {
     Value *Source = Deinterleave->getArgOperand(0);
     assert(cast<VectorType>(Source->getType())->getElementCount() == WideEC &&
            "deinterleave source must have the interleaved element count");
+    WideValueCache[Members] = Source;
     return Source;
   }
 
@@ -6328,7 +6352,8 @@ static Value *widenDeinterleavedOperations(ArrayRef<Value *> Members,
         assert(all_equal(Operands) && "expected all operands to be equal");
       }
     } else {
-      NewOperand = widenDeinterleavedOperations(Operands, WideEC, Builder);
+      NewOperand = widenDeinterleavedOperations(Operands, WideEC, Builder,
+                                                WideValueCache);
     }
     NewOperands.push_back(NewOperand);
   }
@@ -6342,6 +6367,7 @@ static Value *widenDeinterleavedOperations(ArrayRef<Value *> Members,
     propagateIRFlags(NewInst, Members);
     propagateMetadata(NewInst, Members);
   }
+  WideValueCache[Members] = NewValue;
   return NewValue;
 }
 
@@ -6391,13 +6417,22 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
     return false;
 
   SmallVector<Value *, 8> RootMembers(Interleave->args());
-  unsigned NumScanned = 0;
-  if (!canWidenDeinterleavedOperations(Opts, RootMembers, NumScanned))
+  SmallPtrSet<User *, 4> UndroppableUsers;
+  DenseSet<Value *> Visited;
+  if (!canWidenDeinterleavedOperations(Opts, RootMembers, Visited,
+                                       UndroppableUsers))
+    return false;
+  // Every users should be in the tree.
+  if (!set_is_subset(UndroppableUsers, Visited))
     return false;
 
   ElementCount WideEC = cast<VectorType>(I.getType())->getElementCount();
   Builder.SetInsertPoint(Interleave);
-  Value *WideValue = widenDeinterleavedOperations(RootMembers, WideEC, Builder);
+  // Mapping from members to the new wide value. This avoids emitting redundant
+  // instructions when a new operand value has more than one use.
+  DenseMap<SmallVector<Value *, 8>, Value *> WideValueCache;
+  Value *WideValue = widenDeinterleavedOperations(RootMembers, WideEC, Builder,
+                                                  WideValueCache);
   assert(WideValue->getType() == Interleave->getType());
   replaceValue(*Interleave, *WideValue);
   return true;
@@ -6436,9 +6471,14 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
     return false;
   }
 
-  APInt NewSplatVal = SplatVal1->zext(Width * 2);
+  // The bitcast puts element 0 of the narrow vector in the low half of each
+  // wide element on little-endian targets, and in the high half on big-endian
+  // targets.
+  const APInt &LowHalf = DL->isLittleEndian() ? *SplatVal0 : *SplatVal1;
+  const APInt &HighHalf = DL->isLittleEndian() ? *SplatVal1 : *SplatVal0;
+  APInt NewSplatVal = HighHalf.zext(Width * 2);
   NewSplatVal <<= Width;
-  NewSplatVal |= SplatVal0->zext(Width * 2);
+  NewSplatVal |= LowHalf.zext(Width * 2);
   auto *NewSplat = ConstantVector::getSplat(
       ExtVTy->getElementCount(), ConstantInt::get(F.getContext(), NewSplatVal));
 
@@ -6476,10 +6516,6 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
 /// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
 /// ```
 bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
-  // This pattern involves bitcast that is not compatible with big endian.
-  if (DL->isBigEndian())
-    return false;
-
   using namespace PatternMatch;
   Value *DeinterleavedVal;
   if (!match(&I, m_Deinterleave2(m_Value(DeinterleavedVal))))
@@ -6508,6 +6544,9 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
       return false;
     OrigFields[Idx] = E;
   }
+
+  if (DL->isBigEndian())
+    std::swap(OrigFields[0], OrigFields[1]);
 
   // Find the merge instruction (i.e. OR) first.
   SmallVector<Instruction *, 2> MergeInsts;
@@ -6570,6 +6609,8 @@ bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
   Value *NewDeinterleave = Builder.CreateIntrinsic(
       Intrinsic::vector_deinterleave2, {NewVecTy}, {NewVecCast});
   for (auto [Idx, MergeInst] : enumerate(MergeInsts)) {
+    if (DL->isBigEndian())
+      Idx ^= 1;
     Value *NewField = Builder.CreateExtractValue(NewDeinterleave, Idx);
     NewField = Builder.CreateBitCast(NewField, MergeInst->getType());
     replaceValue(*MergeInst, *NewField);
@@ -6907,6 +6948,199 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
   return false;
 }
 
+// Attempt to combine two adjacent fixed-length vector loads, that only feed
+// shufflevector instructions, into a single wider load, rewriting every such
+// shuffle so that operand 0 is the wide load and operand 1 is poison.
+// clang-format off
+// e.g.
+//   %loadA = load <16 x i8>, ptr %a
+//   %gep = getelementptr inbounds <16 x i8>, ptr %a, i64 1
+//   %loadB = load <16 x i8>, ptr %gep
+//   %shuffle0 = shufflevector <16 x i8> %loadA, <16 x i8> %loadB,
+//               <32 x i8> <...>
+//   %shuffle1 = shufflevector <16 x i8> %loadA, <16 x i8> %loadB,
+//               <32 x i8> <...>
+//
+// The fold would transform this to:
+//   %loadAB = load <32 x i8>, ptr %a
+//   %shuffle0 = shufflevector <32 x i8> %loadAB, <32 x i8> poison,
+//               <32 x i8> <...>
+//   %shuffle1 = shufflevector <32 x i8> %loadAB, <32 x i8> poison,
+//               <32 x i8> <...>
+//
+// clang-format on
+// Matching this pattern in codegen becomes difficult and hence, we prefer doing
+// this here.
+bool VectorCombine::foldShuffleOfAdjacentLoads(Instruction &I) {
+  auto *SV = cast<ShuffleVectorInst>(&I);
+
+  // The two operands must be distinct loads of the same fixed vector type.
+  auto *Load0 = dyn_cast<LoadInst>(SV->getOperand(0));
+  auto *Load1 = dyn_cast<LoadInst>(SV->getOperand(1));
+  if (!Load0 || !Load1 || Load0 == Load1 || !Load0->isSimple() ||
+      !Load1->isSimple())
+    return false;
+
+  // Confirm both loads are of fixed vector type.
+  auto *LoadTy = dyn_cast<FixedVectorType>(Load0->getType());
+  if (!LoadTy)
+    return false;
+
+  // We restrict to loads occurring in the same BB for now.
+  if (Load0->getParent() != Load1->getParent())
+    return false;
+
+  if (Load0->getPointerAddressSpace() != Load1->getPointerAddressSpace())
+    return false;
+
+  // Check that the original load type has no padding bits otherwise the wide
+  // load would be incorrect.
+  if (DL->getTypeSizeInBits(LoadTy) != 8 * DL->getTypeStoreSize(LoadTy))
+    return false;
+
+  const unsigned NumElts = LoadTy->getNumElements();
+  // Avoid overflow/wraparound issues.
+  if (NumElts > INT_MAX / 2)
+    return false;
+
+  // Determine which load is at the lower address and confirm the two loads are
+  // exactly contiguous: both pointers must strip to the same base, and their
+  // constant offsets from it must differ by exactly the store size of LoadTy.
+  unsigned AS = Load0->getPointerAddressSpace();
+  unsigned IdxWidth = DL->getIndexSizeInBits(AS);
+  APInt Offset0(IdxWidth, 0), Offset1(IdxWidth, 0);
+  const Value *Base0 =
+      Load0->getPointerOperand()->stripAndAccumulateConstantOffsets(
+          *DL, Offset0, /*AllowNonInbounds=*/true);
+  const Value *Base1 =
+      Load1->getPointerOperand()->stripAndAccumulateConstantOffsets(
+          *DL, Offset1, /*AllowNonInbounds=*/true);
+  // Offsets accumulated across an addrspacecast are not comparable.
+  if (Base0 != Base1 || Base0->getType()->getPointerAddressSpace() != AS)
+    return false;
+
+  int64_t LoadSize = DL->getTypeStoreSize(LoadTy).getFixedValue();
+  std::optional<int64_t> Dist = (Offset1 - Offset0).trySExtValue();
+  LoadInst *LowLoad, *HighLoad;
+  if (Dist == LoadSize) {
+    LowLoad = Load0;
+    HighLoad = Load1;
+  } else if (Dist == -LoadSize) {
+    LowLoad = Load1;
+    HighLoad = Load0;
+  } else {
+    return false;
+  }
+
+  // 1. Check all users of both loads are shuffles.
+  // 2. Check that both loads feed exactly the same set of shuffles.
+  SmallPtrSet<ShuffleVectorInst *, 4> Shuffles;
+  if (!std::is_permutation(LowLoad->user_begin(), LowLoad->user_end(),
+                           HighLoad->user_begin(), HighLoad->user_end()) ||
+      !all_of(LowLoad->users(), [&Shuffles](User *U) {
+        if (auto *SVI = dyn_cast<ShuffleVectorInst>(U)) {
+          Shuffles.insert(SVI);
+          return true;
+        }
+        return false;
+      }))
+    return false;
+
+  // The value loaded by either load must not be clobbered in between the loads.
+  auto *WideTy = FixedVectorType::get(LoadTy->getElementType(), NumElts * 2);
+  LoadInst *FirstLoad = LowLoad, *LastLoad = HighLoad;
+  if (HighLoad->comesBefore(LowLoad))
+    std::swap(FirstLoad, LastLoad);
+  MemoryLocation FirstLoc = MemoryLocation::get(FirstLoad);
+  if (isMemModifiedBetween(Opts, std::next(FirstLoad->getIterator()),
+                           LastLoad->getIterator(), FirstLoc, AA))
+    return false;
+
+  // case 1: wide load = LowLoad + HighLoad   ,
+  //         shuffle 0th operand = LowLoad
+  //         shuffle 1st operand = HighLoad
+  // Implication with this is shuffle mask for the wide load remains unchanged
+  // case 2: wide load = LowLoad + HighLoad   ,
+  //         shuffle 0th operand = HighLoad
+  //         shuffle 1st operand = LowLoad
+  // Implication with this is shuffle mask for the wide load changes
+  auto RemapMask = [&](ShuffleVectorInst *SV, SmallVectorImpl<int> &NewMask) {
+    Value *SVOp0 = SV->getOperand(0);
+    assert(((SVOp0 == LowLoad && SV->getOperand(1) == HighLoad) ||
+            (SVOp0 == HighLoad && SV->getOperand(1) == LowLoad)) &&
+           "Shuffle operands must be exactly {LowLoad, HighLoad} or {HighLoad, "
+           "LowLoad}");
+    SV->getShuffleMask(NewMask);
+    if (SVOp0 == HighLoad)
+      ShuffleVectorInst::commuteShuffleMask(NewMask, NumElts);
+  };
+
+  // Cost model checks
+  Value *Poison = PoisonValue::get(WideTy);
+  InstructionCost OldCost =
+      TTI.getMemoryOpCost(Instruction::Load, LoadTy, LowLoad->getAlign(),
+                          LowLoad->getPointerAddressSpace(), CostKind);
+  OldCost +=
+      TTI.getMemoryOpCost(Instruction::Load, LoadTy, HighLoad->getAlign(),
+                          HighLoad->getPointerAddressSpace(), CostKind);
+  InstructionCost NewCost =
+      TTI.getMemoryOpCost(Instruction::Load, WideTy, LowLoad->getAlign(),
+                          LowLoad->getPointerAddressSpace(), CostKind);
+  for (ShuffleVectorInst *SV : Shuffles) {
+    OldCost += TTI.getShuffleCost(TTI::SK_PermuteTwoSrc, SV->getType(), LoadTy,
+                                  CostKind, SV->getShuffleMask());
+    SmallVector<int, 32> NewMask;
+    RemapMask(SV, NewMask);
+    // LoadSz = initial load size
+    // WideSz = 2 * LoadSz
+    // MaxMaskSize = WideSz * 2
+    // Check if MaxMaskSize fits within an integer range.
+    if (!ShuffleVectorInst::isValidOperands(Poison, Poison, NewMask))
+      return false;
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, SV->getType(),
+                                  WideTy, CostKind, NewMask);
+  }
+
+  LLVM_DEBUG(dbgs() << "Found adjacent loads feeding shuffles: " << *LowLoad
+                    << ", " << *HighLoad << "\n  OldCost: " << OldCost
+                    << " vs NewCost: " << NewCost << "\n");
+
+  if (!NewCost.isValid() || NewCost > OldCost)
+    return false;
+
+  // Insert the wide load at whichever original load comes last, so that both
+  // halves of the contiguous range are known to be dereferenceable there.
+  LoadInst *InsertPt = LastLoad;
+
+  // Build the wide load at the insertion point using the low load's pointer and
+  // alignment, intersecting alias metadata from both original loads.
+  Builder.SetInsertPoint(InsertPt);
+  Builder.SetCurrentDebugLocation(InsertPt->getDebugLoc());
+  LoadInst *WideLoad = Builder.CreateAlignedLoad(
+      WideTy, LowLoad->getPointerOperand(), LowLoad->getAlign());
+
+  // Set the metadata on the wide load. copyMetadataForLoad seeds it from
+  // LowLoad, then combineMetadataForCSE intersects every known kind against
+  // HighLoad (taking the most-generic value where applicable, keeping facts
+  // only where both loads agree, and dropping unknown metadata), so nothing is
+  // asserted over the combined load unless justified by both halves.
+  copyMetadataForLoad(*WideLoad, *LowLoad);
+  combineMetadataForCSE(WideLoad, HighLoad, /*DoesKMove=*/true);
+
+  for (ShuffleVectorInst *SV : Shuffles) {
+    SmallVector<int, 32> NewMask;
+    RemapMask(SV, NewMask);
+
+    Builder.SetInsertPoint(SV);
+    Builder.SetCurrentDebugLocation(SV->getDebugLoc());
+    Value *NewShuf = Builder.CreateShuffleVector(WideLoad, Poison, NewMask);
+    // We do not want to erase shuffles immediately because they may invalidate
+    // the NextInst pointer in the caller's BB traversal.
+    replaceValue(*SV, *NewShuf, /*Erase=*/false);
+  }
+  return true;
+}
+
 // Attempt to narrow a phi of shufflevector instructions where the two incoming
 // values have the same operands but different masks. If the two shuffle masks
 // are offsets of one another we can use one branch to rotate the incoming
@@ -6941,10 +7175,16 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   SmallVector<int, 16> NewMask;
   NewMask.reserve(Mask0.size());
 
+  auto IsPoison = [InputNumElements](int M) {
+    return M < 0 || (unsigned)M >= InputNumElements;
+  };
+
   for (auto [M0, M1] : zip(Mask0, Mask1)) {
-    if (M0 >= 0 && M1 >= 0)
+    bool P0 = IsPoison(M0);
+    bool P1 = IsPoison(M1);
+    if (!P0 && !P1)
       NewMask.push_back(M0 - M1);
-    else if (M0 == -1 && M1 == -1)
+    else if (P0 && P1)
       continue;
     else
       return false;
@@ -7099,6 +7339,8 @@ bool VectorCombine::run() {
         if (foldShuffleOfCastops(I))
           return true;
         if (foldShuffleOfShuffles(I))
+          return true;
+        if (foldShuffleOfAdjacentLoads(I))
           return true;
         if (foldPermuteOfIntrinsic(I))
           return true;

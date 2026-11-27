@@ -8,25 +8,12 @@
 
 #include "mlir/Dialect/Async/IR/Async.h"
 
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::async;
 
 #include "mlir/Dialect/Async/IR/AsyncOpsDialect.cpp.inc"
-
-void AsyncDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Async/IR/AsyncOps.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Async/IR/AsyncOpsTypes.cpp.inc"
-      >();
-}
 
 //===----------------------------------------------------------------------===//
 /// ExecuteOp
