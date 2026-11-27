@@ -597,12 +597,14 @@ class MxDiMuOp_DD_Long<string MN, SDNode NODE, bits<10> CMD, bit SIGNED = false>
     (descend CMD,
       /*MODE*/0b000, /*REGISTER*/(operand "$opd", 3)),
     (descend 0b0,
-      // REGISTER
+      // REGISTER (Dq for a divide, Dl for a multiply)
       (operand "$dst", 3),
       !if(SIGNED, 0b1, 0b0),
       /*SIZE*/0b0, 0b0000000,
-      // Dr REGISTER
-      0b000)
+      // Dr REGISTER. Same register as Dq, as this is the 32/32 -> 32
+      // quotient-only form. Write zero for MULx.L <ea>,Dl, Dh as the
+      // value is unused on a 32-bit product.
+      !if(!eq(CMD, 0x131), (operand "$dst", 3), (descend 0b000)))
   );
 }
 
