@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/HLSLResource.h"
-#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
 

@@ -12,7 +12,6 @@
 #include "IntegralAP.h"
 #include "Opcode.h"
 #include "Program.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
 #include <type_traits>

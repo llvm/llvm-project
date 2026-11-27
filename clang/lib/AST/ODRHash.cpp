@@ -15,7 +15,6 @@
 #include "clang/AST/ODRHash.h"
 
 #include "clang/AST/DeclVisitor.h"
-#include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TypeVisitor.h"
 
 using namespace clang;

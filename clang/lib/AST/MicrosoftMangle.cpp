@@ -35,7 +35,6 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/xxhash.h"
 #include <functional>
 #include <optional>
 

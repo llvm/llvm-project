@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/CommentLexer.h"
-#include "clang/AST/Comment.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/DiagnosticComment.h"
