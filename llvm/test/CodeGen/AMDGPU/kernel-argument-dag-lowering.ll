@@ -516,36 +516,36 @@ define amdgpu_kernel void @byref_natural_align_constant_v16i32_arg(ptr addrspace
 ; GCN-LABEL: byref_natural_align_constant_v16i32_arg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx16 s[12:27], s[8:9], 0x40
-; GCN-NEXT:    s_load_dword s2, s[8:9], 0x80
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GCN-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-NEXT:    s_load_dword s2, s[8:9], 0x80
+; GCN-NEXT:    v_mov_b32_e32 v8, 0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s24
 ; GCN-NEXT:    v_mov_b32_e32 v1, s25
 ; GCN-NEXT:    v_mov_b32_e32 v2, s26
 ; GCN-NEXT:    v_mov_b32_e32 v3, s27
-; GCN-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:48
+; GCN-NEXT:    v_mov_b32_e32 v4, s20
+; GCN-NEXT:    v_mov_b32_e32 v5, s21
+; GCN-NEXT:    v_mov_b32_e32 v6, s22
+; GCN-NEXT:    v_mov_b32_e32 v7, s23
+; GCN-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1] offset:48
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s20
-; GCN-NEXT:    v_mov_b32_e32 v1, s21
-; GCN-NEXT:    v_mov_b32_e32 v2, s22
-; GCN-NEXT:    v_mov_b32_e32 v3, s23
-; GCN-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:32
+; GCN-NEXT:    global_store_dwordx4 v8, v[4:7], s[0:1] offset:32
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s16
 ; GCN-NEXT:    v_mov_b32_e32 v1, s17
 ; GCN-NEXT:    v_mov_b32_e32 v2, s18
 ; GCN-NEXT:    v_mov_b32_e32 v3, s19
-; GCN-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1] offset:16
+; GCN-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1] offset:16
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s12
 ; GCN-NEXT:    v_mov_b32_e32 v1, s13
 ; GCN-NEXT:    v_mov_b32_e32 v2, s14
 ; GCN-NEXT:    v_mov_b32_e32 v3, s15
-; GCN-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
+; GCN-NEXT:    global_store_dwordx4 v8, v[0:3], s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    global_store_dword v4, v0, s[0:1]
+; GCN-NEXT:    global_store_dword v8, v0, s[0:1]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_endpgm
   %in = load <16 x i32>, ptr addrspace(4) %in.byref

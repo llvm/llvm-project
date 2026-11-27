@@ -599,10 +599,10 @@ define amdgpu_kernel void @shl_v2i16(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; EG-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
 ; EG-NEXT:    ALU clause starting at 11:
 ; EG-NEXT:     AND_INT T0.Z, T0.Y, literal.x,
-; EG-NEXT:     LSHR T1.W, T0.Y, literal.y,
-; EG-NEXT:     LSHR * T2.W, T0.X, literal.y,
+; EG-NEXT:     LSHR T1.W, T0.X, literal.y,
+; EG-NEXT:     LSHR * T2.W, T0.Y, literal.y,
 ; EG-NEXT:    65535(9.183409e-41), 16(2.242078e-44)
-; EG-NEXT:     LSHL T1.W, PS, PV.W,
+; EG-NEXT:     LSHL T1.W, PV.W, PS,
 ; EG-NEXT:     LSHL * T2.W, T0.X, PV.Z,
 ; EG-NEXT:     AND_INT T2.W, PS, literal.x,
 ; EG-NEXT:     LSHL * T1.W, PV.W, literal.y,

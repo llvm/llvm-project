@@ -2,8 +2,10 @@
 
 define protected amdgpu_kernel void @test_valu(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %k, ptr addrspace(1) noundef writeonly captures(none) %ret.coerce, i32 noundef %length) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_valu
-; CHECK: s_mul_i32
+; The inline asm counts as the last VALU of the leading group, so the SALU the
+; barrier asks for next lands right after it.
 ; CHECK: ASMSTART
+; CHECK: s_mul_i32
 entry:
   %a0 = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %mul = shl i32 %a0, 6

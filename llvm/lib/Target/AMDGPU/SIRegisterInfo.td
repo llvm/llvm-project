@@ -10,6 +10,16 @@
 //  Subregister declarations
 //===----------------------------------------------------------------------===//
 
+// Widths, in registers, that a contiguous run of registers can be named by.
+// Anything not listed here has to be referred to one register at a time.
+defvar SubRegTupleWidths = [2, 3, 4, 5, 6, 8, 16];
+
+// Name of the index covering the `size` registers starting at register `index`.
+class SubRegTupleName<int index, int size> {
+  string ret =
+      !interleave(!foreach(cur, !range(size), "sub"#!add(cur, index)), "_");
+}
+
 let Namespace = "AMDGPU" in {
 
 def lo16 : SubRegIndex<16, 0>;
@@ -24,9 +34,9 @@ foreach Index = 1...31 in {
   def sub#Index#_hi16 : ComposedSubRegIndex<!cast<SubRegIndex>(sub#Index), hi16>;
 }
 
-foreach Size = {2...6,8,16} in {
+foreach Size = SubRegTupleWidths in {
   foreach Index = !range(!sub(33, Size)) in {
-    def !interleave(!foreach(cur, !range(Size), "sub"#!add(cur, Index)), "_") :
+    def SubRegTupleName<Index, Size>.ret :
       SubRegIndex<!mul(Size, 32), !shl(Index, 5)> {
       let CoveringSubRegIndices =
         !foreach(cur, !range(Size), !cast<SubRegIndex>(sub#!add(cur, Index)));

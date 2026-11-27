@@ -1442,6 +1442,7 @@ define <33 x i32> @v33i32_func_void() #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x8
+; GFX11-NEXT:    buffer_load_b32 v33, off, s[0:3], 0 offset:128
 ; GFX11-NEXT:    buffer_load_b128 v[1:4], off, s[0:3], 0 offset:112
 ; GFX11-NEXT:    buffer_load_b128 v[5:8], off, s[0:3], 0 offset:96
 ; GFX11-NEXT:    buffer_load_b128 v[9:12], off, s[0:3], 0 offset:80
@@ -1450,25 +1451,24 @@ define <33 x i32> @v33i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[21:24], off, s[0:3], 0 offset:32
 ; GFX11-NEXT:    buffer_load_b128 v[25:28], off, s[0:3], 0 offset:16
 ; GFX11-NEXT:    buffer_load_b128 v[29:32], off, s[0:3], 0
-; GFX11-NEXT:    buffer_load_b32 v33, off, s[0:3], 0 offset:128
 ; GFX11-NEXT:    s_waitcnt vmcnt(8)
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:112
-; GFX11-NEXT:    s_waitcnt vmcnt(7)
-; GFX11-NEXT:    scratch_store_b128 v0, v[5:8], off offset:96
-; GFX11-NEXT:    s_waitcnt vmcnt(6)
-; GFX11-NEXT:    scratch_store_b128 v0, v[9:12], off offset:80
-; GFX11-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-NEXT:    scratch_store_b128 v0, v[13:16], off offset:64
-; GFX11-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-NEXT:    scratch_store_b128 v0, v[17:20], off offset:48
-; GFX11-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-NEXT:    scratch_store_b128 v0, v[21:24], off offset:32
-; GFX11-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-NEXT:    scratch_store_b128 v0, v[25:28], off offset:16
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    scratch_store_b128 v0, v[29:32], off
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b32 v0, v33, off offset:128
+; GFX11-NEXT:    s_waitcnt vmcnt(7)
+; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:112
+; GFX11-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-NEXT:    scratch_store_b128 v0, v[5:8], off offset:96
+; GFX11-NEXT:    s_waitcnt vmcnt(5)
+; GFX11-NEXT:    scratch_store_b128 v0, v[9:12], off offset:80
+; GFX11-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-NEXT:    scratch_store_b128 v0, v[13:16], off offset:64
+; GFX11-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-NEXT:    scratch_store_b128 v0, v[17:20], off offset:48
+; GFX11-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-NEXT:    scratch_store_b128 v0, v[21:24], off offset:32
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    scratch_store_b128 v0, v[25:28], off offset:16
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b128 v0, v[29:32], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <33 x i32>, ptr addrspace(1) %ptr
@@ -1659,6 +1659,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x8
+; GFX11-NEXT:    buffer_load_b32 v33, off, s[0:3], 0 offset:128
 ; GFX11-NEXT:    buffer_load_b128 v[1:4], off, s[0:3], 0 offset:112
 ; GFX11-NEXT:    buffer_load_b128 v[5:8], off, s[0:3], 0 offset:96
 ; GFX11-NEXT:    buffer_load_b128 v[9:12], off, s[0:3], 0 offset:80
@@ -1667,25 +1668,24 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[21:24], off, s[0:3], 0 offset:32
 ; GFX11-NEXT:    buffer_load_b128 v[25:28], off, s[0:3], 0 offset:16
 ; GFX11-NEXT:    buffer_load_b128 v[29:32], off, s[0:3], 0
-; GFX11-NEXT:    buffer_load_b32 v33, off, s[0:3], 0 offset:128
 ; GFX11-NEXT:    s_waitcnt vmcnt(8)
-; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:112
-; GFX11-NEXT:    s_waitcnt vmcnt(7)
-; GFX11-NEXT:    scratch_store_b128 v0, v[5:8], off offset:96
-; GFX11-NEXT:    s_waitcnt vmcnt(6)
-; GFX11-NEXT:    scratch_store_b128 v0, v[9:12], off offset:80
-; GFX11-NEXT:    s_waitcnt vmcnt(5)
-; GFX11-NEXT:    scratch_store_b128 v0, v[13:16], off offset:64
-; GFX11-NEXT:    s_waitcnt vmcnt(4)
-; GFX11-NEXT:    scratch_store_b128 v0, v[17:20], off offset:48
-; GFX11-NEXT:    s_waitcnt vmcnt(3)
-; GFX11-NEXT:    scratch_store_b128 v0, v[21:24], off offset:32
-; GFX11-NEXT:    s_waitcnt vmcnt(2)
-; GFX11-NEXT:    scratch_store_b128 v0, v[25:28], off offset:16
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    scratch_store_b128 v0, v[29:32], off
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b32 v0, v33, off offset:128
+; GFX11-NEXT:    s_waitcnt vmcnt(7)
+; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:112
+; GFX11-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-NEXT:    scratch_store_b128 v0, v[5:8], off offset:96
+; GFX11-NEXT:    s_waitcnt vmcnt(5)
+; GFX11-NEXT:    scratch_store_b128 v0, v[9:12], off offset:80
+; GFX11-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-NEXT:    scratch_store_b128 v0, v[13:16], off offset:64
+; GFX11-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-NEXT:    scratch_store_b128 v0, v[17:20], off offset:48
+; GFX11-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-NEXT:    scratch_store_b128 v0, v[21:24], off offset:32
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    scratch_store_b128 v0, v[25:28], off offset:16
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b128 v0, v[29:32], off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load { <32 x i32>, i32 }, ptr addrspace(1) %ptr
@@ -1883,8 +1883,8 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[17:20], off, s[0:3], 0 offset:176
 ; GFX11-NEXT:    buffer_load_b128 v[21:24], off, s[0:3], 0 offset:160
 ; GFX11-NEXT:    buffer_load_b128 v[25:28], off, s[0:3], 0 offset:144
-; GFX11-NEXT:    buffer_load_b128 v[29:32], off, s[0:3], 0 offset:128
 ; GFX11-NEXT:    buffer_load_b32 v33, off, s[0:3], 0
+; GFX11-NEXT:    buffer_load_b128 v[29:32], off, s[0:3], 0 offset:128
 ; GFX11-NEXT:    s_waitcnt vmcnt(8)
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off offset:240
 ; GFX11-NEXT:    s_waitcnt vmcnt(7)
@@ -1900,9 +1900,9 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
 ; GFX11-NEXT:    scratch_store_b128 v0, v[25:28], off offset:144
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    scratch_store_b128 v0, v[29:32], off offset:128
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b32 v0, v33, off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    scratch_store_b128 v0, v[29:32], off offset:128
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load { i32, <32 x i32> }, ptr addrspace(1) %ptr

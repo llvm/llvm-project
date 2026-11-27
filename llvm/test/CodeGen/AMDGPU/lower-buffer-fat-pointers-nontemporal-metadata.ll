@@ -35,19 +35,24 @@ define amdgpu_kernel void @buffer_nontemporal_load_store(ptr addrspace(7) %in, p
 ; GFX942-SDAG-LABEL: buffer_nontemporal_load_store:
 ; GFX942-SDAG:       ; %bb.0: ; %entry
 ; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX942-SDAG-NEXT:    s_load_dword s11, s[4:5], 0x10
+; GFX942-SDAG-NEXT:    s_load_dword s7, s[4:5], 0x10
+; GFX942-SDAG-NEXT:    s_mov_b32 s6, 0
+; GFX942-SDAG-NEXT:    s_mov_b32 s11, s6
 ; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-SDAG-NEXT:    s_mov_b32 s8, s1
-; GFX942-SDAG-NEXT:    s_mov_b32 s9, s2
 ; GFX942-SDAG-NEXT:    s_mov_b32 s10, s3
+; GFX942-SDAG-NEXT:    s_mov_b32 s8, s1
+; GFX942-SDAG-NEXT:    s_or_b64 s[10:11], s[10:11], s[6:7]
+; GFX942-SDAG-NEXT:    s_mov_b32 s9, s2
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-SDAG-NEXT:    buffer_load_dword v1, v0, s[8:11], 0 offen nt
-; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x20
 ; GFX942-SDAG-NEXT:    s_load_dword s7, s[4:5], 0x30
+; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x20
+; GFX942-SDAG-NEXT:    s_mov_b32 s5, s6
 ; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_mov_b32 s4, s3
+; GFX942-SDAG-NEXT:    s_or_b64 s[6:7], s[4:5], s[6:7]
 ; GFX942-SDAG-NEXT:    s_mov_b32 s4, s1
 ; GFX942-SDAG-NEXT:    s_mov_b32 s5, s2
-; GFX942-SDAG-NEXT:    s_mov_b32 s6, s3
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-SDAG-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen nt
@@ -175,20 +180,25 @@ define amdgpu_kernel void @buffer_nontemporal_and_volatile_load_store(ptr addrsp
 ; GFX942-SDAG-LABEL: buffer_nontemporal_and_volatile_load_store:
 ; GFX942-SDAG:       ; %bb.0: ; %entry
 ; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
-; GFX942-SDAG-NEXT:    s_load_dword s11, s[4:5], 0x10
+; GFX942-SDAG-NEXT:    s_load_dword s7, s[4:5], 0x10
+; GFX942-SDAG-NEXT:    s_mov_b32 s6, 0
+; GFX942-SDAG-NEXT:    s_mov_b32 s11, s6
 ; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-SDAG-NEXT:    s_mov_b32 s8, s1
-; GFX942-SDAG-NEXT:    s_mov_b32 s9, s2
 ; GFX942-SDAG-NEXT:    s_mov_b32 s10, s3
+; GFX942-SDAG-NEXT:    s_mov_b32 s8, s1
+; GFX942-SDAG-NEXT:    s_or_b64 s[10:11], s[10:11], s[6:7]
+; GFX942-SDAG-NEXT:    s_mov_b32 s9, s2
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-SDAG-NEXT:    buffer_load_dword v1, v0, s[8:11], 0 offen sc0 sc1
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x20
 ; GFX942-SDAG-NEXT:    s_load_dword s7, s[4:5], 0x30
+; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x20
+; GFX942-SDAG-NEXT:    s_mov_b32 s5, s6
 ; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_mov_b32 s4, s3
+; GFX942-SDAG-NEXT:    s_or_b64 s[6:7], s[4:5], s[6:7]
 ; GFX942-SDAG-NEXT:    s_mov_b32 s4, s1
 ; GFX942-SDAG-NEXT:    s_mov_b32 s5, s2
-; GFX942-SDAG-NEXT:    s_mov_b32 s6, s3
 ; GFX942-SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX942-SDAG-NEXT:    buffer_store_dword v1, v0, s[4:7], 0 offen sc0 sc1
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0)
