@@ -1443,8 +1443,7 @@ define half @raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
   ; GFX1250-LABEL: name: raw_ptr_buffer_load_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset
@@ -2188,8 +2187,7 @@ define half @raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset(ptr 
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.3:
   ; GFX908-NEXT:   $exec = S_MOV_B64 [[S_MOV_B64_]]
-  ; GFX908-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
-  ; GFX908-NEXT:   $vgpr0 = COPY [[COPY10]]
+  ; GFX908-NEXT:   $vgpr0 = COPY [[BUFFER_LOAD_USHORT_OFFEN]]
   ; GFX908-NEXT:   SI_RETURN implicit $vgpr0
   ;
   ; GFX1250-LABEL: name: raw_ptr_buffer_load_f16__vgpr_rsrc__vgpr_voffset__sgpr_soffset

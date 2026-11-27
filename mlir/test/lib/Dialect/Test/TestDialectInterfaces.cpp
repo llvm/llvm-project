@@ -8,7 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
-#include "TestTypes.h"
+#include "TestTypesCore.h"
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
@@ -17,6 +17,7 @@
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace test;
@@ -44,13 +45,11 @@ struct TestResourceBlobManagerInterface
       TestDialectResourceBlobHandle>::ResourceBlobManagerDialectInterfaceBase;
 };
 
-namespace {
 enum test_encoding {
   k_attr_params = 0,
   k_test_i32 = 99,
   k_test_rec_alias = 100
 };
-} // namespace
 
 // Test support for interacting with the Bytecode reader/writer.
 struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
@@ -60,22 +59,23 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
 
   LogicalResult writeType(Type type,
                           DialectBytecodeWriter &writer) const final {
-    if (auto concreteType = llvm::dyn_cast<TestI32Type>(type)) {
-      writer.writeVarInt(test_encoding::k_test_i32);
-      return success();
-    }
-    // A mutable, possibly self-referential type. Exercises the cyclic path in
-    // the bytecode reader; see readType below.
-    if (auto recType = llvm::dyn_cast<TestRecursiveAliasType>(type)) {
-      writer.writeVarInt(test_encoding::k_test_rec_alias);
-      writer.writeOwnedString(recType.getName());
-      Type body = recType.getBody();
-      writer.writeOwnedBool(static_cast<bool>(body));
-      if (body)
-        writer.writeType(body);
-      return success();
-    }
-    return failure();
+    return TypeSwitch<Type, LogicalResult>(type)
+        .Case([&](TestI32Type) {
+          writer.writeVarInt(test_encoding::k_test_i32);
+          return success();
+        })
+        .Case([&](TestRecursiveAliasType recType) {
+          // A mutable, possibly self-referential type. Exercises the cyclic
+          // path in the bytecode reader; see readType below.
+          writer.writeVarInt(test_encoding::k_test_rec_alias);
+          writer.writeOwnedString(recType.getName());
+          Type body = recType.getBody();
+          writer.writeOwnedBool(static_cast<bool>(body));
+          if (body)
+            writer.writeType(body);
+          return success();
+        })
+        .Default(failure());
   }
 
   Type readType(DialectBytecodeReader &reader) const final {
@@ -86,8 +86,13 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       return TestI32Type::get(getContext());
     if (encoding == test_encoding::k_test_rec_alias) {
       StringRef name;
-      if (failed(reader.readString(name)))
+      bool hasBody = false;
+      if (failed(reader.readString(name)) || failed(reader.readBool(hasBody)))
         return Type();
+
+      auto rec = TestRecursiveAliasType::get(getContext(), name);
+      if (!hasBody)
+        return rec;
 
       // The body may name this very type, so the type has to exist before the
       // body is read. Publish it first: a reference back to it then resolves
@@ -95,18 +100,14 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       // is the bytecode counterpart of tryStartCyclicParse in
       // TestRecursiveAliasType::parse, and it needs the same stable identity:
       // completing the type must mutate the published instance.
-      auto rec = TestRecursiveAliasType::get(getContext(), name);
-      if (failed(reader.tryStartCyclicRead(rec)))
+      Type body;
+      if (failed(reader.tryStartCyclicRead(rec)) ||
+          failed(reader.readType(body)))
         return Type();
-
-      bool hasBody = false;
-      if (failed(reader.readBool(hasBody)))
+      if (failed(rec.setBody(body))) {
+        reader.emitError("recursive alias '")
+            << name << "' redefined with a different body";
         return Type();
-      if (hasBody) {
-        Type body;
-        if (failed(reader.readType(body)))
-          return Type();
-        rec.setBody(body);
       }
       return rec;
     }

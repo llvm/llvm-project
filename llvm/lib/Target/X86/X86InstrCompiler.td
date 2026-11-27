@@ -60,7 +60,7 @@ def : Pat<(X86callseq_start timm:$amt1, timm:$amt2),
 let SchedRW = [WriteSystem] in {
 
 // x86-64 va_start lowering magic.
-let hasSideEffects = 1, mayStore = 1, Defs = [EFLAGS] in {
+let hasSideEffects = 1, mayStore = 1, isNotDuplicable = 1, Defs = [EFLAGS] in {
 def VASTART_SAVE_XMM_REGS : I<0, Pseudo,
                               (outs),
                               (ins GR8:$al, i8mem:$regsavefi, variable_ops),

@@ -67,7 +67,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }

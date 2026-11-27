@@ -1548,6 +1548,23 @@ static void createAndEmbedModuleForDynamicDebugging(
   SaveModule("dyndbg.2.outer", *M);
 }
 
+bool clang::passPluginArguments(CompilerInstance &CI) {
+  const std::vector<std::string> &Args = CI.getCodeGenOpts().PassPluginArgs;
+  if (Args.empty())
+    return true;
+  SmallVector<PassPluginLibraryInfo, 0> Infos;
+  for (const std::unique_ptr<PassPlugin> &Plugin : CI.getPassPlugins())
+    Infos.push_back(Plugin->getInfo());
+#define HANDLE_EXTENSION(Ext) Infos.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  if (Error E = llvm::passPluginArguments(Infos, Args)) {
+    CI.getDiagnostics().Report(diag::err_fe_pass_plugin_arg)
+        << toString(std::move(E));
+    return false;
+  }
+  return true;
+}
+
 void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
                               llvm::Module *M, BackendAction Action,
                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
@@ -1627,11 +1644,12 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
   // module's ABI. This respects the target-abi module flag rather than assuming
   // the DataLayout is a fixed property of the target options.
   if (AsmHelper.TM) {
-    std::string DLDesc = M->getDataLayout().getStringRepresentation();
     std::string TDesc = M->getTargetTriple().computeDataLayout(
         AsmHelper.TM->getTargetABIName(*M));
-    if (DLDesc != TDesc)
-      Diags.Report(diag::err_data_layout_mismatch) << DLDesc << TDesc;
+    if (M->getDataLayout() != DataLayout(TDesc)) {
+      Diags.Report(diag::err_data_layout_mismatch)
+          << M->getDataLayout().getStringRepresentation() << TDesc;
+    }
   }
 }
 

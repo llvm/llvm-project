@@ -1189,10 +1189,10 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
   unsigned Flags =
       static_cast<const MCSectionELF *>(MBB.getParent()->getSection())
           ->getFlags();
-  std::string GroupName;
+  StringRef GroupName;
   if (F.hasComdat()) {
     Flags |= ELF::SHF_GROUP;
-    GroupName = F.getComdat()->getName().str();
+    GroupName = F.getComdat()->getName();
   }
   return getContext().getELFSection(Name, ELF::SHT_PROGBITS, Flags,
                                     0 /* Entry Size */, GroupName,

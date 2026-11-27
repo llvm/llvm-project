@@ -70,6 +70,7 @@ class SystemZPostRASchedStrategy : public MachineSchedStrategy {
 
   const MachineLoopInfo *MLI;
   const SystemZInstrInfo *TII;
+  const SystemZOptions &CLOpts;
 
   // A SchedModel is needed before any DAG is built while advancing past
   // non-scheduled instructions, so it would not always be possible to call

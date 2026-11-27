@@ -316,6 +316,13 @@
 // AMX-AVX512: "-target-feature" "+amx-avx512"
 // NO-AMX-AVX512: "-target-feature" "-amx-avx512"
 
+// RUN: %clang --target=x86_64-unknown-linux-gnu -macev1 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=ACEV1 %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-acev1 %s \
+// RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-ACEV1 %s
+// ACEV1: "-target-feature" "+acev1"
+// NO-ACEV1: "-target-feature" "-acev1"
+
 // RUN: %clang --target=i386 -march=i386 -mhreset %s -### 2>&1 | FileCheck -check-prefix=HRESET %s
 // RUN: %clang --target=i386 -march=i386 -mno-hreset %s -### 2>&1 | FileCheck -check-prefix=NO-HRESET %s
 // HRESET: "-target-feature" "+hreset"
@@ -446,8 +453,8 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
 //
-// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu" "-target-feature" "+jmpabs"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu" "-target-feature" "-jmpabs"
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu" "-target-feature" "+jmpabs"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu" "-target-feature" "-jmpabs"
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s

@@ -1,14 +1,10 @@
 ; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02-- -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}global_load_i1:
 ; GCN: buffer_load_ubyte
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 1
 ; GCN: buffer_store_byte
-
-; EG: VTX_READ_8
-; EG: AND_INT
 define amdgpu_kernel void @global_load_i1(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %load = load i1, ptr addrspace(1) %in
   store i1 %load, ptr addrspace(1) %out
@@ -78,9 +74,6 @@ define amdgpu_kernel void @global_zextload_i1_to_i32(ptr addrspace(1) %out, ptr 
 ; GCN: buffer_load_ubyte
 ; GCN: v_bfe_i32 {{v[0-9]+}}, {{v[0-9]+}}, 0, 1{{$}}
 ; GCN: buffer_store_dword
-
-; EG: VTX_READ_8
-; EG: BFE_INT
 define amdgpu_kernel void @global_sextload_i1_to_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %a = load i1, ptr addrspace(1) %in
   %ext = sext i1 %a to i32

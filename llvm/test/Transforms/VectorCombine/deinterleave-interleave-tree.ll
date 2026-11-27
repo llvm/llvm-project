@@ -132,6 +132,166 @@ define <8 x i32> @three_deinterleave2_tree_with_splats(<8 x i32> %a, <8 x i32> %
   ret <8 x i32> %r
 }
 
+define <8 x i32> @deinterleave2_intree_multi_use(<8 x i32> %v, i32 %x) {
+; CHECK-LABEL: define <8 x i32> @deinterleave2_intree_multi_use(
+; CHECK-SAME: <8 x i32> [[V:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = ashr <8 x i32> [[V]], splat (i32 2)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i32> [[TMP1]], splat (i32 3)
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <8 x i32> poison, i32 [[X]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <8 x i32> [[DOTSPLATINSERT]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i32> [[TMP1]], [[DOTSPLAT]]
+; CHECK-NEXT:    [[R:%.*]] = select <8 x i1> [[TMP2]], <8 x i32> [[V]], <8 x i32> [[TMP3]]
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %x.splat.0 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %x.splat = shufflevector <4 x i32> %x.splat.0, <4 x i32> poison, <4 x i32> zeroinitializer
+
+  %dv = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2(<8 x i32> %v)
+  %v0 = extractvalue { <4 x i32>, <4 x i32> } %dv, 0
+  %v1 = extractvalue { <4 x i32>, <4 x i32> } %dv, 1
+
+  %s0 = ashr <4 x i32> %v0, splat (i32 2)
+  %c0 = icmp slt <4 x i32> %s0, splat (i32 3)
+  %a0 = add <4 x i32> %s0, %x.splat
+  %r0 = select <4 x i1> %c0, <4 x i32> %v0, <4 x i32> %a0
+
+  %s1 = ashr <4 x i32> %v1, splat (i32 2)
+  %c1 = icmp slt <4 x i32> %s1, splat (i32 3)
+  %a1 = add <4 x i32> %s1, %x.splat
+  %r1 = select <4 x i1> %c1, <4 x i32> %v1, <4 x i32> %a1
+
+  %r = call <8 x i32> @llvm.vector.interleave2(<4 x i32> %r0, <4 x i32> %r1)
+  ret <8 x i32> %r
+}
+
+define <8 x i32> @negative_deinterleave2_intree_cross_factor_multi_use(<8 x i32> %v, i32 %x) {
+; CHECK-LABEL: define <8 x i32> @negative_deinterleave2_intree_cross_factor_multi_use(
+; CHECK-SAME: <8 x i32> [[V:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[X_SPLAT_0:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[X_SPLAT:%.*]] = shufflevector <4 x i32> [[X_SPLAT_0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DV:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[V]])
+; CHECK-NEXT:    [[V0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DV]], 0
+; CHECK-NEXT:    [[V1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DV]], 1
+; CHECK-NEXT:    [[S0:%.*]] = ashr <4 x i32> [[V0]], splat (i32 2)
+; CHECK-NEXT:    [[C0:%.*]] = icmp slt <4 x i32> [[S0]], splat (i32 3)
+; CHECK-NEXT:    [[A0:%.*]] = add <4 x i32> [[S0]], [[X_SPLAT]]
+; CHECK-NEXT:    [[R0:%.*]] = select <4 x i1> [[C0]], <4 x i32> [[V0]], <4 x i32> [[A0]]
+; CHECK-NEXT:    [[S1:%.*]] = ashr <4 x i32> [[V1]], splat (i32 2)
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt <4 x i32> [[S0]], splat (i32 3)
+; CHECK-NEXT:    [[A1:%.*]] = add <4 x i32> [[S1]], [[X_SPLAT]]
+; CHECK-NEXT:    [[R1:%.*]] = select <4 x i1> [[C1]], <4 x i32> [[V1]], <4 x i32> [[A1]]
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[R0]], <4 x i32> [[R1]])
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %x.splat.0 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %x.splat = shufflevector <4 x i32> %x.splat.0, <4 x i32> poison, <4 x i32> zeroinitializer
+
+  %dv = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2(<8 x i32> %v)
+  %v0 = extractvalue { <4 x i32>, <4 x i32> } %dv, 0
+  %v1 = extractvalue { <4 x i32>, <4 x i32> } %dv, 1
+
+  %s0 = ashr <4 x i32> %v0, splat (i32 2)
+  %c0 = icmp slt <4 x i32> %s0, splat (i32 3)
+  %a0 = add <4 x i32> %s0, %x.splat
+  %r0 = select <4 x i1> %c0, <4 x i32> %v0, <4 x i32> %a0
+
+  %s1 = ashr <4 x i32> %v1, splat (i32 2)
+  ; It's used in-tree but in a different factor.
+  %c1 = icmp slt <4 x i32> %s0, splat (i32 3)
+  %a1 = add <4 x i32> %s1, %x.splat
+  %r1 = select <4 x i1> %c1, <4 x i32> %v1, <4 x i32> %a1
+
+  %r = call <8 x i32> @llvm.vector.interleave2(<4 x i32> %r0, <4 x i32> %r1)
+  ret <8 x i32> %r
+}
+
+define <8 x i32> @negative_deinterleave2_single_factor_multi_use(<8 x i32> %v, i32 %x) {
+; CHECK-LABEL: define <8 x i32> @negative_deinterleave2_single_factor_multi_use(
+; CHECK-SAME: <8 x i32> [[V:%.*]], i32 [[X:%.*]]) {
+; CHECK-NEXT:    [[X_SPLAT_0:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[X_SPLAT:%.*]] = shufflevector <4 x i32> [[X_SPLAT_0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DV:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[V]])
+; CHECK-NEXT:    [[V0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DV]], 0
+; CHECK-NEXT:    [[V1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DV]], 1
+; CHECK-NEXT:    [[S0:%.*]] = ashr <4 x i32> [[V0]], splat (i32 2)
+; CHECK-NEXT:    [[C0:%.*]] = icmp slt <4 x i32> [[S0]], splat (i32 3)
+; CHECK-NEXT:    [[A0:%.*]] = add <4 x i32> [[S0]], [[X_SPLAT]]
+; CHECK-NEXT:    [[R0:%.*]] = select <4 x i1> [[C0]], <4 x i32> [[V0]], <4 x i32> [[A0]]
+; CHECK-NEXT:    [[S1:%.*]] = ashr <4 x i32> [[V1]], splat (i32 2)
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt <4 x i32> [[S0]], splat (i32 3)
+; CHECK-NEXT:    [[A1:%.*]] = add <4 x i32> [[V1]], [[X_SPLAT]]
+; CHECK-NEXT:    [[R1:%.*]] = select <4 x i1> [[C1]], <4 x i32> [[V1]], <4 x i32> [[A1]]
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[R0]], <4 x i32> [[R1]])
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %x.splat.0 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %x.splat = shufflevector <4 x i32> %x.splat.0, <4 x i32> poison, <4 x i32> zeroinitializer
+
+  %dv = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2(<8 x i32> %v)
+  %v0 = extractvalue { <4 x i32>, <4 x i32> } %dv, 0
+  %v1 = extractvalue { <4 x i32>, <4 x i32> } %dv, 1
+
+  %s0 = ashr <4 x i32> %v0, splat (i32 2)
+  %c0 = icmp slt <4 x i32> %s0, splat (i32 3)
+  %a0 = add <4 x i32> %s0, %x.splat
+  %r0 = select <4 x i1> %c0, <4 x i32> %v0, <4 x i32> %a0
+
+  %s1 = ashr <4 x i32> %v1, splat (i32 2)
+  %c1 = icmp slt <4 x i32> %s0, splat (i32 3)
+  %a1 = add <4 x i32> %v1, %x.splat
+  %r1 = select <4 x i1> %c1, <4 x i32> %v1, <4 x i32> %a1
+
+  %r = call <8 x i32> @llvm.vector.interleave2(<4 x i32> %r0, <4 x i32> %r1)
+  ret <8 x i32> %r
+}
+
+define <8 x i32> @negative_deinterleave2_out_of_tree_multi_use(<8 x i32> %v, i32 %x, ptr %out) {
+; CHECK-LABEL: define <8 x i32> @negative_deinterleave2_out_of_tree_multi_use(
+; CHECK-SAME: <8 x i32> [[V:%.*]], i32 [[X:%.*]], ptr [[OUT:%.*]]) {
+; CHECK-NEXT:    [[X_SPLAT_0:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i32 0
+; CHECK-NEXT:    [[X_SPLAT:%.*]] = shufflevector <4 x i32> [[X_SPLAT_0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[DV:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2.v8i32(<8 x i32> [[V]])
+; CHECK-NEXT:    [[V0:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DV]], 0
+; CHECK-NEXT:    [[V1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[DV]], 1
+; CHECK-NEXT:    [[S0:%.*]] = ashr <4 x i32> [[V0]], splat (i32 2)
+; CHECK-NEXT:    [[C0:%.*]] = icmp slt <4 x i32> [[S0]], splat (i32 3)
+; CHECK-NEXT:    [[A0:%.*]] = add <4 x i32> [[S0]], [[X_SPLAT]]
+; CHECK-NEXT:    [[R0:%.*]] = select <4 x i1> [[C0]], <4 x i32> [[V0]], <4 x i32> [[A0]]
+; CHECK-NEXT:    [[S1:%.*]] = ashr <4 x i32> [[V1]], splat (i32 2)
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt <4 x i32> [[S1]], splat (i32 3)
+; CHECK-NEXT:    [[A1:%.*]] = add <4 x i32> [[S1]], [[X_SPLAT]]
+; CHECK-NEXT:    [[R1:%.*]] = select <4 x i1> [[C1]], <4 x i32> [[V1]], <4 x i32> [[A1]]
+; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.vector.interleave2.v8i32(<4 x i32> [[R0]], <4 x i32> [[R1]])
+; CHECK-NEXT:    [[S:%.*]] = mul <4 x i32> [[A0]], splat (i32 5)
+; CHECK-NEXT:    store <4 x i32> [[S]], ptr [[OUT]], align 16
+; CHECK-NEXT:    ret <8 x i32> [[R]]
+;
+  %x.splat.0 = insertelement <4 x i32> poison, i32 %x, i32 0
+  %x.splat = shufflevector <4 x i32> %x.splat.0, <4 x i32> poison, <4 x i32> zeroinitializer
+
+  %dv = call { <4 x i32>, <4 x i32> } @llvm.vector.deinterleave2(<8 x i32> %v)
+  %v0 = extractvalue { <4 x i32>, <4 x i32> } %dv, 0
+  %v1 = extractvalue { <4 x i32>, <4 x i32> } %dv, 1
+
+  %s0 = ashr <4 x i32> %v0, splat (i32 2)
+  %c0 = icmp slt <4 x i32> %s0, splat (i32 3)
+  %a0 = add <4 x i32> %s0, %x.splat
+  %r0 = select <4 x i1> %c0, <4 x i32> %v0, <4 x i32> %a0
+
+  %s1 = ashr <4 x i32> %v1, splat (i32 2)
+  %c1 = icmp slt <4 x i32> %s1, splat (i32 3)
+  %a1 = add <4 x i32> %s1, %x.splat
+  %r1 = select <4 x i1> %c1, <4 x i32> %v1, <4 x i32> %a1
+
+  %r = call <8 x i32> @llvm.vector.interleave2(<4 x i32> %r0, <4 x i32> %r1)
+
+  ; Out-of-tree use that'll prevent this transformation
+  %s = mul <4 x i32> %a0, splat (i32 5)
+  store <4 x i32> %s, ptr %out
+
+  ret <8 x i32> %r
+}
+
 define <8 x i32> @deinterleave4_only_2_extracts_used(<16 x i32> %a) {
 ; CHECK-LABEL: define <8 x i32> @deinterleave4_only_2_extracts_used(
 ; CHECK-SAME: <16 x i32> [[A:%.*]]) {

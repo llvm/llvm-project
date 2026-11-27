@@ -47,3 +47,29 @@ func.func @no_buffer_semantics_with_write_effect(%v0: vector<9x6xf32>) {
   vector.print %v0 : vector<9x6xf32>
   return
 }
+
+// -----
+
+// `omp.wsloop` and `vector.mask` only allow a single op in their regions, so
+// the ownership of the captured memref can't be materialized in them.
+
+// CHECK-LABEL: func @captured_in_single_op_regions(
+//  CHECK-SAME:     %[[mask:.*]]: vector<4xi1>, %[[v:.*]]: vector<4xf32>
+//       CHECK:   %[[true:.*]] = arith.constant true
+//  CHECK-NEXT:   %[[alloc:.*]] = memref.alloc() : memref<8xf32>
+//  CHECK-NEXT:   omp.wsloop {
+//  CHECK-NEXT:     omp.loop_nest (%[[i:.*]]) : index
+//  CHECK-NEXT:       vector.mask %[[mask]] { vector.transfer_write %[[v]], %[[alloc]][%[[i]]] {in_bounds = [true]} : vector<4xf32>, memref<8xf32> } : vector<4xi1>
+//  CHECK-NEXT:       omp.yield
+//       CHECK:   bufferization.dealloc (%[[alloc]] : memref<8xf32>) if (%[[true]])
+//  CHECK-NEXT:   return
+func.func @captured_in_single_op_regions(%mask: vector<4xi1>, %v: vector<4xf32>, %lb: index, %ub: index, %step: index) {
+  %alloc = memref.alloc() : memref<8xf32>
+  omp.wsloop {
+    omp.loop_nest (%i) : index = (%lb) to (%ub) step (%step) {
+      vector.mask %mask { vector.transfer_write %v, %alloc[%i] {in_bounds = [true]} : vector<4xf32>, memref<8xf32> } : vector<4xi1>
+      omp.yield
+    }
+  }
+  return
+}

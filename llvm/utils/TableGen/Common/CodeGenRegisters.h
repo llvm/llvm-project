@@ -455,7 +455,6 @@ public:
   std::string getIdName() const;
   std::string getQualifiedIdName() const;
   ArrayRef<ValueTypeByHwMode> getValueTypes() const { return VTs; }
-  unsigned getNumValueTypes() const { return VTs.size(); }
   bool hasType(const ValueTypeByHwMode &VT) const;
 
   const ValueTypeByHwMode &getValueTypeNum(unsigned VTNum) const {
@@ -781,9 +780,6 @@ class CodeGenRegBank {
 
   // Register categories.
   std::list<CodeGenRegisterCategory> RegCategories;
-  using RCatKeyMap =
-      std::map<CodeGenRegisterClass::Key, CodeGenRegisterCategory *>;
-  RCatKeyMap Key2RCat;
 
   // Remember each unique set of register units. Initially, this contains a
   // unique set for each register class. Simliar sets are coalesced with

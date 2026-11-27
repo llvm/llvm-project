@@ -392,7 +392,6 @@ define void @test_revv8i16v8i16(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-NEXT:    mov h2, v5.h[5]
 ; CHECK-NEXT:    str h0, [sp, #16]
 ; CHECK-NEXT:    mov h0, v5.h[6]
-; CHECK-NEXT:    str h3, [sp, #2]
 ; CHECK-NEXT:    str h1, [sp, #14]
 ; CHECK-NEXT:    mov h1, v5.h[7]
 ; CHECK-NEXT:    str h2, [sp, #12]
@@ -400,6 +399,7 @@ define void @test_revv8i16v8i16(ptr %a, ptr %b, ptr %c) #1 {
 ; CHECK-NEXT:    str h0, [sp, #10]
 ; CHECK-NEXT:    str h1, [sp, #8]
 ; CHECK-NEXT:    str h2, [sp, #4]
+; CHECK-NEXT:    str h3, [sp, #2]
 ; CHECK-NEXT:    ldr z0, [x8]
 ; CHECK-NEXT:    str z0, [x2]
 ; CHECK-NEXT:    mov sp, x29

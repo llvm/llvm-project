@@ -677,7 +677,7 @@ ReprocessLoop:
       // The block has now been cleared of all instructions except for
       // a comparison and a conditional branch. SimplifyCFG may be able
       // to fold it now.
-      if (!foldBranchToCommonDest(BI, /*DTU=*/nullptr, MSSAU))
+      if (!foldBranchToCommonDest(BI, /*DTU=*/nullptr, MSSAU, TTI, AC))
         continue;
 
       // Success. The block is now dead, so remove it from the loop,

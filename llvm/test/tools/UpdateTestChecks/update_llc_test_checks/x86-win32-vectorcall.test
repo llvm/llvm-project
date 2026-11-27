@@ -1,0 +1,6 @@
+
+# REQUIRES: x86-registered-target
+# RUN: cp -f %S/Inputs/x86-win32-vectorcall.ll %t.ll && %update_llc_test_checks %t.ll
+# RUN: grep -F 'CHECK-LABEL: test_int_1@@0:' %t.ll
+# RUN: grep -F 'CHECK-LABEL: test_int_2@@4:' %t.ll
+# RUN: llc -mtriple=i686-pc-win32 -mattr=+sse2 < %t.ll | FileCheck %t.ll

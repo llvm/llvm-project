@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fopenmp -emit-cir -fclangir %s -o - | FileCheck %s --check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-cir \
+// RUN:   -fclangir %s -o - | FileCheck %s --check-prefix=CIR
 
 void during(int);
 int getLB(void);

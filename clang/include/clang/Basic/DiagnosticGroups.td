@@ -724,7 +724,9 @@ def LifetimeSafetyCaptureByViolation
 Detects a parameter whose '[[clang::lifetime_capture_by]]' attributes name
 neither 'unknown' nor an entity that the function body captures the parameter
 by: the enclosing object (a store into a field of 'this', or a capture by 'this'
-in a call), or global storage. Captures by other parameters are not verified.
+in a call), global storage, or another reference parameter (a store into it, or
+a capture by it in a member call). Pointer parameters, stores into members of a
+reference parameter, and captures in calls to free functions are not verified.
   }];
 }
 
@@ -1171,7 +1173,8 @@ def GNUVariableSizedTypeNotAtEnd : DiagGroup<"gnu-variable-sized-type-not-at-end
 def Varargs : DiagGroup<"varargs">;
 def XorUsedAsPow : DiagGroup<"xor-used-as-pow">;
 
-def Unsequenced : DiagGroup<"unsequenced">;
+def UnsequencedVolatile : DiagGroup<"unsequenced-volatile">;
+def Unsequenced : DiagGroup<"unsequenced", [UnsequencedVolatile]>;
 // GCC name for -Wunsequenced
 def : DiagGroup<"sequence-point", [Unsequenced]>;
 

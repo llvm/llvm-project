@@ -1083,6 +1083,11 @@ SDValue LoongArchTargetLowering::lowerSIGN_EXTEND_VECTOR_INREG(
     SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
+
+  // Only whole 128-bit vectors of simple element types can be lowered this
+  // way; fall back to the default lowering for other sources.
+  if (!Src.getValueType().isSimple())
+    return SDValue();
   MVT SrcVT = Src.getSimpleValueType();
   MVT DstVT = Op.getSimpleValueType();
   unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
@@ -6342,14 +6347,19 @@ void LoongArchTargetLowering::ReplaceNodeResults(
 
     EVT DstVT = N->getValueType(0);
     SDValue Src = N->getOperand(0);
-    MVT SrcVT = Src.getSimpleValueType();
+
+    // The VSLTI + VILVL/VILVH expansion below only supports simple vector
+    // sources no wider than 128 bits. Fall back to the default legalization
+    // for anything else, e.g. when the mask of an i24 vector compare is
+    // sign-extended, the promoted <4 x i24> source is not a simple type.
+    EVT SrcEVT = Src.getValueType();
+    if (!SrcEVT.isSimple() || SrcEVT.getSizeInBits() > 128)
+      return;
+    MVT SrcVT = SrcEVT.getSimpleVT();
 
     unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
     unsigned DstEltBits = DstVT.getScalarSizeInBits();
     unsigned NumElts = DstVT.getVectorNumElements();
-
-    if (SrcVT.getSizeInBits() > 128)
-      return;
 
     if (!DstVT.isVector() || DstVT.getSizeInBits() <= 128)
       return;
@@ -7496,6 +7506,17 @@ Retry:
       (CN1 = dyn_cast<ConstantSDNode>(N1->getOperand(1))) &&
       (CN1->getSExtValue() & CN0->getSExtValue()) == 0) {
     LLVM_DEBUG(dbgs() << "Perform OR combine: match pattern 3\n");
+    // For complementary masks, insert the low bits without masking or shifting.
+    if (CN0->getSExtValue() == ~CN1->getSExtValue() &&
+        (isMask_64(CN0->getZExtValue()) || isMask_64(CN1->getZExtValue()))) {
+      bool Swap = isMask_64(CN0->getZExtValue());
+      unsigned Width = llvm::countr_one((Swap ? CN0 : CN1)->getZExtValue());
+      return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy,
+                         (Swap ? N1 : N0).getOperand(0),
+                         (Swap ? N0 : N1).getOperand(0),
+                         DAG.getConstant(Width - 1, DL, GRLenVT),
+                         DAG.getConstant(0, DL, GRLenVT));
+    }
     return DAG.getNode(LoongArchISD::BSTRINS, DL, ValTy, N0.getOperand(0),
                        DAG.getNode(ISD::SRL, DL, N1->getValueType(0), N1,
                                    DAG.getConstant(MaskIdx0, DL, GRLenVT)),
@@ -9964,7 +9985,8 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
         .addReg(Elt)
         .addImm(Idx);
 
-    BuildMI(*BB, MI, DL, TII->get(LoongArch::SUBREG_TO_REG), XDst)
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::INSERT_SUBREG), XDst)
+        .addReg(XSrc)
         .addReg(ScratchSubReg2)
         .addImm(LoongArch::sub_128);
   } else {
@@ -12994,4 +13016,11 @@ LoongArchTargetLowering::emitDynamicProbedAlloc(MachineInstr &MI,
   MI.eraseFromParent();
   MF.getInfo<LoongArchMachineFunctionInfo>()->setDynamicAllocation();
   return ExitMBB->begin()->getParent();
+}
+
+void LoongArchTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  // hasFPImpl depends on the max call frame size, so compute it before the
+  // reserved registers are frozen.
+  MF.getFrameInfo().computeMaxCallFrameSize(MF);
+  TargetLoweringBase::finalizeLowering(MF);
 }

@@ -5,7 +5,7 @@
 ! REQUIRES: fortran-modules
 
 ! RUN: %flang %isysroot -L"%libdir" %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t | FileCheck %s
+! RUN: %t | FileCheck %s
 
 program check_iso_env
   use iso_fortran_env, only: int8, int16, int32, int64, real32, real64

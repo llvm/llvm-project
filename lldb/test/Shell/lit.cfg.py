@@ -175,6 +175,9 @@ if config.objc_gnustep_dir:
 if config.have_dia_sdk:
     config.available_features.add("diasdk")
 
+if config.enable_backtrace:
+    config.available_features.add("backtrace")
+
 if platform.system() == "Windows":
     config.environment["LLDB_USE_LLDB_SERVER"] = (
         "1" if getattr(config, "lldb_use_lldb_server", False) else "0"

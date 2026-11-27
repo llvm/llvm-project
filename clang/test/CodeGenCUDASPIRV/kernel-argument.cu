@@ -16,6 +16,9 @@
 // RUN: llvm-dis %t.bc -o %t.ll
 // RUN: FileCheck %s --input-file=%t.ll
 
+// RUN: %if cir-enabled %{ %clang -emit-llvm -S --cuda-device-only --offload=spirv32 -fclangir -nocudalib -nocudainc %s -o - | FileCheck %s %}
+// RUN: %if cir-enabled %{ %clang -emit-llvm -S --cuda-device-only --offload=spirv64 -fclangir -nocudalib -nocudainc %s -o - | FileCheck %s %}
+
 // CHECK: define
 // CHECK-SAME: spir_kernel void @_Z6kernelPi(ptr addrspace(1) noundef
 

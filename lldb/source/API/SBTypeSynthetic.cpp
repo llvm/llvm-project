@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBTypeSynthetic.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBStream.h"
 
@@ -78,9 +79,9 @@ const char *SBTypeSynthetic::GetData() {
   if (!IsValid())
     return nullptr;
   if (IsClassCode())
-    return ConstString(m_opaque_sp->GetPythonCode()).GetCString();
+    return StringPool::GetSystemPool().Intern(m_opaque_sp->GetPythonCode());
 
-  return ConstString(m_opaque_sp->GetPythonClassName()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetPythonClassName());
 }
 
 void SBTypeSynthetic::SetClassName(const char *data) {
@@ -147,6 +148,8 @@ bool SBTypeSynthetic::IsEqualTo(lldb::SBTypeSynthetic &rhs) {
 
   if (!IsValid())
     return !rhs.IsValid();
+  if (!rhs.IsValid())
+    return false;
 
   if (m_opaque_sp->IsScripted() != rhs.m_opaque_sp->IsScripted())
     return false;
@@ -164,7 +167,7 @@ bool SBTypeSynthetic::operator!=(lldb::SBTypeSynthetic &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
-    return !rhs.IsValid();
+    return rhs.IsValid();
   return m_opaque_sp != rhs.m_opaque_sp;
 }
 
