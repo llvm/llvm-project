@@ -951,4 +951,102 @@ TEST_P(UncheckedExpectedAccessTest, EqualToUnexpectedUncheckedVoidValue) {
   )");
 }
 
+TEST_P(UncheckedExpectedAccessTest, Emplace) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      e.emplace(1);
+      e.value();
+      *e;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    struct Foo {
+      void foo() const {}
+    };
+
+    void target($ns::expected<Foo, int> e) {
+      e.emplace();
+      e->foo();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (!e)
+        e.emplace(0);
+      return *e;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> *p) {
+      p->emplace(1);
+      return **p;
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, EmplaceVoid) {
+  // `tl::expected<void, E>` has no `value()`.
+  if (GetParam().NamespaceName != "std")
+    GTEST_SKIP();
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<void, int> e) {
+      e.emplace();
+      e.value();
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, EmplaceUnchecked) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> e) {
+      e.emplace(1);
+      e.error(); // [[unsafe:error]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      a.emplace(1);
+      return *b; // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e, bool cond) {
+      if (cond)
+        e.emplace(1);
+      return *e; // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<void, int> e) {
+      e.emplace();
+      e.error(); // [[unsafe:error]]
+    }
+  )");
+}
+
 } // namespace clang::dataflow::test
