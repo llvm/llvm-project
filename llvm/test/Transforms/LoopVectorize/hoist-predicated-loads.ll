@@ -1162,9 +1162,9 @@ define void @hoist_loads_with_different_gep_flags(ptr noalias %src, ptr noalias 
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i64> [[VEC_IND]], zeroinitializer
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 -1)
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr nuw i32, ptr [[SRC]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr nuw i32, ptr [[SRC]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> poison, i32 [[TMP7]], i64 0
