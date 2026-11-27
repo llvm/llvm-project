@@ -7,7 +7,7 @@
 // This used to crash CodeGen in ConstantEmitter::tryEmitPrivate.
 
 template <typename> struct a {
-  static char const b{};
+  inline static char const b{};
   static decltype(&b) constexpr c{&b};
 };
 
