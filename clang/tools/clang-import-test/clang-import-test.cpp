@@ -28,7 +28,8 @@
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/ArgList.h"
+#include "llvm/Option/OptTable.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -39,40 +40,27 @@
 
 using namespace clang;
 
-static llvm::cl::opt<std::string> Expression(
-    "expression", llvm::cl::Required,
-    llvm::cl::desc("Path to a file containing the expression to parse"));
+namespace {
+using namespace llvm::opt;
+enum OptID {
+  OPT_INVALID = 0,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
+#include "Opts.inc"
+#undef OPTION
+};
 
-static llvm::cl::list<std::string>
-    Imports("import",
-            llvm::cl::desc("Path to a file containing declarations to import"));
+#define OPTTABLE_CODE
+#include "Opts.inc"
 
-static llvm::cl::opt<bool>
-    Direct("direct",
-           llvm::cl::desc("Use the parsed declarations without indirection"));
+class ImportTestOptTable : public OptTable {
+public:
+  ImportTestOptTable() : OptTable(optionTables()) {}
+};
+} // namespace
 
-static llvm::cl::opt<bool> UseOrigins(
-    "use-origins",
-    llvm::cl::desc(
-        "Use DeclContext origin information for more accurate lookups"));
-
-static llvm::cl::list<std::string>
-    ClangArgs("Xcc",
-              llvm::cl::desc("Argument to pass to the CompilerInvocation"),
-              llvm::cl::CommaSeparated);
-
-static llvm::cl::opt<std::string>
-    Input("x", llvm::cl::desc("The language to parse (default: c++)"),
-          llvm::cl::init("c++"));
-
-static llvm::cl::opt<bool> ObjCARC("objc-arc", llvm::cl::init(false),
-                                   llvm::cl::desc("Emable ObjC ARC"));
-
-static llvm::cl::opt<bool> DumpAST("dump-ast", llvm::cl::init(false),
-                                   llvm::cl::desc("Dump combined AST"));
-
-static llvm::cl::opt<bool> DumpIR("dump-ir", llvm::cl::init(false),
-                                  llvm::cl::desc("Dump IR from final parse"));
+static std::vector<std::string> ClangArgs;
+static std::string Input;
+static bool ObjCARC;
 
 namespace init_convenience {
 class TestDiagnosticConsumer : public DiagnosticConsumer {
@@ -362,7 +350,46 @@ void Forget(CIAndOrigins &CI, llvm::MutableArrayRef<CIAndOrigins> Imports) {
 int main(int argc, const char **argv) {
   const bool DisableCrashReporting = true;
   llvm::sys::PrintStackTraceOnErrorSignal(argv[0], DisableCrashReporting);
-  llvm::cl::ParseCommandLineOptions(argc, argv);
+
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver Saver(Alloc);
+  ImportTestOptTable Tbl;
+  llvm::opt::InputArgList Args =
+      Tbl.parseArgs(argc, const_cast<char **>(argv), OPT_UNKNOWN, Saver,
+                    [](llvm::StringRef Msg) {
+                      llvm::errs() << "error: " << Msg << "\n";
+                      exit(1);
+                    });
+  if (Args.hasArg(OPT_help)) {
+    Tbl.printHelp(llvm::outs(), "clang-import-test [options]",
+                  "ASTImporter/ExternalASTSource testbed");
+    return 0;
+  }
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_INPUT)) {
+    llvm::errs() << "error: unexpected positional argument '"
+                 << A->getAsString(Args) << "'\n";
+    return 1;
+  }
+  const llvm::opt::Arg *ExpressionArg = Args.getLastArg(OPT_expression);
+  if (!ExpressionArg) {
+    llvm::errs() << "error: -expression must be specified\n";
+    return 1;
+  }
+  std::string Expression = ExpressionArg->getValue();
+  std::vector<std::string> Imports = Args.getAllArgValues(OPT_import);
+  bool Direct = Args.hasArg(OPT_direct);
+  bool UseOrigins = Args.hasArg(OPT_use_origins);
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_Xcc)) {
+    llvm::SmallVector<llvm::StringRef> Parts;
+    llvm::StringRef(A->getValue()).split(Parts, ',');
+    for (llvm::StringRef Part : Parts)
+      ClangArgs.push_back(Part.str());
+  }
+  Input = Args.getLastArgValue(OPT_x, "c++").str();
+  ObjCARC = Args.hasArg(OPT_objc_arc);
+  bool DumpAST = Args.hasArg(OPT_dump_ast);
+  bool DumpIR = Args.hasArg(OPT_dump_ir);
+
   std::vector<CIAndOrigins> ImportCIs;
   for (auto I : Imports) {
     llvm::Expected<CIAndOrigins> ImportCI = Parse(I, {}, false, false);

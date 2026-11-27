@@ -2605,6 +2605,15 @@ cc_binary(
     ],
 )
 
+gentbl_cc_library(
+    name = "ClangImportTestOptsTableGen",
+    strip_include_prefix = "tools/clang-import-test",
+    tbl_outs = {"tools/clang-import-test/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/clang-import-test/Opts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_binary(
     name = "clang-import-test",
     testonly = True,
@@ -2613,6 +2622,7 @@ cc_binary(
     ]),
     stamp = 0,
     deps = [
+        ":ClangImportTestOptsTableGen",
         ":ast",
         ":basic",
         ":codegen",
@@ -2621,6 +2631,7 @@ cc_binary(
         ":lex",
         ":parse",
         "//llvm:Core",
+        "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],
