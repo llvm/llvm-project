@@ -51,43 +51,43 @@ define i96 @square_high(i96 %x) nounwind {
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    mull %edi
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    movl %edx, %ebx
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %edi
-; X86-NEXT:    addl %eax, %ecx
-; X86-NEXT:    movl %edx, %ebp
-; X86-NEXT:    adcl $0, %ebp
-; X86-NEXT:    addl %eax, %ecx
-; X86-NEXT:    adcl %edx, %ebp
-; X86-NEXT:    setb %al
-; X86-NEXT:    movzbl %al, %ecx
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    mull %ebx
-; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    addl %ebp, %ebx
+; X86-NEXT:    addl %eax, %ebx
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    adcl $0, %ecx
+; X86-NEXT:    addl %eax, %ebx
 ; X86-NEXT:    adcl %edx, %ecx
+; X86-NEXT:    setb %al
+; X86-NEXT:    movzbl %al, %ebp
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    mull %esi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    addl %ecx, %ebx
+; X86-NEXT:    adcl %edx, %ebp
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %edi
 ; X86-NEXT:    movl %edx, (%esp) ## 4-byte Spill
-; X86-NEXT:    movl %eax, %ebp
+; X86-NEXT:    movl %eax, %ecx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    movl %eax, %edi
 ; X86-NEXT:    addl (%esp), %edi ## 4-byte Folded Reload
 ; X86-NEXT:    adcl $0, %esi
-; X86-NEXT:    addl %ebp, %ebx
-; X86-NEXT:    adcl %edi, %ecx
+; X86-NEXT:    addl %ecx, %ebx
+; X86-NEXT:    adcl %edi, %ebp
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    adcl $0, %eax
 ; X86-NEXT:    setb %dl
-; X86-NEXT:    addl %ebp, %ebx
-; X86-NEXT:    adcl %ecx, %edi
+; X86-NEXT:    addl %ecx, %ebx
+; X86-NEXT:    adcl %ebp, %edi
 ; X86-NEXT:    movzbl %dl, %ecx
 ; X86-NEXT:    adcl %eax, %esi
 ; X86-NEXT:    adcl $0, %ecx

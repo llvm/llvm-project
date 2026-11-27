@@ -243,14 +243,14 @@ define <64 x i8> @vec_v64i8(<64 x i8> %x, <64 x i8> %y) nounwind {
 ; X64-AVX512F:       # %bb.0:
 ; X64-AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm7
 ; X64-AVX512F-NEXT:    vpsllw $4, %ymm7, %ymm2
-; X64-AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; X64-AVX512F-NEXT:    vpand %ymm4, %ymm2, %ymm2
-; X64-AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm3
-; X64-AVX512F-NEXT:    vpsllw $5, %ymm3, %ymm3
-; X64-AVX512F-NEXT:    vpblendvb %ymm3, %ymm2, %ymm7, %ymm2
+; X64-AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; X64-AVX512F-NEXT:    vpand %ymm3, %ymm2, %ymm2
+; X64-AVX512F-NEXT:    vextracti64x4 $1, %zmm1, %ymm4
+; X64-AVX512F-NEXT:    vpsllw $5, %ymm4, %ymm4
+; X64-AVX512F-NEXT:    vpblendvb %ymm4, %ymm2, %ymm7, %ymm2
 ; X64-AVX512F-NEXT:    vpaddb %ymm2, %ymm2, %ymm5
 ; X64-AVX512F-NEXT:    vpaddb %ymm5, %ymm5, %ymm5
-; X64-AVX512F-NEXT:    vpaddb %ymm3, %ymm3, %ymm6
+; X64-AVX512F-NEXT:    vpaddb %ymm4, %ymm4, %ymm6
 ; X64-AVX512F-NEXT:    vpblendvb %ymm6, %ymm5, %ymm2, %ymm2
 ; X64-AVX512F-NEXT:    vpaddb %ymm2, %ymm2, %ymm5
 ; X64-AVX512F-NEXT:    vpaddb %ymm6, %ymm6, %ymm8
@@ -258,62 +258,62 @@ define <64 x i8> @vec_v64i8(<64 x i8> %x, <64 x i8> %y) nounwind {
 ; X64-AVX512F-NEXT:    vpsrlw $4, %ymm2, %ymm9
 ; X64-AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm5 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
 ; X64-AVX512F-NEXT:    vpand %ymm5, %ymm9, %ymm9
-; X64-AVX512F-NEXT:    vpblendvb %ymm3, %ymm9, %ymm2, %ymm9
+; X64-AVX512F-NEXT:    vpblendvb %ymm4, %ymm9, %ymm2, %ymm9
 ; X64-AVX512F-NEXT:    vpsrlw $2, %ymm9, %ymm10
-; X64-AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm3 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
-; X64-AVX512F-NEXT:    vpand %ymm3, %ymm10, %ymm10
+; X64-AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm4 = [63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63,63]
+; X64-AVX512F-NEXT:    vpand %ymm4, %ymm10, %ymm10
 ; X64-AVX512F-NEXT:    vpblendvb %ymm6, %ymm10, %ymm9, %ymm9
 ; X64-AVX512F-NEXT:    vpsrlw $1, %ymm9, %ymm10
 ; X64-AVX512F-NEXT:    vpbroadcastd {{.*#+}} ymm6 = [127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127,127]
 ; X64-AVX512F-NEXT:    vpand %ymm6, %ymm10, %ymm10
 ; X64-AVX512F-NEXT:    vpblendvb %ymm8, %ymm10, %ymm9, %ymm8
-; X64-AVX512F-NEXT:    vpcmpeqb %ymm7, %ymm8, %ymm8
-; X64-AVX512F-NEXT:    vpternlogq {{.*#+}} zmm8 = ~zmm8
-; X64-AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm7 = xmm8[0],zero,zero,zero,xmm8[1],zero,zero,zero,xmm8[2],zero,zero,zero,xmm8[3],zero,zero,zero,xmm8[4],zero,zero,zero,xmm8[5],zero,zero,zero,xmm8[6],zero,zero,zero,xmm8[7],zero,zero,zero,xmm8[8],zero,zero,zero,xmm8[9],zero,zero,zero,xmm8[10],zero,zero,zero,xmm8[11],zero,zero,zero,xmm8[12],zero,zero,zero,xmm8[13],zero,zero,zero,xmm8[14],zero,zero,zero,xmm8[15],zero,zero,zero
+; X64-AVX512F-NEXT:    vpcmpeqb %ymm7, %ymm8, %ymm7
+; X64-AVX512F-NEXT:    vpternlogq {{.*#+}} zmm7 = ~zmm7
+; X64-AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm8 = xmm7[0],zero,zero,zero,xmm7[1],zero,zero,zero,xmm7[2],zero,zero,zero,xmm7[3],zero,zero,zero,xmm7[4],zero,zero,zero,xmm7[5],zero,zero,zero,xmm7[6],zero,zero,zero,xmm7[7],zero,zero,zero,xmm7[8],zero,zero,zero,xmm7[9],zero,zero,zero,xmm7[10],zero,zero,zero,xmm7[11],zero,zero,zero,xmm7[12],zero,zero,zero,xmm7[13],zero,zero,zero,xmm7[14],zero,zero,zero,xmm7[15],zero,zero,zero
 ; X64-AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm9 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; X64-AVX512F-NEXT:    vptestmd %zmm9, %zmm8, %k1
+; X64-AVX512F-NEXT:    vpternlogd {{.*#+}} zmm8 {%k1} {z} = -1
+; X64-AVX512F-NEXT:    vpmovdb %zmm8, %xmm8
+; X64-AVX512F-NEXT:    vextracti128 $1, %ymm7, %xmm7
+; X64-AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm7 = xmm7[0],zero,zero,zero,xmm7[1],zero,zero,zero,xmm7[2],zero,zero,zero,xmm7[3],zero,zero,zero,xmm7[4],zero,zero,zero,xmm7[5],zero,zero,zero,xmm7[6],zero,zero,zero,xmm7[7],zero,zero,zero,xmm7[8],zero,zero,zero,xmm7[9],zero,zero,zero,xmm7[10],zero,zero,zero,xmm7[11],zero,zero,zero,xmm7[12],zero,zero,zero,xmm7[13],zero,zero,zero,xmm7[14],zero,zero,zero,xmm7[15],zero,zero,zero
+; X64-AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm10
+; X64-AVX512F-NEXT:    vpand %ymm3, %ymm10, %ymm3
+; X64-AVX512F-NEXT:    vpsllw $5, %ymm1, %ymm1
+; X64-AVX512F-NEXT:    vpblendvb %ymm1, %ymm3, %ymm0, %ymm3
 ; X64-AVX512F-NEXT:    vptestmd %zmm9, %zmm7, %k1
+; X64-AVX512F-NEXT:    vpaddb %ymm3, %ymm3, %ymm7
+; X64-AVX512F-NEXT:    vpaddb %ymm7, %ymm7, %ymm7
+; X64-AVX512F-NEXT:    vpaddb %ymm1, %ymm1, %ymm10
+; X64-AVX512F-NEXT:    vpblendvb %ymm10, %ymm7, %ymm3, %ymm3
+; X64-AVX512F-NEXT:    vpaddb %ymm3, %ymm3, %ymm7
+; X64-AVX512F-NEXT:    vpaddb %ymm10, %ymm10, %ymm11
+; X64-AVX512F-NEXT:    vpblendvb %ymm11, %ymm7, %ymm3, %ymm3
+; X64-AVX512F-NEXT:    vpsrlw $4, %ymm3, %ymm7
+; X64-AVX512F-NEXT:    vpand %ymm5, %ymm7, %ymm5
 ; X64-AVX512F-NEXT:    vpternlogd {{.*#+}} zmm7 {%k1} {z} = -1
 ; X64-AVX512F-NEXT:    vpmovdb %zmm7, %xmm7
-; X64-AVX512F-NEXT:    vextracti128 $1, %ymm8, %xmm8
-; X64-AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm8 = xmm8[0],zero,zero,zero,xmm8[1],zero,zero,zero,xmm8[2],zero,zero,zero,xmm8[3],zero,zero,zero,xmm8[4],zero,zero,zero,xmm8[5],zero,zero,zero,xmm8[6],zero,zero,zero,xmm8[7],zero,zero,zero,xmm8[8],zero,zero,zero,xmm8[9],zero,zero,zero,xmm8[10],zero,zero,zero,xmm8[11],zero,zero,zero,xmm8[12],zero,zero,zero,xmm8[13],zero,zero,zero,xmm8[14],zero,zero,zero,xmm8[15],zero,zero,zero
-; X64-AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm10
-; X64-AVX512F-NEXT:    vpand %ymm4, %ymm10, %ymm4
-; X64-AVX512F-NEXT:    vpsllw $5, %ymm1, %ymm10
-; X64-AVX512F-NEXT:    vpblendvb %ymm10, %ymm4, %ymm0, %ymm1
-; X64-AVX512F-NEXT:    vptestmd %zmm9, %zmm8, %k1
-; X64-AVX512F-NEXT:    vpaddb %ymm1, %ymm1, %ymm4
-; X64-AVX512F-NEXT:    vpaddb %ymm4, %ymm4, %ymm4
-; X64-AVX512F-NEXT:    vpaddb %ymm10, %ymm10, %ymm8
-; X64-AVX512F-NEXT:    vpblendvb %ymm8, %ymm4, %ymm1, %ymm1
-; X64-AVX512F-NEXT:    vpaddb %ymm1, %ymm1, %ymm4
-; X64-AVX512F-NEXT:    vpaddb %ymm8, %ymm8, %ymm11
-; X64-AVX512F-NEXT:    vpblendvb %ymm11, %ymm4, %ymm1, %ymm1
-; X64-AVX512F-NEXT:    vpsrlw $4, %ymm1, %ymm4
-; X64-AVX512F-NEXT:    vpand %ymm5, %ymm4, %ymm4
-; X64-AVX512F-NEXT:    vpternlogd {{.*#+}} zmm5 {%k1} {z} = -1
-; X64-AVX512F-NEXT:    vpmovdb %zmm5, %xmm5
-; X64-AVX512F-NEXT:    vpblendvb %ymm10, %ymm4, %ymm1, %ymm4
-; X64-AVX512F-NEXT:    vpsrlw $2, %ymm4, %ymm10
-; X64-AVX512F-NEXT:    vpand %ymm3, %ymm10, %ymm3
-; X64-AVX512F-NEXT:    vpblendvb %ymm8, %ymm3, %ymm4, %ymm3
-; X64-AVX512F-NEXT:    vpsrlw $1, %ymm3, %ymm4
+; X64-AVX512F-NEXT:    vpblendvb %ymm1, %ymm5, %ymm3, %ymm1
+; X64-AVX512F-NEXT:    vpsrlw $2, %ymm1, %ymm5
+; X64-AVX512F-NEXT:    vpand %ymm4, %ymm5, %ymm4
+; X64-AVX512F-NEXT:    vpblendvb %ymm10, %ymm4, %ymm1, %ymm1
+; X64-AVX512F-NEXT:    vpsrlw $1, %ymm1, %ymm4
 ; X64-AVX512F-NEXT:    vpand %ymm6, %ymm4, %ymm4
-; X64-AVX512F-NEXT:    vpblendvb %ymm11, %ymm4, %ymm3, %ymm3
-; X64-AVX512F-NEXT:    vinserti128 $1, %xmm5, %ymm7, %ymm4
-; X64-AVX512F-NEXT:    vpcmpeqb %ymm3, %ymm0, %ymm0
+; X64-AVX512F-NEXT:    vpblendvb %ymm11, %ymm4, %ymm1, %ymm1
+; X64-AVX512F-NEXT:    vinserti128 $1, %xmm7, %ymm8, %ymm4
+; X64-AVX512F-NEXT:    vpcmpeqb %ymm1, %ymm0, %ymm0
 ; X64-AVX512F-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
-; X64-AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm3 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; X64-AVX512F-NEXT:    vptestmd %zmm9, %zmm3, %k1
-; X64-AVX512F-NEXT:    vpternlogd {{.*#+}} zmm3 {%k1} {z} = -1
-; X64-AVX512F-NEXT:    vpmovdb %zmm3, %xmm3
+; X64-AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; X64-AVX512F-NEXT:    vptestmd %zmm9, %zmm1, %k1
+; X64-AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 {%k1} {z} = -1
+; X64-AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
 ; X64-AVX512F-NEXT:    vextracti128 $1, %ymm0, %xmm0
 ; X64-AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; X64-AVX512F-NEXT:    vptestmd %zmm9, %zmm0, %k1
 ; X64-AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; X64-AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
-; X64-AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm3, %ymm0
+; X64-AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; X64-AVX512F-NEXT:    vinserti64x4 $1, %ymm4, %zmm0, %zmm0
-; X64-AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
+; X64-AVX512F-NEXT:    vinserti64x4 $1, %ymm2, %zmm3, %zmm1
 ; X64-AVX512F-NEXT:    vporq %zmm1, %zmm0, %zmm0
 ; X64-AVX512F-NEXT:    retq
   %tmp = call <64 x i8> @llvm.ushl.sat.v64i8(<64 x i8> %x, <64 x i8> %y)

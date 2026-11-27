@@ -28,8 +28,8 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    movl %r9d, %ebx
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-NEXT:    movabsq $87960930222080, %r15 # imm = 0x500000000000
-; CHECK-NEXT:    movl 0, %r11d
+; CHECK-NEXT:    movabsq $87960930222080, %r9 # imm = 0x500000000000
+; CHECK-NEXT:    movl 0, %r15d
 ; CHECK-NEXT:    movl %esi, %r12d
 ; CHECK-NEXT:    # implicit-def: $r13d
 ; CHECK-NEXT:    testb $1, %bl
@@ -40,7 +40,7 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    andl $1, %r13d
 ; CHECK-NEXT:    movzbl 544(%r13), %r8d
 ; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    movl %r15d, %r9d
+; CHECK-NEXT:    # kill: def $r9d killed $r9d killed $r9 def $r9
 ; CHECK-NEXT:    andl $1, %r9d
 ; CHECK-NEXT:    movl %r14d, %r10d
 ; CHECK-NEXT:    andl $1, %r10d
@@ -53,8 +53,7 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    cmoveq %r9, %rax
 ; CHECK-NEXT:    orl %r8d, %edx
-; CHECK-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movq %r11, %rcx
+; CHECK-NEXT:    movq %r15, %rcx
 ; CHECK-NEXT:    orq $1, %rcx
 ; CHECK-NEXT:    orl %esi, %r10d
 ; CHECK-NEXT:    movl $1, %r8d
@@ -68,7 +67,7 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    leaq (%rax,%rdx), %rsi
 ; CHECK-NEXT:    addq $1248, %rsi # imm = 0x4E0
 ; CHECK-NEXT:    movq %rcx, 0
-; CHECK-NEXT:    movq %rdi, %r15
+; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movl %r8d, (%rdi)
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %edi, %edi
@@ -83,19 +82,19 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    je .LBB0_5
 ; CHECK-NEXT:  .LBB0_6: # %bb19
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    movq %r15, %rdi
-; CHECK-NEXT:    movabsq $87960930222080, %r15 # imm = 0x500000000000
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r11 # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; CHECK-NEXT:    movabsq $87960930222080, %r9 # imm = 0x500000000000
 ; CHECK-NEXT:    jne .LBB0_8
 ; CHECK-NEXT:  .LBB0_7: # %if.end69
-; CHECK-NEXT:    movl %r11d, 0
+; CHECK-NEXT:    movl %r15d, 0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    movq %r9, %rbx
 ; CHECK-NEXT:    callq *%rax
-; CHECK-NEXT:    xorq %r15, %r12
+; CHECK-NEXT:    xorq %rbx, %r12
 ; CHECK-NEXT:    movslq %r13d, %rax
 ; CHECK-NEXT:    movzbl (%r12), %ecx
 ; CHECK-NEXT:    movb %cl, 544(%rax)

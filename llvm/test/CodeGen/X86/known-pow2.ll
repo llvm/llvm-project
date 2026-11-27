@@ -1237,34 +1237,34 @@ define i32 @pow2_bitreverse_vec(<4 x i32> %a0, i32 %a1, ptr %p2) {
 ; CHECK-NEXT:    movdqa %xmm2, %xmm0
 ; CHECK-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8],xmm1[8],xmm0[9],xmm1[9],xmm0[10],xmm1[10],xmm0[11],xmm1[11],xmm0[12],xmm1[12],xmm0[13],xmm1[13],xmm0[14],xmm1[14],xmm0[15],xmm1[15]
 ; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[3,2,1,0,4,5,6,7]
-; CHECK-NEXT:    pshufhw {{.*#+}} xmm3 = xmm0[0,1,2,3,7,6,5,4]
-; CHECK-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
-; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm2[3,2,1,0,4,5,6,7]
 ; CHECK-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,6,5,4]
-; CHECK-NEXT:    packuswb %xmm3, %xmm0
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlw $4, %xmm1
+; CHECK-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm1 = xmm2[3,2,1,0,4,5,6,7]
+; CHECK-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,7,6,5,4]
+; CHECK-NEXT:    packuswb %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrlw $4, %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [15,15,15,15,15,15,15,15,15,15,15,15,15,15,15,15]
-; CHECK-NEXT:    pand %xmm2, %xmm1
 ; CHECK-NEXT:    pand %xmm2, %xmm0
-; CHECK-NEXT:    psllw $4, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlw $2, %xmm1
+; CHECK-NEXT:    pand %xmm2, %xmm1
+; CHECK-NEXT:    psllw $4, %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrlw $2, %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [51,51,51,51,51,51,51,51,51,51,51,51,51,51,51,51]
-; CHECK-NEXT:    pand %xmm2, %xmm1
 ; CHECK-NEXT:    pand %xmm2, %xmm0
-; CHECK-NEXT:    psllw $2, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-NEXT:    psrlw $1, %xmm1
+; CHECK-NEXT:    pand %xmm2, %xmm1
+; CHECK-NEXT:    psllw $2, %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    psrlw $1, %xmm0
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm2 = [85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85]
-; CHECK-NEXT:    pand %xmm2, %xmm1
 ; CHECK-NEXT:    pand %xmm2, %xmm0
-; CHECK-NEXT:    paddb %xmm0, %xmm0
-; CHECK-NEXT:    por %xmm1, %xmm0
-; CHECK-NEXT:    movdqa %xmm0, (%rsi)
-; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    pand %xmm2, %xmm1
+; CHECK-NEXT:    paddb %xmm1, %xmm1
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, (%rsi)
+; CHECK-NEXT:    movd %xmm1, %eax
 ; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    retq

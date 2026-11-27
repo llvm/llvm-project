@@ -185,6 +185,10 @@ public:
   getRegClassToMinimizeDomainCrossings() const override {
     return &X86::VR128XRegClass;
   }
+
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
+  }
 };
 
 } // End llvm namespace

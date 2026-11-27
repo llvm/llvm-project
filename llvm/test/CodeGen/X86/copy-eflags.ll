@@ -297,22 +297,22 @@ define dso_local void @PR37431(ptr %arg1, ptr %arg2, ptr %arg3, i32 %arg4, i64 %
 ; X32-NEXT:    pushl %ebx
 ; X32-NEXT:    pushl %edi
 ; X32-NEXT:    pushl %esi
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X32-NEXT:    movl (%edi), %edi
-; X32-NEXT:    movl %edi, %ebp
-; X32-NEXT:    sarl $31, %ebp
-; X32-NEXT:    xorl %ebx, %ebx
+; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    sarl $31, %ebx
+; X32-NEXT:    xorl %ecx, %ecx
 ; X32-NEXT:    cmpl %edi, {{[0-9]+}}(%esp)
-; X32-NEXT:    sbbl %ebp, %esi
-; X32-NEXT:    sbbl %ebx, %ebx
-; X32-NEXT:    movb %bl, (%edx)
+; X32-NEXT:    sbbl %ebx, %esi
+; X32-NEXT:    sbbl %ecx, %ecx
+; X32-NEXT:    movb %cl, (%edx)
 ; X32-NEXT:    cltd
-; X32-NEXT:    idivl %ebx
-; X32-NEXT:    movb %dl, (%ecx)
+; X32-NEXT:    idivl %ecx
+; X32-NEXT:    movb %dl, (%ebp)
 ; X32-NEXT:    popl %esi
 ; X32-NEXT:    popl %edi
 ; X32-NEXT:    popl %ebx

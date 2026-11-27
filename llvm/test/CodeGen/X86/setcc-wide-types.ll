@@ -1184,31 +1184,31 @@ define i1 @eq_i512_op(i512 %a, i512 %b) {
 ;
 ; AVX-LABEL: eq_i512_op:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rax
+; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX-NEXT:    addq $1, %rdi
 ; AVX-NEXT:    adcq $0, %rsi
 ; AVX-NEXT:    adcq $0, %rdx
 ; AVX-NEXT:    adcq $0, %rcx
 ; AVX-NEXT:    adcq $0, %r8
 ; AVX-NEXT:    adcq $0, %r9
-; AVX-NEXT:    adcq $0, %r10
 ; AVX-NEXT:    adcq $0, %rax
+; AVX-NEXT:    adcq $0, %r10
 ; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
 ; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
 ; AVX-NEXT:    orq %rsi, %r9
 ; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
-; AVX-NEXT:    orq %rcx, %rax
-; AVX-NEXT:    orq %r9, %rax
-; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
 ; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
-; AVX-NEXT:    orq %rdx, %r10
+; AVX-NEXT:    orq %rcx, %r10
+; AVX-NEXT:    orq %r9, %r10
+; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
+; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; AVX-NEXT:    orq %rdx, %rax
 ; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
 ; AVX-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
 ; AVX-NEXT:    orq %r8, %rdi
-; AVX-NEXT:    orq %r10, %rdi
 ; AVX-NEXT:    orq %rax, %rdi
+; AVX-NEXT:    orq %r10, %rdi
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
   %a2 = add i512 %a, 1

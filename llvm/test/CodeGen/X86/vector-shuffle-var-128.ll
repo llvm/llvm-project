@@ -28,33 +28,13 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) nounwind {
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    andl $15, %eax
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
-; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    andl $15, %eax
-; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    andl $15, %eax
-; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
-; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    andl $15, %eax
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE2-NEXT:    movd %eax, %xmm2
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3],xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    andl $15, %eax
-; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
-; SSE2-NEXT:    movd %eax, %xmm3
-; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    andl $15, %eax
-; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
-; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3],xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    andl $15, %eax
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
@@ -64,6 +44,17 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) nounwind {
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE2-NEXT:    movd %eax, %xmm3
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3],xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    andl $15, %eax
+; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    andl $15, %eax
+; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
+; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    andl $15, %eax
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
@@ -73,7 +64,6 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) nounwind {
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE2-NEXT:    movd %eax, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    andl $15, %eax
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
@@ -83,6 +73,16 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) nounwind {
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE2-NEXT:    movd %eax, %xmm3
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3],xmm3[4],xmm0[4],xmm3[5],xmm0[5],xmm3[6],xmm0[6],xmm3[7],xmm0[7]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    andl $15, %eax
+; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
+; SSE2-NEXT:    movd %eax, %xmm0
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    andl $15, %eax
+; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
+; SSE2-NEXT:    movd %eax, %xmm2
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
 ; SSE2-NEXT:    andl $15, %eax
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
@@ -92,8 +92,8 @@ define <16 x i8> @shuffle_v16i8(<16 x i8> %v, <16 x i8> %mask) nounwind {
 ; SSE2-NEXT:    movzbl -24(%rsp,%rax), %eax
 ; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[1],xmm4[1],xmm0[2],xmm4[2],xmm0[3],xmm4[3],xmm0[4],xmm4[4],xmm0[5],xmm4[5],xmm0[6],xmm4[6],xmm0[7],xmm4[7]
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1]
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
@@ -437,26 +437,26 @@ define <8 x half> @shuffle_v8f16(<8 x half> %v, <8 x i16> %mask) nounwind {
 ; SSE2-NEXT:    andl $7, %r10d
 ; SSE2-NEXT:    pinsrw $0, -24(%rsp,%r10,2), %xmm0
 ; SSE2-NEXT:    andl $7, %r9d
-; SSE2-NEXT:    pinsrw $0, -24(%rsp,%r9,2), %xmm2
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    pinsrw $0, -24(%rsp,%r9,2), %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; SSE2-NEXT:    andl $7, %r8d
 ; SSE2-NEXT:    pinsrw $0, -24(%rsp,%r8,2), %xmm0
 ; SSE2-NEXT:    andl $7, %edi
-; SSE2-NEXT:    pinsrw $0, -24(%rsp,%rdi,2), %xmm1
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE2-NEXT:    pinsrw $0, -24(%rsp,%rdi,2), %xmm2
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; SSE2-NEXT:    andl $7, %esi
 ; SSE2-NEXT:    pinsrw $0, -24(%rsp,%rsi,2), %xmm0
 ; SSE2-NEXT:    andl $7, %edx
-; SSE2-NEXT:    pinsrw $0, -24(%rsp,%rdx,2), %xmm2
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3]
+; SSE2-NEXT:    pinsrw $0, -24(%rsp,%rdx,2), %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; SSE2-NEXT:    andl $7, %ecx
 ; SSE2-NEXT:    pinsrw $0, -24(%rsp,%rcx,2), %xmm3
 ; SSE2-NEXT:    andl $7, %eax
 ; SSE2-NEXT:    pinsrw $0, -24(%rsp,%rax,2), %xmm0
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v8f16:
@@ -506,8 +506,8 @@ define <8 x bfloat> @shuffle_v8bf16(<8 x bfloat> %v, <8 x i16> %mask) nounwind {
 ; SSE-NEXT:    pextrw $7, %xmm1, %eax
 ; SSE-NEXT:    pextrw $6, %xmm1, %ecx
 ; SSE-NEXT:    pextrw $5, %xmm1, %edx
-; SSE-NEXT:    pextrw $4, %xmm1, %edi
-; SSE-NEXT:    pextrw $3, %xmm1, %esi
+; SSE-NEXT:    pextrw $4, %xmm1, %esi
+; SSE-NEXT:    pextrw $3, %xmm1, %edi
 ; SSE-NEXT:    pextrw $2, %xmm1, %r8d
 ; SSE-NEXT:    pextrw $1, %xmm1, %r9d
 ; SSE-NEXT:    pextrw $0, %xmm1, %r10d
@@ -520,18 +520,18 @@ define <8 x bfloat> @shuffle_v8bf16(<8 x bfloat> %v, <8 x i16> %mask) nounwind {
 ; SSE-NEXT:    orl %r10d, %r9d
 ; SSE-NEXT:    andl $7, %r8d
 ; SSE-NEXT:    movzwl -24(%rsp,%r8,2), %r8d
-; SSE-NEXT:    andl $7, %esi
-; SSE-NEXT:    movzwl -24(%rsp,%rsi,2), %esi
-; SSE-NEXT:    shll $16, %esi
-; SSE-NEXT:    orl %r8d, %esi
-; SSE-NEXT:    shlq $32, %rsi
-; SSE-NEXT:    orq %r9, %rsi
 ; SSE-NEXT:    andl $7, %edi
 ; SSE-NEXT:    movzwl -24(%rsp,%rdi,2), %edi
+; SSE-NEXT:    shll $16, %edi
+; SSE-NEXT:    orl %r8d, %edi
+; SSE-NEXT:    shlq $32, %rdi
+; SSE-NEXT:    orq %r9, %rdi
+; SSE-NEXT:    andl $7, %esi
+; SSE-NEXT:    movzwl -24(%rsp,%rsi,2), %esi
 ; SSE-NEXT:    andl $7, %edx
 ; SSE-NEXT:    movzwl -24(%rsp,%rdx,2), %edx
 ; SSE-NEXT:    shll $16, %edx
-; SSE-NEXT:    orl %edi, %edx
+; SSE-NEXT:    orl %esi, %edx
 ; SSE-NEXT:    andl $7, %ecx
 ; SSE-NEXT:    movzwl -24(%rsp,%rcx,2), %ecx
 ; SSE-NEXT:    andl $7, %eax
@@ -541,7 +541,7 @@ define <8 x bfloat> @shuffle_v8bf16(<8 x bfloat> %v, <8 x i16> %mask) nounwind {
 ; SSE-NEXT:    shlq $32, %rax
 ; SSE-NEXT:    orq %rdx, %rax
 ; SSE-NEXT:    movq %rax, %xmm1
-; SSE-NEXT:    movq %rsi, %xmm0
+; SSE-NEXT:    movq %rdi, %xmm0
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    retq
 ;

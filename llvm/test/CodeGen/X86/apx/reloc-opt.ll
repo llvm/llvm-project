@@ -62,12 +62,11 @@ afterloop.41:                                     ; preds = %ifmerge.2
 
 declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg)
 
-; TODO: update after R_X86_64_CODE_6_GOTPCRELX is supported.
 ; CHECK-LABEL: test_regclass_not_updated_by_regalloc_2
-; APXREL: {nf} addq (%rip), %r11, %rcx
-; APXREL-NEXT: R_X86_64_GOTPCREL gvar2-0x4
+; APXREL: addq (%rip), %r10
+; APXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar2-0x4
 ; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar2-0x4
-; NOAPXREL: addq    (%rip), %r11
+; NOAPXREL: addq    (%rip), %r10
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar2-0x4
 
 @gvar2 = external constant [8 x [8 x i32]]
@@ -264,4 +263,24 @@ loop.1500:                                        ; preds = %loop.254
   %16 = fpext float %gepload444 to double
   store double %16, ptr null, align 8
   br label %loop.253
+}
+
+; The test is to check the relocation type of an NF instruction with relocation.
+; The source of the NDD add stays live after it, so the add keeps its NDD form
+; and becomes NF instead of being compressed to the legacy ADD64rm.
+; TODO: update after R_X86_64_CODE_6_GOTPCRELX is supported.
+; CHECK-LABEL: test_nf_ndd_with_reloc
+; APXREL: {nf} addq (%rip), %{{r[a-z0-9]+}}, %{{r[a-z0-9]+}}
+; APXREL-NEXT: R_X86_64_GOTPCREL gvar11-0x4
+; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar11-0x4
+; NOAPXREL: movq (%rip), %{{r[a-z0-9]+}}
+; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar11-0x4
+
+@gvar11 = external global [20000 x i8]
+
+define i64 @test_nf_ndd_with_reloc(i64 %off, ptr %p) {
+entry:
+  %a = getelementptr i8, ptr @gvar11, i64 %off
+  store ptr %a, ptr %p, align 8
+  ret i64 %off
 }

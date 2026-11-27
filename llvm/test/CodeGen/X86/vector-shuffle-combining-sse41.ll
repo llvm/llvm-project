@@ -78,36 +78,36 @@ define <4 x float> @freeze_insertps(<4 x float> %a0, <4 x float> %a1) {
 define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-LABEL: PR50049:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa (%rdi), %xmm2
-; SSE-NEXT:    movdqa 16(%rdi), %xmm3
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    movdqa 16(%rdi), %xmm2
 ; SSE-NEXT:    movdqa 32(%rdi), %xmm0
-; SSE-NEXT:    movdqa (%rsi), %xmm4
-; SSE-NEXT:    movdqa 16(%rsi), %xmm5
-; SSE-NEXT:    movdqa 32(%rsi), %xmm1
+; SSE-NEXT:    movdqa (%rsi), %xmm3
+; SSE-NEXT:    movdqa 16(%rsi), %xmm4
+; SSE-NEXT:    movdqa 32(%rsi), %xmm5
 ; SSE-NEXT:    movdqa {{.*#+}} xmm6 = [128,128,128,128,128,128,2,5,8,11,14,u,u,u,u,u]
-; SSE-NEXT:    pshufb %xmm6, %xmm3
+; SSE-NEXT:    pshufb %xmm6, %xmm2
 ; SSE-NEXT:    movdqa {{.*#+}} xmm7 = [0,3,6,9,12,15,128,128,128,128,128,u,u,u,u,u]
-; SSE-NEXT:    pshufb %xmm7, %xmm2
-; SSE-NEXT:    por %xmm3, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [0,1,2,3,4,5,6,7,8,9,10,128,128,128,128,128]
-; SSE-NEXT:    pshufb %xmm3, %xmm2
+; SSE-NEXT:    pshufb %xmm7, %xmm1
+; SSE-NEXT:    por %xmm2, %xmm1
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [0,1,2,3,4,5,6,7,8,9,10,128,128,128,128,128]
+; SSE-NEXT:    pshufb %xmm2, %xmm1
 ; SSE-NEXT:    movdqa {{.*#+}} xmm8 = [128,128,128,128,128,128,128,128,128,128,128,1,4,7,10,13]
 ; SSE-NEXT:    pshufb %xmm8, %xmm0
-; SSE-NEXT:    por %xmm2, %xmm0
-; SSE-NEXT:    pshufb %xmm6, %xmm5
-; SSE-NEXT:    pshufb %xmm7, %xmm4
-; SSE-NEXT:    por %xmm5, %xmm4
-; SSE-NEXT:    pshufb %xmm3, %xmm4
-; SSE-NEXT:    pshufb %xmm8, %xmm1
-; SSE-NEXT:    por %xmm4, %xmm1
-; SSE-NEXT:    movdqa %xmm0, %xmm2
-; SSE-NEXT:    pmullw %xmm1, %xmm2
-; SSE-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    pand %xmm3, %xmm2
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    pmaddubsw %xmm3, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    pshufb %xmm6, %xmm4
+; SSE-NEXT:    pshufb %xmm7, %xmm3
+; SSE-NEXT:    por %xmm4, %xmm3
+; SSE-NEXT:    pshufb %xmm2, %xmm3
+; SSE-NEXT:    pshufb %xmm8, %xmm5
+; SSE-NEXT:    por %xmm3, %xmm5
+; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    pmullw %xmm5, %xmm1
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pandn %xmm5, %xmm2
+; SSE-NEXT:    pmaddubsw %xmm2, %xmm0
 ; SSE-NEXT:    psllw $8, %xmm0
-; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR50049:

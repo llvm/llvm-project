@@ -322,21 +322,21 @@ define float @from_f6e3m2fn_neg() {
 define float @from_f6e3m2fn_dynamic(i6 %x) {
 ; CHECK-LABEL: from_f6e3m2fn_dynamic:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    andl $3, %edx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shll $21, %ecx
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $-32, %eax
-; CHECK-NEXT:    shll $26, %eax
+; CHECK-NEXT:    andl $3, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shll $21, %ecx
+; CHECK-NEXT:    movl %edi, %edx
+; CHECK-NEXT:    andl $-32, %edx
+; CHECK-NEXT:    shll $26, %edx
 ; CHECK-NEXT:    shrl $2, %edi
 ; CHECK-NEXT:    andl $7, %edi
 ; CHECK-NEXT:    movl %edi, %esi
 ; CHECK-NEXT:    shll $23, %esi
-; CHECK-NEXT:    orl %eax, %esi
+; CHECK-NEXT:    orl %edx, %esi
 ; CHECK-NEXT:    leal 1040187392(%rcx,%rsi), %esi
-; CHECK-NEXT:    bsrl %edx, %r8d
-; CHECK-NEXT:    movl %edx, %r9d
+; CHECK-NEXT:    bsrl %eax, %r8d
+; CHECK-NEXT:    movl %eax, %r9d
 ; CHECK-NEXT:    btcl %r8d, %r9d
 ; CHECK-NEXT:    xorl $31, %r8d
 ; CHECK-NEXT:    leal -8(%r8), %ecx
@@ -345,17 +345,17 @@ define float @from_f6e3m2fn_dynamic(i6 %x) {
 ; CHECK-NEXT:    movl $154, %ecx
 ; CHECK-NEXT:    subl %r8d, %ecx
 ; CHECK-NEXT:    shll $23, %ecx
-; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    orl %edx, %ecx
 ; CHECK-NEXT:    orl %r9d, %ecx
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    sete %dl
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    setne %r8b
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    sete %dil
 ; CHECK-NEXT:    testb %r8b, %dil
 ; CHECK-NEXT:    cmovel %esi, %ecx
-; CHECK-NEXT:    testb %dl, %dil
-; CHECK-NEXT:    cmovnel %eax, %ecx
+; CHECK-NEXT:    testb %al, %dil
+; CHECK-NEXT:    cmovnel %edx, %ecx
 ; CHECK-NEXT:    movd %ecx, %xmm0
 ; CHECK-NEXT:    retq
   %r = call float @llvm.convert.from.arbitrary.fp.f32.i6(i6 %x, metadata !"Float6E3M2FN")
@@ -410,21 +410,21 @@ define float @from_f6e2m3fn_zero() {
 define float @from_f6e2m3fn_dynamic(i6 %x) {
 ; CHECK-LABEL: from_f6e2m3fn_dynamic:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    andl $7, %edx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shll $20, %ecx
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $-32, %eax
-; CHECK-NEXT:    shll $26, %eax
+; CHECK-NEXT:    andl $7, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shll $20, %ecx
+; CHECK-NEXT:    movl %edi, %edx
+; CHECK-NEXT:    andl $-32, %edx
+; CHECK-NEXT:    shll $26, %edx
 ; CHECK-NEXT:    shrl $3, %edi
 ; CHECK-NEXT:    andl $3, %edi
 ; CHECK-NEXT:    movl %edi, %esi
 ; CHECK-NEXT:    shll $23, %esi
-; CHECK-NEXT:    orl %eax, %esi
+; CHECK-NEXT:    orl %edx, %esi
 ; CHECK-NEXT:    leal 1056964608(%rcx,%rsi), %esi
-; CHECK-NEXT:    bsrl %edx, %r8d
-; CHECK-NEXT:    movl %edx, %r9d
+; CHECK-NEXT:    bsrl %eax, %r8d
+; CHECK-NEXT:    movl %eax, %r9d
 ; CHECK-NEXT:    btcl %r8d, %r9d
 ; CHECK-NEXT:    xorl $31, %r8d
 ; CHECK-NEXT:    leal -8(%r8), %ecx
@@ -433,17 +433,17 @@ define float @from_f6e2m3fn_dynamic(i6 %x) {
 ; CHECK-NEXT:    movl $155, %ecx
 ; CHECK-NEXT:    subl %r8d, %ecx
 ; CHECK-NEXT:    shll $23, %ecx
-; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    orl %edx, %ecx
 ; CHECK-NEXT:    orl %r9d, %ecx
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    sete %dl
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    setne %r8b
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    sete %dil
 ; CHECK-NEXT:    testb %r8b, %dil
 ; CHECK-NEXT:    cmovel %esi, %ecx
-; CHECK-NEXT:    testb %dl, %dil
-; CHECK-NEXT:    cmovnel %eax, %ecx
+; CHECK-NEXT:    testb %al, %dil
+; CHECK-NEXT:    cmovnel %edx, %ecx
 ; CHECK-NEXT:    movd %ecx, %xmm0
 ; CHECK-NEXT:    retq
   %r = call float @llvm.convert.from.arbitrary.fp.f32.i6(i6 %x, metadata !"Float6E2M3FN")
@@ -488,21 +488,21 @@ define float @from_f4e2m1fn_max() {
 define float @from_f4e2m1fn_dynamic(i4 %x) {
 ; CHECK-LABEL: from_f4e2m1fn_dynamic:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %edx
-; CHECK-NEXT:    andl $1, %edx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shll $22, %ecx
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $-8, %eax
-; CHECK-NEXT:    shll $28, %eax
+; CHECK-NEXT:    andl $1, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shll $22, %ecx
+; CHECK-NEXT:    movl %edi, %edx
+; CHECK-NEXT:    andl $-8, %edx
+; CHECK-NEXT:    shll $28, %edx
 ; CHECK-NEXT:    shrl %edi
 ; CHECK-NEXT:    andl $3, %edi
 ; CHECK-NEXT:    movl %edi, %esi
 ; CHECK-NEXT:    shll $23, %esi
-; CHECK-NEXT:    orl %eax, %esi
+; CHECK-NEXT:    orl %edx, %esi
 ; CHECK-NEXT:    leal 1056964608(%rcx,%rsi), %esi
-; CHECK-NEXT:    bsrl %edx, %r8d
-; CHECK-NEXT:    movl %edx, %r9d
+; CHECK-NEXT:    bsrl %eax, %r8d
+; CHECK-NEXT:    movl %eax, %r9d
 ; CHECK-NEXT:    btcl %r8d, %r9d
 ; CHECK-NEXT:    xorl $31, %r8d
 ; CHECK-NEXT:    leal -8(%r8), %ecx
@@ -511,17 +511,17 @@ define float @from_f4e2m1fn_dynamic(i4 %x) {
 ; CHECK-NEXT:    movl $157, %ecx
 ; CHECK-NEXT:    subl %r8d, %ecx
 ; CHECK-NEXT:    shll $23, %ecx
-; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    orl %edx, %ecx
 ; CHECK-NEXT:    orl %r9d, %ecx
-; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    sete %dl
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    setne %r8b
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    sete %dil
 ; CHECK-NEXT:    testb %r8b, %dil
 ; CHECK-NEXT:    cmovel %esi, %ecx
-; CHECK-NEXT:    testb %dl, %dil
-; CHECK-NEXT:    cmovnel %eax, %ecx
+; CHECK-NEXT:    testb %al, %dil
+; CHECK-NEXT:    cmovnel %edx, %ecx
 ; CHECK-NEXT:    movd %ecx, %xmm0
 ; CHECK-NEXT:    retq
   %r = call float @llvm.convert.from.arbitrary.fp.f32.i4(i4 %x, metadata !"Float4E2M1FN")
@@ -770,23 +770,23 @@ define <2 x bfloat> @from_f8e5m2_v2bf16(<2 x i8> %x) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movd %xmm0, %edx
-; CHECK-NEXT:    movl %edx, %r8d
-; CHECK-NEXT:    shrl $8, %r8d
-; CHECK-NEXT:    andl $3, %r8d
-; CHECK-NEXT:    movl %r8d, %ecx
+; CHECK-NEXT:    movl %edx, %edi
+; CHECK-NEXT:    shrl $8, %edi
+; CHECK-NEXT:    andl $3, %edi
+; CHECK-NEXT:    movl %edi, %ecx
 ; CHECK-NEXT:    shll $21, %ecx
 ; CHECK-NEXT:    movl %edx, %eax
 ; CHECK-NEXT:    shll $16, %eax
 ; CHECK-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    shrl $10, %edi
-; CHECK-NEXT:    andl $31, %edi
-; CHECK-NEXT:    movl %edi, %esi
+; CHECK-NEXT:    movl %edx, %r8d
+; CHECK-NEXT:    shrl $10, %r8d
+; CHECK-NEXT:    andl $31, %r8d
+; CHECK-NEXT:    movl %r8d, %esi
 ; CHECK-NEXT:    shll $23, %esi
 ; CHECK-NEXT:    orl %eax, %esi
 ; CHECK-NEXT:    leal 939524096(%rcx,%rsi), %r9d
-; CHECK-NEXT:    bsrl %r8d, %r10d
-; CHECK-NEXT:    movl %r8d, %r11d
+; CHECK-NEXT:    bsrl %edi, %r10d
+; CHECK-NEXT:    movl %edi, %r11d
 ; CHECK-NEXT:    btcl %r10d, %r11d
 ; CHECK-NEXT:    xorl $31, %r10d
 ; CHECK-NEXT:    leal -8(%r10), %ecx
@@ -798,21 +798,21 @@ define <2 x bfloat> @from_f8e5m2_v2bf16(<2 x i8> %x) {
 ; CHECK-NEXT:    shll $23, %ecx
 ; CHECK-NEXT:    orl %eax, %ecx
 ; CHECK-NEXT:    orl %r11d, %ecx
-; CHECK-NEXT:    testl %r8d, %r8d
-; CHECK-NEXT:    sete %r8b
-; CHECK-NEXT:    setne %r10b
 ; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    sete %dil
+; CHECK-NEXT:    setne %r10b
+; CHECK-NEXT:    testl %r8d, %r8d
 ; CHECK-NEXT:    sete %r11b
 ; CHECK-NEXT:    testb %r10b, %r11b
 ; CHECK-NEXT:    cmovel %r9d, %ecx
-; CHECK-NEXT:    testb %r8b, %r11b
+; CHECK-NEXT:    testb %dil, %r11b
 ; CHECK-NEXT:    cmovnel %eax, %ecx
 ; CHECK-NEXT:    orl $2139095040, %eax # imm = 0x7F800000
-; CHECK-NEXT:    cmpl $31, %edi
-; CHECK-NEXT:    sete %dil
-; CHECK-NEXT:    testb %r8b, %dil
+; CHECK-NEXT:    cmpl $31, %r8d
+; CHECK-NEXT:    sete %r8b
+; CHECK-NEXT:    testb %dil, %r8b
 ; CHECK-NEXT:    cmovel %ecx, %eax
-; CHECK-NEXT:    testb %r10b, %dil
+; CHECK-NEXT:    testb %r10b, %r8b
 ; CHECK-NEXT:    movl $2143289344, %edi # imm = 0x7FC00000
 ; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    btl $16, %eax

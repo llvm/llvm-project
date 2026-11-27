@@ -54,6 +54,7 @@ define <17 x i1> @extract_subvector_out_of_bounds(<17 x i1> %a, ptr %p) nounwind
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    vmovd %esi, %xmm0
@@ -75,70 +76,71 @@ define <17 x i1> @extract_subvector_out_of_bounds(<17 x i1> %a, ptr %p) nounwind
 ; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; CHECK-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k0
 ; CHECK-NEXT:    kshiftrw $1, %k0, %k1
-; CHECK-NEXT:    kmovw %k1, %esi
+; CHECK-NEXT:    kmovw %k1, %r14d
 ; CHECK-NEXT:    kshiftrw $3, %k0, %k1
-; CHECK-NEXT:    kmovw %k1, %r9d
+; CHECK-NEXT:    kmovw %k1, %r15d
 ; CHECK-NEXT:    kshiftrw $15, %k0, %k1
 ; CHECK-NEXT:    kmovw %k1, %edx
 ; CHECK-NEXT:    kshiftrw $4, %k0, %k1
-; CHECK-NEXT:    kmovw %k1, %r8d
-; CHECK-NEXT:    kshiftrw $7, %k0, %k1
-; CHECK-NEXT:    kmovw %k1, %edi
-; CHECK-NEXT:    kshiftrw $14, %k0, %k1
-; CHECK-NEXT:    kmovw %k1, %r10d
-; CHECK-NEXT:    kshiftrw $6, %k0, %k1
 ; CHECK-NEXT:    kmovw %k1, %r11d
+; CHECK-NEXT:    kshiftrw $7, %k0, %k1
+; CHECK-NEXT:    kmovw %k1, %r10d
+; CHECK-NEXT:    kshiftrw $14, %k0, %k1
+; CHECK-NEXT:    kmovw %k1, %ebx
+; CHECK-NEXT:    kshiftrw $6, %k0, %k1
+; CHECK-NEXT:    kmovw %k1, %r8d
 ; CHECK-NEXT:    kshiftrw $12, %k0, %k1
-; CHECK-NEXT:    kmovw %k1, %ebp
-; CHECK-NEXT:    kmovw %k0, %ebx
+; CHECK-NEXT:    kmovw %k1, %edi
+; CHECK-NEXT:    kmovw %k0, %esi
 ; CHECK-NEXT:    kshiftrw $13, %k0, %k0
-; CHECK-NEXT:    kmovw %k0, %r14d
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r15
-; CHECK-NEXT:    andl $1, %ebx
-; CHECK-NEXT:    movb %bl, (%r15)
+; CHECK-NEXT:    kmovw %k0, %r9d
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r12
 ; CHECK-NEXT:    andl $1, %esi
-; CHECK-NEXT:    andl $1, %r9d
-; CHECK-NEXT:    leal (%r9,%rsi,2), %esi
+; CHECK-NEXT:    movb %sil, (%r12)
+; CHECK-NEXT:    andl $1, %r14d
+; CHECK-NEXT:    andl $1, %r15d
+; CHECK-NEXT:    leal (%r15,%r14,2), %r14d
 ; CHECK-NEXT:    andl $1, %edx
-; CHECK-NEXT:    leal (%rsi,%rdx,4), %esi
-; CHECK-NEXT:    leal (%rsi,%rbx,8), %esi
-; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    movl %r8d, %r9d
-; CHECK-NEXT:    shll $4, %r9d
-; CHECK-NEXT:    orl %esi, %r9d
-; CHECK-NEXT:    andl $1, %edi
-; CHECK-NEXT:    shll $5, %edi
-; CHECK-NEXT:    orl %r9d, %edi
-; CHECK-NEXT:    andl $1, %r10d
-; CHECK-NEXT:    movl %r10d, %esi
-; CHECK-NEXT:    shll $6, %esi
-; CHECK-NEXT:    shll $7, %r8d
-; CHECK-NEXT:    orl %esi, %r8d
-; CHECK-NEXT:    shll $8, %r10d
-; CHECK-NEXT:    orl %r8d, %r10d
+; CHECK-NEXT:    leal (%r14,%rdx,4), %r14d
+; CHECK-NEXT:    leal (%r14,%rsi,8), %ebp
 ; CHECK-NEXT:    andl $1, %r11d
-; CHECK-NEXT:    movl %r11d, %esi
-; CHECK-NEXT:    shll $9, %esi
-; CHECK-NEXT:    orl %r10d, %esi
-; CHECK-NEXT:    shll $10, %ebx
-; CHECK-NEXT:    orl %esi, %ebx
+; CHECK-NEXT:    movl %r11d, %r14d
+; CHECK-NEXT:    shll $4, %r14d
+; CHECK-NEXT:    orl %ebp, %r14d
+; CHECK-NEXT:    andl $1, %r10d
+; CHECK-NEXT:    shll $5, %r10d
+; CHECK-NEXT:    orl %r14d, %r10d
+; CHECK-NEXT:    andl $1, %ebx
+; CHECK-NEXT:    movl %ebx, %ebp
+; CHECK-NEXT:    shll $6, %ebp
+; CHECK-NEXT:    shll $7, %r11d
+; CHECK-NEXT:    orl %ebp, %r11d
+; CHECK-NEXT:    shll $8, %ebx
+; CHECK-NEXT:    orl %r11d, %ebx
+; CHECK-NEXT:    andl $1, %r8d
+; CHECK-NEXT:    movl %r8d, %r11d
+; CHECK-NEXT:    shll $9, %r11d
+; CHECK-NEXT:    orl %ebx, %r11d
+; CHECK-NEXT:    shll $10, %esi
+; CHECK-NEXT:    orl %r11d, %esi
 ; CHECK-NEXT:    andl $1, %ecx
 ; CHECK-NEXT:    movb %cl, 2(%rax)
-; CHECK-NEXT:    orl %edi, %ebx
+; CHECK-NEXT:    orl %r10d, %esi
 ; CHECK-NEXT:    shll $11, %ecx
 ; CHECK-NEXT:    shll $12, %edx
 ; CHECK-NEXT:    orl %ecx, %edx
-; CHECK-NEXT:    shll $13, %r11d
-; CHECK-NEXT:    orl %edx, %r11d
-; CHECK-NEXT:    andl $1, %ebp
-; CHECK-NEXT:    shll $14, %ebp
-; CHECK-NEXT:    orl %r11d, %ebp
-; CHECK-NEXT:    andl $1, %r14d
-; CHECK-NEXT:    shll $15, %r14d
-; CHECK-NEXT:    orl %ebp, %r14d
-; CHECK-NEXT:    orl %ebx, %r14d
-; CHECK-NEXT:    movw %r14w, (%rax)
+; CHECK-NEXT:    shll $13, %r8d
+; CHECK-NEXT:    orl %edx, %r8d
+; CHECK-NEXT:    andl $1, %edi
+; CHECK-NEXT:    shll $14, %edi
+; CHECK-NEXT:    orl %r8d, %edi
+; CHECK-NEXT:    andl $1, %r9d
+; CHECK-NEXT:    shll $15, %r9d
+; CHECK-NEXT:    orl %edi, %r9d
+; CHECK-NEXT:    orl %esi, %r9d
+; CHECK-NEXT:    movw %r9w, (%rax)
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
