@@ -1,7 +1,7 @@
 add_libc_test(
   clone_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     clone_test.cpp
   DEPENDS
@@ -12,8 +12,7 @@ add_libc_test(
     libc.hdr.sys_wait_macros
     libc.hdr.types.pid_t
     libc.hdr.types.size_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.gettid
     libc.src.sched.clone
     libc.src.sys.wait.waitpid
     libc.src.unistd.gettid

@@ -94,10 +94,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   RegInfo = &MF->getRegInfo();
   const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
   UA = DAG->getUniformityInfo();
-  // Prefer the "exception-model" module flag, else the TargetOptions default.
   ExceptionModel = Fn->getParent()->getExceptionModel();
-  if (ExceptionModel == ExceptionHandling::Default)
-    ExceptionModel = MF->getTarget().getExceptionModel();
 
   // Check whether the function can return without sret-demotion.
   SmallVector<ISD::OutputArg, 4> Outs;
@@ -136,17 +133,17 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   // Initialize the mapping of values to registers.  This is only set up for
   // instruction values that are used outside of the block that defines
   // them.
-  const Align StackAlign = TFI->getStackAlign();
+  const Align StackAlign = MF->getFrameInfo().getStackAlign();
   for (const BasicBlock &BB : *Fn) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
         Align Alignment = AI->getAlign();
 
         // Static allocas can be folded into the initial stack frame
-        // adjustment. For targets that don't realign the stack, don't
+        // adjustment. If this function can't realign the stack, don't
         // do this if there is an extra alignment requirement.
-        if (AI->isStaticAlloca() &&
-            (TFI->isStackRealignable() || (Alignment <= StackAlign))) {
+        if (AI->isStaticAlloca() && (MF->getFrameInfo().isStackRealignable() ||
+                                     Alignment <= StackAlign)) {
           TypeSize AllocaSize = AI->getAllocationSize(MF->getDataLayout())
                                     .value_or(TypeSize::getZero());
           uint64_t TySize = AllocaSize.getKnownMinValue();

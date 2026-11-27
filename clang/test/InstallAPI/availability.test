@@ -135,6 +135,7 @@ extern int publicGlobalVariable6 OBSOLETE_I386;
 // #endif
 ;--- Availability.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007

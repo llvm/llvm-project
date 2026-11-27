@@ -187,6 +187,22 @@ def ApplyEraseUnusedOperandsAndResultsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyFoldReshapeOpsByExpansionPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.fold_reshape_ops_by_expansion",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that fold reshape operations into their producers or
+    consumers by expanding dimensions.
+
+    If `fold_single_use_only` is true, folding is restricted to cases where the
+    defining producer operation of the operand being fused has exactly one use.
+    Otherwise, no use-count restriction is imposed.
+  }];
+
+  let arguments = (ins DefaultValuedAttr<BoolAttr, "false">:$fold_single_use_only);
+  let assemblyFormat = "oilist(`fold_single_use_only` `=` $fold_single_use_only) attr-dict";
+}
+
 //===----------------------------------------------------------------------===//
 // BufferizeToAllocationOp
 //===----------------------------------------------------------------------===//
@@ -550,15 +566,15 @@ def FuseIntoContainingOp :
 
     The containing op handle must be associated with exactly one payload op. The
     producer op handle may be associated with multiple payload ops. This
-    transform fuses producers one-by-one, always picking an unspecified producer
-    that has at least one use inside the containing op among the
-    producers. A producer can be listed multiple times in the handle.
+    transform fuses producers one-by-one in reverse topological order, picking
+    producers that have at least one use inside the containing op. This exposes
+    uses introduced by fusing selected consumers before fusing their producers.
+    A producer can be listed multiple times in the handle.
 
     Note: If a producer has multiple uses inside the containing op, it is
     currently tiled and/or cloned multiple times into the containing op.
     TODO: Reuse already fused OpResults instead of tiling/cloning a second time
-    when possible. Fuse producers according to a topological sorting to achieve
-    the largest amount of reuse.
+    when possible.
 
     #### Return modes
 
@@ -2417,6 +2433,11 @@ def TileUsingForallOp :
     Static zero tile sizes indicate that the dimension is not tiled and can be
     thought of as tiling by the full size of data.
 
+    A static tile size enclosed in brackets is scalable: `[8]` denotes
+    `8 * vector.vscale`. Scalable tile sizes are supported only by `tile_sizes`,
+    not by `num_threads` or packed tile size handles. A scalable zero tile size
+    also leaves the dimension untiled.
+
     It is the user's responsibility to ensure that `num_threads/tile_sizes` is
     a valid tiling specification (i.e. that only tiles parallel dimensions,
     e.g. in the Linalg case). If the dimension is not parallelizable, a warning
@@ -2473,6 +2494,7 @@ def TileUsingForallOp :
                    Optional<TransformAnyParamTypeOrAnyHandle>:$packed_tile_sizes,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_num_threads,
                    DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$static_tile_sizes,
+                   DefaultValuedOptionalAttr<DenseBoolArrayAttr, "{}">:$scalable_sizes,
                    OptionalAttr<DeviceMappingArrayAttr>:$mapping);
   let results = (outs TransformHandleTypeInterface:$tiled_op,
                       TransformHandleTypeInterface:$forall_op);
@@ -2482,12 +2504,14 @@ def TileUsingForallOp :
                    "ArrayRef<int64_t>":$staticTileSizes,
                    CArg<"::mlir::transform::TileSizesSpec",
                         "::mlir::transform::TileSizesSpec()">,
-                   CArg<"ArrayAttr", "{}">:$mapping)>,
+                   CArg<"ArrayAttr", "{}">:$mapping,
+                   CArg<"ArrayRef<bool>", "{}">:$scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<OpFoldResult>":$mixedTileSizes,
                    CArg<"::mlir::transform::TileSizesSpec",
                         "::mlir::transform::TileSizesSpec()">,
-                   CArg<"ArrayAttr", "{}">:$mapping)>,
+                   CArg<"ArrayAttr", "{}">:$mapping,
+                   CArg<"ArrayRef<bool>", "{}">:$scalableSizes)>,
     OpBuilder<(ins "Value":$target,
                    "ArrayRef<int64_t>":$staticNumThreads,
                    CArg<"::mlir::transform::NumThreadsSpec",
@@ -2507,7 +2531,8 @@ def TileUsingForallOp :
                                                        $static_num_threads) |
          `tile_sizes` custom<PackedOrDynamicIndexList>($packed_tile_sizes,
                                                        $tile_sizes,
-                                                       $static_tile_sizes))
+                                                       $static_tile_sizes,
+                                                       $scalable_sizes))
     (`(` `mapping` `=` $mapping^ `)`)? attr-dict
     `:` functional-type(operands, results)
   }];

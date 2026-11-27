@@ -4,7 +4,7 @@
 
 LLVM's policy is that contributors can use whatever tools they would like to
 craft their contributions, but there must be a **human in the loop**.
-**Contributors must read and review all LLM-generated code or text before they
+**Contributors must read and review all AI-generated code or text before they
 ask other project members to review it.** The contributor is always the author
 and is fully accountable for their contributions. Contributors should be
 sufficiently confident that the contribution is high enough quality that asking
@@ -16,7 +16,7 @@ and our guidance to them is to **start with small contributions** that they can
 fully understand to build confidence. We aspire to be a welcoming community
 that helps new contributors grow their expertise, but learning involves taking
 small steps, getting feedback, and iterating. Passing maintainer feedback to an
-LLM doesn't help anyone grow, and does not sustain our community.
+AI doesn't help anyone grow, and does not sustain our community.
 
 Contributors are expected to **be transparent and label contributions that
 contain substantial amounts of tool-generated content**. Our policy on
@@ -49,7 +49,7 @@ in our digital spaces without human approval, such as the GitHub [`@claude`
 agent](https://github.com/claude/). Similarly, automated review tools that
 publish comments without human review are not allowed. However, an opt-in
 review tool that **keeps a human in the loop** is acceptable under this policy.
-As another example, using an LLM to generate documentation, which a contributor
+As another example, using an AI to generate documentation, which a contributor
 manually reviews for correctness, edits, and then posts as a PR, is an approved
 use of tools under this policy.
 
@@ -68,7 +68,7 @@ issues" is forbidden**.
 The reason for our "human-in-the-loop" contribution policy is that processing
 patches, PRs, RFCs, and comments to LLVM is not free -- it takes a lot of
 maintainer time and energy to review those contributions! Sending the
-unreviewed output of an LLM to open source project maintainers *extracts* work
+unreviewed output of an AI to open source project maintainers *extracts* work
 from them in the form of design and code review, so we call this kind of
 contribution an "extractive contribution".
 
@@ -87,7 +87,7 @@ from the book [Working in Public][public] by Nadia Eghbal:
 > contribution, it might be a pull request that's too complex or unwieldy to
 > review, given the potential upside.\" \-- Nadia Eghbal
 
-Prior to the advent of LLMs, open source project maintainers would often review
+Prior to the advent of AI, open source project maintainers would often review
 any and all changes sent to the project simply because posting a change for
 review was a sign of interest from a potential long-term contributor. While new
 tools enable more development, it shifts effort from the implementor to the
@@ -147,7 +147,7 @@ just like any other offending contribution.
 
 We have one exception to this policy for the Bazel-fixer bot. The project
 council approved [this RFC][bazel-rfc] proposing to use a combination of
-[dwyu][dwyu] and LLMs to maintain the Bazel build files.
+[dwyu][dwyu] and AI to maintain the Bazel build files.
 
 [bazel-rfc]: https://discourse.llvm.org/t/rfc-ai-assisted-bazel-fixer-bot/89178/93
 [dwyu]: https://github.com/hzeller/bant?tab=readme-ov-file#dwyu--depend-on-what-you-use

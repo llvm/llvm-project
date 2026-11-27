@@ -107,6 +107,14 @@ macro(append_passthrough_options out type names)
             list(APPEND ${out} -C ${cache})
           endforeach()
         else()
+          # Type is important for cache variables.
+          # For example PATH variables will be made relative to CMAKE_BINARY_DIR
+          # at the point of set(CACHE) if the type isn't passed along.
+          get_property(variable_type CACHE ${variable_name} PROPERTY TYPE)
+          if(variable_type AND NOT variable_type STREQUAL "UNINITIALIZED")
+            string(APPEND new_name ":${variable_type}")
+          endif()
+
           string(REPLACE ";" "|" new_value "${${variable_name}}")
           list(APPEND ${out} "-D${new_name}=${new_value}")
         endif()
@@ -117,8 +125,10 @@ endmacro()
 
 # Wire build-order dependencies on flang for targets that invoke it. This
 # allows us to configure the runtimes without first building flang. Attaches the
-# flang dependency to the main build target and any fortran module file builds,
-# like 'install-libomp-mod' or `install-flang-rt-mod'.
+# flang dependency to the main build target, any fortran module file builds,
+# like 'install-libomp-mod' or `install-flang-rt-mod', and the test targets
+# that build those modules or compile Fortran, like 'check-flang-rt' or
+# 'runtimes-test-depends'.
 function(add_flang_mod_deps build_target)
   if(NOT TARGET flang)
     return ()
@@ -128,7 +138,9 @@ function(add_flang_mod_deps build_target)
     add_dependencies(${build_target} flang)
   endif()
   foreach(tgt IN LISTS ARGN)
-    if(tgt MATCHES "-mod($|-)" OR tgt MATCHES "check-(flang-rt|openmp)($|-)")
+    if(tgt MATCHES "-mod($|-)" OR
+       tgt MATCHES "check-(flang-rt|openmp|offload)($|-)" OR
+       tgt MATCHES "^runtimes-test-depends($|-)")
       if(TARGET ${tgt})
         add_dependencies(${tgt} flang)
       endif()
@@ -654,6 +666,10 @@ if(build_runtimes)
       if(TARGET offload-arch)
         list(APPEND extra_deps offload-arch)
       endif()
+      # The offload lit tests link their programs via clang-linker-wrapper.
+      if(TARGET clang-linker-wrapper)
+        list(APPEND extra_deps clang-linker-wrapper)
+      endif()
     endif()
   endif()
   if("libsycl" IN_LIST LLVM_ENABLE_RUNTIMES)
@@ -876,6 +892,17 @@ ${_flag_values}\
     foreach(target ${test_targets} ${SUB_CHECK_TARGETS})
       add_dependencies(${target} ${extra_test_deps})
     endforeach()
+
+    # The offload tests compile programs for the GPU targets, which link
+    # against the device runtimes (e.g. libompdevice, libc) built for them.
+    if(TARGET check-offload)
+      foreach(name ${LLVM_RUNTIME_TARGETS})
+        if(name MATCHES "^amdgpu|^amdgcn|^nvptx|^spirv" AND
+           TARGET runtimes-${name})
+          add_dependencies(check-offload runtimes-${name})
+        endif()
+      endforeach()
+    endif()
 
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_ADDITIONAL_TEST_TARGETS runtimes ${extra_test_deps})
   endif()

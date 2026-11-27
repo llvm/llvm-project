@@ -633,11 +633,10 @@ class NewGVN {
   SmallPtrSet<Instruction *, 8> InstructionsToErase;
 
 public:
-  NewGVN(Function &F, DominatorTree *DT, AssumptionCache *AC,
-         TargetLibraryInfo *TLI, AliasAnalysis *AA, MemorySSA *MSSA,
-         const DataLayout &DL)
-      : Opts(ScalarOptions::Global), F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA),
-        AC(AC), DL(DL),
+  NewGVN(const ScalarOptions &Opts, Function &F, DominatorTree *DT,
+         AssumptionCache *AC, TargetLibraryInfo *TLI, AliasAnalysis *AA,
+         MemorySSA *MSSA, const DataLayout &DL)
+      : Opts(Opts), F(F), DT(DT), TLI(TLI), AA(AA), MSSA(MSSA), AC(AC), DL(DL),
         // Reuse ExpressionAllocator for PredicateInfo as well.
         PredInfo(
             std::make_unique<PredicateInfo>(F, *DT, *AC, ExpressionAllocator)),
@@ -1517,9 +1516,8 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   // that the result of the allocation is pointer equal to the load ptr.
   if (isa<AllocaInst>(DepInst)) {
     return createConstantExpression(UndefValue::get(LoadType));
-  } else if (auto *InitVal =
-                 getInitialValueOfAllocation(DepInst, TLI, LoadType))
-      return createConstantExpression(InitVal);
+  } else if (auto *InitVal = getInitialValueOfAllocation(DepInst, LoadType))
+    return createConstantExpression(InitVal);
 
   return nullptr;
 }
@@ -4227,9 +4225,9 @@ PreservedAnalyses NewGVNPass::run(Function &F, AnalysisManager<Function> &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &AA = AM.getResult<AAManager>(F);
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
+  const ScalarOptions &Opts = getScalarOptions(F);
   bool Changed =
-      NewGVN(F, &DT, &AC, &TLI, &AA, &MSSA, F.getDataLayout())
-          .runGVN();
+      NewGVN(Opts, F, &DT, &AC, &TLI, &AA, &MSSA, F.getDataLayout()).runGVN();
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;

@@ -11,20 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/PHITransAddr.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
-
-static cl::opt<bool> EnableAddPhiTranslation(
-    "gvn-add-phi-translation", cl::init(false), cl::Hidden,
-    cl::desc("Enable phi-translation of add instructions"));
 
 static bool canPHITrans(Instruction *Inst) {
   if (isa<PHINode>(Inst) || isa<GetElementPtrInst>(Inst) || isa<CastInst>(Inst))
@@ -246,15 +242,18 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
       return nullptr;
 
     for (User *U : APHIOp->users()) {
-      if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U))
+      if (GetElementPtrInst *GEPI = dyn_cast<GetElementPtrInst>(U)) {
+        bool FlagsAreSubset = (GEPI->getNoWrapFlags() &
+                               GEP->getNoWrapFlags()) == GEPI->getNoWrapFlags();
         if (GEPI->getType() == GEP->getType() &&
             GEPI->getSourceElementType() == GEP->getSourceElementType() &&
-            GEPI->getNumOperands() == GEPOps.size() &&
+            GEPI->getNumOperands() == GEPOps.size() && FlagsAreSubset &&
             GEPI->getParent()->getParent() == CurBB->getParent() &&
             (!DT || DT->dominates(GEPI->getParent(), PredBB))) {
           if (std::equal(GEPOps.begin(), GEPOps.end(), GEPI->op_begin()))
             return GEPI;
         }
+      }
     }
     return nullptr;
   }
@@ -300,12 +299,17 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
 
     // Otherwise, see if we have this add available somewhere.
     for (User *U : LHS->users()) {
-      if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U))
-        if (BO->getOpcode() == Instruction::Add &&
-            BO->getOperand(0) == LHS && BO->getOperand(1) == RHS &&
+      if (BinaryOperator *BO = dyn_cast<BinaryOperator>(U)) {
+        if (BO->getOpcode() != Instruction::Add)
+          continue;
+        bool FlagsAreSubset = (!BO->hasNoSignedWrap() || isNSW) &&
+                              (!BO->hasNoUnsignedWrap() || isNUW);
+        if (BO->getOperand(0) == LHS && BO->getOperand(1) == RHS &&
+            FlagsAreSubset &&
             BO->getParent()->getParent() == CurBB->getParent() &&
             (!DT || DT->dominates(BO->getParent(), PredBB)))
           return BO;
+      }
     }
 
     return nullptr;
@@ -446,8 +450,9 @@ Value *PHITransAddr::insertTranslatedSubExpr(
   }
 
   // Handle add with a constant RHS.
-  if (EnableAddPhiTranslation && Inst->getOpcode() == Instruction::Add &&
-      isa<ConstantInt>(Inst->getOperand(1))) {
+  if (Inst->getOpcode() == Instruction::Add &&
+      isa<ConstantInt>(Inst->getOperand(1)) &&
+      getAnalysisOptions(Inst->getContext()).gvn_add_phi_translation) {
 
     // FIXME: This code works, but it is unclear that we actually want to insert
     // a big chain of computation in order to make a value available in a block.

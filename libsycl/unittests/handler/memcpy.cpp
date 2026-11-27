@@ -44,6 +44,23 @@ TEST(Handler, MemcpyViaSubmit) {
   E.wait();
 }
 
+TEST(Handler, CopyViaSubmit) {
+  struct Elem {
+    char Data[3];
+  };
+  constexpr std::size_t Count = 16;
+
+  mock::MockWrapper Mock;
+  queue Q;
+
+  Elem Src[Count] = {};
+  Elem Dst[Count] = {};
+
+  EXPECT_CALL(Mock.get(), olMemcpy(_, Dst, _, Src, _, sizeof(Src))).Times(1);
+
+  Q.submit([&](handler &CGH) { CGH.copy(Src, Dst, Count); });
+}
+
 TEST(Handler, DependsOnWithMemcpy) {
   constexpr int NumBytes = 32;
 

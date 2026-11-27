@@ -375,9 +375,8 @@ def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
 def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
                                  "Support status flags update suppression">;
-// FeatureCF is not enabled by default for APXF and targets that support APXF
-// due to performance reason, though it is part of APXF. Users need to enable it
-// manually.
+// Memory-operand CFCMOV (conditional faulting load/store) is only used with
+// TuningPreferCFMemOperand.
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
@@ -908,6 +907,12 @@ def TuningPreferLegacySetCC
     : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
                        "Prefer to emit legacy SetCC.", [], InlineIgnore>;
 
+def TuningPreferCFMemOperand
+    : SubtargetFeature<"prefer-cf-mem-operand", "PreferCFMemOperand", "true",
+                       "Use CFCMOV with memory operands (conditional "
+                       "faulting load/store).",
+                       [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -1309,6 +1314,7 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
+                                                  FeatureCF,
                                                   FeatureJMPABS,
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
@@ -1482,6 +1488,7 @@ def ProcessorFeatures {
                                                   FeaturePush2Pop2,
                                                   FeaturePPX,
                                                   FeatureNF,
+                                                  FeatureCF,
                                                   FeatureNDD,
                                                   FeatureZU,
                                                   FeatureJMPABS,
@@ -2126,9 +2133,10 @@ def : ProcModel<"alderlake", AlderlakePModel,
 // FIXME: Use Gracemont Schedule Model when it is ready.
 def : ProcModel<"gracemont", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.GRTTuning>;
-def : ProcModel<"sierraforest", AlderlakePModel, ProcessorFeatures.SRFFeatures,
-                ProcessorFeatures.GRTTuning>;
-def : ProcessorAlias<"grandridge", "sierraforest">;
+foreach P = ["sierraforest", "grandridge"] in {
+  def : ProcModel<P, AlderlakePModel, ProcessorFeatures.SRFFeatures,
+                  ProcessorFeatures.GRTTuning>;
+}
 def : ProcModel<"raptorlake", AlderlakePModel,
                 ProcessorFeatures.ADLFeatures, ProcessorFeatures.ADLTuning>;
 def : ProcModel<"meteorlake", AlderlakePModel,
@@ -2140,9 +2148,10 @@ def : ProcModel<"arrowlake-s", AlderlakePModel,
 def : ProcessorAlias<"arrowlake_s", "arrowlake-s">;
 def : ProcModel<"lunarlake", LunarlakePModel, ProcessorFeatures.ARLSFeatures,
                 ProcessorFeatures.ADLTuning>;
-def : ProcModel<"pantherlake", AlderlakePModel,
-                ProcessorFeatures.PTLFeatures, ProcessorFeatures.ADLTuning>;
-def : ProcessorAlias<"wildcatlake", "pantherlake">;
+foreach P = ["pantherlake", "wildcatlake"] in {
+  def : ProcModel<P, AlderlakePModel, ProcessorFeatures.PTLFeatures,
+                  ProcessorFeatures.ADLTuning>;
+}
 def : ProcModel<"novalake", AlderlakePModel, ProcessorFeatures.NVLFeatures,
                 ProcessorFeatures.NVLTuning>;
 

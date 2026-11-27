@@ -211,7 +211,7 @@ define ptr @find_first_of_i16(ptr %search_start, ptr %search_end, ptr %needle_st
 ; CHECK-NEXT:    [[SEARCH_IDX:%.*]] = phi i64 [ 0, %[[MEM_CHECK]] ], [ [[SEARCH_IDX_NEXT:%.*]], %[[SEARCH_CHECK_VEC:.*]] ]
 ; CHECK-NEXT:    [[SEARCH_PRED:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[SEARCH_IDX]], i64 [[SEARCH_TRIP_COUNT]])
 ; CHECK-NEXT:    [[SEARCH_MASKED:%.*]] = and <vscale x 8 x i1> [[TMP6]], [[SEARCH_PRED]]
-; CHECK-NEXT:    [[PSEARCH:%.*]] = getelementptr i16, ptr [[SEARCH_START]], i64 [[SEARCH_IDX]]
+; CHECK-NEXT:    [[PSEARCH:%.*]] = getelementptr [2 x i8], ptr [[SEARCH_START]], i64 [[SEARCH_IDX]]
 ; CHECK-NEXT:    [[SEARCH_LOAD_VEC:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 1 [[PSEARCH]], <vscale x 8 x i1> [[SEARCH_MASKED]], <vscale x 8 x i16> zeroinitializer)
 ; CHECK-NEXT:    br label %[[NEEDLE_CHECK_VEC:.*]]
 ; CHECK:       [[NEEDLE_CHECK_VEC]]:
@@ -219,7 +219,7 @@ define ptr @find_first_of_i16(ptr %search_start, ptr %search_end, ptr %needle_st
 ; CHECK-NEXT:    [[PMATCH:%.*]] = phi <vscale x 8 x i1> [ zeroinitializer, %[[FIND_FIRST_VEC_HEADER]] ], [ [[MATCH_ACCUMULATOR:%.*]], %[[NEEDLE_CHECK_VEC]] ]
 ; CHECK-NEXT:    [[NEEDLE_PRED:%.*]] = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 [[NEEDLE_IDX]], i64 [[NEEDLE_TRIP_COUNT]])
 ; CHECK-NEXT:    [[NEEDLE_MASKED:%.*]] = and <vscale x 8 x i1> [[TMP6]], [[NEEDLE_PRED]]
-; CHECK-NEXT:    [[PNEEDLE:%.*]] = getelementptr i16, ptr [[NEEDLE_START]], i64 [[NEEDLE_IDX]]
+; CHECK-NEXT:    [[PNEEDLE:%.*]] = getelementptr [2 x i8], ptr [[NEEDLE_START]], i64 [[NEEDLE_IDX]]
 ; CHECK-NEXT:    [[NEEDLE_LOAD_VEC:%.*]] = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(ptr align 1 [[PNEEDLE]], <vscale x 8 x i1> [[NEEDLE_MASKED]], <vscale x 8 x i16> zeroinitializer)
 ; CHECK-NEXT:    [[NEEDLE0:%.*]] = extractelement <vscale x 8 x i16> [[NEEDLE_LOAD_VEC]], i64 0
 ; CHECK-NEXT:    [[NEEDLE0_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i16> poison, i16 [[NEEDLE0]], i64 0
@@ -239,7 +239,7 @@ define ptr @find_first_of_i16(ptr %search_start, ptr %search_end, ptr %needle_st
 ; CHECK-NEXT:    [[MATCH_START:%.*]] = phi ptr [ [[PSEARCH]], %[[MATCH_CHECK_VEC]] ]
 ; CHECK-NEXT:    [[MATCH_VEC:%.*]] = phi <vscale x 8 x i1> [ [[MATCH_PRED]], %[[MATCH_CHECK_VEC]] ]
 ; CHECK-NEXT:    [[MATCH_IDX:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> [[MATCH_VEC]], i1 true)
-; CHECK-NEXT:    [[MATCH_RES:%.*]] = getelementptr i16, ptr [[MATCH_START]], i64 [[MATCH_IDX]]
+; CHECK-NEXT:    [[MATCH_RES:%.*]] = getelementptr [2 x i8], ptr [[MATCH_START]], i64 [[MATCH_IDX]]
 ; CHECK-NEXT:    br label %[[EXIT_LOOPEXIT:.*]]
 ; CHECK:       [[SEARCH_CHECK_VEC]]:
 ; CHECK-NEXT:    [[SEARCH_IDX_NEXT]] = add i64 [[SEARCH_IDX]], 8

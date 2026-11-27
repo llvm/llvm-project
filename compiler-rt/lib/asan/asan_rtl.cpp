@@ -55,6 +55,15 @@ static void AsanDie() {
   WaitForDebugger(flags()->sleep_before_dying, "before dying");
 
   if (flags()->unmap_shadow_on_exit) {
+#if SANITIZER_AIX && SANITIZER_WORDSIZE == 64
+    UnmapOrDie((void*)kHighShadowBeg, kHighShadowEnd - kHighShadowBeg);
+    UnmapOrDie((void*)kMidShadowBeg, kMidShadowEnd - kMidShadowBeg);
+
+    UnmapOrDie((void*)kMid2ShadowBeg, kMid2ShadowEnd - kMid2ShadowBeg);
+    UnmapOrDie((void*)kMid3ShadowBeg, kMid3ShadowEnd - kMid3ShadowBeg);
+
+    UnmapOrDie((void*)kLowShadowBeg, kLowShadowEnd - kLowShadowBeg);
+#else
     if (kMidMemBeg) {
       UnmapOrDie((void*)kLowShadowBeg, kMidMemBeg - kLowShadowBeg);
       UnmapOrDie((void*)kMidMemEnd, kHighShadowEnd - kMidMemEnd);
@@ -62,6 +71,7 @@ static void AsanDie() {
       if (kHighShadowEnd)
         UnmapOrDie((void*)kLowShadowBeg, kHighShadowEnd - kLowShadowBeg);
     }
+#endif
   }
 }
 
@@ -85,7 +95,11 @@ bool AsanInited() {
 bool replace_intrin_cached;
 
 #if !ASAN_FIXED_MAPPING
+#  if !(SANITIZER_AIX && SANITIZER_WORDSIZE == 64)
 uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;
+#  else
+uptr kHighMemEnd;
+#  endif
 #endif
 
 // -------------------------- Misc ---------------- {{{1
@@ -403,7 +417,10 @@ void PrintAddressSpaceLayout() {
   CHECK(ASAN_SHADOW_SCALE >= 3 && ASAN_SHADOW_SCALE <= 7);
   if (kMidMemBeg)
     CHECK(kMidShadowBeg > kLowShadowEnd &&
+// On AIX 64-bit, we have a highly customized memory layout.
+#if !SANITIZER_AIX || SANITIZER_WORDSIZE != 64
           kMidMemBeg > kMidShadowEnd &&
+#endif
           kHighShadowBeg > kMidMemEnd);
 }
 

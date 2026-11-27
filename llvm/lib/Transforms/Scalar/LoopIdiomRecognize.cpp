@@ -176,14 +176,14 @@ class LoopIdiomRecognize {
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
 public:
-  explicit LoopIdiomRecognize(AliasAnalysis *AA, DominatorTree *DT,
-                              LoopInfo *LI, ScalarEvolution *SE,
-                              TargetLibraryInfo *TLI,
+  explicit LoopIdiomRecognize(const ScalarOptions &Opts, AliasAnalysis *AA,
+                              DominatorTree *DT, LoopInfo *LI,
+                              ScalarEvolution *SE, TargetLibraryInfo *TLI,
                               const TargetTransformInfo *TTI, MemorySSA *MSSA,
                               const DataLayout *DL,
                               OptimizationRemarkEmitter &ORE)
-      : Opts(ScalarOptions::Global), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI),
-        TTI(TTI), DL(DL), ORE(ORE) {
+      : Opts(Opts), AA(AA), DT(DT), LI(LI), SE(SE), TLI(TLI), TTI(TTI), DL(DL),
+        ORE(ORE) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
   }
@@ -297,7 +297,8 @@ PreservedAnalyses LoopIdiomRecognizePass::run(Loop &L, LoopAnalysisManager &AM,
   // but ORE cannot be preserved (see comment before the pass definition).
   OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
 
-  LoopIdiomRecognize LIR(&AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
+  const ScalarOptions &Opts = getScalarOptions(L);
+  LoopIdiomRecognize LIR(Opts, &AR.AA, &AR.DT, &AR.LI, &AR.SE, &AR.TLI, &AR.TTI,
                          AR.MSSA, DL, ORE);
   if (!LIR.runOnLoop(&L))
     return PreservedAnalyses::all();
@@ -413,9 +414,6 @@ static APInt getStoreStride(const SCEVAddRecExpr *StoreEv) {
 /// memset.pattern intrinsic rather than directly the memset_pattern16
 /// libcall.
 static Constant *getMemSetPatternValue(Value *V, const DataLayout *DL) {
-  // FIXME: This could check for UndefValue because it can be merged into any
-  // other valid pattern.
-
   // If the value isn't a constant, we can't promote it to being in a constant
   // array.  We could theoretically do a store to an alloca or something, but
   // that doesn't seem worthwhile.
@@ -665,10 +663,15 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
     Value *FirstSplatValue = nullptr;
     Constant *FirstPatternValue = nullptr;
 
-    if (For == ForMemset::Yes)
+    if (For == ForMemset::Yes) {
       FirstSplatValue = isBytewiseValue(FirstStoredVal, *DL);
-    else
+      if (isa<UndefValue>(FirstSplatValue))
+        continue;
+    } else {
       FirstPatternValue = getMemSetPatternValue(FirstStoredVal, DL);
+      if (isa<UndefValue>(FirstPatternValue))
+        continue;
+    }
 
     assert((FirstSplatValue || FirstPatternValue) &&
            "Expected either splat value or pattern value.");
@@ -708,13 +711,9 @@ bool LoopIdiomRecognize::processLoopStores(SmallVectorImpl<StoreInst *> &SL,
 
       if (isConsecutiveAccess(SL[i], SL[k], *DL, *SE, false)) {
         if (For == ForMemset::Yes) {
-          if (isa<UndefValue>(FirstSplatValue))
-            FirstSplatValue = SecondSplatValue;
           if (FirstSplatValue != SecondSplatValue)
             continue;
         } else {
-          if (isa<UndefValue>(FirstPatternValue))
-            FirstPatternValue = SecondPatternValue;
           if (FirstPatternValue != SecondPatternValue)
             continue;
         }
@@ -1067,6 +1066,55 @@ static const SCEV *getNumBytes(const SCEV *BECount, Type *IntPtr,
                         SCEV::FlagNUW);
 }
 
+/// Add a range to the length (or, for memset.pattern, the count) of a newly
+/// formed memset/memset.pattern/memmove/memcpy intrinsic, with an upper bound
+/// derived from the loop's constant max backedge-taken count (BTC). Only small
+/// bounds are worth recording, e.g. to expand the call inline instead of
+/// calling the library function, so bail if the bound exceeds a cap.
+static void addRangeAttrFromTripCount(CallInst *NewCall, uint64_t ElemsPerIter,
+                                      Loop *L, ScalarEvolution *SE) {
+  Use *LenUse;
+  if (auto *MSP = dyn_cast<MemSetPatternInst>(NewCall))
+    LenUse = &MSP->getLengthUse();
+  else if (auto *MI = dyn_cast<AnyMemIntrinsic>(NewCall))
+    LenUse = &MI->getLengthUse();
+  else
+    llvm_unreachable("Expected a memset.pattern or a memory intrinsic");
+
+  // Bail if already a constant (range would be a constant too).
+  if (isa<Constant>(LenUse->get()))
+    return;
+
+  // Cap all contributing parts at 64k (large upper bounds are not useful).
+  constexpr uint64_t MaxBoundedLen = 1 << 16;
+
+  if (ElemsPerIter > MaxBoundedLen)
+    return;
+  const APInt *MaxBTC;
+  if (!match(SE->getConstantMaxBackedgeTakenCount(L), m_scev_APInt(MaxBTC)))
+    return;
+  if (MaxBTC->uge(MaxBoundedLen))
+    return;
+
+  // The length is in [0, (MaxBTC + 1) * ElemsPerIter]. Both factors are capped,
+  // so this can't overflow.
+  uint64_t MaxLen = (MaxBTC->getZExtValue() + 1) * ElemsPerIter;
+  if (MaxLen > MaxBoundedLen)
+    return;
+
+  // ConstantRange's upper end is exclusive, so the range ends at MaxLen + 1,
+  // which must fit in the length's type.
+  uint64_t RangeEnd = MaxLen + 1;
+  unsigned BW = LenUse->get()->getType()->getIntegerBitWidth();
+  if (RangeEnd > maxUIntN(BW))
+    return;
+
+  NewCall->addParamAttr(
+      LenUse->getOperandNo(),
+      Attribute::get(NewCall->getContext(), Attribute::Range,
+                     ConstantRange(APInt::getZero(BW), APInt(BW, RangeEnd))));
+}
+
 /// processLoopStridedStore - We see a strided store of some value.  If we can
 /// transform this into a memset or memset_pattern in the loop preheader, do so.
 bool LoopIdiomRecognize::processLoopStridedStore(
@@ -1139,7 +1187,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // MemsetArg is the number of bytes for the memset libcall, and the number
   // of pattern repetitions if the memset.pattern intrinsic is being used.
   Value *MemsetArg;
-  std::optional<int64_t> BytesWritten;
+  std::optional<uint64_t> BytesWritten;
+  uint64_t PatternRepsPerTrip = 0;
 
   if (PatternValue &&
       (HasMemsetPattern || Opts.loop_idiom_force_memset_pattern_intrinsic)) {
@@ -1152,9 +1201,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
       return Changed;
     Value *TripCount = Expander.expandCodeFor(TripCountS, IntIdxTy,
                                               Preheader->getTerminator());
-    uint64_t PatternRepsPerTrip =
-        (ConstStoreSize->getValue()->getZExtValue() * 8) /
-        DL->getTypeSizeInBits(PatternValue->getType());
+    PatternRepsPerTrip = (ConstStoreSize->getValue()->getZExtValue() * 8) /
+                         DL->getTypeSizeInBits(PatternValue->getType());
     // If ConstStoreSize is not equal to the width of PatternValue, then
     // MemsetArg is TripCount * (ConstStoreSize/PatternValueWidth). Else
     // MemSetArg is just TripCount.
@@ -1186,16 +1234,17 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   AAMDNodes AATags = TheStore->getAAMetadata();
   for (Instruction *Store : Stores)
     AATags = AATags.merge(Store->getAAMetadata());
-  if (BytesWritten)
-    AATags = AATags.extendTo(BytesWritten.value());
-  else
-    AATags = AATags.extendTo(-1);
+  AATags = AATags.extendTo(BytesWritten);
 
   CallInst *NewCall;
   if (SplatValue) {
     NewCall = Builder.CreateMemSet(BasePtr, SplatValue, MemsetArg,
                                    MaybeAlign(StoreAlignment),
                                    /*isVolatile=*/false, AATags);
+    if (auto *ConstStoreSize = dyn_cast<SCEVConstant>(StoreSizeSCEV)) {
+      addRangeAttrFromTripCount(
+          NewCall, ConstStoreSize->getValue()->getZExtValue(), CurLoop, SE);
+    }
   } else if (Opts.loop_idiom_force_memset_pattern_intrinsic ||
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
@@ -1208,6 +1257,8 @@ bool LoopIdiomRecognize::processLoopStridedStore(
     if (StoreAlignment)
       cast<MemSetPatternInst>(NewCall)->setDestAlignment(*StoreAlignment);
     NewCall->setAAMetadata(AATags);
+    assert(PatternRepsPerTrip != 0 && "PatternRepsPerTrip must be set");
+    addRangeAttrFromTripCount(NewCall, PatternRepsPerTrip, CurLoop, SE);
   } else {
     // Neither a memset, nor memset_pattern16
     return Changed;
@@ -1494,10 +1545,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   AAMDNodes AATags = TheLoad->getAAMetadata();
   AAMDNodes StoreAATags = TheStore->getAAMetadata();
   AATags = AATags.merge(StoreAATags);
-  if (auto CI = dyn_cast<ConstantInt>(NumBytes))
-    AATags = AATags.extendTo(CI->getZExtValue());
-  else
-    AATags = AATags.extendTo(-1);
+  AATags = AATags.extendTo(NumBytes);
 
   CallInst *NewCall = nullptr;
   // Check whether to generate an unordered atomic memcpy:
@@ -1520,6 +1568,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
         StoreBasePtr, *StoreAlign, LoadBasePtr, *LoadAlign, NumBytes, StoreSize,
         AATags);
   }
+  addRangeAttrFromTripCount(NewCall, StoreSize, CurLoop, SE);
   NewCall->setDebugLoc(TheStore->getDebugLoc());
 
   if (MSSAU) {
@@ -2028,9 +2077,8 @@ namespace {
 
 class StrlenVerifier {
 public:
-  explicit StrlenVerifier(const Loop *CurLoop, ScalarEvolution *SE,
-                          const TargetLibraryInfo *TLI)
-      : CurLoop(CurLoop), SE(SE), TLI(TLI) {}
+  explicit StrlenVerifier(const Loop *CurLoop, ScalarEvolution *SE)
+      : CurLoop(CurLoop), SE(SE) {}
 
   bool isValidStrlenIdiom() {
     // Give up if the loop has multiple blocks, multiple backedges, or
@@ -2084,7 +2132,7 @@ public:
 
     // Verify that StepSize is consistent with platform char width.
     OpWidth = OperandType->getIntegerBitWidth();
-    unsigned WcharSize = TLI->getWCharSize(*LoopLoad->getModule());
+    unsigned WcharSize = LoopLoad->getModule()->getWCharSize();
     if (OpWidth != 8 && OpWidth != 16 && OpWidth != 32)
       return false;
     if (StepSize != OpWidth / 8)
@@ -2144,7 +2192,6 @@ public:
 public:
   const Loop *CurLoop;
   ScalarEvolution *SE;
-  const TargetLibraryInfo *TLI;
 
   unsigned OpWidth;
   ConstantInt *StepSizeCI;
@@ -2217,7 +2264,7 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
   if (DisableLIRP::All)
     return false;
 
-  StrlenVerifier Verifier(CurLoop, SE, TLI);
+  StrlenVerifier Verifier(CurLoop, SE);
 
   if (!Verifier.isValidStrlenIdiom())
     return false;
@@ -3050,17 +3097,17 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
 
   // Step 1: Insert the ctpop instruction at the end of the precondition block
   IRBuilder<> Builder(PreCondBr);
-  Value *PopCnt, *PopCntZext, *NewCount, *TripCnt;
+  Value *PopCnt, *NewCount, *TripCnt;
   {
     PopCnt = createPopcntIntrinsic(Builder, Var, DL);
-    NewCount = PopCntZext =
+    NewCount =
         Builder.CreateZExtOrTrunc(PopCnt, cast<IntegerType>(CntPhi->getType()));
 
     if (NewCount != PopCnt)
       (cast<Instruction>(NewCount))->setDebugLoc(DL);
 
     // TripCnt is exactly the number of iterations the loop has
-    TripCnt = NewCount;
+    TripCnt = PopCnt;
 
     // If the population counter's initial value is not zero, insert Add Inst.
     Value *CntInitVal = CntPhi->getIncomingValueForBlock(PreHead);
@@ -3072,14 +3119,14 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
   }
 
   // Step 2: Replace the precondition from "if (x == 0) goto loop-exit" to
-  //   "if (NewCount == 0) loop-exit". Without this change, the intrinsic
+  //   "if (TripCnt == 0) loop-exit". Without this change, the intrinsic
   //   function would be partial dead code, and downstream passes will drag
   //   it back from the precondition block to the preheader.
   {
     ICmpInst *PreCond = cast<ICmpInst>(PreCondBr->getCondition());
 
-    Value *Opnd0 = PopCntZext;
-    Value *Opnd1 = ConstantInt::get(PopCntZext->getType(), 0);
+    Value *Opnd0 = TripCnt;
+    Value *Opnd1 = ConstantInt::get(TripCnt->getType(), 0);
     if (PreCond->getOperand(0) != Var)
       std::swap(Opnd0, Opnd1);
 
@@ -3121,14 +3168,14 @@ void LoopIdiomRecognize::transformLoopToPopcount(BasicBlock *PreCondBB,
 
     Builder.SetInsertPoint(LbCond);
     Instruction *TcDec = cast<Instruction>(
-        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1),
-                          "tcdec", false, true));
+        Builder.CreateSub(TcPhi, ConstantInt::get(Ty, 1), "tcdec",
+                          /*HasNUW=*/true, /*HasNSW=*/false));
 
     TcPhi->addIncoming(TripCnt, PreHead);
     TcPhi->addIncoming(TcDec, Body);
 
     CmpInst::Predicate Pred =
-        (LbBr->getSuccessor(0) == Body) ? CmpInst::ICMP_UGT : CmpInst::ICMP_SLE;
+        (LbBr->getSuccessor(0) == Body) ? CmpInst::ICMP_UGT : CmpInst::ICMP_EQ;
     LbCond->setPredicate(Pred);
     LbCond->setOperand(0, TcDec);
     LbCond->setOperand(1, ConstantInt::get(Ty, 0));

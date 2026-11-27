@@ -1069,6 +1069,65 @@ func.func @unreachable() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.KHR.Abort
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @abort_i32
+func.func @abort_i32(%arg0: i32) {
+  // CHECK: spirv.KHR.Abort %{{.*}} : i32
+  spirv.KHR.Abort %arg0 : i32
+}
+
+// CHECK-LABEL: func @abort_struct
+func.func @abort_struct(%arg0: !spirv.struct<(!spirv.array<4 x i8>, vector<2xf16>, !spirv.matrix<2 x vector<2xf32>>, !spirv.ptr<i32, CrossWorkgroup>)>) {
+  // CHECK: spirv.KHR.Abort %{{.*}} : !spirv.struct<(!spirv.array<4 x i8>, vector<2xf16>, !spirv.matrix<2 x vector<2xf32>>, !spirv.ptr<i32, CrossWorkgroup>)>
+  spirv.KHR.Abort %arg0 : !spirv.struct<(!spirv.array<4 x i8>, vector<2xf16>, !spirv.matrix<2 x vector<2xf32>>, !spirv.ptr<i32, CrossWorkgroup>)>
+}
+
+// -----
+
+func.func @abort_bool(%arg0: i1) {
+  // expected-error @+1 {{message must be of a concrete type}}
+  spirv.KHR.Abort %arg0 : i1
+}
+
+// -----
+
+func.func @abort_struct_with_bool_vector(%arg0: !spirv.struct<(i32, vector<2xi1>)>) {
+  // expected-error @+1 {{message must be of a concrete type}}
+  spirv.KHR.Abort %arg0 : !spirv.struct<(i32, vector<2xi1>)>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.func @abort_logical_ptr(%arg0: !spirv.ptr<i32, StorageBuffer>) "None" {
+    // expected-error @+1 {{message must be of a concrete type}}
+    spirv.KHR.Abort %arg0 : !spirv.ptr<i32, StorageBuffer>
+  }
+}
+
+// -----
+
+spirv.module PhysicalStorageBuffer64 GLSL450 {
+  spirv.func @abort_psb_ptr(%arg0: !spirv.ptr<i32, PhysicalStorageBuffer> { spirv.decoration = #spirv.decoration<Aliased> }) "None" {
+    // CHECK: spirv.KHR.Abort %{{.*}} : !spirv.ptr<i32, PhysicalStorageBuffer>
+    spirv.KHR.Abort %arg0 : !spirv.ptr<i32, PhysicalStorageBuffer>
+  }
+}
+
+// -----
+
+spirv.module PhysicalStorageBuffer64 GLSL450 {
+  spirv.func @abort_psb64_storage_buffer_ptr(%arg0: !spirv.ptr<i32, StorageBuffer>) "None" {
+    // expected-error @+1 {{message must be of a concrete type}}
+    spirv.KHR.Abort %arg0 : !spirv.ptr<i32, StorageBuffer>
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.Kill
 //===----------------------------------------------------------------------===//
 
@@ -1076,6 +1135,78 @@ func.func @unreachable() {
 func.func @kill() {
   // CHECK: spirv.Kill
   spirv.Kill
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.LifetimeStart / spirv.LifetimeStop
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @lifetime
+func.func @lifetime() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: spirv.LifetimeStart %{{.*}}, 0 : !spirv.ptr<f32, Function>
+  spirv.LifetimeStart %0, 0 : !spirv.ptr<f32, Function>
+  // CHECK: spirv.LifetimeStop %{{.*}}, 0 : !spirv.ptr<f32, Function>
+  spirv.LifetimeStop %0, 0 : !spirv.ptr<f32, Function>
+
+  %1 = spirv.Bitcast %0 : !spirv.ptr<f32, Function> to !spirv.ptr<i8, Function>
+  // CHECK: spirv.LifetimeStart %{{.*}}, 0 : !spirv.ptr<i8, Function>
+  spirv.LifetimeStart %1, 0 : !spirv.ptr<i8, Function>
+  // CHECK: spirv.LifetimeStop %{{.*}}, 0 : !spirv.ptr<i8, Function>
+  spirv.LifetimeStop %1, 0 : !spirv.ptr<i8, Function>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_start_wrong_storage_class(%arg0: !spirv.ptr<f32, CrossWorkgroup>) {
+  // expected-error @+1 {{pointer must have the Function storage class}}
+  spirv.LifetimeStart %arg0, 0 : !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_stop_wrong_storage_class(%arg0: !spirv.ptr<f32, CrossWorkgroup>) {
+  // expected-error @+1 {{pointer must have the Function storage class}}
+  spirv.LifetimeStop %arg0, 0 : !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_start_size_on_typed_pointer() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
+  spirv.LifetimeStart %0, 4 : !spirv.ptr<f32, Function>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_stop_size_on_typed_pointer() {
+  %0 = spirv.Variable : !spirv.ptr<f32, Function>
+  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
+  spirv.LifetimeStop %0, 4 : !spirv.ptr<f32, Function>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_start_size_on_byte_pointer(%ptr: !spirv.ptr<i8, Function>) {
+  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
+  spirv.LifetimeStart %ptr, 4 : !spirv.ptr<i8, Function>
+  spirv.Return
+}
+
+// -----
+
+func.func @lifetime_stop_size_on_byte_pointer(%ptr: !spirv.ptr<i8, Function>) {
+  // expected-error @+1 {{attribute 'size' failed to satisfy constraint: 32-bit signless integer attribute whose value is one of {0}}}
+  spirv.LifetimeStop %ptr, 4 : !spirv.ptr<i8, Function>
+  spirv.Return
 }
 
 // -----

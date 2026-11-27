@@ -32,7 +32,6 @@
 ---
 name:            test
 alignment:       16
-tracksRegLiveness: true
 frameInfo:
   stackSize:       40
   maxAlignment:    8

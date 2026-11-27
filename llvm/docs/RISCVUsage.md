@@ -72,8 +72,10 @@ ISA naming string. Currently supported profiles:
 - `rva22s64`
 - `rva23u64`
 - `rva23s64`
+- `rva23p1s64`
 - `rvb23u64`
 - `rvb23s64`
+- `rvb23p1s64`
 
 Note that you can also append additional extension names to be enabled, e.g.
 `rva20u64_zicond` will enable the `zicond` extension in addition to those
@@ -83,14 +85,12 @@ Profiles that are not yet ratified cannot be used unless
 `-menable-experimental-extensions` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
-- `rva23p1s64`
-- `rvb23p1s64`
 - `rvm23u32`
 
 The `rva23p1s64` and `rvb23p1s64` profiles enable the same mandatory extensions
 as `rva23s64` and `rvb23s64`, respectively. Their additional optional extensions
 must be requested explicitly, for example
-`-march=rva23p1s64_ssctr -menable-experimental-extensions`.
+`-march=rva23p1s64_ssctr`.
 
 (riscv-extensions)=
 
@@ -498,6 +498,10 @@ The current vendor extensions supported are:
 `Xsfvfwmaccqqq`
 
 : LLVM implements [version 1.0.0 of the Matrix Multiply Accumulate Instruction Extension Specification](https://sifive.cdn.prismic.io/sifive/c391d53e-ffcf-4091-82f6-c37bf3e883ed_xsfvfwmaccqqq-spec.pdf) by SiFive. All instructions are prefixed with `sf.` as described in the specification linked above.
+
+`Xsfvfofp4min`
+
+: LLVM implements the [0.1 draft specification](https://www.sifive.com/document-file/ofp4-conversion-instruction-xsfvfofp4min-extension) by SiFive.
 
 `XCVbitmanip`
 

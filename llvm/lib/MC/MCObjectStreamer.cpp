@@ -605,6 +605,14 @@ void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
 void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
                                                  const MCSymbol *Label,
                                                  SMLoc Loc) {
+  // The delta is final when both labels are in the fixed part of a fragment
+  // without linker relaxation. Encode it now to save a fragment.
+  if (std::optional<uint64_t> Diff = absoluteSymbolDiff(Label, LastLabel)) {
+    SmallString<8> Tmp;
+    MCDwarfFrameEmitter::encodeAdvanceLoc(getContext(), *Diff, Tmp);
+    emitBytes(Tmp);
+    return;
+  }
   auto *F = getCurrentFragment();
   F->Kind = MCFragment::FT_DwarfFrame;
   F->setDwarfAddrDelta(buildSymbolDiff(*this, Label, LastLabel, Loc));
@@ -766,7 +774,8 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
   }
 
   assert(getCurrentSectionOnly() && "need a section");
-  newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
+  if (Size)
+    newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
 }
 
 void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,

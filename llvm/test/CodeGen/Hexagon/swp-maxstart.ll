@@ -2,7 +2,7 @@
 
 ; Test that the MinStart computation, which is based upon the length
 ; of the chain edges, is computed correctly. A bug in the code allowed
-; two instuctions that have a chain edge to be scheduled more than II
+; two instructions that have a chain edge to be scheduled more than II
 ; instructions apart. In this test, if two stores appear before the
 ; store, then that is a bug.
 

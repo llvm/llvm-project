@@ -28,6 +28,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/TarWriter.h"
 #include <atomic>
 #include <memory>
@@ -305,6 +306,7 @@ struct Config {
   llvm::SmallVector<llvm::StringRef, 0> auxiliaryList;
   llvm::SmallVector<llvm::StringRef, 0> filterList;
   llvm::SmallVector<llvm::StringRef, 0> passPlugins;
+  llvm::SmallVector<llvm::StringRef, 0> passPluginArgs;
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
   llvm::SmallVector<llvm::StringRef, 0> symbolOrderingFile;
   llvm::SmallVector<llvm::StringRef, 0> thinLTOModulesToCompile;
@@ -317,6 +319,7 @@ struct Config {
   llvm::SmallVector<SymbolVersion, 0> dynamicList;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
+  llvm::cl::LibraryOptionsContext libraryOptions;
   llvm::MapVector<std::pair<const InputSectionBase *, const InputSectionBase *>,
                   uint64_t>
       callGraphProfile;

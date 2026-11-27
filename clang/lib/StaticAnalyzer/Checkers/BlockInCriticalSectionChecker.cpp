@@ -178,7 +178,7 @@ private:
       {{CDM::CLibrary, {"mtx_unlock"}, 1}, {RoleKind::Unlock}},
       {{CDM::CLibrary, {"pthread_mutex_trylock"}, 1}, {RoleKind::Lock}},
       {{CDM::CLibrary, {"mtx_trylock"}, 1}, {RoleKind::Lock}},
-      {{CDM::CLibrary, {"mtx_timedlock"}, 1}, {RoleKind::Lock}},
+      {{CDM::CLibrary, {"mtx_timedlock"}, 2}, {RoleKind::Lock}},
       {{CDM::CXXMethod, {"lock_guard", "lock_guard"}},
        {RoleKind::Lock, getObjectUnderConstruction}},
       {{CDM::CXXMethod, {"lock_guard", "~lock_guard"}},
@@ -307,8 +307,9 @@ void BlockInCriticalSectionChecker::handleUnlock(
 
 bool BlockInCriticalSectionChecker::isBlockingInCritSection(
     const CallEvent &Call, CheckerContext &C) const {
-  return BlockingFunctions.contains(Call) &&
-         !C.getState()->get<ActiveCritSections>().isEmpty();
+  // Checking the lock state is cheaper than matching the call.
+  return !C.getState()->get<ActiveCritSections>().isEmpty() &&
+         BlockingFunctions.contains(Call);
 }
 
 void BlockInCriticalSectionChecker::checkPostCall(const CallEvent &Call,

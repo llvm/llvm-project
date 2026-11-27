@@ -21,7 +21,43 @@ upgrades post-parsing through the `upgradeFromVersion` method.
 There is no restriction on what kind of information a dialect
 is allowed to encode to model its versioning.
 
+When emitting bytecode, `mlir-opt --emit-bytecode-version=<version>` selects the
+overall bytecode format version. Dialect versions are selected separately with
+`--emit-bytecode-dialect-version=<dialect>=<version>`, which may be repeated for
+different dialects. For example, `mlir-opt --emit-bytecode
+--emit-bytecode-dialect-version=builtin=0` selects the historical builtin dialect
+encoding. A dialect must implement `BytecodeDialectInterface::parseVersion` to
+accept a version string; the dialect defines its syntax and supported versions.
+The resulting version object is passed to the bytecode writer through
+`BytecodeWriterConfig::setDialectVersion`. Before emission, the writer invokes
+`BytecodeDialectInterface::verifyVersion` for explicitly selected versions so
+dialects can reject IR that cannot be represented without losing information.
+
 [TOC]
+
+## Operation Properties and Back-Deployment
+
+Bytecode version 5 introduced native operation property encoding. Versions 0
+through 4 store only the operation's legacy attribute dictionary, formed by
+combining its inherent and discardable attributes. When reading these versions,
+operation properties are initialized to their defaults and then populated using
+the legacy inherent-attribute setters.
+
+Inherent attributes stored in properties can therefore be preserved. ODS operand
+and result segment sizes are also exposed as inherent attributes, even though
+they are native properties. Other native properties are normally omitted from
+the legacy dictionary and retain their initialized defaults when read back.
+Omitting such a property is lossless only if its original value equals that
+default. For example, a native integer property initialized to zero can retain
+the value zero without being encoded, but a nonzero value would be lost.
+
+For versions 0 through 4, the writer rejects back-deployment when reconstructing
+properties from the legacy dictionary would produce property storage unequal to
+the original. This check is unnecessary for version 5 and later, which encode
+properties directly. Providing an attribute conversion for a native property
+alone does not make it available to the legacy reader: the legacy
+inherent-attribute hooks must expose and restore it. Use bytecode version 5 or
+later when the legacy representation cannot preserve the operation's properties.
 
 ## Magic Number
 
@@ -287,6 +323,20 @@ or type is being encoded; the bytecode reader will only know that it has
 encountered an attribute or type of a given dialect, it doesn't encode any
 further information. As such, a common encoding idiom is to use a leading
 `varint` code to indicate how the attribute or type was encoded.
+
+Mutable types (`TypeTrait::IsMutable`) may refer to themselves directly or
+through nested attributes and types. To support cyclic references, the encoding
+must begin with the immutable key that uniquely identifies the type. In
+`readType`, the dialect constructs or looks up the incomplete type from that
+key, publishes it via `DialectBytecodeReader::tryStartCyclicRead` before reading
+its body, mutates the published instance in place, and returns that same
+instance. Because `readType` may run more than once when nested entries exceed
+the eager depth limit and defer, key lookup must return the same instance across
+retries and in-place mutation must be idempotent. Nested entries inside the
+cycle observe the incomplete mutable type during their own parse, whereas
+non-cyclic parents retry only after the mutable type completes. Mutable
+attributes (`AttributeTrait::IsMutable`) do not yet have a cyclic-read hook and
+always use the assembly format fallback.
 
 ### Resource Section
 

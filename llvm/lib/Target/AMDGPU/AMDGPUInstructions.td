@@ -77,9 +77,6 @@ class RegListUnion<list<Register> lstA, list<Register> lstB> {
 class AMDGPUPat<dag pattern, dag result> : Pat<pattern, result>,
       PredicateControl, GISelFlags;
 
-let GIIgnoreCopies = 1 in
-class AMDGPUPatIgnoreCopies<dag pattern, dag result> : AMDGPUPat<pattern, result>;
-
 let RecomputePerFunction = 1 in {
 def FP16Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP64FP16Denormals != DenormalMode::getPreserveSign()">;
 def FP32Denormals : Predicate<"MF->getInfo<SIMachineFunctionInfo>()->getMode().FP32Denormals != DenormalMode::getPreserveSign()">;
@@ -907,6 +904,20 @@ def fmaxnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
    (fmaxnum_oneuse node:$src0, node:$src1),
    (fmaximumnum_oneuse node:$src0, node:$src1)]
 >;
+
+// Unlike FMA, div.fmas always preserves input denormals.
+def unscaled_div_fmas : PatFrag<
+  (ops node:$src0, node:$src1, node:$src2, node:$scale),
+  (AMDGPUdiv_fmas node:$src0, node:$src1, node:$src2, node:$scale), [{
+    return isNullConstant(N->getOperand(N->getNumOperands() - 1)) &&
+           CurDAG->getMachineFunction()
+               .getDenormalMode(N->getValueType(0).getFltSemantics()).Input ==
+           DenormalMode::IEEE;
+  }]> {
+  let GISelPredicateCode = [{
+    return AMDGPU::isUnscaledIEEEDivFmas(MI, MRI);
+  }];
+}
 
 def any_fmad : PatFrags<(ops node:$src0, node:$src1, node:$src2),
   [(fmad node:$src0, node:$src1, node:$src2),

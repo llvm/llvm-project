@@ -6,6 +6,8 @@
 // RUN:   spirv-pc-vulkan1.3-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // Test that the RWByteAddressBuffer::InterlockedExchange and
 // InterlockedExchange64 member methods lower to `resource_getpointer ->
 // atomicrmw xchg`, and that the returned original value is stored through the

@@ -32,7 +32,7 @@
 // constructors in the end user application (starting at priority 101). This
 // value matches the libgcc choice for the same functions.
 #ifdef _WIN32
-// Contructor that replaces the ifunc runs currently with prio 10, see
+// Constructor that replaces the ifunc runs currently with prio 10, see
 // the LowerIFuncPass. The resolver of FMV depends on the cpu features so set
 // the priority to 9.
 #define CONSTRUCTOR_PRIORITY 9

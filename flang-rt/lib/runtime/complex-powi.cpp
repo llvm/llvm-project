@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "flang/Common/api-attrs.h"
 #include "flang/Common/float128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
@@ -18,7 +19,15 @@ namespace Fortran::runtime {
 #pragma clang diagnostic ignored "-Wc99-extensions"
 #endif
 
-template <typename C, typename I> C tgpowi(C base, I exp) {
+// The exponentiation-by-squaring algorithm itself. Force-inlined so that
+// tgpowiSingle() below can fuse it into the single-precision entry points:
+// there the caller's promote/narrow pair sits on the algorithm's dependency
+// path, and leaving the call out of line costs those entry points a stack
+// frame and a call on every invocation. The entry points that use the
+// algorithm at its own precision call tgpowi(), which keeps the out-of-line
+// instantiation they share today.
+template <typename C, typename I>
+RT_FORCE_INLINE_ATTR C tgpowiInline(C base, I exp) {
   if (exp == 0) {
     return C{1};
   }
@@ -62,11 +71,26 @@ template <typename C, typename I> C tgpowi(C base, I exp) {
   return acc;
 }
 
+template <typename C, typename I> C tgpowi(C base, I exp) {
+  return tgpowiInline(base, exp);
+}
+
 #ifndef _MSC_VER
 // With most compilers, C complex is implemented as a builtin type that may have
 // specific ABI requirements
+
+// Accumulate in COMPLEX(8) and round to single once, matching what constant
+// folding does for a COMPLEX(4) power -- rounding every intermediate product
+// instead costs a few single-precision ULPs and would disagree with the
+// folder. Only the single-precision entry points need this.
+template <typename I>
+static float _Complex tgpowiSingle(float _Complex base, I exp) {
+  return static_cast<float _Complex>(
+      tgpowiInline(static_cast<double _Complex>(base), exp));
+}
+
 extern "C" float _Complex RTNAME(cpowi)(float _Complex base, std::int32_t exp) {
-  return tgpowi(base, exp);
+  return tgpowiSingle(base, exp);
 }
 
 extern "C" double _Complex RTNAME(zpowi)(
@@ -75,7 +99,7 @@ extern "C" double _Complex RTNAME(zpowi)(
 }
 
 extern "C" float _Complex RTNAME(cpowk)(float _Complex base, std::int64_t exp) {
-  return tgpowi(base, exp);
+  return tgpowiSingle(base, exp);
 }
 
 extern "C" double _Complex RTNAME(zpowk)(
@@ -125,9 +149,20 @@ struct Dcomplex {
   CppTypeFor<TypeCategory::Real, 8> im;
 };
 
+// See the note on the non-MSVC tgpowiSingle above.
+template <typename I>
+static CppTypeFor<TypeCategory::Complex, 4> tgpowiSingle(
+    CppTypeFor<TypeCategory::Complex, 4> base, I exp) {
+  CppTypeFor<TypeCategory::Complex, 8> wideBase{base.real(), base.imag()};
+  auto wide = tgpowiInline(wideBase, exp);
+  return CppTypeFor<TypeCategory::Complex, 4>{
+      static_cast<CppTypeFor<TypeCategory::Real, 4>>(wide.real()),
+      static_cast<CppTypeFor<TypeCategory::Real, 4>>(wide.imag())};
+}
+
 extern "C" Fcomplex RTNAME(cpowi)(Fcomplex base, std::int32_t exp) {
   auto cppbase = *(CppTypeFor<TypeCategory::Complex, 4> *)(&base);
-  auto cppres = tgpowi(cppbase, exp);
+  auto cppres = tgpowiSingle(cppbase, exp);
   return *(Fcomplex *)(&cppres);
 }
 
@@ -139,7 +174,7 @@ extern "C" Dcomplex RTNAME(zpowi)(Dcomplex base, std::int32_t exp) {
 
 extern "C" Fcomplex RTNAME(cpowk)(Fcomplex base, std::int64_t exp) {
   auto cppbase = *(CppTypeFor<TypeCategory::Complex, 4> *)(&base);
-  auto cppres = tgpowi(cppbase, exp);
+  auto cppres = tgpowiSingle(cppbase, exp);
   return *(Fcomplex *)(&cppres);
 }
 

@@ -1,10 +1,10 @@
 if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-  add_custom_target(libc_regex_unittests)
+  add_libc_testsuite(libc-regex-tests)
 
   add_libc_test(
     regerror_test
     SUITE
-      libc_regex_unittests
+      libc-regex-tests
     SRCS
       regerror_test.cpp
     DEPENDS
@@ -15,12 +15,46 @@ if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
   add_libc_test(
     regex_basic_test
     SUITE
-      libc_regex_unittests
+      libc-regex-tests
     SRCS
       regex_basic_test.cpp
     DEPENDS
       libc.hdr.regex_macros
       libc.hdr.types.regex_t
+      libc.src.__support.CPP.scope
+      libc.src.regex.regcomp
+      libc.src.regex.regexec
+      libc.src.regex.regfree
+  )
+
+  add_libc_test(
+    regex_limits_test
+    SUITE
+      libc-regex-tests
+    SRCS
+      regex_limits_test.cpp
+    DEPENDS
+      libc.hdr.regex_macros
+      libc.hdr.types.regex_t
+      libc.hdr.types.size_t
+      libc.src.__support.macros.attributes
+      libc.src.regex.regcomp
+      libc.src.regex.regexec
+      libc.src.regex.regfree
+  )
+
+  add_libc_test(
+    regex_submatch_test
+    SUITE
+      libc-regex-tests
+    SRCS
+      regex_submatch_test.cpp
+    DEPENDS
+      libc.hdr.regex_macros
+      libc.hdr.types.regex_t
+      libc.hdr.types.regmatch_t
+      libc.hdr.types.regoff_t
+      libc.src.__support.CPP.scope
       libc.src.regex.regcomp
       libc.src.regex.regexec
       libc.src.regex.regfree

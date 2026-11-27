@@ -21,7 +21,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -47,7 +46,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -1344,6 +1342,39 @@ MDNode *MDNode::getMergedCalleesMetadata(MDNode *A, MDNode *B) {
   return MDNode::get(A->getContext(), Callees.getArrayRef());
 }
 
+MDNode *MDNode::getMergedPCSectionsMetadata(MDNode *A, MDNode *B) {
+  // The merged instruction stands for both, so its PC belongs in every section
+  // either requested, with each request's auxiliary data.
+  if (!A || A == B)
+    return B;
+  if (!B)
+    return A;
+  // Requests are a section name followed by auxiliary data tuples. Append B's
+  // requests that A does not already contain.
+  const auto Requests = [](MDNode *N) {
+    SmallVector<ArrayRef<MDOperand>, 4> Rs;
+    const ArrayRef<MDOperand> Ops = N->operands();
+    for (size_t I = 0; I < Ops.size();) {
+      const size_t Begin = I++;
+      while (I < Ops.size() && !isa<MDString>(Ops[I]))
+        ++I;
+      Rs.push_back(Ops.slice(Begin, I - Begin));
+    }
+    return Rs;
+  };
+  const auto RequestsA = Requests(A);
+  const auto Same = [](ArrayRef<MDOperand> X, ArrayRef<MDOperand> Y) {
+    return equal(X, Y, [](const MDOperand &L, const MDOperand &R) {
+      return L.get() == R.get();
+    });
+  };
+  SmallVector<Metadata *, 8> Ops(A->op_begin(), A->op_end());
+  for (const ArrayRef<MDOperand> R : Requests(B))
+    if (none_of(RequestsA, [&](ArrayRef<MDOperand> RA) { return Same(RA, R); }))
+      Ops.append(R.begin(), R.end());
+  return MDNode::get(A->getContext(), Ops);
+}
+
 MDNode *MDNode::getMergedAllocTokenMetadata(const MDNode *A, const MDNode *B) {
   // Drop !alloc_token metadata if either instruction lacks it to avoid mis-
   // classifying unclassified allocations, where the fallback token must be
@@ -2002,6 +2033,15 @@ void Function::setSubprogram(DISubprogram *SP) {
 
 DISubprogram *Function::getSubprogram() const {
   return cast_or_null<DISubprogram>(getMetadata(LLVMContext::MD_dbg));
+}
+
+void Function::setFLContext(MDFunctionLocalContext *FLContext) {
+  setMetadata(LLVMContext::MD_flmd, FLContext);
+}
+
+MDFunctionLocalContext *Function::getFLContext() const {
+  return cast_or_null<MDFunctionLocalContext>(
+      getMetadata(LLVMContext::MD_flmd));
 }
 
 bool Function::shouldEmitDebugInfoForProfiling() const {

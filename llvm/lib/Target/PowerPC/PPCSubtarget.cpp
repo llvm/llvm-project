@@ -26,7 +26,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
 
@@ -38,10 +38,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "PPCGenSubtargetInfo.inc"
 
-static cl::opt<bool>
-    EnableMachinePipeliner("ppc-enable-pipeliner",
-                           cl::desc("Enable Machine Pipeliner for PPC"),
-                           cl::init(false), cl::Hidden);
+#define OPTIONS_STRUCT_DEFS
+#include "PPCOptions.inc"
 
 PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                             StringRef TuneCPU,
@@ -54,7 +52,7 @@ PPCSubtarget &PPCSubtarget::initializeSubtargetDependencies(StringRef CPU,
 PPCSubtarget::PPCSubtarget(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                            StringRef FS, StringRef ABIName,
                            const PPCTargetMachine &TM)
-    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS),
+    : PPCGenSubtargetInfo(TT, CPU, TuneCPU, FS), CLOpts(TM.getCLOpts()),
       TargetABI(PPCTargetMachine::computeABI(TT, ABIName)), TM(TM),
       FrameLowering(initializeSubtargetDependencies(CPU, TuneCPU, FS)),
       InstrInfo(*this), TLInfo(TM, *this) {
@@ -154,7 +152,7 @@ void PPCSubtarget::initSubtargetFeatures(StringRef CPU, StringRef TuneCPU,
 bool PPCSubtarget::enableMachineScheduler() const { return true; }
 
 bool PPCSubtarget::enableMachinePipeliner() const {
-  return getSchedModel().hasInstrSchedModel() && EnableMachinePipeliner;
+  return getSchedModel().hasInstrSchedModel();
 }
 
 bool PPCSubtarget::useDFAforSMS() const { return false; }

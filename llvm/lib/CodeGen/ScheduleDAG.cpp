@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ScheduleDAG.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -22,7 +23,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -41,12 +41,6 @@ STATISTIC(NumNewPredsAdded, "Number of times a  single predecessor was added");
 STATISTIC(NumTopoInits,
           "Number of times the topological order has been recomputed");
 
-#ifndef NDEBUG
-static cl::opt<bool> StressSchedOpt(
-  "stress-sched", cl::Hidden, cl::init(false),
-  cl::desc("Stress test instruction scheduling"));
-#endif
-
 void SchedulingPriorityQueue::anchor() {}
 
 ScheduleDAG::ScheduleDAG(MachineFunction &mf)
@@ -54,7 +48,7 @@ ScheduleDAG::ScheduleDAG(MachineFunction &mf)
       TRI(mf.getSubtarget().getRegisterInfo()), MF(mf),
       MRI(mf.getRegInfo()) {
 #ifndef NDEBUG
-  StressSched = StressSchedOpt;
+  StressSched = getCodeGenOptions(mf).stress_sched;
 #endif
 }
 

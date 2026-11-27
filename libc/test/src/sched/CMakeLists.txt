@@ -1,4 +1,4 @@
-add_custom_target(libc_sched_unittests)
+add_libc_testsuite(libc-sched-tests)
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})
@@ -7,15 +7,13 @@ endif()
 add_libc_test(
   affinity_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     affinity_test.cpp
   DEPENDS
     libc.hdr.types.cpu_set_t
     libc.hdr.types.pid_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
+    libc.src.__support.OSUtil.linux.syscall_wrappers.gettid
     libc.src.sched.sched_getaffinity
     libc.src.sched.sched_setaffinity
     libc.test.UnitTest.ErrnoCheckingTest
@@ -25,24 +23,35 @@ add_libc_test(
 add_libc_test(
   yield_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     yield_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.sched.sched_yield
     libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
+  unshare_test
+  SUITE
+    libc-sched-tests
+  SRCS
+    unshare_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.sched.unshare
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   get_priority_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     get_priority_test.cpp
   DEPENDS
     libc.hdr.sched_macros
-    libc.src.errno.errno
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_get_priority_max
     libc.test.UnitTest.ErrnoCheckingTest
@@ -51,11 +60,10 @@ add_libc_test(
 add_libc_test(
   getcpu_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     getcpu_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.sched.getcpu
     libc.test.UnitTest.ErrnoCheckingTest
 )
@@ -63,11 +71,10 @@ add_libc_test(
 add_libc_test(
   sched_getcpu_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     sched_getcpu_test.cpp
   DEPENDS
-    libc.src.errno.errno
     libc.src.sched.sched_getcpu
     libc.test.UnitTest.ErrnoCheckingTest
 )
@@ -75,13 +82,12 @@ add_libc_test(
 add_libc_test(
   scheduler_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     param_and_scheduler_test.cpp
   DEPENDS
     libc.hdr.sched_macros
     libc.hdr.types.struct_sched_param
-    libc.src.errno.errno
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_setscheduler
     libc.src.sched.sched_getparam
@@ -95,13 +101,12 @@ add_libc_test(
 add_libc_test(
   sched_rr_get_interval_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     sched_rr_get_interval_test.cpp
   DEPENDS
     libc.hdr.sched_macros
     libc.hdr.types.struct_timespec
-    libc.src.errno.errno
     libc.src.sched.sched_getscheduler
     libc.src.sched.sched_setscheduler
     libc.src.sched.sched_get_priority_min
@@ -113,7 +118,7 @@ add_libc_test(
 add_libc_test(
   cpu_alloc_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     cpu_alloc_test.cpp
   DEPENDS
@@ -130,16 +135,14 @@ add_libc_test(
 add_libc_test(
   cpu_count_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     cpu_count_test.cpp
   DEPENDS
     libc.hdr.sched_macros
     libc.hdr.types.cpu_set_t
     libc.hdr.types.pid_t
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
-    libc.src.errno.errno
+    libc.src.__support.OSUtil.linux.syscall_wrappers.gettid
     libc.src.sched.sched_getaffinity
     libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_getcpucount
@@ -153,7 +156,7 @@ add_libc_test(
 add_libc_test(
   sched_andcpuset_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     sched_andcpuset_test.cpp
   DEPENDS
@@ -168,7 +171,7 @@ add_libc_test(
 add_libc_test(
   sched_cpuequal_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     sched_cpuequal_test.cpp
   DEPENDS
@@ -181,7 +184,7 @@ add_libc_test(
 add_libc_test(
   sched_orcpuset_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     sched_orcpuset_test.cpp
   DEPENDS
@@ -196,7 +199,7 @@ add_libc_test(
 add_libc_test(
   sched_xorcpuset_test
   SUITE
-    libc_sched_unittests
+    libc-sched-tests
   SRCS
     sched_xorcpuset_test.cpp
   DEPENDS

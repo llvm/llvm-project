@@ -14,7 +14,7 @@
 #ifndef MLIR_LIB_TARGET_LLVMIR_DEBUGIMPORTER_H_
 #define MLIR_LIB_TARGET_LLVMIR_DEBUGIMPORTER_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/CyclicReplacerCache.h"
@@ -65,6 +65,7 @@ private:
   DICompileUnitAttr translateImpl(llvm::DICompileUnit *node);
   DICompositeTypeAttr translateImpl(llvm::DICompositeType *node);
   DIDerivedTypeAttr translateImpl(llvm::DIDerivedType *node);
+  DIEnumeratorAttr translateImpl(llvm::DIEnumerator *node);
   DIStringTypeAttr translateImpl(llvm::DIStringType *node);
   DIFileAttr translateImpl(llvm::DIFile *node);
   DILabelAttr translateImpl(llvm::DILabel *node);

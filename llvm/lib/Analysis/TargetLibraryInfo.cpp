@@ -14,8 +14,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringTable.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/SystemLibraries.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/TargetParser/Triple.h"
@@ -60,7 +60,7 @@ static bool hasBcmp(const Triple &TT) {
     return TT.isGNUEnvironment() || TT.isMusl();
   // Both NetBSD and OpenBSD are planning to remove the function. Windows does
   // not have it.
-  return TT.isOSFreeBSD() || TT.isOSSolaris();
+  return TT.isOSFreeBSD() || TT.isOSDragonFly() || TT.isOSSolaris();
 }
 
 static bool isCallingConvCCompatible(CallingConv::ID CC, const Triple &TT,
@@ -104,6 +104,23 @@ bool TargetLibraryInfoImpl::isCallingConvCCompatible(Function *F) {
   return ::isCallingConvCCompatible(F->getCallingConv(),
                                     F->getParent()->getTargetTriple(),
                                     F->getFunctionType());
+}
+
+void TargetLibraryInfo::initExtensionsForTriple(bool &ShouldExtI32Param,
+                                                bool &ShouldExtI32Return,
+                                                bool &ShouldSignExtI32Param,
+                                                bool &ShouldSignExtI32Return,
+                                                const Triple &T) {
+  RTLIB::RuntimeLibcallsInfo::initExtensionsForTriple(
+      ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param,
+      ShouldSignExtI32Return, T);
+}
+
+void TargetLibraryInfo::initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                    bool &ShouldZExtBoolReturn,
+                                                    const Triple &T) {
+  RTLIB::RuntimeLibcallsInfo::initBoolExtensionsForTriple(
+      ShouldZExtBoolParam, ShouldZExtBoolReturn, T);
 }
 
 static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
@@ -188,6 +205,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_sinpif);
     TLI.setUnavailable(LibFunc_cospi);
     TLI.setUnavailable(LibFunc_cospif);
+    TLI.setUnavailable(LibFunc_sincos_stret);
+    TLI.setUnavailable(LibFunc_sincosf_stret);
     TLI.setUnavailable(LibFunc_sincospi_stret);
     TLI.setUnavailable(LibFunc_sincospif_stret);
   }
@@ -554,8 +573,8 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setUnavailable(LibFunc_exp10l);
   }
 
-  // ffsl is available on at least Darwin, Mac OS X, iOS, FreeBSD, and
-  // Linux (GLIBC):
+  // ffsl is available on at least Darwin, Mac OS X, iOS, FreeBSD, DragonFly,
+  // OpenBSD and Linux (GLIBC):
   // http://developer.apple.com/library/mac/#documentation/Darwin/Reference/ManPages/man3/ffsl.3.html
   // http://svn.freebsd.org/base/head/lib/libc/string/ffsl.c
   // http://www.gnu.org/software/gnulib/manual/html_node/ffsl.html
@@ -567,13 +586,16 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::WatchOS:
   case Triple::XROS:
   case Triple::FreeBSD:
+  case Triple::DragonFly:
+  case Triple::OpenBSD:
   case Triple::Linux:
     break;
   default:
     TLI.setUnavailable(LibFunc_ffsl);
   }
 
-  // ffsll is available on at least FreeBSD and Linux (GLIBC):
+  // ffsll is available on at least FreeBSD, DragonFly, OpenBSD and Linux
+  // (GLIBC):
   // http://svn.freebsd.org/base/head/lib/libc/string/ffsll.c
   // http://www.gnu.org/software/gnulib/manual/html_node/ffsll.html
   switch (T.getOS()) {
@@ -584,17 +606,22 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   case Triple::WatchOS:
   case Triple::XROS:
   case Triple::FreeBSD:
+  case Triple::DragonFly:
+  case Triple::OpenBSD:
   case Triple::Linux:
     break;
   default:
     TLI.setUnavailable(LibFunc_ffsll);
   }
 
-  // The following functions are available on at least FreeBSD:
+  // The following functions are available on at least FreeBSD and DragonFly:
   // http://svn.freebsd.org/base/head/lib/libc/string/fls.c
   // http://svn.freebsd.org/base/head/lib/libc/string/flsl.c
   // http://svn.freebsd.org/base/head/lib/libc/string/flsll.c
-  if (!T.isOSFreeBSD()) {
+  // https://gitweb.dragonflybsd.org/?p=dragonfly.git;a=blob;f=lib/libc/string/fls.c
+  // https://gitweb.dragonflybsd.org/?p=dragonfly.git;a=blob;f=lib/libc/string/flsl.c
+  // https://gitweb.dragonflybsd.org/?p=dragonfly.git;a=blob;f=lib/libc/string/flsll.c
+  if (!T.isOSFreeBSD() && !T.isOSDragonFly()) {
     TLI.setUnavailable(LibFunc_fls);
     TLI.setUnavailable(LibFunc_flsl);
     TLI.setUnavailable(LibFunc_flsll);
@@ -820,10 +847,17 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   if (T.isOSFreeBSD()) {
     TLI.setAvailable(LibFunc_dunder_strtok_r);
     TLI.setAvailable(LibFunc_memalign);
+  }
+
+  if (T.isOSFreeBSD() || T.isOSDragonFly()) {
     TLI.setAvailable(LibFunc_fputc_unlocked);
     TLI.setAvailable(LibFunc_fputs_unlocked);
     TLI.setAvailable(LibFunc_fread_unlocked);
     TLI.setAvailable(LibFunc_fwrite_unlocked);
+  }
+
+  if (T.isOSFreeBSD() || T.isOSDragonFly() || T.isOSNetBSD() ||
+      T.isOSOpenBSD()) {
     TLI.setAvailable(LibFunc_getc_unlocked);
     TLI.setAvailable(LibFunc_getchar_unlocked);
     TLI.setAvailable(LibFunc_putc_unlocked);
@@ -882,6 +916,11 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
 
   if (T.isOSAIX())
     TLI.setUnavailable(LibFunc_memrchr);
+
+  if (T.getOS() != Triple::CheriotRTOS) {
+    TLI.setUnavailable(LibFunc_cheriot_heap_allocate);
+    TLI.setUnavailable(LibFunc_cheriot_heap_free);
+  }
 
   TLI.addVectorizableFunctionsFromVecLib(VecLib, T);
 }
@@ -1085,9 +1124,13 @@ static bool isValidProtoForSizeReturningNew(const FunctionType &FTy, LibFunc F,
 
   auto &Context = M.getContext();
   PointerType *PtrTy = PointerType::get(Context, 0);
-  StructType *SizedPtrTy = StructType::get(
-      Context, {PtrTy, Type::getIntNTy(Context, SizeTSizeBits)});
-  return FTy.getReturnType() == SizedPtrTy;
+  Type *SizeTTy = Type::getIntNTy(Context, SizeTSizeBits);
+  Type *RetTy = FTy.getReturnType();
+  // Return type struct __sized_ptr_t { void*, size_t } is lowered to
+  // { ptr, iN } on some targets (e.g. x86_64) and [2 x iN] on others (e.g.
+  // AArch64).
+  return RetTy == StructType::get(Context, {PtrTy, SizeTTy}) ||
+         RetTy == ArrayType::get(SizeTTy, 2);
 }
 
 bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
@@ -1116,8 +1159,10 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
 
     return false;
   }
-    // Special handling for the sincospi functions that return either
-    // a struct or vector:
+    // Special handling for the sincos and sincospi functions that return
+    // either a struct or vector:
+  case LibFunc_sincos_stret:
+  case LibFunc_sincosf_stret:
   case LibFunc_sincospi_stret:
   case LibFunc_sincospif_stret: {
     if (NumParams != 1)
@@ -1453,13 +1498,6 @@ TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
   if (!BaselineInfoImpl)
     BaselineInfoImpl = TargetLibraryInfoImpl(F.getParent()->getTargetTriple());
   return TargetLibraryInfo(*BaselineInfoImpl, &F);
-}
-
-unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
-  if (auto *ShortWChar = cast_or_null<ConstantAsMetadata>(
-      M.getModuleFlag("wchar_size")))
-    return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
-  return Triple(M.getTargetTriple()).getDefaultWCharSize();
 }
 
 unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {

@@ -66,10 +66,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Analysis/TopologicalSortUtils.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
@@ -78,6 +78,7 @@
 #include "mlir/IR/Region.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Pass/Pass.h"
@@ -96,7 +97,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 /// Returns true if all users of the given value are inside the region.
 static bool allUsersAreInsideRegion(Value val, Region &region) {
   for (Operation *user : val.getUsers())
@@ -206,6 +206,12 @@ public:
       OffloadLiveInValueCanonicalization>::
       OffloadLiveInValueCanonicalizationBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    acc::impl::OffloadLiveInValueCanonicalizationBase<
+        OffloadLiveInValueCanonicalization>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   /// Canonicalizes live-in values for a region by sinking or rematerializing
   /// operations. Returns true if any changes were made.
   bool canonicalizeLiveInValues(Region &region,
@@ -300,7 +306,7 @@ public:
       accSupportPtr = &getAnalysis<acc::OpenACCSupport>();
     acc::OpenACCSupport &accSupport = *accSupportPtr;
 
-    func::FuncOp func = getOperation();
+    FunctionOpInterface func = getOperation();
     LLVM_DEBUG(llvm::dbgs()
                << "Processing function: " << func.getName() << "\n");
 
@@ -326,5 +332,4 @@ public:
     LLVM_DEBUG(llvm::dbgs() << "Exit OffloadLiveInValueCanonicalization\n");
   }
 };
-
 } // namespace

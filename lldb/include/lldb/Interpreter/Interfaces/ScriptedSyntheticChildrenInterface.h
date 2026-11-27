@@ -10,7 +10,6 @@
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDSYNTHETICCHILDRENINTERFACE_H
 
 #include "ScriptedInterface.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/ErrorExtras.h"
 
@@ -28,7 +27,8 @@ public:
     return lldb::ValueObjectSP();
   }
 
-  virtual llvm::Expected<uint32_t> GetIndexOfChildWithName(ConstString name) {
+  virtual llvm::Expected<uint32_t>
+  GetIndexOfChildWithName(llvm::StringRef name) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
 
@@ -38,7 +38,7 @@ public:
 
   virtual lldb::ValueObjectSP GetSyntheticValue() { return nullptr; }
 
-  virtual ConstString GetSyntheticTypeName() { return ConstString(); }
+  virtual std::string GetSyntheticTypeName() { return std::string(); }
 };
 } // namespace lldb_private
 

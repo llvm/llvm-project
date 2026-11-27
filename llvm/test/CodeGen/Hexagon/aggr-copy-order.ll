@@ -10,25 +10,25 @@ define void @f0(ptr %a0, ptr %a1) #0 {
 ; CHECK-LABEL: f0:
 ; CHECK:       // %bb.0: // %b0
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = memw(r1+#0)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     r29 = add(r29,#-8)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memw(r0+#0) = r2
+; CHECK-NEXT:     r2 = memw(r1+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     memw(r29+#0) = r0
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = memw(r1+#4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     memw(r29+#4) = r1
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     r29 = add(r29,#8)
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     memw(r0+#0) = r2
+; CHECK-NEXT:    }
+; CHECK-NEXT:    {
+; CHECK-NEXT:     r2 = memw(r1+#4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     memw(r0+#4) = r2

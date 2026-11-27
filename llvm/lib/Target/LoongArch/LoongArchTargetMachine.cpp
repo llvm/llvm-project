@@ -57,7 +57,7 @@ static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
 static cl::opt<bool>
     EnableLoopDataPrefetch("loongarch-enable-loop-data-prefetch", cl::Hidden,
                            cl::desc("Enable the loop data prefetch pass"),
-                           cl::init(false));
+                           cl::init(true));
 
 static cl::opt<bool>
     EnableMergeBaseOffset("loongarch-enable-merge-offset",
@@ -68,6 +68,11 @@ static cl::opt<bool>
     EnableSinkFold("loongarch-enable-sink-fold",
                    cl::desc("Enable sinking and folding of instruction copies"),
                    cl::init(true), cl::Hidden);
+
+static cl::opt<bool>
+    EnableMachineCombiner("loongarch-enable-machine-combiner",
+                          cl::desc("Enable the machine combiner pass"),
+                          cl::init(true), cl::Hidden);
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
@@ -155,8 +160,9 @@ public:
   void addPreEmitPass2() override;
   void addMachineSSAOptimization() override;
   void addPreRegAlloc() override;
-  bool addRegAssignAndRewriteFast() override;
-  bool addRegAssignAndRewriteOptimized() override;
+  bool addILPOpts() override;
+  void addRegAssignAndRewriteFast() override;
+  void addRegAssignAndRewriteOptimized() override;
   void addMachineLateOptimization() override;
 };
 } // end namespace
@@ -221,18 +227,25 @@ void LoongArchPassConfig::addPreRegAlloc() {
     addPass(createLoongArchMergeBaseOffsetOptPass());
 }
 
-bool LoongArchPassConfig::addRegAssignAndRewriteFast() {
-  if (TM->getOptLevel() != CodeGenOptLevel::None &&
-      EnableLoongArchDeadRegisterElimination)
-    addPass(createLoongArchDeadRegisterDefinitionsPass());
-  return TargetPassConfig::addRegAssignAndRewriteFast();
+bool LoongArchPassConfig::addILPOpts() {
+  if (EnableMachineCombiner)
+    addPass(&MachineCombinerID);
+
+  return true;
 }
 
-bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
+void LoongArchPassConfig::addRegAssignAndRewriteFast() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableLoongArchDeadRegisterElimination)
     addPass(createLoongArchDeadRegisterDefinitionsPass());
-  return TargetPassConfig::addRegAssignAndRewriteOptimized();
+  TargetPassConfig::addRegAssignAndRewriteFast();
+}
+
+void LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
+  if (TM->getOptLevel() != CodeGenOptLevel::None &&
+      EnableLoongArchDeadRegisterElimination)
+    addPass(createLoongArchDeadRegisterDefinitionsPass());
+  TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
 void LoongArchPassConfig::addMachineLateOptimization() {

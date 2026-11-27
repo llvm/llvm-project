@@ -21,9 +21,9 @@ define float @ordered_reduction_epilogue(ptr %p, i64 %n) "prefer-vector-width"="
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP7:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[P]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[TMP0]], i64 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[TMP0]], i64 32
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr float, ptr [[TMP0]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i64 64
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 128
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 192
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x float>, ptr [[TMP2]], align 4
@@ -105,9 +105,9 @@ define float @ordered_reduction_epilogue_single_vector_iterations(ptr %p, i64 %n
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[P]], i64 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[P]], i64 32
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[P]], i64 48
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P]], i64 64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 128
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 192
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x float>, ptr [[P]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x float>, ptr [[TMP1]], align 4
@@ -182,9 +182,9 @@ define float @ordered_reduction_nonzero_start_single_iteration_vector_loops(ptr 
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[P]], i64 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[P]], i64 32
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[P]], i64 48
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P]], i64 64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[P]], i64 128
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 192
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x float>, ptr [[P]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <16 x float>, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <16 x float>, ptr [[TMP1]], align 4

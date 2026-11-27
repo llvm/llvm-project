@@ -15,6 +15,7 @@
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -28,6 +29,11 @@ namespace {
 struct ConvertACCToLLVMPass
     : public impl::ConvertACCToLLVMPassBase<ConvertACCToLLVMPass> {
   using Base::Base;
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    Base::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
 
   void runOnOperation() override;
 };

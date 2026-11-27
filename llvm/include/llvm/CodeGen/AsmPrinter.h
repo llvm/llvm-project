@@ -49,7 +49,6 @@ class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
-class EHStreamer;
 class GCMetadataPrinter;
 class GCStrategy;
 class GlobalAlias;
@@ -195,6 +194,8 @@ public:
   std::function<void(Module &)> EmitStackMaps;
   std::function<void()> AssertDebugEHFinalized;
 
+  void emitStackMapsForGCStrategies(ArrayRef<GCStrategy *> Strategies);
+
 private:
   MCSymbol *CurrentFnEnd = nullptr;
 
@@ -238,7 +239,7 @@ private:
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
 
   /// List of symbols to be inserted into PC sections.
-  DenseMap<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
+  MapVector<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
 
   static char ID;
 
@@ -249,7 +250,7 @@ protected:
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
   /// A handle to the EH info emitter (if present).
-  SmallVector<std::unique_ptr<EHStreamer>, 1> EHHandlers;
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
 
   // A vector of all Debuginfo emitters we should use. Protected so that
   // targets can add their own. This vector maintains ownership of the
@@ -275,6 +276,9 @@ private:
 
   /// CFISection type the module needs i.e. either .eh_frame or .debug_frame.
   CFISection ModuleCFISection = CFISection::None;
+
+  /// The exception model for the current module.
+  ExceptionHandling ModuleExceptionModel = ExceptionHandling::None;
 
   /// True if the module contains split-stack functions. This is used to
   /// emit .note.GNU-split-stack section as required by the linker for
@@ -533,13 +537,18 @@ public:
   /// Get the CFISection type for the module.
   CFISection getModuleCFISectionType() const { return ModuleCFISection; }
 
+  /// Get the exception model resolved for the current module.
+  ExceptionHandling getModuleExceptionModel() const {
+    return ModuleExceptionModel;
+  }
+
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
 
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind
-  /// information for other purposes (debugging, sanitizers, ...) when
-  /// `MCAsmInfo::ExceptionsType == ExceptionHandling::None`.
+  /// information for other purposes (debugging, sanitizers, ...) when the
+  /// module's exception model is `ExceptionHandling::None`.
   bool usesCFIWithoutEH() const;
 
   /// Print to the current output stream assembly representations of the

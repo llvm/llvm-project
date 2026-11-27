@@ -18,26 +18,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-
-#ifndef NDEBUG
-static cl::opt<bool> ExpensiveAsserts(
-    "ipt-expensive-asserts",
-    cl::desc("Perform expensive assert validation on every query to Instruction"
-             " Precedence Tracking"),
-    cl::init(false), cl::Hidden);
-#endif
 
 const Instruction *InstructionPrecedenceTracking::getFirstSpecialInstruction(
     const BasicBlock *BB) {
 #ifndef NDEBUG
-  // If there is a bug connected to invalid cache, turn on ExpensiveAsserts to
-  // catch this situation as early as possible.
-  if (ExpensiveAsserts)
+  // If there is a bug connected to invalid cache, turn on
+  // -ipt-expensive-asserts to catch this situation as early as possible.
+  if (getAnalysisOptions(BB->getContext()).ipt_expensive_asserts)
     validateAll();
   else
     validate(BB);
@@ -74,16 +66,23 @@ void InstructionPrecedenceTracking::validate(const BasicBlock *BB) const {
   if (It == FirstSpecialInsts.end())
     return;
 
-  for (const Instruction &Insn : *BB)
-    if (isSpecialInstruction(&Insn)) {
-      assert(It->second == &Insn &&
-             "Cached first special instruction is wrong!");
-      return;
-    }
+  const Instruction *Cached = It->second;
+  assert((!Cached || Cached->getParent() == BB) &&
+         "Cached first special instruction is not in the block!");
 
-  assert(It->second == nullptr &&
-         "Block is marked as having special instructions but in fact it  has "
-         "none!");
+  // The cache is allowed to be conservative: the cached instruction may be
+  // earlier than the actual first special instruction (e.g. if an instruction
+  // stopped being special after a RAUW of one of its operands), but it must
+  // never be later than it.
+  for (const Instruction &Insn : *BB) {
+    if (&Insn == Cached)
+      return;
+    if (isSpecialInstruction(&Insn)) {
+      assert(Cached && "Block is marked as having no special instructions but "
+                       "in fact it has some!");
+      llvm_unreachable("Cached first special instruction is too late!");
+    }
+  }
 }
 
 void InstructionPrecedenceTracking::validateAll() const {

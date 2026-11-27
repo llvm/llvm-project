@@ -3,7 +3,6 @@
 
 ---
 name:            ds_read_b32_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -15,7 +14,7 @@ body:             |
     ; CHECK-NEXT: $m0 = S_MOV_B32 0
     ; CHECK-NEXT: [[DS_READ2_B32_:%[0-9]+]]:vreg_64 = DS_READ2_B32 [[COPY]], 0, 1, 1, implicit $m0, implicit $exec :: (load (s32), addrspace 2)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[DS_READ2_B32_]].sub0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[DS_READ2_B32_]].sub1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[DS_READ2_B32_]].sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY2]]
     %0:vgpr_32 = COPY $vgpr0
     $m0 = S_MOV_B32 0
@@ -26,7 +25,6 @@ body:             |
 ...
 ---
 name:            ds_read2st64_b32_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -38,7 +36,7 @@ body:             |
     ; CHECK-NEXT: $m0 = S_MOV_B32 0
     ; CHECK-NEXT: [[DS_READ2ST64_B32_:%[0-9]+]]:vreg_64 = DS_READ2ST64_B32 [[COPY]], 0, 4, 1, implicit $m0, implicit $exec :: (load (s32), addrspace 2)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[DS_READ2ST64_B32_]].sub0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY killed [[DS_READ2ST64_B32_]].sub1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[DS_READ2ST64_B32_]].sub1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY2]]
     %0:vgpr_32 = COPY $vgpr0
     $m0 = S_MOV_B32 0
@@ -49,7 +47,6 @@ body:             |
 ...
 ---
 name:            ds_read_b64_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -61,7 +58,7 @@ body:             |
     ; CHECK-NEXT: $m0 = S_MOV_B32 0
     ; CHECK-NEXT: [[DS_READ2_B64_:%[0-9]+]]:vreg_128 = DS_READ2_B64 [[COPY]], 0, 1, 1, implicit $m0, implicit $exec :: (load (s64), addrspace 2)
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[DS_READ2_B64_]].sub0_sub1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY killed [[DS_READ2_B64_]].sub2_sub3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vreg_64 = COPY [[DS_READ2_B64_]].sub2_sub3
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY2]]
     %0:vgpr_32 = COPY $vgpr0
     $m0 = S_MOV_B32 0
@@ -72,7 +69,6 @@ body:             |
 ...
 ---
 name:            ds_write_b32_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -97,7 +93,6 @@ body:             |
 ...
 ---
 name:            ds_write2st64_b32_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -122,7 +117,6 @@ body:             |
 ...
 ---
 name:            ds_read_b32_lds_gds
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -145,7 +139,6 @@ body:             |
 
 ---
 name:            ds_write_b32_lds_gds
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2

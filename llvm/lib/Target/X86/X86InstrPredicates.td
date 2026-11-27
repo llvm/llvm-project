@@ -20,7 +20,7 @@ def TruePredicate : Predicate<"true">;
 //   All instructions in the EVEX space can access the EGPR in their
 //   register/memory operands.
 //
-// For the above intructions, the only difference in encoding is reflected in
+// For the above instructions, the only difference in encoding is reflected in
 // the REX2/EVEX prefix when EGPR is used, i.e. the opcode and opcode name are
 // unchanged. We don’t add new entries in TD, and instead we extend GPR with
 // R16-R31 and make them allocatable only when the feature EGPR is available.
@@ -51,6 +51,7 @@ def PreferLegacySetCC  : Predicate<"!Subtarget->hasZU() || "
 def PreferNoLegacySetCC : Predicate<"Subtarget->hasZU() && "
                                     "!Subtarget->preferLegacySetCC()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
+def UseCFMemOperand : Predicate<"Subtarget->preferCFMemOperand()">;
 def HasJMPABS    : Predicate<"Subtarget->hasJMPABS()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;

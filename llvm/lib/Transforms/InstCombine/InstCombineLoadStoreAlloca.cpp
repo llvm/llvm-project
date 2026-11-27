@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
@@ -46,17 +47,18 @@ static bool isOnlyCopiedFromConstantMemory(
   // quickly eliminate the markers.
 
   using ValueAndIsOffset = PointerIntPair<Value *, 1, bool>;
-  SmallVector<ValueAndIsOffset, 32> Worklist;
-  SmallPtrSet<ValueAndIsOffset, 32> Visited;
-  Worklist.emplace_back(V, false);
-  while (!Worklist.empty()) {
-    ValueAndIsOffset Elem = Worklist.pop_back_val();
-    if (!Visited.insert(Elem).second)
-      continue;
-    if (Visited.size() > MaxUsers)
-      return false;
-
-    const auto [Value, IsOffset] = Elem;
+  SmallSetVector<ValueAndIsOffset, 32> Worklist;
+  // Check the limit as soon as a value is added, rather than when it is
+  // visited. Otherwise an alloca with many GEP users has all of them scanned
+  // on every visit, which makes repeated visits of the alloca quadratic.
+  auto Push = [&](Value *Val, bool IsOffset) {
+    Worklist.insert(ValueAndIsOffset(Val, IsOffset));
+    return Worklist.size() <= MaxUsers;
+  };
+  if (!Push(V, false))
+    return false;
+  for (unsigned Idx = 0; Idx != Worklist.size(); ++Idx) {
+    const auto [Value, IsOffset] = Worklist[Idx];
     for (auto &U : Value->uses()) {
       auto *I = cast<Instruction>(U.getUser());
 
@@ -70,18 +72,21 @@ static bool isOnlyCopiedFromConstantMemory(
         // We set IsOffset=true, to forbid the memcpy from occurring after the
         // phi: If one of the phi operands is not based on the alloca, we
         // would incorrectly omit a write.
-        Worklist.emplace_back(I, true);
+        if (!Push(I, true))
+          return false;
         continue;
       }
       if (isa<BitCastInst, AddrSpaceCastInst>(I)) {
         // If uses of the bitcast are ok, we are ok.
-        Worklist.emplace_back(I, IsOffset);
+        if (!Push(I, IsOffset))
+          return false;
         continue;
       }
       if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
         // If the GEP has all zero indices, it doesn't offset the pointer. If it
         // doesn't, it does.
-        Worklist.emplace_back(I, IsOffset || !GEP->hasAllZeroIndices());
+        if (!Push(I, IsOffset || !GEP->hasAllZeroIndices()))
+          return false;
         continue;
       }
 
@@ -1098,6 +1103,45 @@ Value *InstCombinerImpl::simplifyNonNullOperand(Value *V, bool UseProvenance,
   return nullptr;
 }
 
+/// load (gep (select Cond, TrueC, FalseC), IndexC)
+///   --> select Cond, (load TrueC'), (load FalseC')
+/// Only done when both arms fold to a constant, which makes this profitable
+/// regardless of the use count of the select: no new load is created.
+static Instruction *foldLoadOfSelectOfConstPtrs(LoadInst &LI,
+                                                const DataLayout &DL) {
+  Value *Op = LI.getOperand(0);
+  // In canonical IR the pattern is load (select) or load (gep (select)).
+  Value *Base = Op;
+  if (auto *GEP = dyn_cast<GEPOperator>(Base))
+    Base = GEP->getPointerOperand();
+  Value *Cond;
+  Constant *TrueC, *FalseC;
+  if (!match(Base,
+             m_Select(m_Value(Cond), m_Constant(TrueC), m_Constant(FalseC))))
+    return nullptr;
+
+  APInt Offset(DL.getIndexTypeSizeInBits(Op->getType()), 0);
+  if (Op->stripAndAccumulateConstantOffsets(DL, Offset,
+                                            /*AllowNonInbounds=*/true) != Base)
+    return nullptr;
+
+  // Stripping an addrspacecast may have changed the index width.
+  if (DL.getIndexTypeSizeInBits(Base->getType()) != Offset.getBitWidth())
+    return nullptr;
+
+  Constant *TrueVal =
+      ConstantFoldLoadFromConstPtr(TrueC, LI.getType(), Offset, DL);
+  if (!TrueVal)
+    return nullptr;
+  Constant *FalseVal =
+      ConstantFoldLoadFromConstPtr(FalseC, LI.getType(), Offset, DL);
+  if (!FalseVal)
+    return nullptr;
+
+  return SelectInst::Create(Cond, TrueVal, FalseVal, "", nullptr,
+                            cast<Instruction>(Base));
+}
+
 Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   Value *Op = LI.getOperand(0);
   if (Value *Res = simplifyLoadInst(&LI, Op, SQ.getWithInstruction(&LI)))
@@ -1191,6 +1235,9 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
       }
     }
   }
+
+  if (Instruction *Res = foldLoadOfSelectOfConstPtrs(LI, DL))
+    return Res;
 
   if (!NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()))
     if (Value *V = simplifyNonNullOperand(Op, /*UseProvenance=*/true))
@@ -1770,6 +1817,12 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   // If the two stores had access groups, intersect them.
   NewSI->setMetadata(LLVMContext::MD_access_group,
                      intersectAccessGroups(&SI, OtherStore));
+
+  // The merged store stands for both, so it requests the PC sections of either.
+  NewSI->setMetadata(LLVMContext::MD_pcsections,
+                     MDNode::getMergedPCSectionsMetadata(
+                         SI.getMetadata(LLVMContext::MD_pcsections),
+                         OtherStore->getMetadata(LLVMContext::MD_pcsections)));
 
   // Nuke the old stores.
   eraseInstFromFunction(SI);

@@ -31,7 +31,6 @@ STATISTIC(NumDeletes,          "Number of dead instructions deleted");
 namespace {
 class DeadMachineInstructionElimImpl {
   const MachineRegisterInfo *MRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
   LiveRegUnits LivePhysRegs;
 
 public:
@@ -57,12 +56,18 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setIsSSA();
+  }
 };
 } // namespace
 
 PreservedAnalyses
 DeadMachineInstructionElimPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
+
   if (!DeadMachineInstructionElimImpl().runImpl(MF))
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
@@ -80,7 +85,6 @@ bool DeadMachineInstructionElimImpl::runImpl(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
 
   const TargetSubtargetInfo &ST = MF.getSubtarget();
-  TII = ST.getInstrInfo();
   LivePhysRegs.init(*ST.getRegisterInfo());
 
   bool NeedAnotherIteration;

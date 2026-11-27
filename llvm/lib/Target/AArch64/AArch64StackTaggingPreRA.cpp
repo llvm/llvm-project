@@ -35,7 +35,6 @@ class AArch64StackTaggingPreRAImpl {
   AArch64FunctionInfo *AFI;
   MachineFrameInfo *MFI;
   MachineRegisterInfo *MRI;
-  const AArch64RegisterInfo *TRI;
   const AArch64InstrInfo *TII;
 
   SmallVector<MachineInstr*, 16> ReTags;
@@ -275,7 +274,7 @@ std::optional<int> AArch64StackTaggingPreRAImpl::findFirstSlotCandidate() {
 
     while (!WorkList.empty()) {
       Register UseReg = WorkList.pop_back_val();
-      for (auto &UseI : MRI->use_instructions(UseReg)) {
+      for (auto &UseI : MRI->use_nodbg_instructions(UseReg)) {
         unsigned Opcode = UseI.getOpcode();
         if (Opcode == AArch64::STGi || Opcode == AArch64::ST2Gi ||
             Opcode == AArch64::STZGi || Opcode == AArch64::STZ2Gi ||
@@ -339,9 +338,8 @@ bool AArch64StackTaggingPreRAImpl::run(MachineFunction &Func) {
   MF = &Func;
   MRI = &MF->getRegInfo();
   AFI = MF->getInfo<AArch64FunctionInfo>();
-  TII = static_cast<const AArch64InstrInfo *>(MF->getSubtarget().getInstrInfo());
-  TRI = static_cast<const AArch64RegisterInfo *>(
-      MF->getSubtarget().getRegisterInfo());
+  TII =
+      static_cast<const AArch64InstrInfo *>(MF->getSubtarget().getInstrInfo());
   MFI = &MF->getFrameInfo();
   ReTags.clear();
 

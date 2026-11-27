@@ -178,6 +178,9 @@ public:
     }
     /// @}
 
+    /// Create a set with all values of the given type.
+    RangeSet getFullRangeSet(APSIntType Ty);
+
     /// Intersect the given range sets.
     ///
     /// Complexity: O(N + M)
@@ -301,6 +304,10 @@ public:
     // Usually we deal with the same ranges and range sets over and over.
     // Here we track all created containers and try not to repeat ourselves.
     llvm::FoldingSet<ContainerType> Cache;
+    // Full range sets per integer type. Bounded by the number of distinct
+    // (bit width, signedness) pairs.
+    llvm::SmallVector<std::pair<APSIntType, const ContainerType *>, 8>
+        FullRangeSets;
     static const ContainerType EmptySet;
   };
 
@@ -428,9 +435,9 @@ public:
 
 protected:
   /// Assume a constraint between a symbolic expression and a concrete integer.
-  virtual ProgramStateRef assumeSymRel(ProgramStateRef State, SymbolRef Sym,
-                                       BinaryOperator::Opcode op,
-                                       const llvm::APSInt &Int);
+  ProgramStateRef assumeSymRel(ProgramStateRef State, SymbolRef Sym,
+                               BinaryOperator::Opcode op,
+                               const llvm::APSInt &Int);
 
   //===------------------------------------------------------------------===//
   // Interface that subclasses must implement.
