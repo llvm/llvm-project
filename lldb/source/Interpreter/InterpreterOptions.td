@@ -1,6 +1,10 @@
 include "../Commands/OptionsBase.td"
 
 // Options of the option groups that are shared between multiple commands.
+//
+// Note that the options are emitted sorted by def name, not in the order in
+// which they are declared. Some option groups depend on this order, which is
+// documented (and checked) at the use sites.
 
 let Command = "architecture" in {
   def architecture_arch : Option<"arch", "a">,
@@ -32,6 +36,26 @@ let Command = "output file" in {
       : Option<"append-outfile", "\\x01">,
         Group<1>,
         Desc<"Append to the file specified with '--outfile <path>'.">;
+}
+
+// OptionGroupPlatform::GetDefinitions() omits the --platform option by
+// dropping the first element, so its def name must sort first.
+let Command = "platform" in {
+  def platform : Option<"platform", "p">,
+                 Arg<"Platform">,
+                 Desc<"Specify name of the platform to use for this target, "
+                      "creating the platform if necessary.">;
+  def platform_build : Option<"build", "b">,
+                       Arg<"None">,
+                       Desc<"Specify the initial SDK build number.">;
+  def platform_sysroot : Option<"sysroot", "S">,
+                         Arg<"Filename">,
+                         Desc<"Specify the SDK root directory that contains a "
+                              "root of all remote system files.">;
+  def platform_version
+      : Option<"version", "v">,
+        Arg<"None">,
+        Desc<"Specify the initial SDK version to use prior to connecting.">;
 }
 
 let Command = "uuid" in {
