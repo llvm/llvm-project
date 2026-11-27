@@ -9,6 +9,7 @@
 #ifndef MLIR_PASS_PASSINSTRUMENTATION_H_
 #define MLIR_PASS_PASSINSTRUMENTATION_H_
 
+#include "mlir/Analysis/AnalysisInstrumentation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include <optional>
@@ -95,12 +96,12 @@ public:
 
 /// This class holds a collection of PassInstrumentation objects, and invokes
 /// their respective call backs.
-class PassInstrumentor {
+class PassInstrumentor final : public AnalysisInstrumentation {
 public:
   PassInstrumentor();
   PassInstrumentor(PassInstrumentor &&) = delete;
   PassInstrumentor(const PassInstrumentor &) = delete;
-  ~PassInstrumentor();
+  ~PassInstrumentor() override;
 
   /// See PassInstrumentation::runBeforePipeline for details.
   void
@@ -122,10 +123,10 @@ public:
   void runAfterPassFailed(Pass *pass, Operation *op);
 
   /// See PassInstrumentation::runBeforeAnalysis for details.
-  void runBeforeAnalysis(StringRef name, TypeID id, Operation *op);
+  void runBeforeAnalysis(StringRef name, TypeID id, Operation *op) override;
 
   /// See PassInstrumentation::runAfterAnalysis for details.
-  void runAfterAnalysis(StringRef name, TypeID id, Operation *op);
+  void runAfterAnalysis(StringRef name, TypeID id, Operation *op) override;
 
   /// Add the given instrumentation to the collection.
   void addInstrumentation(std::unique_ptr<PassInstrumentation> pi);
@@ -133,7 +134,6 @@ public:
 private:
   std::unique_ptr<detail::PassInstrumentorImpl> impl;
 };
-
 } // namespace mlir
 
 namespace llvm {

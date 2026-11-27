@@ -23,6 +23,15 @@
 
 add_subdirectory(Presburger)
 
+add_mlir_library(MLIRAnalysisManager
+  AnalysisManager.cpp
+
+  PARTIAL_SOURCES_INTENDED
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+  )
+
 # Keep source ownership separate from the umbrella archive below. Object
 # libraries let both archives reuse the same compilations, including in shared
 # library builds.
@@ -44,6 +53,7 @@ add_mlir_library(MLIRAnalysisBase
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Analysis
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisManager
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces

@@ -50,6 +50,7 @@
 #ifndef MLIR_DIALECT_OPENACC_ANALYSIS_OPENACCSUPPORT_H
 #define MLIR_DIALECT_OPENACC_ANALYSIS_OPENACCSUPPORT_H
 
+#include "mlir/Analysis/AnalysisManager.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
@@ -57,7 +58,6 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Remarks.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Pass/AnalysisManager.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <memory>

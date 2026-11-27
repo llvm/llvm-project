@@ -13,9 +13,9 @@
 #ifndef MLIR_TRANSFORMS_INLINER_H
 #define MLIR_TRANSFORMS_INLINER_H
 
+#include "mlir/Analysis/AnalysisManager.h"
 #include "mlir/Analysis/CallGraph.h"
 #include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/StringMap.h"
