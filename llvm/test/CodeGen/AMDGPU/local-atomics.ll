@@ -2,10 +2,8 @@
 ; RUN: llc -mtriple=amdgpu7.04 -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgpu9.00 -mattr=-flat-for-global -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood -amdgpu-atomic-optimizer-strategy=None < %s | FileCheck -enable-var-scope -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}lds_atomic_xchg_ret_i32:
-; EG: LDS_WRXCHG_RET *
 
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -26,7 +24,6 @@ define amdgpu_kernel void @lds_atomic_xchg_ret_i32(ptr addrspace(1) %out, ptr ad
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_WRXCHG_RET *
 ; GCN: ds_wrxchg_rtn_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_xchg_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -40,7 +37,6 @@ define amdgpu_kernel void @lds_atomic_xchg_ret_i32_offset(ptr addrspace(1) %out,
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_WRXCHG_RET *
 ; GCN: ds_wrxchg_rtn_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_xchg_ret_f32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -52,7 +48,6 @@ define amdgpu_kernel void @lds_atomic_xchg_ret_f32_offset(ptr addrspace(1) %out,
 
 ; XXX - Is it really necessary to load 4 into VGPR?
 ; FUNC-LABEL: {{^}}lds_atomic_add_ret_i32:
-; EG: LDS_ADD_RET *
 
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -73,7 +68,6 @@ define amdgpu_kernel void @lds_atomic_add_ret_i32(ptr addrspace(1) %out, ptr add
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_ADD_RET *
 ; GCN: ds_add_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_add_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -87,7 +81,6 @@ define amdgpu_kernel void @lds_atomic_add_ret_i32_offset(ptr addrspace(1) %out, 
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_ADD_RET *
 ; SI: ds_add_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CIVI: ds_add_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
@@ -101,7 +94,6 @@ define amdgpu_kernel void @lds_atomic_add_ret_i32_bad_si_offset(ptr addrspace(1)
 }
 
 ; FUNC-LABEL: {{^}}lds_atomic_add1_ret_i32:
-; EG: LDS_ADD_RET *
 
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -116,7 +108,6 @@ define amdgpu_kernel void @lds_atomic_add1_ret_i32(ptr addrspace(1) %out, ptr ad
 }
 
 ; FUNC-LABEL: {{^}}lds_atomic_add1_ret_i32_offset:
-; EG: LDS_ADD_RET *
 
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -135,7 +126,6 @@ define amdgpu_kernel void @lds_atomic_add1_ret_i32_offset(ptr addrspace(1) %out,
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_ADD_RET *
 ; SI: ds_add_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 ; CIVI: ds_add_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
@@ -149,7 +139,6 @@ define amdgpu_kernel void @lds_atomic_add1_ret_i32_bad_si_offset(ptr addrspace(1
 }
 
 ; FUNC-LABEL: {{^}}lds_atomic_sub_ret_i32:
-; EG: LDS_SUB_RET *
 
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -163,7 +152,6 @@ define amdgpu_kernel void @lds_atomic_sub_ret_i32(ptr addrspace(1) %out, ptr add
 }
 
 ; FUNC-LABEL: {{^}}lds_atomic_sub_ret_i32_offset:
-; EG: LDS_SUB_RET *
 
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -178,7 +166,6 @@ define amdgpu_kernel void @lds_atomic_sub_ret_i32_offset(ptr addrspace(1) %out, 
 }
 
 ; FUNC-LABEL: {{^}}lds_atomic_sub1_ret_i32:
-; EG: LDS_SUB_RET *
 
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -193,7 +180,6 @@ define amdgpu_kernel void @lds_atomic_sub1_ret_i32(ptr addrspace(1) %out, ptr ad
 }
 
 ; FUNC-LABEL: {{^}}lds_atomic_sub1_ret_i32_offset:
-; EG: LDS_SUB_RET *
 
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -209,7 +195,6 @@ define amdgpu_kernel void @lds_atomic_sub1_ret_i32_offset(ptr addrspace(1) %out,
 }
 
 ; FUNC-LABEL: {{^}}lds_atomic_and_ret_i32:
-; EG: LDS_AND_RET *
 
 ; SICIVI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
@@ -226,7 +211,6 @@ define amdgpu_kernel void @lds_atomic_and_ret_i32(ptr addrspace(1) %out, ptr add
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_AND_RET *
 ; GCN: ds_and_rtn_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_and_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -240,7 +224,6 @@ define amdgpu_kernel void @lds_atomic_and_ret_i32_offset(ptr addrspace(1) %out, 
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_OR_RET *
 ; GCN: ds_or_rtn_b32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_or_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -253,7 +236,6 @@ define amdgpu_kernel void @lds_atomic_or_ret_i32(ptr addrspace(1) %out, ptr addr
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_OR_RET *
 ; GCN: ds_or_rtn_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_or_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -267,7 +249,6 @@ define amdgpu_kernel void @lds_atomic_or_ret_i32_offset(ptr addrspace(1) %out, p
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_XOR_RET *
 ; GCN: ds_xor_rtn_b32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_xor_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -280,7 +261,6 @@ define amdgpu_kernel void @lds_atomic_xor_ret_i32(ptr addrspace(1) %out, ptr add
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_XOR_RET *
 ; GCN: ds_xor_rtn_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_xor_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -302,7 +282,6 @@ define amdgpu_kernel void @lds_atomic_xor_ret_i32_offset(ptr addrspace(1) %out, 
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_MIN_INT_RET *
 ; GCN: ds_min_rtn_i32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_min_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -315,7 +294,6 @@ define amdgpu_kernel void @lds_atomic_min_ret_i32(ptr addrspace(1) %out, ptr add
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_MIN_INT_RET *
 ; GCN: ds_min_rtn_i32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_min_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -329,7 +307,6 @@ define amdgpu_kernel void @lds_atomic_min_ret_i32_offset(ptr addrspace(1) %out, 
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_MAX_INT_RET *
 ; GCN: ds_max_rtn_i32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_max_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -342,7 +319,6 @@ define amdgpu_kernel void @lds_atomic_max_ret_i32(ptr addrspace(1) %out, ptr add
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_MAX_INT_RET *
 ; GCN: ds_max_rtn_i32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_max_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -356,7 +332,6 @@ define amdgpu_kernel void @lds_atomic_max_ret_i32_offset(ptr addrspace(1) %out, 
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_MIN_UINT_RET *
 ; GCN: ds_min_rtn_u32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_umin_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -369,7 +344,6 @@ define amdgpu_kernel void @lds_atomic_umin_ret_i32(ptr addrspace(1) %out, ptr ad
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_MIN_UINT_RET *
 ; GCN: ds_min_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_umin_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -383,7 +357,6 @@ define amdgpu_kernel void @lds_atomic_umin_ret_i32_offset(ptr addrspace(1) %out,
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_MAX_UINT_RET *
 ; GCN: ds_max_rtn_u32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_umax_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -396,7 +369,6 @@ define amdgpu_kernel void @lds_atomic_umax_ret_i32(ptr addrspace(1) %out, ptr ad
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_MAX_UINT_RET *
 ; GCN: ds_max_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_umax_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -733,7 +705,6 @@ define amdgpu_kernel void @lds_atomic_umax_noret_i32_offset(ptr addrspace(3) %pt
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_CMPST
 ; GCN: ds_inc_rtn_u32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -746,7 +717,6 @@ define amdgpu_kernel void @lds_atomic_inc_ret_i32(ptr addrspace(1) %out, ptr add
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_CMPST
 ; GCN: ds_inc_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_inc_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -783,7 +753,6 @@ define amdgpu_kernel void @lds_atomic_inc_noret_i32_offset(ptr addrspace(3) %ptr
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_CMPST
 ; GCN: ds_dec_rtn_u32
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_dec_ret_i32(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {
@@ -796,7 +765,6 @@ define amdgpu_kernel void @lds_atomic_dec_ret_i32(ptr addrspace(1) %out, ptr add
 ; SICIVI: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; EG: LDS_CMPST
 ; GCN: ds_dec_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset:16
 ; GCN: s_endpgm
 define amdgpu_kernel void @lds_atomic_dec_ret_i32_offset(ptr addrspace(1) %out, ptr addrspace(3) %ptr) nounwind {

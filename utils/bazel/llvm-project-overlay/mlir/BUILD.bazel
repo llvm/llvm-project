@@ -2217,7 +2217,12 @@ cc_library(
 
 td_library(
     name = "ArmSMETdFiles",
-    srcs = ["include/mlir/Dialect/ArmSME/IR/ArmSME.td"],
+    srcs = [
+        "include/mlir/Dialect/ArmSME/IR/ArmSME.td",
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEAllOps.td",
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.td",
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.td",
+    ],
     includes = ["include"],
     deps = [
         ":ArithOpsTdFiles",
@@ -2270,8 +2275,14 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "ArmSMEOpsIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Core",
+        ],
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Core",
+        ],
         "include/mlir/Dialect/ArmSME/IR/ArmSMEEnums.h.inc": ["-gen-enum-decls"],
         "include/mlir/Dialect/ArmSME/IR/ArmSMEEnums.cpp.inc": ["-gen-enum-defs"],
         "include/mlir/Dialect/ArmSME/IR/ArmSMEAttrDefs.h.inc": [
@@ -2284,7 +2295,7 @@ gentbl_cc_library(
         ],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEOps.td",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEAllOps.td",
     deps = [":ArmSMETdFiles"],
 )
 
@@ -2322,12 +2333,18 @@ cc_library(
 gentbl_cc_library(
     name = "ArmSMEIntrinsicOpsIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Intrinsic",
+        ],
+        "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Intrinsic",
+        ],
         "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicConversions.inc": ["-gen-llvmir-conversions"],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEIntrinsicOps.td",
+    td_file = "include/mlir/Dialect/ArmSME/IR/ArmSMEAllOps.td",
     deps = [":ArmSMETdFiles"],
 )
 
@@ -11918,8 +11935,14 @@ td_library(
 gentbl_cc_library(
     name = "LinalgOpsIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/Linalg/IR/LinalgOps.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/Linalg/IR/LinalgOps.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/Linalg/IR/LinalgOps.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Core",
+        ],
+        "include/mlir/Dialect/Linalg/IR/LinalgOps.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Core",
+        ],
         "include/mlir/Dialect/Linalg/IR/LinalgOpsDialect.h.inc": [
             "-gen-dialect-decls",
             "-dialect=linalg",
@@ -11932,19 +11955,25 @@ gentbl_cc_library(
         "include/mlir/Dialect/Linalg/IR/LinalgOpsAttrDefs.cpp.inc": ["-gen-attrdef-defs"],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Linalg/IR/LinalgOps.td",
-    deps = [":LinalgOpsTdFiles"],
+    td_file = "include/mlir/Dialect/Linalg/IR/LinalgAllOps.td",
+    deps = [":LinalgAllOpsTdFiles"],
 )
 
 gentbl_cc_library(
     name = "LinalgRelayoutOpsIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Relayout",
+        ],
+        "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Relayout",
+        ],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Linalg/IR/LinalgRelayoutOps.td",
-    deps = [":LinalgOpsTdFiles"],
+    td_file = "include/mlir/Dialect/Linalg/IR/LinalgAllOps.td",
+    deps = [":LinalgAllOpsTdFiles"],
 )
 
 gentbl_cc_library(
@@ -12035,15 +12064,33 @@ td_library(
     ],
 )
 
+td_library(
+    name = "LinalgAllOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Linalg/IR/LinalgAllOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":LinalgOpsTdFiles",
+        ":LinalgStructuredOpsTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "LinalgStructuredOpsIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/Linalg/IR/LinalgStructuredOps.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/Linalg/IR/LinalgStructuredOps.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Structured",
+        ],
+        "include/mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Structured",
+        ],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/Linalg/IR/LinalgStructuredOps.td",
-    deps = [":LinalgStructuredOpsTdFiles"],
+    td_file = "include/mlir/Dialect/Linalg/IR/LinalgAllOps.td",
+    deps = [":LinalgAllOpsTdFiles"],
 )
 
 gentbl_cc_library(
@@ -13111,6 +13158,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":DialectUtils",
         ":FuncDialect",

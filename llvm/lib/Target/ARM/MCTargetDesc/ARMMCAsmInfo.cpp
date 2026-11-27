@@ -93,6 +93,14 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
   // foo(plt) instead of foo@plt
   UseAtForSpecifier = false;
   UseParensForSpecifier = true;
+
+  if (!binutilsIsAtLeast(2, 25)) {
+    // gas doesn't handle VFP register names in cfi directives. As we don't know
+    // at this point whether the integrated assembler is used, don't use
+    // register names if we are not sure that the assembler supports then.
+    // See https://sourceware.org/bugzilla/show_bug.cgi?id=16694
+    DwarfRegNumForCFI = true;
+  }
 }
 
 bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {

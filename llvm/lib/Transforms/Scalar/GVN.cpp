@@ -1730,8 +1730,7 @@ GVNPassImpl::analyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
   if (isa<AllocaInst>(DepInst) || isLifetimeStart(DepInst))
     return AvailableValue::get(UndefValue::get(Load->getType()));
 
-  if (Constant *InitVal =
-          getInitialValueOfAllocation(DepInst, TLI, Load->getType()))
+  if (Constant *InitVal = getInitialValueOfAllocation(DepInst, Load->getType()))
     return AvailableValue::get(InitVal);
 
   if (StoreInst *S = dyn_cast<StoreInst>(DepInst)) {

@@ -836,7 +836,7 @@ Function *OpenMPIRBuilder::getOrCreateRuntimeFunctionPtr(RuntimeFunction FnID) {
 
 CallInst *OpenMPIRBuilder::createRuntimeFunctionCall(FunctionCallee Callee,
                                                      ArrayRef<Value *> Args,
-                                                     StringRef Name) {
+                                                     const Twine &Name) {
   CallInst *Call = Builder.CreateCall(Callee, Args, Name);
   Call->setCallingConv(Config.getRuntimeCC());
   return Call;
@@ -1389,8 +1389,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInReduction(
         OrigPtrTy && OrigPtrTy->getAddressSpace() != 0)
       OrigPtr = Builder.CreateAddrSpaceCast(OrigPtr, PtrTy);
 
-    Value *Priv = Builder.CreateCall(GetThData, {Gtid, NullDesc, OrigPtr},
-                                     "omp.inred.priv");
+    Value *Priv = createRuntimeFunctionCall(
+        GetThData, {Gtid, NullDesc, OrigPtr}, "omp.inred.priv");
 
     // Cast the returned private pointer back to the requested address space
     // when it differs.
@@ -1740,7 +1740,7 @@ static Function *createTargetParallelWrapper(OpenMPIRBuilder *OMPIRBuilder,
   Builder.CreateStore(WrapperFn->getArg(1), AddrAlloca);
   Builder.CreateStore(Builder.getInt32(0), ZeroAlloca);
   if (UseArgStruct) {
-    Builder.CreateCall(
+    OMPIRBuilder->createRuntimeFunctionCall(
         OMPIRBuilder->getOrCreateRuntimeFunctionPtr(
             llvm::omp::RuntimeFunction::OMPRTL___kmpc_get_shared_variables),
         {ArgsAlloca});
@@ -2733,7 +2733,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
       // Emit runtime call for @__kmpc_taskgroup
       Function *TaskgroupFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskgroup);
-      Builder.CreateCall(TaskgroupFn, {Ident, ThreadID});
+      createRuntimeFunctionCall(TaskgroupFn, {Ident, ThreadID});
     }
 
     // `flags` Argument Configuration
@@ -2774,7 +2774,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
     // variables must be copied before the task is run (TaskData)
-    CallInst *TaskData = Builder.CreateCall(
+    CallInst *TaskData = createRuntimeFunctionCall(
         TaskAllocFn, {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
                       /*task_func=*/&OutlinedFn});
@@ -2816,14 +2816,14 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // taskloop runtime call
     Function *TaskloopFn =
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskloop);
-    Builder.CreateCall(TaskloopFn, Args);
+    createRuntimeFunctionCall(TaskloopFn, Args);
 
     // Emit the @__kmpc_end_taskgroup runtime call to end the taskgroup if
     // nogroup is not defined
     if (!NoGroup) {
       Function *EndTaskgroupFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_taskgroup);
-      Builder.CreateCall(EndTaskgroupFn, {Ident, ThreadID});
+      createRuntimeFunctionCall(EndTaskgroupFn, {Ident, ThreadID});
     }
 
     StaleCI->eraseFromParent();
@@ -7182,7 +7182,8 @@ void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
   Remaining->addIncoming(InitialRemaining, Entry);
   // Only the first row starts at InnerBegin; subsequent rows start at zero.
   // For an inner trip count of one, the existing zero start is sufficient.
-  if (!cast<ConstantInt>(TripCounts.back())->isOne()) {
+  auto *InnerCount = dyn_cast<ConstantInt>(TripCounts.back());
+  if (!InnerCount || !InnerCount->isOne()) {
     PHINode *Start =
         Builder.CreatePHI(IVType, 2, "omp_collapsed.row.start.1.0");
     Start->addIncoming(InnerBegin, Entry);
@@ -7226,6 +7227,15 @@ void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
   Guard->getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(Guard);
   Builder.CreateCondBr(IsFinalRow, Result->getExit(), Latch);
+  // Match the retained outer bound to the count used in the total product.
+  cast<CmpInst>(&Result->getCond()->front())->setOperand(1, TripCounts.front());
+
+  // Trip counts are unsigned and may exceed the IV's signed range.
+  // TODO: Preserve nsw when the trip count is known to fit the signed range.
+  for (auto [IV, TripCount] : zip(Plan.IndVars, TripCounts))
+    if (!isa<ConstantInt>(TripCount))
+      cast<BinaryOperator>(IV->getIncomingValue(1))->setHasNoSignedWrap(false);
+
   Plan.IndVars.front()->setIncomingValue(0, OuterBegin);
   Plan.IndVars.front()->setIncomingBlock(0, Entry);
 }
@@ -7296,20 +7306,32 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
 
   if (Config.CollapseMapping == CollapseIVMapping::Virtual) {
     if (Loops.size() != 2)
-      reportFatalInternalError(
-          "Virtual collapse requires two constant-count loops");
+      reportFatalInternalError("Virtual collapse requires two loops");
     SmallVector<Value *, 4> TripCounts;
     for (CanonicalLoopInfo *Loop : Loops) {
       if (Loop->VirtualCollapse)
         Loop->reportUnsupportedVirtualCollapse();
       Value *TC = Loop->getTripCount();
-      if (!isa<ConstantInt>(TC))
-        reportFatalInternalError(
-            "Virtual collapse requires two constant-count loops");
       TripCounts.push_back(TC);
     }
     VirtualRowPlan Plan = planVirtualRowLoop(Loops);
-    // Constant counts fold the product without emitting instructions.
+    if (ComputeIP.isValid())
+      Builder.restoreIP(ComputeIP);
+    else
+      Builder.restoreIP(Loops.front()->getPreheaderIP());
+    Builder.SetCurrentDebugLocation(DL);
+
+    // Freeze each count once so the product, decoding and bounds agree even
+    // for undef or poison inputs.
+    SmallDenseMap<Value *, Value *, 4> Counts;
+    for (Value *&TripCount : TripCounts) {
+      if (isa<ConstantInt, FreezeInst>(TripCount))
+        continue;
+      auto [It, Inserted] = Counts.try_emplace(TripCount, TripCount);
+      if (Inserted)
+        It->second = Builder.CreateFreeze(TripCount, "omp_collapsed.tripcount");
+      TripCount = It->second;
+    }
     Value *CollapsedTripCount =
         Builder.CreateNUWMul(TripCounts.front(), TripCounts.back());
     return createVirtualCollapsedLoop(DL, Loops, Plan, TripCounts,
@@ -8521,7 +8543,7 @@ CallInst *OpenMPIRBuilder::createOMPAlignedAlloc(const LocationDescription &Loc,
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_aligned_alloc);
 
-  return Builder.CreateCall(Fn, Args, Name);
+  return createRuntimeFunctionCall(Fn, Args, Name);
 }
 
 CallInst *OpenMPIRBuilder::createOMPFree(const LocationDescription &Loc,
@@ -8548,7 +8570,7 @@ CallInst *OpenMPIRBuilder::createOMPAllocShared(const LocationDescription &Loc,
 
   Value *Args[] = {Size};
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_alloc_shared);
-  CallInst *Call = Builder.CreateCall(Fn, Args, Name);
+  CallInst *Call = createRuntimeFunctionCall(Fn, Args, Name);
   Call->addRetAttr(Attribute::getWithAlignment(
       M.getContext(), M.getDataLayout().getPrefTypeAlign(Int64)));
   return Call;
@@ -8569,7 +8591,7 @@ CallInst *OpenMPIRBuilder::createOMPFreeShared(const LocationDescription &Loc,
 
   Value *Args[] = {Addr, Size};
   Function *Fn = getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_free_shared);
-  return Builder.CreateCall(Fn, Args, Name);
+  return createRuntimeFunctionCall(Fn, Args, Name);
 }
 
 CallInst *OpenMPIRBuilder::createOMPFreeShared(const LocationDescription &Loc,

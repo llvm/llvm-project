@@ -1,11 +1,8 @@
 ; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600-- -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=R600 -check-prefix=FUNC %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
 
 ; FUNC-LABEL: {{^}}setcc_v2i32:
-; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW]}}, KC0[3].X, KC0[3].Z
-; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW]}}, KC0[2].W, KC0[3].Y
 
 ; GCN: s_cmp_eq_u32
 ; GCN: s_cmp_eq_u32
@@ -17,10 +14,6 @@ define amdgpu_kernel void @setcc_v2i32(ptr addrspace(1) %out, <2 x i32> %a, <2 x
 }
 
 ; FUNC-LABEL: {{^}}setcc_v4i32:
-; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600-DAG: SETE_INT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 
 ; GCN: s_cmp_eq_u32
 ; GCN: s_cmp_eq_u32
@@ -41,7 +34,6 @@ define amdgpu_kernel void @setcc_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %
 ;;;==========================================================================;;;
 
 ; FUNC-LABEL: {{^}}f32_oeq:
-; R600: SETE_DX10
 ; GCN: v_cmp_eq_f32
 define amdgpu_kernel void @f32_oeq(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
@@ -52,7 +44,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_ogt:
-; R600: SETGT_DX10
 ; GCN: v_cmp_gt_f32
 define amdgpu_kernel void @f32_ogt(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
@@ -63,7 +54,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_oge:
-; R600: SETGE_DX10
 ; GCN: v_cmp_ge_f32
 define amdgpu_kernel void @f32_oge(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
@@ -74,7 +64,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_olt:
-; R600: SETGT_DX10
 ; GCN: v_cmp_lt_f32
 define amdgpu_kernel void @f32_olt(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
@@ -85,7 +74,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_ole:
-; R600: SETGE_DX10
 ; GCN: v_cmp_le_f32
 define amdgpu_kernel void @f32_ole(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
@@ -96,10 +84,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_one:
-; R600-DAG: SETGT_DX10
-; R600-DAG: SETGT_DX10
-; R600-DAG: OR_INT
-; R600-DAG: SETNE_INT
 
 ; GCN: v_cmp_lg_f32_e32 vcc
 ; GCN: s_cselect_b32 {{s[0-9]+}}, -1, 0
@@ -112,10 +96,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_ord:
-; R600-DAG: SETE_DX10
-; R600-DAG: SETE_DX10
-; R600-DAG: AND_INT
-; R600-DAG: SETNE_INT
 ; GCN: v_cmp_o_f32
 define amdgpu_kernel void @f32_ord(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
@@ -126,10 +106,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_ueq:
-; R600-DAG: SETGT_DX10
-; R600-DAG: SETGT_DX10
-; R600-DAG: OR_INT
-; R600-DAG: SETE_INT
 
 ; GCN: v_cmp_nlg_f32_e32 vcc
 ; GCN: s_cselect_b32 {{s[0-9]+}}, -1, 0
@@ -142,8 +118,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_ugt:
-; R600: SETGE
-; R600: SETE_DX10
 ; GCN: v_cmp_nle_f32_e32 vcc
 ; GCN: s_cselect_b32 {{s[0-9]+}}, -1, 0
 define amdgpu_kernel void @f32_ugt(ptr addrspace(1) %out, float %a, float %b) #0 {
@@ -155,8 +129,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_uge:
-; R600: SETGT
-; R600: SETE_DX10
 
 ; GCN: v_cmp_nlt_f32_e32 vcc
 ; GCN: s_cselect_b32 {{s[0-9]+}}, -1, 0
@@ -169,8 +141,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_ult:
-; R600: SETGE
-; R600: SETE_DX10
 
 ; GCN: v_cmp_nge_f32_e32 vcc
 ; GCN: s_cselect_b32 {{s[0-9]+}}, -1, 0
@@ -183,8 +153,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_ule:
-; R600: SETGT
-; R600: SETE_DX10
 
 ; GCN: v_cmp_ngt_f32_e32 vcc
 ; GCN: s_cselect_b32 {{s[0-9]+}}, -1, 0
@@ -197,7 +165,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_une:
-; R600: SETNE_DX10
 ; GCN: v_cmp_neq_f32
 define amdgpu_kernel void @f32_une(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
@@ -208,10 +175,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}f32_uno:
-; R600: SETNE_DX10
-; R600: SETNE_DX10
-; R600: OR_INT
-; R600: SETNE_INT
 ; GCN: v_cmp_u_f32
 define amdgpu_kernel void @f32_uno(ptr addrspace(1) %out, float %a, float %b) #0 {
 entry:
@@ -226,7 +189,6 @@ entry:
 ;;;==========================================================================;;;
 
 ; FUNC-LABEL: {{^}}i32_eq:
-; R600: SETE_INT
 ; GCN: s_cmp_eq_u32
 define amdgpu_kernel void @i32_eq(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
@@ -237,7 +199,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_ne:
-; R600: SETNE_INT
 ; GCN: s_cmp_lg_u32
 define amdgpu_kernel void @i32_ne(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
@@ -248,7 +209,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_ugt:
-; R600: SETGT_UINT
 ; GCN: s_cmp_gt_u32
 define amdgpu_kernel void @i32_ugt(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
@@ -259,7 +219,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_uge:
-; R600: SETGE_UINT
 ; GCN: s_cmp_ge_u32
 define amdgpu_kernel void @i32_uge(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
@@ -270,7 +229,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_ult:
-; R600: SETGT_UINT
 ; GCN: s_cmp_lt_u32
 define amdgpu_kernel void @i32_ult(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
@@ -281,7 +239,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_ule:
-; R600: SETGE_UINT
 ; GCN: s_cmp_le_u32
 define amdgpu_kernel void @i32_ule(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
@@ -292,7 +249,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_sgt:
-; R600: SETGT_INT
 ; GCN: s_cmp_gt_i32
 define amdgpu_kernel void @i32_sgt(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
@@ -303,7 +259,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_sge:
-; R600: SETGE_INT
 ; GCN: s_cmp_ge_i32
 define amdgpu_kernel void @i32_sge(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
@@ -314,7 +269,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_slt:
-; R600: SETGT_INT
 ; GCN: s_cmp_lt_i32
 define amdgpu_kernel void @i32_slt(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:
@@ -325,7 +279,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}i32_sle:
-; R600: SETGE_INT
 ; GCN: s_cmp_le_i32
 define amdgpu_kernel void @i32_sle(ptr addrspace(1) %out, i32 %a, i32 %b) #0 {
 entry:

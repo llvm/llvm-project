@@ -7011,7 +7011,7 @@ static void emitOMPAtomicReadExpr(CodeGenFunction &CGF, llvm::AtomicOrdering AO,
 
 static void emitOMPAtomicWriteExpr(CodeGenFunction &CGF,
                                    llvm::AtomicOrdering AO, const Expr *X,
-                                   const Expr *E, SourceLocation Loc) {
+                                   const Expr *E) {
   // x = expr;
   assert(X->isLValue() && "X of 'omp atomic write' is not lvalue");
   emitSimpleAtomicStore(CGF, AO, CGF.EmitLValue(X), CGF.EmitAnyExpr(E));
@@ -7377,7 +7377,7 @@ static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
     emitOMPAtomicReadExpr(CGF, AO, X, V, Loc);
     break;
   case OMPC_write:
-    emitOMPAtomicWriteExpr(CGF, AO, X, E, Loc);
+    emitOMPAtomicWriteExpr(CGF, AO, X, E);
     break;
   case OMPC_unknown:
   case OMPC_update:

@@ -15,8 +15,10 @@
 
 ; CHECK: memw(r{{[0-9]+}}+#12) = #9
 
-; Check that the flag hexagon-disable-args-min-alignment works and the struct
+; Check that the flag hexagon-args-min-alignment=false works and the struct
 ; is aligned to 8 bytes.
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv65 -hexagon-args-min-alignment=false < %s | FileCheck -check-prefix=HEXAGON_LEGACY %s
+; Old spelling, still accepted as an alias.
 ; RUN: llc -mtriple=hexagon -mcpu=hexagonv65 -hexagon-disable-args-min-alignment < %s | FileCheck -check-prefix=HEXAGON_LEGACY %s
 
 ; HEXAGON_LEGACY: memw(r{{[0-9]+}}+#16) = #9
