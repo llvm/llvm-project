@@ -346,6 +346,13 @@ class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
                     OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
 }
 
+// Marks an LLVM dialect operation that translates to a call of an LLVM
+// intrinsic. Only such operations accept the discardable `llvm.strictfp`
+// attribute.
+def LLVM_IntrinsicOpTrait : NativeOpTrait<"IntrinsicOpTrait"> {
+  let cppNamespace = "::mlir::LLVM";
+}
+
 // Base class for LLVM intrinsics operation. It is similar to LLVM_Op, but
 // provides the "llvmBuilder" field for constructing the intrinsic.
 // The builder relies on the contents of "overloadedResults" and
@@ -515,7 +522,8 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> immArgPositions = [],
                   list<string> immArgAttrNames = []>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
-                      overloadedResults, overloadedOperands, traits,
+                      overloadedResults, overloadedOperands,
+                      !listconcat([LLVM_IntrinsicOpTrait], traits),
                       numResults, requiresAccessGroup, requiresAliasAnalysis,
                       requiresFastmath, requiresArgAndResultAttrs,
                       requiresOpBundles, immArgPositions, immArgAttrNames>;

@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_LLVMIR_LLVMCODEGENINTRINSICOPS_H_
 
 #include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMCodeGenIntrinsicOps.h.inc"
