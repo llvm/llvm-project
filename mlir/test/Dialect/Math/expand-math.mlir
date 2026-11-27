@@ -259,6 +259,20 @@ func.func @roundf_func(%a: f32) -> f32 {
 
 // -----
 
+// CHECK-LABEL: func.func @round_scalable
+// CHECK-FILTER-LABEL: func.func @round_scalable
+func.func @round_scalable(%arg: vector<[4]xf32>) -> vector<[4]xf32> {
+  // CHECK: %[[BELOW_HALF:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : vector<[4]xi32>
+  // CHECK: %[[SIGNED_ZERO:.*]] = math.copysign
+  // CHECK: %[[RESULT:.*]] = arith.select %[[BELOW_HALF]], %[[SIGNED_ZERO]],
+  // CHECK: return %[[RESULT]] : vector<[4]xf32>
+  // CHECK-FILTER: math.round %{{.*}} : vector<[4]xf32>
+  %r = math.round %arg : vector<[4]xf32>
+  return %r : vector<[4]xf32>
+}
+
+// -----
+
 // CHECK-LABEL:   func @powf_func
 // CHECK-SAME:    (%[[ARG0:.+]]: f64, %[[ARG1:.+]]: f64) -> f64
 func.func @powf_func(%a: f64, %b: f64) -> f64 {
