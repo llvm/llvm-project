@@ -2808,6 +2808,8 @@ def CIR_LoweringOptionsAttr
     `relative_cxx_abi_vtables` mirrors `LangOptions::RelativeCXXABIVTables`
     (`-fexperimental-relative-c++-abi-vtables`), which selects the layout of the
     C++ vtables that lowering emits and reads. It is omitted when false.
+    `rounding_math` mirrors `LangOptions::RoundingMath` (`-frounding-math`).
+    It is omitted when false.
 
     The following fields come from `CodeGenOptions`.
     `enable_noundef_attrs` mirrors `CodeGenOptions::EnableNoundefAttrs`,
@@ -2821,6 +2823,11 @@ def CIR_LoweringOptionsAttr
     function does not get `"no-trapping-math"`, since a pragma such as
     `float_control(except, on)` can make its FP operations observe exceptions
     even when the TU-wide default ignores them.
+
+    The TU-wide default FP environment is constrained when `no_trapping_math`
+    is false or `rounding_math` is true. `LoweringPrepare` then marks the
+    initialization and cleanup functions it creates `strictfp`, as classic
+    codegen does for a function that has no `FunctionDecl`.
 
     Example:
     ```
@@ -2849,7 +2856,8 @@ def CIR_LoweringOptionsAttr
     "bool":$enable_noundef_attrs,
     "bool":$no_trapping_math,
     "uint32_t":$ssp_buffer_size,
-    DefaultValuedParameter<"bool", "false">:$relative_cxx_abi_vtables
+    DefaultValuedParameter<"bool", "false">:$relative_cxx_abi_vtables,
+    DefaultValuedParameter<"bool", "false">:$rounding_math
   );
 
   let assemblyFormat = [{
@@ -2857,7 +2865,8 @@ def CIR_LoweringOptionsAttr
                $hlsl, $sycl_is_device, $gpu_rdc, $openmp,
                $openmp_is_target_device, $clang_abi_compat, $long_double_size,
                $enable_noundef_attrs, $no_trapping_math,
-               $ssp_buffer_size, $relative_cxx_abi_vtables) `>`
+               $ssp_buffer_size, $relative_cxx_abi_vtables,
+               $rounding_math) `>`
   }];
 
   let canHaveIllegalCXXABIType = 0;

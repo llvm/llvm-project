@@ -438,12 +438,8 @@ void CIRGenModule::emitCXXGlobalVarDeclInit(const VarDecl *varDecl,
   LangOptions::FPExceptionModeKind eb = getLangOpts().getDefaultExceptionMode();
   builder.setDefaultConstrainedRounding(rm);
   builder.setDefaultConstrainedExcept(eb);
-  builder.setIsFPConstrained(false);
-  if (eb != LangOptions::FPE_Ignore ||
-      rm != llvm::RoundingMode::NearestTiesToEven) {
-    builder.setIsFPConstrained(true);
-    addr.setStrictfp(true);
-  }
+  builder.setIsFPConstrained(eb != LangOptions::FPE_Ignore ||
+                             rm != llvm::RoundingMode::NearestTiesToEven);
 
   if (const auto *ipa = varDecl->getAttr<InitPriorityAttr>())
     addr.setInitPriority(ipa->getPriority());

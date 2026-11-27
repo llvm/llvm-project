@@ -3669,11 +3669,6 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     namespace-scope variables with vague linkage such as weak/linkonce_odr
     inline variables). It contains the mangled name of the guard variable.
 
-    The `strictfp` attribute indicates that the dynamic initialization emitted
-    into the `ctorRegion`/`dtorRegion` runs under a constrained floating-point
-    environment. LoweringPrepare forwards it to the `strictfp` attribute of the
-    generated `__cxx_global_var_init` function.
-
     The `init_priority` attribute records the priority specified by a
     C++ `init_priority` attribute on the source variable declaration.
     LoweringPrepare uses it to place the dynamic initializer emitted from
@@ -3706,7 +3701,6 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
-                       UnitAttr:$strictfp,
                        OptionalAttr<I32Attr>:$init_priority
                        );
 
@@ -3734,7 +3728,6 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     (`ast` `(` $ast^ `)`)?
     (`dynamic_init_info` `` $dynamic_init_info^)?
     (`section` `(` $section^ `)`)?
-    (`strictfp` $strictfp^)?
     (`init_priority` `(` $init_priority^ `)`)?
     attr-dict
   }];

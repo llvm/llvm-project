@@ -223,7 +223,8 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
           /*no_trapping_math=*/langOpts.getDefaultExceptionMode() ==
               LangOptions::FPE_Ignore,
           /*ssp_buffer_size=*/cgo.SSPBufferSize,
-          /*relative_cxx_abi_vtables=*/langOpts.RelativeCXXABIVTables));
+          /*relative_cxx_abi_vtables=*/langOpts.RelativeCXXABIVTables,
+          /*rounding_math=*/langOpts.RoundingMath));
 
   if (cgo.OptimizationLevel > 0 || cgo.OptimizeSize > 0)
     getModule()->setAttr(cir::CIRDialect::getOptInfoAttrName(),
