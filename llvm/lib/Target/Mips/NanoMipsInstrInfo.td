@@ -20,28 +20,202 @@
 // nanoMIPS Operand, Complex Patterns and Transformations Definitions.
 //===----------------------------------------------------------------------===//
 
-def uimm2_nm : Operand<i32>;
-def uimm2code_nm : Operand<i32>;
-def uimm3_nm : Operand<i32>;
-def uimm3shift_nm : Operand<i32>;
-def uimm4mask_nm : Operand<i32>;
-def uimm3plus1_nm : Operand<i32>;
-def uimm5s2_nm : Operand<i32>;
-def uimm6_nm : Operand<i32>;
+class NegImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = []>
+  : AsmOperandClass {
+  let Name = "NegImm" # Bits;
+  let RenderMethod = "addSImmOperands<32>";
+  let PredicateMethod = "isNegImm<" # Bits # ">";
+  let SuperClasses = Supers;
+}
+
+class UImm4AsmOperandClass : AsmOperandClass {
+  let Name = "UImm4Mask";
+  let RenderMethod = "addUImmOperands<16>";
+  let PredicateMethod = "isConstantUImmMask";
+}
+
+class UImm3ShiftAsmOperandClass : AsmOperandClass {
+  let Name = "UImm3Shift";
+  let RenderMethod = "addUImmOperands<4>";
+  let PredicateMethod = "isConstantUImmRange<1,8>";
+}
+
+def UImm4AsmOperand : UImm4AsmOperandClass;
+def UImm3ShiftAsmOperand : UImm3ShiftAsmOperandClass;
+
+def NImm12AsmOperandClass : NegImmAsmOperandClass<12, []>;
+
+class NMUImmAsmOperandClass<int Bits, list<AsmOperandClass> Supers = [],
+                            int Offset = 0>
+  : AsmOperandClass {
+  let Name = "NMUImm" # Bits # "_" # Offset;
+  let RenderMethod = "addConstantUImmOperands<" # Bits # "," # Offset # ">";
+  let PredicateMethod = "isConstantUImm<" # Bits # "," # Offset # ">";
+  let SuperClasses = Supers;
+}
+
+class NMUImm16AsmOperandClass<list<AsmOperandClass> Supers = []>
+  : AsmOperandClass {
+  let Name = "NMUImm16";
+  let RenderMethod = "addUImmOperands<16>";
+  let PredicateMethod = "isLo12OrUImm16Offset";
+  let SuperClasses = Supers;
+}
+
+class NMSImmScaledAsmOperandClass<int Bits, int Shift = 0, int Offset = 0,
+                                  list<AsmOperandClass> Supers = []>
+  : AsmOperandClass {
+  let Name = "NMSImm" # Bits # "_" # Offset # "_s" # Shift;
+  let RenderMethod =
+      "addConstantSImmOperands<" # !add(Bits,Shift) # "," # Offset # ">";
+  let PredicateMethod =
+      "isScaledSImm<" # Bits # "," # Shift # "," # Offset # ">";
+  let SuperClasses = Supers;
+}
+
+class NMUImmScaledAsmOperandClass<int Bits, int Shift = 0,
+                                  list<AsmOperandClass> Supers = []>
+  : AsmOperandClass {
+  let Name = "NMUImm" # Bits # "_s" # Shift;
+  let RenderMethod = "addConstantUImmOperands<32>";
+  let PredicateMethod = "isScaledUImm<" # Bits # "," # Shift # ">";
+  let SuperClasses = Supers;
+}
+
+def Hi20AsmOperand : AsmOperandClass {
+  let Name = "Hi20Offset";
+  let RenderMethod = "addHi20Operands";
+  let ParserMethod = "parseHi20Op";
+}
+
+class SImmScaledAsmOperandClass<int Bits, int Align,
+                                list<AsmOperandClass> Supers = []>
+  : AsmOperandClass {
+  let Name = "SImm" # Bits # "s" # Align;
+  let RenderMethod = "addSImmOperands<32>";
+  let PredicateMethod = "isSImm<" # Bits # ">";
+  let SuperClasses = Supers;
+  let DiagnosticType = "SImm" # Bits # "s" # Align;
+}
+
+def UImm19AsmOperand : NMUImmAsmOperandClass<19>;
+def UImm18AsmOperand : NMUImmAsmOperandClass<18>;
+def UImm3AsmOperand  : NMUImmAsmOperandClass<3, [UImm19AsmOperand]>;
+def UImm2AsmOperand  : NMUImmAsmOperandClass<2, [UImm18AsmOperand]>;
+
+def uimm2_nm : Operand<i32> {
+  let ParserMatchClass = UImm2AsmOperand;
+}
+
+def uimm2code_nm : Operand<i32> {
+  let ParserMatchClass = UImm2AsmOperand;
+  let PrintMethod = "printUImm<2, 0, 16>";
+}
+
+def uimm3_nm : Operand<i32> {
+  let ParserMatchClass = UImm3AsmOperand;
+  let PrintMethod = "printUImm<3, 0, 16>";
+}
+
+def uimm3plus1_nm : Operand<i32> {
+  let ParserMatchClass = NMUImmAsmOperandClass<3, [], 1>;
+  let DecoderMethod = "DecodeUImm3Shift";
+}
+
+def uimm3shift_nm : Operand<i32> {
+  let ParserMatchClass = UImm3ShiftAsmOperand;
+  let EncoderMethod = "getUImm3ShiftEncoding";
+  let DecoderMethod = "DecodeUImm3Shift";
+  let PrintMethod = "printUImm<4>";
+}
+
+def uimm4mask_nm : Operand<i32> {
+  let ParserMatchClass = UImm4AsmOperand;
+  let EncoderMethod = "getUImm4MaskEncoding";
+  let DecoderMethod = "DecodeUImm4Mask";
+  let PrintMethod = "printUImm<16, 0, 16>";
+}
+
+def uimm5s1_nm : Operand<i32> {
+  let ParserMatchClass = NMUImmScaledAsmOperandClass<4, 1>;
+  let PrintMethod = "printUImm<5>";
+}
+
+def uimm16_nm : Operand<i32> {
+  let ParserMatchClass = NMUImm16AsmOperandClass<>;
+  let PrintMethod = "printUImm<16>";
+}
+
+def uimm5s2_nm : Operand<i32> {
+  let ParserMatchClass =
+      NMUImmScaledAsmOperandClass<3, 2, [uimm16_nm.ParserMatchClass]>;
+  let PrintMethod = "printUImm<5>";
+}
+
+def uimm6_nm : Operand<i32> {
+  let ParserMatchClass = NMUImmAsmOperandClass<6>;
+  let PrintMethod = "printUImm<6>";
+}
+
 def uimm8s2_nm : Operand<i32>;
-def uimm8s4_nm : Operand<i32>;
-def uimm12_nm : Operand<i32>;
-def uimm12mask_nm : Operand<i32>;
-def uimm12s3_nm : Operand<i32>;
-def uimm16_nm : Operand<i32>;
-def uimm18_nm : Operand<i32>;
-def uimm19_nm : Operand<i32>;
-def uimm5s1_nm : Operand<i32>;
-def simm22s1_nm : Operand<i32>;
-def simm32_nm : Operand<i32>;
-def simm32s12_nm : Operand<i32>;
+
+def uimm12s3_nm : Operand<i32> {
+  let ParserMatchClass = NMUImmScaledAsmOperandClass<9, 3, []>;
+  let PrintMethod = "printUImm<12>";
+}
+
+def uimm8s4_nm : Operand<i32> {
+  let ParserMatchClass =
+      NMUImmScaledAsmOperandClass<4, 4, [uimm12s3_nm.ParserMatchClass]>;
+  let PrintMethod = "printUImm<8>";
+}
+
+def uimm12_nm : Operand<i32> {
+  let ParserMatchClass = NMUImmAsmOperandClass<12>;
+}
+
+def uimm12mask_nm : Operand<i32> {
+  let ParserMatchClass = NMUImmAsmOperandClass<12>;
+  let PrintMethod = "printUImm<12, 0, 16>";
+}
+
+def uimm18_nm : Operand<i32> {
+  let ParserMatchClass = UImm18AsmOperand;
+  let PrintMethod = "printUImm<18, 0, 16>";
+}
+
+def uimm19_nm : Operand<i32> {
+  let ParserMatchClass = UImm19AsmOperand;
+  let PrintMethod = "printUImm<19, 0, 16>";
+}
+
+// ADDIUPC's immediate is relative to the start of the instruction, while the
+// encoded field is relative to the next instruction, so the offset is the
+// instruction length: 4 for ADDIUPC[32], 6 for ADDIUPC[48].
+def simm22s1_nm : Operand<i32> {
+  let ParserMatchClass = NMSImmScaledAsmOperandClass<21, 1, 4>;
+  let EncoderMethod = "getSImmWithOffsetEncoding<22, 4>";
+  let PrintMethod = "printUImm<32, 0, 16>";
+}
+
+def simm32_nm : Operand<i32> {
+  let ParserMatchClass = NMSImmScaledAsmOperandClass<32, 0, 6>;
+  let EncoderMethod = "getSImmWithOffsetEncoding<32, 6>";
+  let PrintMethod = "printUImm<32, 0, 16>";
+}
+
+def simm32s12_nm : Operand<i32> {
+  let ParserMatchClass = Hi20AsmOperand;
+  let PrintMethod = "printHi20";
+}
+
 def simm32s12_pcrel_nm : Operand<i32>;
-def nimm12_nm : Operand<i32>;
+
+def nimm12_nm : Operand<i32> {
+  let ParserMatchClass = NImm12AsmOperandClass;
+  let EncoderMethod = "getNegImm12Encoding";
+  let DecoderMethod = "DecodeNegImm12";
+}
 
 def mem_nm_sp5s2 : Operand<iPTR>;
 def mem_nm_gp7s2 : Operand<iPTR>;
@@ -56,8 +230,37 @@ def mem_nm_s9 : Operand<iPTR>;
 def mem_nm_4s2 : Operand<iPTR>;
 def mem_nm_7s2 : Operand<iPTR>;
 
-def reglist16_nm : Operand<OtherVT>;
-def reglist_nm : Operand<OtherVT>;
+class NMRegListAsmOperandClass<list<AsmOperandClass> Supers = []>
+  : AsmOperandClass {
+  let Name = "NMRegList32";
+  let RenderMethod = "addRegListOperands";
+  let PredicateMethod = "isRegList";
+  let SuperClasses = Supers;
+  let ParserMethod = "parseNMRegisterList";
+}
+
+class NMRegList16AsmOperandClass<list<AsmOperandClass> Supers = []>
+  : AsmOperandClass {
+  let Name = "NMRegList16";
+  let PredicateMethod = "isNMRegList16";
+  let RenderMethod = "addRegListOperands";
+  let SuperClasses = Supers;
+  let ParserMethod = "parseNMRegisterList";
+}
+
+def reglist16_nm : Operand<OtherVT> {
+  let ParserMatchClass = NMRegList16AsmOperandClass<>;
+  let EncoderMethod = "getNMRegList16Encoding";
+  let DecoderMethod = "DecodeNMRegList16Operand";
+  let PrintMethod = "printNanoMipsRegisterList";
+}
+
+def reglist_nm : Operand<OtherVT> {
+  let ParserMatchClass = NMRegListAsmOperandClass<>;
+  let EncoderMethod = "getNMRegListEncoding";
+  let DecoderMethod = "DecodeNMRegListOperand";
+  let PrintMethod = "printNanoMipsRegisterList";
+}
 
 foreach I = {7, 10, 11, 14, 25} in
   def brtarget # I # _nm : Operand<OtherVT>;
@@ -83,8 +286,9 @@ def sym32_nm : Operand<pAny>;
 // P16_4X4
 class Arith4x4_Desc<string opstr, RegisterOperand RO>
   : InstNM<(outs RO:$dst), (ins RO:$rt, RO:$rs),
-           !strconcat(opstr, "\t$dst, $rt, $rs")>, RegConstraint<"$rt = $dst">;
-
+           !strconcat(opstr, "\t$dst, $rt, $rs")>, RegConstraint<"$rt = $dst"> {
+  let AsmMatchConverter = "ConvertCommutedTiedOperands";
+}
 // 32-bit arithmetic and logical instructions with 3 register operands.
 class ArithLogicR32_Desc<string opstr, RegisterOperand RO>
   : InstNM<(outs RO:$rd), (ins RO:$rs, RO:$rt),
@@ -94,7 +298,9 @@ class ArithLogicR32_Desc<string opstr, RegisterOperand RO>
 // POOL16C_0
 class ArithLogicR16_Desc<string opstr, RegisterOperand RO>
   : InstNM<(outs RO:$rd), (ins RO:$rs, RO:$rt),
-           !strconcat(opstr, "\t$rd, $rs, $rt")>, RegConstraint<"$rt = $rd">;
+           !strconcat(opstr, "\t$rd, $rs, $rt")>, RegConstraint<"$rt = $rd"> {
+  let AsmMatchConverter = "ConvertCommutedTiedOperands";
+}
 
 class ArithLogicR16U_Desc<string opstr, RegisterOperand RO>
   : InstNM<(outs RO:$rd), (ins RO:$rs),

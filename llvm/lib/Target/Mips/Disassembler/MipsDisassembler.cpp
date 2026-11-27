@@ -40,12 +40,14 @@ namespace {
 
 class MipsDisassembler : public MCDisassembler {
   bool IsMicroMips;
+  bool IsNanoMips;
   bool IsBigEndian;
 
 public:
   MipsDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx, bool IsBigEndian)
       : MCDisassembler(STI, Ctx),
         IsMicroMips(STI.hasFeature(Mips::FeatureMicroMips)),
+        IsNanoMips(STI.hasFeature(Mips::FeatureNanoMips)),
         IsBigEndian(IsBigEndian) {}
 
   bool hasMips2() const { return STI.hasFeature(Mips::FeatureMips2); }
@@ -100,6 +102,8 @@ LLVMInitializeMipsDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheMips64Target(),
                                          createMipsDisassembler);
   TargetRegistry::RegisterMCDisassembler(getTheMips64elTarget(),
+                                         createMipselDisassembler);
+  TargetRegistry::RegisterMCDisassembler(getTheNanoMipsTarget(),
                                          createMipselDisassembler);
 }
 
@@ -1480,6 +1484,81 @@ static DecodeStatus DecodeFIXMEInstruction(MCInst &Inst, unsigned Insn,
   return MCDisassembler::Fail;
 }
 
+static DecodeStatus DecodeUImm4Mask(MCInst &Inst, unsigned Value,
+                                    uint64_t Address,
+                                    const MCDisassembler *Decoder) {
+  assert(isUInt<4>(Value) && "Unexpected value in DecoderMethod");
+  if (Value == 12)
+    Inst.addOperand(MCOperand::createImm(0xff));
+  else if (Value == 13)
+    Inst.addOperand(MCOperand::createImm(0xffff));
+  else
+    Inst.addOperand(MCOperand::createImm(Value));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeUImm3Shift(MCInst &Inst, unsigned Value,
+                                     uint64_t Address,
+                                     const MCDisassembler *Decoder) {
+  assert(isUInt<3>(Value) && "Unexpected value in DecoderMethod");
+  if (Value == 0)
+    Inst.addOperand(MCOperand::createImm(8));
+  else
+    Inst.addOperand(MCOperand::createImm(Value));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeNMRegListOperand(MCInst &Inst, unsigned Insn,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  unsigned RegStart = fieldFromInstruction(Insn, 5, 5);
+  unsigned RegCount = fieldFromInstruction(Insn, 1, 4);
+  unsigned GPBit = fieldFromInstruction(Insn, 0, 1);
+  unsigned RegIdx;
+  unsigned RegNo;
+
+  for (RegIdx = RegStart; RegIdx < RegStart + RegCount; RegIdx++) {
+    if (RegIdx == RegStart + RegCount - 1 && GPBit)
+      RegNo = 28;
+    else if (RegIdx > 31)
+      RegNo = 16 + (RegIdx % 32); // $ra+1 wraps to $s0
+    else
+      RegNo = RegIdx;
+    Inst.addOperand(
+        MCOperand::createReg(getReg(Decoder, Mips::GPR32RegClassID, RegNo)));
+  }
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeNMRegList16Operand(MCInst &Inst, unsigned Insn,
+                                             uint64_t Address,
+                                             const MCDisassembler *Decoder) {
+  unsigned RegStart = 30 + fieldFromInstruction(Insn, 4, 1);
+  unsigned RegCount = fieldFromInstruction(Insn, 0, 4);
+  // Re-encode the parameters for 32-bit instruction operand
+  // and call its decoder
+  return DecodeNMRegListOperand(Inst, (RegStart << 5) | (RegCount << 1),
+                                Address, Decoder);
+}
+
+static DecodeStatus DecodeNegImm12(MCInst &Inst, unsigned Insn,
+                                   uint64_t Address,
+                                   const MCDisassembler *Decoder) {
+  int Imm = fieldFromInstruction(Insn, 0, 12);
+  assert(isUInt<12>(Imm) && "Unexpected value in DecoderMethod");
+  Inst.addOperand(MCOperand::createImm(-Imm));
+  return MCDisassembler::Success;
+}
+
+template <unsigned Bits, unsigned Offset, unsigned Scale, unsigned RegNum>
+static DecodeStatus DecodeUImmWithReg(MCInst &Inst, unsigned Value,
+                                      uint64_t Address,
+                                      const MCDisassembler *Decoder) {
+  Inst.addOperand(MCOperand::createReg(RegNum));
+  return DecodeUImmWithOffsetAndScale<Bits, Offset, Scale>(Inst, Value, Address,
+                                                           Decoder);
+}
+
 #include "MipsGenDisassemblerTables.inc"
 
 /// Read two bytes from the ArrayRef and return 16 bit halfword sorted
@@ -1503,30 +1582,34 @@ static DecodeStatus readInstruction16(ArrayRef<uint8_t> Bytes, uint64_t Address,
 }
 
 /// Read four bytes from the ArrayRef and return 32 bit word sorted
-/// according to the given endianness.
+/// according to the given endianness. IsCompInstByteOrder selects the
+/// compressed microMIPS/nanoMIPS half-word order.
 static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
                                       uint64_t &Size, uint32_t &Insn,
-                                      bool IsBigEndian, bool IsMicroMips) {
+                                      bool IsBigEndian,
+                                      bool IsCompInstByteOrder) {
   // We want to read exactly 4 Bytes of data.
   if (Bytes.size() < 4) {
     Size = 0;
     return MCDisassembler::Fail;
   }
 
-  // High 16 bits of a 32-bit microMIPS instruction (where the opcode is)
-  // always precede the low 16 bits in the instruction stream (that is, they
+  // High 16 bits of a 32-bit microMIPS/nanoMIPS instruction (where the opcode
+  // is) always precede the low 16 bits in the instruction stream (that is, they
   // are placed at lower addresses in the instruction stream).
   //
   // microMIPS byte ordering:
   //   Big-endian:    0 | 1 | 2 | 3
   //   Little-endian: 1 | 0 | 3 | 2
+  //
+  // nanoMIPS is little-endian and uses the same half-word order.
 
   if (IsBigEndian) {
     // Encoded as a big-endian 32-bit word in the stream.
     Insn =
         (Bytes[3] << 0) | (Bytes[2] << 8) | (Bytes[1] << 16) | (Bytes[0] << 24);
   } else {
-    if (IsMicroMips) {
+    if (IsCompInstByteOrder) {
       Insn = (Bytes[2] << 0) | (Bytes[3] << 8) | (Bytes[0] << 16) |
              (Bytes[1] << 24);
     } else {
@@ -1538,6 +1621,29 @@ static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
   return MCDisassembler::Success;
 }
 
+/// Read 6 bytes from the ArrayRef and return in a 64-bit word sorted according
+/// to the compressed half-word instruction byte order.
+static DecodeStatus readInstruction48(ArrayRef<uint8_t> Bytes, uint64_t Address,
+                                      uint64_t &Size, uint64_t &Insn) {
+  // We want to read exactly 6 Bytes of data.
+  if (Bytes.size() < 6) {
+    Size = 0;
+    return MCDisassembler::Fail;
+  }
+
+  // High 16 bits of a 48-bit nanoMIPS instruction (where the opcode is) always
+  // precede the remaining 32 bits, which are read in the same half-word order
+  // as a 32-bit instruction.
+  //
+  // nanoMIPS byte ordering:
+  //   Little-endian: 1 | 0 | 3 | 2 | 5 | 4
+
+  Insn = (Bytes[0] << 0) | (Bytes[1] << 8);
+  Insn = ((Insn << 32) | (Bytes[4] << 0) | (Bytes[5] << 8) | (Bytes[2] << 16) |
+          ((unsigned)Bytes[3] << 24));
+  return MCDisassembler::Success;
+}
+
 DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
                                               ArrayRef<uint8_t> Bytes,
                                               uint64_t Address,
@@ -1545,6 +1651,45 @@ DecodeStatus MipsDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   uint32_t Insn;
   DecodeStatus Result;
   Size = 0;
+
+  if (IsNanoMips) {
+    auto TryDecode = [&](const uint8_t *Table, unsigned InstrSize,
+                         auto Encoding) {
+      if (Result == MCDisassembler::Fail)
+        return false;
+      LLVM_DEBUG(dbgs() << "Trying NanoMips" << InstrSize * 8 << " table ("
+                        << InstrSize * 8 << "-bit instructions):\n");
+      // Calling the auto-generated decoder function.
+      Result = decodeInstruction(Table, Instr, Encoding, Address, this, STI);
+      if (Result == MCDisassembler::Fail)
+        return false;
+      Size = InstrSize;
+      return true;
+    };
+
+    assert(!IsBigEndian && "Big-endian nanoMIPS is not supported");
+    uint64_t Insn48;
+    Result = readInstruction48(Bytes, Address, Size, Insn48);
+    if (TryDecode(DecoderTableNanoMips48, 6, Insn48))
+      return Result;
+
+    Result =
+        readInstruction32(Bytes, Address, Size, Insn, /*IsBigEndian=*/false,
+                          /*IsCompInstByteOrder=*/true);
+    if (TryDecode(DecoderTableNanoMips32, 4, Insn))
+      return Result;
+
+    Result =
+        readInstruction16(Bytes, Address, Size, Insn, /*IsBigEndian=*/false);
+    if (TryDecode(DecoderTableNanoMips16, 2, Insn))
+      return Result;
+
+    // This is an invalid instruction. Claim that the Size is 2 bytes, if
+    // two bytes are available. Since nanoMIPS instructions have a minimum
+    // alignment of 2, the next 2 bytes could form a valid instruction.
+    Size = std::min<uint64_t>(2, Bytes.size());
+    return MCDisassembler::Fail;
+  }
 
   if (IsMicroMips) {
     Result = readInstruction16(Bytes, Address, Size, Insn, IsBigEndian);

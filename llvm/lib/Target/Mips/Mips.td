@@ -251,6 +251,14 @@ def MIPS64 : HwMode<[IsPTR64bit]>;
 // Register File, Calling Conv, Instruction Descriptions
 //===----------------------------------------------------------------------===//
 
+// Keep in sync with MipsAsmVariants in MipsBaseInfo.h.
+def MipsAsmVariants {
+  string Mips = "mips";
+  int Mips_ID = 0;
+  string NanoMips = "nanomips";
+  int NanoMips_ID = 1;
+}
+
 include "MipsRegisterInfo.td"
 include "MipsInstrInfo.td"
 include "MipsCallingConv.td"
@@ -324,7 +332,8 @@ def MipsAsmParser : AsmParser {
 }
 
 def MipsAsmParserVariant : AsmParserVariant {
-  int Variant = 0;
+  let Variant = MipsAsmVariants.Mips_ID;
+  let Name = MipsAsmVariants.Mips;
 
   // Recognize hard coded registers.
   string RegisterPrefix = "$";
@@ -334,11 +343,20 @@ def MipsAsmWriter : AsmWriter {
   int PassSubtarget = 1;
 }
 
+def NanoMipsAsmParserVariant : AsmParserVariant {
+  let Variant = MipsAsmVariants.NanoMips_ID;
+  let Name = MipsAsmVariants.NanoMips;
+  // nanoMIPS uses square brackets to refer to a specific encoding of an
+  // instruction (e.g. addu[16])
+  string TokenizingCharacters = "*!";
+  string RegisterPrefix = "$";
+}
+
 def Mips : Target {
   let InstructionSet = MipsInstrInfo;
   let AssemblyWriters = [MipsAsmWriter];
   let AssemblyParsers = [MipsAsmParser];
-  let AssemblyParserVariants = [MipsAsmParserVariant];
+  let AssemblyParserVariants = [MipsAsmParserVariant, NanoMipsAsmParserVariant];
   let AllowRegisterRenaming = 1;
 }
 

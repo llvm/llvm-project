@@ -16,7 +16,7 @@ class InstNM_Enc : Instruction, PredicateControl, ISA_NANOMIPS {
 
   let EncodingPredicates = [HasNanoMips];
   string Arch = "nanomips";
-  let AsmVariantName = "nanomips";
+  let AsmVariantName = MipsAsmVariants.NanoMips;
 }
 
 class InstNM<dag outs, dag ins, string asmstr, list<dag> pattern = [],

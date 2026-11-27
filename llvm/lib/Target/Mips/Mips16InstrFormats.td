@@ -44,6 +44,7 @@ class MipsInst16_Base<dag outs, dag ins, string asmstr,
   let AsmString   = asmstr;
   let Pattern     = pattern;
 
+  let AsmVariantName = MipsAsmVariants.Mips;
   let Predicates = [InMips16Mode];
 }
 

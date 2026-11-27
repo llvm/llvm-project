@@ -19,6 +19,7 @@ class MMDSPInstAlias<string Asm, dag Result, bit Emit = 0b1>
     : InstAlias<Asm, Result, Emit>, PredicateControl {
   let ASEPredicate = [HasDSP];
   let AdditionalPredicates = [InMicroMips];
+  let AsmVariantName = MipsAsmVariants.Mips;
 }
 
 class POOL32A_3R_FMT<string opstr, bits<11> op> : MMDSPInst<opstr> {

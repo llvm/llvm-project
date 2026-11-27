@@ -14,7 +14,7 @@
 # --- indirect jump / call (register) ---
 ---
 # CHECK-LABEL: balrsc:
-# CHECK: balrsc $ra, $5 # encoding: [0xe5,0x4b,0x00,0x80]
+# CHECK: balrsc $ra, $a1 # encoding: [0xe5,0x4b,0x00,0x80]
 name: balrsc
 tracksRegLiveness: false
 body: |
@@ -23,7 +23,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: jalrc:
-# CHECK: jalrc $ra, $5 # encoding: [0xe5,0x4b,0x00,0x00]
+# CHECK: jalrc $ra, $a1 # encoding: [0xe5,0x4b,0x00,0x00]
 name: jalrc
 tracksRegLiveness: false
 body: |
@@ -32,7 +32,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: jalrchb:
-# CHECK: jalrc.hb $ra, $5 # encoding: [0xe5,0x4b,0x00,0x10]
+# CHECK: jalrc.hb $ra, $a1 # encoding: [0xe5,0x4b,0x00,0x10]
 name: jalrchb
 tracksRegLiveness: false
 body: |
@@ -61,7 +61,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: movebalc:
-# CHECK: move.balc $4, $5, 0 # encoding: [0xa0,0x08,0x00,0x00]
+# CHECK: move.balc $a0, $a1, 0 # encoding: [0xa0,0x08,0x00,0x00]
 name: movebalc
 tracksRegLiveness: false
 body: |
@@ -72,7 +72,7 @@ body: |
 # --- conditional branch (with placeholder operands for now) ---
 ---
 # CHECK-LABEL: bbeqzc:
-# CHECK: bbeqzc $4, 3, 0 # encoding: [0x84,0xc8,0x00,0x18]
+# CHECK: bbeqzc $a0, 3, 0 # encoding: [0x84,0xc8,0x00,0x18]
 name: bbeqzc
 tracksRegLiveness: false
 body: |
@@ -81,7 +81,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bbnezc:
-# CHECK: bbnezc $4, 3, 0 # encoding: [0x94,0xc8,0x00,0x18]
+# CHECK: bbnezc $a0, 3, 0 # encoding: [0x94,0xc8,0x00,0x18]
 name: bbnezc
 tracksRegLiveness: false
 body: |
@@ -90,7 +90,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: beqc:
-# CHECK: beqc $4, $5, 0 # encoding: [0xa4,0x88,0x00,0x00]
+# CHECK: beqc $a0, $a1, 0 # encoding: [0xa4,0x88,0x00,0x00]
 name: beqc
 tracksRegLiveness: false
 body: |
@@ -99,7 +99,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: beqic:
-# CHECK: beqic $4, 5, 0 # encoding: [0x80,0xc8,0x00,0x28]
+# CHECK: beqic $a0, 5, 0 # encoding: [0x80,0xc8,0x00,0x28]
 name: beqic
 tracksRegLiveness: false
 body: |
@@ -108,7 +108,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bgec:
-# CHECK: bgec $4, $5, 0 # encoding: [0xa4,0x88,0x00,0x80]
+# CHECK: bgec $a0, $a1, 0 # encoding: [0xa4,0x88,0x00,0x80]
 name: bgec
 tracksRegLiveness: false
 body: |
@@ -117,7 +117,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bgeic:
-# CHECK: bgeic $4, 5, 0 # encoding: [0x88,0xc8,0x00,0x28]
+# CHECK: bgeic $a0, 5, 0 # encoding: [0x88,0xc8,0x00,0x28]
 name: bgeic
 tracksRegLiveness: false
 body: |
@@ -126,7 +126,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bgeiuc:
-# CHECK: bgeiuc $4, 5, 0 # encoding: [0x8c,0xc8,0x00,0x28]
+# CHECK: bgeiuc $a0, 5, 0 # encoding: [0x8c,0xc8,0x00,0x28]
 name: bgeiuc
 tracksRegLiveness: false
 body: |
@@ -135,7 +135,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bgeuc:
-# CHECK: bgeuc $4, $5, 0 # encoding: [0xa4,0x88,0x00,0xc0]
+# CHECK: bgeuc $a0, $a1, 0 # encoding: [0xa4,0x88,0x00,0xc0]
 name: bgeuc
 tracksRegLiveness: false
 body: |
@@ -144,7 +144,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bltc:
-# CHECK: bltc $4, $5, 0 # encoding: [0xa4,0xa8,0x00,0x80]
+# CHECK: bltc $a0, $a1, 0 # encoding: [0xa4,0xa8,0x00,0x80]
 name: bltc
 tracksRegLiveness: false
 body: |
@@ -153,7 +153,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bltic:
-# CHECK: bltic $4, 5, 0 # encoding: [0x98,0xc8,0x00,0x28]
+# CHECK: bltic $a0, 5, 0 # encoding: [0x98,0xc8,0x00,0x28]
 name: bltic
 tracksRegLiveness: false
 body: |
@@ -162,7 +162,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bltiuc:
-# CHECK: bltiuc $4, 5, 0 # encoding: [0x9c,0xc8,0x00,0x28]
+# CHECK: bltiuc $a0, 5, 0 # encoding: [0x9c,0xc8,0x00,0x28]
 name: bltiuc
 tracksRegLiveness: false
 body: |
@@ -171,7 +171,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bltuc:
-# CHECK: bltuc $4, $5, 0 # encoding: [0xa4,0xa8,0x00,0xc0]
+# CHECK: bltuc $a0, $a1, 0 # encoding: [0xa4,0xa8,0x00,0xc0]
 name: bltuc
 tracksRegLiveness: false
 body: |
@@ -180,7 +180,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bnec:
-# CHECK: bnec $4, $5, 0 # encoding: [0xa4,0xa8,0x00,0x00]
+# CHECK: bnec $a0, $a1, 0 # encoding: [0xa4,0xa8,0x00,0x00]
 name: bnec
 tracksRegLiveness: false
 body: |
@@ -189,7 +189,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: bneic:
-# CHECK: bneic $4, 5, 0 # encoding: [0x90,0xc8,0x00,0x28]
+# CHECK: bneic $a0, 5, 0 # encoding: [0x90,0xc8,0x00,0x28]
 name: bneic
 tracksRegLiveness: false
 body: |
@@ -198,7 +198,7 @@ body: |
 ...
 ---
 # CHECK-LABEL: brsc:
-# CHECK: brsc $4 # encoding: [0x04,0x48,0x00,0x80]
+# CHECK: brsc $a0 # encoding: [0x04,0x48,0x00,0x80]
 name: brsc
 tracksRegLiveness: false
 body: |

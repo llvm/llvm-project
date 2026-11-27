@@ -29,6 +29,8 @@ class MicroMipsInstBase<dag outs, dag ins, string asmstr, list<dag> pattern,
 
   let AsmString   = asmstr;
   let Pattern     = pattern;
+
+  let AsmVariantName = MipsAsmVariants.Mips;
   let EncodingPredicates = [InMicroMips];
 
   Format Form = f;
