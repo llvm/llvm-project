@@ -2675,6 +2675,15 @@ llvm_driver_cc_binary(
     deps = [":clang-driver"],
 )
 
+gentbl_cc_library(
+    name = "DiagtoolOptsTableGen",
+    strip_include_prefix = "tools/diagtool",
+    tbl_outs = {"tools/diagtool/Opts.inc": ["-gen-opt-parser-defs"]},
+    tblgen = "//llvm:llvm-tblgen",
+    td_file = "tools/diagtool/Opts.td",
+    deps = ["//llvm:OptParserTdFiles"],
+)
+
 cc_binary(
     name = "diagtool",
     srcs = glob([
@@ -2683,12 +2692,14 @@ cc_binary(
     ]),
     stamp = 0,
     deps = [
+        ":DiagtoolOptsTableGen",
         ":basic",
         ":diagnostic_defs_gen",
         ":driver",
         ":frontend",
         ":lex",
         ":sema",
+        "//llvm:Option",
         "//llvm:Support",
     ],
 )
