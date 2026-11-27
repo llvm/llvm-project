@@ -16,6 +16,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -58,7 +59,7 @@ const char *SBSection::GetName() {
 
   SectionSP section_sp(GetSP());
   if (section_sp)
-    return ConstString(section_sp->GetName()).GetCString();
+    return StringPool::GetSystemPool().Intern(section_sp->GetName());
   return nullptr;
 }
 

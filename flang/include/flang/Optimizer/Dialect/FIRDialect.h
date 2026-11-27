@@ -17,21 +17,13 @@
 
 #include "flang/Optimizer/Dialect/FIRDialect.h.inc"
 
+#include "flang/Optimizer/Dialect/FIRCodeGenDialect.h.inc"
+
 namespace mlir {
 class IRMapping;
 } // namespace mlir
 
 namespace fir {
-
-/// The FIR codegen dialect is a dialect containing a small set of transient
-/// operations used exclusively during code generation.
-class FIRCodeGenDialect final : public mlir::Dialect {
-public:
-  explicit FIRCodeGenDialect(mlir::MLIRContext *ctx);
-  virtual ~FIRCodeGenDialect();
-
-  static llvm::StringRef getDialectNamespace() { return "fircg"; }
-};
 
 /// Support for inlining on FIR.
 bool canLegallyInline(mlir::Operation *op, mlir::Region *reg, bool,

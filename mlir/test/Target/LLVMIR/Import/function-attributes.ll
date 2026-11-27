@@ -478,6 +478,12 @@ declare void @willreturn_attribute() willreturn
 
 // -----
 
+; CHECK-LABEL: @strictfp_attribute
+; CHECK-SAME: attributes {strictfp}
+declare void @strictfp_attribute() strictfp
+
+// -----
+
 ; CHECK-LABEL: @noreturn_attribute
 ; CHECK-SAME: attributes {noreturn}
 declare void @noreturn_attribute() noreturn

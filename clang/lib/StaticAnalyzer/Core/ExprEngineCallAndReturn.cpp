@@ -55,7 +55,7 @@ void ExprEngine::processCallEnter(CallEnter CE, ExplodedNode *Pred) {
 
   // Construct a new node, notify checkers that analysis of the function has
   // begun, and add the resultant nodes to the worklist.
-  ExplodedNode *Node = Engine.makeNode(Loc, Pred->getState(), Pred);
+  ExplodedNode *Node = Engine.makeNode(Loc, Pred->getState().get(), Pred);
   if (Node) {
     // FIXME: In the `processBeginOfFunction` callback
     // `ExprEngine::getCurrStackFrame()` can be different from the
@@ -353,7 +353,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
                    : ProgramPoint{EpsilonPoint(CalleeSF, /*Data1=*/nullptr,
                                                /*Data2=*/nullptr, &RetValBind)};
 
-    ExplodedNode *BoundRetNode = Engine.makeNode(Loc, State, CEBNode);
+    ExplodedNode *BoundRetNode = Engine.makeNode(Loc, State.get(), CEBNode);
     if (!BoundRetNode)
       return;
 
@@ -378,7 +378,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
     CallExitEnd Loc(CalleeSF, CallerSF);
     ProgramStateRef CEEState = (N == CEBNode) ? State : N->getState();
 
-    ExplodedNode *CEENode = Engine.makeNode(Loc, CEEState, N);
+    ExplodedNode *CEENode = Engine.makeNode(Loc, CEEState.get(), N);
     if (!CEENode)
       continue;
 
@@ -541,7 +541,7 @@ void ExprEngine::inlineCall(WorkList *WList, const CallEvent &Call,
   // formal arguments.
   State = State->enterStackFrame(Call, CalleeSF);
 
-  if (ExplodedNode *N = Engine.makeNode(Loc, State, Pred))
+  if (ExplodedNode *N = Engine.makeNode(Loc, State.get(), Pred))
     WList->enqueue(N);
 
   NumInlinedCalls++;
@@ -587,7 +587,7 @@ void ExprEngine::VisitCallExpr(const CallExpr *CE, ExplodedNode *Pred,
             createTemporaryRegionIfNeeded(State, SF, OCE->getArg(0));
         if (NewState != State) {
           PreStmt PS(OCE, SF, /*tag=*/nullptr);
-          Pred = Engine.makeNode(PS, NewState, Pred);
+          Pred = Engine.makeNode(PS, NewState.get(), Pred);
           if (!Pred)
             return; // Cached out.
         }
@@ -661,7 +661,7 @@ void ExprEngine::finishArgumentConstruction(ExplodedNodeSet &Dst,
   const StackFrame *SF = Call.getStackFrame();
   static SimpleProgramPointTag Tag("ExprEngine",
                                    "Finish argument construction");
-  Dst.insert(Engine.makeNode(PreStmt(E, SF, &Tag), CleanedState, Pred));
+  Dst.insert(Engine.makeNode(PreStmt(E, SF, &Tag), CleanedState.get(), Pred));
 }
 
 void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -724,7 +724,7 @@ void ExprEngine::evalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                                         PSK_EscapeOutParameters, &*Call);
 
     if (State != I->getState())
-      I = Engine.makeNode(I->getLocation(), State, I);
+      I = Engine.makeNode(I->getLocation(), State.get(), I);
 
     Dst.insert(I);
   }
@@ -829,7 +829,7 @@ ExplodedNode *ExprEngine::conservativeEvalCall(const CallEvent &Call,
 
   // And make the result node.
   static SimpleProgramPointTag PT("ExprEngine", "Conservative eval call");
-  return Engine.makeNode(Call.getProgramPoint(false, &PT), State, Pred);
+  return Engine.makeNode(Call.getProgramPoint(false, &PT), State.get(), Pred);
 }
 
 ExprEngine::CallInlinePolicy
@@ -1297,7 +1297,7 @@ void ExprEngine::dynDispatchBifurcate(const MemRegion *BifurReg,
 void ExprEngine::VisitReturnStmt(const ReturnStmt *RS, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
   if (RS->getRetValue()) {
-    Dst.insert(Engine.makePostStmtNode(RS, Pred->getState(), Pred));
+    Dst.insert(Engine.makePostStmtNode(RS, Pred->getState().get(), Pred));
   } else {
     Dst.insert(Pred);
   }

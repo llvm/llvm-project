@@ -264,7 +264,8 @@ private:
   void sortExceptionTables();
   void sortCRTSectionChunks(std::vector<Chunk *> &chunks);
   void addSyntheticIdata();
-  void sortBySectionOrder(std::vector<Chunk *> &chunks);
+  void sortBySectionOrder(std::vector<Chunk *> &chunks,
+                          function_ref<int(const SectionChunk *)> priority);
   void fixPartialSectionChars(StringRef name, uint32_t chars);
   bool fixGnuImportChunks();
   void fixTlsAlignment(SymbolTable &symtab);
@@ -530,6 +531,14 @@ bool Writer::createThunks(OutputSection *os, int margin) {
         continue;
 
       uint64_t s = sym->getRVA();
+
+      // A target in the relocation's own chunk needs no margin: thunks are
+      // only inserted between chunks, so this distance cannot change.
+      if (auto *dr = dyn_cast<DefinedRegular>(sym))
+        if (dr->getChunk() == sc &&
+            isInRange(rel.Type, s, sc->getRVA() + rel.VirtualAddress, 0,
+                      machine))
+          continue;
 
       if (isInRange(rel.Type, s, p, margin, machine))
         continue;
@@ -853,11 +862,13 @@ static StringRef getOutputSectionName(StringRef name, bool isMinGW) {
 }
 
 // For /order.
-void Writer::sortBySectionOrder(std::vector<Chunk *> &chunks) {
-  auto getPriority = [&ctx = ctx](const Chunk *c) {
+void Writer::sortBySectionOrder(
+    std::vector<Chunk *> &chunks,
+    function_ref<int(const SectionChunk *)> priority) {
+  auto getPriority = [=](const Chunk *c) {
     if (auto *sec = dyn_cast<SectionChunk>(c))
       if (sec->sym)
-        return ctx.config.order.lookup(sec->sym->getName());
+        return priority(sec);
     return 0;
   };
 
@@ -1043,16 +1054,20 @@ static bool shouldStripSectionSuffix(SectionChunk *sc, StringRef name,
 
 void Writer::sortSections() {
   if (!ctx.config.callGraphProfile.empty()) {
+    // The call graph order is per section: two leaders can have the same name.
     DenseMap<const SectionChunk *, int> order =
         computeCallGraphProfileOrder(ctx);
-    for (auto it : order) {
-      if (DefinedRegular *sym = it.first->sym)
-        ctx.config.order[sym->getName()] = it.second;
-    }
+    for (auto it : partialSections)
+      sortBySectionOrder(it.second->chunks, [&](const SectionChunk *sec) {
+        return order.lookup(sec);
+      });
+    return;
   }
   if (!ctx.config.order.empty())
     for (auto it : partialSections)
-      sortBySectionOrder(it.second->chunks);
+      sortBySectionOrder(it.second->chunks, [&](const SectionChunk *sec) {
+        return ctx.config.order.lookup(sec->sym->getName());
+      });
 }
 
 void Writer::calculateStubDependentSizes() {

@@ -8,13 +8,17 @@ define double @test(double %x) {
 ; CHECK-LABEL: define double @test(
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double 1.000000e+00>, double [[X]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[M0:%.*]] = extractelement <4 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    [[M0:%.*]] = fmul double 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    [[M0_USE:%.*]] = fmul double [[M0]], 0.000000e+00
 ; CHECK-NEXT:    call void @use(double [[M0_USE]])
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x double> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[A2:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP3]])
+; CHECK-NEXT:    [[M1:%.*]] = fmul double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[R0:%.*]] = fmul contract double [[M0]], 0.000000e+00
+; CHECK-NEXT:    [[R1:%.*]] = fmul double [[M1]], 0.000000e+00
+; CHECK-NEXT:    [[A0:%.*]] = fadd reassoc contract double [[R0]], [[R1]]
+; CHECK-NEXT:    [[M2:%.*]] = fmul double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[R2:%.*]] = fmul double [[M2]], 0.000000e+00
+; CHECK-NEXT:    [[A1:%.*]] = fadd reassoc double [[A0]], [[R2]]
+; CHECK-NEXT:    [[A2:%.*]] = fadd reassoc double [[A1]], 0.000000e+00
 ; CHECK-NEXT:    ret double [[A2]]
 ;
 entry:
@@ -84,9 +88,7 @@ define double @many_users(double %x, ptr %sink) {
 ; CHECK-LABEL: define double @many_users(
 ; CHECK-SAME: double [[X:%.*]], ptr [[SINK:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double 1.000000e+00>, double [[X]], i64 1
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 1.000000e+00>
-; CHECK-NEXT:    [[M0:%.*]] = extractelement <4 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    [[M0:%.*]] = fmul double 0.000000e+00, 0.000000e+00
 ; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
 ; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
 ; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
@@ -95,8 +97,14 @@ define double @many_users(double %x, ptr %sink) {
 ; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
 ; CHECK-NEXT:    store volatile double [[M0]], ptr [[SINK]], align 8
 ; CHECK-NEXT:    call void @bar()
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul <4 x double> zeroinitializer, [[TMP1]]
-; CHECK-NEXT:    [[A2:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP3]])
+; CHECK-NEXT:    [[M1:%.*]] = fmul double [[X]], 0.000000e+00
+; CHECK-NEXT:    [[R0:%.*]] = fmul contract double [[M0]], 0.000000e+00
+; CHECK-NEXT:    [[R1:%.*]] = fmul double [[M1]], 0.000000e+00
+; CHECK-NEXT:    [[A0:%.*]] = fadd reassoc contract double [[R0]], [[R1]]
+; CHECK-NEXT:    [[M2:%.*]] = fmul double 0.000000e+00, 0.000000e+00
+; CHECK-NEXT:    [[R2:%.*]] = fmul double [[M2]], 0.000000e+00
+; CHECK-NEXT:    [[A1:%.*]] = fadd reassoc double [[A0]], [[R2]]
+; CHECK-NEXT:    [[A2:%.*]] = fadd reassoc double [[A1]], 0.000000e+00
 ; CHECK-NEXT:    ret double [[A2]]
 ;
 entry:
@@ -170,16 +178,18 @@ define void @moved_operand(ptr noalias %in, ptr noalias %out) {
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[IN]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = fmul double [[X0]], 3.000000e+00
+; CHECK-NEXT:    [[B0:%.*]] = fadd double [[A0]], 1.000000e+00
+; CHECK-NEXT:    call void @use(double [[B0]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[IN2:%.*]] = getelementptr double, ptr [[IN]], i64 2
 ; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[IN2]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X1]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 3.000000e+00, double 5.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <2 x double> [[TMP2]], <double 1.000000e+00, double 2.000000e+00>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
-; CHECK-NEXT:    call void @use(double [[TMP4]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP3]]
-; CHECK-NEXT:    store <2 x double> [[TMP5]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = fmul double [[X1]], 5.000000e+00
+; CHECK-NEXT:    [[B1:%.*]] = fadd double [[A1]], 2.000000e+00
+; CHECK-NEXT:    [[C0:%.*]] = fmul double [[A0]], [[B0]]
+; CHECK-NEXT:    [[C1:%.*]] = fmul double [[A1]], [[B1]]
+; CHECK-NEXT:    store double [[C0]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr double, ptr [[OUT]], i64 1
+; CHECK-NEXT:    store double [[C1]], ptr [[OUT1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -199,6 +209,442 @@ entry:
   ret void
 }
 
+; The adds and subtracts are scheduled above the call user together with the
+; multiplies, so only the multiplied vector is live across the call.
+
+define void @call_user_moved_operand(ptr noalias %in, ptr noalias %out) {
+; CHECK-LABEL: define void @call_user_moved_operand(
+; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[IN]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[TMP0]], <double 1.000000e+00, double 2.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], <double 7.000000e+00, double 9.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], <double 3.000000e+00, double 5.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; CHECK-NEXT:    call void @use(double [[TMP4]])
+; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[OUT]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load double, ptr %in, align 8
+  %in1 = getelementptr double, ptr %in, i64 1
+  %x1 = load double, ptr %in1, align 8
+  %e0 = fadd double %x0, 1.0
+  %f0 = fsub double %e0, 7.0
+  %m0 = fmul double %f0, 3.0
+  call void @use(double %m0)
+  %e1 = fadd double %x1, 2.0
+  %f1 = fsub double %e1, 9.0
+  %m1 = fmul double %f1, 5.0
+  store double %m0, ptr %out, align 8
+  %o1 = getelementptr double, ptr %out, i64 1
+  store double %m1, ptr %o1, align 8
+  ret void
+}
+
+; The flattened adds are scheduled above the call user together with the
+; multiplies they reuse through a gather, so both vectors are live across the
+; call.
+
+define void @reassoc_moved_gather_operand(ptr noalias %in, ptr noalias %inb, ptr noalias %inc, ptr noalias %ind, ptr noalias %out) {
+; CHECK-LABEL: define void @reassoc_moved_gather_operand(
+; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[INB:%.*]], ptr noalias [[INC:%.*]], ptr noalias [[IND:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[IN]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load i64, ptr [[INB]], align 8
+; CHECK-NEXT:    [[C0:%.*]] = load i64, ptr [[INC]], align 8
+; CHECK-NEXT:    [[D0:%.*]] = load i64, ptr [[IND]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = mul i64 [[X0]], 3
+; CHECK-NEXT:    [[T00:%.*]] = add i64 [[A0]], [[B0]]
+; CHECK-NEXT:    [[T01:%.*]] = add i64 [[C0]], [[D0]]
+; CHECK-NEXT:    [[S0:%.*]] = add i64 [[T00]], [[T01]]
+; CHECK-NEXT:    call void @use_i64(i64 [[S0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[IN2:%.*]] = getelementptr i64, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[X1:%.*]] = load i64, ptr [[IN2]], align 8
+; CHECK-NEXT:    [[INB1:%.*]] = getelementptr i64, ptr [[INB]], i64 1
+; CHECK-NEXT:    [[B1:%.*]] = load i64, ptr [[INB1]], align 8
+; CHECK-NEXT:    [[INC1:%.*]] = getelementptr i64, ptr [[INC]], i64 1
+; CHECK-NEXT:    [[C1:%.*]] = load i64, ptr [[INC1]], align 8
+; CHECK-NEXT:    [[IND1:%.*]] = getelementptr i64, ptr [[IND]], i64 1
+; CHECK-NEXT:    [[D1:%.*]] = load i64, ptr [[IND1]], align 8
+; CHECK-NEXT:    [[A1:%.*]] = mul i64 [[X1]], 5
+; CHECK-NEXT:    [[T10:%.*]] = add i64 [[B1]], [[D1]]
+; CHECK-NEXT:    [[T11:%.*]] = add i64 [[A1]], [[C1]]
+; CHECK-NEXT:    [[S1:%.*]] = add i64 [[T10]], [[T11]]
+; CHECK-NEXT:    [[R0:%.*]] = mul i64 [[A0]], [[S0]]
+; CHECK-NEXT:    [[R1:%.*]] = mul i64 [[A1]], [[S1]]
+; CHECK-NEXT:    store i64 [[R0]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr i64, ptr [[OUT]], i64 1
+; CHECK-NEXT:    store i64 [[R1]], ptr [[OUT1]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load i64, ptr %in, align 8
+  %b0 = load i64, ptr %inb, align 8
+  %c0 = load i64, ptr %inc, align 8
+  %d0 = load i64, ptr %ind, align 8
+  %a0 = mul i64 %x0, 3
+  %t00 = add i64 %a0, %b0
+  %t01 = add i64 %c0, %d0
+  %s0 = add i64 %t00, %t01
+  call void @use_i64(i64 %s0) nounwind willreturn memory(read)
+  %in2 = getelementptr i64, ptr %in, i64 2
+  %x1 = load i64, ptr %in2, align 8
+  %inb1 = getelementptr i64, ptr %inb, i64 1
+  %b1 = load i64, ptr %inb1, align 8
+  %inc1 = getelementptr i64, ptr %inc, i64 1
+  %c1 = load i64, ptr %inc1, align 8
+  %ind1 = getelementptr i64, ptr %ind, i64 1
+  %d1 = load i64, ptr %ind1, align 8
+  %a1 = mul i64 %x1, 5
+  %t10 = add i64 %b1, %d1
+  %t11 = add i64 %a1, %c1
+  %s1 = add i64 %t10, %t11
+  %r0 = mul i64 %a0, %s0
+  %r1 = mul i64 %a1, %s1
+  store i64 %r0, ptr %out, align 8
+  %out1 = getelementptr i64, ptr %out, i64 1
+  store i64 %r1, ptr %out1, align 8
+  ret void
+}
+
+; The truncations are scheduled above the call user, but the adds are reused
+; after the call through a gather, so their vector stays live across the call.
+
+define void @hoisted_user_reused_operand(ptr noalias %in, ptr noalias %out) {
+; CHECK-LABEL: define void @hoisted_user_reused_operand(
+; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[IN]], i64 [[IV]]
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[P0]], align 8
+; CHECK-NEXT:    [[IV2:%.*]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[IN]], i64 [[IV2]]
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = fadd double [[X0]], 3.000000e+00
+; CHECK-NEXT:    [[A1:%.*]] = fadd double [[X1]], 5.000000e+00
+; CHECK-NEXT:    [[B0:%.*]] = fptrunc double [[A0]] to float
+; CHECK-NEXT:    call void @use_f(float [[B0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[B1:%.*]] = fptrunc double [[A1]] to float
+; CHECK-NEXT:    [[E0:%.*]] = fpext float [[B0]] to double
+; CHECK-NEXT:    [[E1:%.*]] = fpext float [[B1]] to double
+; CHECK-NEXT:    [[C0:%.*]] = fadd double [[E0]], [[A0]]
+; CHECK-NEXT:    [[C1:%.*]] = fadd double [[E1]], [[A1]]
+; CHECK-NEXT:    [[O0:%.*]] = getelementptr double, ptr [[OUT]], i64 [[IV]]
+; CHECK-NEXT:    store double [[C0]], ptr [[O0]], align 8
+; CHECK-NEXT:    [[O1:%.*]] = getelementptr double, ptr [[O0]], i64 1
+; CHECK-NEXT:    store double [[C1]], ptr [[O1]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], 400
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p0 = getelementptr double, ptr %in, i64 %iv
+  %x0 = load double, ptr %p0, align 8
+  %iv2 = add i64 %iv, 2
+  %p1 = getelementptr double, ptr %in, i64 %iv2
+  %x1 = load double, ptr %p1, align 8
+  %a0 = fadd double %x0, 3.0
+  %a1 = fadd double %x1, 5.0
+  %b0 = fptrunc double %a0 to float
+  call void @use_f(float %b0) nounwind willreturn memory(read)
+  %b1 = fptrunc double %a1 to float
+  %e0 = fpext float %b0 to double
+  %e1 = fpext float %b1 to double
+  %c0 = fadd double %e0, %a0
+  %c1 = fadd double %e1, %a1
+  %o0 = getelementptr double, ptr %out, i64 %iv
+  store double %c0, ptr %o0, align 8
+  %o1 = getelementptr double, ptr %o0, i64 1
+  store double %c1, ptr %o1, align 8
+  %iv.next = add i64 %iv, 4
+  %cond = icmp ult i64 %iv.next, 400
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Same, but the gather reusing the adds is in the next block, so their vector
+; is live to the end of the block with the call.
+
+define void @hoisted_user_reused_operand_next_block(ptr noalias %in, ptr noalias %out) {
+; CHECK-LABEL: define void @hoisted_user_reused_operand_next_block(
+; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[IN]], i64 [[IV]]
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[P0]], align 8
+; CHECK-NEXT:    [[IV2:%.*]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[IN]], i64 [[IV2]]
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = fadd double [[X0]], 3.000000e+00
+; CHECK-NEXT:    [[A1:%.*]] = fadd double [[X1]], 5.000000e+00
+; CHECK-NEXT:    [[B0:%.*]] = fptrunc double [[A0]] to float
+; CHECK-NEXT:    call void @use_f(float [[B0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[B1:%.*]] = fptrunc double [[A1]] to float
+; CHECK-NEXT:    [[E0:%.*]] = fpext float [[B0]] to double
+; CHECK-NEXT:    [[E1:%.*]] = fpext float [[B1]] to double
+; CHECK-NEXT:    br label %[[LATCH]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[C0:%.*]] = fadd double [[E0]], [[A0]]
+; CHECK-NEXT:    [[C1:%.*]] = fadd double [[E1]], [[A1]]
+; CHECK-NEXT:    [[O0:%.*]] = getelementptr double, ptr [[OUT]], i64 [[IV]]
+; CHECK-NEXT:    store double [[C0]], ptr [[O0]], align 8
+; CHECK-NEXT:    [[O1:%.*]] = getelementptr double, ptr [[O0]], i64 1
+; CHECK-NEXT:    store double [[C1]], ptr [[O1]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], 400
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %p0 = getelementptr double, ptr %in, i64 %iv
+  %x0 = load double, ptr %p0, align 8
+  %iv2 = add i64 %iv, 2
+  %p1 = getelementptr double, ptr %in, i64 %iv2
+  %x1 = load double, ptr %p1, align 8
+  %a0 = fadd double %x0, 3.0
+  %a1 = fadd double %x1, 5.0
+  %b0 = fptrunc double %a0 to float
+  call void @use_f(float %b0) nounwind willreturn memory(read)
+  %b1 = fptrunc double %a1 to float
+  %e0 = fpext float %b0 to double
+  %e1 = fpext float %b1 to double
+  br label %latch
+
+latch:
+  %c0 = fadd double %e0, %a0
+  %c1 = fadd double %e1, %a1
+  %o0 = getelementptr double, ptr %out, i64 %iv
+  store double %c0, ptr %o0, align 8
+  %o1 = getelementptr double, ptr %o0, i64 1
+  store double %c1, ptr %o1, align 8
+  %iv.next = add i64 %iv, 4
+  %cond = icmp ult i64 %iv.next, 400
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Same, but the adds are reused by the phis through the backedge, so their
+; vector is live to the end of the loop body.
+
+define void @hoisted_user_reused_by_phi(ptr noalias %in, ptr noalias %out) {
+; CHECK-LABEL: define void @hoisted_user_reused_by_phi(
+; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACC0:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[A0:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACC1:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[A1:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[IN]], i64 [[IV]]
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[P0]], align 8
+; CHECK-NEXT:    [[IV2:%.*]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[IN]], i64 [[IV2]]
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[A0]] = fadd double [[X0]], 3.000000e+00
+; CHECK-NEXT:    [[A1]] = fadd double [[X1]], 5.000000e+00
+; CHECK-NEXT:    [[B0:%.*]] = fptrunc double [[A0]] to float
+; CHECK-NEXT:    call void @use_f(float [[B0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[B1:%.*]] = fptrunc double [[A1]] to float
+; CHECK-NEXT:    [[E0:%.*]] = fpext float [[B0]] to double
+; CHECK-NEXT:    [[E1:%.*]] = fpext float [[B1]] to double
+; CHECK-NEXT:    [[C0:%.*]] = fadd double [[E0]], [[ACC0]]
+; CHECK-NEXT:    [[C1:%.*]] = fadd double [[E1]], [[ACC1]]
+; CHECK-NEXT:    [[D0:%.*]] = fmul double [[C0]], 7.000000e+00
+; CHECK-NEXT:    [[D1:%.*]] = fmul double [[C1]], 9.000000e+00
+; CHECK-NEXT:    [[O0:%.*]] = getelementptr double, ptr [[OUT]], i64 [[IV]]
+; CHECK-NEXT:    store double [[D0]], ptr [[O0]], align 8
+; CHECK-NEXT:    [[O1:%.*]] = getelementptr double, ptr [[O0]], i64 1
+; CHECK-NEXT:    store double [[D1]], ptr [[O1]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], 400
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc0 = phi double [ 0.0, %entry ], [ %a0, %loop ]
+  %acc1 = phi double [ 0.0, %entry ], [ %a1, %loop ]
+  %p0 = getelementptr double, ptr %in, i64 %iv
+  %x0 = load double, ptr %p0, align 8
+  %iv2 = add i64 %iv, 2
+  %p1 = getelementptr double, ptr %in, i64 %iv2
+  %x1 = load double, ptr %p1, align 8
+  %a0 = fadd double %x0, 3.0
+  %a1 = fadd double %x1, 5.0
+  %b0 = fptrunc double %a0 to float
+  call void @use_f(float %b0) nounwind willreturn memory(read)
+  %b1 = fptrunc double %a1 to float
+  %e0 = fpext float %b0 to double
+  %e1 = fpext float %b1 to double
+  %c0 = fadd double %e0, %acc0
+  %c1 = fadd double %e1, %acc1
+  %d0 = fmul double %c0, 7.0
+  %d1 = fmul double %c1, 9.0
+  %o0 = getelementptr double, ptr %out, i64 %iv
+  store double %d0, ptr %o0, align 8
+  %o1 = getelementptr double, ptr %o0, i64 1
+  store double %d1, ptr %o1, align 8
+  %iv.next = add i64 %iv, 4
+  %cond = icmp ult i64 %iv.next, 400
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The truncations to half are scheduled above the call right after the call
+; user of the truncations to float, so the adds they reuse through a gather are
+; live across the first call.
+
+define void @hoisted_users_adjacent_calls(ptr noalias %in, ptr noalias %out) {
+; CHECK-LABEL: define void @hoisted_users_adjacent_calls(
+; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr double, ptr [[IN]], i64 [[IV]]
+; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[P0]], align 8
+; CHECK-NEXT:    [[IV2:%.*]] = add i64 [[IV]], 2
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr double, ptr [[IN]], i64 [[IV2]]
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[A0:%.*]] = fadd double [[X0]], 3.000000e+00
+; CHECK-NEXT:    [[A1:%.*]] = fadd double [[X1]], 5.000000e+00
+; CHECK-NEXT:    [[B0:%.*]] = fptrunc double [[A0]] to float
+; CHECK-NEXT:    [[H0:%.*]] = fptrunc double [[A0]] to half
+; CHECK-NEXT:    call void @use_f(float [[B0]]) #[[ATTR2]]
+; CHECK-NEXT:    call void @use_h(half [[H0]]) #[[ATTR2]]
+; CHECK-NEXT:    [[B1:%.*]] = fptrunc double [[A1]] to float
+; CHECK-NEXT:    [[H1:%.*]] = fptrunc double [[A1]] to half
+; CHECK-NEXT:    [[E0:%.*]] = fpext float [[B0]] to double
+; CHECK-NEXT:    [[E1:%.*]] = fpext float [[B1]] to double
+; CHECK-NEXT:    [[F0:%.*]] = fpext half [[H0]] to double
+; CHECK-NEXT:    [[F1:%.*]] = fpext half [[H1]] to double
+; CHECK-NEXT:    [[C0:%.*]] = fadd double [[E0]], [[F0]]
+; CHECK-NEXT:    [[C1:%.*]] = fadd double [[E1]], [[F1]]
+; CHECK-NEXT:    [[O0:%.*]] = getelementptr double, ptr [[OUT]], i64 [[IV]]
+; CHECK-NEXT:    store double [[C0]], ptr [[O0]], align 8
+; CHECK-NEXT:    [[O1:%.*]] = getelementptr double, ptr [[O0]], i64 1
+; CHECK-NEXT:    store double [[C1]], ptr [[O1]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 4
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[IV_NEXT]], 400
+; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p0 = getelementptr double, ptr %in, i64 %iv
+  %x0 = load double, ptr %p0, align 8
+  %iv2 = add i64 %iv, 2
+  %p1 = getelementptr double, ptr %in, i64 %iv2
+  %x1 = load double, ptr %p1, align 8
+  %a0 = fadd double %x0, 3.0
+  %a1 = fadd double %x1, 5.0
+  %b0 = fptrunc double %a0 to float
+  %h0 = fptrunc double %a0 to half
+  call void @use_f(float %b0) nounwind willreturn memory(read)
+  call void @use_h(half %h0) nounwind willreturn memory(read)
+  %b1 = fptrunc double %a1 to float
+  %h1 = fptrunc double %a1 to half
+  %e0 = fpext float %b0 to double
+  %e1 = fpext float %b1 to double
+  %f0 = fpext half %h0 to double
+  %f1 = fpext half %h1 to double
+  %c0 = fadd double %e0, %f0
+  %c1 = fadd double %e1, %f1
+  %o0 = getelementptr double, ptr %out, i64 %iv
+  store double %c0, ptr %o0, align 8
+  %o1 = getelementptr double, ptr %o0, i64 1
+  store double %c1, ptr %o1, align 8
+  %iv.next = add i64 %iv, 4
+  %cond = icmp ult i64 %iv.next, 400
+  br i1 %cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The multiply operand is a gather split into a vectorized half and a gathered
+; splat half, whose user is the gather itself.
+
+define double @split_gather_operand(ptr noalias %in, i64 %i) {
+; CHECK-LABEL: define double @split_gather_operand(
+; CHECK-SAME: ptr noalias [[IN:%.*]], i64 [[I:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[IN2:%.*]] = getelementptr double, ptr [[IN]], i64 2
+; CHECK-NEXT:    [[X2:%.*]] = load double, ptr [[IN2]], align 8
+; CHECK-NEXT:    [[IN3:%.*]] = getelementptr double, ptr [[IN]], i64 3
+; CHECK-NEXT:    [[X3:%.*]] = load double, ptr [[IN3]], align 8
+; CHECK-NEXT:    [[B2:%.*]] = fadd double [[X2]], 3.000000e+00
+; CHECK-NEXT:    [[B3:%.*]] = fadd double [[X3]], 4.000000e+00
+; CHECK-NEXT:    [[S:%.*]] = sitofp i64 [[I]] to double
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[IN]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[TMP0]], <double 1.000000e+00, double 2.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    call void @use(double [[TMP2]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fdiv <2 x double> [[TMP0]], <double 3.000000e+00, double 5.000000e+00>
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[R2:%.*]] = fmul double [[B2]], [[S]]
+; CHECK-NEXT:    [[R3:%.*]] = fmul double [[B3]], [[S]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP4]])
+; CHECK-NEXT:    [[A1:%.*]] = fadd reassoc double [[TMP5]], [[R2]]
+; CHECK-NEXT:    [[A2:%.*]] = fadd reassoc double [[A1]], [[R3]]
+; CHECK-NEXT:    ret double [[A2]]
+;
+entry:
+  %x0 = load double, ptr %in, align 8
+  %in1 = getelementptr double, ptr %in, i64 1
+  %x1 = load double, ptr %in1, align 8
+  %in2 = getelementptr double, ptr %in, i64 2
+  %x2 = load double, ptr %in2, align 8
+  %in3 = getelementptr double, ptr %in, i64 3
+  %x3 = load double, ptr %in3, align 8
+  %b0 = fadd double %x0, 1.0
+  call void @use(double %b0) nounwind willreturn memory(read)
+  %b1 = fadd double %x1, 2.0
+  %b2 = fadd double %x2, 3.0
+  %b3 = fadd double %x3, 4.0
+  %f0 = fdiv double %x0, 3.0
+  %f1 = fdiv double %x1, 5.0
+  %s = sitofp i64 %i to double
+  %r0 = fmul double %b0, %f0
+  %r1 = fmul double %b1, %f1
+  %r2 = fmul double %b2, %s
+  %r3 = fmul double %b3, %s
+  %a0 = fadd reassoc double %r0, %r1
+  %a1 = fadd reassoc double %a0, %r2
+  %a2 = fadd reassoc double %a1, %r3
+  ret double %a2
+}
+
 ; The multiplies feeding the phis in another block are scheduled above their
 ; external user, so their vector is live across the call.
 
@@ -207,20 +653,21 @@ define void @cross_block_phi(ptr noalias %in, ptr noalias %out, i1 %cond) {
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias [[OUT:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[IN]], align 8
+; CHECK-NEXT:    [[R0:%.*]] = fmul double [[X0]], 3.000000e+00
+; CHECK-NEXT:    [[R0_USE:%.*]] = fmul double [[R0]], 7.000000e+00
+; CHECK-NEXT:    call void @use(double [[R0_USE]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[IN2:%.*]] = getelementptr double, ptr [[IN]], i64 2
 ; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[IN2]], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[X0]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[X1]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP1]], <double 3.000000e+00, double 5.000000e+00>
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
-; CHECK-NEXT:    [[R0_USE:%.*]] = fmul double [[TMP3]], 7.000000e+00
-; CHECK-NEXT:    call void @use(double [[R0_USE]]) #[[ATTR2]]
+; CHECK-NEXT:    [[R1:%.*]] = fmul double [[X1]], 5.000000e+00
 ; CHECK-NEXT:    br i1 [[COND]], label %[[MERGE:.*]], label %[[OTHER:.*]]
 ; CHECK:       [[OTHER]]:
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x double> [ [[TMP2]], %[[ENTRY]] ], [ zeroinitializer, %[[OTHER]] ]
-; CHECK-NEXT:    store <2 x double> [[TMP4]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[P0:%.*]] = phi double [ [[R0]], %[[ENTRY]] ], [ 0.000000e+00, %[[OTHER]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi double [ [[R1]], %[[ENTRY]] ], [ 0.000000e+00, %[[OTHER]] ]
+; CHECK-NEXT:    store double [[P0]], ptr [[OUT]], align 8
+; CHECK-NEXT:    [[OUT1:%.*]] = getelementptr double, ptr [[OUT]], i64 1
+; CHECK-NEXT:    store double [[P1]], ptr [[OUT1]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -352,23 +799,25 @@ define double @copyable_phi_backedge(double %init, double %b) {
 ; CHECK-LABEL: define double @copyable_phi_backedge(
 ; CHECK-SAME: double [[INIT:%.*]], double [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> poison, double [[B]], i64 1
-; CHECK-NEXT:    [[E1:%.*]] = fadd fast double [[B]], 1.000000e+00
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PHI0:%.*]] = phi double [ [[INIT]], %[[ENTRY]] ], [ [[TMP6:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PHI0:%.*]] = phi double [ [[INIT]], %[[ENTRY]] ], [ [[BACK0:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[PHI0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double -0.000000e+00, double 1.000000e+00, double 2.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[E1:%.*]] = fadd fast double [[B]], 1.000000e+00
 ; CHECK-NEXT:    [[E1_USE:%.*]] = fmul double [[E1]], 7.000000e+00
+; CHECK-NEXT:    [[E2:%.*]] = fadd fast double [[B]], 2.000000e+00
+; CHECK-NEXT:    [[E3:%.*]] = fadd fast double [[B]], 4.000000e+00
 ; CHECK-NEXT:    call void @use(double [[E1_USE]])
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast <4 x double> [[TMP3]], <double 1.100000e+01, double 1.300000e+01, double 1.700000e+01, double 1.900000e+01>
-; CHECK-NEXT:    [[R2:%.*]] = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP4]])
+; CHECK-NEXT:    [[BACK0]] = fmul fast double [[PHI0]], 1.100000e+01
+; CHECK-NEXT:    [[BACK1:%.*]] = fmul fast double [[E1]], 1.300000e+01
+; CHECK-NEXT:    [[BACK2:%.*]] = fmul fast double [[E2]], 1.700000e+01
+; CHECK-NEXT:    [[BACK3:%.*]] = fmul fast double [[E3]], 1.900000e+01
+; CHECK-NEXT:    [[R0:%.*]] = fadd fast double [[BACK0]], [[BACK1]]
+; CHECK-NEXT:    [[R1:%.*]] = fadd fast double [[R0]], [[BACK2]]
+; CHECK-NEXT:    [[R2:%.*]] = fadd fast double [[R1]], [[BACK3]]
 ; CHECK-NEXT:    call void @use(double [[R2]])
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[I_NEXT]], 100
-; CHECK-NEXT:    [[TMP6]] = extractelement <4 x double> [[TMP4]], i64 0
 ; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret double [[R2]]
@@ -401,4 +850,7 @@ exit:
 }
 
 declare void @use(double)
+declare void @use_i64(i64)
+declare void @use_f(float)
+declare void @use_h(half)
 declare void @bar()

@@ -350,10 +350,6 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       }
 
     } else {
-      // The dynamic linker always needs to fix PtrAuth relocations up.
-      if (containsConstantPtrAuth(C))
-        return SectionKind::getReadOnlyWithRel();
-
       // GOFF: data in the code section is shared by all instances of the
       // program, while function descriptors and other data live in the WSA
       // of each instance. The binder rejects a relocation in the code section
@@ -364,13 +360,15 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
 
       // In static, ROPI and RWPI relocation models, the linker will resolve
       // all addresses, so the relocation entries will actually be constants by
-      // the time the app starts up.  However, we can't put this into a
-      // mergable section, because the linker doesn't take relocations into
-      // consideration when it tries to merge entries in the section.
+      // the time the app starts up (except for PtrAuth relocations, which the
+      // dynamic linker always needs to fix up).  However, we can't put this
+      // into a mergable section, because the linker doesn't take relocations
+      // into consideration when it tries to merge entries in the section.
       Reloc::Model ReloModel = TM.getRelocationModel();
-      if (ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
-          ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI ||
-          !C->needsDynamicRelocation())
+      if ((ReloModel == Reloc::Static || ReloModel == Reloc::ROPI ||
+           ReloModel == Reloc::RWPI || ReloModel == Reloc::ROPI_RWPI ||
+           !C->needsDynamicRelocation()) &&
+          !containsConstantPtrAuth(C))
         return SectionKind::getReadOnly();
 
       // Otherwise, the dynamic linker needs to fix it up, put it in the

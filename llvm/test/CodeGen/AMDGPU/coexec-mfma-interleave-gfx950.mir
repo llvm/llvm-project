@@ -6,7 +6,6 @@
 
 ---
 name: mfma_16x16_interleave
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

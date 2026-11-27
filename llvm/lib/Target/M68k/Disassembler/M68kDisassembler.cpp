@@ -128,7 +128,7 @@ static DecodeStatus DecodeImm32(MCInst &Inst, uint64_t Imm, uint64_t Address,
 static DecodeStatus DecodeScale(MCInst &Inst, uint64_t Imm, uint64_t Address,
                                 const void *Decoder) {
   assert(isUInt<2>(Imm));
-  Inst.addOperand(MCOperand::createImm(1 << Imm));
+  Inst.addOperand(MCOperand::createImm(1LL << Imm));
   return DecodeStatus::Success;
 }
 

@@ -132,6 +132,9 @@ public:
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
+  bool
+  legalizeClusterWorkGroupValue(MachineInstr &MI, MachineIRBuilder &B,
+                                AMDGPUFunctionArgInfo::PreloadedValue PV) const;
   bool loadInputValue(Register DstReg, MachineIRBuilder &B,
                       AMDGPUFunctionArgInfo::PreloadedValue ArgType) const;
 

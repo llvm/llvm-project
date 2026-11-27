@@ -46,7 +46,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __always_false {
   template <class... _Args>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool operator()(_Args&&...) const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR bool operator()(_Args&&...) const _NOEXCEPT {
     return false;
   }
 };
@@ -54,8 +54,7 @@ struct __always_false {
 // uninitialized_copy
 
 template <class _ValueType, class _InputIterator, class _Sentinel1, class _ForwardIterator, class _EndPredicate>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator>
-__uninitialized_copy(
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator> __uninitialized_copy(
     _InputIterator __ifirst, _Sentinel1 __ilast, _ForwardIterator __ofirst, _EndPredicate __stop_copying) {
   _ForwardIterator __idx = __ofirst;
   auto __guard           = std::__make_exception_guard([&] { std::__destroy(__ofirst, __idx); });
@@ -67,7 +66,7 @@ __uninitialized_copy(
 }
 
 template <class _InputIterator, class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+_LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_copy(_InputIterator __ifirst, _InputIterator __ilast, _ForwardIterator __ofirst) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   auto __result = std::__uninitialized_copy<_ValueType>(
@@ -78,7 +77,7 @@ uninitialized_copy(_InputIterator __ifirst, _InputIterator __ilast, _ForwardIter
 // uninitialized_copy_n
 
 template <class _ValueType, class _InputIterator, class _Size, class _ForwardIterator, class _EndPredicate>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator>
 __uninitialized_copy_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst, _EndPredicate __stop_copying) {
   _ForwardIterator __idx = __ofirst;
   auto __guard           = std::__make_exception_guard([&] { std::__destroy(__ofirst, __idx); });
@@ -90,7 +89,7 @@ __uninitialized_copy_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __of
 }
 
 template <class _InputIterator, class _Size, class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_copy_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   auto __result =
@@ -101,7 +100,7 @@ uninitialized_copy_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofir
 // uninitialized_fill
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_fill(_ForwardIterator __first, _Sentinel __last, const _Tp& __x) {
   _ForwardIterator __idx = __first;
   auto __guard           = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -113,7 +112,7 @@ __uninitialized_fill(_ForwardIterator __first, _Sentinel __last, const _Tp& __x)
 }
 
 template <class _ForwardIterator, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 uninitialized_fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp& __x) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   (void)std::__uninitialized_fill<_ValueType>(__first, __last, __x);
@@ -134,7 +133,7 @@ __uninitialized_allocator_fill_n(_Alloc& __alloc, _ForwardIterator __first, _Siz
 }
 
 template <class _ValueType, class _ForwardIterator, class _Size, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
   _ForwardIterator __idx = __first;
   auto __guard           = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -146,7 +145,7 @@ __uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
 }
 
 template <class _ForwardIterator, class _Size, class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   return std::__uninitialized_fill_n<_ValueType>(__first, __n, __x);
@@ -169,7 +168,7 @@ __uninitialized_allocator_value_construct_n(_Alloc& __alloc, _ForwardIterator __
 #if _LIBCPP_STD_VER >= 17
 
 template <class _Iter>
-_LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) __deref_move(_Iter& __it) {
+constexpr decltype(auto) __deref_move(_Iter& __it) {
   if constexpr (is_lvalue_reference_v<decltype(*__it)>)
     return std::move(*__it);
   else
@@ -179,7 +178,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) __deref_move(_Iter& __it) {
 // uninitialized_default_construct
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_default_construct(_ForwardIterator __first, _Sentinel __last) {
   auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -191,7 +190,7 @@ __uninitialized_default_construct(_ForwardIterator __first, _Sentinel __last) {
 }
 
 template <class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __last) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   (void)std::__uninitialized_default_construct<_ValueType>(std::move(__first), std::move(__last));
@@ -200,7 +199,7 @@ uninitialized_default_construct(_ForwardIterator __first, _ForwardIterator __las
 // uninitialized_default_construct_n
 
 template <class _ValueType, class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
   auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -212,7 +211,7 @@ __uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
 }
 
 template <class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   return std::__uninitialized_default_construct_n<_ValueType>(std::move(__first), __n);
@@ -221,7 +220,7 @@ uninitialized_default_construct_n(_ForwardIterator __first, _Size __n) {
 // uninitialized_value_construct
 
 template <class _ValueType, class _ForwardIterator, class _Sentinel>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_value_construct(_ForwardIterator __first, _Sentinel __last) {
   auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -233,7 +232,7 @@ __uninitialized_value_construct(_ForwardIterator __first, _Sentinel __last) {
 }
 
 template <class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 void
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 void
 uninitialized_value_construct(_ForwardIterator __first, _ForwardIterator __last) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   (void)std::__uninitialized_value_construct<_ValueType>(std::move(__first), std::move(__last));
@@ -242,7 +241,7 @@ uninitialized_value_construct(_ForwardIterator __first, _ForwardIterator __last)
 // uninitialized_value_construct_n
 
 template <class _ValueType, class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
   auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -254,7 +253,7 @@ __uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
 }
 
 template <class _ForwardIterator, class _Size>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_value_construct_n(_ForwardIterator __first, _Size __n) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   return std::__uninitialized_value_construct_n<_ValueType>(std::move(__first), __n);
@@ -268,12 +267,12 @@ template <class _ValueType,
           class _ForwardIterator,
           class _EndPredicate,
           class _IterMove>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator>
-__uninitialized_move(_InputIterator __ifirst,
-                     _Sentinel1 __ilast,
-                     _ForwardIterator __ofirst,
-                     _EndPredicate __stop_moving,
-                     _IterMove __iter_move) {
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator> __uninitialized_move(
+    _InputIterator __ifirst,
+    _Sentinel1 __ilast,
+    _ForwardIterator __ofirst,
+    _EndPredicate __stop_moving,
+    _IterMove __iter_move) {
   auto __idx   = __ofirst;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__ofirst, __idx); });
   for (; __ifirst != __ilast && !__stop_moving(__idx); ++__idx, (void)++__ifirst) {
@@ -285,7 +284,7 @@ __uninitialized_move(_InputIterator __ifirst,
 }
 
 template <class _InputIterator, class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_move(_InputIterator __ifirst, _InputIterator __ilast, _ForwardIterator __ofirst) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::__deref_move(__iter); };
@@ -303,8 +302,7 @@ template <class _ValueType,
           class _ForwardIterator,
           class _EndPredicate,
           class _IterMove>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator>
-__uninitialized_move_n(
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 __in_out_result<_InputIterator, _ForwardIterator> __uninitialized_move_n(
     _InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst, _EndPredicate __stop_moving, _IterMove __iter_move) {
   auto __idx   = __ofirst;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__ofirst, __idx); });
@@ -316,7 +314,7 @@ __uninitialized_move_n(
 }
 
 template <class _InputIterator, class _Size, class _ForwardIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<_InputIterator, _ForwardIterator>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX26 pair<_InputIterator, _ForwardIterator>
 uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofirst) {
   using _ValueType = typename iterator_traits<_ForwardIterator>::value_type;
   auto __iter_move = [](auto&& __iter) -> decltype(auto) { return std::__deref_move(__iter); };
@@ -338,7 +336,7 @@ uninitialized_move_n(_InputIterator __ifirst, _Size __n, _ForwardIterator __ofir
 //                 doesn't contain any objects.
 //                 [__first, __last) doesn't contain any objects.
 template <class _ContiguousIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
+_LIBCPP_CONSTEXPR_SINCE_CXX14 void
 __uninitialized_relocate(_ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
   static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
   using _ValueType = typename iterator_traits<_ContiguousIterator>::value_type;
@@ -365,11 +363,10 @@ __uninitialized_relocate(_ContiguousIterator __first, _ContiguousIterator __last
 template <class _Alloc, class _Iter>
 class _AllocatorDestroyRangeReverse {
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
-  _AllocatorDestroyRangeReverse(_Alloc& __alloc, _Iter& __first, _Iter& __last)
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _AllocatorDestroyRangeReverse(_Alloc& __alloc, _Iter& __first, _Iter& __last)
       : __alloc_(__alloc), __first_(__first), __last_(__last) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void operator()() const {
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 void operator()() const {
     std::__allocator_destroy_backward(__alloc_, __first_, __last_);
   }
 
@@ -384,7 +381,7 @@ private:
 // The caller has to ensure that __first2 can hold at least N uninitialized elements. If an exception is thrown the
 // already copied elements are destroyed in reverse order of their construction.
 template <class _Alloc, class _Iter1, class _Size, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
 __uninitialized_allocator_copy_n_impl(_Alloc& __alloc, _Iter1 __first1, _Size __count, _Iter2 __first2) {
   auto __destruct_first = __first2;
   auto __guard =
@@ -413,7 +410,7 @@ template <class _Alloc,
                             is_same<__remove_const_t<_In>, __remove_const_t<_Out> >::value &&
                             __allocator_has_trivial_copy_construct_v<_Alloc, _In>,
                         int> = 0>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Out*
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _Out*
 __uninitialized_allocator_copy_n_impl(_Alloc&, _In* __first1, _Size __count, _Out* __first2) {
   if (__libcpp_is_constant_evaluated()) {
     for (_Size __i = 0; __i != __count; ++__i) {
@@ -429,7 +426,7 @@ __uninitialized_allocator_copy_n_impl(_Alloc&, _In* __first1, _Size __count, _Ou
 }
 
 template <class _Alloc, class _Iter1, class _Size, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter2
 __uninitialized_allocator_copy_n(_Alloc& __alloc, _Iter1 __first1, _Size __count, _Iter2 __first2) {
   auto __result = std::__uninitialized_allocator_copy_n_impl(
       __alloc, std::__unwrap_iter(std::move(__first1)), __count, std::__unwrap_iter(__first2));
@@ -475,7 +472,7 @@ inline const bool __allocator_has_trivial_destroy_v<allocator<_Tp>, _Up> = true;
 // - is_copy_constructible<_ValueType>
 // - __is_trivially_relocatable_v<_ValueType>
 template <class _Alloc, class _ContiguousIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate(
+_LIBCPP_CONSTEXPR_SINCE_CXX14 void __uninitialized_allocator_relocate(
     _Alloc& __alloc, _ContiguousIterator __first, _ContiguousIterator __last, _ContiguousIterator __result) {
   static_assert(__libcpp_is_contiguous_iterator<_ContiguousIterator>::value, "");
   static_assert(

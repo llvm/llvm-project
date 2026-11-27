@@ -3,7 +3,7 @@
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=0' | FileCheck %s --check-prefix UNROLL-OUTER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 loop-depth=1' | FileCheck %s --check-prefix UNROLL-INNER-BY-2
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=2 annotate=true' | FileCheck %s --check-prefix UNROLL-BY-2-ANNOTATE
-// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=6 unroll-up-to-factor=true}))" | FileCheck %s --check-prefix UNROLL-UP-TO
+// RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-up-to-factor=true}))" | FileCheck %s --check-prefix UNROLL-UP-TO
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=5 cleanup-unroll=true}))" | FileCheck %s --check-prefix CLEANUP-UNROLL-BY-5
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=3 promote-single-iteration=false' | FileCheck %s --check-prefix NO-PROMOTE-BY-3
 // RUN: mlir-opt %s -test-loop-unrolling='unroll-factor=3 promote-single-iteration=true' | FileCheck %s --check-prefix PROMOTE-BY-3
@@ -851,3 +851,27 @@ func.func @unroll_static_trip_count_ub_offset_from_lb(%arg0: index, %arg1: memre
 //       UNROLL-BY-2:     memref.store
 //       UNROLL-BY-2:   scf.for
 //       UNROLL-BY-2:     memref.store
+
+// -----
+
+// A zero-trip loop has nothing to unroll; it must not trip the unroll factor
+// assertion in loopUnrollByFactor (the factor is clamped to the trip count).
+
+// UNROLL-UP-TO-LABEL: func @zero_trip_loop
+func.func @zero_trip_loop() {
+  // UNROLL-UP-TO-NEXT: affine.for %{{.*}} = 0 to 0
+  affine.for %i = 0 to 0 {
+  }
+  return
+}
+
+// UNROLL-UP-TO-LABEL: func @zero_trip_inner_loop
+func.func @zero_trip_inner_loop() {
+  // UNROLL-UP-TO-NEXT: affine.for %{{.*}} = 0 to 1 step 4
+  affine.for %i = 0 to 1 step 4 {
+    // UNROLL-UP-TO-NEXT: affine.for %{{.*}} = 0 to 0
+    affine.for %j = 0 to 0 {
+    }
+  }
+  return
+}

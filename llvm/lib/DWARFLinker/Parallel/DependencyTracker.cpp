@@ -914,14 +914,21 @@ bool DependencyTracker::maybeAddReferencedRoots(
     assert(RefDie->CU->getStage() >= CompileUnit::Stage::LiveRootsCollected &&
            "Referenced unit has not found its live roots");
 
+    // A vtable holder and a callee's declaration are found in the type table.
+    // Marking them live would also copy their class into the unit, where
+    // nothing refers to it. A callee's definition has an address and stays
+    // live.
+    bool IsTypeReference =
+        llvm::is_contained(getODRAttributes(), AttrSpec.Attr) ||
+        AttrSpec.Attr == dwarf::DW_AT_containing_type ||
+        (AttrSpec.Attr == dwarf::DW_AT_call_origin &&
+         dwarf::toUnsigned(
+             RefDie->CU->find(RefDie->DieEntry, dwarf::DW_AT_declaration), 0));
+
     CompileUnit::DIEInfo &RefInfo = RefDie->CU->getDIEInfo(RefDie->DieEntry);
     if (!RefInfo.getODRAvailable())
       Action = LiveRootWorklistActionTy::MarkLiveEntryRec;
-    else if (RefInfo.getODRAvailable() &&
-             llvm::is_contained(getODRAttributes(), AttrSpec.Attr))
-      // Note: getODRAttributes does not include DW_AT_containing_type.
-      // It should be OK as we do getRootForSpecifiedEntry(). So any containing
-      // type would be found as the root for the entry.
+    else if (IsTypeReference)
       Action = LiveRootWorklistActionTy::MarkTypeEntryRec;
     else if (isLiveAction(Action))
       Action = LiveRootWorklistActionTy::MarkLiveEntryRec;

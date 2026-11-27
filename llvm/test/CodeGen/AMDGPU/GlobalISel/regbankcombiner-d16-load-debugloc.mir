@@ -24,7 +24,6 @@
 name: zext_i8_lo_volatile_debugloc
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 # CHECK-LABEL: name: zext_i8_lo_volatile_debugloc
 # CHECK: G_AMDGPU_LOAD_D16_LO_U8 {{.*}}debug-location !DILocation(line: 10,
 body: |
@@ -48,7 +47,6 @@ body: |
 name: zext_i8_hi_late_preserved_debugloc
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 # CHECK-LABEL: name: zext_i8_hi_late_preserved_debugloc
 # CHECK: G_AMDGPU_LOAD_D16_HI_U8 {{.*}}debug-location !DILocation(line: 20,
 body: |

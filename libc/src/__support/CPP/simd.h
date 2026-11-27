@@ -15,10 +15,12 @@
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/algorithm.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
 #include "src/__support/CPP/tuple.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility/integer_sequence.h"
+#include "src/__support/endian_internal.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
@@ -194,6 +196,40 @@ template <typename T, size_t N, internal::enable_if_integral_t<T> = 0>
 LIBC_INLINE constexpr static int find_last_set(simd<T, N> v) {
   constexpr size_t size = simd_size_v<simd<T, N>>;
   return size - 1 - __builtin_clzg(simd_cast<bool>(v));
+}
+template <size_t N>
+LIBC_INLINE constexpr static auto to_bitmask(const simd<bool, N> &m) {
+  using bitmask_t = internal::get_as_integer_type_t<simd<bool, N>>;
+  if constexpr (N == sizeof(simd<bool, N>) * CHAR_BIT) {
+    // Bitcasts can only be used safely here if they fit an integer type,
+    // otherwise the unused bits are poison.
+    if constexpr (Endian::IS_LITTLE) {
+      return cpp::bit_cast<bitmask_t>(m);
+    } else {
+      return __builtin_elementwise_bitreverse(cpp::bit_cast<bitmask_t>(m));
+    }
+  } else {
+    bitmask_t res = 0;
+    for (size_t i = 0; i < N; ++i)
+      res |= static_cast<bitmask_t>(m[i]) << i;
+    return res;
+  }
+}
+template <size_t N>
+LIBC_INLINE constexpr static simd<bool, N>
+from_bitmask(internal::get_as_integer_type_t<simd<bool, N>> bm) {
+  if constexpr (N == sizeof(simd<bool, N>) * CHAR_BIT) {
+    if constexpr (Endian::IS_LITTLE) {
+      return cpp::bit_cast<simd<bool, N>>(bm);
+    } else {
+      return cpp::bit_cast<simd<bool, N>>(__builtin_elementwise_bitreverse(bm));
+    }
+  } else {
+    simd<bool, N> res{};
+    for (size_t i = 0; i < N; ++i)
+      res[i] = (bm >> i) & 1;
+    return res;
+  }
 }
 
 // Elementwise operations.

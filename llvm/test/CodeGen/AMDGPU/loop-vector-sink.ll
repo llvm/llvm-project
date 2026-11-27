@@ -12,7 +12,9 @@ define amdgpu_kernel void @runningSum(ptr addrspace(1) %out0, ptr addrspace(1) %
 ; OPT:       [[LOOPBODY]]:
 ; OPT-NEXT:    [[PREVIOUSSUM:%.*]] = phi <2 x i32> [ [[TMP0]], %[[PREHEADER]] ], [ [[RUNNINGSUM:%.*]], %[[LOOPBODY]] ]
 ; OPT-NEXT:    [[ITERCOUNT:%.*]] = phi i32 [ [[INPUTITER]], %[[PREHEADER]] ], [ [[ITERSLEFT:%.*]], %[[LOOPBODY]] ]
-; OPT-NEXT:    [[RUNNINGSUM]] = add <2 x i32> [[TMP0]], [[PREVIOUSSUM]]
+; OPT-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[INPUTELEMENT1]], i64 0
+; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> zeroinitializer
+; OPT-NEXT:    [[RUNNINGSUM]] = add <2 x i32> [[TMP1]], [[PREVIOUSSUM]]
 ; OPT-NEXT:    [[ITERSLEFT]] = sub i32 [[ITERCOUNT]], 1
 ; OPT-NEXT:    [[COND:%.*]] = icmp eq i32 [[ITERSLEFT]], 0
 ; OPT-NEXT:    br i1 [[COND]], label %[[LOOPEXIT:.*]], label %[[LOOPBODY]]
@@ -45,7 +47,8 @@ loopExit:
 }
 
 ; testing extract case with single use - with divergent control flow
-; The vector has SINGLE use (extractelement), both sink into if.then
+; The vector has SINGLE use (extractelement). Neither sinks: only the scalar
+; user is in if.then
 define amdgpu_kernel void @test_sink_extract_single_use_operands(ptr addrspace(1) %out0, <2 x i32> %inputVec, i32 %tid, i32 %cond) {
 ; OPT-LABEL: define amdgpu_kernel void @test_sink_extract_single_use_operands(
 ; OPT-SAME: ptr addrspace(1) [[OUT0:%.*]], <2 x i32> [[INPUTVEC:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) {
@@ -77,7 +80,8 @@ if.end:
 }
 
 ; testing extract case - extracting two elements with divergent control flow
-; The vector has TWO uses (two extractelements), all sink into if.then
+; The vector has TWO uses (two extractelements). None of them sink: only the
+; scalar users are in if.then
 define amdgpu_kernel void @test_sink_extract_operands(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <4 x i32> %input_vec, i32 %tid, i32 %cond) {
 ; OPT-LABEL: define amdgpu_kernel void @test_sink_extract_operands(
 ; OPT-SAME: ptr addrspace(1) [[OUT0:%.*]], ptr addrspace(1) [[OUT1:%.*]], <4 x i32> [[INPUT_VEC:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) {
@@ -406,5 +410,45 @@ if.then:
   br label %if.end
 
 if.end:
+  ret void
+}
+
+; testing f32 splat of a scalar hoisted out of a loop - the insertelement and
+; the splat shuffle both sink into the loop next to their fmul user
+define amdgpu_kernel void @test_sink_f32_scalar_splat_loop(ptr addrspace(1) %ptr, float %s, i32 %n) {
+; OPT-LABEL: define amdgpu_kernel void @test_sink_f32_scalar_splat_loop(
+; OPT-SAME: ptr addrspace(1) [[PTR:%.*]], float [[S:%.*]], i32 [[N:%.*]]) {
+; OPT-NEXT:  [[ENTRY:.*]]:
+; OPT-NEXT:    br label %[[LOOP:.*]]
+; OPT:       [[LOOP]]:
+; OPT-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; OPT-NEXT:    [[GEP:%.*]] = getelementptr <2 x float>, ptr addrspace(1) [[PTR]], i32 [[I]]
+; OPT-NEXT:    [[X:%.*]] = load <2 x float>, ptr addrspace(1) [[GEP]], align 8
+; OPT-NEXT:    [[TMP0:%.*]] = insertelement <2 x float> poison, float [[S]], i64 0
+; OPT-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> poison, <2 x i32> zeroinitializer
+; OPT-NEXT:    [[MUL:%.*]] = fmul <2 x float> [[TMP1]], [[X]]
+; OPT-NEXT:    store <2 x float> [[MUL]], ptr addrspace(1) [[GEP]], align 8
+; OPT-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
+; OPT-NEXT:    [[COND:%.*]] = icmp slt i32 [[I_NEXT]], [[N]]
+; OPT-NEXT:    br i1 [[COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; OPT:       [[EXIT]]:
+; OPT-NEXT:    ret void
+;
+entry:
+  %ins = insertelement <2 x float> poison, float %s, i64 0
+  %splat = shufflevector <2 x float> %ins, <2 x float> poison, <2 x i32> zeroinitializer
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %gep = getelementptr <2 x float>, ptr addrspace(1) %ptr, i32 %i
+  %x = load <2 x float>, ptr addrspace(1) %gep
+  %mul = fmul <2 x float> %splat, %x
+  store <2 x float> %mul, ptr addrspace(1) %gep
+  %i.next = add i32 %i, 1
+  %cond = icmp slt i32 %i.next, %n
+  br i1 %cond, label %loop, label %exit
+
+exit:
   ret void
 }

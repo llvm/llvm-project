@@ -100,7 +100,7 @@ module attributes {
   }
 
   // CHECK: cir.func{{.*}} @call_sret(%arg0: !cir.ptr<!cir.func<() -> !rec_Big>>)
-  // CHECK:   %[[SRET:.*]] = cir.alloca "sret" align(8) : !cir.ptr<!rec_Big>
+  // CHECK:   %[[SRET:.*]] = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
   // CHECK:   %[[SCAST:.*]] = cir.cast bitcast %arg0 : !cir.ptr<!cir.func<() -> !rec_Big>> -> !cir.ptr<!cir.func<(!cir.ptr<!rec_Big>)>>
   // CHECK:   cir.call %[[SCAST]](%[[SRET]]) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Big>)>>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
 }

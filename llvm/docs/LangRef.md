@@ -1565,7 +1565,9 @@ Currently, only the following parameter attributes are defined:
 
     Additionally, it is possible to specify that some components are only
     captured in certain locations. Currently only the return value (`ret`)
-    and other (default) locations are supported.
+    and other (default) locations are supported. Components that are captured
+    only through the return value require the function's return type to be a
+    pointer.
 
     The {ref}`pointer capture section <pointercapture>` discusses these semantics
     in more detail.
@@ -2147,7 +2149,9 @@ define void @f() "no-sse" { ... }
       will match that of the `allocptr` argument and the `allocptr`
       argument is invalidated, even if the function returns the same address.
     * "free": the function frees the block of memory specified by `allocptr`.
-      Functions marked as "free" `allockind` must return void.
+      Functions marked as "free" `allockind` must return void or an integer.
+      When it returns an integer, calling the function on the pointer returned
+      by an "alloc" `allockind` call of the matching `alloc-family` must return 0.
     * "uninitialized": Any newly-allocated memory (either a new block from
       a "alloc" function or the enlarged capacity from a "realloc" function)
       will be uninitialized.
@@ -2428,6 +2432,12 @@ define void @f() "no-sse" { ... }
     divergence even if its inputs are uniform. A call with no further information
     would normally be considered a source of divergence; setting this attribute
     on a function means that a call to it is not a source of divergence.
+
+`alwaysuniform`
+:   Setting this attribute on a function means that a call to it always returns
+    a {ref}`uniform <convergence-uniformity>` result regardless of the uniformity
+    of the inputs.  If a call to a function with this attribute returns a value
+    that is not uniform, the behavior is undefined.
 
 `noduplicate`
 :   This attribute indicates that calls to the function cannot be
@@ -6171,6 +6181,7 @@ AMDGPU:
 - `C`: A 32-bit unsigned integer constant or an integer inline constant in the range from -16 to 64.
 - `DA`: A 64-bit constant that can be split into two "A" constants.
 - `DB`: A 64-bit constant that can be split into two "B" constants.
+- `RF`: A flat memory address operand, for use with `flat_*` instructions.
 
 All ARM modes:
 
@@ -8289,6 +8300,24 @@ node has a single operand containing the name string:
 ```llvm
 !0 = !{!"llvm.loop.vectorize.enable"}
 !1 = !{!"llvm.loop.vectorize.disable"}
+```
+
+When `llvm.loop.vectorize.enable` is present, the Loop Vectorizer is also
+permitted to apply floating-point transforms that may change the computed
+result by default (equivalent to the behaviour of
+`#pragma clang loop vectorize(enable)`). This default can be overridden
+per-loop using `llvm.loop.vectorize.fp_unsafe.enable` /
+`llvm.loop.vectorize.fp_unsafe.disable` (see below).
+
+#### '`llvm.loop.vectorize.fp_unsafe.enable`' and '`llvm.loop.vectorize.fp_unsafe.disable`' Metadata
+
+This metadata gives the Loop Vectorizer an explicit per-loop instruction about
+whether floating-point transforms that may change the computed result are
+permitted. Each node has a single operand containing the name string:
+
+```llvm
+!0 = !{!"llvm.loop.vectorize.fp_unsafe.enable"}   ; allowed
+!1 = !{!"llvm.loop.vectorize.fp_unsafe.disable"}  ; suppressed
 ```
 
 #### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata
@@ -20977,9 +21006,10 @@ The '`llvm.vector.reduce.fmaximum.*`' intrinsics do a floating-point
 `MAX` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-This instruction has the same comparison semantics as the '`llvm.maximum.*`'
-intrinsic. That is, this intrinsic propagates NaNs and +0.0 is considered
-greater than -0.0. If any element of the vector is a NaN, the result is NaN.
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.maximum.*`' intrinsic. That is, this intrinsic propagates NaNs and +0.0
+is considered greater than -0.0. If any element of the vector is a NaN, the
+result is NaN.
 
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.
@@ -21002,9 +21032,10 @@ The '`llvm.vector.reduce.fminimum.*`' intrinsics do a floating-point
 `MIN` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-This instruction has the same comparison semantics as the '`llvm.minimum.*`'
-intrinsic. That is, this intrinsic propagates NaNs and -0.0 is considered less
-than +0.0. If any element of the vector is a NaN, the result is NaN.
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.minimum.*`' intrinsic. That is, this intrinsic propagates NaNs and -0.0
+is considered less than +0.0. If any element of the vector is a NaN, the result
+is NaN.
 
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.

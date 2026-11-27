@@ -8,11 +8,14 @@
 //  CHECK-SAME:                  %[[ARG0:.*]]: tensor<2x?x2xf32>, %[[PAD:.*]]: f32
 //   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
 //   CHECK-DAG:   %[[INIT:.*]] = tensor.empty() : tensor<2x3x4xf32>
 //   CHECK-DAG:   %[[VEC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<2x3x4xf32>
-//       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]]{{.*}} : vector<2x3x4xf32>, tensor<2x3x4xf32>
-//       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, false, true]} : tensor<2x?x2xf32>, vector<2x3x2xf32>
+//       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]]{{.*}} {in_bounds = [true, true, true]} : vector<2x3x4xf32>, tensor<2x3x4xf32>
+//       CHECK:   %[[DIM:.*]] = tensor.dim %[[ARG0]], %[[C1]] : tensor<2x?x2xf32>
+//       CHECK:   %[[MASK:.*]] = vector.create_mask %[[C2]], %[[DIM]], %[[C2]] : vector<2x3x2xi1>
+//       CHECK:   %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true, true]} : tensor<2x?x2xf32>, vector<2x3x2xf32> }
 //       CHECK:   %[[RESULT:.*]] = vector.transfer_write %[[READ]], %[[FILL]][%[[C0]], %[[C0]], %[[C2]]] {in_bounds = [true, true, true]} : vector<2x3x2xf32>, tensor<2x3x4xf32>
 //       CHECK:   return %[[RESULT]]
 func.func @pad_static(%arg0: tensor<2x?x2xf32>, %pad_value: f32) -> tensor<2x3x4xf32> {

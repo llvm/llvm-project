@@ -9,7 +9,7 @@ typedef int(*fptr)(int, double);
 
 vptr vptr_add(vptr p) {
   // CIR-LABEL: vptr_add
-  // CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!void>>
+  // CIR: %[[RET:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[ARG:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[ARG_LOAD:.*]] = cir.load {{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR: %[[OFFSET:.*]] = cir.const #cir.int<3> : !s32i
@@ -28,7 +28,7 @@ vptr vptr_add(vptr p) {
 
 vptr vptr_sub(vptr p) {
   // CIR-LABEL: vptr_sub
-  // CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!void>>
+  // CIR: %[[RET:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[ARG:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[ARG_LOAD:.*]] = cir.load {{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR: %[[OFFSET:.*]] = cir.const #cir.int<-2> : !s32i
@@ -47,7 +47,7 @@ vptr vptr_sub(vptr p) {
 
 vptr vptr_inc(vptr p) {
   // CIR-LABEL: vptr_inc
-  // CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!void>>
+  // CIR: %[[RET:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[ARG:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[ARG_LOAD:.*]] = cir.load {{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR: %[[OFFSET:.*]] = cir.const #cir.int<1> : !s32i
@@ -65,7 +65,7 @@ vptr vptr_inc(vptr p) {
 }
 vptr vptr_dec(vptr p) {
   // CIR-LABEL: vptr_dec
-  // CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!void>>
+  // CIR: %[[RET:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[ARG:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!void>>
   // CIR: %[[ARG_LOAD:.*]] = cir.load {{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
   // CIR: %[[OFFSET:.*]] = cir.const #cir.int<-1> : !s32i
@@ -84,7 +84,7 @@ vptr vptr_dec(vptr p) {
 
 fptr fptr_add(fptr p) {
   // CIR-LABEL: fptr_add
-  // CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
+  // CIR: %[[RET:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
   // CIR: %[[ARG:.*]] = cir.alloca "p" {{.*}} init :  !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
   // CIR: %[[ARG_LOAD:.*]] = cir.load {{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>
   // CIR: %[[OFFSET:.*]] = cir.const #cir.int<3> : !s32i
@@ -103,7 +103,7 @@ fptr fptr_add(fptr p) {
 
 fptr fptr_sub(fptr p) {
   // CIR-LABEL: fptr_sub
-  // CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} :  !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
+  // CIR: %[[RET:.*]] = cir.alloca "" {{.*}} return_slot :  !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
   // CIR: %[[ARG:.*]] = cir.alloca "p" {{.*}} init :  !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
   // CIR: %[[ARG_LOAD:.*]] = cir.load {{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>
   // CIR: %[[OFFSET:.*]] = cir.const #cir.int<-2> : !s32i
@@ -122,7 +122,7 @@ fptr fptr_sub(fptr p) {
 
 fptr fptr_inc(fptr p) {
   // CIR-LABEL: fptr_inc
-  // CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
+  // CIR: %[[RET:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
   // CIR: %[[ARG:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
   // CIR: %[[ARG_LOAD:.*]] = cir.load {{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>
   // CIR: %[[OFFSET:.*]] = cir.const #cir.int<1> : !s32i
@@ -139,7 +139,7 @@ fptr fptr_inc(fptr p) {
 }
 fptr fptr_dec(fptr p) {
   // CIR-LABEL: fptr_dec
-  // CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
+  // CIR: %[[RET:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
   // CIR: %[[ARG:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>
   // CIR: %[[ARG_LOAD:.*]] = cir.load {{.*}}%[[ARG]] : !cir.ptr<!cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>>, !cir.ptr<!cir.func<(!s32i, !cir.double) -> !s32i>>
   // CIR: %[[OFFSET:.*]] = cir.const #cir.int<-1> : !s32i

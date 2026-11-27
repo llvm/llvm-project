@@ -140,7 +140,12 @@ bool cir::CopyOp::storesTo(const MemorySlot &slot) {
 
 Value cir::CopyOp::getStored(const MemorySlot &slot, OpBuilder &builder,
                              Value reachingDef, const DataLayout &dataLayout) {
-  return cir::LoadOp::create(builder, getLoc(), slot.valueType, getSrc());
+  return cir::LoadOp::create(builder, getLoc(), slot.valueType, getSrc(),
+                             /*isDeref=*/false, /*is_volatile=*/false,
+                             /*is_nontemporal=*/false, getSrcAlignmentAttr(),
+                             /*sync_scope=*/cir::SyncScopeKindAttr(),
+                             /*mem_order=*/cir::MemOrderAttr(),
+                             /*invariant=*/false);
 }
 
 DeletionKind cir::CopyOp::removeBlockingUses(
@@ -150,18 +155,39 @@ DeletionKind cir::CopyOp::removeBlockingUses(
   if (loadsFrom(slot))
     cir::StoreOp::create(builder, getLoc(), reachingDefinition, getDst(),
                          /*is_volatile=*/false,
-                         /*is_nontemporal=*/false,
-                         /*alignment=*/mlir::IntegerAttr{},
+                         /*is_nontemporal=*/false, getDstAlignmentAttr(),
                          /*sync_scope=*/cir::SyncScopeKindAttr(),
                          /*mem-order=*/cir::MemOrderAttr());
   return DeletionKind::Delete;
+}
+
+// Whether the type holds a union by value; only structs and arrays can.
+static bool containsUnion(mlir::Type ty) {
+  if (mlir::isa<cir::UnionType>(ty))
+    return true;
+  if (auto structTy = mlir::dyn_cast<cir::StructType>(ty))
+    return llvm::any_of(structTy.getMembers(), containsUnion);
+  if (auto arrayTy = mlir::dyn_cast<cir::ArrayType>(ty))
+    return containsUnion(arrayTy.getElementType());
+  return false;
 }
 
 bool cir::CopyOp::canUsesBeRemoved(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
     SmallVectorImpl<OpOperand *> &newBlockingUses,
     const DataLayout &dataLayout) {
-  if (getDst() == getSrc())
+  // loadsFrom/storesTo only recognize the slot pointer itself, so a copy
+  // through a cast would be erased without its effect.
+  if (blockingUses.size() != 1 || (*blockingUses.begin())->get() != slot.ptr)
+    return false;
+
+  // Volatile copies must stay in memory, like volatile loads and stores.
+  if (getIsVolatile())
+    return false;
+
+  // A union lowers to one member plus padding: a typed load or store of the
+  // value would drop bytes another member keeps in that padding.
+  if (containsUnion(slot.valueType))
     return false;
 
   return getCopySizeInBytes(dataLayout) ==
@@ -353,4 +379,34 @@ Value cir::TernaryOp::finalizePromotion(
     OpBuilder &builder) {
   assert(!hasValueStores && "cir.ternary cannot yield a new definition");
   return reachingDef;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for LifetimeStartOp and LifetimeEndOp
+//===----------------------------------------------------------------------===//
+
+// A promoted slot is no longer on the stack, so its lifetime markers go away
+// with it.
+bool cir::LifetimeStartOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return true;
+}
+
+DeletionKind cir::LifetimeStartOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
+}
+
+bool cir::LifetimeEndOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  return true;
+}
+
+DeletionKind cir::LifetimeEndOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
+  return DeletionKind::Delete;
 }

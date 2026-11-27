@@ -45,6 +45,13 @@ class AtomicOperandChecker {
       return StmtError();
 
     Expr *E = dyn_cast<Expr>(AssocStmt.get());
+
+    // DeclStmt can't be wrapped in a RecoveryExpr, and dropping it causes
+    // template instantiation to not be able to find the declaration, so we have
+    // to continue representing it as itself.
+    if (isa<DeclStmt>(AssocStmt.get()))
+      return AssocStmt;
+
     QualType T = E ? E->getType() : SemaRef.getASTContext().DependentTy;
 
     return RecoveryExpr::Create(SemaRef.getASTContext(), T,

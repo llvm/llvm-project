@@ -9,13 +9,20 @@
 #ifndef LLD_MACHO_RELOCATIONS_H
 #define LLD_MACHO_RELOCATIONS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MemAlloc.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <memory>
+#include <type_traits>
+#include <utility>
 
 namespace lld::macho {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -130,6 +137,74 @@ private:
     int64_t addend = 0;
     AuthReloc authData; // Valid when hasAuth.
   };
+};
+
+// The relocations of one subsection. They start out borrowing a slice of the
+// input Section's relocation array, which avoids an allocation per subsection.
+// Appending moves them to a buffer of their own.
+class RelocArray {
+  // Neither the destructor nor erase() destroys the elements.
+  static_assert(std::is_trivially_destructible_v<Relocation>);
+
+public:
+  RelocArray() = default;
+  RelocArray(const RelocArray &) = delete;
+  RelocArray &operator=(const RelocArray &) = delete;
+  ~RelocArray() {
+    if (cap)
+      free(ptr);
+  }
+
+  Relocation *begin() { return ptr; }
+  Relocation *end() { return ptr + len; }
+  const Relocation *begin() const { return ptr; }
+  const Relocation *end() const { return ptr + len; }
+  size_t size() const { return len; }
+  bool empty() const { return len == 0; }
+  Relocation &operator[](size_t i) {
+    assert(i < len);
+    return ptr[i];
+  }
+  const Relocation &operator[](size_t i) const {
+    assert(i < len);
+    return ptr[i];
+  }
+
+  void borrow(llvm::MutableArrayRef<Relocation> slice) {
+    assert(!cap && "array has its own buffer");
+    ptr = slice.data();
+    len = slice.size();
+  }
+
+  template <class... Args> Relocation &emplace_back(Args &&...args) {
+    if (len < cap)
+      return *new (ptr + len++) Relocation(std::forward<Args>(args)...);
+    // A borrowed slice has no capacity: the array after it belongs to other
+    // subsections.
+    uint32_t newCap = std::max<uint32_t>(4, 2 * len);
+    auto *buf = static_cast<Relocation *>(
+        llvm::safe_malloc(newCap * sizeof(Relocation)));
+    // Construct before releasing the old buffer: args may refer into it.
+    new (buf + len) Relocation(std::forward<Args>(args)...);
+    std::uninitialized_copy(ptr, ptr + len, buf);
+    if (cap)
+      free(ptr);
+    ptr = buf;
+    cap = newCap;
+    return ptr[len++];
+  }
+
+  Relocation *erase(Relocation *first, Relocation *last) {
+    len = std::move(last, end(), first) - ptr;
+    return first;
+  }
+  Relocation *erase(Relocation *it) { return erase(it, it + 1); }
+
+private:
+  Relocation *ptr = nullptr;
+  uint32_t len = 0;
+  // Zero while this borrows from the Section's array.
+  uint32_t cap = 0;
 };
 
 bool validateSymbolRelocation(const Symbol *, const InputSection *,

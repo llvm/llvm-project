@@ -33,6 +33,8 @@ def MIFDialect : Dialect {
   }];
 
   let cppNamespace = "::mif";
+  let useDefaultOperationRegistration = 1;
+  let hasInitializer = 0;
   let dependentDialects = ["fir::FIROpsDialect"];
 }
 

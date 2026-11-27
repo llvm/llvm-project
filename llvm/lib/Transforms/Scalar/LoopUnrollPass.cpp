@@ -32,6 +32,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
@@ -634,20 +635,15 @@ static bool hasRuntimeUnrollDisablePragma(const Loop *L) {
 }
 
 /// Returns true if the SCEV expression is uniform, i.e., all threads in a
-/// convergent execution agree on its value. Recursively checks operands.
+/// convergent execution agree on its value.
 /// Returns false if the SCEV could not be computed.
 static bool isSCEVUniform(const SCEV *S, UniformityInfo &UI) {
   if (isa<SCEVCouldNotCompute>(S))
     return false;
-  if (isa<SCEVConstant>(S))
-    return true;
-  if (auto *U = dyn_cast<SCEVUnknown>(S))
-    return UI.isUniformAtDef(U->getValue());
-  for (const SCEV *Op : S->operands()) {
-    if (!isSCEVUniform(Op, UI))
-      return false;
-  }
-  return true;
+  return !SCEVExprContains(S, [&](const SCEV *Node) {
+    const auto *U = dyn_cast<SCEVUnknown>(Node);
+    return U && !UI.isUniformAtDef(U->getValue());
+  });
 }
 
 // If loop has an unroll_count pragma return the (necessarily

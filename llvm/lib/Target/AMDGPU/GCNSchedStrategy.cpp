@@ -2017,8 +2017,13 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
     return true;
   }
 
-  // Do not attempt to relax schedule even more if we are already spilling.
-  if (isRegionWithExcessRP())
+  // Do not attempt to relax schedule even more if we are already spilling
+  // VGPRs, or if reverting would spill VGPRs. SGPRs spill to VGPR lanes, which
+  // is cheap, so if only SGPRs are in excess, still check that the new
+  // schedule does not cost too much latency.
+  if (isRegionWithExcessRP() &&
+      (GCNRPTarget(MF, PressureBefore).hasVectorRegisterExcess() ||
+       GCNRPTarget(MF, PressureAfter).hasVectorRegisterExcess()))
     return false;
 
   LLVM_DEBUG(
