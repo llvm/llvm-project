@@ -205,7 +205,10 @@ PreservedAnalyses InferAlignmentPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  inferAlignment(F, AC, DT);
-  // Changes to alignment shouldn't invalidated analyses.
-  return PreservedAnalyses::all();
+  if (!inferAlignment(F, AC, DT))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
