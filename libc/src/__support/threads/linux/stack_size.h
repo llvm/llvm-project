@@ -32,12 +32,14 @@ namespace detail {
 LIBC_INLINE_VAR constexpr size_t FALLBACK_STACKSIZE = 2 * 1024 * 1024;
 
 // Derives the default thread stack size from the soft RLIMIT_STACK limit.
-// If the limit is RLIM_INFINITY or too large to page-align in size_t, falls
-// back to FALLBACK_STACKSIZE. Otherwise, clamps to at least PTHREAD_STACK_MIN
-// and rounds up to EXEC_PAGESIZE.
+// If the limit is RLIM_INFINITY or too large to page-align in size_t (leaving
+// room for the default guard page), falls back to FALLBACK_STACKSIZE.
+// Otherwise, clamps to at least PTHREAD_STACK_MIN and rounds up to
+// EXEC_PAGESIZE.
 LIBC_INLINE size_t stacksize_from_rlimit(rlim_t rlim_cur) {
   constexpr size_t PAGE_MASK = static_cast<size_t>(EXEC_PAGESIZE) - 1;
-  constexpr size_t MAX_STACKSIZE = ~PAGE_MASK;
+  constexpr size_t MAX_STACKSIZE =
+      ~PAGE_MASK - static_cast<size_t>(EXEC_PAGESIZE);
   constexpr size_t MIN_STACKSIZE = static_cast<size_t>(PTHREAD_STACK_MIN);
 
   if (rlim_cur == RLIM_INFINITY || rlim_cur > MAX_STACKSIZE)

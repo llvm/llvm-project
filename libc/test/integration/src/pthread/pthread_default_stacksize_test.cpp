@@ -17,6 +17,7 @@
 #include "hdr/types/pid_t.h"
 #include "hdr/types/pthread_attr_t.h"
 #include "hdr/types/pthread_t.h"
+#include "hdr/types/size_t.h"
 #include "hdr/types/struct_rlimit.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/threads/stack_size.h"

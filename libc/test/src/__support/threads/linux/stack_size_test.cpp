@@ -23,7 +23,7 @@ using LIBC_NAMESPACE::detail::stacksize_from_rlimit;
 
 constexpr size_t PAGE_SIZE = static_cast<size_t>(EXEC_PAGESIZE);
 constexpr size_t PAGE_MASK = PAGE_SIZE - 1;
-constexpr size_t MAX_STACKSIZE = ~PAGE_MASK;
+constexpr size_t MAX_STACKSIZE = ~PAGE_MASK - PAGE_SIZE;
 constexpr size_t MIN_STACKSIZE = static_cast<size_t>(PTHREAD_STACK_MIN);
 constexpr size_t ALIGNED_MIN_STACKSIZE =
     (MIN_STACKSIZE + PAGE_MASK) & ~PAGE_MASK;

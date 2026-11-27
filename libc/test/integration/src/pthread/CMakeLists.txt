@@ -387,6 +387,7 @@ add_integration_test(
     libc.hdr.types.pid_t
     libc.hdr.types.pthread_attr_t
     libc.hdr.types.pthread_t
+    libc.hdr.types.size_t
     libc.hdr.types.struct_rlimit
     libc.include.threads
     libc.src.__support.CPP.string_view
