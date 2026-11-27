@@ -9,7 +9,7 @@
 ; store machine instructions don't depend on each other, the second store should
 ; not appear in the successors list of the first one and the first one should
 ; not appear on the predecessors list of the second one.
-define i32 @test_disjoint(ptr %P, i32 %v) {
+define i32 @test_disjoint(ptr noalias %P, i32 %v) {
 entry:
 ; CHECK: Current Schedule Region
 ; CHECK-LABEL: test_disjoint:%bb.0

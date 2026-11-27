@@ -83,6 +83,11 @@ protected:
   isCopyInstrImpl(const MachineInstr &MI) const override;
 
 private:
+  void storeLoadAFGR64Halves(MachineBasicBlock &MBB,
+                             MachineBasicBlock::iterator I, Register Reg,
+                             bool IsKill, int FI, int64_t Offset,
+                             MachineMemOperand *MMO, bool IsStore) const;
+
   unsigned getAnalyzableBrOpc(unsigned Opc) const override;
 
   void expandRetRA(MachineBasicBlock &MBB, MachineBasicBlock::iterator I) const;

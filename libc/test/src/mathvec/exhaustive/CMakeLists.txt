@@ -473,3 +473,17 @@ add_fp_unittest(
   LINK_LIBRARIES
     -lpthread
 )
+
+add_fp_unittest(
+  range_test
+  SUITE
+    libc-mathvec-tests
+  SRCS
+    range_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.CPP.simd
+  LINK_LIBRARIES
+    -lpthread
+)

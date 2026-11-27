@@ -35,7 +35,7 @@ public:
         Keywords(Keywords), SourceMgr(SourceMgr), Status(Status) {}
 
   /// Format the current block and return the penalty.
-  unsigned format(const SmallVectorImpl<AnnotatedLine *> &Lines,
+  uint64_t format(const SmallVectorImpl<AnnotatedLine *> &Lines,
                   bool DryRun = false, int AdditionalIndent = 0,
                   bool FixBadIndentation = false, unsigned FirstStartColumn = 0,
                   unsigned NextStartColumn = 0, unsigned LastStartColumn = 0);
@@ -57,7 +57,7 @@ private:
   // starting from a specific additional offset. Improves performance if there
   // are many nested blocks.
   std::map<std::pair<const SmallVectorImpl<AnnotatedLine *> *, unsigned>,
-           unsigned>
+           uint64_t>
       PenaltyCache;
 
   ContinuationIndenter *Indenter;

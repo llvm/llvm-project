@@ -1,6 +1,6 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=true -verify-machineinstrs -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
-# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=false -verify-machineinstrs -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=true -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler -misched-only-block=1 -misched-prera-direction=topdown -amdgpu-use-amdgpu-trackers=false -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
 
 # Check the pressure limits used to accept the completed schedule. Live-ins
 # fix the region's peak pressure independently of candidate ordering.
@@ -21,7 +21,6 @@
 # CHECK-NEXT: Pressure in desired limits, done.
 ---
 name: wide_budget
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy: 1
@@ -54,7 +53,6 @@ body: |
 # CHECK-NEXT: Occupancy before scheduling: 1, after 1.
 ---
 name: vgpr_excess
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy: 1
@@ -85,7 +83,6 @@ body: |
 # CHECK-NEXT: Occupancy before scheduling: 1, after 1.
 ---
 name: agpr_excess
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy: 1

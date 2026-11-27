@@ -81,60 +81,56 @@ class _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG transform_view : public view_inte
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
 public:
-  _LIBCPP_HIDE_FROM_ABI transform_view()
+  transform_view()
     requires default_initializable<_View> && default_initializable<_Fn>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit transform_view(_View __base, _Fn __func)
+  constexpr explicit transform_view(_View __base, _Fn __func)
       : __func_(std::in_place, std::move(__func)), __base_(std::move(__base)) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] constexpr _View base() && { return std::move(__base_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<false> begin() {
-    return __iterator<false>{*this, ranges::begin(__base_)};
-  }
+  [[nodiscard]] constexpr __iterator<false> begin() { return __iterator<false>{*this, ranges::begin(__base_)}; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<true> begin() const
+  [[nodiscard]] constexpr __iterator<true> begin() const
     requires range<const _View> && __regular_invocable_with_range_ref<const _Fn&, const _View>
   {
     return __iterator<true>(*this, ranges::begin(__base_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __sentinel<false> end() {
-    return __sentinel<false>(ranges::end(__base_));
-  }
+  [[nodiscard]] constexpr __sentinel<false> end() { return __sentinel<false>(ranges::end(__base_)); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<false> end()
+  [[nodiscard]] constexpr __iterator<false> end()
     requires common_range<_View>
   {
     return __iterator<false>(*this, ranges::end(__base_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __sentinel<true> end() const
+  [[nodiscard]] constexpr __sentinel<true> end() const
     requires range<const _View> && __regular_invocable_with_range_ref<const _Fn&, const _View>
   {
     return __sentinel<true>(ranges::end(__base_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator<true> end() const
+  [[nodiscard]] constexpr __iterator<true> end() const
     requires common_range<const _View> && __regular_invocable_with_range_ref<const _Fn&, const _View>
   {
     return __iterator<true>(*this, ranges::end(__base_));
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);
@@ -192,7 +188,7 @@ class transform_view<_View, _Fn>::__iterator
 
   _Parent* __parent_ = nullptr;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(_Parent& __parent, iterator_t<_Base> __current)
+  constexpr __iterator(_Parent& __parent, iterator_t<_Base> __current)
       : __parent_(std::addressof(__parent)), __current_(std::move(__current)) {}
 
   friend class transform_view<_View, _Fn>;
@@ -210,34 +206,34 @@ public:
   using value_type       = remove_cvref_t<invoke_result_t<__maybe_const<_Const, _Fn>&, range_reference_t<_Base>>>;
   using difference_type  = range_difference_t<_Base>;
 
-  _LIBCPP_HIDE_FROM_ABI __iterator()
+  __iterator()
     requires default_initializable<iterator_t<_Base>>
   = default;
 
   // Note: `__i` should always be `__iterator<false>`, but directly using
   // `__iterator<false>` is ill-formed when `_Const` is false
   // (see http://wg21.link/class.copy.ctor#5).
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
+  constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && convertible_to<iterator_t<_View>, iterator_t<_Base>>
       : __parent_(__i.__parent_), __current_(std::move(__i.__current_)) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const iterator_t<_Base>& base() const& noexcept { return __current_; }
+  [[nodiscard]] constexpr const iterator_t<_Base>& base() const& noexcept { return __current_; }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() && { return std::move(__current_); }
+  [[nodiscard]] constexpr iterator_t<_Base> base() && { return std::move(__current_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
+  [[nodiscard]] constexpr decltype(auto) operator*() const
       noexcept(noexcept(std::invoke(*__parent_->__func_, *__current_))) {
     return std::invoke(*__parent_->__func_, *__current_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+  constexpr __iterator& operator++() {
     ++__current_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++__current_; }
+  constexpr void operator++(int) { ++__current_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
+  constexpr __iterator operator++(int)
     requires forward_range<_Base>
   {
     auto __tmp = *this;
@@ -245,14 +241,14 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
+  constexpr __iterator& operator--()
     requires bidirectional_range<_Base>
   {
     --__current_;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+  constexpr __iterator operator--(int)
     requires bidirectional_range<_Base>
   {
     auto __tmp = *this;
@@ -260,83 +256,82 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
+  constexpr __iterator& operator+=(difference_type __n)
     requires random_access_range<_Base>
   {
     __current_ += __n;
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n)
+  constexpr __iterator& operator-=(difference_type __n)
     requires random_access_range<_Base>
   {
     __current_ -= __n;
     return *this;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const
+  [[nodiscard]] constexpr decltype(auto) operator[](difference_type __n) const
       noexcept(noexcept(std::invoke(*__parent_->__func_, __current_[__n])))
     requires random_access_range<_Base>
   {
     return std::invoke(*__parent_->__func_, __current_[__n]);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
     requires equality_comparable<iterator_t<_Base>>
   {
     return __x.__current_ == __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base>
   {
     return __x.__current_ < __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator>(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base>
   {
     return __x.__current_ > __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator<=(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base>
   {
     return __x.__current_ <= __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(const __iterator& __x, const __iterator& __y)
+  friend constexpr bool operator>=(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base>
   {
     return __x.__current_ >= __y.__current_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
+  friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
     requires random_access_range<_Base> && three_way_comparable<iterator_t<_Base>>
   {
     return __x.__current_ <=> __y.__current_;
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator __i, difference_type __n)
+  [[nodiscard]] friend constexpr __iterator operator+(__iterator __i, difference_type __n)
     requires random_access_range<_Base>
   {
     return __iterator{*__i.__parent_, __i.__current_ + __n};
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, __iterator __i)
+  [[nodiscard]] friend constexpr __iterator operator+(difference_type __n, __iterator __i)
     requires random_access_range<_Base>
   {
     return __iterator{*__i.__parent_, __i.__current_ + __n};
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __i, difference_type __n)
+  [[nodiscard]] friend constexpr __iterator operator-(__iterator __i, difference_type __n)
     requires random_access_range<_Base>
   {
     return __iterator{*__i.__parent_, __i.__current_ - __n};
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
-  operator-(const __iterator& __x, const __iterator& __y)
+  [[nodiscard]] friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y)
     requires sized_sentinel_for<iterator_t<_Base>, iterator_t<_Base>>
   {
     return __x.__current_ - __y.__current_;
@@ -356,7 +351,7 @@ class transform_view<_View, _Fn>::__sentinel {
 
   sentinel_t<_Base> __end_ = sentinel_t<_Base>();
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(__end) {}
+  constexpr explicit __sentinel(sentinel_t<_Base> __end) : __end_(__end) {}
 
   friend class transform_view<_View, _Fn>;
 
@@ -367,33 +362,33 @@ class transform_view<_View, _Fn>::__sentinel {
   friend class transform_view<_View, _Fn>::__sentinel;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
+  __sentinel() = default;
 
   // Note: `__i` should always be `__sentinel<false>`, but directly using
   // `__sentinel<false>` is ill-formed when `_Const` is false
   // (see http://wg21.link/class.copy.ctor#5).
-  _LIBCPP_HIDE_FROM_ABI constexpr __sentinel(__sentinel<!_Const> __i)
+  constexpr __sentinel(__sentinel<!_Const> __i)
     requires _Const && convertible_to<sentinel_t<_View>, sentinel_t<_Base>>
       : __end_(std::move(__i.__end_)) {}
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr sentinel_t<_Base> base() const { return __end_; }
+  [[nodiscard]] constexpr sentinel_t<_Base> base() const { return __end_; }
 
   template <bool _OtherConst>
     requires sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
+  friend constexpr bool operator==(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __x.__current_ == __y.__end_;
   }
 
   template <bool _OtherConst>
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
+  [[nodiscard]] friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
   operator-(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __x.__current_ - __y.__end_;
   }
 
   template <bool _OtherConst>
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
+  [[nodiscard]] friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
   operator-(const __sentinel& __x, const __iterator<_OtherConst>& __y) {
     return __x.__end_ - __y.__current_;
   }
@@ -403,7 +398,7 @@ namespace views {
 namespace __transform {
 struct __fn {
   template <class _Range, class _Fn>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Fn&& __f) const
+  [[nodiscard]] constexpr auto operator()(_Range&& __range, _Fn&& __f) const
       noexcept(noexcept(transform_view(std::forward<_Range>(__range), std::forward<_Fn>(__f))))
           -> decltype(transform_view(std::forward<_Range>(__range), std::forward<_Fn>(__f))) {
     return transform_view(std::forward<_Range>(__range), std::forward<_Fn>(__f));
@@ -411,8 +406,7 @@ struct __fn {
 
   template <class _Fn>
     requires constructible_from<decay_t<_Fn>, _Fn>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Fn&& __f) const
-      noexcept(is_nothrow_constructible_v<decay_t<_Fn>, _Fn>) {
+  [[nodiscard]] constexpr auto operator()(_Fn&& __f) const noexcept(is_nothrow_constructible_v<decay_t<_Fn>, _Fn>) {
     return __pipeable(std::__bind_back(*this, std::forward<_Fn>(__f)));
   }
 };

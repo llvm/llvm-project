@@ -47,7 +47,6 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
 
   // Cache some information.
   Is64Bit = TT.isX86_64();
-  IsTarget64BitLP64 = Is64Bit && !TT.isX32();
   IsWin64 = Is64Bit && TT.isOSWindows();
   IsUEFI64 = Is64Bit && TT.isUEFI();
 
@@ -238,8 +237,9 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_NoRegs_SaveList;
   case CallingConv::AnyReg:
     if (HasAVX)
-      return CSR_64_AllRegs_AVX_SaveList;
-    return CSR_64_AllRegs_SaveList;
+      return HasEGPR ? CSR_64_APX_AllRegs_AVX_SaveList
+                     : CSR_64_AllRegs_AVX_SaveList;
+    return HasEGPR ? CSR_64_APX_AllRegs_SaveList : CSR_64_AllRegs_SaveList;
   case CallingConv::PreserveMost:
     if (IsWin64)
       return HasEGPR ? CSR_Win64_APX_RT_MostRegs_SaveList
@@ -309,12 +309,15 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   case CallingConv::X86_INTR:
     if (Is64Bit) {
       if (HasAVX512)
-        return CSR_64_AllRegs_AVX512_SaveList;
+        return HasEGPR ? CSR_64_APX_AllRegs_AVX512_SaveList
+                       : CSR_64_AllRegs_AVX512_SaveList;
       if (HasAVX)
-        return CSR_64_AllRegs_AVX_SaveList;
+        return HasEGPR ? CSR_64_APX_AllRegs_AVX_SaveList
+                       : CSR_64_AllRegs_AVX_SaveList;
       if (HasSSE)
-        return CSR_64_AllRegs_SaveList;
-      return CSR_64_AllRegs_NoSSE_SaveList;
+        return HasEGPR ? CSR_64_APX_AllRegs_SaveList : CSR_64_AllRegs_SaveList;
+      return HasEGPR ? CSR_64_APX_AllRegs_NoSSE_SaveList
+                     : CSR_64_AllRegs_NoSSE_SaveList;
     }
     if (HasAVX512)
       return CSR_32_AllRegs_AVX512_SaveList;
@@ -378,6 +381,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::HiPE:
     return CSR_NoRegs_RegMask;
   case CallingConv::AnyReg:
+    // Callers keep R16-R31 clobbered: callees built without EGPR or by older
+    // compilers may not save them (see CSR_64_APX_AllRegs).
     if (HasAVX)
       return CSR_64_AllRegs_AVX_RegMask;
     return CSR_64_AllRegs_RegMask;
@@ -448,6 +453,8 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   case CallingConv::X86_64_SysV:
     return CSR_64_RegMask;
   case CallingConv::X86_INTR:
+    // Callers keep R16-R31 clobbered: callees built without EGPR or by older
+    // compilers may not save them (see CSR_64_APX_AllRegs).
     if (Is64Bit) {
       if (HasAVX512)
         return CSR_64_AllRegs_AVX512_RegMask;
@@ -710,7 +717,14 @@ bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
 
   CallingConv::ID CC = MF.getFunction().getCallingConv();
 
-  if (CC == CallingConv::X86_64_SysV && IsSubReg(X86::RAX, Reg))
+  if ((CC == CallingConv::X86_64_SysV || CC == CallingConv::PreserveNone) &&
+      IsSubReg(X86::RAX, Reg))
+    return true;
+
+  if (CC == CallingConv::PreserveNone &&
+      llvm::any_of(
+          ArrayRef<MCPhysReg>{X86::R11, X86::R12, X86::R13, X86::R14, X86::R15},
+          [&](MCPhysReg RegA) { return IsSubReg(RegA, Reg); }))
     return true;
 
   if (llvm::any_of(

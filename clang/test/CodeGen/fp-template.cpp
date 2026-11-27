@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fdelayed-template-parsing -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -emit-llvm -fdelayed-template-parsing -o - %s | FileCheck %s %}
 
 template <typename T>
 T templ_01(T x, T y) {
@@ -35,7 +37,7 @@ float func_02(float x, float y) {
 }
 
 // CHECK-LABEL: define {{.*}} float @_Z8templ_02IfET_S0_S0_
-// CHECK:       %add = fadd float %0, %1
+// CHECK:       fadd float %{{[0-9]+}}, %{{[0-9]+}}
 
 float func_03(float x, float y) {
   return templ_03(x, y);

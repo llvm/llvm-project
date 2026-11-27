@@ -627,9 +627,9 @@ class WSBH_MMR6_DESC : WRPGPR_WSBH_MMR6_DESC_BASE<"wsbh", GPR32Opnd>;
 
 class MTC0_MMR6_DESC_BASE<string opstr, RegisterOperand DstRC,
                          RegisterOperand SrcRC> {
-  dag InOperandList = (ins SrcRC:$rt, uimm3:$sel);
-  dag OutOperandList = (outs DstRC:$rs);
-  string AsmString = !strconcat(opstr, "\t$rt, $rs, $sel");
+  dag InOperandList = (ins SrcRC:$rt);
+  dag OutOperandList = (outs DstRC:$cop0);
+  string AsmString = !strconcat(opstr, "\t$rt, $cop0");
   list<dag> Pattern = [];
   Format f = FrmFR;
   string BaseOpcode = opstr;
@@ -677,9 +677,9 @@ class MTHC2_MMR6_DESC : MTC2_MMR6_DESC_BASE<"mthc2", COP2Opnd, GPR32Opnd>;
 
 class MFC0_MMR6_DESC_BASE<string opstr, RegisterOperand DstRC,
                           RegisterOperand SrcRC> {
-  dag InOperandList = (ins SrcRC:$rs, uimm3:$sel);
+  dag InOperandList = (ins SrcRC:$cop0);
   dag OutOperandList = (outs DstRC:$rt);
-  string AsmString = !strconcat(opstr, "\t$rt, $rs, $sel");
+  string AsmString = !strconcat(opstr, "\t$rt, $cop0");
   list<dag> Pattern = [];
   Format f = FrmFR;
   string BaseOpcode = opstr;
@@ -1586,18 +1586,6 @@ def : MipsInstAlias<"sigrie", (SIGRIE_MMR6 0), 1>, ISA_MICROMIPS32R6;
 def : MipsInstAlias<"rdhwr $rt, $rs",
                     (RDHWR_MMR6 GPR32Opnd:$rt, HWRegsOpnd:$rs, 0), 1>,
                     ISA_MICROMIPS32R6;
-def : MipsInstAlias<"mtc0 $rt, $rs",
-                    (MTC0_MMR6 COP0Opnd:$rs, GPR32Opnd:$rt, 0), 0>,
-                    ISA_MICROMIPS32R6;
-def : MipsInstAlias<"mthc0 $rt, $rs",
-                    (MTHC0_MMR6 COP0Opnd:$rs, GPR32Opnd:$rt, 0), 0>,
-                    ISA_MICROMIPS32R6;
-def : MipsInstAlias<"mfc0 $rt, $rs",
-                    (MFC0_MMR6 GPR32Opnd:$rt, COP0Opnd:$rs, 0), 0>,
-                    ISA_MICROMIPS32R6;
-def : MipsInstAlias<"mfhc0 $rt, $rs",
-                    (MFHC0_MMR6 GPR32Opnd:$rt, COP0Opnd:$rs, 0), 0>,
-                    ISA_MICROMIPS32R6;
 def : MipsInstAlias<"jalrc.hb $rs", (JALRC_HB_MMR6 R31, GPR32Opnd:$rs), 1>,
                     ISA_MICROMIPS32R6;
 def : MipsInstAlias<"jal $offset", (BALC_MMR6 brtarget26_mm:$offset), 0>,
@@ -1693,13 +1681,15 @@ def : MipsPat<(brcond (and (not i32_zero_or_negative_one:$cond), 1), bb:$dst),
 
 def : SEL_FP_PAT<FGR32Opnd, SEL_S_MMR6>, ISA_MICROMIPS32R6;
 def : SEL_FP_PAT<FGR64Opnd, SEL_D_MMR6>, ISA_MICROMIPS32R6;
+defm : SEL_FP_AND1_PATS<FGR32Opnd, SEL_S_MMR6>, ISA_MICROMIPS32R6;
+defm : SEL_FP_AND1_PATS<FGR64Opnd, SEL_D_MMR6>, ISA_MICROMIPS32R6;
 
 def : MipsPat<(f32 fpimm0), (MTC1_MMR6 R0)>, ISA_MICROMIPS32R6;
 def : MipsPat<(f32 fpimm0neg), (FNEG_S_MMR6(MTC1_MMR6 R0))>,
       ISA_MICROMIPS32R6;
-def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR64Opnd:$src),
               (TRUNC_W_D_MMR6 FGR64Opnd:$src)>, ISA_MICROMIPS32R6;
-def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR32Opnd:$src),
               (TRUNC_W_S_MMR6 FGR32Opnd:$src)>, ISA_MICROMIPS32R6;
 
 def : MipsPat<(and GPRMM16:$src, immZExtAndi16:$imm),

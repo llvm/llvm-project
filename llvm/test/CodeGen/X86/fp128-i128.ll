@@ -425,7 +425,6 @@ entry:
 
 declare fp128 @llvm.fabs.f128(fp128) #1
 
-declare fp128 @copysignl(fp128, fp128) #1
 
 ; Test more complicated logical operations generated from copysignl.
 define dso_local void @TestCopySign(ptr noalias nocapture sret({ fp128, fp128 }) %agg.result, ptr byval({ fp128, fp128 }) nocapture readonly align 16 %z) #0 {
@@ -517,7 +516,7 @@ if.then:                                          ; preds = %entry
 cleanup:                                          ; preds = %entry, %if.then
   %z.real.sink = phi fp128 [ %z.real, %if.then ], [ %sub, %entry ]
   %call.sink = phi fp128 [ %call, %if.then ], [ %z.real, %entry ]
-  %call5 = tail call fp128 @copysignl(fp128 %z.real.sink, fp128 %z.imag4) #2
+  %call5 = tail call fp128 @llvm.copysign.f128(fp128 %z.real.sink, fp128 %z.imag4)
   %0 = getelementptr inbounds { fp128, fp128 }, ptr %agg.result, i64 0, i32 0
   %1 = getelementptr inbounds { fp128, fp128 }, ptr %agg.result, i64 0, i32 1
   store fp128 %call.sink, ptr %0, align 16

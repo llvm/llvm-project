@@ -15,6 +15,7 @@ include "mlir/IR/OpBase.td"
 def Arith_Dialect : Dialect {
   let name = "arith";
   let cppNamespace = "::mlir::arith";
+  let useDefaultOperationRegistration = 1;
   let description = [{
     The arith dialect is intended to hold basic integer and floating point
     mathematical operations. This includes unary, binary, and ternary arithmetic
@@ -39,7 +40,7 @@ def Arith_Dialect : Dialect {
   }];
 
   let hasConstantMaterializer = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 // The predicate indicates the type of the comparison to perform:

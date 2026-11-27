@@ -8,10 +8,10 @@ define i32 @test_extract_v8i32_from_nxv8i32(<vscale x 8 x i32> %vec) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-2
-; CHECK-NEXT:    str z0, [sp]
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ldr z0, [sp]
 ; CHECK-NEXT:    str z1, [sp, #1, mul vl]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    ldr z0, [sp]
 ; CHECK-NEXT:    uaddv d0, p0, z0.s
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    addvl sp, sp, #2

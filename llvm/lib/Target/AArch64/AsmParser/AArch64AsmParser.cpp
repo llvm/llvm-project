@@ -8289,7 +8289,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
   }
 
   // Consume the second parameter (attribute value)
-  unsigned ValueInt = unsigned(-1);
+  uint64_t ValueInt = uint64_t(-1);
   std::string ValueStr = "";
   if (Parser.getTok().is(AsmToken::Integer)) {
     if (AArch64BuildAttributes::NTBS == ActiveSubsectionType) {
@@ -8339,7 +8339,7 @@ bool AArch64AsmParser::parseDirectiveAeabiAArch64Attr(SMLoc L) {
     return true;
   }
 
-  if (unsigned(-1) != ValueInt) {
+  if (uint64_t(-1) != ValueInt) {
     getTargetStreamer().emitAttribute(ActiveSubsectionName, Tag, ValueInt, "");
   }
   if ("" != ValueStr) {

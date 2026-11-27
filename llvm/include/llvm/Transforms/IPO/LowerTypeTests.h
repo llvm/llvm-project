@@ -240,9 +240,12 @@ enum class DropTestKind {
 
 /// Lower @llvm.type.checked.load[.relative] calls to the guarded load with
 /// the check assumed true, and erase the declaration once it has no users.
-/// Returns true if anything changed. Shared with FatLTOCleanup.
-LLVM_ABI bool cleanUpTypeCheckedLoad(Module &M, Function &CheckedLoadFn,
-                                     bool IsRelative);
+/// Returns true if anything changed. Shared with FatLTOCleanup. If
+/// \p ModifiedFunctions is not null, the functions containing the lowered calls
+/// are added to it.
+LLVM_ABI bool cleanUpTypeCheckedLoad(
+    Module &M, Function &CheckedLoadFn, bool IsRelative,
+    SmallSetVector<Function *, 8> *ModifiedFunctions = nullptr);
 
 } // end namespace lowertypetests
 

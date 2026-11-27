@@ -40,6 +40,10 @@ llvm_config.add_tool_substitutions(
 # controller. Tests that use it must be gated on the llvm-jitlink feature.
 ogre = os.path.join(config.orc_rt_obj_root, "tools", "ogre", "ogre")
 config.substitutions.append(("%{ogre}", ogre))
+
+# %{test-dylib} is the path to a minimal shared library (test/Inputs/
+# orc-rt-test-dylib.c), for tests that load, search, and close a host library.
+config.substitutions.append(("%{test-dylib}", config.orc_rt_test_dylib))
 llvm_jitlink = llvm_config.use_llvm_tool("llvm-jitlink")
 if llvm_jitlink:
     config.available_features.add("llvm-jitlink")
@@ -49,11 +53,27 @@ if llvm_jitlink:
 
 
 # %{cc} and %{cxx} compile C and C++ for the runtime's target. They default to
-# clang and clang++ from the LLVM tools directory. Pass --param orc-rt-cc=<cc>
-# or --param orc-rt-cxx=<cxx> to use a different compiler: it must accept
-# clang-style options and target the runtime's target without being told to
-# (use a wrapper script if necessary). Tests that use %{cc} or %{cxx} must be
-# gated on the orc-rt-cc or orc-rt-cxx feature respectively.
+# clang and clang++ from the LLVM tools directory, building against the sysroot
+# that the runtime was built against (ORC_RT_TEST_SYSROOT, see
+# cmake/OrcRTTesting.cmake). Pass --param orc-rt-cc=<cc> or
+# --param orc-rt-cxx=<cxx> to use a different compiler: it must accept
+# clang-style options and target the runtime's target and sysroot without being
+# told to (use a wrapper script if necessary). Tests that use %{cc} or %{cxx}
+# must be gated on the orc-rt-cc or orc-rt-cxx feature respectively.
+target_is_apple = "apple" in config.target_triple.split("-")
+if config.orc_rt_sysroot:
+    sysroot_option = (
+        " -isysroot " if target_is_apple else " --sysroot="
+    ) + config.orc_rt_sysroot
+else:
+    sysroot_option = ""
+    if target_is_apple:
+        lit_config.note(
+            "no SDK found for %{cc} and %{cxx}; tests that include system "
+            "headers will fail"
+        )
+
+
 def add_compiler(name, clang_name):
     override = lit_config.params.get(name)
     if override:
@@ -64,7 +84,7 @@ def add_compiler(name, clang_name):
     else:
         compiler = llvm_config.use_llvm_tool(clang_name)
         if compiler:
-            compiler += " --target=" + config.target_triple
+            compiler += " --target=" + config.target_triple + sysroot_option
     if compiler:
         config.available_features.add(name)
         substitution = "%{" + name[len("orc-rt-") :] + "}"
@@ -73,6 +93,19 @@ def add_compiler(name, clang_name):
 
 add_compiler("orc-rt-cc", "clang")
 add_compiler("orc-rt-cxx", "clang++")
+
+# %{orc-rt-cflags} adds the runtime's header search paths (the source tree, and
+# the build tree for generated headers such as orc-rt-c/config.h), for tests
+# that compile JIT'd code against the APIs the runtime provides.
+config.substitutions.append(
+    (
+        "%{orc-rt-cflags}",
+        "-I{} -I{}".format(
+            os.path.join(config.orc_rt_src_root, "include"),
+            os.path.join(config.orc_rt_obj_root, "include"),
+        ),
+    )
+)
 
 # %{mc} assembles its input into an object file for the runtime's target.
 # Unlike %{cc}, it can't be overridden, so that object format tests always
@@ -115,6 +148,11 @@ def add_target_features():
 
 
 add_target_features()
+
+# target-posix: the runtime was built with its shared POSIX host
+# implementation (ORC_RT_TARGET_POSIX), so it provides the POSIX-only APIs.
+if lit.util.pythonize_bool(config.orc_rt_target_posix):
+    config.available_features.add("target-posix")
 
 
 def run_test_tool(name, *args):

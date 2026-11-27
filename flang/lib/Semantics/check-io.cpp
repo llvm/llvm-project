@@ -576,6 +576,8 @@ void IoChecker::Enter(const parser::IoControlSpec::CharExpr &spec) {
           std::get<parser::ScalarDefaultCharExpr>(spec.t))}) {
     if (specKind == IoSpecKind::Advance) {
       flags_.set(Flag::AdvanceYes, Normalize(*charConst) == "YES");
+    } else if (specKind == IoSpecKind::Delim) {
+      flags_.set(Flag::DelimNone, Normalize(*charConst) == "NONE");
     }
     CheckStringValue(specKind, *charConst, parser::FindSourceLocation(spec));
   }
@@ -943,6 +945,7 @@ void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
     if (namelist->symbol) {
       CheckNamelist(*namelist->symbol, common::DefinedIo::WriteFormatted,
           namelist->source);
+      CheckForUndelimitedNamelistCharacter(*namelist->symbol, namelist->source);
     }
   }
   LeaveReadWrite();
@@ -1474,6 +1477,46 @@ void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
           context_.SetError(namelist);
         }
       }
+    }
+  }
+}
+
+// F'2018 13.11.4.2 NOTE 1.  Without DELIM= the delimiter mode is not known
+// here.
+void IoChecker::CheckForUndelimitedNamelistCharacter(
+    const Symbol &namelist, parser::CharBlock namelistLocation) const {
+  if (context_.HasError(namelist) ||
+      (specifierSet_.test(IoSpecKind::Delim) &&
+          !flags_.test(Flag::DelimNone))) {
+    return;
+  }
+  const Scope &scope{context_.FindScope(namelistLocation)};
+  const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
+  for (const Symbol &object : details.objects()) {
+    const Symbol &ultimate{object.GetUltimate()};
+    if (const DeclTypeSpec *type{ultimate.GetType()}) {
+      if (const DerivedTypeSpec *derived{type->AsDerived()}) {
+        if (HasDefinedIo(common::DefinedIo::WriteFormatted, *derived, &scope)) {
+          continue;
+        }
+      }
+    }
+    if (FindUltimateComponent(ultimate, [](const Symbol &symbol) {
+          const DeclTypeSpec *type{symbol.GetType()};
+          return type && type->category() == DeclTypeSpec::Character;
+        })) {
+      if (flags_.test(Flag::DelimNone)) {
+        context_.Warn(common::UsageWarning::UndelimitedNamelistCharacter,
+            namelistLocation,
+            "CHARACTER output of namelist item '%s' with DELIM='NONE' might not be readable as namelist input; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE'"_warn_en_US,
+            object.name());
+      } else {
+        context_.Warn(common::UsageWarning::UndelimitedNamelistCharacter,
+            namelistLocation,
+            "CHARACTER output of namelist item '%s' might not be readable as namelist input if the delimiter mode is NONE; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE'"_warn_en_US,
+            object.name());
+      }
+      return;
     }
   }
 }

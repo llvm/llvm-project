@@ -12,6 +12,7 @@
 
 #include "CppGenUtilities.h"
 #include "DialectGenUtilities.h"
+#include "PartitionHelpers.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -80,6 +81,101 @@ tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
   return *dialectIt;
 }
 
+/// Returns the name of `kind` as used in the registration hook names.
+static StringRef getRegistrationKindName(RegistrationKind kind) {
+  switch (kind) {
+  case RegistrationKind::Operation:
+    return "Operation";
+  case RegistrationKind::Attribute:
+    return "Attribute";
+  case RegistrationKind::Type:
+    return "Type";
+  }
+  llvm::reportFatalInternalError("unknown registration kind");
+}
+
+/// Returns the class whose `insert` method registers a definition of `kind`.
+static StringRef getRegistrar(RegistrationKind kind) {
+  switch (kind) {
+  case RegistrationKind::Operation:
+    return "::mlir::RegisteredOperationName";
+  case RegistrationKind::Attribute:
+    return "::mlir::AbstractAttribute";
+  case RegistrationKind::Type:
+    return "::mlir::AbstractType";
+  }
+  llvm::reportFatalInternalError("unknown registration kind");
+}
+
+std::string tblgen::getRegistrationHookName(const Dialect &dialect,
+                                            RegistrationKind kind,
+                                            StringRef registrationName,
+                                            StringRef part) {
+  return llvm::formatv("register{0}{1}s{2}",
+                       registrationName.empty() ? dialect.getCppClassName()
+                                                : registrationName.str(),
+                       getRegistrationKindName(kind),
+                       getPartitionFunctionSuffix(part))
+      .str();
+}
+
+void tblgen::emitRegistrationHookDecls(raw_ostream &os, const Dialect &dialect,
+                                       RegistrationKind kind,
+                                       StringRef registrationName,
+                                       ArrayRef<std::string> parts,
+                                       StringRef partsDescription) {
+  std::string dialectClass = dialect.getCppClassName();
+  std::string kindName = getRegistrationKindName(kind).lower();
+  os << "class " << dialectClass << ";\n";
+  if (parts.empty())
+    os << llvm::formatv(
+        "/// Registers the {0}s defined in this file with `dialect`.\n",
+        kindName);
+  else
+    os << llvm::formatv("/// Registers the {0}s of all {1} with `dialect`.\n",
+                        kindName, partsDescription);
+  auto emitDecl = [&](StringRef part) {
+    os << llvm::formatv(
+        "void {0}({1} *dialect);\n",
+        getRegistrationHookName(dialect, kind, registrationName, part),
+        dialectClass);
+  };
+  emitDecl("");
+  for (StringRef part : parts)
+    emitDecl(part);
+}
+
+void tblgen::emitRegistrationHookDefs(
+    raw_ostream &os, const Dialect &dialect, RegistrationKind kind,
+    StringRef registrationNameSuffix, StringRef part,
+    ArrayRef<std::string> parts, ArrayRef<std::string> classNamesToRegister) {
+  std::string dialectClass = dialect.getCppClassName();
+  const char *const hookDef = "void {0}({1} *dialect) {{\n";
+  if (!parts.empty() && parts.front() == part) {
+    os << llvm::formatv(
+        hookDef, getRegistrationHookName(dialect, kind, registrationNameSuffix),
+        dialectClass);
+    for (StringRef otherPart : parts)
+      os << "  "
+         << getRegistrationHookName(dialect, kind, registrationNameSuffix,
+                                    otherPart)
+         << "(dialect);\n";
+    os << "}\n";
+  }
+
+  // Register each class with a separate call instead of a variadic one like
+  // `addOperations<...>()`, whose single instantiation over all classes takes
+  // noticeably longer to compile.
+  os << llvm::formatv(
+      hookDef,
+      getRegistrationHookName(dialect, kind, registrationNameSuffix, part),
+      dialectClass);
+  for (StringRef className : classNamesToRegister)
+    os << "  " << getRegistrar(kind) << "::insert<" << className
+       << ">(*dialect);\n";
+  os << "}\n";
+}
+
 //===----------------------------------------------------------------------===//
 // GEN: Dialect declarations
 //===----------------------------------------------------------------------===//
@@ -89,11 +185,11 @@ tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
 /// {0}: The name of the dialect class.
 /// {1}: The dialect namespace.
 /// {2}: The dialect parent class.
+/// {3}: The declaration of initialize(), if the dialect has an initializer.
 static const char *const dialectDeclBeginStr = R"(
 class {0} : public ::mlir::{2} {
   explicit {0}(::mlir::MLIRContext *context);
-
-  void initialize();
+{3}
   friend class ::mlir::MLIRContext;
 public:
   ~{0}() override;
@@ -230,8 +326,9 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
     tblgen::emitSummaryAndDescComments(os, dialect.getSummary(),
                                        dialect.getDescription(),
                                        /*terminateCmment=*/false);
-    os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
-                        superClassName);
+    os << llvm::formatv(
+        dialectDeclBeginStr, cppName, dialect.getName(), superClassName,
+        dialect.hasInitializer() ? "\n  void initialize();" : "");
 
     // If the dialect requested the default attribute printer and parser, emit
     // the declarations for the hooks.
@@ -283,6 +380,22 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
        << "::" << dialect.getCppClassName() << ")\n";
 }
 
+/// Emit the `#include` directives for the headers declaring the C++ constructs
+/// used by the declaration of `dialect`.
+static void emitDialectDeclIncludes(const Dialect &dialect, raw_ostream &os) {
+  SmallVector<StringRef> includes;
+  // `::mlir::Dialect` or `::mlir::ExtensibleDialect`.
+  includes.push_back(dialect.isExtensible() ? "mlir/IR/ExtensibleDialect.h"
+                                            : "mlir/IR/Dialect.h");
+  if (dialect.getDiscardableAttributes()->getNumArgs() != 0) {
+    // `::mlir::StringAttr` and `::mlir::Operation`, used by the discardable
+    // attribute helpers.
+    includes.push_back("mlir/IR/BuiltinAttributes.h");
+    includes.push_back("mlir/IR/Operation.h");
+  }
+  tblgen::emitIncludes(os, includes);
+}
+
 static bool emitDialectDecls(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Dialect Declarations", os, records);
 
@@ -294,6 +407,7 @@ static bool emitDialectDecls(const RecordKeeper &records, raw_ostream &os) {
   std::optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
+  emitDialectDeclIncludes(*dialect, os);
   emitDialectDecl(*dialect, os);
   return false;
 }
@@ -305,8 +419,9 @@ static bool emitDialectDecls(const RecordKeeper &records, raw_ostream &os) {
 /// The code block to generate a dialect constructor definition.
 ///
 /// {0}: The name of the dialect class.
-/// {1}: Initialization code that is emitted in the ctor body before calling
-///      initialize(), such as dependent dialect registration.
+/// {1}: Initialization code that is emitted in the ctor body, such as
+///      dependent dialect registration, the registration of the attributes,
+///      types and operations generated by ODS and the call to initialize().
 /// {2}: The dialect parent class.
 /// {3}: Extra members to initialize
 static const char *const dialectConstructorStr = R"(
@@ -315,7 +430,6 @@ static const char *const dialectConstructorStr = R"(
     {3}
      {{
   {1}
-  initialize();
 }
 )";
 
@@ -339,18 +453,31 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
   // Emit all nested namespaces.
   DialectNamespaceEmitter nsEmitter(os, dialect);
 
-  /// Build the list of dependent dialects.
-  std::string dependentDialectRegistrations;
-  {
-    llvm::raw_string_ostream dialectsOs(dependentDialectRegistrations);
-    llvm::interleave(
-        dialect.getDependentDialects(), dialectsOs,
-        [&](StringRef dependentDialect) {
-          dialectsOs << llvm::formatv(dialectRegistrationTemplate,
-                                      dependentDialect);
-        },
-        "\n  ");
-  }
+  // Build the initialization code: the registration of the dependent dialects
+  // and of the attributes, types and operations generated by ODS, whose
+  // registration hooks are defined alongside the generated definitions.
+  SmallVector<std::string> hooks;
+  if (dialect.useDefaultAttributeRegistration())
+    hooks.push_back(
+        getRegistrationHookName(dialect, RegistrationKind::Attribute));
+  if (dialect.useDefaultTypeRegistration())
+    hooks.push_back(getRegistrationHookName(dialect, RegistrationKind::Type));
+  if (dialect.useDefaultOperationRegistration())
+    hooks.push_back(
+        getRegistrationHookName(dialect, RegistrationKind::Operation));
+  for (const std::string &hook : hooks)
+    os << llvm::formatv("void {0}({1} *dialect);\n", hook, cppClassName);
+
+  std::string initCode;
+  llvm::raw_string_ostream initOs(initCode);
+  llvm::ListSeparator sep("\n  ");
+  for (StringRef dependentDialect : dialect.getDependentDialects())
+    initOs << sep
+           << llvm::formatv(dialectRegistrationTemplate, dependentDialect);
+  for (const std::string &hook : hooks)
+    initOs << sep << hook << "(this);";
+  if (dialect.hasInitializer())
+    initOs << sep << "initialize();";
 
   // Emit the constructor and destructor.
   StringRef superClassName =
@@ -368,9 +495,8 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
     os << ", " << camelName << "AttrName(context)";
   }
 
-  os << llvm::formatv(dialectConstructorStr, cppClassName,
-                      dependentDialectRegistrations, superClassName,
-                      discardableAttributesInit);
+  os << llvm::formatv(dialectConstructorStr, cppClassName, initCode,
+                      superClassName, discardableAttributesInit);
   if (!dialect.hasNonDefaultDestructor())
     os << llvm::formatv(dialectDestructorStr, cppClassName);
 }
@@ -386,6 +512,9 @@ static bool emitDialectDefs(const RecordKeeper &records, raw_ostream &os) {
   std::optional<Dialect> dialect = findDialectToGenerate(dialects);
   if (!dialect)
     return true;
+  // `::mlir::MLIRContext::loadDialect`, used to load the dependent dialects.
+  if (!dialect->getDependentDialects().empty())
+    tblgen::emitIncludes(os, StringRef("mlir/IR/MLIRContext.h"));
   emitDialectDef(*dialect, records, os);
   return false;
 }

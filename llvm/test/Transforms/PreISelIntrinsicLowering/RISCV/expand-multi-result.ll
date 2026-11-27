@@ -72,6 +72,3 @@ define { <2 x float>, <2 x float> } @fixed_vec_sincos_f32(<2 x float> %input) {
   ret { <2 x float>, <2 x float> } %r
 }
 
-declare { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.sincos.nxv4f32(<vscale x 4 x float>)
-declare { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.modf.nxv4f32(<vscale x 4 x float>)
-declare { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float>)

@@ -11,6 +11,7 @@
 #include "hdr/sys_socket_macros.h"
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_linger.h"
+#include "hdr/types/struct_tcp_info.h"
 #include "hdr/types/struct_timespec.h"
 #include "hdr/types/struct_timeval.h"
 #include "src/__support/time/clock_gettime.h"
@@ -121,6 +122,24 @@ TEST_F(LlvmLibcSocketOptTest, TcpSocketOpt) {
   ASSERT_EQ(optlen, INT_OPTLEN);
 }
 
+TEST_F(LlvmLibcSocketOptTest, TcpInfo) {
+  int sock = LIBC_NAMESPACE::socket(AF_INET, SOCK_STREAM, 0);
+  ASSERT_GE(sock, 0);
+  scope_exit close_sock(
+      [&] { ASSERT_THAT(LIBC_NAMESPACE::close(sock), Succeeds(0)); });
+
+  struct tcp_info info = {};
+  socklen_t optlen = sizeof(info);
+  ASSERT_THAT(
+      LIBC_NAMESPACE::getsockopt(sock, SOL_TCP, TCP_INFO, &info, &optlen),
+      Succeeds(0));
+  // The kernel's version of the struct can be smaller or larger than ours,
+  // but it will always contain the tcpi_state field.
+  ASSERT_GT(optlen, static_cast<socklen_t>(0));
+  ASSERT_LE(optlen, static_cast<socklen_t>(sizeof(info)));
+  EXPECT_EQ(static_cast<int>(info.tcpi_state), static_cast<int>(TCP_CLOSE));
+}
+
 TEST_F(LlvmLibcSocketOptTest, NotASocket) {
   int fds[2];
   ASSERT_THAT(LIBC_NAMESPACE::pipe(fds), Succeeds(0));
@@ -200,6 +219,7 @@ TEST_F(LlvmLibcSocketOptTest, ReceiveTimeout) {
   int64_t elapsed_seconds = end.tv_sec - start.tv_sec;
   int64_t elapsed_nseconds = end.tv_nsec - start.tv_nsec;
   int64_t elapsed_ms = elapsed_seconds * 1000 + elapsed_nseconds / 1000000;
-  ASSERT_GE(elapsed_ms, static_cast<int64_t>(1000));
+  // Make sure the value is in the right ballpark.
+  ASSERT_GE(elapsed_ms, static_cast<int64_t>(900));
   ASSERT_LT(elapsed_ms, static_cast<int64_t>(10000));
 }

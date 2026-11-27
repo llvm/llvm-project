@@ -86,10 +86,14 @@ void ScheduleDAGVLIW::Schedule() {
   LLVM_DEBUG(dbgs() << "********** List Scheduling " << printMBBReference(*BB)
                     << " '" << BB->getName() << "' **********\n");
 
+  assert(PendingQueue.empty() && "stale PendingQueue");
+
   // Build the scheduling graph.
   BuildSchedGraph();
 
   AvailableQueue->initNodes(SUnits);
+
+  HazardRec->Reset();
 
   listScheduleTopDown();
 

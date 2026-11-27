@@ -37,8 +37,8 @@ class GDBRemoteCommunicationServerLLGS
 public:
   // Constructors and Destructors
   GDBRemoteCommunicationServerLLGS(
-      MainLoop &mainloop,
-      NativeProcessProtocol::Manager &process_manager);
+      MainLoop &mainloop, NativeProcessProtocol::Manager &process_manager,
+      llvm::StringRef name);
 
   void SetLaunchInfo(const ProcessLaunchInfo &info);
 
@@ -76,6 +76,15 @@ public:
 
   void InstallPlugin(
       std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin> plugin_up);
+
+  /// Associate this server with the accelerator plugin for this connection.
+  /// The plugin must outlive this server.
+  void SetConnectionAcceleratorPlugin(
+      lldb_server::LLDBServerAcceleratorPlugin &plugin) {
+    m_connection_accelerator_plugin = &plugin;
+  }
+
+  NativeProcessProtocol *GetCurrentProcess() { return m_current_process; }
 
   // NativeProcessProtocol::NativeDelegate overrides
   void InitializeDelegate(NativeProcessProtocol *process) override;
@@ -120,6 +129,10 @@ protected:
   NativeProcessProtocol::Manager &m_process_manager;
   std::vector<std::unique_ptr<lldb_server::LLDBServerAcceleratorPlugin>>
       m_accelerator_plugins;
+  /// The plugin that owns this accelerator connection. This is null for the
+  /// native connection and does not own the plugin.
+  lldb_server::LLDBServerAcceleratorPlugin *m_connection_accelerator_plugin =
+      nullptr;
   lldb::tid_t m_current_tid = LLDB_INVALID_THREAD_ID;
   lldb::tid_t m_continue_tid = LLDB_INVALID_THREAD_ID;
   NativeProcessProtocol *m_current_process;
@@ -303,6 +316,8 @@ protected:
   PacketResult Handle_T(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_jMultiBreakpoint(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_jLLDBSettings(StringExtractorGDBRemote &packet);
 
   PacketResult
   Handle_jAcceleratorPluginInitialize(StringExtractorGDBRemote &packet);

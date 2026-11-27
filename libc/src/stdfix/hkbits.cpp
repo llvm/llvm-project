@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "hkbits.h"
+#include "src/stdfix/hkbits.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/common.h"
-#include "src/__support/fixed_point/fx_bits.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

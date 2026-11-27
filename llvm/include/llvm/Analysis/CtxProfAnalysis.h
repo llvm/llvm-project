@@ -144,14 +144,12 @@ public:
 class CtxProfAnalysisPrinterPass
     : public RequiredPassInfoMixin<CtxProfAnalysisPrinterPass> {
 public:
-  enum class PrintMode { Everything, YAML };
   LLVM_ABI explicit CtxProfAnalysisPrinterPass(raw_ostream &OS);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   raw_ostream &OS;
-  const PrintMode Mode;
 };
 
 /// Utility that propagates counter values to each basic block and to each edge

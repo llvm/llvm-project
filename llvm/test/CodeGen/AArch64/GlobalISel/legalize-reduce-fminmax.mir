@@ -3,7 +3,6 @@
 
 ---
 name:            fmin_v2s32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0
@@ -23,7 +22,6 @@ body:             |
 ...
 ---
 name:            fmax_v8s16
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0
@@ -48,7 +46,6 @@ body:             |
 ...
 ---
 name:            fminimum_v2s32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0
@@ -68,7 +65,6 @@ body:             |
 ...
 ---
 name:            fmaximum_v8s16
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0

@@ -513,6 +513,15 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     auto upperBound = forOp.getUpperBound();
     Value diff =
         arith::SubIOp::create(boundsBuilder, loc, upperBound, lowerBound);
+    Value zero = arith::ConstantOp::create(
+        boundsBuilder, loc, boundsBuilder.getZeroAttr(diff.getType()));
+    Value nonEmpty = arith::CmpIOp::create(boundsBuilder, loc,
+                                           forOp.getUnsignedCmp()
+                                               ? arith::CmpIPredicate::ult
+                                               : arith::CmpIPredicate::slt,
+                                           lowerBound, upperBound);
+    diff = arith::SelectOp::create(boundsBuilder, loc, nonEmpty, diff, zero);
+
     Value tripCount = ceilDivPositive(boundsBuilder, loc, diff, step);
     Value unrollFactorCst = arith::ConstantOp::create(
         boundsBuilder, loc,
@@ -522,11 +531,11 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
     // Compute tripCountEvenMultiple = tripCount - (tripCount % unrollFactor)
     Value tripCountEvenMultiple =
         arith::SubIOp::create(boundsBuilder, loc, tripCount, tripCountRem);
-    // Compute upperBoundUnrolled = lowerBound + tripCountEvenMultiple * step
+    // Compute upperBoundUnrolled = UpperBound + tripCountEvenMultiple * step
     upperBoundUnrolled = arith::AddIOp::create(
         boundsBuilder, loc, lowerBound,
         arith::MulIOp::create(boundsBuilder, loc, tripCountEvenMultiple, step));
-    // Scale 'step' by 'unrollFactor'.
+    // Compute stepUnrolled = step * unrollFactor
     stepUnrolled =
         arith::MulIOp::create(boundsBuilder, loc, step, unrollFactorCst);
   }
@@ -1167,7 +1176,7 @@ LogicalResult mlir::coalescePerfectlyNestedSCFForLoops(scf::ForOp op) {
   return result;
 }
 
-void mlir::collapseParallelLoops(
+scf::ParallelOp mlir::collapseParallelLoops(
     RewriterBase &rewriter, scf::ParallelOp loops,
     ArrayRef<std::vector<unsigned>> combinedDimensions) {
   OpBuilder::InsertionGuard g(rewriter);
@@ -1217,9 +1226,10 @@ void mlir::collapseParallelLoops(
   // value. The remainders then determine based on that range, which iteration
   // of the original induction value this represents. This is a normalized value
   // that is un-normalized already by the previous logic.
+  SmallVector<Value> newIVs(loops.getNumLoops());
   auto newPloop = scf::ParallelOp::create(
-      rewriter, loc, lowerBounds, upperBounds, steps,
-      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs) {
+      rewriter, loc, lowerBounds, upperBounds, steps, loops.getInitVals(),
+      [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs, ValueRange) {
         for (unsigned i = 0, e = combinedDimensions.size(); i < e; ++i) {
           Value previous = ploopIVs[i];
           unsigned numberCombinedDimensions = combinedDimensions[i].size();
@@ -1230,8 +1240,7 @@ void mlir::collapseParallelLoops(
             // Determine the current induction value's current loop iteration
             Value iv = arith::RemSIOp::create(insideBuilder, loc, previous,
                                               normalizedUpperBounds[idx]);
-            replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
-                                       loops.getRegion());
+            newIVs[idx] = iv;
 
             // Remove the effect of the current induction value to prepare for
             // the next value.
@@ -1241,17 +1250,19 @@ void mlir::collapseParallelLoops(
 
           // The final induction value is just the remaining value.
           unsigned idx = combinedDimensions[i][0];
-          replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx),
-                                     previous, loops.getRegion());
+          newIVs[idx] = previous;
         }
       });
 
-  // Replace the old loop with the new loop.
-  loops.getBody()->back().erase();
-  newPloop.getBody()->getOperations().splice(
-      Block::iterator(newPloop.getBody()->back()),
-      loops.getBody()->getOperations());
-  loops.erase();
+  // The builder inserts an empty scf.reduce only when there are no reductions.
+  // Drop that terminator and move the original one over with the body, so a
+  // loop with reductions keeps its scf.reduce and its results.
+  if (loops.getInitVals().empty())
+    rewriter.eraseOp(newPloop.getBody()->getTerminator());
+  rewriter.mergeBlocks(loops.getBody(), newPloop.getBody(), newIVs);
+  // Replace uses of the results.
+  rewriter.replaceOp(loops, newPloop);
+  return newPloop;
 }
 
 // Hoist the ops within `outer` that appear before `inner`.
@@ -1342,17 +1353,15 @@ static void getPerfectlyNestedLoopsImpl(
 
 static Loops stripmineSink(scf::ForOp forOp, Value factor,
                            ArrayRef<scf::ForOp> targets) {
-  assert(!forOp.getUnsignedCmp() && "unsigned loops are not supported");
   auto originalStep = forOp.getStep();
   auto iv = forOp.getInductionVar();
+  bool isUnsigned = forOp.getUnsignedCmp();
 
   OpBuilder b(forOp);
   forOp.setStep(arith::MulIOp::create(b, forOp.getLoc(), originalStep, factor));
 
   Loops innerLoops;
   for (auto t : targets) {
-    assert(!t.getUnsignedCmp() && "unsigned loops are not supported");
-
     // Save information for splicing ops out of t when done
     auto begin = t.getBody()->begin();
     auto nOps = t.getBody()->getOperations().size();
@@ -1360,16 +1369,35 @@ static Loops stripmineSink(scf::ForOp forOp, Value factor,
     // Insert newForOp before the terminator of `t`.
     auto b = OpBuilder::atBlockTerminator((t.getBody()));
     Value stepped = arith::AddIOp::create(b, t.getLoc(), iv, forOp.getStep());
-    Value ub =
-        arith::MinSIOp::create(b, t.getLoc(), forOp.getUpperBound(), stepped);
+    Value ub;
+    if (isUnsigned)
+      ub =
+          arith::MinUIOp::create(b, t.getLoc(), forOp.getUpperBound(), stepped);
+    else
+      ub =
+          arith::MinSIOp::create(b, t.getLoc(), forOp.getUpperBound(), stepped);
 
     // Splice [begin, begin + nOps - 1) into `newForOp` and replace uses.
-    auto newForOp = scf::ForOp::create(b, t.getLoc(), iv, ub, originalStep);
+    auto newForOp =
+        scf::ForOp::create(b, t.getLoc(), iv, ub, originalStep,
+                           /*initArgs=*/t.getRegionIterArgs(),
+                           /*bodyBuilder=*/nullptr, /*unsignedCmp=*/isUnsigned);
     newForOp.getBody()->getOperations().splice(
         newForOp.getBody()->getOperations().begin(),
         t.getBody()->getOperations(), begin, std::next(begin, nOps - 1));
     replaceAllUsesInRegionWith(iv, newForOp.getInductionVar(),
                                newForOp.getRegion());
+
+    // Thread the iter_args of `t` through `newForOp`.
+    if (!t.getInitArgs().empty()) {
+      Operation *yieldOp = t.getBody()->getTerminator();
+      yieldOp->moveBefore(newForOp.getBody(), newForOp.getBody()->end());
+      for (auto [oldArg, newArg] :
+           llvm::zip_equal(t.getRegionIterArgs(), newForOp.getRegionIterArgs()))
+        replaceAllUsesInRegionWith(oldArg, newArg, newForOp.getRegion());
+      b.setInsertionPointToEnd(t.getBody());
+      scf::YieldOp::create(b, t.getLoc(), newForOp.getResults());
+    }
 
     innerLoops.push_back(newForOp);
   }
@@ -1424,15 +1452,6 @@ TileLoops mlir::extractFixedOuterLoops(scf::ForOp rootForOp,
   getPerfectlyNestedLoopsImpl(forOps, rootForOp, sizes.size());
   if (forOps.size() < sizes.size())
     sizes = sizes.take_front(forOps.size());
-
-  // The strip-mining transformation splices loop bodies into a new inner loop
-  // without threading iter_args.  If any of the collected loops carries
-  // iter_args, the splice would produce invalid IR (yielded values from the
-  // inner scope used in the outer terminator).  Skip the transformation in
-  // that case.
-  if (llvm::any_of(forOps,
-                   [](scf::ForOp op) { return !op.getInitArgs().empty(); }))
-    return {};
 
   // Compute the tile sizes such that i-th outer loop executes size[i]
   // iterations.  Given that the loop current executes

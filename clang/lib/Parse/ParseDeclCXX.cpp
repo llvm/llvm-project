@@ -227,9 +227,11 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
     while (!tryParseMisplacedModuleImport() && Tok.isNot(tok::r_brace) &&
            Tok.isNot(tok::eof)) {
       ParsedAttributes DeclAttrs(AttrFactory);
-      MaybeParseCXX11Attributes(DeclAttrs);
-      ParsedAttributes EmptyDeclSpecAttrs(AttrFactory);
-      ParseExternalDeclaration(DeclAttrs, EmptyDeclSpecAttrs);
+      ParsedAttributes DeclSpecAttrs(AttrFactory);
+      while (MaybeParseCXX11Attributes(DeclAttrs) ||
+             MaybeParseGNUAttributes(DeclSpecAttrs))
+        ;
+      ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
     }
 
     // The caller is what called check -- we are simply calling
@@ -2584,9 +2586,10 @@ bool Parser::ParseCXXMemberDeclaratorBeforeInitializer(
   //
   // NOTE: the latter two productions are a proposed bugfix rather than the
   // current grammar rules as of C++20.
-  if (Tok.isNot(tok::colon))
+  if (Tok.isNot(tok::colon)) {
+    DeclaratorInfo.setDeclarationLateAttrs(&LateParsedAttrs);
     ParseDeclarator(DeclaratorInfo);
-  else
+  } else
     DeclaratorInfo.SetIdentifier(nullptr, Tok.getLocation());
 
   bool IsFunctionDeclarator = DeclaratorInfo.isFunctionDeclarator();
@@ -3122,9 +3125,10 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
         for (unsigned i = 0, ni = CommonLateParsedAttrs.size(); i < ni; ++i) {
           CommonLateParsedAttrs[i]->addDecl(FunDecl);
         }
-        for (unsigned i = 0, ni = LateParsedAttrs.size(); i < ni; ++i) {
-          LateParsedAttrs[i]->addDecl(FunDecl);
-        }
+        // A parameter's attribute already has its parameter.
+        for (unsigned i = 0, ni = LateParsedAttrs.size(); i < ni; ++i)
+          if (LateParsedAttrs[i]->Decls.empty())
+            LateParsedAttrs[i]->addDecl(FunDecl);
       }
       LateParsedAttrs.clear();
 
@@ -3264,8 +3268,10 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclaration(
         for (unsigned i = 0, ni = CommonLateParsedAttrs.size(); i < ni; ++i)
           CommonLateParsedAttrs[i]->addDecl(ThisDecl);
 
+        // A parameter's attribute already has its parameter.
         for (unsigned i = 0, ni = LateParsedAttrs.size(); i < ni; ++i)
-          LateParsedAttrs[i]->addDecl(ThisDecl);
+          if (LateParsedAttrs[i]->Decls.empty())
+            LateParsedAttrs[i]->addDecl(ThisDecl);
       }
       Actions.FinalizeDeclaration(ThisDecl);
       DeclsInGroup.push_back(ThisDecl);
@@ -3381,7 +3387,11 @@ ExprResult Parser::ParseCXXMemberInitializer(Decl *D, bool IsFunction,
             << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << getLangOpts().CPlusPlus20;
+            << (getLangOpts().CPlusPlus29
+                    ? diag::DefaultableFunctionKinds::Cxx29
+                : getLangOpts().CPlusPlus20
+                    ? diag::DefaultableFunctionKinds::Cxx20
+                    : diag::DefaultableFunctionKinds::Default);
       return ExprError();
     }
   }

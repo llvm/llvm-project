@@ -117,14 +117,15 @@ void encodeInstructionInto(SmallVectorImpl<uint32_t> &binary, spirv::Opcode op,
   binary.append(operands.begin(), operands.end());
 }
 
-Serializer::Serializer(spirv::ModuleOp module,
+Serializer::Serializer(spirv::ModuleOp moduleOp,
                        const SerializationOptions &options)
-    : module(module), mlirBuilder(module.getContext()), options(options) {}
+    : moduleOp(moduleOp), mlirBuilder(moduleOp.getContext()), options(options) {
+}
 
 LogicalResult Serializer::serialize() {
   LLVM_DEBUG(llvm::dbgs() << "+++ starting serialization +++\n");
 
-  if (failed(module.verifyInvariants()))
+  if (failed(moduleOp.verifyInvariants()))
     return failure();
 
   // TODO: handle the other sections
@@ -135,11 +136,11 @@ LogicalResult Serializer::serialize() {
   processMemoryModel();
   processDebugInfo();
 
-  moveFuncDeclarationsToTop(module);
+  moveFuncDeclarationsToTop(moduleOp);
 
   // Iterate over the module body to serialize it. Assumptions are that there is
   // only one basic block in the moduleOp
-  for (auto &op : *module.getBody()) {
+  for (auto &op : *moduleOp.getBody()) {
     if (failed(processOperation(&op))) {
       return failure();
     }
@@ -159,7 +160,7 @@ void Serializer::collect(SmallVectorImpl<uint32_t> &binary) {
   binary.clear();
   binary.reserve(moduleSize);
 
-  spirv::appendModuleHeader(binary, module.getVceTriple()->getVersion(),
+  spirv::appendModuleHeader(binary, moduleOp.getVceTriple()->getVersion(),
                             nextID);
   binary.append(capabilities.begin(), capabilities.end());
   binary.append(extensions.begin(), extensions.end());
@@ -209,7 +210,7 @@ uint32_t Serializer::getOrCreateFunctionID(StringRef fnName) {
 }
 
 void Serializer::processCapability() {
-  for (auto cap : module.getVceTriple()->getCapabilities())
+  for (auto cap : moduleOp.getVceTriple()->getCapabilities())
     encodeInstructionInto(capabilities, spirv::Opcode::OpCapability,
                           {static_cast<uint32_t>(cap)});
 }
@@ -218,7 +219,7 @@ void Serializer::addLongCompositesCapability() {
   if (longCompositesEmitted)
     return;
   longCompositesEmitted = true;
-  auto vceTriple = module.getVceTriple();
+  auto vceTriple = moduleOp.getVceTriple();
   if (!llvm::is_contained(vceTriple->getCapabilities(),
                           spirv::Capability::LongCompositesINTEL))
     encodeInstructionInto(
@@ -259,7 +260,7 @@ void Serializer::encodeInstructionWithContinuationInto(
 void Serializer::processDebugInfo() {
   if (!options.emitDebugInfo)
     return;
-  auto fileLoc = dyn_cast<FileLineColLoc>(module.getLoc());
+  auto fileLoc = dyn_cast<FileLineColLoc>(moduleOp.getLoc());
   auto fileName = fileLoc ? fileLoc.getFilename().strref() : "<unknown>";
   fileID = getNextID();
   SmallVector<uint32_t, 16> operands;
@@ -272,12 +273,12 @@ void Serializer::processDebugInfo() {
 LogicalResult Serializer::processExtension() {
   llvm::SmallVector<uint32_t, 16> extName;
   llvm::SmallSet<Extension, 4> deducedExts(
-      llvm::from_range, module.getVceTriple()->getExtensions());
+      llvm::from_range, moduleOp.getVceTriple()->getExtensions());
   auto nonSemanticInfoExt = spirv::Extension::SPV_KHR_non_semantic_info;
   if (options.emitDebugInfo && !deducedExts.contains(nonSemanticInfoExt)) {
-    TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(module);
+    TargetEnvAttr targetEnvAttr = lookupTargetEnvOrDefault(moduleOp);
     if (!is_contained(targetEnvAttr.getExtensions(), nonSemanticInfoExt))
-      return module.emitError(
+      return moduleOp.emitError(
           "SPV_KHR_non_semantic_info extension not available");
     deducedExts.insert(nonSemanticInfoExt);
   }
@@ -290,8 +291,8 @@ LogicalResult Serializer::processExtension() {
 }
 
 void Serializer::processMemoryModel() {
-  auto mm = static_cast<uint32_t>(module.getMemoryModel());
-  auto am = static_cast<uint32_t>(module.getAddressingModel());
+  auto mm = static_cast<uint32_t>(moduleOp.getMemoryModel());
+  auto am = static_cast<uint32_t>(moduleOp.getAddressingModel());
 
   encodeInstructionInto(memoryModel, spirv::Opcode::OpMemoryModel, {am, mm});
 }
@@ -680,6 +681,18 @@ LogicalResult Serializer::prepareBasicType(
       operands.push_back(
           static_cast<uint32_t>(spirv::FPEncoding::Float8E5M2EXT));
     }
+    if (isa<Float4E2M1FNType>(floatType))
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float4E2M1EXT));
+    if (isa<Float6E2M3FNType>(floatType))
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float6E2M3EXT));
+    if (isa<Float6E3M2FNType>(floatType))
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float6E3M2EXT));
+    if (isa<Float8E8M0FNUType>(floatType))
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float8UnsignedE8M0EXT));
 
     return success();
   }
@@ -749,7 +762,7 @@ LogicalResult Serializer::prepareBasicType(
 
       // 2. Find the pointee (enclosing) struct.
       auto structType = spirv::StructType::getIdentified(
-          module.getContext(), pointeeStruct.getIdentifier());
+          moduleOp.getContext(), pointeeStruct.getIdentifier());
 
       if (!structType)
         return failure();
@@ -806,6 +819,12 @@ LogicalResult Serializer::prepareBasicType(
 
   if (isa<spirv::NamedBarrierType>(type)) {
     typeEnum = spirv::Opcode::OpTypeNamedBarrier;
+    return success();
+  }
+
+  if (auto untypedPtrType = dyn_cast<spirv::UntypedPointerType>(type)) {
+    typeEnum = spirv::Opcode::OpTypeUntypedPointerKHR;
+    operands.push_back(static_cast<uint32_t>(untypedPtrType.getStorageClass()));
     return success();
   }
 
@@ -1049,6 +1068,10 @@ uint32_t Serializer::prepareConstant(Location loc, Type constType,
                                             /*dim=*/0, index);
   } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
     resultID = prepareArrayConstant(loc, constType, arrayAttr);
+  } else if (isa<spirv::NullAttr>(valueAttr)) {
+    resultID = getNextID();
+    encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                          {typeID, resultID});
   }
 
   if (resultID == 0) {
@@ -1347,10 +1370,12 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
     } words = llvm::bit_cast<DoubleWord>(value.convertToDouble());
     encodeInstructionInto(typesGlobalValues, opcode,
                           {typeID, resultID, words.word1, words.word2});
-  } else if (llvm::is_contained({&APFloat::IEEEhalf(), &APFloat::BFloat(),
-                                 &APFloat::Float8E4M3FN(),
-                                 &APFloat::Float8E5M2()},
-                                semantics)) {
+  } else if (llvm::is_contained(
+                 {&APFloat::IEEEhalf(), &APFloat::BFloat(),
+                  &APFloat::Float8E4M3FN(), &APFloat::Float8E5M2(),
+                  &APFloat::Float4E2M1FN(), &APFloat::Float6E2M3FN(),
+                  &APFloat::Float6E3M2FN(), &APFloat::Float8E8M0FNU()},
+                 semantics)) {
     uint32_t word =
         static_cast<uint32_t>(value.bitcastToAPInt().getZExtValue());
     encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});

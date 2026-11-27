@@ -23,6 +23,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -74,6 +75,32 @@ DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
   StringRef Str = "<can't format argument>";
   Output.append(Str.begin(), Str.end());
 }
+
+// FIXME: We should isolate the parser from SpecialCaseList and just use it
+// here.
+class DiagnosticsEngine::WarningsSpecialCaseList
+    : public llvm::SpecialCaseList {
+public:
+  static std::unique_ptr<WarningsSpecialCaseList>
+  create(const llvm::MemoryBuffer &Input, std::string &Err);
+
+  // Section names refer to diagnostic groups, which cover multiple individual
+  // diagnostics. Expand diagnostic groups here to individual diagnostics.
+  // A diagnostic can have multiple diagnostic groups associated with it, we let
+  // the last section take precedence in such cases.
+  void processSections(DiagnosticsEngine &Diags);
+
+  bool isDiagSuppressed(diag::kind DiagId, SourceLocation DiagLoc,
+                        const SourceManager &SM) const;
+
+  /// Whether a section applies to \p DiagId.
+  bool hasSection(diag::kind DiagId) const {
+    return DiagToSection.contains(DiagId);
+  }
+
+private:
+  llvm::DenseMap<diag::kind, const Section *> DiagToSection;
+};
 
 DiagnosticsEngine::DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> diags,
                                      DiagnosticOptions &DiagOpts,
@@ -231,10 +258,10 @@ DiagnosticsEngine::DiagStateMap::File *
 DiagnosticsEngine::DiagStateMap::getFileUncached(SourceManager &SrcMgr,
                                                  FileID ID) const {
   // Get or insert the File for this ID.
-  auto Range = Files.equal_range(ID);
-  if (Range.first != Range.second)
-    return &Range.first->second;
-  auto &F = Files.insert(Range.first, std::make_pair(ID, File()))->second;
+  auto [FilePtr, Inserted] = getOrInsertFile(ID);
+  if (!Inserted)
+    return FilePtr;
+  auto &F = *FilePtr;
 
   // We created a new File; look up the diagnostic state at the start of it and
   // initialize it.
@@ -262,9 +289,14 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
   CurDiagStateLoc.print(llvm::errs(), SrcMgr);
   llvm::errs() << ": " << CurDiagState << "\n";
 
-  for (auto &F : Files) {
+  SmallVector<std::pair<FileID, File *>, 16> SortedFiles;
+  for (const auto &[ID, FilePtr] : Files)
+    SortedFiles.emplace_back(ID, FilePtr.get());
+  llvm::sort(SortedFiles, llvm::less_first());
+
+  for (auto &F : SortedFiles) {
     FileID ID = F.first;
-    File &File = F.second;
+    File &File = *F.second;
 
     bool PrintedOuterHeading = false;
     auto PrintOuterHeading = [&] {
@@ -275,7 +307,7 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
       llvm::errs() << "File " << &File << " <FileID " << ID.getHashValue()
                    << ">: " << SrcMgr.getBufferOrFake(ID).getBufferIdentifier();
 
-      if (F.second.Parent) {
+      if (File.Parent) {
         FileIDAndOffset Decomp = SrcMgr.getDecomposedIncludedLoc(ID);
         assert(File.ParentOffset == Decomp.second);
         llvm::errs() << " parent " << File.Parent << " <FileID "
@@ -512,38 +544,17 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
       setSeverity(Diag, Map, Loc);
 }
 
-namespace {
-// FIXME: We should isolate the parser from SpecialCaseList and just use it
-// here.
-class WarningsSpecialCaseList : public llvm::SpecialCaseList {
-public:
-  static std::unique_ptr<WarningsSpecialCaseList>
-  create(const llvm::MemoryBuffer &Input, std::string &Err);
-
-  // Section names refer to diagnostic groups, which cover multiple individual
-  // diagnostics. Expand diagnostic groups here to individual diagnostics.
-  // A diagnostic can have multiple diagnostic groups associated with it, we let
-  // the last section take precedence in such cases.
-  void processSections(DiagnosticsEngine &Diags);
-
-  bool isDiagSuppressed(diag::kind DiagId, SourceLocation DiagLoc,
-                        const SourceManager &SM) const;
-
-private:
-  llvm::DenseMap<diag::kind, const Section *> DiagToSection;
-};
-} // namespace
-
-std::unique_ptr<WarningsSpecialCaseList>
-WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
-                                std::string &Err) {
+std::unique_ptr<DiagnosticsEngine::WarningsSpecialCaseList>
+DiagnosticsEngine::WarningsSpecialCaseList::create(
+    const llvm::MemoryBuffer &Input, std::string &Err) {
   auto WarningSuppressionList = std::make_unique<WarningsSpecialCaseList>();
   if (!WarningSuppressionList->createInternal(&Input, Err))
     return nullptr;
   return WarningSuppressionList;
 }
 
-void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
+void DiagnosticsEngine::WarningsSpecialCaseList::processSections(
+    DiagnosticsEngine &Diags) {
   static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
   for (const auto &SectionEntry : sections()) {
     StringRef DiagGroup = SectionEntry.name();
@@ -581,16 +592,11 @@ void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
     return;
   }
   WarningSuppressionList->processSections(*this);
-  DiagSuppressionMapping =
-      [WarningSuppressionList(std::move(WarningSuppressionList))](
-          diag::kind DiagId, SourceLocation DiagLoc, const SourceManager &SM) {
-        return WarningSuppressionList->isDiagSuppressed(DiagId, DiagLoc, SM);
-      };
+  DiagSuppressionMapping = std::move(WarningSuppressionList);
 }
 
-bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
-                                               SourceLocation DiagLoc,
-                                               const SourceManager &SM) const {
+bool DiagnosticsEngine::WarningsSpecialCaseList::isDiagSuppressed(
+    diag::kind DiagId, SourceLocation DiagLoc, const SourceManager &SM) const {
   const Section *DiagSection = DiagToSection.lookup(DiagId);
   if (!DiagSection)
     return false;
@@ -623,7 +629,12 @@ bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
                                                SourceLocation DiagLoc) const {
   if (!hasSourceManager() || !DiagSuppressionMapping)
     return false;
-  return DiagSuppressionMapping(DiagId, DiagLoc, getSourceManager());
+  return DiagSuppressionMapping->isDiagSuppressed(DiagId, DiagLoc,
+                                                  getSourceManager());
+}
+
+bool DiagnosticsEngine::hasDiagSuppressionMappingFor(diag::kind DiagId) const {
+  return DiagSuppressionMapping && DiagSuppressionMapping->hasSection(DiagId);
 }
 
 void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {

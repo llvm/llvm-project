@@ -1,7 +1,7 @@
 
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -target-cpu core2 -fopenmp -fopenmp-version=50 -x c -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-apple-darwin10 -target-cpu core2 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-apple-darwin10 -target-cpu core2 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix=CHECK --check-prefix=CHECK-50 %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c -triple x86_64-apple-darwin10 -target-cpu core2 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
 // RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -target-cpu core2 -fopenmp-simd -fopenmp-version=50 -x c -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c -triple x86_64-apple-darwin10 -target-cpu core2 -emit-pch -o %t %s
@@ -327,7 +327,7 @@ int main(void) {
 // CHECK: [[IM_CAST:%.+]] = fptrunc double [[NEW_IM]] to float
 // CHECK: store float [[RE_CAST]], ptr @{{.+}},
 // CHECK: store float [[IM_CAST]], ptr getelementptr inbounds nuw (i8, ptr @{{.+}}, i64 4),
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture seq_cst
   {cdx = cdx - cdv; cfv = cdx;}
 // CHECK: [[BV:%.+]] = load i8, ptr @{{.+}}
@@ -377,7 +377,7 @@ int main(void) {
 // CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store i8 [[NEW]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture, seq_cst
   {cx = cx >> ucv; cv = cx;}
 // CHECK: [[SV:%.+]]  = load i16, ptr @{{.+}},
@@ -420,7 +420,7 @@ int main(void) {
 // CHECK: [[OLD:%.+]] = atomicrmw or ptr @{{.+}}, i32 [[EXPR]] seq_cst, align 4
 // CHECK: [[DESIRED:%.+]] = or i32 [[EXPR]], [[OLD]]
 // CHECK: store i32 [[DESIRED]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic seq_cst, capture
   {uix = iv | uix; uiv = uix;}
 // CHECK: [[EXPR:%.+]] = load i32, ptr @{{.+}}
@@ -866,7 +866,7 @@ int main(void) {
 // CHECK: [[EXIT]]
 // CHECK: [[NEW_VAL:%.+]] = trunc i64 [[CONV]] to i32
 // CHECK: store i32 [[NEW_VAL]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture release
   {bfx4.b /= ldv; iv = bfx4.b;}
 // CHECK: [[EXPR:%.+]] = load x86_fp80, ptr @{{.+}}
@@ -897,7 +897,7 @@ int main(void) {
 // CHECK: [[EXIT]]
 // CHECK: [[NEW_VAL_I32:%.+]] = trunc i64 [[NEW_VAL]] to i32
 // CHECK: store i32 [[NEW_VAL_I32]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture acquire
   iv = bfx4_packed.b += ldv;
 // CHECK: load i64, ptr
@@ -922,7 +922,7 @@ int main(void) {
 // CHECK: br i1 [[FAIL_SUCCESS]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
 // CHECK: store float [[X]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture acq_rel
   {fv = float2x.x; float2x.x = ulv - float2x.x;}
 // CHECK: [[EXPR:%.+]] = load double, ptr @{{.+}},
@@ -932,7 +932,7 @@ int main(void) {
 // CHECK: [[NEW_VAL:%.+]] = fptosi double [[DIV]] to i32
 // CHECK: call void @llvm.write_register.i32([[REG]], i32 [[NEW_VAL]])
 // CHECK: store i32 [[NEW_VAL]], ptr @{{.+}},
-// CHECK-50: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic capture seq_cst
   {rix = dv / rix; iv = rix;}
 // CHECK: [[OLD_VAL:%.+]] = atomicrmw xchg ptr @{{.+}}, i32 5 monotonic, align 4

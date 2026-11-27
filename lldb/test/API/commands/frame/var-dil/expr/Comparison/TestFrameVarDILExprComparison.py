@@ -19,8 +19,6 @@ class TestFrameVarComparison(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         # Check arithmetic comparison
         self.expect_var_path("1 == 1", value="true")
         self.expect_var_path("1 == 1.0", value="true")
