@@ -107,17 +107,17 @@ class LLVM_ABI LVElement : public LVObject {
     IsAnonymous,
     LastEntry
   };
-  // Typed bitvector with properties for this element.
-  LVProperties<Property> Properties;
   static LVElementDispatch Dispatch;
-
-  /// RTTI.
-  const LVSubclassID SubclassID;
 
   // Indexes in the String Pool.
   size_t NameIndex = 0;
   size_t QualifiedNameIndex = 0;
   size_t FilenameIndex = 0;
+
+  // Typed bitvector with properties for this element.
+  LVProperties<Property> Properties;
+  /// RTTI.
+  const LVSubclassID SubclassID;
 
   uint16_t AccessibilityCode : 2; // DW_AT_accessibility.
   uint16_t InlineCode : 2;        // DW_AT_inline.
@@ -143,7 +143,7 @@ public:
         VirtualityCode(0) {}
   LVElement(const LVElement &) = delete;
   LVElement &operator=(const LVElement &) = delete;
-  virtual ~LVElement() = default;
+  ~LVElement() override = default;
 
   LVSubclassID getSubclassID() const { return SubclassID; }
 
@@ -373,6 +373,13 @@ public:
 
   // Report the current element as missing or added during comparison.
   virtual void report(LVComparePass Pass) {}
+
+  // Print the basic and extra information. Used mainly to debug IR.
+  void printCommon(raw_ostream &OS, bool Full = true) const;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  void dumpCommon() const { printCommon(dbgs(), /*Full=*/true); }
+#endif
 
   static LVElementDispatch &getDispatch() { return Dispatch; }
 };

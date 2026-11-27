@@ -22,7 +22,7 @@ define i1 @can_simplify_ult_i32_ptr_len_zext(ptr %p.base, i32 %len) {
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[P_INC:%.*]], [[LATCH:%.*]] ], [ [[P_BASE]], [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], [[LATCH]] ], [ 0, [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[I_ULT_EXT:%.*]] = icmp ult i64 [[I]], [[EXT]]
+; CHECK-NEXT:    [[I_ULT_EXT:%.*]] = icmp samesign ult i64 [[I]], [[EXT]]
 ; CHECK-NEXT:    br i1 [[I_ULT_EXT]], label [[LATCH]], label [[TRAP_LOOPEXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i32, ptr [[P]], i64 1
@@ -128,7 +128,7 @@ define i1 @cannot_simplify_ult_i32_ptr_len_zext(ptr %p.base, i32 %len) {
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[P_INC:%.*]], [[LATCH:%.*]] ], [ [[P_BASE]], [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], [[LATCH]] ], [ 1, [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[I_ULT_EXT:%.*]] = icmp ult i64 [[I]], [[EXT]]
+; CHECK-NEXT:    [[I_ULT_EXT:%.*]] = icmp samesign ult i64 [[I]], [[EXT]]
 ; CHECK-NEXT:    br i1 [[I_ULT_EXT]], label [[LATCH]], label [[TRAP_LOOPEXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i32, ptr [[P]], i64 1
@@ -181,7 +181,7 @@ define i1 @can_simplify_ule_i32_ptr_len_zext(ptr %p.base, i32 %len) {
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[P_INC:%.*]], [[LATCH:%.*]] ], [ [[P_BASE]], [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], [[LATCH]] ], [ 1, [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[I_ULT_EXT:%.*]] = icmp ule i64 [[I]], [[EXT]]
+; CHECK-NEXT:    [[I_ULT_EXT:%.*]] = icmp samesign ule i64 [[I]], [[EXT]]
 ; CHECK-NEXT:    br i1 [[I_ULT_EXT]], label [[LATCH]], label [[TRAP_LOOPEXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i32, ptr [[P]], i64 1
@@ -236,7 +236,7 @@ define i1 @can_simplify_uge_i32_ptr_len_zext(ptr %p.base, i32 %len) {
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[P_INC:%.*]], [[LATCH:%.*]] ], [ [[P_BASE]], [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], [[LATCH]] ], [ 0, [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i64 [[I]], 1
-; CHECK-NEXT:    [[I_UGE_EXT:%.*]] = icmp uge i64 [[I]], [[EXT]]
+; CHECK-NEXT:    [[I_UGE_EXT:%.*]] = icmp samesign uge i64 [[I]], [[EXT]]
 ; CHECK-NEXT:    br i1 [[I_UGE_EXT]], label [[TRAP_LOOPEXIT:%.*]], label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i32, ptr [[P]], i64 1
@@ -340,7 +340,7 @@ define i1 @cannot_simplify_uge_i32_ptr_len_zext_step_2(ptr %p.base, i32 %len) {
 ; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[P_INC:%.*]], [[LATCH:%.*]] ], [ [[P_BASE]], [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], [[LATCH]] ], [ 0, [[HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_INC]] = add nuw nsw i64 [[I]], 2
-; CHECK-NEXT:    [[I_UGE_EXT:%.*]] = icmp uge i64 [[I]], [[EXT]]
+; CHECK-NEXT:    [[I_UGE_EXT:%.*]] = icmp samesign uge i64 [[I]], [[EXT]]
 ; CHECK-NEXT:    br i1 [[I_UGE_EXT]], label [[TRAP_LOOPEXIT:%.*]], label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i32, ptr [[P]], i64 1

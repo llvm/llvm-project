@@ -8,9 +8,9 @@
 
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Interfaces/RuntimeVerifiableOpInterface.h"
@@ -43,19 +43,17 @@ struct MemRefInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void mlir::memref::MemRefDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/MemRef/IR/MemRefOps.cpp.inc"
-      >();
   addInterfaces<MemRefInlinerInterface>();
   declarePromisedInterface<ConvertToEmitCPatternInterface, MemRefDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, MemRefDialect>();
   declarePromisedInterfaces<bufferization::AllocationOpInterface, AllocOp,
                             AllocaOp, ReallocOp>();
-  declarePromisedInterfaces<RuntimeVerifiableOpInterface, CastOp, ExpandShapeOp,
-                            LoadOp, ReinterpretCastOp, StoreOp, SubViewOp>();
-  declarePromisedInterfaces<ValueBoundsOpInterface, AllocOp, AllocaOp, CastOp,
-                            DimOp, GetGlobalOp, RankOp, SubViewOp>();
+  declarePromisedInterfaces<RuntimeVerifiableOpInterface, AssumeAlignmentOp,
+                            AtomicRMWOp, CastOp, CopyOp, DimOp, ExpandShapeOp,
+                            GenericAtomicRMWOp, LoadOp, StoreOp, SubViewOp>();
+  declarePromisedInterfaces<
+      ValueBoundsOpInterface, AllocOp, AllocaOp, AssumeAlignmentOp, CastOp,
+      DimOp, ExtractStridedMetadataOp, GetGlobalOp, RankOp, SubViewOp>();
   declarePromisedInterface<DestructurableTypeInterface, MemRefType>();
 }
 

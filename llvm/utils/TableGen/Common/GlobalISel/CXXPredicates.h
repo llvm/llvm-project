@@ -22,8 +22,7 @@
 #include <string>
 #include <vector>
 
-namespace llvm {
-namespace gi {
+namespace llvm::gi {
 
 /// Entry into the static pool of all CXX Predicate code. This contains
 /// fully expanded C++ code.
@@ -71,16 +70,11 @@ public:
   const unsigned ID;
   const std::string BaseEnumName;
 
-  bool needsUnreachable() const {
-    return !StringRef(Code).starts_with("return");
-  }
-
   std::string getEnumNameWithPrefix(StringRef Prefix) const {
     return Prefix.str() + BaseEnumName;
   }
 };
 
-} // namespace gi
-} // end namespace llvm
+} // namespace llvm::gi
 
 #endif // LLVM_UTILS_TABLEGEN_COMMON_GLOBALISEL_CXXPREDICATES_H

@@ -15,7 +15,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -23,8 +22,8 @@ using namespace llvm;
 COFF::MachineTypes llvm::getMachineType(StringRef S) {
   // Flags must be a superset of Microsoft lib.exe /machine flags.
   return StringSwitch<COFF::MachineTypes>(S.lower())
-      .Cases("x64", "amd64", COFF::IMAGE_FILE_MACHINE_AMD64)
-      .Cases("x86", "i386", COFF::IMAGE_FILE_MACHINE_I386)
+      .Cases({"x64", "amd64"}, COFF::IMAGE_FILE_MACHINE_AMD64)
+      .Cases({"x86", "i386"}, COFF::IMAGE_FILE_MACHINE_I386)
       .Case("arm", COFF::IMAGE_FILE_MACHINE_ARMNT)
       .Case("arm64", COFF::IMAGE_FILE_MACHINE_ARM64)
       .Case("arm64ec", COFF::IMAGE_FILE_MACHINE_ARM64EC)
@@ -48,6 +47,6 @@ StringRef llvm::machineToStr(COFF::MachineTypes MT) {
   case COFF::IMAGE_FILE_MACHINE_I386:
     return "x86";
   default:
-    llvm_unreachable("unknown machine type");
+    return "unknown";
   }
 }

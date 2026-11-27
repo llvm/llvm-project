@@ -19,7 +19,7 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lc++ -lc++abi -Wl,-bbigtoc'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env LIBPATH=%{lib} -- '
+    '%{executor} --execdir %{temp} --env LIBPATH=%{lib} -- '
 ))
 
 import os, site

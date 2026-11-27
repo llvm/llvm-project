@@ -2,8 +2,6 @@ set(LLVM_OPTIONAL_SOURCES
   null.cpp
 )
 
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
-get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 set(LLVM_LINK_COMPONENTS
   Core
   Support
@@ -35,22 +33,11 @@ if(MLIR_INCLUDE_TESTS)
 endif()
 
 set(LIBS
-  ${conversion_libs}
-  ${dialect_libs}
-  ${extension_libs}
-
-  MLIRAffineAnalysis
-  MLIRAnalysis
-  MLIRDialect
-  MLIRFuncAllExtensions
   MLIRLspServerLib
-  MLIRParser
-  MLIRPass
-  MLIRTensorAllExtensions
-  MLIRTransforms
-  MLIRTransformUtils
-  MLIRSupport
-  MLIRIR
+
+  MLIRRegisterAllDialects
+  MLIRRegisterAllExtensions
+  MLIRRegisterAllPasses
   )
 
 add_mlir_tool(mlir-lsp-server

@@ -109,19 +109,8 @@ static void createInitOrFiniCalls(Function &F, bool IsCtor) {
   // The destructor array must be called in reverse order. Get a constant
   // expression to the end of the array and iterate backwards instead.
   if (!IsCtor) {
-    Type *Int64Ty = IntegerType::getInt64Ty(C);
-    auto *EndPtr = IRB.CreatePtrToInt(End, Int64Ty);
-    auto *BeginPtr = IRB.CreatePtrToInt(Begin, Int64Ty);
-    auto *ByteSize = IRB.CreateSub(EndPtr, BeginPtr, "", /*HasNUW=*/true,
-                                   /*HasNSW=*/true);
-    auto *Size = IRB.CreateAShr(ByteSize, ConstantInt::get(Int64Ty, 3), "",
-                                /*isExact=*/true);
-    auto *Offset =
-        IRB.CreateSub(Size, ConstantInt::get(Int64Ty, 1), "", /*HasNUW=*/true,
-                      /*HasNSW=*/true);
     Start = IRB.CreateInBoundsGEP(
-        PtrArrayTy, Begin,
-        ArrayRef<Value *>({ConstantInt::get(Int64Ty, 0), Offset}));
+        PtrTy, End, ConstantInt::getAllOnesValue(IRB.getInt64Ty()));
     Stop = Begin;
   }
 

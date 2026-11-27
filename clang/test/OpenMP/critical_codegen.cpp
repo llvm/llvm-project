@@ -16,9 +16,9 @@
 #define HEADER
 
 // ALL:       [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, ptr }
-// ALL:       [[UNNAMED_LOCK:@.+]] = common global [8 x i32] zeroinitializer
-// ALL:       [[THE_NAME_LOCK:@.+]] = common global [8 x i32] zeroinitializer
-// ALL:       [[THE_NAME_LOCK1:@.+]] = common global [8 x i32] zeroinitializer
+// ALL:       [[UNNAMED_LOCK:@.+]] = common {{(dso_local )?}}global [8 x i32] zeroinitializer
+// ALL:       [[THE_NAME_LOCK:@.+]] = common {{(dso_local )?}}global [8 x i32] zeroinitializer
+// ALL:       [[THE_NAME_LOCK1:@.+]] = common {{(dso_local )?}}global [8 x i32] zeroinitializer
 
 // ALL:       define {{.*}}void [[FOO:@.+]]()
 
@@ -35,6 +35,8 @@ int main() {
 // ALL-NEXT:  			store i8 2, ptr [[A_ADDR]]
 // IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
 // IRBUILDER:			[[AFTER]]
+// IRBUILDER-NEXT:		br label %[[OMP_REGION_FINALIZE:[^ ,]+]]
+// IRBUILDER:			[[OMP_REGION_FINALIZE]]
 // ALL-NEXT:  			call {{.*}}void @__kmpc_end_critical(ptr [[DEFAULT_LOC]], i32 [[GTID]], ptr [[UNNAMED_LOCK]])
 #pragma omp critical
   a = 2;

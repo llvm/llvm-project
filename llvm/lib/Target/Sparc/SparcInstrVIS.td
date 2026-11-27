@@ -199,6 +199,7 @@ def CMASK32  : VISInstFormat<0b000011111, (outs), (ins I64Regs:$rs2),
 
 def FCHKSM16 : VISInst<0b001000100, "fchksm16">;
 
+let Uses = [FSR], mayRaiseFPException = 1 in {
 def FHADDS   : F3_3<0b10, 0b110100, 0b001100001,
                     (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                     "fhadds $rs1, $rs2, $rd", []>;
@@ -211,6 +212,8 @@ def FHSUBS   : F3_3<0b10, 0b110100, 0b001100101,
 def FHSUBD   : F3_3<0b10, 0b110100, 0b001100110,
                     (outs DFPRegs:$rd), (ins DFPRegs:$rs1, DFPRegs:$rs2),
                     "fhsubd $rs1, $rs2, $rd", []>;
+} // Uses = [FSR], mayRaiseFPException = 1
+
 def FLCMPS   : VISInstFormat<0b101010001, (outs FCCRegs:$rd),
                      (ins FPRegs:$rs1, FPRegs:$rs2),
                      "flcmps $rd, $rs1, $rs2">;
@@ -220,6 +223,7 @@ def FLCMPD   : VISInstFormat<0b101010010, (outs FCCRegs:$rd),
 
 def FMEAN16  : VISInst<0b001000000, "fmean16">;
 
+let Uses = [FSR], mayRaiseFPException = 1 in {
 def FNADDS   : F3_3<0b10, 0b110100, 0b001010001,
                     (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                     "fnadds $rs1, $rs2, $rd", []>;
@@ -242,6 +246,7 @@ def FNMULD   : F3_3<0b10, 0b110100, 0b001011010,
 def FNSMULD  : F3_3<0b10, 0b110100, 0b001111001,
                     (outs DFPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                     "fnsmuld $rs1, $rs2, $rd", []>;
+} // Uses = [FSR], mayRaiseFPException = 1
 
 def FPADD64   : VISInst<0b001000010, "fpadd64">;
 
@@ -279,8 +284,8 @@ def XMULXHI  : VISInst<0b100010110, "xmulxhi", I64Regs>;
 } // Predicates = [IsVIS3]
 
 // FP immediate patterns.
-def fpimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.0);}]>;
-def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.0);}]>;
+def fpimm0 : FPImmLeaf<fAny, [{return Imm.isPosZero();}]>;
+def fpnegimm0 : FPImmLeaf<fAny, [{return Imm.isNegZero();}]>;
 def fpimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(+0.5);}]>;
 def fpnegimmhalf : FPImmLeaf<fAny, [{return Imm.isExactlyValue(-0.5);}]>;
 
@@ -318,14 +323,14 @@ def : Pat<(i64 (mulhs i64:$lhs, i64:$rhs)),
                     (ANDrr (SRAXri $rhs, 63), $lhs)))>;
 
 def : Pat<(i64 (ctlz i64:$src)), (LZCNT $src)>;
-def : Pat<(i64 (ctlz_zero_undef i64:$src)), (LZCNT $src)>;
+def : Pat<(i64 (ctlz_zero_poison i64:$src)), (LZCNT $src)>;
 // 32-bit LZCNT.
 // The zero extension will leave us with 32 extra leading zeros,
 // so we need to compensate for it.
 // FIXME remove this when the codegen supports using 64-bit values directly
 // in V8+ mode.
 def : Pat<(i32 (ctlz i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
-def : Pat<(i32 (ctlz_zero_undef i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
+def : Pat<(i32 (ctlz_zero_poison i32:$src)), (ADDri (LZCNT (SRLri $src, 0)), (i32 -32))>;
 
 def : Pat<(i32 (bitconvert f32:$src)), (MOVSTOUW $src)>;
 def : Pat<(i64 (zanyext (i32 (bitconvert f32:$src)))), (MOVSTOUW $src)>;

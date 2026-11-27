@@ -19,23 +19,25 @@ namespace mca {
 
 TimelineView::TimelineView(const MCSubtargetInfo &sti, MCInstPrinter &Printer,
                            llvm::ArrayRef<llvm::MCInst> S, unsigned Iterations,
-                           unsigned Cycles)
+                           unsigned Cycles, float ReservationStationScaleFactor)
     : InstructionView(sti, Printer, S), CurrentCycle(0),
       MaxCycle(Cycles == 0 ? std::numeric_limits<unsigned>::max() : Cycles),
-      LastCycle(0), WaitTime(S.size()), UsedBuffer(S.size()) {
+      LastCycle(0),
+      ReservationStationScaleFactor(ReservationStationScaleFactor),
+      WaitTime(S.size()), UsedBuffer(S.size()) {
   unsigned NumInstructions = getSource().size();
   assert(Iterations && "Invalid number of iterations specified!");
   NumInstructions *= Iterations;
   Timeline.resize(NumInstructions);
   TimelineViewEntry InvalidTVEntry = {-1, 0, 0, 0, 0};
-  std::fill(Timeline.begin(), Timeline.end(), InvalidTVEntry);
+  llvm::fill(Timeline, InvalidTVEntry);
 
   WaitTimeEntry NullWTEntry = {0, 0, 0};
-  std::fill(WaitTime.begin(), WaitTime.end(), NullWTEntry);
+  llvm::fill(WaitTime, NullWTEntry);
 
   std::pair<unsigned, int> NullUsedBufferEntry = {/* Invalid resource ID*/ 0,
                                                   /* unknown buffer size */ -1};
-  std::fill(UsedBuffer.begin(), UsedBuffer.end(), NullUsedBufferEntry);
+  llvm::fill(UsedBuffer, NullUsedBufferEntry);
 }
 
 void TimelineView::onReservedBuffers(const InstRef &IR,
@@ -46,10 +48,11 @@ void TimelineView::onReservedBuffers(const InstRef &IR,
   const MCSchedModel &SM = getSubTargetInfo().getSchedModel();
   std::pair<unsigned, int> BufferInfo = {0, -1};
   for (const unsigned Buffer : Buffers) {
-    const MCProcResourceDesc &MCDesc = *SM.getProcResource(Buffer);
-    if (!BufferInfo.first || BufferInfo.second > MCDesc.BufferSize) {
+    const int BufferSize =
+        SM.getResourceBufferSize(Buffer, ReservationStationScaleFactor);
+    if (!BufferInfo.first || BufferInfo.second > BufferSize) {
       BufferInfo.first = Buffer;
-      BufferInfo.second = MCDesc.BufferSize;
+      BufferInfo.second = BufferSize;
     }
   }
 
@@ -151,7 +154,7 @@ void TimelineView::printWaitTimeEntry(formatted_raw_ostream &OS,
   AverageTime3 = (double)(Entry.CyclesSpentAfterWBAndBeforeRetire * 10) /
                  CumulativeExecutions;
 
-  OS << Executions;
+  OS << CumulativeExecutions;
   OS.PadToColumn(13);
 
   int BufferSize = PrintingTotals ? 0 : UsedBuffer[SourceIndex].second;

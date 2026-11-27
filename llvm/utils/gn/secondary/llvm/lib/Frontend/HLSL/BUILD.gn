@@ -6,7 +6,13 @@ static_library("HLSL") {
   ]
   sources = [
     "CBuffer.cpp",
+    "HLSLBinding.cpp",
     "HLSLResource.cpp",
-    "HLSLRootSignatureUtils.cpp",
+    "HLSLRootSignature.cpp",
+    "HLSLUtils.cpp",
+    "RootSignatureMetadata.cpp",
+    "RootSignatureValidations.cpp",
+    "SemanticSignaturePacking.cpp",
+    "SemanticSignatures.cpp",
   ]
 }

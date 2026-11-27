@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/FunctionPropertiesAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/IR2Vec.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Dominators.h"
@@ -17,25 +18,29 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/StandardInstrumentations.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstring>
 
 using namespace llvm;
-
-namespace llvm {
-LLVM_ABI extern cl::opt<bool> EnableDetailedFunctionProperties;
-LLVM_ABI extern cl::opt<bool> BigBasicBlockInstructionThreshold;
-LLVM_ABI extern cl::opt<bool> MediumBasicBlockInstrutionThreshold;
-} // namespace llvm
+using namespace testing;
 
 namespace {
 
 class FunctionPropertiesAnalysisTest : public testing::Test {
 public:
   FunctionPropertiesAnalysisTest() {
+    auto VocabVector = ir2vec::Vocabulary::createDummyVocabForTest(1);
+    MAM.registerPass([VocabVector = std::move(VocabVector)]() mutable {
+      return IR2VecVocabAnalysis(std::move(VocabVector));
+    });
+    IR2VecVocab = std::make_unique<ir2vec::Vocabulary>(
+        ir2vec::Vocabulary::createDummyVocabForTest(1));
+    MAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+    FAM.registerPass([&] { return ModuleAnalysisManagerFunctionProxy(MAM); });
     FAM.registerPass([&] { return DominatorTreeAnalysis(); });
     FAM.registerPass([&] { return LoopAnalysis(); });
     FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
@@ -45,9 +50,21 @@ protected:
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
   FunctionAnalysisManager FAM;
+  ModuleAnalysisManager MAM;
+  std::unique_ptr<ir2vec::Vocabulary> IR2VecVocab;
 
   FunctionPropertiesInfo buildFPI(Function &F) {
+    // FunctionPropertiesInfo assumes IR2VecVocabAnalysis has been run to
+    // use IR2Vec.
+    auto &VocabResult = MAM.getResult<IR2VecVocabAnalysis>(*F.getParent());
+    (void)VocabResult;
     return FunctionPropertiesInfo::getFunctionPropertiesInfo(F, FAM);
+  }
+
+  void enableDetailedProperties(LLVMContext &C) {
+    const char *Args[] = {"", "-enable-detailed-function-properties"};
+    ASSERT_TRUE(
+        cl::parseCommandLineOptions(C.getLibraryOptions(), Args, "", &nulls()));
   }
 
   void invalidate(Function &F) {
@@ -62,14 +79,20 @@ protected:
       Err.print("MLAnalysisTests", errs());
     return Mod;
   }
-  
-  CallBase* findCall(Function& F, const char* Name = nullptr) {
+
+  CallBase *findCall(Function &F, const char *Name = nullptr) {
     for (auto &BB : F)
-      for (auto &I : BB )
+      for (auto &I : BB)
         if (auto *CB = dyn_cast<CallBase>(&I))
           if (!Name || CB->getName() == Name)
             return CB;
     return nullptr;
+  }
+
+  std::unique_ptr<ir2vec::Embedder> createEmbedder(const Function &F) {
+    auto Emb = ir2vec::Embedder::create(IR2VecKind::Symbolic, F, *IR2VecVocab);
+    EXPECT_TRUE(static_cast<bool>(Emb));
+    return Emb;
   }
 };
 
@@ -113,6 +136,8 @@ define internal i32 @top() {
   EXPECT_EQ(BranchesFeatures.StoreInstCount, 0);
   EXPECT_EQ(BranchesFeatures.MaxLoopDepth, 0);
   EXPECT_EQ(BranchesFeatures.TopLevelLoopCount, 0);
+  EXPECT_TRUE(BranchesFeatures.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*BranchesFunction)->getFunctionVector()));
 
   Function *TopFunction = M->getFunction("top");
   FunctionPropertiesInfo TopFeatures = buildFPI(*TopFunction);
@@ -120,12 +145,14 @@ define internal i32 @top() {
   EXPECT_EQ(TopFeatures.BlocksReachedFromConditionalInstruction, 0);
   EXPECT_EQ(TopFeatures.Uses, 0);
   EXPECT_EQ(TopFeatures.DirectCallsToDefinedFunctions, 1);
+  EXPECT_TRUE(TopFeatures.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*TopFunction)->getFunctionVector()));
   EXPECT_EQ(BranchesFeatures.LoadInstCount, 0);
   EXPECT_EQ(BranchesFeatures.StoreInstCount, 0);
   EXPECT_EQ(BranchesFeatures.MaxLoopDepth, 0);
   EXPECT_EQ(BranchesFeatures.TopLevelLoopCount, 0);
 
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedBranchesFeatures = buildFPI(*BranchesFunction);
   EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithSingleSuccessor, 2);
   EXPECT_EQ(DetailedBranchesFeatures.BasicBlocksWithTwoSuccessors, 1);
@@ -159,7 +186,9 @@ define internal i32 @top() {
   EXPECT_EQ(DetailedBranchesFeatures.CallReturnsPointerCount, 0);
   EXPECT_EQ(DetailedBranchesFeatures.CallWithManyArgumentsCount, 0);
   EXPECT_EQ(DetailedBranchesFeatures.CallWithPointerArgumentCount, 0);
-  EnableDetailedFunctionProperties.setValue(false);
+  EXPECT_TRUE(
+      DetailedBranchesFeatures.getFunctionEmbedding().approximatelyEquals(
+          createEmbedder(*BranchesFunction)->getFunctionVector()));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, DifferentPredecessorSuccessorCounts) {
@@ -176,7 +205,7 @@ finally:
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSingleSuccessor, 0);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoSuccessors, 1);
@@ -210,7 +239,8 @@ finally:
   EXPECT_EQ(DetailedF1Properties.CallReturnsPointerCount, 0);
   EXPECT_EQ(DetailedF1Properties.CallWithManyArgumentsCount, 0);
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 0);
-  EnableDetailedFunctionProperties.setValue(false);
+  EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, InlineSameBBSimple) {
@@ -232,7 +262,7 @@ define i32 @f2(i32 %a) {
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  CallBase* CB = findCall(*F1, "b");
+  CallBase *CB = findCall(*F1, "b");
   EXPECT_NE(CB, nullptr);
 
   FunctionPropertiesInfo ExpectedInitial;
@@ -240,6 +270,8 @@ define i32 @f2(i32 %a) {
   ExpectedInitial.TotalInstructionCount = 3;
   ExpectedInitial.Uses = 1;
   ExpectedInitial.DirectCallsToDefinedFunctions = 1;
+  ExpectedInitial.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
 
   FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
   ExpectedFinal.DirectCallsToDefinedFunctions = 0;
@@ -252,6 +284,9 @@ define i32 @f2(i32 %a) {
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
+  ExpectedFinal.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
+
   EXPECT_TRUE(FPU.finishAndTest(FAM));
   EXPECT_EQ(FPI, ExpectedFinal);
 }
@@ -285,7 +320,7 @@ define i32 @f2(i32 %a) {
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  CallBase* CB = findCall(*F1, "b");
+  CallBase *CB = findCall(*F1, "b");
   EXPECT_NE(CB, nullptr);
 
   FunctionPropertiesInfo ExpectedInitial;
@@ -294,6 +329,8 @@ define i32 @f2(i32 %a) {
   ExpectedInitial.TotalInstructionCount = 9;
   ExpectedInitial.Uses = 1;
   ExpectedInitial.DirectCallsToDefinedFunctions = 1;
+  ExpectedInitial.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
 
   FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
   ExpectedFinal.DirectCallsToDefinedFunctions = 0;
@@ -307,6 +344,9 @@ define i32 @f2(i32 %a) {
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   EXPECT_TRUE(FPU.finishAndTest(FAM));
+
+  ExpectedFinal.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
@@ -347,7 +387,7 @@ exit:
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  CallBase* CB = findCall(*F1, "b");
+  CallBase *CB = findCall(*F1, "b");
   EXPECT_NE(CB, nullptr);
 
   FunctionPropertiesInfo ExpectedInitial;
@@ -356,6 +396,8 @@ exit:
   ExpectedInitial.TotalInstructionCount = 9;
   ExpectedInitial.Uses = 1;
   ExpectedInitial.DirectCallsToDefinedFunctions = 1;
+  ExpectedInitial.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
 
   FunctionPropertiesInfo ExpectedFinal;
   ExpectedFinal.BasicBlockCount = 6;
@@ -374,6 +416,9 @@ exit:
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   EXPECT_TRUE(FPU.finishAndTest(FAM));
+
+  ExpectedFinal.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
@@ -391,7 +436,7 @@ entry:
   ret void
 }
 
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @caller() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @callee()
       to label %cont unwind label %exc
@@ -400,7 +445,7 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
@@ -409,7 +454,7 @@ declare i32 @__gxx_personality_v0(...)
 )IR");
 
   Function *F1 = M->getFunction("caller");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -422,6 +467,8 @@ declare i32 @__gxx_personality_v0(...)
   EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size());
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount());
+  EXPECT_TRUE(FPI.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, InvokeUnreachableHandler) {
@@ -430,7 +477,7 @@ TEST_F(FunctionPropertiesAnalysisTest, InvokeUnreachableHandler) {
                                              R"IR(
 declare void @might_throw()
 
-define internal i32 @callee() personality i32 (...)* @__gxx_personality_v0 {
+define internal i32 @callee() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @might_throw()
       to label %cont unwind label %exc
@@ -439,12 +486,12 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @caller() personality ptr @__gxx_personality_v0 {
 entry:
   %X = invoke i32 @callee()
            to label %cont unwind label %Handler
@@ -453,7 +500,7 @@ cont:
   ret i32 %X
 
 Handler:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
@@ -462,7 +509,7 @@ declare i32 @__gxx_personality_v0(...)
 )IR");
 
   Function *F1 = M->getFunction("caller");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -475,6 +522,8 @@ declare i32 @__gxx_personality_v0(...)
   EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
+  EXPECT_TRUE(FPI.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
   EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
 }
 
@@ -484,7 +533,7 @@ TEST_F(FunctionPropertiesAnalysisTest, Rethrow) {
                                              R"IR(
 declare void @might_throw()
 
-define internal i32 @callee() personality i32 (...)* @__gxx_personality_v0 {
+define internal i32 @callee() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @might_throw()
       to label %cont unwind label %exc
@@ -493,12 +542,12 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @caller() personality ptr @__gxx_personality_v0 {
 entry:
   %X = invoke i32 @callee()
            to label %cont unwind label %Handler
@@ -507,7 +556,7 @@ cont:
   ret i32 %X
 
 Handler:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
@@ -516,7 +565,7 @@ declare i32 @__gxx_personality_v0(...)
 )IR");
 
   Function *F1 = M->getFunction("caller");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -542,18 +591,18 @@ declare void @external_func()
 @exception_type2 = external global i8
 
 
-define internal void @inner() personality i8* null {
+define internal void @inner() personality ptr null {
   invoke void @external_func()
       to label %cont unwind label %lpad
 cont:
   ret void
 lpad:
   %lp = landingpad i32
-      catch i8* @exception_type1
+      catch ptr @exception_type1
   resume i32 %lp
 }
 
-define void @outer() personality i8* null {
+define void @outer() personality ptr null {
   invoke void @inner()
       to label %cont unwind label %lpad
 cont:
@@ -561,14 +610,14 @@ cont:
 lpad:
   %lp = landingpad i32
       cleanup
-      catch i8* @exception_type2
+      catch ptr @exception_type2
   resume i32 %lp
 }
 
 )IR");
 
   Function *F1 = M->getFunction("outer");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -581,6 +630,8 @@ lpad:
   EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
+  EXPECT_TRUE(FPI.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
   EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
 }
 
@@ -594,18 +645,18 @@ declare void @external_func()
 @exception_type2 = external global i8
 
 
-define internal void @inner() personality i8* null {
+define internal void @inner() personality ptr null {
   invoke void @external_func()
       to label %cont unwind label %lpad
 cont:
   ret void
 lpad:
   %lp = landingpad i32
-      catch i8* @exception_type1
+      catch ptr @exception_type1
   resume i32 %lp
 }
 
-define void @outer(i32 %a) personality i8* null {
+define void @outer(i32 %a) personality ptr null {
 entry:
   %i = icmp slt i32 %a, 0
   br i1 %i, label %if.then, label %cont
@@ -617,14 +668,14 @@ cont:
 lpad:
   %lp = landingpad i32
       cleanup
-      catch i8* @exception_type2
+      catch ptr @exception_type2
   resume i32 %lp
 }
 
 )IR");
 
   Function *F1 = M->getFunction("outer");
-  CallBase* CB = findCall(*F1);
+  CallBase *CB = findCall(*F1);
   EXPECT_NE(CB, nullptr);
 
   auto FPI = buildFPI(*F1);
@@ -637,6 +688,8 @@ lpad:
   EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
+  EXPECT_TRUE(FPI.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
   EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
 }
 
@@ -689,6 +742,8 @@ end:
   ExpectedInitial.DirectCallsToDefinedFunctions = 1;
   ExpectedInitial.MaxLoopDepth = 1;
   ExpectedInitial.TopLevelLoopCount = 1;
+  ExpectedInitial.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
 
   FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
   ExpectedFinal.BasicBlockCount = 6;
@@ -705,6 +760,9 @@ end:
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   EXPECT_TRUE(FPU.finishAndTest(FAM));
+
+  ExpectedFinal.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
@@ -733,7 +791,7 @@ extra:
 extra2:
   br label %cond.end
 
-cond.end:                                         ; preds = %cond.false, %cond.true
+cond.end:                                         ; preds = %extra2, %cond.true
   %cond = phi i64 [ %conv2, %cond.true ], [ %call3, %extra ]
   ret i64 %cond
 }
@@ -757,7 +815,9 @@ declare void @llvm.trap()
   ExpectedInitial.BlocksReachedFromConditionalInstruction = 2;
   ExpectedInitial.Uses = 1;
   ExpectedInitial.DirectCallsToDefinedFunctions = 1;
-  
+  ExpectedInitial.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
+
   FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
   ExpectedFinal.BasicBlockCount = 4;
   ExpectedFinal.DirectCallsToDefinedFunctions = 0;
@@ -772,6 +832,9 @@ declare void @llvm.trap()
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   EXPECT_TRUE(FPU.finishAndTest(FAM));
+
+  ExpectedFinal.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
@@ -817,6 +880,8 @@ declare void @f3()
   ExpectedInitial.BlocksReachedFromConditionalInstruction = 0;
   ExpectedInitial.Uses = 1;
   ExpectedInitial.DirectCallsToDefinedFunctions = 1;
+  ExpectedInitial.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
 
   FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
   ExpectedFinal.BasicBlockCount = 6;
@@ -832,6 +897,9 @@ declare void @f3()
   EXPECT_TRUE(IR.isSuccess());
   invalidate(*F1);
   EXPECT_TRUE(FPU.finishAndTest(FAM));
+
+  ExpectedFinal.setFunctionEmbeddingForTest(
+      createEmbedder(*F1)->getFunctionVector());
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
@@ -842,16 +910,16 @@ TEST_F(FunctionPropertiesAnalysisTest, DetailedOperandCount) {
 @a = global i64 1
 
 define i64 @f1(i64 %e) {
-	%b = load i64, i64* @a
+	%b = load i64, ptr @a
   %c = add i64 %b, 2
-  %d = call i64 asm "mov $1,$0", "=r,r" (i64 %c)																						
+  %d = call i64 asm "mov $1,$0", "=r,r" (i64 %c)
 	%f = add i64 %d, %e
 	ret i64 %f
 }
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithSingleSuccessor, 0);
   EXPECT_EQ(DetailedF1Properties.BasicBlocksWithTwoSuccessors, 0);
@@ -885,7 +953,8 @@ define i64 @f1(i64 %e) {
   EXPECT_EQ(DetailedF1Properties.CallReturnsPointerCount, 0);
   EXPECT_EQ(DetailedF1Properties.CallWithManyArgumentsCount, 0);
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 0);
-  EnableDetailedFunctionProperties.setValue(false);
+  EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, IntrinsicCount) {
@@ -900,7 +969,7 @@ declare float @llvm.cos.f32(float)
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.IntrinsicCount, 1);
   EXPECT_EQ(DetailedF1Properties.DirectCallCount, 1);
@@ -910,7 +979,8 @@ declare float @llvm.cos.f32(float)
   EXPECT_EQ(DetailedF1Properties.CallReturnsPointerCount, 0);
   EXPECT_EQ(DetailedF1Properties.CallWithManyArgumentsCount, 0);
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 0);
-  EnableDetailedFunctionProperties.setValue(false);
+  EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, FunctionCallMetrics) {
@@ -933,7 +1003,7 @@ declare float @f5()
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.IntrinsicCount, 0);
   EXPECT_EQ(DetailedF1Properties.DirectCallCount, 4);
@@ -943,7 +1013,8 @@ declare float @f5()
   EXPECT_EQ(DetailedF1Properties.CallReturnsPointerCount, 1);
   EXPECT_EQ(DetailedF1Properties.CallWithManyArgumentsCount, 1);
   EXPECT_EQ(DetailedF1Properties.CallWithPointerArgumentCount, 1);
-  EnableDetailedFunctionProperties.setValue(false);
+  EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, CriticalEdge) {
@@ -969,12 +1040,12 @@ BottomBlock2:
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.CriticalEdgeCount, 1);
-  EnableDetailedFunctionProperties.setValue(false);
+  EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
 }
-
 
 TEST_F(FunctionPropertiesAnalysisTest, FunctionReturnVectors) {
   LLVMContext C;
@@ -993,12 +1064,13 @@ declare <4 x ptr> @f4()
 )IR");
 
   Function *F1 = M->getFunction("f1");
-  EnableDetailedFunctionProperties.setValue(true);
+  enableDetailedProperties(C);
   FunctionPropertiesInfo DetailedF1Properties = buildFPI(*F1);
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorIntCount, 1);
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorFloatCount, 1);
   EXPECT_EQ(DetailedF1Properties.CallReturnsVectorPointerCount, 1);
-  EnableDetailedFunctionProperties.setValue(false);
+  EXPECT_TRUE(DetailedF1Properties.getFunctionEmbedding().approximatelyEquals(
+      createEmbedder(*F1)->getFunctionVector()));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, ReAddEdges) {

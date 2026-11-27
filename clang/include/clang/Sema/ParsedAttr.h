@@ -518,6 +518,10 @@ public:
   void handleAttrWithDelayedArgs(Sema &S, Decl *D) const;
   bool diagnoseAppertainsTo(class Sema &S, const Decl *D) const;
   bool diagnoseAppertainsTo(class Sema &S, const Stmt *St) const;
+  // This function stub exists for parity with the declaration and statement
+  // checking code so that checkCommonAttributeFeatures() can work generically
+  // on types.
+  bool diagnoseAppertainsTo(class Sema &S, QualType T) const { return true; }
   bool diagnoseMutualExclusion(class Sema &S, const Decl *D) const;
   // This function stub exists for parity with the declaration checking code so
   // that checkCommonAttributeFeatures() can work generically on declarations
@@ -525,6 +529,10 @@ public:
   bool diagnoseMutualExclusion(class Sema &S, const Stmt *St) const {
     return true;
   }
+  // This function stub exists for parity with the declaration and statement
+  // checking code so that checkCommonAttributeFeatures() can work generically
+  // on types.
+  bool diagnoseMutualExclusion(class Sema &S, QualType T) const { return true; }
   bool appliesToDecl(const Decl *D, attr::SubjectMatchRule MatchRule) const;
   void getMatchRules(const LangOptions &LangOpts,
                      SmallVectorImpl<std::pair<attr::SubjectMatchRule, bool>>
@@ -576,21 +584,34 @@ public:
     }
   }
 
-  /// If this is an OpenCL address space attribute, returns its SYCL
-  /// representation in LangAS, otherwise returns default address space.
+  /// If this is a SYCL address space attribute, returns its SYCL
+  /// representation in LangAS.
   LangAS asSYCLLangAS() const {
-    switch (getKind()) {
-    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+    switch (getParsedKind()) {
+    case ParsedAttr::AT_SYCLGlobalAddressSpace:
       return LangAS::sycl_global;
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
       return LangAS::sycl_global_device;
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
       return LangAS::sycl_global_host;
-    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_SYCLLocalAddressSpace:
       return LangAS::sycl_local;
-    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_SYCLPrivateAddressSpace:
       return LangAS::sycl_private;
+    case ParsedAttr::AT_SYCLGenericAddressSpace:
+      return LangAS::sycl_generic;
+    case ParsedAttr::AT_SYCLConstantAddressSpace:
+      return LangAS::sycl_constant;
+    // The OpenCL address space attributes are available to enable
+    // implicit conversions between OpenCL address space attributes and
+    // SYCL address space attributes when targeting the OpenCL execution
+    // environments.
+    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
+    case ParsedAttr::AT_OpenCLConstantAddressSpace:
+      return asOpenCLLangAS();
     default:
       return LangAS::Default;
     }
@@ -678,7 +699,7 @@ class AttributePool {
   friend class AttributeFactory;
   friend class ParsedAttributes;
   AttributeFactory &Factory;
-  llvm::SmallVector<ParsedAttr *> Attrs;
+  llvm::SmallVector<ParsedAttr *, 2> Attrs;
 
   void *allocate(size_t size) {
     return Factory.allocate(size);
@@ -808,7 +829,7 @@ public:
 
 class ParsedAttributesView {
   friend class AttributePool;
-  using VecTy = llvm::SmallVector<ParsedAttr *>;
+  using VecTy = llvm::SmallVector<ParsedAttr *, 2>;
   using SizeType = decltype(std::declval<VecTy>().size());
 
 public:
@@ -856,19 +877,19 @@ public:
     friend class ParsedAttributesView;
   };
 
-  void addAll(iterator B, iterator E) {
+  void prepend(iterator B, iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void addAll(const_iterator B, const_iterator E) {
+  void prepend(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.begin(), B.I, E.I);
   }
 
-  void addAllAtEnd(iterator B, iterator E) {
+  void append(iterator B, iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
-  void addAllAtEnd(const_iterator B, const_iterator E) {
+  void append(const_iterator B, const_iterator E) {
     AttrList.insert(AttrList.end(), B.I, E.I);
   }
 
@@ -943,18 +964,18 @@ public:
 
   AttributePool &getPool() const { return pool; }
 
-  void takeAllFrom(ParsedAttributes &Other) {
+  void takeAllPrependingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    addAll(Other.begin(), Other.end());
+    prepend(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }
 
-  void takeAllAtEndFrom(ParsedAttributes &Other) {
+  void takeAllAppendingFrom(ParsedAttributes &Other) {
     assert(&Other != this &&
            "ParsedAttributes can't take attributes from itself");
-    addAllAtEnd(Other.begin(), Other.end());
+    append(Other.begin(), Other.end());
     Other.clearListOnly();
     pool.takeAllFrom(Other.pool);
   }
@@ -1093,45 +1114,6 @@ enum AttributeDeclKind {
   ExpectedClass,
   ExpectedTypedef,
 };
-
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ParsedAttr &At) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(At.getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ParsedAttr *At) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(At->getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-/// AttributeCommonInfo has a non-explicit constructor which takes an
-/// SourceRange as its only argument, this constructor has many uses so making
-/// it explicit is hard. This constructor causes ambiguity with
-/// DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB, SourceRange R).
-/// We use SFINAE to disable any conversion and remove any ambiguity.
-template <
-    typename ACI,
-    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ACI &CI) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI.getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
-
-template <
-    typename ACI,
-    std::enable_if_t<std::is_same<ACI, AttributeCommonInfo>::value, int> = 0>
-inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                             const ACI *CI) {
-  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI->getAttrName()),
-                  DiagnosticsEngine::ak_identifierinfo);
-  return DB;
-}
 
 } // namespace clang
 

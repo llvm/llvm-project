@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -o - %s | FileCheck -check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -o - %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgpu10.10-amd-amdhsa -o - %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -o - %s | FileCheck -check-prefix=GFX10 %s
 
 ; Make sure new higher SGPRs are callee saved
 ; GFX10-LABEL: {{^}}callee_new_sgprs:

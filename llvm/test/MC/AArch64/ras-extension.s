@@ -5,6 +5,9 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=cortex-r82 < %s | FileCheck %s
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+v8r < %s | FileCheck %s
 
+  hint #16
+// CHECK: esb                             // encoding: [0x1f,0x22,0x03,0xd5]
+
   esb
 // CHECK: esb                             // encoding: [0x1f,0x22,0x03,0xd5]
 

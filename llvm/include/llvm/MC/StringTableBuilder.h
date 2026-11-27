@@ -12,8 +12,11 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Compiler.h"
+#include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 
@@ -38,6 +41,8 @@ public:
   };
 
 private:
+  // Only non-zero priority will be recorded.
+  DenseMap<CachedHashStringRef, uint8_t> StringPriorityMap;
   DenseMap<CachedHashStringRef, size_t> StringIndexMap;
   size_t Size = 0;
   Kind K;
@@ -51,11 +56,32 @@ public:
   LLVM_ABI StringTableBuilder(Kind K, Align Alignment = Align(1));
   LLVM_ABI ~StringTableBuilder();
 
-  /// Add a string to the builder. Returns the position of S in the
-  /// table. The position will be changed if finalize is used.
-  /// Can only be used before the table is finalized.
-  LLVM_ABI size_t add(CachedHashStringRef S);
-  size_t add(StringRef S) { return add(CachedHashStringRef(S)); }
+  /// Add a string to the builder. Returns the position of S in the table. The
+  /// position will be changed if finalize is used. Can only be used before the
+  /// table is finalized. Priority is only useful with reordering. Strings with
+  /// the same priority will be put together. Strings with higher priority are
+  /// placed closer to the begin of string table. When adding same string with
+  /// different priority, the maximum priority win.
+  size_t add(CachedHashStringRef S, uint8_t Priority = 0) {
+    // Inline: lld calls this for every mergeable string piece.
+    if (K == WinCOFF)
+      assert(S.size() > COFF::NameSize && "Short string in COFF string table!");
+
+    assert(!isFinalized());
+    if (Priority)
+      StringPriorityMap[S] = std::max(Priority, StringPriorityMap[S]);
+
+    auto P = StringIndexMap.try_emplace(S);
+    if (P.second) {
+      size_t Start = alignTo(Size, Alignment);
+      P.first->second = Start;
+      Size = Start + S.size() + (K != RAW);
+    }
+    return P.first->second;
+  }
+  size_t add(StringRef S, uint8_t Priority = 0) {
+    return add(CachedHashStringRef(S), Priority);
+  }
 
   /// Analyze the strings and build the final table. No more strings can
   /// be added after this point.
@@ -78,6 +104,7 @@ public:
   bool contains(StringRef S) const { return contains(CachedHashStringRef(S)); }
   bool contains(CachedHashStringRef S) const { return StringIndexMap.count(S); }
 
+  bool empty() const { return StringIndexMap.empty(); }
   size_t getSize() const { return Size; }
   LLVM_ABI void clear();
 

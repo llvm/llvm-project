@@ -58,7 +58,9 @@ struct DebugLine {
 };
 
 /// Map from a selection/loop's header block to its merge (and continue) target.
-using BlockMergeInfoMap = DenseMap<Block *, BlockMergeInfo>;
+/// Use `MapVector<>` to ensure a deterministic iteration order with a pointer
+/// key.
+using BlockMergeInfoMap = llvm::MapVector<Block *, BlockMergeInfo>;
 
 /// A "deferred struct type" is a struct type with one or more member types not
 /// known when the Deserializer first encounters the struct. This happens, for
@@ -95,6 +97,7 @@ struct DeferredStructTypeInfo {
   SmallVector<Type, 4> memberTypes;
   SmallVector<spirv::StructType::OffsetInfo, 0> offsetInfo;
   SmallVector<spirv::StructType::MemberDecorationInfo, 0> memberDecorationsInfo;
+  SmallVector<spirv::StructType::StructDecorationInfo, 0> structDecorationsInfo;
 };
 
 /// A struct that collects the info needed to materialize/emit a
@@ -103,6 +106,13 @@ struct SpecConstOperationMaterializationInfo {
   spirv::Opcode enclodesOpcode;
   uint32_t resultTypeID;
   SmallVector<uint32_t> enclosedOpOperands;
+};
+
+/// A struct that collects the info needed to materialize/emit a
+/// GraphConstantARMOp.
+struct GraphConstantARMOpMaterializationInfo {
+  Type resultType;
+  IntegerAttr graphConstantID;
 };
 
 //===----------------------------------------------------------------------===//
@@ -136,7 +146,7 @@ private:
   // Module structure
   //===--------------------------------------------------------------------===//
 
-  /// Initializes the `module` ModuleOp in this deserializer instance.
+  /// Initializes the `moduleOp` ModuleOp in this deserializer instance.
   OwningOpRef<spirv::ModuleOp> createModuleOp();
 
   /// Processes SPIR-V module header in `binary`.
@@ -154,11 +164,11 @@ private:
   /// bookkeeping in the deserializer.
   LogicalResult processExtInstImport(ArrayRef<uint32_t> words);
 
-  /// Attaches (version, capabilities, extensions) triple to `module` as an
+  /// Attaches (version, capabilities, extensions) triple to `moduleOp` as an
   /// attribute.
   void attachVCETriple();
 
-  /// Processes the SPIR-V OpMemoryModel with `operands` and updates `module`.
+  /// Processes the SPIR-V OpMemoryModel with `operands` and updates `moduleOp`.
   LogicalResult processMemoryModel(ArrayRef<uint32_t> operands);
 
   /// Process SPIR-V OpName with `operands`.
@@ -166,6 +176,11 @@ private:
 
   /// Processes an OpDecorate instruction.
   LogicalResult processDecoration(ArrayRef<uint32_t> words);
+
+  /// Resolves all OpDecorateId entries previously queued during
+  /// processDecoration. Called after all module ops have been deserialized so
+  /// the operand <id>s can be looked up as MLIR symbols.
+  LogicalResult resolveDeferredIdDecorations();
 
   // Processes an OpMemberDecorate instruction.
   LogicalResult processMemberDecoration(ArrayRef<uint32_t> words);
@@ -190,10 +205,20 @@ private:
   /// Gets the constant's attribute and type associated with the given <id>.
   std::optional<std::pair<Attribute, Type>> getConstant(uint32_t id);
 
+  /// Gets the replicated composite constant's attribute and type associated
+  /// with the given <id>.
+  std::optional<std::pair<Attribute, Type>>
+  getConstantCompositeReplicate(uint32_t id);
+
   /// Gets the info needed to materialize the spec constant operation op
   /// associated with the given <id>.
   std::optional<SpecConstOperationMaterializationInfo>
   getSpecConstantOperation(uint32_t id);
+
+  /// Gets the type and constituent <id>s of the undef composite with the
+  /// given <id>.
+  std::optional<std::pair<Type, SmallVector<uint32_t>>>
+  getUndefComposite(uint32_t id);
 
   /// Gets the constant's integer attribute with the given <id>. Returns a
   /// null IntegerAttr if the given is not registered or does not correspond
@@ -205,9 +230,14 @@ private:
   /// exists; otherwise creates one based on the <id>.
   std::string getFunctionSymbol(uint32_t id);
 
-  /// Returns a symbol to be used for the specialization constant with the given
-  /// result <id>. This tries to use the specialization constant's OpName if
+  /// Returns a symbol to be used for the graph name with the given
+  /// result <id>. This tries to use the graph's OpName if
   /// exists; otherwise creates one based on the <id>.
+  std::string getGraphSymbol(uint32_t id);
+
+  /// Returns a symbol to be used for the specialization constant with the
+  /// given result <id>. This tries to use the specialization constant's
+  /// OpName if exists; otherwise creates one based on the <id>.
   std::string getSpecConstantSymbol(uint32_t id);
 
   /// Gets the specialization constant with the given result <id>.
@@ -220,9 +250,21 @@ private:
     return specConstCompositeMap.lookup(id);
   }
 
+  /// Gets the replicated composite specialization constant with the given
+  /// result <id>.
+  spirv::EXTSpecConstantCompositeReplicateOp
+  getSpecConstantCompositeReplicate(uint32_t id) {
+    return specConstCompositeReplicateMap.lookup(id);
+  }
+
   /// Creates a spirv::SpecConstantOp.
   spirv::SpecConstantOp createSpecConstant(Location loc, uint32_t resultID,
                                            TypedAttr defaultValue);
+
+  /// Gets the GraphConstantARM ID attribute and result type with the given
+  /// result <id>.
+  std::optional<spirv::GraphConstantARMOpMaterializationInfo>
+  getGraphConstantARM(uint32_t id);
 
   /// Processes the OpVariable instructions at current `offset` into `binary`.
   /// It is expected that this method is used for variables that are to be
@@ -248,11 +290,11 @@ private:
     return opBuilder.getStringAttr(attrName);
   }
 
-  /// Move a conditional branch into a separate basic block to avoid unnecessary
-  /// sinking of defs that may be required outside a selection region. This
-  /// function also ensures that a single block cannot be a header block of one
-  /// selection construct and the merge block of another.
-  LogicalResult splitConditionalBlocks();
+  /// Move a conditional branch or a switch into a separate basic block to avoid
+  /// unnecessary sinking of defs that may be required outside a selection
+  /// region. This function also ensures that a single block cannot be a header
+  /// block of one selection construct and the merge block of another.
+  LogicalResult splitSelectionHeader();
 
   //===--------------------------------------------------------------------===//
   // Type
@@ -268,7 +310,7 @@ private:
   bool isVoidType(Type type) const { return isa<NoneType>(type); }
 
   /// Processes a SPIR-V type instruction with given `opcode` and `operands` and
-  /// registers the type into `module`.
+  /// registers the type into `moduleOp`.
   LogicalResult processType(spirv::Opcode opcode, ArrayRef<uint32_t> operands);
 
   LogicalResult processOpTypePointer(ArrayRef<uint32_t> operands);
@@ -285,11 +327,29 @@ private:
 
   LogicalResult processSampledImageType(ArrayRef<uint32_t> operands);
 
+  LogicalResult processSamplerType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processNamedBarrierType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processUntypedPointerType(ArrayRef<uint32_t> operands);
+
   LogicalResult processRuntimeArrayType(ArrayRef<uint32_t> operands);
 
   LogicalResult processStructType(ArrayRef<uint32_t> operands);
 
   LogicalResult processMatrixType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processTensorARMType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processGraphTypeARM(ArrayRef<uint32_t> operands);
+
+  LogicalResult processGraphEntryPointARM(ArrayRef<uint32_t> operands);
+
+  LogicalResult processGraphARM(ArrayRef<uint32_t> operands);
+
+  LogicalResult processOpGraphSetOutputARM(ArrayRef<uint32_t> operands);
+
+  LogicalResult processGraphEndARM(ArrayRef<uint32_t> operands);
 
   LogicalResult processTypeForwardPointer(ArrayRef<uint32_t> operands);
 
@@ -311,9 +371,19 @@ private:
   /// `operands`.
   LogicalResult processConstantComposite(ArrayRef<uint32_t> operands);
 
+  /// Processes a SPIR-V OpConstantCompositeReplicateEXT instruction with
+  /// the given `operands`.
+  LogicalResult
+  processConstantCompositeReplicateEXT(ArrayRef<uint32_t> operands);
+
   /// Processes a SPIR-V OpSpecConstantComposite instruction with the given
   /// `operands`.
   LogicalResult processSpecConstantComposite(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpSpecConstantCompositeReplicateEXT instruction with
+  /// the given `operands`.
+  LogicalResult
+  processSpecConstantCompositeReplicateEXT(ArrayRef<uint32_t> operands);
 
   /// Processes a SPIR-V OpSpecConstantOp instruction with the given
   /// `operands`.
@@ -327,6 +397,10 @@ private:
 
   /// Processes a SPIR-V OpConstantNull instruction with the given `operands`.
   LogicalResult processConstantNull(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpGraphConstantARM instruction with the given
+  /// `operands`.
+  LogicalResult processGraphConstantARM(ArrayRef<uint32_t> operands);
 
   //===--------------------------------------------------------------------===//
   // Debug
@@ -416,6 +490,9 @@ private:
   /// Processes a SPIR-V OpPhi instruction with the given `operands`.
   LogicalResult processPhi(ArrayRef<uint32_t> operands);
 
+  /// Processes a SPIR-V OpSwitch instruction with the given `operands`.
+  LogicalResult processSwitch(ArrayRef<uint32_t> operands);
+
   /// Creates block arguments on predecessors previously recorded when handling
   /// OpPhi instructions.
   LogicalResult wireUpBlockArgument();
@@ -424,6 +501,9 @@ private:
   /// spirv.mlir.selection/spirv.mlir.loop op. This method iterates until all
   /// blocks declared as selection/loop headers are handled.
   LogicalResult structurizeControlFlow();
+
+  /// Creates a block for graph with the given graphID.
+  LogicalResult createGraphBlock(uint32_t graphID);
 
   //===--------------------------------------------------------------------===//
   // Instruction
@@ -444,6 +524,15 @@ private:
   LogicalResult
   sliceInstruction(spirv::Opcode &opcode, ArrayRef<uint32_t> &operands,
                    std::optional<spirv::Opcode> expectedOpcode = std::nullopt);
+
+  /// If `opcode` is a SPV_INTEL_long_composites splittable opcode and the
+  /// next binary instruction(s) are matching `*ContinuedINTEL` ops, consumes
+  /// them and rebinds `operands` to a buffer (held in `mergedStorage`)
+  /// containing the parent + continuation operands concatenated.
+  void
+  mergeLongCompositeContinuations(spirv::Opcode opcode,
+                                  ArrayRef<uint32_t> &operands,
+                                  SmallVectorImpl<uint32_t> &mergedStorage);
 
   /// Processes a SPIR-V instruction with the given `opcode` and `operands`.
   /// This method is the main entrance for handling SPIR-V instruction; it
@@ -481,6 +570,11 @@ private:
   /// other entries.
   LogicalResult processExtInst(ArrayRef<uint32_t> operands);
 
+  /// Processes a SPIR-V OpExtInst with given `operands` for a DebugInfo
+  /// extension instruction.
+  LogicalResult processDebugInfoExtInst(ArrayRef<uint32_t> operands,
+                                        bool deferInstructions);
+
   /// Dispatches the deserialization of extended instruction set operation based
   /// on the extended instruction set name, and instruction opcode. This is
   /// autogenerated from ODS.
@@ -516,10 +610,13 @@ private:
   Location unknownLoc;
 
   /// The SPIR-V ModuleOp.
-  OwningOpRef<spirv::ModuleOp> module;
+  OwningOpRef<spirv::ModuleOp> moduleOp;
 
   /// The current function under construction.
   std::optional<spirv::FuncOp> curFunction;
+
+  /// The current graph under construction.
+  std::optional<spirv::GraphARMOp> curGraph;
 
   /// The current block under construction.
   Block *curBlock = nullptr;
@@ -547,22 +644,48 @@ private:
   /// (and type) here. Later when it's used, we materialize the constant.
   DenseMap<uint32_t, std::pair<Attribute, Type>> constantMap;
 
+  // Result <id> to debug location for constants materialized from constantMap.
+  DenseMap<uint32_t, LocationAttr> constantLocMap;
+
+  // Result <id> to replicated constant attribute and type mapping.
+  ///
+  /// In the SPIR-V binary format, OpConstantCompositeReplicateEXT is placed in
+  /// the module and shared by instructions at module level and in subsequent
+  /// functions. But in the SPIR-V dialect, this is materialized to where
+  /// it's used in the function. So when seeing a
+  /// OpConstantCompositeReplicateEXT in the binary format, we don't immediately
+  /// emit a `spirv.EXT.ConstantCompositeReplicate` op into the module, we keep
+  /// the id of its value and type here. Later when it's used, we materialize
+  /// the `spirv.EXT.ConstantCompositeReplicate`.
+  DenseMap<uint32_t, std::pair<Attribute, Type>> constantCompositeReplicateMap;
+
   // Result <id> to spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantOp> specConstMap;
 
   // Result <id> to composite spec constant mapping.
   DenseMap<uint32_t, spirv::SpecConstantCompositeOp> specConstCompositeMap;
 
+  // Result <id> to replicated composite spec constant mapping.
+  DenseMap<uint32_t, spirv::EXTSpecConstantCompositeReplicateOp>
+      specConstCompositeReplicateMap;
+
   /// Result <id> to info needed to materialize an OpSpecConstantOp
   /// mapping.
   DenseMap<uint32_t, SpecConstOperationMaterializationInfo>
       specConstOperationMap;
+
+  // Result <id> to GraphConstantARM ID attribute and result type.
+  DenseMap<uint32_t, spirv::GraphConstantARMOpMaterializationInfo>
+      graphConstantMap;
 
   // Result <id> to variable mapping.
   DenseMap<uint32_t, spirv::GlobalVariableOp> globalVariableMap;
 
   // Result <id> to function mapping.
   DenseMap<uint32_t, spirv::FuncOp> funcMap;
+
+  // Result <id> to function mapping.
+  DenseMap<uint32_t, spirv::GraphARMOp> graphMap;
 
   // Result <id> to block mapping.
   DenseMap<uint32_t, Block *> blockMap;
@@ -581,6 +704,13 @@ private:
   // Mapping from result <id> to undef value of a type.
   DenseMap<uint32_t, Type> undefMap;
 
+  // Composites with OpUndef constituents, built as spirv.CompositeConstruct.
+  DenseMap<uint32_t, std::pair<Type, SmallVector<uint32_t>>> undefCompositeMap;
+
+  // Constant and undef ops already materialized in a block of the current
+  // function or graph.
+  DenseMap<std::pair<Block *, uint32_t>, Value> blockConstantMap;
+
   // Result <id> to name mapping.
   DenseMap<uint32_t, StringRef> nameMap;
 
@@ -589,6 +719,21 @@ private:
 
   // Result <id> to decorations mapping.
   DenseMap<uint32_t, NamedAttrList> decorations;
+
+  // FuncParamAttr decorations awaiting an OpFunctionParameter or OpFunction.
+  // Keeping them separate prevents unsupported targets from acquiring
+  // discardable attributes that would be silently dropped during serialization.
+  DenseMap<uint32_t, ArrayAttr> functionParameterAttrs;
+
+  // Decoration entries from OpDecorateId whose operand <id>s must be resolved
+  // to MLIR symbols after all module ops have been deserialized.
+  struct DeferredIdDecoration {
+    uint32_t targetID;
+    spirv::Decoration decoration;
+    uint32_t operandID;
+    Location loc;
+  };
+  SmallVector<DeferredIdDecoration> pendingIdDecorations;
 
   // Result <id> to type decorations.
   DenseMap<uint32_t, uint32_t> typeDecorations;
@@ -626,6 +771,9 @@ private:
 
   /// Deserialization options.
   DeserializationOptions options;
+
+  /// List of IDs assigned to graph outputs.
+  SmallVector<Value> graphOutputs;
 
 #ifndef NDEBUG
   /// A logger used to emit information during the deserialzation process.

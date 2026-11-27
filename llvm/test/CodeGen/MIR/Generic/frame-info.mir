@@ -20,10 +20,29 @@
     ret i32 %c
   }
 
+  define void @test_framePointerPolicy_none() {
+    ret void
+  }
+
+  define void @test_framePointerPolicy_non_leaf() {
+    ret void
+  }
+
+  define void @test_framePointerPolicy_all() {
+    ret void
+  }
+
+  define void @test_framePointerPolicy_reserved() {
+    ret void
+  }
+
+  define void @test_framePointerPolicy_non_leaf_no_reserve() {
+    ret void
+  }
+
 ...
 ---
 name:            test
-tracksRegLiveness: true
 
 # CHECK: frameInfo:
 # CHECK-NEXT: isFrameAddressTaken: false
@@ -36,6 +55,7 @@ tracksRegLiveness: true
 # CHECK-NEXT: maxAlignment:
 # CHECK-NEXT: adjustsStack: false
 # CHECK-NEXT: hasCalls: false
+# CHECK-NEXT: framePointerPolicy: none
 # CHECK-NEXT: stackProtector:  ''
 # CHECK-NEXT: functionContext:  ''
 # CHECK-NEXT: maxCallFrameSize:
@@ -46,8 +66,6 @@ tracksRegLiveness: true
 # CHECK-NEXT: hasTailCall: false
 # CHECK-NEXT: isCalleeSavedInfoValid: false
 # CHECK-NEXT: localFrameSize: 0
-# CHECK-NEXT: savePoint:       ''
-# CHECK-NEXT: restorePoint:    ''
 # CHECK: body
 frameInfo:
   maxAlignment:    4
@@ -56,7 +74,6 @@ body: |
 ...
 ---
 name:            test2
-tracksRegLiveness: true
 stack:
   - { id: 0, offset: -40, size: 8, alignment: 8 }
 
@@ -72,6 +89,7 @@ stack:
 # CHECK-NEXT: maxAlignment:
 # CHECK-NEXT: adjustsStack: true
 # CHECK-NEXT: hasCalls: true
+# CHECK-NEXT: framePointerPolicy: none
 # CHECK-NEXT: stackProtector:  ''
 # CHECK-NEXT: functionContext:  '%stack.0'
 # CHECK-NEXT: maxCallFrameSize: 4
@@ -102,4 +120,43 @@ frameInfo:
 body: |
   bb.0.entry:
 ...
+---
+name:            test_framePointerPolicy_none
 
+# CHECK: test_framePointerPolicy_none
+# CHECK: framePointerPolicy: none
+frameInfo:
+  framePointerPolicy: none
+...
+---
+name:            test_framePointerPolicy_non_leaf
+
+# CHECK: test_framePointerPolicy_non_leaf
+# CHECK: framePointerPolicy: non-leaf
+frameInfo:
+  framePointerPolicy: non-leaf
+...
+---
+name:            test_framePointerPolicy_all
+
+# CHECK: test_framePointerPolicy_all
+# CHECK: framePointerPolicy: all
+frameInfo:
+  framePointerPolicy: all
+...
+---
+name:            test_framePointerPolicy_reserved
+
+# CHECK: test_framePointerPolicy_reserved
+# CHECK: framePointerPolicy: reserved
+frameInfo:
+  framePointerPolicy: reserved
+...
+---
+name:            test_framePointerPolicy_non_leaf_no_reserve
+
+# CHECK: test_framePointerPolicy_non_leaf_no_reserve
+# CHECK: framePointerPolicy: non-leaf-no-reserve
+frameInfo:
+  framePointerPolicy: non-leaf-no-reserve
+...

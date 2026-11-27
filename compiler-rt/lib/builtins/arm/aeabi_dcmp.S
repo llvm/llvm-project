@@ -29,14 +29,14 @@
 #  define PROLOGUE PACBTI_LANDING        SEPARATOR \
                    push      { r12, lr }
 #  define EPILOGUE pop       { r12, lr } SEPARATOR \
-                   bxaut     r12, lr, sp
+                   PAC_RETURN
 #elif defined(__ARM_FEATURE_BTI_DEFAULT)
 #  define PROLOGUE PACBTI_LANDING        SEPARATOR \
                    push      { r4, lr }
-#  define EPILOGUE pop       { r4, pc }
+#  define EPILOGUE POP_PC_WITH_REGS r4
 #else
 #  define PROLOGUE push      { r4, lr }
-#  define EPILOGUE pop       { r4, pc }
+#  define EPILOGUE POP_PC_WITH_REGS r4
 #endif
 
 #define DEFINE_AEABI_DCMP(cond)                            \

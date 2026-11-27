@@ -33,4 +33,3 @@ template("write_target_def_file") {
     values = [ "${invoker.key}=$value" ]
   }
 }
-

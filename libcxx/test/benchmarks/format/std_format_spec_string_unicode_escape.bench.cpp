@@ -8,21 +8,21 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
+// UNSUPPORTED: libcpp-has-no-unicode
+
 // This test formats a larger piece of text in "escaped" mode. It uses several
 // datasets to give an impression how the amount of multibyte UTF-8 sequences
 // and larger grapheme clusters affect the performance.
 
-#  include <concepts>
-#  include <format>
-#  include <string_view>
+#include <concepts>
+#include <format>
+#include <string_view>
 
-#  include "benchmark/benchmark.h"
-#  include "make_string.h"
-#  include "test_macros.h"
+#include "benchmark/benchmark.h"
+#include "make_string.h"
+#include "test_macros.h"
 
-#if _LIBCPP_HAS_UNICODE
-
-#  define SV(S) MAKE_STRING_VIEW(CharT, S)
+#define SV(S) MAKE_STRING_VIEW(CharT, S)
 
 // generated with https://generator.lorem-ipsum.info/_latin
 
@@ -258,27 +258,27 @@ void BM_escaped(benchmark::State& state, std::basic_string_view<CharT> input) {
 }
 
 template <class CharT>
-void BM_ascii_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_ascii_escaped(benchmark::State& state) {
   BM_escaped(state, ascii_text<CharT>());
 }
 
 template <class CharT>
-void BM_unicode_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_unicode_escaped(benchmark::State& state) {
   BM_escaped(state, unicode_text<CharT>());
 }
 
 template <class CharT>
-void BM_cyrillic_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_cyrillic_escaped(benchmark::State& state) {
   BM_escaped(state, cyrillic_text<CharT>());
 }
 
 template <class CharT>
-void BM_japanese_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_japanese_escaped(benchmark::State& state) {
   BM_escaped(state, japanese_text<CharT>());
 }
 
 template <class CharT>
-void BM_emoji_escaped(benchmark::State& state) {
+TEST_ALIGN_BENCHMARK void BM_emoji_escaped(benchmark::State& state) {
   BM_escaped(state, emoji_text<CharT>());
 }
 
@@ -288,16 +288,12 @@ BENCHMARK(BM_cyrillic_escaped<char>);
 BENCHMARK(BM_japanese_escaped<char>);
 BENCHMARK(BM_emoji_escaped<char>);
 
-#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
 BENCHMARK(BM_ascii_escaped<wchar_t>);
 BENCHMARK(BM_unicode_escaped<wchar_t>);
 BENCHMARK(BM_cyrillic_escaped<wchar_t>);
 BENCHMARK(BM_japanese_escaped<wchar_t>);
 BENCHMARK(BM_emoji_escaped<wchar_t>);
-#  endif
+#endif
 
 BENCHMARK_MAIN();
-
-#else
-int main(int, char**) { return 0; }
-#endif

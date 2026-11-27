@@ -2,6 +2,82 @@
 
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{expected as many scalable size flags as static tile sizes}}
+  %tiled:2 = "transform.structured.tile_using_forall"(%arg0) <{operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, static_tile_sizes = array<i64: 8, 1>, scalable_sizes = array<i1: true>}> : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %size = transform.param.constant 8 : i64 -> !transform.param<i64>
+  // expected-error@below {{scalable tile sizes must be non-negative static integers}}
+  %tiled:2 = "transform.structured.tile_using_forall"(%arg0, %size) <{operandSegmentSizes = array<i32: 1, 0, 1, 0, 0>, static_tile_sizes = array<i64: -9223372036854775808>, scalable_sizes = array<i1: true>}> : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{scalable tile sizes must be non-negative static integers}}
+  %tiled, %loop = transform.structured.tile_using_forall %arg0 tile_sizes [[-8], 1] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %size = transform.param.constant 8 : i64 -> !transform.param<i64>
+  // expected-error@below {{expected as many scalable size flags as static tile sizes}}
+  %tiled:2 = "transform.structured.tile_using_forall"(%arg0, %size) <{operandSegmentSizes = array<i32: 1, 0, 0, 0, 1>, scalable_sizes = array<i1: true>}> : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{scalable tile sizes cannot be used with num_threads}}
+  %tiled, %loop = transform.structured.tile_using_forall %arg0 num_threads [2, 4] tile_sizes [[8], 1] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+// Scalable indices must not be silently treated as fixed indices by transforms
+// that do not support scalable thread counts or interchange.
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{scalable indices are not supported}}
+  %tiled, %loop = transform.structured.tile_using_forall %arg0 num_threads [2, [4]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{scalable indices are not supported}}
+  %tiled, %loops:2 = transform.structured.tile_using_for %arg0 tile_sizes [8, 4] interchange = [0, [1]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{scalable indices are not supported}}
+  %tiled, %loops:2 = transform.structured.fuse %arg0 tile_sizes [4, [8]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{scalable indices are not supported}}
+  %tiled, %loops:2 = transform.structured.fuse %arg0 tile_sizes [8, 4] interchange [0, [1]] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
   // expected-error@below {{'transform.structured.interchange' op expects iterator_interchange to be a permutation, found 1, 1}}
   transform.structured.interchange %arg0 iterator_interchange = [1, 1] : (!transform.any_op) -> !transform.any_op
 }
@@ -11,7 +87,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects padding_dimensions to contain positive integers, found [1, -7]}}
-  transform.structured.pad %arg0 {padding_dimensions=[1, -7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+  transform.structured.pad %arg0 <padding_dimensions = [1, -7]> : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
@@ -19,7 +95,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects nofold_flags to contain booleans (0/1), found [1, 7]}}
-  transform.structured.pad %arg0 {nofold_flags=[1, 7]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+  transform.structured.pad %arg0 <nofold_flags = [1, 7]> : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
@@ -27,7 +103,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects transpose_paddings to be a permutation, found [1, 1]}}
-  transform.structured.pad %arg0 {transpose_paddings=[[1, 1]]} : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+  transform.structured.pad %arg0 <transpose_paddings = [[1, 1]]> : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
 // -----
@@ -43,7 +119,7 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expects all results type to be the same}}
-  "transform.structured.multitile_sizes"(%arg0) { target_size = 3, divisor = 2, dimension = 0 }
+  "transform.structured.multitile_sizes"(%arg0) <{target_size = 3, divisor = 2, dimension = 0}>
       : (!transform.any_op) -> (!transform.param<i64>, !transform.param<i64>, !transform.param<i32>)
 }
 
@@ -99,4 +175,40 @@ transform.sequence failures(propagate) {
 ^bb0(%arg0: !transform.any_op):
   // expected-error@below {{expected '('}}
   %res = transform.structured.generalize %arg0 : !transform.any_op -> !transform.any_op 
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{expected one of 'Unknown', 'Multiple' or 'Equal', but got 'Foo'}}
+  %1, %loop = transform.structured.tile_using_for %arg0 tile_sizes [8] inner_tile_alignments = [Foo] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-error@below {{expected one of 'Unknown', 'Multiple' or 'Equal', but got 'Bogus'}}
+  %1, %loop = transform.structured.fuse %arg0 tile_sizes [8] inner_tile_alignments = [Bogus] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["tensor.empty"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  // expected-error@below {{expected one of 'Unknown', 'Multiple' or 'Equal', but got 'Nope'}}
+  %fused, %new = transform.structured.fuse_into_containing_op %0 into %1 inner_tile_alignments = [Nope] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// -----
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.structured.match ops{["scf.for"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  // expected-error@below {{expected one of 'Unknown', 'Multiple' or 'Equal', but got 'Xyz'}}
+  %a, %b = transform.test.fuse_consumer %1 into (%0) inner_tile_alignments = [Xyz] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 }

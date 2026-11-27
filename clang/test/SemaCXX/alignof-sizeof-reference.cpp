@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
 
 struct s0; // expected-note {{forward declaration}}
 char ar[sizeof(s0&)]; // expected-error {{invalid application of 'sizeof' to an incomplete type}}

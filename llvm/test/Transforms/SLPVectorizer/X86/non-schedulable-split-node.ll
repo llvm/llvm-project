@@ -7,17 +7,18 @@ define i64 @test(i256 %0, { i32, i1 } %1) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i256 [[TMP0]] to i32
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i32, i1 } [[TMP1]], 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP8]], i32 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP7]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i32> [[TMP9]], i32 [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> [[TMP10]], i32 [[TMP7]], i64 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i32> [[TMP11]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP14:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP13]], <4 x i32> [[TMP12]], i64 4)
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i32> [[TMP12]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <8 x i32> [[TMP13]], <8 x i32> [[TMP19]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp ne <8 x i32> [[TMP14]], zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <8 x i1> [[TMP15]] to i8
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP16]])

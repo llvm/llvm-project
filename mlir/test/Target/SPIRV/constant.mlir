@@ -1,6 +1,12 @@
 // RUN: mlir-translate --no-implicit-module --test-spirv-roundtrip %s | FileCheck %s
+// RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv %s | spirv-val %}
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+// Note: Since the output of this test (optionally) gets validated by spirv-val,
+// we cannot use splits.
+
+spirv.module Logical Vulkan requires #spirv.vce<v1.3,
+             [VulkanMemoryModel, Shader, Int64, Int16, Int8, Float64, Float16, BFloat16TypeKHR, Float8EXT, CooperativeMatrixKHR, Linkage],
+             [SPV_KHR_vulkan_memory_model, SPV_KHR_cooperative_matrix, SPV_KHR_bfloat16, SPV_EXT_float8]> {
   // CHECK-LABEL: @bool_const
   spirv.func @bool_const() -> () "None" {
     // CHECK: spirv.Constant true
@@ -155,6 +161,42 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
 
+  // CHECK-LABEL: @bf16
+  spirv.func @bf16() -> () "None" {
+    // CHECK: spirv.Constant 5.120000e+02 : bf16
+    %0 = spirv.Constant 512. : bf16
+    // CHECK: spirv.Constant -5.120000e+02 : bf16
+    %1 = spirv.Constant -512. : bf16
+
+    %2 = spirv.FConvert %0 : bf16 to f32
+    %3 = spirv.FConvert %1 : bf16 to f32
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @f8E4M3FN
+  spirv.func @f8E4M3FN() -> () "None" {
+    // CHECK: spirv.Constant 1.280000e+02 : f8E4M3FN
+    %0 = spirv.Constant 127. : f8E4M3FN
+    // CHECK: spirv.Constant -1.280000e+02 : f8E4M3FN
+    %1 = spirv.Constant -127. : f8E4M3FN
+
+    %2 = spirv.FConvert %0 : f8E4M3FN to f32
+    %3 = spirv.FConvert %1 : f8E4M3FN to f32
+    spirv.Return
+  }
+
+  // CHECK-LABEL: @f8E5M2
+  spirv.func @f8E5M2() -> () "None" {
+    // CHECK: spirv.Constant 1.280000e+02 : f8E5M2
+    %0 = spirv.Constant 127. : f8E5M2
+    // CHECK: spirv.Constant -1.280000e+02 : f8E5M2
+    %1 = spirv.Constant -127. : f8E5M2
+
+    %2 = spirv.FConvert %0 : f8E5M2 to f32
+    %3 = spirv.FConvert %1 : f8E5M2 to f32
+    spirv.Return
+  }
+
   // CHECK-LABEL: @bool_vector_const
   spirv.func @bool_vector_const() -> () "None" {
     // CHECK: spirv.Constant dense<false> : vector<2xi1>
@@ -228,14 +270,20 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     spirv.Return
   }
 
-  // CHECK-LABEL: @materialize_const_at_each_use
-  spirv.func @materialize_const_at_each_use() -> (i32) "None" {
-    // CHECK: %[[USE1:.*]] = spirv.Constant 42 : i32
-    // CHECK: %[[USE2:.*]] = spirv.Constant 42 : i32
-    // CHECK: spirv.IAdd %[[USE1]], %[[USE2]]
+  // CHECK-LABEL: @materialize_const_once_per_block
+  spirv.func @materialize_const_once_per_block() -> (i32) "None" {
+    // CHECK: %[[C1:.*]] = spirv.Constant 42 : i32
+    // CHECK-NEXT: %[[ADD:.*]] = spirv.IAdd %[[C1]], %[[C1]]
+    // CHECK-NEXT: spirv.Branch ^[[BB:.*]]
+    // CHECK-NEXT: ^[[BB]]:
+    // CHECK-NEXT: %[[C2:.*]] = spirv.Constant 42 : i32
+    // CHECK-NEXT: spirv.IAdd %[[ADD]], %[[C2]]
     %0 = spirv.Constant 42 : i32
     %1 = spirv.IAdd %0, %0 : i32
-    spirv.ReturnValue %1 : i32
+    spirv.Branch ^bb1
+  ^bb1:
+    %2 = spirv.IAdd %1, %0 : i32
+    spirv.ReturnValue %2 : i32
   }
 
   // CHECK-LABEL: @const_variable
@@ -305,4 +353,55 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
     %coop = spirv.Constant dense<4> : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
     spirv.ReturnValue %coop : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   }
+
+  // CHECK-LABEL: @struct_const
+  spirv.func @struct_const() -> (!spirv.struct<(i32, f32)>) "None" {
+    // CHECK: spirv.Constant [1 : i32, 2.000000e+00 : f32] : !spirv.struct<(i32, f32)>
+    %0 = spirv.Constant [1 : i32, 2.0 : f32] : !spirv.struct<(i32, f32)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, f32)>
+  }
+
+  // CHECK-LABEL: @struct_const_nested
+  spirv.func @struct_const_nested() -> (!spirv.struct<(i32, !spirv.array<2 x i32>)>) "None" {
+    // CHECK: spirv.Constant [1 : i32, [2 : i32, 3 : i32]] : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+    %0 = spirv.Constant [1 : i32, [2 : i32, 3 : i32]] : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+  }
+
+  // CHECK-LABEL: @zero_array_const
+  spirv.func @zero_array_const() -> (!spirv.array<4 x i32>) "None" {
+    // CHECK: spirv.Constant [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !spirv.array<4 x i32>
+    %0 = spirv.Constant [0 : i32, 0 : i32, 0 : i32, 0 : i32] : !spirv.array<4 x i32>
+    spirv.ReturnValue %0 : !spirv.array<4 x i32>
+  }
+
+  // CHECK-LABEL: @zero_nested_array_const
+  spirv.func @zero_nested_array_const() -> (!spirv.array<2 x !spirv.array<2 x f32>>) "None" {
+    // CHECK: spirv.Constant {{\[}}[0.000000e+00 : f32, 0.000000e+00 : f32], [0.000000e+00 : f32, 0.000000e+00 : f32]] : !spirv.array<2 x !spirv.array<2 x f32>>
+    %0 = spirv.Constant [[0.0 : f32, 0.0 : f32], [0.0 : f32, 0.0 : f32]] : !spirv.array<2 x !spirv.array<2 x f32>>
+    spirv.ReturnValue %0 : !spirv.array<2 x !spirv.array<2 x f32>>
+  }
+
+  // CHECK-LABEL: @zero_vector_array_const
+  spirv.func @zero_vector_array_const() -> (!spirv.array<2 x vector<2xi32>>) "None" {
+    // CHECK: spirv.Constant [dense<0> : vector<2xi32>, dense<0> : vector<2xi32>] : !spirv.array<2 x vector<2xi32>>
+    %0 = spirv.Constant [dense<0> : vector<2xi32>, dense<0> : vector<2xi32>] : !spirv.array<2 x vector<2xi32>>
+    spirv.ReturnValue %0 : !spirv.array<2 x vector<2xi32>>
+  }
+
+  // CHECK-LABEL: @zero_struct_const
+  spirv.func @zero_struct_const() -> (!spirv.struct<(i32, !spirv.array<2 x f32>)>) "None" {
+    // CHECK: spirv.Constant [0 : i32, [0.000000e+00 : f32, 0.000000e+00 : f32]] : !spirv.struct<(i32, !spirv.array<2 x f32>)>
+    %0 = spirv.Constant [0 : i32, [0.0 : f32, 0.0 : f32]] : !spirv.struct<(i32, !spirv.array<2 x f32>)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, !spirv.array<2 x f32>)>
+  }
+
+  // CHECK-LABEL: @zero_empty_struct_const
+  spirv.func @zero_empty_struct_const() -> (!spirv.struct<()>) "None" {
+    // CHECK: spirv.Constant [] : !spirv.struct<()>
+    %0 = spirv.Constant [] : !spirv.struct<()>
+    spirv.ReturnValue %0 : !spirv.struct<()>
+  }
+
+  spirv.EntryPoint "GLCompute" @bool_const
 }

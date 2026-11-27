@@ -3,8 +3,8 @@ set( LLVM_LINK_COMPONENTS
   Core
   LineEditor
   Option
-  OrcJIT
   Support
+  TargetParser
   )
 
 add_clang_tool(clang-repl
@@ -13,18 +13,29 @@ add_clang_tool(clang-repl
   EXPORT_SYMBOLS
   )
 
+if(EMSCRIPTEN)
+  # Incremental modules use dlopen and resolve symbols from the tool.
+  target_link_options(clang-repl PRIVATE
+    "-fwasm-exceptions"
+    "SHELL:-s MAIN_MODULE=1"
+    "LINKER:--export=__clang_Interpreter_SetValueWithAlloc"
+    "LINKER:--export=__clang_Interpreter_SetValueNoAlloc"
+    "LINKER:--export=_ZnwmPv26__clang_Interpreter_NewTag"
+  )
+endif()
+
 if(MSVC)
   set_target_properties(clang-repl PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS 1)
 
   # RTTI/C++ symbols
-  set(clang_repl_exports ${clang_repl_exports} ??_7type_info@@6B@
-    ?__type_info_root_node@@3U__type_info_node@@A
-    ?nothrow@std@@3Unothrow_t@1@B
+  set(clang_repl_exports ${clang_repl_exports} ??_7type_info@@6B@,DATA
+    ?__type_info_root_node@@3U__type_info_node@@A,DATA
+    ?nothrow@std@@3Unothrow_t@1@B,DATA
   )
 
   # Compiler added symbols for static variables. NOT for VStudio < 2015
-  set(clang_repl_exports ${clang_repl_exports} _Init_thread_abort _Init_thread_epoch
-    _Init_thread_footer _Init_thread_header _tls_index
+  set(clang_repl_exports ${clang_repl_exports} _Init_thread_abort _Init_thread_epoch,DATA
+    _Init_thread_footer _Init_thread_header _tls_index,DATA
   )
 
   if(CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -48,7 +59,10 @@ if(MSVC)
   endif()
 
   # List to '/EXPORT:sym0 /EXPORT:sym1 /EXPORT:sym2 ...'
-  list(TRANSFORM clang_repl_exports PREPEND "LINKER:/EXPORT:")
+  # The 'SHELL' prefix tells CMake to use a space instead of comma as the
+  # separator between the driver and linker options, which we need since MSVC's
+  # linker uses `,DATA` as a suffix to indicate that data is being exported.
+  list(TRANSFORM clang_repl_exports PREPEND "LINKER:SHELL:/EXPORT:")
 
   set_property(TARGET clang-repl APPEND PROPERTY LINK_OPTIONS ${clang_repl_exports})
 

@@ -17,17 +17,12 @@
 
 using namespace llvm;
 
-// MSVC emits references to this into the translation units which reference it.
-#ifndef _MSC_VER
-constexpr size_t StringRef::npos;
-#endif
-
 // strncasecmp() is not available on non-POSIX systems, so define an
 // alternative function here.
-static int ascii_strncasecmp(const char *LHS, const char *RHS, size_t Length) {
-  for (size_t I = 0; I < Length; ++I) {
-    unsigned char LHC = toLower(LHS[I]);
-    unsigned char RHC = toLower(RHS[I]);
+static int ascii_strncasecmp(StringRef LHS, StringRef RHS) {
+  for (auto [LC, RC] : zip_equal(LHS, RHS)) {
+    unsigned char LHC = toLower(LC);
+    unsigned char RHC = toLower(RC);
     if (LHC != RHC)
       return LHC < RHC ? -1 : 1;
   }
@@ -35,8 +30,8 @@ static int ascii_strncasecmp(const char *LHS, const char *RHS, size_t Length) {
 }
 
 int StringRef::compare_insensitive(StringRef RHS) const {
-  if (int Res =
-          ascii_strncasecmp(data(), RHS.data(), std::min(size(), RHS.size())))
+  size_t Min = std::min(size(), RHS.size());
+  if (int Res = ascii_strncasecmp(take_front(Min), RHS.take_front(Min)))
     return Res;
   if (size() == RHS.size())
     return 0;
@@ -45,13 +40,12 @@ int StringRef::compare_insensitive(StringRef RHS) const {
 
 bool StringRef::starts_with_insensitive(StringRef Prefix) const {
   return size() >= Prefix.size() &&
-         ascii_strncasecmp(data(), Prefix.data(), Prefix.size()) == 0;
+         ascii_strncasecmp(take_front(Prefix.size()), Prefix) == 0;
 }
 
 bool StringRef::ends_with_insensitive(StringRef Suffix) const {
   return size() >= Suffix.size() &&
-         ascii_strncasecmp(end() - Suffix.size(), Suffix.data(),
-                           Suffix.size()) == 0;
+         ascii_strncasecmp(take_back(Suffix.size()), Suffix) == 0;
 }
 
 size_t StringRef::find_insensitive(char C, size_t From) const {
@@ -201,6 +195,32 @@ size_t StringRef::find_insensitive(StringRef Str, size_t From) const {
   return npos;
 }
 
+// Returns the index of the last C in Data[0, End), or npos if it is not found.
+// Written to be vectorizable.
+LLVM_ATTRIBUTE_ALWAYS_INLINE static size_t rfindByte(const char *Data,
+                                                     size_t End, char C) {
+  constexpr size_t VectorWidth = 16;
+  size_t I = End;
+  for (; I >= VectorWidth; I -= VectorWidth) {
+    const char *Chunk = Data + I - VectorWidth;
+    unsigned char Any = 0;
+    for (size_t J = 0; J != VectorWidth; ++J)
+      Any |= Chunk[J] == C;
+    if (Any)
+      break;
+  }
+  while (I) {
+    --I;
+    if (Data[I] == C)
+      return I;
+  }
+  return StringRef::npos;
+}
+
+size_t StringRef::rfind(char C, size_t From) const {
+  return rfindByte(data(), std::min(From, size()), C);
+}
+
 size_t StringRef::rfind_insensitive(char C, size_t From) const {
   From = std::min(From, size());
   size_t i = From;
@@ -217,7 +237,15 @@ size_t StringRef::rfind_insensitive(char C, size_t From) const {
 /// \return - The index of the last occurrence of \arg Str, or npos if not
 /// found.
 size_t StringRef::rfind(StringRef Str) const {
-  return std::string_view(*this).rfind(Str);
+  size_t N = Str.size();
+  if (N > size())
+    return npos;
+  if (N == 0)
+    return size();
+  for (size_t I = size() - N + 1; (I = rfindByte(data(), I, Str[0])) != npos;)
+    if (std::memcmp(data() + I + 1, Str.data() + 1, N - 1) == 0)
+      return I;
+  return npos;
 }
 
 size_t StringRef::rfind_insensitive(StringRef Str) const {
@@ -386,7 +414,7 @@ size_t StringRef::count(StringRef Str) const {
   return Count;
 }
 
-static unsigned GetAutoSenseRadix(StringRef &Str) {
+unsigned llvm::getAutoSenseRadix(StringRef &Str) {
   if (Str.empty())
     return 10;
 
@@ -411,7 +439,7 @@ bool llvm::consumeUnsignedInteger(StringRef &Str, unsigned Radix,
                                   unsigned long long &Result) {
   // Autosense radix if not specified.
   if (Radix == 0)
-    Radix = GetAutoSenseRadix(Str);
+    Radix = getAutoSenseRadix(Str);
 
   // Empty strings (after the radix autosense) are invalid.
   if (Str.empty()) return true;
@@ -510,7 +538,7 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
 
   // Autosense radix if not specified.
   if (Radix == 0)
-    Radix = GetAutoSenseRadix(Str);
+    Radix = getAutoSenseRadix(Str);
 
   assert(Radix > 1 && Radix <= 36);
 
@@ -528,16 +556,17 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
     return false;
   }
 
-  // (Over-)estimate the required number of bits.
   unsigned Log2Radix = 0;
   while ((1U << Log2Radix) < Radix) Log2Radix++;
   bool IsPowerOf2Radix = ((1U << Log2Radix) == Radix);
 
-  unsigned BitWidth = Log2Radix * Str.size();
-  if (BitWidth < Result.getBitWidth())
-    BitWidth = Result.getBitWidth(); // don't shrink the result
-  else if (BitWidth > Result.getBitWidth())
+  // Initialize Result to a reasonable starting width (at least 64 bits),
+  // but do not shrink it if it was already larger.
+  unsigned BitWidth = std::max(64U, Result.getBitWidth());
+
+  if (Result.getBitWidth() < BitWidth) {
     Result = Result.zext(BitWidth);
+  }
 
   APInt RadixAP, CharAP; // unused unless !IsPowerOf2Radix
   if (!IsPowerOf2Radix) {
@@ -563,6 +592,21 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
     // invalid.
     if (CharVal >= Radix)
       break;
+
+    // Check if one more digit will overflow, and grow if so.
+    if (Result.getActiveBits() + Log2Radix > Result.getBitWidth()) {
+      unsigned NewWidth = Result.getBitWidth() * 2;
+
+      // Guard against overflow of the NewWidth itself
+      if (NewWidth < Result.getBitWidth())
+        return true;
+
+      Result = Result.zext(NewWidth);
+      if (!IsPowerOf2Radix) {
+        RadixAP = RadixAP.zext(NewWidth);
+        CharAP = CharAP.zext(NewWidth);
+      }
+    }
 
     // Add in this character.
     if (IsPowerOf2Radix) {
@@ -616,9 +660,5 @@ bool StringRef::getAsDouble(double &Result, bool AllowInexact) const {
 hash_code llvm::hash_value(StringRef S) { return hash_combine_range(S); }
 
 unsigned DenseMapInfo<StringRef, void>::getHashValue(StringRef Val) {
-  assert(Val.data() != getEmptyKey().data() &&
-         "Cannot hash the empty key!");
-  assert(Val.data() != getTombstoneKey().data() &&
-         "Cannot hash the tombstone key!");
   return (unsigned)(hash_value(Val));
 }

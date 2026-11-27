@@ -1,14 +1,6 @@
-; RUN: opt %loadNPMPolly -polly-pattern-matching-based-opts=true \
-; RUN: -polly-target-throughput-vector-fma=1 \
-; RUN: -polly-target-latency-vector-fma=8 \
-; RUN: -polly-target-1st-cache-level-associativity=8 \
-; RUN: -polly-target-2nd-cache-level-associativity=8 \
-; RUN: -polly-target-1st-cache-level-size=32768 \
-; RUN: -polly-target-vector-register-bitwidth=256 \
-; RUN: -polly-target-2nd-cache-level-size=262144 \
-; RUN: -passes=polly-opt-isl -disable-output < %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-pattern-matching-based-opts=true -plugin-arg=Polly,-polly-target-throughput-vector-fma=1 -plugin-arg=Polly,-polly-target-latency-vector-fma=8 -plugin-arg=Polly,-polly-target-1st-cache-level-associativity=8 -plugin-arg=Polly,-polly-target-2nd-cache-level-associativity=8 -plugin-arg=Polly,-polly-target-1st-cache-level-size=32768 -plugin-arg=Polly,-polly-target-vector-register-bitwidth=256 -plugin-arg=Polly,-polly-target-2nd-cache-level-size=262144 '-passes=polly-custom<opt-isl>' -disable-output < %s
 ;
-; RUN: opt %loadNPMPolly '-passes=print<polly-dependences>' -disable-output < %s | FileCheck %s --check-prefix=DEPENDENCES
+; RUN: opt %loadNPMPolly '-passes=polly-custom<deps>' -plugin-arg=Polly,-polly-print-deps -disable-output < %s | FileCheck %s --check-prefix=DEPENDENCES
 ;
 ;    /* C := A * B + C */
 ;    /* Elements of the matrices A, B, C have the char type. */

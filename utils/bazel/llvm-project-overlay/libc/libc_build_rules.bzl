@@ -6,6 +6,7 @@
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("@bazel_skylib//lib:selects.bzl", "selects")
+load("@rules_cc//cc:defs.bzl", "cc_library")
 load(":libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 load(":libc_namespace.bzl", "LIBC_NAMESPACE")
 load(":platforms.bzl", "PLATFORM_CPU_X86_64")
@@ -17,7 +18,40 @@ def libc_common_copts():
         "-I" + libc_include_path,
         "-I" + paths.join(libc_include_path, "include"),
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
-    ]
+    ] + select({
+        Label(":full_build"): [
+            "-DLIBC_FULL_BUILD",
+            "-ffreestanding",
+            "-fno-asynchronous-unwind-tables",
+            "-fno-exceptions",
+            "-fno-rtti",
+            "-fno-unwind-tables",
+            "-nostdinc++",
+            "-nostdlib",
+            "-nostdlib++",
+            # This is a clang-only option. To support gcc, we should use
+            # -nostdinc and pass in compiler builtin headers separately.
+            "-nostdlibinc",
+        ],
+        "//conditions:default": [],
+    })
+
+def libc_common_deps():
+    return select({
+        Label(":full_build"): [
+            # This is too broad. Really, we should have every public header
+            # accessible as a distinct cc_library target. However, the glob
+            # here is convenient for keeping Bazel rules in sync with CMake.
+            "//libc/include:public_headers",
+            "//libc/include:public_headers_deps",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        Label(":full_build_linux"): [
+            "@linux_uapi//:linux_uapi_headers",
+        ],
+        "//conditions:default": [],
+    })
 
 def libc_release_copts():
     copts = [
@@ -41,22 +75,48 @@ def libc_release_copts():
     })
     return copts + platform_copts
 
-def _libc_library(name, **kwargs):
+def _libc_library(
+        name,
+        deps = [],
+        copts = [],
+        target_compatible_with = [],
+        full_build_only = False,
+        **kwargs):
     """Internal macro to serve as a base for all other libc library rules.
 
     Args:
       name: Target name.
+      deps: cc_library deps.
+      copts: copts for cc_library, only allowed if full_build_only is True.
+      target_compatible_with: target_compatible_with for the cc_library rule.
+      full_build_only: Whether this target is only used in full-build mode.
       **kwargs: All other attributes relevant for the cc_library rule.
     """
 
-    for attr in ["copts", "local_defines"]:
+    for attr in ["local_defines"]:
         if attr in kwargs:
             fail("disallowed attribute: '{}' in rule: '{}'".format(attr, name))
-    native.cc_library(
+
+    # Allow copts if the target is only for full-builds. Startup or threading
+    # code necessitate copts, but LLVM-libc's build rules should prefer to
+    # avoid copts when possible as per-file-copts are not compatible with
+    # libc_release_library's method of aggregating sources into one cc_library.
+    if copts and not full_build_only:
+        fail("copts disallowed in overlay-compatible rule: '{}'".format(name))
+
+    if full_build_only:
+        target_compatible_with = target_compatible_with + select({
+            Label(":full_build"): [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        })
+
+    cc_library(
         name = name,
-        copts = libc_common_copts(),
+        copts = libc_common_copts() + copts,
         local_defines = LIBC_CONFIGURE_OPTIONS,
-        linkstatic = 1,
+        deps = deps + libc_common_deps(),
+        linkstatic = True,
+        target_compatible_with = target_compatible_with,
         **kwargs
     )
 
@@ -65,6 +125,26 @@ def _libc_library(name, **kwargs):
 # libc_support_library.
 def libc_support_library(name, **kwargs):
     _libc_library(name = name, **kwargs)
+
+def libc_startup_library(name, **kwargs):
+    """Add target for a libc startup library.
+
+    Args:
+      name: Target name.
+      **kwargs: Other attributes relevant for a cc_library.
+    """
+
+    _libc_library(
+        name = name,
+        full_build_only = True,
+        copts = [
+            "-ffreestanding",
+            "-fno-builtin",
+            "-fno-omit-frame-pointer",
+            "-fno-stack-protector",
+        ],
+        **kwargs
+    )
 
 def libc_function(name, **kwargs):
     """Add target for a libc function.
@@ -168,6 +248,7 @@ def libc_release_library(
         name,
         libc_functions,
         weak_symbols = [],
+        srcs = [],
         **kwargs):
     """Create the release version of a libc library.
 
@@ -176,6 +257,7 @@ def libc_release_library(
         libc_functions: List of functions to include in the library. They should be
             created by libc_function macro.
         weak_symbols: List of function names that should be marked as weak symbols.
+        srcs: Additional sources for the cc_library.
         **kwargs: Other arguments relevant to cc_library.
     """
 
@@ -188,7 +270,7 @@ def libc_release_library(
         name = name + "_textual_hdrs",
         libs = libc_functions,
     )
-    native.cc_library(
+    cc_library(
         name = name + "_textual_hdr_library",
         textual_hdrs = [":" + name + "_textual_hdrs"],
     )
@@ -197,15 +279,14 @@ def libc_release_library(
         "LLVM_LIBC_FUNCTION_ATTR_" + name + "='LLVM_LIBC_EMPTY, [[gnu::weak]]'"
         for name in weak_symbols
     ]
-
-    native.cc_library(
+    cc_library(
         name = name,
-        srcs = [":" + name + "_srcs"],
+        srcs = [":" + name + "_srcs"] + srcs,
         copts = libc_common_copts() + libc_release_copts(),
         local_defines = weak_attributes + LIBC_CONFIGURE_OPTIONS,
         deps = [
             ":" + name + "_textual_hdr_library",
-        ],
+        ] + libc_common_deps(),
         **kwargs
     )
 
@@ -229,23 +310,189 @@ def libc_header_library(name, hdrs, deps = [], **kwargs):
         name = name + "_textual_hdrs",
         libs = deps,
     )
-    native.cc_library(
+    cc_library(
         name = name + "_textual_hdr_library",
         textual_hdrs = [":" + name + "_textual_hdrs"],
     )
-
-    native.cc_library(
+    cc_library(
         name = name,
         hdrs = hdrs,
         # We put _hdr_deps in srcs, as they are not a part of this cc_library
         # interface, but instead are used to implement shared headers.
         srcs = [":" + name + "_hdr_deps"],
-        deps = [":" + name + "_textual_hdr_library"],
+        deps = [":" + name + "_textual_hdr_library"] + libc_common_deps(),
         # copts don't really matter, since it's a header-only library, but we
         # need proper -I flags for header validation, which are specified in
         # libc_common_copts().
         copts = libc_common_copts(),
         **kwargs
+    )
+
+    # Also generate a filegroup that contains _all_ of the headers for use in
+    # systems like Carbon's where runtime sources are shipped outside of Bazel.
+    _libc_srcs_filegroup(
+        name = name + "_hdrs",
+        libs = [":" + name],
+        enforce_headers_only = True,
+    )
+
+LibcHdrgenSpecInfo = provider(
+    "Information required to build a libc header with hdrgen.",
+    fields = [
+        # The install path of the generated header, e.g. "sys/mman.h".
+        "install_path",
+        # The yaml File object to pass to hdrgen.
+        "yaml_template",
+        # An optional .h.def File object to pass to hdrgen.
+        "def_template",
+        # Whether this is a proxy header.
+        "proxy",
+        # Additional sources required by hdrgen, as a depset of File objects.
+        "other_srcs",
+    ],
+)
+
+def _libc_hdrgen_spec_impl(ctx):
+    other_srcs = depset(
+        transitive = [target.files for target in ctx.attr.other_srcs],
+    )
+    return [
+        LibcHdrgenSpecInfo(
+            install_path = ctx.attr.install_path,
+            yaml_template = ctx.file.yaml_template,
+            def_template = ctx.file.def_template,
+            other_srcs = other_srcs,
+            proxy = ctx.attr.proxy,
+        ),
+    ]
+
+libc_hdrgen_spec = rule(
+    doc = "Describes a libc header to be generated by hdrgen.",
+    implementation = _libc_hdrgen_spec_impl,
+    attrs = {
+        "install_path": attr.string(
+            doc = "The install path of the generated header (e.g. sys/mman.h).",
+            mandatory = True,
+        ),
+        "yaml_template": attr.label(
+            doc = "The .yaml file to pass to hdrgen.",
+            mandatory = True,
+            allow_single_file = [".yaml"],
+        ),
+        "def_template": attr.label(
+            doc = "An optional .h.def file to pass to hdrgen.",
+            allow_single_file = [".def"],
+        ),
+        "other_srcs": attr.label_list(
+            doc = "Additional sources required by hdrgen.",
+            allow_files = True,
+        ),
+        "proxy": attr.bool(
+            doc = "Whether this is a proxy header.",
+            default = False,
+        ),
+    },
+    provides = [LibcHdrgenSpecInfo],
+)
+
+def _libc_generated_headers_impl(ctx):
+    if not ctx.attr.output_dir:
+        fail("output_dir must be provided")
+
+    # The entrypoint list can be long, so pass it to every hdrgen invocation
+    # via a single file. hdrgen supports `@file` argument expansion.
+    entrypoints_rsp = ctx.actions.declare_file(ctx.label.name + ".entrypoints.rsp")
+    ctx.actions.write(
+        output = entrypoints_rsp,
+        content = "".join([
+            "--entry-point={}\n".format(e)
+            for e in ctx.attr.entrypoints
+        ]),
+    )
+
+    outs = []
+    for hdr_spec in ctx.attr.specs:
+        info = hdr_spec[LibcHdrgenSpecInfo]
+        out = ctx.actions.declare_file(
+            paths.join(ctx.attr.output_dir, info.install_path),
+        )
+        outs.append(out)
+
+        input_files = [
+            info.yaml_template,
+            entrypoints_rsp,
+        ]
+        if info.def_template:
+            input_files.append(info.def_template)
+        inputs = depset(input_files, transitive = [info.other_srcs])
+
+        args = ctx.actions.args()
+        args.add(info.yaml_template)
+        args.add("-o", out)
+        if info.proxy:
+            args.add("--proxy")
+        args.add(entrypoints_rsp, format = "@%s")
+
+        ctx.actions.run(
+            executable = ctx.executable._hdrgen,
+            arguments = [args],
+            inputs = inputs,
+            outputs = [out],
+            mnemonic = "LibcHdrGen",
+            progress_message = "Generating libc header %{output}",
+        )
+
+    return [DefaultInfo(
+        files = depset(outs),
+        # Provide runfiles so that tests can inspect the output files.
+        runfiles = ctx.runfiles(files = outs),
+    )]
+
+libc_generated_headers = rule(
+    doc = """Generates libc headers from libc_hdrgen_spec targets.""",
+    implementation = _libc_generated_headers_impl,
+    attrs = {
+        "specs": attr.label_list(
+            doc = "The libc_hdrgen_spec targets of the headers to generate.",
+            mandatory = True,
+            providers = [LibcHdrgenSpecInfo],
+        ),
+        "entrypoints": attr.string_list(
+            doc = """Entrypoints that the headers should provide.
+
+            See hdrgen's --entrypoints= argument. If left unset,
+            the generated headers will contain all entrypoints.
+            """,
+        ),
+        "output_dir": attr.string(
+            doc = """Package-relative directory to write the headers into.
+
+            Each header is staged to <output_dir>/<install_path>
+            according to the install_path in the libc_hdrgen_spec.
+            """,
+            mandatory = True,
+        ),
+        "_hdrgen": attr.label(
+            default = "//libc:hdrgen",
+            executable = True,
+            cfg = "exec",
+        ),
+    },
+)
+
+def libc_header_info(
+        name,
+        has_def_template = False,
+        proxy = False,
+        other_srcs = []):
+    return struct(
+        target_name = "{}_h".format(name.replace("/", "_")),
+        spec_name = "{}_hdrgen_spec".format(name.replace("/", "_")),
+        install_path = "{}.h".format(name),
+        yaml_template = "{}.yaml".format(name),
+        def_template = "{}.h.def".format(name) if has_def_template else None,
+        proxy = proxy,
+        other_srcs = other_srcs,
     )
 
 def libc_math_function(
@@ -262,20 +509,24 @@ def libc_math_function(
 
     #TODO(michaelrj): Fix the floating point dependencies
     OLD_FPUTIL_DEPS = [
-        ":__support_fputil_basic_operations",
-        ":__support_fputil_division_and_remainder_operations",
-        ":__support_fputil_fenv_impl",
-        ":__support_fputil_fp_bits",
-        ":__support_fputil_hypot",
-        ":__support_fputil_manipulation_functions",
-        ":__support_fputil_nearest_integer_operations",
-        ":__support_fputil_normal_float",
-        ":__support_math_extras",
-        ":__support_fputil_except_value_utils",
+        "//libc/src/__support:math_extras",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:hypot",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/FPUtil:normal_float",
     ]
     libc_function(
         name = name,
-        srcs = ["src/math/generic/" + name + ".cpp"],
-        hdrs = ["src/math/" + name + ".h"],
-        deps = [":__support_common"] + OLD_FPUTIL_DEPS + additional_deps,
+        srcs = ["//libc/src/math:generic/{}.cpp".format(name)],
+        hdrs = ["//libc/src/math:{}.h".format(name)],
+        deps = [
+            "//libc/src/__support:common",
+            "//libc/src/__support/macros:config",
+            "//libc/src/__support/macros/properties:types",
+        ] + OLD_FPUTIL_DEPS + additional_deps,
     )

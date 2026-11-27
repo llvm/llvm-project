@@ -22,7 +22,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <optional>
-#include <utility>
 
 using namespace clang;
 
@@ -69,10 +68,8 @@ unsigned MacroInfo::getDefinitionLengthSlow(const SourceManager &SM) const {
          "Macro defined in macro?");
   assert((macroEnd.isFileID() || lastToken.is(tok::comment)) &&
          "Macro defined in macro?");
-  std::pair<FileID, unsigned>
-      startInfo = SM.getDecomposedExpansionLoc(macroStart);
-  std::pair<FileID, unsigned>
-      endInfo = SM.getDecomposedExpansionLoc(macroEnd);
+  FileIDAndOffset startInfo = SM.getDecomposedExpansionLoc(macroStart);
+  FileIDAndOffset endInfo = SM.getDecomposedExpansionLoc(macroEnd);
   assert(startInfo.first == endInfo.first &&
          "Macro definition spanning multiple FileIDs ?");
   assert(startInfo.second <= endInfo.second);
@@ -147,11 +144,16 @@ bool MacroInfo::isIdenticalTo(const MacroInfo &Other, Preprocessor &PP,
   return true;
 }
 
-LLVM_DUMP_METHOD void MacroInfo::dump() const {
+LLVM_DUMP_METHOD void MacroInfo::dump() const { dump(/*SM=*/nullptr); }
+
+LLVM_DUMP_METHOD void MacroInfo::dump(const SourceManager *SM) const {
   llvm::raw_ostream &Out = llvm::errs();
 
-  // FIXME: Dump locations.
   Out << "MacroInfo " << this;
+  if (SM) {
+    Out << " ";
+    SourceRange(Location, EndLocation).print(Out, *SM);
+  }
   if (IsBuiltinMacro) Out << " builtin";
   if (IsDisabled) Out << " disabled";
   if (IsUsed) Out << " used";
@@ -228,7 +230,9 @@ MacroDirective::findDirectiveAtLoc(SourceLocation L,
   return DefInfo();
 }
 
-LLVM_DUMP_METHOD void MacroDirective::dump() const {
+LLVM_DUMP_METHOD void MacroDirective::dump() const { dump(/*SM=*/nullptr); }
+
+LLVM_DUMP_METHOD void MacroDirective::dump(const SourceManager *SM) const {
   llvm::raw_ostream &Out = llvm::errs();
 
   switch (getKind()) {
@@ -237,10 +241,13 @@ LLVM_DUMP_METHOD void MacroDirective::dump() const {
   case MD_Visibility: Out << "VisibilityMacroDirective"; break;
   }
   Out << " " << this;
-  // FIXME: Dump SourceLocation.
+  if (SM) {
+    Out << " <";
+    Loc.print(Out, *SM);
+    Out << ">";
+  }
   if (auto *Prev = getPrevious())
     Out << " prev " << Prev;
-  if (IsFromPCH) Out << " from_pch";
 
   if (isa<VisibilityMacroDirective>(this))
     Out << (IsPublic ? " public" : " private");
@@ -248,7 +255,7 @@ LLVM_DUMP_METHOD void MacroDirective::dump() const {
   if (auto *DMD = dyn_cast<DefMacroDirective>(this)) {
     if (auto *Info = DMD->getInfo()) {
       Out << "\n  ";
-      Info->dump();
+      Info->dump(SM);
     }
   }
   Out << "\n";

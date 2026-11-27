@@ -27,7 +27,7 @@ template <class BlockT> class BlockFrequencyInfoImpl;
 class MachineBasicBlock;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
-class MachineLoopInfo;
+class MachineCycleInfo;
 class raw_ostream;
 
 /// MachineBlockFrequencyInfo pass uses BlockFrequencyInfoImpl implementation
@@ -39,8 +39,8 @@ class MachineBlockFrequencyInfo {
 public:
   LLVM_ABI MachineBlockFrequencyInfo(); // Legacy pass manager only.
   LLVM_ABI explicit MachineBlockFrequencyInfo(
-      MachineFunction &F, MachineBranchProbabilityInfo &MBPI,
-      MachineLoopInfo &MLI);
+      const MachineFunction &F, const MachineBranchProbabilityInfo &MBPI,
+      const MachineCycleInfo &MCI);
   LLVM_ABI MachineBlockFrequencyInfo(MachineBlockFrequencyInfo &&);
   LLVM_ABI ~MachineBlockFrequencyInfo();
 
@@ -51,7 +51,7 @@ public:
   /// calculate - compute block frequency info for the given function.
   LLVM_ABI void calculate(const MachineFunction &F,
                           const MachineBranchProbabilityInfo &MBPI,
-                          const MachineLoopInfo &MLI);
+                          const MachineCycleInfo &MCI);
 
   LLVM_ABI void print(raw_ostream &OS);
 
@@ -79,8 +79,6 @@ public:
   getBlockProfileCount(const MachineBasicBlock *MBB) const;
   LLVM_ABI std::optional<uint64_t>
   getProfileCountFromFreq(BlockFrequency Freq) const;
-
-  LLVM_ABI bool isIrrLoopHeader(const MachineBasicBlock *MBB) const;
 
   /// incrementally calculate block frequencies when we split edges, to avoid
   /// full CFG traversal.
@@ -125,7 +123,7 @@ public:
 
 /// Printer pass for the \c MachineBlockFrequencyInfo results.
 class MachineBlockFrequencyPrinterPass
-    : public PassInfoMixin<MachineBlockFrequencyPrinterPass> {
+    : public RequiredPassInfoMixin<MachineBlockFrequencyPrinterPass> {
   raw_ostream &OS;
 
 public:
@@ -133,8 +131,6 @@ public:
 
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI MachineBlockFrequencyInfoWrapperPass

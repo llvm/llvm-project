@@ -7,28 +7,28 @@ target triple = "dxil-pc-shadermodel6.7-compute"
 
 ; CHECK-LABEL: @test_thread_id(
 ; Function Attrs: noinline nounwind optnone
-define i32 @test_thread_id(i32 %a) #0 {
+define i32 @test_thread_id() #0 {
 entry:
-; CHECK:call i32 @dx.op.threadId.i32(i32 93, i32 %{{.*}}) #[[#ATTR:]]
-  %0 = call i32 @llvm.dx.thread.id(i32 %a)
+; CHECK:call i32 @dx.op.threadId.i32(i32 93, i32 0)
+  %0 = call i32 @llvm.dx.thread.id(i32 0)
   ret i32 %0
 }
 
 ; CHECK-LABEL: @test_group_id(
 ; Function Attrs: noinline nounwind optnone
-define i32 @test_group_id(i32 %a) #0 {
+define i32 @test_group_id() #0 {
 entry:
-; CHECK: call i32 @dx.op.groupId.i32(i32 94, i32 %{{.*}}) #[[#ATTR]]
-  %0 = call i32 @llvm.dx.group.id(i32 %a)
+; CHECK: call i32 @dx.op.groupId.i32(i32 94, i32 1)
+  %0 = call i32 @llvm.dx.group.id(i32 1)
   ret i32 %0
 }
 
 ; CHECK-LABEL: @test_thread_id_in_group(
 ; Function Attrs: noinline nounwind optnone
-define i32 @test_thread_id_in_group(i32 %a) #0 {
+define i32 @test_thread_id_in_group() #0 {
 entry:
-; CHECK: call i32 @dx.op.threadIdInGroup.i32(i32 95, i32 %{{.*}}) #[[#ATTR]]
-  %0 = call i32 @llvm.dx.thread.id.in.group(i32 %a)
+; CHECK: call i32 @dx.op.threadIdInGroup.i32(i32 95, i32 2)
+  %0 = call i32 @llvm.dx.thread.id.in.group(i32 2)
   ret i32 %0
 }
 
@@ -36,18 +36,22 @@ entry:
 ; Function Attrs: noinline nounwind optnone
 define i32 @test_flattened_thread_id_in_group() #0 {
 entry:
-; CHECK: call i32 @dx.op.flattenedThreadIdInGroup.i32(i32 96) #[[#ATTR]]
+; CHECK: call i32 @dx.op.flattenedThreadIdInGroup.i32(i32 96)
   %0 = call i32 @llvm.dx.flattened.thread.id.in.group()
   ret i32 %0
 }
 
-; CHECK: attributes #[[#ATTR]] = {{{.*}} memory(none) {{.*}}}
+; CHECK-DAG: declare i32 @dx.op.threadId.i32(i32, i32) #[[#ATTR0:]]
+; CHECK-DAG: declare i32 @dx.op.groupId.i32(i32, i32) #[[#ATTR0]]
+; CHECK-DAG: declare i32 @dx.op.flattenedThreadIdInGroup.i32(i32) #[[#ATTR0]]
+; CHECK-DAG: declare i32 @dx.op.threadIdInGroup.i32(i32, i32) #[[#ATTR0]]
+; CHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
 
 ; Function Attrs: nounwind readnone willreturn
-declare i32 @llvm.dx.thread.id(i32) #1
-declare i32 @llvm.dx.group.id(i32) #1
+declare i32 @llvm.dx.thread.id(i32 immarg) #1
+declare i32 @llvm.dx.group.id(i32 immarg) #1
 declare i32 @llvm.dx.flattened.thread.id.in.group() #1
-declare i32 @llvm.dx.thread.id.in.group(i32) #1
+declare i32 @llvm.dx.thread.id.in.group(i32 immarg) #1
 
 attributes #0 = { noinline nounwind }
 attributes #1 = { nounwind readnone willreturn }

@@ -20,7 +20,6 @@
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -41,11 +40,10 @@ static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
             RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development,
             "development", "for training")));
 
-static cl::opt<bool> EnableLocalReassignment(
+static cl::opt<cl::boolOrDefault> EnableLocalReassignment(
     "enable-local-reassign", cl::Hidden,
     cl::desc("Local reassignment can yield better allocation decisions, but "
-             "may be compile time intensive"),
-    cl::init(false));
+             "may be compile time intensive"));
 
 namespace llvm {
 cl::opt<unsigned> EvictInterferenceCutoff(
@@ -124,17 +122,15 @@ void RegAllocEvictionAdvisorAnalysis::initializeProvider(
         new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/false, Ctx));
     return;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Development:
-#if defined(LLVM_HAVE_TFLITE)
     Provider.reset(createDevelopmentModeAdvisorProvider(Ctx));
-#else
-    Provider.reset(
-        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
-#endif
-    return;
+    break;
   case RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode::Release:
     Provider.reset(createReleaseModeAdvisorProvider(Ctx));
-    return;
+    break;
   }
+  if (!Provider)
+    Provider.reset(
+        new DefaultEvictionAdvisorProvider(/*NotAsRequested=*/true, Ctx));
 }
 
 RegAllocEvictionAdvisorAnalysis::Result
@@ -185,9 +181,26 @@ RegAllocEvictionAdvisor::RegAllocEvictionAdvisor(const MachineFunction &MF,
       LIS(RA.getLiveIntervals()), VRM(RA.getVirtRegMap()),
       MRI(&VRM->getRegInfo()), TRI(MF.getSubtarget().getRegisterInfo()),
       RegClassInfo(RA.getRegClassInfo()), RegCosts(TRI->getRegisterCosts(MF)),
-      EnableLocalReassign(EnableLocalReassignment ||
-                          MF.getSubtarget().enableRALocalReassignment(
-                              MF.getTarget().getOptLevel())) {}
+      EnableLocalReassign(
+          EnableLocalReassignment == cl::boolOrDefault::BOU_TRUE ||
+          (EnableLocalReassignment != cl::boolOrDefault::BOU_FALSE &&
+           MF.getSubtarget().enableRALocalReassignment(
+               MF.getTarget().getOptLevel()))) {}
+
+/// isUrgentEviction - Returns true if this is an urgent eviction. Once a live
+/// range becomes small enough, it is urgent that we find a register for it.
+/// This is indicated by an infinite spill weight. These urgent live ranges
+/// get to evict almost anything.
+///
+/// Also allow urgent evictions of unspillable ranges from a strictly larger
+/// allocation order.
+bool RegAllocEvictionAdvisor::isUrgentEviction(const LiveInterval &VirtReg,
+                                               const LiveInterval &Intf) const {
+  return !VirtReg.isSpillable() &&
+         (Intf.isSpillable() ||
+          RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
+              RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(Intf.reg())));
+}
 
 /// shouldEvict - determine if A should evict the assigned live range B. The
 /// eviction policy defined by this function together with the allocation order
@@ -225,7 +238,7 @@ bool DefaultEvictionAdvisor::canEvictHintInterference(
     const LiveInterval &VirtReg, MCRegister PhysReg,
     const SmallVirtRegSet &FixedRegisters) const {
   EvictionCost MaxCost;
-  MaxCost.setBrokenHints(1);
+  MaxCost.setBrokenHints(MRI->getRegClass(VirtReg.reg())->getCopyCost());
   return canEvictInterferenceBasedOnCost(VirtReg, PhysReg, true, MaxCost,
                                          FixedRegisters);
 }
@@ -279,18 +292,8 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       // Never evict spill products. They cannot split or spill.
       if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
         return false;
-      // Once a live range becomes small enough, it is urgent that we find a
-      // register for it. This is indicated by an infinite spill weight. These
-      // urgent live ranges get to evict almost anything.
-      //
-      // Also allow urgent evictions of unspillable ranges from a strictly
-      // larger allocation order.
-      bool Urgent =
-          !VirtReg.isSpillable() &&
-          (Intf->isSpillable() ||
-           RegClassInfo.getNumAllocatableRegs(MRI->getRegClass(VirtReg.reg())) <
-               RegClassInfo.getNumAllocatableRegs(
-                   MRI->getRegClass(Intf->reg())));
+
+      bool Urgent = isUrgentEviction(VirtReg, *Intf);
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       if (Cascade == IntfCascade)
@@ -301,15 +304,17 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
           return false;
         // We permit breaking cascades for urgent evictions. It should be the
         // last resort, though, so make it really expensive.
-        Cost.BrokenHints += 10;
+        Cost.BrokenHints += 10 * MRI->getRegClass(Intf->reg())->getCopyCost();
       }
       // Would this break a satisfied hint?
       bool BreaksHint = VRM->hasPreferredPhys(Intf->reg());
       // Update eviction cost.
-      Cost.BrokenHints += BreaksHint;
+      if (BreaksHint)
+        Cost.BrokenHints += MRI->getRegClass(Intf->reg())->getCopyCost();
+
       Cost.MaxWeight = std::max(Cost.MaxWeight, Intf->weight());
       // Abort if this would be too expensive.
-      if (!(Cost < MaxCost))
+      if (Cost >= MaxCost)
         return false;
       if (Urgent)
         continue;
@@ -352,7 +357,7 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
        ++I) {
     MCRegister PhysReg = *I;
     assert(PhysReg);
-    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg) ||
+    if (!canAllocatePhysReg(VirtReg, CostPerUseLimit, PhysReg) ||
         !canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
                                          FixedRegisters))
       continue;

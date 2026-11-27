@@ -100,14 +100,12 @@ std::string Include::quote() const {
       .str();
 }
 
-static llvm::SmallString<128> normalizePath(llvm::StringRef Path) {
+llvm::SmallString<128> normalizePath(llvm::StringRef Path) {
   namespace path = llvm::sys::path;
 
   llvm::SmallString<128> P = Path;
   path::remove_dots(P, /*remove_dot_dot=*/true);
   path::native(P, path::Style::posix);
-  while (!P.empty() && P.back() == '/')
-    P.pop_back();
   return P;
 }
 

@@ -34,23 +34,31 @@ using namespace llvm;
 #include "WebAssemblyGenInstrInfo.inc"
 
 WebAssemblyInstrInfo::WebAssemblyInstrInfo(const WebAssemblySubtarget &STI)
-    : WebAssemblyGenInstrInfo(WebAssembly::ADJCALLSTACKDOWN,
+    : WebAssemblyGenInstrInfo(STI, RI, WebAssembly::ADJCALLSTACKDOWN,
                               WebAssembly::ADJCALLSTACKUP,
                               WebAssembly::CATCHRET),
       RI(STI.getTargetTriple()) {}
 
-bool WebAssemblyInstrInfo::isReallyTriviallyReMaterializable(
+const TargetRegisterClass *
+WebAssemblyInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return RI.getTargetTriple().getArch() == Triple::wasm64
+             ? &WebAssembly::I64RegClass
+             : &WebAssembly::I32RegClass;
+}
+
+bool WebAssemblyInstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case WebAssembly::CONST_I32:
   case WebAssembly::CONST_I64:
   case WebAssembly::CONST_F32:
   case WebAssembly::CONST_F64:
-    // TargetInstrInfo::isReallyTriviallyReMaterializable misses these
-    // because of the ARGUMENTS implicit def, so we manualy override it here.
+    // TargetInstrInfo::isReMaterializableImpl misses these
+    // because of the ARGUMENTS implicit def, so we manually override it here.
     return true;
   default:
-    return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
+    return TargetInstrInfo::isReMaterializableImpl(MI);
   }
 }
 
@@ -71,7 +79,7 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   unsigned CopyOpcode = WebAssembly::getCopyOpcodeForRegClass(RC);
 
   BuildMI(MBB, I, DL, get(CopyOpcode), DestReg)
-      .addReg(SrcReg, KillSrc ? RegState::Kill : 0);
+      .addReg(SrcReg, getKillRegState(KillSrc));
 }
 
 MachineInstr *WebAssemblyInstrInfo::commuteInstructionImpl(

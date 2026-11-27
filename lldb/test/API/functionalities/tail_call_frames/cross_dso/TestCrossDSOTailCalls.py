@@ -1,17 +1,16 @@
 """Test that backtraces can follow cross-DSO tail calls"""
 
 
-import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestCrossDSOTailCalls(TestBase):
-    @skipIf(compiler="clang", compiler_version=["<", "10.0"])
+    @skipIf(compiler="clang", compiler_version=["<", "22.0"])
     @skipIf(dwarf_version=["<", "4"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
-    @expectedFailureAll(archs=["arm$", "arm64", "aarch64"], bugnumber="llvm.org/PR44561")
     def test_cross_dso_tail_calls(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -22,17 +21,17 @@ class TestCrossDSOTailCalls(TestBase):
         # automatically uploaded
         environment = self.registerSharedLibrariesWithTarget(target, ["One", "Two"])
 
-        lldbutil.run_break_set_by_source_regexp(
+        bkpt_id = lldbutil.run_break_set_by_source_regexp(
             self, "// break here", extra_options="-f Two.c"
         )
 
-        process = target.LaunchSimple(
-            None, environment, self.get_process_working_directory()
-        )
-        self.assertTrue(process, PROCESS_IS_VALID)
-
         # We should be stopped in the second dylib.
-        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetEnvironmentEntries(environment, False)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        _, process, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, target.FindBreakpointByID(bkpt_id), launch_info
+        )
 
         # Debug helper:
         # self.runCmd("log enable -f /tmp/lldb.log lldb step")

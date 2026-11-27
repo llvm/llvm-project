@@ -15,8 +15,6 @@
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
-#include "llvm/TargetParser/Host.h"
 #include <cstdint>
 #include <cstring>
 
@@ -85,7 +83,12 @@ void MappingTraits<MachOYAML::FileHeader>::mapping(
   IO.mapRequired("magic", FileHdr.magic);
   IO.mapRequired("cputype", FileHdr.cputype);
   IO.mapRequired("cpusubtype", FileHdr.cpusubtype);
-  IO.mapRequired("filetype", FileHdr.filetype);
+
+  MachO::HeaderFileType FileType =
+      static_cast<MachO::HeaderFileType>(uint32_t(FileHdr.filetype));
+  IO.mapRequired("filetype", FileType);
+  FileHdr.filetype = FileType;
+
   IO.mapRequired("ncmds", FileHdr.ncmds);
   IO.mapRequired("sizeofcmds", FileHdr.sizeofcmds);
   IO.mapRequired("flags", FileHdr.flags);
@@ -102,8 +105,7 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
     IO.setContext(&Object);
   }
   IO.mapTag("!mach-o", true);
-  IO.mapOptional("IsLittleEndian", Object.IsLittleEndian,
-                 sys::IsLittleEndianHost);
+  IO.mapRequired("IsLittleEndian", Object.IsLittleEndian);
   Object.DWARF.IsLittleEndian = Object.IsLittleEndian;
 
   IO.mapRequired("FileHeader", Object.Header);
@@ -275,6 +277,12 @@ template <>
 void mapLoadCommandData<MachO::build_version_command>(
     IO &IO, MachOYAML::LoadCommand &LoadCommand) {
   IO.mapOptional("Tools", LoadCommand.Tools);
+}
+
+template <>
+void mapLoadCommandData<MachO::target_triple_command>(
+    IO &IO, MachOYAML::LoadCommand &LoadCommand) {
+  IO.mapOptional("Content", LoadCommand.Content);
 }
 
 void MappingTraits<MachOYAML::LoadCommand>::mapping(
@@ -623,6 +631,11 @@ void MappingTraits<MachO::build_version_command>::mapping(
   IO.mapRequired("minos", LoadCommand.minos);
   IO.mapRequired("sdk", LoadCommand.sdk);
   IO.mapRequired("ntools", LoadCommand.ntools);
+}
+
+void MappingTraits<MachO::target_triple_command>::mapping(
+    IO &IO, MachO::target_triple_command &LoadCommand) {
+  IO.mapRequired("triple", LoadCommand.triple);
 }
 
 void MappingTraits<MachO::fileset_entry_command>::mapping(

@@ -10,7 +10,10 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
+@requireExpressionEvaluation
 class TestRerunExpr(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     # FIXME: on Windows rebuilding the binary isn't enough to unload it
     #        on progrem restart. One will have to try hard to evict
     #        the module from the ModuleList (possibly including a call to
@@ -33,10 +36,12 @@ class TestRerunExpr(TestBase):
         self.build(dictionary={"CXX_SOURCES": "main.cpp", "EXE": "a.out"})
 
         exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        target.BreakpointCreateBySourceRegex("return", lldb.SBFileSpec("rebuild.cpp"))
-        target.BreakpointCreateBySourceRegex("return", lldb.SBFileSpec("main.cpp"))
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "return", lldb.SBFileSpec("main.cpp")
+        )
+        rebuild_bkpt = target.BreakpointCreateBySourceRegex(
+            "return", lldb.SBFileSpec("rebuild.cpp")
+        )
 
         self.expect_expr(
             "foo",
@@ -50,7 +55,7 @@ class TestRerunExpr(TestBase):
 
         # Rerun program within the same target
         process.Destroy()
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        lldbutil.run_to_breakpoint_do_run(self, target, rebuild_bkpt)
 
         self.expect_expr(
             "foo",

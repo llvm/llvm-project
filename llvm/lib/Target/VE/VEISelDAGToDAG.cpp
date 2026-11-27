@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VE.h"
+#include "VESelectionDAGInfo.h"
 #include "VETargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -332,9 +333,12 @@ SDNode *VEDAGToDAGISel::getGlobalBaseReg() {
       .getNode();
 }
 
+VEDAGToDAGISelPass::VEDAGToDAGISelPass(VETargetMachine &TM)
+    : SelectionDAGISelPass(std::make_unique<VEDAGToDAGISel>(TM)) {}
+
 /// createVEISelDag - This pass converts a legalized DAG into a
 /// VE-specific DAG, ready for instruction scheduling.
 ///
-FunctionPass *llvm::createVEISelDag(VETargetMachine &TM) {
+FunctionPass *llvm::createVEDAGToDAGISelLegacyPass(VETargetMachine &TM) {
   return new VEDAGToDAGISelLegacy(TM);
 }

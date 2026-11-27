@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm-only -triple %itanium_abi_triple -fdump-record-layouts %s 2>/dev/null \
+// RUN: %clang_cc1 -emit-llvm-only -triple %itanium_abi_triple -fms-layout-compatibility=itanium -fdump-record-layouts %s 2>/dev/null \
 // RUN:            | FileCheck %s
 
 // On z/OS, a bit-field has single byte alignment.  Add aligned(4) on z/OS so the union has

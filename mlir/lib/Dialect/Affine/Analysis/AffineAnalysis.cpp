@@ -19,9 +19,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/IR/AffineExprVisitor.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/IntegerSet.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -69,9 +67,10 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
           .Case([](arith::MaxSIOp) { return arith::AtomicRMWKind::maxs; })
           .Case([](arith::MinUIOp) { return arith::AtomicRMWKind::minu; })
           .Case([](arith::MaxUIOp) { return arith::AtomicRMWKind::maxu; })
+          .Case([](arith::XOrIOp) { return arith::AtomicRMWKind::xori; })
+          .Case([](arith::MaxNumFOp) { return arith::AtomicRMWKind::maxnumf; })
+          .Case([](arith::MinNumFOp) { return arith::AtomicRMWKind::minnumf; })
           .Default([](Operation *) -> std::optional<arith::AtomicRMWKind> {
-            // TODO: AtomicRMW supports other kinds of reductions this is
-            // currently not detecting, add those when the need arises.
             return std::nullopt;
           });
   if (!maybeKind)
@@ -136,6 +135,21 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
   return viewOp && isLocallyDefined(viewOp.getViewSource(), enclosingOp);
 }
 
+/// Returns true if all memory effects of `op` free memory that is allocated
+/// locally to `enclosingOp`.
+static bool freesOnlyLocallyDefined(Operation *op, Operation *enclosingOp) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  memOp.getEffects(effects);
+  return !effects.empty() &&
+         llvm::all_of(effects, [&](const MemoryEffects::EffectInstance &e) {
+           return isa<MemoryEffects::Free>(e.getEffect()) && e.getValue() &&
+                  isLocallyDefined(e.getValue(), enclosingOp);
+         });
+}
+
 bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   // Any memref-typed iteration arguments are treated as serializing.
   if (llvm::any_of(forOp.getResultTypes(), llvm::IsaPred<BaseMemRefType>))
@@ -154,9 +168,11 @@ bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
         loadAndStoreOps.push_back(op);
     } else if (!isa<AffineForOp, AffineYieldOp, AffineIfOp>(op) &&
                !hasSingleEffect<MemoryEffects::Allocate>(op) &&
-               !isMemoryEffectFree(op)) {
+               !freesOnlyLocallyDefined(op, forOp) && !isMemoryEffectFree(op)) {
       // Alloc-like ops inside `forOp` are fine (they don't impact parallelism)
       // as long as they don't escape the loop (which has been checked above).
+      // So are dealloc-like ops freeing such allocations. Freeing other memory
+      // may race with accesses to it from other iterations.
       return WalkResult::interrupt();
     }
 
@@ -286,6 +302,19 @@ static LogicalResult getOpIndexSet(Operation *op,
                                    FlatAffineValueConstraints *indexSet) {
   SmallVector<Operation *, 4> ops;
   getEnclosingAffineOps(*op, &ops);
+
+  // getIndexSet(ops, indexSet) will add constraints only for for the then
+  // block, so if op is part of the else block, then the indexSet ends up being
+  // wrong. So instead, any AffineIfOp where op is in the else block is removed.
+  //
+  // TODO: make memory dependence check able to handle the complement of the
+  //       AffineIfOp integer set.
+  llvm::erase_if(ops, [&](Operation *affineOp) {
+    auto ifOp = dyn_cast<AffineIfOp>(affineOp);
+    return ifOp && ifOp.hasElse() &&
+           ifOp.getElseRegion().isAncestor(op->getParentRegion());
+  });
+
   return getIndexSet(ops, indexSet);
 }
 
@@ -391,7 +420,7 @@ static void addOrderingConstraints(const FlatAffineValueConstraints &srcDomain,
   unsigned numCommonLoops = getNumCommonLoops(srcDomain, dstDomain);
   unsigned numCommonLoopConstraints = std::min(numCommonLoops, loopDepth);
   for (unsigned i = 0; i < numCommonLoopConstraints; ++i) {
-    std::fill(eq.begin(), eq.end(), 0);
+    llvm::fill(eq, 0);
     eq[i] = -1;
     eq[i + numSrcDims] = 1;
     if (i == loopDepth - 1) {
@@ -433,7 +462,7 @@ static void computeDirectionVector(
   // Constraint variables format:
   // [num-common-loops][num-src-dim-ids][num-dst-dim-ids][num-symbols][constant]
   for (unsigned j = 0; j < numCommonLoops; ++j) {
-    std::fill(eq.begin(), eq.end(), 0);
+    llvm::fill(eq, 0);
     eq[j] = 1;
     eq[j + numCommonLoops] = 1;
     eq[j + numCommonLoops + numSrcDims] = -1;
@@ -457,15 +486,11 @@ static void computeDirectionVector(
   }
 }
 
-LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
-  // Create set corresponding to domain of access.
-  FlatAffineValueConstraints domain;
-  if (failed(getOpIndexSet(opInst, &domain)))
-    return failure();
-
+LogicalResult
+mlir::affine::getAccessRelation(const AffineValueMap &accessValueMap,
+                                const FlatAffineValueConstraints &domain,
+                                IntegerRelation &rel) {
   // Get access relation from access map.
-  AffineValueMap accessValueMap;
-  getAccessMap(&accessValueMap);
   if (failed(getRelationFromMap(accessValueMap, rel)))
     return failure();
 
@@ -503,6 +528,17 @@ LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
                      VarKind::Domain);
 
   return success();
+}
+
+LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
+  // Create set corresponding to domain of access.
+  FlatAffineValueConstraints domain;
+  if (failed(getOpIndexSet(opInst, &domain)))
+    return failure();
+
+  AffineValueMap accessValueMap;
+  getAccessMap(&accessValueMap);
+  return mlir::affine::getAccessRelation(accessValueMap, domain, rel);
 }
 
 // Populates 'accessMap' with composition of AffineApplyOps reachable from
@@ -652,16 +688,29 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   // Note: this check is skipped if 'allowRAR' is true, because RAR deps
   // can exist irrespective of lexicographic ordering b/w src and dst.
   unsigned numCommonLoops = getNumCommonLoops(srcDomain, dstDomain);
-  assert(loopDepth <= numCommonLoops + 1);
+  assert(loopDepth <= numCommonLoops + 1 && "Invalid depth");
   if (!allowRAR && loopDepth > numCommonLoops &&
       !srcAppearsBeforeDstInAncestralBlock(srcAccess, dstAccess)) {
     return DependenceResult::NoDependence;
   }
 
+  return checkAccessDependence(std::move(srcRel), std::move(dstRel), loopDepth,
+                               dependenceConstraints, dependenceComponents);
+}
+
+DependenceResult mlir::affine::checkAccessDependence(
+    IntegerRelation &&srcRel, IntegerRelation &&dstRel, unsigned loopDepth,
+    FlatAffineValueConstraints *dependenceConstraints,
+    SmallVector<DependenceComponent, 2> *dependenceComponents) {
+  FlatAffineValueConstraints srcDomain(srcRel.getDomainSet());
+  FlatAffineValueConstraints dstDomain(dstRel.getDomainSet());
+  assert(loopDepth <= getNumCommonLoops(srcDomain, dstDomain) + 1 &&
+         "Invalid depth");
+
   // Compute the dependence relation by composing `srcRel` with the inverse of
-  // `dstRel`. Doing this builds a relation between iteration domain of
-  // `srcAccess` to the iteration domain of `dstAccess` which access the same
-  // memory locations.
+  // `dstRel`. Doing this builds a relation between the iteration domain of the
+  // source access to the iteration domain of the destination access which
+  // access the same memory locations.
   dstRel.inverse();
   // For 0-d spaces, there will be no IDs. Enable if that's the case.
   if (!dstRel.getSpace().isUsingIds())
@@ -688,9 +737,8 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   LLVM_DEBUG(llvm::dbgs() << "Dependence polyhedron:\n");
   LLVM_DEBUG(dependenceDomain.dump());
 
-  FlatAffineValueConstraints result(dependenceDomain);
   if (dependenceConstraints)
-    *dependenceConstraints = result;
+    *dependenceConstraints = FlatAffineValueConstraints(dependenceDomain);
   return DependenceResult::HasDependence;
 }
 
@@ -722,7 +770,7 @@ void mlir::affine::getDependenceComponents(
             srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
             &depComps);
         if (hasDependence(result))
-          depCompsVec->push_back(depComps);
+          depCompsVec->push_back(std::move(depComps));
       }
     }
   }

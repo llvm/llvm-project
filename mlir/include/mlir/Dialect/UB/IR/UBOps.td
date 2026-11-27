@@ -12,19 +12,21 @@
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 
-include "UBOpsInterfaces.td"
+include "mlir/Dialect/UB/IR/UBOpsInterfaces.td"
 
 def UB_Dialect : Dialect {
   let name = "ub";
   let cppNamespace = "::mlir::ub";
+  let useDefaultOperationRegistration = 1;
 
   let hasConstantMaterializer = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 // Base class for UB dialect attributes.
 class UB_Attr<string name, string attrMnemonic, list<Trait> traits = []> :
     AttrDef<UB_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/UB/IR/UBOps.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -64,6 +66,26 @@ def PoisonOp : UB_Op<"poison", [ConstantLike, Pure]> {
   let assemblyFormat = "attr-dict (`<` $value^ `>`)? `:` type($result)";
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// UnreachableOp
+//===----------------------------------------------------------------------===//
+
+def UnreachableOp : UB_Op<"unreachable", [Terminator]> {
+  let summary = "Unreachable operation.";
+  let description = [{
+    The `unreachable` operation triggers immediate undefined behavior if
+    executed.
+
+    Example:
+
+    ```
+    ub.unreachable
+    ```
+  }];
+
+  let assemblyFormat = "attr-dict";
 }
 
 #endif // MLIR_DIALECT_UB_IR_UBOPS_TD

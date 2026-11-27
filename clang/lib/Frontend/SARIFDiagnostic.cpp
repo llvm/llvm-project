@@ -30,6 +30,44 @@
 
 namespace clang {
 
+// SARIF reportingConfiguration.rank is given to each severity. Notes, remarks
+// and warnings keep the default -1.
+namespace rank {
+constexpr float Error = 50.0f;
+constexpr float Fatal = 100.0f;
+} // namespace rank
+
+SarifResultLevel getSarifResultLevel(DiagnosticsEngine::Level level) {
+  switch (level) {
+  case DiagnosticsEngine::Ignored:
+    llvm_unreachable("Invalid diagnostic type");
+  case DiagnosticsEngine::Note:
+    return SarifResultLevel::Note;
+  case DiagnosticsEngine::Remark:
+    return SarifResultLevel::None;
+  case DiagnosticsEngine::Warning:
+    return SarifResultLevel::Warning;
+  case DiagnosticsEngine::Error:
+  case DiagnosticsEngine::Fatal:
+    return SarifResultLevel::Error;
+  }
+  llvm_unreachable("Un-handled DiagnosticsEngine::Level occured.");
+}
+
+SarifRule addDiagnosticLevelToRule(SarifRule Rule,
+                                   DiagnosticsEngine::Level Level) {
+  SarifReportingConfiguration Config =
+      SarifReportingConfiguration::create().setLevel(
+          getSarifResultLevel(Level));
+
+  if (Level == DiagnosticsEngine::Error)
+    Config = Config.setRank(rank::Error);
+  else if (Level == DiagnosticsEngine::Fatal)
+    Config = Config.setRank(rank::Fatal);
+
+  return Rule.setDefaultConfiguration(Config);
+}
+
 SARIFDiagnostic::SARIFDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
                                  DiagnosticOptions &DiagOpts,
                                  SarifDocumentWriter *Writer)
@@ -41,12 +79,16 @@ void SARIFDiagnostic::emitDiagnosticMessage(
     StringRef Message, ArrayRef<clang::CharSourceRange> Ranges,
     DiagOrStoredDiag D) {
 
-  const auto *Diag = D.dyn_cast<const Diagnostic *>();
+  const auto *Diag = dyn_cast_if_present<const Diagnostic *>(D);
 
   if (!Diag)
     return;
 
-  SarifRule Rule = SarifRule::create().setRuleId(std::to_string(Diag->getID()));
+  const auto &DiagnosticIDs = *(Diag->getDiags()->getDiagnosticIDs());
+  std::string StableID = DiagnosticIDs.getStableID(Diag->getID());
+  auto LegacyStableIDs = DiagnosticIDs.getLegacyStableIDs(Diag->getID());
+  SarifRule Rule =
+      SarifRule::create().setRuleId(StableID).setDeprecatedIds(LegacyStableIDs);
 
   Rule = addDiagnosticLevelToRule(Rule, Level);
 
@@ -58,12 +100,48 @@ void SARIFDiagnostic::emitDiagnosticMessage(
   if (Loc.isValid())
     Result = addLocationToResult(Result, Loc, PLoc, Ranges, *Diag);
 
+  for (auto &[RelLoc, RelPLoc] : RelatedLocationsCache)
+    Result = addRelatedLocationToResult(Result, RelLoc, RelPLoc);
+  RelatedLocationsCache.clear();
+
   Writer->appendResult(Result);
+}
+
+void SARIFDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
+  // We always emit include location before results, for example:
+  //
+  // In file included from ...
+  // In file included from ...
+  // error: ...
+  //
+  // At this time We cannot peek the SarifRule. But what we
+  // do is to push it into a cache and wait for next time
+  // \ref SARIFDiagnostic::emitDiagnosticMessage to pick it up.
+  RelatedLocationsCache.push_back({Loc, PLoc});
+}
+
+void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                                         StringRef ModuleName) {
+  RelatedLocationsCache.push_back({Loc, PLoc});
 }
 
 SarifResult SARIFDiagnostic::addLocationToResult(
     SarifResult Result, FullSourceLoc Loc, PresumedLoc PLoc,
     ArrayRef<CharSourceRange> Ranges, const Diagnostic &Diag) {
+  auto Locations = getSarifLocation(Loc, PLoc, Ranges);
+  return Result.addLocations(Locations);
+}
+
+SarifResult SARIFDiagnostic::addRelatedLocationToResult(SarifResult Result,
+                                                        FullSourceLoc Loc,
+                                                        PresumedLoc PLoc) {
+  auto Locations = getSarifLocation(Loc, PLoc, {});
+  return Result.addRelatedLocations(Locations);
+}
+
+llvm::SmallVector<CharSourceRange>
+SARIFDiagnostic::getSarifLocation(FullSourceLoc Loc, PresumedLoc PLoc,
+                                  ArrayRef<CharSourceRange> Ranges) {
   SmallVector<CharSourceRange> Locations = {};
 
   if (PLoc.isInvalid()) {
@@ -75,34 +153,25 @@ SarifResult SARIFDiagnostic::addLocationToResult(
         // FIXME(llvm-project/issues/57366): File-only locations
       }
     }
-    return Result;
+    return {};
   }
 
   FileID CaretFileID = Loc.getExpansionLoc().getFileID();
 
+  auto &SM = Loc.getManager();
   for (const CharSourceRange Range : Ranges) {
-    // Ignore invalid ranges.
-    if (Range.isInvalid())
+    std::optional<CharSourceRange> FileRange =
+        getExpansionRangeInFile(Range, CaretFileID, SM);
+    if (!FileRange)
       continue;
 
-    auto &SM = Loc.getManager();
-    SourceLocation B = SM.getExpansionLoc(Range.getBegin());
-    CharSourceRange ERange = SM.getExpansionRange(Range.getEnd());
-    SourceLocation E = ERange.getEnd();
-    bool IsTokenRange = ERange.isTokenRange();
-
-    std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(B);
-    std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(E);
-
-    // If the start or end of the range is in another file, just discard
-    // it.
-    if (BInfo.first != CaretFileID || EInfo.first != CaretFileID)
-      continue;
+    SourceLocation B = FileRange->getBegin();
+    SourceLocation E = FileRange->getEnd();
 
     // Add in the length of the token, so that we cover multi-char
     // tokens.
     unsigned TokSize = 0;
-    if (IsTokenRange)
+    if (FileRange->isTokenRange())
       TokSize = Lexer::MeasureTokenLength(E, SM, LangOpts);
 
     FullSourceLoc BF(B, SM), EF(E, SM);
@@ -117,7 +186,6 @@ SarifResult SARIFDiagnostic::addLocationToResult(
     // Text and SARIF diagnostics.
   }
 
-  auto &SM = Loc.getManager();
   auto FID = PLoc.getFileID();
   // Visual Studio 2010 or earlier expects column number to be off by one.
   unsigned int ColNo = (LangOpts.MSCompatibilityVersion &&
@@ -127,38 +195,11 @@ SarifResult SARIFDiagnostic::addLocationToResult(
   SourceLocation DiagLoc = SM.translateLineCol(FID, PLoc.getLine(), ColNo);
 
   // FIXME(llvm-project/issues/57366): Properly process #line directives.
-  Locations.push_back(
-      CharSourceRange{SourceRange{DiagLoc, DiagLoc}, /* ITR = */ false});
+  CharSourceRange Range = {SourceRange{DiagLoc, DiagLoc}, /* ITR = */ false};
+  if (Range.isValid())
+    Locations.push_back(std::move(Range));
 
-  return Result.setLocations(Locations);
-}
-
-SarifRule
-SARIFDiagnostic::addDiagnosticLevelToRule(SarifRule Rule,
-                                          DiagnosticsEngine::Level Level) {
-  auto Config = SarifReportingConfiguration::create();
-
-  switch (Level) {
-  case DiagnosticsEngine::Note:
-    Config = Config.setLevel(SarifResultLevel::Note);
-    break;
-  case DiagnosticsEngine::Remark:
-    Config = Config.setLevel(SarifResultLevel::None);
-    break;
-  case DiagnosticsEngine::Warning:
-    Config = Config.setLevel(SarifResultLevel::Warning);
-    break;
-  case DiagnosticsEngine::Error:
-    Config = Config.setLevel(SarifResultLevel::Error).setRank(50);
-    break;
-  case DiagnosticsEngine::Fatal:
-    Config = Config.setLevel(SarifResultLevel::Error).setRank(100);
-    break;
-  case DiagnosticsEngine::Ignored:
-    assert(false && "Invalid diagnostic type");
-  }
-
-  return Rule.setDefaultConfiguration(Config);
+  return Locations;
 }
 
 llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
@@ -182,7 +223,7 @@ llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
       // on that system, both aforementioned paths point to the same place.
 #ifdef _WIN32
       SmallString<256> TmpFilename = File->getName();
-      llvm::sys::fs::make_absolute(TmpFilename);
+      SM.getFileManager().makeAbsolutePath(TmpFilename);
       llvm::sys::path::native(TmpFilename);
       llvm::sys::path::remove_dots(TmpFilename, /* remove_dot_dot */ true);
       Filename = StringRef(TmpFilename.data(), TmpFilename.size());
@@ -204,15 +245,6 @@ llvm::StringRef SARIFDiagnostic::emitFilename(StringRef Filename,
 void SARIFDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
                                         DiagnosticsEngine::Level Level,
                                         ArrayRef<CharSourceRange> Ranges) {
-  assert(false && "Not implemented in SARIF mode");
-}
-
-void SARIFDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
-  assert(false && "Not implemented in SARIF mode");
-}
-
-void SARIFDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
-                                         StringRef ModuleName) {
   assert(false && "Not implemented in SARIF mode");
 }
 

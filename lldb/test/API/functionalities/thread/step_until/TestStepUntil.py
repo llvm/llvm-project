@@ -1,13 +1,14 @@
 """Test stepping over vrs. hitting breakpoints & subsequent stepping in various forms."""
 
-
-import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test_event.build_exception import BuildError
 
 
 class StepUntilTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -39,18 +40,12 @@ class StepUntilTestCase(TestBase):
         )
         self.assertTrue(break_before, VALID_BREAKPOINT)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(args, None, self.get_process_working_directory())
-
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break_before)
-
-        if len(threads) != 1:
-            self.fail("Failed to stop at first breakpoint in main.")
-
-        thread = threads[0]
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetArguments(args, True)
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        _, _, thread, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, break_before, launch_info
+        )
         return thread
 
     def do_until(self, args, until_lines, expected_linenum):
@@ -92,6 +87,7 @@ class StepUntilTestCase(TestBase):
             None, [self.less_than_two, self.greater_than_two], self.less_than_two
         )
 
+    @skipIfWasm  # step-until stops one line late
     def test_missing_one(self):
         """Test thread step until - targeting one line and missing it by stepping out to call site"""
         self.do_until(
@@ -112,10 +108,15 @@ class StepUntilTestCase(TestBase):
     @no_debug_info_test
     @skipIf(oslist=lldbplatformutil.getDarwinOSTriples() + ["windows"])
     @skipIf(archs=no_match(["x86_64", "aarch64"]))
+    @skipIf(compiler=no_match(["clang"]))
     def test_bad_line_discontinuous(self):
         """Test that we get an error if attempting to step outside the current
         function -- and the function is discontinuous"""
-        self.build(dictionary=self._build_dict_for_discontinuity())
+        try:
+            self.build(dictionary=self._build_dict_for_discontinuity())
+        except BuildError as ex:
+            self.skipTest(f"failed to build with linker script.")
+
         _, _, thread, _ = lldbutil.run_to_source_breakpoint(
             self, "At the start", lldb.SBFileSpec(self.main_source)
         )

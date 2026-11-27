@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DebuggerEvents.h"
@@ -41,6 +40,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -59,15 +59,36 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Error.h"
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
 using namespace lldb;
 using namespace lldb_private;
+
+namespace {
+struct RuntimeGlobalSymbolSpec {
+  ConstString name;
+
+  /// Whether to only return the address or also the value.
+  bool read_value = true;
+
+  /// A byte size of 0 means use the process pointer size.
+  uint8_t byte_size = 0;
+};
+
+struct RuntimeGlobalSymbolResult {
+  uint64_t value = LLDB_INVALID_ADDRESS;
+  bool success = false;
+};
+} // namespace
 
 char AppleObjCRuntimeV2::ID = 0;
 
@@ -312,15 +333,15 @@ __lldb_apple_objc_v2_get_dynamic_class_info3(void *gdb_objc_realized_classes_ptr
 static const char *g_shared_cache_class_name_funcptr = R"(
 extern "C"
 {
-    const char *%s(void *objc_class);
-    const char *(*class_name_lookup_func)(void *) = %s;
+    const char *{0}(void *objc_class);
+    const char *(*class_name_lookup_func)(void *) = {1};
 }
 )";
 
 static const char *g_get_shared_cache_class_info_name =
     "__lldb_apple_objc_v2_get_shared_cache_class_info";
 
-static const char *g_get_shared_cache_class_info_body = R"(
+static const char *g_get_shared_cache_class_info_definitions = R"(
 
 extern "C"
 {
@@ -411,6 +432,9 @@ struct ClassInfo
     Class isa;
     uint32_t hash;
 }  __attribute__((__packed__));
+)";
+
+static const char *g_get_shared_cache_class_info_body = R"(
 
 uint32_t
 __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
@@ -418,6 +442,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                                                   void *class_infos_ptr,
                                                   uint64_t *relative_selector_offset,
                                                   uint32_t class_infos_byte_size,
+                                                  uint32_t *start_idx,
                                                   uint32_t should_log)
 {
     *relative_selector_offset = 0;
@@ -426,6 +451,7 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
     DEBUG_PRINTF ("shared_cache_base_ptr = %p\n", shared_cache_base_ptr);
     DEBUG_PRINTF ("class_infos_ptr = %p\n", class_infos_ptr);
     DEBUG_PRINTF ("class_infos_byte_size = %u (%llu class infos)\n", class_infos_byte_size, (uint64_t)(class_infos_byte_size/sizeof(ClassInfo)));
+    DEBUG_PRINTF ("start_idx = %u\n", *start_idx);
     if (objc_opt_ro_ptr)
     {
         const objc_opt_t *objc_opt = (objc_opt_t *)objc_opt_ro_ptr;
@@ -480,7 +506,11 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
             DEBUG_PRINTF ("clsopt->mask = 0x%8.8x\n", clsopt->mask);
             DEBUG_PRINTF ("classOffsets = %p\n", classOffsets);
 
-            for (uint32_t i=0; i<clsopt->capacity; ++i)
+            const uint32_t original_start_idx = *start_idx;
+
+            // Always start at the start_idx here. If it's greater than the capacity,
+            // it will skip the loop entirely and go to the duplicate handling below.
+            for (uint32_t i=*start_idx; i<clsopt->capacity; ++i)
             {
                 const uint64_t objectCacheOffset = classOffsets[i].objectCacheOffset;
                 DEBUG_PRINTF("objectCacheOffset[%u] = %u\n", i, objectCacheOffset);
@@ -524,58 +554,77 @@ __lldb_apple_objc_v2_get_shared_cache_class_info (void *objc_opt_ro_ptr,
                 else
                 {
                     DEBUG_PRINTF("not(class_infos && idx < max_class_infos)\n");
+                    *start_idx = i;
+                    break;
                 }
                 ++idx;
             }
 
-            const uint32_t *duplicate_count_ptr = (uint32_t *)&classOffsets[clsopt->capacity];
-            const uint32_t duplicate_count = *duplicate_count_ptr;
-            const objc_classheader_v16_t *duplicateClassOffsets = (const objc_classheader_v16_t *)(&duplicate_count_ptr[1]);
+            if (idx < max_class_infos) {
+                const uint32_t *duplicate_count_ptr = (uint32_t *)&classOffsets[clsopt->capacity];
+                const uint32_t duplicate_count = *duplicate_count_ptr;
+                const objc_classheader_v16_t *duplicateClassOffsets = (const objc_classheader_v16_t *)(&duplicate_count_ptr[1]);
 
-            DEBUG_PRINTF ("duplicate_count = %u\n", duplicate_count);
-            DEBUG_PRINTF ("duplicateClassOffsets = %p\n", duplicateClassOffsets);
+                DEBUG_PRINTF ("duplicate_count = %u\n", duplicate_count);
+                DEBUG_PRINTF ("duplicateClassOffsets = %p\n", duplicateClassOffsets);
 
-            for (uint32_t i=0; i<duplicate_count; ++i)
-            {
-                const uint64_t objectCacheOffset = classOffsets[i].objectCacheOffset;
-                DEBUG_PRINTF("objectCacheOffset[%u] = %u\n", i, objectCacheOffset);
+                const uint32_t duplicate_start_idx =
+                      *start_idx < clsopt->capacity ?
+                      0 :
+                      *start_idx - clsopt->capacity;
 
-                if (classOffsets[i].isDuplicate) {
-                    DEBUG_PRINTF("isDuplicate = true\n");
-                    continue; // duplicate
-                }
-
-                if (objectCacheOffset == 0) {
-                    DEBUG_PRINTF("objectCacheOffset == invalidEntryOffset\n");
-                    continue; // invalid offset
-                }
-
-                if (class_infos && idx < max_class_infos)
+                for (uint32_t i=duplicate_start_idx; i<duplicate_count; ++i)
                 {
-                    class_infos[idx].isa = (Class)((uint8_t *)shared_cache_base_ptr + objectCacheOffset);
+                    const uint64_t objectCacheOffset = duplicateClassOffsets[i].objectCacheOffset;
+                    DEBUG_PRINTF("objectCacheOffset[%u] = %u\n", i, objectCacheOffset);
 
-                    // Lookup the class name.
-                    const char *name = class_name_lookup_func(class_infos[idx].isa);
-                    DEBUG_PRINTF("[%u] isa = %8p %s\n", idx, class_infos[idx].isa, name);
-
-                    // Hash the class name so we don't have to read it.
-                    const char *s = name;
-                    uint32_t h = 5381;
-                    for (unsigned char c = *s; c; c = *++s)
-                    {
-                        // class_getName demangles swift names and the hash must
-                        // be calculated on the mangled name.  hash==0 means lldb
-                        // will fetch the mangled name and compute the hash in
-                        // ParseClassInfoArray.
-                        if (c == '.')
-                        {
-                            h = 0;
-                            break;
-                        }
-                        h = ((h << 5) + h) + c;
+                    if (duplicateClassOffsets[i].isDuplicate) {
+                        DEBUG_PRINTF("isDuplicate = true\n");
+                        continue; // duplicate
                     }
-                    class_infos[idx].hash = h;
+
+                    if (objectCacheOffset == 0) {
+                        DEBUG_PRINTF("objectCacheOffset == invalidEntryOffset\n");
+                        continue; // invalid offset
+                    }
+
+                    if (class_infos && idx < max_class_infos)
+                    {
+                        class_infos[idx].isa = (Class)((uint8_t *)shared_cache_base_ptr + objectCacheOffset);
+
+                        // Lookup the class name.
+                        const char *name = class_name_lookup_func(class_infos[idx].isa);
+                        DEBUG_PRINTF("[%u] isa = %8p %s\n", idx, class_infos[idx].isa, name);
+
+                        // Hash the class name so we don't have to read it.
+                        const char *s = name;
+                        uint32_t h = 5381;
+                        for (unsigned char c = *s; c; c = *++s)
+                        {
+                            // class_getName demangles swift names and the hash must
+                            // be calculated on the mangled name.  hash==0 means lldb
+                            // will fetch the mangled name and compute the hash in
+                            // ParseClassInfoArray.
+                            if (c == '.')
+                            {
+                                h = 0;
+                                break;
+                            }
+                            h = ((h << 5) + h) + c;
+                        }
+                        class_infos[idx].hash = h;
+                    } else {
+                        DEBUG_PRINTF("not(class_infos && idx < max_class_infos)\n");
+                        *start_idx = i;
+                        break;
+                    }
+                    ++idx;
                 }
+            }
+            // Always make sure start_idx gets updated. Otherwise we have an infinite
+            // loop if there are exactly max_class_infos number of classes.
+            if (*start_idx == original_start_idx) {
+              *start_idx = idx;
             }
         }
         else if (objc_opt->version >= 12 && objc_opt->version <= 15)
@@ -731,6 +780,75 @@ ExtractRuntimeGlobalSymbol(Process *process, ConstString name,
   return symbol_load_addr;
 }
 
+/// Batched version of ExtractRuntimeGlobalSymbol. Resolves symbols and reads
+/// their values in a single batch using ReadUnsignedIntegersFromMemory.
+static llvm::SmallVector<RuntimeGlobalSymbolResult>
+ExtractRuntimeGlobalSymbolsBatched(
+    Process *process, const ModuleSP &module_sp,
+    llvm::ArrayRef<RuntimeGlobalSymbolSpec> specs) {
+
+  // Start out with all results in a failed state.
+  llvm::SmallVector<RuntimeGlobalSymbolResult> results(specs.size());
+
+  if (!process || !module_sp)
+    return results;
+
+  const uint8_t ptr_size = process->GetAddressByteSize();
+
+  // Phase 1: Resolve all symbols to addresses. Build a work list of entries
+  // that need their values read in Phase 2.
+  struct ReadEntry {
+    size_t result_idx;
+    lldb::addr_t addr;
+    uint8_t byte_size;
+  };
+  llvm::SmallVector<ReadEntry> work_list;
+  for (auto [i, spec] : llvm::enumerate(specs)) {
+    const uint8_t size = spec.byte_size ? spec.byte_size : ptr_size;
+    const Symbol *symbol = module_sp->FindFirstSymbolWithNameAndType(
+        spec.name, lldb::eSymbolTypeData);
+
+    if (!symbol || !symbol->ValueIsAddress())
+      continue;
+
+    lldb::addr_t symbol_load_addr =
+        symbol->GetAddressRef().GetLoadAddress(&process->GetTarget());
+    if (symbol_load_addr == LLDB_INVALID_ADDRESS)
+      continue;
+
+    if (!spec.read_value)
+      results[i] = {symbol_load_addr, true};
+    else
+      work_list.push_back({i, symbol_load_addr, size});
+  }
+
+  // Phase 2: Batch read values, grouping consecutive entries with the same
+  // byte size into a single ReadUnsignedIntegersFromMemory call.
+  llvm::stable_sort(work_list, [](const ReadEntry &a, const ReadEntry &b) {
+    return a.byte_size < b.byte_size;
+  });
+
+  for (size_t i = 0; i < work_list.size();) {
+    const uint8_t byte_size = work_list[i].byte_size;
+    const size_t group_start = i;
+
+    llvm::SmallVector<lldb::addr_t> addrs;
+    while (i < work_list.size() && work_list[i].byte_size == byte_size)
+      addrs.push_back(work_list[i++].addr);
+
+    auto read_values =
+        process->ReadUnsignedIntegersFromMemory(addrs, byte_size);
+
+    for (size_t j = 0; j < addrs.size(); ++j) {
+      size_t idx = work_list[group_start + j].result_idx;
+      if (read_values[j].has_value())
+        results[idx] = {*read_values[j], true};
+    }
+  }
+
+  return results;
+}
+
 static void RegisterObjCExceptionRecognizer(Process *process);
 
 AppleObjCRuntimeV2::AppleObjCRuntimeV2(Process *process,
@@ -765,6 +883,11 @@ LanguageRuntime *
 AppleObjCRuntimeV2::GetPreferredLanguageRuntime(ValueObject &in_value) {
   if (auto process_sp = in_value.GetProcessSP()) {
     assert(process_sp.get() == m_process);
+    // A runtime that is preferred for the object because of the code that uses
+    // it comes before the runtime of the language that implements its class.
+    for (LanguageRuntime *runtime : process_sp->GetLanguageRuntimes())
+      if (runtime != this && runtime->IsPreferredLanguageRuntimeFor(in_value))
+        return runtime;
     if (auto descriptor_sp = GetNonKVOClassDescriptor(in_value)) {
       LanguageType impl_lang = descriptor_sp->GetImplementationLanguage();
       if (impl_lang != eLanguageTypeUnknown)
@@ -1161,9 +1284,9 @@ AppleObjCRuntimeV2::CreateExceptionResolver(const BreakpointSP &bkpt,
 
   if (throw_bp)
     resolver_sp = std::make_shared<BreakpointResolverName>(
-        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(),
+        bkpt, std::get<1>(GetExceptionThrowLocation()).AsCString(nullptr),
         eFunctionNameTypeBase, eLanguageTypeUnknown, Breakpoint::Exact, 0,
-        eLazyBoolNo);
+        /*offset_is_insn_count = */ false, eLazyBoolNo);
   // FIXME: We don't do catch breakpoints for ObjC yet.
   // Should there be some way for the runtime to specify what it can do in this
   // regard?
@@ -1234,10 +1357,10 @@ size_t AppleObjCRuntimeV2::GetByteOffsetForIvar(CompilerType &parent_ast_type,
     // Make the objective C V2 mangled name for the ivar offset from the class
     // name and ivar name
     std::string buffer("OBJC_IVAR_$_");
-    buffer.append(class_name.AsCString());
+    buffer.append(class_name.GetStringRef());
     buffer.push_back('.');
     buffer.append(ivar_name);
-    ConstString ivar_const_str(buffer.c_str());
+    ConstString ivar_const_str(buffer);
 
     // Try to get the ivar offset address from the symbol table first using the
     // name we created above
@@ -1324,9 +1447,12 @@ public:
         cursor += unsigned_byte_size;
 
         // void *buckets;
-        m_buckets_ptr = m_process->ReadPointerFromMemory(cursor, err);
+        std::optional<lldb::addr_t> buckets_ptr =
+            llvm::expectedToOptional(m_process->ReadPointerFromMemory(cursor));
+        if (buckets_ptr)
+          m_buckets_ptr = *buckets_ptr;
 
-        success = m_count > 0 && m_buckets_ptr != LLDB_INVALID_ADDRESS;
+        success = m_count > 0 && buckets_ptr.has_value();
       }
     }
 
@@ -1390,25 +1516,29 @@ public:
       size_t map_pair_size = m_parent.m_map_pair_size;
       lldb::addr_t pair_ptr = pairs_ptr + (m_index * map_pair_size);
 
-      Status err;
-
-      lldb::addr_t key =
-          m_parent.m_process->ReadPointerFromMemory(pair_ptr, err);
-      if (!err.Success())
+      llvm::Expected<lldb::addr_t> key =
+          m_parent.m_process->ReadPointerFromMemory(pair_ptr);
+      if (!key) {
+        llvm::consumeError(key.takeError());
         return element();
-      lldb::addr_t value = m_parent.m_process->ReadPointerFromMemory(
-          pair_ptr + m_parent.m_process->GetAddressByteSize(), err);
-      if (!err.Success())
+      }
+      llvm::Expected<lldb::addr_t> value =
+          m_parent.m_process->ReadPointerFromMemory(
+              pair_ptr + m_parent.m_process->GetAddressByteSize());
+      if (!value) {
+        llvm::consumeError(value.takeError());
         return element();
+      }
 
       std::string key_string;
 
-      m_parent.m_process->ReadCStringFromMemory(key, key_string, err);
+      Status err;
+      m_parent.m_process->ReadCStringFromMemory(*key, key_string, err);
       if (!err.Success())
         return element();
 
-      return element(ConstString(key_string.c_str()),
-                     (ObjCLanguageRuntime::ObjCISA)value);
+      return element(ConstString(key_string),
+                     (ObjCLanguageRuntime::ObjCISA)*value);
     }
 
   private:
@@ -1419,19 +1549,19 @@ public:
       const lldb::addr_t pairs_ptr = m_parent.m_buckets_ptr;
       const size_t map_pair_size = m_parent.m_map_pair_size;
       const lldb::addr_t invalid_key = m_parent.m_invalid_key;
-      Status err;
 
       while (m_index--) {
         lldb::addr_t pair_ptr = pairs_ptr + (m_index * map_pair_size);
-        lldb::addr_t key =
-            m_parent.m_process->ReadPointerFromMemory(pair_ptr, err);
+        llvm::Expected<lldb::addr_t> key =
+            m_parent.m_process->ReadPointerFromMemory(pair_ptr);
 
-        if (!err.Success()) {
+        if (!key) {
+          llvm::consumeError(key.takeError());
           m_index = -1;
           return;
         }
 
-        if (key != invalid_key)
+        if (*key != invalid_key)
           return;
       }
     }
@@ -1505,15 +1635,24 @@ AppleObjCRuntimeV2::GetClassDescriptorFromISA(ObjCISA isa) {
 
 ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
+  ValueObjectSet seen;
+  return GetClassDescriptorImpl(valobj, seen);
+}
+
+ObjCLanguageRuntime::ClassDescriptorSP
+AppleObjCRuntimeV2::GetClassDescriptorImpl(ValueObject &valobj,
+                                           ValueObjectSet &seen) {
+  seen.insert(&valobj);
+
   ClassDescriptorSP objc_class_sp;
   if (valobj.IsBaseClass()) {
     ValueObject *parent = valobj.GetParent();
-    // if I am my own parent, bail out of here fast..
-    if (parent && parent != &valobj) {
-      ClassDescriptorSP parent_descriptor_sp = GetClassDescriptor(*parent);
-      if (parent_descriptor_sp)
-        return parent_descriptor_sp->GetSuperclass();
-    }
+    // Fail if there's a cycle in our parent chain.
+    if (!parent || seen.count(parent))
+      return nullptr;
+    if (ClassDescriptorSP parent_descriptor_sp =
+            GetClassDescriptorImpl(*parent, seen))
+      return parent_descriptor_sp->GetSuperclass();
     return nullptr;
   }
   // if we get an invalid VO (which might still happen when playing around with
@@ -1522,6 +1661,8 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
   if (!valobj.GetCompilerType().IsValid())
     return objc_class_sp;
   addr_t isa_pointer = valobj.GetPointerValue().address;
+  if (isa_pointer == LLDB_INVALID_ADDRESS)
+    return objc_class_sp;
 
   // tagged pointer
   if (IsTaggedPointer(isa_pointer))
@@ -1532,10 +1673,13 @@ AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
   if (!process)
     return objc_class_sp;
 
-  Status error;
-  ObjCISA isa = process->ReadPointerFromMemory(isa_pointer, error);
-  if (isa == LLDB_INVALID_ADDRESS)
+  llvm::Expected<lldb::addr_t> isa_or_err =
+      process->ReadPointerFromMemory(isa_pointer);
+  if (!isa_or_err) {
+    llvm::consumeError(isa_or_err.takeError());
     return objc_class_sp;
+  }
+  ObjCISA isa = *isa_or_err;
 
   objc_class_sp = GetClassDescriptorFromISA(isa);
   if (!objc_class_sp) {
@@ -1573,11 +1717,11 @@ lldb::addr_t AppleObjCRuntimeV2::GetTaggedPointerObfuscator() {
     lldb::addr_t g_gdb_obj_obfuscator_ptr =
         symbol->GetLoadAddress(&process->GetTarget());
 
-    if (g_gdb_obj_obfuscator_ptr != LLDB_INVALID_ADDRESS) {
-      Status error;
+    if (g_gdb_obj_obfuscator_ptr != LLDB_INVALID_ADDRESS)
       m_tagged_pointer_obfuscator =
-          process->ReadPointerFromMemory(g_gdb_obj_obfuscator_ptr, error);
-    }
+          llvm::expectedToOptional(
+              process->ReadPointerFromMemory(g_gdb_obj_obfuscator_ptr))
+              .value_or(LLDB_INVALID_ADDRESS);
   }
   // If we don't have a correct value at this point, there must be no
   // obfuscation.
@@ -1604,11 +1748,11 @@ lldb::addr_t AppleObjCRuntimeV2::GetISAHashTablePointer() {
       lldb::addr_t gdb_objc_realized_classes_ptr =
           symbol->GetLoadAddress(&process->GetTarget());
 
-      if (gdb_objc_realized_classes_ptr != LLDB_INVALID_ADDRESS) {
-        Status error;
-        m_isa_hash_table_ptr = process->ReadPointerFromMemory(
-            gdb_objc_realized_classes_ptr, error);
-      }
+      if (gdb_objc_realized_classes_ptr != LLDB_INVALID_ADDRESS)
+        m_isa_hash_table_ptr =
+            llvm::expectedToOptional(
+                process->ReadPointerFromMemory(gdb_objc_realized_classes_ptr))
+                .value_or(LLDB_INVALID_ADDRESS);
     }
   }
   return m_isa_hash_table_ptr;
@@ -1639,19 +1783,22 @@ AppleObjCRuntimeV2::SharedCacheImageHeaders::CreateSharedCacheImageHeaders(
     return nullptr;
   }
 
-  Status error;
-  lldb::addr_t objc_debug_headerInfoRWs_ptr =
-      process->ReadPointerFromMemory(objc_debug_headerInfoRWs_addr, error);
-  if (error.Fail()) {
+  llvm::Expected<lldb::addr_t> objc_debug_headerInfoRWs_ptr_or_err =
+      process->ReadPointerFromMemory(objc_debug_headerInfoRWs_addr);
+  if (!objc_debug_headerInfoRWs_ptr_or_err) {
+    llvm::consumeError(objc_debug_headerInfoRWs_ptr_or_err.takeError());
     LLDB_LOG(log,
              "Failed to read address of 'objc_debug_headerInfoRWs' at {0:x}",
              objc_debug_headerInfoRWs_addr);
     return nullptr;
   }
+  lldb::addr_t objc_debug_headerInfoRWs_ptr =
+      *objc_debug_headerInfoRWs_ptr_or_err;
 
   const size_t metadata_size =
       sizeof(uint32_t) + sizeof(uint32_t); // count + entsize
   DataBufferHeap metadata_buffer(metadata_size, '\0');
+  Status error;
   process->ReadMemory(objc_debug_headerInfoRWs_ptr, metadata_buffer.GetBytes(),
                       metadata_size, error);
   if (error.Fail()) {
@@ -1695,23 +1842,35 @@ llvm::Error AppleObjCRuntimeV2::SharedCacheImageHeaders::UpdateIfNeeded() {
   constexpr lldb::addr_t metadata_size =
       sizeof(uint32_t) + sizeof(uint32_t); // count + entsize
 
-  Status error;
+  /// Sanity check: m_count and m_entsize are external input, guard against
+  /// invalid values using an arbitrary 1GB maximum size.
+  const size_t memory_needed = static_cast<size_t>(m_count) * m_entsize;
+  if (memory_needed > 1024 * 1024 * 1024)
+    return llvm::createStringError(
+        "SharedCacheImageHeaders require too much memory");
+
   const lldb::addr_t first_header_addr = m_headerInfoRWs_ptr + metadata_size;
-  DataBufferHeap header_buffer(m_entsize, '\0');
-  lldb::offset_t cursor = 0;
-  for (uint32_t i = 0; i < m_count; i++) {
-    const lldb::addr_t header_addr = first_header_addr + (i * m_entsize);
-    process->ReadMemory(header_addr, header_buffer.GetBytes(), m_entsize,
-                        error);
-    if (error.Fail())
+
+  llvm::SmallVector<Range<addr_t, size_t>> mem_ranges =
+      llvm::to_vector(llvm::map_range(llvm::seq(m_count), [&](uint32_t i) {
+        return Range<addr_t, size_t>(first_header_addr + (i * m_entsize),
+                                     m_entsize);
+      }));
+
+  llvm::SmallVector<uint8_t, 0> buffer(memory_needed, 0);
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>> read_results =
+      process->ReadMemoryRanges(mem_ranges, buffer);
+
+  for (auto [i, header_data] : llvm::enumerate(read_results)) {
+    if (header_data.size() != m_entsize)
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Failed to read memory from inferior when "
                                      "populating SharedCacheImageHeaders");
 
-    DataExtractor header_extractor(header_buffer.GetBytes(), m_entsize,
+    DataExtractor header_extractor(header_data.data(), m_entsize,
                                    process->GetByteOrder(),
                                    process->GetAddressByteSize());
-    cursor = 0;
+    lldb::offset_t cursor = 0;
     bool is_loaded = false;
     if (m_entsize == 4) {
       uint32_t header = header_extractor.GetU32_unchecked(&cursor);
@@ -1754,6 +1913,17 @@ uint64_t AppleObjCRuntimeV2::SharedCacheImageHeaders::GetVersion() {
   return m_version;
 }
 
+static lldb::TypeSystemSP GetScratchTypeSystemForObjCRuntime(Target &target) {
+  auto ts_or_err = target.GetScratchTypeSystemForLanguage(lldb::eLanguageTypeC);
+  if (!ts_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Process | LLDBLog::Types),
+                   ts_or_err.takeError(),
+                   "Couldn't get the scratch type system: {0}");
+    return nullptr;
+  }
+  return *ts_or_err;
+}
+
 std::unique_ptr<UtilityFunction>
 AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
     ExecutionContext &exe_ctx, Helper helper, std::string code,
@@ -1762,8 +1932,8 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
 
   LLDB_LOG(log, "Creating utility function {0}", name);
 
-  TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
+  lldb::TypeSystemSP scratch_ts_sp =
+      GetScratchTypeSystemForObjCRuntime(exe_ctx.GetTargetRef());
   if (!scratch_ts_sp)
     return {};
 
@@ -1780,7 +1950,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::GetClassInfoUtilityFunctionImpl(
   CompilerType clang_uint32_t_type =
       scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
 
   // Make the runner function for our implementation utility function.
   ValueList arguments;
@@ -1903,8 +2073,8 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   LLDB_LOG(log, "Creating utility function {0}",
            g_get_shared_cache_class_info_name);
 
-  TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(exe_ctx.GetTargetRef());
+  lldb::TypeSystemSP scratch_ts_sp =
+      GetScratchTypeSystemForObjCRuntime(exe_ctx.GetTargetRef());
   if (!scratch_ts_sp)
     return {};
 
@@ -1923,11 +2093,11 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   // concatenate the two parts of our expression text.  The format string has
   // two %s's, so provide the name twice.
   std::string shared_class_expression;
-  llvm::raw_string_ostream(shared_class_expression)
-      << llvm::format(g_shared_cache_class_name_funcptr,
-                      class_name_getter_function_name.AsCString(),
-                      class_name_getter_function_name.AsCString());
+  llvm::raw_string_ostream(shared_class_expression) << llvm::formatv(
+      g_shared_cache_class_name_funcptr, class_name_getter_function_name,
+      class_name_getter_function_name);
 
+  shared_class_expression += g_get_shared_cache_class_info_definitions;
   shared_class_expression += g_get_shared_cache_class_info_body;
 
   auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
@@ -1945,9 +2115,12 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   CompilerType clang_uint32_t_type =
       scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32);
   CompilerType clang_void_pointer_type =
-      scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+      scratch_ts_sp->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
   CompilerType clang_uint64_t_pointer_type =
       scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 64)
+          .GetPointerType();
+  CompilerType clang_uint32_t_pointer_type =
+      scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 32)
           .GetPointerType();
 
   // Next make the function caller for our implementation utility function.
@@ -1966,6 +2139,13 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::
   value.SetValueType(Value::ValueType::Scalar);
   value.SetCompilerType(clang_uint32_t_type);
   arguments.PushValue(value);
+
+  value.SetValueType(Value::ValueType::Scalar);
+  value.SetCompilerType(clang_uint32_t_pointer_type);
+  arguments.PushValue(value);
+
+  value.SetValueType(Value::ValueType::Scalar);
+  value.SetCompilerType(clang_uint32_t_type);
   arguments.PushValue(value);
 
   std::unique_ptr<UtilityFunction> utility_fn = std::move(*utility_fn_or_error);
@@ -2014,8 +2194,8 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     return DescriptorMapUpdateResult::Retry();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
+  lldb::TypeSystemSP scratch_ts_sp =
+      GetScratchTypeSystemForObjCRuntime(process->GetTarget());
 
   if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
@@ -2071,7 +2251,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     return DescriptorMapUpdateResult::Fail();
   }
 
-  auto deallocate_class_infos = llvm::make_scope_exit([&] {
+  llvm::scope_exit deallocate_class_infos([&] {
     // Deallocate the memory we allocated for the ClassInfo array
     if (class_infos_addr != LLDB_INVALID_ADDRESS)
       process->DeallocateMemory(class_infos_addr);
@@ -2094,7 +2274,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
     }
   }
 
-  auto deallocate_class_buffer = llvm::make_scope_exit([&] {
+  llvm::scope_exit deallocate_class_buffer([&] {
     // Deallocate the memory we allocated for the Class array
     if (class_buffer_addr != LLDB_INVALID_ADDRESS)
       process->DeallocateMemory(class_buffer_addr);
@@ -2111,7 +2291,7 @@ AppleObjCRuntimeV2::DynamicClassInfoExtractor::UpdateISAToDescriptorMap(
 
   if (class_buffer_addr != LLDB_INVALID_ADDRESS) {
     arguments.GetValueAtIndex(index++)->GetScalar() = class_buffer_addr;
-    arguments.GetValueAtIndex(index++)->GetScalar() = class_buffer_byte_size;
+    arguments.GetValueAtIndex(index++)->GetScalar() = class_buffer_len;
   }
 
   // Only dump the runtime classes from the expression evaluation if the log is
@@ -2279,8 +2459,8 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
     return DescriptorMapUpdateResult::Retry();
 
   thread_sp->CalculateExecutionContext(exe_ctx);
-  TypeSystemClangSP scratch_ts_sp =
-      ScratchTypeSystemClang::GetForTarget(process->GetTarget());
+  lldb::TypeSystemSP scratch_ts_sp =
+      GetScratchTypeSystemForObjCRuntime(process->GetTarget());
 
   if (!scratch_ts_sp)
     return DescriptorMapUpdateResult::Fail();
@@ -2303,10 +2483,7 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
 
   // The number of entries to pre-allocate room for.
   // Each entry is (addrsize + 4) bytes
-  // FIXME: It is not sustainable to continue incrementing this value every time
-  // the shared cache grows. This is because it requires allocating memory in
-  // the inferior process and some inferior processes have small memory limits.
-  const uint32_t max_num_classes = 212992;
+  const uint32_t max_num_classes_in_buffer = 212992;
 
   UtilityFunction *get_class_info_code = GetClassInfoUtilityFunction(exe_ctx);
   if (!get_class_info_code) {
@@ -2328,17 +2505,35 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   DiagnosticManager diagnostics;
 
   const uint32_t class_info_byte_size = addr_size + 4;
-  const uint32_t class_infos_byte_size = max_num_classes * class_info_byte_size;
+  const uint32_t class_infos_byte_size =
+      max_num_classes_in_buffer * class_info_byte_size;
   lldb::addr_t class_infos_addr = process->AllocateMemory(
       class_infos_byte_size, ePermissionsReadable | ePermissionsWritable, err);
   const uint32_t relative_selector_offset_addr_size = 64;
   lldb::addr_t relative_selector_offset_addr =
       process->AllocateMemory(relative_selector_offset_addr_size,
                               ePermissionsReadable | ePermissionsWritable, err);
+  constexpr uint32_t class_info_start_idx_byte_size = sizeof(uint32_t);
+  lldb::addr_t class_info_start_idx_addr =
+      process->AllocateMemory(class_info_start_idx_byte_size,
+                              ePermissionsReadable | ePermissionsWritable, err);
 
-  if (class_infos_addr == LLDB_INVALID_ADDRESS) {
+  if (class_infos_addr == LLDB_INVALID_ADDRESS ||
+      relative_selector_offset_addr == LLDB_INVALID_ADDRESS ||
+      class_info_start_idx_addr == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log,
               "unable to allocate %" PRIu32
+              " bytes in process for shared cache read",
+              class_infos_byte_size);
+    return DescriptorMapUpdateResult::Fail();
+  }
+
+  const uint32_t start_idx_init_value = 0;
+  size_t bytes_written = process->WriteMemory(
+      class_info_start_idx_addr, &start_idx_init_value, sizeof(uint32_t), err);
+  if (bytes_written != sizeof(uint32_t)) {
+    LLDB_LOGF(log,
+              "unable to write %" PRIu32
               " bytes in process for shared cache read",
               class_infos_byte_size);
     return DescriptorMapUpdateResult::Fail();
@@ -2352,12 +2547,13 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
   arguments.GetValueAtIndex(2)->GetScalar() = class_infos_addr;
   arguments.GetValueAtIndex(3)->GetScalar() = relative_selector_offset_addr;
   arguments.GetValueAtIndex(4)->GetScalar() = class_infos_byte_size;
+  arguments.GetValueAtIndex(5)->GetScalar() = class_info_start_idx_addr;
   // Only dump the runtime classes from the expression evaluation if the log is
   // verbose:
   Log *type_log = GetLog(LLDBLog::Types);
   bool dump_log = type_log && type_log->GetVerbose();
 
-  arguments.GetValueAtIndex(5)->GetScalar() = dump_log ? 1 : 0;
+  arguments.GetValueAtIndex(6)->GetScalar() = dump_log ? 1 : 0;
 
   bool success = false;
 
@@ -2384,78 +2580,80 @@ AppleObjCRuntimeV2::SharedCacheClassInfoExtractor::UpdateISAToDescriptorMap() {
 
     diagnostics.Clear();
 
-    // Run the function
-    ExpressionResults results =
-        get_shared_cache_class_info_function->ExecuteFunction(
-            exe_ctx, &m_args, options, diagnostics, return_value);
+    uint32_t num_class_infos_read = 0;
+    bool already_read_relative_selector_offset = false;
 
-    if (results == eExpressionCompleted) {
-      // The result is the number of ClassInfo structures that were filled in
-      num_class_infos = return_value.GetScalar().ULong();
-      LLDB_LOG(log, "Discovered {0} Objective-C classes in the shared cache",
-               num_class_infos);
-      // Assert if there were more classes than we pre-allocated
-      // room for.
-      assert(num_class_infos <= max_num_classes);
-      if (num_class_infos > 0) {
-        if (num_class_infos > max_num_classes) {
-          num_class_infos = max_num_classes;
+    do {
+      // Run the function.
+      ExpressionResults results =
+          get_shared_cache_class_info_function->ExecuteFunction(
+              exe_ctx, &m_args, options, diagnostics, return_value);
 
-          success = false;
-        } else {
+      if (results == eExpressionCompleted) {
+        // The result is the number of ClassInfo structures that were filled in.
+        num_class_infos_read = return_value.GetScalar().ULong();
+        num_class_infos += num_class_infos_read;
+        LLDB_LOG(log, "Discovered {0} Objective-C classes in the shared cache",
+                 num_class_infos_read);
+        if (num_class_infos_read > 0) {
           success = true;
-        }
 
-        // Read the relative selector offset.
-        DataBufferHeap relative_selector_offset_buffer(64, 0);
-        if (process->ReadMemory(relative_selector_offset_addr,
-                                relative_selector_offset_buffer.GetBytes(),
-                                relative_selector_offset_buffer.GetByteSize(),
-                                err) ==
-            relative_selector_offset_buffer.GetByteSize()) {
-          DataExtractor relative_selector_offset_data(
-              relative_selector_offset_buffer.GetBytes(),
-              relative_selector_offset_buffer.GetByteSize(),
-              process->GetByteOrder(), addr_size);
-          lldb::offset_t offset = 0;
-          uint64_t relative_selector_offset =
-              relative_selector_offset_data.GetU64(&offset);
-          if (relative_selector_offset > 0) {
-            // The offset is relative to the objc_opt struct.
-            m_runtime.SetRelativeSelectorBaseAddr(objc_opt_ptr +
-                                                  relative_selector_offset);
+          // Read the relative selector offset. This only needs to occur once no
+          // matter how many times the function is called.
+          if (!already_read_relative_selector_offset) {
+            DataBufferHeap relative_selector_offset_buffer(64, 0);
+            if (process->ReadMemory(
+                    relative_selector_offset_addr,
+                    relative_selector_offset_buffer.GetBytes(),
+                    relative_selector_offset_buffer.GetByteSize(),
+                    err) == relative_selector_offset_buffer.GetByteSize()) {
+              DataExtractor relative_selector_offset_data(
+                  relative_selector_offset_buffer.GetBytes(),
+                  relative_selector_offset_buffer.GetByteSize(),
+                  process->GetByteOrder(), addr_size);
+              lldb::offset_t offset = 0;
+              uint64_t relative_selector_offset =
+                  relative_selector_offset_data.GetU64(&offset);
+              if (relative_selector_offset > 0) {
+                // The offset is relative to the objc_opt struct.
+                m_runtime.SetRelativeSelectorBaseAddr(objc_opt_ptr +
+                                                      relative_selector_offset);
+              }
+            }
+            already_read_relative_selector_offset = true;
+          }
+
+          // Read the ClassInfo structures
+          DataBufferHeap class_infos_buffer(
+              num_class_infos_read * class_info_byte_size, 0);
+          if (process->ReadMemory(class_infos_addr,
+                                  class_infos_buffer.GetBytes(),
+                                  class_infos_buffer.GetByteSize(),
+                                  err) == class_infos_buffer.GetByteSize()) {
+            DataExtractor class_infos_data(class_infos_buffer.GetBytes(),
+                                           class_infos_buffer.GetByteSize(),
+                                           process->GetByteOrder(), addr_size);
+
+            m_runtime.ParseClassInfoArray(class_infos_data,
+                                          num_class_infos_read);
           }
         }
-
-        // Read the ClassInfo structures
-        DataBufferHeap class_infos_buffer(
-            num_class_infos * class_info_byte_size, 0);
-        if (process->ReadMemory(class_infos_addr, class_infos_buffer.GetBytes(),
-                                class_infos_buffer.GetByteSize(),
-                                err) == class_infos_buffer.GetByteSize()) {
-          DataExtractor class_infos_data(class_infos_buffer.GetBytes(),
-                                         class_infos_buffer.GetByteSize(),
-                                         process->GetByteOrder(), addr_size);
-
-          m_runtime.ParseClassInfoArray(class_infos_data, num_class_infos);
-        }
-      } else {
-        success = true;
-      }
-    } else {
-      if (log) {
+      } else if (log) {
         LLDB_LOGF(log, "Error evaluating our find class name function.");
         diagnostics.Dump(log);
+        break;
       }
-    }
-  } else {
-    if (log) {
-      LLDB_LOGF(log, "Error writing function arguments.");
-      diagnostics.Dump(log);
-    }
+    } while (num_class_infos_read == max_num_classes_in_buffer);
+  } else if (log) {
+    LLDB_LOGF(log, "Error writing function arguments.");
+    diagnostics.Dump(log);
   }
 
-  // Deallocate the memory we allocated for the ClassInfo array
+  LLDB_LOG(log, "Processed {0} Objective-C classes total from the shared cache",
+           num_class_infos);
+  // Cleanup memory we allocated in the process.
+  process->DeallocateMemory(relative_selector_offset_addr);
+  process->DeallocateMemory(class_info_start_idx_addr);
   process->DeallocateMemory(class_infos_addr);
 
   return DescriptorMapUpdateResult(success, false, num_class_infos);
@@ -2474,13 +2672,12 @@ lldb::addr_t AppleObjCRuntimeV2::GetSharedCacheReadOnlyAddress() {
         SectionList *section_list = objc_module_sp->GetSectionList();
 
         if (section_list) {
-          SectionSP text_segment_sp(
-              section_list->FindSectionByName(ConstString("__TEXT")));
+          SectionSP text_segment_sp(section_list->FindSectionByName("__TEXT"));
 
           if (text_segment_sp) {
             SectionSP objc_opt_section_sp(
                 text_segment_sp->GetChildren().FindSectionByName(
-                    ConstString("__objc_opt_ro")));
+                    "__objc_opt_ro"));
 
             if (objc_opt_section_sp) {
               return objc_opt_section_sp->GetLoadBaseAddress(
@@ -2643,20 +2840,20 @@ void AppleObjCRuntimeV2::WarnIfNoClassesCached(
   case SharedCacheWarningReason::eNotEnoughClassesRead:
     Debugger::ReportWarning("could not find Objective-C class data in "
                             "the process. This may reduce the quality of type "
-                            "information available.\n",
+                            "information available\n",
                             debugger.GetID(), &m_no_classes_cached_warning);
     break;
   case SharedCacheWarningReason::eExpressionExecutionFailure:
     Debugger::ReportWarning(
         "could not execute support code to read "
         "Objective-C class data in the process. This may "
-        "reduce the quality of type information available.\n",
+        "reduce the quality of type information available\n",
         debugger.GetID(), &m_no_classes_cached_warning);
     break;
   case SharedCacheWarningReason::eExpressionUnableToRun:
     Debugger::ReportWarning(
         "could not execute support code to read Objective-C class data because "
-        "it's not yet safe to do so, and will be retried later.\n",
+        "it's not yet safe to do so, and will be retried later\n",
         debugger.GetID(), nullptr);
     break;
   }
@@ -2693,7 +2890,7 @@ void AppleObjCRuntimeV2::WarnIfNoExpandedSharedCache() {
   } else {
     os << "read from the shared cache";
   }
-  os << ". This will likely reduce debugging performance.\n";
+  os << ". This will likely reduce debugging performance\n";
 
   Debugger::ReportWarning(buffer, debugger.GetID(),
                           &m_no_expanded_cache_warning);
@@ -2706,20 +2903,15 @@ DeclVendor *AppleObjCRuntimeV2::GetDeclVendor() {
   return m_decl_vendor_up.get();
 }
 
-lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
+lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(llvm::StringRef name) {
   lldb::addr_t ret = LLDB_INVALID_ADDRESS;
 
-  const char *name_cstr = name.AsCString();
-
-  if (name_cstr) {
-    llvm::StringRef name_strref(name_cstr);
-
+  if (!name.empty()) {
     llvm::StringRef ivar_prefix("OBJC_IVAR_$_");
     llvm::StringRef class_prefix("OBJC_CLASS_$_");
 
-    if (name_strref.starts_with(ivar_prefix)) {
-      llvm::StringRef ivar_skipped_prefix =
-          name_strref.substr(ivar_prefix.size());
+    if (name.starts_with(ivar_prefix)) {
+      llvm::StringRef ivar_skipped_prefix = name.substr(ivar_prefix.size());
       std::pair<llvm::StringRef, llvm::StringRef> class_and_ivar =
           ivar_skipped_prefix.split('.');
 
@@ -2730,7 +2922,7 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
 
         if (descriptor) {
           const ConstString ivar_name_cs(class_and_ivar.second);
-          const char *ivar_name_cstr = ivar_name_cs.AsCString();
+          const char *ivar_name_cstr = ivar_name_cs.AsCString(nullptr);
 
           auto ivar_func = [&ret,
                             ivar_name_cstr](const char *name, const char *type,
@@ -2750,9 +2942,8 @@ lldb::addr_t AppleObjCRuntimeV2::LookupRuntimeSymbol(ConstString name) {
               ivar_func);
         }
       }
-    } else if (name_strref.starts_with(class_prefix)) {
-      llvm::StringRef class_skipped_prefix =
-          name_strref.substr(class_prefix.size());
+    } else if (name.starts_with(class_prefix)) {
+      llvm::StringRef class_skipped_prefix = name.substr(class_prefix.size());
       const ConstString class_name_cs(class_skipped_prefix);
       ClassDescriptorSP descriptor =
           GetClassDescriptorFromClassName(class_name_cs);
@@ -2770,56 +2961,61 @@ AppleObjCRuntimeV2::NonPointerISACache::CreateInstance(
     AppleObjCRuntimeV2 &runtime, const lldb::ModuleSP &objc_module_sp) {
   Process *process(runtime.GetProcess());
 
-  Status error;
-
   Log *log = GetLog(LLDBLog::Types);
 
-  auto objc_debug_isa_magic_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_isa_magic_mask"), objc_module_sp, error);
-  if (error.Fail())
+  // Batch read all the ISA-related symbols in one go.
+  enum ISASymbol {
+    kMagicMask,
+    kMagicValue,
+    kClassMask,
+    kIndexedMagicMask,
+    kIndexedMagicValue,
+    kIndexedIndexMask,
+    kIndexedIndexShift,
+    kIndexedClasses,
+    kISASymbolCount,
+  };
+  llvm::SmallVector<RuntimeGlobalSymbolSpec> specs = {
+      {ConstString("objc_debug_isa_magic_mask")},
+      {ConstString("objc_debug_isa_magic_value")},
+      {ConstString("objc_debug_isa_class_mask")},
+      {ConstString("objc_debug_indexed_isa_magic_mask")},
+      {ConstString("objc_debug_indexed_isa_magic_value")},
+      {ConstString("objc_debug_indexed_isa_index_mask")},
+      {ConstString("objc_debug_indexed_isa_index_shift")},
+      {ConstString("objc_indexed_classes"), /*read_value=*/false},
+  };
+  assert(specs.size() == kISASymbolCount);
+
+  auto results =
+      ExtractRuntimeGlobalSymbolsBatched(process, objc_module_sp, specs);
+
+  // Check required symbols.
+  if (!results[kMagicMask].success || !results[kMagicValue].success ||
+      !results[kClassMask].success)
     return nullptr;
 
-  auto objc_debug_isa_magic_value = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_isa_magic_value"), objc_module_sp,
-      error);
-  if (error.Fail())
-    return nullptr;
-
-  auto objc_debug_isa_class_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_isa_class_mask"), objc_module_sp, error);
-  if (error.Fail())
-    return nullptr;
+  auto objc_debug_isa_magic_mask = results[kMagicMask].value;
+  auto objc_debug_isa_magic_value = results[kMagicValue].value;
+  auto objc_debug_isa_class_mask = results[kClassMask].value;
 
   if (log)
     log->PutCString("AOCRT::NPI: Found all the non-indexed ISA masks");
 
-  bool foundError = false;
-  auto objc_debug_indexed_isa_magic_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_indexed_isa_magic_mask"), objc_module_sp,
-      error);
-  foundError |= error.Fail();
+  // Check optional indexed ISA symbols.
+  bool foundError = !results[kIndexedMagicMask].success ||
+                    !results[kIndexedMagicValue].success ||
+                    !results[kIndexedIndexMask].success ||
+                    !results[kIndexedIndexShift].success ||
+                    !results[kIndexedClasses].success;
 
-  auto objc_debug_indexed_isa_magic_value = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_indexed_isa_magic_value"),
-      objc_module_sp, error);
-  foundError |= error.Fail();
+  auto objc_debug_indexed_isa_magic_mask = results[kIndexedMagicMask].value;
+  auto objc_debug_indexed_isa_magic_value = results[kIndexedMagicValue].value;
+  auto objc_debug_indexed_isa_index_mask = results[kIndexedIndexMask].value;
+  auto objc_debug_indexed_isa_index_shift = results[kIndexedIndexShift].value;
+  auto objc_indexed_classes = results[kIndexedClasses].value;
 
-  auto objc_debug_indexed_isa_index_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_indexed_isa_index_mask"), objc_module_sp,
-      error);
-  foundError |= error.Fail();
-
-  auto objc_debug_indexed_isa_index_shift = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_indexed_isa_index_shift"),
-      objc_module_sp, error);
-  foundError |= error.Fail();
-
-  auto objc_indexed_classes =
-      ExtractRuntimeGlobalSymbol(process, ConstString("objc_indexed_classes"),
-                                 objc_module_sp, error, false);
-  foundError |= error.Fail();
-
-  if (log)
+  if (log && !foundError)
     log->PutCString("AOCRT::NPI: Found all the indexed ISA masks");
 
   // we might want to have some rules to outlaw these other values (e.g if the
@@ -2838,84 +3034,72 @@ AppleObjCRuntimeV2::TaggedPointerVendorV2::CreateInstance(
     AppleObjCRuntimeV2 &runtime, const lldb::ModuleSP &objc_module_sp) {
   Process *process(runtime.GetProcess());
 
-  Status error;
+  // Batch read all tagged pointer symbols in one go.
+  enum TaggedPtrSymbol {
+    kMask,
+    kSlotShift,
+    kSlotMask,
+    kPayloadLshift,
+    kPayloadRshift,
+    kClasses,
+    kExtMask,
+    kExtSlotShift,
+    kExtSlotMask,
+    kExtClasses,
+    kExtPayloadLshift,
+    kExtPayloadRshift,
+    kTaggedPtrSymbolCount,
+  };
+  llvm::SmallVector<RuntimeGlobalSymbolSpec> specs = {
+      {ConstString("objc_debug_taggedpointer_mask")},
+      {ConstString("objc_debug_taggedpointer_slot_shift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_slot_mask"), true, 4},
+      {ConstString("objc_debug_taggedpointer_payload_lshift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_payload_rshift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_classes"), false},
+      {ConstString("objc_debug_taggedpointer_ext_mask")},
+      {ConstString("objc_debug_taggedpointer_ext_slot_shift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_ext_slot_mask"), true, 4},
+      {ConstString("objc_debug_taggedpointer_ext_classes"), false},
+      {ConstString("objc_debug_taggedpointer_ext_payload_lshift"), true, 4},
+      {ConstString("objc_debug_taggedpointer_ext_payload_rshift"), true, 4},
+  };
+  assert(specs.size() == kTaggedPtrSymbolCount);
 
-  auto objc_debug_taggedpointer_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_mask"), objc_module_sp,
-      error);
-  if (error.Fail())
+  auto results =
+      ExtractRuntimeGlobalSymbolsBatched(process, objc_module_sp, specs);
+
+  // Check required symbols.
+  bool required_success =
+      results[kMask].success && results[kSlotShift].success &&
+      results[kSlotMask].success && results[kPayloadLshift].success &&
+      results[kPayloadRshift].success && results[kClasses].success;
+
+  if (!required_success)
     return new TaggedPointerVendorLegacy(runtime);
 
-  auto objc_debug_taggedpointer_slot_shift = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_slot_shift"),
-      objc_module_sp, error, true, 4);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
+  auto objc_debug_taggedpointer_mask = results[kMask].value;
+  auto objc_debug_taggedpointer_slot_shift = results[kSlotShift].value;
+  auto objc_debug_taggedpointer_slot_mask = results[kSlotMask].value;
+  auto objc_debug_taggedpointer_payload_lshift = results[kPayloadLshift].value;
+  auto objc_debug_taggedpointer_payload_rshift = results[kPayloadRshift].value;
+  auto objc_debug_taggedpointer_classes = results[kClasses].value;
 
-  auto objc_debug_taggedpointer_slot_mask = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_slot_mask"),
-      objc_module_sp, error, true, 4);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
+  // Check if extended symbols are all present.
+  bool extended_success =
+      results[kExtMask].success && results[kExtSlotShift].success &&
+      results[kExtSlotMask].success && results[kExtClasses].success &&
+      results[kExtPayloadLshift].success && results[kExtPayloadRshift].success;
 
-  auto objc_debug_taggedpointer_payload_lshift = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_payload_lshift"),
-      objc_module_sp, error, true, 4);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
-
-  auto objc_debug_taggedpointer_payload_rshift = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_payload_rshift"),
-      objc_module_sp, error, true, 4);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
-
-  auto objc_debug_taggedpointer_classes = ExtractRuntimeGlobalSymbol(
-      process, ConstString("objc_debug_taggedpointer_classes"), objc_module_sp,
-      error, false);
-  if (error.Fail())
-    return new TaggedPointerVendorLegacy(runtime);
-
-  // try to detect the "extended tagged pointer" variables - if any are
-  // missing, use the non-extended vendor
-  do {
-    auto objc_debug_taggedpointer_ext_mask = ExtractRuntimeGlobalSymbol(
-        process, ConstString("objc_debug_taggedpointer_ext_mask"),
-        objc_module_sp, error);
-    if (error.Fail())
-      break;
-
-    auto objc_debug_taggedpointer_ext_slot_shift = ExtractRuntimeGlobalSymbol(
-        process, ConstString("objc_debug_taggedpointer_ext_slot_shift"),
-        objc_module_sp, error, true, 4);
-    if (error.Fail())
-      break;
-
-    auto objc_debug_taggedpointer_ext_slot_mask = ExtractRuntimeGlobalSymbol(
-        process, ConstString("objc_debug_taggedpointer_ext_slot_mask"),
-        objc_module_sp, error, true, 4);
-    if (error.Fail())
-      break;
-
-    auto objc_debug_taggedpointer_ext_classes = ExtractRuntimeGlobalSymbol(
-        process, ConstString("objc_debug_taggedpointer_ext_classes"),
-        objc_module_sp, error, false);
-    if (error.Fail())
-      break;
-
+  if (extended_success) {
+    auto objc_debug_taggedpointer_ext_mask = results[kExtMask].value;
+    auto objc_debug_taggedpointer_ext_slot_shift = results[kExtSlotShift].value;
+    auto objc_debug_taggedpointer_ext_slot_mask = results[kExtSlotMask].value;
+    auto objc_debug_taggedpointer_ext_classes = results[kExtClasses].value;
     auto objc_debug_taggedpointer_ext_payload_lshift =
-        ExtractRuntimeGlobalSymbol(
-            process, ConstString("objc_debug_taggedpointer_ext_payload_lshift"),
-            objc_module_sp, error, true, 4);
-    if (error.Fail())
-      break;
-
+        results[kExtPayloadLshift].value;
     auto objc_debug_taggedpointer_ext_payload_rshift =
-        ExtractRuntimeGlobalSymbol(
-            process, ConstString("objc_debug_taggedpointer_ext_payload_rshift"),
-            objc_module_sp, error, true, 4);
-    if (error.Fail())
-      break;
+        results[kExtPayloadRshift].value;
 
     return new TaggedPointerVendorExtended(
         runtime, objc_debug_taggedpointer_mask,
@@ -2928,7 +3112,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorV2::CreateInstance(
         objc_debug_taggedpointer_ext_payload_lshift,
         objc_debug_taggedpointer_ext_payload_rshift,
         objc_debug_taggedpointer_classes, objc_debug_taggedpointer_ext_classes);
-  } while (false);
+  }
 
   // we might want to have some rules to outlaw these values (e.g if the
   // table's address is zero)
@@ -2946,16 +3130,16 @@ bool AppleObjCRuntimeV2::TaggedPointerVendorLegacy::IsPossibleTaggedPointer(
   return (ptr & 1);
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
 AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
     lldb::addr_t ptr) {
   if (!IsPossibleTaggedPointer(ptr))
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   uint32_t foundation_version = m_runtime.GetFoundationVersion();
 
   if (foundation_version == LLDB_INVALID_MODULE_VERSION)
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   uint64_t class_bits = (ptr & 0xE) >> 1;
   ConstString name;
@@ -2984,7 +3168,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
       name = g_NSDate;
       break;
     default:
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     }
   } else {
     switch (class_bits) {
@@ -3001,12 +3185,12 @@ AppleObjCRuntimeV2::TaggedPointerVendorLegacy::GetClassDescriptor(
       name = g_NSDateTS;
       break;
     default:
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     }
   }
 
   lldb::addr_t unobfuscated = ptr ^ m_runtime.GetTaggedPointerObfuscator();
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(name, unobfuscated));
+  return std::make_unique<ClassDescriptorV2Tagged>(name, unobfuscated);
 }
 
 AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::
@@ -3033,14 +3217,14 @@ bool AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::
   return (ptr & m_objc_debug_taggedpointer_mask) != 0;
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
 AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
   uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
   if (!IsPossibleTaggedPointer(unobfuscated))
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   uintptr_t slot = (ptr >> m_objc_debug_taggedpointer_slot_shift) &
                    m_objc_debug_taggedpointer_slot_mask;
@@ -3052,10 +3236,14 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
     Process *process(m_runtime.GetProcess());
     uintptr_t slot_ptr = slot * process->GetAddressByteSize() +
                          m_objc_debug_taggedpointer_classes;
-    Status error;
-    uintptr_t slot_data = process->ReadPointerFromMemory(slot_ptr, error);
-    if (error.Fail() || slot_data == 0 ||
-        slot_data == uintptr_t(LLDB_INVALID_ADDRESS))
+    llvm::Expected<lldb::addr_t> slot_data_or_err =
+        process->ReadPointerFromMemory(slot_ptr);
+    if (!slot_data_or_err) {
+      llvm::consumeError(slot_data_or_err.takeError());
+      return nullptr;
+    }
+    uintptr_t slot_data = *slot_data_or_err;
+    if (slot_data == 0)
       return nullptr;
     actual_class_descriptor_sp =
         m_runtime.GetClassDescriptorFromISA((ObjCISA)slot_data);
@@ -3067,7 +3255,7 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
       }
     }
     if (!actual_class_descriptor_sp)
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     m_cache[slot] = actual_class_descriptor_sp;
   }
 
@@ -3077,8 +3265,8 @@ AppleObjCRuntimeV2::TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(
   int64_t data_payload_signed =
       ((int64_t)(unobfuscated << m_objc_debug_taggedpointer_payload_lshift) >>
        m_objc_debug_taggedpointer_payload_rshift);
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(
-      actual_class_descriptor_sp, data_payload, data_payload_signed));
+  return std::make_unique<ClassDescriptorV2Tagged>(
+      actual_class_descriptor_sp, data_payload, data_payload_signed);
 }
 
 AppleObjCRuntimeV2::TaggedPointerVendorExtended::TaggedPointerVendorExtended(
@@ -3126,14 +3314,14 @@ bool AppleObjCRuntimeV2::TaggedPointerVendorExtended::
           m_objc_debug_taggedpointer_ext_mask);
 }
 
-ObjCLanguageRuntime::ClassDescriptorSP
+std::unique_ptr<ObjCLanguageRuntime::ClassDescriptor>
 AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     lldb::addr_t ptr) {
   ClassDescriptorSP actual_class_descriptor_sp;
   uint64_t unobfuscated = (ptr) ^ m_runtime.GetTaggedPointerObfuscator();
 
   if (!IsPossibleTaggedPointer(unobfuscated))
-    return ObjCLanguageRuntime::ClassDescriptorSP();
+    return nullptr;
 
   if (!IsPossibleExtendedTaggedPointer(unobfuscated))
     return this->TaggedPointerVendorRuntimeAssisted::GetClassDescriptor(ptr);
@@ -3148,15 +3336,19 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
     Process *process(m_runtime.GetProcess());
     uintptr_t slot_ptr = slot * process->GetAddressByteSize() +
                          m_objc_debug_taggedpointer_ext_classes;
-    Status error;
-    uintptr_t slot_data = process->ReadPointerFromMemory(slot_ptr, error);
-    if (error.Fail() || slot_data == 0 ||
-        slot_data == uintptr_t(LLDB_INVALID_ADDRESS))
+    llvm::Expected<lldb::addr_t> slot_data_or_err =
+        process->ReadPointerFromMemory(slot_ptr);
+    if (!slot_data_or_err) {
+      llvm::consumeError(slot_data_or_err.takeError());
+      return nullptr;
+    }
+    uintptr_t slot_data = *slot_data_or_err;
+    if (slot_data == 0)
       return nullptr;
     actual_class_descriptor_sp =
         m_runtime.GetClassDescriptorFromISA((ObjCISA)slot_data);
     if (!actual_class_descriptor_sp)
-      return ObjCLanguageRuntime::ClassDescriptorSP();
+      return nullptr;
     m_ext_cache[slot] = actual_class_descriptor_sp;
   }
 
@@ -3168,8 +3360,8 @@ AppleObjCRuntimeV2::TaggedPointerVendorExtended::GetClassDescriptor(
                  << m_objc_debug_taggedpointer_ext_payload_lshift) >>
        m_objc_debug_taggedpointer_ext_payload_rshift);
 
-  return ClassDescriptorSP(new ClassDescriptorV2Tagged(
-      actual_class_descriptor_sp, data_payload, data_payload_signed));
+  return std::make_unique<ClassDescriptorV2Tagged>(
+      actual_class_descriptor_sp, data_payload, data_payload_signed);
 }
 
 AppleObjCRuntimeV2::NonPointerISACache::NonPointerISACache(
@@ -3336,33 +3528,31 @@ bool AppleObjCRuntimeV2::GetCFBooleanValuesIfNeeded() {
   static ConstString g_kCFBooleanFalse("kCFBooleanFalse");
   static ConstString g_kCFBooleanTrue("kCFBooleanTrue");
 
-  std::function<lldb::addr_t(ConstString, ConstString)> get_symbol =
-      [this](ConstString sym, ConstString real_sym) -> lldb::addr_t {
-    SymbolContextList sc_list;
-    GetProcess()->GetTarget().GetImages().FindSymbolsWithNameAndType(
-        sym, lldb::eSymbolTypeData, sc_list);
-    if (sc_list.GetSize() == 1) {
-      SymbolContext sc;
-      sc_list.GetContextAtIndex(0, sc);
-      if (sc.symbol)
-        return sc.symbol->GetLoadAddress(&GetProcess()->GetTarget());
-    }
-    GetProcess()->GetTarget().GetImages().FindSymbolsWithNameAndType(
-        real_sym, lldb::eSymbolTypeData, sc_list);
-    if (sc_list.GetSize() != 1)
+  static ModuleSpec corefoundation_module_spec(FileSpec("CoreFoundation"));
+
+  ModuleSP corefoundation_module_sp =
+      GetProcess()->GetTarget().GetImages().FindFirstModule(
+          corefoundation_module_spec);
+
+  if (!corefoundation_module_sp)
+    return false;
+
+  auto get_symbol = [this, &corefoundation_module_sp](
+                        ConstString sym, ConstString real_sym) -> lldb::addr_t {
+    const Symbol *symbol =
+        corefoundation_module_sp->FindFirstSymbolWithNameAndType(
+            sym, lldb::eSymbolTypeData);
+    if (symbol)
+      return symbol->GetLoadAddress(&GetProcess()->GetTarget());
+
+    symbol = corefoundation_module_sp->FindFirstSymbolWithNameAndType(
+        real_sym, lldb::eSymbolTypeData);
+    if (!symbol)
       return LLDB_INVALID_ADDRESS;
 
-    SymbolContext sc;
-    sc_list.GetContextAtIndex(0, sc);
-    if (!sc.symbol)
-      return LLDB_INVALID_ADDRESS;
-
-    lldb::addr_t addr = sc.symbol->GetLoadAddress(&GetProcess()->GetTarget());
-    Status error;
-    addr = GetProcess()->ReadPointerFromMemory(addr, error);
-    if (error.Fail())
-      return LLDB_INVALID_ADDRESS;
-    return addr;
+    lldb::addr_t addr = symbol->GetLoadAddress(&GetProcess()->GetTarget());
+    return llvm::expectedToOptional(GetProcess()->ReadPointerFromMemory(addr))
+        .value_or(LLDB_INVALID_ADDRESS);
   };
 
   lldb::addr_t false_addr = get_symbol(g_dunder_kCFBooleanFalse, g_kCFBooleanFalse);
@@ -3428,12 +3618,13 @@ public:
     if (!abi)
       return;
 
-    TypeSystemClangSP scratch_ts_sp =
-        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
+    lldb::TypeSystemSP scratch_ts_sp =
+        GetScratchTypeSystemForObjCRuntime(process_sp->GetTarget());
     if (!scratch_ts_sp)
       return;
     CompilerType voidstar =
-        scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicTypeFromAST(lldb::eBasicTypeVoid)
+            .GetPointerType();
 
     ValueList args;
     Value input_value;
@@ -3453,7 +3644,7 @@ public:
         *exception, eValueTypeVariableArgument);
     exception = exception->GetDynamicValue(eDynamicDontRunTarget);
 
-    m_arguments = ValueObjectListSP(new ValueObjectList());
+    m_arguments = std::make_shared<ValueObjectList>();
     m_arguments->Append(exception);
 
     m_stop_desc = "hit Objective-C exception";
@@ -3483,6 +3674,7 @@ static void RegisterObjCExceptionRecognizer(Process *process) {
 
   process->GetTarget().GetFrameRecognizerManager().AddRecognizer(
       StackFrameRecognizerSP(new ObjCExceptionThrowFrameRecognizer()),
-      module.GetFilename(), symbols, Mangled::NamePreference::ePreferDemangled,
+      module.GetFilename().str(), std::move(symbols),
+      Mangled::NamePreference::ePreferDemangled,
       /*first_instruction_only*/ true);
 }

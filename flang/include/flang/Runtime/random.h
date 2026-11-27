@@ -12,7 +12,6 @@
 #define FORTRAN_RUNTIME_RANDOM_H_
 
 #include "flang/Runtime/entry-names.h"
-#include <cstdint>
 
 namespace Fortran::runtime {
 class Descriptor;

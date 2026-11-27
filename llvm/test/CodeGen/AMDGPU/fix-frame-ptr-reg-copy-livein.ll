@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -stop-after=prologepilog -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00 -stop-after=prolog-epilog < %s | FileCheck -check-prefix=GCN %s
 
 ; It is a small loop test that iterates over the array member of the structure argument  passed byval to the function.
 ; The loop code will keep the prologue and epilogue blocks apart.
@@ -14,9 +14,9 @@ define i32 @fp_save_restore_in_temp_sgpr(ptr addrspace(5) nocapture readonly byv
   ; GCN:   $sgpr11 = frame-setup COPY $sgpr33
   ; GCN:   $sgpr33 = frame-setup COPY $sgpr32
   ; GCN: bb.1.lp_end:
-  ; GCN:   liveins: $sgpr10, $sgpr11, $vgpr1, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
-  ; GCN: bb.2.lp_begin:
   ; GCN:   liveins: $sgpr10, $sgpr11, $vgpr1, $sgpr4_sgpr5, $sgpr6_sgpr7
+  ; GCN: bb.2.lp_begin:
+  ; GCN:   liveins: $sgpr10, $sgpr11, $vgpr1, $sgpr4_sgpr5
   ; GCN: bb.3.Flow:
   ; GCN:   liveins: $sgpr10, $sgpr11, $vgpr0, $vgpr1, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9
   ; GCN: bb.4.end:

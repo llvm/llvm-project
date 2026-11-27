@@ -3,11 +3,11 @@
 
 # RUN: rm -rf %t && mkdir %t && cd %t
 
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax %s -o 32.o
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax %s -o 32.o -riscv-align-rvc=0
 # RUN: ld.lld -Ttext=0x10000 --emit-relocs 32.o -o 32
 # RUN: llvm-objdump -dr --no-show-raw-insn -M no-aliases 32 | FileCheck %s
 
-# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax %s -o 64.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+relax %s -o 64.o -riscv-align-rvc=0
 # RUN: ld.lld -Ttext=0x10000 --emit-relocs 64.o -o 64
 # RUN: llvm-objdump -dr --no-show-raw-insn -M no-aliases 64 | FileCheck %s
 

@@ -1,4 +1,4 @@
-//===--- UsingNamespaceDirectiveCheck.cpp - clang-tidy ----------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,7 @@ void UsingNamespaceDirectiveCheck::registerMatchers(
 void UsingNamespaceDirectiveCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *U = Result.Nodes.getNodeAs<UsingDirectiveDecl>("usingNamespace");
-  SourceLocation Loc = U->getBeginLoc();
+  const SourceLocation Loc = U->getBeginLoc();
   if (U->isImplicit() || !Loc.isValid())
     return;
 

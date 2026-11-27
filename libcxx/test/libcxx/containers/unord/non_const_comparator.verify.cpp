@@ -42,17 +42,21 @@ void f() {
   {
     using C = std::unordered_set<int, BadHash, BadEqual>;
     C s;
+    (void)s;
   }
   {
     using C = std::unordered_multiset<long, BadHash, BadEqual>;
     C s;
+    (void)s;
   }
   {
     using C = std::unordered_map<int, int, BadHash, BadEqual>;
     C s;
+    (void)s;
   }
   {
     using C = std::unordered_multimap<long, int, BadHash, BadEqual>;
     C s;
+    (void)s;
   }
 }

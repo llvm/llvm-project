@@ -233,6 +233,7 @@ struct CommonConfig {
   SmallVector<StringRef, 0> DumpSection;
   SmallVector<NewSectionInfo, 0> UpdateSection;
   SmallVector<SectionPatternAddressUpdate, 0> ChangeSectionAddress;
+  SmallVector<StringRef, 0> ExtractSection;
 
   // Section matchers
   NameMatcher KeepSection;
@@ -275,6 +276,7 @@ struct CommonConfig {
   bool StripNonAlloc = false;
   bool StripSections = false;
   bool StripUnneeded = false;
+  bool Verbose = false;
   bool Weaken = false;
   bool DecompressDebugSections = false;
 

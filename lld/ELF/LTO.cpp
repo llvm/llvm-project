@@ -8,6 +8,7 @@
 
 #include "LTO.h"
 #include "Config.h"
+#include "Driver.h"
 #include "InputFiles.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
@@ -19,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "llvm/DTLTO/DTLTO.h"
 #include "llvm/LTO/Config.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/Caching.h"
@@ -37,6 +39,16 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+static AddBufferFn
+createAddBufferFn(std::vector<std::unique_ptr<MemoryBuffer>> &files,
+                  SmallVectorImpl<std::string> &filenames) {
+  return [&files, &filenames](unsigned task, const Twine &moduleName,
+                              std::unique_ptr<MemoryBuffer> mb) {
+    files[task] = std::move(mb);
+    filenames[task] = moduleName.str();
+  };
+}
+
 static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
   return lto::getThinLTOOutputFile(modulePath, ctx.arg.thinLTOPrefixReplaceOld,
                                    ctx.arg.thinLTOPrefixReplaceNew);
@@ -44,9 +56,10 @@ static std::string getThinLTOOutputFile(Ctx &ctx, StringRef modulePath) {
 
 static lto::Config createConfig(Ctx &ctx) {
   lto::Config c;
+  c.LibraryOptions = &ctx.arg.libraryOptions;
 
   // LLD supports the new relocations and address-significance tables.
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.Options = getTargetOptions(ctx.arg.libraryOptions);
   c.Options.EmitAddrsig = true;
   for (StringRef C : ctx.arg.mllvmOpts)
     c.MllvmArgs.emplace_back(C.str());
@@ -77,8 +90,8 @@ static lto::Config createConfig(Ctx &ctx) {
                        << MBOrErr.getError().message();
       } else {
         c.Options.BBSectionsFuncListBuf = std::move(*MBOrErr);
+        c.Options.BBSections = BasicBlockSection::List;
       }
-      c.Options.BBSections = BasicBlockSection::List;
     }
   }
 
@@ -87,7 +100,7 @@ static lto::Config createConfig(Ctx &ctx) {
   c.Options.UniqueBasicBlockSectionNames =
       ctx.arg.ltoUniqueBasicBlockSectionNames;
 
-  if (auto relocModel = getRelocModelFromCMModel())
+  if (auto relocModel = getRelocModelFromCMModel(ctx.arg.libraryOptions))
     c.RelocModel = *relocModel;
   else if (ctx.arg.relocatable)
     c.RelocModel = std::nullopt;
@@ -96,12 +109,12 @@ static lto::Config createConfig(Ctx &ctx) {
   else
     c.RelocModel = Reloc::Static;
 
-  c.CodeModel = getCodeModelFromCMModel();
+  c.CodeModel = getCodeModelFromCMModel(ctx.arg.libraryOptions);
   c.DisableVerify = ctx.arg.disableVerify;
   c.DiagHandler = diagnosticHandler;
   c.OptLevel = ctx.arg.ltoo;
-  c.CPU = getCPUStr();
-  c.MAttrs = getMAttrs();
+  c.CPU = getCPUStr(ctx.arg.libraryOptions);
+  c.MAttrs = getMAttrs(ctx.arg.libraryOptions);
   c.CGOptLevel = ctx.arg.ltoCgo;
 
   c.PTO.LoopVectorization = c.OptLevel > 1;
@@ -123,7 +136,9 @@ static lto::Config createConfig(Ctx &ctx) {
 
   c.SampleProfile = std::string(ctx.arg.ltoSampleProfile);
   for (StringRef pluginFn : ctx.arg.passPlugins)
-    c.PassPlugins.push_back(std::string(pluginFn));
+    c.PassPluginFilenames.push_back(std::string(pluginFn));
+  for (StringRef arg : ctx.arg.passPluginArgs)
+    c.PassPluginArgs.push_back(std::string(arg));
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
   c.DwoDir = std::string(ctx.arg.dwoDir);
 
@@ -158,6 +173,12 @@ static lto::Config createConfig(Ctx &ctx) {
     c.Options.MCOptions.AsmVerbose = true;
   }
 
+  if (ctx.arg.thinLTOIndexOnly) {
+    c.PostRegularLTOLinkHook = [&ctx]() {
+      markBuffersAsDontNeed(ctx, /*skipLinkedOutput=*/true);
+    };
+  }
+
   if (!ctx.arg.saveTempsArgs.empty())
     checkError(ctx.e, c.addSaveTemps(ctx.arg.outputFile.str() + ".",
                                      /*UseInputModulePath*/ true,
@@ -187,14 +208,24 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
         ctx.arg.thinLTOEmitImportsFiles);
   }
 
-  constexpr llvm::lto::LTO::LTOKind ltoModes[3] =
-    {llvm::lto::LTO::LTOKind::LTOK_UnifiedThin,
-     llvm::lto::LTO::LTOKind::LTOK_UnifiedRegular,
-     llvm::lto::LTO::LTOKind::LTOK_Default};
-  ltoObj = std::make_unique<lto::LTO>(createConfig(ctx), backend,
-                                      ctx.arg.ltoPartitions,
-                                      ltoModes[ctx.arg.ltoKind]);
+  constexpr llvm::lto::LTO::LTOKind ltoModes[3] = {
+      llvm::lto::LTO::LTOKind::LTOK_UnifiedThin,
+      llvm::lto::LTO::LTOKind::LTOK_UnifiedRegular,
+      llvm::lto::LTO::LTOKind::LTOK_Default};
 
+  if (ctx.arg.dtltoDistributor.empty())
+    ltoObj = std::make_unique<lto::LTO>(createConfig(ctx), backend,
+                                        ctx.arg.ltoPartitions,
+                                        ltoModes[ctx.arg.ltoKind]);
+  else
+    ltoObj = std::make_unique<lto::DTLTO>(
+        createConfig(ctx), ctx.arg.ltoPartitions, ltoModes[ctx.arg.ltoKind],
+        onIndexWrite, ctx.arg.thinLTOEmitIndexFiles,
+        ctx.arg.thinLTOEmitImportsFiles, ctx.arg.outputFile,
+        ctx.arg.dtltoDistributor, ctx.arg.dtltoDistributorArgs,
+        ctx.arg.dtltoCompiler, ctx.arg.dtltoCompilerPrependArgs,
+        ctx.arg.dtltoCompilerArgs, createAddBufferFn(files, filenames),
+        !ctx.arg.saveTempsArgs.empty());
   // Initialize usedStartStop.
   if (ctx.bitcodeFiles.empty())
     return;
@@ -209,6 +240,11 @@ BitcodeCompiler::BitcodeCompiler(Ctx &ctx) : ctx(ctx) {
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;
+
+void BitcodeCompiler::waitForLTOCleanup() {
+  if (ltoObj)
+    ltoObj->waitForCleanup();
+}
 
 void BitcodeCompiler::add(BitcodeFile &f) {
   lto::InputFile &obj = *f.obj;
@@ -245,7 +281,7 @@ void BitcodeCompiler::add(BitcodeFile &f) {
     r.VisibleToRegularObj = ctx.arg.relocatable || sym->isUsedInRegularObj ||
                             sym->referencedAfterWrap ||
                             (r.Prevailing && sym->isExported) ||
-                            usedStartStop.count(objSym.getSectionName());
+                            usedStartStop.contains(objSym.getSectionName());
     // Identify symbols exported dynamically, and that therefore could be
     // referenced by a shared library not visible to the linker.
     r.ExportDynamic = sym->computeBinding(ctx) != STB_LOCAL &&
@@ -315,11 +351,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   FileCache cache;
   if (!ctx.arg.thinLTOCacheDir.empty())
     cache = check(localCache("ThinLTO", "Thin", ctx.arg.thinLTOCacheDir,
-                             [&](size_t task, const Twine &moduleName,
-                                 std::unique_ptr<MemoryBuffer> mb) {
-                               files[task] = std::move(mb);
-                               filenames[task] = moduleName.str();
-                             }));
+                             createAddBufferFn(files, filenames),
+                             !ctx.arg.dtltoDistributor.empty()));
 
   if (!ctx.bitcodeFiles.empty())
     checkError(ctx.e, ltoObj->run(
@@ -357,13 +390,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
   }
 
   if (!ctx.arg.thinLTOCacheDir.empty())
-    pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files);
-
-  if (!ctx.arg.ltoObjPath.empty()) {
-    saveBuffer(buf[0].second, ctx.arg.ltoObjPath);
-    for (unsigned i = 1; i != maxTasks; ++i)
-      saveBuffer(buf[i].second, ctx.arg.ltoObjPath + Twine(i));
-  }
+    check(
+        pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files));
 
   bool savePrelink = ctx.arg.saveTempsArgs.contains("prelink");
   SmallVector<std::unique_ptr<InputFile>, 0> ret;
@@ -372,8 +400,10 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
     StringRef bitcodeFilePath;
     StringRef objBuf;
     if (files[i]) {
-      // When files[i] is not null, we get the native relocatable file from the
-      // cache. filenames[i] contains the original BitcodeFile's identifier.
+      // When files[i] is not null, it holds a native relocatable file provided
+      // as a MemoryBuffer, for example from the cache or from an external DTLTO
+      // backend compilation. filenames[i] contains the original BitcodeFile's
+      // identifier.
       objBuf = files[i]->getBuffer();
       bitcodeFilePath = filenames[i];
     } else {
@@ -381,6 +411,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
       objBuf = buf[i].second;
       bitcodeFilePath = buf[i].first;
     }
+    if (!ctx.arg.ltoObjPath.empty())
+      saveBuffer(objBuf, ctx.arg.ltoObjPath + (i == 0 ? "" : Twine(i)));
     if (objBuf.empty())
       continue;
 
@@ -413,4 +445,8 @@ SmallVector<std::unique_ptr<InputFile>, 0> BitcodeCompiler::compile() {
       ret.push_back(createObjFile(ctx, MemoryBufferRef(objBuf, ltoObjName)));
   }
   return ret;
+}
+
+void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
+  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
 }

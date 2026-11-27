@@ -30,19 +30,21 @@ void ODRHash::AddIdentifierInfo(const IdentifierInfo *II) {
   ID.AddString(II->getName());
 }
 
-void ODRHash::AddDeclarationName(DeclarationName Name, bool TreatAsDecl) {
+void ODRHash::AddDeclarationNameInfo(DeclarationNameInfo NameInfo,
+                                     bool TreatAsDecl) {
   if (TreatAsDecl)
     // Matches the NamedDecl check in AddDecl
     AddBoolean(true);
 
-  AddDeclarationNameImpl(Name);
+  AddDeclarationNameInfoImpl(NameInfo);
 
   if (TreatAsDecl)
     // Matches the ClassTemplateSpecializationDecl check in AddDecl
     AddBoolean(false);
 }
 
-void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
+void ODRHash::AddDeclarationNameInfoImpl(DeclarationNameInfo NameInfo) {
+  DeclarationName Name = NameInfo.getName();
   // Index all DeclarationName and use index numbers to refer to them.
   auto Result = DeclNameMap.insert(std::make_pair(Name, DeclNameMap.size()));
   ID.AddInteger(Result.first->second);
@@ -85,16 +87,17 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
   }
   case DeclarationName::CXXConstructorName:
   case DeclarationName::CXXDestructorName:
-    AddQualType(Name.getCXXNameType());
+  case DeclarationName::CXXConversionFunctionName:
+    if (auto *TSI = NameInfo.getNamedTypeInfo())
+      AddQualType(TSI->getType());
+    else
+      AddQualType(Name.getCXXNameType());
     break;
   case DeclarationName::CXXOperatorName:
     ID.AddInteger(Name.getCXXOverloadedOperator());
     break;
   case DeclarationName::CXXLiteralOperatorName:
     AddIdentifierInfo(Name.getCXXLiteralIdentifier());
-    break;
-  case DeclarationName::CXXConversionFunctionName:
-    AddQualType(Name.getCXXNameType());
     break;
   case DeclarationName::CXXUsingDirective:
     break;
@@ -108,37 +111,28 @@ void ODRHash::AddDeclarationNameImpl(DeclarationName Name) {
   }
 }
 
-void ODRHash::AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
-  assert(NNS && "Expecting non-null pointer.");
-  const auto *Prefix = NNS->getPrefix();
-  AddBoolean(Prefix);
-  if (Prefix) {
-    AddNestedNameSpecifier(Prefix);
-  }
-  auto Kind = NNS->getKind();
-  ID.AddInteger(Kind);
+void ODRHash::AddNestedNameSpecifier(NestedNameSpecifier NNS) {
+  auto Kind = NNS.getKind();
+  ID.AddInteger(llvm::to_underlying(Kind));
   switch (Kind) {
-  case NestedNameSpecifier::Identifier:
-    AddIdentifierInfo(NNS->getAsIdentifier());
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
+    AddDecl(Namespace);
+    AddNestedNameSpecifier(Prefix);
     break;
-  case NestedNameSpecifier::Namespace:
-    AddDecl(NNS->getAsNamespace());
+  }
+  case NestedNameSpecifier::Kind::Type:
+    AddType(NNS.getAsType());
     break;
-  case NestedNameSpecifier::NamespaceAlias:
-    AddDecl(NNS->getAsNamespaceAlias());
-    break;
-  case NestedNameSpecifier::TypeSpec:
-    AddType(NNS->getAsType());
-    break;
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     break;
   }
 }
 
 void ODRHash::AddDependentTemplateName(const DependentTemplateStorage &Name) {
-  if (NestedNameSpecifier *NNS = Name.getQualifier())
-    AddNestedNameSpecifier(NNS);
+  AddNestedNameSpecifier(Name.getQualifier());
   if (IdentifierOrOverloadedOperator IO = Name.getName();
       const IdentifierInfo *II = IO.getIdentifier())
     AddIdentifierInfo(II);
@@ -156,8 +150,7 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     break;
   case TemplateName::QualifiedTemplate: {
     QualifiedTemplateName *QTN = Name.getAsQualifiedTemplateName();
-    if (NestedNameSpecifier *NNS = QTN->getQualifier())
-      AddNestedNameSpecifier(NNS);
+    AddNestedNameSpecifier(QTN->getQualifier());
     AddBoolean(QTN->hasTemplateKeyword());
     AddTemplateName(QTN->getUnderlyingTemplate());
     break;
@@ -166,12 +159,20 @@ void ODRHash::AddTemplateName(TemplateName Name) {
     AddDependentTemplateName(*Name.getAsDependentTemplateName());
     break;
   }
+  case TemplateName::PackIndexingTemplate: {
+    PackIndexingTemplateStorage *PI = Name.getAsPackIndexingTemplate();
+    AddTemplateName(PI->getPattern());
+    AddStmt(PI->getIndexExpr());
+    break;
+  }
   // TODO: Support these cases.
   case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
   case TemplateName::SubstTemplateTemplateParm:
   case TemplateName::SubstTemplateTemplateParmPack:
+    break;
   case TemplateName::UsingTemplate:
+    AddDecl(Name.getAsUsingShadowDecl()->getTargetDecl());
     break;
   case TemplateName::DeducedTemplate:
     llvm_unreachable("Unexpected DeducedTemplate");
@@ -227,6 +228,11 @@ void ODRHash::AddTemplateParameterList(const TemplateParameterList *TPL) {
   for (auto *ND : TPL->asArray()) {
     AddSubDecl(ND);
   }
+
+  const Expr *RequiresClause = TPL->getRequiresClause();
+  AddBoolean(RequiresClause);
+  if (RequiresClause)
+    AddStmt(RequiresClause);
 }
 
 void ODRHash::clear() {
@@ -314,7 +320,10 @@ public:
   }
 
   void VisitNamedDecl(const NamedDecl *D) {
-    Hash.AddDeclarationName(D->getDeclName());
+    if (const auto *FD = dyn_cast<FunctionDecl>(D))
+      Hash.AddDeclarationNameInfo(FD->getNameInfo());
+    else
+      Hash.AddDeclarationName(D->getDeclName());
     Inherited::VisitNamedDecl(D);
   }
 
@@ -425,28 +434,21 @@ public:
     for (auto Param : Method->parameters())
       Hash.AddSubDecl(Param);
 
-    if (Method->hasBody()) {
-      const bool IsDefinition = Method->isThisDeclarationADefinition();
-      Hash.AddBoolean(IsDefinition);
-      if (IsDefinition) {
-        Stmt *Body = Method->getBody();
-        Hash.AddBoolean(Body);
-        if (Body)
-          AddStmt(Body);
+    const bool IsDefinition = Method->isThisDeclarationADefinition();
+    Hash.AddBoolean(IsDefinition);
+    if (IsDefinition) {
+      AddStmt(Method->getBody());
 
-        // Filter out sub-Decls which will not be processed in order to get an
-        // accurate count of Decl's.
-        llvm::SmallVector<const Decl *, 16> Decls;
-        for (Decl *SubDecl : Method->decls())
-          if (ODRHash::isSubDeclToBeProcessed(SubDecl, Method))
-            Decls.push_back(SubDecl);
+      // Filter out sub-Decls which will not be processed in order to get an
+      // accurate count of Decl's.
+      llvm::SmallVector<const Decl *, 16> Decls;
+      for (Decl *SubDecl : Method->decls())
+        if (ODRHash::isSubDeclToBeProcessed(SubDecl, Method))
+          Decls.push_back(SubDecl);
 
-        ID.AddInteger(Decls.size());
-        for (auto SubDecl : Decls)
-          Hash.AddSubDecl(SubDecl);
-      }
-    } else {
-      Hash.AddBoolean(false);
+      ID.AddInteger(Decls.size());
+      for (auto SubDecl : Decls)
+        Hash.AddSubDecl(SubDecl);
     }
 
     Inherited::VisitObjCMethodDecl(Method);
@@ -475,6 +477,26 @@ public:
       AddDecl(D->getFriendDecl());
     }
     Hash.AddBoolean(D->isPackExpansion());
+  }
+
+  void VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+    for (const TemplateParameterList *TPL : D->getTemplateParameterLists())
+      Hash.AddTemplateParameterList(TPL);
+
+    bool IsTemplateFriend =
+        D->getFriendKind() ==
+        FriendTemplateDecl::FriendTemplateEntityKind::Template;
+    Hash.AddBoolean(!IsTemplateFriend);
+    if (!IsTemplateFriend) {
+      VisitFriendDecl(D);
+      if (D->getFriendKind() ==
+              FriendTemplateDecl::FriendTemplateEntityKind::Type &&
+          !D->getFriendTemplateName().isNull())
+        Hash.AddTemplateName(D->getFriendTemplateName());
+    } else {
+      Hash.AddTemplateName(D->getFriendTemplateName());
+      Hash.AddBoolean(D->isPackExpansion());
+    }
   }
 
   void VisitTemplateTypeParmDecl(const TemplateTypeParmDecl *D) {
@@ -561,6 +583,7 @@ bool ODRHash::isSubDeclToBeProcessed(const Decl *D, const DeclContext *Parent) {
     case Decl::EnumConstant: // Only found in EnumDecl's.
     case Decl::Field:
     case Decl::Friend:
+    case Decl::FriendTemplate:
     case Decl::FunctionTemplate:
     case Decl::StaticAssert:
     case Decl::TypeAlias:
@@ -828,7 +851,10 @@ void ODRHash::AddDecl(const Decl *D) {
     return;
   }
 
-  AddDeclarationName(ND->getDeclName());
+  if (auto *FD = dyn_cast<FunctionDecl>(D))
+    AddDeclarationNameInfo(FD->getNameInfo());
+  else
+    AddDeclarationName(ND->getDeclName());
 
   // If this was a specialization we should take into account its template
   // arguments. This helps to reduce collisions coming when visiting template
@@ -883,11 +909,8 @@ public:
     }
   }
 
-  void AddNestedNameSpecifier(const NestedNameSpecifier *NNS) {
-    Hash.AddBoolean(NNS);
-    if (NNS) {
-      Hash.AddNestedNameSpecifier(NNS);
-    }
+  void AddNestedNameSpecifier(NestedNameSpecifier NNS) {
+    Hash.AddNestedNameSpecifier(NNS);
   }
 
   void AddIdentifierInfo(const IdentifierInfo *II) {
@@ -901,52 +924,42 @@ public:
     ID.AddInteger(Quals.getAsOpaqueValue());
   }
 
-  // Return the RecordType if the typedef only strips away a keyword.
-  // Otherwise, return the original type.
-  static const Type *RemoveTypedef(const Type *T) {
+  // Handle typedefs which only strip away a keyword.
+  bool handleTypedef(const Type *T) {
     const auto *TypedefT = dyn_cast<TypedefType>(T);
-    if (!TypedefT) {
-      return T;
-    }
+    if (!TypedefT)
+      return false;
 
-    const TypedefNameDecl *D = TypedefT->getDecl();
-    QualType UnderlyingType = D->getUnderlyingType();
+    QualType UnderlyingType = TypedefT->desugar();
 
-    if (UnderlyingType.hasLocalQualifiers()) {
-      return T;
-    }
+    if (UnderlyingType.hasLocalQualifiers())
+      return false;
 
-    const auto *ElaboratedT = dyn_cast<ElaboratedType>(UnderlyingType);
-    if (!ElaboratedT) {
-      return T;
-    }
+    const auto *TagT = dyn_cast<TagType>(UnderlyingType);
+    if (!TagT || TagT->getQualifier())
+      return false;
 
-    if (ElaboratedT->getQualifier() != nullptr) {
-      return T;
-    }
+    if (TypedefT->getDecl()->getIdentifier() !=
+        TagT->getDecl()->getIdentifier())
+      return false;
 
-    QualType NamedType = ElaboratedT->getNamedType();
-    if (NamedType.hasLocalQualifiers()) {
-      return T;
-    }
-
-    const auto *RecordT = dyn_cast<RecordType>(NamedType);
-    if (!RecordT) {
-      return T;
-    }
-
-    const IdentifierInfo *TypedefII = TypedefT->getDecl()->getIdentifier();
-    const IdentifierInfo *RecordII = RecordT->getDecl()->getIdentifier();
-    if (!TypedefII || !RecordII ||
-        TypedefII->getName() != RecordII->getName()) {
-      return T;
-    }
-
-    return RecordT;
+    ID.AddInteger(TagT->getTypeClass());
+    VisitTagType(TagT, /*ElaboratedOverride=*/TypedefT);
+    return true;
   }
 
   void Visit(const Type *T) {
-    T = RemoveTypedef(T);
+    if (const auto *UsingT = dyn_cast<UsingType>(T)) {
+      // A using-declaration changes lookup, not the referenced entity. Preserve
+      // the keyword and qualifier at the use, not at the using-declaration.
+      const auto *Target = cast<TypeDecl>(UsingT->getDecl()->getTargetDecl());
+      T = Target->getASTContext()
+              .getTypeDeclType(UsingT->getKeyword(), UsingT->getQualifier(),
+                               Target)
+              .getTypePtr();
+    }
+    if (handleTypedef(T))
+      return;
     ID.AddInteger(T->getTypeClass());
     Inherited::Visit(T);
   }
@@ -1017,7 +1030,7 @@ public:
   }
 
   void VisitDecltypeType(const DecltypeType *T) {
-    AddStmt(T->getUnderlyingExpr());
+    Hash.AddStmt(T->getUnderlyingExpr());
     VisitType(T);
   }
 
@@ -1034,7 +1047,7 @@ public:
     ID.AddInteger((unsigned)T->getKeyword());
     ID.AddInteger(T->isConstrained());
     if (T->isConstrained()) {
-      AddDecl(T->getTypeConstraintConcept());
+      Hash.AddTemplateName(T->getTypeConstraintConcept());
       ID.AddInteger(T->getTypeConstraintArguments().size());
       for (const auto &TA : T->getTypeConstraintArguments())
         Hash.AddTemplateArgument(TA);
@@ -1082,7 +1095,7 @@ public:
   }
 
   void VisitInjectedClassNameType(const InjectedClassNameType *T) {
-    AddDecl(T->getDecl());
+    AddDecl(T->getDecl()->getDefinitionOrSelf());
     VisitType(T);
   }
 
@@ -1180,13 +1193,16 @@ public:
     VisitType(T);
   }
 
-  void VisitTagType(const TagType *T) {
-    AddDecl(T->getDecl());
+  void VisitTagType(const TagType *T,
+                    const TypedefType *ElaboratedOverride = nullptr) {
+    ID.AddInteger(llvm::to_underlying(
+        ElaboratedOverride ? ElaboratedTypeKeyword::None : T->getKeyword()));
+    AddNestedNameSpecifier(ElaboratedOverride
+                               ? ElaboratedOverride->getQualifier()
+                               : T->getQualifier());
+    AddDecl(T->getDecl()->getDefinitionOrSelf());
     VisitType(T);
   }
-
-  void VisitRecordType(const RecordType *T) { VisitTagType(T); }
-  void VisitEnumType(const EnumType *T) { VisitTagType(T); }
 
   void VisitTemplateSpecializationType(const TemplateSpecializationType *T) {
     ID.AddInteger(T->template_arguments().size());
@@ -1205,6 +1221,8 @@ public:
   }
 
   void VisitTypedefType(const TypedefType *T) {
+    ID.AddInteger(llvm::to_underlying(T->getKeyword()));
+    AddNestedNameSpecifier(T->getQualifier());
     AddDecl(T->getDecl());
     VisitType(T);
   }
@@ -1228,22 +1246,6 @@ public:
   void VisitDependentNameType(const DependentNameType *T) {
     AddNestedNameSpecifier(T->getQualifier());
     AddIdentifierInfo(T->getIdentifier());
-    VisitTypeWithKeyword(T);
-  }
-
-  void VisitDependentTemplateSpecializationType(
-      const DependentTemplateSpecializationType *T) {
-    Hash.AddDependentTemplateName(T->getDependentTemplateName());
-    ID.AddInteger(T->template_arguments().size());
-    for (const auto &TA : T->template_arguments()) {
-      Hash.AddTemplateArgument(TA);
-    }
-    VisitTypeWithKeyword(T);
-  }
-
-  void VisitElaboratedType(const ElaboratedType *T) {
-    AddNestedNameSpecifier(T->getQualifier());
-    AddQualType(T->getNamedType());
     VisitTypeWithKeyword(T);
   }
 
@@ -1324,7 +1326,7 @@ void ODRHash::AddStructuralValue(const APValue &Value) {
             TypeSoFar = FD->getType();
           } else {
             TypeSoFar =
-                D->getASTContext().getRecordType(cast<CXXRecordDecl>(D));
+                D->getASTContext().getCanonicalTagType(cast<CXXRecordDecl>(D));
           }
         }
       }

@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
@@ -48,7 +48,8 @@ static LogicalResult fuseLinalgOpsGreedily(func::FuncOp f) {
           continue;
         auto *originalOp = info->originalProducer.getOperation();
         auto *originalOpInLinalgOpsVector = llvm::find(linalgOps, originalOp);
-        *originalOpInLinalgOpsVector = info->fusedProducer;
+        if (originalOpInLinalgOpsVector != linalgOps.end())
+          *originalOpInLinalgOpsVector = info->fusedProducer;
         // Don't mark for erasure in the tensor case, let DCE handle this.
         changed = true;
       }
@@ -73,8 +74,8 @@ struct TestLinalgGreedyFusion
   }
   void runOnOperation() override {
     MLIRContext *context = &getContext();
-    RewritePatternSet patterns =
-        linalg::getLinalgTilingCanonicalizationPatterns(context);
+    RewritePatternSet patterns(context);
+    linalg::populateLinalgTilingCanonicalizationPatterns(patterns);
     patterns.add<ExtractSliceOfPadTensorSwapPattern>(context);
     scf::populateSCFForLoopCanonicalizationPatterns(patterns);
     FrozenRewritePatternSet frozenPatterns(std::move(patterns));

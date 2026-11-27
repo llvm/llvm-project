@@ -156,7 +156,7 @@ public:
     return ValidatorResult(SCEVType::PARAM, Expr);
   }
 
-  ValidatorResult visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
+  ValidatorResult visitPtrToAddrExpr(const SCEVPtrToAddrExpr *Expr) {
     return visit(Expr->getOperand());
   }
 
@@ -423,7 +423,7 @@ public:
 
     auto *Divisor = SRem->getOperand(1);
     auto *CI = dyn_cast<ConstantInt>(Divisor);
-    if (!CI || CI->isZeroValue())
+    if (!CI || CI->isNullValue())
       return visitGenericInst(SRem, S);
 
     auto *Dividend = SRem->getOperand(0);
@@ -696,7 +696,7 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
   }
 
   if (auto *Add = dyn_cast<SCEVAddExpr>(S)) {
-    SmallVector<const SCEV *, 4> LeftOvers;
+    SmallVector<SCEVUse, 4> LeftOvers;
     auto Op0Pair = extractConstantFactor(Add->getOperand(0), SE);
     auto *Factor = Op0Pair.first;
     if (SE.isKnownNegative(Factor)) {
@@ -725,7 +725,7 @@ polly::extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
   if (!Mul)
     return std::make_pair(ConstPart, S);
 
-  SmallVector<const SCEV *, 4> LeftOvers;
+  SmallVector<SCEVUse, 4> LeftOvers;
   for (const SCEV *Op : Mul->operands())
     if (isa<SCEVConstant>(Op))
       ConstPart = cast<SCEVConstant>(SE.getMulExpr(ConstPart, Op));

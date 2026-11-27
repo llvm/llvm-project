@@ -38,8 +38,6 @@ static uint32_t g_initialize_count = 0;
 
 // Static Functions
 void PlatformRemoteMacOSX::Initialize() {
-  PlatformDarwin::Initialize();
-
   if (g_initialize_count++ == 0) {
     PluginManager::RegisterPlugin(PlatformRemoteMacOSX::GetPluginNameStatic(),
                                   PlatformRemoteMacOSX::GetDescriptionStatic(),
@@ -53,8 +51,6 @@ void PlatformRemoteMacOSX::Terminate() {
       PluginManager::UnregisterPlugin(PlatformRemoteMacOSX::CreateInstance);
     }
   }
-
-  PlatformDarwin::Terminate();
 }
 
 PlatformSP PlatformRemoteMacOSX::CreateInstance(bool force,
@@ -145,8 +141,9 @@ llvm::StringRef PlatformRemoteMacOSX::GetDescriptionStatic() {
   return "Remote Mac OS X user platform plug-in.";
 }
 
-llvm::StringRef PlatformRemoteMacOSX::GetDeviceSupportDirectoryName() {
-  return "macOS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformRemoteMacOSX::GetDeviceSupportDirectoryNames() {
+  return {"macOS DeviceSupport"};
 }
 
 llvm::StringRef PlatformRemoteMacOSX::GetPlatformName() {

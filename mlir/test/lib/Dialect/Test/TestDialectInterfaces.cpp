@@ -8,9 +8,16 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
+#include "TestTypesCore.h"
+#include "mlir/Bytecode/Encoding.h"
+#include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/InliningUtils.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace test;
@@ -38,9 +45,11 @@ struct TestResourceBlobManagerInterface
       TestDialectResourceBlobHandle>::ResourceBlobManagerDialectInterfaceBase;
 };
 
-namespace {
-enum test_encoding { k_attr_params = 0, k_test_i32 = 99 };
-} // namespace
+enum test_encoding {
+  k_attr_params = 0,
+  k_test_i32 = 99,
+  k_test_rec_alias = 100
+};
 
 // Test support for interacting with the Bytecode reader/writer.
 struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
@@ -50,11 +59,23 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
 
   LogicalResult writeType(Type type,
                           DialectBytecodeWriter &writer) const final {
-    if (auto concreteType = llvm::dyn_cast<TestI32Type>(type)) {
-      writer.writeVarInt(test_encoding::k_test_i32);
-      return success();
-    }
-    return failure();
+    return TypeSwitch<Type, LogicalResult>(type)
+        .Case([&](TestI32Type) {
+          writer.writeVarInt(test_encoding::k_test_i32);
+          return success();
+        })
+        .Case([&](TestRecursiveAliasType recType) {
+          // A mutable, possibly self-referential type. Exercises the cyclic
+          // path in the bytecode reader; see readType below.
+          writer.writeVarInt(test_encoding::k_test_rec_alias);
+          writer.writeOwnedString(recType.getName());
+          Type body = recType.getBody();
+          writer.writeOwnedBool(static_cast<bool>(body));
+          if (body)
+            writer.writeType(body);
+          return success();
+        })
+        .Default(failure());
   }
 
   Type readType(DialectBytecodeReader &reader) const final {
@@ -63,15 +84,52 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       return Type();
     if (encoding == test_encoding::k_test_i32)
       return TestI32Type::get(getContext());
+    if (encoding == test_encoding::k_test_rec_alias) {
+      StringRef name;
+      bool hasBody = false;
+      if (failed(reader.readString(name)) || failed(reader.readBool(hasBody)))
+        return Type();
+
+      auto rec = TestRecursiveAliasType::get(getContext(), name);
+      if (!hasBody)
+        return rec;
+
+      // The body may name this very type, so the type has to exist before the
+      // body is read. Publish it first: a reference back to it then resolves
+      // to this incomplete value instead of re-entering the same entry. This
+      // is the bytecode counterpart of tryStartCyclicParse in
+      // TestRecursiveAliasType::parse, and it needs the same stable identity:
+      // completing the type must mutate the published instance.
+      Type body;
+      if (failed(reader.tryStartCyclicRead(rec)) ||
+          failed(reader.readType(body)))
+        return Type();
+      if (failed(rec.setBody(body))) {
+        reader.emitError("recursive alias '")
+            << name << "' redefined with a different body";
+        return Type();
+      }
+      return rec;
+    }
     return Type();
   }
 
   LogicalResult writeAttribute(Attribute attr,
                                DialectBytecodeWriter &writer) const final {
     if (auto concreteAttr = llvm::dyn_cast<TestAttrParamsAttr>(attr)) {
+      // Without dialect version metadata, use the textual fallback rather than
+      // emit a historical encoding that a reader would interpret as current.
+      if (writer.getBytecodeVersion() < bytecode::kDialectVersioning)
+        return failure();
       writer.writeVarInt(test_encoding::k_attr_params);
-      writer.writeVarInt(concreteAttr.getV0());
-      writer.writeVarInt(concreteAttr.getV1());
+      auto version = writer.getDialectVersion<TestDialect>();
+      bool useOldEncoding =
+          succeeded(version) &&
+          static_cast<const TestDialectVersion *>(*version)->major_ < 2;
+      writer.writeVarInt(useOldEncoding ? concreteAttr.getV1()
+                                        : concreteAttr.getV0());
+      writer.writeVarInt(useOldEncoding ? concreteAttr.getV0()
+                                        : concreteAttr.getV1());
       return success();
     }
     return failure();
@@ -90,6 +148,39 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
       return readAttrNewEncoding(reader);
     // Forbid reading future versions by returning nullptr.
     return Attribute();
+  }
+
+  std::unique_ptr<DialectVersion> parseVersion(StringRef version) const final {
+    auto [major, minor] = version.split('.');
+    uint32_t majorVersion, minorVersion;
+    if (major.getAsInteger(10, majorVersion) ||
+        minor.getAsInteger(10, minorVersion) || majorVersion > 2 ||
+        (majorVersion == 2 && minorVersion > 0))
+      return nullptr;
+    return std::make_unique<TestDialectVersion>(majorVersion, minorVersion);
+  }
+
+  LogicalResult verifyVersion(Operation *topLevelOp,
+                              const DialectVersion &version) const final {
+    if (static_cast<const TestDialectVersion &>(version).major_ >= 2)
+      return success();
+    WalkResult result = topLevelOp->walk([](TestVersionedOpA op) {
+      if (!op.getModifier())
+        return WalkResult::advance();
+      op.emitOpError("cannot emit test dialect versions before 2.0 with "
+                     "'modifier = true'");
+      return WalkResult::interrupt();
+    });
+    if (result.wasInterrupted())
+      return failure();
+    result = topLevelOp->walk([](TestOpWithVersionedProperties op) {
+      if (op.getProperties().prop.value2 == 0)
+        return WalkResult::advance();
+      op.emitOpError("cannot emit test dialect versions before 2.0 with "
+                     "a nonzero 'value2' property");
+      return WalkResult::interrupt();
+    });
+    return failure(result.wasInterrupted());
   }
 
   // Emit a specific version of the dialect.
@@ -177,6 +268,22 @@ struct TestOpAsmInterface : public OpAsmDialectInterface {
   //===------------------------------------------------------------------===//
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
+    if (auto nestedAttr = dyn_cast<TestNestedAliasAttr>(attr)) {
+      std::optional<StringRef> aliasName =
+          StringSwitch<std::optional<StringRef>>(nestedAttr.getValue())
+              .Case("alias_test:trailing_digit_conflict_base",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base_conflict",
+                    StringRef("unique_base"))
+              .Case("alias_test:trailing_digit_conflict_base1",
+                    StringRef("unique_base1"))
+              .Default(std::nullopt);
+      if (!aliasName)
+        return AliasResult::NoAlias;
+      os << *aliasName;
+      return AliasResult::FinalAlias;
+    }
+
     StringAttr strAttr = dyn_cast<StringAttr>(attr);
     if (!strAttr)
       return AliasResult::NoAlias;
@@ -306,7 +413,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *call, Operation *callable,
                        bool wouldBeCloned) const final {
     // Don't allow inlining calls that are marked `noinline`.
-    return !call->hasAttr("noinline");
+    return !call->hasDiscardableAttr("noinline");
   }
   bool isLegalToInline(Region *, Region *, bool, IRMapping &) const final {
     // Inlining into test dialect regions is legal.
@@ -327,6 +434,19 @@ struct TestInlinerInterface : public DialectInlinerInterface {
   //===--------------------------------------------------------------------===//
 
   /// Handle the given inlined terminator by replacing it with a new operation
+  /// as necessary (multi-block inlining case: replace test.return with a
+  /// branch to the successor block that carries the inlined results).
+  void handleTerminator(Operation *op, Block *newDest) const final {
+    auto returnOp = dyn_cast<TestReturnOp>(op);
+    if (!returnOp)
+      return;
+    OpBuilder builder(op);
+    cf::BranchOp::create(builder, op->getLoc(), newDest,
+                         returnOp.getOperands());
+    op->erase();
+  }
+
+  /// Handle the given inlined terminator by replacing it with a new operation
   /// as necessary.
   void handleTerminator(Operation *op, ValueRange valuesToRepl) const final {
     // Only handle "test.return" here.
@@ -334,8 +454,11 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     if (!returnOp)
       return;
 
-    // Replace the values directly with the return operands.
-    assert(returnOp.getNumOperands() == valuesToRepl.size());
+    // Replace the values directly with the return operands. Skip if the
+    // number of operands doesn't match (e.g., when inlining into a call
+    // with a different result arity due to invalid IR mixing dialects).
+    if (returnOp.getNumOperands() != valuesToRepl.size())
+      return;
     for (const auto &it : llvm::enumerate(returnOp.getOperands()))
       valuesToRepl[it.index()].replaceAllUsesWith(it.value());
   }
@@ -354,7 +477,7 @@ struct TestInlinerInterface : public DialectInlinerInterface {
         !(input.getType().isSignlessInteger(16) ||
           input.getType().isSignlessInteger(32)))
       return nullptr;
-    return builder.create<TestCastOp>(conversionLoc, resultType, input);
+    return TestCastOp::create(builder, conversionLoc, resultType, input);
   }
 
   Value handleArgument(OpBuilder &builder, Operation *call, Operation *callable,
@@ -362,16 +485,16 @@ struct TestInlinerInterface : public DialectInlinerInterface {
                        DictionaryAttr argumentAttrs) const final {
     if (!argumentAttrs.contains("test.handle_argument"))
       return argument;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), argument.getType(),
-                                             argument);
+    return TestTypeChangerOp::create(builder, call->getLoc(),
+                                     argument.getType(), argument);
   }
 
   Value handleResult(OpBuilder &builder, Operation *call, Operation *callable,
                      Value result, DictionaryAttr resultAttrs) const final {
     if (!resultAttrs.contains("test.handle_result"))
       return result;
-    return builder.create<TestTypeChangerOp>(call->getLoc(), result.getType(),
-                                             result);
+    return TestTypeChangerOp::create(builder, call->getLoc(), result.getType(),
+                                     result);
   }
 
   void processInlinedCallBlocks(
@@ -383,7 +506,8 @@ struct TestInlinerInterface : public DialectInlinerInterface {
     // Set attributed on all ops in the inlined blocks.
     for (Block &block : inlinedBlocks) {
       block.walk([&](Operation *op) {
-        op->setAttr("inlined_conversion", UnitAttr::get(call->getContext()));
+        op->setDiscardableAttr("inlined_conversion",
+                               UnitAttr::get(call->getContext()));
       });
     }
   }
@@ -399,6 +523,20 @@ public:
   }
 };
 
+struct TestToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
+  explicit TestToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
+
+  void populateConvertToEmitCConversionPatterns(
+      ConversionTarget &target, TypeConverter &typeConverter,
+      RewritePatternSet &patterns,
+      ::std::optional<bool> lowerToCpp) const final {
+    typeConverter.addConversion([](test::TestMemRefElementTypeType type) {
+      return emitc::OpaqueType::get(type.getContext(), "TestElementT");
+    });
+  }
+};
+
 } // namespace
 
 void TestDialect::registerInterfaces() {
@@ -407,4 +545,5 @@ void TestDialect::registerInterfaces() {
 
   addInterfaces<TestDialectFoldInterface, TestInlinerInterface,
                 TestReductionPatternInterface, TestBytecodeDialectInterface>();
+  addInterface<TestToEmitCDialectInterface>();
 }

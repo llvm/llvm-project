@@ -1,0 +1,32 @@
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// Round-trip tests:
+
+// RUN: clang-ssaf-format --type wpa %S/Inputs/wpa-result.json -o %t/wpa-result.json
+// RUN: diff %S/Inputs/wpa-result.json %t/wpa-result.json
+
+// RUN: clang-ssaf-format --type wpa %S/Inputs/wpa-result-empty.json -o %t/wpa-result-empty.json
+// RUN: diff %S/Inputs/wpa-result-empty.json %t/wpa-result-empty.json
+
+// Negative tests:
+
+// Missing the PointerFlowAnalysisResult key in the result object.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/wpa-result-no-key.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-MISSING-KEY
+// CHECK-MISSING-KEY: saw an object of 1 key(s) but expected an object with a key PointerFlowAnalysisResult
+
+// Odd number of elements in the flat array.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/wpa-result-odd-count.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-ODD-COUNT
+// CHECK-ODD-COUNT: saw array of size 1 but expected an even number of elements, got 1
+
+// EntityId slot is not an object.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/wpa-result-bad-id.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-BAD-ID
+// CHECK-BAD-ID: saw "not-an-object" but expected an object representing EntityId
+
+// EdgeSet slot is not an array.
+// RUN: not clang-ssaf-format --type wpa %S/Inputs/wpa-result-bad-edges.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=CHECK-BAD-EDGES
+// CHECK-BAD-EDGES: saw "not-an-array" but expected an array of arrays representing EdgeSet

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s readability-simplify-boolean-expr %t
+// RUN: %check_clang_tidy %s readability-simplify-boolean-expr %t
 
 bool a1 = false;
 
@@ -244,6 +244,30 @@ void operator_and() {
   } else {
     i = 29;
   }
+}
+
+bool sideEffect();
+__attribute__((pure)) bool noSideEffect();
+
+void side_effects(volatile bool v) {
+  bool r1 = sideEffect() || true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: {{.*}} to boolean operator
+  // CHECK-MESSAGES: :[[@LINE-2]]:13: note: left operand may have side effects and cannot be removed
+  // CHECK-FIXES: bool r1 = sideEffect() || true;
+  bool r2 = sideEffect() && false;
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: {{.*}} to boolean operator
+  // CHECK-MESSAGES: :[[@LINE-2]]:13: note: left operand may have side effects and cannot be removed
+  // CHECK-FIXES: bool r2 = sideEffect() && false;
+  bool r3 = v || true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: {{.*}} to boolean operator
+  // CHECK-MESSAGES: :[[@LINE-2]]:13: note: left operand may have side effects and cannot be removed
+  // CHECK-FIXES: bool r3 = v || true;
+  bool r4 = true || sideEffect();
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: {{.*}} to boolean operator
+  // CHECK-FIXES: bool r4 = true;
+  bool r5 = noSideEffect() || true;
+  // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: {{.*}} to boolean operator
+  // CHECK-FIXES: bool r5 = true;
 }
 
 void ternary_operator() {
@@ -1019,7 +1043,7 @@ bool expr_with_cleanups(A &S) {
   return true;
 }
 // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: S == (A)S;{{$}}
+// CHECK-FIXES: return S == (A)S;{{$}}
 
 template <bool B>
 void ignoreInstantiations() {

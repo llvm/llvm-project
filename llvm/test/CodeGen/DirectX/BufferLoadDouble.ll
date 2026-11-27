@@ -6,10 +6,10 @@ define void @loadf64() {
   ; check the handle from binding is unchanged
   ; CHECK: [[B:%.*]] = call target("dx.TypedBuffer", double, 1, 0, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
-  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, ptr null)
   %buffer = call target("dx.TypedBuffer", double, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
-          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; check we load an <2 x i32> instead of a double
   ; CHECK-NOT: call {double, i1} @llvm.dx.resource.load.typedbuffer
@@ -33,10 +33,10 @@ define void @loadv2f64() {
   ; check the handle from binding is unchanged
   ; CHECK: [[B:%.*]] = call target("dx.TypedBuffer", <2 x double>, 1, 0, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0t(
-  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, ptr null)
   %buffer = call target("dx.TypedBuffer", <2 x double>, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f64_1_0_0t(
-          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; check we load an <4 x i32> instead of a double2
   ; CHECK: [[L0:%.*]] = call { <4 x i32>, i1 }
@@ -65,10 +65,10 @@ define void @loadf64WithCheckBit() {
   ; check the handle from binding is unchanged
   ; CHECK: [[B:%.*]] = call target("dx.TypedBuffer", double, 1, 0, 0)
   ; CHECK-SAME: @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
-  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+  ; CHECK-SAME: i32 0, i32 1, i32 1, i32 0, ptr null)
   %buffer = call target("dx.TypedBuffer", double, 1, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
-          i32 0, i32 1, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 1, i32 1, i32 0, ptr null)
 
   ; check we load an <2 x i32> instead of a double
   ; CHECK-NOT: call {double, i1} @llvm.dx.resource.load.typedbuffer

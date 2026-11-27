@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 \
+// RUN: %clang_cc1 -verify=expected,cxx -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify=expected,cxx -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 \
 // RUN:  -DNO_INTEROP_T_DEF -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -Wno-strict-prototypes -DC -x c -o - %s
-// RUN: %clang_cc1 -verify -triple x86_64-pc-windows-msvc -fms-compatibility \
+// RUN: %clang_cc1 -verify=expected,cxx -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify=expected,c -triple x86_64-unknown-linux -fopenmp -fopenmp-version=60 -Wno-strict-prototypes -DC -x c -o - %s
+// RUN: %clang_cc1 -verify=expected,c -triple x86_64-pc-windows-msvc -fms-compatibility \
 // RUN:  -fopenmp -fopenmp-version=60 -Wno-strict-prototypes -DC -DWIN -x c -o - %s
 
 #ifdef NO_INTEROP_T_DEF
@@ -15,7 +15,7 @@ void foo_v1(float *);
 #else
 typedef void *omp_interop_t;
 
-int Other;
+int Other; // cxx-note {{declared here}}
 
 #if _OPENMP >= 202011  // At least OpenMP 5.1
 #ifdef __cplusplus
@@ -91,6 +91,7 @@ void foo_v1(float *AAA, float *BBB, int *I) { return; }
 void foo_v2(float *AAA, float *BBB, int *I) { return; }
 void foo_v3(float *AAA, float *BBB, int *I) { return; }
 void foo_v4(float *AAA, float *BBB, int *I, omp_interop_t IOp) { return; }
+void foo_v5(float *AAA, float *BBB, int I) { return; }
 
 #if _OPENMP >= 202011 // At least OpenMP 5.1
 void vararg_foo(const char *fmt, omp_interop_t it, ...);
@@ -129,7 +130,14 @@ void vararg_bar2(const char *fmt) { return; }
    adjust_args(nothing:J)                                    \
    match(construct={dispatch}, device={arch(x86,x86_64)})
 
-// expected-error@+2 {{expected reference to one of the parameters of function 'foo'}}
+// expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}
+#pragma omp declare variant(foo_v1)                          \
+   adjust_args(need_device_addr:AAA)                         \
+   match(construct={dispatch}, device={arch(x86,x86_64)})
+
+// cxx-error@+4 {{expression is not an integral constant expression}}
+// cxx-note@+3 {{read of non-const variable 'Other' is not allowed in a constant expression}}
+// c-error@+2 {{expression is not an integer constant expression}}
 #pragma omp declare variant(foo_v3)                          \
    adjust_args(nothing:Other)                                \
    match(construct={dispatch}, device={arch(x86,x86_64)})
@@ -152,7 +160,7 @@ void vararg_bar2(const char *fmt) { return; }
 #pragma omp declare variant(foo_v1) match(construct={dispatch}) \
                                     append_args(foobar(target))
 
-// expected-error@+2 {{directive '#pragma omp declare variant' cannot contain more than one 'append_args' clause}}
+// expected-error@+2 {{directive '#pragma omp declare_variant' cannot contain more than one 'append_args' clause}}
 #pragma omp declare variant(foo_v1) match(construct={dispatch}) \
                                     append_args(interop(target)) \
                                     append_args(interop(targetsync))
@@ -217,6 +225,12 @@ void vararg_bar2(const char *fmt) { return; }
 #endif // _OPENMP < 202011
 
 void foo(float *AAA, float *BBB, int *I) { return; }
+
+// expected-error@+2 {{expected reference type argument on 'adjust_args' clause with 'need_device_addr' modifier}}
+#pragma omp declare variant(foo_v5)                          \
+   adjust_args(need_device_addr:I)                         \
+   match(construct={dispatch}, device={arch(x86,x86_64)})
+void foo5(float *AAA, float *BBB, int I) { return; }
 
 #endif // NO_INTEROP_T_DEF
 

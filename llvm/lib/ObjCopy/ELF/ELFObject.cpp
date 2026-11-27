@@ -9,6 +9,7 @@
 #include "ELFObject.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
@@ -23,7 +24,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -536,7 +536,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   Elf_Chdr_Impl<ELFT> Chdr = {};
   switch (Sec.CompressionType) {
   case DebugCompressionType::None:
-    std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(), Buf);
+    llvm::copy(Sec.OriginalData, Buf);
     return Error::success();
   case DebugCompressionType::Zlib:
     Chdr.ch_type = ELF::ELFCOMPRESS_ZLIB;
@@ -550,7 +550,7 @@ Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   memcpy(Buf, &Chdr, sizeof(Chdr));
   Buf += sizeof(Chdr);
 
-  std::copy(Sec.CompressedData.begin(), Sec.CompressedData.end(), Buf);
+  llvm::copy(Sec.CompressedData, Buf);
   return Error::success();
 }
 
@@ -564,6 +564,7 @@ CompressedSection::CompressedSection(const SectionBase &Sec,
 
   Flags |= ELF::SHF_COMPRESSED;
   OriginalFlags |= ELF::SHF_COMPRESSED;
+  OriginalType = ELF::SHT_PROGBITS;
   size_t ChdrSize = Is64Bits ? sizeof(object::Elf_Chdr_Impl<object::ELF64LE>)
                              : sizeof(object::Elf_Chdr_Impl<object::ELF32LE>);
   Size = ChdrSize + CompressedData.size();
@@ -1307,6 +1308,9 @@ Error BasicELFBuilder::initSections() {
   return Error::success();
 }
 
+BasicELFBuilder::BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
+BasicELFBuilder::~BasicELFBuilder() = default;
+
 void BinaryELFBuilder::addData(SymbolTableSection *SymTab) {
   auto Data = ArrayRef<uint8_t>(
       reinterpret_cast<const uint8_t *>(MemBuf->getBufferStart()),
@@ -1706,7 +1710,11 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
   case SHT_REL:
   case SHT_RELA:
   case SHT_CREL:
-    if (Shdr.sh_flags & SHF_ALLOC) {
+    // SHF_ALLOC relocations of an executable or shared object are copied
+    // verbatim. Relocatable files relocations are usually non-ALLOC, but Linux
+    // livepatch modules set SHF_ALLOC on .klp.rela.* to keep these static
+    // relocations in memory.
+    if ((Shdr.sh_flags & SHF_ALLOC) && ElfFile.getHeader().e_type != ET_REL) {
       if (Expected<ArrayRef<uint8_t>> Data = ElfFile.getSectionContents(Shdr))
         return Obj.addSection<DynamicRelocationSection>(*Data);
       else
@@ -2168,12 +2176,19 @@ Error Object::updateSectionData(SecPtr &Sec, ArrayRef<uint8_t> Data) {
                              Data.size(), Sec->Name.c_str(), Sec->Size);
 
   if (!Sec->ParentSegment) {
-    Sec = std::make_unique<OwnedDataSection>(*Sec, Data);
-  } else {
-    // The segment writer will be in charge of updating these contents.
-    Sec->Size = Data.size();
-    UpdatedSections[Sec.get()] = Data;
+    // addSection modifies the container that Sec is stored in, potentially
+    // invalidating the Sec reference. We obtain the raw pointer Sec owns before
+    // calling addSection, so that it can be safely passed into replaceSections.
+    SectionBase *Replaced = Sec.get();
+    SectionBase *Modified = &addSection<OwnedDataSection>(*Sec, Data);
+    // replaceSections deletes the replaced section internally,
+    // so we don't need to do so here.
+    return replaceSections({{Replaced, Modified}});
   }
+
+  // The segment writer will be in charge of updating these contents.
+  Sec->Size = Data.size();
+  UpdatedSections[Sec.get()] = Data;
 
   return Error::success();
 }
@@ -2201,10 +2216,6 @@ Error Object::removeSections(
       std::begin(Sections), std::end(Sections), [=](const SecPtr &Sec) {
         if (ToRemove(*Sec))
           return false;
-        // TODO: A compressed relocation section may be recognized as
-        // RelocationSectionBase. We don't want such a section to be removed.
-        if (isa<CompressedSection>(Sec))
-          return true;
         if (auto RelSec = dyn_cast<RelocationSectionBase>(Sec.get())) {
           if (auto ToRelSec = RelSec->getSection())
             return !ToRemove(*ToRelSec);
@@ -2225,7 +2236,7 @@ Error Object::removeSections(
   // Now make sure there are no remaining references to the sections that will
   // be removed. Sometimes it is impossible to remove a reference so we emit
   // an error here instead.
-  std::unordered_set<const SectionBase *> RemoveSections;
+  SmallPtrSet<const SectionBase *, 0> RemoveSections;
   RemoveSections.reserve(std::distance(Iter, std::end(Sections)));
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)

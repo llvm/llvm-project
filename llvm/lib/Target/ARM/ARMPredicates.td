@@ -45,7 +45,7 @@ def HasFPRegs16      : Predicate<"Subtarget->hasFPRegs16()">,
                                  AssemblerPredicate<(all_of FeatureFPRegs16),
                                                     "16-bit fp registers">;
 def HasNoFPRegs16    : Predicate<"!Subtarget->hasFPRegs16()">,
-                                 AssemblerPredicate<(all_of (not FeatureFPRegs16)),
+                                 AssemblerPredicate<(none_of FeatureFPRegs16),
                                                     "16-bit fp registers">;
 def HasFPRegs64      : Predicate<"Subtarget->hasFPRegs64()">,
                                  AssemblerPredicate<(all_of FeatureFPRegs64),
@@ -64,7 +64,7 @@ def HasV7            : Predicate<"Subtarget->hasV7Ops()">,
 def HasV8            : Predicate<"Subtarget->hasV8Ops()">,
                                  AssemblerPredicate<(all_of HasV8Ops), "armv8">;
 def PreV8            : Predicate<"!Subtarget->hasV8Ops()">,
-                                 AssemblerPredicate<(all_of (not HasV8Ops)), "armv7 or earlier">;
+                                 AssemblerPredicate<(none_of HasV8Ops), "armv7 or earlier">;
 def HasV8_1a         : Predicate<"Subtarget->hasV8_1aOps()">,
                                  AssemblerPredicate<(all_of HasV8_1aOps), "armv8.1a">;
 def HasV8_2a         : Predicate<"Subtarget->hasV8_2aOps()">,
@@ -161,26 +161,22 @@ def IsThumb2         : Predicate<"Subtarget->isThumb2()">,
 def IsMClass         : Predicate<"Subtarget->isMClass()">,
                                  AssemblerPredicate<(all_of FeatureMClass), "armv*m">;
 def IsNotMClass      : Predicate<"!Subtarget->isMClass()">,
-                                 AssemblerPredicate<(all_of (not FeatureMClass)),
+                                 AssemblerPredicate<(none_of FeatureMClass),
                                                     "!armv*m">;
 def IsARM            : Predicate<"!Subtarget->isThumb()">,
-                                 AssemblerPredicate<(all_of (not ModeThumb)), "arm-mode">;
+                                 AssemblerPredicate<(none_of ModeThumb), "arm-mode">;
 def IsMachO          : Predicate<"Subtarget->isTargetMachO()">;
 def IsNotMachO       : Predicate<"!Subtarget->isTargetMachO()">;
-def IsNaCl           : Predicate<"Subtarget->isTargetNaCl()">;
 def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
 def IsNotWindows     : Predicate<"!Subtarget->isTargetWindows()">;
 def IsReadTPTPIDRURW : Predicate<"Subtarget->isReadTPTPIDRURW()">;
 def IsReadTPTPIDRURO : Predicate<"Subtarget->isReadTPTPIDRURO()">;
 def IsReadTPTPIDRPRW : Predicate<"Subtarget->isReadTPTPIDRPRW()">;
 def IsReadTPSoft     : Predicate<"Subtarget->isReadTPSoft()">;
-def UseNaClTrap      : Predicate<"Subtarget->useNaClTrap()">,
-                                 AssemblerPredicate<(all_of FeatureNaClTrap), "NaCl">;
-def DontUseNaClTrap  : Predicate<"!Subtarget->useNaClTrap()">;
 
 def UseNegativeImmediates :
   Predicate<"false">,
-            AssemblerPredicate<(all_of (not FeatureNoNegativeImmediates)),
+            AssemblerPredicate<(none_of FeatureNoNegativeImmediates),
                                "NegativeImmediates">;
 
 // FIXME: Eventually this will be just "hasV6T2Ops".
@@ -190,9 +186,7 @@ let RecomputePerFunction = 1 in {
   def UseMovtInPic     : Predicate<"Subtarget->useMovt() && Subtarget->allowPositionIndependentMovt()">;
   def DontUseMovtInPic : Predicate<"!Subtarget->useMovt() || !Subtarget->allowPositionIndependentMovt()">;
 
-  def UseFPVMLx: Predicate<"((Subtarget->useFPVMLx() &&"
-                           "  TM.Options.AllowFPOpFusion != FPOpFusion::Fast) ||"
-                           "Subtarget->hasMinSize())">;
+  def UseFPVMLx: Predicate<"Subtarget->useFPVMLx() || Subtarget->hasMinSize()">;
   def SLSBLRMitigation : Predicate<[{ MF->getSubtarget<ARMSubtarget>().hardenSlsBlr() }]>;
   def NoSLSBLRMitigation : Predicate<[{ !MF->getSubtarget<ARMSubtarget>().hardenSlsBlr() }]>;
 
@@ -203,9 +197,7 @@ def UseMulOps        : Predicate<"Subtarget->useMulOps()">;
 // But only select them if more precision in FP computation is allowed, and when
 // they are not slower than a mul + add sequence.
 // Do not use them for Darwin platforms.
-def UseFusedMAC      : Predicate<"TM.Options.AllowFPOpFusion =="
-                                 "  FPOpFusion::Fast && "
-                                 "Subtarget->useFPVFMx()">;
+def UseFusedMAC      : Predicate<"Subtarget->useFPVFMx()">;
 
 def HasFastVGETLNi32 : Predicate<"!Subtarget->hasSlowVGETLNi32()">;
 def HasSlowVGETLNi32 : Predicate<"Subtarget->hasSlowVGETLNi32()">;

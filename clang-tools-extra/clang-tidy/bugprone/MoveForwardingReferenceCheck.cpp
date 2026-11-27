@@ -1,4 +1,4 @@
-//===--- MoveForwardingReferenceCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,15 +13,23 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+namespace {
+
+AST_MATCHER(DeclRefExpr, refersToEnclosingVariableOrCapture) {
+  return Node.refersToEnclosingVariableOrCapture();
+}
+
+} // namespace
+
 static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
                                    const ParmVarDecl *ParmVar,
                                    const TemplateTypeParmDecl *TypeParmDecl,
-                                   DiagnosticBuilder &Diag,
+                                   const DiagnosticBuilder &Diag,
                                    const ASTContext &Context) {
   const SourceManager &SM = Context.getSourceManager();
   const LangOptions &LangOpts = Context.getLangOpts();
 
-  CharSourceRange CallRange =
+  const CharSourceRange CallRange =
       Lexer::makeFileCharRange(CharSourceRange::getTokenRange(
                                    Callee->getBeginLoc(), Callee->getEndLoc()),
                                SM, LangOpts);
@@ -39,24 +47,31 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
     // std::move(). This will hopefully prevent erroneous replacements if the
     // code does unusual things (e.g. create an alias for std::move() in
     // another namespace).
-    NestedNameSpecifier *NNS = Callee->getQualifier();
-    if (!NNS) {
+    const NestedNameSpecifier NNS = Callee->getQualifier();
+    switch (NNS.getKind()) {
+    case NestedNameSpecifier::Kind::Null:
       // Called as "move" (i.e. presumably the code had a "using std::move;").
       // We still conservatively put a "std::" in front of the forward because
       // we don't know whether the code also had a "using std::forward;".
       Diag << FixItHint::CreateReplacement(CallRange, "std::" + ForwardName);
-    } else if (const NamespaceDecl *Namespace = NNS->getAsNamespace()) {
+      break;
+    case NestedNameSpecifier::Kind::Namespace: {
+      auto [Namespace, Prefix] = NNS.getAsNamespaceAndPrefix();
       if (Namespace->getName() == "std") {
-        if (!NNS->getPrefix()) {
+        if (!Prefix) {
           // Called as "std::move".
           Diag << FixItHint::CreateReplacement(CallRange,
                                                "std::" + ForwardName);
-        } else if (NNS->getPrefix()->getKind() == NestedNameSpecifier::Global) {
+        } else if (Prefix.getKind() == NestedNameSpecifier::Kind::Global) {
           // Called as "::std::move".
           Diag << FixItHint::CreateReplacement(CallRange,
                                                "::std::" + ForwardName);
         }
       }
+      break;
+    }
+    default:
+      return;
     }
   }
 }
@@ -64,7 +79,7 @@ static void replaceMoveWithForward(const UnresolvedLookupExpr *Callee,
 void MoveForwardingReferenceCheck::registerMatchers(MatchFinder *Finder) {
   // Matches a ParmVarDecl for a forwarding reference, i.e. a non-const rvalue
   // reference of a function template parameter type.
-  auto ForwardingReferenceParmMatcher =
+  const auto ForwardingReferenceParmMatcher =
       parmVarDecl(
           hasType(qualType(rValueReferenceType(),
                            references(templateTypeParmType(hasDeclaration(
@@ -73,13 +88,15 @@ void MoveForwardingReferenceCheck::registerMatchers(MatchFinder *Finder) {
           .bind("parm-var");
 
   Finder->addMatcher(
-      callExpr(callee(unresolvedLookupExpr(
-                          hasAnyDeclaration(namedDecl(
-                              hasUnderlyingDecl(hasName("::std::move")))))
-                          .bind("lookup")),
-               argumentCountIs(1),
-               hasArgument(0, ignoringParenImpCasts(declRefExpr(
-                                  to(ForwardingReferenceParmMatcher)))))
+      callExpr(
+          callee(unresolvedLookupExpr(
+                     hasAnyDeclaration(
+                         namedDecl(hasUnderlyingDecl(hasName("::std::move")))))
+                     .bind("lookup")),
+          argumentCountIs(1),
+          hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                             to(ForwardingReferenceParmMatcher),
+                             unless(refersToEnclosingVariableOrCapture())))))
           .bind("call-move"),
       this);
 }
@@ -110,10 +127,11 @@ void MoveForwardingReferenceCheck::check(
   if (!llvm::is_contained(*Params, TypeParmDecl))
     return;
 
-  auto Diag = diag(CallMove->getExprLoc(),
-                   "forwarding reference passed to std::move(), which may "
-                   "unexpectedly cause lvalues to be moved; use "
-                   "std::forward() instead");
+  const auto Diag =
+      diag(CallMove->getExprLoc(),
+           "forwarding reference passed to std::move(), which may "
+           "unexpectedly cause lvalues to be moved; use "
+           "std::forward() instead");
 
   replaceMoveWithForward(UnresolvedLookup, ParmVar, TypeParmDecl, Diag,
                          *Result.Context);

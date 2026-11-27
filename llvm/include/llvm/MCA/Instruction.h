@@ -26,8 +26,6 @@
 #include "llvm/Support/raw_ostream.h"
 #endif
 
-#include <memory>
-
 namespace llvm {
 
 namespace mca {
@@ -50,7 +48,7 @@ class MCAOperand {
   MCAOperandType Kind;
 
   union {
-    unsigned RegVal;
+    MCRegister RegVal;
     int64_t ImmVal;
     uint32_t SFPImmVal;
     uint64_t FPImmVal;
@@ -72,7 +70,7 @@ public:
   bool isDFPImm() const { return Kind == kDFPImmediate; }
 
   /// Returns the register number.
-  unsigned getReg() const {
+  MCRegister getReg() const {
     assert(isReg() && "This is not a register operand!");
     return RegVal;
   }
@@ -96,7 +94,7 @@ public:
 
   unsigned getIndex() const { return Index; }
 
-  static MCAOperand createReg(unsigned Reg) {
+  static MCAOperand createReg(MCRegister Reg) {
     MCAOperand Op;
     Op.Kind = kRegister;
     Op.RegVal = Reg;
@@ -382,6 +380,10 @@ public:
   bool isReadZero() const { return IsZero; }
   void setReadZero() { IsZero = true; }
   void setPRF(unsigned ID) { PRFID = ID; }
+
+#ifndef NDEBUG
+  void dump() const;
+#endif
 };
 
 /// A sequence of cycles.

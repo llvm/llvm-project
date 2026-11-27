@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=objc-arc-apelim < %s | FileCheck %s
+; RUN: opt -S -passes=objc-arc < %s | FileCheck %s
 ; rdar://10227311
 
 @llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_x, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_y, ptr null }]

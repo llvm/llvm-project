@@ -11,6 +11,7 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -31,7 +32,10 @@
 #ifdef _WIN32
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/Windows/WindowsSupport.h"
+#include "llvm/Support/WindowsError.h"
+#include <fileapi.h>
 #include <windows.h>
 #include <winerror.h>
 #endif
@@ -39,6 +43,7 @@
 #ifdef LLVM_ON_UNIX
 #include <pwd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 using namespace llvm;
@@ -255,14 +260,14 @@ TEST(Support, Path) {
 
   {
     SmallString<32> Relative("foo.cpp");
-    sys::fs::make_absolute("/root", Relative);
+    path::make_absolute("/root", Relative);
     Relative[5] = '/'; // Fix up windows paths.
     ASSERT_EQ("/root/foo.cpp", Relative);
   }
 
   {
     SmallString<32> Relative("foo.cpp");
-    sys::fs::make_absolute("//root", Relative);
+    path::make_absolute("//root", Relative);
     Relative[6] = '/'; // Fix up windows paths.
     ASSERT_EQ("//root/foo.cpp", Relative);
   }
@@ -584,6 +589,104 @@ TEST(Support, CacheDirectory) {
 }
 #endif
 
+#if defined(_WIN32) && LLVM_WINDOWS_RESTRICTED_APIS
+// RAII helper to set and restore a variable in the Win32 environment block,
+// which is what Support reads (the CRT copy used by _wgetenv is not updated).
+class WithEnvW {
+  const wchar_t *Var;
+  std::optional<std::wstring> OriginalValue;
+
+public:
+  WithEnvW(const wchar_t *Var, const wchar_t *Value) : Var(Var) {
+    if (DWORD Size = ::GetEnvironmentVariableW(Var, nullptr, 0)) {
+      std::wstring V(Size, L'\0');
+      V.resize(::GetEnvironmentVariableW(Var, V.data(), Size));
+      OriginalValue = std::move(V);
+    }
+    ::SetEnvironmentVariableW(Var, Value);
+  }
+  ~WithEnvW() {
+    ::SetEnvironmentVariableW(Var,
+                              OriginalValue ? OriginalValue->c_str() : nullptr);
+  }
+};
+
+// Known folders are read from the environment and created if missing, like
+// SHGetKnownFolderPath with KF_FLAG_CREATE.
+TEST(Support, KnownFoldersFromEnv) {
+  SmallString<128> Base;
+  ASSERT_NO_ERROR(fs::createUniqueDirectory("known-folders", Base));
+  llvm::scope_exit Cleanup([&] { fs::remove_directories(Base); });
+
+  SmallString<128> Home(Base), AppData(Base);
+  path::append(Home, "home");
+  path::append(AppData, "appdata");
+  path::make_preferred(Home);
+  path::make_preferred(AppData);
+  SmallVector<wchar_t, 128> Home16, AppData16;
+  ASSERT_NO_ERROR(windows::UTF8ToUTF16(Home, Home16));
+  ASSERT_NO_ERROR(windows::UTF8ToUTF16(AppData, AppData16));
+  WithEnvW HomeEnv(L"USERPROFILE", Home16.data());
+  WithEnvW AppDataEnv(L"LOCALAPPDATA", AppData16.data());
+
+  SmallString<128> Dir;
+  EXPECT_TRUE(path::home_directory(Dir));
+  EXPECT_EQ(Home, Dir);
+  EXPECT_TRUE(fs::is_directory(Home));
+
+  EXPECT_TRUE(path::user_config_directory(Dir));
+  EXPECT_EQ(AppData, Dir);
+  EXPECT_TRUE(fs::is_directory(AppData));
+
+  EXPECT_TRUE(path::cache_directory(Dir));
+  EXPECT_EQ(AppData, Dir);
+}
+
+TEST(Support, HomeDirectoryMissingEnv) {
+  WithEnvW Env(L"USERPROFILE", nullptr);
+  SmallString<128> HomeDir;
+  EXPECT_FALSE(path::home_directory(HomeDir));
+}
+
+// Returns the lowercase names of the DLLs in the import and delay-import
+// tables of the module that contains Addr.
+static std::vector<std::string> getImportedDLLs(const void *Addr) {
+  std::vector<std::string> DLLs;
+  HMODULE Mod;
+  if (!::GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                                GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            reinterpret_cast<LPCWSTR>(Addr), &Mod))
+    return DLLs;
+  const char *Base = reinterpret_cast<const char *>(Mod);
+  auto *DOS = reinterpret_cast<const IMAGE_DOS_HEADER *>(Base);
+  auto *NT = reinterpret_cast<const IMAGE_NT_HEADERS *>(Base + DOS->e_lfanew);
+  const IMAGE_DATA_DIRECTORY *Dirs = NT->OptionalHeader.DataDirectory;
+  if (DWORD RVA = Dirs[IMAGE_DIRECTORY_ENTRY_IMPORT].VirtualAddress)
+    for (auto *D =
+             reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR *>(Base + RVA);
+         D->Name; ++D)
+      DLLs.push_back(StringRef(Base + D->Name).lower());
+  if (DWORD RVA = Dirs[IMAGE_DIRECTORY_ENTRY_DELAY_IMPORT].VirtualAddress)
+    for (auto *D =
+             reinterpret_cast<const IMAGE_DELAYLOAD_DESCRIPTOR *>(Base + RVA);
+         D->DllNameRVA; ++D)
+      DLLs.push_back(StringRef(Base + D->DllNameRVA).lower());
+  return DLLs;
+}
+
+TEST(Support, NoShell32Imports) {
+  // Reference the functions that import shell32 without the option.
+  SmallString<128> Dir;
+  (void)path::home_directory(Dir);
+  (void)fs::remove_directories("nonexistent-dir");
+
+  std::vector<std::string> DLLs =
+      getImportedDLLs(reinterpret_cast<const void *>(&path::home_directory));
+  ASSERT_FALSE(DLLs.empty());
+  EXPECT_THAT(DLLs, testing::Not(testing::Contains("shell32.dll")));
+}
+#endif
+
 TEST(Support, TempDirectory) {
   SmallString<32> TempDir;
   path::system_temp_directory(false, TempDir);
@@ -696,6 +799,10 @@ TEST_F(FileSystemTest, Unique) {
   ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), F2));
   ASSERT_EQ(F1, F2);
 
+  fs::file_status S1;
+  ASSERT_NO_ERROR(fs::status(FileDescriptor, S1));
+  ASSERT_EQ(F1, S1.getUniqueID());
+
   // Different files should return different unique ids.
   int FileDescriptor2;
   SmallString<64> TempPath2;
@@ -705,6 +812,11 @@ TEST_F(FileSystemTest, Unique) {
   fs::UniqueID D;
   ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath2), D));
   ASSERT_NE(D, F1);
+
+  fs::file_status S2;
+  ASSERT_NO_ERROR(fs::status(FileDescriptor2, S2));
+  ASSERT_EQ(D, S2.getUniqueID());
+
   ::close(FileDescriptor2);
 
   ASSERT_NO_ERROR(fs::remove(Twine(TempPath2)));
@@ -781,6 +893,152 @@ TEST_F(FileSystemTest, RealPath) {
   ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/test1"));
 }
 
+TEST_F(FileSystemTest, Readlink) {
+  int FD;
+  SmallString<128> Target(TestDirectory);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink(Target, Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  EXPECT_EQ(Target, Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+}
+
+TEST_F(FileSystemTest, ReadlinkRelative) {
+  int FD;
+  SmallString<128> Target(TestDirectory);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink("target", Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  EXPECT_EQ("target", Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+}
+
+TEST_F(FileSystemTest, ReadlinkRelativeWithSlash) {
+  // Verify that a symlink target created with forward slashes is read back
+  // with the native separator. On Windows, create_symlink normalizes forward
+  // slashes to backslashes.
+  SmallString<128> SubDir(TestDirectory);
+  path::append(SubDir, "subdir");
+  ASSERT_NO_ERROR(fs::create_directory(SubDir));
+
+  int FD;
+  SmallString<128> Target(SubDir);
+  path::append(Target, "target");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Target, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  std::error_code EC = fs::create_symlink("subdir/target", Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(Target));
+    ASSERT_NO_ERROR(fs::remove(SubDir));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  SmallString<128> Result;
+  ASSERT_NO_ERROR(fs::readlink(Link, Result));
+  SmallString<128> Expected("subdir/target");
+  path::native(Expected);
+  EXPECT_EQ(Expected, Result);
+
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(Target));
+  ASSERT_NO_ERROR(fs::remove(SubDir));
+}
+
+TEST_F(FileSystemTest, CreateRelativeDirectorySymlink) {
+  // Verify that a relative symlink to a directory is correctly detected as a
+  // directory symlink. On Windows, create_symlink needs to resolve the relative
+  // target against the link's parent to check if the target is a directory.
+  SmallString<128> SubDir(TestDirectory);
+  path::append(SubDir, "subdir");
+  ASSERT_NO_ERROR(fs::create_directory(SubDir));
+
+  SmallString<128> TargetDir(SubDir);
+  path::append(TargetDir, "target_dir");
+  ASSERT_NO_ERROR(fs::create_directory(TargetDir));
+
+  // Create a symlink in TestDirectory pointing to "subdir/target_dir" using a
+  // relative path. The target is relative to the link's parent (TestDirectory),
+  // not the CWD.
+  SmallString<128> Link(TestDirectory);
+  path::append(Link, "link");
+  SmallString<128> RelTarget("subdir");
+  path::append(RelTarget, "target_dir");
+  path::native(RelTarget);
+  std::error_code EC = fs::create_symlink(RelTarget, Link);
+  if (EC) {
+    ASSERT_NO_ERROR(fs::remove(TargetDir));
+    ASSERT_NO_ERROR(fs::remove(SubDir));
+    GTEST_SKIP() << "Symlinks not supported: " << EC.message();
+  }
+
+  // The symlink should be recognized as a directory.
+  EXPECT_TRUE(fs::is_directory(Link));
+
+  // Verify we can access a file through the directory symlink.
+  int FD;
+  SmallString<128> FileInTarget(TargetDir);
+  path::append(FileInTarget, "file");
+  ASSERT_NO_ERROR(fs::openFileForWrite(FileInTarget, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> FileThroughLink(Link);
+  path::append(FileThroughLink, "file");
+  EXPECT_TRUE(fs::is_regular_file(FileThroughLink));
+
+  ASSERT_NO_ERROR(fs::remove(FileInTarget));
+  ASSERT_NO_ERROR(fs::remove(Link));
+  ASSERT_NO_ERROR(fs::remove(TargetDir));
+  ASSERT_NO_ERROR(fs::remove(SubDir));
+}
+
+TEST_F(FileSystemTest, ReadlinkNonSymlink) {
+  int FD;
+  SmallString<128> Regular(TestDirectory);
+  path::append(Regular, "regular");
+  ASSERT_NO_ERROR(fs::openFileForWrite(Regular, FD, fs::CD_CreateNew));
+  ::close(FD);
+
+  SmallString<128> Result;
+  EXPECT_EQ(fs::readlink(Regular, Result), errc::invalid_argument);
+
+  ASSERT_NO_ERROR(fs::remove(Regular));
+}
+
+TEST_F(FileSystemTest, ReadlinkNonExistent) {
+  SmallString<128> Result;
+  EXPECT_EQ(fs::readlink(TestDirectory + "/does_not_exist", Result),
+            errc::no_such_file_or_directory);
+}
+
 TEST_F(FileSystemTest, ExpandTilde) {
   SmallString<64> Expected;
   SmallString<64> Actual;
@@ -836,7 +1094,7 @@ TEST_F(FileSystemTest, RemoveDirectoriesNoExePerm) {
   // It's expected that the directory exists, but some environments appear to
   // allow the removal despite missing the 'x' permission, so be flexible.
   if (fs::exists(Twine(TestDirectory) + "/noexeperm")) {
-    fs::setPermissions(Twine(TestDirectory) + "/noexeperm", fs::all_perms);
+    fs::setPermissions(Twine(TestDirectory) + "/noexeperm", fs::all_all);
     ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
                                            /*IgnoreErrors=*/false));
   }
@@ -937,19 +1195,19 @@ TEST_F(FileSystemTest, TempFiles) {
 #ifdef _WIN32
   // Path name > 260 chars should get an error.
   const char *Path270 =
-    "abcdefghijklmnopqrstuvwxyz9abcdefghijklmnopqrstuvwxyz8"
-    "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
-    "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
-    "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
-    "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz0";
+      "abcdefghijklmnopqrstuvwxyz9abcdefghijklmnopqrstuvwxyz8"
+      "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
+      "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
+      "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
+      "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz%";
   EXPECT_EQ(fs::createUniqueFile(Path270, FileDescriptor, TempPath),
             errc::invalid_argument);
   // Relative path < 247 chars, no problem.
   const char *Path216 =
-    "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
-    "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
-    "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
-    "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstuvwxyz0";
+      "abcdefghijklmnopqrstuvwxyz7abcdefghijklmnopqrstuvwxyz6"
+      "abcdefghijklmnopqrstuvwxyz5abcdefghijklmnopqrstuvwxyz4"
+      "abcdefghijklmnopqrstuvwxyz3abcdefghijklmnopqrstuvwxyz2"
+      "abcdefghijklmnopqrstuvwxyz1abcdefghijklmnopqrstu%%%%%%";
   ASSERT_NO_ERROR(fs::createTemporaryFile(Path216, "", TempPath));
   ASSERT_NO_ERROR(fs::remove(Twine(TempPath)));
 #endif
@@ -1176,21 +1434,21 @@ TEST_F(FileSystemTest, BrokenSymlinkDirectoryIteration) {
   // Create a known hierarchy to recurse over.
   ASSERT_NO_ERROR(fs::create_directories(Twine(TestDirectory) + "/symlink"));
   ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/a"));
+      fs::create_symlink("no_such_file", Twine(TestDirectory) + "/symlink/a"));
   ASSERT_NO_ERROR(
       fs::create_directories(Twine(TestDirectory) + "/symlink/b/bb"));
+  ASSERT_NO_ERROR(fs::create_symlink("no_such_file",
+                                     Twine(TestDirectory) + "/symlink/b/ba"));
+  ASSERT_NO_ERROR(fs::create_symlink("no_such_file",
+                                     Twine(TestDirectory) + "/symlink/b/bc"));
   ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/b/ba"));
-  ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/b/bc"));
-  ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/c"));
+      fs::create_symlink("no_such_file", Twine(TestDirectory) + "/symlink/c"));
   ASSERT_NO_ERROR(
       fs::create_directories(Twine(TestDirectory) + "/symlink/d/dd/ddd"));
-  ASSERT_NO_ERROR(fs::create_link(Twine(TestDirectory) + "/symlink/d/dd",
-                                  Twine(TestDirectory) + "/symlink/d/da"));
+  ASSERT_NO_ERROR(fs::create_symlink(Twine(TestDirectory) + "/symlink/d/dd",
+                                     Twine(TestDirectory) + "/symlink/d/da"));
   ASSERT_NO_ERROR(
-      fs::create_link("no_such_file", Twine(TestDirectory) + "/symlink/e"));
+      fs::create_symlink("no_such_file", Twine(TestDirectory) + "/symlink/e"));
 
   typedef std::vector<std::string> v_t;
   v_t VisitedNonBrokenSymlinks;
@@ -1328,6 +1586,70 @@ TEST_F(FileSystemTest, Remove) {
 }
 
 #ifdef _WIN32
+// remove_directories() deletes read-only files and directories.
+TEST_F(FileSystemTest, RemoveDirectoriesReadOnly) {
+  SmallString<128> Root(TestDirectory), Sub, File;
+  path::append(Root, "readonly");
+  (Sub = Root) += "/sub";
+  (File = Sub) += "/file";
+  ASSERT_NO_ERROR(fs::create_directories(Sub));
+  {
+    std::error_code EC;
+    raw_fd_ostream OS(File, EC);
+    ASSERT_NO_ERROR(EC);
+  }
+  ASSERT_NO_ERROR(fs::setPermissions(File, fs::all_read));
+  ASSERT_NO_ERROR(fs::setPermissions(Sub, fs::all_read | fs::all_exe));
+  ASSERT_NO_ERROR(fs::remove_directories(Root));
+  EXPECT_FALSE(fs::exists(Root));
+}
+
+// remove_directories() must delete a directory junction, not its target.
+TEST_F(FileSystemTest, RemoveDirectoriesJunction) {
+  ErrorOr<std::string> Cmd = sys::findProgramByName("cmd");
+  if (!Cmd)
+    GTEST_SKIP();
+  auto MakeJunction = [&](StringRef Link, StringRef Target) {
+    std::optional<StringRef> Redirects[] = {std::nullopt, StringRef(""),
+                                            StringRef("")};
+    return sys::ExecuteAndWait(*Cmd, {*Cmd, "/c", "mklink", "/J", Link, Target},
+                               std::nullopt, Redirects) == 0;
+  };
+
+  // mklink only accepts backslashes.
+  auto Child = [&](StringRef A, StringRef B = "") {
+    SmallString<128> P(TestDirectory);
+    path::append(P, A, B);
+    path::native(P, path::Style::windows_backslash);
+    return P;
+  };
+  SmallString<128> Target = Child("target"), Keep = Child("target", "keep");
+  ASSERT_NO_ERROR(fs::create_directories(Target));
+  {
+    std::error_code EC;
+    raw_fd_ostream OS(Keep, EC);
+    ASSERT_NO_ERROR(EC);
+  }
+
+  // A junction nested inside the directory being removed.
+  SmallString<128> Root = Child("root");
+  ASSERT_NO_ERROR(fs::create_directories(Root));
+  if (!MakeJunction(Child("root", "link"), Target))
+    GTEST_SKIP() << "could not create a directory junction";
+  ASSERT_NO_ERROR(fs::remove_directories(Root));
+  EXPECT_FALSE(fs::exists(Root));
+  EXPECT_TRUE(fs::exists(Keep));
+
+  // The path passed to remove_directories() is itself a junction.
+  SmallString<128> TopLevel = Child("toplevel");
+  ASSERT_TRUE(MakeJunction(TopLevel, Target));
+  ASSERT_NO_ERROR(fs::remove_directories(TopLevel));
+  EXPECT_FALSE(fs::exists(TopLevel));
+  EXPECT_TRUE(fs::exists(Keep));
+}
+#endif
+
+#ifdef _WIN32
 TEST_F(FileSystemTest, CarriageReturn) {
   SmallString<128> FilePathname(TestDirectory);
   std::error_code EC;
@@ -1366,6 +1688,9 @@ TEST_F(FileSystemTest, Resize) {
   fs::file_status Status;
   ASSERT_NO_ERROR(fs::status(FD, Status));
   ASSERT_EQ(Status.getSize(), 123U);
+  ErrorOr<uint64_t> Size = fs::file_size(fs::convertFDToNativeFile(FD));
+  ASSERT_TRUE(!!Size);
+  ASSERT_EQ(*Size, 123U);
   ::close(FD);
   ASSERT_NO_ERROR(fs::remove(TempPath));
 }
@@ -1428,7 +1753,7 @@ TEST_F(FileSystemTest, FileMapping) {
     fs::mapped_file_region mfr(fs::convertFDToNativeFile(FileDescriptor),
                                fs::mapped_file_region::readwrite, Size, 0, EC);
     ASSERT_NO_ERROR(EC);
-    std::copy(Val.begin(), Val.end(), mfr.data());
+    llvm::copy(Val, mfr.data());
     // Explicitly add a 0.
     mfr.data()[Val.size()] = 0;
 
@@ -1471,6 +1796,95 @@ TEST_F(FileSystemTest, FileMapping) {
   ASSERT_NO_ERROR(fs::remove(TempPath));
 }
 
+TEST_F(FileSystemTest, FileMappingSync) {
+  // Create a temp file.
+  SmallString<0> TempPath(TestDirectory);
+  sys::path::append(TempPath, "test-%%%%");
+  auto TempFileOrError = fs::TempFile::create(TempPath);
+  ASSERT_TRUE((bool)TempFileOrError);
+  fs::TempFile File = std::move(*TempFileOrError);
+  StringRef Content("hello there");
+  std::string FileName = File.TmpName;
+  ASSERT_NO_ERROR(
+      fs::resize_file_before_mapping_readwrite(File.FD, Content.size()));
+  {
+    // Map in the file and write some content.
+    std::error_code EC;
+    fs::mapped_file_region MFR(fs::convertFDToNativeFile(File.FD),
+                               fs::mapped_file_region::readwrite,
+                               Content.size(), 0, EC);
+
+    // Keep the file so it can be read.
+    ASSERT_FALSE((bool)File.keep());
+
+    // Write content through mapped memory.
+    ASSERT_NO_ERROR(EC);
+    llvm::copy(Content, MFR.data());
+
+    // Synchronize to file system.
+    ASSERT_FALSE((bool)MFR.sync());
+
+    // Check the file content using file IO APIs.
+    auto Buffer = MemoryBuffer::getFile(FileName);
+    ASSERT_TRUE((bool)Buffer);
+    ASSERT_EQ(Content, Buffer->get()->getBuffer());
+  }
+  // Manually remove the test file.
+  ASSERT_FALSE((bool)fs::remove(FileName));
+}
+
+#ifdef _WIN32
+TEST_F(FileSystemTest, FileMappingNamed) {
+  // Create a temp file.
+  SmallString<0> TempPath(TestDirectory);
+  sys::path::append(TempPath, "test-%%%%");
+  auto TempFileOrError = fs::TempFile::create(TempPath);
+  ASSERT_TRUE((bool)TempFileOrError);
+  fs::TempFile File = std::move(*TempFileOrError);
+  StringRef Content("hello there");
+  std::string FileName = File.TmpName;
+  ASSERT_NO_ERROR(
+      fs::resize_file_before_mapping_readwrite(File.FD, Content.size()));
+  {
+    // Map in the file twice with the same name
+    std::error_code EC1;
+    fs::mapped_file_region MFR1(
+        fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+        Content.size(), 0, EC1, "Local\\FileSystemTest_map");
+    ASSERT_NO_ERROR(EC1);
+
+    std::error_code EC2;
+    fs::mapped_file_region MFR2(
+        fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+        Content.size(), 0, EC2, "Local\\FileSystemTest_map");
+    ASSERT_NO_ERROR(EC2);
+
+    // Write content through mapped memory and check the content
+    llvm::copy(Content, MFR1.data());
+    ASSERT_EQ(std::memcmp(MFR1.data(), MFR2.data(), Content.size()), 0);
+  }
+  {
+    // Map in the file twice named and unnamed
+    std::error_code EC1;
+    fs::mapped_file_region MFR1(fs::convertFDToNativeFile(File.FD),
+                                fs::mapped_file_region::readwrite,
+                                Content.size(), 0, EC1, nullptr);
+    ASSERT_NO_ERROR(EC1);
+
+    std::error_code EC2;
+    fs::mapped_file_region MFR2(
+        fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+        Content.size(), 0, EC2, "Local\\FileSystemTest_map2");
+    ASSERT_NO_ERROR(EC2);
+
+    // Write content through mapped memory and check the content
+    llvm::copy(Content, MFR1.data());
+    ASSERT_EQ(std::memcmp(MFR1.data(), MFR2.data(), Content.size()), 0);
+  }
+  ASSERT_FALSE((bool)File.discard());
+}
+#endif
+
 TEST(Support, NormalizePath) {
   //                           Input,        Expected Win, Expected Posix
   using TestTuple = std::tuple<const char *, const char *, const char *>;
@@ -1490,6 +1904,16 @@ TEST(Support, NormalizePath) {
     path::native(Win, path::Style::windows);
     path::native(Posix, path::Style::posix);
     path::native(WinSlash, path::Style::windows_slash);
+    EXPECT_EQ(std::get<1>(T), Win);
+    EXPECT_EQ(std::get<2>(T), Posix);
+    EXPECT_EQ(std::get<2>(T), WinSlash);
+  }
+
+  for (auto &T : Tests) {
+    std::string Win = path::native(std::get<0>(T), path::Style::windows);
+    std::string Posix = path::native(std::get<0>(T), path::Style::posix);
+    std::string WinSlash =
+        path::native(std::get<0>(T), path::Style::windows_slash);
     EXPECT_EQ(std::get<1>(T), Win);
     EXPECT_EQ(std::get<2>(T), Posix);
     EXPECT_EQ(std::get<2>(T), WinSlash);
@@ -1720,6 +2144,15 @@ TEST_F(FileSystemTest, OpenFileForRead) {
     ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
     ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
     ASSERT_EQ(D1, D2);
+
+    // getRealPathFromHandle on the open descriptor gives the same path.
+    SmallString<64> HandlePath;
+    auto EC = fs::getRealPathFromHandle(
+        fs::convertFDToNativeFile(FileDescriptor2), HandlePath);
+    if (EC != errc::not_supported) {
+      ASSERT_NO_ERROR(EC);
+      ASSERT_EQ(ResultPath, HandlePath);
+    }
   }
   ::close(FileDescriptor);
   ::close(FileDescriptor2);
@@ -1755,14 +2188,47 @@ TEST_F(FileSystemTest, OpenFileForRead) {
 #endif
 }
 
+TEST_F(FileSystemTest, SetLastAccessAndModificationTimeFile) {
+  int FD;
+  SmallString<64> Path;
+  ASSERT_NO_ERROR(fs::createTemporaryFile("set-mtime", "tmp", FD, Path));
+  FileRemover Cleanup(Path);
+  ::close(FD);
+
+  TimePoint<> When(std::chrono::seconds(1234567890));
+  ASSERT_NO_ERROR(fs::setLastAccessAndModificationTime(Path, When));
+
+  fs::file_status Status;
+  ASSERT_NO_ERROR(fs::status(Twine(Path), Status));
+  EXPECT_EQ(std::chrono::time_point_cast<std::chrono::seconds>(When),
+            std::chrono::time_point_cast<std::chrono::seconds>(
+                Status.getLastModificationTime()));
+}
+
+TEST_F(FileSystemTest, SetLastAccessAndModificationTimeDirectory) {
+  SmallString<64> Dir;
+  ASSERT_NO_ERROR(fs::createUniqueDirectory("set-mtime-dir", Dir));
+
+  TimePoint<> When(std::chrono::seconds(1234567890));
+  ASSERT_NO_ERROR(fs::setLastAccessAndModificationTime(Dir, When));
+
+  fs::file_status Status;
+  ASSERT_NO_ERROR(fs::status(Twine(Dir), Status));
+  EXPECT_EQ(std::chrono::time_point_cast<std::chrono::seconds>(When),
+            std::chrono::time_point_cast<std::chrono::seconds>(
+                Status.getLastModificationTime()));
+
+  ASSERT_NO_ERROR(fs::remove(Dir));
+}
+
 TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
   std::string Buf(5, '?');
   Expected<fs::file_t> FD = fs::openNativeFileForRead(TestDirectory);
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_AIX) || defined(__MVS__)
   EXPECT_EQ(errorToErrorCode(FD.takeError()), errc::is_a_directory);
 #else
   ASSERT_THAT_EXPECTED(FD, Succeeded());
-  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  scope_exit Close([&] { fs::closeFile(*FD); });
   Expected<size_t> BytesRead =
       fs::readNativeFile(*FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
   EXPECT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
@@ -1988,7 +2454,7 @@ TEST_F(FileSystemTest, readNativeFile) {
     Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
     if (!FD)
       return FD.takeError();
-    auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+    llvm::scope_exit Close([&] { fs::closeFile(*FD); });
     if (Expected<size_t> BytesRead = fs::readNativeFile(
             *FD, MutableArrayRef(&*Buf.begin(), Buf.size())))
       return Buf.substr(0, *BytesRead);
@@ -2009,7 +2475,7 @@ TEST_F(FileSystemTest, readNativeFileToEOF) {
     Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
     if (!FD)
       return FD.takeError();
-    auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+    llvm::scope_exit Close([&] { fs::closeFile(*FD); });
     if (ChunkSize)
       return fs::readNativeFileToEOF(*FD, V, *ChunkSize);
     return fs::readNativeFileToEOF(*FD, V);
@@ -2052,7 +2518,7 @@ TEST_F(FileSystemTest, readNativeFileSlice) {
   FileRemover Cleanup(NonExistantFile);
   Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
   ASSERT_THAT_EXPECTED(FD, Succeeded());
-  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  llvm::scope_exit Close([&] { fs::closeFile(*FD); });
   const auto &Read = [&](size_t Offset,
                          size_t ToRead) -> Expected<std::string> {
     std::string Buf(ToRead, '?');
@@ -2077,8 +2543,8 @@ TEST_F(FileSystemTest, is_local) {
 
   int FD;
   SmallString<128> TempPath;
-  ASSERT_NO_ERROR(
-      fs::createUniqueFile(Twine(TestDirectory) + "/temp", FD, TempPath));
+  ASSERT_NO_ERROR(fs::createUniqueFile(Twine(TestDirectory) + "/temp-%%%%%%",
+                                       FD, TempPath));
   FileRemover Cleanup(TempPath);
 
   // Make sure it exists.
@@ -2177,6 +2643,21 @@ TEST_F(FileSystemTest, permissions) {
   SmallString<64> TempPath;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
   FileRemover Cleanup(TempPath);
+
+  // BSD semantics (also available on Linux via mount -o bsdgroups/grpid) are
+  // for the group ID to be inherited, rather than only if the directory's
+  // set-group-ID bit is set, and so if the temporary file is created in a
+  // directory whose group is one the current user is not in (e.g. /tmp,
+  // typically root:wheel, i.e. 0:0, for a non-admin user) we will be unable to
+  // test setting the set-group-ID bit on it. Force the group to the effective
+  // group ID, i.e. the default Linux semantics, so we can perform tests
+  // setting the set-group-ID bit below. Note getegid() has no reserved return
+  // value to signify an error, it always succeeds.
+#ifdef LLVM_ON_UNIX
+  fs::file_status Status;
+  ASSERT_NO_ERROR(fs::status(FD, Status));
+  ASSERT_NO_ERROR(fs::changeFileOwnership(FD, Status.getUser(), getegid()));
+#endif
 
   // Make sure it exists.
   ASSERT_TRUE(fs::exists(Twine(TempPath)));
@@ -2448,6 +2929,168 @@ TEST_F(FileSystemTest, widenPath) {
 #endif
 
 #ifdef _WIN32
+/// Checks whether short 8.3 form names are enabled in the given UTF-8 path.
+static llvm::Expected<bool> areShortNamesEnabled(llvm::StringRef Path8) {
+  // Create a directory under Path8 with a name long enough that Windows will
+  // provide a short 8.3 form name, if short 8.3 form names are enabled.
+  SmallString<MAX_PATH> Dir(Path8);
+  path::append(Dir, "verylongdir");
+  if (std::error_code EC = fs::create_directories(Dir))
+    return llvm::errorCodeToError(EC);
+  scope_exit Close([&] { fs::remove_directories(Dir); });
+
+  SmallVector<wchar_t, MAX_PATH> Path16;
+  if (std::error_code EC = sys::windows::widenPath(Dir, Path16))
+    return llvm::errorCodeToError(EC);
+
+  WIN32_FIND_DATAW Data;
+  HANDLE H = ::FindFirstFileW(Path16.data(), &Data);
+  if (H == INVALID_HANDLE_VALUE)
+    return llvm::errorCodeToError(llvm::mapWindowsError(::GetLastError()));
+  ::FindClose(H);
+
+  return (Data.cAlternateFileName[0] != L'\0');
+}
+
+/// Returns the short 8.3 form path for the given UTF-8 path, or an empty string
+/// on failure. Uses Win32 GetShortPathNameW.
+static std::string getShortPathName(llvm::StringRef Path8) {
+  // Convert UTF-8 to UTF-16.
+  SmallVector<wchar_t, MAX_PATH> Path16;
+  if (std::error_code EC = sys::windows::widenPath(Path8, Path16))
+    return {};
+
+  // Get the required buffer size for the short 8.3 form path (includes null
+  // terminator).
+  DWORD Required = ::GetShortPathNameW(Path16.data(), nullptr, 0);
+  if (Required == 0)
+    return {};
+
+  SmallVector<wchar_t, MAX_PATH> ShortPath;
+  ShortPath.resize_for_overwrite(Required);
+
+  DWORD Written =
+      ::GetShortPathNameW(Path16.data(), ShortPath.data(), Required);
+  if (Written == 0 || Written >= Required)
+    return {};
+
+  ShortPath.truncate(Written);
+
+  SmallString<MAX_PATH> Utf8Result;
+  if (std::error_code EC = sys::windows::UTF16ToUTF8(
+          ShortPath.data(), ShortPath.size(), Utf8Result))
+    return {};
+
+  return std::string(Utf8Result);
+}
+
+/// Returns true if the two paths refer to the same file or directory by
+/// comparing their UniqueIDs.
+static bool sameEntity(llvm::StringRef P1, llvm::StringRef P2) {
+  fs::UniqueID ID1, ID2;
+  return !fs::getUniqueID(P1, ID1) && !fs::getUniqueID(P2, ID2) && ID1 == ID2;
+}
+
+/// Removes the Windows long path path prefix (\\?\ or \\?\UNC\) from the given
+/// UTF-8 path, if present.
+static std::string stripPrefix(llvm::StringRef P) {
+  if (P.starts_with(R"(\\?\UNC\)"))
+    return "\\" + P.drop_front(7).str();
+  if (P.starts_with(R"(\\?\)"))
+    return P.drop_front(4).str();
+  return P.str();
+}
+
+TEST_F(FileSystemTest, makeLongFormPath) {
+  auto Enabled = areShortNamesEnabled(TestDirectory.str());
+  ASSERT_TRUE(static_cast<bool>(Enabled))
+      << llvm::toString(Enabled.takeError());
+  if (!*Enabled)
+    GTEST_SKIP() << "Short 8.3 form names not enabled in: " << TestDirectory;
+
+  const bool PreferForwardSlash = path::native("/") == "/";
+
+  // Setup: A test directory longer than 8 characters for which a distinct
+  // short 8.3 form name will be created on Windows. Typically, 123456~1.
+  const char *OneDir =
+      PreferForwardSlash ? "/123456789" : "\\123456789"; // >8 chars
+
+  // Setup: Create a path where even if all components were reduced to short 8.3
+  // form names, the total length would exceed MAX_PATH.
+  SmallString<MAX_PATH * 2> Deep(TestDirectory);
+  const size_t NLevels = (MAX_PATH / 8) + 1;
+  for (size_t I = 0; I < NLevels; ++I)
+    Deep.append(OneDir);
+
+  ASSERT_NO_ERROR(fs::create_directories(Deep));
+
+  // Setup: Create prefixed and non-prefixed short 8.3 form paths from the deep
+  // test path we just created.
+  std::string DeepShortWithPrefix = getShortPathName(Deep);
+  ASSERT_TRUE(StringRef(DeepShortWithPrefix).starts_with(R"(\\?\)"))
+      << "Expected prefixed short 8.3 form path, got: " << DeepShortWithPrefix;
+  std::string DeepShort = stripPrefix(DeepShortWithPrefix);
+
+  // Setup: Create a short 8.3 form path for the first-level directory.
+  SmallString<MAX_PATH> FirstLevel(TestDirectory);
+  FirstLevel.append(OneDir);
+  std::string Short = getShortPathName(FirstLevel);
+  ASSERT_FALSE(Short.empty())
+      << "Expected short 8.3 form path for test directory.";
+
+  // Setup: Create a short 8.3 form path with . and .. components for the
+  // first-level directory.
+  llvm::SmallString<MAX_PATH> WithDots(FirstLevel);
+  llvm::sys::path::append(WithDots, ".", "..", OneDir);
+  std::string DotAndDotDot = getShortPathName(WithDots);
+  ASSERT_FALSE(DotAndDotDot.empty())
+      << "Expected short 8.3 form path for test directory.";
+  auto ContainsDotAndDotDot = [PreferForwardSlash](llvm::StringRef S) {
+    if (PreferForwardSlash)
+      return S.contains("/./") && S.contains("/../");
+    return S.contains("\\.\\") && S.contains("\\..\\");
+  };
+  ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDot))
+      << "Expected '.' and '..' components in: " << DotAndDotDot;
+
+  // Case 1: Non-existent short 8.3 form path.
+  SmallString<MAX_PATH> NoExist("NotEre~1");
+  ASSERT_FALSE(fs::exists(NoExist));
+  SmallString<MAX_PATH> NoExistResult;
+  EXPECT_TRUE(windows::makeLongFormPath(NoExist, NoExistResult));
+  EXPECT_TRUE(NoExistResult.empty());
+
+  // Case 2: Valid short 8.3 form path.
+  SmallString<MAX_PATH> ShortResult;
+  ASSERT_FALSE(windows::makeLongFormPath(Short, ShortResult));
+  EXPECT_TRUE(sameEntity(Short, ShortResult));
+
+  // Case 3: Valid . and .. short 8.3 form path.
+  SmallString<MAX_PATH> DotAndDotDotResult;
+  ASSERT_FALSE(windows::makeLongFormPath(DotAndDotDot, DotAndDotDotResult));
+  EXPECT_TRUE(sameEntity(DotAndDotDot, DotAndDotDotResult));
+  // Assert that '.' and '..' remain as path components.
+  ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDotResult));
+
+  // Case 4: Deep short 8.3 form path without \\?\ prefix.
+  SmallString<MAX_PATH> DeepResult;
+  ASSERT_FALSE(windows::makeLongFormPath(DeepShort, DeepResult));
+  EXPECT_TRUE(sameEntity(DeepShort, DeepResult));
+  EXPECT_FALSE(StringRef(DeepResult).starts_with(R"(\\?\)"))
+      << "Expected unprefixed result, got: " << DeepResult;
+
+  // Case 5: Deep short 8.3 form path with \\?\ prefix.
+  SmallString<MAX_PATH> DeepPrefixedResult;
+  ASSERT_FALSE(
+      windows::makeLongFormPath(DeepShortWithPrefix, DeepPrefixedResult));
+  EXPECT_TRUE(sameEntity(DeepShortWithPrefix, DeepPrefixedResult));
+  EXPECT_TRUE(StringRef(DeepPrefixedResult).starts_with(R"(\\?\)"))
+      << "Expected prefixed result, got: " << DeepPrefixedResult;
+
+  // Cleanup.
+  ASSERT_NO_ERROR(fs::remove_directories(TestDirectory.str()));
+}
+
 // Windows refuses lock request if file region is already locked by the same
 // process. POSIX system in this case updates the existing lock.
 TEST_F(FileSystemTest, FileLocker) {
@@ -2519,13 +3162,13 @@ TEST_F(FileSystemTest, CopyFile) {
   verifyFileContents(Destination, Data[1]);
 
   // Note: The remaining logic is targeted at a potential failure case related
-  // to file cloning and symlinks on Darwin. On Windows, fs::create_link() does
-  // not return success here so the test is skipped.
+  // to file cloning and symlinks on Darwin. On Windows, fs::create_symlink()
+  // may not return success here so the test is skipped.
 #if !defined(_WIN32)
   // Set up a symlink to the third file.
   SmallString<128> Symlink(RootTestDirectory.path());
   path::append(Symlink, "symlink");
-  ASSERT_NO_ERROR(fs::create_link(path::filename(Sources[2]), Symlink));
+  ASSERT_NO_ERROR(fs::create_symlink(path::filename(Sources[2]), Symlink));
   verifyFileContents(Symlink, Data[2]);
 
   // fs::getUniqueID() should follow symlinks. Otherwise, this isn't good test

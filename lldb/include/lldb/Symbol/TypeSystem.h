@@ -9,6 +9,8 @@
 #ifndef LLDB_SYMBOL_TYPESYSTEM_H
 #define LLDB_SYMBOL_TYPESYSTEM_H
 
+#include <atomic>
+#include <cassert>
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -86,14 +88,14 @@ public:
   /// removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
 
+  /// Called on a target's scratch type systems when the target loads the
+  /// modules in \p module_list.
+  virtual void ModulesDidLoad(ModuleList &module_list) {}
+
   virtual plugin::dwarf::DWARFASTParser *GetDWARFParser() { return nullptr; }
 
   virtual PDBASTParser *GetPDBParser() { return nullptr; }
   virtual npdb::PdbAstBuilder *GetNativePDBParser() { return nullptr; }
-
-  virtual SymbolFile *GetSymbolFile() const { return m_sym_file; }
-
-  virtual void SetSymbolFile(SymbolFile *sym_file) { m_sym_file = sym_file; }
 
   // CompilerDecl functions
   virtual ConstString DeclGetName(void *opaque_decl) = 0;
@@ -162,8 +164,7 @@ public:
 
   virtual bool IsDefined(lldb::opaque_compiler_type_t type) = 0;
 
-  virtual bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                                   uint32_t &count, bool &is_complex) = 0;
+  virtual bool IsFloatingPointType(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool IsFunctionType(lldb::opaque_compiler_type_t type) = 0;
 
@@ -178,6 +179,8 @@ public:
 
   virtual bool
   IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual bool IsMemberDataPointerType(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool IsBlockPointerType(lldb::opaque_compiler_type_t type,
                                   CompilerType *function_pointer_type_ptr) = 0;
@@ -204,6 +207,17 @@ public:
 
   virtual bool IsVoidType(lldb::opaque_compiler_type_t type) = 0;
 
+  virtual bool HasPointerAuthQualifier(lldb::opaque_compiler_type_t type) {
+    return false;
+  }
+
+  /// Returns the target address space of \p type,
+  /// or std::nullopt if it lives in the default address space.
+  virtual std::optional<uint32_t>
+  GetTargetAddressSpace(lldb::opaque_compiler_type_t type) const {
+    return std::nullopt;
+  }
+
   virtual bool CanPassInRegisters(const CompilerType &type) = 0;
 
   // TypeSystems can support more than one language
@@ -221,6 +235,10 @@ public:
   // AST related queries
 
   virtual uint32_t GetPointerByteSize() = 0;
+
+  virtual CompilerType GetPointerDiffType(bool is_signed) = 0;
+
+  virtual CompilerType GetSizeType() = 0;
 
   virtual unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) = 0;
 
@@ -301,6 +319,10 @@ public:
   virtual CompilerType AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
                                           uint32_t payload);
 
+  virtual CompilerType
+  AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                          uint32_t address_space);
+
   /// \param opaque_payload      The m_payload field of Type, which may
   /// carry TypeSystem-specific extra information.
   virtual CompilerType CreateTypedef(lldb::opaque_compiler_type_t type,
@@ -310,14 +332,20 @@ public:
 
   // Exploring the type
 
-  virtual const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) = 0;
+  virtual const llvm::fltSemantics &
+  GetFloatTypeSemantics(size_t byte_size, lldb::Format format) = 0;
 
   virtual llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) = 0;
 
-  virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
-                                     uint64_t &count) = 0;
+  /// Return the distance in bytes between consecutive elements of this type
+  /// when stored in contiguous storage (e.g. array), or std::nullopt if it
+  /// cannot be determined.
+  virtual std::optional<uint64_t>
+  GetByteStride(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) = 0;
 
   virtual lldb::Format GetFormat(lldb::opaque_compiler_type_t type) = 0;
 
@@ -370,14 +398,12 @@ public:
                       uint32_t &deref_byte_size, int32_t &deref_byte_offset,
                       ValueObject *valobj, uint64_t &language_flags) = 0;
 
-  virtual llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
-      lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
-      bool transparent_pointers, bool omit_empty_base_classes,
-      bool ignore_array_bounds, std::string &child_name,
-      uint32_t &child_byte_size, int32_t &child_byte_offset,
-      uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
-      bool &child_is_base_class, bool &child_is_deref_of_parent,
-      ValueObject *valobj, uint64_t &language_flags) = 0;
+  /// Get the child at \p idx, such as a field, a base class or a pointee.
+  virtual llvm::Expected<ChildTypeInfo>
+  GetChildAtIndex(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
+                  size_t idx, bool transparent_pointers,
+                  bool omit_empty_base_classes, bool ignore_array_bounds,
+                  ValueObject *valobj) = 0;
 
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.
@@ -410,6 +436,11 @@ public:
   virtual std::optional<CompilerType::IntegralTemplateArgument>
   GetIntegralTemplateArgument(lldb::opaque_compiler_type_t type, size_t idx,
                               bool expand_pack);
+
+  virtual bool IsPromotableIntegerType(lldb::opaque_compiler_type_t type);
+
+  virtual CompilerType
+  GetPromotedIntegerType(lldb::opaque_compiler_type_t type);
 
   // Dumping types
 
@@ -447,7 +478,9 @@ public:
   /// \param[out] output Stream to dup the AST into.
   /// \param[in] filter If empty, dump whole AST. If non-empty, will only
   /// dump decls whose names contain \c filter.
-  virtual void Dump(llvm::raw_ostream &output, llvm::StringRef filter) = 0;
+  /// \param[in] show_color If true, prints the AST color-highlighted.
+  virtual void Dump(llvm::raw_ostream &output, llvm::StringRef filter,
+                    bool show_color) = 0;
 
   /// This is used by swift.
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;
@@ -545,13 +578,37 @@ public:
 
   virtual std::optional<llvm::json::Value> ReportStatistics();
 
+  SymbolFile *GetSymbolFile() const { return m_sym_file.load(); }
+
+  /// Bind this TypeSystem to its owning SymbolFile.
+  ///
+  /// A TypeSystem is created by its Module's TypeSystemMap before that
+  /// Module has an associated SymbolFile. The SymbolFile installs this
+  /// back-pointer when it first hands out the TypeSystem so that lazy
+  /// type-completion callbacks can route through it.
+  ///
+  /// Each Module owns at most one SymbolFile and one (Module-)TypeSystem per
+  /// language, so the binding is expected to be established exactly once.
+  /// Repeated calls with the same pointer are no-ops. Rebinding to a different
+  /// non-null SymbolFile is a programming error.
+  void SetSymbolFile(SymbolFile *sym_file) {
+    SymbolFile *expected = nullptr;
+    if (m_sym_file.compare_exchange_strong(expected, sym_file))
+      return;
+    assert(expected == sym_file &&
+           "TypeSystem rebound to a different SymbolFile");
+  }
+
   bool GetHasForcefullyCompletedTypes() const {
     return m_has_forcefully_completed_types;
   }
+
 protected:
-  SymbolFile *m_sym_file = nullptr;
   /// Used for reporting statistics.
   bool m_has_forcefully_completed_types = false;
+
+private:
+  std::atomic<SymbolFile *> m_sym_file = nullptr;
 };
 
 class TypeSystemMap {

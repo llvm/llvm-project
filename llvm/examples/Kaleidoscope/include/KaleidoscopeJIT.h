@@ -22,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/DataLayout.h"
@@ -85,6 +86,8 @@ public:
     return std::make_unique<KaleidoscopeJIT>(std::move(ES), std::move(JTMB),
                                              std::move(*DL));
   }
+
+  const Triple &getTargetTriple() const { return ES->getTargetTriple(); }
 
   const DataLayout &getDataLayout() const { return DL; }
 

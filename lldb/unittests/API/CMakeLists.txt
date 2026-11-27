@@ -1,14 +1,34 @@
 add_lldb_unittest(APITests
+  SBBreakpointNameTest.cpp
+  SBBreakpointTest.cpp
   SBCommandInterpreterTest.cpp
+  SBCommandReturnObjectTest.cpp
+  SBEnvironmentTest.cpp
+  SBEventTest.cpp
+  SBInitializationOptionsTest.cpp
   SBLineEntryTest.cpp
   SBMutexTest.cpp
+  SBBreakpointClearConditionTest.cpp
+  SBProtocolServerTest.cpp
+  SBProgressTest.cpp
+  SBTargetTest.cpp
+  SBTypeCategoryTest.cpp
+  SBTypeFilterTest.cpp
+  SBTypeFormatTest.cpp
+  SBTypeNameSpecifierTest.cpp
+  SBTypeSummaryTest.cpp
+  SBTypeSyntheticTest.cpp
+
+  SBAPITEST
 
   LINK_LIBS
-    liblldb
+    LLVMTestingSupport
+    lldbSBUtilityHelpers
   )
 
 # Build with -Wdocumentation. This relies on the tests including all the API
-# headers through API/LLDB.h.
+# headers through API/LLDB.h. It also means that the API tests cannot include
+# private headers.
 check_cxx_compiler_flag("-Wdocumentation"
                         CXX_SUPPORTS_DOCUMENTATION)
 if (CXX_SUPPORTS_DOCUMENTATION)

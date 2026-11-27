@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: (clang || apple-clang) && stdlib=libc++
 
+#include <cstddef>
 #include <new>
 
 #include "test_macros.h"

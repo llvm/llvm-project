@@ -110,8 +110,8 @@ void bar_long_double(void) {
 // CHECK: %[[VAR21:[A-Za-z0-9.]+]] = alloca { ppc_fp128, ppc_fp128 }, align 16
 // CHECK: %[[VAR22:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
 // CHECK: %[[VAR23:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
-// CHECK: store ppc_fp128 0xM40000000000000000000000000000000, ptr %[[VAR22]]
-// CHECK: store ppc_fp128 0xMC0040000000000008000000000000000, ptr %[[VAR23]]
+// CHECK: store ppc_fp128 2.000000e+00, ptr %[[VAR22]]
+// CHECK: store ppc_fp128 -2.500000e+00, ptr %[[VAR23]]
 // CHECK: %[[VAR24:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
 // CHECK: %[[VAR25:[A-Za-z0-9.]+]] = load ppc_fp128, ptr %[[VAR24]], align 16
 // CHECK: %[[VAR26:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
@@ -126,8 +126,8 @@ void bar_ibm128(void) {
 // CHECK: %[[VAR21:[A-Za-z0-9.]+]] = alloca { ppc_fp128, ppc_fp128 }, align 16
 // CHECK: %[[VAR22:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
 // CHECK: %[[VAR23:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1
-// CHECK: store ppc_fp128 0xM40000000000000000000000000000000, ptr %[[VAR22]]
-// CHECK: store ppc_fp128 0xMC0040000000000008000000000000000, ptr %[[VAR23]]
+// CHECK: store ppc_fp128 2.000000e+00, ptr %[[VAR22]]
+// CHECK: store ppc_fp128 -2.500000e+00, ptr %[[VAR23]]
 // CHECK: %[[VAR24:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 0
 // CHECK: %[[VAR25:[A-Za-z0-9.]+]] = load ppc_fp128, ptr %[[VAR24]], align 16
 // CHECK: %[[VAR26:[A-Za-z0-9.]+]] = getelementptr inbounds nuw { ppc_fp128, ppc_fp128 }, ptr %[[VAR21]], i32 0, i32 1

@@ -3135,11 +3135,11 @@ define <2 x i64> @test_mm_mulhi_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16> %arg0, <8 x i16> %arg1)
+  %res = call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.pmulh.w(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.smulh.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_mulhi_epu16(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_mulhi_epu16:
@@ -3158,11 +3158,11 @@ define <2 x i64> @test_mm_mulhi_epu16(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
   %arg1 = bitcast <2 x i64> %a1 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16> %arg0, <8 x i16> %arg1)
+  %res = call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %arg0, <8 x i16> %arg1)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
-declare <8 x i16> @llvm.x86.sse2.pmulhu.w(<8 x i16>, <8 x i16>) nounwind readnone
+declare <8 x i16> @llvm.umulh.v8i16(<8 x i16>, <8 x i16>) nounwind readnone
 
 define <2 x i64> @test_mm_mullo_epi16(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE-LABEL: test_mm_mullo_epi16:
@@ -5791,20 +5791,20 @@ declare <2 x i64> @llvm.x86.sse2.psll.q(<2 x i64>, <2 x i64>) nounwind readnone
 define <2 x i64> @test_mm_slli_epi16(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_slli_epi16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psllw $1, %xmm0 # encoding: [0x66,0x0f,0x71,0xf0,0x01]
+; SSE-NEXT:    psllw $2, %xmm0 # encoding: [0x66,0x0f,0x71,0xf0,0x02]
 ; SSE-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX1-LABEL: test_mm_slli_epi16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsllw $1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x71,0xf0,0x01]
+; AVX1-NEXT:    vpsllw $2, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x71,0xf0,0x02]
 ; AVX1-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512-LABEL: test_mm_slli_epi16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllw $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x71,0xf0,0x01]
+; AVX512-NEXT:    vpsllw $2, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x71,0xf0,0x02]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <8 x i16>
-  %res = call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %arg0, i32 1)
+  %res = call <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16> %arg0, i32 2)
   %bc = bitcast <8 x i16> %res to <2 x i64>
   ret <2 x i64> %bc
 }
@@ -5813,20 +5813,20 @@ declare <8 x i16> @llvm.x86.sse2.pslli.w(<8 x i16>, i32) nounwind readnone
 define <2 x i64> @test_mm_slli_epi32(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_slli_epi32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pslld $1, %xmm0 # encoding: [0x66,0x0f,0x72,0xf0,0x01]
+; SSE-NEXT:    pslld $2, %xmm0 # encoding: [0x66,0x0f,0x72,0xf0,0x02]
 ; SSE-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX1-LABEL: test_mm_slli_epi32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpslld $1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x72,0xf0,0x01]
+; AVX1-NEXT:    vpslld $2, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x72,0xf0,0x02]
 ; AVX1-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512-LABEL: test_mm_slli_epi32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpslld $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x72,0xf0,0x01]
+; AVX512-NEXT:    vpslld $2, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x72,0xf0,0x02]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
   %arg0 = bitcast <2 x i64> %a0 to <4 x i32>
-  %res = call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %arg0, i32 1)
+  %res = call <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32> %arg0, i32 2)
   %bc = bitcast <4 x i32> %res to <2 x i64>
   ret <2 x i64> %bc
 }
@@ -5835,19 +5835,19 @@ declare <4 x i32> @llvm.x86.sse2.pslli.d(<4 x i32>, i32) nounwind readnone
 define <2 x i64> @test_mm_slli_epi64(<2 x i64> %a0) {
 ; SSE-LABEL: test_mm_slli_epi64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    psllq $1, %xmm0 # encoding: [0x66,0x0f,0x73,0xf0,0x01]
+; SSE-NEXT:    psllq $2, %xmm0 # encoding: [0x66,0x0f,0x73,0xf0,0x02]
 ; SSE-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX1-LABEL: test_mm_slli_epi64:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpsllq $1, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x73,0xf0,0x01]
+; AVX1-NEXT:    vpsllq $2, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0x73,0xf0,0x02]
 ; AVX1-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX512-LABEL: test_mm_slli_epi64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsllq $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x73,0xf0,0x01]
+; AVX512-NEXT:    vpsllq $2, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x73,0xf0,0x02]
 ; AVX512-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %res = call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %a0, i32 1)
+  %res = call <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64> %a0, i32 2)
   ret <2 x i64> %res
 }
 declare <2 x i64> @llvm.x86.sse2.pslli.q(<2 x i64>, i32) nounwind readnone
@@ -7094,48 +7094,57 @@ define void @test_mm_stream_pd(ptr%a0, <2 x double> %a1) {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-SSE-NEXT:    movntps %xmm0, (%eax) # encoding: [0x0f,0x2b,0x00]
+; X86-SSE-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X86-SSE-NEXT:    retl # encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: test_mm_stream_pd:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    vmovntps %xmm0, (%eax) # encoding: [0xc5,0xf8,0x2b,0x00]
+; X86-AVX1-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
 ; X86-AVX512-LABEL: test_mm_stream_pd:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX512-NEXT:    vmovntps %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2b,0x00]
+; X86-AVX512-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: test_mm_stream_pd:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movntps %xmm0, (%rdi) # encoding: [0x0f,0x2b,0x07]
+; X64-SSE-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_mm_stream_pd:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovntps %xmm0, (%rdi) # encoding: [0xc5,0xf8,0x2b,0x07]
+; X64-AVX1-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_mm_stream_pd:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovntps %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2b,0x07]
+; X64-AVX512-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X64-AVX512-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-SSE-LABEL: test_mm_stream_pd:
 ; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    movntps %xmm0, (%edi) # encoding: [0x67,0x0f,0x2b,0x07]
+; X32-SSE-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X32-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-AVX1-LABEL: test_mm_stream_pd:
 ; X32-AVX1:       # %bb.0:
 ; X32-AVX1-NEXT:    vmovntps %xmm0, (%edi) # encoding: [0x67,0xc5,0xf8,0x2b,0x07]
+; X32-AVX1-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X32-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-AVX512-LABEL: test_mm_stream_pd:
 ; X32-AVX512:       # %bb.0:
 ; X32-AVX512-NEXT:    vmovntps %xmm0, (%edi) # EVEX TO VEX Compression encoding: [0x67,0xc5,0xf8,0x2b,0x07]
+; X32-AVX512-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X32-AVX512-NEXT:    retq # encoding: [0xc3]
   store <2 x double> %a1, ptr %a0, align 16, !nontemporal !0
   ret void
@@ -7147,16 +7156,19 @@ define void @test_mm_stream_si32(ptr%a0, i32 %a1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x08]
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx # encoding: [0x8b,0x4c,0x24,0x04]
 ; X86-NEXT:    movntil %eax, (%ecx) # encoding: [0x0f,0xc3,0x01]
+; X86-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_mm_stream_si32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movntil %esi, (%rdi) # encoding: [0x0f,0xc3,0x37]
+; X64-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-LABEL: test_mm_stream_si32:
 ; X32:       # %bb.0:
 ; X32-NEXT:    movntil %esi, (%edi) # encoding: [0x67,0x0f,0xc3,0x37]
+; X32-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X32-NEXT:    retq # encoding: [0xc3]
   store i32 %a1, ptr %a0, align 1, !nontemporal !0
   ret void
@@ -7167,48 +7179,57 @@ define void @test_mm_stream_si128(ptr%a0, <2 x i64> %a1) {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-SSE-NEXT:    movntps %xmm0, (%eax) # encoding: [0x0f,0x2b,0x00]
+; X86-SSE-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X86-SSE-NEXT:    retl # encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: test_mm_stream_si128:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    vmovntps %xmm0, (%eax) # encoding: [0xc5,0xf8,0x2b,0x00]
+; X86-AVX1-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
 ; X86-AVX512-LABEL: test_mm_stream_si128:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX512-NEXT:    vmovntps %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2b,0x00]
+; X86-AVX512-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-SSE-LABEL: test_mm_stream_si128:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movntps %xmm0, (%rdi) # encoding: [0x0f,0x2b,0x07]
+; X64-SSE-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_mm_stream_si128:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovntps %xmm0, (%rdi) # encoding: [0xc5,0xf8,0x2b,0x07]
+; X64-AVX1-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_mm_stream_si128:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovntps %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x2b,0x07]
+; X64-AVX512-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X64-AVX512-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-SSE-LABEL: test_mm_stream_si128:
 ; X32-SSE:       # %bb.0:
 ; X32-SSE-NEXT:    movntps %xmm0, (%edi) # encoding: [0x67,0x0f,0x2b,0x07]
+; X32-SSE-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X32-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-AVX1-LABEL: test_mm_stream_si128:
 ; X32-AVX1:       # %bb.0:
 ; X32-AVX1-NEXT:    vmovntps %xmm0, (%edi) # encoding: [0x67,0xc5,0xf8,0x2b,0x07]
+; X32-AVX1-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X32-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-AVX512-LABEL: test_mm_stream_si128:
 ; X32-AVX512:       # %bb.0:
 ; X32-AVX512-NEXT:    vmovntps %xmm0, (%edi) # EVEX TO VEX Compression encoding: [0x67,0xc5,0xf8,0x2b,0x07]
+; X32-AVX512-NEXT:    sfence # encoding: [0x0f,0xae,0xf8]
 ; X32-AVX512-NEXT:    retq # encoding: [0xc3]
   store <2 x i64> %a1, ptr %a0, align 16, !nontemporal !0
   ret void

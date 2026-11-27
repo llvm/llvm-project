@@ -11,6 +11,7 @@
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/State.h"
 
@@ -29,6 +30,12 @@ void OptionValueArch::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
       const char *arch_name = m_current_value.GetArchitectureName();
       if (arch_name)
         strm.PutCString(arch_name);
+    }
+
+    if (dump_mask & eDumpOptionDefaultValue &&
+        m_current_value != m_default_value && m_default_value.IsValid()) {
+      DefaultValueFormat label(strm);
+      strm.PutCString(m_default_value.GetArchitectureName());
     }
   }
 }

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/exp10f16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -16,8 +16,6 @@
 using LlvmLibcExp10f16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcExp10f16Test, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::exp10f16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -40,8 +38,6 @@ TEST_F(LlvmLibcExp10f16Test, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcExp10f16Test, Overflow) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::exp10f16(max_normal),
                               FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -53,8 +49,6 @@ TEST_F(LlvmLibcExp10f16Test, Overflow) {
 }
 
 TEST_F(LlvmLibcExp10f16Test, Underflow) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ_WITH_EXCEPTION(zero, LIBC_NAMESPACE::exp10f16(neg_max_normal),
                               FE_UNDERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -64,4 +58,26 @@ TEST_F(LlvmLibcExp10f16Test, Underflow) {
       LIBC_NAMESPACE::exp10f16(LIBC_NAMESPACE::fputil::cast<float16>(-8.0)),
       FE_UNDERFLOW | FE_INEXACT);
   EXPECT_MATH_ERRNO(ERANGE);
+}
+
+TEST_F(LlvmLibcExp10f16Test, OverflowStatusAllRoundingModes) {
+  using Bits = LIBC_NAMESPACE::fputil::FPBits<float16>;
+  const float16 x = Bits(uint16_t(0x5000)).get_val();
+  [[maybe_unused]] const float16 largest = Bits(uint16_t(0x7bff)).get_val();
+  const float16 infinity = Bits::inf().get_val();
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_NEAREST(
+      infinity, LIBC_NAMESPACE::exp10f16(x), FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_UPWARD(
+      infinity, LIBC_NAMESPACE::exp10f16(x), FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_DOWNWARD(
+      largest, LIBC_NAMESPACE::exp10f16(x), FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+  EXPECT_FP_EQ_WITH_EXCEPTION_ROUNDING_TOWARD_ZERO(
+      largest, LIBC_NAMESPACE::exp10f16(x), FE_OVERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 }

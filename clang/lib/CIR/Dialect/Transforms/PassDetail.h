@@ -11,6 +11,8 @@
 
 #include "mlir/IR/Dialect.h"
 #include "mlir/Pass/Pass.h"
+#include "clang/CIR/Dialect/Passes.h"
+#include "llvm/ABI/TargetInfo.h"
 
 namespace cir {
 class CIRDialect;
@@ -21,7 +23,7 @@ namespace mlir {
 template <typename ConcreteDialect>
 void registerDialect(DialectRegistry &registry);
 
-#define GEN_PASS_CLASSES
+#define GEN_PASS_DECL
 #include "clang/CIR/Dialect/Passes.h.inc"
 
 } // namespace mlir

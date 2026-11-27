@@ -1,4 +1,4 @@
-add_lldb_library(lldbValueObject
+add_lldb_library(lldbValueObject NO_PLUGIN_DEPENDENCIES
   DILAST.cpp
   DILEval.cpp
   DILLexer.cpp
@@ -14,7 +14,8 @@ add_lldb_library(lldbValueObject
   ValueObjectList.cpp
   ValueObjectMemory.cpp
   ValueObjectRegister.cpp
-  ValueObjectSyntheticFilter.cpp
+  ValueObjectSynthesizedValue.cpp
+  ValueObjectSynthetic.cpp
   ValueObjectUpdater.cpp
   ValueObjectVariable.cpp
   ValueObjectVTable.cpp
@@ -34,6 +35,4 @@ add_lldb_library(lldbValueObject
     lldbSymbol
     lldbTarget
     lldbUtility
-    lldbPluginCPlusPlusLanguage
-    lldbPluginObjCLanguage
   )

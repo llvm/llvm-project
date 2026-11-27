@@ -25,10 +25,14 @@
 #include "clang/AST/RawCommentList.h"
 #include "clang/AST/SYCLKernelInfo.h"
 #include "clang/AST/TemplateName.h"
+#include "clang/AST/Type.h"
+#include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Lex/MacroBase.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -36,6 +40,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -50,6 +55,30 @@ class APFixedPoint;
 class FixedPointSemantics;
 struct fltSemantics;
 template <typename T, unsigned N> class SmallPtrSet;
+
+struct ScalableVecTyKey {
+  clang::QualType EltTy;
+  unsigned NumElts;
+  unsigned NumFields;
+
+  bool operator==(const ScalableVecTyKey &RHS) const {
+    return EltTy == RHS.EltTy && NumElts == RHS.NumElts &&
+           NumFields == RHS.NumFields;
+  }
+};
+
+// Provide a DenseMapInfo specialization so that ScalableVecTyKey can be used
+// as a key in DenseMap.
+template <> struct DenseMapInfo<ScalableVecTyKey> {
+  static unsigned getHashValue(const ScalableVecTyKey &Val) {
+    return hash_combine(DenseMapInfo<clang::QualType>::getHashValue(Val.EltTy),
+                        Val.NumElts, Val.NumFields);
+  }
+  static bool isEqual(const ScalableVecTyKey &LHS,
+                      const ScalableVecTyKey &RHS) {
+    return LHS == RHS;
+  }
+};
 
 } // namespace llvm
 
@@ -71,6 +100,7 @@ class CXXRecordDecl;
 class DiagnosticsEngine;
 class DynTypedNodeList;
 class Expr;
+class ExplicitInstantiationDecl;
 enum class FloatModeKind;
 class GlobalDecl;
 class IdentifierTable;
@@ -153,6 +183,10 @@ enum class AlignRequirementKind {
 
   /// The alignment comes from an alignment attribute on a enum type.
   RequiredByEnum,
+
+  /// The type's natural alignment is preserved under #pragma pack in MSVC
+  /// record layout (e.g., vectors, x87 fp80).
+  ResistPragmaPack,
 };
 
 struct TypeInfo {
@@ -165,7 +199,8 @@ struct TypeInfo {
            AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
   }
 };
 
@@ -179,7 +214,29 @@ struct TypeInfoChars {
                 AlignRequirementKind AlignRequirement)
       : Width(Width), Align(Align), AlignRequirement(AlignRequirement) {}
   bool isAlignRequired() {
-    return AlignRequirement != AlignRequirementKind::None;
+    return AlignRequirement != AlignRequirementKind::None &&
+           AlignRequirement != AlignRequirementKind::ResistPragmaPack;
+  }
+};
+
+struct PFPField {
+  CharUnits Offset;
+  FieldDecl *Field;
+};
+
+/// UniquingSet info for pools keyed on a QualType and a bool. DenseMapInfo has
+/// no bool specialization, so we cannot use the default UniquingSetInfo.
+struct QualTypeBoolInfo {
+  using KeyTy = std::pair<QualType, bool>;
+
+  template <typename T> static KeyTy getKey(const T &N) { return N.getKey(); }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return llvm::hash_combine(Key.first.getAsOpaquePtr(), Key.second);
+  }
+
+  template <typename T> static bool isEqual(const KeyTy &Key, const T &N) {
+    return Key == N.getKey();
   }
 };
 
@@ -190,12 +247,14 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   mutable SmallVector<Type *, 0> Types;
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
-  mutable llvm::FoldingSet<ComplexType> ComplexTypes;
-  mutable llvm::FoldingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
-  mutable llvm::FoldingSet<AdjustedType> AdjustedTypes;
-  mutable llvm::FoldingSet<BlockPointerType> BlockPointerTypes;
-  mutable llvm::FoldingSet<LValueReferenceType> LValueReferenceTypes;
-  mutable llvm::FoldingSet<RValueReferenceType> RValueReferenceTypes;
+  mutable llvm::UniquingSet<ComplexType> ComplexTypes;
+  mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<AdjustedType> AdjustedTypes;
+  mutable llvm::UniquingSet<BlockPointerType> BlockPointerTypes;
+  mutable llvm::UniquingSet<LValueReferenceType, QualTypeBoolInfo>
+      LValueReferenceTypes;
+  mutable llvm::UniquingSet<RValueReferenceType, QualTypeBoolInfo>
+      RValueReferenceTypes;
   mutable llvm::FoldingSet<MemberPointerType> MemberPointerTypes;
   mutable llvm::ContextualFoldingSet<ConstantArrayType, ASTContext &>
       ConstantArrayTypes;
@@ -224,42 +283,47 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<PackIndexingType, ASTContext &>
       DependentPackIndexingTypes;
 
-  mutable llvm::FoldingSet<TemplateTypeParmType> TemplateTypeParmTypes;
-  mutable llvm::FoldingSet<ObjCTypeParamType> ObjCTypeParamTypes;
-  mutable llvm::FoldingSet<SubstTemplateTypeParmType>
-    SubstTemplateTypeParmTypes;
+  mutable llvm::UniquingSet<TemplateTypeParmType> TemplateTypeParmTypes;
+  mutable llvm::UniquingSet<ObjCTypeParamType> ObjCTypeParamTypes;
+  mutable llvm::UniquingSet<SubstTemplateTypeParmType>
+      SubstTemplateTypeParmTypes;
   mutable llvm::FoldingSet<SubstTemplateTypeParmPackType>
     SubstTemplateTypeParmPackTypes;
+  mutable llvm::FoldingSet<SubstBuiltinTemplatePackType>
+      SubstBuiltinTemplatePackTypes;
   mutable llvm::ContextualFoldingSet<TemplateSpecializationType, ASTContext&>
     TemplateSpecializationTypes;
-  mutable llvm::FoldingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
+  mutable llvm::UniquingSet<ParenType> ParenTypes{GeneralTypesLog2InitSize};
+  mutable llvm::FoldingSet<TagTypeFoldingSetPlaceholder> TagTypes;
+  mutable llvm::FoldingSet<FoldingSetPlaceholder<UnresolvedUsingType>>
+      UnresolvedUsingTypes;
   mutable llvm::FoldingSet<UsingType> UsingTypes;
-  mutable llvm::FoldingSet<TypedefType> TypedefTypes;
-  mutable llvm::FoldingSet<ElaboratedType> ElaboratedTypes{
-      GeneralTypesLog2InitSize};
+  mutable llvm::FoldingSet<FoldingSetPlaceholder<TypedefType>> TypedefTypes;
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::ContextualFoldingSet<DependentTemplateSpecializationType,
-                                     ASTContext&>
-    DependentTemplateSpecializationTypes;
-  mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
+  mutable llvm::UniquingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
-  mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
-  mutable llvm::FoldingSet<UnaryTransformType> UnaryTransformTypes;
+  mutable llvm::UniquingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
+  mutable llvm::UniquingSet<UnaryTransformType> UnaryTransformTypes;
   // An AutoType can have a dependency on another AutoType via its template
   // arguments. Since both dependent and dependency are on the same set,
   // we can end up in an infinite recursion when looking for a node if we used
   // a `FoldingSet`, since both could end up in the same bucket.
-  mutable llvm::DenseMap<llvm::FoldingSetNodeID, AutoType *> AutoTypes;
+  // Keyed by an interned FoldingSetNodeIDRef rather than a FoldingSetNodeID to
+  // avoid its large inline SmallVector in every bucket.
+  mutable llvm::DenseMap<llvm::FoldingSetNodeIDRef, AutoType *> AutoTypes;
   mutable llvm::FoldingSet<DeducedTemplateSpecializationType>
     DeducedTemplateSpecializationTypes;
-  mutable llvm::FoldingSet<AtomicType> AtomicTypes;
-  mutable llvm::FoldingSet<AttributedType> AttributedTypes;
-  mutable llvm::FoldingSet<PipeType> PipeTypes;
-  mutable llvm::FoldingSet<BitIntType> BitIntTypes;
+  mutable llvm::UniquingSet<AtomicType> AtomicTypes;
+  mutable llvm::ContextualFoldingSet<AttributedType, ASTContext &>
+      AttributedTypes;
+  mutable llvm::UniquingSet<PipeType, QualTypeBoolInfo> PipeTypes;
+  mutable llvm::UniquingSet<BitIntType> BitIntTypes;
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
-  llvm::FoldingSet<HLSLAttributedResourceType> HLSLAttributedResourceTypes;
+  mutable llvm::UniquingSet<OverflowBehaviorType> OverflowBehaviorTypes;
+  mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
+      HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;
 
   mutable llvm::FoldingSet<CountAttributedType> CountAttributedTypes;
@@ -273,15 +337,22 @@ class ASTContext : public RefCountedBase<ASTContext> {
     SubstTemplateTemplateParmPacks;
   mutable llvm::ContextualFoldingSet<DeducedTemplateStorage, ASTContext &>
       DeducedTemplates;
+  mutable llvm::ContextualFoldingSet<PackIndexingTemplateStorage, ASTContext &>
+      PackIndexingTemplates;
 
   mutable llvm::ContextualFoldingSet<ArrayParameterType, ASTContext &>
       ArrayParameterTypes;
 
-  /// The set of nested name specifiers.
+  /// Store the unique Type corresponding to each Kind.
+  mutable std::array<Type *,
+                     llvm::to_underlying(PredefinedSugarType::Kind::Last) + 1>
+      PredefinedSugarTypes{};
+
+  /// Internal storage for NestedNameSpecifiers.
   ///
   /// This set is managed by the NestedNameSpecifier class.
-  mutable llvm::FoldingSet<NestedNameSpecifier> NestedNameSpecifiers;
-  mutable NestedNameSpecifier *GlobalNestedNameSpecifier = nullptr;
+  mutable llvm::UniquingSet<NamespaceAndPrefixStorage>
+      NamespaceAndPrefixStorages;
 
   /// A cache mapping from RecordDecls to ASTRecordLayouts.
   ///
@@ -333,6 +404,22 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::DenseSet<const FunctionDecl *> DestroyingOperatorDeletes;
   mutable llvm::DenseSet<const FunctionDecl *> TypeAwareOperatorNewAndDeletes;
 
+  /// Global and array operators delete are only required for MSVC deleting
+  /// destructors support. Store them here to avoid keeping 4 pointers that are
+  /// not always used in each redeclaration of the destructor.
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      OperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      GlobalOperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      ArrayOperatorDeletesForVirtualDtor;
+  mutable llvm::DenseMap<const CXXDestructorDecl *, FunctionDecl *>
+      GlobalArrayOperatorDeletesForVirtualDtor;
+
+  /// To remember for which types we met new[] call, these potentially require a
+  /// vector deleting dtor.
+  llvm::DenseSet<const CXXRecordDecl *> MaybeRequireVectorDeletingDtor;
+
   /// The next string literal "version" to allocate during constant evaluation.
   /// This is used to distinguish between repeated evaluations of the same
   /// string literal.
@@ -380,6 +467,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   /// The typedef for the predefined \c __builtin_ms_va_list type.
   mutable TypedefDecl *BuiltinMSVaListDecl = nullptr;
+
+  /// The typedef for the predefined \c __builtin_zos_va_list type.
+  mutable TypedefDecl *BuiltinZOSVaListDecl = nullptr;
 
   /// The typedef for the predefined \c id type.
   mutable TypedefDecl *ObjCIdDecl = nullptr;
@@ -451,12 +541,19 @@ class ASTContext : public RefCountedBase<ASTContext> {
 
   /// Declaration for the CUDA cudaConfigureCall function.
   FunctionDecl *cudaConfigureCallDecl = nullptr;
+  /// Declaration for the CUDA cudaGetParameterBuffer function.
+  FunctionDecl *cudaGetParameterBufferDecl = nullptr;
+  /// Declaration for the CUDA cudaLaunchDevice function.
+  FunctionDecl *cudaLaunchDeviceDecl = nullptr;
 
-  /// Keeps track of all declaration attributes.
+  llvm::DenseMap<const CXXConstructorDecl *, ArrayRef<CXXDefaultArgExpr *>>
+      CtorClosureDefaultArgs;
+
+  /// Storage for the AttrVecs pointed to by Decl::Attrs.
   ///
-  /// Since so few decls have attrs, we keep them in a hash map instead of
-  /// wasting space in the Decl class.
-  llvm::DenseMap<const Decl*, AttrVec*> DeclAttrs;
+  /// A SpecificBumpPtrAllocator so that the vectors are destroyed when the
+  /// context dies without having to track them individually.
+  llvm::SpecificBumpPtrAllocator<AttrVec> DeclAttrAllocator;
 
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
@@ -499,6 +596,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   llvm::DenseMap<const ObjCInterfaceDecl *,
                  SmallVector<const ObjCInterfaceDecl *, 4>>
       ObjCSubClasses;
+
+  // A mapping from Scalable Vector Type keys to their corresponding QualType.
+  mutable llvm::DenseMap<llvm::ScalableVecTyKey, QualType> ScalableVecTyMap;
 
   ASTContext &this_() { return *this; }
 
@@ -589,6 +689,12 @@ private:
 
   llvm::DenseMap<FieldDecl *, FieldDecl *> InstantiatedFromUnnamedFieldDecl;
 
+  /// Maps a canonical specialization Decl to all ExplicitInstantiationDecls
+  /// that reference it (declarations and definitions).
+  llvm::DenseMap<const NamedDecl *,
+                 llvm::TinyPtrVector<ExplicitInstantiationDecl *>>
+      ExplicitInstantiations;
+
   /// Mapping that stores the methods overridden by a given C++
   /// member function.
   ///
@@ -619,22 +725,36 @@ private:
   using ParameterIndexTable = llvm::DenseMap<const VarDecl *, unsigned>;
   ParameterIndexTable ParamIndices;
 
+  /// Map from numbering information for lambdas to the corresponding lambdas.
+  /// This is intentionally not serialized, and is instead reconstructed as we
+  /// read each lambda.
+  llvm::DenseMap<std::pair<const Decl *, unsigned>, CXXRecordDecl *>
+      LambdaDeclarationsForMerging;
+
 public:
   struct CXXRecordDeclRelocationInfo {
     unsigned IsRelocatable;
-    unsigned IsReplaceable;
   };
   std::optional<CXXRecordDeclRelocationInfo>
   getRelocationInfoForCXXRecord(const CXXRecordDecl *) const;
   void setRelocationInfoForCXXRecord(const CXXRecordDecl *,
                                      CXXRecordDeclRelocationInfo);
 
+  // Returns a reference to the first lambda declaration with a given index in a
+  // given context. Used to merge lambdas in the case where the same lambda is
+  // redefined in multiple modules.
+  CXXRecordDecl *&getLambdaDeclarationSlotForMerging(const Decl *ContextDecl,
+                                                     int IndexInContext) {
+    return LambdaDeclarationsForMerging[{ContextDecl->getCanonicalDecl(),
+                                         IndexInContext}];
+  }
+
   /// Examines a given type, and returns whether the type itself
   /// is address discriminated, or any transitively embedded types
   /// contain data that is address discriminated. This includes
   /// implicitly authenticated values like vtable pointers, as well as
   /// explicitly qualified fields.
-  bool containsAddressDiscriminatedPointerAuth(QualType T) {
+  bool containsAddressDiscriminatedPointerAuth(QualType T) const {
     if (!isPointerAuthenticationAvailable())
       return false;
     return findPointerAuthContent(T) != PointerAuthContent::None;
@@ -648,8 +768,7 @@ public:
   bool containsNonRelocatablePointerAuth(QualType T) {
     if (!isPointerAuthenticationAvailable())
       return false;
-    return findPointerAuthContent(T) ==
-           PointerAuthContent::AddressDiscriminatedData;
+    return findPointerAuthContent(T) != PointerAuthContent::None;
   }
 
 private:
@@ -667,8 +786,8 @@ private:
   bool isPointerAuthenticationAvailable() const {
     return LangOpts.PointerAuthCalls || LangOpts.PointerAuthIntrinsics;
   }
-  PointerAuthContent findPointerAuthContent(QualType T);
-  llvm::DenseMap<const RecordDecl *, PointerAuthContent>
+  PointerAuthContent findPointerAuthContent(QualType T) const;
+  mutable llvm::DenseMap<const RecordDecl *, PointerAuthContent>
       RecordContainsAddressDiscriminatedPointerAuth;
 
   ImportDecl *FirstLocalImport = nullptr;
@@ -722,8 +841,11 @@ private:
 
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
+  mutable llvm::DenseMap<std::pair<llvm::StringRef, unsigned>,
+                         std::unique_ptr<llvm::StringMap<bool>>>
+      FunctionFeatureMaps;
   clang::PrintingPolicy PrintingPolicy;
-  std::unique_ptr<interp::Context> InterpContext;
+  mutable std::unique_ptr<interp::Context> InterpContext;
   std::unique_ptr<ParentMapContext> ParentMapCtx;
 
   /// Keeps track of the deallocated DeclListNodes for future reuse.
@@ -739,7 +861,7 @@ public:
   ASTMutationListener *Listener = nullptr;
 
   /// Returns the clang bytecode interpreter context.
-  interp::Context &getInterpContext();
+  interp::Context &getInterpContext() const;
 
   struct CUDAConstantEvalContext {
     /// Do not allow wrong-sided variables in constant expressions.
@@ -756,7 +878,7 @@ public:
   };
 
   /// Returns the dynamic AST node parent map context.
-  ParentMapContext &getParentMapContext();
+  ParentMapContext &getParentMapContext() { return *ParentMapCtx; }
 
   // A traversal scope limits the parts of the AST visible to certain analyses.
   // RecursiveASTVisitor only visits specified children of TranslationUnitDecl.
@@ -814,7 +936,7 @@ public:
 
   llvm::StringRef backupStr(llvm::StringRef S) const {
     char *Buf = new (*this) char[S.size()];
-    std::copy(S.begin(), S.end(), Buf);
+    llvm::copy(S, Buf);
     return llvm::StringRef(Buf, S.size());
   }
 
@@ -876,6 +998,9 @@ public:
   QualType getIntTypeForBitwidth(unsigned DestWidth,
                                  unsigned Signed) const;
 
+  QualType getLeastIntTypeForBitwidth(unsigned DestWidth,
+                                      unsigned Signed) const;
+
   /// getRealTypeForBitwidth -
   /// sets floating point QualTy according to specified bitwidth.
   /// Returns empty type if there is no appropriate target types.
@@ -898,6 +1023,8 @@ public:
 
   bool isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
                                 const QualType &Ty) const;
+
+  bool isUnaryOverflowPatternExcluded(const UnaryOperator *UO);
 
   const XRayFunctionFilter &getXRayFilter() const {
     return *XRayFilter;
@@ -922,11 +1049,15 @@ public:
   /// True if comments are already loaded from ExternalASTSource.
   mutable bool CommentsLoaded = false;
 
-  /// Mapping from declaration to directly attached comment.
+  /// Key used to look up the raw comment attached to a declaration or macro.
+  using RawCommentLookupKey =
+      llvm::PointerUnion<const Decl *, const MacroInfo *>;
+
+  /// Mapping from declaration or macro to directly attached comment.
   ///
   /// Raw comments are owned by Comments list.  This mapping is populated
   /// lazily.
-  mutable llvm::DenseMap<const Decl *, const RawComment *> DeclRawComments;
+  mutable llvm::DenseMap<RawCommentLookupKey, const RawComment *> RawComments;
 
   /// Mapping from canonical declaration to the first redeclaration in chain
   /// that has a comment attached.
@@ -948,37 +1079,40 @@ public:
   /// redeclaration.
   mutable llvm::DenseMap<const Decl *, comments::FullComment *> ParsedComments;
 
-  /// Attaches \p Comment to \p OriginalD and to its redeclaration chain
-  /// and removes the redeclaration chain from the set of commentless chains.
+  /// Attaches \p Comment to \p Original (a declaration or macro), and to its
+  /// redeclaration chain when \p Original is a declaration. Removes the
+  /// redeclaration chain from the set of commentless chains.
   ///
-  /// Don't do anything if a comment has already been attached to \p OriginalD
+  /// Don't do anything if a comment has already been attached to \p Original
   /// or its redeclaration chain.
-  void cacheRawCommentForDecl(const Decl &OriginalD,
-                              const RawComment &Comment) const;
+  void cacheRawComment(RawCommentLookupKey Original,
+                       const RawComment &Comment) const;
 
-  /// \returns searches \p CommentsInFile for doc comment for \p D.
+  /// \returns searches \p CommentsInFile for doc comment for \p Key.
   ///
   /// \p RepresentativeLocForDecl is used as a location for searching doc
   /// comments. \p CommentsInFile is a mapping offset -> comment of files in the
   /// same file where \p RepresentativeLocForDecl is.
-  RawComment *getRawCommentForDeclNoCacheImpl(
-      const Decl *D, const SourceLocation RepresentativeLocForDecl,
+  RawComment *getRawCommentNoCacheImpl(
+      RawCommentLookupKey Key, const SourceLocation RepresentativeLoc,
       const std::map<unsigned, RawComment *> &CommentsInFile) const;
 
-  /// Return the documentation comment attached to a given declaration,
-  /// without looking into cache.
-  RawComment *getRawCommentForDeclNoCache(const Decl *D) const;
+  /// Return the documentation comment attached to a given declaration or
+  /// macro, without looking into cache.
+  RawComment *getRawCommentNoCache(RawCommentLookupKey Key) const;
 
 public:
   void addComment(const RawComment &RC);
 
-  /// Return the documentation comment attached to a given declaration.
-  /// Returns nullptr if no comment is attached.
+  /// Return the documentation comment attached to a given declaration or
+  /// macro.  Returns nullptr if no comment is attached.
   ///
   /// \param OriginalDecl if not nullptr, is set to declaration AST node that
   /// had the comment, if the comment we found comes from a redeclaration.
+  /// Macros have no redeclaration chain, so this is set to nullptr when
+  /// \p Key is a \c MacroInfo.
   const RawComment *
-  getRawCommentForAnyRedecl(const Decl *D,
+  getRawCommentForAnyRedecl(RawCommentLookupKey Key,
                             const Decl **OriginalDecl = nullptr) const;
 
   /// Searches existing comments for doc comments that should be attached to \p
@@ -998,6 +1132,15 @@ public:
   /// preprocessor is not available.
   comments::FullComment *getCommentForDecl(const Decl *D,
                                            const Preprocessor *PP) const;
+
+  /// Attempts to merge two types that may be OverflowBehaviorTypes.
+  ///
+  /// \returns A QualType if the types were handled, std::nullopt otherwise.
+  /// A null QualType indicates an incompatible merge.
+  std::optional<QualType>
+  tryMergeOverflowBehaviorTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
+                                bool Unqualified, bool BlockReturnType,
+                                bool IsConditionalOperator);
 
   /// Return parsed documentation comment attached to a given declaration.
   /// Returns nullptr if no comment is attached. Does not look at any
@@ -1052,18 +1195,21 @@ public:
     return CommentCommandTraits;
   }
 
-  /// Retrieve the attributes for the given declaration.
-  AttrVec& getDeclAttrs(const Decl *D);
+  /// Allocate an empty attribute vector with the lifetime of this context.
+  AttrVec *allocateAttrVec();
 
-  /// Erase the attributes corresponding to the given declaration.
-  void eraseDeclAttrs(const Decl *D);
+  ArrayRef<CXXDefaultArgExpr *>
+  getCtorClosureDefaultArgs(const CXXConstructorDecl *CD);
+  void setCtorClosureDefaultArgs(const CXXConstructorDecl *CD,
+                                 ArrayRef<CXXDefaultArgExpr *> Args);
 
-  /// If this variable is an instantiated static data member of a
-  /// class template specialization, returns the templated static data member
-  /// from which it was instantiated.
-  // FIXME: Remove ?
-  MemberSpecializationInfo *getInstantiatedFromStaticDataMember(
-                                                           const VarDecl *Var);
+  /// Get all ExplicitInstantiationDecls for a given specialization.
+  ArrayRef<ExplicitInstantiationDecl *>
+  getExplicitInstantiationDecls(const NamedDecl *Spec) const;
+
+  /// Add an ExplicitInstantiationDecl for a given specialization.
+  void addExplicitInstantiationDecl(const NamedDecl *Spec,
+                                    ExplicitInstantiationDecl *EID);
 
   /// Note that the static data member \p Inst is an instantiation of
   /// the static data member template \p Tmpl of a class template.
@@ -1192,6 +1338,10 @@ public:
   bool isInSameModule(const Module *M1, const Module *M2) const;
 
   TranslationUnitDecl *getTranslationUnitDecl() const {
+    assert(TUDecl && "TUDecl might have been reset by 'cleanup' likely because "
+                     "'CodeGenOpts.ClearASTBeforeBackend' was set.");
+    assert(TUDecl->getMostRecentDecl() == TUDecl &&
+           "The active TU is not current one!");
     return TUDecl->getMostRecentDecl();
   }
   void addTranslationUnitDecl() {
@@ -1238,6 +1388,7 @@ public:
   CanQualType BFloat16Ty;
   CanQualType Float16Ty; // C11 extension ISO/IEC TS 18661-3
   CanQualType VoidPtrTy, NullPtrTy;
+  CanQualType MetaInfoTy;
   CanQualType DependentTy, OverloadTy, BoundMemberTy, UnresolvedTemplateTy,
       UnknownAnyTy;
   CanQualType BuiltinFnTy;
@@ -1271,6 +1422,10 @@ public:
 #include "clang/Basic/AMDGPUTypes.def"
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/HLSLPackedTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) CanQualType SingletonId;
+#include "clang/Basic/SPIRVTypes.def"
 
   // Types for deductions in C++0x [stmt.ranged]'s desugaring. Built on demand.
   mutable QualType AutoDeductTy;     // Deduction against 'auto'.
@@ -1283,11 +1438,14 @@ public:
   // Implicitly-declared type 'struct _GUID'.
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
+  // Implicitly-declared type 'struct type_info'.
+  mutable TagDecl *MSTypeInfoTagDecl = nullptr;
+
   /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
   /// This does not include extern shared variables used by device host
   /// functions as addresses of shared variables are per warp, therefore
   /// cannot be accessed by host code.
-  llvm::DenseSet<const VarDecl *> CUDADeviceVarODRUsedByHost;
+  llvm::SetVector<const VarDecl *> CUDADeviceVarODRUsedByHost;
 
   /// Keep track of CUDA/HIP external kernels or device variables ODR-used by
   /// host code. SetVector is used to maintain the order.
@@ -1296,6 +1454,9 @@ public:
   /// Keep track of CUDA/HIP implicit host device functions used on device side
   /// in device compilation.
   llvm::DenseSet<const FunctionDecl *> CUDAImplicitHostDeviceFunUsedByDevice;
+
+  /// Functions whose device body should be replaced with a trap stub.
+  llvm::SmallPtrSet<const FunctionDecl *, 4> CUDADeviceInvalidFuncs;
 
   /// Map of SYCL kernels indexed by the unique type used to name the kernel.
   /// Entries are not serialized but are recreated on deserialization of a
@@ -1326,6 +1487,12 @@ public:
   /// with this AST context, if any.
   ExternalASTSource *getExternalSource() const {
     return ExternalSource.get();
+  }
+
+  /// Retrieve a pointer to the external AST source associated
+  /// with this AST context, if any. Returns as an IntrusiveRefCntPtr.
+  IntrusiveRefCntPtr<ExternalASTSource> getExternalSourcePtr() const {
+    return ExternalSource;
   }
 
   /// Attach an AST mutation listener to the AST context.
@@ -1370,8 +1537,6 @@ private:
   /// Return a type with extended qualifiers.
   QualType getExtQualType(const Type *Base, Qualifiers Quals) const;
 
-  QualType getTypeDeclTypeSlow(const TypeDecl *Decl) const;
-
   QualType getPipeType(QualType T, bool ReadOnly) const;
 
 public:
@@ -1391,9 +1556,9 @@ public:
   QualType removeAddrSpaceQualType(QualType T) const;
 
   /// Return the "other" discriminator used for the pointer auth schema used for
-  /// vtable pointers in instances of the requested type.
-  uint16_t
-  getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD);
+  /// vtable pointers using the given discriminator type.
+  uint16_t getPointerAuthVTablePointerDiscriminator(const CXXRecordDecl *RD,
+                                                    bool IsVTTEntry);
 
   /// Return the "other" type-specific discriminator for the given type.
   uint16_t getPointerAuthTypeDiscriminator(QualType T);
@@ -1518,6 +1683,28 @@ public:
                          bool OrNull,
                          ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
 
+  /// Return a `CountAttributedType` whose count expression has not been parsed
+  /// yet, for use by a late-parsed bounds attribute. The result is *not*
+  /// uniqued, and must be completed with `completeCountAttributedType` once the
+  /// argument becomes parseable. Returns the node rather than a `QualType` so
+  /// the caller can retain it for completion.
+  CountAttributedType *getIncompleteCountAttributedType(QualType WrappedTy,
+                                                        bool CountInBytes,
+                                                        bool OrNull) const;
+
+  /// Supply the count expression and coupled declarations for a type created by
+  /// `getIncompleteCountAttributedType`. Enclosing types keep pointing at the
+  /// same node, so nothing above it needs rebuilding.
+  void completeCountAttributedType(
+      CountAttributedType *CATy, Expr *CountExpr,
+      ArrayRef<TypeCoupledDeclRefInfo> DependentDecls) const;
+
+  /// Return a placeholder type for a late-parsed type attribute.
+  /// This type wraps another type and holds the LateParsedAttribute
+  /// that will be parsed later.
+  QualType getLateParsedAttrType(QualType Wrapped,
+                                 LateParsedTypeAttribute *LateParsedAttr) const;
+
   /// Return the uniqued reference to a type adjusted from the original
   /// type to a new type.
   QualType getAdjustedType(QualType Orig, QualType New) const;
@@ -1567,6 +1754,8 @@ public:
   /// and bit count.
   QualType getDependentBitIntType(bool Unsigned, Expr *BitsExpr) const;
 
+  QualType getPredefinedSugarType(PredefinedSugarType::Kind KD) const;
+
   /// Gets the struct used to keep track of the extended descriptor for
   /// pointer to blocks.
   QualType getBlockDescriptorExtendedType() const;
@@ -1591,6 +1780,18 @@ public:
     return cudaConfigureCallDecl;
   }
 
+  void setcudaGetParameterBufferDecl(FunctionDecl *FD) {
+    cudaGetParameterBufferDecl = FD;
+  }
+
+  FunctionDecl *getcudaGetParameterBufferDecl() {
+    return cudaGetParameterBufferDecl;
+  }
+
+  void setcudaLaunchDeviceDecl(FunctionDecl *FD) { cudaLaunchDeviceDecl = FD; }
+
+  FunctionDecl *getcudaLaunchDeviceDecl() { return cudaLaunchDeviceDecl; }
+
   /// Returns true iff we need copy/dispose helpers for the given type.
   bool BlockRequiresCopying(QualType Ty, const VarDecl *D);
 
@@ -1612,7 +1813,7 @@ public:
 
   /// Return the uniqued reference to the type for a member pointer to
   /// the specified type in the specified nested name.
-  QualType getMemberPointerType(QualType T, NestedNameSpecifier *Qualifier,
+  QualType getMemberPointerType(QualType T, NestedNameSpecifier Qualifier,
                                 const CXXRecordDecl *Cls) const;
 
   /// Return a non-unique reference to the type for a variable array of
@@ -1707,14 +1908,18 @@ public:
   ///
   /// \pre \p ElementType must be a valid matrix element type (see
   /// MatrixType::isValidElementType).
-  QualType getConstantMatrixType(QualType ElementType, unsigned NumRows,
-                                 unsigned NumColumns) const;
+  QualType getConstantMatrixType(
+      QualType ElementType, unsigned NumRows, unsigned NumColumns,
+      std::optional<MatrixType::LayoutKind> Layout = std::nullopt) const;
 
   /// Return the unique reference to the matrix type of the specified element
   /// type and size
   QualType getDependentSizedMatrixType(QualType ElementType, Expr *RowExpr,
                                        Expr *ColumnExpr,
                                        SourceLocation AttrLoc) const;
+
+  QualType getMatrixTypeWithLayout(QualType T,
+                                   MatrixType::LayoutKind Layout) const;
 
   QualType getDependentAddressSpaceType(QualType PointeeType,
                                         Expr *AddrSpaceExpr,
@@ -1736,47 +1941,75 @@ public:
 
   QualType adjustStringLiteralBaseType(QualType StrLTy) const;
 
+  // Represents an inclusive-first/exclusive last bit-offset into a type.
+  struct BitInterval {
+    // [First, Last)
+    uint64_t First;
+    uint64_t Last;
+  };
+
+  // Calculate and get the 'padding intervals' inside of a type. Note: calls to
+  // this potentially invalidate all ArrayRef objects, so effort must be made to
+  // copy the data if necessary.
+  llvm::ArrayRef<BitInterval> getPaddingIntervals(QualType Ty) const;
+
 private:
+  mutable llvm::DenseMap<QualType, llvm::SmallVector<BitInterval>>
+      PaddingIntervalCache;
+
   /// Return a normal function type with a typed argument list.
   QualType getFunctionTypeInternal(QualType ResultTy, ArrayRef<QualType> Args,
                                    const FunctionProtoType::ExtProtoInfo &EPI,
                                    bool OnlyWantCanonical) const;
-  QualType
-  getAutoTypeInternal(QualType DeducedType, AutoTypeKeyword Keyword,
-                      bool IsDependent, bool IsPack = false,
-                      ConceptDecl *TypeConstraintConcept = nullptr,
-                      ArrayRef<TemplateArgument> TypeConstraintArgs = {},
-                      bool IsCanon = false) const;
 
 public:
+  QualType getTypeDeclType(ElaboratedTypeKeyword Keyword,
+                           NestedNameSpecifier Qualifier,
+                           const TypeDecl *Decl) const;
+
   /// Return the unique reference to the type for the specified type
   /// declaration.
-  QualType getTypeDeclType(const TypeDecl *Decl,
-                           const TypeDecl *PrevDecl = nullptr) const {
-    assert(Decl && "Passed null for Decl param");
-    if (Decl->TypeForDecl) return QualType(Decl->TypeForDecl, 0);
+  QualType getTypeDeclType(const TypeDecl *Decl) const;
 
-    if (PrevDecl) {
-      assert(PrevDecl->TypeForDecl && "previous decl has no TypeForDecl");
-      Decl->TypeForDecl = PrevDecl->TypeForDecl;
-      return QualType(PrevDecl->TypeForDecl, 0);
-    }
+  /// Use the normal 'getFooBarType' constructors to obtain these types.
+  QualType getTypeDeclType(const TagDecl *) const = delete;
+  QualType getTypeDeclType(const TypedefDecl *) const = delete;
+  QualType getTypeDeclType(const TypeAliasDecl *) const = delete;
+  QualType getTypeDeclType(const UnresolvedUsingTypenameDecl *) const = delete;
 
-    return getTypeDeclTypeSlow(Decl);
-  }
+  CanQualType getCanonicalTypeDeclType(const TypeDecl *TD) const;
 
-  QualType getUsingType(const UsingShadowDecl *Found,
-                        QualType Underlying) const;
+  QualType getUsingType(ElaboratedTypeKeyword Keyword,
+                        NestedNameSpecifier Qualifier, const UsingShadowDecl *D,
+                        QualType UnderlyingType = QualType()) const;
 
   /// Return the unique reference to the type for the specified
   /// typedef-name decl.
-  QualType getTypedefType(const TypedefNameDecl *Decl,
-                          QualType Underlying = QualType()) const;
+  /// FIXME: TypeMatchesDeclOrNone is a workaround for a serialization issue:
+  /// The decl underlying type might still not be available.
+  QualType getTypedefType(
+      ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
+      const TypedefNameDecl *Decl, QualType UnderlyingType = QualType(),
+      std::optional<bool> TypeMatchesDeclOrNone = std::nullopt) const;
 
-  QualType getRecordType(const RecordDecl *Decl) const;
+  CanQualType getCanonicalTagType(const TagDecl *TD) const;
+  QualType getTagType(ElaboratedTypeKeyword Keyword,
+                      NestedNameSpecifier Qualifier, const TagDecl *TD,
+                      bool OwnsTag) const;
 
-  QualType getEnumType(const EnumDecl *Decl) const;
+private:
+  UnresolvedUsingType *getUnresolvedUsingTypeInternal(
+      ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
+      const UnresolvedUsingTypenameDecl *D, llvm::FoldingSetInsertToken Token,
+      const Type *CanonicalType) const;
 
+  TagType *getTagTypeInternal(ElaboratedTypeKeyword Keyword,
+                              NestedNameSpecifier Qualifier, const TagDecl *Tag,
+                              bool OwnsTag, bool IsInjected,
+                              const Type *CanonicalType,
+                              bool WithFoldingSetNode) const;
+
+public:
   /// Compute BestType and BestPromotionType for an enum based on the highest
   /// number of negative and positive bits of its elements.
   /// Returns true if enum width is too large.
@@ -1809,7 +2042,7 @@ public:
         NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
       } else {
         NumNegativeBits =
-            std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
+            std::max(NumNegativeBits, InitVal.getSignificantBits());
       }
 
       MembersRepresentableByInt &= isRepresentableIntegerValue(InitVal, IntTy);
@@ -1825,10 +2058,11 @@ public:
     return MembersRepresentableByInt;
   }
 
-  QualType
-  getUnresolvedUsingType(const UnresolvedUsingTypenameDecl *Decl) const;
-
-  QualType getInjectedClassNameType(CXXRecordDecl *Decl, QualType TST) const;
+  CanQualType
+  getCanonicalUnresolvedUsingType(const UnresolvedUsingTypenameDecl *D) const;
+  QualType getUnresolvedUsingType(ElaboratedTypeKeyword Keyword,
+                                  NestedNameSpecifier Qualifier,
+                                  const UnresolvedUsingTypenameDecl *D) const;
 
   QualType getAttributedType(attr::Kind attrKind, QualType modifiedType,
                              QualType equivalentType,
@@ -1838,10 +2072,17 @@ public:
                              QualType equivalentType) const;
 
   QualType getAttributedType(NullabilityKind nullability, QualType modifiedType,
-                             QualType equivalentType);
+                             QualType equivalentType) const;
 
   QualType getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
                                    QualType Wrapped) const;
+
+  QualType getOverflowBehaviorType(const OverflowBehaviorAttr *Attr,
+                                   QualType Wrapped) const;
+
+  QualType
+  getOverflowBehaviorType(OverflowBehaviorType::OverflowBehaviorKind Kind,
+                          QualType Wrapped) const;
 
   QualType getHLSLAttributedResourceType(
       QualType Wrapped, QualType Contained,
@@ -1858,28 +2099,31 @@ public:
   QualType getSubstTemplateTypeParmPackType(Decl *AssociatedDecl,
                                             unsigned Index, bool Final,
                                             const TemplateArgument &ArgPack);
+  QualType getSubstBuiltinTemplatePack(const TemplateArgument &ArgPack);
 
   QualType
-  getTemplateTypeParmType(unsigned Depth, unsigned Index,
-                          bool ParameterPack,
+  getTemplateTypeParmType(int Depth, int Index, bool ParameterPack,
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
   QualType getCanonicalTemplateSpecializationType(
-      TemplateName T, ArrayRef<TemplateArgument> CanonicalArgs) const;
+      ElaboratedTypeKeyword Keyword, TemplateName T,
+      ArrayRef<TemplateArgument> CanonicalArgs) const;
 
   QualType
-  getTemplateSpecializationType(TemplateName T,
+  getTemplateSpecializationType(ElaboratedTypeKeyword Keyword, TemplateName T,
                                 ArrayRef<TemplateArgument> SpecifiedArgs,
                                 ArrayRef<TemplateArgument> CanonicalArgs,
                                 QualType Underlying = QualType()) const;
 
   QualType
-  getTemplateSpecializationType(TemplateName T,
+  getTemplateSpecializationType(ElaboratedTypeKeyword Keyword, TemplateName T,
                                 ArrayRef<TemplateArgumentLoc> SpecifiedArgs,
                                 ArrayRef<TemplateArgument> CanonicalArgs,
                                 QualType Canon = QualType()) const;
 
   TypeSourceInfo *getTemplateSpecializationTypeInfo(
+      ElaboratedTypeKeyword Keyword, SourceLocation ElaboratedKeywordLoc,
+      NestedNameSpecifierLoc QualifierLoc, SourceLocation TemplateKeywordLoc,
       TemplateName T, SourceLocation TLoc,
       const TemplateArgumentListInfo &SpecifiedArgs,
       ArrayRef<TemplateArgument> CanonicalArgs,
@@ -1890,19 +2134,9 @@ public:
   QualType getMacroQualifiedType(QualType UnderlyingTy,
                                  const IdentifierInfo *MacroII) const;
 
-  QualType getElaboratedType(ElaboratedTypeKeyword Keyword,
-                             NestedNameSpecifier *NNS, QualType NamedType,
-                             TagDecl *OwnedTagDecl = nullptr) const;
   QualType getDependentNameType(ElaboratedTypeKeyword Keyword,
-                                NestedNameSpecifier *NNS,
+                                NestedNameSpecifier NNS,
                                 const IdentifierInfo *Name) const;
-
-  QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
-      ArrayRef<TemplateArgumentLoc> Args) const;
-  QualType getDependentTemplateSpecializationType(
-      ElaboratedTypeKeyword Keyword, const DependentTemplateStorage &Name,
-      ArrayRef<TemplateArgument> Args, bool IsCanonical = false) const;
 
   TemplateArgument getInjectedTemplateArg(NamedDecl *ParamDecl) const;
 
@@ -1964,10 +2198,10 @@ public:
                                  UnaryTransformType::UTTKind UKind) const;
 
   /// C++11 deduced auto type.
-  QualType getAutoType(QualType DeducedType, AutoTypeKeyword Keyword,
-                       bool IsDependent, bool IsPack = false,
-                       ConceptDecl *TypeConstraintConcept = nullptr,
-                       ArrayRef<TemplateArgument> TypeConstraintArgs ={}) const;
+  QualType
+  getAutoType(DeducedKind DK, QualType DeducedAsType, AutoTypeKeyword Keyword,
+              TemplateName TypeConstraintConcept = TemplateName(),
+              ArrayRef<TemplateArgument> TypeConstraintArgs = {}) const;
 
   /// C++11 deduction pattern for 'auto' type.
   QualType getAutoDeductType() const;
@@ -1980,30 +2214,22 @@ public:
   QualType getUnconstrainedType(QualType T) const;
 
   /// C++17 deduced class template specialization type.
-  QualType getDeducedTemplateSpecializationType(TemplateName Template,
-                                                QualType DeducedType,
-                                                bool IsDependent) const;
-
-private:
-  QualType getDeducedTemplateSpecializationTypeInternal(TemplateName Template,
-                                                        QualType DeducedType,
-                                                        bool IsDependent,
-                                                        QualType Canon) const;
-
-public:
-  /// Return the unique reference to the type for the specified TagDecl
-  /// (struct/union/class/enum) decl.
-  QualType getTagDeclType(const TagDecl *Decl) const;
+  QualType getDeducedTemplateSpecializationType(DeducedKind DK,
+                                                QualType DeducedAsType,
+                                                ElaboratedTypeKeyword Keyword,
+                                                TemplateName Template) const;
 
   /// Return the unique type for "size_t" (C99 7.17), defined in
   /// <stddef.h>.
   ///
   /// The sizeof operator requires this (C99 6.5.3.4p4).
-  CanQualType getSizeType() const;
+  QualType getSizeType() const;
+
+  CanQualType getCanonicalSizeType() const;
 
   /// Return the unique signed counterpart of
   /// the integer type corresponding to size_t.
-  CanQualType getSignedSizeType() const;
+  QualType getSignedSizeType() const;
 
   /// Return the unique type for "intmax_t" (C99 7.18.1.5), defined in
   /// <stdint.h>.
@@ -2068,7 +2294,9 @@ public:
   /// if it hasn't yet been built.
   QualType getRawCFConstantStringType() const {
     if (CFConstantStringTypeDecl)
-      return getTypedefType(CFConstantStringTypeDecl);
+      return getTypedefType(ElaboratedTypeKeyword::None,
+                            /*Qualifier=*/std::nullopt,
+                            CFConstantStringTypeDecl);
     return QualType();
   }
   void setCFConstantStringType(QualType T);
@@ -2165,10 +2393,11 @@ public:
   }
 #include "clang/Basic/BuiltinTemplates.inc"
 
-  /// Retrieve the Objective-C "instancetype" type, if already known;
-  /// otherwise, returns a NULL type;
+  /// Retrieve the Objective-C "instancetype" type.
   QualType getObjCInstanceType() {
-    return getTypeDeclType(getObjCInstanceTypeDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt,
+                          getObjCInstanceTypeDecl());
   }
 
   /// Retrieve the typedef declaration corresponding to the Objective-C
@@ -2181,7 +2410,8 @@ public:
   /// Retrieve the C FILE type.
   QualType getFILEType() const {
     if (FILEDecl)
-      return getTypeDeclType(FILEDecl);
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, FILEDecl);
     return QualType();
   }
 
@@ -2193,7 +2423,8 @@ public:
   /// Retrieve the C jmp_buf type.
   QualType getjmp_bufType() const {
     if (jmp_bufDecl)
-      return getTypeDeclType(jmp_bufDecl);
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, jmp_bufDecl);
     return QualType();
   }
 
@@ -2205,7 +2436,8 @@ public:
   /// Retrieve the C sigjmp_buf type.
   QualType getsigjmp_bufType() const {
     if (sigjmp_bufDecl)
-      return getTypeDeclType(sigjmp_bufDecl);
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, sigjmp_bufDecl);
     return QualType();
   }
 
@@ -2217,12 +2449,13 @@ public:
   /// Retrieve the C ucontext_t type.
   QualType getucontext_tType() const {
     if (ucontext_tDecl)
-      return getTypeDeclType(ucontext_tDecl);
+      return getTypeDeclType(ElaboratedTypeKeyword::None,
+                             /*Qualifier=*/std::nullopt, ucontext_tDecl);
     return QualType();
   }
 
   /// The result type of logical operations, '<', '>', '!=', etc.
-  QualType getLogicalOperationType() const {
+  CanQualType getLogicalOperationType() const {
     return getLangOpts().CPlusPlus ? BoolTy : IntTy;
   }
 
@@ -2287,7 +2520,8 @@ public:
   /// This is set up lazily, by Sema.  \c id is always a (typedef for a)
   /// pointer type, a pointer to a struct.
   QualType getObjCIdType() const {
-    return getTypeDeclType(getObjCIdDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getObjCIdDecl());
   }
 
   /// Retrieve the typedef corresponding to the predefined 'SEL' type
@@ -2297,8 +2531,11 @@ public:
   /// Retrieve the type that corresponds to the predefined Objective-C
   /// 'SEL' type.
   QualType getObjCSelType() const {
-    return getTypeDeclType(getObjCSelDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getObjCSelDecl());
   }
+
+  PointerAuthQualifier getObjCMemberSelTypePtrAuth();
 
   /// Retrieve the typedef declaration corresponding to the predefined
   /// Objective-C 'Class' type.
@@ -2309,7 +2546,8 @@ public:
   /// This is set up lazily, by Sema.  \c Class is always a (typedef for a)
   /// pointer type, a pointer to a struct.
   QualType getObjCClassType() const {
-    return getTypeDeclType(getObjCClassDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getObjCClassDecl());
   }
 
   /// Retrieve the Objective-C class declaration corresponding to
@@ -2328,7 +2566,8 @@ public:
 
   /// type of 'BOOL' type.
   QualType getBOOLType() const {
-    return getTypeDeclType(getBOOLDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getBOOLDecl());
   }
 
   /// Retrieve the type of the Objective-C \c Protocol class.
@@ -2342,7 +2581,8 @@ public:
 
   /// Retrieve the type of the \c __builtin_va_list type.
   QualType getBuiltinVaListType() const {
-    return getTypeDeclType(getBuiltinVaListDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getBuiltinVaListDecl());
   }
 
   /// Retrieve the C type declaration corresponding to the predefined
@@ -2356,16 +2596,36 @@ public:
 
   /// Retrieve the type of the \c __builtin_ms_va_list type.
   QualType getBuiltinMSVaListType() const {
-    return getTypeDeclType(getBuiltinMSVaListDecl());
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt, getBuiltinMSVaListDecl());
   }
 
   /// Retrieve the implicitly-predeclared 'struct _GUID' declaration.
   TagDecl *getMSGuidTagDecl() const { return MSGuidTagDecl; }
 
   /// Retrieve the implicitly-predeclared 'struct _GUID' type.
-  QualType getMSGuidType() const {
+  CanQualType getMSGuidType() const {
     assert(MSGuidTagDecl && "asked for GUID type but MS extensions disabled");
-    return getTagDeclType(MSGuidTagDecl);
+    return getCanonicalTagType(MSGuidTagDecl);
+  }
+
+  /// Retrieve the implicitly-predeclared 'struct type_info' declaration.
+  TagDecl *getMSTypeInfoTagDecl() const {
+    // Lazily create this type on demand - it's only needed for MS builds.
+    if (!MSTypeInfoTagDecl)
+      MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
+    return MSTypeInfoTagDecl;
+  }
+
+  /// Retrieve the C type declaration corresponding to the predefined
+  /// \c __builtin_zos_va_list type.
+  TypedefDecl *getBuiltinZOSVaListDecl() const;
+
+  /// Retrieve the type of the \c __builtin_zos_va_list type.
+  QualType getBuiltinZOSVaListType() const {
+    return getTypedefType(ElaboratedTypeKeyword::None,
+                          /*Qualifier=*/std::nullopt,
+                          getBuiltinZOSVaListDecl());
   }
 
   /// Return whether a declaration to a builtin is allowed to be
@@ -2446,7 +2706,7 @@ public:
                                          UnresolvedSetIterator End) const;
   TemplateName getAssumedTemplateName(DeclarationName Name) const;
 
-  TemplateName getQualifiedTemplateName(NestedNameSpecifier *NNS,
+  TemplateName getQualifiedTemplateName(NestedNameSpecifier Qualifier,
                                         bool TemplateKeyword,
                                         TemplateName Template) const;
   TemplateName
@@ -2461,6 +2721,11 @@ public:
                                                 Decl *AssociatedDecl,
                                                 unsigned Index,
                                                 bool Final) const;
+
+  TemplateName
+  getPackIndexingTemplateName(TemplateName Pattern, Expr *IndexExpr,
+                              bool FullySubstituted = false,
+                              ArrayRef<TemplateName> Expansions = {}) const;
 
   /// Represents a TemplateName which had some of its default arguments
   /// deduced. This both represents this default argument deduction as sugar,
@@ -2524,14 +2789,22 @@ public:
   /// types.
   bool areCompatibleVectorTypes(QualType FirstVec, QualType SecondVec);
 
-  /// Return true if the given types are an SVE builtin and a VectorType that
-  /// is a fixed-length representation of the SVE builtin for a specific
-  /// vector-length.
-  bool areCompatibleSveTypes(QualType FirstType, QualType SecondType);
+  /// Return true if two OverflowBehaviorTypes are compatible for assignment.
+  /// This checks both the underlying type compatibility and the overflow
+  /// behavior kind (trap vs wrap).
+  bool areCompatibleOverflowBehaviorTypes(QualType LHS, QualType RHS);
 
-  /// Return true if the given vector types are lax-compatible SVE vector types,
-  /// false otherwise.
-  bool areLaxCompatibleSveTypes(QualType FirstType, QualType SecondType);
+  enum class OBTAssignResult {
+    Compatible,        // No OBT issues
+    IncompatibleKinds, // __ob_trap vs __ob_wrap (error)
+    Discards,          // OBT -> non-OBT on integer types (warning)
+    NotApplicable      // Not both integers, fall through to normal checking
+  };
+
+  /// Check overflow behavior type compatibility for assignments.
+  /// Returns detailed information about OBT compatibility for assignment
+  /// checking.
+  OBTAssignResult checkOBTAssignmentCompatibility(QualType LHS, QualType RHS);
 
   /// Return true if the given types are an RISC-V vector builtin type and a
   /// VectorType that is a fixed-length representation of the RISC-V vector
@@ -2591,7 +2864,8 @@ public:
   CharUnits getTypeSizeInChars(const Type *T) const;
 
   std::optional<CharUnits> getTypeSizeInCharsIfKnown(QualType Ty) const {
-    if (Ty->isIncompleteType() || Ty->isDependentType())
+    if (Ty->isIncompleteType() || Ty->isDependentType() ||
+        Ty->isUndeducedType() || Ty->isSizelessType())
       return std::nullopt;
     return getTypeSizeInChars(Ty);
   }
@@ -2702,9 +2976,20 @@ public:
   /// runtime, such as those using the Itanium C++ ABI.
   CharUnits getExnObjectAlignment() const;
 
+  /// Return whether unannotated records are treated as if they have
+  /// [[gnu::ms_struct]].
+  bool defaultsToMsStruct() const;
+
+  /// Whether layout (offset and size) information can be queried for \p D.
+  static bool hasLayout(const RecordDecl *D) {
+    D = D->getDefinition();
+    return D && !D->isInvalidDecl() && D->isCompleteDefinition();
+  }
+
   /// Get or compute information about the layout of the specified
   /// record (struct/union/class) \p D, which indicates its size and field
   /// position information.
+  /// \pre hasLayout(D)
   const ASTRecordLayout &getASTRecordLayout(const RecordDecl *D) const;
 
   /// Get or compute information about the layout of the specified
@@ -2772,6 +3057,8 @@ public:
   /// (from the AuxTargetInfo) is a an itanium target.
   MangleContext *createDeviceMangleContext(const TargetInfo &T);
 
+  MangleContext *cudaNVInitDeviceMC();
+
   void DeepCollectObjCIvars(const ObjCInterfaceDecl *OI, bool leafClass,
                             SmallVectorImpl<const ObjCIvarDecl*> &Ivars) const;
 
@@ -2797,11 +3084,11 @@ public:
   /// returned type is guaranteed to be free of any of these, allowing two
   /// canonical types to be compared for exact equality with a simple pointer
   /// comparison.
-  CanQualType getCanonicalType(QualType T) const {
+  static CanQualType getCanonicalType(QualType T) {
     return CanQualType::CreateUnsafe(T.getCanonicalType());
   }
 
-  const Type *getCanonicalType(const Type *T) const {
+  static const Type *getCanonicalType(const Type *T) {
     return T->getCanonicalTypeInternal().getTypePtr();
   }
 
@@ -2813,10 +3100,10 @@ public:
   CanQualType getCanonicalParamType(QualType T) const;
 
   /// Determine whether the given types \p T1 and \p T2 are equivalent.
-  bool hasSameType(QualType T1, QualType T2) const {
+  static bool hasSameType(QualType T1, QualType T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
-  bool hasSameType(const Type *T1, const Type *T2) const {
+  static bool hasSameType(const Type *T1, const Type *T2) {
     return getCanonicalType(T1) == getCanonicalType(T2);
   }
 
@@ -2844,7 +3131,7 @@ public:
 
   /// Determine whether the given types are equivalent after
   /// cvr-qualifiers have been removed.
-  bool hasSameUnqualifiedType(QualType T1, QualType T2) const {
+  static bool hasSameUnqualifiedType(QualType T1, QualType T2) {
     return getCanonicalType(T1).getTypePtr() ==
            getCanonicalType(T2).getTypePtr();
   }
@@ -2897,36 +3184,14 @@ public:
   /// Determine if two types are similar, ignoring only CVR qualifiers.
   bool hasCvrSimilarType(QualType T1, QualType T2);
 
-  /// Retrieves the "canonical" nested name specifier for a
-  /// given nested name specifier.
+  /// Retrieves the default calling convention for the current context.
   ///
-  /// The canonical nested name specifier is a nested name specifier
-  /// that uniquely identifies a type or namespace within the type
-  /// system. For example, given:
-  ///
-  /// \code
-  /// namespace N {
-  ///   struct S {
-  ///     template<typename T> struct X { typename T* type; };
-  ///   };
-  /// }
-  ///
-  /// template<typename T> struct Y {
-  ///   typename N::S::X<T>::type member;
-  /// };
-  /// \endcode
-  ///
-  /// Here, the nested-name-specifier for N::S::X<T>:: will be
-  /// S::X<template-param-0-0>, since 'S' and 'X' are uniquely defined
-  /// by declarations in the type system and the canonical type for
-  /// the template type parameter 'T' is template-param-0-0.
-  NestedNameSpecifier *
-  getCanonicalNestedNameSpecifier(NestedNameSpecifier *NNS) const;
-
-  /// Retrieves the default calling convention for the current target.
+  /// The context's default calling convention may differ from the current
+  /// target's default calling convention if the -fdefault-calling-conv option
+  /// is used; to get the target's default calling convention, e.g. for built-in
+  /// functions, call getTargetInfo().getDefaultCallingConv() instead.
   CallingConv getDefaultCallingConvention(bool IsVariadic,
-                                          bool IsCXXMethod,
-                                          bool IsBuiltin = false) const;
+                                          bool IsCXXMethod) const;
 
   /// Retrieves the "canonical" template name that refers to a
   /// given template.
@@ -2948,6 +3213,10 @@ public:
   /// types, values, and templates.
   TemplateName getCanonicalTemplateName(TemplateName Name,
                                         bool IgnoreDeduced = false) const;
+
+  /// Return the default argument of a template parameter, if one exists.
+  const TemplateArgument *
+  getDefaultTemplateArgumentOrNone(const NamedDecl *P) const;
 
   /// Determine whether the given template names refer to the same
   /// template.
@@ -3047,12 +3316,14 @@ public:
   /// actually be an array type).
   QualType getBaseElementType(QualType QT) const;
 
-  /// Return number of constant array elements.
-  uint64_t getConstantArrayElementCount(const ConstantArrayType *CA) const;
+  /// Return number of (potentially nested) constant array elements.
+  static uint64_t getConstantArrayElementCount(const ConstantArrayType *CA);
 
-  /// Return number of elements initialized in an ArrayInitLoopExpr.
-  uint64_t
-  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE) const;
+  /// Return number of elements initialized in a (potentially nested)
+  /// ArrayInitLoopExpr.
+  /// \c AILE may be null, in which case 0 is returned.
+  static uint64_t
+  getArrayInitLoopExprElementCount(const ArrayInitLoopExpr *AILE);
 
   /// Perform adjustment on the parameter type of a function.
   ///
@@ -3132,7 +3403,7 @@ public:
   mergeExceptionSpecs(FunctionProtoType::ExceptionSpecInfo ESI1,
                       FunctionProtoType::ExceptionSpecInfo ESI2,
                       SmallVectorImpl<QualType> &ExceptionTypeStorage,
-                      bool AcceptDependent);
+                      bool AcceptDependent) const;
 
   // For two "same" types, return a type which has
   // the common sugar between them. If Unqualified is true,
@@ -3140,7 +3411,7 @@ public:
   // The result will drop the qualifiers which do not occur
   // in both types.
   QualType getCommonSugaredType(QualType X, QualType Y,
-                                bool Unqualified = false);
+                                bool Unqualified = false) const;
 
 private:
   // Helper for integer ordering
@@ -3158,23 +3429,11 @@ public:
   bool propertyTypesAreCompatible(QualType, QualType);
   bool typesAreBlockPointerCompatible(QualType, QualType);
 
-  bool isObjCIdType(QualType T) const {
-    if (const auto *ET = dyn_cast<ElaboratedType>(T))
-      T = ET->getNamedType();
-    return T == getObjCIdType();
-  }
+  bool isObjCIdType(QualType T) const { return T == getObjCIdType(); }
 
-  bool isObjCClassType(QualType T) const {
-    if (const auto *ET = dyn_cast<ElaboratedType>(T))
-      T = ET->getNamedType();
-    return T == getObjCClassType();
-  }
+  bool isObjCClassType(QualType T) const { return T == getObjCClassType(); }
 
-  bool isObjCSelType(QualType T) const {
-    if (const auto *ET = dyn_cast<ElaboratedType>(T))
-      T = ET->getNamedType();
-    return T == getObjCSelType();
-  }
+  bool isObjCSelType(QualType T) const { return T == getObjCSelType(); }
 
   bool ObjCQualifiedIdTypesAreCompatible(const ObjCObjectPointerType *LHS,
                                          const ObjCObjectPointerType *RHS,
@@ -3394,6 +3653,13 @@ public:
   /// it is not used.
   bool DeclMustBeEmitted(const Decl *D);
 
+  /// Determines if the global variable or function \p D is emitted on the side
+  /// of the CUDA/HIP compilation, i.e. host or device, that is being compiled,
+  /// based on its host/device related attributes.
+  ///
+  /// \returns false if CodeGen never emits \p D in this compilation.
+  bool shouldEmitCUDADecl(const ValueDecl *D) const;
+
   /// Visits all versions of a multiversioned function with the passed
   /// predicate.
   void forEachMultiversionedFunctionVersion(
@@ -3421,6 +3687,9 @@ public:
   void setStaticLocalNumber(const VarDecl *VD, unsigned Number);
   unsigned getStaticLocalNumber(const VarDecl *VD) const;
 
+  /// Ordinal for the next TopLevelStmtDecl; counts created and loaded ones.
+  unsigned NumTopLevelStmtDecls = 0;
+
   bool hasSeenTypeAwareOperatorNewOrDelete() const {
     return !TypeAwareOperatorNewAndDeletes.empty();
   }
@@ -3429,6 +3698,18 @@ public:
   void setIsTypeAwareOperatorNewOrDelete(const FunctionDecl *FD,
                                          bool IsTypeAware);
   bool isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const;
+
+  enum OperatorDeleteKind { Regular, GlobalRegular, Array, ArrayGlobal };
+
+  void addOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                 FunctionDecl *OperatorDelete,
+                                 OperatorDeleteKind K) const;
+  FunctionDecl *getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                          OperatorDeleteKind K) const;
+  bool dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
+                             OperatorDeleteKind K) const;
+  void setClassMaybeNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
+  bool classMaybeNeedsVectorDeletingDestructor(const CXXRecordDecl *RD);
 
   /// Retrieve the context for computing mangling numbers in the given
   /// DeclContext.
@@ -3473,6 +3754,10 @@ public:
   /// Parses the target attributes passed in, and returns only the ones that are
   /// valid feature names.
   ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD) const;
+
+  const llvm::StringMap<bool> &
+  getFunctionFeatureMap(const FunctionDecl *FD) const;
+  const llvm::StringMap<bool> &getFunctionFeatureMap(GlobalDecl GD) const;
 
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                              const FunctionDecl *) const;
@@ -3705,12 +3990,30 @@ public:
   /// Resolve the root record to be used to derive the vtable pointer
   /// authentication policy for the specified record.
   const CXXRecordDecl *
-  baseForVTableAuthentication(const CXXRecordDecl *ThisClass);
+  baseForVTableAuthentication(const CXXRecordDecl *ThisClass) const;
 
   bool useAbbreviatedThunkName(GlobalDecl VirtualMethodDecl,
                                StringRef MangledName);
 
   StringRef getCUIDHash() const;
+
+  /// Returns a list of PFP fields for the given type, including subfields in
+  /// bases or other fields, except for fields contained within fields of union
+  /// type.
+  std::vector<PFPField> findPFPFields(QualType Ty) const;
+
+  bool hasPFPFields(QualType Ty) const;
+  static bool isPFPField(const FieldDecl *Field);
+
+  /// Returns whether this record's PFP fields (if any) are trivially
+  /// copyable (i.e. may be memcpy'd). This may also return true if the
+  /// record does not have any PFP fields, so it may be necessary for the caller
+  /// to check for PFP fields, e.g. by calling hasPFPFields().
+  bool arePFPFieldsTriviallyCopyable(const RecordDecl *RD) const;
+
+  llvm::SetVector<const FieldDecl *> PFPFieldsWithEvaluatedOffset;
+  void recordMemberDataPointerEvaluation(const ValueDecl *VD);
+  void recordOffsetOfEvaluation(const OffsetOfExpr *E);
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per
@@ -3821,18 +4124,29 @@ inline void operator delete[](void *Ptr, const clang::ASTContext &C, size_t) {
   C.Deallocate(Ptr);
 }
 
-/// Create the representation of a LazyGenerationalUpdatePtr.
-template <typename Owner, typename T,
-          void (clang::ExternalASTSource::*Update)(Owner)>
-typename clang::LazyGenerationalUpdatePtr<Owner, T, Update>::ValueType
-    clang::LazyGenerationalUpdatePtr<Owner, T, Update>::makeValue(
-        const clang::ASTContext &Ctx, T Value) {
-  // Note, this is implemented here so that ExternalASTSource.h doesn't need to
-  // include ASTContext.h. We explicitly instantiate it for all relevant types
-  // in ASTContext.cpp.
-  if (auto *Source = Ctx.getExternalSource())
-    return new (Ctx) LazyData(Source, Value);
-  return Value;
-}
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeID> {
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.computeHash();
+  }
+
+  static bool isEqual(const FoldingSetNodeID &LHS,
+                      const FoldingSetNodeID &RHS) {
+    return LHS == RHS;
+  }
+};
+template <> struct llvm::DenseMapInfo<llvm::FoldingSetNodeIDRef> {
+  static unsigned getHashValue(FoldingSetNodeIDRef Val) {
+    return Val.computeHash();
+  }
+  static bool isEqual(FoldingSetNodeIDRef LHS, FoldingSetNodeIDRef RHS) {
+    return LHS == RHS;
+  }
+  static unsigned getHashValue(const FoldingSetNodeID &Val) {
+    return Val.computeHash();
+  }
+  static bool isEqual(const FoldingSetNodeID &LHS, FoldingSetNodeIDRef RHS) {
+    return LHS == RHS;
+  }
+};
 
 #endif // LLVM_CLANG_AST_ASTCONTEXT_H

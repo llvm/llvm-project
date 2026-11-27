@@ -81,53 +81,49 @@ define void @test_zero(ptr %P, ptr %S) nounwind {
 define void @test_f2(ptr %P, ptr %S) nounwind {
 ; LA32F-LABEL: test_f2:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    fld.s $fa0, $a0, 4
-; LA32F-NEXT:    fld.s $fa1, $a0, 0
-; LA32F-NEXT:    addi.w $a0, $zero, 1
-; LA32F-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI1_0)
-; LA32F-NEXT:    fld.s $fa2, $a2, %pc_lo12(.LCPI1_0)
-; LA32F-NEXT:    movgr2fr.w $fa3, $a0
-; LA32F-NEXT:    ffint.s.w $fa3, $fa3
-; LA32F-NEXT:    fadd.s $fa1, $fa1, $fa3
+; LA32F-NEXT:    fld.s $fa0, $a0, 0
+; LA32F-NEXT:    fld.s $fa1, $a0, 4
+; LA32F-NEXT:    lu12i.w $a0, 260096
+; LA32F-NEXT:    movgr2fr.w $fa2, $a0
 ; LA32F-NEXT:    fadd.s $fa0, $fa0, $fa2
-; LA32F-NEXT:    fst.s $fa0, $a1, 4
-; LA32F-NEXT:    fst.s $fa1, $a1, 0
+; LA32F-NEXT:    lu12i.w $a0, 262144
+; LA32F-NEXT:    movgr2fr.w $fa2, $a0
+; LA32F-NEXT:    fadd.s $fa1, $fa1, $fa2
+; LA32F-NEXT:    fst.s $fa1, $a1, 4
+; LA32F-NEXT:    fst.s $fa0, $a1, 0
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: test_f2:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fld.s $fa0, $a0, 4
-; LA32D-NEXT:    fld.s $fa1, $a0, 0
-; LA32D-NEXT:    addi.w $a0, $zero, 1
-; LA32D-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI1_0)
-; LA32D-NEXT:    fld.s $fa2, $a2, %pc_lo12(.LCPI1_0)
-; LA32D-NEXT:    movgr2fr.w $fa3, $a0
-; LA32D-NEXT:    ffint.s.w $fa3, $fa3
-; LA32D-NEXT:    fadd.s $fa1, $fa1, $fa3
+; LA32D-NEXT:    fld.s $fa0, $a0, 0
+; LA32D-NEXT:    fld.s $fa1, $a0, 4
+; LA32D-NEXT:    lu12i.w $a0, 260096
+; LA32D-NEXT:    movgr2fr.w $fa2, $a0
 ; LA32D-NEXT:    fadd.s $fa0, $fa0, $fa2
-; LA32D-NEXT:    fst.s $fa0, $a1, 4
-; LA32D-NEXT:    fst.s $fa1, $a1, 0
+; LA32D-NEXT:    lu12i.w $a0, 262144
+; LA32D-NEXT:    movgr2fr.w $fa2, $a0
+; LA32D-NEXT:    fadd.s $fa1, $fa1, $fa2
+; LA32D-NEXT:    fst.s $fa1, $a1, 4
+; LA32D-NEXT:    fst.s $fa0, $a1, 0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: test_f2:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    fld.s $fa0, $a0, 4
-; LA64F-NEXT:    fld.s $fa1, $a0, 0
-; LA64F-NEXT:    addi.w $a0, $zero, 1
-; LA64F-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI1_0)
-; LA64F-NEXT:    fld.s $fa2, $a2, %pc_lo12(.LCPI1_0)
-; LA64F-NEXT:    movgr2fr.w $fa3, $a0
-; LA64F-NEXT:    ffint.s.w $fa3, $fa3
-; LA64F-NEXT:    fadd.s $fa1, $fa1, $fa3
+; LA64F-NEXT:    fld.s $fa0, $a0, 0
+; LA64F-NEXT:    fld.s $fa1, $a0, 4
+; LA64F-NEXT:    lu12i.w $a0, 260096
+; LA64F-NEXT:    movgr2fr.w $fa2, $a0
 ; LA64F-NEXT:    fadd.s $fa0, $fa0, $fa2
-; LA64F-NEXT:    fst.s $fa0, $a1, 4
-; LA64F-NEXT:    fst.s $fa1, $a1, 0
+; LA64F-NEXT:    lu12i.w $a0, 262144
+; LA64F-NEXT:    movgr2fr.w $fa2, $a0
+; LA64F-NEXT:    fadd.s $fa1, $fa1, $fa2
+; LA64F-NEXT:    fst.s $fa1, $a1, 4
+; LA64F-NEXT:    fst.s $fa0, $a1, 0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: test_f2:
 ; LA64D:       # %bb.0:
-; LA64D-NEXT:    ld.d $a0, $a0, 0
-; LA64D-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64D-NEXT:    fld.d $fa0, $a0, 0
 ; LA64D-NEXT:    lu12i.w $a0, 260096
 ; LA64D-NEXT:    lu52i.d $a0, $a0, 1024
 ; LA64D-NEXT:    vreplgr2vr.d $vr1, $a0
@@ -145,75 +141,72 @@ define void @test_f4(ptr %P, ptr %S) nounwind {
 ; LA32F:       # %bb.0:
 ; LA32F-NEXT:    fld.s $fa0, $a0, 12
 ; LA32F-NEXT:    fld.s $fa1, $a0, 8
-; LA32F-NEXT:    fld.s $fa2, $a0, 4
-; LA32F-NEXT:    fld.s $fa3, $a0, 0
-; LA32F-NEXT:    addi.w $a0, $zero, 1
+; LA32F-NEXT:    fld.s $fa2, $a0, 0
+; LA32F-NEXT:    fld.s $fa3, $a0, 4
+; LA32F-NEXT:    lu12i.w $a0, 260096
 ; LA32F-NEXT:    movgr2fr.w $fa4, $a0
-; LA32F-NEXT:    ffint.s.w $fa4, $fa4
-; LA32F-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32F-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI2_0)
-; LA32F-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_1)
-; LA32F-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI2_1)
-; LA32F-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_2)
-; LA32F-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI2_2)
+; LA32F-NEXT:    fadd.s $fa2, $fa2, $fa4
+; LA32F-NEXT:    lu12i.w $a0, 262144
+; LA32F-NEXT:    movgr2fr.w $fa4, $a0
 ; LA32F-NEXT:    fadd.s $fa3, $fa3, $fa4
-; LA32F-NEXT:    fadd.s $fa2, $fa2, $fa5
-; LA32F-NEXT:    fadd.s $fa1, $fa1, $fa6
-; LA32F-NEXT:    fadd.s $fa0, $fa0, $fa7
+; LA32F-NEXT:    lu12i.w $a0, 263168
+; LA32F-NEXT:    movgr2fr.w $fa4, $a0
+; LA32F-NEXT:    fadd.s $fa1, $fa1, $fa4
+; LA32F-NEXT:    lu12i.w $a0, 264192
+; LA32F-NEXT:    movgr2fr.w $fa4, $a0
+; LA32F-NEXT:    fadd.s $fa0, $fa0, $fa4
 ; LA32F-NEXT:    fst.s $fa0, $a1, 12
 ; LA32F-NEXT:    fst.s $fa1, $a1, 8
-; LA32F-NEXT:    fst.s $fa2, $a1, 4
-; LA32F-NEXT:    fst.s $fa3, $a1, 0
+; LA32F-NEXT:    fst.s $fa3, $a1, 4
+; LA32F-NEXT:    fst.s $fa2, $a1, 0
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: test_f4:
 ; LA32D:       # %bb.0:
 ; LA32D-NEXT:    fld.s $fa0, $a0, 12
 ; LA32D-NEXT:    fld.s $fa1, $a0, 8
-; LA32D-NEXT:    fld.s $fa2, $a0, 4
-; LA32D-NEXT:    fld.s $fa3, $a0, 0
-; LA32D-NEXT:    addi.w $a0, $zero, 1
+; LA32D-NEXT:    fld.s $fa2, $a0, 0
+; LA32D-NEXT:    fld.s $fa3, $a0, 4
+; LA32D-NEXT:    lu12i.w $a0, 260096
 ; LA32D-NEXT:    movgr2fr.w $fa4, $a0
-; LA32D-NEXT:    ffint.s.w $fa4, $fa4
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA32D-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI2_0)
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_1)
-; LA32D-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI2_1)
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_2)
-; LA32D-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI2_2)
+; LA32D-NEXT:    fadd.s $fa2, $fa2, $fa4
+; LA32D-NEXT:    lu12i.w $a0, 262144
+; LA32D-NEXT:    movgr2fr.w $fa4, $a0
 ; LA32D-NEXT:    fadd.s $fa3, $fa3, $fa4
-; LA32D-NEXT:    fadd.s $fa2, $fa2, $fa5
-; LA32D-NEXT:    fadd.s $fa1, $fa1, $fa6
-; LA32D-NEXT:    fadd.s $fa0, $fa0, $fa7
+; LA32D-NEXT:    lu12i.w $a0, 263168
+; LA32D-NEXT:    movgr2fr.w $fa4, $a0
+; LA32D-NEXT:    fadd.s $fa1, $fa1, $fa4
+; LA32D-NEXT:    lu12i.w $a0, 264192
+; LA32D-NEXT:    movgr2fr.w $fa4, $a0
+; LA32D-NEXT:    fadd.s $fa0, $fa0, $fa4
 ; LA32D-NEXT:    fst.s $fa0, $a1, 12
 ; LA32D-NEXT:    fst.s $fa1, $a1, 8
-; LA32D-NEXT:    fst.s $fa2, $a1, 4
-; LA32D-NEXT:    fst.s $fa3, $a1, 0
+; LA32D-NEXT:    fst.s $fa3, $a1, 4
+; LA32D-NEXT:    fst.s $fa2, $a1, 0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: test_f4:
 ; LA64F:       # %bb.0:
 ; LA64F-NEXT:    fld.s $fa0, $a0, 12
 ; LA64F-NEXT:    fld.s $fa1, $a0, 8
-; LA64F-NEXT:    fld.s $fa2, $a0, 4
-; LA64F-NEXT:    fld.s $fa3, $a0, 0
-; LA64F-NEXT:    addi.w $a0, $zero, 1
+; LA64F-NEXT:    fld.s $fa2, $a0, 0
+; LA64F-NEXT:    fld.s $fa3, $a0, 4
+; LA64F-NEXT:    lu12i.w $a0, 260096
 ; LA64F-NEXT:    movgr2fr.w $fa4, $a0
-; LA64F-NEXT:    ffint.s.w $fa4, $fa4
-; LA64F-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_0)
-; LA64F-NEXT:    fld.s $fa5, $a0, %pc_lo12(.LCPI2_0)
-; LA64F-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_1)
-; LA64F-NEXT:    fld.s $fa6, $a0, %pc_lo12(.LCPI2_1)
-; LA64F-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI2_2)
-; LA64F-NEXT:    fld.s $fa7, $a0, %pc_lo12(.LCPI2_2)
+; LA64F-NEXT:    fadd.s $fa2, $fa2, $fa4
+; LA64F-NEXT:    lu12i.w $a0, 262144
+; LA64F-NEXT:    movgr2fr.w $fa4, $a0
 ; LA64F-NEXT:    fadd.s $fa3, $fa3, $fa4
-; LA64F-NEXT:    fadd.s $fa2, $fa2, $fa5
-; LA64F-NEXT:    fadd.s $fa1, $fa1, $fa6
-; LA64F-NEXT:    fadd.s $fa0, $fa0, $fa7
+; LA64F-NEXT:    lu12i.w $a0, 263168
+; LA64F-NEXT:    movgr2fr.w $fa4, $a0
+; LA64F-NEXT:    fadd.s $fa1, $fa1, $fa4
+; LA64F-NEXT:    lu12i.w $a0, 264192
+; LA64F-NEXT:    movgr2fr.w $fa4, $a0
+; LA64F-NEXT:    fadd.s $fa0, $fa0, $fa4
 ; LA64F-NEXT:    fst.s $fa0, $a1, 12
 ; LA64F-NEXT:    fst.s $fa1, $a1, 8
-; LA64F-NEXT:    fst.s $fa2, $a1, 4
-; LA64F-NEXT:    fst.s $fa3, $a1, 0
+; LA64F-NEXT:    fst.s $fa3, $a1, 4
+; LA64F-NEXT:    fst.s $fa2, $a1, 0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: test_f4:
@@ -233,113 +226,110 @@ define void @test_f4(ptr %P, ptr %S) nounwind {
 define void @test_f8(ptr %P, ptr %S) nounwind {
 ; LA32F-LABEL: test_f8:
 ; LA32F:       # %bb.0:
-; LA32F-NEXT:    addi.w $a2, $zero, 1
-; LA32F-NEXT:    movgr2fr.w $fa0, $a2
-; LA32F-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_0)
-; LA32F-NEXT:    fld.s $fa1, $a2, %pc_lo12(.LCPI3_0)
-; LA32F-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_1)
-; LA32F-NEXT:    fld.s $fa2, $a2, %pc_lo12(.LCPI3_1)
-; LA32F-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_2)
-; LA32F-NEXT:    fld.s $fa3, $a2, %pc_lo12(.LCPI3_2)
-; LA32F-NEXT:    fld.s $fa4, $a0, 28
-; LA32F-NEXT:    fld.s $fa5, $a0, 24
-; LA32F-NEXT:    fld.s $fa6, $a0, 12
-; LA32F-NEXT:    fld.s $fa7, $a0, 8
-; LA32F-NEXT:    fld.s $ft0, $a0, 0
-; LA32F-NEXT:    fld.s $ft1, $a0, 16
-; LA32F-NEXT:    fld.s $ft2, $a0, 4
-; LA32F-NEXT:    ffint.s.w $fa0, $fa0
-; LA32F-NEXT:    fadd.s $ft0, $ft0, $fa0
-; LA32F-NEXT:    fadd.s $fa0, $ft1, $fa0
-; LA32F-NEXT:    fld.s $ft1, $a0, 20
-; LA32F-NEXT:    fadd.s $ft2, $ft2, $fa1
-; LA32F-NEXT:    fadd.s $fa7, $fa7, $fa2
-; LA32F-NEXT:    fadd.s $fa6, $fa6, $fa3
-; LA32F-NEXT:    fadd.s $fa1, $ft1, $fa1
-; LA32F-NEXT:    fadd.s $fa2, $fa5, $fa2
-; LA32F-NEXT:    fadd.s $fa3, $fa4, $fa3
-; LA32F-NEXT:    fst.s $fa3, $a1, 28
-; LA32F-NEXT:    fst.s $fa2, $a1, 24
-; LA32F-NEXT:    fst.s $fa1, $a1, 20
-; LA32F-NEXT:    fst.s $fa6, $a1, 12
-; LA32F-NEXT:    fst.s $fa7, $a1, 8
-; LA32F-NEXT:    fst.s $ft2, $a1, 4
-; LA32F-NEXT:    fst.s $fa0, $a1, 16
-; LA32F-NEXT:    fst.s $ft0, $a1, 0
+; LA32F-NEXT:    fld.s $fa0, $a0, 28
+; LA32F-NEXT:    fld.s $fa1, $a0, 24
+; LA32F-NEXT:    fld.s $fa2, $a0, 20
+; LA32F-NEXT:    fld.s $fa3, $a0, 16
+; LA32F-NEXT:    fld.s $fa4, $a0, 12
+; LA32F-NEXT:    fld.s $fa5, $a0, 8
+; LA32F-NEXT:    fld.s $fa6, $a0, 0
+; LA32F-NEXT:    fld.s $fa7, $a0, 4
+; LA32F-NEXT:    lu12i.w $a0, 260096
+; LA32F-NEXT:    movgr2fr.w $ft0, $a0
+; LA32F-NEXT:    fadd.s $fa6, $fa6, $ft0
+; LA32F-NEXT:    lu12i.w $a0, 262144
+; LA32F-NEXT:    movgr2fr.w $ft1, $a0
+; LA32F-NEXT:    fadd.s $fa7, $fa7, $ft1
+; LA32F-NEXT:    lu12i.w $a0, 263168
+; LA32F-NEXT:    movgr2fr.w $ft2, $a0
+; LA32F-NEXT:    fadd.s $fa5, $fa5, $ft2
+; LA32F-NEXT:    lu12i.w $a0, 264192
+; LA32F-NEXT:    movgr2fr.w $ft3, $a0
+; LA32F-NEXT:    fadd.s $fa4, $fa4, $ft3
+; LA32F-NEXT:    fadd.s $fa3, $fa3, $ft0
+; LA32F-NEXT:    fadd.s $fa2, $fa2, $ft1
+; LA32F-NEXT:    fadd.s $fa1, $fa1, $ft2
+; LA32F-NEXT:    fadd.s $fa0, $fa0, $ft3
+; LA32F-NEXT:    fst.s $fa0, $a1, 28
+; LA32F-NEXT:    fst.s $fa1, $a1, 24
+; LA32F-NEXT:    fst.s $fa2, $a1, 20
+; LA32F-NEXT:    fst.s $fa3, $a1, 16
+; LA32F-NEXT:    fst.s $fa4, $a1, 12
+; LA32F-NEXT:    fst.s $fa5, $a1, 8
+; LA32F-NEXT:    fst.s $fa7, $a1, 4
+; LA32F-NEXT:    fst.s $fa6, $a1, 0
 ; LA32F-NEXT:    ret
 ;
 ; LA32D-LABEL: test_f8:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    addi.w $a2, $zero, 1
-; LA32D-NEXT:    movgr2fr.w $fa0, $a2
-; LA32D-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_0)
-; LA32D-NEXT:    fld.s $fa1, $a2, %pc_lo12(.LCPI3_0)
-; LA32D-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_1)
-; LA32D-NEXT:    fld.s $fa2, $a2, %pc_lo12(.LCPI3_1)
-; LA32D-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_2)
-; LA32D-NEXT:    fld.s $fa3, $a2, %pc_lo12(.LCPI3_2)
-; LA32D-NEXT:    fld.s $fa4, $a0, 28
-; LA32D-NEXT:    fld.s $fa5, $a0, 24
-; LA32D-NEXT:    fld.s $fa6, $a0, 12
-; LA32D-NEXT:    fld.s $fa7, $a0, 8
-; LA32D-NEXT:    fld.s $ft0, $a0, 0
-; LA32D-NEXT:    fld.s $ft1, $a0, 16
-; LA32D-NEXT:    fld.s $ft2, $a0, 4
-; LA32D-NEXT:    ffint.s.w $fa0, $fa0
-; LA32D-NEXT:    fadd.s $ft0, $ft0, $fa0
-; LA32D-NEXT:    fadd.s $fa0, $ft1, $fa0
-; LA32D-NEXT:    fld.s $ft1, $a0, 20
-; LA32D-NEXT:    fadd.s $ft2, $ft2, $fa1
-; LA32D-NEXT:    fadd.s $fa7, $fa7, $fa2
-; LA32D-NEXT:    fadd.s $fa6, $fa6, $fa3
-; LA32D-NEXT:    fadd.s $fa1, $ft1, $fa1
-; LA32D-NEXT:    fadd.s $fa2, $fa5, $fa2
-; LA32D-NEXT:    fadd.s $fa3, $fa4, $fa3
-; LA32D-NEXT:    fst.s $fa3, $a1, 28
-; LA32D-NEXT:    fst.s $fa2, $a1, 24
-; LA32D-NEXT:    fst.s $fa1, $a1, 20
-; LA32D-NEXT:    fst.s $fa6, $a1, 12
-; LA32D-NEXT:    fst.s $fa7, $a1, 8
-; LA32D-NEXT:    fst.s $ft2, $a1, 4
-; LA32D-NEXT:    fst.s $fa0, $a1, 16
-; LA32D-NEXT:    fst.s $ft0, $a1, 0
+; LA32D-NEXT:    fld.s $fa0, $a0, 28
+; LA32D-NEXT:    fld.s $fa1, $a0, 24
+; LA32D-NEXT:    fld.s $fa2, $a0, 20
+; LA32D-NEXT:    fld.s $fa3, $a0, 16
+; LA32D-NEXT:    fld.s $fa4, $a0, 12
+; LA32D-NEXT:    fld.s $fa5, $a0, 8
+; LA32D-NEXT:    fld.s $fa6, $a0, 0
+; LA32D-NEXT:    fld.s $fa7, $a0, 4
+; LA32D-NEXT:    lu12i.w $a0, 260096
+; LA32D-NEXT:    movgr2fr.w $ft0, $a0
+; LA32D-NEXT:    fadd.s $fa6, $fa6, $ft0
+; LA32D-NEXT:    lu12i.w $a0, 262144
+; LA32D-NEXT:    movgr2fr.w $ft1, $a0
+; LA32D-NEXT:    fadd.s $fa7, $fa7, $ft1
+; LA32D-NEXT:    lu12i.w $a0, 263168
+; LA32D-NEXT:    movgr2fr.w $ft2, $a0
+; LA32D-NEXT:    fadd.s $fa5, $fa5, $ft2
+; LA32D-NEXT:    lu12i.w $a0, 264192
+; LA32D-NEXT:    movgr2fr.w $ft3, $a0
+; LA32D-NEXT:    fadd.s $fa4, $fa4, $ft3
+; LA32D-NEXT:    fadd.s $fa3, $fa3, $ft0
+; LA32D-NEXT:    fadd.s $fa2, $fa2, $ft1
+; LA32D-NEXT:    fadd.s $fa1, $fa1, $ft2
+; LA32D-NEXT:    fadd.s $fa0, $fa0, $ft3
+; LA32D-NEXT:    fst.s $fa0, $a1, 28
+; LA32D-NEXT:    fst.s $fa1, $a1, 24
+; LA32D-NEXT:    fst.s $fa2, $a1, 20
+; LA32D-NEXT:    fst.s $fa3, $a1, 16
+; LA32D-NEXT:    fst.s $fa4, $a1, 12
+; LA32D-NEXT:    fst.s $fa5, $a1, 8
+; LA32D-NEXT:    fst.s $fa7, $a1, 4
+; LA32D-NEXT:    fst.s $fa6, $a1, 0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: test_f8:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.w $a2, $zero, 1
-; LA64F-NEXT:    movgr2fr.w $fa0, $a2
-; LA64F-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_0)
-; LA64F-NEXT:    fld.s $fa1, $a2, %pc_lo12(.LCPI3_0)
-; LA64F-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_1)
-; LA64F-NEXT:    fld.s $fa2, $a2, %pc_lo12(.LCPI3_1)
-; LA64F-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI3_2)
-; LA64F-NEXT:    fld.s $fa3, $a2, %pc_lo12(.LCPI3_2)
-; LA64F-NEXT:    fld.s $fa4, $a0, 28
-; LA64F-NEXT:    fld.s $fa5, $a0, 24
-; LA64F-NEXT:    fld.s $fa6, $a0, 12
-; LA64F-NEXT:    fld.s $fa7, $a0, 8
-; LA64F-NEXT:    fld.s $ft0, $a0, 0
-; LA64F-NEXT:    fld.s $ft1, $a0, 16
-; LA64F-NEXT:    fld.s $ft2, $a0, 4
-; LA64F-NEXT:    ffint.s.w $fa0, $fa0
-; LA64F-NEXT:    fadd.s $ft0, $ft0, $fa0
-; LA64F-NEXT:    fadd.s $fa0, $ft1, $fa0
-; LA64F-NEXT:    fld.s $ft1, $a0, 20
-; LA64F-NEXT:    fadd.s $ft2, $ft2, $fa1
-; LA64F-NEXT:    fadd.s $fa7, $fa7, $fa2
-; LA64F-NEXT:    fadd.s $fa6, $fa6, $fa3
-; LA64F-NEXT:    fadd.s $fa1, $ft1, $fa1
-; LA64F-NEXT:    fadd.s $fa2, $fa5, $fa2
-; LA64F-NEXT:    fadd.s $fa3, $fa4, $fa3
-; LA64F-NEXT:    fst.s $fa3, $a1, 28
-; LA64F-NEXT:    fst.s $fa2, $a1, 24
-; LA64F-NEXT:    fst.s $fa1, $a1, 20
-; LA64F-NEXT:    fst.s $fa6, $a1, 12
-; LA64F-NEXT:    fst.s $fa7, $a1, 8
-; LA64F-NEXT:    fst.s $ft2, $a1, 4
-; LA64F-NEXT:    fst.s $fa0, $a1, 16
-; LA64F-NEXT:    fst.s $ft0, $a1, 0
+; LA64F-NEXT:    fld.s $fa0, $a0, 28
+; LA64F-NEXT:    fld.s $fa1, $a0, 24
+; LA64F-NEXT:    fld.s $fa2, $a0, 20
+; LA64F-NEXT:    fld.s $fa3, $a0, 16
+; LA64F-NEXT:    fld.s $fa4, $a0, 12
+; LA64F-NEXT:    fld.s $fa5, $a0, 8
+; LA64F-NEXT:    fld.s $fa6, $a0, 0
+; LA64F-NEXT:    fld.s $fa7, $a0, 4
+; LA64F-NEXT:    lu12i.w $a0, 260096
+; LA64F-NEXT:    movgr2fr.w $ft0, $a0
+; LA64F-NEXT:    fadd.s $fa6, $fa6, $ft0
+; LA64F-NEXT:    lu12i.w $a0, 262144
+; LA64F-NEXT:    movgr2fr.w $ft1, $a0
+; LA64F-NEXT:    fadd.s $fa7, $fa7, $ft1
+; LA64F-NEXT:    lu12i.w $a0, 263168
+; LA64F-NEXT:    movgr2fr.w $ft2, $a0
+; LA64F-NEXT:    fadd.s $fa5, $fa5, $ft2
+; LA64F-NEXT:    lu12i.w $a0, 264192
+; LA64F-NEXT:    movgr2fr.w $ft3, $a0
+; LA64F-NEXT:    fadd.s $fa4, $fa4, $ft3
+; LA64F-NEXT:    fadd.s $fa3, $fa3, $ft0
+; LA64F-NEXT:    fadd.s $fa2, $fa2, $ft1
+; LA64F-NEXT:    fadd.s $fa1, $fa1, $ft2
+; LA64F-NEXT:    fadd.s $fa0, $fa0, $ft3
+; LA64F-NEXT:    fst.s $fa0, $a1, 28
+; LA64F-NEXT:    fst.s $fa1, $a1, 24
+; LA64F-NEXT:    fst.s $fa2, $a1, 20
+; LA64F-NEXT:    fst.s $fa3, $a1, 16
+; LA64F-NEXT:    fst.s $fa4, $a1, 12
+; LA64F-NEXT:    fst.s $fa5, $a1, 8
+; LA64F-NEXT:    fst.s $fa7, $a1, 4
+; LA64F-NEXT:    fst.s $fa6, $a1, 0
 ; LA64F-NEXT:    ret
 ;
 ; LA64D-LABEL: test_f8:
@@ -403,14 +393,14 @@ define void @test_d2(ptr %P, ptr %S) nounwind {
 ; LA32D:       # %bb.0:
 ; LA32D-NEXT:    fld.d $fa0, $a0, 8
 ; LA32D-NEXT:    fld.d $fa1, $a0, 0
-; LA32D-NEXT:    addi.w $a0, $zero, 1
-; LA32D-NEXT:    movgr2fr.w $fa2, $a0
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI4_0)
-; LA32D-NEXT:    fld.d $fa3, $a0, %pc_lo12(.LCPI4_0)
-; LA32D-NEXT:    ffint.s.w $fa2, $fa2
-; LA32D-NEXT:    fcvt.d.s $fa2, $fa2
-; LA32D-NEXT:    fadd.d $fa1, $fa1, $fa2
-; LA32D-NEXT:    fadd.d $fa0, $fa0, $fa3
+; LA32D-NEXT:    movgr2fr.w $fa2, $zero
+; LA32D-NEXT:    lu12i.w $a0, 261888
+; LA32D-NEXT:    fmov.d $fa3, $fa2
+; LA32D-NEXT:    movgr2frh.w $fa3, $a0
+; LA32D-NEXT:    fadd.d $fa1, $fa1, $fa3
+; LA32D-NEXT:    lu12i.w $a0, 262144
+; LA32D-NEXT:    movgr2frh.w $fa2, $a0
+; LA32D-NEXT:    fadd.d $fa0, $fa0, $fa2
 ; LA32D-NEXT:    fst.d $fa0, $a1, 8
 ; LA32D-NEXT:    fst.d $fa1, $a1, 0
 ; LA32D-NEXT:    ret
@@ -528,26 +518,28 @@ define void @test_d4(ptr %P, ptr %S) nounwind {
 ;
 ; LA32D-LABEL: test_d4:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    fld.d $fa0, $a0, 24
-; LA32D-NEXT:    fld.d $fa1, $a0, 16
+; LA32D-NEXT:    fld.d $fa0, $a0, 16
+; LA32D-NEXT:    fld.d $fa1, $a0, 24
 ; LA32D-NEXT:    fld.d $fa2, $a0, 8
 ; LA32D-NEXT:    fld.d $fa3, $a0, 0
-; LA32D-NEXT:    addi.w $a0, $zero, 1
-; LA32D-NEXT:    movgr2fr.w $fa4, $a0
-; LA32D-NEXT:    ffint.s.w $fa4, $fa4
-; LA32D-NEXT:    fcvt.d.s $fa4, $fa4
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_0)
-; LA32D-NEXT:    fld.d $fa5, $a0, %pc_lo12(.LCPI5_0)
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_1)
-; LA32D-NEXT:    fld.d $fa6, $a0, %pc_lo12(.LCPI5_1)
-; LA32D-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI5_2)
-; LA32D-NEXT:    fld.d $fa7, $a0, %pc_lo12(.LCPI5_2)
-; LA32D-NEXT:    fadd.d $fa3, $fa3, $fa4
+; LA32D-NEXT:    movgr2fr.w $fa4, $zero
+; LA32D-NEXT:    lu12i.w $a0, 261888
+; LA32D-NEXT:    fmov.d $fa5, $fa4
+; LA32D-NEXT:    movgr2frh.w $fa5, $a0
+; LA32D-NEXT:    fadd.d $fa3, $fa3, $fa5
+; LA32D-NEXT:    lu12i.w $a0, 262144
+; LA32D-NEXT:    fmov.d $fa5, $fa4
+; LA32D-NEXT:    movgr2frh.w $fa5, $a0
 ; LA32D-NEXT:    fadd.d $fa2, $fa2, $fa5
-; LA32D-NEXT:    fadd.d $fa1, $fa1, $fa6
-; LA32D-NEXT:    fadd.d $fa0, $fa0, $fa7
-; LA32D-NEXT:    fst.d $fa0, $a1, 24
-; LA32D-NEXT:    fst.d $fa1, $a1, 16
+; LA32D-NEXT:  .Lpcadd_hi0:
+; LA32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI5_0)
+; LA32D-NEXT:    fld.d $fa5, $a0, %pcadd_lo12(.Lpcadd_hi0)
+; LA32D-NEXT:    lu12i.w $a0, 262400
+; LA32D-NEXT:    movgr2frh.w $fa4, $a0
+; LA32D-NEXT:    fadd.d $fa1, $fa1, $fa4
+; LA32D-NEXT:    fadd.d $fa0, $fa0, $fa5
+; LA32D-NEXT:    fst.d $fa0, $a1, 16
+; LA32D-NEXT:    fst.d $fa1, $a1, 24
 ; LA32D-NEXT:    fst.d $fa2, $a1, 8
 ; LA32D-NEXT:    fst.d $fa3, $a1, 0
 ; LA32D-NEXT:    ret
@@ -562,22 +554,21 @@ define void @test_d4(ptr %P, ptr %S) nounwind {
 ; LA64F-NEXT:    st.d $s2, $sp, 8 # 8-byte Folded Spill
 ; LA64F-NEXT:    st.d $s3, $sp, 0 # 8-byte Folded Spill
 ; LA64F-NEXT:    ld.d $fp, $a0, 24
-; LA64F-NEXT:    ld.d $s0, $a0, 8
-; LA64F-NEXT:    ld.d $s1, $a0, 0
-; LA64F-NEXT:    ld.d $a0, $a0, 16
+; LA64F-NEXT:    ld.d $s0, $a0, 16
+; LA64F-NEXT:    ld.d $s1, $a0, 8
+; LA64F-NEXT:    ld.d $a0, $a0, 0
 ; LA64F-NEXT:    move $s2, $a1
-; LA64F-NEXT:    ori $a1, $zero, 0
-; LA64F-NEXT:    lu32i.d $a1, -524288
-; LA64F-NEXT:    lu52i.d $a1, $a1, 1024
+; LA64F-NEXT:    lu52i.d $a1, $zero, 1023
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    move $s3, $a0
-; LA64F-NEXT:    lu52i.d $a1, $zero, 1023
+; LA64F-NEXT:    lu52i.d $a1, $zero, 1024
 ; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    move $s1, $a0
-; LA64F-NEXT:    lu52i.d $a1, $zero, 1024
+; LA64F-NEXT:    lu12i.w $a0, 2049
+; LA64F-NEXT:    slli.d $a1, $a0, 39
 ; LA64F-NEXT:    move $a0, $s0
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
@@ -587,9 +578,9 @@ define void @test_d4(ptr %P, ptr %S) nounwind {
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $a0, $s2, 24
-; LA64F-NEXT:    st.d $s0, $s2, 8
-; LA64F-NEXT:    st.d $s1, $s2, 0
-; LA64F-NEXT:    st.d $s3, $s2, 16
+; LA64F-NEXT:    st.d $s0, $s2, 16
+; LA64F-NEXT:    st.d $s1, $s2, 8
+; LA64F-NEXT:    st.d $s3, $s2, 0
 ; LA64F-NEXT:    ld.d $s3, $sp, 0 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s2, $sp, 8 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s1, $sp, 16 # 8-byte Folded Reload
@@ -748,40 +739,42 @@ define void @test_d8(ptr %P, ptr %S) nounwind {
 ;
 ; LA32D-LABEL: test_d8:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    addi.w $a2, $zero, 1
-; LA32D-NEXT:    movgr2fr.w $fa0, $a2
-; LA32D-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI6_0)
-; LA32D-NEXT:    fld.d $fa1, $a2, %pc_lo12(.LCPI6_0)
-; LA32D-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI6_1)
-; LA32D-NEXT:    fld.d $fa2, $a2, %pc_lo12(.LCPI6_1)
-; LA32D-NEXT:    pcalau12i $a2, %pc_hi20(.LCPI6_2)
-; LA32D-NEXT:    fld.d $fa3, $a2, %pc_lo12(.LCPI6_2)
-; LA32D-NEXT:    fld.d $fa4, $a0, 56
-; LA32D-NEXT:    fld.d $fa5, $a0, 48
-; LA32D-NEXT:    fld.d $fa6, $a0, 24
-; LA32D-NEXT:    fld.d $fa7, $a0, 16
-; LA32D-NEXT:    fld.d $ft0, $a0, 8
-; LA32D-NEXT:    fld.d $ft1, $a0, 0
-; LA32D-NEXT:    fld.d $ft2, $a0, 32
-; LA32D-NEXT:    ffint.s.w $fa0, $fa0
-; LA32D-NEXT:    fcvt.d.s $fa0, $fa0
-; LA32D-NEXT:    fadd.d $ft1, $ft1, $fa0
-; LA32D-NEXT:    fadd.d $fa0, $ft2, $fa0
-; LA32D-NEXT:    fld.d $ft2, $a0, 40
-; LA32D-NEXT:    fadd.d $ft0, $ft0, $fa1
-; LA32D-NEXT:    fadd.d $fa7, $fa7, $fa2
-; LA32D-NEXT:    fadd.d $fa6, $fa6, $fa3
-; LA32D-NEXT:    fadd.d $fa1, $ft2, $fa1
-; LA32D-NEXT:    fadd.d $fa2, $fa5, $fa2
-; LA32D-NEXT:    fadd.d $fa3, $fa4, $fa3
-; LA32D-NEXT:    fst.d $fa3, $a1, 56
-; LA32D-NEXT:    fst.d $fa2, $a1, 48
-; LA32D-NEXT:    fst.d $fa1, $a1, 40
-; LA32D-NEXT:    fst.d $fa6, $a1, 24
-; LA32D-NEXT:    fst.d $fa7, $a1, 16
-; LA32D-NEXT:    fst.d $ft0, $a1, 8
-; LA32D-NEXT:    fst.d $fa0, $a1, 32
-; LA32D-NEXT:    fst.d $ft1, $a1, 0
+; LA32D-NEXT:    fld.d $fa0, $a0, 48
+; LA32D-NEXT:    fld.d $fa1, $a0, 16
+; LA32D-NEXT:    fld.d $fa2, $a0, 56
+; LA32D-NEXT:    fld.d $fa3, $a0, 40
+; LA32D-NEXT:    fld.d $fa4, $a0, 32
+; LA32D-NEXT:    fld.d $fa5, $a0, 24
+; LA32D-NEXT:    fld.d $fa6, $a0, 8
+; LA32D-NEXT:    fld.d $fa7, $a0, 0
+; LA32D-NEXT:    movgr2fr.w $ft0, $zero
+; LA32D-NEXT:    lu12i.w $a0, 261888
+; LA32D-NEXT:    fmov.d $ft1, $ft0
+; LA32D-NEXT:    movgr2frh.w $ft1, $a0
+; LA32D-NEXT:    fadd.d $fa7, $fa7, $ft1
+; LA32D-NEXT:    lu12i.w $a0, 262144
+; LA32D-NEXT:    fmov.d $ft2, $ft0
+; LA32D-NEXT:    movgr2frh.w $ft2, $a0
+; LA32D-NEXT:    fadd.d $fa6, $fa6, $ft2
+; LA32D-NEXT:    lu12i.w $a0, 262400
+; LA32D-NEXT:    movgr2frh.w $ft0, $a0
+; LA32D-NEXT:    fadd.d $fa4, $fa4, $ft1
+; LA32D-NEXT:  .Lpcadd_hi1:
+; LA32D-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI6_0)
+; LA32D-NEXT:    fld.d $ft1, $a0, %pcadd_lo12(.Lpcadd_hi1)
+; LA32D-NEXT:    fadd.d $fa5, $fa5, $ft0
+; LA32D-NEXT:    fadd.d $fa3, $fa3, $ft2
+; LA32D-NEXT:    fadd.d $fa2, $fa2, $ft0
+; LA32D-NEXT:    fadd.d $fa1, $fa1, $ft1
+; LA32D-NEXT:    fadd.d $fa0, $fa0, $ft1
+; LA32D-NEXT:    fst.d $fa0, $a1, 48
+; LA32D-NEXT:    fst.d $fa1, $a1, 16
+; LA32D-NEXT:    fst.d $fa2, $a1, 56
+; LA32D-NEXT:    fst.d $fa3, $a1, 40
+; LA32D-NEXT:    fst.d $fa4, $a1, 32
+; LA32D-NEXT:    fst.d $fa5, $a1, 24
+; LA32D-NEXT:    fst.d $fa6, $a1, 8
+; LA32D-NEXT:    fst.d $fa7, $a1, 0
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: test_d8:
@@ -800,67 +793,67 @@ define void @test_d8(ptr %P, ptr %S) nounwind {
 ; LA64F-NEXT:    st.d $s8, $sp, 24 # 8-byte Folded Spill
 ; LA64F-NEXT:    ld.d $a2, $a0, 56
 ; LA64F-NEXT:    st.d $a2, $sp, 16 # 8-byte Folded Spill
-; LA64F-NEXT:    ld.d $s1, $a0, 40
-; LA64F-NEXT:    ld.d $s2, $a0, 32
-; LA64F-NEXT:    ld.d $s3, $a0, 24
-; LA64F-NEXT:    ld.d $s4, $a0, 8
-; LA64F-NEXT:    ld.d $s5, $a0, 0
-; LA64F-NEXT:    ld.d $s6, $a0, 48
-; LA64F-NEXT:    ld.d $a0, $a0, 16
+; LA64F-NEXT:    ld.d $a2, $a0, 48
+; LA64F-NEXT:    st.d $a2, $sp, 0 # 8-byte Folded Spill
+; LA64F-NEXT:    ld.d $s2, $a0, 40
+; LA64F-NEXT:    ld.d $s3, $a0, 32
+; LA64F-NEXT:    ld.d $s4, $a0, 24
+; LA64F-NEXT:    ld.d $s5, $a0, 16
+; LA64F-NEXT:    ld.d $s6, $a0, 8
+; LA64F-NEXT:    ld.d $a0, $a0, 0
 ; LA64F-NEXT:    move $fp, $a1
-; LA64F-NEXT:    ori $a1, $zero, 0
-; LA64F-NEXT:    lu32i.d $a1, -524288
-; LA64F-NEXT:    lu52i.d $s7, $a1, 1024
+; LA64F-NEXT:    lu52i.d $s7, $zero, 1023
 ; LA64F-NEXT:    move $a1, $s7
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $a0, $sp, 8 # 8-byte Folded Spill
-; LA64F-NEXT:    move $a0, $s6
-; LA64F-NEXT:    move $a1, $s7
-; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
-; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    move $s6, $a0
-; LA64F-NEXT:    lu52i.d $s7, $zero, 1023
-; LA64F-NEXT:    move $a0, $s5
-; LA64F-NEXT:    move $a1, $s7
-; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
-; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    move $s5, $a0
 ; LA64F-NEXT:    lu52i.d $s0, $zero, 1024
-; LA64F-NEXT:    move $a0, $s4
+; LA64F-NEXT:    move $a0, $s6
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    move $s4, $a0
-; LA64F-NEXT:    lu52i.d $s8, $zero, 1025
-; LA64F-NEXT:    move $a0, $s3
+; LA64F-NEXT:    move $s6, $a0
+; LA64F-NEXT:    lu12i.w $a0, 2049
+; LA64F-NEXT:    slli.d $s8, $a0, 39
+; LA64F-NEXT:    move $a0, $s5
 ; LA64F-NEXT:    move $a1, $s8
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
+; LA64F-NEXT:    move $s5, $a0
+; LA64F-NEXT:    lu52i.d $s1, $zero, 1025
+; LA64F-NEXT:    move $a0, $s4
+; LA64F-NEXT:    move $a1, $s1
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
+; LA64F-NEXT:    move $s4, $a0
+; LA64F-NEXT:    move $a0, $s3
+; LA64F-NEXT:    move $a1, $s7
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    move $s3, $a0
 ; LA64F-NEXT:    move $a0, $s2
-; LA64F-NEXT:    move $a1, $s7
-; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
-; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    move $s2, $a0
-; LA64F-NEXT:    move $a0, $s1
 ; LA64F-NEXT:    move $a1, $s0
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    move $s0, $a0
-; LA64F-NEXT:    ld.d $a0, $sp, 16 # 8-byte Folded Reload
+; LA64F-NEXT:    ld.d $a0, $sp, 0 # 8-byte Folded Reload
 ; LA64F-NEXT:    move $a1, $s8
 ; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
 ; LA64F-NEXT:    jirl $ra, $ra, 0
+; LA64F-NEXT:    move $s2, $a0
+; LA64F-NEXT:    ld.d $a0, $sp, 16 # 8-byte Folded Reload
+; LA64F-NEXT:    move $a1, $s1
+; LA64F-NEXT:    pcaddu18i $ra, %call36(__adddf3)
+; LA64F-NEXT:    jirl $ra, $ra, 0
 ; LA64F-NEXT:    st.d $a0, $fp, 56
+; LA64F-NEXT:    st.d $s2, $fp, 48
 ; LA64F-NEXT:    st.d $s0, $fp, 40
-; LA64F-NEXT:    st.d $s2, $fp, 32
-; LA64F-NEXT:    st.d $s3, $fp, 24
-; LA64F-NEXT:    st.d $s4, $fp, 8
-; LA64F-NEXT:    st.d $s5, $fp, 0
-; LA64F-NEXT:    st.d $s6, $fp, 48
+; LA64F-NEXT:    st.d $s3, $fp, 32
+; LA64F-NEXT:    st.d $s4, $fp, 24
+; LA64F-NEXT:    st.d $s5, $fp, 16
+; LA64F-NEXT:    st.d $s6, $fp, 8
 ; LA64F-NEXT:    ld.d $a0, $sp, 8 # 8-byte Folded Reload
-; LA64F-NEXT:    st.d $a0, $fp, 16
+; LA64F-NEXT:    st.d $a0, $fp, 0
 ; LA64F-NEXT:    ld.d $s8, $sp, 24 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s7, $sp, 32 # 8-byte Folded Reload
 ; LA64F-NEXT:    ld.d $s6, $sp, 40 # 8-byte Folded Reload

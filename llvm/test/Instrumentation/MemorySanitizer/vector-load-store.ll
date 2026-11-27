@@ -672,13 +672,13 @@ define void @store.nxv1i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP13:%.*]], !prof [[PROF1:![0-9]+]]
 ; ORIGINS:       7:
 ; ORIGINS-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGINS-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 4
+; ORIGINS-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 4
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGINS:       .split:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
+; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr [4 x i8], ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
@@ -732,13 +732,13 @@ define void @store.nxv2i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
 ; ORIGINS:       7:
 ; ORIGINS-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGINS-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 8
+; ORIGINS-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 8
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGINS:       .split:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
+; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr [4 x i8], ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
@@ -792,13 +792,13 @@ define void @store.nxv4i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
 ; ORIGINS:       7:
 ; ORIGINS-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGINS-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 16
+; ORIGINS-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 16
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGINS:       .split:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
+; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr [4 x i8], ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
@@ -852,13 +852,13 @@ define void @store.nxv8i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
 ; ORIGINS:       7:
 ; ORIGINS-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGINS-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 32
+; ORIGINS-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 32
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGINS:       .split:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
+; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr [4 x i8], ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
@@ -912,13 +912,13 @@ define void @store.nxv16i32(ptr %p) sanitize_memory {
 ; ORIGINS-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP13:%.*]], !prof [[PROF1]]
 ; ORIGINS:       7:
 ; ORIGINS-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGINS-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], 64
+; ORIGINS-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 64
 ; ORIGINS-NEXT:    [[TMP10:%.*]] = add i64 [[TMP9]], 3
 ; ORIGINS-NEXT:    [[TMP11:%.*]] = udiv i64 [[TMP10]], 4
 ; ORIGINS-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGINS:       .split:
 ; ORIGINS-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
+; ORIGINS-NEXT:    [[TMP12:%.*]] = getelementptr [4 x i8], ptr [[TMP5]], i64 [[IV]]
 ; ORIGINS-NEXT:    store i32 0, ptr [[TMP12]], align 4
 ; ORIGINS-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGINS-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]

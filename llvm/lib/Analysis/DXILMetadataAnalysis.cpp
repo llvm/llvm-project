@@ -7,14 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/HLSL/HLSLUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "dxil-metadata-analysis"
@@ -37,6 +40,29 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
         VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
   }
 
+  NamedMDNode *ContentsNode = M.getNamedMetadata("dx.source.contents");
+  NamedMDNode *ArgsNode = M.getNamedMetadata("dx.source.args");
+  if (ContentsNode && ArgsNode) {
+    MMDAI.SourceInfo.emplace();
+    if (auto Type = getAnalysisOptions(M).compress_srci) {
+      MMDAI.SourceInfo->setCompressionType(*Type);
+    } else {
+      // If the option is not specified, pick zlib if available.
+      MMDAI.SourceInfo->setCompressionType(
+          compression::zlib::isAvailable()
+              ? dxbc::SourceInfo::Contents::CompressionType::Zlib
+              : dxbc::SourceInfo::Contents::CompressionType::None);
+    }
+    for (Metadata *FileInfoNode : ContentsNode->operands()) {
+      auto *FileInfo = cast<MDTuple>(FileInfoNode);
+      MMDAI.SourceInfo->addFile(
+          cast<MDString>(FileInfo->getOperand(0))->getString(),
+          cast<MDString>(FileInfo->getOperand(1))->getString());
+    }
+    for (Metadata *ArgNode : ArgsNode->getOperand(0)->operands())
+      MMDAI.SourceInfo->addArg(cast<MDString>(ArgNode)->getString(), "");
+  }
+
   // For all HLSL Shader functions
   for (auto &F : M.functions()) {
     if (!F.hasFnAttribute("hlsl.shader"))
@@ -50,22 +76,21 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     StringRef EntryProfile = EntryAttr.getValueAsString();
     Triple T("", "", "", EntryProfile);
     EFP.ShaderStage = T.getEnvironment();
+
     // Get numthreads attribute value, if one exists
     StringRef NumThreadsStr =
         F.getFnAttribute("hlsl.numthreads").getValueAsString();
-    if (!NumThreadsStr.empty()) {
-      SmallVector<StringRef> NumThreadsVec;
-      NumThreadsStr.split(NumThreadsVec, ',');
-      assert(NumThreadsVec.size() == 3 && "Invalid numthreads specified");
-      // Read in the three component values of numthreads
-      [[maybe_unused]] bool Success =
-          llvm::to_integer(NumThreadsVec[0], EFP.NumThreadsX, 10);
-      assert(Success && "Failed to parse X component of numthreads");
-      Success = llvm::to_integer(NumThreadsVec[1], EFP.NumThreadsY, 10);
-      assert(Success && "Failed to parse Y component of numthreads");
-      Success = llvm::to_integer(NumThreadsVec[2], EFP.NumThreadsZ, 10);
-      assert(Success && "Failed to parse Z component of numthreads");
-    }
+    if (!NumThreadsStr.empty())
+      hlsl::parseThreadCounts(NumThreadsStr, EFP.NumThreadsX, EFP.NumThreadsY,
+                              EFP.NumThreadsZ);
+
+    // Get wavesize attribute value, if one exists
+    StringRef WaveSizeStr =
+        F.getFnAttribute("hlsl.wavesize").getValueAsString();
+    if (!WaveSizeStr.empty())
+      hlsl::parseThreadCounts(WaveSizeStr, EFP.WaveSizeMin, EFP.WaveSizeMax,
+                              EFP.WaveSizePref);
+
     MMDAI.EntryPropertyVec.push_back(EFP);
   }
   return MMDAI;

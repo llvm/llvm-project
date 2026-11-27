@@ -25,6 +25,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/ImplicitNullChecks.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -52,22 +54,11 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
 
 using namespace llvm;
-
-static cl::opt<int> PageSize("imp-null-check-page-size",
-                             cl::desc("The page size of the target in bytes"),
-                             cl::init(4096), cl::Hidden);
-
-static cl::opt<unsigned> MaxInstsToConsider(
-    "imp-null-max-insts-to-consider",
-    cl::desc("The max number of instructions to consider hoisting loads over "
-             "(the algorithm is quadratic over this number)"),
-    cl::Hidden, cl::init(8));
 
 #define DEBUG_TYPE "implicit-null-checks"
 
@@ -76,7 +67,7 @@ STATISTIC(NumImplicitNullChecks,
 
 namespace {
 
-class ImplicitNullChecks : public MachineFunctionPass {
+class ImplicitNullChecksImpl {
   /// Return true if \c computeDependence can process \p MI.
   static bool canHandle(const MachineInstr *MI);
 
@@ -159,6 +150,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
     MachineInstr *getOnlyDependency() const { return OnlyDependency; }
   };
 
+  const CodeGenOptions &Opts;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   AliasAnalysis *AA = nullptr;
@@ -212,13 +204,26 @@ class ImplicitNullChecks : public MachineFunctionPass {
                     MachineBasicBlock *NullSucc, MachineInstr *&Dependence);
 
 public:
+  ImplicitNullChecksImpl(MachineFunction &MF, AliasAnalysis *AA)
+      : Opts(getCodeGenOptions(MF)), TII(MF.getSubtarget().getInstrInfo()),
+        TRI(MF.getRegInfo().getTargetRegisterInfo()), AA(AA),
+        MFI(&MF.getFrameInfo()) {}
+
+  bool run(MachineFunction &MF);
+};
+
+class ImplicitNullChecksLegacy : public MachineFunctionPass {
+public:
   static char ID;
 
-  ImplicitNullChecks() : MachineFunctionPass(ID) {
-    initializeImplicitNullChecksPass(*PassRegistry::getPassRegistry());
-  }
+  ImplicitNullChecksLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    if (skipFunction(MF.getFunction()))
+      return false;
+    auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+    return ImplicitNullChecksImpl(MF, AA).run(MF);
+  }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AAResultsWrapperPass>();
@@ -232,7 +237,7 @@ public:
 
 } // end anonymous namespace
 
-bool ImplicitNullChecks::canHandle(const MachineInstr *MI) {
+bool ImplicitNullChecksImpl::canHandle(const MachineInstr *MI) {
   if (MI->isCall() || MI->mayRaiseFPException() ||
       MI->hasUnmodeledSideEffects())
     return false;
@@ -246,9 +251,9 @@ bool ImplicitNullChecks::canHandle(const MachineInstr *MI) {
   return llvm::all_of(MI->memoperands(), IsUnordered);
 }
 
-ImplicitNullChecks::DependenceResult
-ImplicitNullChecks::computeDependence(const MachineInstr *MI,
-                                      ArrayRef<MachineInstr *> Block) {
+ImplicitNullChecksImpl::DependenceResult
+ImplicitNullChecksImpl::computeDependence(const MachineInstr *MI,
+                                          ArrayRef<MachineInstr *> Block) {
   assert(llvm::all_of(Block, canHandle) && "Check this first!");
   assert(!is_contained(Block, MI) && "Block must be exclusive of MI!");
 
@@ -270,8 +275,8 @@ ImplicitNullChecks::computeDependence(const MachineInstr *MI,
   return {true, Dep};
 }
 
-bool ImplicitNullChecks::canReorder(const MachineInstr *A,
-                                    const MachineInstr *B) {
+bool ImplicitNullChecksImpl::canReorder(const MachineInstr *A,
+                                        const MachineInstr *B) {
   assert(canHandle(A) && canHandle(B) && "Precondition!");
 
   // canHandle makes sure that we _can_ correctly analyze the dependencies
@@ -297,11 +302,7 @@ bool ImplicitNullChecks::canReorder(const MachineInstr *A,
   return true;
 }
 
-bool ImplicitNullChecks::runOnMachineFunction(MachineFunction &MF) {
-  TII = MF.getSubtarget().getInstrInfo();
-  TRI = MF.getRegInfo().getTargetRegisterInfo();
-  MFI = &MF.getFrameInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+bool ImplicitNullChecksImpl::run(MachineFunction &MF) {
 
   SmallVector<NullCheck, 16> NullCheckList;
 
@@ -324,9 +325,9 @@ static bool AnyAliasLiveIn(const TargetRegisterInfo *TRI,
   return false;
 }
 
-ImplicitNullChecks::AliasResult
-ImplicitNullChecks::areMemoryOpsAliased(const MachineInstr &MI,
-                                        const MachineInstr *PrevMI) const {
+ImplicitNullChecksImpl::AliasResult
+ImplicitNullChecksImpl::areMemoryOpsAliased(const MachineInstr &MI,
+                                            const MachineInstr *PrevMI) const {
   // If it is not memory access, skip the check.
   if (!(PrevMI->mayStore() || PrevMI->mayLoad()))
     return AR_NoAlias;
@@ -359,10 +360,10 @@ ImplicitNullChecks::areMemoryOpsAliased(const MachineInstr &MI,
   return AR_NoAlias;
 }
 
-ImplicitNullChecks::SuitabilityResult
-ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
-                                       Register PointerReg,
-                                       ArrayRef<MachineInstr *> PrevInsts) {
+ImplicitNullChecksImpl::SuitabilityResult
+ImplicitNullChecksImpl::isSuitableMemoryOp(const MachineInstr &MI,
+                                           Register PointerReg,
+                                           ArrayRef<MachineInstr *> PrevInsts) {
   // Implementation restriction for faulting_op insertion
   // TODO: This could be relaxed if we find a test case which warrants it.
   if (MI.getDesc().getNumDefs() > 1)
@@ -370,7 +371,7 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
 
   if (!MI.mayLoadOrStore() || MI.isPredicable())
     return SR_Unsuitable;
-  auto AM = TII->getAddrModeFromMemoryOp(MI, TRI);
+  auto AM = TII->getAddrModeFromMemoryOp(MI);
   if (!AM || AM->Form != ExtAddrMode::Formula::Basic)
     return SR_Unsuitable;
   auto AddrMode = *AM;
@@ -461,7 +462,8 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
 
   // We want the mem access to be issued at a sane offset from PointerReg,
   // so that if PointerReg is null then the access reliably page faults.
-  if (!(-PageSize < Displacement && Displacement < PageSize))
+  if (!(-Opts.imp_null_check_page_size < Displacement &&
+        Displacement < Opts.imp_null_check_page_size))
     return SR_Unsuitable;
 
   // Finally, check whether the current memory access aliases with previous one.
@@ -475,7 +477,7 @@ ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
   return SR_Suitable;
 }
 
-bool ImplicitNullChecks::canDependenceHoistingClobberLiveIns(
+bool ImplicitNullChecksImpl::canDependenceHoistingClobberLiveIns(
     MachineInstr *DependenceMI, MachineBasicBlock *NullSucc) {
   for (const auto &DependenceMO : DependenceMI->operands()) {
     if (!(DependenceMO.isReg() && DependenceMO.getReg()))
@@ -507,10 +509,9 @@ bool ImplicitNullChecks::canDependenceHoistingClobberLiveIns(
   return false;
 }
 
-bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
-                                      ArrayRef<MachineInstr *> InstsSeenSoFar,
-                                      MachineBasicBlock *NullSucc,
-                                      MachineInstr *&Dependence) {
+bool ImplicitNullChecksImpl::canHoistInst(
+    MachineInstr *FaultingMI, ArrayRef<MachineInstr *> InstsSeenSoFar,
+    MachineBasicBlock *NullSucc, MachineInstr *&Dependence) {
   auto DepResult = computeDependence(FaultingMI, InstsSeenSoFar);
   if (!DepResult.CanReorder)
     return false;
@@ -548,7 +549,7 @@ bool ImplicitNullChecks::canHoistInst(MachineInstr *FaultingMI,
 /// Analyze MBB to check if its terminating branch can be turned into an
 /// implicit null check.  If yes, append a description of the said null check to
 /// NullCheckList and return true, else return false.
-bool ImplicitNullChecks::analyzeBlockForNullChecks(
+bool ImplicitNullChecksImpl::analyzeBlockForNullChecks(
     MachineBasicBlock &MBB, SmallVectorImpl<NullCheck> &NullCheckList) {
   using MachineBranchPredicate = TargetInstrInfo::MachineBranchPredicate;
 
@@ -674,8 +675,16 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 
   SmallVector<MachineInstr *, 8> InstsSeenSoFar;
 
-  for (auto &MI : *NotNullSucc) {
-    if (!canHandle(&MI) || InstsSeenSoFar.size() >= MaxInstsToConsider)
+  // Skip debug instructions and pseudo probes: neither has execution
+  // semantics, so neither can be the faulting operation nor consume
+  // -imp-null-max-insts-to-consider.  PSEUDO_PROBE is marked as having side
+  // effects to keep it from being dropped, so canHandle() would otherwise
+  // reject the block.  Only the faulting operation is hoisted; the probes stay
+  // in place.
+  for (MachineInstr &MI :
+       instructionsWithoutDebug(NotNullSucc->begin(), NotNullSucc->end())) {
+    if (!canHandle(&MI) ||
+        InstsSeenSoFar.size() >= Opts.imp_null_max_insts_to_consider)
       return false;
 
     MachineInstr *Dependence;
@@ -691,7 +700,7 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 
     // If MI re-defines the PointerReg in a way that changes the value of
     // PointerReg if it was null, then we cannot move further.
-    if (!TII->preservesZeroValueInReg(&MI, PointerReg, TRI))
+    if (!TII->preservesZeroValueInReg(&MI, PointerReg))
       return false;
     InstsSeenSoFar.push_back(&MI);
   }
@@ -703,9 +712,8 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 /// The FAULTING instruction does the same load/store as MI
 /// (defining the same register), and branches to HandlerMBB if the mem access
 /// faults.  The FAULTING instruction is inserted at the end of MBB.
-MachineInstr *ImplicitNullChecks::insertFaultingInstr(
+MachineInstr *ImplicitNullChecksImpl::insertFaultingInstr(
     MachineInstr *MI, MachineBasicBlock *MBB, MachineBasicBlock *HandlerMBB) {
-  DebugLoc DL;
   unsigned NumDefs = MI->getDesc().getNumDefs();
   assert(NumDefs <= 1 && "other cases unhandled!");
 
@@ -722,7 +730,8 @@ MachineInstr *ImplicitNullChecks::insertFaultingInstr(
   else
     FK = FaultMaps::FaultingStore;
 
-  auto MIB = BuildMI(MBB, DL, TII->get(TargetOpcode::FAULTING_OP), DefReg)
+  auto MIB = BuildMI(MBB, MI->getDebugLoc(),
+                     TII->get(TargetOpcode::FAULTING_OP), DefReg)
                  .addImm(FK)
                  .addMBB(HandlerMBB)
                  .addImm(MI->getOpcode());
@@ -748,8 +757,8 @@ MachineInstr *ImplicitNullChecks::insertFaultingInstr(
 }
 
 /// Rewrite the null checks in NullCheckList into implicit null checks.
-void ImplicitNullChecks::rewriteNullChecks(
-    ArrayRef<ImplicitNullChecks::NullCheck> NullCheckList) {
+void ImplicitNullChecksImpl::rewriteNullChecks(
+    ArrayRef<ImplicitNullChecksImpl::NullCheck> NullCheckList) {
   DebugLoc DL;
 
   for (const auto &NC : NullCheckList) {
@@ -803,12 +812,25 @@ void ImplicitNullChecks::rewriteNullChecks(
   }
 }
 
-char ImplicitNullChecks::ID = 0;
+char ImplicitNullChecksLegacy::ID = 0;
 
-char &llvm::ImplicitNullChecksID = ImplicitNullChecks::ID;
+char &llvm::ImplicitNullChecksID = ImplicitNullChecksLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(ImplicitNullChecks, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(ImplicitNullChecksLegacy, DEBUG_TYPE,
                       "Implicit null checks", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(ImplicitNullChecks, DEBUG_TYPE,
+INITIALIZE_PASS_END(ImplicitNullChecksLegacy, DEBUG_TYPE,
                     "Implicit null checks", false, false)
+
+PreservedAnalyses
+ImplicitNullChecksPass::run(MachineFunction &MF,
+                            MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  auto &AA = FAM.getResult<AAManager>(MF.getFunction());
+  bool Changed = ImplicitNullChecksImpl(MF, &AA).run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
+}

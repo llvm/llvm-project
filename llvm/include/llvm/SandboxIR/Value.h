@@ -20,7 +20,11 @@ namespace llvm::sandboxir {
 #define DEF_INSTR(ID, OPC, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #define DEF_USER(ID, CLASS) class CLASS;
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
+#undef DEF_CONST
+#undef DEF_USER
 class Context;
 class FuncletPadInst;
 class Type;
@@ -33,6 +37,9 @@ class IntrinsicInst;
 class Operator;
 class OverflowingBinaryOperator;
 class FPMathOperator;
+class Region;
+class UncondBrInst;
+class CondBrInst;
 
 /// Iterator for the `Use` edges of a Value's users.
 /// \Returns a `Use` when dereferenced.
@@ -69,7 +76,12 @@ public:
 #define DEF_USER(ID, CLASS) ID,
 #define DEF_CONST(ID, CLASS) ID,
 #define DEF_INSTR(ID, OPC, CLASS) ID,
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_VALUE
+#undef DEF_USER
+#undef DEF_CONST
+#undef DEF_INSTR
   };
 
 protected:
@@ -87,7 +99,12 @@ protected:
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   case ClassID::ID:                                                            \
     return #ID;
-#include "llvm/SandboxIR/Values.def"
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_VALUE
+#undef DEF_USER
+#undef DEF_CONST
+#undef DEF_INSTR
     }
     llvm_unreachable("Unimplemented ID");
   }
@@ -116,7 +133,8 @@ protected:
   friend class ShuffleVectorInst;     // For getting `Val`.
   friend class ExtractValueInst;      // For getting `Val`.
   friend class InsertValueInst;       // For getting `Val`.
-  friend class BranchInst;            // For getting `Val`.
+  friend class UncondBrInst;          // For getting `Val`.
+  friend class CondBrInst;            // For getting `Val`.
   friend class LoadInst;              // For getting `Val`.
   friend class StoreInst;             // For getting `Val`.
   friend class ReturnInst;            // For getting `Val`.
@@ -174,20 +192,33 @@ protected:
   friend class ConstantDataArray; // For `Val`
   friend class ConstantDataVector; // For `Val`
 
+#define DEF_INSTR(ID, OPC, CLASS) friend class CLASS;
+#define DEF_DISABLE_AUTO_UNDEF // ValuesDefFilesList.def includes multiple .def
+#include "llvm/SandboxIR/ValuesDefFilesList.def"
+#undef DEF_INSTR
+
   /// All values point to the context.
   Context &Ctx;
   // This is used by eraseFromParent().
   void clearValue() { Val = nullptr; }
-  template <typename ItTy, typename SBTy> friend class LLVMOpUserItToSBTy;
 
   LLVM_ABI Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx);
   /// Disable copies.
   Value(const Value &) = delete;
   Value &operator=(const Value &) = delete;
 
+#ifndef NDEBUG
+  /// Helper hash for calculating the hash in the subclasses.
+  hash_code hashHelper() const { return hash_combine(SubclassID, &Ctx, Val); }
+#endif
+
 public:
   virtual ~Value() = default;
   ClassID getSubclassID() const { return SubclassID; }
+
+#ifndef NDEBUG
+  virtual hash_code hash() const = 0;
+#endif
 
   using use_iterator = UserUseIterator;
   using const_use_iterator = UserUseIterator;
@@ -269,6 +300,20 @@ public:
   /// \Returns the LLVM IR name of the bottom-most LLVM value.
   StringRef getName() const { return Val->getName(); }
 
+  LLVM_ABI const Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr,
+      bool LookThroughIntToPtr = false) const;
+
+  LLVM_ABI Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr,
+      bool LookThroughIntToPtr = false);
+
 #ifndef NDEBUG
   /// Should crash if there is something wrong with the instruction.
   virtual void verify() const = 0;
@@ -303,6 +348,7 @@ public:
     assert((isa<llvm::MetadataAsValue>(Val) || isa<llvm::InlineAsm>(Val)) &&
            "Expected Metadata or InlineAssembly!");
   }
+  hash_code hash() const final { return Value::hashHelper(); }
   void dumpOS(raw_ostream &OS) const override {
     dumpCommonPrefix(OS);
     dumpCommonSuffix(OS);

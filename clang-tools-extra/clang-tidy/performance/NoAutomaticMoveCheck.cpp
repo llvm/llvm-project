@@ -1,4 +1,4 @@
-//===--- NoAutomaticMoveCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,6 +20,10 @@ namespace {
 
 AST_MATCHER(VarDecl, isNRVOVariable) { return Node.isNRVOVariable(); }
 
+AST_MATCHER(DeclRefExpr, refersToEnclosingVariableOrCapture) {
+  return Node.refersToEnclosingVariableOrCapture();
+}
+
 } // namespace
 
 NoAutomaticMoveCheck::NoAutomaticMoveCheck(StringRef Name,
@@ -36,17 +40,17 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
                   isConstQualified(),
                   hasCanonicalType(matchers::isExpensiveToCopy()),
                   unless(hasDeclaration(namedDecl(
-                      matchers::matchesAnyListedName(AllowedTypes)))))))
+                      matchers::matchesAnyListedRegexName(AllowedTypes)))))))
           .bind("vardecl");
 
   // A matcher for a `DstT::DstT(const Src&)` where DstT also has a
   // `DstT::DstT(Src&&)`.
   const auto LValueRefCtor = cxxConstructorDecl(
-      hasParameter(0,
-                   hasType(lValueReferenceType(pointee(type().bind("SrcT"))))),
+      hasParameter(0, hasType(hasCanonicalType(
+                          lValueReferenceType(pointee(type().bind("SrcT")))))),
       ofClass(cxxRecordDecl(hasMethod(cxxConstructorDecl(
-          hasParameter(0, hasType(rValueReferenceType(
-                              pointee(type(equalsBoundNode("SrcT")))))))))));
+          hasParameter(0, hasType(hasCanonicalType(rValueReferenceType(
+                              pointee(type(equalsBoundNode("SrcT"))))))))))));
 
   // A matcher for `DstT::DstT(const Src&&)`, which typically comes from an
   // instantiation of `template <typename U> DstT::DstT(U&&)`.
@@ -62,8 +66,11 @@ void NoAutomaticMoveCheck::registerMatchers(MatchFinder *Finder) {
               ignoringElidableConstructorCall(ignoringParenImpCasts(
                   cxxConstructExpr(
                       hasDeclaration(anyOf(LValueRefCtor, ConstRefRefCtor)),
-                      hasArgument(0, ignoringParenImpCasts(declRefExpr(
-                                         to(NonNrvoConstLocalVariable)))))
+                      hasArgument(
+                          0,
+                          ignoringParenImpCasts(declRefExpr(
+                              to(NonNrvoConstLocalVariable),
+                              unless(refersToEnclosingVariableOrCapture())))))
                       .bind("ctor_call")))))),
       this);
 }

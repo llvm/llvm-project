@@ -5,9 +5,9 @@
 ## (a) code sequence can be converted from `pcalau12i+addi.[wd]` to `pcaddi`.
 ## (b) dynamic relocations can be omitted for LD->LE relaxation.
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 --position-independent %t/a.s -o %t/a.32.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 --position-independent -mattr=+relax %t/a.s -o %t/a.32.relax.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/tga.s -o %t/tga.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --position-independent -mattr=-32s %t/a.s -o %t/a.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 --position-independent -mattr=+32s,+relax %t/a.s -o %t/a.32.relax.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s %t/tga.s -o %t/tga.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --position-independent %t/a.s -o %t/a.64.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 --position-independent -mattr=+relax %t/a.s -o %t/a.64.relax.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/tga.s -o %t/tga.64.o
@@ -16,35 +16,35 @@
 # RUN: ld.lld -shared %t/a.32.o -o %t/ld.32.so
 # RUN: llvm-readobj -r %t/ld.32.so | FileCheck --check-prefix=LD32-REL %s
 # RUN: llvm-readelf -x .got %t/ld.32.so | FileCheck --check-prefix=LD32-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/ld.32.so | FileCheck --check-prefixes=LD32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/ld.32.so | FileCheck --check-prefixes=LD32 %s
 # RUN: ld.lld -shared %t/a.32.relax.o -o %t/ld.32.relax.so
-# RUN: llvm-objdump -d --no-show-raw-insn %t/ld.32.relax.so | FileCheck --check-prefixes=LD32-RELAX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/ld.32.relax.so | FileCheck --check-prefixes=LD32-RELAX %s
 
 ## LA32 LD -> LE
 # RUN: ld.lld %t/a.32.o %t/tga.32.o -o %t/le.32
 # RUN: llvm-readelf -r %t/le.32 | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-readelf -x .got %t/le.32 | FileCheck --check-prefix=LE32-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/le.32 | FileCheck --check-prefixes=LE32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/le.32 | FileCheck --check-prefixes=LE32 %s
 # RUN: ld.lld %t/a.32.relax.o %t/tga.32.o -o %t/le.32.relax
 # RUN: llvm-readelf -x .got %t/le.32.relax | FileCheck --check-prefix=LE32-GOT-RELAX %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/le.32.relax | FileCheck --check-prefixes=LE32-RELAX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/le.32.relax | FileCheck --check-prefixes=LE32-RELAX %s
 
 ## LA64 LD
 # RUN: ld.lld -shared %t/a.64.o -o %t/ld.64.so
 # RUN: llvm-readobj -r %t/ld.64.so | FileCheck --check-prefix=LD64-REL %s
 # RUN: llvm-readelf -x .got %t/ld.64.so | FileCheck --check-prefix=LD64-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/ld.64.so | FileCheck --check-prefixes=LD64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/ld.64.so | FileCheck --check-prefixes=LD64 %s
 # RUN: ld.lld -shared %t/a.64.relax.o -o %t/ld.64.relax.so
-# RUN: llvm-objdump -d --no-show-raw-insn %t/ld.64.relax.so | FileCheck --check-prefixes=LD64-RELAX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/ld.64.relax.so | FileCheck --check-prefixes=LD64-RELAX %s
 
 ## LA64 LD -> LE
 # RUN: ld.lld %t/a.64.o %t/tga.64.o -o %t/le.64
 # RUN: llvm-readelf -r %t/le.64 | FileCheck --check-prefix=NOREL %s
 # RUN: llvm-readelf -x .got %t/le.64 | FileCheck --check-prefix=LE64-GOT %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/le.64 | FileCheck --check-prefixes=LE64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/le.64 | FileCheck --check-prefixes=LE64 %s
 # RUN: ld.lld %t/a.64.relax.o %t/tga.64.o -o %t/le.64.relax
 # RUN: llvm-readelf -x .got %t/le.64.relax | FileCheck --check-prefix=LE64-GOT-RELAX %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/le.64.relax | FileCheck --check-prefixes=LE64-RELAX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/le.64.relax | FileCheck --check-prefixes=LE64-RELAX %s
 
 ## a@dtprel = st_value(a) = 0 is a link-time constant.
 # LD32-REL:      .rela.dyn {
@@ -60,8 +60,8 @@
 # LD64-GOT-NEXT: 0x00020400 00000000 00000000 00000000 00000000
 
 ## LA32: &DTPMOD(a) - . = 0x20280 - 0x101cc: 0x10 pages, page offset 0x280
-# LD32:      101cc: pcalau12i $a0, 16
-# LD32-NEXT:        addi.w $a0, $a0, 640
+# LD32:      101cc: pcaddu12i $a0, 16
+# LD32-NEXT:        addi.w $a0, $a0, 180
 # LD32-NEXT:        bl 44
 
 ## LA64: &DTPMOD(a) - . = 0x20400 - 0x102e0: 0x10 pages, page offset 0x400
@@ -94,8 +94,8 @@
 # LE64-GOT-RELAX-NEXT: 0x000301d0 01000000 00000000 00000000 00000000
 
 ## LA32: DTPMOD(.LANCHOR0) - . = 0x30120 - 0x20114: 0x10 pages, page offset 0x120
-# LE32:      20114: pcalau12i $a0, 16
-# LE32-NEXT:        addi.w $a0, $a0, 288
+# LE32:      20114: pcaddu12i $a0, 16
+# LE32-NEXT:        addi.w $a0, $a0, 12
 # LE32-NEXT:        bl 4
 
 ## LA64: DTPMOD(.LANCHOR0) - . = 0x301d8 - 0x201c8: 0x10 pages, page offset 0x1d8

@@ -35,18 +35,14 @@ StringRef stringifyTypeName<FloatType>() {
 // Verifies an atomic update op.
 template <typename AtomicOpTy, typename ExpectedElementType>
 static LogicalResult verifyAtomicUpdateOp(Operation *op) {
-  auto ptrType = llvm::cast<spirv::PointerType>(op->getOperand(0).getType());
+  auto ptrType = cast<spirv::PointerType>(op->getOperand(0).getType());
   auto elementType = ptrType.getPointeeType();
-  if (!llvm::isa<ExpectedElementType>(elementType))
+  if (!isa<ExpectedElementType>(elementType))
     return op->emitOpError() << "pointer operand must point to an "
                              << stringifyTypeName<ExpectedElementType>()
                              << " value, found " << elementType;
 
-  StringAttr semanticsAttrName =
-      AtomicOpTy::getSemanticsAttrName(op->getName());
-  auto memorySemantics =
-      op->getAttrOfType<spirv::MemorySemanticsAttr>(semanticsAttrName)
-          .getValue();
+  spirv::MemorySemantics memorySemantics = cast<AtomicOpTy>(op).getSemantics();
   if (failed(verifyMemorySemantics(op, memorySemantics))) {
     return failure();
   }
@@ -59,6 +55,50 @@ static LogicalResult verifyAtomicUpdateOp(Operation *op) {
 
 LogicalResult AtomicAndOp::verify() {
   return verifyAtomicUpdateOp<AtomicAndOp, IntegerType>(getOperation());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicCompareExchangeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicCompareExchangeOp::verify() {
+  if (failed(verifyMemorySemantics(getOperation(), getEqualSemantics())))
+    return failure();
+  return verifyMemorySemantics(getOperation(), getUnequalSemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicCompareExchangeWeakOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicCompareExchangeWeakOp::verify() {
+  if (failed(verifyMemorySemantics(getOperation(), getEqualSemantics())))
+    return failure();
+  return verifyMemorySemantics(getOperation(), getUnequalSemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicExchangeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicExchangeOp::verify() {
+  return verifyMemorySemantics(getOperation(), getSemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicLoadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicLoadOp::verify() {
+  return verifyMemorySemantics(getOperation(), getSemantics());
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.AtomicStoreOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AtomicStoreOp::verify() {
+  return verifyMemorySemantics(getOperation(), getSemantics());
 }
 
 //===----------------------------------------------------------------------===//

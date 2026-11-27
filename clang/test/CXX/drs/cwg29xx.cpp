@@ -1,12 +1,44 @@
-// RUN: %clang_cc1 -std=c++98 -pedantic-errors -verify=expected,cxx98 %s
-// RUN: %clang_cc1 -std=c++11 -pedantic-errors -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++14 -pedantic-errors -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++17 -pedantic-errors -verify=expected,since-cxx11 %s
-// RUN: %clang_cc1 -std=c++20 -pedantic-errors -verify=expected,since-cxx11,since-cxx20 %s
-// RUN: %clang_cc1 -std=c++23 -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23 %s
-// RUN: %clang_cc1 -std=c++2c -pedantic-errors -verify=expected,since-cxx11,since-cxx20,since-cxx23,since-cxx26 %s
+// RUN: %clang_cc1 -std=c++98 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,cxx98 %s
+// RUN: %clang_cc1 -std=c++11 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++14 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11 %s
+// RUN: %clang_cc1 -std=c++17 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17 %s
+// RUN: %clang_cc1 -std=c++20 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,since-cxx20 %s
+// RUN: %clang_cc1 -std=c++23 -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,since-cxx20,since-cxx23 %s
+// RUN: %clang_cc1 -std=c++2c -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17,since-cxx20,since-cxx23,since-cxx26 %s
 
 // cxx98-no-diagnostics
+
+namespace cwg2900 { // cwg2900: 24
+#if __cplusplus >= 201703L
+// [temp.deduct.type] Example 13.
+template <int &> struct E;
+template <auto x> void f(E<x> *); // #cwg2900-f-E
+int v;
+void g(E<v> *bp) {
+  f(bp);
+  // since-cxx17-error@-1 {{no matching function for call to 'f'}}
+  //   since-cxx17-note@#cwg2900-f-E {{candidate template ignored: substitution failure: non-type template argument is not a constant expression}}
+}
+
+template <const int &> struct F;
+template <decltype(auto) x> void f(F<x> *);
+int i;
+void g(F<i> *ap) {
+  f(ap); // OK, deduces x as a constant template parameter of type const int &
+}
+
+template <decltype(auto) q> struct G;
+template <auto x> long *f(G<x> *);            // #1
+template <decltype(auto) x> short *f(G<x> *); // #2
+const int j = 0;
+short *g(G<(j)> *ap) { // OK, q has type const int &
+  return f(ap);        // OK, only #2 matches
+}
+long *g(G<j> *ap) { // OK, q has type int
+  return f(ap);     // OK, #1 is more specialized
+}
+#endif
+} // namespace cwg2900
 
 namespace cwg2913 { // cwg2913: 20
 
@@ -38,7 +70,7 @@ struct A {
 #endif
 } // namespace cwg2915
 
-namespace cwg2917 { // cwg2917: 20 review 2024-07-30
+namespace cwg2917 { // cwg2917: 20
 #if __cplusplus >= 201103L
 template <typename>
 class Foo;
@@ -74,8 +106,10 @@ template<bool B> struct X {
 };
 
 void test() {
-  &X<true>::f;      // since-cxx20-error {{reference to overloaded function could not be resolved}}
-  &X<true>::g<int>; // since-cxx20-error {{reference to overloaded function could not be resolved}}
+  &X<true>::f;
+  // since-cxx20-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
+  &X<true>::g<int>;
+  // since-cxx20-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
 }
 
 } // namespace Example1
@@ -106,7 +140,7 @@ void test() {
   constexpr auto y = &X<false>::f;
   static_assert(__is_same(decltype(y), int(*const)(short)));
   static_assert(y(0) == 24, "");
-  
+
   constexpr auto z = &f<int>;
   static_assert(__is_same(decltype(z), int(*const)(int)));
   static_assert(z(0) == 2, "");
@@ -171,3 +205,15 @@ constexpr U _ = nondeterministic(true);
 //   since-cxx26-note@-3 {{in call to 'nondeterministic(true)'}}
 #endif
 } // namespace cwg2922
+
+// cwg2947 is in cwg2947.cpp
+
+namespace cwg2966 { // cwg2966: 2.7
+#if __cplusplus >= 201103L
+static_assert(sizeof(decltype(nullptr)) == sizeof(void*), "");
+static_assert(alignof(decltype(nullptr)) == alignof(void*), "");
+#endif
+} // namespace cwg2966
+
+// cwg2983: na
+// cwg2992: na

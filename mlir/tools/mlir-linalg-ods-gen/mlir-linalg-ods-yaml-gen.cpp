@@ -449,7 +449,7 @@ static bool isAttribute(LinalgOperandDefKind kind) {
 }
 
 // Get the enum name for the given operand kind.
-std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
+static std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
   switch (kind) {
   case LinalgOperandDefKind::UnaryFnAttr:
     return std::string("UnaryFn");
@@ -466,7 +466,7 @@ std::string convertOperandKindToEnumName(LinalgOperandDefKind kind) {
 }
 
 // Get the enum name for the given function kind.
-std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
+static std::string convertFunctionKindToEnumName(ScalarFnKind kind) {
   switch (kind) {
   case ScalarFnKind::Unary:
     return std::string("UnaryFn");
@@ -505,7 +505,7 @@ static const char bannerFormat[] = R"FMT(
 // {3}: documentation (summary + description)
 // {4}: op attribute list
 // {5}: builder methods taking standalone attribute parameters
-// {6}: additional method defintions
+// {6}: additional method definitions
 // {7}: additional methods for attributes used by indexing maps
 static const char structuredOpOdsHeaderFormat[] = R"FMT(
 //===----------------------------------------------------------------------===//
@@ -559,9 +559,10 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
       SmallVector<utils::IteratorType> getIteratorTypesArray();
       ArrayAttr getIndexingMaps();
       static void regionBuilder(ImplicitLocOpBuilder &b,
-                                Block &block, ArrayRef<NamedAttribute> attrs);
+                                Block &block, ArrayRef<NamedAttribute> attrs,
+                                function_ref<InFlightDiagnostic()> emitError);
       static std::function<void(ImplicitLocOpBuilder &,
-                                Block &, ArrayRef<NamedAttribute>)>
+                                Block &, ArrayRef<NamedAttribute>, function_ref<InFlightDiagnostic()> emitError)>
       getRegionBuilder() {{
         return regionBuilder;
       }
@@ -622,7 +623,8 @@ SmallVector<utils::IteratorType> {0}::getIteratorTypesArray() {{
 static const char structuredOpIndexingMapsFormat[] = R"FMT(
 ArrayAttr {0}::getIndexingMaps() {{
   static const char memoizeAttr[] = "linalg.memoized_indexing_maps";
-  ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(memoizeAttr);
+  ArrayAttr cached =
+      getOperation()->getDiscardableAttrOfType<ArrayAttr>(memoizeAttr);
   if (cached)
     return cached;
 
@@ -631,7 +633,7 @@ ArrayAttr {0}::getIndexingMaps() {{
   SmallVector<AffineMap> maps;
   {1}
   cached = Builder(context).getAffineMapArrayAttr(maps);
-  getOperation()->setAttr(memoizeAttr, cached);
+  getOperation()->setDiscardableAttr(memoizeAttr, cached);
   return cached;
 }
 )FMT";
@@ -975,7 +977,7 @@ std::string {0}::getLibraryCallName() {{
       // {0}: Attribute name
       // {1}: Attribute size
       static const char attrFmt[] = R"FMT(
-if (auto attr = op->getAttrOfType<DenseElementsAttr>("{0}")) {{
+if (auto attr = op->getInherentAttrOfType<DenseElementsAttr>("{0}")) {{
   if (!attr.getType().getElementType().isInteger(64))
     return op->emitError("incorrect element type for index attribute '{0}'");
   if (attr.getType().getShape() != ArrayRef<int64_t>{{ {1} })
@@ -1010,7 +1012,8 @@ LogicalResult {0}::verifyIndexingMapRequiredAttributes() {{
     // {3}: Statements
     static const char structuredOpRegionBuilderFormat[] = R"FMT(
 void {0}::regionBuilder(ImplicitLocOpBuilder &b,
-                        Block &block, ArrayRef<NamedAttribute> attrs) {{
+                        Block &block, ArrayRef<NamedAttribute> attrs,
+                        function_ref<InFlightDiagnostic()> emitError) {{
   assert({1} > 0 && block.getNumArguments() == {1} &&
          "{0} regionBuilder expects {1} (>=0) args");
   RegionBuilderHelper helper(b, block);
@@ -1137,8 +1140,13 @@ void {0}::regionBuilder(ImplicitLocOpBuilder &b,
           // Call the function builder.
           std::string cppIdent = llvm::formatv("value{0}", ++localCounter);
           stmts.push_back(llvm::formatv(
-              "Value {0} = helper.build{1}({2}, {3});", cppIdent, enumName,
-              funcType, interleaveToString(operandCppValues, ", ")));
+              R"mlir(
+              Value {0} = helper.build{1}({2}, {3}, emitError);
+              if (!{0})
+                return;
+              )mlir",
+              cppIdent, enumName, funcType,
+              interleaveToString(operandCppValues, ", ")));
           return cppIdent;
         }
         emitError(genContext.getLoc()) << "unknown ScalarExpression type";

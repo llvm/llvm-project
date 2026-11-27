@@ -15,6 +15,7 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRLinalgStructuredOpsIncGen
   MLIRLinalgRelayoutOpsIncGen
   MLIRShardingInterfaceIncGen
+  MLIRRelayoutOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
@@ -24,6 +25,7 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRFunctionInterfaces
+  MLIRIndexingMapOpInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRParser
@@ -33,6 +35,7 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRMathDialect
   MLIRMemRefDialect
   MLIRTensorDialect
+  MLIRTilingInterface
   MLIRValueBoundsOpInterface
   MLIRViewLikeInterface
   )

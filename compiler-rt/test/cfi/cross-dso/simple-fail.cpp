@@ -1,37 +1,38 @@
+// RUN: mkdir -p %t.dir && cd %t.dir
 // RUN: %clangxx_cfi_dso -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx_cfi_dso %s -o %t %ld_flags_rpath_exe
-// RUN: %expect_crash %t 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %clangxx_cfi_dso %s -o %t.dir/exe %ld_flags_rpath_exe
+// RUN: %expect_crash %t.dir/exe 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %t.dir/exe x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
 
 // RUN: %clangxx_cfi_dso -DB32 -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx_cfi_dso -DB32 %s -o %t %ld_flags_rpath_exe
-// RUN: %expect_crash %t 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %clangxx_cfi_dso -DB32 %s -o %t.dir/exe %ld_flags_rpath_exe
+// RUN: %expect_crash %t.dir/exe 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %t.dir/exe x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
 
 // RUN: %clangxx_cfi_dso -DB64 -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx_cfi_dso -DB64 %s -o %t %ld_flags_rpath_exe
-// RUN: %expect_crash %t 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %clangxx_cfi_dso -DB64 %s -o %t.dir/exe %ld_flags_rpath_exe
+// RUN: %expect_crash %t.dir/exe 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %t.dir/exe x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
 
 // RUN: %clangxx_cfi_dso -DBM -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx_cfi_dso -DBM %s -o %t %ld_flags_rpath_exe
-// RUN: %expect_crash %t 2>&1 | FileCheck --check-prefix=CFI %s
-// RUN: %expect_crash %t x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
+// RUN: %clangxx_cfi_dso -DBM %s -o %t.dir/exe %ld_flags_rpath_exe
+// RUN: %expect_crash %t.dir/exe 2>&1 | FileCheck --check-prefix=CFI %s
+// RUN: %expect_crash %t.dir/exe x 2>&1 | FileCheck --check-prefix=CFI-CAST %s
 
 // RUN: %clangxx -DBM -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx -DBM %s -o %t %ld_flags_rpath_exe
-// RUN: %t 2>&1 | FileCheck --check-prefix=NCFI %s
-// RUN: %t x 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %clangxx -DBM %s -o %t.dir/exe %ld_flags_rpath_exe
+// RUN: %t.dir/exe 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %t.dir/exe x 2>&1 | FileCheck --check-prefix=NCFI %s
 
 // RUN: %clangxx -DBM -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx_cfi_dso -DBM %s -o %t %ld_flags_rpath_exe
-// RUN: %t 2>&1 | FileCheck --check-prefix=NCFI %s
-// RUN: %t x 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %clangxx_cfi_dso -DBM %s -o %t.dir/exe %ld_flags_rpath_exe
+// RUN: %t.dir/exe 2>&1 | FileCheck --check-prefix=NCFI %s
+// RUN: %t.dir/exe x 2>&1 | FileCheck --check-prefix=NCFI %s
 
 // RUN: %clangxx_cfi_dso_diag -DSHARED_LIB %s -fPIC -shared -o %dynamiclib %ld_flags_rpath_so
-// RUN: %clangxx_cfi_dso_diag %s -o %t %ld_flags_rpath_exe
-// RUN: %t 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL %s
-// RUN: %t x 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL --check-prefix=CFI-DIAG-CAST %s
+// RUN: %clangxx_cfi_dso_diag %s -o %t.dir/exe %ld_flags_rpath_exe
+// RUN: %t.dir/exe 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL %s
+// RUN: %t.dir/exe x 2>&1 | FileCheck --check-prefix=CFI-DIAG-CALL --check-prefix=CFI-DIAG-CAST %s
 
 // Tests that the CFI mechanism crashes the program when making a virtual call
 // to an object of the wrong class but with a compatible vtable, by casting a
@@ -78,6 +79,7 @@ int main(int argc, char *argv[]) {
     // Test cast. BOOM.
     // CFI-DIAG-CAST: runtime error: control flow integrity check for type 'A' failed during cast to unrelated type
     // CFI-DIAG-CAST-NEXT: note: vtable is of type '{{(struct )?}}B'
+    // CFI-DIAG-CAST: SUMMARY: UndefinedBehaviorSanitizer: cfi-unrelated-cast
     a = (A*)p;
   } else {
     // Invisible to CFI. Test virtual call later.
@@ -91,6 +93,7 @@ int main(int argc, char *argv[]) {
 
   // CFI-DIAG-CALL: runtime error: control flow integrity check for type 'A' failed during virtual call
   // CFI-DIAG-CALL-NEXT: note: vtable is of type '{{(struct )?}}B'
+  // CFI-DIAG-CALL: SUMMARY: UndefinedBehaviorSanitizer: cfi-vcall
   a->f(); // UB here
 
   // CFI-NOT: =2=

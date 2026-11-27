@@ -1,6 +1,8 @@
+// clang-format off
 // RUN: %libomp-compile-and-run | FileCheck %s
 // REQUIRES: ompt
 // UNSUPPORTED: gcc-4, gcc-5, gcc-6, gcc-7
+// clang-format on
 #define USE_PRIVATE_TOOL 1
 #include "callback.h"
 #include <omp.h>
@@ -93,9 +95,10 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
   return &ompt_start_tool_result;
 }
 
+// clang-format off
 // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
 
-// CHECK: ompt_event_implicit_task_begin: task_id=[[TASK_ID:[0-9]+]]
+// CHECK: ompt_event_implicit_task_begin: task_id=[[TASK_ID:[0-f]+]]
 // CHECK-SAME: memory_addr=[[NULL]], memory_size=0, result=0
 
 // CHECK: ompt_event_task_create: task_id=[[TASK_ID_0:[0-9]+]]
@@ -109,3 +112,4 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
 
 // CHECK: ompt_event_implicit_task_end: task_id=[[TASK_ID]]
 // CHECK-SAME: memory_addr=[[NULL]], memory_size=0, result=0
+// clang-format on

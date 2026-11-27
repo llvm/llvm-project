@@ -4,17 +4,17 @@
 define void @test() {
 ; CHECK-LABEL: define void @test() {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr null, align 1
+; CHECK-NEXT:    [[G_2197_REAL32_PRE:%.*]] = load i32, ptr null, align 1
+; CHECK-NEXT:    [[G_2197_IMAG33_PRE:%.*]] = load i32, ptr getelementptr inbounds nuw ({ i32, i32 }, ptr null, i32 0, i32 1), align 1
 ; CHECK-NEXT:    br label %[[IF_END:.*]]
 ; CHECK:       [[IF_THEN:.*]]:
 ; CHECK-NEXT:    br label %[[IF_END]]
 ; CHECK:       [[IF_END]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ [[TMP0]], %[[ENTRY]] ], [ poison, %[[IF_THEN]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i32> [[TMP1]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i32 [ [[G_2197_IMAG33_PRE]], %[[ENTRY]] ], [ 0, %[[IF_THEN]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[G_2197_REAL32_PRE]], %[[ENTRY]] ], [ 0, %[[IF_THEN]] ]
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr null, align 1
 ; CHECK-NEXT:    br label %[[TRAP:.*]]
 ; CHECK:       [[BB3:.*:]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP1]], i32 1
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr null, align 1
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[TRAP]]:

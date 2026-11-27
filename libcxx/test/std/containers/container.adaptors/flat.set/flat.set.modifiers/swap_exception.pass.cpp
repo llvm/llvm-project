@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// `check_assertion.h` requires Unix headers and regex support.
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: no-localization
 // UNSUPPORTED: no-exceptions
 
 // <flat_set>
@@ -27,7 +24,6 @@
 
 #include "test_macros.h"
 #include "../helpers.h"
-#include "check_assertion.h"
 
 template <class F>
 void test_swap_exception_guarantee([[maybe_unused]] F&& swap_function) {
@@ -41,8 +37,16 @@ void test_swap_exception_guarantee([[maybe_unused]] F&& swap_function) {
     m1.emplace(2);
     m2.emplace(3);
     m2.emplace(4);
-    // swap is noexcept
-    EXPECT_STD_TERMINATE([&] { swap_function(m1, m2); });
+
+    try {
+      swap_function(m1, m2);
+      assert(false);
+    } catch (int) {
+      check_invariant(m1);
+      check_invariant(m2);
+      LIBCPP_ASSERT(m1.size() == 0);
+      LIBCPP_ASSERT(m2.size() == 0);
+    }
   }
 }
 

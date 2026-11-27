@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
@@ -29,12 +30,15 @@ struct FEntryInserter {
 
 struct FEntryInserterLegacy : public MachineFunctionPass {
   static char ID; // Pass identification, replacement for typeid
-  FEntryInserterLegacy() : MachineFunctionPass(ID) {
-    initializeFEntryInserterLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  FEntryInserterLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override {
     return FEntryInserter().run(F);
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 }

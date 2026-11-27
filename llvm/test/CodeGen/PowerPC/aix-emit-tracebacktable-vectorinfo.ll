@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr7 \
-; RUN:     -mattr=+altivec  -vec-extabi -xcoff-traceback-table=true < %s | \
+; RUN:     -mattr=+altivec  -target-abi=vec-extabi -xcoff-traceback-table=true < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-ASM,COMMON %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -function-sections \
-; RUN:     -mcpu=pwr7 -mattr=+altivec -vec-extabi < %s | \
+; RUN:     -mcpu=pwr7 -mattr=+altivec -target-abi=vec-extabi < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-FUNC,COMMON %s
 
 ;; #include <altivec.h>
@@ -82,7 +82,7 @@ declare <4 x float> @llvm.fabs.v4f32(<4 x float>) #1
 ; COMMON-NEXT:  .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
-; COMMON-NEXT:  .byte   0x22                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; COMMON-NEXT:  .byte   0x22                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; COMMON-NEXT:                                         # +HasTraceBackTableOffset, -IsInternalProcedure
 ; COMMON-NEXT:                                         # -HasControlledStorage, -IsTOCless
 ; COMMON-NEXT:                                         # +IsFloatingPointPresent
@@ -107,7 +107,7 @@ declare <4 x float> @llvm.fabs.v4f32(<4 x float>) #1
 ; COMMON-NEXT:  .vbyte  4, 0x00000000                   # Traceback table begin
 ; COMMON-NEXT:  .byte   0x00                            # Version = 0
 ; COMMON-NEXT:  .byte   0x09                            # Language = CPlusPlus
-; COMMON-NEXT:  .byte   0x22                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; COMMON-NEXT:  .byte   0x22                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; COMMON-NEXT:                                         # +HasTraceBackTableOffset, -IsInternalProcedure
 ; COMMON-NEXT:                                         # -HasControlledStorage, -IsTOCless
 ; COMMON-NEXT:                                         # +IsFloatingPointPresent

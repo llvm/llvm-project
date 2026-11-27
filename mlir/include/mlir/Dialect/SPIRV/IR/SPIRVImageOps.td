@@ -37,6 +37,11 @@ class SPIRV_MSOperandIs<string operand, list<string> values, string transform="$
   SPIRV_ValuesAreContained<operand, values, transform, "ImageSamplingInfo", "getSamplingInfo"> 
 >;
 
+class SPIRV_ArrayedOperandIs<string operand, list<string> values, string transform="$_self"> : PredOpTrait<
+  "the Arrayed operand of the underlying image type must be " # !interleave(values, " or "),
+  SPIRV_ValuesAreContained<operand, values, transform, "ImageArrayedInfo", "getArrayedInfo">
+>;
+
 class SPIRV_DimIs<string operand, list<string> values, string transform="$_self"> : PredOpTrait<
   "the Dim operand of the underlying image must be " # !interleave(values, " or "),
   SPIRV_ValuesAreContained<operand, values, transform, "Dim", "getDim">
@@ -62,6 +67,54 @@ class SPIRV_ImageOperandIsPresent<string operand, list<string> values> : PredOpT
 >;
 
 def SPIRV_SampledImageTransform : StrFunc<"llvm::cast<::mlir::spirv::SampledImageType>($_self).getImageType()">;
+
+// -----
+
+def SPIRV_SampledImageOp : SPIRV_Op<"SampledImage",
+    [Pure,
+     TypesMatchWith<"type of 'result' wraps the image type of 'image'",
+                    "result", "image",
+                    "::llvm::cast<spirv::SampledImageType>($_self).getImageType()">,
+     SPIRV_DimIsNot<"image", ["SubpassData"]>,
+     SPIRV_SampledOperandIs<"image", ["SamplerUnknown", "NeedSampler"]>]> {
+  let summary = "Create a sampled image, containing both a sampler and an image.";
+
+  let description = [{
+    Result Type must be OpTypeSampledImage whose Image Type is the same as
+    the type of the Image operand.
+
+    Image must be an object whose type is an OpTypeImage, whose Sampled
+    operand is 0 or 1. The Dim operand of the underlying OpTypeImage must
+    not be SubpassData. Additionally, starting with version 1.6, the Dim
+    operand must not be Buffer.
+
+    Sampler must be an object of a type made by OpTypeSampler.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.SampledImage %image, %sampler : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>, !spirv.sampler -> !spirv.sampled_image<!spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, Unknown>>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyImage:$image,
+    SPIRV_AnySampler:$sampler
+  );
+
+  let results = (outs
+    SPIRV_AnySampledImage:$result
+  );
+
+  let assemblyFormat = [{
+    $image `,` $sampler attr-dict `:` type($image) `,` type($sampler)
+    `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
 
 // -----
 
@@ -462,7 +515,8 @@ def SPIRV_ImageSampleImplicitLodOp : SPIRV_Op<"ImageSampleImplicitLod",
 // -----
 
 def SPIRV_ImageSampleProjDrefImplicitLodOp : SPIRV_Op<"ImageSampleProjDrefImplicitLod",
-    [SPIRV_DimIsNot<"sampled_image", ["Buffer"], SPIRV_SampledImageTransform.result>,
+    [SPIRV_DimIs<"sampled_image", ["Dim1D", "Dim2D", "Dim3D", "Rect"], SPIRV_SampledImageTransform.result>,
+     SPIRV_ArrayedOperandIs<"sampled_image", ["NonArrayed"], SPIRV_SampledImageTransform.result>,
      SPIRV_MSOperandIs<"sampled_image", ["SingleSampled"], SPIRV_SampledImageTransform.result>,
      TypesMatchWith<"type of 'result' matches image type of 'sampled_image'",
                     "sampled_image", "result",
@@ -540,5 +594,52 @@ def SPIRV_ImageSampleProjDrefImplicitLodOp : SPIRV_Op<"ImageSampleProjDrefImplic
 }
 
 // -----
+
+def SPIRV_ImageFetchOp : SPIRV_Op<"ImageFetch",
+    [SPIRV_DimIsNot<"image", ["Cube"]>,
+     SPIRV_SampledOperandIs<"image", ["NeedSampler"]>,
+     SPIRV_NoneOrElementMatchImage<"result", "image">,
+     DeclareOpInterfaceMethods<SPIRV_FetchOpInterface>]> {
+  let summary = "Fetch a single texel from an image whose Sampled operand is 1. ";
+
+  let description = [{
+    Result Type must be a vector of four components of floating-point type or
+    integer type. Its components must be the same as Sampled Type of the underlying
+    OpTypeImage (unless that underlying Sampled Type is OpTypeVoid).
+
+    Image must be an object whose type is OpTypeImage. Its Dim operand must not be
+    Cube, and its Sampled operand must be 1.
+
+    Coordinate must be a scalar or vector of integer type. It contains (u[, v] … [,
+    array layer]) as needed by the definition of Sampled Image.
+
+    Image Operands encodes what operands follow, as per Image Operands.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.ImageFetch %1, %2 : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NeedSampler, R32f>, vector<2xsi32> -> vector<4xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyImage:$image,
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$coordinate,
+    OptionalAttr<SPIRV_ImageOperandsAttr>:$image_operands,
+    Variadic<SPIRV_Type>:$operand_arguments
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_Vec4<SPIRV_Float>, SPIRV_Vec4<SPIRV_Integer>]>:$result
+  );
+
+  let assemblyFormat = [{
+    $image `,` $coordinate custom<ImageOperands>($image_operands) ( `,` $operand_arguments^ )? attr-dict
+    `:` type($image) `,` type($coordinate) ( `,` type($operand_arguments)^ )?
+    `->` type($result)
+  }];
+}
 
 #endif // MLIR_DIALECT_SPIRV_IR_IMAGE_OPS

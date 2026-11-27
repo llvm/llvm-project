@@ -23,6 +23,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 
@@ -37,8 +38,8 @@ SBModule::SBModule(const SBModuleSpec &module_spec) {
   LLDB_INSTRUMENT_VA(this, module_spec);
 
   ModuleSP module_sp;
-  Status error = ModuleList::GetSharedModule(
-      *module_spec.m_opaque_up, module_sp, nullptr, nullptr, nullptr);
+  Status error = ModuleList::GetSharedModule(*module_spec.m_opaque_up,
+                                             module_sp, nullptr, nullptr);
   if (module_sp)
     SetSP(module_sp);
 }
@@ -52,7 +53,14 @@ SBModule::SBModule(lldb::SBProcess &process, lldb::addr_t header_addr) {
 
   ProcessSP process_sp(process.GetSP());
   if (process_sp) {
-    m_opaque_sp = process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    llvm::Expected<ModuleSP> module_sp_or_err =
+        process_sp->ReadModuleFromMemory(FileSpec(), header_addr);
+    if (auto err = module_sp_or_err.takeError()) {
+      llvm::consumeError(std::move(err));
+      return;
+    }
+
+    m_opaque_sp = *module_sp_or_err;
     if (m_opaque_sp) {
       Target &target = process_sp->GetTarget();
       bool changed = false;
@@ -177,17 +185,8 @@ const char *SBModule::GetUUIDString() const {
   if (!module_sp)
     return nullptr;
 
-  // We are going to return a "const char *" value through the public API, so
-  // we need to constify it so it gets added permanently the string pool and
-  // then we don't need to worry about the lifetime of the string as it will
-  // never go away once it has been put into the ConstString string pool
-  const char *uuid_cstr =
-      ConstString(module_sp->GetUUID().GetAsString()).GetCString();
-  // Note: SBModule::GetUUIDString's expected behavior is to return nullptr if
-  // the string we get is empty, so we must perform this check before returning.
-  if (uuid_cstr && uuid_cstr[0])
-    return uuid_cstr;
-  return nullptr;
+  return StringPool::GetSystemPool().InternNonEmpty(
+      module_sp->GetUUID().GetAsString());
 }
 
 bool SBModule::operator==(const SBModule &rhs) const {
@@ -296,6 +295,14 @@ size_t SBModule::GetNumSymbols() {
   if (Symtab *symtab = GetUnifiedSymbolTable(module_sp))
     return symtab->GetNumSymbols();
   return 0;
+}
+
+uint32_t SBModule::GetSymtabState() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (ModuleSP module_sp = GetSP())
+    return module_sp->GetSymtabState();
+  return eSymtabStateNone;
 }
 
 SBSymbol SBModule::GetSymbolAtIndex(size_t idx) {
@@ -550,8 +557,7 @@ SBSection SBModule::FindSection(const char *sect_name) {
     module_sp->GetSymbolFile();
     SectionList *section_list = module_sp->GetSectionList();
     if (section_list) {
-      ConstString const_sect_name(sect_name);
-      SectionSP section_sp(section_list->FindSectionByName(const_sect_name));
+      SectionSP section_sp(section_list->FindSectionByName(sect_name));
       if (section_sp) {
         sb_section.SetSP(section_sp);
       }
@@ -577,11 +583,7 @@ const char *SBModule::GetTriple() {
     return nullptr;
 
   std::string triple(module_sp->GetArchitecture().GetTriple().str());
-  // Unique the string so we don't run into ownership issues since the const
-  // strings put the string into the string pool once and the strings never
-  // comes out
-  ConstString const_triple(triple.c_str());
-  return const_triple.GetCString();
+  return StringPool::GetSystemPool().Intern(triple);
 }
 
 uint32_t SBModule::GetAddressByteSize() {
@@ -633,6 +635,15 @@ lldb::SBFileSpec SBModule::GetSymbolFileSpec() const {
   return sb_file_spec;
 }
 
+lldb::SBModuleSpecList SBModule::GetSeparateDebugInfoFiles() {
+  LLDB_INSTRUMENT_VA(this);
+  ModuleSP module_sp(GetSP());
+  if (module_sp)
+    return lldb::SBModuleSpecList(module_sp->GetSeparateDebugInfoFiles());
+
+  return lldb::SBModuleSpecList();
+}
+
 lldb::SBAddress SBModule::GetObjectFileHeaderAddress() const {
   LLDB_INSTRUMENT_VA(this);
 
@@ -651,11 +662,8 @@ lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
 
   lldb::SBAddress sb_addr;
   ModuleSP module_sp(GetSP());
-  if (module_sp) {
-    ObjectFile *objfile_ptr = module_sp->GetObjectFile();
-    if (objfile_ptr)
-      sb_addr.ref() = objfile_ptr->GetEntryPointAddress();
-  }
+  if (module_sp)
+    sb_addr.ref() = module_sp->GetObjectFileEntryPointAddress();
   return sb_addr;
 }
 
@@ -670,4 +678,13 @@ void SBModule::GarbageCollectAllocatedModules() {
 
   const bool mandatory = false;
   ModuleList::RemoveOrphanSharedModules(mandatory);
+}
+
+const char *SBModule::GetObjectName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_sp)
+    return nullptr;
+  return StringPool::GetSystemPool().InternNonEmpty(
+      m_opaque_sp->GetObjectName());
 }

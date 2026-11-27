@@ -16,6 +16,8 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstdint>
+#include <deque>
 #include <ranges>
 #include <string>
 #include <vector>
@@ -48,6 +50,14 @@ constexpr void test_iterators() {
     std::array<int, 0> a;
     auto ret = std::ranges::fill_n(It(a.data()), 0, 1);
     assert(base(ret) == a.data());
+  }
+
+  { // A negative count is a no-op that returns the unchanged iterator.
+    // Regression test for https://llvm.org/PR193613.
+    int a[3]                            = {-1, -2, -3};
+    std::same_as<It> decltype(auto) ret = std::ranges::fill_n(It(a), -5, 1);
+    assert(base(ret) == a);
+    assert(a[0] == -1 && a[1] == -2 && a[2] == -3);
   }
 }
 
@@ -97,9 +107,23 @@ constexpr bool test_vector_bool(std::size_t N) {
     }
   }
 
+  { // Negative count test
+    std::vector<bool> v(N, false);
+    auto r = std::ranges::fill_n(v.begin(), -5, true);
+    assert(r == v.begin());
+    assert(v == std::vector<bool>(N, false));
+  }
+
   return true;
 }
 #endif
+
+/*TEST_CONSTEXPR_CXX26*/ void test_deque() { // TODO: Mark as TEST_CONSTEXPR_CXX26 once std::deque is constexpr
+  std::deque<int> in(20);
+  std::deque<int> expected(in.size(), 42);
+  std::ranges::fill_n(std::ranges::begin(in), std::ranges::size(in), 42);
+  assert(in == expected);
+}
 
 constexpr bool test() {
   test_iterators<cpp17_output_iterator<int*>, sentinel_wrapper<cpp17_output_iterator<int*>>>();
@@ -172,6 +196,20 @@ constexpr bool test() {
       std::ranges::fill_n(std::ranges::begin(in), in.size(), true);
       assert(in == expected);
     }
+  }
+#endif
+
+  if (!TEST_IS_CONSTANT_EVALUATED) // TODO: Use TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED when std::deque is made constexpr
+    test_deque();
+
+#if TEST_STD_VER >= 20
+  {
+    std::vector<std::vector<int>> v{{1, 2}, {1, 2, 3}, {}, {3, 4, 5}, {6}, {7, 8, 9, 6}, {0, 1, 2, 3, 0, 1, 2}};
+    auto jv = std::ranges::join_view(v);
+    std::ranges::fill_n(std::ranges::begin(jv), std::ranges::distance(jv), 42);
+    for (const auto& vec : v)
+      for (auto n : vec)
+        assert(n == 42);
   }
 #endif
 

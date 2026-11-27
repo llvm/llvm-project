@@ -15,6 +15,7 @@
 
 #include "llvm/Analysis/ReplayInlineAdvisor.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <memory>
@@ -33,10 +34,9 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
 
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ReplaySettings.ReplayFile);
   std::error_code EC = BufferOrErr.getError();
-  if (EC) {
-    Context.emitError("Could not open remarks file: " + EC.message());
-    return;
-  }
+  if (EC)
+    reportFatalUsageError("could not open remarks file: " +
+                          Twine(EC.message()));
 
   // Example for inline remarks to parse:
   //   main:3:1.1: '_Z3subii' inlined into 'main' at callsite sum:1 @
@@ -62,10 +62,8 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
 
     auto CallSite = Pair.second.split(";").first;
 
-    if (Callee.empty() || Caller.empty() || CallSite.empty()) {
-      Context.emitError("Invalid remark format: " + Line);
-      return;
-    }
+    if (Callee.empty() || Caller.empty() || CallSite.empty())
+      reportFatalUsageError("invalid remark format: " + Twine(Line));
 
     std::string Combined = (Callee + CallSite).str();
     InlineSitesFromRemarks[Combined] = IsPositiveRemark;
@@ -96,8 +94,9 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
   Function &Caller = *CB.getCaller();
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(Caller);
 
-  // Decision not made by replay system
-  if (!hasInlineAdvice(*CB.getFunction())) {
+  // Decision not made by replay system. Remarks only name direct callees, so
+  // there is no replay decision for an indirect call either.
+  if (!hasInlineAdvice(*CB.getFunction()) || !CB.getCalledFunction()) {
     // If there's a registered original advisor, return its decision
     if (OriginalAdvisor)
       return OriginalAdvisor->getAdvice(CB);

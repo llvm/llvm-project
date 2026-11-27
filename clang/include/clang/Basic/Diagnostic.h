@@ -16,24 +16,28 @@
 
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/OptionalUnsigned.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
-#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
 #include <list>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -42,9 +46,6 @@ namespace llvm {
 class Error;
 class raw_ostream;
 class MemoryBuffer;
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 } // namespace llvm
 
 namespace clang {
@@ -221,6 +222,15 @@ public:
   }
 };
 
+/// Whether a source location is in a system header and/or a system macro.
+enum class DiagStateSystemClass : unsigned {
+  UserCode = 0,
+  SystemMacro = 1 << 0,
+  SystemHeader = 1 << 1,
+  SystemHeaderAndMacro = SystemHeader | SystemMacro,
+  NUM_CLASSES
+};
+
 /// Concrete class used by the front-end to report problems and issues.
 ///
 /// This massages the diagnostics (e.g. handling things like "report warnings
@@ -289,6 +299,9 @@ public:
 
     /// Expr *
     ak_expr,
+
+    /// AttributeCommonInfo *
+    ak_attr_info,
   };
 
   /// Represents on argument value, which is a union discriminated
@@ -304,6 +317,11 @@ private:
 
   // Suppress all diagnostics.
   bool SuppressAllDiagnostics = false;
+
+  // Force system warnings to be shown, regardless of the current
+  // diagnostic state. This is used for temporary overrides and is not
+  // stored as location-specific state in modules.
+  bool ForceSystemWarnings = false;
 
   // Elide common types of templates.
   bool ElideType = true;
@@ -427,6 +445,7 @@ private:
     void clear(bool Soft) {
       // Just clear the cache when in soft mode.
       Files.clear();
+      LastLookupFileID = FileID::getSentinel();
       if (!Soft) {
         FirstDiagState = CurDiagState = nullptr;
         CurDiagStateLoc = SourceLocation();
@@ -483,7 +502,19 @@ private:
     };
 
     /// The diagnostic states for each file.
-    mutable std::map<FileID, File> Files;
+    mutable llvm::DenseMap<FileID, std::unique_ptr<File>> Files;
+
+    std::pair<File *, bool> getOrInsertFile(FileID ID) const {
+      auto [It, Inserted] = Files.try_emplace(ID);
+      if (Inserted)
+        It->second = std::make_unique<File>();
+      return {It->second.get(), Inserted};
+    }
+
+    /// One-entry cache for getFile(): Files gets large, and most
+    /// lookups are for the same FileID as the previous one.
+    mutable FileID LastLookupFileID = FileID::getSentinel();
+    mutable File *LastLookupFile = nullptr;
 
     /// The initial diagnostic state.
     DiagState *FirstDiagState;
@@ -496,6 +527,7 @@ private:
 
     /// Get the diagnostic state information for a file.
     File *getFile(SourceManager &SrcMgr, FileID ID) const;
+    File *getFileUncached(SourceManager &SrcMgr, FileID ID) const;
   };
 
   DiagStateMap DiagStatesByLoc;
@@ -566,12 +598,33 @@ private:
   void *ArgToStringCookie = nullptr;
   ArgToStringFnTy ArgToStringFn;
 
-  /// Whether the diagnostic should be suppressed in FilePath.
-  llvm::unique_function<bool(diag::kind, SourceLocation /*DiagLoc*/,
-                             const SourceManager &) const>
-      DiagSuppressionMapping;
+  /// Decides whether a diagnostic should be suppressed in a file. Null if
+  /// there is no diagnostic suppression mapping.
+  class WarningsSpecialCaseList;
+  std::unique_ptr<WarningsSpecialCaseList> DiagSuppressionMapping;
 
 public:
+  /// Returns a cache key representing the diagnostic state at \p Loc.
+  const void *getDiagStateKeyForLoc(SourceLocation Loc) const {
+    return GetDiagStateForLoc(Loc);
+  }
+
+  /// Returns whether \p Loc is in a system header and/or a system macro.
+  /// Severity depends on this through
+  /// DiagnosticIDs::shouldSuppressAsSystemWarning(), so a cache keyed on
+  /// getDiagStateKeyForLoc() must take it into account as well.
+  DiagStateSystemClass getDiagStateSystemClassForLoc(SourceLocation Loc) const;
+
+  /// True if an active diagnostic suppression mapping makes severity dependent
+  /// on the file path.
+  bool hasDiagSuppressionMapping() const {
+    return DiagSuppressionMapping != nullptr;
+  }
+
+  /// True if an active diagnostic suppression mapping has a section for
+  /// \p DiagId, so that its severity can depend on the file path.
+  bool hasDiagSuppressionMappingFor(diag::kind DiagId) const;
+
   explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
                              DiagnosticOptions &DiagOpts,
                              DiagnosticConsumer *client = nullptr,
@@ -724,6 +777,9 @@ public:
   /// client
   void setSuppressAllDiagnostics(bool Val) { SuppressAllDiagnostics = Val; }
   bool getSuppressAllDiagnostics() const { return SuppressAllDiagnostics; }
+
+  void setForceSystemWarnings(bool Val) { ForceSystemWarnings = Val; }
+  bool getForceSystemWarnings() const { return ForceSystemWarnings; }
 
   /// Set type eliding, to skip outputting same types occurring in
   /// template types.
@@ -892,7 +948,10 @@ public:
   /// \param FormatString A fixed diagnostic format string that will be hashed
   /// and mapped to a unique DiagID.
   template <unsigned N>
-  // TODO: Deprecate this once all uses are removed from Clang.
+  // FIXME: this API should almost never be used; custom diagnostics do not
+  // have an associated diagnostic group and thus cannot be controlled by users
+  // like other diagnostics. The number of times this API is used in Clang
+  // should only ever be reduced, not increased.
   // [[deprecated("Use a CustomDiagDesc instead of a Level")]]
   unsigned getCustomDiagID(Level L, const char (&FormatString)[N]) {
     return Diags->getCustomDiagID((DiagnosticIDs::Level)L,
@@ -945,6 +1004,16 @@ public:
            diag::Severity::Ignored;
   }
 
+  bool areAllIgnored(StringRef Group, SourceLocation Loc) const {
+    llvm::SmallVector<diag::kind> diagsInGroup;
+    bool Failed = Diags->getDiagnosticsInGroup(diag::Flavor::WarningOrError,
+                                               Group, diagsInGroup);
+    assert(!Failed && "Incorrect group name?");
+    (void)Failed;
+    return Diags->getDiagnosticListHighestSeverity(diagsInGroup, Loc, *this) ==
+           diag::Severity::Ignored;
+  }
+
   /// Based on the way the client configured the DiagnosticsEngine
   /// object, classify the specified diagnostic ID into a Level, consumable by
   /// the DiagnosticConsumer.
@@ -963,7 +1032,7 @@ public:
   /// diagnostics in specific files.
   /// Mapping file is expected to be a special case list with sections denoting
   /// diagnostic groups and `src` entries for globs to suppress. `emit` category
-  /// can be used to disable suppression. Longest glob that matches a filepath
+  /// can be used to disable suppression. The last glob that matches a filepath
   /// takes precedence. For example:
   ///   [unused]
   ///   src:clang/*
@@ -1093,6 +1162,39 @@ public:
     NumErrors = Diag.TrapNumErrorsOccurred;
     NumUnrecoverableErrors = Diag.TrapNumUnrecoverableErrorsOccurred;
   }
+};
+
+/// RAII class that temporarily sets the "ignore all warnings" state on a
+/// DiagnosticsEngine and restores the previous state on destruction.  Use it to
+/// silence warnings around a self-contained region of diagnostics, such as a
+/// compiler-synthesized call whose arguments are known to be correct.
+class IgnoreAllWarningDiagRAII {
+  DiagnosticsEngine &Diag;
+  bool OldValue;
+
+public:
+  explicit IgnoreAllWarningDiagRAII(DiagnosticsEngine &Diag)
+      : Diag(Diag), OldValue(Diag.getIgnoreAllWarnings()) {
+    Diag.setIgnoreAllWarnings(true);
+  }
+  ~IgnoreAllWarningDiagRAII() { Diag.setIgnoreAllWarnings(OldValue); }
+};
+
+/// RAII class that temporarily forces warnings in system headers and system
+/// macros to be shown on a DiagnosticsEngine and restores the previous state on
+/// destruction.  Use it to ask what a diagnostic's severity would be if the
+/// location were not in a system header.
+class ForceSystemWarningsRAII {
+  DiagnosticsEngine &Diag;
+  bool OldValue;
+
+public:
+  explicit ForceSystemWarningsRAII(DiagnosticsEngine &Diag, bool Force = true)
+      : Diag(Diag), OldValue(Diag.getForceSystemWarnings()) {
+    if (Force)
+      Diag.setForceSystemWarnings(true);
+  }
+  ~ForceSystemWarningsRAII() { Diag.setForceSystemWarnings(OldValue); }
 };
 
 /// The streaming interface shared between DiagnosticBuilder and
@@ -1253,10 +1355,13 @@ class DiagnosticBuilder : public StreamingDiagnostic {
 
   DiagnosticBuilder() = default;
 
+protected:
   DiagnosticBuilder(DiagnosticsEngine *DiagObj, SourceLocation DiagLoc,
                     unsigned DiagID);
 
-protected:
+  DiagnosticsEngine *getDiagnosticsEngine() const { return DiagObj; }
+  unsigned getDiagID() const { return DiagID; }
+
   /// Clear out the current diagnostic.
   void Clear() const {
     DiagObj = nullptr;
@@ -1350,9 +1455,50 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
 }
 
 inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::Twine &S) {
+  DB.AddString(S.str());
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             std::string_view S) {
+  DB.AddString(S);
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const std::string &S) {
+  DB.AddString(S);
+  return DB;
+}
+
+inline const StreamingDiagnostic &
+operator<<(const StreamingDiagnostic &DB,
+           const llvm::SmallVectorImpl<char> &S) {
+  DB.AddString(llvm::StringRef(S.data(), S.size()));
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                              const char *Str) {
   DB.AddTaggedVal(reinterpret_cast<intptr_t>(Str),
                   DiagnosticsEngine::ak_c_string);
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::APSInt &Int) {
+  DB.AddString(toString(Int, /*Radix=*/10, Int.isSigned(),
+                        /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true));
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const llvm::APInt &Int) {
+  DB.AddString(toString(Int, /*Radix=*/10, /*Signed=*/false,
+                        /*formatAsCLiteral=*/false,
+                        /*UpperCase=*/true, /*InsertSeparators=*/true));
   return DB;
 }
 
@@ -1708,7 +1854,8 @@ public:
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const StoredDiagnostic &);
 
 /// Abstract interface, implemented by clients of the front-end, which
-/// formats and prints fully processed diagnostics.
+/// formats and prints fully processed diagnostics. The destructor must be
+/// called even with -disable-free.
 class DiagnosticConsumer {
 protected:
   unsigned NumWarnings = 0; ///< Number of warnings reported
@@ -1742,10 +1889,6 @@ public:
   /// The diagnostic client should assume that any objects made available via
   /// BeginSourceFile() are inaccessible.
   virtual void EndSourceFile() {}
-
-  /// Callback to inform the diagnostic client that processing of all
-  /// source files has ended.
-  virtual void finish() {}
 
   /// Indicates whether the diagnostics handled by this
   /// DiagnosticConsumer should be included in the number of diagnostics
@@ -1818,6 +1961,8 @@ void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
                            llvm::vfs::FileSystem &VFS, bool ReportDiags = true);
 void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
+SmallString<16> EscapeSingleCodepointForDiagnostic(StringRef Str);
+SmallString<16> EscapeSingleCodepointForDiagnostic(llvm::UTF32 CP);
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTIC_H

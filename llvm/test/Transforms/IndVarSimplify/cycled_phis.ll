@@ -144,7 +144,7 @@ define i32 @start.from.sibling.iv(ptr %len.ptr, ptr %sibling.len.ptr) {
 ; CHECK-NEXT:    br label [[SIBLING_LOOP:%.*]]
 ; CHECK:       sibling.loop:
 ; CHECK-NEXT:    [[SIBLING_IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[SIBLING_IV_NEXT:%.*]], [[SIBLING_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SIBLING_RC:%.*]] = icmp ult i32 [[SIBLING_IV]], [[SIBLING_LEN]]
+; CHECK-NEXT:    [[SIBLING_RC:%.*]] = icmp samesign ult i32 [[SIBLING_IV]], [[SIBLING_LEN]]
 ; CHECK-NEXT:    br i1 [[SIBLING_RC]], label [[SIBLING_BACKEDGE]], label [[FAILED_SIBLING:%.*]]
 ; CHECK:       sibling.backedge:
 ; CHECK-NEXT:    [[SIBLING_IV_NEXT]] = add nuw nsw i32 [[SIBLING_IV]], 1
@@ -235,7 +235,7 @@ define i32 @start.from.sibling.iv.wide(ptr %len.ptr, ptr %sibling.len.ptr) {
 ; CHECK-NEXT:    br label [[SIBLING_LOOP:%.*]]
 ; CHECK:       sibling.loop:
 ; CHECK-NEXT:    [[SIBLING_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[SIBLING_IV_NEXT:%.*]], [[SIBLING_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SIBLING_RC:%.*]] = icmp ult i64 [[SIBLING_IV]], [[SIBLING_LEN_WIDE]]
+; CHECK-NEXT:    [[SIBLING_RC:%.*]] = icmp samesign ult i64 [[SIBLING_IV]], [[SIBLING_LEN_WIDE]]
 ; CHECK-NEXT:    br i1 [[SIBLING_RC]], label [[SIBLING_BACKEDGE]], label [[FAILED_SIBLING:%.*]]
 ; CHECK:       sibling.backedge:
 ; CHECK-NEXT:    [[SIBLING_IV_NEXT]] = add nuw nsw i64 [[SIBLING_IV]], 1
@@ -331,7 +331,7 @@ define i32 @start.from.sibling.iv.wide.cycled.phis(ptr %len.ptr, ptr %sibling.le
 ; CHECK-NEXT:    br label [[SIBLING_LOOP:%.*]]
 ; CHECK:       sibling.loop:
 ; CHECK-NEXT:    [[SIBLING_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[SIBLING_IV_NEXT:%.*]], [[SIBLING_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SIBLING_RC:%.*]] = icmp ult i64 [[SIBLING_IV]], [[SIBLING_LEN_WIDE]]
+; CHECK-NEXT:    [[SIBLING_RC:%.*]] = icmp samesign ult i64 [[SIBLING_IV]], [[SIBLING_LEN_WIDE]]
 ; CHECK-NEXT:    br i1 [[SIBLING_RC]], label [[SIBLING_BACKEDGE]], label [[FAILED_SIBLING:%.*]]
 ; CHECK:       sibling.backedge:
 ; CHECK-NEXT:    [[SIBLING_IV_NEXT]] = add nuw nsw i64 [[SIBLING_IV]], 1
@@ -345,13 +345,13 @@ define i32 @start.from.sibling.iv.wide.cycled.phis(ptr %len.ptr, ptr %sibling.le
 ; CHECK-NEXT:    [[IV_START:%.*]] = phi i32 [ [[SIBLING_IV_NEXT_TRUNC]], [[OUTER_LOOP_PREHEADER]] ], [ [[IV_NEXT_LCSSA:%.*]], [[OUTER_LOOP_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    br label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
+; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_START]], [[PREHEADER]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SIGNED_CMP:%.*]] = icmp slt i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[SIGNED_CMP]], label [[SIGNED_PASSED:%.*]], label [[FAILED_SIGNED:%.*]]
 ; CHECK:       signed.passed:
-; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
@@ -449,7 +449,7 @@ define i32 @start.from.sibling.iv.wide.cycled.phis.complex.phis(ptr %len.ptr, pt
 ; CHECK-NEXT:    br label [[SIBLING_LOOP:%.*]]
 ; CHECK:       sibling.loop:
 ; CHECK-NEXT:    [[SIBLING_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[SIBLING_IV_NEXT:%.*]], [[SIBLING_BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[SIBLING_RC:%.*]] = icmp ult i64 [[SIBLING_IV]], [[SIBLING_LEN_WIDE]]
+; CHECK-NEXT:    [[SIBLING_RC:%.*]] = icmp samesign ult i64 [[SIBLING_IV]], [[SIBLING_LEN_WIDE]]
 ; CHECK-NEXT:    br i1 [[SIBLING_RC]], label [[SIBLING_BACKEDGE]], label [[FAILED_SIBLING:%.*]]
 ; CHECK:       sibling.backedge:
 ; CHECK-NEXT:    [[SIBLING_IV_NEXT]] = add nuw nsw i64 [[SIBLING_IV]], 1
@@ -463,13 +463,13 @@ define i32 @start.from.sibling.iv.wide.cycled.phis.complex.phis(ptr %len.ptr, pt
 ; CHECK-NEXT:    [[IV_START:%.*]] = phi i32 [ [[SIBLING_IV_NEXT_TRUNC]], [[OUTER_LOOP_PREHEADER]] ], [ [[IV_START_UPDATED:%.*]], [[OUTER_LOOP_BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    br label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
+; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_START]], [[PREHEADER]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[SIGNED_CMP:%.*]] = icmp slt i32 [[IV]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[SIGNED_CMP]], label [[SIGNED_PASSED:%.*]], label [[FAILED_SIGNED:%.*]]
 ; CHECK:       signed.passed:
-; CHECK-NEXT:    [[UNSIGNED_CMP:%.*]] = icmp ult i32 [[IV_START]], [[LEN]]
 ; CHECK-NEXT:    br i1 [[UNSIGNED_CMP]], label [[BACKEDGE]], label [[FAILED_UNSIGNED:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1

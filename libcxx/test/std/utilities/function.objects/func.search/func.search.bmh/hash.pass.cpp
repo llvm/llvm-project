@@ -34,6 +34,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <iterator>
 
 #include "test_iterators.h"
 

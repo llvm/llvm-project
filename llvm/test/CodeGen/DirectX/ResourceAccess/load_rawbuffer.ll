@@ -13,7 +13,7 @@ declare void @v4f64_user(<4 x double>)
 define void @loadf32_struct(i32 %index) {
   %buffer = call target("dx.RawBuffer", float, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -32,13 +32,13 @@ define void @loadf32_struct(i32 %index) {
 define void @loadf32_byte(i32 %offset) {
   %buffer = call target("dx.RawBuffer", i8, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset)
 
-  ; CHECK: %[[LOAD:.*]] = call { float, i1 } @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_i8_0_0_0t(target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset, i32 0)
+  ; CHECK: %[[LOAD:.*]] = call { float, i1 } @llvm.dx.resource.load.rawbuffer.f32.tdx.RawBuffer_i8_0_0_0t(target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset, i32 poison)
   ; CHECK: %[[VAL:.*]] = extractvalue { float, i1 } %[[LOAD]], 0
   ; CHECK: call void @f32_user(float %[[VAL]])
   %data = load float, ptr %ptr
@@ -51,7 +51,7 @@ define void @loadf32_byte(i32 %offset) {
 define void @loadv4f32_struct(i32 %index) {
   %buffer = call target("dx.RawBuffer", <4 x float>, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4f32_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -70,13 +70,13 @@ define void @loadv4f32_struct(i32 %index) {
 define void @loadv4f32_byte(i32 %offset) {
   %buffer = call target("dx.RawBuffer", i8, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset)
 
-  ; CHECK: %[[LOAD:.*]] = call { <4 x float>, i1 } @llvm.dx.resource.load.rawbuffer.v4f32.tdx.RawBuffer_i8_0_0_0t(target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset, i32 0)
+  ; CHECK: %[[LOAD:.*]] = call { <4 x float>, i1 } @llvm.dx.resource.load.rawbuffer.v4f32.tdx.RawBuffer_i8_0_0_0t(target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset, i32 poison)
   ; CHECK: %[[VAL:.*]] = extractvalue { <4 x float>, i1 } %[[LOAD]], 0
   ; CHECK: call void @v4f32_user(<4 x float> %[[VAL]]
   %data = load <4 x float>, ptr %ptr
@@ -89,7 +89,7 @@ define void @loadv4f32_byte(i32 %offset) {
 define void @loadelements(i32 %index) {
   %buffer = call target("dx.RawBuffer", {<4 x float>, <4 x i32>}, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_sl_v4f32v4i32s_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -116,7 +116,7 @@ define void @loadelements(i32 %index) {
 define void @loadnested(i32 %index) {
   %buffer = call
       target("dx.RawBuffer", {i32, {<4 x float>, <3 x half>}}, 0, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
@@ -151,13 +151,13 @@ define void @loadnested(i32 %index) {
 define void @loadv4f64_byte(i32 %offset) {
   %buffer = call target("dx.RawBuffer", i8, 0, 0, 0)
       @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_0_0_0(
-          i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+          i32 0, i32 0, i32 1, i32 0, ptr null)
 
   ; CHECK-NOT: @llvm.dx.resource.getpointer
   %ptr = call ptr @llvm.dx.resource.getpointer(
       target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset)
 
-  ; CHECK: %[[LOAD:.*]] = call { <4 x double>, i1 } @llvm.dx.resource.load.rawbuffer.v4f64.tdx.RawBuffer_i8_0_0_0t(target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset, i32 0)
+  ; CHECK: %[[LOAD:.*]] = call { <4 x double>, i1 } @llvm.dx.resource.load.rawbuffer.v4f64.tdx.RawBuffer_i8_0_0_0t(target("dx.RawBuffer", i8, 0, 0, 0) %buffer, i32 %offset, i32 poison)
   ; CHECK: %[[VAL:.*]] = extractvalue { <4 x double>, i1 } %[[LOAD]], 0
   ; CHECK: call void @v4f64_user(<4 x double> %[[VAL]])
   %data = load <4 x double>, ptr %ptr

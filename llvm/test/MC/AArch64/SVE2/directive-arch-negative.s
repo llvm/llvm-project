@@ -20,13 +20,13 @@ aesd z23.b, z23.b, z13.b
 .arch armv9-a+sve2-sm4
 .arch armv9-a+nosve2-sm4
 sm4e z0.s, z0.s, z0.s
-// CHECK: error: instruction requires: sve2-sm4
+// CHECK: error: instruction requires: sve-sm4
 // CHECK-NEXT: sm4e z0.s, z0.s, z0.s
 
 .arch armv9-a+sve2-sha3
 .arch armv9-a+nosve2-sha3
 rax1 z0.d, z0.d, z0.d
-// CHECK: error: instruction requires: sve2-sha3
+// CHECK: error: instruction requires: sve-sha3
 // CHECK-NEXT: rax1 z0.d, z0.d, z0.d
 
 .arch armv9-a+ssve-bitperm
@@ -64,3 +64,14 @@ fmmla   z23.s, z13.h, z8.h
 bfscale z0.h, p0/m, z0.h, z0.h
 // CHECK: error: instruction requires: sve-bfscale
 // CHECK-NEXT: bfscale z0.h, p0/m, z0.h, z0.h
+
+.arch armv9.6-a+sve-lrcpc
+.arch armv9.6-a+nosve-lrcpc
+ldapro z0, [x0]
+// CHECK: error: instruction requires: sve-lrcpc
+// CHECK-NEXT: ldapro z0, [x0]
+
+.arch armv9.8-a+nosve-perm256
+uzp1 z0.q, z1.q, z2.q
+# CHECK: error: instruction requires: f64mm or sve-perm256
+# CHECK-NEXT:   uzp1 z0.q, z1.q, z2.q

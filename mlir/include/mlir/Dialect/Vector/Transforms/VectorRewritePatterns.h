@@ -75,9 +75,17 @@ struct UnrollVectorOptions {
     traversalOrderCallback = std::move(traversalOrderFn);
     return *this;
   }
+
+  /// Unrolling order for ContractionOp. In general, this could be used by
+  /// any other Op, but in practice it isn't and the name reflects that.
+  /// The user is responsible for making sure that the number of indices
+  /// matches the number of loops to be unrolled.
+  SmallVector<int64_t> unrollOrderForContractOp = {};
+  /// Controls whether to reverse the unrolling order.
+  bool reverseDefaultTraversalOrder = false;
 };
 
-/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// Canonicalization of a `vector.contract %a, %b, %c` with row-major matmul
 /// semantics to a contraction with MMT semantics (matrix matrix multiplication
 /// with the RHS transposed). This specific form is meant to have the vector
 /// operands are organized such that the reduction dimension is contiguous.
@@ -90,7 +98,7 @@ struct UnrollVectorOptions {
 ///                  kind = #vector.kind<add>} %a, %b, %c : ...
 /// ```
 ///
-///  The `constraint` predicate is used to decide which `vector.contraction` ops
+///  The `constraint` predicate is used to decide which `vector.contract` ops
 ///  to filter out.
 void populateVectorContractCanonicalizeMatmulToMMT(
     RewritePatternSet &patterns,
@@ -100,8 +108,13 @@ void populateVectorContractCanonicalizeMatmulToMMT(
 
 /// Collect patterns to convert reduction op to vector.contract and fold
 /// transpose/broadcast ops into the contract.
-void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
-                                               PatternBenefit benefit = 1);
+///
+/// The new contract keeps only the fast-math flags that both the multiply and
+/// the reduction carry. If `allowFastMathFlagLoss` is false, a multiply and a
+/// reduction with different flags are not converted, so no flag is lost.
+void populateVectorReductionToContractPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit = 1,
+    bool allowFastMathFlagLoss = true);
 
 /// Populate `patterns` with the following patterns.
 ///
@@ -121,7 +134,7 @@ void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view : compatibleMemRefType, index, index
 ///    } else {
-///      // slow path, not in-bounds vector.transfer or linalg.copy.
+///      // slow path, not in-bounds vector.transfer or memref.copy.
 ///      memref.cast %alloc: memref<B...> to compatibleMemRefType
 ///      scf.yield %4 : compatibleMemRefType, index, index
 //     }
@@ -137,12 +150,14 @@ void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
 void populateVectorTransferFullPartialPatterns(
     RewritePatternSet &patterns, const VectorTransformsOptions &options);
 
-/// Collect a set of patterns to reduce the rank of the operands of vector
-/// transfer ops to operate on the largest contigious vector.
-/// These patterns are useful when lowering to dialects with 1d vector type
-/// such as llvm and it will result fewer memory reads.
-void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+/// Collect a set of patterns to collapse the most inner unit dims in xfer Ops
+///
+/// These patters reduce the rank of the operands of vector transfer ops to
+/// operate on vectors without trailing unit dims. This helps reduce the rank of
+/// the operands, which can be helpful when lowering to dialects that only
+/// support 1D vector type such as LLVM.
+void populateDropInnerMostUnitDimsXferOpPatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit = 1);
 
 /// Patterns that remove redundant Vector Ops by re-ordering them with
 /// e.g. elementwise Ops:
@@ -233,8 +248,8 @@ void populateBreakDownVectorReductionPatterns(
 ///
 /// [DecomposeNDExtractStridedSlice]
 /// ================================
-/// For such cases, we can rewrite it to ExtractOp/ExtractElementOp + lower
-/// rank ExtractStridedSliceOp + InsertOp/InsertElementOp for the n-D case.
+/// For such cases, we can rewrite it to ExtractOp + lower rank
+/// ExtractStridedSliceOp + InsertOp for the n-D case.
 void populateVectorInsertExtractStridedSliceDecompositionPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
 
@@ -320,6 +335,28 @@ void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options,
                                   PatternBenefit benefit = 1);
 
+/// Compute indices for a transfer op slice.
+SmallVector<Value> sliceTransferIndices(ArrayRef<int64_t> elementOffsets,
+                                        ArrayRef<Value> indices,
+                                        AffineMap permutationMap, Location loc,
+                                        OpBuilder &builder);
+
+/// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
+/// outermost dimension of the operand.
+void populateVectorContractUnrollPatterns(RewritePatternSet &patterns,
+                                          const UnrollVectorOptions &options,
+                                          PatternBenefit benefit = 1);
+
+/// Unrolls 2 or more dimensional `vector.to_elements` ops by unrolling the
+/// outermost dimension of the operand.
+void populateVectorToElementsUnrollPatterns(RewritePatternSet &patterns,
+                                            PatternBenefit benefit = 1);
+
+/// Unrolls 2 or more dimensional `vector.from_elements` ops by unrolling the
+/// outermost dimension.
+void populateVectorFromElementsUnrollPatterns(RewritePatternSet &patterns,
+                                              PatternBenefit benefit = 1);
+
 /// Collect a set of leading one dimension removal patterns.
 ///
 /// These patterns insert vector.shape_cast to remove leading one dimensions
@@ -376,25 +413,25 @@ void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
 /// Appends patterns for emulating vector operations over narrow types with ops
 /// over wider types. The `disableAtomicRMW` indicates whether to use a normal
 /// read-modify-write sequence instead of using `memref.generic_atomic_rmw` to
-/// perform subbyte storing.
+/// perform subbyte storing. When `assumeAligned` is true, store offsets are
+/// assumed to be aligned to container element boundaries, so a store whose
+/// source vector fills whole container elements is emitted as a simple
+/// bitcast + store without checking the offset. Stores that are not divisible
+/// in size are rejected.
 void populateVectorNarrowTypeEmulationPatterns(
     const arith::NarrowTypeEmulationConverter &typeConverter,
-    RewritePatternSet &patterns, bool disableAtomicRMW = false);
+    RewritePatternSet &patterns, bool disableAtomicRMW = false,
+    bool assumeAligned = false);
 
-/// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
-/// vector operations comprising `shuffle` and `bitwise` ops.
-/// Warning: these patterns currently only work for little endian targets.
-FailureOr<Value> rewriteBitCastOfTruncI(RewriterBase &rewriter,
-                                        vector::BitCastOp bitCastOp,
-                                        arith::TruncIOp truncOp,
-                                        vector::BroadcastOp maybeBroadcastOp);
-
-/// Rewrite a vector `ext(bitcast)` to use a more efficient sequence of
-/// vector operations comprising `shuffle` and `bitwise` ops.
-/// Warning: these patterns currently only work for little endian targets.
-FailureOr<Value> rewriteExtOfBitCast(RewriterBase &rewriter, Operation *extOp,
-                                     vector::BitCastOp bitCastOp,
-                                     vector::BroadcastOp maybeBroadcastOp);
+/// Populates patterns for both MeMref flattening and Vector narrow type
+/// emulation.
+///
+/// Patterns for narrow-type-emulation require "flattened" MemRef(s), so this
+/// composite populate* method can be used for narrow-type-emulation for Ops
+/// operating on MemRef(s) that are rank > 2.
+void populateMemRefFlattenAndVectorNarrowTypeEmulationPatterns(
+    arith::NarrowTypeEmulationConverter &typeConverter,
+    RewritePatternSet &patterns);
 
 /// Appends patterns for rewriting vector operations over narrow types with
 /// ops over wider types.
@@ -425,6 +462,12 @@ void populateVectorTransposeNarrowTypeRewritePatterns(
 /// conversions for linearizing scf/cf/func operations
 void populateForVectorLinearize(TypeConverter &typeConverter,
                                 ConversionTarget &conversionTarget);
+
+/// Extends `conversionTarget` so that ops whose inner-most vector dimension is
+/// at least `targetBitWidth` bits wide (or has `index` elements) stay legal.
+/// Must be called after `populateForVectorLinearize`.
+void populateVectorLinearizeBitWidthTargetRules(
+    ConversionTarget &conversionTarget, unsigned targetBitWidth);
 
 /// Populates `patterns` for ND vector (N >= 2) linearization. This currently
 /// contains patterns for converting ConstantLike, Vectorizable, and

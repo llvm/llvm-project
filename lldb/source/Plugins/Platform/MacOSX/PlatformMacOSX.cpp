@@ -84,7 +84,7 @@ void PlatformMacOSX::Terminate() {
   PlatformDarwinKernel::Terminate();
   PlatformAppleSimulator::Terminate();
 #endif
-  PlatformRemoteMacOSX::Initialize();
+  PlatformRemoteMacOSX::Terminate();
   PlatformRemoteiOS::Terminate();
   PlatformDarwin::Terminate();
 }
@@ -101,48 +101,6 @@ PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch) {
 
 /// Default Constructor
 PlatformMacOSX::PlatformMacOSX() : PlatformDarwinDevice(true) {}
-
-ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
-  ModuleSP exe_module_sp(target.GetExecutableModule());
-  if (!exe_module_sp)
-    return {};
-
-  ObjectFile *objfile = exe_module_sp->GetObjectFile();
-  if (!objfile)
-    return {};
-
-  llvm::VersionTuple version = objfile->GetSDKVersion();
-  if (version.empty())
-    return {};
-
-  // First try to find an SDK that matches the given SDK version.
-  if (FileSpec fspec = HostInfo::GetXcodeContentsDirectory()) {
-    StreamString sdk_path;
-    sdk_path.Printf("%s/Developer/Platforms/MacOSX.platform/Developer/"
-                    "SDKs/MacOSX%u.%u.sdk",
-                    fspec.GetPath().c_str(), version.getMajor(),
-                    *version.getMinor());
-    if (FileSystem::Instance().Exists(fspec))
-      return ConstString(sdk_path.GetString());
-  }
-
-  // Use the default SDK as a fallback.
-  auto sdk_path_or_err =
-      HostInfo::GetSDKRoot(HostInfo::SDKOptions{XcodeSDK::GetAnyMacOS()});
-  if (!sdk_path_or_err) {
-    Debugger::ReportError("Error while searching for Xcode SDK: " +
-                          toString(sdk_path_or_err.takeError()));
-    return {};
-  }
-
-  FileSpec fspec(*sdk_path_or_err);
-  if (fspec) {
-    if (FileSystem::Instance().Exists(fspec))
-      return ConstString(fspec.GetPath());
-  }
-
-  return {};
-}
 
 std::vector<ArchSpec>
 PlatformMacOSX::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
@@ -180,13 +138,11 @@ PlatformMacOSX::GetSupportedArchitectures(const ArchSpec &process_host_arch) {
 }
 
 lldb_private::Status PlatformMacOSX::GetSharedModule(
-    const lldb_private::ModuleSpec &module_spec, Process *process,
+    const lldb_private::ModuleSpec &module_spec, Target &target,
     lldb::ModuleSP &module_sp,
-    const lldb_private::FileSpecList *module_search_paths_ptr,
     llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr) {
-  Status error = GetSharedModuleWithLocalCache(module_spec, module_sp,
-                                               module_search_paths_ptr,
-                                               old_modules, did_create_ptr);
+  Status error = GetSharedModuleWithLocalCache(
+      module_spec, module_sp, old_modules, did_create_ptr, target);
 
   if (module_sp) {
     if (module_spec.GetArchitecture().GetCore() ==
@@ -200,8 +156,8 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
         llvm::SmallVector<lldb::ModuleSP, 1> old_x86_64_modules;
         bool did_create = false;
         Status x86_64_error = GetSharedModuleWithLocalCache(
-            module_spec_x86_64, x86_64_module_sp, module_search_paths_ptr,
-            &old_x86_64_modules, &did_create);
+            module_spec_x86_64, x86_64_module_sp, &old_x86_64_modules,
+            &did_create, target);
         if (x86_64_module_sp && x86_64_module_sp->GetObjectFile()) {
           module_sp = x86_64_module_sp;
           if (old_modules)
@@ -216,15 +172,15 @@ lldb_private::Status PlatformMacOSX::GetSharedModule(
   }
 
   if (!module_sp) {
-    error = FindBundleBinaryInExecSearchPaths(module_spec, process, module_sp,
-                                              module_search_paths_ptr,
+    error = FindBundleBinaryInExecSearchPaths(module_spec, target, module_sp,
                                               old_modules, did_create_ptr);
   }
   return error;
 }
 
-llvm::StringRef PlatformMacOSX::GetDeviceSupportDirectoryName() {
-  return "macOS DeviceSupport";
+llvm::SmallVector<llvm::StringRef>
+PlatformMacOSX::GetDeviceSupportDirectoryNames() {
+  return {"macOS DeviceSupport"};
 }
 
 llvm::StringRef PlatformMacOSX::GetPlatformName() { return "MacOSX.platform"; }

@@ -1,5 +1,7 @@
 // RUN: mlir-tblgen -gen-attrdef-decls -I %S/../../include %s | FileCheck %s --check-prefix=DECL
 // RUN: mlir-tblgen -gen-attrdef-defs -I %S/../../include %s | FileCheck %s --check-prefix=DEF
+// RUN: mlir-tblgen -gen-attrdef-decls -attrdefs-registration-name=Ext -I %S/../../include %s | FileCheck %s --check-prefix=NAME
+// RUN: mlir-tblgen -gen-attrdef-defs -attrdefs-registration-name=Ext -I %S/../../include %s | FileCheck %s --check-prefix=NAME
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -19,11 +21,11 @@ include "mlir/IR/OpBase.td"
 // DEF: ::test::CompoundAAttr,
 // DEF: ::test::SingleParameterAttr
 
-// DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(
+// DEF-LABEL: ::mlir::OptionalParseResult generatedTestDialectAttributeParser(
 // DEF-SAME: ::mlir::AsmParser &parser,
 // DEF-SAME: ::llvm::StringRef *mnemonic, ::mlir::Type type,
 // DEF-SAME: ::mlir::Attribute &value) {
-// DEF: return ::mlir::AsmParser::KeywordSwitch<::mlir::OptionalParseResult>(parser)
+// DEF: return ::mlir::AsmParser::KeywordSwitch<::mlir::OptionalParseResult>(parser, mnemonic)
 // DEF: .Case(::test::IndexAttr::getMnemonic()
 // DEF-NEXT:   value = ::test::IndexAttr::parse(parser, type);
 // DEF-NEXT:   return ::mlir::success(!!value);
@@ -34,12 +36,24 @@ include "mlir/IR/OpBase.td"
 // DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;
 // DEF-NEXT:   return std::nullopt;
+// DEF: ::llvm::LogicalResult generatedTestDialectAttributePrinter(
+
+// Without partitions, the dispatch functions are also available under their
+// former names.
+// DEF: /// Kept for compatibility, use `generatedTestDialectAttributeParser` and `generatedTestDialectAttributePrinter` instead.
+// DEF-NEXT: {{\[\[}}maybe_unused{{\]\]}} static ::mlir::OptionalParseResult generatedAttributeParser(::mlir::AsmParser &parser, ::llvm::StringRef *mnemonic, ::mlir::Type type, ::mlir::Attribute &value) {
+// DEF-NEXT:   return ::test::generatedTestDialectAttributeParser(parser, mnemonic, type, value);
+// DEF-NEXT: }
+// DEF: {{\[\[}}maybe_unused{{\]\]}} static ::llvm::LogicalResult generatedAttributePrinter(::mlir::Attribute def, ::mlir::AsmPrinter &printer) {
+// DEF-NEXT:   return ::test::generatedTestDialectAttributePrinter(def, printer);
+// DEF-NEXT: }
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
 // DEF-NOT: TestDialect
     let name = "TestDialect";
     let cppNamespace = "::test";
+    let useDefaultAttributeRegistration = 1;
 }
 
 class TestAttr<string name> : AttrDef<Test_Dialect, name> { }
@@ -115,6 +129,11 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 // DEF: return new (allocator.allocate<CompoundAAttrStorage>())
 // DEF-SAME: CompoundAAttrStorage(std::move(widthOfSomething), std::move(exampleTdType), std::move(apFloat), std::move(dims), std::move(inner));
 
+// DEF: CompoundAAttr CompoundAAttr::getChecked(
+// DEF-SAME:   int widthOfSomething, ::test::SimpleTypeA exampleTdType, ::llvm::APFloat apFloat, ::llvm::ArrayRef<int> dims, ::mlir::Type inner
+// DEF-SAME: )
+// DEF-NEXT: return Base::getChecked(emitError, context, std::move(widthOfSomething), std::move(exampleTdType), std::move(apFloat), std::move(dims), std::move(inner));
+
 // DEF: ::mlir::Type CompoundAAttr::getInner() const {
 // DEF-NEXT: return getImpl()->inner;
 }
@@ -186,3 +205,29 @@ def I_TestGenMnemonicAliasAttr : TestAttr<"TestGenMnemonicAlias"> {
 // DEF-NEXT: os << "test_gen_mnemonic_alias";
 // DEF-NEXT: return ::mlir::OpAsmAliasResult::OverridableAlias;
 // DEF-NEXT: }
+
+def J_CustomStorageCtorAttr : AttrDef<Test_Dialect, "CustomStorageCtorAttr"> {
+  let attrName = "test_custom_storage_ctor_attr";
+  let parameters = (ins "bool":$flag);
+  let hasStorageCustomConstructor = 1;
+}
+
+// Note: ';' at the end of construct method declaration is important - otherwise
+// one cannot provide custom definition
+
+// DEF-LABEL: struct CustomStorageCtorAttrAttrStorage : public ::mlir::AttributeStorage
+// DEF: static CustomStorageCtorAttrAttrStorage *construct
+// DEF-SAME: (::mlir::AttributeStorageAllocator &allocator, KeyTy &&tblgenKey);
+
+// The registration hook registers every attribute.
+// DECL: class TestDialect;
+// DECL-NEXT: /// Registers the attributes defined in this file with `dialect`.
+// DECL-NEXT: void registerTestDialectAttributes(TestDialect *dialect);
+
+// DEF: void registerTestDialectAttributes(TestDialect *dialect) {
+// DEF-NEXT:   ::mlir::AbstractAttribute::insert<IndexAttr>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractAttribute::insert<SimpleAAttr>(*dialect);
+// DEF:        ::mlir::AbstractAttribute::insert<CustomStorageCtorAttrAttr>(*dialect);
+// DEF-NEXT: }
+
+// NAME: void registerExtAttributes(TestDialect *dialect)

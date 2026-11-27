@@ -149,7 +149,7 @@ private:
 
 AnalysisKey TestImmutableFunctionAnalysis::Key;
 
-struct LambdaModulePass : public PassInfoMixin<LambdaModulePass> {
+struct LambdaModulePass : public OptionalPassInfoMixin<LambdaModulePass> {
   template <typename T>
   LambdaModulePass(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
@@ -160,7 +160,7 @@ struct LambdaModulePass : public PassInfoMixin<LambdaModulePass> {
   std::function<PreservedAnalyses(Module &, ModuleAnalysisManager &)> Func;
 };
 
-struct LambdaSCCPass : public PassInfoMixin<LambdaSCCPass> {
+struct LambdaSCCPass : public OptionalPassInfoMixin<LambdaSCCPass> {
   template <typename T> LambdaSCCPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
@@ -173,7 +173,7 @@ struct LambdaSCCPass : public PassInfoMixin<LambdaSCCPass> {
       Func;
 };
 
-struct LambdaFunctionPass : public PassInfoMixin<LambdaFunctionPass> {
+struct LambdaFunctionPass : public OptionalPassInfoMixin<LambdaFunctionPass> {
   template <typename T>
   LambdaFunctionPass(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
@@ -1320,7 +1320,8 @@ TEST_F(CGSCCPassManagerTest, TestAnalysisInvalidationCGSCCUpdate) {
 // is not defined.
 #ifndef NDEBUG
 
-struct LambdaSCCPassNoPreserve : public PassInfoMixin<LambdaSCCPassNoPreserve> {
+struct LambdaSCCPassNoPreserve
+    : public OptionalPassInfoMixin<LambdaSCCPassNoPreserve> {
   template <typename T>
   LambdaSCCPassNoPreserve(T &&Arg) : Func(std::forward<T>(Arg)) {}
 
@@ -1640,7 +1641,8 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses8) {
         CallGraphUpdater CGU;
         CGU.initialize(CG, C, AM, UR);
         ASSERT_NO_FATAL_FAILURE(CGU.replaceFunctionWith(*FnF, *FnewF));
-        ASSERT_TRUE(FnF->isDeclaration());
+        ASSERT_EQ(FnF->size(), 1u);
+        ASSERT_TRUE(isa<UnreachableInst>(FnF->getEntryBlock().front()));
         ASSERT_TRUE(FnF->use_empty());
       }));
 
@@ -1663,6 +1665,11 @@ TEST_F(CGSCCPassManagerTest, TestUpdateCGAndAnalysisManagerForPasses9) {
         CallGraphUpdater CGU;
         CGU.initialize(CG, C, AM, UR);
         ASSERT_NO_FATAL_FAILURE(CGU.removeFunction(*FnF));
+        // The function is erased only at the end of the CGSCC walk; until
+        // then, it stays a definition with an unreachable body.
+        CGU.finalize();
+        ASSERT_EQ(FnF->size(), 1u);
+        ASSERT_TRUE(isa<UnreachableInst>(FnF->getEntryBlock().front()));
         ASSERT_EQ(M->getFunctionList().size(), 6U);
       }));
 
@@ -1936,26 +1943,26 @@ TEST_F(CGSCCPassManagerTest, TestDeletionOfFunctionInNonTrivialRefSCC) {
 TEST_F(CGSCCPassManagerTest, TestInsertionOfNewNonTrivialCallEdge) {
   std::unique_ptr<Module> M = parseIR("define void @f1() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f4 to i8*\n"
-                                      "  %b = bitcast void ()* @f2 to i8*\n"
+                                      "  %a = bitcast ptr @f4 to ptr\n"
+                                      "  %b = bitcast ptr @f2 to ptr\n"
                                       "  ret void\n"
                                       "}\n"
                                       "define void @f2() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f1 to i8*\n"
-                                      "  %b = bitcast void ()* @f3 to i8*\n"
+                                      "  %a = bitcast ptr @f1 to ptr\n"
+                                      "  %b = bitcast ptr @f3 to ptr\n"
                                       "  ret void\n"
                                       "}\n"
                                       "define void @f3() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f2 to i8*\n"
-                                      "  %b = bitcast void ()* @f4 to i8*\n"
+                                      "  %a = bitcast ptr @f2 to ptr\n"
+                                      "  %b = bitcast ptr @f4 to ptr\n"
                                       "  ret void\n"
                                       "}\n"
                                       "define void @f4() {\n"
                                       "entry:\n"
-                                      "  %a = bitcast void ()* @f3 to i8*\n"
-                                      "  %b = bitcast void ()* @f1 to i8*\n"
+                                      "  %a = bitcast ptr @f3 to ptr\n"
+                                      "  %b = bitcast ptr @f1 to ptr\n"
                                       "  ret void\n"
                                       "}\n");
 

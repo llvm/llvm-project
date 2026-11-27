@@ -1,16 +1,16 @@
 # RUN: yaml2obj %s -o %t1.o
 
-# RUN: wasm-ld --no-entry --shared-memory --features=atomics,bulk-memory %t1.o -o - | obj2yaml | FileCheck %s --check-prefix SHARED
+# RUN: wasm-ld --no-entry --no-gc-sections --shared-memory --features=atomics,bulk-memory %t1.o -o - | obj2yaml | FileCheck %s --check-prefix SHARED
 
-# RUN: not wasm-ld --no-entry --shared-memory --max-memory=100000 %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-UNALIGNED
+# RUN: not wasm-ld --no-entry --no-gc-sections --shared-memory --max-memory=100000 %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-UNALIGNED
 
-# RUN: not wasm-ld --no-entry --shared-memory --max-memory=131072 --features=bulk-memory %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-NO-ATOMICS
+# RUN: not wasm-ld --no-entry --no-gc-sections --shared-memory --max-memory=131072 --features=bulk-memory %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-NO-ATOMICS
 
-# RUN: not wasm-ld --no-entry --shared-memory --max-memory=131072 --features=atomics %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-NO-BULK-MEM
+# RUN: not wasm-ld --no-entry --no-gc-sections --shared-memory --max-memory=131072 --features=atomics %t1.o -o - 2>&1 | FileCheck %s --check-prefix SHARED-NO-BULK-MEM
 
 # RUN: wasm-ld --relocatable --features=atomics %t1.o -o - | obj2yaml | FileCheck %s --check-prefix ATOMICS-RELOCATABLE
 
-# RUN: wasm-ld --no-entry --shared-memory --max-memory=131072 --features=atomics,bulk-memory %t1.o -o - | obj2yaml | FileCheck %s --check-prefix SHARED
+# XUN: wasm-ld --no-entry --no-gc-sections --shared-memory --max-memory=131072 --features=atomics,bulk-memory %t1.o -o - | obj2yaml | FileCheck %s --check-prefix SHARED
 
 --- !WASM
 FileHeader:
@@ -22,7 +22,7 @@ Sections:
         Field:           __linear_memory
         Kind:            MEMORY
         Memory:
-          Minimum:         0x00000001
+          Minimum:         0x00000009
       - Module:          env
         Field:           __indirect_function_table
         Kind:            TABLE

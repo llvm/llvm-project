@@ -5,9 +5,11 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangAnalysis
   AnalysisDeclContext.cpp
+  AnnexKDetection.cpp
   BodyFarm.cpp
   CalledOnceCheck.cpp
   CFG.cpp
+  CFGBackEdges.cpp
   CFGReachabilityAnalysis.cpp
   CFGStmtMap.cpp
   CallGraph.cpp
@@ -49,3 +51,4 @@ add_clang_library(clangAnalysis
 
 add_subdirectory(plugins)
 add_subdirectory(FlowSensitive)
+add_subdirectory(LifetimeSafety)

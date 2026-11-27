@@ -163,14 +163,24 @@ TEST_F(DumpDataExtractorTest, Formats) {
   TestDump(0xcafef00d, lldb::Format::eFormatHex, "0xcafef00d");
   TestDump(0xcafef00d, lldb::Format::eFormatHexUppercase, "0xCAFEF00D");
   TestDump(0.456, lldb::Format::eFormatFloat, "0.45600000000000002");
+  TestDump(std::vector<uint64_t>{0x47ae147ae147ae14, 0x40011147ae147ae1},
+           lldb::Format::eFormatFloat128,
+           "4.26999999999999999999999999999999963");
   TestDump(9, lldb::Format::eFormatOctal, "011");
   // Chars packed into an integer.
   TestDump<uint32_t>(0x4C4C4442, lldb::Format::eFormatOSType, "'LLDB'");
   // Unicode8 doesn't have a specific formatter.
   TestDump<uint8_t>(0x34, lldb::Format::eFormatUnicode8, "0x34");
   TestDump<uint16_t>(0x1122, lldb::Format::eFormatUnicode16, "U+1122");
-  TestDump<uint32_t>(0x12345678, lldb::Format::eFormatUnicode32,
-                     "U+0x12345678");
+  TestDump<uint16_t>(0xabcd, lldb::Format::eFormatUnicode16, "U+ABCD");
+  // Code points up to and including U+10FFFF use the "U+" notation of the
+  // Unicode Standard: uppercase hex, four to six digits, zero-padded to four.
+  TestDump<uint32_t>(0x12, lldb::Format::eFormatUnicode32, "U+0012");
+  TestDump<uint32_t>(0x20e3, lldb::Format::eFormatUnicode32, "U+20E3");
+  TestDump<uint32_t>(0x10FFFF, lldb::Format::eFormatUnicode32, "U+10FFFF");
+  // Values that are not valid code points fall back to plain hex.
+  TestDump<uint32_t>(0x110000, lldb::Format::eFormatUnicode32, "0x00110000");
+  TestDump<uint32_t>(0x12345678, lldb::Format::eFormatUnicode32, "0x12345678");
   TestDump<unsigned int>(654321, lldb::Format::eFormatUnsigned, "654321");
   // This pointer is printed based on the size of uint64_t, so the test is the
   // same for 32/64 bit host.
@@ -388,6 +398,9 @@ TEST_F(DumpDataExtractorTest, ItemByteSizeErrors) {
   TestDumpWithItemByteSize(
       18, lldb::Format::eFormatFloat,
       "error: unsupported byte size (18) for float format");
+  TestDumpWithItemByteSize(
+      17, lldb::Format::eFormatFloat128,
+      "error: unsupported byte size (17) for float format");
 
   // We want sizes to exactly match one of float/double.
   TestDumpWithItemByteSize(

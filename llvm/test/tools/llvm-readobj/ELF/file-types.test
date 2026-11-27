@@ -62,7 +62,7 @@ FileHeader:
 # RUN: llvm-readelf -h %t.unknown | FileCheck %s --match-full-lines --check-prefix GNU-UNNKNOWN
 
 # LLVM-UNNKNOWN: ElfHeader {
-# LLVM-UNNKNOWN:   Type: Unknown (0xFDFF)
+# LLVM-UNNKNOWN:   Type: Unknown (0xfdff)
 
 # GNU-UNNKNOWN: ELF Header:
 # GNU-UNNKNOWN:   Type: <unknown>: fdff
@@ -72,7 +72,7 @@ FileHeader:
 # RUN: llvm-readelf -h %t6 | FileCheck %s --match-full-lines --check-prefix GNU-LOOS
 
 # LLVM-LOOS: ElfHeader {
-# LLVM-LOOS:   Type: OS Specific (0xFE00)
+# LLVM-LOOS:   Type: OS Specific (0xfe00)
 
 # GNU-LOOS: ELF Header:
 # GNU-LOOS:   Type: OS Specific: (fe00)
@@ -82,7 +82,7 @@ FileHeader:
 # RUN: llvm-readelf -h %t7 | FileCheck %s --match-full-lines --check-prefix GNU-HIOS
 
 # LLVM-HIOS: ElfHeader {
-# LLVM-HIOS:   Type: OS Specific (0xFEFF)
+# LLVM-HIOS:   Type: OS Specific (0xfeff)
 
 # GNU-HIOS: ELF Header:
 # GNU-HIOS:   Type: OS Specific: (feff)
@@ -92,7 +92,7 @@ FileHeader:
 # RUN: llvm-readelf -h %t8 | FileCheck %s --match-full-lines --check-prefix GNU-LOPROC
 
 # LLVM-LOPROC: ElfHeader {
-# LLVM-LOPROC:   Type: Processor Specific (0xFF00)
+# LLVM-LOPROC:   Type: Processor Specific (0xff00)
 
 # GNU-LOPROC: ELF Header:
 # GNU-LOPROC:   Type: Processor Specific: (ff00)
@@ -102,7 +102,7 @@ FileHeader:
 # RUN: llvm-readelf -h %t9 | FileCheck %s --match-full-lines --check-prefix GNU-HIPROC
 
 # LLVM-HIPROC: ElfHeader {
-# LLVM-HIPROC:   Type: Processor Specific (0xFFFF)
+# LLVM-HIPROC:   Type: Processor Specific (0xffff)
 
 # GNU-HIPROC: ELF Header:
 # GNU-HIPROC:   Type: Processor Specific: (ffff)

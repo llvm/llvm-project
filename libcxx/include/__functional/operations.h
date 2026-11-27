@@ -15,7 +15,9 @@
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>
 #include <__type_traits/desugars_to.h>
+#include <__type_traits/is_generic_transparent_comparator.h>
 #include <__type_traits/is_integral.h>
+#include <__type_traits/make_transparent.h>
 #include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -33,9 +35,7 @@ template <class _Tp>
 #endif
 struct plus : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x + __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x + __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(plus);
 
@@ -51,7 +51,7 @@ inline const bool __desugars_to_v<__plus_tag, plus<void>, _Tp, _Up> = true;
 template <>
 struct plus<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) + std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) + std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) + std::forward<_T2>(__u);
@@ -67,9 +67,7 @@ template <class _Tp>
 #endif
 struct minus : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x - __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x - __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(minus);
 
@@ -77,7 +75,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(minus);
 template <>
 struct minus<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) - std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) - std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) - std::forward<_T2>(__u);
@@ -93,9 +91,7 @@ template <class _Tp>
 #endif
 struct multiplies : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x * __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x * __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(multiplies);
 
@@ -103,7 +99,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(multiplies);
 template <>
 struct multiplies<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) * std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) * std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) * std::forward<_T2>(__u);
@@ -119,9 +115,7 @@ template <class _Tp>
 #endif
 struct divides : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x / __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x / __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(divides);
 
@@ -129,7 +123,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(divides);
 template <>
 struct divides<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) / std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) / std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) / std::forward<_T2>(__u);
@@ -145,9 +139,7 @@ template <class _Tp>
 #endif
 struct modulus : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x % __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x % __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(modulus);
 
@@ -155,7 +147,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(modulus);
 template <>
 struct modulus<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) % std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) % std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) % std::forward<_T2>(__u);
@@ -171,7 +163,7 @@ template <class _Tp>
 #endif
 struct negate : __unary_function<_Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x) const { return -__x; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x) const { return -__x; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(negate);
 
@@ -179,8 +171,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(negate);
 template <>
 struct negate<void> {
   template <class _Tp>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_Tp&& __x) const
-      noexcept(noexcept(-std::forward<_Tp>(__x))) //
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_Tp&& __x) const noexcept(noexcept(-std::forward<_Tp>(__x))) //
       -> decltype(-std::forward<_Tp>(__x)) {
     return -std::forward<_Tp>(__x);
   }
@@ -197,9 +188,7 @@ template <class _Tp>
 #endif
 struct bit_and : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x & __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x & __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_and);
 
@@ -207,9 +196,9 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_and);
 template <>
 struct bit_and<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
-      noexcept(noexcept(std::forward<_T1>(__t) &
-                        std::forward<_T2>(__u))) -> decltype(std::forward<_T1>(__t) & std::forward<_T2>(__u)) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
+      noexcept(noexcept(std::forward<_T1>(__t) & std::forward<_T2>(__u)))
+          -> decltype(std::forward<_T1>(__t) & std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) & std::forward<_T2>(__u);
   }
   typedef void is_transparent;
@@ -219,15 +208,14 @@ struct bit_and<void> {
 #if _LIBCPP_STD_VER >= 14
 template <class _Tp = void>
 struct bit_not : __unary_function<_Tp, _Tp> {
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x) const { return ~__x; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x) const { return ~__x; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_not);
 
 template <>
 struct bit_not<void> {
   template <class _Tp>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_Tp&& __x) const
-      noexcept(noexcept(~std::forward<_Tp>(__x))) //
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_Tp&& __x) const noexcept(noexcept(~std::forward<_Tp>(__x))) //
       -> decltype(~std::forward<_Tp>(__x)) {
     return ~std::forward<_Tp>(__x);
   }
@@ -242,9 +230,7 @@ template <class _Tp>
 #endif
 struct bit_or : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x | __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x | __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_or);
 
@@ -252,7 +238,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_or);
 template <>
 struct bit_or<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) | std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) | std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) | std::forward<_T2>(__u);
@@ -268,9 +254,7 @@ template <class _Tp>
 #endif
 struct bit_xor : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x ^ __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x ^ __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_xor);
 
@@ -278,7 +262,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_xor);
 template <>
 struct bit_xor<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) ^ std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) ^ std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) ^ std::forward<_T2>(__u);
@@ -296,9 +280,7 @@ template <class _Tp>
 #endif
 struct equal_to : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x == __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Tp& __y) const { return __x == __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(equal_to);
 
@@ -306,7 +288,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(equal_to);
 template <>
 struct equal_to<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) == std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) == std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) == std::forward<_T2>(__u);
@@ -331,9 +313,7 @@ template <class _Tp>
 #endif
 struct not_equal_to : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x != __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Tp& __y) const { return __x != __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(not_equal_to);
 
@@ -341,7 +321,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(not_equal_to);
 template <>
 struct not_equal_to<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) != std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) != std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) != std::forward<_T2>(__u);
@@ -353,9 +333,7 @@ struct not_equal_to<void> {
 template <class _Tp>
 struct less : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x < __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Tp& __y) const { return __x < __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(less);
 
@@ -369,13 +347,21 @@ inline const bool __desugars_to_v<__totally_ordered_less_tag, less<_Tp>, _Tp, _T
 template <>
 struct less<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) < std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) < std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) < std::forward<_T2>(__u);
   }
   typedef void is_transparent;
 };
+
+template <class _ArgumentType>
+struct __make_transparent<_ArgumentType, less<_ArgumentType> > {
+  using type _LIBCPP_NODEBUG = less<>;
+};
+
+template <>
+inline const bool __is_generic_transparent_comparator_v<less<>> = true;
 
 template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__less_tag, less<>, _Tp, _Up> = true;
@@ -391,9 +377,7 @@ template <class _Tp>
 #endif
 struct less_equal : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x <= __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Tp& __y) const { return __x <= __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(less_equal);
 
@@ -401,7 +385,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(less_equal);
 template <>
 struct less_equal<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) <= std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) <= std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) <= std::forward<_T2>(__u);
@@ -417,9 +401,7 @@ template <class _Tp>
 #endif
 struct greater_equal : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x >= __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Tp& __y) const { return __x >= __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(greater_equal);
 
@@ -427,9 +409,9 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(greater_equal);
 template <>
 struct greater_equal<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
-      noexcept(noexcept(std::forward<_T1>(__t) >=
-                        std::forward<_T2>(__u))) -> decltype(std::forward<_T1>(__t) >= std::forward<_T2>(__u)) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
+      noexcept(noexcept(std::forward<_T1>(__t) >= std::forward<_T2>(__u)))
+          -> decltype(std::forward<_T1>(__t) >= std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) >= std::forward<_T2>(__u);
   }
   typedef void is_transparent;
@@ -443,9 +425,7 @@ template <class _Tp>
 #endif
 struct greater : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x > __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Tp& __y) const { return __x > __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(greater);
 
@@ -456,7 +436,7 @@ inline const bool __desugars_to_v<__greater_tag, greater<_Tp>, _Tp, _Tp> = true;
 template <>
 struct greater<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) > std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) > std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) > std::forward<_T2>(__u);
@@ -466,6 +446,14 @@ struct greater<void> {
 
 template <class _Tp, class _Up>
 inline const bool __desugars_to_v<__greater_tag, greater<>, _Tp, _Up> = true;
+
+template <class _ArgumentType>
+struct __make_transparent<_ArgumentType, greater<_ArgumentType>> {
+  using type _LIBCPP_NODEBUG = greater<>;
+};
+
+template <>
+inline const bool __is_generic_transparent_comparator_v<greater<>> = true;
 #endif
 
 // Logical operations
@@ -477,9 +465,7 @@ template <class _Tp>
 #endif
 struct logical_and : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x && __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Tp& __y) const { return __x && __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_and);
 
@@ -487,7 +473,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_and);
 template <>
 struct logical_and<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) && std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) && std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) && std::forward<_T2>(__u);
@@ -503,7 +489,7 @@ template <class _Tp>
 #endif
 struct logical_not : __unary_function<_Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x) const { return !__x; }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x) const { return !__x; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_not);
 
@@ -511,8 +497,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_not);
 template <>
 struct logical_not<void> {
   template <class _Tp>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_Tp&& __x) const
-      noexcept(noexcept(!std::forward<_Tp>(__x))) //
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_Tp&& __x) const noexcept(noexcept(!std::forward<_Tp>(__x))) //
       -> decltype(!std::forward<_Tp>(__x)) {
     return !std::forward<_Tp>(__x);
   }
@@ -527,9 +512,7 @@ template <class _Tp>
 #endif
 struct logical_or : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x || __y;
-  }
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Tp& __y) const { return __x || __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_or);
 
@@ -537,7 +520,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_or);
 template <>
 struct logical_or<void> {
   template <class _T1, class _T2>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI auto operator()(_T1&& __t, _T2&& __u) const
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 auto operator()(_T1&& __t, _T2&& __u) const
       noexcept(noexcept(std::forward<_T1>(__t) || std::forward<_T2>(__u))) //
       -> decltype(std::forward<_T1>(__t) || std::forward<_T2>(__u)) {
     return std::forward<_T1>(__t) || std::forward<_T2>(__u);

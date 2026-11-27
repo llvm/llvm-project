@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s %}
 
 struct A {
   A(const char *);
@@ -19,8 +20,8 @@ struct S {
 };
 
 // CHECK: store i32 0, ptr @arr
-// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (i8, ptr @arr, i64 4), ptr noundef @.str)
-// CHECK: store i32 1, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 1)
-// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (i8, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 1), i64 4), ptr noundef @.str.1)
-// CHECK: store i32 2, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 2)
-// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds (i8, ptr getelementptr inbounds (%struct.S, ptr @arr, i64 2), i64 4), ptr noundef @.str.2)
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds nuw (i8, ptr @arr, i64 4), ptr noundef @.str)
+// CHECK: store i32 1, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8)
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds nuw (i8, ptr @arr, i64 12), ptr noundef @.str.1)
+// CHECK: store i32 2, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 16)
+// CHECK: call void @_ZN1AC1EPKc(ptr {{[^,]*}} getelementptr inbounds nuw (i8, ptr @arr, i64 20), ptr noundef @.str.2)

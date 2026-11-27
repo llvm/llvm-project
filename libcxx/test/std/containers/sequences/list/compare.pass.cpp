@@ -10,34 +10,34 @@
 
 // template< class T, class Alloc >
 // bool operator==( const std::list<T,Alloc>& lhs,
-//                  const std::list<T,Alloc>& rhs );
+//                  const std::list<T,Alloc>& rhs ); // constexpr since C++26
 
 // template< class T, class Alloc >
 // bool operator!=( const std::list<T,Alloc>& lhs,
-//                  const std::list<T,Alloc>& rhs );
+//                  const std::list<T,Alloc>& rhs ); // constexpr since C++26
 
 // template< class T, class Alloc >
 // bool operator<( const std::list<T,Alloc>& lhs,
-//                 const std::list<T,Alloc>& rhs );
+//                 const std::list<T,Alloc>& rhs ); // constexpr since C++26
 
 // template< class T, class Alloc >
 // bool operator<=( const std::list<T,Alloc>& lhs,
-//                  const std::list<T,Alloc>& rhs );
+//                  const std::list<T,Alloc>& rhs ); // constexpr since C++26
 
 // template< class T, class Alloc >
 // bool operator>( const std::list<T,Alloc>& lhs,
-//                 const std::list<T,Alloc>& rhs );
+//                 const std::list<T,Alloc>& rhs ); // constexpr since C++26
 
 // template< class T, class Alloc >
 // bool operator>=( const std::list<T,Alloc>& lhs,
-//                  const std::list<T,Alloc>& rhs );
+//                  const std::list<T,Alloc>& rhs ); // constexpr since C++26
 
 #include <list>
 #include <cassert>
 
 #include "test_comparisons.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     const std::list<int> l1, l2;
     assert(testComparisons(l1, l2, true, false));
@@ -113,5 +113,15 @@ int main(int, char**) {
     const std::list<LessAndEqComp> l2(items2, items2 + 2);
     assert(testComparisons(l1, l2, false, false));
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
+
   return 0;
 }

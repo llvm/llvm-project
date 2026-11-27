@@ -241,7 +241,7 @@ operation. This operation will represent a constant value in the Toy language.
 ```
 
 This operation takes zero operands, a
-[dense elements](../../Dialects/Builtin.md/#denseintorfpelementsattr) attribute named
+[dense elements](../../Dialects/Builtin.md/#densetypedelementsattr) attribute named
 `value` to represent the constant value, and returns a single result of
 [RankedTensorType](../../Dialects/Builtin.md/#rankedtensortype). An operation class
 inherits from the [CRTP](https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern)
@@ -402,6 +402,13 @@ Depending on the selected action, this will print either the `ConstantOp` class
 declaration or its implementation. Comparing this output to the hand-crafted
 implementation is incredibly useful when getting started with TableGen.
 
+Unlike our hand-written `ConstantOp`, operations defined in ODS do not need to
+be added with `addOperations`: as our dialect sets
+`useDefaultOperationRegistration` to `1` in its definition, the generated
+dialect constructor registers all of them. As registering the operations is all
+our dialect needs, it also sets `hasInitializer` to `0`, so that it does not
+need to define `ToyDialect::initialize`.
+
 #### Defining Arguments and Results
 
 With the shell of the operation defined, we can now provide the
@@ -521,7 +528,7 @@ def ConstantOp : Toy_Op<"constant"> {
 
   // Add custom build methods for the constant operation. These methods populate
   // the `state` that MLIR uses to create operations, i.e. these are used when
-  // using `builder.create<ConstantOp>(...)`.
+  // using `ConstantOp::create(builder, ...)`.
   let builders = [
     // Build a constant with a given constant tensor value.
     OpBuilder<(ins "DenseElementsAttr":$value), [{
@@ -620,7 +627,7 @@ def PrintOp : Toy_Op<"print"> {
 A C++ implementation for the printer and parser is shown below:
 
 ```c++
-/// The 'OpAsmPrinter' class is a stream that will allows for formatting
+/// The 'OpAsmPrinter' class is a stream that allows for formatting
 /// strings, attributes, operands, types, etc.
 void PrintOp::print(mlir::OpAsmPrinter &printer) {
   printer << "toy.print " << op.input();

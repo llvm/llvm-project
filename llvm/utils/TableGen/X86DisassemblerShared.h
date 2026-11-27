@@ -14,6 +14,8 @@
 
 #include "llvm/Support/X86DisassemblerDecoderCommon.h"
 
+namespace llvm::X86Disassembler {
+
 struct InstructionSpecifier {
   llvm::X86Disassembler::OperandSpecifier
       operands[llvm::X86Disassembler::X86_MAX_OPERANDS];
@@ -31,7 +33,6 @@ struct InstructionSpecifier {
 /// instruction each possible value of the ModR/M byte corresponds to. Once
 /// this information is known, we have narrowed down to a single instruction.
 struct ModRMDecision {
-  uint8_t modrm_type;
   llvm::X86Disassembler::InstrUID instructionIDs[256];
 };
 
@@ -51,5 +52,7 @@ struct ContextDecision {
 
   ContextDecision() { memset(opcodeDecisions, 0, sizeof(opcodeDecisions)); }
 };
+
+} // namespace llvm::X86Disassembler
 
 #endif

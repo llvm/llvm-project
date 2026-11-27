@@ -30,7 +30,7 @@ struct PoisonRecord {
 };
 
 void AddPoisonRecord(const PoisonRecord& new_record);
-bool FindPoisonRecord(uptr addr, PoisonRecord& match);
+bool FindPoisonRecord(uptr addr, PoisonRecord& match, bool& is_full);
 
 void AcquirePoisonRecords();
 void ReleasePoisonRecords();
@@ -66,7 +66,9 @@ ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
   // for mapping shadow and zeroing out pages doesn't "just work", so we should
   // probably provide higher-level interface for these operations.
   // For now, just memset on Windows.
-  if (value || SANITIZER_WINDOWS == 1 ||
+  // On AIX, calling ReserveShadowMemoryRange() is not allowed to remap the
+  // memory, so just memset the memory.
+  if (value || SANITIZER_WINDOWS == 1 || SANITIZER_AIX ||
       shadow_end - shadow_beg < common_flags()->clear_shadow_mmap_threshold) {
     REAL(memset)((void*)shadow_beg, value, shadow_end - shadow_beg);
   } else {

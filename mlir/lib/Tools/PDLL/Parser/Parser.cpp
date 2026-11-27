@@ -25,11 +25,12 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Parser.h"
+#include <cstdint>
 #include <optional>
 #include <string>
 
@@ -148,8 +149,9 @@ private:
     std::string docStr;
     {
       llvm::raw_string_ostream docOS(docStr);
+      std::string tmpDocStr = doc.str();
       raw_indented_ostream(docOS).printReindented(
-          StringRef(docStr).rtrim(" \t"));
+          StringRef(tmpDocStr).rtrim(" \t"));
     }
     return docStr;
   }
@@ -828,6 +830,7 @@ LogicalResult Parser::parseTdInclude(StringRef filename, llvm::SMRange fileLoc,
   llvm::SourceMgr tdSrcMgr;
   tdSrcMgr.AddNewSourceBuffer(std::move(*includeBuffer), SMLoc());
   tdSrcMgr.setIncludeDirs(parserSrcMgr.getIncludeDirs());
+  tdSrcMgr.setVirtualFileSystem(llvm::vfs::getRealFileSystem());
 
   // This class provides a context argument for the llvm::SourceMgr diagnostic
   // handler.
@@ -985,8 +988,7 @@ ast::Decl *Parser::createODSNativePDLLConstraintDecl(
   // Build the native constraint.
   auto *constraintDecl = ast::UserConstraintDecl::createNative(
       ctx, ast::Name::create(ctx, name, loc), paramVar,
-      /*results=*/std::nullopt, codeBlock, ast::TupleType::get(ctx),
-      nativeType);
+      /*results=*/{}, codeBlock, ast::TupleType::get(ctx), nativeType);
   constraintDecl->setDocComment(ctx, docString);
   curDeclScope->add(constraintDecl);
   return constraintDecl;
@@ -1782,7 +1784,7 @@ Parser::parseConstraint(std::optional<SMRange> &typeConstraint,
 
 FailureOr<ast::ConstraintRef> Parser::parseArgOrResultConstraint() {
   std::optional<SMRange> typeConstraint;
-  return parseConstraint(typeConstraint, /*existingConstraints=*/std::nullopt,
+  return parseConstraint(typeConstraint, /*existingConstraints=*/{},
                          /*allowInlineTypeConstraints=*/false);
 }
 
@@ -2808,8 +2810,12 @@ FailureOr<ast::Type> Parser::validateMemberAccess(ast::Expr *parentExpr,
       if (it != results.end())
         return it->isVariadic() ? valueRangeTy : valueTy;
     } else if (llvm::isDigit(name[0])) {
-      // Allow unchecked numeric indexing of the results of unregistered
-      // operations. It returns a single value.
+      int32_t index;
+      if (name.getAsInteger(/*Radix=*/10, index))
+        return emitError(loc, "result index is too large");
+
+      // Allow numeric indexing of the results of unregistered operations. It
+      // returns a single value because the result signature is unknown.
       return valueTy;
     }
   } else if (auto tupleType = dyn_cast<ast::TupleType>(parentType)) {
@@ -2883,8 +2889,9 @@ Parser::validateOperationOperands(SMRange loc, std::optional<StringRef> name,
                                   SmallVectorImpl<ast::Expr *> &operands) {
   return validateOperationOperandsOrResults(
       "operand", loc, odsOp ? odsOp->getLoc() : std::optional<SMRange>(), name,
-      operands, odsOp ? odsOp->getOperands() : std::nullopt, valueTy,
-      valueRangeTy);
+      operands,
+      odsOp ? odsOp->getOperands() : ArrayRef<pdll::ods::OperandOrResult>(),
+      valueTy, valueRangeTy);
 }
 
 LogicalResult
@@ -2893,7 +2900,9 @@ Parser::validateOperationResults(SMRange loc, std::optional<StringRef> name,
                                  SmallVectorImpl<ast::Expr *> &results) {
   return validateOperationOperandsOrResults(
       "result", loc, odsOp ? odsOp->getLoc() : std::optional<SMRange>(), name,
-      results, odsOp ? odsOp->getResults() : std::nullopt, typeTy, typeRangeTy);
+      results,
+      odsOp ? odsOp->getResults() : ArrayRef<pdll::ods::OperandOrResult>(),
+      typeTy, typeRangeTy);
 }
 
 void Parser::checkOperationResultTypeInferrence(SMRange loc, StringRef opName,
@@ -2992,8 +3001,8 @@ LogicalResult Parser::validateOperationOperandsOrResults(
       // Otherwise, create dummy values for each of the entries so that we
       // adhere to the ODS signature.
       for (unsigned i = 0, e = odsValues.size(); i < e; ++i) {
-        values.push_back(ast::RangeExpr::create(
-            ctx, loc, /*elements=*/std::nullopt, rangeTy));
+        values.push_back(
+            ast::RangeExpr::create(ctx, loc, /*elements=*/{}, rangeTy));
       }
       return success();
     }

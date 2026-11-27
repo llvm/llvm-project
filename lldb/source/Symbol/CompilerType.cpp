@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CompilerType.h"
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -20,6 +19,8 @@
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-enumerations.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <iterator>
 #include <mutex>
@@ -176,6 +177,13 @@ bool CompilerType::IsMemberFunctionPointerType() const {
   return false;
 }
 
+bool CompilerType::IsMemberDataPointerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsMemberDataPointerType(m_type);
+  return false;
+}
+
 bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
@@ -240,15 +248,21 @@ bool CompilerType::ShouldTreatScalarValueAsAddress() const {
   return false;
 }
 
-bool CompilerType::IsFloatingPointType(uint32_t &count,
-                                       bool &is_complex) const {
-  if (IsValid()) {
+bool CompilerType::IsComplexType() const {
+  return GetTypeClass() & eTypeClassComplexFloat ||
+         GetTypeClass() & eTypeClassComplexInteger;
+}
+
+bool CompilerType::IsFloatingPointType() const {
+  if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->IsFloatingPointType(m_type, count, is_complex);
-  }
-  count = 0;
-  is_complex = false;
+      return type_system_sp->IsFloatingPointType(m_type);
+
   return false;
+}
+
+bool CompilerType::IsRealFloatingPointType() const {
+  return IsFloatingPointType() && !IsComplexType() && !IsVectorType();
 }
 
 bool CompilerType::IsDefined() const {
@@ -304,18 +318,18 @@ bool CompilerType::IsVoidType() const {
   return false;
 }
 
-bool CompilerType::IsPointerToScalarType() const {
-  if (!IsValid())
-    return false;
-
-  return IsPointerType() && GetPointeeType().IsScalarType();
+bool CompilerType::HasPointerAuthQualifier() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->HasPointerAuthQualifier(m_type);
+  return false;
 }
 
-bool CompilerType::IsArrayOfScalarType() const {
-  CompilerType element_type;
-  if (IsArrayType(&element_type))
-    return element_type.IsScalarType();
-  return false;
+std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTargetAddressSpace(m_type);
+  return std::nullopt;
 }
 
 bool CompilerType::IsBeingDefined() const {
@@ -328,12 +342,6 @@ bool CompilerType::IsBeingDefined() const {
 bool CompilerType::IsInteger() const {
   bool is_signed = false; // May be reset by the call below.
   return IsIntegerType(is_signed);
-}
-
-bool CompilerType::IsFloat() const {
-  uint32_t count = 0;
-  bool is_complex = false;
-  return IsFloatingPointType(count, is_complex);
 }
 
 bool CompilerType::IsEnumerationType() const {
@@ -354,12 +362,11 @@ bool CompilerType::IsSigned() const {
 }
 
 bool CompilerType::IsNullPtrType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() ==
-         lldb::eBasicTypeNullPtr;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeNullPtr;
 }
 
 bool CompilerType::IsBoolean() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
+  return GetBasicTypeEnumeration() == lldb::eBasicTypeBool;
 }
 
 bool CompilerType::IsEnumerationIntegerTypeSigned() const {
@@ -374,30 +381,10 @@ bool CompilerType::IsScalarOrUnscopedEnumerationType() const {
 }
 
 bool CompilerType::IsPromotableIntegerType() const {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  if (IsUnscopedEnumerationType())
-    return true;
-
-  switch (GetCanonicalType().GetBasicTypeEnumeration()) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-
-  llvm_unreachable("All cases handled above.");
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsPromotableIntegerType(m_type);
+  return false;
 }
 
 bool CompilerType::IsPointerToVoid() const {
@@ -455,8 +442,7 @@ bool CompilerType::IsContextuallyConvertibleToBool() const {
 }
 
 bool CompilerType::IsBasicType() const {
-  return GetCanonicalType().GetBasicTypeEnumeration() !=
-         lldb::eBasicTypeInvalid;
+  return GetBasicTypeEnumeration() != lldb::eBasicTypeInvalid;
 }
 
 std::string CompilerType::TypeDescription() {
@@ -702,6 +688,14 @@ CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
   return CompilerType();
 }
 
+CompilerType
+CompilerType::AddAddressSpaceModifier(uint32_t address_space) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddAddressSpaceModifier(m_type, address_space);
+  return CompilerType();
+}
+
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -776,7 +770,7 @@ CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetBitSize(m_type, exe_scope);
-  return llvm::createStringError("Invalid type: Cannot determine size");
+  return llvm::createStringError("invalid type: cannot determine size");
 }
 
 llvm::Expected<uint64_t>
@@ -787,6 +781,13 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   return (*bit_size_or_err + 7) / 8;
 }
 
+std::optional<uint64_t> CompilerType::GetByteStride() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetByteStride(m_type);
+  return {};
+}
+
 std::optional<size_t>
 CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
   if (IsValid())
@@ -795,10 +796,10 @@ CompilerType::GetTypeBitAlign(ExecutionContextScope *exe_scope) const {
   return {};
 }
 
-lldb::Encoding CompilerType::GetEncoding(uint64_t &count) const {
+lldb::Encoding CompilerType::GetEncoding() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetEncoding(m_type, count);
+      return type_system_sp->GetEncoding(m_type);
   return lldb::eEncodingInvalid;
 }
 
@@ -905,23 +906,16 @@ llvm::Expected<CompilerType> CompilerType::GetDereferencedType(
   return CompilerType();
 }
 
-llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
+llvm::Expected<ChildTypeInfo> CompilerType::GetChildAtIndex(
     ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
     bool omit_empty_base_classes, bool ignore_array_bounds,
-    std::string &child_name, uint32_t &child_byte_size,
-    int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
-    uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
-    bool &child_is_deref_of_parent, ValueObject *valobj,
-    uint64_t &language_flags) const {
+    ValueObject *valobj) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
-      return type_system_sp->GetChildCompilerTypeAtIndex(
+      return type_system_sp->GetChildAtIndex(
           m_type, exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
-          ignore_array_bounds, child_name, child_byte_size, child_byte_offset,
-          child_bitfield_bit_size, child_bitfield_bit_offset,
-          child_is_base_class, child_is_deref_of_parent, valobj,
-          language_flags);
-  return CompilerType();
+          ignore_array_bounds, valobj);
+  return ChildTypeInfo();
 }
 
 // Look for a child member (doesn't include base classes, but it does include
@@ -1017,6 +1011,13 @@ CompilerType CompilerType::GetTypeForFormatters() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::GetPromotedIntegerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPromotedIntegerType(m_type);
+  return CompilerType();
+}
+
 LazyBool CompilerType::ShouldPrintAsOneLiner(ValueObject *valobj) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -1043,8 +1044,7 @@ CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
                                                      omit_empty_base_classes);
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 // Dumping types
@@ -1095,10 +1095,10 @@ bool CompilerType::GetValueAsScalar(const lldb_private::DataExtractor &data,
   if (IsAggregateType()) {
     return false; // Aggregate types don't have scalar values
   } else {
-    uint64_t count = 0;
-    lldb::Encoding encoding = GetEncoding(count);
+    // FIXME: check that type is scalar instead of checking encoding?
+    lldb::Encoding encoding = GetEncoding();
 
-    if (encoding == lldb::eEncodingInvalid || count != 1)
+    if (encoding == lldb::eEncodingInvalid || (GetTypeInfo() & eTypeIsComplex))
       return false;
 
     auto byte_size_or_err = GetByteSize(exe_scope);

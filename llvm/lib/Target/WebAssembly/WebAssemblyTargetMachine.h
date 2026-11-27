@@ -17,14 +17,29 @@
 
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 
 namespace llvm {
 
 class WebAssemblyTargetMachine final : public CodeGenTargetMachineImpl {
+  const WebAssemblyOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<WebAssemblySubtarget>> SubtargetMap;
-  bool UsesMultivalueABI = false;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS;
+    StringRef ABIName;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS && ABIName == RHS.ABIName;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<WebAssemblySubtarget, SubtargetAttrs>
+      LastSubtarget;
 
 public:
   WebAssemblyTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -35,9 +50,10 @@ public:
 
   ~WebAssemblyTargetMachine() override;
 
-  const WebAssemblySubtarget *getSubtargetImpl() const;
-  const WebAssemblySubtarget *getSubtargetImpl(std::string CPU,
-                                               std::string FS) const;
+  const WebAssemblyOptions &getCLOpts() const { return CLOpts; }
+
+  const WebAssemblySubtarget *getSubtargetImpl(StringRef CPU, StringRef FS,
+                                               StringRef ABIName) const;
   const WebAssemblySubtarget *
   getSubtargetImpl(const Function &F) const override;
 
@@ -64,7 +80,13 @@ public:
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
 
-  bool usesMultivalueABI() const { return UsesMultivalueABI; }
+  void registerPassBuilderCallbacks(PassBuilder &PbB) override;
+
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
+                             CodeGenFileType FileType,
+                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             PassInstrumentationCallbacks *PIC) override;
 };
 
 } // end namespace llvm

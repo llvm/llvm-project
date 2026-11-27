@@ -36,6 +36,28 @@
 using namespace lldb_private;
 using namespace minidump;
 
+/// Wrap raw stream contents in a single-stream minidump. Unlike yaml2obj, this
+/// leaves the location descriptors inside the stream untouched, so they can
+/// point anywhere.
+static std::string MakeMinidump(StreamType type, llvm::StringRef contents) {
+  Header header = {};
+  header.Signature = Header::MagicSignature;
+  header.Version = Header::MagicVersion;
+  header.NumberOfStreams = 1;
+  header.StreamDirectoryRVA = sizeof(Header);
+
+  Directory directory = {};
+  directory.Type = type;
+  directory.Location.RVA = sizeof(Header) + sizeof(Directory);
+  directory.Location.DataSize = contents.size();
+
+  std::string data;
+  data.append(reinterpret_cast<const char *>(&header), sizeof(header));
+  data.append(reinterpret_cast<const char *>(&directory), sizeof(directory));
+  data.append(contents);
+  return data;
+}
+
 class MinidumpParserTest : public testing::Test {
 public:
   SubsystemRAII<FileSystem> subsystems;
@@ -59,6 +81,10 @@ public:
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "convertYAML() failed");
 
+    return SetUpFromData(data);
+  }
+
+  llvm::Error SetUpFromData(llvm::StringRef data) {
     auto data_buffer_sp =
         std::make_shared<DataBufferHeap>(data.data(), data.size());
     auto expected_parser = MinidumpParser::Create(std::move(data_buffer_sp));
@@ -308,16 +334,19 @@ Streams:
 )"),
                     llvm::Succeeded());
 
-  EXPECT_EQ((llvm::ArrayRef<uint8_t>{0x54}), parser->GetMemory(0x401d46, 1));
-  EXPECT_EQ((llvm::ArrayRef<uint8_t>{0x54, 0x21}),
-            parser->GetMemory(0x401d46, 4));
-
-  EXPECT_EQ((llvm::ArrayRef<uint8_t>{0xc8, 0x4d, 0x04, 0xbc, 0xe9}),
-            parser->GetMemory(0x7ffceb34a000, 5));
-  EXPECT_EQ((llvm::ArrayRef<uint8_t>{0xc8, 0x4d, 0x04}),
-            parser->GetMemory(0x7ffceb34a000, 3));
-
-  EXPECT_EQ(llvm::ArrayRef<uint8_t>(), parser->GetMemory(0x500000, 512));
+  EXPECT_THAT_EXPECTED(parser->GetMemory(0x401d46, 1),
+                       llvm::HasValue(llvm::ArrayRef<uint8_t>{0x54}));
+  EXPECT_THAT_EXPECTED(parser->GetMemory(0x401d46, 4),
+                       llvm::HasValue(llvm::ArrayRef<uint8_t>{0x54, 0x21}));
+  EXPECT_THAT_EXPECTED(
+      parser->GetMemory(0x7ffceb34a000, 5),
+      llvm::HasValue(llvm::ArrayRef<uint8_t>{0xc8, 0x4d, 0x04, 0xbc, 0xe9}));
+  EXPECT_THAT_EXPECTED(
+      parser->GetMemory(0x7ffceb34a000, 3),
+      llvm::HasValue(llvm::ArrayRef<uint8_t>{0xc8, 0x4d, 0x04}));
+  EXPECT_THAT_EXPECTED(
+      parser->GetMemory(0x500000, 512),
+      llvm::FailedWithMessage("No memory range found for address (0x500000)"));
 }
 
 TEST_F(MinidumpParserTest, FindMemoryRangeWithFullMemoryMinidump) {
@@ -334,9 +363,9 @@ TEST_F(MinidumpParserTest, FindMemoryRangeWithFullMemoryMinidump) {
   EXPECT_FALSE(parser->FindMemoryRange(0x7ffe0000 + 4096).has_value());
 }
 
-constexpr auto yes = MemoryRegionInfo::eYes;
-constexpr auto no = MemoryRegionInfo::eNo;
-constexpr auto unknown = MemoryRegionInfo::eDontKnow;
+constexpr auto yes = eLazyBoolYes;
+constexpr auto no = eLazyBoolNo;
+constexpr auto unknown = eLazyBoolDontKnow;
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfo) {
   ASSERT_THAT_ERROR(SetUpFromYaml(R"(
@@ -381,20 +410,15 @@ Streams:
       parser->BuildMemoryRegions(),
       testing::Pair(testing::ElementsAre(
                         MemoryRegionInfo({0x0, 0x10000}, no, no, no, unknown,
-                                         no, ConstString(), unknown, 0, unknown,
-                                         unknown, unknown),
+                                         no, ConstString()),
                         MemoryRegionInfo({0x10000, 0x21000}, yes, yes, no,
-                                         unknown, yes, ConstString(), unknown,
-                                         0, unknown, unknown, unknown),
+                                         unknown, yes, ConstString()),
                         MemoryRegionInfo({0x40000, 0x1000}, yes, no, no,
-                                         unknown, yes, ConstString(), unknown,
-                                         0, unknown, unknown, unknown),
+                                         unknown, yes, ConstString()),
                         MemoryRegionInfo({0x7ffe0000, 0x1000}, yes, no, no,
-                                         unknown, yes, ConstString(), unknown,
-                                         0, unknown, unknown, unknown),
+                                         unknown, yes, ConstString()),
                         MemoryRegionInfo({0x7ffe1000, 0xf000}, no, no, no,
-                                         unknown, yes, ConstString(), unknown,
-                                         0, unknown, unknown, unknown)),
+                                         unknown, yes, ConstString())),
                     true));
 }
 
@@ -419,11 +443,9 @@ Streams:
       parser->BuildMemoryRegions(),
       testing::Pair(testing::ElementsAre(
                         MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown,
-                                         unknown, yes, ConstString(), unknown,
-                                         0, unknown, unknown, unknown),
+                                         unknown, yes, ConstString()),
                         MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown,
-                                         unknown, yes, ConstString(), unknown,
-                                         0, unknown, unknown, unknown)),
+                                         unknown, yes, ConstString())),
                     false));
 }
 
@@ -436,11 +458,9 @@ TEST_F(MinidumpParserTest, GetMemoryRegionInfoFromMemory64List) {
       parser->BuildMemoryRegions(),
       testing::Pair(testing::ElementsAre(
                         MemoryRegionInfo({0x1000, 0x10}, yes, unknown, unknown,
-                                         unknown, yes, ConstString(), unknown,
-                                         0, unknown, unknown, unknown),
+                                         unknown, yes, ConstString()),
                         MemoryRegionInfo({0x2000, 0x20}, yes, unknown, unknown,
-                                         unknown, yes, ConstString(), unknown,
-                                         0, unknown, unknown, unknown)),
+                                         unknown, yes, ConstString())),
                     false));
 }
 
@@ -465,27 +485,21 @@ Streams:
   ConstString app_process("/system/bin/app_process");
   ConstString linker("/system/bin/linker");
   ConstString liblog("/system/lib/liblog.so");
-  EXPECT_THAT(
-      parser->BuildMemoryRegions(),
-      testing::Pair(
-          testing::ElementsAre(
-              MemoryRegionInfo({0x400d9000, 0x2000}, yes, no, yes, no, yes,
-                               app_process, unknown, 0, unknown, unknown,
-                               unknown),
-              MemoryRegionInfo({0x400db000, 0x1000}, yes, no, no, no, yes,
-                               app_process, unknown, 0, unknown, unknown,
-                               unknown),
-              MemoryRegionInfo({0x400dc000, 0x1000}, yes, yes, no, no, yes,
-                               ConstString(), unknown, 0, unknown, unknown,
-                               unknown),
-              MemoryRegionInfo({0x400ec000, 0x1000}, yes, no, no, no, yes,
-                               ConstString(), unknown, 0, unknown, unknown,
-                               unknown),
-              MemoryRegionInfo({0x400ee000, 0x1000}, yes, yes, no, no, yes,
-                               linker, unknown, 0, unknown, unknown, unknown),
-              MemoryRegionInfo({0x400fc000, 0x1000}, yes, yes, yes, no, yes,
-                               liblog, unknown, 0, unknown, unknown, unknown)),
-          true));
+  EXPECT_THAT(parser->BuildMemoryRegions(),
+              testing::Pair(testing::ElementsAre(
+                                MemoryRegionInfo({0x400d9000, 0x2000}, yes, no,
+                                                 yes, no, yes, app_process),
+                                MemoryRegionInfo({0x400db000, 0x1000}, yes, no,
+                                                 no, no, yes, app_process),
+                                MemoryRegionInfo({0x400dc000, 0x1000}, yes, yes,
+                                                 no, no, yes, ConstString()),
+                                MemoryRegionInfo({0x400ec000, 0x1000}, yes, no,
+                                                 no, no, yes, ConstString()),
+                                MemoryRegionInfo({0x400ee000, 0x1000}, yes, yes,
+                                                 no, no, yes, linker),
+                                MemoryRegionInfo({0x400fc000, 0x1000}, yes, yes,
+                                                 yes, no, yes, liblog)),
+                            true));
 }
 
 TEST_F(MinidumpParserTest, GetMemoryRegionInfoLinuxMapsError) {
@@ -504,8 +518,7 @@ Streams:
   EXPECT_THAT(parser->BuildMemoryRegions(),
               testing::Pair(testing::ElementsAre(MemoryRegionInfo(
                                 {0x400fc000, 0x1000}, yes, yes, yes, no, yes,
-                                ConstString(nullptr), unknown, 0, unknown,
-                                unknown, unknown)),
+                                ConstString(nullptr))),
                             true));
 }
 
@@ -923,4 +936,46 @@ Streams:
   EXPECT_THAT_EXPECTED(
       parser->GetMinidumpFile().getString(filtered_modules[1]->ModuleNameRVA),
       llvm::HasValue("/tmp/b"));
+}
+
+TEST_F(MinidumpParserTest, GetModuleUUIDOutOfRangeCvRecord) {
+  minidump::Module module = {};
+  module.BaseOfImage = 0x1000;
+  module.SizeOfImage = 0x1000;
+  module.CvRecord.RVA = 0xf0000000;
+  module.CvRecord.DataSize = sizeof(llvm::support::ulittle32_t);
+
+  std::string stream;
+  llvm::support::ulittle32_t module_count(1);
+  stream.append(reinterpret_cast<const char *>(&module_count),
+                sizeof(module_count));
+  stream.append(reinterpret_cast<const char *>(&module), sizeof(module));
+
+  ASSERT_THAT_ERROR(SetUpFromData(MakeMinidump(StreamType::ModuleList, stream)),
+                    llvm::Succeeded());
+
+  llvm::ArrayRef<minidump::Module> modules = parser->GetModuleList();
+  ASSERT_EQ(1u, modules.size());
+  EXPECT_FALSE(parser->GetModuleUUID(&modules[0]).IsValid());
+}
+
+TEST_F(MinidumpParserTest, GetThreadContextOutOfRange) {
+  minidump::Thread thread = {};
+  thread.ThreadId = 0x3e81;
+  // The sum of the two fields wraps around in 32 bits.
+  thread.Context.RVA = 0xfffffff0;
+  thread.Context.DataSize = 0x20;
+
+  std::string stream;
+  llvm::support::ulittle32_t thread_count(1);
+  stream.append(reinterpret_cast<const char *>(&thread_count),
+                sizeof(thread_count));
+  stream.append(reinterpret_cast<const char *>(&thread), sizeof(thread));
+
+  ASSERT_THAT_ERROR(SetUpFromData(MakeMinidump(StreamType::ThreadList, stream)),
+                    llvm::Succeeded());
+
+  llvm::ArrayRef<minidump::Thread> threads = parser->GetThreads();
+  ASSERT_EQ(1u, threads.size());
+  EXPECT_TRUE(parser->GetThreadContext(threads[0]).empty());
 }

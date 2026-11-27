@@ -10,8 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsCore.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -68,8 +67,8 @@ LogicalResult TestDialectLLVMIRTranslationInterface::amendOperation(
 
               if (createSymbol) {
                 OpBuilder builder(op->getRegion(0));
-                builder.create<test::SymbolOp>(
-                    op->getLoc(),
+                test::SymbolOp::create(
+                    builder, op->getLoc(),
                     StringAttr::get(op->getContext(), "sym_from_attr"),
                     /*sym_visibility=*/nullptr);
               }
@@ -123,7 +122,6 @@ void registerTestToLLVMIR() {
         if (!llvmModule)
           return failure();
 
-        llvmModule->removeDebugIntrinsicDeclarations();
         llvmModule->print(output, nullptr);
         return success();
       },

@@ -1,0 +1,9 @@
+# ignore build artefacts
+node_folder/
+out/
+.vscode-test/
+
+# user settings
+.vscode
+
+package-lock.json

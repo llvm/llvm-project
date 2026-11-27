@@ -11,6 +11,12 @@
 // GENERIC: "-target-cpu" "generic"
 // BLEEDING-EDGE: "-target-cpu" "bleeding-edge"
 
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -macquire-release-atomics 2>&1 | FileCheck %s -check-prefix=ACQUIRE-RELEASE-ATOMICS
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-acquire-release-atomics 2>&1 | FileCheck %s -check-prefix=NO-ACQUIRE-RELEASE-ATOMICS
+
+// ACQUIRE-RELEASE-ATOMICS: "-target-feature" "+acquire-release-atomics"
+// NO-ACQUIRE-RELEASE-ATOMICS: "-target-feature" "-acquire-release-atomics"
+
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -matomics 2>&1 | FileCheck %s -check-prefix=ATOMICS
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-atomics 2>&1 | FileCheck %s -check-prefix=NO-ATOMICS
 
@@ -40,6 +46,12 @@
 
 // HALF-PRECISION: "-target-feature" "+fp16"
 // NO-HALF-PRECISION: "-target-feature" "-fp16"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mgc 2>&1 | FileCheck %s -check-prefix=GC
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-gc 2>&1 | FileCheck %s -check-prefix=NO-GC
+
+// GC: "-target-feature" "+gc"
+// NO-GC: "-target-feature" "-gc"
 
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mmultimemory 2>&1 | FileCheck %s -check-prefix=MULTIMEMORY
 // RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-multimemory 2>&1 | FileCheck %s -check-prefix=NO-MULTIMEMORY
@@ -100,3 +112,9 @@
 
 // WIDE-ARITH: "-target-feature" "+wide-arithmetic"
 // NO-WIDE-ARITH: "-target-feature" "-wide-arithmetic"
+
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mcompact-imports 2>&1 | FileCheck %s -check-prefix=COMPACT-IMPORTS
+// RUN: %clang --target=wasm32-unknown-unknown -### %s -mno-compact-imports 2>&1 | FileCheck %s -check-prefix=NO-COMPACT-IMPORTS
+
+// COMPACT-IMPORTS: "-target-feature" "+compact-imports"
+// NO-COMPACT-IMPORTS: "-target-feature" "-compact-imports"

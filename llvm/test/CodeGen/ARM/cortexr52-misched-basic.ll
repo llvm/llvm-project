@@ -7,7 +7,7 @@
 ; Cortex-r52 machine model will cause the div to be sceduled before eor
 ; as div takes more cycles to compute than eor.
 ;
-; CHECK:       ********** MI Scheduling **********
+; CHECK:       Current Schedule Region
 ; CHECK:      foo:%bb.0 entry
 ; CHECK:      EORrr
 ; GENERIC:    Latency    : 1

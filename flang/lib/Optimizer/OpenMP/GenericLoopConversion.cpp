@@ -81,7 +81,7 @@ public:
               loopBlockArgIface.getReductionBlockArgsStart());
         }
 
-        loopOp.removeReductionModAttr();
+        loopOp.removeReductionModsAttr();
         loopOp.getReductionVarsMutable().clear();
         loopOp.removeReductionByrefAttr();
         loopOp.removeReductionSymsAttr();
@@ -272,15 +272,15 @@ private:
       clauseOps.privateSyms.assign(privateSyms->begin(), privateSyms->end());
 
     Fortran::common::openmp::EntryBlockArgs args;
-    args.priv.vars = clauseOps.privateVars;
+    args.privVars = clauseOps.privateVars;
 
     if constexpr (!std::is_same_v<OpOperandsTy,
                                   mlir::omp::DistributeOperands>) {
       populateReductionClauseOps(loopOp, clauseOps);
-      args.reduction.vars = clauseOps.reductionVars;
+      args.reductionVars = clauseOps.reductionVars;
     }
 
-    auto wrapperOp = rewriter.create<OpTy>(loopOp.getLoc(), clauseOps);
+    auto wrapperOp = OpTy::create(rewriter, loopOp.getLoc(), clauseOps);
     mlir::Block *opBlock = genEntryBlock(rewriter, args, wrapperOp.getRegion());
 
     mlir::IRMapping mapper;
@@ -305,28 +305,28 @@ private:
                                            privateSyms->end());
 
     Fortran::common::openmp::EntryBlockArgs parallelArgs;
-    parallelArgs.priv.vars = parallelClauseOps.privateVars;
+    parallelArgs.privVars = parallelClauseOps.privateVars;
 
-    auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loopOp.getLoc(),
-                                                             parallelClauseOps);
+    auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loopOp.getLoc(),
+                                                    parallelClauseOps);
     genEntryBlock(rewriter, parallelArgs, parallelOp.getRegion());
     parallelOp.setComposite(true);
     rewriter.setInsertionPoint(
-        rewriter.create<mlir::omp::TerminatorOp>(loopOp.getLoc()));
+        mlir::omp::TerminatorOp::create(rewriter, loopOp.getLoc()));
 
     mlir::omp::DistributeOperands distributeClauseOps;
-    auto distributeOp = rewriter.create<mlir::omp::DistributeOp>(
-        loopOp.getLoc(), distributeClauseOps);
+    auto distributeOp = mlir::omp::DistributeOp::create(
+        rewriter, loopOp.getLoc(), distributeClauseOps);
     distributeOp.setComposite(true);
     rewriter.createBlock(&distributeOp.getRegion());
 
     mlir::omp::WsloopOperands wsloopClauseOps;
     populateReductionClauseOps(loopOp, wsloopClauseOps);
     Fortran::common::openmp::EntryBlockArgs wsloopArgs;
-    wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
+    wsloopArgs.reductionVars = wsloopClauseOps.reductionVars;
 
     auto wsloopOp =
-        rewriter.create<mlir::omp::WsloopOp>(loopOp.getLoc(), wsloopClauseOps);
+        mlir::omp::WsloopOp::create(rewriter, loopOp.getLoc(), wsloopClauseOps);
     wsloopOp.setComposite(true);
     genEntryBlock(rewriter, wsloopArgs, wsloopOp.getRegion());
 
@@ -355,7 +355,8 @@ private:
   void
   populateReductionClauseOps(mlir::omp::LoopOp loopOp,
                              mlir::omp::ReductionClauseOps &clauseOps) const {
-    clauseOps.reductionMod = loopOp.getReductionModAttr();
+    if (auto mods = loopOp.getReductionModsAttr())
+      llvm::append_range(clauseOps.reductionMods, mods);
     clauseOps.reductionVars = loopOp.getReductionVars();
 
     std::optional<mlir::ArrayAttr> reductionSyms = loopOp.getReductionSyms();
@@ -453,7 +454,7 @@ public:
     mlir::omp::LoopOp nestedLoopOp = tryToFindNestedLoopWithReduction(teamsOp);
 
     rewriter.modifyOpInPlace(teamsOp, [&]() {
-      teamsOp.setReductionMod(nestedLoopOp.getReductionMod());
+      teamsOp.setReductionModsAttr(nestedLoopOp.getReductionModsAttr());
       teamsOp.getReductionVarsMutable().assign(nestedLoopOp.getReductionVars());
       teamsOp.setReductionByref(nestedLoopOp.getReductionByref());
       teamsOp.setReductionSymsAttr(nestedLoopOp.getReductionSymsAttr());
@@ -518,8 +519,10 @@ public:
                   loopOp));
         });
 
+    mlir::ConversionConfig config;
+    config.allowPatternRollback = false;
     if (mlir::failed(mlir::applyFullConversion(getOperation(), target,
-                                               std::move(patterns)))) {
+                                               std::move(patterns), config))) {
       mlir::emitError(func.getLoc(), "error in converting `omp.loop` op");
       signalPassFailure();
     }

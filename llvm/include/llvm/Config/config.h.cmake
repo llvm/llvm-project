@@ -23,13 +23,14 @@
    backslashes. */
 #cmakedefine01 LLVM_WINDOWS_PREFER_FORWARD_SLASH
 
+/* Define to 1 to use only APIs available in restricted Windows environments
+   (no shell32), and to 0 otherwise. */
+#cmakedefine01 LLVM_WINDOWS_RESTRICTED_APIS
+
 /* Define to 1 if you have the `backtrace' function. */
 #cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}
 
 #define BACKTRACE_HEADER <${BACKTRACE_HEADER}>
-
-/* Define to 1 if you have the <CrashReporterClient.h> header file. */
-#cmakedefine HAVE_CRASHREPORTERCLIENT_H
 
 /* can use __crashreporter_info__ */
 #cmakedefine01 HAVE_CRASHREPORTER_INFO
@@ -37,14 +38,6 @@
 /* Define to 1 if you have the declaration of `arc4random', and to 0 if you
    don't. */
 #cmakedefine01 HAVE_DECL_ARC4RANDOM
-
-/* Define to 1 if you have the declaration of `FE_ALL_EXCEPT', and to 0 if you
-   don't. */
-#cmakedefine01 HAVE_DECL_FE_ALL_EXCEPT
-
-/* Define to 1 if you have the declaration of `FE_INEXACT', and to 0 if you
-   don't. */
-#cmakedefine01 HAVE_DECL_FE_INEXACT
 
 /* Define to 1 if you have the declaration of `strerror_s', and to 0 if you
    don't. */
@@ -140,9 +133,6 @@
 /* Define to 1 if you have the <pthread.h> header file. */
 #cmakedefine HAVE_PTHREAD_H ${HAVE_PTHREAD_H}
 
-/* Have pthread_mutex_lock */
-#cmakedefine HAVE_PTHREAD_MUTEX_LOCK ${HAVE_PTHREAD_MUTEX_LOCK}
-
 /* Have pthread_rwlock_init */
 #cmakedefine HAVE_PTHREAD_RWLOCK_INIT ${HAVE_PTHREAD_RWLOCK_INIT}
 
@@ -164,6 +154,9 @@
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #cmakedefine HAVE_SYS_MMAN_H ${HAVE_SYS_MMAN_H}
 
+/* Define to 1 if you have the <sys/ioctl.h> header file. */
+#cmakedefine HAVE_SYS_IOCTL_H ${HAVE_SYS_IOCTL_H}
+
 /* Define to 1 if stat struct has st_mtimespec member .*/
 #cmakedefine HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC ${HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC}
 
@@ -172,9 +165,6 @@
 
 /* Define to 1 if you have the <unistd.h> header file. */
 #cmakedefine HAVE_UNISTD_H ${HAVE_UNISTD_H}
-
-/* Define to 1 if you have the <valgrind/valgrind.h> header file. */
-#cmakedefine HAVE_VALGRIND_VALGRIND_H ${HAVE_VALGRIND_VALGRIND_H}
 
 /* Have host's _alloca */
 #cmakedefine HAVE__ALLOCA ${HAVE__ALLOCA}
@@ -238,6 +228,9 @@
 
 /* Define if ICU library is available */
 #cmakedefine01 HAVE_ICU
+
+/* Define if Windows vendored ICU is available */
+#cmakedefine01 HAVE_WINDOWS_ICU
 
 /* Define if iconv library is available */
 #cmakedefine01 HAVE_ICONV

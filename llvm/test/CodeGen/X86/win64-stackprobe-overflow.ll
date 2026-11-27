@@ -10,5 +10,5 @@ start:
 attributes #0 = { nonlazybind uwtable "probe-stack"="probe_stack" "target-cpu"="x86-64" }
 
 ; CHECK-LABEL: foo:
-; CHECK: movabsq $4294967304, %rax
+; CHECK: movabsq $4294967312, %rax
 ; CHECK-NEXT: callq probe_stack

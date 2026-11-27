@@ -45,21 +45,17 @@ unsigned BPFELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case FK_SecRel_8:
     // LD_imm64 instruction.
     return ELF::R_BPF_64_64;
-  case FK_PCRel_4:
-    // CALL instruction.
-    return ELF::R_BPF_64_32;
   case FK_Data_8:
     return ELF::R_BPF_64_ABS64;
   case FK_Data_4:
+    if (Fixup.isPCRel()) // CALL instruction
+      return ELF::R_BPF_64_32;
     if (const auto *A = Target.getAddSym()) {
       const MCSymbol &Sym = *A;
 
       if (Sym.isDefined()) {
-        MCSection &Section = Sym.getSection();
-        const MCSectionELF *SectionELF = dyn_cast<MCSectionELF>(&Section);
-        assert(SectionELF && "Null section for reloc symbol");
-
-        unsigned Flags = SectionELF->getFlags();
+        auto &Section = static_cast<const MCSectionELF &>(Sym.getSection());
+        unsigned Flags = Section.getFlags();
 
         if (Sym.isTemporary()) {
           // .BTF.ext generates FK_Data_4 relocations for

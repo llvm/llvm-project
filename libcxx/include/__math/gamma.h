@@ -23,17 +23,17 @@ namespace __math {
 
 // lgamma
 
-inline _LIBCPP_HIDE_FROM_ABI float lgamma(float __x) _NOEXCEPT { return __builtin_lgammaf(__x); }
+inline float lgamma(float __x) _NOEXCEPT { return __builtin_lgammaf(__x); }
 
 template <class = int>
-_LIBCPP_HIDE_FROM_ABI double lgamma(double __x) _NOEXCEPT {
+double lgamma(double __x) _NOEXCEPT {
   return __builtin_lgamma(__x);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double lgamma(long double __x) _NOEXCEPT { return __builtin_lgammal(__x); }
+inline long double lgamma(long double __x) _NOEXCEPT { return __builtin_lgammal(__x); }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI double lgamma(_A1 __x) _NOEXCEPT {
+inline double lgamma(_A1 __x) _NOEXCEPT {
   return __builtin_lgamma((double)__x);
 }
 
@@ -41,19 +41,47 @@ inline _LIBCPP_HIDE_FROM_ABI double lgamma(_A1 __x) _NOEXCEPT {
 
 // tgamma
 
-inline _LIBCPP_HIDE_FROM_ABI float tgamma(float __x) _NOEXCEPT { return __builtin_tgammaf(__x); }
+inline float tgamma(float __x) _NOEXCEPT { return __builtin_tgammaf(__x); }
 
 template <class = int>
-_LIBCPP_HIDE_FROM_ABI double tgamma(double __x) _NOEXCEPT {
+double tgamma(double __x) _NOEXCEPT {
   return __builtin_tgamma(__x);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double tgamma(long double __x) _NOEXCEPT { return __builtin_tgammal(__x); }
+inline long double tgamma(long double __x) _NOEXCEPT { return __builtin_tgammal(__x); }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI double tgamma(_A1 __x) _NOEXCEPT {
+inline double tgamma(_A1 __x) _NOEXCEPT {
   return __builtin_tgamma((double)__x);
 }
+
+// __lgamma_r
+//
+// POSIX systems provide a function named lgamma_r which is a reentrant version of lgamma. Use that
+// whenever possible. However, we avoid re-declaring the actual function since different platforms
+// declare it differently in the first place: instead use `asm` to get the compiler to call the right
+// function.
+
+#ifdef _WIN32 // reentrant version is not available on Windows
+
+inline double __lgamma_r(double __d) _NOEXCEPT { return __builtin_lgamma(__d); }
+
+#else
+
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+#  if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
+double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("_lgamma_r");
+#  else
+double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("lgamma_r");
+#  endif
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
+inline double __lgamma_r(double __d) _NOEXCEPT {
+  int __sign;
+  return __math::__lgamma_r_shim(__d, &__sign);
+}
+
+#endif
 
 } // namespace __math
 

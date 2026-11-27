@@ -25,7 +25,7 @@
 
 // FIXME: Upload suppressions to device.
 // XFAIL: android
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 
 #include <stdio.h>
 #include <stdlib.h>

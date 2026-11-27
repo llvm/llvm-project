@@ -359,7 +359,14 @@ static bool CC_X86_64_I128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
 
   static const MCPhysReg Regs[] = {X86::RDI, X86::RSI, X86::RDX,
                                    X86::RCX, X86::R8,  X86::R9};
-  ArrayRef<MCPhysReg> Allocated = State.AllocateRegBlock(Regs, NumRegs);
+  static const MCPhysReg PreserveNoneRegs[] = {
+      X86::R12, X86::R13, X86::R14, X86::R15, X86::RDI, X86::RSI,
+      X86::RDX, X86::RCX, X86::R8,  X86::R9,  X86::R11, X86::RAX};
+  ArrayRef<MCPhysReg> RegList =
+      State.getCallingConv() == CallingConv::PreserveNone
+          ? ArrayRef(PreserveNoneRegs)
+          : ArrayRef(Regs);
+  ArrayRef<MCPhysReg> Allocated = State.AllocateRegBlock(RegList, NumRegs);
   if (!Allocated.empty()) {
     PendingMembers[0].convertToReg(Allocated[0]);
     PendingMembers[1].convertToReg(Allocated[1]);
@@ -374,5 +381,37 @@ static bool CC_X86_64_I128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return true;
 }
 
+/// Special handling for i128 and fp128: on x86-32, i128 and fp128 get legalized
+/// as four i32s, but fp128 must be passed on the stack with 16-byte alignment.
+/// Technically only fp128 has a specified ABI, but it makes sense to handle
+/// i128 the same until we hear differently.
+static bool CC_X86_32_I128_FP128(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                 CCValAssign::LocInfo &LocInfo,
+                                 ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  assert(ValVT == MVT::i32 && "Should have i32 parts");
+  SmallVectorImpl<CCValAssign> &PendingMembers = State.getPendingLocs();
+  PendingMembers.push_back(
+      CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+
+  if (!ArgFlags.isInConsecutiveRegsLast())
+    return true;
+
+  assert(PendingMembers.size() == 4 && "Should have four parts");
+
+  int64_t Offset = State.AllocateStack(16, Align(16));
+  PendingMembers[0].convertToMem(Offset);
+  PendingMembers[1].convertToMem(Offset + 4);
+  PendingMembers[2].convertToMem(Offset + 8);
+  PendingMembers[3].convertToMem(Offset + 12);
+
+  State.addLoc(PendingMembers[0]);
+  State.addLoc(PendingMembers[1]);
+  State.addLoc(PendingMembers[2]);
+  State.addLoc(PendingMembers[3]);
+  PendingMembers.clear();
+  return true;
+}
+
 // Provides entry points of CC_X86 and RetCC_X86.
+#define GET_CALLING_CONV_IMPL
 #include "X86GenCallingConv.inc"

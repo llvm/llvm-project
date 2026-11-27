@@ -264,14 +264,25 @@ void Lint::visitCallBase(CallBase &I) {
 
         // Check that ABI attributes for the function and call-site match.
         unsigned ArgNo = AI->getOperandNo();
-        Attribute::AttrKind ABIAttributes[] = {
-            Attribute::ZExt,         Attribute::SExt,     Attribute::InReg,
-            Attribute::ByVal,        Attribute::ByRef,    Attribute::InAlloca,
-            Attribute::Preallocated, Attribute::StructRet};
         AttributeList CallAttrs = I.getAttributes();
-        for (Attribute::AttrKind Attr : ABIAttributes) {
+        for (Attribute::AttrKind Attr :
+             drop_begin(enum_seq(Attribute::None, Attribute::EndAttrKinds,
+                                 force_iteration_on_noniterable_enum))) {
+          if (!Attribute::isABIAttr(Attr))
+            continue;
+
           Attribute CallAttr = CallAttrs.getParamAttr(ArgNo, Attr);
           Attribute FnAttr = F->getParamAttribute(ArgNo, Attr);
+
+          if ((Attr == Attribute::ZExt || Attr == Attribute::SExt) &&
+              CallAttr.isValid() && !FnAttr.isValid()) {
+            // As an exception, allow zeroext/signext at the call-site, while
+            // missing on the function. This means that the caller extends,
+            // while the callee does not assume extension. The call-site
+            // extension is redundant in that case, but perfectly well-defined.
+            continue;
+          }
+
           Check(CallAttr.isValid() == FnAttr.isValid(),
                 Twine("Undefined behavior: ABI attribute ") +
                     Attribute::getNameFromAttrKind(Attr) +
@@ -374,13 +385,6 @@ void Lint::visitCallBase(CallBase &I) {
       visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
                            std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
-    case Intrinsic::get_active_lane_mask:
-      if (auto *TripCount = dyn_cast<ConstantInt>(I.getArgOperand(1)))
-        Check(!TripCount->isZero(),
-              "get_active_lane_mask: operand #2 "
-              "must be greater than 0",
-              &I);
-      break;
     }
 }
 
@@ -458,9 +462,9 @@ void Lint::visitMemoryReference(Instruction &I, const MemoryLocation &Loc,
     MaybeAlign BaseAlign;
 
     if (AllocaInst *AI = dyn_cast<AllocaInst>(Base)) {
-      Type *ATy = AI->getAllocatedType();
-      if (!AI->isArrayAllocation() && ATy->isSized() && !ATy->isScalableTy())
-        BaseSize = DL->getTypeAllocSize(ATy).getFixedValue();
+      std::optional<TypeSize> ATy = AI->getAllocationSize(*DL);
+      if (ATy && !ATy->isScalable())
+        BaseSize = ATy->getFixedValue();
       BaseAlign = AI->getAlign();
     } else if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
       // If the global may be defined differently in another compilation unit
@@ -560,7 +564,7 @@ static bool isZero(Value *V, const DataLayout &DL, DominatorTree *DT,
   if (!C)
     return false;
 
-  if (C->isZeroValue())
+  if (C->isNullValue())
     return true;
 
   // For a vector, KnownZero will only be true if all values are zero, so check

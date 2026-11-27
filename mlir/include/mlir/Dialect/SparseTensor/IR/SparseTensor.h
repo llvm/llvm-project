@@ -9,18 +9,10 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSOR_H_
 #define MLIR_DIALECT_SPARSETENSOR_IR_SPARSETENSOR_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/SparseTensor/IR/Enums.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/TensorEncoding.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "llvm/ADT/bit.h"
 
@@ -158,16 +150,14 @@ namespace sparse_tensor {
 /// Convenience method to abbreviate casting `getType()`.
 template <typename T>
 inline RankedTensorType getRankedTensorType(T &&t) {
-  assert(static_cast<bool>(std::forward<T>(t)) &&
-         "getRankedTensorType got null argument");
+  assert(static_cast<bool>(t) && "getRankedTensorType got null argument");
   return dyn_cast<RankedTensorType>(std::forward<T>(t).getType());
 }
 
 /// Convenience method to abbreviate casting `getType()`.
 template <typename T>
 inline MemRefType getMemRefType(T &&t) {
-  assert(static_cast<bool>(std::forward<T>(t)) &&
-         "getMemRefType got null argument");
+  assert(static_cast<bool>(t) && "getMemRefType got null argument");
   return cast<MemRefType>(std::forward<T>(t).getType());
 }
 

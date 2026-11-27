@@ -65,9 +65,23 @@ TEST(SmallDenseSetTest, InsertRange) {
   EXPECT_THAT(set, ::testing::UnorderedElementsAre(7, 8, 9));
 }
 
+TEST(DenseSetTest, RemoveIf) {
+  llvm::DenseSet<unsigned> set;
+  for (unsigned I = 0; I < 100; ++I)
+    set.insert(I);
+
+  EXPECT_TRUE(set.remove_if([](unsigned V) { return V % 2 == 0; }));
+  EXPECT_EQ(set.size(), 50u);
+  for (unsigned I = 0; I < 100; ++I)
+    EXPECT_EQ(set.contains(I), I % 2 == 1);
+
+  EXPECT_FALSE(set.remove_if([](unsigned) { return false; }));
+  EXPECT_EQ(set.size(), 50u);
+  EXPECT_TRUE(set.remove_if([](unsigned) { return true; }));
+  EXPECT_TRUE(set.empty());
+}
+
 struct TestDenseSetInfo {
-  static inline unsigned getEmptyKey() { return ~0; }
-  static inline unsigned getTombstoneKey() { return ~0U - 1; }
   static unsigned getHashValue(const unsigned& Val) { return Val * 37U; }
   static unsigned getHashValue(const char* Val) {
     return (unsigned)(Val[0] - 'a') * 37U;
@@ -96,13 +110,13 @@ private:
 };
 
 // Register these types for testing.
-typedef ::testing::Types<DenseSet<unsigned, TestDenseSetInfo>,
-                         const DenseSet<unsigned, TestDenseSetInfo>,
-                         SmallDenseSet<unsigned, 1, TestDenseSetInfo>,
-                         SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
-                         const SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
-                         SmallDenseSet<unsigned, 64, TestDenseSetInfo>>
-    DenseSetTestTypes;
+using DenseSetTestTypes =
+    ::testing::Types<DenseSet<unsigned, TestDenseSetInfo>,
+                     const DenseSet<unsigned, TestDenseSetInfo>,
+                     SmallDenseSet<unsigned, 1, TestDenseSetInfo>,
+                     SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
+                     const SmallDenseSet<unsigned, 4, TestDenseSetInfo>,
+                     SmallDenseSet<unsigned, 64, TestDenseSetInfo>>;
 TYPED_TEST_SUITE(DenseSetTest, DenseSetTestTypes, );
 
 TYPED_TEST(DenseSetTest, Constructor) {
@@ -214,10 +228,6 @@ int CountCopyAndMove::Move = 0;
 namespace llvm {
 // Specialization required to insert a CountCopyAndMove into a DenseSet.
 template <> struct DenseMapInfo<CountCopyAndMove> {
-  static inline CountCopyAndMove getEmptyKey() { return CountCopyAndMove(-1); };
-  static inline CountCopyAndMove getTombstoneKey() {
-    return CountCopyAndMove(-2);
-  };
   static unsigned getHashValue(const CountCopyAndMove &Val) {
     return Val.Value;
   }
@@ -264,5 +274,77 @@ TEST(DenseSetCustomTest, ConstTest) {
   EXPECT_EQ(Map.count(C), 1u);
   EXPECT_TRUE(Map.contains(B));
   EXPECT_TRUE(Map.contains(C));
+}
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+TEST(DenseSetCustomTest, EraseInvalidatesIterators) {
+  DenseSet<int> Set;
+  Set.insert(1);
+  Set.insert(2);
+  auto It = Set.find(1);
+  Set.erase(2);
+  EXPECT_DEATH((void)*It, "invalid iterator access");
+}
+#endif
+
+struct PolymorphicBase {
+  int Value = 0;
+  PolymorphicBase() = default;
+  explicit PolymorphicBase(int V) : Value(V) {}
+  PolymorphicBase(const PolymorphicBase &) = default;
+  PolymorphicBase(PolymorphicBase &&) noexcept = default;
+  PolymorphicBase &operator=(const PolymorphicBase &) = default;
+  PolymorphicBase &operator=(PolymorphicBase &&) noexcept = default;
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+  bool operator==(const PolymorphicBase &RHS) const {
+    return Value == RHS.Value;
+  }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+
+struct PolymorphicSetInfo {
+  static unsigned getHashValue(const PolymorphicBase &Val) {
+    return static_cast<unsigned>(Val.Value) * 37U;
+  }
+  static bool isEqual(const PolymorphicBase &LHS, const PolymorphicBase &RHS) {
+    return LHS == RHS;
+  }
+};
+
+TEST(DenseSetCustomTest, PolymorphicTypes) {
+  DenseSet<PolymorphicBase, PolymorphicSetInfo> Set;
+  SmallDenseSet<PolymorphicBase, 2, PolymorphicSetInfo> SmallSet;
+  for (int I = 0; I < 16; ++I) {
+    EXPECT_TRUE(Set.insert(PolymorphicBase(I)).second);
+    EXPECT_TRUE(SmallSet.insert(PolymorphicBase(I)).second);
+  }
+  EXPECT_EQ(16u, Set.size());
+  EXPECT_EQ(16u, SmallSet.size());
+  EXPECT_EQ(7, Set.find(PolymorphicBase(7))->get());
+  EXPECT_EQ(7, SmallSet.find(PolymorphicBase(7))->get());
+  EXPECT_TRUE(Set.erase(PolymorphicBase(7)));
+  EXPECT_TRUE(SmallSet.erase(PolymorphicBase(7)));
+  EXPECT_FALSE(Set.contains(PolymorphicBase(7)));
+  EXPECT_FALSE(SmallSet.contains(PolymorphicBase(7)));
+
+  PolymorphicBase B(3);
+  PolymorphicDerived D(4);
+  DenseSet<PolymorphicBase *> PtrSet;
+  SmallDenseSet<PolymorphicBase *, 2> SmallPtrSet;
+  PtrSet.insert(&B);
+  PtrSet.insert(&D);
+  SmallPtrSet.insert(&B);
+  SmallPtrSet.insert(&D);
+
+  const PolymorphicBase *ConstD = &D;
+  EXPECT_TRUE(PtrSet.contains(ConstD));
+  EXPECT_TRUE(SmallPtrSet.contains(ConstD));
+  EXPECT_EQ(8, (*PtrSet.find(ConstD))->get());
+  EXPECT_EQ(8, (*SmallPtrSet.find(ConstD))->get());
 }
 }

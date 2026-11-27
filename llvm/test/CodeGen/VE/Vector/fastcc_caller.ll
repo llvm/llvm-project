@@ -11,7 +11,7 @@ declare void @test(i64)
 
 define fastcc i32 @sample_call() {
 ; CHECK-LABEL: sample_call:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, sample_add@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, sample_add@hi(, %s0)
@@ -25,7 +25,7 @@ define fastcc i32 @sample_call() {
 
 define fastcc i32 @stack_call_int() {
 ; CHECK-LABEL: stack_call_int:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s0, 10, (0)1
 ; CHECK-NEXT:    st %s0, 248(, %s11)
 ; CHECK-NEXT:    or %s34, 9, (0)1
@@ -49,7 +49,7 @@ define fastcc i32 @stack_call_int() {
 
 define fastcc i32 @stack_call_int_szext() {
 ; CHECK-LABEL: stack_call_int_szext:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s0, -1, (0)1
 ; CHECK-NEXT:    st %s0, 248(, %s11)
 ; CHECK-NEXT:    lea %s34, 65535
@@ -73,7 +73,7 @@ define fastcc i32 @stack_call_int_szext() {
 
 define fastcc float @stack_call_float() {
 ; CHECK-LABEL: stack_call_float:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea.sl %s0, 1092616192
 ; CHECK-NEXT:    st %s0, 248(, %s11)
 ; CHECK-NEXT:    lea.sl %s34, 1091567616
@@ -97,7 +97,7 @@ define fastcc float @stack_call_float() {
 
 define fastcc float @stack_call_float2(float %p0) {
 ; CHECK-LABEL: stack_call_float2:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    st %s0, 248(, %s11)
 ; CHECK-NEXT:    lea %s1, stack_callee_float@lo
 ; CHECK-NEXT:    and %s1, %s1, (32)0
@@ -124,7 +124,7 @@ declare fastcc void @vsample_iv(i32, <256 x i32>)
 
 define void @caller_vret() {
 ; CHECK:       caller_vret:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, get_v256i32@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, get_v256i32@hi(, %s0)
@@ -136,7 +136,7 @@ define void @caller_vret() {
 
 define void @caller_vret_pass_p0() {
 ; CHECK-LABEL: caller_vret_pass_p0:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK:         lea %s0, get_v256i32@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, get_v256i32@hi(, %s0)
@@ -153,7 +153,7 @@ define void @caller_vret_pass_p0() {
 
 define void @caller_vret_pass_p1(i32 %s) {
 ; CHECK-LABEL: caller_vret_pass_p1:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK:         or %s18, 0, %s0
 ; CHECK-NEXT:    lea %s0, get_v256i32@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
@@ -174,7 +174,7 @@ declare fastcc void @vsample_vvv(<256 x i32>, <256 x i32>, <256 x i32>)
 
 define void @caller_vret_pass_p01() {
 ; CHECK-LABEL: caller_vret_pass_p01:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, get_v256i32@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, get_v256i32@hi(, %s0)
@@ -194,7 +194,7 @@ define void @caller_vret_pass_p01() {
 
 define void @caller_vret_pass_p012() {
 ; CHECK-LABEL: caller_vret_pass_p012:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s0, get_v256i32@lo
 ; CHECK-NEXT:    and %s0, %s0, (32)0
 ; CHECK-NEXT:    lea.sl %s12, get_v256i32@hi(, %s0)
@@ -221,7 +221,7 @@ declare fastcc void @vsample_vvvvvvv(<256 x i32>, <256 x i32>, <256 x i32>, <256
 ; TODO improve vreg copy (redundant lea+lvl emitted)
 define fastcc void @roundtrip_caller_callee(<256 x i32> %p0, <256 x i32> %p1, <256 x i32> %p2, <256 x i32> %p3, <256 x i32> %p4, <256 x i32> %p5, <256 x i32> %p6) {
 ; CHECK-LABEL: roundtrip_caller_callee:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    lea %s16, 256
 ; CHECK-NEXT:    lvl %s16
 ; CHECK-NEXT:    vor %v7, (0)1, %v0

@@ -52,6 +52,7 @@ class DwarfCompileUnit;
 class DwarfExpression;
 class DwarfTypeUnit;
 class DwarfUnit;
+class GlobalVariable;
 class LexicalScope;
 class MachineFunction;
 class MCSection;
@@ -375,6 +376,10 @@ class DwarfDebug : public DebugHandlerBase {
   /// create DIEs.
   SmallSetVector<const DISubprogram *, 16> ProcessedSPNodes;
 
+  /// Whether all functions of the module have been processed, so that it is
+  /// known which subprograms have abstract DIEs.
+  bool AllFunctionsProcessed = false;
+
   /// Map function-local imported entities to their parent local scope
   /// (either DILexicalBlock or DISubprogram) for a processed function
   /// (including inlined subprograms).
@@ -393,9 +398,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// As an optimization, there is no need to emit an entry in the directory
   /// table for the same directory as DW_AT_comp_dir.
   StringRef CompilationDir;
-
-  /// Holder for the file specific debug information.
-  DwarfFile InfoHolder;
 
   /// Holders for the various debug information flags that we might need to
   /// have exposed. See accessor functions below for description.
@@ -508,9 +510,6 @@ private:
   bool SingleCU;
   bool IsDarwin;
 
-  /// Map for tracking Fortran deferred CHARACTER lengths.
-  DenseMap<const DIStringType *, unsigned> StringTypeLocMap;
-
   AddressPool AddrPool;
 
   /// Accelerator tables.
@@ -531,10 +530,6 @@ private:
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
-
-  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
-    return InfoHolder.getUnits();
-  }
 
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
@@ -673,6 +668,7 @@ private:
   /// emit it here if we don't have a skeleton CU for split dwarf.
   void addGnuPubAttributes(DwarfCompileUnit &U, DIE &D) const;
 
+  DwarfCompileUnit *getDwarfCompileUnit(const DICompileUnit *DIUnit);
   /// Create new DwarfCompileUnit for the given metadata node with tag
   /// DW_TAG_compile_unit.
   DwarfCompileUnit &getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit);
@@ -711,6 +707,8 @@ private:
   void computeKeyInstructions(const MachineFunction *MF);
 
 protected:
+  /// Holder for the file specific debug information.
+  DwarfFile InfoHolder;
   /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
 
@@ -722,7 +720,64 @@ protected:
 
   void skippedNonDebugFunction() override;
 
+  /// Target-specific debug info initialization at function start.
+  virtual void initializeTargetDebugInfo(const MachineFunction &MF) {}
+
+  /// Setters for target-specific DWARF configuration overrides.
+  /// Called from target DwarfDebug subclass constructors.
+  void setUseInlineStrings(bool V) { UseInlineStrings = V; }
+  void setUseRangesSection(bool V) { UseRangesSection = V; }
+  void setUseSectionsAsReferences(bool V) { UseSectionsAsReferences = V; }
+
+  /// Select \p DwarfVersion and (re)compute all state derived from it. Called
+  /// by the constructor; a target subclass may call it again to change the
+  /// version, which keeps the derived state consistent with the emitted one.
+  void applyDwarfVersion(unsigned DwarfVersion);
+
+  /// Whether to attach ranges/low_pc to the compile unit DIE in endModule.
+  virtual bool shouldAttachCompileUnitRanges() const { return true; }
+
+  /// Target-specific source line recording.
+  virtual void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags);
+
+  /// Target-specific compile unit attribute finalization.
+  virtual void finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                          DwarfCompileUnit &NewCU) {}
+
+  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
+    return InfoHolder.getUnits();
+  }
+
 public:
+  //===--------------------------------------------------------------------===//
+  // Target hooks for debug info customization.
+  //
+
+  /// Whether the target requires resetting the base address in range/loc lists.
+  virtual bool shouldResetBaseAddress(const MCSection &Section) const {
+    return false;
+  }
+
+  /// Describes the storage kind of a debug variable for target hooks.
+  enum class VariableLocationKind { Global, Register, FrameIndex };
+
+  /// Extract target-specific address space information from a DIExpression.
+  /// Targets may strip address-space-encoding ops from the expression and
+  /// return the address space via \p TargetAddrSpace.
+  virtual const DIExpression *
+  adjustExpressionForTarget(const DIExpression *Expr,
+                            std::optional<unsigned> &TargetAddrSpace) const {
+    return Expr;
+  }
+
+  /// Add target-specific attributes to a variable DIE (e.g.
+  /// DW_AT_address_class).
+  virtual void
+  addTargetVariableAttributes(DwarfCompileUnit &CU, DIE &Die,
+                              std::optional<unsigned> TargetAddrSpace,
+                              VariableLocationKind VarLocKind,
+                              const GlobalVariable *GV = nullptr) const {}
+
   //===--------------------------------------------------------------------===//
   // Main entry points.
   //
@@ -764,6 +819,9 @@ public:
   void setSymbolSize(const MCSymbol *Sym, uint64_t Size) override {
     SymSize[Sym] = Size;
   }
+
+  /// Whether to emit .debug_pubnames / .debug_pubtypes. Default true;
+  virtual bool shouldEmitDwarfPubSections() const { return true; }
 
   /// Returns whether we should emit all DW_AT_[MIPS_]linkage_name.
   /// If not, we still might emit certain cases.
@@ -819,8 +877,7 @@ public:
     return HasAppleExtensionAttributes;
   }
 
-  /// Returns whether or not to change the current debug info for the
-  /// split dwarf proposal support.
+  /// Returns whether or not to change the current debug info for split DWARF.
   bool useSplitDwarf() const { return HasSplitDwarf; }
 
   /// Returns whether to generate a string offsets table with (possibly shared)
@@ -906,14 +963,17 @@ public:
     return CUDieMap.lookup(Die);
   }
 
-  unsigned getStringTypeLoc(const DIStringType *ST) const {
-    return StringTypeLocMap.lookup(ST);
-  }
+  /// Find the matching DwarfCompileUnit for the given SP referenced from SrcCU.
+  DwarfCompileUnit &getOrCreateAbstractSubprogramCU(const DISubprogram *SP,
+                                                    DwarfCompileUnit &SrcCU);
 
-  void addStringTypeLoc(const DIStringType *ST, unsigned Loc) {
-    assert(ST);
-    if (Loc)
-      StringTypeLocMap[ST] = Loc;
+  /// Returns whether all functions of the module have been processed, so that
+  /// abstract subprogram DIEs are not created for inlined subprograms anymore.
+  bool allFunctionsProcessed() const { return AllFunctionsProcessed; }
+
+  /// Returns whether a DIE for the function of \p SP has been constructed.
+  bool isProcessedSubprogram(const DISubprogram *SP) const {
+    return ProcessedSPNodes.contains(SP);
   }
 
   /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.

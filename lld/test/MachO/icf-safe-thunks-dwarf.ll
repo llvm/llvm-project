@@ -27,6 +27,20 @@
 ; RUN: %lld -arch arm64 -lSystem --icf=safe_thunks --keep-icf-stabs -dylib -o %t/a_thunks.dylib %t/a.o
 ; RUN: dsymutil -s %t/a_thunks.dylib > %t/a_thunks.txt
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;; Check out-of-range ICF thunks ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Check that STABS still points to the retained body after LLD inserts branch-extension thunks.
+; RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %t/spacer.s -o %t/spacer.o
+; RUN: %lld -arch arm64 --icf=safe_thunks --keep-icf-stabs -dylib -order_file %t/orderfile.txt -o %t/far.dylib %t/a.o %t/spacer.o -map - | FileCheck %s --check-prefix=VERIFY-FAR-THUNK
+; RUN: dsymutil --dump-debug-map %t/far.dylib | FileCheck %s --check-prefix=VERIFY-FAR-MAP
+; RUN: dsymutil --verify-dwarf=all --flat %t/far.dylib -o %t/far.dwarf
+; RUN: llvm-dwarfdump --verify %t/far.dwarf | FileCheck %s --check-prefix=VERIFY-DSYM
+
+; VERIFY-FAR-THUNK: ltmp{{.*}}.thunk.0
+; VERIFY-FAR-MAP:      sym: _func_A, {{.*}} binAddr: 0x[[#%X, FAR_A:]], size: 0x8
+; VERIFY-FAR-MAP-NEXT: sym: _func_B, {{.*}} binAddr: 0x[[#FAR_A]], size: 0x0
+; VERIFY-FAR-MAP-NEXT: sym: _func_C, {{.*}} binAddr: 0x[[#FAR_A]], size: 0x0
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;; Test multiple object files with identical functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ; RUN: llc -filetype=obj %t/b.ll -O3 -o %t/b.o -enable-machine-outliner=never -mtriple arm64-apple-macos -addrsig
@@ -146,6 +160,20 @@ ATTR ULL take_func_addr_b() {
     return val;
 }
 
+;--- spacer.s
+.subsections_via_symbols
+.text
+.globl _spacer
+_spacer:
+  .space 0x8001000
+  ret
+
+;--- orderfile.txt
+_func_A
+_func_B
+_spacer
+_func_C
+
 ;--- gen
 clang -target arm64-apple-macos11.0 -S -emit-llvm a.cpp -O3 -g -fdebug-compilation-dir=/proc/self/cwd -o -
 echo ""
@@ -186,7 +214,7 @@ entry:
   ret i64 add (i64 add (i64 ptrtoint (ptr @func_A to i64), i64 ptrtoint (ptr @func_B to i64)), i64 ptrtoint (ptr @func_C to i64)), !dbg !27
 }
 
-attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
+attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7, !8, !9, !10, !11}
@@ -254,7 +282,7 @@ entry:
   ret i64 add (i64 add (i64 ptrtoint (ptr @func_D to i64), i64 ptrtoint (ptr @func_E to i64)), i64 ptrtoint (ptr @func_F to i64)), !dbg !27
 }
 
-attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a,+zcm,+zcz" }
+attributes #0 = { mustprogress nofree noinline norecurse nosync nounwind ssp willreturn memory(none) uwtable(sync) "frame-pointer"="non-leaf" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="apple-m1" "target-features"="+aes,+altnzcv,+ccdp,+ccidx,+ccpp,+complxnum,+crc,+dit,+dotprod,+flagm,+fp-armv8,+fp16fml,+fptoint,+fullfp16,+jsconv,+lse,+neon,+pauth,+perfmon,+predres,+ras,+rcpc,+rdm,+sb,+sha2,+sha3,+specrestrict,+ssbs,+v8.1a,+v8.2a,+v8.3a,+v8.4a,+v8a" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!6, !7, !8, !9, !10, !11}

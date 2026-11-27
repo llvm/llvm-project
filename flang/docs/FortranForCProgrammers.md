@@ -8,11 +8,6 @@
 
 # Fortran For C Programmers
 
-```{contents}
----
-local:
----
-```
 
 This note is limited to essential information about Fortran so that
 a C or C++ programmer can get started more quickly with the language,
@@ -304,7 +299,7 @@ Preprocessing behavior varies across implementations and one should not depend o
 much portability.
 Preprocessing is typically requested by the use of a capitalized filename
 suffix (e.g., "foo.F90") or a compiler command line option.
-(Since the F18 compiler always runs its built-in preprocessing stage,
+(Since Flang always runs its built-in preprocessing stage,
 no special option or filename suffix is required.)
 
 ## "Object Oriented" Programming

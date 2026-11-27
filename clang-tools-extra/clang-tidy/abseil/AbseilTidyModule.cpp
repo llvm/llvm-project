@@ -1,4 +1,4 @@
-//===------- AbseilTidyModule.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "CleanupCtadCheck.h"
 #include "DurationAdditionCheck.h"
 #include "DurationComparisonCheck.h"
@@ -27,10 +26,12 @@
 #include "StringFindStrContainsCheck.h"
 #include "TimeComparisonCheck.h"
 #include "TimeSubtractionCheck.h"
+#include "UncheckedStatusOrAccessCheck.h"
 #include "UpgradeDurationConversionsCheck.h"
 
 namespace clang::tidy {
 namespace abseil {
+namespace {
 
 class AbseilModule : public ClangTidyModule {
 public:
@@ -67,10 +68,14 @@ public:
     CheckFactories.registerCheck<TimeComparisonCheck>("abseil-time-comparison");
     CheckFactories.registerCheck<TimeSubtractionCheck>(
         "abseil-time-subtraction");
+    CheckFactories.registerCheck<UncheckedStatusOrAccessCheck>(
+        "abseil-unchecked-statusor-access");
     CheckFactories.registerCheck<UpgradeDurationConversionsCheck>(
         "abseil-upgrade-duration-conversions");
   }
 };
+
+} // namespace
 
 // Register the AbseilModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<AbseilModule> X("abseil-module",

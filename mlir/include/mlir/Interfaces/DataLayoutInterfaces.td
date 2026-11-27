@@ -22,6 +22,7 @@ include "mlir/IR/OpBase.td"
 
 def DLTIQueryInterface : AttrInterface<"DLTIQueryInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface exposing querying-mechanism for key-value associations.
@@ -43,8 +44,15 @@ def DLTIQueryInterface : AttrInterface<"DLTIQueryInterface"> {
   ];
 }
 
+def ImplementsDLTIQueryInterface : AttrConstraint<
+    CPred<"::llvm::isa<::mlir::DLTIQueryInterface>($_self)">,
+    "implementing the `DLTIQueryInterface` attr interface">;
+
+def DLTIQueryAttr : ConfinedAttr<AnyAttr, [ImplementsDLTIQueryInterface]>;
+
 def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface describing an entry in a data layout specification.
@@ -93,6 +101,7 @@ def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
 
 def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQueryInterface]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface describing a data layout specification.
@@ -252,6 +261,7 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
 
 def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface", [DLTIQueryInterface]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface describing a target device description specification.
@@ -310,6 +320,7 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface", [DLTI
 
 def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTIQueryInterface]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Attribute interface describing a target system description specification.
@@ -372,6 +383,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTI
 
 def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Interface for operations that can have a data layout specification attached.
@@ -611,6 +623,7 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
 
 def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
 
   let description = [{
     Interface for types subject to data layout.
@@ -714,6 +727,67 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{ return ::mlir::success(); }]
     >,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// Dialect interface
+//===----------------------------------------------------------------------===//
+
+def DataLayoutDialectInterface : DialectInterface<"DataLayoutDialectInterface"> {
+  let description = [{
+    An interface to be implemented by dialects that can have identifiers in the
+    data layout specification entries. Provides hooks for verifying the entry
+    validity and combining two entries.
+  }];
+  let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DataLayoutInterfaces.h"];
+
+  let extraClassDeclaration = [{
+    /// Default implementation of entry combination that combines identical
+    /// entries and returns null otherwise.
+    static ::mlir::DataLayoutEntryInterface
+    defaultCombine(::mlir::DataLayoutEntryInterface outer,
+                   ::mlir::DataLayoutEntryInterface inner) {
+      if (!outer || outer == inner)
+        return inner;
+      return {};
+    }
+  }];
+
+  let methods = [
+    InterfaceMethod<[{
+        Checks whether the given data layout entry is valid and reports any errors
+        at the provided location. Derived classes should override this.
+      }],
+      "::mlir::LogicalResult", "verifyEntry",
+      (ins "::mlir::DataLayoutEntryInterface":$entry, "::mlir::Location":$loc),
+      [{
+        return ::llvm::success();
+      }]
+    >,
+    InterfaceMethod<[{
+        Checks whether the given data layout entry is valid and reports any errors
+        at the provided location. Derived classes should override this.
+      }],
+      "::mlir::LogicalResult", "verifyEntry",
+      (ins "::mlir::TargetDeviceSpecInterface":$entry, "::mlir::Location":$loc),
+      [{
+        return ::llvm::success();
+      }]
+    >,
+    InterfaceMethod<[{
+        Combines two entries with identifiers that belong to this dialect. Returns
+        the combined entry or null if the entries are not compatible. Derived
+        classes likely need to reimplement this.
+      }],
+      "::mlir::DataLayoutEntryInterface", "combine",
+      (ins "::mlir::DataLayoutEntryInterface":$outer, 
+           "::mlir::DataLayoutEntryInterface":$inner),
+      [{
+        return defaultCombine(outer, inner);
+      }]
+    > 
   ];
 }
 

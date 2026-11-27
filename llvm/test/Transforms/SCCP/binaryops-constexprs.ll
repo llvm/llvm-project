@@ -8,10 +8,12 @@ define void @and_constexpr(i32 %a) {
 ; CHECK-LABEL: @and_constexpr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @use.i32(i32 0)
-; CHECK-NEXT:    [[AND_2:%.*]] = and i32 20, [[A:%.*]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i32 ptrtoint (ptr inttoptr (i32 20 to ptr) to i32), [[A:%.*]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[AND_2]])
-; CHECK-NEXT:    call void @use.i1(i1 true)
-; CHECK-NEXT:    call void @use.i1(i1 false)
+; CHECK-NEXT:    [[TRUE_1:%.*]] = icmp ne i32 [[AND_2]], 100
+; CHECK-NEXT:    call void @use.i1(i1 [[TRUE_1]])
+; CHECK-NEXT:    [[FALSE_1:%.*]] = icmp eq i32 [[AND_2]], 100
+; CHECK-NEXT:    call void @use.i1(i1 [[FALSE_1]])
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i32 [[AND_2]], 10
 ; CHECK-NEXT:    call void @use.i1(i1 [[COND_1]])
 ; CHECK-NEXT:    call void @use.i32(i32 4)
@@ -38,7 +40,7 @@ define void @add_constexpr(i32 %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i32 0, [[A:%.*]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[ADD_1]])
-; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 20, [[A]]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 ptrtoint (ptr inttoptr (i32 20 to ptr) to i32), [[A]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[ADD_2]])
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ne i32 [[ADD_2]], 100
 ; CHECK-NEXT:    call void @use.i1(i1 [[COND_1]])
@@ -46,7 +48,7 @@ define void @add_constexpr(i32 %a) {
 ; CHECK-NEXT:    call void @use.i1(i1 [[COND_2]])
 ; CHECK-NEXT:    [[COND_3:%.*]] = icmp eq i32 [[ADD_2]], 10
 ; CHECK-NEXT:    call void @use.i1(i1 [[COND_3]])
-; CHECK-NEXT:    call void @use.i32(i32 120)
+; CHECK-NEXT:    call void @use.i32(i32 add (i32 ptrtoint (ptr inttoptr (i32 20 to ptr) to i32), i32 ptrtoint (ptr inttoptr (i32 100 to ptr) to i32)))
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -69,7 +71,7 @@ define void @mul_constexpr(i32 %a) {
 ; CHECK-LABEL: @mul_constexpr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @use.i32(i32 0)
-; CHECK-NEXT:    [[MUL_2:%.*]] = mul i32 20, [[A:%.*]]
+; CHECK-NEXT:    [[MUL_2:%.*]] = mul i32 ptrtoint (ptr inttoptr (i32 20 to ptr) to i32), [[A:%.*]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[MUL_2]])
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp ne i32 [[MUL_2]], 100
 ; CHECK-NEXT:    call void @use.i1(i1 [[COND_1]])
@@ -77,7 +79,8 @@ define void @mul_constexpr(i32 %a) {
 ; CHECK-NEXT:    call void @use.i1(i1 [[COND_2]])
 ; CHECK-NEXT:    [[COND_3:%.*]] = icmp eq i32 [[MUL_2]], 10
 ; CHECK-NEXT:    call void @use.i1(i1 [[COND_3]])
-; CHECK-NEXT:    call void @use.i32(i32 2000)
+; CHECK-NEXT:    [[MUL_3:%.*]] = mul i32 ptrtoint (ptr inttoptr (i32 20 to ptr) to i32), ptrtoint (ptr inttoptr (i32 100 to ptr) to i32)
+; CHECK-NEXT:    call void @use.i32(i32 [[MUL_3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -100,13 +103,16 @@ define void @udiv_constexpr(i32 %a) {
 ; CHECK-LABEL: @udiv_constexpr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @use.i32(i32 0)
-; CHECK-NEXT:    [[UDIV_2:%.*]] = udiv i32 20, [[A:%.*]]
+; CHECK-NEXT:    [[UDIV_2:%.*]] = udiv i32 ptrtoint (ptr inttoptr (i32 20 to ptr) to i32), [[A:%.*]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[UDIV_2]])
-; CHECK-NEXT:    call void @use.i1(i1 true)
-; CHECK-NEXT:    call void @use.i1(i1 false)
+; CHECK-NEXT:    [[TRUE_1:%.*]] = icmp ne i32 [[UDIV_2]], 100
+; CHECK-NEXT:    call void @use.i1(i1 [[TRUE_1]])
+; CHECK-NEXT:    [[FALSE_1:%.*]] = icmp eq i32 [[UDIV_2]], 50
+; CHECK-NEXT:    call void @use.i1(i1 [[FALSE_1]])
 ; CHECK-NEXT:    [[COND_1:%.*]] = icmp eq i32 [[UDIV_2]], 10
 ; CHECK-NEXT:    call void @use.i1(i1 [[COND_1]])
-; CHECK-NEXT:    call void @use.i32(i32 0)
+; CHECK-NEXT:    [[UDIV_3:%.*]] = udiv i32 ptrtoint (ptr inttoptr (i32 20 to ptr) to i32), ptrtoint (ptr inttoptr (i32 100 to ptr) to i32)
+; CHECK-NEXT:    call void @use.i32(i32 [[UDIV_3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:

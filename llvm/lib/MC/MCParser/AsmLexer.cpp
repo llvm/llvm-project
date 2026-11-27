@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmInfo.h"
-#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SaveAndRestore.h"
@@ -120,6 +119,11 @@ AsmLexer::AsmLexer(const MCAsmInfo &MAI) : MAI(MAI) {
 
 void AsmLexer::setBuffer(StringRef Buf, const char *ptr,
                          bool EndStatementAtEOF) {
+  // Buffer must be NULL-terminated. NULL terminator must reside at `Buf.end()`.
+  // It must be safe to dereference `Buf.end()`.
+  assert(*Buf.end() == '\0' &&
+         "Buffer provided to AsmLexer lacks null terminator.");
+
   CurBuf = Buf;
 
   if (ptr)
@@ -222,12 +226,6 @@ AsmToken AsmLexer::LexHexFloatLiteral(bool NoIntDigits) {
                                  "expected at least one exponent digit");
 
   return AsmToken(AsmToken::Real, StringRef(TokStart, CurPtr - TokStart));
-}
-
-/// LexIdentifier: [a-zA-Z_$.@?][a-zA-Z0-9_$.@#?]*
-static bool isIdentifierChar(char C, bool AllowAt, bool AllowHash) {
-  return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '?' ||
-         (AllowAt && C == '@') || (AllowHash && C == '#');
 }
 
 AsmToken AsmLexer::LexIdentifier() {
@@ -834,8 +832,17 @@ AsmToken AsmLexer::LexToken() {
       return LexLineComment();
   }
 
-  if (isAtStartOfComment(TokStart))
+  if (isAtStartOfComment(TokStart)) {
+    StringRef CommentString = MAI.getCommentString();
+    // For multi-char comment strings, advance CurPtr only if we matched the
+    // full string. This stops us from accidentally eating the newline if the
+    // current line ends in a single comment char.
+    if (CommentString.size() > 1 &&
+        StringRef(TokStart, CommentString.size()) == CommentString) {
+      CurPtr += CommentString.size() - 1;
+    }
     return LexLineComment();
+  }
 
   if (isAtStatementSeparator(TokStart)) {
     CurPtr += strlen(MAI.getSeparatorString()) - 1;

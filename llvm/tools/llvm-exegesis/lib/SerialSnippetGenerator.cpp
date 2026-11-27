@@ -11,7 +11,6 @@
 #include "CodeTemplate.h"
 #include "MCInstrDescView.h"
 #include "Target.h"
-#include <algorithm>
 #include <numeric>
 #include <vector>
 
@@ -56,6 +55,12 @@ computeAliasingInstructions(const LLVMState &State, const Instruction *Instr,
     if (ET.getIgnoredOpcodeReasonOrNull(State, OtherInstr.getOpcode()))
       continue;
     if (OtherInstr.hasMemoryOperands())
+      continue;
+    // Filtering out loads/stores might belong in hasMemoryOperands(), but that
+    // complicates things as there are instructions with may load/store that
+    // don't have operands (e.g. X86's CLUI instruction). So, it's easier to
+    // filter them out here.
+    if (OtherInstr.Description.mayLoad() || OtherInstr.Description.mayStore())
       continue;
     if (!ET.allowAsBackToBack(OtherInstr))
       continue;
@@ -127,7 +132,7 @@ static void appendCodeTemplates(const LLVMState &State,
       unsigned ScratchMemoryRegister = ET.getScratchMemoryRegister(
           State.getTargetMachine().getTargetTriple());
       const llvm::MCRegisterClass &RegClass =
-          State.getTargetMachine().getMCRegisterInfo()->getRegClass(
+          State.getTargetMachine().getMCRegisterInfo().getRegClass(
               DefOp.getExplicitOperandInfo().RegClass);
 
       // Register classes of def operand and memory operand must be the same
@@ -136,7 +141,12 @@ static void appendCodeTemplates(const LLVMState &State,
         return;
 
       ET.fillMemoryOperands(Variant, ScratchMemoryRegister, 0);
-      Variant.getValueFor(DefOp) = MCOperand::createReg(ScratchMemoryRegister);
+
+      // Only force the def register to ScratchMemoryRegister if the target
+      // hasn't assigned a value yet.
+      MCOperand &DefVal = Variant.getValueFor(DefOp);
+      if (!DefVal.isValid())
+        DefVal = MCOperand::createReg(ScratchMemoryRegister);
 
       CodeTemplate CT;
       CT.Execution = ExecutionModeBit;

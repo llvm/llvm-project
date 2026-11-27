@@ -8,12 +8,10 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Transforms/Coroutines/CoroShape.h"
 
 using namespace llvm;
 
@@ -24,21 +22,21 @@ namespace {
 class Lowerer : public coro::LowererBase {
   IRBuilder<> Builder;
   PointerType *const AnyResumeFnPtrTy;
-  Constant *NoopCoro = nullptr;
 
   void lowerResumeOrDestroy(CallBase &CB, CoroSubFnInst::ResumeKind);
   void lowerCoroPromise(CoroPromiseInst *Intrin);
   void lowerCoroDone(IntrinsicInst *II);
-  void lowerCoroNoop(IntrinsicInst *II);
-  void hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin);
 
 public:
+  // Set if noalias was removed from the arguments of any function.
+  bool RemovedNoAliasArg = false;
+
   Lowerer(Module &M)
-      : LowererBase(M), Builder(Context),
+      : LowererBase(M), Builder(M),
         AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
-  void lowerEarlyIntrinsics(Function &F);
+  bool lowerEarlyIntrinsics(Function &F, FunctionAnalysisManager &FAM);
 };
-}
+} // namespace
 
 // Replace a direct call to coro.resume or coro.destroy with an indirect call to
 // an address returned by coro.subfn.addr intrinsic. This is done so that
@@ -48,7 +46,6 @@ void Lowerer::lowerResumeOrDestroy(CallBase &CB,
                                    CoroSubFnInst::ResumeKind Index) {
   Value *ResumeAddr = makeSubFnCall(CB.getArgOperand(0), Index, &CB);
   CB.setCalledOperand(ResumeAddr);
-  CB.setCallingConv(CallingConv::Fast);
 }
 
 // Coroutine promise field is always at the fixed offset from the beginning of
@@ -87,8 +84,6 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
   Value *Operand = II->getArgOperand(0);
 
   // ResumeFnAddr is the first pointer sized element of the coroutine frame.
-  static_assert(coro::Shape::SwitchFieldIndex::Resume == 0,
-                "resume function not at offset zero");
   auto *FrameTy = Int8Ptr;
 
   Builder.SetInsertPoint(II);
@@ -97,84 +92,6 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
 
   II->replaceAllUsesWith(Cond);
   II->eraseFromParent();
-}
-
-static void buildDebugInfoForNoopResumeDestroyFunc(Function *NoopFn) {
-  Module &M = *NoopFn->getParent();
-  if (M.debug_compile_units().empty())
-     return;
-
-  DICompileUnit *CU = *M.debug_compile_units_begin();
-  DIBuilder DB(M, /*AllowUnresolved*/ false, CU);
-  std::array<Metadata *, 2> Params{nullptr, nullptr};
-  auto *SubroutineType =
-      DB.createSubroutineType(DB.getOrCreateTypeArray(Params));
-  StringRef Name = NoopFn->getName();
-  auto *SP = DB.createFunction(
-      CU, /*Name=*/Name, /*LinkageName=*/Name, /*File=*/ CU->getFile(),
-      /*LineNo=*/0, SubroutineType, /*ScopeLine=*/0, DINode::FlagArtificial,
-      DISubprogram::SPFlagDefinition);
-  NoopFn->setSubprogram(SP);
-  DB.finalize();
-}
-
-void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
-  if (!NoopCoro) {
-    LLVMContext &C = Builder.getContext();
-    Module &M = *II->getModule();
-
-    // Create a noop.frame struct type.
-    auto *FnTy = FunctionType::get(Type::getVoidTy(C), Builder.getPtrTy(0),
-                                   /*isVarArg=*/false);
-    auto *FnPtrTy = Builder.getPtrTy(0);
-    StructType *FrameTy =
-        StructType::create({FnPtrTy, FnPtrTy}, "NoopCoro.Frame");
-
-    // Create a Noop function that does nothing.
-    Function *NoopFn = Function::createWithDefaultAttr(
-        FnTy, GlobalValue::LinkageTypes::PrivateLinkage,
-        M.getDataLayout().getProgramAddressSpace(), "__NoopCoro_ResumeDestroy",
-        &M);
-    NoopFn->setCallingConv(CallingConv::Fast);
-    buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
-    auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
-    ReturnInst::Create(C, Entry);
-
-    // Create a constant struct for the frame.
-    Constant* Values[] = {NoopFn, NoopFn};
-    Constant* NoopCoroConst = ConstantStruct::get(FrameTy, Values);
-    NoopCoro = new GlobalVariable(M, NoopCoroConst->getType(), /*isConstant=*/true,
-                                GlobalVariable::PrivateLinkage, NoopCoroConst,
-                                "NoopCoro.Frame.Const");
-    cast<GlobalVariable>(NoopCoro)->setNoSanitizeMetadata();
-  }
-
-  Builder.SetInsertPoint(II);
-  auto *NoopCoroVoidPtr = Builder.CreateBitCast(NoopCoro, Int8Ptr);
-  II->replaceAllUsesWith(NoopCoroVoidPtr);
-  II->eraseFromParent();
-}
-
-// Later middle-end passes will assume promise alloca dead after coroutine
-// suspend, leading to misoptimizations. We hide promise alloca using
-// coro.promise and will lower it back to alloca at CoroSplit.
-void Lowerer::hidePromiseAlloca(CoroIdInst *CoroId, CoroBeginInst *CoroBegin) {
-  auto *PA = CoroId->getPromise();
-  if (!PA || !CoroBegin)
-    return;
-  Builder.SetInsertPoint(*CoroBegin->getInsertionPointAfterDef());
-
-  auto *Alignment = Builder.getInt32(PA->getAlign().value());
-  auto *FromPromise = Builder.getInt1(false);
-  SmallVector<Value *, 3> Arg{CoroBegin, Alignment, FromPromise};
-  auto *PI = Builder.CreateIntrinsic(
-      Builder.getPtrTy(), Intrinsic::coro_promise, Arg, {}, "promise.addr");
-  PI->setCannotDuplicate();
-  PA->replaceUsesWithIf(PI, [CoroId](Use &U) {
-    bool IsBitcast = U == U.getUser()->stripPointerCasts();
-    bool IsCoroId = U.getUser() == CoroId;
-    return !IsBitcast && !IsCoroId;
-  });
 }
 
 // Prior to CoroSplit, calls to coro.begin needs to be marked as NoDuplicate,
@@ -187,11 +104,12 @@ static void setCannotDuplicate(CoroIdInst *CoroId) {
       CB->setCannotDuplicate();
 }
 
-void Lowerer::lowerEarlyIntrinsics(Function &F) {
+bool Lowerer::lowerEarlyIntrinsics(Function &F, FunctionAnalysisManager &FAM) {
   CoroIdInst *CoroId = nullptr;
   CoroBeginInst *CoroBegin = nullptr;
   SmallVector<CoroFreeInst *, 4> CoroFrees;
   bool HasCoroSuspend = false;
+  bool Changed = false;
   for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
     auto *CB = dyn_cast<CallBase>(&I);
     if (!CB)
@@ -213,19 +131,22 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_suspend:
         // Make sure that final suspend point is not duplicated as CoroSplit
         // pass expects that there is at most one final suspend point.
-        if (cast<CoroSuspendInst>(&I)->isFinal())
+        if (cast<CoroSuspendInst>(&I)->isFinal()) {
           CB->setCannotDuplicate();
+          Changed = true;
+        }
+
         HasCoroSuspend = true;
         break;
       case Intrinsic::coro_end_async:
       case Intrinsic::coro_end:
         // Make sure that fallthrough coro.end is not duplicated as CoroSplit
         // pass expects that there is at most one fallthrough coro.end.
-        if (cast<AnyCoroEndInst>(&I)->isFallthrough())
+        if (cast<AnyCoroEndInst>(&I)->isFallthrough()) {
           CB->setCannotDuplicate();
-        break;
-      case Intrinsic::coro_noop:
-        lowerCoroNoop(cast<IntrinsicInst>(&I));
+          Changed = true;
+        }
+
         break;
       case Intrinsic::coro_id:
         if (auto *CII = cast<CoroIdInst>(&I)) {
@@ -236,25 +157,34 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();
             CoroId = cast<CoroIdInst>(&I);
+            Changed = true;
           }
         }
         break;
       case Intrinsic::coro_id_retcon:
       case Intrinsic::coro_id_retcon_once:
       case Intrinsic::coro_id_async:
-        F.setPresplitCoroutine();
+        if (!F.isPresplitCoroutine()) {
+          F.setPresplitCoroutine();
+          Changed = true;
+        }
+
         break;
       case Intrinsic::coro_resume:
         lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
+        Changed = true;
         break;
       case Intrinsic::coro_destroy:
         lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
+        Changed = true;
         break;
       case Intrinsic::coro_promise:
         lowerCoroPromise(cast<CoroPromiseInst>(&I));
+        Changed = true;
         break;
       case Intrinsic::coro_done:
         lowerCoroDone(cast<IntrinsicInst>(&I));
+        Changed = true;
         break;
     }
   }
@@ -263,39 +193,68 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
     // Make sure that all CoroFree reference the coro.id intrinsic.
     // Token type is not exposed through coroutine C/C++ builtins to plain C, so
     // we allow specifying none and fixing it up here.
-    for (CoroFreeInst *CF : CoroFrees)
-      CF->setArgOperand(0, CoroId);
-
-    hidePromiseAlloca(CoroId, CoroBegin);
+    for (CoroFreeInst *CF : CoroFrees) {
+      if (CF->getArgOperand(0) != CoroId) {
+        CF->setArgOperand(0, CoroId);
+        Changed = true;
+      }
+    }
   }
 
   // Coroutine suspention could potentially lead to any argument modified
   // outside of the function, hence arguments should not have noalias
   // attributes.
-  if (HasCoroSuspend)
-    for (Argument &A : F.args())
-      if (A.hasNoAliasAttr())
+  bool RemovedNoAlias = false;
+  if (HasCoroSuspend) {
+    for (Argument &A : F.args()) {
+      if (A.hasNoAliasAttr()) {
         A.removeAttr(Attribute::NoAlias);
+        RemovedNoAlias = true;
+      }
+    }
+  }
+
+  if (!Changed && !RemovedNoAlias)
+    return false;
+
+  PreservedAnalyses FuncPA;
+  FuncPA.preserveSet<CFGAnalyses>();
+  FAM.invalidate(F, FuncPA);
+  RemovedNoAliasArg |= RemovedNoAlias;
+  return true;
 }
 
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
+  // coro_suspend omitted as it is overloaded.
   return coro::declaresIntrinsics(
-      M, {"llvm.coro.id", "llvm.coro.id.retcon", "llvm.coro.id.retcon.once",
-          "llvm.coro.id.async", "llvm.coro.destroy", "llvm.coro.done",
-          "llvm.coro.end", "llvm.coro.end.async", "llvm.coro.noop",
-          "llvm.coro.free", "llvm.coro.promise", "llvm.coro.resume",
-          "llvm.coro.suspend"});
+      M, {Intrinsic::coro_id, Intrinsic::coro_id_retcon,
+          Intrinsic::coro_id_retcon_once, Intrinsic::coro_id_async,
+          Intrinsic::coro_destroy, Intrinsic::coro_done, Intrinsic::coro_end,
+          Intrinsic::coro_end_async, Intrinsic::coro_free,
+          Intrinsic::coro_promise, Intrinsic::coro_resume});
 }
 
-PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &MAM) {
   if (!declaresCoroEarlyIntrinsics(M))
     return PreservedAnalyses::all();
 
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  bool Changed = false;
   Lowerer L(M);
   for (auto &F : M)
-    L.lowerEarlyIntrinsics(F);
+    Changed |= L.lowerEarlyIntrinsics(F, FAM);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
   PA.preserveSet<CFGAnalyses>();
+  // Removing noalias may affect the analyses of the callers, so only preserve
+  // all function analyses if that didn't happen.
+  if (!L.RemovedNoAliasArg)
+    PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -fcuda-is-device -triple nvptx-unknown-unknown | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm %s -o - -fcuda-is-device -triple amdgcn | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -fcuda-is-device -triple amdgpu | FileCheck %s
 
 // Verifies Clang emits correct address spaces and addrspacecast instructions
 // for CUDA code.
@@ -68,7 +68,7 @@ __device__ void func2() {
   *ap = 1.0f;
 }
 // CHECK: define{{.*}} void @_Z5func2v()
-// CHECK: store ptr getelementptr inbounds ([256 x float], ptr addrspacecast (ptr addrspace(3) @_ZZ5func2vE1a to ptr), i{{32|64}} 0, i{{32|64}} 128), ptr %{{.*}}
+// CHECK: store ptr getelementptr inbounds nuw (i8, ptr addrspacecast (ptr addrspace(3) @_ZZ5func2vE1a to ptr), i{{32|64}} 512), ptr %{{.*}}
 
 __device__ void func3() {
   __shared__ float a;

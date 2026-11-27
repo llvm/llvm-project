@@ -1,5 +1,6 @@
 // Verify that we synthesized the coroutine for a lambda inside of a function template.
 // RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -fexceptions -fcxx-exceptions -disable-llvm-passes | FileCheck %s %}
 
 namespace std {
 template <typename R, typename... T> struct coroutine_traits {
@@ -55,4 +56,4 @@ void f() {
 //   CHECK: alloca %"struct.Task::promise_type"
 //   CHECK: call token @llvm.coro.id(
 //   CHECK: call i8 @llvm.coro.suspend(
-//   CHECK: call i1 @llvm.coro.end(
+//   CHECK: call void @llvm.coro.end(

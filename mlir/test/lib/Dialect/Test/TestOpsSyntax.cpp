@@ -8,7 +8,8 @@
 
 #include "TestOpsSyntax.h"
 #include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsConversion.h"
+#include "TestOpsCore.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/Support/Base64.h"
 
@@ -285,7 +286,7 @@ void ParseB64BytesOp::print(OpAsmPrinter &p) {
 ::llvm::LogicalResult FormatInferType2Op::inferReturnTypes(
     ::mlir::MLIRContext *context, ::std::optional<::mlir::Location> location,
     ::mlir::ValueRange operands, ::mlir::DictionaryAttr attributes,
-    OpaqueProperties properties, ::mlir::RegionRange regions,
+    PropertyRef properties, ::mlir::RegionRange regions,
     ::llvm::SmallVectorImpl<::mlir::Type> &inferredReturnTypes) {
   inferredReturnTypes.assign({::mlir::IntegerType::get(context, 16)});
   return ::mlir::success();
@@ -313,7 +314,7 @@ ParseResult WrappingRegionOp::parse(OpAsmParser &parser,
   SmallVector<Value, 8> returnOperands(wrappedOp->getResults());
   OpBuilder builder(parser.getContext());
   builder.setInsertionPointToEnd(&block);
-  builder.create<TestReturnOp>(wrappedOp->getLoc(), returnOperands);
+  TestReturnOp::create(builder, wrappedOp->getLoc(), returnOperands);
 
   // Get the results type for the wrapping op from the terminator operands.
   Operation &returnOp = body.back().back();
@@ -397,7 +398,7 @@ ParseResult PrettyPrintedRegionOp::parse(OpAsmParser &parser,
       builder.create(opLoc, innerOpName, /*operands=*/{lhs, rhs}, innerOpType);
 
   // Insert a return statement in the block returning the inner-op's result.
-  builder.create<TestReturnOp>(innerOp->getLoc(), innerOp->getResults());
+  TestReturnOp::create(builder, innerOp->getLoc(), innerOp->getResults());
 
   // Populate the op operation-state with result-type and location.
   result.addTypes(opFntype.getResults());
@@ -456,7 +457,8 @@ void PolyForOp::print(OpAsmPrinter &p) {
 
 void PolyForOp::getAsmBlockArgumentNames(Region &region,
                                          OpAsmSetValueNameFn setNameFn) {
-  auto arrayAttr = getOperation()->getAttrOfType<ArrayAttr>("arg_names");
+  auto arrayAttr =
+      getOperation()->getDiscardableAttrOfType<ArrayAttr>("arg_names");
   if (!arrayAttr)
     return;
   auto args = getRegion().front().getArguments();
@@ -508,10 +510,3 @@ static void printCustomOperationNameEntry(OpAsmPrinter &p, Operation *op,
 
 #define GET_OP_CLASSES
 #include "TestOpsSyntax.cpp.inc"
-
-void TestDialect::registerOpsSyntax() {
-  addOperations<
-#define GET_OP_LIST
-#include "TestOpsSyntax.cpp.inc"
-      >();
-}

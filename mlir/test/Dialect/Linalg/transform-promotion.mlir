@@ -61,7 +61,7 @@ func.func @promote_subview_matmul(%arg0: memref<?x?xf32, strided<[?, 1], offset:
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 { operands_to_promote = [0, 1, 2], use_full_tiles_by_default } : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 <operands_to_promote = [0, 1, 2], use_full_tiles_by_default> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -123,7 +123,7 @@ func.func @promote_first_subview_matmul(%arg0: memref<?x?xf32, strided<[?, 1], o
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 { operands_to_promote = [0], use_full_tiles_by_default } : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 <operands_to_promote = [0], use_full_tiles_by_default> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -145,7 +145,7 @@ func.func @aligned_promote_fill(%arg0: memref<?x?xf32, strided<[?, 1], offset: ?
 // CHECK-LABEL: func @aligned_promote_fill
 // CHECK:         %[[cf:.*]] = arith.constant 1.{{.*}} : f32
 // CHECK:         %[[s0:.*]] = memref.subview {{.*}}: memref<?x?xf32, strided{{.*}}> to memref<?x?xf32, strided{{.*}}>
-// CHECK:         %[[a0:.*]] = memref.alloc() {alignment = 32 : i64} : memref<32000000xi8>
+// CHECK:         %[[a0:.*]] = memref.alloc() alignment = 32 : memref<32000000xi8>
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]]{{.*}} : memref<32000000xi8> to memref<?x?xf32>
 // CHECK:         %[[l0:.*]] = memref.subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, 1]>>
 // CHECK:         linalg.fill ins({{.*}} : f32) outs(%[[v0]] : memref<?x?xf32>)
@@ -155,7 +155,7 @@ func.func @aligned_promote_fill(%arg0: memref<?x?xf32, strided<[?, 1], offset: ?
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 { operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32} : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 <operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -178,7 +178,7 @@ func.func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, strided<
 // CHECK-LABEL: func @aligned_promote_fill_complex
 // CHECK:         %[[cc:.*]] = complex.create {{.*}} : complex<f32>
 // CHECK:         %[[s0:.*]] = memref.subview {{.*}}: memref<?x?xcomplex<f32>, strided{{.*}}> to memref<?x?xcomplex<f32>, strided{{.*}}>
-// CHECK:         %[[a0:.*]] = memref.alloc() {alignment = 32 : i64} : memref<64000000xi8>
+// CHECK:         %[[a0:.*]] = memref.alloc() alignment = 32 : memref<64000000xi8>
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]]{{.*}} : memref<64000000xi8> to memref<?x?xcomplex<f32>>
 // CHECK:         %[[l0:.*]] = memref.subview %[[v0]][0, 0] [%{{.*}}, %{{.*}}] [1, 1] : memref<?x?xcomplex<f32>> to memref<?x?xcomplex<f32>, strided<[?, 1]>>
 // CHECK:         linalg.fill ins({{.*}} : complex<f32>) outs(%[[v0]] : memref<?x?xcomplex<f32>>)
@@ -188,7 +188,7 @@ func.func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, strided<
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op) {
     %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.promote %0 { operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32} : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.promote %0 <operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }

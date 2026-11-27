@@ -2,6 +2,8 @@
 
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-pch -o %t %s
 // RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -include-pch %t -emit-llvm -o - -DUSESTRUCT %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -fexceptions -fobjc-exceptions -emit-llvm -o - -DUSESTRUCT %s | FileCheck %s --check-prefix=CHECK-EH
+
 
 #ifndef HEADER
 #define HEADER
@@ -470,7 +472,7 @@ void test_copy_assignment_StrongBlock(StrongBlock *d, StrongBlock *s) {
 // CHECK: %[[ADDR_CUR1:.*]] = phi ptr
 
 // CHECK: %[[V6:.*]] = load volatile i8, ptr %[[ADDR_CUR1]], align 1
-// CHECK: %[[TOBOOL:.*]] = trunc i8 %[[V6]] to i1
+// CHECK: %[[TOBOOL:.*]] = icmp ne i8 %[[V6]], 0
 // CHECK: %[[FROMBOOL:.*]] = zext i1 %[[TOBOOL]] to i8
 // CHECK: store volatile i8 %[[FROMBOOL]], ptr %[[ADDR_CUR]], align 1
 
@@ -678,6 +680,14 @@ void test_copy_constructor_VolatileArray(VolatileArray *a) {
 
 // CHECK: call void @__destructor_8_s8(ptr %[[_COMPOUNDLITERAL]])
 
+// CHECK-EH: define{{.*}} void @test_compound_literal0(
+// CHECK-EH: invoke void @func(
+// CHECK-EH: to label %{{.*}} unwind label %[[LPAD:.*]]
+// CHECK-EH: [[LPAD]]:
+// CHECK-EH: landingpad
+// CHECK-EH: call void @__destructor_8_s8(
+// CHECK-EH: call void @__destructor_8_s8(
+
 void test_compound_literal0(int c) {
   StrongSmall *p = c ? &(StrongSmall){ 1, 0 } : &(StrongSmall){ 2, 0 };
   func(0);
@@ -736,10 +746,35 @@ void test_compound_literal1(int c) {
 
 // CHECK: call void @__destructor_8_s8(ptr %[[_COMPOUNDLITERAL]])
 
+// CHECK-EH: define{{.*}} void @test_compound_literal2(
+// CHECK-EH: invoke void @func(
+// CHECK-EH: to label %{{.*}} unwind label %[[LPAD:.*]]
+// CHECK-EH: [[LPAD]]:
+// CHECK-EH: landingpad
+// CHECK-EH: call void @__destructor_8_s8(
+// CHECK-EH: call void @__destructor_8_s8(
+
 void test_compound_literal2(int c, StrongSmall *p) {
   *p = c ? (StrongSmall){ 1, 0 } : (StrongSmall){ 2, 0 };
   func(0);
 }
+
+// CHECK: define{{.*}} void @test_compound_literal3(
+// CHECK: call void @func(
+// CHECK: call void @__destructor_8_s8(
+
+// CHECK-EH: define{{.*}} void @test_compound_literal3(
+// CHECK-EH: invoke void @func(
+// CHECK-EH: to label %{{.*}} unwind label %[[LPAD:.*]]
+// CHECK-EH: [[LPAD]]:
+// CHECK-EH: landingpad
+// CHECK-EH: call void @__destructor_8_s8(
+
+void test_compound_literal3(int c) {
+  StrongSmall *p = c ? (StrongSmall[]){ {1, 0}, {2, 0} } : 0;
+  func(0);
+}
+
 
 // CHECK: define{{.*}} void @test_member_access(
 // CHECK: %[[TMP:.*]] = alloca %[[STRUCT_STRONGSMALL]],

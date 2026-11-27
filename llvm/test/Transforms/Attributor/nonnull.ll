@@ -294,7 +294,7 @@ define ptr @test10(ptr %a, i64 %n) {
 ; FIXME: missing nonnull
 define ptr @test11(ptr) local_unnamed_addr {
 ; CHECK-LABEL: define {{[^@]+}}@test11
-; CHECK-SAME: (ptr [[TMP0:%.*]]) local_unnamed_addr {
+; CHECK-SAME: (ptr nofree [[TMP0:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP5:%.*]]
 ; CHECK:       3:
@@ -400,7 +400,7 @@ define internal ptr @f1(ptr %arg) {
 ; TUNIT-NEXT:    [[TMP:%.*]] = icmp eq ptr [[ARG]], null
 ; TUNIT-NEXT:    br i1 [[TMP]], label [[BB9:%.*]], label [[BB1:%.*]]
 ; TUNIT:       bb1:
-; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4
+; TUNIT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4, !invariant.load [[META0:![0-9]+]]
 ; TUNIT-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; TUNIT-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
 ; TUNIT:       bb4:
@@ -422,7 +422,7 @@ define internal ptr @f1(ptr %arg) {
 ; CGSCC-NEXT:    [[TMP:%.*]] = icmp eq ptr [[ARG]], null
 ; CGSCC-NEXT:    br i1 [[TMP]], label [[BB9:%.*]], label [[BB1:%.*]]
 ; CGSCC:       bb1:
-; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4
+; CGSCC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARG]], align 4, !invariant.load [[META0:![0-9]+]]
 ; CGSCC-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CGSCC-NEXT:    br i1 [[TMP3]], label [[BB6:%.*]], label [[BB4:%.*]]
 ; CGSCC:       bb4:
@@ -839,11 +839,11 @@ f:
 }
 
 ; The callsite must execute in order for the attribute to transfer to the parent.
-; The volatile load can't trap, so we can guarantee that we'll get to the call.
+; The volatile load can trap, so we can't guarantee that we'll get to the call.
 
 define i8 @parent6(ptr %a, ptr %b) {
 ; CHECK-LABEL: define {{[^@]+}}@parent6
-; CHECK-SAME: (ptr nonnull [[A:%.*]], ptr nofree noundef [[B:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]], ptr nofree noundef [[B:%.*]]) {
 ; CHECK-NEXT:    [[C:%.*]] = load volatile i8, ptr [[B]], align 1
 ; CHECK-NEXT:    call void @use1nonnull(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret i8 [[C]]
@@ -1553,14 +1553,14 @@ merge:
 define void @phi_caller(ptr %p) {
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@phi_caller
-; TUNIT-SAME: (ptr nofree [[P:%.*]]) #[[ATTR5]] {
+; TUNIT-SAME: (ptr [[P:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:    [[C:%.*]] = call nonnull ptr @phi(ptr noalias nofree readnone [[P]]) #[[ATTR20:[0-9]+]]
 ; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[C]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@phi_caller
-; CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR4]] {
+; CGSCC-SAME: (ptr [[P:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    [[C:%.*]] = call nonnull ptr @phi(ptr noalias nofree readnone [[P]]) #[[ATTR21:[0-9]+]]
 ; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[C]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
@@ -1593,14 +1593,14 @@ NULL:
 define void @multi_ret_caller(ptr %p) {
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@multi_ret_caller
-; TUNIT-SAME: (ptr nofree [[P:%.*]]) #[[ATTR5]] {
+; TUNIT-SAME: (ptr [[P:%.*]]) #[[ATTR5]] {
 ; TUNIT-NEXT:    [[C:%.*]] = call nonnull ptr @multi_ret(ptr noalias nofree readnone [[P]]) #[[ATTR20]]
 ; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[C]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@multi_ret_caller
-; CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR4]] {
+; CGSCC-SAME: (ptr [[P:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    [[C:%.*]] = call nonnull ptr @multi_ret(ptr noalias nofree readnone [[P]]) #[[ATTR21]]
 ; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nofree nonnull readnone captures(none) [[C]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
@@ -1635,6 +1635,69 @@ if.then:
   ret ptr inttoptr (i64 5 to ptr)
 if.else:
   ret ptr null
+}
+
+; The definition of a linkonce_odr function might be replaced by another one,
+; e.g. one without the load or the assumption, so the attributes of its
+; arguments and return value must not be derived from its body.
+define linkonce_odr ptr @nonnull_return_from_load_non_exact(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@nonnull_return_from_load_non_exact
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %v = load i32, ptr %p, align 4
+  ret ptr %p
+}
+
+define ptr @call_nonnull_return_from_load_non_exact(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@call_nonnull_return_from_load_non_exact
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @nonnull_return_from_load_non_exact(ptr [[P]])
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = call ptr @nonnull_return_from_load_non_exact(ptr %p)
+  ret ptr %r
+}
+
+define linkonce_odr ptr @nonnull_return_from_assume_non_exact(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@nonnull_return_from_assume_non_exact
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "nonnull"(ptr [[P]]) ]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %p) ]
+  ret ptr %p
+}
+
+define ptr @call_nonnull_return_from_assume_non_exact(ptr %p) {
+; CHECK-LABEL: define {{[^@]+}}@call_nonnull_return_from_assume_non_exact
+; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call ptr @nonnull_return_from_assume_non_exact(ptr [[P]])
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = call ptr @nonnull_return_from_assume_non_exact(ptr %p)
+  ret ptr %r
+}
+
+define linkonce_odr void @align_from_assume_non_exact(ptr %a) {
+; CHECK-LABEL: define {{[^@]+}}@align_from_assume_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) [ "align"(ptr [[A]], i64 16) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %a, i64 16) ]
+  ret void
+}
+
+define void @call_align_from_assume_non_exact(ptr %a) {
+; CHECK-LABEL: define {{[^@]+}}@call_align_from_assume_non_exact
+; CHECK-SAME: (ptr [[A:%.*]]) {
+; CHECK-NEXT:    call void @align_from_assume_non_exact(ptr [[A]])
+; CHECK-NEXT:    ret void
+;
+  call void @align_from_assume_non_exact(ptr %a)
+  ret void
 }
 
 attributes #0 = { null_pointer_is_valid }
@@ -1683,5 +1746,9 @@ attributes #1 = { nounwind willreturn}
 ; CGSCC: attributes #[[ATTR18]] = { nosync willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR19]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR20]] = { nofree nosync willreturn memory(read) }
-; CGSCC: attributes #[[ATTR21]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR21]] = { willreturn }
+;.
+; TUNIT: [[META0]] = !{}
+;.
+; CGSCC: [[META0]] = !{}
 ;.

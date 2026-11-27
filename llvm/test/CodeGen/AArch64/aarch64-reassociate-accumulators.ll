@@ -24,8 +24,8 @@ loop:
   %acc_phi = phi <8 x i16> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i8, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i8, ptr %ptr2, i32 %i
-  %a = load <8 x i8>, <8 x i8>* %ptr1_i, align 1
-  %b = load <8 x i8>, <8 x i8>* %ptr2_i, align 1
+  %a = load <8 x i8>, ptr %ptr1_i, align 1
+  %b = load <8 x i8>, ptr %ptr2_i, align 1
   %vabd = call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %a, <8 x i8> %b)
   %vabd_ext = zext <8 x i8> %vabd to <8 x i16>
   %acc_next = add <8 x i16> %vabd_ext, %acc_phi
@@ -65,8 +65,8 @@ loop:
   %acc_phi = phi <4 x i32> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i16, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i16, ptr %ptr2, i32 %i
-  %a = load <4 x i16>, <4 x i16>* %ptr1_i, align 1
-  %b = load <4 x i16>, <4 x i16>* %ptr2_i, align 1
+  %a = load <4 x i16>, ptr %ptr1_i, align 1
+  %b = load <4 x i16>, ptr %ptr2_i, align 1
   %vabd = tail call <4 x i16> @llvm.aarch64.neon.sabd.v4i16(<4 x i16> %a, <4 x i16> %b)
   %vmov = zext <4 x i16> %vabd to <4 x i32>
   %acc_next = add <4 x i32> %vmov, %acc_phi
@@ -116,8 +116,8 @@ loop:
   %acc_phi_lo = phi <8 x i16> [ zeroinitializer, %entry ], [ %acc_next_lo, %loop ]
   %ptr1_i = getelementptr i8, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i8, ptr %ptr2, i32 %i
-  %a = load <16 x i8>, <16 x i8>* %ptr1_i, align 1
-  %b = load <16 x i8>, <16 x i8>* %ptr2_i, align 1
+  %a = load <16 x i8>, ptr %ptr1_i, align 1
+  %b = load <16 x i8>, ptr %ptr2_i, align 1
   %a_hi = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %b_hi = shufflevector <16 x i8> %b, <16 x i8> zeroinitializer, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %a_lo = shufflevector <16 x i8> %a, <16 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -160,8 +160,8 @@ loop:
   %acc_phi = phi <4 x i32> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i32, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i32, ptr %ptr2, i32 %i
-  %a = load <4 x i32>, <4 x i32>* %ptr1_i, align 1
-  %b = load <4 x i32>, <4 x i32>* %ptr2_i, align 1
+  %a = load <4 x i32>, ptr %ptr1_i, align 1
+  %b = load <4 x i32>, ptr %ptr2_i, align 1
   %vabd = tail call <4 x i32> @llvm.aarch64.neon.uabd.v4i32(<4 x i32> %a, <4 x i32> %b)
   %acc_next = add <4 x i32> %acc_phi, %vabd
   %next_i = add i32 %i, 4
@@ -198,8 +198,8 @@ loop:
   ; Load values from ptr1 and ptr2
   %ptr1_i = getelementptr i32, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i32, ptr %ptr2, i32 %i
-  %a = load <4 x i32>, <4 x i32>* %ptr1_i, align 1
-  %b = load <4 x i32>, <4 x i32>* %ptr2_i, align 1
+  %a = load <4 x i32>, ptr %ptr1_i, align 1
+  %b = load <4 x i32>, ptr %ptr2_i, align 1
   ; Perform the intrinsic operation
   %vabd = tail call <4 x i32> @llvm.aarch64.neon.sabd.v4i32(<4 x i32> %a, <4 x i32> %b)
   %acc_next = add <4 x i32> %acc_phi, %vabd
@@ -237,9 +237,44 @@ loop:
   %acc_phi = phi <2 x i32> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i32, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i32, ptr %ptr2, i32 %i
-  %a = load <2 x i32>, <2 x i32>* %ptr1_i, align 1
-  %b = load <2 x i32>, <2 x i32>* %ptr2_i, align 1
+  %a = load <2 x i32>, ptr %ptr1_i, align 1
+  %b = load <2 x i32>, ptr %ptr2_i, align 1
   %vabd = tail call <2 x i32> @llvm.aarch64.neon.uabd.v2i32(<2 x i32> %a, <2 x i32> %b)
+  %acc_next = add <2 x i32> %acc_phi, %vabd
+  %next_i = add i32 %i, 2
+  %cmp = icmp slt i32 %next_i, 16
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %reduce = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %acc_next)
+  ret i32 %reduce
+}
+
+define i32 @saba_v2i32_accumulation(ptr %ptr1, ptr %ptr2) {
+; CHECK-LABEL: saba_v2i32_accumulation:
+; CHECK:    sabd.2s v0, v0, v2
+; CHECK:    sabd.2s v1, v1, v3
+; CHECK:    sabd.2s v2, v2, v5
+; CHECK:    saba.2s v0, v4, v6
+; CHECK:    saba.2s v1, v7, v17
+; CHECK:    saba.2s v2, v16, v18
+; CHECK:    saba.2s v0, v19, v21
+; CHECK:    saba.2s v1, v20, v22
+; CHECK:    add.2s v0, v2, v0
+; CHECK:    add.2s v0, v0, v1
+; CHECK:    addp.2s v0, v0, v0
+entry:
+  br label %loop
+
+loop:
+
+  %i = phi i32 [ 0, %entry ], [ %next_i, %loop ]
+  %acc_phi = phi <2 x i32> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
+  %ptr1_i = getelementptr i32, ptr %ptr1, i32 %i
+  %ptr2_i = getelementptr i32, ptr %ptr2, i32 %i
+  %a = load <2 x i32>, ptr %ptr1_i, align 1
+  %b = load <2 x i32>, ptr %ptr2_i, align 1
+  %vabd = tail call <2 x i32> @llvm.aarch64.neon.sabd.v2i32(<2 x i32> %a, <2 x i32> %b)
   %acc_next = add <2 x i32> %acc_phi, %vabd
   %next_i = add i32 %i, 2
   %cmp = icmp slt i32 %next_i, 16
@@ -272,8 +307,8 @@ loop:
   %acc_phi = phi <8 x i8> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i8, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i8, ptr %ptr2, i32 %i
-  %a = load <8 x i8>, <8 x i8>* %ptr1_i, align 1
-  %b = load <8 x i8>, <8 x i8>* %ptr2_i, align 1
+  %a = load <8 x i8>, ptr %ptr1_i, align 1
+  %b = load <8 x i8>, ptr %ptr2_i, align 1
   %vabd = tail call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %a, <8 x i8> %b)
   %acc_next = add <8 x i8> %acc_phi, %vabd
   %next_i = add i32 %i, 8
@@ -307,8 +342,8 @@ loop:
   %acc_phi = phi <16 x i8> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i8, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i8, ptr %ptr2, i32 %i
-  %a = load <16 x i8>, <16 x i8>* %ptr1_i, align 1
-  %b = load <16 x i8>, <16 x i8>* %ptr2_i, align 1
+  %a = load <16 x i8>, ptr %ptr1_i, align 1
+  %b = load <16 x i8>, ptr %ptr2_i, align 1
   %vabd = tail call <16 x i8> @llvm.aarch64.neon.uabd.v16i8(<16 x i8> %a, <16 x i8> %b)
   %acc_next = add <16 x i8> %acc_phi, %vabd
   %next_i = add i32 %i, 16
@@ -342,8 +377,8 @@ loop:
   %acc_phi = phi <8 x i16> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i16, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i16, ptr %ptr2, i32 %i
-  %a = load <8 x i16>, <8 x i16>* %ptr1_i, align 1
-  %b = load <8 x i16>, <8 x i16>* %ptr2_i, align 1
+  %a = load <8 x i16>, ptr %ptr1_i, align 1
+  %b = load <8 x i16>, ptr %ptr2_i, align 1
   %vabd = tail call <8 x i16> @llvm.aarch64.neon.uabd.v8i16(<8 x i16> %a, <8 x i16> %b)
   %acc_next = add <8 x i16> %acc_phi, %vabd
   %next_i = add i32 %i, 8
@@ -377,8 +412,8 @@ loop:
   %acc_phi = phi <8 x i8> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i8, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i8, ptr %ptr2, i32 %i
-  %a = load <8 x i8>, <8 x i8>* %ptr1_i, align 1
-  %b = load <8 x i8>, <8 x i8>* %ptr2_i, align 1
+  %a = load <8 x i8>, ptr %ptr1_i, align 1
+  %b = load <8 x i8>, ptr %ptr2_i, align 1
   %vabd = tail call <8 x i8> @llvm.aarch64.neon.sabd.v8i8(<8 x i8> %a, <8 x i8> %b)
   %acc_next = add <8 x i8> %acc_phi, %vabd
   %next_i = add i32 %i, 8
@@ -411,8 +446,8 @@ loop:
   %acc_phi = phi <4 x i16> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i16, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i16, ptr %ptr2, i32 %i
-  %a = load <4 x i16>, <4 x i16>* %ptr1_i, align 1
-  %b = load <4 x i16>, <4 x i16>* %ptr2_i, align 1
+  %a = load <4 x i16>, ptr %ptr1_i, align 1
+  %b = load <4 x i16>, ptr %ptr2_i, align 1
   %vabd = tail call <4 x i16> @llvm.aarch64.neon.sabd.v4i16(<4 x i16> %a, <4 x i16> %b)
   %acc_next = add <4 x i16> %acc_phi, %vabd
   %next_i = add i32 %i, 4
@@ -445,8 +480,8 @@ loop:
   %acc_phi = phi <8 x i16> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i16, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i16, ptr %ptr2, i32 %i
-  %a = load <8 x i16>, <8 x i16>* %ptr1_i, align 1
-  %b = load <8 x i16>, <8 x i16>* %ptr2_i, align 1
+  %a = load <8 x i16>, ptr %ptr1_i, align 1
+  %b = load <8 x i16>, ptr %ptr2_i, align 1
   %vabd = tail call <8 x i16> @llvm.aarch64.neon.sabd.v8i16(<8 x i16> %a, <8 x i16> %b)
   %acc_next = add <8 x i16> %acc_phi, %vabd
   %next_i = add i32 %i, 8
@@ -480,8 +515,8 @@ loop:
   %acc_phi = phi <8 x i16> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i8, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i8, ptr %ptr2, i32 %i
-  %a = load <8 x i8>, <8 x i8>* %ptr1_i, align 1
-  %b = load <8 x i8>, <8 x i8>* %ptr2_i, align 1
+  %a = load <8 x i8>, ptr %ptr1_i, align 1
+  %b = load <8 x i8>, ptr %ptr2_i, align 1
   %vabd = tail call <8 x i8> @llvm.aarch64.neon.uabd.v8i8(<8 x i8> %a, <8 x i8> %b)
   %vmov = zext <8 x i8> %vabd to <8 x i16>
   %acc_next = add <8 x i16> %vmov, %acc_phi
@@ -516,8 +551,8 @@ loop:
   %acc_phi = phi <4 x i32> [ zeroinitializer, %entry ], [ %acc_next, %loop ]
   %ptr1_i = getelementptr i16, ptr %ptr1, i32 %i
   %ptr2_i = getelementptr i16, ptr %ptr2, i32 %i
-  %a = load <4 x i16>, <4 x i16>* %ptr1_i, align 1
-  %b = load <4 x i16>, <4 x i16>* %ptr2_i, align 1
+  %a = load <4 x i16>, ptr %ptr1_i, align 1
+  %b = load <4 x i16>, ptr %ptr2_i, align 1
   %vabd = tail call <4 x i16> @llvm.aarch64.neon.uabd.v4i16(<4 x i16> %a, <4 x i16> %b)
   %vmov = zext <4 x i16> %vabd to <4 x i32>
   %acc_next = add <4 x i32> %vmov, %acc_phi

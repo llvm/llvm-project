@@ -16,8 +16,8 @@ bar:
     ldrd r0, r1, foo1    @ arm_pcrel_10_unscaled
     ldrd r0, r1, foo2-8  @ arm_pcrel_10_unscaled
 .ifdef ERR
-  @ ERR:[[#@LINE-3]]:5: error: unsupported relocation type
-  @ ERR:[[#@LINE-3]]:5: error: unsupported relocation type
+  @ ERR:[[#@LINE-3]]:18: error: unsupported relocation type
+  @ ERR:[[#@LINE-3]]:22: error: unsupported relocation type
 .endif
     bx lr
 

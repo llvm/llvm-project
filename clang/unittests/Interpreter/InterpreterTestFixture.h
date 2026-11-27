@@ -9,9 +9,11 @@
 #ifndef LLVM_CLANG_UNITTESTS_INTERPRETER_INTERPRETERTESTBASE_H
 #define LLVM_CLANG_UNITTESTS_INTERPRETER_INTERPRETERTESTBASE_H
 
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/PreprocessorOptions.h"
+
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "gtest/gtest.h"
@@ -38,8 +40,14 @@ protected:
   }
 
   void SetUp() override {
+// FIXME : WebAssembly doesn't currently support Jit (see
+// https: // github.com/llvm/llvm-project/pull/150977#discussion_r2237521095).
+// so this check of HostSupportsJIT has been skipped
+// over until support is added, and HostSupportsJIT can return true.
+#ifndef __EMSCRIPTEN__
     if (!HostSupportsJIT())
       GTEST_SKIP();
+#endif
   }
 
   void TearDown() override {}
@@ -48,8 +56,6 @@ protected:
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
   }
-
-  static void TearDownTestSuite() { llvm::llvm_shutdown(); }
 };
 
 } // namespace clang

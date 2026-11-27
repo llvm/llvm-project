@@ -102,36 +102,42 @@ class ThreadPlanUserBreakpointsTestCase(TestBase):
         # Set breakpoint callback to return True/False
         bp.SetScriptCallbackBody("return %s" % condition)
 
+    @skipIfWasm  # a step on Wasm ends at the breakpoint's address without hitting it
     def test_thread_plan_user_breakpoint_conditional_active(self):
         # Test with breakpoints having true condition
         self.check_thread_plan_user_breakpoint(
             condition=True, set_up_breakpoint_func=self.set_up_breakpoints_condition
         )
 
+    @skipIfWasm  # a step on Wasm runs to exit
     def test_thread_plan_user_breakpoint_conditional_inactive(self):
         # Test with breakpoints having false condition
         self.check_thread_plan_user_breakpoint(
             condition=False, set_up_breakpoint_func=self.set_up_breakpoints_condition
         )
 
+    @skipIfWasm  # a step on Wasm ends at the breakpoint's address without hitting it
     def test_thread_plan_user_breakpoint_unconditional_active(self):
         # Test with breakpoints enabled unconditionally
         self.check_thread_plan_user_breakpoint(
             condition=True, set_up_breakpoint_func=self.set_up_breakpoints_enable
         )
 
+    @skipIfWasm  # a step on Wasm runs to exit
     def test_thread_plan_user_breakpoint_unconditional_inactive(self):
         # Test with breakpoints disabled unconditionally
         self.check_thread_plan_user_breakpoint(
             condition=False, set_up_breakpoint_func=self.set_up_breakpoints_enable
         )
 
+    @skipIfWasm  # a step on Wasm ends at the breakpoint's address without hitting it
     def test_thread_plan_user_breakpoint_callback_active(self):
         # Test with breakpoints with callback that returns 'True'
         self.check_thread_plan_user_breakpoint(
             condition=True, set_up_breakpoint_func=self.set_up_breakpoints_callback
         )
 
+    @skipIfWasm  # a step on Wasm runs to exit
     def test_thread_plan_user_breakpoint_callback_inactive(self):
         # Test with breakpoints with callback that returns 'False'
         self.check_thread_plan_user_breakpoint(

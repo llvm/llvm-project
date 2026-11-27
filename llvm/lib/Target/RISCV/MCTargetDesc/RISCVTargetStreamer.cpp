@@ -13,14 +13,10 @@
 #include "RISCVTargetStreamer.h"
 #include "RISCVBaseInfo.h"
 #include "RISCVMCTargetDesc.h"
-#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Alignment.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/RISCVAttributes.h"
@@ -28,14 +24,9 @@
 
 using namespace llvm;
 
-// This option controls whether or not we emit ELF attributes for ABI features,
-// like RISC-V atomics or X3 usage.
-static cl::opt<bool> RiscvAbiAttr(
-    "riscv-abi-attributes",
-    cl::desc("Enable emitting RISC-V ELF attributes for ABI features"),
-    cl::Hidden);
-
-RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
+RISCVTargetStreamer::RISCVTargetStreamer(MCStreamer &S)
+    : MCTargetStreamer(S),
+      CLOpts(RISCV_MC::getCLOpts(S.getContext().getTargetOptions())) {}
 
 void RISCVTargetStreamer::finish() { finishAttributeSection(); }
 void RISCVTargetStreamer::reset() {}
@@ -61,88 +52,33 @@ void RISCVTargetStreamer::emitIntTextAttribute(unsigned Attribute,
                                                unsigned IntValue,
                                                StringRef StringValue) {}
 
-void RISCVTargetStreamer::emitNoteGnuPropertySection(
-    const uint32_t Feature1And) {
-  MCStreamer &OutStreamer = getStreamer();
-  MCContext &Ctx = OutStreamer.getContext();
-
-  const Triple &Triple = Ctx.getTargetTriple();
-  Align NoteAlign;
-  if (Triple.isArch64Bit()) {
-    NoteAlign = Align(8);
-  } else {
-    assert(Triple.isArch32Bit());
-    NoteAlign = Align(4);
-  }
-
-  assert(Ctx.getObjectFileType() == MCContext::Environment::IsELF);
-  MCSection *const NoteSection =
-      Ctx.getELFSection(".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
-  NoteSection->setAlignment(NoteAlign);
-  OutStreamer.pushSection();
-  OutStreamer.switchSection(NoteSection);
-
-  // Emit the note header
-  OutStreamer.emitIntValue(4, 4); // n_namsz
-
-  MCSymbol *const NDescBeginSym = Ctx.createTempSymbol();
-  MCSymbol *const NDescEndSym = Ctx.createTempSymbol();
-  const MCExpr *const NDescSzExpr =
-      MCBinaryExpr::createSub(MCSymbolRefExpr::create(NDescEndSym, Ctx),
-                              MCSymbolRefExpr::create(NDescBeginSym, Ctx), Ctx);
-
-  OutStreamer.emitValue(NDescSzExpr, 4);                    // n_descsz
-  OutStreamer.emitIntValue(ELF::NT_GNU_PROPERTY_TYPE_0, 4); // n_type
-  OutStreamer.emitBytes(StringRef("GNU", 4));               // n_name
-
-  // Emit n_desc field
-  OutStreamer.emitLabel(NDescBeginSym);
-  OutStreamer.emitValueToAlignment(NoteAlign);
-
-  // Emit the feature_1_and property
-  OutStreamer.emitIntValue(ELF::GNU_PROPERTY_RISCV_FEATURE_1_AND, 4); // pr_type
-  OutStreamer.emitIntValue(4, 4);              // pr_datasz
-  OutStreamer.emitIntValue(Feature1And, 4);    // pr_data
-  OutStreamer.emitValueToAlignment(NoteAlign); // pr_padding
-
-  OutStreamer.emitLabel(NDescEndSym);
-  OutStreamer.popSection();
-}
-
 void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
-  assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialized target ABI");
+  assert(ABI != RISCVABI::ABI::Unknown && "Improperly initialized target ABI");
   TargetABI = ABI;
 }
 
 void RISCVTargetStreamer::setFlagsFromFeatures(const MCSubtargetInfo &STI) {
-  HasRVC = STI.hasFeature(RISCV::FeatureStdExtC) ||
-           STI.hasFeature(RISCV::FeatureStdExtZca);
+  HasRVC = STI.hasFeature(RISCV::FeatureStdExtZca);
   HasTSO = STI.hasFeature(RISCV::FeatureStdExtZtso);
 }
 
 void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
                                                bool EmitStackAlign) {
-  if (EmitStackAlign) {
-    unsigned StackAlign;
-    if (TargetABI == RISCVABI::ABI_ILP32E)
-      StackAlign = 4;
-    else if (TargetABI == RISCVABI::ABI_LP64E)
-      StackAlign = 8;
-    else
-      StackAlign = 16;
-    emitAttribute(RISCVAttrs::STACK_ALIGN, StackAlign);
-  }
+  if (EmitStackAlign && TargetABI != RISCVABI::ABI::Unknown)
+    emitAttribute(RISCVAttrs::STACK_ALIGN,
+                  RISCVABI::getStackAlignment(TargetABI).value());
 
-  auto ParseResult = RISCVFeatures::parseFeatureBits(
-      STI.hasFeature(RISCV::Feature64Bit), STI.getFeatureBits());
+  auto ParseResult = RISCVFeatures::parseFeatureBits(STI);
   if (!ParseResult) {
     report_fatal_error(ParseResult.takeError());
   } else {
     auto &ISAInfo = *ParseResult;
-    emitTextAttribute(RISCVAttrs::ARCH, ISAInfo->toString());
+    std::string Arch = ISAInfo->toString();
+    emitTextAttribute(RISCVAttrs::ARCH, Arch);
+    setArchString(Arch);
   }
 
-  if (RiscvAbiAttr && STI.hasFeature(RISCV::FeatureStdExtA)) {
+  if (CLOpts.abi_attributes && STI.hasFeature(RISCV::FeatureStdExtA)) {
     unsigned AtomicABITag;
     if (STI.hasFeature(RISCV::FeatureStdExtZalasr))
       AtomicABITag = static_cast<unsigned>(RISCVAttrs::RISCVAtomicAbiTag::A7);

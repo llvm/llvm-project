@@ -33,6 +33,10 @@ using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<OpFoldResult>>;
 LogicalResult
 reifyResultShapes(OpBuilder &b, Operation *op,
                   ReifiedRankedShapedTypeDims &reifiedReturnShapes);
+FailureOr<SmallVector<OpFoldResult>>
+reifyShapeOfResult(OpBuilder &b, Operation *op, int resultIndex);
+FailureOr<OpFoldResult> reifyDimOfResult(OpBuilder &b, Operation *op,
+                                         int resultIndex, int dim);
 
 /// Adaptor class to abstract the differences between whether value is from
 /// a ShapedType or ShapedTypeComponents or DenseIntElementsAttribute.
@@ -88,7 +92,9 @@ public:
   explicit operator bool() const { return !val.isNull(); }
 
   /// Dumps textual repesentation to stderr.
-  void dump() const;
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  LLVM_DUMP_METHOD void dump() const;
+#endif
 
 private:
   // Union storing either ShapedTypeComponents, ShapedType (stored as Type and

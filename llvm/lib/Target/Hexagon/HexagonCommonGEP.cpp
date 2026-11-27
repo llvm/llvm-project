@@ -272,15 +272,14 @@ namespace {
       OS << *I << ' ' << **I << '\n';
   }
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const NodeVect &S) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, const NodeVect &S);
   raw_ostream &operator<< (raw_ostream &OS, const NodeVect &S) {
     dump_node_container(OS, S);
     return OS;
   }
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const NodeToUsesMap &M) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                           const NodeToUsesMap &M);
   raw_ostream &operator<< (raw_ostream &OS, const NodeToUsesMap &M){
     for (const auto &I : M) {
       const UseSet &Us = I.second;
@@ -330,7 +329,7 @@ bool HexagonCommonGEP::isHandledGepForm(GetElementPtrInst *GepI) {
   if (!GepI->getType()->isPointerTy())
     return false;
   // No GEPs without any indices.  (Is this possible?)
-  if (GepI->idx_begin() == GepI->idx_end())
+  if (GepI->indices().empty())
     return false;
   return true;
 }
@@ -358,7 +357,8 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   // Collect the list of users of this GEP instruction. Will add it to the
   // last node created for it.
   UseSet Us;
-  for (Value::user_iterator UI = GepI->user_begin(), UE = GepI->user_end();
+  for (Instruction::user_iterator UI = GepI->user_begin(),
+                                  UE = GepI->user_end();
        UI != UE; ++UI) {
     // Check if this gep is used by anything other than other geps that
     // we will process.
@@ -482,7 +482,7 @@ static unsigned node_hash(GepNode *N) {
     FoldingSetNodeID ID;
     ID.AddPointer(N->Idx);
     ID.AddPointer(N->PTy);
-    return ID.ComputeHash();
+    return ID.computeHash();
 }
 
 static bool node_eq(GepNode *N1, GepNode *N2, NodePairSet &Eq,
@@ -914,9 +914,8 @@ namespace {
     const NodeToValueMap &Map;
   };
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const LocationAsBlock &Loc) LLVM_ATTRIBUTE_UNUSED ;
-  raw_ostream &operator<< (raw_ostream &OS, const LocationAsBlock &Loc) {
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                           const LocationAsBlock &Loc) {
     for (const auto &I : Loc.Map) {
       OS << I.first << " -> ";
       if (BasicBlock *B = cast_or_null<BasicBlock>(I.second))

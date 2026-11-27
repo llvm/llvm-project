@@ -16,8 +16,11 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 #define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 
+#include <cstdint>
+
 #include "HexagonDepITypes.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/MC/MCInstrDesc.h"
 
 namespace llvm {
 
@@ -43,12 +46,41 @@ namespace HexagonII {
     HalfWordAccess,
     WordAccess,
     DoubleWordAccess,
-    HVXVectorAccess
+    HVXVectorAccess,
+    HLXVectorAccess
   };
+
+  enum class RegType : uint8_t {
+    Unknown = 0,
+    QF32,
+    QF16,
+  };
+
+  struct RegTypeInfo {
+    RegType Output = RegType::Unknown;
+    RegType Input1 = RegType::Unknown;
+    RegType Input2 = RegType::Unknown;
+    RegType Input3 = RegType::Unknown;
+  };
+
+  RegTypeInfo getRegTypeInfo(unsigned Opcode);
+
+  inline RegType getOpRegType(unsigned Opcode) {
+    return getRegTypeInfo(Opcode).Output;
+  }
+  inline RegType getInp1RegType(unsigned Opcode) {
+    return getRegTypeInfo(Opcode).Input1;
+  }
+  inline RegType getInp2RegType(unsigned Opcode) {
+    return getRegTypeInfo(Opcode).Input2;
+  }
+  inline RegType getInp3RegType(unsigned Opcode) {
+    return getRegTypeInfo(Opcode).Input3;
+  }
 
   // MCInstrDesc TSFlags
   // *** Must match HexagonInstrFormat*.td ***
-  enum {
+  enum HexagonTSFlagsVal {
     // This 7-bit field describes the insn type.
     TypePos = 0,
     TypeMask = 0x7f,
@@ -139,6 +171,8 @@ namespace HexagonII {
     FPPos = 48,
     FPMask = 0x1,
 
+    isHMXActivatePos = 49,
+
     // New-Value producer-2 instructions.
     hasNewValuePos2 = 50,
     hasNewValueMask2 = 0x1,
@@ -154,8 +188,9 @@ namespace HexagonII {
     PrefersSlot3Pos = 55,
     PrefersSlot3Mask = 0x1,
 
-    HasHvxTmpPos = 56,
-    HasHvxTmpMask = 0x1,
+    isTmpWritePos = 56,
+
+    isHMXWeightPos = 57,
 
     CVINewPos = 58,
     CVINewMask = 0x1,
@@ -169,9 +204,15 @@ namespace HexagonII {
     isHVXALU2SRCPos = 61,
     isHVXALU2SRCMask = 0x1,
 
-    hasUnaryRestrictionPos = 62,
-    hasUnaryRestrictionMask = 0x1,
+    isHVXVS3SRCPos = 62,
+
+    isHLXPos = 63,
+    isHLXMask = 0x1,
   };
+
+  inline bool getTSFlag(const MCInstrDesc &MID, HexagonTSFlagsVal Pos) {
+    return (MID.TSFlags >> Pos) & 1;
+  }
 
   // *** The code above must match HexagonInstrFormat*.td *** //
 
@@ -275,7 +316,7 @@ namespace HexagonII {
     INST_ICLASS_ALU32_3   = 0xf0000000
   };
 
-  LLVM_ATTRIBUTE_UNUSED
+  [[maybe_unused]]
   static unsigned getMemAccessSizeInBytes(MemAccessSize S) {
     switch (S) {
       case ByteAccess:        return 1;

@@ -7,8 +7,8 @@
 func.func @f(%a : i32) -> i32 {
    %1 = arith.constant 1 : i32
    %2 = arith.constant 42 : i32
-// CHECK: switch i32 %{{.*}}, label %{{.*}} [
-// CHECK:   i32 1, label %{{.*}}
+// CHECK: switch i64 %{{.*}}, label %{{.*}} [
+// CHECK:   i64 1, label %{{.*}}
 // CHECK: ]
    fir.select %a : i32 [1, ^bb2(%1:i32), unit, ^bb3(%2:i32)]
 ^bb2(%3 : i32) :
@@ -24,9 +24,9 @@ func.func @g(%a : i32) -> i32 {
    %1 = arith.constant 1 : i32
    %2 = arith.constant 42 : i32
 
-// CHECK: switch i32 %{{.*}}, label %{{.*}} [
-// CHECK:  i32 1, label %{{.*}}
-// CHECK:  i32 -1, label %{{.*}}
+// CHECK: switch i64 %{{.*}}, label %{{.*}} [
+// CHECK:  i64 1, label %{{.*}}
+// CHECK:  i64 -1, label %{{.*}}
 // CHECK: ]
    fir.select_rank %a : i32 [1, ^bb2(%1:i32), -1, ^bb4, unit, ^bb3(%2:i32)]
 ^bb2(%3 : i32) :
@@ -47,10 +47,13 @@ func.func @h(%a : i32) -> i32 {
    %b2 = arith.constant 14 : i32
    %b3 = arith.constant 82 : i32
    %b4 = arith.constant 96 : i32
+   // `sle const, sel` and `sge sel, const` are semantically equivalent; the
+   // full flang pipeline canonicalizes to the latter while tco keeps the
+   // former, so accept both forms for the lower-bound / interval-lo checks.
    // CHECK-DAG: icmp eq i32 %{{.*}}, 1
-   // CHECK-DAG: icmp sle i32 4, %{{.*}}
+   // CHECK-DAG: icmp {{sle i32 4, %.*|sge i32 %.*, 4}}
    // CHECK-DAG: icmp sle i32 %{{.*}}, 14
-   // CHECK-DAG: icmp sle i32 82, %{{.*}}
+   // CHECK-DAG: icmp {{sle i32 82, %.*|sge i32 %.*, 82}}
    // CHECK-DAG: icmp sle i32 %{{.*}}, 96
    fir.select_case %a : i32 [#fir.point, %1, ^bb2(%1:i32), #fir.lower, %b1, ^bb4, #fir.upper, %b2, ^bb6, #fir.interval, %b3, %b4, ^bb5, unit, ^bb3(%2:i32)]
 ^bb2(%3 : i32) :
@@ -67,3 +70,20 @@ func.func @h(%a : i32) -> i32 {
    // CHECK: ret i32
    return %x : i32
 }
+
+func.func @empty_cases(%arg0 : i32) {
+  fir.select %arg0 : i32 [unit, ^bb1]
+^bb1:  // pred: ^bb0
+  fir.call @crash() fastmath<contract> : () -> ()
+  fir.unreachable
+}
+func.func private @crash()
+
+// The empty-cases fir.select has only a `unit` default: no switch is emitted.
+// The `tco` path preserves the intermediate `br label %B; B:` block, whereas
+// the full flang pipeline canonicalizes the trivial cf.br away and drops
+// straight into `call @crash; unreachable`. Either shape is acceptable.
+//CHECK-LABEL: @empty_cases(i32 %0) {
+//CHECK-NOT:    switch
+//CHECK:        call void @crash()
+//CHECK-NEXT:   unreachable

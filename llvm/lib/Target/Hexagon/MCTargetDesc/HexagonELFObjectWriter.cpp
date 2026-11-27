@@ -50,16 +50,28 @@ unsigned HexagonELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case HexagonMCExpr::VK_IE:
   case HexagonMCExpr::VK_IE_GOT:
   case HexagonMCExpr::VK_TPREL:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
   }
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
-    report_fatal_error("Unrecognized relocation type");
+    report_fatal_error("Unrecognized relocation type, fixup kind=" +
+                       Twine(Fixup.getKind()));
     break;
+  case FK_Data_8:
+    // Hexagon is a 32-bit target with no native 64-bit relocation.
+    // Handle 8-byte data fixups as 32-bit relocations -- on a
+    // little-endian 32-bit platform, addresses occupy the low 4 bytes
+    // and the high 4 bytes are zero.
+    switch (Variant) {
+    case HexagonMCExpr::VK_None:
+      return IsPCRel ? ELF::R_HEX_32_PCREL : ELF::R_HEX_32;
+    default:
+      report_fatal_error("Unrecognized variant type for FK_Data_8");
+    };
   case FK_Data_4:
     switch (Variant) {
     case HexagonMCExpr::VK_DTPREL:
@@ -85,8 +97,6 @@ unsigned HexagonELFObjectWriter::getRelocType(const MCFixup &Fixup,
     default:
       report_fatal_error("Unrecognized variant type");
     };
-  case FK_PCRel_4:
-    return ELF::R_HEX_32_PCREL;
   case FK_Data_2:
     switch(Variant) {
     case HexagonMCExpr::VK_DTPREL:

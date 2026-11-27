@@ -25,18 +25,23 @@
 
 ; CHECK: DICompileUnit
 ; CHECK-NOT: DICompileUnit
+; CHECK: DISubprogram
+; CHECK-NOT: DICompileUnit
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux"
+
+define void @foo() !dbg !6 {
+  ret void
+}
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!28, !29}
 !llvm.ident = !{!30}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 5.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !3)
+!0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 5.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, globals: !2)
 !1 = !DIFile(filename: "p.cpp", directory: "/usr/local/google/home/pcc/b682773-2-repro/small2")
 !2 = !{}
-!3 = !{!4}
 !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
 !5 = distinct !DIGlobalVariable(name: "a", scope: !6, file: !1, line: 5, type: !27, isLocal: true, isDefinition: true)
 !6 = distinct !DISubprogram(name: "m_fn2<B>", linkageName: "_ZN1A5m_fn2IZ3foovE1BEEvv", scope: !7, file: !1, line: 5, type: !8, isLocal: true, isDefinition: true, scopeLine: 5, flags: DIFlagPrototyped, isOptimized: true, unit: !0, templateParams: !11, declaration: !23, retainedNodes: !24)
@@ -57,7 +62,7 @@ target triple = "x86_64-unknown-linux"
 !21 = !{null, !22}
 !22 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !13, size: 64, flags: DIFlagArtificial | DIFlagObjectPointer)
 !23 = !DISubprogram(name: "m_fn2<B>", linkageName: "_ZN1A5m_fn2IZ3foovE1BEEvv", scope: !7, file: !1, line: 5, type: !8, isLocal: false, isDefinition: false, scopeLine: 5, flags: DIFlagPublic | DIFlagPrototyped, isOptimized: true, templateParams: !11)
-!24 = !{!25}
+!24 = !{!25, !4}
 !25 = !DILocalVariable(name: "this", arg: 1, scope: !6, type: !26, flags: DIFlagArtificial | DIFlagObjectPointer)
 !26 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64)
 !27 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)

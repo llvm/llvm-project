@@ -115,10 +115,10 @@ define float @test_select_frexp_no_const(float %x, float %y, i1 %cond) {
 define i32 @test_select_frexp_extract_exp(float %x, i1 %cond) {
 ; CHECK-LABEL: define i32 @test_select_frexp_extract_exp(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], float 1.000000e+00, float [[X]]
-; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[SEL]])
+; CHECK-NEXT:    [[FREXP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[FREXP_1:%.*]] = extractvalue { float, i32 } [[FREXP]], 1
-; CHECK-NEXT:    ret i32 [[FREXP_1]]
+; CHECK-NEXT:    [[FREXP_2:%.*]] = select i1 [[COND]], i32 1, i32 [[FREXP_1]]
+; CHECK-NEXT:    ret i32 [[FREXP_2]]
 ;
   %sel = select i1 %cond, float 1.000000e+00, float %x
   %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
@@ -132,7 +132,7 @@ define float @test_select_frexp_fast_math_select(float %x, i1 %cond) {
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:    [[FREXP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
 ; CHECK-NEXT:    [[MANTISSA:%.*]] = extractvalue { float, i32 } [[FREXP1]], 0
-; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select nnan ninf nsz i1 [[COND]], float 5.000000e-01, float [[MANTISSA]]
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[COND]], float 5.000000e-01, float [[MANTISSA]]
 ; CHECK-NEXT:    ret float [[SELECT_FREXP]]
 ;
   %sel = select nnan ninf nsz i1 %cond, float 1.000000e+00, float %x
@@ -189,3 +189,24 @@ define <vscale x 2 x float> @test_select_frexp_scalable_vec1(<vscale x 2 x float
 
 declare { <2 x float>, <2 x i32> } @llvm.frexp.v2f32.v2i32(<2 x float>)
 declare { <vscale x 2 x float>, <vscale x 2 x i32> } @llvm.frexp.nxv2f32.nxv2i32(<vscale x 2 x float>)
+
+define float @test_scalar_fcmp(float %x) {
+; CHECK-LABEL: define float @test_scalar_fcmp(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[X]], 1.000000e+00
+; CHECK-NEXT:    [[FREXP1:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[X]])
+; CHECK-NEXT:    [[MANTISSA2:%.*]] = extractvalue { float, i32 } [[FREXP1]], 0
+; CHECK-NEXT:    [[SELECT_FREXP:%.*]] = select i1 [[CMP]], float 5.000000e-01, float [[MANTISSA2]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    ret float [[SELECT_FREXP]]
+;
+  %cmp = fcmp olt float %x, 1.000000e+00
+  %sel = select i1 %cmp, float 1.000000e+00, float %x, !prof !0
+  %frexp = call { float, i32 } @llvm.frexp.f32.i32(float %sel)
+  %mantissa = extractvalue { float, i32 } %frexp, 0
+  ret float %mantissa
+}
+
+!0 = !{!"branch_weights", i32 1, i32 99}
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 99}
+;.

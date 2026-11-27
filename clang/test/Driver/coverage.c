@@ -18,7 +18,7 @@
 // GCNO-LOCATION-REL: "-coverage-notes-file={{.*}}{{/|\\\\}}foo/bar.gcno"
 
 /// GCC allows PWD to change the paths.
-// RUN: %if system-linux %{ PWD=/proc/self/cwd %clang -### -c --coverage %s -o foo/bar.o 2>&1 | FileCheck --check-prefix=PWD %s %}
+// RUN: %if system-linux %{ env PWD=/proc/self/cwd %clang -### -c --coverage %s -o foo/bar.o 2>&1 | FileCheck --check-prefix=PWD %s %}
 // PWD: "-coverage-notes-file=/proc/self/cwd/foo/bar.gcno" "-coverage-data-file=/proc/self/cwd/foo/bar.gcda"
 
 /// Don't warn -Wunused-command-line-argument.
@@ -31,6 +31,14 @@
 // RUN: %clang -### -S --coverage -fprofile-dir=abc %s 2>&1 | FileCheck --check-prefix=PROFILE-DIR %s
 
 // PROFILE-DIR: "-coverage-data-file=abc
+
+/// Test -fprofile-abs-path
+// RUN: %clang -### -S -ftest-coverage %s 2>&1 | FileCheck --check-prefix=NO-PROFILE-ABS-PATH %s
+// RUN: %clang -### -S -fprofile-abs-path %s 2>&1 | FileCheck --check-prefix=NO-PROFILE-ABS-PATH %s
+// RUN: %clang -### -S -ftest-coverage -fprofile-abs-path %s 2>&1 | FileCheck --check-prefix=PROFILE-ABS-PATH %s
+
+// NO-PROFILE-ABS-PATH-NOT: "-coverage-notes-abs-paths"
+// PROFILE-ABS-PATH: "-coverage-notes-abs-paths"
 
 /// These should only get passed if any of --coverage, -ftest-coverage, or
 /// -fprofile-arcs is passed.
@@ -50,6 +58,6 @@
 // LINK2: -cc1{{.*}} "-coverage-notes-file={{.*}}{{/|\\\\}}f/gb.gcno" "-coverage-data-file={{.*}}{{/|\\\\}}f/gb.gcda"
 
 /// GCC allows PWD to change the paths.
-// RUN: %if system-linux %{ PWD=/proc/self/cwd %clang -### --coverage d/a.c d/b.c -o e/x -fprofile-dir=f 2>&1 | FileCheck %s --check-prefix=LINK3 %}
+// RUN: %if system-linux %{ env PWD=/proc/self/cwd %clang -### --coverage d/a.c d/b.c -o e/x -fprofile-dir=f 2>&1 | FileCheck %s --check-prefix=LINK3 %}
 // LINK3: -cc1{{.*}} "-coverage-notes-file=/proc/self/cwd/e/x-a.gcno" "-coverage-data-file=f/proc/self/cwd/e/x-a.gcda"
 // LINK3: -cc1{{.*}} "-coverage-notes-file=/proc/self/cwd/e/x-b.gcno" "-coverage-data-file=f/proc/self/cwd/e/x-b.gcda"

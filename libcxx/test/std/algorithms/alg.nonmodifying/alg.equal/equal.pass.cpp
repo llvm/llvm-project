@@ -26,10 +26,10 @@
 // MSVC warning C4244: 'argument': conversion from 'wchar_t' to 'const _Ty', possible loss of data
 // MSVC warning C4389: '==': signed/unsigned mismatch
 // ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4242 /wd4244 /wd4389
-// XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <algorithm>
 #include <cassert>
+#include <cstdint>
 #include <functional>
 #include <vector>
 
@@ -178,7 +178,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 
   // Make sure std::equal behaves properly with std::vector<bool> iterators with custom size types.
-  // See issue: https://github.com/llvm/llvm-project/issues/126369.
+  // See issue: https://llvm.org/PR126369.
   {
     //// Tests for std::equal with aligned bits
 

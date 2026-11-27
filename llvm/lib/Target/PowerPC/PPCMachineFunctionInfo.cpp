@@ -7,22 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCMachineFunctionInfo.h"
+#include "PPCSubtarget.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-static cl::opt<bool> PPCDisableNonVolatileCR(
-    "ppc-disable-non-volatile-cr",
-    cl::desc("Disable the use of non-volatile CR register fields"),
-    cl::init(false), cl::Hidden);
 
 void PPCFunctionInfo::anchor() {}
-PPCFunctionInfo::PPCFunctionInfo(const Function &F,
-                                 const TargetSubtargetInfo *STI)
-    : DisableNonVolatileCR(PPCDisableNonVolatileCR) {}
+PPCFunctionInfo::PPCFunctionInfo(const Function &F, const PPCSubtarget *STI)
+    : DisableNonVolatileCR(!STI->getCLOpts().non_volatile_cr) {}
 
 MachineFunctionInfo *
 PPCFunctionInfo::clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
@@ -33,28 +28,28 @@ PPCFunctionInfo::clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
 
 MCSymbol *PPCFunctionInfo::getPICOffsetSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
-  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            Twine(MF.getFunctionNumber()) +
                                            "$poff");
 }
 
 MCSymbol *PPCFunctionInfo::getGlobalEPSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
-  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            "func_gep" +
                                            Twine(MF.getFunctionNumber()));
 }
 
 MCSymbol *PPCFunctionInfo::getLocalEPSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
-  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            "func_lep" +
                                            Twine(MF.getFunctionNumber()));
 }
 
 MCSymbol *PPCFunctionInfo::getTOCOffsetSymbol(MachineFunction &MF) const {
   const DataLayout &DL = MF.getDataLayout();
-  return MF.getContext().getOrCreateSymbol(Twine(DL.getPrivateGlobalPrefix()) +
+  return MF.getContext().getOrCreateSymbol(Twine(DL.getInternalSymbolPrefix()) +
                                            "func_toc" +
                                            Twine(MF.getFunctionNumber()));
 }

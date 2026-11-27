@@ -15,9 +15,9 @@ set(LIBCXX_ENABLE_UNICODE OFF CACHE BOOL "")
 set(LIBCXX_ENABLE_WIDE_CHARACTERS OFF CACHE BOOL "")
 set(LIBCXX_HAS_TERMINAL_AVAILABLE OFF CACHE BOOL "")
 set(LIBCXX_INSTALL_LIBRARY ON CACHE BOOL "")
-set(LIBCXX_LIBC "llvm-libc" CACHE STRING "")
 set(LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY ON CACHE BOOL "")
 set(LIBCXX_USE_COMPILER_RT ON CACHE BOOL "")
+set(RUNTIMES_USE_LIBC "llvm-libc" CACHE STRING "")
 
 # Configuration options for libcxxabi.
 set(LIBCXXABI_BAREMETAL ON CACHE BOOL "")
@@ -29,7 +29,7 @@ set(LIBCXXABI_USE_LLVM_UNWINDER OFF CACHE BOOL "")
 
 # Test configuration.
 set(LIBCXX_TEST_CONFIG "nvptx-libc++-shared.cfg.in" CACHE STRING "")
-set(LIBCXX_TEST_PARAMS "optimization=none;long_tests=False;executor=nvptx-loader" CACHE STRING "")
+set(LIBCXX_TEST_PARAMS "optimization=none;long_tests=False;executor=llvm-gpu-loader" CACHE STRING "")
 
 # Necessary compile flags for NVPTX.
 set(LIBCXX_ADDITIONAL_COMPILE_FLAGS

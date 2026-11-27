@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 
@@ -109,8 +110,8 @@ public:
 
     // Create the new op in canonical form.
     auto newOp =
-        rewriter.create<OpType>(op.getLoc(), resultType, op.getSource(),
-                                mixedOffsets, mixedSizes, mixedStrides);
+        OpType::create(rewriter, op.getLoc(), resultType, op.getSource(),
+                       mixedOffsets, mixedSizes, mixedStrides);
     CastOpFunc()(rewriter, op, newOp);
 
     return success();
@@ -207,6 +208,8 @@ inline void printDynamicIndexList(
 ///       2. `values` is empty.
 ///       3. `scalableFlags` is filled with `[false, true, false]`.
 ///
+/// Overloads that do not return scalable flags reject scalable indices.
+///
 ParseResult parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
@@ -219,8 +222,13 @@ inline ParseResult parseDynamicIndexList(
     DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes = nullptr,
     AsmParser::Delimiter delimiter = AsmParser::Delimiter::Square) {
   DenseBoolArrayAttr scalableFlags;
-  return parseDynamicIndexList(parser, values, integers, scalableFlags,
-                               valueTypes, delimiter);
+  if (failed(parseDynamicIndexList(parser, values, integers, scalableFlags,
+                                   valueTypes, delimiter)))
+    return failure();
+  if (llvm::is_contained(scalableFlags.asArrayRef(), true))
+    return parser.emitError(parser.getNameLoc())
+           << "scalable indices are not supported";
+  return success();
 }
 
 /// Verify that a the `values` has as many elements as the number of entries in
@@ -229,6 +237,22 @@ LogicalResult verifyListOfOperandsOrIntegers(Operation *op, StringRef name,
                                              unsigned expectedNumElements,
                                              ArrayRef<int64_t> attr,
                                              ValueRange values);
+
+namespace OpTrait {
+/// This trai indicates that pointer-like objects (such as memrefs) returned
+/// from this operation will never alias with each other. This provides a
+/// guarantee to optimization passes that accesses through different results
+/// of this operation can be safely reordered, as they will never reference
+/// overlapping memory locations.
+///
+/// Operations with this trait take multiple pointer-like operands
+/// and return the same operands with additional non-aliasing guarantees.
+/// If the access to the results of this operation aliases at runtime, the
+/// behavior of such access is undefined.
+template <typename ConcreteType>
+class DistinctObjectsTrait
+    : public TraitBase<ConcreteType, DistinctObjectsTrait> {};
+} // namespace OpTrait
 
 } // namespace mlir
 

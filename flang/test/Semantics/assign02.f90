@@ -85,7 +85,7 @@ contains
     real, pointer, volatile :: q
     p => x
     !ERROR: Pointer must be VOLATILE when target is a VOLATILE coarray
-    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer [-Wnon-volatile-pointer-to-volatile]
     p => y
     !ERROR: Pointer may not be VOLATILE when target is a non-VOLATILE coarray
     q => x
@@ -139,7 +139,7 @@ contains
     real, target :: x
     real, pointer :: p
     p => f1()
-    !ERROR: pointer 'p' is associated with the result of a reference to function 'f2' that is a not a pointer
+    !ERROR: pointer 'p' is associated with the result of a reference to function 'f2' that is not a pointer
     p => f2()
   contains
     function f1()
@@ -175,7 +175,7 @@ contains
     real, volatile, target :: x
     real, pointer :: p
     real, pointer, volatile :: q
-    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer [-Wnon-volatile-pointer-to-volatile]
     p => x
     q => x
   end
@@ -188,11 +188,11 @@ contains
     real, pointer, volatile :: q1
     type(t2), pointer, volatile :: q2
     type(t3), pointer, volatile :: q3
-    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer [-Wnon-volatile-pointer-to-volatile]
     p1 => y%t3Field%t2Field
-    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer [-Wnon-volatile-pointer-to-volatile]
     p2 => y%t3Field
-    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer [-Wnon-volatile-pointer-to-volatile]
     p3 => y
     !OK:
     q1 => y%t3Field%t2Field
@@ -200,9 +200,9 @@ contains
     q2 => y%t3Field
     !OK:
     q3 => y
-    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer [-Wnon-volatile-pointer-to-volatile]
     p3%t3FieldPtr => y%t3Field
-    !ERROR: VOLATILE target associated with non-VOLATILE pointer
+    !ERROR: VOLATILE target associated with non-VOLATILE pointer [-Wnon-volatile-pointer-to-volatile]
     p3%t3FieldPtr%t2FieldPtr => y%t3Field%t2Field
     !OK
     q3%t3FieldPtr => y%t3Field

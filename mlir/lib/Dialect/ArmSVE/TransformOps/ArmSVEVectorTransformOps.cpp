@@ -18,9 +18,19 @@ using namespace mlir;
 // Apply...PatternsOp
 //===----------------------------------------------------------------------===//
 
-void transform::ApplyArmSVELowerContractionPatternsOp::populatePatterns(
+void transform::ApplyArmSVELowerContractionToI8MMPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  mlir::populateLowerContractionToSVEI8MMPatternPatterns(patterns);
+  arm_sve::populateLowerContractionToSVEI8MMPatterns(patterns);
+}
+
+void transform::ApplyArmSVELowerContractionToBFMMLAPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  arm_sve::populateLowerContractionToSVEBFMMLAPatterns(patterns);
+}
+
+void transform::ApplyArmSVELowerContractionToIndexedFMLAPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  arm_sve::populateLowerContractionToSVEIndexedFMLAPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//

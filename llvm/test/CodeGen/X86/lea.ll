@@ -2,7 +2,6 @@
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s --check-prefixes=LINUX
 ; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s --check-prefixes=WIN
 ; RUN: llc < %s -mtriple=x86_64-linux-gnux32 | FileCheck %s --check-prefixes=LINUX
-; RUN: llc < %s -mtriple=x86_64-nacl | FileCheck %s --check-prefixes=LINUX
 
 define i32 @test1(i32 %x) nounwind {
 ; LINUX-LABEL: test1:

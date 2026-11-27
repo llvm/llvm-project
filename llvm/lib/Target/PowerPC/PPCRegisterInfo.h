@@ -76,11 +76,6 @@ public:
     return It->second;
   }
 
-  /// getPointerRegClass - Return the register class to use to hold pointers.
-  /// This is used for addressing modes.
-  const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF, unsigned Kind=0) const override;
-
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
@@ -111,7 +106,7 @@ public:
   // Similarly if UACC5 is assigned, we want to assign VSRp10, VSRp11
   // to its inputs.
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 

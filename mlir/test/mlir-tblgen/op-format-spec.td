@@ -49,6 +49,19 @@ def DirectiveCustomValidD : TestFormat_Op<[{
 def DirectiveCustomValidE : TestFormat_Op<[{
   custom<MyDirective>(prop-dict) attr-dict
 }]>, Arguments<(ins UnitAttr:$flag)>;
+def DirectiveCustomValidF : TestFormat_Op<[{
+  $operand custom<MyDirective>(ref($operand)) attr-dict
+}]>, Arguments<(ins Optional<I64>:$operand)>;
+def DirectiveCustomValidG : TestFormat_Op<[{
+  $body custom<MyDirective>(ref($body)) attr-dict
+}]> {
+  let regions = (region AnyRegion:$body);
+}
+def DirectiveCustomValidH : TestFormat_Op<[{
+  $successor custom<MyDirective>(ref($successor)) attr-dict
+}]> {
+  let successors = (successor AnySuccessor:$successor);
+}
 
 //===----------------------------------------------------------------------===//
 // functional-type
@@ -82,7 +95,7 @@ def DirectiveRegionsValid : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error:
-def DirectiveResultsInvalidA : TestFormat_Op<[{
+def DirectiveResultsValid : TestFormat_Op<[{
   type(results) attr-dict
 }]>;
 
@@ -91,7 +104,7 @@ def DirectiveResultsInvalidA : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error:
-def DirectiveSuccessorsInvalidA : TestFormat_Op<[{
+def DirectiveSuccessorsValid : TestFormat_Op<[{
   successors attr-dict
 }]>;
 
@@ -110,7 +123,7 @@ def DirectiveTypeValid : TestFormat_Op<[{
 
 // CHECK-NOT: error
 def LiteralValid : TestFormat_Op<[{
-  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `?` `+` `*` ` ` `` `->` `\n` `abc$._`
+  `_` `:` `,` `=` `<` `>` `(` `)` `[` `]` `?` `+` `-` `*` ` ` `` `->` `\n` `abc$._`
   attr-dict
 }]>;
 
@@ -139,6 +152,10 @@ def OIListCustom : TestFormat_Op<[{
         | `nowait`
         | `reduction` custom<ReductionClause>($arg1, type($arg1))) attr-dict
 }], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
+def OIListWithSeparator : TestFormat_Op<[{
+  oilist<`,`>( `keyword` $arg0 `:` type($arg0)
+             | `otherkeyword` $arg1 `:` type($arg1)) attr-dict
+}], [AttrSizedOperandSegments]>, Arguments<(ins Optional<AnyType>:$arg0, Optional<AnyType>:$arg1)>;
 
 //===----------------------------------------------------------------------===//
 // Optional Groups
@@ -154,7 +171,7 @@ def OptionalValidA : TestFormat_Op<[{
 //===----------------------------------------------------------------------===//
 
 // CHECK-NOT: error
-def StringInvalidA : TestFormat_Op<[{ custom<Foo>("foo") attr-dict }]>;
+def StringValid : TestFormat_Op<[{ custom<Foo>("foo") attr-dict }]>;
 
 //===----------------------------------------------------------------------===//
 // Variables
@@ -162,7 +179,7 @@ def StringInvalidA : TestFormat_Op<[{ custom<Foo>("foo") attr-dict }]>;
 
 // CHECK-NOT: error:
 def VariableValidA : TestFormat_Op<[{
-  $attr `:` attr-dict
+  ($attr^)? `:` attr-dict
 }]>, Arguments<(ins OptionalAttr<I1Attr>:$attr)>;
 def VariableValidB : TestFormat_Op<[{
   (`foo` $attr^)? `:` attr-dict

@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -fdebug-dump-symbols -fopenmp -fopenmp-version=50 %s | FileCheck %s
 
 program main
-!CHECK-LABEL: MainProgram scope: main
+!CHECK-LABEL: MainProgram scope: MAIN
    implicit none
 
    type ty
@@ -11,9 +11,9 @@ program main
    !$omp declare mapper(ty :: maptwo) map(maptwo, maptwo%x)
 
 !! Note, symbols come out in their respective scope, but not in declaration order.
-!CHECK: mymapper: Misc ConstructName
+!CHECK: mymapper: MapperDetails
 !CHECK: ty: DerivedType components: x
-!CHECK: ty.omp.default.mapper: Misc ConstructName
+!CHECK: ty_omp_default_mapper: MapperDetails
 !CHECK: DerivedType scope: ty
 !CHECK: OtherConstruct scope:
 !CHECK: mapped (OmpMapToFrom) {{.*}} ObjectEntity type: TYPE(ty)
@@ -21,4 +21,3 @@ program main
 !CHECK: maptwo (OmpMapToFrom) {{.*}} ObjectEntity type: TYPE(ty)
 
 end program main
-

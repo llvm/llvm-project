@@ -22,6 +22,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cstdint>
 #include <string>
 #include <system_error>
 
@@ -41,12 +43,30 @@ static cl::opt<bool> GenerateMergedBaseProfiles(
 
 namespace llvm {
 namespace sampleprof {
-bool FunctionSamples::ProfileIsProbeBased = false;
-bool FunctionSamples::ProfileIsCS = false;
-bool FunctionSamples::ProfileIsPreInlined = false;
-bool FunctionSamples::UseMD5 = false;
-bool FunctionSamples::HasUniqSuffix = true;
-bool FunctionSamples::ProfileIsFS = false;
+std::atomic<bool> FunctionSamples::ProfileIsProbeBased;
+std::atomic<bool> FunctionSamples::ProfileIsCS;
+std::atomic<bool> FunctionSamples::ProfileIsPreInlined;
+std::atomic<bool> FunctionSamples::UseMD5;
+std::atomic<bool> FunctionSamples::HasUniqSuffix = true;
+std::atomic<bool> FunctionSamples::ProfileIsFS;
+
+std::error_code
+serializeTypeMap(const TypeCountMap &Map,
+                 const MapVector<FunctionId, uint32_t> &NameTable,
+                 raw_ostream &OS) {
+  encodeULEB128(Map.size(), OS);
+  for (const auto &[TypeName, SampleCount] : Map) {
+    if (auto NameIndexIter = NameTable.find(TypeName);
+        NameIndexIter != NameTable.end()) {
+      encodeULEB128(NameIndexIter->second, OS);
+    } else {
+      // If the type is not in the name table, we cannot serialize it.
+      return sampleprof_error::truncated_name_table;
+    }
+    encodeULEB128(SampleCount, OS);
+  }
+  return sampleprof_error::success;
+}
 } // namespace sampleprof
 } // namespace llvm
 
@@ -91,6 +111,8 @@ class SampleProfErrorCategoryType : public std::error_category {
       return "Zlib is unavailable";
     case sampleprof_error::hash_mismatch:
       return "Function hash mismatch";
+    case sampleprof_error::illegal_line_offset:
+      return "Illegal line offset in sample profile data";
     }
     llvm_unreachable("A value of sampleprof_error has no message.");
   }
@@ -121,6 +143,7 @@ sampleprof_error SampleRecord::merge(const SampleRecord &Other,
                                      uint64_t Weight) {
   sampleprof_error Result;
   Result = addSamples(Other.getSamples(), Weight);
+  CallTargets.reserve(CallTargets.size() + Other.getCallTargets().size());
   for (const auto &I : Other.getCallTargets()) {
     mergeSampleProfErrors(Result, addCalledTarget(I.first, I.second, Weight));
   }
@@ -150,7 +173,7 @@ std::error_code SampleRecord::serialize(
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
 #endif
 
-void LineLocation::serialize(raw_ostream &OS) {
+void LineLocation::serialize(raw_ostream &OS) const {
   encodeULEB128(LineOffset, OS);
   encodeULEB128(Discriminator, OS);
 }
@@ -176,6 +199,17 @@ raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
   return OS;
 }
 
+static void printTypeCountMap(raw_ostream &OS, LineLocation Loc,
+                              const TypeCountMap &TypeCountMap) {
+  if (TypeCountMap.empty()) {
+    return;
+  }
+  OS << Loc << ": vtables: ";
+  for (const auto &[Type, Count] : TypeCountMap)
+    OS << Type << ":" << Count << " ";
+  OS << "\n";
+}
+
 /// Print the samples collected for a function on stream \p OS.
 void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   if (getFunctionHash())
@@ -187,10 +221,14 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS.indent(Indent);
   if (!BodySamples.empty()) {
     OS << "Samples collected in the function's body {\n";
-    SampleSorter<LineLocation, SampleRecord> SortedBodySamples(BodySamples);
-    for (const auto &SI : SortedBodySamples.get()) {
+    for (const auto &[Loc, Record] : BodySamples) {
       OS.indent(Indent + 2);
-      OS << SI->first << ": " << SI->second;
+      OS << Loc << ": " << Record;
+      if (const TypeCountMap *TypeCountMap =
+              this->findCallsiteTypeSamplesAt(Loc)) {
+        OS.indent(Indent + 2);
+        printTypeCountMap(OS, Loc, *TypeCountMap);
+      }
     }
     OS.indent(Indent);
     OS << "}\n";
@@ -201,14 +239,17 @@ void FunctionSamples::print(raw_ostream &OS, unsigned Indent) const {
   OS.indent(Indent);
   if (!CallsiteSamples.empty()) {
     OS << "Samples collected in inlined callsites {\n";
-    SampleSorter<LineLocation, FunctionSamplesMap> SortedCallsiteSamples(
-        CallsiteSamples);
-    for (const auto &CS : SortedCallsiteSamples.get()) {
-      for (const auto &FS : CS->second) {
+    for (const auto &[Loc, FunctionSampleMap] : CallsiteSamples) {
+      for (const FunctionSamples &FuncSample :
+           llvm::make_second_range(FunctionSampleMap)) {
         OS.indent(Indent + 2);
-        OS << CS->first << ": inlined callee: " << FS.second.getFunction()
-           << ": ";
-        FS.second.print(OS, Indent + 4);
+        OS << Loc << ": inlined callee: " << FuncSample.getFunction() << ": ";
+        FuncSample.print(OS, Indent + 4);
+      }
+      auto TypeSamplesIter = VirtualCallsiteTypeCounts.find(Loc);
+      if (TypeSamplesIter != VirtualCallsiteTypeCounts.end()) {
+        OS.indent(Indent + 2);
+        printTypeCountMap(OS, Loc, TypeSamplesIter->second);
       }
     }
     OS.indent(Indent);
@@ -240,7 +281,7 @@ void sampleprof::sortFuncProfiles(
 
 unsigned FunctionSamples::getOffset(const DILocation *DIL) {
   return (DIL->getLine() - DIL->getScope()->getSubprogram()->getLine()) &
-      0xffff;
+         0xffff;
 }
 
 LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
@@ -262,8 +303,8 @@ LineLocation FunctionSamples::getCallSiteIdentifier(const DILocation *DIL,
 
 const FunctionSamples *FunctionSamples::findFunctionSamples(
     const DILocation *DIL, SampleProfileReaderItaniumRemapper *Remapper,
-    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-        *FuncNameToProfNameMap) const {
+    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
+    const {
   assert(DIL);
   SmallVector<std::pair<LineLocation, StringRef>, 10> S;
 
@@ -305,8 +346,8 @@ void FunctionSamples::findAllNames(DenseSet<FunctionId> &NameSet) const {
 const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
     const LineLocation &Loc, StringRef CalleeName,
     SampleProfileReaderItaniumRemapper *Remapper,
-    const HashKeyMap<std::unordered_map, FunctionId, FunctionId>
-        *FuncNameToProfNameMap) const {
+    const HashKeyMap<DenseMap, FunctionId, FunctionId> *FuncNameToProfNameMap)
+    const {
   CalleeName = getCanonicalFnName(CalleeName);
 
   auto I = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
@@ -354,6 +395,10 @@ LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 
 std::error_code ProfileSymbolList::read(const uint8_t *Data,
                                         uint64_t ListSize) {
+  // Scan forward to see how many elements we expect.
+  reserve(std::min<uint64_t>(ProfileSymbolListCutOff,
+                             std::count(Data, Data + ListSize, 0)));
+
   const char *ListStart = reinterpret_cast<const char *>(Data);
   uint64_t Size = 0;
   uint64_t StrNum = 0;

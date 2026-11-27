@@ -203,8 +203,8 @@ define signext i32 @switch_dispatch(i8 %a) {
 ; CHECK-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
-; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    li a1, 31
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    blt a1, a0, .LBB2_5
 ; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    beqz a0, .LBB2_10
@@ -293,8 +293,8 @@ define signext i32 @branch_dispatch(i8 %a) {
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_remember_state
-; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    li a1, 32
+; CHECK-NEXT:    zext.b a0, a0
 ; CHECK-NEXT:    beq a0, a1, .LBB3_7
 ; CHECK-NEXT:  # %bb.1: # %case.1
 ; CHECK-NEXT:    li a1, 12

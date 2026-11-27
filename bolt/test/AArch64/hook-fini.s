@@ -15,13 +15,13 @@
 # RUN: %clang %cflags -pie %s -Wl,-q -o %t.exe
 # RUN: llvm-readelf -d %t.exe | FileCheck --check-prefix=DYN-FINI %s
 # RUN: llvm-readelf -r %t.exe | FileCheck --check-prefix=RELOC-PIE %s
-# RUN: llvm-bolt %t.exe -o %t --instrument
+# RUN: llvm-bolt %t.exe -o %t --instrument | FileCheck --check-prefix=CHECK-BOLT-RT-FINI %s
 # RUN: llvm-readelf -drs %t | FileCheck --check-prefix=CHECK-FINI %s
 
 # RUN: %clang %cflags -pie %s -Wl,-q,-fini=0 -o %t-no-fini.exe
 # RUN: llvm-readelf -d %t-no-fini.exe | FileCheck --check-prefix=DYN-NO-FINI %s
 # RUN: llvm-readelf -r %t-no-fini.exe | FileCheck --check-prefix=RELOC-PIE %s
-# RUN: llvm-bolt %t-no-fini.exe -o %t-no-fini --instrument
+# RUN: llvm-bolt %t-no-fini.exe -o %t-no-fini --instrument | FileCheck --check-prefix=CHECK-BOLT-RT-FINI-ARRAY %s
 # RUN: llvm-readelf -drs %t-no-fini | FileCheck --check-prefix=CHECK-NO-FINI %s
 # RUN: llvm-readelf -ds -x .fini_array %t-no-fini | FileCheck --check-prefix=CHECK-NO-FINI-RELOC %s
 
@@ -29,7 +29,7 @@
 # RUN: %clang %cflags %p/../Inputs/stub.c -fPIC -shared -o %t-stub.so
 # RUN: %clang %cflags %s -no-pie -Wl,-q,-fini=0 %t-stub.so -o %t-no-pie-no-fini.exe
 # RUN: llvm-readelf -r %t-no-pie-no-fini.exe | FileCheck --check-prefix=RELOC-NO-PIE %s
-# RUN: llvm-bolt %t-no-pie-no-fini.exe -o %t-no-pie-no-fini --instrument
+# RUN: llvm-bolt %t-no-pie-no-fini.exe -o %t-no-pie-no-fini --instrument | FileCheck --check-prefix=CHECK-BOLT-RT-FINI-ARRAY %s
 # RUN: llvm-readelf -ds -x .fini_array %t-no-pie-no-fini | FileCheck --check-prefix=CHECK-NO-PIE-NO-FINI %s
 
 ## With fini: dynamic section should contain DT_FINI
@@ -45,6 +45,14 @@
 
 ## Without PIE: binary should not have relative relocations
 # RELOC-NO-PIE-NOT: R_AARCH64_RELATIVE
+
+## Check BOLT output output finalization hook (DT_FINI)
+# CHECK-BOLT-RT-FINI: runtime library finalization was hooked via DT_FINI
+# CHECK-BOLT-RT-FINI-NOT: runtime library finalization was hooked via .fini_array entry
+
+## Check BOLT output output finalization hook (.fini_array entry)
+# CHECK-BOLT-RT-FINI-ARRAY-NOT: runtime library finalization was hooked via DT_FINI
+# CHECK-BOLT-RT-FINI-ARRAY: runtime library finalization was hooked via .fini_array entry
 
 ## Check that DT_FINI is set to __bolt_runtime_fini
 # CHECK-FINI:     Dynamic section at offset {{.*}} contains {{.*}} entries:

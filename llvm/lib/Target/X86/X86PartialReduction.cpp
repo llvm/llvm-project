@@ -16,10 +16,13 @@
 #include "X86TargetMachine.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/KnownBits.h"
@@ -30,39 +33,45 @@ using namespace llvm;
 
 namespace {
 
-class X86PartialReduction : public FunctionPass {
+class X86PartialReduction {
+  const X86TargetMachine *TM;
   const DataLayout *DL = nullptr;
   const X86Subtarget *ST = nullptr;
 
 public:
+  X86PartialReduction(const X86TargetMachine *TM) : TM(TM) {}
+  bool run(Function &F);
+
+private:
+  bool tryMAddReplacement(Instruction *Op, bool ReduceInOneBB);
+  bool trySADReplacement(Instruction *Op);
+  bool tryByteSumReplacement(Instruction *Op);
+};
+
+class X86PartialReductionLegacy : public FunctionPass {
+public:
   static char ID; // Pass identification, replacement for typeid.
 
-  X86PartialReduction() : FunctionPass(ID) { }
+  X86PartialReductionLegacy() : FunctionPass(ID) {}
 
-  bool runOnFunction(Function &Fn) override;
+  bool runOnFunction(Function &F) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
   }
 
-  StringRef getPassName() const override {
-    return "X86 Partial Reduction";
-  }
-
-private:
-  bool tryMAddReplacement(Instruction *Op, bool ReduceInOneBB);
-  bool trySADReplacement(Instruction *Op);
+  StringRef getPassName() const override { return "X86 Partial Reduction"; }
 };
 }
 
-FunctionPass *llvm::createX86PartialReductionPass() {
-  return new X86PartialReduction();
+FunctionPass *llvm::createX86PartialReductionLegacyPass() {
+  return new X86PartialReductionLegacy();
 }
 
-char X86PartialReduction::ID = 0;
+char X86PartialReductionLegacy::ID = 0;
 
-INITIALIZE_PASS(X86PartialReduction, DEBUG_TYPE,
-                "X86 Partial Reduction", false, false)
+INITIALIZE_PASS(X86PartialReductionLegacy, DEBUG_TYPE, "X86 Partial Reduction",
+                false, false)
 
 // This function should be aligned with detectExtMul() in X86ISelLowering.cpp.
 static bool matchVPDPBUSDPattern(const X86Subtarget *ST, BinaryOperator *Mul,
@@ -264,7 +273,7 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
 
   unsigned IntrinsicNumElts;
   Intrinsic::ID IID;
-  if (ST->hasBWI() && NumElts >= 64) {
+  if (ST->useBWIRegs() && NumElts >= 64) {
     IID = Intrinsic::x86_avx512_psad_bw_512;
     IntrinsicNumElts = 64;
   } else if (ST->hasAVX2() && NumElts >= 32) {
@@ -343,6 +352,106 @@ bool X86PartialReduction::trySADReplacement(Instruction *Op) {
   Op->replaceAllUsesWith(Ops[0]);
   Op->eraseFromParent();
 
+  return true;
+}
+
+bool X86PartialReduction::tryByteSumReplacement(Instruction *Op) {
+  if (!ST->hasSSE2())
+    return false;
+
+  auto *OpTy = dyn_cast<FixedVectorType>(Op->getType());
+  if (!OpTy)
+    return false;
+  unsigned ElemBits = OpTy->getElementType()->getScalarSizeInBits();
+  if (ElemBits != 32 && ElemBits != 64)
+    return false;
+
+  auto *ZExt = dyn_cast<ZExtInst>(Op);
+  if (!ZExt)
+    return false;
+
+  auto *SrcTy = dyn_cast<FixedVectorType>(ZExt->getOperand(0)->getType());
+  if (!SrcTy || !SrcTy->getElementType()->isIntegerTy(8))
+    return false;
+
+  unsigned NumElts = OpTy->getNumElements();
+
+  // Below 16 elements, SelectionDAG's SAD matcher handles it.
+  if (NumElts < 16)
+    return false;
+
+  // Select the widest psadbw intrinsic the subtarget supports.
+  unsigned IntrinsicNumElts;
+  Intrinsic::ID IID;
+  if (ST->useBWIRegs() && NumElts >= 64) {
+    IID = Intrinsic::x86_avx512_psad_bw_512;
+    IntrinsicNumElts = 64;
+  } else if (ST->hasAVX2() && NumElts >= 32) {
+    IID = Intrinsic::x86_avx2_psad_bw;
+    IntrinsicNumElts = 32;
+  } else {
+    IID = Intrinsic::x86_sse2_psad_bw;
+    IntrinsicNumElts = 16;
+  }
+
+  if (NumElts % IntrinsicNumElts != 0 ||
+      !isPowerOf2_32(NumElts / IntrinsicNumElts))
+    return false;
+  unsigned NumSplits = NumElts / IntrinsicNumElts;
+
+  IRBuilder<> Builder(Op);
+  Builder.SetCurrentDebugLocation(Op->getDebugLoc());
+
+  Function *PSADBWFn = Intrinsic::getOrInsertDeclaration(Op->getModule(), IID);
+
+  // psadbw(x, 0) horizontally sums 8 bytes per lane into i64.
+  auto *I8VecTy = FixedVectorType::get(Builder.getInt8Ty(), IntrinsicNumElts);
+  Value *Zeroes = Constant::getNullValue(I8VecTy);
+
+  // For i32 accumulators, bitcast each i64 lane to two i32 lanes.
+  // Per-lane sums are at most 8*255 = 2040, so the upper i32 is always zero.
+  FixedVectorType *I32PerSplitTy =
+      ElemBits == 32
+          ? FixedVectorType::get(Builder.getInt32Ty(), IntrinsicNumElts / 4)
+          : nullptr;
+
+  // Split input into IntrinsicNumElts-byte lanes and compute psadbw per lane.
+  Value *Src = ZExt->getOperand(0);
+  SmallVector<Value *, 4> Ops(NumSplits);
+  for (unsigned i = 0; i != NumSplits; ++i) {
+    SmallVector<int, 64> ExtractMask(IntrinsicNumElts);
+    std::iota(ExtractMask.begin(), ExtractMask.end(), i * IntrinsicNumElts);
+    Value *ExtractSrc = Builder.CreateShuffleVector(Src, Src, ExtractMask);
+    Ops[i] = Builder.CreateCall(PSADBWFn, {ExtractSrc, Zeroes});
+    if (I32PerSplitTy)
+      Ops[i] = Builder.CreateBitCast(Ops[i], I32PerSplitTy);
+  }
+
+  // Concat per-split results with a pairwise shuffle tree.
+  unsigned Stages = Log2_32(NumSplits);
+  for (unsigned S = Stages; S > 0; --S) {
+    unsigned NumConcatElts =
+        cast<FixedVectorType>(Ops[0]->getType())->getNumElements() * 2;
+    for (unsigned i = 0; i != 1U << (S - 1); ++i) {
+      SmallVector<int, 64> ConcatMask(NumConcatElts);
+      std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+      Ops[i] =
+          Builder.CreateShuffleVector(Ops[i * 2], Ops[i * 2 + 1], ConcatMask);
+    }
+  }
+
+  // Pad with zeros to match the original vector width.
+  SmallVector<int, 32> ConcatMask(NumElts);
+  unsigned SubElts = cast<FixedVectorType>(Ops[0]->getType())->getNumElements();
+  for (unsigned i = 0; i != SubElts; ++i)
+    ConcatMask[i] = i;
+  for (unsigned i = SubElts; i != NumElts; ++i)
+    ConcatMask[i] = (i % SubElts) + SubElts;
+  Value *Zero = Constant::getNullValue(Ops[0]->getType());
+  Ops[0] = Builder.CreateShuffleVector(Ops[0], Zero, ConcatMask);
+
+  Op->replaceAllUsesWith(Ops[0]);
+  Op->eraseFromParent();
   return true;
 }
 
@@ -494,17 +603,8 @@ static void collectLeaves(Value *Root, SmallVectorImpl<Instruction *> &Leaves) {
   }
 }
 
-bool X86PartialReduction::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
-  if (!TPC)
-    return false;
-
-  auto &TM = TPC->getTM<X86TargetMachine>();
-  ST = TM.getSubtargetImpl(F);
-
+bool X86PartialReduction::run(Function &F) {
+  ST = TM->getSubtargetImpl(F);
   DL = &F.getDataLayout();
 
   bool MadeChange = false;
@@ -532,11 +632,45 @@ bool X86PartialReduction::runOnFunction(Function &F) {
 
         // Don't do SAD matching on the root node. SelectionDAG already
         // has support for that and currently generates better code.
-        if (I != Root && trySADReplacement(I))
+        if (I != Root && trySADReplacement(I)) {
           MadeChange = true;
+          continue;
+        }
+
+        // Byte sum via psadbw(x, 0).  Same rationale as trySADReplacement:
+        // don't match on the root node because SelectionDAG already handles
+        // small single-vector patterns and generally emits better code for
+        // them.  We only help on wider intermediate shapes that reach us
+        // from loop vectorization.
+        if (I != Root && tryByteSumReplacement(I)) {
+          MadeChange = true;
+          continue;
+        }
       }
     }
   }
 
   return MadeChange;
+}
+
+bool X86PartialReductionLegacy::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
+  if (!TPC)
+    return false;
+
+  return X86PartialReduction(&TPC->getTM<X86TargetMachine>()).run(F);
+}
+
+PreservedAnalyses X86PartialReductionPass::run(Function &F,
+                                               FunctionAnalysisManager &FAM) {
+  bool Changed = X86PartialReduction(TM).run(F);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

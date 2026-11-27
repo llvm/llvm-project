@@ -1,0 +1,17 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+cir.func @while_loop(%cond : !cir.bool) {
+  cir.while {
+    cir.condition(%cond)
+  } do {
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @while_loop
+// CHECK-SAME: %[[COND:.*]]: !cir.bool
+// CHECK:       cir.while
+// CHECK-NEXT:    cir.condition(%[[COND]])
+// CHECK-NEXT:  do
+// CHECK-NEXT:    cir.yield

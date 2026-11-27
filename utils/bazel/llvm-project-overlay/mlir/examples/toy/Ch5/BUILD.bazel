@@ -1,6 +1,7 @@
 # Description:
 #   MLIR Tutorial
 
+load("@rules_cc//cc:defs.bzl", "cc_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
 licenses(["notice"])
@@ -78,6 +79,7 @@ cc_binary(
         "//mlir:AllPassesAndDialects",
         "//mlir:Analysis",
         "//mlir:ArithDialect",
+        "//mlir:BytecodeOpInterface",
         "//mlir:BytecodeReader",
         "//mlir:CallOpInterfaces",
         "//mlir:CastInterfaces",

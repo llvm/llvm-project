@@ -29,9 +29,10 @@
 define spir_func noundef i32 @foo(i64 noundef %index) local_unnamed_addr {
 ; CHECK: %[[#index:]] = OpFunctionParameter %[[#uint64]]
 entry:
-; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#global1]] %[[#uint_0]] %[[#index]]
+; CHECK: %[[#idx:]] = OpUConvert %[[#uint]] %[[#index]]
+; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#global1]] %[[#uint_0]] %[[#idx]]
   %ptr = getelementptr inbounds %S1, ptr addrspace(10) @global1, i64 0, i32 0, i64 %index
-; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]] Aligned 4
+; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]]
   %val = load i32, ptr addrspace(10) %ptr
   ret i32 %val
 }
@@ -39,9 +40,10 @@ entry:
 define spir_func noundef i32 @bar(i64 noundef %index) local_unnamed_addr {
 ; CHECK: %[[#index:]] = OpFunctionParameter %[[#uint64]]
 entry:
-; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#global2]] %[[#uint_0]] %[[#uint_0]] %[[#index]] %[[#uint_1]]
+; CHECK: %[[#idx:]] = OpUConvert %[[#uint]] %[[#index]]
+; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#global2]] %[[#uint_0]] %[[#uint_0]] %[[#idx]] %[[#uint_1]]
   %ptr = getelementptr inbounds %S2, ptr addrspace(10) @global2, i64 0, i32 0, i32 0, i64 %index, i32 1
-; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]] Aligned 4
+; CHECK: %[[#val:]] = OpLoad %[[#uint]] %[[#ptr]]
   %val = load i32, ptr addrspace(10) %ptr
   ret i32 %val
 }
@@ -49,9 +51,10 @@ entry:
 define spir_func void @foos(i64 noundef %index) local_unnamed_addr {
 ; CHECK: %[[#index:]] = OpFunctionParameter %[[#uint64]]
 entry:
-; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#global1]] %[[#uint_0]] %[[#index]]
+; CHECK: %[[#idx:]] = OpUConvert %[[#uint]] %[[#index]]
+; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#global1]] %[[#uint_0]] %[[#idx]]
   %ptr = getelementptr inbounds %S1, ptr addrspace(10) @global1, i64 0, i32 0, i64 %index
-; CHECK: OpStore %[[#ptr]] %[[#uint_0]] Aligned 4
+; CHECK: OpStore %[[#ptr]] %[[#uint_0]]
   store i32 0, ptr addrspace(10) %ptr
   ret void
 }
@@ -59,9 +62,10 @@ entry:
 define spir_func void @bars(i64 noundef %index) local_unnamed_addr {
 ; CHECK: %[[#index:]] = OpFunctionParameter %[[#uint64]]
 entry:
-; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#global2]] %[[#uint_0]] %[[#uint_0]] %[[#index]] %[[#uint_1]]
+; CHECK: %[[#idx:]] = OpUConvert %[[#uint]] %[[#index]]
+; CHECK: %[[#ptr:]] = OpInBoundsAccessChain %[[#uint_pp]] %[[#global2]] %[[#uint_0]] %[[#uint_0]] %[[#idx]] %[[#uint_1]]
   %ptr = getelementptr inbounds %S2, ptr addrspace(10) @global2, i64 0, i32 0, i32 0, i64 %index, i32 1
-; CHECK: OpStore %[[#ptr]] %[[#uint_0]] Aligned 4
+; CHECK: OpStore %[[#ptr]] %[[#uint_0]]
   store i32 0, ptr addrspace(10) %ptr
   ret void
 }

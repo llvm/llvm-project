@@ -1,5 +1,4 @@
-//===-- Language.h ---------------------------------------------------*- C++
-//-*-===//
+//===-- Language.h --------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,11 +11,14 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Highlighter.h"
+#include "lldb/Core/Mangled.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
@@ -24,6 +26,8 @@
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace lldb_private {
 
@@ -165,8 +169,18 @@ public:
   static Language *FindPlugin(lldb::LanguageType language,
                               llvm::StringRef file_path);
 
+  /// Returns the Language that registered \p scheme with
+  /// Mangled::RegisterManglingScheme(), or a nullptr if none did.
+  static Language *FindPluginForManglingScheme(Mangled::ManglingScheme scheme);
+
+  static llvm::Expected<lldb::LanguageType>
+  GetExceptionLanguageForLanguage(llvm::StringRef lang_name);
   // return false from callback to stop iterating
-  static void ForEach(std::function<bool(Language *)> callback);
+  static void ForEach(llvm::function_ref<IterationAction(Language *)> callback);
+
+  /// Returns lldb_private::GetVersion(), followed by the GetVersionInfo() of
+  /// each registered language plugin, in language type order.
+  static std::string GetVersionWithLanguageInfo();
 
   virtual lldb::LanguageType GetLanguageType() const = 0;
 
@@ -177,8 +191,6 @@ public:
   virtual bool IsTopLevelFunction(Function &function);
 
   virtual bool IsSourceFile(llvm::StringRef file_path) const = 0;
-
-  virtual const Highlighter *GetHighlighter() const { return nullptr; }
 
   virtual lldb::TypeCategoryImplSP GetFormatters();
 
@@ -193,41 +205,62 @@ public:
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic);
 
+  /// Returns the languages whose formatters apply to values of \p language,
+  /// in the order in which to consult them. FormatManager consults the
+  /// formatters of every language that a language plugin returns. By default,
+  /// the formatters of this language apply to its own values.
+  virtual std::vector<lldb::LanguageType>
+  GetFormatterLanguages(lldb::LanguageType language) const;
+
+  /// Returns whether the formatters in a category for \p category_language,
+  /// one of the languages of this plugin, apply to values of
+  /// \p valobj_language. By default, they only apply to values of
+  /// \p category_language.
+  virtual bool IsCategoryApplicable(lldb::LanguageType category_language,
+                                    lldb::LanguageType valobj_language) const {
+    return category_language == valobj_language;
+  }
+
+  /// Returns the options that this language adds to the commands that
+  /// evaluate expressions, or nullptr.
+  virtual std::unique_ptr<OptionGroupLanguageExpression>
+  CreateExpressionOptions();
+
   virtual std::unique_ptr<TypeScavenger> GetTypeScavenger();
 
   virtual const char *GetLanguageSpecificTypeLookupHelp();
 
   class MethodNameVariant {
-    ConstString m_name;
+    std::string m_name;
     lldb::FunctionNameType m_type;
 
   public:
-    MethodNameVariant(ConstString name, lldb::FunctionNameType type)
-        : m_name(name), m_type(type) {}
-    ConstString GetName() const { return m_name; }
+    MethodNameVariant(std::string name, lldb::FunctionNameType type)
+        : m_name(std::move(name)), m_type(type) {}
+    llvm::StringRef GetName() const { return m_name; }
     lldb::FunctionNameType GetType() const { return m_type; }
   };
   // If a language can have more than one possible name for a method, this
   // function can be used to enumerate them. This is useful when doing name
   // lookups.
   virtual std::vector<Language::MethodNameVariant>
-  GetMethodNameVariants(ConstString method_name) const {
+  GetMethodNameVariants(llvm::StringRef method_name) const {
     return std::vector<Language::MethodNameVariant>();
-  };
+  }
 
   class MethodName {
   public:
     MethodName() {}
 
-    MethodName(ConstString full)
-        : m_full(full), m_basename(), m_context(), m_arguments(),
+    MethodName(std::string full)
+        : m_full(std::move(full)), m_basename(), m_context(), m_arguments(),
           m_qualifiers(), m_return_type(), m_scope_qualified(), m_parsed(false),
           m_parse_error(false) {}
 
     virtual ~MethodName() {};
 
     void Clear() {
-      m_full.Clear();
+      m_full = {};
       m_basename = llvm::StringRef();
       m_context = llvm::StringRef();
       m_arguments = llvm::StringRef();
@@ -243,10 +276,10 @@ public:
         Parse();
       if (m_parse_error)
         return false;
-      return (bool)m_full;
+      return !m_full.empty();
     }
 
-    ConstString GetFullName() const { return m_full; }
+    const std::string &GetFullName() const { return m_full; }
 
     llvm::StringRef GetBasename() {
       if (!m_parsed)
@@ -290,7 +323,7 @@ public:
       m_parse_error = true;
     }
 
-    ConstString m_full; // Full name:
+    std::string m_full; // Full name:
                         // "size_t lldb::SBTarget::GetBreakpointAtIndex(unsigned
                         // int) const"
     llvm::StringRef m_basename;    // Basename:     "GetBreakpointAtIndex"
@@ -304,9 +337,9 @@ public:
   };
 
   virtual std::unique_ptr<Language::MethodName>
-  GetMethodName(ConstString name) const {
-    return std::make_unique<Language::MethodName>(name);
-  };
+  GetMethodName(llvm::StringRef name) const {
+    return std::make_unique<Language::MethodName>(name.str());
+  }
 
   virtual std::pair<lldb::FunctionNameType, std::optional<ConstString>>
   GetFunctionNameInfo(ConstString name) const {
@@ -318,7 +351,50 @@ public:
   ///
   /// This function should only return true if there is a high confidence
   /// that the name actually belongs to this language.
-  virtual bool SymbolNameFitsToLanguage(Mangled name) const { return false; }
+  virtual bool SymbolNameFitsToLanguage(const Mangled &name) const {
+    return false;
+  }
+
+  /// How to demangle a name in DemangleSymbol().
+  struct DemangleOptions {
+    /// Whether to compute the \c DemangledNameInfo too.
+    bool want_info = false;
+  };
+
+  /// A demangled name and, if requested, where its parts begin and end.
+  struct DemangledName {
+    /// Empty if the name couldn't be demangled.
+    std::string name;
+    /// Only computed if DemangleOptions::want_info is true.
+    std::optional<DemangledNameInfo> info;
+  };
+
+  /// Demangle \p mangled, a name mangled with \p scheme, a scheme that this
+  /// language registered with Mangled::RegisterManglingScheme().
+  virtual DemangledName DemangleSymbol(ConstString mangled,
+                                       Mangled::ManglingScheme scheme,
+                                       const DemangleOptions &options) const {
+    return {};
+  }
+
+  /// Parses mangled function names.
+  class MangledNameParser {
+  public:
+    virtual ~MangledNameParser() = default;
+
+    /// Parse a function name. Returns std::nullopt if \p mangled isn't a
+    /// function name that this parser understands.
+    virtual std::optional<Mangled::FunctionNameParts>
+    Parse(const Mangled &mangled) = 0;
+  };
+
+  /// Returns a parser for the names mangled with \p scheme, a scheme that this
+  /// language registered, or a nullptr if the symbol table should index them
+  /// by their demangled names.
+  virtual std::unique_ptr<MangledNameParser>
+  CreateMangledNameParser(Mangled::ManglingScheme scheme) const {
+    return nullptr;
+  }
 
   /// An individual data formatter may apply to several types and cross language
   /// boundaries. Each of those languages may want to customize the display of
@@ -404,7 +480,14 @@ public:
   GetLanguageTypeFromString(const char *string) = delete;
   static lldb::LanguageType GetLanguageTypeFromString(llvm::StringRef string);
 
+  /// Returns the internal LLDB name for the specified language. When presenting
+  /// the language name to users, use \ref GetDisplayNameForLanguageType
+  /// instead.
   static const char *GetNameForLanguageType(lldb::LanguageType language);
+
+  /// Returns a user-friendly name for the specified language.
+  static llvm::StringRef
+  GetDisplayNameForLanguageType(lldb::LanguageType language);
 
   static void PrintAllLanguages(Stream &s, const char *prefix,
                                 const char *suffix);
@@ -420,7 +503,8 @@ public:
                                                     llvm::StringRef suffix);
 
   // return false from callback to stop iterating
-  static void ForAllLanguages(std::function<bool(lldb::LanguageType)> callback);
+  static void ForAllLanguages(
+      llvm::function_ref<IterationAction(lldb::LanguageType)> callback);
 
   static bool LanguageIsCPlusPlus(lldb::LanguageType language);
 
@@ -431,7 +515,11 @@ public:
   /// Equivalent to \c LanguageIsC||LanguageIsObjC||LanguageIsCPlusPlus.
   static bool LanguageIsCFamily(lldb::LanguageType language);
 
+  static bool LanguageIsFortran(lldb::LanguageType language);
+
   static bool LanguageIsPascal(lldb::LanguageType language);
+
+  static bool LanguageIsRust(lldb::LanguageType language);
 
   // return the primary language, so if LanguageIsC(l), return eLanguageTypeC,
   // etc.
@@ -458,7 +546,7 @@ public:
     return ConstString();
   }
 
-  virtual llvm::StringRef GetInstanceVariableName() { return {}; }
+  virtual llvm::StringRef GetInstanceName() { return {}; }
 
   /// Given a symbol context list of matches which supposedly represent the
   /// same file and line number in a CU, erases those that should be ignored
@@ -474,6 +562,15 @@ public:
   virtual std::optional<bool>
   AreEqualForFrameComparison(const SymbolContext &sc1,
                              const SymbolContext &sc2) const {
+    return {};
+  }
+
+  /// Returns an explanation of why there is no variable named \p name in
+  /// \p sc, for example because \p sc is a closure that didn't capture a
+  /// variable of that name from its parent function, or an empty string.
+  virtual std::string
+  GetMissingVariableDiagnostic(llvm::StringRef name,
+                               const SymbolContext &sc) const {
     return {};
   }
 
@@ -497,6 +594,10 @@ public:
 
   virtual FormatEntity::Entry GetFunctionNameFormat() const { return {}; }
 
+  /// Returns text to append to LLDB's version string, such as the
+  /// revisions of compilers embedded in this plugin.
+  virtual std::string GetVersionInfo() const { return {}; }
+
 protected:
   // Classes that inherit from Language can see and modify these
 
@@ -508,5 +609,12 @@ private:
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+template <> struct format_provider<lldb::LanguageType> {
+  static void format(const lldb::LanguageType &language, llvm::raw_ostream &OS,
+                     llvm::StringRef Options);
+};
+} // namespace llvm
 
 #endif // LLDB_TARGET_LANGUAGE_H

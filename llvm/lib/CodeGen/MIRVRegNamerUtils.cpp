@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MIRVRegNamerUtils.h"
+#include "CodeGenOptions.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/IR/Constants.h"
@@ -14,11 +15,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mir-vregnamer-utils"
-
-static cl::opt<bool>
-    UseStableNamerHash("mir-vreg-namer-use-stable-hash", cl::init(false),
-                       cl::Hidden,
-                       cl::desc("Use Stable Hashing for MIR VReg Renaming"));
 
 using VRegRenameMap = std::map<Register, Register>;
 
@@ -55,7 +51,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
   std::string S;
   raw_string_ostream OS(S);
 
-  if (UseStableNamerHash) {
+  if (Opts.mir_vreg_namer_use_stable_hash) {
     auto Hash = stableHashValue(MI, /* HashVRegs */ true,
                                 /* HashConstantPoolIndices */ true,
                                 /* HashMemOperands */ true);
@@ -93,11 +89,12 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     // is contributing to a hash collision but there's enough information
     // (Opcodes,other registers etc) that this will likely not be a problem.
 
-    // TODO: Handle the following Index/ID/Predicate cases. They can
+    // TODO: Handle the following Index/ID/Predicate/LaneMask cases. They can
     // be hashed on in a stable manner.
     case MachineOperand::MO_CFIIndex:
     case MachineOperand::MO_IntrinsicID:
     case MachineOperand::MO_Predicate:
+    case MachineOperand::MO_LaneMask:
 
     // In the cases below we havn't found a way to produce an artifact that will
     // result in a stable hash, in most cases because they are pointers. We want
@@ -151,13 +148,14 @@ bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
       continue;
     if (!Candidate.getNumOperands())
       continue;
-    // Look for instructions that define VRegs in operand 0.
-    MachineOperand &MO = Candidate.getOperand(0);
-    // Avoid non regs, instructions defining physical regs.
-    if (!MO.isReg() || !MO.getReg().isVirtual())
-      continue;
-    VRegs.push_back(
-        NamedVReg(MO.getReg(), Prefix + getInstructionOpcodeHash(Candidate)));
+    // Look for instructions that define VRegs.
+    for (MachineOperand &MO : Candidate.all_defs()) {
+      // Avoid physical reg defs.
+      if (!MO.getReg().isVirtual())
+        continue;
+      VRegs.push_back(
+          NamedVReg(MO.getReg(), Prefix + getInstructionOpcodeHash(Candidate)));
+    }
   }
 
   return !VRegs.empty() ? doVRegRenaming(getVRegRenameMap(VRegs)) : false;

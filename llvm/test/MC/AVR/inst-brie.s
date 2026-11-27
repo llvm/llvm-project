@@ -16,6 +16,9 @@ bar:
 ; CHECK: brie bar            ; encoding: [0bAAAAA111,0b111100AA]
 
 ; INST-LABEL: <foo>:
-; INST-NEXT: 57 f0      brie .+20
-; INST-NEXT: a7 f0      brie .+40
-; INST-NEXT: 07 f0      brie .+0
+; INST-NEXT: ff f3      brie .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x16
+; INST-NEXT: ff f3      brie .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x2c
+; INST-NEXT: ff f3      brie .-2
+; INST-NEXT: R_AVR_7_PCREL .text+0x6

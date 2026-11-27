@@ -11,28 +11,34 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AVRAsmPrinter.h"
 #include "AVR.h"
 #include "AVRMCInstLower.h"
 #include "AVRSubtarget.h"
 #include "AVRTargetMachine.h"
 #include "MCTargetDesc/AVRInstPrinter.h"
-#include "MCTargetDesc/AVRMCExpr.h"
+#include "MCTargetDesc/AVRMCAsmInfo.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -47,7 +53,7 @@ namespace {
 class AVRAsmPrinter : public AsmPrinter {
 public:
   AVRAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer), ID), MRI(*TM.getMCRegisterInfo()) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), MRI(TM.getMCRegisterInfo()) {}
 
   StringRef getPassName() const override { return "AVR Assembly Printer"; }
 
@@ -113,13 +119,10 @@ bool AVRAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
 
   const MachineOperand &MO = MI->getOperand(OpNum);
 
-  if (ExtraCode && ExtraCode[0]) {
+  // Operand must be a register when using 'A' ~ 'Z' extra code.
+  if (ExtraCode && ExtraCode[0] && MO.isReg()) {
     // Unknown extra code.
     if (ExtraCode[1] != 0 || ExtraCode[0] < 'A' || ExtraCode[0] > 'Z')
-      return true;
-
-    // Operand must be a register when using 'A' ~ 'Z' extra code.
-    if (!MO.isReg())
       return true;
 
     Register Reg = MO.getReg();
@@ -164,11 +167,17 @@ bool AVRAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
     return true; // Unknown modifier
 
   const MachineOperand &MO = MI->getOperand(OpNum);
-  (void)MO;
+
+  // Print direct memory operands.
+  if (MO.isGlobal() || MO.isSymbol() || MO.isMCSymbol()) {
+    PrintSymbolOperand(MO, O);
+    return false;
+  }
+
   assert(MO.isReg() && "Unexpected inline asm memory operand");
 
   // TODO: We should be able to look up the alternative name for
-  // the register if it's given.
+  //       the register if it's given.
   // TableGen doesn't expose a way of getting retrieving names
   // for registers.
   if (MI->getOperand(OpNum).getReg() == AVR::R31R30) {
@@ -215,7 +224,7 @@ const MCExpr *AVRAsmPrinter::lowerConstant(const Constant *CV,
     bool IsProgMem = GV->getAddressSpace() == AVR::ProgramMemory;
     if (IsProgMem) {
       const MCExpr *Expr = MCSymbolRefExpr::create(getSymbol(GV), Ctx);
-      return AVRMCExpr::create(AVRMCExpr::VK_PM, Expr, false, Ctx);
+      return AVRMCExpr::create(AVR::S_PM, Expr, false, Ctx);
     }
   }
 
@@ -244,7 +253,7 @@ void AVRAsmPrinter::emitXXStructor(const DataLayout &DL, const Constant *CV) {
 bool AVRAsmPrinter::doFinalization(Module &M) {
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const AVRTargetMachine &TM = (const AVRTargetMachine &)MMI->getTarget();
-  const AVRSubtarget *SubTM = (const AVRSubtarget *)TM.getSubtargetImpl();
+  const AVRSubtarget *SubTM = TM.getSubtargetImpl();
 
   bool NeedsCopyData = false;
   bool NeedsClearBSS = false;
@@ -259,7 +268,7 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
       continue;
     }
 
-    auto *Section = cast<MCSectionELF>(TLOF.SectionForGlobal(&GO, TM));
+    auto *Section = static_cast<MCSectionELF *>(TLOF.SectionForGlobal(&GO, TM));
     if (Section->getName().starts_with(".data"))
       NeedsCopyData = true;
     else if (Section->getName().starts_with(".rodata") && SubTM->hasLPM())
@@ -293,7 +302,7 @@ bool AVRAsmPrinter::doFinalization(Module &M) {
 
 void AVRAsmPrinter::emitStartOfAsmFile(Module &M) {
   const AVRTargetMachine &TM = (const AVRTargetMachine &)MMI->getTarget();
-  const AVRSubtarget *SubTM = (const AVRSubtarget *)TM.getSubtargetImpl();
+  const AVRSubtarget *SubTM = TM.getSubtargetImpl();
   if (!SubTM)
     return;
 
@@ -335,6 +344,36 @@ char AVRAsmPrinter::ID = 0;
 INITIALIZE_PASS(AVRAsmPrinter, "avr-asm-printer", "AVR Assembly Printer", false,
                 false)
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAVRAsmPrinter() {
   llvm::RegisterAsmPrinter<AVRAsmPrinter> X(getTheAVRTarget());
+}
+
+PreservedAnalyses AVRAsmPrinterBeginPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  AVRAsmPrinter &AsmPrinter = static_cast<AVRAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses AVRAsmPrinterPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  AVRAsmPrinter &AsmPrinter = static_cast<AVRAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses AVRAsmPrinterEndPass::run(Module &M,
+                                            ModuleAnalysisManager &MAM) {
+  AVRAsmPrinter &AsmPrinter = static_cast<AVRAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

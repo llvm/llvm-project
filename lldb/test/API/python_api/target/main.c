@@ -1,4 +1,10 @@
 #include <stdio.h>
+#include <stdlib.h>
+#ifdef _WIN32
+#define environ _environ
+#else
+extern char **environ;
+#endif
 
 // This simple program is to test the lldb Python API SBTarget.
 //
@@ -36,24 +42,23 @@ int c(int val)
     return val + 3;
 }
 
-int main (int argc, char const *argv[], char** env)
-{
-    // Set a break at entry to main.
-    int A1 = a(1);  // a(1) -> b(1) -> c(1)
-    printf("a(1) returns %d\n", A1);
+int main(int argc, char const *argv[]) {
+  // Set a break at entry to main.
+  int A1 = a(1); // a(1) -> b(1) -> c(1)
+  printf("a(1) returns %d\n", A1);
 
-    int B2 = b(2);  // b(2) -> c(2)
-    printf("b(2) returns %d\n", B2);
+  int B2 = b(2); // b(2) -> c(2)
+  printf("b(2) returns %d\n", B2);
 
-    int A3 = a(3);  // a(3) -> c(3)
-    printf("a(3) returns %d\n", A3);
+  int A3 = a(3); // a(3) -> c(3)
+  printf("a(3) returns %d\n", A3);
 
-    for (int i = 1; i < argc; i++) {
-      printf("arg: %s\n", argv[i]);
-    }
+  for (int i = 1; i < argc; i++) {
+    printf("arg: %s\n", argv[i]);
+  }
 
-    while (*env)
-      printf("env: %s\n", *env++);
+  for (char **e = environ; *e; ++e)
+    printf("env: %s\n", *e);
 
-    return 0;
+  return 0;
 }

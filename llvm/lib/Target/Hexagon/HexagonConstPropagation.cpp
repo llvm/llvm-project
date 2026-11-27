@@ -105,8 +105,7 @@ namespace {
     };
 
     LatticeCell() : Kind(Top), Size(0), IsSpecial(false) {
-      for (const Constant *&Value : Values)
-        Value = nullptr;
+      llvm::fill(Values, nullptr);
     }
 
     bool meet(const LatticeCell &L);
@@ -1006,7 +1005,7 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
       SmallVector<MachineBasicBlock*,2> ToRemove;
       for (MachineBasicBlock *SB : B->successors()) {
         if (!Targets.count(SB))
-          ToRemove.push_back(const_cast<MachineBasicBlock*>(SB));
+          ToRemove.push_back(SB);
         Targets.remove(SB);
       }
       for (MachineBasicBlock *MBB : ToRemove)
@@ -1774,12 +1773,13 @@ bool MachineConstEvaluator::evaluateEXTRACTi(const APInt &A1, unsigned Bits,
     return true;
   }
   if (BW <= 64) {
-    int64_t V = A1.getZExtValue();
-    V <<= (64-Bits-Offset);
+    uint64_t U = A1.getZExtValue();
+    U <<= (64 - Bits - Offset);
+    int64_t V;
     if (Signed)
-      V >>= (64-Bits);
+      V = static_cast<int64_t>(U) >> (64 - Bits);
     else
-      V = static_cast<uint64_t>(V) >> (64-Bits);
+      V = static_cast<int64_t>(U >> (64 - Bits));
     Result = APInt(BW, V, Signed);
     return true;
   }
@@ -1870,9 +1870,7 @@ namespace {
     bool evaluateHexExt(const MachineInstr &MI, const CellMap &Inputs,
           CellMap &Outputs);
     bool evaluateHexVector1(const MachineInstr &MI, const CellMap &Inputs,
-          CellMap &Outputs);
-    bool evaluateHexVector2(const MachineInstr &MI, const CellMap &Inputs,
-          CellMap &Outputs);
+                            CellMap &Outputs);
 
     void replaceAllRegUsesWith(Register FromReg, Register ToReg);
     bool rewriteHexBranch(MachineInstr &BrI, const CellMap &Inputs);
@@ -1935,6 +1933,12 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
   if (!DefR.Reg.isVirtual())
     return false;
 
+  // The evaluators below assume every register use has a cell.
+  for (const MachineOperand &MO : MI.uses()) {
+    if (MO.isReg() && MO.getReg().isVirtual() && !Inputs.has(MO.getReg()))
+      return false;
+  }
+
   if (MI.isCopy()) {
     LatticeCell RC;
     RegSubRegPair SrcR(getRegSubRegPair(MI.getOperand(1)));
@@ -1991,7 +1995,8 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
         return false;
       IntegerType *Ty = (W == 32) ? Type::getInt32Ty(CX)
                                   : Type::getInt64Ty(CX);
-      const ConstantInt *CI = ConstantInt::get(Ty, V, true);
+      const ConstantInt *CI =
+          ConstantInt::get(Ty, V, /*IsSigned=*/true, /*ImplicitTrunc=*/true);
       LatticeCell RC = Outputs.get(DefR.Reg);
       RC.add(CI);
       Outputs.update(DefR.Reg, RC);
@@ -2248,7 +2253,8 @@ bool HexagonConstEvaluator::evaluate(const RegSubRegPair &R,
     int32_t V32;
     memcpy(&V32, &U32, sizeof V32);
     IntegerType *Ty = Type::getInt32Ty(CX);
-    const ConstantInt *C32 = ConstantInt::get(Ty, static_cast<int64_t>(V32));
+    const ConstantInt *C32 =
+        ConstantInt::getSigned(Ty, static_cast<int64_t>(V32));
     Result.add(C32);
   }
   return true;
@@ -2294,7 +2300,10 @@ Undetermined:
     // we currently recognize.
     if (PR.SubReg)
       goto Undetermined;
-    assert(Inputs.has(PR.Reg));
+    // A predicate with no reaching definition (e.g. an undef operand) has no
+    // cell; its value is unknown.
+    if (!Inputs.has(PR.Reg))
+      goto Undetermined;
     const LatticeCell &PredC = Inputs.get(PR.Reg);
     if (PredC.isBottom())
       goto Undetermined;
@@ -2326,6 +2335,12 @@ Undetermined:
 bool HexagonConstEvaluator::rewrite(MachineInstr &MI, const CellMap &Inputs) {
   if (MI.isBranch())
     return rewriteHexBranch(MI, Inputs);
+
+  // The rewriters below assume every register use has a cell.
+  for (const MachineOperand &MO : MI.uses()) {
+    if (MO.isReg() && MO.getReg().isVirtual() && !Inputs.has(MO.getReg()))
+      return false;
+  }
 
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
@@ -3002,7 +3017,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                     .addReg(R1.Reg, getRegState(Acc), R1.SubReg);
         }
         replaceAllRegUsesWith(DefR.Reg, NewR);
-        MRI->clearKillFlags(NewR);
         Changed = true;
         break;
       }
@@ -3068,7 +3082,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                   .addReg(SR.Reg, getRegState(SO), SR.SubReg);
       }
       replaceAllRegUsesWith(DefR.Reg, NewR);
-      MRI->clearKillFlags(NewR);
       Changed = true;
     }
     break;
@@ -3100,7 +3113,6 @@ bool HexagonConstEvaluator::rewriteHexConstUses(MachineInstr &MI,
                   .addReg(SR.Reg, getRegState(SO), SR.SubReg);
       }
       replaceAllRegUsesWith(DefR.Reg, NewR);
-      MRI->clearKillFlags(NewR);
       Changed = true;
     }
     break;

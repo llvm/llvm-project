@@ -5,6 +5,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:native_binary.bzl", "native_binary")
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("defs.bzl", "clang_tidy_library")
 
@@ -23,6 +24,11 @@ bool_flag(
     build_setting_default = True,
 )
 
+bool_flag(
+    name = "enable_custom_checks",
+    build_setting_default = True,
+)
+
 config_setting(
     name = "static_analyzer_enabled",
     flag_values = {
@@ -30,17 +36,32 @@ config_setting(
     },
 )
 
+config_setting(
+    name = "custom_checks_enabled",
+    flag_values = {
+        ":enable_custom_checks": "true",
+    },
+)
+
 expand_template(
     name = "config",
     out = "clang-tidy-config.h",
-    substitutions = select({
-        ":static_analyzer_enabled": {
-            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
-        },
-        "//conditions:default": {
-            "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 0",
-        },
-    }),
+    substitutions =
+        select({
+            ":custom_checks_enabled": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS": "#define CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS 1",
+            },
+            "//conditions:default": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS": "#define CLANG_TIDY_ENABLE_QUERY_BASED_CUSTOM_CHECKS 0",
+            },
+        }) | select({
+            ":static_analyzer_enabled": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 1",
+            },
+            "//conditions:default": {
+                "#cmakedefine01 CLANG_TIDY_ENABLE_STATIC_ANALYZER": "#define CLANG_TIDY_ENABLE_STATIC_ANALYZER 0",
+            },
+        }),
     template = "clang-tidy-config.h.cmake",
     visibility = ["//visibility:private"],
 )
@@ -52,12 +73,15 @@ cc_binary(
     deps = ["//llvm:Support"],
 )
 
-genrule(
+run_binary(
     name = "confusables_inc",
     srcs = ["misc/ConfusableTable/confusables.txt"],
     outs = ["Confusables.inc"],
-    cmd = "$(location :confusable_table_builder) $(SRCS) $(OUTS)",
-    tools = [":confusable_table_builder"],
+    args = [
+        "$(execpath misc/ConfusableTable/confusables.txt)",
+        "$(execpath Confusables.inc)",
+    ],
+    tool = ":confusable_table_builder",
     visibility = ["//visibility:private"],
 )
 
@@ -140,6 +164,8 @@ clang_tidy_library(
     name = "google",
     deps = [
         ":lib",
+        ":misc",
+        ":modernize",
         ":readability",
         ":utils",
     ],
@@ -150,6 +176,8 @@ clang_tidy_library(
     deps = [
         ":google",
         ":lib",
+        ":misc",
+        ":utils",
     ],
 )
 
@@ -160,6 +188,7 @@ clang_tidy_library(
         ":readability",
         ":utils",
         "//clang:tooling",
+        "//clang:transformer",
     ],
 )
 
@@ -177,6 +206,7 @@ clang_tidy_library(
     deps = [
         ":lib",
         ":utils",
+        "//clang:analysis",
         "//clang:tooling",
         "//clang:transformer",
     ],
@@ -200,6 +230,15 @@ clang_tidy_library(
     deps = [
         ":lib",
         ":utils",
+    ],
+)
+
+clang_tidy_library(
+    name = "custom",
+    deps = [
+        ":lib",
+        "//clang:ast_matchers_dynamic",
+        "//clang-tools-extra/clang-query:lib",
     ],
 )
 
@@ -255,14 +294,6 @@ clang_tidy_library(
 )
 
 clang_tidy_library(
-    name = "zircon",
-    deps = [
-        ":lib",
-        ":utils",
-    ],
-)
-
-clang_tidy_library(
     name = "cppcoreguidelines",
     deps = [
         ":bugprone",
@@ -306,23 +337,10 @@ clang_tidy_library(
         ":google",
         ":lib",
         ":misc",
-        ":performance",
-        ":readability",
-        ":utils",
-    ],
-)
-
-clang_tidy_library(
-    name = "hicpp",
-    deps = [
-        ":bugprone",
-        ":cppcoreguidelines",
-        ":google",
-        ":lib",
-        ":misc",
         ":modernize",
         ":performance",
         ":readability",
+        ":utils",
     ],
 )
 
@@ -343,7 +361,6 @@ CHECKS = [
     ":darwin",
     ":fuchsia",
     ":google",
-    ":hicpp",
     ":linuxkernel",
     ":llvm",
     ":llvmlibc",
@@ -354,9 +371,11 @@ CHECKS = [
     ":performance",
     ":portability",
     ":readability",
-    ":zircon",
 ] + select({
     ":static_analyzer_enabled": [":mpi"],
+    "//conditions:default": [],
+}) + select({
+    ":custom_checks_enabled": [":custom"],
     "//conditions:default": [],
 })
 

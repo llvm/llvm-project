@@ -164,7 +164,7 @@ define i1 @fold_strnlen_ax_nz_gtz(i64 %n) {
 
 define i1 @fold_strnlen_a5_pi_nz_eqz(i64 %i, i64 %n) {
 ; CHECK-LABEL: @fold_strnlen_a5_pi_nz_eqz(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [5 x i8], ptr @a5, i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr @a5, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[CHAR0:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i8 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[EQZ]]
@@ -200,7 +200,7 @@ define i1 @fold_strnlen_s5_pi_nz_eqz(i64 %i, i64 %n) {
 
 define i1 @call_strnlen_s5_pi_n_eqz(i64 %i, i64 %n) {
 ; CHECK-LABEL: @call_strnlen_s5_pi_n_eqz(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [6 x i8], ptr @s5, i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds i8, ptr @s5, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr nonnull [[PTR]], i64 [[N:%.*]])
 ; CHECK-NEXT:    [[EQZ:%.*]] = icmp eq i64 [[LEN]], 0
 ; CHECK-NEXT:    ret i1 [[EQZ]]

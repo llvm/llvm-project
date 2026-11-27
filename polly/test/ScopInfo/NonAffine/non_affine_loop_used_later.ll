@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops                                                                        '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -polly-allow-nonaffine -polly-allow-nonaffine-branches -polly-allow-nonaffine-loops -polly-unprofitable-scalar-accs=true -polly-process-unprofitable=false '-passes=print<polly-detect>,print<polly-function-scops>' -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine -plugin-arg=Polly,-polly-allow-nonaffine-branches -plugin-arg=Polly,-polly-allow-nonaffine-loops '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-allow-nonaffine -plugin-arg=Polly,-polly-allow-nonaffine-branches -plugin-arg=Polly,-polly-allow-nonaffine-loops -plugin-arg=Polly,-polly-unprofitable-scalar-accs=true -plugin-arg=Polly,-polly-process-unprofitable=false '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-detect -plugin-arg=Polly,-polly-print-scops -disable-output < %s 2>&1 | FileCheck %s --check-prefix=PROFIT
 ;
 ; Verify that we over approximate the read access of A[j] in the last statement as j is
 ; computed in a non-affine loop we do not model.

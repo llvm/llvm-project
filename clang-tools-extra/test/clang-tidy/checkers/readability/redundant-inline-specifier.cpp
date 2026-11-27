@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy -std=c++17 %s readability-redundant-inline-specifier %t
-// RUN: %check_clang_tidy -std=c++17 -check-suffixes=,STRICT %s readability-redundant-inline-specifier %t -- -config="{CheckOptions: {readability-redundant-inline-specifier.StrictMode: 'true'}}"
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-redundant-inline-specifier %t
+// RUN: %check_clang_tidy -std=c++17-or-later -check-suffixes=,STRICT %s readability-redundant-inline-specifier %t -- -config="{CheckOptions: {readability-redundant-inline-specifier.StrictMode: 'true'}}"
 
 template <typename T> inline T f()
 // CHECK-MESSAGES-STRICT: :[[@LINE-1]]:23: warning: function 'f' has inline specifier but is implicitly inlined [readability-redundant-inline-specifier]
@@ -148,4 +148,14 @@ public:
   // CHECK-MESSAGES-STRICT: :[[@LINE-1]]:10: warning: variable 'test4' has inline specifier but is implicitly inlined [readability-redundant-inline-specifier]
   // CHECK-FIXES-STRICT: static float test4;
 };
+}
+
+namespace ns {
+class B
+{
+public:
+  ~B();
+};
+
+inline B::~B() = default;
 }

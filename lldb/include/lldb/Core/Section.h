@@ -10,7 +10,6 @@
 #define LLDB_CORE_SECTION_H
 
 #include "lldb/Core/ModuleChild.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-defines.h"
@@ -46,6 +45,8 @@ public:
   /// Create an empty list.
   SectionList() = default;
 
+  SectionList(const SectionList &lhs);
+
   SectionList &operator=(const SectionList &rhs);
 
   size_t AddSection(const lldb::SectionSP &section_sp);
@@ -59,7 +60,7 @@ public:
   void Dump(llvm::raw_ostream &s, unsigned indent, Target *target,
             bool show_header, uint32_t depth) const;
 
-  lldb::SectionSP FindSectionByName(ConstString section_dstr) const;
+  lldb::SectionSP FindSectionByName(llvm::StringRef section_name) const;
 
   lldb::SectionSP FindSectionByID(lldb::user_id_t sect_id) const;
 
@@ -77,8 +78,8 @@ public:
   // Get the number of sections in this list, and any contained child sections
   size_t GetNumSections(uint32_t depth) const;
 
-  bool ReplaceSection(lldb::user_id_t sect_id,
-                      const lldb::SectionSP &section_sp,
+  bool ReplaceSection(const lldb::SectionSP &remove_section_sp,
+                      const lldb::SectionSP &replace_section_sp,
                       uint32_t depth = UINT32_MAX);
 
   // Warning, this can be slow as it's removing items from a std::vector.
@@ -95,6 +96,17 @@ public:
   /// information for this call, just known sections that contain debug
   /// information.
   uint64_t GetDebugInfoSize() const;
+
+  // Callback to decide which of two matching sections should be used in the
+  // merged output.
+  using MergeCallback =
+      std::function<lldb::SectionSP(lldb::SectionSP, lldb::SectionSP)>;
+
+  // Function that merges two different sections into a new output list. All
+  // unique sections will be checked for conflict and resolved using the
+  // supplied merging callback.
+  static SectionList Merge(SectionList &lhs, SectionList &rhs,
+                           MergeCallback filter);
 
 protected:
   collection m_sections;
@@ -130,22 +142,20 @@ class Section : public std::enable_shared_from_this<Section>,
 public:
   // Create a root section (one that has no parent)
   Section(const lldb::ModuleSP &module_sp, ObjectFile *obj_file,
-          lldb::user_id_t sect_id, ConstString name,
+          lldb::user_id_t sect_id, std::string name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
-          lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
-          uint32_t target_byte_size = 1);
+          lldb::offset_t file_size, uint32_t log2align, uint32_t flags);
 
   // Create a section that is a child of parent_section_sp
   Section(const lldb::SectionSP &parent_section_sp, // NULL for top level
                                                     // sections, non-NULL for
                                                     // child sections
           const lldb::ModuleSP &module_sp, ObjectFile *obj_file,
-          lldb::user_id_t sect_id, ConstString name,
+          lldb::user_id_t sect_id, std::string name,
           lldb::SectionType sect_type, lldb::addr_t file_vm_addr,
           lldb::addr_t vm_size, lldb::offset_t file_offset,
-          lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
-          uint32_t target_byte_size = 1);
+          lldb::offset_t file_size, uint32_t log2align, uint32_t flags);
 
   ~Section();
 
@@ -197,7 +207,7 @@ public:
 
   bool IsDescendant(const Section *section);
 
-  ConstString GetName() const { return m_name; }
+  llvm::StringRef GetName() const { return m_name; }
 
   bool Slide(lldb::addr_t slide_amount, bool slide_children);
 
@@ -259,9 +269,6 @@ public:
 
   void SetLog2Align(uint32_t align) { m_log2align = align; }
 
-  // Get the number of host bytes required to hold a target byte
-  uint32_t GetTargetByteSize() const { return m_target_byte_size; }
-
   bool IsRelocated() const { return m_relocated; }
 
   void SetIsRelocated(bool b) { m_relocated = b; }
@@ -273,12 +280,15 @@ public:
   /// return true.
   bool ContainsOnlyDebugInfo() const;
 
+  /// Returns true if this is a global offset table section.
+  bool IsGOTSection() const;
+
 protected:
   ObjectFile *m_obj_file;   // The object file that data for this section should
                             // be read from
   lldb::SectionType m_type; // The type of this section
   lldb::SectionWP m_parent_wp; // Weak pointer to parent section
-  ConstString m_name;          // Name of this section
+  std::string m_name;          // Name of this section
   lldb::addr_t m_file_addr; // The absolute file virtual address range of this
                             // section if m_parent == NULL,
   // offset from parent file virtual address if m_parent != NULL
@@ -295,15 +305,12 @@ protected:
       // children contains an address. This allows for gaps between the
       // children that are contained in the address range for this section, but
       // do not produce hits unless the children contain the address.
-      m_encrypted : 1,         // Set to true if the contents are encrypted
-      m_thread_specific : 1,   // This section is thread specific
-      m_readable : 1,          // If this section has read permissions
-      m_writable : 1,          // If this section has write permissions
-      m_executable : 1,        // If this section has executable permissions
-      m_relocated : 1;         // If this section has had relocations applied
-  uint32_t m_target_byte_size; // Some architectures have non-8-bit byte size.
-                               // This is specified as
-                               // as a multiple number of a host bytes
+      m_encrypted : 1,       // Set to true if the contents are encrypted
+      m_thread_specific : 1, // This section is thread specific
+      m_readable : 1,        // If this section has read permissions
+      m_writable : 1,        // If this section has write permissions
+      m_executable : 1,      // If this section has executable permissions
+      m_relocated : 1;       // If this section has had relocations applied
 private:
   Section(const Section &) = delete;
   const Section &operator=(const Section &) = delete;

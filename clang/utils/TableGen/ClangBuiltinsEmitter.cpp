@@ -11,8 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "TableGenBackends.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
@@ -150,6 +154,57 @@ struct Builtin {
   }
 };
 
+bool isIdentifierChar(char C) { return isAlnum(C) || C == '_'; }
+
+bool endsWithWord(StringRef S, StringRef Word) {
+  return S.ends_with(Word) &&
+         (S.size() == Word.size() ||
+          !isIdentifierChar(S[S.size() - Word.size() - 1]));
+}
+
+bool consumeFrontWord(StringRef &S, StringRef Word) {
+  if (!S.starts_with(Word))
+    return false;
+  if (S.size() > Word.size() && isIdentifierChar(S[Word.size()]))
+    return false;
+  S = S.drop_front(Word.size());
+  return true;
+}
+
+bool consumeBackWord(StringRef &S, StringRef Word) {
+  if (!endsWithWord(S, Word))
+    return false;
+  S = S.drop_back(Word.size());
+  return true;
+}
+
+/// Split a parameter list string into individual parameter type strings,
+/// respecting nested angle brackets (e.g. address_space<4>, _ExtVector<4,
+/// float>).
+SmallVector<StringRef> splitParams(StringRef Params) {
+  SmallVector<StringRef> Result;
+  if (Params.empty())
+    return Result;
+
+  int Depth = 0;
+  size_t Start = 0;
+  for (size_t I = 0, E = Params.size(); I < E; ++I) {
+    if (Params[I] == '<') {
+      ++Depth;
+    } else if (Params[I] == '>') {
+      --Depth;
+    } else if (Params[I] == ',' && Depth == 0) {
+      Result.push_back(Params.substr(Start, I - Start).trim());
+      Start = I + 1;
+    }
+  }
+  // Add the last parameter.
+  StringRef Last = Params.substr(Start).trim();
+  if (!Last.empty())
+    Result.push_back(Last);
+  return Result;
+}
+
 class PrototypeParser {
 public:
   PrototypeParser(StringRef Substitution, const Record *Builtin)
@@ -183,45 +238,9 @@ private:
     Prototype = Prototype.drop_back();
 
     // Look through the input parameters.
-    const size_t end = Prototype.size();
-    for (size_t I = 0; I != end;) {
-      const StringRef Current = Prototype.substr(I, end);
-      // Skip any leading space or commas
-      if (Current.starts_with(" ") || Current.starts_with(",")) {
-        ++I;
-        continue;
-      }
-
-      // Check if we are in _ExtVector. We do this first because
-      // extended vectors are written in template form with the syntax
-      // _ExtVector< ..., ...>, so we need to make sure we are not
-      // detecting the comma of the template class as a separator for
-      // the parameters of the prototype. Note: the assumption is that
-      // we cannot have nested _ExtVector.
-      if (Current.starts_with("_ExtVector<") ||
-          Current.starts_with("_Vector<")) {
-        const size_t EndTemplate = Current.find('>', 0);
-        ParseType(Current.substr(0, EndTemplate + 1));
-        // Move the prototype beyond _ExtVector<...>
-        I += EndTemplate + 1;
-        continue;
-      }
-
-      // We know that we are past _ExtVector, therefore the first seen
-      // comma is the boundary of a parameter in the prototype.
-      if (size_t CommaPos = Current.find(',', 0)) {
-        if (CommaPos != StringRef::npos) {
-          StringRef T = Current.substr(0, CommaPos);
-          ParseType(T);
-          // Move the prototype beyond the comma.
-          I += CommaPos + 1;
-          continue;
-        }
-      }
-
-      // No more commas, parse final parameter.
-      ParseType(Current);
-      I = end;
+    for (StringRef Param : splitParams(Prototype)) {
+      if (!Param.empty())
+        ParseType(Param);
     }
   }
 
@@ -230,44 +249,53 @@ private:
 
     auto ConsumeAddrSpace = [&]() -> std::optional<unsigned> {
       T = T.trim();
-      if (!T.consume_back(">"))
+      if (!T.ends_with(">"))
         return std::nullopt;
 
       auto Open = T.find_last_of('<');
       if (Open == StringRef::npos)
         PrintFatalError(Loc, "Mismatched angle-brackets in type");
 
-      StringRef ArgStr = T.substr(Open + 1);
-      T = T.slice(0, Open);
-      if (!T.consume_back("address_space"))
+      StringRef BeforeOpen = T.slice(0, Open).rtrim();
+      if (!consumeBackWord(BeforeOpen, "address_space")) {
+        if (endsWithWord(BeforeOpen, "_ExtVector") ||
+            endsWithWord(BeforeOpen, "_Vector"))
+          return std::nullopt;
         PrintFatalError(Loc,
                         "Only `address_space<N>` supported as a parameterized "
                         "pointer or reference type qualifier");
+      }
+
+      StringRef ArgStr = T.slice(Open + 1, T.size() - 1);
+      T = BeforeOpen;
 
       unsigned Number = 0;
       if (ArgStr.getAsInteger(10, Number))
         PrintFatalError(
             Loc, "Expected an integer argument to the address_space qualifier");
-      if (Number == 0)
-        PrintFatalError(Loc, "No need for a qualifier for address space `0`");
       return Number;
     };
 
     if (T.consume_back("*")) {
       // Pointers may have an address space qualifier immediately before them.
       std::optional<unsigned> AS = ConsumeAddrSpace();
-      ParseType(T);
+      // Pointers can apply to already parsed types, like vectors.
+      if (!T.empty())
+        ParseType(T);
       Type += "*";
       if (AS)
         Type += std::to_string(*AS);
-    } else if (T.consume_back("const")) {
-      ParseType(T);
+    } else if (consumeBackWord(T, "const")) {
+      if (!T.empty())
+        ParseType(T);
       Type += "C";
-    } else if (T.consume_back("volatile")) {
-      ParseType(T);
+    } else if (consumeBackWord(T, "volatile")) {
+      if (!T.empty())
+        ParseType(T);
       Type += "D";
-    } else if (T.consume_back("restrict")) {
-      ParseType(T);
+    } else if (consumeBackWord(T, "restrict")) {
+      if (!T.empty())
+        ParseType(T);
       Type += "R";
     } else if (T.consume_back("&")) {
       // References may have an address space qualifier immediately before them.
@@ -279,6 +307,14 @@ private:
     } else if (T.consume_back(")")) {
       ParseType(T);
       Type += "&";
+    } else if (consumeFrontWord(T, "const")) {
+      if (!T.empty())
+        ParseType(T);
+      Type += "C";
+    } else if (consumeFrontWord(T, "volatile")) {
+      if (!T.empty())
+        ParseType(T);
+      Type += "D";
     } else if (EnableOpenCLLong && T.consume_front("long long")) {
       Type += "O";
       ParseType(T);
@@ -330,7 +366,12 @@ private:
                                .Case("__builtin_va_list", "a")
                                .Case("__float128", "LLd")
                                .Case("__fp16", "h")
+                               .Case("__hlsl_resource_t", "Qr")
+                               .Case("__amdgpu_buffer_rsrc_t", "Qb")
+                               .Case("__amdgpu_feature_predicate_t", "Qc")
+                               .Case("__amdgpu_texture_t", "Qt")
                                .Case("__int128_t", "LLLi")
+                               .Case("__uint128_t", "ULLLi")
                                .Case("_Float16", "x")
                                .Case("__bf16", "y")
                                .Case("bool", "b")
@@ -341,6 +382,8 @@ private:
                                .Case("float", "f")
                                .Case("id", "G")
                                .Case("int", "i")
+                               .Case("int8_t", "Bi")
+                               .Case("int16_t", "Ti")
                                .Case("int32_t", "Zi")
                                .Case("int64_t", "Wi")
                                .Case("jmp_buf", "J")
@@ -353,9 +396,20 @@ private:
                                .Case("short", "s")
                                .Case("sigjmp_buf", "SJ")
                                .Case("size_t", "z")
+                               .Case("std::meta::info", "r")
                                .Case("ucontext_t", "K")
+                               .Case("uint8_t", "UBi")
+                               .Case("uint16_t", "UTi")
                                .Case("uint32_t", "UZi")
                                .Case("uint64_t", "UWi")
+                               .Case("uint_least8_t", "lUBi")
+                               .Case("uint_least16_t", "lUTi")
+                               .Case("uint_least32_t", "lUZi")
+                               .Case("uint_least64_t", "lUWi")
+                               .Case("int_least8_t", "lBi")
+                               .Case("int_least16_t", "lTi")
+                               .Case("int_least32_t", "lZi")
+                               .Case("int_least64_t", "lWi")
                                .Case("void", "v")
                                .Case("wchar_t", "w")
                                .Case("...", ".")
@@ -391,7 +445,13 @@ std::string renderAttributes(const Record *Builtin, BuiltinType BT) {
     OS << "z";
   }
 
+  SmallVector<const Record *> ArgRanges;
   for (const auto *Attr : Builtin->getValueAsListOfDefs("Attributes")) {
+    if (Attr->isSubClassOf("ArgRange")) {
+      ArgRanges.push_back(Attr);
+      continue;
+    }
+
     OS << Attr->getValueAsString("Mangling");
     if (Attr->isSubClassOf("IndexedAttribute")) {
       OS << ':' << Attr->getValueAsInt("Index") << ':';
@@ -403,6 +463,46 @@ std::string renderAttributes(const Record *Builtin, BuiltinType BT) {
       OS << '>';
     }
   }
+
+  // All argument ranges are encoded together as R<Index:Lower:Upper,...>.
+  if (!ArgRanges.empty()) {
+    StringRef Prototype = Builtin->getValueAsString("Prototype").trim();
+    SmallVector<StringRef> Params;
+    if (size_t Open = Prototype.find('('); Open != StringRef::npos)
+      Params = splitParams(Prototype.drop_front(Open + 1).drop_back());
+
+    OS << "R<";
+    llvm::ListSeparator Sep(",");
+    SmallDenseSet<int64_t> SeenIndices;
+    for (const Record *Range : ArgRanges) {
+      int64_t Index = Range->getValueAsInt("Index");
+      int64_t Lower = Range->getValueAsInt("Lower");
+      int64_t Upper = Range->getValueAsInt("Upper");
+      if (Index < 0 || Index >= static_cast<int64_t>(Params.size()))
+        PrintFatalError(Builtin->getLoc(),
+                        "ArgRange index " + Twine(Index) + " out of bounds");
+
+      if (!Params[Index].starts_with("_Constant"))
+        PrintFatalError(Builtin->getLoc(), "ArgRange argument " + Twine(Index) +
+                                               " must be _Constant");
+
+      if (!isInt<32>(Lower) || !isInt<32>(Upper))
+        PrintFatalError(Builtin->getLoc(),
+                        "ArgRange bounds must fit in a 32-bit int");
+
+      if (!SeenIndices.insert(Index).second)
+        PrintFatalError(Builtin->getLoc(),
+                        "duplicate ArgRange for argument " + Twine(Index));
+
+      if (Lower >= Upper)
+        PrintFatalError(Builtin->getLoc(), "ArgRange range is empty");
+
+      OS << Sep << Index << ':' << Lower << ':' << Upper;
+    }
+
+    OS << '>';
+  }
+
   return Attributes;
 }
 
@@ -590,4 +690,165 @@ void clang::EmitClangBuiltins(const RecordKeeper &Records, raw_ostream &OS) {
 #endif // ATOMIC_BUILTIN
 #undef ATOMIC_BUILTIN
 )c++";
+}
+
+//===----------------------------------------------------------------------===//
+// Builtin documentation emitter
+//===----------------------------------------------------------------------===//
+
+/// Holds the data needed to emit documentation for a single builtin.
+namespace {
+struct BuiltinDocData {
+  const Record *Documentation = nullptr;
+  const Record *BuiltinRecord = nullptr;
+  std::string Heading;
+
+  BuiltinDocData(const Record *D, const Record *B)
+      : Documentation(D), BuiltinRecord(B) {
+    // Use the Heading field if set, otherwise use the builtin's first
+    // spelling.
+    StringRef HeadingStr = D->getValueAsString("Heading");
+    if (HeadingStr.empty()) {
+      std::vector<StringRef> Spellings =
+          B->getValueAsListOfStrings("Spellings");
+      if (!Spellings.empty())
+        Heading = Spellings[0].str();
+      else
+        Heading = B->getName().str();
+    } else {
+      Heading = HeadingStr.str();
+    }
+  }
+};
+} // namespace
+
+static void writeCategoryHeader(const Record *Category, raw_ostream &OS) {
+  StringRef CategoryName = Category->getValueAsString("Name");
+  OS << "\n" << CategoryName << "\n";
+  for (size_t I = 0, E = CategoryName.size(); I < E; ++I)
+    OS << "=";
+  OS << "\n\n";
+
+  StringRef CategoryContent = Category->getValueAsString("Content");
+  if (!CategoryContent.trim().empty())
+    OS << CategoryContent.trim() << "\n\n";
+}
+
+static void writeBuiltinDocumentation(const BuiltinDocData &Doc,
+                                      raw_ostream &OS) {
+  // Write heading with '-' underline (subsection).
+  std::string HeadingText = "``" + Doc.Heading + "``";
+  OS << HeadingText << "\n";
+  for (size_t I = 0, E = HeadingText.size(); I < E; ++I)
+    OS << "-";
+  OS << "\n\n";
+
+  // Write prototype as a code block.
+  StringRef Prototype = Doc.BuiltinRecord->getValueAsString("Prototype");
+  if (!Prototype.empty()) {
+    std::vector<StringRef> Spellings =
+        Doc.BuiltinRecord->getValueAsListOfStrings("Spellings");
+    StringRef Name =
+        Spellings.empty() ? Doc.BuiltinRecord->getName() : Spellings[0];
+
+    // Split prototype into return type and params at the first '('.
+    size_t ParenPos = Prototype.find('(');
+    if (ParenPos != StringRef::npos) {
+      StringRef RetType = Prototype.substr(0, ParenPos).rtrim();
+      StringRef ParamStr =
+          Prototype.substr(ParenPos + 1, Prototype.size() - ParenPos - 2);
+
+      OS << "**Prototype:**\n\n";
+      OS << ".. code-block:: c\n\n";
+      OS << "  " << RetType << " " << Name << "(";
+
+      std::vector<StringRef> ArgNames =
+          Doc.BuiltinRecord->getValueAsListOfStrings("ArgNames");
+      if (!ArgNames.empty()) {
+        SmallVector<StringRef> ParamTypes = splitParams(ParamStr);
+        bool IsVariadic = !ParamTypes.empty() && ParamTypes.back() == "...";
+        size_t NamedParams = ParamTypes.size() - (IsVariadic ? 1 : 0);
+        if (ArgNames.size() != NamedParams)
+          PrintFatalError(Doc.BuiltinRecord->getLoc(),
+                          "number of ArgNames (" + Twine(ArgNames.size()) +
+                              ") does not match number of prototype "
+                              "parameters (" +
+                              Twine(NamedParams) + ")");
+        for (size_t I = 0, E = ParamTypes.size(); I < E; ++I) {
+          if (I > 0)
+            OS << ", ";
+          if (I < NamedParams)
+            OS << ParamTypes[I] << " " << ArgNames[I];
+          else
+            OS << ParamTypes[I];
+        }
+      } else {
+        OS << ParamStr;
+      }
+
+      OS << ")\n\n";
+    }
+  }
+
+  // Write target features if this is a TargetBuiltin with features.
+  if (Doc.BuiltinRecord->isSubClassOf("TargetBuiltin")) {
+    StringRef Features = Doc.BuiltinRecord->getValueAsString("Features");
+    if (!Features.empty())
+      OS << "**Target Features:** " << Features << "\n\n";
+  }
+
+  // Write documentation content.
+  StringRef Content = Doc.Documentation->getValueAsString("Content");
+  OS << Content.trim() << "\n\n\n";
+}
+
+void clang::EmitClangBuiltinDocs(const RecordKeeper &Records, raw_ostream &OS) {
+  // Get the documentation introduction paragraph.
+  const Record *Doc = Records.getDef("GlobalDocumentation");
+  if (!Doc) {
+    PrintFatalError("The GlobalDocumentation top-level definition is missing, "
+                    "no documentation will be generated.");
+  }
+
+  OS << Doc->getValueAsString("Intro") << "\n";
+
+  // Gather documentation from each builtin, grouped by category.
+  llvm::MapVector<const Record *, std::vector<BuiltinDocData>> SplitDocs;
+
+  for (const Record *B : Records.getAllDerivedDefinitions("Builtin")) {
+    for (const Record *D : B->getValueAsListOfDefs("Documentation")) {
+      const Record *Category = D->getValueAsDef("Category");
+      StringRef Cat = Category->getValueAsString("Name");
+      // Skip builtins that are explicitly internal-only.
+      if (Cat == "InternalOnly")
+        continue;
+      SplitDocs[Category].emplace_back(D, B);
+    }
+  }
+
+  // Sort categories alphabetically by name for deterministic output, but
+  // push the "Undocumented" category to the end so that documented sections
+  // always appear first.
+  llvm::sort(SplitDocs, [](const auto &A, const auto &B) {
+    StringRef NameA = A.first->getValueAsString("Name");
+    StringRef NameB = B.first->getValueAsString("Name");
+    bool UndocA = (NameA == "Undocumented");
+    bool UndocB = (NameB == "Undocumented");
+    if (UndocA != UndocB)
+      return UndocB;
+    return NameA < NameB;
+  });
+
+  // Write out each category and its builtins.
+  for (auto &[Category, Docs] : SplitDocs) {
+    writeCategoryHeader(Category, OS);
+
+    // Sort entries alphabetically by heading.
+    llvm::sort(Docs, [](const BuiltinDocData &A, const BuiltinDocData &B) {
+      return A.Heading < B.Heading;
+    });
+
+    for (const BuiltinDocData &D : Docs)
+      writeBuiltinDocumentation(D, OS);
+  }
 }

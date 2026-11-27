@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/SparcFixupKinds.h"
-#include "MCTargetDesc/SparcMCExpr.h"
+#include "MCTargetDesc/SparcMCAsmInfo.h"
 #include "MCTargetDesc/SparcMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -42,7 +42,9 @@ namespace {
 unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
                                             bool IsPCRel) const {
-  switch (Target.getSpecifier()) {
+  auto Kind = Fixup.getKind();
+  auto Spec = Target.getSpecifier();
+  switch (Spec) {
   case ELF::R_SPARC_TLS_GD_HI22:
   case ELF::R_SPARC_TLS_GD_LO10:
   case ELF::R_SPARC_TLS_GD_ADD:
@@ -59,23 +61,36 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case ELF::R_SPARC_TLS_IE_ADD:
   case ELF::R_SPARC_TLS_LE_HIX22:
   case ELF::R_SPARC_TLS_LE_LOX10:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
+  case ELF::R_SPARC_DISP32:
+    if (Kind == FK_Data_4)
+      return ELF::R_SPARC_DISP32;
+    reportError(Fixup.getLoc(), "%" + Sparc::getSpecifierName(Spec) +
+                                    " can only be used in a .word directive");
+    return ELF::R_SPARC_NONE;
+  case ELF::R_SPARC_TLS_DTPOFF32:
+  case ELF::R_SPARC_TLS_DTPOFF64: {
+    bool Is64 = Spec == ELF::R_SPARC_TLS_DTPOFF64;
+    if (Kind != (Is64 ? FK_Data_8 : FK_Data_4)) {
+      reportError(Fixup.getLoc(), "%" + Sparc::getSpecifierName(Spec) +
+                                      " can only be used in a ." +
+                                      (Is64 ? "xword" : "word") + " directive");
+      return ELF::R_SPARC_NONE;
+    }
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
+    return Spec;
+  }
   default:
     break;
   }
 
   // Extract the relocation type from the fixup kind, after applying STT_TLS as
   // needed.
-  unsigned Kind = Fixup.getTargetKind();
   if (mc::isRelocation(Fixup.getKind()))
     return Kind;
-
-  if (const SparcMCExpr *SExpr = dyn_cast<SparcMCExpr>(Fixup.getValue())) {
-    if (SExpr->getSpecifier() == ELF::R_SPARC_DISP32)
-      return ELF::R_SPARC_DISP32;
-  }
 
   if (IsPCRel) {
     switch (Kind) {
@@ -93,7 +108,7 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
   }
 
   // clang-format off
-  switch(Fixup.getTargetKind()) {
+  switch(Fixup.getKind()) {
   default:
     llvm_unreachable("Unimplemented fixup -> relocation");
   case FK_NONE:                  return ELF::R_SPARC_NONE;
@@ -134,6 +149,7 @@ bool SparcELFObjectWriter::needsRelocateWithSymbol(const MCValue &,
     case ELF::R_SPARC_GOTDATA_LOX10:
     case ELF::R_SPARC_GOTDATA_OP_HIX22:
     case ELF::R_SPARC_GOTDATA_OP_LOX10:
+    case ELF::R_SPARC_GOTDATA_OP:
       return true;
   }
 }

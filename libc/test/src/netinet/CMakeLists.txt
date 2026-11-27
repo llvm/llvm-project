@@ -1,0 +1,33 @@
+add_libc_testsuite(libc-netinet-tests)
+
+add_subdirectory(ether)
+add_subdirectory(ip)
+
+add_libc_test(
+  in_test
+  SUITE
+    libc-netinet-tests
+  SRCS
+    in_test.cpp
+  DEPENDS
+    libc.hdr.netinet_in_macros
+    libc.hdr.types.struct_group_req
+    libc.hdr.types.struct_group_source_req
+    libc.hdr.types.struct_in6_addr
+    libc.hdr.types.struct_in6_pktinfo
+    libc.hdr.types.struct_ip_mreq
+    libc.hdr.types.struct_ip_mreq_source
+    libc.hdr.types.struct_ip_mreqn
+    libc.hdr.types.struct_ip_msfilter
+    libc.hdr.types.struct_ip_opts
+    libc.hdr.types.struct_ipv6_mreq
+    libc.hdr.types.struct_sockaddr_in6
+    libc.src.__support.net.byte_order
+    libc.src.netinet.in6addr_any
+    libc.src.netinet.in6addr_loopback
+    libc.src.string.memcmp
+)
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${LIBC_TARGET_OS})
+endif()

@@ -16,8 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include <tuple>
 
-namespace llvm {
-namespace xray {
+namespace llvm::xray {
 
 /// The color helper class it a healper class which allows you to easily get a
 /// color in a gradient. This is used to color-code edges in XRay-Graph tools.
@@ -82,6 +81,6 @@ public:
   // Convert a tuple to a string
   static std::string getColorString(std::tuple<uint8_t, uint8_t, uint8_t> t);
 };
-} // namespace xray
-} // namespace llvm
+} // namespace llvm::xray
+
 #endif

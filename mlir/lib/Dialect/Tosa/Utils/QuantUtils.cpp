@@ -162,10 +162,14 @@ std::pair<Value, Value>
 mlir::tosa::createZPsAsConst(OpBuilder &builder, Value input, Value weight) {
   std::int64_t inputZp, weightZp;
 
-  auto inputEType = getElementTypeOrSelf(input.getType());
-  auto weightEType = getElementTypeOrSelf(weight.getType());
+  Type inputZpType = getElementTypeOrSelf(input.getType());
+  if (isa<BlockScaledType>(inputZpType))
+    inputZpType = builder.getF32Type();
+  Type weightZpType = getElementTypeOrSelf(weight.getType());
+  if (isa<BlockScaledType>(weightZpType))
+    weightZpType = builder.getF32Type();
 
-  if (mlir::isa<FloatType>(inputEType) && mlir::isa<FloatType>(weightEType)) {
+  if (mlir::isa<FloatType>(inputZpType) && mlir::isa<FloatType>(weightZpType)) {
     inputZp = 0;
     weightZp = 0;
   } else {
@@ -178,12 +182,12 @@ mlir::tosa::createZPsAsConst(OpBuilder &builder, Value input, Value weight) {
   }
 
   auto maybeInputZpValue =
-      createZeroPointTensor(builder, input.getLoc(), inputEType, inputZp);
+      createZeroPointTensor(builder, input.getLoc(), inputZpType, inputZp);
   if (!maybeInputZpValue.has_value())
     return {};
 
   auto maybeWeightZpValue =
-      createZeroPointTensor(builder, weight.getLoc(), weightEType, weightZp);
+      createZeroPointTensor(builder, weight.getLoc(), weightZpType, weightZp);
   if (!maybeWeightZpValue.has_value())
     return {};
 
@@ -394,4 +398,17 @@ mlir::tosa::buildQTypeAttrFromMinMax(OpBuilder builder, Type inputDtype,
   return TypeAttr::get(buildQTypeFromMinMax(builder, inputDtype, minAttr,
                                             maxAttr, quantBits, filterQuantDim,
                                             isSigned, narrowRange));
+}
+
+Type mlir::tosa::getStorageElementTypeFromQuantized(
+    quant::QuantizedType quantType) {
+  auto quantEty = quantType.getStorageType();
+  // StorageType doesn't capture the sign information
+  // Explicitly create unsigned type if needed
+  if (!quantType.isSigned()) {
+    quantEty = IntegerType::get(quantEty.getContext(),
+                                quantEty.getIntOrFloatBitWidth(),
+                                IntegerType::Unsigned);
+  }
+  return quantEty;
 }

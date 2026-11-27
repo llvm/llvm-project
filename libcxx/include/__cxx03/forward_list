@@ -572,12 +572,12 @@ void __forward_list_base<_Tp, _Alloc>::clear() _NOEXCEPT {
 
 template <class _Tp, class _Alloc /*= allocator<_Tp>*/>
 class _LIBCPP_TEMPLATE_VIS forward_list : private __forward_list_base<_Tp, _Alloc> {
-  typedef __forward_list_base<_Tp, _Alloc> base;
-  typedef typename base::__node_allocator __node_allocator;
-  typedef typename base::__node_type __node_type;
-  typedef typename base::__node_traits __node_traits;
-  typedef typename base::__node_pointer __node_pointer;
-  typedef typename base::__begin_node_pointer __begin_node_pointer;
+  typedef __forward_list_base<_Tp, _Alloc> __base;
+  typedef typename __base::__node_allocator __node_allocator;
+  typedef typename __base::__node_type __node_type;
+  typedef typename __base::__node_traits __node_traits;
+  typedef typename __base::__node_pointer __node_pointer;
+  typedef typename __base::__begin_node_pointer __begin_node_pointer;
 
 public:
   typedef _Tp value_type;
@@ -598,8 +598,8 @@ public:
   typedef typename allocator_traits<allocator_type>::size_type size_type;
   typedef typename allocator_traits<allocator_type>::difference_type difference_type;
 
-  typedef typename base::iterator iterator;
-  typedef typename base::const_iterator const_iterator;
+  typedef typename __base::iterator iterator;
+  typedef typename __base::const_iterator const_iterator;
   typedef void __remove_return_type;
 
   _LIBCPP_HIDE_FROM_ABI forward_list() {} // = default;
@@ -608,7 +608,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v);
 
   template <__enable_if_t<__is_allocator<_Alloc>::value, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v, const allocator_type& __a) : base(__a) {
+  _LIBCPP_HIDE_FROM_ABI forward_list(size_type __n, const value_type& __v, const allocator_type& __a) : __base(__a) {
     insert_after(cbefore_begin(), __n, __v);
   }
 
@@ -630,35 +630,37 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void assign(size_type __n, const value_type& __v);
 
-  _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const _NOEXCEPT { return allocator_type(base::__alloc()); }
+  _LIBCPP_HIDE_FROM_ABI allocator_type get_allocator() const _NOEXCEPT { return allocator_type(__base::__alloc()); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return iterator(base::__before_begin()->__next_); }
+  _LIBCPP_HIDE_FROM_ABI iterator begin() _NOEXCEPT { return iterator(__base::__before_begin()->__next_); }
   _LIBCPP_HIDE_FROM_ABI const_iterator begin() const _NOEXCEPT {
-    return const_iterator(base::__before_begin()->__next_);
+    return const_iterator(__base::__before_begin()->__next_);
   }
   _LIBCPP_HIDE_FROM_ABI iterator end() _NOEXCEPT { return iterator(nullptr); }
   _LIBCPP_HIDE_FROM_ABI const_iterator end() const _NOEXCEPT { return const_iterator(nullptr); }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator cbegin() const _NOEXCEPT {
-    return const_iterator(base::__before_begin()->__next_);
+    return const_iterator(__base::__before_begin()->__next_);
   }
   _LIBCPP_HIDE_FROM_ABI const_iterator cend() const _NOEXCEPT { return const_iterator(nullptr); }
 
-  _LIBCPP_HIDE_FROM_ABI iterator before_begin() _NOEXCEPT { return iterator(base::__before_begin()); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator before_begin() const _NOEXCEPT { return const_iterator(base::__before_begin()); }
+  _LIBCPP_HIDE_FROM_ABI iterator before_begin() _NOEXCEPT { return iterator(__base::__before_begin()); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator before_begin() const _NOEXCEPT {
+    return const_iterator(__base::__before_begin());
+  }
   _LIBCPP_HIDE_FROM_ABI const_iterator cbefore_begin() const _NOEXCEPT {
-    return const_iterator(base::__before_begin());
+    return const_iterator(__base::__before_begin());
   }
 
   _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool empty() const _NOEXCEPT {
-    return base::__before_begin()->__next_ == nullptr;
+    return __base::__before_begin()->__next_ == nullptr;
   }
   _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
-    return std::min<size_type>(__node_traits::max_size(base::__alloc()), numeric_limits<difference_type>::max());
+    return std::min<size_type>(__node_traits::max_size(__base::__alloc()), numeric_limits<difference_type>::max());
   }
 
-  _LIBCPP_HIDE_FROM_ABI reference front() { return base::__before_begin()->__next_->__get_value(); }
-  _LIBCPP_HIDE_FROM_ABI const_reference front() const { return base::__before_begin()->__next_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI reference front() { return __base::__before_begin()->__next_->__get_value(); }
+  _LIBCPP_HIDE_FROM_ABI const_reference front() const { return __base::__before_begin()->__next_->__get_value(); }
 
   _LIBCPP_HIDE_FROM_ABI void push_front(const value_type& __v);
 
@@ -675,11 +677,11 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __p);
   _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __f, const_iterator __l);
 
-  _LIBCPP_HIDE_FROM_ABI void swap(forward_list& __x) { base::swap(__x); }
+  _LIBCPP_HIDE_FROM_ABI void swap(forward_list& __x) { __base::swap(__x); }
 
   _LIBCPP_HIDE_FROM_ABI void resize(size_type __n);
   _LIBCPP_HIDE_FROM_ABI void resize(size_type __n, const value_type& __v);
-  _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { base::clear(); }
+  _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT { __base::clear(); }
 
   _LIBCPP_HIDE_FROM_ABI void splice_after(const_iterator __p, forward_list&& __x);
   _LIBCPP_HIDE_FROM_ABI void splice_after(const_iterator __p, forward_list&& __x, const_iterator __i);
@@ -716,12 +718,12 @@ private:
 };
 
 template <class _Tp, class _Alloc>
-inline forward_list<_Tp, _Alloc>::forward_list(const allocator_type& __a) : base(__a) {}
+inline forward_list<_Tp, _Alloc>::forward_list(const allocator_type& __a) : __base(__a) {}
 
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(size_type __n) {
   if (__n > 0) {
-    for (__begin_node_pointer __p = base::__before_begin(); __n > 0; --__n, __p = __p->__next_as_begin()) {
+    for (__begin_node_pointer __p = __base::__before_begin(); __n > 0; --__n, __p = __p->__next_as_begin()) {
       __p->__next_ = this->__create_node(/* next = */ nullptr);
     }
   }
@@ -740,26 +742,27 @@ forward_list<_Tp, _Alloc>::forward_list(_InputIterator __f, _InputIterator __l) 
 
 template <class _Tp, class _Alloc>
 template <class _InputIterator, __enable_if_t<__has_input_iterator_category<_InputIterator>::value, int> >
-forward_list<_Tp, _Alloc>::forward_list(_InputIterator __f, _InputIterator __l, const allocator_type& __a) : base(__a) {
+forward_list<_Tp, _Alloc>::forward_list(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
+    : __base(__a) {
   insert_after(cbefore_begin(), __f, __l);
 }
 
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(const forward_list& __x)
-    : base(__node_traits::select_on_container_copy_construction(__x.__alloc())) {
+    : __base(__node_traits::select_on_container_copy_construction(__x.__alloc())) {
   insert_after(cbefore_begin(), __x.begin(), __x.end());
 }
 
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>::forward_list(const forward_list& __x, const __type_identity_t<allocator_type>& __a)
-    : base(__a) {
+    : __base(__a) {
   insert_after(cbefore_begin(), __x.begin(), __x.end());
 }
 
 template <class _Tp, class _Alloc>
 forward_list<_Tp, _Alloc>& forward_list<_Tp, _Alloc>::operator=(const forward_list& __x) {
   if (this != std::addressof(__x)) {
-    base::__copy_assign_alloc(__x);
+    __base::__copy_assign_alloc(__x);
     assign(__x.begin(), __x.end());
   }
   return *this;
@@ -800,13 +803,13 @@ void forward_list<_Tp, _Alloc>::assign(size_type __n, const value_type& __v) {
 
 template <class _Tp, class _Alloc>
 void forward_list<_Tp, _Alloc>::push_front(const value_type& __v) {
-  base::__before_begin()->__next_ = this->__create_node(/* next = */ base::__before_begin()->__next_, __v);
+  __base::__before_begin()->__next_ = this->__create_node(/* next = */ __base::__before_begin()->__next_, __v);
 }
 
 template <class _Tp, class _Alloc>
 void forward_list<_Tp, _Alloc>::pop_front() {
-  __node_pointer __p              = base::__before_begin()->__next_;
-  base::__before_begin()->__next_ = __p->__next_;
+  __node_pointer __p                = __base::__before_begin()->__next_;
+  __base::__before_begin()->__next_ = __p->__next_;
   this->__delete_node(__p);
 }
 
@@ -1082,8 +1085,9 @@ template <class _Tp, class _Alloc>
 template <class _Compare>
 void forward_list<_Tp, _Alloc>::merge(forward_list& __x, _Compare __comp) {
   if (this != std::addressof(__x)) {
-    base::__before_begin()->__next_ = __merge(base::__before_begin()->__next_, __x.__before_begin()->__next_, __comp);
-    __x.__before_begin()->__next_   = nullptr;
+    __base::__before_begin()->__next_ =
+        __merge(__base::__before_begin()->__next_, __x.__before_begin()->__next_, __comp);
+    __x.__before_begin()->__next_ = nullptr;
   }
 }
 
@@ -1127,7 +1131,7 @@ forward_list<_Tp, _Alloc>::__merge(__node_pointer __f1, __node_pointer __f2, _Co
 template <class _Tp, class _Alloc>
 template <class _Compare>
 inline void forward_list<_Tp, _Alloc>::sort(_Compare __comp) {
-  base::__before_begin()->__next_ = __sort(base::__before_begin()->__next_, std::distance(begin(), end()), __comp);
+  __base::__before_begin()->__next_ = __sort(__base::__before_begin()->__next_, std::distance(begin(), end()), __comp);
 }
 
 template <class _Tp, class _Alloc>
@@ -1157,7 +1161,7 @@ forward_list<_Tp, _Alloc>::__sort(__node_pointer __f1, difference_type __sz, _Co
 
 template <class _Tp, class _Alloc>
 void forward_list<_Tp, _Alloc>::reverse() _NOEXCEPT {
-  __node_pointer __p = base::__before_begin()->__next_;
+  __node_pointer __p = __base::__before_begin()->__next_;
   if (__p != nullptr) {
     __node_pointer __f = __p->__next_;
     __p->__next_       = nullptr;
@@ -1167,7 +1171,7 @@ void forward_list<_Tp, _Alloc>::reverse() _NOEXCEPT {
       __p                = __f;
       __f                = __t;
     }
-    base::__before_begin()->__next_ = __p;
+    __base::__before_begin()->__next_ = __p;
   }
 }
 

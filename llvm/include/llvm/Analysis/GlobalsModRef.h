@@ -21,6 +21,7 @@
 #include <list>
 
 namespace llvm {
+struct AnalysisOptions;
 class CallGraph;
 class Function;
 
@@ -31,8 +32,8 @@ class Function;
 class GlobalsAAResult : public AAResultBase {
   class FunctionInfo;
 
+  const AnalysisOptions &Opts;
   const DataLayout &DL;
-  std::function<const TargetLibraryInfo &(Function &F)> GetTLI;
 
   /// The globals that do not have their addresses taken.
   SmallPtrSet<const GlobalValue *, 8> NonAddressTakenGlobals;
@@ -73,9 +74,7 @@ class GlobalsAAResult : public AAResultBase {
   /// could perform to the memory utilization here if this becomes a problem.
   std::list<DeletionCallbackHandle> Handles;
 
-  explicit GlobalsAAResult(
-      const DataLayout &DL,
-      std::function<const TargetLibraryInfo &(Function &F)> GetTLI);
+  explicit GlobalsAAResult(const AnalysisOptions &Opts, const DataLayout &DL);
 
   friend struct RecomputeGlobalsAAPass;
 
@@ -86,10 +85,7 @@ public:
   LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
                            ModuleAnalysisManager::Invalidator &);
 
-  LLVM_ABI static GlobalsAAResult
-  analyzeModule(Module &M,
-                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
-                CallGraph &CG);
+  LLVM_ABI static GlobalsAAResult analyzeModule(Module &M, CallGraph &CG);
 
   //------------------------------------------------
   // Implement the AliasAnalysis API
@@ -138,7 +134,7 @@ public:
   LLVM_ABI GlobalsAAResult run(Module &M, ModuleAnalysisManager &AM);
 };
 
-struct RecomputeGlobalsAAPass : PassInfoMixin<RecomputeGlobalsAAPass> {
+struct RecomputeGlobalsAAPass : OptionalPassInfoMixin<RecomputeGlobalsAAPass> {
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 

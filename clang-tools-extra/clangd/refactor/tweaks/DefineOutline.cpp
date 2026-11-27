@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AST.h"
+#include "FindSymbols.h"
 #include "FindTarget.h"
 #include "HeaderSourceSwitch.h"
 #include "ParsedAST.h"
@@ -22,16 +23,19 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Stmt.h"
+#include "clang/Basic/AttributeCommonInfo.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include <cstddef>
+#include <iterator>
 #include <optional>
 #include <string>
 
@@ -162,6 +166,14 @@ getFunctionSourceAfterReplacements(const FunctionDecl *FD,
     Source.insert(0, "inline ");
   if (!TemplatePrefix.empty())
     Source.insert(0, TemplatePrefix);
+  if (!FD->hasBody() && !FD->isExplicitlyDefaulted()) {
+    Source.pop_back(); // The semicolon finishing the declaration.
+    Source += " {";
+    if (!FD->getReturnType()->isVoidType())
+      Source += " return {}; ";
+    Source += "}";
+  }
+
   return Source;
 }
 
@@ -206,12 +218,166 @@ deleteTokensWithKind(const syntax::TokenBuffer &TokBuf, tok::TokenKind Kind,
   return DelKeywordCleanups;
 }
 
+// Helper function to skip over a matching pair of tokens (e.g., parentheses
+// or braces). Returns an iterator to the matching closing token, or the end
+// iterator if no matching pair is found.
+template <typename Iterator>
+Iterator skipTokenPair(Iterator Begin, Iterator End, tok::TokenKind StartKind,
+                       tok::TokenKind EndKind) {
+  int Count = 0;
+  for (auto It = Begin; It != End; ++It) {
+    if (It->kind() == StartKind) {
+      ++Count;
+    } else if (It->kind() == EndKind) {
+      if (--Count == 0)
+        return It;
+      if (Count < 0)
+        // We encountered a closing token without a matching opening token.
+        return End;
+    }
+  }
+  return End;
+}
+
+// Delete the attributes that should not appear in the generated function
+// definition. Some attributes must be repeated on the definition. If the
+// function has one of those, we leave all attributes alone.
+llvm::Error dropAttributes(const syntax::TokenBuffer &TokBuf,
+                           const FunctionDecl *FD,
+                           tooling::Replacements &DeclarationCleanups) {
+  llvm::Error Errors = llvm::Error::success();
+  if (!FD->hasAttrs())
+    return Errors;
+
+  // Some attributes are part of a function's identity and must be repeated on
+  // the definition so that it still matches the declaration: attributes that
+  // make a function multiversioned (e.g. target, cpu_specific) and attributes
+  // like enable_if and overloadable. Leave all attributes alone in this case.
+  if (FD->isMultiVersion() || FD->hasAttr<EnableIfAttr>() ||
+      FD->hasAttr<OverloadableAttr>()) {
+    return Errors;
+  }
+
+  for (const Attr *A : FD->attrs()) {
+    // Non-inheritable attributes are not inherited by the definition. As one
+    // may share an attribute list with an inheritable attribute, which we would
+    // delete along with the list, we better don't drop anything in this case.
+    if (A->isImplicit() || A->isInherited())
+      continue;
+    if (!isa<InheritableAttr>(A))
+      return Errors;
+  }
+
+  const SourceManager &SM = TokBuf.sourceManager();
+
+  // Do nothing if the function has no body.
+  const Stmt *Body = FD->getBody();
+  if (!Body)
+    return Errors;
+
+  auto FDTokens = TokBuf.spelledForExpanded(
+      TokBuf.expandedTokens({FD->getBeginLoc(), Body->getBeginLoc()}));
+
+  // Drop attributes that the out-of-line definition inherits from the
+  // declaration. Ones we can't safely locate are left alone.
+  // FIXME: Attributes coming from macros and attributes unknown to clang (which
+  // are not part of the AST) are not dropped.
+  for (const Attr *A : FD->attrs()) {
+    // Get the delimiter for the attribute type
+    llvm::SmallVector<tok::TokenKind> LeftDelimiter, RightDelimiter;
+    switch (A->getSyntax()) {
+    case AttributeCommonInfo::AS_GNU:
+      // Delimited by __attribute__(( and ))
+      LeftDelimiter.assign({tok::kw___attribute, tok::l_paren, tok::l_paren});
+      RightDelimiter.assign({tok::r_paren, tok::r_paren});
+      break;
+    case AttributeCommonInfo::AS_CXX11:
+    case AttributeCommonInfo::AS_C23:
+      // Delimited by [[ and ]]
+      LeftDelimiter.assign({tok::l_square, tok::l_square});
+      RightDelimiter.assign({tok::r_square, tok::r_square});
+      break;
+    case AttributeCommonInfo::AS_Declspec:
+      // Delimited by __declspec( and )
+      LeftDelimiter.assign({tok::kw___declspec, tok::l_paren});
+      RightDelimiter.assign({tok::r_paren});
+      break;
+    default:
+      // Keyword (e.g. __forceinline) and Microsoft ([...]) attributes are not
+      // handled, they are still copied to the definition.
+      break;
+    }
+
+    if (LeftDelimiter.empty() || RightDelimiter.empty())
+      continue;
+
+    auto AttrTokens =
+        TokBuf.spelledForExpanded(TokBuf.expandedTokens(A->getRange()));
+
+    if (!FDTokens.has_value() || !AttrTokens.has_value() ||
+        !SM.isPointWithin(A->getLocation(), FDTokens->front().location(),
+                          FDTokens->back().location()))
+      continue;
+
+    CharSourceRange DelRange;
+
+    // Find position of the right delimiter
+    for (auto It = AttrTokens->end(), E = FDTokens->end(); It != E; ++It) {
+      // There might be a further attribute with argument delimited by parens
+      // in the attribute list. The closing paren might be recognized as part
+      // of the attribute delimiter. So skip tokens until the closing paren.
+      if (It->kind() == tok::l_paren) {
+        It = skipTokenPair(It, E, tok::l_paren, tok::r_paren);
+        if (It != E)
+          continue;
+      }
+
+      if (std::distance(It, E) < static_cast<long>(RightDelimiter.size()))
+        // No chance to find the right delimiter. Give up.
+        break;
+
+      llvm::ArrayRef<syntax::Token> Candidate(It, RightDelimiter.size());
+
+      if (llvm::equal(Candidate, RightDelimiter,
+                      [](const auto &Tok, const auto &TokKindDel) {
+                        return Tok.kind() == TokKindDel;
+                      })) {
+        DelRange.setEnd(Candidate.back().endLocation());
+        break;
+      }
+    }
+
+    // Find position of the left delimiter
+    for (auto It = AttrTokens->begin(), E = FDTokens->begin(); It != E; --It) {
+      if (std::distance(E, It) < static_cast<long>(LeftDelimiter.size()))
+        break;
+
+      llvm::ArrayRef<syntax::Token> Candidate(
+          std::prev(It, LeftDelimiter.size()), LeftDelimiter.size());
+
+      if (llvm::equal(Candidate, LeftDelimiter,
+                      [](const auto &Tok, const auto &TokKindDel) {
+                        return Tok.kind() == TokKindDel;
+                      })) {
+        DelRange.setBegin(Candidate.front().location());
+        break;
+      }
+    }
+
+    if (DelRange.isValid()) {
+      if (auto Err =
+              DeclarationCleanups.add(tooling::Replacement(SM, DelRange, "")))
+        Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+    }
+  }
+  return Errors;
+}
+
 // Creates a modified version of function definition that can be inserted at a
 // different location, qualifies return value and function name to achieve that.
 // Contains function signature, except defaulted parameter arguments, body and
 // template parameters if applicable. No need to qualify parameters, as they are
 // looked up in the context containing the function/method.
-// FIXME: Drop attributes in function signature.
 llvm::Expected<std::string>
 getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
                       const syntax::TokenBuffer &TokBuf,
@@ -234,8 +400,13 @@ getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
         if (Ref.Qualifier || Ref.Targets.empty() || Ref.NameLoc.isMacroID())
           return;
         // Only qualify return type and function name.
-        if (Ref.NameLoc != FD->getReturnTypeSourceRange().getBegin() &&
-            Ref.NameLoc != FD->getLocation())
+        if (auto ReturnTypeRange = FD->getReturnTypeSourceRange();
+            Ref.NameLoc != FD->getLocation() &&
+            (ReturnTypeRange.isInvalid() ||
+             SM.isBeforeInTranslationUnit(Ref.NameLoc,
+                                          ReturnTypeRange.getBegin()) ||
+             SM.isBeforeInTranslationUnit(ReturnTypeRange.getEnd(),
+                                          Ref.NameLoc)))
           return;
 
         for (const NamedDecl *ND : Ref.Targets) {
@@ -351,6 +522,11 @@ getFunctionSourceCode(const FunctionDecl *FD, const DeclContext *TargetContext,
       DelKeyword(tok::kw_explicit, {FD->getBeginLoc(), FD->getLocation()});
   }
 
+  // Must come after the keyword deletions above, otherwise keywords such as
+  // `static` are no longer removed (their offsets are shifted by merge()).
+  if (auto Err = dropAttributes(TokBuf, FD, DeclarationCleanups))
+    Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+
   if (Errors)
     return std::move(Errors);
   return getFunctionSourceAfterReplacements(FD, DeclarationCleanups,
@@ -362,11 +538,41 @@ struct InsertionPoint {
   size_t Offset;
 };
 
+enum class RelativeInsertPos { Before, After };
+struct InsertionAnchor {
+  Location Loc;
+  RelativeInsertPos RelInsertPos = RelativeInsertPos::Before;
+};
+
 // Returns the range that should be deleted from declaration, which always
 // contains function body. In addition to that it might contain constructor
 // initializers.
 SourceRange getDeletionRange(const FunctionDecl *FD,
                              const syntax::TokenBuffer &TokBuf) {
+  if (!FD->hasBody()) {
+    if (!FD->isExplicitlyDefaulted())
+      return {};
+
+    auto Tokens = TokBuf.expandedTokens(FD->getSourceRange());
+    for (auto It = std::rbegin(Tokens); It != std::rend(Tokens); ++It) {
+      if (It->kind() == tok::kw_default) {
+        const auto NextIt = std::next(It);
+        if (NextIt == std::rend(Tokens))
+          return {};
+        const auto &ExpandedEquals = *NextIt;
+        if (ExpandedEquals.kind() != tok::equal)
+          return {};
+        auto SpelledEquals =
+            TokBuf.spelledForExpanded(llvm::ArrayRef(ExpandedEquals));
+        if (!SpelledEquals)
+          return {};
+        return {SpelledEquals->front().location(),
+                FD->getDefaultLoc().getLocWithOffset(1)};
+      }
+    }
+    return {};
+  }
+
   auto DeletionRange = FD->getBody()->getSourceRange();
   if (auto *CD = llvm::dyn_cast<CXXConstructorDecl>(FD)) {
     // AST doesn't contain the location for ":" in ctor initializers. Therefore
@@ -424,19 +630,43 @@ public:
     return CodeAction::REFACTOR_KIND;
   }
   std::string title() const override {
-    return "Move function body to out-of-line";
+    if (Source->doesThisDeclarationHaveABody())
+      return "Move function body to out-of-line";
+    return "Create function body out-of-line";
   }
 
   bool prepare(const Selection &Sel) override {
     SameFile = !isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts());
     Source = getSelectedFunction(Sel.ASTSelection.commonAncestor());
 
-    // Bail out if the selection is not a in-line function definition.
-    if (!Source || !Source->doesThisDeclarationHaveABody() ||
-        Source->isOutOfLine())
+    // Bail out if the selection is not a function declaration.
+    if (!Source || Source->isDeleted() || Source->isOutOfLine())
       return false;
 
-    // Bail out if this is a function template specialization, as their
+    // Bail out if a definition exists somewhere else.
+    if (!Source->hasBody() && !Source->isExplicitlyDefaulted()) {
+      // Check AST first.
+      if (Source->getDefinition())
+        return false;
+
+      // Then consult the index.
+      if (Sel.Index) {
+        bool HasDefinition = false;
+
+        // Note: Once other code actions want to start querying the index for
+        // the symbol under the cursor in their prepare() function, this look-up
+        // should get consolidated in some manner (e.g. a cache).
+        Sel.Index->lookup({{getSymbolID(Source)}},
+                          [&HasDefinition](const Symbol &S) {
+                            if (S.Definition)
+                              HasDefinition = true;
+                          });
+        if (HasDefinition)
+          return false;
+      }
+    }
+
+    // Bail out if this is a function template or specialization, as their
     // definitions need to be visible in all including translation units.
     if (Source->getTemplateSpecializationInfo())
       return false;
@@ -489,8 +719,14 @@ public:
 
   Expected<Effect> apply(const Selection &Sel) override {
     const SourceManager &SM = Sel.AST->getSourceManager();
-    auto CCFile = SameFile ? Sel.AST->tuPath().str()
-                           : getSourceFile(Sel.AST->tuPath(), Sel);
+    std::optional<Path> CCFile;
+    auto Anchor = getDefinitionOfAdjacentDecl(Sel);
+    if (Anchor) {
+      CCFile = Anchor->Loc.uri.file();
+    } else {
+      CCFile = SameFile ? Sel.AST->tuPath().str()
+                        : getSourceFile(Sel.AST->tuPath(), Sel);
+    }
     if (!CCFile)
       return error("Couldn't find a suitable implementation file.");
     assert(Sel.FS && "FS Must be set in apply");
@@ -499,32 +735,78 @@ public:
     // doesn't exist?
     if (!Buffer)
       return llvm::errorCodeToError(Buffer.getError());
+
     auto Contents = Buffer->get()->getBuffer();
-    auto InsertionPoint = getInsertionPoint(Contents, Sel);
-    if (!InsertionPoint)
-      return InsertionPoint.takeError();
+    SourceManagerForFile SMFF(*CCFile, Contents);
+
+    std::optional<Position> InsertionPos;
+    if (Anchor) {
+      if (auto P = getInsertionPointFromExistingDefinition(
+              SMFF, **Buffer, Anchor->Loc, Anchor->RelInsertPos, Sel.AST)) {
+        InsertionPos = *P;
+      }
+    }
+
+    std::optional<std::size_t> Offset;
+    const DeclContext *EnclosingNamespace = nullptr;
+    std::string EnclosingNamespaceName;
+
+    if (InsertionPos) {
+      EnclosingNamespaceName = getNamespaceAtPosition(Contents, *InsertionPos,
+                                                      Sel.AST->getLangOpts());
+    } else if (SameFile) {
+      auto P = getInsertionPointInMainFile(Sel.AST);
+      if (!P)
+        return P.takeError();
+      Offset = P->Offset;
+      EnclosingNamespace = P->EnclosingNamespace;
+    } else {
+      auto Region = getEligiblePoints(
+          Contents, Source->getQualifiedNameAsString(), Sel.AST->getLangOpts());
+      assert(!Region.EligiblePoints.empty());
+      EnclosingNamespaceName = Region.EnclosingNamespace;
+      InsertionPos = Region.EligiblePoints.back();
+    }
+
+    if (InsertionPos) {
+      auto O = positionToOffset(Contents, *InsertionPos);
+      if (!O)
+        return O.takeError();
+      Offset = *O;
+      auto TargetContext =
+          findContextForNS(EnclosingNamespaceName, Source->getDeclContext());
+      if (!TargetContext)
+        return error("define outline: couldn't find a context for target");
+      EnclosingNamespace = *TargetContext;
+    }
+
+    assert(Offset);
+    assert(EnclosingNamespace);
 
     auto FuncDef = getFunctionSourceCode(
-        Source, InsertionPoint->EnclosingNamespace, Sel.AST->getTokens(),
+        Source, EnclosingNamespace, Sel.AST->getTokens(),
         Sel.AST->getHeuristicResolver(),
         SameFile && isHeaderFile(Sel.AST->tuPath(), Sel.AST->getLangOpts()));
     if (!FuncDef)
       return FuncDef.takeError();
 
-    SourceManagerForFile SMFF(*CCFile, Contents);
-    const tooling::Replacement InsertFunctionDef(
-        *CCFile, InsertionPoint->Offset, 0, *FuncDef);
+    const tooling::Replacement InsertFunctionDef(*CCFile, *Offset, 0, *FuncDef);
     auto Effect = Effect::mainFileEdit(
         SMFF.get(), tooling::Replacements(InsertFunctionDef));
     if (!Effect)
       return Effect.takeError();
 
-    tooling::Replacements HeaderUpdates(tooling::Replacement(
-        Sel.AST->getSourceManager(),
-        CharSourceRange::getTokenRange(*toHalfOpenFileRange(
-            SM, Sel.AST->getLangOpts(),
-            getDeletionRange(Source, Sel.AST->getTokens()))),
-        ";"));
+    tooling::Replacements HeaderUpdates;
+    auto DeletionRange = getDeletionRange(Source, Sel.AST->getTokens());
+    if (DeletionRange.isValid()) {
+      if (auto Error = HeaderUpdates.add(tooling::Replacement(
+              Sel.AST->getSourceManager(),
+              CharSourceRange::getTokenRange(*toHalfOpenFileRange(
+                  SM, Sel.AST->getLangOpts(), DeletionRange)),
+              ";"))) {
+        return Error;
+      }
+    }
 
     if (Source->isInlineSpecified()) {
       auto DelInline =
@@ -548,59 +830,195 @@ public:
     return std::move(*Effect);
   }
 
-  // Returns the most natural insertion point for \p QualifiedName in \p
-  // Contents. This currently cares about only the namespace proximity, but in
-  // feature it should also try to follow ordering of declarations. For example,
-  // if decls come in order `foo, bar, baz` then this function should return
-  // some point between foo and baz for inserting bar.
-  // FIXME: The selection can be made smarter by looking at the definition
-  // locations for adjacent decls to Source. Unfortunately pseudo parsing in
-  // getEligibleRegions only knows about namespace begin/end events so we
-  // can't match function start/end positions yet.
-  llvm::Expected<InsertionPoint> getInsertionPoint(llvm::StringRef Contents,
-                                                   const Selection &Sel) {
+  std::optional<InsertionAnchor>
+  getDefinitionOfAdjacentDecl(const Selection &Sel) {
+    if (!Sel.Index)
+      return {};
+    std::optional<Location> Anchor;
+    std::string TuURI = URI::createFile(Sel.AST->tuPath()).toString();
+    auto CheckCandidate = [&](Decl *Candidate) {
+      assert(Candidate != Source);
+      if (auto Func = llvm::dyn_cast_or_null<FunctionDecl>(Candidate);
+          !Func || Func->isThisDeclarationADefinition()) {
+        return;
+      }
+      std::optional<Location> CandidateLoc;
+      Sel.Index->lookup({{getSymbolID(Candidate)}}, [&](const Symbol &S) {
+        if (S.Definition) {
+          if (auto Loc = indexToLSPLocation(S.Definition, Sel.AST->tuPath()))
+            CandidateLoc = *Loc;
+          else
+            log("getDefinitionOfAdjacentDecl: {0}", Loc.takeError());
+        }
+      });
+      if (!CandidateLoc)
+        return;
+
+      // If our definition is constrained to the same file, ignore
+      // definitions that are not located there.
+      // If our definition is not constrained to the same file, but
+      // our anchor definition is in the same file, then we also put our
+      // definition there, because that appears to be the user preference.
+      // Exception: If the existing definition is a template, then the
+      // location is likely due to technical necessity rather than preference,
+      // so ignore that definition.
+      bool CandidateSameFile = TuURI == CandidateLoc->uri.uri();
+      if (SameFile && !CandidateSameFile)
+        return;
+      if (!SameFile && CandidateSameFile) {
+        if (Candidate->isTemplateDecl())
+          return;
+        SameFile = true;
+      }
+      Anchor = *CandidateLoc;
+    };
+
+    // Try to find adjacent function declarations.
+    // Determine the closest one by alternatingly going "up" and "down"
+    // from our function in increasing steps.
+    const DeclContext *ParentContext = Source->getParent();
+    const auto SourceIt = llvm::find_if(
+        ParentContext->decls(), [this](const Decl *D) { return D == Source; });
+    if (SourceIt == ParentContext->decls_end())
+      return {};
+    const int Preceding = std::distance(ParentContext->decls_begin(), SourceIt);
+    const int Following =
+        std::distance(SourceIt, ParentContext->decls_end()) - 1;
+    for (int Offset = 1; Offset <= Preceding || Offset <= Following; ++Offset) {
+      if (Offset <= Preceding)
+        CheckCandidate(
+            *std::next(ParentContext->decls_begin(), Preceding - Offset));
+      if (Anchor)
+        return InsertionAnchor{*Anchor, RelativeInsertPos::After};
+      if (Offset <= Following)
+        CheckCandidate(*std::next(SourceIt, Offset));
+      if (Anchor)
+        return InsertionAnchor{*Anchor, RelativeInsertPos::Before};
+    }
+    return {};
+  }
+
+  // We don't know the actual start or end of the definition, only the position
+  // of the name. Therefore, we heuristically try to locate the last token
+  // before or in this function, respectively. Adapt as required by user code.
+  std::optional<Position> getInsertionPointFromExistingDefinition(
+      SourceManagerForFile &SMFF, const llvm::MemoryBuffer &Buffer,
+      const Location &Loc, RelativeInsertPos RelInsertPos, ParsedAST *AST) {
+    auto StartOffset = positionToOffset(Buffer.getBuffer(), Loc.range.start);
+    if (!StartOffset)
+      return {};
+    SourceLocation InsertionLoc;
+    SourceManager &SM = SMFF.get();
+
+    auto InsertBefore = [&] {
+      // Go backwards until we encounter one of the following:
+      //   - An opening brace (of a namespace).
+      //   - A closing brace (of a function definition).
+      //   - A semicolon (of a declaration).
+      // If no such token was found, then the first token in the file starts the
+      // definition.
+      auto Tokens = syntax::tokenize(
+          syntax::FileRange(SM.getMainFileID(), 0, *StartOffset), SM,
+          AST->getLangOpts());
+      if (Tokens.empty())
+        return;
+      for (auto I = std::rbegin(Tokens);
+           InsertionLoc.isInvalid() && I != std::rend(Tokens); ++I) {
+        switch (I->kind()) {
+        case tok::l_brace:
+        case tok::r_brace:
+        case tok::semi:
+          if (I != std::rbegin(Tokens))
+            InsertionLoc = std::prev(I)->location();
+          else
+            InsertionLoc = I->endLocation();
+          break;
+        default:
+          break;
+        }
+      }
+      if (InsertionLoc.isInvalid())
+        InsertionLoc = Tokens.front().location();
+    };
+
+    if (RelInsertPos == RelativeInsertPos::Before) {
+      InsertBefore();
+    } else {
+      // Skip over one top-level pair of parentheses (for the parameter list)
+      // and one pair of curly braces (for the code block), or `= default`.
+      // If that fails, insert before the function instead.
+      auto Tokens =
+          syntax::tokenize(syntax::FileRange(SM.getMainFileID(), *StartOffset,
+                                             Buffer.getBuffer().size()),
+                           SM, AST->getLangOpts());
+      std::optional<syntax::Token> Tok;
+
+      // Skip parameter list (parentheses)
+      auto ClosingParen = skipTokenPair(Tokens.begin(), Tokens.end(),
+                                        tok::l_paren, tok::r_paren);
+      if (ClosingParen != Tokens.end()) {
+        // After the closing paren, check for `= default`
+        auto AfterParams = std::next(ClosingParen);
+        if (AfterParams != Tokens.end() && AfterParams->kind() == tok::equal) {
+          auto NextIt = std::next(AfterParams);
+          if (NextIt != Tokens.end() && NextIt->kind() == tok::kw_default) {
+            // Find the semicolon after `default`.
+            auto SemiIt = std::next(NextIt);
+            if (SemiIt != Tokens.end() && SemiIt->kind() == tok::semi) {
+              Tok = *SemiIt;
+            }
+          }
+        }
+
+        // If not `= default`, skip function body (braces)
+        if (!Tok && AfterParams != Tokens.end()) {
+          auto ClosingBrace = skipTokenPair(AfterParams, Tokens.end(),
+                                            tok::l_brace, tok::r_brace);
+          if (ClosingBrace != Tokens.end()) {
+            Tok = *ClosingBrace;
+          }
+        }
+      }
+
+      if (Tok)
+        InsertionLoc = Tok->endLocation();
+      else
+        InsertBefore();
+    }
+
+    if (!InsertionLoc.isValid())
+      return {};
+    return sourceLocToPosition(SM, InsertionLoc);
+  }
+
+  // Returns the most natural insertion point in this file.
+  // This is a fallback for when we failed to find an existing definition to
+  // place the new one next to. It only considers namespace proximity.
+  llvm::Expected<InsertionPoint> getInsertionPointInMainFile(ParsedAST *AST) {
     // If the definition goes to the same file and there is a namespace,
     // we should (and, in the case of anonymous namespaces, need to)
     // put the definition into the original namespace block.
-    if (SameFile) {
-      auto *Klass = Source->getDeclContext()->getOuterLexicalRecordContext();
-      if (!Klass)
-        return error("moving to same file not supported for free functions");
-      const SourceLocation EndLoc = Klass->getBraceRange().getEnd();
-      const auto &TokBuf = Sel.AST->getTokens();
-      auto Tokens = TokBuf.expandedTokens();
-      auto It = llvm::lower_bound(
-          Tokens, EndLoc, [](const syntax::Token &Tok, SourceLocation EndLoc) {
-            return Tok.location() < EndLoc;
-          });
-      while (It != Tokens.end()) {
-        if (It->kind() != tok::semi) {
-          ++It;
-          continue;
-        }
-        unsigned Offset = Sel.AST->getSourceManager()
-                              .getDecomposedLoc(It->endLocation())
-                              .second;
-        return InsertionPoint{Klass->getEnclosingNamespaceContext(), Offset};
+    auto *Klass = Source->getDeclContext()->getOuterLexicalRecordContext();
+    if (!Klass)
+      return error("moving to same file not supported for free functions");
+    const SourceLocation EndLoc = Klass->getBraceRange().getEnd();
+    const auto &TokBuf = AST->getTokens();
+    auto Tokens = TokBuf.expandedTokens();
+    auto It = llvm::lower_bound(
+        Tokens, EndLoc, [](const syntax::Token &Tok, SourceLocation EndLoc) {
+          return Tok.location() < EndLoc;
+        });
+    while (It != Tokens.end()) {
+      if (It->kind() != tok::semi) {
+        ++It;
+        continue;
       }
-      return error(
-          "failed to determine insertion location: no end of class found");
+      unsigned Offset =
+          AST->getSourceManager().getDecomposedLoc(It->endLocation()).second;
+      return InsertionPoint{Klass->getEnclosingNamespaceContext(), Offset};
     }
-
-    auto Region = getEligiblePoints(
-        Contents, Source->getQualifiedNameAsString(), Sel.AST->getLangOpts());
-
-    assert(!Region.EligiblePoints.empty());
-    auto Offset = positionToOffset(Contents, Region.EligiblePoints.back());
-    if (!Offset)
-      return Offset.takeError();
-
-    auto TargetContext =
-        findContextForNS(Region.EnclosingNamespace, Source->getDeclContext());
-    if (!TargetContext)
-      return error("define outline: couldn't find a context for target");
-
-    return InsertionPoint{*TargetContext, *Offset};
+    return error(
+        "failed to determine insertion location: no end of class found");
   }
 
 private:

@@ -1,4 +1,4 @@
-//===--- NoNamespaceCheck.h - clang-tidy-------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::abseil {
 /// Abseil's compatibility guidelines.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/no-namespace.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/abseil/no-namespace.html
 class NoNamespaceCheck : public ClangTidyCheck {
 public:
   NoNamespaceCheck(StringRef Name, ClangTidyContext *Context)

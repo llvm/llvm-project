@@ -77,7 +77,6 @@ void parseExpectErrorMeta(
 
   Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
       remarks::createRemarkParserFromMeta(remarks::Format::YAML, Buf,
-                                          /*StrTab=*/std::nullopt,
                                           std::move(ExternalFilePrependPath));
   handleAllErrors(MaybeParser.takeError(),
                   [&](const ErrorInfoBase &EIB) { EIB.log(Stream); });
@@ -95,6 +94,40 @@ void parseExpectErrorMeta(
 
 TEST(YAMLRemarks, ParsingEmpty) {
   EXPECT_TRUE(parseExpectError("\n\n", "document root is not of mapping type."));
+}
+
+TEST(YAMLRemarks, Parsing64BitHotness) {
+  for (uint64_t Hotness : {uint64_t(1) << 32, UINT64_MAX}) {
+    std::string Buf = "--- !Passed\nPass: inline\nName: Inlined\n"
+                      "Function: caller\nHotness: " +
+                      std::to_string(Hotness) + "\n";
+    auto Parser = remarks::createRemarkParser(remarks::Format::YAML, Buf);
+    if (!Parser) {
+      ADD_FAILURE() << toString(Parser.takeError());
+      continue;
+    }
+    auto Remark = (*Parser)->next();
+    if (!Remark) {
+      ADD_FAILURE() << toString(Remark.takeError());
+      continue;
+    }
+    ASSERT_TRUE((*Remark)->Hotness);
+    EXPECT_EQ(*(*Remark)->Hotness, Hotness);
+  }
+}
+
+TEST(YAMLRemarks, ParsingHotnessOverflow) {
+  EXPECT_TRUE(parseExpectError(
+      "--- !Passed\nPass: inline\nName: Inlined\nFunction: caller\n"
+      "Hotness: 18446744073709551616\n",
+      "expected a value of integer type."));
+}
+
+TEST(YAMLRemarks, ParsingDebugLocationOverflow) {
+  EXPECT_TRUE(parseExpectError(
+      "--- !Passed\nPass: inline\nName: Inlined\nFunction: caller\n"
+      "DebugLoc: { File: file.c, Line: 4294967296, Column: 1 }\n",
+      "expected a value of integer type."));
 }
 
 TEST(YAMLRemarks, ParsingNotYAML) {
@@ -385,6 +418,27 @@ TEST(YAMLRemarks, ParsingWrongArgs) {
                    "  - DebugLoc: { File: a, Line: 1, Column: 2 }\n"
                    "",
                    "argument key is missing."));
+  // Bad escape in a double-quoted value.
+  EXPECT_TRUE(parseExpectError("\n"
+                               "--- !Missed\n"
+                               "Pass: inline\n"
+                               "Name: NoDefinition\n"
+                               "Function: foo\n"
+                               "Args:\n"
+                               "  - Str: \"a\\qb\"\n"
+                               "",
+                               "Unrecognized escape code"));
+  // Null character in a value.
+  EXPECT_TRUE(
+      parseExpectError("\n"
+                       "--- !Missed\n"
+                       "Pass: inline\n"
+                       "Name: NoDefinition\n"
+                       "Function: foo\n"
+                       "Args:\n"
+                       "  - Str: \"a\\0b\"\n"
+                       "",
+                       "remark strings cannot contain null characters."));
 }
 
 static inline StringRef checkStr(StringRef Str, unsigned ExpectedLen) {
@@ -476,6 +530,75 @@ TEST(YAMLRemarks, Contents) {
   EXPECT_TRUE(errorToBool(std::move(E))); // Check for parsing errors.
 }
 
+TEST(YAMLRemarks, ContentsBlockScalar) {
+  StringRef Buf = "--- !Missed\n"
+                  "Pass: pass\n"
+                  "Name: name\n"
+                  "Function: func\n"
+                  "Args:\n"
+                  "  - String: |\n"
+                  "      abc\n"
+                  "      def\n"
+                  "--- !Missed\n"
+                  "Pass: pass\n"
+                  "Name: name\n"
+                  "Function: func\n"
+                  "Args:\n"
+                  "  - String: |\n"
+                  "      xxxxxxxxxx\n"
+                  "      xxxxxxxxxx\n"
+                  "\n";
+
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
+      remarks::createRemarkParser(remarks::Format::YAML, Buf);
+  EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
+  EXPECT_TRUE(*MaybeParser != nullptr);
+
+  remarks::RemarkParser &Parser = **MaybeParser;
+  Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
+  EXPECT_FALSE(errorToBool(MaybeRemark.takeError()));
+  EXPECT_TRUE(*MaybeRemark != nullptr);
+  // The value must outlive the YAML document it was parsed from.
+  Expected<std::unique_ptr<remarks::Remark>> MaybeNext = Parser.next();
+  EXPECT_FALSE(errorToBool(MaybeNext.takeError()));
+
+  const remarks::Remark &Remark = **MaybeRemark;
+  ASSERT_EQ(Remark.Args.size(), 1U);
+  EXPECT_EQ(checkStr(Remark.Args[0].Val, 8), "abc\ndef\n");
+}
+
+TEST(YAMLRemarks, ContentsQuoted) {
+  StringRef Buf = "--- !Missed\n"
+                  "Pass: pass\n"
+                  "Name: name\n"
+                  "Function: func\n"
+                  "Args:\n"
+                  "  - Single: 'it''s'\n"
+                  "  - Double: \"abc\\ndef\\n\\x01ghi\"\n"
+                  "  - 'INST_@': x\n"
+                  "  - Block: |\n"
+                  "      'abc'\n"
+                  "      def\n"
+                  "\n";
+
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
+      remarks::createRemarkParser(remarks::Format::YAML, Buf);
+  EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
+  EXPECT_TRUE(*MaybeParser != nullptr);
+
+  remarks::RemarkParser &Parser = **MaybeParser;
+  Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
+  EXPECT_FALSE(errorToBool(MaybeRemark.takeError()));
+  EXPECT_TRUE(*MaybeRemark != nullptr);
+
+  const remarks::Remark &Remark = **MaybeRemark;
+  ASSERT_EQ(Remark.Args.size(), 4U);
+  EXPECT_EQ(checkStr(Remark.Args[0].Val, 4), "it's");
+  EXPECT_EQ(checkStr(Remark.Args[1].Val, 12), "abc\ndef\n\x01ghi");
+  EXPECT_EQ(checkStr(Remark.Args[2].Key, 6), "INST_@");
+  EXPECT_EQ(checkStr(Remark.Args[3].Val, 10), "'abc'\ndef\n");
+}
+
 static inline StringRef checkStr(LLVMRemarkStringRef Str,
                                  unsigned ExpectedLen) {
   const char *StrData = LLVMRemarkStringGetData(Str);
@@ -558,124 +681,6 @@ TEST(YAMLRemarks, ContentsCAPI) {
   LLVMRemarkParserDispose(Parser);
 }
 
-TEST(YAMLRemarks, ContentsStrTab) {
-  StringRef Buf = "\n"
-                  "--- !Missed\n"
-                  "Pass: 0\n"
-                  "Name: 1\n"
-                  "DebugLoc: { File: 2, Line: 3, Column: 12 }\n"
-                  "Function: 3\n"
-                  "Hotness: 4\n"
-                  "Args:\n"
-                  "  - Callee: 5\n"
-                  "  - String: 7\n"
-                  "  - Caller: 3\n"
-                  "    DebugLoc: { File: 2, Line: 2, Column: 0 }\n"
-                  "  - String: 8\n"
-                  "\n";
-
-  StringRef StrTabBuf =
-      StringRef("inline\0NoDefinition\0file.c\0foo\0Callee\0bar\0String\0 "
-                "will not be inlined into \0 because its definition is "
-                "unavailable",
-                115);
-
-  remarks::ParsedStringTable StrTab(StrTabBuf);
-  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
-      remarks::createRemarkParser(remarks::Format::YAMLStrTab, Buf,
-                                  std::move(StrTab));
-  EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
-  EXPECT_TRUE(*MaybeParser != nullptr);
-
-  remarks::RemarkParser &Parser = **MaybeParser;
-  Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
-  EXPECT_FALSE(
-      errorToBool(MaybeRemark.takeError())); // Check for parsing errors.
-  EXPECT_TRUE(*MaybeRemark != nullptr);      // At least one remark.
-
-  const remarks::Remark &Remark = **MaybeRemark;
-  EXPECT_EQ(Remark.RemarkType, remarks::Type::Missed);
-  EXPECT_EQ(checkStr(Remark.PassName, 6), "inline");
-  EXPECT_EQ(checkStr(Remark.RemarkName, 12), "NoDefinition");
-  EXPECT_EQ(checkStr(Remark.FunctionName, 3), "foo");
-  EXPECT_TRUE(Remark.Loc);
-  const remarks::RemarkLocation &RL = *Remark.Loc;
-  EXPECT_EQ(checkStr(RL.SourceFilePath, 6), "file.c");
-  EXPECT_EQ(RL.SourceLine, 3U);
-  EXPECT_EQ(RL.SourceColumn, 12U);
-  EXPECT_TRUE(Remark.Hotness);
-  EXPECT_EQ(*Remark.Hotness, 4U);
-  EXPECT_EQ(Remark.Args.size(), 4U);
-
-  unsigned ArgID = 0;
-  for (const remarks::Argument &Arg : Remark.Args) {
-    switch (ArgID) {
-    case 0:
-      EXPECT_EQ(checkStr(Arg.Key, 6), "Callee");
-      EXPECT_EQ(checkStr(Arg.Val, 3), "bar");
-      EXPECT_FALSE(Arg.Loc);
-      break;
-    case 1:
-      EXPECT_EQ(checkStr(Arg.Key, 6), "String");
-      EXPECT_EQ(checkStr(Arg.Val, 26), " will not be inlined into ");
-      EXPECT_FALSE(Arg.Loc);
-      break;
-    case 2: {
-      EXPECT_EQ(checkStr(Arg.Key, 6), "Caller");
-      EXPECT_EQ(checkStr(Arg.Val, 3), "foo");
-      EXPECT_TRUE(Arg.Loc);
-      const remarks::RemarkLocation &RL = *Arg.Loc;
-      EXPECT_EQ(checkStr(RL.SourceFilePath, 6), "file.c");
-      EXPECT_EQ(RL.SourceLine, 2U);
-      EXPECT_EQ(RL.SourceColumn, 0U);
-      break;
-    }
-    case 3:
-      EXPECT_EQ(checkStr(Arg.Key, 6), "String");
-      EXPECT_EQ(checkStr(Arg.Val, 38),
-                " because its definition is unavailable");
-      EXPECT_FALSE(Arg.Loc);
-      break;
-    default:
-      break;
-    }
-    ++ArgID;
-  }
-
-  MaybeRemark = Parser.next();
-  Error E = MaybeRemark.takeError();
-  EXPECT_TRUE(E.isA<remarks::EndOfFileError>());
-  EXPECT_TRUE(errorToBool(std::move(E))); // Check for parsing errors.
-}
-
-TEST(YAMLRemarks, ParsingBadStringTableIndex) {
-  StringRef Buf = "\n"
-                  "--- !Missed\n"
-                  "Pass: 50\n"
-                  "\n";
-
-  StringRef StrTabBuf = StringRef("inline");
-
-  remarks::ParsedStringTable StrTab(StrTabBuf);
-  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
-      remarks::createRemarkParser(remarks::Format::YAMLStrTab, Buf,
-                                  std::move(StrTab));
-  EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
-  EXPECT_TRUE(*MaybeParser != nullptr);
-
-  remarks::RemarkParser &Parser = **MaybeParser;
-  Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
-  EXPECT_FALSE(MaybeRemark); // Expect an error here.
-
-  std::string ErrorStr;
-  raw_string_ostream Stream(ErrorStr);
-  handleAllErrors(MaybeRemark.takeError(),
-                  [&](const ErrorInfoBase &EIB) { EIB.log(Stream); });
-  EXPECT_TRUE(
-      StringRef(Stream.str())
-          .contains("String with index 50 is out of bounds (size = 1)."));
-}
-
 TEST(YAMLRemarks, ParsingGoodMeta) {
   // No metadata should also work.
   parseGoodMeta("--- !Missed\n"
@@ -692,17 +697,6 @@ TEST(YAMLRemarks, ParsingGoodMeta) {
                           "Name: NoDefinition\n"
                           "Function: foo\n",
                           82));
-
-  // Use the string table from the metadata.
-  parseGoodMeta(StringRef("REMARKS\0"
-                          "\0\0\0\0\0\0\0\0"
-                          "\x02\0\0\0\0\0\0\0"
-                          "a\0"
-                          "--- !Missed\n"
-                          "Pass: 0\n"
-                          "Name: 0\n"
-                          "Function: 0\n",
-                          66));
 }
 
 TEST(YAMLRemarks, ParsingBadMeta) {
@@ -727,7 +721,8 @@ TEST(YAMLRemarks, ParsingBadMeta) {
                                  "\0\0\0\0\0\0\0\0"
                                  "\x01\0\0\0\0\0\0\0",
                                  24),
-                       "Expecting string table.", CmpType::Equal);
+                       "String table unsupported for YAML format.",
+                       CmpType::Equal);
 
   parseExpectErrorMeta(StringRef("REMARKS\0"
                                  "\0\0\0\0\0\0\0\0"

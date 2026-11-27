@@ -12,19 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CodeGen/ObjectFilePCHContainerWriter.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
+#include "clang/Options/Options.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
@@ -38,6 +39,7 @@
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -51,6 +53,7 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cstdio>
 
 #ifdef CLANG_HAVE_RLIMITS
@@ -109,9 +112,33 @@ static void ensureSufficientStack() {
 static void ensureSufficientStack() {}
 #endif
 
-/// Print supported cpus of the given target.
-static int PrintSupportedCPUs(std::string TargetStr) {
+/// Print supported cpus (or tuning cpus if Tune is set) of the given target.
+static int PrintSupportedCPUs(std::string TargetStr, bool Tune = false) {
   llvm::Triple Triple(TargetStr);
+
+  // RISC-V has different lists of names for -mcpu/-mtune and RV32/RV64.
+  // FIXME: Migrate other targets by using TargetInfo. This would fix similar
+  // issues like x86-32 vs x86-64.
+  if (Triple.isRISCV()) {
+    llvm::SmallVector<llvm::StringRef, 64> Values;
+    if (Tune)
+      llvm::RISCV::fillValidTuneCPUArchList(Values, Triple.isRISCV64());
+    else
+      llvm::RISCV::fillValidCPUArchList(Values, Triple.isRISCV64());
+
+    llvm::errs() << (Tune ? "Available tuning CPUs for this target:\n\n"
+                          : "Available CPUs for this target:\n\n");
+    for (llvm::StringRef Name : Values)
+      llvm::errs() << "\t" << Name << "\n";
+    llvm::errs() << "\n";
+    if (Tune)
+      llvm::errs() << "Use -mtune to specify the target's tuning processor.\n";
+    else
+      llvm::errs() << "Use -mcpu or -mtune to specify the target's "
+                      "processor.\n";
+    return 0;
+  }
+
   std::string Error;
   const llvm::Target *TheTarget =
       llvm::TargetRegistry::lookupTarget(Triple, Error);
@@ -142,13 +169,13 @@ static int PrintSupportedExtensions(std::string TargetStr) {
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
       TheTarget->createTargetMachine(Triple, "", "", Options, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
-  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::MCSubtargetInfo &MCInfo = TheTargetMachine->getMCSubtargetInfo();
   const llvm::ArrayRef<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getAllProcessorFeatures();
+      MCInfo.getAllProcessorFeatures();
 
   llvm::StringMap<llvm::StringRef> DescMap;
   for (const llvm::SubtargetFeatureKV &feature : Features)
-    DescMap.insert({feature.Key, feature.Desc});
+    DescMap.insert({feature.key(), feature.desc()});
 
   if (MachineTriple.isRISCV())
     llvm::RISCVISAInfo::printSupportedExtensions(DescMap);
@@ -185,23 +212,23 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
       TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
                                      BackendOptions, std::nullopt));
   const llvm::Triple &MachineTriple = TheTargetMachine->getTargetTriple();
-  const llvm::MCSubtargetInfo *MCInfo = TheTargetMachine->getMCSubtargetInfo();
+  const llvm::MCSubtargetInfo &MCInfo = TheTargetMachine->getMCSubtargetInfo();
 
   // Extract the feature names that are enabled for the given target.
   // We do that by capturing the key from the set of SubtargetFeatureKV entries
   // provided by MCSubtargetInfo, which match the '-target-feature' values.
-  const std::vector<llvm::SubtargetFeatureKV> Features =
-    MCInfo->getEnabledProcessorFeatures();
+  const std::vector<const llvm::SubtargetFeatureKV *> Features =
+      MCInfo.getEnabledProcessorFeatures();
   std::set<llvm::StringRef> EnabledFeatureNames;
-  for (const llvm::SubtargetFeatureKV &feature : Features)
-    EnabledFeatureNames.insert(feature.Key);
+  for (const llvm::SubtargetFeatureKV *feature : Features)
+    EnabledFeatureNames.insert(feature->key());
 
   if (MachineTriple.isAArch64())
     llvm::AArch64::printEnabledExtensions(EnabledFeatureNames);
   else if (MachineTriple.isRISCV()) {
     llvm::StringMap<llvm::StringRef> DescMap;
-    for (const llvm::SubtargetFeatureKV &feature : Features)
-      DescMap.insert({feature.Key, feature.Desc});
+    for (const llvm::SubtargetFeatureKV *feature : Features)
+      DescMap.insert({feature->key(), feature->desc()});
     llvm::RISCVISAInfo::printEnabledExtensions(MachineTriple.isArch64Bit(),
                                                EnabledFeatureNames, DescMap);
   } else {
@@ -217,7 +244,7 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
 
   // Register the support for object-file-wrapped Clang modules.
   auto PCHOps = std::make_shared<PCHContainerOperations>();
@@ -249,13 +276,22 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
                                                   std::move(PCHOps));
 
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
+    llvm::TimeTraceCompression Compress =
+        Clang->getFrontendOpts().TimeTraceCompress;
+    if (Compress == llvm::TimeTraceCompression::Infer)
+      Compress = llvm::inferTimeTraceCompressionFromPath(
+          Clang->getFrontendOpts().TimeTracePath);
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
-        Clang->getFrontendOpts().TimeTraceVerbose);
+        Clang->getFrontendOpts().TimeTraceVerbose, Compress);
   }
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
     return PrintSupportedCPUs(Clang->getTargetOpts().Triple);
+
+  // --print-supported-tune-cpus takes priority over the actual compilation.
+  if (Clang->getFrontendOpts().PrintSupportedTuneCPUs)
+    return PrintSupportedCPUs(Clang->getTargetOpts().Triple, /*Tune=*/true);
 
   // --print-supported-extensions takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedExtensions)
@@ -269,61 +305,55 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+        GetResourcesPath(Argv0, MainAddr);
+
+  /// Create the actual file system.
+  auto VFS = [] {
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    return llvm::vfs::getRealFileSystem();
+  }();
+  Clang->createVirtualFileSystem(std::move(VFS), DiagsBuffer);
 
   // Create the actual diagnostics engine.
-  Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
-  if (!Clang->hasDiagnostics())
-    return 1;
+  Clang->createDiagnostics();
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
-  llvm::install_fatal_error_handler(LLVMErrorHandler,
-                                  static_cast<void*>(&Clang->getDiagnostics()));
+  llvm::install_fatal_error_handler(
+      LLVMErrorHandler, static_cast<void *>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
-  if (!Success) {
-    Clang->getDiagnosticClient().finish();
+  if (!Success)
     return 1;
-  }
 
   // Execute the frontend actions.
-  {
-    llvm::TimeTraceScope TimeScope("ExecuteCompiler");
-    bool TimePasses = Clang->getCodeGenOpts().TimePasses;
-    if (TimePasses)
-      Clang->createFrontendTimer();
-    llvm::TimeRegion Timer(TimePasses ? &Clang->getFrontendTimer() : nullptr);
-    Success = ExecuteCompilerInvocation(Clang.get());
-  }
+  Success = ExecuteCompilerInvocation(Clang.get());
 
   // If any timers were active but haven't been destroyed yet, print their
   // results now.  This happens in -disable-free mode.
-  std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
-  if (Clang->getCodeGenOpts().TimePassesJson) {
-    *IOFile << "{\n";
-    llvm::TimerGroup::printAllJSONValues(*IOFile, "");
-    *IOFile << "\n}\n";
-  } else {
-    llvm::TimerGroup::printAll(*IOFile);
+  {
+    // This isn't a formal input or output of the compiler.
+    auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+    std::unique_ptr<raw_ostream> IOFile = llvm::CreateInfoOutputFile();
+    if (Clang->getCodeGenOpts().TimePassesJson) {
+      *IOFile << "{\n";
+      llvm::TimerGroup::printAllJSONValues(*IOFile, "");
+      *IOFile << "\n}\n";
+    } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
+      llvm::TimerGroup::printAll(*IOFile);
+    }
+    llvm::TimerGroup::clearAll();
   }
-  llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
-    // It is possible that the compiler instance doesn't own a file manager here
-    // if we're compiling a module unit. Since the file manager are owned by AST
-    // when we're compiling a module unit. So the file manager may be invalid
-    // here.
-    //
-    // It should be fine to create file manager here since the file system
-    // options are stored in the compiler invocation and we can recreate the VFS
-    // from the compiler invocation.
-    if (!Clang->hasFileManager())
-      Clang->createFileManager(createVFSFromCompilerInvocation(
-          Clang->getInvocation(), Clang->getDiagnostics()));
-
+    llvm::TimeTraceCompression Compress =
+        Clang->getFrontendOpts().TimeTraceCompress;
+    if (Compress == llvm::TimeTraceCompression::Infer)
+      Compress = llvm::inferTimeTraceCompressionFromPath(
+          Clang->getFrontendOpts().TimeTracePath);
+    bool Binary = Compress == llvm::TimeTraceCompression::Zstd;
     if (auto profilerOutput = Clang->createOutputFile(
-            Clang->getFrontendOpts().TimeTracePath, /*Binary=*/false,
+            Clang->getFrontendOpts().TimeTracePath, Binary,
             /*RemoveFileOnSignal=*/false,
             /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);
@@ -340,6 +370,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {
+    // DiagnosticConsumer must be always destroyed.
+    Clang->getDiagnosticClient().~DiagnosticConsumer();
     llvm::BuryPointer(std::move(Clang));
     return !Success;
   }

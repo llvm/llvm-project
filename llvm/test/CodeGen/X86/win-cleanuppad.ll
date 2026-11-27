@@ -98,7 +98,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X86: "?dtor$[[cleanup_inner:[0-9]+]]@?0?nested_cleanup@4HA":
 ; X86: LBB1_[[cleanup_inner]]: # %cleanup.inner{{$}}
 ; X86: pushl %ebp
-; X86: leal    {{.*}}(%ebp), %ecx
+; X86: movl    {{.*}}(%ebp), %ecx
 ; X86: calll   "??1Dtor@@QAE@XZ"
 ; X86: popl %ebp
 ; X86: retl
@@ -106,7 +106,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X86: "?dtor$[[cleanup_outer:[0-9]+]]@?0?nested_cleanup@4HA":
 ; X86: LBB1_[[cleanup_outer]]: # %cleanup.outer{{$}}
 ; X86: pushl %ebp
-; X86: leal    {{.*}}(%ebp), %ecx
+; X86: movl    {{.*}}(%ebp), %ecx
 ; X86: calll   "??1Dtor@@QAE@XZ"
 ; X86: popl %ebp
 ; X86: retl
@@ -191,9 +191,9 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X64-NEXT: .long   1
 ; X64-NEXT: .long   .Ltmp6@IMGREL
 ; X64-NEXT: .long   0
-; X64-NEXT: .long   .Ltmp7@IMGREL+1
+; X64-NEXT: .long   .Ltmp7@IMGREL
 ; X64-NEXT: .long   -1
 
-attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
+attributes #1 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "use-soft-float"="false" }
 attributes #2 = { nounwind }

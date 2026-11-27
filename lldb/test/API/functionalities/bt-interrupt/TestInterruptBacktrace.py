@@ -13,6 +13,7 @@ class TestInterruptingBacktrace(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIf(oslist=["linux"], archs=["arm$"])
+    @skipIfWasm  # the runtime ends the process on a stack exhaustion trap without stopping
     def test_backtrace_interrupt(self):
         """Use RequestInterrupt followed by stack operations
         to ensure correct interrupt behavior for stacks."""

@@ -12,7 +12,9 @@
 include "mlir/Dialect/SMT/IR/SMTDialect.td"
 include "mlir/IR/AttrTypeBase.td"
 
-class SMTTypeDef<string name> : TypeDef<SMTDialect, name> { }
+class SMTTypeDef<string name> : TypeDef<SMTDialect, name> {
+  let cppIncludes = ["mlir/Dialect/SMT/IR/SMTTypes.h"];
+}
 
 def BoolType : SMTTypeDef<"Bool"> {
   let mnemonic = "bool";
@@ -82,10 +84,7 @@ def SMTFuncType : SMTTypeDef<"SMTFunc"> {
     "mlir::Type":$rangeType
   );
 
-  // Note: We are not printing the parentheses when no domain type is present
-  // because the default MLIR parser thinks it is a builtin function type
-  // otherwise.
-  let assemblyFormat = "`<` `(` $domainTypes `)` ` ` $rangeType `>`";
+  let assemblyFormat = "`<` custom<DomainTypes>($domainTypes) $rangeType `>`";
 
   let builders = [
     TypeBuilderWithInferredContext<(ins

@@ -35,7 +35,7 @@
 #define RT_PRETTY_FUNCTION __func__
 #endif
 
-#if defined(RT_DEVICE_COMPILATION)
+#if defined(RT_DEVICE_COMPILATION) || RT_GPU_TARGET
 // Use the pseudo lock and pseudo file unit implementations
 // for the device.
 #define RT_USE_PSEUDO_LOCK 1
@@ -94,8 +94,9 @@ RT_API_ATTRS void CheckConformability(const Descriptor &to, const Descriptor &x,
 template <int KIND> struct StoreIntegerAt {
   RT_API_ATTRS void operator()(const Fortran::runtime::Descriptor &result,
       std::size_t at, std::int64_t value) const {
-    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
-        Fortran::common::TypeCategory::Integer, KIND>>(at) = value;
+    *result.ZeroBasedIndexedElement<
+        Fortran::runtime::CppTypeFor<common::TypeCategory::Integer, KIND>>(at) =
+        value;
   }
 };
 
@@ -103,8 +104,9 @@ template <int KIND> struct StoreIntegerAt {
 template <int KIND> struct StoreFloatingPointAt {
   RT_API_ATTRS void operator()(const Fortran::runtime::Descriptor &result,
       std::size_t at, std::double_t value) const {
-    *result.ZeroBasedIndexedElement<Fortran::runtime::CppTypeFor<
-        Fortran::common::TypeCategory::Real, KIND>>(at) = value;
+    *result.ZeroBasedIndexedElement<
+        Fortran::runtime::CppTypeFor<common::TypeCategory::Real, KIND>>(at) =
+        value;
   }
 };
 
@@ -136,7 +138,7 @@ static inline RT_API_ATTRS std::int64_t GetInt64(
   }
 }
 
-static inline RT_API_ATTRS Fortran::common::optional<std::int64_t> GetInt64Safe(
+static inline RT_API_ATTRS common::optional<std::int64_t> GetInt64Safe(
     const char *p, std::size_t bytes, Terminator &terminator) {
   switch (bytes) {
   case 1:
@@ -154,7 +156,7 @@ static inline RT_API_ATTRS Fortran::common::optional<std::int64_t> GetInt64Safe(
     if (static_cast<Int128>(result) == n) {
       return result;
     }
-    return Fortran::common::nullopt;
+    return common::nullopt;
   }
   default:
     terminator.Crash("GetInt64Safe: no case for %zd bytes", bytes);
@@ -392,8 +394,7 @@ inline RT_API_ATTRS RESULT ApplyLogicalKind(
 }
 
 // Calculate result type of (X op Y) for *, //, DOT_PRODUCT, &c.
-Fortran::common::optional<
-    std::pair<TypeCategory, int>> inline constexpr RT_API_ATTRS
+common::optional<std::pair<TypeCategory, int>> inline constexpr RT_API_ATTRS
 GetResultType(TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
   int maxKind{std::max(xKind, yKind)};
   switch (xCat) {
@@ -467,18 +468,18 @@ GetResultType(TypeCategory xCat, int xKind, TypeCategory yCat, int yKind) {
     if (yCat == TypeCategory::Character) {
       return std::make_pair(TypeCategory::Character, maxKind);
     } else {
-      return Fortran::common::nullopt;
+      return common::nullopt;
     }
   case TypeCategory::Logical:
     if (yCat == TypeCategory::Logical) {
       return std::make_pair(TypeCategory::Logical, maxKind);
     } else {
-      return Fortran::common::nullopt;
+      return common::nullopt;
     }
   default:
     break;
   }
-  return Fortran::common::nullopt;
+  return common::nullopt;
 }
 
 // Accumulate floating-point results in (at least) double precision
@@ -524,6 +525,21 @@ RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous);
 RT_API_ATTRS void ShallowCopy(const Descriptor &to, const Descriptor &from);
 
+// Scans for the first element of 'from' whose bit pattern differs from the
+// corresponding element of 'to', then copies that element and every element
+// after it (one fused pass). Elements before the first difference are
+// bitwise-identical and are not stored to. Used by copy-out so that an
+// unmodifying copy-out performs no stores at all — an original that lives in
+// read-only memory (e.g. a named constant) is never written to unless it was
+// actually modified — while a modifying copy-out never traverses the data
+// more than once nor stores more than the unconditional copy would. The
+// comparison is bitwise, so it is exact when 'from' was originally produced
+// from 'to' by ShallowCopy() (as CopyInAssign() and the copy-in emitted
+// inline by the compiler do): unmodified elements compare equal even for
+// NaNs and padding bytes, which a value comparison would misjudge.
+RT_API_ATTRS void ShallowCopyModifiedSuffix(
+    const Descriptor &to, const Descriptor &from);
+
 // Ensures that a character string is null-terminated, allocating a /p length +1
 // size memory for null-terminator if necessary. Returns the original or a newly
 // allocated null-terminated string (responsibility for deallocation is on the
@@ -559,9 +575,9 @@ RT_API_ATTRS void CopyAndPad(
       to[j] = static_cast<TO>(' ');
     }
   } else if (toChars <= fromChars) {
-    std::memcpy(to, from, toChars * sizeof(TO));
+    runtime::memcpy(to, from, toChars * sizeof(TO));
   } else {
-    std::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
+    runtime::memcpy(to, from, std::min(toChars, fromChars) * sizeof(TO));
     for (std::size_t j{fromChars}; j < toChars; ++j) {
       to[j] = static_cast<TO>(' ');
     }

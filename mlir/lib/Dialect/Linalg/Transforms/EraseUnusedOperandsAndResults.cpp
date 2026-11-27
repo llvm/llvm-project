@@ -40,9 +40,11 @@ static bool isResultValueDead(linalg::GenericOp genericOp, OpResult result) {
   if (!argUserOp->use_empty())
     return false;
 
-  // Check that argUser is a yield.
+  // Check that argUser is this op's own terminator. A nested op's
+  // `linalg.yield` also matches, but leaves the argument live inside that
+  // region.
   auto yieldOp = dyn_cast<linalg::YieldOp>(argUserOp);
-  if (!yieldOp)
+  if (!yieldOp || yieldOp != genericOp.getBody()->getTerminator())
     return false;
 
   // Check outArg data is not being used by other outArgs.
@@ -200,10 +202,10 @@ static void populateOpPayload(
   SmallVector<OpOperand *> newInputOperands = newOp.getDpsInputOperands();
   updateReplacements(origInputOperands, newInputOperands, origInsToNewInsPos);
 
-  SmallVector<OpOperand *> origOutputOperands = llvm::to_vector(llvm::map_range(
-      genericOp.getDpsInitsMutable(), [](OpOperand &o) { return &o; }));
-  SmallVector<OpOperand *> newOutputOperands = llvm::to_vector(llvm::map_range(
-      newOp.getDpsInitsMutable(), [](OpOperand &o) { return &o; }));
+  SmallVector<OpOperand *> origOutputOperands =
+      llvm::to_vector(llvm::make_pointer_range(genericOp.getDpsInitsMutable()));
+  SmallVector<OpOperand *> newOutputOperands =
+      llvm::to_vector(llvm::make_pointer_range(newOp.getDpsInitsMutable()));
   updateReplacements(origOutputOperands, newOutputOperands,
                      origOutsToNewOutsPos);
 
@@ -259,8 +261,8 @@ mlir::linalg::deduplicateOperandsAndRemoveDeadResults(
   for (Value v : newOutputOperands)
     if (isa<TensorType>(v.getType()))
       newResultTypes.push_back(v.getType());
-  auto newOp = rewriter.create<GenericOp>(
-      loc, newResultTypes, newInputOperands, newOutputOperands,
+  auto newOp = GenericOp::create(
+      rewriter, loc, newResultTypes, newInputOperands, newOutputOperands,
       rewriter.getAffineMapArrayAttr(newIndexingMaps),
       genericOp.getIteratorTypes(), genericOp.getDocAttr(),
       genericOp.getLibraryCallAttr(),
@@ -269,9 +271,9 @@ mlir::linalg::deduplicateOperandsAndRemoveDeadResults(
       });
   // Copy over unknown attributes. They might be load bearing for some flow.
   ArrayRef<StringRef> odsAttrs = genericOp.getAttributeNames();
-  for (NamedAttribute kv : genericOp->getAttrs())
+  for (NamedAttribute kv : genericOp->getDiscardableAttrDictionary())
     if (!llvm::is_contained(odsAttrs, kv.getName().getValue()))
-      newOp->setAttr(kv.getName(), kv.getValue());
+      newOp->setDiscardableAttr(kv.getName(), kv.getValue());
 
   // Fix up the payload of the canonicalized operation.
   populateOpPayload(genericOp, newOp, origInsToNewInsPos, origOutsToNewOutsPos,

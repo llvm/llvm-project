@@ -18,10 +18,15 @@ include "mlir/IR/OpBase.td"
 def Vector_Dialect : Dialect {
   let name = "vector";
   let cppNamespace = "::mlir::vector";
+  let useDefaultOperationRegistration = 1;
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
   let hasConstantMaterializer = 1;
-  let dependentDialects = ["arith::ArithDialect"];
+  let hasCanonicalizer = 1;
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "ub::UBDialect"
+  ];
 }
 
 // Base class for Vector dialect ops.

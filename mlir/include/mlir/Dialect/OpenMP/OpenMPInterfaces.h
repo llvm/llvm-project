@@ -13,9 +13,9 @@
 #ifndef MLIR_DIALECT_OPENMP_OPENMPINTERFACES_H_
 #define MLIR_DIALECT_OPENMP_OPENMPINTERFACES_H_
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
+#include "mlir/Dialect/OpenMP/OpenMPOpsEnums.h"
 #include "mlir/IR/Dialect.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"

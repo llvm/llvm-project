@@ -1,5 +1,5 @@
 # RUN: llc %s -o - -experimental-debug-variable-locations \
-# RUN:     -run-pass=livedebugvalues  | \
+# RUN:     -run-pass=live-debug-values  | \
 # RUN: FileCheck %s --implicit-check-not=DBG_VALUE
 #
 # Test that spills of live values to the stack are tracked by LiveDebugValues.
@@ -177,7 +177,6 @@
 ---
 name:            _ZNSt5dequeIPN4llvm4LoopESaIS2_EE13_M_insert_auxESt15_Deque_iteratorIS2_RS2_PS2_EmRKS2_
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 liveins:
   - { reg: '$rdi' }

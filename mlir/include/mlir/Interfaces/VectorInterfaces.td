@@ -20,16 +20,24 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
     Encodes properties of an operation on vectors that can be unrolled.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/VectorInterfaces.h"];
 
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
-        Return the shape ratio of unrolling to the target vector shape
-        `targetShape`. Return `std::nullopt` if the op cannot be unrolled to the
-        target vector shape.
+        Return the shape of the iteration space to unroll.
+
+        For most vector operations, this is identical to the result shape.
+        For operations such as vector.contract, it also includes reduction
+        dimensions that are absent from the result shape, so unrolling accounts
+        for all iteration dimensions.
+
+        For operations that support both vector and scalar operands, return
+        the iteration shape when operating on vectors, or std::nullopt when
+        operating on scalars to indicate that there is nothing to unroll.
       }],
       /*retTy=*/"::std::optional<::llvm::SmallVector<int64_t, 4>>",
-      /*methodName=*/"getShapeForUnroll",
+      /*methodName=*/"getIterationShapeToUnroll",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -41,6 +49,47 @@ def VectorUnrollOpInterface : OpInterface<"VectorUnrollOpInterface"> {
         ::llvm::SmallVector<int64_t, 4> res(
             vt.getShape().begin(), vt.getShape().end());
         return res;
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return a default target shape for unrolling, or std::nullopt if no
+        default is available.
+
+        This hook provides a fallback when the caller does not specify a target
+        shape. It is intended primarily for testing. Default shapes should have
+        nonzero rank and be representative of a target supported in-tree.
+
+        No default shape is optimal for every target. Callers should provide
+        an explicit target shape when performance matters.
+      }],
+      /*retTy=*/"::std::optional<::llvm::SmallVector<int64_t>>",
+      /*methodName=*/"getDefaultUnrollTargetShape",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        // We use this default implementation for elementwise Ops.
+        return SmallVector<int64_t>{2, 2};
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+          Returns the dimension indices in the order used for vector unrolling.
+
+          By default, dimensions are ordered from the outermost (slowest-varying)
+          to the innermost (fastest-varying), i.e. [0, 1, ..., rank - 1].
+          Setting `reverseOrder` to `true` reverses this order.
+      }],
+      /*retTy=*/"::llvm::SmallVector<int64_t>",
+      /*methodName=*/"getUnrollOrder",
+      /*args=*/(ins "bool":$reverseOrder),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        int64_t numLoops = $_op.getIterationShapeToUnroll().value().size();
+        auto order = llvm::seq<int64_t>(0, numLoops);
+        if (reverseOrder)
+          return llvm::to_vector(llvm::reverse(order));
+        return llvm::to_vector(order);
       }]
     >,
   ];
@@ -74,6 +123,7 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     transfer (see `getPermutationMap`).
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/VectorInterfaces.h"];
 
   let methods = [
     InterfaceMethod<
@@ -135,7 +185,10 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     InterfaceMethod<
       /*desc=*/[{
         Return the indices that specify the starting offsets into the source
-        operand. The starting offsets are guaranteed to be in-bounds.
+        operand. The starting offsets are guaranteed to be in-bounds except
+        when the transfer operation is masked or the `in_bounds` array doesn't
+        specify that that dimension is not necessarily in bounds. It is undefinied
+        behavior if these guarantees are violated.
       }],
       /*retTy=*/"::mlir::OperandRange",
       /*methodName=*/"getIndices",
@@ -174,6 +227,66 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*retTy=*/"Value",
       /*methodName=*/"getMask",
       /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns whether replacing the base operand with a shaped value of
+        `newBaseType` and updating the permutation map according to
+        `newPermutationMap`, where the replacement would adhere to the
+        conditions specified by `updateStartingPosition`, passes any additional
+        op-specific constraints.
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"mayUpdateStartingPosition",
+      /*args=*/(ins "::mlir::ShapedType":$newBaseType,
+        "::mlir::AffineMap":$newPermutationMap),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::success();
+      }]
+    >,
+    // Note: The initial motivating factor for adding this interface method is to
+    // enable folding operations like `memref.subview` with transfer ops in a
+    // generic way. If future usecases require extending this method, it should be
+    // done.
+    InterfaceMethod<
+      /*desc=*/[{
+        Updates the base of this transfer operation to `newBase`, the indices into
+        that base into `newIndices`, and the permutation map to `newPermutationMap`.
+        The new base, indices, and map must:
+        - Keep the same element type as the base (this condition could be relaxed
+          in the future)
+        - Preserve the number of transfer dimensions and avoid inserting new
+          dimensions unaccounted for in the permutation map - that is, if the transfer operation is
+          reading or writing a 4x2 vector to/from an Nx4x2 tensor or memref, it is
+          not valid to update that base to an Nx8 one, but updating in an N0xN1x4x2
+          base - or even an Nx16x32 one - is acceptable. Similarly, if the transfer
+          rank is 2 and the base is MxN, replacing it with a base that is Mx1xN or
+          MxKxN is only permitted if the permutation map is updated to skip the new
+          dimension. This restriction means that the updater does not need to reshape
+          or otherwise adjust the vector type of the transfer or other related attributes
+          like the inbounds attribute array.
+        - Must not shrink the size of a transfer dimension such that an `inbounds`
+          annotation becomes incorrect.
+        - Must pass any op-specific conditions in `mayUpdateStartingPosition`
+
+        The update is performed in-place. Implementations of the interface
+        should use `RewriterBase::modifyOpInPlace` to ensure proper pattern
+        rewriter operation.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"updateStartingPosition",
+      /*args=*/(ins "::mlir::RewriterBase&":$rewriter, "::mlir::Value":$newBase,
+      "::mlir::ValueRange":$newIndices,
+        "::mlir::AffineMapAttr":$newPermutationMap),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        rewriter.modifyOpInPlace($_op, [&]() {
+          $_op.getBaseMutable().assign(newBase);
+          $_op.getIndicesMutable().assign(newIndices);
+          $_op.setPermutationMapAttr(newPermutationMap);
+        });
+      }]
     >
   ];
 
@@ -185,12 +298,6 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       for (int64_t i = 0, e = $_op.getTransferRank(); i < e; ++i)
         inBounds.push_back($_op.isDimInBounds(i));
       return inBounds;
-    }
-
-    /// Wrapper for getBase, which replaced getSource.
-    [[deprecated("Use getBase instead!")]]
-    ::mlir::Value getSource() {
-        return $_op.getBase();
     }
 
     /// Return the number of leading shaped dimensions (of the "source" operand)

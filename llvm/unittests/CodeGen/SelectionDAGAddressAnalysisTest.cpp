@@ -7,98 +7,63 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
+#include "SelectionDAGTestBase.h"
 #include "llvm/Analysis/MemoryLocation.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
-#include "llvm/AsmParser/Parser.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Target/TargetMachine.h"
-#include "gtest/gtest.h"
 
 namespace llvm {
 
-class SelectionDAGAddressAnalysisTest : public testing::Test {
-protected:
-  static void SetUpTestCase() {
-    InitializeAllTargets();
-    InitializeAllTargetMCs();
-  }
+class SelectionDAGAddressAnalysisTest : public SelectionDAGTestBase {};
 
-  void SetUp() override {
-    StringRef Assembly = "@g = global i32 0\n"
-                         "@g_alias = alias i32, i32* @g\n"
-                         "define i32 @f() {\n"
-                         "  %1 = load i32, i32* @g\n"
-                         "  ret i32 %1\n"
-                         "}";
+TEST_F(SelectionDAGAddressAnalysisTest, scalableOffsets) {
+  SDLoc Loc;
+  EVT VT = MVT::nxv4i32;
+  SDValue Base = DAG->getRegister(1, MVT::i64);
+  auto AddOffset = [&](SDValue Ptr, uint64_t Bytes, bool Scalable) {
+    return DAG->getMemBasePlusOffset(Ptr, TypeSize::get(Bytes, Scalable), Loc);
+  };
+  auto Match = [&](SDValue Ptr) {
+    SDValue Load = DAG->getLoad(VT, Loc, DAG->getEntryNode(), Ptr,
+                                MachinePointerInfo(), Align(4));
+    return BaseIndexOffset::match(Load.getNode(), *DAG);
+  };
 
-    Triple TargetTriple("aarch64--");
-    std::string Error;
-    const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
-    // FIXME: These tests do not depend on AArch64 specifically, but we have to
-    // initialize a target. A skeleton Target for unittests would allow us to
-    // always run these tests.
-    if (!T)
-      GTEST_SKIP();
+  // Compare nested offsets with different fixed and scalable components.
+  SDValue Ptr0 = AddOffset(AddOffset(Base, 32, true), 8, false);
+  SDValue Ptr1 = AddOffset(AddOffset(Ptr0, 16, true), 4, false);
+  auto Base0 = Match(Ptr0);
+  auto Base1 = Match(Ptr1);
+  EXPECT_FALSE(Base0.hasValidOffset());
+  EXPECT_TRUE(Base0.hasValidStackOffset());
+  EXPECT_FALSE(Base1.hasValidOffset());
+  EXPECT_TRUE(Base1.hasValidStackOffset());
+  StackOffset Diff;
+  ASSERT_TRUE(Base0.equalBaseIndex(Base1, *DAG, Diff));
+  EXPECT_EQ(Diff, StackOffset::get(4, 16));
+  ASSERT_TRUE(Base1.equalBaseIndex(Base0, *DAG, Diff));
+  EXPECT_EQ(Diff, StackOffset::get(-4, -16));
 
-    TargetOptions Options;
-    TM = std::unique_ptr<TargetMachine>(
-        T->createTargetMachine(TargetTriple, "", "+sve", Options, std::nullopt,
-                               std::nullopt, CodeGenOptLevel::Aggressive));
-    if (!TM)
-      GTEST_SKIP();
+  // The fixed-offset interface must not discard the scalable difference.
+  int64_t FixedDiff;
+  EXPECT_FALSE(Base0.equalBaseIndex(Base1, *DAG, FixedDiff));
 
-    SMDiagnostic SMError;
-    M = parseAssemblyString(Assembly, SMError, Context);
-    if (!M)
-      report_fatal_error(SMError.getMessage());
-    M->setDataLayout(TM->createDataLayout());
+  // Reassociation must not affect the result. Equal scalable components
+  // cancel, leaving a difference that the fixed-offset interface can use.
+  SDValue Ptr2 = AddOffset(AddOffset(Base, 48, true), 12, false);
+  EXPECT_TRUE(Base1.equalBaseIndex(Match(Ptr2), *DAG, FixedDiff));
+  EXPECT_EQ(FixedDiff, 0);
+  EXPECT_TRUE(
+      Base1.equalBaseIndex(Match(AddOffset(Ptr2, 4, false)), *DAG, FixedDiff));
+  EXPECT_EQ(FixedDiff, 4);
 
-    F = M->getFunction("f");
-    if (!F)
-      report_fatal_error("F?");
-    G = M->getGlobalVariable("g");
-    if (!G)
-      report_fatal_error("G?");
-    AliasedG = M->getNamedAlias("g_alias");
-    if (!AliasedG)
-      report_fatal_error("AliasedG?");
+  auto FixedBase = Match(AddOffset(Base, 8, false));
+  EXPECT_TRUE(FixedBase.hasValidOffset());
+  EXPECT_TRUE(FixedBase.hasValidStackOffset());
+  EXPECT_EQ(FixedBase.getOffset(), 8);
 
-    MachineModuleInfo MMI(TM.get());
-
-    MF = std::make_unique<MachineFunction>(*F, *TM, *TM->getSubtargetImpl(*F),
-                                           MMI.getContext(), 0);
-
-    DAG = std::make_unique<SelectionDAG>(*TM, CodeGenOptLevel::None);
-    if (!DAG)
-      report_fatal_error("DAG?");
-    OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, nullptr, nullptr, nullptr, nullptr, nullptr, MMI,
-              nullptr);
-  }
-
-  TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
-    return DAG->getTargetLoweringInfo().getTypeAction(Context, VT);
-  }
-
-  EVT getTypeToTransformTo(EVT VT) {
-    return DAG->getTargetLoweringInfo().getTypeToTransformTo(Context, VT);
-  }
-
-  LLVMContext Context;
-  std::unique_ptr<TargetMachine> TM;
-  std::unique_ptr<Module> M;
-  Function *F;
-  GlobalVariable *G;
-  GlobalAlias *AliasedG;
-  std::unique_ptr<MachineFunction> MF;
-  std::unique_ptr<SelectionDAG> DAG;
-};
+  SDValue OtherBase = DAG->getRegister(2, MVT::i64);
+  EXPECT_FALSE(
+      Base0.equalBaseIndex(Match(AddOffset(OtherBase, 48, true)), *DAG, Diff));
+}
 
 TEST_F(SelectionDAGAddressAnalysisTest, sameFrameObject) {
   SDLoc Loc;

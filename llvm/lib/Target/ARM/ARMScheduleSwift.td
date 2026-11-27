@@ -46,6 +46,8 @@ def SwiftModel : SchedMachineModel {
 
   // FIXME: Remove when all errors have been fixed.
   let FullInstRWOverlapCheck = 0;
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 // Swift predicates.
@@ -1081,9 +1083,6 @@ let SchedModel = SwiftModel in {
   def : WriteRes<WriteVST2, []>;
   def : WriteRes<WriteVST3, []>;
   def : WriteRes<WriteVST4, []>;
-
-  // Not specified.
-  def : InstRW<[SwiftWriteP01OneCycle2x], (instregex "ABS")>;
   // Preload.
   def : WriteRes<WritePreLd, [SwiftUnitP2]> { let Latency = 0;
     let ReleaseAtCycles = [0];

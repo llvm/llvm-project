@@ -43,6 +43,7 @@ template <class T, size_t N> class PODSmallVector {
                 "T is required to be a trivially copyable type");
   static_assert(std::is_trivially_default_constructible<T>::value,
                 "T is required to be trivially default constructible");
+  static_assert(N > 0, "PODSmallVector requires a non-zero inline capacity");
   T *First = nullptr;
   T *Last = nullptr;
   T *Cap = nullptr;
@@ -1366,7 +1367,7 @@ public:
   template <typename Fn> void match(Fn F) const { F(Name, Params, Requires); }
 
   void printLeft(OutputBuffer &OB) const override {
-    ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
+    ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
     OB += "template<";
     Params.printWithComma(OB);
     OB += "> typename ";
@@ -1537,6 +1538,27 @@ public:
   }
 };
 
+class PackIndexing final : public Node {
+  const Node *Pattern;
+  const Node *Index;
+
+public:
+  PackIndexing(const Node *Pattern_, const Node *Index_)
+      : Node(KPackIndexing), Pattern(Pattern_), Index(Index_) {}
+
+  template <typename Fn> void match(Fn F) const { F(Pattern, Index); }
+
+  void printLeft(OutputBuffer &OB) const override {
+    OB.printOpen('(');
+    ParameterPackExpansion PPE(Pattern);
+    PPE.printLeft(OB);
+    OB.printClose(')');
+    OB.printOpen('[');
+    OB.printLeft(*Index);
+    OB.printClose(']');
+  }
+};
+
 class TemplateArgs final : public Node {
   NodeArray Params;
   Node *Requires;
@@ -1550,7 +1572,7 @@ public:
   NodeArray getParams() { return Params; }
 
   void printLeft(OutputBuffer &OB) const override {
-    ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
+    ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
     OB += "<";
     Params.printWithComma(OB);
     OB += ">";
@@ -1824,7 +1846,7 @@ public:
 
   void printDeclarator(OutputBuffer &OB) const {
     if (!TemplateParams.empty()) {
-      ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
+      ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
       OB += "<";
       TemplateParams.printWithComma(OB);
       OB += ">";
@@ -1885,7 +1907,9 @@ public:
   }
 
   void printLeft(OutputBuffer &OB) const override {
-    bool ParenAll = OB.isGtInsideTemplateArgs() &&
+    // If we're printing a '<' inside of a template argument, and we haven't
+    // yet parenthesized the expression, do so now.
+    bool ParenAll = !OB.isInParensInTemplateArgs() &&
                     (InfixOperator == ">" || InfixOperator == ">>");
     if (ParenAll)
       OB.printOpen();
@@ -2061,9 +2085,9 @@ public:
   void printLeft(OutputBuffer &OB) const override {
     OB += CastKind;
     {
-      ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
+      ScopedOverride<bool> LT(OB.TemplateTracker.InsideTemplate, true);
       OB += "<";
-      OB.printLeft(*To);
+      To->print(OB);
       OB += ">";
     }
     OB.printOpen();
@@ -2835,8 +2859,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
     ParsingLambdaParamsAtLevel = (size_t)-1;
     TryToParseTemplateArgs = true;
     PermitForwardTemplateReferences = false;
-    for (int I = 0; I != 3; ++I)
-      NumSyntheticTemplateParameters[I] = 0;
+    for (unsigned int & NumSyntheticTemplateParameter : NumSyntheticTemplateParameters)
+      NumSyntheticTemplateParameter = 0;
     ASTAllocator.reset();
   }
 
@@ -3049,7 +3073,8 @@ template <typename Derived, typename Alloc> struct AbstractManglingParser {
   Node *parse(bool ParseParams = true);
 };
 
-const char* parse_discriminator(const char* first, const char* last);
+DEMANGLE_ABI const char *parse_discriminator(const char *first,
+                                             const char *last);
 
 // <name> ::= <nested-name> // N
 //        ::= <local-name> # See Scope Encoding below  // Z
@@ -4468,7 +4493,9 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
         return nullptr;
       if (!consumeIf('_'))
         return nullptr;
-      return make<BitIntType>(Size, Signed);
+      // The front end expects this to be available for Substitution
+      Result = make<BitIntType>(Size, Signed);
+      break;
     }
     //                ::= Di   # char32_t
     case 'i':
@@ -4524,6 +4551,18 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
       if (!Child)
         return nullptr;
       Result = make<ParameterPackExpansion>(Child);
+      break;
+    }
+    //           ::= Dy <type> <expression> # pack indexing (C++26)
+    case 'y': {
+      First += 2;
+      Node *Pattern = getDerived().parseType();
+      if (!Pattern)
+        return nullptr;
+      Node *Index = getDerived().parseExpr();
+      if (!Index)
+        return nullptr;
+      Result = make<PackIndexing>(Pattern, Index);
       break;
     }
     // Exception specifier on a function type.
@@ -4875,10 +4914,6 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
       return make<StringLiteral>(T);
     return nullptr;
   }
-  case 'D':
-    if (consumeIf("Dn") && (consumeIf('0'), consumeIf('E')))
-      return make<NameType>("nullptr");
-    return nullptr;
   case 'T':
     // Invalid mangled name per
     //   http://sourcerytools.com/pipermail/cxx-abi-dev/2011-August/002422.html
@@ -4892,6 +4927,14 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExprPrimary() {
       return nullptr;
     return make<LambdaExpr>(T);
   }
+  case 'D':
+    if (look(1) == 'n') {
+      if (consumeIf("Dn") && (consumeIf('0'), consumeIf('E')))
+        return make<NameType>("nullptr");
+      return nullptr;
+    }
+    // Other D-prefixed types (DB<n>_, Du, Di, Ds, ...) are ordinary types.
+    DEMANGLE_FALLTHROUGH;
   default: {
     // might be named type
     Node *T = getDerived().parseType();
@@ -5369,6 +5412,16 @@ Node *AbstractManglingParser<Derived, Alloc>::parseExpr() {
     if (Child == nullptr)
       return nullptr;
     return make<ParameterPackExpansion>(Child);
+  }
+  if (consumeIf("sy")) {
+    Node *Pattern = look() == 'T' ? getDerived().parseTemplateParam()
+                                  : getDerived().parseFunctionParam();
+    if (Pattern == nullptr)
+      return nullptr;
+    Node *Index = getDerived().parseExpr();
+    if (Index == nullptr)
+      return nullptr;
+    return make<PackIndexing>(Pattern, Index);
   }
   if (consumeIf("sZ")) {
     if (look() == 'T') {
@@ -6152,8 +6205,17 @@ AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
 // extension      ::= ___Z <encoding> _block_invoke
 // extension      ::= ___Z <encoding> _block_invoke<decimal-digit>+
 // extension      ::= ___Z <encoding> _block_invoke_<decimal-digit>+
+// extension      ::= __alloc_token__Z <encoding>
+// extension      ::= __alloc_token_<decimal-digit>+__Z <encoding>
 template <typename Derived, typename Alloc>
 Node *AbstractManglingParser<Derived, Alloc>::parse(bool ParseParams) {
+  bool AllocToken = consumeIf("__alloc_token_");
+  if (AllocToken) {
+    const char *Saved = First;
+    if (parseNumber().empty() || !consumeIf('_'))
+      First = Saved;
+  }
+
   if (consumeIf("_Z") || consumeIf("__Z")) {
     Node *Encoding = getDerived().parseEncoding(ParseParams);
     if (Encoding == nullptr)
@@ -6163,6 +6225,8 @@ Node *AbstractManglingParser<Derived, Alloc>::parse(bool ParseParams) {
           make<DotSuffix>(Encoding, std::string_view(First, Last - First));
       First = Last;
     }
+    if (AllocToken)
+      Encoding = make<DotSuffix>(Encoding, ".alloc_token");
     if (numLeft() != 0)
       return nullptr;
     return Encoding;

@@ -642,7 +642,7 @@ def : InstRW<[WLat1, LSU5, GroupAlone], (instregex "TR$")>;
 def : InstRW<[WLat30, WLat30, WLat30, FXa3, LSU2, GroupAlone2],
              (instregex "TRT$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TRTR$")>;
-def : InstRW<[WLat30, WLat30, MCD], (instregex "TRE$")>;
+def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TRE$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TRT(R)?E(Opt)?$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD], (instregex "TR(T|O)(T|O)(Opt)?$")>;
 def : InstRW<[WLat30, WLat30, WLat30, MCD],
@@ -1187,7 +1187,7 @@ def : InstRW<[WLat15, LSU, VecDF2, GroupAlone], (instregex "TD(C|G)XT$")>;
 // Vector: Move instructions
 //===----------------------------------------------------------------------===//
 
-def : InstRW<[WLat1, FXb, NormalGr], (instregex "VLR(32|64)?$")>;
+def : InstRW<[WLat1, FXb, NormalGr], (instregex "VLR(16|32|64)?$")>;
 def : InstRW<[WLat3, FXb, NormalGr], (instregex "VLGV(B|F|G|H)?$")>;
 def : InstRW<[WLat1, FXb, NormalGr], (instregex "VLVG(B|F|G|H)?$")>;
 def : InstRW<[WLat3, FXb, NormalGr], (instregex "VLVGP(32)?$")>;

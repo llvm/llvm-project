@@ -9,7 +9,7 @@
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
 #include "llvm/ADT/STLExtras.h"
 
-namespace llvm {
+using namespace llvm;
 
 DwarfStringPoolEntryRef NonRelocatableStringpool::getEntry(StringRef S) {
   auto I = Strings.try_emplace(S);
@@ -43,5 +43,3 @@ NonRelocatableStringpool::getEntriesForEmission() const {
   });
   return Result;
 }
-
-} // namespace llvm

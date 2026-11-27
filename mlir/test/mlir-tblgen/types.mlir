@@ -204,7 +204,7 @@ func.func @ranked_tensor_success(%arg0: tensor<i8>, %arg1: tensor<1xi32>, %arg2:
 // -----
 
 func.func @ranked_tensor_success(%arg0: tensor<*xf32>) {
-  // expected-error @+1 {{must be ranked tensor of any type values}}
+  // expected-error @+1 {{must be ranked tensor of any non-token type values}}
   "test.ranked_tensor_op"(%arg0) : (tensor<*xf32>) -> ()
   return
 }
@@ -212,7 +212,7 @@ func.func @ranked_tensor_success(%arg0: tensor<*xf32>) {
 // -----
 
 func.func @ranked_tensor_success(%arg0: vector<2xf32>) {
-  // expected-error @+1 {{must be ranked tensor of any type values}}
+  // expected-error @+1 {{must be ranked tensor of any non-token type values}}
   "test.ranked_tensor_op"(%arg0) : (vector<2xf32>) -> ()
   return
 }
@@ -432,6 +432,27 @@ func.func @same_element_count_success(%arg0: tensor<36xi32>, %arg1: tensor<1x2xf
 
 // -----
 
+// Regression test for https://github.com/llvm/llvm-project/issues/159740
+// AllElementCountsMatch should fail (not crash) when operands/results have dynamic shapes.
+func.func @same_element_count_dynamic(%arg0: tensor<2xi32>) {
+  // expected-error@+1 {{all of {x, res} have same element count}}
+  %0 = "test.operand0_and_result_have_same_element_count"(%arg0, %arg0) :
+    (tensor<2xi32>, tensor<2xi32>) -> tensor<?x?xf32>
+  return
+}
+
+// -----
+
+// AllElementCountsMatch should fail (not crash) when operands/results are not
+// ShapedType at all (e.g. a plain integer).
+func.func @same_element_count_non_shaped(%arg0: i32) -> i32 {
+  // expected-error@+1 {{all of {x, res} have same element count}}
+  %0 = "test.operand_and_result_have_same_element_count_any_type"(%arg0) : (i32) -> i32
+  return %0 : i32
+}
+
+// -----
+
 func.func @same_element_count_failure(%arg0: tensor<1xi32>, %arg1: tensor<1x2xf32>) {
   // expected-error@+1 {{all of {x, res} have same element count}}
   "test.operand0_and_result_have_same_element_count"(%arg0, %arg1) : (tensor<1xi32>, tensor<1x2xf32>) -> (tensor<2xi32>)
@@ -464,6 +485,78 @@ func.func @operand_rank_equals_result_size_failure(%arg : tensor<1x2x3x4xi32>) {
 
 // -----
 
+// CHECK-LABEL: variadic_same_element_type_success
+func.func @variadic_same_element_type_success(%f32: f32, %i32: i32, %ti32: tensor<* x i32>, %mi32: memref<2x3xi32>) {
+  "test.variadic_operands_have_same_element_type"(%f32) : (f32) -> ()
+  "test.variadic_operands_have_same_element_type"(%f32, %i32) : (f32, i32) -> ()
+  "test.variadic_operands_have_same_element_type"(%f32, %i32, %ti32, %mi32) : (f32, i32, tensor<* x i32>, memref<2x3xi32>) -> ()
+  return
+}
+
+// -----
+
+func.func @variadic_same_element_type_failure(%f32: f32, %ti32: tensor<* x i32>, %tf32: tensor<* x f32>) {
+  // expected-error@+1 {{all elements of 'xs' have same element type}}
+  "test.variadic_operands_have_same_element_type"(%f32, %ti32, %ti32, %tf32) : (f32, tensor<* x i32>, tensor<* x i32>, tensor<* x f32>) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: variadic_same_rank_success
+func.func @variadic_same_rank_success(%t1xi: tensor<1xi32>, %t2xf: tensor<2xf32>, %m3xi: memref<3xi32>) {
+  "test.variadic_operands_have_same_rank"() : () -> ()
+  "test.variadic_operands_have_same_rank"(%t1xi) : (tensor<1xi32>) -> ()
+  "test.variadic_operands_have_same_rank"(%t1xi, %t2xf, %m3xi) : (tensor<1xi32>, tensor<2xf32>, memref<3xi32>) -> ()
+  return
+}
+
+// -----
+
+func.func @variadic_same_rank_failure(%t1xi: tensor<1xi32>, %t2xf: tensor<2xf32>, %t1x2xf: tensor<1x2xf32>) {
+  // expected-error@+1 {{all elements of 'xs' have same rank}}
+  "test.variadic_operands_have_same_rank"(%t1xi, %t2xf, %t1x2xf) : (tensor<1xi32>, tensor<2xf32>, tensor<1x2xf32>) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: variadic_same_shape_success
+func.func @variadic_same_shape_success(%t2x3: tensor<2x3xi32>, %m2x3: memref<2x3xf32>, %v2x3: vector<2x3xi32>) {
+  "test.variadic_operands_have_same_shape"() : () -> ()
+  "test.variadic_operands_have_same_shape"(%t2x3) : (tensor<2x3xi32>) -> ()
+  "test.variadic_operands_have_same_shape"(%t2x3, %m2x3, %v2x3) : (tensor<2x3xi32>, memref<2x3xf32>, vector<2x3xi32>) -> ()
+  return
+}
+
+// -----
+
+func.func @variadic_same_shape_failure(%t2x3: tensor<2x3xi32>, %t3x2: tensor<3x2xi32>) {
+  // expected-error@+1 {{all elements of 'xs' have same shape}}
+  "test.variadic_operands_have_same_shape"(%t2x3, %t2x3, %t3x2) : (tensor<2x3xi32>, tensor<2x3xi32>, tensor<3x2xi32>) -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: variadic_same_type_success
+func.func @variadic_same_type_success(%i32: i32, %ti32: tensor<* x i32>) {
+  "test.variadic_operands_have_same_type"() : () -> ()
+  "test.variadic_operands_have_same_type"(%i32) : (i32) -> ()
+  "test.variadic_operands_have_same_type"(%ti32, %ti32, %ti32) : (tensor<* x i32>, tensor<* x i32>, tensor<* x i32>) -> ()
+  return
+}
+
+// -----
+
+func.func @variadic_same_type_failure(%i32: i32, %ti32: tensor<* x i32>) {
+  // expected-error@+1 {{all elements of 'xs' have same type}}
+  "test.variadic_operands_have_same_type"(%ti32, %ti32, %i32) : (tensor<* x i32>, tensor<* x i32>, i32) -> ()
+  return
+}
+
+// -----
+
 func.func @same_types_element_mismatch(%arg0: tensor<* x i32>, %arg1: tensor<* x f32>) {
   // expected-error@+1 {{op failed to verify that all of {x, res} have same type}}
   "test.operand0_and_result_have_same_type"(%arg0, %arg1) : (tensor<* x i32>, tensor<* x f32>) -> tensor<* x f32>
@@ -489,7 +582,7 @@ func.func @does_not_have_i32(%arg0: tensor<1x2xi32>, %arg1: none) {
 // -----
 
 func.func @does_not_have_static_memref(%arg0: memref<?xi32>) {
-  // expected-error@+1 {{'test.takes_static_memref' op operand #0 must be statically shaped memref of any type values}}
+  // expected-error@+1 {{'test.takes_static_memref' op operand #0 must be statically shaped memref of any non-token type values}}
   "test.takes_static_memref"(%arg0) : (memref<?xi32>) -> ()
 }
 

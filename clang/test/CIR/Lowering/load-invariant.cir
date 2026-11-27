@@ -1,0 +1,21 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+// The invariant flag on cir.load lowers to the LLVM dialect invariant load.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // CHECK-LABEL: llvm.func @invariant_load
+  // CHECK:         llvm.load %{{.*}} invariant {{.*}}: !llvm.ptr -> i32
+  cir.func @invariant_load(%arg0: !cir.ptr<!s32i>) -> !s32i {
+    %0 = cir.load invariant %arg0 : !cir.ptr<!s32i>, !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK-LABEL: llvm.func @plain_load
+  // CHECK-NOT:     invariant
+  cir.func @plain_load(%arg0: !cir.ptr<!s32i>) -> !s32i {
+    %0 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    cir.return %0 : !s32i
+  }
+}

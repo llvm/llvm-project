@@ -72,7 +72,9 @@ public:
         BlockGen(Builder, LI, SE, DT, ScalarMap, EscapeMap, ValueMap,
                  &ExprBuilder, StartBlock),
         RegionGen(BlockGen), DL(DL), LI(LI), SE(SE), DT(DT),
-        StartBlock(StartBlock), GenDT(&DT), GenLI(&LI), GenSE(&SE) {}
+        StartBlock(StartBlock), GenDT(&DT), GenLI(&LI), GenSE(&SE) {
+    Builder.disableGEPCanonicalization();
+  }
 
   virtual ~IslNodeBuilder() = default;
 
@@ -90,6 +92,8 @@ public:
   /// @result An llvm::Value that is true if the condition holds and false
   ///         otherwise.
   Value *createRTC(isl_ast_expr *Condition);
+
+  void generateBeginScopTrace();
 
   void create(__isl_take isl_ast_node *Node);
 
@@ -191,7 +195,7 @@ protected:
   /// Materialize parameters of @p Set.
   ///
   /// @returns False, iff a problem occurred and the value was not materialized.
-  bool materializeParameters(__isl_take isl_set *Set);
+  bool materializeParameters(__isl_keep isl_set *Set);
 
   /// Materialize all parameters in the current scop.
   ///
@@ -280,8 +284,8 @@ protected:
   /// Preload the memory access at @p AccessRange with @p Build.
   ///
   /// @returns The preloaded value casted to type @p Ty
-  Value *preloadUnconditionally(__isl_take isl_set *AccessRange,
-                                isl_ast_build *Build, Instruction *AccInst);
+  Value *preloadUnconditionally(isl::set AccessRange, isl::ast_build Build,
+                                Instruction *AccInst);
 
   /// Preload the memory load access @p MA.
   ///
@@ -293,8 +297,7 @@ protected:
   /// if (C)
   ///   MA_preload = load MA;
   /// use MA_preload
-  Value *preloadInvariantLoad(const MemoryAccess &MA,
-                              __isl_take isl_set *Domain);
+  Value *preloadInvariantLoad(const MemoryAccess &MA, isl::set Domain);
 
   /// Preload the invariant access equivalence class @p IAClass
   ///

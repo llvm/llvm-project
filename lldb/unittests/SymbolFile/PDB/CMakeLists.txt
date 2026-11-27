@@ -8,7 +8,9 @@ add_lldb_unittest(SymbolFilePDBTests
     lldbCore
     lldbHost
     lldbSymbol
+    lldbPluginCPlusPlusLanguage
     lldbPluginObjectFilePECOFF
+    lldbPluginPlatformWindows
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbPluginTypeSystemClang

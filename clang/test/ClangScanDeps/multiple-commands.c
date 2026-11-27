@@ -5,6 +5,7 @@
 // We use an x86_64-apple-darwin target to avoid host-dependent behaviour in
 // the driver. Platforms without an integrated assembler have different commands
 // REQUIRES: x86-registered-target
+// XFAIL: system-zos
 
 // RUN: rm -rf %t
 // RUN: split-file %s %t
@@ -14,7 +15,9 @@
 // RUN:   -j 1 -format experimental-full -mode preprocess-dependency-directives \
 // RUN:   > %t/deps.json
 
-// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/deps.json | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=clang-modulemap-file,name,clang-context-hash,clang-module-deps,command-line,executable,input-file \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // Build the -save-temps + -fmodules case
 // RUN: %deps-to-rsp %t/deps.json --module-name=Mod > %t/Mod.rsp

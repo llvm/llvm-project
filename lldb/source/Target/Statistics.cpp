@@ -17,6 +17,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/StructuredData.h"
 
 using namespace lldb;
@@ -58,7 +59,11 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("symbolTableParseTime", symtab_parse_time);
   module.try_emplace("symbolTableIndexTime", symtab_index_time);
   module.try_emplace("symbolTableLoadedFromCache", symtab_loaded_from_cache);
+  module.try_emplace("symbolTableParsedFromObjectFile",
+                     symtab_parsed_from_object_file);
   module.try_emplace("symbolTableSavedToCache", symtab_saved_to_cache);
+  module.try_emplace("symbolTableSymbolFileAddedSymbols",
+                     symtab_symbol_file_added_symbols);
   module.try_emplace("debugInfoParseTime", debug_parse_time);
   module.try_emplace("debugInfoIndexTime", debug_index_time);
   module.try_emplace("debugInfoByteSize", (int64_t)debug_info_size);
@@ -73,6 +78,9 @@ json::Value ModuleStats::ToJSON() const {
                      debug_info_had_incomplete_types);
   module.try_emplace("symbolTableStripped", symtab_stripped);
   module.try_emplace("symbolTableSymbolCount", symtab_symbol_count);
+  module.try_emplace("dwoFileCount", dwo_stats.dwo_file_count);
+  module.try_emplace("loadedDwoFileCount", dwo_stats.loaded_dwo_file_count);
+  module.try_emplace("dwoErrorCount", dwo_stats.dwo_error_count);
 
   if (!symbol_locator_time.map.empty()) {
     json::Object obj;
@@ -86,7 +94,7 @@ json::Value ModuleStats::ToJSON() const {
 
   if (!symfile_modules.empty()) {
     json::Array symfile_ids;
-    for (const auto symfile_id: symfile_modules)
+    for (const auto symfile_id : symfile_modules)
       symfile_ids.emplace_back(symfile_id);
     module.try_emplace("symbolFileModuleIdentifiers", std::move(symfile_ids));
   }
@@ -126,8 +134,9 @@ TargetStats::ToJSON(Target &target,
     for (auto module_identifier : m_module_identifiers)
       json_module_uuid_array.emplace_back(module_identifier);
 
-    target_metrics_json.try_emplace(m_expr_eval.name, m_expr_eval.ToJSON());
-    target_metrics_json.try_emplace(m_frame_var.name, m_frame_var.ToJSON());
+    target_metrics_json.try_emplace("expressionEvaluation",
+                                    m_expr_eval.ToJSON());
+    target_metrics_json.try_emplace("frameVariable", m_frame_var.ToJSON());
     if (include_modules)
       target_metrics_json.try_emplace("moduleIdentifiers",
                                       std::move(json_module_uuid_array));
@@ -144,6 +153,11 @@ TargetStats::ToJSON(Target &target,
     }
     target_metrics_json.try_emplace("targetCreateTime",
                                     m_create_time.get().count());
+
+    if (m_load_core_time.get().count() > 0) {
+      target_metrics_json.try_emplace("loadCoreTime",
+                                      m_load_core_time.get().count());
+    }
 
     json::Array breakpoints_array;
     double totalBreakpointResolveTime = 0.0;
@@ -199,6 +213,10 @@ TargetStats::ToJSON(Target &target,
     if (process_sp->GetDynamicLoader())
       dyld_plugin_name = process_sp->GetDynamicLoader()->GetPluginName();
     target_metrics_json.try_emplace("dyldPluginName", dyld_plugin_name);
+
+    if (process_sp->GetCoreFile())
+      target_metrics_json.try_emplace(
+          "coreFile", process_sp->GetCoreFile().GetFilename().str());
   }
   target_metrics_json.try_emplace("sourceMapDeduceCount",
                                   m_source_map_deduce_count);
@@ -306,7 +324,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   double debug_index_time = 0.0;
   uint32_t symtabs_loaded = 0;
   uint32_t symtabs_loaded_from_cache = 0;
+  uint32_t symtabs_parsed_from_object_file = 0;
   uint32_t symtabs_saved_to_cache = 0;
+  uint32_t symtabs_symbol_file_added_symbols = 0;
   uint32_t debug_index_loaded = 0;
   uint32_t debug_index_saved = 0;
   uint64_t debug_info_size = 0;
@@ -322,6 +342,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   uint32_t num_modules_with_incomplete_types = 0;
   uint32_t num_stripped_modules = 0;
   uint32_t symtab_symbol_count = 0;
+  DWOStats total_dwo_stats;
   for (size_t image_idx = 0; image_idx < num_modules; ++image_idx) {
     Module *module = target != nullptr
                          ? target->GetImages().GetModuleAtIndex(image_idx).get()
@@ -336,16 +357,28 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       module_stat.symtab_symbol_count = symtab->GetNumSymbols();
       symtab_symbol_count += module_stat.symtab_symbol_count;
       ++symtabs_loaded;
-      module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
+      const uint32_t state = symtab->GetState();
+      module_stat.symtab_loaded_from_cache =
+          state & eSymtabStateLoadedFromCache;
       if (module_stat.symtab_loaded_from_cache)
         ++symtabs_loaded_from_cache;
-      module_stat.symtab_saved_to_cache = symtab->GetWasSavedToCache();
+      module_stat.symtab_parsed_from_object_file =
+          state & eSymtabStateParsedFromObjectFile;
+      if (module_stat.symtab_parsed_from_object_file)
+        ++symtabs_parsed_from_object_file;
+      module_stat.symtab_saved_to_cache = state & eSymtabStateSavedToCache;
       if (module_stat.symtab_saved_to_cache)
         ++symtabs_saved_to_cache;
+      module_stat.symtab_symbol_file_added_symbols =
+          state & eSymtabStateSymbolFileAddedSymbols;
+      if (module_stat.symtab_symbol_file_added_symbols)
+        ++symtabs_symbol_file_added_symbols;
     }
     SymbolFile *sym_file = module->GetSymbolFile(/*can_create=*/false);
     if (sym_file) {
-      if (!summary_only) {
+      // Only record on include_modules, as `GetObjectFile` and
+      // `GetDebugInfoModules` may be expensive to parse.
+      if (!summary_only && include_modules) {
         if (sym_file->GetObjectFile() != module->GetObjectFile())
           module_stat.symfile_path =
               sym_file->GetObjectFile()->GetFileSpec().GetPath();
@@ -353,6 +386,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
         for (const auto &symbol_module : symbol_modules.Modules())
           module_stat.symfile_modules.push_back((intptr_t)symbol_module.get());
       }
+      DWOStats current_dwo_stats = sym_file->GetDwoStats();
+      module_stat.dwo_stats += current_dwo_stats;
+      total_dwo_stats += current_dwo_stats;
       module_stat.debug_info_index_loaded_from_cache =
           sym_file->GetDebugInfoIndexWasLoadedFromCache();
       if (module_stat.debug_info_index_loaded_from_cache)
@@ -397,9 +433,10 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     if (include_modules) {
       module_stat.identifier = (intptr_t)module;
       module_stat.path = module->GetFileSpec().GetPath();
-      if (ConstString object_name = module->GetObjectName()) {
+      if (llvm::StringRef object_name = module->GetObjectName();
+          !object_name.empty()) {
         module_stat.path.append(1, '(');
-        module_stat.path.append(object_name.GetStringRef().str());
+        module_stat.path.append(object_name.str());
         module_stat.path.append(1, ')');
       }
       module_stat.uuid = module->GetUUID().GetAsString();
@@ -413,7 +450,11 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalSymbolTableIndexTime", symtab_index_time},
       {"totalSymbolTablesLoaded", symtabs_loaded},
       {"totalSymbolTablesLoadedFromCache", symtabs_loaded_from_cache},
+      {"totalSymbolTablesParsedFromObjectFile",
+       symtabs_parsed_from_object_file},
       {"totalSymbolTablesSavedToCache", symtabs_saved_to_cache},
+      {"totalSymbolTablesSymbolFileAddedSymbols",
+       symtabs_symbol_file_added_symbols},
       {"totalDebugInfoParseTime", debug_parse_time},
       {"totalDebugInfoIndexTime", debug_index_time},
       {"totalDebugInfoIndexLoadedFromCache", debug_index_loaded},
@@ -427,6 +468,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       {"totalDebugInfoEnabled", num_debug_info_enabled_modules},
       {"totalSymbolTableStripped", num_stripped_modules},
       {"totalSymbolTableSymbolCount", symtab_symbol_count},
+      {"totalLoadedDwoFileCount", total_dwo_stats.loaded_dwo_file_count},
+      {"totalDwoFileCount", total_dwo_stats.dwo_file_count},
+      {"totalDwoErrorCount", total_dwo_stats.dwo_error_count},
   };
 
   if (include_targets) {
@@ -488,6 +532,9 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       if (auto json_transcript = llvm::json::parse(buffer))
         global_stats.try_emplace("transcript",
                                  std::move(json_transcript.get()));
+      else
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Target), json_transcript.takeError(),
+                       "failed to parse transcript JSON: {0}");
     }
   }
 

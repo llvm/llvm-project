@@ -12,11 +12,10 @@
 
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "mlir/IR/AsmState.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Tools/ParseUtilities.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
@@ -37,6 +36,11 @@ struct TranslationOptions {
 static llvm::ManagedStatic<TranslationOptions> clOptions;
 
 void mlir::registerTranslationCLOptions() { *clOptions; }
+
+llvm::cl::LibraryOptionsContext &mlir::getTranslationLibraryOptions() {
+  static llvm::cl::LibraryOptionsContext options;
+  return options;
+}
 
 //===----------------------------------------------------------------------===//
 // Translation Registry

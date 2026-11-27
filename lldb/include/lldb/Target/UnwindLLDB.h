@@ -16,12 +16,12 @@
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Unwind.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-public.h"
 
 namespace lldb_private {
 
 class RegisterContextUnwind;
+class ArchitectureArm;
 
 class UnwindLLDB : public lldb_private::Unwind {
 public:
@@ -37,6 +37,7 @@ public:
 
 protected:
   friend class lldb_private::RegisterContextUnwind;
+  friend class lldb_private::ArchitectureArm;
 
   /// An UnwindPlan::Row::AbstractRegisterLocation, combined with the register
   /// context and memory for a specific stop point, is used to create a
@@ -49,6 +50,9 @@ protected:
                                       // target mem (target_memory_location)
       eRegisterInRegister, // register is available in a (possible other)
                            // register (register_number)
+      eRegisterIsRegisterPlusOffset, // register is available in a (possible
+                                     // other) register (register_number) with
+                                     // an offset applied
       eRegisterSavedAtHostMemoryLocation, // register is saved at a word in
                                           // lldb's address space
       eRegisterValueInferred,        // register val was computed (and is in
@@ -64,6 +68,11 @@ protected:
       void *host_memory_location;
       uint64_t inferred_value; // eRegisterValueInferred - e.g. stack pointer ==
                                // cfa + offset
+      struct {
+        uint32_t
+            register_number; // in eRegisterKindLLDB register numbering system
+        uint64_t offset;
+      } reg_plus_offset;
     } location;
   };
 
@@ -101,13 +110,13 @@ protected:
   ///
   /// The Platform is one source of trap handler function names; that
   /// may be augmented via a setting.  The setting needs to be converted
-  /// into an array of ConstStrings before it can be used - we only want
+  /// into an array of strings before it can be used - we only want
   /// to do that once per thread so it's here in the UnwindLLDB object.
   ///
   /// \return
-  ///     Vector of ConstStrings of trap handler function names.  May be
+  ///     Vector of strings of trap handler function names.  May be
   ///     empty.
-  const std::vector<ConstString> &GetUserSpecifiedTrapHandlerFunctionNames() {
+  const std::vector<std::string> &GetUserSpecifiedTrapHandlerFunctionNames() {
     return m_user_supplied_trap_handler_functions;
   }
 
@@ -139,7 +148,7 @@ private:
   // and m_frames.size()
   // is how far we've currently gone.
 
-  std::vector<ConstString> m_user_supplied_trap_handler_functions;
+  std::vector<std::string> m_user_supplied_trap_handler_functions;
 
   // Check if Full UnwindPlan of First frame is valid or not.
   // If not then try Fallback UnwindPlan of the frame. If Fallback

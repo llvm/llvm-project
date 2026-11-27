@@ -187,8 +187,8 @@ public:
 
 #ifndef NDEBUG
   // Get a context string from root to current node.
-  std::string getContextString(const FunctionSamples &FSamples) const;
-  std::string getContextString(ContextTrieNode *Node) const;
+  LLVM_ABI std::string getContextString(const FunctionSamples &FSamples) const;
+  LLVM_ABI std::string getContextString(ContextTrieNode *Node) const;
 #endif
   // Dump the internal context profile trie.
   LLVM_ABI void dump();
@@ -215,8 +215,7 @@ private:
       FuncToCtxtProfiles;
 
   // Map from current FunctionSample to the belonged context trie.
-  std::unordered_map<const FunctionSamples *, ContextTrieNode *>
-      ProfileToNodeMap;
+  DenseMap<const FunctionSamples *, ContextTrieNode *> ProfileToNodeMap;
 
   // Map from function guid to real function names. Only used in md5 mode.
   const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap;

@@ -1,5 +1,5 @@
 // RUN: rm -rf %t
-// RUN: cp -r %S/Inputs/relative-import-path %t
+// RUN: cp -R %S/Inputs/relative-import-path %t
 // RUN: cp %s %t/t.c
 
 // Use FileCheck, which is more flexible.

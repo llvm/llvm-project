@@ -42,7 +42,6 @@ __orc_rt_jit_dlopen_wrapper(const char *ArgData, size_t ArgSize) {
       .release();
 }
 
-#ifndef _WIN32
 ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_jit_dlupdate_wrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int32_t(SPSExecutorAddr)>::handle(
@@ -52,7 +51,6 @@ __orc_rt_jit_dlupdate_wrapper(const char *ArgData, size_t ArgSize) {
              })
       .release();
 }
-#endif
 
 ORC_RT_INTERFACE orc_rt_WrapperFunctionResult
 __orc_rt_jit_dlclose_wrapper(const char *ArgData, size_t ArgSize) {

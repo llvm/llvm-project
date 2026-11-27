@@ -8,6 +8,7 @@
 #include "refactor/Tweak.h"
 
 #include "support/Logger.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
@@ -133,7 +134,8 @@ Expected<Tweak::Effect> ExpandDeducedType::apply(const Selection &Inputs) {
   auto &SrcMgr = Inputs.AST->getSourceManager();
 
   std::optional<clang::QualType> DeducedType =
-      getDeducedType(Inputs.AST->getASTContext(), Range.getBegin());
+      getDeducedType(Inputs.AST->getASTContext(),
+                     Inputs.AST->getHeuristicResolver(), Range.getBegin());
 
   // if we can't resolve the type, return an error message
   if (DeducedType == std::nullopt || (*DeducedType)->isUndeducedAutoType())

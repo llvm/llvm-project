@@ -90,6 +90,12 @@ PreservedAnalyses RealtimeSanitizerPass::run(Module &M,
       [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
 
   for (Function &F : M) {
+    if (F.empty())
+      continue;
+
+    if (F.hasFnAttribute(Attribute::DisableSanitizerInstrumentation))
+      continue;
+
     if (F.hasFnAttribute(Attribute::SanitizeRealtime))
       runSanitizeRealtime(F);
 

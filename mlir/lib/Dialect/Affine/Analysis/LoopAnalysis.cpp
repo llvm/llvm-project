@@ -20,13 +20,10 @@
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "llvm/Support/MathExtras.h"
 
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <numeric>
 #include <optional>
-#include <type_traits>
 
 #define DEBUG_TYPE "affine-loop-analysis"
 
@@ -34,7 +31,6 @@ using namespace mlir;
 using namespace mlir::affine;
 
 namespace {
-
 /// A directed graph to model relationships between MLIR Operations.
 class DirectedOpGraph {
 public:
@@ -158,7 +154,6 @@ private:
   // Edges as an adjacency list.
   DenseMap<Operation *, SmallVector<DGNode *>> edges;
 };
-
 } // namespace
 
 /// Returns the trip count of the loop as an affine expression if the latter is
@@ -194,15 +189,11 @@ void mlir::affine::getTripCountMapAndOperands(
   // expression (divided by the step) provides the expressions for the trip
   // count map.
   AffineValueMap ubValueMap(ubMap, forOp.getUpperBoundOperands());
-
-  SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
-                                         lbMap.getResult(0));
-  auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
-                                   lbSplatExpr, context);
-  AffineValueMap lbSplatValueMap(lbMapSplat, forOp.getLowerBoundOperands());
+  AffineValueMap lbValueMap(lbMap, forOp.getLowerBoundOperands());
 
   AffineValueMap tripCountValueMap;
-  AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);
+  AffineValueMap::cartesianProductDifference(ubValueMap, lbValueMap,
+                                             &tripCountValueMap);
   for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i)
     tripCountValueMap.setResult(i,
                                 tripCountValueMap.getResult(i).ceilDiv(step));
@@ -217,27 +208,9 @@ void mlir::affine::getTripCountMapAndOperands(
 /// getTripCount) and is able to determine constant trip count in non-trivial
 /// cases.
 std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
-  SmallVector<Value, 4> operands;
-  AffineMap map;
-  getTripCountMapAndOperands(forOp, &map, &operands);
-
-  if (!map)
-    return std::nullopt;
-
-  // Take the min if all trip counts are constant.
-  std::optional<uint64_t> tripCount;
-  for (auto resultExpr : map.getResults()) {
-    if (auto constExpr = dyn_cast<AffineConstantExpr>(resultExpr)) {
-      if (tripCount.has_value())
-        tripCount =
-            std::min(*tripCount, static_cast<uint64_t>(constExpr.getValue()));
-      else
-        tripCount = constExpr.getValue();
-    } else {
-      return std::nullopt;
-    }
-  }
-  return tripCount;
+  if (std::optional<APInt> tripCount = forOp.getStaticTripCount())
+    return tripCount->getZExtValue();
+  return std::nullopt;
 }
 
 /// Returns the greatest known integral divisor of the trip count. Affine
@@ -552,19 +525,19 @@ bool mlir::affine::isTilingValid(ArrayRef<AffineForOp> loops) {
         // Check whether there is any negative direction vector in the
         // dependence components found above, which means that dependence is
         // violated by the default hyper-rect tiling method.
-        LLVM_DEBUG(llvm::dbgs() << "Checking whether tiling legality violated "
-                                   "for dependence at depth: "
-                                << Twine(d) << " between:\n";);
-        LLVM_DEBUG(srcAccess.opInst->dump());
-        LLVM_DEBUG(dstAccess.opInst->dump());
+        LDBG() << "Checking whether tiling legality violated "
+               << "for dependence at depth: " << Twine(d) << " between:"
+               << OpWithFlags(srcAccess.opInst, OpPrintingFlags().skipRegions())
+               << "\nand:\n"
+               << OpWithFlags(dstAccess.opInst,
+                              OpPrintingFlags().skipRegions());
         for (const DependenceComponent &depComp : depComps) {
           if (depComp.lb.has_value() && depComp.ub.has_value() &&
               *depComp.lb < *depComp.ub && *depComp.ub < 0) {
-            LLVM_DEBUG(llvm::dbgs()
-                       << "Dependence component lb = " << Twine(*depComp.lb)
-                       << " ub = " << Twine(*depComp.ub)
-                       << " is negative  at depth: " << Twine(d)
-                       << " and thus violates the legality rule.\n");
+            LDBG() << "Dependence component lb = " << Twine(*depComp.lb)
+                   << " ub = " << Twine(*depComp.ub)
+                   << " is negative  at depth: " << Twine(d)
+                   << " and thus violates the legality rule.";
             return false;
           }
         }

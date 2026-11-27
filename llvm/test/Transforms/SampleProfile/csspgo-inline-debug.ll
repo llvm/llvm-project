@@ -3,8 +3,8 @@
 ; Use debug prints as repeated call site evaluation is not visible from final inline decision.
 
 ; Note that we need new pass manager to enable top-down processing for sample profile loader
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=OLD-INLINE
-; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=1 -debug-only=sample-context-tracker -o /dev/null 2>&1 | FileCheck %s --check-prefix=NEW-INLINE
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=0 -debug-only=sample-context-tracker -disable-output 2>&1 | FileCheck %s --check-prefix=OLD-INLINE
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/profile-context-tracker.prof -sample-profile-inline-size -sample-profile-prioritized-inline=1 -debug-only=sample-context-tracker -disable-output 2>&1 | FileCheck %s --check-prefix=NEW-INLINE
 
 ; Old inliner will evaluate the same call site three times
 ; OLD-INLINE:      Getting callee context for instr:   %call = tail call i32 @_Z5funcBi
@@ -88,8 +88,8 @@ entry:
 
 declare i32 @_Z3fibi(i32)
 
-attributes #0 = { nofree noinline norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
-attributes #1 = { nofree norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" "use-sample-profile" }
+attributes #0 = { nofree noinline norecurse nounwind uwtable "use-sample-profile" }
+attributes #1 = { nofree norecurse nounwind uwtable "use-sample-profile" }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!14, !15, !16}

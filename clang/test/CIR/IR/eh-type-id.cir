@@ -1,0 +1,22 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!u32i = !cir.int<u, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+
+cir.func private @exception_handling_type_id() {
+  %type_id = cir.eh.typeid @_ZTIi
+  cir.return
+}
+
+// CHECK: cir.func private @exception_handling_type_id() {
+// CHECK:   %[[TYPE_ID:.*]] = cir.eh.typeid @_ZTIi
+// CHECK:   cir.return
+// CHECK: }
+
+}
+

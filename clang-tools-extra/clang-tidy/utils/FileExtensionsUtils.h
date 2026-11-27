@@ -1,4 +1,4 @@
-//===--- FileExtensionsUtils.h - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILEEXTENSIONSUTILS_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILEEXTENSIONSUTILS_H
 
 #include "../FileExtensionsSet.h"
 #include "clang/Basic/SourceLocation.h"
@@ -23,11 +23,11 @@ bool isExpansionLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                 const FileExtensionsSet &HeaderFileExtensions);
 
 /// Checks whether presumed location of \p Loc is in header file.
-bool isPresumedLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
+bool isPresumedLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                const FileExtensionsSet &HeaderFileExtensions);
 
 /// Checks whether spelling location of \p Loc is in header file.
-bool isSpellingLocInHeaderFile(SourceLocation Loc, SourceManager &SM,
+bool isSpellingLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
                                const FileExtensionsSet &HeaderFileExtensions);
 
 /// Returns recommended default value for the list of header file
@@ -60,4 +60,4 @@ bool isFileExtension(StringRef FileName,
 
 } // namespace clang::tidy::utils
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILEEXTENSIONSUTILS_H

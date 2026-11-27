@@ -125,9 +125,9 @@ TEST(Host, FindProcesses) {
     }
   }
   ASSERT_TRUE(foundPID);
-  auto clean_up = llvm::make_scope_exit([&] {
+  llvm::scope_exit clean_up([&] {
     Host::Kill(info.GetProcessID(), SIGKILL);
-    exit_status.get_future().get();
+    exit_status.get_future().wait();
   });
 }
 
@@ -145,8 +145,7 @@ TEST(Host, LaunchProcessDuplicatesHandle) {
     exit(1);
   }
   Pipe pipe;
-  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).takeError(),
-                    llvm::Succeeded());
+  ASSERT_THAT_ERROR(pipe.CreateNew().takeError(), llvm::Succeeded());
   SCOPED_TRACE(llvm::formatv("Pipe handles are: {0}/{1}",
                              (uint64_t)pipe.GetReadPipe(),
                              (uint64_t)pipe.GetWritePipe())
@@ -158,8 +157,7 @@ TEST(Host, LaunchProcessDuplicatesHandle) {
       "--gtest_filter=Host.LaunchProcessDuplicatesHandle");
   info.GetArguments().AppendArgument(
       ("--test-arg=" + llvm::Twine((uint64_t)pipe.GetWritePipe())).str());
-  info.AppendDuplicateFileAction((uint64_t)pipe.GetWritePipe(),
-                                 (uint64_t)pipe.GetWritePipe());
+  info.AppendDuplicateFileAction(pipe.GetWritePipe(), pipe.GetWritePipe());
   info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback);
   ASSERT_THAT_ERROR(Host::LaunchProcess(info).takeError(), llvm::Succeeded());
   pipe.CloseWriteFileDescriptor();
@@ -169,4 +167,15 @@ TEST(Host, LaunchProcessDuplicatesHandle) {
       pipe.Read(msg, sizeof(msg), std::chrono::seconds(10));
   ASSERT_THAT_EXPECTED(bytes_read, llvm::Succeeded());
   ASSERT_EQ(llvm::StringRef(msg, *bytes_read), test_msg);
+}
+
+TEST(Host, URLEncode) {
+  // Unreserved characters (RFC 3986) are kept literal.
+  EXPECT_EQ(Host::URLEncode("AZaz09-_.~"), "AZaz09-_.~");
+  // Everything else, including query-string metacharacters, is percent-encoded.
+  EXPECT_EQ(Host::URLEncode("a b&c=d"), "a%20b%26c%3Dd");
+  EXPECT_EQ(Host::URLEncode("/?#"), "%2F%3F%23");
+  // High bytes are encoded as two upper-case hex digits.
+  EXPECT_EQ(Host::URLEncode("\xC3\xA9"), "%C3%A9");
+  EXPECT_EQ(Host::URLEncode(""), "");
 }

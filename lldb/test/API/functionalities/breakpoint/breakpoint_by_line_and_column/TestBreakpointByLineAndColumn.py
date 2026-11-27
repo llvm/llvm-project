@@ -27,6 +27,25 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             in_then |= b_loc.GetColumn() == 50
         self.assertTrue(in_then)
 
+    def testBreakpointByLineAndColumnUsingCLI(self):
+        self.build()
+        src_file = lldb.SBFileSpec("main.cpp")
+        line = (
+            line_number("main.cpp", "At the beginning of a function name (col:50)") + 1
+        )  # Next line after comment
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(self, "This is a random comment", src_file)
+        bkpt_no = lldbutil.run_break_set_by_file_and_line(self, "main.cpp", line, "--column 50")
+        breakpoint = target.FindBreakpointByID(bkpt_no)
+        threads = lldbutil.continue_to_breakpoint(process, breakpoint)
+        self.assertEqual(len(threads), 1, "Stopped at our breakpoint")
+        self.expect("fr v did_call", substrs=["1"])
+        in_then = False
+        for i in range(breakpoint.GetNumLocations()):
+            b_loc = breakpoint.GetLocationAtIndex(i).GetAddress().GetLineEntry()
+            self.assertEqual(b_loc.GetLine(), line)
+            in_then |= b_loc.GetColumn() == 50
+        self.assertTrue(in_then)
+
     ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
     @skipIf(compiler="gcc", compiler_version=["<", "7.1"])
     def testBreakpointByLine(self):
@@ -44,7 +63,6 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             in_condition |= b_loc.GetColumn() < 30
         self.assertTrue(in_condition)
 
-    @skipIfWindows
     ## Skip gcc version less 7.1 since it doesn't support -gcolumn-info
     @skipIf(compiler="gcc", compiler_version=["<", "7.1"])
     def testBreakpointByLineAndColumnNearestCode(self):
@@ -78,8 +96,9 @@ class BreakpointByLineAndColumnTestCase(TestBase):
             self.assertTrue(valid_bpkt, VALID_BREAKPOINT)
             self.assertEqual(valid_bpkt.GetNumLocations(), 1)
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
+        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(
+            self, target, target.GetBreakpointAtIndex(0)
+        )
 
         nearest_column = [7, 17, 26]
 

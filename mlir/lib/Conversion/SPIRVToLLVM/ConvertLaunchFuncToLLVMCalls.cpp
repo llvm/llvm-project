@@ -11,8 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVMPass.h"
-
+#include "../SPIRVCommon/Pattern.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
@@ -22,7 +21,10 @@
 #include "mlir/Conversion/SPIRVToLLVM/SPIRVToLLVM.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/SymbolTable.h"
@@ -45,32 +47,19 @@ static constexpr const char kSPIRVModule[] = "__spv__";
 // Utility functions
 //===----------------------------------------------------------------------===//
 
-/// Returns the string name of the `DescriptorSet` decoration.
-static std::string descriptorSetName() {
-  return llvm::convertToSnakeFromCamelCase(
-      stringifyDecoration(spirv::Decoration::DescriptorSet));
-}
-
-/// Returns the string name of the `Binding` decoration.
-static std::string bindingName() {
-  return llvm::convertToSnakeFromCamelCase(
-      stringifyDecoration(spirv::Decoration::Binding));
-}
-
 /// Calculates the index of the kernel's operand that is represented by the
 /// given global variable with the `bind` attribute. We assume that the index of
 /// each kernel's operand is mapped to (descriptorSet, binding) by the map:
 ///   i -> (0, i)
 /// which is implemented under `LowerABIAttributesPass`.
 static unsigned calculateGlobalIndex(spirv::GlobalVariableOp op) {
-  IntegerAttr binding = op->getAttrOfType<IntegerAttr>(bindingName());
-  return binding.getInt();
+  return *op.getBinding();
 }
 
 /// Copies the given number of bytes from src to dst pointers.
 static void copy(Location loc, Value dst, Value src, Value size,
                  OpBuilder &builder) {
-  builder.create<LLVM::MemcpyOp>(loc, dst, src, size, /*isVolatile=*/false);
+  LLVM::MemcpyOp::create(builder, loc, dst, src, size, /*isVolatile=*/false);
 }
 
 /// Encodes the binding and descriptor set numbers into a new symbolic name.
@@ -81,22 +70,16 @@ static void copy(Location loc, Value dst, Value src, Value size,
 static std::string
 createGlobalVariableWithBindName(spirv::GlobalVariableOp op,
                                  StringRef kernelModuleName) {
-  IntegerAttr descriptorSet =
-      op->getAttrOfType<IntegerAttr>(descriptorSetName());
-  IntegerAttr binding = op->getAttrOfType<IntegerAttr>(bindingName());
   return llvm::formatv("{0}_{1}_descriptor_set{2}_binding{3}",
                        kernelModuleName.str(), op.getSymName().str(),
-                       std::to_string(descriptorSet.getInt()),
-                       std::to_string(binding.getInt()));
+                       std::to_string(*op.getDescriptorSet()),
+                       std::to_string(*op.getBinding()));
 }
 
 /// Returns true if the given global variable has both a descriptor set number
 /// and a binding number.
 static bool hasDescriptorSetAndBinding(spirv::GlobalVariableOp op) {
-  IntegerAttr descriptorSet =
-      op->getAttrOfType<IntegerAttr>(descriptorSetName());
-  IntegerAttr binding = op->getAttrOfType<IntegerAttr>(bindingName());
-  return descriptorSet && binding;
+  return op.getDescriptorSetAttr() && op.getBindingAttr();
 }
 
 /// Fills `globalVariableMap` with SPIR-V global variables that represent kernel
@@ -104,14 +87,14 @@ static bool hasDescriptorSetAndBinding(spirv::GlobalVariableOp op) {
 /// single entry point function. Hence, all `spirv.GlobalVariable`s with a bind
 /// attribute are kernel arguments.
 static LogicalResult getKernelGlobalVariables(
-    spirv::ModuleOp module,
+    spirv::ModuleOp moduleOp,
     DenseMap<uint32_t, spirv::GlobalVariableOp> &globalVariableMap) {
-  auto entryPoints = module.getOps<spirv::EntryPointOp>();
+  auto entryPoints = moduleOp.getOps<spirv::EntryPointOp>();
   if (!llvm::hasSingleElement(entryPoints)) {
-    return module.emitError(
+    return moduleOp.emitError(
         "The module must contain exactly one entry point function");
   }
-  auto globalVariables = module.getOps<spirv::GlobalVariableOp>();
+  auto globalVariables = moduleOp.getOps<spirv::GlobalVariableOp>();
   for (auto globalOp : globalVariables) {
     if (hasDescriptorSetAndBinding(globalOp))
       globalVariableMap[calculateGlobalIndex(globalOp)] = globalOp;
@@ -121,23 +104,23 @@ static LogicalResult getKernelGlobalVariables(
 
 /// Encodes the SPIR-V module's symbolic name into the name of the entry point
 /// function.
-static LogicalResult encodeKernelName(spirv::ModuleOp module) {
-  StringRef spvModuleName = module.getSymName().value_or(kSPIRVModule);
+static LogicalResult encodeKernelName(spirv::ModuleOp moduleOp) {
+  StringRef spvModuleName = moduleOp.getSymName().value_or(kSPIRVModule);
   // We already know that the module contains exactly one entry point function
   // based on `getKernelGlobalVariables()` call. Update this function's name
   // to:
   //   {spv_module_name}_{function_name}
-  auto entryPoints = module.getOps<spirv::EntryPointOp>();
+  auto entryPoints = moduleOp.getOps<spirv::EntryPointOp>();
   if (!llvm::hasSingleElement(entryPoints)) {
-    return module.emitError(
+    return moduleOp.emitError(
         "The module must contain exactly one entry point function");
   }
   spirv::EntryPointOp entryPoint = *entryPoints.begin();
   StringRef funcName = entryPoint.getFn();
-  auto funcOp = module.lookupSymbol<spirv::FuncOp>(entryPoint.getFnAttr());
+  auto funcOp = moduleOp.lookupSymbol<spirv::FuncOp>(entryPoint.getFnAttr());
   StringAttr newFuncName =
-      StringAttr::get(module->getContext(), spvModuleName + "_" + funcName);
-  if (failed(SymbolTable::replaceAllSymbolUses(funcOp, newFuncName, module)))
+      StringAttr::get(moduleOp->getContext(), spvModuleName + "_" + funcName);
+  if (failed(SymbolTable::replaceAllSymbolUses(funcOp, newFuncName, moduleOp)))
     return failure();
   SymbolTable::setSymbolName(funcOp, newFuncName);
   return success();
@@ -168,7 +151,7 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto *op = launchOp.getOperation();
     MLIRContext *context = rewriter.getContext();
-    auto module = launchOp->getParentOfType<ModuleOp>();
+    auto moduleOp = launchOp->getParentOfType<ModuleOp>();
 
     // Get the SPIR-V module that represents the gpu kernel module. The module
     // is named:
@@ -176,7 +159,7 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
     // based on GPU to SPIR-V conversion.
     StringRef kernelModuleName = launchOp.getKernelModuleName().getValue();
     std::string spvModuleName = kSPIRVModule + kernelModuleName.str();
-    auto spvModule = module.lookupSymbol<spirv::ModuleOp>(
+    auto spvModule = moduleOp.lookupSymbol<spirv::ModuleOp>(
         StringAttr::get(context, spvModuleName));
     if (!spvModule) {
       return launchOp.emitOpError("SPIR-V kernel module '")
@@ -191,13 +174,13 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
     // to avoid symbolic name conflicts.
     StringRef kernelFuncName = launchOp.getKernelName().getValue();
     std::string newKernelFuncName = spvModuleName + "_" + kernelFuncName.str();
-    auto kernelFunc = module.lookupSymbol<LLVM::LLVMFuncOp>(
+    auto kernelFunc = moduleOp.lookupSymbol<LLVM::LLVMFuncOp>(
         StringAttr::get(context, newKernelFuncName));
     if (!kernelFunc) {
       OpBuilder::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module.getBody());
-      kernelFunc = rewriter.create<LLVM::LLVMFuncOp>(
-          rewriter.getUnknownLoc(), newKernelFuncName,
+      rewriter.setInsertionPointToStart(moduleOp.getBody());
+      kernelFunc = LLVM::LLVMFuncOp::create(
+          rewriter, rewriter.getUnknownLoc(), newKernelFuncName,
           LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context),
                                       ArrayRef<Type>()));
       rewriter.setInsertionPoint(launchOp);
@@ -243,12 +226,12 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       std::string name =
           createGlobalVariableWithBindName(spirvGlobal, spvModuleName);
       // Check if this variable has already been created.
-      auto dstGlobal = module.lookupSymbol<LLVM::GlobalOp>(name);
+      auto dstGlobal = moduleOp.lookupSymbol<LLVM::GlobalOp>(name);
       if (!dstGlobal) {
         OpBuilder::InsertionGuard guard(rewriter);
-        rewriter.setInsertionPointToStart(module.getBody());
-        dstGlobal = rewriter.create<LLVM::GlobalOp>(
-            loc, dstGlobalType,
+        rewriter.setInsertionPointToStart(moduleOp.getBody());
+        dstGlobal = LLVM::GlobalOp::create(
+            rewriter, loc, dstGlobalType,
             /*isConstant=*/false, LLVM::Linkage::Linkonce, name, Attribute(),
             /*alignment=*/0);
         rewriter.setInsertionPoint(launchOp);
@@ -257,8 +240,8 @@ class GPULaunchLowering : public ConvertOpToLLVMPattern<gpu::LaunchFuncOp> {
       // Copy the data from src operand pointer to dst global variable. Save
       // src, dst and size so that we can copy data back after emulating the
       // kernel call.
-      Value dst = rewriter.create<LLVM::AddressOfOp>(
-          loc, typeConverter->convertType(spirvGlobal.getType()),
+      Value dst = LLVM::AddressOfOp::create(
+          rewriter, loc, typeConverter->convertType(spirvGlobal.getType()),
           dstGlobal.getSymName());
       copy(loc, dst, src, sizeBytes, rewriter);
 
@@ -283,23 +266,23 @@ public:
   using Base::Base;
 
   void runOnOperation() override {
-    ModuleOp module = getOperation();
+    ModuleOp moduleOp = getOperation();
 
     // Erase the GPU module.
     for (auto gpuModule :
-         llvm::make_early_inc_range(module.getOps<gpu::GPUModuleOp>()))
+         llvm::make_early_inc_range(moduleOp.getOps<gpu::GPUModuleOp>()))
       gpuModule.erase();
 
     // Request C wrapper emission.
-    for (auto func : module.getOps<func::FuncOp>()) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(&getContext()));
+    for (auto func : moduleOp.getOps<func::FuncOp>()) {
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(&getContext()));
     }
 
     // Specify options to lower to LLVM and pull in the conversion patterns.
-    LowerToLLVMOptions options(module.getContext());
+    LowerToLLVMOptions options(moduleOp.getContext());
 
-    auto *context = module.getContext();
+    auto *context = moduleOp.getContext();
     RewritePatternSet patterns(context);
     LLVMTypeConverter typeConverter(context, options);
     mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
@@ -313,12 +296,12 @@ public:
 
     ConversionTarget target(*context);
     target.addLegalDialect<LLVM::LLVMDialect>();
-    if (failed(applyPartialConversion(module, target, std::move(patterns))))
+    if (failed(applyPartialConversion(moduleOp, target, std::move(patterns))))
       signalPassFailure();
 
     // Finally, modify the kernel function in SPIR-V modules to avoid symbolic
     // conflicts.
-    for (auto spvModule : module.getOps<spirv::ModuleOp>()) {
+    for (auto spvModule : moduleOp.getOps<spirv::ModuleOp>()) {
       if (failed(encodeKernelName(spvModule))) {
         signalPassFailure();
         return;

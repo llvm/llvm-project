@@ -15,7 +15,6 @@
 #define LLVM_LIB_IR_CONSTANTSCONTEXT_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
@@ -35,6 +34,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 #include <utility>
 
 #define DEBUG_TYPE "ir"
@@ -54,7 +54,7 @@ public:
 
   // allocate space for exactly one operand
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
@@ -77,12 +77,13 @@ public:
       : ConstantExpr(C1->getType(), Opcode, AllocMarker) {
     Op<0>() = C1;
     Op<1>() = C2;
+    assert((Flags & ConstantSubclassBits) == 0 && "invalid flags");
     SubclassOptionalData = Flags;
   }
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -111,7 +112,7 @@ public:
 
   // allocate space for exactly two operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -140,7 +141,7 @@ public:
 
   // allocate space for exactly three operands
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr); }
+  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -178,7 +179,9 @@ public:
   Constant *ShuffleMaskForBitcode;
 
   void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { return User::operator delete(Ptr); }
+  void operator delete(void *Ptr) {
+    return User::operator delete(Ptr, AllocMarker);
+  }
 
   /// Transparently provide more efficient getOperand methods.
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
@@ -211,6 +214,7 @@ public:
     GetElementPtrConstantExpr *Result = new (AllocMarker)
         GetElementPtrConstantExpr(SrcElementTy, C, IdxList, DestTy,
                                   std::move(InRange), AllocMarker);
+    assert((Flags & ConstantSubclassBits) == 0 && "invalid flags");
     Result->SubclassOptionalData = Flags;
     return Result;
   }
@@ -535,17 +539,26 @@ struct ConstantPtrAuthKeyType {
 
   unsigned getHash() const { return hash_combine_range(Operands); }
 
-  using TypeClass = typename ConstantInfo<ConstantPtrAuth>::TypeClass;
+  using TypeClass = ConstantInfo<ConstantPtrAuth>::TypeClass;
 
   ConstantPtrAuth *create(TypeClass *Ty) const {
     return new ConstantPtrAuth(Operands[0], cast<ConstantInt>(Operands[1]),
-                               cast<ConstantInt>(Operands[2]), Operands[3]);
+                               cast<ConstantInt>(Operands[2]), Operands[3],
+                               Operands[4]);
   }
 };
 
 // Free memory for a given constant.  Assumes the constant has already been
 // removed from all relevant maps.
 void deleteConstant(Constant *C);
+
+/// Record that a uniqued constant uses \p Op, so that
+/// Constant::removeDeadConstantUsers on a global operand knows it has work to
+/// do.
+inline void noteConstantOperand(Value *Op) {
+  if (auto *GV = dyn_cast<GlobalValue>(Op))
+    GV->setMayHaveConstantUsers();
+}
 
 template <class ConstantClass> class ConstantUniqueMap {
 public:
@@ -558,16 +571,6 @@ public:
 
 private:
   struct MapInfo {
-    using ConstantClassInfo = DenseMapInfo<ConstantClass *>;
-
-    static inline ConstantClass *getEmptyKey() {
-      return ConstantClassInfo::getEmptyKey();
-    }
-
-    static inline ConstantClass *getTombstoneKey() {
-      return ConstantClassInfo::getTombstoneKey();
-    }
-
     static unsigned getHashValue(const ConstantClass *CP) {
       SmallVector<Constant *, 32> Storage;
       return getHashValue(LookupKey(CP->getType(), ValType(CP, Storage)));
@@ -586,8 +589,6 @@ private:
     }
 
     static bool isEqual(const LookupKey &LHS, const ConstantClass *RHS) {
-      if (RHS == getEmptyKey() || RHS == getTombstoneKey())
-        return false;
       if (LHS.first != RHS->getType())
         return false;
       return LHS.second == RHS;
@@ -618,6 +619,9 @@ private:
     ConstantClass *Result = V.create(Ty);
 
     assert(Result->getType() == Ty && "Type specified is not correct!");
+    if constexpr (std::is_base_of_v<User, ConstantClass>)
+      for (Value *Op : Result->operand_values())
+        noteConstantOperand(Op);
     Map.insert_as(Result, HashKey);
 
     return Result;
@@ -665,6 +669,7 @@ public:
     // Update to the new value.  Optimize for the case when we have a single
     // operand that we're changing, but handle bulk updates efficiently.
     remove(CP);
+    noteConstantOperand(To);
     if (NumUpdated == 1) {
       assert(OperandNo < CP->getNumOperands() && "Invalid index");
       assert(CP->getOperand(OperandNo) != To && "I didn't contain From!");

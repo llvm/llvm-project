@@ -17,7 +17,11 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/OpDefinition.h"
+
+namespace fir::detail {
+/// Verify operations implementing FortranVariableStorageOpInterface.
+mlir::LogicalResult verifyFortranVariableStorageOpInterface(mlir::Operation *);
+} // namespace fir::detail
 
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h.inc"
 

@@ -1,6 +1,7 @@
 ! RUN: %flang -### -c -fveclib=none %s 2>&1 | FileCheck -check-prefix CHECK-NOLIB %s
 ! RUN: %flang -### -c -fveclib=Accelerate %s 2>&1 | FileCheck -check-prefix CHECK-ACCELERATE %s
 ! RUN: %flang -### -c --target=x86_64-unknown-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck -check-prefix CHECK-libmvec %s
+! RUN: %flang -### -c --target=aarch64-unknown-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck -check-prefix CHECK-libmvec %s
 ! RUN: %flang -### -c -fveclib=MASSV %s 2>&1 | FileCheck -check-prefix CHECK-MASSV %s
 ! RUN: %flang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck -check-prefix CHECK-DARWIN_LIBSYSTEM_M %s
 ! RUN: %flang -### -c --target=aarch64-none-none -fveclib=SLEEF %s 2>&1 | FileCheck -check-prefix CHECK-SLEEF %s
@@ -23,7 +24,7 @@
 
 ! RUN: not %flang --target=x86-none-none -c -fveclib=SLEEF %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
 ! RUN: not %flang --target=x86-none-none -c -fveclib=ArmPL %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
-! RUN: not %flang --target=aarch64-none-none -c -fveclib=libmvec %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
+! RUN: not %flang --target=riscv64-none-none -c -fveclib=libmvec %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
 ! RUN: not %flang --target=aarch64-none-none -c -fveclib=SVML %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
 ! RUN: not %flang --target=aarch64-none-none -c -fveclib=AMDLIBM %s 2>&1 | FileCheck -check-prefix CHECK-ERROR %s
 ! CHECK-ERROR: unsupported option {{.*}} for target
@@ -53,6 +54,4 @@
 
 ! RUN: %flang -### --target=aarch64-linux-gnu -resource-dir=%S/../../../clang/test/Driver/Inputs/resource_dir_with_arch_subdir -frtlib-add-rpath -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-RPATH-ARMPL %s
 ! CHECK-RPATH-ARMPL: "--push-state" "--as-needed" "-lm" "-lamath" "-lm" "--pop-state"
-! We need to see "-rpath" at least twice, one for veclib, one for the Fortran runtime
-! CHECK-RPATH-ARMPL-SAME: "-rpath"
 ! CHECK-RPATH-ARMPL-SAME: "-rpath"

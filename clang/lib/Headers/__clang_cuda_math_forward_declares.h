@@ -70,6 +70,11 @@ __DEVICE__ double floor(double);
 __DEVICE__ float floor(float);
 __DEVICE__ double fma(double, double, double);
 __DEVICE__ float fma(float, float, float);
+#ifdef _MSC_VER
+// long double fma variant is not actually supported by CUDA (PTX).
+// However, MS-STL requires that this is forward declared anyways.
+__DEVICE__ long double fma(long double, long double, long double);
+#endif
 __DEVICE__ double fmax(double, double);
 __DEVICE__ float fmax(float, float);
 __DEVICE__ double fmin(double, double);

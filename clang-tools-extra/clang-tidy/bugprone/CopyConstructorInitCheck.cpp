@@ -1,4 +1,4 @@
-//===--- CopyConstructorInitCheck.cpp - clang-tidy-------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,7 +31,7 @@ void CopyConstructorInitCheck::registerMatchers(MatchFinder *Finder) {
 
 void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
-  std::string ParamName = Ctor->getParamDecl(0)->getNameAsString();
+  const std::string ParamName = Ctor->getParamDecl(0)->getNameAsString();
 
   // We want only one warning (and FixIt) for each ctor.
   std::string FixItInitList;
@@ -40,7 +40,7 @@ void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   bool HasWrittenInitializer = false;
   SmallVector<FixItHint, 2> SafeFixIts;
   for (const auto *Init : Ctor->inits()) {
-    bool CtorInitIsWritten = Init->isWritten();
+    const bool CtorInitIsWritten = Init->isWritten();
     HasWrittenInitializer = HasWrittenInitializer || CtorInitIsWritten;
     if (!Init->isBaseInitializer())
       continue;
@@ -87,9 +87,10 @@ void CopyConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
   if (!HasRelevantBaseInit)
     return;
 
-  auto Diag = diag(Ctor->getLocation(),
-                   "calling a base constructor other than the copy constructor")
-              << SafeFixIts;
+  const auto Diag =
+      diag(Ctor->getLocation(),
+           "calling a base constructor other than the copy constructor")
+      << SafeFixIts;
 
   if (FixItInitList.empty() || ParamName.empty() || ShouldNotDoFixit)
     return;

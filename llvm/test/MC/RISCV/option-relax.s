@@ -39,6 +39,7 @@ call bar
 
 .dword .L2-.L1
 # CHECK-RELOC-NEXT: R_RISCV_JAL
+# CHECK-RELOC-NEXT: R_RISCV_RELAX
 jal zero, .L1
 # CHECK-RELOC-NEXT: R_RISCV_BRANCH
 beq s1, s1, .L1

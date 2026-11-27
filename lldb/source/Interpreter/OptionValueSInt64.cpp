@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/OptionValueSInt64.h"
 
+#include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb;
@@ -26,6 +27,11 @@ void OptionValueSInt64::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
     if (dump_mask & eDumpOptionType)
       strm.PutCString(" = ");
     strm.Printf("%" PRIi64, m_current_value);
+    if (dump_mask & eDumpOptionDefaultValue &&
+        m_current_value != m_default_value) {
+      DefaultValueFormat label(strm);
+      strm.Printf("%" PRIi64, m_default_value);
+    }
   }
 }
 

@@ -1,81 +1,127 @@
-add_custom_target(libc_time_unittests)
+add_libc_testsuite(libc-time-tests)
 
-add_libc_unittest(
-  asctime_test
-  SUITE
-    libc_time_unittests
-  SRCS
-    asctime_test.cpp
+# Allow designated and aggregate initialisers of struct tm to omit fields
+# (such as platform extension fields tm_gmtoff and tm_zone) and rely on
+# standard zero-initialisation without compiler warnings.
+set(time_test_copts "-Wno-missing-field-initializers")
+
+add_header_library(
+  time_test_utils
   HDRS
     TmHelper.h
     TmMatcher.h
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.src.__support.macros.config
+    libc.src.time.time_constants
+    libc.test.UnitTest.LibcTest
+)
+
+add_libc_test(
+  asctime_test
+  SUITE
+    libc-time-tests
+  SRCS
+    asctime_test.cpp
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
+    .time_test_utils
+    libc.hdr.errno_macros
     libc.src.time.asctime
     libc.hdr.types.struct_tm
     libc.src.time.time_constants
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   asctime_r_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     asctime_r_test.cpp
-  HDRS
-    TmHelper.h
-    TmMatcher.h
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
+    .time_test_utils
+    libc.hdr.errno_macros
     libc.src.time.asctime_r
     libc.hdr.types.struct_tm
     libc.src.time.time_constants
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   ctime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     ctime_test.cpp
-  HDRS
-    TmHelper.h
-    TmMatcher.h
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
+    .time_test_utils
     libc.include.time
     libc.hdr.types.time_t
     libc.src.time.ctime
     libc.src.time.time_constants
     libc.hdr.types.struct_tm
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   ctime_r_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     ctime_r_test.cpp
-  HDRS
-    TmHelper.h
-    TmMatcher.h
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
+    .time_test_utils
     libc.include.time
     libc.hdr.types.time_t
     libc.src.time.ctime_r
     libc.src.time.time_constants
     libc.hdr.types.struct_tm
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  localtime_test
+  SUITE
+    libc-time-tests
+  SRCS
+    localtime_test.cpp
+  DEPENDS
+    libc.hdr.types.time_t
+    libc.src.time.localtime
+)
+
+add_libc_test(
+  localtime_r_test
+  SUITE
+    libc-time-tests
+  SRCS
+    localtime_r_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.hdr.types.time_t
+    libc.src.time.localtime_r
 )
 
 add_libc_test(
   clock_gettime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     clock_gettime_test.cpp
   DEPENDS
@@ -86,19 +132,78 @@ add_libc_test(
 )
 
 add_libc_test(
+  clock_getcpuclockid_test
+  SUITE
+    libc-time-tests
+  SRCS
+    clock_getcpuclockid_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pid_t
+    libc.hdr.types.struct_timespec
+    libc.src.time.clock_getcpuclockid
+    libc.src.time.clock_gettime
+    libc.src.unistd.getpid
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
   clock_getres_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     clock_getres_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
     libc.src.time.clock_getres
 )
 
-add_libc_unittest(
+add_libc_test(
+  clock_settime_test
+  SUITE
+    libc-time-tests
+  SRCS
+    clock_settime_test.cpp
+  DEPENDS
+    libc.src.time.clock_settime
+    libc.hdr.types.time_t
+    libc.hdr.types.struct_timespec
+    libc.hdr.time_macros
+    libc.hdr.errno_macros
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  timer_test
+  SUITE
+    libc-time-tests
+  SRCS
+    timer_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_itimerspec
+    libc.hdr.types.struct_sigevent
+    libc.hdr.types.timer_t
+    libc.src.time.clock_gettime
+    libc.src.time.timer_create
+    libc.src.time.timer_delete
+    libc.src.time.timer_getoverrun
+    libc.src.time.timer_gettime
+    libc.src.time.timer_settime
+    libc.src.unistd.gettid
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
   difftime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     difftime_test.cpp
   DEPENDS
@@ -107,59 +212,53 @@ add_libc_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-add_libc_unittest(
-  gettimeofday_test
-  SUITE
-    libc_time_unittests
-  SRCS
-    gettimeofday_test.cpp
-  DEPENDS
-    libc.include.time
-    libc.src.time.gettimeofday
-    libc.hdr.types.struct_timeval
-)
-
-add_libc_unittest(
+add_libc_test(
   gmtime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     gmtime_test.cpp
-  HDRS
-    TmMatcher.h
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
+    .time_test_utils
+    libc.hdr.errno_macros
     libc.src.time.gmtime
+    libc.src.time.time_utils
     libc.src.__support.CPP.limits
     libc.hdr.types.struct_tm
     libc.src.time.time_constants
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
-add_libc_unittest(
+add_libc_test(
   gmtime_r_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     gmtime_r_test.cpp
-  HDRS
-    TmMatcher.h
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
+    .time_test_utils
     libc.src.time.gmtime_r
     libc.hdr.types.struct_tm
     libc.src.time.time_constants
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
   mktime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     mktime_test.cpp
-  HDRS
-    TmHelper.h
-    TmMatcher.h
   CXX_STANDARD
     20
+  COMPILE_OPTIONS
+    ${time_test_copts}
   DEPENDS
+    .time_test_utils
     libc.src.time.mktime
     libc.src.__support.CPP.limits
     libc.hdr.types.struct_tm
@@ -167,22 +266,61 @@ add_libc_test(
 )
 
 add_libc_test(
+  timegm_test
+  SUITE
+    libc-time-tests
+  SRCS
+    timegm_test.cpp
+  CXX_STANDARD
+    20
+  COMPILE_OPTIONS
+    ${time_test_copts}
+  DEPENDS
+    .time_test_utils
+    libc.hdr.types.struct_tm
+    libc.hdr.types.time_t
+    libc.src.__support.CPP.limits
+    libc.src.time.time_constants
+    libc.src.time.time_utils
+    libc.src.time.timegm
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)
+
+add_libc_test(
+  clock_nanosleep_test
+  SUITE
+    libc-time-tests
+  SRCS
+    clock_nanosleep_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.time_macros
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.src.time.clock_nanosleep
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.Test
+)
+
+add_libc_test(
   nanosleep_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     nanosleep_test.cpp
   DEPENDS
-    libc.include.time
-    libc.src.time.nanosleep
-    libc.src.errno.errno
     libc.hdr.types.struct_timespec
+    libc.hdr.signal_macros
+    libc.src.time.nanosleep
+    libc.src.__support.macros.config
+    libc.test.UnitTest.ErrnoCheckingTest
 )
 
 add_libc_test(
   strftime_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     strftime_test.cpp
   DEPENDS
@@ -190,22 +328,32 @@ add_libc_test(
     libc.src.time.strftime
 )
 
-add_libc_unittest(
+add_libc_test(
+  strptime_test
+  SUITE
+    libc-time-tests
+  SRCS
+    strptime_test.cpp
+  DEPENDS
+    libc.hdr.types.struct_tm
+    libc.src.time.strptime
+)
+
+add_libc_test(
   time_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     time_test.cpp
   DEPENDS
     libc.src.time.time
     libc.src.__support.time.clock_gettime
-    libc.src.errno.errno
 )
 
 add_libc_test(
   timespec_get_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     timespec_get_test.cpp
   DEPENDS
@@ -216,12 +364,43 @@ add_libc_test(
 add_libc_test(
   clock_test
   SUITE
-    libc_time_unittests
+    libc-time-tests
   SRCS
     clock_test.cpp
   DEPENDS
     libc.include.time
     libc.src.time.clock
-    libc.src.errno.errno
     libc.hdr.types.clock_t
+)
+
+add_libc_test(
+  tzset_test
+  SUITE
+    libc-time-tests
+  SRCS
+    tzset_test.cpp
+  DEPENDS
+    libc.src.time.tz_variables
+    libc.src.time.tzset
+)
+
+# Depending on the gmtime entrypoint skips this test on targets that don't
+# enable the time functions. time_utils requires a 64-bit time_t and does not
+# compile on overlay builds whose system time_t is 32-bit (e.g. armhf).
+add_libc_test(
+  time_utils_test
+  SUITE
+    libc-time-tests
+  SRCS
+    time_utils_test.cpp
+  CXX_STANDARD
+    20
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.struct_tm
+    libc.hdr.types.time_t
+    libc.src.time.gmtime
+    libc.src.time.time_constants
+    libc.src.time.time_utils
 )

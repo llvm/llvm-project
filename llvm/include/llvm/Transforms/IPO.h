@@ -14,6 +14,8 @@
 #ifndef LLVM_TRANSFORMS_IPO_H
 #define LLVM_TRANSFORMS_IPO_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class ModulePass;
@@ -25,23 +27,6 @@ class raw_ostream;
 /// which are not used by the body of the function.
 ///
 LLVM_ABI ModulePass *createDeadArgEliminationPass();
-
-/// DeadArgHacking pass - Same as DAE, but delete arguments of external
-/// functions as well.  This is definitely not safe, and should only be used by
-/// bugpoint.
-LLVM_ABI ModulePass *createDeadArgHackingPass();
-
-//===----------------------------------------------------------------------===//
-//
-/// createLoopExtractorPass - This pass extracts all natural loops from the
-/// program into a function if it can.
-///
-LLVM_ABI Pass *createLoopExtractorPass();
-
-/// createSingleLoopExtractorPass - This pass extracts one natural loop from the
-/// program into a function if it can.  This is used by bugpoint.
-///
-LLVM_ABI Pass *createSingleLoopExtractorPass();
 
 //===----------------------------------------------------------------------===//
 /// createBarrierNoopPass - This pass is purely a module pass barrier in a pass

@@ -8,9 +8,9 @@ func.func @_QPcst_alloca(%arg0: !fir.ref<!fir.array<100000xf32>> {fir.bindc_name
   %c100000 = arith.constant 100000 : index
   %0 = fir.dummy_scope : !fir.dscope
   %1 = fir.shape %c100000 : (index) -> !fir.shape<1>
-  %2 = fir.declare %arg0(%1) dummy_scope %0 {uniq_name = "_QFcst_allocaEx"} : (!fir.ref<!fir.array<100000xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<100000xf32>>
+  %2 = fir.declare %arg0(%1) dummy_scope %0 uniq_name("_QFcst_allocaEx") : (!fir.ref<!fir.array<100000xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<100000xf32>>
   %3 = fir.allocmem !fir.array<100000xf32> {bindc_name = ".tmp.array", uniq_name = ""}
-  %4 = fir.declare %3(%1) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<100000xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<100000xf32>>
+  %4 = fir.declare %3(%1) uniq_name(".tmp.array") : (!fir.heap<!fir.array<100000xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<100000xf32>>
   fir.do_loop %arg1 = %c1 to %c100000 step %c1 unordered {
     %9 = fir.array_coor %2(%1) %arg1 : (!fir.ref<!fir.array<100000xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
     %10 = fir.load %9 : !fir.ref<f32>
@@ -22,7 +22,7 @@ func.func @_QPcst_alloca(%arg0: !fir.ref<!fir.array<100000xf32>> {fir.bindc_name
   fir.call @_QPbar(%5) fastmath<contract> : (!fir.ref<!fir.array<100000xf32>>) -> ()
   fir.freemem %4 : !fir.heap<!fir.array<100000xf32>>
   %6 = fir.allocmem !fir.array<100000xi32> {bindc_name = ".tmp.array", uniq_name = ""}
-  %7 = fir.declare %6(%1) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<100000xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<100000xi32>>
+  %7 = fir.declare %6(%1) uniq_name(".tmp.array") : (!fir.heap<!fir.array<100000xi32>>, !fir.shape<1>) -> !fir.heap<!fir.array<100000xi32>>
   fir.do_loop %arg1 = %c1 to %c100000 step %c1 unordered {
     %9 = fir.array_coor %2(%1) %arg1 : (!fir.ref<!fir.array<100000xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
     %10 = fir.load %9 : !fir.ref<f32>
@@ -36,33 +36,33 @@ func.func @_QPcst_alloca(%arg0: !fir.ref<!fir.array<100000xf32>> {fir.bindc_name
   return
 }
 // CHECK-LABEL:   func.func @_QPcst_alloca(
-// CHECK-DAG:           %[[VAL_0:.*]] = fir.alloca !fir.array<100000xf32> {bindc_name = ".tmp.array", fir.has_lifetime}
-// CHECK-DAG:           %[[VAL_2:.*]] = fir.alloca !fir.array<100000xi32> {bindc_name = ".tmp.array", fir.has_lifetime}
+// CHECK-DAG:           %[[VAL_0:.*]] = fir.alloca !fir.array<100000xf32> <{bindc_name = ".tmp.array"}> {fir.has_lifetime}
+// CHECK-DAG:           %[[VAL_2:.*]] = fir.alloca !fir.array<100000xi32> <{bindc_name = ".tmp.array"}> {fir.has_lifetime}
 // CHECK:           %[[VAL_9:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<100000xf32>>) -> !llvm.ptr
-// CHECK:           llvm.intr.lifetime.start 400000, %[[VAL_9]] : !llvm.ptr
+// CHECK:           llvm.intr.lifetime.start %[[VAL_9]] : !llvm.ptr
 // CHECK:           fir.do_loop
 // CHECK:           fir.call @_QPbar(
-// CHECK:           llvm.intr.lifetime.end 400000, %[[VAL_9]] : !llvm.ptr
+// CHECK:           llvm.intr.lifetime.end %[[VAL_9]] : !llvm.ptr
 // CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<!fir.array<100000xi32>>) -> !llvm.ptr
-// CHECK:           llvm.intr.lifetime.start 400000, %[[VAL_17]] : !llvm.ptr
+// CHECK:           llvm.intr.lifetime.start %[[VAL_17]] : !llvm.ptr
 // CHECK:           fir.do_loop
 // CHECK:           fir.call @_QPibar(
-// CHECK:           llvm.intr.lifetime.end 400000, %[[VAL_17]] : !llvm.ptr
+// CHECK:           llvm.intr.lifetime.end %[[VAL_17]] : !llvm.ptr
 
 
 func.func @_QPdyn_alloca(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i64> {fir.bindc_name = "n"}) {
   %c1 = arith.constant 1 : index
   %c0 = arith.constant 0 : index
   %0 = fir.dummy_scope : !fir.dscope
-  %1 = fir.declare %arg1 dummy_scope %0 {uniq_name = "_QFdyn_allocaEn"} : (!fir.ref<i64>, !fir.dscope) -> !fir.ref<i64>
+  %1 = fir.declare %arg1 dummy_scope %0 uniq_name("_QFdyn_allocaEn") : (!fir.ref<i64>, !fir.dscope) -> !fir.ref<i64>
   %2 = fir.load %1 : !fir.ref<i64>
   %3 = fir.convert %2 : (i64) -> index
   %4 = arith.cmpi sgt, %3, %c0 : index
   %5 = arith.select %4, %3, %c0 : index
   %6 = fir.shape %5 : (index) -> !fir.shape<1>
-  %7 = fir.declare %arg0(%6) dummy_scope %0 {uniq_name = "_QFdyn_allocaEx"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  %7 = fir.declare %arg0(%6) dummy_scope %0 uniq_name("_QFdyn_allocaEx") : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
   %8 = fir.allocmem !fir.array<?xf32>, %5 {bindc_name = ".tmp.array", uniq_name = ""}
-  %9 = fir.declare %8(%6) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
+  %9 = fir.declare %8(%6) uniq_name(".tmp.array") : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
   fir.do_loop %arg2 = %c1 to %5 step %c1 unordered {
     %14 = fir.array_coor %7(%6) %arg2 : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
     %15 = fir.load %14 : !fir.ref<f32>
@@ -74,7 +74,7 @@ func.func @_QPdyn_alloca(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x
   fir.call @_QPbar(%10) fastmath<contract> : (!fir.ref<!fir.array<?xf32>>) -> ()
   fir.freemem %9 : !fir.heap<!fir.array<?xf32>>
   %11 = fir.allocmem !fir.array<?xf32>, %5 {bindc_name = ".tmp.array", uniq_name = ""}
-  %12 = fir.declare %11(%6) {uniq_name = ".tmp.array"} : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
+  %12 = fir.declare %11(%6) uniq_name(".tmp.array") : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.heap<!fir.array<?xf32>>
   fir.do_loop %arg2 = %c1 to %5 step %c1 unordered {
     %14 = fir.array_coor %7(%6) %arg2 : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
     %15 = fir.load %14 : !fir.ref<f32>

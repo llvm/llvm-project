@@ -29,6 +29,7 @@ class BlockFrequencyInfo;
 class CallBase;
 class DataLayout;
 class Function;
+class LLVMContext;
 class ProfileSummaryInfo;
 class TargetTransformInfo;
 class TargetLibraryInfo;
@@ -45,8 +46,10 @@ const int OptMinSizeThreshold = 5;
 /// Use when -O3 is specified.
 const int OptAggressiveThreshold = 250;
 
+/// Return -inline-instr-cost.
+LLVM_ABI int getInstrCost(const LLVMContext &C);
+
 // Various magic constants used to adjust heuristics.
-LLVM_ABI int getInstrCost();
 const int IndirectCallThreshold = 100;
 const int LoopPenalty = 25;
 const int ColdccPenalty = 2000;
@@ -211,6 +214,10 @@ struct InlineParams {
   /// Threshold to use for callees with inline hint.
   std::optional<int> HintThreshold;
 
+  /// Threshold to use for callees with inline hint, when the caller is
+  /// optimized for size.
+  std::optional<int> OptSizeHintThreshold;
+
   /// Threshold to use for cold callees.
   std::optional<int> ColdThreshold;
 
@@ -238,6 +245,11 @@ struct InlineParams {
 
   /// Indicate whether we allow inlining for recursive call.
   std::optional<bool> AllowRecursiveCall = false;
+
+  /// Indicate whether to ignore profile information. If set, the inline cost
+  /// analysis is performed without the profile summary and block frequency
+  /// info.
+  std::optional<bool> IgnoreProfile = false;
 };
 
 LLVM_ABI std::optional<int> getStringFnAttrAsInt(CallBase &CB,
@@ -245,20 +257,21 @@ LLVM_ABI std::optional<int> getStringFnAttrAsInt(CallBase &CB,
 
 /// Generate the parameters to tune the inline cost analysis based only on the
 /// commandline options.
-LLVM_ABI InlineParams getInlineParams();
+LLVM_ABI InlineParams getInlineParams(const LLVMContext &C);
 
 /// Generate the parameters to tune the inline cost analysis based on command
 /// line options. If -inline-threshold option is not explicitly passed,
 /// \p Threshold is used as the default threshold.
-LLVM_ABI InlineParams getInlineParams(int Threshold);
+LLVM_ABI InlineParams getInlineParams(const LLVMContext &C, int Threshold);
 
 /// Generate the parameters to tune the inline cost analysis based on command
 /// line options. If -inline-threshold option is not explicitly passed,
-/// the default threshold is computed from \p OptLevel and \p SizeOptLevel.
+/// the default threshold is computed from \p OptLevel.
 /// An \p OptLevel value above 3 is considered an aggressive optimization mode.
-/// \p SizeOptLevel of 1 corresponds to the -Os flag and 2 corresponds to
-/// the -Oz flag.
-LLVM_ABI InlineParams getInlineParams(unsigned OptLevel, unsigned SizeOptLevel);
+/// Optimization for size is handled via separate thresholds for
+/// optsize/minsize, rather than changes to the default threshold.
+LLVM_ABI InlineParams getInlineParamsFromOptLevel(const LLVMContext &C,
+                                                  unsigned OptLevel);
 
 /// Return the cost associated with a callsite, including parameter passing
 /// and the call/return instruction.
@@ -277,7 +290,7 @@ LLVM_ABI int getCallsiteCost(const TargetTransformInfo &TTI,
 /// Also note that calling this function *dynamically* computes the cost of
 /// inlining the callsite. It is an expensive, heavyweight call.
 LLVM_ABI InlineCost getInlineCost(
-    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
@@ -292,7 +305,7 @@ LLVM_ABI InlineCost getInlineCost(
 //
 LLVM_ABI InlineCost getInlineCost(
     CallBase &Call, Function *Callee, const InlineParams &Params,
-    TargetTransformInfo &CalleeTTI,
+    TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
@@ -307,7 +320,7 @@ LLVM_ABI InlineCost getInlineCost(
 /// Otherwise returns std::nullopt, meaning that inlining should be decided
 /// based on other criteria (e.g. cost modeling).
 LLVM_ABI std::optional<InlineResult> getAttributeBasedInliningDecision(
-    CallBase &Call, Function *Callee, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, Function *Callee, TargetTransformInfo &CallerTTI,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
 /// Get the cost estimate ignoring thresholds. This is similar to getInlineCost
@@ -319,7 +332,7 @@ LLVM_ABI std::optional<InlineResult> getAttributeBasedInliningDecision(
 /// - std::nullopt, if the inlining cannot happen (is illegal)
 /// - an integer, representing the cost.
 LLVM_ABI std::optional<int> getInliningCostEstimate(
-    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
@@ -329,27 +342,30 @@ LLVM_ABI std::optional<int> getInliningCostEstimate(
 /// Get the expanded cost features. The features are returned unconditionally,
 /// even if inlining is impossible.
 LLVM_ABI std::optional<InlineCostFeatures> getInliningCostFeatures(
-    CallBase &Call, TargetTransformInfo &CalleeTTI,
+    CallBase &Call, TargetTransformInfo &CallerTTI,
     function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
     function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
     function_ref<const TargetLibraryInfo &(Function &)> GetTLI = nullptr,
     ProfileSummaryInfo *PSI = nullptr,
     OptimizationRemarkEmitter *ORE = nullptr);
 
-/// Minimal filter to detect invalid constructs for inlining.
+/// Check if it is mechanically possible to inline the function \p Callee, based
+/// on the contents of the function.
+///
+/// See also \p CanInlineCallSite as an additional precondition necessary to
+/// perform a valid inline in a particular use context.
 LLVM_ABI InlineResult isInlineViable(Function &Callee);
 
 // This pass is used to annotate instructions during the inline process for
 // debugging and analysis. The main purpose of the pass is to see and test
 // inliner's decisions when creating new optimizations to InlineCost.
 struct InlineCostAnnotationPrinterPass
-    : PassInfoMixin<InlineCostAnnotationPrinterPass> {
+    : RequiredPassInfoMixin<InlineCostAnnotationPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit InlineCostAnnotationPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-  static bool isRequired() { return true; }
 };
 } // namespace llvm
 

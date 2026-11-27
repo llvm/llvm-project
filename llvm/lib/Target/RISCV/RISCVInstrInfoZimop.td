@@ -33,13 +33,13 @@ class RVInstRMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3, RISCVOpcode opcod
 }
 
 // May-Be-Operations
-def riscv_mopr  : RVSDNode<"MOPR",
-                           SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
-                                                SDTCisSameAs<0, 2>]>>;
-def riscv_moprr : RVSDNode<"MOPRR",
-                           SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
-                                                SDTCisSameAs<0, 2>,
-                                                SDTCisSameAs<0, 3>]>>;
+def riscv_mop_r  : RVSDNode<"MOP_R",
+                            SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
+                                                 SDTCisSameAs<0, 2>]>>;
+def riscv_mop_rr : RVSDNode<"MOP_RR",
+                            SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<0, 1>,
+                                                 SDTCisSameAs<0, 2>,
+                                                 SDTCisSameAs<0, 3>]>>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVMopr<bits<7> imm7, bits<5> imm5, bits<3> funct3,
@@ -50,31 +50,32 @@ class RVMopr<bits<7> imm7, bits<5> imm5, bits<3> funct3,
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVMoprr<bits<4> imm4, bits<3> imm3, bits<3> funct3,
              RISCVOpcode opcode, string opcodestr>
-    : RVInstRMoprr<imm4, imm3, funct3, opcode, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
+    : RVInstRMoprr<imm4, imm3, funct3, opcode, (outs GPR:$rd),
+                   (ins GPR:$rs1, GPR:$rs2),
                    opcodestr, "$rd, $rs1, $rs2">;
 
 foreach i = 0...31 in {
   let Predicates = [HasStdExtZimop] in
-  def MOPR#i : RVMopr<0b1000111, i, 0b100, OPC_SYSTEM, "mop.r."#i>,
-               Sched<[]>;
+  def MOP_R_#i : RVMopr<0b1000111, i, 0b100, OPC_SYSTEM, "mop.r."#i>,
+                 Sched<[]>;
 }
 
 foreach i = 0...7 in {
   let Predicates = [HasStdExtZimop] in
-  def MOPRR#i : RVMoprr<0b1001, i, 0b100, OPC_SYSTEM, "mop.rr."#i>,
+  def MOP_RR_#i : RVMoprr<0b1001, i, 0b100, OPC_SYSTEM, "mop.rr."#i>,
                 Sched<[]>;
 }
 
 let Predicates = [HasStdExtZimop] in {
 // Zimop instructions
 foreach i = 0...31 in {
-  def : Pat<(XLenVT (riscv_mopr GPR:$rs1, (XLenVT i))),
-            (!cast<Instruction>("MOPR"#i) GPR:$rs1)>;
+  def : Pat<(XLenVT (riscv_mop_r GPR:$rs1, (XLenVT i))),
+            (!cast<Instruction>("MOP_R_"#i) GPR:$rs1)>;
 }
 
 foreach i = 0...7 in {
-  def : Pat<(XLenVT (riscv_moprr GPR:$rs1, GPR:$rs2, (XLenVT i))),
-            (!cast<Instruction>("MOPRR"#i) GPR:$rs1, GPR:$rs2)>;
+  def : Pat<(XLenVT (riscv_mop_rr GPR:$rs1, GPR:$rs2, (XLenVT i))),
+            (!cast<Instruction>("MOP_RR_"#i) GPR:$rs1, GPR:$rs2)>;
 }
 
 } // Predicates = [HasStdExtZimop]

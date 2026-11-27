@@ -6,25 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
+#include "hdr/sys_stat_macros.h" // For S_IRWXU
 #include "src/fcntl/open.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/mman/remap_file_pages.h"
 #include "src/unistd/close.h"
-#include "src/unistd/sysconf.h"
+#include "src/unistd/getpagesize.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/mman.h>
-#include <sys/stat.h> // For S_IRWXU
+const size_t PAGE_SIZE = LIBC_NAMESPACE::getpagesize();
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
 using LlvmLibcRemapFilePagesTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 TEST_F(LlvmLibcRemapFilePagesTest, NoError) {
-  size_t page_size = LIBC_NAMESPACE::sysconf(_SC_PAGE_SIZE);
+  size_t page_size = PAGE_SIZE;
   ASSERT_GT(page_size, size_t(0));
 
   // Create a file-backed mapping
@@ -50,7 +51,7 @@ TEST_F(LlvmLibcRemapFilePagesTest, NoError) {
 }
 
 TEST_F(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
-  size_t page_size = LIBC_NAMESPACE::sysconf(_SC_PAGE_SIZE);
+  size_t page_size = PAGE_SIZE;
   ASSERT_GT(page_size, size_t(0));
 
   // Create a file-backed mapping
@@ -77,7 +78,7 @@ TEST_F(LlvmLibcRemapFilePagesTest, ErrorInvalidFlags) {
 }
 
 TEST_F(LlvmLibcRemapFilePagesTest, ErrorInvalidAddress) {
-  size_t page_size = LIBC_NAMESPACE::sysconf(_SC_PAGESIZE);
+  size_t page_size = PAGE_SIZE;
   ASSERT_GT(page_size, size_t(0));
 
   // Use an address that we haven't mapped

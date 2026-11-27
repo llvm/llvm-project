@@ -19,7 +19,7 @@ namespace Fortran::runtime {
 
 static RT_API_ATTRS void TransferImpl(Descriptor &result,
     const Descriptor &source, const Descriptor &mold, const char *sourceFile,
-    int line, Fortran::common::optional<std::int64_t> resultExtent) {
+    int line, common::optional<std::int64_t> resultExtent) {
   int rank{resultExtent.has_value() ? 1 : 0};
   std::size_t elementBytes{mold.ElementBytes()};
   result.Establish(mold.type(), elementBytes, nullptr, rank, nullptr,
@@ -42,14 +42,14 @@ static RT_API_ATTRS void TransferImpl(Descriptor &result,
   source.GetLowerBounds(sourceAt);
   while (resultBytes > 0 && sourceElements > 0) {
     std::size_t toMove{std::min(resultBytes, sourceElementBytes)};
-    std::memcpy(to, source.Element<char>(sourceAt), toMove);
+    runtime::memcpy(to, source.Element<char>(sourceAt), toMove);
     to += toMove;
     resultBytes -= toMove;
     --sourceElements;
     source.IncrementSubscripts(sourceAt);
   }
   if (resultBytes > 0) {
-    std::memset(to, 0, resultBytes);
+    runtime::memset(to, 0, resultBytes);
   }
 }
 
@@ -59,14 +59,22 @@ RT_EXT_API_GROUP_BEGIN
 void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
     const Descriptor *status, const char *sourceFile, int line) {
   Terminator terminator{sourceFile, line};
-#if !defined(RT_DEVICE_COMPILATION)
-  char *pathSrc{EnsureNullTerminated(
-      path1.OffsetElement(), path1.ElementBytes(), terminator)};
-  char *pathDst{EnsureNullTerminated(
-      path2.OffsetElement(), path2.ElementBytes(), terminator)};
 
-  // We simply call rename(2) from POSIX
-  int result{rename(pathSrc, pathDst)};
+  // Semantics for character strings: A null character (CHAR(0)) can be used to
+  // mark the end of the names in PATH1 and PATH2; otherwise, trailing blanks in
+  // the file names are ignored.
+  // (https://gcc.gnu.org/onlinedocs/gfortran/RENAME.html)
+#if !defined(RT_DEVICE_COMPILATION)
+  // Trim tailing spaces, respect presences of null character when doing so.
+  auto pathSrc{SaveDefaultCharacter(path1.OffsetElement(),
+      TrimTrailingSpaces(path1.OffsetElement(), path1.ElementBytes()),
+      terminator)};
+  auto pathDst{SaveDefaultCharacter(path2.OffsetElement(),
+      TrimTrailingSpaces(path2.OffsetElement(), path2.ElementBytes()),
+      terminator)};
+
+  // We can now simply call rename(2) from POSIX.
+  int result{rename(pathSrc.get(), pathDst.get())};
   if (status) {
     // When an error has happened,
     int errorCode{0}; // Assume success
@@ -76,14 +84,6 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
     }
     StoreIntToDescriptor(status, errorCode, terminator);
   }
-
-  // Deallocate memory if EnsureNullTerminated dynamically allocated memory
-  if (pathSrc != path1.OffsetElement()) {
-    FreeMemory(pathSrc);
-  }
-  if (pathDst != path2.OffsetElement()) {
-    FreeMemory(pathDst);
-  }
 #else // !defined(RT_DEVICE_COMPILATION)
   terminator.Crash("RENAME intrinsic is only supported on host devices");
 #endif // !defined(RT_DEVICE_COMPILATION)
@@ -91,7 +91,7 @@ void RTDEF(Rename)(const Descriptor &path1, const Descriptor &path2,
 
 void RTDEF(Transfer)(Descriptor &result, const Descriptor &source,
     const Descriptor &mold, const char *sourceFile, int line) {
-  Fortran::common::optional<std::int64_t> elements;
+  common::optional<std::int64_t> elements;
   if (mold.rank() > 0) {
     if (std::size_t sourceElementBytes{
             source.Elements() * source.ElementBytes()}) {

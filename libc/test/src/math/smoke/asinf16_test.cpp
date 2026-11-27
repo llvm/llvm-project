@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
+#include "hdr/errno_macros.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/math/asinf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -15,7 +16,7 @@
 using LlvmLibcAsinf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAsinf16Test, SpecialNumbers) {
-  libc_errno = 0;
+  using LIBC_NAMESPACE::fputil::cast;
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinf16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -34,9 +35,9 @@ TEST_F(LlvmLibcAsinf16Test, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinf16(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinf16(2.0f));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinf16(cast<float16>(2.0f)));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinf16(-2.0f));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinf16(cast<float16>(-2.0f)));
   EXPECT_MATH_ERRNO(EDOM);
 }

@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "WebAssemblyRegisterInfo.h"
+#include "GISel/WebAssemblyRegisterBankInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "WebAssemblyFrameLowering.h"
 #include "WebAssemblyInstrInfo.h"
@@ -116,8 +117,8 @@ bool WebAssemblyRegisterInfo::eliminateFrameIndex(
   unsigned FIRegOperand = FrameRegister;
   if (FrameOffset) {
     // Create i32/64.add SP, offset and make it the operand.
-    const TargetRegisterClass *PtrRC =
-        MRI.getTargetRegisterInfo()->getPointerRegClass(MF);
+    const TargetRegisterClass *PtrRC = TII->getRegClass(
+        TII->get(WebAssemblyFrameLowering::getOpcConst(MF)), 0);
     Register OffsetOp = MRI.createVirtualRegister(PtrRC);
     BuildMI(MBB, *II, II->getDebugLoc(),
             TII->get(WebAssemblyFrameLowering::getOpcConst(MF)),
@@ -148,11 +149,58 @@ WebAssemblyRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return Regs[TFI->hasFP(MF)][TT.isArch64Bit()];
 }
 
+static const TargetRegisterClass &getRegClassForBank(const RegisterBank &RB) {
+  switch (RB.getID()) {
+  case WebAssembly::I32RegBankID:
+    return WebAssembly::I32RegClass;
+  case WebAssembly::I64RegBankID:
+    return WebAssembly::I64RegClass;
+  case WebAssembly::F32RegBankID:
+    return WebAssembly::F32RegClass;
+  case WebAssembly::F64RegBankID:
+    return WebAssembly::F64RegClass;
+  case WebAssembly::EXNREFRegBankID:
+    return WebAssembly::EXNREFRegClass;
+  case WebAssembly::EXTERNREFRegBankID:
+    return WebAssembly::EXTERNREFRegClass;
+  case WebAssembly::FUNCREFRegBankID:
+    return WebAssembly::FUNCREFRegClass;
+  case WebAssembly::V128RegBankID:
+    return WebAssembly::V128RegClass;
+  default:
+    llvm_unreachable("Found unexpected RegisterBank in `getRegClassForBank`");
+  }
+}
+
 const TargetRegisterClass *
-WebAssemblyRegisterInfo::getPointerRegClass(const MachineFunction &MF,
-                                            unsigned Kind) const {
-  assert(Kind == 0 && "Only one kind of pointer on WebAssembly");
-  if (MF.getSubtarget<WebAssemblySubtarget>().hasAddr64())
-    return &WebAssembly::I64RegClass;
-  return &WebAssembly::I32RegClass;
+WebAssemblyRegisterInfo::getConstrainedRegClassForReg(
+    Register Reg, const MachineRegisterInfo &MRI) const {
+  if (Reg.isPhysical()) {
+    switch (Reg.id()) {
+    case WebAssembly::SP32:
+    case WebAssembly::FP32:
+      return &WebAssembly::I32RegClass;
+    case WebAssembly::SP64:
+    case WebAssembly::FP64:
+      return &WebAssembly::I64RegClass;
+      break;
+    default:
+      return nullptr;
+    }
+  }
+
+  const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
+
+  if (RegClassOrBank.isNull())
+    return nullptr;
+
+  const TargetRegisterClass *DefRC =
+      dyn_cast<const TargetRegisterClass *>(RegClassOrBank);
+
+  if (!DefRC) {
+    const RegisterBank &RB = *cast<const RegisterBank *>(RegClassOrBank);
+    DefRC = &getRegClassForBank(RB);
+  }
+
+  return DefRC;
 }

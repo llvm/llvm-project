@@ -16,9 +16,6 @@ namespace scudo {
 uptr PageSizeCached = 0;
 uptr PageSizeLogCached = 0;
 
-// Must be defined in platform specific code.
-uptr getPageSize();
-
 // This must be called in the init path or there could be a race if multiple
 // threads try to set the cached values.
 uptr getPageSizeSlow() {

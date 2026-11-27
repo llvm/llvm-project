@@ -65,11 +65,11 @@ err:
 // Test errors, if referencing a symbol with an offset
 
     b .Lerr_target+4
-// ERR: [[#@LINE-1]]:5: error: cannot perform a PC-relative fixup with a non-zero symbol offset
+// ERR: [[#@LINE-1]]:19: error: cannot perform a PC-relative fixup with a non-zero symbol offset
     bl .Lerr_target+4
-// ERR: [[#@LINE-1]]:5: error: cannot perform a PC-relative fixup with a non-zero symbol offset
+// ERR: [[#@LINE-1]]:20: error: cannot perform a PC-relative fixup with a non-zero symbol offset
     blx .Lerr_target+4
-// ERR: [[#@LINE-1]]:5: error: cannot perform a PC-relative fixup with a non-zero symbol offset
+// ERR: [[#@LINE-1]]:21: error: cannot perform a PC-relative fixup with a non-zero symbol offset
 
 // Test errors, if referencing a private label which lacks .def/.scl/.type/.endef, in another
 // section, without an offset. Such symbols are omitted from the output symbol table, so the
@@ -77,7 +77,7 @@ err:
 // section plus an offset, but such an offset is not supported with this relocation.
 
     b .Lerr_target2
-// ERR: [[#@LINE-1]]:5: error: cannot perform a PC-relative fixup with a non-zero symbol offset
+// ERR: [[#@LINE-1]]:7: error: cannot perform a PC-relative fixup with a non-zero symbol offset
 
     .def .Lerr_target
     .scl 3

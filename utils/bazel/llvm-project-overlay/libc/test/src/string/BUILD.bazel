@@ -14,7 +14,7 @@ libc_test(
     name = "strlen_test",
     srcs = ["strlen_test.cpp"],
     deps = [
-        "//libc:strlen",
+        "//libc/src/string:strlen",
     ],
 )
 
@@ -22,8 +22,35 @@ libc_test(
     name = "strcpy_test",
     srcs = ["strcpy_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
-        "//libc:strcpy",
+        "//libc/hdr:signal_macros",
+        "//libc/src/string:strcpy",
+    ],
+)
+
+libc_test(
+    name = "strlcpy_test",
+    srcs = ["strlcpy_test.cpp"],
+    deps = [
+        "//libc/src/string:strlcpy",
+    ],
+)
+
+libc_test(
+    name = "stpcpy_test",
+    srcs = ["stpcpy_test.cpp"],
+    deps = [
+        "//libc/src/string:stpcpy",
+        "//libc/src/string:utils",
+    ],
+)
+
+libc_test(
+    name = "stpncpy_test",
+    srcs = ["stpncpy_test.cpp"],
+    deps = [
+        "//libc/hdr:signal_macros",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/string:stpncpy",
     ],
 )
 
@@ -31,7 +58,15 @@ libc_test(
     name = "strcmp_test",
     srcs = ["strcmp_test.cpp"],
     deps = [
-        "//libc:strcmp",
+        "//libc/src/string:strcmp",
+    ],
+)
+
+libc_test(
+    name = "strncmp_test",
+    srcs = ["strncmp_test.cpp"],
+    deps = [
+        "//libc/src/string:strncmp",
     ],
 )
 
@@ -39,8 +74,8 @@ libc_test(
     name = "memchr_test",
     srcs = ["memchr_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
-        "//libc:memchr",
+        "//libc/hdr:signal_macros",
+        "//libc/src/string:memchr",
     ],
 )
 
@@ -55,7 +90,32 @@ libc_test(
     srcs = ["strchr_test.cpp"],
     deps = [
         ":strchr_test_helper",
-        "//libc:strchr",
+        "//libc/src/string:strchr",
+    ],
+)
+
+libc_test(
+    name = "strchrnul_test",
+    srcs = ["strchrnul_test.cpp"],
+    deps = [
+        "//libc/src/string:strchrnul",
+    ],
+)
+
+libc_test(
+    name = "strpbrk_test",
+    srcs = ["strpbrk_test.cpp"],
+    deps = [
+        "//libc/src/string:strpbrk",
+    ],
+)
+
+libc_test(
+    name = "strsep_test",
+    srcs = ["strsep_test.cpp"],
+    deps = [
+        "//libc/hdr:signal_macros",
+        "//libc/src/string:strsep",
     ],
 )
 
@@ -63,7 +123,7 @@ libc_test(
     name = "strstr_test",
     srcs = ["strstr_test.cpp"],
     deps = [
-        "//libc:strstr",
+        "//libc/src/string:strstr",
     ],
 )
 
@@ -71,7 +131,7 @@ libc_test(
     name = "strnlen_test",
     srcs = ["strnlen_test.cpp"],
     deps = [
-        "//libc:strnlen",
+        "//libc/src/string:strnlen",
     ],
 )
 
@@ -79,8 +139,8 @@ libc_test(
     name = "memrchr_test",
     srcs = ["memrchr_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
-        "//libc:memrchr",
+        "//libc/hdr:signal_macros",
+        "//libc/src/string:memrchr",
     ],
 )
 
@@ -89,7 +149,40 @@ libc_test(
     srcs = ["strrchr_test.cpp"],
     deps = [
         ":strchr_test_helper",
-        "//libc:strrchr",
+        "//libc/src/string:strrchr",
+    ],
+)
+
+libc_test(
+    name = "strcasestr_test",
+    srcs = ["strcasestr_test.cpp"],
+    deps = [
+        "//libc/src/string:strcasestr",
+    ],
+)
+
+libc_test(
+    name = "strcat_test",
+    srcs = ["strcat_test.cpp"],
+    deps = [
+        "//libc/hdr:signal_macros",
+        "//libc/src/string:strcat",
+    ],
+)
+
+libc_test(
+    name = "strlcat_test",
+    srcs = ["strlcat_test.cpp"],
+    deps = [
+        "//libc/src/string:strlcat",
+    ],
+)
+
+libc_test(
+    name = "strncat_test",
+    srcs = ["strncat_test.cpp"],
+    deps = [
+        "//libc/src/string:strncat",
     ],
 )
 
@@ -97,7 +190,7 @@ libc_test(
     name = "strcspn_test",
     srcs = ["strcspn_test.cpp"],
     deps = [
-        "//libc:strcspn",
+        "//libc/src/string:strcspn",
     ],
 )
 
@@ -105,8 +198,8 @@ libc_test(
     name = "strspn_test",
     srcs = ["strspn_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
-        "//libc:strspn",
+        "//libc/hdr:signal_macros",
+        "//libc/src/string:strspn",
     ],
 )
 
@@ -114,7 +207,15 @@ libc_test(
     name = "strtok_test",
     srcs = ["strtok_test.cpp"],
     deps = [
-        "//libc:strtok",
+        "//libc/src/string:strtok",
+    ],
+)
+
+libc_test(
+    name = "strtok_r_test",
+    srcs = ["strtok_r_test.cpp"],
+    deps = [
+        "//libc/src/string:strtok_r",
     ],
 )
 
@@ -122,20 +223,27 @@ libc_test_library(
     name = "memory_check_utils",
     hdrs = ["memory_utils/memory_check_utils.h"],
     deps = [
-        "//libc:__support_cpp_span",
-        "//libc:__support_libc_assert",
-        "//libc:__support_macros_config",
-        "//libc:__support_macros_sanitizer",
-        "//libc:string_memory_utils",
+        "//libc/hdr:stdint_proxy",
+        "//libc/src/__support:libc_assert",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:sanitizer",
+        "//libc/src/string/memory_utils",
     ],
 )
 
 libc_test_library(
     name = "protected_pages",
     hdrs = ["memory_utils/protected_pages.h"],
+    target_compatible_with = select({
+        "//libc:full_build": ["@platforms//:incompatible"],
+        "//conditions:default": [],
+    }),
     deps = [
-        "//libc:__support_macros_attributes",
-        "//libc:__support_macros_properties_os",
+        "//libc/hdr:stdint_proxy",
+        "//libc/hdr:sys_mman_macros",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros/properties:os",
     ],
 )
 
@@ -144,10 +252,23 @@ libc_test(
     srcs = ["memcpy_test.cpp"],
     deps = [
         ":memory_check_utils",
-        ":protected_pages",
-        "//libc:__support_macros_properties_os",
-        "//libc:hdr_signal_macros",
-        "//libc:memcpy",
+        "//libc/hdr:signal_macros",
+        "//libc/src/__support/macros/properties:os",
+        "//libc/src/string:memcpy",
+    ] + select({
+        "//libc:full_build": [],
+        "//conditions:default": [
+            ":protected_pages",
+        ],
+    }),
+)
+
+libc_test(
+    name = "memccpy_test",
+    srcs = ["memccpy_test.cpp"],
+    deps = [
+        "//libc/src/__support/CPP:span",
+        "//libc/src/string:memccpy",
     ],
 )
 
@@ -155,8 +276,8 @@ libc_test(
     name = "mempcpy_test",
     srcs = ["mempcpy_test.cpp"],
     deps = [
-        "//libc:hdr_signal_macros",
-        "//libc:mempcpy",
+        "//libc/hdr:signal_macros",
+        "//libc/src/string:mempcpy",
     ],
 )
 
@@ -165,10 +286,24 @@ libc_test(
     srcs = ["memset_test.cpp"],
     deps = [
         ":memory_check_utils",
-        ":protected_pages",
-        "//libc:__support_macros_properties_os",
-        "//libc:hdr_signal_macros",
-        "//libc:memset",
+        "//libc/hdr:signal_macros",
+        "//libc/src/__support/macros/properties:os",
+        "//libc/src/string:memset",
+    ] + select({
+        "//libc:full_build": [],
+        "//conditions:default": [
+            ":protected_pages",
+        ],
+    }),
+)
+
+libc_test(
+    name = "memset_explicit_test",
+    srcs = ["memset_explicit_test.cpp"],
+    deps = [
+        ":memory_check_utils",
+        "//libc/src/string:memset_explicit",
+        "//libc/src/string/memory_utils",
     ],
 )
 
@@ -177,10 +312,10 @@ libc_test(
     srcs = ["memmove_test.cpp"],
     deps = [
         ":memory_check_utils",
-        "//libc:__support_cpp_span",
-        "//libc:hdr_signal_macros",
-        "//libc:memcmp",
-        "//libc:memmove",
+        "//libc/hdr:signal_macros",
+        "//libc/src/__support/CPP:span",
+        "//libc/src/string:memcmp",
+        "//libc/src/string:memmove",
         "//libc/test/UnitTest:memory_matcher",
     ],
 )
@@ -190,8 +325,17 @@ libc_test(
     srcs = ["memcmp_test.cpp"],
     deps = [
         ":memory_check_utils",
-        "//libc:hdr_signal_macros",
-        "//libc:memcmp",
+        "//libc/hdr:signal_macros",
+        "//libc/src/string:memcmp",
         "//libc/test/UnitTest:test_logger",
+    ],
+)
+
+libc_test(
+    name = "memmem_test",
+    srcs = ["memmem_test.cpp"],
+    deps = [
+        "//libc/src/string:memmem",
+        "//libc/src/string:utils",
     ],
 )

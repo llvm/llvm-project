@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_resource_macros.h"
+#include "hdr/sys_stat_macros.h"
+#include "hdr/types/struct_rlimit.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/fcntl/open.h"
 #include "src/sys/resource/getrlimit.h"
@@ -16,9 +19,6 @@
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <sys/resource.h>
-#include <sys/stat.h>
-
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcResourceLimitsTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
@@ -27,8 +27,11 @@ TEST_F(LlvmLibcResourceLimitsTest, SetNoFileLimit) {
   // successfully. Next, close the files and set the file descriptor limit
   // to 4. This will allow us to open one of those file but not the other.
 
-  constexpr const char *TEST_FILE1 = "testdata/resource_limits1.test";
-  constexpr const char *TEST_FILE2 = "testdata/resource_limits2.test";
+  constexpr const char *TEST_FILE1_NAME = "resource_limits1.test";
+  constexpr const char *TEST_FILE2_NAME = "resource_limits2.test";
+
+  auto TEST_FILE1 = libc_make_test_file_path(TEST_FILE1_NAME);
+  auto TEST_FILE2 = libc_make_test_file_path(TEST_FILE2_NAME);
 
   int fd1 = LIBC_NAMESPACE::open(TEST_FILE1, O_CREAT | O_WRONLY, S_IRWXU);
   ASSERT_GT(fd1, 0);

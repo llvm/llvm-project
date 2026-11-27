@@ -1,6 +1,6 @@
 # Check the pushd and popd commands
 
-# RUN: not %{lit} -a -v %{inputs}/shtest-pushd-popd \
+# RUN: not %{lit} -v %{inputs}/shtest-pushd-popd \
 # RUN: | FileCheck -match-full-lines %s
 #
 # END.

@@ -161,8 +161,8 @@ entry:
   ret i32 %conv6
 }
 
-define i32 @utesth_f16i32(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i32:
+define i32 @utest_f16i32(half %x) nounwind {
+; CHECK-LABEL: utest_f16i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
@@ -337,16 +337,12 @@ define i16 @stest_f16i16(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $32768, %ecx # imm = 0x8000
-; CHECK-NEXT:    cmovael %eax, %ecx
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $32767, %edx # imm = 0x7FFF
-; CHECK-NEXT:    cmovbel %ecx, %edx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovnpl %edx, %eax
+; CHECK-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %ecx
+; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -360,8 +356,8 @@ entry:
   ret i16 %conv6
 }
 
-define i16 @utesth_f16i16(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i16:
+define i16 @utest_f16i16(half %x) nounwind {
+; CHECK-LABEL: utest_f16i16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
@@ -566,14 +562,12 @@ entry:
   ret i64 %conv6
 }
 
-define i64 @utesth_f16i64(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i64:
+define i64 @utest_f16i64(half %x) nounwind {
+; CHECK-LABEL: utest_f16i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __fixunshfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    cvttss2si %xmm0, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
@@ -588,17 +582,20 @@ define i64 @ustest_f16i64(half %x) nounwind {
 ; CHECK-LABEL: ustest_f16i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __fixhfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    cvttss2si %xmm0, %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    sarq $63, %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    testq %rcx, %rcx
 ; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    cmovleq %rdx, %rsi
-; CHECK-NEXT:    cmovgq %rcx, %rax
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    negq %rdx
-; CHECK-NEXT:    movl $0, %edx
-; CHECK-NEXT:    sbbq %rsi, %rdx
-; CHECK-NEXT:    cmovgeq %rcx, %rax
+; CHECK-NEXT:    cmovleq %rcx, %rsi
+; CHECK-NEXT:    cmovgq %rdx, %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    negq %rcx
+; CHECK-NEXT:    movl $0, %ecx
+; CHECK-NEXT:    sbbq %rsi, %rcx
+; CHECK-NEXT:    cmovgeq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
@@ -717,6 +714,18 @@ entry:
   ret i32 %conv6
 }
 
+; A zero clamp is not saturation bound, so umin(fptoui(x), 0) should fold to 0.
+define i32 @utest_f32i32_zero(float %x) nounwind {
+; CHECK-LABEL: utest_f32i32_zero:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    retq
+entry:
+  %conv = fptoui float %x to i32
+  %spec.store.select = call i32 @llvm.umin.i32(i32 %conv, i32 0)
+  ret i32 %spec.store.select
+}
+
 define i32 @ustest_f32i32_mm(float %x) nounwind {
 ; CHECK-LABEL: ustest_f32i32_mm:
 ; CHECK:       # %bb.0: # %entry
@@ -762,8 +771,8 @@ entry:
   ret i32 %conv6
 }
 
-define i32 @utesth_f16i32_mm(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i32_mm:
+define i32 @utest_f16i32_mm(half %x) nounwind {
+; CHECK-LABEL: utest_f16i32_mm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
@@ -925,16 +934,12 @@ define i16 @stest_f16i16_mm(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %eax
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $32768, %ecx # imm = 0x8000
-; CHECK-NEXT:    cmovael %eax, %ecx
-; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    movl $32767, %edx # imm = 0x7FFF
-; CHECK-NEXT:    cmovbel %ecx, %edx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovnpl %edx, %eax
+; CHECK-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttss2si %xmm0, %ecx
+; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -946,8 +951,8 @@ entry:
   ret i16 %conv6
 }
 
-define i16 @utesth_f16i16_mm(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i16_mm:
+define i16 @utest_f16i16_mm(half %x) nounwind {
+; CHECK-LABEL: utest_f16i16_mm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
@@ -1131,14 +1136,12 @@ entry:
   ret i64 %conv6
 }
 
-define i64 @utesth_f16i64_mm(half %x) nounwind {
-; CHECK-LABEL: utesth_f16i64_mm:
+define i64 @utest_f16i64_mm(half %x) nounwind {
+; CHECK-LABEL: utest_f16i64_mm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __fixunshfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovneq %rcx, %rax
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    cvttss2si %xmm0, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
@@ -1152,14 +1155,17 @@ define i64 @ustest_f16i64_mm(half %x) nounwind {
 ; CHECK-LABEL: ustest_f16i64_mm:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    callq __fixhfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    cmovgq %rcx, %rax
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    cvttss2si %xmm0, %rax
+; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    sarq $63, %rcx
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    cmovgq %rdx, %rax
 ; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    cmovleq %rdx, %rsi
+; CHECK-NEXT:    cmovleq %rcx, %rsi
 ; CHECK-NEXT:    testq %rsi, %rsi
-; CHECK-NEXT:    cmovsq %rcx, %rax
+; CHECK-NEXT:    cmovsq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
@@ -1168,6 +1174,27 @@ entry:
   %spec.store.select7 = call i128 @llvm.smax.i128(i128 %spec.store.select, i128 0)
   %conv6 = trunc i128 %spec.store.select7 to i64
   ret i64 %conv6
+}
+
+; i32 non saturate
+
+define i32 @ustest_f16i32_nsat(half %x) nounwind {
+; CHECK-LABEL: ustest_f16i32_nsat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    callq __extendhfsf2@PLT
+; CHECK-NEXT:    cvttss2si %xmm0, %ecx
+; CHECK-NEXT:    movl %ecx, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    andl %ecx, %eax
+; CHECK-NEXT:    cmovlel %edx, %eax
+; CHECK-NEXT:    popq %rcx
+; CHECK-NEXT:    retq
+  %conv = fptosi half %x to i32
+  %spec.store.select = call i32 @llvm.smin.i32(i32 0, i32 %conv)
+  %spec.store.select7 = call i32 @llvm.smax.i32(i32 %spec.store.select, i32 0)
+  ret i32 %spec.store.select7
 }
 
 declare i32 @llvm.smin.i32(i32, i32)

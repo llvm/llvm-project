@@ -5,6 +5,11 @@ Test more expression command sequences with objective-c.
 
 import lldb
 from lldbsuite.test.decorators import *
+from lldbsuite.test.gdbclientutils import (
+    PacketDirection,
+    parse_memory_read_ranges,
+    parse_packet_log,
+)
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
@@ -45,3 +50,55 @@ class FoundationTestCaseNSError(TestBase):
             ],
         )
         self.runCmd("process continue")
+
+    def test_runtime_types_efficient_memreads(self):
+        # Test that we use an efficient reading of memory when reading
+        # Objective-C method descriptions.
+        logfile = os.path.join(self.getBuildDir(), "log.txt")
+        self.runCmd(f"log enable -f {logfile} gdb-remote packets process")
+        self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
+
+        self.build()
+        self.target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "// Break here for NSString tests", lldb.SBFileSpec("main.m", False)
+        )
+
+        lldbutil.require_qsupported_capability(self, "MultiMemRead+")
+
+        self.runCmd(f"proc plugin packet send StartTesting", check=False)
+        self.expect('expression str = [NSString stringWithCString: "new"]')
+        self.runCmd(f"proc plugin packet send EndTesting", check=False)
+
+        self.assertTrue(os.path.exists(logfile))
+        log_text = open(logfile).read()
+        log_text = log_text.split("StartTesting", 1)[-1].split("EndTesting", 1)[0]
+
+        # The two assertions below only check that the packet is used at all (and
+        # that no errors are produced). They don't check that the packet is being
+        # used to solve a problem in an optimal way.
+        self.assertIn("MultiMemRead:", log_text)
+        self.assertNotIn("MultiMemRead error", log_text)
+
+        # The memory cache serves a read out of what an earlier read fetched, so
+        # no range may be contained in one an earlier packet already read.
+        requested = []
+        for direction, body in parse_packet_log(log_text.splitlines()):
+            if direction != PacketDirection.SEND:
+                continue
+
+            # Resuming drops the whole cache, so nothing read before it is still
+            # held.
+            if body[0] in "cCsS" or body.startswith("vCont;"):
+                requested.clear()
+                continue
+
+            ranges = parse_memory_read_ranges(body)
+            for addr, length in ranges:
+                self.assertFalse(
+                    any(
+                        addr >= base and addr + length <= base + size
+                        for base, size in requested
+                    ),
+                    f"re-read {length} bytes at {addr:#x}",
+                )
+            requested.extend(ranges)

@@ -61,6 +61,7 @@ public:
     kw_attr_dict_w_keyword,
     kw_prop_dict,
     kw_custom,
+    kw_enum,
     kw_functional_type,
     kw_oilist,
     kw_operands,

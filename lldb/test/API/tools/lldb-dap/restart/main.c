@@ -1,9 +1,6 @@
-#include <stdio.h>
-
-int main(int argc, char const *argv[], char const *envp[]) {
+int main(int argc, char const *argv[]) {
   int i = 0;
-  printf("Do something\n"); // breakpoint A
-  printf("Do something else\n");
+  (void)i; // breakpoint A
   i = 1234;
   return 0; // breakpoint B
 }

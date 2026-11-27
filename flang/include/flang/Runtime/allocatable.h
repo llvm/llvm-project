@@ -13,6 +13,7 @@
 
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/freestanding-tools.h"
 
 namespace Fortran::runtime {
 
@@ -94,10 +95,17 @@ int RTDECL(AllocatableCheckLengthParameter)(Descriptor &,
 // Successfully allocated memory is initialized if the allocatable has a
 // derived type, and is always initialized by AllocatableAllocateSource().
 // Performs all necessary coarray synchronization and validation actions.
+#ifdef RT_DEVICE_COMPILATION
 int RTDECL(AllocatableAllocate)(Descriptor &,
     std::int64_t *asyncObject = nullptr, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    int sourceLine = 0, MemcpyFct memcpyFct = &MemcpyWrapper);
+#else
+int RTDECL(AllocatableAllocate)(Descriptor &,
+    std::int64_t *asyncObject = nullptr, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0, MemcpyFct memcpyFct = &Fortran::runtime::memcpy);
+#endif
 int RTDECL(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
     bool hasStat = false, const Descriptor *errMsg = nullptr,
     const char *sourceFile = nullptr, int sourceLine = 0);
@@ -128,6 +136,10 @@ int RTDECL(AllocatableDeallocatePolymorphic)(Descriptor &,
 // Variant of above that does not finalize; for intermediate results
 void RTDECL(AllocatableDeallocateNoFinal)(
     Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
+
+// For an existing descriptor, set a new base_addr
+void RTDECL(AllocatableSetBaseAddr)(Descriptor &, void *);
+
 } // extern "C"
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_ALLOCATABLE_H_

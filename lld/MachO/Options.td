@@ -78,6 +78,9 @@ def no_deduplicate_strings: Flag<["--"], "no-deduplicate-strings">,
 def dead_strip_duplicates: Flag<["--"], "dead-strip-duplicates">,
     HelpText<"Do not error on duplicate symbols that will be dead stripped.">,
     Group<grp_lld>;
+defm strip_swift_force_load: BB<"strip-swift-force-load",
+  "Strip the swift FORCE_LOAD sections containing fixups",
+  "Do not strip the the swift FORCE_LOAD sections (default)">, Group<grp_lld>;
 def print_dylib_search: Flag<["--"], "print-dylib-search">,
     HelpText<"Print which paths lld searched when trying to find dylibs">,
     Group<grp_lld>;
@@ -147,9 +150,17 @@ def bp_compression_sort_startup_functions: Flag<["--"], "bp-compression-sort-sta
     Group<grp_lld>;
 def no_bp_compression_sort_startup_functions: Flag<["--"], "no-bp-compression-sort-startup-functions">,
     HelpText<"Do not order startup function for compression">, Group<grp_lld>;
-def bp_compression_sort: Joined<["--"], "bp-compression-sort=">,
-    MetaVarName<"[none,function,data,both]">,
-    HelpText<"Order sections to improve compressed size">, Group<grp_lld>;
+def bp_compression_sort
+    : Joined<["--"], "bp-compression-sort=">,
+      MetaVarName<"[none,function,data,both]">,
+      HelpText<"Order sections to improve compressed size. Deprecated. Please "
+               "use --bp-compression-sort-section">,
+      Group<grp_lld>;
+def bp_compression_sort_section
+    : Joined<["--"], "bp-compression-sort-section=">,
+      MetaVarName<"<glob>[=<layout_priority>[=<match_priority>]]">,
+      HelpText<"Reorder sections whose segment+section name (e.g. __TEXT__text) matches <glob> to improve Lempel-Ziv compression, while letting users split sections into groups, run BP independently per group, and exclude unsuitable sections. layout_priority controls group placement order (default 0). match_priority resolves conflicts when multiple globs match (default: last match wins). May be specified multiple times">,
+      Group<grp_lld>;
 def irpgo_profile_sort: Separate<["--"], "irpgo-profile-sort">, Group<grp_lld>;
 def irpgo_profile_sort_eq: Joined<["--"], "irpgo-profile-sort=">,
     Alias<!cast<Separate>(irpgo_profile_sort)>, MetaVarName<"<profile>">,
@@ -188,10 +199,16 @@ def lto_debug_pass_manager: Flag<["--"], "lto-debug-pass-manager">,
     HelpText<"Debug new pass manager">, Group<grp_lld>;
 def lto_newpm_passes: Joined<["--"], "lto-newpm-passes=">,
     HelpText<"Passes to run during LTO">, Group<grp_lld>;
+def lto_emit_llvm: Flag<["--"], "lto-emit-llvm">,
+    HelpText<"Emit LLVM-IR bitcode">, Group<grp_lld>;
 def load_pass_plugins : Separate<["--"], "load-pass-plugin">, Group<grp_lld>;
 def load_pass_plugins_eq : Joined<["--"], "load-pass-plugin=">,
     Alias<!cast<Separate>(load_pass_plugins)>,
     HelpText<"Load passes from plugin library">, Group<grp_lld>;
+def pass_plugin_arg : Separate<["--"], "pass-plugin-arg">, Group<grp_lld>;
+def pass_plugin_arg_eq : Joined<["--"], "pass-plugin-arg=">,
+    Alias<!cast<Separate>(pass_plugin_arg)>, MetaVarName<"<plugin>,<arg>">,
+    HelpText<"Pass <arg> to the pass plugin named <plugin>">, Group<grp_lld>;
 def codegen_data_generate_path : Separate<["--"], "codegen-data-generate-path">, Group<grp_lld>;
 def codegen_data_generate_path_eq : Joined<["--"], "codegen-data-generate-path=">,
     Alias<!cast<Separate>(codegen_data_generate_path)>, MetaVarName<"<cgdata>">,
@@ -206,6 +223,9 @@ defm pgo_warn_mismatch: BB<"pgo-warn-mismatch",
 defm warn_thin_archive_missing_members : BB<"warn-thin-archive-missing-members",
   "Warn on missing object files referenced by thin archives (default)",
   "Do not warn on missing object files referenced by thin archives">, Group<grp_lld>;
+defm warn_missing_subsections_via_symbols : BB<"warn-missing-subsections-via-symbols",
+  "Warn if an input object file is missing MH_SUBSECTIONS_VIA_SYMBOLS",
+  "Do not warn if an input object file is missing MH_SUBSECTIONS_VIA_SYMBOLS (default)">, Group<grp_lld>;
 
 // This is a complete Options.td compiled from Apple's ld(1) manpage
 // dated 2018-03-07 and cross checked with ld64 source code in repo
@@ -214,7 +234,7 @@ defm warn_thin_archive_missing_members : BB<"warn-thin-archive-missing-members",
 
 // Flags<[HelpHidden]> marks options that are not yet ported to lld,
 // and serve as a scoreboard for annotating our progress toward
-// implementing ld64 options in lld. As you add implementions to
+// implementing ld64 options in lld. As you add implementations to
 // Driver.cpp, please remove the hidden flag here.
 
 def grp_kind : OptionGroup<"kind">, HelpText<"OUTPUT KIND">;
@@ -396,6 +416,9 @@ def dead_strip : Flag<["-"], "dead_strip">,
 def interposable : Flag<["-"], "interposable">,
     HelpText<"Indirects access to all exported symbols in an image">,
     Group<grp_opts>;
+def read_workers : Joined<["--"], "read-workers=">,
+    HelpText<"Approximate number of workers to use to eagerly preload input files content into memory. Use 0 to disable this feature. Default is disabled.">,
+    Group<grp_lld>;
 def order_file : Separate<["-"], "order_file">,
     MetaVarName<"<file>">,
     HelpText<"Layout functions and data according to specification in <file>">,
@@ -675,7 +698,8 @@ def whyload : Flag<["-"], "whyload">,
     Group<grp_introspect>;
 def why_live : Separate<["-"], "why_live">,
     MetaVarName<"<symbol>">,
-    HelpText<"Log a chain of references to <symbol>, for use with -dead_strip">,
+    HelpText<"Log a chain of references to <symbol>, for use with -dead_strip. "
+             "The chain is deterministic only with --threads=1">,
     Group<grp_introspect>;
 def print_statistics : Flag<["-"], "print_statistics">,
     HelpText<"Log the linker's memory and CPU usage">,
@@ -1081,6 +1105,25 @@ def dyld_env : Separate<["-"], "dyld_env">,
 def ignore_auto_link : Flag<["-"], "ignore_auto_link">,
     HelpText<"Ignore LC_LINKER_OPTIONs">,
     Group<grp_rare>;
+defm separate_cstring_literal_sections
+    : BB<"separate-cstring-literal-sections",
+         "Emit all cstring literals into their respective sections defined by "
+         "their section names.",
+         "Emit all cstring literals into the __cstring section. As a special "
+         "case, the __objc_methname section will still be emitted. (default)">,
+      Group<grp_rare>;
+defm tail_merge_strings
+    : BB<"tail-merge-strings", "Enable string tail merging",
+         "Disable string tail merging to improve link-time performance">,
+      Group<grp_rare>;
+def slop_scale_eq
+    : Joined<["--"], "slop_scale=">,
+      MetaVarName<"<unsigned_int>">,
+      HelpText<"Specify the slop scale. Default value is 256. If your binary "
+               "has too many consecutive branch instructions resulting in "
+               "thunk-range overrun, then you need to increase this value to a "
+               "higher value, such as 512 or 1024, etc">,
+      Group<grp_rare>;
 
 def grp_deprecated : OptionGroup<"deprecated">, HelpText<"DEPRECATED">;
 

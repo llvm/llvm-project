@@ -70,7 +70,9 @@ entry:
 ; CHECK-LABEL: f128_compare:
 ; HARD:       fcmpq
 ; HARD-NEXT:  nop
-; SOFT:       _Q_cmp
+; SOFT:       call _Q_fge
+; SOFT:       cmp %o0, 0
+; SOFT-NEXT:  be
 
 define i32 @f128_compare(ptr byval(fp128) %f0, ptr byval(fp128) %f1, i32 %a, i32 %b) {
 entry:
@@ -84,8 +86,9 @@ entry:
 ; CHECK-LABEL: f128_compare2:
 ; HARD:        fcmpq
 ; HARD:        fb{{ule|g}}
-; SOFT:       _Q_cmp
-; SOFT:       cmp
+; SOFT:       call _Q_fgt
+; SOFT:       cmp %o0, 0
+; SOFT-NEXT:  be
 
 define i32 @f128_compare2(ptr byval(fp128) %f0) {
 entry:
@@ -98,6 +101,40 @@ entry:
 
 "7":                                              ; preds = %entry
   ret i32 1
+}
+
+; CHECK-LABEL: f128_compare_one:
+; HARD:        fcmpq
+; HARD:        fblg
+; SOFT:        call _Q_cmp
+; SOFT:        add %o0, 1, [[R:%[gilo][0-7]]]
+; SOFT-NEXT:   andcc [[R]], 2, %g0
+; SOFT-NEXT:   bne
+
+define i32 @f128_compare_one(ptr byval(fp128) %f0, ptr byval(fp128) %f1, i32 %a, i32 %b) nounwind {
+entry:
+  %0 = load fp128, ptr %f0, align 8
+  %1 = load fp128, ptr %f1, align 8
+  %cond = fcmp one fp128 %0, %1
+  %ret = select i1 %cond, i32 %a, i32 %b
+  ret i32 %ret
+}
+
+; CHECK-LABEL: f128_compare_ueq:
+; HARD:        fcmpq
+; HARD:        fbue
+; SOFT:        call _Q_cmp
+; SOFT:        add %o0, 1, [[R:%[gilo][0-7]]]
+; SOFT-NEXT:   andcc [[R]], 2, %g0
+; SOFT-NEXT:   be
+
+define i32 @f128_compare_ueq(ptr byval(fp128) %f0, ptr byval(fp128) %f1, i32 %a, i32 %b) nounwind {
+entry:
+  %0 = load fp128, ptr %f0, align 8
+  %1 = load fp128, ptr %f1, align 8
+  %cond = fcmp ueq fp128 %0, %1
+  %ret = select i1 %cond, i32 %a, i32 %b
+  ret i32 %ret
 }
 
 

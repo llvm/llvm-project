@@ -10,6 +10,7 @@
 #include "MCTargetDesc/RISCVMCObjectFileInfo.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -22,9 +23,10 @@ unsigned RISCVELFTargetObjectFile::getTextSectionAlignment() const {
       *getContext().getSubtargetInfo());
 }
 
-void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
-                                          const TargetMachine &TM) {
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void RISCVELFTargetObjectFile::initialize(MCContext &Ctx,
+                                          const TargetMachine &TM,
+                                          const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 
   PLTPCRelativeSpecifier = ELF::R_RISCV_PLT32;
   SupportIndirectSymViaGOTPCRel = true;
@@ -43,6 +45,17 @@ void RISCVELFTargetObjectFile::Initialize(MCContext &Ctx,
       ".srodata.cst16", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
   SmallROData32Section = getContext().getELFSection(
       ".srodata.cst32", ELF::SHT_PROGBITS, ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
+
+  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
+  M.getModuleFlagsMetadata(ModuleFlags);
+
+  for (const auto &MFE : ModuleFlags) {
+    StringRef Key = MFE.Key->getString();
+    if (Key == "SmallDataLimit") {
+      SSThreshold = mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue();
+      break;
+    }
+  }
 }
 
 const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
@@ -53,6 +66,15 @@ const MCExpr *RISCVELFTargetObjectFile::getIndirectSymViaGOTPCRel(
   Res = MCBinaryExpr::createAdd(
       Res, MCConstantExpr::create(Offset + MV.getConstant(), Ctx), Ctx);
   return MCSpecifierExpr::create(Res, ELF::R_RISCV_GOT32_PCREL, Ctx);
+}
+
+bool RISCVELFTargetObjectFile::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  // With the large code model, keep the jump table in the function's section.
+  if (TM->getCodeModel() == CodeModel::Large)
+    return true;
+  return TargetLoweringObjectFileELF::shouldPutJumpTableInFunctionSection(
+      UsesLabelDifference, F);
 }
 
 // A address must be loaded from a small section if its size is less than the
@@ -138,20 +160,6 @@ MCSection *RISCVELFTargetObjectFile::SelectSectionForGlobal(
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GO, Kind, TM);
 }
 
-void RISCVELFTargetObjectFile::getModuleMetadata(Module &M) {
-  TargetLoweringObjectFileELF::getModuleMetadata(M);
-  SmallVector<Module::ModuleFlagEntry, 8> ModuleFlags;
-  M.getModuleFlagsMetadata(ModuleFlags);
-
-  for (const auto &MFE : ModuleFlags) {
-    StringRef Key = MFE.Key->getString();
-    if (Key == "SmallDataLimit") {
-      SSThreshold = mdconst::extract<ConstantInt>(MFE.Val)->getZExtValue();
-      break;
-    }
-  }
-}
-
 /// Return true if this constant should be placed into small data section.
 bool RISCVELFTargetObjectFile::isConstantInSmallSection(
     const DataLayout &DL, const Constant *CN) const {
@@ -159,8 +167,20 @@ bool RISCVELFTargetObjectFile::isConstantInSmallSection(
 }
 
 MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
-    const DataLayout &DL, SectionKind Kind, const Constant *C,
-    Align &Alignment) const {
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
+
+  // The large code model has to put constant pools close to the program, so we
+  // put them in the .text section. Large code model doesn't support PIC, so
+  // there should be no dynamic relocations that would require `.data.rel.ro`
+  // (which could be too far away anyway).
+  if (TM->getCodeModel() == CodeModel::Large) {
+    if (F)
+      return SectionForGlobal(F, SectionKind::getText(), *TM);
+    else
+      return TextSection;
+  }
+
   if (C && isConstantInSmallSection(DL, C)) {
     if (Kind.isMergeableConst4())
       return SmallROData4Section;
@@ -177,5 +197,13 @@ MCSection *RISCVELFTargetObjectFile::getSectionForConstant(
 
   // Otherwise, we work the same as ELF.
   return TargetLoweringObjectFileELF::getSectionForConstant(DL, Kind, C,
-                                                            Alignment);
+                                                            Alignment, F);
+}
+
+void RISCVMachOTargetObjectFile::getNameWithPrefix(
+    SmallVectorImpl<char> &OutName, const GlobalValue *GV,
+    const TargetMachine &TM) const {
+  // RISC-V does not use section-relative relocations so any global symbol must
+  // be accessed via at least a linker-private symbol.
+  getMangler().getNameWithPrefix(OutName, GV, /*CannotUsePrivateLabel=*/true);
 }

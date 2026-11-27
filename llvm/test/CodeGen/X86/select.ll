@@ -493,8 +493,8 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; ATOM-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; ATOM-NEXT:    pcmpeqd %xmm2, %xmm2
 ; ATOM-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; ATOM-NEXT:    paddd %xmm2, %xmm0
 ; ATOM-NEXT:    paddd %xmm2, %xmm1
+; ATOM-NEXT:    paddd %xmm2, %xmm0
 ; ATOM-NEXT:    movq %xmm1, 16(%rsi)
 ; ATOM-NEXT:    movdqa %xmm0, (%rsi)
 ; ATOM-NEXT:    retq
@@ -2197,4 +2197,70 @@ define i32 @select_uaddo_common_op1(i32 %a, i32 %b, i32 %c, i1 %cond) {
   %cb0 = extractvalue { i32, i1 } %cb, 0
   %sel = select i1 %cond, i32 %ab0, i32 %cb0
   ret i32 %sel
+}
+
+define i56 @select_undef_rhs(i64 %x, i1 %cmp) {
+; GENERIC-LABEL: select_undef_rhs:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    movabsq $281474976710655, %rax ## imm = 0xFFFFFFFFFFFF
+; GENERIC-NEXT:    andq %rdi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: select_undef_rhs:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    movabsq $281474976710655, %rax ## imm = 0xFFFFFFFFFFFF
+; ATOM-NEXT:    andq %rdi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
+;
+; ATHLON-LABEL: select_undef_rhs:
+; ATHLON:       ## %bb.0:
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; ATHLON-NEXT:    retl
+;
+; MCU-LABEL: select_undef_rhs:
+; MCU:       # %bb.0:
+; MCU-NEXT:    movzwl %dx, %edx
+; MCU-NEXT:    retl
+  %trunc = trunc nuw i64 %x to i48
+  %sel = select i1 %cmp, i48 %trunc, i48 undef
+  %zext = zext i48 %sel to i56
+  ret i56 %zext
+}
+
+define i56 @select_undef_lhs(i64 %x, i1 %cmp) {
+; GENERIC-LABEL: select_undef_lhs:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    movabsq $281474976710655, %rax ## imm = 0xFFFFFFFFFFFF
+; GENERIC-NEXT:    andq %rdi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: select_undef_lhs:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    movabsq $281474976710655, %rax ## imm = 0xFFFFFFFFFFFF
+; ATOM-NEXT:    andq %rdi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
+;
+; ATHLON-LABEL: select_undef_lhs:
+; ATHLON:       ## %bb.0:
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
+; ATHLON-NEXT:    retl
+;
+; MCU-LABEL: select_undef_lhs:
+; MCU:       # %bb.0:
+; MCU-NEXT:    movzwl %dx, %edx
+; MCU-NEXT:    retl
+  %trunc = trunc nuw i64 %x to i48
+  %sel = select i1 %cmp, i48 undef, i48 %trunc
+  %zext = zext i48 %sel to i56
+  ret i56 %zext
 }

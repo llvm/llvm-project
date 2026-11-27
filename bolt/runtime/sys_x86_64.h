@@ -40,7 +40,7 @@
 
 namespace {
 
-// Get the difference between runtime addrress of .text section and
+// Get the difference between runtime address of .text section and
 // static address in section header table. Can be extracted from arbitrary
 // pc value recorded at runtime to get the corresponding static address, which
 // in turn can be used to search for indirect call description. Needed because
@@ -171,8 +171,9 @@ uint64_t __exit(uint64_t code) {
 #if !defined(__APPLE__)
 // We use a stack-allocated buffer for string manipulation in many pieces of
 // this code, including the code that prints each line of the fdata file. This
-// buffer needs to accomodate large function names, but shouldn't be arbitrarily
-// large (dynamically allocated) for simplicity of our memory space usage.
+// buffer needs to accommodate large function names, but shouldn't be
+// arbitrarily large (dynamically allocated) for simplicity of our memory space
+// usage.
 
 // Declare some syscall wrappers we use throughout this code to avoid linking
 // against system libc.

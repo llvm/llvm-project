@@ -424,7 +424,7 @@ std::string
 InstallAPIVisitor::getMangledCXXRTTIName(const CXXRecordDecl *D) const {
   SmallString<256> Name;
   raw_svector_ostream NameStream(Name);
-  MC->mangleCXXRTTIName(QualType(D->getTypeForDecl(), 0), NameStream);
+  MC->mangleCXXRTTIName(MC->getASTContext().getCanonicalTagType(D), NameStream);
 
   return getBackendMangledName(Name);
 }
@@ -432,7 +432,7 @@ InstallAPIVisitor::getMangledCXXRTTIName(const CXXRecordDecl *D) const {
 std::string InstallAPIVisitor::getMangledCXXRTTI(const CXXRecordDecl *D) const {
   SmallString<256> Name;
   raw_svector_ostream NameStream(Name);
-  MC->mangleCXXRTTI(QualType(D->getTypeForDecl(), 0), NameStream);
+  MC->mangleCXXRTTI(MC->getASTContext().getCanonicalTagType(D), NameStream);
 
   return getBackendMangledName(Name);
 }
@@ -543,7 +543,7 @@ void InstallAPIVisitor::emitVTableSymbols(const CXXRecordDecl *D,
   }
 
   for (const auto &It : D->bases()) {
-    const CXXRecordDecl *Base =
+    const auto *Base =
         cast<CXXRecordDecl>(It.getType()->castAs<RecordType>()->getDecl());
     const auto BaseAccess = getAccessForDecl(Base);
     if (!BaseAccess)

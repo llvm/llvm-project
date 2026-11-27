@@ -21,8 +21,7 @@ define void @pr56319(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <96 x i8>, ptr [[TMP1]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <96 x i8> [[WIDE_VEC]], <96 x i8> poison, <32 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45, i32 48, i32 51, i32 54, i32 57, i32 60, i32 63, i32 66, i32 69, i32 72, i32 75, i32 78, i32 81, i32 84, i32 87, i32 90, i32 93>
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[DST:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    store <32 x i8> [[STRIDED_VEC]], ptr [[TMP4]], align 1
+; CHECK-NEXT:    store <32 x i8> [[STRIDED_VEC]], ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -39,8 +38,7 @@ define void @pr56319(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[WIDE_VEC2:%.*]] = load <6 x i8>, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <6 x i8> [[WIDE_VEC2]], <6 x i8> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[INDEX1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i32 0
-; CHECK-NEXT:    store <2 x i8> [[STRIDED_VEC3]], ptr [[TMP10]], align 1
+; CHECK-NEXT:    store <2 x i8> [[STRIDED_VEC3]], ptr [[TMP9]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT4]] = add nuw i64 [[INDEX1]], 2
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 36
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]

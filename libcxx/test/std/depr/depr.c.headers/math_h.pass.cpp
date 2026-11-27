@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test fails because Clang no longer enables -fdelayed-template-parsing
-// by default on Windows with C++20 (#69431).
-// XFAIL: msvc && (clang-18 || clang-19 || clang-20 || clang-21)
+// Missing some math functions.
+// XFAIL: LLVM-LIBC-FIXME
 
 // <math.h>
 
@@ -863,7 +862,7 @@ struct test_two_args {
     (void)::remainder(T(), U());
     int ip;
     ASSERT_SAME_TYPE(decltype(::remquo(T(), U(), &ip)), PromoteResult);
-    ::remquo(T(), U(), &ip);
+    (void)::remquo(T(), U(), &ip);
   }
 };
 

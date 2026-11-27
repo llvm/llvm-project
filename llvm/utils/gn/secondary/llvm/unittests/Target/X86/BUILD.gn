@@ -12,6 +12,7 @@ unittest("X86Tests") {
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target/X86:LLVMX86CodeGen",
+    "//llvm/lib/Target/X86:X86GenSDNodeInfo",
     "//llvm/lib/Target/X86/MCTargetDesc",
     "//llvm/lib/Target/X86/TargetInfo",
     "//llvm/lib/TargetParser",
@@ -19,7 +20,9 @@ unittest("X86Tests") {
   ]
   include_dirs = [ "//llvm/lib/Target/X86" ]
   sources = [
+    "InlineAsmOperandCommentTest.cpp",
     "MachineSizeOptsTest.cpp",
     "TernlogTest.cpp",
+    "X86SelectionDAGTest.cpp",
   ]
 }

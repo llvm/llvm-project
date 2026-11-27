@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify=expected -std=c++23 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected -std=c++23 %s -fexperimental-new-constant-interpreter
 
 // This test covers modifications made by P2448R2.
 

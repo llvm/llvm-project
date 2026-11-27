@@ -16,6 +16,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include <functional>
 #include <memory>
 
@@ -36,26 +37,39 @@ class ELFObjectFileBase;
 class MachOObjectFile;
 class WasmObjectFile;
 class XCOFFObjectFile;
+class DXContainer;
 } // namespace object
 
 namespace objdump {
 
-enum DebugVarsFormat { DVDisabled, DVUnicode, DVASCII, DVInvalid };
+enum DebugFormat { DFASCII, DFDisabled, DFInvalid, DFLimitsOnly, DFUnicode };
+
+enum class ColorOutput {
+  Auto,
+  Enable,
+  Disable,
+  Invalid,
+};
 
 extern bool ArchiveHeaders;
 extern int DbgIndent;
-extern DebugVarsFormat DbgVariables;
+extern DebugFormat DbgVariables;
+extern DebugFormat DbgInlinedFunctions;
 extern bool Demangle;
 extern bool Disassemble;
 extern bool DisassembleAll;
 extern std::vector<std::string> DisassemblerOptions;
+extern ColorOutput DisassemblyColor;
 extern DIDumpType DwarfDumpType;
 extern std::vector<std::string> FilterSections;
 extern bool LeadingAddr;
+extern cl::LibraryOptionsContext LibraryOptions;
 extern std::vector<std::string> MAttrs;
 extern std::string MCPU;
 extern std::string Prefix;
 extern uint32_t PrefixStrip;
+extern std::vector<std::string> SourceDirs;
+extern std::vector<std::pair<std::string, std::string>> SubstitutePaths;
 extern bool PrintImmHex;
 extern bool PrintLines;
 extern bool PrintSource;
@@ -69,6 +83,7 @@ extern bool TracebackTable;
 extern bool SymbolTable;
 extern std::string TripleName;
 extern bool UnwindInfo;
+extern bool UnwindShowWODPool;
 
 extern StringSet<> FoundSectionSet;
 
@@ -82,7 +97,7 @@ protected:
 
 public:
   Dumper(const object::ObjectFile &O);
-  virtual ~Dumper() {}
+  virtual ~Dumper() = default;
 
   void reportUniqueWarning(Error Err);
   void reportUniqueWarning(const Twine &Msg);
@@ -104,6 +119,8 @@ std::unique_ptr<Dumper> createELFDumper(const object::ELFObjectFileBase &Obj);
 std::unique_ptr<Dumper> createMachODumper(const object::MachOObjectFile &Obj);
 std::unique_ptr<Dumper> createWasmDumper(const object::WasmObjectFile &Obj);
 std::unique_ptr<Dumper> createXCOFFDumper(const object::XCOFFObjectFile &Obj);
+std::unique_ptr<Dumper>
+createDXContainerDumper(const object::DXContainerObjectFile &Obj);
 
 // Various helper functions.
 
@@ -126,7 +143,7 @@ void printSectionContents(const object::ObjectFile *O);
 void reportWarning(const Twine &Message, StringRef File);
 
 template <typename T, typename... Ts>
-T unwrapOrError(Expected<T> EO, Ts &&... Args) {
+T unwrapOrError(Expected<T> EO, Ts &&...Args) {
   if (EO)
     return std::move(*EO);
   reportError(EO.takeError(), std::forward<Ts>(Args)...);

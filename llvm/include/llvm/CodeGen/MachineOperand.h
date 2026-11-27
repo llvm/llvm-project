@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 
@@ -69,7 +70,8 @@ public:
     MO_Predicate,         ///< Generic predicate for ISel
     MO_ShuffleMask,       ///< Other IR Constant for ISel (shuffle masks)
     MO_DbgInstrRef, ///< Integer indices referring to an instruction+operand
-    MO_Last = MO_DbgInstrRef
+    MO_LaneMask,    ///< Mask to represent active parts of registers
+    MO_Last = MO_LaneMask
   };
 
 private:
@@ -124,10 +126,13 @@ private:
   /// the same register.  In that case, the instruction may depend on those
   /// operands reading the same dont-care value.  For example:
   ///
-  ///   %1 = XOR undef %2, undef %2
+  ///   $eax = XOR32rr undef $eax, undef $eax
   ///
-  /// Any register can be used for %2, and its value doesn't matter, but
-  /// the two operands must be the same register.
+  /// Any register can be used, and its value doesn't matter, but the operands
+  /// must be the same register.  Rewriting a tie renames only the tied
+  /// operand, so an undef use of a virtual register may not be tied to a def
+  /// of another register while another undef operand reads the same register;
+  /// read an IMPLICIT_DEF instead.
   ///
   unsigned IsUndef : 1;
 
@@ -178,6 +183,7 @@ private:
     Intrinsic::ID IntrinsicID; // For MO_IntrinsicID.
     unsigned Pred;           // For MO_Predicate
     ArrayRef<int> ShuffleMask; // For MO_ShuffleMask
+    LaneBitmask LaneMask;      // For MO_LaneMask
 
     struct {                  // For MO_Register.
       // Register number is in SmallContents.RegNo.
@@ -360,6 +366,7 @@ public:
   bool isIntrinsicID() const { return OpKind == MO_IntrinsicID; }
   bool isPredicate() const { return OpKind == MO_Predicate; }
   bool isShuffleMask() const { return OpKind == MO_ShuffleMask; }
+  bool isLaneMask() const { return OpKind == MO_LaneMask; }
   //===--------------------------------------------------------------------===//
   // Accessors for Register Operands
   //===--------------------------------------------------------------------===//
@@ -397,7 +404,7 @@ public:
 
   bool isKill() const {
     assert(isReg() && "Wrong MachineOperand accessor");
-    return IsDeadOrKill & !IsDef;
+    return IsDeadOrKill && !IsDef;
   }
 
   bool isUndef() const {
@@ -445,6 +452,9 @@ public:
     assert(isReg() && "Wrong MachineOperand accessor");
     return IsEarlyClobber;
   }
+
+  /// Return true if this operand is an early-clobber def or a use tied to one.
+  LLVM_ABI bool isEarlyClobberDefOrUse() const;
 
   bool isTied() const {
     assert(isReg() && "Wrong MachineOperand accessor");
@@ -624,6 +634,11 @@ public:
     return Contents.ShuffleMask;
   }
 
+  LaneBitmask getLaneMask() const {
+    assert(isLaneMask() && "Wrong MachineOperand accessor");
+    return Contents.LaneMask;
+  }
+
   /// Return the offset from the symbol in this operand. This always returns 0
   /// for ExternalSymbol operands.
   int64_t getOffset() const {
@@ -764,7 +779,7 @@ public:
   /// isIdenticalTo uses for comparison. It is thus suited for use in hash
   /// tables which use that function for equality comparisons only. This must
   /// stay exactly in sync with isIdenticalTo above.
-  LLVM_ABI_FRIEND friend hash_code hash_value(const MachineOperand &MO);
+  LLVM_ABI friend hash_code hash_value(const MachineOperand &MO);
 
   /// ChangeToImmediate - Replace this operand with a new immediate operand of
   /// the specified value.  If an operand is known to be an immediate already,
@@ -787,6 +802,9 @@ public:
   /// ChangeToBA - Replace this operand with a new block address operand.
   LLVM_ABI void ChangeToBA(const BlockAddress *BA, int64_t Offset,
                            unsigned TargetFlags = 0);
+
+  /// ChangeToCPI - Replace this operand with a new constant pool index operand.
+  LLVM_ABI void ChangeToCPI(unsigned Idx, int Offset, unsigned TargetFlags = 0);
 
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
   LLVM_ABI void ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags = 0);
@@ -989,6 +1007,12 @@ public:
     return Op;
   }
 
+  static MachineOperand CreateLaneMask(LaneBitmask LaneMask) {
+    MachineOperand Op(MachineOperand::MO_LaneMask);
+    Op.Contents.LaneMask = LaneMask;
+    return Op;
+  }
+
   friend class MachineInstr;
   friend class MachineRegisterInfo;
 
@@ -1000,7 +1024,6 @@ private:
   /// Artificial kinds for DenseMap usage.
   enum : unsigned char {
     MO_Empty = MO_Last + 1,
-    MO_Tombstone,
   };
 
   friend struct DenseMapInfo<MachineOperand>;
@@ -1019,22 +1042,12 @@ private:
 };
 
 template <> struct DenseMapInfo<MachineOperand> {
-  static MachineOperand getEmptyKey() {
-    return MachineOperand(static_cast<MachineOperand::MachineOperandType>(
-        MachineOperand::MO_Empty));
-  }
-  static MachineOperand getTombstoneKey() {
-    return MachineOperand(static_cast<MachineOperand::MachineOperandType>(
-        MachineOperand::MO_Tombstone));
-  }
   static unsigned getHashValue(const MachineOperand &MO) {
     return hash_value(MO);
   }
   static bool isEqual(const MachineOperand &LHS, const MachineOperand &RHS) {
     if (LHS.getType() == static_cast<MachineOperand::MachineOperandType>(
-                             MachineOperand::MO_Empty) ||
-        LHS.getType() == static_cast<MachineOperand::MachineOperandType>(
-                             MachineOperand::MO_Tombstone))
+                             MachineOperand::MO_Empty))
       return LHS.getType() == RHS.getType();
     return LHS.isIdenticalTo(RHS);
   }

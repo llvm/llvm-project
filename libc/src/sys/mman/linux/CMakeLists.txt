@@ -1,3 +1,10 @@
+add_subdirectory(generic)
+set(ARCH_SUBDIRECTORY generic)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE})
+  add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
+  set(ARCH_SUBDIRECTORY ${LIBC_TARGET_ARCHITECTURE})
+endif()
+
 add_entrypoint_object(
   madvise
   SRCS
@@ -5,9 +12,22 @@ add_entrypoint_object(
   HDRS
     ../madvise.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.madvise
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  memfd_create
+  SRCS
+    memfd_create.cpp
+  HDRS
+    ../memfd_create.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.memfd_create
     libc.src.errno.errno
 )
 
@@ -18,9 +38,10 @@ add_entrypoint_object(
   HDRS
     ../mmap.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.off_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mmap
     libc.src.errno.errno
 )
 
@@ -31,9 +52,12 @@ add_entrypoint_object(
   HDRS
     ../mremap.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mremap
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -44,9 +68,8 @@ add_entrypoint_object(
   HDRS
     ../munmap.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munmap
     libc.src.errno.errno
 )
 
@@ -57,9 +80,8 @@ add_entrypoint_object(
   HDRS
     ../mprotect.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mprotect
     libc.src.errno.errno
 )
 
@@ -70,9 +92,11 @@ add_entrypoint_object(
   HDRS
     ../posix_madvise.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.sys_mman_macros
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.madvise
+    libc.src.__support.common
+    libc.src.__support.macros.config
 )
 
 add_entrypoint_object(
@@ -82,9 +106,11 @@ add_entrypoint_object(
   HDRS
     ../mincore.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mincore
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -95,9 +121,11 @@ add_entrypoint_object(
   HDRS
     ../mlock.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mlock
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -108,9 +136,12 @@ add_entrypoint_object(
   HDRS
     ../mlock2.h
   DEPENDS
-    libc.include.sys_mman
+    libc.hdr.types.size_t
     libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mlock2
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -121,9 +152,11 @@ add_entrypoint_object(
   HDRS
     ../munlock.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munlock
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -134,9 +167,10 @@ add_entrypoint_object(
   HDRS
     ../mlockall.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mlockall
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -147,9 +181,10 @@ add_entrypoint_object(
   HDRS
     ../munlockall.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.munlockall
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -160,10 +195,89 @@ add_entrypoint_object(
   HDRS
     ../msync.h
   DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.msync
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pkey_alloc
+  SRCS
+    pkey_alloc.cpp
+  HDRS
+    ../pkey_alloc.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pkey_alloc
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_header_library(
+  pkey_common
+  HDRS
+    pkey_common.h
+  DEPENDS
+    .${ARCH_SUBDIRECTORY}.pkey_common
+)
+
+add_entrypoint_object(
+  pkey_free
+  SRCS
+    pkey_free.cpp
+  HDRS
+    ../pkey_free.h
+  DEPENDS
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pkey_free
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pkey_get
+  SRCS
+    pkey_get.cpp
+  HDRS
+    ../pkey_get.h
+  DEPENDS
     libc.include.sys_mman
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+    .pkey_common
+)
+
+add_entrypoint_object(
+  pkey_mprotect
+  SRCS
+    pkey_mprotect.cpp
+  HDRS
+    ../pkey_mprotect.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.mprotect
+    libc.src.__support.OSUtil.linux.syscall_wrappers.pkey_mprotect
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pkey_set
+  SRCS
+    pkey_set.cpp
+  HDRS
+    ../pkey_set.h
+  DEPENDS
+    libc.include.sys_mman
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    .pkey_common
 )
 
 add_entrypoint_object(
@@ -173,9 +287,11 @@ add_entrypoint_object(
   HDRS
     ../remap_file_pages.h
   DEPENDS
-    libc.include.sys_mman
-    libc.include.sys_syscall
-    libc.src.__support.OSUtil.osutil
+    libc.hdr.types.size_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.remap_file_pages
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
@@ -184,11 +300,10 @@ add_header_library(
   HDRS
     shm_common.h
   DEPENDS
+    libc.hdr.errno_macros
     libc.src.__support.CPP.array
     libc.src.__support.CPP.string_view
-    libc.src.__support.CPP.optional
-    libc.src.__support.common
-    libc.src.errno.errno
+    libc.src.__support.error_or
     libc.src.string.memory_utils.inline_memcpy
 )
 
@@ -199,8 +314,10 @@ add_entrypoint_object(
   HDRS
     ../shm_open.h
   DEPENDS
-    libc.src.fcntl.open
+    libc.hdr.fcntl_macros
     libc.hdr.types.mode_t
+    libc.src.errno.errno
+    libc.src.__support.OSUtil.linux.syscall_wrappers.open
     .shm_common
 )
 
@@ -211,6 +328,7 @@ add_entrypoint_object(
   HDRS
     ../shm_unlink.h
   DEPENDS
-    libc.src.unistd.unlink
+    libc.src.__support.OSUtil.linux.syscall_wrappers.unlink
+    libc.src.errno.errno
     .shm_common
 )

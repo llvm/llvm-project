@@ -42,7 +42,7 @@ Sections:
 
 # GNU2-EMPTY:
 # GNU2:       There are no sections in this file.
-# GNU2-NEXT:  warning: '[[FILE]]': e_shstrndx == SHN_XINDEX, but the section header table is empty
+# GNU2-NEXT:  warning: '[[FILE]]': e_shstrndx == SHN_XINDEX, but cannot read section header 0: invalid section index: 0
 
 # RUN: llvm-readobj --file-headers --sections %t2 | \
 # RUN:   FileCheck %s --check-prefix=LLVM2 --implicit-check-not="warning:"

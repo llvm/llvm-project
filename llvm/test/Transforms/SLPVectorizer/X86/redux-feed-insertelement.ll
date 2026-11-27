@@ -11,7 +11,7 @@ define void @rdx_feeds_single_insert(<2 x double> %v, ptr nocapture readonly %ar
 ; CHECK-NEXT:    [[TMP2:%.*]] = call fast double @llvm.vector.reduce.fadd.v8f64(double 0.000000e+00, <8 x double> [[TMP1]])
 ; CHECK-NEXT:    [[I:%.*]] = insertelement <2 x double> [[V:%.*]], double [[TMP2]], i64 1
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds double, ptr [[ARG2:%.*]], <2 x i64> <i64 0, i64 16>
-; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> [[I]], <2 x ptr> [[P]], i32 8, <2 x i1> splat (i1 true))
+; CHECK-NEXT:    call void @llvm.masked.scatter.v2f64.v2p0(<2 x double> [[I]], <2 x ptr> align 8 [[P]], <2 x i1> splat (i1 true))
 ; CHECK-NEXT:    ret void
 ;
 entry:

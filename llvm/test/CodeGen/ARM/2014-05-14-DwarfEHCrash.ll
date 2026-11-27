@@ -45,6 +45,6 @@ declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 
-attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="true" }
+attributes #0 = { "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="true" }
 attributes #1 = { nounwind readnone }
 attributes #2 = { nounwind }

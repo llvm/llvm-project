@@ -1,5 +1,4 @@
-; RUN: opt %loadNPMPolly -passes=polly-codegen -polly-invariant-load-hoisting=true \
-; RUN: -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-invariant-load-hoisting=true -S < %s | FileCheck %s
 ;
 ; This test case checks whether Polly generates alias metadata in case of
 ; the ublas gemm kernel and polly-invariant-load-hoisting.
@@ -8,7 +7,7 @@
 ;
 ; CHECK: !0 = !{!1}
 ; CHECK-NEXT: !1 = distinct !{!1, !2, !"polly.alias.scope.MemRef_A"}
-; CHECK-NEXT: !2 = distinct !{!2, !"polly.alias.scope.domain"}
+; CHECK-NEXT: !2 = distinct !{!2, i1 false, !"polly.alias.scope.domain"}
 ; CHECK-NEXT: !3 = !{!4}
 ; CHECK-NEXT: !4 = distinct !{!4, !2, !"polly.alias.scope.MemRef_ptrA"}
 ;

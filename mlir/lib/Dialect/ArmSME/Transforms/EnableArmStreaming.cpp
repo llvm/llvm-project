@@ -53,7 +53,7 @@ using namespace mlir::arm_sme;
 namespace {
 
 constexpr StringLiteral
-    kEnableArmStreamingIgnoreAttr("enable_arm_streaming_ignore");
+    kEnableArmStreamingIgnoreAttr("llvm.enable_arm_streaming_ignore");
 
 template <typename... Ops>
 constexpr auto opList() {
@@ -122,20 +122,23 @@ struct EnableArmStreamingPass
         return;
     }
 
-    if (function->getAttr(kEnableArmStreamingIgnoreAttr) ||
+    if (function->getDiscardableAttr(kEnableArmStreamingIgnoreAttr) ||
         streamingMode == ArmStreamingMode::Disabled)
       return;
 
     auto unitAttr = UnitAttr::get(&getContext());
 
-    function->setAttr(stringifyArmStreamingMode(streamingMode), unitAttr);
+    function->setDiscardableAttr(
+        (Twine("llvm.") + stringifyArmStreamingMode(streamingMode)).str(),
+        unitAttr);
 
     // The pass currently only supports enabling ZA when in streaming-mode, but
     // ZA can be accessed by the SME LDR, STR and ZERO instructions when not in
     // streaming-mode (see section B1.1.1, IDGNQM of spec [1]). It may be worth
     // supporting this later.
     if (zaMode != ArmZaMode::Disabled)
-      function->setAttr(stringifyArmZaMode(zaMode), unitAttr);
+      function->setDiscardableAttr(
+          (Twine("llvm.") + stringifyArmZaMode(zaMode)).str(), unitAttr);
   }
 };
 } // namespace

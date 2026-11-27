@@ -66,6 +66,7 @@ public:
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
+  bool isBoxAddress() const { return fir::isBoxAddress(getType()); }
 
   /// Is this entity a procedure designator?
   bool isProcedure() const { return isFortranProcedureValue(getType()); }
@@ -97,6 +98,14 @@ public:
   }
   mlir::Type getElementOrSequenceType() const {
     return hlfir::getFortranElementOrSequenceType(getType());
+  }
+  /// Return the fir.class or fir.box type needed to describe this entity.
+  fir::BaseBoxType getBoxType() const {
+    if (isBoxAddressOrValue())
+      return llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(getType()));
+    const bool isVolatile = fir::isa_volatile_type(getType());
+    const int64_t corank = fir::getBoxCorank(getType());
+    return fir::BoxType::get(getElementOrSequenceType(), isVolatile, corank);
   }
 
   bool hasLengthParameters() const {
@@ -224,8 +233,9 @@ fir::FortranVariableOpInterface
 genDeclare(mlir::Location loc, fir::FirOpBuilder &builder,
            const fir::ExtendedValue &exv, llvm::StringRef name,
            fir::FortranVariableFlagsAttr flags,
-           mlir::Value dummyScope = nullptr,
-           cuf::DataAttributeAttr dataAttr = {});
+           mlir::Value dummyScope = nullptr, mlir::Value storage = nullptr,
+           std::uint64_t storageOffset = 0,
+           cuf::DataAttributeAttr dataAttr = {}, unsigned dummyArgNo = 0);
 
 /// Generate an hlfir.associate to build a variable from an expression value.
 /// The type of the variable must be provided so that scalar logicals are
@@ -323,6 +333,10 @@ void genLengthParameters(mlir::Location loc, fir::FirOpBuilder &builder,
 mlir::Value genCharLength(mlir::Location loc, fir::FirOpBuilder &builder,
                           Entity entity);
 
+/// Return character length if known at compile time. Unlike genCharLength
+/// it does not create any new op as specifically is intended for analysis.
+std::optional<std::int64_t> getCharLengthIfConst(Entity entity);
+
 mlir::Value genRank(mlir::Location loc, fir::FirOpBuilder &builder,
                     Entity entity, mlir::Type resultType);
 
@@ -344,10 +358,13 @@ mlir::Type getVariableElementType(hlfir::Entity variable);
 /// type (that may be an hlfir.expr type).
 mlir::Type getEntityElementType(hlfir::Entity entity);
 
-using ElementalKernelGenerator = std::function<hlfir::Entity(
+using ElementalKernelResult =
+    std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>;
+using ElementalKernelGenerator = std::function<ElementalKernelResult(
     mlir::Location, fir::FirOpBuilder &, mlir::ValueRange)>;
 /// Generate an hlfir.elementalOp given call back to generate the element
-/// value at for each iteration.
+/// value for each iteration and its explicit cleanup, if any. The cleanup
+/// callback is emitted in the yield_element cleanup region.
 /// If exprType is specified, this will be the return type of the elemental op.
 /// If exprType is not specified, the resulting expression type is computed
 /// from the given \p elementType and \p shape, and the type is polymorphic
@@ -418,7 +435,8 @@ llvm::SmallVector<mlir::Value> genLoopNestWithReductions(
 /// Inline the body of an hlfir.elemental at the current insertion point
 /// given a list of one based indices. This generates the computation
 /// of one element of the elemental expression. Return the YieldElementOp
-/// whose value argument is the element value.
+/// whose value argument is the element value. The caller must emit or transfer
+/// its cleanup region after consuming that value, then erase the yield.
 /// The original hlfir::ElementalOp is left untouched.
 hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
@@ -432,11 +450,59 @@ hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
 /// current context and uses values that have been cloned already. A callback is
 /// provided to indicate if an hlfir.apply inside the hlfir.elemental must be
 /// immediately replaced by the inlining of the applied hlfir.elemental.
+/// Collect callbacks for the cloned yield_element cleanup regions, preserving
+/// the mapping for each inlined instance. The caller must execute the callbacks
+/// in reverse order after consuming the result. An elemental_addr's own cleanup
+/// remains the caller's responsibility.
 mlir::Value inlineElementalOp(
     mlir::Location loc, fir::FirOpBuilder &builder,
     hlfir::ElementalOpInterface elemental, mlir::ValueRange oneBasedIndices,
     mlir::IRMapping &mapper,
-    const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline);
+    const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline,
+    llvm::SmallVectorImpl<hlfir::CleanupFunction> &cleanups);
+
+/// Generate an element-by-element assignment from \p rhs to \p lhs for arrays
+/// that are known not to alias. The assignment is performed using a loop nest
+/// over the optimal extents deduced from both shapes. If \p emitWorkshareLoop
+/// is true, a workshare loop construct may be emitted when available.
+/// Allocatable LHS must be allocated with the right shape and parameters.
+/// An optional scalarCombineAndAssign can be provided to provide logic for more
+/// complex assignment actions like for reductions that may need to happen
+/// atomically. When provided, the callback will be passed scalar addresses for
+/// the LHS and RHS elements and is in charge of generating the combination and
+/// assignment logic.
+void genNoAliasArrayAssignment(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    hlfir::Entity lhs, bool emitWorkshareLoop = false,
+    bool temporaryLHS = false,
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)>
+        *scalarCombineAndAssign = nullptr,
+    mlir::ArrayAttr accessGroups = {});
+
+/// Generate an assignment from \p rhs to \p lhs when they are known not to
+/// alias. Handles both arrays and scalars: for arrays, delegates to
+/// genNoAliasArrayAssignment; for scalars, performs load/store for trivial
+/// scalar types and falls back to hlfir.assign otherwise.
+/// Allocatable LHS must be allocated with the right shape and parameters.
+void genNoAliasAssignment(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    hlfir::Entity lhs, bool emitWorkshareLoop = false,
+    bool temporaryLHS = false,
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr accessGroups)>
+        *scalarCombineAndAssign = nullptr,
+    mlir::ArrayAttr accessGroups = {});
+inline void genNoAliasAssignment(
+    mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
+    hlfir::Entity lhs, bool emitWorkshareLoop, bool temporaryLHS,
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)>
+        scalarCombineAndAssign,
+    mlir::ArrayAttr accessGroups = {}) {
+  genNoAliasAssignment(loc, builder, rhs, lhs, emitWorkshareLoop, temporaryLHS,
+                       &scalarCombineAndAssign, accessGroups);
+}
 
 /// Create a new temporary with the shape and parameters of the provided
 /// hlfir.eval_in_mem operation and clone the body of the hlfir.eval_in_mem
@@ -466,7 +532,7 @@ convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-             hlfir::Entity entity, mlir::Type targetType);
+             hlfir::Entity entity, mlir::Type targetType, unsigned corank = 0);
 
 /// Clone an hlfir.elemental_addr into an hlfir.elemental value.
 hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
@@ -480,9 +546,18 @@ hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
 /// would be incorrect.
 bool elementalOpMustProduceTemp(hlfir::ElementalOp elemental);
 
-std::pair<hlfir::Entity, mlir::Value>
-createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
-                   hlfir::Entity mold);
+/// Create a new temporary based on the provided \p mold entity.
+///
+/// The returned temporary has the same element type, shape and type parameters
+/// as the mold. When possible, the storage is stack-allocated; otherwise it is
+/// heap-allocated (for instance for arrays with dynamic shape or polymorphic
+/// cases). The bool result indicates whether heap allocation was used.
+///
+/// If the returned bool is true, callers are responsible for arranging cleanup
+/// (e.g., generating destruction/deallocation code at an appropriate point).
+std::pair<hlfir::Entity, bool> createTempFromMold(mlir::Location loc,
+                                                  fir::FirOpBuilder &builder,
+                                                  hlfir::Entity mold);
 
 // TODO: this does not support polymorphic molds
 hlfir::Entity createStackTempFromMold(mlir::Location loc,
@@ -532,7 +607,6 @@ genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 /// and \p typeParams of the array.
 Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
                     Entity array, int64_t dim,
-                    mlir::ArrayRef<mlir::Value> lbounds,
                     mlir::ArrayRef<mlir::Value> extents,
                     mlir::ValueRange oneBasedIndices,
                     mlir::ArrayRef<mlir::Value> typeParams);
@@ -541,6 +615,18 @@ Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
 /// a contiguous part of the memref object given that it is
 /// contiguous.
 bool designatePreservesContinuity(hlfir::DesignateOp op);
+
+/// Return true iff the given \p base desribes an object
+/// that is contiguous. If \p checkWhole is true, then
+/// the object must be contiguous in all dimensions,
+/// otherwise, it must be contiguous in the innermost dimension.
+/// This function is an extension of hlfir::Entity::isSimplyContiguous(),
+/// and it can be used on pure FIR representation as well as on HLFIR.
+bool isSimplyContiguous(mlir::Value base, bool checkWhole = true);
+
+/// Return true if \p region belongs to a sub-expression of an hlfir.where
+/// that is subject to the WHERE mask control.
+bool isInsideHlfirWhereMaskedExpression(mlir::Region &region);
 
 } // namespace hlfir
 

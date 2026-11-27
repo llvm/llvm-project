@@ -7,11 +7,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Token.h"
+#include "clang/Tooling/Core/Replacement.h"
+#include "clang/Tooling/Inclusions/IncludeStyle.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Regex.h"
+#include <algorithm>
+#include <cassert>
+#include <climits>
+#include <functional>
+#include <iterator>
 #include <optional>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace tooling {
@@ -32,6 +53,22 @@ LangOptions createLangOpts() {
   return LangOpts;
 }
 
+// Create a new lexer on the given \p Code and calls \p Callback with the
+// created source manager and lexer. \p Callback must be a callable object that
+// could be invoked with (const SourceManager &, Lexer &). This function returns
+// whatever \p Callback returns.
+template <typename F>
+auto withLexer(StringRef FileName, StringRef Code, const IncludeStyle &Style,
+               F &&Callback)
+    -> std::invoke_result_t<F, const SourceManager &, Lexer &> {
+  SourceManagerForFile VirtualSM(FileName, Code);
+  SourceManager &SM = VirtualSM.get();
+  LangOptions LangOpts = createLangOpts();
+  Lexer Lex(SM.getMainFileID(), SM.getBufferOrFake(SM.getMainFileID()), SM,
+            LangOpts);
+  return std::invoke(std::forward<F>(Callback), std::as_const(SM), Lex);
+}
+
 // Returns the offset after skipping a sequence of tokens, matched by \p
 // GetOffsetAfterSequence, from the start of the code.
 // \p GetOffsetAfterSequence should be a function that matches a sequence of
@@ -40,15 +77,13 @@ unsigned getOffsetAfterTokenSequence(
     StringRef FileName, StringRef Code, const IncludeStyle &Style,
     llvm::function_ref<unsigned(const SourceManager &, Lexer &, Token &)>
         GetOffsetAfterSequence) {
-  SourceManagerForFile VirtualSM(FileName, Code);
-  SourceManager &SM = VirtualSM.get();
-  LangOptions LangOpts = createLangOpts();
-  Lexer Lex(SM.getMainFileID(), SM.getBufferOrFake(SM.getMainFileID()), SM,
-            LangOpts);
-  Token Tok;
-  // Get the first token.
-  Lex.LexFromRawLexer(Tok);
-  return GetOffsetAfterSequence(SM, Lex, Tok);
+  return withLexer(FileName, Code, Style,
+                   [&](const SourceManager &SM, Lexer &Lex) {
+                     Token Tok;
+                     // Get the first token.
+                     Lex.LexFromRawLexer(Tok);
+                     return GetOffsetAfterSequence(SM, Lex, Tok);
+                   });
 }
 
 // Check if a sequence of tokens is like "#<Name> <raw_identifier>". If it is,
@@ -74,13 +109,24 @@ void skipComments(Lexer &Lex, Token &Tok) {
       return;
 }
 
-// Returns the offset after header guard directives and any comments
-// before/after header guards (e.g. #ifndef/#define pair, #pragma once). If no
-// header guard is present in the code, this will return the offset after
-// skipping all comments from the start of the code.
-unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
-                                               StringRef Code,
-                                               const IncludeStyle &Style) {
+bool checkAndConsumeModuleDecl(const SourceManager &SM, Lexer &Lex,
+                               Token &Tok) {
+  bool Matched = Tok.is(tok::raw_identifier) &&
+                 Tok.getRawIdentifier() == "module" &&
+                 !Lex.LexFromRawLexer(Tok) && Tok.is(tok::semi) &&
+                 !Lex.LexFromRawLexer(Tok);
+  return Matched;
+}
+
+// Determines the minimum offset into the file where we want to insert header
+// includes. This will be put (when available):
+// - after `#pragma once`
+// - after header guards (`#ifdef` and `#define`)
+// - after opening global module (`module;`)
+// - after any comments at the start of the file or immediately following one of
+//   the above constructs
+unsigned getMinHeaderInsertionOffset(StringRef FileName, StringRef Code,
+                                     const IncludeStyle &Style) {
   // \p Consume returns location after header guard or 0 if no header guard is
   // found.
   auto ConsumeHeaderGuardAndComment =
@@ -95,7 +141,17 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
               return std::max(InitialOffset, Consume(SM, Lex, Tok));
             });
       };
-  return std::max(
+
+  auto ModuleDecl = ConsumeHeaderGuardAndComment(
+      [](const SourceManager &SM, Lexer &Lex, Token Tok) -> unsigned {
+        if (checkAndConsumeModuleDecl(SM, Lex, Tok)) {
+          skipComments(Lex, Tok);
+          return SM.getFileOffset(Tok.getLocation());
+        }
+        return 0;
+      });
+
+  auto HeaderAndPPOffset = std::max(
       // #ifndef/#define
       ConsumeHeaderGuardAndComment(
           [](const SourceManager &SM, Lexer &Lex, Token Tok) -> unsigned {
@@ -115,10 +171,11 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
               return SM.getFileOffset(Tok.getLocation());
             return 0;
           }));
+  return std::max(HeaderAndPPOffset, ModuleDecl);
 }
 
 // Check if a sequence of tokens is like
-//    "#include ("header.h" | <header.h>)".
+//    "#(include | import) ("header.h" | <header.h>)".
 // If it is, \p Tok will be the token after this directive; otherwise, it can be
 // any token after the given \p Tok (including \p Tok).
 bool checkAndConsumeInclusiveDirective(Lexer &Lex, Token &Tok) {
@@ -127,7 +184,9 @@ bool checkAndConsumeInclusiveDirective(Lexer &Lex, Token &Tok) {
     return true;
   };
   if (Tok.is(tok::hash) && !Lex.LexFromRawLexer(Tok) &&
-      Tok.is(tok::raw_identifier) && Tok.getRawIdentifier() == "include") {
+      Tok.is(tok::raw_identifier) &&
+      (Tok.getRawIdentifier() == "include" ||
+       Tok.getRawIdentifier() == "import")) {
     if (Lex.LexFromRawLexer(Tok))
       return false;
     if (Tok.is(tok::string_literal))
@@ -168,12 +227,49 @@ unsigned getMaxHeaderInsertionOffset(StringRef FileName, StringRef Code,
       });
 }
 
+// Check whether the first declaration in the code is a C++20 module
+// declaration, and it is not preceded by any preprocessor directives.
+bool isFirstDeclModuleDecl(StringRef FileName, StringRef Code,
+                           const IncludeStyle &Style) {
+  return withLexer(
+      FileName, Code, Style, [](const SourceManager &SM, Lexer &Lex) {
+        // Let the lexer skip any comments and whitespaces for us.
+        Lex.SetKeepWhitespaceMode(false);
+        Lex.SetCommentRetentionState(false);
+
+        Token tok;
+        if (Lex.LexFromRawLexer(tok))
+          return false;
+
+        // A module declaration is made up of the following token sequence:
+        //     export? module <ident> ('.' <ident>)* <partition> <attr> ;
+        //
+        // For convenience, we don't actually lex the whole declaration -- it's
+        // enough to distinguish a module declaration to just ensure an <ident>
+        // is following the "module" keyword.
+
+        // Lex the optional "export" keyword.
+        if (tok.is(tok::raw_identifier) && tok.getRawIdentifier() == "export") {
+          if (Lex.LexFromRawLexer(tok))
+            return false;
+        }
+
+        // Lex the "module" keyword.
+        if (!tok.is(tok::raw_identifier) ||
+            tok.getRawIdentifier() != "module" || Lex.LexFromRawLexer(tok))
+          return false;
+
+        // Make sure an identifier follows the "module" keyword.
+        return tok.is(tok::raw_identifier);
+      });
+}
+
 inline StringRef trimInclude(StringRef IncludeName) {
   return IncludeName.trim("\"<>");
 }
 
 const char IncludeRegexPattern[] =
-    R"(^[\t\ ]*#[\t\ ]*(import|include)[^"<]*(["<][^">]*[">]))";
+    "^[\t ]*#[\t ]*(import|include)[^\"<]*([\"<][^\">]*[\">])";
 
 // The filename of Path excluding extension.
 // Used to match implementation with headers, this differs from sys::path::stem:
@@ -267,7 +363,8 @@ bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   else if (FileStem.equals_insensitive(HeaderStem))
     Matching = FileStem; // example 3)
   if (!Matching.empty()) {
-    llvm::Regex MainIncludeRegex(HeaderStem.str() + Style.IncludeIsMainRegex,
+    llvm::Regex MainIncludeRegex(llvm::Regex::escape(HeaderStem) +
+                                     Style.IncludeIsMainRegex,
                                  llvm::Regex::IgnoreCase);
     if (MainIncludeRegex.match(Matching))
       return true;
@@ -280,12 +377,13 @@ const llvm::Regex HeaderIncludes::IncludeRegex(IncludeRegexPattern);
 HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
                                const IncludeStyle &Style)
     : FileName(FileName), Code(Code), FirstIncludeOffset(-1),
-      MinInsertOffset(
-          getOffsetAfterHeaderGuardsAndComments(FileName, Code, Style)),
+      MinInsertOffset(getMinHeaderInsertionOffset(FileName, Code, Style)),
       MaxInsertOffset(MinInsertOffset +
                       getMaxHeaderInsertionOffset(
                           FileName, Code.drop_front(MinInsertOffset), Style)),
       MainIncludeFound(false),
+      ShouldInsertGlobalModuleFragmentDecl(
+          isFirstDeclModuleDecl(FileName, Code, Style)),
       Categories(Style, FileName) {
   // Add 0 for main header and INT_MAX for headers that are not in any
   // category.
@@ -352,22 +450,41 @@ void HeaderIncludes::addExistingInclude(Include IncludeToAdd,
 }
 
 std::optional<tooling::Replacement>
-HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
+HeaderIncludes::insert(llvm::StringRef Header, bool IsAngled,
                        IncludeDirective Directive) const {
-  assert(IncludeName == trimInclude(IncludeName));
+  assert(Header == trimInclude(Header));
   // If a <header> ("header") already exists in code, "header" (<header>) with
-  // different quotation and/or directive will still be inserted.
+  // different quotation will still be inserted.
   // FIXME: figure out if this is the best behavior.
-  auto It = ExistingIncludes.find(IncludeName);
+  auto It = ExistingIncludes.find(Header);
   if (It != ExistingIncludes.end()) {
-    for (const auto &Inc : It->second)
-      if (Inc.Directive == Directive &&
-          ((IsAngled && StringRef(Inc.Name).starts_with("<")) ||
-           (!IsAngled && StringRef(Inc.Name).starts_with("\""))))
-        return std::nullopt;
+    for (const auto &Inc : It->second) {
+      bool SameQuotation = (IsAngled && StringRef(Inc.Name).starts_with("<")) ||
+                           (!IsAngled && StringRef(Inc.Name).starts_with("\""));
+      if (SameQuotation) {
+        // If the directive is the same, or if the directive is an include and
+        // the existing directive is an import, then we don't need to insert
+        // the header.
+        if ((Inc.Directive == Directive) ||
+            (Inc.Directive == IncludeDirective::Import &&
+             Directive == IncludeDirective::Include)) {
+          return std::nullopt;
+        }
+
+        // "import" outranks "include" with the assumption that includes are
+        // designed to handle multiple inclusions while import is not.
+        char Open = IsAngled ? '<' : '"';
+        char Close = IsAngled ? '>' : '"';
+        std::string NewInclude =
+            llvm::formatv("#import {0}{1}{2}\n", Open, Header, Close);
+
+        return tooling::Replacement(FileName, Inc.R.getOffset(),
+                                    Inc.R.getLength(), NewInclude);
+      }
+    }
   }
   std::string Quoted =
-      std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", IncludeName));
+      std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", Header));
   StringRef QuotedName = Quoted;
   int Priority = Categories.getIncludePriority(
       QuotedName, /*CheckMainHeader=*/!MainIncludeFound);
@@ -394,14 +511,88 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
   // newline should be added.
   if (InsertOffset == Code.size() && (!Code.empty() && Code.back() != '\n'))
     NewInclude = "\n" + NewInclude;
+  if (ShouldInsertGlobalModuleFragmentDecl)
+    NewInclude = "module;\n" + NewInclude;
   return tooling::Replacement(FileName, InsertOffset, 0, NewInclude);
 }
 
-tooling::Replacements HeaderIncludes::remove(llvm::StringRef IncludeName,
-                                             bool IsAngled) const {
-  assert(IncludeName == trimInclude(IncludeName));
+HeaderIncludes::HeaderToInsert::HeaderToInsert(
+    llvm::StringRef RawOrSpelledHeader, IncludeDirective Directive,
+    QuoteStyle QuoteStyle)
+    : Directive(Directive) {
+  if (RawOrSpelledHeader.starts_with("<")) {
+    Header = RawOrSpelledHeader.trim("<>").str();
+    this->IsAngled = QuoteStyle != QuoteStyle::QUOTED;
+  } else if (RawOrSpelledHeader.starts_with("\"")) {
+    Header = RawOrSpelledHeader.trim("\"").str();
+    this->IsAngled = QuoteStyle == QuoteStyle::ANGLED;
+  }
+}
+
+tooling::Replacements
+HeaderIncludes::insert(llvm::ArrayRef<HeaderToInsert> Headers) const {
   tooling::Replacements Result;
-  auto Iter = ExistingIncludes.find(IncludeName);
+  if (Headers.empty())
+    return Result;
+
+  std::vector<HeaderToInsert> SortedHeaders = Headers.vec();
+  llvm::stable_sort(SortedHeaders, [&](const HeaderToInsert &L,
+                                       const HeaderToInsert &R) {
+    std::string QuotedL =
+        std::string(llvm::formatv(L.IsAngled ? "<{0}>" : "\"{0}\"", L.Header));
+    std::string QuotedR =
+        std::string(llvm::formatv(R.IsAngled ? "<{0}>" : "\"{0}\"", R.Header));
+    int PriorityL = Categories.getIncludePriority(
+        QuotedL, /*CheckMainHeader=*/!MainIncludeFound);
+    int PriorityR = Categories.getIncludePriority(
+        QuotedR, /*CheckMainHeader=*/!MainIncludeFound);
+    if (PriorityL != PriorityR)
+      return PriorityL < PriorityR;
+    if (L.Header != R.Header)
+      return L.Header < R.Header;
+    if (L.IsAngled != R.IsAngled)
+      return L.IsAngled < R.IsAngled;
+    return L.Directive > R.Directive;
+  });
+  SortedHeaders.erase(
+      std::unique(SortedHeaders.begin(), SortedHeaders.end(),
+                  [](const HeaderToInsert &L, const HeaderToInsert &R) {
+                    return L.Header == R.Header && L.IsAngled == R.IsAngled;
+                  }),
+      SortedHeaders.end());
+
+  struct InsertionInfo {
+    std::string Text;
+    unsigned Length = 0;
+  };
+  llvm::DenseMap<unsigned, InsertionInfo> InsertionsByOffset;
+
+  for (const auto &H : SortedHeaders) {
+    if (auto Insertion = insert(H.Header, H.IsAngled, H.Directive)) {
+      auto &Info = InsertionsByOffset[Insertion->getOffset()];
+      Info.Text += Insertion->getReplacementText();
+      if (Insertion->getLength() > 0) {
+        assert(Info.Length == 0 && "Multiple replacements at same offset?");
+        Info.Length = Insertion->getLength();
+      }
+    }
+  }
+
+  for (const auto &Entry : InsertionsByOffset) {
+    const auto &Info = Entry.second;
+    const unsigned Offset = Entry.first;
+    cantFail(Result.add(
+        tooling::Replacement(FileName, Offset, Info.Length, Info.Text)));
+  }
+
+  return Result;
+}
+
+tooling::Replacements HeaderIncludes::remove(llvm::StringRef Header,
+                                             bool IsAngled) const {
+  assert(Header == trimInclude(Header));
+  tooling::Replacements Result;
+  auto Iter = ExistingIncludes.find(Header);
   if (Iter == ExistingIncludes.end())
     return Result;
   for (const auto &Inc : Iter->second) {

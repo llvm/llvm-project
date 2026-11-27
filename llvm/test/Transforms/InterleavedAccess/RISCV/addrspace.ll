@@ -20,7 +20,7 @@ define void @load_factor2(ptr addrspace(1) %ptr) {
 define void @load_factor2_vscale(ptr addrspace(1) %ptr) {
 ; CHECK-LABEL: define void @load_factor2_vscale(
 ; CHECK-SAME: ptr addrspace(1) [[PTR:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv32i8_2t.p1.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr addrspace(1) [[PTR]], i64 -1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = call target("riscv.vector.tuple", <vscale x 32 x i8>, 2) @llvm.riscv.vlseg2.mask.triscv.vector.tuple_nxv32i8_2t.p1.nxv8i1.i64(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) poison, ptr addrspace(1) [[PTR]], <vscale x 8 x i1> splat (i1 true), i64 -1, i64 3, i64 5)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 8 x i32> @llvm.riscv.tuple.extract.nxv8i32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]], i32 0)
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertvalue { <vscale x 8 x i32>, <vscale x 8 x i32> } poison, <vscale x 8 x i32> [[TMP2]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i32> @llvm.riscv.tuple.extract.nxv8i32.triscv.vector.tuple_nxv32i8_2t(target("riscv.vector.tuple", <vscale x 32 x i8>, 2) [[TMP1]], i32 1)

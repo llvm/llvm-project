@@ -19,6 +19,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <optional>
+#include <string>
 
 namespace llvm {
 
@@ -56,29 +57,55 @@ public:
   ///                       created from expanding braces otherwise disable
   ///                       brace expansion
   LLVM_ABI static Expected<GlobPattern>
-  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {});
+  create(StringRef Pat, std::optional<size_t> MaxSubPatterns = {},
+         bool SlashAgnostic = false);
   /// \returns \p true if \p S matches this glob pattern
   LLVM_ABI bool match(StringRef S) const;
+
+  /// \returns the single string this pattern matches, if the pattern contains
+  /// no unescaped metacharacters; otherwise std::nullopt. Escapes are resolved,
+  /// so `a\*b` yields `a*b`. Characters that are only special in context (`]`,
+  /// `}`, `,`) do not make a pattern non-literal.
+  LLVM_ABI std::optional<std::string> asLiteral() const;
 
   // Returns true for glob pattern "*". Can be used to avoid expensive
   // preparation/acquisition of the input for match().
   bool isTrivialMatchAll() const {
-    if (!Prefix.empty())
+    if (PrefixSize)
+      return false;
+    if (SuffixSize)
       return false;
     if (SubGlobs.size() != 1)
       return false;
     return SubGlobs[0].getPat() == "*";
   }
 
+  // The following functions are just shortcuts for faster matching. They are
+  // conservative to simplify implementations.
+
+  // Returns plain prefix of the pattern.
+  StringRef prefix() const { return Pattern.take_front(PrefixSize); }
+  // Returns plain suffix of the pattern.
+  StringRef suffix() const { return Pattern.take_back(SuffixSize); }
+  // Returns the longest plain substring of the pattern between prefix and
+  // suffix.
+  LLVM_ABI StringRef longest_substr() const;
+
 private:
-  StringRef Prefix;
+  StringRef Pattern;
+  size_t PrefixSize = 0;
+  size_t SuffixSize = 0;
+  bool SlashAgnostic = false;
 
   struct SubGlobPattern {
     /// \param Pat the pattern to match against
-    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat);
+    LLVM_ABI static Expected<SubGlobPattern> create(StringRef Pat,
+                                                    bool SlashAgnostic);
     /// \returns \p true if \p S matches this glob pattern
-    LLVM_ABI bool match(StringRef S) const;
+    LLVM_ABI bool match(StringRef S, bool SlashAgnostic) const;
     StringRef getPat() const { return StringRef(Pat.data(), Pat.size()); }
+    /// \returns \p true if this sub-pattern matches exactly one string.
+    bool isLiteral() const { return Brackets.empty() && !HasWildcard; }
 
     // Brackets with their end position and matched bytes.
     struct Bracket {
@@ -86,6 +113,8 @@ private:
       BitVector Bytes;
     };
     SmallVector<Bracket, 0> Brackets;
+    // Set while parsing if an unescaped '*' or '?' is present.
+    bool HasWildcard = false;
     SmallVector<char, 0> Pat;
   };
   SmallVector<SubGlobPattern, 1> SubGlobs;

@@ -7,7 +7,7 @@ subroutine bad_kind_error(values, time)
   !ERROR: Actual argument for 'values=' has bad type or kind 'REAL(8)'
   call etime(values, time)
 end subroutine bad_kind_error
-  
+
 subroutine bad_args_error(values)
   REAL(KIND=4), DIMENSION(2) :: values
   !ERROR: missing mandatory 'time=' argument

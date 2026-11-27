@@ -30,6 +30,7 @@
 #include <__ranges/movable_box.h>
 #include <__ranges/view_interface.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/decay.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/type_identity.h>
@@ -43,9 +44,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 template <class _Int>
@@ -57,11 +58,17 @@ struct __get_wider_signed {
       return type_identity<int>{};
     else if constexpr (sizeof(_Int) < sizeof(long))
       return type_identity<long>{};
-    else
+    else if constexpr (sizeof(_Int) < sizeof(long long))
       return type_identity<long long>{};
-
-    static_assert(
-        sizeof(_Int) <= sizeof(long long), "Found integer-like type that is bigger than largest integer like type.");
+#  if _LIBCPP_HAS_INT128
+    else if constexpr (sizeof(_Int) <= sizeof(__int128))
+      return type_identity<__int128>{};
+#  else
+    else if constexpr (sizeof(_Int) <= sizeof(long long))
+      return type_identity<long long>{};
+#  endif
+    else
+      static_assert(false, "Found integer-like type that is bigger than the largest integer like type.");
   }
 
   using type = typename decltype(__call())::type;
@@ -103,6 +110,12 @@ template <weakly_incrementable _Start, semiregular _BoundSentinel = unreachable_
   requires __weakly_equality_comparable_with<_Start, _BoundSentinel> && copyable<_Start>
 class iota_view : public view_interface<iota_view<_Start, _BoundSentinel>> {
   struct __iterator : public __iota_iterator_category<_Start> {
+  private:
+    _Start __value_ = _Start();
+
+    constexpr explicit __iterator(_Start __value) : __value_(std::move(__value)) {}
+
+  public:
     friend class iota_view;
 
     using iterator_concept =
@@ -117,26 +130,22 @@ class iota_view : public view_interface<iota_view<_Start, _BoundSentinel>> {
     using value_type      = _Start;
     using difference_type = _IotaDiffT<_Start>;
 
-    _Start __value_ = _Start();
-
-    _LIBCPP_HIDE_FROM_ABI __iterator()
+    __iterator()
       requires default_initializable<_Start>
     = default;
 
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __iterator(_Start __value) : __value_(std::move(__value)) {}
-
-    _LIBCPP_HIDE_FROM_ABI constexpr _Start operator*() const noexcept(is_nothrow_copy_constructible_v<_Start>) {
+    [[nodiscard]] constexpr _Start operator*() const noexcept(is_nothrow_copy_constructible_v<_Start>) {
       return __value_;
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+    constexpr __iterator& operator++() {
       ++__value_;
       return *this;
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr void operator++(int) { ++*this; }
+    constexpr void operator++(int) { ++*this; }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int)
+    constexpr __iterator operator++(int)
       requires incrementable<_Start>
     {
       auto __tmp = *this;
@@ -144,14 +153,14 @@ class iota_view : public view_interface<iota_view<_Start, _BoundSentinel>> {
       return __tmp;
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--()
+    constexpr __iterator& operator--()
       requires __decrementable<_Start>
     {
       --__value_;
       return *this;
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+    constexpr __iterator operator--(int)
       requires __decrementable<_Start>
     {
       auto __tmp = *this;
@@ -159,7 +168,7 @@ class iota_view : public view_interface<iota_view<_Start, _BoundSentinel>> {
       return __tmp;
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n)
+    constexpr __iterator& operator+=(difference_type __n)
       requires __advanceable<_Start>
     {
       if constexpr (__integer_like<_Start> && !__signed_integer_like<_Start>) {
@@ -174,7 +183,7 @@ class iota_view : public view_interface<iota_view<_Start, _BoundSentinel>> {
       return *this;
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n)
+    constexpr __iterator& operator-=(difference_type __n)
       requires __advanceable<_Start>
     {
       if constexpr (__integer_like<_Start> && !__signed_integer_like<_Start>) {
@@ -189,69 +198,69 @@ class iota_view : public view_interface<iota_view<_Start, _BoundSentinel>> {
       return *this;
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr _Start operator[](difference_type __n) const
+    [[nodiscard]] constexpr _Start operator[](difference_type __n) const
       requires __advanceable<_Start>
     {
       return _Start(__value_ + __n);
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
+    friend constexpr bool operator==(const __iterator& __x, const __iterator& __y)
       requires equality_comparable<_Start>
     {
       return __x.__value_ == __y.__value_;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
+    friend constexpr bool operator<(const __iterator& __x, const __iterator& __y)
       requires totally_ordered<_Start>
     {
       return __x.__value_ < __y.__value_;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>(const __iterator& __x, const __iterator& __y)
+    friend constexpr bool operator>(const __iterator& __x, const __iterator& __y)
       requires totally_ordered<_Start>
     {
       return __y < __x;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator<=(const __iterator& __x, const __iterator& __y)
+    friend constexpr bool operator<=(const __iterator& __x, const __iterator& __y)
       requires totally_ordered<_Start>
     {
       return !(__y < __x);
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator>=(const __iterator& __x, const __iterator& __y)
+    friend constexpr bool operator>=(const __iterator& __x, const __iterator& __y)
       requires totally_ordered<_Start>
     {
       return !(__x < __y);
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
+    friend constexpr auto operator<=>(const __iterator& __x, const __iterator& __y)
       requires totally_ordered<_Start> && three_way_comparable<_Start>
     {
       return __x.__value_ <=> __y.__value_;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator __i, difference_type __n)
+    [[nodiscard]] friend constexpr __iterator operator+(__iterator __i, difference_type __n)
       requires __advanceable<_Start>
     {
       __i += __n;
       return __i;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, __iterator __i)
+    [[nodiscard]] friend constexpr __iterator operator+(difference_type __n, __iterator __i)
       requires __advanceable<_Start>
     {
       return __i + __n;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __i, difference_type __n)
+    [[nodiscard]] friend constexpr __iterator operator-(__iterator __i, difference_type __n)
       requires __advanceable<_Start>
     {
       __i -= __n;
       return __i;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y)
+    [[nodiscard]] friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y)
       requires __advanceable<_Start>
     {
       if constexpr (__integer_like<_Start>) {
@@ -273,24 +282,22 @@ class iota_view : public view_interface<iota_view<_Start, _BoundSentinel>> {
   private:
     _BoundSentinel __bound_sentinel_ = _BoundSentinel();
 
-  public:
-    _LIBCPP_HIDE_FROM_ABI __sentinel() = default;
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __sentinel(_BoundSentinel __bound_sentinel)
-        : __bound_sentinel_(std::move(__bound_sentinel)) {}
+    constexpr explicit __sentinel(_BoundSentinel __bound_sentinel) : __bound_sentinel_(std::move(__bound_sentinel)) {}
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const __iterator& __x, const __sentinel& __y) {
+  public:
+    __sentinel() = default;
+
+    friend constexpr bool operator==(const __iterator& __x, const __sentinel& __y) {
       return __x.__value_ == __y.__bound_sentinel_;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Start>
-    operator-(const __iterator& __x, const __sentinel& __y)
+    [[nodiscard]] friend constexpr iter_difference_t<_Start> operator-(const __iterator& __x, const __sentinel& __y)
       requires sized_sentinel_for<_BoundSentinel, _Start>
     {
       return __x.__value_ - __y.__bound_sentinel_;
     }
 
-    _LIBCPP_HIDE_FROM_ABI friend constexpr iter_difference_t<_Start>
-    operator-(const __sentinel& __x, const __iterator& __y)
+    [[nodiscard]] friend constexpr iter_difference_t<_Start> operator-(const __sentinel& __x, const __iterator& __y)
       requires sized_sentinel_for<_BoundSentinel, _Start>
     {
       return -(__y - __x);
@@ -301,14 +308,13 @@ class iota_view : public view_interface<iota_view<_Start, _BoundSentinel>> {
   _BoundSentinel __bound_sentinel_ = _BoundSentinel();
 
 public:
-  _LIBCPP_HIDE_FROM_ABI iota_view()
+  iota_view()
     requires default_initializable<_Start>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit iota_view(_Start __value) : __value_(std::move(__value)) {}
+  constexpr explicit iota_view(_Start __value) : __value_(std::move(__value)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23
-  iota_view(type_identity_t<_Start> __value, type_identity_t<_BoundSentinel> __bound_sentinel)
+  constexpr explicit iota_view(type_identity_t<_Start> __value, type_identity_t<_BoundSentinel> __bound_sentinel)
       : __value_(std::move(__value)), __bound_sentinel_(std::move(__bound_sentinel)) {
     // Validate the precondition if possible.
     if constexpr (totally_ordered_with<_Start, _BoundSentinel>) {
@@ -317,38 +323,38 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 iota_view(__iterator __first, __iterator __last)
+  constexpr explicit iota_view(__iterator __first, __iterator __last)
     requires same_as<_Start, _BoundSentinel>
       : iota_view(std::move(__first.__value_), std::move(__last.__value_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 iota_view(__iterator __first, _BoundSentinel __last)
+  constexpr explicit iota_view(__iterator __first, _BoundSentinel __last)
     requires same_as<_BoundSentinel, unreachable_sentinel_t>
       : iota_view(std::move(__first.__value_), std::move(__last)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 iota_view(__iterator __first, __sentinel __last)
+  constexpr explicit iota_view(__iterator __first, __sentinel __last)
     requires(!same_as<_Start, _BoundSentinel> && !same_as<_BoundSentinel, unreachable_sentinel_t>)
       : iota_view(std::move(__first.__value_), std::move(__last.__bound_sentinel_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const { return __iterator{__value_}; }
+  [[nodiscard]] constexpr __iterator begin() const { return __iterator{__value_}; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
+  [[nodiscard]] constexpr auto end() const {
     if constexpr (same_as<_BoundSentinel, unreachable_sentinel_t>)
       return unreachable_sentinel;
     else
       return __sentinel{__bound_sentinel_};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator end() const
+  [[nodiscard]] constexpr __iterator end() const
     requires same_as<_Start, _BoundSentinel>
   {
     return __iterator{__bound_sentinel_};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr bool empty() const { return __value_ == __bound_sentinel_; }
+  [[nodiscard]] constexpr bool empty() const { return __value_ == __bound_sentinel_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] constexpr auto size() const
     requires(same_as<_Start, _BoundSentinel> && __advanceable<_Start>) ||
-            (integral<_Start> && integral<_BoundSentinel>) || sized_sentinel_for<_BoundSentinel, _Start>
+            (__integer_like<_Start> && __integer_like<_BoundSentinel>) || sized_sentinel_for<_BoundSentinel, _Start>
   {
     if constexpr (__integer_like<_Start> && __integer_like<_BoundSentinel>) {
       return (__value_ < 0)
@@ -374,14 +380,14 @@ namespace views {
 namespace __iota {
 struct __fn {
   template <class _Start>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Start&& __start) const
-      noexcept(noexcept(ranges::iota_view(std::forward<_Start>(__start))))
-          -> decltype(ranges::iota_view(std::forward<_Start>(__start))) {
-    return ranges::iota_view(std::forward<_Start>(__start));
+    requires(requires(_Start __s) { ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__s)); })
+  [[nodiscard]] constexpr auto operator()(_Start&& __start) const
+      noexcept(noexcept(ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__start)))) {
+    return ranges::iota_view<decay_t<_Start>>(std::forward<_Start>(__start));
   }
 
   template <class _Start, class _BoundSentinel>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Start&& __start, _BoundSentinel&& __bound_sentinel) const noexcept(
+  [[nodiscard]] constexpr auto operator()(_Start&& __start, _BoundSentinel&& __bound_sentinel) const noexcept(
       noexcept(ranges::iota_view(std::forward<_Start>(__start), std::forward<_BoundSentinel>(__bound_sentinel))))
       -> decltype(ranges::iota_view(std::forward<_Start>(__start), std::forward<_BoundSentinel>(__bound_sentinel))) {
     return ranges::iota_view(std::forward<_Start>(__start), std::forward<_BoundSentinel>(__bound_sentinel));
@@ -392,12 +398,21 @@ struct __fn {
 inline namespace __cpo {
 inline constexpr auto iota = __iota::__fn{};
 } // namespace __cpo
+
+#  if _LIBCPP_STD_VER >= 26
+
+inline constexpr auto indices = [] [[nodiscard]] (__integer_like auto __size) static {
+  return ranges::views::iota(decltype(__size){}, __size);
+};
+
+#  endif
+
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

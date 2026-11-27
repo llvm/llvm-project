@@ -63,7 +63,7 @@ RT_API_ATTRS std::size_t MeasurePreviousUTF8Bytes(
 
 // Ensure that all bytes are present in sequence in the input buffer
 // before calling; use MeasureUTF8Bytes(first byte) to count them.
-RT_API_ATTRS Fortran::common::optional<char32_t> DecodeUTF8(const char *);
+RT_API_ATTRS common::optional<char32_t> DecodeUTF8(const char *);
 
 // Ensure that at least maxUTF8Bytes remain in the output
 // buffer before calling.

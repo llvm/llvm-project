@@ -30,6 +30,10 @@
 #    error "__cpp_lib_jthread should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 14
 
 #  ifdef __cpp_lib_formatters
@@ -38,6 +42,10 @@
 
 #  ifdef __cpp_lib_jthread
 #    error "__cpp_lib_jthread should not be defined before c++20"
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 17
@@ -50,13 +58,17 @@
 #    error "__cpp_lib_jthread should not be defined before c++20"
 #  endif
 
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
+#  endif
+
 #elif TEST_STD_VER == 20
 
 #  ifdef __cpp_lib_formatters
 #    error "__cpp_lib_formatters should not be defined before c++23"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should be defined in c++20"
 #    endif
@@ -65,8 +77,12 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_jthread
-#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
+#  endif
+
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
 #  endif
 
 #elif TEST_STD_VER == 23
@@ -84,7 +100,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should be defined in c++23"
 #    endif
@@ -93,11 +109,15 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_jthread
-#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
-#elif TEST_STD_VER > 23
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
+#  endif
+
+#elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_formatters
@@ -112,7 +132,7 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
 #    ifndef __cpp_lib_jthread
 #      error "__cpp_lib_jthread should be defined in c++26"
 #    endif
@@ -121,11 +141,55 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_jthread
-#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC)' is not met!"
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#  ifdef __cpp_lib_thread_attributes
+#    error "__cpp_lib_thread_attributes should not be defined before c++29"
+#  endif
+
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_formatters
+#      error "__cpp_lib_formatters should be defined in c++29"
+#    endif
+#    if __cpp_lib_formatters != 202302L
+#      error "__cpp_lib_formatters should have the value 202302L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_formatters
+#      error "__cpp_lib_formatters should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS
+#    ifndef __cpp_lib_jthread
+#      error "__cpp_lib_jthread should be defined in c++29"
+#    endif
+#    if __cpp_lib_jthread != 201911L
+#      error "__cpp_lib_jthread should have the value 201911L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_jthread
+#      error "__cpp_lib_jthread should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_THREADS' is not met!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_thread_attributes
+#      error "__cpp_lib_thread_attributes should be defined in c++29"
+#    endif
+#    if __cpp_lib_thread_attributes != 202606L
+#      error "__cpp_lib_thread_attributes should have the value 202606L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_thread_attributes
+#      error "__cpp_lib_thread_attributes should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on
-

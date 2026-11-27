@@ -19,17 +19,20 @@ enum SystemZAsmDialect { AD_GNU = 0, AD_HLASM = 1 };
 
 class SystemZMCAsmInfoELF : public MCAsmInfoELF {
 public:
-  explicit SystemZMCAsmInfoELF(const Triple &TT);
+  explicit SystemZMCAsmInfoELF(const Triple &TT,
+                               const MCTargetOptions &Options);
 };
 
 class SystemZMCAsmInfoGOFF : public MCAsmInfoGOFF {
 public:
-  explicit SystemZMCAsmInfoGOFF(const Triple &TT);
-  bool isAcceptableChar(char C) const override;
+  explicit SystemZMCAsmInfoGOFF(const Triple &TT,
+                                const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
+  const MCExpr *getDwarfSectionOffsetExpr(const MCSymbol *Sym, uint64_t Offset,
+                                          MCContext &Ctx) const override;
 };
 
 namespace SystemZ {
@@ -51,6 +54,7 @@ enum {
   // https://www.ibm.com/docs/en/hla-and-tf/1.6?topic=value-address-constants
   S_RCon, // Address of ADA of symbol.
   S_VCon, // Address of external function symbol.
+  S_QCon, // Class-based offset.
 };
 } // namespace SystemZ
 

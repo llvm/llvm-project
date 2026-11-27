@@ -12,8 +12,9 @@
 
 // UNSUPPORTED: c++03
 
-#include <list>
 #include <cassert>
+#include <list>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "MoveOnly.h"

@@ -10,9 +10,10 @@
 #define _LIBCPP___RANDOM_NORMAL_DISTRIBUTION_H
 
 #include <__config>
+#include <__math/logarithms.h>
+#include <__math/roots.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
-#include <cmath>
 #include <iosfwd>
 #include <limits>
 
@@ -41,16 +42,15 @@ public:
   public:
     typedef normal_distribution distribution_type;
 
-    _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __mean = 0, result_type __stddev = 1)
-        : __mean_(__mean), __stddev_(__stddev) {}
+    explicit param_type(result_type __mean = 0, result_type __stddev = 1) : __mean_(__mean), __stddev_(__stddev) {}
 
-    _LIBCPP_HIDE_FROM_ABI result_type mean() const { return __mean_; }
-    _LIBCPP_HIDE_FROM_ABI result_type stddev() const { return __stddev_; }
+    [[__nodiscard__]] result_type mean() const { return __mean_; }
+    [[__nodiscard__]] result_type stddev() const { return __stddev_; }
 
-    friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
+    friend bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__mean_ == __y.__mean_ && __x.__stddev_ == __y.__stddev_;
     }
-    friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+    friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
   };
 
 private:
@@ -61,40 +61,38 @@ private:
 public:
   // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI normal_distribution() : normal_distribution(0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit normal_distribution(result_type __mean, result_type __stddev = 1)
+  normal_distribution() : normal_distribution(0) {}
+  explicit normal_distribution(result_type __mean, result_type __stddev = 1)
       : __p_(param_type(__mean, __stddev)), __v_hot_(false) {}
 #else
-  _LIBCPP_HIDE_FROM_ABI explicit normal_distribution(result_type __mean = 0, result_type __stddev = 1)
+  explicit normal_distribution(result_type __mean = 0, result_type __stddev = 1)
       : __p_(param_type(__mean, __stddev)), __v_hot_(false) {}
 #endif
-  _LIBCPP_HIDE_FROM_ABI explicit normal_distribution(const param_type& __p) : __p_(__p), __v_hot_(false) {}
-  _LIBCPP_HIDE_FROM_ABI void reset() { __v_hot_ = false; }
+  explicit normal_distribution(const param_type& __p) : __p_(__p), __v_hot_(false) {}
+  void reset() { __v_hot_ = false; }
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI result_type mean() const { return __p_.mean(); }
-  _LIBCPP_HIDE_FROM_ABI result_type stddev() const { return __p_.stddev(); }
+  [[__nodiscard__]] result_type mean() const { return __p_.mean(); }
+  [[__nodiscard__]] result_type stddev() const { return __p_.stddev(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
-  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
+  [[__nodiscard__]] param_type param() const { return __p_; }
+  void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return -numeric_limits<result_type>::infinity(); }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return numeric_limits<result_type>::infinity(); }
+  [[__nodiscard__]] result_type min() const { return -numeric_limits<result_type>::infinity(); }
+  [[__nodiscard__]] result_type max() const { return numeric_limits<result_type>::infinity(); }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const normal_distribution& __x, const normal_distribution& __y) {
+  friend bool operator==(const normal_distribution& __x, const normal_distribution& __y) {
     return __x.__p_ == __y.__p_ && __x.__v_hot_ == __y.__v_hot_ && (!__x.__v_hot_ || __x.__v_ == __y.__v_);
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const normal_distribution& __x, const normal_distribution& __y) {
-    return !(__x == __y);
-  }
+  friend bool operator!=(const normal_distribution& __x, const normal_distribution& __y) { return !(__x == __y); }
 
   template <class _CharT, class _Traits, class _RT>
   friend basic_ostream<_CharT, _Traits>&
@@ -123,7 +121,7 @@ _RealType normal_distribution<_RealType>::operator()(_URNG& __g, const param_typ
       __v = __uni(__g);
       __s = __u * __u + __v * __v;
     } while (__s > 1 || __s == 0);
-    result_type __fp = std::sqrt(-2 * std::log(__s) / __s);
+    result_type __fp = __math::sqrt(-2 * __math::log(__s) / __s);
     __v_             = __v * __fp;
     __v_hot_         = true;
     __up             = __u * __fp;
@@ -132,8 +130,7 @@ _RealType normal_distribution<_RealType>::operator()(_URNG& __g, const param_typ
 }
 
 template <class _CharT, class _Traits, class _RT>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os, const normal_distribution<_RT>& __x) {
+basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const normal_distribution<_RT>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _OStream;
   __os.flags(_OStream::dec | _OStream::left | _OStream::fixed | _OStream::scientific);
@@ -146,8 +143,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const normal_distribution<_RT>&
 }
 
 template <class _CharT, class _Traits, class _RT>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, normal_distribution<_RT>& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, normal_distribution<_RT>& __x) {
   typedef normal_distribution<_RT> _Eng;
   typedef typename _Eng::result_type result_type;
   typedef typename _Eng::param_type param_type;

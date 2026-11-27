@@ -431,15 +431,15 @@ namespace PR9238 {
 }
 
 namespace PR7900 {
-  struct A { // expected-note 2{{type 'PR7900::A' found by destructor name lookup}}
+  struct A { // expected-note 2{{type 'A' found by destructor name lookup}}
   };
   struct B : public A {
   };
   void foo() {
     B b;
     b.~B();
-    b.~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
-    (&b)->~A(); // expected-error{{destructor type 'PR7900::A' in object destruction expression does not match the type 'B' of the object being destroyed}}
+    b.~A(); // expected-error{{destructor type 'A' in object destruction expression does not match the type 'B' of the object being destroyed}}
+    (&b)->~A(); // expected-error{{destructor type 'A' in object destruction expression does not match the type 'B' of the object being destroyed}}
   }
 }
 

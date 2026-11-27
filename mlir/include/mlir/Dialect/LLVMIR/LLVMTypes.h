@@ -16,7 +16,6 @@
 
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include <optional>
 
 namespace llvm {
@@ -28,6 +27,7 @@ namespace mlir {
 
 class AsmParser;
 class AsmPrinter;
+class DataLayout;
 
 namespace LLVM {
 class LLVMDialect;
@@ -66,7 +66,6 @@ namespace LLVM {
   }
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType, "llvm.token");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType, "llvm.label");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType, "llvm.metadata");
 
@@ -110,6 +109,15 @@ bool isCompatibleFloatingPointType(Type type);
 /// integers and floating-point values, LLVM dialect fixed vector types of LLVM
 /// dialect pointers and LLVM dialect scalable vector types.
 bool isCompatibleVectorType(Type type);
+
+/// Returns `true` if the given type is a loadable type compatible with the LLVM
+/// dialect.
+bool isLoadableType(Type type);
+
+/// Returns true if the given type is supported by atomic operations. All
+/// integer, float, and pointer types with a power-of-two bitsize and a minimal
+/// size of 8 bits are supported.
+bool isTypeCompatibleWithAtomicOp(Type type, const DataLayout &dataLayout);
 
 /// Returns the element count of any LLVM-compatible vector type.
 llvm::ElementCount getVectorNumElements(Type type);

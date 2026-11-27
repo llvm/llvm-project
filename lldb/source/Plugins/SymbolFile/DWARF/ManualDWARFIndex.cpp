@@ -21,21 +21,21 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/Timer.h"
-#include "llvm/Support/FormatVariadic.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/Support/ThreadPool.h"
 #include <atomic>
 #include <optional>
 
 using namespace lldb_private;
 using namespace lldb;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 void ManualDWARFIndex::Index() {
-  if (m_indexed)
-    return;
-  m_indexed = true;
+  std::call_once(m_indexed_flag, [this]() { IndexImpl(); });
+}
 
+void ManualDWARFIndex::IndexImpl() {
   ElapsedTime elapsed(m_index_time);
   LLDB_SCOPED_TIMERF("%p", static_cast<void *>(m_dwarf));
   if (LoadFromCache()) {
@@ -311,7 +311,7 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
                   objc_method->GetClassNameWithCategory());
               ConstString objc_selector_name(objc_method->GetSelector());
               ConstString objc_fullname_no_category_name(
-                  objc_method->GetFullNameWithoutCategory().c_str());
+                  objc_method->GetFullNameWithoutCategory());
               ConstString class_name_no_category(objc_method->GetClassName());
               set.function_fullnames.Insert(ConstString(name), ref);
               if (class_name_with_category)
@@ -413,7 +413,8 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString basename,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.globals.Find(basename,
                      DIERefCallback(callback, basename.GetStringRef()));
@@ -421,19 +422,21 @@ void ManualDWARFIndex::GetGlobalVariables(
 
 void ManualDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.globals.Find(regex, DIERefCallback(callback, regex.GetText()));
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    DWARFUnit &unit,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.globals.FindAllEntriesForUnit(unit, DIERefCallback(callback));
 }
 
 void ManualDWARFIndex::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString class_name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.objc_class_selectors.Find(
       class_name, DIERefCallback(callback, class_name.GetStringRef()));
@@ -441,21 +444,22 @@ void ManualDWARFIndex::GetObjCMethods(
 
 void ManualDWARFIndex::GetCompleteObjCClass(
     ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.types.Find(class_name,
                    DIERefCallback(callback, class_name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetTypes(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.types.Find(name, DIERefCallback(callback, name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetTypes(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   auto name = context[0].name;
   m_set.types.Find(ConstString(name),
@@ -463,7 +467,8 @@ void ManualDWARFIndex::GetTypes(
 }
 
 void ManualDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.namespaces.Find(name, DIERefCallback(callback, name.GetStringRef()));
 }
@@ -471,7 +476,7 @@ void ManualDWARFIndex::GetNamespaces(
 void ManualDWARFIndex::GetFunctions(
     const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   ConstString name = lookup_info.GetLookupName();
   FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
@@ -482,7 +487,7 @@ void ManualDWARFIndex::GetFunctions(
                       [&](DWARFDIE die) {
                         if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
                                                                die))
-                          return true;
+                          return IterationAction::Continue;
                         return callback(die);
                       },
                       name.GetStringRef())))
@@ -494,7 +499,7 @@ void ManualDWARFIndex::GetFunctions(
                       [&](DWARFDIE die) {
                         if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
                                                                die))
-                          return true;
+                          return IterationAction::Continue;
                         return callback(die);
                       },
                       name.GetStringRef())))
@@ -517,7 +522,7 @@ void ManualDWARFIndex::GetFunctions(
 
 void ManualDWARFIndex::GetFunctions(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
 
   if (!m_set.function_basenames.Find(regex,
@@ -551,16 +556,12 @@ void ManualDWARFIndex::Dump(Stream &s) {
 }
 
 bool ManualDWARFIndex::Decode(const DataExtractor &data,
-                              lldb::offset_t *offset_ptr,
-                              bool &signature_mismatch) {
-  signature_mismatch = false;
+                              lldb::offset_t *offset_ptr) {
   CacheSignature signature;
   if (!signature.Decode(data, offset_ptr))
     return false;
-  if (CacheSignature(m_dwarf->GetObjectFile()) != signature) {
-    signature_mismatch = true;
+  if (CacheSignature(m_dwarf->GetObjectFile()) != signature)
     return false;
-  }
   std::optional<IndexSet<NameToDIE>> set = DecodeIndexSet(data, offset_ptr);
   if (!set)
     return false;
@@ -612,11 +613,12 @@ std::string ManualDWARFIndex::GetCacheKey() {
 }
 
 bool ManualDWARFIndex::LoadFromCache() {
-  DataFileCache *cache = Module::GetIndexCache();
-  if (!cache)
-    return false;
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   if (!objfile)
+    return false;
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeDwarfIndex;
+  DataFileCache *cache = Module::GetIndexCache(type);
+  if (!cache)
     return false;
   std::unique_ptr<llvm::MemoryBuffer> mem_buffer_up =
       cache->GetCachedData(GetCacheKey());
@@ -626,21 +628,23 @@ bool ManualDWARFIndex::LoadFromCache() {
                      mem_buffer_up->getBufferSize(),
                      endian::InlHostByteOrder(),
                      objfile->GetAddressByteSize());
-  bool signature_mismatch = false;
   lldb::offset_t offset = 0;
-  const bool result = Decode(data, &offset, signature_mismatch);
-  if (signature_mismatch)
+  const bool result = Decode(data, &offset);
+  // SaveToCache won't overwrite an existing cache file, so remove any file
+  // that can't be used or it will stop this index from being cached.
+  if (!result)
     cache->RemoveCacheFile(GetCacheKey());
   return result;
 }
 
 void ManualDWARFIndex::SaveToCache() {
-  DataFileCache *cache = Module::GetIndexCache();
-  if (!cache)
-    return; // Caching is not enabled.
   ObjectFile *objfile = m_dwarf->GetObjectFile();
   if (!objfile)
     return;
+  Module::LLDBIndexType type = Module::LLDBIndexType::eLLDBIndexTypeDwarfIndex;
+  DataFileCache *cache = Module::GetIndexCache(type);
+  if (!cache)
+    return; // Caching is not enabled.
   DataEncoder file(endian::InlHostByteOrder(), objfile->GetAddressByteSize());
   // Encode will return false if the object file doesn't have anything to make
   // a signature from.

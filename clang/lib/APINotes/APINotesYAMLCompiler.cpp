@@ -18,16 +18,33 @@
 #include "clang/APINotes/Types.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
 #include <type_traits>
 #include <vector>
 
 using namespace clang;
 using namespace api_notes;
+
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<SwiftSafetyKind> {
+  static void enumeration(IO &IO, SwiftSafetyKind &SK) {
+    IO.enumCase(SK, "unspecified", SwiftSafetyKind::Unspecified);
+    IO.enumCase(SK, "safe", SwiftSafetyKind::Safe);
+    IO.enumCase(SK, "unsafe", SwiftSafetyKind::Unsafe);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 namespace {
 enum class APIAvailability {
@@ -36,6 +53,31 @@ enum class APIAvailability {
   NonSwift,
 };
 } // namespace
+
+namespace {
+struct BoundsSafetyNotes {
+  BoundsSafetyInfo::BoundsSafetyKind Kind;
+  std::optional<unsigned> Level;
+  StringRef BoundsExpr = "";
+};
+} // namespace
+
+namespace llvm {
+namespace yaml {
+template <> struct ScalarEnumerationTraits<BoundsSafetyInfo::BoundsSafetyKind> {
+  static void enumeration(IO &IO, BoundsSafetyInfo::BoundsSafetyKind &AA) {
+    IO.enumCase(AA, "counted_by",
+                BoundsSafetyInfo::BoundsSafetyKind::CountedBy);
+    IO.enumCase(AA, "counted_by_or_null",
+                BoundsSafetyInfo::BoundsSafetyKind::CountedByOrNull);
+    IO.enumCase(AA, "sized_by", BoundsSafetyInfo::BoundsSafetyKind::SizedBy);
+    IO.enumCase(AA, "sized_by_or_null",
+                BoundsSafetyInfo::BoundsSafetyKind::SizedByOrNull);
+    IO.enumCase(AA, "ended_by", BoundsSafetyInfo::BoundsSafetyKind::EndedBy);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 namespace llvm {
 namespace yaml {
@@ -74,6 +116,7 @@ struct Param {
   std::optional<bool> Lifetimebound = false;
   std::optional<NullabilityKind> Nullability;
   std::optional<RetainCountConventionKind> RetainCountConvention;
+  std::optional<BoundsSafetyNotes> BoundsSafety;
   StringRef Type;
 };
 
@@ -91,7 +134,7 @@ template <> struct ScalarEnumerationTraits<NullabilityKind> {
     IO.enumCase(NK, "Optional", NullabilityKind::Nullable);
     IO.enumCase(NK, "Unspecified", NullabilityKind::Unspecified);
     IO.enumCase(NK, "NullableResult", NullabilityKind::NullableResult);
-    // TODO: Mapping this to it's own value would allow for better cross
+    // TODO: Mapping this to its own value would allow for better cross
     // checking. Also the default should be Unknown.
     IO.enumCase(NK, "Scalar", NullabilityKind::Unspecified);
 
@@ -125,6 +168,15 @@ template <> struct MappingTraits<Param> {
     IO.mapOptional("NoEscape", P.NoEscape);
     IO.mapOptional("Lifetimebound", P.Lifetimebound);
     IO.mapOptional("Type", P.Type, StringRef(""));
+    IO.mapOptional("BoundsSafety", P.BoundsSafety);
+  }
+};
+
+template <> struct MappingTraits<BoundsSafetyNotes> {
+  static void mapping(IO &IO, BoundsSafetyNotes &BS) {
+    IO.mapRequired("Kind", BS.Kind);
+    IO.mapRequired("BoundedBy", BS.BoundsExpr);
+    IO.mapOptional("Level", BS.Level);
   }
 };
 } // namespace yaml
@@ -163,6 +215,7 @@ struct Method {
   bool Required = false;
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Method> MethodsSeq;
@@ -199,6 +252,7 @@ template <> struct MappingTraits<Method> {
     IO.mapOptional("ResultType", M.ResultType, StringRef(""));
     IO.mapOptional("SwiftReturnOwnership", M.SwiftReturnOwnership,
                    StringRef(""));
+    IO.mapOptional("SwiftSafety", M.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -214,6 +268,7 @@ struct Property {
   StringRef SwiftName;
   std::optional<bool> SwiftImportAsAccessors;
   StringRef Type;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Property> PropertiesSeq;
@@ -235,6 +290,7 @@ template <> struct MappingTraits<Property> {
     IO.mapOptional("SwiftName", P.SwiftName, StringRef(""));
     IO.mapOptional("SwiftImportAsAccessors", P.SwiftImportAsAccessors);
     IO.mapOptional("Type", P.Type, StringRef(""));
+    IO.mapOptional("SwiftSafety", P.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -251,8 +307,10 @@ struct Class {
   std::optional<StringRef> NSErrorDomain;
   std::optional<bool> SwiftImportAsNonGeneric;
   std::optional<bool> SwiftObjCMembers;
+  std::optional<std::string> SwiftConformance;
   MethodsSeq Methods;
   PropertiesSeq Properties;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Class> ClassesSeq;
@@ -275,16 +333,25 @@ template <> struct MappingTraits<Class> {
     IO.mapOptional("NSErrorDomain", C.NSErrorDomain);
     IO.mapOptional("SwiftImportAsNonGeneric", C.SwiftImportAsNonGeneric);
     IO.mapOptional("SwiftObjCMembers", C.SwiftObjCMembers);
+    IO.mapOptional("SwiftConformsTo", C.SwiftConformance);
     IO.mapOptional("Methods", C.Methods);
     IO.mapOptional("Properties", C.Properties);
+    IO.mapOptional("SwiftSafety", C.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
 } // namespace llvm
 
 namespace {
+typedef std::vector<StringRef> WhereParamsSeq;
+
+struct FunctionWhere {
+  std::optional<WhereParamsSeq> Parameters;
+};
+
 struct Function {
   StringRef Name;
+  std::optional<FunctionWhere> Where;
   ParamsSeq Params;
   NullabilitySeq Nullability;
   std::optional<NullabilityKind> NullabilityOfRet;
@@ -295,6 +362,8 @@ struct Function {
   StringRef Type;
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
+  bool UnsafeBufferUsage = false;
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -304,9 +373,16 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
 
 namespace llvm {
 namespace yaml {
+template <> struct MappingTraits<FunctionWhere> {
+  static void mapping(IO &IO, FunctionWhere &W) {
+    IO.mapOptional("Parameters", W.Parameters);
+  }
+};
+
 template <> struct MappingTraits<Function> {
   static void mapping(IO &IO, Function &F) {
     IO.mapRequired("Name", F.Name);
+    IO.mapOptional("Where", F.Where);
     IO.mapOptional("Parameters", F.Params);
     IO.mapOptional("Nullability", F.Nullability);
     IO.mapOptional("NullabilityOfRet", F.NullabilityOfRet, std::nullopt);
@@ -319,6 +395,8 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("ResultType", F.ResultType, StringRef(""));
     IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
                    StringRef(""));
+    IO.mapOptional("SwiftSafety", F.SafetyKind, SwiftSafetyKind::None);
+    IO.mapOptional("UnsafeBufferUsage", F.UnsafeBufferUsage, false);
   }
 };
 } // namespace yaml
@@ -332,6 +410,7 @@ struct GlobalVariable {
   std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
   StringRef Type;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<GlobalVariable> GlobalVariablesSeq;
@@ -351,6 +430,7 @@ template <> struct MappingTraits<GlobalVariable> {
     IO.mapOptional("SwiftPrivate", GV.SwiftPrivate);
     IO.mapOptional("SwiftName", GV.SwiftName, StringRef(""));
     IO.mapOptional("Type", GV.Type, StringRef(""));
+    IO.mapOptional("SwiftSafety", GV.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -362,6 +442,7 @@ struct EnumConstant {
   AvailabilityItem Availability;
   std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<EnumConstant> EnumConstantsSeq;
@@ -379,6 +460,7 @@ template <> struct MappingTraits<EnumConstant> {
     IO.mapOptional("AvailabilityMsg", EC.Availability.Msg, StringRef(""));
     IO.mapOptional("SwiftPrivate", EC.SwiftPrivate);
     IO.mapOptional("SwiftName", EC.SwiftName, StringRef(""));
+    IO.mapOptional("SwiftSafety", EC.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -422,6 +504,7 @@ struct Field {
   std::optional<bool> SwiftPrivate;
   StringRef SwiftName;
   StringRef Type;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Field> FieldsSeq;
@@ -441,6 +524,7 @@ template <> struct MappingTraits<Field> {
     IO.mapOptional("SwiftPrivate", F.SwiftPrivate);
     IO.mapOptional("SwiftName", F.SwiftName, StringRef(""));
     IO.mapOptional("Type", F.Type, StringRef(""));
+    IO.mapOptional("SwiftSafety", F.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -460,6 +544,7 @@ struct Tag {
   std::optional<std::string> SwiftImportAs;
   std::optional<std::string> SwiftRetainOp;
   std::optional<std::string> SwiftReleaseOp;
+  std::optional<std::string> SwiftDestroyOp;
   std::optional<std::string> SwiftDefaultOwnership;
   std::optional<std::string> SwiftConformance;
   std::optional<EnumExtensibilityKind> EnumExtensibility;
@@ -467,6 +552,7 @@ struct Tag {
   std::optional<EnumConvenienceAliasKind> EnumConvenienceKind;
   std::optional<bool> SwiftCopyable;
   std::optional<bool> SwiftEscapable;
+  SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
   FunctionsSeq Methods;
   FieldsSeq Fields;
 
@@ -501,6 +587,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("SwiftImportAs", T.SwiftImportAs);
     IO.mapOptional("SwiftReleaseOp", T.SwiftReleaseOp);
     IO.mapOptional("SwiftRetainOp", T.SwiftRetainOp);
+    IO.mapOptional("SwiftDestroyOp", T.SwiftDestroyOp);
     IO.mapOptional("SwiftDefaultOwnership", T.SwiftDefaultOwnership);
     IO.mapOptional("SwiftConformsTo", T.SwiftConformance);
     IO.mapOptional("EnumExtensibility", T.EnumExtensibility);
@@ -511,6 +598,7 @@ template <> struct MappingTraits<Tag> {
     IO.mapOptional("Methods", T.Methods);
     IO.mapOptional("Fields", T.Fields);
     IO.mapOptional("Tags", T.Tags);
+    IO.mapOptional("SwiftSafety", T.SafetyKind, SwiftSafetyKind::None);
   }
 };
 } // namespace yaml
@@ -525,6 +613,8 @@ struct Typedef {
   std::optional<StringRef> SwiftBridge;
   std::optional<StringRef> NSErrorDomain;
   std::optional<SwiftNewTypeKind> SwiftType;
+  std::optional<std::string> SwiftConformance;
+  const SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 
 typedef std::vector<Typedef> TypedefsSeq;
@@ -553,6 +643,7 @@ template <> struct MappingTraits<Typedef> {
     IO.mapOptional("SwiftBridge", T.SwiftBridge);
     IO.mapOptional("NSErrorDomain", T.NSErrorDomain);
     IO.mapOptional("SwiftWrapper", T.SwiftType);
+    IO.mapOptional("SwiftConformsTo", T.SwiftConformance);
   }
 };
 } // namespace yaml
@@ -596,6 +687,7 @@ struct Namespace {
   StringRef SwiftName;
   std::optional<bool> SwiftPrivate;
   TopLevelItems Items;
+  const SwiftSafetyKind SafetyKind = SwiftSafetyKind::None;
 };
 } // namespace
 
@@ -701,20 +793,36 @@ bool clang::api_notes::parseAndDumpAPINotes(StringRef YI,
 namespace {
 using namespace api_notes;
 
+static std::string
+getFunctionSelectorKey(llvm::StringRef Name,
+                       llvm::ArrayRef<llvm::StringRef> Parameters) {
+  llvm::SmallString<64> Key;
+  llvm::raw_svector_ostream OS(Key);
+  auto AppendKeyPart = [&OS](llvm::StringRef Part) {
+    OS << Part.size() << ':' << Part;
+  };
+
+  AppendKeyPart(Name);
+  OS << ';';
+  for (llvm::StringRef Parameter : Parameters)
+    AppendKeyPart(Parameter);
+  return Key.str().str();
+}
+
 class YAMLConverter {
   const Module &M;
   APINotesWriter Writer;
   llvm::raw_ostream &OS;
   llvm::SourceMgr::DiagHandlerTy DiagHandler;
   void *DiagHandlerCtxt;
-  bool ErrorOccured;
+  bool ErrorOccurred;
 
   /// Emit a diagnostic
   bool emitError(llvm::Twine Message) {
     DiagHandler(
         llvm::SMDiagnostic("", llvm::SourceMgr::DK_Error, Message.str()),
         DiagHandlerCtxt);
-    ErrorOccured = true;
+    ErrorOccurred = true;
     return true;
   }
 
@@ -725,7 +833,7 @@ public:
                 void *DiagHandlerCtxt)
       : M(TheModule), Writer(TheModule.Name, SourceFile), OS(OS),
         DiagHandler(DiagHandler), DiagHandlerCtxt(DiagHandlerCtxt),
-        ErrorOccured(false) {}
+        ErrorOccurred(false) {}
 
   void convertAvailability(const AvailabilityItem &Availability,
                            CommonEntityInfo &CEI, llvm::StringRef APIName) {
@@ -751,6 +859,14 @@ public:
       PI.setLifetimebound(P.Lifetimebound);
       PI.setType(std::string(P.Type));
       PI.setRetainCountConvention(P.RetainCountConvention);
+      if (P.BoundsSafety) {
+        BoundsSafetyInfo BSI;
+        BSI.setKindAudited(P.BoundsSafety->Kind);
+        if (P.BoundsSafety->Level)
+          BSI.setLevelAudited(*P.BoundsSafety->Level);
+        BSI.ExternalBounds = P.BoundsSafety->BoundsExpr.str();
+        PI.BoundsSafety = BSI;
+      }
       if (static_cast<int>(OutInfo.Params.size()) <= P.Position)
         OutInfo.Params.resize(P.Position + 1);
       if (P.Position == -1)
@@ -791,6 +907,8 @@ public:
                            StringRef APIName) {
     convertAvailability(Common.Availability, Info, APIName);
     Info.setSwiftPrivate(Common.SwiftPrivate);
+    if (Common.SafetyKind != SwiftSafetyKind::None)
+      Info.setSwiftSafety(Common.SafetyKind);
     Info.SwiftName = std::string(Common.SwiftName);
   }
 
@@ -802,6 +920,8 @@ public:
     if (Common.SwiftBridge)
       Info.setSwiftBridge(std::string(*Common.SwiftBridge));
     Info.setNSErrorDomain(Common.NSErrorDomain);
+    if (auto conformance = Common.SwiftConformance)
+      Info.setSwiftConformance(conformance);
   }
 
   // Translate from Method into ObjCMethodInfo and write it out.
@@ -944,10 +1064,24 @@ public:
                          TheNamespace.Items, SwiftVersion);
   }
 
+  std::pair<bool, std::optional<llvm::ArrayRef<llvm::StringRef>>>
+  getWhereParameters(const Function &Function) {
+    if (!Function.Where)
+      return {true, std::nullopt};
+
+    if (!Function.Where->Parameters) {
+      emitError("'Where' requires 'Parameters'");
+      return {false, std::nullopt};
+    }
+    return {true, llvm::ArrayRef<llvm::StringRef>(*Function.Where->Parameters)};
+  }
+
   template <typename FuncOrMethodInfo>
   void convertFunction(const Function &Function, FuncOrMethodInfo &FI) {
     convertAvailability(Function.Availability, FI, Function.Name);
     FI.setSwiftPrivate(Function.SwiftPrivate);
+    if (Function.SafetyKind != SwiftSafetyKind::None)
+      FI.setSwiftSafety(Function.SafetyKind);
     FI.SwiftName = std::string(Function.SwiftName);
     std::optional<ParamInfo> This;
     convertParams(Function.Params, FI, This);
@@ -961,6 +1095,7 @@ public:
     FI.ResultType = std::string(Function.ResultType);
     FI.SwiftReturnOwnership = std::string(Function.SwiftReturnOwnership);
     FI.setRetainCountConvention(Function.RetainCountConvention);
+    FI.UnsafeBufferUsage = Function.UnsafeBufferUsage;
   }
 
   void convertTagContext(std::optional<Context> ParentContext, const Tag &T,
@@ -990,8 +1125,8 @@ public:
       TI.SwiftRetainOp = T.SwiftRetainOp;
     if (T.SwiftReleaseOp)
       TI.SwiftReleaseOp = T.SwiftReleaseOp;
-    if (T.SwiftConformance)
-      TI.SwiftConformance = T.SwiftConformance;
+    if (T.SwiftDestroyOp)
+      TI.SwiftDestroyOp = T.SwiftDestroyOp;
     if (T.SwiftDefaultOwnership)
       TI.SwiftDefaultOwnership = T.SwiftDefaultOwnership;
 
@@ -1048,10 +1183,31 @@ public:
       Writer.addField(TagCtxID, Field.Name, FI, SwiftVersion);
     }
 
+    llvm::StringSet<> KnownMethodSelectors;
     for (const auto &CXXMethod : T.Methods) {
+      auto WhereParameters = getWhereParameters(CXXMethod);
+      if (!WhereParameters.first)
+        continue;
+
+      if (WhereParameters.second) {
+        if (!KnownMethodSelectors
+                 .insert(getFunctionSelectorKey(CXXMethod.Name,
+                                                *WhereParameters.second))
+                 .second) {
+          emitError(llvm::Twine("multiple API notes entries for C++ method '") +
+                    CXXMethod.Name + "' with Where.Parameters " +
+                    formatAPINotesParameterSelector(*WhereParameters.second));
+          continue;
+        }
+      }
+
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
-      Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereParameters.second,
+                            MI, SwiftVersion);
+      else
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
     }
 
     // Convert nested tags.
@@ -1120,10 +1276,29 @@ public:
     }
 
     // Write all global functions.
-    llvm::StringSet<> KnownFunctions;
+    llvm::StringSet<> KnownNameOnlyFunctions;
+    llvm::StringSet<> KnownFunctionSelectors;
     for (const auto &Function : TLItems.Functions) {
-      // Check for duplicate global functions.
-      if (!KnownFunctions.insert(Function.Name).second) {
+      auto WhereParameters = getWhereParameters(Function);
+      if (!WhereParameters.first)
+        continue;
+
+      if (WhereParameters.second) {
+        if (!KnownFunctionSelectors
+                 .insert(getFunctionSelectorKey(Function.Name,
+                                                *WhereParameters.second))
+                 .second) {
+          emitError(
+              llvm::Twine("multiple API notes entries for global function '") +
+              Function.Name + "' with Where.Parameters " +
+              formatAPINotesParameterSelector(*WhereParameters.second));
+          continue;
+        }
+      }
+
+      // Check for duplicate name-only global functions.
+      if (!WhereParameters.second &&
+          !KnownNameOnlyFunctions.insert(Function.Name).second) {
         emitError(llvm::Twine("multiple definitions of global function '") +
                   Function.Name + "'");
         continue;
@@ -1131,7 +1306,11 @@ public:
 
       GlobalFunctionInfo GFI;
       convertFunction(Function, GFI);
-      Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addGlobalFunction(Ctx, Function.Name, *WhereParameters.second,
+                                 GFI, SwiftVersion);
+      else
+        Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
     }
 
     // Write all enumerators.
@@ -1192,10 +1371,10 @@ public:
       convertTopLevelItems(/* context */ std::nullopt, Versioned.Items,
                            Versioned.Version);
 
-    if (!ErrorOccured)
+    if (!ErrorOccurred)
       Writer.writeToStream(OS);
 
-    return ErrorOccured;
+    return ErrorOccurred;
   }
 };
 } // namespace

@@ -47,3 +47,46 @@ namespace GH132562 {
     // expected-note@-2 {{value of type 'const J' is not implicitly convertible to 'int'}}
   } // namespace t3
 } // namespace GH132562
+
+namespace GH51866 {
+
+template <class> struct Trait;
+template <class T>
+    requires T::one
+struct Trait<T> {}; // #gh51866-one
+template <class T>
+    requires T::two
+struct Trait<T> {}; // #gh51866-two
+
+struct Y {
+    static constexpr bool one = true;
+    static constexpr bool two = true;
+};
+
+template <class T>
+concept C = sizeof(Trait<T>) != 0;
+
+static_assert(!C<Y>);
+
+Trait<Y> t;
+// expected-error@-1{{ambiguous partial specializations of 'Trait<GH51866::Y>'}}
+// expected-note@#gh51866-one{{partial specialization matches}}
+// expected-note@#gh51866-two{{partial specialization matches}}
+}
+
+namespace GH27357 {
+struct S {
+  using type = int;
+};
+
+// T and Ts are used in a non-deduced context and have no value,
+// so deduction fails in // both directions ([temp.deduct.partial]p12).
+template <class T> int add(typename T::type); // #gh27357-1
+template <class T, class... Ts>
+int add(typename T::type, typename Ts::type...); // #gh27357-2
+
+int x = add<S>(0);
+// expected-error@-1 {{call to 'add' is ambiguous}}
+// expected-note@#gh27357-1 {{candidate function [with T = GH27357::S]}}
+// expected-note@#gh27357-2 {{candidate function [with T = GH27357::S, Ts = <>]}}
+} // namespace GH27357

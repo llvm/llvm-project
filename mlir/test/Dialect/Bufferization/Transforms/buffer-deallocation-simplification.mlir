@@ -169,3 +169,53 @@ func.func @duplicate_memref(%arg0: memref<5xf32>, %arg1: memref<6xf32>, %c: i1) 
 // CHECK-LABEL: func @duplicate_memref(
 //       CHECK:   %[[r:.*]] = bufferization.dealloc (%{{.*}} : memref<5xf32>) if (%{{.*}}) retain (%{{.*}} : memref<6xf32>)
 //       CHECK:   return %[[r]]
+
+// -----
+
+module {
+  func.func @memref_cast_folding(%arg0: memref<4x4xf32>) -> memref<4x4xf32, 1> {
+    %cfalse = arith.constant false
+    %ctrue = arith.constant true
+
+    %memspacecast = memref.memory_space_cast %arg0 : memref<4x4xf32> to memref<4x4xf32, 1>
+    %cast = memref.cast %memspacecast : memref<4x4xf32, 1> to memref<?x?xf32, 1>
+    %cast_1 = memref.cast %cast : memref<?x?xf32, 1> to memref<4x4xf32, 1>
+
+    %5 = scf.if %cfalse -> (memref<4x4xf32, 1>) {
+      scf.yield %cast_1 : memref<4x4xf32, 1>
+    } else {
+      %7 = bufferization.clone %cast_1 : memref<4x4xf32, 1> to memref<4x4xf32, 1>
+      scf.yield %7 : memref<4x4xf32, 1>
+    }
+
+    %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %arg0 : memref<4x4xf32> -> memref<f32>, index, index, index, index, index
+    %base_buffer_5, %offset_6, %sizes_7:2, %strides_8:2 = memref.extract_strided_metadata %memspacecast : memref<4x4xf32, 1> -> memref<f32, 1>, index, index, index, index, index
+
+    %6 = bufferization.dealloc (%base_buffer, %base_buffer_5 : memref<f32>, memref<f32, 1>) if (%cfalse, %ctrue) retain (%5 : memref<4x4xf32, 1>)
+    return %memspacecast : memref<4x4xf32, 1>
+  }
+}
+
+// CHECK-LABEL: func @memref_cast_folding
+//       CHECK: %[[r:.*]] = bufferization.dealloc (%{{.*}} : memref<f32, 1>) if (%{{.*}}) retain (%{{.*}} : memref<4x4xf32, 1>)
+
+// -----
+
+// The origin of a buffer that is not a memref is not known, so a dealloc of
+// one is not simplified by its origin.
+
+// CHECK-LABEL: func @dealloc_buffer_like_retained
+//  CHECK-SAME: ([[A:%.+]]: !test.test_memref<[4], f32>, [[C:%.+]]: i1, [[R:%.+]]: !test.test_memref<[4], f32>, [[M:%.+]]: memref<4xf32>)
+//       CHECK: [[D0:%.+]] = bufferization.dealloc ([[A]] : !test.test_memref<[4], f32>) if ([[C]]) retain ([[R]] : !test.test_memref<[4], f32>)
+//       CHECK: [[D1:%.+]] = bufferization.dealloc ([[M]] : memref<4xf32>) if ([[C]]) retain ([[R]] : !test.test_memref<[4], f32>)
+//       CHECK: return [[D0]], [[D1]]
+func.func @dealloc_buffer_like_retained(%a: !test.test_memref<[4], f32>,
+                                        %c: i1,
+                                        %r: !test.test_memref<[4], f32>,
+                                        %m: memref<4xf32>) -> (i1, i1) {
+  %0 = bufferization.dealloc (%a : !test.test_memref<[4], f32>) if (%c)
+    retain (%r : !test.test_memref<[4], f32>)
+  %1 = bufferization.dealloc (%m : memref<4xf32>) if (%c)
+    retain (%r : !test.test_memref<[4], f32>)
+  return %0, %1 : i1, i1
+}

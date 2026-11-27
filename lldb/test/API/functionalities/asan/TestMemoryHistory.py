@@ -2,15 +2,16 @@
 Test that ASan memory history provider returns correct stack traces
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbplatform
 from lldbsuite.test import lldbutil
-from lldbsuite.test_event.build_exception import BuildError
+
 
 class MemoryHistoryTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     @skipIfFreeBSD  # llvm.org/pr21136 runtimes not yet available by default
     @expectedFailureNetBSD
     @skipUnlessAddressSanitizer
@@ -18,16 +19,7 @@ class MemoryHistoryTestCase(TestBase):
         self.build(make_targets=["compiler_rt-asan"])
         self.compiler_rt_asan_tests()
 
-    @skipUnlessDarwin
-    @skipIf(bugnumber="rdar://109913184&143590169")
-    def test_libsanitizers_asan(self):
-        try:
-            self.build(make_targets=["libsanitizers-asan"])
-        except BuildError as e:
-            self.skipTest("failed to build with libsanitizers")
-        self.libsanitizers_asan_tests()
-
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(macos_version=["<", "15.5"])
     def test_libsanitizers_traces(self):
         self.build(make_targets=["libsanitizers-traces"])
@@ -41,18 +33,16 @@ class MemoryHistoryTestCase(TestBase):
         self.line_free = line_number("main.c", "// free line")
         self.line_breakpoint = line_number("main.c", "// break line")
 
-    # Test line numbers: rdar://126237493
-    # for libsanitizers and remove `skip_line_numbers` parameter
-    def check_traces(self, skip_line_numbers=False):
+    def check_traces(self):
         self.expect(
             "memory history 'pointer'",
             substrs=[
                 "Memory deallocated by Thread",
                 "a.out`f2",
-                "main.c" if skip_line_numbers else f"main.c:{self.line_free}",
+                f"main.c:{self.line_free}",
                 "Memory allocated by Thread",
                 "a.out`f1",
-                "main.c" if skip_line_numbers else f"main.c:{self.line_malloc}",
+                f"main.c:{self.line_malloc}",
             ],
         )
 
@@ -76,57 +66,7 @@ class MemoryHistoryTestCase(TestBase):
         self.runCmd("env SanitizersAllocationTraces=all")
 
         self.run_to_breakpoint(target)
-        self.check_traces(skip_line_numbers=True)
-
-    def libsanitizers_asan_tests(self):
-        target = self.createTestTarget()
-
-        self.runCmd("env SanitizersAddress=1 MallocSanitizerZone=1")
-
-        self.run_to_breakpoint(target)
-        self.check_traces(skip_line_numbers=True)
-
-        self.runCmd("continue")
-
-        # Stop on report
-        self.expect(
-            "thread list",
-            "Process should be stopped due to ASan report",
-            substrs=["stopped", "stop reason = Use of deallocated memory"],
-        )
-        self.check_traces(skip_line_numbers=True)
-
-        # do the same using SB API
-        process = self.dbg.GetSelectedTarget().process
-        val = (
-            process.GetSelectedThread().GetSelectedFrame().EvaluateExpression("pointer")
-        )
-        addr = val.GetValueAsUnsigned()
-        threads = process.GetHistoryThreads(addr)
-        self.assertEqual(threads.GetSize(), 2)
-
-        history_thread = threads.GetThreadAtIndex(0)
-        self.assertTrue(history_thread.num_frames >= 2)
-        self.assertEqual(
-            history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(),
-            "main.c",
-        )
-
-        history_thread = threads.GetThreadAtIndex(1)
-        self.assertTrue(history_thread.num_frames >= 2)
-        self.assertEqual(
-            history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(),
-            "main.c",
-        )
-
-        # let's free the container (SBThreadCollection) and see if the
-        # SBThreads still live
-        threads = None
-        self.assertTrue(history_thread.num_frames >= 2)
-        self.assertEqual(
-            history_thread.frames[1].GetLineEntry().GetFileSpec().GetFilename(),
-            "main.c",
-        )
+        self.check_traces()
 
     def compiler_rt_asan_tests(self):
         target = self.createTestTarget()
@@ -219,6 +159,11 @@ class MemoryHistoryTestCase(TestBase):
         )
 
         self.check_traces()
+
+        if self.platformIsDarwin():
+            # Make sure we're not stopped in the sanitizer library but instead at the
+            # point of failure in the user-code.
+            self.assertEqual(self.frame().GetFunctionName(), "main")
 
         # make sure the 'memory history' command still works even when we're
         # generating a report now

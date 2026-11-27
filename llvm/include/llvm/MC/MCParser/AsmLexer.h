@@ -15,13 +15,13 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <string>
-#include <utility>
 
 namespace llvm {
 
@@ -45,6 +45,7 @@ class AsmLexer {
   SmallVector<AsmToken, 1> CurTok;
 
   const char *CurPtr = nullptr;
+  /// NULL-terminated buffer. NULL terminator must reside at `CurBuf.end()`.
   StringRef CurBuf;
 
   /// The location and description of the current error
@@ -191,10 +192,21 @@ public:
   /// literals.
   void setLexHLASMStrings(bool V) { LexHLASMStrings = V; }
 
+  /// Set buffer to be lexed.
+  /// `Buf` must be NULL-terminated. NULL terminator must reside at `Buf.end()`.
+  /// `ptr` if provided must be in range [`Buf.begin()`, `buf.end()`] or NULL.
+  /// Specifies where lexing of buffer should begin.
+  /// `EndStatementAtEOF` specifies whether `AsmToken::EndOfStatement` should be
+  /// returned upon reaching end of buffer.
   LLVM_ABI void setBuffer(StringRef Buf, const char *ptr = nullptr,
                           bool EndStatementAtEOF = true);
 
   const MCAsmInfo &getMAI() const { return MAI; }
+
+  static bool isIdentifierChar(char C, bool AllowAt, bool AllowHash) {
+    return isAlnum(C) || C == '_' || C == '$' || C == '.' || C == '?' ||
+           (AllowAt && C == '@') || (AllowHash && C == '#');
+  }
 
 private:
   bool isAtStartOfComment(const char *Ptr);

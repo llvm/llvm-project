@@ -26,11 +26,10 @@
 
 namespace llvm {
 
-LLVM_ABI extern cl::opt<bool> DebugInfoCorrelate;
-
 class Function;
 class Instruction;
 class Module;
+class ModuleSummaryIndex;
 
 /// The instrumentation (profile-instr-gen) pass for IR based PGO.
 // We use this pass to create COMDAT profile variables for context
@@ -39,7 +38,7 @@ class Module;
 // all the COMDAT variables before linking. So we have this pass
 // always run before linking for CSPGO.
 class PGOInstrumentationGenCreateVar
-    : public PassInfoMixin<PGOInstrumentationGenCreateVar> {
+    : public OptionalPassInfoMixin<PGOInstrumentationGenCreateVar> {
 public:
   PGOInstrumentationGenCreateVar(std::string CSInstrName = "",
                                  bool Sampling = false)
@@ -53,7 +52,8 @@ private:
 
 enum class PGOInstrumentationType { Invalid = 0, FDO, CSFDO, CTXPROF };
 /// The instrumentation (profile-instr-gen) pass for IR based PGO.
-class PGOInstrumentationGen : public PassInfoMixin<PGOInstrumentationGen> {
+class PGOInstrumentationGen
+    : public OptionalPassInfoMixin<PGOInstrumentationGen> {
 public:
   PGOInstrumentationGen(
       PGOInstrumentationType InstrumentationType = PGOInstrumentationType ::FDO)
@@ -66,7 +66,8 @@ private:
 };
 
 /// The profile annotation (profile-instr-use) pass for IR based PGO.
-class PGOInstrumentationUse : public PassInfoMixin<PGOInstrumentationUse> {
+class PGOInstrumentationUse
+    : public OptionalPassInfoMixin<PGOInstrumentationUse> {
 public:
   LLVM_ABI
   PGOInstrumentationUse(std::string Filename = "",
@@ -84,31 +85,42 @@ private:
 };
 
 /// The indirect function call promotion pass.
-class PGOIndirectCallPromotion : public PassInfoMixin<PGOIndirectCallPromotion> {
+class PGOIndirectCallPromotion
+    : public OptionalPassInfoMixin<PGOIndirectCallPromotion> {
 public:
-  PGOIndirectCallPromotion(bool IsInLTO = false, bool SamplePGO = false)
-      : InLTO(IsInLTO), SamplePGO(SamplePGO) {}
+  /// \p ImportSummary is the combined summary index of a ThinLTO backend
+  /// compile, if any. When present, promotion to a function that is only
+  /// declared in the module requires a summary for the target in the index
+  /// that indicates it is live (see -icp-allow-decls).
+  PGOIndirectCallPromotion(bool IsInLTO = false, bool SamplePGO = false,
+                           const ModuleSummaryIndex *ImportSummary = nullptr)
+      : InLTO(IsInLTO), SamplePGO(SamplePGO), ImportSummary(ImportSummary) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   bool InLTO;
   bool SamplePGO;
+  const ModuleSummaryIndex *ImportSummary;
 };
 
 /// The profile size based optimization pass for memory intrinsics.
-class PGOMemOPSizeOpt : public PassInfoMixin<PGOMemOPSizeOpt> {
+class PGOMemOPSizeOpt : public OptionalPassInfoMixin<PGOMemOPSizeOpt> {
 public:
   PGOMemOPSizeOpt() = default;
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &MAM);
 };
 
-LLVM_ABI void setProfMetadata(Module *M, Instruction *TI,
-                              ArrayRef<uint64_t> EdgeCounts, uint64_t MaxCount);
+LLVM_ABI void setProfMetadata(Instruction *TI, ArrayRef<uint64_t> EdgeCounts,
+                              uint64_t MaxCount);
 
 LLVM_ABI void setIrrLoopHeaderMetadata(Module *M, Instruction *TI,
                                        uint64_t Count);
+
+/// Return the value of -pgo-instrument-cold-function-only in LibraryOptions.
+LLVM_ABI bool isPGOInstrumentColdFunctionOnly(
+    const cl::LibraryOptionsContext &LibraryOptions);
 
 } // end namespace llvm
 

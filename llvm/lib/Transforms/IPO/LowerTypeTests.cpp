@@ -14,10 +14,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -25,15 +28,20 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/AsmParser/Parser.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -48,37 +56,41 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/ModuleSummaryIndexYAML.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <system_error>
@@ -95,42 +107,6 @@ STATISTIC(ByteArraySizeBytes, "Byte array size in bytes");
 STATISTIC(NumByteArraysCreated, "Number of byte arrays created");
 STATISTIC(NumTypeTestCallsLowered, "Number of type test calls lowered");
 STATISTIC(NumTypeIdDisjointSets, "Number of disjoint sets of type identifiers");
-
-static cl::opt<bool> AvoidReuse(
-    "lowertypetests-avoid-reuse",
-    cl::desc("Try to avoid reuse of byte array addresses using aliases"),
-    cl::Hidden, cl::init(true));
-
-static cl::opt<PassSummaryAction> ClSummaryAction(
-    "lowertypetests-summary-action",
-    cl::desc("What to do with the summary when running this pass"),
-    cl::values(clEnumValN(PassSummaryAction::None, "none", "Do nothing"),
-               clEnumValN(PassSummaryAction::Import, "import",
-                          "Import typeid resolutions from summary and globals"),
-               clEnumValN(PassSummaryAction::Export, "export",
-                          "Export typeid resolutions to summary and globals")),
-    cl::Hidden);
-
-static cl::opt<std::string> ClReadSummary(
-    "lowertypetests-read-summary",
-    cl::desc("Read summary from given YAML file before running pass"),
-    cl::Hidden);
-
-static cl::opt<std::string> ClWriteSummary(
-    "lowertypetests-write-summary",
-    cl::desc("Write summary to given YAML file after running pass"),
-    cl::Hidden);
-
-static cl::opt<DropTestKind>
-    ClDropTypeTests("lowertypetests-drop-type-tests",
-                    cl::desc("Simply drop type test sequences"),
-                    cl::values(clEnumValN(DropTestKind::None, "none",
-                                          "Do not drop any type tests"),
-                               clEnumValN(DropTestKind::Assume, "assume",
-                                          "Drop type test assume sequences"),
-                               clEnumValN(DropTestKind::All, "all",
-                                          "Drop all type test sequences")),
-                    cl::Hidden, cl::init(DropTestKind::None));
 
 bool BitSetInfo::containsGlobalOffset(uint64_t Offset) const {
   if (Offset < ByteOffset)
@@ -199,32 +175,65 @@ BitSetInfo BitSetBuilder::build() {
 }
 
 void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
+  assert(Fragments.front().empty() && "Cannot add fragments after build()");
+
   // Create a new fragment to hold the layout for F.
   Fragments.emplace_back();
   std::vector<uint64_t> &Fragment = Fragments.back();
   uint64_t FragmentIndex = Fragments.size() - 1;
 
+  std::vector<std::vector<uint64_t>> SubFragments;
   for (auto ObjIndex : F) {
     uint64_t OldFragmentIndex = FragmentMap[ObjIndex];
     if (OldFragmentIndex == 0) {
       // We haven't seen this object index before, so just add it to the current
       // fragment.
-      Fragment.push_back(ObjIndex);
-    } else {
+      SubFragments.push_back({ObjIndex});
+    } else if (!Fragments[OldFragmentIndex].empty()) {
       // This index belongs to an existing fragment. Copy the elements of the
       // old fragment into this one and clear the old fragment. We don't update
       // the fragment map just yet, this ensures that any further references to
       // indices from the old fragment in this fragment do not insert any more
       // indices.
-      std::vector<uint64_t> &OldFragment = Fragments[OldFragmentIndex];
-      llvm::append_range(Fragment, OldFragment);
-      OldFragment.clear();
+      SubFragments.push_back(std::move(Fragments[OldFragmentIndex]));
     }
   }
+
+  if (Less) {
+    llvm::stable_sort(SubFragments, [&](const std::vector<uint64_t> &A,
+                                        const std::vector<uint64_t> &B) {
+      return Less(A.back(), B.back());
+    });
+  }
+
+  for (auto &SF : SubFragments)
+    llvm::append_range(Fragment, std::move(SF));
 
   // Update the fragment map to point our object indices to this fragment.
   for (uint64_t ObjIndex : Fragment)
     FragmentMap[ObjIndex] = FragmentIndex;
+}
+
+const std::vector<uint64_t> &GlobalLayoutBuilder::build() {
+  if (Less) {
+    // If multiple root fragments remain (e.g. disjoint signatures with no
+    // generalized type), order them so the one containing the hottest function
+    // is placed last.
+    llvm::erase_if(Fragments,
+                   [](const std::vector<uint64_t> &F) { return F.empty(); });
+    llvm::stable_sort(Fragments, [&](const std::vector<uint64_t> &FA,
+                                     const std::vector<uint64_t> &FB) {
+      return Less(FA.back(), FB.back());
+    });
+  }
+
+  std::vector<uint64_t> Layout;
+  Layout.reserve(FragmentMap.size());
+  for (auto &&F : Fragments)
+    llvm::append_range(Layout, F);
+  Fragments.clear();
+  Fragments.push_back(std::move(Layout));
+  return Fragments.front();
 }
 
 void ByteArrayBuilder::allocate(const std::set<uint64_t> &Bits,
@@ -258,6 +267,254 @@ bool lowertypetests::isJumpTableCanonical(Function *F) {
   if (!CI || !CI->isZero())
     return true;
   return F->hasFnAttribute("cfi-canonical-jump-table");
+}
+
+bool lowertypetests::hasTypeMetadata(const GlobalObject &GO) {
+  if (MDNode *MD = GO.getMetadata(LLVMContext::MD_associated))
+    if (auto *AssocVM = dyn_cast_or_null<ValueAsMetadata>(MD->getOperand(0)))
+      if (auto *AssocGO = dyn_cast<GlobalObject>(AssocVM->getValue()))
+        if (AssocGO->hasMetadata(LLVMContext::MD_type))
+          return true;
+  return GO.hasMetadata(LLVMContext::MD_type);
+}
+
+SetVector<GlobalValue *> lowertypetests::findCfiFunctions(Module &M) {
+  SetVector<GlobalValue *> CfiFunctions;
+  for (auto &F : M)
+    if ((!F.hasLocalLinkage() || F.hasAddressTaken()) && hasTypeMetadata(F))
+      CfiFunctions.insert(&F);
+  for (auto &A : M.aliases())
+    if (auto *F = dyn_cast<Function>(A.getAliasee()))
+      if (hasTypeMetadata(*F))
+        CfiFunctions.insert(&A);
+  return CfiFunctions;
+}
+
+/// Extracts a numeric type identifier from an MDNode containing type metadata.
+static ConstantInt *extractNumericTypeId(MDNode &MD) {
+  // This check excludes vtables for classes inside anonymous namespaces.
+  auto TM = dyn_cast<ValueAsMetadata>(MD.getOperand(1));
+  if (!TM)
+    return nullptr;
+  auto C = dyn_cast_or_null<ConstantInt>(TM->getValue());
+  if (!C)
+    return nullptr;
+  // We are looking for i64 constants.
+  if (C->getBitWidth() != 64)
+    return nullptr;
+
+  return C;
+}
+
+SetVector<uint64_t> lowertypetests::findCfiTypeIds(const Module &M) {
+  SetVector<uint64_t> TypeIds;
+  SmallVector<MDNode *, 2> Types;
+  for (const GlobalObject &GO : M.global_objects()) {
+    Types.clear();
+    GO.getMetadata(LLVMContext::MD_type, Types);
+    for (MDNode *Type : Types)
+      if (ConstantInt *TypeId = extractNumericTypeId(*Type))
+        TypeIds.insert(TypeId->getZExtValue());
+  }
+
+  if (NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions")) {
+    for (auto *Func : CfiFunctionsMD->operands()) {
+      assert(Func->getNumOperands() >= 3);
+      assert(isa<ConstantAsMetadata>(Func->getOperand(2)));
+      for (unsigned I = 3; I < Func->getNumOperands(); ++I)
+        if (ConstantInt *TypeId =
+                extractNumericTypeId(*cast<MDNode>(Func->getOperand(I))))
+          TypeIds.insert(TypeId->getZExtValue());
+    }
+  }
+  return TypeIds;
+}
+
+namespace {
+
+/// The type of CFI jumptable needed for a function.
+enum class CfiFunctionLinkage : uint8_t {
+  Definition = 0,
+  Declaration = 1,
+  WeakDeclaration = 2,
+};
+
+/// The hotness of a CFI jumptable function entry.
+class CfiFunctionHotness {
+  enum class Kind : uint8_t {
+    Unknown = 0, // It's higher rank than Cold, but convenient to store as zero.
+    Cold = 1,
+    Other = 2,
+    Hot = 3,
+  };
+
+  Kind Type = Kind::Unknown;
+
+  CfiFunctionHotness(Kind Type) : Type(Type) {}
+
+public:
+  CfiFunctionHotness() = default;
+
+  // Computes the execution weight for F across its entry count and basic block
+  // counts. Placing the hottest function (i.e. the function with the highest
+  // weight) as the last jump table entry makes it more likely to benefit from
+  // the SHT_LLVM_CFI_JUMP_TABLE last-entry optimization and locks the jump
+  // table into the target's section, which is likely hot.
+  // The most important goal is to put functions which end up in .hot at the
+  // end of jumptable, to keep jump table in the same section.
+  static CfiFunctionHotness
+  fromFunction(Function &F, ProfileSummaryInfo &PSI,
+               function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+    if (F.isDeclaration())
+      return Kind::Unknown;
+
+    // We want to mimic CodeGenPrepare::_run to match section assignments.
+    const BlockFrequencyInfo &BFI = BFIGetter(F);
+    if (F.hasFnAttribute(Attribute::Hot) ||
+        PSI.isFunctionHotInCallGraph(&F, BFI)) {
+      return Kind::Hot;
+    }
+
+    if (PSI.isFunctionColdInCallGraph(&F, BFI) ||
+        F.hasFnAttribute(Attribute::Cold)) {
+      return Kind::Cold;
+    }
+
+    return (!PSI.hasPartialSampleProfile() || PSI.isFunctionHotnessUnknown(F))
+               ? Kind::Unknown
+               : Kind::Other;
+  }
+
+  static CfiFunctionHotness fromUint6(uint8_t V) {
+    return CfiFunctionHotness(static_cast<Kind>(V & 0x3));
+  }
+
+  uint8_t asUint6() const { return static_cast<uint8_t>(Type) & 0x3; }
+
+  bool operator==(const CfiFunctionHotness &Other) const {
+    return Type == Other.Type;
+  }
+
+  bool operator<(const CfiFunctionHotness &Other) const {
+    auto Rank = [](Kind K) -> int {
+      return (K == Kind::Cold) ? -1 : static_cast<int>(K);
+    };
+    return Rank(Type) < Rank(Other.Type);
+  }
+};
+
+} // namespace
+
+static CfiFunctionLinkage decodeCfiFunctionLinkage(uint8_t Encoded) {
+  return static_cast<CfiFunctionLinkage>(Encoded & 0x3);
+}
+
+static CfiFunctionHotness decodeCfiFunctionHotness(uint8_t Encoded) {
+  return CfiFunctionHotness::fromUint6(Encoded >> 2);
+}
+
+static uint8_t encodeCfiFunctionLinkage(CfiFunctionLinkage Linkage,
+                                        CfiFunctionHotness Hotness) {
+  uint8_t Encoded =
+      (Hotness.asUint6() << 2) | (static_cast<uint8_t>(Linkage) & 0x3);
+  assert(decodeCfiFunctionLinkage(Encoded) == Linkage);
+  assert(decodeCfiFunctionHotness(Encoded) == Hotness);
+  return Encoded;
+}
+
+static void createCfiFunctionsMetadata(
+    Module &DestM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+  const IPOOptions &Opts = getIPOOptions(DestM);
+  auto &Ctx = DestM.getContext();
+  SmallVector<MDNode *, 8> CfiFunctionMDs;
+  for (auto *V : CfiFunctions) {
+    Function &F = *cast<Function>(V->getAliaseeObject());
+    SmallVector<MDNode *, 2> Types;
+    F.getMetadata(LLVMContext::MD_type, Types);
+
+    SmallVector<Metadata *, 4> Elts;
+    Elts.push_back(MDString::get(Ctx, V->getName()));
+    CfiFunctionLinkage Linkage = CfiFunctionLinkage::Declaration;
+    if (lowertypetests::isJumpTableCanonical(&F))
+      Linkage = CfiFunctionLinkage::Definition;
+    else if (F.hasExternalWeakLinkage())
+      Linkage = CfiFunctionLinkage::WeakDeclaration;
+
+    CfiFunctionHotness Hotness =
+        Opts.reorder_cfi_jump_tables_profiles
+            ? CfiFunctionHotness::fromFunction(F, PSI, BFIGetter)
+            : CfiFunctionHotness();
+
+    uint8_t EncodedLinkage = encodeCfiFunctionLinkage(Linkage, Hotness);
+
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), EncodedLinkage)));
+    GlobalValue::GUID GUID = V->getGUID();
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt64Ty(Ctx), GUID)));
+    append_range(Elts, Types);
+    CfiFunctionMDs.push_back(MDTuple::get(Ctx, Elts));
+  }
+
+  if (!CfiFunctionMDs.empty()) {
+    NamedMDNode *NMD = DestM.getOrInsertNamedMetadata("cfi.functions");
+    for (auto *MD : CfiFunctionMDs)
+      NMD->addOperand(MD);
+  }
+}
+
+static void createCfiAliasesMetadata(Module &DestM, const Module &SrcM) {
+  auto &Ctx = DestM.getContext();
+  MapVector<const Function *, std::vector<const GlobalAlias *>> FunctionAliases;
+  for (const auto &A : SrcM.aliases()) {
+    if (!isa<Function>(A.getAliasee()))
+      continue;
+
+    const auto *F = cast<Function>(A.getAliasee());
+    FunctionAliases[F].push_back(&A);
+  }
+
+  if (!FunctionAliases.empty()) {
+    NamedMDNode *NMD = DestM.getOrInsertNamedMetadata("aliases");
+    for (auto &Alias : FunctionAliases) {
+      SmallVector<Metadata *> Elts;
+      Elts.push_back(MDString::get(Ctx, Alias.first->getName()));
+      for (auto *A : Alias.second)
+        Elts.push_back(MDString::get(Ctx, A->getName()));
+      NMD->addOperand(MDTuple::get(Ctx, Elts));
+    }
+  }
+}
+
+static void createCfiSymversMetadata(Module &DestM, const Module &SrcM) {
+  auto &Ctx = DestM.getContext();
+  SmallVector<MDNode *, 8> Symvers;
+  ModuleSymbolTable::CollectAsmSymvers(
+      SrcM, [&](StringRef Name, StringRef Alias) {
+        const Function *F = SrcM.getFunction(Name);
+        if (!F || F->use_empty())
+          return;
+
+        Symvers.push_back(MDTuple::get(
+            Ctx, {MDString::get(Ctx, Name), MDString::get(Ctx, Alias)}));
+      });
+
+  if (!Symvers.empty()) {
+    NamedMDNode *NMD = DestM.getOrInsertNamedMetadata("symvers");
+    for (auto *MD : Symvers)
+      NMD->addOperand(MD);
+  }
+}
+
+void lowertypetests::createCfiMetadata(
+    Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
+    ProfileSummaryInfo &PSI,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+  createCfiFunctionsMetadata(DestM, CfiFunctions, PSI, BFIGetter);
+  createCfiAliasesMetadata(DestM, SrcM);
+  createCfiSymversMetadata(DestM, SrcM);
 }
 
 namespace {
@@ -422,16 +679,13 @@ struct ScopedSaveAliaseesAndUsed {
 };
 
 class LowerTypeTestsModule {
+  const IPOOptions &Opts;
   Module &M;
 
   ModuleSummaryIndex *ExportSummary;
   const ModuleSummaryIndex *ImportSummary;
-  // Set when the client has invoked this to simply drop all type test assume
-  // sequences.
-  DropTestKind DropTypeTests;
 
   Triple::ArchType Arch;
-  Triple::OSType OS;
   Triple::ObjectFormatType ObjectFormat;
 
   // Determines which kind of Thumb jump table we generate. If arch is
@@ -441,6 +695,9 @@ class LowerTypeTestsModule {
 
   // Cache variable used by hasBranchTargetEnforcement().
   int HasBranchTargetEnforcement = -1;
+
+  // Map from function to hotness passed via cfi.functions metadata.
+  DenseMap<const Function *, CfiFunctionHotness> FunctionSummaryHotness;
 
   IntegerType *Int1Ty = Type::getInt1Ty(M.getContext());
   IntegerType *Int8Ty = Type::getInt8Ty(M.getContext());
@@ -498,17 +755,22 @@ class LowerTypeTestsModule {
   GlobalVariable *GlobalAnnotation;
   DenseSet<Value *> FunctionAnnotations;
 
+  // Cross-DSO CFI emits jumptable entries for exported functions as well as
+  // address taken functions in case they are address taken in other modules.
+  bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
+
+  std::optional<DIBuilder> JumpTableDIB;
+  DICompileUnit *JumpTableCU = nullptr;
+  DIFile *JumpTableFile = nullptr;
+  DISubroutineType *JumpTableFnTy = nullptr;
+
   bool shouldExportConstantsAsAbsoluteSymbols();
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
   void importTypeTest(CallInst *CI);
-  void importFunction(Function *F, bool isJumpTableCanonical,
-                      std::vector<GlobalAlias *> &AliasesToErase);
+  void importFunction(Function *F, bool isJumpTableCanonical);
 
-  BitSetInfo
-  buildBitSet(Metadata *TypeId,
-              const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout);
-  ByteArrayInfo *createByteArray(BitSetInfo &BSI);
+  ByteArrayInfo *createByteArray(const BitSetInfo &BSI);
   void allocateByteArrays();
   Value *createBitSetTest(IRBuilder<> &B, const TypeIdLowering &TIL,
                           Value *BitOffset);
@@ -543,14 +805,15 @@ class LowerTypeTestsModule {
   void findGlobalVariableUsersOf(Constant *C,
                                  SmallSetVector<GlobalVariable *, 8> &Out);
 
+  SmallVector<DILocation *>
+  createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions);
   void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions,
                        Triple::ArchType JumpTableArch);
 
-  /// replaceCfiUses - Go through the uses list for this definition
-  /// and make each use point to "V" instead of "this" when the use is outside
-  /// the block. 'This's use list is expected to have at least one element.
-  /// Unlike replaceAllUsesWith this function skips blockaddr and direct call
-  /// uses.
+  /// replaceCfiUses - Go through the uses list for this definition and make
+  /// each use point to "New" instead of "Old" when the use is outside the
+  /// block. 'Old's use list is expected to have at least one element.  Unlike
+  /// replaceAllUsesWith this function skips blockaddr and direct call uses.
   void replaceCfiUses(Function *Old, Value *New, bool IsJumpTableCanonical);
 
   /// replaceDirectCalls - Go through the uses list for this definition and
@@ -561,11 +824,16 @@ class LowerTypeTestsModule {
     return FunctionAnnotations.contains(V);
   }
 
+  void maybeReplaceComdat(Function *F, StringRef OriginalName);
+
 public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
                        ModuleSummaryIndex *ExportSummary,
-                       const ModuleSummaryIndex *ImportSummary,
-                       DropTestKind DropTypeTests);
+                       const ModuleSummaryIndex *ImportSummary);
+  ~LowerTypeTestsModule() {
+    if (JumpTableDIB)
+      JumpTableDIB->finalize();
+  }
 
   bool lower();
 
@@ -575,28 +843,11 @@ public:
 };
 } // end anonymous namespace
 
-/// Build a bit set for TypeId using the object layouts in
-/// GlobalLayout.
-BitSetInfo LowerTypeTestsModule::buildBitSet(
-    Metadata *TypeId,
-    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
-  BitSetBuilder BSB;
-
+/// Build a bit set for list of offsets.
+static BitSetInfo buildBitSet(ArrayRef<uint64_t> Offsets) {
   // Compute the byte offset of each address associated with this type
   // identifier.
-  for (const auto &GlobalAndOffset : GlobalLayout) {
-    for (MDNode *Type : GlobalAndOffset.first->types()) {
-      if (Type->getOperand(1) != TypeId)
-        continue;
-      uint64_t Offset =
-          cast<ConstantInt>(
-              cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
-              ->getZExtValue();
-      BSB.addOffset(GlobalAndOffset.second + Offset);
-    }
-  }
-
-  return BSB.build();
+  return BitSetBuilder(Offsets).build();
 }
 
 /// Build a test that bit BitOffset mod sizeof(Bits)*8 is set in
@@ -614,7 +865,7 @@ static Value *createMaskedBitTest(IRBuilder<> &B, Value *Bits,
   return B.CreateICmpNE(MaskedBits, ConstantInt::get(BitsType, 0));
 }
 
-ByteArrayInfo *LowerTypeTestsModule::createByteArray(BitSetInfo &BSI) {
+ByteArrayInfo *LowerTypeTestsModule::createByteArray(const BitSetInfo &BSI) {
   // Create globals to stand in for byte arrays and masks. These never actually
   // get initialized, we RAUW and erase them later in allocateByteArrays() once
   // we know the offset and mask to use.
@@ -662,11 +913,8 @@ void LowerTypeTestsModule::allocateByteArrays() {
 
   for (unsigned I = 0; I != ByteArrayInfos.size(); ++I) {
     ByteArrayInfo *BAI = &ByteArrayInfos[I];
-
-    Constant *Idxs[] = {ConstantInt::get(IntPtrTy, 0),
-                        ConstantInt::get(IntPtrTy, ByteArrayOffsets[I])};
-    Constant *GEP = ConstantExpr::getInBoundsGetElementPtr(
-        ByteArrayConst->getType(), ByteArray, Idxs);
+    Constant *GEP = ConstantExpr::getInBoundsPtrAdd(
+        ByteArray, ConstantInt::get(IntPtrTy, ByteArrayOffsets[I]));
 
     // Create an alias instead of RAUW'ing the gep directly. On x86 this ensures
     // that the pc-relative displacement is folded into the lea instead of the
@@ -694,7 +942,7 @@ Value *LowerTypeTestsModule::createBitSetTest(IRBuilder<> &B,
     return createMaskedBitTest(B, TIL.InlineBits, BitOffset);
   } else {
     Constant *ByteArray = TIL.TheByteArray;
-    if (AvoidReuse && !ImportSummary) {
+    if (Opts.lowertypetests_avoid_reuse && !ImportSummary) {
       // Each use of the byte array uses a different alias. This makes the
       // backend less likely to reuse previously computed byte array addresses,
       // improving the security of the CFI mechanism based on this pass.
@@ -805,11 +1053,11 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
   // where nothing happens between the type test and the br.
   // If so, create slightly simpler IR.
   if (CI->hasOneUse())
-    if (auto *Br = dyn_cast<BranchInst>(*CI->user_begin()))
+    if (auto *Br = dyn_cast<CondBrInst>(*CI->user_begin()))
       if (CI->getNextNode() == Br) {
         BasicBlock *Then = InitialBB->splitBasicBlock(CI->getIterator());
         BasicBlock *Else = Br->getSuccessor(1);
-        BranchInst *NewBr = BranchInst::Create(Then, Else, OffsetInRange);
+        CondBrInst *NewBr = CondBrInst::Create(OffsetInRange, Then, Else);
         NewBr->setMetadata(LLVMContext::MD_prof,
                            Br->getMetadata(LLVMContext::MD_prof));
         ReplaceInstWithInst(InitialBB->getTerminator(), NewBr);
@@ -822,7 +1070,9 @@ Value *LowerTypeTestsModule::lowerTypeTestCall(Metadata *TypeId, CallInst *CI,
         return createBitSetTest(ThenB, TIL, BitOffset);
       }
 
-  IRBuilder<> ThenB(SplitBlockAndInsertIfThen(OffsetInRange, CI, false));
+  MDBuilder MDB(M.getContext());
+  IRBuilder<> ThenB(SplitBlockAndInsertIfThen(OffsetInRange, CI, false,
+                                              MDB.createLikelyBranchWeights()));
 
   // Now that we know that the offset is in range and aligned, load the
   // appropriate bit from the bitset.
@@ -867,7 +1117,7 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     }
 
     GlobalInits.push_back(GV->getInitializer());
-    uint64_t InitSize = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t InitSize = GV->getGlobalSize(DL);
     CurOffset = GVOffset + InitSize;
 
     // Compute the amount of padding that we'd like for the next element.
@@ -899,8 +1149,9 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
     // Multiply by 2 to account for padding elements.
     Constant *CombinedGlobalIdxs[] = {ConstantInt::get(Int32Ty, 0),
                                       ConstantInt::get(Int32Ty, I * 2)};
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs);
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        DL, NewInit->getType(), CombinedGlobal, CombinedGlobalIdxs,
+        GEPNoWrapFlags::inBounds());
     assert(GV->getType()->getAddressSpace() == 0);
     GlobalAlias *GAlias =
         GlobalAlias::create(NewTy->getElementType(I * 2), 0, GV->getLinkage(),
@@ -1017,10 +1268,12 @@ LowerTypeTestsModule::importTypeId(StringRef TypeId) {
       GV->setMetadata(LLVMContext::MD_absolute_symbol,
                       MDNode::get(M.getContext(), {MinC, MaxC}));
     };
-    if (AbsWidth == IntPtrTy->getBitWidth())
-      SetAbsRange(~0ull, ~0ull); // Full set.
-    else
+    if (AbsWidth == IntPtrTy->getBitWidth()) {
+      uint64_t AllOnes = IntPtrTy->getBitMask();
+      SetAbsRange(AllOnes, AllOnes); // Full set.
+    } else {
       SetAbsRange(0, 1ull << AbsWidth);
+    }
     return C;
   };
 
@@ -1082,11 +1335,27 @@ void LowerTypeTestsModule::importTypeTest(CallInst *CI) {
   }
 }
 
+void LowerTypeTestsModule::maybeReplaceComdat(Function *F,
+                                              StringRef OriginalName) {
+  // For COFF we should also rename the comdat if this function also
+  // happens to be the key function. Even if the comdat name changes, this
+  // should still be fine since comdat and symbol resolution happens
+  // before LTO, so all symbols which would prevail have been selected.
+  if (F->hasComdat() && ObjectFormat == Triple::COFF &&
+      F->getComdat()->getName() == OriginalName) {
+    Comdat *OldComdat = F->getComdat();
+    Comdat *NewComdat = M.getOrInsertComdat(F->getName());
+    for (GlobalObject &GO : M.global_objects()) {
+      if (GO.getComdat() == OldComdat)
+        GO.setComdat(NewComdat);
+    }
+  }
+}
+
 // ThinLTO backend: the function F has a jump table entry; update this module
 // accordingly. isJumpTableCanonical describes the type of the jump table entry.
-void LowerTypeTestsModule::importFunction(
-    Function *F, bool isJumpTableCanonical,
-    std::vector<GlobalAlias *> &AliasesToErase) {
+void LowerTypeTestsModule::importFunction(Function *F,
+                                          bool isJumpTableCanonical) {
   assert(F->getType()->getAddressSpace() == 0);
 
   GlobalValue::VisibilityTypes Visibility = F->getVisibility();
@@ -1095,15 +1364,26 @@ void LowerTypeTestsModule::importFunction(
   if (F->isDeclarationForLinker() && isJumpTableCanonical) {
     // Non-dso_local functions may be overriden at run time,
     // don't short curcuit them
-    if (F->isDSOLocal()) {
+    if (!F->isDSOLocal())
+      return;
+    if (F->isDeclaration()) {
+      // Direct calls do not need the type check, so let them skip the jump
+      // table and call the real function directly.
       Function *RealF = Function::Create(F->getFunctionType(),
                                          GlobalValue::ExternalLinkage,
                                          F->getAddressSpace(),
                                          Name + ".cfi", &M);
       RealF->setVisibility(GlobalVariable::HiddenVisibility);
       replaceDirectCalls(F, RealF);
+      return;
     }
-    return;
+    // Otherwise F is an available_externally definition imported from
+    // another module. Handle it like a local definition below: the body is
+    // renamed to Name.cfi and stays the target of direct calls, so it remains
+    // inlinable, while address-taken uses are redirected to the jump table
+    // entry. If the body is not inlined and is dropped later, the reference
+    // to Name.cfi resolves to the real function at link time, exactly as for
+    // a declaration.
   }
 
   Function *FDecl;
@@ -1115,23 +1395,33 @@ void LowerTypeTestsModule::importFunction(
     FDecl->setVisibility(GlobalValue::HiddenVisibility);
   } else {
     F->setName(Name + ".cfi");
-    F->setLinkage(GlobalValue::ExternalLinkage);
+    maybeReplaceComdat(F, Name);
     FDecl = Function::Create(F->getFunctionType(), GlobalValue::ExternalLinkage,
                              F->getAddressSpace(), Name, &M);
     FDecl->setVisibility(Visibility);
+    FDecl->setDSOLocal(F->isDSOLocal());
     Visibility = GlobalValue::HiddenVisibility;
 
-    // Delete aliases pointing to this function, they'll be re-created in the
-    // merged output. Don't do it yet though because ScopedSaveAliaseesAndUsed
-    // will want to reset the aliasees first.
+    // Update aliases pointing to this function to also include the ".cfi" suffix,
+    // We expect the jump table entry to either point to the real function or an
+    // alias. Redirect all other users to the jump table entry.
     for (auto &U : F->uses()) {
       if (auto *A = dyn_cast<GlobalAlias>(U.getUser())) {
+        // MemProf duplicate-clone aliases are created in the ThinLTO backend
+        // after the thin link has finalized the CFI jump table and !aliases in
+        // the merged module, and are only called directly. Leave them aliasing
+        // the local .cfi body (restored by ScopedSaveAliaseesAndUsed) rather
+        // than redirecting them to a non-existent jump table entry.
+        if (isMemProfClone(*A))
+          continue;
+        std::string AliasName = A->getName().str() + ".cfi";
         Function *AliasDecl = Function::Create(
             F->getFunctionType(), GlobalValue::ExternalLinkage,
             F->getAddressSpace(), "", &M);
         AliasDecl->takeName(A);
         A->replaceAllUsesWith(AliasDecl);
-        AliasesToErase.push_back(A);
+        A->setName(AliasName);
+        AliasDecl->setDSOLocal(A->isDSOLocal());
       }
     }
   }
@@ -1146,28 +1436,54 @@ void LowerTypeTestsModule::importFunction(
   F->setVisibility(Visibility);
 }
 
-void LowerTypeTestsModule::lowerTypeTestCalls(
-    ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
-    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
-  // For each type identifier in this disjoint set...
+static auto
+buildBitSets(ArrayRef<Metadata *> TypeIds,
+             const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
+  DenseMap<Metadata *, SmallVector<uint64_t, 16>> OffsetsByTypeID;
+  // Pre-populate the map with interesting type identifiers.
+  for (Metadata *TypeId : TypeIds)
+    OffsetsByTypeID[TypeId];
+  for (const auto &[Mem, MemOff] : GlobalLayout) {
+    for (MDNode *Type : Mem->types()) {
+      auto It = OffsetsByTypeID.find(Type->getOperand(1));
+      if (It == OffsetsByTypeID.end())
+        continue;
+      uint64_t Offset =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
+              ->getZExtValue();
+      It->second.push_back(MemOff + Offset);
+    }
+  }
+
+  SmallVector<std::pair<Metadata *, BitSetInfo>> BitSets;
+  BitSets.reserve(TypeIds.size());
   for (Metadata *TypeId : TypeIds) {
-    // Build the bitset.
-    BitSetInfo BSI = buildBitSet(TypeId, GlobalLayout);
+    BitSets.emplace_back(TypeId, buildBitSet(OffsetsByTypeID[TypeId]));
     LLVM_DEBUG({
       if (auto MDS = dyn_cast<MDString>(TypeId))
         dbgs() << MDS->getString() << ": ";
       else
         dbgs() << "<unnamed>: ";
-      BSI.print(dbgs());
+      BitSets.back().second.print(dbgs());
     });
+  }
 
+  return BitSets;
+}
+
+void LowerTypeTestsModule::lowerTypeTestCalls(
+    ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
+    const DenseMap<GlobalTypeMember *, uint64_t> &GlobalLayout) {
+  // For each type identifier in this disjoint set...
+  for (const auto &[TypeId, BSI] : buildBitSets(TypeIds, GlobalLayout)) {
     ByteArrayInfo *BAI = nullptr;
     TypeIdLowering TIL;
 
     uint64_t GlobalOffset =
         BSI.ByteOffset + ((BSI.BitSize - 1) << BSI.AlignLog2);
-    TIL.OffsetedGlobal = ConstantExpr::getGetElementPtr(
-        Int8Ty, CombinedGlobalAddr, ConstantInt::get(IntPtrTy, GlobalOffset)),
+    TIL.OffsetedGlobal = ConstantExpr::getPtrAdd(
+        CombinedGlobalAddr, ConstantInt::get(IntPtrTy, GlobalOffset)),
     TIL.AlignLog2 = ConstantInt::get(IntPtrTy, BSI.AlignLog2);
     TIL.SizeM1 = ConstantInt::get(IntPtrTy, BSI.BitSize - 1);
     if (BSI.isAllOnes()) {
@@ -1240,6 +1556,7 @@ static const unsigned kARMBTIJumpTableEntrySize = 8;
 static const unsigned kARMv6MJumpTableEntrySize = 16;
 static const unsigned kRISCVJumpTableEntrySize = 8;
 static const unsigned kLOONGARCH64JumpTableEntrySize = 8;
+static const unsigned kHexagonJumpTableEntrySize = 4;
 
 bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
   if (HasBranchTargetEnforcement == -1) {
@@ -1247,7 +1564,7 @@ bool LowerTypeTestsModule::hasBranchTargetEnforcement() {
     // the module flags.
     if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement")))
-      HasBranchTargetEnforcement = (BTE->getZExtValue() != 0);
+      HasBranchTargetEnforcement = !BTE->isZero();
     else
       HasBranchTargetEnforcement = 0;
   }
@@ -1283,6 +1600,8 @@ LowerTypeTestsModule::getJumpTableEntrySize(Triple::ArchType JumpTableArch) {
     return kRISCVJumpTableEntrySize;
   case Triple::loongarch64:
     return kLOONGARCH64JumpTableEntrySize;
+  case Triple::hexagon:
+    return kHexagonJumpTableEntrySize;
   default:
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1349,6 +1668,8 @@ LowerTypeTestsModule::createJumpTableEntryAsm(Triple::ArchType JumpTableArch) {
   } else if (JumpTableArch == Triple::loongarch64) {
     AsmOS << "pcalau12i $$t0, %pc_hi20($0)\n"
           << "jirl $$r0, $$t0, %pc_lo12($0)\n";
+  } else if (JumpTableArch == Triple::hexagon) {
+    AsmOS << "jump $0\n";
   } else {
     report_fatal_error("Unsupported architecture for jump tables");
   }
@@ -1366,7 +1687,7 @@ void LowerTypeTestsModule::buildBitSetsFromFunctions(
   if (Arch == Triple::x86 || Arch == Triple::x86_64 || Arch == Triple::arm ||
       Arch == Triple::thumb || Arch == Triple::aarch64 ||
       Arch == Triple::riscv32 || Arch == Triple::riscv64 ||
-      Arch == Triple::loongarch64)
+      Arch == Triple::loongarch64 || Arch == Triple::hexagon)
     buildBitSetsFromFunctionsNative(TypeIds, Functions);
   else if (Arch == Triple::wasm32 || Arch == Triple::wasm64)
     buildBitSetsFromFunctionsWASM(TypeIds, Functions);
@@ -1427,8 +1748,7 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
   // Can not RAUW F with an expression that uses F. Replace with a temporary
   // placeholder first.
   Function *PlaceholderFn =
-      Function::Create(cast<FunctionType>(F->getValueType()),
-                       GlobalValue::ExternalWeakLinkage,
+      Function::Create(F->getFunctionType(), GlobalValue::ExternalWeakLinkage,
                        F->getAddressSpace(), "", &M);
   replaceCfiUses(F, PlaceholderFn, IsJumpTableCanonical);
 
@@ -1446,6 +1766,9 @@ void LowerTypeTestsModule::replaceWeakDeclarationWithJumpTablePtr(
                                      Constant::getNullValue(F->getType()));
     Value *Select = Builder.CreateSelect(ICmp, JT,
                                          Constant::getNullValue(F->getType()));
+
+    if (auto *SI = dyn_cast<SelectInst>(Select))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
     // For phi nodes, we need to update the incoming value for all operands
     // with the same predecessor.
     if (PN)
@@ -1504,16 +1827,78 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
   return ArmCount > ThumbCount ? Triple::arm : Triple::thumb;
 }
 
+// Create location for each function entry which should look like this:
+// frame #0: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
+// frame #1: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
+SmallVector<DILocation *> LowerTypeTestsModule::createJumpTableDebugInfo(
+    Function *F, ArrayRef<GlobalTypeMember *> Functions) {
+  if (!JumpTableDIB) {
+    auto CUs = M.debug_compile_units();
+    if (!CUs.empty())
+      JumpTableCU = *CUs.begin();
+    JumpTableDIB.emplace(M, /*AllowUnresolved=*/true, JumpTableCU);
+    JumpTableFile = JumpTableDIB->createFile("ubsan_interface.h", "sanitizer");
+    if (!JumpTableCU) {
+      // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
+      // even if the rest of the program has debug info.
+      JumpTableCU = JumpTableDIB->createCompileUnit(
+          DISourceLanguageName(dwarf::DW_LANG_C), JumpTableFile, "llvm", true,
+          "", 0, "", DICompileUnit::DebugEmissionKind::LineTablesOnly);
+    }
+    JumpTableFnTy = JumpTableDIB->createSubroutineType(nullptr);
+  }
+
+  DISubprogram *UbsanSP = JumpTableDIB->createFunction(
+      JumpTableCU, "__ubsan_check_cfi_icall_jt", {}, JumpTableFile, 0,
+      JumpTableFnTy, 0, DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+
+  F->setSubprogram(UbsanSP);
+
+  DILocation *UbsanLoc = DILocation::get(M.getContext(), 0, 0, UbsanSP);
+
+  SmallVector<DILocation *> Locations;
+  Locations.reserve(Functions.size());
+
+  for (auto *Func : Functions) {
+    StringRef FuncName = Func->getGlobal()->getName();
+    FuncName.consume_back(".cfi");
+    DISubprogram *JumpSP = JumpTableDIB->createFunction(
+        JumpTableCU, (FuncName + ".cfi_jt").str(), {}, JumpTableFile, 0,
+        JumpTableFnTy, 0, DINode::FlagArtificial,
+        DISubprogram::SPFlagDefinition);
+
+    DILocation *EntryLoc =
+        DILocation::get(M.getContext(), 0, 0, JumpSP, UbsanLoc);
+
+    Locations.push_back(EntryLoc);
+  }
+
+  return Locations;
+}
+
 void LowerTypeTestsModule::createJumpTable(
     Function *F, ArrayRef<GlobalTypeMember *> Functions,
     Triple::ArchType JumpTableArch) {
-  std::string AsmStr, ConstraintStr;
-  raw_string_ostream AsmOS(AsmStr), ConstraintOS(ConstraintStr);
-  SmallVector<Value *, 16> AsmArgs;
-  AsmArgs.reserve(Functions.size() * 2);
+  unsigned JumpTableEntrySize = getJumpTableEntrySize(JumpTableArch);
+  // Give the jumptable section this type in order to enable jumptable
+  // relaxation. Only do this if cross-DSO CFI is disabled because jumptable
+  // relaxation violates cross-DSO CFI's restrictions on the ordering of the
+  // jumptable relative to other sections.
+  if (!CrossDsoCfi)
+    F->setMetadata(LLVMContext::MD_elf_section_properties,
+                   MDNode::get(F->getContext(),
+                               ArrayRef<Metadata *>{
+                                   ConstantAsMetadata::get(ConstantInt::get(
+                                       Int64Ty, ELF::SHT_LLVM_CFI_JUMP_TABLE)),
+                                   ConstantAsMetadata::get(ConstantInt::get(
+                                       Int64Ty, JumpTableEntrySize))}));
 
   BasicBlock *BB = BasicBlock::Create(M.getContext(), "entry", F);
   IRBuilder<> IRB(BB);
+
+  SmallVector<DILocation *> Locations;
+  if (M.getDwarfVersion() != 0 && Opts.lowertypetests_jump_table_debug_info)
+    Locations = createJumpTableDebugInfo(F, Functions);
 
   InlineAsm *JumpTableAsm = createJumpTableEntryAsm(JumpTableArch);
 
@@ -1522,23 +1907,21 @@ void LowerTypeTestsModule::createJumpTable(
   // cfi.jumptable as NoUnwind, otherwise, direct calls
   // to the jump table will not handle exceptions properly
   bool areAllEntriesNounwind = true;
-  for (GlobalTypeMember *GTM : Functions) {
-    if (!llvm::cast<llvm::Function>(GTM->getGlobal())
-             ->hasFnAttribute(llvm::Attribute::NoUnwind)) {
+  assert(Locations.empty() || Functions.size() == Locations.size());
+  for (auto [GTM, Loc] : zip_longest(Functions, Locations)) {
+    if (Loc.has_value())
+      IRB.SetCurrentDebugLocation(*Loc);
+    if (!cast<Function>((*GTM)->getGlobal())
+             ->hasFnAttribute(Attribute::NoUnwind)) {
       areAllEntriesNounwind = false;
     }
-    IRB.CreateCall(JumpTableAsm, GTM->getGlobal());
+    IRB.CreateCall(JumpTableAsm, (*GTM)->getGlobal());
   }
   IRB.CreateUnreachable();
 
   // Align the whole table by entry size.
-  F->setAlignment(Align(getJumpTableEntrySize(JumpTableArch)));
-  // Skip prologue.
-  // Disabled on win32 due to https://llvm.org/bugs/show_bug.cgi?id=28641#c3.
-  // Luckily, this function does not get any prologue even without the
-  // attribute.
-  if (OS != Triple::Win32)
-    F->addFnAttr(Attribute::Naked);
+  F->setPreferredAlignment(Align(JumpTableEntrySize));
+  F->addFnAttr(Attribute::Naked);
   if (JumpTableArch == Triple::arm)
     F->addFnAttr("target-features", "-thumb-mode");
   if (JumpTableArch == Triple::thumb) {
@@ -1681,12 +2064,15 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
                        GlobalValue::PrivateLinkage,
                        M.getDataLayout().getProgramAddressSpace(),
                        ".cfi.jumptable", &M);
+  ArrayType *JumpTableEntryType = ArrayType::get(Int8Ty, EntrySize);
   ArrayType *JumpTableType =
-      ArrayType::get(ArrayType::get(Int8Ty, EntrySize), Functions.size());
+      ArrayType::get(JumpTableEntryType, Functions.size());
   auto JumpTable = ConstantExpr::getPointerCast(
       JumpTableFn, PointerType::getUnqual(M.getContext()));
 
   lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
+
+  SmallVector<GlobalValue *> UsedJtAliases;
 
   // Build aliases pointing to offsets into the jump table, and replace
   // references to the original functions with references to the aliases.
@@ -1694,29 +2080,32 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     Function *F = cast<Function>(Functions[I]->getGlobal());
     bool IsJumpTableCanonical = Functions[I]->isJumpTableCanonical();
 
-    Constant *CombinedGlobalElemPtr = ConstantExpr::getInBoundsGetElementPtr(
-        JumpTableType, JumpTable,
-        ArrayRef<Constant *>{ConstantInt::get(IntPtrTy, 0),
-                             ConstantInt::get(IntPtrTy, I)});
+    Constant *CombinedGlobalElemPtr = ConstantExpr::getGetElementPtr(
+        F->getDataLayout(), JumpTableType, JumpTable,
+        {ConstantInt::get(IntPtrTy, 0), ConstantInt::get(IntPtrTy, I)},
+        GEPNoWrapFlags::inBounds());
 
     const bool IsExported = Functions[I]->isExported();
     if (!IsJumpTableCanonical) {
       GlobalValue::LinkageTypes LT = IsExported ? GlobalValue::ExternalLinkage
                                                 : GlobalValue::InternalLinkage;
-      GlobalAlias *JtAlias = GlobalAlias::create(F->getValueType(), 0, LT,
+      GlobalAlias *JtAlias = GlobalAlias::create(JumpTableEntryType, 0, LT,
                                                  F->getName() + ".cfi_jt",
                                                  CombinedGlobalElemPtr, &M);
       if (IsExported)
         JtAlias->setVisibility(GlobalValue::HiddenVisibility);
       else
-        appendToUsed(M, {JtAlias});
+        UsedJtAliases.push_back(JtAlias);
     }
 
     if (IsExported) {
+      GlobalValue::GUID GUID = F->getGUID();
       if (IsJumpTableCanonical)
-        ExportSummary->cfiFunctionDefs().emplace(F->getName());
+        ExportSummary->cfiFunctionDefs().addSymbolWithThinLTOGUID(F->getName(),
+                                                                  GUID);
       else
-        ExportSummary->cfiFunctionDecls().emplace(F->getName());
+        ExportSummary->cfiFunctionDecls().addSymbolWithThinLTOGUID(F->getName(),
+                                                                   GUID);
     }
 
     if (!IsJumpTableCanonical) {
@@ -1728,31 +2117,24 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
     } else {
       assert(F->getType()->getAddressSpace() == 0);
 
-      GlobalAlias *FAlias = GlobalAlias::create(
-          F->getValueType(), 0, F->getLinkage(), "", CombinedGlobalElemPtr, &M);
+      GlobalAlias *FAlias =
+          GlobalAlias::create(JumpTableEntryType, 0, F->getLinkage(), "",
+                              CombinedGlobalElemPtr, &M);
       FAlias->setVisibility(F->getVisibility());
+      FAlias->setDSOLocal(F->isDSOLocal());
       FAlias->takeName(F);
       if (FAlias->hasName()) {
         F->setName(FAlias->getName() + ".cfi");
-        // For COFF we should also rename the comdat if this function also
-        // happens to be the key function. Even if the comdat name changes, this
-        // should still be fine since comdat and symbol resolution happens
-        // before LTO, so all symbols which would prevail have been selected.
-        if (F->hasComdat() && ObjectFormat == Triple::COFF &&
-            F->getComdat()->getName() == FAlias->getName()) {
-          Comdat *OldComdat = F->getComdat();
-          Comdat *NewComdat = M.getOrInsertComdat(F->getName());
-          for (GlobalObject &GO : M.global_objects()) {
-            if (GO.getComdat() == OldComdat)
-              GO.setComdat(NewComdat);
-          }
-        }
+        maybeReplaceComdat(F, FAlias->getName());
       }
       replaceCfiUses(F, FAlias, IsJumpTableCanonical);
       if (!F->hasLocalLinkage())
         F->setVisibility(GlobalVariable::HiddenVisibility);
     }
   }
+
+  if (!UsedJtAliases.empty())
+    appendToUsed(M, UsedJtAliases);
 
   createJumpTable(JumpTableFn, Functions, JumpTableArch);
 }
@@ -1830,25 +2212,52 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
     return O1.size() < O2.size();
   });
 
+  bool IsGlobalSet =
+      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
+
+  unique_function<bool(uint64_t, uint64_t)> Less;
+  if (!IsGlobalSet && !FunctionSummaryHotness.empty() &&
+      Opts.reorder_cfi_jump_tables_profiles) {
+    // Estimated weight of each jump entry.
+    std::vector<CfiFunctionHotness> GTMHotness;
+    GTMHotness.reserve(Globals.size());
+    for (GlobalTypeMember *GTM : Globals) {
+      GTMHotness.push_back(
+          FunctionSummaryHotness.lookup(cast<Function>(GTM->getGlobal())));
+    }
+
+    // Order jump table entries by hotness ascending so that the hottest
+    // entry is placed at the end of the jump table:
+    // 1. Under jump table relaxation (SHT_LLVM_CFI_JUMP_TABLE), the linker
+    //    moves the jump table directly before the target of the last entry
+    //    and deletes its branch so the target function body acts as the
+    //    last entry.
+    // 2. The jump table is placed into the output section of that last
+    //    target. Jump tables are critical to performance; if the last
+    //    entry were a cold function, the jump table would be dragged into a
+    //    cold binary section (such as .text.unlikely). Placing the hottest
+    //    entry at the end ensures the jump table lands in a hot section and
+    //    the hottest callee benefits from fall-through without a branch.
+    Less = [GTMHotness = std::move(GTMHotness)](uint64_t A, uint64_t B) {
+      return GTMHotness[A] < GTMHotness[B];
+    };
+  }
+
   // Create a GlobalLayoutBuilder and provide it with index sets as layout
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as
   // close together as possible.
-  GlobalLayoutBuilder GLB(Globals.size());
+  GlobalLayoutBuilder GLB(Globals.size(), std::move(Less));
   for (auto &&MemSet : TypeMembers)
     GLB.addFragment(MemSet);
 
   // Build a vector of globals with the computed layout.
-  bool IsGlobalSet =
-      Globals.empty() || isa<GlobalVariable>(Globals[0]->getGlobal());
   std::vector<GlobalTypeMember *> OrderedGTMs(Globals.size());
   auto OGTMI = OrderedGTMs.begin();
-  for (auto &&F : GLB.Fragments) {
-    for (auto &&Offset : F) {
-      if (IsGlobalSet != isa<GlobalVariable>(Globals[Offset]->getGlobal()))
-        report_fatal_error("Type identifier may not contain both global "
-                           "variables and functions");
-      *OGTMI++ = Globals[Offset];
-    }
+  for (uint64_t Offset : GLB.build()) {
+    if (IsGlobalSet != isa<GlobalVariable>(Globals[Offset]->getGlobal()))
+      report_fatal_error("Type identifier may not contain both global "
+                         "variables and functions");
+    *OGTMI++ = Globals[Offset];
   }
 
   // Build the bitsets from this disjoint set.
@@ -1861,18 +2270,17 @@ void LowerTypeTestsModule::buildBitSetsFromDisjointSet(
 /// Lower all type tests in this module.
 LowerTypeTestsModule::LowerTypeTestsModule(
     Module &M, ModuleAnalysisManager &AM, ModuleSummaryIndex *ExportSummary,
-    const ModuleSummaryIndex *ImportSummary, DropTestKind DropTypeTests)
-    : M(M), ExportSummary(ExportSummary), ImportSummary(ImportSummary),
-      DropTypeTests(ClDropTypeTests > DropTypeTests ? ClDropTypeTests
-                                                    : DropTypeTests) {
+    const ModuleSummaryIndex *ImportSummary)
+    : Opts(getIPOOptions(M)), M(M), ExportSummary(ExportSummary),
+      ImportSummary(ImportSummary) {
   assert(!(ExportSummary && ImportSummary));
   Triple TargetTriple(M.getTargetTriple());
   Arch = TargetTriple.getArch();
+  auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
   if (Arch == Triple::arm)
     CanUseArmJumpTable = true;
   if (Arch == Triple::arm || Arch == Triple::thumb) {
-    auto &FAM =
-        AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     for (Function &F : M) {
       // Skip declarations since we should not query the TTI for them.
       if (F.isDeclaration())
@@ -1884,7 +2292,6 @@ LowerTypeTestsModule::LowerTypeTestsModule(
         CanUseThumbBWJumpTable = true;
     }
   }
-  OS = TargetTriple.getOS();
   ObjectFormat = TargetTriple.getObjectFormat();
 
   // Function annotation describes or applies to function itself, and
@@ -1898,38 +2305,55 @@ LowerTypeTestsModule::LowerTypeTestsModule(
 }
 
 bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
-  ModuleSummaryIndex Summary(/*HaveGVs=*/false);
+  const IPOOptions &Opts = getIPOOptions(M);
+  StringRef ReadSummary = Opts.lowertypetests_read_summary;
+  StringRef WriteSummary = Opts.lowertypetests_write_summary;
+  PassSummaryAction SummaryAction = Opts.lowertypetests_summary_action;
+  std::unique_ptr<ModuleSummaryIndex> Summary;
 
   // Handle the command-line summary arguments. This code is for testing
   // purposes only, so we handle errors directly.
-  if (!ClReadSummary.empty()) {
-    ExitOnError ExitOnErr("-lowertypetests-read-summary: " + ClReadSummary +
-                          ": ");
-    auto ReadSummaryFile = ExitOnErr(errorOrToExpected(
-        MemoryBuffer::getFile(ClReadSummary, /*IsText=*/true)));
-
-    yaml::Input In(ReadSummaryFile->getBuffer());
-    In >> Summary;
-    ExitOnErr(errorCodeToError(In.error()));
+  if (!ReadSummary.empty()) {
+    ExitOnError ExitOnErr(
+        ("-lowertypetests-read-summary: " + ReadSummary + ": ").str());
+    auto ReadSummaryFile = ExitOnErr(
+        errorOrToExpected(MemoryBuffer::getFile(ReadSummary, /*IsText=*/true)));
+    // TODO: Convert the rest of tests (some YAML features are missing from
+    // textual summary assembly) and remove YAML from this file.
+    if (ReadSummaryFile->getBuffer().starts_with("---")) {
+      Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
+      yaml::Input In(ReadSummaryFile->getBuffer());
+      In >> *Summary;
+      ExitOnErr(errorCodeToError(In.error()));
+    } else {
+      SMDiagnostic Err;
+      Summary =
+          parseSummaryIndexAssembly(ReadSummaryFile->getMemBufferRef(), Err);
+      if (!Summary) {
+        Err.print(ReadSummary.str().c_str(), errs());
+        report_fatal_error("Failed to parse summary index assembly");
+      }
+    }
+  } else {
+    Summary = std::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
   }
 
   bool Changed =
       LowerTypeTestsModule(
           M, AM,
-          ClSummaryAction == PassSummaryAction::Export ? &Summary : nullptr,
-          ClSummaryAction == PassSummaryAction::Import ? &Summary : nullptr,
-          /*DropTypeTests=*/DropTestKind::None)
+          SummaryAction == PassSummaryAction::Export ? Summary.get() : nullptr,
+          SummaryAction == PassSummaryAction::Import ? Summary.get() : nullptr)
           .lower();
 
-  if (!ClWriteSummary.empty()) {
-    ExitOnError ExitOnErr("-lowertypetests-write-summary: " + ClWriteSummary +
-                          ": ");
+  if (!WriteSummary.empty()) {
+    ExitOnError ExitOnErr(
+        ("-lowertypetests-write-summary: " + WriteSummary + ": ").str());
     std::error_code EC;
-    raw_fd_ostream OS(ClWriteSummary, EC, sys::fs::OF_TextWithCRLF);
+    raw_fd_ostream OS(WriteSummary, EC, sys::fs::OF_TextWithCRLF);
     ExitOnErr(errorCodeToError(EC));
 
     yaml::Output Out(OS);
-    Out << Summary;
+    Out << *Summary;
   }
 
   return Changed;
@@ -1937,12 +2361,7 @@ bool LowerTypeTestsModule::runForTesting(Module &M, ModuleAnalysisManager &AM) {
 
 static bool isDirectCall(Use& U) {
   auto *Usr = dyn_cast<CallInst>(U.getUser());
-  if (Usr) {
-    auto *CB = dyn_cast<CallBase>(Usr);
-    if (CB && CB->isCallee(&U))
-      return true;
-  }
-  return false;
+  return Usr && Usr->isCallee(&U);
 }
 
 void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
@@ -1954,7 +2373,7 @@ void LowerTypeTestsModule::replaceCfiUses(Function *Old, Value *New,
     if (isa<NoCFIValue>(U.getUser()))
       continue;
 
-    // Skip direct calls to externally defined or non-dso_local functions.
+    // Skip direct calls to externally defined or dso_local functions.
     if (isDirectCall(U) && (Old->isDSOLocal() || !IsJumpTableCanonical))
       continue;
 
@@ -1985,23 +2404,71 @@ void LowerTypeTestsModule::replaceDirectCalls(Value *Old, Value *New) {
   Old->replaceUsesWithIf(New, isDirectCall);
 }
 
-static void dropTypeTests(Module &M, Function &TypeTestFunc,
-                          bool ShouldDropAll) {
+// Sound wherever the caller has already dropped the type tests: the check
+// folds to true, the trap branch becomes dead, and later passes fold it
+// away. Required because the backend cannot select these intrinsics
+// ("must be lowered by the LowerTypeTests pass before code generation").
+bool lowertypetests::cleanUpTypeCheckedLoad(
+    Module &M, Function &CheckedLoadFn, bool IsRelative,
+    SmallSetVector<Function *, 8> *ModifiedFunctions) {
+  bool Changed = false;
+  for (User *User : llvm::make_early_inc_range(CheckedLoadFn.users())) {
+    Instruction *I = dyn_cast<Instruction>(User);
+    if (!I)
+      continue;
+    IRBuilder<> IRB(I);
+    Value *Ptr = I->getOperand(0);
+    Value *Offset = I->getOperand(1);
+    Type *PtrTy = I->getType()->getStructElementType(0);
+    ConstantInt *True = ConstantInt::getTrue(M.getContext());
+    Instruction *Load;
+    if (IsRelative) {
+      Load = IRB.CreateIntrinsicWithoutFolding(
+          Intrinsic::load_relative, {Offset->getType()}, {Ptr, Offset},
+          /*FMFSource=*/nullptr, "rel_load");
+    } else {
+      Value *PtrAdd = IRB.CreatePtrAddWithSExtOrTrunc(Ptr, Offset);
+      Load = IRB.CreateLoad(PtrTy, PtrAdd, "vfunc");
+    }
+
+    Value *Replacement = PoisonValue::get(I->getType());
+    Replacement = IRB.CreateInsertValue(Replacement, True, {1});
+    Replacement = IRB.CreateInsertValue(Replacement, Load, {0});
+    I->replaceAllUsesWith(Replacement);
+
+    if (ModifiedFunctions)
+      ModifiedFunctions->insert(I->getFunction());
+
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": erase " << *I << "\n");
+    I->eraseFromParent();
+    Changed = true;
+  }
+  if (Changed) {
+    CheckedLoadFn.eraseFromParent();
+    for (GlobalVariable &GV : M.globals())
+      GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
+  }
+  return Changed;
+}
+
+static void dropTypeTests(Module &M, Function &TypeTestFunc, bool ShouldDropAll,
+                          SmallSetVector<Function *, 8> &ModifiedFunctions) {
   for (Use &U : llvm::make_early_inc_range(TypeTestFunc.uses())) {
     auto *CI = cast<CallInst>(U.getUser());
+    ModifiedFunctions.insert(CI->getFunction());
     // Find and erase llvm.assume intrinsics for this llvm.type.test call.
     for (Use &CIU : llvm::make_early_inc_range(CI->uses()))
       if (auto *Assume = dyn_cast<AssumeInst>(CIU.getUser()))
         Assume->eraseFromParent();
     // If the assume was merged with another assume, we might have a use on a
-    // phi (which will feed the assume). Simply replace the use on the phi
-    // with "true" and leave the merged assume.
+    // phi or select (which will feed the assume). Simply replace the use on
+    // the phi/select with "true" and leave the merged assume.
     //
     // If ShouldDropAll is set, then we  we need to update any remaining uses,
     // regardless of the instruction type.
     if (!CI->use_empty()) {
       assert(ShouldDropAll || all_of(CI->users(), [](User *U) -> bool {
-               return isa<PHINode>(U);
+               return isa<PHINode>(U) || isa<SelectInst>(U);
              }));
       CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
     }
@@ -2009,31 +2476,47 @@ static void dropTypeTests(Module &M, Function &TypeTestFunc,
   }
 }
 
+static bool dropTypeTests(Module &M, bool ShouldDropAll,
+                          SmallSetVector<Function *, 8> &ModifiedFunctions) {
+  Function *TypeTestFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
+  if (TypeTestFunc)
+    dropTypeTests(M, *TypeTestFunc, ShouldDropAll, ModifiedFunctions);
+  // Only drop checked loads when dropping everything: in Assume mode a
+  // checked load may feed a CFI trap check, which must keep diagnosing
+  // loudly instead of being turned to true.
+  bool DroppedCheckedLoads = false;
+  if (ShouldDropAll) {
+    if (Function *F =
+            Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load))
+      DroppedCheckedLoads |= lowertypetests::cleanUpTypeCheckedLoad(
+          M, *F, false, &ModifiedFunctions);
+    if (Function *F = Intrinsic::getDeclarationIfExists(
+            &M, Intrinsic::type_checked_load_relative))
+      DroppedCheckedLoads |= lowertypetests::cleanUpTypeCheckedLoad(
+          M, *F, true, &ModifiedFunctions);
+  }
+  // Normally we'd have already removed all @llvm.public.type.test calls,
+  // except for in the case where we originally were performing ThinLTO but
+  // decided not to in the backend.
+  Function *PublicTypeTestFunc =
+      Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
+  if (PublicTypeTestFunc)
+    dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll, ModifiedFunctions);
+  bool Changed = TypeTestFunc || PublicTypeTestFunc || DroppedCheckedLoads;
+  if (Changed || ShouldDropAll) {
+    // We have deleted the type intrinsics, so we no longer have enough
+    // information to reason about the liveness of virtual function pointers
+    // in GlobalDCE.
+    for (GlobalVariable &GV : M.globals())
+      Changed |= GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
+  }
+  return Changed;
+}
+
 bool LowerTypeTestsModule::lower() {
   Function *TypeTestFunc =
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_test);
-
-  if (DropTypeTests != DropTestKind::None) {
-    bool ShouldDropAll = DropTypeTests == DropTestKind::All;
-    if (TypeTestFunc)
-      dropTypeTests(M, *TypeTestFunc, ShouldDropAll);
-    // Normally we'd have already removed all @llvm.public.type.test calls,
-    // except for in the case where we originally were performing ThinLTO but
-    // decided not to in the backend.
-    Function *PublicTypeTestFunc =
-        Intrinsic::getDeclarationIfExists(&M, Intrinsic::public_type_test);
-    if (PublicTypeTestFunc)
-      dropTypeTests(M, *PublicTypeTestFunc, ShouldDropAll);
-    if (TypeTestFunc || PublicTypeTestFunc) {
-      // We have deleted the type intrinsics, so we no longer have enough
-      // information to reason about the liveness of virtual function pointers
-      // in GlobalDCE.
-      for (GlobalVariable &GV : M.globals())
-        GV.eraseMetadata(LLVMContext::MD_vcall_visibility);
-      return true;
-    }
-    return false;
-  }
 
   // If only some of the modules were split, we cannot correctly perform
   // this transformation. We already checked for the presense of type tests
@@ -2059,6 +2542,38 @@ bool LowerTypeTestsModule::lower() {
       report_fatal_error(
           "unexpected call to llvm.icall.branch.funnel during import phase");
 
+    // For internal linkage cfiFunction defs/decls, we only needed the alias
+    // through the linker. We can replace those aliases with the aliased
+    // function here.
+    SmallVector<std::pair<Function *, std::string>> PromotedFuncs;
+    for (auto &A : llvm::make_early_inc_range(M.aliases())) {
+      if (A.hasLocalLinkage())
+        continue;
+      if (ImportSummary->cfiFunctionDefs().contains(A.getName()) ||
+          ImportSummary->cfiFunctionDecls().contains(A.getName())) {
+        if (auto *F = dyn_cast_or_null<Function>(A.getAliaseeObject())) {
+          if (F->hasExternalLinkage()) {
+            // The original internal linkage function was independently promoted
+            // by thinlink. While, pre-link, all static references to it
+            // (implicitly, module-internal) were replaced with references to
+            // the alias, thinlink might decide to promote it because (for
+            // example) it turns out to be a hot indirect call target in a
+            // different module.
+            // In that case, we need to remember its thinlink-promoted name
+            // because it's potentially referenced elsewhere, and make sure
+            // there's an alias to it.
+            PromotedFuncs.emplace_back(F, F->getName());
+          } else {
+            F->setLinkage(GlobalValue::ExternalLinkage);
+            F->setVisibility(GlobalValue::HiddenVisibility);
+          }
+          A.replaceAllUsesWith(F);
+          F->takeName(&A);
+          A.eraseFromParent();
+        }
+      }
+    }
+
     SmallVector<Function *, 8> Defs;
     SmallVector<Function *, 8> Decls;
     for (auto &F : M) {
@@ -2066,22 +2581,22 @@ bool LowerTypeTestsModule::lower() {
       // have the same name, but it's not the one we are looking for.
       if (F.hasLocalLinkage())
         continue;
-      if (ImportSummary->cfiFunctionDefs().count(F.getName()))
+      if (ImportSummary->cfiFunctionDefs().contains(F.getName()))
         Defs.push_back(&F);
-      else if (ImportSummary->cfiFunctionDecls().count(F.getName()))
+      else if (ImportSummary->cfiFunctionDecls().contains(F.getName()))
         Decls.push_back(&F);
     }
 
-    std::vector<GlobalAlias *> AliasesToErase;
     {
       ScopedSaveAliaseesAndUsed S(M);
       for (auto *F : Defs)
-        importFunction(F, /*isJumpTableCanonical*/ true, AliasesToErase);
+        importFunction(F, /*isJumpTableCanonical*/ true);
       for (auto *F : Decls)
-        importFunction(F, /*isJumpTableCanonical*/ false, AliasesToErase);
+        importFunction(F, /*isJumpTableCanonical*/ false);
     }
-    for (GlobalAlias *GA : AliasesToErase)
-      GA->eraseFromParent();
+    // Add an alias with the thinlink promotion name.
+    for (auto &[F, Name] : PromotedFuncs)
+      GlobalAlias::create(GlobalValue::LinkageTypes::ExternalLinkage, Name, F);
 
     return true;
   }
@@ -2109,10 +2624,6 @@ bool LowerTypeTestsModule::lower() {
   unsigned CurUniqueId = 0;
   SmallVector<MDNode *, 2> Types;
 
-  // Cross-DSO CFI emits jumptable entries for exported functions as well as
-  // address taken functions in case they are address taken in other modules.
-  const bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
-
   struct ExportedFunctionInfo {
     CfiFunctionLinkage Linkage;
     MDNode *FuncMD; // {name, linkage, type[, type...]}
@@ -2124,7 +2635,7 @@ bool LowerTypeTestsModule::lower() {
       // A set of all functions that are address taken by a live global object.
       DenseSet<GlobalValue::GUID> AddressTaken;
       for (auto &I : *ExportSummary)
-        for (auto &GVS : I.second.SummaryList)
+        for (auto &GVS : I.second.getSummaryList())
           if (GVS->isLive())
             for (const auto &Ref : GVS->refs()) {
               AddressTaken.insert(Ref.getGUID());
@@ -2132,24 +2643,38 @@ bool LowerTypeTestsModule::lower() {
                 if (auto Alias = dyn_cast<AliasSummary>(RefGVS.get()))
                   AddressTaken.insert(Alias->getAliaseeGUID());
             }
+      auto IsAddressTaken = [&](GlobalValue::GUID GUID) {
+        if (AddressTaken.count(GUID))
+          return true;
+        auto VI = ExportSummary->getValueInfo(GUID);
+        if (!VI)
+          return false;
+        for (auto &I : VI.getSummaryList())
+          if (auto Alias = dyn_cast<AliasSummary>(I.get()))
+            if (AddressTaken.count(Alias->getAliaseeGUID()))
+              return true;
+        return false;
+      };
       for (auto *FuncMD : CfiFunctionsMD->operands()) {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
             cast<MDString>(FuncMD->getOperand(0))->getString();
-        CfiFunctionLinkage Linkage = static_cast<CfiFunctionLinkage>(
+        CfiFunctionLinkage Linkage = decodeCfiFunctionLinkage(
             cast<ConstantAsMetadata>(FuncMD->getOperand(1))
                 ->getValue()
                 ->getUniqueInteger()
                 .getZExtValue());
         const GlobalValue::GUID GUID =
-            GlobalValue::getGUIDAssumingExternalLinkage(
-                GlobalValue::dropLLVMManglingEscape(FunctionName));
+            cast<ConstantAsMetadata>(FuncMD->getOperand(2))
+                ->getValue()
+                ->getUniqueInteger()
+                .getZExtValue();
         // Do not emit jumptable entries for functions that are not-live and
         // have no live references (and are not exported with cross-DSO CFI.)
         if (!ExportSummary->isGUIDLive(GUID))
           continue;
-        if (!AddressTaken.count(GUID)) {
-          if (!CrossDsoCfi || Linkage != CFL_Definition)
+        if (!IsAddressTaken(GUID)) {
+          if (!CrossDsoCfi || Linkage != CfiFunctionLinkage::Definition)
             continue;
 
           bool Exported = false;
@@ -2162,7 +2687,8 @@ bool LowerTypeTestsModule::lower() {
             continue;
         }
         auto P = ExportedFunctions.insert({FunctionName, {Linkage, FuncMD}});
-        if (!P.second && P.first->second.Linkage != CFL_Definition)
+        if (!P.second &&
+            P.first->second.Linkage != CfiFunctionLinkage::Definition)
           P.first->second = {Linkage, FuncMD};
       }
 
@@ -2182,27 +2708,44 @@ bool LowerTypeTestsModule::lower() {
           F = nullptr;
         }
 
-        if (!F)
+        if (!F) {
           F = Function::Create(
               FunctionType::get(Type::getVoidTy(M.getContext()), false),
               GlobalVariable::ExternalLinkage,
               M.getDataLayout().getProgramAddressSpace(), FunctionName, &M);
-
+          F->setMetadata(
+              LLVMContext::MD_guid,
+              MDTuple::get(M.getContext(), {FuncMD->getOperand(2).get()}));
+          if (ExportSummary) {
+            GlobalValue::GUID GUID =
+                cast<ConstantAsMetadata>(FuncMD->getOperand(2))
+                    ->getValue()
+                    ->getUniqueInteger()
+                    .getZExtValue();
+            if (auto VI = ExportSummary->getValueInfo(GUID))
+              F->setDSOLocal(
+                  VI.isDSOLocal(ExportSummary->withDSOLocalPropagation()));
+          }
+        }
         // If the function is available_externally, remove its definition so
         // that it is handled the same way as a declaration. Later we will try
         // to create an alias using this function's linkage, which will fail if
         // the linkage is available_externally. This will also result in us
         // following the code path below to replace the type metadata.
         if (F->hasAvailableExternallyLinkage()) {
+          // Maintain !guid metadata.
+          auto *OrigGUIDMD = F->getMetadata(LLVMContext::MD_guid);
           F->setLinkage(GlobalValue::ExternalLinkage);
           F->deleteBody();
           F->setComdat(nullptr);
           F->clearMetadata();
+          F->setMetadata(LLVMContext::MD_guid, OrigGUIDMD);
         }
 
         // Update the linkage for extern_weak declarations when a definition
         // exists.
-        if (Linkage == CFL_Definition && F->hasExternalWeakLinkage())
+        if (Linkage == CfiFunctionLinkage::Definition &&
+            F->hasExternalWeakLinkage())
           F->setLinkage(GlobalValue::ExternalLinkage);
 
         // If the function in the full LTO module is a declaration, replace its
@@ -2210,13 +2753,53 @@ bool LowerTypeTestsModule::lower() {
         // metadata is presumed to be more accurate than the metadata attached
         // to the declaration.
         if (F->isDeclaration()) {
-          if (Linkage == CFL_WeakDeclaration)
+          if (Linkage == CfiFunctionLinkage::WeakDeclaration)
             F->setLinkage(GlobalValue::ExternalWeakLinkage);
 
           F->eraseMetadata(LLVMContext::MD_type);
-          for (unsigned I = 2; I < FuncMD->getNumOperands(); ++I)
+          for (unsigned I = 3; I < FuncMD->getNumOperands(); ++I)
             F->addMetadata(LLVMContext::MD_type,
                            *cast<MDNode>(FuncMD->getOperand(I).get()));
+        }
+        uint8_t Encoded = cast<ConstantAsMetadata>(FuncMD->getOperand(1))
+                              ->getValue()
+                              ->getUniqueInteger()
+                              .getZExtValue();
+        // TODO: Implement for Full LTO.
+        FunctionSummaryHotness[F] = decodeCfiFunctionHotness(Encoded);
+      }
+    }
+  }
+
+  struct AliasToCreate {
+    Function *Alias;
+    std::string TargetName;
+  };
+  std::vector<AliasToCreate> AliasesToCreate;
+
+  // Parse alias data to replace stand-in function declarations for aliases
+  // with an alias to the intended target.
+  if (ExportSummary) {
+    if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
+      for (auto *AliasMD : AliasesMD->operands()) {
+        SmallVector<Function *> Aliases;
+        for (MDString *MDS : make_isa_range<MDString>(AliasMD->operands())) {
+          StringRef AliasName = MDS->getString();
+          if (!ExportedFunctions.count(AliasName))
+            continue;
+          auto *AliasF = M.getFunction(AliasName);
+          if (AliasF)
+            Aliases.push_back(AliasF);
+        }
+
+        if (Aliases.empty())
+          continue;
+
+        for (unsigned I = 1; I != Aliases.size(); ++I) {
+          auto *AliasF = Aliases[I];
+          ExportedFunctions.erase(AliasF->getName());
+          AliasesToCreate.push_back(
+              {AliasF, std::string(Aliases[0]->getName())});
         }
       }
     }
@@ -2236,7 +2819,8 @@ bool LowerTypeTestsModule::lower() {
       IsJumpTableCanonical = isJumpTableCanonical(F);
       if (auto It = ExportedFunctions.find(F->getName());
           It != ExportedFunctions.end()) {
-        IsJumpTableCanonical |= It->second.Linkage == CFL_Definition;
+        IsJumpTableCanonical |=
+            It->second.Linkage == CfiFunctionLinkage::Definition;
         IsExported = true;
       // TODO: The logic here checks only that the function is address taken,
       // not that the address takers are live. This can be updated to check
@@ -2246,6 +2830,10 @@ bool LowerTypeTestsModule::lower() {
         if (!CrossDsoCfi || !IsJumpTableCanonical || F->hasLocalLinkage())
           continue;
       }
+
+      // TODO: Pre-fill for full LTO.
+      // if (!ExportSummary)
+      //   FunctionSummaryHotness[F] = getHotness(*F, PSI, BFIGetter);
     }
 
     auto *GTM = GlobalTypeMember::create(Alloc, &GO, IsJumpTableCanonical,
@@ -2327,7 +2915,11 @@ bool LowerTypeTestsModule::lower() {
           report_fatal_error(
               "Expected branch funnel operand to be global value");
 
-        GlobalTypeMember *GTM = GlobalTypeMembers[Base];
+        auto It = GlobalTypeMembers.find(Base);
+        if (It == GlobalTypeMembers.end())
+          reportFatalUsageError("Expected branch funnel operand to be a "
+                                "defined global value with type metadata");
+        GlobalTypeMember *GTM = It->second;
         Targets.push_back(GTM);
         GlobalClassesTy::member_iterator NewSet =
             GlobalClasses.findLeader(GlobalClasses.insert(GTM));
@@ -2354,7 +2946,7 @@ bool LowerTypeTestsModule::lower() {
     }
 
     for (auto &P : *ExportSummary) {
-      for (auto &S : P.second.SummaryList) {
+      for (auto &S : P.second.getSummaryList()) {
         if (!ExportSummary->isGlobalValueLive(S.get()))
           continue;
         if (auto *FS = dyn_cast<FunctionSummary>(S->getBaseObject()))
@@ -2409,47 +3001,17 @@ bool LowerTypeTestsModule::lower() {
 
   allocateByteArrays();
 
-  // Parse alias data to replace stand-in function declarations for aliases
-  // with an alias to the intended target.
-  if (ExportSummary) {
-    if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
-      for (auto *AliasMD : AliasesMD->operands()) {
-        assert(AliasMD->getNumOperands() >= 4);
-        StringRef AliasName =
-            cast<MDString>(AliasMD->getOperand(0))->getString();
-        StringRef Aliasee = cast<MDString>(AliasMD->getOperand(1))->getString();
-
-        if (auto It = ExportedFunctions.find(Aliasee);
-            It == ExportedFunctions.end() ||
-            It->second.Linkage != CFL_Definition || !M.getNamedAlias(Aliasee))
-          continue;
-
-        GlobalValue::VisibilityTypes Visibility =
-            static_cast<GlobalValue::VisibilityTypes>(
-                cast<ConstantAsMetadata>(AliasMD->getOperand(2))
-                    ->getValue()
-                    ->getUniqueInteger()
-                    .getZExtValue());
-        bool Weak =
-            static_cast<bool>(cast<ConstantAsMetadata>(AliasMD->getOperand(3))
-                                  ->getValue()
-                                  ->getUniqueInteger()
-                                  .getZExtValue());
-
-        auto *Alias = GlobalAlias::create("", M.getNamedAlias(Aliasee));
-        Alias->setVisibility(Visibility);
-        if (Weak)
-          Alias->setLinkage(GlobalValue::WeakAnyLinkage);
-
-        if (auto *F = M.getFunction(AliasName)) {
-          Alias->takeName(F);
-          F->replaceAllUsesWith(Alias);
-          F->eraseFromParent();
-        } else {
-          Alias->setName(AliasName);
-        }
-      }
-    }
+  for (auto A : AliasesToCreate) {
+    auto *Target = M.getNamedValue(A.TargetName);
+    if (!isa<GlobalAlias>(Target))
+      continue;
+    auto *AliasGA = GlobalAlias::create("", Target);
+    AliasGA->setVisibility(A.Alias->getVisibility());
+    AliasGA->setLinkage(A.Alias->getLinkage());
+    AliasGA->setDSOLocal(A.Alias->isDSOLocal());
+    AliasGA->takeName(A.Alias);
+    A.Alias->replaceAllUsesWith(AliasGA);
+    A.Alias->eraseFromParent();
   }
 
   // Emit .symver directives for exported functions, if they exist.
@@ -2479,17 +3041,63 @@ PreservedAnalyses LowerTypeTestsPass::run(Module &M,
   if (UseCommandLine)
     Changed = LowerTypeTestsModule::runForTesting(M, AM);
   else
-    Changed =
-        LowerTypeTestsModule(M, AM, ExportSummary, ImportSummary, DropTypeTests)
-            .lower();
+    Changed = LowerTypeTestsModule(M, AM, ExportSummary, ImportSummary).lower();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
 }
 
+void DropTypeTestsPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<DropTypeTestsPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  switch (Kind) {
+  case DropTestKind::Assume:
+    OS << "assume";
+    break;
+  case DropTestKind::All:
+    OS << "all";
+    break;
+  }
+  OS << '>';
+}
+
+PreservedAnalyses DropTypeTestsPass::run(Module &M, ModuleAnalysisManager &AM) {
+  bool ShouldDropAll = Kind == DropTestKind::All;
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  // Dropping all type tests erases the checked load declarations. Since the
+  // proxy is preserved, their analyses need to be cleared before they are
+  // deleted.
+  if (ShouldDropAll) {
+    for (Intrinsic::ID ID : {Intrinsic::type_checked_load,
+                             Intrinsic::type_checked_load_relative}) {
+      if (Function *F = Intrinsic::getDeclarationIfExists(&M, ID))
+        FAM.clear(*F, F->getName());
+    }
+  }
+
+  SmallSetVector<Function *, 8> ModifiedFunctions;
+  if (!dropTypeTests(M, ShouldDropAll, ModifiedFunctions))
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses FuncPA;
+  FuncPA.preserveSet<CFGAnalyses>();
+  for (Function *F : ModifiedFunctions)
+    FAM.invalidate(*F, FuncPA);
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
+}
+
 PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   bool Changed = false;
+  bool ReplacedConstant = false;
+  SmallSetVector<Function *, 8> ModifiedFunctions;
   // Figure out whether inlining has exposed a constant address to a lowered
   // type test, and remove the test if so and the address is known to pass the
   // test. Unfortunately this pass ends up needing to reverse engineer what
@@ -2534,6 +3142,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
           // This is an equality comparison (TypeTestResolution::Single case in
           // lowerTypeTestCall). In this case we just replace the comparison
           // with true.
+          ModifiedFunctions.insert(CI->getFunction());
           CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
           CI->eraseFromParent();
           Changed = true;
@@ -2554,6 +3163,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
           // should cause later passes to remove the range and alignment checks.
           // The bitset checks won't be removed but those are uncommon.
           CE->replaceAllUsesWith(ConstantInt::get(CE->getType(), 0));
+          ReplacedConstant = true;
           Changed = true;
         }
         auto *CI = dyn_cast<ICmpInst>(U.getUser());
@@ -2562,6 +3172,7 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
             MaySimplifyInt(CI->getOperand(0))) {
           // This is an equality comparison. Unlike in the case above it
           // remained as an integer compare.
+          ModifiedFunctions.insert(CI->getFunction());
           CI->replaceAllUsesWith(ConstantInt::getTrue(M.getContext()));
           CI->eraseFromParent();
           Changed = true;
@@ -2572,9 +3183,20 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
 
   if (!Changed)
     return PreservedAnalyses::all();
-  PreservedAnalyses PA = PreservedAnalyses::none();
-  PA.preserve<DominatorTreeAnalysis>();
-  PA.preserve<PostDominatorTreeAnalysis>();
-  PA.preserve<LoopAnalysis>();
+
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  PreservedAnalyses FuncPA;
+  FuncPA.preserveSet<CFGAnalyses>();
+  for (Function *F : ModifiedFunctions)
+    FAM.invalidate(*F, FuncPA);
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  // Replacing a constant may affect any function using it, but not its CFG.
+  if (ReplacedConstant)
+    PA.preserveSet<CFGAnalyses>();
+  else
+    PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }

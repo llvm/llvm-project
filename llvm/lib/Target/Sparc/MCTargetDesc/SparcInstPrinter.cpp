@@ -12,6 +12,7 @@
 
 #include "SparcInstPrinter.h"
 #include "Sparc.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -125,21 +126,8 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   }
 
   if (MO.isImm()) {
-    switch (MI->getOpcode()) {
-      default:
-        markup(O, Markup::Immediate) << formatImm(int32_t(MO.getImm()));
-        return;
-
-      case SP::TICCri: // Fall through
-      case SP::TICCrr: // Fall through
-      case SP::TRAPri: // Fall through
-      case SP::TRAPrr: // Fall through
-      case SP::TXCCri: // Fall through
-      case SP::TXCCrr: // Fall through
-        // Only seven-bit values up to 127.
-        O << ((int) MO.getImm() & 0x7f);
-        return;
-    }
+    markup(O, Markup::Immediate) << formatImm(int32_t(MO.getImm()));
+    return;
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");
@@ -235,12 +223,10 @@ void SparcInstPrinter::printMembarTag(const MCInst *MI, int opNum,
     return;
   }
 
-  bool First = true;
+  ListSeparator LS(" | ");
   for (unsigned i = 0; i < std::size(TagNames); i++) {
-    if (Imm & (1 << i)) {
-      O << (First ? "" : " | ") << TagNames[i];
-      First = false;
-    }
+    if (Imm & (1 << i))
+      O << LS << TagNames[i];
   }
 }
 
@@ -249,7 +235,7 @@ void SparcInstPrinter::printASITag(const MCInst *MI, int opNum,
   unsigned Imm = MI->getOperand(opNum).getImm();
   auto ASITag = SparcASITag::lookupASITagByEncoding(Imm);
   if (isV9(STI) && ASITag)
-    O << '#' << ASITag->Name;
+    O << '#' << SparcASITag::getASITagStr(ASITag->Name);
   else
     O << Imm;
 }
@@ -260,7 +246,7 @@ void SparcInstPrinter::printPrefetchTag(const MCInst *MI, int opNum,
   unsigned Imm = MI->getOperand(opNum).getImm();
   auto PrefetchTag = SparcPrefetchTag::lookupPrefetchTagByEncoding(Imm);
   if (PrefetchTag)
-    O << '#' << PrefetchTag->Name;
+    O << '#' << SparcPrefetchTag::getPrefetchTagStr(PrefetchTag->Name);
   else
     O << Imm;
 }

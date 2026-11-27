@@ -11,8 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ptr;
@@ -24,26 +22,30 @@ constexpr const static unsigned kBitsInByte = 8;
 //===----------------------------------------------------------------------===//
 
 bool GenericSpaceAttr::isValidLoad(
-    Type type, ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }
 
 bool GenericSpaceAttr::isValidStore(
-    Type type, ptr::AtomicOrdering ordering, IntegerAttr alignment,
+    Type type, ptr::AtomicOrdering ordering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }
 
 bool GenericSpaceAttr::isValidAtomicOp(
     ptr::AtomicBinOp op, Type type, ptr::AtomicOrdering ordering,
-    IntegerAttr alignment, function_ref<InFlightDiagnostic()> emitError) const {
+    std::optional<int64_t> alignment, const ::mlir::DataLayout *dataLayout,
+    function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }
 
 bool GenericSpaceAttr::isValidAtomicXchg(
     Type type, ptr::AtomicOrdering successOrdering,
-    ptr::AtomicOrdering failureOrdering, IntegerAttr alignment,
+    ptr::AtomicOrdering failureOrdering, std::optional<int64_t> alignment,
+    const ::mlir::DataLayout *dataLayout,
     function_ref<InFlightDiagnostic()> emitError) const {
   return true;
 }

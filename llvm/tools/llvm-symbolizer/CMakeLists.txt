@@ -4,7 +4,7 @@
 # targets as well. Currently, there is no support for such a build strategy.
 
 set(LLVM_TARGET_DEFINITIONS Opts.td)
-tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+llvm_tablegen(Opts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(SymbolizerOptsTableGen)
 
 set(LLVM_LINK_COMPONENTS
@@ -24,7 +24,7 @@ add_llvm_tool(llvm-symbolizer
   )
 
 if(NOT LLVM_TOOL_LLVM_DRIVER_BUILD)
-  target_link_libraries(llvm-symbolizer PRIVATE LLVMDebuginfod)
+  target_link_libraries(llvm-symbolizer PRIVATE LLVMDebuginfod LLVMHTTP)
 endif()
 
 add_llvm_tool_symlink(llvm-addr2line llvm-symbolizer)

@@ -18,12 +18,15 @@
 #include "PPCInstrInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
 
 using namespace llvm;
@@ -108,6 +111,8 @@ struct BlockSplitInfo {
   MachineInstr *OrigBranch;
   MachineInstr *SplitBefore;
   MachineInstr *SplitCond;
+  unsigned OrigSubreg;
+  unsigned SplitCondSubreg;
   bool InvertNewBranch;
   bool InvertOrigBranch;
   bool BranchToFallThrough;
@@ -220,7 +225,7 @@ static bool splitMBB(BlockSplitInfo &BSI) {
   // Add the branches to ThisMBB.
   BuildMI(*ThisMBB, ThisMBB->end(), BSI.SplitBefore->getDebugLoc(),
           TII->get(NewBROpcode))
-      .addReg(BSI.SplitCond->getOperand(0).getReg())
+      .addReg(BSI.SplitCond->getOperand(0).getReg(), {}, BSI.SplitCondSubreg)
       .addMBB(NewBRTarget);
   BuildMI(*ThisMBB, ThisMBB->end(), BSI.SplitBefore->getDebugLoc(),
           TII->get(PPC::B))
@@ -234,6 +239,7 @@ static bool splitMBB(BlockSplitInfo &BSI) {
     assert(FirstTerminator->getOperand(0).isReg() &&
            "Can't update condition of unconditional branch.");
     FirstTerminator->getOperand(0).setReg(BSI.NewCond->getOperand(0).getReg());
+    FirstTerminator->getOperand(0).setSubReg(BSI.OrigSubreg);
   }
   if (BSI.InvertOrigBranch)
     FirstTerminator->setDesc(TII->get(InvertedOpcode));
@@ -244,6 +250,15 @@ static bool splitMBB(BlockSplitInfo &BSI) {
     updatePHIs(Succ, ThisMBB, NewMBB, MRI);
   }
   addIncomingValuesToPHIs(NewBRTarget, ThisMBB, NewMBB, MRI);
+
+  // Physical registers (e.g. the carry bit) may be live across the split
+  // point, so NewMBB needs a live-in list.
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *NewMBB);
+
+  // Set the call frame size on ThisMBB to the new basic blocks.
+  // See https://reviews.llvm.org/D156113.
+  NewMBB->setCallFrameSize(TII->getCallFrameSizeAt(ThisMBB->back()));
 
   LLVM_DEBUG(dbgs() << "After splitting, ThisMBB:\n"; ThisMBB->dump());
   LLVM_DEBUG(dbgs() << "NewMBB:\n"; NewMBB->dump());
@@ -425,7 +440,7 @@ public:
   CRLogicalOpInfo createCRLogicalOpInfo(MachineInstr &MI);
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -471,6 +486,7 @@ PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {
   } else {
     MachineInstr *Def1 = lookThroughCRCopy(MIParam.getOperand(1).getReg(),
                                            Ret.SubregDef1, Ret.CopyDefs.first);
+    Ret.SubregDef1 = MIParam.getOperand(1).getSubReg();
     assert(Def1 && "Must be able to find a definition of operand 1.");
     Ret.DefsSingleUse &=
       MRI->hasOneNonDBGUse(Def1->getOperand(0).getReg());
@@ -481,6 +497,7 @@ PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {
       MachineInstr *Def2 = lookThroughCRCopy(MIParam.getOperand(2).getReg(),
                                              Ret.SubregDef2,
                                              Ret.CopyDefs.second);
+      Ret.SubregDef2 = MIParam.getOperand(2).getSubReg();
       assert(Def2 && "Must be able to find a definition of operand 2.");
       Ret.DefsSingleUse &=
         MRI->hasOneNonDBGUse(Def2->getOperand(0).getReg());
@@ -535,7 +552,6 @@ PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {
 MachineInstr *PPCReduceCRLogicals::lookThroughCRCopy(unsigned Reg,
                                                      unsigned &Subreg,
                                                      MachineInstr *&CpDef) {
-  Subreg = -1;
   if (!Register::isVirtualRegister(Reg))
     return nullptr;
   MachineInstr *Copy = MRI->getVRegDef(Reg);
@@ -543,18 +559,8 @@ MachineInstr *PPCReduceCRLogicals::lookThroughCRCopy(unsigned Reg,
   if (!Copy->isCopy())
     return Copy;
   Register CopySrc = Copy->getOperand(1).getReg();
-  Subreg = Copy->getOperand(1).getSubReg();
   if (!CopySrc.isVirtual()) {
     const TargetRegisterInfo *TRI = &TII->getRegisterInfo();
-    // Set the Subreg
-    if (CopySrc == PPC::CR0EQ || CopySrc == PPC::CR6EQ)
-      Subreg = PPC::sub_eq;
-    if (CopySrc == PPC::CR0LT || CopySrc == PPC::CR6LT)
-      Subreg = PPC::sub_lt;
-    if (CopySrc == PPC::CR0GT || CopySrc == PPC::CR6GT)
-      Subreg = PPC::sub_gt;
-    if (CopySrc == PPC::CR0UN || CopySrc == PPC::CR6UN)
-      Subreg = PPC::sub_un;
     // Loop backwards and return the first MI that modifies the physical CR Reg.
     MachineBasicBlock::iterator Me = Copy, B = Copy->getParent()->begin();
     while (Me != B)
@@ -655,7 +661,7 @@ bool PPCReduceCRLogicals::splitBlockOnBinaryCROp(CRLogicalOpInfo &CRI) {
 
   // Get the branch instruction.
   MachineInstr *Branch =
-    MRI->use_nodbg_begin(CRI.MI->getOperand(0).getReg())->getParent();
+      &*MRI->use_instr_nodbg_begin(CRI.MI->getOperand(0).getReg());
 
   // We want the new block to have no code in it other than the definition
   // of the input to the CR logical and the CR logical itself. So we move
@@ -682,16 +688,21 @@ bool PPCReduceCRLogicals::splitBlockOnBinaryCROp(CRLogicalOpInfo &CRI) {
   computeBranchTargetAndInversion(Opc, Branch->getOpcode(), UsingDef1,
                                   InvertNewBranch, InvertOrigBranch,
                                   TargetIsFallThrough);
-  MachineInstr *SplitCond =
-    UsingDef1 ? CRI.CopyDefs.second : CRI.CopyDefs.first;
+  MachineInstr *NewCond = CRI.CopyDefs.first;
+  MachineInstr *SplitCond = CRI.CopyDefs.second;
+  if (!UsingDef1) {
+    std::swap(NewCond, SplitCond);
+    std::swap(CRI.SubregDef1, CRI.SubregDef2);
+  }
   LLVM_DEBUG(dbgs() << "We will " << (InvertNewBranch ? "invert" : "copy"));
   LLVM_DEBUG(dbgs() << " the original branch and the target is the "
                     << (TargetIsFallThrough ? "fallthrough block\n"
                                             : "orig. target block\n"));
   LLVM_DEBUG(dbgs() << "Original branch instruction: "; Branch->dump());
-  BlockSplitInfo BSI { Branch, SplitBefore, SplitCond, InvertNewBranch,
-    InvertOrigBranch, TargetIsFallThrough, MBPI, CRI.MI,
-    UsingDef1 ? CRI.CopyDefs.first : CRI.CopyDefs.second };
+  BlockSplitInfo BSI{
+      Branch,         SplitBefore,     SplitCond,        CRI.SubregDef1,
+      CRI.SubregDef2, InvertNewBranch, InvertOrigBranch, TargetIsFallThrough,
+      MBPI,           CRI.MI,          NewCond};
   bool Changed = splitMBB(BSI);
   // If we've split on a CR logical that is fed by a CR logical,
   // recompute the source CR logical as it may be usable for splitting.

@@ -23,7 +23,7 @@ define <vscale x 4 x i32> @rvv_vector_cc_1() {
 ; CHECK-ASM-NEXT: rvv_vector_cc_1:
 ; CHECK-OBJ-LABEL: Name: rvv_vector_cc_1
 ; CHECK-OBJ: Other [ (0x80)
-  ret <vscale x 4 x i32> undef
+  ret <vscale x 4 x i32> poison
 }
 
 define <vscale x 4 x i1> @rvv_vector_cc_2() {
@@ -31,7 +31,7 @@ define <vscale x 4 x i1> @rvv_vector_cc_2() {
 ; CHECK-ASM-NEXT: rvv_vector_cc_2:
 ; CHECK-OBJ-LABEL: Name: rvv_vector_cc_2
 ; CHECK-OBJ: Other [ (0x80)
-  ret <vscale x 4 x i1> undef
+  ret <vscale x 4 x i1> poison
 }
 
 define void @rvv_vector_cc_3(<vscale x 4 x i32> %arg) {

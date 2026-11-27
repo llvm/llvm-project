@@ -13,8 +13,12 @@
 // Check that std::flat_set and its iterators can be instantiated with an incomplete
 // type.
 
+// FIXME: We should avoid SFINAEing in any of this code
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-sfinae-incomplete
+
 #include <flat_set>
 #include <vector>
+#include "test_macros.h"
 
 struct A {
   using Set = std::flat_set<A>;
@@ -25,12 +29,18 @@ struct A {
 };
 
 // Implement the operator< required in order to instantiate flat_set<A>
-bool operator<(A const& L, A const& R) { return L.data < R.data; }
+constexpr bool operator<(A const& L, A const& R) { return L.data < R.data; }
 
-void test() { A a; }
+constexpr bool test() {
+  A a;
+  return true;
+}
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -8,18 +8,17 @@
 
 #include "PPCMachineScheduler.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "PPCSubtarget.h"
 
 using namespace llvm;
 
-static cl::opt<bool> 
-DisableAddiLoadHeuristic("disable-ppc-sched-addi-load",
-                         cl::desc("Disable scheduling addi instruction before" 
-                                  "load for ppc"), cl::Hidden);
-static cl::opt<bool>
-    EnableAddiHeuristic("ppc-postra-bias-addi",
-                        cl::desc("Enable scheduling addi instruction as early"
-                                 "as possible post ra"),
-                        cl::Hidden, cl::init(true));
+PPCPreRASchedStrategy::PPCPreRASchedStrategy(const MachineSchedContext *C)
+    : GenericScheduler(C),
+      CLOpts(C->MF->getSubtarget<PPCSubtarget>().getCLOpts()) {}
+
+PPCPostRASchedStrategy::PPCPostRASchedStrategy(const MachineSchedContext *C)
+    : PostGenericScheduler(C),
+      CLOpts(C->MF->getSubtarget<PPCSubtarget>().getCLOpts()) {}
 
 static bool isADDIInstr(const GenericScheduler::SchedCandidate &Cand) {
   return Cand.SU->getInstr()->getOpcode() == PPC::ADDI ||
@@ -29,7 +28,7 @@ static bool isADDIInstr(const GenericScheduler::SchedCandidate &Cand) {
 bool PPCPreRASchedStrategy::biasAddiLoadCandidate(SchedCandidate &Cand,
                                                   SchedCandidate &TryCand,
                                                   SchedBoundary &Zone) const {
-  if (DisableAddiLoadHeuristic)
+  if (!CLOpts.sched_addi_load)
     return false;
 
   SchedCandidate &FirstCand = Zone.isTop() ? TryCand : Cand;
@@ -100,10 +99,14 @@ bool PPCPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
-  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
-  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
-                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
 
@@ -163,7 +166,7 @@ bool PPCPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
 
 bool PPCPostRASchedStrategy::biasAddiCandidate(SchedCandidate &Cand,
                                                SchedCandidate &TryCand) const {
-  if (!EnableAddiHeuristic)
+  if (!CLOpts.postra_bias_addi)
     return false;
 
   if (isADDIInstr(TryCand) && !isADDIInstr(Cand)) {
@@ -189,10 +192,14 @@ bool PPCPostRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   // Keep clustered nodes together.
-  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
-  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
-  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
-                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
 

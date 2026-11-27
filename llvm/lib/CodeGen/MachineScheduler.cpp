@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineScheduler.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -25,7 +26,7 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
-#include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -176,123 +177,40 @@ STATISTIC(NumNodeOrderPostRA,
 STATISTIC(NumFirstValidPostRA,
           "Number of scheduling units chosen for FirstValid heuristic post-RA");
 
-namespace llvm {
+static cl::opt<TargetSubtargetInfo::AntiDepBreakMode> PostRABreakAntiDeps(
+    "misched-postra-break-antideps", cl::Hidden,
+    cl::desc("Set the post-RA MISched anti-dependency break mode"),
+    cl::init(TargetSubtargetInfo::ANTIDEP_NONE),
+    cl::values(clEnumValN(TargetSubtargetInfo::ANTIDEP_NONE, "none",
+                          "No anti-dependency breaking"),
+               clEnumValN(TargetSubtargetInfo::ANTIDEP_CRITICAL, "critical",
+                          "Break critical-path anti-dependencies"),
+               clEnumValN(TargetSubtargetInfo::ANTIDEP_ALL, "all",
+                          "Break all anti-dependencies")));
 
-cl::opt<MISched::Direction> PreRADirection(
-    "misched-prera-direction", cl::Hidden,
-    cl::desc("Pre reg-alloc list scheduling direction"),
-    cl::init(MISched::Unspecified),
-    cl::values(
-        clEnumValN(MISched::TopDown, "topdown",
-                   "Force top-down pre reg-alloc list scheduling"),
-        clEnumValN(MISched::BottomUp, "bottomup",
-                   "Force bottom-up pre reg-alloc list scheduling"),
-        clEnumValN(MISched::Bidirectional, "bidirectional",
-                   "Force bidirectional pre reg-alloc list scheduling")));
-
-static cl::opt<MISched::Direction> PostRADirection(
-    "misched-postra-direction", cl::Hidden,
-    cl::desc("Post reg-alloc list scheduling direction"),
-    cl::init(MISched::Unspecified),
-    cl::values(
-        clEnumValN(MISched::TopDown, "topdown",
-                   "Force top-down post reg-alloc list scheduling"),
-        clEnumValN(MISched::BottomUp, "bottomup",
-                   "Force bottom-up post reg-alloc list scheduling"),
-        clEnumValN(MISched::Bidirectional, "bidirectional",
-                   "Force bidirectional post reg-alloc list scheduling")));
-
-static cl::opt<bool>
-    DumpCriticalPathLength("misched-dcpl", cl::Hidden,
-                           cl::desc("Print critical path length to stdout"));
-
-cl::opt<bool> VerifyScheduling(
-    "verify-misched", cl::Hidden,
-    cl::desc("Verify machine instrs before and after machine scheduling"));
-
+MISched::Direction llvm::getPreRADirection(const MachineFunction &MF) {
+  return getCodeGenOptions(MF).misched_prera_direction;
+}
+TargetSubtargetInfo::AntiDepBreakMode llvm::getPostRABreakAntiDeps() {
+  return PostRABreakAntiDeps;
+}
+bool llvm::shouldVerifyScheduling(const MachineFunction &MF) {
+  return getCodeGenOptions(MF).verify_misched;
+}
+bool llvm::shouldPrintMISchedDAGs(const MachineFunction &MF) {
 #ifndef NDEBUG
-cl::opt<bool> ViewMISchedDAGs(
-    "view-misched-dags", cl::Hidden,
-    cl::desc("Pop up a window to show MISched dags after they are processed"));
-cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
-                        cl::desc("Print schedule DAGs"));
-cl::opt<bool> MISchedDumpReservedCycles(
-    "misched-dump-reserved-cycles", cl::Hidden, cl::init(false),
-    cl::desc("Dump resource usage at schedule boundary."));
-cl::opt<bool> MischedDetailResourceBooking(
-    "misched-detail-resource-booking", cl::Hidden, cl::init(false),
-    cl::desc("Show details of invoking getNextResoufceCycle."));
+  return getCodeGenOptions(MF).misched_print_dags;
 #else
-const bool ViewMISchedDAGs = false;
-const bool PrintDAGs = false;
-const bool MischedDetailResourceBooking = false;
-#ifdef LLVM_ENABLE_DUMP
-const bool MISchedDumpReservedCycles = false;
-#endif // LLVM_ENABLE_DUMP
-#endif // NDEBUG
-
-} // end namespace llvm
-
-#ifndef NDEBUG
-/// In some situations a few uninteresting nodes depend on nearly all other
-/// nodes in the graph, provide a cutoff to hide them.
-static cl::opt<unsigned> ViewMISchedCutoff("view-misched-cutoff", cl::Hidden,
-  cl::desc("Hide nodes with more predecessor/successor than cutoff"));
-
-static cl::opt<unsigned> MISchedCutoff("misched-cutoff", cl::Hidden,
-  cl::desc("Stop scheduling after N instructions"), cl::init(~0U));
-
-static cl::opt<std::string> SchedOnlyFunc("misched-only-func", cl::Hidden,
-  cl::desc("Only schedule this function"));
-static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
-                                        cl::desc("Only schedule this MBB#"));
-#endif // NDEBUG
-
-/// Avoid quadratic complexity in unusually large basic blocks by limiting the
-/// size of the ready lists.
-static cl::opt<unsigned> ReadyListLimit("misched-limit", cl::Hidden,
-  cl::desc("Limit ready list to N instructions"), cl::init(256));
-
-static cl::opt<bool> EnableRegPressure("misched-regpressure", cl::Hidden,
-  cl::desc("Enable register pressure scheduling."), cl::init(true));
-
-static cl::opt<bool> EnableCyclicPath("misched-cyclicpath", cl::Hidden,
-  cl::desc("Enable cyclic critical path analysis."), cl::init(true));
-
-static cl::opt<bool> EnableMemOpCluster("misched-cluster", cl::Hidden,
-                                        cl::desc("Enable memop clustering."),
-                                        cl::init(true));
-static cl::opt<bool>
-    ForceFastCluster("force-fast-cluster", cl::Hidden,
-                     cl::desc("Switch to fast cluster algorithm with the lost "
-                              "of some fusion opportunities"),
-                     cl::init(false));
-static cl::opt<unsigned>
-    FastClusterThreshold("fast-cluster-threshold", cl::Hidden,
-                         cl::desc("The threshold for fast cluster"),
-                         cl::init(1000));
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-static cl::opt<bool> MISchedDumpScheduleTrace(
-    "misched-dump-schedule-trace", cl::Hidden, cl::init(false),
-    cl::desc("Dump resource usage at schedule boundary."));
-static cl::opt<unsigned>
-    HeaderColWidth("misched-dump-schedule-trace-col-header-width", cl::Hidden,
-                   cl::desc("Set width of the columns with "
-                            "the resources and schedule units"),
-                   cl::init(19));
-static cl::opt<unsigned>
-    ColWidth("misched-dump-schedule-trace-col-width", cl::Hidden,
-             cl::desc("Set width of the columns showing resource booking."),
-             cl::init(5));
-static cl::opt<bool> MISchedSortResourcesInTrace(
-    "misched-sort-resources-in-trace", cl::Hidden, cl::init(true),
-    cl::desc("Sort the resources printed in the dump trace"));
+  return false;
 #endif
-
-static cl::opt<unsigned>
-    MIResourceCutOff("misched-resource-cutoff", cl::Hidden,
-                     cl::desc("Number of intervals to track"), cl::init(10));
+}
+bool llvm::shouldViewMISchedDAGs(const MachineFunction &MF) {
+#ifndef NDEBUG
+  return getCodeGenOptions(MF).misched_view_dags;
+#else
+  return false;
+#endif
+}
 
 // DAG subtrees must have at least this many nodes.
 static const unsigned MinSubtreeSize = 8;
@@ -306,13 +224,8 @@ void ScheduleDAGMutation::anchor() {}
 // Machine Instruction Scheduling Pass and Registry
 //===----------------------------------------------------------------------===//
 
-MachineSchedContext::MachineSchedContext() {
-  RegClassInfo = new RegisterClassInfo();
-}
-
-MachineSchedContext::~MachineSchedContext() {
-  delete RegClassInfo;
-}
+MachineSchedContext::MachineSchedContext() = default;
+MachineSchedContext::~MachineSchedContext() = default;
 
 namespace llvm {
 namespace impl_detail {
@@ -333,12 +246,41 @@ class MachineSchedulerImpl : public MachineSchedulerBase {
 public:
   struct RequiredAnalyses {
     MachineLoopInfo &MLI;
-    MachineDominatorTree &MDT;
     AAResults &AA;
     LiveIntervals &LIS;
+    RegisterClassInfo &RegClassInfo;
+    MachineBlockFrequencyInfo &MBFI;
   };
 
-  MachineSchedulerImpl() {}
+  MachineSchedulerImpl() = default;
+  // Migration only
+  void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
+  void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }
+
+  bool run(MachineFunction &MF, const TargetMachine &TM,
+           const RequiredAnalyses &Analyses);
+
+protected:
+  ScheduleDAGInstrs *createMachineScheduler();
+};
+
+/// Impl class for SSAMachineScheduler.
+class SSAMachineSchedulerImpl : public MachineSchedulerBase {
+  // These are only for using MF.verify()
+  // remove when verify supports passing in all analyses
+  MachineFunctionPass *P = nullptr;
+  MachineFunctionAnalysisManager *MFAM = nullptr;
+
+public:
+  struct RequiredAnalyses {
+    MachineLoopInfo &MLI;
+    AAResults &AA;
+    LiveIntervals &LIS;
+    RegisterClassInfo &RegClassInfo;
+    MachineBlockFrequencyInfo &MBFI;
+  };
+
+  SSAMachineSchedulerImpl() {}
   // Migration only
   void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
   void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }
@@ -361,8 +303,9 @@ public:
   struct RequiredAnalyses {
     MachineLoopInfo &MLI;
     AAResults &AA;
+    RegisterClassInfo &RCI;
   };
-  PostMachineSchedulerImpl() {}
+  PostMachineSchedulerImpl() = default;
   // Migration only
   void setLegacyPass(MachineFunctionPass *P) { this->P = P; }
   void setMFAM(MachineFunctionAnalysisManager *MFAM) { this->MFAM = MFAM; }
@@ -380,6 +323,7 @@ protected:
 using impl_detail::MachineSchedulerBase;
 using impl_detail::MachineSchedulerImpl;
 using impl_detail::PostMachineSchedulerImpl;
+using impl_detail::SSAMachineSchedulerImpl;
 
 namespace {
 /// MachineScheduler runs after coalescing and before register allocation.
@@ -390,6 +334,18 @@ public:
   MachineSchedulerLegacy();
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction&) override;
+
+  static char ID; // Class identification, replacement for typeinfo
+};
+
+/// SSAMachineScheduler runs before PHI elimination.
+class SSAMachineSchedulerLegacy : public MachineFunctionPass {
+  SSAMachineSchedulerImpl Impl;
+
+public:
+  SSAMachineSchedulerLegacy();
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+  bool runOnMachineFunction(MachineFunction &) override;
 
   static char ID; // Class identification, replacement for typeinfo
 };
@@ -415,27 +371,57 @@ char &llvm::MachineSchedulerID = MachineSchedulerLegacy::ID;
 INITIALIZE_PASS_BEGIN(MachineSchedulerLegacy, DEBUG_TYPE,
                       "Machine Instruction Scheduler", false, false)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass);
 INITIALIZE_PASS_END(MachineSchedulerLegacy, DEBUG_TYPE,
                     "Machine Instruction Scheduler", false, false)
 
-MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {
-  initializeMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
-}
+MachineSchedulerLegacy::MachineSchedulerLegacy() : MachineFunctionPass(ID) {}
 
 void MachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
-  AU.addRequired<SlotIndexesWrapperPass>();
   AU.addPreserved<SlotIndexesWrapperPass>();
   AU.addRequired<LiveIntervalsWrapperPass>();
   AU.addPreserved<LiveIntervalsWrapperPass>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
+  MachineFunctionPass::getAnalysisUsage(AU);
+}
+
+char SSAMachineSchedulerLegacy::ID = 0;
+
+char &llvm::SSAMachineSchedulerID = SSAMachineSchedulerLegacy::ID;
+
+INITIALIZE_PASS_BEGIN(SSAMachineSchedulerLegacy, "ssa-machine-scheduler",
+                      "SSA Machine Instruction Scheduler", false, false)
+INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfoWrapperPass);
+INITIALIZE_PASS_END(SSAMachineSchedulerLegacy, "ssa-machine-scheduler",
+                    "SSA Machine Instruction Scheduler", false, false)
+
+SSAMachineSchedulerLegacy::SSAMachineSchedulerLegacy()
+    : MachineFunctionPass(ID) {
+  initializeSSAMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
+}
+
+void SSAMachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesCFG();
+  AU.addRequired<MachineLoopInfoWrapperPass>();
+  AU.addRequired<AAResultsWrapperPass>();
+  AU.addRequired<TargetPassConfig>();
+  AU.addPreserved<SlotIndexesWrapperPass>();
+  AU.addRequired<LiveIntervalsWrapperPass>();
+  AU.addPreserved<LiveIntervalsWrapperPass>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+  AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -445,23 +431,21 @@ char &llvm::PostMachineSchedulerID = PostMachineSchedulerLegacy::ID;
 
 INITIALIZE_PASS_BEGIN(PostMachineSchedulerLegacy, "postmisched",
                       "PostRA Machine Instruction Scheduler", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
 INITIALIZE_PASS_END(PostMachineSchedulerLegacy, "postmisched",
                     "PostRA Machine Instruction Scheduler", false, false)
 
 PostMachineSchedulerLegacy::PostMachineSchedulerLegacy()
-    : MachineFunctionPass(ID) {
-  initializePostMachineSchedulerLegacyPass(*PassRegistry::getPassRegistry());
-}
+    : MachineFunctionPass(ID) {}
 
 void PostMachineSchedulerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
-  AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachineLoopInfoWrapperPass>();
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<TargetPassConfig>();
+  AU.addRequired<MachineRegisterClassInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -484,16 +468,6 @@ MachineSchedOpt("misched",
 static MachineSchedRegistry
 DefaultSchedRegistry("default", "Use the target's default scheduler choice.",
                      useDefaultMachineSched);
-
-static cl::opt<bool> EnableMachineSched(
-    "enable-misched",
-    cl::desc("Enable the machine instruction scheduling pass."), cl::init(true),
-    cl::Hidden);
-
-static cl::opt<bool> EnablePostRAMachineSched(
-    "enable-post-misched",
-    cl::desc("Enable the post-ra machine instruction scheduling pass."),
-    cl::init(true), cl::Hidden);
 
 /// Decrement this iterator until reaching the top or a non-debug instr.
 static MachineBasicBlock::const_iterator
@@ -555,12 +529,62 @@ bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
                                const RequiredAnalyses &Analyses) {
   MF = &Func;
   MLI = &Analyses.MLI;
-  MDT = &Analyses.MDT;
   this->TM = &TM;
   AA = &Analyses.AA;
   LIS = &Analyses.LIS;
+  RegClassInfo = &Analyses.RegClassInfo;
+  MBFI = &Analyses.MBFI;
 
-  if (VerifyScheduling) {
+  const CodeGenOptions &Opts = getCodeGenOptions(Func);
+  if (Opts.verify_misched) {
+    LLVM_DEBUG(LIS->dump());
+    const char *MSchedBanner = "Before machine scheduling.";
+    if (P)
+      MF->verify(P, MSchedBanner, &errs());
+    else
+      MF->verify(*MFAM, MSchedBanner, &errs());
+  }
+
+  // Instantiate the selected scheduler for this target, function, and
+  // optimization level.
+  std::unique_ptr<ScheduleDAGInstrs> Scheduler(createMachineScheduler());
+  scheduleRegions(*Scheduler, false);
+
+  LLVM_DEBUG(LIS->dump());
+  if (Opts.verify_misched) {
+    const char *MSchedBanner = "After machine scheduling.";
+    if (P)
+      MF->verify(P, MSchedBanner, &errs());
+    else
+      MF->verify(*MFAM, MSchedBanner, &errs());
+  }
+  return true;
+}
+
+/// Instantiate a ScheduleDAGInstrs that will be owned by the caller.
+ScheduleDAGInstrs *SSAMachineSchedulerImpl::createMachineScheduler() {
+  // Get the default scheduler set by the target for this function.
+  ScheduleDAGInstrs *Scheduler = TM->createMachineScheduler(this);
+  if (Scheduler)
+    return Scheduler;
+
+  // Default to GenericScheduler.
+  return createSchedLive(this);
+}
+
+bool SSAMachineSchedulerImpl::run(MachineFunction &Func,
+                                  const TargetMachine &TM,
+                                  const RequiredAnalyses &Analyses) {
+  MF = &Func;
+  MLI = &Analyses.MLI;
+  this->TM = &TM;
+  AA = &Analyses.AA;
+  LIS = &Analyses.LIS;
+  RegClassInfo = &Analyses.RegClassInfo;
+  MBFI = &Analyses.MBFI;
+
+  const CodeGenOptions &Opts = getCodeGenOptions(Func);
+  if (Opts.verify_misched) {
     LLVM_DEBUG(LIS->dump());
     const char *MSchedBanner = "Before machine scheduling.";
     if (P)
@@ -576,7 +600,7 @@ bool MachineSchedulerImpl::run(MachineFunction &Func, const TargetMachine &TM,
   scheduleRegions(*Scheduler, false);
 
   LLVM_DEBUG(LIS->dump());
-  if (VerifyScheduling) {
+  if (Opts.verify_misched) {
     const char *MSchedBanner = "After machine scheduling.";
     if (P)
       MF->verify(P, MSchedBanner, &errs());
@@ -606,8 +630,10 @@ bool PostMachineSchedulerImpl::run(MachineFunction &Func,
   MLI = &Analyses.MLI;
   this->TM = &TM;
   AA = &Analyses.AA;
+  RegClassInfo = &Analyses.RCI;
 
-  if (VerifyScheduling) {
+  const CodeGenOptions &Opts = getCodeGenOptions(Func);
+  if (Opts.verify_misched) {
     const char *PostMSchedBanner = "Before post machine scheduling.";
     if (P)
       MF->verify(P, PostMSchedBanner, &errs());
@@ -620,7 +646,7 @@ bool PostMachineSchedulerImpl::run(MachineFunction &Func,
   std::unique_ptr<ScheduleDAGInstrs> Scheduler(createPostMachineScheduler());
   scheduleRegions(*Scheduler, true);
 
-  if (VerifyScheduling) {
+  if (Opts.verify_misched) {
     const char *PostMSchedBanner = "After post machine scheduling.";
     if (P)
       MF->verify(P, PostMSchedBanner, &errs());
@@ -650,22 +676,42 @@ bool MachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  if (EnableMachineSched.getNumOccurrences()) {
-    if (!EnableMachineSched)
-      return false;
-  } else if (!MF.getSubtarget().enableMachineScheduler()) {
+  if (!valueOr(getCodeGenOptions(MF).enable_misched,
+               MF.getSubtarget().enableMachineScheduler()))
     return false;
-  }
 
   LLVM_DEBUG(dbgs() << "Before MISched:\n"; MF.print(dbgs()));
 
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto &RegClassInfo =
+      getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  auto &MBFI = getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+
   Impl.setLegacyPass(this);
-  return Impl.run(MF, TM, {MLI, MDT, AA, LIS});
+  return Impl.run(MF, TM, {MLI, AA, LIS, RegClassInfo, MBFI});
+}
+
+bool SSAMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  if (!valueOr(getCodeGenOptions(MF).enable_ssa_misched,
+               MF.getSubtarget().enableSSAMachineScheduler()))
+    return false;
+
+  auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto &RegClassInfo =
+      getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  auto &MBFI = getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+
+  Impl.setLegacyPass(this);
+  return Impl.run(MF, TM, {MLI, AA, LIS, RegClassInfo, MBFI});
 }
 
 MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM)
@@ -673,6 +719,12 @@ MachineSchedulerPass::MachineSchedulerPass(const TargetMachine *TM)
 MachineSchedulerPass::~MachineSchedulerPass() = default;
 MachineSchedulerPass::MachineSchedulerPass(MachineSchedulerPass &&Other) =
     default;
+
+SSAMachineSchedulerPass::SSAMachineSchedulerPass(const TargetMachine *TM)
+    : Impl(std::make_unique<SSAMachineSchedulerImpl>()), TM(TM) {}
+SSAMachineSchedulerPass::SSAMachineSchedulerPass(
+    SSAMachineSchedulerPass &&Other) = default;
+SSAMachineSchedulerPass::~SSAMachineSchedulerPass() = default;
 
 PostMachineSchedulerPass::PostMachineSchedulerPass(const TargetMachine *TM)
     : Impl(std::make_unique<PostMachineSchedulerImpl>()), TM(TM) {}
@@ -683,22 +735,21 @@ PostMachineSchedulerPass::~PostMachineSchedulerPass() = default;
 PreservedAnalyses
 MachineSchedulerPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  if (EnableMachineSched.getNumOccurrences()) {
-    if (!EnableMachineSched)
-      return PreservedAnalyses::all();
-  } else if (!MF.getSubtarget().enableMachineScheduler()) {
+  if (!valueOr(getCodeGenOptions(MF).enable_misched,
+               MF.getSubtarget().enableMachineScheduler()))
     return PreservedAnalyses::all();
-  }
 
   LLVM_DEBUG(dbgs() << "Before MISched:\n"; MF.print(dbgs()));
   auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
-  auto &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &AA = FAM.getResult<AAManager>(MF.getFunction());
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  auto &RegClassInfo = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+
   Impl->setMFAM(&MFAM);
-  bool Changed = Impl->run(MF, *TM, {MLI, MDT, AA, LIS});
+  bool Changed = Impl->run(MF, *TM, {MLI, AA, LIS, RegClassInfo, MBFI});
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -708,12 +759,41 @@ MachineSchedulerPass::run(MachineFunction &MF,
       .preserve<LiveIntervalsAnalysis>();
 }
 
+PreservedAnalyses
+SSAMachineSchedulerPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  if (auto Enable = toOptional(getCodeGenOptions(MF).enable_ssa_misched)) {
+    if (!*Enable)
+      return PreservedAnalyses::all();
+  } else if (!MF.getSubtarget().enableSSAMachineScheduler()) {
+    LLVM_DEBUG(dbgs() << "Subtarget disables ssa-MI-sched.\n");
+    return PreservedAnalyses::all();
+  }
+
+  auto &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  auto &AA = FAM.getResult<AAManager>(MF.getFunction());
+  auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  auto &RegClassInfo = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+
+  Impl->setMFAM(&MFAM);
+  bool Changed = Impl->run(MF, *TM, {MLI, AA, LIS, RegClassInfo, MBFI});
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
+
 bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  if (EnablePostRAMachineSched.getNumOccurrences()) {
-    if (!EnablePostRAMachineSched)
+  if (auto Enable = toOptional(getCodeGenOptions(MF).enable_post_misched)) {
+    if (!*Enable)
       return false;
   } else if (!MF.getSubtarget().enablePostRAMachineScheduler()) {
     LLVM_DEBUG(dbgs() << "Subtarget disables post-MI-sched.\n");
@@ -723,15 +803,16 @@ bool PostMachineSchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
   auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto &RCI = getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
   Impl.setLegacyPass(this);
-  return Impl.run(MF, TM, {MLI, AA});
+  return Impl.run(MF, TM, {MLI, AA, RCI});
 }
 
 PreservedAnalyses
 PostMachineSchedulerPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &MFAM) {
-  if (EnablePostRAMachineSched.getNumOccurrences()) {
-    if (!EnablePostRAMachineSched)
+  if (auto Enable = toOptional(getCodeGenOptions(MF).enable_post_misched)) {
+    if (!*Enable)
       return PreservedAnalyses::all();
   } else if (!MF.getSubtarget().enablePostRAMachineScheduler()) {
     LLVM_DEBUG(dbgs() << "Subtarget disables post-MI-sched.\n");
@@ -742,9 +823,10 @@ PostMachineSchedulerPass::run(MachineFunction &MF,
   auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
                   .getManager();
   auto &AA = FAM.getResult<AAManager>(MF.getFunction());
+  auto &RCI = MFAM.getResult<MachineRegisterClassAnalysis>(MF);
 
   Impl->setMFAM(&MFAM);
-  bool Changed = Impl->run(MF, *TM, {MLI, AA});
+  bool Changed = Impl->run(MF, *TM, {MLI, AA, RCI});
   if (!Changed)
     return PreservedAnalyses::all();
 
@@ -764,30 +846,11 @@ PostMachineSchedulerPass::run(MachineFunction &MF,
 /// the boundary, but there would be no benefit to postRA scheduling across
 /// calls this late anyway.
 static bool isSchedBoundary(MachineBasicBlock::iterator MI,
-                            MachineBasicBlock *MBB,
-                            MachineFunction *MF,
+                            MachineBasicBlock *MBB, MachineFunction *MF,
                             const TargetInstrInfo *TII) {
   return MI->isCall() || TII->isSchedulingBoundary(*MI, MBB, *MF) ||
-         MI->isFakeUse();
+         MI->isFakeUse() || MI->isPHI();
 }
-
-/// A region of an MBB for scheduling.
-namespace {
-struct SchedRegion {
-  /// RegionBegin is the first instruction in the scheduling region, and
-  /// RegionEnd is either MBB->end() or the scheduling boundary after the
-  /// last instruction in the scheduling region. These iterators cannot refer
-  /// to instructions outside of the identified scheduling region because
-  /// those may be reordered before scheduling this region.
-  MachineBasicBlock::iterator RegionBegin;
-  MachineBasicBlock::iterator RegionEnd;
-  unsigned NumRegionInstrs;
-
-  SchedRegion(MachineBasicBlock::iterator B, MachineBasicBlock::iterator E,
-              unsigned N) :
-    RegionBegin(B), RegionEnd(E), NumRegionInstrs(N) {}
-};
-} // end anonymous namespace
 
 using MBBRegionsVector = SmallVector<SchedRegion, 16>;
 
@@ -836,22 +899,23 @@ getSchedRegions(MachineBasicBlock *MBB,
 /// Main driver for both MachineScheduler and PostMachineScheduler.
 void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
                                            bool FixKillFlags) {
+  const CodeGenOptions &Opts = Scheduler.Opts;
+
   // Visit all machine basic blocks.
   //
   // TODO: Visit blocks in global postorder or postorder within the bottom-up
   // loop tree. Then we can optionally compute global RegPressure.
   for (MachineFunction::iterator MBB = MF->begin(), MBBEnd = MF->end();
        MBB != MBBEnd; ++MBB) {
-
-    Scheduler.startBlock(&*MBB);
-
 #ifndef NDEBUG
-    if (SchedOnlyFunc.getNumOccurrences() && SchedOnlyFunc != MF->getName())
+    if (Opts.misched_only_func && *Opts.misched_only_func != MF->getName())
       continue;
-    if (SchedOnlyBlock.getNumOccurrences()
-        && (int)SchedOnlyBlock != MBB->getNumber())
+    if (Opts.misched_only_block &&
+        (int)*Opts.misched_only_block != MBB->getNumber())
       continue;
 #endif
+
+    Scheduler.startBlock(&*MBB);
 
     // Break the block into scheduling regions [I, RegionEnd). RegionEnd
     // points to the scheduling boundary at the bottom of the region. The DAG
@@ -887,14 +951,21 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
         Scheduler.exitRegion();
         continue;
       }
-      LLVM_DEBUG(dbgs() << "********** MI Scheduling **********\n");
-      LLVM_DEBUG(dbgs() << MF->getName() << ":" << printMBBReference(*MBB)
-                        << " " << MBB->getName() << "\n  From: " << *I
-                        << "    To: ";
-                 if (RegionEnd != MBB->end()) dbgs() << *RegionEnd;
-                 else dbgs() << "End\n";
-                 dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n');
-      if (DumpCriticalPathLength) {
+      auto DumpRegionHeader = [&] {
+        dbgs() << "Current Schedule Region\n";
+        dbgs() << MF->getName() << ":" << printMBBReference(*MBB) << " "
+               << MBB->getName() << "\n  From: " << *I << "    To: ";
+        if (RegionEnd != MBB->end())
+          dbgs() << *RegionEnd;
+        else
+          dbgs() << "End\n";
+        dbgs() << " RegionInstrs: " << NumRegionInstrs << '\n';
+      };
+      if (shouldPrintMISchedDAGs(*MF))
+        DumpRegionHeader();
+      else
+        LLVM_DEBUG(DumpRegionHeader());
+      if (Opts.misched_dcpl) {
         errs() << MF->getName();
         errs() << ":%bb. " << MBB->getNumber();
         errs() << " " << MBB->getName() << " \n";
@@ -921,7 +992,7 @@ void MachineSchedulerBase::scheduleRegions(ScheduleDAGInstrs &Scheduler,
 LLVM_DUMP_METHOD void ReadyQueue::dump() const {
   dbgs() << "Queue " << Name << ": ";
   for (const SUnit *SU : Queue)
-    dbgs() << SU->NodeNum << " ";
+    dbgs() << *SU << " ";
   dbgs() << "\n";
 }
 #endif
@@ -931,6 +1002,91 @@ LLVM_DUMP_METHOD void ReadyQueue::dump() const {
 // independent of PreRA/PostRA scheduling and involves no extra book-keeping for
 // virtual registers.
 // ===----------------------------------------------------------------------===/
+
+AntiDepState::AntiDepState(MachineSchedContext *C,
+                           TargetSubtargetInfo::AntiDepBreakMode AntiDepMode) {
+  if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_NONE)
+    return;
+
+  assert(C->MF->getRegInfo().tracksLiveness() &&
+         "Live-ins must be accurate for anti-dependency breaking");
+  assert(C->RegClassInfo &&
+         "Register class info is required for anti-dependency breaking");
+  if (AntiDepMode == TargetSubtargetInfo::ANTIDEP_ALL) {
+    SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
+    C->MF->getSubtarget().getCriticalPathRCs(CriticalPathRCs);
+    Breaker.reset(createAggressiveAntiDepBreaker(*C->MF, *C->RegClassInfo,
+                                                 CriticalPathRCs));
+  } else {
+    assert(AntiDepMode == TargetSubtargetInfo::ANTIDEP_CRITICAL &&
+           "Unexpected anti-dependency break mode");
+    Breaker.reset(createCriticalAntiDepBreaker(*C->MF, *C->RegClassInfo));
+  }
+}
+
+void AntiDepState::scanRangeBackwards(MachineBasicBlock::iterator From,
+                                      MachineBasicBlock::iterator To) {
+  for (auto I = From; I != To;) {
+    MachineInstr &MI = *--I;
+    --BoundaryScanIndex;
+    if (!MI.isDebugOrPseudoInstr())
+      Breaker->Observe(MI, BoundaryScanIndex, RegionEndIndex);
+    if (MI.isBundle())
+      BoundaryScanIndex -= MI.getBundleSize();
+  }
+}
+
+void AntiDepState::startBlock(MachineBasicBlock *MBB) {
+  if (!Breaker)
+    return;
+  Breaker->StartBlock(MBB);
+  BoundaryScanPos = MBB->end();
+  BoundaryScanIndex = MBB->size();
+  RegionEndIndex = BoundaryScanIndex;
+}
+
+void AntiDepState::finishBlock() {
+  if (!Breaker)
+    return;
+  Breaker->FinishBlock();
+}
+
+void AntiDepState::enterRegion(MachineBasicBlock::iterator End) {
+  if (!Breaker)
+    return;
+
+  // Scheduling regions exclude boundary instructions and may have gaps between
+  // them. Scan those gaps so the breaker's liveness remains synchronized.
+  scanRangeBackwards(BoundaryScanPos, End);
+  RegionEndIndex = BoundaryScanIndex;
+  RegionProcessed = false;
+}
+
+void AntiDepState::exitRegion(MachineBasicBlock::iterator Begin,
+                              MachineBasicBlock::iterator End) {
+  if (!Breaker)
+    return;
+
+  BoundaryScanPos = Begin;
+  if (RegionProcessed) {
+    BoundaryScanIndex -= std::distance(Begin, End);
+  } else {
+    // schedule() skips empty and single-instruction regions. Scan a skipped
+    // region here so its instructions still contribute to liveness.
+    scanRangeBackwards(End, Begin);
+  }
+}
+
+bool AntiDepState::breakAntiDependencies(
+    const std::vector<SUnit> &SUnits, MachineBasicBlock::iterator Begin,
+    MachineBasicBlock::iterator End,
+    AntiDepBreaker::DbgValueVector &DbgValues) {
+  if (!Breaker)
+    return false;
+  RegionProcessed = true;
+  return Breaker->BreakAntiDependencies(SUnits, Begin, End, RegionEndIndex,
+                                        DbgValues) != 0;
+}
 
 // Provide a vtable anchor.
 ScheduleDAGMI::~ScheduleDAGMI() = default;
@@ -1008,9 +1164,11 @@ void ScheduleDAGMI::releasePredecessors(SUnit *SU) {
 void ScheduleDAGMI::startBlock(MachineBasicBlock *bb) {
   ScheduleDAGInstrs::startBlock(bb);
   SchedImpl->enterMBB(bb);
+  AntiDep.startBlock(bb);
 }
 
 void ScheduleDAGMI::finishBlock() {
+  AntiDep.finishBlock();
   SchedImpl->leaveMBB();
   ScheduleDAGInstrs::finishBlock();
 }
@@ -1020,11 +1178,11 @@ void ScheduleDAGMI::finishBlock() {
 /// in the region, including the boundary itself and single-instruction regions
 /// that don't get scheduled.
 void ScheduleDAGMI::enterRegion(MachineBasicBlock *bb,
-                                     MachineBasicBlock::iterator begin,
-                                     MachineBasicBlock::iterator end,
-                                     unsigned regioninstrs)
-{
+                                MachineBasicBlock::iterator begin,
+                                MachineBasicBlock::iterator end,
+                                unsigned regioninstrs) {
   ScheduleDAGInstrs::enterRegion(bb, begin, end, regioninstrs);
+  AntiDep.enterRegion(end);
 
   SchedImpl->initPolicy(begin, end, regioninstrs);
 
@@ -1037,6 +1195,11 @@ void ScheduleDAGMI::enterRegion(MachineBasicBlock *bb,
   else
     D = ScheduleDAGMI::DumpDirection::Bidirectional;
   setDumpDirection(D);
+}
+
+void ScheduleDAGMI::exitRegion() {
+  AntiDep.exitRegion(RegionBegin, RegionEnd);
+  ScheduleDAGInstrs::exitRegion();
 }
 
 /// This is normally called from the main scheduler loop but may also be invoked
@@ -1061,7 +1224,7 @@ void ScheduleDAGMI::moveInstruction(
 
 bool ScheduleDAGMI::checkSchedLimit() {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
-  if (NumInstrsScheduled == MISchedCutoff && MISchedCutoff != ~0U) {
+  if (NumInstrsScheduled == Opts.misched_cutoff && Opts.misched_cutoff != ~0U) {
     CurrentTop = CurrentBottom;
     return false;
   }
@@ -1081,14 +1244,24 @@ void ScheduleDAGMI::schedule() {
   // Build the DAG.
   buildSchedGraph(AA);
 
+  if (AntiDep.breakAntiDependencies(SUnits, RegionBegin, RegionEnd,
+                                    DbgValues)) {
+    // Renaming invalidates register dependencies. Rebuild the base DAG before
+    // applying mutations below, as SchedulePostRATDList does. Updating the DAG
+    // in place would also need to account for edges removed by mutations.
+    buildSchedGraph(AA);
+  }
+
   postProcessDAG();
 
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
   findRootsAndBiasEdges(TopRoots, BotRoots);
 
   LLVM_DEBUG(dump());
-  if (PrintDAGs) dump();
-  if (ViewMISchedDAGs) viewGraph();
+  if (shouldPrintMISchedDAGs(MF))
+    dump();
+  if (shouldViewMISchedDAGs(MF))
+    viewGraph();
 
   // Initialize the strategy before modifying the DAG.
   // This may initialize a DFSResult to be used for queue priority.
@@ -1232,10 +1405,12 @@ void ScheduleDAGMI::placeDebugValues() {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+#ifndef NDEBUG
 static const char *scheduleTableLegend = "  i: issue\n  x: resource booked";
 
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
+  unsigned HeaderColWidth = Opts.misched_dump_schedule_trace_col_header_width;
+  unsigned ColWidth = Opts.misched_dump_schedule_trace_col_width;
   // Bail off when there is no schedule model to query.
   if (!SchedModel.hasInstrSchedModel())
     return;
@@ -1272,8 +1447,8 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
       dbgs() << "Missing SUnit\n";
       continue;
     }
-    std::string NodeName("SU(");
-    NodeName += std::to_string(SU->NodeNum) + ")";
+    std::string NodeName;
+    raw_string_ostream(NodeName) << *SU;
     dbgs() << llvm::left_justify(NodeName, HeaderColWidth);
     unsigned C = FirstCycle;
     for (; C <= LastCycle; ++C) {
@@ -1289,14 +1464,14 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
         make_range(SchedModel.getWriteProcResBegin(SC),
                    SchedModel.getWriteProcResEnd(SC)));
 
-    if (MISchedSortResourcesInTrace)
-      llvm::stable_sort(ResourcesIt,
-                        [](const MCWriteProcResEntry &LHS,
-                           const MCWriteProcResEntry &RHS) -> bool {
-                          return LHS.AcquireAtCycle < RHS.AcquireAtCycle ||
-                                 (LHS.AcquireAtCycle == RHS.AcquireAtCycle &&
-                                  LHS.ReleaseAtCycle < RHS.ReleaseAtCycle);
-                        });
+    if (Opts.misched_sort_resources_in_trace)
+      llvm::stable_sort(
+          ResourcesIt,
+          [](const MCWriteProcResEntry &LHS,
+             const MCWriteProcResEntry &RHS) -> bool {
+            return std::tie(LHS.AcquireAtCycle, LHS.ReleaseAtCycle) <
+                   std::tie(RHS.AcquireAtCycle, RHS.ReleaseAtCycle);
+          });
     for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =
@@ -1317,6 +1492,8 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
 }
 
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
+  unsigned HeaderColWidth = Opts.misched_dump_schedule_trace_col_header_width;
+  unsigned ColWidth = Opts.misched_dump_schedule_trace_col_width;
   // Bail off when there is no schedule model to query.
   if (!SchedModel.hasInstrSchedModel())
     return;
@@ -1354,8 +1531,8 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
       dbgs() << "Missing SUnit\n";
       continue;
     }
-    std::string NodeName("SU(");
-    NodeName += std::to_string(SU->NodeNum) + ")";
+    std::string NodeName;
+    raw_string_ostream(NodeName) << *SU;
     dbgs() << llvm::left_justify(NodeName, HeaderColWidth);
     int C = FirstCycle;
     for (; C >= LastCycle; --C) {
@@ -1370,14 +1547,14 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
         make_range(SchedModel.getWriteProcResBegin(SC),
                    SchedModel.getWriteProcResEnd(SC)));
 
-    if (MISchedSortResourcesInTrace)
-      llvm::stable_sort(ResourcesIt,
-                        [](const MCWriteProcResEntry &LHS,
-                           const MCWriteProcResEntry &RHS) -> bool {
-                          return LHS.AcquireAtCycle < RHS.AcquireAtCycle ||
-                                 (LHS.AcquireAtCycle == RHS.AcquireAtCycle &&
-                                  LHS.ReleaseAtCycle < RHS.ReleaseAtCycle);
-                        });
+    if (Opts.misched_sort_resources_in_trace)
+      llvm::stable_sort(
+          ResourcesIt,
+          [](const MCWriteProcResEntry &LHS,
+             const MCWriteProcResEntry &RHS) -> bool {
+            return std::tie(LHS.AcquireAtCycle, LHS.ReleaseAtCycle) <
+                   std::tie(RHS.AcquireAtCycle, RHS.ReleaseAtCycle);
+          });
     for (const MCWriteProcResEntry &PI : ResourcesIt) {
       C = FirstCycle;
       const std::string ResName =
@@ -1400,7 +1577,8 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
-  if (MISchedDumpScheduleTrace) {
+#ifndef NDEBUG
+  if (Opts.misched_dump_schedule_trace) {
     if (DumpDir == DumpDirection::TopDown)
       dumpScheduleTraceTopDown();
     else if (DumpDir == DumpDirection::BottomUp)
@@ -1411,6 +1589,7 @@ LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
       dbgs() << "* Schedule table: DumpDirection not set.\n";
     }
   }
+#endif
 
   for (MachineInstr &MI : *this) {
     if (SUnit *SU = getSUnit(&MI))
@@ -1602,10 +1781,10 @@ updateScheduledPressure(const SUnit *SU,
 /// instruction.
 void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
   for (const VRegMaskOrUnit &P : LiveUses) {
-    Register Reg = P.RegUnit;
     /// FIXME: Currently assuming single-use physregs.
-    if (!Reg.isVirtual())
+    if (!P.VRegOrUnit.isVirtualReg())
       continue;
+    Register Reg = P.VRegOrUnit.asVirtualReg();
 
     if (ShouldTrackLaneMasks) {
       // If the register has just become live then other uses won't change
@@ -1621,19 +1800,19 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
           continue;
 
         PressureDiff &PDiff = getPressureDiff(&SU);
-        PDiff.addPressureChange(Reg, Decrement, &MRI);
+        PDiff.addPressureChange(VirtRegOrUnit(Reg), Decrement, &MRI);
         if (llvm::any_of(PDiff, [](const PressureChange &Change) {
               return Change.isValid();
             }))
           LLVM_DEBUG(dbgs()
-                         << "  UpdateRegPressure: SU(" << SU.NodeNum << ") "
+                         << "  UpdateRegPressure: " << SU << " "
                          << printReg(Reg, TRI) << ':'
                          << PrintLaneMask(P.LaneMask) << ' ' << *SU.getInstr();
                      dbgs() << "                     to "; PDiff.dump(*TRI););
       }
     } else {
       assert(P.LaneMask.any());
-      LLVM_DEBUG(dbgs() << "  LiveReg: " << printVRegOrUnit(Reg, TRI) << "\n");
+      LLVM_DEBUG(dbgs() << "  LiveReg: " << printReg(Reg, TRI) << "\n");
       // This may be called before CurrentBottom has been initialized. However,
       // BotRPTracker must have a valid position. We want the value live into the
       // instruction or live out of the block, so ask for the previous
@@ -1660,12 +1839,12 @@ void ScheduleDAGMILive::updatePressureDiffs(ArrayRef<VRegMaskOrUnit> LiveUses) {
               LI.Query(LIS->getInstructionIndex(*SU->getInstr()));
           if (LRQ.valueIn() == VNI) {
             PressureDiff &PDiff = getPressureDiff(SU);
-            PDiff.addPressureChange(Reg, true, &MRI);
+            PDiff.addPressureChange(VirtRegOrUnit(Reg), true, &MRI);
             if (llvm::any_of(PDiff, [](const PressureChange &Change) {
                   return Change.isValid();
                 }))
-              LLVM_DEBUG(dbgs() << "  UpdateRegPressure: SU(" << SU->NodeNum
-                                << ") " << *SU->getInstr();
+              LLVM_DEBUG(dbgs() << "  UpdateRegPressure: " << *SU << " "
+                                << *SU->getInstr();
                          dbgs() << "                     to ";
                          PDiff.dump(*TRI););
           }
@@ -1723,8 +1902,10 @@ void ScheduleDAGMILive::schedule() {
   SchedImpl->initialize(this);
 
   LLVM_DEBUG(dump());
-  if (PrintDAGs) dump();
-  if (ViewMISchedDAGs) viewGraph();
+  if (shouldPrintMISchedDAGs(MF))
+    dump();
+  if (shouldViewMISchedDAGs(MF))
+    viewGraph();
 
   // Initialize ready queues now that the DAG and priority data are finalized.
   initQueues(TopRoots, BotRoots);
@@ -1836,9 +2017,9 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
   unsigned MaxCyclicLatency = 0;
   // Visit each live out vreg def to find def/use pairs that cross iterations.
   for (const VRegMaskOrUnit &P : RPTracker.getPressure().LiveOutRegs) {
-    Register Reg = P.RegUnit;
-    if (!Reg.isVirtual())
+    if (!P.VRegOrUnit.isVirtualReg())
       continue;
+    Register Reg = P.VRegOrUnit.asVirtualReg();
     const LiveInterval &LI = LIS->getInterval(Reg);
     const VNInfo *DefVNI = LI.getVNInfoBefore(LIS->getMBBEndIdx(BB));
     if (!DefVNI)
@@ -1877,8 +2058,8 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
       } else
         CyclicLatency = 0;
 
-      LLVM_DEBUG(dbgs() << "Cyclic Path: SU(" << DefSU->NodeNum << ") -> SU("
-                        << SU->NodeNum << ") = " << CyclicLatency << "c\n");
+      LLVM_DEBUG(dbgs() << "Cyclic Path: " << *DefSU << " -> " << *SU << " = "
+                        << CyclicLatency << "c\n");
       if (CyclicLatency > MaxCyclicLatency)
         MaxCyclicLatency = CyclicLatency;
     }
@@ -1919,11 +2100,10 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *LIS);
+        RegOpers.detectDeadDefs(*MI, *LIS, MRI);
       }
 
       TopRPTracker.advance(RegOpers);
@@ -1954,11 +2134,10 @@ void ScheduleDAGMILive::scheduleMI(SUnit *SU, bool IsTopNode) {
                        /*IgnoreDead=*/false);
       if (ShouldTrackLaneMasks) {
         // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx, MI);
+        RegOpers.adjustLaneLiveness(*LIS, MRI, *MI);
       } else {
         // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *LIS);
+        RegOpers.detectDeadDefs(*MI, *LIS, MRI);
       }
 
       if (BotRPTracker.getPos() != CurrentBottom)
@@ -2004,9 +2183,27 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
         return A->getReg() < B->getReg();
       if (A->isFI()) {
         const MachineFunction &MF = *A->getParent()->getParent()->getParent();
+        const MachineFrameInfo &MFI = MF.getFrameInfo();
         const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
         bool StackGrowsDown = TFI.getStackGrowthDirection() ==
                               TargetFrameLowering::StackGrowsDown;
+        bool AIsFixed = MFI.isFixedObjectIndex(A->getIndex());
+        bool BIsFixed = MFI.isFixedObjectIndex(B->getIndex());
+        // Sort fixed and non-fixed bases as separate groups, preserving the
+        // existing frame-index ordering between the groups. Do not rely on
+        // non-fixed object offsets before frame layout.
+        if (AIsFixed != BIsFixed)
+          return StackGrowsDown ? !AIsFixed : AIsFixed;
+        if (AIsFixed) {
+          // Fixed objects have explicit offsets, and targets may create their
+          // frame indices in an order unrelated to those offsets. Sort by the
+          // actual object offsets so target clustering hooks see fixed object
+          // bases in address order.
+          int64_t AOffset = MFI.getObjectOffset(A->getIndex());
+          int64_t BOffset = MFI.getObjectOffset(B->getIndex());
+          if (AOffset != BOffset)
+            return AOffset < BOffset;
+        }
         return StackGrowsDown ? A->getIndex() > B->getIndex()
                               : A->getIndex() < B->getIndex();
       }
@@ -2031,19 +2228,30 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
     }
   };
 
+  /// Encodes a relationship between two memops, A and B. Here, a path is 'safe'
+  /// if it is of length 1 and consists of only memory or barrier edges.
+  enum class MemOpRelationship {
+    UnsafePath, ///< There is an unsafe path in either direction.
+    Unrelated,  ///< The two memops are mutually unreachable.
+    DirectOrd,  ///< All paths from A to B are safe and there is such a path.
+    ReverseOrd, ///< All paths from B to A are safe and there is such a path.
+  };
+
   const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
   bool IsLoad;
   bool ReorderWhileClustering;
 
 public:
-  BaseMemOpClusterMutation(const TargetInstrInfo *tii,
-                           const TargetRegisterInfo *tri, bool IsLoad,
+  BaseMemOpClusterMutation(const TargetInstrInfo *tii, bool IsLoad,
                            bool ReorderWhileClustering)
-      : TII(tii), TRI(tri), IsLoad(IsLoad),
+      : TII(tii), IsLoad(IsLoad),
         ReorderWhileClustering(ReorderWhileClustering) {}
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
+
+private:
+  MemOpRelationship computeRelationship(ScheduleDAGInstrs *DAG, SUnit *SUa,
+                                        SUnit *SUb);
 
 protected:
   void clusterNeighboringMemOps(ArrayRef<MemOpInfo> MemOps, bool FastCluster,
@@ -2056,42 +2264,68 @@ protected:
 
 class StoreClusterMutation : public BaseMemOpClusterMutation {
 public:
-  StoreClusterMutation(const TargetInstrInfo *tii,
-                       const TargetRegisterInfo *tri,
-                       bool ReorderWhileClustering)
-      : BaseMemOpClusterMutation(tii, tri, false, ReorderWhileClustering) {}
+  StoreClusterMutation(const TargetInstrInfo *tii, bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, false, ReorderWhileClustering) {}
 };
 
 class LoadClusterMutation : public BaseMemOpClusterMutation {
 public:
-  LoadClusterMutation(const TargetInstrInfo *tii, const TargetRegisterInfo *tri,
-                      bool ReorderWhileClustering)
-      : BaseMemOpClusterMutation(tii, tri, true, ReorderWhileClustering) {}
+  LoadClusterMutation(const TargetInstrInfo *tii, bool ReorderWhileClustering)
+      : BaseMemOpClusterMutation(tii, true, ReorderWhileClustering) {}
 };
 
 } // end anonymous namespace
 
-namespace llvm {
-
 std::unique_ptr<ScheduleDAGMutation>
-createLoadClusterDAGMutation(const TargetInstrInfo *TII,
-                             const TargetRegisterInfo *TRI,
-                             bool ReorderWhileClustering) {
-  return EnableMemOpCluster ? std::make_unique<LoadClusterMutation>(
-                                  TII, TRI, ReorderWhileClustering)
-                            : nullptr;
+llvm::createLoadClusterDAGMutation(const TargetInstrInfo *TII,
+                                   bool ReorderWhileClustering) {
+  return std::make_unique<LoadClusterMutation>(TII, ReorderWhileClustering);
 }
 
 std::unique_ptr<ScheduleDAGMutation>
-createStoreClusterDAGMutation(const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI,
-                              bool ReorderWhileClustering) {
-  return EnableMemOpCluster ? std::make_unique<StoreClusterMutation>(
-                                  TII, TRI, ReorderWhileClustering)
-                            : nullptr;
+llvm::createStoreClusterDAGMutation(const TargetInstrInfo *TII,
+                                    bool ReorderWhileClustering) {
+  return std::make_unique<StoreClusterMutation>(TII, ReorderWhileClustering);
 }
 
-} // end namespace llvm
+BaseMemOpClusterMutation::MemOpRelationship
+BaseMemOpClusterMutation::computeRelationship(ScheduleDAGInstrs *DAG,
+                                              SUnit *SUa, SUnit *SUb) {
+  bool AReachesB = DAG->IsReachable(SUb, SUa);
+  bool BReachesA = DAG->IsReachable(SUa, SUb);
+
+  if (!BReachesA && !AReachesB)
+    return MemOpRelationship::Unrelated;
+
+  // We have a path. Determine whether all paths are safe and which order they
+  // run.
+
+  // If the path runs from B -> A, normalise so that it runs from A -> B for
+  // the search.
+  bool Reverse = false;
+  if (BReachesA) {
+    assert(!AReachesB && "Cycle detected");
+    std::swap(SUa, SUb);
+    Reverse = true;
+  }
+
+  // Check each successor of A for reachability against B. For edges from A to
+  // B, check that they are all memory or barrier edges.
+  for (const SDep &Succ : SUa->Succs) {
+    if (Succ.getSUnit() == &DAG->ExitSU)
+      continue;
+    if (Succ.getSUnit() == SUb) {
+      if (!Succ.isNormalMemoryOrBarrier())
+        return MemOpRelationship::UnsafePath;
+      continue;
+    }
+
+    if (DAG->IsReachable(SUb, Succ.getSUnit()))
+      return MemOpRelationship::UnsafePath;
+  }
+
+  return Reverse ? MemOpRelationship::ReverseOrd : MemOpRelationship::DirectOrd;
+}
 
 // Sorting all the loads/stores first, then for each load/store, checking the
 // following load/store one by one, until reach the first non-dependent one and
@@ -2105,22 +2339,33 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   DenseMap<unsigned, std::pair<unsigned, unsigned>> SUnit2ClusterInfo;
   EquivalenceClasses<SUnit *> Clusters;
 
-  // At this point, `MemOpRecords` array must hold atleast two mem ops. Try to
+  // At this point, `MemOpRecords` array must hold at least two mem ops. Try to
   // cluster mem ops collected within `MemOpRecords` array.
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     // Decision to cluster mem ops is taken based on target dependent logic
     auto MemOpa = MemOpRecords[Idx];
+    MemOpRelationship Relationship = MemOpRelationship::UnsafePath;
 
     // Seek for the next load/store to do the cluster.
     unsigned NextIdx = Idx + 1;
-    for (; NextIdx < End; ++NextIdx)
-      // Skip if MemOpb has been clustered already or has dependency with
-      // MemOpa.
-      if (!SUnit2ClusterInfo.count(MemOpRecords[NextIdx].SU->NodeNum) &&
-          (FastCluster ||
-           (!DAG->IsReachable(MemOpRecords[NextIdx].SU, MemOpa.SU) &&
-            !DAG->IsReachable(MemOpa.SU, MemOpRecords[NextIdx].SU))))
+    for (; NextIdx < End; ++NextIdx) {
+      // Skip if MemOpb has been clustered already.
+      if (SUnit2ClusterInfo.count(MemOpRecords[NextIdx].SU->NodeNum))
+        continue;
+
+      // If FastCluster is enabled, we assume everything is unrelated and
+      // therefore trivially clusterable.
+      if (FastCluster) {
+        Relationship = MemOpRelationship::Unrelated;
         break;
+      }
+
+      Relationship =
+          computeRelationship(DAG, MemOpa.SU, MemOpRecords[NextIdx].SU);
+      if (Relationship != MemOpRelationship::UnsafePath)
+        break;
+    }
+
     if (NextIdx == End)
       continue;
 
@@ -2144,16 +2389,24 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     SUnit *SUa = MemOpa.SU;
     SUnit *SUb = MemOpb.SU;
 
-    if (!ReorderWhileClustering && SUa->NodeNum > SUb->NodeNum)
+    // We insert each edge from A to B. Switch if such an edge would run in the
+    // wrong order. When ReorderWhileClustering is disabled, so long as A and B
+    // are unrelated, the 'wrong order' is any order contrary to program order.
+    if (Relationship == MemOpRelationship::ReverseOrd ||
+        (Relationship == MemOpRelationship::Unrelated &&
+         !ReorderWhileClustering && SUa->NodeNum > SUb->NodeNum))
       std::swap(SUa, SUb);
 
-    // FIXME: Is this check really required?
-    if (!DAG->addEdge(SUb, SDep(SUa, SDep::Cluster)))
+    // This check is necessary to ensure we don't create a cycle with
+    // FastCluster enabled.
+    if (!DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
+      assert(FastCluster &&
+             "Adding an edge would create a cycle without FastCluster enabled");
       continue;
+    }
 
     Clusters.unionSets(SUa, SUb);
-    LLVM_DEBUG(dbgs() << "Cluster ld/st SU(" << SUa->NodeNum << ") - SU("
-                      << SUb->NodeNum << ")\n");
+    LLVM_DEBUG(dbgs() << "Cluster ld/st " << *SUa << " - " << *SUb << "\n");
     ++NumClustered;
 
     if (IsLoad) {
@@ -2164,8 +2417,8 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
       for (const SDep &Succ : SUa->Succs) {
         if (Succ.getSUnit() == SUb)
           continue;
-        LLVM_DEBUG(dbgs() << "  Copy Succ SU(" << Succ.getSUnit()->NodeNum
-                          << ")\n");
+        LLVM_DEBUG(dbgs() << "  Copy Succ ";
+                   DAG->dumpNodeName(*Succ.getSUnit()); dbgs() << "\n");
         DAG->addEdge(Succ.getSUnit(), SDep(SUb, SDep::Artificial));
       }
     } else {
@@ -2173,13 +2426,10 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
       // SUb dependent on scheduled in-between SUb and SUa. Successor edges
       // do not need to be copied from SUa to SUb since no one will depend
       // on stores.
-      // Notice that, we don't need to care about the memory dependency as
-      // we won't try to cluster them if they have any memory dependency.
       for (const SDep &Pred : SUb->Preds) {
         if (Pred.getSUnit() == SUa)
           continue;
-        LLVM_DEBUG(dbgs() << "  Copy Pred SU(" << Pred.getSUnit()->NodeNum
-                          << ")\n");
+        LLVM_DEBUG(dbgs() << "  Copy Pred " << *Pred.getSUnit() << "\n");
         DAG->addEdge(SUa, SDep(Pred.getSUnit(), SDep::Artificial));
       }
     }
@@ -2221,7 +2471,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
     bool OffsetIsScalable;
     LocationSize Width = LocationSize::precise(0);
     if (TII->getMemOperandsWithOffsetWidth(MI, BaseOps, Offset,
-                                           OffsetIsScalable, Width, TRI)) {
+                                           OffsetIsScalable, Width)) {
       if (!Width.hasValue())
         continue;
 
@@ -2242,9 +2492,9 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
 bool BaseMemOpClusterMutation::groupMemOps(
     ArrayRef<MemOpInfo> MemOps, ScheduleDAGInstrs *DAG,
     DenseMap<unsigned, SmallVector<MemOpInfo, 32>> &Groups) {
-  bool FastCluster =
-      ForceFastCluster ||
-      MemOps.size() * DAG->SUnits.size() / 1000 > FastClusterThreshold;
+  bool FastCluster = DAG->Opts.misched_force_fast_cluster ||
+                     MemOps.size() * DAG->SUnits.size() / 1000 >
+                         DAG->Opts.misched_fast_cluster_threshold;
 
   for (const auto &MemOp : MemOps) {
     unsigned ChainPredID = DAG->SUnits.size();
@@ -2271,6 +2521,9 @@ bool BaseMemOpClusterMutation::groupMemOps(
 
 /// Callback from DAG postProcessing to create cluster edges for loads/stores.
 void BaseMemOpClusterMutation::apply(ScheduleDAGInstrs *DAG) {
+  if (!DAG->Opts.misched_cluster)
+    return;
+
   // Collect all the clusterable loads/stores
   SmallVector<MemOpInfo, 32> MemOpRecords;
   collectMemOpRecords(DAG->SUnits, MemOpRecords);
@@ -2312,7 +2565,7 @@ class CopyConstrain : public ScheduleDAGMutation {
   SlotIndex RegionEndIdx;
 
 public:
-  CopyConstrain(const TargetInstrInfo *, const TargetRegisterInfo *) {}
+  CopyConstrain(const TargetInstrInfo *) {}
 
   void apply(ScheduleDAGInstrs *DAGInstrs) override;
 
@@ -2322,15 +2575,10 @@ protected:
 
 } // end anonymous namespace
 
-namespace llvm {
-
 std::unique_ptr<ScheduleDAGMutation>
-createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
-                               const TargetRegisterInfo *TRI) {
-  return std::make_unique<CopyConstrain>(TII, TRI);
+llvm::createCopyConstrainDAGMutation(const TargetInstrInfo *TII) {
+  return std::make_unique<CopyConstrain>(TII);
 }
-
-} // end namespace llvm
 
 /// constrainLocalCopy handles two possibilities:
 /// 1) Local src:
@@ -2459,7 +2707,7 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
       return;
     GlobalUses.push_back(Pred.getSUnit());
   }
-  LLVM_DEBUG(dbgs() << "Constraining copy SU(" << CopySU->NodeNum << ")\n");
+  LLVM_DEBUG(dbgs() << "Constraining copy " << *CopySU << "\n");
   // Add the weak edges.
   for (SUnit *LU : LocalUses) {
     LLVM_DEBUG(dbgs() << "  Local use SU(" << LU->NodeNum << ") -> SU("
@@ -2467,8 +2715,8 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
     DAG->addEdge(GlobalSU, SDep(LU, SDep::Weak));
   }
   for (SUnit *GU : GlobalUses) {
-    LLVM_DEBUG(dbgs() << "  Global use SU(" << GU->NodeNum << ") -> SU("
-                      << FirstLocalSU->NodeNum << ")\n");
+    LLVM_DEBUG(dbgs() << "  Global use " << *GU << " -> " << *FirstLocalSU
+                      << "\n");
     DAG->addEdge(FirstLocalSU, SDep(GU, SDep::Weak));
   }
 }
@@ -2501,7 +2749,7 @@ void CopyConstrain::apply(ScheduleDAGInstrs *DAGInstrs) {
 
 static const unsigned InvalidCycle = ~0U;
 
-SchedBoundary::~SchedBoundary() { delete HazardRec; }
+SchedBoundary::~SchedBoundary() = default;
 
 /// Given a Count of resource usage and a Latency value, return true if a
 /// SchedBoundary becomes resource limited.
@@ -2520,10 +2768,8 @@ void SchedBoundary::reset() {
   // A new HazardRec is created for each DAG and owned by SchedBoundary.
   // Destroying and reconstructing it is very expensive though. So keep
   // invalid, placeholder HazardRecs.
-  if (HazardRec && HazardRec->isEnabled()) {
-    delete HazardRec;
-    HazardRec = nullptr;
-  }
+  if (HazardRec && HazardRec->isEnabled())
+    HazardRec.reset();
   Available.clear();
   Pending.clear();
   CheckPending = false;
@@ -2589,7 +2835,7 @@ init(ScheduleDAGMI *dag, const TargetSchedModel *smodel, SchedRemainder *rem) {
     for (unsigned i = 0; i < ResourceCount; ++i) {
       ReservedCyclesIndex[i] = NumUnits;
       NumUnits += SchedModel->getProcResource(i)->NumUnits;
-      if (isUnbufferedGroup(i)) {
+      if (isReservedGroup(i)) {
         auto SubUnits = SchedModel->getProcResource(i)->SubUnitsIdxBegin;
         for (unsigned U = 0, UE = SchedModel->getProcResource(i)->NumUnits;
              U != UE; ++U)
@@ -2649,11 +2895,11 @@ std::pair<unsigned, unsigned>
 SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
                                     unsigned ReleaseAtCycle,
                                     unsigned AcquireAtCycle) {
-  if (MischedDetailResourceBooking) {
-    LLVM_DEBUG(dbgs() << "  Resource booking (@" << CurrCycle << "c): \n");
-    LLVM_DEBUG(dumpReservedCycles());
-    LLVM_DEBUG(dbgs() << "  getNextResourceCycle (@" << CurrCycle << "c): \n");
-  }
+  LLVM_DEBUG(if (DAG->Opts.misched_detail_resource_booking) {
+    dbgs() << "  Resource booking (@" << CurrCycle << "c): \n";
+    dumpReservedCycles();
+    dbgs() << "  getNextResourceCycle (@" << CurrCycle << "c): \n";
+  });
   unsigned MinNextUnreserved = InvalidCycle;
   unsigned InstanceIdx = 0;
   unsigned StartIndex = ReservedCyclesIndex[PIdx];
@@ -2661,7 +2907,7 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
   assert(NumberOfInstances > 0 &&
          "Cannot have zero instances of a ProcResource");
 
-  if (isUnbufferedGroup(PIdx)) {
+  if (isReservedGroup(PIdx)) {
     // If any subunits are used by the instruction, report that the
     // subunits of the resource group are available at the first cycle
     // in which the unit is available, effectively removing the group
@@ -2698,19 +2944,23 @@ SchedBoundary::getNextResourceCycle(const MCSchedClassDesc *SC, unsigned PIdx,
        ++I) {
     unsigned NextUnreserved =
         getNextResourceCycleByInstance(I, ReleaseAtCycle, AcquireAtCycle);
-    if (MischedDetailResourceBooking)
-      LLVM_DEBUG(dbgs() << "    Instance " << I - StartIndex << " available @"
-                        << NextUnreserved << "c\n");
+    LLVM_DEBUG({
+      if (DAG->Opts.misched_detail_resource_booking)
+        dbgs() << "    Instance " << I - StartIndex << " available @"
+               << NextUnreserved << "c\n";
+    });
     if (MinNextUnreserved > NextUnreserved) {
       InstanceIdx = I;
       MinNextUnreserved = NextUnreserved;
     }
   }
-  if (MischedDetailResourceBooking)
-    LLVM_DEBUG(dbgs() << "    selecting " << SchedModel->getResourceName(PIdx)
-                      << "[" << InstanceIdx - StartIndex << "]"
-                      << " available @" << MinNextUnreserved << "c"
-                      << "\n");
+  LLVM_DEBUG({
+    if (DAG->Opts.misched_detail_resource_booking)
+      dbgs() << "    selecting " << SchedModel->getResourceName(PIdx) << "["
+             << InstanceIdx - StartIndex << "]"
+             << " available @" << MinNextUnreserved << "c"
+             << "\n";
+  });
   return std::make_pair(MinNextUnreserved, InstanceIdx);
 }
 
@@ -2731,14 +2981,14 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
   if (HazardRec->isEnabled()
       && HazardRec->getHazardType(SU) != ScheduleHazardRecognizer::NoHazard) {
     LLVM_DEBUG(dbgs().indent(2)
-               << "hazard: SU(" << SU->NodeNum << ") reported by HazardRec\n");
+               << "hazard: " << *SU << " reported by HazardRec\n");
     return true;
   }
 
   unsigned uops = SchedModel->getNumMicroOps(SU->getInstr());
   if ((CurrMOps > 0) && (CurrMOps + uops > SchedModel->getIssueWidth())) {
-    LLVM_DEBUG(dbgs().indent(2) << "hazard:  SU(" << SU->NodeNum << ") uops="
-                                << uops << ", CurrMOps = " << CurrMOps << ", "
+    LLVM_DEBUG(dbgs().indent(2) << "hazard:  " << *SU << " uops=" << uops
+                                << ", CurrMOps = " << CurrMOps << ", "
                                 << "CurrMOps + uops > issue width of "
                                 << SchedModel->getIssueWidth() << "\n");
     return true;
@@ -2747,7 +2997,7 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
   if (CurrMOps > 0 &&
       ((isTop() && SchedModel->mustBeginGroup(SU->getInstr())) ||
        (!isTop() && SchedModel->mustEndGroup(SU->getInstr())))) {
-    LLVM_DEBUG(dbgs().indent(2) << "hazard: SU(" << SU->NodeNum << ") must "
+    LLVM_DEBUG(dbgs().indent(2) << "hazard: " << *SU << " must "
                                 << (isTop() ? "begin" : "end") << " group\n");
     return true;
   }
@@ -2768,7 +3018,7 @@ bool SchedBoundary::checkHazard(SUnit *SU) {
         MaxObservedStall = std::max(ReleaseAtCycle, MaxObservedStall);
 #endif
         LLVM_DEBUG(dbgs().indent(2)
-                   << "hazard:  SU(" << SU->NodeNum << ") "
+                   << "hazard:  " << *SU << " "
                    << SchedModel->getResourceName(ResIdx) << '['
                    << InstanceIdx - ReservedCyclesIndex[ResIdx] << ']' << "="
                    << NRCycle << "c, is later than "
@@ -2793,8 +3043,8 @@ findMaxLatency(ArrayRef<SUnit*> ReadySUs) {
     }
   }
   if (LateSU) {
-    LLVM_DEBUG(dbgs() << Available.getName() << " RemLatency SU("
-                      << LateSU->NodeNum << ") " << RemLatency << "c\n");
+    LLVM_DEBUG(dbgs() << Available.getName() << " RemLatency " << *LateSU << " "
+                      << RemLatency << "c\n");
   }
   return RemLatency;
 }
@@ -2849,14 +3099,14 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
   bool IsBuffered = SchedModel->getMicroOpBufferSize() != 0;
   bool HazardDetected = !IsBuffered && ReadyCycle > CurrCycle;
   if (HazardDetected)
-    LLVM_DEBUG(dbgs().indent(2) << "hazard: SU(" << SU->NodeNum
-                                << ") ReadyCycle = " << ReadyCycle
-                                << " is later than CurrCycle = " << CurrCycle
-                                << " on an unbuffered resource" << "\n");
+    LLVM_DEBUG(dbgs().indent(2)
+               << "hazard: " << *SU << " ReadyCycle = " << ReadyCycle
+               << " is later than CurrCycle = " << CurrCycle
+               << " on an unbuffered resource" << "\n");
   else
     HazardDetected = checkHazard(SU);
 
-  if (!HazardDetected && Available.size() >= ReadyListLimit) {
+  if (!HazardDetected && Available.size() >= DAG->Opts.misched_limit) {
     HazardDetected = true;
     LLVM_DEBUG(dbgs().indent(2) << "hazard: Available Q is full (size: "
                                 << Available.size() << ")\n");
@@ -2864,8 +3114,7 @@ void SchedBoundary::releaseNode(SUnit *SU, unsigned ReadyCycle, bool InPQueue,
 
   if (!HazardDetected) {
     Available.push(SU);
-    LLVM_DEBUG(dbgs().indent(2)
-               << "Move SU(" << SU->NodeNum << ") into Available Q\n");
+    LLVM_DEBUG(dbgs().indent(2) << "Move " << *SU << " into Available Q\n");
 
     if (InPQueue)
       Pending.remove(Pending.begin() + Idx);
@@ -2969,17 +3218,6 @@ unsigned SchedBoundary::countResource(const MCSchedClassDesc *SC, unsigned PIdx,
 
 /// Move the boundary of scheduled code by one SUnit.
 void SchedBoundary::bumpNode(SUnit *SU) {
-  // Update the reservation table.
-  if (HazardRec->isEnabled()) {
-    if (!isTop() && SU->isCall) {
-      // Calls are scheduled with their preceding instructions. For bottom-up
-      // scheduling, clear the pipeline state before emitting.
-      HazardRec->Reset();
-    }
-    HazardRec->EmitInstruction(SU);
-    // Scheduling an instruction may have made pending instructions available.
-    CheckPending = true;
-  }
   // checkHazard should prevent scheduling multiple instructions per cycle that
   // exceed the issue width.
   const MCSchedClassDesc *SC = DAG->getSchedClass(SU);
@@ -3051,7 +3289,7 @@ void SchedBoundary::bumpNode(SUnit *SU) {
              PI = SchedModel->getWriteProcResBegin(SC),
              PE = SchedModel->getWriteProcResEnd(SC); PI != PE; ++PI) {
         unsigned PIdx = PI->ProcResourceIdx;
-        if (SchedModel->getProcResource(PIdx)->BufferSize == 0) {
+        if (SchedModel->getResourceBufferSize(PIdx) == 0) {
 
           if (SchedModel && SchedModel->enableIntervals()) {
             unsigned ReservedUntil, InstanceIdx;
@@ -3061,12 +3299,12 @@ void SchedBoundary::bumpNode(SUnit *SU) {
               ReservedResourceSegments[InstanceIdx].add(
                   ResourceSegments::getResourceIntervalTop(
                       NextCycle, PI->AcquireAtCycle, PI->ReleaseAtCycle),
-                  MIResourceCutOff);
+                  DAG->Opts.misched_resource_cutoff);
             } else {
               ReservedResourceSegments[InstanceIdx].add(
                   ResourceSegments::getResourceIntervalBottom(
                       NextCycle, PI->AcquireAtCycle, PI->ReleaseAtCycle),
-                  MIResourceCutOff);
+                  DAG->Opts.misched_resource_cutoff);
             }
           } else {
 
@@ -3088,13 +3326,13 @@ void SchedBoundary::bumpNode(SUnit *SU) {
   unsigned &BotLatency = isTop() ? DependentLatency : ExpectedLatency;
   if (SU->getDepth() > TopLatency) {
     TopLatency = SU->getDepth();
-    LLVM_DEBUG(dbgs() << "  " << Available.getName() << " TopLatency SU("
-                      << SU->NodeNum << ") " << TopLatency << "c\n");
+    LLVM_DEBUG(dbgs() << "  " << Available.getName() << " TopLatency " << *SU
+                      << " " << TopLatency << "c\n");
   }
   if (SU->getHeight() > BotLatency) {
     BotLatency = SU->getHeight();
-    LLVM_DEBUG(dbgs() << "  " << Available.getName() << " BotLatency SU("
-                      << SU->NodeNum << ") " << BotLatency << "c\n");
+    LLVM_DEBUG(dbgs() << "  " << Available.getName() << " BotLatency " << *SU
+                      << " " << BotLatency << "c\n");
   }
   // If we stall for any reason, bump the cycle.
   if (NextCycle > CurrCycle)
@@ -3105,6 +3343,18 @@ void SchedBoundary::bumpNode(SUnit *SU) {
     IsResourceLimited =
         checkResourceLimit(SchedModel->getLatencyFactor(), getCriticalCount(),
                            getScheduledLatency(), true);
+
+  // Update the reservation table.
+  if (HazardRec->isEnabled()) {
+    if (!isTop() && SU->isCall) {
+      // Calls are scheduled with their preceding instructions. For bottom-up
+      // scheduling, clear the pipeline state before emitting.
+      HazardRec->Reset();
+    }
+    HazardRec->EmitInstruction(SU);
+    // Scheduling an instruction may have made pending instructions available.
+    CheckPending = true;
+  }
 
   // Update CurrMOps after calling bumpCycle to handle stalls, since bumpCycle
   // resets CurrMOps. Loop to handle instructions with more MOps than issue in
@@ -3144,12 +3394,12 @@ void SchedBoundary::releasePending() {
     SUnit *SU = *(Pending.begin() + I);
     unsigned ReadyCycle = isTop() ? SU->TopReadyCycle : SU->BotReadyCycle;
 
-    LLVM_DEBUG(dbgs() << "Checking pending node SU(" << SU->NodeNum << ")\n");
+    LLVM_DEBUG(dbgs() << "Checking pending node " << *SU << "\n");
 
     if (ReadyCycle < MinReadyCycle)
       MinReadyCycle = ReadyCycle;
 
-    if (Available.size() >= ReadyListLimit)
+    if (Available.size() >= DAG->Opts.misched_limit)
       break;
 
     releaseNode(SU, ReadyCycle, true, I);
@@ -3255,8 +3505,10 @@ LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
          << "\n  ExpectedLatency: " << ExpectedLatency << "c\n"
          << (IsResourceLimited ? "  - Resource" : "  - Latency")
          << " limited.\n";
-  if (MISchedDumpReservedCycles)
+#ifndef NDEBUG
+  if (DAG->Opts.misched_dump_reserved_cycles)
     dumpReservedCycles();
+#endif
 }
 #endif
 
@@ -3279,31 +3531,6 @@ initResourceDelta(const ScheduleDAGMI *DAG,
     if (PI->ProcResourceIdx == Policy.DemandResIdx)
       ResDelta.DemandedResources += PI->ReleaseAtCycle;
   }
-}
-
-/// Compute remaining latency. We need this both to determine whether the
-/// overall schedule has become latency-limited and whether the instructions
-/// outside this zone are resource or latency limited.
-///
-/// The "dependent" latency is updated incrementally during scheduling as the
-/// max height/depth of scheduled nodes minus the cycles since it was
-/// scheduled:
-///   DLat = max (N.depth - (CurrCycle - N.ReadyCycle) for N in Zone
-///
-/// The "independent" latency is the max ready queue depth:
-///   ILat = max N.depth for N in Available|Pending
-///
-/// RemainingLatency is the greater of independent and dependent latency.
-///
-/// These computations are expensive, especially in DAGs with many edges, so
-/// only do them if necessary.
-static unsigned computeRemLatency(SchedBoundary &CurrZone) {
-  unsigned RemLatency = CurrZone.getDependentLatency();
-  RemLatency = std::max(RemLatency,
-                        CurrZone.findMaxLatency(CurrZone.Available.elements()));
-  RemLatency = std::max(RemLatency,
-                        CurrZone.findMaxLatency(CurrZone.Pending.elements()));
-  return RemLatency;
 }
 
 /// Returns true if the current cycle plus remaning latency is greater than
@@ -3445,7 +3672,7 @@ void GenericSchedulerBase::traceCandidate(const SchedCandidate &Cand) {
     Latency = Cand.SU->getDepth();
     break;
   }
-  dbgs() << "  Cand SU(" << Cand.SU->NodeNum << ") " << getReasonStr(Cand.Reason);
+  dbgs() << "  Cand " << *Cand.SU << " " << getReasonStr(Cand.Reason);
   if (P.isValid())
     dbgs() << " " << TRI->getRegPressureSetName(P.getPSet())
            << ":" << P.getUnitInc() << " ";
@@ -3463,14 +3690,38 @@ void GenericSchedulerBase::traceCandidate(const SchedCandidate &Cand) {
 }
 #endif
 
-namespace llvm {
+/// Compute remaining latency. We need this both to determine whether the
+/// overall schedule has become latency-limited and whether the instructions
+/// outside this zone are resource or latency limited.
+///
+/// The "dependent" latency is updated incrementally during scheduling as the
+/// max height/depth of scheduled nodes minus the cycles since it was
+/// scheduled:
+///   DLat = max (N.depth - (CurrCycle - N.ReadyCycle) for N in Zone
+///
+/// The "independent" latency is the max ready queue depth:
+///   ILat = max N.depth for N in Available|Pending
+///
+/// RemainingLatency is the greater of independent and dependent latency.
+///
+/// These computations are expensive, especially in DAGs with many edges, so
+/// only do them if necessary.
+unsigned llvm::computeRemLatency(SchedBoundary &CurrZone) {
+  unsigned RemLatency = CurrZone.getDependentLatency();
+  RemLatency = std::max(RemLatency,
+                        CurrZone.findMaxLatency(CurrZone.Available.elements()));
+  RemLatency = std::max(RemLatency,
+                        CurrZone.findMaxLatency(CurrZone.Pending.elements()));
+  return RemLatency;
+}
+
 /// Return true if this heuristic determines order.
 /// TODO: Consider refactor return type of these functions as integer or enum,
 /// as we may need to differentiate whether TryCand is better than Cand.
-bool tryLess(int TryVal, int CandVal,
-             GenericSchedulerBase::SchedCandidate &TryCand,
-             GenericSchedulerBase::SchedCandidate &Cand,
-             GenericSchedulerBase::CandReason Reason) {
+bool llvm::tryLess(int TryVal, int CandVal,
+                   GenericSchedulerBase::SchedCandidate &TryCand,
+                   GenericSchedulerBase::SchedCandidate &Cand,
+                   GenericSchedulerBase::CandReason Reason) {
   if (TryVal < CandVal) {
     TryCand.Reason = Reason;
     return true;
@@ -3483,10 +3734,10 @@ bool tryLess(int TryVal, int CandVal,
   return false;
 }
 
-bool tryGreater(int TryVal, int CandVal,
-                GenericSchedulerBase::SchedCandidate &TryCand,
-                GenericSchedulerBase::SchedCandidate &Cand,
-                GenericSchedulerBase::CandReason Reason) {
+bool llvm::tryGreater(int TryVal, int CandVal,
+                      GenericSchedulerBase::SchedCandidate &TryCand,
+                      GenericSchedulerBase::SchedCandidate &Cand,
+                      GenericSchedulerBase::CandReason Reason) {
   if (TryVal > CandVal) {
     TryCand.Reason = Reason;
     return true;
@@ -3499,9 +3750,9 @@ bool tryGreater(int TryVal, int CandVal,
   return false;
 }
 
-bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
-                GenericSchedulerBase::SchedCandidate &Cand,
-                SchedBoundary &Zone) {
+bool llvm::tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
+                      GenericSchedulerBase::SchedCandidate &Cand,
+                      SchedBoundary &Zone) {
   if (Zone.isTop()) {
     // Prefer the candidate with the lesser depth, but only if one of them has
     // depth greater than the total latency scheduled so far, otherwise either
@@ -3531,12 +3782,13 @@ bool tryLatency(GenericSchedulerBase::SchedCandidate &TryCand,
   }
   return false;
 }
-} // end namespace llvm
 
-static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
-                      bool IsPostRA = false) {
-  LLVM_DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ")
-                    << GenericSchedulerBase::getReasonStr(Reason) << " ["
+static void tracePick(const SUnit *SU,
+                      const GenericSchedulerBase::CandReason Reason,
+                      const bool IsTop, const bool IsPostRA = false) {
+  assert(SU && "SU must not be null for tracing");
+  LLVM_DEBUG(dbgs() << "Pick " << (IsTop ? "Top " : "Bot ") << "Cand " << *SU
+                    << " " << GenericSchedulerBase::getReasonStr(Reason) << " ["
                     << (IsPostRA ? "post-RA" : "pre-RA") << "]\n");
 
   if (IsPostRA) {
@@ -3662,8 +3914,8 @@ static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
 }
 
 static void tracePick(const GenericSchedulerBase::SchedCandidate &Cand,
-                      bool IsPostRA = false) {
-  tracePick(Cand.Reason, Cand.AtTop, IsPostRA);
+                      const bool IsPostRA = false) {
+  tracePick(Cand.SU, Cand.Reason, Cand.AtTop, IsPostRA);
 }
 
 void GenericScheduler::initialize(ScheduleDAGMI *dag) {
@@ -3685,17 +3937,15 @@ void GenericScheduler::initialize(ScheduleDAGMI *dag) {
   // Initialize the HazardRecognizers. If itineraries don't exist, are empty, or
   // are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
-  if (!Top.HazardRec) {
-    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
-  if (!Bot.HazardRec) {
-    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
+  if (!Top.HazardRec)
+    Top.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
+  if (!Bot.HazardRec)
+    Bot.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
   TopCand.SU = nullptr;
   BotCand.SU = nullptr;
 
-  TopCluster = nullptr;
-  BotCluster = nullptr;
+  TopClusterID = InvalidClusterId;
+  BotClusterID = InvalidClusterId;
 }
 
 /// Initialize the per-region scheduling policy.
@@ -3725,10 +3975,13 @@ void GenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   RegionPolicy.OnlyBottomUp = true;
 
   // Allow the subtarget to override default policy.
-  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, NumRegionInstrs);
+  SchedRegion Region(Begin, End, NumRegionInstrs);
+  MF.getSubtarget().overrideSchedPolicy(RegionPolicy, Region);
 
   // After subtarget overrides, apply command line options.
-  if (!EnableRegPressure) {
+  const CodeGenOptions &Opts = getCodeGenOptions(MF);
+  MISched::Direction PreRADirection = Opts.misched_prera_direction;
+  if (!Opts.misched_regpressure) {
     RegionPolicy.ShouldTrackPressure = false;
     RegionPolicy.ShouldTrackLaneMasks = false;
   }
@@ -3805,24 +4058,22 @@ void GenericScheduler::registerRoots() {
       Rem.CriticalPath = SU->getDepth();
   }
   LLVM_DEBUG(dbgs() << "Critical Path(GS-RR ): " << Rem.CriticalPath << '\n');
-  if (DumpCriticalPathLength) {
+  if (DAG->Opts.misched_dcpl) {
     errs() << "Critical Path(GS-RR ): " << Rem.CriticalPath << " \n";
   }
 
-  if (EnableCyclicPath && SchedModel->getMicroOpBufferSize() > 0) {
+  if (DAG->Opts.misched_cyclicpath && SchedModel->getMicroOpBufferSize() > 0) {
     Rem.CyclicCritPath = DAG->computeCyclicCriticalPath();
     checkAcyclicLatency();
   }
 }
 
-namespace llvm {
-bool tryPressure(const PressureChange &TryP,
-                 const PressureChange &CandP,
-                 GenericSchedulerBase::SchedCandidate &TryCand,
-                 GenericSchedulerBase::SchedCandidate &Cand,
-                 GenericSchedulerBase::CandReason Reason,
-                 const TargetRegisterInfo *TRI,
-                 const MachineFunction &MF) {
+bool llvm::tryPressure(const PressureChange &TryP, const PressureChange &CandP,
+                       GenericSchedulerBase::SchedCandidate &TryCand,
+                       GenericSchedulerBase::SchedCandidate &Cand,
+                       GenericSchedulerBase::CandReason Reason,
+                       const TargetRegisterInfo *TRI,
+                       const MachineFunction &MF) {
   // If one candidate decreases and the other increases, go with it.
   // Invalid candidates have UnitInc==0.
   if (tryGreater(TryP.getUnitInc() < 0, CandP.getUnitInc() < 0, TryCand, Cand,
@@ -3855,7 +4106,7 @@ bool tryPressure(const PressureChange &TryP,
   return tryGreater(TryRank, CandRank, TryCand, Cand, Reason);
 }
 
-unsigned getWeakLeft(const SUnit *SU, bool isTop) {
+unsigned llvm::getWeakLeft(const SUnit *SU, bool isTop) {
   return (isTop) ? SU->WeakPredsLeft : SU->WeakSuccsLeft;
 }
 
@@ -3866,7 +4117,7 @@ unsigned getWeakLeft(const SUnit *SU, bool isTop) {
 /// copies which can be prescheduled. The rest (e.g. x86 MUL) could be bundled
 /// with the operation that produces or consumes the physreg. We'll do this when
 /// regalloc has support for parallel copies.
-int biasPhysReg(const SUnit *SU, bool isTop) {
+int llvm::biasPhysReg(const SUnit *SU, bool isTop, bool BiasPRegsExtra) {
   const MachineInstr *MI = SU->getInstr();
 
   if (MI->isCopy()) {
@@ -3899,9 +4150,35 @@ int biasPhysReg(const SUnit *SU, bool isTop) {
       return isTop ? -1 : 1;
   }
 
+  if (BiasPRegsExtra && !isTop && MI->getNumExplicitDefs() == 1)
+    // Register coalescer will create cases of e.g. Load Address of a frame
+    // index directly into a physreg.
+    return MI->getOperand(0).getReg().isPhysical();
+
   return 0;
 }
-} // end namespace llvm
+
+bool llvm::tryBiasPhysRegs(GenericSchedulerBase::SchedCandidate &TryCand,
+                           GenericSchedulerBase::SchedCandidate &Cand,
+                           SchedBoundary *Zone, bool BiasPRegsExtra) {
+  int TryCandPRegBias = biasPhysReg(TryCand.SU, TryCand.AtTop, BiasPRegsExtra);
+  int CandPRegBias = biasPhysReg(Cand.SU, Cand.AtTop, BiasPRegsExtra);
+  if (tryGreater(TryCandPRegBias, CandPRegBias, TryCand, Cand,
+                 GenericSchedulerBase::PhysReg))
+    return true;
+  if (BiasPRegsExtra && Zone != nullptr && TryCandPRegBias &&
+      TryCandPRegBias == CandPRegBias) {
+    // Both biased same way - maintain their input order.
+    if (Zone->isTop())
+      tryLess(TryCand.SU->NodeNum, Cand.SU->NodeNum, TryCand, Cand,
+              GenericSchedulerBase::NodeOrder);
+    else
+      tryGreater(TryCand.SU->NodeNum, Cand.SU->NodeNum, TryCand, Cand,
+                 GenericSchedulerBase::NodeOrder);
+    return true;
+  }
+  return false;
+}
 
 void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
                                      bool AtTop,
@@ -3917,7 +4194,7 @@ void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
         DAG->getRegionCriticalPSets(),
         DAG->getRegPressure().MaxSetPressure);
     } else {
-      if (VerifyScheduling) {
+      if (DAG->Opts.verify_misched) {
         TempTracker.getMaxUpwardPressureDelta(
           Cand.SU->getInstr(),
           &DAG->getPressureDiff(Cand.SU),
@@ -3935,7 +4212,7 @@ void GenericScheduler::initCandidate(SchedCandidate &Cand, SUnit *SU,
     }
   }
   LLVM_DEBUG(if (Cand.RPDelta.Excess.isValid()) dbgs()
-             << "  Try  SU(" << Cand.SU->NodeNum << ") "
+             << "  Try  " << *Cand.SU << " "
              << TRI->getRegPressureSetName(Cand.RPDelta.Excess.getPSet()) << ":"
              << Cand.RPDelta.Excess.getUnitInc() << "\n");
 }
@@ -3961,8 +4238,7 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
   }
 
   // Bias PhysReg Defs and copies to their uses and defined respectively.
-  if (tryGreater(biasPhysReg(TryCand.SU, TryCand.AtTop),
-                 biasPhysReg(Cand.SU, Cand.AtTop), TryCand, Cand, PhysReg))
+  if (tryBiasPhysRegs(TryCand, Cand, Zone, RegionPolicy.BiasPRegsExtra))
     return TryCand.Reason != NoCand;
 
   // Avoid exceeding the target's limit.
@@ -4005,10 +4281,14 @@ bool GenericScheduler::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
-  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
-  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
-                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
 
@@ -4090,12 +4370,12 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // efficient, but also provides the best heuristics for CriticalPSets.
   if (SUnit *SU = Bot.pickOnlyChoice()) {
     IsTopNode = false;
-    tracePick(Only1, /*IsTopNode=*/false);
+    tracePick(SU, Only1, /*IsTopNode=*/false);
     return SU;
   }
   if (SUnit *SU = Top.pickOnlyChoice()) {
     IsTopNode = true;
-    tracePick(Only1, /*IsTopNode=*/true);
+    tracePick(SU, Only1, /*IsTopNode=*/true);
     return SU;
   }
   // Set the bottom-up policy based on the state of the current bottom zone and
@@ -4117,7 +4397,7 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   } else {
     LLVM_DEBUG(traceCandidate(BotCand));
 #ifndef NDEBUG
-    if (VerifyScheduling) {
+    if (DAG->Opts.verify_misched) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Bot, BotPolicy, DAG->getBotRPTracker(), TCand);
@@ -4137,7 +4417,7 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   } else {
     LLVM_DEBUG(traceCandidate(TopCand));
 #ifndef NDEBUG
-    if (VerifyScheduling) {
+    if (DAG->Opts.verify_misched) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Top, TopPolicy, DAG->getTopRPTracker(), TCand);
@@ -4170,33 +4450,36 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  do {
-    if (RegionPolicy.OnlyTopDown) {
-      SU = Top.pickOnlyChoice();
-      if (!SU) {
-        CandPolicy NoPolicy;
-        TopCand.reset(NoPolicy);
-        pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
-        assert(TopCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(TopCand);
-        SU = TopCand.SU;
-      }
-      IsTopNode = true;
-    } else if (RegionPolicy.OnlyBottomUp) {
-      SU = Bot.pickOnlyChoice();
-      if (!SU) {
-        CandPolicy NoPolicy;
-        BotCand.reset(NoPolicy);
-        pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
-        assert(BotCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(BotCand);
-        SU = BotCand.SU;
-      }
-      IsTopNode = false;
+  if (RegionPolicy.OnlyTopDown) {
+    SU = Top.pickOnlyChoice();
+    if (SU) {
+      tracePick(SU, Only1, /*IsTopNode=*/true);
     } else {
-      SU = pickNodeBidirectional(IsTopNode);
+      CandPolicy NoPolicy;
+      TopCand.reset(NoPolicy);
+      pickNodeFromQueue(Top, NoPolicy, DAG->getTopRPTracker(), TopCand);
+      assert(TopCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(TopCand);
+      SU = TopCand.SU;
     }
-  } while (SU->isScheduled);
+    IsTopNode = true;
+  } else if (RegionPolicy.OnlyBottomUp) {
+    SU = Bot.pickOnlyChoice();
+    if (SU) {
+      tracePick(SU, Only1, /*IsTopNode=*/false);
+    } else {
+      CandPolicy NoPolicy;
+      BotCand.reset(NoPolicy);
+      pickNodeFromQueue(Bot, NoPolicy, DAG->getBotRPTracker(), BotCand);
+      assert(BotCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(BotCand);
+      SU = BotCand.SU;
+    }
+    IsTopNode = false;
+  } else {
+    SU = pickNodeBidirectional(IsTopNode);
+  }
+  assert(!SU->isScheduled && "SUnit scheduled twice.");
 
   // If IsTopNode, then SU is in Top.Available and must be removed. Otherwise,
   // if isTopReady(), then SU is in either Top.Available or Top.Pending.
@@ -4218,8 +4501,7 @@ SUnit *GenericScheduler::pickNode(bool &IsTopNode) {
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
-  LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
-                    << *SU->getInstr());
+  LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
 
   if (IsTopNode) {
     if (SU->NodeNum == TopIdx++)
@@ -4254,7 +4536,48 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
       continue;
     LLVM_DEBUG(dbgs() << "  Rescheduling physreg copy ";
                DAG->dumpNode(*Dep.getSUnit()));
+    // Moving a copy past subregister defs can leave stale read-undef flags,
+    // dropping true dependencies in a later DAG build. Recompute them from
+    // LiveIntervals after the move. Only vreg copies need this, and only when
+    // lane masks are tracked.
+    LiveIntervals *LIS = DAG->getLIS();
+    SmallVector<Register, 8> CopyVRegs;
+    if (LIS && DAG->hasVRegLiveness() && shouldTrackLaneMasks())
+      for (const MachineOperand &MO : Copy->operands())
+        if (MO.isReg() && MO.getReg().isVirtual())
+          CopyVRegs.push_back(MO.getReg());
+    bool FixUndef = !CopyVRegs.empty();
+
+    // Remember the old location to limit the fixup below to the range moved.
+    SlotIndex OldIdx;
+    MachineBasicBlock::iterator OldNext;
+    if (FixUndef) {
+      OldIdx = LIS->getInstructionIndex(*Copy);
+      OldNext = std::next(Copy->getIterator());
+    }
+
     DAG->moveInstruction(Copy, InsertPos);
+    if (!FixUndef)
+      continue;
+
+    // Fix up the copy itself and everything it moved past.
+    RegisterOperands::restoreLivenessFlags(*Copy, *TRI, DAG->MRI, *LIS,
+                                           /*TrackLaneMasks=*/true, CopyVRegs);
+    MachineBasicBlock::iterator NewIt = Copy->getIterator();
+    SlotIndex NewIdx = LIS->getInstructionIndex(*Copy);
+    MachineBasicBlock::iterator FixBegin = NewIt, FixEnd = NewIt;
+    if (NewIdx < OldIdx) {
+      FixBegin = std::next(NewIt);
+      FixEnd = OldNext;
+    } else if (OldIdx < NewIdx) {
+      FixBegin = OldNext;
+      FixEnd = NewIt;
+    }
+    for (auto I = FixBegin; I != FixEnd; ++I)
+      if (!I->isDebugInstr())
+        RegisterOperands::restoreLivenessFlags(*I, *TRI, DAG->MRI, *LIS,
+                                               /*TrackLaneMasks=*/true,
+                                               CopyVRegs);
   }
 }
 
@@ -4268,24 +4591,34 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
 void GenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   if (IsTopNode) {
     SU->TopReadyCycle = std::max(SU->TopReadyCycle, Top.getCurrCycle());
-    TopCluster = DAG->getCluster(SU->ParentClusterIdx);
-    LLVM_DEBUG(if (TopCluster) {
-      dbgs() << "  Top Cluster: ";
-      for (auto *N : *TopCluster)
-        dbgs() << N->NodeNum << '\t';
-      dbgs() << '\n';
+    TopClusterID = SU->ParentClusterIdx;
+    LLVM_DEBUG({
+      if (TopClusterID != InvalidClusterId) {
+        ClusterInfo *TopCluster = DAG->getCluster(TopClusterID);
+        dbgs() << "  Top Cluster: ";
+        for (auto *N : *TopCluster) {
+          DAG->dumpNodeName(*N);
+          dbgs() << '\t';
+        }
+        dbgs() << '\n';
+      }
     });
     Top.bumpNode(SU);
     if (SU->hasPhysRegUses)
       reschedulePhysReg(SU, true);
   } else {
     SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
-    BotCluster = DAG->getCluster(SU->ParentClusterIdx);
-    LLVM_DEBUG(if (BotCluster) {
-      dbgs() << "  Bot Cluster: ";
-      for (auto *N : *BotCluster)
-        dbgs() << N->NodeNum << '\t';
-      dbgs() << '\n';
+    BotClusterID = SU->ParentClusterIdx;
+    LLVM_DEBUG({
+      if (BotClusterID != InvalidClusterId) {
+        ClusterInfo *BotCluster = DAG->getCluster(BotClusterID);
+        dbgs() << "  Bot Cluster: ";
+        for (auto *N : *BotCluster) {
+          DAG->dumpNodeName(*N);
+          dbgs() << '\t';
+        }
+        dbgs() << '\n';
+      }
     });
     Bot.bumpNode(SU);
     if (SU->hasPhysRegDefs)
@@ -4317,14 +4650,12 @@ void PostGenericScheduler::initialize(ScheduleDAGMI *Dag) {
   // Initialize the HazardRecognizers. If itineraries don't exist, are empty,
   // or are disabled, then these HazardRecs will be disabled.
   const InstrItineraryData *Itin = SchedModel->getInstrItineraries();
-  if (!Top.HazardRec) {
-    Top.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
-  if (!Bot.HazardRec) {
-    Bot.HazardRec = DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG);
-  }
-  TopCluster = nullptr;
-  BotCluster = nullptr;
+  if (!Top.HazardRec)
+    Top.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
+  if (!Bot.HazardRec)
+    Bot.HazardRec.reset(DAG->TII->CreateTargetMIHazardRecognizer(Itin, DAG));
+  TopClusterID = InvalidClusterId;
+  BotClusterID = InvalidClusterId;
 }
 
 void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
@@ -4338,9 +4669,12 @@ void PostGenericScheduler::initPolicy(MachineBasicBlock::iterator Begin,
   RegionPolicy.OnlyBottomUp = false;
 
   // Allow the subtarget to override default policy.
-  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, NumRegionInstrs);
+  SchedRegion Region(Begin, End, NumRegionInstrs);
+  MF.getSubtarget().overridePostRASchedPolicy(RegionPolicy, Region);
 
   // After subtarget overrides, apply command line options.
+  MISched::Direction PostRADirection =
+      getCodeGenOptions(MF).misched_postra_direction;
   if (PostRADirection == MISched::TopDown) {
     RegionPolicy.OnlyTopDown = true;
     RegionPolicy.OnlyBottomUp = false;
@@ -4365,7 +4699,7 @@ void PostGenericScheduler::registerRoots() {
       Rem.CriticalPath = SU->getDepth();
   }
   LLVM_DEBUG(dbgs() << "Critical Path: (PGS-RR) " << Rem.CriticalPath << '\n');
-  if (DumpCriticalPathLength) {
+  if (DAG->Opts.misched_dcpl) {
     errs() << "Critical Path(PGS-RR ): " << Rem.CriticalPath << " \n";
   }
 }
@@ -4389,10 +4723,14 @@ bool PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
 
   // Keep clustered nodes together.
-  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
-  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
-  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
-                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
   // Avoid critical resource consumption and balance the schedule.
@@ -4446,12 +4784,12 @@ SUnit *PostGenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   // efficient, but also provides the best heuristics for CriticalPSets.
   if (SUnit *SU = Bot.pickOnlyChoice()) {
     IsTopNode = false;
-    tracePick(Only1, /*IsTopNode=*/false, /*IsPostRA=*/true);
+    tracePick(SU, Only1, /*IsTopNode=*/false, /*IsPostRA=*/true);
     return SU;
   }
   if (SUnit *SU = Top.pickOnlyChoice()) {
     IsTopNode = true;
-    tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
+    tracePick(SU, Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
     return SU;
   }
   // Set the bottom-up policy based on the state of the current bottom zone and
@@ -4473,7 +4811,7 @@ SUnit *PostGenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   } else {
     LLVM_DEBUG(traceCandidate(BotCand));
 #ifndef NDEBUG
-    if (VerifyScheduling) {
+    if (DAG->Opts.verify_misched) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Bot, BotCand);
@@ -4493,7 +4831,7 @@ SUnit *PostGenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   } else {
     LLVM_DEBUG(traceCandidate(TopCand));
 #ifndef NDEBUG
-    if (VerifyScheduling) {
+    if (DAG->Opts.verify_misched) {
       SchedCandidate TCand;
       TCand.reset(CandPolicy());
       pickNodeFromQueue(Top, TopCand);
@@ -4526,51 +4864,49 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
     return nullptr;
   }
   SUnit *SU;
-  do {
-    if (RegionPolicy.OnlyBottomUp) {
-      SU = Bot.pickOnlyChoice();
-      if (SU) {
-        tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
-      } else {
-        CandPolicy NoPolicy;
-        BotCand.reset(NoPolicy);
-        // Set the bottom-up policy based on the state of the current bottom
-        // zone and the instructions outside the zone, including the top zone.
-        setPolicy(BotCand.Policy, /*IsPostRA=*/true, Bot, nullptr);
-        pickNodeFromQueue(Bot, BotCand);
-        assert(BotCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(BotCand, /*IsPostRA=*/true);
-        SU = BotCand.SU;
-      }
-      IsTopNode = false;
-    } else if (RegionPolicy.OnlyTopDown) {
-      SU = Top.pickOnlyChoice();
-      if (SU) {
-        tracePick(Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
-      } else {
-        CandPolicy NoPolicy;
-        TopCand.reset(NoPolicy);
-        // Set the top-down policy based on the state of the current top zone
-        // and the instructions outside the zone, including the bottom zone.
-        setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
-        pickNodeFromQueue(Top, TopCand);
-        assert(TopCand.Reason != NoCand && "failed to find a candidate");
-        tracePick(TopCand, /*IsPostRA=*/true);
-        SU = TopCand.SU;
-      }
-      IsTopNode = true;
+  if (RegionPolicy.OnlyBottomUp) {
+    SU = Bot.pickOnlyChoice();
+    if (SU) {
+      tracePick(SU, Only1, /*IsTopNode=*/false, /*IsPostRA=*/true);
     } else {
-      SU = pickNodeBidirectional(IsTopNode);
+      CandPolicy NoPolicy;
+      BotCand.reset(NoPolicy);
+      // Set the bottom-up policy based on the state of the current bottom
+      // zone and the instructions outside the zone, including the top zone.
+      setPolicy(BotCand.Policy, /*IsPostRA=*/true, Bot, nullptr);
+      pickNodeFromQueue(Bot, BotCand);
+      assert(BotCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(BotCand, /*IsPostRA=*/true);
+      SU = BotCand.SU;
     }
-  } while (SU->isScheduled);
+    IsTopNode = false;
+  } else if (RegionPolicy.OnlyTopDown) {
+    SU = Top.pickOnlyChoice();
+    if (SU) {
+      tracePick(SU, Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
+    } else {
+      CandPolicy NoPolicy;
+      TopCand.reset(NoPolicy);
+      // Set the top-down policy based on the state of the current top zone
+      // and the instructions outside the zone, including the bottom zone.
+      setPolicy(TopCand.Policy, /*IsPostRA=*/true, Top, nullptr);
+      pickNodeFromQueue(Top, TopCand);
+      assert(TopCand.Reason != NoCand && "failed to find a candidate");
+      tracePick(TopCand, /*IsPostRA=*/true);
+      SU = TopCand.SU;
+    }
+    IsTopNode = true;
+  } else {
+    SU = pickNodeBidirectional(IsTopNode);
+  }
+  assert(!SU->isScheduled && "SUnit scheduled twice.");
 
   if (SU->isTopReady())
     Top.removeReady(SU);
   if (SU->isBottomReady())
     Bot.removeReady(SU);
 
-  LLVM_DEBUG(dbgs() << "Scheduling SU(" << SU->NodeNum << ") "
-                    << *SU->getInstr());
+  LLVM_DEBUG(dbgs() << "Scheduling " << *SU << " " << *SU->getInstr());
 
   if (IsTopNode) {
     if (SU->NodeNum == TopIdx++)
@@ -4591,11 +4927,11 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
 void PostGenericScheduler::schedNode(SUnit *SU, bool IsTopNode) {
   if (IsTopNode) {
     SU->TopReadyCycle = std::max(SU->TopReadyCycle, Top.getCurrCycle());
-    TopCluster = DAG->getCluster(SU->ParentClusterIdx);
+    TopClusterID = SU->ParentClusterIdx;
     Top.bumpNode(SU);
   } else {
     SU->BotReadyCycle = std::max(SU->BotReadyCycle, Bot.getCurrCycle());
-    BotCluster = DAG->getCluster(SU->ParentClusterIdx);
+    BotClusterID = SU->ParentClusterIdx;
     Bot.bumpNode(SU);
   }
 }
@@ -4673,8 +5009,7 @@ public:
     SUnit *SU = ReadyQ.back();
     ReadyQ.pop_back();
     IsTopNode = false;
-    LLVM_DEBUG(dbgs() << "Pick node "
-                      << "SU(" << SU->NodeNum << ") "
+    LLVM_DEBUG(dbgs() << "Pick node " << *SU << " "
                       << " ILP: " << DAG->getDFSResult()->getILP(SU)
                       << " Tree: " << DAG->getDFSResult()->getSubtreeID(SU)
                       << " @"
@@ -4799,6 +5134,8 @@ public:
 } // end anonymous namespace
 
 static ScheduleDAGInstrs *createInstructionShuffler(MachineSchedContext *C) {
+  MISched::Direction PreRADirection =
+      getCodeGenOptions(*C->MF).misched_prera_direction;
   bool Alternate =
       PreRADirection != MISched::TopDown && PreRADirection != MISched::BottomUp;
   bool TopDown = PreRADirection != MISched::BottomUp;
@@ -4815,14 +5152,14 @@ static MachineSchedRegistry ShufflerRegistry(
 // GraphWriter support for ScheduleDAGMILive.
 //===----------------------------------------------------------------------===//
 
-#ifndef NDEBUG
-namespace llvm {
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 
-template<> struct GraphTraits<
-  ScheduleDAGMI*> : public GraphTraits<ScheduleDAG*> {};
+template <>
+struct llvm::GraphTraits<ScheduleDAGMI *> : public GraphTraits<ScheduleDAG *> {
+};
 
-template<>
-struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
+template <>
+struct llvm::DOTGraphTraits<ScheduleDAGMI *> : public DefaultDOTGraphTraits {
   DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
   static std::string getGraphName(const ScheduleDAG *G) {
@@ -4834,10 +5171,10 @@ struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
   }
 
   static bool isNodeHidden(const SUnit *Node, const ScheduleDAG *G) {
-    if (ViewMISchedCutoff == 0)
+    unsigned Cutoff = getCodeGenOptions(G->MF).misched_view_cutoff;
+    if (Cutoff == 0)
       return false;
-    return (Node->Preds.size() > ViewMISchedCutoff
-         || Node->Succs.size() > ViewMISchedCutoff);
+    return Node->Preds.size() > Cutoff || Node->Succs.size() > Cutoff;
   }
 
   /// If you want to override the dot attributes printed for a particular
@@ -4858,7 +5195,7 @@ struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
     const ScheduleDAGMI *DAG = static_cast<const ScheduleDAGMI*>(G);
     const SchedDFSResult *DFS = DAG->hasVRegLiveness() ?
       static_cast<const ScheduleDAGMILive*>(G)->getDFSResult() : nullptr;
-    SS << "SU:" << SU->NodeNum;
+    SS << *SU;
     if (DFS)
       SS << " I:" << DFS->getNumInstrs(SU);
     return Str;
@@ -4882,13 +5219,12 @@ struct DOTGraphTraits<ScheduleDAGMI*> : public DefaultDOTGraphTraits {
   }
 };
 
-} // end namespace llvm
 #endif // NDEBUG
 
 /// viewGraph - Pop up a ghostview window with the reachable parts of the DAG
 /// rendered using 'dot'.
 void ScheduleDAGMI::viewGraph(const Twine &Name, const Twine &Title) {
-#ifndef NDEBUG
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
   ViewGraph(this, Name, false, Title);
 #else
   errs() << "ScheduleDAGMI::viewGraph is only available in debug builds on "

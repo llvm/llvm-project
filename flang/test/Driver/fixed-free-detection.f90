@@ -16,14 +16,14 @@
 ! RUN: %flang_fc1 -E -fno-reformat %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=FIXEDFORM
 ! RUN: %flang_fc1 -E -fno-reformat %S/Inputs/free-form-test.f90 %S/Inputs/fixed-form-test.f  2>&1 | FileCheck %s --check-prefix=MULTIPLEFORMS
 
-! FREEFORM:program freeform
-! FREEFORM-NOT:programfixedform
+! FREEFORM:y z=1
+! FREEFORM-NOT:yz=1
 
 ! FIXEDFORM:programfixedform
 ! FIXEDFORM-NOT:program freeform
 
-! MULTIPLEFORMS:program freeform
-! MULTIPLEFORMS-NOT:programfixedform
+! MULTIPLEFORMS:xy z=1
+! MULTIPLEFORMS-NOT:xyz=1
 ! MULTIPLEFORMS-NEXT:end
 ! MULTIPLEFORMS-NEXT:programfixedform
 ! MULTIPLEFORMS-NOT:program freeform

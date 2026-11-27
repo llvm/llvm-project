@@ -19,7 +19,23 @@ include "mlir/IR/CommonAttrConstraints.td"
 class OpenMP_Attr<string name, string attrMnemonic, list<Trait> traits = [],
                   string baseCppClass = "::mlir::Attribute">
     : AttrDef<OpenMP_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/OpenMP/OpenMPOpsAttributes.h"];
   let mnemonic = attrMnemonic;
+}
+
+//===----------------------------------------------------------------------===//
+// AtomicControlAttr
+//===----------------------------------------------------------------------===//
+
+// Atomic control attributes hold information about architectural
+// characteristics which are required for lowering atomic operations.
+def AtomicControlAttr : OpenMP_Attr<"AtomicControl", "atomic_control"> {
+  let parameters =
+      (ins DefaultValuedParameter<"bool", "false">:$ignore_denormal_mode,
+          DefaultValuedParameter<"bool", "false">:$fine_grained_memory,
+          DefaultValuedParameter<"bool", "false">:$remote_memory);
+
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -27,10 +43,11 @@ class OpenMP_Attr<string name, string attrMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 def DeclareTargetAttr : OpenMP_Attr<"DeclareTarget", "declaretarget"> {
-  let parameters = (ins
-    OptionalParameter<"DeclareTargetDeviceTypeAttr">:$device_type,
-    OptionalParameter<"DeclareTargetCaptureClauseAttr">:$capture_clause
-  );
+  let parameters =
+      (ins "mlir::omp::DeclareTargetDeviceType":$device_type,
+          "mlir::omp::DeclareTargetCaptureClause":$capture_clause,
+          DefaultValuedParameter<"bool", "false">:$automap,
+          DefaultValuedParameter<"bool", "false">:$implicit);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }
@@ -55,12 +72,32 @@ def FlagsAttr : OpenMP_Attr<"Flags", "flags"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionModifierArrayAttr
+//===----------------------------------------------------------------------===//
+
+def ReductionModifierArrayAttr
+    : TypedArrayAttrBase<ReductionModifierAttr,
+                         "array of reduction modifiers"> {
+  let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
 // TaskDependArrayAttr
 //===----------------------------------------------------------------------===//
 
 def TaskDependArrayAttr
     : TypedArrayAttrBase<ClauseTaskDependAttr,
                          ClauseTaskDependAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
+//===----------------------------------------------------------------------===//
+// InteropTypeArrayAttr
+//===----------------------------------------------------------------------===//
+
+def InteropTypeArrayAttr
+    : TypedArrayAttrBase<InteropTypeAttr,
+                         InteropTypeAttr.summary # " array"> {
   let constBuilderCall = ?;
 }
 
@@ -72,6 +109,17 @@ def VersionAttr : OpenMP_Attr<"Version", "version"> {
   let parameters = (ins
     "uint32_t":$version
   );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// IntegerWrapAroundAttr
+//===----------------------------------------------------------------------===//
+
+def IntegerWrapAroundAttr
+    : OpenMP_Attr<"IntegerWrapAround", "integer_wrap_around"> {
+  let parameters = (ins "bool":$integer_wrap_around);
 
   let assemblyFormat = "`<` struct(params) `>`";
 }

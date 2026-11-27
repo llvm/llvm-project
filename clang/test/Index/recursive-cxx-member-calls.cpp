@@ -402,7 +402,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Identifier: "getKind" [33:17 - 33:24] CXXMethod=getKind:33:17 (static)
 // CHECK-tokens: Punctuation: "(" [33:24 - 33:25] CXXMethod=getKind:33:17 (static)
 // CHECK-tokens: Keyword: "const" [33:25 - 33:30] ParmDecl=Name:33:48 (Definition)
-// CHECK-tokens: Identifier: "IdentifierInfo" [33:31 - 33:45] TypeRef=class clang::IdentifierInfo:66:7
+// CHECK-tokens: Identifier: "IdentifierInfo" [33:31 - 33:45] TypeRef=class clang::IdentifierInfo:11:9
 // CHECK-tokens: Punctuation: "*" [33:46 - 33:47] ParmDecl=Name:33:48 (Definition)
 // CHECK-tokens: Identifier: "Name" [33:48 - 33:52] ParmDecl=Name:33:48 (Definition)
 // CHECK-tokens: Punctuation: ")" [33:52 - 33:53] CXXMethod=getKind:33:17 (static)
@@ -438,7 +438,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Identifier: "size_t" [41:16 - 41:22] TypeRef=size_t:2:25
 // CHECK-tokens: Identifier: "npos" [41:23 - 41:27] VarDecl=npos:41:23
 // CHECK-tokens: Punctuation: "=" [41:28 - 41:29] VarDecl=npos:41:23
-// CHECK-tokens: Punctuation: "~" [41:30 - 41:31] UnaryOperator=
+// CHECK-tokens: Punctuation: "~" [41:30 - 41:31] UnaryOperator=~
 // CHECK-tokens: Identifier: "size_t" [41:31 - 41:37] TypeRef=size_t:2:25
 // CHECK-tokens: Punctuation: "(" [41:37 - 41:38] CXXFunctionalCastExpr=
 // CHECK-tokens: Literal: "0" [41:38 - 41:39] IntegerLiteral=
@@ -846,7 +846,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Keyword: "unsigned" [88:14 - 88:22] NonTypeTemplateParameter=N:88:23 (Definition)
 // CHECK-tokens: Identifier: "N" [88:23 - 88:24] NonTypeTemplateParameter=N:88:23 (Definition)
 // CHECK-tokens: Punctuation: ">" [88:25 - 88:26] FunctionTemplate=Case:88:42 (Definition)
-// CHECK-tokens: Identifier: "StringSwitch" [88:27 - 88:39] TypeRef=StringSwitch<T, R>:83:47
+// CHECK-tokens: Identifier: "StringSwitch" [88:27 - 88:39] TypeRef=llvm::StringSwitch<T, R>:83:47
 // CHECK-tokens: Punctuation: "&" [88:40 - 88:41] FunctionTemplate=Case:88:42 (Definition)
 // CHECK-tokens: Identifier: "Case" [88:42 - 88:46] FunctionTemplate=Case:88:42 (Definition)
 // CHECK-tokens: Punctuation: "(" [88:46 - 88:47] FunctionTemplate=Case:88:42 (Definition)
@@ -867,7 +867,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK-tokens: Punctuation: ")" [89:62 - 89:63] FunctionTemplate=Case:88:42 (Definition)
 // CHECK-tokens: Punctuation: "{" [89:64 - 89:65] CompoundStmt=
 // CHECK-tokens: Keyword: "return" [90:5 - 90:11] ReturnStmt=
-// CHECK-tokens: Punctuation: "*" [90:12 - 90:13] UnaryOperator=
+// CHECK-tokens: Punctuation: "*" [90:12 - 90:13] UnaryOperator=*
 // CHECK-tokens: Keyword: "this" [90:13 - 90:17] CXXThisExpr=
 // CHECK-tokens: Punctuation: ";" [90:17 - 90:18] CompoundStmt=
 // CHECK-tokens: Punctuation: "}" [91:3 - 91:4] CompoundStmt=
@@ -1619,7 +1619,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 33:17: CXXMethod=getKind:33:17 (static) Extent=[33:5 - 33:53]
 // CHECK: 33:12: TypeRef=enum clang::AttributeList::Kind:13:10 Extent=[33:12 - 33:16]
 // CHECK: 33:48: ParmDecl=Name:33:48 (Definition) Extent=[33:25 - 33:52]
-// CHECK: 33:31: TypeRef=class clang::IdentifierInfo:66:7 Extent=[33:31 - 33:45]
+// CHECK: 33:31: TypeRef=class clang::IdentifierInfo:11:9 Extent=[33:31 - 33:45]
 // CHECK: 36:8: FunctionDecl=magic_length:36:8 Extent=[36:1 - 36:35]
 // CHECK: 36:1: TypeRef=size_t:2:25 Extent=[36:1 - 36:7]
 // CHECK: 36:33: ParmDecl=s:36:33 (Definition) Extent=[36:21 - 36:34]
@@ -1629,7 +1629,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 40:23: TypedefDecl=iterator:40:23 (Definition) Extent=[40:3 - 40:31]
 // CHECK: 41:23: VarDecl=npos:41:23 Extent=[41:3 - 41:40]
 // CHECK: 41:16: TypeRef=size_t:2:25 Extent=[41:16 - 41:22]
-// CHECK: 41:30: UnaryOperator= Extent=[41:30 - 41:40]
+// CHECK: 41:30: UnaryOperator=~ Extent=[41:30 - 41:40]
 // CHECK: 41:31: CXXFunctionalCastExpr= Extent=[41:31 - 41:40]
 // CHECK: 41:31: TypeRef=size_t:2:25 Extent=[41:31 - 41:37]
 // CHECK: 41:38: UnexposedExpr= Extent=[41:38 - 41:39]
@@ -1856,7 +1856,7 @@ AttributeList::Kind AttributeList::getKind(const IdentifierInfo * Name) {
 // CHECK: 89:57: ParmDecl=Value:89:57 (Definition) Extent=[89:47 - 89:62]
 // CHECK: 89:64: CompoundStmt= Extent=[89:64 - 91:4]
 // CHECK: 90:5: ReturnStmt= Extent=[90:5 - 90:17]
-// CHECK: 90:12: UnaryOperator= Extent=[90:12 - 90:17]
+// CHECK: 90:12: UnaryOperator=* Extent=[90:12 - 90:17]
 // CHECK: 90:13: CXXThisExpr= Extent=[90:13 - 90:17]
 // CHECK: 92:5: CXXMethod=Default:92:5 (Definition) (const) Extent=[92:3 - 94:4] [access=public]
 // CHECK: 92:23: ParmDecl=Value:92:23 (Definition) Extent=[92:13 - 92:28]

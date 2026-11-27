@@ -6,11 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/Passes.h"
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/ComplexToLibm/ComplexToLibm.h"
+#include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
+#include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
+#include "mlir/Conversion/MathToLibm/MathToLibm.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
+#include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/NVVM/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
@@ -53,7 +65,8 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   // GPU code generation.
   const bool gpuCodegen = options.gpuTriple.hasValue();
   if (gpuCodegen) {
-    pm.addPass(createSparseGPUCodegenPass());
+    pm.addPass(createSparseGPUCodegenPass(options.gpuNumThreads,
+                                          options.enableRuntimeLibrary));
     pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createSCFToControlFlowPass());
     pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps());
@@ -66,12 +79,11 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());
   pm.addNestedPass<func::FuncOp>(createConvertVectorToSCFPass());
   pm.addNestedPass<func::FuncOp>(memref::createExpandReallocPass());
-  pm.addNestedPass<func::FuncOp>(createSCFToControlFlowPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(createLowerAffinePass());
+  pm.addNestedPass<func::FuncOp>(createSCFToControlFlowPass());
   pm.addPass(
       createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
-  pm.addPass(createFinalizeMemRefToLLVMConversionPass());
   pm.addNestedPass<func::FuncOp>(createConvertComplexToStandardPass());
   pm.addNestedPass<func::FuncOp>(arith::createArithExpandOpsPass());
   pm.addNestedPass<func::FuncOp>(createConvertMathToLLVMPass());
@@ -79,18 +91,15 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
   pm.addPass(createConvertComplexToLibm());
   pm.addPass(
       createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
-  pm.addPass(createConvertComplexToLLVMPass());
-  pm.addPass(
-      createConvertVectorToLLVMPass(options.convertVectorToLLVMOptions()));
-  pm.addPass(createConvertFuncToLLVMPass());
-  pm.addPass(createArithToLLVMConversionPass());
-  pm.addPass(createConvertControlFlowToLLVMPass());
 
   // Finalize GPU code generation.
   if (gpuCodegen) {
     GpuNVVMAttachTargetOptions nvvmTargetOptions;
     nvvmTargetOptions.triple = options.gpuTriple;
-    nvvmTargetOptions.chip = options.gpuChip;
+    // `gpu-chip` has no default here, so forwarding it unset would overwrite
+    // the pass default with the empty string, which `#nvvm.target` rejects.
+    if (options.gpuChip.hasValue())
+      nvvmTargetOptions.chip = options.gpuChip;
     nvvmTargetOptions.features = options.gpuFeatures;
     pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
     pm.addPass(createGpuToLLVMConversionPass());
@@ -99,8 +108,8 @@ void mlir::sparse_tensor::buildSparsifier(OpPassManager &pm,
     pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   }
 
-  // Convert poison values.
-  pm.addPass(createUBToLLVMConversionPass());
+  // Convert to LLVM.
+  pm.addPass(createConvertToLLVMPass());
 
   // Ensure all casts are realized.
   pm.addPass(createReconcileUnrealizedCastsPass());

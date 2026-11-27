@@ -114,7 +114,7 @@ func.func @non_operation() {
 
 func.func @unknown_dialect_operation() {
   // expected-error@below {{Dialect `foo' not found for custom op 'foo.asd'}}
-  // expected-note-re@below {{Registered dialects:{{.*}} test{{.*}}}}
+  // expected-note-re@below {{Available dialects:{{.*}} test{{.*}}}}
   foo.asd
 }
 
@@ -697,5 +697,14 @@ func.func @drop_references_on_block_parse_error(){
     // Syntax error to abort parsing this block.
     123
   }) : () -> ()
+  return
+}
+
+// -----
+
+func.func @redefined_recursive_alias_type() {
+  "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<redef, i32>
+  // expected-error @below {{recursive alias 'redef' redefined with a different body}}
+  "test.dummy_op_for_roundtrip"() : () -> !test.test_rec_alias<redef, i64>
   return
 }

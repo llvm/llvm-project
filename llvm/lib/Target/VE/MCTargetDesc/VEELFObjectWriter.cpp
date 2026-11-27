@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/VEMCExpr.h"
+#include "MCTargetDesc/VEMCAsmInfo.h"
 #include "VEFixupKinds.h"
-#include "VEMCExpr.h"
+#include "VEMCAsmInfo.h"
 #include "VEMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -44,8 +44,8 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case VE::S_TLS_GD_LO32:
   case VE::S_TPOFF_HI32:
   case VE::S_TPOFF_LO32:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -56,12 +56,11 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
   }
 
   if (IsPCRel) {
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     default:
       reportError(Fixup.getLoc(), "Unsupported pc-relative fixup kind");
       return ELF::R_VE_NONE;
     case FK_Data_1:
-    case FK_PCRel_1:
       reportError(Fixup.getLoc(),
                   "1-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
@@ -72,7 +71,6 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
     case FK_Data_4:
       return ELF::R_VE_SREL32;
     case FK_Data_8:
-    case FK_PCRel_8:
       reportError(Fixup.getLoc(),
                   "8-byte pc-relative data relocation is not supported");
       return ELF::R_VE_NONE;
@@ -86,7 +84,7 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
     }
   }
 
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     reportError(Fixup.getLoc(), "Unknown ELF relocation type");
     return ELF::R_VE_NONE;

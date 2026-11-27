@@ -42,15 +42,20 @@
 /// wouldn't be created, or when your know a newer processor is being
 /// targeted, or when optimizing for minimum code size.
 ///
+/// Widening the loads in this pass can leave behind zero and sign extends of
+/// values that are already extended, so as a second step these are removed.
+///
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LazyMachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -59,6 +64,7 @@
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 using namespace llvm;
 
 #define FIXUPBW_DESC "X86 Byte/Word Instruction Fixup"
@@ -66,14 +72,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE FIXUPBW_NAME
 
-// Option to allow this optimization pass to have fine-grained control.
-static cl::opt<bool>
-    FixupBWInsts("fixup-byte-word-insts",
-                 cl::desc("Change byte and word instructions to larger sizes"),
-                 cl::init(true), cl::Hidden);
-
 namespace {
-class FixupBWInstPass : public MachineFunctionPass {
+class X86FixupBWInstImpl {
+public:
+  X86FixupBWInstImpl(ProfileSummaryInfo *PSI, MachineBlockFrequencyInfo *MBFI)
+      : PSI(PSI), MBFI(MBFI) {}
+  bool runOnMachineFunction(MachineFunction &MF);
+
+private:
   /// Loop over all of the instructions in the basic block replacing applicable
   /// byte or word instructions with better alternatives.
   void processBasicBlock(MachineFunction &MF, MachineBasicBlock &MBB);
@@ -104,29 +110,10 @@ class FixupBWInstPass : public MachineFunctionPass {
   // otherwise.
   MachineInstr *tryReplaceInstr(MachineInstr *MI, MachineBasicBlock &MBB) const;
 
-public:
-  static char ID;
+  /// Remove the zero and sign extends in \p MBB of values that an earlier
+  /// instruction in the same block (widened by this pass) has already extended.
+  void eliminateRedundantExtends(MachineBasicBlock &MBB);
 
-  StringRef getPassName() const override { return FIXUPBW_DESC; }
-
-  FixupBWInstPass() : MachineFunctionPass(ID) { }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<ProfileSummaryInfoWrapperPass>();
-    AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
-    MachineFunctionPass::getAnalysisUsage(AU);
-  }
-
-  /// Loop over all of the basic blocks, replacing byte and word instructions by
-  /// equivalent 32 bit instructions where performance or code size can be
-  /// improved.
-  bool runOnMachineFunction(MachineFunction &MF) override;
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoVRegs();
-  }
-
-private:
   MachineFunction *MF = nullptr;
 
   /// Machine instruction info used throughout the class.
@@ -143,24 +130,49 @@ private:
   ProfileSummaryInfo *PSI = nullptr;
   MachineBlockFrequencyInfo *MBFI = nullptr;
 };
-char FixupBWInstPass::ID = 0;
+
+class X86FixupBWInstLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+
+  StringRef getPassName() const override { return FIXUPBW_DESC; }
+
+  X86FixupBWInstLegacy() : MachineFunctionPass(ID) {}
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<ProfileSummaryInfoWrapperPass>();
+    AU.addRequired<LazyMachineBlockFrequencyInfoPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
+
+  /// Loop over all of the basic blocks, replacing byte and word instructions by
+  /// equivalent 32 bit instructions where performance or code size can be
+  /// improved.
+  bool runOnMachineFunction(MachineFunction &MF) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
+};
+
+char X86FixupBWInstLegacy::ID = 0;
+
+} // namespace
+
+INITIALIZE_PASS(X86FixupBWInstLegacy, FIXUPBW_NAME, FIXUPBW_DESC, false, false)
+
+FunctionPass *llvm::createX86FixupBWInstsLegacyPass() {
+  return new X86FixupBWInstLegacy();
 }
 
-INITIALIZE_PASS(FixupBWInstPass, FIXUPBW_NAME, FIXUPBW_DESC, false, false)
-
-FunctionPass *llvm::createX86FixupBWInsts() { return new FixupBWInstPass(); }
-
-bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
-  if (!FixupBWInsts || skipFunction(MF.getFunction()))
+bool X86FixupBWInstImpl::runOnMachineFunction(MachineFunction &MF) {
+  const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
+  if (!ST.getCLOpts().fixup_byte_word_insts)
     return false;
 
   this->MF = &MF;
-  TII = MF.getSubtarget<X86Subtarget>().getInstrInfo();
+  TII = ST.getInstrInfo();
   TRI = MF.getRegInfo().getTargetRegisterInfo();
-  PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
-  MBFI = (PSI && PSI->hasProfileSummary()) ?
-         &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
-         nullptr;
   LiveUnits.init(TII->getRegisterInfo());
 
   LLVM_DEBUG(dbgs() << "Start X86FixupBWInsts\n";);
@@ -179,7 +191,7 @@ bool FixupBWInstPass::runOnMachineFunction(MachineFunction &MF) {
 /// destination register.
 ///
 /// If so, return that super register in \p SuperDestReg.
-Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
+Register X86FixupBWInstImpl::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   const X86RegisterInfo *TRI = &TII->getRegisterInfo();
   Register OrigDestReg = OrigMI->getOperand(0).getReg();
   Register SuperDestReg = getX86SubSuperRegister(OrigDestReg, 32);
@@ -202,7 +214,8 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   MCRegUnitIterator I = Range.begin(), E = Range.end();
   for (MCRegUnit S : TRI->regunits(SuperDestReg)) {
     I = std::lower_bound(I, E, S);
-    if ((I == E || *I > S) && LiveUnits.getBitVector().test(S)) {
+    if ((I == E || *I > S) &&
+        LiveUnits.getBitVector().test(static_cast<unsigned>(S))) {
       SuperIsLive = true;
       break;
     }
@@ -273,8 +286,8 @@ Register FixupBWInstPass::getSuperRegDestIfDead(MachineInstr *OrigMI) const {
   return SuperDestReg;
 }
 
-MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
-                                              MachineInstr *MI) const {
+MachineInstr *X86FixupBWInstImpl::tryReplaceLoad(unsigned New32BitOpcode,
+                                                 MachineInstr *MI) const {
   // We are going to try to rewrite this load to a larger zero-extending
   // load.  This is safe if all portions of the 32 bit super-register
   // of the original destination register, except for the original destination
@@ -304,7 +317,7 @@ MachineInstr *FixupBWInstPass::tryReplaceLoad(unsigned New32BitOpcode,
   return MIB;
 }
 
-MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
+MachineInstr *X86FixupBWInstImpl::tryReplaceCopy(MachineInstr *MI) const {
   assert(MI->getNumExplicitOperands() == 2);
   auto &OldDest = MI->getOperand(0);
   auto &OldSrc = MI->getOperand(1);
@@ -341,8 +354,8 @@ MachineInstr *FixupBWInstPass::tryReplaceCopy(MachineInstr *MI) const {
   return MIB;
 }
 
-MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
-                                                MachineInstr *MI) const {
+MachineInstr *X86FixupBWInstImpl::tryReplaceExtend(unsigned New32BitOpcode,
+                                                   MachineInstr *MI) const {
   Register NewDestReg = getSuperRegDestIfDead(MI);
   if (!NewDestReg)
     return nullptr;
@@ -375,8 +388,9 @@ MachineInstr *FixupBWInstPass::tryReplaceExtend(unsigned New32BitOpcode,
   return MIB;
 }
 
-MachineInstr *FixupBWInstPass::tryReplaceInstr(MachineInstr *MI,
-                                               MachineBasicBlock &MBB) const {
+MachineInstr *
+X86FixupBWInstImpl::tryReplaceInstr(MachineInstr *MI,
+                                    MachineBasicBlock &MBB) const {
   // See if this is an instruction of the type we are currently looking for.
   switch (MI->getOpcode()) {
 
@@ -421,8 +435,124 @@ MachineInstr *FixupBWInstPass::tryReplaceInstr(MachineInstr *MI,
   return nullptr;
 }
 
-void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
-                                        MachineBasicBlock &MBB) {
+void X86FixupBWInstImpl::eliminateRedundantExtends(MachineBasicBlock &MBB) {
+  // A value that is the zero or sign extension of its low Bits bits.
+  struct Extension {
+    unsigned Bits;
+    bool IsSigned;
+  };
+
+  // Return the extension done by the extending mov.
+  auto DefinedExtension =
+      [](const MachineInstr &MI) -> std::optional<Extension> {
+    switch (MI.getOpcode()) {
+    case X86::MOVZX32rm8:
+    case X86::MOVZX32rr8:
+      return Extension{8, false};
+    case X86::MOVZX32rm16:
+    case X86::MOVZX32rr16:
+      return Extension{16, false};
+    case X86::MOVSX32rm8:
+    case X86::MOVSX32rr8:
+      return Extension{8, true};
+    case X86::MOVSX32rm16:
+    case X86::MOVSX32rr16:
+      return Extension{16, true};
+    default:
+      return std::nullopt;
+    }
+  };
+
+  // Whether extending the low Ext.Bits bits of a register known to hold
+  // KnownExt leaves its value unchanged. Zero extending a sign extended value
+  // never does, as the value may be negative. Sign extending a zero extended
+  // value does if the sign bit is known to be zero, i.e. the value was zero
+  // extended from fewer bits.
+  auto IsRedundant = [](Extension KnownExt, Extension Ext) {
+    if (KnownExt.IsSigned == Ext.IsSigned)
+      return KnownExt.Bits <= Ext.Bits;
+    return !KnownExt.IsSigned && KnownExt.Bits < Ext.Bits;
+  };
+
+  // Maps what is currently known about each 32 bit register to the extension
+  // its value is known to be the result of: a value zero extended from 8 bits
+  // is in [0, 0xFF] and one sign extended from 8 bits is in [-0x80, 0x7F], and
+  // likewise for 16 bits. Only tracks registers within a single block.
+  SmallDenseMap<MCRegister, Extension, 8> Known;
+
+  for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+    if (MI.isDebugInstr())
+      continue;
+
+    std::optional<Extension> Ext = DefinedExtension(MI);
+
+    // Only match 8 and 16 bit register to register extends to 32 bits. Loads
+    // can't be eliminated. 64 bit zero extends are done by the 32 bit versions,
+    // while 64 bit sign extends are not handled.
+    unsigned Opc = MI.getOpcode();
+    if (Opc == X86::MOVZX32rr8 || Opc == X86::MOVZX32rr16 ||
+        Opc == X86::MOVSX32rr8 || Opc == X86::MOVSX32rr16) {
+      MCRegister Dst = MI.getOperand(0).getReg().asMCReg();
+      MCRegister Src = MI.getOperand(1).getReg().asMCReg();
+      MCRegister SrcSuper = getX86SubSuperRegister(Src, 32);
+      auto It = Known.find(SrcSuper);
+      // Reading %ah and friends does not read the part of the super register
+      // that is known to hold the whole value, so insist on the low bits.
+      if (It != Known.end() && IsRedundant(It->second, *Ext) &&
+          getX86SubSuperRegister(SrcSuper, Ext->Bits) == Src) {
+
+        if (Dst == SrcSuper) {
+          // The extend writes back the value that is already in the register.
+          LLVM_DEBUG(dbgs() << "Removing redundant extend: " << MI);
+          MI.eraseFromParent();
+          continue;
+        }
+
+        // The extend is redundant but the move is not. A 32 bit copy is a
+        // byte shorter and can be eliminated at rename.
+        LLVM_DEBUG(dbgs() << "Turning extend into a copy: " << MI);
+        MachineInstrBuilder MIB =
+            BuildMI(MBB, MI, MIMetadata(MI), TII->get(X86::MOV32rr), Dst)
+                .addReg(SrcSuper);
+        if (unsigned OldInstrNum = MI.peekDebugInstrNum()) {
+          unsigned NewInstrNum = MIB->getDebugInstrNum(*MF);
+          MF->makeDebugValueSubstitution({OldInstrNum, 0}, {NewInstrNum, 0}, 0);
+        }
+        MI.eraseFromParent();
+
+        // The copy leaves the destination holding the value the source had,
+        // so it inherits what was known about it.
+        Extension SrcExt = It->second;
+        Known[Dst] = SrcExt;
+        continue;
+      }
+    }
+
+    // Clear what this instruction overwrites. Two 32 bit registers never
+    // overlap, so a definition can only invalidate the one it is a sub or
+    // super register of.
+    for (const MachineOperand &MO : MI.operands()) {
+      if (MO.isRegMask()) {
+        SmallVector<MCRegister, 4> Clobbered;
+        for (auto &KnownReg : Known)
+          if (MO.clobbersPhysReg(KnownReg.first))
+            Clobbered.push_back(KnownReg.first);
+        for (MCRegister Reg : Clobbered)
+          Known.erase(Reg);
+      } else if (MO.isReg() && MO.isDef()) {
+        Known.erase(getX86SubSuperRegister(MO.getReg().asMCReg(), 32));
+      }
+    }
+
+    if (Ext) {
+      MCRegister Dst = MI.getOperand(0).getReg().asMCReg();
+      Known[getX86SubSuperRegister(Dst, 32)] = *Ext;
+    }
+  }
+}
+
+void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
+                                           MachineBasicBlock &MBB) {
 
   // This algorithm doesn't delete the instructions it is replacing
   // right away.  By leaving the existing instructions in place, the
@@ -449,7 +579,8 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
       MIReplacements.push_back(std::make_pair(&MI, NewMI));
 
     // We're done with this instruction, update liveness for the next one.
-    LiveUnits.stepBackward(MI);
+    if (!MI.isDebugInstr())
+      LiveUnits.stepBackward(MI);
   }
 
   while (!MIReplacements.empty()) {
@@ -459,4 +590,37 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
     MBB.insert(MI, NewMI);
     MBB.erase(MI);
   }
+
+  // Finally, clean up any extends made redundant by widening.
+  eliminateRedundantExtends(MBB);
+}
+
+bool X86FixupBWInstLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  ProfileSummaryInfo *PSI =
+      &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
+  MachineBlockFrequencyInfo *MBFI =
+      (PSI && PSI->hasProfileSummary())
+          ? &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI()
+          : nullptr;
+  X86FixupBWInstImpl Impl(PSI, MBFI);
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86FixupBWInstsPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  ProfileSummaryInfo *PSI =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<ProfileSummaryAnalysis>(
+              *MF.getFunction().getParent());
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+  if (PSI && PSI->hasProfileSummary())
+    MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  X86FixupBWInstImpl Impl(PSI, MBFI);
+  bool Changed = Impl.runOnMachineFunction(MF);
+  return Changed ? getMachineFunctionPassPreservedAnalyses()
+                       .preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
 }

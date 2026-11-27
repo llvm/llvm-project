@@ -3,16 +3,16 @@
 
 program test
   interface
-    pure integer function index1(string, substring)
+    simple integer function index1(string, substring)
       character(*), intent(in) :: string, substring ! ok
     end
-    pure integer function index2(x1, x2)
+    simple integer function index2(x1, x2)
       character(*), intent(in) :: x1, x2 ! ok
     end
-    pure integer function index3(string, substring)
+    simple integer function index3(string, substring)
       character, intent(in) :: string, substring ! not assumed length
     end
-    pure integer function index4(string, substring, back)
+    simple integer function index4(string, substring, back)
       character(*), intent(in) :: string, substring
       logical, optional, intent(in) :: back ! not ok
     end
@@ -123,3 +123,12 @@ program test
   call s4(index3)
   call s4(index4) ! ok
 end
+
+subroutine ichar_tests()
+  integer, parameter :: a1 = ichar('B')
+  !Without -Wportability, the warning isn't emitted and the parameter is constant.
+  integer, parameter :: a2 = ichar('B ')
+  !ERROR: Character in intrinsic function ichar must have length one
+  !ERROR: Value of named constant 'a3' (ichar("")) cannot be computed as a constant value
+  integer, parameter :: a3 = ichar('')
+end subroutine

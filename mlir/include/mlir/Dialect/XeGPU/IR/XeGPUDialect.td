@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 def XeGPU_Dialect : Dialect {
     let name = "xegpu";
     let cppNamespace = "::mlir::xegpu";
+    let useDefaultOperationRegistration = 1;
     let summary = "The XeGPU dialect that models Intel GPU's ISA";
     let description = [{
       The XeGPU dialect closely models a subset of the Xe GPU's ISA, providing an
@@ -34,13 +35,27 @@ def XeGPU_Dialect : Dialect {
 
     let dependentDialects = ["arith::ArithDialect"];
 
-    let useDefaultTypePrinterParser = true;
-    let useDefaultAttributePrinterParser = true;
+    let hasTypes = 1;
+    let hasAttributes = 1;
+    let hasInitializer = 0;
 
     let extraClassDeclaration = [{
-      /// Checks if the given shape can be evenly distributed based on the layout
-      /// and data factors provided by the LayoutAttr.
-      static bool isEvenlyDistributable(llvm::ArrayRef<int64_t> shape, xegpu::LayoutAttr attr);
+      /// Checks if the given memref type represents shared local memory (SLM).
+      /// Returns true if the memory space is address space 3, MemorySpace::SLM,
+      /// xevm::AddrSpace::SHARED, or a GPU workgroup memory address space.
+      static bool isSharedMemory(const MemRefType &memrefTy);
+
+      /// drops/slices the shape in the specified dims, and return the rest. e.g.,
+      /// for shape = [32, 64, 8], dims = [0, 2], it will return [64]
+      template<typename T, typename U>
+      static llvm::SmallVector<T> slice(llvm::ArrayRef<T> shape, llvm::ArrayRef<U> dims) {
+        llvm::SmallVector<T> result;
+        for (auto [i, v]: llvm::enumerate(shape)) {
+          if (!llvm::is_contained(dims, i))
+            result.push_back(v);
+        }
+        return result;
+      }
     }];
 }
 

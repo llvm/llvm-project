@@ -84,6 +84,10 @@ Parts:
 # CHECK-NEXT: NumThreadsZ:     2048
 # CHECK-NEXT: EntryName: HSEntry
 # CHECK-NEXT: ResourceStride: 24
+# CHECK-NEXT: RuntimeInfoSize: 52
+# CHECK-NEXT: StringTable:
+# CHECK-NEXT: - String:            HSEntry
+# CHECK-NEXT: Offset:          1
 # CHECK-NEXT: Resources:
 # CHECK-NEXT: - Type:            Sampler
 # CHECK-NEXT: Space:           2

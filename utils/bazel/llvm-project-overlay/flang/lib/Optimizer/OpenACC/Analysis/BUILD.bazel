@@ -1,0 +1,47 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "FIROpenACCAnalysis",
+    srcs = glob(
+        [
+            "*.cpp",
+            "*.h",
+        ],
+        allow_empty = True,
+    ),
+    deps = [
+        "//flang/include/flang/Optimizer/Analysis:AnalysisHeaders",
+        "//flang/include/flang/Optimizer/Builder:BuilderHeaders",
+        "//flang/include/flang/Optimizer/CodeGen:CodeGenHeaders",
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF:CUFHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsHeaders",
+        "//flang/include/flang/Optimizer/HLFIR:HLFIRHeaders",
+        "//flang/include/flang/Optimizer/OpenACC:OpenACCHeaders",
+        "//flang/lib/Optimizer/Analysis:FIRAnalysis",
+        "//flang/lib/Optimizer/Dialect:FIRDialect",
+        "//flang/lib/Optimizer/Dialect/CUF:CUFDialect",
+        "//flang/lib/Optimizer/Dialect/CUF/Attributes:CUFAttrs",
+        "//flang/lib/Optimizer/HLFIR/IR:HLFIRDialect",
+        "//flang/lib/Optimizer/OpenACC/Support:FIROpenACCSupport",
+        "//llvm:Support",
+        "//mlir:IR",
+        "//mlir:LLVMDialect",
+        "//mlir:OpenACCAnalysis",
+        "//mlir:OpenACCDialect",
+        "//mlir:OpenACCUtils",
+    ],
+)

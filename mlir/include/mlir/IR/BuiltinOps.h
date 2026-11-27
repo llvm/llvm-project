@@ -13,13 +13,8 @@
 #ifndef MLIR_IR_BUILTINOPS_H_
 #define MLIR_IR_BUILTINOPS_H_
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OwningOpRef.h"
-#include "mlir/IR/RegionKindInterface.h"
-#include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 //===----------------------------------------------------------------------===//
@@ -40,7 +35,7 @@ public:
   static inline mlir::ModuleOp getFromVoidPointer(void *p) {
     return mlir::ModuleOp::getFromOpaquePointer(p);
   }
-  static constexpr int numLowBitsAvailable = 3;
+  static constexpr int NumLowBitsAvailable = 3;
 };
 } // namespace llvm
 

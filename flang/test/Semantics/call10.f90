@@ -26,8 +26,6 @@ module m
       import polyAlloc
       real, save :: v1
       real :: v2 = 0.
-      real :: v3
-      data v3/0./
       real :: v4
       common /blk/ v4
       save /blk/
@@ -62,7 +60,7 @@ module m
     real, pointer :: a ! ok
   end function
   pure real function f04(a) ! C1583
-    !WARNING: non-POINTER dummy argument of pure function should be INTENT(IN) or VALUE
+    !WARNING: non-POINTER dummy argument of pure function should be INTENT(IN) or VALUE [-Wrelaxed-pure-dummy]
     real, intent(out) :: a
   end function
   pure real function f04a(a)

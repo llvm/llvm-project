@@ -23,28 +23,17 @@ class ConversionTarget;
 class RewritePatternSet;
 class TypeConverter;
 
-void populateExpandCtlzPattern(RewritePatternSet &patterns);
-void populateExpandTanPattern(RewritePatternSet &patterns);
-void populateExpandSinhPattern(RewritePatternSet &patterns);
-void populateExpandCoshPattern(RewritePatternSet &patterns);
-void populateExpandTanhPattern(RewritePatternSet &patterns);
-void populateExpandAsinhPattern(RewritePatternSet &patterns);
-void populateExpandAcoshPattern(RewritePatternSet &patterns);
-void populateExpandAtanhPattern(RewritePatternSet &patterns);
-void populateExpandFmaFPattern(RewritePatternSet &patterns);
-void populateExpandCeilFPattern(RewritePatternSet &patterns);
-void populateExpandExp2FPattern(RewritePatternSet &patterns);
-void populateExpandPowFPattern(RewritePatternSet &patterns);
-void populateExpandFPowIPattern(RewritePatternSet &patterns);
-void populateExpandRoundFPattern(RewritePatternSet &patterns);
-void populateExpandRoundEvenPattern(RewritePatternSet &patterns);
-void populateExpandRsqrtPattern(RewritePatternSet &patterns);
-void populateMathAlgebraicSimplificationPatterns(RewritePatternSet &patterns);
+namespace math {
+/// Adds patterns to expand math operations into other more fundamental
+/// operations. For example, hyperbolic functions are expanded into expressions
+/// using `exp`. If `opMnemonics` is empty then all available patterns will be
+/// added, otherwise only the patterns corresponding to ops in `opMnemonics`
+/// will be added to the set.
+void populateExpansionPatterns(RewritePatternSet &patterns,
+                               ArrayRef<StringRef> opMnemonics = {});
+} // namespace math
 
-struct MathPolynomialApproximationOptions {
-  // Enables the use of AVX2 intrinsics in some of the approximations.
-  bool enableAvx2 = false;
-};
+void populateMathAlgebraicSimplificationPatterns(RewritePatternSet &patterns);
 
 void populatePolynomialApproximateTanhPattern(RewritePatternSet &patterns);
 void populatePolynomialApproximateErfPattern(RewritePatternSet &patterns);
@@ -71,9 +60,7 @@ void populateMathPolynomialApproximationPatterns(
 // Prefer calling these functions directly:
 // * populateMathF32ExpansionPatterns(patterns, predicate)
 // * populateMathPolynomialApproximationPatterns(patterns, predicate)
-void populateMathPolynomialApproximationPatterns(
-    RewritePatternSet &patterns,
-    const MathPolynomialApproximationOptions &options = {});
+void populateMathPolynomialApproximationPatterns(RewritePatternSet &patterns);
 
 void populateUpliftToFMAPatterns(RewritePatternSet &patterns);
 

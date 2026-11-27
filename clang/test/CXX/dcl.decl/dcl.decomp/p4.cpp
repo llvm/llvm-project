@@ -25,10 +25,10 @@ namespace NonPublicMembers {
   struct NonPublic4 : NonPublic2 {};
 
   void test() {
-    auto [a1] = NonPublic1(); // expected-error {{cannot decompose protected member 'a' of 'NonPublicMembers::NonPublic1'}}
-    auto [a2] = NonPublic2(); // expected-error {{cannot decompose private member 'a' of 'NonPublicMembers::NonPublic2'}}
-    auto [a3] = NonPublic3(); // expected-error {{cannot decompose members of inaccessible base class 'A' of 'NonPublicMembers::NonPublic3'}}
-    auto [a4] = NonPublic4(); // expected-error {{cannot decompose private member 'a' of 'NonPublicMembers::NonPublic2'}}
+    auto [a1] = NonPublic1(); // expected-error {{cannot bind protected member 'a' of 'NonPublicMembers::NonPublic1'}}
+    auto [a2] = NonPublic2(); // expected-error {{cannot bind private member 'a' of 'NonPublicMembers::NonPublic2'}}
+    auto [a3] = NonPublic3(); // expected-error {{cannot bind members of inaccessible base class 'A' of 'NonPublicMembers::NonPublic3'}}
+    auto [a4] = NonPublic4(); // expected-error {{cannot bind private member 'a' of 'NonPublicMembers::NonPublic2'}}
   }
 }
 
@@ -46,8 +46,8 @@ namespace AnonymousMember {
   };
 
   void test() {
-    auto [a1] = Struct(); // expected-error {{cannot decompose class type 'Struct' because it has an anonymous struct member}}
-    auto [a2] = Union(); // expected-error {{cannot decompose class type 'Union' because it has an anonymous union member}}
+    auto [a1] = Struct(); // expected-error {{cannot bind class type 'Struct' because it has an anonymous struct member}}
+    auto [a2] = Union(); // expected-error {{cannot bind class type 'Union' because it has an anonymous union member}}
   }
 }
 
@@ -73,12 +73,12 @@ namespace MultipleClasses {
   struct M : virtual J, L {};
 
   void test() {
-    auto [b] = B(); // expected-error {{cannot decompose class type 'B': both it and its base class 'A' have non-static data members}}
-    auto [d] = D(); // expected-error {{cannot decompose class type 'D': its base classes 'A' and 'C' have non-static data members}}
+    auto [b] = B(); // expected-error {{cannot bind class type 'B': both it and its base class 'A' have non-static data members}}
+    auto [d] = D(); // expected-error {{cannot bind class type 'D': its base classes 'A' and 'C' have non-static data members}}
     auto [e] = E();
-    auto [f] = F(); // expected-error-re {{cannot decompose members of ambiguous base class 'A' of 'F':{{.*}}struct MultipleClasses::F -> A{{.*}}struct MultipleClasses::F -> E -> A}}
+    auto [f] = F(); // expected-error-re {{cannot bind members of ambiguous base class 'A' of 'F':{{.*}}struct MultipleClasses::F -> A{{.*}}struct MultipleClasses::F -> E -> A}}
     auto [h] = H(); // ok, only one (virtual) base subobject even though there are two paths to it
-    auto [k] = K(); // expected-error {{cannot decompose members of ambiguous base class 'I'}}
+    auto [k] = K(); // expected-error {{cannot bind members of ambiguous base class 'I'}}
     auto [m] = M(); // ok, all paths to I are through the same virtual base subobject J
 
     same<decltype(m), int>();
@@ -214,7 +214,7 @@ namespace p0969r0 {
     auto &[x, y] = b;
   }
   void test_external(B b) {
-    auto &[x, y] = b; // expected-error {{cannot decompose members of inaccessible base class 'A' of 'p0969r0::B'}}
+    auto &[x, y] = b; // expected-error {{cannot bind members of inaccessible base class 'A' of 'p0969r0::B'}}
   }
 
   struct C {
@@ -229,13 +229,13 @@ namespace p0969r0 {
   struct D : C {
     static void test_member(D d, C c) {
       auto &[x1, y1] = d;
-      auto &[x2, y2] = c; // expected-error {{cannot decompose protected member 'y' of 'p0969r0::C'}}
+      auto &[x2, y2] = c; // expected-error {{cannot bind protected member 'y' of 'p0969r0::C'}}
     }
   };
   void test_friend(D d) {
     auto &[x, y] = d;
   }
   void test_external(D d) {
-    auto &[x, y] = d; // expected-error {{cannot decompose protected member 'y' of 'p0969r0::C'}}
+    auto &[x, y] = d; // expected-error {{cannot bind protected member 'y' of 'p0969r0::C'}}
   }
 }

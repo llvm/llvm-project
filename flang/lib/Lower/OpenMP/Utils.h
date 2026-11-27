@@ -9,22 +9,31 @@
 #ifndef FORTRAN_LOWER_OPENMPUTILS_H
 #define FORTRAN_LOWER_OPENMPUTILS_H
 
-#include "Clauses.h"
+#include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
+#include <optional>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
 
 namespace fir {
 class FirOpBuilder;
+class RecordType;
 } // namespace fir
 namespace Fortran {
 
 namespace semantics {
+class SemanticsContext;
 class Symbol;
+namespace omp {
+class OmpVariantMatchContext;
+} // namespace omp
 } // namespace semantics
 
 namespace parser {
@@ -42,8 +51,15 @@ class AbstractConverter;
 
 namespace omp {
 
-using DeclareTargetCapturePair =
-    std::pair<mlir::omp::DeclareTargetCaptureClause, const semantics::Symbol &>;
+struct DeclareTargetCaptureInfo {
+  mlir::omp::DeclareTargetCaptureClause clause;
+  bool automap = false;
+  const semantics::Symbol &symbol;
+
+  DeclareTargetCaptureInfo(mlir::omp::DeclareTargetCaptureClause c,
+                           const semantics::Symbol &s, bool a = false)
+      : clause(c), automap(a), symbol(s) {}
+};
 
 // A small helper structure for keeping track of a component members MapInfoOp
 // and index data when lowering OpenMP map clauses. Keeps track of the
@@ -107,23 +123,13 @@ struct OmpMapParentAndMemberData {
                                    semantics::SemanticsContext &semaCtx);
 };
 
-mlir::omp::MapInfoOp
-createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr,
-                llvm::StringRef name, llvm::ArrayRef<mlir::Value> bounds,
-                llvm::ArrayRef<mlir::Value> members,
-                mlir::ArrayAttr membersIndex, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap = false,
-                mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
-
 void insertChildMapInfoIntoParent(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semaCtx,
     Fortran::lower::StatementContext &stmtCtx,
     std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms);
+    llvm::SmallVectorImpl<Object> &mapObjects);
 
 void generateMemberPlacementIndices(
     const Object &object, llvm::SmallVectorImpl<int64_t> &indices,
@@ -137,7 +143,12 @@ mlir::Value createParentSymAndGenIntermediateMaps(
     semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,
     omp::ObjectList &objectList, llvm::SmallVectorImpl<int64_t> &indices,
     OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
-    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits);
+    mlir::omp::ClauseMapFlags mapTypeBits);
+
+bool requiresImplicitDefaultDeclareMapper(
+    lower::AbstractConverter &converter, fir::FirOpBuilder &firOpBuilder,
+    const semantics::DerivedTypeSpec &typeSpec,
+    bool enableImplicitDefaultMapperAllocatableMembers);
 
 omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
                                 semantics::SemanticsContext &semaCtx);
@@ -145,12 +156,15 @@ omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
 mlir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);
 
+std::size_t getLoopVarSize(const semantics::Symbol &sym);
+
 semantics::Symbol *
 getIterationVariableSymbol(const lower::pft::Evaluation &eval);
 
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause,
+    bool automap = false);
 
 int64_t getCollapseValue(const List<Clause> &clauses);
 
@@ -161,11 +175,154 @@ void genObjectList(const ObjectList &objects,
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
 
-bool collectLoopRelatedInfo(
+pft::Evaluation *tryGetNestedDoConstruct(pft::Evaluation &eval);
+
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval);
+
+int64_t collectLoopRelatedInfo(
     lower::AbstractConverter &converter, mlir::Location currentLocation,
-    lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
+
+void collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    std::int64_t collapseValue,
+    // const omp::List<omp::Clause> &clauses,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
+
+void collectTileSizesFromOpenMPConstruct(
+    const parser::OpenMPConstruct *ompCons,
+    llvm::SmallVectorImpl<int64_t> &tileSizes,
+    Fortran::semantics::SemanticsContext &semaCtx);
+
+mlir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
+                                  mlir::Location loc,
+                                  const mlir::DataLayout &dl,
+                                  hlfir::Entity entity);
+
+mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
+                            const omp::Object &object,
+                            Fortran::lower::StatementContext &stmtCtx,
+                            mlir::Location loc);
+
+mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
+                           const mlir::DataLayout &dl, hlfir::Entity entity,
+                           llvm::ArrayRef<mlir::Value> bounds);
+
+struct IteratorRange {
+  mlir::Value lb;
+  mlir::Value ub;
+  mlir::Value step;
+  Fortran::semantics::Symbol *ivSym = nullptr;
+};
+
+/// Select ranges referenced in the locator source, even if folding removes
+/// their occurrences from the analyzed expression. Preserve declaration order.
+/// An empty result means the locator is not iterator-dependent.
+llvm::SmallVector<IteratorRange>
+getIteratorRangesForObject(const omp::Object &object,
+                           llvm::ArrayRef<IteratorRange> ranges);
+
+/// Default name mangler for implicit default mappers.
+///
+/// \param converter The converter to use for name mangling.
+/// \param mapperIdName The name of the mapper to mangle.
+/// \param memberName The name of the member to mangle.
+void defaultMangler(Fortran::lower::AbstractConverter &converter,
+                    std::string &mapperIdName, llvm::StringRef memberName);
+
+/// Resolve the declare mapper symbol to attach to a mapped object.
+///
+/// The default mapper path first looks for a user-defined mapper. If none
+/// exists, it may synthesize a compiler-generated mapper.
+///
+/// \param converter The converter used to query and generate mapper symbols.
+/// \param loc The location to use when generating an implicit mapper.
+/// \param object The mapped object whose type controls mapper resolution.
+/// \param mapperIdName An explicit mapper name, `__implicit_mapper`, or an
+///        empty name.
+/// \param mapTypeBits The map flags used when deciding whether an implicit
+///        mapper should be generated.
+/// \return A symbol reference to the resolved mapper, or a null attribute when
+///         no mapper applies.
+mlir::FlatSymbolRefAttr
+resolveMapperId(Fortran::lower::AbstractConverter &converter,
+                mlir::Location loc, const omp::Object &object,
+                llvm::StringRef mapperIdName,
+                mlir::omp::ClauseMapFlags mapTypeBits);
+
+std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
+    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
+    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
+
+struct IteratorMapInfo {
+  hlfir::Entity entity;
+  llvm::SmallVector<mlir::Value> bounds;
+};
+
+/// Properties needed to validate an iterator map locator without lowering it.
+/// Unsupported DataRef forms are classified without evaluating their bases.
+struct IteratorMapObjectAnalysis {
+  const semantics::Symbol *rootSym = nullptr;
+  bool isDerivedTypeMember = false;
+  bool hasArrayValuedParent = false;
+  // Own the validated reference so lowering can reuse it after analysis.
+  std::optional<evaluate::ArrayRef> arrayRef;
+};
+
+/// Classify a locator and retain its array reference if supported.
+IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object);
+
+/// Lower a locator to its array base and iterator-dependent map bounds.
+/// \p arrayRef must be the supported reference returned by locator analysis.
+IteratorMapInfo genIteratorMapInfo(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::StatementContext &stmtCtx, const omp::Object &object,
+    const evaluate::ArrayRef &arrayRef, mlir::Location loc);
+
+/// Walk the already-emitted MLIR parent operations starting from \p op and
+/// collect the implied OpenMP construct traits in outermost-to-innermost
+/// order. Used by metadirective lowering and declare-variant call resolution
+/// to build the `ConstructTraits` of an `OMPContext`. When
+/// \p excludeNearestDispatch is set, the innermost enclosing `dispatch`
+/// construct is omitted (used to implement the `nocontext` clause).
+void collectEnclosingConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits,
+    bool excludeNearestDispatch = false);
+
+/// Return true when \p module is being compiled for an AMDGPU device or all of
+/// its offload targets are AMDGPU devices.
+bool hasOnlyAMDGCNTargets(mlir::ModuleOp module);
+
+/// Return true when \p module is the host side of an offload compilation, i.e.
+/// the compilation that emits mapper functions.
+bool isHostOffloadCompilation(mlir::ModuleOp module);
+
+/// In host offload compilation, report not yet implemented if the implicit
+/// default mapper for \p typeSpec would skip a component type's default mapper
+/// that has iterator map entries.
+void checkImplicitMapperComponents(lower::AbstractConverter &converter,
+                                   mlir::Location loc,
+                                   const semantics::DerivedTypeSpec &typeSpec);
+
+/// Return true when unified shared memory is required by either the OpenMP
+/// module attributes or a source-level `requires` directive.
+bool requiresUnifiedSharedMemory(mlir::ModuleOp module,
+                                 semantics::SemanticsContext &semaCtx);
+
+/// Build the OpenMP variant-matching context for \p module. The device flag,
+/// host triple, offload triple, and target features are read from the module;
+/// \p constructTraits seeds the enclosing-construct traits.
+semantics::omp::OmpVariantMatchContext makeVariantMatchContext(
+    mlir::ModuleOp module,
+    llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

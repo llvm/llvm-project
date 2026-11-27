@@ -40,10 +40,7 @@ define i64 @zext_scalar_neg(ptr %p, ptr %q, i1 zeroext %c) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movsbl (%rdi), %eax
 ; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    je .LBB2_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    movzwl (%rsi), %eax
-; CHECK-NEXT:  .LBB2_2:
+; CHECK-NEXT:    cmovnew (%rsi), %ax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    retq
   %ld1 = load volatile i8, ptr %p

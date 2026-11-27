@@ -29,12 +29,12 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
+_LIBCPP_BEGIN_NAMESPACE_STD
+
 template <class _Callback>
-class _LIBCPP_AVAILABILITY_SYNC stop_callback : private __stop_callback_base {
+class stop_callback : private __stop_callback_base {
   static_assert(invocable<_Callback>,
                 "Mandates: stop_callback is instantiated with an argument for the template parameter Callback that "
                 "satisfies invocable.");
@@ -47,17 +47,15 @@ public:
 
   template <class _Cb>
     requires constructible_from<_Callback, _Cb>
-  _LIBCPP_HIDE_FROM_ABI explicit stop_callback(const stop_token& __st,
-                                               _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
+  explicit stop_callback(const stop_token& __st, _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
       : stop_callback(__private_constructor_tag{}, __st.__state_, std::forward<_Cb>(__cb)) {}
 
   template <class _Cb>
     requires constructible_from<_Callback, _Cb>
-  _LIBCPP_HIDE_FROM_ABI explicit stop_callback(stop_token&& __st,
-                                               _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
+  explicit stop_callback(stop_token&& __st, _Cb&& __cb) noexcept(is_nothrow_constructible_v<_Callback, _Cb>)
       : stop_callback(__private_constructor_tag{}, std::move(__st.__state_), std::forward<_Cb>(__cb)) {}
 
-  _LIBCPP_HIDE_FROM_ABI ~stop_callback() {
+  ~stop_callback() {
     if (__state_) {
       __state_->__remove_callback(this);
     }
@@ -75,7 +73,7 @@ private:
   friend __stop_callback_base;
 
   template <class _StatePtr, class _Cb>
-  _LIBCPP_HIDE_FROM_ABI explicit stop_callback(__private_constructor_tag, _StatePtr&& __state, _Cb&& __cb) noexcept(
+  explicit stop_callback(__private_constructor_tag, _StatePtr&& __state, _Cb&& __cb) noexcept(
       is_nothrow_constructible_v<_Callback, _Cb>)
       : __stop_callback_base([](__stop_callback_base* __cb_base) noexcept {
           // stop callback is supposed to only be called once
@@ -91,11 +89,11 @@ private:
 };
 
 template <class _Callback>
-_LIBCPP_AVAILABILITY_SYNC stop_callback(stop_token, _Callback) -> stop_callback<_Callback>;
-
-#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
+stop_callback(stop_token, _Callback) -> stop_callback<_Callback>;
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
 
 _LIBCPP_POP_MACROS
 

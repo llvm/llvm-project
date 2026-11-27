@@ -23,13 +23,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/StringSaver.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <climits>
@@ -42,18 +42,20 @@
 
 namespace llvm {
 
-namespace vfs {
-class FileSystem;
-}
-
 class StringSaver;
+class ElementCount;
+class Error;
 
 /// This namespace contains all of the command line option processing machinery.
 /// It is intentionally a short name to make qualified usage concise.
 namespace cl {
 
+class LibraryOptions;
+class LibraryOptionsContext;
+
 //===----------------------------------------------------------------------===//
-// Command line option processing entry point.
+// Command line option processing entry point. It does not recognize library
+// options; parseCommandLineOptions below does.
 //
 // Returns true on success. Otherwise, this will print the error message to
 // stderr and exit if \p Errs is not set (nullptr by default), or print the
@@ -69,8 +71,31 @@ namespace cl {
 LLVM_ABI bool ParseCommandLineOptions(int argc, const char *const *argv,
                                       StringRef Overview = "",
                                       raw_ostream *Errs = nullptr,
-                                      const char *EnvVar = nullptr,
-                                      bool LongOptionsUseDoubleDash = false);
+                                      vfs::FileSystem *VFS = nullptr,
+                                      const char *EnvVar = nullptr);
+
+// Like ParseCommandLineOptions, but also recognizes library options, the
+// options declared in TableGen, and sets them in Context.
+LLVM_ABI bool parseCommandLineOptions(LibraryOptionsContext &Context,
+                                      ArrayRef<const char *> Args,
+                                      StringRef Overview = "",
+                                      raw_ostream *Errs = nullptr,
+                                      vfs::FileSystem *VFS = nullptr,
+                                      const char *EnvVar = nullptr);
+
+// Like the above, but also accepts the options of ToolOptions, libraries that a
+// tool opts in to rather than registering with addLibraryOptions. Context (for
+// assign) and the parser (until its next parse or ResetCommandLineParser) keep
+// pointers to them.
+LLVM_ABI bool parseCommandLineOptions(
+    LibraryOptionsContext &Context,
+    ArrayRef<const LibraryOptions *> ToolOptions, ArrayRef<const char *> Args,
+    StringRef Overview = "", raw_ostream *Errs = nullptr,
+    vfs::FileSystem *VFS = nullptr, const char *EnvVar = nullptr);
+
+// The library options that LLVMParseCommandLineOptions sets, which contexts
+// and target machines created through the C API use.
+LLVM_ABI LibraryOptionsContext &getCAPILibraryOptions();
 
 // Function pointer type for printing version information.
 using VersionPrinterTy = std::function<void(raw_ostream &)>;
@@ -163,16 +188,6 @@ enum FormattingFlags {
 enum MiscFlags {             // Miscellaneous flags to adjust argument
   CommaSeparated = 0x01,     // Should this cl::list split between commas?
   PositionalEatsArgs = 0x02, // Should this positional cl::list eat -args?
-  Sink = 0x04,               // Should this cl::list eat all unknown options?
-
-  // Can this option group with other options?
-  // If this is enabled, multiple letter options are allowed to bunch together
-  // with only a single hyphen for the whole group.  This allows emulation
-  // of the behavior that ls uses for example: ls -la === ls -l -a
-  Grouping = 0x08,
-
-  // Default option
-  DefaultOption = 0x10
 };
 
 //===----------------------------------------------------------------------===//
@@ -231,8 +246,7 @@ public:
   StringRef getDescription() const { return Description; }
 
   SmallVector<Option *, 4> PositionalOpts;
-  SmallVector<Option *, 4> SinkOpts;
-  StringMap<Option *> OptionsMap;
+  DenseMap<StringRef, Option *> OptionsMap;
 
   Option *ConsumeAfterOpt = nullptr; // The ConsumeAfter option if it exists.
 };
@@ -277,7 +291,6 @@ class LLVM_ABI Option {
   uint16_t Misc : 5;
   uint16_t FullyInitialized : 1; // Has addArgument been called?
   uint16_t Position;             // Position of last occurrence of the option
-  uint16_t AdditionalVals;       // Greater than 0 for multi-valued option.
 
 public:
   StringRef ArgStr;   // The argument string itself (ex: "help", "o")
@@ -305,13 +318,10 @@ public:
 
   inline unsigned getMiscFlags() const { return Misc; }
   inline unsigned getPosition() const { return Position; }
-  inline unsigned getNumAdditionalVals() const { return AdditionalVals; }
 
   // Return true if the argstr != ""
   bool hasArgStr() const { return !ArgStr.empty(); }
   bool isPositional() const { return getFormattingFlag() == cl::Positional; }
-  bool isSink() const { return getMiscFlags() & cl::Sink; }
-  bool isDefaultOption() const { return getMiscFlags() & cl::DefaultOption; }
 
   bool isConsumeAfter() const {
     return getNumOccurrencesFlag() == cl::ConsumeAfter;
@@ -334,14 +344,7 @@ public:
 
 protected:
   explicit Option(enum NumOccurrencesFlag OccurrencesFlag,
-                  enum OptionHidden Hidden)
-      : NumOccurrences(0), Occurrences(OccurrencesFlag), Value(0),
-        HiddenFlag(Hidden), Formatting(NormalFormatting), Misc(0),
-        FullyInitialized(false), Position(0), AdditionalVals(0) {
-    Categories.push_back(&getGeneralCategory());
-  }
-
-  inline void setNumAdditionalVals(unsigned n) { AdditionalVals = n; }
+                  enum OptionHidden Hidden);
 
 public:
   virtual ~Option() = default;
@@ -388,8 +391,7 @@ public:
 
   // Wrapper around handleOccurrence that enforces Flags.
   //
-  virtual bool addOccurrence(unsigned pos, StringRef ArgName, StringRef Value,
-                             bool MultiArg = false);
+  virtual bool addOccurrence(unsigned pos, StringRef ArgName, StringRef Value);
 
   // Prints option name followed by message.  Always returns true.
   bool error(const Twine &Message, StringRef ArgName = StringRef(), raw_ostream &Errs = llvm::errs());
@@ -548,7 +550,7 @@ template <class DataType> struct OptionValue;
 // The default value safely does nothing. Option value printing is only
 // best-effort.
 template <class DataType, bool isClass>
-struct OptionValueBase : public GenericOptionValue {
+struct OptionValueBase : GenericOptionValue {
   // Temporary storage for argument passing.
   using WrapperType = OptionValue<DataType>;
 
@@ -635,7 +637,7 @@ struct OptionValue final
 };
 
 // Other safe-to-copy-by-value common option types.
-enum boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
+enum class boolOrDefault { BOU_UNSET, BOU_TRUE, BOU_FALSE };
 template <>
 struct LLVM_ABI OptionValue<cl::boolOrDefault> final
     : OptionValueCopy<cl::boolOrDefault> {
@@ -1192,6 +1194,31 @@ public:
 
 //--------------------------------------------------
 
+template <>
+class LLVM_ABI parser<std::optional<std::string>>
+    : public basic_parser<std::optional<std::string>> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // Return true on error.
+  bool parse(Option &, StringRef, StringRef Arg,
+             std::optional<std::string> &Value) {
+    Value = Arg.str();
+    return false;
+  }
+
+  // Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "optional string"; }
+
+  void printOptionDiff(const Option &O, std::optional<StringRef> V,
+                       const OptVal &Default, size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+//--------------------------------------------------
+
 extern template class LLVM_TEMPLATE_ABI basic_parser<char>;
 
 template <> class LLVM_ABI parser<char> : public basic_parser<char> {
@@ -1208,6 +1235,28 @@ public:
   StringRef getValueName() const override { return "char"; }
 
   void printOptionDiff(const Option &O, char V, OptVal Default,
+                       size_t GlobalWidth) const;
+
+  // An out-of-line virtual method to provide a 'home' for this class.
+  void anchor() override;
+};
+
+//--------------------------------------------------
+
+extern template class LLVM_TEMPLATE_ABI basic_parser<ElementCount>;
+
+template <>
+class LLVM_ABI parser<ElementCount> : public basic_parser<ElementCount> {
+public:
+  parser(Option &O) : basic_parser(O) {}
+
+  // Return true on error.
+  bool parse(Option &O, StringRef ArgName, StringRef Arg, ElementCount &Value);
+
+  // Overload in subclass to provide a better default value.
+  StringRef getValueName() const override { return "ElementCount"; }
+
+  void printOptionDiff(const Option &O, ElementCount V, OptVal Default,
                        size_t GlobalWidth) const;
 
   // An out-of-line virtual method to provide a 'home' for this class.
@@ -1303,11 +1352,7 @@ template <> struct applicator<FormattingFlags> {
 };
 
 template <> struct applicator<MiscFlags> {
-  static void opt(MiscFlags MF, Option &O) {
-    assert((MF != Grouping || O.ArgStr.size() == 1) &&
-           "cl::Grouping can only apply to single character Options.");
-    O.setMiscFlag(MF);
-  }
+  static void opt(MiscFlags MF, Option &O) { O.setMiscFlag(MF); }
 };
 
 // Apply modifiers to an option in a type safe way.
@@ -1437,7 +1482,8 @@ class opt
       return true; // Parse error!
     this->setValue(Val);
     this->setPosition(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1492,7 +1538,15 @@ public:
 
   template <class T> DataType &operator=(const T &Val) {
     this->setValue(Val);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
+    return this->getValue();
+  }
+
+  template <class T> DataType &operator=(T &&Val) {
+    this->getValue() = std::forward<T>(Val);
+    if (Callback)
+      Callback(this->getValue());
     return this->getValue();
   }
 
@@ -1508,15 +1562,21 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
-extern template class opt<unsigned>;
-extern template class opt<int>;
-extern template class opt<std::string>;
-extern template class opt<char>;
-extern template class opt<bool>;
+#if !(defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && defined(_MSC_VER))
+// Only instantiate opt<std::string> when not building a Windows DLL. When
+// exporting opt<std::string>, MSVC implicitly exports symbols for
+// std::basic_string through transitive inheritance via std::string. These
+// symbols may appear in clients, leading to duplicate symbol conflicts.
+extern template class LLVM_TEMPLATE_ABI opt<std::string>;
+#endif
+
+extern template class LLVM_TEMPLATE_ABI opt<unsigned>;
+extern template class LLVM_TEMPLATE_ABI opt<int>;
+extern template class LLVM_TEMPLATE_ABI opt<char>;
+extern template class LLVM_TEMPLATE_ABI opt<bool>;
 
 //===----------------------------------------------------------------------===//
 // Default storage class definition: external storage.  This implementation
@@ -1679,7 +1739,8 @@ class list : public Option, public list_storage<DataType, StorageClass> {
     list_storage<DataType, StorageClass>::addValue(Val);
     setPosition(pos);
     Positions.push_back(pos);
-    Callback(Val);
+    if (Callback)
+      Callback(Val);
     return false;
   }
 
@@ -1734,8 +1795,6 @@ public:
       list_storage<DataType, StorageClass>::addValue(Val, true);
   }
 
-  void setNumAdditionalVals(unsigned n) { Option::setNumAdditionalVals(n); }
-
   template <class... Mods>
   explicit list(const Mods &... Ms)
       : Option(ZeroOrMore, NotHidden), Parser(*this) {
@@ -1748,164 +1807,7 @@ public:
     Callback = CB;
   }
 
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
-};
-
-// Modifier to set the number of additional values.
-struct multi_val {
-  unsigned AdditionalVals;
-  explicit multi_val(unsigned N) : AdditionalVals(N) {}
-
-  template <typename D, typename S, typename P>
-  void apply(list<D, S, P> &L) const {
-    L.setNumAdditionalVals(AdditionalVals);
-  }
-};
-
-//===----------------------------------------------------------------------===//
-// Default storage class definition: external storage.  This implementation
-// assumes the user will specify a variable to store the data into with the
-// cl::location(x) modifier.
-//
-template <class DataType, class StorageClass> class bits_storage {
-  unsigned *Location = nullptr; // Where to store the bits...
-
-  template <class T> static unsigned Bit(const T &V) {
-    unsigned BitPos = static_cast<unsigned>(V);
-    assert(BitPos < sizeof(unsigned) * CHAR_BIT &&
-           "enum exceeds width of bit vector!");
-    return 1 << BitPos;
-  }
-
-public:
-  bits_storage() = default;
-
-  bool setLocation(Option &O, unsigned &L) {
-    if (Location)
-      return O.error("cl::location(x) specified more than once!");
-    Location = &L;
-    return false;
-  }
-
-  template <class T> void addValue(const T &V) {
-    assert(Location != nullptr &&
-           "cl::location(...) not specified for a command "
-           "line option with external storage!");
-    *Location |= Bit(V);
-  }
-
-  unsigned getBits() { return *Location; }
-
-  void clear() {
-    if (Location)
-      *Location = 0;
-  }
-
-  template <class T> bool isSet(const T &V) {
-    return (*Location & Bit(V)) != 0;
-  }
-};
-
-// Define how to hold bits.  Since we can inherit from a class, we do so.
-// This makes us exactly compatible with the bits in all cases that it is used.
-//
-template <class DataType> class bits_storage<DataType, bool> {
-  unsigned Bits{0}; // Where to store the bits...
-
-  template <class T> static unsigned Bit(const T &V) {
-    unsigned BitPos = static_cast<unsigned>(V);
-    assert(BitPos < sizeof(unsigned) * CHAR_BIT &&
-           "enum exceeds width of bit vector!");
-    return 1 << BitPos;
-  }
-
-public:
-  template <class T> void addValue(const T &V) { Bits |= Bit(V); }
-
-  unsigned getBits() { return Bits; }
-
-  void clear() { Bits = 0; }
-
-  template <class T> bool isSet(const T &V) { return (Bits & Bit(V)) != 0; }
-};
-
-//===----------------------------------------------------------------------===//
-// A bit vector of command options.
-//
-template <class DataType, class Storage = bool,
-          class ParserClass = parser<DataType>>
-class bits : public Option, public bits_storage<DataType, Storage> {
-  std::vector<unsigned> Positions;
-  ParserClass Parser;
-
-  enum ValueExpected getValueExpectedFlagDefault() const override {
-    return Parser.getValueExpectedFlagDefault();
-  }
-
-  void getExtraOptionNames(SmallVectorImpl<StringRef> &OptionNames) override {
-    return Parser.getExtraOptionNames(OptionNames);
-  }
-
-  bool handleOccurrence(unsigned pos, StringRef ArgName,
-                        StringRef Arg) override {
-    typename ParserClass::parser_data_type Val =
-        typename ParserClass::parser_data_type();
-    if (Parser.parse(*this, ArgName, Arg, Val))
-      return true; // Parse Error!
-    this->addValue(Val);
-    setPosition(pos);
-    Positions.push_back(pos);
-    Callback(Val);
-    return false;
-  }
-
-  // Forward printing stuff to the parser...
-  size_t getOptionWidth() const override {
-    return Parser.getOptionWidth(*this);
-  }
-
-  void printOptionInfo(size_t GlobalWidth) const override {
-    Parser.printOptionInfo(*this, GlobalWidth);
-  }
-
-  // Unimplemented: bits options don't currently store their default values.
-  void printOptionValue(size_t /*GlobalWidth*/, bool /*Force*/) const override {
-  }
-
-  void setDefault() override { bits_storage<DataType, Storage>::clear(); }
-
-  void done() {
-    addArgument();
-    Parser.initialize();
-  }
-
-public:
-  // Command line options should not be copyable
-  bits(const bits &) = delete;
-  bits &operator=(const bits &) = delete;
-
-  ParserClass &getParser() { return Parser; }
-
-  unsigned getPosition(unsigned optnum) const {
-    assert(optnum < this->size() && "Invalid option index");
-    return Positions[optnum];
-  }
-
-  template <class... Mods>
-  explicit bits(const Mods &... Ms)
-      : Option(ZeroOrMore, NotHidden), Parser(*this) {
-    apply(this, Ms...);
-    done();
-  }
-
-  void setCallback(
-      std::function<void(const typename ParserClass::parser_data_type &)> CB) {
-    Callback = CB;
-  }
-
-  std::function<void(const typename ParserClass::parser_data_type &)> Callback =
-      [](const typename ParserClass::parser_data_type &) {};
+  std::function<void(const typename ParserClass::parser_data_type &)> Callback;
 };
 
 //===----------------------------------------------------------------------===//
@@ -1920,9 +1822,9 @@ class LLVM_ABI alias : public Option {
     return AliasFor->handleOccurrence(pos, AliasFor->ArgStr, Arg);
   }
 
-  bool addOccurrence(unsigned pos, StringRef /*ArgName*/, StringRef Value,
-                     bool MultiArg = false) override {
-    return AliasFor->addOccurrence(pos, AliasFor->ArgStr, Value, MultiArg);
+  bool addOccurrence(unsigned pos, StringRef /*ArgName*/,
+                     StringRef Value) override {
+    return AliasFor->addOccurrence(pos, AliasFor->ArgStr, Value);
   }
 
   // Handle printing stuff...
@@ -2011,10 +1913,10 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 // Public interface for accessing registered options.
 //
 
-/// Use this to get a StringMap to all registered named options
+/// Use this to get a map of all registered named options
 /// (e.g. -help).
 ///
-/// \return A reference to the StringMap used by the cl APIs to parse options.
+/// \return A reference to the map used by the cl APIs to parse options.
 ///
 /// Access to unnamed arguments (i.e. positional) are not provided because
 /// it is expected that the client already has access to these.
@@ -2022,7 +1924,8 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 /// Typical usage:
 /// \code
 /// main(int argc,char* argv[]) {
-/// StringMap<llvm::cl::Option*> &opts = llvm::cl::getRegisteredOptions();
+/// DenseMap<llvm::StringRef, llvm::cl::Option*> &opts =
+///     llvm::cl::getRegisteredOptions();
 /// assert(opts.count("help") == 1)
 /// opts["help"]->setDescription("Show alphabetical help information")
 /// // More code
@@ -2038,7 +1941,7 @@ LLVM_ABI void printBuildConfig(raw_ostream &OS);
 /// Hopefully this API can be deprecated soon. Any situation where options need
 /// to be modified by tools or libraries should be handled by sane APIs rather
 /// than just handing around a global list.
-LLVM_ABI StringMap<Option *> &
+LLVM_ABI DenseMap<StringRef, Option *> &
 getRegisteredOptions(SubCommand &Sub = SubCommand::getTopLevel());
 
 /// Use this to get all registered SubCommands from the provided parser.
@@ -2060,7 +1963,7 @@ getRegisteredOptions(SubCommand &Sub = SubCommand::getTopLevel());
 ///
 /// This interface is useful for defining subcommands in libraries and
 /// the dispatch from a single point (like in the main function).
-LLVM_ABI iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+LLVM_ABI iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
 getRegisteredSubcommands();
 
 //===----------------------------------------------------------------------===//
@@ -2179,7 +2082,8 @@ class ExpansionContext {
                                  SmallVectorImpl<const char *> &NewArgv);
 
 public:
-  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T);
+  LLVM_ABI ExpansionContext(BumpPtrAllocator &A, TokenizerCallback T,
+                            vfs::FileSystem *FS = nullptr);
 
   ExpansionContext &setMarkEOLs(bool X) {
     MarkEOLs = X;
@@ -2235,14 +2139,6 @@ public:
   LLVM_ABI Error expandResponseFiles(SmallVectorImpl<const char *> &Argv);
 };
 
-/// A convenience helper which concatenates the options specified by the
-/// environment variable EnvVar and command line options, then expands
-/// response files recursively.
-/// \return true if all @files were expanded successfully or there were none.
-LLVM_ABI bool expandResponseFiles(int Argc, const char *const *Argv,
-                                  const char *EnvVar,
-                                  SmallVectorImpl<const char *> &NewArgv);
-
 /// A convenience helper which supports the typical use case of expansion
 /// function call.
 LLVM_ABI bool ExpandResponseFiles(StringSaver &Saver,
@@ -2291,6 +2187,43 @@ LLVM_ABI void ResetCommandLineParser();
 
 /// Parses `Arg` into the option handler `Handler`.
 LLVM_ABI bool ProvidePositionalOption(Option *Handler, StringRef Arg, int i);
+
+/// The options of a library that declares them in TableGen rather than as
+/// cl::opt (see llvm/Option/LibraryOptions.h). parseCommandLineOptions hands
+/// every argument naming one of them to parse(). This lets libraries move off
+/// cl::opt while tools still parse argv with cl::, and goes away once tools
+/// parse argv without cl::.
+class LLVM_ABI LibraryOptions {
+public:
+  /// Calls \p Fn with the spelling of each option without its prefix (e.g.
+  /// "x" or "x="), its metavariable, and its help text. Only -help-hidden
+  /// lists the options.
+  virtual void forEachOption(
+      function_ref<void(StringRef Spelling, StringRef MetaVar, StringRef Help)>
+          Fn) const = 0;
+
+  /// Parses the option spelled by Args[0], which may take Args[1] as its
+  /// value, into \p Opts and sets \p Consumed to the number of arguments it
+  /// spans. The strings in \p Args and the memory from \p Alloc remain valid as
+  /// long as \p Opts is used.
+  virtual Error parse(void *Opts, ArrayRef<const char *> Args,
+                      unsigned &Consumed, BumpPtrAllocator &Alloc) const = 0;
+
+  /// Returns the default values.
+  virtual const void *getDefault() const = 0;
+
+  /// Returns a copy of getDefault() allocated from \p Alloc.
+  virtual void *copyDefault(BumpPtrAllocator &Alloc) const = 0;
+
+protected:
+  constexpr LibraryOptions() = default;
+  // Registrations are static and never destroyed through this class.
+  ~LibraryOptions() = default;
+};
+
+/// Makes ParseCommandLineOptions recognize \p L's options. A name that is also
+/// a cl::opt or belongs to another library is a fatal error.
+LLVM_ABI void addLibraryOptions(const LibraryOptions &L);
 
 } // end namespace cl
 

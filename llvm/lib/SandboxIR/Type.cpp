@@ -15,20 +15,47 @@ Type *Type::getScalarType() const {
   return Ctx.getType(LLVMTy->getScalarType());
 }
 
-Type *Type::getInt64Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt64Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt64Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt64Ty(Ctx.LLVMCtx)));
 }
-Type *Type::getInt32Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt32Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt32Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt32Ty(Ctx.LLVMCtx)));
 }
-Type *Type::getInt16Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt16Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt16Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt16Ty(Ctx.LLVMCtx)));
 }
-Type *Type::getInt8Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt8Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt8Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt8Ty(Ctx.LLVMCtx)));
 }
-Type *Type::getInt1Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt1Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt1Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt1Ty(Ctx.LLVMCtx)));
+}
+ByteType *Type::getByteNTy(Context &Ctx, unsigned N) {
+  return cast<ByteType>(Ctx.getType(llvm::Type::getByteNTy(Ctx.LLVMCtx, N)));
+}
+ByteType *Type::getByte1Ty(Context &Ctx) {
+  return cast<ByteType>(Ctx.getType(llvm::Type::getByte1Ty(Ctx.LLVMCtx)));
+}
+ByteType *Type::getByte8Ty(Context &Ctx) {
+  return cast<ByteType>(Ctx.getType(llvm::Type::getByte8Ty(Ctx.LLVMCtx)));
+}
+ByteType *Type::getByte16Ty(Context &Ctx) {
+  return cast<ByteType>(Ctx.getType(llvm::Type::getByte16Ty(Ctx.LLVMCtx)));
+}
+ByteType *Type::getByte32Ty(Context &Ctx) {
+  return cast<ByteType>(Ctx.getType(llvm::Type::getByte32Ty(Ctx.LLVMCtx)));
+}
+ByteType *Type::getByte64Ty(Context &Ctx) {
+  return cast<ByteType>(Ctx.getType(llvm::Type::getByte64Ty(Ctx.LLVMCtx)));
+}
+ByteType *Type::getByte128Ty(Context &Ctx) {
+  return cast<ByteType>(Ctx.getType(llvm::Type::getByte128Ty(Ctx.LLVMCtx)));
+}
+Type *Type::getIntFromByteType(Type *Ty) {
+  return Ty->getContext().getType(llvm::Type::getIntFromByteType(Ty->LLVMTy));
+}
+Type *Type::getByteFromIntType(Type *Ty) {
+  return Ty->getContext().getType(llvm::Type::getByteFromIntType(Ty->LLVMTy));
 }
 Type *Type::getDoubleTy(Context &Ctx) {
   return Ctx.getType(llvm::Type::getDoubleTy(Ctx.LLVMCtx));
@@ -124,4 +151,8 @@ ScalableVectorType *ScalableVectorType::get(Type *ElementType,
 IntegerType *IntegerType::get(Context &Ctx, unsigned NumBits) {
   return cast<IntegerType>(
       Ctx.getType(llvm::IntegerType::get(Ctx.LLVMCtx, NumBits)));
+}
+
+ByteType *ByteType::get(Context &Ctx, unsigned NumBits) {
+  return cast<ByteType>(Ctx.getType(llvm::ByteType::get(Ctx.LLVMCtx, NumBits)));
 }

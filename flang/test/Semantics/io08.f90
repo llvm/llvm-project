@@ -40,6 +40,7 @@
   write(*,'($)')
   write(*,'(\)')
   write(*,'(RZ,RU,RP,RN,RD,RC,SS,SP,S,3G15.3e2)')
+  write(*, "()")
   write(*, '(' // achar( 9) // ')') ! horizontal tab
   write(*, '(' // achar(11) // ')') ! vertical tab
   write(*, '(' // achar(32) // ')') ! space
@@ -320,4 +321,8 @@
 
   !ERROR: Negative scale factor k (from kP) and width d in a 'E' edit descriptor must satisfy '-d < k'
   write(*, '(-4P,E20.5,E15.2)')
+
+  !ERROR: Nested parenthesized format item list is empty
+  write(*, "(I6.3, ( ))")
+
 end

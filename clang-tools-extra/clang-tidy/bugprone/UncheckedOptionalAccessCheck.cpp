@@ -1,4 +1,4 @@
-//===--- UncheckedOptionalAccessCheck.cpp - clang-tidy --------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,14 +7,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "UncheckedOptionalAccessCheck.h"
+#include "../ClangTidyCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
+#include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Error.h"
+
+#include <optional>
+#include <utility>
+
+namespace clang::tidy {
+template <> struct OptionEnumMapping<dataflow::BoolModelKind> {
+  static llvm::ArrayRef<std::pair<dataflow::BoolModelKind, llvm::StringRef>>
+  getEnumMapping() {
+    static constexpr std::pair<dataflow::BoolModelKind, llvm::StringRef>
+        Mapping[] = {{dataflow::BoolModelKind::SAT, "SAT"},
+                     {dataflow::BoolModelKind::Simple, "Simple"}};
+    return {Mapping};
+  }
+};
+} // namespace clang::tidy
 
 namespace clang::tidy::bugprone {
 using ast_matchers::MatchFinder;
@@ -22,19 +39,35 @@ using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessDiagnostic;
 using dataflow::UncheckedOptionalAccessModel;
 
-static constexpr llvm::StringLiteral FuncID("fun");
+static constexpr StringRef FuncID = "fun";
+
+UncheckedOptionalAccessCheck::UncheckedOptionalAccessCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      ModelOptions{Options.get("IgnoreSmartPointerDereference", false),
+                   Options.get("IgnoreValueCalls", false)},
+      BoolModel(Options.get("BoolSolverModel", dataflow::BoolModelKind::SAT)) {}
+
+void UncheckedOptionalAccessCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "IgnoreSmartPointerDereference",
+                ModelOptions.IgnoreSmartPointerDereference);
+  Options.store(Opts, "IgnoreValueCalls", ModelOptions.IgnoreValueCalls);
+  Options.store(Opts, "BoolSolverModel", BoolModel);
+}
 
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
 
-  auto HasOptionalCallDescendant = hasDescendant(callExpr(callee(cxxMethodDecl(
-      ofClass(UncheckedOptionalAccessModel::optionalClassDecl())))));
+  const auto HasOptionalCallDescendant = hasDescendant(callExpr(
+      anyOf(UncheckedOptionalAccessModel::memberCallToOptionalClass(),
+            UncheckedOptionalAccessModel::operatorCallToOptionalClass())));
   Finder->addMatcher(
-      decl(anyOf(functionDecl(unless(isExpansionInSystemHeader()),
-                              // FIXME: Remove the filter below when lambdas are
-                              // well supported by the check.
-                              unless(hasDeclContext(cxxRecordDecl(isLambda()))),
-                              hasBody(HasOptionalCallDescendant)),
+      decl(anyOf(functionDecl(
+                     // FIXME: Remove the filter below when lambdas are
+                     // well supported by the check.
+                     unless(hasDeclContext(cxxRecordDecl(isLambda()))),
+                     hasBody(HasOptionalCallDescendant)),
                  cxxConstructorDecl(hasAnyConstructorInitializer(
                      withInitializer(HasOptionalCallDescendant)))))
           .bind(FuncID),
@@ -53,16 +86,22 @@ void UncheckedOptionalAccessCheck::check(
   UncheckedOptionalAccessDiagnoser Diagnoser(ModelOptions);
   // FIXME: Allow user to set the (defaulted) SAT iterations max for
   // `diagnoseFunction` with config options.
-  if (llvm::Expected<llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>
-          Diags = dataflow::diagnoseFunction<UncheckedOptionalAccessModel,
-                                             UncheckedOptionalAccessDiagnostic>(
-              *FuncDecl, *Result.Context, Diagnoser))
+  if (llvm::Expected<SmallVector<UncheckedOptionalAccessDiagnostic>> Diags =
+          dataflow::diagnoseFunction<UncheckedOptionalAccessModel,
+                                     UncheckedOptionalAccessDiagnostic>(
+              *FuncDecl, *Result.Context, Diagnoser,
+              dataflow::kDefaultMaxSATIterations,
+              dataflow::kDefaultMaxBlockVisits,
+              {/*ContextSensitiveOpts=*/std::nullopt,
+               /*Logger=*/nullptr,
+               /*BoolModel=*/BoolModel})) {
     for (const UncheckedOptionalAccessDiagnostic &Diag : *Diags) {
       diag(Diag.Range.getBegin(), "unchecked access to optional value")
           << Diag.Range;
     }
-  else
+  } else {
     llvm::consumeError(Diags.takeError());
+  }
 }
 
 } // namespace clang::tidy::bugprone

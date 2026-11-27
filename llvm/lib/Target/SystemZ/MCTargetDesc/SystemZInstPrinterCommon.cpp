@@ -67,7 +67,7 @@ void SystemZInstPrinterCommon::printUImmOperand(const MCInst *MI, int OpNum,
                                                 raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isExpr()) {
-    O << *MO.getExpr();
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
   uint64_t Value = static_cast<uint64_t>(MO.getImm());
@@ -80,7 +80,7 @@ void SystemZInstPrinterCommon::printSImmOperand(const MCInst *MI, int OpNum,
                                                 raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   if (MO.isExpr()) {
-    O << *MO.getExpr();
+    MAI.printExpr(O, *MO.getExpr());
     return;
   }
   int64_t Value = MI->getOperand(OpNum).getImm();
@@ -118,6 +118,15 @@ void SystemZInstPrinterCommon::printU8ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<8>(MI, OpNum, O);
 }
 
+void SystemZInstPrinterCommon::printX8ImmOperand(const MCInst *MI, int OpNum,
+                                                 raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  if (Value >= 0)
+    printUImmOperand<8>(MI, OpNum, O);
+  else
+    printSImmOperand<8>(MI, OpNum, O);
+}
+
 void SystemZInstPrinterCommon::printU12ImmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   printUImmOperand<12>(MI, OpNum, O);
@@ -133,6 +142,15 @@ void SystemZInstPrinterCommon::printU16ImmOperand(const MCInst *MI, int OpNum,
   printUImmOperand<16>(MI, OpNum, O);
 }
 
+void SystemZInstPrinterCommon::printX16ImmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  if (Value >= 0)
+    printUImmOperand<16>(MI, OpNum, O);
+  else
+    printSImmOperand<16>(MI, OpNum, O);
+}
+
 void SystemZInstPrinterCommon::printS32ImmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   printSImmOperand<32>(MI, OpNum, O);
@@ -141,6 +159,15 @@ void SystemZInstPrinterCommon::printS32ImmOperand(const MCInst *MI, int OpNum,
 void SystemZInstPrinterCommon::printU32ImmOperand(const MCInst *MI, int OpNum,
                                                   raw_ostream &O) {
   printUImmOperand<32>(MI, OpNum, O);
+}
+
+void SystemZInstPrinterCommon::printX32ImmOperand(const MCInst *MI, int OpNum,
+                                                  raw_ostream &O) {
+  int64_t Value = MI->getOperand(OpNum).getImm();
+  if (Value >= 0)
+    printUImmOperand<32>(MI, OpNum, O);
+  else
+    printSImmOperand<32>(MI, OpNum, O);
 }
 
 void SystemZInstPrinterCommon::printU48ImmOperand(const MCInst *MI, int OpNum,
@@ -184,8 +211,8 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
   // Output the TLS marker if present.
   if ((unsigned)OpNum + 1 < MI->getNumOperands()) {
     const MCOperand &MO = MI->getOperand(OpNum + 1);
-    const MCSymbolRefExpr &refExp = cast<MCSymbolRefExpr>(*MO.getExpr());
-    switch (refExp.getSpecifier()) {
+    const MCSymbolRefExpr &RefExp = cast<MCSymbolRefExpr>(*MO.getExpr());
+    switch (RefExp.getSpecifier()) {
     case SystemZ::S_TLSGD:
       O << ":tls_gdcall:";
       break;
@@ -195,7 +222,7 @@ void SystemZInstPrinterCommon::printPCRelTLSOperand(const MCInst *MI,
     default:
       llvm_unreachable("Unexpected symbol kind");
     }
-    O << refExp.getSymbol().getName();
+    O << RefExp.getSymbol().getName();
   }
 }
 
@@ -218,7 +245,7 @@ void SystemZInstPrinterCommon::printBDXAddrOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinterCommon::printBDLAddrOperand(const MCInst *MI, int OpNum,
                                                    raw_ostream &O) {
-  unsigned Base = MI->getOperand(OpNum).getReg();
+  MCRegister Base = MI->getOperand(OpNum).getReg();
   const MCOperand &DispMO = MI->getOperand(OpNum + 1);
   uint64_t Length = MI->getOperand(OpNum + 2).getImm();
   printOperand(DispMO, &MAI, O);
@@ -232,9 +259,9 @@ void SystemZInstPrinterCommon::printBDLAddrOperand(const MCInst *MI, int OpNum,
 
 void SystemZInstPrinterCommon::printBDRAddrOperand(const MCInst *MI, int OpNum,
                                                    raw_ostream &O) {
-  unsigned Base = MI->getOperand(OpNum).getReg();
+  MCRegister Base = MI->getOperand(OpNum).getReg();
   const MCOperand &DispMO = MI->getOperand(OpNum + 1);
-  unsigned Length = MI->getOperand(OpNum + 2).getReg();
+  MCRegister Length = MI->getOperand(OpNum + 2).getReg();
   printOperand(DispMO, &MAI, O);
   O << "(";
   printRegName(O, Length);
@@ -264,5 +291,8 @@ void SystemZInstPrinterCommon::printCond4Operand(const MCInst *MI, int OpNum,
                                           "nl", "le", "nh",  "no"};
   uint64_t Imm = MI->getOperand(OpNum).getImm();
   assert(Imm > 0 && Imm < 15 && "Invalid condition");
+  if (MAI.getAssemblerDialect() == AD_HLASM)
+    assert(Imm != 3 && Imm != 5 && Imm != 6 && Imm != 9 && Imm != 10 &&
+           Imm != 12 && "Restricted HLASM dialect");
   O << CondNames[Imm - 1];
 }

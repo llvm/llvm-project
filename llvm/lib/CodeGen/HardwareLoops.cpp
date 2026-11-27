@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
@@ -33,8 +34,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -47,32 +46,6 @@
 #define HW_LOOPS_NAME "Hardware Loop Insertion"
 
 using namespace llvm;
-
-static cl::opt<bool>
-ForceHardwareLoops("force-hardware-loops", cl::Hidden, cl::init(false),
-                   cl::desc("Force hardware loops intrinsics to be inserted"));
-
-static cl::opt<bool>
-ForceHardwareLoopPHI(
-  "force-hardware-loop-phi", cl::Hidden, cl::init(false),
-  cl::desc("Force hardware loop counter to be updated through a phi"));
-
-static cl::opt<bool>
-ForceNestedLoop("force-nested-hardware-loop", cl::Hidden, cl::init(false),
-                cl::desc("Force allowance of nested hardware loops"));
-
-static cl::opt<unsigned>
-LoopDecrement("hardware-loop-decrement", cl::Hidden, cl::init(1),
-            cl::desc("Set the loop decrement value"));
-
-static cl::opt<unsigned>
-CounterBitWidth("hardware-loop-counter-bitwidth", cl::Hidden, cl::init(32),
-                cl::desc("Set the loop counter bitwidth"));
-
-static cl::opt<bool>
-ForceGuardLoopEntry(
-  "force-hardware-loop-guard", cl::Hidden, cl::init(false),
-  cl::desc("Force generation of loop guard intrinsic"));
 
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
 
@@ -114,15 +87,11 @@ namespace {
     ORE->emit(createHWLoopAnalysis(ORETag, TheLoop, I) << Msg);
   }
 
-  using TTI = TargetTransformInfo;
-
   class HardwareLoopsLegacy : public FunctionPass {
   public:
     static char ID;
 
-    HardwareLoopsLegacy() : FunctionPass(ID) {
-      initializeHardwareLoopsLegacyPass(*PassRegistry::getPassRegistry());
-    }
+    HardwareLoopsLegacy() : FunctionPass(ID) {}
 
     bool runOnFunction(Function &F) override;
 
@@ -143,12 +112,11 @@ namespace {
   class HardwareLoopsImpl {
   public:
     HardwareLoopsImpl(ScalarEvolution &SE, LoopInfo &LI, bool PreserveLCSSA,
-                      DominatorTree &DT, const DataLayout &DL,
-                      const TargetTransformInfo &TTI, TargetLibraryInfo *TLI,
-                      AssumptionCache &AC, OptimizationRemarkEmitter *ORE,
-                      HardwareLoopOptions &Opts)
-      : SE(SE), LI(LI), PreserveLCSSA(PreserveLCSSA), DT(DT), DL(DL), TTI(TTI),
-        TLI(TLI), AC(AC), ORE(ORE), Opts(Opts) { }
+                      DominatorTree &DT, const TargetTransformInfo &TTI,
+                      TargetLibraryInfo *TLI, AssumptionCache &AC,
+                      OptimizationRemarkEmitter *ORE, HardwareLoopOptions &Opts)
+        : SE(SE), LI(LI), PreserveLCSSA(PreserveLCSSA), DT(DT), TTI(TTI),
+          TLI(TLI), AC(AC), ORE(ORE), Opts(Opts) {}
 
     bool run(Function &F);
 
@@ -164,7 +132,6 @@ namespace {
     LoopInfo &LI;
     bool PreserveLCSSA;
     DominatorTree &DT;
-    const DataLayout &DL;
     const TargetTransformInfo &TTI;
     TargetLibraryInfo *TLI = nullptr;
     AssumptionCache &AC;
@@ -197,29 +164,22 @@ namespace {
 
   public:
     HardwareLoop(HardwareLoopInfo &Info, ScalarEvolution &SE,
-                 const DataLayout &DL,
-                 OptimizationRemarkEmitter *ORE,
-                 HardwareLoopOptions &Opts) :
-      SE(SE), DL(DL), ORE(ORE), Opts(Opts), L(Info.L), M(L->getHeader()->getModule()),
-      ExitCount(Info.ExitCount),
-      CountType(Info.CountType),
-      ExitBranch(Info.ExitBranch),
-      LoopDecrement(Info.LoopDecrement),
-      UsePHICounter(Info.CounterInReg),
-      UseLoopGuard(Info.PerformEntryTest) { }
+                 OptimizationRemarkEmitter *ORE, HardwareLoopOptions &Opts)
+        : SE(SE), ORE(ORE), Opts(Opts), L(Info.L), ExitCount(Info.ExitCount),
+          CountType(Info.CountType), ExitBranch(Info.ExitBranch),
+          LoopDecrement(Info.LoopDecrement), UsePHICounter(Info.CounterInReg),
+          UseLoopGuard(Info.PerformEntryTest) {}
 
     void Create();
 
   private:
     ScalarEvolution &SE;
-    const DataLayout &DL;
     OptimizationRemarkEmitter *ORE = nullptr;
     HardwareLoopOptions &Opts;
-    Loop *L                 = nullptr;
-    Module *M               = nullptr;
+    Loop *L = nullptr;
     const SCEV *ExitCount   = nullptr;
     Type *CountType         = nullptr;
-    BranchInst *ExitBranch  = nullptr;
+    CondBrInst *ExitBranch = nullptr;
     Value *LoopDecrement    = nullptr;
     bool UsePHICounter      = false;
     bool UseLoopGuard       = false;
@@ -239,29 +199,22 @@ bool HardwareLoopsLegacy::runOnFunction(Function &F) {
   auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  auto &DL = F.getDataLayout();
   auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
   auto *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
   auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
   bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
+  const CodeGenOptions &CGOpts = getCodeGenOptions(F);
   HardwareLoopOptions Opts;
-  if (ForceHardwareLoops.getNumOccurrences())
-    Opts.setForce(ForceHardwareLoops);
-  if (ForceHardwareLoopPHI.getNumOccurrences())
-    Opts.setForcePhi(ForceHardwareLoopPHI);
-  if (ForceNestedLoop.getNumOccurrences())
-    Opts.setForceNested(ForceNestedLoop);
-  if (ForceGuardLoopEntry.getNumOccurrences())
-    Opts.setForceGuard(ForceGuardLoopEntry);
-  if (LoopDecrement.getNumOccurrences())
-    Opts.setDecrement(LoopDecrement);
-  if (CounterBitWidth.getNumOccurrences())
-    Opts.setCounterBitwidth(CounterBitWidth);
+  Opts.Force = toOptional(CGOpts.force_hardware_loops);
+  Opts.ForcePhi = toOptional(CGOpts.force_hardware_loop_phi);
+  Opts.ForceNested = toOptional(CGOpts.force_nested_hardware_loop);
+  Opts.ForceGuard = toOptional(CGOpts.force_hardware_loop_guard);
+  Opts.Decrement = CGOpts.hardware_loop_decrement;
+  Opts.Bitwidth = CGOpts.hardware_loop_counter_bitwidth;
 
-  HardwareLoopsImpl Impl(SE, LI, PreserveLCSSA, DT, DL, TTI, TLI, AC, ORE,
-                         Opts);
+  HardwareLoopsImpl Impl(SE, LI, PreserveLCSSA, DT, TTI, TLI, AC, ORE, Opts);
   return Impl.run(F);
 }
 
@@ -274,9 +227,8 @@ PreservedAnalyses HardwareLoopsPass::run(Function &F,
   auto *TLI = &AM.getResult<TargetLibraryAnalysis>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto *ORE = &AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  auto &DL = F.getDataLayout();
 
-  HardwareLoopsImpl Impl(SE, LI, true, DT, DL, TTI, TLI, AC, ORE, Opts);
+  HardwareLoopsImpl Impl(SE, LI, true, DT, TTI, TLI, AC, ORE, Opts);
   bool Changed = Impl.run(F);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -365,7 +317,7 @@ bool HardwareLoopsImpl::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
   if (!Preheader)
     return false;
 
-  HardwareLoop HWLoop(HWLoopInfo, SE, DL, ORE, Opts);
+  HardwareLoop HWLoop(HWLoopInfo, SE, ORE, Opts);
   HWLoop.Create();
   ++NumHWLoops;
   return true;
@@ -403,11 +355,8 @@ static bool CanGenerateTest(Loop *L, Value *Count) {
     return false;
 
   BasicBlock *Pred = Preheader->getSinglePredecessor();
-  if (!isa<BranchInst>(Pred->getTerminator()))
-    return false;
-
-  auto *BI = cast<BranchInst>(Pred->getTerminator());
-  if (BI->isUnconditional() || !isa<ICmpInst>(BI->getCondition()))
+  auto *BI = dyn_cast<CondBrInst>(Pred->getTerminator());
+  if (!BI || !isa<ICmpInst>(BI->getCondition()))
     return false;
 
   // Check that the icmp is checking for equality of Count and zero and that
@@ -444,7 +393,7 @@ Value *HardwareLoop::InitLoopCount() {
   // Can we replace a conditional branch with an intrinsic that sets the
   // loop counter and tests that is not zero?
 
-  SCEVExpander SCEVE(SE, DL, "loopcnt");
+  SCEVExpander SCEVE(SE, "loopcnt");
   if (!ExitCount->getType()->isPointerTy() &&
       ExitCount->getType() != CountType)
     ExitCount = SE.getZeroExtendExpr(ExitCount, CountType);
@@ -465,7 +414,7 @@ Value *HardwareLoop::InitLoopCount() {
 
   BasicBlock *BB = L->getLoopPreheader();
   if (UseLoopGuard && BB->getSinglePredecessor() &&
-      cast<BranchInst>(BB->getTerminator())->isUnconditional()) {
+      isa<UncondBrInst>(BB->getTerminator())) {
     BasicBlock *Predecessor = BB->getSinglePredecessor();
     // If it's not safe to create a while loop then don't force it and create a
     // do-while loop instead
@@ -515,13 +464,9 @@ Value* HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
 
   // Use the return value of the intrinsic to control the entry of the loop.
   if (UseLoopGuard) {
-    assert((isa<BranchInst>(BeginBB->getTerminator()) &&
-            cast<BranchInst>(BeginBB->getTerminator())->isConditional()) &&
-           "Expected conditional branch");
-
     Value *SetCount =
         UsePhi ? Builder.CreateExtractValue(LoopSetup, 1) : LoopSetup;
-    auto *LoopGuard = cast<BranchInst>(BeginBB->getTerminator());
+    auto *LoopGuard = cast<CondBrInst>(BeginBB->getTerminator());
     LoopGuard->setCondition(SetCount);
     if (LoopGuard->getSuccessor(0) != L->getLoopPreheader())
       LoopGuard->swapSuccessors();
@@ -574,7 +519,7 @@ PHINode* HardwareLoop::InsertPHICounter(Value *NumElts, Value *EltsRem) {
   BasicBlock *Preheader = L->getLoopPreheader();
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = ExitBranch->getParent();
-  IRBuilder<> Builder(Header, Header->getFirstNonPHIIt());
+  IRBuilder<> Builder(Header->getFirstNonPHIIt());
   PHINode *Index = Builder.CreatePHI(NumElts->getType(), 2);
   Index->addIncoming(NumElts, Preheader);
   Index->addIncoming(EltsRem, Latch);

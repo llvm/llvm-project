@@ -22,7 +22,7 @@ declare <4 x i32> @get_data() #1
 define void @RWBufferLoad_Vec4_I32() #0 {
   %buffer0 = call target("spirv.Image", i32, 5, 2, 0, 0, 2, 0)
       @llvm.spv.resource.handlefrombinding.tspirv.Image_f32_5_2_0_0_2_0(
-          i32 16, i32 7, i32 1, i32 0, i1 false, ptr nonnull @.str.b)
+          i32 16, i32 7, i32 1, i32 0, ptr nonnull @.str.b)
 
 ; CHECK: [[data:%[0-9]+]] = OpFunctionCall
   %data = call <4 x i32> @get_data()

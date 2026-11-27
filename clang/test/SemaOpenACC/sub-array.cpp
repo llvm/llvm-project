@@ -61,13 +61,15 @@ void Func(int i, int j) {
 #pragma acc parallel private(ptr[3:])
   while (true);
 
-  // expected-error@+1{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is an array of unknown bound}}
+  // expected-error@+2{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is an array of unknown bound}}
+  // expected-warning@+1{{variable of array type 'int[i]' referenced in OpenACC 'private' clause does not have constant bounds; initialization will happen after decay to pointer}}
 #pragma acc parallel private(VLA[3:])
   while (true);
 
 #pragma acc parallel private(ptr[:3])
   while (true);
 
+  // expected-warning@+1{{variable of array type 'int[i]' referenced in OpenACC 'private' clause does not have constant bounds; initialization will happen after decay to pointer}}
 #pragma acc parallel private(VLA[:3])
   while (true);
 
@@ -159,11 +161,13 @@ void Templ(int i){
   // expected-error@+1{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is not an array}}
 #pragma acc parallel private(ptr[Conv:])
   while (true);
-  // expected-error@+1{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is an array of unknown bound}}
+  // expected-error@+2{{OpenACC sub-array length is unspecified and cannot be inferred because the subscripted value is an array of unknown bound}}
+  // expected-warning@+1{{variable of array type 'int[i]' referenced in OpenACC 'private' clause does not have constant bounds; initialization will happen after decay to pointer}}
 #pragma acc parallel private(VLA[Conv:])
   while (true);
 #pragma acc parallel private(ptr[:Conv])
   while (true);
+  // expected-warning@+1{{variable of array type 'int[i]' referenced in OpenACC 'private' clause does not have constant bounds; initialization will happen after decay to pointer}}
 #pragma acc parallel private(VLA[:Conv])
   while (true);
 

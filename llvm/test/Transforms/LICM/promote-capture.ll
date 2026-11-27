@@ -2,7 +2,8 @@
 ; RUN: opt -S -passes='loop-mssa(licm)' < %s | FileCheck %s
 
 declare i1 @cond(i32 %v) readnone
-declare void @capture(ptr %p) readnone
+declare ptr @capture(ptr %p) readnone
+declare void @use(i32) memory(inaccessiblemem: write) nounwind willreturn
 
 define void @test_captured_after_loop(i32 %len) {
 ; CHECK-LABEL: @test_captured_after_loop(
@@ -27,7 +28,7 @@ define void @test_captured_after_loop(i32 %len) {
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_INC1_LCSSA:%.*]] = phi i32 [ [[C_INC1]], [[LATCH]] ]
 ; CHECK-NEXT:    store i32 [[C_INC1_LCSSA]], ptr [[COUNT]], align 4
-; CHECK-NEXT:    call void @capture(ptr [[COUNT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @capture(ptr [[COUNT]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -52,7 +53,52 @@ latch:
   br i1 %cmp, label %exit, label %loop
 
 exit:
-  call void @capture(ptr %count)
+  call ptr @capture(ptr %count)
+  ret void
+}
+
+define void @test_captured_after_loop_unrelated_load(ptr %pp, i32 %len) {
+; CHECK-LABEL: @test_captured_after_loop_unrelated_load(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COUNT:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 4
+; CHECK-NEXT:    [[P:%.*]] = load ptr, ptr [[PP:%.*]], align 8
+; CHECK-NEXT:    [[COUNT_PROMOTED:%.*]] = load i32, ptr [[COUNT]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[C_INC1:%.*]] = phi i32 [ [[COUNT_PROMOTED]], [[ENTRY:%.*]] ], [ [[C_INC:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[I_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[P]], i32 [[I]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[C_INC]] = add i32 [[C_INC1]], [[V]]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[I_NEXT]], [[LEN:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[C_INC_LCSSA:%.*]] = phi i32 [ [[C_INC]], [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[C_INC_LCSSA]], ptr [[COUNT]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @capture(ptr [[COUNT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %count = alloca i32
+  store i32 0, ptr %count
+  %p = load ptr, ptr %pp
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+  %gep = getelementptr i32, ptr %p, i32 %i
+  %v = load i32, ptr %gep
+  %c = load i32, ptr %count
+  %c.inc = add i32 %c, %v
+  store i32 %c.inc, ptr %count
+  %i.next = add nuw i32 %i, 1
+  %cmp = icmp eq i32 %i.next, %len
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  call ptr @capture(ptr %count)
   ret void
 }
 
@@ -71,7 +117,7 @@ define void @test_captured_in_loop(i32 %len) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[C_INC:%.*]] = add i32 [[C_INC2]], 1
 ; CHECK-NEXT:    store i32 [[C_INC]], ptr [[COUNT]], align 4
-; CHECK-NEXT:    call void @capture(ptr [[COUNT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @capture(ptr [[COUNT]])
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    [[C_INC1]] = phi i32 [ [[C_INC]], [[IF]] ], [ [[C_INC2]], [[LOOP]] ]
@@ -95,7 +141,7 @@ if:
   %c = load i32, ptr %count
   %c.inc = add i32 %c, 1
   store i32 %c.inc, ptr %count
-  call void @capture(ptr %count)
+  call ptr @capture(ptr %count)
   br label %latch
 
 latch:
@@ -112,7 +158,7 @@ define void @test_captured_before_loop(i32 %len) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COUNT:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 4
-; CHECK-NEXT:    call void @capture(ptr [[COUNT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @capture(ptr [[COUNT]])
 ; CHECK-NEXT:    [[COUNT_PROMOTED:%.*]] = load i32, ptr [[COUNT]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -135,7 +181,7 @@ define void @test_captured_before_loop(i32 %len) {
 entry:
   %count = alloca i32
   store i32 0, ptr %count
-  call void @capture(ptr %count)
+  call ptr @capture(ptr %count)
   br label %loop
 
 loop:
@@ -163,7 +209,7 @@ define void @test_captured_before_loop_address_only(i32 %len) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[COUNT:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    store i32 0, ptr [[COUNT]], align 4
-; CHECK-NEXT:    call void @capture(ptr captures(address) [[COUNT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @capture(ptr captures(address) [[COUNT]])
 ; CHECK-NEXT:    [[COUNT_PROMOTED:%.*]] = load i32, ptr [[COUNT]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -187,7 +233,7 @@ define void @test_captured_before_loop_address_only(i32 %len) {
 entry:
   %count = alloca i32
   store i32 0, ptr %count
-  call void @capture(ptr captures(address) %count)
+  call ptr @capture(ptr captures(address) %count)
   br label %loop
 
 loop:
@@ -216,7 +262,7 @@ define void @test_captured_before_loop_byval(ptr byval(i32) align 4 %count, i32 
 ; CHECK-LABEL: @test_captured_before_loop_byval(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    store i32 0, ptr [[COUNT:%.*]], align 4
-; CHECK-NEXT:    call void @capture(ptr [[COUNT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @capture(ptr [[COUNT]])
 ; CHECK-NEXT:    [[COUNT_PROMOTED:%.*]] = load i32, ptr [[COUNT]], align 4
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -238,7 +284,7 @@ define void @test_captured_before_loop_byval(ptr byval(i32) align 4 %count, i32 
 ;
 entry:
   store i32 0, ptr %count
-  call void @capture(ptr %count)
+  call ptr @capture(ptr %count)
   br label %loop
 
 loop:
@@ -255,6 +301,63 @@ if:
 latch:
   %i.next = add nuw i32 %i, 1
   %cmp = icmp eq i32 %i.next, %len
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @test_promoted_capture(ptr %pp, i1 %cond, i64 %n) {
+; CHECK-LABEL: @test_promoted_capture(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i32], align 4
+; CHECK-NEXT:    [[LOC:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ [[A_PROMOTED]], [[ENTRY:%.*]] ], [ [[TMP1:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[I_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[Q:%.*]] = load ptr, ptr [[PP:%.*]], align 8
+; CHECK-NEXT:    store i32 1, ptr [[Q]], align 4
+; CHECK-NEXT:    call void @use(i32 [[TMP0]])
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[LATCH]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[TMP1]] = phi i32 [ 2, [[IF]] ], [ [[TMP0]], [[LOOP]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[I_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32 [ [[TMP1]], [[LATCH]] ]
+; CHECK-NEXT:    [[GEP_LCSSA:%.*]] = phi ptr [ [[GEP]], [[LATCH]] ]
+; CHECK-NEXT:    store i32 [[DOTLCSSA]], ptr [[A]], align 4
+; CHECK-NEXT:    store ptr [[GEP_LCSSA]], ptr [[LOC]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a = alloca [16 x i32]
+  %loc = alloca ptr
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %gep = getelementptr inbounds i32, ptr %a, i64 %i
+  store ptr %gep, ptr %loc
+  %q = load ptr, ptr %pp
+  store i32 1, ptr %q
+  %v = load i32, ptr %a
+  call void @use(i32 %v)
+  br i1 %cond, label %if, label %latch
+
+if:
+  store i32 2, ptr %a
+  br label %latch
+
+latch:
+  %i.next = add nuw i64 %i, 1
+  %cmp = icmp eq i64 %i.next, %n
   br i1 %cmp, label %exit, label %loop
 
 exit:
@@ -283,7 +386,7 @@ define void @test_captured_after_loop_byval(ptr byval(i32) align 4 %count, i32 %
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[C_INC1_LCSSA:%.*]] = phi i32 [ [[C_INC1]], [[LATCH]] ]
 ; CHECK-NEXT:    store i32 [[C_INC1_LCSSA]], ptr [[COUNT]], align 4
-; CHECK-NEXT:    call void @capture(ptr [[COUNT]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call ptr @capture(ptr [[COUNT]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -307,6 +410,6 @@ latch:
   br i1 %cmp, label %exit, label %loop
 
 exit:
-  call void @capture(ptr %count)
+  call ptr @capture(ptr %count)
   ret void
 }

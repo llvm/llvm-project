@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/Index/IR/IndexOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 
 using namespace mlir;
 
@@ -55,23 +55,58 @@ struct GpuSubgroupIdRewriter final : OpRewritePattern<gpu::SubgroupIdOp> {
     Location loc = op->getLoc();
     Type indexType = rewriter.getIndexType();
 
-    Value dimX = rewriter.create<gpu::BlockDimOp>(loc, gpu::Dimension::x);
-    Value dimY = rewriter.create<gpu::BlockDimOp>(loc, gpu::Dimension::y);
-    Value tidX = rewriter.create<gpu::ThreadIdOp>(loc, gpu::Dimension::x);
-    Value tidY = rewriter.create<gpu::ThreadIdOp>(loc, gpu::Dimension::y);
-    Value tidZ = rewriter.create<gpu::ThreadIdOp>(loc, gpu::Dimension::z);
+    auto asMaybeIndexAttr = [&](std::optional<uint32_t> bound) -> IntegerAttr {
+      if (!bound)
+        return IntegerAttr();
+      return IntegerAttr::get(
+          indexType, static_cast<int64_t>(static_cast<uint64_t>(*bound)));
+    };
 
-    Value dimYxIdZ = rewriter.create<arith::MulIOp>(loc, indexType, dimY, tidZ);
+    IntegerAttr maybeKnownDimX =
+        asMaybeIndexAttr(gpu::getKnownDimensionSizeAround(
+            op, gpu::DimensionKind::Block, gpu::Dimension::x));
+    IntegerAttr maybeKnownDimY =
+        asMaybeIndexAttr(gpu::getKnownDimensionSizeAround(
+            op, gpu::DimensionKind::Block, gpu::Dimension::y));
+    IntegerAttr maybeKnownDimZ =
+        asMaybeIndexAttr(gpu::getKnownDimensionSizeAround(
+            op, gpu::DimensionKind::Block, gpu::Dimension::z));
+
+    Value dimX, dimY;
+    if (maybeKnownDimX)
+      dimX = arith::ConstantOp::create(rewriter, loc, maybeKnownDimX);
+    else
+      dimX = gpu::BlockDimOp::create(rewriter, loc, gpu::Dimension::x);
+    if (maybeKnownDimY)
+      dimY = arith::ConstantOp::create(rewriter, loc, maybeKnownDimY);
+    else
+      dimY = gpu::BlockDimOp::create(rewriter, loc, gpu::Dimension::y);
+
+    Value tidX = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::x,
+                                         maybeKnownDimX);
+    Value tidY = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::y,
+                                         maybeKnownDimY);
+    Value tidZ = gpu::ThreadIdOp::create(rewriter, loc, gpu::Dimension::z,
+                                         maybeKnownDimZ);
+
+    // Block dimensions don't exceed a signed int32_t maximum, and neither does
+    // their product, on any realistic hardware, nor would any targets compile
+    // with index < 32 bits, so we can assert no overflow.
+    auto flags =
+        arith::IntegerOverflowFlags::nsw | arith::IntegerOverflowFlags::nuw;
+    Value dimYxIdZ =
+        arith::MulIOp::create(rewriter, loc, indexType, dimY, tidZ, flags);
     Value dimYxIdZPlusIdY =
-        rewriter.create<arith::AddIOp>(loc, indexType, dimYxIdZ, tidY);
-    Value dimYxIdZPlusIdYTimesDimX =
-        rewriter.create<arith::MulIOp>(loc, indexType, dimX, dimYxIdZPlusIdY);
-    Value IdXPlusDimYxIdZPlusIdYTimesDimX = rewriter.create<arith::AddIOp>(
-        loc, indexType, tidX, dimYxIdZPlusIdYTimesDimX);
-    Value subgroupSize = rewriter.create<gpu::SubgroupSizeOp>(
-        loc, rewriter.getIndexType(), /*upper_bound = */ nullptr);
-    Value subgroupIdOp = rewriter.create<arith::DivUIOp>(
-        loc, indexType, IdXPlusDimYxIdZPlusIdYTimesDimX, subgroupSize);
+        arith::AddIOp::create(rewriter, loc, indexType, dimYxIdZ, tidY, flags);
+    Value dimYxIdZPlusIdYTimesDimX = arith::MulIOp::create(
+        rewriter, loc, indexType, dimX, dimYxIdZPlusIdY, flags);
+    Value idXPlusDimYxIdZPlusIdYTimesDimX = arith::AddIOp::create(
+        rewriter, loc, indexType, tidX, dimYxIdZPlusIdYTimesDimX, flags);
+    Value subgroupSize = gpu::SubgroupSizeOp::create(
+        rewriter, loc, rewriter.getIndexType(), /*upper_bound = */ nullptr);
+    Value subgroupIdOp =
+        arith::DivUIOp::create(rewriter, loc, indexType,
+                               idXPlusDimYxIdZPlusIdYTimesDimX, subgroupSize);
     rewriter.replaceOp(op, {subgroupIdOp});
     return success();
   }

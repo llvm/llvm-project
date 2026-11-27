@@ -27,6 +27,11 @@ void constructAssembleCommand(Compilation &C, const Tool &T,
                               const InputInfo &Input,
                               const llvm::opt::ArgStringList &Args);
 
+void constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                              const JobAction &JA, const InputInfo &Output,
+                              const InputInfoList &Inputs,
+                              const llvm::opt::ArgList &Args);
+
 class LLVM_LIBRARY_VISIBILITY Translator : public Tool {
 public:
   Translator(const ToolChain &TC)

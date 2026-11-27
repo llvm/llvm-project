@@ -29,7 +29,6 @@ test(S s,
      typename S::value_type c,
      S expected) {
   const typename S::size_type old_size = s.size();
-  S s0                                 = s;
   if (pos <= old_size) {
     s.replace(pos, n1, n2, c);
     LIBCPP_ASSERT(s.__invariants());
@@ -41,6 +40,7 @@ test(S s,
   }
 #ifndef TEST_HAS_NO_EXCEPTIONS
   else if (!TEST_IS_CONSTANT_EVALUATED) {
+    S s0 = s;
     try {
       s.replace(pos, n1, n2, c);
       assert(false);

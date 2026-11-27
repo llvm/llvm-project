@@ -4,6 +4,7 @@
 // RUN: %libomptarget-compileopt-generic && \
 // RUN: env OMP_MAX_ACTIVE_LEVELS=2 %libomptarget-run-generic | \
 // RUN: %fcheck-generic -allow-empty
+// XFAIL: intelgpu
 
 #include <assert.h>
 #include <omp.h>

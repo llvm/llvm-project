@@ -129,11 +129,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: intregs, preferred-register: '' }
-  - { id: 1, class: intregs, preferred-register: '' }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 frameInfo:
@@ -154,8 +150,8 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   hasTailCall:     false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 callSites:       []
@@ -180,37 +176,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: intregs, preferred-register: '' }
-  - { id: 1, class: intregs, preferred-register: '' }
-  - { id: 2, class: intregs, preferred-register: '' }
-  - { id: 3, class: intregs, preferred-register: '' }
-  - { id: 4, class: intregs, preferred-register: '' }
-  - { id: 5, class: intregs, preferred-register: '' }
-  - { id: 6, class: intregs, preferred-register: '' }
-  - { id: 7, class: intregs, preferred-register: '' }
-  - { id: 8, class: predregs, preferred-register: '' }
-  - { id: 9, class: intregs, preferred-register: '' }
-  - { id: 10, class: intregs, preferred-register: '' }
-  - { id: 11, class: intregs, preferred-register: '' }
-  - { id: 12, class: intregs, preferred-register: '' }
-  - { id: 13, class: intregs, preferred-register: '' }
-  - { id: 14, class: intregs, preferred-register: '' }
-  - { id: 15, class: intregs, preferred-register: '' }
-  - { id: 16, class: predregs, preferred-register: '' }
-  - { id: 17, class: intregs, preferred-register: '' }
-  - { id: 18, class: predregs, preferred-register: '' }
-  - { id: 19, class: intregs, preferred-register: '' }
-  - { id: 20, class: intregs, preferred-register: '' }
-  - { id: 21, class: intregs, preferred-register: '' }
-  - { id: 22, class: intregs, preferred-register: '' }
-  - { id: 23, class: intregs, preferred-register: '' }
-  - { id: 24, class: intregs, preferred-register: '' }
-  - { id: 25, class: intregs, preferred-register: '' }
-  - { id: 26, class: intregs, preferred-register: '' }
-  - { id: 27, class: intregs, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -230,8 +196,8 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   hasTailCall:     false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:
   - { id: 0, name: a, type: default, offset: 0, size: 4, alignment: 4,

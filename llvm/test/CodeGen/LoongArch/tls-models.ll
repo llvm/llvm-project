@@ -28,8 +28,9 @@ define ptr @f1() nounwind {
 ; LA32PIC:       # %bb.0: # %entry
 ; LA32PIC-NEXT:    addi.w $sp, $sp, -16
 ; LA32PIC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32PIC-NEXT:    pcalau12i $a0, %gd_pc_hi20(unspecified)
-; LA32PIC-NEXT:    addi.w $a0, $a0, %got_pc_lo12(unspecified)
+; LA32PIC-NEXT:  .Lpcadd_hi0:
+; LA32PIC-NEXT:    pcaddu12i $a0, %gd_pcadd_hi20(unspecified)
+; LA32PIC-NEXT:    addi.w $a0, $a0, %gd_pcadd_lo12(.Lpcadd_hi0)
 ; LA32PIC-NEXT:    bl __tls_get_addr
 ; LA32PIC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32PIC-NEXT:    addi.w $sp, $sp, 16
@@ -68,8 +69,9 @@ define ptr @f1() nounwind {
 ;
 ; LA32NOPIC-LABEL: f1:
 ; LA32NOPIC:       # %bb.0: # %entry
-; LA32NOPIC-NEXT:    pcalau12i $a0, %ie_pc_hi20(unspecified)
-; LA32NOPIC-NEXT:    ld.w $a0, $a0, %ie_pc_lo12(unspecified)
+; LA32NOPIC-NEXT:  .Lpcadd_hi0:
+; LA32NOPIC-NEXT:    pcaddu12i $a0, %ie_pcadd_hi20(unspecified)
+; LA32NOPIC-NEXT:    ld.w $a0, $a0, %ie_pcadd_lo12(.Lpcadd_hi0)
 ; LA32NOPIC-NEXT:    add.w $a0, $a0, $tp
 ; LA32NOPIC-NEXT:    ret
 ;
@@ -94,8 +96,9 @@ define ptr @f1() nounwind {
 ; LA32DESC:       # %bb.0: # %entry
 ; LA32DESC-NEXT:    addi.w $sp, $sp, -16
 ; LA32DESC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32DESC-NEXT:    pcalau12i $a0, %desc_pc_hi20(unspecified)
-; LA32DESC-NEXT:    addi.w $a0, $a0, %desc_pc_lo12(unspecified)
+; LA32DESC-NEXT:  .Lpcadd_hi0:
+; LA32DESC-NEXT:    pcaddu12i $a0, %desc_pcadd_hi20(unspecified)
+; LA32DESC-NEXT:    addi.w $a0, $a0, %desc_pcadd_lo12(.Lpcadd_hi0)
 ; LA32DESC-NEXT:    ld.w $ra, $a0, %desc_ld(unspecified)
 ; LA32DESC-NEXT:    jirl $ra, $ra, %desc_call(unspecified)
 ; LA32DESC-NEXT:    add.w $a0, $a0, $tp
@@ -142,8 +145,9 @@ define ptr @f2() nounwind {
 ; LA32PIC:       # %bb.0: # %entry
 ; LA32PIC-NEXT:    addi.w $sp, $sp, -16
 ; LA32PIC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32PIC-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
-; LA32PIC-NEXT:    addi.w $a0, $a0, %got_pc_lo12(ld)
+; LA32PIC-NEXT:  .Lpcadd_hi1:
+; LA32PIC-NEXT:    pcaddu12i $a0, %ld_pcadd_hi20(ld)
+; LA32PIC-NEXT:    addi.w $a0, $a0, %ld_pcadd_lo12(.Lpcadd_hi1)
 ; LA32PIC-NEXT:    bl __tls_get_addr
 ; LA32PIC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32PIC-NEXT:    addi.w $sp, $sp, 16
@@ -182,8 +186,9 @@ define ptr @f2() nounwind {
 ;
 ; LA32NOPIC-LABEL: f2:
 ; LA32NOPIC:       # %bb.0: # %entry
-; LA32NOPIC-NEXT:    pcalau12i $a0, %ie_pc_hi20(ld)
-; LA32NOPIC-NEXT:    ld.w $a0, $a0, %ie_pc_lo12(ld)
+; LA32NOPIC-NEXT:  .Lpcadd_hi1:
+; LA32NOPIC-NEXT:    pcaddu12i $a0, %ie_pcadd_hi20(ld)
+; LA32NOPIC-NEXT:    ld.w $a0, $a0, %ie_pcadd_lo12(.Lpcadd_hi1)
 ; LA32NOPIC-NEXT:    add.w $a0, $a0, $tp
 ; LA32NOPIC-NEXT:    ret
 ;
@@ -208,8 +213,9 @@ define ptr @f2() nounwind {
 ; LA32DESC:       # %bb.0: # %entry
 ; LA32DESC-NEXT:    addi.w $sp, $sp, -16
 ; LA32DESC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32DESC-NEXT:    pcalau12i $a0, %desc_pc_hi20(ld)
-; LA32DESC-NEXT:    addi.w $a0, $a0, %desc_pc_lo12(ld)
+; LA32DESC-NEXT:  .Lpcadd_hi1:
+; LA32DESC-NEXT:    pcaddu12i $a0, %desc_pcadd_hi20(ld)
+; LA32DESC-NEXT:    addi.w $a0, $a0, %desc_pcadd_lo12(.Lpcadd_hi1)
 ; LA32DESC-NEXT:    ld.w $ra, $a0, %desc_ld(ld)
 ; LA32DESC-NEXT:    jirl $ra, $ra, %desc_call(ld)
 ; LA32DESC-NEXT:    add.w $a0, $a0, $tp
@@ -254,8 +260,9 @@ entry:
 define ptr @f3() nounwind {
 ; LA32PIC-LABEL: f3:
 ; LA32PIC:       # %bb.0: # %entry
-; LA32PIC-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
-; LA32PIC-NEXT:    ld.w $a0, $a0, %ie_pc_lo12(ie)
+; LA32PIC-NEXT:  .Lpcadd_hi2:
+; LA32PIC-NEXT:    pcaddu12i $a0, %ie_pcadd_hi20(ie)
+; LA32PIC-NEXT:    ld.w $a0, $a0, %ie_pcadd_lo12(.Lpcadd_hi2)
 ; LA32PIC-NEXT:    add.w $a0, $a0, $tp
 ; LA32PIC-NEXT:    ret
 ;
@@ -278,8 +285,9 @@ define ptr @f3() nounwind {
 ;
 ; LA32NOPIC-LABEL: f3:
 ; LA32NOPIC:       # %bb.0: # %entry
-; LA32NOPIC-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
-; LA32NOPIC-NEXT:    ld.w $a0, $a0, %ie_pc_lo12(ie)
+; LA32NOPIC-NEXT:  .Lpcadd_hi2:
+; LA32NOPIC-NEXT:    pcaddu12i $a0, %ie_pcadd_hi20(ie)
+; LA32NOPIC-NEXT:    ld.w $a0, $a0, %ie_pcadd_lo12(.Lpcadd_hi2)
 ; LA32NOPIC-NEXT:    add.w $a0, $a0, $tp
 ; LA32NOPIC-NEXT:    ret
 ;
@@ -302,8 +310,9 @@ define ptr @f3() nounwind {
 ;
 ; LA32DESC-LABEL: f3:
 ; LA32DESC:       # %bb.0: # %entry
-; LA32DESC-NEXT:    pcalau12i $a0, %ie_pc_hi20(ie)
-; LA32DESC-NEXT:    ld.w $a0, $a0, %ie_pc_lo12(ie)
+; LA32DESC-NEXT:  .Lpcadd_hi2:
+; LA32DESC-NEXT:    pcaddu12i $a0, %ie_pcadd_hi20(ie)
+; LA32DESC-NEXT:    ld.w $a0, $a0, %ie_pcadd_lo12(.Lpcadd_hi2)
 ; LA32DESC-NEXT:    add.w $a0, $a0, $tp
 ; LA32DESC-NEXT:    ret
 ;

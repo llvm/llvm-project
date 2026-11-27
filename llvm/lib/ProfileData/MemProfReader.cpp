@@ -135,7 +135,7 @@ readMemInfoBlocksV3(const char *Ptr) {
 }
 
 llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
-readMemInfoBlocksV4(const char *Ptr) {
+readMemInfoBlocksCommon(const char *Ptr, bool IsHistogramEncoded = false) {
   using namespace support;
 
   const uint64_t NumItemsToRead =
@@ -145,25 +145,72 @@ readMemInfoBlocksV4(const char *Ptr) {
   for (uint64_t I = 0; I < NumItemsToRead; I++) {
     const uint64_t Id =
         endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
-    // We cheat a bit here and remove the const from cast to set the
-    // Histogram Pointer to newly allocated buffer.
-    MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
 
-    // Only increment by size of MIB since readNext implicitly increments.
-    Ptr += sizeof(MemInfoBlock);
+    MemInfoBlock MIB;
+#define READ_MIB_FIELD(FIELD)                                                  \
+  MIB.FIELD = endian::readNext<decltype(MIB.FIELD), llvm::endianness::little,  \
+                               unaligned>(Ptr)
+
+    READ_MIB_FIELD(AllocCount);
+    READ_MIB_FIELD(TotalAccessCount);
+    READ_MIB_FIELD(MinAccessCount);
+    READ_MIB_FIELD(MaxAccessCount);
+    READ_MIB_FIELD(TotalSize);
+    READ_MIB_FIELD(MinSize);
+    READ_MIB_FIELD(MaxSize);
+    READ_MIB_FIELD(AllocTimestamp);
+    READ_MIB_FIELD(DeallocTimestamp);
+    READ_MIB_FIELD(TotalLifetime);
+    READ_MIB_FIELD(MinLifetime);
+    READ_MIB_FIELD(MaxLifetime);
+    READ_MIB_FIELD(AllocCpuId);
+    READ_MIB_FIELD(DeallocCpuId);
+    READ_MIB_FIELD(NumMigratedCpu);
+    READ_MIB_FIELD(NumLifetimeOverlaps);
+    READ_MIB_FIELD(NumSameAllocCpu);
+    READ_MIB_FIELD(NumSameDeallocCpu);
+    READ_MIB_FIELD(DataTypeId);
+    READ_MIB_FIELD(TotalAccessDensity);
+    READ_MIB_FIELD(MinAccessDensity);
+    READ_MIB_FIELD(MaxAccessDensity);
+    READ_MIB_FIELD(TotalLifetimeAccessDensity);
+    READ_MIB_FIELD(MinLifetimeAccessDensity);
+    READ_MIB_FIELD(MaxLifetimeAccessDensity);
+    READ_MIB_FIELD(AccessHistogramSize);
+    READ_MIB_FIELD(AccessHistogram);
+#undef READ_MIB_FIELD
 
     if (MIB.AccessHistogramSize > 0) {
+      // The in-memory representation uses uint64_t for histogram entries.
       MIB.AccessHistogram =
           (uintptr_t)malloc(MIB.AccessHistogramSize * sizeof(uint64_t));
-    }
-
-    for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
-      ((uint64_t *)MIB.AccessHistogram)[J] =
-          endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
+      for (uint64_t J = 0; J < MIB.AccessHistogramSize; J++) {
+        if (!IsHistogramEncoded) {
+          ((uint64_t *)MIB.AccessHistogram)[J] =
+              endian::readNext<uint64_t, llvm::endianness::little, unaligned>(
+                  Ptr);
+        } else {
+          // The encoded on-disk format (V5 onwards) uses uint16_t.
+          const uint16_t Val =
+              endian::readNext<uint16_t, llvm::endianness::little, unaligned>(
+                  Ptr);
+          ((uint64_t *)MIB.AccessHistogram)[J] = decodeHistogramCount(Val);
+        }
+      }
     }
     Items.push_back({Id, MIB});
   }
   return Items;
+}
+
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+readMemInfoBlocksV4(const char *Ptr) {
+  return readMemInfoBlocksCommon(Ptr);
+}
+
+llvm::SmallVector<std::pair<uint64_t, MemInfoBlock>>
+readMemInfoBlocksV5(const char *Ptr) {
+  return readMemInfoBlocksCommon(Ptr, /*IsHistogramEncoded=*/true);
 }
 
 CallStackMap readStackInfo(const char *Ptr) {
@@ -228,7 +275,7 @@ std::string getBuildIdString(const SegmentEntry &Entry) {
   for (size_t I = 0; I < Entry.BuildIdSize; I++) {
     OS << format_hex_no_prefix(Entry.BuildId[I], 2);
   }
-  return OS.str();
+  return Str;
 }
 } // namespace
 
@@ -548,7 +595,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
 
   // For entries where all PCs in the callstack are discarded, we erase the
   // entry from the stack map.
-  llvm::SmallVector<uint64_t> EntriesToErase;
+  llvm::DenseSet<uint64_t> EntriesToErase;
   // We keep track of all prior discarded entries so that we can avoid invoking
   // the symbolizer for such entries.
   llvm::DenseSet<uint64_t> AllVAddrsToDiscard;
@@ -565,7 +612,7 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
           getModuleOffset(VAddr), Specifier, /*UseSymbolTable=*/false);
       if (!DIOr)
         return DIOr.takeError();
-      DIInliningInfo DI = DIOr.get();
+      DIInliningInfo &DI = DIOr.get();
 
       // Drop frames which we can't symbolize or if they belong to the runtime.
       if (DI.getFrame(0).FunctionName == DILineInfo::BadString ||
@@ -578,7 +625,13 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
            I++) {
         const auto &DIFrame = DI.getFrame(I);
         const uint64_t Guid = memprof::getGUID(DIFrame.FunctionName);
-        const Frame F(Guid, DIFrame.Line - DIFrame.StartLine, DIFrame.Column,
+        // Compiler generated code, e.g. the forwarding call in a C++
+        // non-virtual thunk, has line 0. Record such frames with offset 0
+        // (matching the compiler side) instead of a wrapped around value.
+        const uint32_t LineOffset = DIFrame.Line >= DIFrame.StartLine
+                                        ? DIFrame.Line - DIFrame.StartLine
+                                        : 0;
+        const Frame F(Guid, LineOffset, DIFrame.Column,
                       // Only the last entry is not an inlined location.
                       I != NumFrames - 1);
         // Here we retain a mapping from the GUID to canonical symbol name
@@ -601,19 +654,22 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames(
       return AllVAddrsToDiscard.contains(A);
     });
     if (CallStack.empty())
-      EntriesToErase.push_back(Entry.getFirst());
+      EntriesToErase.insert(Entry.getFirst());
   }
 
   // Drop the entries where the callstack is empty.
-  for (const uint64_t Id : EntriesToErase) {
+  for (const uint64_t Id : EntriesToErase)
     StackMap.erase(Id);
-    if (auto It = CallstackProfileData.find(Id);
-        It != CallstackProfileData.end()) {
-      if (It->second.AccessHistogramSize > 0)
-        free((void *)It->second.AccessHistogram);
-      CallstackProfileData.erase(It);
-    }
-  }
+
+  if (!EntriesToErase.empty())
+    CallstackProfileData.remove_if(
+        [&EntriesToErase](const std::pair<uint64_t, MemInfoBlock> &KV) {
+          if (!EntriesToErase.contains(KV.first))
+            return false;
+          if (KV.second.AccessHistogramSize > 0)
+            free((void *)KV.second.AccessHistogram);
+          return true;
+        });
 
   if (StackMap.empty())
     return make_error<InstrProfError>(
@@ -658,6 +714,8 @@ RawMemProfReader::readMemInfoBlocks(const char *Ptr) {
     return readMemInfoBlocksV3(Ptr);
   if (MemprofRawVersion == 4ULL)
     return readMemInfoBlocksV4(Ptr);
+  if (MemprofRawVersion == 5ULL)
+    return readMemInfoBlocksV5(Ptr);
   llvm_unreachable(
       "Panic: Unsupported version number when reading MemInfoBlocks");
 }

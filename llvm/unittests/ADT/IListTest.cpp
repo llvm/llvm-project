@@ -19,7 +19,7 @@ namespace {
 struct Node : ilist_node<Node> {
   int Value;
 
-  Node() {}
+  Node() = default;
   Node(int Value) : Value(Value) {}
   Node(const Node&) = default;
   ~Node() { Value = -1; }

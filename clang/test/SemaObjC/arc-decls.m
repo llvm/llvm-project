@@ -131,7 +131,7 @@ void test7(void) {
   id *px = &x; // expected-error {{pointer to non-const type 'id' with no explicit ownership}}
 
   I *y;
-  J **py = &y; // expected-error {{pointer to non-const type 'J *' with no explicit ownership}} expected-warning {{incompatible pointer types initializing}}
+  J **py = &y; // expected-error {{pointer to non-const type 'J *' with no explicit ownership}} expected-error {{incompatible pointer types initializing}}
 }
 
 void func(void) __attribute__((objc_ownership(none)));  // expected-warning {{'objc_ownership' only applies to Objective-C object or block pointer types; type here is 'void (void)'}}

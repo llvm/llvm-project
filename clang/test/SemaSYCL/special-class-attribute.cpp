@@ -64,14 +64,14 @@ struct __attribute__((sycl_special_class)) struct7 {
 };
 
 // Only classes
-[[clang::sycl_special_class]] int var1 = 0;       // expected-warning {{'sycl_special_class' attribute only applies to classes}}
+[[clang::sycl_special_class]] int var1 = 0;       // expected-warning {{'clang::sycl_special_class' attribute only applies to classes}}
 __attribute__((sycl_special_class)) int var2 = 0; // expected-warning {{'sycl_special_class' attribute only applies to classes}}
 
-[[clang::sycl_special_class]] void foo1();       // expected-warning {{'sycl_special_class' attribute only applies to classes}}
+[[clang::sycl_special_class]] void foo1();       // expected-warning {{'clang::sycl_special_class' attribute only applies to classes}}
 __attribute__((sycl_special_class)) void foo2(); // expected-warning {{'sycl_special_class' attribute only applies to classes}}
 
 // Attribute takes no arguments
-class [[clang::sycl_special_class(1)]] class9{};         // expected-error {{'sycl_special_class' attribute takes no arguments}}
+class [[clang::sycl_special_class(1)]] class9{};         // expected-error {{'clang::sycl_special_class' attribute takes no arguments}}
 class __attribute__((sycl_special_class(1))) class10 {}; // expected-error {{'sycl_special_class' attribute takes no arguments}}
 
 // __init method must be defined inside the CXXRecordDecl.

@@ -2,6 +2,7 @@ static_library("ProfileData") {
   output_name = "LLVMProfileData"
   deps = [
     "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/DWARF/LowLevel",
     "//llvm/lib/DebugInfo/Symbolize",
     "//llvm/lib/IR",
     "//llvm/lib/Object",
@@ -10,6 +11,7 @@ static_library("ProfileData") {
   ]
   sources = [
     "DataAccessProf.cpp",
+    "ETMTraceDecoder.cpp",
     "GCOV.cpp",
     "IndexedMemProfData.cpp",
     "InstrProf.cpp",

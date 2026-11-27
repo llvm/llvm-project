@@ -27,6 +27,25 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/TargetParser/Triple.h"
+#include <optional>
+
+namespace llvm::AArch64 {
+// Mode for selecting how to insert frame record info into the stack ring
+// buffer.
+enum class StackTaggingRecordStackHistoryMode {
+  // Do not record frame record info.
+  None,
+
+  // Insert instructions into the prologue for storing into the stack ring
+  // buffer directly.
+  Instr,
+};
+
+enum class UncheckedLdStMode { Never, Safe, Always };
+} // namespace llvm::AArch64
+
+#define OPTIONS_STRUCT_DECL
+#include "AArch64Options.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "AArch64GenSubtargetInfo.inc"
@@ -36,6 +55,8 @@ class GlobalValue;
 class StringRef;
 
 class AArch64Subtarget final : public AArch64GenSubtargetInfo {
+  const AArch64Options &CLOpts;
+
 public:
   enum ARMProcFamilyEnum : uint8_t {
     Generic,
@@ -59,7 +80,7 @@ protected:
   unsigned EpilogueVectorizationMinVF = 16;
   uint8_t MaxInterleaveFactor = 2;
   uint8_t VectorInsertExtractBaseCost = 2;
-  uint16_t CacheLineSize = 0;
+  uint16_t CacheLineSize = 64;
   // Default scatter/gather overhead.
   unsigned ScatterOverhead = 10;
   unsigned GatherOverhead = 10;
@@ -71,6 +92,7 @@ protected:
   unsigned MaxBytesForLoopAlignment = 0;
   unsigned MinimumJumpTableEntries = 4;
   unsigned MaxJumpTableSize = 0;
+  unsigned FixedLoadLatency = 0;
 
   // ReserveXRegister[i] - X#i is not available as a general purpose register.
   BitVector ReserveXRegister;
@@ -85,9 +107,9 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
-  std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
+  bool EnableSRLTSubregToRegMitigation;
   unsigned VScaleForTuning = 1;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
@@ -128,9 +150,10 @@ public:
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
-                   bool HasMinSize = false);
+                   bool HasMinSize = false,
+                   bool EnableSRLTSubregToRegMitigation = false);
 
-  virtual unsigned getHwModeSet() const override;
+  const AArch64Options &getCLOpts() const { return CLOpts; }
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -171,6 +194,23 @@ public:
     return ARMProcFamily;
   }
 
+  /// Returns true if the processor is an Apple M-series or aligned A-series
+  /// (A14 or newer).
+  bool isAppleMLike() const {
+    switch (ARMProcFamily) {
+    case AppleA14:
+    case AppleA15:
+    case AppleA16:
+    case AppleA17:
+    case AppleM4:
+    case AppleM5:
+    case AppleM6:
+      return true;
+    default:
+      return false;
+    }
+  }
+
   bool isXRaySupported() const override { return true; }
 
   /// Returns true if the function has a streaming body.
@@ -182,7 +222,7 @@ public:
   /// Returns the size of memory region that if accessed by both the CPU and
   /// the SME unit could result in a hazard. 0 = disabled.
   unsigned getStreamingHazardSize() const {
-    return StreamingHazardSize.value_or(
+    return CLOpts.streaming_hazard_size.value_or(
         !hasSMEFA64() && hasSME() && hasSVE() ? 1024 : 0);
   }
 
@@ -212,6 +252,21 @@ public:
     return hasSVE() || isStreamingSVEAvailable();
   }
 
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions
+  /// available to SME2.
+  bool isNonStreamingSVEorSME2Available() const {
+    return isSVEAvailable() || (isSVEorStreamingSVEAvailable() && hasSME2());
+  }
+
+  /// Returns true if SVE bit-permute instructions (bext/bdep/bgrp) can be
+  /// emitted.
+  bool isSVEBitPermAvailable() const {
+    return hasSVEBitPerm() &&
+           (isSVEAvailable() ||
+            (isSVEorStreamingSVEAvailable() && hasSSVE_BitPerm()));
+  }
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust
@@ -239,9 +294,21 @@ public:
   /// Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
-           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCCSelect() ||
-           hasFuseAdrpAdd() || hasFuseLiterals();
+           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
+           hasFuseFCmpFCSel() || hasFuseCmpCSet() || hasFuseAdrpAdd() ||
+           hasFuseLiterals() || hasFuseAppleSMECompute() || hasFuseFMinFMax();
   }
+
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions.
+  bool fusesMOVImmPair(unsigned FirstOpc, unsigned FirstShift,
+                       unsigned SecondOpc, unsigned SecondShift) const;
+
+  /// Return true if the subtarget fuses this pair of move immediate
+  /// instructions. The 1st instruction is a wildcard when it is nullptr, which
+  /// tells whether the 2nd one can be fused at all.
+  bool fusesMOVImmPair(const MachineInstr *FirstMI,
+                       const MachineInstr &SecondMI) const;
 
   unsigned getEpilogueVectorizationMinVF() const {
     return EpilogueVectorizationMinVF;
@@ -275,6 +342,8 @@ public:
     return MinimumJumpTableEntries;
   }
 
+  unsigned getFixedLoadLatency() const { return FixedLoadLatency; }
+
   /// CPU has TBI (top byte of addresses is ignored during HW address
   /// translation) and OS enables it.
   bool supportsAddressTopByteIgnored() const;
@@ -285,9 +354,17 @@ public:
   bool isTargetIOS() const { return TargetTriple.isiOS(); }
   bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
   bool isTargetWindows() const { return TargetTriple.isOSWindows(); }
+  bool isTargetUEFI() const { return TargetTriple.isUEFI(); }
+  /// UEFI follows the Windows ARM64 ABI and produces PE/COFF images, so most
+  /// of the Windows specific ABI handling (calling convention, callee saved
+  /// registers, frame chain, stack probing and unwind info) applies to it.
+  bool isTargetWindowsOrUEFI() const {
+    return TargetTriple.isOSWindowsOrUEFI();
+  }
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isWindowsArm64EC() const { return TargetTriple.isWindowsArm64EC(); }
+  bool isLFI() const { return TargetTriple.isLFI(); }
 
   bool isTargetCOFF() const { return TargetTriple.isOSBinFormatCOFF(); }
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
@@ -300,12 +377,6 @@ public:
 
   bool useAA() const override;
 
-  bool addrSinkUsingGEPs() const override {
-    // Keeping GEPs inbounds is important for exploiting AArch64
-    // addressing-modes in ILP32 mode.
-    return useAA() || isTargetILP32();
-  }
-
   bool useSmallAddressing() const {
     switch (TLInfo.getTargetMachine().getCodeModel()) {
       case CodeModel::Kernel:
@@ -317,6 +388,10 @@ public:
         return false;
     }
   }
+
+  /// Returns whether the operating system makes it safer to store sensitive
+  /// values in x16 and x17 as opposed to other registers.
+  bool isX16X17Safer() const;
 
   /// ParseSubtargetFeatures - Parses features string setting specified
   /// subtarget options.  Definition of function is auto generated by tblgen.
@@ -339,7 +414,8 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           unsigned NumRegionInstrs) const override;
+                           const SchedRegion &Region) const override;
+
   void adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx,
                              SDep &Dep,
                              const TargetSchedModel *SchedModel) const override;
@@ -354,9 +430,9 @@ public:
     case CallingConv::Fast:
     case CallingConv::Swift:
     case CallingConv::SwiftTail:
-      return isTargetWindows();
+      return isTargetWindowsOrUEFI();
     case CallingConv::PreserveNone:
-      return IsVarArg && isTargetWindows();
+      return IsVarArg && isTargetWindowsOrUEFI();
     case CallingConv::Win64:
       return true;
     default:
@@ -415,6 +491,12 @@ public:
     return 0;
   }
 
+  // Return the known bit length of SVE predicate registers. A value of 0 means
+  // the length is unknown beyond what's implied by the architecture.
+  unsigned getSVEPredicateSizeInBits() const {
+    return getSVEVectorSizeInBits() / 8;
+  }
+
   bool useSVEForFixedLengthVectors() const {
     if (!isSVEorStreamingSVEAvailable())
       return false;
@@ -440,16 +522,8 @@ public:
   /// add + cnt instructions.
   bool useScalarIncVL() const;
 
-  const char* getChkStkName() const {
-    if (isWindowsArm64EC())
-      return "#__chkstk_arm64ec";
-    return "__chkstk";
-  }
-
-  const char* getSecurityCheckCookieName() const {
-    if (isWindowsArm64EC())
-      return "#__security_check_cookie_arm64ec";
-    return "__security_check_cookie";
+  bool enableSRLTSubregToRegMitigation() const {
+    return EnableSRLTSubregToRegMitigation;
   }
 
   /// Choose a method of checking LR before performing a tail call.
@@ -465,6 +539,8 @@ public:
   /// a function.
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
+
+  bool enableAggressiveInterleaving() const { return AggressiveInterleaving; }
 };
 } // End llvm namespace
 

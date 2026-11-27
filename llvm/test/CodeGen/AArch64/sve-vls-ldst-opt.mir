@@ -1,7 +1,6 @@
-# RUN: llc -mtriple=aarch64-unknown-linux -mattr=+sve -aarch64-sve-vector-bits-min=128 -aarch64-sve-vector-bits-max=128 -run-pass=aarch64-ldst-opt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-unknown-linux -mattr=+sve -aarch64-sve-vector-bits-min=128 -aarch64-sve-vector-bits-max=128 -run-pass=aarch64-ldst-opt %s -o - | FileCheck %s
 ---
 name: pair-sve-fill-spill
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1
@@ -16,7 +15,6 @@ body: |
 # CHECK: STPQi killed $q0, killed $q1, renamable $x1, 0 :: (store (<vscale x 1 x s128>))
 ---
 name: do-not-pair-sve-with-neon-scaled
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1
@@ -45,7 +43,6 @@ body: |
 # CHECK: STR_ZXI killed renamable $z3, renamable $x1, 4 :: (store (<vscale x 1 x s128>))
 ---
 name: do-not-pair-sve-with-neon-unscaled
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1
@@ -72,3 +69,20 @@ body: |
 # CHECK: STURQi killed renamable $q1, renamable $x1, 16 :: (store (s128))
 # CHECK: STURQi killed renamable $q2, renamable $x1, 48 :: (store (s128))
 # CHECK: STR_ZXI killed renamable $z3, renamable $x1, 4 :: (store (<vscale x 1 x s128>))
+---
+name: clear-kill-in-bundle-forward
+body: |
+  bb.0:
+    liveins: $x0, $z0
+    STR_ZXI $z0, $x0, 0 :: (store (<vscale x 1 x s128>))
+    BUNDLE implicit-def $z1, implicit killed $z0 {
+      $z1 = ADD_ZZZ_D killed $z0, $z0
+    }
+    STR_ZXI renamable $z1, $x0, 1 :: (store (<vscale x 1 x s128>))
+    RET_ReallyLR
+...
+# CHECK-LABEL: name: clear-kill-in-bundle-forward
+# CHECK: BUNDLE implicit-def $z1, implicit $z0 {
+# CHECK:   $z1 = ADD_ZZZ_D $z0, $z0
+# CHECK: }
+# CHECK: STPQi $q0, $q1, $x0, 0 :: (store (<vscale x 1 x s128>))

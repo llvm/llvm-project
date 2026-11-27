@@ -24,6 +24,19 @@ namespace clang {
 namespace driver {
 namespace tools {
 
+struct OffloadJobsOpt {
+  enum class Kind { Missing, Invalid, Jobserver, Fixed };
+
+  Kind K = Kind::Missing;
+  llvm::opt::Arg *A = nullptr;
+  StringRef Value;
+  unsigned NumThreads = 0;
+
+  bool isValid() const { return K == Kind::Jobserver || K == Kind::Fixed; }
+};
+
+OffloadJobsOpt parseOffloadJobs(const llvm::opt::ArgList &Args);
+
 void addPathIfExists(const Driver &D, const Twine &Path,
                      ToolChain::path_list &Paths);
 
@@ -31,14 +44,24 @@ void AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
                      const llvm::opt::ArgList &Args,
                      llvm::opt::ArgStringList &CmdArgs, const JobAction &JA);
 
+const char *getLDMOption(const llvm::Triple &T, const llvm::opt::ArgList &Args);
+
 void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
                                           const llvm::opt::ArgList &Args,
                                           llvm::opt::ArgStringList &CmdArgs);
 
+void renderDebugInfoCompressionArgs(const llvm::opt::ArgList &Args,
+                                    llvm::opt::ArgStringList &CmdArgs,
+                                    const Driver &D, const ToolChain &TC);
+
+/// Whether Mach-O objects for \p T with DWARF \p DwarfVersion relocate offsets
+/// between DWARF sections.
+bool useMachORelocatableDwarf(const llvm::Triple &T, unsigned DwarfVersion);
+
 void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs);
+                          llvm::opt::ArgStringList &CmdArgs, Compilation &C);
 
 void linkSanitizerRuntimeDeps(const ToolChain &TC,
                               const llvm::opt::ArgList &Args,
@@ -54,25 +77,15 @@ void AddRunTimeLibs(const ToolChain &TC, const Driver &D,
                     llvm::opt::ArgStringList &CmdArgs,
                     const llvm::opt::ArgList &Args);
 
-void AddStaticDeviceLibsLinking(Compilation &C, const Tool &T,
-                                const JobAction &JA,
-                                const InputInfoList &Inputs,
-                                const llvm::opt::ArgList &DriverArgs,
-                                llvm::opt::ArgStringList &CmdArgs,
-                                StringRef Arch, StringRef Target,
-                                bool isBitCodeSDL);
-void AddStaticDeviceLibs(Compilation *C, const Tool *T, const JobAction *JA,
-                         const InputInfoList *Inputs, const Driver &D,
-                         const llvm::opt::ArgList &DriverArgs,
-                         llvm::opt::ArgStringList &CmdArgs, StringRef Arch,
-                         StringRef Target, bool isBitCodeSDL);
-
 const char *SplitDebugName(const JobAction &JA, const llvm::opt::ArgList &Args,
                            const InputInfo &Input, const InputInfo &Output);
 
 void SplitDebugInfo(const ToolChain &TC, Compilation &C, const Tool &T,
                     const JobAction &JA, const llvm::opt::ArgList &Args,
                     const InputInfo &Output, const char *OutFile);
+
+void addDTLTOOptions(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
+                     llvm::opt::ArgStringList &CmdArgs);
 
 void addLTOOptions(const ToolChain &ToolChain, const llvm::opt::ArgList &Args,
                    llvm::opt::ArgStringList &CmdArgs, const InputInfo &Output,
@@ -82,6 +95,8 @@ const char *RelocationModelName(llvm::Reloc::Model Model);
 
 std::tuple<llvm::Reloc::Model, unsigned, bool>
 ParsePICArgs(const ToolChain &ToolChain, const llvm::opt::ArgList &Args);
+
+bool getStaticPIE(const llvm::opt::ArgList &Args, const ToolChain &TC);
 
 unsigned ParseFunctionAlignment(const ToolChain &TC,
                                 const llvm::opt::ArgList &Args);
@@ -101,6 +116,20 @@ unsigned DwarfVersionNum(StringRef ArgValue);
 const llvm::opt::Arg *getDwarfNArg(const llvm::opt::ArgList &Args);
 unsigned getDwarfVersion(const ToolChain &TC, const llvm::opt::ArgList &Args);
 
+enum class DwarfFissionKind { None, Split, Single };
+
+DwarfFissionKind getDebugFissionKind(const Driver &D,
+                                     const llvm::opt::ArgList &Args,
+                                     llvm::opt::Arg *&Arg);
+
+bool checkDebugInfoOption(const llvm::opt::Arg *A,
+                          const llvm::opt::ArgList &Args, const Driver &D,
+                          const ToolChain &TC);
+
+void addDebugInfoForProfilingArgs(const Driver &D, const ToolChain &TC,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs);
+
 void AddAssemblerKPIC(const ToolChain &ToolChain,
                       const llvm::opt::ArgList &Args,
                       llvm::opt::ArgStringList &CmdArgs);
@@ -110,6 +139,12 @@ void addArchSpecificRPath(const ToolChain &TC, const llvm::opt::ArgList &Args,
 void addOpenMPRuntimeLibraryPath(const ToolChain &TC,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
+
+bool addLLVMOffloadingRuntime(const Compilation &C,
+                              llvm::opt::ArgStringList &CmdArgs,
+                              const ToolChain &TC,
+                              const llvm::opt::ArgList &Args);
+
 /// Returns true, if an OpenMP runtime has been added.
 bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
                       const ToolChain &TC, const llvm::opt::ArgList &Args,
@@ -120,10 +155,6 @@ bool addOpenMPRuntime(const Compilation &C, llvm::opt::ArgStringList &CmdArgs,
 void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
-
-void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
-                          const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs);
 
 void addAsNeededOption(const ToolChain &TC, const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs, bool as_needed);
@@ -140,6 +171,11 @@ llvm::StringRef getLTOParallelism(const llvm::opt::ArgList &Args,
 bool areOptimizationsEnabled(const llvm::opt::ArgList &Args);
 
 bool isUseSeparateSections(const llvm::Triple &Triple);
+/// Append -ffunction-sections / -fdata-sections to \p CmdArgs when the
+/// corresponding flags are enabled (explicitly or by target default).
+void addSeparateSectionFlags(const llvm::Triple &Triple,
+                             const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs);
 // Parse -mtls-dialect=. Return true if the target supports both general-dynamic
 // and TLSDESC, and TLSDESC is requested.
 bool isTLSDESCEnabled(const ToolChain &TC, const llvm::opt::ArgList &Args);
@@ -208,17 +244,31 @@ void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
                             const llvm::Triple &Triple, bool IsLTO,
                             const StringRef PluginOptPrefix = "");
 
+void addSplitMachineFunctionsArgs(const Driver &D,
+                                  const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs,
+                                  const llvm::Triple &Triple);
+
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple,
                         const ToolChain &HostTC);
+
+/// Try to link libclc, depending on the target ABI and command line
+/// arguments.
+///
+/// \return true if libclc should be linked for the compile.
+bool addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
+                          const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args);
 
 void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
                            const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs,
                            const llvm::Triple &Triple);
 void addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
-                            llvm::opt::ArgStringList &CmdArgs);
+                            llvm::opt::ArgStringList &CmdArgs,
+                            bool EmitCompressionFormat = false);
 void addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
                 const llvm::Triple &Triple,
                 const llvm::Reloc::Model &RelocationModel,
@@ -250,11 +300,16 @@ const char *renderEscapedCommandLine(const ToolChain &TC,
 /// line options that were passed.
 bool shouldRecordCommandLine(const ToolChain &TC,
                              const llvm::opt::ArgList &Args,
-                             bool &FRecordCommandLine,
-                             bool &GRecordCommandLine);
+                             bool &FRecordCommandLine, bool &GRecordCommandLine,
+                             bool &DXRecordCommandLine);
+
+void renderGlobalISelOptions(const Driver &D, const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs,
+                             const llvm::Triple &Triple);
 
 void renderCommonIntegerOverflowOptions(const llvm::opt::ArgList &Args,
-                                        llvm::opt::ArgStringList &CmdArgs);
+                                        llvm::opt::ArgStringList &CmdArgs,
+                                        bool IsMSVCCompat);
 
 bool shouldEnableVectorizerAtOLevel(const llvm::opt::ArgList &Args,
                                     bool isSlpVec);
@@ -271,15 +326,27 @@ void handleVectorizeLoopsArgs(const llvm::opt::ArgList &Args,
 void handleVectorizeSLPArgs(const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs);
 
-// Parse -mprefer-vector-width=. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
-                                        const llvm::opt::ArgList &Args);
+// Convert ComplexRangeKind to a string that can be passed as a frontend option.
+std::string complexRangeKindToStr(LangOptions::ComplexRangeKind Range);
 
-// Parse -mrecip. Return the Value string if well-formed.
-// Otherwise, return an empty string and issue a diagnosic message if needed.
-StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
-                            const llvm::opt::ArgList &Args);
+// Render a frontend option corresponding to ComplexRangeKind.
+std::string renderComplexRangeOption(LangOptions::ComplexRangeKind Range);
+
+// Set the complex range and output a warning as needed.
+void setComplexRange(const Driver &D, StringRef NewOpt,
+                     LangOptions::ComplexRangeKind NewRange, StringRef &LastOpt,
+                     LangOptions::ComplexRangeKind &Range);
+
+// This function expects that the inputs to llvm-link will be specified by the
+// caller, but the output is handled by this function, with the optional ability
+// to set the output filename.
+void constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                              const JobAction &JA,
+                              const InputInfoList &JobInputs,
+                              const llvm::opt::ArgStringList &LinkerInputs,
+                              const InputInfo &Output,
+                              const llvm::opt::ArgList &Args,
+                              const char *OutputFilename = nullptr);
 
 } // end namespace tools
 } // end namespace driver

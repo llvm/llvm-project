@@ -41,7 +41,7 @@ define i32 @foo() nounwind noinline uwtable "function-instrument"="xray-always" 
 ; CHECK-NEXT:         .space  13
 ; CHECK-NEXT: .Lxray_sleds_end0:
 ; CHECK-LABEL: xray_fn_idx,"ao",@progbits,foo{{$}}
-; CHECK:              .p2align        4
+; CHECK:              .p2align        3, 0x0
 ; CHECK-NEXT: [[IDX:.Lxray_fn_idx[0-9]+]]:
 ; CHECK-NEXT:         .quad .Lxray_sleds_start0-[[IDX]]
 ; CHECK-NEXT:         .quad 2

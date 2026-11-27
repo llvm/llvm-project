@@ -13,7 +13,12 @@
 // Bufferization Type Interfaces
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/Types.h"
+#include "mlir/IR/Diagnostics.h"
+
+namespace mlir::bufferization {
+struct BufferizationOptions;
+class BufferLikeType;
+} // namespace mlir::bufferization
 
 #include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h.inc"
 

@@ -12,7 +12,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK: cir.func @fold_shuffle_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK: cir.func{{.*}} @fold_shuffle_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i,
   // CHECK-SAME: #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
@@ -32,7 +32,7 @@ module  {
     cir.return %new_vec : !cir.vector<6 x !s32i>
   }
 
-  // CHECK: cir.func @fold_shuffle_vector_op_test() -> !cir.vector<6 x !s32i> {
+  // CHECK: cir.func{{.*}} @fold_shuffle_vector_op_test() -> !cir.vector<6 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i,
   // CHECK-SAME: #cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<6> : !s32i]> : !cir.vector<6 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<6 x !s32i>
@@ -52,7 +52,7 @@ module  {
     cir.return %new_vec : !cir.vector<4 x !s32i>
   }
 
-  // CHECK: cir.func @fold_shuffle_vector_op_test() -> !cir.vector<4 x !s32i> {
+  // CHECK: cir.func{{.*}} @fold_shuffle_vector_op_test() -> !cir.vector<4 x !s32i> {
   // CHECK: cir.const #cir.const_vector<[#cir.undef : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i,
   // CHECK-SAME: #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>

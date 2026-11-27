@@ -41,6 +41,7 @@ origin/release/12.x) are deduplicated in output.
 
 import argparse
 import collections
+import itertools
 import logging
 import re
 import subprocess
@@ -246,7 +247,11 @@ def _load_pr_commit_mappings(
 # enough for the 99% case of reverts: rarely should someone land a cleanish
 # revert of a >6 month old change...
 def find_reverts(
-    git_dir: str, across_ref: str, root: str, max_pr_lookback: int = 20000
+    git_dir: str,
+    across_ref: str,
+    root: str,
+    max_pr_lookback: int = 20000,
+    stop_at_sha: Optional[str] = None,
 ) -> List[Revert]:
     """Finds reverts across `across_ref` in `git_dir`, starting from `root`.
 
@@ -260,6 +265,9 @@ def find_reverts(
             SHAs. These heuristics require that commit history from `root` to
             `some_parent_of_root` is loaded in memory. `max_pr_lookback` is how
             many commits behind `across_ref` should be loaded in memory.
+        stop_at_sha: If non-None and `stop_at_sha` is encountered while walking
+            to `across_ref` from `root`, stop checking for reverts. This allows for
+            faster incremental checking between `find_reverts` calls.
     """
     across_sha = _rev_parse(git_dir, across_ref)
     root_sha = _rev_parse(git_dir, root)
@@ -281,10 +289,16 @@ def find_reverts(
         root_sha,
     )
 
+    commit_log_stream: Iterable[_LogEntry] = _log_stream(git_dir, root_sha, across_sha)
+    if stop_at_sha:
+        commit_log_stream = itertools.takewhile(
+            lambda x: x.sha != stop_at_sha, commit_log_stream
+        )
+
     all_reverts = []
     # Lazily load PR <-> commit mappings, since it can be expensive.
     pr_commit_mappings = None
-    for sha, commit_message in _log_stream(git_dir, root_sha, across_sha):
+    for sha, commit_message in commit_log_stream:
         reverts, pr_reverts = _try_parse_reverts_from_commit_message(
             commit_message,
         )

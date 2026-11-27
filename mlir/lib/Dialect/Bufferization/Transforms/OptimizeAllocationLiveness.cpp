@@ -15,16 +15,13 @@
 #include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/DebugLog.h"
 
 #define DEBUG_TYPE "optimize-allocation-liveness"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 namespace mlir {
 namespace bufferization {
@@ -36,7 +33,6 @@ namespace bufferization {
 using namespace mlir;
 
 namespace {
-
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -67,8 +63,8 @@ Operation *findUserWithFreeSideEffect(Value value) {
       for (const auto &effect : effects) {
         if (isa<MemoryEffects::Free>(effect.getEffect())) {
           if (freeOpUser) {
-            LDBG("Multiple users with free effect found: " << *freeOpUser
-                                                           << " and " << *user);
+            LDBG() << "Multiple users with free effect found: " << *freeOpUser
+                   << " and " << *user;
             return nullptr;
           }
           freeOpUser = user;
@@ -110,6 +106,58 @@ struct OptimizeAllocationLiveness
 public:
   OptimizeAllocationLiveness() = default;
 
+  /// When moving a dealloc operation to be closer to its companion alloc we
+  /// have to consider the following. The dealloc should be:
+  /// - After all the operand definitions that the dealloc uses
+  /// - Before any ops that consume the results produced by the dealloc
+  /// To do this, we first ensure the "target" position is after all the
+  /// operands. Then we ensure this target dominates all consumers of the
+  /// dealloc's results. If not, no valid position exists and nullptr is
+  /// returned.
+  static Operation *findValidInsertionPoint(DominanceInfo *domInfo,
+                                            Operation *allocOp,
+                                            Operation *deallocOp,
+                                            Operation *lastUser) {
+
+    auto *target = lastUser;
+
+    // Start at the last user of the buffer, then move later if an operand of
+    // the dealloc is defined after it. E.g. target starts at %x but moves to
+    // %w:
+    //   %x = memref.load %a[%c0]                          // lastUser
+    //   %w = gpu.wait async [%d]                          // target
+    //   %done = gpu.dealloc async [%w] %a : memref<8xf32> // deallocOp
+    for (Value operand : deallocOp->getOperands()) {
+      auto *definingOp = operand.getDefiningOp();
+      if (!definingOp)
+        continue;
+
+      if (!target || domInfo->properlyDominates(target, definingOp))
+        target = definingOp;
+    }
+
+    if (!target)
+      target = allocOp;
+
+    // Ensure target dominates all result users. Here the realloc is the
+    // deallocOp since it frees %a, and it also produces %b. The first loop
+    // leaves target at the memref.dealloc (the last user of the aliased
+    // buffer), but that op uses %b, so placing the realloc after it is invalid:
+    //   %a = memref.alloc() : memref<8xf32>
+    //   %b = memref.realloc %a : memref<8xf32> to memref<16xf32> // deallocOp
+    //   memref.dealloc %b : memref<16xf32>                       // target
+    // nullptr is returned as a result.
+    for (Value result : deallocOp->getResults()) {
+      for (Operation *user : result.getUsers()) {
+        if (user == target ||
+            !domInfo->properlyDominates(target, user, /*enclosingOpOk=*/false))
+          return nullptr;
+      }
+    }
+    // Return the op to insert before
+    return target->getNextNode();
+  }
+
   void runOnOperation() override {
     func::FuncOp func = getOperation();
 
@@ -117,13 +165,14 @@ public:
       return;
 
     BufferViewFlowAnalysis analysis = BufferViewFlowAnalysis(func);
+    auto domInfo = DominanceInfo();
 
     func.walk([&](MemoryEffectOpInterface memEffectOp) -> WalkResult {
       if (!hasMemoryAllocEffect(memEffectOp))
         return WalkResult::advance();
 
       auto allocOp = memEffectOp;
-      LDBG("Checking alloc op: " << allocOp);
+      LDBG() << "Checking alloc op: " << allocOp;
 
       SmallVector<OpResult> allocationResults = collectAllocations(allocOp);
       // Multiple allocations from a single op are not considered here yet.
@@ -131,7 +180,7 @@ public:
         return WalkResult::advance();
 
       OpResult allocResult = allocationResults[0];
-      LDBG("On allocation result: " << allocResult);
+      LDBG() << "On allocation result: " << allocResult;
 
       auto *deallocOp = findUserWithFreeSideEffect(allocResult);
       if (!deallocOp || (deallocOp->getBlock() != allocOp->getBlock())) {
@@ -152,25 +201,37 @@ public:
             continue;
 
           // find the ancestor of user that is in the same block as the allocOp.
-          auto topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
+          auto *topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
+          // A user outside the block cannot be ordered against the dealloc op.
+          if (!topUser)
+            return WalkResult::advance();
           if (!lastUser || happensBefore(lastUser, topUser)) {
             lastUser = topUser;
           }
         }
       }
-      if (lastUser == nullptr) {
+      if (lastUser) {
+        LDBG() << "Last user found: " << *lastUser;
+        assert(lastUser->getBlock() == allocOp->getBlock());
+        assert(lastUser->getBlock() == deallocOp->getBlock());
+      } else {
+        LDBG() << "Last not user found";
+      }
+
+      // If no lastUser we can still try to optimize the position of the
+      // deallocOp
+      Operation *target =
+          findValidInsertionPoint(&domInfo, allocOp, deallocOp, lastUser);
+      if (!target) {
+        LDBG() << "No valid insertion point found; skipping move";
         return WalkResult::advance();
       }
-      LDBG("Last user found: " << *lastUser);
-      assert(lastUser->getBlock() == allocOp->getBlock());
-      assert(lastUser->getBlock() == deallocOp->getBlock());
-      // Move the dealloc op after the last user.
-      deallocOp->moveAfter(lastUser);
-      LDBG("Moved dealloc op after: " << *lastUser);
+
+      deallocOp->moveBefore(target);
+      LDBG() << "Moved dealloc op before: " << *target;
 
       return WalkResult::advance();
     });
   }
 };
-
 } // end anonymous namespace

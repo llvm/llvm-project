@@ -22,6 +22,8 @@
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_linux.h"
+#include "sanitizer_common/sanitizer_placement_new.h"
+#include "sanitizer_common/sanitizer_platform_interceptors.h"
 #include "sanitizer_common/sanitizer_platform_limits_netbsd.h"
 #include "sanitizer_common/sanitizer_platform_limits_posix.h"
 #include "sanitizer_common/sanitizer_posix.h"
@@ -29,12 +31,17 @@
 #include "sanitizer_common/sanitizer_tls_get_addr.h"
 #include "sanitizer_common/sanitizer_vector.h"
 #include "tsan_fd.h"
+#include "tsan_adaptive_delay.h"
 #include "tsan_interceptors.h"
 #include "tsan_interface.h"
 #include "tsan_mman.h"
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
 #include "tsan_suppressions.h"
+
+#if SANITIZER_APPLE
+#  include <dlfcn.h>
+#endif
 
 using namespace __tsan;
 
@@ -77,17 +84,6 @@ struct ucontext_t {
 };
 #endif
 
-#if defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
-    defined(__s390x__)
-#define PTHREAD_ABI_BASE  "GLIBC_2.3.2"
-#elif defined(__aarch64__) || SANITIZER_PPC64V2
-#define PTHREAD_ABI_BASE  "GLIBC_2.17"
-#elif SANITIZER_LOONGARCH64
-#define PTHREAD_ABI_BASE  "GLIBC_2.36"
-#elif SANITIZER_RISCV64
-#  define PTHREAD_ABI_BASE "GLIBC_2.27"
-#endif
-
 extern "C" int pthread_attr_init(void *attr);
 extern "C" int pthread_attr_destroy(void *attr);
 DECLARE_REAL(int, pthread_attr_getdetachstate, void *, void *)
@@ -121,6 +117,7 @@ const int PTHREAD_MUTEX_RECURSIVE_NP = 2;
 #endif
 #if !SANITIZER_FREEBSD && !SANITIZER_APPLE && !SANITIZER_NETBSD
 const int EPOLL_CTL_ADD = 1;
+const int EPOLL_CTL_MOD = 3;
 #endif
 const int SIGILL = 4;
 const int SIGTRAP = 5;
@@ -170,6 +167,7 @@ namespace __tsan {
 struct SignalDesc {
   bool armed;
   __sanitizer_siginfo siginfo;
+  bool has_ctx;
   ucontext_t ctx;
 };
 
@@ -339,11 +337,6 @@ void ScopedInterceptor::DisableIgnoresImpl() {
 }
 
 #define TSAN_INTERCEPT(func) INTERCEPT_FUNCTION(func)
-#if SANITIZER_FREEBSD || SANITIZER_NETBSD
-#  define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION(func)
-#else
-#  define TSAN_INTERCEPT_VER(func, ver) INTERCEPT_FUNCTION_VER(func, ver)
-#endif
 #if SANITIZER_FREEBSD
 #  define TSAN_MAYBE_INTERCEPT_FREEBSD_ALIAS(func) \
     INTERCEPT_FUNCTION(_pthread_##func)
@@ -458,7 +451,15 @@ TSAN_INTERCEPTOR(int, atexit, void (*f)()) {
   // We want to setup the atexit callback even if we are in ignored lib
   // or after fork.
   SCOPED_INTERCEPTOR_RAW(atexit, f);
-  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), (void (*)())f, 0, 0);
+  void* dso = nullptr;
+#  if SANITIZER_APPLE
+  // Darwin's libc runs an atexit callback when the image containing it is
+  // dlclose'd. Pass that image as the DSO so the wrapper runs then too.
+  Dl_info info;
+  if (dladdr((const void*)f, &info))
+    dso = info.dli_fbase;
+#  endif
+  return setup_at_exit_wrapper(thr, GET_CALLER_PC(), f, 0, dso);
 }
 #endif
 
@@ -747,6 +748,41 @@ TSAN_INTERCEPTOR(void, free, void *p) {
   user_free(thr, pc, p);
 }
 
+#  if SANITIZER_INTERCEPT_FREE_SIZED
+TSAN_INTERCEPTOR(void, free_sized, void *p, uptr size) {
+  if (UNLIKELY(!p))
+    return;
+  if (in_symbolizer())
+    return InternalFree(p);
+  if (DlsymAlloc::PointerIsMine(p))
+    return DlsymAlloc::Free(p);
+  invoke_free_hook(p);
+  SCOPED_INTERCEPTOR_RAW(free_sized, p, size);
+  user_free(thr, pc, p);
+}
+#    define TSAN_MAYBE_INTERCEPT_FREE_SIZED INTERCEPT_FUNCTION(free_sized)
+#  else
+#    define TSAN_MAYBE_INTERCEPT_FREE_SIZED
+#  endif
+
+#  if SANITIZER_INTERCEPT_FREE_ALIGNED_SIZED
+TSAN_INTERCEPTOR(void, free_aligned_sized, void *p, uptr alignment, uptr size) {
+  if (UNLIKELY(!p))
+    return;
+  if (in_symbolizer())
+    return InternalFree(p);
+  if (DlsymAlloc::PointerIsMine(p))
+    return DlsymAlloc::Free(p);
+  invoke_free_hook(p);
+  SCOPED_INTERCEPTOR_RAW(free_aligned_sized, p, alignment, size);
+  user_free(thr, pc, p);
+}
+#    define TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED \
+      INTERCEPT_FUNCTION(free_aligned_sized)
+#  else
+#    define TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED
+#  endif
+
 TSAN_INTERCEPTOR(void, cfree, void *p) {
   if (UNLIKELY(!p))
     return;
@@ -763,6 +799,9 @@ TSAN_INTERCEPTOR(uptr, malloc_usable_size, void *p) {
   SCOPED_INTERCEPTOR_RAW(malloc_usable_size, p);
   return user_alloc_usable_size(p);
 }
+#else
+#  define TSAN_MAYBE_INTERCEPT_FREE_SIZED
+#  define TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED
 #endif
 
 TSAN_INTERCEPTOR(char *, strcpy, char *dst, const char *src) {
@@ -986,6 +1025,8 @@ void PlatformCleanUpThreadState(ThreadState *thr) {
   if (sctx) {
     atomic_store(&thr->signal_ctx, 0, memory_order_relaxed);
     sctx->oldset.Reset();
+    DontNeedShadowFor((uptr)sctx,
+                      RoundUpTo(sizeof(*sctx), GetPageSizeCached()));
     UnmapOrDie(sctx, sizeof(*sctx));
   }
 }
@@ -1015,10 +1056,9 @@ struct ThreadParam {
   Semaphore started;
 };
 
-extern "C" void *__tsan_thread_start_func(void *arg) {
-  ThreadParam *p = (ThreadParam*)arg;
-  void* (*callback)(void *arg) = p->callback;
-  void *param = p->param;
+// NOTE: The creating thread may return once p->started is posted, so p must
+// not be used after ThreadStartCommon returns.
+static void ThreadStartCommon(ThreadParam* p) {
   {
     ThreadState *thr = cur_thread_init();
     // Thread-local state is not initialized yet.
@@ -1038,6 +1078,16 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
     ThreadStart(thr, p->tid, GetTid(), ThreadType::Regular);
     p->started.Post();
   }
+
+  AdaptiveDelay::BeforeChildThreadRuns();
+}
+
+extern "C" void* __tsan_thread_start_func(void* arg) {
+  ThreadParam* p = (ThreadParam*)arg;
+  void* (*callback)(void* arg) = p->callback;
+  void* param = p->param;
+  ThreadStartCommon(p);
+
   void *res = callback(param);
   // Prevent the callback from being tail called,
   // it mixes up stack traces.
@@ -1046,10 +1096,10 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
   return res;
 }
 
-TSAN_INTERCEPTOR(int, pthread_create,
-    void *th, void *attr, void *(*callback)(void*), void * param) {
-  SCOPED_INTERCEPTOR_RAW(pthread_create, th, attr, callback, param);
-
+template <class Fn>
+static int ThreadCreateCommon(ThreadState* thr, uptr pc, void* th,
+                              bool detached, void* (*callback)(void*),
+                              void* param, const Fn& create) {
   MaybeSpawnBackgroundThread();
 
   if (ctx->after_multithreaded_fork) {
@@ -1065,14 +1115,6 @@ TSAN_INTERCEPTOR(int, pthread_create,
               internal_getpid());
     }
   }
-  __sanitizer_pthread_attr_t myattr;
-  if (attr == 0) {
-    pthread_attr_init(&myattr);
-    attr = &myattr;
-  }
-  int detached = 0;
-  REAL(pthread_attr_getdetachstate)(attr, &detached);
-  AdjustStackSize(attr);
 
   ThreadParam p;
   p.callback = callback;
@@ -1083,11 +1125,11 @@ TSAN_INTERCEPTOR(int, pthread_create,
     // Otherwise we see false positives in pthread stack manipulation.
     ScopedIgnoreInterceptors ignore;
     ThreadIgnoreBegin(thr, pc);
-    res = REAL(pthread_create)(th, attr, __tsan_thread_start_func, &p);
+    res = create(&p);
     ThreadIgnoreEnd(thr);
   }
   if (res == 0) {
-    p.tid = ThreadCreate(thr, pc, *(uptr *)th, IsStateDetached(detached));
+    p.tid = ThreadCreate(thr, pc, *(uptr*)th, detached);
     CHECK_NE(p.tid, kMainTid);
     // Synchronization on p.tid serves two purposes:
     // 1. ThreadCreate must finish before the new thread starts.
@@ -1099,21 +1141,66 @@ TSAN_INTERCEPTOR(int, pthread_create,
     p.created.Post();
     p.started.Wait();
   }
+  AdaptiveDelay::AfterThreadCreation();
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, pthread_create, void* th, void* attr,
+                 void* (*callback)(void*), void* param) {
+  SCOPED_INTERCEPTOR_RAW(pthread_create, th, attr, callback, param);
+
+  __sanitizer_pthread_attr_t myattr;
+  if (attr == 0) {
+    pthread_attr_init(&myattr);
+    attr = &myattr;
+  }
+  int detached = 0;
+  REAL(pthread_attr_getdetachstate)(attr, &detached);
+  AdjustStackSize(attr);
+
+  int res = ThreadCreateCommon(thr, pc, th, IsStateDetached(detached), callback,
+                               param, [&](ThreadParam* p) {
+                                 return REAL(pthread_create)(
+                                     th, attr, __tsan_thread_start_func, p);
+                               });
   if (attr == &myattr)
     pthread_attr_destroy(&myattr);
   return res;
 }
 
-TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
-  SCOPED_INTERCEPTOR_RAW(pthread_join, th, ret);
-  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
+template <class Fn>
+static int ThreadJoinCommon(ThreadState* thr, uptr pc, uptr th,
+                            const Fn& join) {
+  Tid tid = ThreadConsumeTid(thr, pc, th);
   ThreadIgnoreBegin(thr, pc);
-  int res = BLOCK_REAL(pthread_join)(th, ret);
+  int res = join();
   ThreadIgnoreEnd(thr);
   if (res == 0) {
     ThreadJoin(thr, pc, tid);
   }
   return res;
+}
+
+TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
+  SCOPED_INTERCEPTOR_RAW(pthread_join, th, ret);
+#if SANITIZER_ANDROID
+  {
+    // In Bionic, if the target thread has already exited when pthread_detach is
+    // called, pthread_detach will call pthread_join internally to clean it up.
+    // In that case, the thread has already been consumed by the pthread_detach
+    // interceptor.
+    Tid tid = ctx->thread_registry.FindThread(
+        [](ThreadContextBase* tctx, void* arg) {
+          return tctx->user_id == (uptr)arg;
+        },
+        th);
+    if (tid == kInvalidTid) {
+      return REAL(pthread_join)(th, ret);
+    }
+  }
+#endif
+  return ThreadJoinCommon(thr, pc, (uptr)th,
+                          [&]() { return BLOCK_REAL(pthread_join)(th, ret); });
 }
 
 // DEFINE_INTERNAL_PTHREAD_FUNCTIONS
@@ -1129,14 +1216,21 @@ int internal_pthread_join(void *th, void **ret) {
 }
 }  // namespace __sanitizer
 
-TSAN_INTERCEPTOR(int, pthread_detach, void *th) {
-  SCOPED_INTERCEPTOR_RAW(pthread_detach, th);
-  Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
-  int res = REAL(pthread_detach)(th);
+template <class Fn>
+static int ThreadDetachCommon(ThreadState* thr, uptr pc, uptr th,
+                              const Fn& detach) {
+  Tid tid = ThreadConsumeTid(thr, pc, th);
+  int res = detach();
   if (res == 0) {
     ThreadDetach(thr, pc, tid);
   }
   return res;
+}
+
+TSAN_INTERCEPTOR(int, pthread_detach, void* th) {
+  SCOPED_INTERCEPTOR_RAW(pthread_detach, th);
+  return ThreadDetachCommon(thr, pc, (uptr)th,
+                            [&]() { return REAL(pthread_detach)(th); });
 }
 
 TSAN_INTERCEPTOR(void, pthread_exit, void *retval) {
@@ -1177,6 +1271,44 @@ TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
   return res;
 }
 #endif
+
+#if SANITIZER_INTERCEPT_C11_THREADS
+extern "C" int __tsan_c11_thread_start_func(void* arg) {
+  ThreadParam* p = (ThreadParam*)arg;
+  int (*callback)(void*) = (int (*)(void*))(uptr)p->callback;
+  void* param = p->param;
+  ThreadStartCommon(p);
+
+  int res = callback(param);
+  // Prevent the callback from being tail called,
+  // it mixes up stack traces.
+  volatile int foo = 42;
+  foo++;
+  return res;
+}
+
+TSAN_INTERCEPTOR(int, thrd_create, void* th, int (*callback)(void*),
+                 void* param) {
+  SCOPED_INTERCEPTOR_RAW(thrd_create, th, callback, param);
+  return ThreadCreateCommon(
+      thr, pc, th, /*detached=*/false, (void* (*)(void*))(uptr)callback, param,
+      [&](ThreadParam* p) {
+        return REAL(thrd_create)(th, __tsan_c11_thread_start_func, p);
+      });
+}
+
+TSAN_INTERCEPTOR(int, thrd_join, uptr th, int* res) {
+  SCOPED_INTERCEPTOR_RAW(thrd_join, th, res);
+  return ThreadJoinCommon(thr, pc, th,
+                          [&]() { return BLOCK_REAL(thrd_join)(th, res); });
+}
+
+TSAN_INTERCEPTOR(int, thrd_detach, uptr th) {
+  SCOPED_INTERCEPTOR_RAW(thrd_detach, th);
+  return ThreadDetachCommon(thr, pc, th,
+                            [&]() { return REAL(thrd_detach)(th); });
+}
+#endif  // SANITIZER_INTERCEPT_C11_THREADS
 
 // Problem:
 // NPTL implementation of pthread_cond has 2 versions (2.2.5 and 2.3.2).
@@ -1380,6 +1512,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_mutex_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
@@ -1392,6 +1525,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_lock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_trylock, m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_mutex_trylock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
@@ -1403,6 +1537,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_mutex_timedlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_timedlock, m, abstime);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_mutex_timedlock)(m, abstime);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1415,6 +1550,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_unlock, m);
   MutexUnlock(thr, pc, (uptr)m);
   int res = REAL(pthread_mutex_unlock)(m);
+  AdaptiveDelay::SyncOp();
   if (res == errno_EINVAL)
     MutexInvalidAccess(thr, pc, (uptr)m);
   return res;
@@ -1425,6 +1561,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
                  __sanitizer_clockid_t clock, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_clocklock, m, clock, abstime);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_mutex_clocklock)(m, clock, abstime);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
@@ -1443,6 +1580,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_clocklock, void *m,
 TSAN_INTERCEPTOR(int, __pthread_mutex_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(__pthread_mutex_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(__pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
@@ -1457,6 +1595,7 @@ TSAN_INTERCEPTOR(int, __pthread_mutex_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(__pthread_mutex_unlock, m);
   MutexUnlock(thr, pc, (uptr)m);
   int res = REAL(__pthread_mutex_unlock)(m);
+  AdaptiveDelay::SyncOp();
   if (res == errno_EINVAL)
     MutexInvalidAccess(thr, pc, (uptr)m);
   return res;
@@ -1486,6 +1625,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_spin_lock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m);
@@ -1495,6 +1635,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_spin_trylock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_trylock, m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_spin_trylock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1506,6 +1647,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_unlock, m);
   MutexUnlock(thr, pc, (uptr)m);
   int res = REAL(pthread_spin_unlock)(m);
+  AdaptiveDelay::SyncOp();
   return res;
 }
 #endif
@@ -1531,6 +1673,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_destroy, void *m) {
 TSAN_INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_rdlock, m);
   MutexPreReadLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_rdlock)(m);
   if (res == 0) {
     MutexPostReadLock(thr, pc, (uptr)m);
@@ -1540,6 +1683,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_tryrdlock, m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_tryrdlock)(m);
   if (res == 0) {
     MutexPostReadLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1550,6 +1694,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedrdlock, m, abstime);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_timedrdlock)(m, abstime);
   if (res == 0) {
     MutexPostReadLock(thr, pc, (uptr)m);
@@ -1561,6 +1706,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
 TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_wrlock, m);
   MutexPreLock(thr, pc, (uptr)m);
+  AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_rwlock_wrlock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m);
@@ -1570,6 +1716,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_trywrlock, m);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_trywrlock)(m);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1580,6 +1727,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_rwlock_timedwrlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedwrlock, m, abstime);
+  AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_timedwrlock)(m, abstime);
   if (res == 0) {
     MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
@@ -1592,6 +1740,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_unlock, m);
   MutexReadOrWriteUnlock(thr, pc, (uptr)m);
   int res = REAL(pthread_rwlock_unlock)(m);
+  AdaptiveDelay::SyncOp();
   return res;
 }
 
@@ -1625,6 +1774,14 @@ TSAN_INTERCEPTOR(int, pthread_barrier_wait, void *b) {
 
 TSAN_INTERCEPTOR(int, pthread_once, void *o, void (*f)()) {
   SCOPED_INTERCEPTOR_RAW(pthread_once, o, f);
+#if SANITIZER_APPLE && !SANITIZER_GO
+  if (flags()->lock_during_write != kLockDuringAllWrites &&
+      cur_thread_init()->in_internal_write_call) {
+    // This is needed to make it through process launch without hanging
+    f();
+    return 0;
+  }
+#endif
   if (o == 0 || f == 0)
     return errno_EINVAL;
   atomic_uint32_t *a;
@@ -1753,29 +1910,64 @@ TSAN_INTERCEPTOR(int, creat64, const char *name, int mode) {
 #define TSAN_MAYBE_INTERCEPT_CREAT64
 #endif
 
+static int HandleDupResult(ThreadState* thr, uptr pc, int oldfd, int newfd,
+                           bool write) {
+  if (oldfd >= 0 && newfd >= 0 && newfd != oldfd)
+    FdDup(thr, pc, oldfd, newfd, write);
+  return newfd;
+}
+
+#if SANITIZER_LINUX
+// These values are part of the Linux UAPI and are the same on all Linux
+// architectures.
+static const int kF_DUPFD = 0;
+static const int kF_DUPFD_CLOEXEC = 1030;
+
+// fcntl accepts either an int or a pointer as its optional argument.  Reading
+// it as uptr follows libc's implementation strategy and preserves either value
+// on the ABIs supported by TSan.
+#  define TSAN_FCNTL_INTERCEPTOR(func)                       \
+    TSAN_INTERCEPTOR(int, func, int oldfd, int cmd, ...) {   \
+      va_list ap;                                            \
+      va_start(ap, cmd);                                     \
+      uptr arg = va_arg(ap, uptr);                           \
+      va_end(ap);                                            \
+      SCOPED_TSAN_INTERCEPTOR(func, oldfd, cmd, arg);        \
+      int newfd = REAL(func)(oldfd, cmd, arg);               \
+      if (cmd == kF_DUPFD || cmd == kF_DUPFD_CLOEXEC)        \
+        return HandleDupResult(thr, pc, oldfd, newfd, true); \
+      return newfd;                                          \
+    }
+
+TSAN_FCNTL_INTERCEPTOR(fcntl)
+#  if SANITIZER_INTERCEPT_FCNTL64
+TSAN_FCNTL_INTERCEPTOR(fcntl64)
+#    define TSAN_MAYBE_INTERCEPT_FCNTL64 TSAN_INTERCEPT(fcntl64)
+#  else
+#    define TSAN_MAYBE_INTERCEPT_FCNTL64
+#  endif
+#  undef TSAN_FCNTL_INTERCEPTOR
+#  define TSAN_MAYBE_INTERCEPT_FCNTL TSAN_INTERCEPT(fcntl)
+#else
+#  define TSAN_MAYBE_INTERCEPT_FCNTL
+#  define TSAN_MAYBE_INTERCEPT_FCNTL64
+#endif
+
 TSAN_INTERCEPTOR(int, dup, int oldfd) {
   SCOPED_TSAN_INTERCEPTOR(dup, oldfd);
-  int newfd = REAL(dup)(oldfd);
-  if (oldfd >= 0 && newfd >= 0 && newfd != oldfd)
-    FdDup(thr, pc, oldfd, newfd, true);
-  return newfd;
+  return HandleDupResult(thr, pc, oldfd, REAL(dup)(oldfd), true);
 }
 
 TSAN_INTERCEPTOR(int, dup2, int oldfd, int newfd) {
   SCOPED_TSAN_INTERCEPTOR(dup2, oldfd, newfd);
-  int newfd2 = REAL(dup2)(oldfd, newfd);
-  if (oldfd >= 0 && newfd2 >= 0 && newfd2 != oldfd)
-    FdDup(thr, pc, oldfd, newfd2, false);
-  return newfd2;
+  return HandleDupResult(thr, pc, oldfd, REAL(dup2)(oldfd, newfd), false);
 }
 
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, dup3, int oldfd, int newfd, int flags) {
   SCOPED_TSAN_INTERCEPTOR(dup3, oldfd, newfd, flags);
-  int newfd2 = REAL(dup3)(oldfd, newfd, flags);
-  if (oldfd >= 0 && newfd2 >= 0 && newfd2 != oldfd)
-    FdDup(thr, pc, oldfd, newfd2, false);
-  return newfd2;
+  return HandleDupResult(thr, pc, oldfd, REAL(dup3)(oldfd, newfd, flags),
+                         false);
 }
 #endif
 
@@ -2009,7 +2201,7 @@ TSAN_INTERCEPTOR(int, epoll_ctl, int epfd, int op, int fd, void *ev) {
     FdAccess(thr, pc, epfd);
   if (epfd >= 0 && fd >= 0)
     FdAccess(thr, pc, fd);
-  if (op == EPOLL_CTL_ADD && epfd >= 0) {
+  if ((op == EPOLL_CTL_ADD || op == EPOLL_CTL_MOD) && epfd >= 0) {
     FdPollAdd(thr, pc, epfd, fd);
     FdRelease(thr, pc, epfd);
   }
@@ -2102,13 +2294,12 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // StackTrace::GetNestInstructionPc(pc) is used because return address is
   // expected, OutputReport() will undo this.
   ObtainCurrentStack(thr, StackTrace::GetNextInstructionPc(pc), &stack);
-  ThreadRegistryLock l(&ctx->thread_registry);
+  if (IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack))
+    return;
   ScopedReport rep(ReportTypeErrnoInSignal);
   rep.SetSigNum(sig);
-  if (!IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack)) {
-    rep.AddStack(stack, true);
-    OutputReport(thr, rep);
-  }
+  rep.AddStack(stack, true);
+  OutputReport(thr, rep);
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
@@ -2190,7 +2381,7 @@ void ProcessPendingSignalsImpl(ThreadState *thr) {
     if (signal->armed) {
       signal->armed = false;
       CallUserSignalHandler(thr, false, true, sig, &signal->siginfo,
-                            &signal->ctx);
+                            signal->has_ctx ? &signal->ctx : nullptr);
     }
   }
   res = REAL(pthread_sigmask)(SIG_SETMASK, oldset, 0);
@@ -2254,7 +2445,9 @@ void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
   if (signal->armed == false) {
     signal->armed = true;
     internal_memcpy(&signal->siginfo, info, sizeof(*info));
-    internal_memcpy(&signal->ctx, ctx, sizeof(signal->ctx));
+    signal->has_ctx = (ctx != nullptr);
+    if (ctx)
+      internal_memcpy(&signal->ctx, ctx, sizeof(signal->ctx));
     atomic_store(&thr->pending_signals, 1, memory_order_relaxed);
   }
 }
@@ -2372,7 +2565,11 @@ TSAN_INTERCEPTOR(int, vfork, int fake) {
 }
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
+// Bionic's pthread_create internally calls clone. When the CLONE_THREAD flag is
+// set, clone does not create a new process but a new thread. This is a
+// workaround for Android. Disabling the interception of clone solves the
+// problem in most scenarios.
 TSAN_INTERCEPTOR(int, clone, int (*fn)(void *), void *stack, int flags,
                  void *arg, int *parent_tid, void *tls, pid_t *child_tid) {
   SCOPED_INTERCEPTOR_RAW(clone, fn, stack, flags, arg, parent_tid, tls,
@@ -2503,9 +2700,9 @@ static void HandleRecvmsg(ThreadState *thr, uptr pc,
 
 #define COMMON_INTERCEPTOR_DLOPEN(filename, flag) \
   ({                                              \
-    CheckNoDeepBind(filename, flag);              \
+    OnDlOpen(filename, flag);                     \
     ThreadIgnoreBegin(thr, 0);                    \
-    void *res = REAL(dlopen)(filename, flag);     \
+    void* res = REAL(dlopen)(filename, flag);     \
     ThreadIgnoreEnd(thr);                         \
     res;                                          \
   })
@@ -2849,12 +3046,12 @@ TSAN_INTERCEPTOR(void, _lwp_exit) {
 #endif
 
 #if SANITIZER_FREEBSD
-TSAN_INTERCEPTOR(void, thr_exit, tid_t *state) {
+TSAN_INTERCEPTOR(void, thr_exit, ThreadID *state) {
   SCOPED_TSAN_INTERCEPTOR(thr_exit, state);
   DestroyThreadState();
   REAL(thr_exit(state));
 }
-#define TSAN_MAYBE_INTERCEPT_THR_EXIT TSAN_INTERCEPT(thr_exit)
+#  define TSAN_MAYBE_INTERCEPT_THR_EXIT TSAN_INTERCEPT(thr_exit)
 #else
 #define TSAN_MAYBE_INTERCEPT_THR_EXIT
 #endif
@@ -2963,6 +3160,8 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(realloc);
   TSAN_INTERCEPT(reallocarray);
   TSAN_INTERCEPT(free);
+  TSAN_MAYBE_INTERCEPT_FREE_SIZED;
+  TSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED;
   TSAN_INTERCEPT(cfree);
   TSAN_INTERCEPT(munmap);
   TSAN_MAYBE_INTERCEPT_MEMALIGN;
@@ -2982,13 +3181,32 @@ void InitializeInterceptors() {
   TSAN_INTERCEPT(pthread_tryjoin_np);
   TSAN_INTERCEPT(pthread_timedjoin_np);
   #endif
+#if SANITIZER_INTERCEPT_C11_THREADS
+  TSAN_INTERCEPT(thrd_create);
+  TSAN_INTERCEPT(thrd_join);
+  TSAN_INTERCEPT(thrd_detach);
+#endif
 
-  TSAN_INTERCEPT_VER(pthread_cond_init, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_signal, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_broadcast, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_wait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_timedwait, PTHREAD_ABI_BASE);
-  TSAN_INTERCEPT_VER(pthread_cond_destroy, PTHREAD_ABI_BASE);
+  // In glibc versions older than 2.36, dlsym(RTLD_NEXT, "pthread_cond_init")
+  // may return an outdated symbol (max(2.2,base_version)) if the port was
+  // introduced before 2.3.2 (when the new pthread_cond_t was introduced).
+#if SANITIZER_GLIBC && !__GLIBC_PREREQ(2, 36) &&                      \
+    (defined(__x86_64__) || defined(__mips__) || SANITIZER_PPC64V1 || \
+     defined(__s390x__))
+  INTERCEPT_FUNCTION_VER(pthread_cond_init, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_signal, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_broadcast, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_wait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_timedwait, "GLIBC_2.3.2");
+  INTERCEPT_FUNCTION_VER(pthread_cond_destroy, "GLIBC_2.3.2");
+#else
+  INTERCEPT_FUNCTION(pthread_cond_init);
+  INTERCEPT_FUNCTION(pthread_cond_signal);
+  INTERCEPT_FUNCTION(pthread_cond_broadcast);
+  INTERCEPT_FUNCTION(pthread_cond_wait);
+  INTERCEPT_FUNCTION(pthread_cond_timedwait);
+  INTERCEPT_FUNCTION(pthread_cond_destroy);
+#endif
 
   TSAN_MAYBE_PTHREAD_COND_CLOCKWAIT;
 
@@ -3037,6 +3255,8 @@ void InitializeInterceptors() {
   TSAN_MAYBE_INTERCEPT_OPEN64;
   TSAN_INTERCEPT(creat);
   TSAN_MAYBE_INTERCEPT_CREAT64;
+  TSAN_MAYBE_INTERCEPT_FCNTL;
+  TSAN_MAYBE_INTERCEPT_FCNTL64;
   TSAN_INTERCEPT(dup);
   TSAN_INTERCEPT(dup2);
   TSAN_INTERCEPT(dup3);
@@ -3079,7 +3299,7 @@ void InitializeInterceptors() {
 
   TSAN_INTERCEPT(fork);
   TSAN_INTERCEPT(vfork);
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_ANDROID
   TSAN_INTERCEPT(clone);
 #endif
 #if !SANITIZER_ANDROID

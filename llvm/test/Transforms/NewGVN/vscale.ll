@@ -46,7 +46,8 @@ define <vscale x 4 x i32> @load_store_clobber_load_noalias(ptr noalias %p, ptr n
   ret <vscale x 4 x i32> %add
 }
 
-; BasicAA return MayAlias for %gep1,%gep2, could improve as MustAlias.
+; BasicAA could return MustAlias for %gep1,%gep2, but does not bother,
+; because vscale geps are non-canonical.
 define i32 @load_clobber_load_gep1(ptr %p) {
 ; CHECK-LABEL: @load_clobber_load_gep1(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 0, i64 1
@@ -81,7 +82,8 @@ define i32 @load_clobber_load_gep2(ptr %p) {
   ret i32 %add
 }
 
-; TODO: BasicAA return MayAlias for %gep1,%gep2, could improve as MustAlias.
+; BasicAA could return MustAlias for %gep1,%gep2, but does not bother,
+; because vscale geps are non-canonical.
 define i32 @load_clobber_load_gep3(ptr %p) {
 ; CHECK-LABEL: @load_clobber_load_gep3(
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P:%.*]], i64 1, i64 0
@@ -272,7 +274,8 @@ if.end:
   ret i32 %result
 }
 
-; TODO: BasicAA return MayAlias for %gep1,%gep2, could improve as NoAlias.
+; BasicAA could return NoAlias for %gep1,%gep2, but does not bother,
+; because vscale geps are non-canonical.
 define void @redundant_load_elimination_2(i1 %c, ptr %p, ptr %q) {
 ; CHECK-LABEL: @redundant_load_elimination_2(
 ; CHECK-NEXT:  entry:
@@ -579,7 +582,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: @bigexample(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[REF_TMP:%.*]] = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[REF_TMP]])
 ; CHECK-NEXT:    [[A_ELT:%.*]] = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } [[A:%.*]], 0
 ; CHECK-NEXT:    store <vscale x 4 x i32> [[A_ELT]], ptr [[REF_TMP]], align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
@@ -603,12 +606,12 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP9]], <vscale x 16 x i8> [[DOTUNPACK10]], 2
 ; CHECK-NEXT:    [[DOTUNPACK12:%.*]] = load <vscale x 16 x i8>, ptr [[REF_TMP_REPACK5]], align 16
 ; CHECK-NEXT:    [[TMP15:%.*]] = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP12]], <vscale x 16 x i8> [[DOTUNPACK12]], 3
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull [[REF_TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[REF_TMP]])
 ; CHECK-NEXT:    ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } [[TMP15]]
 ;
 entry:
   %ref.tmp = alloca { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> }, align 16
-  call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %ref.tmp)
+  call void @llvm.lifetime.start.p0(ptr nonnull %ref.tmp)
   %a.elt = extractvalue { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %a, 0
   store <vscale x 4 x i32> %a.elt, ptr %ref.tmp, align 16
   %0 = call i64 @llvm.vscale.i64()
@@ -643,7 +646,7 @@ entry:
   %.elt11 = getelementptr inbounds i8, ptr %ref.tmp, i64 %14
   %.unpack12 = load <vscale x 16 x i8>, ptr %.elt11, align 16
   %15 = insertvalue { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %12, <vscale x 16 x i8> %.unpack12, 3
-  call void @llvm.lifetime.end.p0(i64 -1, ptr nonnull %ref.tmp)
+  call void @llvm.lifetime.end.p0(ptr nonnull %ref.tmp)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %15
 }
 

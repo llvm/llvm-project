@@ -91,7 +91,7 @@ declare !dbg !19 void @_Z2f3v()
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -191,7 +191,7 @@ declare !dbg !25 void @_Z2g2v() local_unnamed_addr
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -282,7 +282,7 @@ attributes #2 = { builtin allocsize(0) }
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -309,9 +309,9 @@ MemInfoBlock makePartialMIB() {
 }
 
 IndexedMemProfRecord
-makeRecordV2(std::initializer_list<CallStackId> AllocFrames,
-             std::initializer_list<CallStackId> CallSiteFrames,
-             const MemInfoBlock &Block, const MemProfSchema &Schema) {
+makeRecord(std::initializer_list<CallStackId> AllocFrames,
+           std::initializer_list<CallStackId> CallSiteFrames,
+           const MemInfoBlock &Block, const MemProfSchema &Schema) {
   IndexedMemProfRecord MR;
   for (const auto &CSId : AllocFrames)
     MR.AllocSites.emplace_back(CSId, Block, Schema);
@@ -398,7 +398,7 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
   auto *F = M->getFunction("_Z3foov");
   ASSERT_NE(F, nullptr);
 
-  TargetLibraryInfoWrapperPass WrapperPass;
+  TargetLibraryInfoWrapperPass WrapperPass(M->getTargetTriple());
   auto &TLI = WrapperPass.getTLI(*F);
   auto Calls = extractCallsFromIR(*M, TLI);
 
@@ -424,7 +424,7 @@ attributes #1 = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "t
   ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
                     Succeeded());
 
-  const IndexedMemProfRecord IndexedMR = makeRecordV2(
+  const IndexedMemProfRecord IndexedMR = makeRecord(
       /*AllocFrames=*/{0x111, 0x222, 0x333},
       /*CallSiteFrames=*/{}, MIB, getHotColdSchema());
 

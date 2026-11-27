@@ -97,6 +97,8 @@ enum class TemplateSubstitutionKind : char {
     /// The kind of substitution described by this argument list.
     TemplateSubstitutionKind Kind = TemplateSubstitutionKind::Specialization;
 
+    bool RetainInnerDepths = false;
+
   public:
     /// Construct an empty set of template argument lists.
     MultiLevelTemplateArgumentList() = default;
@@ -107,6 +109,10 @@ enum class TemplateSubstitutionKind : char {
     }
 
     void setKind(TemplateSubstitutionKind K) { Kind = K; }
+
+    void setRetainInnerDepths() { RetainInnerDepths = true; }
+
+    bool retainInnerDepths() const { return RetainInnerDepths; }
 
     /// Determine the kind of template substitution being performed.
     TemplateSubstitutionKind getKind() const { return Kind; }
@@ -188,7 +194,9 @@ enum class TemplateSubstitutionKind : char {
     bool isAnyArgInstantiationDependent() const {
       for (ArgumentListLevel ListLevel : TemplateArgumentLists)
         for (const TemplateArgument &TA : ListLevel.Args)
-          if (TA.isInstantiationDependent())
+          // There might be null template arguments representing unused template
+          // parameter mappings in an MLTAL during concept checking.
+          if (!TA.isNull() && TA.isInstantiationDependent())
             return true;
       return false;
     }
@@ -205,8 +213,8 @@ enum class TemplateSubstitutionKind : char {
 
     /// Add a new outmost level to the multi-level template argument
     /// list.
-    /// A 'Final' substitution means that Subst* nodes won't be built
-    /// for the replacements.
+    /// A 'Final' substitution means that these Args don't need to be
+    /// resugared later.
     void addOuterTemplateArguments(Decl *AssociatedDecl, ArgList Args,
                                    bool Final) {
       assert(!NumRetainedOuterLevels &&
@@ -234,21 +242,25 @@ enum class TemplateSubstitutionKind : char {
     /// Replaces the current 'innermost' level with the provided argument list.
     /// This is useful for type deduction cases where we need to get the entire
     /// list from the AST, but then add the deduced innermost list.
-    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
+    void replaceInnermostTemplateArguments(Decl *AssociatedDecl, ArgList Args,
+                                           bool Final = false) {
       assert((!TemplateArgumentLists.empty() || NumRetainedOuterLevels) &&
              "Replacing in an empty list?");
 
       if (!TemplateArgumentLists.empty()) {
-        assert((TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer() ||
-                TemplateArgumentLists[0].AssociatedDeclAndFinal.getPointer() ==
-                    AssociatedDecl) &&
-               "Trying to change incorrect declaration?");
         TemplateArgumentLists[0].Args = Args;
-      } else {
-        --NumRetainedOuterLevels;
-        TemplateArgumentLists.push_back(
-            {{AssociatedDecl, /*Final=*/false}, Args});
+        return;
       }
+      --NumRetainedOuterLevels;
+      TemplateArgumentLists.push_back(
+          {{AssociatedDecl, /*Final=*/Final}, Args});
+    }
+
+    void replaceOutermostTemplateArguments(Decl *AssociatedDecl, ArgList Args) {
+      assert((!TemplateArgumentLists.empty()) && "Replacing in an empty list?");
+      TemplateArgumentLists.back().AssociatedDeclAndFinal.setPointer(
+          AssociatedDecl);
+      TemplateArgumentLists.back().Args = Args;
     }
 
     /// Add an outermost level that we are not substituting. We have no
@@ -504,7 +516,8 @@ enum class TemplateSubstitutionKind : char {
     /// given outermost scope.
     static void deleteScopes(LocalInstantiationScope *Scope,
                              LocalInstantiationScope *Outermost) {
-      while (Scope && Scope != Outermost) {
+      while (Scope != Outermost) {
+        assert(Scope && "scope does not extend the outermost scope");
         LocalInstantiationScope *Out = Scope->Outer;
         delete Scope;
         Scope = Out;
@@ -708,8 +721,34 @@ enum class TemplateSubstitutionKind : char {
     }
 
     // Helper functions for instantiating methods.
+
+    /// Container for the late-parsed attributes of a function's parameters,
+    /// which SubstFunctionType defers until the function is declared.
+    class DeferredParamAttrs {
+      TemplateDeclInstantiator &Instantiator;
+      // The scope that the attributes' saved scopes extend.
+      LocalInstantiationScope *Outer;
+
+    public:
+      Sema::LateInstantiatedAttrVec Attrs;
+
+      explicit DeferredParamAttrs(TemplateDeclInstantiator &Instantiator)
+          : Instantiator(Instantiator),
+            Outer(Instantiator.SemaRef.CurrentInstantiationScope) {}
+      DeferredParamAttrs(const DeferredParamAttrs &) = delete;
+      DeferredParamAttrs &operator=(const DeferredParamAttrs &) = delete;
+      ~DeferredParamAttrs() { discard(); }
+
+      /// Free the attributes without instantiating them.
+      void discard();
+      /// Instantiate the attributes, once the function is declared. In a
+      /// class, they are deferred again until the class is instantiated.
+      void instantiate();
+    };
+
     TypeSourceInfo *SubstFunctionType(FunctionDecl *D,
-                             SmallVectorImpl<ParmVarDecl *> &Params);
+                                      SmallVectorImpl<ParmVarDecl *> &Params,
+                                      DeferredParamAttrs &ParamAttrs);
     bool InitFunctionInstantiation(FunctionDecl *New, FunctionDecl *Tmpl);
     bool InitMethodInstantiation(CXXMethodDecl *New, CXXMethodDecl *Tmpl);
 
@@ -718,16 +757,21 @@ enum class TemplateSubstitutionKind : char {
     TemplateParameterList *
       SubstTemplateParams(TemplateParameterList *List);
 
+    bool SubstTemplateParameterLists(
+        ArrayRef<TemplateParameterList *> TPLs,
+        SmallVectorImpl<TemplateParameterList *> &InstTPLs);
+
     bool SubstQualifier(const DeclaratorDecl *OldDecl,
                         DeclaratorDecl *NewDecl);
     bool SubstQualifier(const TagDecl *OldDecl,
                         TagDecl *NewDecl);
 
-    Decl *VisitVarTemplateSpecializationDecl(
+    VarTemplateSpecializationDecl *VisitVarTemplateSpecializationDecl(
         VarTemplateDecl *VarTemplate, VarDecl *FromVar,
-        const TemplateArgumentListInfo &TemplateArgsInfo,
         ArrayRef<TemplateArgument> Converted,
         VarTemplateSpecializationDecl *PrevDecl = nullptr);
+
+    bool InstantiateFriendPackExpansion(FriendDecl *D);
 
     Decl *InstantiateTypedefNameDecl(TypedefNameDecl *D, bool IsTypeAlias);
     Decl *InstantiateTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);

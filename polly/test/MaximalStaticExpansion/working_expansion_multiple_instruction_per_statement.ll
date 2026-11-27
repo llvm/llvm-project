@@ -1,4 +1,4 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb "-passes=scop(print<polly-mse>)" -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<mse>' -plugin-arg=Polly,-polly-print-mse -disable-output < %s | FileCheck %s
 ;
 ; Verify that the accesses are correctly expanded
 ;

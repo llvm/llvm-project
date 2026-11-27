@@ -47,8 +47,9 @@ define double @double_imm_op(double %a) nounwind {
 ;
 ; CHECK64D-LABEL: double_imm_op:
 ; CHECK64D:       # %bb.0:
-; CHECK64D-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK64D-NEXT:    fld fa5, %lo(.LCPI1_0)(a0)
+; CHECK64D-NEXT:    li a0, 1023
+; CHECK64D-NEXT:    slli a0, a0, 52
+; CHECK64D-NEXT:    fmv.d.x fa5, a0
 ; CHECK64D-NEXT:    fadd.d fa0, fa0, fa5
 ; CHECK64D-NEXT:    ret
 ;
@@ -152,8 +153,7 @@ define dso_local double @negzero_sel(i16 noundef %a, double noundef %d) nounwind
 ; CHECKRV32ZDINX-NEXT:    mv a3, a2
 ; CHECKRV32ZDINX-NEXT:    mv a2, a1
 ; CHECKRV32ZDINX-NEXT:  .LBB4_3: # %entry
-; CHECKRV32ZDINX-NEXT:    mv a0, a2
-; CHECKRV32ZDINX-NEXT:    mv a1, a3
+; CHECKRV32ZDINX-NEXT:    fmv.d a0, a2
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: negzero_sel:
@@ -169,4 +169,46 @@ entry:
   %tobool.not = icmp eq i16 %a, 0
   %d. = select i1 %tobool.not, double %d, double -0.000000e+00
   ret double %d.
+}
+
+define double @poison() nounwind {
+; CHECK32D-LABEL: poison:
+; CHECK32D:       # %bb.0:
+; CHECK32D-NEXT:    fcvt.d.w fa0, zero
+; CHECK32D-NEXT:    ret
+;
+; CHECK64D-LABEL: poison:
+; CHECK64D:       # %bb.0:
+; CHECK64D-NEXT:    fmv.d.x fa0, zero
+; CHECK64D-NEXT:    ret
+;
+; CHECKRV32ZDINX-LABEL: poison:
+; CHECKRV32ZDINX:       # %bb.0:
+; CHECKRV32ZDINX-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: poison:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    ret
+  ret double poison
+}
+
+define double @undef() nounwind {
+; CHECK32D-LABEL: undef:
+; CHECK32D:       # %bb.0:
+; CHECK32D-NEXT:    fcvt.d.w fa0, zero
+; CHECK32D-NEXT:    ret
+;
+; CHECK64D-LABEL: undef:
+; CHECK64D:       # %bb.0:
+; CHECK64D-NEXT:    fmv.d.x fa0, zero
+; CHECK64D-NEXT:    ret
+;
+; CHECKRV32ZDINX-LABEL: undef:
+; CHECKRV32ZDINX:       # %bb.0:
+; CHECKRV32ZDINX-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: undef:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    ret
+  ret double undef
 }

@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
@@ -27,7 +26,7 @@ namespace {
 
 class Sdot2dLoweringPattern : public OpRewritePattern<Sdot2dOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   /// Convert to 1-dimensional vector type to match the requirements of
   /// arm.neon.intr.sdot
@@ -41,11 +40,11 @@ public:
     Value c2d = op.getC();
     Location loc = op.getLoc();
     Value b1d =
-        rewriter.create<vector::ShapeCastOp>(loc, flattenedVectorType, b2d);
+        vector::ShapeCastOp::create(rewriter, loc, flattenedVectorType, b2d);
     Value c1d =
-        rewriter.create<vector::ShapeCastOp>(loc, flattenedVectorType, c2d);
-    Value newOp = rewriter.create<SdotOp>(loc, op.getRes().getType(), op.getA(),
-                                          b1d, c1d);
+        vector::ShapeCastOp::create(rewriter, loc, flattenedVectorType, c2d);
+    Value newOp = SdotOp::create(rewriter, loc, op.getRes().getType(),
+                                 op.getA(), b1d, c1d);
     rewriter.replaceOp(op, {newOp});
     return success();
   }

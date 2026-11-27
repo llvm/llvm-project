@@ -18,7 +18,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbolELF.h"
-#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -73,12 +72,14 @@ void MipsELFStreamer::createPendingLabelRelocs() {
   MipsTargetELFStreamer *ELFTargetStreamer =
       static_cast<MipsTargetELFStreamer *>(getTargetStreamer());
 
-  // FIXME: Also mark labels when in MIPS16 mode.
-  if (ELFTargetStreamer->isMicroMipsEnabled()) {
+  if (ELFTargetStreamer->isMicroMipsEnabled() ||
+      ELFTargetStreamer->isMips16Enabled()) {
     for (auto *L : Labels) {
-      auto *Label = cast<MCSymbolELF>(L);
+      auto *Label = static_cast<MCSymbolELF *>(L);
       getAssembler().registerSymbol(*Label);
-      Label->setOther(ELF::STO_MIPS_MICROMIPS);
+      Label->setOther(ELFTargetStreamer->isMips16Enabled()
+                          ? ELF::STO_MIPS_MIPS16
+                          : ELF::STO_MIPS_MICROMIPS);
     }
   }
 
@@ -103,6 +104,23 @@ void MipsELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
 
 void MipsELFStreamer::emitIntValue(uint64_t Value, unsigned Size) {
   MCELFStreamer::emitIntValue(Value, Size);
+  Labels.clear();
+}
+
+void MipsELFStreamer::emitBytes(StringRef Data) {
+  MCELFStreamer::emitBytes(Data);
+  Labels.clear();
+}
+
+void MipsELFStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                               SMLoc Loc) {
+  MCELFStreamer::emitFill(NumBytes, FillValue, Loc);
+  Labels.clear();
+}
+
+void MipsELFStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
+                               int64_t Expr, SMLoc Loc) {
+  MCELFStreamer::emitFill(NumValues, Size, Expr, Loc);
   Labels.clear();
 }
 

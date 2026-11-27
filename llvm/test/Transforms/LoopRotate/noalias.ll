@@ -146,11 +146,7 @@ for.end:                                          ; preds = %for.cond
 }
 
 ; Function Attrs: inaccessiblememonly nounwind
-declare void @llvm.experimental.noalias.scope.decl(metadata) #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { inaccessiblememonly nounwind }
-attributes #2 = { nounwind readnone speculatable }
+declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}
@@ -159,13 +155,13 @@ attributes #2 = { nounwind readnone speculatable }
 !1 = !{!"clang"}
 !2 = !{!3}
 !3 = distinct !{!3, !4, !"test_loop_rotate_XX: pA"}
-!4 = distinct !{!4, !"test_loop_rotate_XX"}
+!4 = distinct !{!4, i1 false, !"test_loop_rotate_XX"}
 
 ; CHECK: !0 = !{i32 1, !"wchar_size", i32 4}
 ; CHECK: !1 = !{!"clang"}
 ; CHECK: !2 = !{!3}
 ; CHECK: !3 = distinct !{!3, !4, !"test_loop_rotate_XX: pA:pre.rot"}
-; CHECK: !4 = distinct !{!4, !"test_loop_rotate_XX"}
+; CHECK: !4 = distinct !{!4, i1 false, !"test_loop_rotate_XX"}
 ; CHECK: !5 = !{!6}
 ; CHECK: !6 = distinct !{!6, !4, !"test_loop_rotate_XX: pA"}
 ; CHECK: !7 = !{!8}

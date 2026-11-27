@@ -61,15 +61,15 @@ public:
     EXPECT_FP_EQ(T(-10.0), func(T(-10.65)));
     EXPECT_FP_EQ(T(123.0), func(T(123.38)));
     EXPECT_FP_EQ(T(-123.0), func(T(-123.38)));
-    EXPECT_FP_EQ(T(123.0), func(T(123.96)));
-    EXPECT_FP_EQ(T(-123.0), func(T(-123.96)));
+    EXPECT_FP_EQ(T(123.0), func(T(123.5)));
+    EXPECT_FP_EQ(T(-123.0), func(T(-123.5)));
   }
 };
 
-#define LIST_TRUNC_TESTS(T, func)                                              \
-  using LlvmLibcTruncTest = TruncTest<T>;                                      \
-  TEST_F(LlvmLibcTruncTest, SpecialNumbers) { testSpecialNumbers(&func); }     \
-  TEST_F(LlvmLibcTruncTest, RoundedNubmers) { testRoundedNumbers(&func); }     \
-  TEST_F(LlvmLibcTruncTest, Fractions) { testFractions(&func); }
+#define LIST_TRUNC_TESTS(Name, T, func)                                        \
+  using LlvmLibc##Name##Test = TruncTest<T>;                                   \
+  TEST_F(LlvmLibc##Name##Test, SpecialNumbers) { testSpecialNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundedNumbers) { testRoundedNumbers(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_SMOKE_TRUNCTEST_H

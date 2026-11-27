@@ -15,70 +15,79 @@
 #define LLVM_CLANG_LIB_ANALYSIS_FORMATSTRINGPARSING_H
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Type.h"
 #include "clang/AST/FormatString.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 
 class LangOptions;
 
-template <typename T>
-class UpdateOnReturn {
+template <typename T> class UpdateOnReturn {
   T &ValueToUpdate;
   const T &ValueToCopy;
+
 public:
   UpdateOnReturn(T &valueToUpdate, const T &valueToCopy)
-    : ValueToUpdate(valueToUpdate), ValueToCopy(valueToCopy) {}
+      : ValueToUpdate(valueToUpdate), ValueToCopy(valueToCopy) {}
 
-  ~UpdateOnReturn() {
-    ValueToUpdate = ValueToCopy;
-  }
+  ~UpdateOnReturn() { ValueToUpdate = ValueToCopy; }
 };
 
 namespace analyze_format_string {
 
-OptionalAmount ParseAmount(const char *&Beg, const char *E);
-OptionalAmount ParseNonPositionAmount(const char *&Beg, const char *E,
-                                      unsigned &argIndex);
+class FormatStringParser {
+protected:
+  FormatStringParser(FormatStringHandler &H, const LangOptions &LO,
+                     const TargetInfo &Target, bool IsScanf)
+      : H(H), LO(LO), Target(Target), IsScanf(IsScanf) {}
 
-OptionalAmount ParsePositionAmount(FormatStringHandler &H,
-                                   const char *Start, const char *&Beg,
-                                   const char *E, PositionContext p);
+  OptionalAmount parseAmount(const char *&Beg, const char *E) const;
 
-bool ParseFieldWidth(FormatStringHandler &H,
-                     FormatSpecifier &CS,
-                     const char *Start, const char *&Beg, const char *E,
-                     unsigned *argIndex);
+  OptionalAmount parseNonPositionAmount(const char *&Beg, const char *E,
+                                        unsigned &argIndex) const;
 
-bool ParseArgPosition(FormatStringHandler &H,
-                      FormatSpecifier &CS, const char *Start,
-                      const char *&Beg, const char *E);
+  OptionalAmount parsePositionAmount(const char *Start, const char *&Beg,
+                                     const char *E, PositionContext p) const;
 
-bool ParseVectorModifier(FormatStringHandler &H,
-                         FormatSpecifier &FS, const char *&Beg, const char *E,
-                         const LangOptions &LO);
+  bool parseFieldWidth(FormatSpecifier &CS, const char *Start, const char *&Beg,
+                       const char *E, unsigned *argIndex) const;
 
-/// Returns true if a LengthModifier was parsed and installed in the
-/// FormatSpecifier& argument, and false otherwise.
-bool ParseLengthModifier(FormatSpecifier &FS, const char *&Beg, const char *E,
-                         const LangOptions &LO, bool IsScanf = false);
+  bool parseArgPosition(FormatSpecifier &CS, const char *Start,
+                        const char *&Beg, const char *E) const;
 
-/// Returns true if the invalid specifier in \p SpecifierBegin is a UTF-8
-/// string; check that it won't go further than \p FmtStrEnd and write
-/// up the total size in \p Len.
-bool ParseUTF8InvalidSpecifier(const char *SpecifierBegin,
-                               const char *FmtStrEnd, unsigned &Len);
+  bool parseVectorModifier(FormatSpecifier &FS, const char *&Beg,
+                           const char *E) const;
+
+  /// Returns true if a LengthModifier was parsed and installed in the
+  /// FormatSpecifier& argument, and false otherwise.
+  bool parseLengthModifier(FormatSpecifier &FS, const char *&Beg,
+                           const char *E) const;
+
+  /// Returns true if the invalid specifier in \p SpecifierBegin is a UTF-8
+  /// string; check that it won't go further than \p FmtStrEnd and write
+  /// up the total size in \p Len.
+  bool parseUTF8InvalidSpecifier(const char *SpecifierBegin,
+                                 const char *FmtStrEnd, unsigned &Len) const;
+
+  FormatStringHandler &H;
+  const LangOptions &LO;
+  const TargetInfo &Target;
+  bool IsScanf;
+
+private:
+  bool parseWidthModifier(const char *&I, const char *E, unsigned &BitWidth,
+                          unsigned &ModifierLength) const;
+};
 
 template <typename T> class SpecifierResult {
   T FS;
   const char *Start;
   bool Stop;
+
 public:
-  SpecifierResult(bool stop = false)
-  : Start(nullptr), Stop(stop) {}
-  SpecifierResult(const char *start,
-                  const T &fs)
-  : FS(fs), Start(start), Stop(false) {}
+  SpecifierResult(bool stop = false) : Start(nullptr), Stop(stop) {}
+  SpecifierResult(const char *start, const T &fs)
+      : FS(fs), Start(start), Stop(false) {}
 
   const char *getStart() const { return Start; }
   bool shouldStop() const { return Stop; }
@@ -90,7 +99,7 @@ public:
   const T &getValue() { return FS; }
 };
 
-} // end analyze_format_string namespace
-} // end clang namespace
+} // namespace analyze_format_string
+} // namespace clang
 
 #endif

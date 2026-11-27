@@ -285,7 +285,7 @@ public:
   /// Map type for initializing the manager. See init.
   using StubInitsMap = StringMap<std::pair<ExecutorAddr, JITSymbolFlags>>;
 
-  virtual ~IndirectStubsManager() = default;
+  ~IndirectStubsManager() override = default;
 
   /// Create a single stub with the given name, target address and flags.
   virtual Error createStub(StringRef StubName, ExecutorAddr StubAddr,

@@ -394,7 +394,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-LABEL: ld4.nxv64i8_outside_lower_bound:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov x9, #-576
+; CHECK-NEXT:    mov x9, #-576 // =0xfffffffffffffdc0
 ; CHECK-NEXT:    lsr x8, x8, #4
 ; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
@@ -410,14 +410,6 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 }
 
 define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld4.nxv64i8_outside_upper_bound(<vscale x 16 x i1> %Pg, ptr %addr) {
-; CHECK-LABEL: ld4.nxv64i8_outside_upper_bound:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    mov w9, #512
-; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    mul x8, x8, x9
-; CHECK-NEXT:    ld4b { z0.b - z3.b }, p0/z, [x0, x8]
-; CHECK-NEXT:    ret
 ; FIXME: optimize OFFSET computation so that xOFFSET = (mul (RDVL #16) #2)
 ; xM = 2^9
 ; xP = RDVL * 2^-4

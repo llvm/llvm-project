@@ -1,8 +1,8 @@
-# RUN: llc -start-after=livedebugvalues --filetype=obj %s -o - \
+# RUN: llc -start-after=live-debug-values --filetype=obj %s -o - \
 # RUN:   | llvm-dwarfdump -v --name local - \
 # RUN:   | FileCheck %s
 #
-## Generated with opt -inline -mem2reg, llc -stop-after=livedebugvalues from:
+## Generated with opt -inline -mem2reg, llc -stop-after=live-debug-values from:
 ## int glob;
 ## int ext1(int);
 ## int ext2(int);

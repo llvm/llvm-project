@@ -104,11 +104,8 @@ define void @outer6(ptr %a, ptr %ptr) {
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) argmemonly nounwind
-
 define void @inner6(ptr %a, ptr %ptr) {
   %1 = load i32, ptr %a
-  call void @llvm.lifetime.start.p0(i64 32, ptr %ptr) ; This intrinsic does not clobber the first load.
   %2 = load i32, ptr %a
   call void @pad()
   %3 = load i32, ptr %a

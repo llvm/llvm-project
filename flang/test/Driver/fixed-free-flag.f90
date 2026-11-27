@@ -14,4 +14,4 @@
 
 ! FREEFORM: Could not parse
 
-! FIXEDFORM:free-form-test.f90:1:1: warning: Character in fixed-form label field must be a digit
+! FIXEDFORM:free-form-test.f90:1:6: warning: Statement should not begin with a continuation line [-Wscanning]

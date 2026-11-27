@@ -8,7 +8,7 @@
 //
 // TableGen is a tool which can be used to build up a description of something,
 // then invoke one or more "tablegen backends" to emit information about the
-// description in some predefined format.  In practice, this is used by the LLVM
+// description in some predefined format. In practice, this is used by the LLVM
 // code generators to automate generation of a code generator through a
 // high-level description of the target.
 //
@@ -17,21 +17,25 @@
 #include "llvm/TableGen/Main.h"
 #include "TGLexer.h"
 #include "TGParser.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <memory>
+#include <set>
 #include <string>
 #include <system_error>
 #include <utility>
@@ -64,18 +68,18 @@ WriteIfChanged("write-if-changed", cl::desc("Only write output if it changed"));
 static cl::opt<bool>
 TimePhases("time-phases", cl::desc("Time phases of parser and backend"));
 
-namespace llvm {
-cl::opt<bool> EmitLongStrLiterals(
+cl::opt<bool> llvm::EmitLongStrLiterals(
     "long-string-literals",
     cl::desc("when emitting large string tables, prefer string literals over "
              "comma-separated char literals. This can be a readability and "
              "compile-time performance win, but upsets some compilers"),
     cl::Hidden, cl::init(true));
-} // end namespace llvm
 
 static cl::opt<bool> NoWarnOnUnusedTemplateArgs(
     "no-warn-on-unused-template-args",
     cl::desc("Disable unused template argument warnings."));
+
+static cl::opt<bool> Preprocess("E", cl::desc("Write preprocessed output"));
 
 static int reportError(const char *ProgName, Twine Msg) {
   errs() << ProgName << ": " << Msg;
@@ -83,11 +87,100 @@ static int reportError(const char *ProgName, Twine Msg) {
   return 1;
 }
 
+namespace {
+/// Encapsulate file, line and column numbers from SourceMgr.
+struct SMCoords {
+  unsigned Buf = 0;
+  unsigned Line = 0;
+  unsigned Col = 0;
+  SMCoords() = default;
+  SMCoords(const SourceMgr &Mgr, SMLoc Loc) {
+    Buf = Mgr.FindBufferContainingLoc(Loc);
+    // TODO: Find a faster way to do this. For example we don't need the column
+    // number for every token, only the first token on each output line.
+    std::tie(Line, Col) = Mgr.getLineAndColumn(Loc, Buf);
+  }
+};
+} // end anonymous namespace
+
+/// Create preprocessed output for `-E` option.
+static int preprocessInput(TGLexer &Lex, raw_ostream &OS) {
+  SMCoords Last;
+  while (true) {
+    Lex.Lex();
+    if (Lex.getCode() == tgtok::Eof || Lex.getCode() == tgtok::Error)
+      break;
+    SMCoords This(SrcMgr, Lex.getLoc());
+    if (This.Buf == Last.Buf && This.Line == Last.Line) {
+      // Add a single space between tokens on the same line. This is overkill in
+      // many cases but at least it will parse correctly.
+      OS << ' ';
+    } else {
+      // Always start a new line when including a new file or popping back out
+      // to the previous file. This is just a heuristic to make the output look
+      // reasonably pretty.
+      if (Last.Buf)
+        OS << '\n';
+      // Indent the first token on a line to its original indentation, to make
+      // the output look pretty.
+      OS.indent(This.Col - 1);
+    }
+
+    const char *Start = Lex.getLoc().getPointer();
+    const char *End = Lex.getLocRange().End.getPointer();
+    StringRef Text(Start, End - Start);
+    OS << Text;
+
+    Last = This;
+    // A code block is the only kind of token that can span multiple lines.
+    // Record the line it ends on, so that a following token on that line stays
+    // on the same output line. Count '\n' characters to match how SourceMgr
+    // counts lines.
+    if (Lex.getCode() == tgtok::CodeFragment)
+      Last.Line += Text.count('\n');
+  }
+  if (Last.Buf != 0)
+    OS << '\n';
+  return Lex.getCode() == tgtok::Error;
+}
+
+/// Escape a filename in the dependency file so that it is correctly
+/// interpreted by `make`. This is consistent with Clang, GCC, and lld.
+static std::string escapeDependencyFilename(StringRef Filename) {
+  std::string Res;
+  raw_string_ostream OS(Res);
+
+  // Only transform the path to native on Windows, where backslashes are valid
+  // path separators. On non-Windows platforms, we don't want backslashes in
+  // filenames to be incorrectly treated as path separators.
+#ifdef _WIN32
+  SmallString<256> NativePath;
+  sys::path::native(Filename, NativePath);
+#else
+  StringRef NativePath = Filename;
+#endif
+
+  for (unsigned I = 0, E = NativePath.size(); I != E; ++I) {
+    if (NativePath[I] == '#')
+      OS << '\\';
+    else if (NativePath[I] == ' ') {
+      OS << '\\';
+      unsigned J = I;
+      while (J > 0 && NativePath[--J] == '\\')
+        OS << '\\';
+    } else if (NativePath[I] == '$')
+      OS << '$';
+    OS << NativePath[I];
+  }
+
+  return Res;
+}
+
 /// Create a dependency file for `-d` option.
 ///
 /// This functionality is really only for the benefit of the build system.
 /// It is similar to GCC's `-M*` family of options.
-static int createDependencyFile(const TGParser &Parser, const char *argv0) {
+static int createDependencyFile(const char *argv0) {
   if (OutputFilename == "-")
     return reportError(argv0, "the option -d must be used together with -o\n");
 
@@ -96,33 +189,61 @@ static int createDependencyFile(const TGParser &Parser, const char *argv0) {
   if (EC)
     return reportError(argv0, "error opening " + DependFilename + ":" +
                                   EC.message() + "\n");
-  DepOut.os() << OutputFilename << ":";
-  for (const auto &Dep : Parser.getDependencies()) {
-    DepOut.os() << ' ' << Dep;
-  }
+  DepOut.os() << escapeDependencyFilename(OutputFilename) << ":";
+
+  // Emit the primary input file as a dependency. This matches C compilers like
+  // Clang and GCC. Without it, a .td file with no `include` directives would
+  // produce a depfile listing zero dependencies. CMake's
+  // `cmake_transform_depfile` then collapses that to a 0-byte file, which Ninja
+  // treats as a missing depfile and re-runs the rule on every incremental
+  // build.
+  if (InputFilename != "-")
+    DepOut.os() << ' ' << escapeDependencyFilename(InputFilename);
+
+  // Every other buffer in SrcMgr was added by an include directive, and its
+  // identifier is the path that the include resolved to. Buffer 1 is the main
+  // file. Use a set to sort the list and remove duplicates.
+  std::set<std::string> Dependencies;
+  for (unsigned I = 2, E = SrcMgr.getNumBuffers(); I <= E; ++I)
+    Dependencies.insert(SrcMgr.getMemoryBuffer(I)->getBufferIdentifier().str());
+  for (const std::string &Dep : Dependencies)
+    DepOut.os() << ' ' << escapeDependencyFilename(Dep);
   DepOut.os() << "\n";
   DepOut.keep();
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0,
-                       std::function<TableGenMainFn> MainFn) {
-  RecordKeeper Records;
-  TGTimer &Timer = Records.getTimer();
+static int WriteOutput(const char *argv0, StringRef Filename,
+                       StringRef Content) {
+  if (WriteIfChanged) {
+    // Only updates the real output file if there are any differences.
+    // This prevents recompilation of all the files depending on it if there
+    // aren't any.
+    if (auto ExistingOrErr = MemoryBuffer::getFile(Filename, /*IsText=*/true))
+      if (std::move(ExistingOrErr.get())->getBuffer() == Content)
+        return 0;
+  }
+  std::error_code EC;
+  // On z/OS, text files default to IBM-1047, but generated files are UTF-8.
+  // OF_ForceUTF8 has no effect on other platforms.
+  ToolOutputFile OutFile(Filename, EC,
+                         sys::fs::OF_Text | sys::fs::OF_ForceUTF8);
+  if (EC)
+    return reportError(argv0, "error opening " + Filename + ": " +
+                                  EC.message() + "\n");
+  OutFile.os() << Content;
+  if (ErrorsPrinted == 0)
+    OutFile.keep();
 
-  if (TimePhases)
-    Timer.startPhaseTiming();
+  return 0;
+}
 
-  // Parse the input file.
-
-  Timer.startTimer("Parse, build records");
+int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError())
     return reportError(argv0, "Could not open input file '" + InputFilename +
                                   "': " + EC.message() + "\n");
-
-  Records.saveInputFilename(InputFilename);
 
   // Tell SrcMgr about this buffer, which is what TGParser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
@@ -130,6 +251,35 @@ int llvm::TableGenMain(const char *argv0,
   // Record the location of the include directory so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
+
+  if (Preprocess) {
+    TGLexer Lex(SrcMgr, MacroNames);
+    std::string OutString;
+    raw_string_ostream Out(OutString);
+    if (int Ret = preprocessInput(Lex, Out))
+      return Ret;
+    // Return early if the lexer printed errors but still reached EOF (e.g., a
+    // NUL character in the source).
+    if (ErrorsPrinted > 0)
+      return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
+    if (!DependFilename.empty()) {
+      if (int Ret = createDependencyFile(argv0))
+        return Ret;
+    }
+    return WriteOutput(argv0, OutputFilename, OutString);
+  }
+
+  RecordKeeper Records;
+  Records.saveInputFilename(InputFilename);
+
+  TGTimer &Timer = Records.getTimer();
+  if (TimePhases)
+    Timer.startPhaseTiming();
+
+  // Parse the input file.
+
+  Timer.startTimer("Parse, build records");
 
   TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
 
@@ -144,46 +294,38 @@ int llvm::TableGenMain(const char *argv0,
 
   // Write output to memory.
   Timer.startBackendTimer("Backend overall");
-  std::string OutString;
-  raw_string_ostream Out(OutString);
+  TableGenOutputFiles OutFiles;
   unsigned status = 0;
   // ApplyCallback will return true if it did not apply any callback. In that
   // case, attempt to apply the MainFn.
-  if (TableGen::Emitter::ApplyCallback(Records, Out))
-    status = MainFn ? MainFn(Out, Records) : 1;
+  StringRef FilenamePrefix(sys::path::stem(OutputFilename));
+  if (TableGen::Emitter::ApplyCallback(Records, OutFiles, FilenamePrefix))
+    status = MainFn ? MainFn(OutFiles, Records) : 1;
   Timer.stopBackendTimer();
   if (status)
     return 1;
 
   // Always write the depfile, even if the main output hasn't changed.
-  // If it's missing, Ninja considers the output dirty.  If this was below
+  // If it's missing, Ninja considers the output dirty. If this was below
   // the early exit below and someone deleted the .inc.d file but not the .inc
   // file, tablegen would never write the depfile.
   if (!DependFilename.empty()) {
-    if (int Ret = createDependencyFile(Parser, argv0))
+    if (int Ret = createDependencyFile(argv0))
       return Ret;
   }
 
   Timer.startTimer("Write output");
-  bool WriteFile = true;
-  if (WriteIfChanged) {
-    // Only updates the real output file if there are any differences.
-    // This prevents recompilation of all the files depending on it if there
-    // aren't any.
-    if (auto ExistingOrErr =
-            MemoryBuffer::getFile(OutputFilename, /*IsText=*/true))
-      if (std::move(ExistingOrErr.get())->getBuffer() == OutString)
-        WriteFile = false;
-  }
-  if (WriteFile) {
-    std::error_code EC;
-    ToolOutputFile OutFile(OutputFilename, EC, sys::fs::OF_Text);
-    if (EC)
-      return reportError(argv0, "error opening " + OutputFilename + ": " +
-                                    EC.message() + "\n");
-    OutFile.os() << OutString;
-    if (ErrorsPrinted == 0)
-      OutFile.keep();
+  if (int Ret = WriteOutput(argv0, OutputFilename, OutFiles.MainFile))
+    return Ret;
+  for (auto [Suffix, Content] : OutFiles.AdditionalFiles) {
+    SmallString<128> Filename(OutputFilename);
+    // TODO: Format using the split-file convention when writing to stdout?
+    if (Filename != "-") {
+      sys::path::replace_extension(Filename, "");
+      Filename.append(Suffix);
+    }
+    if (int Ret = WriteOutput(argv0, Filename, Content))
+      return Ret;
   }
 
   Timer.stopTimer();
@@ -192,4 +334,15 @@ int llvm::TableGenMain(const char *argv0,
   if (ErrorsPrinted > 0)
     return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
   return 0;
+}
+
+int llvm::TableGenMain(const char *argv0, TableGenMainFn MainFn) {
+  return TableGenMain(argv0, [&MainFn](TableGenOutputFiles &OutFiles,
+                                       const RecordKeeper &Records) {
+    std::string S;
+    raw_string_ostream OS(S);
+    int Res = MainFn(OS, Records);
+    OutFiles = {std::move(S), {}};
+    return Res;
+  });
 }

@@ -1,0 +1,12 @@
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+zclsd -M no-aliases %s \
+# RUN:   | FileCheck -check-prefixes=CHECK %s
+
+
+[0x00,0x00]
+# CHECK: unimp
+
+[0x52,0x70]
+# CHECK-NOT: c.ldsp zero, {{[0-9]+}}(sp)
+
+[0x00,0x00]
+# CHECK: unimp

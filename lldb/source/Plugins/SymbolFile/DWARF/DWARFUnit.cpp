@@ -29,8 +29,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 extern int g_verbose;
 
@@ -134,12 +134,14 @@ void DWARFUnit::ExtractUnitDIEIfNeeded() {
   else if (dwo_symbol_file->GetDWARFContext()
                .getOrLoadRngListsData()
                .GetByteSize() > 0)
-    dwo_cu->SetRangesBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
+    dwo_cu->SetRangesBase(
+        llvm::DWARFListTableHeader::getHeaderSize(GetFormParams().Format));
 
   if (GetVersion() >= 5 &&
       dwo_symbol_file->GetDWARFContext().getOrLoadLocListsData().GetByteSize() >
           0)
-    dwo_cu->SetLoclistsBase(llvm::DWARFListTableHeader::getHeaderSize(DWARF32));
+    dwo_cu->SetLoclistsBase(
+        llvm::DWARFListTableHeader::getHeaderSize(GetFormParams().Format));
 
   dwo_cu->SetBaseAddress(GetBaseAddress());
 
@@ -223,12 +225,22 @@ DWARFUnit::ScopedExtractDIEs::operator=(DWARFUnit::ScopedExtractDIEs &&rhs) {
 void DWARFUnit::ExtractDIEsRWLocked() {
   llvm::sys::ScopedWriter first_die_lock(m_first_die_mutex);
 
-  ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
   LLDB_SCOPED_TIMERF(
       "%s",
       llvm::formatv("{0:x16}: DWARFUnit::ExtractDIEsIfNeeded()", GetOffset())
           .str()
           .c_str());
+
+  ExtractDIEsNoDwoRWLocked();
+
+  // The skeleton and its .dwo unit share a parse time counter, so timing the
+  // .dwo unit inside ExtractDIEsNoDwoRWLocked would count it twice.
+  if (m_dwo)
+    m_dwo->ExtractDIEsIfNeeded();
+}
+
+void DWARFUnit::ExtractDIEsNoDwoRWLocked() {
+  ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
@@ -334,9 +346,6 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   }
 
   m_die_array.shrink_to_fit();
-
-  if (m_dwo)
-    m_dwo->ExtractDIEsIfNeeded();
 }
 
 // This is used when a split dwarf is enabled.
@@ -348,6 +357,10 @@ void DWARFUnit::ExtractDIEsRWLocked() {
 void DWARFUnit::SetDwoStrOffsetsBase() {
   lldb::offset_t baseOffset = 0;
 
+  // Size of offset for .debug_str_offsets is same as DWARF offset byte size
+  // of the DWARFUnit as a default. We might override this if below if needed.
+  m_str_offset_size = m_header.getDwarfOffsetByteSize();
+
   if (const llvm::DWARFUnitIndex::Entry *entry = m_header.getIndexEntry()) {
     if (const auto *contribution =
             entry->getContribution(llvm::DW_SECT_STR_OFFSETS))
@@ -357,14 +370,17 @@ void DWARFUnit::SetDwoStrOffsetsBase() {
   }
 
   if (GetVersion() >= 5) {
-    const DWARFDataExtractor &strOffsets =
-        GetSymbolFileDWARF().GetDWARFContext().getOrLoadStrOffsetsData();
-    uint64_t length = strOffsets.GetU32(&baseOffset);
-    if (length == 0xffffffff)
-      length = strOffsets.GetU64(&baseOffset);
+    const llvm::DWARFDataExtractor &strOffsets = GetSymbolFileDWARF()
+                                                     .GetDWARFContext()
+                                                     .getOrLoadStrOffsetsData()
+                                                     .GetAsLLVMDWARF();
 
+    uint64_t length;
+    llvm::dwarf::DwarfFormat format;
+    std::tie(length, format) = strOffsets.getInitialLength(&baseOffset);
+    m_str_offset_size = format == llvm::dwarf::DwarfFormat::DWARF64 ? 8 : 4;
     // Check version.
-    if (strOffsets.GetU16(&baseOffset) < 5)
+    if (strOffsets.getU16(&baseOffset) < 5)
       return;
 
     // Skip padding.
@@ -409,7 +425,16 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
       SetRangesBase(form_value.Unsigned());
       break;
     case DW_AT_str_offsets_base:
+      // When we have a DW_AT_str_offsets_base attribute, it points us to the
+      // first string offset for this DWARFUnit which is after the string
+      // offsets table header. In this case we use the DWARF32/DWARF64 of the
+      // DWARFUnit to determine the string offset byte size. DWO files do not
+      // use this attribute and they point to the start of the string offsets
+      // table header which can be used to determine the DWARF32/DWARF64 status
+      // of the string table. See SetDwoStrOffsetsBase() for now it figures out
+      // the m_str_offset_size value that should be used.
       SetStrOffsetsBase(form_value.Unsigned());
+      m_str_offset_size = m_header.getDwarfOffsetByteSize();
       break;
     case DW_AT_low_pc:
       SetBaseAddress(form_value.Address());
@@ -505,7 +530,8 @@ void DWARFUnit::SetLoclistsBase(dw_addr_t loclists_base) {
   }
   m_loclists_base = loclists_base;
 
-  uint64_t header_size = llvm::DWARFListTableHeader::getHeaderSize(DWARF32);
+  uint64_t header_size =
+      llvm::DWARFListTableHeader::getHeaderSize(GetFormParams().Format);
   if (loclists_base < header_size)
     return;
 
@@ -575,7 +601,8 @@ DWARFUnit::GetRnglistTable() {
     m_rnglist_table_done = true;
     if (auto table_or_error =
             ParseListTableHeader<llvm::DWARFDebugRnglistTable>(
-                GetRnglistData().GetAsLLVMDWARF(), m_ranges_base, DWARF32))
+                GetRnglistData().GetAsLLVMDWARF(), m_ranges_base,
+                GetFormParams().Format))
       m_rnglist_table = std::move(table_or_error.get());
     else
       GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
@@ -695,8 +722,8 @@ llvm::StringRef DWARFUnit::PeekDIEName(dw_offset_t die_offset) {
   return llvm::StringRef();
 }
 
-llvm::Expected<std::pair<uint64_t, bool>>
-DWARFUnit::GetDIEBitSizeAndSign(uint64_t relative_die_offset) const {
+llvm::Expected<std::pair<uint64_t, llvm::dwarf::TypeKind>>
+DWARFUnit::GetDIEBitSizeAndEncoding(uint64_t relative_die_offset) const {
   // Retrieve the type DIE that the value is being converted to. This
   // offset is compile unit relative so we need to fix it up.
   const uint64_t abs_die_offset = relative_die_offset + GetOffset();
@@ -704,27 +731,27 @@ DWARFUnit::GetDIEBitSizeAndSign(uint64_t relative_die_offset) const {
   DWARFDIE die = const_cast<DWARFUnit *>(this)->GetDIE(abs_die_offset);
   if (!die)
     return llvm::createStringError("cannot resolve DW_OP_convert type DIE");
+  if (die.Tag() != DW_TAG_base_type)
+    return llvm::createStringError(
+        "DW_OP_convert type DIE is not a DW_TAG_base_type");
   uint64_t encoding =
       die.GetAttributeValueAsUnsigned(DW_AT_encoding, DW_ATE_hi_user);
-  uint64_t bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
+  uint64_t bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
   if (!bit_size)
-    bit_size = die.GetAttributeValueAsUnsigned(DW_AT_bit_size, 0);
+    bit_size = die.GetAttributeValueAsUnsigned(DW_AT_byte_size, 0) * 8;
   if (!bit_size)
     return llvm::createStringError("unsupported type size");
-  bool sign;
   switch (encoding) {
   case DW_ATE_signed:
   case DW_ATE_signed_char:
-    sign = true;
-    break;
   case DW_ATE_unsigned:
   case DW_ATE_unsigned_char:
-    sign = false;
+  case DW_ATE_float:
     break;
   default:
     return llvm::createStringError("unsupported encoding");
   }
-  return std::pair{bit_size, sign};
+  return std::pair{bit_size, static_cast<TypeKind>(encoding)};
 }
 
 lldb::offset_t
@@ -734,11 +761,14 @@ DWARFUnit::GetVendorDWARFOpcodeSize(const DataExtractor &data,
   return GetSymbolFileDWARF().GetVendorDWARFOpcodeSize(data, data_offset, op);
 }
 
-bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
+bool DWARFUnit::ParseVendorDWARFOpcode(uint8_t op,
+                                       const llvm::DataExtractor &opcodes,
                                        lldb::offset_t &offset,
+                                       RegisterContext *reg_ctx,
+                                       lldb::RegisterKind reg_kind,
                                        std::vector<Value> &stack) const {
   return GetSymbolFileDWARF().ParseVendorDWARFOpcode(op, opcodes, offset,
-                                                     stack);
+                                                     reg_ctx, reg_kind, stack);
 }
 
 bool DWARFUnit::ParseDWARFLocationList(
@@ -835,8 +865,8 @@ void DWARFUnit::ParseProducerInfo() {
   if (producer.empty())
     return;
 
-  static const RegularExpression g_swiftlang_version_regex(
-      llvm::StringRef(R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
+  static const RegularExpression g_swiftlang_version_regex(llvm::StringRef(
+      R"(swiftlang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?(\.[0-9]+)?))"));
   static const RegularExpression g_clang_version_regex(
       llvm::StringRef(R"(clang-([0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?))"));
 
@@ -1073,25 +1103,13 @@ const lldb_private::DWARFDataExtractor &DWARFUnit::GetData() const {
              : m_dwarf.GetDWARFContext().getOrLoadDebugInfoData();
 }
 
-uint32_t DWARFUnit::GetHeaderByteSize() const {
-  switch (m_header.getUnitType()) {
-  case llvm::dwarf::DW_UT_compile:
-  case llvm::dwarf::DW_UT_partial:
-    return GetVersion() < 5 ? 11 : 12;
-  case llvm::dwarf::DW_UT_skeleton:
-  case llvm::dwarf::DW_UT_split_compile:
-    return 20;
-  case llvm::dwarf::DW_UT_type:
-  case llvm::dwarf::DW_UT_split_type:
-    return GetVersion() < 5 ? 23 : 24;
-  }
-  llvm_unreachable("invalid UnitType.");
-}
+uint32_t DWARFUnit::GetHeaderByteSize() const { return m_header.getSize(); }
 
 std::optional<uint64_t>
 DWARFUnit::GetStringOffsetSectionItem(uint32_t index) const {
-  lldb::offset_t offset = GetStrOffsetsBase() + index * 4;
-  return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetU32(&offset);
+  lldb::offset_t offset = GetStrOffsetsBase() + index * m_str_offset_size;
+  return m_dwarf.GetDWARFContext().getOrLoadStrOffsetsData().GetMaxU64(
+      &offset, m_str_offset_size);
 }
 
 llvm::Expected<llvm::DWARFAddressRangesVector>

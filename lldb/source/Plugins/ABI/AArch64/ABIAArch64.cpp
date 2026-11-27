@@ -71,8 +71,6 @@ std::pair<uint32_t, uint32_t>
 ABIAArch64::GetEHAndDWARFNums(llvm::StringRef name) {
   if (name == "pc")
     return {arm64_ehframe::pc, arm64_dwarf::pc};
-  if (name == "cpsr")
-    return {arm64_ehframe::cpsr, arm64_dwarf::cpsr};
   return MCBasedABI::GetEHAndDWARFNums(name);
 }
 
@@ -86,10 +84,11 @@ std::string ABIAArch64::GetMCName(std::string reg) {
 uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Cases("lr", "x30", LLDB_REGNUM_GENERIC_RA)
-      .Cases("sp", "x31", LLDB_REGNUM_GENERIC_SP)
-      .Cases("fp", "x29", LLDB_REGNUM_GENERIC_FP)
+      .Cases({"lr", "x30"}, LLDB_REGNUM_GENERIC_RA)
+      .Cases({"sp", "x31"}, LLDB_REGNUM_GENERIC_SP)
+      .Cases({"fp", "x29"}, LLDB_REGNUM_GENERIC_FP)
       .Case("cpsr", LLDB_REGNUM_GENERIC_FLAGS)
+      .Case("tpidr", LLDB_REGNUM_GENERIC_TP)
       .Case("x0", LLDB_REGNUM_GENERIC_ARG1)
       .Case("x1", LLDB_REGNUM_GENERIC_ARG2)
       .Case("x2", LLDB_REGNUM_GENERIC_ARG3)
@@ -112,10 +111,9 @@ static void addPartialRegisters(
       return;
 
     lldb_private::DynamicRegisterInfo::Register partial_reg{
-        lldb_private::ConstString(
-            llvm::formatv(partial_reg_format, it.index()).str()),
-        lldb_private::ConstString(),
-        lldb_private::ConstString("supplementary registers"),
+        llvm::formatv(partial_reg_format, it.index()).str(),
+        "",
+        "supplementary registers",
         partial_reg_size,
         LLDB_INVALID_INDEX32,
         encoding,
@@ -134,8 +132,6 @@ void ABIAArch64::AugmentRegisterInfo(
     std::vector<lldb_private::DynamicRegisterInfo::Register> &regs) {
   lldb_private::MCBasedABI::AugmentRegisterInfo(regs);
 
-  lldb_private::ConstString sp_string{"sp"};
-
   std::array<std::optional<uint32_t>, 32> x_regs;
   std::array<std::optional<uint32_t>, 32> v_regs;
   std::array<std::optional<uint32_t>, 32> z_regs;
@@ -144,13 +140,13 @@ void ABIAArch64::AugmentRegisterInfo(
   for (auto it : llvm::enumerate(regs)) {
     lldb_private::DynamicRegisterInfo::Register &info = it.value();
     // GDB sends x31 as "sp".  Add the "x31" alt_name for convenience.
-    if (info.name == sp_string && !info.alt_name)
-      info.alt_name.SetCString("x31");
+    if (info.name == "sp" && info.alt_name.empty())
+      info.alt_name = "x31";
 
     unsigned int reg_num;
     auto get_reg = [&info, &reg_num](const char *prefix) {
-      llvm::StringRef reg_name = info.name.GetStringRef();
-      llvm::StringRef alt_name = info.alt_name.GetStringRef();
+      llvm::StringRef reg_name = info.name;
+      llvm::StringRef alt_name = info.alt_name;
       return (reg_name.consume_front(prefix) &&
               llvm::to_integer(reg_name, reg_num, 10) && reg_num < 32) ||
              (alt_name.consume_front(prefix) &&

@@ -19,6 +19,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/DenseMap.h"
 
 namespace mlir {
 namespace bufferization {
@@ -37,8 +38,12 @@ using namespace mlir::bufferization;
 /// Given a memref value, return the "base" value by skipping over all
 /// ViewLikeOpInterface ops (if any) in the reverse use-def chain.
 static Value getViewBase(Value value) {
-  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>())
+  while (auto viewLikeOp = value.getDefiningOp<ViewLikeOpInterface>()) {
+    if (value != viewLikeOp.getViewDest()) {
+      break;
+    }
     value = viewLikeOp.getViewSource();
+  }
   return value;
 }
 
@@ -167,8 +172,8 @@ struct RemoveDeallocMemrefsContainedInRetained
       std::optional<bool> analysisResult =
           analysis.isSameAllocation(retained, memref);
       if (analysisResult == true) {
-        auto disjunction = rewriter.create<arith::OrIOp>(
-            deallocOp.getLoc(), updatedCondition, cond);
+        auto disjunction = arith::OrIOp::create(rewriter, deallocOp.getLoc(),
+                                                updatedCondition, cond);
         rewriter.replaceAllUsesExcept(updatedCondition, disjunction.getResult(),
                                       disjunction);
       }
@@ -247,16 +252,16 @@ struct RemoveRetainedMemrefsGuaranteedToNotAlias
         continue;
       }
 
-      replacements.push_back(rewriter.create<arith::ConstantOp>(
-          deallocOp.getLoc(), rewriter.getBoolAttr(false)));
+      replacements.push_back(arith::ConstantOp::create(
+          rewriter, deallocOp.getLoc(), rewriter.getBoolAttr(false)));
     }
 
     if (newRetainedMemrefs.size() == deallocOp.getRetained().size())
       return failure();
 
-    auto newDeallocOp = rewriter.create<DeallocOp>(
-        deallocOp.getLoc(), deallocOp.getMemrefs(), deallocOp.getConditions(),
-        newRetainedMemrefs);
+    auto newDeallocOp =
+        DeallocOp::create(rewriter, deallocOp.getLoc(), deallocOp.getMemrefs(),
+                          deallocOp.getConditions(), newRetainedMemrefs);
     int i = 0;
     for (auto &repl : replacements) {
       if (!repl)
@@ -310,15 +315,39 @@ struct SplitDeallocWhenNotAliasingAnyOther
     if (deallocOp.getMemrefs().size() <= 1)
       return failure();
 
+    // Fast path: when every operand is an alloc (or a chain of view-like
+    // operations rooted in an alloc), two operands may alias only when their
+    // allocation roots are identical. This avoids quadratic pairwise checks.
+    // Unknown origins retain the original conservative analysis below.
+    SmallVector<Value> knownRoots;
+    knownRoots.reserve(deallocOp.getMemrefs().size());
+    llvm::DenseMap<Value, int64_t> rootUseCount;
+    bool allRootsKnown = true;
+    for (Value memref : deallocOp.getMemrefs()) {
+      Value root = getViewBase(memref);
+      if (!root.getDefiningOp<memref::AllocOp>()) {
+        allRootsKnown = false;
+        break;
+      }
+      knownRoots.push_back(root);
+      ++rootUseCount[root];
+    }
+
     SmallVector<Value> remainingMemrefs, remainingConditions;
     SmallVector<SmallVector<Value>> updatedConditions;
     for (int64_t i = 0, e = deallocOp.getMemrefs().size(); i < e; ++i) {
       Value memref = deallocOp.getMemrefs()[i];
       Value cond = deallocOp.getConditions()[i];
-      SmallVector<Value> otherMemrefs(deallocOp.getMemrefs());
-      otherMemrefs.erase(otherMemrefs.begin() + i);
-      // Check if `memref` can split off into a separate bufferization.dealloc.
-      if (potentiallyAliasesMemref(analysis, otherMemrefs, memref)) {
+      bool mayAlias;
+      if (allRootsKnown) {
+        mayAlias = rootUseCount.lookup(knownRoots[i]) > 1;
+      } else {
+        SmallVector<Value> otherMemrefs(deallocOp.getMemrefs());
+        otherMemrefs.erase(otherMemrefs.begin() + i);
+        mayAlias = potentiallyAliasesMemref(analysis, otherMemrefs, memref);
+      }
+      // Check if memref can split off into a separate bufferization.dealloc.
+      if (mayAlias) {
         // `memref` alias with other memrefs, do not split off.
         remainingMemrefs.push_back(memref);
         remainingConditions.push_back(cond);
@@ -326,8 +355,8 @@ struct SplitDeallocWhenNotAliasingAnyOther
       }
 
       // Create new bufferization.dealloc op for `memref`.
-      auto newDeallocOp = rewriter.create<DeallocOp>(loc, memref, cond,
-                                                     deallocOp.getRetained());
+      auto newDeallocOp = DeallocOp::create(rewriter, loc, memref, cond,
+                                            deallocOp.getRetained());
       updatedConditions.push_back(
           llvm::to_vector(ValueRange(newDeallocOp.getUpdatedConditions())));
     }
@@ -337,8 +366,9 @@ struct SplitDeallocWhenNotAliasingAnyOther
       return failure();
 
     // Create bufferization.dealloc op for all remaining memrefs.
-    auto newDeallocOp = rewriter.create<DeallocOp>(
-        loc, remainingMemrefs, remainingConditions, deallocOp.getRetained());
+    auto newDeallocOp =
+        DeallocOp::create(rewriter, loc, remainingMemrefs, remainingConditions,
+                          deallocOp.getRetained());
 
     // Bit-or all conditions.
     SmallVector<Value> replacements =
@@ -347,8 +377,8 @@ struct SplitDeallocWhenNotAliasingAnyOther
       assert(replacements.size() == additionalConditions.size() &&
              "expected same number of updated conditions");
       for (int64_t i = 0, e = replacements.size(); i < e; ++i) {
-        replacements[i] = rewriter.create<arith::OrIOp>(
-            loc, replacements[i], additionalConditions[i]);
+        replacements[i] = arith::OrIOp::create(rewriter, loc, replacements[i],
+                                               additionalConditions[i]);
       }
     }
     rewriter.replaceOp(deallocOp, replacements);
@@ -464,12 +494,24 @@ struct BufferDeallocationSimplificationPass
                  RetainedMemrefAliasingAlwaysDeallocatedMemref>(&getContext(),
                                                                 analysis);
 
-    populateDeallocOpCanonicalizationPatterns(patterns, &getContext());
     // We don't want that the block structure changes invalidating the
     // `BufferOriginAnalysis` so we apply the rewrites with `Normal` level of
-    // region simplification
+    // region simplification and disable folding.
     if (failed(applyPatternsGreedily(
             getOperation(), std::move(patterns),
+            GreedyRewriteConfig()
+                .setRegionSimplificationLevel(GreedySimplifyRegionLevel::Normal)
+                .enableFolding(false))))
+      signalPassFailure();
+
+    // We run canonicalization separately so it can benefit from
+    // folding, which was disabled previously to avoid invalidating
+    // `BufferOriginAnalysis`.
+    RewritePatternSet canonicalizationPatterns(&getContext());
+    populateDeallocOpCanonicalizationPatterns(canonicalizationPatterns,
+                                              &getContext());
+    if (failed(applyPatternsGreedily(
+            getOperation(), std::move(canonicalizationPatterns),
             GreedyRewriteConfig().setRegionSimplificationLevel(
                 GreedySimplifyRegionLevel::Normal))))
       signalPassFailure();

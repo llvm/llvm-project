@@ -1,3 +1,6 @@
+// Most likely platform specific sed differences
+// UNSUPPORTED: system-windows
+
 // This test verifies modules that are entirely comprised from stable directory inputs are captured in
 // dependency information.
 
@@ -5,14 +8,15 @@
 // The second compilation verifies that external paths are resolved when a 
 // vfsoverlay for determining is-in-stable-directories.
 
-// REQUIRES: shell
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/compile-commands.json.in > %t/compile-commands.json
 // RUN: sed -e "s|DIR|%/t|g" %t/overlay.json.template > %t/overlay.json
 // RUN: clang-scan-deps -compilation-database %t/compile-commands.json \
 // RUN:   -j 1 -format experimental-full > %t/deps.db
-// RUN: cat %t/deps.db | sed 's:\\\\\?:/:g' | FileCheck %s -DPREFIX=%/t
+// RUN: cat %t/deps.db | sed 's:\\\\\?:/:g' \
+// RUN:   | %scan-deps-filter --fields=modules.is-in-stable-directories,modules.name,modules.command-line \
+// RUN:   | FileCheck %s -DPREFIX=%/t
 
 // CHECK:   "modules": [
 // CHECK-NEXT:     {

@@ -1,3 +1,4 @@
+
 // RUN: %clang --target=riscv32-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-unknown-elf -### %s -fsyntax-only 2>&1 | FileCheck %s
 // RUN: %clang --target=riscv64-linux-android -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ANDROID,DEFAULT,FAST-SCALAR-UNALIGNED-ACCESS,FAST-VECTOR-UNALIGNED-ACCESS
@@ -47,6 +48,13 @@
 // FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "+unaligned-vector-mem"
 // NO-FAST-VECTOR-UNALIGNED-ACCESS: "-target-feature" "-unaligned-vector-mem"
 
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mfix-sifive-mal-9174 2>&1 | FileCheck %s -check-prefix=FIX-SIFIVE-MAL-9174
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-fix-sifive-mal-9174 2>&1 | FileCheck %s -check-prefix=NO-FIX-SIFIVE-MAL-9174
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mfix-sifive-mal-9191 2>&1 | FileCheck %s -check-prefix=FIX-SIFIVE-MAL-9174
+// RUN: %clang --target=riscv32-unknown-elf -### %s -mno-fix-sifive-mal-9191 2>&1 | FileCheck %s -check-prefix=NO-FIX-SIFIVE-MAL-9174
+// FIX-SIFIVE-MAL-9174: "-target-feature" "+fix-sifive-mal-9174"
+// NO-FIX-SIFIVE-MAL-9174: "-target-feature" "-fix-sifive-mal-9174"
+
 // RUN: %clang --target=riscv32-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
 // RUN: %clang --target=riscv32-unknown-elf -fasynchronous-unwind-tables -### %s 2>&1 | FileCheck %s -check-prefix=UWTABLE
 // RUN: %clang --target=riscv64-unknown-elf -### %s 2>&1 | FileCheck %s -check-prefix=NOUWTABLE
@@ -67,13 +75,6 @@
 // DEFAULT-LINUX-SAME: "-target-feature" "+d"
 // DEFAULT-LINUX-SAME: "-target-feature" "+c"
 
-// RUN: not %clang -c --target=riscv64-linux-gnu -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-DWARF
-// RUN: not %clang -c --target=riscv64 -gsplit-dwarf=single %s 2>&1 | FileCheck %s --check-prefix=ERR-SPLIT-DWARF
-// RUN: %clang -### -c --target=riscv64 -mno-relax -g -gsplit-dwarf %s 2>&1 | FileCheck %s --check-prefix=SPLIT-DWARF
-
-// ERR-SPLIT-DWARF: error: -gsplit-dwarf{{.*}} is unsupported with RISC-V linker relaxation (-mrelax)
-// SPLIT-DWARF:     "-split-dwarf-file"
-
 // RUN: %clang -mabi=lp64d --target=riscv64-unknown-fuchsia -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=FUCHSIA
 // FUCHSIA: "-target-feature" "+m"
 // FUCHSIA-SAME: "-target-feature" "+a"
@@ -85,3 +86,14 @@
 // FUCHSIA-SAME: "-target-feature" "+zbb"
 // FUCHSIA-SAME: "-target-feature" "+zbs"
 
+
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv32i %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVI
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv64i %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVI
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv32e %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVE
+// RUN: %clang --target=riscv32-unknown-elf -### -march=rv64e %s -fsyntax-only 2>&1 | FileCheck %s -check-prefix=RVE
+
+// RVI: "-target-feature" "+i"
+// RVI-SAME: "-target-feature" "-e"
+
+// RVE: "-target-feature" "+e"
+// RVE-SAME: "-target-feature" "-i"

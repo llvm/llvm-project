@@ -15,6 +15,7 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=kryo < %s | FileCheck --check-prefixes=ALIGN2,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=neoverse-e1 < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=neoverse-n1 < %s | FileCheck --check-prefixes=ALIGN4,CHECK %s
+; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=neoverse-v2 < %s | FileCheck --check-prefixes=ALIGN5,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=thunderx < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=thunderxt81 < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
 ; RUN: llc -mtriple=aarch64-unknown-linux -mcpu=thunderxt83 < %s | FileCheck --check-prefixes=ALIGN3,CHECK %s
@@ -29,14 +30,22 @@ define void @test() {
 }
 
 ; CHECK-LABEL: test
-; ALIGN2: .p2align 2
-; ALIGN3: .p2align 3
-; ALIGN4: .p2align 4
-; ALIGN5: .p2align 5
+; CHECK: .p2align 2
+; ALIGN2-NOT: .prefalign
+; ALIGN3-NEXT: .prefalign 3
+; ALIGN4-NEXT: .prefalign 4
+; ALIGN5-NEXT: .prefalign 5
 
 define void @test_optsize() optsize {
   ret void
 }
 
 ; CHECK-LABEL: test_optsize
+; CHECK-NEXT: .p2align 2
+
+define void @test_minsize() minsize {
+  ret void
+}
+
+; CHECK-LABEL: test_minsize
 ; CHECK-NEXT: .p2align 2

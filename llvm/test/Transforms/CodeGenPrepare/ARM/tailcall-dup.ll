@@ -4,8 +4,8 @@ target triple = "armv8m.main-none-eabi"
 
 declare ptr @f0()
 declare ptr @f1()
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind
 
 define ptr @tail_dup() {
 ; CHECK-LABEL: tail_dup
@@ -15,7 +15,7 @@ define ptr @tail_dup() {
 ; CHECK-NEXT: ret ptr
 bb0:
   %a = alloca i32
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %a) nounwind
+  call void @llvm.lifetime.start.p0(ptr %a) nounwind
   %tmp0 = tail call ptr @f0()
   br label %return
 bb1:
@@ -23,7 +23,7 @@ bb1:
   br label %return
 return:
   %retval = phi ptr [ %tmp0, %bb0 ], [ %tmp1, %bb1 ]
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %a) nounwind
+  call void @llvm.lifetime.end.p0(ptr %a) nounwind
   ret ptr %retval
 }
 

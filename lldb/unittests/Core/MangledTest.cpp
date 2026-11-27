@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
+#include "Plugins/Language/D/DLanguage.h"
+#include "Plugins/Language/Rust/RustLanguage.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/SubsystemRAII.h"
@@ -19,6 +22,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -52,6 +56,7 @@ struct TrackingOutputBufferDeleter {
 };
 
 TEST(MangledTest, ResultForValidName) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   ConstString MangledName("_ZN1a1b1cIiiiEEvm");
   Mangled TheMangled(MangledName);
   ConstString TheDemangled = TheMangled.GetDemangledName();
@@ -61,6 +66,7 @@ TEST(MangledTest, ResultForValidName) {
 }
 
 TEST(MangledTest, ResultForBlockInvocation) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   ConstString MangledName("___Z1fU13block_pointerFviE_block_invoke");
   Mangled TheMangled(MangledName);
   ConstString TheDemangled = TheMangled.GetDemangledName();
@@ -71,6 +77,7 @@ TEST(MangledTest, ResultForBlockInvocation) {
 }
 
 TEST(MangledTest, EmptyForInvalidName) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   ConstString MangledName("_ZN1a1b1cmxktpEEvm");
   Mangled TheMangled(MangledName);
   ConstString TheDemangled = TheMangled.GetDemangledName();
@@ -79,6 +86,7 @@ TEST(MangledTest, EmptyForInvalidName) {
 }
 
 TEST(MangledTest, ResultForValidRustV0Name) {
+  SubsystemRAII<RustLanguage> subsystems;
   ConstString mangled_name("_RNvC1a4main");
   Mangled the_mangled(mangled_name);
   ConstString the_demangled = the_mangled.GetDemangledName();
@@ -88,6 +96,7 @@ TEST(MangledTest, ResultForValidRustV0Name) {
 }
 
 TEST(MangledTest, EmptyForInvalidRustV0Name) {
+  SubsystemRAII<RustLanguage> subsystems;
   ConstString mangled_name("_RRR");
   Mangled the_mangled(mangled_name);
   ConstString the_demangled = the_mangled.GetDemangledName();
@@ -96,6 +105,7 @@ TEST(MangledTest, EmptyForInvalidRustV0Name) {
 }
 
 TEST(MangledTest, ResultForValidDLangName) {
+  SubsystemRAII<DLanguage> subsystems;
   ConstString mangled_name("_Dmain");
   Mangled the_mangled(mangled_name);
   ConstString the_demangled = the_mangled.GetDemangledName();
@@ -112,22 +122,51 @@ TEST(MangledTest, SameForInvalidDLangPrefixedName) {
   EXPECT_STREQ("_DDD", the_demangled.GetCString());
 }
 
-TEST(MangledTest, RecognizeSwiftMangledNames) {
-  llvm::StringRef valid_swift_mangled_names[] = {
-      "_TtC4main7MyClass",   // Mangled objc class name
-      "_TtP4main3Foo_",      // Mangld objc protocol name
-      "$s4main3BarCACycfC",  // Mangled name
-      "_$s4main3BarCACycfC", // Mangled name with leading underscore
-      "$S4main3BarCACycfC",  // Older swift mangled name
-      "_$S4main3BarCACycfC", // Older swift mangled name
-                             // with leading underscore
-      // Mangled swift filename
-      "@__swiftmacro_4main16FunVariableNames9OptionSetfMm_.swift",
-  };
+TEST(MangledTest, RegisterManglingScheme) {
+  Mangled::ManglingScheme scheme = Mangled::RegisterManglingScheme(
+      {"$test1_", "$test2_"}, eLanguageTypeAda83);
+  ASSERT_NE(scheme, Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test1_foo"), scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test2_foo"), scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test3_foo"),
+            Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetLanguageForManglingScheme(scheme), eLanguageTypeAda83);
+  EXPECT_EQ(Mangled("$test1_foo").GetMangledName(), ConstString("$test1_foo"));
 
-  for (llvm::StringRef mangled : valid_swift_mangled_names)
-    EXPECT_EQ(Mangled::GetManglingScheme(mangled),
-              Mangled::eManglingSchemeSwift);
+  // Registering the scheme again, as a plugin that is initialized again would,
+  // returns the same scheme.
+  EXPECT_EQ(Mangled::RegisterManglingScheme({"$test1_", "$test2_"},
+                                            eLanguageTypeAda83),
+            scheme);
+
+  Mangled::UnregisterManglingScheme(scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test1_foo"),
+            Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled("$test1_foo").GetDemangledName(),
+            ConstString("$test1_foo"));
+
+  // Registering it again after unregistering it, as a plugin that is
+  // terminated and initialized again would, reactivates the same scheme.
+  EXPECT_EQ(Mangled::RegisterManglingScheme({"$test1_", "$test2_"},
+                                            eLanguageTypeAda83),
+            scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test1_foo"), scheme);
+  Mangled::UnregisterManglingScheme(scheme);
+}
+
+TEST(MangledTest, RegisterManglingSchemeWithMatcher) {
+  Mangled::ManglingScheme scheme = Mangled::RegisterManglingScheme(
+      {"$test4_"}, eLanguageTypeAda83, [](llvm::StringRef name) {
+        return name.consume_front("$test4_") && !name.empty() &&
+               llvm::isDigit(name.front());
+      });
+  ASSERT_NE(scheme, Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test4_1foo"), scheme);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test4_foo"),
+            Mangled::eManglingSchemeNone);
+  EXPECT_EQ(Mangled::GetManglingScheme("$test4_"),
+            Mangled::eManglingSchemeNone);
+  Mangled::UnregisterManglingScheme(scheme);
 }
 
 TEST(MangledTest, BoolConversionOperator) {
@@ -151,7 +190,8 @@ TEST(MangledTest, BoolConversionOperator) {
 }
 
 TEST(MangledTest, NameIndexes_FindFunctionSymbols) {
-  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab>
+  SubsystemRAII<FileSystem, HostInfo, ObjectFileELF, SymbolFileSymtab,
+                CPlusPlusLanguage>
       subsystems;
 
   auto ExpectedFile = TestFile::fromYaml(R"(
@@ -351,76 +391,188 @@ static bool NameInfoEquals(const DemangledNameInfo &lhs,
                   rhs.QualifiersRange);
 }
 
-TEST(MangledTest, DemangledNameInfo_SetMangledResets) {
+TEST(MangledTest, DemangledNameInfo_SetMangled) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   Mangled mangled;
-  EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_EQ(mangled.ComputeDemangledInfo(), std::nullopt);
 
   mangled.SetMangledName(ConstString("_Z3foov"));
   ASSERT_TRUE(mangled);
 
-  auto info1 = mangled.GetDemangledInfo();
-  EXPECT_NE(info1, std::nullopt);
+  // Keep a copy of the original demangled info.
+  std::optional<DemangledNameInfo> info1 = mangled.ComputeDemangledInfo();
+  ASSERT_NE(info1, std::nullopt);
   EXPECT_TRUE(info1->hasBasename());
 
   mangled.SetMangledName(ConstString("_Z4funcv"));
 
   // Should have re-calculated demangled-info since mangled name changed.
-  auto info2 = mangled.GetDemangledInfo();
+  std::optional<DemangledNameInfo> info2 = mangled.ComputeDemangledInfo();
   ASSERT_NE(info2, std::nullopt);
   EXPECT_TRUE(info2->hasBasename());
 
-  EXPECT_FALSE(NameInfoEquals(info1.value(), info2.value()));
+  EXPECT_FALSE(NameInfoEquals(*info1, *info2));
   EXPECT_EQ(mangled.GetDemangledName(), "func()");
 }
 
-TEST(MangledTest, DemangledNameInfo_SetDemangledResets) {
+TEST(MangledTest, DemangledNameInfo_SetDemangled) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   Mangled mangled("_Z3foov");
   ASSERT_TRUE(mangled);
+
+  std::optional<DemangledNameInfo> info = mangled.ComputeDemangledInfo();
+  ASSERT_NE(info, std::nullopt);
 
   mangled.SetDemangledName(ConstString(""));
 
-  // Mangled name hasn't changed, so GetDemangledInfo causes re-demangling
-  // of previously set mangled name.
-  EXPECT_NE(mangled.GetDemangledInfo(), std::nullopt);
-  EXPECT_EQ(mangled.GetDemangledName(), "foo()");
+  // The info is computed from the mangled name, which hasn't changed.
+  std::optional<DemangledNameInfo> new_info = mangled.ComputeDemangledInfo();
+  ASSERT_NE(new_info, std::nullopt);
+  EXPECT_TRUE(NameInfoEquals(*new_info, *info));
 }
 
 TEST(MangledTest, DemangledNameInfo_Clear) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   Mangled mangled("_Z3foov");
   ASSERT_TRUE(mangled);
-  EXPECT_NE(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_NE(mangled.ComputeDemangledInfo(), std::nullopt);
 
   mangled.Clear();
 
-  EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_EQ(mangled.ComputeDemangledInfo(), std::nullopt);
 }
 
 TEST(MangledTest, DemangledNameInfo_SetValue) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
   Mangled mangled("_Z4funcv");
   ASSERT_TRUE(mangled);
 
-  auto demangled_func = mangled.GetDemangledInfo();
+  // Keep a copy of the original demangled info.
+  std::optional<DemangledNameInfo> demangled_func =
+      mangled.ComputeDemangledInfo();
+  ASSERT_NE(demangled_func, std::nullopt);
 
-  // SetValue(mangled) resets demangled-info
+  // SetValue(mangled) re-computes demangled-info
   mangled.SetValue(ConstString("_Z3foov"));
-  auto demangled_foo = mangled.GetDemangledInfo();
-  EXPECT_NE(demangled_foo, std::nullopt);
-  EXPECT_FALSE(NameInfoEquals(demangled_foo.value(), demangled_func.value()));
+  std::optional<DemangledNameInfo> demangled_foo =
+      mangled.ComputeDemangledInfo();
+  ASSERT_NE(demangled_foo, std::nullopt);
+  EXPECT_FALSE(NameInfoEquals(*demangled_foo, *demangled_func));
 
-  // SetValue(demangled) resets demangled-info
+  // SetValue(demangled) re-computes demangled-info
   mangled.SetValue(ConstString("_Z4funcv"));
-  EXPECT_TRUE(NameInfoEquals(mangled.GetDemangledInfo().value(),
-                             demangled_func.value()));
+  ASSERT_NE(mangled.ComputeDemangledInfo(), std::nullopt);
+  EXPECT_TRUE(NameInfoEquals(*mangled.ComputeDemangledInfo(), *demangled_func));
 
-  // SetValue(empty) resets demangled-info
+  // SetValue(empty) leaves nothing to compute demangled-info from
   mangled.SetValue(ConstString());
-  EXPECT_EQ(mangled.GetDemangledInfo(), std::nullopt);
+  EXPECT_EQ(mangled.ComputeDemangledInfo(), std::nullopt);
 
   // Demangling invalid mangled name will set demangled-info
   // (without a valid basename).
   mangled.SetValue(ConstString("_Zinvalid"));
-  ASSERT_NE(mangled.GetDemangledInfo(), std::nullopt);
-  EXPECT_FALSE(mangled.GetDemangledInfo()->hasBasename());
+  ASSERT_NE(mangled.ComputeDemangledInfo(), std::nullopt);
+  EXPECT_FALSE(mangled.ComputeDemangledInfo()->hasBasename());
+}
+
+/// Returns the mangled name of the function 'void foo<i>()'.
+static Mangled MakeUniqueFunctionName(unsigned i) {
+  std::string basename = "foo" + std::to_string(i);
+  return Mangled("_Z" + std::to_string(basename.size()) + basename + "v");
+}
+
+TEST(MangledTest, DemangledNameInfoCache_Get) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
+  DemangledNameInfoCache cache;
+
+  Mangled func("_Z4funcv");
+  Mangled foo("_Z3foov");
+
+  std::optional<DemangledNameInfo> func_info = cache.Get(func);
+  ASSERT_NE(func_info, std::nullopt);
+  ASSERT_TRUE(func_info->hasBasename());
+
+  // Repeated lookups (of both the same and a copied object) hand out the same
+  // info.
+  EXPECT_TRUE(NameInfoEquals(*cache.Get(func), *func_info));
+  EXPECT_TRUE(NameInfoEquals(*cache.Get(Mangled("_Z4funcv")), *func_info));
+
+  // Different names get their own info.
+  std::optional<DemangledNameInfo> foo_info = cache.Get(foo);
+  ASSERT_NE(foo_info, std::nullopt);
+  EXPECT_FALSE(NameInfoEquals(*foo_info, *func_info));
+
+  // Names that aren't mangled don't return any name info.
+  Mangled not_mangled("not_mangled");
+  EXPECT_EQ(cache.Get(not_mangled), std::nullopt);
+  EXPECT_EQ(cache.Get(not_mangled), std::nullopt);
+
+  cache.Clear();
+
+  EXPECT_TRUE(NameInfoEquals(*cache.Get(func), *func_info));
+}
+
+TEST(MangledTest, DemangledNameInfoCache_MaxEntries) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
+  DemangledNameInfoCache cache;
+  cache.SetMaxEntries(4);
+
+  std::optional<DemangledNameInfo> expected = cache.Get(Mangled("_Z4funcv"));
+  ASSERT_NE(expected, std::nullopt);
+
+  // Overflow the cache a few times over. It drops entries to stay within its
+  // limit, but never hands out anything but the correct info.
+  for (unsigned i = 0; i < 4 * cache.GetMaxEntries(); ++i) {
+    cache.Get(MakeUniqueFunctionName(i));
+    EXPECT_TRUE(NameInfoEquals(*cache.Get(Mangled("_Z4funcv")), *expected));
+    EXPECT_LE(cache.GetNumEntries(), cache.GetMaxEntries());
+  }
+
+  // Only a single entry is dropped to make room, so a full cache stays full.
+  EXPECT_EQ(cache.GetNumEntries(), cache.GetMaxEntries());
+
+  // Further lookups keep the cache at its limit.
+  cache.Get(Mangled("_Z4funcv"));
+  EXPECT_EQ(cache.GetNumEntries(), cache.GetMaxEntries());
+
+  cache.Clear();
+  EXPECT_EQ(cache.GetNumEntries(), 0u);
+}
+
+TEST(MangledTest, DemangledNameInfoCache_SetMaxEntries) {
+  SubsystemRAII<CPlusPlusLanguage> subsystems;
+  DemangledNameInfoCache cache;
+  cache.SetMaxEntries(4);
+
+  std::optional<DemangledNameInfo> expected = cache.Get(Mangled("_Z4funcv"));
+  ASSERT_NE(expected, std::nullopt);
+
+  cache.SetMaxEntries(8);
+  EXPECT_EQ(cache.GetMaxEntries(), 8u);
+  EXPECT_TRUE(NameInfoEquals(*cache.Get(Mangled("_Z4funcv")), *expected));
+
+  // Fill the cache with 8 unique functions.
+  for (unsigned i = 0; i < 8; ++i) {
+    cache.Get(MakeUniqueFunctionName(i));
+  }
+  EXPECT_EQ(cache.GetNumEntries(), 8u);
+
+  // Growing the limit keeps all entries.
+  cache.SetMaxEntries(16);
+  EXPECT_EQ(cache.GetNumEntries(), 8u);
+
+  // Shrinking the limit below the number of entries clears the cache.
+  cache.SetMaxEntries(2);
+  EXPECT_EQ(cache.GetNumEntries(), 0u);
+  EXPECT_TRUE(NameInfoEquals(*cache.Get(Mangled("_Z4funcv")), *expected));
+
+  // A limit of 0 disables the cache, but lookups still compute the info.
+  cache.SetMaxEntries(0);
+  EXPECT_EQ(cache.GetMaxEntries(), 0u);
+  EXPECT_EQ(cache.GetNumEntries(), 0u);
+  EXPECT_TRUE(NameInfoEquals(*cache.Get(Mangled("_Z4funcv")), *expected));
+  EXPECT_EQ(cache.Get(Mangled("not_mangled")), std::nullopt);
+  EXPECT_EQ(cache.GetNumEntries(), 0u);
 }
 
 struct DemanglingPartsTestCase {
@@ -435,145 +587,215 @@ struct DemanglingPartsTestCase {
 DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
     // clang-format off
    { "_ZNVKO3BarIN2ns3QuxIiEEE1CIPFi3FooIS_IiES6_EEE6methodIS6_EENS5_IT_SC_E5InnerIiEESD_SD_",
-     { /*.BasenameRange=*/{92, 98}, /*.ScopeRange=*/{36, 92}, /*.ArgumentsRange=*/{ 108, 158 },
-       /*.QualifiersRange=*/{158, 176}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{92, 98}, /*.TemplateArgumentsRange=*/{98, 108}, /*.ScopeRange=*/{36, 92},
+       /*.ArgumentsRange=*/{108, 158}, /*.QualifiersRange=*/{158, 176}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"method",
      /*.scope=*/"Bar<ns::Qux<int>>::C<int (*)(Foo<Bar<int>, Bar<int>>)>::",
      /*.qualifiers=*/" const volatile &&"
    },
    { "_Z7getFuncIfEPFiiiET_",
-     { /*.BasenameRange=*/{6, 13}, /*.ScopeRange=*/{6, 6}, /*.ArgumentsRange=*/{ 20, 27 },
-       /*.QualifiersRange=*/{38, 38}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{6, 13}, /*.TemplateArgumentsRange=*/{13, 20}, /*.ScopeRange=*/{6, 6},
+       /*.ArgumentsRange=*/{20, 27}, /*.QualifiersRange=*/{38, 38}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"getFunc",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_ZN1f1b1c1gEv",
-     { /*.BasenameRange=*/{9, 10}, /*.ScopeRange=*/{0, 9}, /*.ArgumentsRange=*/{ 10, 12 },
-       /*.QualifiersRange=*/{12, 12}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{9, 10}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 9},
+       /*.ArgumentsRange=*/{10, 12}, /*.QualifiersRange=*/{12, 12}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"g",
      /*.scope=*/"f::b::c::",
      /*.qualifiers=*/""
    },
    { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bEEEcvT__EES2_",
-     { /*.BasenameRange=*/{45, 48}, /*.ScopeRange=*/{38, 45}, /*.ArgumentsRange=*/{ 53, 58 },
-       /*.QualifiersRange=*/{58, 58}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{45, 48}, /*.TemplateArgumentsRange=*/{48, 53}, /*.ScopeRange=*/{38, 45},
+       /*.ArgumentsRange=*/{53, 58}, /*.QualifiersRange=*/{58, 58}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fD1",
      /*.scope=*/"test7::",
      /*.qualifiers=*/""
    },
    { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
-     { /*.BasenameRange=*/{61, 64}, /*.ScopeRange=*/{54, 61}, /*.ArgumentsRange=*/{ 69, 79 },
-       /*.QualifiersRange=*/{79, 79}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{61, 64}, /*.TemplateArgumentsRange=*/{64, 69},/*.ScopeRange=*/{54, 61},
+       /*.ArgumentsRange=*/{69, 79}, /*.QualifiersRange=*/{79, 79}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fD1",
      /*.scope=*/"test7::",
      /*.qualifiers=*/""
    },
    { "_ZN5test7INDT1cE1dINDT1cE1dEEEE3fD1INDT1cE1dINDT1cE1dEEEEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
-     { /*.BasenameRange=*/{120, 123}, /*.ScopeRange=*/{81, 120}, /*.ArgumentsRange=*/{ 155, 168 },
-       /*.QualifiersRange=*/{168, 168}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{120, 123}, /*.TemplateArgumentsRange=*/{123, 155}, /*.ScopeRange=*/{81, 120},
+       /*.ArgumentsRange=*/{155, 168}, /*.QualifiersRange=*/{168, 168}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fD1",
      /*.scope=*/"test7<decltype(c)::d<decltype(c)::d>>::",
      /*.qualifiers=*/""
    },
    { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvE5parseIRA29_KcEESE_OT_NS2_8functionIFbiNS0_6detail13parse_event_tERSE_EEEbb",
-     { /*.BasenameRange=*/{687, 692}, /*.ScopeRange=*/{343, 687}, /*.ArgumentsRange=*/{ 713, 1174 },
-       /*.QualifiersRange=*/{1174, 1174}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{687, 692}, /*.TemplateArgumentsRange=*/{692, 713}, /*.ScopeRange=*/{343, 687},
+       /*.ArgumentsRange=*/{713, 1174}, /*.QualifiersRange=*/{1174, 1174}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"parse",
      /*.scope=*/"nlohmann::json_abi_v3_11_3::basic_json<std::__1::map, std::__1::vector, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, bool, long long, unsigned long long, double, std::__1::allocator, nlohmann::json_abi_v3_11_3::adl_serializer, std::__1::vector<unsigned char, std::__1::allocator<unsigned char>>, void>::",
      /*.qualifiers=*/""
    },
    { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvEC1EDn",
-     { /*.BasenameRange=*/{344, 354}, /*.ScopeRange=*/{0, 344}, /*.ArgumentsRange=*/{ 354, 370 },
-       /*.QualifiersRange=*/{370, 370}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{344, 354}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 344},
+       /*.ArgumentsRange=*/{354, 370}, /*.QualifiersRange=*/{370, 370}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"basic_json",
      /*.scope=*/"nlohmann::json_abi_v3_11_3::basic_json<std::__1::map, std::__1::vector, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, bool, long long, unsigned long long, double, std::__1::allocator, nlohmann::json_abi_v3_11_3::adl_serializer, std::__1::vector<unsigned char, std::__1::allocator<unsigned char>>, void>::",
      /*.qualifiers=*/""
    },
    { "_Z3fppIiEPFPFvvEiEf",
-     { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 },
-      /*.QualifiersRange=*/{34,34}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{10, 13}, /*.TemplateArgumentsRange=*/{13, 18}, /*.ScopeRange=*/{10, 10},
+      /*.ArgumentsRange=*/{18, 25}, /*.QualifiersRange=*/{34,34}, /*.NameQualifiersRange=*/{0, 0},
+      /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_Z3fppIiEPFPFvvEN2ns3FooIiEEEf",
-     { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 },
-       /*.QualifiersRange=*/{43, 43}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{10, 13}, /*.TemplateArgumentsRange=*/{13, 18}, /*.ScopeRange=*/{10, 10},
+       /*.ArgumentsRange=*/{18, 25}, /*.QualifiersRange=*/{43, 43}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_Z3fppIiEPFPFvPFN2ns3FooIiEENS2_3BarIfE3QuxEEEPFS2_S2_EEf",
-     { /*.BasenameRange=*/{10, 13}, /*.ScopeRange=*/{10, 10}, /*.ArgumentsRange=*/{ 18, 25 },
-       /*.QualifiersRange=*/{108, 108}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{10, 13}, /*.TemplateArgumentsRange=*/{13, 18}, /*.ScopeRange=*/{10, 10},
+       /*.ArgumentsRange=*/{18, 25}, /*.QualifiersRange=*/{108, 108}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"",
      /*.qualifiers=*/""
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvEiEf",
-     { /*.BasenameRange=*/{64, 67}, /*.ScopeRange=*/{10, 64}, /*.ArgumentsRange=*/{ 72, 79 },
-       /*.QualifiersRange=*/{88, 88}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{64, 67}, /*.TemplateArgumentsRange=*/{67, 72}, /*.ScopeRange=*/{10, 64},
+       /*.ArgumentsRange=*/{72, 79}, /*.QualifiersRange=*/{88, 88}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::",
      /*.qualifiers=*/""
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvES2_Ef",
-     { /*.BasenameRange=*/{64, 67}, /*.ScopeRange=*/{10, 64}, /*.ArgumentsRange=*/{ 72, 79 },
-       /*.QualifiersRange=*/{97, 97}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{64, 67}, /*.TemplateArgumentsRange=*/{67, 72}, /*.ScopeRange=*/{10, 64},
+       /*.ArgumentsRange=*/{72, 79}, /*.QualifiersRange=*/{97, 97}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::",
      /*.qualifiers=*/"",
    },
    { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvPFS2_S5_EEPFS2_S2_EEf",
-     { /*.BasenameRange=*/{64, 67}, /*.ScopeRange=*/{10, 64}, /*.ArgumentsRange=*/{ 72, 79 },
-       /*.QualifiersRange=*/{162, 162}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{64, 67}, /*.TemplateArgumentsRange=*/{67, 72}, /*.ScopeRange=*/{10, 64},
+       /*.ArgumentsRange=*/{72, 79}, /*.QualifiersRange=*/{162, 162}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"fpp",
      /*.scope=*/"ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::",
      /*.qualifiers=*/"",
    },
    { "_ZNKO2ns3ns23Bar3fooIiEEPFPFNS0_3FooIiEEiENS3_IfEEEi",
-     { /*.BasenameRange=*/{37, 40}, /*.ScopeRange=*/{23, 37}, /*.ArgumentsRange=*/{ 45, 50 },
-       /*.QualifiersRange=*/{78, 87}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{37, 40}, /*.TemplateArgumentsRange=*/{40, 45}, /*.ScopeRange=*/{23, 37},
+       /*.ArgumentsRange=*/{45, 50}, /*.QualifiersRange=*/{78, 87}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"foo",
      /*.scope=*/"ns::ns2::Bar::",
      /*.qualifiers=*/" const &&",
    },
    { "_ZTV11ImageLoader",
-     { /*.BasenameRange=*/{0, 0}, /*.ScopeRange=*/{0, 0}, /*.ArgumentsRange=*/{ 0, 0 },
-       /*.QualifiersRange=*/{0, 0}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{0, 0}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 0},
+       /*.ArgumentsRange=*/{0, 0}, /*.QualifiersRange=*/{0, 0}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"",
      /*.scope=*/"",
      /*.qualifiers=*/"",
      /*.valid_basename=*/false
    },
    { "___ZNK5dyld313MachOAnalyzer18forEachInitializerER11DiagnosticsRKNS0_15VMAddrConverterEU13block_pointerFvjEPKv_block_invoke.204",
-     { /*.BasenameRange=*/{55, 73}, /*.ScopeRange=*/{33, 55}, /*.ArgumentsRange=*/{ 73, 181 },
-       /*.QualifiersRange=*/{181, 187}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{55, 73}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{33, 55},
+       /*.ArgumentsRange=*/{73, 181}, /*.QualifiersRange=*/{181, 187}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"forEachInitializer",
      /*.scope=*/"dyld3::MachOAnalyzer::",
      /*.qualifiers=*/" const",
    },
    { "_ZZN5dyld45startEPNS_10KernelArgsEPvS2_ENK3$_1clEv",
-     { /*.BasenameRange=*/{53, 63}, /*.ScopeRange=*/{0, 53}, /*.ArgumentsRange=*/{ 63, 65 },
-       /*.QualifiersRange=*/{65, 71}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{53, 63}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 53},
+       /*.ArgumentsRange=*/{63, 65}, /*.QualifiersRange=*/{65, 71}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::start(dyld4::KernelArgs*, void*, void*)::$_1::",
      /*.qualifiers=*/" const",
    },
    { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv",
-     { /*.BasenameRange=*/{88, 98}, /*.ScopeRange=*/{0, 88}, /*.ArgumentsRange=*/{ 98, 100 },
-       /*.QualifiersRange=*/{100, 106}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{88, 98}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 88},
+       /*.ArgumentsRange=*/{98, 100}, /*.QualifiersRange=*/{100, 106}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
      /*.qualifiers=*/" const",
    },
    { "_ZZNK5dyld46Loader38runInitializersBottomUpPlusUpwardLinksERNS_12RuntimeStateEENK3$_0clEv.cold",
-     { /*.BasenameRange=*/{88, 98}, /*.ScopeRange=*/{0, 88}, /*.ArgumentsRange=*/{ 98, 100 },
-       /*.QualifiersRange=*/{100, 106}, /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0} },
+     {
+       /*.BasenameRange=*/{88, 98}, /*.TemplateArgumentsRange=*/{0, 0}, /*.ScopeRange=*/{0, 88},
+       /*.ArgumentsRange=*/{98, 100}, /*.QualifiersRange=*/{100, 106}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
      /*.qualifiers=*/" const",
+   },
+   {"_Z4funcILN3foo4EnumE1EEvv",
+     {
+       /*.BasenameRange=*/{5, 9}, /*.TemplateArgumentsRange=*/{9, 23}, /*.ScopeRange=*/{5, 5},
+       /*.ArgumentsRange=*/{23, 25}, /*.QualifiersRange=*/{25, 25}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
+     /*.basename=*/"func",
+     /*.scope=*/"",
+     /*.qualifiers=*/"",
    }
     // clang-format on
 };
@@ -617,11 +839,12 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
   auto demangled = std::string_view(*OB);
 
   ASSERT_EQ(OB->NameInfo.hasBasename(), valid_basename);
-
   EXPECT_EQ(OB->NameInfo.BasenameRange, info.BasenameRange);
+  EXPECT_EQ(OB->NameInfo.TemplateArgumentsRange, info.TemplateArgumentsRange);
   EXPECT_EQ(OB->NameInfo.ScopeRange, info.ScopeRange);
   EXPECT_EQ(OB->NameInfo.ArgumentsRange, info.ArgumentsRange);
   EXPECT_EQ(OB->NameInfo.QualifiersRange, info.QualifiersRange);
+  EXPECT_EQ(OB->NameInfo.NameQualifiersRange, info.NameQualifiersRange);
 
   auto get_part = [&](const std::pair<size_t, size_t> &loc) {
     return demangled.substr(loc.first, loc.second - loc.first);
@@ -635,6 +858,125 @@ TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
 INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
                          ::testing::ValuesIn(g_demangling_parts_test_cases));
 
+struct DemangledNameInfoTestCase {
+  DemangledNameInfo expected_info;
+  bool valid_basename;
+  bool valid_template;
+  bool valid_scope;
+  bool valid_arguments;
+  bool valid_qualifiers;
+  bool valid_name_qualifiers;
+  bool valid_prefix;
+  bool valid_suffix;
+};
+
+DemangledNameInfoTestCase g_demangled_name_info_test_cases[] = {
+    // clang-format off
+  {
+    {
+      /*.BasenameRange=*/{0, 10}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+    },
+    /*valid_basename=*/true, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{0, 10}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+    },
+    /*valid_basename=*/false, /*valid_name_qualifiers=*/true, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{0, 10},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+    },
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/true,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{0, 10}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+    },
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/true, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{0, 10}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+    },
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/true, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{0, 10},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{1, 0}
+    },
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/true,
+    /*valid_prefix=*/false, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{0, 10}, /*.SuffixRange=*/{1, 0}
+    },
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/true, /*valid_suffix=*/false,
+  },
+  {
+    {
+      /*.BasenameRange=*/{1, 0}, /*.TemplateArgumentsRange=*/{1, 0}, /*.ScopeRange=*/{1, 0},
+      /*.ArgumentsRange=*/{1, 0}, /*.QualifiersRange=*/{1, 0}, /*.NameQualifiersRange=*/{1, 0},
+      /*.PrefixRange=*/{1, 0}, /*.SuffixRange=*/{0, 10}
+    },
+    /*valid_basename=*/false, /*valid_template=*/false, /*valid_scope=*/false,
+    /*valid_arguments=*/false, /*valid_qualifiers=*/false, /*valid_name_qualifiers=*/false,
+    /*valid_prefix=*/false, /*valid_suffix=*/true,
+  },
+    // clang-format on
+};
+
+struct DemangledNameInfoTestFixture
+    : public ::testing::TestWithParam<DemangledNameInfoTestCase> {};
+
+TEST_P(DemangledNameInfoTestFixture, DemangledNameInfoRanges) {
+  const auto &[info, valid_basename, valid_template_arguments, valid_scope,
+               valid_arguments, valid_qualifiers, valid_name_qualifiers,
+               valid_prefix, valid_suffix] = GetParam();
+
+  ASSERT_EQ(info.hasBasename(), valid_basename);
+  ASSERT_EQ(info.hasTemplateArguments(), valid_template_arguments);
+  ASSERT_EQ(info.hasScope(), valid_scope);
+  ASSERT_EQ(info.hasArguments(), valid_arguments);
+  ASSERT_EQ(info.hasQualifiers(), valid_qualifiers);
+  ASSERT_EQ(info.hasNameQualifiers(), valid_name_qualifiers);
+  ASSERT_EQ(info.hasPrefix(), valid_prefix);
+  ASSERT_EQ(info.hasSuffix(), valid_suffix);
+}
+
+INSTANTIATE_TEST_SUITE_P(DemangledNameInfoRangesTests,
+                         DemangledNameInfoTestFixture,
+                         ::testing::ValuesIn(g_demangled_name_info_test_cases));
+
 struct DemanglingInfoCorrectnessTestCase {
   const char *mangled;
   const char *demangled;
@@ -644,57 +986,78 @@ DemanglingInfoCorrectnessTestCase g_demangling_correctness_test_cases[] = {
 #include "llvm/Testing/Demangle/DemangleTestCases.inc"
 };
 
-struct DemanglingInfoCorrectnessTestFixutre
-    : public ::testing::TestWithParam<DemanglingInfoCorrectnessTestCase> {};
+TEST(MangledTest, DemanglingInfoCorrectness) {
+  for (const auto &[mangled, demangled] : g_demangling_correctness_test_cases) {
+    SCOPED_TRACE(mangled);
 
-TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
-  auto [mangled, demangled] = GetParam();
+    llvm::itanium_demangle::ManglingParser<TestAllocator> Parser(
+        mangled, mangled + ::strlen(mangled));
 
-  llvm::itanium_demangle::ManglingParser<TestAllocator> Parser(
-      mangled, mangled + ::strlen(mangled));
+    const auto *Root = Parser.parse();
 
-  const auto *Root = Parser.parse();
+    EXPECT_NE(nullptr, Root);
+    if (!Root)
+      continue;
 
-  ASSERT_NE(nullptr, Root);
+    auto OB =
+        std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
+            new TrackingOutputBuffer());
+    Root->print(*OB);
 
-  auto OB = std::unique_ptr<TrackingOutputBuffer, TrackingOutputBufferDeleter>(
-      new TrackingOutputBuffer());
-  Root->print(*OB);
+    // Filter out cases which would never show up in frames. We only care
+    // about function names.
+    if (Root->getKind() !=
+            llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
+        Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
+      continue;
 
-  // Filter out cases which would never show up in frames. We only care about
-  // function names.
-  if (Root->getKind() !=
-          llvm::itanium_demangle::Node::Kind::KFunctionEncoding &&
-      Root->getKind() != llvm::itanium_demangle::Node::Kind::KDotSuffix)
-    return;
+    EXPECT_TRUE(OB->NameInfo.hasBasename());
+    if (!OB->NameInfo.hasBasename())
+      continue;
 
-  ASSERT_TRUE(OB->NameInfo.hasBasename());
+    auto tracked_name = llvm::StringRef(*OB);
 
-  auto tracked_name = llvm::StringRef(*OB);
+    std::string reconstructed_name;
 
-  auto return_left = tracked_name.slice(0, OB->NameInfo.ScopeRange.first);
-  auto scope = tracked_name.slice(OB->NameInfo.ScopeRange.first,
-                                  OB->NameInfo.ScopeRange.second);
-  auto basename = tracked_name.slice(OB->NameInfo.BasenameRange.first,
-                                     OB->NameInfo.BasenameRange.second);
-  auto template_args = tracked_name.slice(OB->NameInfo.BasenameRange.second,
-                                          OB->NameInfo.ArgumentsRange.first);
-  auto args = tracked_name.slice(OB->NameInfo.ArgumentsRange.first,
-                                 OB->NameInfo.ArgumentsRange.second);
-  auto return_right = tracked_name.slice(OB->NameInfo.ArgumentsRange.second,
-                                         OB->NameInfo.QualifiersRange.first);
-  auto qualifiers = tracked_name.slice(OB->NameInfo.QualifiersRange.first,
-                                       OB->NameInfo.QualifiersRange.second);
-  auto suffix = tracked_name.slice(OB->NameInfo.QualifiersRange.second,
-                                   llvm::StringRef::npos);
+    auto return_left = CPlusPlusLanguage::GetDemangledReturnTypeLHS(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(return_left, llvm::Succeeded());
+    reconstructed_name += *return_left;
 
-  auto reconstructed_name =
-      llvm::join_items("", return_left, scope, basename, template_args, args,
-                       return_right, qualifiers, suffix);
+    auto scope =
+        CPlusPlusLanguage::GetDemangledScope(tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(scope, llvm::Succeeded());
+    reconstructed_name += *scope;
 
-  EXPECT_EQ(reconstructed_name, demangled);
+    auto basename =
+        CPlusPlusLanguage::GetDemangledBasename(tracked_name, OB->NameInfo);
+    reconstructed_name += basename;
+
+    auto template_args = CPlusPlusLanguage::GetDemangledTemplateArguments(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(template_args, llvm::Succeeded());
+    reconstructed_name += *template_args;
+
+    auto args = CPlusPlusLanguage::GetDemangledFunctionArguments(tracked_name,
+                                                                 OB->NameInfo);
+    EXPECT_THAT_EXPECTED(args, llvm::Succeeded());
+    reconstructed_name += *args;
+
+    auto return_right = CPlusPlusLanguage::GetDemangledReturnTypeRHS(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(return_right, llvm::Succeeded());
+    reconstructed_name += *return_right;
+
+    auto qualifiers = CPlusPlusLanguage::GetDemangledFunctionQualifiers(
+        tracked_name, OB->NameInfo);
+    EXPECT_THAT_EXPECTED(qualifiers, llvm::Succeeded());
+    reconstructed_name += *qualifiers;
+
+    auto suffix = CPlusPlusLanguage::GetDemangledFunctionSuffix(tracked_name,
+                                                                OB->NameInfo);
+    EXPECT_THAT_EXPECTED(suffix, llvm::Succeeded());
+    reconstructed_name += *suffix;
+
+    EXPECT_EQ(reconstructed_name, demangled);
+  }
 }
-
-INSTANTIATE_TEST_SUITE_P(
-    DemanglingInfoCorrectnessTests, DemanglingInfoCorrectnessTestFixutre,
-    ::testing::ValuesIn(g_demangling_correctness_test_cases));

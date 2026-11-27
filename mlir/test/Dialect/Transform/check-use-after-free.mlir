@@ -117,7 +117,7 @@ func.func @use_after_free() {
 // precede the one that frees it in the same block. Both operations should
 // be reported as use-after-free.
 func.func @use_after_free_self_cycle() {
-  // expected-note @below {{allocated here}}
+  // expected-note @below @times(2) {{allocated here}}
   %0 = transform.test_produce_self_handle_or_forward_operand : () -> !transform.any_op
   transform.test_transform_op_with_regions {
     "transform.test_branching_transform_op_terminator"() : () -> ()
@@ -131,7 +131,7 @@ func.func @use_after_free_self_cycle() {
     ^bb0(%arg0: !transform.any_op):
     }
     // expected-warning @below {{operand #0 may be used after free}}
-    // expected-note @below {{freed here}}
+    // expected-note @below @times(2) {{freed here}}
     transform.test_consume_operand_of_op_kind_or_fail %0, "transform.test_produce_self_handle_or_forward_operand" : !transform.any_op
     "transform.test_branching_transform_op_terminator"()[^bb1, ^bb2] : () -> ()
   ^bb2:
@@ -188,6 +188,43 @@ module attributes {transform.with_named_sequence} {
     transform.apply_patterns to %0 {
       transform.apply_patterns.memref.extract_address_computations
     } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// collectFreedValues should not crash on ops that don't implement
+// MemoryEffectOpInterface (e.g. pdl ops inside with_pdl_patterns).
+// https://github.com/llvm/llvm-project/issues/120944
+
+// CHECK-LABEL: func @foo
+func.func @foo(%arg0: index, %arg1: index, %arg2: index) {
+  scf.for %i = %arg0 to %arg1 step %arg2 {
+    %0 = arith.constant 0 : i32
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op) {
+    transform.with_pdl_patterns %root : !transform.any_op {
+    ^bb0(%arg0: !transform.any_op):
+      pdl.pattern @match_const : benefit(1) {
+        %0 = pdl.operands
+        %1 = pdl.types
+        %2 = pdl.operation "arith.constant"(%0 : !pdl.range<value>) -> (%1 : !pdl.range<type>)
+        pdl.rewrite %2 with "transform.dialect"
+      }
+      sequence %arg0 : !transform.any_op failures(propagate) {
+      ^bb1(%arg1: !transform.any_op):
+        %0 = transform.pdl_match @match_const in %arg1 : (!transform.any_op) -> !transform.any_op
+        %1 = transform.get_parent_op %0 <op_name = "scf.for"> : (!transform.any_op) -> !transform.any_op
+        alternatives %1 : !transform.any_op {
+        ^bb2(%arg2: !transform.any_op):
+        }
+      }
+    }
     transform.yield
   }
 }

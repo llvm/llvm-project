@@ -16,6 +16,7 @@
 
 #include "CodeGenHwModes.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SortedVectorMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Compiler.h"
@@ -24,14 +25,17 @@
 #include <map>
 #include <string>
 #include <tuple>
-#include <utility>
 
 namespace llvm {
 
+class CodeGenRegBank;
+class CodeGenRegister;
+class CodeGenRegisterClass;
 class Record;
 class raw_ostream;
 
-template <typename InfoT> struct InfoByHwMode;
+template <typename InfoT, typename MapT = std::map<unsigned, InfoT>>
+struct InfoByHwMode;
 
 std::string getModeName(unsigned Mode);
 
@@ -39,8 +43,8 @@ enum : unsigned {
   DefaultMode = CodeGenHwModes::DefaultMode,
 };
 
-template <typename InfoT>
-void union_modes(const InfoByHwMode<InfoT> &A, const InfoByHwMode<InfoT> &B,
+template <typename InfoByHwModeT>
+void union_modes(const InfoByHwModeT &A, const InfoByHwModeT &B,
                  SmallVectorImpl<unsigned> &Modes) {
   auto AI = A.begin();
   auto BI = B.begin();
@@ -84,13 +88,13 @@ void union_modes(const InfoByHwMode<InfoT> &A, const InfoByHwMode<InfoT> &B,
     Modes.push_back(DefaultMode);
 }
 
-template <typename InfoT> struct InfoByHwMode {
-  typedef std::map<unsigned, InfoT> MapType;
-  typedef typename MapType::value_type PairType;
-  typedef typename MapType::iterator iterator;
-  typedef typename MapType::const_iterator const_iterator;
+template <typename InfoT, typename MapT> struct InfoByHwMode {
+  using MapType = MapT;
+  using PairType = typename MapType::value_type;
+  using iterator = typename MapType::iterator;
+  using const_iterator = typename MapType::const_iterator;
 
-  InfoByHwMode() = default;
+  explicit InfoByHwMode(const Record *Def = nullptr) : Def(Def) {};
   InfoByHwMode(const MapType &M) : Map(M) {}
 
   LLVM_ATTRIBUTE_ALWAYS_INLINE
@@ -101,6 +105,8 @@ template <typename InfoT> struct InfoByHwMode {
   const_iterator begin() const { return Map.begin(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   const_iterator end() const { return Map.end(); }
+  LLVM_ATTRIBUTE_ALWAYS_INLINE
+  size_t size() const { return Map.size(); }
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   bool empty() const { return Map.empty(); }
 
@@ -140,15 +146,12 @@ template <typename InfoT> struct InfoByHwMode {
     assert(isSimple());
     return Map.begin()->second;
   }
-  void makeSimple(unsigned Mode) {
-    assert(hasMode(Mode) || hasDefault());
-    InfoT I = get(Mode);
-    Map.clear();
-    Map.try_emplace(DefaultMode, I);
-  }
+
+  const Record *getRecord() const { return Def; }
 
 protected:
   MapType Map;
+  const Record *Def;
 };
 
 struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
@@ -162,7 +165,9 @@ struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
 
   bool isValid() const { return !Map.empty(); }
   MVT getType(unsigned Mode) const { return get(Mode); }
-  MVT &getOrCreateTypeForMode(unsigned Mode, MVT Type);
+  void insertTypeForMode(unsigned Mode, MVT Type) {
+    Map.try_emplace(Mode, Type);
+  }
 
   static StringRef getMVTName(MVT T);
   void writeToStream(raw_ostream &OS) const;
@@ -220,11 +225,11 @@ raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfo &T);
 raw_ostream &operator<<(raw_ostream &OS, const RegSizeInfoByHwMode &T);
 
 struct SubRegRange {
-  uint16_t Size;
-  uint16_t Offset;
+  uint32_t Size;
+  uint32_t Offset;
 
   SubRegRange(const Record *R);
-  SubRegRange(uint16_t Size, uint16_t Offset) : Size(Size), Offset(Offset) {}
+  SubRegRange(uint32_t Size, uint32_t Offset) : Size(Size), Offset(Offset) {}
 };
 
 struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {
@@ -242,6 +247,22 @@ struct SubRegRangeByHwMode : public InfoByHwMode<SubRegRange> {
 struct EncodingInfoByHwMode : public InfoByHwMode<const Record *> {
   EncodingInfoByHwMode(const Record *R, const CodeGenHwModes &CGH);
   EncodingInfoByHwMode() = default;
+};
+
+struct RegClassByHwMode : public InfoByHwMode<const CodeGenRegisterClass *> {
+public:
+  RegClassByHwMode(const Record *R, const CodeGenRegBank &RegBank);
+  RegClassByHwMode() = default;
+};
+
+struct RegisterByHwMode : public InfoByHwMode<const CodeGenRegister *> {
+  RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank);
+  RegisterByHwMode() = default;
+  /// Resolve the register by calling <target>::RegByHwMode::get<name>(HwMode).
+  void emitResolverCall(raw_ostream &OS, const Twine &HwMode) const;
+
+private:
+  StringRef Namespace;
 };
 
 } // namespace llvm

@@ -24,6 +24,7 @@
 namespace llvm {
 
 enum AMXProgModelEnum { None = 0, DirectReg = 1, ManagedRA = 2 };
+enum ACEProgModelEnum { ACE_None = 0, ACE_DirectReg = 1, ACE_ManagedRA = 2 };
 
 class X86MachineFunctionInfo;
 
@@ -36,19 +37,31 @@ template <> struct ScalarEnumerationTraits<AMXProgModelEnum> {
   }
 };
 
+template <> struct ScalarEnumerationTraits<ACEProgModelEnum> {
+  static void enumeration(IO &YamlIO, ACEProgModelEnum &Value) {
+    YamlIO.enumCase(Value, "None", ACEProgModelEnum::ACE_None);
+    YamlIO.enumCase(Value, "DirectReg", ACEProgModelEnum::ACE_DirectReg);
+    YamlIO.enumCase(Value, "ManagedRA", ACEProgModelEnum::ACE_ManagedRA);
+  }
+};
+
 struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   AMXProgModelEnum AMXProgModel;
+  ACEProgModelEnum ACEProgModel;
+  bool HasVAStartSaveXMMRegs = false;
 
   X86MachineFunctionInfo() = default;
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
 
   void mappingImpl(yaml::IO &YamlIO) override;
-  ~X86MachineFunctionInfo() = default;
+  ~X86MachineFunctionInfo() override = default;
 };
 
 template <> struct MappingTraits<X86MachineFunctionInfo> {
   static void mapping(IO &YamlIO, X86MachineFunctionInfo &MFI) {
     YamlIO.mapOptional("amxProgModel", MFI.AMXProgModel);
+    YamlIO.mapOptional("aceProgModel", MFI.ACEProgModel);
+    YamlIO.mapOptional("hasVAStartSaveXMMRegs", MFI.HasVAStartSaveXMMRegs);
   }
 };
 } // end namespace yaml
@@ -120,6 +133,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// of pushes to pass function parameters.
   bool HasPushSequences = false;
 
+  /// True if the function contains a VASTART_SAVE_XMM_REGS pseudo.
+  bool HasVAStartSaveXMMRegs = false;
+
   /// True if the function recovers from an SEH exception, and therefore needs
   /// to spill and restore the frame pointer.
   bool HasSEHFramePtrSave = false;
@@ -130,6 +146,12 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
 
   /// The AMX programing model used in the function.
   AMXProgModelEnum AMXProgModel = AMXProgModelEnum::None;
+
+  /// The ACE programming model used in the function.
+  ACEProgModelEnum ACEProgModel = ACEProgModelEnum::ACE_None;
+
+  /// True once a function using both ACE programming models has been reported.
+  bool ReportedACEProgModelMix = false;
 
   /// True if this function has a subset of CSRs that is handled explicitly via
   /// copies.
@@ -148,9 +170,6 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// addr]. If so, bit 60 of the in-memory frame pointer will be 1 to enable
   /// other tools to detect the extended record.
   bool HasSwiftAsyncContext = false;
-
-  /// Adjust stack for push2/pop2
-  bool PadForPush2Pop2 = false;
 
   /// Candidate registers for push2/pop2
   std::set<Register> CandidatesForPush2Pop2;
@@ -200,6 +219,9 @@ public:
   bool getHasPushSequences() const { return HasPushSequences; }
   void setHasPushSequences(bool HasPush) { HasPushSequences = HasPush; }
 
+  bool getHasVAStartSaveXMMRegs() const { return HasVAStartSaveXMMRegs; }
+  void setHasVAStartSaveXMMRegs(bool Has) { HasVAStartSaveXMMRegs = Has; }
+
   bool getRestoreBasePointer() const { return RestoreBasePointerOffset!=0; }
   void setRestoreBasePointer(const MachineFunction *MF);
   void setRestoreBasePointer(unsigned CalleeSavedFrameSize) {
@@ -211,9 +233,7 @@ public:
   const DenseMap<int, unsigned>& getWinEHXMMSlotInfo() const {
     return WinEHXMMSlotInfo; }
 
-  unsigned getCalleeSavedFrameSize() const {
-    return CalleeSavedFrameSize + 8 * padForPush2Pop2();
-  }
+  unsigned getCalleeSavedFrameSize() const { return CalleeSavedFrameSize; }
   void setCalleeSavedFrameSize(unsigned bytes) { CalleeSavedFrameSize = bytes; }
 
   unsigned getBytesToPopOnReturn() const { return BytesToPopOnReturn; }
@@ -265,6 +285,11 @@ public:
     AMXProgModel = Model;
   }
 
+  ACEProgModelEnum getACEProgModel() const { return ACEProgModel; }
+  /// Record the ACE programming model of \p MF, reporting an error if it
+  /// already uses the other one.
+  void setACEProgModel(const MachineFunction *MF, ACEProgModelEnum Model);
+
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
     return ForwardedMustTailRegParms;
   }
@@ -283,9 +308,6 @@ public:
 
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
   void setHasSwiftAsyncContext(bool v) { HasSwiftAsyncContext = v; }
-
-  bool padForPush2Pop2() const { return PadForPush2Pop2; }
-  void setPadForPush2Pop2(bool V) { PadForPush2Pop2 = V; }
 
   bool isCandidateForPush2Pop2(Register Reg) const {
     return CandidatesForPush2Pop2.find(Reg) != CandidatesForPush2Pop2.end();

@@ -28,13 +28,13 @@
 #include "llvm/TargetParser/Host.h"
 
 #include <memory>
-#include <string>
 #include <vector>
-#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64))
+#if defined(_MSC_VER) && (defined(_M_IX86) || defined(_M_X64)) &&              \
+    !defined(_M_ARM64EC)
 #include <immintrin.h>
 #include <intrin.h>
 #endif
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)
 #include <float.h> // For _clearfp in ~X86SavedState().
 #endif
 
@@ -277,9 +277,9 @@ static Expected<std::vector<CodeTemplate>> generateLEATemplatesCommon(
   assert(X86II::getMemoryOperandNo(Instr.Description.TSFlags) == 1 &&
          "invalid LEA");
 
-  constexpr const int kDestOp = 0;
-  constexpr const int kBaseOp = 1;
-  constexpr const int kIndexOp = 3;
+  constexpr int kDestOp = 0;
+  constexpr int kBaseOp = 1;
+  constexpr int kIndexOp = 3;
   auto PossibleDestRegs =
       Instr.Operands[kDestOp].getRegisterAliasing().sourceBits();
   remove(PossibleDestRegs, ForbiddenRegisters);
@@ -547,7 +547,7 @@ private:
 
   void initStack(unsigned Bytes);
 
-  static constexpr const unsigned kF80Bytes = 10; // 80 bits.
+  static constexpr unsigned kF80Bytes = 10; // 80 bits.
 
   APInt Constant_;
   std::vector<MCInst> Instructions;
@@ -654,7 +654,7 @@ namespace {
 class X86SavedState : public ExegesisTarget::SavedState {
 public:
   X86SavedState() {
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)
     _fxsave64(FPState);
     Eflags = __readeflags();
 #elif defined(__GNUC__) && defined(__x86_64__)
@@ -665,10 +665,10 @@ public:
 #endif
   }
 
-  ~X86SavedState() {
+  ~X86SavedState() override {
     // Restoring the X87 state does not flush pending exceptions, make sure
     // these exceptions are flushed now.
-#if defined(_MSC_VER) && defined(_M_X64)
+#if defined(_MSC_VER) && defined(_M_X64) && !defined(_M_ARM64EC)
     _clearfp();
     _fxrstor64(FPState);
     __writeeflags(Eflags);
@@ -682,7 +682,7 @@ public:
   }
 
 private:
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__x86_64__) || defined(_M_X64) && !defined(_M_ARM64EC)
   alignas(16) char FPState[512];
   uint64_t Eflags;
 #endif
@@ -824,8 +824,9 @@ private:
       // For now, only do the check if we see an Intel machine because
       // the counter uses some intel-specific magic and it could
       // be confuse and think an AMD machine actually has LBR support.
-#if defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||            \
-    defined(_M_X64)
+#if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
+     defined(_M_X64)) &&                                                       \
+    !defined(_M_ARM64EC)
     using namespace sys::detail::x86;
 
     if (getVendorSignature() == VendorSignatures::GENUINE_INTEL)
@@ -862,13 +863,13 @@ const MCPhysReg ExegesisX86Target::kUnavailableRegistersSSE[12] = {
 // We're using one of R8-R15 because these registers are never hardcoded in
 // instructions (e.g. MOVS writes to EDI, ESI, EDX), so they have less
 // conflicts.
-constexpr const MCPhysReg kDefaultLoopCounterReg = X86::R8;
+constexpr MCPhysReg kDefaultLoopCounterReg = X86::R8;
 
 } // namespace
 
 void ExegesisX86Target::addTargetSpecificPasses(PassManagerBase &PM) const {
   // Lowers FP pseudo-instructions, e.g. ABS_Fp32 -> ABS_F.
-  PM.add(createX86FloatingPointStackifierPass());
+  PM.add(createX86FPStackifierLegacyPass());
 }
 
 MCRegister ExegesisX86Target::getScratchMemoryRegister(const Triple &TT) const {
@@ -1108,9 +1109,9 @@ std::vector<MCInst> ExegesisX86Target::setRegTo(const MCSubtargetInfo &STI,
 #ifdef __linux__
 
 #ifdef __arm__
-static constexpr const uintptr_t VAddressSpaceCeiling = 0xC0000000;
+static constexpr uintptr_t VAddressSpaceCeiling = 0xC0000000;
 #else
-static constexpr const uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
+static constexpr uintptr_t VAddressSpaceCeiling = 0x0000800000000000;
 #endif
 
 void generateRoundToNearestPage(unsigned int Register,

@@ -9,7 +9,6 @@
 #include "mlir/Dialect/NVGPU/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/NVGPU/Transforms/Utils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -19,11 +18,13 @@
 using namespace mlir;
 
 /// Return "true" if the given vector transfer op is contiguous and suitable
-/// for replacement with an async copy.
+/// for replacement with an async copy. An op masked by an enclosing
+/// vector.mask is not: replacing it would drop the mask and leave non-maskable
+/// ops inside the vector.mask region.
 template <typename OpTy>
 static bool isContiguousXferOp(OpTy op) {
-  return op.getPermutationMap().isMinorIdentity() && op.isDimInBounds(0) &&
-         op.hasPureBufferSemantics() &&
+  return !op.isMasked() && op.getPermutationMap().isMinorIdentity() &&
+         op.isDimInBounds(0) && op.hasPureBufferSemantics() &&
          cast<MemRefType>(nvgpu::getMemrefOperand(op).getType())
              .isLastDimUnitStride();
 }
@@ -72,7 +73,7 @@ static FailureOr<TransferMask> getMaskOp(Operation *loadOp) {
   if (auto extractOp =
           transferRead.getMask().getDefiningOp<vector::ExtractOp>())
     if (auto maskOp =
-            extractOp.getVector().getDefiningOp<vector::CreateMaskOp>())
+            extractOp.getSource().getDefiningOp<vector::CreateMaskOp>())
       return TransferMask{maskOp,
                           SmallVector<int64_t>(extractOp.getStaticPosition())};
 
@@ -90,11 +91,27 @@ static Value buildNumReadElements(OpBuilder &b, Location loc,
   if (!transferMask->createMaskOp)
     return Value();
 
+  // vector.create_mask treats a negative size as 0 and a size larger than the
+  // dimension as the dimension size. The async copy must not read more
+  // elements than it writes, so clamp the size of the "ones" segment in the
+  // same way.
+  auto clampToDimSize = [&](Value size) -> Value {
+    int64_t dimSize =
+        transferMask->createMaskOp.getVectorType().getShape().back();
+    if (std::optional<int64_t> cst = getConstantIntValue(size))
+      return arith::ConstantIndexOp::create(
+          b, loc, std::clamp(*cst, int64_t(0), dimSize));
+    Value zero = arith::ConstantIndexOp::create(b, loc, 0);
+    Value dim = arith::ConstantIndexOp::create(b, loc, dimSize);
+    Value nonNegative = arith::MaxSIOp::create(b, loc, size, zero);
+    return arith::MinSIOp::create(b, loc, nonNegative, dim);
+  };
+
   // No extract: return size of "ones" segment in the mask.
   if (transferMask->extractPosition.empty()) {
     assert(transferMask->createMaskOp.getNumOperands() == 1 &&
            "expected single operand");
-    return transferMask->createMaskOp.getOperand(0);
+    return clampToDimSize(transferMask->createMaskOp.getOperand(0));
   }
 
   // vector.extract(vector.create_mask).
@@ -110,17 +127,18 @@ static Value buildNumReadElements(OpBuilder &b, Location loc,
   for (auto [pos, sz] : llvm::zip(transferMask->extractPosition,
                                   transferMask->createMaskOp->getOperands())) {
     Value cmp =
-        b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
-                                b.create<arith::ConstantIndexOp>(loc, pos), sz);
+        arith::CmpIOp::create(b, loc, arith::CmpIPredicate::slt,
+                              arith::ConstantIndexOp::create(b, loc, pos), sz);
     if (!cond) {
       cond = cmp;
       continue;
     }
-    cond = b.create<arith::AndIOp>(loc, cmp, cond);
+    cond = arith::AndIOp::create(b, loc, cmp, cond);
   }
-  return b.create<arith::SelectOp>(
-      loc, cond, transferMask->createMaskOp->getOperands().back(),
-      b.create<arith::ConstantIndexOp>(loc, 0));
+  return arith::SelectOp::create(
+      b, loc, cond,
+      clampToDimSize(transferMask->createMaskOp->getOperands().back()),
+      arith::ConstantIndexOp::create(b, loc, 0));
 }
 
 /// Return "true" if the conversion to async copy is supported by "async copy".
@@ -252,8 +270,9 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
       int64_t sizeInBytes =
           (dstMemref.getElementTypeBitWidth() * numElements) / 8;
       // bypass_l1 only possible with 16 byte transfer.
-      Value token = rewriter.create<nvgpu::DeviceAsyncCopyOp>(
-          writeOp->getLoc(), nvgpu::DeviceAsyncTokenType::get(op->getContext()),
+      Value token = nvgpu::DeviceAsyncCopyOp::create(
+          rewriter, writeOp->getLoc(),
+          nvgpu::DeviceAsyncTokenType::get(op->getContext()),
           /*dst=*/storeBase, /*dstIndices=*/nvgpu::getIndices(writeOp),
           /*src=*/loadBase,
           /*srcIndices=*/nvgpu::getIndices(readOp),
@@ -265,11 +284,11 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
     }
 
     // Create the group and wait for it right after.
-    Value groupToken = rewriter.create<nvgpu::DeviceAsyncCreateGroupOp>(
-        op->getLoc(), nvgpu::DeviceAsyncTokenType::get(op->getContext()),
-        tokens);
-    rewriter.create<nvgpu::DeviceAsyncWaitOp>(op->getLoc(), groupToken,
-                                              nullptr);
+    Value groupToken = nvgpu::DeviceAsyncCreateGroupOp::create(
+        rewriter, op->getLoc(),
+        nvgpu::DeviceAsyncTokenType::get(op->getContext()), tokens);
+    nvgpu::DeviceAsyncWaitOp::create(rewriter, op->getLoc(), groupToken,
+                                     nullptr);
     // Clean up old stores.
     for (Operation *writeOp : group)
       rewriter.eraseOp(writeOp);

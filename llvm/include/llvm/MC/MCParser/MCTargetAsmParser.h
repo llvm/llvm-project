@@ -345,8 +345,7 @@ public:
   };
 
 protected: // Can only create subclasses.
-  MCTargetAsmParser(MCTargetOptions const &, const MCSubtargetInfo &STI,
-                    const MCInstrInfo &MII);
+  MCTargetAsmParser(const MCSubtargetInfo &STI, const MCInstrInfo &MII);
 
   /// Create a copy of STI and return a non-const reference to it.
   MCSubtargetInfo &copySTI();
@@ -360,9 +359,6 @@ protected: // Can only create subclasses.
   /// SemaCallback - The Sema callback implementation.  Must be set when parsing
   /// ms-style inline assembly.
   MCAsmParserSemaCallback *SemaCallback = nullptr;
-
-  /// Set of options which affects instrumentation of inline assembly.
-  MCTargetOptions MCOptions;
 
   /// Current STI.
   const MCSubtargetInfo *STI;
@@ -387,7 +383,12 @@ public:
   bool isParsingMSInlineAsm () { return ParsingMSInlineAsm; }
   void setParsingMSInlineAsm (bool Value) { ParsingMSInlineAsm = Value; }
 
-  MCTargetOptions getTargetOptions() const { return MCOptions; }
+  const MCTargetOptions &getTargetOptions() const {
+    return const_cast<MCTargetAsmParser *>(this)
+        ->getParser()
+        .getContext()
+        .getTargetOptions();
+  }
 
   void setSemaCallback(MCAsmParserSemaCallback *Callback) {
     SemaCallback = Callback;

@@ -113,9 +113,9 @@ public:
 #endif
 
     size_t FullDataSize = Capacity - Index;
-    TypeSourceInfo *DI = Context.CreateTypeSourceInfo(T, FullDataSize);
-    memcpy(DI->getTypeLoc().getOpaqueData(), &Buffer[Index], FullDataSize);
-    return DI;
+    TypeSourceInfo *TSI = Context.CreateTypeSourceInfo(T, FullDataSize);
+    memcpy(TSI->getTypeLoc().getOpaqueData(), &Buffer[Index], FullDataSize);
+    return TSI;
   }
 
   /// Copies the type-location information to the given AST context and

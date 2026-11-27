@@ -9,6 +9,7 @@
 #ifndef LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 #define LLDB_EXPRESSION_DWARFEXPRESSIONLIST_H
 
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Utility/RangeMap.h"
@@ -58,6 +59,21 @@ public:
   }
 
   lldb::addr_t GetFuncFileAddress() { return m_func_file_addr; }
+
+  /// Represents an entry in the DWARFExpressionList with all needed metadata.
+  struct DWARFExpressionEntry {
+    /// Represents a DWARF location range in the DWARF unit’s file‐address space
+    std::optional<AddressRange> file_range; ///< None = always-valid single expr
+    const DWARFExpression *expr;
+  };
+
+  /// Returns a DWARFExpressionEntry whose file_range contains the given
+  /// load‐address.  `func_load_addr` is the load‐address of the function
+  /// start; `load_addr` is the full runtime PC.  On success, `expr` is
+  /// non-null.
+  std::optional<DWARFExpressionEntry>
+  GetExpressionEntryAtAddress(lldb::addr_t func_load_addr,
+                              lldb::addr_t load_addr) const;
 
   const DWARFExpression *GetExpressionAtAddress(lldb::addr_t func_load_addr,
                                                 lldb::addr_t load_addr) const;
@@ -110,7 +126,20 @@ public:
                                  const Value *initial_value_ptr,
                                  const Value *object_address_ptr) const;
 
+  /// Return true if the expression in scope at the current PC produces an
+  /// implicit location, or if no location is in scope. See
+  /// DWARFExpression::IsImplicit. \p exe_ctx and \p reg_ctx may be null for an
+  /// always-valid single expression.
+  bool IsImplicit(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+                  lldb::addr_t func_load_addr) const;
+
 private:
+  /// Return the expression in scope at the current PC, or an error if no
+  /// location is in scope.
+  llvm::Expected<const DWARFExpression *>
+  GetExpressionAtPC(ExecutionContext *exe_ctx, RegisterContext *reg_ctx,
+                    lldb::addr_t func_load_addr) const;
+
   // RangeDataVector requires a comparator for DWARFExpression, but it doesn't
   // make sense to do so.
   struct DWARFExpressionCompare {

@@ -38,8 +38,8 @@ declare void @f0()
 declare void @f1()
 declare void @f2()
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define void @_Z4loopi(i32 %width) {
 ; HOIST-LABEL: @_Z4loopi(
@@ -100,7 +100,7 @@ if.then:
   br label %return
 
 if.end:
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i)
+  call void @llvm.lifetime.start.p0(ptr %i)
   store i32 0, ptr %i, align 4
   br label %for.cond
 
@@ -112,7 +112,7 @@ for.cond:
   br i1 %cmp1, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i)
+  call void @llvm.lifetime.end.p0(ptr %i)
   br label %for.end
 
 for.body:

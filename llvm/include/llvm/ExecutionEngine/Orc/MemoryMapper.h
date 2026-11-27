@@ -15,12 +15,17 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
+#include "llvm/ExecutionEngine/Orc/SharedMemoryMap.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Process.h"
 
 #include <mutex>
 
 namespace llvm {
+namespace jitlink {
+class LinkGraph;
+} // namespace jitlink
+
 namespace orc {
 
 /// Manages mapping, content transfer and protections for JIT memory
@@ -51,7 +56,11 @@ public:
   virtual void reserve(size_t NumBytes, OnReservedFunction OnReserved) = 0;
 
   /// Provides working memory
-  virtual char *prepare(ExecutorAddr Addr, size_t ContentSize) = 0;
+  /// The LinkGraph parameter is included to allow implementations to allocate
+  /// working memory from the LinkGraph's allocator, in which case it will be
+  /// deallocated when the LinkGraph is destroyed.
+  virtual char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                        size_t ContentSize) = 0;
 
   using OnInitializedFunction = unique_function<void(Expected<ExecutorAddr>)>;
 
@@ -92,7 +101,8 @@ public:
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override;
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override;
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override;
 
   void deinitialize(ArrayRef<ExecutorAddr> Allocations,
                     OnDeinitializedFunction OnDeInitialized) override;
@@ -124,25 +134,18 @@ private:
 
 class LLVM_ABI SharedMemoryMapper final : public MemoryMapper {
 public:
-  struct SymbolAddrs {
-    ExecutorAddr Instance;
-    ExecutorAddr Reserve;
-    ExecutorAddr Initialize;
-    ExecutorAddr Deinitialize;
-    ExecutorAddr Release;
-  };
-
-  SharedMemoryMapper(ExecutorProcessControl &EPC, SymbolAddrs SAs,
+  SharedMemoryMapper(ExecutionSession &ES, SharedMemoryMapBindings B,
                      size_t PageSize);
 
   static Expected<std::unique_ptr<SharedMemoryMapper>>
-  Create(ExecutorProcessControl &EPC, SymbolAddrs SAs);
+  Create(ExecutionSession &ES, SharedMemoryMapBindings B);
 
   unsigned int getPageSize() override { return PageSize; }
 
   void reserve(size_t NumBytes, OnReservedFunction OnReserved) override;
 
-  char *prepare(ExecutorAddr Addr, size_t ContentSize) override;
+  char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
+                size_t ContentSize) override;
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override;
 
@@ -161,8 +164,8 @@ private:
     int SharedMemoryId;
   };
 
-  ExecutorProcessControl &EPC;
-  SymbolAddrs SAs;
+  ExecutionSession &ES;
+  SharedMemoryMapBindings B;
 
   std::mutex Mutex;
 

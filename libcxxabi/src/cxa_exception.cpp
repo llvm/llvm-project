@@ -140,7 +140,7 @@ exception_cleanup_func(_Unwind_Reason_Code reason, _Unwind_Exception* unwind_exc
     __cxa_decrement_exception_refcount(unwind_exception + 1);
 }
 
-static _LIBCXXABI_NORETURN void failed_throw(__cxa_exception* exception_header) {
+[[noreturn]] static void failed_throw(__cxa_exception* exception_header) {
 //  Section 2.5.3 says:
 //      * For purposes of this ABI, several things are considered exception handlers:
 //      ** A terminate() call due to a throw.
@@ -192,7 +192,9 @@ void *__cxa_allocate_exception(size_t thrown_size) throw() {
         std::terminate();
     __cxa_exception *exception_header =
         static_cast<__cxa_exception *>((void *)(raw_buffer + header_offset));
-    ::memset(exception_header, 0, actual_size);
+    // We warn on memset to a non-trivially castable type. We might want to
+    // change that diagnostic to not fire on a trivially obvious zero fill.
+    ::memset(static_cast<void*>(exception_header), 0, actual_size);
     return thrown_object_from_cxa_exception(exception_header);
 }
 
@@ -226,7 +228,7 @@ __cxa_exception* __cxa_init_primary_exception(void* object, std::type_info* tinf
 }
 
 //  This function shall allocate a __cxa_dependent_exception and
-//  return a pointer to it. (Really to the object, not past its' end).
+//  return a pointer to it. (Really to the object, not past its end).
 //  Otherwise, it will work like __cxa_allocate_exception.
 void * __cxa_allocate_dependent_exception () {
     size_t actual_size = sizeof(__cxa_dependent_exception);

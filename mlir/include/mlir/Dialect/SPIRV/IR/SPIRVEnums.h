@@ -15,8 +15,6 @@
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/StringRef.h"
 
 // Forward declare enum classes related to op availability. Their definitions
 // are in the TableGen'erated SPIRVEnums.h.inc and can be referenced by other
@@ -51,6 +49,10 @@ ArrayRef<Capability> getDirectImpliedCapabilities(Capability cap);
 /// if an implicitly declared capability implicitly declares a third one, the
 /// third one will also be returned.
 SmallVector<Capability, 0> getRecursiveImpliedCapabilities(Capability cap);
+
+/// Converts a SPIR-V Decoration enum value to its snake_case string
+/// representation for use in MLIR attributes.
+std::string getDecorationString(Decoration decoration);
 
 } // namespace spirv
 } // namespace mlir

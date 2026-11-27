@@ -13,7 +13,7 @@
 ; RUN:     | FileCheck %s --check-prefixes=CHECK,TRAP
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_20 -verify-machineinstrs -trap-unreachable -mattr=+ptx83 \
 ; RUN:     | FileCheck %s --check-prefixes=BUG-FIXED
-; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: %if ptxas-ptr32 %{ llc < %s -mtriple=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
 target triple = "nvptx-unknown-cuda"
@@ -25,13 +25,9 @@ define ptx_kernel void @kernel_func() {
 ; NO-TRAP-UNREACHABLE-LABEL: kernel_func(
 ; NO-TRAP-UNREACHABLE:       {
 ; NO-TRAP-UNREACHABLE-EMPTY:
-; NO-TRAP-UNREACHABLE-EMPTY:
 ; NO-TRAP-UNREACHABLE-NEXT:  // %bb.0:
 ; NO-TRAP-UNREACHABLE-NEXT:    { // callseq 0, 0
-; NO-TRAP-UNREACHABLE-NEXT:    call.uni
-; NO-TRAP-UNREACHABLE-NEXT:    throw,
-; NO-TRAP-UNREACHABLE-NEXT:    (
-; NO-TRAP-UNREACHABLE-NEXT:    );
+; NO-TRAP-UNREACHABLE-NEXT:    call.uni throw, ();
 ; NO-TRAP-UNREACHABLE-NEXT:    } // callseq 0
 ; NO-TRAP-UNREACHABLE-NEXT:    // begin inline asm
 ; NO-TRAP-UNREACHABLE-NEXT:    exit;
@@ -40,13 +36,9 @@ define ptx_kernel void @kernel_func() {
 ; NO-TRAP-AFTER-NORETURN-LABEL: kernel_func(
 ; NO-TRAP-AFTER-NORETURN:       {
 ; NO-TRAP-AFTER-NORETURN-EMPTY:
-; NO-TRAP-AFTER-NORETURN-EMPTY:
 ; NO-TRAP-AFTER-NORETURN-NEXT:  // %bb.0:
 ; NO-TRAP-AFTER-NORETURN-NEXT:    { // callseq 0, 0
-; NO-TRAP-AFTER-NORETURN-NEXT:    call.uni
-; NO-TRAP-AFTER-NORETURN-NEXT:    throw,
-; NO-TRAP-AFTER-NORETURN-NEXT:    (
-; NO-TRAP-AFTER-NORETURN-NEXT:    );
+; NO-TRAP-AFTER-NORETURN-NEXT:    call.uni throw, ();
 ; NO-TRAP-AFTER-NORETURN-NEXT:    } // callseq 0
 ; NO-TRAP-AFTER-NORETURN-NEXT:    // begin inline asm
 ; NO-TRAP-AFTER-NORETURN-NEXT:    exit;
@@ -56,26 +48,18 @@ define ptx_kernel void @kernel_func() {
 ; TRAP-LABEL: kernel_func(
 ; TRAP:       {
 ; TRAP-EMPTY:
-; TRAP-EMPTY:
 ; TRAP-NEXT:  // %bb.0:
 ; TRAP-NEXT:    { // callseq 0, 0
-; TRAP-NEXT:    call.uni
-; TRAP-NEXT:    throw,
-; TRAP-NEXT:    (
-; TRAP-NEXT:    );
+; TRAP-NEXT:    call.uni throw, ();
 ; TRAP-NEXT:    } // callseq 0
 ; TRAP-NEXT:    trap; exit;
 ;
 ; BUG-FIXED-LABEL: kernel_func(
 ; BUG-FIXED:       {
 ; BUG-FIXED-EMPTY:
-; BUG-FIXED-EMPTY:
 ; BUG-FIXED-NEXT:  // %bb.0:
 ; BUG-FIXED-NEXT:    { // callseq 0, 0
-; BUG-FIXED-NEXT:    call.uni
-; BUG-FIXED-NEXT:    throw,
-; BUG-FIXED-NEXT:    (
-; BUG-FIXED-NEXT:    );
+; BUG-FIXED-NEXT:    call.uni throw, ();
 ; BUG-FIXED-NEXT:    } // callseq 0
 ; BUG-FIXED-NEXT:    trap;
   call void @throw()
@@ -86,13 +70,11 @@ define void @kernel_func_2() {
 ; CHECK-LABEL: kernel_func_2(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    trap; exit;
 ;
 ; BUG-FIXED-LABEL: kernel_func_2(
 ; BUG-FIXED:       {
-; BUG-FIXED-EMPTY:
 ; BUG-FIXED-EMPTY:
 ; BUG-FIXED-NEXT:  // %bb.0:
 ; BUG-FIXED-NEXT:    trap;

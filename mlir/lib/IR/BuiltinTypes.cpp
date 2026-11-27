@@ -8,19 +8,23 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "TypeDetail.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/TensorEncoding.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CheckedArithmetic.h"
+#include <cstring>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -37,17 +41,6 @@ namespace mlir {
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
-// BuiltinDialect
-//===----------------------------------------------------------------------===//
-
-void BuiltinDialect::registerTypes() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/IR/BuiltinTypes.cpp.inc"
-      >();
-}
-
-//===----------------------------------------------------------------------===//
 /// ComplexType
 //===----------------------------------------------------------------------===//
 
@@ -56,6 +49,39 @@ LogicalResult ComplexType::verify(function_ref<InFlightDiagnostic()> emitError,
                                   Type elementType) {
   if (!elementType.isIntOrFloat())
     return emitError() << "invalid element type for complex";
+  return success();
+}
+
+size_t ComplexType::getDenseElementBitSize() const {
+  auto elemTy = cast<DenseElementType>(getElementType());
+  return llvm::alignTo<8>(elemTy.getDenseElementBitSize()) * 2;
+}
+
+Attribute ComplexType::convertToAttribute(ArrayRef<char> rawData) const {
+  auto elemTy = cast<DenseElementType>(getElementType());
+  size_t singleElementBytes =
+      llvm::alignTo<8>(elemTy.getDenseElementBitSize()) / 8;
+  Attribute real =
+      elemTy.convertToAttribute(rawData.take_front(singleElementBytes));
+  Attribute imag =
+      elemTy.convertToAttribute(rawData.take_back(singleElementBytes));
+  return ArrayAttr::get(getContext(), {real, imag});
+}
+
+LogicalResult
+ComplexType::convertFromAttribute(Attribute attr,
+                                  SmallVectorImpl<char> &result) const {
+  auto arrayAttr = dyn_cast<ArrayAttr>(attr);
+  if (!arrayAttr || arrayAttr.size() != 2)
+    return failure();
+  auto elemTy = cast<DenseElementType>(getElementType());
+  SmallVector<char> realData, imagData;
+  if (failed(elemTy.convertFromAttribute(arrayAttr[0], realData)))
+    return failure();
+  if (failed(elemTy.convertFromAttribute(arrayAttr[1], imagData)))
+    return failure();
+  result.append(realData);
+  result.append(imagData);
   return success();
 }
 
@@ -86,6 +112,83 @@ IntegerType IntegerType::scaleElementBitwidth(unsigned scale) {
   return IntegerType::get(getContext(), scale * getWidth(), getSignedness());
 }
 
+size_t IntegerType::getDenseElementBitSize() const {
+  // Return the actual bit width. Storage alignment is handled separately.
+  return getWidth();
+}
+
+Attribute IntegerType::convertToAttribute(ArrayRef<char> rawData) const {
+  APInt value = detail::readBits(rawData.data(), /*bitPos=*/0, getWidth());
+  return IntegerAttr::get(*this, value);
+}
+
+static void writeAPIntToVector(APInt apInt, SmallVectorImpl<char> &result) {
+  size_t byteSize = llvm::divideCeil(apInt.getBitWidth(), CHAR_BIT);
+  size_t bitPos = result.size() * CHAR_BIT;
+  result.resize(result.size() + byteSize);
+  detail::writeBits(result.data(), bitPos, apInt);
+}
+
+LogicalResult
+IntegerType::convertFromAttribute(Attribute attr,
+                                  SmallVectorImpl<char> &result) const {
+  auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr || intAttr.getType() != *this)
+    return failure();
+  writeAPIntToVector(intAttr.getValue(), result);
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// MXI8 Type
+//===----------------------------------------------------------------------===//
+
+llvm::FixedPointSemantics MXI8Type::getFixedPointSemantics() {
+  // Saturation is selected by a conversion operation, not by the value type.
+  return {/*Width=*/8, /*Scale=*/6, /*IsSigned=*/true,
+          /*IsSaturated=*/false, /*HasUnsignedPadding=*/false};
+}
+
+size_t MXI8Type::getDenseElementBitSize() const { return 8; }
+
+Attribute MXI8Type::convertToAttribute(ArrayRef<char> rawData) const {
+  return IntegerType::get(getContext(), 8).convertToAttribute(rawData);
+}
+
+LogicalResult
+MXI8Type::convertFromAttribute(Attribute attr,
+                               SmallVectorImpl<char> &result) const {
+  auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr || !intAttr.getType().isSignlessInteger(8))
+    return failure();
+  return cast<IntegerType>(intAttr.getType())
+      .convertFromAttribute(attr, result);
+}
+
+//===----------------------------------------------------------------------===//
+// Index Type
+//===----------------------------------------------------------------------===//
+
+size_t IndexType::getDenseElementBitSize() const {
+  return kInternalStorageBitWidth;
+}
+
+Attribute IndexType::convertToAttribute(ArrayRef<char> rawData) const {
+  APInt value =
+      detail::readBits(rawData.data(), /*bitPos=*/0, kInternalStorageBitWidth);
+  return IntegerAttr::get(*this, value);
+}
+
+LogicalResult
+IndexType::convertFromAttribute(Attribute attr,
+                                SmallVectorImpl<char> &result) const {
+  auto intAttr = dyn_cast<IntegerAttr>(attr);
+  if (!intAttr || intAttr.getType() != *this)
+    return failure();
+  writeAPIntToVector(intAttr.getValue(), result);
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Float Types
 //===----------------------------------------------------------------------===//
@@ -106,6 +209,7 @@ FLOAT_TYPE_SEMANTICS(Float8E4M3FNUZType, Float8E4M3FNUZ)
 FLOAT_TYPE_SEMANTICS(Float8E4M3B11FNUZType, Float8E4M3B11FNUZ)
 FLOAT_TYPE_SEMANTICS(Float8E3M4Type, Float8E3M4)
 FLOAT_TYPE_SEMANTICS(Float8E8M0FNUType, Float8E8M0FNU)
+FLOAT_TYPE_SEMANTICS(Float8E5M3FNUType, Float8E5M3FNU)
 FLOAT_TYPE_SEMANTICS(BFloat16Type, BFloat)
 FLOAT_TYPE_SEMANTICS(Float16Type, IEEEhalf)
 FLOAT_TYPE_SEMANTICS(FloatTF32Type, FloatTF32)
@@ -181,6 +285,45 @@ FunctionType::getWithoutArgsAndResults(const BitVector &argIndices,
   return clone(newArgTypes, newResultTypes);
 }
 
+//===----------------------------------------------------------------------===//
+// GraphType
+//===----------------------------------------------------------------------===//
+
+unsigned GraphType::getNumInputs() const { return getImpl()->numInputs; }
+
+ArrayRef<Type> GraphType::getInputs() const { return getImpl()->getInputs(); }
+
+unsigned GraphType::getNumResults() const { return getImpl()->numResults; }
+
+ArrayRef<Type> GraphType::getResults() const { return getImpl()->getResults(); }
+
+GraphType GraphType::clone(TypeRange inputs, TypeRange results) const {
+  return get(getContext(), inputs, results);
+}
+
+/// Returns a new function type with the specified arguments and results
+/// inserted.
+GraphType GraphType::getWithArgsAndResults(ArrayRef<unsigned> argIndices,
+                                           TypeRange argTypes,
+                                           ArrayRef<unsigned> resultIndices,
+                                           TypeRange resultTypes) {
+  SmallVector<Type> argStorage, resultStorage;
+  TypeRange newArgTypes =
+      insertTypesInto(getInputs(), argIndices, argTypes, argStorage);
+  TypeRange newResultTypes =
+      insertTypesInto(getResults(), resultIndices, resultTypes, resultStorage);
+  return clone(newArgTypes, newResultTypes);
+}
+
+/// Returns a new function type without the specified arguments and results.
+GraphType GraphType::getWithoutArgsAndResults(const BitVector &argIndices,
+                                              const BitVector &resultIndices) {
+  SmallVector<Type> argStorage, resultStorage;
+  TypeRange newArgTypes = filterTypesOut(getInputs(), argIndices, argStorage);
+  TypeRange newResultTypes =
+      filterTypesOut(getResults(), resultIndices, resultStorage);
+  return clone(newArgTypes, newResultTypes);
+}
 //===----------------------------------------------------------------------===//
 // OpaqueType
 //===----------------------------------------------------------------------===//
@@ -310,7 +453,7 @@ bool TensorType::isValidElementType(Type type) {
   // types. Dialects are expected to verify that tensor types have a valid
   // element type within that dialect.
   return llvm::isa<ComplexType, FloatType, IntegerType, OpaqueType, VectorType,
-                   IndexType>(type) ||
+                   IndexType, MXI8Type>(type) ||
          !llvm::isa<BuiltinDialect>(type.getDialect());
 }
 
@@ -323,7 +466,7 @@ RankedTensorType::verify(function_ref<InFlightDiagnostic()> emitError,
                          ArrayRef<int64_t> shape, Type elementType,
                          Attribute encoding) {
   for (int64_t s : shape)
-    if (s < 0 && !ShapedType::isDynamic(s))
+    if (s < 0 && ShapedType::isStatic(s))
       return emitError() << "invalid tensor dimension size";
   if (auto v = llvm::dyn_cast_or_null<VerifiableTensorEncoding>(encoding))
     if (failed(v.verifyEncoding(shape, elementType, emitError)))
@@ -374,6 +517,20 @@ BaseMemRefType BaseMemRefType::cloneWith(std::optional<ArrayRef<int64_t>> shape,
     builder.setShape(*shape);
   builder.setElementType(elementType);
   return builder;
+}
+
+FailureOr<PtrLikeTypeInterface>
+BaseMemRefType::clonePtrWith(Attribute memorySpace,
+                             std::optional<Type> elementType) const {
+  Type eTy = elementType ? *elementType : getElementType();
+  if (llvm::dyn_cast<UnrankedMemRefType>(*this))
+    return cast<PtrLikeTypeInterface>(
+        UnrankedMemRefType::get(eTy, memorySpace));
+
+  MemRefType::Builder builder(llvm::cast<MemRefType>(*this));
+  builder.setElementType(eTy);
+  builder.setMemorySpace(memorySpace);
+  return cast<PtrLikeTypeInterface>(static_cast<MemRefType>(builder));
 }
 
 MemRefType BaseMemRefType::clone(::llvm::ArrayRef<int64_t> shape,
@@ -466,22 +623,6 @@ mlir::isRankReducedType(ShapedType originalType,
     return SliceVerificationResult::ElemTypeMismatch;
 
   return SliceVerificationResult::Success;
-}
-
-bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
-  // Empty attribute is allowed as default memory space.
-  if (!memorySpace)
-    return true;
-
-  // Supported built-in attributes.
-  if (llvm::isa<IntegerAttr, StringAttr, DictionaryAttr>(memorySpace))
-    return true;
-
-  // Allow custom dialect attributes.
-  if (!isa<BuiltinDialect>(memorySpace.getDialect()))
-    return true;
-
-  return false;
 }
 
 Attribute mlir::detail::wrapIntegerMemorySpace(unsigned memorySpace,
@@ -632,49 +773,56 @@ LogicalResult MemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
 
   // Negative sizes are not allowed except for `kDynamic`.
   for (int64_t s : shape)
-    if (s < 0 && !ShapedType::isDynamic(s))
+    if (s < 0 && ShapedType::isStatic(s))
       return emitError() << "invalid memref size";
 
   assert(layout && "missing layout specification");
   if (failed(layout.verifyLayout(shape, emitError)))
     return failure();
 
-  if (!isSupportedMemorySpace(memorySpace))
-    return emitError() << "unsupported memory space Attribute";
-
   return success();
 }
 
 bool MemRefType::areTrailingDimsContiguous(int64_t n) {
-  if (!isLastDimUnitStride())
-    return false;
+  assert(n <= getRank() &&
+         "number of dimensions to check must not exceed rank");
+  return n <= getNumContiguousTrailingDims();
+}
 
-  auto memrefShape = getShape().take_back(n);
-  if (ShapedType::isDynamicShape(memrefShape))
-    return false;
+int64_t MemRefType::getNumContiguousTrailingDims() {
+  const int64_t n = getRank();
 
+  // memrefs with identity layout are entirely contiguous.
   if (getLayout().isIdentity())
-    return true;
+    return n;
 
+  // Get the strides (if any). Failing to do that, conservatively assume a
+  // non-contiguous layout.
   int64_t offset;
-  SmallVector<int64_t> stridesFull;
-  if (!succeeded(getStridesAndOffset(stridesFull, offset)))
-    return false;
-  auto strides = ArrayRef<int64_t>(stridesFull).take_back(n);
+  SmallVector<int64_t> strides;
+  if (!succeeded(getStridesAndOffset(strides, offset)))
+    return 0;
 
-  if (strides.empty())
-    return true;
+  ArrayRef<int64_t> shape = getShape();
 
-  // Check whether strides match "flattened" dims.
-  SmallVector<int64_t> flattenedDims;
-  auto dimProduct = 1;
-  for (auto dim : llvm::reverse(memrefShape.drop_front(1))) {
-    dimProduct *= dim;
-    flattenedDims.push_back(dimProduct);
+  // A memref with dimensions `d0, d1, ..., dn-1` and strides
+  // `s0, s1, ..., sn-1` is contiguous up to dimension `k`
+  // if each stride `si` is the product of the dimensions `di+1, ..., dn-1`,
+  // for `i` in `[k, n-1]`.
+  // Ignore stride elements if the corresponding dimension is 1, as they are
+  // of no consequence.
+  int64_t dimProduct = 1;
+  for (int64_t i = n - 1; i >= 0; --i) {
+    if (shape[i] == 1)
+      continue;
+    if (strides[i] != dimProduct)
+      return n - i - 1;
+    if (shape[i] == ShapedType::kDynamic)
+      return n - i;
+    dimProduct *= shape[i];
   }
 
-  strides = strides.drop_back(1);
-  return llvm::equal(strides, llvm::reverse(flattenedDims));
+  return n;
 }
 
 MemRefType MemRefType::canonicalizeStridedLayout() {
@@ -716,11 +864,12 @@ MemRefType MemRefType::canonicalizeStridedLayout() {
 }
 
 LogicalResult MemRefType::getStridesAndOffset(SmallVectorImpl<int64_t> &strides,
-                                              int64_t &offset) {
+                                              int64_t &offset) const {
   return getLayout().getStridesAndOffset(getShape(), strides, offset);
 }
 
-std::pair<SmallVector<int64_t>, int64_t> MemRefType::getStridesAndOffset() {
+std::pair<SmallVector<int64_t>, int64_t>
+MemRefType::getStridesAndOffset() const {
   SmallVector<int64_t> strides;
   int64_t offset;
   LogicalResult status = getStridesAndOffset(strides, offset);
@@ -756,9 +905,6 @@ UnrankedMemRefType::verify(function_ref<InFlightDiagnostic()> emitError,
                            Type elementType, Attribute memorySpace) {
   if (!BaseMemRefType::isValidElementType(elementType))
     return emitError() << "invalid memref element type";
-
-  if (!isSupportedMemorySpace(memorySpace))
-    return emitError() << "unsupported memory space Attribute";
 
   return success();
 }
@@ -813,8 +959,13 @@ AffineExpr mlir::makeCanonicalStridedLayoutExpr(ArrayRef<int64_t> sizes,
                             : getAffineConstantExpr(runningSize, context);
     expr = expr ? expr + dimExpr * stride : dimExpr * stride;
     if (size > 0) {
-      runningSize *= size;
-      assert(runningSize > 0 && "integer overflow in size computation");
+      auto result = llvm::checkedMul(runningSize, size);
+      if (!result) {
+        // Overflow occurred, treat as dynamic
+        dynamicPoisonBit = true;
+      } else {
+        runningSize = *result;
+      }
     } else {
       dynamicPoisonBit = true;
     }

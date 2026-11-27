@@ -10,31 +10,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-def : Enum {
-  let name = "ol_platform_info_t";
+def ol_platform_info_t : Enum {
   let desc = "Supported platform info.";
   let is_typed = 1;
   let etors = [
     TaggedEtor<"NAME", "char[]", "The string denoting name of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"VENDOR_NAME", "char[]", "The string denoting name of the vendor of the platform. The size of the info needs to be dynamically queried.">,
     TaggedEtor<"VERSION", "char[]", "The string denoting the version of the platform. The size of the info needs to be dynamically queried.">,
-    TaggedEtor<"BACKEND", "ol_platform_backend_t", "The native backend of the platform.">
+    TaggedEtor<"BACKEND", "ol_platform_backend_t", "The native backend of the platform.">,
+    TaggedEtor<"ACTIVE", "bool", "True if the platform has already been initialized and has at least one device. Querying this does not initialize the platform.">
   ];
 }
 
-def : Enum {
-  let name = "ol_platform_backend_t";
+def ol_platform_backend_t : Enum {
   let desc = "Identifies the native backend of the platform.";
   let etors =[
     Etor<"UNKNOWN", "The backend is not recognized">,
     Etor<"CUDA", "The backend is CUDA">,
     Etor<"AMDGPU", "The backend is AMDGPU">,
+    Etor<"LEVEL_ZERO", "The backend is Level Zero">,
     Etor<"HOST", "The backend is the host">,
   ];
 }
 
-def : Function {
-  let name = "olGetPlatformInfo";
+def olGetPlatformInfo : Function {
   let desc = "Queries the given property of the platform.";
   let details = [
     "`olGetPlatformInfoSize` can be used to query the storage size "
@@ -61,8 +60,7 @@ def : Function {
   ];
 }
 
-def : Function {
-  let name = "olGetPlatformInfoSize";
+def olGetPlatformInfoSize : Function {
   let desc = "Returns the storage size of the given platform query.";
   let details = [];
   let params = [
@@ -74,6 +72,52 @@ def : Function {
     Return<"OL_ERRC_UNSUPPORTED_ENUMERATION", [
       "If `PropName` is not supported by the platform."
     ]>,
+    Return<"OL_ERRC_INVALID_PLATFORM">
+  ];
+}
+
+def ol_platform_rpc_cb_t : FptrTypedef {
+  let desc = "User-provided RPC server callback for a platform.";
+  let params = [Param<"void*", "Port", "opaque pointer to the RPC server port",
+                      PARAM_IN>,
+                Param<"unsigned", "NumLanes",
+                      "number of lanes handled in a single call", PARAM_IN>];
+  let return = "unsigned";
+}
+
+def olPlatformRegisterRPCCallback : Function {
+  let desc = "Registers a platform-wide RPC server callback.";
+  let details =
+      ["The registered callback is invoked before the default RPC opcode "
+       "handling.",
+       "If the callback returns a value other than RPC_UNHANDLED_OPCODE,",
+       "the default handling is skipped."];
+  let params = [Param<"ol_platform_handle_t", "Platform",
+                      "handle of the platform", PARAM_IN>,
+                Param<"ol_platform_rpc_cb_t", "Callback",
+                      "RPC callback function pointer", PARAM_IN>];
+  let returns = [Return<"OL_ERRC_INVALID_PLATFORM">, Return<"OL_ERRC_SUCCESS">];
+}
+
+def ol_platform_iterate_cb_t : FptrTypedef {
+  let desc = "User-provided function to be used with `olIteratePlatforms`";
+  let params = [
+    Param<"ol_platform_handle_t", "Platform", "the platform handle of the current iteration", PARAM_IN>,
+    Param<"void*", "UserData", "optional user data", PARAM_IN_OPTIONAL>
+  ];
+  let return = "bool";
+}
+
+def olIteratePlatforms : Function {
+  let desc = "Iterates over all available platforms, calling the callback for each platform.";
+  let details = [
+    "If the user-provided callback returns `false`, the iteration is stopped."
+  ];
+  let params = [
+    Param<"ol_platform_iterate_cb_t", "Callback", "User-provided function called for each available platform", PARAM_IN>,
+    Param<"void*", "UserData", "Optional user data to pass to the callback", PARAM_IN_OPTIONAL>
+  ];
+  let returns = [
     Return<"OL_ERRC_INVALID_PLATFORM">
   ];
 }

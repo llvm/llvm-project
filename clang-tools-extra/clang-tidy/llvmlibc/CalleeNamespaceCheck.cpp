@@ -1,4 +1,4 @@
-//===-- CalleeNamespaceCheck.cpp ------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -64,7 +64,7 @@ void CalleeNamespaceCheck::check(const MatchFinder::MatchResult &Result) {
       << FuncDecl << RequiredNamespaceRefMacroName;
 
   diag(FuncDecl->getLocation(), "resolves to this declaration",
-       clang::DiagnosticIDs::Note);
+       DiagnosticIDs::Note);
 }
 
 } // namespace clang::tidy::llvm_libc

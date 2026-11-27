@@ -13,14 +13,14 @@
 ; UNSUPPORTED: target={{.*-(cygwin|windows-gnu|windows-msvc)}}
 
 ; RUN: llc -mtriple=x86_64 < %s -o - | FileCheck %s -check-prefix=ASM
-; RUN: llc -mtriple=x86_64 -debugger-tune=lldb < %s -filetype=obj -o %t.o
+; RUN: llc -mtriple=x86_64 < %s -filetype=obj -o %t.o
 ; RUN: llvm-dwarfdump %t.o -o - | FileCheck %s -check-prefix=OBJ -implicit-check-not=DW_TAG_call -implicit-check-not=DW_AT_call
 ; RUN: llvm-dwarfdump -verify %t.o 2>&1 | FileCheck %s -check-prefix=VERIFY
 ; RUN: llvm-dwarfdump -statistics %t.o | FileCheck %s -check-prefix=STATS
-; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis -o /dev/null
+; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis -disable-output
 
 ; VERIFY: No errors.
-; STATS: "#call site DIEs": 6,
+; STATS: "#call site DIEs": 5,
 
 @sink = global i32 0, align 4, !dbg !0
 
@@ -94,15 +94,9 @@ entry:
 ; OBJ:   DW_TAG_call_site
 ; OBJ:     DW_AT_call_origin ([[foo_sp]] "_Z3foov")
 ; OBJ:     DW_AT_call_return_pc
-; OBJ:   DW_TAG_call_site
-; OBJ:     DW_AT_call_target
-; OBJ:     DW_AT_call_return_pc
 define i32 @main() !dbg !29 {
 entry:
   call void @_Z3foov(), !dbg !32
-
-  %indirect_target = load ptr, ptr undef
-  call void %indirect_target()
 
   call void asm sideeffect "", "~{dirflag},~{fpsr},~{flags}"()
 

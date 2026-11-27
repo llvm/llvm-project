@@ -10,19 +10,17 @@
 
 #include "mlir/Conversion/GPUToROCDL/Runtimes.h"
 #include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/Dialect/LLVMIR/ROCDLTargetInfo.h"
 #include <memory>
 
 namespace mlir {
+class Pass;
 class LLVMTypeConverter;
 class ConversionTarget;
 class RewritePatternSet;
 
 template <typename OpT>
 class OperationPass;
-
-namespace amdgpu {
-struct Chipset;
-} // namespace amdgpu
 
 namespace gpu {
 class GPUModuleOp;
@@ -37,20 +35,10 @@ class GPUModuleOp;
 void populateGpuToROCDLConversionPatterns(const LLVMTypeConverter &converter,
                                           RewritePatternSet &patterns,
                                           gpu::amd::Runtime runtime,
-                                          amdgpu::Chipset chipset);
+                                          const ROCDL::TargetInfo &target);
 
 /// Configure target to convert from the GPU dialect to ROCDL.
 void configureGpuToROCDLConversionLegality(ConversionTarget &target);
-
-/// Creates a pass that lowers GPU dialect operations to ROCDL counterparts. The
-/// index bitwidth used for the lowering of the device side index computations
-/// is configurable.
-std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
-createLowerGpuOpsToROCDLOpsPass(
-    const std::string &chipset = "gfx900",
-    unsigned indexBitwidth = kDeriveIndexBitwidthFromDataLayout,
-    bool useBarePtrCallConv = false,
-    gpu::amd::Runtime runtime = gpu::amd::Runtime::Unknown);
 
 } // namespace mlir
 

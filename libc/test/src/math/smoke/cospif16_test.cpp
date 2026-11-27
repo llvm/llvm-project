@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "src/__support/FPUtil/cast.h"
-#include "src/__support/libc_errno.h"
 #include "src/math/cospif16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -15,25 +15,29 @@
 using LlvmLibcCospif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcCospif16Test, SpecialNumbers) {
-  libc_errno = 0;
-
-  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::cospif16(sNaN), FE_INVALID);
+  EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::cospif16(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cospif16(aNaN));
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::cospif16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(FPBits::one().get_val(), LIBC_NAMESPACE::cospif16(zero));
+  EXPECT_FP_EQ_WITH_EXCEPTION(FPBits::one().get_val(),
+                              LIBC_NAMESPACE::cospif16(zero), 0);
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(FPBits::one().get_val(), LIBC_NAMESPACE::cospif16(neg_zero));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cospif16(inf));
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::cospif16(inf));
   EXPECT_MATH_ERRNO(EDOM);
 
-  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cospif16(neg_inf));
+  EXPECT_FP_IS_NAN(LIBC_NAMESPACE::cospif16(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(FPBits::one(Sign::NEG).get_val(),
+                              LIBC_NAMESPACE::cospif16(FPBits::one().get_val()),
+                              0);
+  EXPECT_MATH_ERRNO(0);
 }
 
 TEST_F(LlvmLibcCospif16Test, Integers) {

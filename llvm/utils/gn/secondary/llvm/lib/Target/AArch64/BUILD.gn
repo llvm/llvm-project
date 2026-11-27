@@ -29,7 +29,10 @@ tablegen("AArch64GenO0PreLegalizeGICombiner") {
 
 tablegen("AArch64GenGlobalISel") {
   visibility = [ ":LLVMAArch64CodeGen" ]
-  args = [ "-gen-global-isel" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
   td_file = "AArch64.td"
 }
 
@@ -76,10 +79,22 @@ tablegen("AArch64GenSDNodeInfo") {
   visibility = [
     ":LLVMAArch64CodeGen",
     "//bolt/unittests/Core:CoreTests",
+    "//bolt/unittests/Passes:PassTests",
     "//llvm/unittests/Target/AArch64:AArch64Tests",
   ]
   args = [ "-gen-sd-node-info" ]
   td_file = "AArch64.td"
+}
+
+tablegen("AArch64Options") {
+  visibility = [
+    ":LLVMAArch64CodeGen",
+    "//bolt/unittests/Core:CoreTests",
+    "//bolt/unittests/Passes:PassTests",
+    "//llvm/unittests/Target/AArch64:AArch64Tests",
+  ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "AArch64Options.td"
 }
 
 static_library("LLVMAArch64CodeGen") {
@@ -95,6 +110,7 @@ static_library("LLVMAArch64CodeGen") {
     ":AArch64GenPreLegalizeGICombiner",
     ":AArch64GenRegisterBank",
     ":AArch64GenSDNodeInfo",
+    ":AArch64Options",
 
     # See https://reviews.llvm.org/D69130
     "AsmParser:AArch64GenAsmMatcher",
@@ -108,6 +124,8 @@ static_library("LLVMAArch64CodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",
@@ -126,6 +144,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64BranchTargets.cpp",
     "AArch64CallingConvention.cpp",
     "AArch64CleanupLocalDynamicTLSPass.cpp",
+    "AArch64CodeLayoutOpt.cpp",
     "AArch64CollectLOH.cpp",
     "AArch64CompressJumpTables.cpp",
     "AArch64CondBrTuning.cpp",
@@ -148,13 +167,20 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64MachineScheduler.cpp",
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
+    "AArch64PTrueCoalescing.cpp",
+    "AArch64PerfectShuffle.cpp",
     "AArch64PointerAuth.cpp",
     "AArch64PostCoalescerPass.cpp",
+    "AArch64PredicateAsCounterLoopRewrites.cpp",
+    "AArch64PrologueEpilogue.cpp",
     "AArch64PromoteConstant.cpp",
+    "AArch64RedundantCondBranchPass.cpp",
     "AArch64RedundantCopyElimination.cpp",
     "AArch64RegisterInfo.cpp",
     "AArch64SIMDInstrOpt.cpp",
     "AArch64SLSHardening.cpp",
+    "AArch64SMEAttributes.cpp",
+    "AArch64SRLTDefineSuperRegs.cpp",
     "AArch64SelectionDAGInfo.cpp",
     "AArch64SpeculationHardening.cpp",
     "AArch64StackTagging.cpp",
@@ -174,9 +200,9 @@ static_library("LLVMAArch64CodeGen") {
     "GISel/AArch64PostSelectOptimize.cpp",
     "GISel/AArch64PreLegalizerCombiner.cpp",
     "GISel/AArch64RegisterBankInfo.cpp",
-    "SMEABIPass.cpp",
+    "MachineSMEABIPass.cpp",
     "SMEPeepholeOpt.cpp",
-    "SVEIntrinsicOpts.cpp",
+    "SVEShuffleOpts.cpp",
   ]
 }
 

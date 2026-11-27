@@ -13,24 +13,19 @@
 #ifndef MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 #define MLIR_DIALECT_VECTOR_IR_VECTOROPS_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithOpInterfaces.h"
+#include "mlir/Dialect/Vector/IR/VectorDialect.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskingOpInterface.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/DestinationStyleOpInterface.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
-#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Alignment.h"
 
 // Pull in all enum type definitions and utility function declarations.
 #include "mlir/Dialect/Vector/IR/VectorEnums.h.inc"
@@ -50,7 +45,6 @@ namespace vector {
 class ContractionOp;
 class TransferReadOp;
 class TransferWriteOp;
-class VectorDialect;
 
 namespace detail {
 struct BitmaskEnumStorage;
@@ -63,7 +57,7 @@ enum class ConstantMaskKind { AllFalse = 0, AllTrue };
 /// arguments.
 void buildTerminatedBody(OpBuilder &builder, Location loc);
 
-/// Return whether `srcType` can be broadcast to `dstVectorType` under the
+/// Models whether `srcType` can be broadcast to `dstVectorType` under the
 /// semantics of the `vector.broadcast` op.
 enum class BroadcastableToResult {
   Success = 0,
@@ -79,6 +73,11 @@ struct VectorDim {
 BroadcastableToResult
 isBroadcastableTo(Type srcType, VectorType dstVectorType,
                   std::pair<VectorDim, VectorDim> *mismatchingDims = nullptr);
+
+/// Returns true if `memRefTy` has a valid layout for a vector.load/store of
+/// `vecTy`: the most minor memref dim must have unit stride, unless `vecTy`
+/// is a non-scalable vector with a single element.
+bool isValidLoadStoreMemRefLayout(VectorType vecTy, MemRefType memRefTy);
 
 /// Collect a set of vector-to-vector canonicalization patterns.
 void populateVectorToVectorCanonicalizationPatterns(RewritePatternSet &patterns,
@@ -210,7 +209,6 @@ Value selectPassthru(OpBuilder &builder, Value mask, Value newValue,
 } // namespace mlir
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/Vector/IR/VectorDialect.h.inc"
 #include "mlir/Dialect/Vector/IR/VectorOps.h.inc"
 
 #endif // MLIR_DIALECT_VECTOR_IR_VECTOROPS_H

@@ -2,15 +2,6 @@
 ; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=riscv32 -mattr=+v -verify-machineinstrs | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v -verify-machineinstrs | FileCheck %s
 
-declare <vscale x 1 x i1> @llvm.riscv.vmset.nxv1i1(iXLen);
-
-declare <vscale x 1 x i8> @llvm.riscv.vadd.mask.nxv1i8.nxv1i8(
-  <vscale x 1 x i8>,
-  <vscale x 1 x i8>,
-  <vscale x 1 x i8>,
-  <vscale x 1 x i1>,
-  iXLen, iXLen);
-
 ; Use unmasked instruction because the mask operand is allone mask
 define <vscale x 1 x i8> @test0(<vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %2) nounwind {
 ; CHECK-LABEL: test0:
@@ -22,7 +13,7 @@ entry:
   %allone = call <vscale x 1 x i1> @llvm.riscv.vmset.nxv1i1(
     iXLen %2);
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.mask.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     <vscale x 1 x i1> %allone,
@@ -42,7 +33,7 @@ entry:
   %allone = call <vscale x 1 x i1> @llvm.riscv.vmset.nxv1i1(
     iXLen %2);
   %a = call <vscale x 1 x i8> @llvm.riscv.vadd.mask.nxv1i8.nxv1i8(
-    <vscale x 1 x i8> undef,
+    <vscale x 1 x i8> poison,
     <vscale x 1 x i8> %0,
     <vscale x 1 x i8> %1,
     <vscale x 1 x i1> %allone,

@@ -24,15 +24,15 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
-#include <optional>
 #include <utility>
 
 namespace llvm {
 
 class AAResults;
+class AssumptionCache;
 class BasicBlock;
 class BinaryOperator;
-class BranchInst;
+class CondBrInst;
 class CmpInst;
 class Constant;
 class Function;
@@ -41,6 +41,7 @@ class IntrinsicInst;
 class LazyValueInfo;
 class LoadInst;
 class PHINode;
+struct ScalarOptions;
 class SelectInst;
 class SwitchInst;
 class TargetLibraryInfo;
@@ -77,16 +78,18 @@ enum ConstantPreference { WantInteger, WantBlockAddress };
 ///
 /// In this case, the unconditional branch at the end of the first if can be
 /// revectored to the false side of the second if.
-class JumpThreadingPass : public PassInfoMixin<JumpThreadingPass> {
+class JumpThreadingPass : public OptionalPassInfoMixin<JumpThreadingPass> {
+  const ScalarOptions *Opts = nullptr;
   Function *F = nullptr;
   FunctionAnalysisManager *FAM = nullptr;
   TargetLibraryInfo *TLI = nullptr;
   TargetTransformInfo *TTI = nullptr;
   LazyValueInfo *LVI = nullptr;
   AAResults *AA = nullptr;
+  AssumptionCache *AC = nullptr;
   std::unique_ptr<DomTreeUpdater> DTU;
-  std::optional<BlockFrequencyInfo *> BFI;
-  std::optional<BranchProbabilityInfo *> BPI;
+  BlockFrequencyInfo *BFI = nullptr;
+  BranchProbabilityInfo *BPI = nullptr;
   bool ChangedSinceLastAnalysisUpdate = false;
   bool HasGuards = false;
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -110,8 +113,7 @@ public:
                         TargetLibraryInfo *TLI, TargetTransformInfo *TTI,
                         LazyValueInfo *LVI, AAResults *AA,
                         std::unique_ptr<DomTreeUpdater> DTU,
-                        std::optional<BlockFrequencyInfo *> BFI,
-                        std::optional<BranchProbabilityInfo *> BPI);
+                        BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI);
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
@@ -137,20 +139,20 @@ public:
   LLVM_ABI bool computeValueKnownInPredecessorsImpl(
       Value *V, BasicBlock *BB, jumpthreading::PredValueInfo &Result,
       jumpthreading::ConstantPreference Preference,
-      SmallPtrSet<Value *, 4> &RecursionSet, Instruction *CxtI = nullptr);
+      SmallPtrSet<Value *, 4> &RecursionSet, Instruction *CtxI = nullptr);
   bool
   computeValueKnownInPredecessors(Value *V, BasicBlock *BB,
                                   jumpthreading::PredValueInfo &Result,
                                   jumpthreading::ConstantPreference Preference,
-                                  Instruction *CxtI = nullptr) {
+                                  Instruction *CtxI = nullptr) {
     SmallPtrSet<Value *, 4> RecursionSet;
     return computeValueKnownInPredecessorsImpl(V, BB, Result, Preference,
-                                               RecursionSet, CxtI);
+                                               RecursionSet, CtxI);
   }
 
   LLVM_ABI Constant *evaluateOnPredecessorEdge(BasicBlock *BB,
                                                BasicBlock *PredPredBB,
-                                               Value *cond,
+                                               Value *Cond,
                                                const DataLayout &DL);
   LLVM_ABI bool maybethreadThroughTwoBasicBlocks(BasicBlock *BB, Value *Cond);
   LLVM_ABI void threadThroughTwoBasicBlocks(BasicBlock *PredPredBB,
@@ -159,7 +161,7 @@ public:
   LLVM_ABI bool
   processThreadableEdges(Value *Cond, BasicBlock *BB,
                          jumpthreading::ConstantPreference Preference,
-                         Instruction *CxtI = nullptr);
+                         Instruction *CtxI = nullptr);
 
   LLVM_ABI bool processBranchOnPHI(PHINode *PN);
   LLVM_ABI bool processBranchOnXOR(BinaryOperator *BO);
@@ -175,7 +177,7 @@ public:
 
   LLVM_ABI bool processGuards(BasicBlock *BB);
   LLVM_ABI bool threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
-                            BranchInst *BI);
+                            CondBrInst *BI);
 
 private:
   BasicBlock *splitBlockPreds(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
@@ -219,8 +221,9 @@ private:
 
   // Internal overload of evaluateOnPredecessorEdge().
   Constant *evaluateOnPredecessorEdge(BasicBlock *BB, BasicBlock *PredPredBB,
-                                      Value *cond, const DataLayout &DL,
-                                      SmallPtrSet<Value *, 8> &Visited);
+                                      Value *Cond, const DataLayout &DL,
+                                      SmallPtrSet<Value *, 8> &Visited,
+                                      const Use *U = nullptr);
 };
 
 } // end namespace llvm

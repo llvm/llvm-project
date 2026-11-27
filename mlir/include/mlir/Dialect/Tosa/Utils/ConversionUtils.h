@@ -13,12 +13,13 @@
 #ifndef DIALECT_TOSA_UTILS_COVERSION_UTILS_H_
 #define DIALECT_TOSA_UTILS_COVERSION_UTILS_H_
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
+#include "llvm/ADT/APFloat.h"
 #include <optional>
 
 namespace mlir {
@@ -43,6 +44,18 @@ Value clampIntHelper(Location loc, Value arg, Value min, Value max,
 
 // Determines whether the integer value falls witin the range of integer type.
 bool validIntegerRange(IntegerType ty, int64_t value);
+
+// Returns the identity value to seed a float min/max computation with, such as
+// a reduction accumulator or a pooling window. TOSA seeds REDUCE_MIN with
+// maximum_s<in_out_t>() and REDUCE_MAX/ARGMAX/MAX_POOL2D with
+// minimum_s<in_out_t>(), and for floating-point types those bounds are
+// +/-infinity rather than the largest finite value. Only use them when the
+// caller opted in *and* the format can represent them: APFloat::getInf() is
+// unreachable for FiniteOnly semantics and silently returns a NaN for NanOnly
+// semantics such as f8E4M3FN, which would poison the whole computation through
+// NaN-propagating arith.minimumf/arith.maximumf.
+APFloat getFloatMinMaxIdentity(const llvm::fltSemantics &semantics,
+                               bool negative, bool allowNonFinites);
 
 // Checks for a dynamic batch dim in any of the passed parameters of an op.
 // The batch dimention must be #0 and the rest of the dimensions must be static.
@@ -70,7 +83,7 @@ checkHasDynamicBatchDims(PatternRewriter &rewriter, Op op,
   }
 
   dynamicDims.push_back(
-      rewriter.create<tensor::DimOp>(op->getLoc(), params[0], 0));
+      tensor::DimOp::create(rewriter, op->getLoc(), params[0], 0));
   return dynamicDims;
 }
 
@@ -84,14 +97,12 @@ LogicalResult EqualizeRanks(PatternRewriter &rewriter, Location loc,
 LogicalResult EqualizeRanks(ImplicitLocOpBuilder &builder, Value &input1,
                             Value &input2);
 
-namespace {
-
 // Creates a TOSA operation and performs shape inference on the individual
 // op. This allows shape inference when lowering down to TOSA.
 template <typename TosaOp, typename... Args>
 TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
                              Args &&...args) {
-  auto op = builder.create<TosaOp>(resultTy, args...);
+  auto op = TosaOp::create(builder, resultTy, args...);
 
   InferShapedTypeOpInterface shapeInterface =
       dyn_cast<InferShapedTypeOpInterface>(op.getOperation());
@@ -100,10 +111,10 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
 
   SmallVector<ShapedTypeComponents> returnedShapes;
   if (shapeInterface
-          .inferReturnTypeComponents(op.getContext(), builder.getLoc(),
-                                     op->getOperands(), op->getAttrDictionary(),
-                                     op->getPropertiesStorage(),
-                                     op->getRegions(), returnedShapes)
+          .inferReturnTypeComponents(
+              op.getContext(), builder.getLoc(), op->getOperands(),
+              op->getDiscardableAttrDictionary(), op->getPropertiesStorage(),
+              op->getRegions(), returnedShapes)
           .failed())
     return op;
 
@@ -112,7 +123,7 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   // different bit-width types and does not have a TypeAttr to define the
   // target type.
   auto result = op->getResult(0);
-  auto predictedShape = returnedShapes[0];
+  const auto &predictedShape = returnedShapes[0];
   auto currentKnowledge = ValueKnowledge::getKnowledgeFromType(resultTy);
 
   // Compute the knowledge based on the inferred type.
@@ -135,8 +146,6 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   result.setType(newTy);
   return op;
 }
-
-} // namespace
 
 // Creates a TOSA operation by:
 //   - first equalize ranks for ops with SameOperandsAndResultRank trait
@@ -248,6 +257,33 @@ SmallVector<int64_t> convertFromIntAttr(const DenseElementsAttr &attr,
 // per batch
 bool hasUniqueConstantScatterIndices(ShapedType indicesType,
                                      DenseIntElementsAttr indicesAttr);
+
+// Try to get the values of a DenseResourceElementsAttr construct
+template <typename T>
+std::optional<ArrayRef<T>> tryGetDenseResourceValues(ElementsAttr attr) {
+  if (auto denseResource = dyn_cast<DenseResourceElementsAttr>(attr)) {
+    // Check that the resource memory blob exists
+    AsmResourceBlob *blob = denseResource.getRawHandle().getBlob();
+    if (!blob)
+      return std::nullopt;
+
+    // Check that the data are in a valid form
+    if (!DenseElementsAttr::isValidRawBuffer(attr.getShapedType(),
+                                             blob->getData())) {
+      return std::nullopt;
+    }
+
+    return blob->template getDataAs<T>();
+  }
+
+  return std::nullopt;
+}
+
+// returns the value of a constant scalar int tensor, or failure if
+// the value cannot be extracted
+template <typename T>
+FailureOr<T> getConstantScalarIntValue(Value val);
+
 } // namespace tosa
 } // namespace mlir
 

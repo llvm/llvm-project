@@ -12,9 +12,9 @@ void chained_conditional_compound_assignment(int i) {
     b = false;
   }
   // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: redundant boolean literal in conditional assignment [readability-simplify-boolean-expr]
-  // CHECK-FIXES:      {{^}}  } else if (i < 10) {{{$}}
-  // CHECK-FIXES-NEXT: {{^}}    b = false;{{$}}
-  // CHECK-FIXES-NEXT: {{^}}  } else b = i > 20;{{$}}
+  // CHECK-FIXES:      } else if (i < 10) {
+  // CHECK-FIXES-NEXT:   b = false;
+  // CHECK-FIXES-NEXT: } else b = i > 20;
 }
 
 void chained_conditional_assignment(int i) {
@@ -28,7 +28,7 @@ void chained_conditional_assignment(int i) {
   else
     b = false;
   // CHECK-MESSAGES: :[[@LINE-3]]:9: warning: {{.*}} in conditional assignment
-  // CHECK-FIXES:      {{^}}  else if (i < 10)
-  // CHECK-FIXES-NEXT: {{^}}    b = false;
-  // CHECK-FIXES-NEXT: {{^}}  else b = i > 20;
+  // CHECK-FIXES:      else if (i < 10)
+  // CHECK-FIXES-NEXT:   b = false;
+  // CHECK-FIXES-NEXT: else b = i > 20;
 }

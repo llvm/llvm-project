@@ -8,6 +8,7 @@ add_clang_unittest(IndexTests
   clangLex
   clangSerialization
   clangTooling
+  clangUnifiedSymbolResolution
   LLVM_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Support

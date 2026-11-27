@@ -182,12 +182,12 @@ template <typename T> struct dispatch_shared_info_template {
 #if KMP_USE_HIER_SCHED
   kmp_hier_t<T> *hier;
 #endif
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
   // When linking with libhwloc, the ORDERED EPCC test slowsdown on big
   // machines (> 48 cores). Performance analysis showed that a cache thrash
   // was occurring and this padding helps alleviate the problem.
   char padding[64];
-#endif
+#endif // KMP_HWLOC_ENABLED
 };
 
 /* ------------------------------------------------------------------------ */
@@ -291,8 +291,8 @@ template <typename T> kmp_uint32 __kmp_eq(T value, T checker) {
     TODO: make inline function (move to header file for icl)
 */
 template <typename UT>
-static UT __kmp_wait(volatile UT *spinner, UT checker,
-                     kmp_uint32 (*pred)(UT, UT) USE_ITT_BUILD_ARG(void *obj)) {
+UT __kmp_wait(volatile UT *spinner, UT checker,
+              kmp_uint32 (*pred)(UT, UT) USE_ITT_BUILD_ARG(void *obj)) {
   // note: we may not belong to a team at this point
   volatile UT *spin = spinner;
   UT check = checker;

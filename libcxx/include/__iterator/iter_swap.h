@@ -29,9 +29,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [iter.cust.swap]
 
@@ -56,7 +56,7 @@ struct __fn {
   // NOLINTBEGIN(libcpp-robust-against-adl) iter_swap ADL calls should only be made through ranges::iter_swap
   template <class _T1, class _T2>
     requires __unqualified_iter_swap<_T1, _T2>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_T1&& __x, _T2&& __y) const
+  constexpr void operator()(_T1&& __x, _T2&& __y) const
       noexcept(noexcept(iter_swap(std::forward<_T1>(__x), std::forward<_T2>(__y)))) {
     (void)iter_swap(std::forward<_T1>(__x), std::forward<_T2>(__y));
   }
@@ -64,7 +64,7 @@ struct __fn {
 
   template <class _T1, class _T2>
     requires(!__unqualified_iter_swap<_T1, _T2>) && __readable_swappable<_T1, _T2>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_T1&& __x, _T2&& __y) const
+  constexpr void operator()(_T1&& __x, _T2&& __y) const
       noexcept(noexcept(ranges::swap(*std::forward<_T1>(__x), *std::forward<_T2>(__y)))) {
     ranges::swap(*std::forward<_T1>(__x), *std::forward<_T2>(__y));
   }
@@ -74,7 +74,7 @@ struct __fn {
              !__readable_swappable<_T1, _T2>) &&     //
             indirectly_movable_storable<_T1, _T2> && //
             indirectly_movable_storable<_T2, _T1>
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_T1&& __x, _T2&& __y) const
+  constexpr void operator()(_T1&& __x, _T2&& __y) const
       noexcept(noexcept(iter_value_t<_T2>(ranges::iter_move(__y))) && //
                noexcept(*__y = ranges::iter_move(__x)) &&             //
                noexcept(*std::forward<_T1>(__x) = std::declval<iter_value_t<_T2>>())) {
@@ -99,9 +99,9 @@ concept indirectly_swappable =
       ranges::iter_swap(__i2, __i1);
     };
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

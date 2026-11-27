@@ -57,32 +57,38 @@ public:
                                     SymbolRoleSet());
   }
 
-  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
-    SourceLocation Loc = TL.getNameLoc();
-    TypedefNameDecl *ND = TL.getTypedefNameDecl();
-    if (ND->isTransparentTag()) {
-      TagDecl *Underlying = ND->getUnderlyingType()->getAsTagDecl();
-      return IndexCtx.handleReference(Underlying, Loc, Parent,
-                                      ParentDC, SymbolRoleSet(), Relations);
-    }
-    if (IsBase) {
-      TRY_TO(IndexCtx.handleReference(ND, Loc,
-                                      Parent, ParentDC, SymbolRoleSet()));
-      if (auto *CD = TL.getType()->getAsCXXRecordDecl()) {
+  bool handleTypeNameReference(NamedDecl *ND, SourceLocation Loc, QualType T) {
+    if (auto *TND = dyn_cast<TypedefNameDecl>(ND))
+      if (TND->isTransparentTag())
+        ND = TND->getUnderlyingType()->castAsTagDecl();
+    if (IsBase && !isa<TagDecl>(ND)) {
+      TRY_TO(
+          IndexCtx.handleReference(ND, Loc, Parent, ParentDC, SymbolRoleSet()));
+      if (auto *CD = T->getAsCXXRecordDecl()) {
         TRY_TO(IndexCtx.handleReference(CD, Loc, Parent, ParentDC,
                                         (unsigned)SymbolRole::Implicit,
                                         Relations));
       }
-    } else {
-      TRY_TO(IndexCtx.handleReference(ND, Loc,
-                                      Parent, ParentDC, SymbolRoleSet(),
-                                      Relations));
+      return true;
     }
-    return true;
+    return IndexCtx.handleReference(ND, Loc, Parent, ParentDC, SymbolRoleSet(),
+                                    Relations);
+  }
+
+  bool VisitTypedefTypeLoc(TypedefTypeLoc TL) {
+    return handleTypeNameReference(TL.getDecl(), TL.getNameLoc(), TL.getType());
+  }
+
+  // A type found via a using-declaration, e.g. `ns2::A` after
+  // `namespace ns2 { using ns1::A; }`. Like DeclRefExpr, report the target
+  // declaration rather than the UsingShadowDecl.
+  bool VisitUsingTypeLoc(UsingTypeLoc TL) {
+    return handleTypeNameReference(TL.getDecl()->getTargetDecl(),
+                                   TL.getNameLoc(), TL.getType());
   }
 
   bool VisitAutoTypeLoc(AutoTypeLoc TL) {
-    if (auto *C = TL.getNamedConcept())
+    if (auto *C = TL.getNamedConcept().getAsTemplateDecl())
       return IndexCtx.handleReference(C, TL.getConceptNameLoc(), Parent,
                                       ParentDC);
     return true;
@@ -172,7 +178,8 @@ public:
     return true;
   }
 
-  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL) {
+  bool TraverseTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc TL,
+                                             bool TraverseQualifier) {
     if (!WalkUpFromTemplateSpecializationTypeLoc(TL))
       return false;
     if (!TraverseTemplateName(TL.getTypePtr()->getTemplateName()))
@@ -182,8 +189,8 @@ public:
     // so clear them while visiting the args.
     SmallVector<SymbolRelation, 3> SavedRelations = Relations;
     Relations.clear();
-    auto ResetSavedRelations =
-        llvm::make_scope_exit([&] { this->Relations = SavedRelations; });
+    llvm::scope_exit ResetSavedRelations(
+        [&] { this->Relations = SavedRelations; });
     for (unsigned I = 0, E = TL.getNumArgs(); I != E; ++I) {
       if (!TraverseTemplateArgumentLoc(TL.getArgLoc(I)))
         return false;
@@ -200,11 +207,6 @@ public:
         T->getTemplateName(), TL.getTemplateNameLoc(), T->getAsCXXRecordDecl(),
         /*IsTypeAlias=*/false);
     return true;
-  }
-
-  bool VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-    return IndexCtx.handleReference(TL.getDecl(), TL.getNameLoc(), Parent,
-                                    ParentDC, SymbolRoleSet(), Relations);
   }
 
   bool VisitDependentNameTypeLoc(DependentNameTypeLoc TL) {
@@ -248,36 +250,28 @@ void IndexingContext::indexTypeLoc(TypeLoc TL,
   TypeIndexer(*this, Parent, DC, isBase, isIBType).TraverseTypeLoc(TL);
 }
 
-void IndexingContext::indexNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS,
-                                                  const NamedDecl *Parent,
-                                                  const DeclContext *DC) {
-  if (!NNS)
-    return;
-
-  if (NestedNameSpecifierLoc Prefix = NNS.getPrefix())
-    indexNestedNameSpecifierLoc(Prefix, Parent, DC);
-
+void IndexingContext::indexNestedNameSpecifierLoc(
+    NestedNameSpecifierLoc QualifierLoc, const NamedDecl *Parent,
+    const DeclContext *DC) {
   if (!DC)
     DC = Parent->getLexicalDeclContext();
-  SourceLocation Loc = NNS.getLocalBeginLoc();
-
-  switch (NNS.getNestedNameSpecifier()->getKind()) {
-  case NestedNameSpecifier::Identifier:
-  case NestedNameSpecifier::Global:
-  case NestedNameSpecifier::Super:
+  switch (NestedNameSpecifier Qualifier = QualifierLoc.getNestedNameSpecifier();
+          Qualifier.getKind()) {
+  case NestedNameSpecifier::Kind::Null:
+  case NestedNameSpecifier::Kind::Global:
+  case NestedNameSpecifier::Kind::MicrosoftSuper:
     break;
 
-  case NestedNameSpecifier::Namespace:
-    handleReference(NNS.getNestedNameSpecifier()->getAsNamespace(),
-                    Loc, Parent, DC, SymbolRoleSet());
+  case NestedNameSpecifier::Kind::Namespace: {
+    auto [Namespace, Prefix] = QualifierLoc.castAsNamespaceAndPrefix();
+    indexNestedNameSpecifierLoc(Prefix, Parent, DC);
+    handleReference(Namespace, QualifierLoc.getLocalBeginLoc(), Parent, DC,
+                    SymbolRoleSet());
     break;
-  case NestedNameSpecifier::NamespaceAlias:
-    handleReference(NNS.getNestedNameSpecifier()->getAsNamespaceAlias(),
-                    Loc, Parent, DC, SymbolRoleSet());
-    break;
+  }
 
-  case NestedNameSpecifier::TypeSpec:
-    indexTypeLoc(NNS.getTypeLoc(), Parent, DC);
+  case NestedNameSpecifier::Kind::Type:
+    indexTypeLoc(QualifierLoc.castAsTypeLoc(), Parent, DC);
     break;
   }
 }

@@ -15,6 +15,8 @@
 
 #include "llvm/MC/MCAsmInfoELF.h"
 #include "llvm/MC/MCAsmInfoXCOFF.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCValue.h"
 
 namespace llvm {
 class Triple;
@@ -23,7 +25,8 @@ class PPCELFMCAsmInfo : public MCAsmInfoELF {
   void anchor() override;
 
 public:
-  explicit PPCELFMCAsmInfo(bool is64Bit, const Triple &);
+  explicit PPCELFMCAsmInfo(bool is64Bit, const Triple &,
+                           const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
@@ -31,10 +34,9 @@ public:
 };
 
 class PPCXCOFFMCAsmInfo : public MCAsmInfoXCOFF {
-  void anchor() override;
-
 public:
-  explicit PPCXCOFFMCAsmInfo(bool is64Bit, const Triple &);
+  explicit PPCXCOFFMCAsmInfo(bool is64Bit, const Triple &,
+                             const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
@@ -123,8 +125,17 @@ enum Specifier {
   S_TPREL_LO,       // symbol@tprel@l
   S_U,              // symbol@u
 };
+
+bool evaluateAsConstant(const MCSpecifierExpr &Expr, int64_t &Res);
 }
 
+namespace PPCMCExpr {
+using Specifier = uint16_t;
+}
+
+static inline uint16_t getSpecifier(const MCSymbolRefExpr *SRE) {
+  return SRE->getKind();
+}
 } // namespace llvm
 
 #endif

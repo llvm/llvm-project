@@ -10,9 +10,11 @@
 #define _LIBCPP___RANDOM_BINOMIAL_DISTRIBUTION_H
 
 #include <__config>
+#include <__math/exponential_functions.h>
+#include <__math/gamma.h>
+#include <__math/logarithms.h>
 #include <__random/is_valid.h>
 #include <__random/uniform_real_distribution.h>
-#include <cmath>
 #include <iosfwd>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -42,15 +44,15 @@ public:
   public:
     typedef binomial_distribution distribution_type;
 
-    _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __t = 1, double __p = 0.5);
+    explicit param_type(result_type __t = 1, double __p = 0.5);
 
-    _LIBCPP_HIDE_FROM_ABI result_type t() const { return __t_; }
-    _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
+    [[__nodiscard__]] result_type t() const { return __t_; }
+    [[__nodiscard__]] double p() const { return __p_; }
 
-    friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
+    friend bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__t_ == __y.__t_ && __x.__p_ == __y.__p_;
     }
-    friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+    friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
 
     friend class binomial_distribution;
   };
@@ -61,63 +63,45 @@ private:
 public:
   // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI binomial_distribution() : binomial_distribution(1) {}
-  _LIBCPP_HIDE_FROM_ABI explicit binomial_distribution(result_type __t, double __p = 0.5)
-      : __p_(param_type(__t, __p)) {}
+  binomial_distribution() : binomial_distribution(1) {}
+  explicit binomial_distribution(result_type __t, double __p = 0.5) : __p_(param_type(__t, __p)) {}
 #else
-  _LIBCPP_HIDE_FROM_ABI explicit binomial_distribution(result_type __t = 1, double __p = 0.5)
-      : __p_(param_type(__t, __p)) {}
+  explicit binomial_distribution(result_type __t = 1, double __p = 0.5) : __p_(param_type(__t, __p)) {}
 #endif
-  _LIBCPP_HIDE_FROM_ABI explicit binomial_distribution(const param_type& __p) : __p_(__p) {}
-  _LIBCPP_HIDE_FROM_ABI void reset() {}
+  explicit binomial_distribution(const param_type& __p) : __p_(__p) {}
+  void reset() {}
 
   // generating functions
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI result_type t() const { return __p_.t(); }
-  _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
+  [[__nodiscard__]] result_type t() const { return __p_.t(); }
+  [[__nodiscard__]] double p() const { return __p_.p(); }
 
-  _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
-  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
+  [[__nodiscard__]] param_type param() const { return __p_; }
+  void param(const param_type& __p) { __p_ = __p; }
 
-  _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
-  _LIBCPP_HIDE_FROM_ABI result_type max() const { return t(); }
+  [[__nodiscard__]] result_type min() const { return 0; }
+  [[__nodiscard__]] result_type max() const { return t(); }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const binomial_distribution& __x, const binomial_distribution& __y) {
+  friend bool operator==(const binomial_distribution& __x, const binomial_distribution& __y) {
     return __x.__p_ == __y.__p_;
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const binomial_distribution& __x, const binomial_distribution& __y) {
-    return !(__x == __y);
-  }
+  friend bool operator!=(const binomial_distribution& __x, const binomial_distribution& __y) { return !(__x == __y); }
 };
-
-// The LLVM C library provides this with conflicting `noexcept` attributes.
-#if !defined(_LIBCPP_MSVCRT_LIKE) && !defined(__LLVM_LIBC__)
-extern "C" double lgamma_r(double, int*);
-#endif
-
-inline _LIBCPP_HIDE_FROM_ABI double __libcpp_lgamma(double __d) {
-#if defined(_LIBCPP_MSVCRT_LIKE) || defined(__LLVM_LIBC__)
-  return lgamma(__d);
-#else
-  int __sign;
-  return lgamma_r(__d, &__sign);
-#endif
-}
 
 template <class _IntType>
 binomial_distribution<_IntType>::param_type::param_type(result_type __t, double __p) : __t_(__t), __p_(__p) {
   if (0 < __p_ && __p_ < 1) {
     __r0_ = static_cast<result_type>((__t_ + 1) * __p_);
-    __pr_ = std::exp(
-        std::__libcpp_lgamma(__t_ + 1.) - std::__libcpp_lgamma(__r0_ + 1.) - std::__libcpp_lgamma(__t_ - __r0_ + 1.) +
-        __r0_ * std::log(__p_) + (__t_ - __r0_) * std::log(1 - __p_));
+    __pr_ = __math::exp(
+        __math::__lgamma_r(__t_ + 1.) - __math::__lgamma_r(__r0_ + 1.) - __math::__lgamma_r(__t_ - __r0_ + 1.) +
+        __r0_ * __math::log(__p_) + (__t_ - __r0_) * __math::log(1 - __p_));
     __odds_ratio_ = __p_ / (1 - __p_);
   }
 }
@@ -165,7 +149,7 @@ _IntType binomial_distribution<_IntType>::operator()(_URNG& __g, const param_typ
 }
 
 template <class _CharT, class _Traits, class _IntType>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const binomial_distribution<_IntType>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _OStream;
@@ -176,8 +160,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const binomial_distribution<_In
 }
 
 template <class _CharT, class _Traits, class _IntType>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, binomial_distribution<_IntType>& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, binomial_distribution<_IntType>& __x) {
   typedef binomial_distribution<_IntType> _Eng;
   typedef typename _Eng::result_type result_type;
   typedef typename _Eng::param_type param_type;

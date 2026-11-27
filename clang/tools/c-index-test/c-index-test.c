@@ -36,7 +36,9 @@ extern int indextest_perform_shell_execution(const char *command_line);
 /* Utility functions.                                                         */
 /******************************************************************************/
 
-#ifdef _MSC_VER
+#ifdef __MVS__
+#include <libgen.h>
+#elif _MSC_VER
 char *basename(const char* path)
 {
     char* base1 = (char*)strrchr(path, '/');
@@ -1240,7 +1242,15 @@ static CXString GetCursorSource(CXCursor Cursor) {
     clang_disposeString(source);
     return createCXString("<invalid loc>");
   }
+#ifdef __MVS__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored                                               \
+    "-Wincompatible-pointer-types-discards-qualifiers"
+#endif
   b = basename(clang_getCString(source));
+#ifdef __MVS__
+#pragma clang diagnostic pop
+#endif
   result = duplicateCXString(b);
   clang_disposeString(source);
   return result;
@@ -1986,6 +1996,51 @@ static enum CXChildVisitResult PrintDeclAttributes(CXCursor cursor, CXCursor p,
     PrintCursor(cursor, NULL);
   }
   return CXChildVisit_Continue;
+}
+
+/******************************************************************************/
+/* Inline assembly cursor testing                                             */
+/******************************************************************************/
+
+static enum CXChildVisitResult
+PrintGCCInlineAssembly(CXCursor cursor, CXCursor p, CXClientData d) {
+  CXString Constraint, Template, Clobber;
+  CXCursor Expr;
+  unsigned hasGoto, i, e;
+  if (clang_getCursorKind(cursor) != CXCursor_AsmStmt)
+    return CXChildVisit_Recurse;
+
+  hasGoto = clang_Cursor_isGCCAssemblyHasGoto(cursor);
+  printf("===ASM TEMPLATE%s===\n", hasGoto ? " (WITH GOTO)" : "");
+  Template = clang_Cursor_getGCCAssemblyTemplate(cursor);
+  printf("%s", clang_getCString(Template));
+  clang_disposeString(Template);
+  printf("\n===ASM TEMPLATE END===\n");
+
+  printf("volatile: %s\n",
+         clang_Cursor_isGCCAssemblyVolatile(cursor) ? "true" : "false");
+
+  for (i = 0, e = clang_Cursor_getGCCAssemblyNumOutputs(cursor); i < e; ++i) {
+    clang_Cursor_getGCCAssemblyOutput(cursor, i, &Constraint, &Expr);
+    printf("Output #%d Constraint (%s): ", i, clang_getCString(Constraint));
+    PrintCursor(Expr, NULL);
+    printf("\n");
+    clang_disposeString(Constraint);
+  }
+  for (i = 0, e = clang_Cursor_getGCCAssemblyNumInputs(cursor); i < e; ++i) {
+    clang_Cursor_getGCCAssemblyInput(cursor, i, &Constraint, &Expr);
+    printf("Input #%d Constraint (%s): ", i, clang_getCString(Constraint));
+    PrintCursor(Expr, NULL);
+    printf("\n");
+    clang_disposeString(Constraint);
+  }
+  for (i = 0, e = clang_Cursor_getGCCAssemblyNumClobbers(cursor); i < e; ++i) {
+    Clobber = clang_Cursor_getGCCAssemblyClobber(cursor, i);
+    printf("Clobber #%d: %s\n", i, clang_getCString(Clobber));
+    clang_disposeString(Clobber);
+  }
+  printf("===ASM END===\n");
+  return CXChildVisit_Recurse;
 }
 
 /******************************************************************************/
@@ -3054,19 +3109,14 @@ static void inspect_print_cursor(CXCursor Cursor) {
 
   {
     CXModule mod = clang_Cursor_getModule(Cursor);
-    CXFile astFile;
-    CXString name, astFilename;
+    CXString name;
     unsigned i, numHeaders;
     if (mod) {
-      astFile = clang_Module_getASTFile(mod);
-      astFilename = clang_getFileName(astFile);
       name = clang_Module_getFullName(mod);
       numHeaders = clang_Module_getNumTopLevelHeaders(TU, mod);
-      printf(" ModuleName=%s (%s) system=%d Headers(%d):",
-             clang_getCString(name), clang_getCString(astFilename),
+      printf(" ModuleName=%s system=%d Headers(%d):", clang_getCString(name),
              clang_Module_isSystem(mod), numHeaders);
       clang_disposeString(name);
-      clang_disposeString(astFilename);
       for (i = 0; i < numHeaders; ++i) {
         CXFile file = clang_Module_getTopLevelHeader(TU, mod, i);
         CXString filename = clang_getFileName(file);
@@ -5010,6 +5060,7 @@ static void print_usage(void) {
     "       c-index-test -test-annotate-tokens=<range> {<args>}*\n"
     "       c-index-test -test-inclusion-stack-source {<args>}*\n"
     "       c-index-test -test-inclusion-stack-tu <AST file>\n");
+  fprintf(stderr, "       c-index-test -test-inline-assembly <AST file>\n");
   fprintf(stderr,
     "       c-index-test -test-print-linkage-source {<args>}*\n"
     "       c-index-test -test-print-visibility {<args>}*\n"
@@ -5166,6 +5217,10 @@ int cindextest_main(int argc, const char **argv) {
         argc, argv, "-single-symbol-sgf-at=", inspect_single_symbol_sgf_cursor);
   else if (argc > 2 && strstr(argv[1], "-single-symbol-sgf-for=") == argv[1])
     return perform_test_single_symbol_sgf(argv[1], argc - 2, argv + 2);
+
+  if (argc > 2 && strstr(argv[1], "-test-inline-assembly") == argv[1])
+    return perform_test_load_source(argc - 2, argv + 2, "all",
+                                    PrintGCCInlineAssembly, NULL);
 
   print_usage();
   return 1;

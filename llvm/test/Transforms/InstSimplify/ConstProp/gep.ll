@@ -29,3 +29,31 @@ define ptr @f2() {
 ;
   ret ptr getelementptr (ptr, ptr getelementptr inbounds inrange(0, 8) ([3 x ptr], ptr @vt, i64 0, i64 1), i64 3)
 }
+
+define ptr @f3() {
+; CHECK-LABEL: @f3(
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw inrange(-8, 0) (i8, ptr @vt, i64 16)
+;
+  ret ptr getelementptr inrange(-16, 8) (ptr, ptr getelementptr inbounds inrange(0, 8) ([3 x ptr], ptr @vt, i64 0, i64 1), i64 1)
+}
+
+define ptr @f4() {
+; CHECK-LABEL: @f4(
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw inrange(-8, 8) (i8, ptr @vt, i64 16)
+;
+  ret ptr getelementptr inrange(-16, 8) (ptr, ptr getelementptr inbounds inrange(0, 24) ([3 x ptr], ptr @vt, i64 0, i64 1), i64 1)
+}
+
+define ptr @f5() {
+; CHECK-LABEL: @f5(
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw inrange(0, 0) (i8, ptr @vt, i64 16)
+;
+  ret ptr getelementptr inrange(0, 8) (ptr, ptr getelementptr inbounds inrange(0, 8) ([3 x ptr], ptr @vt, i64 0, i64 0), i64 2)
+}
+
+define ptr @f6() {
+; CHECK-LABEL: @f6(
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw inrange(-8, 8) (i8, ptr @vt, i64 16)
+;
+  ret ptr getelementptr inrange(-8, 8) (ptr, ptr getelementptr inbounds inrange(-8, 16) ([3 x ptr], ptr @vt, i64 0, i64 1), i64 1)
+}

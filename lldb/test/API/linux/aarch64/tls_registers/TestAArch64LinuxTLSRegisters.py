@@ -53,6 +53,8 @@ class AArch64LinuxTLSRegisters(TestBase):
                 tls_reg.IsValid(), "{} register not found.".format(register)
             )
             self.assertEqual(tls_reg.GetValueAsUnsigned(), values[register])
+            if register == "tpidr":
+                self.expect("reg read tp", substrs=[hex(values[register])])
 
     def check_tls_reg(self, registers):
         self.setup(registers)
@@ -94,7 +96,7 @@ class AArch64LinuxTLSRegisters(TestBase):
             self.expect("p {}_was_set".format(register), substrs=["true"])
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_tls_no_sme(self):
         if self.isAArch64SME():
             self.skipTest("SME must not be present.")
@@ -102,7 +104,7 @@ class AArch64LinuxTLSRegisters(TestBase):
         self.check_tls_reg(["tpidr"])
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_tls_sme(self):
         if not self.isAArch64SME():
             self.skipTest("SME must be present.")
@@ -110,7 +112,7 @@ class AArch64LinuxTLSRegisters(TestBase):
         self.check_tls_reg(["tpidr", "tpidr2"])
 
     @skipUnlessArch("aarch64")
-    @skipUnlessPlatform(["linux"])
+    @requireLinux
     def test_tpidr2_no_sme(self):
         if self.isAArch64SME():
             self.skipTest("SME must not be present.")

@@ -37,7 +37,7 @@ namespace test1 {
     // CHECK:      [[NEW:%.*]] = call noalias nonnull ptr @_Znwm(i64 8)
     // CHECK-NEXT: invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 5)
     // CHECK:      ret ptr [[NEW]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr allocptr [[NEW]])
     return new A(5);
   }
 
@@ -47,7 +47,7 @@ namespace test1 {
     // CHECK-NEXT: [[FOO:%.*]] = invoke i32 @_ZN5test13fooEv()
     // CHECK:      invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 [[FOO]])
     // CHECK:      ret ptr [[NEW]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr allocptr [[NEW]])
     extern int foo();
     return new A(foo());
   }
@@ -72,7 +72,7 @@ namespace test1 {
     // CHECK:      ret ptr [[NEW]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, ptr [[ACTIVE]]
     // CHECK-NEXT: br i1 [[ISACTIVE]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr allocptr [[NEW]])
     return new A(B().x);
   }
 
@@ -98,7 +98,7 @@ namespace test1 {
     // CHECK:      ret ptr [[NEW]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, ptr [[ACTIVE]]
     // CHECK-NEXT: br i1 [[ISACTIVE]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr allocptr [[NEW]])
     return new A(B());
   }
 
@@ -123,7 +123,7 @@ namespace test1 {
     // CHECK:      ret ptr [[NEW]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, ptr [[ACTIVE]]
     // CHECK-NEXT: br i1 [[ISACTIVE]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr allocptr [[NEW]])
     return new A(B(), B());
   }
   A *f() {
@@ -159,7 +159,7 @@ namespace test1 {
     // CHECK:      ret ptr [[RET]]
     // CHECK:      [[ISACTIVE:%.*]] = load i1, ptr [[ACTIVE]]
     // CHECK-NEXT: br i1 [[ISACTIVE]]
-    // CHECK:      call void @_ZdlPv(ptr [[NEW]])
+    // CHECK:      call void @_ZdlPv(ptr allocptr [[NEW]])
     A *x;
     return (x = new A(makeB()), makeB(), x);
   }
@@ -216,12 +216,12 @@ namespace test3 {
 
   A *b(bool cond) {
 
-    // CHECK:    define{{( dso_local)?}} ptr @_ZN5test31bEb(i1 zeroext
+    // CHECK:    define{{( dso_local)?}} ptr @_ZN5test31bEb(i1
     // CHECK:      [[SAVED0:%.*]] = alloca ptr
     // CHECK-NEXT: [[SAVED1:%.*]] = alloca ptr
     // CHECK-NEXT: [[CLEANUPACTIVE:%.*]] = alloca i1
 
-    // CHECK:      [[COND:%.*]] = trunc i8 {{.*}} to i1
+    // CHECK:      [[COND:%.*]] = icmp ne i8 {{.*}}, 0
     // CHECK-NEXT: store i1 false, ptr [[CLEANUPACTIVE]]
     // CHECK-NEXT: br i1 [[COND]]
     return (cond ?
@@ -444,7 +444,7 @@ namespace test9 {
   }
   // CHECK: define{{.*}} ptr @_ZN5test94testEv
   // CHECK: [[TEST9_NEW:%.*]] = call noalias nonnull ptr @_Znam
-  // CHECK: call void @_ZdaPv(ptr [[TEST9_NEW]])
+  // CHECK: call void @_ZdaPv(ptr allocptr [[TEST9_NEW]])
 }
 
 // In a destructor with a function-try-block, a return statement in a
@@ -475,7 +475,7 @@ namespace test10 {
   // CHECK:      invoke void @_ZN6test107cleanupEv()
   // CHECK:      call ptr @__cxa_begin_catch
   // CHECK-NEXT: load i8, ptr @_ZN6test108suppressE, align 1
-  // CHECK-NEXT: trunc
+  // CHECK-NEXT: icmp ne
   // CHECK-NEXT: br i1
 
   // CHECK98:      call void @__cxa_end_catch()

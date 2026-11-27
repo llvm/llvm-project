@@ -1,0 +1,10 @@
+# Check that ORC_RT_LOG_OUTPUT redirects log records to the named file.
+# Redirection is level-independent, so checking the error line suffices (error
+# is shown at the default threshold).
+#
+# REQUIRES: orc-rt-log-level-error
+# RUN: rm -f %t.log
+# RUN: env ORC_RT_LOG_OUTPUT=%t.log orc-rt-log-check
+# RUN: FileCheck %s < %t.log
+
+# CHECK: [orc-rt:General:ERROR] error message

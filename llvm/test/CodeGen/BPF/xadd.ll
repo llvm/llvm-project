@@ -17,7 +17,7 @@ target datalayout = "e-m:e-p:64:64-i64:64-n32:64-S128"
 target triple = "bpf"
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(ptr nocapture %ptr) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test(ptr nocapture %ptr) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata ptr %ptr, metadata !13, metadata !DIExpression()), !dbg !15
   %0 = atomicrmw add ptr %ptr, i32 4 seq_cst, !dbg !16
@@ -28,10 +28,7 @@ entry:
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

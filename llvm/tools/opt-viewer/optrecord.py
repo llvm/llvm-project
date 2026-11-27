@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from __future__ import print_function
 
@@ -16,38 +16,20 @@ import html
 from collections import defaultdict
 import fnmatch
 import functools
-from multiprocessing import Lock
 import os, os.path
 import subprocess
-
-try:
-    # The previously builtin function `intern()` was moved
-    # to the `sys` module in Python 3.
-    from sys import intern
-except:
-    pass
-
+from sys import intern
 import re
 
 import optpmap
 
-try:
-    dict.iteritems
-except AttributeError:
-    # Python 3
-    def itervalues(d):
-        return iter(d.values())
 
-    def iteritems(d):
-        return iter(d.items())
+def itervalues(d):
+    return iter(d.values())
 
-else:
-    # Python 2
-    def itervalues(d):
-        return d.itervalues()
 
-    def iteritems(d):
-        return d.iteritems()
+def iteritems(d):
+    return iter(d.items())
 
 
 def html_file_name(filename):
@@ -63,23 +45,25 @@ class Remark(yaml.YAMLObject):
     yaml_loader = Loader
 
     default_demangler = "c++filt -n"
+    demangler_cmd = default_demangler
     demangler_proc = None
-    demangler_lock = Lock()
-
-    @classmethod
-    def set_demangler(cls, demangler):
-        cls.demangler_proc = subprocess.Popen(
-            demangler.split(), stdin=subprocess.PIPE, stdout=subprocess.PIPE
-        )
+    demangler_owner_pid = None
 
     @classmethod
     def demangle(cls, name):
-        with cls.demangler_lock:
-            if not cls.demangler_proc:
-                cls.set_demangler(cls.default_demangler)
-            cls.demangler_proc.stdin.write((name + "\n").encode("utf-8"))
-            cls.demangler_proc.stdin.flush()
-            return cls.demangler_proc.stdout.readline().rstrip().decode("utf-8")
+        # Start a demangler on first use in each process. Workers created by
+        # `fork` inherit the parent's class state, including its pipes, so
+        # compare against the current pid rather than just checking for None.
+        if cls.demangler_owner_pid != os.getpid():
+            cls.demangler_proc = subprocess.Popen(
+                cls.demangler_cmd.split(),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+            )
+            cls.demangler_owner_pid = os.getpid()
+        cls.demangler_proc.stdin.write((name + "\n").encode("utf-8"))
+        cls.demangler_proc.stdin.flush()
+        return cls.demangler_proc.stdout.readline().rstrip().decode("utf-8")
 
     # Intern all strings since we have lot of duplication across filenames,
     # remark text.
@@ -361,6 +345,8 @@ def find_opt_files(*dirs_or_files):
                     d for d in subdirs if not os.path.ismount(os.path.join(dir, d))
                 ]
                 for file in files:
-                    if fnmatch.fnmatch(file, "*.opt.yaml*"):
+                    if fnmatch.fnmatch(file, "*.opt.yaml*") or fnmatch.fnmatch(
+                        file, "*.opt.ld.yaml*"
+                    ):
                         all.append(os.path.join(dir, file))
     return all

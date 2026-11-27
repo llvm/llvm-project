@@ -23,8 +23,11 @@ def A64FXModel : SchedMachineModel {
   list<Predicate> UnsupportedFeatures = !listconcat(SMEUnsupported.F, SVEUnsupported.F,
                                                     [HasMTE, HasMatMulInt8, HasBF16,
                                                     HasPAuth, HasPAuthLR, HasCPA,
-                                                    HasCSSC]);
+                                                    HasCSSC, HasMOPS, HasMOPS_GO,
+                                                    HasFPv2]);
   let FullInstRWOverlapCheck = 0;
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 let SchedModel = A64FXModel in {
@@ -2290,7 +2293,7 @@ def A64FXWrite_FMAXVD : SchedWriteRes<[A64FXGI03]> {
   let NumMicroOps = 7;
   let ReleaseAtCycles = [7];
 }
-def : InstRW<[A64FXWrite_FMAXVH], (instregex "^F(MAX|MIN)(NM)?V_VPZ_D")>;
+def : InstRW<[A64FXWrite_FMAXVD], (instregex "^F(MAX|MIN)(NM)?V_VPZ_D")>;
 
 def A64FXWrite_INDEX_RI_BH : SchedWriteRes<[A64FXGI0, A64FXGI2]> {
   let Latency = 17;
@@ -2334,7 +2337,7 @@ def : InstRW<[A64FXWrite_INSR_ZR], (instregex "^INSR_ZR")>;
 def A64FXWrite_LAST_R : SchedWriteRes<[A64FXGI0, A64FXGI56]> {
   let Latency = 25;
 }
-def : InstRW<[A64FXWrite_CLAST_R], (instregex "^LAST[AB]_R")>;
+def : InstRW<[A64FXWrite_LAST_R], (instregex "^LAST[AB]_R")>;
 
 def A64FXWrite_GLD_S_ZI : SchedWriteRes<[A64FXGI0, A64FXGI5, A64FXGI6]> {
   let Latency = 19;

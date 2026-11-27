@@ -1,5 +1,4 @@
-; REQUIRES: x86_64-linux
-; REQUIRES: asserts
+; REQUIRES: asserts && x86-registered-target
 ; RUN: opt < %s -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline  -sample-profile-file=%S/Inputs/pseudo-probe-callee-profile-mismatch.prof --salvage-stale-profile --salvage-unused-profile=false -S --debug-only=sample-profile,sample-profile-matcher,sample-profile-impl  -pass-remarks=inline 2>&1 | FileCheck %s
 
 ; There is no profile-checksum-mismatch attr, even the checksum is mismatched in the pseudo_probe_desc, it doesn't run the matching.
@@ -12,9 +11,6 @@
 ; CHECK: Probe descriptor missing for Function bar
 ; CHECK: Profile is invalid due to CFG mismatch for Function bar
 
-
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 define available_externally i32 @main() #0 {
   %1 = call i32 @bar(), !dbg !13

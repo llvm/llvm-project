@@ -49,7 +49,9 @@ public:
 } // namespace
 
 APINotesManager::APINotesManager(SourceManager &SM, const LangOptions &LangOpts)
-    : SM(SM), ImplicitAPINotes(LangOpts.APINotes) {}
+    : SM(SM), ImplicitAPINotes(LangOpts.APINotes),
+      HasAPINotes(LangOpts.APINotes),
+      VersionIndependentSwift(LangOpts.SwiftVersionIndependentAPINotes) {}
 
 APINotesManager::~APINotesManager() {
   // Free the API notes readers.
@@ -97,8 +99,11 @@ APINotesManager::loadAPINotes(FileEntryRef APINotesFile) {
 
   // Load the binary form we just compiled.
   auto Reader = APINotesReader::Create(std::move(CompiledBuffer), SwiftVersion);
-  assert(Reader && "Could not load the API notes we just generated?");
-  return Reader;
+  if (!Reader) {
+    llvm::consumeError(Reader.takeError());
+    return nullptr;
+  }
+  return std::move(Reader.get());
 }
 
 std::unique_ptr<APINotesReader>
@@ -117,9 +122,13 @@ APINotesManager::loadAPINotes(StringRef Buffer) {
 
   CompiledBuffer = llvm::MemoryBuffer::getMemBufferCopy(
       StringRef(APINotesBuffer.data(), APINotesBuffer.size()));
+
   auto Reader = APINotesReader::Create(std::move(CompiledBuffer), SwiftVersion);
-  assert(Reader && "Could not load the API notes we just generated?");
-  return Reader;
+  if (!Reader) {
+    llvm::consumeError(Reader.takeError());
+    return nullptr;
+  }
+  return std::move(Reader.get());
 }
 
 bool APINotesManager::loadAPINotes(const DirectoryEntry *HeaderDir,
@@ -311,6 +320,8 @@ bool APINotesManager::loadCurrentModuleAPINotes(
       M->APINotesFile = File.getName().str();
   }
 
+  if (NumReaders > 0)
+    HasAPINotes = true;
   return NumReaders > 0;
 }
 
@@ -323,6 +334,8 @@ bool APINotesManager::loadCurrentModuleAPINotesFromBuffer(
 
     CurrentModuleReaders[NumReader++] = Reader.release();
   }
+  if (NumReader > 0)
+    HasAPINotes = true;
   return NumReader;
 }
 
@@ -416,7 +429,7 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
         }
 
         // Grab the result.
-        if (auto Reader = Readers[*Dir].dyn_cast<APINotesReader *>())
+        if (auto Reader = dyn_cast_if_present<APINotesReader *>(Readers[*Dir]))
           Results.push_back(Reader);
         break;
       }
@@ -431,7 +444,7 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
       if (auto APINotesFile = FileMgr.getOptionalFileRef(APINotesPath)) {
         if (!loadAPINotes(*Dir, *APINotesFile)) {
           ++NumHeaderAPINotes;
-          if (auto Reader = Readers[*Dir].dyn_cast<APINotesReader *>())
+          if (auto Reader = dyn_cast<APINotesReader *>(Readers[*Dir]))
             Results.push_back(Reader);
           break;
         }

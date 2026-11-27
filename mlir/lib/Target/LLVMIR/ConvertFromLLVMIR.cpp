@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "mlir/Target/LLVMIR/Import.h"
@@ -19,6 +18,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -29,6 +29,14 @@ void registerFromLLVMIRTranslation() {
       "emit-expensive-warnings",
       llvm::cl::desc("Emit expensive warnings during LLVM IR import "
                      "(discouraged: testing only!)"),
+      llvm::cl::init(false));
+  static llvm::cl::opt<bool> convertDebugRecToIntrinsics(
+      "convert-debug-rec-to-intrinsics",
+      llvm::cl::desc("Change the input LLVM module to use old debug intrinsics "
+                     "instead of records "
+                     "via convertFromNewDbgValues, this happens "
+                     "before importing the debug information"
+                     "(discouraged: to be removed soon!)"),
       llvm::cl::init(false));
   static llvm::cl::opt<bool> dropDICompositeTypeElements(
       "drop-di-composite-type-elements",
@@ -56,6 +64,7 @@ void registerFromLLVMIRTranslation() {
          MLIRContext *context) -> OwningOpRef<Operation *> {
         llvm::SMDiagnostic err;
         llvm::LLVMContext llvmContext;
+        llvmContext.getLibraryOptions().assign(getTranslationLibraryOptions());
         std::unique_ptr<llvm::Module> llvmModule =
             llvm::parseIR(*sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()),
                           err, llvmContext);
@@ -69,8 +78,10 @@ void registerFromLLVMIRTranslation() {
         if (llvm::verifyModule(*llvmModule, &llvm::errs()))
           return nullptr;
 
-        // Debug records are not currently supported in the LLVM IR translator.
-        llvmModule->convertFromNewDbgValues();
+        // Now that the translation supports importing debug records directly,
+        // make it the default, but allow the user to override to old behavior.
+        if (convertDebugRecToIntrinsics)
+          llvmModule->convertFromNewDbgValues();
 
         return translateLLVMIRToModule(
             std::move(llvmModule), context, emitExpensiveWarnings,
@@ -78,9 +89,6 @@ void registerFromLLVMIRTranslation() {
             preferUnregisteredIntrinsics, importStructsAsLiterals);
       },
       [](DialectRegistry &registry) {
-        // Register the DLTI dialect used to express the data layout
-        // specification of the imported module.
-        registry.insert<DLTIDialect>();
         // Register all dialects that implement the LLVMImportDialectInterface
         // including the LLVM dialect.
         registerAllFromLLVMIRTranslations(registry);

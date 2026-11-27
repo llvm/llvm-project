@@ -16,7 +16,7 @@ def ADD_CO : I<(outs GPR32:$dst, GPR8:$flag),
 // GISEL-NEXT: GIR_MakeTempReg, /*TempRegID*/0, /*TypeID*/GILLT_s8,
 // GISEL-NEXT: GIR_BuildRootMI, /*Opcode*/GIMT_Encode2(MyTarget::ADD_CO),
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/0, // DstI[dst]
-// GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(RegState::Define|RegState::Dead),
+// GISEL-NEXT: GIR_AddTempRegister, /*InsnID*/0, /*TempRegID*/0, /*TempRegFlags*/GIMT_Encode2(static_cast<uint16_t>(RegState::Define|RegState::Dead)),
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/1, // src0
 // GISEL-NEXT: GIR_RootToRootCopy, /*OpIdx*/2, // src1
 // GISEL-NEXT: GIR_RootConstrainSelectedInstOperands,

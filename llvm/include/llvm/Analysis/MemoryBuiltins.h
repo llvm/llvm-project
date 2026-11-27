@@ -59,15 +59,6 @@ isAllocationFn(const Value *V,
                function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
 
 /// Tests if a value is a call or invoke to a library function that
-/// allocates memory via new.
-LLVM_ABI bool isNewLikeFn(const Value *V, const TargetLibraryInfo *TLI);
-
-/// Tests if a value is a call or invoke to a library function that
-/// allocates memory similar to malloc or calloc.
-LLVM_ABI bool isMallocOrCallocLikeFn(const Value *V,
-                                     const TargetLibraryInfo *TLI);
-
-/// Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
 LLVM_ABI bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
 
@@ -82,12 +73,16 @@ LLVM_ABI Value *getReallocatedOperand(const CallBase *CB);
 //  free Call Utility Functions.
 //
 
-/// isLibFreeFunction - Returns true if the function is a builtin free()
-LLVM_ABI bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
+/// Returns true if the function has allockind(free).
+LLVM_ABI bool isFreeLikeFn(const Function *F);
 
 /// If this if a call to a free function, return the freed operand.
-LLVM_ABI Value *getFreedOperand(const CallBase *CB,
-                                const TargetLibraryInfo *TLI);
+LLVM_ABI Value *getFreedOperand(const CallBase *CB);
+
+/// If this is a call to a free function that returns a value, return the value
+/// that will be returned when it is elided, i.e. when a free(malloc(...)) pair
+/// is eliminated. Returns nullptr on free functions with void return type.
+LLVM_ABI Constant *getElidedFreeResult(const Value *V);
 
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
@@ -104,12 +99,11 @@ LLVM_ABI Value *getFreedOperand(const CallBase *CB,
 /// insertion or speculative execution of allocation routines.
 LLVM_ABI bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
 
-/// Gets the alignment argument for an aligned_alloc-like function, using either
-/// built-in knowledge based on fuction names/signatures or allocalign
-/// attributes. Note: the Value returned may not indicate a valid alignment, per
+/// Gets the alignment argument for an aligned_alloc-like function based on the
+/// allocalign attribute.
+/// Note: the Value returned may not indicate a valid alignment, per
 /// the definition of the allocalign attribute.
-LLVM_ABI Value *getAllocAlignment(const CallBase *V,
-                                  const TargetLibraryInfo *TLI);
+LLVM_ABI Value *getAllocAlignment(const CallBase *V);
 
 /// Return the size of the requested allocation. With a trivial mapper, this is
 /// similar to calling getObjectSize(..., Exact), but without looking through
@@ -125,9 +119,7 @@ LLVM_ABI std::optional<APInt> getAllocSize(
 /// If this is a call to an allocation function that initializes memory to a
 /// fixed value, return said value in the requested type.  Otherwise, return
 /// nullptr.
-LLVM_ABI Constant *getInitialValueOfAllocation(const Value *V,
-                                               const TargetLibraryInfo *TLI,
-                                               Type *Ty);
+LLVM_ABI Constant *getInitialValueOfAllocation(const Value *V, Type *Ty);
 
 /// If a function is part of an allocation family (e.g.
 /// malloc/realloc/calloc/free), return the identifier for its family
@@ -180,6 +172,14 @@ struct ObjectSizeOpts {
 LLVM_ABI bool getObjectSize(const Value *Ptr, uint64_t &Size,
                             const DataLayout &DL, const TargetLibraryInfo *TLI,
                             ObjectSizeOpts Opts = {});
+
+/// Like getObjectSize(), but only returns the size of base objects (like
+/// allocas, global variables and allocator calls) and std::nullopt otherwise.
+/// Requires ExactSizeFromOffset mode.
+LLVM_ABI std::optional<TypeSize> getBaseObjectSize(const Value *Ptr,
+                                                   const DataLayout &DL,
+                                                   const TargetLibraryInfo *TLI,
+                                                   ObjectSizeOpts Opts = {});
 
 /// Try to turn a call to \@llvm.objectsize into an integer value of the given
 /// Type. Returns null on failure. If MustSucceed is true, this function will
@@ -305,7 +305,7 @@ private:
   OffsetSpan combineOffsetRange(OffsetSpan LHS, OffsetSpan RHS);
   OffsetSpan computeImpl(Value *V);
   OffsetSpan computeValue(Value *V);
-  bool CheckedZextOrTrunc(APInt &I);
+  bool checkedZextOrTrunc(APInt &I);
 };
 
 /// SizeOffsetValue - Used by \p ObjectSizeOffsetEvaluator, which works with
@@ -355,9 +355,7 @@ class ObjectSizeOffsetEvaluator
   SizeOffsetValue compute_(Value *V);
 
 public:
-  LLVM_ABI ObjectSizeOffsetEvaluator(const DataLayout &DL,
-                                     const TargetLibraryInfo *TLI,
-                                     LLVMContext &Context,
+  LLVM_ABI ObjectSizeOffsetEvaluator(Module &M, const TargetLibraryInfo *TLI,
                                      ObjectSizeOpts EvalOpts = {});
 
   static SizeOffsetValue unknown() { return SizeOffsetValue(); }

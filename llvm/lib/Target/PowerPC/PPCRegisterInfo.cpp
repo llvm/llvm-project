@@ -31,14 +31,12 @@
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -50,48 +48,16 @@ using namespace llvm;
 STATISTIC(InflateGPRC, "Number of gprc inputs for getLargestLegalClass");
 STATISTIC(InflateGP8RC, "Number of g8rc inputs for getLargestLegalClass");
 
-static cl::opt<bool>
-EnableBasePointer("ppc-use-base-pointer", cl::Hidden, cl::init(true),
-         cl::desc("Enable use of a base pointer for complex stack frames"));
-
-static cl::opt<bool>
-AlwaysBasePointer("ppc-always-use-base-pointer", cl::Hidden, cl::init(false),
-         cl::desc("Force the use of a base pointer in every function"));
-
-static cl::opt<bool>
-EnableGPRToVecSpills("ppc-enable-gpr-to-vsr-spills", cl::Hidden, cl::init(false),
-         cl::desc("Enable spills from gpr to vsr rather than stack"));
-
-static cl::opt<bool>
-StackPtrConst("ppc-stack-ptr-caller-preserved",
-                cl::desc("Consider R1 caller preserved so stack saves of "
-                         "caller preserved registers can be LICM candidates"),
-                cl::init(true), cl::Hidden);
-
-static cl::opt<unsigned>
-MaxCRBitSpillDist("ppc-max-crbit-spill-dist",
-                  cl::desc("Maximum search distance for definition of CR bit "
-                           "spill on ppc"),
-                  cl::Hidden, cl::init(100));
-
-// Copies/moves of physical accumulators are expensive operations
-// that should be avoided whenever possible. MMA instructions are
-// meant to be used in performance-sensitive computational kernels.
-// This option is provided, at least for the time being, to give the
-// user a tool to detect this expensive operation and either rework
-// their code or report a compiler bug if that turns out to be the
-// cause.
-#ifndef NDEBUG
-static cl::opt<bool>
-ReportAccMoves("ppc-report-acc-moves",
-               cl::desc("Emit information about accumulator register spills "
-                        "and copies"),
-               cl::Hidden, cl::init(false));
-#endif
-
-extern cl::opt<bool> DisableAutoPairedVecSt;
-
 static unsigned offsetMinAlignForOpcode(unsigned OpC);
+
+#ifndef NDEBUG
+static bool reportAccMoves(const MachineBasicBlock &MBB) {
+  return MBB.getParent()
+      ->getSubtarget<PPCSubtarget>()
+      .getCLOpts()
+      .report_acc_moves;
+}
+#endif
 
 PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   : PPCGenRegisterInfo(TM.isPPC64() ? PPC::LR8 : PPC::LR,
@@ -161,24 +127,6 @@ PPCRegisterInfo::PPCRegisterInfo(const PPCTargetMachine &TM)
   ImmToIdxMap[PPC::PSTXVP] = PPC::STXVPX;
 }
 
-/// getPointerRegClass - Return the register class to use to hold pointers.
-/// This is used for addressing modes.
-const TargetRegisterClass *
-PPCRegisterInfo::getPointerRegClass(const MachineFunction &MF, unsigned Kind)
-                                                                       const {
-  // Note that PPCInstrInfo::foldImmediate also directly uses this Kind value
-  // when it checks for ZERO folding.
-  if (Kind == 1) {
-    if (TM.isPPC64())
-      return &PPC::G8RC_NOX0RegClass;
-    return &PPC::GPRC_NOR0RegClass;
-  }
-
-  if (TM.isPPC64())
-    return &PPC::G8RCRegClass;
-  return &PPC::GPRCRegClass;
-}
-
 const MCPhysReg*
 PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
@@ -188,12 +136,12 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     if (Subtarget.hasVSX()) {
       if (Subtarget.pairedVectorMemops())
         return CSR_64_AllRegs_VSRP_SaveList;
-      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+      if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_VSX_SaveList;
       return CSR_64_AllRegs_VSX_SaveList;
     }
     if (Subtarget.hasAltivec()) {
-      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+      if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_Altivec_SaveList;
       return CSR_64_AllRegs_Altivec_SaveList;
     }
@@ -237,14 +185,14 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (TM.isPPC64()) {
     if (Subtarget.pairedVectorMemops()) {
       if (Subtarget.isAIXABI()) {
-        if (!TM.getAIXExtendedAltivecABI())
+        if (!Subtarget.isAIXExtendedAltivecABI())
           return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
         return SaveR2 ? CSR_AIX64_R2_VSRP_SaveList : CSR_AIX64_VSRP_SaveList;
       }
       return SaveR2 ? CSR_SVR464_R2_VSRP_SaveList : CSR_SVR464_VSRP_SaveList;
     }
     if (Subtarget.hasAltivec() &&
-        (!Subtarget.isAIXABI() || TM.getAIXExtendedAltivecABI())) {
+        (!Subtarget.isAIXABI() || Subtarget.isAIXExtendedAltivecABI())) {
       return SaveR2 ? CSR_PPC64_R2_Altivec_SaveList
                     : CSR_PPC64_Altivec_SaveList;
     }
@@ -253,11 +201,11 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   // 32-bit targets.
   if (Subtarget.isAIXABI()) {
     if (Subtarget.pairedVectorMemops())
-      return TM.getAIXExtendedAltivecABI() ? CSR_AIX32_VSRP_SaveList
-                                           : CSR_AIX32_SaveList;
+      return Subtarget.isAIXExtendedAltivecABI() ? CSR_AIX32_VSRP_SaveList
+                                                 : CSR_AIX32_SaveList;
     if (Subtarget.hasAltivec())
-      return TM.getAIXExtendedAltivecABI() ? CSR_AIX32_Altivec_SaveList
-                                           : CSR_AIX32_SaveList;
+      return Subtarget.isAIXExtendedAltivecABI() ? CSR_AIX32_Altivec_SaveList
+                                                 : CSR_AIX32_SaveList;
     return CSR_AIX32_SaveList;
   }
   if (Subtarget.pairedVectorMemops())
@@ -280,12 +228,12 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     if (Subtarget.hasVSX()) {
       if (Subtarget.pairedVectorMemops())
         return CSR_64_AllRegs_VSRP_RegMask;
-      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+      if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_VSX_RegMask;
       return CSR_64_AllRegs_VSX_RegMask;
     }
     if (Subtarget.hasAltivec()) {
-      if (Subtarget.isAIXABI() && !TM.getAIXExtendedAltivecABI())
+      if (Subtarget.isAIXABI() && !Subtarget.isAIXExtendedAltivecABI())
         return CSR_64_AllRegs_AIX_Dflt_Altivec_RegMask;
       return CSR_64_AllRegs_Altivec_RegMask;
     }
@@ -294,17 +242,18 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
 
   if (Subtarget.isAIXABI()) {
     if (Subtarget.pairedVectorMemops()) {
-      if (!TM.getAIXExtendedAltivecABI())
+      if (!Subtarget.isAIXExtendedAltivecABI())
         return TM.isPPC64() ? CSR_PPC64_RegMask : CSR_AIX32_RegMask;
       return TM.isPPC64() ? CSR_AIX64_VSRP_RegMask : CSR_AIX32_VSRP_RegMask;
     }
-    return TM.isPPC64()
-               ? ((Subtarget.hasAltivec() && TM.getAIXExtendedAltivecABI())
-                      ? CSR_PPC64_Altivec_RegMask
-                      : CSR_PPC64_RegMask)
-               : ((Subtarget.hasAltivec() && TM.getAIXExtendedAltivecABI())
-                      ? CSR_AIX32_Altivec_RegMask
-                      : CSR_AIX32_RegMask);
+    return TM.isPPC64() ? ((Subtarget.hasAltivec() &&
+                            Subtarget.isAIXExtendedAltivecABI())
+                               ? CSR_PPC64_Altivec_RegMask
+                               : CSR_PPC64_RegMask)
+                        : ((Subtarget.hasAltivec() &&
+                            Subtarget.isAIXExtendedAltivecABI())
+                               ? CSR_AIX32_Altivec_RegMask
+                               : CSR_AIX32_RegMask);
   }
 
   if (CC == CallingConv::Cold) {
@@ -418,7 +367,7 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
       markSuperRegs(Reserved, Reg);
 
   if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
-      !TM.getAIXExtendedAltivecABI()) {
+      !Subtarget.isAIXExtendedAltivecABI()) {
     //  In the AIX default Altivec ABI, vector registers VR20-VR31 are reserved
     //  and cannot be used.
     for (auto Reg : CSR_Altivec_SaveList) {
@@ -543,7 +492,8 @@ bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
     // uses the TOC). In functions where it isn't reserved (i.e. leaf functions
     // with no TOC access), we can't claim that it is preserved.
     return (getReservedRegs(MF).test(PhysReg));
-  if (StackPtrConst && PhysReg == Subtarget.getStackPointerRegister() &&
+  if (TM.getCLOpts().stack_ptr_caller_preserved &&
+      PhysReg == Subtarget.getStackPointerRegister() &&
       !MFI.hasVarSizedObjects() && !MFI.hasOpaqueSPAdjustment())
     // The value of the stack pointer does not change within a function after
     // the prologue and before the epilogue if there are no dynamic allocations
@@ -552,12 +502,10 @@ bool PPCRegisterInfo::isCallerPreservedPhysReg(MCRegister PhysReg,
   return false;
 }
 
-bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
-                                            ArrayRef<MCPhysReg> Order,
-                                            SmallVectorImpl<MCPhysReg> &Hints,
-                                            const MachineFunction &MF,
-                                            const VirtRegMap *VRM,
-                                            const LiveRegMatrix *Matrix) const {
+bool PPCRegisterInfo::getRegAllocationHints(
+    Register VirtReg, ArrayRef<MCPhysReg> Order,
+    SmallSetVector<MCPhysReg, 16> &Hints, const MachineFunction &MF,
+    const VirtRegMap *VRM, const LiveRegMatrix *Matrix) const {
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
 
   // Call the base implementation first to set any hints based on the usual
@@ -598,11 +546,11 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
           HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
           // Ensure that the hint is a VSRp register.
           if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
-            Hints.push_back(HintReg);
+            Hints.insert(HintReg);
         } else if (RegClass->contains(PPC::ACC0)) {
           HintReg = PPC::ACC0 + (UACCPhys - PPC::UACC0);
           if (HintReg >= PPC::ACC0 && HintReg <= PPC::ACC7)
-            Hints.push_back(HintReg);
+            Hints.insert(HintReg);
         }
       }
       break;
@@ -616,7 +564,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
         assert((ACCPhys >= PPC::ACC0 && ACCPhys <= PPC::ACC7) &&
                "Expecting an ACC register for BUILD_UACC.");
         Register HintReg = PPC::UACC0 + (ACCPhys - PPC::ACC0);
-        Hints.push_back(HintReg);
+        Hints.insert(HintReg);
       }
       break;
     }
@@ -657,7 +605,7 @@ unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
     const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
     // Vector registers VR20-VR31 are reserved and cannot be used in the default
     // Altivec ABI on AIX.
-    if (!TM.getAIXExtendedAltivecABI() && Subtarget.isAIXABI())
+    if (!Subtarget.isAIXExtendedAltivecABI() && Subtarget.isAIXABI())
       return 20 - DefaultSafety;
   }
     return 32 - DefaultSafety;
@@ -665,7 +613,7 @@ unsigned PPCRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case PPC::VSSRCRegClassID:
   case PPC::VSRCRegClassID: {
     const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
-    if (!TM.getAIXExtendedAltivecABI() && Subtarget.isAIXABI())
+    if (!Subtarget.isAIXExtendedAltivecABI() && Subtarget.isAIXABI())
       // Vector registers VR20-VR31 are reserved and cannot be used in the
       // default Altivec ABI on AIX.
       return 52 - DefaultSafety;
@@ -689,13 +637,13 @@ PPCRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
     // For Power9 we allow the user to enable GPR to vector spills.
     // FIXME: Currently limited to spilling GP8RC. A follow on patch will add
     // support to spill GPRC.
-    if (TM.isELFv2ABI() || Subtarget.isAIXABI()) {
-      if (Subtarget.hasP9Vector() && EnableGPRToVecSpills &&
+    if (Subtarget.isELFv2ABI() || Subtarget.isAIXABI()) {
+      if (Subtarget.hasP9Vector() && TM.getCLOpts().enable_gpr_to_vsr_spills &&
           RC == &PPC::G8RCRegClass) {
         InflateGP8RC++;
         return &PPC::SPILLTOVSRRCRegClass;
       }
-      if (RC == &PPC::GPRCRegClass && EnableGPRToVecSpills)
+      if (RC == &PPC::GPRCRegClass && TM.getCLOpts().enable_gpr_to_vsr_spills)
         InflateGPRC++;
     }
 
@@ -1075,7 +1023,7 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
     if (Ins->readsRegister(SrcReg, TRI))
       SeenUse = true;
     // Unable to find CR bit definition within maximum search distance.
-    if (CRBitSpillDistance == MaxCRBitSpillDist) {
+    if (CRBitSpillDistance == TM.getCLOpts().max_crbit_spill_dist) {
       Ins = MI;
       break;
     }
@@ -1102,13 +1050,20 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
     SpillsKnownBit = true;
     break;
   default:
+    // When spilling a CR bit, the super register may not be explicitly defined
+    // (i.e. it can be defined by a CR-logical that only defines the subreg) so
+    // we state that the CR field is undef. Also, in order to preserve the kill
+    // flag on the CR bit, we add it as an implicit use.
+
     // On Power10, we can use SETNBC to spill all CR bits. SETNBC will set all
     // bits (specifically, it produces a -1 if the CR bit is set). Ultimately,
     // the bit that is of importance to us is bit 32 (bit 0 of a 32-bit
     // register), and SETNBC will set this.
     if (Subtarget.isISA3_1()) {
       BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::SETNBC8 : PPC::SETNBC), Reg)
-          .addReg(SrcReg, RegState::Undef);
+          .addReg(SrcReg, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit |
+                              getKillRegState(MI.getOperand(0).isKill()));
       break;
     }
 
@@ -1122,16 +1077,14 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
           SrcReg == PPC::CR4LT || SrcReg == PPC::CR5LT ||
           SrcReg == PPC::CR6LT || SrcReg == PPC::CR7LT) {
         BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::SETB8 : PPC::SETB), Reg)
-          .addReg(getCRFromCRBit(SrcReg), RegState::Undef);
+            .addReg(getCRFromCRBit(SrcReg), RegState::Undef)
+            .addReg(SrcReg, RegState::Implicit |
+                                getKillRegState(MI.getOperand(0).isKill()));
         break;
       }
     }
 
     // We need to move the CR field that contains the CR bit we are spilling.
-    // The super register may not be explicitly defined (i.e. it can be defined
-    // by a CR-logical that only defines the subreg) so we state that the CR
-    // field is undef. Also, in order to preserve the kill flag on the CR bit,
-    // we add it as an implicit use.
     BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::MFOCRF8 : PPC::MFOCRF), Reg)
       .addReg(getCRFromCRBit(SrcReg), RegState::Undef)
       .addReg(SrcReg,
@@ -1216,7 +1169,7 @@ void PPCRegisterInfo::emitAccCopyInfo(MachineBasicBlock &MBB,
 #ifdef NDEBUG
   return;
 #else
-  if (ReportAccMoves) {
+  if (reportAccMoves(MBB)) {
     std::string Dest = PPC::ACCRCRegClass.contains(DestReg) ? "acc" : "uacc";
     std::string Src = PPC::ACCRCRegClass.contains(SrcReg) ? "acc" : "uacc";
     dbgs() << "Emitting copy from " << Src << " to " << Dest << ":\n";
@@ -1230,7 +1183,7 @@ static void emitAccSpillRestoreInfo(MachineBasicBlock &MBB, bool IsPrimed,
 #ifdef NDEBUG
   return;
 #else
-  if (ReportAccMoves) {
+  if (reportAccMoves(MBB)) {
     dbgs() << "Emitting " << (IsPrimed ? "acc" : "uacc") << " register "
            << (IsRestore ? "restore" : "spill") << ":\n";
     MBB.dump();
@@ -1263,16 +1216,15 @@ void PPCRegisterInfo::spillRegPair(MachineBasicBlock &MBB,
 }
 
 /// Remove any STXVP[X] instructions and split them out into a pair of
-/// STXV[X] instructions if --disable-auto-paired-vec-st is specified on
-/// the command line.
+/// STXV[X] instructions when paired vector stores are disabled.
 void PPCRegisterInfo::lowerOctWordSpilling(MachineBasicBlock::iterator II,
                                            unsigned FrameIndex) const {
-  assert(DisableAutoPairedVecSt &&
-         "Expecting to do this only if paired vector stores are disabled.");
   MachineInstr &MI = *II; // STXVP <SrcReg>, <offset>
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
+  assert(!Subtarget.enableAutoPairedVecSt() &&
+         "Expecting to do this only if paired vector stores are disabled.");
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
   Register SrcReg = MI.getOperand(0).getReg();
@@ -1290,7 +1242,7 @@ static void emitWAccSpillRestoreInfo(MachineBasicBlock &MBB, bool IsRestore) {
 #ifdef NDEBUG
   return;
 #else
-  if (ReportAccMoves) {
+  if (reportAccMoves(MBB)) {
     dbgs() << "Emitting wacc register " << (IsRestore ? "restore" : "spill")
            << ":\n";
     MBB.dump();
@@ -1325,7 +1277,7 @@ void PPCRegisterInfo::lowerACCSpilling(MachineBasicBlock::iterator II,
   // adjust the offset of the store that is within the 64-byte stack slot.
   if (IsPrimed)
     BuildMI(MBB, II, DL, TII.get(PPC::XXMFACC), SrcReg).addReg(SrcReg);
-  if (DisableAutoPairedVecSt) {
+  if (!Subtarget.enableAutoPairedVecSt()) {
     spillRegPair(MBB, II, DL, TII, FrameIndex, IsLittleEndian, IsKilled,
                  TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_pair0),
                  IsLittleEndian ? 48 : 0);
@@ -1519,33 +1471,32 @@ void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
   // DMR is made up of WACC and WACC_HI, so DMXXEXTFDMR512 to spill
   // the corresponding 512 bits.
   const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
+  auto spillDMR = [&](Register SrcReg, int BEIdx, int LEIdx) {
+    auto spillWACC = [&](unsigned Opc, unsigned RegIdx, int IdxBE, int IdxLE) {
+      Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
+      Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
+
+      BuildMI(MBB, II, DL, TII.get(Opc), VSRpReg0)
+          .addDef(VSRpReg1)
+          .addReg(TargetRegisterInfo::getSubReg(SrcReg, RegIdx));
+
+      addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                            .addReg(VSRpReg0, RegState::Kill),
+                        FrameIndex, IsLittleEndian ? IdxLE : IdxBE);
+      addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
+                            .addReg(VSRpReg1, RegState::Kill),
+                        FrameIndex, IsLittleEndian ? IdxLE - 32 : IdxBE + 32);
+    };
+    spillWACC(PPC::DMXXEXTFDMR512, PPC::sub_wacc_lo, BEIdx, LEIdx);
+    spillWACC(PPC::DMXXEXTFDMR512_HI, PPC::sub_wacc_hi, BEIdx + 64, LEIdx - 64);
+  };
+
   Register SrcReg = MI.getOperand(0).getReg();
-
-  Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
-  Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
-  Register VSRpReg2 = MF.getRegInfo().createVirtualRegister(RC);
-  Register VSRpReg3 = MF.getRegInfo().createVirtualRegister(RC);
-
-  BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512_HI), VSRpReg2)
-      .addDef(VSRpReg3)
-      .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_wacc_hi));
-
-  BuildMI(MBB, II, DL, TII.get(PPC::DMXXEXTFDMR512), VSRpReg0)
-      .addDef(VSRpReg1)
-      .addReg(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_wacc_lo));
-
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                        .addReg(VSRpReg0, RegState::Kill),
-                    FrameIndex, IsLittleEndian ? 96 : 0);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                        .addReg(VSRpReg1, RegState::Kill),
-                    FrameIndex, IsLittleEndian ? 64 : 32);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                        .addReg(VSRpReg2, RegState::Kill),
-                    FrameIndex, IsLittleEndian ? 32 : 64);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::STXVP))
-                        .addReg(VSRpReg3, RegState::Kill),
-                    FrameIndex, IsLittleEndian ? 0 : 96);
+  if (MI.getOpcode() == PPC::SPILL_DMRP) {
+    spillDMR(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_dmr1), 0, 96);
+    spillDMR(TargetRegisterInfo::getSubReg(SrcReg, PPC::sub_dmr0), 128, 224);
+  } else
+    spillDMR(SrcReg, 0, 96);
 
   // Discard the pseudo instruction.
   MBB.erase(II);
@@ -1554,7 +1505,7 @@ void PPCRegisterInfo::lowerDMRSpilling(MachineBasicBlock::iterator II,
 /// lowerDMRRestore - Generate the code to restore the DMR register.
 void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
                                       unsigned FrameIndex) const {
-  MachineInstr &MI = *II; // <DestReg> = RESTORE_WACC <offset>
+  MachineInstr &MI = *II; // <DestReg> = RESTORE_DMR[P] <offset>
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MBB.getParent();
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
@@ -1563,32 +1514,34 @@ void PPCRegisterInfo::lowerDMRRestore(MachineBasicBlock::iterator II,
   bool IsLittleEndian = Subtarget.isLittleEndian();
 
   const TargetRegisterClass *RC = &PPC::VSRpRCRegClass;
+  auto restoreDMR = [&](Register DestReg, int BEIdx, int LEIdx) {
+    auto restoreWACC = [&](unsigned Opc, unsigned RegIdx, int IdxBE,
+                           int IdxLE) {
+      Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
+      Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
+
+      addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg0),
+                        FrameIndex, IsLittleEndian ? IdxLE : IdxBE);
+      addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg1),
+                        FrameIndex, IsLittleEndian ? IdxLE - 32 : IdxBE + 32);
+
+      // Kill virtual registers (killedRegState::Killed).
+      BuildMI(MBB, II, DL, TII.get(Opc),
+              TargetRegisterInfo::getSubReg(DestReg, RegIdx))
+          .addReg(VSRpReg0, RegState::Kill)
+          .addReg(VSRpReg1, RegState::Kill);
+    };
+    restoreWACC(PPC::DMXXINSTDMR512, PPC::sub_wacc_lo, BEIdx, LEIdx);
+    restoreWACC(PPC::DMXXINSTDMR512_HI, PPC::sub_wacc_hi, BEIdx + 64,
+                LEIdx - 64);
+  };
+
   Register DestReg = MI.getOperand(0).getReg();
-
-  Register VSRpReg0 = MF.getRegInfo().createVirtualRegister(RC);
-  Register VSRpReg1 = MF.getRegInfo().createVirtualRegister(RC);
-  Register VSRpReg2 = MF.getRegInfo().createVirtualRegister(RC);
-  Register VSRpReg3 = MF.getRegInfo().createVirtualRegister(RC);
-
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg0),
-                    FrameIndex, IsLittleEndian ? 96 : 0);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg1),
-                    FrameIndex, IsLittleEndian ? 64 : 32);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg2),
-                    FrameIndex, IsLittleEndian ? 32 : 64);
-  addFrameReference(BuildMI(MBB, II, DL, TII.get(PPC::LXVP), VSRpReg3),
-                    FrameIndex, IsLittleEndian ? 0 : 96);
-
-  // Kill virtual registers (killedRegState::Killed).
-  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512_HI),
-          TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_hi))
-      .addReg(VSRpReg2, RegState::Kill)
-      .addReg(VSRpReg3, RegState::Kill);
-
-  BuildMI(MBB, II, DL, TII.get(PPC::DMXXINSTDMR512),
-          TargetRegisterInfo::getSubReg(DestReg, PPC::sub_wacc_lo))
-      .addReg(VSRpReg0, RegState::Kill)
-      .addReg(VSRpReg1, RegState::Kill);
+  if (MI.getOpcode() == PPC::RESTORE_DMRP) {
+    restoreDMR(TargetRegisterInfo::getSubReg(DestReg, PPC::sub_dmr1), 0, 96);
+    restoreDMR(TargetRegisterInfo::getSubReg(DestReg, PPC::sub_dmr0), 128, 224);
+  } else
+    restoreDMR(DestReg, 0, 96);
 
   // Discard the pseudo instruction.
   MBB.erase(II);
@@ -1648,6 +1601,14 @@ static unsigned offsetMinAlignForOpcode(unsigned OpC) {
 static unsigned offsetMinAlign(const MachineInstr &MI) {
   unsigned OpC = MI.getOpcode();
   return offsetMinAlignForOpcode(OpC);
+}
+
+// Check that the offset fits in the instruction's immediate displacement field.
+static bool offsetFitsImmForm(unsigned OpC, int64_t Offset) {
+  // The SPE doubleword loads and stores have a 5-bit displacement, scaled by 8.
+  if (OpC == PPC::EVSTDD || OpC == PPC::EVLDD)
+    return isShiftedUInt<5, 3>(Offset);
+  return isInt<16>(Offset);
 }
 
 // Return the OffsetOperandNo given the FIOperandNum (and the instruction).
@@ -1744,7 +1705,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     lowerACCRestore(II, FrameIndex);
     return true;
   case PPC::STXVP: {
-    if (DisableAutoPairedVecSt) {
+    if (!Subtarget.enableAutoPairedVecSt()) {
       lowerOctWordSpilling(II, FrameIndex);
       return true;
     }
@@ -1756,9 +1717,11 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   case PPC::RESTORE_WACC:
     lowerWACCRestore(II, FrameIndex);
     return true;
+  case PPC::SPILL_DMRP:
   case PPC::SPILL_DMR:
     lowerDMRSpilling(II, FrameIndex);
     return true;
+  case PPC::RESTORE_DMRP:
   case PPC::RESTORE_DMR:
     lowerDMRRestore(II, FrameIndex);
     return true;
@@ -1814,9 +1777,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
          "This should be handled in a target-independent way");
   // FIXME: This should be factored out to a separate function as prefixed
   // instructions add a number of opcodes for which we can use 34-bit imm.
-  bool OffsetFitsMnemonic = (OpC == PPC::EVSTDD || OpC == PPC::EVLDD) ?
-                            isUInt<8>(Offset) :
-                            isInt<16>(Offset);
+  bool OffsetFitsMnemonic = offsetFitsImmForm(OpC, Offset);
   if (TII.isPrefixed(MI.getOpcode()))
     OffsetFitsMnemonic = isInt<34>(Offset);
   if (!noImmForm && ((OffsetFitsMnemonic &&
@@ -1939,9 +1900,9 @@ Register PPCRegisterInfo::getBaseRegister(const MachineFunction &MF) const {
 }
 
 bool PPCRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
-  if (!EnableBasePointer)
+  if (!TM.getCLOpts().use_base_pointer)
     return false;
-  if (AlwaysBasePointer)
+  if (TM.getCLOpts().always_use_base_pointer)
     return true;
 
   // If we need to realign the stack, then the stack pointer can no longer
@@ -2014,9 +1975,7 @@ Register PPCRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   const MCInstrDesc &MCID = TII.get(ADDriOpc);
   MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
-  const TargetRegisterClass *RC = getPointerRegClass(MF);
-  Register BaseReg = MRI.createVirtualRegister(RC);
-  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, 0, this, MF));
+  Register BaseReg = MRI.createVirtualRegister(TII.getRegClass(MCID, 0));
 
   BuildMI(*MBB, Ins, DL, MCID, BaseReg)
     .addFrameIndex(FrameIdx).addImm(Offset);
@@ -2044,8 +2003,7 @@ void PPCRegisterInfo::resolveFrameIndex(MachineInstr &MI, Register BaseReg,
   const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
   const MCInstrDesc &MCID = MI.getDesc();
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  MRI.constrainRegClass(BaseReg,
-                        TII.getRegClass(MCID, FIOperandNum, this, MF));
+  MRI.constrainRegClass(BaseReg, TII.getRegClass(MCID, FIOperandNum));
 }
 
 bool PPCRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
@@ -2064,5 +2022,6 @@ bool PPCRegisterInfo::isFrameOffsetLegal(const MachineInstr *MI,
   return MI->getOpcode() == PPC::DBG_VALUE || // DBG_VALUE is always Reg+Imm
          MI->getOpcode() == TargetOpcode::STACKMAP ||
          MI->getOpcode() == TargetOpcode::PATCHPOINT ||
-         (isInt<16>(Offset) && (Offset % offsetMinAlign(*MI)) == 0);
+         (offsetFitsImmForm(MI->getOpcode(), Offset) &&
+          (Offset % offsetMinAlign(*MI)) == 0);
 }

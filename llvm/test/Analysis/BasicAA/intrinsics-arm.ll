@@ -27,5 +27,5 @@ declare <8 x i16> @llvm.arm.neon.vld1.v8i16.p0(ptr, i32) nounwind readonly
 declare void @llvm.arm.neon.vst1.p0.v8i16(ptr, <8 x i16>, i32) nounwind
 
 ; CHECK: attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-; CHECK: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; CHECK: attributes [[ATTR]] = { nounwind }

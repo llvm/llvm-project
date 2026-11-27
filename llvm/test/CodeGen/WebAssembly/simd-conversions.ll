@@ -441,3 +441,31 @@ define <2 x double> @promote_mixed_v2f64(<4 x float> %x, <4 x float> %y) {
   %a = fpext <2 x float> %v to <2 x double>
   ret <2 x double> %a
 }
+
+define <4 x float> @convert_u_v4f32_maybeneg(<4 x i32> %x) {
+; CHECK-LABEL: convert_u_v4f32_maybeneg:
+; CHECK:         .functype convert_u_v4f32_maybeneg (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32x4.shr_s
+; CHECK-NEXT:    f32x4.convert_i32x4_u
+; CHECK-NEXT:    # fallthrough-return
+  %a = ashr <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %b = uitofp <4 x i32> %a to <4 x float>
+  ret <4 x float> %b
+}
+
+define <4 x float> @convert_u_v4f32_nonneg(<4 x i32> %x) {
+; CHECK-LABEL: convert_u_v4f32_nonneg:
+; CHECK:         .functype convert_u_v4f32_nonneg (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32.const 1
+; CHECK-NEXT:    i32x4.shr_u
+; CHECK-NEXT:    f32x4.convert_i32x4_s
+; CHECK-NEXT:    # fallthrough-return
+  %a = lshr <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
+  %b = uitofp <4 x i32> %a to <4 x float>
+  ret <4 x float> %b
+}

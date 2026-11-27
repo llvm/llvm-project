@@ -9,11 +9,12 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_arm64.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_i386.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_riscv32.h"
-#include "Plugins/Process/Utility/RegisterContextDarwin_x86_64.h"
+#include <algorithm>
+
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_arm64.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_riscv32.h"
+#include "Plugins/Register/Darwin/RegisterContextDarwin_x86_64.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -21,6 +22,7 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/DWARFCallFrameInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -47,9 +49,12 @@
 #include "lldb/Host/SafeMachO.h"
 
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 
+#include "MachOTrie.h"
 #include "ObjectFileMachO.h"
 
 #if defined(__APPLE__)
@@ -80,9 +85,6 @@
 #endif
 #ifdef CPU_TYPE_ARM64_32
 #undef CPU_TYPE_ARM64_32
-#endif
-#ifdef CPU_TYPE_I386
-#undef CPU_TYPE_I386
 #endif
 #ifdef CPU_TYPE_X86_64
 #undef CPU_TYPE_X86_64
@@ -133,7 +135,6 @@
 #undef PLATFORM_WATCHOSSIMULATOR
 #endif
 
-#define THUMB_ADDRESS_BIT_MASK 0xfffffffffffffffeull
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
@@ -142,6 +143,31 @@ static constexpr llvm::StringLiteral g_loader_path = "@loader_path";
 static constexpr llvm::StringLiteral g_executable_path = "@executable_path";
 
 LLDB_PLUGIN_DEFINE(ObjectFileMachO)
+
+/// Read a Mach-O load-command header (cmd + cmdsize) from \p data at
+/// \p offset into \p cmd, advancing \p offset by 8 bytes.  \p T may be
+/// \c llvm::MachO::load_command or any of its richer variants
+/// (\c thread_command, \c dylib_command, \c encryption_info_command, ...);
+/// only the leading cmd/cmdsize fields are touched by this read.  Returns
+/// false on EOF or on a cmdsize smaller than sizeof(load_command), in which
+/// case callers should break out of their load-command loop to avoid spinning
+/// on malformed input.
+template <typename T>
+static bool ReadMachOCommand(const DataExtractor &data, lldb::offset_t &offset,
+                             T &cmd) {
+  static_assert(offsetof(T, cmd) == 0, "T::cmd must be the first field");
+  static_assert(offsetof(T, cmdsize) == sizeof(uint32_t),
+                "T::cmdsize must immediately follow T::cmd");
+  static_assert(std::is_same<decltype(T::cmd), uint32_t>::value,
+                "T::cmd must be uint32_t");
+  static_assert(std::is_same<decltype(T::cmdsize), uint32_t>::value,
+                "T::cmdsize must be uint32_t");
+  if (data.GetU32(&offset, &cmd, 2) == nullptr)
+    return false;
+  if (cmd.cmdsize < sizeof(load_command))
+    return false;
+  return true;
+}
 
 static void PrintRegisterValue(RegisterContext *reg_ctx, const char *name,
                                const char *alt_name, size_t reg_byte_size,
@@ -184,46 +210,32 @@ public:
     SetError(GPRRegSet, Read, -1);
     SetError(FPURegSet, Read, -1);
     SetError(EXCRegSet, Read, -1);
-    bool done = false;
 
-    while (!done) {
+    while (offset < data.GetByteSize()) {
       int flavor = data.GetU32(&offset);
       if (flavor == 0)
-        done = true;
-      else {
-        uint32_t i;
-        uint32_t count = data.GetU32(&offset);
-        switch (flavor) {
-        case GPRRegSet:
-          for (i = 0; i < count; ++i)
-            (&gpr.rax)[i] = data.GetU64(&offset);
-          SetError(GPRRegSet, Read, 0);
-          done = true;
-
-          break;
-        case FPURegSet:
-          // TODO: fill in FPU regs....
-          // SetError (FPURegSet, Read, -1);
-          done = true;
-
-          break;
-        case EXCRegSet:
-          exc.trapno = data.GetU32(&offset);
-          exc.err = data.GetU32(&offset);
-          exc.faultvaddr = data.GetU64(&offset);
-          SetError(EXCRegSet, Read, 0);
-          done = true;
-          break;
-        case 7:
-        case 8:
-        case 9:
-          // fancy flavors that encapsulate of the above flavors...
-          break;
-
-        default:
-          done = true;
-          break;
-        }
+        break;
+      uint32_t count = data.GetU32(&offset);
+      switch (flavor) {
+      case GPRRegSet: {
+        uint32_t *gpr_data = reinterpret_cast<uint32_t *>(&gpr.rax);
+        for (uint32_t i = 0; i < count && offset < data.GetByteSize(); ++i)
+          gpr_data[i] = data.GetU32(&offset);
+        SetError(GPRRegSet, Read, 0);
+      } break;
+      case FPURegSet:
+        // TODO: fill in FPU regs....
+        SetError(FPURegSet, Read, -1);
+        break;
+      case EXCRegSet:
+        exc.trapno = data.GetU32(&offset);
+        exc.err = data.GetU32(&offset);
+        exc.faultvaddr = data.GetU64(&offset);
+        SetError(EXCRegSet, Read, 0);
+        break;
+      default:
+        offset += count * 4;
+        break;
       }
     }
   }
@@ -353,127 +365,11 @@ public:
   }
 
 protected:
-  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return 0; }
+  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return -1; }
 
-  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return 0; }
+  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return -1; }
 
-  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return 0; }
-
-  int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr) override {
-    return 0;
-  }
-
-  int DoWriteFPU(lldb::tid_t tid, int flavor, const FPU &fpu) override {
-    return 0;
-  }
-
-  int DoWriteEXC(lldb::tid_t tid, int flavor, const EXC &exc) override {
-    return 0;
-  }
-};
-
-class RegisterContextDarwin_i386_Mach : public RegisterContextDarwin_i386 {
-public:
-  RegisterContextDarwin_i386_Mach(lldb_private::Thread &thread,
-                                  const DataExtractor &data)
-      : RegisterContextDarwin_i386(thread, 0) {
-    SetRegisterDataFrom_LC_THREAD(data);
-  }
-
-  void InvalidateAllRegisters() override {
-    // Do nothing... registers are always valid...
-  }
-
-  void SetRegisterDataFrom_LC_THREAD(const DataExtractor &data) {
-    lldb::offset_t offset = 0;
-    SetError(GPRRegSet, Read, -1);
-    SetError(FPURegSet, Read, -1);
-    SetError(EXCRegSet, Read, -1);
-    bool done = false;
-
-    while (!done) {
-      int flavor = data.GetU32(&offset);
-      if (flavor == 0)
-        done = true;
-      else {
-        uint32_t i;
-        uint32_t count = data.GetU32(&offset);
-        switch (flavor) {
-        case GPRRegSet:
-          for (i = 0; i < count; ++i)
-            (&gpr.eax)[i] = data.GetU32(&offset);
-          SetError(GPRRegSet, Read, 0);
-          done = true;
-
-          break;
-        case FPURegSet:
-          // TODO: fill in FPU regs....
-          // SetError (FPURegSet, Read, -1);
-          done = true;
-
-          break;
-        case EXCRegSet:
-          exc.trapno = data.GetU32(&offset);
-          exc.err = data.GetU32(&offset);
-          exc.faultvaddr = data.GetU32(&offset);
-          SetError(EXCRegSet, Read, 0);
-          done = true;
-          break;
-        case 7:
-        case 8:
-        case 9:
-          // fancy flavors that encapsulate of the above flavors...
-          break;
-
-        default:
-          done = true;
-          break;
-        }
-      }
-    }
-  }
-
-  static bool Create_LC_THREAD(Thread *thread, Stream &data) {
-    RegisterContextSP reg_ctx_sp(thread->GetRegisterContext());
-    if (reg_ctx_sp) {
-      RegisterContext *reg_ctx = reg_ctx_sp.get();
-
-      data.PutHex32(GPRRegSet); // Flavor
-      data.PutHex32(GPRWordCount);
-      PrintRegisterValue(reg_ctx, "eax", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ebx", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ecx", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "edx", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "edi", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "esi", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ebp", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "esp", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ss", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "eflags", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "eip", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "cs", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "ds", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "es", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "fs", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "gs", nullptr, 4, data);
-
-      // Write out the EXC registers
-      data.PutHex32(EXCRegSet);
-      data.PutHex32(EXCWordCount);
-      PrintRegisterValue(reg_ctx, "trapno", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "err", nullptr, 4, data);
-      PrintRegisterValue(reg_ctx, "faultvaddr", nullptr, 4, data);
-      return true;
-    }
-    return false;
-  }
-
-protected:
-  int DoReadGPR(lldb::tid_t tid, int flavor, GPR &gpr) override { return 0; }
-
-  int DoReadFPU(lldb::tid_t tid, int flavor, FPU &fpu) override { return 0; }
-
-  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return 0; }
+  int DoReadEXC(lldb::tid_t tid, int flavor, EXC &exc) override { return -1; }
 
   int DoWriteGPR(lldb::tid_t tid, int flavor, const GPR &gpr) override {
     return 0;
@@ -505,12 +401,11 @@ public:
     SetError(GPRRegSet, Read, -1);
     SetError(FPURegSet, Read, -1);
     SetError(EXCRegSet, Read, -1);
-    bool done = false;
 
-    while (!done) {
+    while (offset < data.GetByteSize()) {
       int flavor = data.GetU32(&offset);
       uint32_t count = data.GetU32(&offset);
-      lldb::offset_t next_thread_state = offset + (count * 4);
+      offset_t next_thread_state = offset + (count * 4);
       switch (flavor) {
       case GPRAltRegSet:
       case GPRRegSet: {
@@ -524,9 +419,7 @@ public:
 
           SetError(GPRRegSet, Read, 0);
         }
-      }
-        offset = next_thread_state;
-        break;
+      } break;
 
       case FPURegSet: {
         uint8_t *fpu_reg_buf = (uint8_t *)&fpu.floats;
@@ -536,12 +429,8 @@ public:
           offset += fpu_reg_buf_size;
           fpu.fpscr = data.GetU32(&offset);
           SetError(FPURegSet, Read, 0);
-        } else {
-          done = true;
         }
-      }
-        offset = next_thread_state;
-        break;
+      } break;
 
       case EXCRegSet:
         if (count == 3) {
@@ -550,14 +439,9 @@ public:
           exc.far = data.GetU32(&offset);
           SetError(EXCRegSet, Read, 0);
         }
-        done = true;
-        offset = next_thread_state;
         break;
-
-      // Unknown register set flavor, stop trying to parse.
-      default:
-        done = true;
       }
+      offset = next_thread_state;
     }
   }
 
@@ -640,11 +524,10 @@ public:
     SetError(GPRRegSet, Read, -1);
     SetError(FPURegSet, Read, -1);
     SetError(EXCRegSet, Read, -1);
-    bool done = false;
-    while (!done) {
+    while (offset < data.GetByteSize()) {
       int flavor = data.GetU32(&offset);
       uint32_t count = data.GetU32(&offset);
-      lldb::offset_t next_thread_state = offset + (count * 4);
+      offset_t next_thread_state = offset + (count * 4);
       switch (flavor) {
       case GPRRegSet:
         // x0-x29 + fp + lr + sp + pc (== 33 64-bit registers) plus cpsr (1
@@ -659,7 +542,6 @@ public:
           gpr.cpsr = data.GetU32(&offset);
           SetError(GPRRegSet, Read, 0);
         }
-        offset = next_thread_state;
         break;
       case FPURegSet: {
         uint8_t *fpu_reg_buf = (uint8_t *)&fpu.v[0];
@@ -668,12 +550,8 @@ public:
             data.ExtractBytes(offset, fpu_reg_buf_size, eByteOrderLittle,
                               fpu_reg_buf) == fpu_reg_buf_size) {
           SetError(FPURegSet, Read, 0);
-        } else {
-          done = true;
         }
-      }
-        offset = next_thread_state;
-        break;
+      } break;
       case EXCRegSet:
         if (count == 4) {
           exc.far = data.GetU64(&offset);
@@ -681,12 +559,9 @@ public:
           exc.exception = data.GetU32(&offset);
           SetError(EXCRegSet, Read, 0);
         }
-        offset = next_thread_state;
-        break;
-      default:
-        done = true;
         break;
       }
+      offset = next_thread_state;
     }
   }
 
@@ -789,11 +664,10 @@ public:
     SetError(FPURegSet, Read, -1);
     SetError(EXCRegSet, Read, -1);
     SetError(CSRRegSet, Read, -1);
-    bool done = false;
-    while (!done) {
+    while (offset < data.GetByteSize()) {
       int flavor = data.GetU32(&offset);
       uint32_t count = data.GetU32(&offset);
-      lldb::offset_t next_thread_state = offset + (count * 4);
+      offset_t next_thread_state = offset + (count * 4);
       switch (flavor) {
       case GPRRegSet:
         // x0-x31 + pc
@@ -803,7 +677,6 @@ public:
           gpr.pc = data.GetU32(&offset);
           SetError(GPRRegSet, Read, 0);
         }
-        offset = next_thread_state;
         break;
       case FPURegSet: {
         // f0-f31 + fcsr
@@ -813,9 +686,7 @@ public:
           fpr.fcsr = data.GetU32(&offset);
           SetError(FPURegSet, Read, 0);
         }
-      }
-        offset = next_thread_state;
-        break;
+      } break;
       case EXCRegSet:
         if (count == 3) {
           exc.exception = data.GetU32(&offset);
@@ -823,12 +694,9 @@ public:
           exc.far = data.GetU32(&offset);
           SetError(EXCRegSet, Read, 0);
         }
-        offset = next_thread_state;
-        break;
-      default:
-        done = true;
         break;
       }
+      offset = next_thread_state;
     }
   }
 
@@ -943,30 +811,32 @@ void ObjectFileMachO::Terminate() {
 }
 
 ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
-                                            DataBufferSP data_sp,
+                                            DataExtractorSP extractor_sp,
                                             lldb::offset_t data_offset,
                                             const FileSpec *file,
                                             lldb::offset_t file_offset,
                                             lldb::offset_t length) {
-  if (!data_sp) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (!extractor_sp || !extractor_sp->HasData()) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
 
-  if (!ObjectFileMachO::MagicBytesMatch(data_sp, data_offset, length))
+  if (!ObjectFileMachO::MagicBytesMatch(extractor_sp, data_offset, length))
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already
-  if (data_sp->GetByteSize() < length) {
-    data_sp = MapFileData(*file, length, file_offset);
+  if (extractor_sp->GetByteSize() < length) {
+    DataBufferSP data_sp = MapFileData(*file, length, file_offset);
     if (!data_sp)
       return nullptr;
     data_offset = 0;
+    extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
   auto objfile_up = std::make_unique<ObjectFileMachO>(
-      module_sp, data_sp, data_offset, file, file_offset, length);
+      module_sp, extractor_sp, data_offset, file, file_offset, length);
   if (!objfile_up || !objfile_up->ParseHeader())
     return nullptr;
 
@@ -976,7 +846,9 @@ ObjectFile *ObjectFileMachO::CreateInstance(const lldb::ModuleSP &module_sp,
 ObjectFile *ObjectFileMachO::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, WritableDataBufferSP data_sp,
     const ProcessSP &process_sp, lldb::addr_t header_addr) {
-  if (ObjectFileMachO::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
+  DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
+  if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
+                                       extractor_sp->GetByteSize())) {
     std::unique_ptr<ObjectFile> objfile_up(
         new ObjectFileMachO(module_sp, data_sp, process_sp, header_addr));
     if (objfile_up.get() && objfile_up->ParseHeader())
@@ -985,97 +857,99 @@ ObjectFile *ObjectFileMachO::CreateMemoryInstance(
   return nullptr;
 }
 
-size_t ObjectFileMachO::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
-  const size_t initial_count = specs.GetSize();
+ModuleSpecList ObjectFileMachO::GetModuleSpecifications(
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
+    lldb::offset_t file_offset, lldb::offset_t length) {
+  if (!extractor_sp || !extractor_sp->HasData())
+    return {};
 
-  if (ObjectFileMachO::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
-    DataExtractor data;
-    data.SetData(data_sp);
+  ModuleSpecList specs;
+  if (ObjectFileMachO::MagicBytesMatch(extractor_sp, 0,
+                                       extractor_sp->GetByteSize())) {
     llvm::MachO::mach_header header;
-    if (ParseHeader(data, &data_offset, header)) {
+    offset_t data_offset = 0;
+    if (ParseHeader(extractor_sp, &data_offset, header)) {
       size_t header_and_load_cmds =
           header.sizeofcmds + MachHeaderSizeFromMagic(header.magic);
-      if (header_and_load_cmds >= data_sp->GetByteSize()) {
-        data_sp = MapFileData(file, header_and_load_cmds, file_offset);
-        data.SetData(data_sp);
+      if (header_and_load_cmds >= extractor_sp->GetByteSize()) {
+        DataBufferSP file_data_sp =
+            MapFileData(file, header_and_load_cmds, file_offset);
+        if (file_data_sp)
+          extractor_sp->SetData(file_data_sp);
         data_offset = MachHeaderSizeFromMagic(header.magic);
       }
-      if (data_sp) {
+      if (extractor_sp && extractor_sp->HasData()) {
         ModuleSpec base_spec;
         base_spec.GetFileSpec() = file;
         base_spec.SetObjectOffset(file_offset);
         base_spec.SetObjectSize(length);
-        GetAllArchSpecs(header, data, data_offset, base_spec, specs);
+        GetAllArchSpecs(header, *extractor_sp, data_offset, base_spec, specs);
       }
     }
   }
-  return specs.GetSize() - initial_count;
+  return specs;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameTEXT() {
-  static ConstString g_segment_name_TEXT("__TEXT");
+llvm::StringRef ObjectFileMachO::GetSegmentNameTEXT() {
+  static constexpr llvm::StringLiteral g_segment_name_TEXT("__TEXT");
   return g_segment_name_TEXT;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameDATA() {
-  static ConstString g_segment_name_DATA("__DATA");
+llvm::StringRef ObjectFileMachO::GetSegmentNameDATA() {
+  static constexpr llvm::StringLiteral g_segment_name_DATA("__DATA");
   return g_segment_name_DATA;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameDATA_DIRTY() {
-  static ConstString g_segment_name("__DATA_DIRTY");
+llvm::StringRef ObjectFileMachO::GetSegmentNameDATA_DIRTY() {
+  static constexpr llvm::StringLiteral g_segment_name("__DATA_DIRTY");
   return g_segment_name;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameDATA_CONST() {
-  static ConstString g_segment_name("__DATA_CONST");
+llvm::StringRef ObjectFileMachO::GetSegmentNameDATA_CONST() {
+  static constexpr llvm::StringLiteral g_segment_name("__DATA_CONST");
   return g_segment_name;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameOBJC() {
-  static ConstString g_segment_name_OBJC("__OBJC");
+llvm::StringRef ObjectFileMachO::GetSegmentNameOBJC() {
+  static constexpr llvm::StringLiteral g_segment_name_OBJC("__OBJC");
   return g_segment_name_OBJC;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameLINKEDIT() {
-  static ConstString g_section_name_LINKEDIT("__LINKEDIT");
+llvm::StringRef ObjectFileMachO::GetSegmentNameLINKEDIT() {
+  static constexpr llvm::StringLiteral g_section_name_LINKEDIT("__LINKEDIT");
   return g_section_name_LINKEDIT;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameDWARF() {
-  static ConstString g_section_name("__DWARF");
+llvm::StringRef ObjectFileMachO::GetSegmentNameDWARF() {
+  static constexpr llvm::StringLiteral g_section_name("__DWARF");
   return g_section_name;
 }
 
-ConstString ObjectFileMachO::GetSegmentNameLLVM_COV() {
-  static ConstString g_section_name("__LLVM_COV");
+llvm::StringRef ObjectFileMachO::GetSegmentNameLLVM_COV() {
+  static constexpr llvm::StringLiteral g_section_name("__LLVM_COV");
   return g_section_name;
 }
 
-ConstString ObjectFileMachO::GetSectionNameEHFrame() {
-  static ConstString g_section_name_eh_frame("__eh_frame");
+llvm::StringRef ObjectFileMachO::GetSectionNameEHFrame() {
+  static constexpr llvm::StringLiteral g_section_name_eh_frame("__eh_frame");
   return g_section_name_eh_frame;
 }
 
-ConstString ObjectFileMachO::GetSectionNameLLDBNoNlist() {
-  static ConstString g_section_name_lldb_no_nlist("__lldb_no_nlist");
+llvm::StringRef ObjectFileMachO::GetSectionNameLLDBNoNlist() {
+  static constexpr llvm::StringLiteral g_section_name_lldb_no_nlist(
+      "__lldb_no_nlist");
   return g_section_name_lldb_no_nlist;
 }
 
-bool ObjectFileMachO::MagicBytesMatch(DataBufferSP data_sp,
+bool ObjectFileMachO::MagicBytesMatch(DataExtractorSP extractor_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
-  DataExtractor data;
-  data.SetData(data_sp, data_offset, data_length);
-  lldb::offset_t offset = 0;
-  uint32_t magic = data.GetU32(&offset);
+  lldb::offset_t offset = data_offset;
+  uint32_t magic = extractor_sp->GetU32(&offset);
 
   offset += 4; // cputype
   offset += 4; // cpusubtype
-  uint32_t filetype = data.GetU32(&offset);
+  uint32_t filetype = extractor_sp->GetU32(&offset);
 
   // A fileset has a Mach-O header but is not an
   // individual file and must be handled via an
@@ -1087,12 +961,13 @@ bool ObjectFileMachO::MagicBytesMatch(DataBufferSP data_sp,
 }
 
 ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
-                                 DataBufferSP data_sp,
+                                 DataExtractorSP extractor_sp,
                                  lldb::offset_t data_offset,
                                  const FileSpec *file,
                                  lldb::offset_t file_offset,
                                  lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
+    : ObjectFile(module_sp, file, file_offset, length, extractor_sp,
+                 data_offset),
       m_mach_sections(), m_entry_point_address(), m_thread_context_offsets(),
       m_thread_context_offsets_valid(false), m_reexported_dylibs(),
       m_allow_assembly_emulation_unwind_plans(true) {
@@ -1104,7 +979,8 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
                                  lldb::WritableDataBufferSP header_data_sp,
                                  const lldb::ProcessSP &process_sp,
                                  lldb::addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
+    : ObjectFile(module_sp, process_sp, header_addr,
+                 std::make_shared<DataExtractor>(header_data_sp)),
       m_mach_sections(), m_entry_point_address(), m_thread_context_offsets(),
       m_thread_context_offsets_valid(false), m_reexported_dylibs(),
       m_allow_assembly_emulation_unwind_plans(true) {
@@ -1112,41 +988,41 @@ ObjectFileMachO::ObjectFileMachO(const lldb::ModuleSP &module_sp,
   ::memset(&m_dysymtab, 0, sizeof(m_dysymtab));
 }
 
-bool ObjectFileMachO::ParseHeader(DataExtractor &data,
+bool ObjectFileMachO::ParseHeader(DataExtractorSP &extractor_sp,
                                   lldb::offset_t *data_offset_ptr,
                                   llvm::MachO::mach_header &header) {
-  data.SetByteOrder(endian::InlHostByteOrder());
+  extractor_sp->SetByteOrder(endian::InlHostByteOrder());
   // Leave magic in the original byte order
-  header.magic = data.GetU32(data_offset_ptr);
+  header.magic = extractor_sp->GetU32(data_offset_ptr);
   bool can_parse = false;
   bool is_64_bit = false;
   switch (header.magic) {
   case MH_MAGIC:
-    data.SetByteOrder(endian::InlHostByteOrder());
-    data.SetAddressByteSize(4);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder());
+    extractor_sp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_MAGIC_64:
-    data.SetByteOrder(endian::InlHostByteOrder());
-    data.SetAddressByteSize(8);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder());
+    extractor_sp->SetAddressByteSize(8);
     can_parse = true;
     is_64_bit = true;
     break;
 
   case MH_CIGAM:
-    data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                          ? eByteOrderLittle
-                          : eByteOrderBig);
-    data.SetAddressByteSize(4);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                   ? eByteOrderLittle
+                                   : eByteOrderBig);
+    extractor_sp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_CIGAM_64:
-    data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                          ? eByteOrderLittle
-                          : eByteOrderBig);
-    data.SetAddressByteSize(8);
+    extractor_sp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                   ? eByteOrderLittle
+                                   : eByteOrderBig);
+    extractor_sp->SetAddressByteSize(8);
     is_64_bit = true;
     can_parse = true;
     break;
@@ -1156,7 +1032,7 @@ bool ObjectFileMachO::ParseHeader(DataExtractor &data,
   }
 
   if (can_parse) {
-    data.GetU32(data_offset_ptr, &header.cputype, 6);
+    extractor_sp->GetU32(data_offset_ptr, &header.cputype, 6);
     if (is_64_bit)
       *data_offset_ptr += 4;
     return true;
@@ -1174,35 +1050,35 @@ bool ObjectFileMachO::ParseHeader() {
   std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
   bool can_parse = false;
   lldb::offset_t offset = 0;
-  m_data.SetByteOrder(endian::InlHostByteOrder());
+  m_data_nsp->SetByteOrder(endian::InlHostByteOrder());
   // Leave magic in the original byte order
-  m_header.magic = m_data.GetU32(&offset);
+  m_header.magic = m_data_nsp->GetU32(&offset);
   switch (m_header.magic) {
   case MH_MAGIC:
-    m_data.SetByteOrder(endian::InlHostByteOrder());
-    m_data.SetAddressByteSize(4);
+    m_data_nsp->SetByteOrder(endian::InlHostByteOrder());
+    m_data_nsp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_MAGIC_64:
-    m_data.SetByteOrder(endian::InlHostByteOrder());
-    m_data.SetAddressByteSize(8);
+    m_data_nsp->SetByteOrder(endian::InlHostByteOrder());
+    m_data_nsp->SetAddressByteSize(8);
     can_parse = true;
     break;
 
   case MH_CIGAM:
-    m_data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                            ? eByteOrderLittle
-                            : eByteOrderBig);
-    m_data.SetAddressByteSize(4);
+    m_data_nsp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                 ? eByteOrderLittle
+                                 : eByteOrderBig);
+    m_data_nsp->SetAddressByteSize(4);
     can_parse = true;
     break;
 
   case MH_CIGAM_64:
-    m_data.SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
-                            ? eByteOrderLittle
-                            : eByteOrderBig);
-    m_data.SetAddressByteSize(8);
+    m_data_nsp->SetByteOrder(endian::InlHostByteOrder() == eByteOrderBig
+                                 ? eByteOrderLittle
+                                 : eByteOrderBig);
+    m_data_nsp->SetAddressByteSize(8);
     can_parse = true;
     break;
 
@@ -1211,12 +1087,13 @@ bool ObjectFileMachO::ParseHeader() {
   }
 
   if (can_parse) {
-    m_data.GetU32(&offset, &m_header.cputype, 6);
+    m_data_nsp->GetU32(&offset, &m_header.cputype, 6);
 
     ModuleSpecList all_specs;
     ModuleSpec base_spec;
-    GetAllArchSpecs(m_header, m_data, MachHeaderSizeFromMagic(m_header.magic),
-                    base_spec, all_specs);
+    GetAllArchSpecs(m_header, *m_data_nsp,
+                    MachHeaderSizeFromMagic(m_header.magic), base_spec,
+                    all_specs);
 
     for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
       ArchSpec mach_arch =
@@ -1230,7 +1107,7 @@ bool ObjectFileMachO::ParseHeader() {
       if (SetModulesArchitecture(mach_arch)) {
         const size_t header_and_lc_size =
             m_header.sizeofcmds + MachHeaderSizeFromMagic(m_header.magic);
-        if (m_data.GetByteSize() < header_and_lc_size) {
+        if (m_data_nsp->GetByteSize() < header_and_lc_size) {
           DataBufferSP data_sp;
           ProcessSP process_sp(m_process_wp.lock());
           if (process_sp) {
@@ -1242,7 +1119,7 @@ bool ObjectFileMachO::ParseHeader() {
               continue;
           }
           if (data_sp)
-            m_data.SetData(data_sp);
+            m_data_nsp->SetData(data_sp);
         }
       }
       return true;
@@ -1256,7 +1133,7 @@ bool ObjectFileMachO::ParseHeader() {
 }
 
 ByteOrder ObjectFileMachO::GetByteOrder() const {
-  return m_data.GetByteOrder();
+  return m_data_nsp->GetByteOrder();
 }
 
 bool ObjectFileMachO::IsExecutable() const {
@@ -1276,7 +1153,7 @@ bool ObjectFileMachO::IsKext() const {
 }
 
 uint32_t ObjectFileMachO::GetAddressByteSize() const {
-  return m_data.GetAddressByteSize();
+  return m_data_nsp->GetAddressByteSize();
 }
 
 AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
@@ -1284,7 +1161,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
   if (!symtab)
     return AddressClass::eUnknown;
 
-  Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
+  const Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
   if (symbol) {
     if (symbol->ValueIsAddress()) {
       SectionSP section_sp(symbol->GetAddressRef().GetSection());
@@ -1318,6 +1195,8 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDataObjCMessageRefs:
         case eSectionTypeDataObjCCFStrings:
         case eSectionTypeGoSymtab:
+        case eSectionTypeWasmName:
+        case eSectionTypeWasmGlobal:
           return AddressClass::eData;
 
         case eSectionTypeDebug:
@@ -1444,6 +1323,8 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
       return AddressClass::eRuntime;
     case eSymbolTypeReExported:
       return AddressClass::eRuntime;
+    case eSymbolTypeASTFile:
+      return AddressClass::eDebug;
     }
   }
   return AddressClass::eUnknown;
@@ -1458,13 +1339,13 @@ bool ObjectFileMachO::IsStripped() {
         const lldb::offset_t load_cmd_offset = offset;
 
         llvm::MachO::load_command lc = {};
-        if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+        if (!ReadMachOCommand(*m_data_nsp, offset, lc))
           break;
         if (lc.cmd == LC_DYSYMTAB) {
           m_dysymtab.cmd = lc.cmd;
           m_dysymtab.cmdsize = lc.cmdsize;
-          if (m_data.GetU32(&offset, &m_dysymtab.ilocalsym,
-                            (sizeof(m_dysymtab) / sizeof(uint32_t)) - 2) ==
+          if (m_data_nsp->GetU32(&offset, &m_dysymtab.ilocalsym,
+                                 (sizeof(m_dysymtab) / sizeof(uint32_t)) - 2) ==
               nullptr) {
             // Clear m_dysymtab if we were unable to read all items from the
             // load command
@@ -1487,14 +1368,14 @@ ObjectFileMachO::EncryptedFileRanges ObjectFileMachO::GetEncryptedFileRanges() {
   llvm::MachO::encryption_info_command encryption_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
-    if (m_data.GetU32(&offset, &encryption_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(*m_data_nsp, offset, encryption_cmd))
       break;
 
     // LC_ENCRYPTION_INFO and LC_ENCRYPTION_INFO_64 have the same sizes for the
     // 3 fields we care about, so treat them the same.
     if (encryption_cmd.cmd == LC_ENCRYPTION_INFO ||
         encryption_cmd.cmd == LC_ENCRYPTION_INFO_64) {
-      if (m_data.GetU32(&offset, &encryption_cmd.cryptoff, 3)) {
+      if (m_data_nsp->GetU32(&offset, &encryption_cmd.cryptoff, 3)) {
         if (encryption_cmd.cryptid != 0) {
           EncryptedFileRanges::Entry entry;
           entry.SetRangeBase(encryption_cmd.cryptoff);
@@ -1519,11 +1400,11 @@ void ObjectFileMachO::SanitizeSegmentCommand(
     // shared cache file, and not the specific image we are
     // examining. Let's fix this up so that it looks like a normal
     // image.
-    if (strncmp(seg_cmd.segname, GetSegmentNameTEXT().GetCString(),
-                sizeof(seg_cmd.segname)) == 0)
+    llvm::StringRef segname(seg_cmd.segname,
+                            strnlen(seg_cmd.segname, sizeof(seg_cmd.segname)));
+    if (segname == GetSegmentNameTEXT())
       m_text_address = seg_cmd.vmaddr;
-    if (strncmp(seg_cmd.segname, GetSegmentNameLINKEDIT().GetCString(),
-                sizeof(seg_cmd.segname)) == 0)
+    if (segname == GetSegmentNameLINKEDIT())
       m_linkedit_original_offset = seg_cmd.fileoff;
 
     seg_cmd.fileoff = seg_cmd.vmaddr - m_text_address;
@@ -1580,43 +1461,57 @@ GetSegmentPermissions(const llvm::MachO::segment_command_64 &seg_cmd) {
 }
 
 static lldb::SectionType GetSectionType(uint32_t flags,
-                                        ConstString section_name) {
+                                        llvm::StringRef section_name) {
 
   if (flags & (S_ATTR_PURE_INSTRUCTIONS | S_ATTR_SOME_INSTRUCTIONS))
     return eSectionTypeCode;
 
   uint32_t mach_sect_type = flags & SECTION_TYPE;
-  static ConstString g_sect_name_objc_data("__objc_data");
-  static ConstString g_sect_name_objc_msgrefs("__objc_msgrefs");
-  static ConstString g_sect_name_objc_selrefs("__objc_selrefs");
-  static ConstString g_sect_name_objc_classrefs("__objc_classrefs");
-  static ConstString g_sect_name_objc_superrefs("__objc_superrefs");
-  static ConstString g_sect_name_objc_const("__objc_const");
-  static ConstString g_sect_name_objc_classlist("__objc_classlist");
-  static ConstString g_sect_name_cfstring("__cfstring");
+  static constexpr llvm::StringLiteral g_sect_name_objc_data("__objc_data");
+  static constexpr llvm::StringLiteral g_sect_name_objc_msgrefs(
+      "__objc_msgrefs");
+  static constexpr llvm::StringLiteral g_sect_name_objc_selrefs(
+      "__objc_selrefs");
+  static constexpr llvm::StringLiteral g_sect_name_objc_classrefs(
+      "__objc_classrefs");
+  static constexpr llvm::StringLiteral g_sect_name_objc_superrefs(
+      "__objc_superrefs");
+  static constexpr llvm::StringLiteral g_sect_name_objc_const("__objc_const");
+  static constexpr llvm::StringLiteral g_sect_name_objc_classlist(
+      "__objc_classlist");
+  static constexpr llvm::StringLiteral g_sect_name_cfstring("__cfstring");
 
-  static ConstString g_sect_name_dwarf_debug_str_offs("__debug_str_offs");
-  static ConstString g_sect_name_dwarf_debug_str_offs_dwo("__debug_str_offs.dwo");
-  static ConstString g_sect_name_dwarf_apple_names("__apple_names");
-  static ConstString g_sect_name_dwarf_apple_types("__apple_types");
-  static ConstString g_sect_name_dwarf_apple_namespaces("__apple_namespac");
-  static ConstString g_sect_name_dwarf_apple_objc("__apple_objc");
-  static ConstString g_sect_name_eh_frame("__eh_frame");
-  static ConstString g_sect_name_compact_unwind("__unwind_info");
-  static ConstString g_sect_name_text("__text");
-  static ConstString g_sect_name_data("__data");
-  static ConstString g_sect_name_go_symtab("__gosymtab");
-  static ConstString g_sect_name_ctf("__ctf");
-  static ConstString g_sect_name_lldb_summaries("__lldbsummaries");
-  static ConstString g_sect_name_lldb_formatters("__lldbformatters");
-  static ConstString g_sect_name_swift_ast("__swift_ast");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_debug_str_offs(
+      "__debug_str_offs");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_debug_str_offs_dwo(
+      "__debug_str_offs.dwo");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_apple_names(
+      "__apple_names");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_apple_types(
+      "__apple_types");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_apple_namespaces(
+      "__apple_namespac");
+  static constexpr llvm::StringLiteral g_sect_name_dwarf_apple_objc(
+      "__apple_objc");
+  static constexpr llvm::StringLiteral g_sect_name_eh_frame("__eh_frame");
+  static constexpr llvm::StringLiteral g_sect_name_compact_unwind(
+      "__unwind_info");
+  static constexpr llvm::StringLiteral g_sect_name_text("__text");
+  static constexpr llvm::StringLiteral g_sect_name_data("__data");
+  static constexpr llvm::StringLiteral g_sect_name_go_symtab("__gosymtab");
+  static constexpr llvm::StringLiteral g_sect_name_ctf("__ctf");
+  static constexpr llvm::StringLiteral g_sect_name_lldb_summaries(
+      "__lldbsummaries");
+  static constexpr llvm::StringLiteral g_sect_name_lldb_formatters(
+      "__lldbformatters");
+  static constexpr llvm::StringLiteral g_sect_name_swift_ast("__swift_ast");
 
   if (section_name == g_sect_name_dwarf_debug_str_offs)
     return eSectionTypeDWARFDebugStrOffsets;
   if (section_name == g_sect_name_dwarf_debug_str_offs_dwo)
     return eSectionTypeDWARFDebugStrOffsetsDwo;
 
-  llvm::StringRef stripped_name = section_name.GetStringRef();
+  llvm::StringRef stripped_name = section_name;
   if (stripped_name.consume_front("__debug_"))
     return ObjectFile::GetDWARFSectionTypeFromName(stripped_name);
 
@@ -1723,7 +1618,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
   llvm::MachO::segment_command_64 load_cmd;
   memcpy(&load_cmd, &load_cmd_, sizeof(load_cmd_));
 
-  if (!m_data.GetU8(&offset, (uint8_t *)load_cmd.segname, 16))
+  if (!m_data_nsp->GetU8(&offset, (uint8_t *)load_cmd.segname, 16))
     return;
 
   ModuleSP module_sp = GetModule();
@@ -1731,13 +1626,12 @@ void ObjectFileMachO::ProcessSegmentCommand(
   const bool is_dsym = (m_header.filetype == MH_DSYM);
   bool add_section = true;
   bool add_to_unified = true;
-  ConstString const_segname(
-      load_cmd.segname, strnlen(load_cmd.segname, sizeof(load_cmd.segname)));
+  llvm::StringRef segname(load_cmd.segname,
+                          strnlen(load_cmd.segname, sizeof(load_cmd.segname)));
 
-  SectionSP unified_section_sp(
-      context.UnifiedList.FindSectionByName(const_segname));
+  SectionSP unified_section_sp(context.UnifiedList.FindSectionByName(segname));
   if (is_dsym && unified_section_sp) {
-    if (const_segname == GetSegmentNameLINKEDIT()) {
+    if (segname == GetSegmentNameLINKEDIT()) {
       // We need to keep the __LINKEDIT segment private to this object file
       // only
       add_to_unified = false;
@@ -1747,11 +1641,11 @@ void ObjectFileMachO::ProcessSegmentCommand(
       add_section = false;
     }
   }
-  load_cmd.vmaddr = m_data.GetAddress(&offset);
-  load_cmd.vmsize = m_data.GetAddress(&offset);
-  load_cmd.fileoff = m_data.GetAddress(&offset);
-  load_cmd.filesize = m_data.GetAddress(&offset);
-  if (!m_data.GetU32(&offset, &load_cmd.maxprot, 4))
+  load_cmd.vmaddr = m_data_nsp->GetAddress(&offset);
+  load_cmd.vmsize = m_data_nsp->GetAddress(&offset);
+  load_cmd.fileoff = m_data_nsp->GetAddress(&offset);
+  load_cmd.filesize = m_data_nsp->GetAddress(&offset);
+  if (!m_data_nsp->GetU32(&offset, &load_cmd.maxprot, 4))
     return;
 
   SanitizeSegmentCommand(load_cmd, cmd_idx);
@@ -1763,7 +1657,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
   // Use a segment ID of the segment index shifted left by 8 so they never
   // conflict with any of the sections.
   SectionSP segment_sp;
-  if (add_section && (const_segname || is_core)) {
+  if (add_section && (!segname.empty() || is_core)) {
     segment_sp = std::make_shared<Section>(
         module_sp, // Module to which this section belongs
         this,      // Object file to which this sections belongs
@@ -1771,7 +1665,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
             << 8, // Section ID is the 1 based segment index
         // shifted right by 8 bits as not to collide with any of the 256
         // section IDs that are possible
-        const_segname,         // Name of this section
+        segname.str(),         // Name of this section
         eSectionTypeContainer, // This section is a container of other
         // sections.
         load_cmd.vmaddr, // File VM address == addresses as they are
@@ -1800,14 +1694,10 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // addresses will differ from what the ObjectFile had originally,
     // and what the dSYM has.
     if (is_dsym && unified_section_sp->GetFileAddress() != load_cmd.vmaddr) {
-      Log *log = GetLog(LLDBLog::Symbols);
-      if (log) {
-        log->Printf(
-            "Installing dSYM's %s segment file address over ObjectFile's "
-            "so symbol table/debug info resolves correctly for %s",
-            const_segname.AsCString(),
-            module_sp->GetFileSpec().GetFilename().AsCString());
-      }
+      LLDB_LOG(GetLog(LLDBLog::Symbols),
+               "Installing dSYM's {0} segment file address over ObjectFile's "
+               "so symbol table/debug info resolves correctly for {1}",
+               segname, module_sp->GetFileSpec().GetFilename());
 
       // Make sure we've parsed the symbol table from the ObjectFile before
       // we go around changing its Sections.
@@ -1835,19 +1725,23 @@ void ObjectFileMachO::ProcessSegmentCommand(
   uint32_t segment_sect_idx;
   const lldb::user_id_t first_segment_sectID = context.NextSectionIdx + 1;
 
+  // 64 bit mach-o files have sections with 32 bit file offsets. If any section
+  // data end will exceed UINT32_MAX, then we need to do some bookkeeping to
+  // ensure we can access this data correctly.
+  uint64_t section_offset_adjust = 0;
   const uint32_t num_u32s = load_cmd.cmd == LC_SEGMENT ? 7 : 8;
   for (segment_sect_idx = 0; segment_sect_idx < load_cmd.nsects;
        ++segment_sect_idx) {
-    if (m_data.GetU8(&offset, (uint8_t *)sect64.sectname,
-                     sizeof(sect64.sectname)) == nullptr)
+    if (m_data_nsp->GetU8(&offset, (uint8_t *)sect64.sectname,
+                          sizeof(sect64.sectname)) == nullptr)
       break;
-    if (m_data.GetU8(&offset, (uint8_t *)sect64.segname,
-                     sizeof(sect64.segname)) == nullptr)
+    if (m_data_nsp->GetU8(&offset, (uint8_t *)sect64.segname,
+                          sizeof(sect64.segname)) == nullptr)
       break;
-    sect64.addr = m_data.GetAddress(&offset);
-    sect64.size = m_data.GetAddress(&offset);
+    sect64.addr = m_data_nsp->GetAddress(&offset);
+    sect64.size = m_data_nsp->GetAddress(&offset);
 
-    if (m_data.GetU32(&offset, &sect64.offset, num_u32s) == nullptr)
+    if (m_data_nsp->GetU32(&offset, &sect64.offset, num_u32s) == nullptr)
       break;
 
     if (IsSharedCacheBinary() && !IsInMemory()) {
@@ -1858,19 +1752,29 @@ void ObjectFileMachO::ProcessSegmentCommand(
     // isn't stored in the abstracted Sections.
     m_mach_sections.push_back(sect64);
 
+    // Make sure we can load sections in mach-o files where some sections cross
+    // a 4GB boundary. llvm::MachO::section_64 have only 32 bit file offsets
+    // for the file offset of the section contents, so we need to track and
+    // sections that overflow and adjust the offsets accordingly.
+    const uint64_t section_file_offset =
+        (uint64_t)sect64.offset + section_offset_adjust;
+    const uint64_t end_section_offset = (uint64_t)sect64.offset + sect64.size;
+    if (end_section_offset >= UINT32_MAX)
+      section_offset_adjust += end_section_offset & 0xFFFFFFFF00000000ull;
+
     if (add_section) {
-      ConstString section_name(
+      llvm::StringRef section_name(
           sect64.sectname, strnlen(sect64.sectname, sizeof(sect64.sectname)));
-      if (!const_segname) {
+      if (segname.empty()) {
         // We have a segment with no name so we need to conjure up segments
         // that correspond to the section's segname if there isn't already such
         // a section. If there is such a section, we resize the section so that
         // it spans all sections.  We also mark these sections as fake so
         // address matches don't hit if they land in the gaps between the child
         // sections.
-        const_segname.SetTrimmedCStringWithLength(sect64.segname,
-                                                  sizeof(sect64.segname));
-        segment_sp = context.UnifiedList.FindSectionByName(const_segname);
+        segname = llvm::StringRef(
+            sect64.segname, strnlen(sect64.segname, sizeof(sect64.segname)));
+        segment_sp = context.UnifiedList.FindSectionByName(segname);
         if (segment_sp.get()) {
           Section *segment = segment_sp.get();
           // Grow the section size as needed.
@@ -1897,13 +1801,13 @@ void ObjectFileMachO::ProcessSegmentCommand(
           }
 
           // Grow the section size as needed.
-          if (sect64.offset) {
+          if (section_file_offset) {
             const lldb::addr_t segment_min_file_offset =
                 segment->GetFileOffset();
             const lldb::addr_t segment_max_file_offset =
                 segment_min_file_offset + segment->GetFileSize();
 
-            const lldb::addr_t section_min_file_offset = sect64.offset;
+            const lldb::addr_t section_min_file_offset = section_file_offset;
             const lldb::addr_t section_max_file_offset =
                 section_min_file_offset + sect64.size;
             const lldb::addr_t new_file_offset =
@@ -1925,15 +1829,15 @@ void ObjectFileMachO::ProcessSegmentCommand(
               // shifted right by 8 bits as not to
               // collide with any of the 256 section IDs
               // that are possible
-              const_segname,         // Name of this section
+              segname.str(),         // Name of this section
               eSectionTypeContainer, // This section is a container of
               // other sections.
               sect64.addr, // File VM address == addresses as they are
               // found in the object file
-              sect64.size,   // VM size in bytes of this section
-              sect64.offset, // Offset to the data for this section in
+              sect64.size,         // VM size in bytes of this section
+              section_file_offset, // Offset to the data for this section in
               // the file
-              sect64.offset ? sect64.size : 0, // Size in bytes of
+              section_file_offset ? sect64.size : 0, // Size in bytes of
               // this section as
               // found in the file
               sect64.align,
@@ -1950,17 +1854,18 @@ void ObjectFileMachO::ProcessSegmentCommand(
 
       lldb::SectionType sect_type = GetSectionType(sect64.flags, section_name);
 
-      SectionSP section_sp(new Section(
-          segment_sp, module_sp, this, ++context.NextSectionIdx, section_name,
-          sect_type, sect64.addr - segment_sp->GetFileAddress(), sect64.size,
-          sect64.offset, sect64.offset == 0 ? 0 : sect64.size, sect64.align,
-          sect64.flags));
+      SectionSP section_sp = std::make_shared<Section>(
+          segment_sp, module_sp, this, ++context.NextSectionIdx,
+          section_name.str(), sect_type,
+          sect64.addr - segment_sp->GetFileAddress(), sect64.size,
+          section_file_offset, section_file_offset == 0 ? 0 : sect64.size,
+          sect64.align, sect64.flags);
       // Set the section to be encrypted to match the segment
 
       bool section_is_encrypted = false;
       if (!segment_is_encrypted && load_cmd.filesize != 0)
         section_is_encrypted = context.EncryptedRanges.FindEntryThatContains(
-                                   sect64.offset) != nullptr;
+                                   section_file_offset) != nullptr;
 
       section_sp->SetIsEncrypted(segment_is_encrypted || section_is_encrypted);
       section_sp->SetPermissions(segment_permissions);
@@ -1968,7 +1873,7 @@ void ObjectFileMachO::ProcessSegmentCommand(
 
       if (segment_sp->IsFake()) {
         segment_sp.reset();
-        const_segname.Clear();
+        segname = {};
       }
     }
   }
@@ -2002,8 +1907,8 @@ void ObjectFileMachO::ProcessDysymtabCommand(
     const llvm::MachO::load_command &load_cmd, lldb::offset_t offset) {
   m_dysymtab.cmd = load_cmd.cmd;
   m_dysymtab.cmdsize = load_cmd.cmdsize;
-  m_data.GetU32(&offset, &m_dysymtab.ilocalsym,
-                (sizeof(m_dysymtab) / sizeof(uint32_t)) - 2);
+  m_data_nsp->GetU32(&offset, &m_dysymtab.ilocalsym,
+                     (sizeof(m_dysymtab) / sizeof(uint32_t)) - 2);
 }
 
 void ObjectFileMachO::CreateSections(SectionList &unified_section_list) {
@@ -2022,7 +1927,7 @@ void ObjectFileMachO::CreateSections(SectionList &unified_section_list) {
   llvm::MachO::load_command load_cmd;
   for (uint32_t i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t load_cmd_offset = offset;
-    if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(*m_data_nsp, offset, load_cmd))
       break;
 
     if (load_cmd.cmd == LC_SEGMENT || load_cmd.cmd == LC_SEGMENT_64)
@@ -2055,7 +1960,7 @@ public:
         SectionSP section_sp(m_section_list->FindSectionByID(n_sect));
         m_section_infos[n_sect].section_sp = section_sp;
         if (section_sp) {
-          m_section_infos[n_sect].vm_range.SetBaseAddress(
+          m_section_infos[n_sect].vm_range.SetRangeBase(
               section_sp->GetFileAddress());
           m_section_infos[n_sect].vm_range.SetByteSize(
               section_sp->GetByteSize());
@@ -2075,8 +1980,7 @@ public:
         // Symbol is in section.
         return m_section_infos[n_sect].section_sp;
       } else if (m_section_infos[n_sect].vm_range.GetByteSize() == 0 &&
-                 m_section_infos[n_sect].vm_range.GetBaseAddress() ==
-                     file_addr) {
+                 m_section_infos[n_sect].vm_range.GetRangeBase() == file_addr) {
         // Symbol is in section with zero size, but has the same start address
         // as the section. This can happen with linker symbols (symbols that
         // start with the letter 'l' or 'L'.
@@ -2090,142 +1994,48 @@ protected:
   struct SectionInfo {
     SectionInfo() : vm_range(), section_sp() {}
 
-    VMRange vm_range;
+    Range<addr_t, addr_t> vm_range;
     SectionSP section_sp;
   };
   SectionList *m_section_list;
   std::vector<SectionInfo> m_section_infos;
 };
 
-#define TRIE_SYMBOL_IS_THUMB (1ULL << 63)
-struct TrieEntry {
-  void Dump() const {
-    printf("0x%16.16llx 0x%16.16llx 0x%16.16llx \"%s\"",
-           static_cast<unsigned long long>(address),
-           static_cast<unsigned long long>(flags),
-           static_cast<unsigned long long>(other), name.GetCString());
-    if (import_name)
-      printf(" -> \"%s\"\n", import_name.GetCString());
-    else
-      printf("\n");
-  }
-  ConstString name;
-  uint64_t address = LLDB_INVALID_ADDRESS;
-  uint64_t flags =
-      0; // EXPORT_SYMBOL_FLAGS_REEXPORT, EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER,
-         // TRIE_SYMBOL_IS_THUMB
-  uint64_t other = 0;
-  ConstString import_name;
-};
+static bool
+TryParseV2ObjCMetadataSymbol(const char *&symbol_name,
+                             const char *&symbol_name_non_abi_mangled,
+                             SymbolType &type) {
+  static constexpr llvm::StringLiteral g_objc_v2_prefix_class("_OBJC_CLASS_$_");
+  static constexpr llvm::StringLiteral g_objc_v2_prefix_metaclass(
+      "_OBJC_METACLASS_$_");
+  static constexpr llvm::StringLiteral g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
 
-struct TrieEntryWithOffset {
-  lldb::offset_t nodeOffset;
-  TrieEntry entry;
+  llvm::StringRef symbol_name_ref(symbol_name);
+  if (symbol_name_ref.empty())
+    return false;
 
-  TrieEntryWithOffset(lldb::offset_t offset) : nodeOffset(offset), entry() {}
-
-  void Dump(uint32_t idx) const {
-    printf("[%3u] 0x%16.16llx: ", idx,
-           static_cast<unsigned long long>(nodeOffset));
-    entry.Dump();
-  }
-
-  bool operator<(const TrieEntryWithOffset &other) const {
-    return (nodeOffset < other.nodeOffset);
-  }
-};
-
-static bool ParseTrieEntries(DataExtractor &data, lldb::offset_t offset,
-                             const bool is_arm, addr_t text_seg_base_addr,
-                             std::vector<llvm::StringRef> &nameSlices,
-                             std::set<lldb::addr_t> &resolver_addresses,
-                             std::vector<TrieEntryWithOffset> &reexports,
-                             std::vector<TrieEntryWithOffset> &ext_symbols) {
-  if (!data.ValidOffset(offset))
+  if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
+    symbol_name_non_abi_mangled = symbol_name + 1;
+    symbol_name = symbol_name + g_objc_v2_prefix_class.size();
+    type = eSymbolTypeObjCClass;
     return true;
-
-  // Terminal node -- end of a branch, possibly add this to
-  // the symbol table or resolver table.
-  const uint64_t terminalSize = data.GetULEB128(&offset);
-  lldb::offset_t children_offset = offset + terminalSize;
-  if (terminalSize != 0) {
-    TrieEntryWithOffset e(offset);
-    e.entry.flags = data.GetULEB128(&offset);
-    const char *import_name = nullptr;
-    if (e.entry.flags & EXPORT_SYMBOL_FLAGS_REEXPORT) {
-      e.entry.address = 0;
-      e.entry.other = data.GetULEB128(&offset); // dylib ordinal
-      import_name = data.GetCStr(&offset);
-    } else {
-      e.entry.address = data.GetULEB128(&offset);
-      if (text_seg_base_addr != LLDB_INVALID_ADDRESS)
-        e.entry.address += text_seg_base_addr;
-      if (e.entry.flags & EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER) {
-        e.entry.other = data.GetULEB128(&offset);
-        uint64_t resolver_addr = e.entry.other;
-        if (text_seg_base_addr != LLDB_INVALID_ADDRESS)
-          resolver_addr += text_seg_base_addr;
-        if (is_arm)
-          resolver_addr &= THUMB_ADDRESS_BIT_MASK;
-        resolver_addresses.insert(resolver_addr);
-      } else
-        e.entry.other = 0;
-    }
-    bool add_this_entry = false;
-    if (Flags(e.entry.flags).Test(EXPORT_SYMBOL_FLAGS_REEXPORT) &&
-        import_name && import_name[0]) {
-      // add symbols that are reexport symbols with a valid import name.
-      add_this_entry = true;
-    } else if (e.entry.flags == 0 &&
-               (import_name == nullptr || import_name[0] == '\0')) {
-      // add externally visible symbols, in case the nlist record has
-      // been stripped/omitted.
-      add_this_entry = true;
-    }
-    if (add_this_entry) {
-      std::string name;
-      if (!nameSlices.empty()) {
-        for (auto name_slice : nameSlices)
-          name.append(name_slice.data(), name_slice.size());
-      }
-      if (name.size() > 1) {
-        // Skip the leading '_'
-        e.entry.name.SetCStringWithLength(name.c_str() + 1, name.size() - 1);
-      }
-      if (import_name) {
-        // Skip the leading '_'
-        e.entry.import_name.SetCString(import_name + 1);
-      }
-      if (Flags(e.entry.flags).Test(EXPORT_SYMBOL_FLAGS_REEXPORT)) {
-        reexports.push_back(e);
-      } else {
-        if (is_arm && (e.entry.address & 1)) {
-          e.entry.flags |= TRIE_SYMBOL_IS_THUMB;
-          e.entry.address &= THUMB_ADDRESS_BIT_MASK;
-        }
-        ext_symbols.push_back(e);
-      }
-    }
   }
 
-  const uint8_t childrenCount = data.GetU8(&children_offset);
-  for (uint8_t i = 0; i < childrenCount; ++i) {
-    const char *cstr = data.GetCStr(&children_offset);
-    if (cstr)
-      nameSlices.push_back(llvm::StringRef(cstr));
-    else
-      return false; // Corrupt data
-    lldb::offset_t childNodeOffset = data.GetULEB128(&children_offset);
-    if (childNodeOffset) {
-      if (!ParseTrieEntries(data, childNodeOffset, is_arm, text_seg_base_addr,
-                            nameSlices, resolver_addresses, reexports,
-                            ext_symbols)) {
-        return false;
-      }
-    }
-    nameSlices.pop_back();
+  if (symbol_name_ref.starts_with(g_objc_v2_prefix_metaclass)) {
+    symbol_name_non_abi_mangled = symbol_name + 1;
+    symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
+    type = eSymbolTypeObjCMetaClass;
+    return true;
   }
-  return true;
+
+  if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
+    symbol_name_non_abi_mangled = symbol_name + 1;
+    symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
+    type = eSymbolTypeObjCIVar;
+    return true;
+  }
+
+  return false;
 }
 
 static SymbolType GetSymbolType(const char *&symbol_name,
@@ -2237,7 +2047,7 @@ static SymbolType GetSymbolType(const char *&symbol_name,
                                 const SectionSP &symbol_section) {
   SymbolType type = eSymbolTypeInvalid;
 
-  const char *symbol_sect_name = symbol_section->GetName().AsCString();
+  llvm::StringRef symbol_sect_name = symbol_section->GetName();
   if (symbol_section->IsDescendant(text_section_sp.get())) {
     if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
                                 S_ATTR_SELF_MODIFYING_CODE |
@@ -2248,8 +2058,7 @@ static SymbolType GetSymbolType(const char *&symbol_name,
   } else if (symbol_section->IsDescendant(data_section_sp.get()) ||
              symbol_section->IsDescendant(data_dirty_section_sp.get()) ||
              symbol_section->IsDescendant(data_const_section_sp.get())) {
-    if (symbol_sect_name &&
-        ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
+    if (symbol_sect_name.starts_with("__objc")) {
       type = eSymbolTypeRuntime;
 
       if (symbol_name) {
@@ -2274,15 +2083,12 @@ static SymbolType GetSymbolType(const char *&symbol_name,
           }
         }
       }
-    } else if (symbol_sect_name &&
-               ::strstr(symbol_sect_name, "__gcc_except_tab") ==
-                   symbol_sect_name) {
+    } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
       type = eSymbolTypeException;
     } else {
       type = eSymbolTypeData;
     }
-  } else if (symbol_sect_name &&
-             ::strstr(symbol_sect_name, "__IMPORT") == symbol_sect_name) {
+  } else if (symbol_sect_name.starts_with("__IMPORT")) {
     type = eSymbolTypeTrampoline;
   }
   return type;
@@ -2302,6 +2108,17 @@ ParseNList(DataExtractor &nlist_data, lldb::offset_t &nlist_data_offset,
   return nlist;
 }
 
+static void UpdateHasSourceFilesAndDebugMap(SymbolType type,
+                                            const struct nlist_64 &nlist,
+                                            bool &has_source_files,
+                                            bool &has_debug_map) {
+  if (type == eSymbolTypeSourceFile)
+    has_source_files = true;
+  else if (type == eSymbolTypeObjectFile && nlist.n_type == N_OSO &&
+           nlist.n_desc == 1)
+    has_debug_map = true;
+}
+
 enum { DebugSymbols = true, NonDebugSymbols = false };
 
 void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
@@ -2312,15 +2129,16 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   Log *log = GetLog(LLDBLog::Symbols);
 
   const FileSpec &file = m_file ? m_file : module_sp->GetFileSpec();
-  const char *file_name = file.GetFilename().AsCString("<Unknown>");
-  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s", file_name);
+  llvm::StringRef file_name = file.GetFilename().nonEmptyOr("<Unknown>");
+  LLDB_SCOPED_TIMERF("ObjectFileMachO::ParseSymtab () module = %s",
+                     file_name.str().c_str());
   LLDB_LOG(log, "Parsing symbol table for {0}", file_name);
-  Progress progress("Parsing symbol table", file_name);
+  Progress progress("Parsing symbol table", file_name.str());
 
-  llvm::MachO::linkedit_data_command function_starts_load_command = {0, 0, 0, 0};
-  llvm::MachO::linkedit_data_command exports_trie_load_command = {0, 0, 0, 0};
-  llvm::MachO::dyld_info_command dyld_info = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  llvm::MachO::dysymtab_command dysymtab = m_dysymtab;
+  LinkeditDataCommandLargeOffsets function_starts_load_command;
+  LinkeditDataCommandLargeOffsets exports_trie_load_command;
+  DyldInfoCommandLargeOffsets dyld_info;
+  DysymtabCommandLargeOffsets dysymtab(m_dysymtab);
   SymtabCommandLargeOffsets symtab_load_command;
   // The data element of type bool indicates that this entry is thumb
   // code.
@@ -2333,10 +2151,10 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   llvm::DenseSet<addr_t> symbols_added;
 
   // We are using a llvm::DenseSet for "symbols_added" so we must be sure we
-  // do not add the tombstone or empty keys to the set.
+  // do not add the empty key to the set.
   auto add_symbol_addr = [&symbols_added](lldb::addr_t file_addr) {
-    // Don't add the tombstone or empty keys.
-    if (file_addr == UINT64_MAX || file_addr == UINT64_MAX - 1)
+    // Don't add the empty key.
+    if (file_addr == UINT64_MAX)
       return;
     symbols_added.insert(file_addr);
   };
@@ -2344,58 +2162,47 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
   uint32_t i;
   FileSpecList dylib_files;
-  llvm::StringRef g_objc_v2_prefix_class("_OBJC_CLASS_$_");
-  llvm::StringRef g_objc_v2_prefix_metaclass("_OBJC_METACLASS_$_");
-  llvm::StringRef g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
   UUID image_uuid;
 
   for (i = 0; i < m_header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
     // Read in the load command and load command size
     llvm::MachO::load_command lc;
-    if (m_data.GetU32(&offset, &lc, 2) == nullptr)
+    if (!ReadMachOCommand(*m_data_nsp, offset, lc))
       break;
     // Watch for the symbol table load command
     switch (lc.cmd) {
-    case LC_SYMTAB:
-      // struct symtab_command {
-      //   uint32_t        cmd;            /* LC_SYMTAB */
-      //   uint32_t        cmdsize;        /* sizeof(struct symtab_command) */
-      //   uint32_t        symoff;         /* symbol table offset */
-      //   uint32_t        nsyms;          /* number of symbol table entries */
-      //   uint32_t        stroff;         /* string table offset */
-      //   uint32_t        strsize;        /* string table size in bytes */
-      // };
-      symtab_load_command.cmd = lc.cmd;
-      symtab_load_command.cmdsize = lc.cmdsize;
-      symtab_load_command.symoff = m_data.GetU32(&offset);
-      symtab_load_command.nsyms = m_data.GetU32(&offset);
-      symtab_load_command.stroff = m_data.GetU32(&offset);
-      symtab_load_command.strsize = m_data.GetU32(&offset);
-      break;
+    case LC_SYMTAB: {
+      llvm::MachO::symtab_command lc_obj;
+      if (m_data_nsp->GetU32(&offset, &lc_obj.symoff, 4)) {
+        lc_obj.cmd = lc.cmd;
+        lc_obj.cmdsize = lc.cmdsize;
+        symtab_load_command = lc_obj;
+      }
+    } break;
 
     case LC_DYLD_INFO:
-    case LC_DYLD_INFO_ONLY:
-      if (m_data.GetU32(&offset, &dyld_info.rebase_off, 10)) {
-        dyld_info.cmd = lc.cmd;
-        dyld_info.cmdsize = lc.cmdsize;
-      } else {
-        memset(&dyld_info, 0, sizeof(dyld_info));
+    case LC_DYLD_INFO_ONLY: {
+      llvm::MachO::dyld_info_command lc_obj;
+      if (m_data_nsp->GetU32(&offset, &lc_obj.rebase_off, 10)) {
+        lc_obj.cmd = lc.cmd;
+        lc_obj.cmdsize = lc.cmdsize;
+        dyld_info = lc_obj;
       }
-      break;
+    } break;
 
     case LC_LOAD_DYLIB:
     case LC_LOAD_WEAK_DYLIB:
     case LC_REEXPORT_DYLIB:
     case LC_LOADFVMLIB:
     case LC_LOAD_UPWARD_DYLIB: {
-      uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
-      const char *path = m_data.PeekCStr(name_offset);
-      if (path) {
-        FileSpec file_spec(path);
+      uint32_t name_offset = cmd_offset + m_data_nsp->GetU32(&offset);
+      if (std::optional<llvm::StringRef> path =
+              m_data_nsp->PeekCStr(name_offset)) {
+        FileSpec file_spec(*path);
         // Strip the path if there is @rpath, @executable, etc so we just use
         // the basename
-        if (path[0] == '@')
+        if (path->starts_with("@"))
           file_spec.ClearDirectory();
 
         if (lc.cmd == LC_REEXPORT_DYLIB) {
@@ -2406,25 +2213,23 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     } break;
 
-    case LC_DYLD_EXPORTS_TRIE:
-      exports_trie_load_command.cmd = lc.cmd;
-      exports_trie_load_command.cmdsize = lc.cmdsize;
-      if (m_data.GetU32(&offset, &exports_trie_load_command.dataoff, 2) ==
-          nullptr) // fill in offset and size fields
-        memset(&exports_trie_load_command, 0,
-               sizeof(exports_trie_load_command));
-      break;
-    case LC_FUNCTION_STARTS:
-      function_starts_load_command.cmd = lc.cmd;
-      function_starts_load_command.cmdsize = lc.cmdsize;
-      if (m_data.GetU32(&offset, &function_starts_load_command.dataoff, 2) ==
-          nullptr) // fill in data offset and size fields
-        memset(&function_starts_load_command, 0,
-               sizeof(function_starts_load_command));
-      break;
+    case LC_DYLD_EXPORTS_TRIE: {
+      llvm::MachO::linkedit_data_command lc_obj;
+      lc_obj.cmd = lc.cmd;
+      lc_obj.cmdsize = lc.cmdsize;
+      if (m_data_nsp->GetU32(&offset, &lc_obj.dataoff, 2))
+        exports_trie_load_command = lc_obj;
+    } break;
+    case LC_FUNCTION_STARTS: {
+      llvm::MachO::linkedit_data_command lc_obj;
+      lc_obj.cmd = lc.cmd;
+      lc_obj.cmdsize = lc.cmdsize;
+      if (m_data_nsp->GetU32(&offset, &lc_obj.dataoff, 2))
+        function_starts_load_command = lc_obj;
+    } break;
 
     case LC_UUID: {
-      const uint8_t *uuid_bytes = m_data.PeekData(offset, 16);
+      const uint8_t *uuid_bytes = m_data_nsp->PeekData(offset, 16);
 
       if (uuid_bytes)
         image_uuid = UUID(uuid_bytes, 16);
@@ -2444,8 +2249,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   if (section_list == nullptr)
     return;
 
-  const uint32_t addr_byte_size = m_data.GetAddressByteSize();
-  const ByteOrder byte_order = m_data.GetByteOrder();
+  bool has_source_files = false;
+  bool has_debug_map = false;
+
+  const uint32_t addr_byte_size = m_data_nsp->GetAddressByteSize();
+  const ByteOrder byte_order = m_data_nsp->GetByteOrder();
   bool bit_width_32 = addr_byte_size == 4;
   const size_t nlist_byte_size =
       bit_width_32 ? sizeof(struct nlist) : sizeof(struct nlist_64);
@@ -2469,27 +2277,22 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   bool is_shared_cache_image = IsSharedCacheBinary();
   bool is_local_shared_cache_image = is_shared_cache_image && !IsInMemory();
 
-  ConstString g_segment_name_TEXT = GetSegmentNameTEXT();
-  ConstString g_segment_name_DATA = GetSegmentNameDATA();
-  ConstString g_segment_name_DATA_DIRTY = GetSegmentNameDATA_DIRTY();
-  ConstString g_segment_name_DATA_CONST = GetSegmentNameDATA_CONST();
-  ConstString g_segment_name_OBJC = GetSegmentNameOBJC();
-  ConstString g_section_name_eh_frame = GetSectionNameEHFrame();
-  ConstString g_section_name_lldb_no_nlist = GetSectionNameLLDBNoNlist();
   SectionSP text_section_sp(
-      section_list->FindSectionByName(g_segment_name_TEXT));
+      section_list->FindSectionByName(GetSegmentNameTEXT()));
   SectionSP data_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA));
+      section_list->FindSectionByName(GetSegmentNameDATA()));
   SectionSP linkedit_section_sp(
       section_list->FindSectionByName(GetSegmentNameLINKEDIT()));
   SectionSP data_dirty_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_DIRTY));
+      section_list->FindSectionByName(GetSegmentNameDATA_DIRTY()));
   SectionSP data_const_section_sp(
-      section_list->FindSectionByName(g_segment_name_DATA_CONST));
+      section_list->FindSectionByName(GetSegmentNameDATA_CONST()));
   SectionSP objc_section_sp(
-      section_list->FindSectionByName(g_segment_name_OBJC));
+      section_list->FindSectionByName(GetSegmentNameOBJC()));
   SectionSP eh_frame_section_sp;
   SectionSP lldb_no_nlist_section_sp;
+  llvm::StringRef g_section_name_eh_frame = GetSectionNameEHFrame();
+  llvm::StringRef g_section_name_lldb_no_nlist = GetSectionNameLLDBNoNlist();
   if (text_section_sp.get()) {
     eh_frame_section_sp = text_section_sp->GetChildren().FindSectionByName(
         g_section_name_eh_frame);
@@ -2591,7 +2394,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     }
   } else {
-    if (is_local_shared_cache_image) {
+    if (is_local_shared_cache_image && linkedit_section_sp) {
       // The load commands in shared cache images are relative to the
       // beginning of the shared cache, not the library image. The
       // data we get handed when creating the ObjectFileMachO starts
@@ -2610,34 +2413,34 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       exports_trie_load_command.dataoff += linkedit_slide;
     }
 
-    nlist_data.SetData(m_data, symtab_load_command.symoff,
-                       nlist_data_byte_size);
-    strtab_data.SetData(m_data, symtab_load_command.stroff,
-                        strtab_data_byte_size);
+    nlist_data = *m_data_nsp->GetSubsetExtractorSP(symtab_load_command.symoff,
+                                                   nlist_data_byte_size);
+    strtab_data = *m_data_nsp->GetSubsetExtractorSP(symtab_load_command.stroff,
+                                                    strtab_data_byte_size);
 
     // We shouldn't have exports data from both the LC_DYLD_INFO command
     // AND the LC_DYLD_EXPORTS_TRIE command in the same binary:
     lldbassert(!((dyld_info.export_size > 0)
                  && (exports_trie_load_command.datasize > 0)));
     if (dyld_info.export_size > 0) {
-      dyld_trie_data.SetData(m_data, dyld_info.export_off,
-                             dyld_info.export_size);
+      dyld_trie_data = *m_data_nsp->GetSubsetExtractorSP(dyld_info.export_off,
+                                                         dyld_info.export_size);
     } else if (exports_trie_load_command.datasize > 0) {
-      dyld_trie_data.SetData(m_data, exports_trie_load_command.dataoff,
-                             exports_trie_load_command.datasize);
+      dyld_trie_data =
+          *m_data_nsp->GetSubsetExtractorSP(exports_trie_load_command.dataoff,
+                                            exports_trie_load_command.datasize);
     }
 
     if (dysymtab.nindirectsyms != 0) {
-      indirect_symbol_index_data.SetData(m_data, dysymtab.indirectsymoff,
-                                         dysymtab.nindirectsyms * 4);
+      indirect_symbol_index_data = *m_data_nsp->GetSubsetExtractorSP(
+          dysymtab.indirectsymoff, dysymtab.nindirectsyms * 4);
     }
     if (function_starts_load_command.cmd) {
-      function_starts_data.SetData(m_data, function_starts_load_command.dataoff,
-                                   function_starts_load_command.datasize);
+      function_starts_data = *m_data_nsp->GetSubsetExtractorSP(
+          function_starts_load_command.dataoff,
+          function_starts_load_command.datasize);
     }
   }
-
-  const bool have_strtab_data = strtab_data.GetByteSize() > 0;
 
   const bool is_arm = (m_header.cputype == llvm::MachO::CPU_TYPE_ARM);
   const bool always_thumb = GetArchitecture().IsAlwaysThumbInstructions();
@@ -2752,7 +2555,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   // Any symbols that get merged into another will get an entry in this map
   // so we know
   NListIndexToSymbolIndexMap m_nlist_idx_to_sym_idx;
-  uint32_t nlist_idx = 0;
   Symbol *symbol_ptr = nullptr;
 
   uint32_t sym_idx = 0;
@@ -2773,14 +2575,738 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     lldb::addr_t text_segment_file_addr = LLDB_INVALID_ADDRESS;
     if (text_segment_sp)
       text_segment_file_addr = text_segment_sp->GetFileAddress();
-    std::vector<llvm::StringRef> nameSlices;
-    ParseTrieEntries(dyld_trie_data, 0, is_arm, text_segment_file_addr,
-                     nameSlices, resolver_addresses, reexport_trie_entries,
+    ParseTrieEntries(dyld_trie_data, is_arm, text_segment_file_addr,
+                     resolver_addresses, reexport_trie_entries,
                      external_sym_trie_entries);
   }
 
   typedef std::set<ConstString> IndirectSymbols;
   IndirectSymbols indirect_symbol_names;
+
+  typedef llvm::DenseMap<ConstString, uint16_t> UndefinedNameToDescMap;
+  typedef llvm::DenseMap<uint32_t, ConstString> SymbolIndexToName;
+  UndefinedNameToDescMap undefined_name_to_desc;
+  SymbolIndexToName reexport_shlib_needs_fixup;
+
+  // Symbol merging depends on the debug symbols being parsed first, so this
+  // lambda runs twice: once for the debug symbols, then for the rest.
+  auto ParseSymbolLambda = [&](struct nlist_64 &nlist, uint32_t nlist_idx,
+                               bool debug_only, const DataExtractor &strtab) {
+    const bool is_debug = ((nlist.n_type & N_STAB) != 0);
+    if (is_debug != debug_only)
+      return;
+
+    const char *symbol_name_non_abi_mangled = nullptr;
+    const char *symbol_name = nullptr;
+
+    if (strtab.GetByteSize() > 0) {
+      std::optional<llvm::StringRef> name = strtab.PeekCStr(nlist.n_strx);
+
+      if (!name) {
+        // No symbol should be NULL, even the symbols with no string values
+        // should have an offset zero which points to an empty C-string
+        // DSC unmapped locals are numbered from nsyms.
+        const bool is_dsc_local = nlist_idx >= symtab_load_command.nsyms;
+        Debugger::ReportError(llvm::formatv(
+            "{0}symbol[{1}] has invalid or unterminated string table offset "
+            "{2:x} in {3}, ignoring symbol",
+            is_dsc_local ? "DSC unmapped local " : "",
+            is_dsc_local ? nlist_idx - symtab_load_command.nsyms : nlist_idx,
+            nlist.n_strx, module_sp->GetFileSpec().GetPath()));
+        return;
+      }
+      // The code below spells "no name" as a nullptr.
+      if (!name->empty())
+        symbol_name = name->data();
+    } else {
+      const addr_t str_addr = strtab_addr + nlist.n_strx;
+      Status str_error;
+      if (process->ReadCStringFromMemory(str_addr, memory_symbol_name,
+                                         str_error))
+        symbol_name = memory_symbol_name.c_str();
+    }
+
+    SymbolType type = eSymbolTypeInvalid;
+    SectionSP symbol_section;
+    bool add_nlist = true;
+    bool is_gsym = false;
+    bool demangled_is_synthesized = false;
+    bool set_value = true;
+
+    assert(sym_idx < num_syms);
+    sym[sym_idx].SetDebug(is_debug);
+
+    if (is_debug) {
+      switch (nlist.n_type) {
+      case N_GSYM: {
+        // global symbol: name,,NO_SECT,type,0
+        // Sometimes the N_GSYM value contains the address.
+
+        // FIXME: In the .o files, we have a GSYM and a debug symbol for all
+        // the ObjC data.  They
+        // have the same address, but we want to ensure that we always find
+        // only the real symbol, 'cause we don't currently correctly
+        // attribute the GSYM one to the ObjCClass/Ivar/MetaClass symbol
+        // type.  This is a temporary hack to make sure the ObjectiveC
+        // symbols get treated correctly.  To do this right, we should
+        // coalesce all the GSYM & global symbols that have the same
+        // address.
+        is_gsym = true;
+        sym[sym_idx].SetExternal(true);
+
+        if (TryParseV2ObjCMetadataSymbol(symbol_name,
+                                         symbol_name_non_abi_mangled, type)) {
+          demangled_is_synthesized = true;
+        } else {
+          if (nlist.n_value != 0)
+            symbol_section =
+                section_info.GetSection(nlist.n_sect, nlist.n_value);
+
+          type = eSymbolTypeData;
+        }
+      } break;
+
+      case N_FNAME:
+        // procedure name (f77 kludge): name,,NO_SECT,0,0
+        type = eSymbolTypeCompiler;
+        break;
+
+      case N_FUN:
+        // procedure: name,,n_sect,linenumber,address
+        if (symbol_name) {
+          type = eSymbolTypeCode;
+          symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
+
+          N_FUN_addr_to_sym_idx.insert(std::make_pair(nlist.n_value, sym_idx));
+          // We use the current number of symbols in the symbol table in
+          // lieu of using nlist_idx in case we ever start trimming entries
+          // out
+          N_FUN_indexes.push_back(sym_idx);
+        } else {
+          type = eSymbolTypeCompiler;
+
+          if (!N_FUN_indexes.empty()) {
+            // Copy the size of the function into the original STAB entry
+            // so we don't have to hunt for it later
+            symtab.SymbolAtIndex(N_FUN_indexes.back())
+                ->SetByteSize(nlist.n_value);
+            N_FUN_indexes.pop_back();
+            // We don't really need the end function STAB as it contains
+            // the size which we already placed with the original symbol,
+            // so don't add it if we want a minimal symbol table
+            add_nlist = false;
+          }
+        }
+        break;
+
+      case N_STSYM:
+        // static symbol: name,,n_sect,type,address
+        N_STSYM_addr_to_sym_idx.insert(std::make_pair(nlist.n_value, sym_idx));
+        symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
+        if (symbol_name && symbol_name[0]) {
+          type = ObjectFile::GetSymbolTypeFromName(symbol_name + 1,
+                                                   eSymbolTypeData);
+        }
+        break;
+
+      case N_LCSYM:
+        // .lcomm symbol: name,,n_sect,type,address
+        symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
+        type = eSymbolTypeCommonBlock;
+        break;
+
+      case N_BNSYM:
+        // We use the current number of symbols in the symbol table in lieu
+        // of using nlist_idx in case we ever start trimming entries out
+        // Skip these if we want minimal symbol tables
+        add_nlist = false;
+        break;
+
+      case N_ENSYM:
+        // Set the size of the N_BNSYM to the terminating index of this
+        // N_ENSYM so that we can always skip the entire symbol if we need
+        // to navigate more quickly at the source level when parsing STABS
+        // Skip these if we want minimal symbol tables
+        add_nlist = false;
+        break;
+
+      case N_OPT:
+        // emitted with gcc2_compiled and in gcc source
+        type = eSymbolTypeCompiler;
+        break;
+
+      case N_RSYM:
+        // register sym: name,,NO_SECT,type,register
+        type = eSymbolTypeVariable;
+        break;
+
+      case N_SLINE:
+        // src line: 0,,n_sect,linenumber,address
+        symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
+        type = eSymbolTypeLineEntry;
+        break;
+
+      case N_SSYM:
+        // structure elt: name,,NO_SECT,type,struct_offset
+        type = eSymbolTypeVariableType;
+        break;
+
+      case N_SO:
+        // source file name
+        type = eSymbolTypeSourceFile;
+        if (symbol_name == nullptr) {
+          add_nlist = false;
+          if (N_SO_index != UINT32_MAX) {
+            // Set the size of the N_SO to the terminating index of this
+            // N_SO so that we can always skip the entire N_SO if we need
+            // to navigate more quickly at the source level when parsing
+            // STABS
+            symbol_ptr = symtab.SymbolAtIndex(N_SO_index);
+            symbol_ptr->SetByteSize(sym_idx);
+            symbol_ptr->SetSizeIsSibling(true);
+          }
+          N_NSYM_indexes.clear();
+          N_INCL_indexes.clear();
+          N_BRAC_indexes.clear();
+          N_COMM_indexes.clear();
+          N_FUN_indexes.clear();
+          N_SO_index = UINT32_MAX;
+        } else {
+          // We use the current number of symbols in the symbol table in
+          // lieu of using nlist_idx in case we ever start trimming entries
+          // out
+          const bool N_SO_has_full_path = symbol_name[0] == '/';
+          if (N_SO_has_full_path) {
+            if ((N_SO_index == sym_idx - 1) && ((sym_idx - 1) < num_syms)) {
+              // We have two consecutive N_SO entries where the first
+              // contains a directory and the second contains a full path.
+              sym[sym_idx - 1].GetMangled().SetValue(ConstString(symbol_name));
+              m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
+              add_nlist = false;
+            } else {
+              // This is the first entry in a N_SO that contains a
+              // directory or a full path to the source file
+              N_SO_index = sym_idx;
+            }
+          } else if ((N_SO_index == sym_idx - 1) &&
+                     ((sym_idx - 1) < num_syms)) {
+            // This is usually the second N_SO entry that contains just the
+            // filename, so here we combine it with the first one if we are
+            // minimizing the symbol table
+            llvm::StringRef so_path =
+                sym[sym_idx - 1].GetMangled().GetDemangledName().GetStringRef();
+            if (!so_path.empty()) {
+              std::string full_so_path(so_path);
+              const size_t double_slash_pos = full_so_path.find("//");
+              if (double_slash_pos != std::string::npos) {
+                // The linker has been generating bad N_SO entries with
+                // doubled up paths in the format "%s%s" where the first
+                // string in the DW_AT_comp_dir, and the second is the
+                // directory for the source file so you end up with a path
+                // that looks like "/tmp/src//tmp/src/"
+                FileSpec so_dir(so_path);
+                if (!FileSystem::Instance().Exists(so_dir)) {
+                  so_dir.SetFile(&full_so_path[double_slash_pos + 1],
+                                 FileSpec::Style::native);
+                  if (FileSystem::Instance().Exists(so_dir)) {
+                    // Trim off the incorrect path
+                    full_so_path.erase(0, double_slash_pos + 1);
+                  }
+                }
+              }
+              if (*full_so_path.rbegin() != '/')
+                full_so_path += '/';
+              full_so_path += symbol_name;
+              sym[sym_idx - 1].GetMangled().SetValue(
+                  ConstString(full_so_path.c_str()));
+              add_nlist = false;
+              m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
+            }
+          } else {
+            // This could be a relative path to a N_SO
+            N_SO_index = sym_idx;
+          }
+        }
+        break;
+
+      case N_OSO:
+        // object file name: name,,0,0,st_mtime
+        type = eSymbolTypeObjectFile;
+        break;
+
+      case N_LSYM:
+        // local sym: name,,NO_SECT,type,offset
+        type = eSymbolTypeLocal;
+        break;
+
+      // INCL scopes
+      case N_BINCL:
+        // include file beginning: name,,NO_SECT,0,sum We use the current
+        // number of symbols in the symbol table in lieu of using nlist_idx
+        // in case we ever start trimming entries out
+        N_INCL_indexes.push_back(sym_idx);
+        type = eSymbolTypeScopeBegin;
+        break;
+
+      case N_EINCL:
+        // include file end: name,,NO_SECT,0,0
+        // Set the size of the N_BINCL to the terminating index of this
+        // N_EINCL so that we can always skip the entire symbol if we need
+        // to navigate more quickly at the source level when parsing STABS
+        if (!N_INCL_indexes.empty()) {
+          symbol_ptr = symtab.SymbolAtIndex(N_INCL_indexes.back());
+          symbol_ptr->SetByteSize(sym_idx + 1);
+          symbol_ptr->SetSizeIsSibling(true);
+          N_INCL_indexes.pop_back();
+        }
+        type = eSymbolTypeScopeEnd;
+        break;
+
+      case N_SOL:
+        // #included file name: name,,n_sect,0,address
+        type = eSymbolTypeHeaderFile;
+
+        // We currently don't use the header files on darwin
+        add_nlist = false;
+        break;
+
+      case N_PARAMS:
+        // compiler parameters: name,,NO_SECT,0,0
+        type = eSymbolTypeCompiler;
+        break;
+
+      case N_VERSION:
+        // compiler version: name,,NO_SECT,0,0
+        type = eSymbolTypeCompiler;
+        break;
+
+      case N_OLEVEL:
+        // compiler -O level: name,,NO_SECT,0,0
+        type = eSymbolTypeCompiler;
+        break;
+
+      case N_PSYM:
+        // parameter: name,,NO_SECT,type,offset
+        type = eSymbolTypeVariable;
+        break;
+
+      case N_ENTRY:
+        // alternate entry: name,,n_sect,linenumber,address
+        symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
+        type = eSymbolTypeLineEntry;
+        break;
+
+      // Left and Right Braces
+      case N_LBRAC:
+        // left bracket: 0,,NO_SECT,nesting level,address We use the
+        // current number of symbols in the symbol table in lieu of using
+        // nlist_idx in case we ever start trimming entries out
+        symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
+        N_BRAC_indexes.push_back(sym_idx);
+        type = eSymbolTypeScopeBegin;
+        break;
+
+      case N_RBRAC:
+        // right bracket: 0,,NO_SECT,nesting level,address Set the size of
+        // the N_LBRAC to the terminating index of this N_RBRAC so that we
+        // can always skip the entire symbol if we need to navigate more
+        // quickly at the source level when parsing STABS
+        symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
+        if (!N_BRAC_indexes.empty()) {
+          symbol_ptr = symtab.SymbolAtIndex(N_BRAC_indexes.back());
+          symbol_ptr->SetByteSize(sym_idx + 1);
+          symbol_ptr->SetSizeIsSibling(true);
+          N_BRAC_indexes.pop_back();
+        }
+        type = eSymbolTypeScopeEnd;
+        break;
+
+      case N_EXCL:
+        // deleted include file: name,,NO_SECT,0,sum
+        type = eSymbolTypeHeaderFile;
+        break;
+
+      // COMM scopes
+      case N_BCOMM:
+        // begin common: name,,NO_SECT,0,0
+        // We use the current number of symbols in the symbol table in lieu
+        // of using nlist_idx in case we ever start trimming entries out
+        type = eSymbolTypeScopeBegin;
+        N_COMM_indexes.push_back(sym_idx);
+        break;
+
+      case N_ECOML:
+        // end common (local name): 0,,n_sect,0,address
+        symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
+        [[fallthrough]];
+
+      case N_ECOMM:
+        // end common: name,,n_sect,0,0
+        // Set the size of the N_BCOMM to the terminating index of this
+        // N_ECOMM/N_ECOML so that we can always skip the entire symbol if
+        // we need to navigate more quickly at the source level when
+        // parsing STABS
+        if (!N_COMM_indexes.empty()) {
+          symbol_ptr = symtab.SymbolAtIndex(N_COMM_indexes.back());
+          symbol_ptr->SetByteSize(sym_idx + 1);
+          symbol_ptr->SetSizeIsSibling(true);
+          N_COMM_indexes.pop_back();
+        }
+        type = eSymbolTypeScopeEnd;
+        break;
+
+      case N_LENG:
+        // second stab entry with length information
+        type = eSymbolTypeAdditional;
+        break;
+
+      case N_AST:
+        // AST file path: name,,NO_SECT,0,0
+        type = eSymbolTypeASTFile;
+        break;
+
+      default:
+        break;
+      }
+    } else {
+      uint8_t n_type = N_TYPE & nlist.n_type;
+      sym[sym_idx].SetExternal((N_EXT & nlist.n_type) != 0);
+
+      switch (n_type) {
+      case N_INDR: {
+        std::optional<llvm::StringRef> reexport_name_str =
+            strtab.PeekCStr(nlist.n_value);
+        if (reexport_name_str && !reexport_name_str->empty() && symbol_name) {
+          type = eSymbolTypeReExported;
+          ConstString reexport_name(reexport_name_str->drop_front(
+              reexport_name_str->front() == '_' ? 1 : 0));
+          sym[sym_idx].SetReExportedSymbolName(reexport_name);
+          set_value = false;
+          reexport_shlib_needs_fixup[sym_idx] = reexport_name;
+          indirect_symbol_names.insert(
+              ConstString(symbol_name + ((symbol_name[0] == '_') ? 1 : 0)));
+        } else
+          type = eSymbolTypeUndefined;
+      } break;
+
+      case N_UNDF:
+        if (symbol_name && symbol_name[0]) {
+          ConstString undefined_name(symbol_name +
+                                     ((symbol_name[0] == '_') ? 1 : 0));
+          undefined_name_to_desc[undefined_name] = nlist.n_desc;
+        }
+        [[fallthrough]];
+
+      case N_PBUD:
+        type = eSymbolTypeUndefined;
+        break;
+
+      case N_ABS:
+        type = eSymbolTypeAbsolute;
+        break;
+
+      case N_SECT: {
+        symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
+
+        if (!symbol_section) {
+          // TODO: warn about this?
+          add_nlist = false;
+          break;
+        }
+
+        if (TEXT_eh_frame_sectID == nlist.n_sect) {
+          type = eSymbolTypeException;
+        } else {
+          uint32_t section_type = symbol_section->Get() & SECTION_TYPE;
+
+          switch (section_type) {
+          case S_CSTRING_LITERALS:
+            type = eSymbolTypeData;
+            break; // section with only literal C strings
+          case S_4BYTE_LITERALS:
+            type = eSymbolTypeData;
+            break; // section with only 4 byte literals
+          case S_8BYTE_LITERALS:
+            type = eSymbolTypeData;
+            break; // section with only 8 byte literals
+          case S_LITERAL_POINTERS:
+            type = eSymbolTypeTrampoline;
+            break; // section with only pointers to literals
+          case S_NON_LAZY_SYMBOL_POINTERS:
+            type = eSymbolTypeTrampoline;
+            break; // section with only non-lazy symbol pointers
+          case S_LAZY_SYMBOL_POINTERS:
+            type = eSymbolTypeTrampoline;
+            break; // section with only lazy symbol pointers
+          case S_SYMBOL_STUBS:
+            type = eSymbolTypeTrampoline;
+            break; // section with only symbol stubs, byte size of stub in
+                   // the reserved2 field
+          case S_MOD_INIT_FUNC_POINTERS:
+            type = eSymbolTypeCode;
+            break; // section with only function pointers for initialization
+          case S_MOD_TERM_FUNC_POINTERS:
+            type = eSymbolTypeCode;
+            break; // section with only function pointers for termination
+          case S_INTERPOSING:
+            type = eSymbolTypeTrampoline;
+            break; // section with only pairs of function pointers for
+                   // interposing
+          case S_16BYTE_LITERALS:
+            type = eSymbolTypeData;
+            break; // section with only 16 byte literals
+          case S_DTRACE_DOF:
+            type = eSymbolTypeInstrumentation;
+            break;
+          case S_LAZY_DYLIB_SYMBOL_POINTERS:
+            type = eSymbolTypeTrampoline;
+            break;
+          default:
+            switch (symbol_section->GetType()) {
+            case lldb::eSectionTypeCode:
+              type = eSymbolTypeCode;
+              break;
+            case eSectionTypeData:
+            case eSectionTypeDataCString:         // Inlined C string data
+            case eSectionTypeDataCStringPointers: // Pointers to C string
+                                                  // data
+            case eSectionTypeDataSymbolAddress:   // Address of a symbol in
+                                                  // the symbol table
+            case eSectionTypeData4:
+            case eSectionTypeData8:
+            case eSectionTypeData16:
+              type = eSymbolTypeData;
+              break;
+            default:
+              break;
+            }
+            break;
+          }
+
+          if (type == eSymbolTypeInvalid) {
+            llvm::StringRef symbol_sect_name = symbol_section->GetName();
+            if (symbol_section->IsDescendant(text_section_sp.get())) {
+              if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
+                                          S_ATTR_SELF_MODIFYING_CODE |
+                                          S_ATTR_SOME_INSTRUCTIONS))
+                type = eSymbolTypeData;
+              else
+                type = eSymbolTypeCode;
+            } else if (symbol_section->IsDescendant(data_section_sp.get()) ||
+                       symbol_section->IsDescendant(
+                           data_dirty_section_sp.get()) ||
+                       symbol_section->IsDescendant(
+                           data_const_section_sp.get())) {
+              if (symbol_sect_name.starts_with("__objc")) {
+                type = eSymbolTypeRuntime;
+
+                if (TryParseV2ObjCMetadataSymbol(
+                        symbol_name, symbol_name_non_abi_mangled, type))
+                  demangled_is_synthesized = true;
+              } else if (symbol_sect_name.starts_with("__gcc_except_tab")) {
+                type = eSymbolTypeException;
+              } else {
+                type = eSymbolTypeData;
+              }
+            } else if (symbol_sect_name.starts_with("__IMPORT")) {
+              type = eSymbolTypeTrampoline;
+            } else if (symbol_section->IsDescendant(objc_section_sp.get())) {
+              type = eSymbolTypeRuntime;
+              if (symbol_name && symbol_name[0] == '.') {
+                llvm::StringRef symbol_name_ref(symbol_name);
+                llvm::StringRef g_objc_v1_prefix_class(".objc_class_name_");
+                if (symbol_name_ref.starts_with(g_objc_v1_prefix_class)) {
+                  symbol_name_non_abi_mangled = symbol_name;
+                  symbol_name = symbol_name + g_objc_v1_prefix_class.size();
+                  type = eSymbolTypeObjCClass;
+                  demangled_is_synthesized = true;
+                }
+              }
+            }
+          }
+        }
+      } break;
+      }
+    }
+
+    if (!add_nlist) {
+      sym[sym_idx].Clear();
+      return;
+    }
+
+    uint64_t symbol_value = nlist.n_value;
+
+    if (symbol_name_non_abi_mangled) {
+      sym[sym_idx].GetMangled().SetMangledName(
+          ConstString(symbol_name_non_abi_mangled));
+      sym[sym_idx].GetMangled().SetDemangledName(ConstString(symbol_name));
+    } else {
+
+      if (symbol_name && symbol_name[0] == '_') {
+        symbol_name++; // Skip the leading underscore
+      }
+
+      if (symbol_name) {
+        ConstString const_symbol_name(symbol_name);
+        sym[sym_idx].GetMangled().SetValue(const_symbol_name);
+      }
+    }
+
+    if (is_gsym) {
+      const char *gsym_name = sym[sym_idx]
+                                  .GetMangled()
+                                  .GetName(Mangled::ePreferMangled)
+                                  .GetCString();
+      if (gsym_name)
+        N_GSYM_name_to_sym_idx[gsym_name] = sym_idx;
+    }
+
+    if (symbol_section) {
+      const addr_t section_file_addr = symbol_section->GetFileAddress();
+      symbol_value -= section_file_addr;
+    }
+
+    if (!is_debug) {
+      if (type == eSymbolTypeCode) {
+        // See if we can find a N_FUN entry for any code symbols. If we do
+        // find a match, and the name matches, then we can merge the two into
+        // just the function symbol to avoid duplicate entries in the symbol
+        // table.
+        std::pair<ValueToSymbolIndexMap::const_iterator,
+                  ValueToSymbolIndexMap::const_iterator>
+            range;
+        range = N_FUN_addr_to_sym_idx.equal_range(nlist.n_value);
+        if (range.first != range.second) {
+          for (ValueToSymbolIndexMap::const_iterator pos = range.first;
+               pos != range.second; ++pos) {
+            if (sym[sym_idx].GetMangled().GetName(Mangled::ePreferMangled) ==
+                sym[pos->second].GetMangled().GetName(
+                    Mangled::ePreferMangled)) {
+              m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
+              // We just need the flags from the linker symbol, so put these
+              // flags into the N_FUN flags to avoid duplicate symbols in the
+              // symbol table.
+              sym[pos->second].SetExternal(sym[sym_idx].IsExternal());
+              sym[pos->second].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+              if (resolver_addresses.find(nlist.n_value) !=
+                  resolver_addresses.end())
+                sym[pos->second].SetType(eSymbolTypeResolver);
+              sym[sym_idx].Clear();
+              return;
+            }
+          }
+        } else {
+          if (resolver_addresses.find(nlist.n_value) !=
+              resolver_addresses.end())
+            type = eSymbolTypeResolver;
+        }
+      } else if (type == eSymbolTypeData || type == eSymbolTypeObjCClass ||
+                 type == eSymbolTypeObjCMetaClass ||
+                 type == eSymbolTypeObjCIVar) {
+        // See if we can find a N_STSYM entry for any data symbols. If we do
+        // find a match, and the name matches, then we can merge the two into
+        // just the Static symbol to avoid duplicate entries in the symbol
+        // table.
+        std::pair<ValueToSymbolIndexMap::const_iterator,
+                  ValueToSymbolIndexMap::const_iterator>
+            range;
+        range = N_STSYM_addr_to_sym_idx.equal_range(nlist.n_value);
+        if (range.first != range.second) {
+          for (ValueToSymbolIndexMap::const_iterator pos = range.first;
+               pos != range.second; ++pos) {
+            if (sym[sym_idx].GetMangled().GetName(Mangled::ePreferMangled) ==
+                sym[pos->second].GetMangled().GetName(
+                    Mangled::ePreferMangled)) {
+              m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
+              // We just need the flags from the linker symbol, so put these
+              // flags into the N_STSYM flags to avoid duplicate symbols in
+              // the symbol table.
+              sym[pos->second].SetExternal(sym[sym_idx].IsExternal());
+              sym[pos->second].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+              sym[sym_idx].Clear();
+              return;
+            }
+          }
+        } else {
+          // Combine N_GSYM stab entries with the non stab symbol.
+          const char *gsym_name = sym[sym_idx]
+                                      .GetMangled()
+                                      .GetName(Mangled::ePreferMangled)
+                                      .GetCString();
+          if (gsym_name) {
+            ConstNameToSymbolIndexMap::const_iterator pos =
+                N_GSYM_name_to_sym_idx.find(gsym_name);
+            if (pos != N_GSYM_name_to_sym_idx.end()) {
+              const uint32_t GSYM_sym_idx = pos->second;
+              m_nlist_idx_to_sym_idx[nlist_idx] = GSYM_sym_idx;
+              // Copy the address, because often the N_GSYM address has an
+              // invalid address of zero when the global is a common symbol.
+              sym[GSYM_sym_idx].GetAddressRef() =
+                  Address(symbol_section, symbol_value);
+              add_symbol_addr(sym[GSYM_sym_idx].GetAddress().GetFileAddress());
+              // We just need the flags from the linker symbol, so put these
+              // flags into the N_GSYM flags to avoid duplicate symbols in
+              // the symbol table.
+              sym[GSYM_sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+              sym[sym_idx].Clear();
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    sym[sym_idx].SetID(nlist_idx);
+    sym[sym_idx].SetType(type);
+    if (set_value) {
+      sym[sym_idx].GetAddressRef() = Address(symbol_section, symbol_value);
+      if (symbol_section)
+        add_symbol_addr(sym[sym_idx].GetAddress().GetFileAddress());
+    }
+    sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+    UpdateHasSourceFilesAndDebugMap(type, nlist, has_source_files,
+                                    has_debug_map);
+    if (nlist.n_desc & N_WEAK_REF)
+      sym[sym_idx].SetIsWeak(true);
+
+    if (demangled_is_synthesized)
+      sym[sym_idx].SetDemangledNameIsSynthesized(true);
+
+    ++sym_idx;
+  };
+
+  // Parses the nlists at offset, numbering them
+  // [first_nlist_idx, end_nlist_idx).
+  auto ParseNListsLambda = [&](DataExtractor &nlist_extractor,
+                               lldb::offset_t offset, uint32_t first_nlist_idx,
+                               uint32_t end_nlist_idx,
+                               const DataExtractor &strtab) {
+    // First parse all the nlists but don't process them yet. See the next
+    // comment for an explanation why.
+    std::vector<struct nlist_64> nlists;
+    nlists.reserve(
+        std::min<uint64_t>(end_nlist_idx - first_nlist_idx,
+                           nlist_extractor.GetByteSize() / nlist_byte_size));
+    for (uint32_t i = first_nlist_idx; i < end_nlist_idx; ++i) {
+      if (auto nlist = ParseNList(nlist_extractor, offset, nlist_byte_size))
+        nlists.push_back(*nlist);
+      else
+        break;
+    }
+
+    // Now parse all the debug symbols. This is needed to merge non-debug
+    // symbols in the next step. Non-debug symbols are always coalesced into
+    // the debug symbol. Doing this in one step would mean that some symbols
+    // won't be merged.
+    uint32_t nlist_idx = first_nlist_idx;
+    for (auto &nlist : nlists)
+      ParseSymbolLambda(nlist, nlist_idx++, DebugSymbols, strtab);
+
+    // Finally parse all the non debug symbols.
+    nlist_idx = first_nlist_idx;
+    for (auto &nlist : nlists)
+      ParseSymbolLambda(nlist, nlist_idx++, NonDebugSymbols, strtab);
+  };
 
 #if TARGET_OS_IPHONE
 
@@ -2791,8 +3317,23 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   // entries of *some*
   // LOCAL symbols in the normal nlist data. To handle this situation
   // correctly, we must first attempt
-  // to parse any DSC unmapped symbol information. If we find any, we set a
+  // to fetch any DSC unmapped symbol information. If we find any, we set a
   // flag that tells the normal nlist parser to ignore all LOCAL symbols.
+
+  __block void *nlist_buffer = nullptr;
+  __block unsigned nlist_count = 0;
+  __block char *string_table = nullptr;
+  __block vm_offset_t vm_nlist_memory = 0;
+  __block mach_msg_type_number_t vm_nlist_bytes_read = 0;
+  __block vm_offset_t vm_string_memory = 0;
+  __block mach_msg_type_number_t vm_string_bytes_read = 0;
+
+  llvm::scope_exit _(^{
+    if (vm_nlist_memory)
+      vm_deallocate(mach_task_self(), vm_nlist_memory, vm_nlist_bytes_read);
+    if (vm_string_memory)
+      vm_deallocate(mach_task_self(), vm_string_memory, vm_string_bytes_read);
+  });
 
   if (IsSharedCacheBinary()) {
     // Before we can start mapping the DSC, we need to make certain the
@@ -2812,1847 +3353,149 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     }
 
     __block bool found_image = false;
-    __block void *nlist_buffer = nullptr;
-    __block unsigned nlist_count = 0;
-    __block char *string_table = nullptr;
-    __block vm_offset_t vm_nlist_memory = 0;
-    __block mach_msg_type_number_t vm_nlist_bytes_read = 0;
-    __block vm_offset_t vm_string_memory = 0;
-    __block mach_msg_type_number_t vm_string_bytes_read = 0;
 
-    auto _ = llvm::make_scope_exit(^{
-      if (vm_nlist_memory)
-        vm_deallocate(mach_task_self(), vm_nlist_memory, vm_nlist_bytes_read);
-      if (vm_string_memory)
-        vm_deallocate(mach_task_self(), vm_string_memory, vm_string_bytes_read);
-    });
-
-    typedef llvm::DenseMap<ConstString, uint16_t> UndefinedNameToDescMap;
-    typedef llvm::DenseMap<uint32_t, ConstString> SymbolIndexToName;
-    UndefinedNameToDescMap undefined_name_to_desc;
-    SymbolIndexToName reexport_shlib_needs_fixup;
-
-    dyld_for_each_installed_shared_cache(^(dyld_shared_cache_t shared_cache) {
-      uuid_t cache_uuid;
-      dyld_shared_cache_copy_uuid(shared_cache, &cache_uuid);
-      if (found_image)
+    // Compute the size of the string table. We need to ask dyld for a
+    // new SPI to avoid this step.
+    auto nlist_extraction_block = ^(const void *nlistStart, uint64_t nlistCount,
+                                    const char *stringTable) {
+      if (!nlistStart || !nlistCount)
         return;
 
-        if (process_shared_cache_uuid.IsValid() &&
-          process_shared_cache_uuid != UUID(&cache_uuid, 16))
+      // The buffers passed here are valid only inside the block.
+      // Use vm_read to make a cheap copy of them available for our
+      // processing later.
+      kern_return_t ret = vm_read(mach_task_self(), (vm_address_t)nlistStart,
+                                  nlist_byte_size * nlistCount,
+                                  &vm_nlist_memory, &vm_nlist_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
+      assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
+
+      // We don't know the size of the string table. It's cheaper
+      // to map the whole VM region than to determine the size by
+      // parsing all the nlist entries.
+      vm_address_t string_address = (vm_address_t)stringTable;
+      vm_size_t region_size;
+      mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
+      vm_region_basic_info_data_t info;
+      memory_object_name_t object;
+      ret = vm_region_64(mach_task_self(), &string_address, &region_size,
+                         VM_REGION_BASIC_INFO_64, (vm_region_info_t)&info,
+                         &info_count, &object);
+      if (ret != KERN_SUCCESS)
         return;
 
-      dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
-        uuid_t dsc_image_uuid;
+      ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
+                    region_size - ((vm_address_t)stringTable - string_address),
+                    &vm_string_memory, &vm_string_bytes_read);
+      if (ret != KERN_SUCCESS)
+        return;
+
+      nlist_buffer = (void *)vm_nlist_memory;
+      string_table = (char *)vm_string_memory;
+      nlist_count = nlistCount;
+    };
+
+    // The shared-cache-binary-loading setting only exists for hosts without
+    // the indexing SPIs.
+    SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
+        image_uuid, process_shared_cache_uuid,
+        eSymbolSharedCacheUseHostAndInferiorSharedCache);
+    if (void *image = image_info.GetImageBaton()) {
+      found_image = true;
+      dyld_image_local_nlist_content_4Symbolication((dyld_image_t)image,
+                                                    nlist_extraction_block);
+    }
+
+    // Images outside the indexed caches need the much slower enumeration.
+    if (!found_image) {
+      dyld_for_each_installed_shared_cache(^(dyld_shared_cache_t shared_cache) {
+        uuid_t cache_uuid;
+        dyld_shared_cache_copy_uuid(shared_cache, &cache_uuid);
         if (found_image)
           return;
 
-        dyld_image_copy_uuid(image, &dsc_image_uuid);
-        if (image_uuid != UUID(dsc_image_uuid, 16))
+        if (process_shared_cache_uuid.IsValid() &&
+            process_shared_cache_uuid != UUID(&cache_uuid, 16))
           return;
 
-        found_image = true;
+        dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
+          uuid_t dsc_image_uuid;
+          if (found_image)
+            return;
 
-        // Compute the size of the string table. We need to ask dyld for a
-        // new SPI to avoid this step.
-        dyld_image_local_nlist_content_4Symbolication(
-            image, ^(const void *nlistStart, uint64_t nlistCount,
-                     const char *stringTable) {
-              if (!nlistStart || !nlistCount)
-                return;
+          dyld_image_copy_uuid(image, &dsc_image_uuid);
+          if (image_uuid != UUID(dsc_image_uuid, 16))
+            return;
 
-              // The buffers passed here are valid only inside the block.
-              // Use vm_read to make a cheap copy of them available for our
-              // processing later.
-              kern_return_t ret =
-                  vm_read(mach_task_self(), (vm_address_t)nlistStart,
-                          nlist_byte_size * nlistCount, &vm_nlist_memory,
-                          &vm_nlist_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-              assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
-
-              // We don't know the size of the string table. It's cheaper
-              // to map the whole VM region than to determine the size by
-              // parsing all the nlist entries.
-              vm_address_t string_address = (vm_address_t)stringTable;
-              vm_size_t region_size;
-              mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;
-              vm_region_basic_info_data_t info;
-              memory_object_name_t object;
-              ret = vm_region_64(mach_task_self(), &string_address,
-                                 &region_size, VM_REGION_BASIC_INFO_64,
-                                 (vm_region_info_t)&info, &info_count, &object);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              ret = vm_read(mach_task_self(), (vm_address_t)stringTable,
-                            region_size -
-                                ((vm_address_t)stringTable - string_address),
-                            &vm_string_memory, &vm_string_bytes_read);
-              if (ret != KERN_SUCCESS)
-                return;
-
-              nlist_buffer = (void *)vm_nlist_memory;
-              string_table = (char *)vm_string_memory;
-              nlist_count = nlistCount;
-            });
+          found_image = true;
+          dyld_image_local_nlist_content_4Symbolication(image,
+                                                        nlist_extraction_block);
+        });
       });
-    });
+    }
     if (nlist_buffer) {
-      DataExtractor dsc_local_symbols_data(nlist_buffer,
-                                           nlist_count * nlist_byte_size,
-                                           byte_order, addr_byte_size);
       unmapped_local_symbols_found = nlist_count;
 
-                // The normal nlist code cannot correctly size the Symbols
-                // array, we need to allocate it here.
-                sym = symtab.Resize(
-                    symtab_load_command.nsyms + m_dysymtab.nindirectsyms +
-                    unmapped_local_symbols_found - m_dysymtab.nlocalsym);
-                num_syms = symtab.GetNumSymbols();
-
-      lldb::offset_t nlist_data_offset = 0;
-
-                for (uint32_t nlist_index = 0;
-                     nlist_index < nlist_count;
-                     nlist_index++) {
-                  /////////////////////////////
-                  {
-                    std::optional<struct nlist_64> nlist_maybe =
-                        ParseNList(dsc_local_symbols_data, nlist_data_offset,
-                                   nlist_byte_size);
-                    if (!nlist_maybe)
-                      break;
-                    struct nlist_64 nlist = *nlist_maybe;
-
-                    SymbolType type = eSymbolTypeInvalid;
-          const char *symbol_name = string_table + nlist.n_strx;
-
-                    if (symbol_name == NULL) {
-                      // No symbol should be NULL, even the symbols with no
-                      // string values should have an offset zero which
-                      // points to an empty C-string
-                      Debugger::ReportError(llvm::formatv(
-                          "DSC unmapped local symbol[{0}] has invalid "
-                          "string table offset {1:x} in {2}, ignoring symbol",
-                          nlist_index, nlist.n_strx,
-                          module_sp->GetFileSpec().GetPath()));
-                      continue;
-                    }
-                    if (symbol_name[0] == '\0')
-                      symbol_name = NULL;
-
-                    const char *symbol_name_non_abi_mangled = NULL;
-
-                    SectionSP symbol_section;
-                    uint32_t symbol_byte_size = 0;
-                    bool add_nlist = true;
-                    bool is_debug = ((nlist.n_type & N_STAB) != 0);
-                    bool demangled_is_synthesized = false;
-                    bool is_gsym = false;
-                    bool set_value = true;
-
-                    assert(sym_idx < num_syms);
-
-                    sym[sym_idx].SetDebug(is_debug);
-
-                    if (is_debug) {
-                      switch (nlist.n_type) {
-                      case N_GSYM:
-                        // global symbol: name,,NO_SECT,type,0
-                        // Sometimes the N_GSYM value contains the address.
-
-                        // FIXME: In the .o files, we have a GSYM and a debug
-                        // symbol for all the ObjC data.  They
-                        // have the same address, but we want to ensure that
-                        // we always find only the real symbol, 'cause we
-                        // don't currently correctly attribute the
-                        // GSYM one to the ObjCClass/Ivar/MetaClass
-                        // symbol type.  This is a temporary hack to make
-                        // sure the ObjectiveC symbols get treated correctly.
-                        // To do this right, we should coalesce all the GSYM
-                        // & global symbols that have the same address.
-
-                        is_gsym = true;
-                        sym[sym_idx].SetExternal(true);
-
-                        if (symbol_name && symbol_name[0] == '_' &&
-                            symbol_name[1] == 'O') {
-                          llvm::StringRef symbol_name_ref(symbol_name);
-                          if (symbol_name_ref.starts_with(
-                                  g_objc_v2_prefix_class)) {
-                            symbol_name_non_abi_mangled = symbol_name + 1;
-                            symbol_name =
-                                symbol_name + g_objc_v2_prefix_class.size();
-                            type = eSymbolTypeObjCClass;
-                            demangled_is_synthesized = true;
-
-                          } else if (symbol_name_ref.starts_with(
-                                         g_objc_v2_prefix_metaclass)) {
-                            symbol_name_non_abi_mangled = symbol_name + 1;
-                            symbol_name =
-                                symbol_name + g_objc_v2_prefix_metaclass.size();
-                            type = eSymbolTypeObjCMetaClass;
-                            demangled_is_synthesized = true;
-                          } else if (symbol_name_ref.starts_with(
-                                         g_objc_v2_prefix_ivar)) {
-                            symbol_name_non_abi_mangled = symbol_name + 1;
-                            symbol_name =
-                                symbol_name + g_objc_v2_prefix_ivar.size();
-                            type = eSymbolTypeObjCIVar;
-                            demangled_is_synthesized = true;
-                          }
-                        } else {
-                          if (nlist.n_value != 0)
-                            symbol_section = section_info.GetSection(
-                                nlist.n_sect, nlist.n_value);
-                          type = eSymbolTypeData;
-                        }
-                        break;
-
-                      case N_FNAME:
-                        // procedure name (f77 kludge): name,,NO_SECT,0,0
-                        type = eSymbolTypeCompiler;
-                        break;
-
-                      case N_FUN:
-                        // procedure: name,,n_sect,linenumber,address
-                        if (symbol_name) {
-                          type = eSymbolTypeCode;
-                          symbol_section = section_info.GetSection(
-                              nlist.n_sect, nlist.n_value);
-
-                          N_FUN_addr_to_sym_idx.insert(
-                              std::make_pair(nlist.n_value, sym_idx));
-                          // We use the current number of symbols in the
-                          // symbol table in lieu of using nlist_idx in case
-                          // we ever start trimming entries out
-                          N_FUN_indexes.push_back(sym_idx);
-                        } else {
-                          type = eSymbolTypeCompiler;
-
-                          if (!N_FUN_indexes.empty()) {
-                            // Copy the size of the function into the
-                            // original
-                            // STAB entry so we don't have
-                            // to hunt for it later
-                            symtab.SymbolAtIndex(N_FUN_indexes.back())
-                                ->SetByteSize(nlist.n_value);
-                            N_FUN_indexes.pop_back();
-                            // We don't really need the end function STAB as
-                            // it contains the size which we already placed
-                            // with the original symbol, so don't add it if
-                            // we want a minimal symbol table
-                            add_nlist = false;
-                          }
-                        }
-                        break;
-
-                      case N_STSYM:
-                        // static symbol: name,,n_sect,type,address
-                        N_STSYM_addr_to_sym_idx.insert(
-                            std::make_pair(nlist.n_value, sym_idx));
-                        symbol_section = section_info.GetSection(nlist.n_sect,
-                                                                 nlist.n_value);
-                        if (symbol_name && symbol_name[0]) {
-                          type = ObjectFile::GetSymbolTypeFromName(
-                              symbol_name + 1, eSymbolTypeData);
-                        }
-                        break;
-
-                      case N_LCSYM:
-                        // .lcomm symbol: name,,n_sect,type,address
-                        symbol_section = section_info.GetSection(nlist.n_sect,
-                                                                 nlist.n_value);
-                        type = eSymbolTypeCommonBlock;
-                        break;
-
-                      case N_BNSYM:
-                        // We use the current number of symbols in the symbol
-                        // table in lieu of using nlist_idx in case we ever
-                        // start trimming entries out Skip these if we want
-                        // minimal symbol tables
-                        add_nlist = false;
-                        break;
-
-                      case N_ENSYM:
-                        // Set the size of the N_BNSYM to the terminating
-                        // index of this N_ENSYM so that we can always skip
-                        // the entire symbol if we need to navigate more
-                        // quickly at the source level when parsing STABS
-                        // Skip these if we want minimal symbol tables
-                        add_nlist = false;
-                        break;
-
-                      case N_OPT:
-                        // emitted with gcc2_compiled and in gcc source
-                        type = eSymbolTypeCompiler;
-                        break;
-
-                      case N_RSYM:
-                        // register sym: name,,NO_SECT,type,register
-                        type = eSymbolTypeVariable;
-                        break;
-
-                      case N_SLINE:
-                        // src line: 0,,n_sect,linenumber,address
-                        symbol_section = section_info.GetSection(nlist.n_sect,
-                                                                 nlist.n_value);
-                        type = eSymbolTypeLineEntry;
-                        break;
-
-                      case N_SSYM:
-                        // structure elt: name,,NO_SECT,type,struct_offset
-                        type = eSymbolTypeVariableType;
-                        break;
-
-                      case N_SO:
-                        // source file name
-                        type = eSymbolTypeSourceFile;
-                        if (symbol_name == NULL) {
-                          add_nlist = false;
-                          if (N_SO_index != UINT32_MAX) {
-                            // Set the size of the N_SO to the terminating
-                            // index of this N_SO so that we can always skip
-                            // the entire N_SO if we need to navigate more
-                            // quickly at the source level when parsing STABS
-                            symbol_ptr = symtab.SymbolAtIndex(N_SO_index);
-                            symbol_ptr->SetByteSize(sym_idx);
-                            symbol_ptr->SetSizeIsSibling(true);
-                          }
-                          N_NSYM_indexes.clear();
-                          N_INCL_indexes.clear();
-                          N_BRAC_indexes.clear();
-                          N_COMM_indexes.clear();
-                          N_FUN_indexes.clear();
-                          N_SO_index = UINT32_MAX;
-                        } else {
-                          // We use the current number of symbols in the
-                          // symbol table in lieu of using nlist_idx in case
-                          // we ever start trimming entries out
-                          const bool N_SO_has_full_path = symbol_name[0] == '/';
-                          if (N_SO_has_full_path) {
-                            if ((N_SO_index == sym_idx - 1) &&
-                                ((sym_idx - 1) < num_syms)) {
-                              // We have two consecutive N_SO entries where
-                              // the first contains a directory and the
-                              // second contains a full path.
-                              sym[sym_idx - 1].GetMangled().SetValue(
-                                  ConstString(symbol_name));
-                              m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
-                              add_nlist = false;
-                            } else {
-                              // This is the first entry in a N_SO that
-                              // contains a directory or
-                              // a full path to the source file
-                              N_SO_index = sym_idx;
-                            }
-                          } else if ((N_SO_index == sym_idx - 1) &&
-                                     ((sym_idx - 1) < num_syms)) {
-                            // This is usually the second N_SO entry that
-                            // contains just the filename, so here we combine
-                            // it with the first one if we are minimizing the
-                            // symbol table
-                            const char *so_path = sym[sym_idx - 1]
-                                                      .GetMangled()
-                                                      .GetDemangledName()
-                                                      .AsCString();
-                            if (so_path && so_path[0]) {
-                              std::string full_so_path(so_path);
-                              const size_t double_slash_pos =
-                                  full_so_path.find("//");
-                              if (double_slash_pos != std::string::npos) {
-                                // The linker has been generating bad N_SO
-                                // entries with doubled up paths
-                                // in the format "%s%s" where the first
-                                // string in the DW_AT_comp_dir, and the
-                                // second is the directory for the source
-                                // file so you end up with a path that looks
-                                // like "/tmp/src//tmp/src/"
-                                FileSpec so_dir(so_path);
-                                if (!FileSystem::Instance().Exists(so_dir)) {
-                                  so_dir.SetFile(
-                                      &full_so_path[double_slash_pos + 1],
-                                      FileSpec::Style::native);
-                                  if (FileSystem::Instance().Exists(so_dir)) {
-                                    // Trim off the incorrect path
-                                    full_so_path.erase(0, double_slash_pos + 1);
-                                  }
-                                }
-                              }
-                              if (*full_so_path.rbegin() != '/')
-                                full_so_path += '/';
-                              full_so_path += symbol_name;
-                              sym[sym_idx - 1].GetMangled().SetValue(
-                                  ConstString(full_so_path.c_str()));
-                              add_nlist = false;
-                              m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
-                            }
-                          } else {
-                            // This could be a relative path to a N_SO
-                            N_SO_index = sym_idx;
-                          }
-                        }
-                        break;
-
-                      case N_OSO:
-                        // object file name: name,,0,0,st_mtime
-                        type = eSymbolTypeObjectFile;
-                        break;
-
-                      case N_LSYM:
-                        // local sym: name,,NO_SECT,type,offset
-                        type = eSymbolTypeLocal;
-                        break;
-
-                      // INCL scopes
-                      case N_BINCL:
-                        // include file beginning: name,,NO_SECT,0,sum We use
-                        // the current number of symbols in the symbol table
-                        // in lieu of using nlist_idx in case we ever start
-                        // trimming entries out
-                        N_INCL_indexes.push_back(sym_idx);
-                        type = eSymbolTypeScopeBegin;
-                        break;
-
-                      case N_EINCL:
-                        // include file end: name,,NO_SECT,0,0
-                        // Set the size of the N_BINCL to the terminating
-                        // index of this N_EINCL so that we can always skip
-                        // the entire symbol if we need to navigate more
-                        // quickly at the source level when parsing STABS
-                        if (!N_INCL_indexes.empty()) {
-                          symbol_ptr =
-                              symtab.SymbolAtIndex(N_INCL_indexes.back());
-                          symbol_ptr->SetByteSize(sym_idx + 1);
-                          symbol_ptr->SetSizeIsSibling(true);
-                          N_INCL_indexes.pop_back();
-                        }
-                        type = eSymbolTypeScopeEnd;
-                        break;
-
-                      case N_SOL:
-                        // #included file name: name,,n_sect,0,address
-                        type = eSymbolTypeHeaderFile;
-
-                        // We currently don't use the header files on darwin
-                        add_nlist = false;
-                        break;
-
-                      case N_PARAMS:
-                        // compiler parameters: name,,NO_SECT,0,0
-                        type = eSymbolTypeCompiler;
-                        break;
-
-                      case N_VERSION:
-                        // compiler version: name,,NO_SECT,0,0
-                        type = eSymbolTypeCompiler;
-                        break;
-
-                      case N_OLEVEL:
-                        // compiler -O level: name,,NO_SECT,0,0
-                        type = eSymbolTypeCompiler;
-                        break;
-
-                      case N_PSYM:
-                        // parameter: name,,NO_SECT,type,offset
-                        type = eSymbolTypeVariable;
-                        break;
-
-                      case N_ENTRY:
-                        // alternate entry: name,,n_sect,linenumber,address
-                        symbol_section = section_info.GetSection(nlist.n_sect,
-                                                                 nlist.n_value);
-                        type = eSymbolTypeLineEntry;
-                        break;
-
-                      // Left and Right Braces
-                      case N_LBRAC:
-                        // left bracket: 0,,NO_SECT,nesting level,address We
-                        // use the current number of symbols in the symbol
-                        // table in lieu of using nlist_idx in case we ever
-                        // start trimming entries out
-                        symbol_section = section_info.GetSection(nlist.n_sect,
-                                                                 nlist.n_value);
-                        N_BRAC_indexes.push_back(sym_idx);
-                        type = eSymbolTypeScopeBegin;
-                        break;
-
-                      case N_RBRAC:
-                        // right bracket: 0,,NO_SECT,nesting level,address
-                        // Set the size of the N_LBRAC to the terminating
-                        // index of this N_RBRAC so that we can always skip
-                        // the entire symbol if we need to navigate more
-                        // quickly at the source level when parsing STABS
-                        symbol_section = section_info.GetSection(nlist.n_sect,
-                                                                 nlist.n_value);
-                        if (!N_BRAC_indexes.empty()) {
-                          symbol_ptr =
-                              symtab.SymbolAtIndex(N_BRAC_indexes.back());
-                          symbol_ptr->SetByteSize(sym_idx + 1);
-                          symbol_ptr->SetSizeIsSibling(true);
-                          N_BRAC_indexes.pop_back();
-                        }
-                        type = eSymbolTypeScopeEnd;
-                        break;
-
-                      case N_EXCL:
-                        // deleted include file: name,,NO_SECT,0,sum
-                        type = eSymbolTypeHeaderFile;
-                        break;
-
-                      // COMM scopes
-                      case N_BCOMM:
-                        // begin common: name,,NO_SECT,0,0
-                        // We use the current number of symbols in the symbol
-                        // table in lieu of using nlist_idx in case we ever
-                        // start trimming entries out
-                        type = eSymbolTypeScopeBegin;
-                        N_COMM_indexes.push_back(sym_idx);
-                        break;
-
-                      case N_ECOML:
-                        // end common (local name): 0,,n_sect,0,address
-                        symbol_section = section_info.GetSection(nlist.n_sect,
-                                                                 nlist.n_value);
-                        // Fall through
-
-                      case N_ECOMM:
-                        // end common: name,,n_sect,0,0
-                        // Set the size of the N_BCOMM to the terminating
-                        // index of this N_ECOMM/N_ECOML so that we can
-                        // always skip the entire symbol if we need to
-                        // navigate more quickly at the source level when
-                        // parsing STABS
-                        if (!N_COMM_indexes.empty()) {
-                          symbol_ptr =
-                              symtab.SymbolAtIndex(N_COMM_indexes.back());
-                          symbol_ptr->SetByteSize(sym_idx + 1);
-                          symbol_ptr->SetSizeIsSibling(true);
-                          N_COMM_indexes.pop_back();
-                        }
-                        type = eSymbolTypeScopeEnd;
-                        break;
-
-                      case N_LENG:
-                        // second stab entry with length information
-                        type = eSymbolTypeAdditional;
-                        break;
-
-                      default:
-                        break;
-                      }
-                    } else {
-                      // uint8_t n_pext    = N_PEXT & nlist.n_type;
-                      uint8_t n_type = N_TYPE & nlist.n_type;
-                      sym[sym_idx].SetExternal((N_EXT & nlist.n_type) != 0);
-
-                      switch (n_type) {
-                      case N_INDR: {
-                        const char *reexport_name_cstr =
-                            strtab_data.PeekCStr(nlist.n_value);
-                        if (reexport_name_cstr && reexport_name_cstr[0]) {
-                          type = eSymbolTypeReExported;
-                          ConstString reexport_name(
-                              reexport_name_cstr +
-                              ((reexport_name_cstr[0] == '_') ? 1 : 0));
-                          sym[sym_idx].SetReExportedSymbolName(reexport_name);
-                          set_value = false;
-                          reexport_shlib_needs_fixup[sym_idx] = reexport_name;
-                          indirect_symbol_names.insert(ConstString(
-                              symbol_name + ((symbol_name[0] == '_') ? 1 : 0)));
-                        } else
-                          type = eSymbolTypeUndefined;
-                      } break;
-
-                      case N_UNDF:
-                        if (symbol_name && symbol_name[0]) {
-                          ConstString undefined_name(
-                              symbol_name + ((symbol_name[0] == '_') ? 1 : 0));
-                          undefined_name_to_desc[undefined_name] = nlist.n_desc;
-                        }
-                      // Fall through
-                      case N_PBUD:
-                        type = eSymbolTypeUndefined;
-                        break;
-
-                      case N_ABS:
-                        type = eSymbolTypeAbsolute;
-                        break;
-
-                      case N_SECT: {
-                        symbol_section = section_info.GetSection(nlist.n_sect,
-                                                                 nlist.n_value);
-
-                        if (symbol_section == NULL) {
-                          // TODO: warn about this?
-                          add_nlist = false;
-                          break;
-                        }
-
-                        if (TEXT_eh_frame_sectID == nlist.n_sect) {
-                          type = eSymbolTypeException;
-                        } else {
-                          uint32_t section_type =
-                              symbol_section->Get() & SECTION_TYPE;
-
-                          switch (section_type) {
-                          case S_CSTRING_LITERALS:
-                            type = eSymbolTypeData;
-                            break; // section with only literal C strings
-                          case S_4BYTE_LITERALS:
-                            type = eSymbolTypeData;
-                            break; // section with only 4 byte literals
-                          case S_8BYTE_LITERALS:
-                            type = eSymbolTypeData;
-                            break; // section with only 8 byte literals
-                          case S_LITERAL_POINTERS:
-                            type = eSymbolTypeTrampoline;
-                            break; // section with only pointers to literals
-                          case S_NON_LAZY_SYMBOL_POINTERS:
-                            type = eSymbolTypeTrampoline;
-                            break; // section with only non-lazy symbol
-                                   // pointers
-                          case S_LAZY_SYMBOL_POINTERS:
-                            type = eSymbolTypeTrampoline;
-                            break; // section with only lazy symbol pointers
-                          case S_SYMBOL_STUBS:
-                            type = eSymbolTypeTrampoline;
-                            break; // section with only symbol stubs, byte
-                                   // size of stub in the reserved2 field
-                          case S_MOD_INIT_FUNC_POINTERS:
-                            type = eSymbolTypeCode;
-                            break; // section with only function pointers for
-                                   // initialization
-                          case S_MOD_TERM_FUNC_POINTERS:
-                            type = eSymbolTypeCode;
-                            break; // section with only function pointers for
-                                   // termination
-                          case S_INTERPOSING:
-                            type = eSymbolTypeTrampoline;
-                            break; // section with only pairs of function
-                                   // pointers for interposing
-                          case S_16BYTE_LITERALS:
-                            type = eSymbolTypeData;
-                            break; // section with only 16 byte literals
-                          case S_DTRACE_DOF:
-                            type = eSymbolTypeInstrumentation;
-                            break;
-                          case S_LAZY_DYLIB_SYMBOL_POINTERS:
-                            type = eSymbolTypeTrampoline;
-                            break;
-                          default:
-                            switch (symbol_section->GetType()) {
-                            case lldb::eSectionTypeCode:
-                              type = eSymbolTypeCode;
-                              break;
-                            case eSectionTypeData:
-                            case eSectionTypeDataCString: // Inlined C string
-                                                          // data
-                            case eSectionTypeDataCStringPointers: // Pointers
-                                                                  // to C
-                                                                  // string
-                                                                  // data
-                            case eSectionTypeDataSymbolAddress:   // Address of
-                                                                  // a symbol in
-                                                                  // the symbol
-                                                                  // table
-                            case eSectionTypeData4:
-                            case eSectionTypeData8:
-                            case eSectionTypeData16:
-                              type = eSymbolTypeData;
-                              break;
-                            default:
-                              break;
-                            }
-                            break;
-                          }
-
-                          if (type == eSymbolTypeInvalid) {
-                            const char *symbol_sect_name =
-                                symbol_section->GetName().AsCString();
-                            if (symbol_section->IsDescendant(
-                                    text_section_sp.get())) {
-                              if (symbol_section->IsClear(
-                                      S_ATTR_PURE_INSTRUCTIONS |
-                                      S_ATTR_SELF_MODIFYING_CODE |
-                                      S_ATTR_SOME_INSTRUCTIONS))
-                                type = eSymbolTypeData;
-                              else
-                                type = eSymbolTypeCode;
-                            } else if (symbol_section->IsDescendant(
-                                           data_section_sp.get()) ||
-                                       symbol_section->IsDescendant(
-                                           data_dirty_section_sp.get()) ||
-                                       symbol_section->IsDescendant(
-                                           data_const_section_sp.get())) {
-                              if (symbol_sect_name &&
-                                  ::strstr(symbol_sect_name, "__objc") ==
-                                      symbol_sect_name) {
-                                type = eSymbolTypeRuntime;
-
-                                if (symbol_name) {
-                                  llvm::StringRef symbol_name_ref(symbol_name);
-                                  if (symbol_name_ref.starts_with("_OBJC_")) {
-                                    llvm::StringRef
-                                        g_objc_v2_prefix_class(
-                                            "_OBJC_CLASS_$_");
-                                    llvm::StringRef
-                                        g_objc_v2_prefix_metaclass(
-                                            "_OBJC_METACLASS_$_");
-                                    llvm::StringRef
-                                        g_objc_v2_prefix_ivar("_OBJC_IVAR_$_");
-                                    if (symbol_name_ref.starts_with(
-                                            g_objc_v2_prefix_class)) {
-                                      symbol_name_non_abi_mangled =
-                                          symbol_name + 1;
-                                      symbol_name =
-                                          symbol_name +
-                                          g_objc_v2_prefix_class.size();
-                                      type = eSymbolTypeObjCClass;
-                                      demangled_is_synthesized = true;
-                                    } else if (
-                                        symbol_name_ref.starts_with(
-                                            g_objc_v2_prefix_metaclass)) {
-                                      symbol_name_non_abi_mangled =
-                                          symbol_name + 1;
-                                      symbol_name =
-                                          symbol_name +
-                                          g_objc_v2_prefix_metaclass.size();
-                                      type = eSymbolTypeObjCMetaClass;
-                                      demangled_is_synthesized = true;
-                                    } else if (symbol_name_ref.starts_with(
-                                                   g_objc_v2_prefix_ivar)) {
-                                      symbol_name_non_abi_mangled =
-                                          symbol_name + 1;
-                                      symbol_name =
-                                          symbol_name +
-                                          g_objc_v2_prefix_ivar.size();
-                                      type = eSymbolTypeObjCIVar;
-                                      demangled_is_synthesized = true;
-                                    }
-                                  }
-                                }
-                              } else if (symbol_sect_name &&
-                                         ::strstr(symbol_sect_name,
-                                                  "__gcc_except_tab") ==
-                                             symbol_sect_name) {
-                                type = eSymbolTypeException;
-                              } else {
-                                type = eSymbolTypeData;
-                              }
-                            } else if (symbol_sect_name &&
-                                       ::strstr(symbol_sect_name, "__IMPORT") ==
-                                           symbol_sect_name) {
-                              type = eSymbolTypeTrampoline;
-                            } else if (symbol_section->IsDescendant(
-                                           objc_section_sp.get())) {
-                              type = eSymbolTypeRuntime;
-                              if (symbol_name && symbol_name[0] == '.') {
-                                llvm::StringRef symbol_name_ref(symbol_name);
-                                llvm::StringRef
-                                    g_objc_v1_prefix_class(".objc_class_name_");
-                                if (symbol_name_ref.starts_with(
-                                        g_objc_v1_prefix_class)) {
-                                  symbol_name_non_abi_mangled = symbol_name;
-                                  symbol_name = symbol_name +
-                                                g_objc_v1_prefix_class.size();
-                                  type = eSymbolTypeObjCClass;
-                                  demangled_is_synthesized = true;
-                                }
-                              }
-                            }
-                          }
-                        }
-                      } break;
-                      }
-                    }
-
-                    if (add_nlist) {
-                      uint64_t symbol_value = nlist.n_value;
-                      if (symbol_name_non_abi_mangled) {
-                        sym[sym_idx].GetMangled().SetMangledName(
-                            ConstString(symbol_name_non_abi_mangled));
-                        sym[sym_idx].GetMangled().SetDemangledName(
-                            ConstString(symbol_name));
-                      } else {
-                        if (symbol_name && symbol_name[0] == '_') {
-                          symbol_name++; // Skip the leading underscore
-                        }
-
-                        if (symbol_name) {
-                          ConstString const_symbol_name(symbol_name);
-                          sym[sym_idx].GetMangled().SetValue(const_symbol_name);
-                          if (is_gsym && is_debug) {
-                            const char *gsym_name =
-                                sym[sym_idx]
-                                    .GetMangled()
-                                    .GetName(Mangled::ePreferMangled)
-                                    .GetCString();
-                            if (gsym_name)
-                              N_GSYM_name_to_sym_idx[gsym_name] = sym_idx;
-                          }
-                        }
-                      }
-                      if (symbol_section) {
-                        const addr_t section_file_addr =
-                            symbol_section->GetFileAddress();
-                        if (symbol_byte_size == 0 &&
-                            function_starts_count > 0) {
-                          addr_t symbol_lookup_file_addr = nlist.n_value;
-                          // Do an exact address match for non-ARM addresses,
-                          // else get the closest since the symbol might be a
-                          // thumb symbol which has an address with bit zero
-                          // set
-                          FunctionStarts::Entry *func_start_entry =
-                              function_starts.FindEntry(symbol_lookup_file_addr,
-                                                        !is_arm);
-                          if (is_arm && func_start_entry) {
-                            // Verify that the function start address is the
-                            // symbol address (ARM) or the symbol address + 1
-                            // (thumb)
-                            if (func_start_entry->addr !=
-                                    symbol_lookup_file_addr &&
-                                func_start_entry->addr !=
-                                    (symbol_lookup_file_addr + 1)) {
-                              // Not the right entry, NULL it out...
-                              func_start_entry = NULL;
-                            }
-                          }
-                          if (func_start_entry) {
-                            func_start_entry->data = true;
-
-                            addr_t symbol_file_addr = func_start_entry->addr;
-                            uint32_t symbol_flags = 0;
-                            if (is_arm) {
-                              if (symbol_file_addr & 1)
-                                symbol_flags = MACHO_NLIST_ARM_SYMBOL_IS_THUMB;
-                              symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-                            }
-
-                            const FunctionStarts::Entry *next_func_start_entry =
-                                function_starts.FindNextEntry(func_start_entry);
-                            const addr_t section_end_file_addr =
-                                section_file_addr +
-                                symbol_section->GetByteSize();
-                            if (next_func_start_entry) {
-                              addr_t next_symbol_file_addr =
-                                  next_func_start_entry->addr;
-                              // Be sure the clear the Thumb address bit when
-                              // we calculate the size from the current and
-                              // next address
-                              if (is_arm)
-                                next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-                              symbol_byte_size = std::min<lldb::addr_t>(
-                                  next_symbol_file_addr - symbol_file_addr,
-                                  section_end_file_addr - symbol_file_addr);
-                            } else {
-                              symbol_byte_size =
-                                  section_end_file_addr - symbol_file_addr;
-                            }
-                          }
-                        }
-                        symbol_value -= section_file_addr;
-                      }
-
-                      if (is_debug == false) {
-                        if (type == eSymbolTypeCode) {
-                          // See if we can find a N_FUN entry for any code
-                          // symbols. If we do find a match, and the name
-                          // matches, then we can merge the two into just the
-                          // function symbol to avoid duplicate entries in
-                          // the symbol table
-                          auto range =
-                              N_FUN_addr_to_sym_idx.equal_range(nlist.n_value);
-                          if (range.first != range.second) {
-                            bool found_it = false;
-                            for (auto pos = range.first; pos != range.second;
-                                 ++pos) {
-                              if (sym[sym_idx].GetMangled().GetName(
-                                      Mangled::ePreferMangled) ==
-                                  sym[pos->second].GetMangled().GetName(
-                                      Mangled::ePreferMangled)) {
-                                m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
-                                // We just need the flags from the linker
-                                // symbol, so put these flags
-                                // into the N_FUN flags to avoid duplicate
-                                // symbols in the symbol table
-                                sym[pos->second].SetExternal(
-                                    sym[sym_idx].IsExternal());
-                                sym[pos->second].SetFlags(nlist.n_type << 16 |
-                                                          nlist.n_desc);
-                                if (resolver_addresses.find(nlist.n_value) !=
-                                    resolver_addresses.end())
-                                  sym[pos->second].SetType(eSymbolTypeResolver);
-                                sym[sym_idx].Clear();
-                                found_it = true;
-                                break;
-                              }
-                            }
-                            if (found_it)
-                              continue;
-                          } else {
-                            if (resolver_addresses.find(nlist.n_value) !=
-                                resolver_addresses.end())
-                              type = eSymbolTypeResolver;
-                          }
-                        } else if (type == eSymbolTypeData ||
-                                   type == eSymbolTypeObjCClass ||
-                                   type == eSymbolTypeObjCMetaClass ||
-                                   type == eSymbolTypeObjCIVar) {
-                          // See if we can find a N_STSYM entry for any data
-                          // symbols. If we do find a match, and the name
-                          // matches, then we can merge the two into just the
-                          // Static symbol to avoid duplicate entries in the
-                          // symbol table
-                          auto range = N_STSYM_addr_to_sym_idx.equal_range(
-                              nlist.n_value);
-                          if (range.first != range.second) {
-                            bool found_it = false;
-                            for (auto pos = range.first; pos != range.second;
-                                 ++pos) {
-                              if (sym[sym_idx].GetMangled().GetName(
-                                      Mangled::ePreferMangled) ==
-                                  sym[pos->second].GetMangled().GetName(
-                                      Mangled::ePreferMangled)) {
-                                m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
-                                // We just need the flags from the linker
-                                // symbol, so put these flags
-                                // into the N_STSYM flags to avoid duplicate
-                                // symbols in the symbol table
-                                sym[pos->second].SetExternal(
-                                    sym[sym_idx].IsExternal());
-                                sym[pos->second].SetFlags(nlist.n_type << 16 |
-                                                          nlist.n_desc);
-                                sym[sym_idx].Clear();
-                                found_it = true;
-                                break;
-                              }
-                            }
-                            if (found_it)
-                              continue;
-                          } else {
-                            const char *gsym_name =
-                                sym[sym_idx]
-                                    .GetMangled()
-                                    .GetName(Mangled::ePreferMangled)
-                                    .GetCString();
-                            if (gsym_name) {
-                              // Combine N_GSYM stab entries with the non
-                              // stab symbol
-                              ConstNameToSymbolIndexMap::const_iterator pos =
-                                  N_GSYM_name_to_sym_idx.find(gsym_name);
-                              if (pos != N_GSYM_name_to_sym_idx.end()) {
-                                const uint32_t GSYM_sym_idx = pos->second;
-                                m_nlist_idx_to_sym_idx[nlist_idx] =
-                                    GSYM_sym_idx;
-                                // Copy the address, because often the N_GSYM
-                                // address has an invalid address of zero
-                                // when the global is a common symbol
-                                sym[GSYM_sym_idx].GetAddressRef().SetSection(
-                                    symbol_section);
-                                sym[GSYM_sym_idx].GetAddressRef().SetOffset(
-                                    symbol_value);
-                                add_symbol_addr(sym[GSYM_sym_idx]
-                                                    .GetAddress()
-                                                    .GetFileAddress());
-                                // We just need the flags from the linker
-                                // symbol, so put these flags
-                                // into the N_GSYM flags to avoid duplicate
-                                // symbols in the symbol table
-                                sym[GSYM_sym_idx].SetFlags(nlist.n_type << 16 |
-                                                           nlist.n_desc);
-                                sym[sym_idx].Clear();
-                                continue;
-                              }
-                            }
-                          }
-                        }
-                      }
-
-                      sym[sym_idx].SetID(nlist_idx);
-                      sym[sym_idx].SetType(type);
-                      if (set_value) {
-                        sym[sym_idx].GetAddressRef().SetSection(symbol_section);
-                        sym[sym_idx].GetAddressRef().SetOffset(symbol_value);
-                        add_symbol_addr(
-                            sym[sym_idx].GetAddress().GetFileAddress());
-                      }
-                      sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
-
-                      if (symbol_byte_size > 0)
-                        sym[sym_idx].SetByteSize(symbol_byte_size);
-
-                      if (demangled_is_synthesized)
-                        sym[sym_idx].SetDemangledNameIsSynthesized(true);
-                      ++sym_idx;
-                    } else {
-                      sym[sym_idx].Clear();
-                    }
-                  }
-                  /////////////////////////////
-                }
-            }
-
-            for (const auto &pos : reexport_shlib_needs_fixup) {
-              const auto undef_pos = undefined_name_to_desc.find(pos.second);
-              if (undef_pos != undefined_name_to_desc.end()) {
-                const uint8_t dylib_ordinal =
-                    llvm::MachO::GET_LIBRARY_ORDINAL(undef_pos->second);
-                if (dylib_ordinal > 0 && dylib_ordinal < dylib_files.GetSize())
-                  sym[pos.first].SetReExportedSymbolSharedLibrary(
-                      dylib_files.GetFileSpecAtIndex(dylib_ordinal - 1));
-              }
-            }
-          }
-
+      // The normal nlist code cannot correctly size the Symbols
+      // array, we need to allocate it here.
+      sym = symtab.Resize(symtab_load_command.nsyms + m_dysymtab.nindirectsyms +
+                          unmapped_local_symbols_found - m_dysymtab.nlocalsym);
+      num_syms = symtab.GetNumSymbols();
+    }
+  }
 #endif
   lldb::offset_t nlist_data_offset = 0;
 
   if (nlist_data.GetByteSize() > 0) {
 
+    const uint64_t max_nsyms = nlist_data.GetByteSize() / nlist_byte_size;
+    const uint64_t max_nindirectsyms =
+        indirect_symbol_index_data.GetByteSize() / sizeof(uint32_t);
+
     // If the sym array was not created while parsing the DSC unmapped
     // symbols, create it now.
     if (sym == nullptr) {
-      sym =
-          symtab.Resize(symtab_load_command.nsyms + m_dysymtab.nindirectsyms);
+      sym = symtab.Resize(
+          std::min<uint64_t>(symtab_load_command.nsyms, max_nsyms) +
+          std::min<uint64_t>(m_dysymtab.nindirectsyms, max_nindirectsyms));
       num_syms = symtab.GetNumSymbols();
     }
 
+    uint32_t first_nlist_idx = 0;
     if (unmapped_local_symbols_found) {
       assert(m_dysymtab.ilocalsym == 0);
       nlist_data_offset += (m_dysymtab.nlocalsym * nlist_byte_size);
-      nlist_idx = m_dysymtab.nlocalsym;
-    } else {
-      nlist_idx = 0;
+      first_nlist_idx = m_dysymtab.nlocalsym;
     }
 
-    typedef llvm::DenseMap<ConstString, uint16_t> UndefinedNameToDescMap;
-    typedef llvm::DenseMap<uint32_t, ConstString> SymbolIndexToName;
-    UndefinedNameToDescMap undefined_name_to_desc;
-    SymbolIndexToName reexport_shlib_needs_fixup;
-
-    // Symtab parsing is a huge mess. Everything is entangled and the code
-    // requires access to a ridiculous amount of variables. LLDB depends
-    // heavily on the proper merging of symbols and to get that right we need
-    // to make sure we have parsed all the debug symbols first. Therefore we
-    // invoke the lambda twice, once to parse only the debug symbols and then
-    // once more to parse the remaining symbols.
-    auto ParseSymbolLambda = [&](struct nlist_64 &nlist, uint32_t nlist_idx,
-                                 bool debug_only) {
-      const bool is_debug = ((nlist.n_type & N_STAB) != 0);
-      if (is_debug != debug_only)
-        return true;
-
-      const char *symbol_name_non_abi_mangled = nullptr;
-      const char *symbol_name = nullptr;
-
-      if (have_strtab_data) {
-        symbol_name = strtab_data.PeekCStr(nlist.n_strx);
-
-        if (symbol_name == nullptr) {
-          // No symbol should be NULL, even the symbols with no string values
-          // should have an offset zero which points to an empty C-string
-          Debugger::ReportError(llvm::formatv(
-              "symbol[{0}] has invalid string table offset {1:x} in {2}, "
-              "ignoring symbol",
-              nlist_idx, nlist.n_strx, module_sp->GetFileSpec().GetPath()));
-          return true;
-        }
-        if (symbol_name[0] == '\0')
-          symbol_name = nullptr;
-      } else {
-        const addr_t str_addr = strtab_addr + nlist.n_strx;
-        Status str_error;
-        if (process->ReadCStringFromMemory(str_addr, memory_symbol_name,
-                                           str_error))
-          symbol_name = memory_symbol_name.c_str();
-      }
-
-      SymbolType type = eSymbolTypeInvalid;
-      SectionSP symbol_section;
-      lldb::addr_t symbol_byte_size = 0;
-      bool add_nlist = true;
-      bool is_gsym = false;
-      bool demangled_is_synthesized = false;
-      bool set_value = true;
-
-      assert(sym_idx < num_syms);
-      sym[sym_idx].SetDebug(is_debug);
-
-      if (is_debug) {
-        switch (nlist.n_type) {
-        case N_GSYM:
-          // global symbol: name,,NO_SECT,type,0
-          // Sometimes the N_GSYM value contains the address.
-
-          // FIXME: In the .o files, we have a GSYM and a debug symbol for all
-          // the ObjC data.  They
-          // have the same address, but we want to ensure that we always find
-          // only the real symbol, 'cause we don't currently correctly
-          // attribute the GSYM one to the ObjCClass/Ivar/MetaClass symbol
-          // type.  This is a temporary hack to make sure the ObjectiveC
-          // symbols get treated correctly.  To do this right, we should
-          // coalesce all the GSYM & global symbols that have the same
-          // address.
-          is_gsym = true;
-          sym[sym_idx].SetExternal(true);
-
-          if (symbol_name && symbol_name[0] == '_' && symbol_name[1] == 'O') {
-            llvm::StringRef symbol_name_ref(symbol_name);
-            if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
-              symbol_name_non_abi_mangled = symbol_name + 1;
-              symbol_name = symbol_name + g_objc_v2_prefix_class.size();
-              type = eSymbolTypeObjCClass;
-              demangled_is_synthesized = true;
-
-            } else if (symbol_name_ref.starts_with(
-                           g_objc_v2_prefix_metaclass)) {
-              symbol_name_non_abi_mangled = symbol_name + 1;
-              symbol_name = symbol_name + g_objc_v2_prefix_metaclass.size();
-              type = eSymbolTypeObjCMetaClass;
-              demangled_is_synthesized = true;
-            } else if (symbol_name_ref.starts_with(g_objc_v2_prefix_ivar)) {
-              symbol_name_non_abi_mangled = symbol_name + 1;
-              symbol_name = symbol_name + g_objc_v2_prefix_ivar.size();
-              type = eSymbolTypeObjCIVar;
-              demangled_is_synthesized = true;
-            }
-          } else {
-            if (nlist.n_value != 0)
-              symbol_section =
-                  section_info.GetSection(nlist.n_sect, nlist.n_value);
-            type = eSymbolTypeData;
-          }
-          break;
-
-        case N_FNAME:
-          // procedure name (f77 kludge): name,,NO_SECT,0,0
-          type = eSymbolTypeCompiler;
-          break;
-
-        case N_FUN:
-          // procedure: name,,n_sect,linenumber,address
-          if (symbol_name) {
-            type = eSymbolTypeCode;
-            symbol_section =
-                section_info.GetSection(nlist.n_sect, nlist.n_value);
-
-            N_FUN_addr_to_sym_idx.insert(
-                std::make_pair(nlist.n_value, sym_idx));
-            // We use the current number of symbols in the symbol table in
-            // lieu of using nlist_idx in case we ever start trimming entries
-            // out
-            N_FUN_indexes.push_back(sym_idx);
-          } else {
-            type = eSymbolTypeCompiler;
-
-            if (!N_FUN_indexes.empty()) {
-              // Copy the size of the function into the original STAB entry
-              // so we don't have to hunt for it later
-              symtab.SymbolAtIndex(N_FUN_indexes.back())
-                  ->SetByteSize(nlist.n_value);
-              N_FUN_indexes.pop_back();
-              // We don't really need the end function STAB as it contains
-              // the size which we already placed with the original symbol,
-              // so don't add it if we want a minimal symbol table
-              add_nlist = false;
-            }
-          }
-          break;
-
-        case N_STSYM:
-          // static symbol: name,,n_sect,type,address
-          N_STSYM_addr_to_sym_idx.insert(
-              std::make_pair(nlist.n_value, sym_idx));
-          symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
-          if (symbol_name && symbol_name[0]) {
-            type = ObjectFile::GetSymbolTypeFromName(symbol_name + 1,
-                                                     eSymbolTypeData);
-          }
-          break;
-
-        case N_LCSYM:
-          // .lcomm symbol: name,,n_sect,type,address
-          symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
-          type = eSymbolTypeCommonBlock;
-          break;
-
-        case N_BNSYM:
-          // We use the current number of symbols in the symbol table in lieu
-          // of using nlist_idx in case we ever start trimming entries out
-          // Skip these if we want minimal symbol tables
-          add_nlist = false;
-          break;
-
-        case N_ENSYM:
-          // Set the size of the N_BNSYM to the terminating index of this
-          // N_ENSYM so that we can always skip the entire symbol if we need
-          // to navigate more quickly at the source level when parsing STABS
-          // Skip these if we want minimal symbol tables
-          add_nlist = false;
-          break;
-
-        case N_OPT:
-          // emitted with gcc2_compiled and in gcc source
-          type = eSymbolTypeCompiler;
-          break;
-
-        case N_RSYM:
-          // register sym: name,,NO_SECT,type,register
-          type = eSymbolTypeVariable;
-          break;
-
-        case N_SLINE:
-          // src line: 0,,n_sect,linenumber,address
-          symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
-          type = eSymbolTypeLineEntry;
-          break;
-
-        case N_SSYM:
-          // structure elt: name,,NO_SECT,type,struct_offset
-          type = eSymbolTypeVariableType;
-          break;
-
-        case N_SO:
-          // source file name
-          type = eSymbolTypeSourceFile;
-          if (symbol_name == nullptr) {
-            add_nlist = false;
-            if (N_SO_index != UINT32_MAX) {
-              // Set the size of the N_SO to the terminating index of this
-              // N_SO so that we can always skip the entire N_SO if we need
-              // to navigate more quickly at the source level when parsing
-              // STABS
-              symbol_ptr = symtab.SymbolAtIndex(N_SO_index);
-              symbol_ptr->SetByteSize(sym_idx);
-              symbol_ptr->SetSizeIsSibling(true);
-            }
-            N_NSYM_indexes.clear();
-            N_INCL_indexes.clear();
-            N_BRAC_indexes.clear();
-            N_COMM_indexes.clear();
-            N_FUN_indexes.clear();
-            N_SO_index = UINT32_MAX;
-          } else {
-            // We use the current number of symbols in the symbol table in
-            // lieu of using nlist_idx in case we ever start trimming entries
-            // out
-            const bool N_SO_has_full_path = symbol_name[0] == '/';
-            if (N_SO_has_full_path) {
-              if ((N_SO_index == sym_idx - 1) && ((sym_idx - 1) < num_syms)) {
-                // We have two consecutive N_SO entries where the first
-                // contains a directory and the second contains a full path.
-                sym[sym_idx - 1].GetMangled().SetValue(
-                    ConstString(symbol_name));
-                m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
-                add_nlist = false;
-              } else {
-                // This is the first entry in a N_SO that contains a
-                // directory or a full path to the source file
-                N_SO_index = sym_idx;
-              }
-            } else if ((N_SO_index == sym_idx - 1) &&
-                       ((sym_idx - 1) < num_syms)) {
-              // This is usually the second N_SO entry that contains just the
-              // filename, so here we combine it with the first one if we are
-              // minimizing the symbol table
-              const char *so_path =
-                  sym[sym_idx - 1].GetMangled().GetDemangledName().AsCString();
-              if (so_path && so_path[0]) {
-                std::string full_so_path(so_path);
-                const size_t double_slash_pos = full_so_path.find("//");
-                if (double_slash_pos != std::string::npos) {
-                  // The linker has been generating bad N_SO entries with
-                  // doubled up paths in the format "%s%s" where the first
-                  // string in the DW_AT_comp_dir, and the second is the
-                  // directory for the source file so you end up with a path
-                  // that looks like "/tmp/src//tmp/src/"
-                  FileSpec so_dir(so_path);
-                  if (!FileSystem::Instance().Exists(so_dir)) {
-                    so_dir.SetFile(&full_so_path[double_slash_pos + 1],
-                                   FileSpec::Style::native);
-                    if (FileSystem::Instance().Exists(so_dir)) {
-                      // Trim off the incorrect path
-                      full_so_path.erase(0, double_slash_pos + 1);
-                    }
-                  }
-                }
-                if (*full_so_path.rbegin() != '/')
-                  full_so_path += '/';
-                full_so_path += symbol_name;
-                sym[sym_idx - 1].GetMangled().SetValue(
-                    ConstString(full_so_path.c_str()));
-                add_nlist = false;
-                m_nlist_idx_to_sym_idx[nlist_idx] = sym_idx - 1;
-              }
-            } else {
-              // This could be a relative path to a N_SO
-              N_SO_index = sym_idx;
-            }
-          }
-          break;
-
-        case N_OSO:
-          // object file name: name,,0,0,st_mtime
-          type = eSymbolTypeObjectFile;
-          break;
-
-        case N_LSYM:
-          // local sym: name,,NO_SECT,type,offset
-          type = eSymbolTypeLocal;
-          break;
-
-        // INCL scopes
-        case N_BINCL:
-          // include file beginning: name,,NO_SECT,0,sum We use the current
-          // number of symbols in the symbol table in lieu of using nlist_idx
-          // in case we ever start trimming entries out
-          N_INCL_indexes.push_back(sym_idx);
-          type = eSymbolTypeScopeBegin;
-          break;
-
-        case N_EINCL:
-          // include file end: name,,NO_SECT,0,0
-          // Set the size of the N_BINCL to the terminating index of this
-          // N_EINCL so that we can always skip the entire symbol if we need
-          // to navigate more quickly at the source level when parsing STABS
-          if (!N_INCL_indexes.empty()) {
-            symbol_ptr = symtab.SymbolAtIndex(N_INCL_indexes.back());
-            symbol_ptr->SetByteSize(sym_idx + 1);
-            symbol_ptr->SetSizeIsSibling(true);
-            N_INCL_indexes.pop_back();
-          }
-          type = eSymbolTypeScopeEnd;
-          break;
-
-        case N_SOL:
-          // #included file name: name,,n_sect,0,address
-          type = eSymbolTypeHeaderFile;
-
-          // We currently don't use the header files on darwin
-          add_nlist = false;
-          break;
-
-        case N_PARAMS:
-          // compiler parameters: name,,NO_SECT,0,0
-          type = eSymbolTypeCompiler;
-          break;
-
-        case N_VERSION:
-          // compiler version: name,,NO_SECT,0,0
-          type = eSymbolTypeCompiler;
-          break;
-
-        case N_OLEVEL:
-          // compiler -O level: name,,NO_SECT,0,0
-          type = eSymbolTypeCompiler;
-          break;
-
-        case N_PSYM:
-          // parameter: name,,NO_SECT,type,offset
-          type = eSymbolTypeVariable;
-          break;
-
-        case N_ENTRY:
-          // alternate entry: name,,n_sect,linenumber,address
-          symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
-          type = eSymbolTypeLineEntry;
-          break;
-
-        // Left and Right Braces
-        case N_LBRAC:
-          // left bracket: 0,,NO_SECT,nesting level,address We use the
-          // current number of symbols in the symbol table in lieu of using
-          // nlist_idx in case we ever start trimming entries out
-          symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
-          N_BRAC_indexes.push_back(sym_idx);
-          type = eSymbolTypeScopeBegin;
-          break;
-
-        case N_RBRAC:
-          // right bracket: 0,,NO_SECT,nesting level,address Set the size of
-          // the N_LBRAC to the terminating index of this N_RBRAC so that we
-          // can always skip the entire symbol if we need to navigate more
-          // quickly at the source level when parsing STABS
-          symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
-          if (!N_BRAC_indexes.empty()) {
-            symbol_ptr = symtab.SymbolAtIndex(N_BRAC_indexes.back());
-            symbol_ptr->SetByteSize(sym_idx + 1);
-            symbol_ptr->SetSizeIsSibling(true);
-            N_BRAC_indexes.pop_back();
-          }
-          type = eSymbolTypeScopeEnd;
-          break;
-
-        case N_EXCL:
-          // deleted include file: name,,NO_SECT,0,sum
-          type = eSymbolTypeHeaderFile;
-          break;
-
-        // COMM scopes
-        case N_BCOMM:
-          // begin common: name,,NO_SECT,0,0
-          // We use the current number of symbols in the symbol table in lieu
-          // of using nlist_idx in case we ever start trimming entries out
-          type = eSymbolTypeScopeBegin;
-          N_COMM_indexes.push_back(sym_idx);
-          break;
-
-        case N_ECOML:
-          // end common (local name): 0,,n_sect,0,address
-          symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
-          [[fallthrough]];
-
-        case N_ECOMM:
-          // end common: name,,n_sect,0,0
-          // Set the size of the N_BCOMM to the terminating index of this
-          // N_ECOMM/N_ECOML so that we can always skip the entire symbol if
-          // we need to navigate more quickly at the source level when
-          // parsing STABS
-          if (!N_COMM_indexes.empty()) {
-            symbol_ptr = symtab.SymbolAtIndex(N_COMM_indexes.back());
-            symbol_ptr->SetByteSize(sym_idx + 1);
-            symbol_ptr->SetSizeIsSibling(true);
-            N_COMM_indexes.pop_back();
-          }
-          type = eSymbolTypeScopeEnd;
-          break;
-
-        case N_LENG:
-          // second stab entry with length information
-          type = eSymbolTypeAdditional;
-          break;
-
-        default:
-          break;
-        }
-      } else {
-        uint8_t n_type = N_TYPE & nlist.n_type;
-        sym[sym_idx].SetExternal((N_EXT & nlist.n_type) != 0);
-
-        switch (n_type) {
-        case N_INDR: {
-          const char *reexport_name_cstr = strtab_data.PeekCStr(nlist.n_value);
-          if (reexport_name_cstr && reexport_name_cstr[0] && symbol_name) {
-            type = eSymbolTypeReExported;
-            ConstString reexport_name(reexport_name_cstr +
-                                      ((reexport_name_cstr[0] == '_') ? 1 : 0));
-            sym[sym_idx].SetReExportedSymbolName(reexport_name);
-            set_value = false;
-            reexport_shlib_needs_fixup[sym_idx] = reexport_name;
-            indirect_symbol_names.insert(
-                ConstString(symbol_name + ((symbol_name[0] == '_') ? 1 : 0)));
-          } else
-            type = eSymbolTypeUndefined;
-        } break;
-
-        case N_UNDF:
-          if (symbol_name && symbol_name[0]) {
-            ConstString undefined_name(symbol_name +
-                                       ((symbol_name[0] == '_') ? 1 : 0));
-            undefined_name_to_desc[undefined_name] = nlist.n_desc;
-          }
-          [[fallthrough]];
-
-        case N_PBUD:
-          type = eSymbolTypeUndefined;
-          break;
-
-        case N_ABS:
-          type = eSymbolTypeAbsolute;
-          break;
-
-        case N_SECT: {
-          symbol_section = section_info.GetSection(nlist.n_sect, nlist.n_value);
-
-          if (!symbol_section) {
-            // TODO: warn about this?
-            add_nlist = false;
-            break;
-          }
-
-          if (TEXT_eh_frame_sectID == nlist.n_sect) {
-            type = eSymbolTypeException;
-          } else {
-            uint32_t section_type = symbol_section->Get() & SECTION_TYPE;
-
-            switch (section_type) {
-            case S_CSTRING_LITERALS:
-              type = eSymbolTypeData;
-              break; // section with only literal C strings
-            case S_4BYTE_LITERALS:
-              type = eSymbolTypeData;
-              break; // section with only 4 byte literals
-            case S_8BYTE_LITERALS:
-              type = eSymbolTypeData;
-              break; // section with only 8 byte literals
-            case S_LITERAL_POINTERS:
-              type = eSymbolTypeTrampoline;
-              break; // section with only pointers to literals
-            case S_NON_LAZY_SYMBOL_POINTERS:
-              type = eSymbolTypeTrampoline;
-              break; // section with only non-lazy symbol pointers
-            case S_LAZY_SYMBOL_POINTERS:
-              type = eSymbolTypeTrampoline;
-              break; // section with only lazy symbol pointers
-            case S_SYMBOL_STUBS:
-              type = eSymbolTypeTrampoline;
-              break; // section with only symbol stubs, byte size of stub in
-                     // the reserved2 field
-            case S_MOD_INIT_FUNC_POINTERS:
-              type = eSymbolTypeCode;
-              break; // section with only function pointers for initialization
-            case S_MOD_TERM_FUNC_POINTERS:
-              type = eSymbolTypeCode;
-              break; // section with only function pointers for termination
-            case S_INTERPOSING:
-              type = eSymbolTypeTrampoline;
-              break; // section with only pairs of function pointers for
-                     // interposing
-            case S_16BYTE_LITERALS:
-              type = eSymbolTypeData;
-              break; // section with only 16 byte literals
-            case S_DTRACE_DOF:
-              type = eSymbolTypeInstrumentation;
-              break;
-            case S_LAZY_DYLIB_SYMBOL_POINTERS:
-              type = eSymbolTypeTrampoline;
-              break;
-            default:
-              switch (symbol_section->GetType()) {
-              case lldb::eSectionTypeCode:
-                type = eSymbolTypeCode;
-                break;
-              case eSectionTypeData:
-              case eSectionTypeDataCString:         // Inlined C string data
-              case eSectionTypeDataCStringPointers: // Pointers to C string
-                                                    // data
-              case eSectionTypeDataSymbolAddress:   // Address of a symbol in
-                                                    // the symbol table
-              case eSectionTypeData4:
-              case eSectionTypeData8:
-              case eSectionTypeData16:
-                type = eSymbolTypeData;
-                break;
-              default:
-                break;
-              }
-              break;
-            }
-
-            if (type == eSymbolTypeInvalid) {
-              const char *symbol_sect_name =
-                  symbol_section->GetName().AsCString();
-              if (symbol_section->IsDescendant(text_section_sp.get())) {
-                if (symbol_section->IsClear(S_ATTR_PURE_INSTRUCTIONS |
-                                            S_ATTR_SELF_MODIFYING_CODE |
-                                            S_ATTR_SOME_INSTRUCTIONS))
-                  type = eSymbolTypeData;
-                else
-                  type = eSymbolTypeCode;
-              } else if (symbol_section->IsDescendant(data_section_sp.get()) ||
-                         symbol_section->IsDescendant(
-                             data_dirty_section_sp.get()) ||
-                         symbol_section->IsDescendant(
-                             data_const_section_sp.get())) {
-                if (symbol_sect_name &&
-                    ::strstr(symbol_sect_name, "__objc") == symbol_sect_name) {
-                  type = eSymbolTypeRuntime;
-
-                  if (symbol_name) {
-                    llvm::StringRef symbol_name_ref(symbol_name);
-                    if (symbol_name_ref.starts_with("_OBJC_")) {
-                      llvm::StringRef g_objc_v2_prefix_class(
-                          "_OBJC_CLASS_$_");
-                      llvm::StringRef g_objc_v2_prefix_metaclass(
-                          "_OBJC_METACLASS_$_");
-                      llvm::StringRef g_objc_v2_prefix_ivar(
-                          "_OBJC_IVAR_$_");
-                      if (symbol_name_ref.starts_with(g_objc_v2_prefix_class)) {
-                        symbol_name_non_abi_mangled = symbol_name + 1;
-                        symbol_name =
-                            symbol_name + g_objc_v2_prefix_class.size();
-                        type = eSymbolTypeObjCClass;
-                        demangled_is_synthesized = true;
-                      } else if (symbol_name_ref.starts_with(
-                                     g_objc_v2_prefix_metaclass)) {
-                        symbol_name_non_abi_mangled = symbol_name + 1;
-                        symbol_name =
-                            symbol_name + g_objc_v2_prefix_metaclass.size();
-                        type = eSymbolTypeObjCMetaClass;
-                        demangled_is_synthesized = true;
-                      } else if (symbol_name_ref.starts_with(
-                                     g_objc_v2_prefix_ivar)) {
-                        symbol_name_non_abi_mangled = symbol_name + 1;
-                        symbol_name =
-                            symbol_name + g_objc_v2_prefix_ivar.size();
-                        type = eSymbolTypeObjCIVar;
-                        demangled_is_synthesized = true;
-                      }
-                    }
-                  }
-                } else if (symbol_sect_name &&
-                           ::strstr(symbol_sect_name, "__gcc_except_tab") ==
-                               symbol_sect_name) {
-                  type = eSymbolTypeException;
-                } else {
-                  type = eSymbolTypeData;
-                }
-              } else if (symbol_sect_name &&
-                         ::strstr(symbol_sect_name, "__IMPORT") ==
-                             symbol_sect_name) {
-                type = eSymbolTypeTrampoline;
-              } else if (symbol_section->IsDescendant(objc_section_sp.get())) {
-                type = eSymbolTypeRuntime;
-                if (symbol_name && symbol_name[0] == '.') {
-                  llvm::StringRef symbol_name_ref(symbol_name);
-                  llvm::StringRef g_objc_v1_prefix_class(
-                      ".objc_class_name_");
-                  if (symbol_name_ref.starts_with(g_objc_v1_prefix_class)) {
-                    symbol_name_non_abi_mangled = symbol_name;
-                    symbol_name = symbol_name + g_objc_v1_prefix_class.size();
-                    type = eSymbolTypeObjCClass;
-                    demangled_is_synthesized = true;
-                  }
-                }
-              }
-            }
-          }
-        } break;
-        }
-      }
-
-      if (!add_nlist) {
-        sym[sym_idx].Clear();
-        return true;
-      }
-
-      uint64_t symbol_value = nlist.n_value;
-
-      if (symbol_name_non_abi_mangled) {
-        sym[sym_idx].GetMangled().SetMangledName(
-            ConstString(symbol_name_non_abi_mangled));
-        sym[sym_idx].GetMangled().SetDemangledName(ConstString(symbol_name));
-      } else {
-
-        if (symbol_name && symbol_name[0] == '_') {
-          symbol_name++; // Skip the leading underscore
-        }
-
-        if (symbol_name) {
-          ConstString const_symbol_name(symbol_name);
-          sym[sym_idx].GetMangled().SetValue(const_symbol_name);
-        }
-      }
-
-      if (is_gsym) {
-        const char *gsym_name = sym[sym_idx]
-                                    .GetMangled()
-                                    .GetName(Mangled::ePreferMangled)
-                                    .GetCString();
-        if (gsym_name)
-          N_GSYM_name_to_sym_idx[gsym_name] = sym_idx;
-      }
-
-      if (symbol_section) {
-        const addr_t section_file_addr = symbol_section->GetFileAddress();
-        if (symbol_byte_size == 0 && function_starts_count > 0) {
-          addr_t symbol_lookup_file_addr = nlist.n_value;
-          // Do an exact address match for non-ARM addresses, else get the
-          // closest since the symbol might be a thumb symbol which has an
-          // address with bit zero set.
-          FunctionStarts::Entry *func_start_entry =
-              function_starts.FindEntry(symbol_lookup_file_addr, !is_arm);
-          if (is_arm && func_start_entry) {
-            // Verify that the function start address is the symbol address
-            // (ARM) or the symbol address + 1 (thumb).
-            if (func_start_entry->addr != symbol_lookup_file_addr &&
-                func_start_entry->addr != (symbol_lookup_file_addr + 1)) {
-              // Not the right entry, NULL it out...
-              func_start_entry = nullptr;
-            }
-          }
-          if (func_start_entry) {
-            func_start_entry->data = true;
-
-            addr_t symbol_file_addr = func_start_entry->addr;
-            if (is_arm)
-              symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-
-            const FunctionStarts::Entry *next_func_start_entry =
-                function_starts.FindNextEntry(func_start_entry);
-            const addr_t section_end_file_addr =
-                section_file_addr + symbol_section->GetByteSize();
-            if (next_func_start_entry) {
-              addr_t next_symbol_file_addr = next_func_start_entry->addr;
-              // Be sure the clear the Thumb address bit when we calculate the
-              // size from the current and next address
-              if (is_arm)
-                next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-              symbol_byte_size = std::min<lldb::addr_t>(
-                  next_symbol_file_addr - symbol_file_addr,
-                  section_end_file_addr - symbol_file_addr);
-            } else {
-              symbol_byte_size = section_end_file_addr - symbol_file_addr;
-            }
-          }
-        }
-        symbol_value -= section_file_addr;
-      }
-
-      if (!is_debug) {
-        if (type == eSymbolTypeCode) {
-          // See if we can find a N_FUN entry for any code symbols. If we do
-          // find a match, and the name matches, then we can merge the two into
-          // just the function symbol to avoid duplicate entries in the symbol
-          // table.
-          std::pair<ValueToSymbolIndexMap::const_iterator,
-                    ValueToSymbolIndexMap::const_iterator>
-              range;
-          range = N_FUN_addr_to_sym_idx.equal_range(nlist.n_value);
-          if (range.first != range.second) {
-            for (ValueToSymbolIndexMap::const_iterator pos = range.first;
-                 pos != range.second; ++pos) {
-              if (sym[sym_idx].GetMangled().GetName(Mangled::ePreferMangled) ==
-                  sym[pos->second].GetMangled().GetName(
-                      Mangled::ePreferMangled)) {
-                m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
-                // We just need the flags from the linker symbol, so put these
-                // flags into the N_FUN flags to avoid duplicate symbols in the
-                // symbol table.
-                sym[pos->second].SetExternal(sym[sym_idx].IsExternal());
-                sym[pos->second].SetFlags(nlist.n_type << 16 | nlist.n_desc);
-                if (resolver_addresses.find(nlist.n_value) !=
-                    resolver_addresses.end())
-                  sym[pos->second].SetType(eSymbolTypeResolver);
-                sym[sym_idx].Clear();
-                return true;
-              }
-            }
-          } else {
-            if (resolver_addresses.find(nlist.n_value) !=
-                resolver_addresses.end())
-              type = eSymbolTypeResolver;
-          }
-        } else if (type == eSymbolTypeData || type == eSymbolTypeObjCClass ||
-                   type == eSymbolTypeObjCMetaClass ||
-                   type == eSymbolTypeObjCIVar) {
-          // See if we can find a N_STSYM entry for any data symbols. If we do
-          // find a match, and the name matches, then we can merge the two into
-          // just the Static symbol to avoid duplicate entries in the symbol
-          // table.
-          std::pair<ValueToSymbolIndexMap::const_iterator,
-                    ValueToSymbolIndexMap::const_iterator>
-              range;
-          range = N_STSYM_addr_to_sym_idx.equal_range(nlist.n_value);
-          if (range.first != range.second) {
-            for (ValueToSymbolIndexMap::const_iterator pos = range.first;
-                 pos != range.second; ++pos) {
-              if (sym[sym_idx].GetMangled().GetName(Mangled::ePreferMangled) ==
-                  sym[pos->second].GetMangled().GetName(
-                      Mangled::ePreferMangled)) {
-                m_nlist_idx_to_sym_idx[nlist_idx] = pos->second;
-                // We just need the flags from the linker symbol, so put these
-                // flags into the N_STSYM flags to avoid duplicate symbols in
-                // the symbol table.
-                sym[pos->second].SetExternal(sym[sym_idx].IsExternal());
-                sym[pos->second].SetFlags(nlist.n_type << 16 | nlist.n_desc);
-                sym[sym_idx].Clear();
-                return true;
-              }
-            }
-          } else {
-            // Combine N_GSYM stab entries with the non stab symbol.
-            const char *gsym_name = sym[sym_idx]
-                                        .GetMangled()
-                                        .GetName(Mangled::ePreferMangled)
-                                        .GetCString();
-            if (gsym_name) {
-              ConstNameToSymbolIndexMap::const_iterator pos =
-                  N_GSYM_name_to_sym_idx.find(gsym_name);
-              if (pos != N_GSYM_name_to_sym_idx.end()) {
-                const uint32_t GSYM_sym_idx = pos->second;
-                m_nlist_idx_to_sym_idx[nlist_idx] = GSYM_sym_idx;
-                // Copy the address, because often the N_GSYM address has an
-                // invalid address of zero when the global is a common symbol.
-                sym[GSYM_sym_idx].GetAddressRef().SetSection(symbol_section);
-                sym[GSYM_sym_idx].GetAddressRef().SetOffset(symbol_value);
-                add_symbol_addr(
-                    sym[GSYM_sym_idx].GetAddress().GetFileAddress());
-                // We just need the flags from the linker symbol, so put these
-                // flags into the N_GSYM flags to avoid duplicate symbols in
-                // the symbol table.
-                sym[GSYM_sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
-                sym[sym_idx].Clear();
-                return true;
-              }
-            }
-          }
-        }
-      }
-
-      sym[sym_idx].SetID(nlist_idx);
-      sym[sym_idx].SetType(type);
-      if (set_value) {
-        sym[sym_idx].GetAddressRef().SetSection(symbol_section);
-        sym[sym_idx].GetAddressRef().SetOffset(symbol_value);
-        if (symbol_section)
-          add_symbol_addr(sym[sym_idx].GetAddress().GetFileAddress());
-      }
-      sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
-      if (nlist.n_desc & N_WEAK_REF)
-        sym[sym_idx].SetIsWeak(true);
-
-      if (symbol_byte_size > 0)
-        sym[sym_idx].SetByteSize(symbol_byte_size);
-
-      if (demangled_is_synthesized)
-        sym[sym_idx].SetDemangledNameIsSynthesized(true);
-
-      ++sym_idx;
-      return true;
-    };
-
-    // First parse all the nlists but don't process them yet. See the next
-    // comment for an explanation why.
-    std::vector<struct nlist_64> nlists;
-    nlists.reserve(symtab_load_command.nsyms);
-    for (; nlist_idx < symtab_load_command.nsyms; ++nlist_idx) {
-      if (auto nlist =
-              ParseNList(nlist_data, nlist_data_offset, nlist_byte_size))
-        nlists.push_back(*nlist);
-      else
-        break;
-    }
-
-    // Now parse all the debug symbols. This is needed to merge non-debug
-    // symbols in the next step. Non-debug symbols are always coalesced into
-    // the debug symbol. Doing this in one step would mean that some symbols
-    // won't be merged.
-    nlist_idx = 0;
-    for (auto &nlist : nlists) {
-      if (!ParseSymbolLambda(nlist, nlist_idx++, DebugSymbols))
-        break;
-    }
-
-    // Finally parse all the non debug symbols.
-    nlist_idx = 0;
-    for (auto &nlist : nlists) {
-      if (!ParseSymbolLambda(nlist, nlist_idx++, NonDebugSymbols))
-        break;
-    }
-
-    for (const auto &pos : reexport_shlib_needs_fixup) {
-      const auto undef_pos = undefined_name_to_desc.find(pos.second);
-      if (undef_pos != undefined_name_to_desc.end()) {
-        const uint8_t dylib_ordinal =
-            llvm::MachO::GET_LIBRARY_ORDINAL(undef_pos->second);
-        if (dylib_ordinal > 0 && dylib_ordinal < dylib_files.GetSize())
-          sym[pos.first].SetReExportedSymbolSharedLibrary(
-              dylib_files.GetFileSpecAtIndex(dylib_ordinal - 1));
-      }
+    ParseNListsLambda(nlist_data, nlist_data_offset, first_nlist_idx,
+                      symtab_load_command.nsyms, strtab_data);
+  }
+
+#if TARGET_OS_IPHONE
+  if (nlist_buffer) {
+    DataExtractor dsc_local_symbols_data(nlist_buffer,
+                                         nlist_count * nlist_byte_size,
+                                         byte_order, addr_byte_size);
+    DataExtractor dsc_string_table_data(string_table, vm_string_bytes_read,
+                                        byte_order, addr_byte_size);
+    // Symbol IDs are LC_SYMTAB indexes and must ascend in parse order, so the
+    // unmapped locals are parsed last and numbered from nsyms.
+    ParseNListsLambda(dsc_local_symbols_data, 0, symtab_load_command.nsyms,
+                      symtab_load_command.nsyms + nlist_count,
+                      dsc_string_table_data);
+  }
+#endif
+
+  for (const auto &pos : reexport_shlib_needs_fixup) {
+    const auto undef_pos = undefined_name_to_desc.find(pos.second);
+    if (undef_pos != undefined_name_to_desc.end()) {
+      const uint8_t dylib_ordinal =
+          llvm::MachO::GET_LIBRARY_ORDINAL(undef_pos->second);
+      if (dylib_ordinal > 0 && dylib_ordinal < dylib_files.GetSize())
+        sym[pos.first].SetReExportedSymbolSharedLibrary(
+            dylib_files.GetFileSpecAtIndex(dylib_ordinal - 1));
     }
   }
 
@@ -4667,7 +3510,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
     num_syms = sym_idx + trie_symbol_table_augment_count;
     sym = symtab.Resize(num_syms);
   }
-  uint32_t synthetic_sym_id = symtab_load_command.nsyms;
+  uint32_t synthetic_sym_id =
+      symtab_load_command.nsyms + unmapped_local_symbols_found;
 
   // Add symbols from the trie to the symbol table.
   for (auto &e : external_sym_trie_entries) {
@@ -4726,23 +3570,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           Address symbol_addr;
           if (module_sp->ResolveFileAddress(symbol_file_addr, symbol_addr)) {
             SectionSP symbol_section(symbol_addr.GetSection());
-            uint32_t symbol_byte_size = 0;
             if (symbol_section) {
-              const addr_t section_file_addr = symbol_section->GetFileAddress();
-              const FunctionStarts::Entry *next_func_start_entry =
-                  function_starts.FindNextEntry(func_start_entry);
-              const addr_t section_end_file_addr =
-                  section_file_addr + symbol_section->GetByteSize();
-              if (next_func_start_entry) {
-                addr_t next_symbol_file_addr = next_func_start_entry->addr;
-                if (is_arm)
-                  next_symbol_file_addr &= THUMB_ADDRESS_BIT_MASK;
-                symbol_byte_size = std::min<lldb::addr_t>(
-                    next_symbol_file_addr - symbol_file_addr,
-                    section_end_file_addr - symbol_file_addr);
-              } else {
-                symbol_byte_size = section_end_file_addr - symbol_file_addr;
-              }
               sym[sym_idx].SetID(synthetic_sym_id++);
               // Don't set the name for any synthetic symbols, the Symbol
               // object will generate one if needed when the name is accessed
@@ -4754,8 +3582,6 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               add_symbol_addr(symbol_addr.GetFileAddress());
               if (symbol_flags)
                 sym[sym_idx].SetFlags(symbol_flags);
-              if (symbol_byte_size)
-                sym[sym_idx].SetByteSize(symbol_byte_size);
               ++sym_idx;
             }
           }
@@ -4857,11 +3683,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                   ++sym_idx;
                 }
               } else {
-                if (log)
-                  log->Warning("symbol stub referencing symbol table symbol "
-                               "%u that isn't in our minimal symbol table, "
-                               "fix this!!!",
-                               stub_sym_id);
+                LLDB_LOGF(log,
+                          "warning: symbol stub referencing symbol table "
+                          "symbol %u that isn't in our minimal symbol table, "
+                          "fix this!!!",
+                          stub_sym_id);
               }
             }
           }
@@ -4894,6 +3720,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
     }
   }
+
+  // Set these after the last Resize(), which clears whether the symbol table
+  // has source files.
+  symtab.SetHasSourceFiles(has_source_files);
+  symtab.SetHasDebugMap(has_debug_map);
 }
 
 void ObjectFileMachO::Dump(Stream *s) {
@@ -4910,8 +3741,9 @@ void ObjectFileMachO::Dump(Stream *s) {
     *s << ", file = '" << m_file;
     ModuleSpecList all_specs;
     ModuleSpec base_spec;
-    GetAllArchSpecs(m_header, m_data, MachHeaderSizeFromMagic(m_header.magic),
-                    base_spec, all_specs);
+    GetAllArchSpecs(m_header, *m_data_nsp,
+                    MachHeaderSizeFromMagic(m_header.magic), base_spec,
+                    all_specs);
     for (unsigned i = 0, e = all_specs.GetSize(); i != e; ++i) {
       *s << "', triple";
       if (e)
@@ -4942,7 +3774,7 @@ UUID ObjectFileMachO::GetUUID(const llvm::MachO::mach_header &header,
   lldb::offset_t offset = lc_offset;
   for (i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
-    if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(data, offset, load_cmd))
       break;
 
     if (load_cmd.cmd == LC_UUID) {
@@ -5101,7 +3933,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   lldb::offset_t offset = lc_offset;
   for (uint32_t i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
-    if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(data, offset, load_cmd))
       break;
 
     llvm::MachO::version_min_command version_min;
@@ -5151,7 +3983,7 @@ void ObjectFileMachO::GetAllArchSpecs(const llvm::MachO::mach_header &header,
   offset = lc_offset;
   for (uint32_t i = 0; i < header.ncmds; ++i) {
     const lldb::offset_t cmd_offset = offset;
-    if (data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(data, offset, load_cmd))
       break;
 
     do {
@@ -5217,7 +4049,7 @@ UUID ObjectFileMachO::GetUUID() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
     lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
-    return GetUUID(m_header, m_data, offset);
+    return GetUUID(m_header, *m_data_nsp, offset);
   }
   return UUID();
 }
@@ -5237,7 +4069,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
   uint32_t i;
   for (i = 0; i < m_header.ncmds; ++i) {
     const uint32_t cmd_offset = offset;
-    if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
+    if (!ReadMachOCommand(*m_data_nsp, offset, load_cmd))
       break;
 
     switch (load_cmd.cmd) {
@@ -5248,17 +4080,17 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
     case LC_LOAD_DYLINKER:
     case LC_LOADFVMLIB:
     case LC_LOAD_UPWARD_DYLIB: {
-      uint32_t name_offset = cmd_offset + m_data.GetU32(&offset);
+      uint32_t name_offset = cmd_offset + m_data_nsp->GetU32(&offset);
       // For LC_LOAD_DYLIB there is an alternate encoding
       // which adds a uint32_t `flags` field for `DYLD_USE_*`
       // flags.  This can be detected by a timestamp field with
       // the `DYLIB_USE_MARKER` constant value.
       bool is_delayed_init = false;
-      uint32_t use_command_marker = m_data.GetU32(&offset);
+      uint32_t use_command_marker = m_data_nsp->GetU32(&offset);
       if (use_command_marker == 0x1a741800 /* DYLIB_USE_MARKER */) {
         offset += 4; /* uint32_t current_version */
         offset += 4; /* uint32_t compat_version */
-        uint32_t flags = m_data.GetU32(&offset);
+        uint32_t flags = m_data_nsp->GetU32(&offset);
         // If this LC_LOAD_DYLIB is marked delay-init,
         // don't report it as a dependent library -- it
         // may be loaded in the process at some point,
@@ -5266,23 +4098,20 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
         if (flags & 0x08 /* DYLIB_USE_DELAYED_INIT */)
           is_delayed_init = true;
       }
-      const char *path = m_data.PeekCStr(name_offset);
-      if (path && !is_delayed_init) {
+      std::optional<llvm::StringRef> maybe_path =
+          m_data_nsp->PeekCStr(name_offset);
+      if (maybe_path && !is_delayed_init) {
+        llvm::StringRef path = *maybe_path;
         if (load_cmd.cmd == LC_RPATH)
-          rpath_paths.push_back(path);
-        else {
-          if (path[0] == '@') {
-            if (strncmp(path, "@rpath", strlen("@rpath")) == 0)
-              rpath_relative_paths.push_back(path + strlen("@rpath"));
-            else if (strncmp(path, "@executable_path",
-                             strlen("@executable_path")) == 0)
-              at_exec_relative_paths.push_back(path +
-                                               strlen("@executable_path"));
-          } else {
-            FileSpec file_spec(path);
-            if (files.AppendIfUnique(file_spec))
-              count++;
-          }
+          rpath_paths.push_back(path.str());
+        else if (path.consume_front("@rpath"))
+          rpath_relative_paths.push_back(path.str());
+        else if (path.consume_front("@executable_path"))
+          at_exec_relative_paths.push_back(path.str());
+        else if (!path.starts_with("@")) {
+          FileSpec file_spec(path);
+          if (files.AppendIfUnique(file_spec))
+            count++;
         }
       }
     } break;
@@ -5298,8 +4127,7 @@ uint32_t ObjectFileMachO::GetDependentModules(FileSpecList &files) {
 
   if (!rpath_paths.empty()) {
     // Fixup all LC_RPATH values to be absolute paths.
-    const std::string this_directory =
-        this_file_spec.GetDirectory().GetString();
+    const std::string this_directory = this_file_spec.GetDirectory().str();
     for (auto &rpath : rpath_paths) {
       if (llvm::StringRef(rpath).starts_with(g_loader_path))
         rpath = this_directory + rpath.substr(g_loader_path.size());
@@ -5386,15 +4214,15 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
 
     for (i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t cmd_offset = offset;
-      if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
+      if (!ReadMachOCommand(*m_data_nsp, offset, load_cmd))
         break;
 
       switch (load_cmd.cmd) {
       case LC_UNIXTHREAD:
       case LC_THREAD: {
         while (offset < cmd_offset + load_cmd.cmdsize) {
-          uint32_t flavor = m_data.GetU32(&offset);
-          uint32_t count = m_data.GetU32(&offset);
+          uint32_t flavor = m_data_nsp->GetU32(&offset);
+          uint32_t count = m_data_nsp->GetU32(&offset);
           if (count == 0) {
             // We've gotten off somehow, log and exit;
             return m_entry_point_address;
@@ -5408,7 +4236,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
             {
               offset += 60; // This is the offset of pc in the GPR thread state
                             // data structure.
-              start_address = m_data.GetU32(&offset);
+              start_address = m_data_nsp->GetU32(&offset);
               done = true;
             }
             break;
@@ -5418,17 +4246,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
             {
               offset += 256; // This is the offset of pc in the GPR thread state
                              // data structure.
-              start_address = m_data.GetU64(&offset);
-              done = true;
-            }
-            break;
-          case llvm::MachO::CPU_TYPE_I386:
-            if (flavor ==
-                1) // x86_THREAD_STATE32 from mach/i386/thread_status.h
-            {
-              offset += 40; // This is the offset of eip in the GPR thread state
-                            // data structure.
-              start_address = m_data.GetU32(&offset);
+              start_address = m_data_nsp->GetU64(&offset);
               done = true;
             }
             break;
@@ -5438,7 +4256,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
             {
               offset += 16 * 8; // This is the offset of rip in the GPR thread
                                 // state data structure.
-              start_address = m_data.GetU64(&offset);
+              start_address = m_data_nsp->GetU64(&offset);
               done = true;
             }
             break;
@@ -5453,7 +4271,7 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
         }
       } break;
       case LC_MAIN: {
-        uint64_t entryoffset = m_data.GetU64(&offset);
+        uint64_t entryoffset = m_data_nsp->GetU64(&offset);
         SectionSP text_segment_sp =
             GetSectionList()->FindSectionByName(GetSegmentNameTEXT());
         if (text_segment_sp) {
@@ -5474,9 +4292,10 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
 
     if (start_address == LLDB_INVALID_ADDRESS && IsDynamicLoader()) {
       if (GetSymtab()) {
-        Symbol *dyld_start_sym = GetSymtab()->FindFirstSymbolWithNameAndType(
-            ConstString("_dyld_start"), SymbolType::eSymbolTypeCode,
-            Symtab::eDebugAny, Symtab::eVisibilityAny);
+        const Symbol *dyld_start_sym =
+            GetSymtab()->FindFirstSymbolWithNameAndType(
+                ConstString("_dyld_start"), SymbolType::eSymbolTypeCode,
+                Symtab::eDebugAny, Symtab::eVisibilityAny);
         if (dyld_start_sym && dyld_start_sym->GetAddress().IsValid()) {
           start_address = dyld_start_sym->GetAddress().GetFileAddress();
         }
@@ -5518,10 +4337,8 @@ lldb_private::Address ObjectFileMachO::GetBaseAddress() {
   if (section_list) {
     SectionSP text_segment_sp(
         section_list->FindSectionByName(GetSegmentNameTEXT()));
-    if (text_segment_sp) {
-      header_addr.SetSection(text_segment_sp);
-      header_addr.SetOffset(0);
-    }
+    if (text_segment_sp)
+      header_addr = Address(text_segment_sp, /*offset=*/0);
   }
   return header_addr;
 }
@@ -5537,7 +4354,7 @@ uint32_t ObjectFileMachO::GetNumThreadContexts() {
       llvm::MachO::thread_command thread_cmd;
       for (uint32_t i = 0; i < m_header.ncmds; ++i) {
         const uint32_t cmd_offset = offset;
-        if (m_data.GetU32(&offset, &thread_cmd, 2) == nullptr)
+        if (!ReadMachOCommand(*m_data_nsp, offset, thread_cmd))
           break;
 
         if (thread_cmd.cmd == LC_THREAD) {
@@ -5563,17 +4380,17 @@ ObjectFileMachO::FindLC_NOTEByName(std::string name) {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       llvm::MachO::load_command lc = {};
-      if (m_data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+      if (!ReadMachOCommand(*m_data_nsp, offset, lc))
         break;
       if (lc.cmd == LC_NOTE) {
         char data_owner[17];
-        m_data.CopyData(offset, 16, data_owner);
+        m_data_nsp->CopyData(offset, 16, data_owner);
         data_owner[16] = '\0';
         offset += 16;
 
         if (name == data_owner) {
-          offset_t payload_offset = m_data.GetU64_unchecked(&offset);
-          offset_t payload_size = m_data.GetU64_unchecked(&offset);
+          offset_t payload_offset = m_data_nsp->GetU64_unchecked(&offset);
+          offset_t payload_size = m_data_nsp->GetU64_unchecked(&offset);
           results.push_back({payload_offset, payload_size});
         }
       }
@@ -5595,11 +4412,11 @@ std::string ObjectFileMachO::GetIdentifierString() {
       offset_t payload_offset = std::get<0>(lc_note);
       offset_t payload_size = std::get<1>(lc_note);
       uint32_t version;
-      if (m_data.GetU32(&payload_offset, &version, 1) != nullptr) {
+      if (m_data_nsp->GetU32(&payload_offset, &version, 1) != nullptr) {
         if (version == 1) {
           uint32_t strsize = payload_size - sizeof(uint32_t);
           std::string result(strsize, '\0');
-          m_data.CopyData(payload_offset, strsize, result.data());
+          m_data_nsp->CopyData(payload_offset, strsize, result.data());
           LLDB_LOGF(log, "LC_NOTE 'kern ver str' found with text '%s'",
                     result.c_str());
           return result;
@@ -5613,12 +4430,12 @@ std::string ObjectFileMachO::GetIdentifierString() {
     for (uint32_t i = 0; i < m_header.ncmds; ++i) {
       const uint32_t cmd_offset = offset;
       llvm::MachO::ident_command ident_command;
-      if (m_data.GetU32(&offset, &ident_command, 2) == nullptr)
+      if (!ReadMachOCommand(*m_data_nsp, offset, ident_command))
         break;
       if (ident_command.cmd == LC_IDENT && ident_command.cmdsize != 0) {
         std::string result(ident_command.cmdsize, '\0');
-        if (m_data.CopyData(offset, ident_command.cmdsize, result.data()) ==
-            ident_command.cmdsize) {
+        if (m_data_nsp->CopyData(offset, ident_command.cmdsize,
+                                 result.data()) == ident_command.cmdsize) {
           LLDB_LOGF(log, "LC_IDENT found with text '%s'", result.c_str());
           return result;
         }
@@ -5640,9 +4457,10 @@ AddressableBits ObjectFileMachO::GetAddressableBits() {
     for (auto lc_note : lc_notes) {
       offset_t payload_offset = std::get<0>(lc_note);
       uint32_t version;
-      if (m_data.GetU32(&payload_offset, &version, 1) != nullptr) {
+      if (m_data_nsp->GetU32(&payload_offset, &version, 1) != nullptr) {
         if (version == 3) {
-          uint32_t num_addr_bits = m_data.GetU32_unchecked(&payload_offset);
+          uint32_t num_addr_bits =
+              m_data_nsp->GetU32_unchecked(&payload_offset);
           addressable_bits.SetAddressableBits(num_addr_bits);
           LLDB_LOGF(log,
                     "LC_NOTE 'addrable bits' v3 found, value %d "
@@ -5650,8 +4468,8 @@ AddressableBits ObjectFileMachO::GetAddressableBits() {
                     num_addr_bits);
         }
         if (version == 4) {
-          uint32_t lo_addr_bits = m_data.GetU32_unchecked(&payload_offset);
-          uint32_t hi_addr_bits = m_data.GetU32_unchecked(&payload_offset);
+          uint32_t lo_addr_bits = m_data_nsp->GetU32_unchecked(&payload_offset);
+          uint32_t hi_addr_bits = m_data_nsp->GetU32_unchecked(&payload_offset);
 
           if (lo_addr_bits == hi_addr_bits)
             addressable_bits.SetAddressableBits(lo_addr_bits);
@@ -5722,25 +4540,26 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
       //    uint32_t unused        [ for alignment ]
 
       uint32_t version;
-      if (m_data.GetU32(&payload_offset, &version, 1) != nullptr &&
+      if (m_data_nsp->GetU32(&payload_offset, &version, 1) != nullptr &&
           version <= 2) {
         uint32_t binspec_type = 0;
         uuid_t raw_uuid;
         memset(raw_uuid, 0, sizeof(uuid_t));
 
-        if (!m_data.GetU32(&payload_offset, &binspec_type, 1))
+        if (!m_data_nsp->GetU32(&payload_offset, &binspec_type, 1))
           return false;
-        if (!m_data.GetU64(&payload_offset, &value, 1))
+        if (!m_data_nsp->GetU64(&payload_offset, &value, 1))
           return false;
         uint64_t slide = LLDB_INVALID_ADDRESS;
-        if (version > 1 && !m_data.GetU64(&payload_offset, &slide, 1))
+        if (version > 1 && !m_data_nsp->GetU64(&payload_offset, &slide, 1))
           return false;
         if (value == LLDB_INVALID_ADDRESS && slide != LLDB_INVALID_ADDRESS) {
           value = slide;
           value_is_offset = true;
         }
 
-        if (m_data.CopyData(payload_offset, sizeof(uuid_t), raw_uuid) != 0) {
+        if (m_data_nsp->CopyData(payload_offset, sizeof(uuid_t), raw_uuid) !=
+            0) {
           uuid = UUID(raw_uuid, sizeof(uuid_t));
           // convert the "main bin spec" type into our
           // ObjectFile::BinaryType enum
@@ -5774,9 +4593,9 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
                     version, type, typestr, value,
                     value_is_offset ? "true" : "false",
                     uuid.GetAsString().c_str());
-          if (!m_data.GetU32(&payload_offset, &log2_pagesize, 1))
+          if (!m_data_nsp->GetU32(&payload_offset, &log2_pagesize, 1))
             return false;
-          if (version > 1 && !m_data.GetU32(&payload_offset, &platform, 1))
+          if (version > 1 && !m_data_nsp->GetU32(&payload_offset, &platform, 1))
             return false;
           return true;
         }
@@ -5794,27 +4613,8 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
     Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
-    auto lc_notes = FindLC_NOTEByName("process metadata");
-    for (auto lc_note : lc_notes) {
-      offset_t payload_offset = std::get<0>(lc_note);
-      offset_t strsize = std::get<1>(lc_note);
-      std::string buf(strsize, '\0');
-      if (m_data.CopyData(payload_offset, strsize, buf.data()) != strsize) {
-        LLDB_LOGF(log,
-                  "Unable to read %" PRIu64
-                  " bytes of 'process metadata' LC_NOTE JSON contents",
-                  strsize);
-        return false;
-      }
-      while (buf.back() == '\0')
-        buf.resize(buf.size() - 1);
-      StructuredData::ObjectSP object_sp = StructuredData::ParseJSON(buf);
+    if (StructuredData::ObjectSP object_sp = GetCorefileProcessMetadata()) {
       StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
-      if (!dict) {
-        LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
-                       "get a dictionary.");
-        return false;
-      }
       StructuredData::Array *threads;
       if (!dict->GetValueForKeyAsArray("threads", threads) || !threads) {
         LLDB_LOGF(log,
@@ -5857,6 +4657,95 @@ bool ObjectFileMachO::GetCorefileThreadExtraInfos(
   return false;
 }
 
+/// Return the payload of an LC_NOTE, decompressing it if needed.
+///
+/// A payload is either stored as is, or compressed in the layout of a GNU
+/// .zdebug section:
+///
+///   offset  size  contents
+///        0     4  magic "ZLIB"
+///        4     8  uncompressed size, big-endian uint64_t
+///       12     n  RFC 1950 zlib stream
+///
+/// The size is big-endian regardless of the corefile's byte order. An
+/// uncompressed payload must not start with the magic.
+static llvm::Expected<std::string> ReadLCNotePayload(const DataExtractor &data,
+                                                     lldb::offset_t offset,
+                                                     uint64_t size) {
+  const uint8_t *bytes = data.PeekData(offset, size);
+  if (!bytes)
+    return llvm::createStringError(
+        "payload of %" PRIu64 " bytes is out of bounds", size);
+  llvm::ArrayRef<uint8_t> payload(bytes, size);
+
+  constexpr llvm::StringLiteral magic = "ZLIB";
+  constexpr size_t header_size = magic.size() + sizeof(uint64_t);
+  if (!llvm::toStringRef(payload).starts_with(magic))
+    return llvm::toStringRef(payload).str();
+  if (payload.size() < header_size)
+    return llvm::createStringError("compressed payload header is truncated");
+
+  uint64_t uncompressed_size =
+      llvm::support::endian::read64be(payload.data() + magic.size());
+  llvm::ArrayRef<uint8_t> compressed = payload.drop_front(header_size);
+  // Deflate cannot exceed a 1032:1 ratio. A larger claimed size is corrupt and
+  // must not size the allocation.
+  if (uncompressed_size / 1032 > compressed.size())
+    return llvm::createStringError("uncompressed size %" PRIu64
+                                   " is impossible for %zu compressed bytes",
+                                   uncompressed_size, compressed.size());
+  if (!llvm::compression::zlib::isAvailable())
+    return llvm::createStringError(
+        "payload is zlib-compressed but LLDB was built without zlib");
+
+  llvm::SmallVector<uint8_t, 0> uncompressed;
+  if (llvm::Error err = llvm::compression::zlib::decompress(
+          compressed, uncompressed, uncompressed_size))
+    return err;
+  return llvm::toStringRef(uncompressed).str();
+}
+
+StructuredData::ObjectSP ObjectFileMachO::GetCorefileProcessMetadata() {
+  ModuleSP module_sp(GetModule());
+  if (!module_sp)
+    return {};
+
+  Log *log(GetLog(LLDBLog::Object | LLDBLog::Process | LLDBLog::Thread));
+  std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+  auto lc_notes = FindLC_NOTEByName("process metadata");
+  if (lc_notes.size() == 0)
+    return {};
+
+  if (lc_notes.size() > 1)
+    LLDB_LOGF(
+        log,
+        "Multiple 'process metadata' LC_NOTEs found, only using the first.");
+
+  auto [payload_offset, payload_size] = lc_notes[0];
+  llvm::Expected<std::string> json =
+      ReadLCNotePayload(*m_data_nsp, payload_offset, payload_size);
+  if (!json) {
+    LLDB_LOG_ERROR(log, json.takeError(),
+                   "Unable to read 'process metadata' LC_NOTE: {0}");
+    return {};
+  }
+  StructuredData::ObjectSP object_sp =
+      StructuredData::ParseJSON(llvm::StringRef(*json).rtrim('\0'));
+  if (!object_sp) {
+    LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
+                   "parse as valid JSON.");
+    return {};
+  }
+  StructuredData::Dictionary *dict = object_sp->GetAsDictionary();
+  if (!dict) {
+    LLDB_LOGF(log, "Unable to read 'process metadata' LC_NOTE, did not "
+                   "get a dictionary.");
+    return {};
+  }
+
+  return object_sp;
+}
+
 lldb::RegisterContextSP
 ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
                                          lldb_private::Thread &thread) {
@@ -5872,7 +4761,7 @@ ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
         m_thread_context_offsets.GetEntryAtIndex(idx);
     if (thread_context_file_range) {
 
-      DataExtractor data(m_data, thread_context_file_range->GetRangeBase(),
+      DataExtractor data(*m_data_nsp, thread_context_file_range->GetRangeBase(),
                          thread_context_file_range->GetByteSize());
 
       switch (m_header.cputype) {
@@ -5885,11 +4774,6 @@ ObjectFileMachO::GetThreadContextAtIndex(uint32_t idx,
       case llvm::MachO::CPU_TYPE_ARM:
         reg_ctx_sp =
             std::make_shared<RegisterContextDarwin_arm_Mach>(thread, data);
-        break;
-
-      case llvm::MachO::CPU_TYPE_I386:
-        reg_ctx_sp =
-            std::make_shared<RegisterContextDarwin_i386_Mach>(thread, data);
         break;
 
       case llvm::MachO::CPU_TYPE_X86_64:
@@ -5975,8 +4859,7 @@ ObjectFile::Strata ObjectFileMachO::CalculateStrata() {
     } else {
       SectionList *section_list = GetSectionList();
       if (section_list) {
-        static ConstString g_kld_section_name("__KLD");
-        if (section_list->FindSectionByName(g_kld_section_name))
+        if (section_list->FindSectionByName("__KLD"))
           return eStrataKernel;
       }
     }
@@ -6017,13 +4900,13 @@ llvm::VersionTuple ObjectFileMachO::GetVersion() {
     uint32_t i;
     for (i = 0; i < m_header.ncmds; ++i) {
       const lldb::offset_t cmd_offset = offset;
-      if (m_data.GetU32(&offset, &load_cmd, 2) == nullptr)
+      if (!ReadMachOCommand(*m_data_nsp, offset, load_cmd))
         break;
 
       if (load_cmd.cmd == LC_ID_DYLIB) {
         if (version_cmd == 0) {
           version_cmd = load_cmd.cmd;
-          if (m_data.GetU32(&offset, &load_cmd.dylib, 4) == nullptr)
+          if (m_data_nsp->GetU32(&offset, &load_cmd.dylib, 4) == nullptr)
             break;
           version = load_cmd.dylib.current_version;
         }
@@ -6049,7 +4932,7 @@ ArchSpec ObjectFileMachO::GetArchitecture() {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-    return GetArchitecture(module_sp, m_header, m_data,
+    return GetArchitecture(module_sp, m_header, *m_data_nsp,
                            MachHeaderSizeFromMagic(m_header.magic));
   }
   return arch;
@@ -6063,8 +4946,10 @@ void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process,
     DynamicLoader *dl = process->GetDynamicLoader();
     LazyBool using_shared_cache;
     LazyBool private_shared_cache;
+    FileSpec sc_filepath;
+    std::optional<uint64_t> size;
     dl->GetSharedCacheInformation(base_addr, uuid, using_shared_cache,
-                                  private_shared_cache);
+                                  private_shared_cache, sc_filepath, size);
   }
   Log *log(GetLog(LLDBLog::Symbols | LLDBLog::Process));
   LLDB_LOGF(
@@ -6175,7 +5060,7 @@ static llvm::VersionTuple FindMinimumVersionInfo(DataExtractor &data,
   for (size_t i = 0; i < ncmds; i++) {
     const lldb::offset_t load_cmd_offset = offset;
     llvm::MachO::load_command lc = {};
-    if (data.GetU32(&offset, &lc.cmd, 2) == nullptr)
+    if (!ReadMachOCommand(data, offset, lc))
       break;
 
     uint32_t version = 0;
@@ -6220,14 +5105,14 @@ static llvm::VersionTuple FindMinimumVersionInfo(DataExtractor &data,
 llvm::VersionTuple ObjectFileMachO::GetMinimumOSVersion() {
   if (!m_min_os_version)
     m_min_os_version = FindMinimumVersionInfo(
-        m_data, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
+        *m_data_nsp, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_min_os_version;
 }
 
 llvm::VersionTuple ObjectFileMachO::GetSDKVersion() {
   if (!m_sdk_versions)
     m_sdk_versions = FindMinimumVersionInfo(
-        m_data, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
+        *m_data_nsp, MachHeaderSizeFromMagic(m_header.magic), m_header.ncmds);
   return *m_sdk_versions;
 }
 
@@ -6274,6 +5159,20 @@ Section *ObjectFileMachO::GetMachHeaderSection() {
   }
 
   return nullptr;
+}
+
+bool ObjectFileMachO::IsGOTSection(const lldb_private::Section &section) const {
+  assert(section.GetObjectFile() == this && "Wrong object file!");
+  SectionSP segment = section.GetParent();
+  if (!segment)
+    return false;
+
+  const bool is_data_const_got =
+      segment->GetName() == "__DATA_CONST" && section.GetName() == "__got";
+  const bool is_auth_const_ptr =
+      segment->GetName() == "__AUTH_CONST" &&
+      (section.GetName() == "__auth_got" || section.GetName() == "__auth_ptr");
+  return is_data_const_got || is_auth_const_ptr;
 }
 
 bool ObjectFileMachO::SectionIsLoadable(const Section *section) {
@@ -6351,11 +5250,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
       // sections that size on disk (to avoid __PAGEZERO) and load them
       SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
       if (SectionIsLoadable(section_sp.get())) {
-        LLDB_LOGF(log,
-                  "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
-                  "0x%" PRIx64,
-                  section_sp->GetName().AsCString(),
-                  section_sp->GetFileAddress() + value);
+        LLDB_LOG(
+            log,
+            "ObjectFileMachO::SetLoadAddress segment '{0}' load addr is {1:x}",
+            section_sp->GetName(), section_sp->GetFileAddress() + value);
         if (target.SetSectionLoadAddress(section_sp,
                                          section_sp->GetFileAddress() + value,
                                          warn_multiple))
@@ -6375,10 +5273,10 @@ bool ObjectFileMachO::SetLoadAddress(Target &target, lldb::addr_t value,
             CalculateSectionLoadAddressForMemoryImage(
                 value, mach_header_section, section_sp.get());
         if (section_load_addr != LLDB_INVALID_ADDRESS) {
-          LLDB_LOGF(log,
-                    "ObjectFileMachO::SetLoadAddress segment '%s' load addr is "
-                    "0x%" PRIx64,
-                    section_sp->GetName().AsCString(), section_load_addr);
+          LLDB_LOG(log,
+                   "ObjectFileMachO::SetLoadAddress segment '{0}' load addr is "
+                   "{1:x}",
+                   section_sp->GetName(), section_load_addr);
           if (target.SetSectionLoadAddress(section_sp, section_load_addr,
                                            warn_multiple))
             ++num_loaded_sections;
@@ -6529,16 +5427,16 @@ CreateAllImageInfosPayload(const lldb::ProcessSP &process_sp,
         addr_t vmaddr = section->GetLoadBaseAddress(&target);
         if (vmaddr == LLDB_INVALID_ADDRESS)
           continue;
-        ConstString name = section->GetName();
+        llvm::StringRef name = section->GetName();
         segment_vmaddr seg_vmaddr;
         // This is the uncommon case where strncpy is exactly
-        // the right one, doesn't need to be nul terminated.
+        // the right one, doesn't need to be null-terminated.
         // The segment name in a Mach-O LC_SEGMENT/LC_SEGMENT_64 is char[16] and
-        // is not guaranteed to be nul-terminated if all 16 characters are
+        // is not guaranteed to be null-terminated if all 16 characters are
         // used.
         // coverity[buffer_size_warning]
-        strncpy(seg_vmaddr.segname, name.AsCString(),
-                sizeof(seg_vmaddr.segname));
+        strncpy(seg_vmaddr.segname, name.data(),
+                std::min(name.size(), sizeof(seg_vmaddr.segname)));
         seg_vmaddr.vmaddr = vmaddr;
         seg_vmaddr.unused = 0;
         segment_vmaddrs.push_back(seg_vmaddr);
@@ -6721,7 +5619,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           segment_load_commands.push_back(segment);
         }
 
-        StreamString buffer(Stream::eBinary, addr_byte_size, byte_order);
+        StreamString buffer(Stream::eBinary, byte_order);
 
         llvm::MachO::mach_header_64 mach_header;
         mach_header.magic = addr_byte_size == 8 ? MH_MAGIC_64 : MH_MAGIC;
@@ -6741,7 +5639,6 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         std::vector<StreamString> LC_THREAD_datas(num_threads);
         for (auto &LC_THREAD_data : LC_THREAD_datas) {
           LC_THREAD_data.GetFlags().Set(Stream::eBinary);
-          LC_THREAD_data.SetAddressByteSize(addr_byte_size);
           LC_THREAD_data.SetByteOrder(byte_order);
         }
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
@@ -6756,11 +5653,6 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
             case llvm::MachO::CPU_TYPE_ARM:
               RegisterContextDarwin_arm_Mach::Create_LC_THREAD(
-                  thread_sp.get(), LC_THREAD_datas[thread_idx]);
-              break;
-
-            case llvm::MachO::CPU_TYPE_I386:
-              RegisterContextDarwin_i386_Mach::Create_LC_THREAD(
                   thread_sp.get(), LC_THREAD_datas[thread_idx]);
               break;
 
@@ -6831,7 +5723,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
         // Add "addrable bits" LC_NOTE when an address mask is available
         if (address_mask != LLDB_INVALID_ADDRESS_MASK) {
           std::unique_ptr<LCNoteEntry> addrable_bits_lcnote_up(
-              new LCNoteEntry(addr_byte_size, byte_order));
+              new LCNoteEntry(byte_order));
           addrable_bits_lcnote_up->name = "addrable bits";
           addrable_bits_lcnote_up->payload_file_offset = file_offset;
           int bits = std::bitset<64>(~address_mask).count();
@@ -6849,7 +5741,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
         // Add "process metadata" LC_NOTE
         std::unique_ptr<LCNoteEntry> thread_extrainfo_lcnote_up(
-            new LCNoteEntry(addr_byte_size, byte_order));
+            new LCNoteEntry(byte_order));
         thread_extrainfo_lcnote_up->name = "process metadata";
         thread_extrainfo_lcnote_up->payload_file_offset = file_offset;
 
@@ -6876,7 +5768,7 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 
         // Add "all image infos" LC_NOTE
         std::unique_ptr<LCNoteEntry> all_image_infos_lcnote_up(
-            new LCNoteEntry(addr_byte_size, byte_order));
+            new LCNoteEntry(byte_order));
         all_image_infos_lcnote_up->name = "all image infos";
         all_image_infos_lcnote_up->payload_file_offset = file_offset;
         file_offset = CreateAllImageInfosPayload(
@@ -6892,9 +5784,9 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
           char namebuf[16];
           memset(namebuf, 0, sizeof(namebuf));
           // This is the uncommon case where strncpy is exactly
-          // the right one, doesn't need to be nul terminated.
+          // the right one, doesn't need to be null-terminated.
           // LC_NOTE name field is char[16] and is not guaranteed to be
-          // nul-terminated.
+          // null-terminated.
           // coverity[buffer_size_warning]
           strncpy(namebuf, lcnote->name.c_str(), sizeof(namebuf));
           buffer.PutRawBytes(namebuf, sizeof(namebuf));
@@ -7033,12 +5925,12 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
   for (auto lc_note : lc_notes) {
     offset_t payload_offset = std::get<0>(lc_note);
     // Read the struct all_image_infos_header.
-    uint32_t version = m_data.GetU32(&payload_offset);
+    uint32_t version = m_data_nsp->GetU32(&payload_offset);
     if (version != 1) {
       return image_infos;
     }
-    uint32_t imgcount = m_data.GetU32(&payload_offset);
-    uint64_t entries_fileoff = m_data.GetU64(&payload_offset);
+    uint32_t imgcount = m_data_nsp->GetU32(&payload_offset);
+    uint64_t entries_fileoff = m_data_nsp->GetU64(&payload_offset);
     // 'entries_size' is not used, nor is the 'unused' entry.
     //  offset += 4; // uint32_t entries_size;
     //  offset += 4; // uint32_t unused;
@@ -7048,17 +5940,18 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
     payload_offset = entries_fileoff;
     for (uint32_t i = 0; i < imgcount; i++) {
       // Read the struct image_entry.
-      offset_t filepath_offset = m_data.GetU64(&payload_offset);
+      offset_t filepath_offset = m_data_nsp->GetU64(&payload_offset);
       uuid_t uuid;
-      memcpy(&uuid, m_data.GetData(&payload_offset, sizeof(uuid_t)),
+      memcpy(&uuid, m_data_nsp->GetData(&payload_offset, sizeof(uuid_t)),
              sizeof(uuid_t));
-      uint64_t load_address = m_data.GetU64(&payload_offset);
-      offset_t seg_addrs_offset = m_data.GetU64(&payload_offset);
-      uint32_t segment_count = m_data.GetU32(&payload_offset);
-      uint32_t currently_executing = m_data.GetU32(&payload_offset);
+      uint64_t load_address = m_data_nsp->GetU64(&payload_offset);
+      offset_t seg_addrs_offset = m_data_nsp->GetU64(&payload_offset);
+      uint32_t segment_count = m_data_nsp->GetU32(&payload_offset);
+      uint32_t currently_executing = m_data_nsp->GetU32(&payload_offset);
 
       MachOCorefileImageEntry image_entry;
-      image_entry.filename = (const char *)m_data.GetCStr(&filepath_offset);
+      image_entry.filename =
+          (const char *)m_data_nsp->GetCStr(&filepath_offset);
       image_entry.uuid = UUID(uuid, sizeof(uuid_t));
       image_entry.load_address = load_address;
       image_entry.currently_executing = currently_executing;
@@ -7066,10 +5959,10 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
       offset_t seg_vmaddrs_offset = seg_addrs_offset;
       for (uint32_t j = 0; j < segment_count; j++) {
         char segname[17];
-        m_data.CopyData(seg_vmaddrs_offset, 16, segname);
+        m_data_nsp->CopyData(seg_vmaddrs_offset, 16, segname);
         segname[16] = '\0';
         seg_vmaddrs_offset += 16;
-        uint64_t vmaddr = m_data.GetU64(&seg_vmaddrs_offset);
+        uint64_t vmaddr = m_data_nsp->GetU64(&seg_vmaddrs_offset);
         seg_vmaddrs_offset += 8; /* unused */
 
         std::tuple<ConstString, addr_t> new_seg{ConstString(segname), vmaddr};
@@ -7088,14 +5981,14 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
   lc_notes = FindLC_NOTEByName("load binary");
   for (auto lc_note : lc_notes) {
     offset_t payload_offset = std::get<0>(lc_note);
-    uint32_t version = m_data.GetU32(&payload_offset);
+    uint32_t version = m_data_nsp->GetU32(&payload_offset);
     if (version == 1) {
       uuid_t uuid;
-      memcpy(&uuid, m_data.GetData(&payload_offset, sizeof(uuid_t)),
+      memcpy(&uuid, m_data_nsp->GetData(&payload_offset, sizeof(uuid_t)),
              sizeof(uuid_t));
-      uint64_t load_address = m_data.GetU64(&payload_offset);
-      uint64_t slide = m_data.GetU64(&payload_offset);
-      std::string filename = m_data.GetCStr(&payload_offset);
+      uint64_t load_address = m_data_nsp->GetU64(&payload_offset);
+      uint64_t slide = m_data_nsp->GetU64(&payload_offset);
+      std::string filename = m_data_nsp->GetCStr(&payload_offset);
 
       MachOCorefileImageEntry image_entry;
       image_entry.filename = filename;
@@ -7121,17 +6014,22 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
 bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
   MachOCorefileAllImageInfos image_infos = GetCorefileAllImageInfos();
   Log *log = GetLog(LLDBLog::Object | LLDBLog::DynamicLoader);
-  Status error;
 
   bool found_platform_binary = false;
   ModuleList added_modules;
-  for (MachOCorefileImageEntry &image : image_infos.all_image_infos) {
-    ModuleSP module_sp, local_filesystem_module_sp;
 
+  llvm::SmallVector<const MachOCorefileImageEntry *> pending_images;
+  std::vector<DynamicLoader::BinarySpec> pending_specs;
+
+  for (MachOCorefileImageEntry &image : image_infos.all_image_infos) {
     // If this is a platform binary, it has been loaded (or registered with
     // the DynamicLoader to be loaded), we don't need to do any further
     // processing.  We're not going to call ModulesDidLoad on this in this
     // method, so notify==true.
+    //
+    // Setting up a platform binary can replace the Target's platform and
+    // dynamic loader, so no image is searched for until this loop has run to
+    // the end.
     if (process.GetTarget()
             .GetDebugger()
             .GetPlatformList()
@@ -7141,6 +6039,7 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
                 "ObjectFileMachO::%s binary at 0x%" PRIx64
                 " is a platform binary, has been handled by a Platform plugin.",
                 __FUNCTION__, image.load_address);
+      found_platform_binary = true;
       continue;
     }
 
@@ -7154,60 +6053,85 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
 
     // We have either a UUID, or we have a load address which
     // and can try to read load commands and find a UUID.
-    if (image.uuid.IsValid() ||
-        (!value_is_offset && value != LLDB_INVALID_ADDRESS)) {
-      const bool set_load_address = image.segment_load_addresses.size() == 0;
-      const bool notify = false;
-      // Userland Darwin binaries will have segment load addresses via
-      // the `all image infos` LC_NOTE.
-      const bool allow_memory_image_last_resort =
-          image.segment_load_addresses.size();
-      module_sp = DynamicLoader::LoadBinaryWithUUIDAndAddress(
-          &process, image.filename, image.uuid, value, value_is_offset,
-          image.currently_executing, notify, set_load_address,
-          allow_memory_image_last_resort);
+    if (!image.uuid.IsValid() &&
+        (value_is_offset || value == LLDB_INVALID_ADDRESS))
+      continue;
+
+    DynamicLoader::BinarySpec bin_spec;
+    bin_spec.name = image.filename;
+    bin_spec.uuid = image.uuid;
+    bin_spec.value = value;
+    bin_spec.value_is_offset = value_is_offset;
+    bin_spec.force_symbol_search = image.currently_executing;
+    bin_spec.notify = false;
+    // Userland Darwin binaries will have segment load addresses via
+    // the `all image infos` LC_NOTE.
+    bin_spec.set_address_in_target = image.segment_load_addresses.empty();
+    bin_spec.allow_memory_image_last_resort =
+        !image.segment_load_addresses.empty();
+
+    pending_images.push_back(&image);
+    pending_specs.push_back(std::move(bin_spec));
+  }
+
+  DynamicLoader::LocateBinaries(&process, pending_specs);
+
+  for (auto [image, bin_spec] :
+       llvm::zip_equal(pending_images, pending_specs)) {
+    ModuleSP module_sp;
+    if (llvm::Expected<ModuleSP> loaded =
+            DynamicLoader::LoadBinaryInTarget(&process, bin_spec)) {
+      module_sp = *loaded;
+    } else if (bin_spec.force_symbol_search) {
+      *process.GetTarget().GetDebugger().GetAsyncErrorStream()
+          << llvm::toString(loaded.takeError()) << "\n";
+    } else {
+      // A corefile image that isn't on this machine is routine, and has
+      // already been logged.
+      llvm::consumeError(loaded.takeError());
     }
 
-    // We have a ModuleSP to load in the Target.  Load it at the
-    // correct address/slide and notify/load scripting resources.
-    if (module_sp) {
-      added_modules.Append(module_sp, false /* notify */);
+    if (!module_sp)
+      continue;
 
-      // We have a list of segment load address
-      if (image.segment_load_addresses.size() > 0) {
-        if (log) {
-          std::string uuidstr = image.uuid.GetAsString();
-          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s with section load addresses",
-                      module_sp->GetFileSpec().GetPath().c_str(),
-                      uuidstr.c_str());
-        }
-        for (auto name_vmaddr_tuple : image.segment_load_addresses) {
-          SectionList *sectlist = module_sp->GetObjectFile()->GetSectionList();
-          if (sectlist) {
-            SectionSP sect_sp =
-                sectlist->FindSectionByName(std::get<0>(name_vmaddr_tuple));
-            if (sect_sp) {
-              process.GetTarget().SetSectionLoadAddress(
-                  sect_sp, std::get<1>(name_vmaddr_tuple));
-            }
+    added_modules.Append(module_sp, false /* notify */);
+
+    // We have a list of segment load address
+    if (image->segment_load_addresses.size() > 0) {
+      if (log) {
+        std::string uuidstr = image->uuid.GetAsString();
+        log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                    "UUID %s with section load addresses",
+                    module_sp->GetFileSpec().GetPath().c_str(),
+                    uuidstr.c_str());
+      }
+      ObjectFile *objfile = module_sp->GetObjectFile();
+      SectionList *sectlist = objfile ? objfile->GetSectionList() : nullptr;
+      for (auto name_vmaddr_tuple : image->segment_load_addresses) {
+        if (sectlist) {
+          SectionSP sect_sp =
+              sectlist->FindSectionByName(std::get<0>(name_vmaddr_tuple));
+          if (sect_sp) {
+            process.GetTarget().SetSectionLoadAddress(
+                sect_sp, std::get<1>(name_vmaddr_tuple));
           }
         }
-      } else {
-        if (log) {
-          std::string uuidstr = image.uuid.GetAsString();
-          log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
-                      "UUID %s with %s 0x%" PRIx64,
-                      module_sp->GetFileSpec().GetPath().c_str(),
-                      uuidstr.c_str(),
-                      value_is_offset ? "slide" : "load address", value);
-        }
-        bool changed;
-        module_sp->SetLoadAddress(process.GetTarget(), value, value_is_offset,
-                                  changed);
       }
+    } else {
+      if (log) {
+        std::string uuidstr = image->uuid.GetAsString();
+        log->Printf("ObjectFileMachO::LoadCoreFileImages adding binary '%s' "
+                    "UUID %s with %s 0x%" PRIx64,
+                    module_sp->GetFileSpec().GetPath().c_str(), uuidstr.c_str(),
+                    bin_spec.value_is_offset ? "slide" : "load address",
+                    bin_spec.value);
+      }
+      bool changed;
+      module_sp->SetLoadAddress(process.GetTarget(), bin_spec.value,
+                                bin_spec.value_is_offset, changed);
     }
   }
+
   if (added_modules.GetSize() > 0) {
     process.GetTarget().ModulesDidLoad(added_modules);
     process.Flush();

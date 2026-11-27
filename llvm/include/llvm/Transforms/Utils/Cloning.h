@@ -17,6 +17,8 @@
 #ifndef LLVM_TRANSFORMS_UTILS_CLONING_H
 #define LLVM_TRANSFORMS_UTILS_CLONING_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -86,6 +88,10 @@ struct ClonedCodeInfo {
   /// may be dangling, it is only intended to be used via isSimplified(), to
   /// check whether the main VMap mapping involves simplification or not.
   DenseMap<const Value *, const Value *> OrigVMap;
+
+  // Cloned calls that were originally an indirect call. They may be direct or
+  // indirect after cloning.
+  SmallSetVector<const Value *, 4> OriginallyIndirectCalls;
 
   ClonedCodeInfo() = default;
 
@@ -224,11 +230,12 @@ LLVM_ABI void CloneFunctionBodyInto(
     ValueMaterializer *Materializer = nullptr,
     const MetadataPredicate *IdentityMD = nullptr);
 
-LLVM_ABI void CloneAndPruneIntoFromInst(
-    Function *NewFunc, const Function *OldFunc, const Instruction *StartingInst,
-    ValueToValueMapTy &VMap, bool ModuleLevelChanges,
-    SmallVectorImpl<ReturnInst *> &Returns, const char *NameSuffix = "",
-    ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI void
+CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
+                          const Instruction *StartingInst,
+                          ValueToValueMapTy &VMap, bool ModuleLevelChanges,
+                          SmallVectorImpl<ReturnInst *> &Returns,
+                          const char *NameSuffix, ClonedCodeInfo &CodeInfo);
 
 /// This works exactly like CloneFunctionInto,
 /// except that it does some simple constant prop and DCE on the fly.  The
@@ -241,10 +248,11 @@ LLVM_ABI void CloneAndPruneIntoFromInst(
 /// If ModuleLevelChanges is false, VMap contains no non-identity GlobalValue
 /// mappings.
 ///
-LLVM_ABI void CloneAndPruneFunctionInto(
-    Function *NewFunc, const Function *OldFunc, ValueToValueMapTy &VMap,
-    bool ModuleLevelChanges, SmallVectorImpl<ReturnInst *> &Returns,
-    const char *NameSuffix = "", ClonedCodeInfo *CodeInfo = nullptr);
+LLVM_ABI void
+CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
+                          ValueToValueMapTy &VMap, bool ModuleLevelChanges,
+                          SmallVectorImpl<ReturnInst *> &Returns,
+                          const char *NameSuffix, ClonedCodeInfo &CodeInfo);
 
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.
@@ -268,16 +276,13 @@ public:
   /// the caller.
   SmallVector<AllocaInst *, 4> StaticAllocas;
 
-  /// InlineFunction fills this in with callsites that were inlined from the
-  /// callee. This is only filled in if CG is non-null.
-  SmallVector<WeakTrackingVH, 8> InlinedCalls;
-
   /// All of the new call sites inlined into the caller.
   ///
-  /// 'InlineFunction' fills this in by scanning the inlined instructions, and
-  /// only if CG is null. If CG is non-null, instead the value handle
-  /// `InlinedCalls` above is used.
+  /// 'InlineFunction' fills this in by scanning the inlined instructions.
   SmallVector<CallBase *, 8> InlinedCallSites;
+
+  Value *ConvergenceControlToken = nullptr;
+  Instruction *CallSiteEHPad = nullptr;
 
   /// Update profile for callee as well as cloned version. We need to do this
   /// for regular inlining, but not for inlining from sample profile loader.
@@ -285,10 +290,37 @@ public:
 
   void reset() {
     StaticAllocas.clear();
-    InlinedCalls.clear();
     InlinedCallSites.clear();
+    ConvergenceControlToken = nullptr;
+    CallSiteEHPad = nullptr;
   }
 };
+
+/// Check if it is legal to perform inlining of the function called by \p CB
+/// into the caller at this particular use, and sets fields in \p IFI.
+///
+/// This does not consider whether it is possible for the function callee itself
+/// to be inlined; for that see isInlineViable.
+LLVM_ABI InlineResult CanInlineCallSite(const CallBase &CB,
+                                        InlineFunctionInfo &IFI);
+
+/// This should generally not be used, use InlineFunction instead.
+///
+/// Perform mechanical inlining of \p CB into the caller.
+///
+/// This does not perform any legality or profitability checks for the
+/// inlining. This assumes that CanInlineCallSite was already called, populated
+/// \p IFI, and returned InlineResult::success.
+///
+/// Also assumes that isInlineViable returned InlineResult::success for the
+/// called function.
+LLVM_ABI void InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
+                                 bool MergeAttributes = false,
+                                 AAResults *CalleeAAR = nullptr,
+                                 bool InsertLifetime = true,
+                                 bool TrackInlineHistory = false,
+                                 Function *ForwardVarArgsTo = nullptr,
+                                 OptimizationRemarkEmitter *ORE = nullptr);
 
 /// This function inlines the called function into the basic
 /// block of the caller.  This returns false if it is not possible to inline
@@ -316,6 +348,7 @@ LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                      bool MergeAttributes = false,
                                      AAResults *CalleeAAR = nullptr,
                                      bool InsertLifetime = true,
+                                     bool TrackInlineHistory = false,
                                      Function *ForwardVarArgsTo = nullptr,
                                      OptimizationRemarkEmitter *ORE = nullptr);
 
@@ -328,13 +361,17 @@ LLVM_ABI InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
                                      bool MergeAttributes = false,
                                      AAResults *CalleeAAR = nullptr,
                                      bool InsertLifetime = true,
-                                     Function *ForwardVarArgsTo = nullptr);
+                                     bool TrackInlineHistory = false,
+                                     Function *ForwardVarArgsTo = nullptr,
+                                     OptimizationRemarkEmitter *ORE = nullptr);
 
 /// Clones a loop \p OrigLoop.  Returns the loop and the blocks in \p
 /// Blocks.
 ///
 /// Updates LoopInfo and DominatorTree assuming the loop is dominated by block
 /// \p LoopDomBB.  Insert the new blocks before block specified in \p Before.
+/// The client needs to further update the CFG and DominatorTree after calling
+/// this function, to ensure the IR remains valid.
 /// Note: Only innermost loops are supported.
 LLVM_ABI Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                                       Loop *OrigLoop, ValueToValueMapTy &VMap,
@@ -382,18 +419,28 @@ identifyNoAliasScopesToClone(BasicBlock::iterator Start,
 /// The 'Ext' string is added as an extension to the name.
 /// Afterwards, the ClonedScopes contains the mapping of the original scope
 /// MDNode onto the cloned scope.
-/// Be aware that the cloned scopes are still part of the original scope domain.
-LLVM_ABI void cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
-                                 DenseMap<MDNode *, MDNode *> &ClonedScopes,
-                                 StringRef Ext, LLVMContext &Context);
+/// Be aware that the cloned scopes are still part of the original scope domain,
+/// unless that domain has disjoint scopes, in which case they are placed in a
+/// clone of the domain. ClonedDomains contains the mapping of such domains onto
+/// their clones.
+LLVM_ABI void
+cloneNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
+                   DenseMap<MDNode *, MDNode *> &ClonedScopes,
+                   DenseMap<const MDNode *, MDNode *> &ClonedDomains,
+                   StringRef Ext, LLVMContext &Context);
 
 /// Adapt the metadata for the specified instruction according to the
 /// provided mapping. This is normally used after cloning an instruction, when
 /// some noalias scopes needed to be cloned.
+/// Scopes that belong to a domain in ClonedDomains but are not in ClonedScopes
+/// (because they have no declaration in the cloned code) are also cloned into
+/// the cloned domain, using 'Ext' as an extension to their name, and added to
+/// ClonedScopes.
 LLVM_ABI void
 adaptNoAliasScopes(llvm::Instruction *I,
-                   const DenseMap<MDNode *, MDNode *> &ClonedScopes,
-                   LLVMContext &Context);
+                   DenseMap<MDNode *, MDNode *> &ClonedScopes,
+                   const DenseMap<const MDNode *, MDNode *> &ClonedDomains,
+                   StringRef Ext, LLVMContext &Context);
 
 /// Clone the specified noalias decl scopes. Then adapt all instructions in the
 /// NewBlocks basicblocks to the cloned versions.

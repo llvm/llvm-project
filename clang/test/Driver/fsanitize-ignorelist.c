@@ -25,7 +25,8 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=nullability -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=undefined -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=alignment -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
-// RUN: %clang --target=%itanium_abi_triple -fsanitize=float-divide-by-zero -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
+// Pass `--no-xcselect` to prevent the driver injecting -fdepfile-entry=<sysroot>/SDKSettings.json when xcselect is active.
+// RUN: %clang --target=%itanium_abi_triple --no-xcselect -fsanitize=float-divide-by-zero -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-IGNORELIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-ignorelist=
 // CHECK-DEFAULT-UBSAN-IGNORELIST: -fsanitize-system-ignorelist={{.*}}ubsan_ignorelist.txt
 
 // Check that combining ubsan and another sanitizer results in both ignorelists being used.
@@ -51,6 +52,17 @@
 // Driver properly reports malformed ignorelist files.
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.second -fsanitize-ignorelist=%t.bad -fsanitize-ignorelist=%t.good %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-IGNORELIST
 // CHECK-BAD-IGNORELIST: error: malformed sanitizer ignorelist: 'error parsing file '{{.*}}.bad': malformed line 1: 'badline''
+
+// Version 6 disallows entries without an explicit section header.
+// RUN: printf "#!special-case-list-v6\nfun:foo\n" > %t.v6_implicit
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.v6_implicit %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-V6-IMPLICIT
+// CHECK-V6-IMPLICIT: error: malformed sanitizer ignorelist: 'error parsing file '{{.*}}.v6_implicit': entry without section header on line 2: 'fun:foo''
+
+// Older versions still accept entries without a section header.
+// RUN: printf "#!special-case-list-v5\nfun:foo\n" > %t.v5_implicit
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.v5_implicit %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-V5-IMPLICIT
+// CHECK-V5-IMPLICIT-NOT: error:
+// CHECK-V5-IMPLICIT: -fsanitize-ignorelist={{.*}}.v5_implicit
 
 // -fno-sanitize-ignorelist disables all ignorelists specified earlier.
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=address -fsanitize-ignorelist=%t.good -fno-sanitize-ignorelist -fsanitize-ignorelist=%t.second %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ONLY-FIRST-DISABLED --implicit-check-not=-fsanitize-ignorelist=

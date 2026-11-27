@@ -6,8 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: Simplify these tests and split them up. mlock, mlock2, mlockall,
+// munlock, and munlockall should have separate test files which only need to
+// check our code paths (succeeds and errors).
+
+#include "hdr/sys_mman_macros.h"
+#include "hdr/sys_resource_macros.h"
+#include "hdr/types/struct_rlimit.h"
+#include "src/__support/CPP/scope.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/libc_errno.h"
+#include "src/__support/macros/sanitizer.h"
 #include "src/sys/mman/madvise.h"
 #include "src/sys/mman/mincore.h"
 #include "src/sys/mman/mlock.h"
@@ -18,16 +27,15 @@
 #include "src/sys/mman/munlockall.h"
 #include "src/sys/mman/munmap.h"
 #include "src/sys/resource/getrlimit.h"
-#include "src/unistd/sysconf.h"
+#include "src/sys/resource/setrlimit.h"
+#include "src/unistd/getpagesize.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
-#include <linux/capability.h>
-#include <sys/mman.h>
-#include <sys/resource.h>
 #include <sys/syscall.h>
-#include <unistd.h>
+
+const size_t PAGE_SIZE = LIBC_NAMESPACE::getpagesize();
 
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 using LlvmLibcMlockTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
@@ -37,7 +45,7 @@ struct PageHolder {
   void *addr;
 
   PageHolder()
-      : size(LIBC_NAMESPACE::sysconf(_SC_PAGESIZE)),
+      : size(PAGE_SIZE),
         addr(LIBC_NAMESPACE::mmap(nullptr, size, PROT_READ | PROT_WRITE,
                                   MAP_ANONYMOUS | MAP_PRIVATE, -1, 0)) {}
   ~PageHolder() {
@@ -50,28 +58,10 @@ struct PageHolder {
   bool is_valid() { return addr != MAP_FAILED; }
 };
 
-static bool get_capacity(unsigned int cap) {
-  __user_cap_header_struct header;
-  header.pid = 0;
-  header.version = _LINUX_CAPABILITY_VERSION_3;
-  __user_cap_data_struct data[_LINUX_CAPABILITY_U32S_3];
-  // TODO: use capget wrapper once implemented.
-  // https://github.com/llvm/llvm-project/issues/80037
-  long res = LIBC_NAMESPACE::syscall_impl(
-      SYS_capget, LIBC_NAMESPACE::cpp::bit_cast<long>(&header),
-      LIBC_NAMESPACE::cpp::bit_cast<long>(&data));
-  if (res < 0)
-    return false;
-  unsigned idx = CAP_TO_INDEX(cap);
-  unsigned shift = CAP_TO_MASK(cap);
-  return (data[idx].effective & shift) != 0;
-}
-
 static bool is_permitted_size(size_t size) {
   rlimit rlimits;
   LIBC_NAMESPACE::getrlimit(RLIMIT_MEMLOCK, &rlimits);
-  return size <= static_cast<size_t>(rlimits.rlim_cur) ||
-         get_capacity(CAP_IPC_LOCK);
+  return size <= static_cast<size_t>(rlimits.rlim_cur);
 }
 
 TEST_F(LlvmLibcMlockTest, UnMappedMemory) {
@@ -90,7 +80,8 @@ TEST_F(LlvmLibcMlockTest, Overflow) {
               Fails(EINVAL));
 }
 
-#ifdef SYS_mlock2
+// QEMU user space emulation does not support mlock2 and returns ENOSYS.
+#if defined(SYS_mlock2) && !defined(LIBC_TEST_UNDER_EMULATOR)
 TEST_F(LlvmLibcMlockTest, MLock2) {
   PageHolder holder;
   EXPECT_TRUE(holder.is_valid());
@@ -115,8 +106,11 @@ TEST_F(LlvmLibcMlockTest, MLock2) {
   EXPECT_EQ(vec & 1, 1);
   EXPECT_THAT(LIBC_NAMESPACE::munlock(holder.addr, holder.size), Succeeds());
 }
-#endif
+#endif // defined(SYS_mlock2) && !defined(LIBC_TEST_UNDER_EMULATOR)
 
+// QEMU user space emulation stubs mlockall to return 0 instead of EINVAL on
+// invalid flags.
+#ifndef LIBC_TEST_UNDER_EMULATOR
 TEST_F(LlvmLibcMlockTest, InvalidFlag) {
   size_t alloc_size = 128; // page size
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
@@ -139,8 +133,46 @@ TEST_F(LlvmLibcMlockTest, InvalidFlag) {
 
   LIBC_NAMESPACE::munmap(addr, alloc_size);
 }
+#endif // LIBC_TEST_UNDER_EMULATOR
 
+// Shadow-memory sanitizers reserve terabytes of shadow mappings (which is why
+// sanitizer_common intercepts mlockall as a no-op). Because LIBC_NAMESPACE::
+// mlockall invokes SYS_mlockall directly, MCL_CURRENT attempts to populate and
+// pin the shadow region into physical RAM when RLIMIT_MEMLOCK is unlimited or
+// CAP_IPC_LOCK is held.
+#ifndef LIBC_HAS_SANITIZER
 TEST_F(LlvmLibcMlockTest, MLockAll) {
+  // For unprivileged processes (without CAP_IPC_LOCK), cap soft RLIMIT_MEMLOCK
+  // so mlockall fails fast with ENOMEM on RLIM_INFINITY hosts if multi-gigabyte
+  // virtual arenas (such as allocator regions or undetected shadow tools) are
+  // mapped.
+  constexpr rlim_t MAX_TEST_MEMLOCK = 64 * 1024 * 1024;
+  rlimit orig_limits{};
+  ASSERT_THAT(LIBC_NAMESPACE::getrlimit(RLIMIT_MEMLOCK, &orig_limits),
+              Succeeds());
+  bool lowered_rlimit = false;
+  if (orig_limits.rlim_cur > MAX_TEST_MEMLOCK) {
+    rlimit capped_limits = orig_limits;
+    capped_limits.rlim_cur = MAX_TEST_MEMLOCK;
+    if (LIBC_NAMESPACE::setrlimit(RLIMIT_MEMLOCK, &capped_limits) == 0) {
+      lowered_rlimit = true;
+    } else {
+      EXPECT_TRUE(libc_errno == EPERM || libc_errno == ENOSYS);
+      libc_errno = 0;
+    }
+  }
+  LIBC_NAMESPACE::cpp::scope_exit restore_limits([&] {
+    const int saved_errno = libc_errno;
+    LIBC_NAMESPACE::munlockall();
+    libc_errno = 0;
+    if (lowered_rlimit) {
+      EXPECT_THAT(LIBC_NAMESPACE::setrlimit(RLIMIT_MEMLOCK, &orig_limits),
+                  Succeeds());
+      libc_errno = 0;
+    }
+    libc_errno = saved_errno;
+  });
+
   {
     PageHolder holder;
     EXPECT_TRUE(holder.is_valid());
@@ -196,3 +228,4 @@ TEST_F(LlvmLibcMlockTest, MLockAll) {
   }
 #endif
 }
+#endif // !LIBC_HAS_SANITIZER

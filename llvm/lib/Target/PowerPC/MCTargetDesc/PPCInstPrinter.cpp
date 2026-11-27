@@ -13,7 +13,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
-#include "PPCMCExpr.h"
+#include "PPCMCAsmInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -22,31 +22,18 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
-// FIXME: Once the integrated assembler supports full register names, tie this
-// to the verbose-asm setting.
-static cl::opt<bool>
-FullRegNames("ppc-asm-full-reg-names", cl::Hidden, cl::init(false),
-             cl::desc("Use full register names when printing assembly"));
-
-// Useful for testing purposes. Prints vs{31-63} as v{0-31} respectively.
-static cl::opt<bool>
-ShowVSRNumsAsVR("ppc-vsr-nums-as-vr", cl::Hidden, cl::init(false),
-             cl::desc("Prints full register names with vs{31-63} as v{0-31}"));
-
-// Prints full register names with percent symbol.
-static cl::opt<bool>
-FullRegNamesWithPercent("ppc-reg-with-percent-prefix", cl::Hidden,
-                        cl::init(false),
-                        cl::desc("Prints full register names with percent"));
-
 #define PRINT_ALIAS_INSTR
 #include "PPCGenAsmWriter.inc"
+
+PPCInstPrinter::PPCInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
+                               const MCRegisterInfo &MRI, Triple T)
+    : MCInstPrinter(MAI, MII, MRI),
+      CLOpts(PPC_MC::getCLOpts(MAI.getTargetOptions())), TT(T) {}
 
 void PPCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   const char *RegName = getRegisterName(Reg);
@@ -323,43 +310,25 @@ void PPCInstPrinter::printATBitsAsHint(const MCInst *MI, unsigned OpNo,
     O << "+";
 }
 
-void PPCInstPrinter::printU1ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Template for unsigned immediate operands with validation.
+// Validates that the value fits within the specified width and prints it.
+template <unsigned Width>
+void PPCInstPrinter::printUImmOperand(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 1 && "Invalid u1imm argument!");
+  assert(Value <= ((1ULL << Width) - 1) && "Invalid uimm argument!");
   O << (unsigned int)Value;
 }
 
-void PPCInstPrinter::printU2ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 3 && "Invalid u2imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU3ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 8 && "Invalid u3imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU4ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 15 && "Invalid u4imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printS5ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Template for signed immediate operands with sign extension.
+// Sign-extends the value to the specified width and prints it.
+template <unsigned Width>
+void PPCInstPrinter::printSImmOperand(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
   int Value = MI->getOperand(OpNo).getImm();
-  Value = SignExtend32<5>(Value);
+  Value = SignExtend32<Width>(Value);
   O << (int)Value;
 }
 
@@ -371,54 +340,14 @@ void PPCInstPrinter::printImmZeroOperand(const MCInst *MI, unsigned OpNo,
   O << (unsigned int)Value;
 }
 
-void PPCInstPrinter::printU5ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 31 && "Invalid u5imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU6ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 63 && "Invalid u6imm argument!");
-  O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU7ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
-  unsigned int Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 127 && "Invalid u7imm argument!");
-  O << (unsigned int)Value;
-}
-
-// Operands of BUILD_VECTOR are signed and we use this to print operands
-// of XXSPLTIB which are unsigned. So we simply truncate to 8 bits and
-// print as unsigned.
-void PPCInstPrinter::printU8ImmOperand(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+// Truncating version specifically for BUILD_VECTOR operands that may be
+// sign-extended (e.g., -1 becomes 0xFFFFFFFF). Truncates to 8 bits without
+// validation, unlike the standard printUImmOperand<8> which validates.
+void PPCInstPrinter::printU8ImmOperandTrunc(const MCInst *MI, unsigned OpNo,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &O) {
   unsigned char Value = MI->getOperand(OpNo).getImm();
   O << (unsigned int)Value;
-}
-
-void PPCInstPrinter::printU10ImmOperand(const MCInst *MI, unsigned OpNo,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  unsigned short Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 1023 && "Invalid u10imm argument!");
-  O << (unsigned short)Value;
-}
-
-void PPCInstPrinter::printU12ImmOperand(const MCInst *MI, unsigned OpNo,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  unsigned short Value = MI->getOperand(OpNo).getImm();
-  assert(Value <= 4095 && "Invalid u12imm argument!");
-  O << (unsigned short)Value;
 }
 
 void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
@@ -427,6 +356,28 @@ void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
   if (MI->getOperand(OpNo).isImm())
     O << (short)MI->getOperand(OpNo).getImm();
   else
+    printOperand(MI, OpNo, STI, O);
+}
+
+void PPCInstPrinter::printS32ImmOperand(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  if (MI->getOperand(OpNo).isImm()) {
+    long long Value = MI->getOperand(OpNo).getImm();
+    assert(isInt<32>(Value) && "Invalid s32imm argument!");
+    O << (long long)Value;
+  } else
+    printOperand(MI, OpNo, STI, O);
+}
+
+void PPCInstPrinter::printNegS32ImmOperand(const MCInst *MI, unsigned OpNo,
+                                           const MCSubtargetInfo &STI,
+                                           raw_ostream &O) {
+  if (MI->getOperand(OpNo).isImm()) {
+    long long Value = MI->getOperand(OpNo).getImm();
+    assert(isInt<32>(Value) && "Invalid s32imm argument!");
+    O << (long long)Value;
+  } else
     printOperand(MI, OpNo, STI, O);
 }
 
@@ -600,7 +551,7 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
 /// showRegistersWithPercentPrefix - Check if this register name should be
 /// printed with a percentage symbol as prefix.
 bool PPCInstPrinter::showRegistersWithPercentPrefix(const char *RegName) const {
-  if ((!FullRegNamesWithPercent && !MAI.useFullRegisterNames()) ||
+  if ((!CLOpts.reg_with_percent_prefix && !MAI.useFullRegisterNames()) ||
       TT.getOS() == Triple::AIX)
     return false;
 
@@ -619,11 +570,11 @@ bool PPCInstPrinter::showRegistersWithPercentPrefix(const char *RegName) const {
 /// getVerboseConditionalRegName - This method expands the condition register
 /// when requested explicitly or targetting Darwin.
 const char *
-PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
+PPCInstPrinter::getVerboseConditionRegName(MCRegister Reg,
                                            unsigned RegEncoding) const {
-  if (!FullRegNames && !MAI.useFullRegisterNames())
+  if (!CLOpts.asm_full_reg_names && !MAI.useFullRegisterNames())
     return nullptr;
-  if (RegNum < PPC::CR0EQ || RegNum > PPC::CR7UN)
+  if (Reg < PPC::CR0EQ || Reg > PPC::CR7UN)
     return nullptr;
   const char *CRBits[] = {
     "lt", "gt", "eq", "un",
@@ -641,7 +592,8 @@ PPCInstPrinter::getVerboseConditionRegName(unsigned RegNum,
 // showRegistersWithPrefix - This method determines whether registers
 // should be number-only or include the prefix.
 bool PPCInstPrinter::showRegistersWithPrefix() const {
-  return FullRegNamesWithPercent || FullRegNames || MAI.useFullRegisterNames();
+  return CLOpts.reg_with_percent_prefix || CLOpts.asm_full_reg_names ||
+         MAI.useFullRegisterNames();
 }
 
 void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
@@ -649,7 +601,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     MCRegister Reg = Op.getReg();
-    if (!ShowVSRNumsAsVR)
+    if (!CLOpts.vsr_nums_as_vr)
       Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
 
     const char *RegName;

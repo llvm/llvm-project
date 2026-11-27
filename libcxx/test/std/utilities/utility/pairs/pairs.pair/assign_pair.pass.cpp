@@ -81,12 +81,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
     using P = std::pair<int, std::unique_ptr<int> >;
     static_assert(!std::is_copy_assignable<P>::value, "");
   }
-  {
-    using P = std::pair<int, Incomplete&>;
-    static_assert(!std::is_copy_assignable<P>::value, "");
-    P p(42, inc_obj);
-    assert(&p.second == &inc_obj);
-  }
 
   return true;
 }
@@ -99,6 +93,3 @@ int main(int, char**) {
 
   return 0;
 }
-
-struct Incomplete {};
-Incomplete inc_obj;

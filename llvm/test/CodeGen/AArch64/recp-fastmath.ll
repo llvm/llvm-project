@@ -164,5 +164,5 @@ define <4 x double> @d4recp1(<4 x double> %x) #1 {
 ; CHECK-NOT: frecps {{v[0-7]\.2d}}, {{v[0-7]\.2d}}, {{v[0-7]\.2d}}
 }
 
-attributes #0 = { nounwind "unsafe-fp-math"="true" }
-attributes #1 = { nounwind "unsafe-fp-math"="true" "reciprocal-estimates"="div,vec-div" }
+attributes #0 = { nounwind }
+attributes #1 = { nounwind "reciprocal-estimates"="div,vec-div" }

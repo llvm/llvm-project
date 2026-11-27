@@ -10,8 +10,9 @@ from lldbsuite.test import lldbutil
 class TestDelayInitDependencies(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(macos_version=["<", "15.0"])
+    @skipIfRemote
     def test_delay_init_dependency(self):
         TestBase.setUp(self)
         out = subprocess.run(

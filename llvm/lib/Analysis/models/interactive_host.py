@@ -23,9 +23,12 @@ from typing import Callable, List, Union
 def send(f: io.BufferedWriter, value: Union[int, float], spec: log_reader.TensorSpec):
     """Send the `value` - currently just a scalar - formatted as per `spec`."""
 
-    # just int64 for now
-    assert spec.element_type == ctypes.c_int64
-    to_send = ctypes.c_int64(int(value))
+    if spec.element_type == ctypes.c_int64:
+        to_send = ctypes.c_int64(int(value))
+    elif spec.element_type == ctypes.c_float:
+        to_send = ctypes.c_float(float(value))
+    else:
+        raise ValueError(f"unsupported advice element type {spec.element_type}")
     assert f.write(bytes(to_send)) == ctypes.sizeof(spec.element_type) * math.prod(
         spec.shape
     )
@@ -52,6 +55,8 @@ def run_interactive(
     and sends back to the compiler an advice (which it gets from `make_response`).
     It's used for testing, and also to showcase how to set up communication in an
     interactive ML ("gym") environment.
+
+    Returns the compiler exit code.
     """
     to_compiler = temp_rootname + ".in"
     from_compiler = temp_rootname + ".out"
@@ -88,7 +93,7 @@ def run_interactive(
                     send(tc, make_response(tensor_values), advice_spec)
         _, err = compiler_proc.communicate()
         print(err.decode("utf-8"))
-        compiler_proc.wait()
+        return compiler_proc.wait()
 
     finally:
         os.unlink(to_compiler)

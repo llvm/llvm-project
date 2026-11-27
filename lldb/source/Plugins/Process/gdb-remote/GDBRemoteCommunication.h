@@ -30,6 +30,11 @@ enum GDBStoppointType {
   eWatchpointReadWrite
 };
 
+// StringRef::getAsInteger()'s first argument specifies the
+// radix of the number it is parsing.  Define enums for easiser
+// searching/reading.
+enum { BASE_AUTOSENSE = 0, BASE_10 = 10, BASE_16 = 16 };
+
 enum class CompressionType {
   None = 0,    // no compression
   ZlibDeflate, // zlib's deflate compression scheme, requires zlib or Apple's
@@ -104,7 +109,10 @@ public:
     bool m_timeout_modified;
   };
 
-  GDBRemoteCommunication();
+  /// Construct a GDB-remote communication channel named \p name.
+  ///
+  /// The name identifies the channel in packet logs.
+  explicit GDBRemoteCommunication(llvm::StringRef name);
 
   ~GDBRemoteCommunication() override;
 
@@ -118,6 +126,10 @@ public:
 
   PacketType CheckForPacket(const uint8_t *src, size_t src_len,
                             StringExtractorGDBRemote &packet);
+
+  PacketType
+  CheckForPacketIgnoreNotifications(const uint8_t *src, size_t src_len,
+                                    StringExtractorGDBRemote &packet);
 
   bool GetSendAcks() { return m_send_acks; }
 
@@ -134,23 +146,14 @@ public:
 
   std::chrono::seconds GetPacketTimeout() const { return m_packet_timeout; }
 
-  // Get the debugserver path and check that it exist.
-  FileSpec GetDebugserverPath(Platform *platform);
-
   // Start a debugserver instance on the current host using the
   // supplied connection URL.
-  Status StartDebugserverProcess(
-      const char *url,
-      Platform *platform, // If non nullptr, then check with the platform for
-                          // the GDB server binary if it can't be located
-      ProcessLaunchInfo &launch_info, uint16_t *port, const Args *inferior_args,
-      shared_fd_t pass_comm_fd); // Communication file descriptor to pass during
-                                 // fork/exec to avoid having to connect/accept
+  static Status
+  StartDebugserverProcess(std::variant<llvm::StringRef, shared_fd_t> comm,
+                          ProcessLaunchInfo &launch_info,
+                          const Args *inferior_args);
 
   void DumpHistory(Stream &strm);
-
-  static llvm::Error ConnectLocally(GDBRemoteCommunication &client,
-                                    GDBRemoteCommunication &server);
 
   /// Expand GDB run-length encoding.
   static std::optional<std::string> ExpandRLE(std::string);
@@ -166,6 +169,12 @@ protected:
                       // a single process
 
   std::string m_bytes;
+  /// Where CheckForPacket resumes its search for the '#' that ends the first
+  /// packet in m_bytes. Nonzero only while that packet is incomplete.
+  size_t m_hash_search_start = 0;
+  /// m_bytes.size() when m_hash_search_start was recorded, so CheckForPacket
+  /// can assert that nothing else changed m_bytes.
+  size_t m_hash_search_bytes_size = 0;
   std::recursive_mutex m_bytes_mutex;
   CompressionType m_compression_type;
 
@@ -199,6 +208,9 @@ protected:
   bool DecompressPacket();
 
 private:
+  /// The communication channel name included in packet logs.
+  const std::string m_name;
+
 #if HAVE_LIBCOMPRESSION
   CompressionType m_decompression_scratch_type = CompressionType::None;
   void *m_decompression_scratch = nullptr;

@@ -26,6 +26,7 @@ la.abs $a0, sym_abs
 # ABS-NEXT:   lu32i.d $a0, %abs64_lo20(sym_abs)
 # ABS-NEXT:   lu52i.d $a0, $a0, %abs64_hi12(sym_abs)
 # ABS-EMPTY:
+# RELOC-NEXT: R_LARCH_MARK_LA - 0x0
 # RELOC-NEXT: R_LARCH_ABS_HI20 sym_abs 0x0
 # RELOC-NEXT: R_LARCH_ABS_LO12 sym_abs 0x0
 # RELOC-NEXT: R_LARCH_ABS64_LO20 sym_abs 0x0

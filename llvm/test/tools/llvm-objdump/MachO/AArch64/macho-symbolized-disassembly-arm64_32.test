@@ -1,0 +1,23 @@
+# RUN: llvm-objdump -d -m --no-show-raw-insn --section="__TEXT,__stubs" %p/Inputs/symbolized-stubs.exe.macho-arm64_32 | FileCheck %s
+
+## Test that arm64_32 disassembly shows "literal pool symbol address" comments.
+
+# CHECK: Contents of (__TEXT,__stubs) section
+# CHECK-NEXT: adrp x16
+# CHECK-NEXT: ldr w16, [x16] ; literal pool symbol address: _free
+# CHECK-NEXT: br x16
+# CHECK-NEXT: adrp x16
+# CHECK-NEXT: ldr w16, [x16, #0x4] ; literal pool symbol address: _malloc
+# CHECK-NEXT: br x16
+
+## The test binary was generated with:
+##   cat > test.c << 'EOF'
+##   #include <stdlib.h>
+##   int main(void) {
+##       int *p = malloc(4);
+##       free(p);
+##       return 0;
+##   }
+##   EOF
+##   xcrun -sdk watchos clang -arch arm64_32 test.c -o symbolized-stubs.exe.macho-arm64_32
+##   xcrun -sdk watchos strip -x symbolized-stubs.exe.macho-arm64_32

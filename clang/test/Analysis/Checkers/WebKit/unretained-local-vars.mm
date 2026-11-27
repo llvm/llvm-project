@@ -1,8 +1,12 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -fblocks -verify %s
 
 #import "objc-mock-types.h"
+#import "mock-types.h"
+#import "mock-system-header.h"
 
 void someFunction();
+extern "C" CFStringRef LocalGlobalCFString;
+extern "C" NSString *LocalGlobalNSString;
 
 namespace raw_ptr {
 void foo() {
@@ -17,7 +21,7 @@ namespace pointer {
 SomeObj *provide();
 void foo_ref() {
   SomeObj *bar = provide();
-  // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
   [bar doWork];
 }
 
@@ -27,29 +31,38 @@ bool bar_ref(SomeObj *obj) {
 
 void cf_ptr() {
   CFMutableArrayRef array = CFArrayCreateMutable(kCFAllocatorDefault, 10);
-  // expected-warning@-1{{Local variable 'array' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'array' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
   CFArrayAppendValue(array, nullptr);
 }
+
+dispatch_queue_t provide_os();
+void os_ptr() {
+  auto queue = provide_os();
+  // expected-warning@-1{{Local variable 'queue' is a raw pointer to RetainPtr-capable type 'NSObject' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  dispatch_queue_get_label(queue);
+}
+
 } // namespace pointer
 
 namespace guardian_scopes {
+SomeObj *provide();
 void foo1() {
-  RetainPtr<SomeObj> foo;
+  RetainPtr<SomeObj> foo = provide();
   {
     SomeObj *bar = foo.get();
   }
 }
 
 void foo2() {
-  RetainPtr<SomeObj> foo;
+  RetainPtr<SomeObj> foo = provide();
   // missing embedded scope here
   SomeObj *bar = foo.get();
-  // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
   [bar doWork];
 }
 
 void foo3() {
-  RetainPtr<SomeObj> foo;
+  RetainPtr<SomeObj> foo = provide();
   {
     { SomeObj *bar = foo.get(); }
   }
@@ -57,9 +70,33 @@ void foo3() {
 
 void foo4() {
   {
-    RetainPtr<SomeObj> foo;
+    RetainPtr<SomeObj> foo = provide();
     { SomeObj *bar = foo.get(); }
   }
+}
+
+CFMutableArrayRef provide_cf();
+void foo5() {
+  RetainPtr<CFMutableArrayRef> foo = provide_cf();
+  {
+    CFMutableArrayRef bar = foo.get();
+    CFArrayAppendValue(bar, nullptr);
+  }
+  CFMutableArrayRef baz = foo.get();
+  // expected-warning@-1{{Local variable 'baz' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  CFArrayAppendValue(baz, nullptr);
+}
+
+dispatch_queue_t provide_os();
+void foo6() {
+  OSObjectPtr<dispatch_queue_t> queue = provide_os();
+  {
+    dispatch_queue_t bar = queue.get();
+    dispatch_queue_get_label(bar);
+  }
+  dispatch_queue_t baz = queue.get();
+  // expected-warning@-1{{Local variable 'baz' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  dispatch_queue_get_label(baz);
 }
 
 struct SelfReferencingStruct {
@@ -77,14 +114,14 @@ void foo8(SomeObj* obj) {
 
   {
     SomeObj *bar = foo.get();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     foo = nullptr;
     [bar doWork];
   }
   RetainPtr<SomeObj> baz;
   {
     SomeObj *bar = baz.get();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     baz = obj;
     [bar doWork];
   }
@@ -98,19 +135,19 @@ void foo8(SomeObj* obj) {
   foo = obj;
   {
     SomeObj *bar = foo.get();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     foo.clear();
     [bar doWork];
   }
   {
     SomeObj *bar = foo.get();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     foo = obj ? obj : nullptr;
     [bar doWork];
   }
   {
     SomeObj *bar = [foo.get() other] ? foo.get() : nullptr;
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     foo = nullptr;
     [bar doWork];
   }
@@ -120,32 +157,32 @@ void foo9(SomeObj* o) {
   RetainPtr<SomeObj> guardian(o);
   {
     SomeObj *bar = guardian.get();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     guardian = o; // We don't detect that we're setting it to the same value.
     [bar doWork];
   }
   {
     SomeObj *bar = guardian.get();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     RetainPtr<SomeObj> other(bar); // We don't detect other has the same value as guardian.
     guardian.swap(other);
     [bar doWork];
   }
   {
     SomeObj *bar = guardian.get();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     RetainPtr<SomeObj> other(static_cast<RetainPtr<SomeObj>&&>(guardian));
     [bar doWork];
   }
   {
     SomeObj *bar = guardian.get();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     guardian.clear();
     [bar doWork];
   }
   {
     SomeObj *bar = guardian.get();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     guardian = [o other] ? o : bar;
     [bar doWork];
   }
@@ -160,7 +197,7 @@ void foo10() {
   }
   {
     CFMutableArrayRef arrayRef = array.get();
-    // expected-warning@-1{{Local variable 'arrayRef' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'arrayRef' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
     array = nullptr;
     CFArrayAppendValue(arrayRef, nullptr);
   }
@@ -171,37 +208,67 @@ void foo10() {
   }
 }
 
+bool trivialFunction(dispatch_queue_t queue) { return !!queue; }
+void foo11() {
+  OSObjectPtr<dispatch_queue_t> queue = adoptOSObject(dispatch_queue_create("some queue", nullptr));
+  {
+    dispatch_queue_t queuePtr = queue.get();
+    dispatch_queue_get_label(queuePtr);
+  }
+  {
+    dispatch_queue_t queuePtr = queue.get();
+    // expected-warning@-1{{Local variable 'queuePtr' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    queue = nullptr;
+    dispatch_queue_get_label(queuePtr);
+  }
+  {
+    dispatch_queue_t queuePtr = queue.get();
+    if (trivialFunction(queuePtr))
+      queuePtr = nullptr;
+  }
+}
+
 } // namespace guardian_scopes
 
 namespace auto_keyword {
 class Foo {
   SomeObj *provide_obj();
   CFMutableArrayRef provide_cf_array();
+  dispatch_queue_t provide_queue();
   void doWork(CFMutableArrayRef);
+  void doWork(dispatch_queue_t);
 
   void evil_func() {
     SomeObj *bar = provide_obj();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     auto *baz = provide_obj();
-    // expected-warning@-1{{Local variable 'baz' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'baz' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     auto *baz2 = this->provide_obj();
-    // expected-warning@-1{{Local variable 'baz2' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'baz2' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     [[clang::suppress]] auto *baz_suppressed = provide_obj(); // no-warning
   }
 
   void func() {
     SomeObj *bar = provide_obj();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     if (bar)
       [bar doWork];
   }
 
   void bar() {
     auto bar = provide_cf_array();
-    // expected-warning@-1{{Local variable 'bar' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'bar' is a raw pointer to RetainPtr-capable type '__CFArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
     doWork(bar);
     [[clang::suppress]] auto baz = provide_cf_array(); // no-warning
     doWork(baz);
+  }
+
+  void baz() {
+    auto value1 = provide_queue();
+    // expected-warning@-1{{Local variable 'value1' is a raw pointer to RetainPtr-capable type 'NSObject' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    doWork(value1);
+    [[clang::suppress]] auto value2 = provide_queue(); // no-warning
+    doWork(value2);
   }
 
 };
@@ -223,6 +290,14 @@ void foo2() {
     someFunction();
   }
 }
+
+void foo3() {
+  OSObjectPtr<dispatch_queue_t> foo;
+  {
+    dispatch_queue_t bar = foo.get();
+    someFunction();
+  }
+}
 } // namespace guardian_casts
 
 namespace conditional_op {
@@ -231,7 +306,7 @@ bool bar();
 
 void foo() {
   SomeObj *a = bar() ? nullptr : provide_obj();
-  // expected-warning@-1{{Local variable 'a' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'a' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
   RetainPtr<SomeObj> b = provide_obj();
   {
     SomeObj* c = bar() ? nullptr : b.get();
@@ -249,14 +324,14 @@ SomeObj *provide_obj();
 
 void foo(SomeObj* a) {
   SomeObj* b = a;
-  // expected-warning@-1{{Local variable 'b' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'b' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
   if ([b other])
     b = provide_obj();
 }
 
 void bar(SomeObj* a) {
   SomeObj* b;
-  // expected-warning@-1{{Local variable 'b' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'b' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
   b = provide_obj();
 }
 
@@ -264,7 +339,7 @@ void baz() {
   RetainPtr<SomeObj> a = provide_obj();
   {
     SomeObj* b = a.get();
-    // expected-warning@-1{{Local variable 'b' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+    // expected-warning@-1{{Local variable 'b' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
     b = provide_obj();
   }
 }
@@ -278,7 +353,7 @@ void someFunction();
 
 void foo(SomeObj* a) {
   a = provide_obj();
-  // expected-warning@-1{{Assignment to an unretained parameter 'a' is unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Parameter 'a' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
   someFunction();
   [a doWork];
 }
@@ -288,7 +363,16 @@ void doWork(CFMutableArrayRef);
 
 void bar(CFMutableArrayRef a) {
   a = provide_cf_array();
-  // expected-warning@-1{{Assignment to an unretained parameter 'a' is unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Parameter 'a' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  doWork(a);
+}
+
+dispatch_queue_t provide_queue();
+void doWork(dispatch_queue_t);
+
+void baz(dispatch_queue_t a) {
+  a = provide_queue();
+  // expected-warning@-1{{Parameter 'a' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLocalVarsChecker]}}
   doWork(a);
 }
 
@@ -301,7 +385,7 @@ void someFunction();
 
 void foo() {
   static SomeObj* a = nullptr;
-  // expected-warning@-1{{Static local variable 'a' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Static local variable 'a' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
   a = provide_obj();
   someFunction();
   [a doWork];
@@ -312,8 +396,18 @@ void doWork(CFMutableArrayRef);
 
 void bar() {
   static CFMutableArrayRef a = nullptr;
-  // expected-warning@-1{{Static local variable 'a' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Static local variable 'a' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
   a = provide_cf_array();
+  doWork(a);
+}
+
+dispatch_queue_t provide_queue();
+void doWork(dispatch_queue_t);
+
+void baz() {
+  static dispatch_queue_t a = nullptr;
+  // expected-warning@-1{{Static local variable 'a' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  a = provide_queue();
   doWork(a);
 }
 
@@ -325,7 +419,7 @@ SomeObj *provide_obj();
 void someFunction();
 
 SomeObj* g_a = nullptr;
-// expected-warning@-1{{Global variable 'local_assignment_to_global::g_a' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+// expected-warning@-1{{Global variable 'local_assignment_to_global::g_a' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
 
 void foo() {
   g_a = provide_obj();
@@ -337,11 +431,21 @@ CFMutableArrayRef provide_cf_array();
 void doWork(CFMutableArrayRef);
 
 CFMutableArrayRef g_b = nullptr;
-// expected-warning@-1{{Global variable 'local_assignment_to_global::g_b' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+// expected-warning@-1{{Global variable 'local_assignment_to_global::g_b' is a RetainPtr-capable type 'CFMutableArrayRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
 
 void bar() {
   g_b = provide_cf_array();
   doWork(g_b);
+}
+
+dispatch_queue_t provide_queue();
+void doWork(dispatch_queue_t);
+dispatch_queue_t g_c = nullptr;
+// expected-warning@-1{{Global variable 'local_assignment_to_global::g_c' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLocalVarsChecker]}}
+
+void baz() {
+  g_c = provide_queue();
+  doWork(g_c);
 }
 
 } // namespace local_assignment_to_global
@@ -357,6 +461,11 @@ namespace local_var_for_singleton {
   CFMutableArrayRef cfSingleton();
   void bar() {
     CFMutableArrayRef cf = cfSingleton();
+  }
+
+  dispatch_queue_t osSingleton();
+  void baz() {
+    dispatch_queue_t os = osSingleton();
   }
 }
 
@@ -391,22 +500,346 @@ namespace const_global {
 
 extern NSString * const SomeConstant;
 extern CFDictionaryRef const SomeDictionary;
-void doWork(NSString *, CFDictionaryRef);
+extern dispatch_queue_t const SomeQueue;
+void doWork(NSString *, CFDictionaryRef, dispatch_queue_t);
 void use_const_global() {
-  doWork(SomeConstant, SomeDictionary);
+  doWork(SomeConstant, SomeDictionary, SomeQueue);
 }
 
 NSString *provide_str();
 CFDictionaryRef provide_dict();
+dispatch_queue_t provide_queue();
 void use_const_local() {
   NSString * const str = provide_str();
-  // expected-warning@-1{{Local variable 'str' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+  // expected-warning@-1{{Local variable 'str' is a raw pointer to RetainPtr-capable type 'NSString' [alpha.webkit.UnretainedLocalVarsChecker]}}
   CFDictionaryRef dict = provide_dict();
-  // expected-warning@-1{{Local variable 'dict' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
-  doWork(str, dict);
+  // expected-warning@-1{{Local variable 'dict' is a RetainPtr-capable type 'CFDictionaryRef' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  dispatch_queue_t queue = provide_queue();
+  // expected-warning@-1{{Local variable 'queue' is a RetainPtr-capable type 'dispatch_queue_t' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  doWork(str, dict, queue);
 }
 
 } // namespace const_global
+
+namespace ns_retained_return_value {
+
+NSString *provideNS() NS_RETURNS_RETAINED;
+CFDictionaryRef provideCF() CF_RETURNS_RETAINED;
+dispatch_queue_t provideOS() CF_RETURNS_RETAINED;
+void consumeNS(NSString *);
+void consumeCF(CFDictionaryRef);
+int consumeOS(dispatch_queue_t);
+
+unsigned foo() {
+  auto *string = provideNS();
+  auto *dictionary = provideCF();
+  auto* queue = provideOS();
+  return string.length + CFDictionaryGetCount(dictionary) + consumeOS(queue);
+}
+
+} // namespace ns_retained_return_value
+
+namespace autoreleased {
+
+NSString *provideAutoreleased() __attribute__((ns_returns_autoreleased));
+void consume(NSString *);
+
+void foo() {
+  auto *string = provideAutoreleased();
+  consume(string);
+}
+
+} // autoreleased
+
+namespace ns_global {
+
+void consumeCFString(CFStringRef);
+void consumeNSString(NSString *);
+
+void cf() {
+  auto *str = kCFURLTagNamesKey;
+  consumeCFString(str);
+  auto *localStr = LocalGlobalCFString;
+  // expected-warning@-1{{Local variable 'localStr' is a raw pointer to RetainPtr-capable type '__CFString' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  consumeCFString(localStr);
+}
+
+void ns() {
+  auto *str = NSApplicationDidBecomeActiveNotification;
+  consumeNSString(str);
+  auto *localStr = LocalGlobalNSString;
+  // expected-warning@-1{{Local variable 'localStr' is a raw pointer to RetainPtr-capable type 'NSString' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  consumeNSString(localStr);
+}
+
+}
+
+@interface ArrayProvider : NSObject
+- (NSArray *)arrayValue;
+@end
+
+namespace fast_enumeration {
+
+NSArray *provideArray();
+void provideArrayToOutArgument(NSArray **);
+void consumeString(NSString *);
+
+void iterateLocal() {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get())
+    [obj doWork];
+}
+
+void iterateLocalInNestedScope() {
+  RetainPtr<NSArray> array = provideArray();
+  {
+    for (SomeObj *obj in array.get()) {
+      for (SomeObj *otherObj in array.get())
+        [otherObj doWork];
+      [obj doWork];
+    }
+  }
+}
+
+void iterateLocalWithRangeBasedFor() {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj : array.get())
+    [obj doWork];
+}
+
+void iterateLocalWithId() {
+  RetainPtr<NSArray> array = provideArray();
+  for (id obj in array.get())
+    [obj doWork];
+}
+
+void iterateLocalClearedInBody() {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get()) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    array = nullptr;
+    [obj doWork];
+  }
+}
+
+void iterateLocalClearedAfterLoop() {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get())
+    [obj doWork];
+  array = nullptr;
+}
+
+void iterateParam(NSArray *array) {
+  for (SomeObj *obj in array)
+    [obj doWork];
+}
+
+void iterateParamReassigned(NSArray *array) {
+  for (SomeObj *obj in array) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    array = provideArray();
+    // expected-warning@-1{{Parameter 'array' is a raw pointer to RetainPtr-capable type 'NSArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    [obj doWork];
+  }
+}
+
+void iterateTemporary() {
+  for (SomeObj *obj in retainPtr(provideArray()).get())
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    [obj doWork];
+}
+
+void iterateReturnValue() {
+  for (SomeObj *obj in provideArray())
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    [obj doWork];
+}
+
+void iterateLocalWithStructuredBinding() {
+  RetainPtr<NSArray> array = provideArray();
+  for (auto [obj] in array.get())
+    // expected-warning@-1{{'auto' deduced as 'id' in declaration of ''}}
+    (void)obj;
+}
+
+void iterateLocalWithStructuredBindingClearedInBody() {
+  RetainPtr<NSArray> array = provideArray();
+  for (auto [obj] in array.get()) {
+    // expected-warning@-1{{'auto' deduced as 'id' in declaration of ''}}
+    // expected-warning@-2{{Local variable '[obj]' is a raw pointer to RetainPtr-capable type}}
+    array = nullptr;
+    (void)obj;
+  }
+}
+
+void iterateRawLocal() {
+  NSArray *array = provideArray();
+  // expected-warning@-1{{Local variable 'array' is a raw pointer to RetainPtr-capable type 'NSArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  for (SomeObj *obj in array)
+    [obj doWork];
+}
+
+void iterateRawLocalFromMessage(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (SomeObj *item in array)
+    [item doWork];
+}
+
+void iterateRawLocalFromMessageWithRangeBasedFor(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (SomeObj *item : array)
+    [item doWork];
+}
+
+void iterateRawLocalFromOutArgument() {
+  NSArray *array = nil;
+  provideArrayToOutArgument(&array);
+  for (SomeObj *obj in array)
+    [obj doWork];
+}
+
+void iterateRawLocalAssignedBeforeLoop(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  // expected-warning@-1{{Local variable 'array' is a raw pointer to RetainPtr-capable type 'NSArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  array = provideArray();
+  for (SomeObj *item in array)
+    [item doWork];
+}
+
+void iterateRawLocalClearedInBody(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (SomeObj *item in array) {
+    // expected-warning@-1{{Local variable 'item' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    array = nil;
+    [item doWork];
+  }
+}
+
+void iterateRawLocalOverwrittenViaOutArgumentInBody(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (SomeObj *item in array) {
+    // expected-warning@-1{{Local variable 'item' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    provideArrayToOutArgument(&array);
+    [item doWork];
+  }
+}
+
+void iterateStaticRawLocal() {
+  static NSArray *array = @[ @"foo" ];
+  for (NSString *str in array)
+    consumeString(str);
+}
+
+void iterateParamWithIndirectCallOutsideBody(NSArray *array, void (*handler)()) {
+  handler();
+  for (SomeObj *obj in array)
+    [obj doWork];
+}
+
+void iterateParamWithIndirectCallInBody(NSArray *array, void (*handler)()) {
+  for (SomeObj *obj in array) {
+    handler();
+    [obj doWork];
+  }
+}
+
+void iterateParamWithBlockCallInBody(NSArray *array, void (^handler)(SomeObj *)) {
+  for (SomeObj *obj in array)
+    handler(obj);
+}
+
+Class (*getSomeObjClass)();
+
+void iterateRawLocalWithIndirectCallInBody(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (id item in array) {
+    if ([item isKindOfClass:getSomeObjClass()])
+      [item doWork];
+  }
+}
+
+void iterateLocalWithIndirectCallInBody(void (*consume)(SomeObj *)) {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get())
+    consume(obj);
+}
+
+void iterateParamOverwrittenViaIndirectCallInBody(NSArray *array, void (*overwrite)(NSArray **)) {
+  for (SomeObj *obj in array) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    overwrite(&array);
+    [obj doWork];
+  }
+}
+
+void iterateLocalClearedViaIndirectCallInBody(void (*clear)(RetainPtr<NSArray>&)) {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get()) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    clear(array);
+    [obj doWork];
+  }
+}
+
+void iterateBlockVariableWithBlockCallInBody() {
+  __block RetainPtr<NSArray> array = provideArray();
+  void (^clear)() = ^{
+    array = nullptr;
+  };
+  for (SomeObj *obj in array.get()) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    clear();
+    [obj doWork];
+  }
+}
+
+void iterateRawBlockVariableWithBlockCallInBody(ArrayProvider *provider) {
+  __block NSArray *array = [provider arrayValue];
+  void (^reset)() = ^{
+    array = nil;
+  };
+  for (SomeObj *obj in array) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    reset();
+    [obj doWork];
+  }
+}
+
+void iterateParamOverwrittenViaOutArgumentInBody(NSArray *array) {
+  for (SomeObj *obj in array) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    provideArrayToOutArgument(&array);
+    [obj doWork];
+  }
+}
+
+void iterateNested(NSArray *array) {
+  for (NSArray *inner in array) {
+    for (SomeObj *obj in inner)
+      [obj doWork];
+  }
+}
+
+void iterateNestedInLocal() {
+  RetainPtr<NSArray> array = provideArray();
+  for (NSArray *inner in array.get()) {
+    for (SomeObj *obj in inner)
+      [obj doWork];
+  }
+}
+
+void iterateNestedOuterElementReassignedInInnerBody(NSArray *array) {
+  for (NSArray *inner in array) {
+    // expected-warning@-1{{Local variable 'inner' is a raw pointer to RetainPtr-capable type 'NSArray' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    for (SomeObj *obj in inner) {
+      // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+      inner = provideArray();
+      [obj doWork];
+    }
+  }
+}
+
+} // namespace fast_enumeration
 
 bool doMoreWorkOpaque(OtherObj*);
 SomeObj* provide();
@@ -428,5 +861,12 @@ SomeObj* provide();
 - (void)storeSomeObj {
   auto *obj = [self getSomeObj];
   [obj doWork];
+}
+
+- (void)assignToGuardianArg:(RetainPtr<SomeObj>&)obj {
+  SomeObj* ptr = obj.get();
+  // expected-warning@-1{{Local variable 'ptr' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+  obj = nullptr;
+  [ptr doWork];
 }
 @end

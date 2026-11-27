@@ -120,7 +120,7 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
 
   const bool generate_debug_info = true;
   ClangExpressionParser parser(exe_ctx.GetBestExecutionContextScope(), *this,
-                               generate_debug_info);
+                               generate_debug_info, diagnostic_manager);
 
   unsigned num_errors = parser.Parse(diagnostic_manager);
 
@@ -149,7 +149,7 @@ bool ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager,
         ConstString const_func_name(FunctionName());
         FileSpec jit_file;
         jit_file.SetFilename(const_func_name);
-        jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
+        jit_module_sp->SetFileSpecAndObjectName(jit_file, std::string());
         m_jit_module_wp = jit_module_sp;
         target->GetImages().Append(jit_module_sp);
       }
@@ -187,5 +187,5 @@ void ClangUtilityFunction::ClangUtilityFunctionHelper::ResetDeclMap(
   }
   m_expr_decl_map_up = std::make_unique<ClangExpressionDeclMap>(
       keep_result_in_memory, nullptr, exe_ctx.GetTargetSP(), ast_importer,
-      nullptr);
+      nullptr, /*ignore_context_qualifiers=*/false);
 }

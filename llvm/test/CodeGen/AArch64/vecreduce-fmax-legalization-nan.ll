@@ -6,15 +6,9 @@
 
 ; CHECK-NOFP-GI:       warning: Instruction selection used fallback path for test_v11f16
 ; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v11f16_ninf
-; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32
-; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32_ninf
-; CHECK-NOFP-GI-NEXT:  warning: Instruction selection used fallback path for test_v2f128
 ;
 ; CHECK-FP-GI:       warning: Instruction selection used fallback path for test_v11f16
 ; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v11f16_ninf
-; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32
-; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v3f32_ninf
-; CHECK-FP-GI-NEXT:  warning: Instruction selection used fallback path for test_v2f128
 
 declare half @llvm.vector.reduce.fmax.v1f16(<1 x half> %a)
 declare float @llvm.vector.reduce.fmax.v1f32(<1 x float> %a)
@@ -557,33 +551,99 @@ define half @test_v11f16_ninf(<11 x half> %a) nounwind {
 }
 
 define float @test_v3f32(<3 x float> %a) nounwind {
-; CHECK-LABEL: test_v3f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4194304 // =0xffc00000
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
-; CHECK-NEXT:    fmaxnmv s0, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-NOFP-SD-LABEL: test_v3f32:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    mov w8, #-4194304 // =0xffc00000
+; CHECK-NOFP-SD-NEXT:    fmov s1, w8
+; CHECK-NOFP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NOFP-SD-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-NOFP-SD-NEXT:    ret
+;
+; CHECK-FP-SD-LABEL: test_v3f32:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    mov w8, #-4194304 // =0xffc00000
+; CHECK-FP-SD-NEXT:    fmov s1, w8
+; CHECK-FP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-FP-SD-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-FP-SD-NEXT:    ret
+;
+; CHECK-NOFP-GI-LABEL: test_v3f32:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-NOFP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-NOFP-GI-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-GI-NEXT:    fmaxnm s0, s0, s2
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v3f32:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-FP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-FP-GI-NEXT:    fmaxnm s0, s0, s1
+; CHECK-FP-GI-NEXT:    fmaxnm s0, s0, s2
+; CHECK-FP-GI-NEXT:    ret
   %b = call float @llvm.vector.reduce.fmax.v3f32(<3 x float> %a)
   ret float %b
 }
 
 define float @test_v3f32_ninf(<3 x float> %a) nounwind {
-; CHECK-LABEL: test_v3f32_ninf:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-4194304 // =0xffc00000
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
-; CHECK-NEXT:    fmaxnmv s0, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-NOFP-SD-LABEL: test_v3f32_ninf:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    mov w8, #-4194304 // =0xffc00000
+; CHECK-NOFP-SD-NEXT:    fmov s1, w8
+; CHECK-NOFP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-NOFP-SD-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-NOFP-SD-NEXT:    ret
+;
+; CHECK-FP-SD-LABEL: test_v3f32_ninf:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    mov w8, #-4194304 // =0xffc00000
+; CHECK-FP-SD-NEXT:    fmov s1, w8
+; CHECK-FP-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-FP-SD-NEXT:    fmaxnmv s0, v0.4s
+; CHECK-FP-SD-NEXT:    ret
+;
+; CHECK-NOFP-GI-LABEL: test_v3f32_ninf:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-NOFP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-NOFP-GI-NEXT:    fmaxnm s0, s0, s1
+; CHECK-NOFP-GI-NEXT:    fmaxnm s0, s0, s2
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v3f32_ninf:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    mov s1, v0.s[1]
+; CHECK-FP-GI-NEXT:    mov s2, v0.s[2]
+; CHECK-FP-GI-NEXT:    fmaxnm s0, s0, s1
+; CHECK-FP-GI-NEXT:    fmaxnm s0, s0, s2
+; CHECK-FP-GI-NEXT:    ret
   %b = call ninf float @llvm.vector.reduce.fmax.v3f32(<3 x float> %a)
   ret float %b
 }
 
 define fp128 @test_v2f128(<2 x fp128> %a) nounwind {
-; CHECK-LABEL: test_v2f128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    b fmaxl
+; CHECK-NOFP-SD-LABEL: test_v2f128:
+; CHECK-NOFP-SD:       // %bb.0:
+; CHECK-NOFP-SD-NEXT:    b fmaxl
+;
+; CHECK-FP-SD-LABEL: test_v2f128:
+; CHECK-FP-SD:       // %bb.0:
+; CHECK-FP-SD-NEXT:    b fmaxl
+;
+; CHECK-NOFP-GI-LABEL: test_v2f128:
+; CHECK-NOFP-GI:       // %bb.0:
+; CHECK-NOFP-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NOFP-GI-NEXT:    bl fmaxl
+; CHECK-NOFP-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-NOFP-GI-NEXT:    ret
+;
+; CHECK-FP-GI-LABEL: test_v2f128:
+; CHECK-FP-GI:       // %bb.0:
+; CHECK-FP-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-FP-GI-NEXT:    bl fmaxl
+; CHECK-FP-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-FP-GI-NEXT:    ret
   %b = call fp128 @llvm.vector.reduce.fmax.v2f128(<2 x fp128> %a)
   ret fp128 %b
 }

@@ -4,10 +4,14 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(TargetParserTests
+  AtomicScopeTest.cpp
   CSKYTargetParserTest.cpp
   Host.cpp
+  IntelGPUTargetParserTest.cpp
+  NVPTXTargetParserTest.cpp
   RISCVISAInfoTest.cpp
   RISCVTargetParserTest.cpp
+  SparcTargetParserTest.cpp
   TargetParserTest.cpp
   TripleTest.cpp
   )

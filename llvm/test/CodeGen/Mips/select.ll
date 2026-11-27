@@ -12,15 +12,15 @@
 define i32 @i32_icmp_ne_i32_val(i32 signext %s, i32 signext %f0, i32 signext %f1) nounwind readnone {
 ; 32-LABEL: i32_icmp_ne_i32_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    movn $5, $6, $4
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    move $2, $5
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movn $2, $6, $4
 ;
 ; 32R2-LABEL: i32_icmp_ne_i32_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    movn $5, $6, $4
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movn $2, $6, $4
 ;
 ; 32R6-LABEL: i32_icmp_ne_i32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -31,15 +31,17 @@ define i32 @i32_icmp_ne_i32_val(i32 signext %s, i32 signext %f0, i32 signext %f1
 ;
 ; 64-LABEL: i32_icmp_ne_i32_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    movn $5, $6, $4
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    move $2, $5
+; 64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movn $2, $6, $4
 ;
 ; 64R2-LABEL: i32_icmp_ne_i32_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    movn $5, $6, $4
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movn $2, $6, $4
 ;
 ; 64R6-LABEL: i32_icmp_ne_i32_val:
 ; 64R6:       # %bb.0: # %entry
@@ -60,23 +62,23 @@ entry:
 define i64 @i32_icmp_ne_i64_val(i32 signext %s, i64 %f0, i64 %f1) nounwind readnone {
 ; 32-LABEL: i32_icmp_ne_i64_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    lw $1, 16($sp)
-; 32-NEXT:    movn $6, $1, $4
-; 32-NEXT:    lw $1, 20($sp)
-; 32-NEXT:    movn $7, $1, $4
-; 32-NEXT:    move $2, $6
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    move $3, $7
+; 32-NEXT:    move $2, $6
+; 32-NEXT:    lw $1, 16($sp)
+; 32-NEXT:    movn $2, $1, $4
+; 32-NEXT:    lw $1, 20($sp)
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movn $3, $1, $4
 ;
 ; 32R2-LABEL: i32_icmp_ne_i64_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    lw $1, 16($sp)
-; 32R2-NEXT:    movn $6, $1, $4
-; 32R2-NEXT:    lw $1, 20($sp)
-; 32R2-NEXT:    movn $7, $1, $4
-; 32R2-NEXT:    move $2, $6
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    move $3, $7
+; 32R2-NEXT:    move $2, $6
+; 32R2-NEXT:    lw $1, 16($sp)
+; 32R2-NEXT:    movn $2, $1, $4
+; 32R2-NEXT:    lw $1, 20($sp)
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movn $3, $1, $4
 ;
 ; 32R6-LABEL: i32_icmp_ne_i64_val:
 ; 32R6:       # %bb.0: # %entry
@@ -92,23 +94,22 @@ define i64 @i32_icmp_ne_i64_val(i32 signext %s, i64 %f0, i64 %f1) nounwind readn
 ;
 ; 64-LABEL: i32_icmp_ne_i64_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    movn $5, $6, $4
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    move $2, $5
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movn $2, $6, $4
 ;
 ; 64R2-LABEL: i32_icmp_ne_i64_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    movn $5, $6, $4
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movn $2, $6, $4
 ;
 ; 64R6-LABEL: i32_icmp_ne_i64_val:
 ; 64R6:       # %bb.0: # %entry
-; 64R6-NEXT:    sll $1, $4, 0
-; 64R6-NEXT:    seleqz $2, $5, $1
-; 64R6-NEXT:    selnez $1, $6, $1
+; 64R6-NEXT:    seleqz $1, $5, $4
+; 64R6-NEXT:    selnez $2, $6, $4
 ; 64R6-NEXT:    jr $ra
-; 64R6-NEXT:    or $2, $1, $2
+; 64R6-NEXT:    or $2, $2, $1
 entry:
   %tobool = icmp ne i32 %s, 0
   %cond = select i1 %tobool, i64 %f1, i64 %f0
@@ -118,25 +119,25 @@ entry:
 define i64 @i64_icmp_ne_i64_val(i64 %s, i64 %f0, i64 %f1) nounwind readnone {
 ; 32-LABEL: i64_icmp_ne_i64_val:
 ; 32:       # %bb.0: # %entry
-; 32-NEXT:    or $1, $4, $5
-; 32-NEXT:    lw $2, 16($sp)
-; 32-NEXT:    movn $6, $2, $1
-; 32-NEXT:    lw $2, 20($sp)
-; 32-NEXT:    movn $7, $2, $1
-; 32-NEXT:    move $2, $6
-; 32-NEXT:    jr $ra
 ; 32-NEXT:    move $3, $7
+; 32-NEXT:    move $2, $6
+; 32-NEXT:    or $1, $4, $5
+; 32-NEXT:    lw $4, 16($sp)
+; 32-NEXT:    movn $2, $4, $1
+; 32-NEXT:    lw $4, 20($sp)
+; 32-NEXT:    jr $ra
+; 32-NEXT:    movn $3, $4, $1
 ;
 ; 32R2-LABEL: i64_icmp_ne_i64_val:
 ; 32R2:       # %bb.0: # %entry
-; 32R2-NEXT:    or $1, $4, $5
-; 32R2-NEXT:    lw $2, 16($sp)
-; 32R2-NEXT:    movn $6, $2, $1
-; 32R2-NEXT:    lw $2, 20($sp)
-; 32R2-NEXT:    movn $7, $2, $1
-; 32R2-NEXT:    move $2, $6
-; 32R2-NEXT:    jr $ra
 ; 32R2-NEXT:    move $3, $7
+; 32R2-NEXT:    move $2, $6
+; 32R2-NEXT:    or $1, $4, $5
+; 32R2-NEXT:    lw $4, 16($sp)
+; 32R2-NEXT:    movn $2, $4, $1
+; 32R2-NEXT:    lw $4, 20($sp)
+; 32R2-NEXT:    jr $ra
+; 32R2-NEXT:    movn $3, $4, $1
 ;
 ; 32R6-LABEL: i64_icmp_ne_i64_val:
 ; 32R6:       # %bb.0: # %entry
@@ -153,15 +154,15 @@ define i64 @i64_icmp_ne_i64_val(i64 %s, i64 %f0, i64 %f1) nounwind readnone {
 ;
 ; 64-LABEL: i64_icmp_ne_i64_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    movn $5, $6, $4
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    move $2, $5
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movn $2, $6, $4
 ;
 ; 64R2-LABEL: i64_icmp_ne_i64_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    movn $5, $6, $4
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movn $2, $6, $4
 ;
 ; 64R6-LABEL: i64_icmp_ne_i64_val:
 ; 64R6:       # %bb.0: # %entry
@@ -192,10 +193,9 @@ define float @i32_icmp_ne_f32_val(i32 signext %s, float %f0, float %f1) nounwind
 ;
 ; 32R6-LABEL: i32_icmp_ne_f32_val:
 ; 32R6:       # %bb.0: # %entry
-; 32R6-NEXT:    sltu $1, $zero, $4
-; 32R6-NEXT:    negu $1, $1
 ; 32R6-NEXT:    mtc1 $5, $f1
 ; 32R6-NEXT:    mtc1 $6, $f2
+; 32R6-NEXT:    sltu $1, $zero, $4
 ; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.s $f0, $f2, $f1
@@ -215,7 +215,6 @@ define float @i32_icmp_ne_f32_val(i32 signext %s, float %f0, float %f1) nounwind
 ; 64R6-LABEL: i32_icmp_ne_f32_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    sltu $1, $zero, $4
-; 64R6-NEXT:    negu $1, $1
 ; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.s $f0, $f14, $f13
@@ -247,7 +246,6 @@ define double @i32_icmp_ne_f64_val(i32 signext %s, double %f0, double %f1) nounw
 ; 32R6-NEXT:    mtc1 $6, $f1
 ; 32R6-NEXT:    mthc1 $7, $f1
 ; 32R6-NEXT:    sltu $1, $zero, $4
-; 32R6-NEXT:    negu $1, $1
 ; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    ldc1 $f2, 16($sp)
 ; 32R6-NEXT:    jr $ra
@@ -268,7 +266,6 @@ define double @i32_icmp_ne_f64_val(i32 signext %s, double %f0, double %f1) nounw
 ; 64R6-LABEL: i32_icmp_ne_f64_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    sltu $1, $zero, $4
-; 64R6-NEXT:    negu $1, $1
 ; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f14, $f13
@@ -458,8 +455,6 @@ define double @f32_fcmp_ogt_f64_val(double %f0, double %f1, float %f2, float %f3
 ; 32R6-NEXT:    lwc1 $f0, 16($sp)
 ; 32R6-NEXT:    lwc1 $f1, 20($sp)
 ; 32R6-NEXT:    cmp.lt.s $f0, $f1, $f0
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
 ;
@@ -480,8 +475,6 @@ define double @f32_fcmp_ogt_f64_val(double %f0, double %f1, float %f2, float %f3
 ; 64R6-LABEL: f32_fcmp_ogt_f64_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.lt.s $f0, $f15, $f14
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
 entry:
@@ -514,8 +507,6 @@ define double @f64_fcmp_oeq_f64_val(double %f0, double %f1, double %f2, double %
 ; 32R6-NEXT:    ldc1 $f0, 24($sp)
 ; 32R6-NEXT:    ldc1 $f1, 16($sp)
 ; 32R6-NEXT:    cmp.eq.d $f0, $f1, $f0
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
 ;
@@ -536,8 +527,6 @@ define double @f64_fcmp_oeq_f64_val(double %f0, double %f1, double %f2, double %
 ; 64R6-LABEL: f64_fcmp_oeq_f64_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.eq.d $f0, $f14, $f15
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
 entry:
@@ -570,8 +559,6 @@ define double @f64_fcmp_olt_f64_val(double %f0, double %f1, double %f2, double %
 ; 32R6-NEXT:    ldc1 $f0, 24($sp)
 ; 32R6-NEXT:    ldc1 $f1, 16($sp)
 ; 32R6-NEXT:    cmp.lt.d $f0, $f1, $f0
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
 ;
@@ -592,8 +579,6 @@ define double @f64_fcmp_olt_f64_val(double %f0, double %f1, double %f2, double %
 ; 64R6-LABEL: f64_fcmp_olt_f64_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.lt.d $f0, $f14, $f15
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
 entry:
@@ -626,8 +611,6 @@ define double @f64_fcmp_ogt_f64_val(double %f0, double %f1, double %f2, double %
 ; 32R6-NEXT:    ldc1 $f0, 16($sp)
 ; 32R6-NEXT:    ldc1 $f1, 24($sp)
 ; 32R6-NEXT:    cmp.lt.d $f0, $f1, $f0
-; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    mtc1 $1, $f0
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.d $f0, $f14, $f12
 ;
@@ -648,8 +631,6 @@ define double @f64_fcmp_ogt_f64_val(double %f0, double %f1, double %f2, double %
 ; 64R6-LABEL: f64_fcmp_ogt_f64_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.lt.d $f0, $f15, $f14
-; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    mtc1 $1, $f0
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.d $f0, $f13, $f12
 entry:
@@ -685,6 +666,7 @@ define float @f64_fcmp_ogt_f32_val(float %f0, float %f1, double %f2, double %f3)
 ; 32R6-NEXT:    mthc1 $7, $f0
 ; 32R6-NEXT:    ldc1 $f1, 16($sp)
 ; 32R6-NEXT:    cmp.lt.d $f0, $f1, $f0
+; 32R6-NEXT:    # kill: def $f0 killed $f0 killed $d0_64
 ; 32R6-NEXT:    jr $ra
 ; 32R6-NEXT:    sel.s $f0, $f14, $f12
 ;
@@ -705,6 +687,7 @@ define float @f64_fcmp_ogt_f32_val(float %f0, float %f1, double %f2, double %f3)
 ; 64R6-LABEL: f64_fcmp_ogt_f32_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.lt.d $f0, $f15, $f14
+; 64R6-NEXT:    # kill: def $f0 killed $f0 killed $d0_64
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    sel.s $f0, $f13, $f12
 entry:
@@ -716,21 +699,21 @@ entry:
 define i32 @f32_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1, float %f2, float %f3) nounwind readnone {
 ; 32-LABEL: f32_fcmp_oeq_i32_val:
 ; 32:       # %bb.0: # %entry
+; 32-NEXT:    move $2, $5
 ; 32-NEXT:    mtc1 $7, $f0
 ; 32-NEXT:    mtc1 $6, $f1
 ; 32-NEXT:    c.eq.s $f1, $f0
-; 32-NEXT:    movt $5, $4, $fcc0
 ; 32-NEXT:    jr $ra
-; 32-NEXT:    move $2, $5
+; 32-NEXT:    movt $2, $4, $fcc0
 ;
 ; 32R2-LABEL: f32_fcmp_oeq_i32_val:
 ; 32R2:       # %bb.0: # %entry
+; 32R2-NEXT:    move $2, $5
 ; 32R2-NEXT:    mtc1 $7, $f0
 ; 32R2-NEXT:    mtc1 $6, $f1
 ; 32R2-NEXT:    c.eq.s $f1, $f0
-; 32R2-NEXT:    movt $5, $4, $fcc0
 ; 32R2-NEXT:    jr $ra
-; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    movt $2, $4, $fcc0
 ;
 ; 32R6-LABEL: f32_fcmp_oeq_i32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -738,7 +721,6 @@ define i32 @f32_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1, float %f2, fl
 ; 32R6-NEXT:    mtc1 $6, $f1
 ; 32R6-NEXT:    cmp.eq.s $f0, $f1, $f0
 ; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    andi $1, $1, 1
 ; 32R6-NEXT:    seleqz $2, $5, $1
 ; 32R6-NEXT:    selnez $1, $4, $1
 ; 32R6-NEXT:    jr $ra
@@ -746,23 +728,24 @@ define i32 @f32_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1, float %f2, fl
 ;
 ; 64-LABEL: f32_fcmp_oeq_i32_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.eq.s $f14, $f15
-; 64-NEXT:    movt $5, $4, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    move $2, $5
+; 64-NEXT:    c.eq.s $f14, $f15
+; 64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movt $2, $4, $fcc0
 ;
 ; 64R2-LABEL: f32_fcmp_oeq_i32_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.eq.s $f14, $f15
-; 64R2-NEXT:    movt $5, $4, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    c.eq.s $f14, $f15
+; 64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movt $2, $4, $fcc0
 ;
 ; 64R6-LABEL: f32_fcmp_oeq_i32_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.eq.s $f0, $f14, $f15
 ; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    andi $1, $1, 1
 ; 64R6-NEXT:    seleqz $2, $5, $1
 ; 64R6-NEXT:    selnez $1, $4, $1
 ; 64R6-NEXT:    jr $ra
@@ -776,21 +759,21 @@ entry:
 define i32 @f32_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1, float %f2, float %f3) nounwind readnone {
 ; 32-LABEL: f32_fcmp_olt_i32_val:
 ; 32:       # %bb.0: # %entry
+; 32-NEXT:    move $2, $5
 ; 32-NEXT:    mtc1 $7, $f0
 ; 32-NEXT:    mtc1 $6, $f1
 ; 32-NEXT:    c.olt.s $f1, $f0
-; 32-NEXT:    movt $5, $4, $fcc0
 ; 32-NEXT:    jr $ra
-; 32-NEXT:    move $2, $5
+; 32-NEXT:    movt $2, $4, $fcc0
 ;
 ; 32R2-LABEL: f32_fcmp_olt_i32_val:
 ; 32R2:       # %bb.0: # %entry
+; 32R2-NEXT:    move $2, $5
 ; 32R2-NEXT:    mtc1 $7, $f0
 ; 32R2-NEXT:    mtc1 $6, $f1
 ; 32R2-NEXT:    c.olt.s $f1, $f0
-; 32R2-NEXT:    movt $5, $4, $fcc0
 ; 32R2-NEXT:    jr $ra
-; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    movt $2, $4, $fcc0
 ;
 ; 32R6-LABEL: f32_fcmp_olt_i32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -798,7 +781,6 @@ define i32 @f32_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1, float %f2, fl
 ; 32R6-NEXT:    mtc1 $6, $f1
 ; 32R6-NEXT:    cmp.lt.s $f0, $f1, $f0
 ; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    andi $1, $1, 1
 ; 32R6-NEXT:    seleqz $2, $5, $1
 ; 32R6-NEXT:    selnez $1, $4, $1
 ; 32R6-NEXT:    jr $ra
@@ -806,23 +788,24 @@ define i32 @f32_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1, float %f2, fl
 ;
 ; 64-LABEL: f32_fcmp_olt_i32_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.olt.s $f14, $f15
-; 64-NEXT:    movt $5, $4, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    move $2, $5
+; 64-NEXT:    c.olt.s $f14, $f15
+; 64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movt $2, $4, $fcc0
 ;
 ; 64R2-LABEL: f32_fcmp_olt_i32_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.olt.s $f14, $f15
-; 64R2-NEXT:    movt $5, $4, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    c.olt.s $f14, $f15
+; 64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movt $2, $4, $fcc0
 ;
 ; 64R6-LABEL: f32_fcmp_olt_i32_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.lt.s $f0, $f14, $f15
 ; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    andi $1, $1, 1
 ; 64R6-NEXT:    seleqz $2, $5, $1
 ; 64R6-NEXT:    selnez $1, $4, $1
 ; 64R6-NEXT:    jr $ra
@@ -836,21 +819,21 @@ entry:
 define i32 @f32_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1, float %f2, float %f3) nounwind readnone {
 ; 32-LABEL: f32_fcmp_ogt_i32_val:
 ; 32:       # %bb.0: # %entry
+; 32-NEXT:    move $2, $5
 ; 32-NEXT:    mtc1 $7, $f0
 ; 32-NEXT:    mtc1 $6, $f1
 ; 32-NEXT:    c.ule.s $f1, $f0
-; 32-NEXT:    movf $5, $4, $fcc0
 ; 32-NEXT:    jr $ra
-; 32-NEXT:    move $2, $5
+; 32-NEXT:    movf $2, $4, $fcc0
 ;
 ; 32R2-LABEL: f32_fcmp_ogt_i32_val:
 ; 32R2:       # %bb.0: # %entry
+; 32R2-NEXT:    move $2, $5
 ; 32R2-NEXT:    mtc1 $7, $f0
 ; 32R2-NEXT:    mtc1 $6, $f1
 ; 32R2-NEXT:    c.ule.s $f1, $f0
-; 32R2-NEXT:    movf $5, $4, $fcc0
 ; 32R2-NEXT:    jr $ra
-; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    movf $2, $4, $fcc0
 ;
 ; 32R6-LABEL: f32_fcmp_ogt_i32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -858,7 +841,6 @@ define i32 @f32_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1, float %f2, fl
 ; 32R6-NEXT:    mtc1 $7, $f1
 ; 32R6-NEXT:    cmp.lt.s $f0, $f1, $f0
 ; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    andi $1, $1, 1
 ; 32R6-NEXT:    seleqz $2, $5, $1
 ; 32R6-NEXT:    selnez $1, $4, $1
 ; 32R6-NEXT:    jr $ra
@@ -866,23 +848,24 @@ define i32 @f32_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1, float %f2, fl
 ;
 ; 64-LABEL: f32_fcmp_ogt_i32_val:
 ; 64:       # %bb.0: # %entry
-; 64-NEXT:    c.ule.s $f14, $f15
-; 64-NEXT:    movf $5, $4, $fcc0
-; 64-NEXT:    jr $ra
 ; 64-NEXT:    move $2, $5
+; 64-NEXT:    c.ule.s $f14, $f15
+; 64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
+; 64-NEXT:    jr $ra
+; 64-NEXT:    movf $2, $4, $fcc0
 ;
 ; 64R2-LABEL: f32_fcmp_ogt_i32_val:
 ; 64R2:       # %bb.0: # %entry
-; 64R2-NEXT:    c.ule.s $f14, $f15
-; 64R2-NEXT:    movf $5, $4, $fcc0
-; 64R2-NEXT:    jr $ra
 ; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    c.ule.s $f14, $f15
+; 64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
+; 64R2-NEXT:    jr $ra
+; 64R2-NEXT:    movf $2, $4, $fcc0
 ;
 ; 64R6-LABEL: f32_fcmp_ogt_i32_val:
 ; 64R6:       # %bb.0: # %entry
 ; 64R6-NEXT:    cmp.lt.s $f0, $f15, $f14
 ; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    andi $1, $1, 1
 ; 64R6-NEXT:    seleqz $2, $5, $1
 ; 64R6-NEXT:    selnez $1, $4, $1
 ; 64R6-NEXT:    jr $ra
@@ -899,28 +882,28 @@ define i32 @f64_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 32-NEXT:    lui $2, %hi(_gp_disp)
 ; 32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; 32-NEXT:    addu $1, $2, $25
-; 32-NEXT:    lw $2, %got(d3)($1)
-; 32-NEXT:    ldc1 $f0, 0($2)
+; 32-NEXT:    move $2, $5
+; 32-NEXT:    lw $3, %got(d3)($1)
+; 32-NEXT:    ldc1 $f0, 0($3)
 ; 32-NEXT:    lw $1, %got(d2)($1)
 ; 32-NEXT:    ldc1 $f2, 0($1)
 ; 32-NEXT:    c.eq.d $f2, $f0
-; 32-NEXT:    movt $5, $4, $fcc0
 ; 32-NEXT:    jr $ra
-; 32-NEXT:    move $2, $5
+; 32-NEXT:    movt $2, $4, $fcc0
 ;
 ; 32R2-LABEL: f64_fcmp_oeq_i32_val:
 ; 32R2:       # %bb.0: # %entry
 ; 32R2-NEXT:    lui $2, %hi(_gp_disp)
 ; 32R2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; 32R2-NEXT:    addu $1, $2, $25
-; 32R2-NEXT:    lw $2, %got(d3)($1)
-; 32R2-NEXT:    ldc1 $f0, 0($2)
+; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    lw $3, %got(d3)($1)
+; 32R2-NEXT:    ldc1 $f0, 0($3)
 ; 32R2-NEXT:    lw $1, %got(d2)($1)
 ; 32R2-NEXT:    ldc1 $f2, 0($1)
 ; 32R2-NEXT:    c.eq.d $f2, $f0
-; 32R2-NEXT:    movt $5, $4, $fcc0
 ; 32R2-NEXT:    jr $ra
-; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    movt $2, $4, $fcc0
 ;
 ; 32R6-LABEL: f64_fcmp_oeq_i32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -933,7 +916,6 @@ define i32 @f64_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 32R6-NEXT:    ldc1 $f1, 0($1)
 ; 32R6-NEXT:    cmp.eq.d $f0, $f1, $f0
 ; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    andi $1, $1, 1
 ; 32R6-NEXT:    seleqz $2, $5, $1
 ; 32R6-NEXT:    selnez $1, $4, $1
 ; 32R6-NEXT:    jr $ra
@@ -944,28 +926,30 @@ define i32 @f64_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 64-NEXT:    lui $1, %hi(%neg(%gp_rel(f64_fcmp_oeq_i32_val)))
 ; 64-NEXT:    daddu $1, $1, $25
 ; 64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(f64_fcmp_oeq_i32_val)))
-; 64-NEXT:    ld $2, %got_disp(d3)($1)
-; 64-NEXT:    ldc1 $f0, 0($2)
+; 64-NEXT:    move $2, $5
+; 64-NEXT:    ld $3, %got_disp(d3)($1)
+; 64-NEXT:    ldc1 $f0, 0($3)
 ; 64-NEXT:    ld $1, %got_disp(d2)($1)
 ; 64-NEXT:    ldc1 $f1, 0($1)
 ; 64-NEXT:    c.eq.d $f1, $f0
-; 64-NEXT:    movt $5, $4, $fcc0
+; 64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; 64-NEXT:    jr $ra
-; 64-NEXT:    move $2, $5
+; 64-NEXT:    movt $2, $4, $fcc0
 ;
 ; 64R2-LABEL: f64_fcmp_oeq_i32_val:
 ; 64R2:       # %bb.0: # %entry
 ; 64R2-NEXT:    lui $1, %hi(%neg(%gp_rel(f64_fcmp_oeq_i32_val)))
 ; 64R2-NEXT:    daddu $1, $1, $25
 ; 64R2-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(f64_fcmp_oeq_i32_val)))
-; 64R2-NEXT:    ld $2, %got_disp(d3)($1)
-; 64R2-NEXT:    ldc1 $f0, 0($2)
+; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    ld $3, %got_disp(d3)($1)
+; 64R2-NEXT:    ldc1 $f0, 0($3)
 ; 64R2-NEXT:    ld $1, %got_disp(d2)($1)
 ; 64R2-NEXT:    ldc1 $f1, 0($1)
 ; 64R2-NEXT:    c.eq.d $f1, $f0
-; 64R2-NEXT:    movt $5, $4, $fcc0
+; 64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; 64R2-NEXT:    jr $ra
-; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    movt $2, $4, $fcc0
 ;
 ; 64R6-LABEL: f64_fcmp_oeq_i32_val:
 ; 64R6:       # %bb.0: # %entry
@@ -978,7 +962,6 @@ define i32 @f64_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 64R6-NEXT:    ldc1 $f1, 0($1)
 ; 64R6-NEXT:    cmp.eq.d $f0, $f1, $f0
 ; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    andi $1, $1, 1
 ; 64R6-NEXT:    seleqz $2, $5, $1
 ; 64R6-NEXT:    selnez $1, $4, $1
 ; 64R6-NEXT:    jr $ra
@@ -997,28 +980,28 @@ define i32 @f64_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 32-NEXT:    lui $2, %hi(_gp_disp)
 ; 32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; 32-NEXT:    addu $1, $2, $25
-; 32-NEXT:    lw $2, %got(d3)($1)
-; 32-NEXT:    ldc1 $f0, 0($2)
+; 32-NEXT:    move $2, $5
+; 32-NEXT:    lw $3, %got(d3)($1)
+; 32-NEXT:    ldc1 $f0, 0($3)
 ; 32-NEXT:    lw $1, %got(d2)($1)
 ; 32-NEXT:    ldc1 $f2, 0($1)
 ; 32-NEXT:    c.olt.d $f2, $f0
-; 32-NEXT:    movt $5, $4, $fcc0
 ; 32-NEXT:    jr $ra
-; 32-NEXT:    move $2, $5
+; 32-NEXT:    movt $2, $4, $fcc0
 ;
 ; 32R2-LABEL: f64_fcmp_olt_i32_val:
 ; 32R2:       # %bb.0: # %entry
 ; 32R2-NEXT:    lui $2, %hi(_gp_disp)
 ; 32R2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; 32R2-NEXT:    addu $1, $2, $25
-; 32R2-NEXT:    lw $2, %got(d3)($1)
-; 32R2-NEXT:    ldc1 $f0, 0($2)
+; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    lw $3, %got(d3)($1)
+; 32R2-NEXT:    ldc1 $f0, 0($3)
 ; 32R2-NEXT:    lw $1, %got(d2)($1)
 ; 32R2-NEXT:    ldc1 $f2, 0($1)
 ; 32R2-NEXT:    c.olt.d $f2, $f0
-; 32R2-NEXT:    movt $5, $4, $fcc0
 ; 32R2-NEXT:    jr $ra
-; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    movt $2, $4, $fcc0
 ;
 ; 32R6-LABEL: f64_fcmp_olt_i32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -1031,7 +1014,6 @@ define i32 @f64_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 32R6-NEXT:    ldc1 $f1, 0($1)
 ; 32R6-NEXT:    cmp.lt.d $f0, $f1, $f0
 ; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    andi $1, $1, 1
 ; 32R6-NEXT:    seleqz $2, $5, $1
 ; 32R6-NEXT:    selnez $1, $4, $1
 ; 32R6-NEXT:    jr $ra
@@ -1042,28 +1024,30 @@ define i32 @f64_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 64-NEXT:    lui $1, %hi(%neg(%gp_rel(f64_fcmp_olt_i32_val)))
 ; 64-NEXT:    daddu $1, $1, $25
 ; 64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(f64_fcmp_olt_i32_val)))
-; 64-NEXT:    ld $2, %got_disp(d3)($1)
-; 64-NEXT:    ldc1 $f0, 0($2)
+; 64-NEXT:    move $2, $5
+; 64-NEXT:    ld $3, %got_disp(d3)($1)
+; 64-NEXT:    ldc1 $f0, 0($3)
 ; 64-NEXT:    ld $1, %got_disp(d2)($1)
 ; 64-NEXT:    ldc1 $f1, 0($1)
 ; 64-NEXT:    c.olt.d $f1, $f0
-; 64-NEXT:    movt $5, $4, $fcc0
+; 64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; 64-NEXT:    jr $ra
-; 64-NEXT:    move $2, $5
+; 64-NEXT:    movt $2, $4, $fcc0
 ;
 ; 64R2-LABEL: f64_fcmp_olt_i32_val:
 ; 64R2:       # %bb.0: # %entry
 ; 64R2-NEXT:    lui $1, %hi(%neg(%gp_rel(f64_fcmp_olt_i32_val)))
 ; 64R2-NEXT:    daddu $1, $1, $25
 ; 64R2-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(f64_fcmp_olt_i32_val)))
-; 64R2-NEXT:    ld $2, %got_disp(d3)($1)
-; 64R2-NEXT:    ldc1 $f0, 0($2)
+; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    ld $3, %got_disp(d3)($1)
+; 64R2-NEXT:    ldc1 $f0, 0($3)
 ; 64R2-NEXT:    ld $1, %got_disp(d2)($1)
 ; 64R2-NEXT:    ldc1 $f1, 0($1)
 ; 64R2-NEXT:    c.olt.d $f1, $f0
-; 64R2-NEXT:    movt $5, $4, $fcc0
+; 64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; 64R2-NEXT:    jr $ra
-; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    movt $2, $4, $fcc0
 ;
 ; 64R6-LABEL: f64_fcmp_olt_i32_val:
 ; 64R6:       # %bb.0: # %entry
@@ -1076,7 +1060,6 @@ define i32 @f64_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 64R6-NEXT:    ldc1 $f1, 0($1)
 ; 64R6-NEXT:    cmp.lt.d $f0, $f1, $f0
 ; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    andi $1, $1, 1
 ; 64R6-NEXT:    seleqz $2, $5, $1
 ; 64R6-NEXT:    selnez $1, $4, $1
 ; 64R6-NEXT:    jr $ra
@@ -1095,28 +1078,28 @@ define i32 @f64_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 32-NEXT:    lui $2, %hi(_gp_disp)
 ; 32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; 32-NEXT:    addu $1, $2, $25
-; 32-NEXT:    lw $2, %got(d3)($1)
-; 32-NEXT:    ldc1 $f0, 0($2)
+; 32-NEXT:    move $2, $5
+; 32-NEXT:    lw $3, %got(d3)($1)
+; 32-NEXT:    ldc1 $f0, 0($3)
 ; 32-NEXT:    lw $1, %got(d2)($1)
 ; 32-NEXT:    ldc1 $f2, 0($1)
 ; 32-NEXT:    c.ule.d $f2, $f0
-; 32-NEXT:    movf $5, $4, $fcc0
 ; 32-NEXT:    jr $ra
-; 32-NEXT:    move $2, $5
+; 32-NEXT:    movf $2, $4, $fcc0
 ;
 ; 32R2-LABEL: f64_fcmp_ogt_i32_val:
 ; 32R2:       # %bb.0: # %entry
 ; 32R2-NEXT:    lui $2, %hi(_gp_disp)
 ; 32R2-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; 32R2-NEXT:    addu $1, $2, $25
-; 32R2-NEXT:    lw $2, %got(d3)($1)
-; 32R2-NEXT:    ldc1 $f0, 0($2)
+; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    lw $3, %got(d3)($1)
+; 32R2-NEXT:    ldc1 $f0, 0($3)
 ; 32R2-NEXT:    lw $1, %got(d2)($1)
 ; 32R2-NEXT:    ldc1 $f2, 0($1)
 ; 32R2-NEXT:    c.ule.d $f2, $f0
-; 32R2-NEXT:    movf $5, $4, $fcc0
 ; 32R2-NEXT:    jr $ra
-; 32R2-NEXT:    move $2, $5
+; 32R2-NEXT:    movf $2, $4, $fcc0
 ;
 ; 32R6-LABEL: f64_fcmp_ogt_i32_val:
 ; 32R6:       # %bb.0: # %entry
@@ -1129,7 +1112,6 @@ define i32 @f64_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 32R6-NEXT:    ldc1 $f1, 0($1)
 ; 32R6-NEXT:    cmp.lt.d $f0, $f1, $f0
 ; 32R6-NEXT:    mfc1 $1, $f0
-; 32R6-NEXT:    andi $1, $1, 1
 ; 32R6-NEXT:    seleqz $2, $5, $1
 ; 32R6-NEXT:    selnez $1, $4, $1
 ; 32R6-NEXT:    jr $ra
@@ -1140,28 +1122,30 @@ define i32 @f64_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 64-NEXT:    lui $1, %hi(%neg(%gp_rel(f64_fcmp_ogt_i32_val)))
 ; 64-NEXT:    daddu $1, $1, $25
 ; 64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(f64_fcmp_ogt_i32_val)))
-; 64-NEXT:    ld $2, %got_disp(d3)($1)
-; 64-NEXT:    ldc1 $f0, 0($2)
+; 64-NEXT:    move $2, $5
+; 64-NEXT:    ld $3, %got_disp(d3)($1)
+; 64-NEXT:    ldc1 $f0, 0($3)
 ; 64-NEXT:    ld $1, %got_disp(d2)($1)
 ; 64-NEXT:    ldc1 $f1, 0($1)
 ; 64-NEXT:    c.ule.d $f1, $f0
-; 64-NEXT:    movf $5, $4, $fcc0
+; 64-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; 64-NEXT:    jr $ra
-; 64-NEXT:    move $2, $5
+; 64-NEXT:    movf $2, $4, $fcc0
 ;
 ; 64R2-LABEL: f64_fcmp_ogt_i32_val:
 ; 64R2:       # %bb.0: # %entry
 ; 64R2-NEXT:    lui $1, %hi(%neg(%gp_rel(f64_fcmp_ogt_i32_val)))
 ; 64R2-NEXT:    daddu $1, $1, $25
 ; 64R2-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(f64_fcmp_ogt_i32_val)))
-; 64R2-NEXT:    ld $2, %got_disp(d3)($1)
-; 64R2-NEXT:    ldc1 $f0, 0($2)
+; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    ld $3, %got_disp(d3)($1)
+; 64R2-NEXT:    ldc1 $f0, 0($3)
 ; 64R2-NEXT:    ld $1, %got_disp(d2)($1)
 ; 64R2-NEXT:    ldc1 $f1, 0($1)
 ; 64R2-NEXT:    c.ule.d $f1, $f0
-; 64R2-NEXT:    movf $5, $4, $fcc0
+; 64R2-NEXT:    # kill: def $r2 killed $r2 killed $r2_64
 ; 64R2-NEXT:    jr $ra
-; 64R2-NEXT:    move $2, $5
+; 64R2-NEXT:    movf $2, $4, $fcc0
 ;
 ; 64R6-LABEL: f64_fcmp_ogt_i32_val:
 ; 64R6:       # %bb.0: # %entry
@@ -1174,7 +1158,6 @@ define i32 @f64_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 64R6-NEXT:    ldc1 $f1, 0($1)
 ; 64R6-NEXT:    cmp.lt.d $f0, $f1, $f0
 ; 64R6-NEXT:    mfc1 $1, $f0
-; 64R6-NEXT:    andi $1, $1, 1
 ; 64R6-NEXT:    seleqz $2, $5, $1
 ; 64R6-NEXT:    selnez $1, $4, $1
 ; 64R6-NEXT:    jr $ra

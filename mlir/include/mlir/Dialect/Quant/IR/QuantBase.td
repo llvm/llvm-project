@@ -387,6 +387,7 @@ def Quant_Dialect : Dialect {
     ```
   }];
   let cppNamespace = "::mlir::quant";
+  let useDefaultOperationRegistration = 1;
   let useDefaultTypePrinterParser = 1;
 }
 
@@ -401,6 +402,16 @@ class quant_ScalarOrTensorOf<Type etype> :
 
 def quant_QuantizedType :
     Type<CPred<"::llvm::isa<mlir::quant::QuantizedType>($_self)">, "quantized type">;
+
+// QuantileType
+def quant_QuantileType :
+    DialectType<Quant_Dialect,
+    CPred<"::llvm::isa<::mlir::quant::QuantileType>($_self)">,
+    "QuantileType">;
+
+// Predicate for detecting a scalar or tensor of QuantileType.
+def quant_QuantileValueType :
+    quant_ScalarOrTensorOf<quant_QuantileType>;
 
 def quant_ScalarType :
     Type<Or<[

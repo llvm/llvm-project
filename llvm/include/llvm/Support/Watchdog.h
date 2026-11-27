@@ -24,8 +24,9 @@ namespace llvm {
     /// to handle it are provided.
     class Watchdog {
     public:
-      Watchdog(unsigned int seconds);
-      ~Watchdog();
+      LLVM_ABI Watchdog(unsigned int seconds);
+      LLVM_ABI ~Watchdog();
+
     private:
       // Noncopyable.
       Watchdog(const Watchdog &other) = delete;

@@ -32,9 +32,9 @@ class Pred;
 // Wrapper class providing helper methods for accesing property constraint
 // values.
 class PropConstraint : public Constraint {
+public:
   using Constraint::Constraint;
 
-public:
   static bool classof(const Constraint *c) { return c->getKind() == CK_Prop; }
 
   StringRef getInterfaceType() const;
@@ -94,6 +94,10 @@ public:
   // Returns the method call which parses this property from textual MLIR.
   StringRef getParserCall() const { return parserCall; }
 
+  // Returns true if this property uses the parser inherited from the base
+  // Property class.
+  bool usesDefaultParser() const;
+
   // Returns true if this property has defined an optional parser.
   bool hasOptionalParser() const { return !optionalParserCall.empty(); }
 
@@ -143,6 +147,10 @@ public:
   // property constraints, this function is added for future-proofing)
   Property getBaseProperty() const;
 
+  // Returns true if this property is backed by a TableGen definition and that
+  // definition is a subclass of `className`.
+  bool isSubClassOf(StringRef className) const;
+
 private:
   // Elements describing a Property, in general fetched from the record.
   StringRef summary;
@@ -169,6 +177,21 @@ struct NamedProperty {
   Property prop;
 };
 
+// Wrapper class providing helper methods for processing constant property
+// values defined using the `ConstantProp` subclass of `Property`
+// in TableGen.
+class ConstantProp : public Property {
+public:
+  explicit ConstantProp(const llvm::DefInit *def) : Property(def) {
+    assert(isSubClassOf("ConstantProp"));
+  }
+
+  static bool classof(Property *p) { return p->isSubClassOf("ConstantProp"); }
+
+  // Return the constant value of the property as an expression
+  // that produces an interface-type constant.
+  StringRef getValue() const;
+};
 } // namespace tblgen
 } // namespace mlir
 

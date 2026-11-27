@@ -124,4 +124,54 @@ Task<int> elidableWithPackRecursive() {
   co_return co_await sumAll(addTasks(returnSame(1), returnSame(2)), returnSame(3));
 }
 
+// Test that parenthesized expressions don't break HALO
+// CHECK-LABEL: define{{.*}} @_Z14withParenthesev{{.*}} {
+Task<int> withParenthese() {
+  // CHECK: call void @_Z6calleev(ptr {{.*}}) #[[ELIDE_SAFE]]
+  co_return co_await (callee());
+}
+
+// Test nested parentheses
+// CHECK-LABEL: define{{.*}} @_Z20withNestedParenthesev{{.*}} {
+Task<int> withNestedParenthese() {
+  // CHECK: call void @_Z6calleev(ptr {{.*}}) #[[ELIDE_SAFE]]
+  co_return co_await ((callee()));
+}
+
+// Test parentheses with elidable argument
+// CHECK-LABEL: define{{.*}} @_Z21withParenArgsElidablev{{.*}} {
+Task<int> withParenArgsElidable() {
+  // CHECK: call void @_Z10returnSamei(ptr {{.*}}, i32 noundef 2) #[[ELIDE_SAFE]]
+  // CHECK: call void @_Z10returnSamei(ptr {{.*}}, i32 noundef 3){{$}}
+  co_return co_await (addTasks(returnSame(2), returnSame(3)));
+}
+
+// Test parentheses around elidable argument expressions
+// CHECK-LABEL: define{{.*}} @_Z24withParenInsideArgsFirstv{{.*}} {
+Task<int> withParenInsideArgsFirst() {
+  // Argument wrapped in parens should still be elidable
+  // CHECK: call void @_Z10returnSamei(ptr {{.*}}, i32 noundef 4) #[[ELIDE_SAFE]]
+  // CHECK: call void @_Z10returnSamei(ptr {{.*}}, i32 noundef 5){{$}}
+  co_return co_await addTasks((returnSame(4)), returnSame(5));
+}
+
+// CHECK-LABEL: define{{.*}} @_Z25withParenInsideArgsSecondv{{.*}} {
+Task<int> withParenInsideArgsSecond() {
+  // Both arguments wrapped in parens, first should still be elidable
+  // CHECK: call void @_Z10returnSamei(ptr {{.*}}, i32 noundef 6) #[[ELIDE_SAFE]]
+  // CHECK: call void @_Z10returnSamei(ptr {{.*}}, i32 noundef 7){{$}}
+  co_return co_await addTasks((returnSame(6)), (returnSame(7)));
+}
+
+// Test operator overloading scenario (like the `operator|` case)
+Task<int> operator|(int, [[clang::coro_await_elidable_argument]] Task<int> &&t) {
+  co_return co_await t;
+}
+
+// CHECK-LABEL: define{{.*}} @_Z15withOperatorOldv{{.*}} {
+Task<int> withOperatorOld() {
+  // CHECK: call void @_Z10returnSamei(ptr {{.*}}, i32 noundef 8) #[[ELIDE_SAFE]]
+  co_return co_await (0 | returnSame(8));
+}
+
 // CHECK: attributes #[[ELIDE_SAFE]] = { coro_elide_safe }

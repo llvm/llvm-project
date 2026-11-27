@@ -1017,8 +1017,8 @@ static void test_europe_dublin() {
 
 static void test_america_st_johns() {
   // A more typical entry,
-  // Uses letters both when DST is ative and not and has multiple
-  // letters. Uses negetive offsets.
+  // Uses letters both when DST is active and not and has multiple
+  // letters. Uses negative offsets.
   // Switches several times between their own and Canadian rules
   // Switches the stdoff from -3:30:52 to -3:30 while observing the same rule
 

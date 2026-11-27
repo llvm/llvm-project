@@ -1,5 +1,6 @@
 # RUN: echo "" | not yaml2obj 2>&1 | FileCheck %s
-# RUN: echo -n "" | not yaml2obj 2>&1 | FileCheck %s
+# RUN: echo -n "" > %t
+# RUN: not yaml2obj %t 2>&1 | FileCheck %s
 # RUN: echo " " | not yaml2obj 2>&1 | FileCheck %s
 # RUN: echo "  " | not yaml2obj 2>&1 | FileCheck %s
 # CHECK: yaml2obj: error: unknown document type

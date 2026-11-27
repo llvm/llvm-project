@@ -18,7 +18,7 @@
 // However using the granularized headers so it's possible to implement
 // <ostream> without <format>. This would be a non-conforming implementation.
 //
-// See https://github.com/llvm/llvm-project/issues/71925
+// See https://llvm.org/PR71925
 
 #include <ostream>
 #include <vector>

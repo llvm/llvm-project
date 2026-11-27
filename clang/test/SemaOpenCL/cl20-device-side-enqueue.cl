@@ -87,7 +87,7 @@ kernel void enqueue_kernel_tests(void) {
                  },
                  1024, 4294967296L);
 #ifdef B32
-// expected-warning@-2{{implicit conversion from 'long' to 'unsigned int' changes value from 4294967296 to 0}}
+// expected-warning@-2{{implicit conversion from 'long' to '__size_t' (aka 'unsigned int') changes value from 4294967296 to 0}}
 #endif
 
   char c;
@@ -97,7 +97,7 @@ kernel void enqueue_kernel_tests(void) {
                  },
                  c, 1024L);
 #ifdef WCONV
-// expected-warning-re@-2{{implicit conversion changes signedness: 'char' to 'unsigned {{int|long}}'}}
+// expected-warning-re@-2{{implicit conversion changes signedness: 'char' to '__size_t' (aka 'unsigned {{int|long}}')}}
 #endif
 #define UINT_MAX 4294967295
 
@@ -107,7 +107,7 @@ kernel void enqueue_kernel_tests(void) {
                  },
                  sizeof(int), sizeof(int) * UINT_MAX);
 #ifdef B32
-// expected-warning@-2{{implicit conversion from 'long' to 'unsigned int' changes value from 17179869180 to 4294967292}}
+// expected-warning@-2{{implicit conversion from 'long' to '__size_t' (aka 'unsigned int') changes value from 17179869180 to 4294967292}}
 #endif
 
   typedef void (^bl_A_t)(local void *);

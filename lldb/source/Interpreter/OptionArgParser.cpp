@@ -8,6 +8,7 @@
 
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -161,7 +162,7 @@ lldb::addr_t OptionArgParser::ToRawAddress(const ExecutionContext *exe_ctx,
                                            lldb::addr_t fail_value,
                                            Status *error_ptr) {
   std::optional<lldb::addr_t> maybe_addr = DoToAddress(exe_ctx, s, error_ptr);
-  return maybe_addr ? *maybe_addr : fail_value;
+  return maybe_addr.value_or(fail_value);
 }
 
 lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
@@ -175,8 +176,7 @@ lldb::addr_t OptionArgParser::ToAddress(const ExecutionContext *exe_ctx,
   lldb::addr_t addr = *maybe_addr;
 
   if (Process *process = exe_ctx->GetProcessPtr())
-    if (ABISP abi_sp = process->GetABI())
-      addr = abi_sp->FixCodeAddress(addr);
+    addr = process->FixAnyAddress(addr);
 
   return addr;
 }
@@ -232,8 +232,18 @@ OptionArgParser::DoToAddress(const ExecutionContext *exe_ctx, llvm::StringRef s,
       valobj_sp = valobj_sp->GetQualifiedRepresentationIfAvailable(
           valobj_sp->GetDynamicValueType(), true);
     // Get the address to watch.
-    if (valobj_sp)
-      addr = valobj_sp->GetValueAsUnsigned(0, &success);
+    if (valobj_sp) {
+      // In C an array decays to a pointer to its first element, whose value is
+      // the address of the array object itself. An aggregate has no scalar
+      // value, so GetValueAsUnsigned() would fail here; use the array's own
+      // load address instead.
+      if (valobj_sp->GetCompilerType().IsArrayType()) {
+        addr = valobj_sp->GetAddressOf(/*scalar_is_load_address=*/true).address;
+        success = addr != LLDB_INVALID_ADDRESS;
+      } else {
+        addr = valobj_sp->GetValueAsUnsigned(0, &success);
+      }
+    }
     if (success) {
       if (error_ptr)
         error_ptr->Clear();

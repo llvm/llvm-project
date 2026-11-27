@@ -1,3 +1,8 @@
+set(LIBC_INCLUDE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(LIBC_INCLUDE_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+include(LLVMLibCHeaderRules)
+
 function(add_proxy_header_library target_name)
   cmake_parse_arguments(
     "ADD_PROXY_HEADER"
@@ -29,7 +34,6 @@ add_proxy_header_library(
     math_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.math_macros
-    libc.include.math
 )
 
 add_proxy_header_library(
@@ -38,7 +42,14 @@ add_proxy_header_library(
     math_function_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.math_function_macros
-    libc.include.math
+)
+
+add_proxy_header_library(
+  arpa_nameser_macros
+  HDRS
+    arpa_nameser_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.arpa_nameser_macros
 )
 
 add_proxy_header_library(
@@ -46,7 +57,6 @@ add_proxy_header_library(
   HDRS
     errno_macros.h
   FULL_BUILD_DEPENDS
-    libc.include.errno
     libc.include.llvm-libc-macros.error_number_macros
     libc.include.llvm-libc-macros.generic_error_number_macros
 )
@@ -60,7 +70,6 @@ add_proxy_header_library(
     .fcntl_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.fcntl_macros
-    libc.include.fcntl
 )
 
 add_proxy_header_library(
@@ -69,7 +78,81 @@ add_proxy_header_library(
     fenv_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.fenv_macros
-    libc.include.fenv
+)
+
+add_proxy_header_library(
+  fnmatch_macros
+  HDRS
+    fnmatch_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.fnmatch_macros
+)
+
+add_proxy_header_library(
+  glob_macros
+  HDRS
+    glob_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.glob_macros
+)
+
+add_proxy_header_library(
+  inet_address_macros
+  HDRS
+    inet-address-macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.inet_address_macros
+)
+
+add_proxy_header_library(
+  net_if_macros
+  HDRS
+    net_if_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.net_if_macros
+)
+
+add_proxy_header_library(
+  netdb_macros
+  HDRS
+    netdb_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.netdb_macros
+)
+
+add_proxy_header_library(
+  netinet_in_macros
+  HDRS
+    netinet_in_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.netinet_in_macros
+)
+
+add_proxy_header_library(
+  netinet_tcp_macros
+  HDRS
+    netinet_tcp_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.netinet_tcp_macros
+)
+
+add_header_library(poll_overlay HDRS poll_overlay.h)
+add_proxy_header_library(
+  poll_macros
+  HDRS
+    poll_macros.h
+  DEPENDS
+    .poll_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.poll-macros
+)
+
+add_proxy_header_library(
+  pthread_macros
+  HDRS
+    pthread_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.pthread_macros
 )
 
 add_proxy_header_library(
@@ -77,8 +160,15 @@ add_proxy_header_library(
   HDRS
     sched_macros.h
   FULL_BUILD_DEPENDS
-    libc.include.sched
     libc.include.llvm-libc-macros.sched_macros
+)
+
+add_proxy_header_library(
+  semaphore_macros
+  HDRS
+    semaphore_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.semaphore_macros
 )
 
 add_proxy_header_library(
@@ -87,7 +177,6 @@ add_proxy_header_library(
     signal_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.signal_macros
-    libc.include.signal
 )
 
 add_header_library(stdlib_overlay HDRS stdlib_overlay.h)
@@ -99,10 +188,10 @@ add_proxy_header_library(
   DEPENDS
     .stdlib_overlay
   FULL_BUILD_DEPENDS
-    libc.include.stdlib
     libc.include.llvm-libc-macros.stdlib_macros
 )
 
+add_header_library(dirent_overlay HDRS dirent_overlay.h)
 add_header_library(stdio_overlay HDRS stdio_overlay.h)
 
 add_proxy_header_library(
@@ -112,7 +201,6 @@ add_proxy_header_library(
   DEPENDS
     .stdio_overlay
   FULL_BUILD_DEPENDS
-    libc.include.stdio
     libc.include.llvm-libc-macros.stdio_macros
     libc.include.llvm-libc-macros.file_seek_macros
 )
@@ -122,8 +210,31 @@ add_proxy_header_library(
   HDRS
     sys_epoll_macros.h
   FULL_BUILD_DEPENDS
-    libc.include.sys_epoll
     libc.include.llvm-libc-macros.sys_epoll_macros
+)
+
+add_proxy_header_library(
+  sys_eventfd_macros
+  HDRS
+    sys_eventfd_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_eventfd_macros
+)
+
+add_proxy_header_library(
+  sys_file_macros
+  HDRS
+    sys_file_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_file_macros
+)
+
+add_proxy_header_library(
+  sys_inotify_macros
+  HDRS
+    sys_inotify_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_inotify_macros
 )
 
 add_proxy_header_library(
@@ -131,8 +242,50 @@ add_proxy_header_library(
   HDRS
     sys_ioctl_macros.h
   FULL_BUILD_DEPENDS
-    libc.include.sys_ioctl
     libc.include.llvm-libc-macros.sys_ioctl_macros
+)
+
+add_proxy_header_library(
+  sys_ipc_macros
+  HDRS
+    sys_ipc_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_ipc_macros
+)
+
+add_proxy_header_library(
+  sys_select_macros
+  HDRS
+    sys_select_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_select_macros
+)
+
+add_proxy_header_library(
+  sys_sem_macros
+  HDRS
+    sys_sem_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_sem_macros
+)
+
+add_proxy_header_library(
+  sys_shm_macros
+  HDRS
+    sys_shm_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_shm_macros
+)
+
+add_header_library(sys_socket_overlay HDRS sys_socket_overlay.h)
+add_proxy_header_library(
+  sys_socket_macros
+  HDRS
+    sys_socket_macros.h
+  DEPENDS
+    .sys_socket_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_socket_macros
 )
 
 add_proxy_header_library(
@@ -140,8 +293,71 @@ add_proxy_header_library(
   HDRS
     sys_stat_macros.h
   FULL_BUILD_DEPENDS
-    libc.include.sys_stat
     libc.include.llvm-libc-macros.sys_stat_macros
+)
+
+add_proxy_header_library(
+  syslog_macros
+  HDRS
+    syslog_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.syslog_macros
+)
+
+add_proxy_header_library(
+  sys_mman_macros
+  HDRS
+    sys_mman_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_mman_macros
+)
+
+add_proxy_header_library(
+  sys_ptrace_macros
+  HDRS
+    sys_ptrace_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_ptrace_macros
+)
+
+add_proxy_header_library(
+  sys_time_macros
+  HDRS
+    sys_time_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_time_macros
+)
+
+add_proxy_header_library(
+  sys_timerfd_macros
+  HDRS
+    sys_timerfd_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_timerfd_macros
+)
+
+add_proxy_header_library(
+  sys_wait_macros
+  HDRS
+    sys_wait_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_wait_macros
+)
+
+add_proxy_header_library(
+  sys_xattr_macros
+  HDRS
+    sys_xattr_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_xattr_macros
+)
+
+add_proxy_header_library(
+  termios_macros
+  HDRS
+    termios_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.termios_macros
 )
 
 add_header_library(unistd_overlay HDRS unistd_overlay.h)
@@ -152,11 +368,11 @@ add_proxy_header_library(
   DEPENDS
     .unistd_overlay
   FULL_BUILD_DEPENDS
-    libc.include.unistd
+    libc.include.llvm-libc-macros.file_seek_macros
     libc.include.llvm-libc-macros.unistd_macros
 )
 
-if (WIN32)
+if(WIN32)
   set(windows_addtional_time_macros libc.include.llvm-libc-macros.windows.time_macros_ext)
 else()
   set(windows_addtional_time_macros "")
@@ -169,7 +385,6 @@ add_proxy_header_library(
   DEPENDS
     ${windows_addtional_time_macros}
   FULL_BUILD_DEPENDS
-    libc.include.time
     libc.include.llvm-libc-macros.time_macros
 )
 
@@ -177,10 +392,8 @@ add_proxy_header_library(
   float_macros
   HDRS
     float_macros.h
-  DEPENDS
-    libc.include.llvm-libc-macros.float_macros
   FULL_BUILD_DEPENDS
-    libc.include.float
+    libc.include.llvm-libc-macros.float_macros
 )
 
 add_proxy_header_library(
@@ -188,7 +401,6 @@ add_proxy_header_library(
   HDRS
     limits_macros.h
   FULL_BUILD_DEPENDS
-    libc.include.limits
     libc.include.llvm-libc-macros.limits_macros
 )
 
@@ -198,7 +410,6 @@ add_proxy_header_library(
     link_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.link_macros
-    libc.include.link
 )
 
 add_proxy_header_library(
@@ -207,7 +418,14 @@ add_proxy_header_library(
     locale_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.locale_macros
-    libc.include.locale
+)
+
+add_proxy_header_library(
+  langinfo_macros
+  HDRS
+    langinfo_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.langinfo_macros
 )
 
 add_proxy_header_library(
@@ -216,7 +434,14 @@ add_proxy_header_library(
     sys_auxv_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_auxv_macros
-    libc.include.sys_auxv
+)
+
+add_proxy_header_library(
+  sys_resource_macros
+  HDRS
+    sys_resource_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_resource_macros
 )
 
 add_header_library(wchar_overlay HDRS wchar_overlay.h)
@@ -231,7 +456,6 @@ add_proxy_header_library(
     .wchar_overlay
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.wchar_macros
-    libc.include.wchar
 )
 
 # offsetof is a macro inside compiler resource header stddef.h
@@ -241,6 +465,39 @@ add_proxy_header_library(
     offsetof_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.offsetof_macro
+)
+
+# stdint.h header.
+add_proxy_header_library(
+  stdint_proxy
+  HDRS
+    stdint_proxy.h
+  FULL_BUILD_DEPENDS
+    libc.include.stdint
+)
+
+add_proxy_header_library(
+  elf_macros
+  HDRS
+    elf_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.elf_macros
+)
+
+add_proxy_header_library(
+  elf_proxy
+  HDRS
+    elf_proxy.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-proxy.elf_proxy
+)
+
+add_proxy_header_library(
+  regex_macros
+  HDRS
+    regex_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.regex_macros
 )
 
 add_subdirectory(types)

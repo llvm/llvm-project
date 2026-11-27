@@ -11,7 +11,6 @@
 
 #include "call.h"
 #include "characteristics.h"
-#include "type.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/message.h"
 #include "flang/Support/default-kinds.h"
@@ -63,6 +62,7 @@ struct SpecificIntrinsicFunctionInterface : public characteristics::Procedure {
 // Generic intrinsic classes from table 16.1
 ENUM_CLASS(IntrinsicClass, atomicSubroutine, collectiveSubroutine,
     elementalFunction, elementalSubroutine, inquiryFunction, pureSubroutine,
+    simpleSubroutine, simpleElementalSubroutine, impureFunction,
     impureSubroutine, transformationalFunction, noClass)
 
 class IntrinsicProcTable {
@@ -86,6 +86,12 @@ public:
   bool IsIntrinsic(const std::string &) const;
   bool IsIntrinsicFunction(const std::string &) const;
   bool IsIntrinsicSubroutine(const std::string &) const;
+  bool IsDualIntrinsic(const std::string &) const;
+
+  // True when a reference to this name is a reference to a generic procedure.
+  // A name that is only a specific intrinsic name, such as DSIN, is not; a
+  // name that is both, such as SIN, is.
+  bool IsGenericIntrinsic(const std::string &) const;
 
   // Inquiry intrinsics are defined in section 16.7, table 16.1
   IntrinsicClass GetIntrinsicClass(const std::string &) const;
@@ -113,6 +119,9 @@ public:
   // constant folding.
   static const inline std::string InvalidName{
       "(invalid intrinsic function call)"};
+
+  // Name of intrinsics used in various locations.
+  static inline const char *const BuiltinIntName{"__builtin_int"};
 
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 

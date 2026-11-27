@@ -1,3 +1,7 @@
+lldb_tablegen(LanguageCPlusPlusOptions.inc -gen-lldb-option-defs
+  SOURCE LanguageCPlusPlusOptions.td
+  TARGET LLDBPluginLanguageCPlusPlusOptionsGen)
+
 lldb_tablegen(LanguageCPlusPlusProperties.inc -gen-lldb-property-defs
   SOURCE LanguageCPlusPlusProperties.td
   TARGET LLDBPluginLanguageCPlusPlusPropertiesGen)
@@ -6,20 +10,27 @@ lldb_tablegen(LanguageCPlusPlusPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE LanguageCPlusPlusProperties.td
   TARGET LLDBPluginLanguageCPlusPlusPropertiesEnumGen)
 
+lldb_tablegen(LanguageCPlusPlusProperties.json -dump-json
+  SOURCE LanguageCPlusPlusProperties.td
+  TARGET LLDBPluginLanguageCPlusPlusPropertiesJsonGen)
+
 add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   BlockPointer.cpp
   Coroutines.cpp
   CPlusPlusLanguage.cpp
   CPlusPlusNameParser.cpp
   CxxStringTypes.cpp
+  Generic.cpp
   GenericBitset.cpp
+  GenericErrorCode.cpp
+  GenericFilesystem.cpp
+  GenericInitializerList.cpp
+  GenericList.cpp
   GenericOptional.cpp
+  GenericQueue.cpp
   LibCxx.cpp
   LibCxxAtomic.cpp
-  LibCxxInitializerList.cpp
-  LibCxxList.cpp
   LibCxxMap.cpp
-  LibCxxQueue.cpp
   LibCxxRangesRefView.cpp
   LibCxxSliceArray.cpp
   LibCxxProxyArray.cpp
@@ -30,9 +41,24 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
   LibCxxValarray.cpp
   LibCxxVector.cpp
   LibStdcpp.cpp
+  LibStdcppAtomic.cpp
+  LibStdcppSpan.cpp
   LibStdcppTuple.cpp
   LibStdcppUniquePointer.cpp
+  MsvcStl.cpp
+  MsvcStlAtomic.cpp
+  MsvcStlDeque.cpp
+  MsvcStlExpected.cpp
+  MsvcStlSmartPointer.cpp
+  MsvcStlSpan.cpp
+  MsvcStlTree.cpp
+  MsvcStlTuple.cpp
+  MsvcStlUnordered.cpp
+  MsvcStlValarray.cpp
+  MsvcStlVariant.cpp
+  MsvcStlVector.cpp
   MSVCUndecoratedNameParser.cpp
+  VectorIterator.cpp
 
   LINK_COMPONENTS
     Support
@@ -44,11 +70,11 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbTarget
     lldbUtility
     lldbValueObject
-    lldbPluginClangCommon
     lldbPluginCPPRuntime
     lldbPluginTypeSystemClang
 )
 
 add_dependencies(lldbPluginCPlusPlusLanguage
+  LLDBPluginLanguageCPlusPlusOptionsGen
   LLDBPluginLanguageCPlusPlusPropertiesGen
   LLDBPluginLanguageCPlusPlusPropertiesEnumGen)

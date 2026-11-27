@@ -1,6 +1,6 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -mattr=+exception-handling -S | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S --mattr=+atomics,+bulk-memory,+exception-handling | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -mattr=+exception-handling --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -25,26 +25,24 @@ entry:
   unreachable
 
 ; CHECK:    entry:
+; CHECK-NEXT: %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
 ; CHECK-NEXT: %functionInvocationId = alloca i32, align 4
 ; CHECK-NEXT: br label %setjmp.dispatch
 
 ; CHECK:    setjmp.dispatch:
 ; CHECK-NEXT: %[[VAL2:.*]] = phi i32 [ %val, %if.end ], [ undef, %entry ]
-; CHECK-NEXT: %[[BUF:.*]] = phi ptr [ %[[BUF2:.*]], %if.end ], [ undef, %entry ]
 ; CHECK-NEXT: %label.phi = phi i32 [ %label, %if.end ], [ -1, %entry ]
 ; CHECK-NEXT: switch i32 %label.phi, label %entry.split [
 ; CHECK-NEXT:   i32 1, label %entry.split.split
 ; CHECK-NEXT: ]
 
 ; CHECK:    entry.split:
-; CHECK-NEXT: %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
 ; CHECK-NEXT: call void @__wasm_setjmp(ptr %buf, i32 1, ptr %functionInvocationId)
 ; CHECK-NEXT: br label %entry.split.split
 
 ; CHECK:    entry.split.split:
-; CHECK-NEXT: %[[BUF2]] = phi ptr [ %[[BUF]], %setjmp.dispatch ], [ %buf, %entry.split ]
 ; CHECK-NEXT: %setjmp.ret = phi i32 [ 0, %entry.split ], [ %[[VAL2]], %setjmp.dispatch ]
-; CHECK-NEXT: invoke void @__wasm_longjmp(ptr %[[BUF2]], i32 1)
+; CHECK-NEXT: invoke void @__wasm_longjmp(ptr %buf, i32 1)
 ; CHECK-NEXT:         to label %.noexc unwind label %catch.dispatch.longjmp
 
 ; CHECK:    .noexc:

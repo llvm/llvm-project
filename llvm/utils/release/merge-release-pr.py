@@ -152,12 +152,6 @@ class PRMerger:
             print("The target repo is NOT llvm-project, check the PR!")
             sys.exit(1)
 
-        if sowner == "llvm":
-            print(
-                "The source owner should never be github.com/llvm, double check the PR!"
-            )
-            sys.exit(1)
-
     def validate_pr(self):
         print(f"> Handling PR {self.args.pr} - {self.prdata['title']}")
         print(f">   {self.prdata['url']}")

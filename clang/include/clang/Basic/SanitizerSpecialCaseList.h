@@ -18,16 +18,10 @@
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
 #include <utility>
 #include <vector>
-
-namespace llvm {
-namespace vfs {
-class FileSystem;
-}
-} // namespace llvm
-
 namespace clang {
 
 class SanitizerSpecialCaseList : public llvm::SpecialCaseList {
@@ -57,12 +51,10 @@ protected:
   void createSanitizerSections();
 
   struct SanitizerSection {
-    SanitizerSection(SanitizerMask SM, SectionEntries &E, unsigned idx)
-        : Mask(SM), Entries(E), FileIdx(idx) {};
+    SanitizerSection(SanitizerMask SM, const Section &S) : Mask(SM), S(S) {};
 
     SanitizerMask Mask;
-    SectionEntries &Entries;
-    unsigned FileIdx;
+    const Section &S;
   };
 
   std::vector<SanitizerSection> SanitizerSections;

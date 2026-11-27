@@ -8,10 +8,10 @@ define i8 @test(i8 %input) {
   %dst = alloca i8
   %src = alloca i8
 ; CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %src, i64 1, i1 false), !alias.scope ![[SCOPE:[0-9]+]]
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %src), !noalias !4
+  call void @llvm.lifetime.start.p0(ptr nonnull %src), !noalias !4
   store i8 %input, ptr %src
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 %src, i64 1, i1 false), !alias.scope !0
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %src), !noalias !4
+  call void @llvm.lifetime.end.p0(ptr nonnull %src), !noalias !4
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %tmp, i64 1, i1 false), !alias.scope !4
   %ret_value = load i8, ptr %dst
   call void @use(ptr %src)
@@ -23,18 +23,18 @@ define i8 @test(i8 %input) {
 ; CHECK-DAG: ![[CALLEE0_B:[0-9]+]] = distinct !{!{{[0-9]+}}, !{{[0-9]+}}, !"callee0: %b"}
 ; CHECK-DAG: ![[SCOPE]] = !{![[CALLEE0_A]], ![[CALLEE0_B]]}
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
 !0 = !{!1, !7}
 !1 = distinct !{!1, !3, !"callee0: %a"}
 !2 = distinct !{!2, !3, !"callee0: %b"}
-!3 = distinct !{!3, !"callee0"}
+!3 = distinct !{!3, i1 false, !"callee0"}
 
 !4 = !{!2, !5}
 !5 = distinct !{!5, !6, !"callee1: %a"}
-!6 = distinct !{!6, !"callee1"}
+!6 = distinct !{!6, i1 false, !"callee1"}
 
 !7 = distinct !{!7, !8, !"callee2: %a"}
-!8 = distinct !{!8, !"callee2"}
+!8 = distinct !{!8, i1 false, !"callee2"}

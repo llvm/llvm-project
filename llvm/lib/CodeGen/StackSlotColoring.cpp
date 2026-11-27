@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/StackSlotColoring.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -37,7 +38,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -49,19 +49,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "stack-slot-coloring"
 
-static cl::opt<bool>
-DisableSharing("no-stack-slot-sharing",
-             cl::init(false), cl::Hidden,
-             cl::desc("Suppress slot sharing during stack coloring"));
-
-static cl::opt<int> DCELimit("ssc-dce-limit", cl::init(-1), cl::Hidden);
-
 STATISTIC(NumEliminated, "Number of stack slots eliminated due to coloring");
 STATISTIC(NumDead,       "Number of trivially dead stack accesses eliminated");
 
 namespace {
 
 class StackSlotColoring {
+  const CodeGenOptions &Opts;
   MachineFrameInfo *MFI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   LiveStacks *LS = nullptr;
@@ -143,8 +137,9 @@ class StackSlotColoring {
 public:
   StackSlotColoring(MachineFunction &MF, LiveStacks *LS,
                     MachineBlockFrequencyInfo *MBFI, SlotIndexes *Indexes)
-      : MFI(&MF.getFrameInfo()), TII(MF.getSubtarget().getInstrInfo()), LS(LS),
-        MBFI(MBFI), Indexes(Indexes) {}
+      : Opts(getCodeGenOptions(MF)), MFI(&MF.getFrameInfo()),
+        TII(MF.getSubtarget().getInstrInfo()), LS(LS), MBFI(MBFI),
+        Indexes(Indexes) {}
   bool run(MachineFunction &MF);
 
 private:
@@ -161,9 +156,7 @@ class StackSlotColoringLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  StackSlotColoringLegacy() : MachineFunctionPass(ID) {
-    initializeStackSlotColoringLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  StackSlotColoringLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -171,8 +164,6 @@ public:
     AU.addPreserved<SlotIndexesWrapperPass>();
     AU.addRequired<LiveStacksWrapperLegacy>();
     AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
-    AU.addPreservedID(MachineDominatorsID);
 
     // In some Target's pipeline, register allocation (RA) might be
     // split into multiple phases based on register class. So, this pass
@@ -316,7 +307,7 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   int FI = li->reg().stackSlotIndex();
   uint8_t StackID = MFI->getStackID(FI);
 
-  if (!DisableSharing) {
+  if (Opts.stack_slot_sharing) {
 
     // Check if it's possible to reuse any of the used colors.
     Color = UsedColors[StackID].find_first();
@@ -470,7 +461,7 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 
   for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end();
        I != E; ++I) {
-    if (DCELimit != -1 && (int)NumDead >= DCELimit)
+    if (Opts.ssc_dce_limit != -1 && (int)NumDead >= Opts.ssc_dce_limit)
       break;
     int FirstSS, SecondSS;
     if (TII->isStackSlotCopy(*I, FirstSS, SecondSS) && FirstSS == SecondSS &&
@@ -497,6 +488,9 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     }
     if (NextMI == E) continue;
     if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize)))
+      continue;
+    // Skip if the stack size is unknown.
+    if (!LoadSize || !StoreSize)
       continue;
     if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1 ||
         LoadSize != StoreSize || !MFI->isSpillSlotObjectIndex(FirstSS))
@@ -591,8 +585,6 @@ StackSlotColoringPass::run(MachineFunction &MF,
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<SlotIndexesAnalysis>();
-  PA.preserve<MachineBlockFrequencyAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   PA.preserve<LiveIntervalsAnalysis>();
   PA.preserve<LiveDebugVariablesAnalysis>();
   return PA;

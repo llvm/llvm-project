@@ -14,8 +14,8 @@
 
 #include "SIOptimizeExecMaskingPreRA.h"
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/InitializePasses.h"
@@ -28,23 +28,25 @@ namespace {
 
 class SIOptimizeExecMaskingPreRA {
 private:
+  const GCNSubtarget &ST;
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
+  const AMDGPU::LaneMaskConstants &LMC;
 
-  unsigned AndOpc;
-  unsigned Andn2Opc;
-  unsigned OrSaveExecOpc;
-  unsigned XorTermrOpc;
   MCRegister CondReg;
   MCRegister ExecReg;
 
+  void removePhysRegDefs(const MachineInstr &MI, SlotIndex Idx);
   bool optimizeVcndVcmpPair(MachineBasicBlock &MBB);
   bool optimizeElseBranch(MachineBasicBlock &MBB);
 
 public:
-  SIOptimizeExecMaskingPreRA(LiveIntervals *LIS) : LIS(LIS) {}
+  SIOptimizeExecMaskingPreRA(MachineFunction &MF, LiveIntervals *LIS)
+      : ST(MF.getSubtarget<GCNSubtarget>()), TRI(ST.getRegisterInfo()),
+        TII(ST.getInstrInfo()), MRI(&MF.getRegInfo()), LIS(LIS),
+        LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
   bool run(MachineFunction &MF);
 };
 
@@ -52,10 +54,7 @@ class SIOptimizeExecMaskingPreRALegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIOptimizeExecMaskingPreRALegacy() : MachineFunctionPass(ID) {
-    initializeSIOptimizeExecMaskingPreRALegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  SIOptimizeExecMaskingPreRALegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -82,10 +81,6 @@ char SIOptimizeExecMaskingPreRALegacy::ID = 0;
 
 char &llvm::SIOptimizeExecMaskingPreRAID = SIOptimizeExecMaskingPreRALegacy::ID;
 
-FunctionPass *llvm::createSIOptimizeExecMaskingPreRAPass() {
-  return new SIOptimizeExecMaskingPreRALegacy();
-}
-
 // See if there is a def between \p AndIdx and \p SelIdx that needs to live
 // beyond \p AndIdx.
 static bool isDefBetween(const LiveRange &LR, SlotIndex AndIdx,
@@ -110,6 +105,16 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
   }
 
   return false;
+}
+
+void SIOptimizeExecMaskingPreRA::removePhysRegDefs(const MachineInstr &MI,
+                                                   SlotIndex Idx) {
+  for (const MachineOperand &Op : MI.all_defs()) {
+    if (Op.getReg().isPhysical()) {
+      LIS->removePhysRegDefAt(Op.getReg().asMCReg(),
+                              Idx.getRegSlot(Op.isEarlyClobber()));
+    }
+  }
 }
 
 // Optimize sequence
@@ -138,8 +143,8 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 
   auto *And =
       TRI->findReachingDef(CondReg, AMDGPU::NoSubRegister, *I, *MRI, LIS);
-  if (!And || And->getOpcode() != AndOpc ||
-      !And->getOperand(1).isReg() || !And->getOperand(2).isReg())
+  if (!And || And->getOpcode() != LMC.AndOpc || !And->getOperand(1).isReg() ||
+      !And->getOperand(2).isReg())
     return false;
 
   MachineOperand *AndCC = &And->getOperand(1);
@@ -207,7 +212,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
                     << *And);
 
   MachineInstr *Andn2 =
-      BuildMI(MBB, *And, And->getDebugLoc(), TII->get(Andn2Opc),
+      BuildMI(MBB, *And, And->getDebugLoc(), TII->get(LMC.AndN2Opc),
               And->getOperand(0).getReg())
           .addReg(ExecReg)
           .addReg(CCReg, getUndefRegState(CC->isUndef()), CC->getSubReg());
@@ -247,6 +252,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
     LLVM_DEBUG(dbgs() << "Erasing: " << *Cmp << '\n');
     if (CmpLI)
       LIS->removeVRegDefAt(*CmpLI, CmpIdx.getRegSlot());
+    removePhysRegDefs(*Cmp, CmpIdx);
     LIS->RemoveMachineInstrFromMaps(*Cmp);
     Cmp->eraseFromParent();
 
@@ -294,11 +300,11 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
   // Check this is an else block.
   auto First = MBB.begin();
   MachineInstr &SaveExecMI = *First;
-  if (SaveExecMI.getOpcode() != OrSaveExecOpc)
+  if (SaveExecMI.getOpcode() != LMC.OrSaveExecOpc)
     return false;
 
   auto I = llvm::find_if(MBB.terminators(), [this](const MachineInstr &MI) {
-    return MI.getOpcode() == XorTermrOpc;
+    return MI.getOpcode() == LMC.XorTermOpc;
   });
   if (I == MBB.terminators().end())
     return false;
@@ -314,7 +320,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
   MachineInstr *AndExecMI = nullptr;
   I--;
   while (I != First && !AndExecMI) {
-    if (I->getOpcode() == AndOpc && I->getOperand(0).getReg() == DstReg &&
+    if (I->getOpcode() == LMC.AndOpc && I->getOperand(0).getReg() == DstReg &&
         I->getOperand(1).getReg() == Register(ExecReg))
       AndExecMI = &*I;
     I--;
@@ -340,6 +346,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeElseBranch(MachineBasicBlock &MBB) {
 
   SaveExecMI.getOperand(0).setReg(DstReg);
 
+  removePhysRegDefs(*AndExecMI, EndIdx);
   LIS->RemoveMachineInstrFromMaps(*AndExecMI);
   AndExecMI->eraseFromParent();
 
@@ -352,7 +359,7 @@ PreservedAnalyses
 SIOptimizeExecMaskingPreRAPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
   auto &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
-  SIOptimizeExecMaskingPreRA(&LIS).run(MF);
+  SIOptimizeExecMaskingPreRA(MF, &LIS).run(MF);
   return PreservedAnalyses::all();
 }
 
@@ -362,40 +369,19 @@ bool SIOptimizeExecMaskingPreRALegacy::runOnMachineFunction(
     return false;
 
   auto *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  return SIOptimizeExecMaskingPreRA(LIS).run(MF);
+  return SIOptimizeExecMaskingPreRA(MF, LIS).run(MF);
 }
 
 bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  TRI = ST.getRegisterInfo();
-  TII = ST.getInstrInfo();
-  MRI = &MF.getRegInfo();
+  CondReg = MCRegister::from(LMC.VccReg);
+  ExecReg = MCRegister::from(LMC.ExecReg);
 
-  const bool Wave32 = ST.isWave32();
-  AndOpc = Wave32 ? AMDGPU::S_AND_B32 : AMDGPU::S_AND_B64;
-  Andn2Opc = Wave32 ? AMDGPU::S_ANDN2_B32 : AMDGPU::S_ANDN2_B64;
-  OrSaveExecOpc =
-      Wave32 ? AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
-  XorTermrOpc = Wave32 ? AMDGPU::S_XOR_B32_term : AMDGPU::S_XOR_B64_term;
-  CondReg = MCRegister::from(Wave32 ? AMDGPU::VCC_LO : AMDGPU::VCC);
-  ExecReg = MCRegister::from(Wave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC);
-
-  DenseSet<Register> RecalcRegs({AMDGPU::EXEC_LO, AMDGPU::EXEC_HI});
+  DenseSet<Register> RecalcRegs;
   bool Changed = false;
 
   for (MachineBasicBlock &MBB : MF) {
-
-    if (optimizeElseBranch(MBB)) {
-      RecalcRegs.insert(AMDGPU::SCC);
-      Changed = true;
-    }
-
-    if (optimizeVcndVcmpPair(MBB)) {
-      RecalcRegs.insert(AMDGPU::VCC_LO);
-      RecalcRegs.insert(AMDGPU::VCC_HI);
-      RecalcRegs.insert(AMDGPU::SCC);
-      Changed = true;
-    }
+    Changed |= optimizeElseBranch(MBB);
+    Changed |= optimizeVcndVcmpPair(MBB);
 
     // Try to remove unneeded instructions before s_endpgm.
     if (MBB.succ_empty()) {
@@ -467,9 +453,13 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
     //    %1:sreg_64 = S_AND_B64 %0:sreg_64, %2:sreg_64
     // =>
     //    %1 = S_AND_B64 $exec, %2:sreg_64
-    unsigned ScanThreshold = 10;
-    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E
-         && ScanThreshold--; ++I) {
+    constexpr unsigned ScanThreshold = 10;
+    unsigned ScanCount = 0;
+    for (auto I = MBB.rbegin(), E = MBB.rend();
+         I != E && ScanCount < ScanThreshold; ++I) {
+      if (I->isMetaInstruction())
+        continue;
+      ++ScanCount;
       // Continue scanning if this is not a full exec copy
       if (!(I->isFullCopy() && I->getOperand(1).getReg() == Register(ExecReg)))
         continue;
@@ -482,12 +472,16 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
         assert(Idx != -1);
         if (SingleExecUser->getParent() == I->getParent() &&
             !SingleExecUser->getOperand(Idx).isImplicit() &&
+            static_cast<unsigned>(Idx) <
+                SingleExecUser->getDesc().getNumOperands() &&
             TII->isOperandLegal(*SingleExecUser, Idx, &I->getOperand(1))) {
           LLVM_DEBUG(dbgs() << "Redundant EXEC COPY: " << *I << '\n');
+          removePhysRegDefs(*I, LIS->getInstructionIndex(*I));
           LIS->RemoveMachineInstrFromMaps(*I);
           I->eraseFromParent();
           MRI->replaceRegWith(SavedExec, ExecReg);
           LIS->removeInterval(SavedExec);
+          RecalcRegs.erase(SavedExec);
           Changed = true;
         }
       }

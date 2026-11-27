@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/sys_mman_macros.h"
 #include "src/sys/mman/madvise.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/mman.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
@@ -37,7 +36,11 @@ TEST_F(LlvmLibcMadviseTest, NoError) {
   EXPECT_THAT(LIBC_NAMESPACE::munmap(addr, alloc_size), Succeeds());
 }
 
+// QEMU user space emulation stubs madvise hints (e.g. MADV_SEQUENTIAL) to
+// return 0, which makes this test fail as it expects ENOMEM on nullptr.
+#ifndef LIBC_TEST_UNDER_EMULATOR
 TEST_F(LlvmLibcMadviseTest, Error_BadPtr) {
   EXPECT_THAT(LIBC_NAMESPACE::madvise(nullptr, 8, MADV_SEQUENTIAL),
               Fails(ENOMEM));
 }
+#endif // LIBC_TEST_UNDER_EMULATOR

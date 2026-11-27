@@ -10,7 +10,7 @@ define i32 @foobar6() !dbg !5 {
 ; CHECK-LABEL: define i32 @foobar6(
 ; CHECK:  loop:
 ; CHECK:    [[IV_S_:%.*]] = phi double [ -3.220000e+03, %[[ENTRY:.*]] ], [ [[IV_S_NEXT_:%.*]], %loop ], !dbg [[DBG9:![0-9]+]]
-; CHECK:    [[IV_S_NEXT_]] = fadd double [[IV_S_]], 0x41624E65A0000000, !dbg [[DBG11:![0-9]+]]
+; CHECK:    [[IV_S_NEXT_]] = fadd double [[IV_S_]], f0x41624E65A0000000, !dbg [[DBG11:![0-9]+]]
 ; CHECK:  exit:
 ;
 entry:

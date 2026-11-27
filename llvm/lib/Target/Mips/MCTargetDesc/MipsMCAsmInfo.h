@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCASMINFO_H
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSMCASMINFO_H
 
-#include "MCTargetDesc/MipsMCExpr.h"
 #include "llvm/MC/MCAsmInfoCOFF.h"
 #include "llvm/MC/MCAsmInfoELF.h"
 #include "llvm/MC/MCFixup.h"
@@ -31,13 +30,14 @@ public:
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
                                  const MCAssembler *Asm) const override;
+  bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const override;
 };
 
 class MipsCOFFMCAsmInfo : public MCAsmInfoGNUCOFF {
   void anchor() override;
 
 public:
-  explicit MipsCOFFMCAsmInfo();
+  explicit MipsCOFFMCAsmInfo(const MCTargetOptions &Options);
   void printSpecifierExpr(raw_ostream &OS,
                           const MCSpecifierExpr &Expr) const override;
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr, MCValue &Res,
@@ -77,6 +77,8 @@ enum {
 };
 
 bool isGpOff(const MCSpecifierExpr &E);
+const MCSpecifierExpr *createGpOff(const MCExpr *Expr, Specifier S,
+                                   MCContext &Ctx);
 }
 
 } // namespace llvm

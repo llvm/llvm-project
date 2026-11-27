@@ -1,5 +1,7 @@
+// clang-format off
 // RUN: %libomp-cxx-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
+// clang-format on
 
 #include <iostream>
 #include <thread>
@@ -43,6 +45,7 @@ int main() {
   t2.join();
 }
 
+// clang-format off
 // Check if libomp supports the callbacks for this test.
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_task_schedule'
 // CHECK-NOT: {{^}}0: Could not register callback 'ompt_callback_parallel_begin'
@@ -57,7 +60,7 @@ int main() {
 // CHECK-SAME: thread_type=ompt_thread_initial=1, thread_id=[[MASTER_ID_1]]
 
 
-// CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_initial_task_begin: parallel_id={{[0-9]+}}
+// CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_initial_task_begin: parallel_id={{[0-f]+}}
 // CHECK-SAME: task_id=[[PARENT_TASK_ID_1:[0-9]+]], actual_parallelism=1,
 // CHECK-SAME: index=1, flags=1
 
@@ -73,7 +76,7 @@ int main() {
 // CHECK-SAME: invoker={{[0-9]+}}
 
 // CHECK: {{^}}[[MASTER_ID_1]]: ompt_event_initial_task_end:
-// CHECK-SAME: parallel_id={{[0-9]+}}, task_id=[[PARENT_TASK_ID_1]],
+// CHECK-SAME: parallel_id={{[0-f]+}}, task_id=[[PARENT_TASK_ID_1]],
 // CHECK-SAME: actual_parallelism=0, index=1
 
 // CHECK: {{^}}[[MASTER_ID_1]]: ompt_event_thread_end:
@@ -83,7 +86,7 @@ int main() {
 // CHECK: {{^}}[[MASTER_ID_2:[0-9]+]]: ompt_event_thread_begin:
 // CHECK-SAME: thread_type=ompt_thread_initial=1, thread_id=[[MASTER_ID_2]]
 
-// CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_initial_task_begin: parallel_id={{[0-9]+}}
+// CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_initial_task_begin: parallel_id={{[0-f]+}}
 // CHECK-SAME: task_id=[[PARENT_TASK_ID_2:[0-9]+]], actual_parallelism=1,
 // CHECK-SAME: index=1, flags=1
 
@@ -100,7 +103,7 @@ int main() {
 // CHECK-SAME: invoker={{[0-9]+}}
 
 // CHECK: {{^}}[[MASTER_ID_2]]: ompt_event_initial_task_end:
-// CHECK-SAME: parallel_id={{[0-9]+}}, task_id=[[PARENT_TASK_ID_2]],
+// CHECK-SAME: parallel_id={{[0-f]+}}, task_id=[[PARENT_TASK_ID_2]],
 // CHECK-SAME: actual_parallelism=0, index=1
 
 // CHECK: {{^}}[[MASTER_ID_2]]: ompt_event_thread_end:
@@ -120,3 +123,4 @@ int main() {
 
 // CHECK: {{^}}[[THREAD_ID_2]]: ompt_event_thread_end:
 // CHECK-SAME: thread_id=[[THREAD_ID_2]]
+// clang-format on

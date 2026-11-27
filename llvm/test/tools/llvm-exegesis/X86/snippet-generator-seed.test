@@ -1,0 +1,14 @@
+# Check that the snippet we generate is exactly the same between runs when we
+# use a fixed RNG seed.
+
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mode=latency -opcode-name=ADD64rr --benchmark-phase=prepare-snippet -random-generator-seed=5 | FileCheck %s
+
+# CHECK: ---
+# CHECK: mode:            latency
+# CHECK: key:
+# CHECK:   instructions:
+# CHECK:     - 'ADD64rr R12 R12 R10'
+# CHECK:   config:          ''
+# CHECK:   register_initial_values:
+# CHECK:     - 'R12=0x0'
+# CHECK:     - 'R10=0x0'

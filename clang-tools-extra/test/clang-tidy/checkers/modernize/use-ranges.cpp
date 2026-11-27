@@ -1,13 +1,12 @@
 // RUN: %check_clang_tidy -std=c++20 %s modernize-use-ranges %t -- -- -I %S/Inputs/
-// RUN: %check_clang_tidy -std=c++23 %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/
-// Example: ./check_clang_tidy.py -std=c++20 checkers/modernize/use-ranges.cpp modernize-use-ranges temp.txt -- -- -I ~/llvm-project/clang-tools-extra/test/clang-tidy/checkers/modernize/Inputs/
+// RUN: %check_clang_tidy -std=c++23-or-later %s modernize-use-ranges %t -check-suffixes=,CPP23 -- -I %S/Inputs/
 
 // CHECK-FIXES: #include <algorithm>
 // CHECK-FIXES-CPP23: #include <numeric>
 // CHECK-FIXES: #include <ranges>
 
 #include "use-ranges/fake_std.h"
-#include "smart-ptr/unique_ptr.h"
+#include <memory>
 
 void Positives() {
   std::vector<int> I, J;
@@ -44,6 +43,186 @@ void Positives() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::reverse(I);
 
+  auto LogicalEnd = std::unique(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto LogicalEnd = std::ranges::unique(I).begin();
+
+  bool AlreadyUnique = std::unique(I.begin(), I.end()) == I.end();
+  // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: bool AlreadyUnique = std::ranges::unique(I).begin() == I.end();
+
+  auto LogicalEndWithPred =
+      std::unique(I.begin(), I.end(), [](int A, int B) { return A == B; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto LogicalEndWithPred =
+  // CHECK-FIXES-NEXT: std::ranges::unique(I, [](int A, int B) { return A == B; }).begin();
+
+  std::unique(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::unique(I);
+
+  I.erase(std::remove(I.begin(), I.end(), 0), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: I.erase(std::ranges::remove(I, 0).begin(), I.end());
+
+  I.erase(std::remove_if(I.begin(), I.end(), [](int N) { return N == 0; }),
+          I.end());
+  // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: I.erase(std::ranges::remove_if(I, [](int N) { return N == 0; }).begin(),
+
+  auto PartitionPoint =
+      std::partition(I.begin(), I.end(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto PartitionPoint =
+  // CHECK-FIXES-NEXT: std::ranges::partition(I, [](int N) { return N == 0; }).begin();
+
+  auto StablePartitionPoint =
+      std::stable_partition(I.begin(), I.end(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto StablePartitionPoint =
+  // CHECK-FIXES-NEXT: std::ranges::stable_partition(I, [](int N) { return N == 0; }).begin();
+
+  auto Output = std::copy(I.begin(), I.end(), J.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto Output = std::ranges::copy(I, J.begin()).out;
+
+  std::copy(I.begin(), I.end(), J.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::copy(I, J.begin());
+
+  auto CopyIfOutput =
+      std::copy_if(I.begin(), I.end(), J.begin(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto CopyIfOutput =
+  // CHECK-FIXES-NEXT: std::ranges::copy_if(I, J.begin(), [](int N) { return N == 0; }).out;
+
+  auto CopyBackwardOutput = std::copy_backward(I.begin(), I.end(), J.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto CopyBackwardOutput = std::ranges::copy_backward(I, J.end()).out;
+
+  auto MoveOutput = std::move(I.begin(), I.end(), J.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto MoveOutput = std::ranges::move(I, J.begin()).out;
+
+  auto MoveBackwardOutput = std::move_backward(I.begin(), I.end(), J.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto MoveBackwardOutput = std::ranges::move_backward(I, J.end()).out;
+
+  auto RemoveCopyOutput = std::remove_copy(I.begin(), I.end(), J.begin(), 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto RemoveCopyOutput = std::ranges::remove_copy(I, J.begin(), 0).out;
+
+  auto RemoveCopyIfOutput = std::remove_copy_if(
+      I.begin(), I.end(), J.begin(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-2]]:29: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto RemoveCopyIfOutput = std::ranges::remove_copy_if(
+  // CHECK-FIXES-NEXT: I, J.begin(), [](int N) { return N == 0; }).out;
+
+  auto ReverseCopyOutput = std::reverse_copy(I.begin(), I.end(), J.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto ReverseCopyOutput = std::ranges::reverse_copy(I, J.begin()).out;
+
+  auto TransformOutput =
+      std::transform(I.begin(), I.end(), J.begin(), [](int N) { return N; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto TransformOutput =
+  // CHECK-FIXES-NEXT: std::ranges::transform(I, J.begin(), [](int N) { return N; }).out;
+
+  auto UniqueCopyOutput = std::unique_copy(I.begin(), I.end(), J.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto UniqueCopyOutput = std::ranges::unique_copy(I, J.begin()).out;
+
+  auto UninitializedCopyOutput =
+      std::uninitialized_copy(I.begin(), I.end(), J.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto UninitializedCopyOutput =
+  // CHECK-FIXES-NEXT: std::ranges::uninitialized_copy(I, J.begin()).out;
+
+  auto UninitializedMoveOutput =
+      std::uninitialized_move(I.begin(), I.end(), J.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto UninitializedMoveOutput =
+  // CHECK-FIXES-NEXT: std::ranges::uninitialized_move(I, J.begin()).out;
+
+  auto MergeOutput =
+      std::merge(I.begin(), I.end(), J.begin(), J.end(), I.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto MergeOutput =
+  // CHECK-FIXES-NEXT: std::ranges::merge(I, J, I.begin()).out;
+
+  auto SetUnionOutput =
+      std::set_union(I.begin(), I.end(), J.begin(), J.end(), I.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto SetUnionOutput =
+  // CHECK-FIXES-NEXT: std::ranges::set_union(I, J, I.begin()).out;
+
+  auto SetIntersectionOutput =
+      std::set_intersection(I.begin(), I.end(), J.begin(), J.end(), I.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto SetIntersectionOutput =
+  // CHECK-FIXES-NEXT: std::ranges::set_intersection(I, J, I.begin()).out;
+
+  auto SetDifferenceOutput =
+      std::set_difference(I.begin(), I.end(), J.begin(), J.end(), I.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto SetDifferenceOutput =
+  // CHECK-FIXES-NEXT: std::ranges::set_difference(I, J, I.begin()).out;
+
+  auto SetSymmetricDifferenceOutput = std::set_symmetric_difference(
+      I.begin(), I.end(), J.begin(), J.end(), I.begin());
+  // CHECK-MESSAGES: :[[@LINE-2]]:39: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto SetSymmetricDifferenceOutput = std::ranges::set_symmetric_difference(
+  // CHECK-FIXES-NEXT: I, J, I.begin()).out;
+
+  auto PartialSortCopyOutput =
+      std::partial_sort_copy(I.begin(), I.end(), J.begin(), J.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto PartialSortCopyOutput =
+  // CHECK-FIXES-NEXT: std::ranges::partial_sort_copy(I, J).out;
+
+  auto RotateCopyOutput =
+      std::rotate_copy(I.begin(), I.begin() + 2, I.end(), J.begin());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto RotateCopyOutput =
+  // CHECK-FIXES-NEXT: std::ranges::rotate_copy(I, I.begin() + 2, J.begin()).out;
+
+  auto ForEachResult =
+      std::for_each(I.begin(), I.end(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto ForEachResult =
+  // CHECK-FIXES-NEXT: std::ranges::for_each(I, [](int N) { return N == 0; }).fun;
+
+  std::for_each(I.begin(), I.end(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::for_each(I, [](int N) { return N == 0; });
+
+  auto [EqualRangeBegin, EqualRangeEnd] =
+      std::equal_range(I.begin(), I.end(), 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto [EqualRangeBegin, EqualRangeEnd] =
+  // CHECK-FIXES-NEXT: std::ranges::equal_range(I, 0);
+
+  auto [MinElement, MaxElement] = std::minmax_element(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto [MinElement, MaxElement] = std::ranges::minmax_element(I);
+
+  auto [MismatchBegin1, MismatchBegin2] =
+      std::mismatch(I.begin(), I.end(), J.begin(), J.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto [MismatchBegin1, MismatchBegin2] =
+  // CHECK-FIXES-NEXT: std::ranges::mismatch(I, J);
+
+  auto EqualRangeResult = std::equal_range(I.begin(), I.end(), 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use a ranges version of this algorithm
+
+  auto PartitionCopyResult = std::partition_copy(
+      I.begin(), I.end(), J.begin(), J.begin(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-2]]:30: warning: use a ranges version of this algorithm
+
+  auto [PartitionCopyTrue, PartitionCopyFalse] = std::partition_copy(
+      I.begin(), I.end(), J.begin(), J.begin(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-2]]:50: warning: use a ranges version of this algorithm
+
   std::includes(I.begin(), I.end(), I.begin(), I.end());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::includes(I, I);
@@ -72,6 +251,10 @@ void Positives() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::rotate(I, I.begin() + 2);
 
+  auto RotatePoint = std::rotate(I.begin(), I.begin() + 2, I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto RotatePoint = std::ranges::rotate(I, I.begin() + 2).begin();
+
   using std::find;
   namespace my_std = std;
 
@@ -80,9 +263,18 @@ void Positives() {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 5);
 
+  using std::unique;
+  auto LogicalEndFromUsing = unique(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:30: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto LogicalEndFromUsing = std::ranges::unique(I).begin();
+
   my_std::find(I.begin(), I.end(), 6);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::find(I, 6);
+
+  auto LogicalEndFromNamespaceAlias = my_std::unique(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:39: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto LogicalEndFromNamespaceAlias = std::ranges::unique(I).begin();
 }
 
 void Reverse(){
@@ -94,19 +286,23 @@ void Reverse(){
 
   std::find(K.rbegin(), K.rend(), std::unique_ptr<int>());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(K), std::unique_ptr<int>());
+  // CHECK-FIXES: std::ranges::find(std::views::reverse(K), std::unique_ptr<int>());
 
   std::find(I.rbegin(), I.rend(), 0);
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::find(std::ranges::reverse_view(I), 0);
+  // CHECK-FIXES: std::ranges::find(std::views::reverse(I), 0);
+
+  auto ReverseLogicalEnd = std::unique(I.rbegin(), I.rend());
+  // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto ReverseLogicalEnd = std::ranges::unique(std::views::reverse(I)).begin();
 
   std::equal(std::rbegin(I), std::rend(I), J.begin(), J.end());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::equal(std::ranges::reverse_view(I), J);
+  // CHECK-FIXES: std::ranges::equal(std::views::reverse(I), J);
 
   std::equal(I.begin(), I.end(), std::crbegin(J), std::crend(J));
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
-  // CHECK-FIXES: std::ranges::equal(I, std::ranges::reverse_view(J));
+  // CHECK-FIXES: std::ranges::equal(I, std::views::reverse(J));
 }
 
 void Negatives() {

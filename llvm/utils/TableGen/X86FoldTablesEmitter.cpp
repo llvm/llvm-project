@@ -16,6 +16,7 @@
 #include "X86RecognizableInstr.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/X86FoldTablesUtils.h"
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <set>
@@ -30,48 +31,94 @@ struct ManualMapEntry {
   const char *MemInstStr;
   uint16_t Strategy;
 };
+} // namespace
 
 // List of instructions requiring explicitly aligned memory.
-const char *ExplicitAlign[] = {"MOVDQA",  "MOVAPS",  "MOVAPD",  "MOVNTPS",
-                               "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
+static constexpr const char *ExplicitAlign[] = {
+    "MOVDQA", "MOVAPS", "MOVAPD", "MOVNTPS", "MOVNTPD", "MOVNTDQ", "MOVNTDQA"};
 
 // List of instructions NOT requiring explicit memory alignment.
-const char *ExplicitUnalign[] = {"MOVDQU",    "MOVUPS",    "MOVUPD",
-                                 "PCMPESTRM", "PCMPESTRI", "PCMPISTRM",
-                                 "PCMPISTRI"};
+static constexpr const char *ExplicitUnalign[] = {
+    "MOVDQU",    "MOVUPS",    "MOVUPD",   "PCMPESTRM",
+    "PCMPESTRI", "PCMPISTRM", "PCMPISTRI"};
 
-const ManualMapEntry ManualMapSet[] = {
+static const ManualMapEntry ManualMapSet[] = {
 #define ENTRY(REG, MEM, FLAGS) {#REG, #MEM, FLAGS},
 #include "X86ManualFoldTables.def"
 };
 
-const std::set<StringRef> NoFoldSet = {
+static const std::set<StringRef> NoFoldSet = {
 #define NOFOLD(INSN) #INSN,
 #include "X86ManualFoldTables.def"
 };
 
+const std::set<StringRef> NoFoldSameMaskPrefixSet = {
+#define NOFOLD_SAME_MASK_PREFIX(PREFIX) #PREFIX,
+#include "X86ManualFoldTables.def"
+};
+
+const std::set<StringRef> NoFoldSameMaskSet = {
+#define NOFOLD_SAME_MASK(INSN) #INSN,
+#include "X86ManualFoldTables.def"
+};
+
+// Check if instruction is unsafe for masked-load folding.
+static bool isNoFoldMaskedInstruction(const CodeGenInstruction *Inst) {
+  StringRef Name = Inst->getName();
+
+  // First check exact instruction name
+  if (NoFoldSameMaskSet.count(Name))
+    return true;
+
+  // Then strip suffixes to get base name for prefix matching
+  // Strip k-register suffix: kz or k
+  if (Name.ends_with("kz"))
+    Name = Name.drop_back(2);
+  else if (Name.ends_with("k"))
+    Name = Name.drop_back(1);
+  else
+    return false; // Not a k-register instruction
+
+  // Strip operand form suffix (check longer patterns first)
+  if (Name.ends_with("rri"))
+    Name = Name.drop_back(3);
+  else if (Name.ends_with("rr") || Name.ends_with("ri"))
+    Name = Name.drop_back(2);
+
+  // Strip vector size suffix: Z128, Z256, or Z
+  if (Name.ends_with("Z128") || Name.ends_with("Z256"))
+    Name = Name.drop_back(4);
+  else if (Name.ends_with("Z"))
+    Name = Name.drop_back(1);
+  else
+    return false; // Not a AVX512 instruction
+
+  return NoFoldSameMaskPrefixSet.count(Name);
+}
+
 static bool isExplicitAlign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitAlign, [Inst](const char *InstStr) {
-    return Inst->TheDef->getName().contains(InstStr);
+    return Inst->getName().contains(InstStr);
   });
 }
 
 static bool isExplicitUnalign(const CodeGenInstruction *Inst) {
   return any_of(ExplicitUnalign, [Inst](const char *InstStr) {
-    return Inst->TheDef->getName().contains(InstStr);
+    return Inst->getName().contains(InstStr);
   });
 }
 
+namespace {
 class X86FoldTablesEmitter {
   const RecordKeeper &Records;
   const CodeGenTarget Target;
 
   // Represents an entry in the folding table
   class X86FoldTableEntry {
+  public:
     const CodeGenInstruction *RegInst;
     const CodeGenInstruction *MemInst;
 
-  public:
     bool NoReverse = false;
     bool NoForward = false;
     bool FoldLoad = false;
@@ -88,6 +135,7 @@ class X86FoldTablesEmitter {
     BcastType BroadcastKind = BCAST_NONE;
 
     Align Alignment;
+    std::optional<unsigned> UnfoldIdx;
 
     X86FoldTableEntry() = default;
     X86FoldTableEntry(const CodeGenInstruction *RegInst,
@@ -96,10 +144,12 @@ class X86FoldTablesEmitter {
 
     void print(raw_ostream &OS) const {
       OS.indent(2);
-      OS << "{X86::" << RegInst->TheDef->getName() << ", ";
-      OS << "X86::" << MemInst->TheDef->getName() << ", ";
+      OS << "{X86::" << RegInst->getName() << ", ";
+      OS << "X86::" << MemInst->getName() << ", ";
 
       std::string Attrs;
+      if (UnfoldIdx)
+        Attrs += "TB_INDEX_" + std::to_string(*UnfoldIdx) + "|";
       if (FoldLoad)
         Attrs += "TB_FOLDED_LOAD|";
       if (FoldStore)
@@ -173,9 +223,8 @@ class X86FoldTablesEmitter {
     }
   };
 
-  typedef std::map<const CodeGenInstruction *, X86FoldTableEntry,
-                   CompareInstrsByEnum>
-      FoldTable;
+  using FoldTable = std::map<const CodeGenInstruction *, X86FoldTableEntry,
+                             CompareInstrsByEnum>;
   // Table2Addr - Holds instructions which their memory form performs
   //              load+store.
   //
@@ -194,6 +243,8 @@ class X86FoldTablesEmitter {
   FoldTable BroadcastTable2;
   FoldTable BroadcastTable3;
   FoldTable BroadcastTable4;
+  FoldTable MemUnfoldTable;
+  std::vector<const CodeGenInstruction *> NonFoldableWithSameMaskTable;
 
 public:
   X86FoldTablesEmitter(const RecordKeeper &R) : Records(R), Target(R) {}
@@ -218,6 +269,10 @@ private:
   void addBroadcastEntry(FoldTable &Table, const CodeGenInstruction *RegInst,
                          const CodeGenInstruction *MemInst);
 
+  // Adds the reversible entries of Table to MemUnfoldTable, where ExtraFlags
+  // holds the folded operand's TB_INDEX_n and any TB_FOLDED_* implied by Table.
+  void addUnfoldEntries(const FoldTable &Table, uint16_t ExtraFlags);
+
   // Print the given table as a static const C++ array of type
   // X86FoldTableEntry.
   void printTable(const FoldTable &Table, StringRef TableName,
@@ -229,7 +284,16 @@ private:
 
     OS << "};\n\n";
   }
+
+  void printTable(const std::vector<const CodeGenInstruction *> &Instructions,
+                  StringRef TableName, raw_ostream &OS) {
+    OS << "static const unsigned " << TableName << "[] = {\n";
+    for (auto Inst : Instructions)
+      OS << "  X86::" << Inst->getName() << ",\n";
+    OS << "};\n\n";
+  }
 };
+} // namespace
 
 // Return true if one of the instruction's operands is a RST register class
 static bool hasRSTRegClass(const CodeGenInstruction *Inst) {
@@ -243,18 +307,6 @@ static bool hasPtrTailcallRegClass(const CodeGenInstruction *Inst) {
   return any_of(Inst->Operands, [](const CGIOperandList::OperandInfo &OpIn) {
     return OpIn.Rec->getName() == "ptr_rc_tailcall";
   });
-}
-
-static uint8_t byteFromBitsInit(const BitsInit *B) {
-  unsigned N = B->getNumBits();
-  assert(N <= 8 && "Field is too large for uint8_t!");
-
-  uint8_t Value = 0;
-  for (unsigned I = 0; I != N; ++I) {
-    const BitInit *Bit = cast<BitInit>(B->getBit(I));
-    Value |= Bit->getValue() << I;
-  }
-  return Value;
 }
 
 static bool mayFoldFromForm(uint8_t Form) {
@@ -330,6 +382,7 @@ static bool isNOREXRegClass(const Record *Op) {
 
 // Function object - Operator() returns true if the given Reg instruction
 // matches the Mem instruction of this object.
+namespace {
 class IsMatch {
   const CodeGenInstruction *MemInst;
   const X86Disassembler::RecognizableInstrBase MemRI;
@@ -451,7 +504,7 @@ void X86FoldTablesEmitter::addEntryWithFlags(FoldTable &Table,
   Result.NoForward = S & TB_NO_FORWARD;
   Result.FoldLoad = S & TB_FOLDED_LOAD;
   Result.FoldStore = S & TB_FOLDED_STORE;
-  Result.Alignment = Align(1ULL << ((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT));
+  Result.Alignment = Align::fromLog2((S & TB_ALIGN_MASK) >> TB_ALIGN_SHIFT);
   if (IsManual) {
     Table[RegInst] = Result;
     return;
@@ -565,10 +618,10 @@ void X86FoldTablesEmitter::updateTables(const CodeGenInstruction *RegInst,
     for (unsigned I = RegOutSize, E = RegInst->Operands.size(); I < E; I++) {
       const Record *RegOpRec = RegInst->Operands[I].Rec;
       const Record *MemOpRec = MemInst->Operands[I].Rec;
-      // PointerLikeRegClass: For instructions like TAILJMPr, TAILJMPr64,
+      // RegClassByHwMode: For instructions like TAILJMPr, TAILJMPr64,
       // TAILJMPr64_REX
       if ((isRegisterOperand(RegOpRec) ||
-           RegOpRec->isSubClassOf("PointerLikeRegClass")) &&
+           (RegOpRec->isSubClassOf("RegClassByHwMode"))) &&
           isMemoryOperand(MemOpRec)) {
         switch (I) {
         case 0:
@@ -625,7 +678,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   std::map<uint8_t, std::vector<const CodeGenInstruction *>> RegInsts;
 
   ArrayRef<const CodeGenInstruction *> NumberedInstructions =
-      Target.getInstructionsByEnumValue();
+      Target.getInstructions();
 
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     const Record *Rec = Inst->TheDef;
@@ -653,6 +706,13 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
     if (hasRSTRegClass(Inst) || hasPtrTailcallRegClass(Inst))
       continue;
 
+    // Check if this instruction has a prefix in NoFoldSameMaskPrefixSet or is
+    // in NoFoldSameMaskSet (problematic for masked-load folding) and add to
+    // NonFoldableWithSameMaskTable.
+    if (isNoFoldMaskedInstruction(Inst)) {
+      NonFoldableWithSameMaskTable.push_back(Inst);
+    }
+
     // Add all the memory form instructions to MemInsts, and all the register
     // form instructions to RegInsts[Opc], where Opc is the opcode of each
     // instructions. this helps reducing the runtime of the backend.
@@ -673,7 +733,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   const Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
   auto FixUp = [&](const CodeGenInstruction *RegInst) {
-    StringRef RegInstName = RegInst->TheDef->getName();
+    StringRef RegInstName = RegInst->getName();
     if (RegInstName.ends_with("_REV") || RegInstName.ends_with("_alt"))
       if (auto *RegAltRec = Records.getDef(RegInstName.drop_back(4)))
         RegInst = &Target.getInstruction(RegAltRec);
@@ -702,7 +762,7 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
     }
 
     // Broadcast tables
-    StringRef MemInstName = MemInst->TheDef->getName();
+    StringRef MemInstName = MemInst->getName();
     if (!MemInstName.contains("mb") && !MemInstName.contains("mib"))
       continue;
     RegInstsIt = RegInstsForBroadcast.find(Opc);
@@ -746,6 +806,31 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   CheckMemFoldTable(BroadcastTable3);
   CheckMemFoldTable(BroadcastTable4);
 #endif
+
+  // Build the memory unfolding table from the reversible entries of all the
+  // fold tables, keyed by the memory instruction.
+  // Index 0, folded load and store, no alignment requirement.
+  addUnfoldEntries(Table2Addr, TB_INDEX_0 | TB_FOLDED_LOAD | TB_FOLDED_STORE);
+  // Index 0, mix of loads and stores.
+  addUnfoldEntries(Table0, TB_INDEX_0);
+  // Index 1, folded load
+  addUnfoldEntries(Table1, TB_INDEX_1 | TB_FOLDED_LOAD);
+  // Index 2, folded load
+  addUnfoldEntries(Table2, TB_INDEX_2 | TB_FOLDED_LOAD);
+  // Index 3, folded load
+  addUnfoldEntries(Table3, TB_INDEX_3 | TB_FOLDED_LOAD);
+  // Index 4, folded load
+  addUnfoldEntries(Table4, TB_INDEX_4 | TB_FOLDED_LOAD);
+  // Broadcast tables.
+  // Index 1, folded broadcast
+  addUnfoldEntries(BroadcastTable1, TB_INDEX_1 | TB_FOLDED_LOAD);
+  // Index 2, folded broadcast
+  addUnfoldEntries(BroadcastTable2, TB_INDEX_2 | TB_FOLDED_LOAD);
+  // Index 3, folded broadcast
+  addUnfoldEntries(BroadcastTable3, TB_INDEX_3 | TB_FOLDED_LOAD);
+  // Index 4, folded broadcast
+  addUnfoldEntries(BroadcastTable4, TB_INDEX_4 | TB_FOLDED_LOAD);
+
 #define PRINT_TABLE(TABLE) printTable(TABLE, #TABLE, OS);
   // Print all tables.
   PRINT_TABLE(Table2Addr)
@@ -758,6 +843,27 @@ void X86FoldTablesEmitter::run(raw_ostream &OS) {
   PRINT_TABLE(BroadcastTable2)
   PRINT_TABLE(BroadcastTable3)
   PRINT_TABLE(BroadcastTable4)
+  PRINT_TABLE(NonFoldableWithSameMaskTable)
+  PRINT_TABLE(MemUnfoldTable)
+}
+
+void X86FoldTablesEmitter::addUnfoldEntries(const FoldTable &Table,
+                                            uint16_t ExtraFlags) {
+  for (const auto &[RegInst, Entry] : Table) {
+    if (Entry.NoReverse)
+      continue;
+    X86FoldTableEntry UnfoldEntry = Entry;
+    std::swap(UnfoldEntry.RegInst, UnfoldEntry.MemInst);
+    UnfoldEntry.UnfoldIdx = ExtraFlags & TB_INDEX_MASK;
+    UnfoldEntry.FoldLoad |= ExtraFlags & TB_FOLDED_LOAD;
+    UnfoldEntry.FoldStore |= ExtraFlags & TB_FOLDED_STORE;
+    if (!MemUnfoldTable.try_emplace(Entry.MemInst, UnfoldEntry).second)
+      PrintFatalError(Entry.MemInst->TheDef,
+                      "Memory unfolding table is not unique: " +
+                          Entry.MemInst->getName() + " unfolds to both " +
+                          MemUnfoldTable.at(Entry.MemInst).MemInst->getName() +
+                          " and " + RegInst->getName());
+  }
 }
 
 static TableGen::Emitter::OptClass<X86FoldTablesEmitter>

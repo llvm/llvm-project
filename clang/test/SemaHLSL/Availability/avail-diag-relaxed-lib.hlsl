@@ -144,12 +144,12 @@ export void exportedFunctionUsed(float f) {
 // Shader entry point without body
 [shader("compute")]
 [numthreads(4,1,1)]
-float main();
+void main();
 
 // Shader entry point with body
 [shader("compute")]
 [numthreads(4,1,1)]
-float main() {
+void main() {
   float f = 3;
   MyClass C = { 1.0f };
   float a = alive(f);
@@ -158,5 +158,4 @@ float main() {
   float d = test((float)1.0);
   float e = test((half)1.0);
   exportedFunctionUsed(1.0f);
-  return a * b * c;
 }

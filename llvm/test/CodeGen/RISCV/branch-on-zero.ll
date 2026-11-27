@@ -119,19 +119,18 @@ for.end:                                          ; preds = %for.body, %entry
 define i32 @test_lshr2(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; RV32-LABEL: test_lshr2:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    srli a2, a2, 2
-; RV32-NEXT:    beqz a2, .LBB3_3
+; RV32-NEXT:    li a3, 4
+; RV32-NEXT:    bltu a2, a3, .LBB3_3
 ; RV32-NEXT:  # %bb.1: # %while.body.preheader
-; RV32-NEXT:    slli a2, a2, 2
+; RV32-NEXT:    andi a2, a2, -4
 ; RV32-NEXT:    add a2, a1, a2
 ; RV32-NEXT:  .LBB3_2: # %while.body
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV32-NEXT:    lw a3, 0(a1)
 ; RV32-NEXT:    addi a4, a1, 4
 ; RV32-NEXT:    slli a3, a3, 1
-; RV32-NEXT:    addi a1, a0, 4
 ; RV32-NEXT:    sw a3, 0(a0)
-; RV32-NEXT:    mv a0, a1
+; RV32-NEXT:    addi a0, a0, 4
 ; RV32-NEXT:    mv a1, a4
 ; RV32-NEXT:    bne a4, a2, .LBB3_2
 ; RV32-NEXT:  .LBB3_3: # %while.end
@@ -153,9 +152,8 @@ define i32 @test_lshr2(ptr nocapture %x, ptr nocapture readonly %y, i32 %n) {
 ; RV64-NEXT:    lw a3, 0(a1)
 ; RV64-NEXT:    addi a4, a1, 4
 ; RV64-NEXT:    slli a3, a3, 1
-; RV64-NEXT:    addi a1, a0, 4
 ; RV64-NEXT:    sw a3, 0(a0)
-; RV64-NEXT:    mv a0, a1
+; RV64-NEXT:    addi a0, a0, 4
 ; RV64-NEXT:    mv a1, a4
 ; RV64-NEXT:    bne a4, a2, .LBB3_2
 ; RV64-NEXT:  .LBB3_3: # %while.end

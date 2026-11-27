@@ -28,8 +28,13 @@ set(RTSAN_NOINST_TEST_SOURCES
 set(RTSAN_UNITTEST_HEADERS
     rtsan_test_utilities.h)
 
+set(RTSAN_RTL_HEADERS)
+foreach (header ${RTSAN_HEADERS})
+  list(APPEND RTSAN_RTL_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
+endforeach()
+
 add_custom_target(RtsanUnitTests)
-set_target_properties(RtsanUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+set_target_properties(RtsanUnitTests PROPERTIES FOLDER "compiler-rt Tests")
 
 set(RTSAN_UNITTEST_LINK_FLAGS
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
@@ -71,7 +76,7 @@ foreach(arch ${RTSAN_TEST_ARCH})
 
   generate_compiler_rt_tests(RtsanTestObjects
     RtsanUnitTests "Rtsan-${arch}-Test" ${arch}
-    COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
+    COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS} ${RTSAN_RTL_HEADERS}
     SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
     DEPS rtsan
     CFLAGS ${RTSAN_UNITTEST_CFLAGS} -fsanitize=realtime
@@ -82,7 +87,7 @@ foreach(arch ${RTSAN_TEST_ARCH})
     set(RtsanTestObjects_FileOffset64)
     generate_compiler_rt_tests(RtsanTestObjects_FileOffset64
       RtsanUnitTests "Rtsan-${arch}-FileOffset64-Test" ${arch}
-      COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
+      COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS} ${RTSAN_RTL_HEADERS}
       SOURCES ${RTSAN_INST_TEST_SOURCES} ${COMPILER_RT_GOOGLETEST_SOURCES}
       DEPS rtsan
       CFLAGS ${RTSAN_UNITTEST_CFLAGS} -D_FILE_OFFSET_BITS=64 -fsanitize=realtime
@@ -111,12 +116,12 @@ foreach(arch ${RTSAN_TEST_ARCH})
   add_library(${RTSAN_TEST_RUNTIME} STATIC ${RTSAN_TEST_RUNTIME_OBJECTS})
   set_target_properties(${RTSAN_TEST_RUNTIME} PROPERTIES
       ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-      FOLDER "Compiler-RT Runtime tests")
+      FOLDER "compiler-rt Runtime tests")
 
   set(RtsanNoInstTestObjects)
   generate_compiler_rt_tests(RtsanNoInstTestObjects
     RtsanUnitTests "Rtsan-${arch}-NoInstTest" ${arch}
-    COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS}
+    COMPILE_DEPS ${RTSAN_UNITTEST_HEADERS} ${RTSAN_RTL_HEADERS}
     SOURCES ${RTSAN_NOINST_TEST_SOURCES}
             ${COMPILER_RT_GOOGLETEST_SOURCES}
     CFLAGS ${RTSAN_UNITTEST_CFLAGS}

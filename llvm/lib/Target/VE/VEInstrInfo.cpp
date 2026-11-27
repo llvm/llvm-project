@@ -16,6 +16,7 @@
 #include "VESubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
@@ -34,8 +35,8 @@ using namespace llvm;
 // Pin the vtable to this file.
 void VEInstrInfo::anchor() {}
 
-VEInstrInfo::VEInstrInfo(VESubtarget &ST)
-    : VEGenInstrInfo(VE::ADJCALLSTACKDOWN, VE::ADJCALLSTACKUP), RI() {}
+VEInstrInfo::VEInstrInfo(const VESubtarget &ST)
+    : VEGenInstrInfo(ST, RI, VE::ADJCALLSTACKDOWN, VE::ADJCALLSTACKUP), RI() {}
 
 static bool IsIntegerCC(unsigned CC) { return (CC < VECC::CC_AF); }
 
@@ -459,7 +460,6 @@ void VEInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator I,
                                       Register SrcReg, bool isKill, int FI,
                                       const TargetRegisterClass *RC,
-                                      const TargetRegisterInfo *TRI,
                                       Register VReg,
                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
@@ -519,10 +519,12 @@ void VEInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     report_fatal_error("Can't store this register to stack slot");
 }
 
-void VEInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void VEInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       Register DestReg, int FI,
+                                       const TargetRegisterClass *RC,
+                                       Register VReg, unsigned SubReg,
+                                       MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (I != MBB.end())
     DL = I->getDebugLoc();
@@ -1017,21 +1019,19 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
   // Create new MBB
   MachineBasicBlock *BB = &MBB;
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
+
+  // EXTEND_STACK and its guard pseudo (the instruction after MI) stay in BB;
+  // everything past them moves to sinkMBB.
+  MachineInstr &GuardMI = *std::next(MachineBasicBlock::iterator(MI));
+  MachineBasicBlock *sinkMBB = BB->splitAt(GuardMI, /*UpdateLiveIns=*/true);
+
+  // Insert the syscall block between BB and sinkMBB so it falls through.
   MachineBasicBlock *syscallMBB = MF.CreateMachineBasicBlock(LLVM_BB);
-  MachineBasicBlock *sinkMBB = MF.CreateMachineBasicBlock(LLVM_BB);
-  MachineFunction::iterator It = ++(BB->getIterator());
-  MF.insert(It, syscallMBB);
-  MF.insert(It, sinkMBB);
+  MF.insert(++BB->getIterator(), syscallMBB);
 
-  // Transfer the remainder of BB and its successor edges to sinkMBB.
-  sinkMBB->splice(sinkMBB->begin(), BB,
-                  std::next(std::next(MachineBasicBlock::iterator(MI))),
-                  BB->end());
-  sinkMBB->transferSuccessorsAndUpdatePHIs(BB);
-
-  // Next, add the true and fallthrough blocks as its successors.
+  // BB branches to sinkMBB when the stack is already large enough, and
+  // otherwise falls through to syscallMBB.
   BB->addSuccessor(syscallMBB);
-  BB->addSuccessor(sinkMBB);
   BuildMI(BB, dl, TII.get(VE::BRCFLrr_t))
       .addImm(VECC::CC_IGE)
       .addReg(VE::SX11) // %sp
@@ -1073,6 +1073,9 @@ bool VEInstrInfo::expandExtendStackPseudo(MachineInstr &MI) const {
       .addImm(0);
 
   MI.eraseFromParent(); // The pseudo instruction is gone now.
+
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *syscallMBB);
   return true;
 }
 

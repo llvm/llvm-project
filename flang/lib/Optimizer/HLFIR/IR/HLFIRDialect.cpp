@@ -17,7 +17,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/SmallVector.h"
@@ -30,17 +29,6 @@
 
 #define GET_ATTRDEF_CLASSES
 #include "flang/Optimizer/HLFIR/HLFIRAttributes.cpp.inc"
-
-void hlfir::hlfirDialect::initialize() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "flang/Optimizer/HLFIR/HLFIRTypes.cpp.inc"
-      >();
-  addOperations<
-#define GET_OP_LIST
-#include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"
-      >();
-}
 
 // `expr` `<` `*` | bounds (`x` bounds)* `:` type [`?`] `>`
 // bounds ::= `?` | int-lit
@@ -87,12 +75,14 @@ bool hlfir::isFortranVariableType(mlir::Type type) {
         return mlir::isa<fir::BaseBoxType>(eleType) ||
                !fir::hasDynamicSize(eleType);
       })
-      .Case<fir::BaseBoxType, fir::BoxCharType>([](auto) { return true; })
-      .Case<fir::VectorType>([](auto) { return true; })
+      .Case<fir::BaseBoxType, fir::BoxCharType>([](mlir::Type) { return true; })
+      .Case([](fir::VectorType) { return true; })
       .Default([](mlir::Type) { return false; });
 }
 
 bool hlfir::isFortranScalarCharacterType(mlir::Type type) {
+  if (isBoxAddressType(type))
+    return false;
   return isFortranScalarCharacterExprType(type) ||
          mlir::isa<fir::BoxCharType>(type) ||
          mlir::isa<fir::CharacterType>(
@@ -201,13 +191,13 @@ mlir::Value hlfir::genExprShape(mlir::OpBuilder &builder,
   for (std::int64_t extent : expr.getShape()) {
     if (extent == hlfir::ExprType::getUnknownExtent())
       return {};
-    extents.emplace_back(builder.create<mlir::arith::ConstantOp>(
-        loc, indexTy, builder.getIntegerAttr(indexTy, extent)));
+    extents.emplace_back(mlir::arith::ConstantOp::create(
+        builder, loc, indexTy, builder.getIntegerAttr(indexTy, extent)));
   }
 
   fir::ShapeType shapeTy =
       fir::ShapeType::get(builder.getContext(), expr.getRank());
-  fir::ShapeOp shape = builder.create<fir::ShapeOp>(loc, shapeTy, extents);
+  fir::ShapeOp shape = fir::ShapeOp::create(builder, loc, shapeTy, extents);
   return shape.getResult();
 }
 
@@ -227,6 +217,25 @@ mlir::Type hlfir::getExprType(mlir::Type variableType) {
   }
   return hlfir::ExprType::get(variableType.getContext(), typeShape, type,
                               isPolymorphic);
+}
+
+mlir::Type hlfir::getVariableType(hlfir::ExprType exprType) {
+  const mlir::Type dataType{hlfir::getFortranElementOrSequenceType(exprType)};
+  // Polymorphic: fir.class<T>.
+  if (exprType.isPolymorphic())
+    return fir::ClassType::get(dataType);
+  // Non-polymorphic arrays need a box to carry shape information.
+  if (exprType.isArray())
+    return fir::BoxType::get(dataType);
+  // Scalar dynamic-length character: fir.boxchar<kind>.
+  if (auto charTy{mlir::dyn_cast<fir::CharacterType>(dataType)})
+    if (charTy.hasDynamicLen())
+      return fir::BoxCharType::get(dataType.getContext(), charTy.getFKind());
+  // Scalar derived type with type parameters: fir.box<T>.
+  if (fir::isRecordWithTypeParameters(dataType))
+    return fir::BoxType::get(dataType);
+  // Simple scalar: fir.ref<T>.
+  return fir::ReferenceType::get(dataType);
 }
 
 bool hlfir::isFortranIntegerScalarOrArrayObject(mlir::Type type) {

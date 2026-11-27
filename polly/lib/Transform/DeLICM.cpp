@@ -15,17 +15,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/DeLICM.h"
-#include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
-#include "polly/ScopPass.h"
 #include "polly/Support/GICHelper.h"
 #include "polly/Support/ISLOStream.h"
 #include "polly/Support/ISLTools.h"
 #include "polly/ZoneAlgo.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 
 #include "polly/Support/PollyDebug.h"
 #define DEBUG_TYPE "polly-delicm"
@@ -35,11 +32,15 @@ using namespace llvm;
 
 namespace {
 
+static cl::opt<bool> PollyPrintDeLICM("polly-print-delicm",
+                                      cl::desc("Polly - Print DeLICM/DePRE"),
+                                      cl::cat(PollyCategory));
+
 cl::opt<int>
     DelicmMaxOps("polly-delicm-max-ops",
                  cl::desc("Maximum number of isl operations to invest for "
                           "lifetime analysis; 0=no limit"),
-                 cl::init(1000000), cl::cat(PollyCategory));
+                 cl::init(1500000), cl::cat(PollyCategory));
 
 cl::opt<bool> DelicmOverapproximateWrites(
     "polly-delicm-overapproximate-writes",
@@ -544,6 +545,13 @@ private:
   /// The number of PHIs mapped to some array element.
   int NumberOfMappedPHIScalars = 0;
 
+  /// Shared ISL operations budget guarding the expensive zone analysis
+  /// (computeZone) and the scalar-to-store collapsing (greedyCollapse). It is
+  /// constructed dormant (AutoEnter=false) and armed narrowly around each
+  /// dangerous region via IslQuotaScope, so the same budget covers both
+  /// regions without ever nesting two armed scopes.
+  IslMaxOperationsGuard MaxOpGuard;
+
   /// Determine whether two knowledges are conflicting with each other.
   ///
   /// @see Knowledge::isConflicting
@@ -1023,9 +1031,35 @@ private:
     auto TargetAccRel = getAccessRelationFor(TargetStoreMA);
 
     // { Zone[] -> DomTarget[] }
-    // For each point in time, find the next target store instance.
-    auto Target =
-        computeScalarReachingOverwrite(Schedule, TargetDom, false, true);
+    // For each point in time, find the next target store instance. This can be
+    // expensive for SCoPs with many modular/quasi-affine constraints, so bound
+    // it with the shared ISL operations budget.
+    isl::map Target;
+    {
+      IslQuotaScope MaxOpScope = MaxOpGuard.enter();
+      Target = computeScalarReachingOverwrite(Schedule, TargetDom, false, true);
+
+      if (MaxOpScope.hasQuotaExceeded()) {
+        DeLICMOutOfQuota++;
+        assert(
+            isl_ctx_last_error(IslCtx.get()) == isl_error_quota &&
+            "The only reason that these things have not been computed should "
+            "be if the max-operations limit hit");
+        POLLY_DEBUG(
+            dbgs() << "collapseScalarsToStore exceeded max_operations\n");
+        DebugLoc Begin, End;
+        getDebugLocations(getBBPairForRegion(&S->getRegion()), Begin, End);
+        OptimizationRemarkAnalysis R(DEBUG_TYPE, "OutOfQuota", Begin,
+                                     S->getEntry());
+        R << "maximal number of operations exceeded during "
+             "collapseScalarsToStore";
+        S->getFunction().getContext().diagnose(R);
+        return false;
+      }
+
+      if (Target.is_null())
+        return false;
+    }
 
     // { Zone[] -> Element[] }
     // Use the target store's write location as a suggestion to map scalars to.
@@ -1186,7 +1220,9 @@ private:
   }
 
 public:
-  DeLICMImpl(Scop *S, LoopInfo *LI) : ZoneAlgorithm("polly-delicm", S, LI) {}
+  DeLICMImpl(Scop *S, LoopInfo *LI)
+      : ZoneAlgorithm("polly-delicm", S, LI),
+        MaxOpGuard(IslCtx.get(), DelicmMaxOps, /*AutoEnter=*/false) {}
 
   /// Calculate the lifetime (definition to last use) of every array element.
   ///
@@ -1199,7 +1235,7 @@ public:
     isl::union_map EltKnown, EltWritten;
 
     {
-      IslMaxOperationsGuard MaxOpGuard(IslCtx.get(), DelicmMaxOps);
+      IslQuotaScope MaxOpScope = MaxOpGuard.enter();
 
       computeCommon();
 
@@ -1238,6 +1274,7 @@ public:
   /// the first processed element claims it.
   void greedyCollapse() {
     bool Modified = false;
+    bool MaxOpQuotaExceeded = false;
 
     for (auto &Stmt : *S) {
       for (auto *MA : Stmt) {
@@ -1333,7 +1370,13 @@ public:
         POLLY_DEBUG(dbgs() << "Analyzing target access " << MA << "\n");
         if (collapseScalarsToStore(MA))
           Modified = true;
+        else if (MaxOpGuard.hasQuotaExceeded()) {
+          MaxOpQuotaExceeded = true;
+          break;
+        }
       }
+      if (MaxOpQuotaExceeded)
+        break;
     }
 
     if (Modified)
@@ -1356,7 +1399,10 @@ public:
   }
 
   /// Return whether at least one transformation been applied.
-  bool isModified() const { return NumberOfTargetsMapped > 0; }
+  bool isModified() const {
+    return NumberOfTargetsMapped > 0 || NumberOfMappedValueScalars > 0 ||
+           NumberOfMappedPHIScalars > 0;
+  }
 };
 
 static std::unique_ptr<DeLICMImpl> collapseToUnused(Scop &S, LoopInfo &LI) {
@@ -1376,7 +1422,7 @@ static std::unique_ptr<DeLICMImpl> collapseToUnused(Scop &S, LoopInfo &LI) {
   return Impl;
 }
 
-static std::unique_ptr<DeLICMImpl> runDeLICM(Scop &S, LoopInfo &LI) {
+static std::unique_ptr<DeLICMImpl> runDeLICMImpl(Scop &S, LoopInfo &LI) {
   std::unique_ptr<DeLICMImpl> Impl = collapseToUnused(S, LI);
 
   Scop::ScopStatistics ScopStats = S.getStatistics();
@@ -1389,129 +1435,7 @@ static std::unique_ptr<DeLICMImpl> runDeLICM(Scop &S, LoopInfo &LI) {
 
   return Impl;
 }
-
-static PreservedAnalyses runDeLICMUsingNPM(Scop &S, ScopAnalysisManager &SAM,
-                                           ScopStandardAnalysisResults &SAR,
-                                           SPMUpdater &U, raw_ostream *OS) {
-  LoopInfo &LI = SAR.LI;
-  std::unique_ptr<DeLICMImpl> Impl = runDeLICM(S, LI);
-
-  if (OS) {
-    *OS << "Printing analysis 'Polly - DeLICM/DePRE' for region: '"
-        << S.getName() << "' in function '" << S.getFunction().getName()
-        << "':\n";
-    if (Impl) {
-      assert(Impl->getScop() == &S);
-
-      *OS << "DeLICM result:\n";
-      Impl->print(*OS);
-    }
-  }
-
-  if (!Impl->isModified())
-    return PreservedAnalyses::all();
-
-  PreservedAnalyses PA;
-  PA.preserveSet<AllAnalysesOn<Module>>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
-  PA.preserveSet<AllAnalysesOn<Loop>>();
-  return PA;
-}
-
-class DeLICMWrapperPass final : public ScopPass {
-private:
-  DeLICMWrapperPass(const DeLICMWrapperPass &) = delete;
-  const DeLICMWrapperPass &operator=(const DeLICMWrapperPass &) = delete;
-
-  /// The pass implementation, also holding per-scop data.
-  std::unique_ptr<DeLICMImpl> Impl;
-
-public:
-  static char ID;
-  explicit DeLICMWrapperPass() : ScopPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequiredTransitive<ScopInfoRegionPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-  bool runOnScop(Scop &S) override {
-    // Free resources for previous scop's computation, if not yet done.
-    releaseMemory();
-
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    Impl = runDeLICM(S, LI);
-
-    return Impl->isModified();
-  }
-
-  void printScop(raw_ostream &OS, Scop &S) const override {
-    if (!Impl)
-      return;
-    assert(Impl->getScop() == &S);
-
-    OS << "DeLICM result:\n";
-    Impl->print(OS);
-  }
-
-  void releaseMemory() override { Impl.reset(); }
-};
-
-char DeLICMWrapperPass::ID;
-
-/// Print result from DeLICMWrapperPass.
-class DeLICMPrinterLegacyPass final : public ScopPass {
-public:
-  static char ID;
-
-  DeLICMPrinterLegacyPass() : DeLICMPrinterLegacyPass(outs()) {}
-  explicit DeLICMPrinterLegacyPass(llvm::raw_ostream &OS)
-      : ScopPass(ID), OS(OS) {}
-
-  bool runOnScop(Scop &S) override {
-    DeLICMWrapperPass &P = getAnalysis<DeLICMWrapperPass>();
-
-    OS << "Printing analysis '" << P.getPassName() << "' for region: '"
-       << S.getRegion().getNameStr() << "' in function '"
-       << S.getFunction().getName() << "':\n";
-    P.printScop(OS, S);
-
-    return false;
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    ScopPass::getAnalysisUsage(AU);
-    AU.addRequired<DeLICMWrapperPass>();
-    AU.setPreservesAll();
-  }
-
-private:
-  llvm::raw_ostream &OS;
-};
-
-char DeLICMPrinterLegacyPass::ID = 0;
 } // anonymous namespace
-
-Pass *polly::createDeLICMWrapperPass() { return new DeLICMWrapperPass(); }
-
-llvm::Pass *polly::createDeLICMPrinterLegacyPass(llvm::raw_ostream &OS) {
-  return new DeLICMPrinterLegacyPass(OS);
-}
-
-llvm::PreservedAnalyses polly::DeLICMPass::run(Scop &S,
-                                               ScopAnalysisManager &SAM,
-                                               ScopStandardAnalysisResults &SAR,
-                                               SPMUpdater &U) {
-  return runDeLICMUsingNPM(S, SAM, SAR, U, nullptr);
-}
-
-llvm::PreservedAnalyses DeLICMPrinterPass::run(Scop &S,
-                                               ScopAnalysisManager &SAM,
-                                               ScopStandardAnalysisResults &SAR,
-                                               SPMUpdater &U) {
-  return runDeLICMUsingNPM(S, SAM, SAR, U, &OS);
-}
 
 bool polly::isConflicting(
     isl::union_set ExistingOccupied, isl::union_set ExistingUnused,
@@ -1527,15 +1451,21 @@ bool polly::isConflicting(
   return Knowledge::isConflicting(Existing, Proposed, OS, Indent);
 }
 
-INITIALIZE_PASS_BEGIN(DeLICMWrapperPass, "polly-delicm", "Polly - DeLICM/DePRE",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(DeLICMWrapperPass, "polly-delicm", "Polly - DeLICM/DePRE",
-                    false, false)
+bool polly::runDeLICM(Scop &S) {
+  LoopInfo &LI = *S.getLI();
+  std::unique_ptr<DeLICMImpl> Impl = runDeLICMImpl(S, LI);
 
-INITIALIZE_PASS_BEGIN(DeLICMPrinterLegacyPass, "polly-print-delicm",
-                      "Polly - Print DeLICM/DePRE", false, false)
-INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass)
-INITIALIZE_PASS_END(DeLICMPrinterLegacyPass, "polly-print-delicm",
-                    "Polly - Print DeLICM/DePRE", false, false)
+  if (PollyPrintDeLICM) {
+    outs() << "Printing analysis 'Polly - DeLICM/DePRE' for region: '"
+           << S.getName() << "' in function '" << S.getFunction().getName()
+           << "':\n";
+    if (Impl) {
+      assert(Impl->getScop() == &S);
+
+      outs() << "DeLICM result:\n";
+      Impl->print(outs());
+    }
+  }
+
+  return Impl->isModified();
+}

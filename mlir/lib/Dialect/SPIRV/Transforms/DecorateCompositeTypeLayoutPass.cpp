@@ -36,11 +36,12 @@ namespace {
 class SPIRVGlobalVariableOpLayoutInfoDecoration
     : public OpRewritePattern<spirv::GlobalVariableOp> {
 public:
-  using OpRewritePattern<spirv::GlobalVariableOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::GlobalVariableOp op,
                                 PatternRewriter &rewriter) const override {
-    SmallVector<NamedAttribute, 4> globalVarAttrs;
+    NamedAttrList globalVarAttrs(op->getDiscardableAttrDictionary());
+    op->getName().populateInherentAttrs(op, globalVarAttrs);
 
     auto ptrType = cast<spirv::PointerType>(op.getType());
     auto pointeeType = cast<spirv::StructType>(ptrType.getPointeeType());
@@ -48,17 +49,13 @@ public:
 
     if (!structType)
       return op->emitError(llvm::formatv(
-          "failed to decorate (unsuported pointee type: '{0}')", pointeeType));
+          "failed to decorate (unsupported pointee type: '{0}')", pointeeType));
 
     auto decoratedType =
         spirv::PointerType::get(structType, ptrType.getStorageClass());
 
-    // Save all named attributes except "type" attribute.
-    for (const auto &attr : op->getAttrs()) {
-      if (attr.getName() == "type")
-        continue;
-      globalVarAttrs.push_back(attr);
-    }
+    // The new type is passed through the operation-specific builder below.
+    globalVarAttrs.erase("type");
 
     rewriter.replaceOpWithNewOp<spirv::GlobalVariableOp>(
         op, TypeAttr::get(decoratedType), globalVarAttrs);
@@ -69,7 +66,7 @@ public:
 class SPIRVAddressOfOpLayoutInfoDecoration
     : public OpRewritePattern<spirv::AddressOfOp> {
 public:
-  using OpRewritePattern<spirv::AddressOfOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(spirv::AddressOfOp op,
                                 PatternRewriter &rewriter) const override {
@@ -116,10 +113,10 @@ class DecorateSPIRVCompositeTypeLayoutPass
 } // namespace
 
 void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
-  auto module = getOperation();
-  RewritePatternSet patterns(module.getContext());
+  auto moduleOp = getOperation();
+  RewritePatternSet patterns(moduleOp.getContext());
   populateSPIRVLayoutInfoPatterns(patterns);
-  ConversionTarget target(*(module.getContext()));
+  ConversionTarget target(*(moduleOp.getContext()));
   target.addLegalDialect<spirv::SPIRVDialect>();
   target.addLegalOp<func::FuncOp>();
   target.addDynamicallyLegalOp<spirv::GlobalVariableOp>(
@@ -145,7 +142,7 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   });
 
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  for (auto spirvModule : module.getOps<spirv::ModuleOp>())
+  for (auto spirvModule : moduleOp.getOps<spirv::ModuleOp>())
     if (failed(applyFullConversion(spirvModule, target, frozenPatterns)))
       signalPassFailure();
 }

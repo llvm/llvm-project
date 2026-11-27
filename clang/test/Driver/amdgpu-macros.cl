@@ -2,70 +2,10 @@
 // "-target" and "-mcpu" options.
 
 //
-// R600-based processors.
-//
-
-// RUN: %clang -E -dM -target r600 -mcpu=r600 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,R600 %s -DCPU=r600
-// RUN: %clang -E -dM -target r600 -mcpu=rv630 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,R600 %s -DCPU=r600
-// RUN: %clang -E -dM -target r600 -mcpu=rv635 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,R600 %s -DCPU=r600
-// RUN: %clang -E -dM -target r600 -mcpu=r630 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,R630 %s -DCPU=r630
-// RUN: %clang -E -dM -target r600 -mcpu=rs780 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,RS880 %s -DCPU=rs880
-// RUN: %clang -E -dM -target r600 -mcpu=rs880 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,RS880 %s -DCPU=rs880
-// RUN: %clang -E -dM -target r600 -mcpu=rv610 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,RS880 %s -DCPU=rs880
-// RUN: %clang -E -dM -target r600 -mcpu=rv620 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,RS880 %s -DCPU=rs880
-// RUN: %clang -E -dM -target r600 -mcpu=rv670 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,RV670 %s -DCPU=rv670
-// RUN: %clang -E -dM -target r600 -mcpu=rv710 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,RV710 %s -DCPU=rv710
-// RUN: %clang -E -dM -target r600 -mcpu=rv730 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,RV730 %s -DCPU=rv730
-// RUN: %clang -E -dM -target r600 -mcpu=rv740 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,RV770 %s -DCPU=rv770
-// RUN: %clang -E -dM -target r600 -mcpu=rv770 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,RV770 %s -DCPU=rv770
-// RUN: %clang -E -dM -target r600 -mcpu=cedar %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CEDAR %s -DCPU=cedar
-// RUN: %clang -E -dM -target r600 -mcpu=palm %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CEDAR %s -DCPU=cedar
-// RUN: %clang -E -dM -target r600 -mcpu=cypress %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CYPRESS %s -DCPU=cypress
-// RUN: %clang -E -dM -target r600 -mcpu=hemlock %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CYPRESS %s -DCPU=cypress
-// RUN: %clang -E -dM -target r600 -mcpu=juniper %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,JUNIPER %s -DCPU=juniper
-// RUN: %clang -E -dM -target r600 -mcpu=redwood %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,REDWOOD %s -DCPU=redwood
-// RUN: %clang -E -dM -target r600 -mcpu=sumo %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,SUMO %s -DCPU=sumo
-// RUN: %clang -E -dM -target r600 -mcpu=sumo2 %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,SUMO %s -DCPU=sumo
-// RUN: %clang -E -dM -target r600 -mcpu=barts %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,BARTS %s -DCPU=barts
-// RUN: %clang -E -dM -target r600 -mcpu=caicos %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CAICOS %s -DCPU=caicos
-// RUN: %clang -E -dM -target r600 -mcpu=aruba %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CAYMAN %s -DCPU=cayman
-// RUN: %clang -E -dM -target r600 -mcpu=cayman %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,CAYMAN %s -DCPU=cayman
-// RUN: %clang -E -dM -target r600 -mcpu=turks %s 2>&1 | FileCheck --check-prefixes=ARCH-R600,TURKS %s -DCPU=turks
-
-// ARCH-R600-NOT:    #define FP_FAST_FMA 1
-// ARCH-R600-NOT:    #define FP_FAST_FMAF 1
-
-// ARCH-R600-DAG: #define __AMDGPU__ 1
-// ARCH-R600-DAG: #define __AMD__ 1
-
-// R600-NOT:    #define __HAS_FMAF__ 1
-// R630-NOT:    #define __HAS_FMAF__ 1
-// RS880-NOT:   #define __HAS_FMAF__ 1
-// RV670-NOT:   #define __HAS_FMAF__ 1
-// RV710-NOT:   #define __HAS_FMAF__ 1
-// RV730-NOT:   #define __HAS_FMAF__ 1
-// RV770-NOT:   #define __HAS_FMAF__ 1
-// CEDAR-NOT:   #define __HAS_FMAF__ 1
-// CYPRESS-DAG: #define __HAS_FMAF__ 1
-// JUNIPER-NOT: #define __HAS_FMAF__ 1
-// REDWOOD-NOT: #define __HAS_FMAF__ 1
-// SUMO-NOT:    #define __HAS_FMAF__ 1
-// BARTS-NOT:   #define __HAS_FMAF__ 1
-// CAICOS-NOT:  #define __HAS_FMAF__ 1
-// CAYMAN-DAG:  #define __HAS_FMAF__ 1
-// TURKS-NOT:   #define __HAS_FMAF__ 1
-
-// ARCH-R600-NOT:    #define __HAS_FP64__ 1
-// ARCH-R600-NOT:    #define __HAS_LDEXPF__ 1
-
-// ARCH-R600-DAG: #define __R600__ 1
-
-// ARCH-R600-DAG:    #define __[[CPU]]__ 1
-
-//
 // AMDGCN-based processors.
 //
 
+// RUN: %clang -E -dM -target amdgcn %s 2>&1 | FileCheck --check-prefixes=DUMMY,SLOW_FMAF -DWAVEFRONT_SIZE=64 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx600 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx600 -DFAMILY=GFX6
 // RUN: %clang -E -dM -target amdgcn -mcpu=tahiti %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx600 -DFAMILY=GFX6
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx601 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,SLOW_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx601 -DFAMILY=GFX6
@@ -128,17 +68,29 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1151 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1151 -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1152 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1152 -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1153 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1153 -DFAMILY=GFX11
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1154 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1154 -DFAMILY=GFX11
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1170 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1170 -DFAMILY=GFX11
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1171 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1171 -DFAMILY=GFX11
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1172 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1172 -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1200 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1200 -DFAMILY=GFX12
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1201 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1201 -DFAMILY=GFX12
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1250 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1250 -DFAMILY=GFX12
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1250-strict %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1250_strict -DFAMILY=GFX12
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1251 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1251 -DFAMILY=GFX12
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1310 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx1310 -DFAMILY=GFX13
 
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx9-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx9_generic -DFAMILY=GFX9
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx9-4-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=64 -DCPU=gfx9_4_generic -DFAMILY=GFX9
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx10-1-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx10_1_generic -DFAMILY=GFX10
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx10-3-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx10_3_generic -DFAMILY=GFX10
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx11-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx11_generic -DFAMILY=GFX11
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx11-7-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx11_7_generic -DFAMILY=GFX11
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx12-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx12_generic -DFAMILY=GFX12
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx12-5-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx12_5_generic -DFAMILY=GFX12
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx13-generic %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,FAST_FMAF %s -DWAVEFRONT_SIZE=32 -DCPU=gfx13_generic -DFAMILY=GFX13
 
 // ARCH-GCN-DAG: #define FP_FAST_FMA 1
+// ARCH-GCN-DAG: #define FP_FAST_FMA_HALF 1
 
 // FAST_FMAF-DAG: #define FP_FAST_FMAF 1
 // SLOW_FMAF-NOT: #define FP_FAST_FMAF 1
@@ -152,38 +104,43 @@
 // ARCH-GCN-DAG: #define __[[CPU]]__ 1
 // ARCH-GCN-DAG: #define __[[FAMILY]]__ 1
 // ARCH-GCN-DAG: #define __amdgcn_processor__ "[[CPU]]"
-// ARCH-GCN-DAG: #define __AMDGCN_WAVEFRONT_SIZE [[WAVEFRONT_SIZE]]
 // ARCH-GCN-DAG: #define __GCC_DESTRUCTIVE_SIZE 128
 // ARCH-GCN-DAG: #define __GCC_CONSTRUCTIVE_SIZE 128
 // UNSAFEFPATOMIC-DAG: #define __AMDGCN_UNSAFE_FP_ATOMICS__ 1
 
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mwavefrontsize64 \
-// RUN:   %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 -mwavefrontsize64 \
-// RUN:   %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mwavefrontsize64 \
-// RUN:   -mno-wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 -mwavefrontsize64 \
-// RUN:   -mno-wavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE32 %s
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mno-wavefrontsize64 \
-// RUN:   -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
-// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 -mno-wavefrontsize64 \
-// RUN:   -mwavefrontsize64 %s 2>&1 | FileCheck --check-prefix=WAVE64 %s
-// WAVE64-DAG: #define __AMDGCN_WAVEFRONT_SIZE 64
-// WAVE32-DAG: #define __AMDGCN_WAVEFRONT_SIZE 32
+
+// DUMMY-DAG: #define __AMDGCN__ 1
+// DUMMY-DAG: #define __AMDGPU__ 1
+// DUMMY-DAG: #define __AMD__ 1
+// DUMMY-DAG: #define __HAS_FMAF__ 1
+// DUMMY-DAG: #define __HAS_FP64__ 1
+// DUMMY-DAG: #define __HAS_LDEXPF__ 1
+
 
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mcumode \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 -mno-cumode \
-// RUN:   %s 2>&1 | FileCheck --check-prefixes=CUMODE-ON,WARN-CUMODE %s
+// RUN:   %s 2>&1 | FileCheck -DMCPU=amdgpu9.06 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-OFF %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 -mcumode \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1030 -mno-cumode \
 // RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-OFF %s
-// WARN-CUMODE-DAG: warning: ignoring '-mno-cumode' option as it is not currently supported for processor 'gfx906' [-Woption-ignored]
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1250 \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1250 -mcumode \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1250 -mno-cumode \
+// RUN:   %s 2>&1 | FileCheck -DMCPU=amdgpu12.50 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1251 \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1251 -mcumode \
+// RUN:   %s 2>&1 | FileCheck --check-prefix=CUMODE-ON %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx1251 -mno-cumode \
+// RUN:   %s 2>&1 | FileCheck -DMCPU=amdgpu12.51 --check-prefixes=CUMODE-ON,WARN-CUMODE %s
+// WARN-CUMODE-DAG: warning: ignoring '-mno-cumode' option as it is not currently supported for processor '[[MCPU]]' [-Woption-ignored]
 // CUMODE-ON-DAG: #define __AMDGCN_CUMODE__ 1
 // CUMODE-OFF-DAG: #define __AMDGCN_CUMODE__ 0

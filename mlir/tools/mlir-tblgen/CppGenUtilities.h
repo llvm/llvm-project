@@ -14,15 +14,24 @@
 #ifndef MLIR_TOOLS_MLIRTBLGEN_CPPGENUTILITIES_H_
 #define MLIR_TOOLS_MLIRTBLGEN_CPPGENUTILITIES_H_
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 namespace tblgen {
 
-// Emit the summary and description as a C++ comment, perperly aligned placed
-// adjacent to the class declaration of generated classes.
-std::string emitSummaryAndDescComments(llvm::StringRef summary,
-                                       llvm::StringRef description);
+// Emit the summary and description as a C++ comment. If `terminateComment` is
+// true, terminates the comment with a `\n`.
+void emitSummaryAndDescComments(llvm::raw_ostream &os, llvm::StringRef summary,
+                                llvm::StringRef description,
+                                bool terminateComment = true);
+
+// Emit an `#include` directive for every header in `headers`, sorted
+// and without duplicates. Headers are emitted verbatim; a header that could
+// break out of the directive is a fatal error.
+void emitIncludes(llvm::raw_ostream &os,
+                  llvm::ArrayRef<llvm::StringRef> headers);
 } // namespace tblgen
 } // namespace mlir
 

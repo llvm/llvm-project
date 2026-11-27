@@ -32,7 +32,7 @@ static_assert(HasStdErase<std::vector<int>>);
 static_assert(!HasStdErase<std::flat_map<int, int>>);
 
 template <class M>
-M make(std::initializer_list<int> vals) {
+constexpr M make(std::initializer_list<int> vals) {
   M ret;
   for (int v : vals)
     ret[static_cast<typename M::key_type>(v)] = static_cast<typename M::mapped_type>(v + 10);
@@ -40,8 +40,8 @@ M make(std::initializer_list<int> vals) {
 }
 
 template <class M, class Pred>
-void test0(
-    std::initializer_list<int> vals, Pred p, std::initializer_list<int> expected, std::size_t expected_erased_count) {
+constexpr void
+test0(std::initializer_list<int> vals, Pred p, std::initializer_list<int> expected, std::size_t expected_erased_count) {
   M s = make<M>(vals);
   ASSERT_SAME_TYPE(typename M::size_type, decltype(std::erase_if(s, p)));
   assert(expected_erased_count == std::erase_if(s, p));
@@ -49,7 +49,7 @@ void test0(
 }
 
 template <class S>
-void test() {
+constexpr void test() {
   // Test all the plausible signatures for this predicate.
   auto is1   = [](typename S::const_reference v) { return v.first == 1; };
   auto is2   = [](typename S::value_type v) { return v.first == 2; };
@@ -76,7 +76,7 @@ void test() {
   test0<S>({1, 2, 3}, False, {1, 2, 3}, 0);
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::flat_map<int, char>>();
   test<std::flat_map<int,
                      char,
@@ -84,10 +84,24 @@ int main(int, char**) {
                      std::vector<int, min_allocator<int>>,
                      std::vector<char, min_allocator<char>>>>();
   test<std::flat_map<int, char, std::greater<int>, std::vector<int, test_allocator<int>>>>();
-  test<std::flat_map<int, char, std::less<int>, std::deque<int, min_allocator<int>>>>();
-  test<std::flat_map<int, char, std::greater<int>, std::deque<int, test_allocator<int>>>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::flat_map<int, char, std::less<int>, std::deque<int, min_allocator<int>>>>();
+    test<std::flat_map<int, char, std::greater<int>, std::deque<int, test_allocator<int>>>>();
+  }
   test<std::flat_map<long, int>>();
   test<std::flat_map<double, int>>();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +reference-types -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -target-feature +fp16 -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
-// RUN: %clang_cc1 -triple wasm64-unknown-unknown -target-feature +reference-types -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -target-feature +fp16 -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
-// RUN: not %clang_cc1 -triple wasm64-unknown-unknown -target-feature +reference-types -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -flax-vector-conversions=none -O3 -emit-llvm -o - %s 2>&1 | FileCheck %s -check-prefixes MISSING-SIMD
+// RUN: %clang_cc1 -triple wasm32-unknown-unknown -target-feature +reference-types -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -target-feature +gc -target-feature +fp16 -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY32
+// RUN: %clang_cc1 -triple wasm64-unknown-unknown -target-feature +reference-types -target-feature +simd128 -target-feature +relaxed-simd -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -target-feature +gc  -target-feature +fp16 -flax-vector-conversions=none -O3 -emit-llvm -o - %s | FileCheck %s -check-prefixes WEBASSEMBLY,WEBASSEMBLY64
+// RUN: not %clang_cc1 -triple wasm64-unknown-unknown -target-feature +reference-types -target-feature +nontrapping-fptoint -target-feature +exception-handling -target-feature +bulk-memory -target-feature +atomics -target-feature +gc -flax-vector-conversions=none -O3 -emit-llvm -o - %s 2>&1 | FileCheck %s -check-prefixes MISSING-SIMD
 
 // SIMD convenience types
 typedef signed char i8x16 __attribute((vector_size(16)));
@@ -25,6 +25,18 @@ __SIZE_TYPE__ memory_grow(__SIZE_TYPE__ delta) {
   return __builtin_wasm_memory_grow(0, delta);
   // WEBASSEMBLY32: call i32 @llvm.wasm.memory.grow.i32(i32 0, i32 %{{.*}})
   // WEBASSEMBLY64: call i64 @llvm.wasm.memory.grow.i64(i32 0, i64 %{{.*}})
+}
+
+void memory_copy(void *dest, const void *src, __SIZE_TYPE__ count) {
+  __builtin_wasm_memory_copy(0, 0, dest, src, count);
+  // WEBASSEMBLY32: call void @llvm.wasm.memory.copy.i32(i32 0, i32 0, ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}})
+  // WEBASSEMBLY64: call void @llvm.wasm.memory.copy.i64(i32 0, i32 0, ptr %{{.*}}, ptr %{{.*}}, i64 %{{.*}})
+}
+
+void memory_fill(void *dest, int value, __SIZE_TYPE__ count) {
+  __builtin_wasm_memory_fill(0, dest, value, count);
+  // WEBASSEMBLY32: call void @llvm.wasm.memory.fill.i32(i32 0, ptr %{{.*}}, i32 %{{.*}}, i32 %{{.*}})
+  // WEBASSEMBLY64: call void @llvm.wasm.memory.fill.i64(i32 0, ptr %{{.*}}, i32 %{{.*}}, i64 %{{.*}})
 }
 
 __SIZE_TYPE__ tls_size(void) {
@@ -737,13 +749,13 @@ f16x8 pmax_f16x8(f16x8 a, f16x8 b) {
 }
 __externref_t externref_null() {
   return __builtin_wasm_ref_null_extern();
-  // WEBASSEMBLY: tail call ptr addrspace(10) @llvm.wasm.ref.null.extern()
+  // WEBASSEMBLY: tail call target("wasm.externref") @llvm.wasm.ref.null.extern()
   // WEBASSEMBLY-NEXT: ret
 }
 
 int externref_is_null(__externref_t arg) {
   return __builtin_wasm_ref_is_null_extern(arg);
-  // WEBASSEMBLY: tail call i32 @llvm.wasm.ref.is_null.extern(ptr addrspace(10) %arg)
+  // WEBASSEMBLY: tail call i32 @llvm.wasm.ref.is_null.extern(target("wasm.externref") %arg)
   // WEBASSEMBLY-NEXT: ret
 }
 

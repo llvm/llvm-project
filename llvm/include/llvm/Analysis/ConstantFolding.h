@@ -19,6 +19,7 @@
 #ifndef LLVM_ANALYSIS_CONSTANTFOLDING_H
 #define LLVM_ANALYSIS_CONSTANTFOLDING_H
 
+#include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Support/Compiler.h"
 #include <stdint.h>
 
@@ -28,6 +29,7 @@ namespace Intrinsic {
 using ID = unsigned;
 }
 
+class APFloat;
 class APInt;
 template <typename T> class ArrayRef;
 class CallBase;
@@ -87,7 +89,7 @@ LLVM_ABI Constant *ConstantFoldInstOperands(
 /// Denormal inputs may be flushed based on the denormal handling mode.
 LLVM_ABI Constant *ConstantFoldCompareInstOperands(
     unsigned Predicate, Constant *LHS, Constant *RHS, const DataLayout &DL,
-    const TargetLibraryInfo *TLI = nullptr, const Instruction *I = nullptr);
+    const TargetLibraryInfo *TLI = nullptr, const Function *CtxF = nullptr);
 
 /// Attempt to constant fold a unary operation with the specified operand.
 /// Returns null on failure.
@@ -108,22 +110,25 @@ ConstantFoldFPInstOperands(unsigned Opcode, Constant *LHS, Constant *RHS,
                            const DataLayout &DL, const Instruction *I,
                            bool AllowNonDeterministic = true);
 
+/// Evaluate \p NativeFP on \p V using the host libm, then convert the result to
+/// \p Ty. Denormal inputs and results are flushed according to \p DenormMode.
+/// Returns nullptr if the host call raised a non-inexact floating-point
+/// exception, or if \p DenormMode has a dynamic input or output mode.
+/// \p DenormMode must be valid.
+LLVM_ABI Constant *
+ConstantFoldFP(double (*NativeFP)(double), const APFloat &V, Type *Ty,
+               DenormalMode DenormMode = DenormalMode::getIEEE());
+
 /// Attempt to flush float point constant according to denormal mode set in the
 /// instruction's parent function attributes. If so, return a zero with the
 /// correct sign, otherwise return the original constant. Inputs and outputs to
 /// floating point instructions can have their mode set separately, so the
 /// direction is also needed.
 ///
-/// If the calling function's "denormal-fp-math" input mode is "dynamic" for the
+/// If the calling function's denormal_fpenv input mode is dynamic for the
 /// floating-point type, returns nullptr for denormal inputs.
-LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Instruction *I,
+LLVM_ABI Constant *FlushFPConstant(Constant *Operand, const Function *CtxF,
                                    bool IsOutput);
-
-/// Attempt to constant fold a select instruction with the specified
-/// operands. The constant result is returned if successful; if not, null is
-/// returned.
-LLVM_ABI Constant *ConstantFoldSelectInstruction(Constant *Cond, Constant *V1,
-                                                 Constant *V2);
 
 /// Attempt to constant fold a cast with the specified operand.  If it
 /// fails, it returns a constant expression of the specified operand.
@@ -135,39 +140,19 @@ LLVM_ABI Constant *ConstantFoldCastOperand(unsigned Opcode, Constant *C,
 LLVM_ABI Constant *ConstantFoldIntegerCast(Constant *C, Type *DestTy,
                                            bool IsSigned, const DataLayout &DL);
 
-/// ConstantFoldInsertValueInstruction - Attempt to constant fold an insertvalue
-/// instruction with the specified operands and indices.  The constant result is
-/// returned if successful; if not, null is returned.
-LLVM_ABI Constant *ConstantFoldInsertValueInstruction(Constant *Agg,
-                                                      Constant *Val,
-                                                      ArrayRef<unsigned> Idxs);
+/// Attempt to constant fold a bitinsert instruction with the specified
+/// operands. The constant result is returned if successful. Otherwise, null is
+/// returned.
+LLVM_ABI Constant *ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
+                                                 Constant *Offset,
+                                                 const DataLayout &DL);
 
-/// Attempt to constant fold an extractvalue instruction with the
-/// specified operands and indices.  The constant result is returned if
-/// successful; if not, null is returned.
-LLVM_ABI Constant *ConstantFoldExtractValueInstruction(Constant *Agg,
-                                                       ArrayRef<unsigned> Idxs);
-
-/// Attempt to constant fold an insertelement instruction with the
-/// specified operands and indices.  The constant result is returned if
-/// successful; if not, null is returned.
-LLVM_ABI Constant *ConstantFoldInsertElementInstruction(Constant *Val,
-                                                        Constant *Elt,
-                                                        Constant *Idx);
-
-/// Attempt to constant fold an extractelement instruction with the
-/// specified operands and indices.  The constant result is returned if
-/// successful; if not, null is returned.
-LLVM_ABI Constant *ConstantFoldExtractElementInstruction(Constant *Val,
-                                                         Constant *Idx);
-
-/// Attempt to constant fold a shufflevector instruction with the
-/// specified operands and mask.  See class ShuffleVectorInst for a description
-/// of the mask representation. The constant result is returned if successful;
-/// if not, null is returned.
-LLVM_ABI Constant *ConstantFoldShuffleVectorInstruction(Constant *V1,
-                                                        Constant *V2,
-                                                        ArrayRef<int> Mask);
+/// Attempt to constant fold a bitextract instruction with the specified result
+/// type and operands. The constant result is returned if successful.
+/// Otherwise, null is returned.
+LLVM_ABI Constant *ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
+                                                  Constant *Offset,
+                                                  const DataLayout &DL);
 
 /// Extract value of C at the given Offset reinterpreted as Ty. If bits past
 /// the end of C are accessed, they are assumed to be poison.
@@ -200,7 +185,8 @@ LLVM_ABI Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
-LLVM_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
+LLVM_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F,
+                                    const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldCall - Attempt to constant fold a call to the specified function
 /// with the specified arguments, returning null if unsuccessful.
@@ -209,9 +195,10 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                                     const TargetLibraryInfo *TLI = nullptr,
                                     bool AllowNonDeterministic = true);
 
-LLVM_ABI Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                               Constant *RHS, Type *Ty,
-                                               Instruction *FMFSource);
+LLVM_ABI Constant *ConstantFoldIntrinsic(Intrinsic::ID ID,
+                                         ArrayRef<Constant *> Ops, Type *Ty,
+                                         const DataLayout &DL,
+                                         const Function *CtxF = nullptr);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to
@@ -226,6 +213,27 @@ LLVM_ABI bool isMathLibCallNoop(const CallBase *Call,
 
 LLVM_ABI Constant *ReadByteArrayFromGlobal(const GlobalVariable *GV,
                                            uint64_t Offset);
-}
+
+struct PreservedCastFlags {
+  bool NNeg = false;
+  bool NUW = false;
+  bool NSW = false;
+};
+
+/// Try to cast C to InvC losslessly, satisfying CastOp(InvC) equals C, or
+/// CastOp(InvC) is a refined value of undefined C. Will try best to
+/// preserve the flags.
+LLVM_ABI Constant *getLosslessInvCast(Constant *C, Type *InvCastTo,
+                                      unsigned CastOp, const DataLayout &DL,
+                                      PreservedCastFlags *Flags = nullptr);
+
+LLVM_ABI Constant *
+getLosslessUnsignedTrunc(Constant *C, Type *DestTy, const DataLayout &DL,
+                         PreservedCastFlags *Flags = nullptr);
+
+LLVM_ABI Constant *getLosslessSignedTrunc(Constant *C, Type *DestTy,
+                                          const DataLayout &DL,
+                                          PreservedCastFlags *Flags = nullptr);
+} // namespace llvm
 
 #endif

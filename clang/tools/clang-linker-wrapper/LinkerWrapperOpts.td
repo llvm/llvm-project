@@ -53,11 +53,25 @@ def wrapper_time_trace_granularity : Joined<["--"], "wrapper-time-trace-granular
 
 def wrapper_jobs : Joined<["--"], "wrapper-jobs=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<number>">,
-  HelpText<"Sets the number of parallel jobs to use for device linking">;
+  HelpText<"Sets the number of parallel jobs for device linking. Can be a "
+            "positive integer or 'jobserver'.">;
 
 def override_image : Joined<["--"], "override-image=">,
   Flags<[WrapperOnlyOption]>, MetaVarName<"<kind=file>">,
   HelpText<"Uses the provided file as if it were the output of the device link step">;
+
+def should_extract : CommaJoined<["--"], "should-extract=">,
+  Flags<[WrapperOnlyOption]>, MetaVarName<"<kind=file>">,
+  HelpText<"Set of device architectures we should always extract if found.">;
+
+def emit_fatbin_only
+    : Flag<["--"], "emit-fatbin-only">,
+      Flags<[WrapperOnlyOption]>,
+      HelpText<"Emit fat binary directly without wrapping or host linking">;
+
+def no_canonical_prefixes : Flag<["--"], "no-canonical-prefixes">,
+  Flags<[WrapperOnlyOption]>,
+  HelpText<"Do not resolve symbolic links, turn relative paths into absolute ones, or do anything else to identify the executable">;
 
 // Flags passed to the device linker.
 def arch_EQ : Joined<["--"], "arch=">,
@@ -66,6 +80,9 @@ def arch_EQ : Joined<["--"], "arch=">,
 def triple_EQ : Joined<["--"], "triple=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<triple>">,
   HelpText<"The device target triple">;
+def code_EQ : Joined<["--"], "code=">,
+  Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<device>">,
+  HelpText<"A real device to compile an image ahead of time for">;
 def whole_program : Flag<["--"], "whole-program">,
   Flags<[DeviceOnlyOption, HelpHidden]>,
   HelpText<"LTO has visibility of all input files">;
@@ -106,15 +123,14 @@ def library_path_EQ : Joined<["--", "-"], "library-path=">, Flags<[HelpHidden]>,
 def library : JoinedOrSeparate<["-"], "l">, MetaVarName<"<libname>">,
   HelpText<"Search for library <libname>">;
 def library_S : Separate<["--", "-"], "library">, Flags<[HelpHidden]>,
-  Alias<library_path>;
+  Alias<library>;
 def library_EQ : Joined<["--", "-"], "library=">, Flags<[HelpHidden]>,
-  Alias<library_path>;
+  Alias<library>;
 
 def rpath : Separate<["--", "-"], "rpath">;
 def rpath_EQ : Joined<["--", "-"], "rpath=">, Flags<[HelpHidden]>, Alias<rpath>;
 
-def v : Flag<["--", "-"], "v">, HelpText<"Display the version number and exit">;
-def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>, Alias<v>;
+def version : Flag<["--", "-"], "version">, Flags<[HelpHidden]>;
 
 def whole_archive : Flag<["--", "-"], "whole-archive">, Flags<[HelpHidden]>;
 def no_whole_archive : Flag<["--", "-"], "no-whole-archive">, Flags<[HelpHidden]>;
@@ -123,7 +139,15 @@ def relocatable : Flag<["--", "-"], "relocatable">,
     HelpText<"Link device code to create a relocatable offloading application">;
 def r : Flag<["-"], "r">, Alias<relocatable>;
 
+// ld64-style linker options.
+def syslibroot : Separate<["-"], "syslibroot">, Flags<[HelpHidden]>;
+
+// ld64-style linker options, defined so they are not parsed as -l or -o.
+def lto_library : Separate<["-"], "lto_library">, Flags<[HelpHidden]>;
+def object_path_lto : Separate<["-"], "object_path_lto">, Flags<[HelpHidden]>;
+
 // link.exe-style linker options.
 def out : Joined<["/", "-", "/?", "-?"], "out:">, Flags<[HelpHidden]>;
 def libpath : Joined<["/", "-", "/?", "-?"], "libpath:">, Flags<[HelpHidden]>;
-def wholearchive_flag : Joined<["/", "-", "/?", "-?"], "wholearchive">, Flags<[HelpHidden]>;
+def wholearchive_file : Joined<["/", "-", "/?", "-?"], "wholearchive:">, Flags<[HelpHidden]>;
+def wholearchive_flag : Flag<["/", "-", "/?", "-?"], "wholearchive">, Flags<[HelpHidden]>;

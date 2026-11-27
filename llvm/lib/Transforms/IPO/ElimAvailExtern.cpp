@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
@@ -22,7 +23,6 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
@@ -30,19 +30,23 @@ using namespace llvm;
 
 #define DEBUG_TYPE "elim-avail-extern"
 
-static cl::opt<bool> ConvertToLocal(
-    "avail-extern-to-local", cl::Hidden,
-    cl::desc("Convert available_externally into locals, renaming them "
-             "to avoid link-time clashes."));
-
 STATISTIC(NumRemovals, "Number of functions removed");
-STATISTIC(NumConversions, "Number of functions converted");
+STATISTIC(NumFunctionsConverted, "Number of functions converted");
+STATISTIC(NumGlobalVariablesConverted, "Number of global variables converted");
 STATISTIC(NumVariables, "Number of global variables removed");
 
 void deleteFunction(Function &F) {
   // This will set the linkage to external
   F.deleteBody();
   ++NumRemovals;
+}
+
+static std::string getNewName(Module &M, const GlobalValue &GV) {
+  std::string Name = GV.getName().str() + ".__uniq";
+  std::string ModuleId = getUniqueModuleId(&M);
+  if (!ModuleId.empty())
+    Name += "." + ModuleId;
+  return Name;
 }
 
 /// Create a copy of the thinlto import, mark it local, and redirect direct
@@ -68,7 +72,7 @@ static void convertToLocalCopy(Module &M, Function &F) {
   // functions with the same name, but that just creates more trouble than
   // necessary e.g. distinguishing profiles or debugging. Instead, we append the
   // module identifier.
-  auto NewName = OrigName + ".__uniq" + getUniqueModuleId(&M);
+  std::string NewName = getNewName(M, F);
   F.setName(NewName);
   if (auto *SP = F.getSubprogram())
     SP->replaceLinkageName(MDString::get(F.getParent()->getContext(), NewName));
@@ -85,16 +89,34 @@ static void convertToLocalCopy(Module &M, Function &F) {
                        F.getAddressSpace(), OrigName, F.getParent());
   F.replaceUsesWithIf(Decl,
                       [&](Use &U) { return !isa<CallBase>(U.getUser()); });
-  ++NumConversions;
+  ++NumFunctionsConverted;
 }
 
-static bool eliminateAvailableExternally(Module &M, bool Convert) {
+/// Similar to the function above, this is to convert an externally available
+/// global variable to local.
+static void convertToLocalCopy(Module &M, GlobalVariable &GV) {
+  assert(GV.hasAvailableExternallyLinkage());
+  GV.setName(getNewName(M, GV));
+  GV.setLinkage(GlobalValue::InternalLinkage);
+  ++NumGlobalVariablesConverted;
+}
+
+static bool eliminateAvailableExternally(Module &M, bool Convert,
+                                         FunctionAnalysisManager &FAM) {
+  const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
 
-  // Drop initializers of available externally global variables.
+  // If a global variable is available externally and in the specified address
+  // space, convert it to local linkage; otherwise, drop its initializer.
   for (GlobalVariable &GV : M.globals()) {
     if (!GV.hasAvailableExternallyLinkage())
       continue;
+    if (GV.getAddressSpace() == Opts.avail_extern_gv_in_addrspace_to_local &&
+        !GV.use_empty()) {
+      convertToLocalCopy(M, GV);
+      Changed = true;
+      continue;
+    }
     if (GV.hasInitializer()) {
       Constant *Init = GV.getInitializer();
       GV.setInitializer(nullptr);
@@ -112,10 +134,12 @@ static bool eliminateAvailableExternally(Module &M, bool Convert) {
     if (F.isDeclaration() || !F.hasAvailableExternallyLinkage())
       continue;
 
-    if (Convert || ConvertToLocal)
+    if (Convert) {
       convertToLocalCopy(M, F);
-    else
+    } else {
+      FAM.clear(F, F.getName());
       deleteFunction(F);
+    }
 
     F.removeDeadConstantUsers();
     Changed = true;
@@ -133,8 +157,19 @@ EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // that's imported, its optimizations will, thus, differ, and be specialized
   // for this contextual information. Eliding it in favor of the original would
   // undo these optimizations.
-  if (!eliminateAvailableExternally(
-          M, /*Convert=*/(CtxProf && CtxProf->isInSpecializedModule())))
+  bool Convert = (CtxProf && CtxProf->isInSpecializedModule()) ||
+                 getIPOOptions(M).avail_extern_to_local;
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  if (!eliminateAvailableExternally(M, Convert, FAM))
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+
+  if (Convert)
+    return PreservedAnalyses::none();
+
+  // Only function bodies were deleted, and their analyses were cleared.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

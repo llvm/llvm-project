@@ -37,8 +37,13 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
   const TargetLowering &TL;
   const DataLayout &DL;
   unsigned MaxDepth;
-  /// Cache maintained during a computeKnownBits request.
-  SmallDenseMap<Register, KnownBits, 16> ComputeKnownBitsCache;
+
+  // The triple (Register, DemandedElts, Depth) used as worklist and cache key.
+  using WorkItem = std::tuple<Register, APInt, unsigned>;
+  // Items pending evaluation during the active top-level query.
+  SmallVector<WorkItem, 6> Stack;
+  // Memoised results for the current top-level query.
+  DenseMap<WorkItem, KnownBits> Results;
 
   void computeKnownBitsMin(Register Src0, Register Src1, KnownBits &Known,
                            const APInt &DemandedElts, unsigned Depth = 0);
@@ -58,17 +63,33 @@ class LLVM_ABI GISelValueTracking : public GISelChangeObserver {
                            FPClassTest InterestedClasses, KnownFPClass &Known,
                            unsigned Depth);
 
+  void computeKnownBits(Register R, KnownBits &Known, const APInt &DemandedElts,
+                        unsigned Depth = 0);
+
+  bool getKnownBitsResult(Register Reg, const APInt &DemandedElts,
+                          unsigned Depth, KnownBits &Known) {
+    auto It = Results.find({Reg, DemandedElts, Depth});
+    if (It == Results.end())
+      return false;
+    Known = It->second;
+    return true;
+  }
+
+  void setKnownBitsResult(Register Reg, const APInt &DemandedElts,
+                          unsigned Depth, const KnownBits &Known) {
+    Results[{Reg, DemandedElts, Depth}] = Known;
+  }
+
 public:
   GISelValueTracking(MachineFunction &MF, unsigned MaxDepth = 6);
-  virtual ~GISelValueTracking() = default;
+  ~GISelValueTracking() override = default;
 
   const MachineFunction &getMachineFunction() const { return MF; }
 
   const DataLayout &getDataLayout() const { return DL; }
 
-  virtual void computeKnownBitsImpl(Register R, KnownBits &Known,
-                                    const APInt &DemandedElts,
-                                    unsigned Depth = 0);
+  void computeKnownBitsImpl(Register R, KnownBits &Known,
+                            const APInt &DemandedElts, unsigned Depth = 0);
 
   unsigned computeNumSignBits(Register R, const APInt &DemandedElts,
                               unsigned Depth = 0);
@@ -79,8 +100,6 @@ public:
   KnownBits getKnownBits(Register R, const APInt &DemandedElts,
                          unsigned Depth = 0);
 
-  // Calls getKnownBits for first operand def of MI.
-  KnownBits getKnownBits(MachineInstr &MI);
   APInt getKnownZeroes(Register R);
   APInt getKnownOnes(Register R);
 
@@ -95,13 +114,32 @@ public:
   /// predicate to simplify operations downstream.
   bool signBitIsZero(Register Op);
 
-  static void computeKnownBitsForAlignment(KnownBits &Known, Align Alignment) {
-    // The low bits are known zero if the pointer is aligned.
-    Known.Zero.setLowBits(Log2(Alignment));
-  }
+  /// Return true if the value defined by \p R is provably never zero.
+  ///
+  /// \p DemandedElts selects the vector elements that must be proven nonzero.
+  /// For scalar values this is a one-bit mask. The overload without
+  /// \p DemandedElts demands every fixed-vector element, or the scalar value to
+  /// be non-zero.
+  bool isKnownNeverZero(Register R, unsigned Depth = 0);
+  bool isKnownNeverZero(Register R, const APInt &DemandedElts,
+                        unsigned Depth = 0);
 
   /// \return The known alignment for the pointer-like value \p R.
   Align computeKnownAlignment(Register R, unsigned Depth = 0);
+
+  /// If a G_SHL/G_ASHR/G_LSHR node with shift operand \p R has shift amounts
+  /// that are all less than the element bit-width of the shift node, return the
+  /// valid constant range.
+  std::optional<ConstantRange>
+  getValidShiftAmountRange(Register R, const APInt &DemandedElts,
+                           unsigned Depth);
+
+  /// If a G_SHL/G_ASHR/G_LSHR node with shift operand \p R has shift amounts
+  /// that are all less than the element bit-width of the shift node, return the
+  /// minimum possible value.
+  std::optional<uint64_t> getValidMinimumShiftAmount(Register R,
+                                                     const APInt &DemandedElts,
+                                                     unsigned Depth = 0);
 
   /// Determine which floating-point classes are valid for \p V, and return them
   /// in KnownFPClass bit sets.
@@ -131,6 +169,18 @@ public:
                                    FPClassTest InterestedClasses,
                                    unsigned Depth);
 
+  /// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is
+  /// true, this returns whether \p Val can be assumed to never be a signaling
+  /// NaN.
+  bool isKnownNeverNaN(Register Val, bool SNaN = false);
+
+  /// Returns true if \p Val can be assumed to never be a signaling NaN.
+  bool isKnownNeverSNaN(Register Val) { return isKnownNeverNaN(Val, true); }
+
+  /// Returns true if \p Val can be assumed to never be a zero, accounting for
+  /// denormal flushing of the containing function.
+  bool isKnownNeverLogicalZero(Register Val, unsigned Depth = 0);
+
   // Observer API. No-op for non-caching implementation.
   void erasingInstr(MachineInstr &MI) override {}
   void createdInstr(MachineInstr &MI) override {}
@@ -154,10 +204,7 @@ class LLVM_ABI GISelValueTrackingAnalysisLegacy : public MachineFunctionPass {
 
 public:
   static char ID;
-  GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {
-    initializeGISelValueTrackingAnalysisLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  GISelValueTrackingAnalysisLegacy() : MachineFunctionPass(ID) {}
   GISelValueTracking &get(MachineFunction &MF);
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -177,11 +224,22 @@ public:
 };
 
 class GISelValueTrackingPrinterPass
-    : public PassInfoMixin<GISelValueTrackingPrinterPass> {
+    : public RequiredPassInfoMixin<GISelValueTrackingPrinterPass> {
   raw_ostream &OS;
 
 public:
   GISelValueTrackingPrinterPass(raw_ostream &OS) : OS(OS) {}
+
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+};
+
+class GISelValueTrackingFPClassPrinterPass
+    : public RequiredPassInfoMixin<GISelValueTrackingFPClassPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  GISelValueTrackingFPClassPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);

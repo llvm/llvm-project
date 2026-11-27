@@ -23,6 +23,7 @@
 #include "clang/AST/TypeOrdering.h"
 #include "clang/Basic/ASTSourceDescriptor.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -58,7 +59,6 @@ class CGBlockInfo;
 /// backend.
 class CGDebugInfo {
   friend class ApplyDebugLocation;
-  friend class SaveAndRestoreLocation;
   friend class ApplyAtomGroup;
 
   CodeGenModule &CGM;
@@ -69,7 +69,10 @@ class CGDebugInfo {
   ModuleMap *ClangModuleMap = nullptr;
   ASTSourceDescriptor PCHDescriptor;
   SourceLocation CurLoc;
-  llvm::MDNode *CurInlinedAt = nullptr;
+  llvm::DIFile *CurLocFile = nullptr;
+  unsigned CurLocLine = 0;
+  unsigned CurLocColumn = 0;
+  llvm::DILocation *CurInlinedAt = nullptr;
   llvm::DIType *VTablePtrType = nullptr;
   llvm::DIType *ClassTy = nullptr;
   llvm::DICompositeType *ObjTy = nullptr;
@@ -81,7 +84,6 @@ class CGDebugInfo {
   llvm::DIType *OCLEventDITy = nullptr;
   llvm::DIType *OCLClkEventDITy = nullptr;
   llvm::DIType *OCLQueueDITy = nullptr;
-  llvm::DIType *OCLNDRangeDITy = nullptr;
   llvm::DIType *OCLReserveIDDITy = nullptr;
 #define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
   llvm::DIType *Id##Ty = nullptr;
@@ -94,9 +96,14 @@ class CGDebugInfo {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
   llvm::DIType *SingletonId = nullptr;
 #include "clang/Basic/HLSLIntangibleTypes.def"
+#define SPIRV_TYPE(Name, Id, SingletonId) llvm::DIType *SingletonId = nullptr;
+#include "clang/Basic/SPIRVTypes.def"
 
   /// Cache of previously constructed Types.
   llvm::DenseMap<const void *, llvm::TrackingMDRef> TypeCache;
+
+  /// DI element indices used by preserve-access intrinsics.
+  llvm::DenseMap<const FieldDecl *, unsigned> FieldIndexCache;
 
   /// Cache that maps VLA types to size expressions for that type,
   /// represented by instantiated Metadata nodes.
@@ -149,6 +156,11 @@ class CGDebugInfo {
 
   /// Keep track of our current nested lexical block.
   std::vector<llvm::TypedTrackingMDRef<llvm::DIScope>> LexicalBlockStack;
+
+  /// Map of AST declaration to its lexical block scope.
+  llvm::DenseMap<const Decl *, llvm::TypedTrackingMDRef<llvm::DIScope>>
+      LexicalBlockMap;
+
   llvm::DenseMap<const Decl *, llvm::TrackingMDRef> RegionMap;
   /// Keep track of LexicalBlockStack counter at the beginning of a
   /// function. This is used to pop unbalanced regions at the end of a
@@ -158,9 +170,18 @@ class CGDebugInfo {
   /// This is a storage for names that are constructed on demand. For
   /// example, C++ destructors, C++ operators etc..
   llvm::BumpPtrAllocator DebugInfoNames;
-  StringRef CWDName;
 
   llvm::DenseMap<const char *, llvm::TrackingMDRef> DIFileCache;
+  /// Where a DIFile came from, for mapping debug locations back to files.
+  struct DIFileSource {
+    /// The file the DIFile was first created for. Invalid if the DIFile was
+    /// also created for a location that is not in a file, such as one renamed
+    /// by a line directive.
+    FileID FID;
+    /// Whether the DIFile was also created for a different file.
+    bool Shared = false;
+  };
+  llvm::DenseMap<const llvm::DIFile *, DIFileSource> DIFileSources;
   llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPCache;
   /// Cache declarations relevant to DW_TAG_imported_declarations (C++
   /// using declarations and global alias variables) that aren't covered
@@ -199,6 +220,7 @@ private:
   llvm::DIType *CreateType(const BuiltinType *Ty);
   llvm::DIType *CreateType(const ComplexType *Ty);
   llvm::DIType *CreateType(const BitIntType *Ty);
+  llvm::DIType *CreateType(const OverflowBehaviorType *Ty, llvm::DIFile *U);
   llvm::DIType *CreateQualifiedType(QualType Ty, llvm::DIFile *Fg);
   llvm::DIType *CreateQualifiedType(const FunctionProtoType *Ty,
                                     llvm::DIFile *Fg);
@@ -263,9 +285,14 @@ private:
   /// to get a method type which includes \c this pointer.
   llvm::DISubroutineType *getOrCreateMethodType(const CXXMethodDecl *Method,
                                                 llvm::DIFile *F);
+
+  llvm::DISubroutineType *
+  getOrCreateMethodTypeForDestructor(const CXXMethodDecl *Method,
+                                     llvm::DIFile *F, QualType FNType);
+
   llvm::DISubroutineType *
   getOrCreateInstanceMethodType(QualType ThisPtr, const FunctionProtoType *Func,
-                                llvm::DIFile *Unit);
+                                llvm::DIFile *Unit, bool SkipFirst = false);
   llvm::DISubroutineType *
   getOrCreateFunctionType(const Decl *D, QualType FnType, llvm::DIFile *F);
   /// \return debug info descriptor for vtable.
@@ -341,6 +368,18 @@ private:
   /// A helper function to collect debug info for btf_decl_tag annotations.
   llvm::DINodeArray CollectBTFDeclTagAnnotations(const Decl *D);
 
+  /// A helper function to collect debug info for btf_decl_tag annotations and
+  /// append them to Annotations.
+  void
+  CollectBTFDeclTagAnnotations(const Decl *D,
+                               SmallVectorImpl<llvm::Metadata *> &Annotations);
+
+  /// A helper function to collect debug info for btf_type_tag annotations and
+  /// append them to Annotations.
+  void
+  CollectBTFTypeTagAnnotations(QualType Ty,
+                               SmallVectorImpl<llvm::Metadata *> &Annotations);
+
   llvm::DIType *createFieldType(StringRef name, QualType type,
                                 SourceLocation loc, AccessSpecifier AS,
                                 uint64_t offsetInBits, uint32_t AlignInBits,
@@ -393,6 +432,7 @@ private:
   void CollectRecordFields(const RecordDecl *Decl, llvm::DIFile *F,
                            SmallVectorImpl<llvm::Metadata *> &E,
                            llvm::DICompositeType *RecordTy);
+  llvm::StringRef GetLambdaCaptureName(const LambdaCapture &Capture);
 
   /// If the C++ class has vtable info then insert appropriate debug
   /// info entry in EltTys vector.
@@ -468,10 +508,10 @@ public:
 
   /// Update the current inline scope. All subsequent calls to \p EmitLocation
   /// will create a location with this inlinedAt field.
-  void setInlinedAt(llvm::MDNode *InlinedAt) { CurInlinedAt = InlinedAt; }
+  void setInlinedAt(llvm::DILocation *InlinedAt) { CurInlinedAt = InlinedAt; }
 
   /// \return the current inline scope.
-  llvm::MDNode *getInlinedAt() const { return CurInlinedAt; }
+  llvm::DILocation *getInlinedAt() const { return CurInlinedAt; }
 
   // Converts a SourceLocation to a DebugLoc
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Loc);
@@ -506,7 +546,7 @@ public:
   /// This is needed for call site debug info.
   void EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                QualType CalleeType,
-                               const FunctionDecl *CalleeDecl);
+                               GlobalDecl CalleeGlobalDecl);
 
   /// Constructs the debug code for exiting a function.
   void EmitFunctionEnd(CGBuilderTy &Builder, llvm::Function *Fn);
@@ -568,6 +608,13 @@ public:
   /// Emit information about global variable alias.
   void EmitGlobalAlias(const llvm::GlobalValue *GV, const GlobalDecl Decl);
 
+  /// Return the source file each DIFile was created for, or std::nullopt for a
+  /// DIFile shared by several files. DIFiles of files with line directives are
+  /// omitted, because debug locations in them use presumed lines. Line
+  /// directives are only all known once the translation unit is parsed.
+  llvm::DenseMap<const llvm::DIFile *, OptionalFileEntryRef>
+  getDIFileSources() const;
+
   /// Emit C++ using directive.
   void EmitUsingDirective(const UsingDirectiveDecl &UD);
 
@@ -600,11 +647,19 @@ public:
   /// Emit C++ namespace alias.
   llvm::DIImportedEntity *EmitNamespaceAlias(const NamespaceAliasDecl &NA);
 
-  /// Emit record type's standalone debug info.
-  llvm::DIType *getOrCreateRecordType(QualType Ty, SourceLocation L);
+  /// Return the complete record type and field index for preserve-access
+  /// intrinsics.
+  std::pair<llvm::DIType *, unsigned>
+  getOrCreatePreserveAccessInfo(QualType Ty, const FieldDecl *Field);
 
   /// Emit an Objective-C interface type standalone debug info.
   llvm::DIType *getOrCreateInterfaceType(QualType Ty, SourceLocation Loc);
+
+  /// Map AST declaration to its lexical block scope if available.
+  void recordDeclarationLexicalScope(const Decl &D);
+
+  /// Get lexical scope of AST declaration.
+  llvm::DIScope *getDeclarationLexicalScope(const Decl *D);
 
   /// Emit standalone debug info for a type.
   llvm::DIType *getOrCreateStandaloneType(QualType Ty, SourceLocation Loc);
@@ -654,8 +709,12 @@ public:
   ///
   /// This is used to indiciate instructions that come from compiler
   /// instrumentation.
-  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc Location,
-                                            StringRef FuncName);
+  llvm::DILocation *
+  CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                          llvm::DISubprogram *SynthSubprogram);
+  llvm::DILocation *CreateSyntheticInlineAt(llvm::DebugLoc ParentLocation,
+                                            StringRef SynthFuncName,
+                                            llvm::DIFile *SynthFile);
 
   /// Reset internal state.
   void completeFunction();
@@ -672,6 +731,13 @@ public:
 
   /// Emit symbol for debugger that holds the pointer to the vtable.
   void emitVTableSymbol(llvm::GlobalVariable *VTable, const CXXRecordDecl *RD);
+
+  /// Return flags which enable debug info emission for call sites, provided
+  /// that it is supported and enabled.
+  llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
+
+  /// Add call target information.
+  void addCallTargetIfVirtual(const FunctionDecl *FD, llvm::CallBase *CI);
 
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
@@ -705,7 +771,8 @@ private:
   };
 
   bool HasReconstitutableArgs(ArrayRef<TemplateArgument> Args) const;
-  std::string GetName(const Decl *, bool Qualified = false) const;
+  std::string GetName(const Decl *, bool Qualified = false,
+                      bool *NameIsSimplified = nullptr) const;
 
   /// Build up structure info for the byref.  See \a BuildByRefType.
   BlockByRefType EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
@@ -739,6 +806,9 @@ private:
   /// Convenience function to get the file debug info descriptor for the input
   /// location.
   llvm::DIFile *getOrCreateFile(SourceLocation Loc);
+
+  /// Note that \p F was created for a location in \p FID.
+  void recordDIFileSource(const llvm::DIFile *F, FileID FID);
 
   /// Create a file debug info descriptor for a source file.
   llvm::DIFile *
@@ -822,18 +892,14 @@ private:
                          unsigned LineNo, StringRef LinkageName,
                          llvm::GlobalVariable *Var, llvm::DIScope *DContext);
 
-
-  /// Return flags which enable debug info emission for call sites, provided
-  /// that it is supported and enabled.
-  llvm::DINode::DIFlags getCallSiteRelatedAttrs() const;
-
   /// Get the printing policy for producing names for debug info.
   PrintingPolicy getPrintingPolicy() const;
 
   /// Get function name for the given FunctionDecl. If the name is
   /// constructed on demand (e.g., C++ destructor) then the name is
   /// stored on the side.
-  StringRef getFunctionName(const FunctionDecl *FD);
+  StringRef getFunctionName(const FunctionDecl *FD,
+                            bool *NameIsSimplified = nullptr);
 
   /// Returns the unmangled name of an Objective-C method.
   /// This is the display name for the debugging info.
@@ -844,7 +910,8 @@ private:
   StringRef getSelectorName(Selector S);
 
   /// Get class name including template argument list.
-  StringRef getClassName(const RecordDecl *RD);
+  StringRef getClassName(const RecordDecl *RD,
+                         bool *NameIsSimplified = nullptr);
 
   /// Get the vtable name for the given class.
   StringRef getVTableName(const CXXRecordDecl *Decl);
@@ -861,8 +928,15 @@ private:
 
   /// Get column number for the location. If location is
   /// invalid then use current location.
-  /// \param Force  Assume DebugColumnInfo option is true.
-  unsigned getColumnNumber(SourceLocation Loc, bool Force = false);
+  unsigned getColumnNumber(SourceLocation Loc);
+
+  /// Clear the current location and its derived metadata.
+  void clearCurLoc() {
+    CurLoc = SourceLocation();
+    CurLocFile = nullptr;
+    CurLocLine = 0;
+    CurLocColumn = 0;
+  }
 
   /// Collect various properties of a FunctionDecl.
   /// \param GD  A GlobalDecl whose getDecl() must return a FunctionDecl.
@@ -895,6 +969,13 @@ private:
       std::memcpy(Data + A.size(), B.data(), B.size());
     return StringRef(Data, A.size() + B.size());
   }
+
+  /// If one exists, returns the linkage name of the specified \
+  /// (non-null) \c Method. Returns empty string otherwise.
+  llvm::StringRef GetMethodLinkageName(const CXXMethodDecl *Method) const;
+
+  /// Returns true if we should generate call target information.
+  bool shouldGenerateVirtualCallSite() const;
 };
 
 /// A scoped helper to set the current debug location to the specified
@@ -917,7 +998,7 @@ public:
     Other.CGF = nullptr;
   }
 
-  // Define copy assignment operator.
+  // Define move assignment operator.
   ApplyDebugLocation &operator=(ApplyDebugLocation &&Other) {
     if (this != &Other) {
       CGF = Other.CGF;
@@ -973,6 +1054,9 @@ public:
   ApplyInlineDebugLocation(CodeGenFunction &CGF, GlobalDecl InlinedFn);
   /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
+  ApplyInlineDebugLocation(const ApplyInlineDebugLocation &) = delete;
+  ApplyInlineDebugLocation &
+  operator=(const ApplyInlineDebugLocation &) = delete;
 };
 
 class SanitizerDebugLocation {
@@ -984,6 +1068,8 @@ public:
                          ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
                          SanitizerHandler Handler);
   ~SanitizerDebugLocation();
+  SanitizerDebugLocation(const SanitizerDebugLocation &) = delete;
+  SanitizerDebugLocation &operator=(const SanitizerDebugLocation &) = delete;
 };
 
 } // namespace CodeGen

@@ -28,7 +28,7 @@ target triple = "bpf"
 %struct.data_t = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local void @test(ptr readonly %args) local_unnamed_addr #0 !dbg !12 {
+define dso_local void @test(ptr readonly %args) local_unnamed_addr !dbg !12 {
 entry:
   %data = alloca i64, align 8
   call void @llvm.dbg.value(metadata ptr %args, metadata !22, metadata !DIExpression()), !dbg !29
@@ -36,7 +36,7 @@ entry:
   %1 = load i32, ptr %0, align 4, !dbg !30, !tbaa !31
   %and = and i32 %1, 65536, !dbg !36
   call void @llvm.dbg.value(metadata i32 %and, metadata !23, metadata !DIExpression()), !dbg !29
-  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %data) #5, !dbg !37
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %data), !dbg !37
   call void @llvm.dbg.declare(metadata ptr %data, metadata !24, metadata !DIExpression()), !dbg !38
   store i64 0, ptr %data, align 8, !dbg !38
   %tobool = icmp eq i32 %and, 0, !dbg !39
@@ -60,8 +60,8 @@ lor.end:                                          ; preds = %lor.end.critedge, %
   %5 = phi i32 [ %phitmp, %cond.false ], [ 1, %lor.end.critedge ]
   %d2 = getelementptr inbounds %struct.data_t, ptr %data, i64 0, i32 1, !dbg !49
   store i32 %5, ptr %d2, align 4, !dbg !50, !tbaa !51
-  call void @output(ptr nonnull %data) #5, !dbg !52
-  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %data) #5, !dbg !53
+  call void @output(ptr nonnull %data), !dbg !52
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %data), !dbg !53
   ret void, !dbg !53
 }
 
@@ -71,28 +71,21 @@ lor.end:                                          ; preds = %lor.end.critedge, %
 ; CHECK: r[[LOAD]] &= 32768
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.info_ts(ptr, i32 immarg, i32 immarg) #3
+declare ptr @llvm.preserve.struct.access.index.p0.p0.info_ts(ptr, i32 immarg, i32 immarg)
 
-declare !dbg !4 dso_local void @output(ptr) local_unnamed_addr #4
+declare !dbg !4 dso_local void @output(ptr) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind readnone speculatable willreturn
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable willreturn }
-attributes #2 = { argmemonly nounwind willreturn }
-attributes #3 = { nounwind readnone }
-attributes #4 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #5 = { nounwind }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!8, !9, !10}

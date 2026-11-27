@@ -38,11 +38,11 @@
 #include "clang/AST/Decl.h"
 
 #define DECLARE_REGISTER_INFOS_PPC64_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64.h"
+#include "Register/Arch/RegisterInfos_ppc64.h"
 #undef DECLARE_REGISTER_INFOS_PPC64_STRUCT
 
 #define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64le.h"
+#include "Register/Arch/RegisterInfos_ppc64le.h"
 #undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
 #include <optional>
 
@@ -309,8 +309,6 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
   Thread *thread = frame_sp->GetThread().get();
 
   bool is_signed;
-  uint32_t count;
-  bool is_complex;
 
   RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
@@ -339,38 +337,33 @@ Status ABISysV_ppc64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning longer than 64 bit "
           "integer values at present.");
     }
-  } else if (compiler_type.IsFloatingPointType(count, is_complex)) {
-    if (is_complex)
-      error = Status::FromErrorString(
-          "We don't support returning complex values at present");
-    else {
-      std::optional<uint64_t> bit_width =
-          llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
-      if (!bit_width) {
-        error = Status::FromErrorString("can't get size of type");
+  } else if (compiler_type.IsRealFloatingPointType()) {
+    std::optional<uint64_t> bit_width =
+        llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
+    if (!bit_width) {
+      error = Status::FromErrorString("can't get size of type");
+      return error;
+    }
+    if (*bit_width <= 64) {
+      DataExtractor data;
+      Status data_error;
+      size_t num_bytes = new_value_sp->GetData(data, data_error);
+      if (data_error.Fail()) {
+        error = Status::FromErrorStringWithFormat(
+            "Couldn't convert return value to raw data: %s",
+            data_error.AsCString());
         return error;
       }
-      if (*bit_width <= 64) {
-        DataExtractor data;
-        Status data_error;
-        size_t num_bytes = new_value_sp->GetData(data, data_error);
-        if (data_error.Fail()) {
-          error = Status::FromErrorStringWithFormat(
-              "Couldn't convert return value to raw data: %s",
-              data_error.AsCString());
-          return error;
-        }
 
-        unsigned char buffer[16];
-        ByteOrder byte_order = data.GetByteOrder();
+      unsigned char buffer[16];
+      ByteOrder byte_order = data.GetByteOrder();
 
-        data.CopyByteOrderedData(0, num_bytes, buffer, 16, byte_order);
-        set_it_simple = true;
-      } else {
-        // FIXME - don't know how to do 80 bit long doubles yet.
-        error = Status::FromErrorString(
-            "We don't support returning float values > 64 bits at present");
-      }
+      data.CopyByteOrderedData(0, num_bytes, buffer, 16, byte_order);
+      set_it_simple = true;
+    } else {
+      // FIXME - don't know how to do 80 bit long doubles yet.
+      error = Status::FromErrorString(
+          "We don't support returning float values > 64 bits at present");
     }
   }
 
@@ -837,14 +830,18 @@ private:
              m_packed ? "packed" : "not packed");
 
     for (uint32_t i = 0; i < n; i++) {
-      std::string name;
-      uint32_t size;
-      (void)GetChildType(i, name, size);
-      // NOTE: the offset returned by GetChildCompilerTypeAtIndex()
-      //       can't be used because it never considers alignment bytes
-      //       between struct fields.
-      LLDB_LOG(m_log, LOG_PREFIX "field={0}, size={1}", name, size);
-      if (!ExtractField(size))
+      llvm::Expected<ChildTypeInfo> child_or_err = GetChild(i);
+      if (!child_or_err) {
+        LLDB_LOG_ERROR(m_log, child_or_err.takeError(),
+                       LOG_PREFIX "GetChild failed: {0}");
+        return ValueObjectSP();
+      }
+      const ChildTypeInfo &child = *child_or_err;
+      // NOTE: the offset returned by GetChildAtIndex() can't be used because
+      //       it never considers alignment bytes between struct fields.
+      LLDB_LOG(m_log, LOG_PREFIX "field={0}, size={1}", child.name,
+               child.byte_size);
+      if (!ExtractField(child.byte_size))
         return ValueObjectSP();
     }
 
@@ -906,28 +903,18 @@ private:
   }
 
   // get child
-  llvm::Expected<CompilerType> GetChildType(uint32_t i, std::string &name,
-                                            uint32_t &size) {
+  llvm::Expected<ChildTypeInfo> GetChild(uint32_t i) {
     // GetChild constant inputs
     const bool transparent_pointers = false;
     const bool omit_empty_base_classes = true;
     const bool ignore_array_bounds = false;
-    // GetChild output params
-    int32_t child_offs;
-    uint32_t child_bitfield_bit_size;
-    uint32_t child_bitfield_bit_offset;
-    bool child_is_base_class;
-    bool child_is_deref_of_parent;
     ValueObject *valobj = nullptr;
-    uint64_t language_flags;
     ExecutionContext exe_ctx;
     m_thread.CalculateExecutionContext(exe_ctx);
 
-    return m_type.GetChildCompilerTypeAtIndex(
-        &exe_ctx, i, transparent_pointers, omit_empty_base_classes,
-        ignore_array_bounds, name, size, child_offs, child_bitfield_bit_size,
-        child_bitfield_bit_offset, child_is_base_class,
-        child_is_deref_of_parent, valobj, language_flags);
+    return m_type.GetChildAtIndex(&exe_ctx, i, transparent_pointers,
+                                  omit_empty_base_classes, ignore_array_bounds,
+                                  valobj);
   }
 };
 

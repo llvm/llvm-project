@@ -70,7 +70,7 @@ template <typename T> struct ProgramStateTrait {
 ///  values will never change.
 class ProgramState : public llvm::FoldingSetNode {
 public:
-  typedef llvm::ImmutableMap<void*, void*>                 GenericDataMap;
+  typedef llvm::ImmutableMap<const void *, void *> GenericDataMap;
 
 private:
   void operator=(const ProgramState& R) = delete;
@@ -78,7 +78,6 @@ private:
   friend class ProgramStateManager;
   friend class ExplodedGraph;
   friend class ExplodedNode;
-  friend class NodeBuilder;
 
   ProgramStateManager *stateMgr;
   Environment Env;           // Maps a Stmt to its current SVal.
@@ -116,12 +115,17 @@ private:
   // overconstrained-related functions. We want to keep this API inaccessible
   // for Checkers.
   friend class ConstraintManager;
+  // The CoreEngine also needs to be a friend to mark nodes as sinks if they
+  // are generated with a PosteriorlyOverconstrained state.
+  // FIXME: Perform this check in the relevant methods of `ExplodedGraph` and
+  // remove this `friend` declaration.
+  friend class CoreEngine;
   bool isPosteriorlyOverconstrained() const {
     return PosteriorlyOverconstrained;
   }
   ProgramStateRef cloneAsPosteriorlyOverconstrained() const;
 
-  unsigned refCount;
+  mutable unsigned refCount;
 
   /// makeWithStore - Return a ProgramState with the same values as the current
   ///  state with the exception of using the specified Store.
@@ -138,6 +142,7 @@ public:
   /// Copy ctor - We must explicitly define this or else the "Next" ptr
   ///  in FoldingSetNode will also get copied.
   ProgramState(const ProgramState &RHS);
+  ProgramState(ProgramState &&RHS);
 
   ~ProgramState();
 
@@ -268,24 +273,23 @@ public:
 
   /// Utility method for getting regions.
   LLVM_ATTRIBUTE_RETURNS_NONNULL
-  const VarRegion* getRegion(const VarDecl *D, const LocationContext *LC) const;
+  const VarRegion *getRegion(const VarDecl *D, const StackFrame *SF) const;
 
   //==---------------------------------------------------------------------==//
   // Binding and retrieving values to/from the environment and symbolic store.
   //==---------------------------------------------------------------------==//
 
-  /// Create a new state by binding the value 'V' to the statement 'S' in the
-  /// state's environment.
-  [[nodiscard]] ProgramStateRef BindExpr(const Stmt *S,
-                                         const LocationContext *LCtx, SVal V,
-                                         bool Invalidate = true) const;
+  /// Create a new state by binding the value \p V to the expression \p E in
+  /// the state's environment.
+  [[nodiscard]] ProgramStateRef BindExpr(const Expr *E, const StackFrame *SF,
+                                         SVal V, bool Invalidate = true) const;
 
   [[nodiscard]] ProgramStateRef bindLoc(Loc location, SVal V,
-                                        const LocationContext *LCtx,
+                                        const StackFrame *SF,
                                         bool notifyChanges = true) const;
 
   [[nodiscard]] ProgramStateRef bindLoc(SVal location, SVal V,
-                                        const LocationContext *LCtx) const;
+                                        const StackFrame *SF) const;
 
   /// Initializes the region of memory represented by \p loc with an initial
   /// value. Once initialized, all values loaded from any sub-regions of that
@@ -293,13 +297,13 @@ public:
   /// This method should not be used on regions that are already initialized.
   /// If you need to indicate that memory contents have suddenly become unknown
   /// within a certain region of memory, consider invalidateRegions().
-  [[nodiscard]] ProgramStateRef
-  bindDefaultInitial(SVal loc, SVal V, const LocationContext *LCtx) const;
+  [[nodiscard]] ProgramStateRef bindDefaultInitial(SVal loc, SVal V,
+                                                   const StackFrame *SF) const;
 
   /// Performs C++ zero-initialization procedure on the region of memory
   /// represented by \p loc.
-  [[nodiscard]] ProgramStateRef
-  bindDefaultZero(SVal loc, const LocationContext *LCtx) const;
+  [[nodiscard]] ProgramStateRef bindDefaultZero(SVal loc,
+                                                const StackFrame *SF) const;
 
   [[nodiscard]] ProgramStateRef killBinding(Loc LV) const;
 
@@ -324,17 +328,15 @@ public:
   ///        the call and should be considered directly invalidated.
   /// \param ITraits information about special handling for particular regions
   ///        or symbols.
-  [[nodiscard]] ProgramStateRef
-  invalidateRegions(ArrayRef<const MemRegion *> Regions,
-                    ConstCFGElementRef Elem, unsigned BlockCount,
-                    const LocationContext *LCtx, bool CausesPointerEscape,
-                    InvalidatedSymbols *IS = nullptr,
-                    const CallEvent *Call = nullptr,
-                    RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
+  [[nodiscard]] ProgramStateRef invalidateRegions(
+      ArrayRef<const MemRegion *> Regions, ConstCFGElementRef Elem,
+      unsigned BlockCount, const StackFrame *SF, bool CausesPointerEscape,
+      InvalidatedSymbols *IS = nullptr, const CallEvent *Call = nullptr,
+      RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
 
   [[nodiscard]] ProgramStateRef
   invalidateRegions(ArrayRef<SVal> Values, ConstCFGElementRef Elem,
-                    unsigned BlockCount, const LocationContext *LCtx,
+                    unsigned BlockCount, const StackFrame *SF,
                     bool CausesPointerEscape, InvalidatedSymbols *IS = nullptr,
                     const CallEvent *Call = nullptr,
                     RegionAndSymbolInvalidationTraits *ITraits = nullptr) const;
@@ -342,11 +344,10 @@ public:
   /// enterStackFrame - Returns the state for entry to the given stack frame,
   ///  preserving the current state.
   [[nodiscard]] ProgramStateRef
-  enterStackFrame(const CallEvent &Call,
-                  const StackFrameContext *CalleeCtx) const;
+  enterStackFrame(const CallEvent &Call, const StackFrame *CalleeSF) const;
 
   /// Return the value of 'self' if available in the given context.
-  SVal getSelfSVal(const LocationContext *LC) const;
+  SVal getSelfSVal(const StackFrame *SF) const;
 
   /// Get the lvalue for a base class object reference.
   Loc getLValue(const CXXBaseSpecifier &BaseSpec, const SubRegion *Super) const;
@@ -356,10 +357,9 @@ public:
                 bool IsVirtual) const;
 
   /// Get the lvalue for a variable reference.
-  Loc getLValue(const VarDecl *D, const LocationContext *LC) const;
+  Loc getLValue(const VarDecl *D, const StackFrame *SF) const;
 
-  Loc getLValue(const CompoundLiteralExpr *literal,
-                const LocationContext *LC) const;
+  Loc getLValue(const CompoundLiteralExpr *literal, const StackFrame *SF) const;
 
   /// Get the lvalue for an ivar reference.
   SVal getLValue(const ObjCIvarDecl *decl, SVal base) const;
@@ -373,10 +373,10 @@ public:
   /// Get the lvalue for an array index.
   SVal getLValue(QualType ElementType, SVal Idx, SVal Base) const;
 
-  /// Returns the SVal bound to the statement 'S' in the state's environment.
-  SVal getSVal(const Stmt *S, const LocationContext *LCtx) const;
+  /// Returns the SVal bound to the expression \p E in the state's environment.
+  SVal getSVal(const Expr *E, const StackFrame *SF) const;
 
-  SVal getSValAsScalarOrLoc(const Stmt *Ex, const LocationContext *LCtx) const;
+  SVal getSValAsScalarOrLoc(const Expr *E, const StackFrame *SF) const;
 
   /// Return the value bound to the specified location.
   /// Returns UnknownVal() if none found.
@@ -419,7 +419,7 @@ public:
   // Accessing the Generic Data Map (GDM).
   //==---------------------------------------------------------------------==//
 
-  void *const* FindGDM(void *K) const;
+  void *const *FindGDM(const void *K) const;
 
   template <typename T>
   [[nodiscard]] ProgramStateRef
@@ -474,18 +474,20 @@ public:
   }
 
   // Pretty-printing.
-  void printJson(raw_ostream &Out, const LocationContext *LCtx = nullptr,
+  void printJson(raw_ostream &Out, const StackFrame *SF = nullptr,
                  const char *NL = "\n", unsigned int Space = 0,
                  bool IsDot = false) const;
 
-  void printDOT(raw_ostream &Out, const LocationContext *LCtx = nullptr,
+  void printDOT(raw_ostream &Out, const StackFrame *SF = nullptr,
                 unsigned int Space = 0) const;
 
   void dump() const;
 
 private:
-  friend void ProgramStateRetain(const ProgramState *state);
-  friend void ProgramStateRelease(const ProgramState *state);
+  friend struct llvm::IntrusiveRefCntPtrInfo<const ProgramState>;
+
+  void retain() const { ++refCount; }
+  void release() const;
 
   SVal desugarReference(SVal Val) const;
   SVal wrapSymbolicRegion(SVal Base) const;
@@ -497,7 +499,7 @@ private:
 
 class ProgramStateManager {
   friend class ProgramState;
-  friend void ProgramStateRelease(const ProgramState *state);
+
 private:
   /// Eng - The ExprEngine that owns this state manager.
   ExprEngine *Eng; /* Can be null. */
@@ -508,7 +510,8 @@ private:
 
   ProgramState::GenericDataMap::Factory     GDMFactory;
 
-  typedef llvm::DenseMap<void*,std::pair<void*,void (*)(void*)> > GDMContextsTy;
+  typedef llvm::DenseMap<const void *, std::pair<void *, void (*)(void *)>>
+      GDMContextsTy;
   GDMContextsTy GDMContexts;
 
   /// StateSet - FoldingSet containing all the states created for analyzing
@@ -527,6 +530,9 @@ private:
   /// A vector of ProgramStates that we can reuse.
   std::vector<ProgramState *> freeStates;
 
+  /// Called when the reference count of \p State drops to zero.
+  void freeState(ProgramState *State);
+
 public:
   ProgramStateManager(ASTContext &Ctx,
                  StoreManagerCreator CreateStoreManager,
@@ -536,7 +542,7 @@ public:
 
   ~ProgramStateManager();
 
-  ProgramStateRef getInitialState(const LocationContext *InitLoc);
+  ProgramStateRef getInitialState(const StackFrame *InitSF);
 
   ASTContext &getContext() { return svalBuilder->getContext(); }
   const ASTContext &getContext() const { return svalBuilder->getContext(); }
@@ -572,13 +578,15 @@ public:
   CallEventManager &getCallEventManager() { return *CallEventMgr; }
 
   StoreManager &getStoreManager() { return *StoreMgr; }
+  const StoreManager &getStoreManager() const { return *StoreMgr; }
   ConstraintManager &getConstraintManager() { return *ConstraintMgr; }
+  const ConstraintManager &getConstraintManager() const {
+    return *ConstraintMgr;
+  }
   ExprEngine &getOwningEngine() { return *Eng; }
 
-  ProgramStateRef
-  removeDeadBindingsFromEnvironmentAndStore(ProgramStateRef St,
-                                            const StackFrameContext *LCtx,
-                                            SymbolReaper &SymReaper);
+  ProgramStateRef removeDeadBindingsFromEnvironmentAndStore(
+      ProgramStateRef St, const StackFrame *SF, SymbolReaper &SymReaper);
 
 public:
 
@@ -587,8 +595,8 @@ public:
   }
 
   // Methods that manipulate the GDM.
-  ProgramStateRef addGDM(ProgramStateRef St, void *Key, void *Data);
-  ProgramStateRef removeGDM(ProgramStateRef state, void *Key);
+  ProgramStateRef addGDM(ProgramStateRef St, const void *Key, void *Data);
+  ProgramStateRef removeGDM(ProgramStateRef state, const void *Key);
 
   // Methods that query & manipulate the Store.
 
@@ -596,7 +604,7 @@ public:
     StoreMgr->iterBindings(state->getStore(), F);
   }
 
-  ProgramStateRef getPersistentState(ProgramState &Impl);
+  ProgramStateRef getPersistentState(ProgramState &&Impl);
   ProgramStateRef getPersistentStateWithGDM(ProgramStateRef FromState,
                                            ProgramStateRef GDMState);
 
@@ -669,9 +677,9 @@ public:
     return removeGDM(st, ProgramStateTrait<T>::GDMIndex());
   }
 
-  void *FindGDMContext(void *index,
-                       void *(*CreateContext)(llvm::BumpPtrAllocator&),
-                       void  (*DeleteContext)(void*));
+  void *FindGDMContext(const void *index,
+                       void *(*CreateContext)(llvm::BumpPtrAllocator &),
+                       void (*DeleteContext)(void *));
 
   template <typename T>
   typename ProgramStateTrait<T>::context_type get_context() {
@@ -688,14 +696,19 @@ public:
 // Out-of-line method definitions for ProgramState.
 //===----------------------------------------------------------------------===//
 
+inline void ProgramState::release() const {
+  assert(refCount > 0);
+  if (--refCount == 0)
+    stateMgr->freeState(const_cast<ProgramState *>(this));
+}
+
 inline ConstraintManager &ProgramState::getConstraintManager() const {
   return stateMgr->getConstraintManager();
 }
 
-inline const VarRegion* ProgramState::getRegion(const VarDecl *D,
-                                                const LocationContext *LC) const
-{
-  return getStateManager().getRegionManager().getVarRegion(D, LC);
+inline const VarRegion *ProgramState::getRegion(const VarDecl *D,
+                                                const StackFrame *SF) const {
+  return getStateManager().getRegionManager().getVarRegion(D, SF);
 }
 
 inline ProgramStateRef ProgramState::assume(DefinedOrUnknownSVal Cond,
@@ -741,9 +754,10 @@ ProgramState::assumeInclusiveRange(DefinedOrUnknownSVal Val,
       this, Val.castAs<NonLoc>(), From, To);
 }
 
-inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V, const LocationContext *LCtx) const {
+inline ProgramStateRef ProgramState::bindLoc(SVal LV, SVal V,
+                                             const StackFrame *SF) const {
   if (std::optional<Loc> L = LV.getAs<Loc>())
-    return bindLoc(*L, V, LCtx);
+    return bindLoc(*L, V, SF);
   return this;
 }
 
@@ -764,13 +778,13 @@ inline Loc ProgramState::getLValue(const CXXRecordDecl *BaseClass,
 }
 
 inline Loc ProgramState::getLValue(const VarDecl *VD,
-                               const LocationContext *LC) const {
-  return getStateManager().StoreMgr->getLValueVar(VD, LC);
+                                   const StackFrame *SF) const {
+  return getStateManager().StoreMgr->getLValueVar(VD, SF);
 }
 
 inline Loc ProgramState::getLValue(const CompoundLiteralExpr *literal,
-                               const LocationContext *LC) const {
-  return getStateManager().StoreMgr->getLValueCompoundLiteral(literal, LC);
+                                   const StackFrame *SF) const {
+  return getStateManager().StoreMgr->getLValueCompoundLiteral(literal, SF);
 }
 
 inline SVal ProgramState::getLValue(const ObjCIvarDecl *D, SVal Base) const {
@@ -783,22 +797,15 @@ inline SVal ProgramState::getLValue(QualType ElementType, SVal Idx, SVal Base) c
   return UnknownVal();
 }
 
-inline SVal ProgramState::getSVal(const Stmt *Ex,
-                                  const LocationContext *LCtx) const{
-  return Env.getSVal(EnvironmentEntry(Ex, LCtx),
-                     *getStateManager().svalBuilder);
+inline SVal ProgramState::getSVal(const Expr *E, const StackFrame *SF) const {
+  return Env.getSVal(EnvironmentEntry(E, SF), *getStateManager().svalBuilder);
 }
 
-inline SVal
-ProgramState::getSValAsScalarOrLoc(const Stmt *S,
-                                   const LocationContext *LCtx) const {
-  if (const Expr *Ex = dyn_cast<Expr>(S)) {
-    QualType T = Ex->getType();
-    if (Ex->isGLValue() || Loc::isLocType(T) ||
-        T->isIntegralOrEnumerationType())
-      return getSVal(S, LCtx);
-  }
-
+inline SVal ProgramState::getSValAsScalarOrLoc(const Expr *E,
+                                               const StackFrame *SF) const {
+  QualType T = E->getType();
+  if (E->isGLValue() || Loc::isLocType(T) || T->isIntegralOrEnumerationType())
+    return getSVal(E, SF);
   return UnknownVal();
 }
 

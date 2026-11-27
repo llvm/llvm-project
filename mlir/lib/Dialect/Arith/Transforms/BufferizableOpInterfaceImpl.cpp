@@ -34,7 +34,8 @@ struct ConstantOpInterface
       return failure();
 
     Attribute memorySpace;
-    if (auto memSpace = options.defaultMemorySpaceFn(type))
+    if (auto memSpace =
+            options.defaultMemorySpaceFn(cast<TensorLikeType>(type)))
       memorySpace = *memSpace;
     else
       return constantOp->emitError("could not infer memory space");
@@ -162,18 +163,21 @@ struct SelectOpInterface
 
     // The "true" and the "false" operands must have the same type. If the
     // buffers have different types, they differ only in their layout map. Cast
-    // both of them to the most dynamic MemRef type.
+    // both of them to the reconciled type.
     if (trueBuffer.getType() != falseBuffer.getType()) {
-      auto targetType =
-          bufferization::getBufferType(selectOp.getResult(), options, state);
-      if (failed(targetType))
-        return failure();
-      if (trueBuffer.getType() != *targetType)
-        trueBuffer =
-            rewriter.create<memref::CastOp>(loc, *targetType, trueBuffer);
-      if (falseBuffer.getType() != *targetType)
-        falseBuffer =
-            rewriter.create<memref::CastOp>(loc, *targetType, falseBuffer);
+      auto targetType = options.reconcileBufferTypeMismatchFn(
+          cast<BufferLikeType>(trueBuffer.getType()),
+          cast<BufferLikeType>(falseBuffer.getType()), options);
+      if (failed(targetType)) {
+        return selectOp->emitError(
+            "incompatible buffer types on true/false operands");
+      }
+      if (trueBuffer.getType() != *targetType) {
+        trueBuffer = *options.castFn(rewriter, loc, *targetType, trueBuffer);
+      }
+      if (falseBuffer.getType() != *targetType) {
+        falseBuffer = *options.castFn(rewriter, loc, *targetType, falseBuffer);
+      }
     }
 
     replaceOpWithNewBufferizedOp<arith::SelectOp>(
@@ -181,7 +185,7 @@ struct SelectOpInterface
     return success();
   }
 
-  FailureOr<BaseMemRefType>
+  FailureOr<BufferLikeType>
   getBufferType(Operation *op, Value value, const BufferizationOptions &options,
                 const BufferizationState &state,
                 SmallVector<Value> &invocationStack) const {
@@ -194,17 +198,10 @@ struct SelectOpInterface
     if (failed(trueType) || failed(falseType))
       return failure();
     if (*trueType == *falseType)
-      return *trueType;
-    if (trueType->getMemorySpace() != falseType->getMemorySpace())
-      return op->emitError("inconsistent memory space on true/false operands");
+      return cast<BufferLikeType>(*trueType);
 
-    // If the buffers have different types, they differ only in their layout
-    // map.
-    auto memrefType = llvm::cast<MemRefType>(*trueType);
-    return getMemRefTypeWithFullyDynamicLayout(
-        RankedTensorType::get(memrefType.getShape(),
-                              memrefType.getElementType()),
-        memrefType.getMemorySpace());
+    return options.reconcileBufferTypeMismatchFn(*trueType, *falseType,
+                                                 options);
   }
 };
 

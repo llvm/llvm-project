@@ -13,16 +13,10 @@
 #ifndef MLIR_DIALECT_EMITC_IR_EMITC_H
 #define MLIR_DIALECT_EMITC_IR_EMITC_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
-#include "mlir/Dialect/EmitC/IR/EmitCTraits.h"
+#include "mlir/Dialect/EmitC/IR/EmitCInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/Interfaces/CastInterfaces.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/Dialect/EmitC/IR/EmitCDialect.h.inc"
 #include "mlir/Dialect/EmitC/IR/EmitCEnums.h.inc"
@@ -52,6 +46,9 @@ bool isPointerWideType(mlir::Type type);
 // Either a literal string, or an placeholder for the fmtArgs.
 struct Placeholder {};
 using ReplacementItem = std::variant<StringRef, Placeholder>;
+
+/// Determines whether \p type is a valid fundamental C++ type in EmitC.
+bool isFundamentalType(mlir::Type type);
 
 } // namespace emitc
 } // namespace mlir

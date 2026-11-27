@@ -15,7 +15,6 @@
 #include "MCTargetDesc/R600MCTargetDesc.h"
 #include "R600Defines.h"
 #include "R600Subtarget.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 
 using namespace llvm;
@@ -29,7 +28,7 @@ using namespace llvm;
 #include "R600GenInstrInfo.inc"
 
 R600InstrInfo::R600InstrInfo(const R600Subtarget &ST)
-  : R600GenInstrInfo(-1, -1), RI(), ST(ST) {}
+    : R600GenInstrInfo(ST, RI, -1, -1), RI(), ST(ST) {}
 
 bool R600InstrInfo::isVector(const MachineInstr &MI) const {
   return get(MI.getOpcode()).TSFlags & R600_InstFlag::VECTOR;
@@ -176,7 +175,7 @@ bool R600InstrInfo::usesVertexCache(unsigned Opcode) const {
 }
 
 bool R600InstrInfo::usesVertexCache(const MachineInstr &MI) const {
-  const MachineFunction *MF = MI.getParent()->getParent();
+  const MachineFunction *MF = MI.getMF();
   return !AMDGPU::isCompute(MF->getFunction().getCallingConv()) &&
          usesVertexCache(MI.getOpcode());
 }
@@ -186,7 +185,7 @@ bool R600InstrInfo::usesTextureCache(unsigned Opcode) const {
 }
 
 bool R600InstrInfo::usesTextureCache(const MachineInstr &MI) const {
-  const MachineFunction *MF = MI.getParent()->getParent();
+  const MachineFunction *MF = MI.getMF();
   return (AMDGPU::isCompute(MF->getFunction().getCallingConv()) &&
           usesVertexCache(MI.getOpcode())) ||
           usesTextureCache(MI.getOpcode());
@@ -584,8 +583,9 @@ R600InstrInfo::fitsConstReadLimitations(const std::vector<MachineInstr *> &MIs)
         return false;
       if (Src.first->getReg() == R600::ALU_CONST)
         Consts.push_back(Src.second);
-      if (R600::R600_KC0RegClass.contains(Src.first->getReg()) ||
-          R600::R600_KC1RegClass.contains(Src.first->getReg())) {
+      if (Src.first->getReg().isPhysical() &&
+          (R600::R600_KC0RegClass.contains(Src.first->getReg()) ||
+           R600::R600_KC1RegClass.contains(Src.first->getReg()))) {
         unsigned Index = RI.getEncodingValue(Src.first->getReg()) & 0xff;
         unsigned Chan = RI.getHWRegChan(Src.first->getReg());
         Consts.push_back((Index << 2) | Chan);
@@ -948,7 +948,7 @@ bool R600InstrInfo::PredicateInstruction(MachineInstr &MI,
         .setReg(Pred[2].getReg());
     MI.getOperand(getOperandIdx(MI, R600::OpName::pred_sel_W))
         .setReg(Pred[2].getReg());
-    MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
+    MachineInstrBuilder MIB(*MI.getMF(), MI);
     MIB.addReg(R600::PREDICATE_BIT, RegState::Implicit);
     return true;
   }
@@ -956,7 +956,7 @@ bool R600InstrInfo::PredicateInstruction(MachineInstr &MI,
   if (PIdx != -1) {
     MachineOperand &PMO = MI.getOperand(PIdx);
     PMO.setReg(Pred[2].getReg());
-    MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
+    MachineInstrBuilder MIB(*MI.getMF(), MI);
     MIB.addReg(R600::PREDICATE_BIT, RegState::Implicit);
     return true;
   }

@@ -62,7 +62,8 @@ void recordMetrics(const SelectionTree &S, const LangOptions &Lang) {
 }
 
 // Return the range covering a node and all its children.
-SourceRange getSourceRange(const DynTypedNode &N) {
+SourceRange getSourceRange(const DynTypedNode &N,
+                           bool IncludeQualifier = false) {
   // MemberExprs to implicitly access anonymous fields should not claim any
   // tokens for themselves. Given:
   //   struct A { struct { int b; }; };
@@ -80,7 +81,7 @@ SourceRange getSourceRange(const DynTypedNode &N) {
                  ? getSourceRange(DynTypedNode::create(*ME->getBase()))
                  : SourceRange();
   }
-  return N.getSourceRange();
+  return N.getSourceRange(IncludeQualifier);
 }
 
 // An IntervalSet maintains a set of disjoint subranges of an array.
@@ -643,8 +644,9 @@ public:
     }
     return traverseNode(X, [&] { return Base::TraverseDecl(X); });
   }
-  bool TraverseTypeLoc(TypeLoc X) {
-    return traverseNode(&X, [&] { return Base::TraverseTypeLoc(X); });
+  bool TraverseTypeLoc(TypeLoc X, bool TraverseQualifier = true) {
+    return traverseNode(
+        &X, [&] { return Base::TraverseTypeLoc(X, TraverseQualifier); });
   }
   bool TraverseTemplateArgumentLoc(const TemplateArgumentLoc &X) {
     return traverseNode(&X,
@@ -664,8 +666,19 @@ public:
   bool TraverseAttr(Attr *X) {
     return traverseNode(X, [&] { return Base::TraverseAttr(X); });
   }
+  bool TraverseAttributedStmt(AttributedStmt *S) {
+    return traverseNode(S, [&] {
+      for (const Attr *A : S->getAttrs())
+        if (!TraverseAttr(const_cast<Attr *>(A)))
+          return false;
+      return TraverseStmt(S->getSubStmt());
+    });
+  }
   bool TraverseConceptReference(ConceptReference *X) {
     return traverseNode(X, [&] { return Base::TraverseConceptReference(X); });
+  }
+  bool TraverseOffsetOfNode(const OffsetOfNode *N) {
+    return traverseNode(N, [&] { return Base::TraverseOffsetOfNode(N); });
   }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
@@ -690,7 +703,8 @@ public:
   // This means we'd never see 'int' in 'const int'! Work around that here.
   // (The reason for the behavior is to avoid traversing the nested Type twice,
   // but we ignore TraverseType anyway).
-  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QX) {
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QX,
+                                bool TraverseQualifier = true) {
     return traverseNode<TypeLoc>(
         &QX, [&] { return TraverseTypeLoc(QX.getUnqualifiedLoc()); });
   }
@@ -698,7 +712,7 @@ public:
     return traverseNode(&PL, [&] { return Base::TraverseObjCProtocolLoc(PL); });
   }
   // Uninteresting parts of the AST that don't have locations within them.
-  bool TraverseNestedNameSpecifier(NestedNameSpecifier *) { return true; }
+  bool TraverseNestedNameSpecifier(NestedNameSpecifier) { return true; }
   bool TraverseType(QualType) { return true; }
 
   // The DeclStmt for the loop variable claims to cover the whole range
@@ -717,15 +731,6 @@ public:
   // We only want to traverse the *syntactic form* to understand the selection.
   bool TraversePseudoObjectExpr(PseudoObjectExpr *E) {
     return traverseNode(E, [&] { return TraverseStmt(E->getSyntacticForm()); });
-  }
-  bool TraverseTypeConstraint(const TypeConstraint *C) {
-    if (auto *E = C->getImmediatelyDeclaredConstraint()) {
-      // Technically this expression is 'implicit' and not traversed by the RAV.
-      // However, the range is correct, so we visit expression to avoid adding
-      // an extra kind to 'DynTypeNode' that hold 'TypeConstraint'.
-      return TraverseStmt(E);
-    }
-    return Base::TraverseTypeConstraint(C);
   }
 
   // Override child traversal for certain node types.
@@ -798,7 +803,7 @@ private:
   // An optimization for a common case: nodes outside macro expansions that
   // don't intersect the selection may be recursively skipped.
   bool canSafelySkipNode(const DynTypedNode &N) {
-    SourceRange S = getSourceRange(N);
+    SourceRange S = getSourceRange(N, /*IncludeQualifier=*/true);
     if (auto *TL = N.get<TypeLoc>()) {
       // FIXME: TypeLoc::getBeginLoc()/getEndLoc() are pretty fragile
       // heuristics. We should consider only pruning critical TypeLoc nodes, to
@@ -814,6 +819,11 @@ private:
     if (llvm::any_of(getAttributes(N),
                      [](const Attr *A) { return !A->isImplicit(); }))
       return false;
+    // Attributes themselves also often have bad source ranges.
+    if (const auto *A = N.get<Attr>()) {
+      if (!A->isImplicit())
+        return false;
+    }
     if (!SelChecker.mayHit(S)) {
       dlog("{2}skip: {0} {1}", printNodeToString(N, PrintPolicy),
            S.printToString(SM), indent());
@@ -912,6 +922,15 @@ private:
     if (N.get<ExprWithCleanups>())
       return;
 
+    if (const auto *OON = N.get<OffsetOfNode>()) {
+      if (OON->getKind() == OffsetOfNode::Array) {
+        // Leave the array index expression to its own child nodes.
+        claimRange(OON->getBeginLoc(), Result);
+        claimRange(OON->getEndLoc(), Result);
+        return;
+      }
+    }
+
     // Declarators nest "inside out", with parent types inside child ones.
     // Instead of claiming the whole range (clobbering parent tokens), carefully
     // claim the tokens owned by this node and non-declarator children.
@@ -951,9 +970,25 @@ private:
         claimRange(PTL.getStarLoc(), Result);
         return;
       }
+      if (auto MPTL = TL->getAs<MemberPointerTypeLoc>()) {
+        claimRange(MPTL.getLocalSourceRange(), Result);
+        return;
+      }
       if (auto FTL = TL->getAs<FunctionTypeLoc>()) {
         claimRange(SourceRange(FTL.getLParenLoc(), FTL.getEndLoc()), Result);
         return;
+      }
+      if (auto ATL = TL->getAs<AttributedTypeLoc>()) {
+        // For attributed function types like `int foo() [[attr]]`, the
+        // AttributedTypeLoc's range includes the function name. We want to
+        // allow the function name to be associated with the FunctionDecl
+        // rather than the AttributedTypeLoc, so we only claim the attribute
+        // range itself.
+        if (ATL.getModifiedLoc().getAs<FunctionTypeLoc>()) {
+          // Only claim the attribute's source range, not the whole type.
+          claimRange(ATL.getLocalSourceRange(), Result);
+          return;
+        }
       }
     }
     claimRange(getSourceRange(N), Result);

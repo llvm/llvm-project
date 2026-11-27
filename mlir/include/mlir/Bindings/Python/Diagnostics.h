@@ -11,10 +11,10 @@
 
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
 #include <cstdint>
+#include <sstream>
 #include <string>
 
 namespace mlir {
@@ -30,29 +30,30 @@ public:
                                            /*deleteUserData=*/nullptr);
   }
   ~CollectDiagnosticsToStringScope() {
-    assert(message.empty() && "unchecked error message");
+    assert(messageStream.str().empty() && "unchecked error message");
     mlirContextDetachDiagnosticHandler(context, handlerID);
   }
 
   [[nodiscard]] std::string takeMessage() {
-    std::string newMessage;
-    std::swap(message, newMessage);
+    std::string newMessage = messageStream.str();
+    messageStream.str("");
+    messageStream.clear();
     return newMessage;
   }
 
 private:
   static MlirLogicalResult handler(MlirDiagnostic diag, void *data) {
     auto printer = +[](MlirStringRef message, void *data) {
-      *static_cast<llvm::raw_string_ostream *>(data)
+      *static_cast<std::ostringstream *>(data)
           << std::string_view(message.data, message.length);
     };
     MlirLocation loc = mlirDiagnosticGetLocation(diag);
-    *static_cast<llvm::raw_string_ostream *>(data) << "at ";
+    *static_cast<std::ostringstream *>(data) << "at ";
     mlirLocationPrint(loc, printer, data);
-    *static_cast<llvm::raw_string_ostream *>(data) << ": ";
+    *static_cast<std::ostringstream *>(data) << ": ";
     mlirDiagnosticPrint(diag, printer, data);
     for (intptr_t i = 0; i < mlirDiagnosticGetNumNotes(diag); i++) {
-      *static_cast<llvm::raw_string_ostream *>(data) << "\n";
+      *static_cast<std::ostringstream *>(data) << "\n";
       MlirDiagnostic note = mlirDiagnosticGetNote(diag, i);
       handler(note, data);
     }
@@ -62,8 +63,7 @@ private:
   MlirContext context;
   MlirDiagnosticHandlerID handlerID;
 
-  std::string message;
-  llvm::raw_string_ostream messageStream{message};
+  std::ostringstream messageStream;
 };
 
 } // namespace python

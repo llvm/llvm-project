@@ -47,6 +47,28 @@ int main(int, char**) {
     assert(c.size() == 0);
     assert(k == c.end());
   }
+  { // Make sure that we're properly updating the bucket list when we're erasing to the end
+    std::unordered_set<int> m;
+    m.insert(1);
+    m.insert(2);
+
+    {
+      auto pair = m.equal_range(1);
+      assert(pair.first != pair.second);
+      m.erase(pair.first, pair.second);
+    }
+
+    {
+      auto pair = m.equal_range(2);
+      assert(pair.first != pair.second);
+      m.erase(pair.first, pair.second);
+    }
+
+    m.insert(3);
+    assert(m.size() == 1);
+    assert(*m.begin() == 3);
+    assert(++m.begin() == m.end());
+  }
 #if TEST_STD_VER >= 11
   {
     typedef std::unordered_set<int, std::hash<int>, std::equal_to<int>, min_allocator<int>> C;

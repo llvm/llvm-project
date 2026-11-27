@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Value.h"
-#include "../../test/lib/Dialect/Test/TestDialect.h"
-#include "../../test/lib/Dialect/Test/TestOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OperationSupport.h"
@@ -16,14 +14,13 @@
 
 using namespace mlir;
 
-static Operation *createOp(MLIRContext *context,
-                           ArrayRef<Value> operands = std::nullopt,
-                           ArrayRef<Type> resultTypes = std::nullopt,
+static Operation *createOp(MLIRContext *context, ArrayRef<Value> operands = {},
+                           ArrayRef<Type> resultTypes = {},
                            unsigned int numRegions = 0) {
   context->allowUnregisteredDialects();
   return Operation::create(
       UnknownLoc::get(context), OperationName("foo.bar", context), resultTypes,
-      operands, std::nullopt, nullptr, std::nullopt, numRegions);
+      operands, NamedAttrList(), PropertyRef(), {}, numRegions);
 }
 
 namespace {
@@ -33,7 +30,7 @@ TEST(ValueTest, getNumUses) {
   Builder builder(&context);
 
   Operation *op0 =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
 
   Value v0 = op0->getResult(0);
   EXPECT_EQ(v0.getNumUses(), (unsigned)0);
@@ -54,7 +51,7 @@ TEST(ValueTest, hasNUses) {
   Builder builder(&context);
 
   Operation *op0 =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value v0 = op0->getResult(0);
   EXPECT_TRUE(v0.hasNUses(0));
   EXPECT_FALSE(v0.hasNUses(1));
@@ -78,7 +75,7 @@ TEST(ValueTest, hasNUsesOrMore) {
   Builder builder(&context);
 
   Operation *op0 =
-      createOp(&context, /*operands=*/std::nullopt, builder.getIntegerType(16));
+      createOp(&context, /*operands=*/{}, builder.getIntegerType(16));
   Value v0 = op0->getResult(0);
   EXPECT_TRUE(v0.hasNUsesOrMore(0));
   EXPECT_FALSE(v0.hasNUsesOrMore(1));

@@ -1,4 +1,4 @@
-//===--- MisleadingSetterOfReferenceCheck.h - clang-tidy---------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// is used to set value of a field with reference type.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/throw-keyword-missing.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/throw-keyword-missing.html
 class MisleadingSetterOfReferenceCheck : public ClangTidyCheck {
 public:
   MisleadingSetterOfReferenceCheck(StringRef Name, ClangTidyContext *Context)

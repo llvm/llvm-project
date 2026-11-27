@@ -9,15 +9,15 @@ add_mlir_unittest(MLIRExecutionEngineTests
   DynamicMemRef.cpp
   StridedMemRef.cpp
   Invoke.cpp
+  WindowsArm64.cpp
 )
-get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 
 mlir_target_link_libraries(MLIRExecutionEngineTests
   PRIVATE
   MLIRArithToLLVM
   MLIRMemRefToLLVM
   MLIRReconcileUnrealizedCasts
-  ${dialect_libs}
+  MLIRRegisterAllDialects
 )
 target_link_libraries(MLIRExecutionEngineTests
   PRIVATE

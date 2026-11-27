@@ -342,7 +342,7 @@ static bool verifyDecls(const RecordKeeper &records, raw_ostream &) {
 /// structures according to the `clauses` argument of each definition deriving
 /// from `OpenMP_Op`.
 static bool genClauseOps(const RecordKeeper &records, raw_ostream &os) {
-  mlir::tblgen::NamespaceEmitter ns(os, "mlir::omp");
+  llvm::NamespaceEmitter ns(os, "mlir::omp");
   for (const Record *clause : records.getAllDerivedDefinitions("OpenMP_Clause"))
     genClauseOpsStruct(clause, os);
 

@@ -9,6 +9,7 @@ from ..._mlir_libs._mlirDialectsLinalg import *
 # definitions following these steps:
 #   DSL -> YAML -> tblgen -> pytblgen -> build/.../_linalg_ops_gen.py.
 from .._linalg_ops_gen import *
+from .._linalg_ops_gen import _Dialect
 from .._linalg_enum_gen import *
 from .._linalg_enum_gen import _iteratortypeenum
 
@@ -62,6 +63,7 @@ from .._ods_common import (
     get_op_result_or_value as _get_op_result_or_value,
     get_op_result_or_op_results as _get_op_result_or_op_results,
     _dispatch_mixed_values,
+    _cext as _ods_cext,
 )
 from ...extras.meta import region_op
 
@@ -232,7 +234,8 @@ def contract(
 # Extend and shadow the TableGen-derived version to make sure correct default
 # indexing_maps are derived (as there is no mechanism for doing so given the
 # Python API bypasses the C++-builders).
-class ElementwiseOp_(ElementwiseOp):
+@_ods_cext.register_operation(_Dialect, replace=True)
+class ElementwiseOp(ElementwiseOp):
     def __init__(
         self,
         result_tensors,
@@ -262,9 +265,6 @@ class ElementwiseOp_(ElementwiseOp):
             loc=loc,
             ip=ip,
         )
-
-
-ElementwiseOp = ElementwiseOp_
 
 
 def elementwise(
@@ -307,9 +307,12 @@ def pack(
         _inner_tiles,
         static_inner_tiles,
     ) = _dispatch_mixed_values(inner_tiles)
+    dest = _get_op_result_or_value(dest)
+    result_type = dest.type if isinstance(dest.type, RankedTensorType) else None
 
     return _get_op_result_or_op_results(
         PackOp(
+            result=result_type,
             source=source,
             dest=dest,
             inner_dims_pos=inner_dims_pos,
@@ -339,9 +342,11 @@ def unpack(
         _inner_tiles,
         static_inner_tiles,
     ) = _dispatch_mixed_values(inner_tiles)
-
+    dest = _get_op_result_or_value(dest)
+    result_type = dest.type if isinstance(dest.type, RankedTensorType) else None
     return _get_op_result_or_op_results(
         UnPackOp(
+            result=result_type,
             source=source,
             dest=dest,
             inner_dims_pos=inner_dims_pos,
@@ -352,3 +357,7 @@ def unpack(
             ip=ip,
         )
     )
+
+
+reduce = region_op(ReduceOp, terminator=YieldOp)
+map = region_op(MapOp, terminator=YieldOp)

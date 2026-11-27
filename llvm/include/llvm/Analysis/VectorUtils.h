@@ -14,6 +14,8 @@
 #define LLVM_ANALYSIS_VECTORUTILS_H
 
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/IR/Module.h"
@@ -24,6 +26,7 @@
 
 namespace llvm {
 class TargetLibraryInfo;
+class IntrinsicInst;
 
 /// The Vector Function Database.
 ///
@@ -117,6 +120,7 @@ public:
   /// @}
 };
 
+struct AnalysisOptions;
 template <typename T> class ArrayRef;
 class DemandedBits;
 template <typename InstTy> class InterleaveGroup;
@@ -128,6 +132,16 @@ class Value;
 namespace Intrinsic {
 typedef unsigned ID;
 }
+
+/// The kind of update operation performed on the buckets of a histogram, i.e.
+/// buckets[indices[i]] = UpdateOp(buckets[indices[i]], Val).
+enum class HistogramUpdateKind {
+  Add,
+  Sub,
+  UAddSat,
+  UMax,
+  UMin,
+};
 
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
@@ -144,9 +158,8 @@ LLVM_ABI bool isTriviallyVectorizable(Intrinsic::ID ID);
 /// Note: There are intrinsics where implementing vectorization for the
 /// intrinsic is redundant, but we want to implement scalarization of the
 /// vector. To prevent the requirement that an intrinsic also implements
-/// vectorization we provide this seperate function.
-LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID,
-                                      const TargetTransformInfo *TTI);
+/// vectorization we provide this separate function.
+LLVM_ABI bool isTriviallyScalarizable(Intrinsic::ID ID);
 
 /// Identifies if the vector form of the intrinsic has a scalar operand.
 /// \p TTI is used to consider target specific intrinsics, if no target specific
@@ -163,6 +176,21 @@ LLVM_ABI bool
 isVectorIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID, int OpdIdx,
                                        const TargetTransformInfo *TTI);
 
+/// Returns the argument index of the pointer parameter for the vector memory
+/// intrinsic \p ID, or `std::nullopt` if the intrinsic does not have a pointer
+/// operand.
+LLVM_ABI std::optional<unsigned>
+getVectorMemoryIntrinsicPointerArgIdx(Intrinsic::ID ID);
+
+/// Returns the argument index of the data value of the vector store intrinsic
+/// \p ID, or `std::nullopt` if the intrinsic does not have a data operand.
+LLVM_ABI std::optional<unsigned>
+getVectorStoreIntrinsicDataArgIdx(Intrinsic::ID ID);
+
+/// Returns the argument index of the mask for the vector intrinsic \p ID, or
+/// `std::nullopt` if the intrinsic does not have a mask operand.
+LLVM_ABI std::optional<unsigned> getVectorIntrinsicMaskArgIdx(Intrinsic::ID ID);
+
 /// Identifies if the vector form of the intrinsic that returns a struct is
 /// overloaded at the struct element index \p RetIdx. /// \p TTI is used to
 /// consider target specific intrinsics, if no target specific intrinsics
@@ -176,11 +204,22 @@ LLVM_ABI bool isVectorIntrinsicWithStructReturnOverloadAtField(
 LLVM_ABI Intrinsic::ID
 getVectorIntrinsicIDForCall(const CallInst *CI, const TargetLibraryInfo *TLI);
 
-/// Returns the corresponding llvm.vector.interleaveN intrinsic for factor N.
-LLVM_ABI Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor);
+/// Returns true if the vector llvm.sincos with \p ScalarTy elements and \p EC
+/// element count has no vector library mapping, but both llvm.sin and llvm.cos
+/// have, so it is split into the separate vector sin and cos library calls.
+LLVM_ABI bool shouldSplitVectorSinCos(const TargetLibraryInfo &TLI,
+                                      Type *ScalarTy, ElementCount EC,
+                                      Module *M);
 
-/// Returns the corresponding llvm.vector.deinterleaveN intrinsic for factor N.
-LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
+/// Returns the corresponding factor of llvm.vector.interleaveN intrinsics.
+LLVM_ABI unsigned getInterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// Returns the corresponding factor of llvm.vector.deinterleaveN intrinsics.
+LLVM_ABI unsigned getDeinterleaveIntrinsicFactor(Intrinsic::ID ID);
+
+/// Given a deinterleaveN intrinsic, return the (narrow) vector type of each
+/// factor.
+LLVM_ABI VectorType *getDeinterleavedVectorType(IntrinsicInst *DI);
 
 /// Given a vector and an element number, see if the scalar value is
 /// already around as a register, for example if it were inserted then extracted
@@ -213,6 +252,14 @@ LLVM_ABI bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
                                      const APInt &DemandedElts,
                                      APInt &DemandedLHS, APInt &DemandedRHS,
                                      bool AllowUndefElts = false);
+
+/// Transform the demanded elements of the result of \p Shuf into the demanded
+/// elements of its two operands. For fixed-length vectors, returns false if a
+/// demanded mask element is poison. For scalable vectors, both operands are
+/// assumed to be fully demanded.
+LLVM_ABI bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
+                                     const APInt &DemandedElts,
+                                     APInt &DemandedLHS, APInt &DemandedRHS);
 
 /// Does this shuffle mask represent either one slide shuffle or a pair of
 /// two slide shuffles, combined with a select on some constant vector mask?
@@ -372,14 +419,9 @@ LLVM_ABI void getMetadataToPropagate(
     Instruction *Inst,
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
 
-/// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
-/// MD_nontemporal, MD_access_group, MD_mmra].
-/// For K in Kinds, we get the MDNode for K from each of the
-/// elements of VL, compute their "intersection" (i.e., the most generic
-/// metadata value that covers all of the individual values), and set I's
-/// metadata for M equal to the intersection value.
-///
-/// This function always sets a (possibly null) value for each K in Kinds.
+/// Propagate metadata that can be preserved after vectorization from \p VL to
+/// \p I, retaining only information valid for all sources and the destination.
+/// Return \p I.
 LLVM_ABI Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 
 /// Create a mask that filters the members of an interleave group where there
@@ -471,16 +513,6 @@ LLVM_ABI llvm::SmallVector<int, 16> createUnaryMask(ArrayRef<int> Mask,
 LLVM_ABI Value *concatenateVectors(IRBuilderBase &Builder,
                                    ArrayRef<Value *> Vecs);
 
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be false or undef.  That is, return true if all
-/// lanes can be assumed inactive.
-LLVM_ABI bool maskIsAllZeroOrUndef(Value *Mask);
-
-/// Given a mask vector of i1, Return true if all of the elements of this
-/// predicate mask are known to be true or undef.  That is, return true if all
-/// lanes can be assumed active.
-LLVM_ABI bool maskIsAllOneOrUndef(Value *Mask);
-
 /// Given a mask vector of i1, Return true if any of the elements of this
 /// predicate mask are known to be true or undef.  That is, return true if at
 /// least one lane can be assumed active.
@@ -548,11 +580,6 @@ public:
       return false;
     int32_t Key = *MaybeKey;
 
-    // Skip if the key is used for either the tombstone or empty special values.
-    if (DenseMapInfo<int32_t>::getTombstoneKey() == Key ||
-        DenseMapInfo<int32_t>::getEmptyKey() == Key)
-      return false;
-
     // Skip if there is already a member with the same index.
     if (Members.contains(Key))
       return false;
@@ -589,6 +616,15 @@ public:
   InstTy *getMember(uint32_t Index) const {
     int32_t Key = SmallestKey + Index;
     return Members.lookup(Key);
+  }
+
+  /// Return an iterator range over the non-null members of this group, in
+  /// index order.
+  auto members() const {
+    return make_filter_range(
+        map_range(seq<uint32_t>(0, Factor),
+                  [this](uint32_t I) { return getMember(I); }),
+        [](InstTy *I) { return I != nullptr; });
   }
 
   /// Get the index for the given member. Unlike the key in the member
@@ -628,6 +664,9 @@ public:
     return true;
   }
 
+  /// Return true if this group is full, i.e. it has no gaps.
+  bool isFull() const { return getNumMembers() == getFactor(); }
+
 private:
   uint32_t Factor; // Interleave Factor.
   bool Reverse;
@@ -660,10 +699,9 @@ private:
 /// between the member and the group in a map.
 class InterleavedAccessInfo {
 public:
-  InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
-                        DominatorTree *DT, LoopInfo *LI,
-                        const LoopAccessInfo *LAI)
-      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(LAI) {}
+  LLVM_ABI InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
+                                 DominatorTree *DT, LoopInfo *LI,
+                                 const LoopAccessInfo *LAI, bool OptForSize);
 
   ~InterleavedAccessInfo() { invalidateGroups(); }
 
@@ -725,6 +763,8 @@ public:
   bool hasGroups() const { return !InterleaveGroups.empty(); }
 
 private:
+  const AnalysisOptions &Opts;
+
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.
   /// Simplifies SCEV expressions in the context of existing SCEV assumptions.
   /// The interleaved access analysis can also add new predicates (for example
@@ -735,6 +775,7 @@ private:
   DominatorTree *DT;
   LoopInfo *LI;
   const LoopAccessInfo *LAI;
+  bool OptForSize;
 
   /// True if the loop may contain non-reversed interleaved groups with
   /// out-of-bounds accesses. We ensure we don't speculatively access memory
@@ -802,13 +843,16 @@ private:
     delete Group;
   }
 
-  /// Collect all the accesses with a constant stride in program order.
+  /// Collect all the accesses with a constant stride in program order. Any
+  /// SCEV predicates needed to compute the strides are added to \p
+  /// Predicates if it is not nullptr.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const DenseMap<Value *, const SCEV *> &Strides);
+      const SymbolicStrideMap &Strides,
+      SmallVectorImpl<const SCEVPredicate *> *Predicates);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
-  LLVM_ABI static bool isStrided(int Stride);
+  LLVM_ABI bool isStrided(int Stride) const;
 
   /// Returns true if \p BB is a predicated block.
   bool isPredicated(BasicBlock *BB) const {

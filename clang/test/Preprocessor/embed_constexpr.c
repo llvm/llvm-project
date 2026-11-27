@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -std=c23
+// RUN: %clang_cc1 %s -fsyntax-only --embed-dir=%S/Inputs -verify -std=c23 -fexperimental-new-constant-interpreter
 
 static constexpr unsigned char data[] = {
 #embed "big_char.txt"
@@ -18,4 +19,12 @@ static constexpr unsigned data3[] = {
 
 static constexpr int data4[] = {
 #embed "big_char.txt" suffix(, -1)
+};
+
+static constexpr float data5[] = {
+#embed "big_char.txt" suffix(, -1)
+};
+
+static constexpr _BitInt(7) data6[] = {
+#embed __FILE__ limit(4) // expected-error {{constexpr initializer evaluates to 82 which is not exactly representable in type 'const _BitInt(7)'}}
 };

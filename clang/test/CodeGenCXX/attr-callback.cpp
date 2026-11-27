@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -std=c++23 %s -emit-llvm -o - | FileCheck %s
 
 struct Base {
 
@@ -47,9 +47,30 @@ struct Derived_2 : public Base {
 // CHECK-NOT: !callback
 void Derived_2::virtual_1(void (*callback)(void)) {}
 
+class ExplicitParameterObject {
+  __attribute__((callback(1, 0))) void implicit_this_idx(void (*callback)(ExplicitParameterObject*));
+  __attribute__((callback(1, this))) void implicit_this_identifier(void (*callback)(ExplicitParameterObject*));
+  __attribute__((callback(2, 1))) void explicit_this_idx(this ExplicitParameterObject* self, void (*callback)(ExplicitParameterObject*));
+  __attribute__((callback(2, self))) void explicit_this_identifier(this ExplicitParameterObject* self, void (*callback)(ExplicitParameterObject*));
+};
+
+// CHECK-DAG: define{{.*}} void @_ZN23ExplicitParameterObject17implicit_this_idxEPFvPS_E({{[^!]*!callback}} ![[cid3:[0-9]+]]
+void ExplicitParameterObject::implicit_this_idx(void (*callback)(ExplicitParameterObject*)) {}
+
+// CHECK-DAG: define{{.*}} void @_ZN23ExplicitParameterObject24implicit_this_identifierEPFvPS_E({{[^!]*!callback}} ![[cid3]]
+void ExplicitParameterObject::implicit_this_identifier(void (*callback)(ExplicitParameterObject*)) {}
+
+// CHECK-DAG: define{{.*}} void @_ZNH23ExplicitParameterObject17explicit_this_idxEPS_PFvS0_E({{[^!]*!callback}} ![[cid3]]
+void ExplicitParameterObject::explicit_this_idx(this ExplicitParameterObject* self, void (*callback)(ExplicitParameterObject*)) {}
+
+// CHECK-DAG: define{{.*}} void @_ZNH23ExplicitParameterObject24explicit_this_identifierEPS_PFvS0_E({{[^!]*!callback}} ![[cid3]]
+void ExplicitParameterObject::explicit_this_identifier(this ExplicitParameterObject* self, void (*callback)(ExplicitParameterObject*)) {}
+
 // CHECK-DAG: ![[cid0]] = !{![[cid0b:[0-9]+]]}
 // CHECK-DAG: ![[cid0b]] = !{i64 1, i1 false}
 // CHECK-DAG: ![[cid1]] = !{![[cid1b:[0-9]+]]}
 // CHECK-DAG: ![[cid1b]] = !{i64 2, i1 false}
 // CHECK-DAG: ![[cid2]] = !{![[cid2b:[0-9]+]]}
 // CHECK-DAG: ![[cid2b]] = !{i64 1, i64 0, i64 -1, i64 0, i1 false}
+// CHECK-DAG: ![[cid3]] = !{![[cid3b:[0-9]+]]}
+// CHECK-DAG: ![[cid3b]] = !{i64 1, i64 0, i1 false}

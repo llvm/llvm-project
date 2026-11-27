@@ -1,5 +1,5 @@
-; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
-; RUN: opt -memssa-check-limit=0 -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
+; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa-walker>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NOLIMIT
+; RUN: opt -memssa-check-limit=0 -aa-pipeline=basic-aa -passes='print<memoryssa-walker>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,LIMIT
 
 ; %ptr can't alias %local, so we should be able to optimize the use of %local to
 ; point to the store to %local.
@@ -465,7 +465,7 @@ end:                                          ; preds = %for.body
 define void @use_clobbered_by_def_in_loop() {
 entry:
   %nodeStack = alloca [12 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 48, ptr nonnull %nodeStack)
+  call void @llvm.lifetime.start.p0(ptr nonnull %nodeStack)
   br i1 false, label %cleanup, label %while.cond
 
 ; CHECK-LABEL: while.cond:
@@ -502,12 +502,12 @@ while.end:                                        ; preds = %while.cond, %land.r
   br i1 true, label %cleanup, label %while.cond.backedge
 
 cleanup:                                          ; preds = %while.body, %while.end, %entry
-  call void @llvm.lifetime.end.p0(i64 48, ptr nonnull %nodeStack)
+  call void @llvm.lifetime.end.p0(ptr nonnull %nodeStack)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define void @another_loop_clobber_inc() {
 ; CHECK-LABEL: void @another_loop_clobber_inc

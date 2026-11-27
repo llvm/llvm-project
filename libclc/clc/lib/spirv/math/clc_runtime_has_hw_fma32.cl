@@ -6,4 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-bool __clc_runtime_has_hw_fma32() { return false; }
+#include "clc/internal/math/clc_runtime_has_hw_fma32.h"
+
+bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void) {
+  return false;
+}

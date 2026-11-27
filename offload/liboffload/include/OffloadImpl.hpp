@@ -22,12 +22,13 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 
-struct OffloadConfig {
-  bool TracingEnabled = false;
-  bool ValidationEnabled = true;
-};
-
-OffloadConfig &offloadConfig();
+namespace llvm {
+namespace offload {
+bool isTracingEnabled();
+bool isValidationEnabled();
+bool isOffloadInitialized();
+} // namespace offload
+} // namespace llvm
 
 // Use the StringSet container to efficiently deduplicate repeated error
 // strings (e.g. if the same error is hit constantly in a long running program)
@@ -85,7 +86,7 @@ inline ol_result_t llvmErrorToOffloadError(llvm::Error &&Err) {
     return nullptr;
   }
 
-  ol_errc_t ErrCode;
+  ol_errc_t ErrCode = OL_ERRC_UNKNOWN;
   llvm::StringRef Details;
 
   llvm::handleAllErrors(std::move(Err), [&](llvm::StringError &Err) {

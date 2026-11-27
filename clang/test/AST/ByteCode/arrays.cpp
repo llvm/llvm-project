@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both            %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -std=gnu++17 %s
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -std=c++20 %s
-// RUN: %clang_cc1 -verify=ref,both            %s
+// RUN: %clang_cc1 -verify=ref,both -std=gnu++17 %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
 
 constexpr int m = 3;
@@ -731,6 +731,10 @@ namespace ZeroSizeTypes {
                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
 
+  constexpr int k2 = p1 - p1; // both-error {{constexpr variable 'k2' must be initialized by a constant expression}} \
+                              // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
+                              // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
+
   int arr[5][0];
   constexpr int f() { // both-error {{never produces a constant expression}}
     return &arr[3] - &arr[0]; // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
@@ -778,4 +782,101 @@ namespace DiscardedSubScriptExpr {
     (void)a[3]; // both-note {{cannot refer to element 3 of array of 2 elements in a constant expression}}
     return true;
   }
+}
+
+namespace ZeroSizeArrayRead {
+  constexpr char str[0] = {};
+  constexpr  unsigned checksum(const char *s) {
+    unsigned result = 0;
+    for (const char *p = s; *p != '\0'; ++p) { // both-note {{read of dereferenced one-past-the-end pointer}}
+      result += *p;
+    }
+    return result;
+  }
+  constexpr unsigned C = checksum(str); // both-error {{must be initialized by a constant expression}} \
+                                        // both-note {{in call to}}
+
+  constexpr const char *p1 = &str[0];
+  constexpr const char *p2 = &str[1]; // both-error {{must be initialized by a constant expression}} \
+                                      // both-note {{cannot refer to element 1 of array of 0 elements in a constant expression}}
+
+  constexpr char s[] = {};
+  static_assert(s[0] == '0', ""); // both-error {{not an integral constant expression}} \
+                                  // both-note {{read of dereferenced one-past-the-end pointer}}
+}
+
+namespace FAM {
+  char *strchr(const char *, int);
+
+  struct A {
+    char n, a[2];
+  };
+  struct B {
+    int n;
+    struct A a[]; // both-note {{here}}
+  };
+
+  const struct B b = {0, {{1, {2, 3}}, {4, {5, 6}}}};
+  void foo(void) { int sch = 0 != strchr(b.a[1].a, '\0'); }
+
+  int foo2() {
+    struct B b = {0, {{1, {2, 3}}, {4, {5, 6}}}}; // both-error {{initialization of flexible array member is not allowed}}
+    return 1;
+  }
+}
+
+namespace MultiDimConstructExpr {
+  struct a {
+    a *p = this;
+  };
+  struct b {
+    a m[3][3];
+  };
+  constexpr b d;
+  static_assert(d.m[2][1].p == &d.m[2][1]);
+}
+
+namespace MultiDimArrayInitLoop {
+  struct S {
+    float x[2][2];
+  };
+  struct T {
+    S y;
+  };
+
+  constexpr S s = {1};
+  constexpr T t = {s};
+}
+
+namespace ErroneousArraySubscriptExpr {
+  constexpr int &foo(int *arr, size_t idx) { return arr[idx]; } // both-error {{unknown type name 'size_t'}}
+  void bar() {
+    int val[] = {1, 2, 3, 4};
+    foo(val, 2) = 42;
+  }
+}
+
+namespace ZeroNonArray {
+  struct __bit_iterator {
+    unsigned* __seg_;
+  };
+
+  struct bitset {
+    unsigned __first_;
+    constexpr bitset() : __first_() {}
+
+    constexpr void set() {
+      __bit_iterator  __trans_tmp_4{&__first_};
+      long __trans_tmp_3 = 0;
+      __trans_tmp_4.__seg_ += 0;
+      __trans_tmp_3 = *__trans_tmp_4.__seg_;
+    }
+  };
+
+  constexpr bool test() {
+    bitset v;
+    v.set();
+    return true;
+  }
+  static_assert(test(), "");
 }

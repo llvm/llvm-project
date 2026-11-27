@@ -12,5 +12,7 @@ add_mlir_library(MLIRTestIRDLToCppDialect
 mlir_target_link_libraries(MLIRTestIRDLToCppDialect PUBLIC
   MLIRIR
   MLIRPass
+  MLIRSCFDialect
   MLIRTransforms
+  MLIRTestDialect
 )

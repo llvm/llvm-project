@@ -8,19 +8,21 @@
 
 #include "clang/Basic/Version.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Path.h"
 
 using namespace llvm;
 
-static cl::opt<bool> Help("h", cl::desc("Alias for -help"), cl::Hidden);
+// Defined in lib/OffloadArchOptions.cpp.
+extern cl::OptionCategory OffloadArchCategory;
 
-// Mark all our options with this category.
-static cl::OptionCategory OffloadArchCategory("offload-arch options");
+extern cl::OptionCategory AMDGPUArchByHIPCategory;
 
 enum VendorName {
   all,
   amdgpu,
   nvptx,
+  intel,
 };
 
 static cl::opt<VendorName>
@@ -28,10 +30,8 @@ static cl::opt<VendorName>
          cl::init(all),
          cl::values(clEnumVal(all, "Print all GPUs (default)"),
                     clEnumVal(amdgpu, "Only print AMD GPUs"),
-                    clEnumVal(nvptx, "Only print NVIDIA GPUs")));
-
-cl::opt<bool> Verbose("verbose", cl::desc("Enable verbose output"),
-                      cl::init(false), cl::cat(OffloadArchCategory));
+                    clEnumVal(nvptx, "Only print NVIDIA GPUs"),
+                    clEnumVal(intel, "Only print Intel GPUs")));
 
 static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("offload-arch") << '\n';
@@ -40,6 +40,7 @@ static void PrintVersion(raw_ostream &OS) {
 int printGPUsByKFD();
 int printGPUsByHIP();
 int printGPUsByCUDA();
+int printGPUsByLevelZero();
 
 static int printAMD() {
 #ifndef _WIN32
@@ -51,37 +52,36 @@ static int printAMD() {
 }
 
 static int printNVIDIA() { return printGPUsByCUDA(); }
+static int printIntel() { return printGPUsByLevelZero(); }
+
+const std::array<std::pair<VendorName, function_ref<int()>>, 3> VendorTable{
+    {{VendorName::amdgpu, printAMD},
+     {VendorName::nvptx, printNVIDIA},
+     {VendorName::intel, printIntel}}};
 
 int main(int argc, char *argv[]) {
-  cl::HideUnrelatedOptions(OffloadArchCategory);
+  cl::HideUnrelatedOptions({&OffloadArchCategory, &AMDGPUArchByHIPCategory});
 
   cl::SetVersionPrinter(PrintVersion);
-  cl::ParseCommandLineOptions(
-      argc, argv,
+  cl::LibraryOptionsContext LibraryOptions;
+  cl::parseCommandLineOptions(
+      LibraryOptions, ArrayRef(argv, argc),
       "A tool to detect the presence of offloading devices on the system. \n\n"
       "The tool will output each detected GPU architecture separated by a\n"
       "newline character. If multiple GPUs of the same architecture are found\n"
       "a string will be printed for each\n");
 
-  if (Help) {
-    cl::PrintHelpMessage();
-    return 0;
+  // Support legacy binaries.
+  if (sys::path::stem(argv[0]).starts_with("amdgpu-arch"))
+    Only = VendorName::amdgpu;
+  if (sys::path::stem(argv[0]).starts_with("nvptx-arch"))
+    Only = VendorName::nvptx;
+
+  int Result = 1;
+  for (auto [Name, Func] : VendorTable) {
+    if (Only == VendorName::all || Only == Name)
+      Result &= Func();
   }
 
-  // If this was invoked from the legacy symlinks provide the same behavior.
-  bool AMDGPUOnly = Only == VendorName::amdgpu ||
-                    sys::path::stem(argv[0]).starts_with("amdgpu-arch");
-  bool NVIDIAOnly = Only == VendorName::nvptx ||
-                    sys::path::stem(argv[0]).starts_with("nvptx-arch");
-
-  int NVIDIAResult = 0;
-  if (!AMDGPUOnly)
-    NVIDIAResult = printNVIDIA();
-
-  int AMDResult = 0;
-  if (!NVIDIAOnly)
-    AMDResult = printAMD();
-
-  // We only failed if all cases returned an error.
-  return AMDResult && NVIDIAResult;
+  return Result;
 }

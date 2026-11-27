@@ -34,13 +34,12 @@ STATISTIC(HexagonNumStoreAbsConversions,
 namespace {
 
 class HexagonGenMemAbsolute : public MachineFunctionPass {
-  const HexagonInstrInfo *TII;
-  MachineRegisterInfo *MRI;
-  const TargetRegisterInfo *TRI;
+  const HexagonInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
 
 public:
   static char ID;
-  HexagonGenMemAbsolute() : MachineFunctionPass(ID), TII(0), MRI(0), TRI(0) {}
+  HexagonGenMemAbsolute() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Hexagon Generate Load/Store Set Absolute Address Instruction";
@@ -72,7 +71,6 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
 
   TII = Fn.getSubtarget<HexagonSubtarget>().getInstrInfo();
   MRI = &Fn.getRegInfo();
-  TRI = Fn.getRegInfo().getTargetRegisterInfo();
 
   MachineDominatorTree &MDT =
       getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
@@ -121,7 +119,7 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
       const MachineOperand *BaseOp = nullptr;
       int64_t Offset;
       bool Scalable;
-      TII->getMemOperandWithOffset(*NextMI, BaseOp, Offset, Scalable, TRI);
+      TII->getMemOperandWithOffset(*NextMI, BaseOp, Offset, Scalable);
 
       // Ensure BaseOp is non-null and register type.
       if (!BaseOp || !BaseOp->isReg())
@@ -191,7 +189,7 @@ bool HexagonGenMemAbsolute::runOnMachineFunction(MachineFunction &Fn) {
       if (IsLoad)
         MIB->getOperand(0).setSubReg(MO0.getSubReg());
       else
-        MIB.addReg(LoadStoreReg, 0, MO0.getSubReg());
+        MIB.addReg(LoadStoreReg, {}, MO0.getSubReg());
 
       LLVM_DEBUG(dbgs() << "Replaced with " << *MIB << "\n");
       // Erase the instructions that got replaced.

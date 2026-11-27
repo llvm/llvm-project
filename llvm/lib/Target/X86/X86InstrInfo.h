@@ -34,7 +34,7 @@ enum X86MachineCombinerPattern : unsigned {
 
 namespace X86 {
 
-enum AsmComments {
+enum AsmComments : MachineInstr::AsmPrinterFlagTy {
   // For instr that was compressed from EVEX to LEGACY.
   AC_EVEX_2_LEGACY = MachineInstr::TAsmComments,
   // For instr that was compressed from EVEX to VEX.
@@ -50,6 +50,9 @@ std::pair<CondCode, bool> getX86ConditionCode(CmpInst::Predicate Predicate);
 /// Return a cmov opcode for the given register size in bytes, and operand type.
 unsigned getCMovOpcode(unsigned RegBytes, bool HasMemoryOperand = false,
                        bool HasNDD = false);
+
+/// Return a MOVri opcode for materializing \p Imm into a 32- or 64-bit GPR.
+unsigned getMOVriOpcode(bool Use64BitReg, int64_t Imm);
 
 /// Return the source operand # for condition code by \p MCID. If the
 /// instruction doesn't have a condition code, return -1.
@@ -68,17 +71,20 @@ CondCode getCondFromSETCC(const MachineInstr &MI);
 // Turn CMOV instruction into condition code.
 CondCode getCondFromCMov(const MachineInstr &MI);
 
-// Turn CFCMOV instruction into condition code.
-CondCode getCondFromCFCMov(const MachineInstr &MI);
-
-// Turn CCMP instruction into condition code.
-CondCode getCondFromCCMP(const MachineInstr &MI);
-
 // Turn condition code into condition flags for CCMP/CTEST.
 int getCCMPCondFlagsFromCondCode(CondCode CC);
 
 // Get the opcode of corresponding NF variant.
 unsigned getNFVariant(unsigned Opc);
+
+// If \p MI clobbers EFLAGS and that clobber can be removed by rewriting the
+// instruction to its NF (no-flags) variant, return that NF opcode; otherwise
+// return 0. The clobber is removable only if the EFLAGS def is dead, an NF
+// variant exists, and (for linker backward-compat) it is not an ADDrm/ADDmr
+// with relocation.
+unsigned
+getNFVariantIfClobberRemovable(const MachineInstr &MI,
+                               const TargetRegisterInfo *TRI = nullptr);
 
 // Get the opcode of corresponding NonND variant.
 unsigned getNonNDVariant(unsigned Opc);
@@ -177,8 +183,8 @@ inline static bool isMem(const MachineInstr &MI, unsigned Op) {
 inline static bool isAddMemInstrWithRelocation(const MachineInstr &MI) {
   unsigned Op = MI.getOpcode();
   if (Op == X86::ADD64rm || Op == X86::ADD64mr_ND || Op == X86::ADD64rm_ND) {
-    int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
-                  X86II::getOperandBias(MI.getDesc());
+    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+    assert(MemOpNo >= 0 && "Expected a memory operand");
     const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
     if (MO.getTargetFlags() == X86II::MO_GOTTPOFF)
       return true;
@@ -210,8 +216,8 @@ inline static bool isMemInstrWithGOTPCREL(const MachineInstr &MI) {
   case X86::SBB64rm:
   case X86::SUB64rm:
   case X86::XOR64rm: {
-    int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
-                  X86II::getOperandBias(MI.getDesc());
+    int MemOpNo = X86II::getMemoryOperandIdx(MI.getDesc());
+    assert(MemOpNo >= 0 && "Expected a memory operand");
     const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
     if (MO.getTargetFlags() == X86II::MO_GOTPCREL)
       return true;
@@ -222,7 +228,7 @@ inline static bool isMemInstrWithGOTPCREL(const MachineInstr &MI) {
 }
 
 class X86InstrInfo final : public X86GenInstrInfo {
-  X86Subtarget &Subtarget;
+  const X86Subtarget &Subtarget;
   const X86RegisterInfo RI;
 
   LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
@@ -238,7 +244,7 @@ class X86InstrInfo final : public X86GenInstrInfo {
                          bool MakeChange) const;
 
 public:
-  explicit X86InstrInfo(X86Subtarget &STI);
+  explicit X86InstrInfo(const X86Subtarget &STI);
 
   /// Given a machine instruction descriptor, returns the register
   /// class constraint for OpNum, or NULL. Returned register class
@@ -246,16 +252,17 @@ public:
   /// GR*RegClass (definition in TD file)
   /// ->
   /// GR*_NOREX2RegClass (Returned register class)
-  const TargetRegisterClass *
-  getRegClass(const MCInstrDesc &MCID, unsigned OpNum,
-              const TargetRegisterInfo *TRI,
-              const MachineFunction &MF) const override;
+  const TargetRegisterClass *getRegClass(const MCInstrDesc &MCID,
+                                         unsigned OpNum) const override;
 
   /// getRegisterInfo - TargetInstrInfo is a superset of MRegister info.  As
   /// such, whenever a client has an instance of instruction info, it should
   /// always be able to get register info as well (through this method).
   ///
   const X86RegisterInfo &getRegisterInfo() const { return RI; }
+
+  const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const override;
 
   /// Returns the stack pointer adjustment that happens inside the frame
   /// setup..destroy sequence (e.g. by pushes, or inside the callee).
@@ -341,11 +348,11 @@ public:
   Register isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
-  bool isReallyTriviallyReMaterializable(const MachineInstr &MI) const override;
-  void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                     Register DestReg, unsigned SubIdx,
-                     const MachineInstr &Orig,
-                     const TargetRegisterInfo &TRI) const override;
+  bool isReMaterializableImpl(const MachineInstr &MI) const override;
+  void
+  reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+                Register DestReg, unsigned SubIdx, const MachineInstr &Orig,
+                LaneBitmask UsedLanes = LaneBitmask::getAll()) const override;
 
   /// Given an operand within a MachineInstr, insert preceding code to put it
   /// into the right format for a particular kind of LEA instruction. This may
@@ -358,8 +365,7 @@ public:
   bool classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                       unsigned LEAOpcode, bool AllowSP, Register &NewSrc,
                       unsigned &NewSrcSubReg, bool &isKill,
-                      MachineOperand &ImplicitOp, LiveVariables *LV,
-                      LiveIntervals *LIS) const;
+                      MachineOperand &ImplicitOp, LiveIntervals *LIS) const;
 
   /// convertToThreeAddress - This method must be implemented by targets that
   /// set the M_CONVERTIBLE_TO_3_ADDR flag.  When this flag is set, the target
@@ -371,7 +377,7 @@ public:
   /// This method returns a null pointer if the transformation cannot be
   /// performed, otherwise it returns the new instruction.
   ///
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
+  MachineInstr *convertToThreeAddress(MachineInstr &MI,
                                       LiveIntervals *LIS) const override;
 
   /// Returns true iff the routine could find two commutable operands in the
@@ -432,21 +438,18 @@ public:
   int getJumpTableIndex(const MachineInstr &MI) const override;
 
   std::optional<ExtAddrMode>
-  getAddrModeFromMemoryOp(const MachineInstr &MemI,
-                          const TargetRegisterInfo *TRI) const override;
+  getAddrModeFromMemoryOp(const MachineInstr &MemI) const override;
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
 
   bool preservesZeroValueInReg(const MachineInstr *MI,
-                               const Register NullValueReg,
-                               const TargetRegisterInfo *TRI) const override;
+                               const Register NullValueReg) const override;
 
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      bool &OffsetIsScalable, LocationSize &Width) const override;
   bool analyzeBranchPredicate(MachineBasicBlock &MBB,
                               TargetInstrInfo::MachineBranchPredicate &MBP,
                               bool AllowModify = false) const override;
@@ -458,8 +461,8 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       Register, Register, Register, int &, int &,
-                       int &) const override;
+                       Register, Register, Register,
+                       SelectExpansion &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
@@ -470,14 +473,13 @@ public:
                    bool RenamableSrc = false) const override;
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
-      int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadStoreTileReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
@@ -495,19 +497,20 @@ public:
   /// is likely that the referenced instruction has been changed.
   ///
   /// \returns true on success.
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops, int FrameIndex,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   /// Same as the previous version except it allows folding of any load and
   /// store from / to any address, not just from a specific stack slot.
-  MachineInstr *foldMemoryOperandImpl(
-      MachineFunction &MF, MachineInstr &MI, ArrayRef<unsigned> Ops,
-      MachineBasicBlock::iterator InsertPt, MachineInstr &LoadMI,
-      LiveIntervals *LIS = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineInstr &LoadMI,
+                                      MachineInstr *&CopyMI,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   bool
   unfoldMemoryOperand(MachineFunction &MF, MachineInstr &MI, Register Reg,
@@ -525,8 +528,8 @@ public:
                                int64_t &Offset2) const override;
 
   /// Overrides the isSchedulingBoundary from Codegen/TargetInstrInfo.cpp to
-  /// make it capable of identifying ENDBR intructions and prevent it from being
-  /// re-scheduled.
+  /// make it capable of identifying ENDBR instructions and prevent it from
+  /// being re-scheduled.
   bool isSchedulingBoundary(const MachineInstr &MI,
                             const MachineBasicBlock *MBB,
                             const MachineFunction &MF) const override;
@@ -572,20 +575,20 @@ public:
 
   bool setExecutionDomainCustom(MachineInstr &MI, unsigned Domain) const;
 
-  unsigned
-  getPartialRegUpdateClearance(const MachineInstr &MI, unsigned OpNum,
-                               const TargetRegisterInfo *TRI) const override;
-  unsigned getUndefRegClearance(const MachineInstr &MI, unsigned OpNum,
-                                const TargetRegisterInfo *TRI) const override;
-  void breakPartialRegDependency(MachineInstr &MI, unsigned OpNum,
-                                 const TargetRegisterInfo *TRI) const override;
+  unsigned getPartialRegUpdateClearance(const MachineInstr &MI,
+                                        unsigned OpNum) const override;
+  unsigned getUndefRegClearance(const MachineInstr &MI,
+                                unsigned OpNum) const override;
+  void breakPartialRegDependency(MachineInstr &MI,
+                                 unsigned OpNum) const override;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
                                       unsigned OpNum,
                                       ArrayRef<MachineOperand> MOs,
                                       MachineBasicBlock::iterator InsertPt,
                                       unsigned Size, Align Alignment,
-                                      bool AllowCommute) const;
+                                      bool AllowCommute, MachineInstr *&CopyMI,
+                                      VirtRegMap *VRM = nullptr) const;
 
   bool isHighLatencyDef(int opc) const override;
 
@@ -702,7 +705,6 @@ private:
   /// We use 32-bit LEA to form 3-address code by promoting to a 32-bit
   /// super-register and then truncating back down to a 8/16-bit sub-register.
   MachineInstr *convertToThreeAddressWithLEA(unsigned MIOpc, MachineInstr &MI,
-                                             LiveVariables *LV,
                                              LiveIntervals *LIS,
                                              bool Is8BitOp) const;
 
@@ -763,6 +765,25 @@ private:
                             const MachineInstr &OI, bool *IsSwapped,
                             int64_t *ImmDelta) const;
 
+  /// Used by optimizeCompareInstr when the backward search for an equivalent
+  /// flag producer reaches a block (\p MultiPredMBB) with multiple
+  /// predecessors. Searches the dominator tree for an instruction that produces
+  /// the same flags as the compare \p CmpInstr and dominates it, such that on
+  /// every path from that producer to \p CmpInstr all EFLAGS clobbers can be
+  /// converted to their NF (no-flags) variants. Those clobbers are appended to
+  /// \p InstsToUpdate as (instruction, NF opcode) pairs for the caller to
+  /// rewrite. Restricted to producers that yield identical flags: it succeeds
+  /// only when isRedundantFlagInstr reports no operand swap and no immediate
+  /// delta, so on success \p IsSwapped is false and \p ImmDelta is 0. Returns
+  /// the flag producer on success, or nullptr otherwise. Requires the NF
+  /// feature (APX).
+  MachineInstr *findDominatingRedundantFlagInstr(
+      MachineInstr &CmpInstr, Register SrcReg, Register SrcReg2,
+      int64_t CmpMask, int64_t CmpValue, MachineBasicBlock *MultiPredMBB,
+      bool &IsSwapped, int64_t &ImmDelta,
+      SmallVectorImpl<std::pair<MachineInstr *, unsigned>> &InstsToUpdate)
+      const;
+
   /// Commute operands of \p MI for memory fold.
   ///
   /// \param Idx1 the index of operand to be commuted.
@@ -770,6 +791,11 @@ private:
   /// \returns the index of operand that is commuted with \p Idx1. If the method
   /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
+
+  MachineInstr *
+  insertCodePrefetchInstr(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator InsertBefore,
+                          const GlobalValue *GV) const override;
 };
 } // namespace llvm
 

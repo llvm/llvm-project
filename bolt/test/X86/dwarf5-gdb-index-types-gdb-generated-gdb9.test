@@ -20,7 +20,7 @@
 # POSTCHECK-NEXT:       1: offset = 0x00000040, type_offset = 0x00000023, type_signature = 0x00f6cca4e3a15118
 # POSTCHECK:          Address area offset = 0x88, has 2 entries
 # POSTCHECK-NEXT:         Low/High address = [0x[[#%.4x,ADDR:]],
-# POSTCHECK-SAME:           0x[[#ADDR + 0xf]]) (Size: 0xf), CU id = 1
+# POSTCHECK-SAME:           0x[[#ADDR + 0xf]]) (Size: 0xf), CU id = 2
 # POSTCHECK-NEXT:         Low/High address = [0x[[#%.4x,ADDR1:]],
 # POSTCHECK-SAME:           0x[[#ADDR1 + 0xd]]) (Size: 0xd), CU id = 3
 # POSTCHECK:          Symbol table offset = 0xb0, size = 1024, filled slots
@@ -37,7 +37,7 @@
 # POSTCHECK-NEXT:       754: Name offset = 0x43, CU vector offset = 0x0
 # POSTCHECK-NEXT:         String name: int, CU vector index: 0
 # POSTCHECK:          Constant pool offset = 0x20b0, has 5 CU vectors
-# POSTCHECK-NEXT:       0(0x0): 0x90000001
+# POSTCHECK-NEXT:       0(0x0): 0x90000002
 # POSTCHECK-NEXT:       1(0x8): 0x90000003
-# POSTCHECK-NEXT:       2(0x10): 0x30000001
+# POSTCHECK-NEXT:       2(0x10): 0x30000002
 # POSTCHECK-NEXT:       3(0x18): 0x30000003

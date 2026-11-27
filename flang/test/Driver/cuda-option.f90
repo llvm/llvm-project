@@ -8,7 +8,7 @@ program main
   integer, device :: dvar
 end program
 
-! CHECK-LABEL: PROGRAM main
+! CHECK-LABEL: PROGRAM MAIN
 ! CHECK: INTEGER :: var = 1
 ! CHECK: INTEGER, DEVICE :: dvar
 

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bitsulk.h"
+#include "src/stdfix/bitsulk.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // unsigned long accum
-#include "include/llvm-libc-types/stdfix-types.h"   // uint_ulk_t
+#include "include/llvm-libc-types/uint_ulk_t.h"     // uint_ulk_t
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION
 #include "src/__support/fixed_point/fx_bits.h"      // fixed_point
 #include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL

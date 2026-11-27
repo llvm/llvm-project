@@ -1,9 +1,9 @@
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-full=true}))" | FileCheck %s --check-prefix UNROLL-FULL
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-full=true unroll-full-threshold=2}))" | FileCheck %s --check-prefix SHORT
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=-1}))" | FileCheck %s --check-prefix UNROLL-FULL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=-1 unroll-full-threshold=2}))" | FileCheck %s --check-prefix SHORT
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=4}))" | FileCheck %s --check-prefix UNROLL-BY-4
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=1}))" | FileCheck %s --check-prefix UNROLL-BY-1
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(func.func(affine-loop-unroll{unroll-factor=5 cleanup-unroll=true}))" | FileCheck %s --check-prefix UNROLL-CLEANUP-LOOP
-// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(gpu.module(gpu.func(affine-loop-unroll{unroll-full=true})))" | FileCheck %s --check-prefix GPU-UNROLL-FULL
+// RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline="builtin.module(gpu.module(gpu.func(affine-loop-unroll{unroll-factor=-1})))" | FileCheck %s --check-prefix GPU-UNROLL-FULL
 
 // UNROLL-FULL-DAG: [[$MAP0:#map[0-9]*]] = affine_map<(d0) -> (d0 + 1)>
 // UNROLL-FULL-DAG: [[$MAP1:#map[0-9]*]] = affine_map<(d0) -> (d0 + 2)>
@@ -23,6 +23,7 @@
 // UNROLL-BY-4-DAG: [[$MAP5:#map[0-9]*]] = affine_map<(d0)[s0] -> (d0 + s0 + 1)>
 // UNROLL-BY-4-DAG: [[$MAP6:#map[0-9]*]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
 // UNROLL-BY-4-DAG: [[$MAP11:#map[0-9]*]] = affine_map<(d0) -> (d0)>
+// UNROLL-BY-4-DAG: [[$MAP_CLEANUP_LB:#map[0-9]*]] = affine_map<(d0)[s0, s1] -> (d0 + ((-d0 - s0 + s1) floordiv 4) * 4 + s0, d0 + s0)>
 
 // UNROLL-FULL-LABEL: func @loop_nest_simplest() {
 func.func @loop_nest_simplest() {
@@ -541,7 +542,7 @@ func.func @loop_nest_symbolic_bound(%N : index) {
     // UNROLL-BY-4-NEXT: %3 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: }
     // A cleanup loop will be generated here.
-    // UNROLL-BY-4-NEXT: affine.for %arg2 = #map{{[0-9]*}}()[%arg0] to %arg0 {
+    // UNROLL-BY-4-NEXT: affine.for %arg2 = max #map{{[0-9]*}}()[%arg0] to %arg0 {
     // UNROLL-BY-4-NEXT: %0 = "foo"() : () -> i32
     // UNROLL-BY-4-NEXT: }
     affine.for %j = 0 to %N {
@@ -566,7 +567,30 @@ func.func @loop_nest_symbolic_bound_with_step(%N : index) {
 // UNROLL-BY-4-NEXT:   "foo"()
 // UNROLL-BY-4-NEXT: }
 // A cleanup loop will be be generated here.
-// UNROLL-BY-4-NEXT: affine.for %{{.*}} = #map{{[0-9]*}}()[%[[N]]] to %[[N]] step 3 {
+// UNROLL-BY-4-NEXT: affine.for %{{.*}} = max #map{{[0-9]*}}()[%[[N]]] to %[[N]] step 3 {
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT: }
+  }
+  return
+}
+
+// The cleanup loop must not execute when the original loop would not (%N below
+// %i + %M), so its lower bound includes the original one.
+// UNROLL-BY-4-LABEL: func @loop_nest_symbolic_lower_bound
+// UNROLL-BY-4-SAME:    %[[M:.*]]: index, %[[N:.*]]: index
+func.func @loop_nest_symbolic_lower_bound(%M : index, %N : index) {
+  // UNROLL-BY-4: affine.for %[[I:.*]] = 0 to 100 {
+  affine.for %i = 0 to 100 {
+    affine.for %j = affine_map<(d0)[s0] -> (d0 + s0)>(%i)[%M] to %N {
+      "foo"() : () -> ()
+    }
+// UNROLL-BY-4:      affine.for %{{.*}} = #map{{[0-9]*}}(%[[I]])[%[[M]]] to #map{{[0-9]*}}(%[[I]])[%[[M]], %[[N]]] step 4 {
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT:   "foo"()
+// UNROLL-BY-4-NEXT: }
+// UNROLL-BY-4-NEXT: affine.for %{{.*}} = max [[$MAP_CLEANUP_LB]](%[[I]])[%[[M]], %[[N]]] to %[[N]] {
 // UNROLL-BY-4-NEXT:   "foo"()
 // UNROLL-BY-4-NEXT: }
   }
@@ -705,6 +729,24 @@ func.func @unroll_with_iter_args_and_promotion(%arg0 : f32, %arg1 : f32) -> f32 
 func.func @unroll_zero_trip_count_case() {
   // CHECK-NEXT: affine.for %{{.*}} = 0 to 0
   affine.for %i = 0 to 0 {
+  }
+  return
+}
+
+// The upper bounds are below the lower bounds, so neither loop executes.
+// UNROLL-FULL-LABEL: func @unroll_zero_trip_count_nonconstant_bounds
+func.func @unroll_zero_trip_count_nonconstant_bounds(%N: index) {
+  // UNROLL-FULL:      affine.for
+  // UNROLL-FULL-NEXT:   "foo"() : () -> ()
+  // UNROLL-FULL-NEXT: }
+  affine.for %i = affine_map<(d0) -> (d0)>(%N) to affine_map<(d0) -> (d0 - 2)>(%N) {
+    "foo"() : () -> ()
+  }
+  // UNROLL-FULL:      affine.for
+  // UNROLL-FULL-NEXT:   "foo"() : () -> ()
+  // UNROLL-FULL-NEXT: }
+  affine.for %i = max affine_map<(d0) -> (d0)>(%N) to min affine_map<(d0) -> (d0 - 4, d0 + 4)>(%N) {
+    "foo"() : () -> ()
   }
   return
 }

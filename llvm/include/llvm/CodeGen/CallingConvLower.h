@@ -154,9 +154,9 @@ struct ForwardedRegister {
 
 /// CCAssignFn - This function assigns a location for Val, updating State to
 /// reflect the change.  It returns 'true' if it failed to handle Val.
-typedef bool CCAssignFn(unsigned ValNo, MVT ValVT,
-                        MVT LocVT, CCValAssign::LocInfo LocInfo,
-                        ISD::ArgFlagsTy ArgFlags, CCState &State);
+typedef bool CCAssignFn(unsigned ValNo, MVT ValVT, MVT LocVT,
+                        CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
+                        Type *OrigTy, CCState &State);
 
 /// CCCustomFn - This function assigns a location for Val, possibly updating
 /// all args to reflect changes and indicates if it handled it. It must set
@@ -182,7 +182,7 @@ private:
 
   uint64_t StackSize;
   Align MaxStackArgAlign;
-  SmallVector<uint32_t, 16> UsedRegs;
+  SmallVector<uint32_t, 32> UsedRegs;
   SmallVector<CCValAssign, 4> PendingLocs;
   SmallVector<ISD::ArgFlagsTy, 4> PendingArgFlags;
 
@@ -290,6 +290,7 @@ public:
   /// and argument flags.
   LLVM_ABI void AnalyzeCallOperands(SmallVectorImpl<MVT> &ArgVTs,
                                     SmallVectorImpl<ISD::ArgFlagsTy> &Flags,
+                                    SmallVectorImpl<Type *> &OrigTys,
                                     CCAssignFn Fn);
 
   /// The function will invoke AnalyzeCallOperands.
@@ -310,7 +311,7 @@ public:
 
   /// AnalyzeCallResult - Same as above except it's specialized for calls which
   /// produce a single value.
-  LLVM_ABI void AnalyzeCallResult(MVT VT, CCAssignFn Fn);
+  LLVM_ABI void AnalyzeCallResult(MVT VT, Type *OrigTy, CCAssignFn Fn);
 
   /// getFirstUnallocated - Return the index of the first unallocated register
   /// in the set, or Regs.size() if they are all allocated.

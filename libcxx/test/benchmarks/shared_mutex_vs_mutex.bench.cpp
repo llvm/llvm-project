@@ -8,6 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
+// This benchmark is very expensive and we don't want to run it on a regular basis,
+// only to ensure the code doesn't rot.
+// REQUIRES: enable-benchmarks=dry-run
+
 // This benchmark compares the performance of std::mutex and std::shared_mutex in contended scenarios.
 // it's meant to establish a baseline overhead for std::shared_mutex and std::mutex, and to help inform decisions about
 // which mutex to use when selecting a mutex type for a given use case.
@@ -19,19 +23,20 @@
 #include <thread>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 
 int global_value = 42;
 std::mutex m;
 std::shared_mutex sm;
 
-static void BM_shared_mutex(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_shared_mutex(benchmark::State& state) {
   for (auto _ : state) {
     std::shared_lock<std::shared_mutex> lock(sm);
     benchmark::DoNotOptimize(global_value);
   }
 }
 
-static void BM_mutex(benchmark::State& state) {
+static TEST_ALIGN_BENCHMARK void BM_mutex(benchmark::State& state) {
   for (auto _ : state) {
     std::lock_guard<std::mutex> lock(m);
     benchmark::DoNotOptimize(global_value);

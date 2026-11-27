@@ -24,29 +24,34 @@
 
 ; ASM-LABEL:  .long  241                      # Symbol subsection for GetFoo
 ; ASM:        .short 4414                     # Record kind: S_LOCAL
-; ASM-NEXT:   .long 4113                      # TypeIndex
+; ASM-NEXT:   .long 4109                      # TypeIndex
 ; ASM-NEXT:   .short 0                        # Flags
 ; ASM-NEXT:   .asciz "foo"
 ; ASM-NEXT:   .p2align 2
 ; ASM-NEXT: .Ltmp
-; ASM:        .cv_def_range  .Ltmp{{.*}} .Ltmp{{.*}}, frame_ptr_rel, 40
+; ASM:        .cv_def_range  .Ltmp{{.*}} .Ltmp{{.*}}, reg_rel_indir, 335, 0, 40, 0
 
 ; OBJ: Subsection [
 ; OBJ:   SubSectionType: Symbols (0xF1)
 ; OBJ:   LocalSym {
 ; OBJ:     Kind: S_LOCAL (0x113E)
-; OBJ:     Type: Foo& (0x1011)
+; OBJ:     Type: Foo (0x100D)
 ; OBJ:     Flags [ (0x0)
 ; OBJ:     ]
 ; OBJ:     VarName: foo
 ; OBJ:   }
-; OBJ:   DefRangeFramePointerRelSym {
-; OBJ:     Kind: S_DEFRANGE_FRAMEPOINTER_REL (0x1142)
-; OBJ:     Offset: 40
+; OBJ:   DefRangeRegisterRelIndirSym {
+; OBJ:     Kind: S_DEFRANGE_REGISTER_REL_INDIR (0x1177)
+; OBJ:     BaseRegister: RSP (0x14F)
+; OBJ:     HasSpilledUDTMember: No
+; OBJ:     OffsetInParent: 0
+; OBJ:     BasePointerOffset: 40
+; OBJ:     OffsetInUDT: 0
 ; OBJ:     LocalVariableAddrRange {
 ; OBJ:       OffsetStart: .text+0x1D
 ; OBJ:       ISectStart: 0x0
 ; OBJ:       Range: 0x16
+; OBJ:     }
 ; OBJ:   }
 
 ; ModuleID = 't.cpp'
@@ -96,9 +101,9 @@ entry:
   ret i32 %0, !dbg !38
 }
 
-attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { noinline norecurse nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #2 = { noinline norecurse nounwind optnone uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}

@@ -193,7 +193,7 @@ struct CodeGenRegisterFile {
   unsigned MaxMovesEliminatedPerCycle;
   bool AllowZeroMoveEliminationOnly;
 
-  unsigned NumPhysRegs;
+  unsigned NumPhysRegs = 0;
   std::vector<CodeGenRegisterCost> Costs;
 
   CodeGenRegisterFile(StringRef name, const Record *def,
@@ -201,7 +201,7 @@ struct CodeGenRegisterFile {
                       bool AllowZeroMoveElimOnly = false)
       : Name(name), RegisterFileDef(def),
         MaxMovesEliminatedPerCycle(MaxMoveElimPerCy),
-        AllowZeroMoveEliminationOnly(AllowZeroMoveElimOnly), NumPhysRegs(0) {}
+        AllowZeroMoveEliminationOnly(AllowZeroMoveElimOnly) {}
 
   bool hasDefaultCosts() const { return Costs.empty(); }
 };
@@ -261,16 +261,16 @@ struct CodeGenProcModel {
   std::vector<CodeGenRegisterFile> RegisterFiles;
 
   // Optional Retire Control Unit definition.
-  const Record *RetireControlUnit;
+  const Record *RetireControlUnit = nullptr;
 
   // Load/Store queue descriptors.
-  const Record *LoadQueue;
-  const Record *StoreQueue;
+  const Record *LoadQueue = nullptr;
+  const Record *StoreQueue = nullptr;
 
   CodeGenProcModel(unsigned Idx, std::string Name, const Record *MDef,
                    const Record *IDef)
-      : Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef),
-        RetireControlUnit(nullptr), LoadQueue(nullptr), StoreQueue(nullptr) {}
+      : Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef) {
+  }
 
   bool hasItineraries() const {
     return !ItinsDef->getValueAsListOfDefs("IID").empty();
@@ -403,10 +403,6 @@ public:
   STIPredicateFunction(const Record *Rec) : FunctionDeclaration(Rec) {}
   STIPredicateFunction(STIPredicateFunction &&Other) = default;
 
-  bool isCompatibleWith(const STIPredicateFunction &Other) const {
-    return FunctionDeclaration == Other.FunctionDeclaration;
-  }
-
   void addDefinition(const Record *Def) { Definitions.push_back(Def); }
   void addOpcode(const Record *OpcodeRec, OpcodeInfo &&Info) {
     if (Groups.empty() ||
@@ -446,6 +442,9 @@ class CodeGenSchedModels {
   // Per-operand SchedReadWrite types.
   std::vector<CodeGenSchedRW> SchedWrites;
   std::vector<CodeGenSchedRW> SchedReads;
+  // Index in SchedWrites or SchedReads of each SchedWrite or SchedRead def.
+  DenseMap<const Record *, unsigned> SchedWriteIdx;
+  DenseMap<const Record *, unsigned> SchedReadIdx;
 
   // List of unique SchedClasses.
   std::vector<CodeGenSchedClass> SchedClasses;
@@ -478,11 +477,11 @@ public:
     return ModelDef;
   }
 
-  const CodeGenProcModel &getModelForProc(const Record *ProcDef) const {
+  unsigned getModelIndexForProc(const Record *ProcDef) const {
     const Record *ModelDef = getModelOrItinDef(ProcDef);
     auto I = ProcModelMap.find(ModelDef);
     assert(I != ProcModelMap.end() && "missing machine model");
-    return ProcModels[I->second];
+    return I->second;
   }
 
   const CodeGenProcModel &getProcModel(const Record *ModelDef) const {
@@ -517,9 +516,11 @@ public:
     return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
   }
   const CodeGenSchedRW &getSchedRW(const Record *Def) const {
-    bool IsRead = Def->isSubClassOf("SchedRead");
-    unsigned Idx = getSchedRWIdx(Def, IsRead);
-    return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
+    if (unsigned Idx = SchedReadIdx.lookup(Def))
+      return getSchedRead(Idx);
+    if (unsigned Idx = SchedWriteIdx.lookup(Def))
+      return getSchedWrite(Idx);
+    return Def->isSubClassOf("SchedRead") ? getSchedRead(0) : getSchedWrite(0);
   }
   CodeGenSchedRW &getSchedRW(const Record *Def) {
     return const_cast<CodeGenSchedRW &>(

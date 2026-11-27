@@ -32,7 +32,8 @@ define i1 @logical_and_icmp_clamp(<4 x i32> %x) {
 ; X86-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[X:%.*]], splat (i32 42)
 ; X86-NEXT:    [[TMP2:%.*]] = icmp sgt <4 x i32> [[X]], splat (i32 17)
 ; X86-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP4:%.*]] = call <8 x i1> @llvm.vector.insert.v8i1.v4i1(<8 x i1> [[TMP3]], <4 x i1> [[TMP1]], i64 4)
+; X86-NEXT:    [[TMP7:%.*]] = shufflevector <4 x i1> [[TMP1]], <4 x i1> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; X86-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i1> [[TMP3]], <8 x i1> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; X86-NEXT:    [[TMP5:%.*]] = freeze <8 x i1> [[TMP4]]
 ; X86-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP5]])
 ; X86-NEXT:    ret i1 [[TMP6]]

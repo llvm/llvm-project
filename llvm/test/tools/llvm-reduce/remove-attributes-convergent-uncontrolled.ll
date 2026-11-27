@@ -24,8 +24,8 @@ declare float @convergent.extern.func(float, float) #0
 declare float @extern.func(float, float)
 declare float @llvm.amdgcn.readfirstlane.f32(float) #1
 
-; RESULT: attributes #0 = { convergent nocallback nofree nounwind willreturn memory(none) }
+; RESULT: attributes #0 = { convergent nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }
 ; RESULT-NOT: attributes
 
 attributes #0 = { convergent nounwind }
-attributes #1 = { convergent nocallback nofree nounwind willreturn memory(none) }
+attributes #1 = { convergent nocallback nocreateundeforpoison nofree nounwind willreturn memory(none) }

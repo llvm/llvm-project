@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_ATTRIBUTECOMMONINFO_H
 
 #include "clang/Basic/AttributeScopeInfo.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TokenKinds.h"
 
@@ -175,6 +176,10 @@ public:
       : AttributeCommonInfo(nullptr, AttributeScopeInfo(), AttrRange, K,
                             FormUsed) {}
 
+  AttributeCommonInfo(SourceRange AttrRange, AttributeScopeInfo AttrScope,
+                      Kind K, Form FormUsed)
+      : AttributeCommonInfo(nullptr, AttrScope, AttrRange, K, FormUsed) {}
+
   AttributeCommonInfo(AttributeCommonInfo &&) = default;
   AttributeCommonInfo(const AttributeCommonInfo &) = default;
 
@@ -290,6 +295,18 @@ inline bool doesKeywordAttributeTakeArgs(tok::TokenKind Kind) {
 #include "clang/Basic/RegularKeywordAttrInfo.inc"
 #undef KEYWORD_ATTRIBUTE
   }
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const AttributeCommonInfo *CI) {
+  DB.AddTaggedVal(reinterpret_cast<uint64_t>(CI),
+                  DiagnosticsEngine::ak_attr_info);
+  return DB;
+}
+
+inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
+                                             const AttributeCommonInfo &CI) {
+  return DB << &CI;
 }
 
 } // namespace clang

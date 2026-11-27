@@ -22,6 +22,8 @@
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang;
@@ -53,28 +55,30 @@ private:
 };
 } // end anonymous namespace
 
-static ASTReader *
+static llvm::IntrusiveRefCntPtr<ASTReader>
 createASTReader(CompilerInstance &CI, StringRef pchFile,
                 SmallVectorImpl<std::unique_ptr<llvm::MemoryBuffer>> &MemBufs,
                 SmallVectorImpl<std::string> &bufNames,
                 ASTDeserializationListener *deserialListener = nullptr) {
   Preprocessor &PP = CI.getPreprocessor();
-  std::unique_ptr<ASTReader> Reader;
-  Reader.reset(new ASTReader(
+  auto Reader = llvm::makeIntrusiveRefCnt<ASTReader>(
       PP, CI.getModuleCache(), &CI.getASTContext(), CI.getPCHContainerReader(),
-      /*Extensions=*/{},
-      /*isysroot=*/"", DisableValidationForModuleKind::PCH));
+      CI.getCodeGenOpts(),
+      /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
+      /*isysroot=*/"", DisableValidationForModuleKind::PCH);
   for (unsigned ti = 0; ti < bufNames.size(); ++ti) {
-    StringRef sr(bufNames[ti]);
-    Reader->addInMemoryBuffer(sr, std::move(MemBufs[ti]));
+    off_t MemBufSize = MemBufs[ti]->getBufferSize();
+    CI.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
+        bufNames[ti], std::move(MemBufs[ti]), MemBufSize, /*ModTime=*/0);
   }
   Reader->setDeserializationListener(deserialListener);
-  switch (Reader->ReadAST(pchFile, serialization::MK_PCH, SourceLocation(),
+  switch (Reader->ReadAST(ModuleFileName::makeInMemory(pchFile),
+                          serialization::MK_PCH, SourceLocation(),
                           ASTReader::ARR_None)) {
   case ASTReader::Success:
     // Set the predefines buffer as suggested by the PCH reader.
     PP.setPredefines(Reader->getSuggestedPredefines());
-    return Reader.release();
+    return Reader;
 
   case ASTReader::Failure:
   case ASTReader::Missing:
@@ -87,8 +91,9 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
   return nullptr;
 }
 
-IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
-    CompilerInstance &CI, IntrusiveRefCntPtr<ExternalSemaSource> &Reader) {
+IntrusiveRefCntPtr<ExternalSemaSource>
+clang::createChainedIncludesSource(CompilerInstance &CI,
+                                   IntrusiveRefCntPtr<ASTReader> &OutReader) {
 
   std::vector<std::string> &includes = CI.getPreprocessorOpts().ChainedIncludes;
   assert(!includes.empty() && "No '-chain-include' in options!");
@@ -118,17 +123,19 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
 
     TextDiagnosticPrinter *DiagClient =
         new TextDiagnosticPrinter(llvm::errs(), CI.getDiagnosticOpts());
-    IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-        new DiagnosticsEngine(DiagID, CI.getDiagnosticOpts(), DiagClient));
+    auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+        DiagnosticIDs::create(), CI.getDiagnosticOpts(), DiagClient);
 
     auto Clang = std::make_unique<CompilerInstance>(
         std::move(CInvok), CI.getPCHContainerOperations());
-    Clang->setDiagnostics(Diags.get());
+    // Inherit the VFS as-is: code below does not make changes to the VFS or to
+    // the VFS-affecting options.
+    Clang->setVirtualFileSystem(CI.getVirtualFileSystemPtr());
+    Clang->setDiagnostics(Diags);
     Clang->setTarget(TargetInfo::CreateTargetInfo(
         Clang->getDiagnostics(), Clang->getInvocation().getTargetOpts()));
     Clang->createFileManager();
-    Clang->createSourceManager(Clang->getFileManager());
+    Clang->createSourceManager();
     Clang->createPreprocessor(TU_Prefix);
     Clang->getDiagnosticClient().BeginSourceFile(Clang->getLangOpts(),
                                                  &Clang->getPreprocessor());
@@ -138,7 +145,8 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions;
     auto consumer = std::make_unique<PCHGenerator>(
         Clang->getPreprocessor(), Clang->getModuleCache(), "-", /*isysroot=*/"",
-        Buffer, Extensions, /*AllowASTWithErrors=*/true);
+        Buffer, Clang->getCodeGenOpts(), Extensions,
+        /*AllowASTWithErrors=*/true);
     Clang->getASTContext().setASTMutationListener(
                                             consumer->GetASTMutationListener());
     Clang->setASTConsumer(std::move(consumer));
@@ -155,10 +163,13 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
       // allocating new ones.
       for (auto &SB : SerialBufs)
         Bufs.push_back(llvm::MemoryBuffer::getMemBuffer(SB->getBuffer()));
-      std::string pchName = includes[i-1];
-      llvm::raw_string_ostream os(pchName);
-      os << ".pch" << i-1;
-      serialBufNames.push_back(pchName);
+      // The PCH that imports this one records the import's file name as an
+      // absolute and canonical path (see ASTWriter::PreparePathForOutput()),
+      // so the buffer needs to be registered under that name.
+      SmallString<256> pchName(includes[i - 1]);
+      pchName += ".pch" + std::to_string(i - 1);
+      Clang->getFileManager().makeAbsolutePath(pchName, /*Canonicalize=*/true);
+      serialBufNames.emplace_back(pchName);
 
       IntrusiveRefCntPtr<ASTReader> Reader;
       Reader = createASTReader(
@@ -186,12 +197,12 @@ IntrusiveRefCntPtr<ExternalSemaSource> clang::createChainedIncludesSource(
   assert(!SerialBufs.empty());
   std::string pchName = includes.back() + ".pch-final";
   serialBufNames.push_back(pchName);
-  Reader = createASTReader(CI, pchName, SerialBufs, serialBufNames);
-  if (!Reader)
+  OutReader = createASTReader(CI, pchName, SerialBufs, serialBufNames);
+  if (!OutReader)
     return nullptr;
 
   auto ChainedSrc =
       llvm::makeIntrusiveRefCnt<ChainedIncludesSource>(std::move(CIs));
   return llvm::makeIntrusiveRefCnt<MultiplexExternalSemaSource>(
-      ChainedSrc.get(), Reader.get());
+      std::move(ChainedSrc), OutReader);
 }

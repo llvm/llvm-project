@@ -76,15 +76,14 @@ define <3 x ptr> @vector_gep_v3i32(<3 x ptr> %b, <3 x i32> %off) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    ext v4.16b, v3.16b, v3.16b, #8
+; CHECK-SD-NEXT:    mov d4, v3.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    saddw v2.2d, v2.2d, v4.2s
 ; CHECK-SD-NEXT:    saddw v0.2d, v0.2d, v3.2s
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vector_gep_v3i32:
@@ -250,9 +249,8 @@ define <3 x ptr> @vector_gep_v3i64_base(ptr %b, <3 x i64> %off) {
 ; CHECK-SD-NEXT:    dup v1.2d, x0
 ; CHECK-SD-NEXT:    add d2, d3, d2
 ; CHECK-SD-NEXT:    add v0.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vector_gep_v3i64_base:
@@ -285,19 +283,11 @@ entry:
 }
 
 define <1 x ptr> @vector_gep_v1i64_c10(ptr %b) {
-; CHECK-SD-LABEL: vector_gep_v1i64_c10:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #10 // =0xa
-; CHECK-SD-NEXT:    fmov d0, x0
-; CHECK-SD-NEXT:    fmov d1, x8
-; CHECK-SD-NEXT:    add d0, d0, d1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vector_gep_v1i64_c10:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    add x8, x0, #10
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vector_gep_v1i64_c10:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    add x8, x0, #10
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
 entry:
   %g = getelementptr i8, ptr %b, <1 x i64> <i64 10>
   ret <1 x ptr> %g
@@ -306,10 +296,8 @@ entry:
 define <2 x ptr> @vector_gep_v2i64_c10(ptr %b) {
 ; CHECK-SD-LABEL: vector_gep_v2i64_c10:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #10 // =0xa
-; CHECK-SD-NEXT:    dup v0.2d, x0
-; CHECK-SD-NEXT:    dup v1.2d, x8
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    add x8, x0, #10
+; CHECK-SD-NEXT:    dup v0.2d, x8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vector_gep_v2i64_c10:
@@ -327,15 +315,10 @@ entry:
 define <3 x ptr> @vector_gep_v3i64_c10(ptr %b) {
 ; CHECK-SD-LABEL: vector_gep_v3i64_c10:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #10 // =0xa
-; CHECK-SD-NEXT:    dup v0.2d, x0
-; CHECK-SD-NEXT:    fmov d3, x0
-; CHECK-SD-NEXT:    dup v2.2d, x8
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    add d2, d3, d2
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SD-NEXT:    add x8, x0, #10
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    fmov d2, d0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vector_gep_v3i64_c10:
@@ -356,10 +339,8 @@ entry:
 define <4 x ptr> @vector_gep_v4i64_c10(ptr %b) {
 ; CHECK-SD-LABEL: vector_gep_v4i64_c10:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #10 // =0xa
-; CHECK-SD-NEXT:    dup v0.2d, x0
-; CHECK-SD-NEXT:    dup v1.2d, x8
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    add x8, x0, #10
+; CHECK-SD-NEXT:    dup v0.2d, x8
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;
@@ -377,19 +358,11 @@ entry:
 }
 
 define <1 x ptr> @vector_gep_v1i64_cm10(ptr %b) {
-; CHECK-SD-LABEL: vector_gep_v1i64_cm10:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, #-10 // =0xfffffffffffffff6
-; CHECK-SD-NEXT:    fmov d1, x0
-; CHECK-SD-NEXT:    fmov d0, x8
-; CHECK-SD-NEXT:    add d0, d1, d0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: vector_gep_v1i64_cm10:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sub x8, x0, #10
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: vector_gep_v1i64_cm10:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sub x8, x0, #10
+; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    ret
 entry:
   %g = getelementptr i8, ptr %b, <1 x i64> <i64 -10>
   ret <1 x ptr> %g
@@ -398,10 +371,8 @@ entry:
 define <2 x ptr> @vector_gep_v2i64_cm10(ptr %b) {
 ; CHECK-SD-LABEL: vector_gep_v2i64_cm10:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, #-10 // =0xfffffffffffffff6
-; CHECK-SD-NEXT:    dup v1.2d, x0
+; CHECK-SD-NEXT:    sub x8, x0, #10
 ; CHECK-SD-NEXT:    dup v0.2d, x8
-; CHECK-SD-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vector_gep_v2i64_cm10:
@@ -419,15 +390,10 @@ entry:
 define <3 x ptr> @vector_gep_v3i64_cm10(ptr %b) {
 ; CHECK-SD-LABEL: vector_gep_v3i64_cm10:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, #-10 // =0xfffffffffffffff6
-; CHECK-SD-NEXT:    dup v0.2d, x0
-; CHECK-SD-NEXT:    fmov d3, x0
-; CHECK-SD-NEXT:    dup v2.2d, x8
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
-; CHECK-SD-NEXT:    add d2, d3, d2
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
+; CHECK-SD-NEXT:    sub x8, x0, #10
+; CHECK-SD-NEXT:    fmov d0, x8
+; CHECK-SD-NEXT:    fmov d1, d0
+; CHECK-SD-NEXT:    fmov d2, d0
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: vector_gep_v3i64_cm10:
@@ -448,10 +414,8 @@ entry:
 define <4 x ptr> @vector_gep_v4i64_cm10(ptr %b) {
 ; CHECK-SD-LABEL: vector_gep_v4i64_cm10:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, #-10 // =0xfffffffffffffff6
-; CHECK-SD-NEXT:    dup v1.2d, x0
+; CHECK-SD-NEXT:    sub x8, x0, #10
 ; CHECK-SD-NEXT:    dup v0.2d, x8
-; CHECK-SD-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-SD-NEXT:    mov v1.16b, v0.16b
 ; CHECK-SD-NEXT:    ret
 ;

@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zimop -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZIMOP
 
-declare i64 @llvm.riscv.mopr.i64(i64 %a, i64 %b)
-
 define i64 @mopr0_64(i64 %a) nounwind {
 ; RV64ZIMOP-LABEL: mopr0_64:
 ; RV64ZIMOP:       # %bb.0:
@@ -22,8 +20,6 @@ define i64 @mopr31_64(i64 %a) nounwind {
   ret i64 %tmp
 }
 
-declare i64 @llvm.riscv.moprr.i64(i64 %a, i64 %b, i64 %c)
-
 define i64 @moprr0_64(i64 %a, i64 %b) nounwind {
 ; RV64ZIMOP-LABEL: moprr0_64:
 ; RV64ZIMOP:       # %bb.0:
@@ -41,8 +37,6 @@ define i64 @moprr7_64(i64 %a, i64 %b) nounwind {
   %tmp = call i64 @llvm.riscv.moprr.i64(i64 %a, i64 %b, i64 7)
   ret i64 %tmp
 }
-
-declare i32 @llvm.riscv.mopr.i32(i32 %a, i32 %b)
 
 define signext i32 @mopr0_32(i32 signext %a) nounwind {
 ; RV64ZIMOP-LABEL: mopr0_32:
@@ -63,8 +57,6 @@ define signext i32 @mopr31_32(i32 signext %a) nounwind {
   %tmp = call i32 @llvm.riscv.mopr.i32(i32 %a, i32 31)
   ret i32 %tmp
 }
-
-declare i32 @llvm.riscv.moprr.i32(i32 %a, i32 %b, i32 %c)
 
 define signext i32 @moprr0_32(i32 signext %a, i32 signext %b) nounwind {
 ; RV64ZIMOP-LABEL: moprr0_32:

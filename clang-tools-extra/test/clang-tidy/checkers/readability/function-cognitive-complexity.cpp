@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-function-cognitive-complexity %t -- -config='{CheckOptions: {readability-function-cognitive-complexity.Threshold: 0}}' -- -std=c++11 -fblocks -fexceptions -w
+// RUN: %check_clang_tidy -std=c++11-or-later %s readability-function-cognitive-complexity %t -- -config='{CheckOptions: {readability-function-cognitive-complexity.Threshold: 0}}' -- -fblocks -fexceptions -w
 
 // any function should be checked.
 
@@ -65,7 +65,7 @@ end:
 //------------------------------ B1. Increments ------------------------------//
 //----------------------------------------------------------------------------//
 // Check that every thing listed in B1 of the specification does indeed       //
-// recieve the base increment, and that not-body does not increase nesting    //
+// receive the base increment, and that not-body does not increase nesting    //
 //----------------------------------------------------------------------------//
 
 // break does not increase cognitive complexity.
@@ -698,7 +698,7 @@ void unittest_b2_10() {
 //-------------------------- B3. Nesting increments --------------------------//
 //----------------------------------------------------------------------------//
 // Check that every thing listed in B3 of the specification does indeed       //
-// recieve the penalty of the current nesting level                           //
+// receive the penalty of the current nesting level                           //
 //----------------------------------------------------------------------------//
 
 void unittest_b3_00() {

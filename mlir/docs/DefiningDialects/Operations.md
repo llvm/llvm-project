@@ -89,7 +89,7 @@ their semantics via a special [TableGen backend][TableGenBackend]:
     help of the following constructs.
 *   The `Dialect` class: Operations belonging to one logical group are placed in
     the same dialect. The `Dialect` class contains dialect-level information.
-*   The `OpTrait` class hierarchy: They are used to specify special properties
+*   The `Trait` class hierarchy: They are used to specify special properties
     and constraints of the operation, including whether the operation has side
     effect or whether its output has the same shape as the input.
 *   The `ins`/`outs` marker: These are two special markers builtin to the
@@ -287,6 +287,11 @@ like `"0.5f"`, and an integer array default value should be specified as like
 The generated operation printing function will not print default-valued
 attributes when the attribute value is equal to the default.
 
+For enum attributes, you can use `DefaultValuedEnumAttr<EnumAttr, EnumCase>`
+instead of `DefaultValuedAttr`. This allows specifying the default value using a
+TableGen `EnumCase` variable instead of a raw string. For example 
+`DefaultValuedEnumAttr<SomeI64Enum, I64Case5>`.
+
 #### Confining attributes
 
 `ConfinedAttr` is provided as a general mechanism to help modelling further
@@ -306,6 +311,8 @@ Right now, the following primitive constraints are supported:
 *   `IntPositive`: Specifying an integer attribute whose value is positive
 *   `IntNonNegative`: Specifying an integer attribute whose value is
     non-negative
+*   `IntPowerOf2`: Specifying an integer attribute whose value is a power of
+    two > 0
 *   `ArrayMinCount<N>`: Specifying an array attribute to have at least `N`
     elements
 *   `ArrayMaxCount<N>`: Specifying an array attribute to have at most `N`
@@ -341,6 +348,10 @@ If the property's storage data type is different from its interface type,
 for example, in the case of array properties (which are stored as `SmallVector`s
 but use `ArrayRef` as an interface type), add the storage-type equivalent
 of the default value as the third argument.
+
+When using the `prop-dict` directive in an assembly format, the generated
+operation printing function will not print default-valued properties when the
+property value is equal to the default.
 
 To declare an optional property, use `OptionalProp<...>`.
 This wraps the underlying property in an `std::optional` and gives it a
@@ -434,7 +445,7 @@ various traits in the `mlir::OpTrait` namespace.
 Both operation traits, [interfaces](../Interfaces.md/#utilizing-the-ods-framework),
 and constraints involving multiple operands/attributes/results are provided as
 the third template parameter to the `Op` class. They should be deriving from
-the `OpTrait` class. See [Constraints](#constraints) for more information.
+the `Trait` class. See [Constraints](#constraints) for more information.
 
 ### Builder methods
 
@@ -472,7 +483,7 @@ The following builders are generated:
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   TypeRange resultTypes,
                   ValueRange operands,
-                  Properties properties,
+                  const Properties &properties,
                   ArrayRef<NamedAttribute> discardableAttributes = {});
 
 // All result-types/operands/attributes have one aggregate parameter.
@@ -512,7 +523,7 @@ static void build(OpBuilder &odsBuilder, OperationState &odsState,
 // Generated if return type can be inferred.
 static void build(OpBuilder &odsBuilder, OperationState &odsState,
                   ValueRange operands,
-                  Properties properties,
+                  const Properties &properties,
                   ArrayRef<NamedAttribute> discardableAttributes);
 
 // All operands/attributes have aggregate parameters.
@@ -527,6 +538,22 @@ static void build(OpBuilder &odsBuilder, OperationState &odsState,
 The first two forms provide basic uniformity so that we can create ops using
 the same form regardless of the exact op. This is particularly useful for
 implementing declarative pattern rewrites.
+
+For operations with non-empty properties, the aggregate builder that takes a
+mixed `attributes` array is deprecated. Use the overload that takes a typed
+`Properties` structure and a separate `discardableAttributes` array instead.
+The deprecated overload remains available for compatibility: it partitions the
+mixed array using the operation's statically known inherent-attribute and
+property names, converts that subset into `Properties`, and places only the
+remaining discardable attributes in `OperationState::attributes`. Defaults and
+result-type inference therefore observe the populated properties before the
+operation is created. Operations with empty properties retain the ordinary
+aggregate attribute builder without a deprecation.
+
+This applies to all aggregate builder variants, including builders with
+explicit or inferred result types and builders that derive result types from
+operands or the first attribute. The overload taking `Properties` and
+`discardableAttributes` is not deprecated.
 
 The third and fourth forms are good for use in manually written code, given that
 they provide better guarantee via signatures.
@@ -732,11 +759,12 @@ The available directives are as follows:
 
 *   `attr-dict`
 
-    -   Represents the attribute dictionary of the operation.
-    -   Any inherent attributes that are not used elsewhere in the format are
-        printed as part of the attribute dictionary unless a `prop-dict` is
-        present.
-    -   Discardable attributes are always part of the `attr-dict`.
+    -   Represents the attribute dictionary of the operation. Under the
+        default strict format rules, it contains only discardable attributes.
+        Inherent attributes must be bound directly in the format or covered by
+        `prop-dict`. The deprecated `useStrictPropertiesInAssemblyFormat = 0`
+        setting temporarily allows inherent attributes to mix with discardable
+        attributes in `attr-dict`.
 
 *   `attr-dict-with-keyword`
 
@@ -745,9 +773,23 @@ The available directives are as follows:
 
 *   `prop-dict`
 
-    -   Represents the properties of the operation converted to a dictionary.
-    -   Any property or inherent attribute that are not used elsewhere in the
-        format are parsed and printed as part of this dictionary.
+    -   Represents the properties of the operation. The generated parser
+        accepts a `<key = value, ...>` list. Explicit property parsers and
+        inherent-attribute parsers must consume exactly one value and leave the
+        comma separating it from the next entry unconsumed. Properties relying
+        on the default parser use attribute conversion instead when no
+        `FieldParser` specialization is available or when the selected
+        specialization declares `isKeyValueCompositional = false`.
+        `UnitAttr` and `UnitProp` entries use a presence-only `<key>` spelling
+        and are omitted when absent. The parser also accepts `<key = unit>` for
+        compatibility.
+    -   The legacy `<{key = attribute, ...}>` dictionary spelling is also
+        accepted when parsing. The generated printer uses the key-value
+        spelling and the same custom-printer or attribute-conversion choice.
+        Operations that provide a custom `printProperties` hook should set
+        `hasCustomPropertiesPrinter` to suppress the shadowed generated helper.
+    -   Any property or inherent attribute that is not used elsewhere in the
+        format is parsed and printed as part of this list.
     -   If present, the `attr-dict` will not contain any inherent attributes.
 
 *   `custom < UserDirective > ( Params )`
@@ -763,10 +805,15 @@ The available directives are as follows:
     -   The constraints on `inputs` and `outputs` are the same as the `input` of
         the `type` directive.
 
-*   ``oilist ( `keyword` elements | `otherKeyword` elements ...)``
+*   ``oilist ( `keyword` elements | `otherKeyword` elements ...)`` or
+    ``oilist < `separator` > ( `keyword` elements | `otherKeyword` elements ...)``
 
     -   Represents an optional order-independent list of clauses. Each clause
         has a keyword and corresponding assembly format.
+    -   The separator specification is optional. When present, the separator
+        is parsed and printed between clauses. For example,
+        ``oilist<`,`>(...)`` formats a comma-separated list without a trailing
+        comma.
     -   Each clause can appear 0 or 1 time (in any order).
     -   Only literals, types and variables can be used within an oilist element.
     -   All the variables must be optional or variadic.
@@ -811,6 +858,20 @@ The available directives are as follows:
         `vector.multi_reduction <minf>, ...` but using `qualified($kind)` in the
         declarative assembly format will print it instead as:
         `vector.multi_reduction #vector.kind<minf>, ...`.
+
+*   `enum ( attribute )`
+
+    -   Represents the symbolic value of an enum-backed attribute without the
+        attribute's dialect prefix, mnemonic, or custom assembly format.
+    -   The argument must be an enum attribute. For example, if `$kind` has the
+        complete form `#vector.kind<minf>`, `enum($kind)` prints `minf`, `$kind`
+        prints the attribute's assembly-format body `<minf>`, and
+        `qualified($kind)` prints the complete attribute `#vector.kind<minf>`.
+    -   Bit enums must define a zero-valued case so every valid bitmask has a
+        symbolic spelling. An unquoted comma-separated bit enum cannot be
+        followed by a comma literal, and a space-separated bit enum cannot be
+        followed by a literal that spells one of its cases, because the two
+        uses would be ambiguous.
 
 #### Literals
 
@@ -1080,6 +1141,8 @@ to:
     directives.
 1.  Unless all non-attribute properties appear in the format, the `prop-dict`
     directive must be present.
+1.  Every inherent attribute and property must either appear in the format or
+    be covered by the `prop-dict` directive.
 1.  The `attr-dict` directive must always be present.
 1.  Must not contain overlapping information; e.g. multiple instances of
     'attr-dict', types, operands, etc.
@@ -1168,6 +1231,32 @@ OpDefinitionsGen generates an operation class and an
 comma-separated list of all defined ops, which can be included and enabled by
 defining `GET_OP_LIST`.
 
+#### Registering with the Dialect
+
+The generated declarations of a dialect that sets its
+`useDefaultOperationRegistration` field to `1` declare
+`register<DialectClass>Operations`, which registers all operations of the
+generated file with the dialect.
+The hook is defined alongside the operation classes and called by the
+generated dialect constructor before `initialize`.
+The operations must therefore not be added again in `initialize`.
+
+Other dialects register their operations themselves, e.g. with the list enabled
+by `GET_OP_LIST`, which every generated file contains.
+
+Each generated file of a dialect using the default op registration defines
+`register<DialectClass>Operations`. A dialect whose operations are spread over
+several `.td` files should therefore make them
+[partitions](#logical-sharding-with-op-partitions) of one `.td` file that
+includes the others, so that a single hook registers all of them.
+
+Operations that are added to a dialect from outside of it, e.g. by an
+extension in another library, must name their hook differently to avoid
+multiple definitions. `-op-registration-name=<Name>` names the hook
+`register<Name>Operations`. The option must be passed to both the declaration
+and the definition generator. Hooks with a custom name are never called by the
+generated dialect constructor.
+
 #### Class name and namespaces
 
 For each operation, its generated C++ class name is the symbol `def`ed with
@@ -1243,14 +1332,10 @@ defining `static` methods in the same source file, you should declare them in a
 shared header and define them in their own source file.
 
 The op registration hooks are also sharded, because the template instantiation
-can take a very long time to compile. Operations should be registered in your
-dialect like:
-
-```c++
-void MyDialect::initialize() {
-  registerMyDialectOperations(this);
-}
-```
+can take a very long time to compile. `register<DialectClass>Operations` calls
+the hooks of all shards and, as without sharding, is called by the generated
+dialect constructor (see
+[Registering with the Dialect](#registering-with-the-dialect)).
 
 CMake and Bazel functions are included to make sharding dialects easier.
 Assuming you have organized your operation utility functions into their own
@@ -1309,6 +1394,93 @@ cc_library(
 )
 ```
 
+#### Logical Sharding with Op Partitions
+
+Sharding by index splits the ops arbitrarily: which shard an op ends up in
+depends on the number of shards and on the names of all other ops. As an
+alternative, a dialect can shard its ops "logically" by grouping them into
+named *op partitions*, such as arithmetic, memory or control flow ops. Each
+partition is generated into its own declaration and definition files, but all
+ops are still registered in one dialect.
+
+Partitions are `Partition` records with a name, which must be a C++
+identifier. Every op sets its `partition`, typically in a base class or with a
+`let` around a group of ops:
+
+```tablegen
+def MyDialect_ArithPartition : Partition<"Arith">;
+def MyDialect_MemoryPartition : Partition<"Memory">;
+
+class MyDialect_Op<string mnemonic, list<Trait> traits = []>
+    : Op<MyDialect, mnemonic, traits> {
+  // Ops are in partition `Arith`, unless they set another partition.
+  let partition = MyDialect_ArithPartition;
+}
+
+def AddOp : MyDialect_Op<"add"> { ... }
+def MulOp : MyDialect_Op<"mul"> { ... }
+
+let partition = MyDialect_MemoryPartition in {
+def LoadOp : MyDialect_Op<"load"> { ... }
+def StoreOp : MyDialect_Op<"store"> { ... }
+}
+```
+
+Passing `-op-partition=<partition>` with a partition name to `-gen-op-decls` and
+`-gen-op-defs` generates only the ops of that partition. Every generated op must
+then be in a partition, and the specified partition must have ops. Without
+`-op-partition`, `partition` is ignored, so ops can be assigned to partitions
+before their files are generated by partition.
+
+The partitions of a dialect are the partitions of its ops. With
+`-op-partition`, `-gen-op-decls` declares a registration hook
+`register<DialectClass>Operations<Partition>` for every partition of the
+dialect, and `register<DialectClass>Operations`, which calls the hooks of all
+partitions. `-gen-op-defs` defines the hook of the specified partition, and the
+first partition by name also defines `register<DialectClass>Operations`, which,
+as without partitions, is called by the generated dialect constructor.
+
+A partition for which no definitions are compiled results in a link error
+for its hook.
+
+In CMake, generate and include the files of each partition:
+
+```cmake
+set(LLVM_TARGET_DEFINITIONS MyDialectOps.td)
+foreach(partition Arith Memory)
+  mlir_tablegen(MyDialect${partition}Ops.h.inc -gen-op-decls -op-partition=${partition})
+  mlir_tablegen(MyDialect${partition}Ops.cpp.inc -gen-op-defs -op-partition=${partition})
+endforeach()
+```
+
+Since the generated declarations of a partition forward declare the ops of all
+other partitions, each partition can get its own header, so that users only
+include the declarations of the ops they use:
+
+```c++
+// MyDialectArithOps.h
+#include "MyDialectBase.h" // The dialect, its attributes and types.
+
+#define GET_OP_CLASSES
+#include "MyDialectArithOps.h.inc"
+
+// MyDialect.h, for users that want all ops.
+#include "MyDialectArithOps.h"
+#include "MyDialectMemoryOps.h"
+
+// MyDialectArithOps.cpp, a natural home for the C++ implementations of the
+// arithmetic ops as well.
+#include "MyDialectArithOps.h"
+#include "OpUtils.h"
+
+#define GET_OP_CLASSES
+#include "MyDialectArithOps.cpp.inc"
+```
+
+As with index sharding, utilities shared by the generated op definitions must
+be declared in a header shared by the compilation units. `-op-partition` cannot
+be combined with `-op-shard-count`.
+
 ## Constraints
 
 Constraint is a core concept in table-driven operation definition: operation
@@ -1353,7 +1525,7 @@ results. These constraints should be specified as the `Op` class template
 parameter as described in
 [Operation traits and constraints](#operation-traits-and-constraints).
 
-Multi-entity constraints are modeled as `PredOpTrait` (a subclass of `OpTrait`)
+Multi-entity constraints are modeled as `PredOpTrait` (a subclass of `Trait`)
 in [`OpBase.td`][OpBase].A bunch of constraint primitives are provided to help
 specification. See [`OpBase.td`][OpBase] for the complete list.
 
@@ -1364,7 +1536,7 @@ commutative or not, whether is a terminator, etc. These constraints should be
 specified as the `Op` class template parameter as described in
 [Operation traits and constraints](#operation-traits-and-constraints).
 
-Traits are modeled as `NativeOpTrait` (a subclass of `OpTrait`) in
+Traits are modeled as `NativeTrait` (a subclass of `Trait`) in
 [`OpBase.td`][OpBase]. They are backed and will be translated into the
 corresponding C++ `mlir::OpTrait` classes.
 
@@ -1556,14 +1728,6 @@ namespace llvm {
 template<> struct DenseMapInfo<Outer::Inner::MyIntEnum> {
   using StorageInfo = llvm::DenseMapInfo<uint32_t>;
 
-  static inline Outer::Inner::MyIntEnum getEmptyKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline Outer::Inner::MyIntEnum getTombstoneKey() {
-    return static_cast<Outer::Inner::MyIntEnum>(StorageInfo::getTombstoneKey());
-  }
-
   static unsigned getHashValue(const Outer::Inner::MyIntEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));
   }
@@ -1622,6 +1786,12 @@ def MyBitEnum: I32BitEnum<"MyBitEnum", "An example bit enum",
 }
 ```
 
+The `separator` is `"|"`, `","`, or a space `" "`. Spaces around `|` or `,`,
+e.g. `" | "`, are printed but optional when parsing. With a space separator, the
+cases are printed as a sequence of keywords, e.g. `Bit1 Bit2`, and parsed until
+the next token is not a case keyword. Only `BitEnum` supports a space separator;
+the legacy `BitEnumAttr` requires `|` or `,`.
+
 We can have:
 
 ```c++
@@ -1646,6 +1816,15 @@ inline constexpr MyBitEnum operator&(MyBitEnum a, MyBitEnum b) {
 }
 inline constexpr MyBitEnum operator^(MyBitEnum a, MyBitEnum b) {
   return static_cast<MyBitEnum>(static_cast<uint32_t>(a) ^ static_cast<uint32_t>(b));
+}
+inline constexpr MyBitEnum &operator|=(MyBitEnum &a, MyBitEnum b) {
+  return a = a | b;
+}
+inline constexpr MyBitEnum &operator&=(MyBitEnum &a, MyBitEnum b) {
+  return a = a & b;
+}
+inline constexpr MyBitEnum &operator^=(MyBitEnum &a, MyBitEnum b) {
+  return a = a ^ b;
 }
 inline constexpr MyBitEnum operator~(MyBitEnum bits) {
   // Ensure only bits that can be present in the enum are set
@@ -1676,14 +1855,6 @@ inline ::std::optional<MyBitEnum> symbolizeEnum<MyBitEnum>(::llvm::StringRef str
 namespace llvm {
 template<> struct DenseMapInfo<::MyBitEnum> {
   using StorageInfo = llvm::DenseMapInfo<uint32_t>;
-
-  static inline ::MyBitEnum getEmptyKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getEmptyKey());
-  }
-
-  static inline ::MyBitEnum getTombstoneKey() {
-    return static_cast<::MyBitEnum>(StorageInfo::getTombstoneKey());
-  }
 
   static unsigned getHashValue(const ::MyBitEnum &val) {
     return StorageInfo::getHashValue(static_cast<uint32_t>(val));
@@ -1745,12 +1916,15 @@ There are several mechanisms for creating an `Attribute` whose values are
 taken from a `*Enum`.
 
 The most common of these is to use the `EnumAttr` class, which takes
-an `EnumInfo` (either a `IntEnum` or `BitEnum`) as a parameter and constructs
-an attribute that holds one argument - value of the enum. This attribute
-is defined within a dialect and can have its assembly format customized to,
-for example, print angle brackets around the enum value or assign a mnemonic.
+an `EnumInfo` (either an `IntEnum` or `BitEnum`) as a parameter and constructs
+an attribute with one parameter: the value of the enum. This attribute
+is defined within a dialect and, by default, prints its value in angle brackets,
+for example `#my_dialect.kind<case>`. In a declarative operation assembly
+format, use `enum($kind)` to print only the symbolic value `case`. The
+attribute's assembly format can still be overridden when different standalone
+syntax is required.
 
-An older form involves using the `*IntEnumAttr` and `*BitEnumATtr` classes
+An older form involves using the `*IntEnumAttr` and `*BitEnumAttr` classes
 and their corresponding `*EnumAttrCase` classes (which can be used
 anywhere a `*EnumCase` is needed). These classes store their values
 as a `SignlessIntegerAttr` of their bitwidth, imposing the constraint on it
@@ -1767,6 +1941,9 @@ property struct and for the operation's verifier to check that the enum's value
 is a valid value for the enum.
 
 The basic wrapper is `EnumProp`, which simply takes an `EnumInfo`.
+`DefaultValuedEnumProp` takes an `EnumInfo` and one of its cases, which
+becomes the property's default value and is elided from `prop-dict` and from
+an optional group anchored on the property.
 
 A less ambiguous syntax, namely putting a mnemonic and `<>`s surrounding
 the enum is generated with `NamedEnumProp`, which takes a `*EnumInfo`

@@ -203,7 +203,7 @@ class ExprAST {
 
 public:
   ExprAST(SourceLocation Loc = CurLoc) : Loc(Loc) {}
-  virtual ~ExprAST() {}
+  virtual ~ExprAST() = default;
   virtual Value *codegen() = 0;
   int getLine() const { return Loc.Line; }
   int getCol() const { return Loc.Col; }
@@ -893,8 +893,7 @@ Function *getFunction(std::string Name) {
 /// the function.  This is used for mutable variables etc.
 static AllocaInst *CreateEntryBlockAlloca(Function *TheFunction,
                                           StringRef VarName) {
-  IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
-                   TheFunction->getEntryBlock().begin());
+  IRBuilder<> TmpB(TheFunction->getEntryBlock().begin());
   return TmpB.CreateAlloca(Type::getDoubleTy(*TheContext), nullptr, VarName);
 }
 
@@ -1324,9 +1323,10 @@ static void InitializeModule() {
   // Open a new module.
   TheContext = std::make_unique<LLVMContext>();
   TheModule = std::make_unique<Module>("my cool jit", *TheContext);
+  TheModule->setTargetTriple(TheJIT->getTargetTriple());
   TheModule->setDataLayout(TheJIT->getDataLayout());
 
-  Builder = std::make_unique<IRBuilder<>>(*TheContext);
+  Builder = std::make_unique<IRBuilder<>>(*TheModule);
 }
 
 static void HandleDefinition() {

@@ -71,14 +71,12 @@ mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
         IntegerType::get(type.getContext(), getIndexBitwidth(params)));
 
   // Sizes of vector types are rounded up to those of types with closest
-  // power-of-two number of elements in the innermost dimension. We also assume
-  // there is no bit-packing at the moment element sizes are taken in bytes and
-  // multiplied with 8 bits.
+  // power-of-two number of elements in the innermost dimension.
   // TODO: make this extensible.
   if (auto vecType = dyn_cast<VectorType>(type)) {
     uint64_t baseSize = vecType.getNumElements() / vecType.getShape().back() *
                         llvm::PowerOf2Ceil(vecType.getShape().back()) *
-                        dataLayout.getTypeSize(vecType.getElementType()) * 8;
+                        dataLayout.getTypeSizeInBits(vecType.getElementType());
     return llvm::TypeSize::get(baseSize, vecType.isScalable());
   }
 
@@ -364,10 +362,7 @@ static DataLayoutSpecInterface getSpec(Operation *operation) {
   return llvm::TypeSwitch<Operation *, DataLayoutSpecInterface>(operation)
       .Case<ModuleOp, DataLayoutOpInterface>(
           [&](auto op) { return op.getDataLayoutSpec(); })
-      .Default([](Operation *) {
-        llvm_unreachable("expected an op with data layout spec");
-        return DataLayoutSpecInterface();
-      });
+      .DefaultUnreachable("expected an op with data layout spec");
 }
 
 static TargetSystemSpecInterface getTargetSystemSpec(Operation *operation) {
@@ -392,7 +387,7 @@ collectParentLayouts(Operation *leaf,
   for (Operation *parent = leaf->getParentOp(); parent != nullptr;
        parent = parent->getParentOp()) {
     llvm::TypeSwitch<Operation *>(parent)
-        .Case<ModuleOp>([&](ModuleOp op) {
+        .Case([&](ModuleOp op) {
           // Skip top-level module op unless it has a layout. Top-level module
           // without layout is most likely the one implicitly added by the
           // parser and it doesn't have location. Top-level null specification
@@ -404,7 +399,7 @@ collectParentLayouts(Operation *leaf,
           if (opLocations)
             opLocations->push_back(op.getLoc());
         })
-        .Case<DataLayoutOpInterface>([&](DataLayoutOpInterface op) {
+        .Case([&](DataLayoutOpInterface op) {
           specs.push_back(op.getDataLayoutSpec());
           if (opLocations)
             opLocations->push_back(op.getLoc());
@@ -557,6 +552,18 @@ static T cachedLookup(Type t, DenseMap<Type, T> &cache,
   return result.first->second;
 }
 
+bool mlir::DataLayout::hasExactTypeEntry(Type type) const {
+  checkValid();
+  if (!originalLayout)
+    return false;
+  return cachedLookup<bool>(type, typeEntries, [&](Type ty) {
+    return llvm::any_of(
+        originalLayout.getEntries(), [ty](DataLayoutEntryInterface entry) {
+          return llvm::dyn_cast_if_present<Type>(entry.getKey()) == ty;
+        });
+  });
+}
+
 llvm::TypeSize mlir::DataLayout::getTypeSize(Type t) const {
   checkValid();
   return cachedLookup<llvm::TypeSize>(t, sizes, [&](Type ty) {
@@ -579,6 +586,10 @@ llvm::TypeSize mlir::DataLayout::getTypeSizeInBits(Type t) const {
       return iface.getTypeSizeInBits(ty, *this, list);
     return detail::getDefaultTypeSizeInBits(ty, *this, list);
   });
+}
+
+llvm::TypeSize mlir::DataLayout::getTypeAllocSize(Type t) const {
+  return llvm::alignTo(getTypeSize(t), getTypeABIAlignment(t));
 }
 
 uint64_t mlir::DataLayout::getTypeABIAlignment(Type t) const {
@@ -815,10 +826,15 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
     if (isa<IndexType>(sampleType)) {
       assert(kvp.second.size() == 1 &&
              "expected one data layout entry for non-parametric 'index' type");
-      if (!isa<IntegerAttr>(kvp.second.front().getValue()))
+      auto width = dyn_cast<IntegerAttr>(kvp.second.front().getValue());
+      if (!width)
         return emitError(loc)
                << "expected integer attribute in the data layout entry for "
                << sampleType;
+      if (width.getValue().isZero() ||
+          width.getValue().ugt(IntegerType::kMaxWidth))
+        return emitError(loc) << "index bit width must be between 1 and "
+                              << IntegerType::kMaxWidth;
       continue;
     }
 

@@ -73,11 +73,13 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
-
-  void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args) const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
+
+  bool IsAArch64OutlineAtomicsDefault(
+      const llvm::opt::ArgList &Args) const override {
+    return true;
+  }
 
   std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
                             FileType Type = ToolChain::FT_Static,
@@ -92,7 +94,9 @@ public:
   }
   unsigned GetDefaultDwarfVersion() const override { return 2; }
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:
   Tool *buildAssembler() const override;

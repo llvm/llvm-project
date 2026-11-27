@@ -14,9 +14,9 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -34,7 +34,7 @@
 /// user to pick which implementation will be used to propagate variable
 /// locations.
 
-#define DEBUG_TYPE "livedebugvalues"
+#define DEBUG_TYPE "live-debug-values"
 
 using namespace llvm;
 
@@ -69,7 +69,7 @@ public:
   static char ID;
 
   LiveDebugValuesLegacy();
-  ~LiveDebugValuesLegacy() = default;
+  ~LiveDebugValuesLegacy() override = default;
 
   /// Calculate the liveness information for the given machine function.
   bool runOnMachineFunction(MachineFunction &MF) override;
@@ -101,9 +101,7 @@ INITIALIZE_PASS(LiveDebugValuesLegacy, DEBUG_TYPE, "Live DEBUG_VALUE analysis",
                 false, false)
 
 /// Default construct and initialize the pass.
-LiveDebugValuesLegacy::LiveDebugValuesLegacy() : MachineFunctionPass(ID) {
-  initializeLiveDebugValuesLegacyPass(*PassRegistry::getPassRegistry());
-}
+LiveDebugValuesLegacy::LiveDebugValuesLegacy() : MachineFunctionPass(ID) {}
 
 LiveDebugValues::LiveDebugValues() {
   InstrRefImpl =
@@ -114,6 +112,10 @@ LiveDebugValues::LiveDebugValues() {
 PreservedAnalyses
 LiveDebugValuesPass::run(MachineFunction &MF,
                          MachineFunctionAnalysisManager &MFAM) {
+
+  const Module *M = MF.getFunction().getParent();
+  bool ShouldEmitDebugEntryValues =
+      MF.getTarget().shouldEmitDebugEntryValues(M->getDebuggerTuning());
   if (!LiveDebugValues().run(MF, ShouldEmitDebugEntryValues))
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -121,17 +123,12 @@ LiveDebugValuesPass::run(MachineFunction &MF,
   return PA;
 }
 
-void LiveDebugValuesPass::printPipeline(
-    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
-  OS << MapClassName2PassName(name());
-  if (ShouldEmitDebugEntryValues)
-    OS << "<emit-debug-entry-values>";
-}
-
 bool LiveDebugValuesLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *TPC = &getAnalysis<TargetPassConfig>();
+  const Module *M = MF.getFunction().getParent();
   return LiveDebugValues().run(
-      MF, TPC->getTM<TargetMachine>().Options.ShouldEmitDebugEntryValues());
+      MF, TPC->getTM<TargetMachine>().shouldEmitDebugEntryValues(
+              M->getDebuggerTuning()));
 }
 
 bool LiveDebugValues::run(MachineFunction &MF,

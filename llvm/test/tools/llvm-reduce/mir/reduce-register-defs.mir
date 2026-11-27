@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir --delta-passes=register-defs -mtriple=amdgcn-amd-amdhsa --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS0,ALL --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir --delta-passes=register-defs -mtriple=amdgpu9.00-amd-amdhsa --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS0,ALL --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --match-full-lines --check-prefixes=RESULT0,ALL %s < %t
 
 # ALL-LABEL: name: func0
@@ -13,7 +13,6 @@
 
 ---
 name: func0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -36,7 +35,6 @@ body:             |
 # RESULT0-NEXT: %super.sub1:vreg_64 = IMPLICIT_DEF
 ---
 name: subreg_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -59,7 +57,6 @@ body:             |
 # RESULT0-NOT: %redef:vgpr_32 = IMPLICIT_DEF
 ---
 name: multi_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -80,7 +77,6 @@ body:             |
 
 ---
 name: multi_def_keep_two
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -98,7 +94,6 @@ body:             |
 # RESULT0: undef %redef.sub1:vreg_64 = IMPLICIT_DEF
 ---
 name: multi_def_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -117,7 +112,6 @@ body:             |
 # RESULT0-NOT: implicit-def %redef
 ---
 name: multi_def_subreg_same_subreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -135,7 +129,6 @@ body:             |
 # RESULT0: %mac1:vgpr_32 = IMPLICIT_DEF
 ---
 name: tied_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -153,7 +146,6 @@ body:             |
 # RESULT0: %fmul:vgpr(s32) = G_IMPLICIT_DEF
 ---
 name: generic_reg
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -173,7 +165,6 @@ body:             |
 # RESULT0-NEXT: S_CBRANCH_EXECZ %bb.2, implicit $exec
 ---
 name: terminator_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr8_sgpr9

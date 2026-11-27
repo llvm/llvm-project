@@ -26,13 +26,14 @@
 
 #include <initializer_list>
 
-LLVM_ABI extern llvm::cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
-LLVM_ABI extern llvm::cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
-LLVM_ABI extern llvm::cl::opt<unsigned>
-    MemProfMinAveLifetimeAccessDensityHotThreshold;
-LLVM_ABI extern llvm::cl::opt<bool> MemProfUseHotHints;
-
 namespace llvm {
+
+LLVM_ABI extern cl::opt<float> MemProfLifetimeAccessDensityColdThreshold;
+LLVM_ABI extern cl::opt<unsigned> MemProfAveLifetimeColdThreshold;
+LLVM_ABI extern cl::opt<unsigned>
+    MemProfMinAveLifetimeAccessDensityHotThreshold;
+LLVM_ABI extern cl::opt<bool> MemProfUseHotHints;
+
 namespace memprof {
 
 namespace {
@@ -160,8 +161,17 @@ TEST(MemProf, FillsValue) {
           {"abc", 10, 5, 30},
       })));
 
+  // A frame whose line (0, e.g. missing debug info) is below the function's
+  // start line; its line offset must be clamped to 0 rather than wrap around.
+  EXPECT_CALL(*Symbolizer, symbolizeInlinedCode(SectionedAddress{0x4000},
+                                                specifier(), false))
+      .Times(1)
+      .WillRepeatedly(Return(makeInliningInfo({
+          {"def", 0, 4, 0},
+      })));
+
   CallStackMap CSM;
-  CSM[0x1] = {0x1000, 0x2000, 0x3000};
+  CSM[0x1] = {0x1000, 0x2000, 0x3000, 0x4000};
 
   llvm::MapVector<uint64_t, MemInfoBlock> Prof;
   Prof[0x1].AllocCount = 1;
@@ -182,11 +192,12 @@ TEST(MemProf, FillsValue) {
   // bar() { foo(); }                Y               Y
   // inline xyz() { bar(); }         N               Y
   // abc() { xyz(); }                N               Y
+  // def() { abc(); }                N               Y
 
-  // We expect 4 records. We attach alloc site data to foo and bar, i.e.
+  // We expect 5 records. We attach alloc site data to foo and bar, i.e.
   // all frames bottom up until we find a non-inline frame. We attach call site
-  // data to bar, xyz and abc.
-  ASSERT_THAT(Records, SizeIs(4));
+  // data to bar, xyz, abc and def.
+  ASSERT_THAT(Records, SizeIs(5));
 
   // Check the memprof record for foo.
   const llvm::GlobalValue::GUID FooId = memprof::getGUID("foo");
@@ -202,6 +213,8 @@ TEST(MemProf, FillsValue) {
               FrameContains("xyz", 5U, 30U, true));
   EXPECT_THAT(Foo.AllocSites[0].CallStack[3],
               FrameContains("abc", 5U, 30U, false));
+  EXPECT_THAT(Foo.AllocSites[0].CallStack[4],
+              FrameContains("def", 0U, 0U, false));
   EXPECT_TRUE(Foo.CallSites.empty());
 
   // Check the memprof record for bar.
@@ -218,6 +231,8 @@ TEST(MemProf, FillsValue) {
               FrameContains("xyz", 5U, 30U, true));
   EXPECT_THAT(Bar.AllocSites[0].CallStack[3],
               FrameContains("abc", 5U, 30U, false));
+  EXPECT_THAT(Bar.AllocSites[0].CallStack[4],
+              FrameContains("def", 0U, 0U, false));
 
   EXPECT_THAT(Bar.CallSites,
               ElementsAre(testing::Field(
@@ -247,6 +262,16 @@ TEST(MemProf, FillsValue) {
                   &CallSiteInfo::Frames,
                   ElementsAre(FrameContains("xyz", 5U, 30U, true),
                               FrameContains("abc", 5U, 30U, false)))));
+
+  // Check the memprof record for def.
+  const llvm::GlobalValue::GUID DefId = memprof::getGUID("def");
+  ASSERT_TRUE(Records.contains(DefId));
+  const MemProfRecord &Def = Records[DefId];
+  EXPECT_TRUE(Def.AllocSites.empty());
+  EXPECT_THAT(Def.CallSites,
+              ElementsAre(testing::Field(
+                  &CallSiteInfo::Frames,
+                  ElementsAre(FrameContains("def", 0U, 0U, false)))));
 }
 
 TEST(MemProf, PortableWrapper) {
@@ -271,35 +296,6 @@ TEST(MemProf, PortableWrapper) {
   EXPECT_EQ(1UL, ReadBlock.getAllocCount());
   EXPECT_EQ(7ULL, ReadBlock.getTotalAccessCount());
   EXPECT_EQ(3UL, ReadBlock.getAllocCpuId());
-}
-
-TEST(MemProf, RecordSerializationRoundTripVerion2) {
-  const auto Schema = getFullSchema();
-
-  MemInfoBlock Info(/*size=*/16, /*access_count=*/7, /*alloc_timestamp=*/1000,
-                    /*dealloc_timestamp=*/2000, /*alloc_cpu=*/3,
-                    /*dealloc_cpu=*/4, /*Histogram=*/0, /*HistogramSize=*/0);
-
-  llvm::SmallVector<CallStackId> CallStackIds = {0x123, 0x456};
-
-  llvm::SmallVector<CallStackId> CallSiteIds = {0x333, 0x444};
-
-  IndexedMemProfRecord Record;
-  for (const auto &CSId : CallStackIds) {
-    // Use the same info block for both allocation sites.
-    Record.AllocSites.emplace_back(CSId, Info);
-  }
-  for (auto CSId : CallSiteIds)
-    Record.CallSites.push_back(IndexedCallSiteInfo(CSId));
-
-  std::string Buffer;
-  llvm::raw_string_ostream OS(Buffer);
-  Record.serialize(Schema, OS, Version2);
-
-  const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
-      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()), Version2);
-
-  EXPECT_EQ(Record, GotRecord);
 }
 
 TEST(MemProf, RecordSerializationRoundTripVersion4) {
@@ -347,7 +343,7 @@ TEST(MemProf, RecordSerializationRoundTripVersion4) {
   EXPECT_EQ(ExpectedRecord, GotRecord);
 }
 
-TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
+TEST(MemProf, RecordSerializationRoundTripVersion4HotColdSchema) {
   const auto Schema = getHotColdSchema();
 
   MemInfoBlock Info;
@@ -389,10 +385,13 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
 
   std::string Buffer;
   llvm::raw_string_ostream OS(Buffer);
-  Record.serialize(Schema, OS, Version2);
+  // Need a dummy map for V4 serialization
+  llvm::DenseMap<CallStackId, LinearCallStackId> DummyMap = {
+      {0x123, 1}, {0x456, 2}, {0x333, 3}, {0x444, 4}};
+  Record.serialize(Schema, OS, Version4, &DummyMap);
 
   const IndexedMemProfRecord GotRecord = IndexedMemProfRecord::deserialize(
-      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()), Version2);
+      Schema, reinterpret_cast<const unsigned char *>(Buffer.data()), Version4);
 
   // Verify that Schema comes back correctly after deserialization. Technically,
   // the comparison between Record and GotRecord below includes the comparison
@@ -401,7 +400,16 @@ TEST(MemProf, RecordSerializationRoundTripVersion2HotColdSchema) {
   EXPECT_EQ(GotRecord.AllocSites[0].Info.getSchema(), SchemaBitSet);
   EXPECT_EQ(GotRecord.AllocSites[1].Info.getSchema(), SchemaBitSet);
 
-  EXPECT_EQ(Record, GotRecord);
+  // Create the expected record using the linear IDs from the dummy map.
+  IndexedMemProfRecord ExpectedRecord;
+  for (const auto &CSId : CallStackIds) {
+    ExpectedRecord.AllocSites.emplace_back(DummyMap[CSId], Info, Schema);
+  }
+  for (const auto &CSId : CallSiteIds) {
+    ExpectedRecord.CallSites.emplace_back(DummyMap[CSId]);
+  }
+
+  EXPECT_EQ(ExpectedRecord, GotRecord);
 }
 
 TEST(MemProf, SymbolizationFilter) {
@@ -451,8 +459,10 @@ TEST(MemProf, SymbolizationFilter) {
   CSM[0x2] = {0x1000, 0x2000, 0x5000};
 
   llvm::MapVector<uint64_t, MemInfoBlock> Prof;
-  Prof[0x1].AllocCount = 1;
+  // Put the entry to be dropped before the surviving entry so filtering
+  // compacts the MapVector and updates the surviving entry's index.
   Prof[0x2].AllocCount = 1;
+  Prof[0x1].AllocCount = 1;
 
   auto Seg = makeSegments();
 

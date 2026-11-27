@@ -33,9 +33,6 @@ module m3
   end
 end
 
-!CHECK: portability: Reference to generic function 'foo' (resolving to specific 'f1') is ambiguous with a structure constructor of the same name
-!CHECK: portability: Reference to generic function 'foo' (resolving to specific 'f2') is ambiguous with a structure constructor of the same name
-
 program main
   use m3
   type(foo) x

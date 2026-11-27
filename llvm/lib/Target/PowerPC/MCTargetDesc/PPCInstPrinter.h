@@ -13,23 +13,24 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCINSTPRINTER_H
 #define LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCINSTPRINTER_H
 
+#include "MCTargetDesc/PPCMCOptions.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
 class PPCInstPrinter : public MCInstPrinter {
+  const PPCMCOptions &CLOpts;
   Triple TT;
 private:
   bool showRegistersWithPercentPrefix(const char *RegName) const;
   bool showRegistersWithPrefix() const;
-  const char *getVerboseConditionRegName(unsigned RegNum,
+  const char *getVerboseConditionRegName(MCRegister Reg,
                                          unsigned RegEncoding) const;
 
 public:
   PPCInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
-                 const MCRegisterInfo &MRI, Triple T)
-    : MCInstPrinter(MAI, MII, MRI), TT(T) {}
+                 const MCRegisterInfo &MRI, Triple T);
 
   void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
@@ -56,30 +57,24 @@ public:
   void printATBitsAsHint(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
 
-  void printU1ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU2ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU3ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU4ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printS5ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU5ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU6ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU7ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU8ImmOperand(const MCInst *MI, unsigned OpNo,
-                         const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU10ImmOperand(const MCInst *MI, unsigned OpNo,
-                          const MCSubtargetInfo &STI, raw_ostream &O);
-  void printU12ImmOperand(const MCInst *MI, unsigned OpNo,
-                          const MCSubtargetInfo &STI, raw_ostream &O);
+  // Template for unsigned immediate operands with validation.
+  template <unsigned Width>
+  void printUImmOperand(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
+
+  // Template for signed immediate operands with sign extension.
+  template <unsigned Width>
+  void printSImmOperand(const MCInst *MI, unsigned OpNo,
+                        const MCSubtargetInfo &STI, raw_ostream &O);
+
+  void printU8ImmOperandTrunc(const MCInst *MI, unsigned OpNo,
+                              const MCSubtargetInfo &STI, raw_ostream &O);
   void printS16ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printS32ImmOperand(const MCInst *MI, unsigned OpNo,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
+  void printNegS32ImmOperand(const MCInst *MI, unsigned OpNo,
+                             const MCSubtargetInfo &STI, raw_ostream &O);
   void printS34ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printU16ImmOperand(const MCInst *MI, unsigned OpNo,

@@ -9,10 +9,11 @@
 // <list>
 
 // template <class InputIterator>
-//   list(InputIterator first, InputIterator last, const Allocator& = Allocator());
+//   list(InputIterator first, InputIterator last, const Allocator& = Allocator()); // constexpr since C++26
 
 #include <list>
 #include <cassert>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "test_allocator.h"
@@ -22,7 +23,7 @@
 #  include "container_test_types.h"
 #endif
 
-void basic_test() {
+TEST_CONSTEXPR_CXX26 void basic_test() {
   {
     int a[] = {0, 1, 2, 3};
     std::list<int> l(
@@ -81,7 +82,7 @@ void basic_test() {
 #endif
 }
 
-void test_emplacable_concept() {
+TEST_CONSTEXPR_CXX26 void test_emplacable_concept() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -126,7 +127,7 @@ void test_emplacable_concept() {
 #endif
 }
 
-void test_emplacable_concept_with_alloc() {
+TEST_CONSTEXPR_CXX26 void test_emplacable_concept_with_alloc() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -183,10 +184,12 @@ void test_ctor_under_alloc() {
     {
       ExpectConstructGuard<int&> G(1);
       C v(It(arr1), It(std::end(arr1)));
+      (void)v;
     }
     {
       ExpectConstructGuard<int&> G(3);
       C v(It(arr2), It(std::end(arr2)));
+      (void)v;
     }
   }
   {
@@ -195,10 +198,12 @@ void test_ctor_under_alloc() {
     {
       ExpectConstructGuard<int&> G(1);
       C v(It(arr1), It(std::end(arr1)));
+      (void)v;
     }
     {
       ExpectConstructGuard<int&> G(3);
       C v(It(arr2), It(std::end(arr2)));
+      (void)v;
     }
   }
 #endif
@@ -216,10 +221,12 @@ void test_ctor_under_alloc_with_alloc() {
     {
       ExpectConstructGuard<int&> G(1);
       C v(It(arr1), It(std::end(arr1)), a);
+      (void)v;
     }
     {
       ExpectConstructGuard<int&> G(3);
       C v(It(arr2), It(std::end(arr2)), a);
+      (void)v;
     }
   }
   {
@@ -230,21 +237,35 @@ void test_ctor_under_alloc_with_alloc() {
     {
       ExpectConstructGuard<int&> G(1);
       C v(It(arr1), It(std::end(arr1)), a);
+      (void)v;
     }
     {
       ExpectConstructGuard<int&> G(3);
       C v(It(arr2), It(std::end(arr2)), a);
+      (void)v;
     }
   }
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   basic_test();
   test_emplacable_concept();
   test_emplacable_concept_with_alloc();
-  test_ctor_under_alloc();
-  test_ctor_under_alloc_with_alloc();
+
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    test_ctor_under_alloc();
+    test_ctor_under_alloc_with_alloc();
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

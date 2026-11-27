@@ -13,17 +13,19 @@
 #ifndef LLVM_TRANSFORMS_UTILS_LOWERVECTORINTRINSICS_H
 #define LLVM_TRANSFORMS_UTILS_LOWERVECTORINTRINSICS_H
 
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
-#include <optional>
 
 namespace llvm {
 
 class CallInst;
 class Module;
 
-/// Lower \p CI as a loop. \p CI is a unary intrinsic with a vector argument and
-/// is deleted and replaced with a loop.
-bool lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI);
+/// Lower \p CI as a loop. \p CI is an intrinsic with at least one vector
+/// argument, returning either a vector or a struct of vectors of the same type.
+/// Scalar arguments are passed unchanged to the scalar intrinsic. \p CI is
+/// deleted and replaced with a loop.
+LLVM_ABI bool lowerVectorIntrinsicAsLoop(Module &M, CallInst *CI);
 
 } // namespace llvm
 

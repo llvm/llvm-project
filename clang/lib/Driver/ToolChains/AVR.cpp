@@ -10,7 +10,7 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -466,7 +466,7 @@ void AVRToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void AVRToolChain::addClangTargetOptions(
     const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
-    Action::OffloadKind DeviceOffloadKind) const {
+    BoundArch BA, Action::OffloadKind DeviceOffloadKind) const {
   // Reject C/C++ compilation for avr1 devices since they have no SRAM.
   const Driver &D = getDriver();
   std::string CPU = getCPUName(D, DriverArgs, getTriple());
@@ -540,11 +540,10 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
-  // Currently we only support libgcc and compiler-rt.
   auto RtLib = TC.GetRuntimeLibType(Args);
-  assert(
-      (RtLib == ToolChain::RLT_Libgcc || RtLib == ToolChain::RLT_CompilerRT) &&
-      "unknown runtime library");
+  assert((RtLib == ToolChain::RLT_None || RtLib == ToolChain::RLT_Libgcc ||
+          RtLib == ToolChain::RLT_CompilerRT) &&
+         "unknown runtime library");
 
   // Only add default libraries if the user hasn't explicitly opted out.
   bool LinkStdlib = false;
@@ -587,9 +586,8 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (D.isUsingLTO())
-    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
-                  D.getLTOMode() == LTOK_Thin);
+  if (auto LTO = TC.getLTOMode(Args); LTO != LTOK_None)
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
   // If the family name is known, we can link with the device-specific libgcc.
   // Without it, libgcc will simply not be linked. This matches avr-gcc

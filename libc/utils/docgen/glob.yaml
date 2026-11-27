@@ -1,3 +1,9 @@
+posix: posix-2024
+types:
+  glob_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
 macros:
   GLOB_APPEND:
     in-latest-posix: ''

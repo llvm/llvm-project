@@ -1,5 +1,13 @@
 #pragma clang system_header
 
+template <typename F>
+void takeLambda(F);
+
+template <typename T>
+inline void lambdaInSystemHeader(T* obj) {
+  takeLambda([obj] { obj->method(); });
+}
+
 template <typename T, typename CreateFunction>
 void callMethod(CreateFunction createFunction) {
   createFunction()->method();
@@ -34,6 +42,8 @@ void os_log_msg(os_log_t oslog, os_log_type_t type, const char *msg, ...);
 
 typedef const struct __attribute__((objc_bridge(NSString))) __CFString * CFStringRef;
 
+extern CFStringRef const kCFURLTagNamesKey;
+
 #ifdef __OBJC__
 @class NSString;
 @interface SystemObject {
@@ -41,4 +51,8 @@ typedef const struct __attribute__((objc_bridge(NSString))) __CFString * CFStrin
   CFStringRef cf_string;
 }
 @end
+
+typedef NSString *NSNotificationName;
+extern "C" NSNotificationName NSApplicationDidBecomeActiveNotification;
+
 #endif

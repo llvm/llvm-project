@@ -19,16 +19,18 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -36,13 +38,15 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
+#include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Repeated.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 
 #include <cassert>
@@ -62,6 +66,18 @@ enum class MaskFormat {
   AllFalse = 1,
   Unknown = 2,
 };
+
+// Default target shape for unrolling CreateMaskOp and ConstantMaskOp
+static std::optional<SmallVector<int64_t>>
+getDefaultTargetMaskShapeForUnroll() {
+  return SmallVector<int64_t>{8, 8};
+}
+
+// Default target shape for unrolling InterleaveOp and DeinterleaveOp
+static std::optional<SmallVector<int64_t>>
+getDefaultTargetInterleaveShapeForUnroll() {
+  return SmallVector<int64_t>{2, 4};
+}
 
 /// Helper method to classify a mask value. Currently, the method
 /// looks "under the hood" of a constant value with dense attributes
@@ -125,7 +141,7 @@ static MaskFormat getMaskFormat(Value mask) {
 /// Default callback to build a region with a 'vector.yield' terminator with no
 /// arguments.
 void mlir::vector::buildTerminatedBody(OpBuilder &builder, Location loc) {
-  builder.create<vector::YieldOp>(loc);
+  vector::YieldOp::create(builder, loc);
 }
 
 // Helper for verifying combining kinds in contractions and reductions.
@@ -147,6 +163,8 @@ static bool isSupportedCombiningKind(CombiningKind combiningKind,
   case CombiningKind::MAXNUMF:
   case CombiningKind::MINIMUMF:
   case CombiningKind::MAXIMUMF:
+  case CombiningKind::MINIMUMNUMF:
+  case CombiningKind::MAXIMUMNUMF:
     return llvm::isa<FloatType>(elementType);
   }
   return false;
@@ -232,6 +250,14 @@ static bool isSplatWriteConsistentWithMaskedRead(vector::TransferWriteOp write,
 
 bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
                                      vector::TransferReadOp read) {
+  // An enclosing vector.mask may leave some lanes unwritten or padded, so the
+  // read may not see the written vector as a whole. This conservatively
+  // includes all-true masks. MaskOp::fold removes them during canonicalization,
+  // so this only matters when a caller such as transferOpflowOpt runs first.
+  // TODO: Account for compatible region masks instead of conservatively
+  // rejecting all region-masked operations.
+  if (defWrite.isMasked() || read.isMasked())
+    return false;
   return !defWrite.hasOutOfBoundsDim() &&
          defWrite.getIndices() == read.getIndices() &&
          defWrite.getVectorType() == read.getVectorType() &&
@@ -242,6 +268,15 @@ bool mlir::vector::checkSameValueRAW(vector::TransferWriteOp defWrite,
 
 bool mlir::vector::checkSameValueWAW(vector::TransferWriteOp write,
                                      vector::TransferWriteOp priorWrite) {
+  // A write under an enclosing vector.mask may not overwrite all lanes of the
+  // prior write. This conservatively includes all-true masks, which
+  // MaskOp::fold removes during canonicalization. Only the later write needs
+  // checking: a region-masked prior write is still dead if the later write
+  // fully overwrites it.
+  // TODO: Handle a region-masked later write when it is known to fully
+  // overwrite the prior write.
+  if (write.isMasked())
+    return false;
   return priorWrite.getIndices() == write.getIndices() &&
          priorWrite.getMask() == write.getMask() &&
          priorWrite.getVectorType() == write.getVectorType() &&
@@ -373,9 +408,8 @@ SmallVector<Value> vector::getAsValues(OpBuilder &builder, Location loc,
   llvm::transform(foldResults, std::back_inserter(values),
                   [&](OpFoldResult foldResult) {
                     if (auto attr = dyn_cast<Attribute>(foldResult))
-                      return builder
-                          .create<arith::ConstantIndexOp>(
-                              loc, cast<IntegerAttr>(attr).getInt())
+                      return arith::ConstantIndexOp::create(
+                                 builder, loc, cast<IntegerAttr>(attr).getInt())
                           .getResult();
 
                     return cast<Value>(foldResult);
@@ -396,6 +430,90 @@ std::optional<int64_t> vector::getConstantVscaleMultiplier(Value value) {
   if (rhs.getDefiningOp<vector::VectorScaleOp>())
     return getConstantIntValue(lhs);
   return {};
+}
+
+/// Converts numeric attributes to the expected type. Supports
+/// integer-to-integer and float-to-integer conversions. Returns the original
+/// attribute if no conversion is needed or supported.
+static Attribute convertNumericAttr(Attribute attr, Type expectedType) {
+  // Integer-to-integer conversion
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    if (auto intType = dyn_cast<IntegerType>(expectedType)) {
+      if (intAttr.getType() != expectedType)
+        return IntegerAttr::get(expectedType, intAttr.getInt());
+    }
+    return attr;
+  }
+
+  // Float-to-integer bitcast (preserves bit representation)
+  if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
+    auto intType = dyn_cast<IntegerType>(expectedType);
+    if (!intType)
+      return attr;
+
+    APFloat floatVal = floatAttr.getValue();
+    APInt intVal = floatVal.bitcastToAPInt();
+    return IntegerAttr::get(expectedType, intVal);
+  }
+
+  return attr;
+}
+
+/// Return whether `srcType` can be broadcast to `dstVectorType` under the
+/// semantics of the `vector.broadcast` op.
+BroadcastableToResult mlir::vector::isBroadcastableTo(
+    Type srcType, VectorType dstVectorType,
+    std::pair<VectorDim, VectorDim> *mismatchingDims) {
+  // Broadcast scalar to vector of the same element type.
+  if (isa<VectorElementTypeInterface>(srcType) && dstVectorType &&
+      srcType == getElementTypeOrSelf(dstVectorType))
+    return BroadcastableToResult::Success;
+  // From now on, only vectors broadcast.
+  VectorType srcVectorType = llvm::dyn_cast<VectorType>(srcType);
+  if (!srcVectorType)
+    return BroadcastableToResult::SourceTypeNotAVector;
+
+  int64_t srcRank = srcVectorType.getRank();
+  int64_t dstRank = dstVectorType.getRank();
+  if (srcRank > dstRank)
+    return BroadcastableToResult::SourceRankHigher;
+  // Source has an exact match or singleton value for all trailing dimensions
+  // (all leading dimensions are simply duplicated).
+  int64_t lead = dstRank - srcRank;
+  for (int64_t dimIdx = 0; dimIdx < srcRank; ++dimIdx) {
+    // Have mismatching dims (in the sense of vector.broadcast semantics) been
+    // encountered?
+    bool foundMismatchingDims = false;
+
+    // Check fixed-width dims.
+    int64_t srcDim = srcVectorType.getDimSize(dimIdx);
+    int64_t dstDim = dstVectorType.getDimSize(lead + dimIdx);
+    if (srcDim != 1 && srcDim != dstDim)
+      foundMismatchingDims = true;
+
+    // Check scalable flags.
+    bool srcDimScalableFlag = srcVectorType.getScalableDims()[dimIdx];
+    bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + dimIdx];
+    if ((srcDim == 1 && srcDimScalableFlag && dstDim != 1) ||
+        // 1 -> [N] is fine, everything else should be rejected when mixing
+        // fixed-width and scalable dims
+        (srcDimScalableFlag != dstDimScalableFlag &&
+         (srcDim != 1 || srcDimScalableFlag)))
+      foundMismatchingDims = true;
+
+    if (foundMismatchingDims) {
+      if (mismatchingDims != nullptr) {
+        mismatchingDims->first.dim = srcDim;
+        mismatchingDims->first.isScalable = srcDimScalableFlag;
+
+        mismatchingDims->second.dim = dstDim;
+        mismatchingDims->second.isScalable = dstDimScalableFlag;
+      }
+      return BroadcastableToResult::DimensionMismatch;
+    }
+  }
+
+  return BroadcastableToResult::Success;
 }
 
 //===----------------------------------------------------------------------===//
@@ -442,18 +560,11 @@ struct VectorInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void VectorDialect::initialize() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Vector/IR/VectorAttributes.cpp.inc"
-      >();
-
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Vector/IR/VectorOps.cpp.inc"
-      >();
-
   addInterfaces<VectorInlinerInterface>();
 
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface, LoadOp, StoreOp,
+                            MaskedLoadOp, MaskedStoreOp, ExpandLoadOp,
+                            CompressStoreOp>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface,
                             TransferReadOp, TransferWriteOp, GatherOp, MaskOp,
                             YieldOp>();
@@ -469,7 +580,7 @@ void VectorDialect::initialize() {
 Operation *VectorDialect::materializeConstant(OpBuilder &builder,
                                               Attribute value, Type type,
                                               Location loc) {
-  if (isa<ub::PoisonAttrInterface>(value))
+  if (matchPattern(value, ub::m_Poison()))
     return value.getDialect().materializeConstant(builder, value, type, loc);
 
   return arith::ConstantOp::materialize(builder, value, type, loc);
@@ -491,37 +602,41 @@ ArrayAttr vector::getVectorSubscriptAttr(Builder &builder,
 void vector::MultiDimReductionOp::build(OpBuilder &builder,
                                         OperationState &result, Value source,
                                         Value acc, ArrayRef<bool> reductionMask,
-                                        CombiningKind kind) {
+                                        CombiningKind kind,
+                                        arith::FastMathFlags fastMathFlags) {
   SmallVector<int64_t> reductionDims;
   for (const auto &en : llvm::enumerate(reductionMask))
     if (en.value())
       reductionDims.push_back(en.index());
-  build(builder, result, kind, source, acc, reductionDims);
+  build(builder, result, kind, source, acc, reductionDims, fastMathFlags);
 }
 
 OpFoldResult MultiDimReductionOp::fold(FoldAdaptor adaptor) {
-  // Single parallel dim, this is a noop.
-  if (getSourceVectorType().getRank() == 1 && !isReducedDim(0))
+  // No reduction dims: this is a noop regardless of rank.
+  if (getReductionDims().empty())
     return getSource();
   return {};
 }
 
-std::optional<SmallVector<int64_t, 4>>
-MultiDimReductionOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getSourceVectorType().getShape());
-}
-
 LogicalResult MultiDimReductionOp::verify() {
+  // Verify the reduction dimensions.
+  int64_t sourceRank = getSourceVectorType().getRank();
+  SmallVector<bool> isReduced(sourceRank, false);
+  for (int64_t dim : getReductionDims()) {
+    if (dim < 0 || dim >= sourceRank)
+      return emitOpError("reduction dimension out of range: ") << dim;
+    if (isReduced[dim])
+      return emitOpError("duplicate reduction dimension: ") << dim;
+    isReduced[dim] = true;
+  }
+
   SmallVector<int64_t> targetShape;
   SmallVector<bool> scalableDims;
   Type inferredReturnType;
   auto sourceScalableDims = getSourceVectorType().getScalableDims();
   for (auto [dimIdx, dimSize] :
        llvm::enumerate(getSourceVectorType().getShape()))
-    if (!llvm::any_of(getReductionDims(),
-                      [dimIdx = dimIdx](int64_t reductionDimIdx) {
-                        return reductionDimIdx == static_cast<int64_t>(dimIdx);
-                      })) {
+    if (!isReduced[dimIdx]) {
       targetShape.push_back(dimSize);
       scalableDims.push_back(sourceScalableDims[dimIdx]);
     }
@@ -547,6 +662,14 @@ Type MultiDimReductionOp::getExpectedMaskType() {
                          vecType.getScalableDims());
 }
 
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+MultiDimReductionOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getSourceVectorType().getShape());
+}
+
 namespace {
 // Only unit dimensions that are being reduced are folded. If the dimension is
 // unit, but not reduced, it is not folded, thereby keeping the output type the
@@ -555,7 +678,7 @@ namespace {
 // ElideSingleElementReduction for ReduceOp.
 struct ElideUnitDimsInMultiDimReduction
     : public OpRewritePattern<MultiDimReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(MultiDimReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -585,21 +708,21 @@ struct ElideUnitDimsInMultiDimReduction
         VectorType newMaskType =
             VectorType::get(dstVecType.getShape(), rewriter.getI1Type(),
                             dstVecType.getScalableDims());
-        mask = rewriter.create<vector::ShapeCastOp>(loc, newMaskType, mask);
+        mask = vector::ShapeCastOp::create(rewriter, loc, newMaskType, mask);
       }
-      cast = rewriter.create<vector::ShapeCastOp>(
-          loc, reductionOp.getDestType(), reductionOp.getSource());
+      cast = vector::ShapeCastOp::create(
+          rewriter, loc, reductionOp.getDestType(), reductionOp.getSource());
     } else {
       // This means we are reducing all the dimensions, and all reduction
       // dimensions are of size 1. So a simple extraction would do.
       if (mask)
-        mask = rewriter.create<vector::ExtractOp>(loc, mask);
-      cast = rewriter.create<vector::ExtractOp>(loc, reductionOp.getSource());
+        mask = vector::ExtractOp::create(rewriter, loc, mask);
+      cast = vector::ExtractOp::create(rewriter, loc, reductionOp.getSource());
     }
 
     Value result =
-        vector::makeArithReduction(rewriter, loc, reductionOp.getKind(), acc,
-                                   cast, /*fastmath=*/nullptr, mask);
+        vector::makeArithReduction(rewriter, loc, reductionOp.getKind(), cast,
+                                   acc, reductionOp.getFastmathAttr(), mask);
     rewriter.replaceOp(rootOp, result);
     return success();
   }
@@ -636,7 +759,7 @@ LogicalResult ReductionOp::verify() {
     return emitOpError("unsupported reduction rank: ") << rank;
 
   // Verify supported reduction kind.
-  Type eltType = getDest().getType();
+  Type eltType = getResult().getType();
   if (!isSupportedCombiningKind(getKind(), eltType))
     return emitOpError("unsupported reduction type '")
            << eltType << "' for kind '" << stringifyCombiningKind(getKind())
@@ -661,37 +784,45 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   switch (op) {
   case arith::AtomicRMWKind::addf:
   case arith::AtomicRMWKind::addi:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::ADD, vector);
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::ADD, vector);
   case arith::AtomicRMWKind::mulf:
   case arith::AtomicRMWKind::muli:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MUL, vector);
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MUL, vector);
   case arith::AtomicRMWKind::minimumf:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MINIMUMF, vector);
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MINIMUMF, vector);
   case arith::AtomicRMWKind::mins:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MINSI, vector);
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MINSI, vector);
   case arith::AtomicRMWKind::minu:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MINUI, vector);
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MINUI, vector);
   case arith::AtomicRMWKind::maximumf:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MAXIMUMF, vector);
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MAXIMUMF, vector);
   case arith::AtomicRMWKind::maxs:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MAXSI, vector);
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MAXSI, vector);
   case arith::AtomicRMWKind::maxu:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::MAXUI, vector);
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MAXUI, vector);
   case arith::AtomicRMWKind::andi:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::AND, vector);
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::AND, vector);
   case arith::AtomicRMWKind::ori:
-    return builder.create<vector::ReductionOp>(vector.getLoc(),
-                                               CombiningKind::OR, vector);
-  // TODO: Add remaining reduction operations.
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::OR, vector);
+  case arith::AtomicRMWKind::minnumf:
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MINNUMF, vector);
+  case arith::AtomicRMWKind::maxnumf:
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::MAXNUMF, vector);
+  case arith::AtomicRMWKind::xori:
+    return vector::ReductionOp::create(builder, vector.getLoc(),
+                                       CombiningKind::XOR, vector);
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");
     break;
@@ -699,13 +830,20 @@ Value mlir::vector::getVectorReductionOp(arith::AtomicRMWKind op,
   return nullptr;
 }
 
-std::optional<SmallVector<int64_t, 4>> ReductionOp::getShapeForUnroll() {
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+ReductionOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getSourceVectorType().getShape());
+}
+std::optional<SmallVector<int64_t>> ReductionOp::getDefaultUnrollTargetShape() {
+  return SmallVector<int64_t>{2};
 }
 
 namespace {
 struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -729,8 +867,8 @@ struct ElideSingleElementReduction : public OpRewritePattern<ReductionOp> {
 
     Location loc = reductionOp.getLoc();
     if (mask)
-      mask = rewriter.create<ExtractOp>(loc, mask);
-    Value result = rewriter.create<ExtractOp>(loc, reductionOp.getVector());
+      mask = ExtractOp::create(rewriter, loc, mask);
+    Value result = ExtractOp::create(rewriter, loc, reductionOp.getVector());
 
     if (Value acc = reductionOp.getAcc())
       result = vector::makeArithReduction(rewriter, loc, reductionOp.getKind(),
@@ -764,10 +902,10 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
           AffineMap::inferFromExprList(indexingExprs, builder.getContext())));
   result.addAttribute(
       getIteratorTypesAttrName(result.name),
-      builder.getArrayAttr(llvm::to_vector(llvm::map_range(
+      builder.getArrayAttr(llvm::map_to_vector(
           iteratorTypes, [&](IteratorType t) -> mlir::Attribute {
             return IteratorTypeAttr::get(builder.getContext(), t);
-          }))));
+          })));
 }
 
 void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
@@ -781,13 +919,18 @@ void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
 void vector::ContractionOp::build(OpBuilder &builder, OperationState &result,
                                   Value lhs, Value rhs, Value acc,
                                   ArrayAttr indexingMaps,
-                                  ArrayAttr iteratorTypes, CombiningKind kind) {
+                                  ArrayAttr iteratorTypes, CombiningKind kind,
+                                  arith::FastMathFlags fastMathFlags) {
   result.addOperands({lhs, rhs, acc});
   result.addTypes(acc.getType());
   result.addAttribute(getIndexingMapsAttrName(result.name), indexingMaps);
   result.addAttribute(getIteratorTypesAttrName(result.name), iteratorTypes);
   result.addAttribute(getKindAttrName(result.name),
                       CombiningKindAttr::get(builder.getContext(), kind));
+  if (fastMathFlags != arith::FastMathFlags::none)
+    result.addAttribute(
+        getFastmathAttrName(result.name),
+        arith::FastMathFlagsAttr::get(builder.getContext(), fastMathFlags));
 }
 
 ParseResult ContractionOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -867,8 +1010,12 @@ void ContractionOp::print(OpAsmPrinter &p) {
   auto attrNames = getTraitAttrNames();
   llvm::StringSet<> traitAttrsSet;
   traitAttrsSet.insert_range(attrNames);
+  NamedAttrList allAttrs(getOperation()->getRawDictionaryAttrs());
+  getOperation()->getName().walkInherentAttrs(
+      getOperation(),
+      [&](StringRef name, Attribute &attr) { allAttrs.append(name, attr); });
   SmallVector<NamedAttribute, 8> attrs;
-  for (auto attr : (*this)->getAttrs()) {
+  for (auto attr : allAttrs) {
     if (attr.getName() == getIteratorTypesAttrName()) {
       auto iteratorTypes =
           llvm::cast<ArrayAttr>(attr.getValue())
@@ -877,22 +1024,28 @@ void ContractionOp::print(OpAsmPrinter &p) {
       // needed, because tests still use the old format when 'iterator_types'
       // attribute is represented as an array of strings.
       // TODO: Remove this conversion once tests are fixed.
-      SmallVector<Attribute> iteratorTypeNames = llvm::to_vector(
-          llvm::map_range(iteratorTypes, [&](IteratorType t) -> Attribute {
+      SmallVector<Attribute> iteratorTypeNames =
+          llvm::map_to_vector(iteratorTypes, [&](IteratorType t) -> Attribute {
             return StringAttr::get(getContext(), stringifyIteratorType(t));
-          }));
+          });
 
       attrs.emplace_back(getIteratorTypesAttrName(),
                          ArrayAttr::get(getContext(), iteratorTypeNames));
-    } else if (traitAttrsSet.count(attr.getName().strref()) > 0)
+    } else if (traitAttrsSet.count(attr.getName().strref()) > 0) {
+      // Omit fastmath when it equals the default (none) to keep output clean.
+      if (attr.getName() == getFastmathAttrName() &&
+          llvm::cast<arith::FastMathFlagsAttr>(attr.getValue()).getValue() ==
+              arith::FastMathFlags::none)
+        continue;
       attrs.push_back(attr);
+    }
   }
 
   auto dictAttr = DictionaryAttr::get(getContext(), attrs);
   p << " " << dictAttr << " " << getLhs() << ", ";
   p << getRhs() << ", " << getAcc();
 
-  p.printOptionalAttrDict((*this)->getAttrs(), attrNames);
+  p.printOptionalAttrDict(allAttrs.getAttrs(), attrNames);
   p << " : " << getLhs().getType() << ", " << getRhs().getType() << " into "
     << getResultType();
 }
@@ -937,11 +1090,17 @@ static LogicalResult verifyOutputShape(
     expectedResultDims.push_back(rhsType.getDimSize(i));
   }
 
+  // The accumulator and the result must agree, regardless of the rank.
+  if (resType != accType)
+    return op.emitOpError("expected same accumulator and result type");
+
   // Verify 'expectedResultDims'.
   if (expectedResultDims.empty()) {
-    // No batch or free dimension implies a scalar result.
-    if (llvm::isa<VectorType>(resType) || llvm::isa<VectorType>(accType))
-      return op.emitOpError("invalid accumulator/result vector shape");
+    // No batch or free dimension implies a scalar or 0-D vector result.
+    if (auto resVectorType = llvm::dyn_cast<VectorType>(resType))
+      if (resVectorType.getRank() != 0)
+        return op.emitOpError("expected scalar or 0-D vector result when "
+                              "there are no batch or free dimensions");
   } else {
     // At least one batch or free dimension implies a vector result.
     auto resVectorType = llvm::dyn_cast<VectorType>(resType);
@@ -982,10 +1141,10 @@ static LogicalResult verifyOutputShape(
                         llvm::IsaPred<AffineConstantExpr>) &&
            "expected constant extent along all dimensions.");
     // Extract the expected shape and build the type.
-    auto expectedShape = llvm::to_vector<4>(
-        llvm::map_range(expectedMap.getResults(), [](AffineExpr e) {
+    auto expectedShape =
+        llvm::map_to_vector<4>(expectedMap.getResults(), [](AffineExpr e) {
           return cast<AffineConstantExpr>(e).getValue();
-        }));
+        });
     auto expected =
         VectorType::get(expectedShape, resVectorType.getElementType(),
                         resVectorType.getScalableDims());
@@ -995,6 +1154,24 @@ static LogicalResult verifyOutputShape(
              << expected;
   }
   return success();
+}
+
+// Find a one-sided reduction dim, i.e. a reduction dim that is present in only
+// one of the inputs.
+static std::optional<int64_t>
+getOneSidedReductionDim(vector::ContractionOp *contract) {
+  auto maps = contract->getIndexingMapsArray();
+  AffineMap lhsMap = maps[0];
+  AffineMap rhsMap = maps[1];
+
+  for (auto [dim, attr] : llvm::enumerate(contract->getIteratorTypes())) {
+    auto iteratorType = cast<vector::IteratorTypeAttr>(attr).getValue();
+    if (iteratorType == vector::IteratorType::reduction &&
+        (!lhsMap.isFunctionOfDim(dim) || !rhsMap.isFunctionOfDim(dim)))
+      return dim;
+  }
+
+  return std::nullopt;
 }
 
 LogicalResult ContractionOp::verify() {
@@ -1037,6 +1214,12 @@ LogicalResult ContractionOp::verify() {
              << index << " to be a projected permutation of its inputs";
   }
 
+  // TODO: For better code re-use, unify this with linalg.contract.
+  auto dimIdx = getOneSidedReductionDim(this);
+  if (dimIdx.has_value())
+    return emitOpError("reduction dim at index ")
+           << dimIdx.value() << " must appear in both LHS and RHS";
+
   auto contractingDimMap = getContractingDimMap();
   auto batchDimMap = getBatchDimMap();
 
@@ -1057,13 +1240,19 @@ LogicalResult ContractionOp::verify() {
                                contractingDimMap, batchDimMap)))
     return failure();
 
+  if (!getKindAttr()) {
+    return emitOpError("expected 'kind' attribute of type CombiningKind (e.g. "
+                       "'vector.kind<add>')");
+  }
+
   // Verify supported combining kind.
   auto vectorType = llvm::dyn_cast<VectorType>(resType);
   auto elementType = vectorType ? vectorType.getElementType() : resType;
   if (!isSupportedCombiningKind(getKind(), elementType))
     return emitOpError("unsupported contraction type");
 
-  return success();
+  // Delayed calling of IndexingMapOpInterface::verifyImpl.
+  return cast<IndexingMapOpInterface>(this->getOperation()).verifyImpl();
 }
 
 // MaskableOpInterface methods.
@@ -1094,7 +1283,7 @@ Type ContractionOp::getExpectedMaskType() {
         rhsType.getScalableDims()[dimIdx];
   }
 
-  assert(!ShapedType::isDynamicShape(maskShape) &&
+  assert(ShapedType::isStaticShape(maskShape) &&
          "Mask shape couldn't be computed");
 
   return VectorType::get(maskShape,
@@ -1104,7 +1293,8 @@ Type ContractionOp::getExpectedMaskType() {
 
 SmallVector<StringRef> ContractionOp::getTraitAttrNames() {
   return SmallVector<StringRef>{getIndexingMapsAttrName(),
-                                getIteratorTypesAttrName(), getKindAttrName()};
+                                getIteratorTypesAttrName(), getKindAttrName(),
+                                getFastmathAttrName()};
 }
 
 static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {
@@ -1114,22 +1304,46 @@ static int64_t getResultIndex(AffineMap map, AffineExpr targetExpr) {
   return -1;
 }
 
+// For every contraction `dim` for which:
+//  * the corresponding iteratory type matches `targetIteratorType`,
+// returns a pair: <lhsIdx, rhsIdx>, where:
+//  * {lhs|rhs}Idx is the index of `dim` in the (result of) indexing map for
+//    {lhs|rhs}.
+// If `oneSidedDim` is true, only dims indexed on exactly one of the `contract`
+// operands are returned.
 static std::vector<std::pair<int64_t, int64_t>>
-getDimMap(ArrayRef<AffineMap> indexingMaps, ArrayAttr iteratorTypes,
-          IteratorType targetIteratorType, MLIRContext *context) {
+getDimPairForIterTy(ContractionOp *contract, IteratorType targetIteratorType,
+                    bool oneSidedDim = false) {
+  SmallVector<AffineMap, 4> indexingMaps(contract->getIndexingMapsArray());
+  ArrayAttr iteratorTypes = contract->getIteratorTypes();
   std::vector<std::pair<int64_t, int64_t>> dimMap;
   for (const auto &it : llvm::enumerate(iteratorTypes)) {
     auto iteratorType = llvm::cast<IteratorTypeAttr>(it.value()).getValue();
     if (iteratorType != targetIteratorType)
       continue;
     // Search lhs/rhs map results for 'targetExpr'.
-    auto targetExpr = getAffineDimExpr(it.index(), context);
+    auto targetExpr = getAffineDimExpr(it.index(), contract->getContext());
     int64_t lhsDim = getResultIndex(indexingMaps[0], targetExpr);
     int64_t rhsDim = getResultIndex(indexingMaps[1], targetExpr);
-    if (lhsDim >= 0 && rhsDim >= 0)
+    bool isOneSidedDim = (lhsDim >= 0) != (rhsDim >= 0);
+    bool isTwoSidedDim = lhsDim >= 0 && rhsDim >= 0;
+    if (oneSidedDim ? isOneSidedDim : isTwoSidedDim)
       dimMap.emplace_back(lhsDim, rhsDim);
   }
   return dimMap;
+}
+
+std::vector<std::pair<int64_t, int64_t>> ContractionOp::getContractingDimMap() {
+  return getDimPairForIterTy(this, IteratorType::reduction);
+}
+
+std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
+  return getDimPairForIterTy(this, IteratorType::parallel);
+}
+
+std::vector<std::pair<int64_t, int64_t>> ContractionOp::getFreeDimMap() {
+  return getDimPairForIterTy(this, IteratorType::parallel,
+                             /*oneSidedDim=*/true);
 }
 
 void ContractionOp::getIterationBounds(
@@ -1170,22 +1384,22 @@ void ContractionOp::getIterationIndexMap(
   }
 }
 
-std::vector<std::pair<int64_t, int64_t>> ContractionOp::getContractingDimMap() {
-  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::reduction,
-                   getContext());
-}
-
-std::vector<std::pair<int64_t, int64_t>> ContractionOp::getBatchDimMap() {
-  SmallVector<AffineMap, 4> indexingMaps(getIndexingMapsArray());
-  return getDimMap(indexingMaps, getIteratorTypes(), IteratorType::parallel,
-                   getContext());
-}
-
-std::optional<SmallVector<int64_t, 4>> ContractionOp::getShapeForUnroll() {
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+ContractionOp::getIterationShapeToUnroll() {
   SmallVector<int64_t, 4> shape;
   getIterationBounds(shape);
   return shape;
+}
+
+std::optional<SmallVector<int64_t>>
+ContractionOp::getDefaultUnrollTargetShape() {
+  SmallVector<int64_t> nativeShape(this->getIteratorTypes().size(), 4);
+  Type lhsType = this->getLhsType().getElementType();
+  nativeShape[nativeShape.size() - 1] = lhsType.isF16() ? 4 : 2;
+  return nativeShape;
 }
 
 /// Return a fused vector::ContractionOp which represents a patterns such as:
@@ -1247,63 +1461,6 @@ void ContractionOp::getCanonicalizationPatterns(RewritePatternSet &results,
               CanonicalizeContractAdd<arith::AddFOp>>(context);
 }
 
-//===----------------------------------------------------------------------===//
-// ExtractElementOp
-//===----------------------------------------------------------------------===//
-
-void ExtractElementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                         SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), argRanges.front());
-}
-
-void vector::ExtractElementOp::build(OpBuilder &builder, OperationState &result,
-                                     Value source) {
-  result.addOperands({source});
-  result.addTypes(llvm::cast<VectorType>(source.getType()).getElementType());
-}
-
-LogicalResult vector::ExtractElementOp::verify() {
-  VectorType vectorType = getSourceVectorType();
-  if (vectorType.getRank() == 0) {
-    if (getPosition())
-      return emitOpError("expected position to be empty with 0-D vector");
-    return success();
-  }
-  if (vectorType.getRank() != 1)
-    return emitOpError("unexpected >1 vector rank");
-  if (!getPosition())
-    return emitOpError("expected position for 1-D vector");
-  return success();
-}
-
-OpFoldResult vector::ExtractElementOp::fold(FoldAdaptor adaptor) {
-  // Skip the 0-D vector here now.
-  if (!adaptor.getPosition())
-    return {};
-
-  // Fold extractelement (splat X) -> X.
-  if (auto splat = getVector().getDefiningOp<vector::SplatOp>())
-    return splat.getInput();
-
-  // Fold extractelement(broadcast(X)) -> X.
-  if (auto broadcast = getVector().getDefiningOp<vector::BroadcastOp>())
-    if (!llvm::isa<VectorType>(broadcast.getSource().getType()))
-      return broadcast.getSource();
-
-  auto src = dyn_cast_or_null<DenseElementsAttr>(adaptor.getVector());
-  auto pos = dyn_cast_or_null<IntegerAttr>(adaptor.getPosition());
-  if (!pos || !src)
-    return {};
-
-  auto srcElements = src.getValues<Attribute>();
-
-  uint64_t posIdx = pos.getInt();
-  if (posIdx >= srcElements.size())
-    return {};
-
-  return srcElements[posIdx];
-}
-
 // Returns `true` if `index` is either within [0, maxIndex) or equal to
 // `poisonValue`.
 static bool isValidPositiveIndexOrPoison(int64_t index, int64_t poisonValue,
@@ -1355,7 +1512,7 @@ LogicalResult
 ExtractOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
                             ExtractOp::Adaptor adaptor,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
-  auto vectorType = llvm::cast<VectorType>(adaptor.getVector().getType());
+  auto vectorType = llvm::cast<VectorType>(adaptor.getSource().getType());
   if (static_cast<int64_t>(adaptor.getStaticPosition().size()) ==
       vectorType.getRank()) {
     inferredReturnTypes.push_back(vectorType.getElementType());
@@ -1369,20 +1526,12 @@ ExtractOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
   return success();
 }
 
-bool ExtractOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-  // Allow extracting 1-element vectors instead of scalars.
-  auto isCompatible = [](TypeRange l, TypeRange r) {
-    auto vectorType = llvm::dyn_cast<VectorType>(l.front());
-    return vectorType && vectorType.getShape().equals({1}) &&
-           vectorType.getElementType() == r.front();
-  };
-  if (l.size() == 1 && r.size() == 1 &&
-      (isCompatible(l, r) || isCompatible(r, l)))
-    return true;
-  return l == r;
-}
-
 LogicalResult vector::ExtractOp::verify() {
+  if (auto resTy = dyn_cast<VectorType>(getResult().getType()))
+    if (resTy.getRank() == 0)
+      return emitError(
+          "expected a scalar instead of a 0-d vector as the result type");
+
   // Note: This check must come before getMixedPosition() to prevent a crash.
   auto dynamicMarkersCount =
       llvm::count_if(getStaticPosition(), ShapedType::isDynamic);
@@ -1412,38 +1561,40 @@ LogicalResult vector::ExtractOp::verify() {
 
 template <typename IntType>
 static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
-  return llvm::to_vector<4>(llvm::map_range(
+  return llvm::map_to_vector<4>(
       arrayAttr.getAsRange<IntegerAttr>(),
-      [](IntegerAttr attr) { return static_cast<IntType>(attr.getInt()); }));
+      [](IntegerAttr attr) { return static_cast<IntType>(attr.getInt()); });
 }
 
 /// Fold the result of chains of ExtractOp in place by simply concatenating the
-/// positions.
+/// positions. Both static and dynamic positions are supported.
+///
+/// BEFORE:
+/// ```mlir
+/// %0 = vector.extract %v[1, 2] : vector<3x4x5xf32>
+/// %1 = vector.extract %0[%idx, 3] : vector<5xf32>
+/// ```
+///
+/// AFTER:
+/// ```mlir
+/// %1 = vector.extract %v[1, 2, %idx, 3] : vector<3x4x5xf32>
+/// ```
 static LogicalResult foldExtractOpFromExtractChain(ExtractOp extractOp) {
-  if (!extractOp.getVector().getDefiningOp<ExtractOp>())
+  if (!extractOp.getSource().getDefiningOp<ExtractOp>())
     return failure();
 
-  // TODO: Canonicalization for dynamic position not implemented yet.
-  if (extractOp.hasDynamicPosition())
-    return failure();
-
-  SmallVector<int64_t> globalPosition;
+  SmallVector<OpFoldResult> globalPosition = extractOp.getMixedPosition();
   ExtractOp currentOp = extractOp;
-  ArrayRef<int64_t> extrPos = currentOp.getStaticPosition();
-  globalPosition.append(extrPos.rbegin(), extrPos.rend());
-  while (ExtractOp nextOp = currentOp.getVector().getDefiningOp<ExtractOp>()) {
+  while (ExtractOp nextOp = currentOp.getSource().getDefiningOp<ExtractOp>()) {
     currentOp = nextOp;
-    // TODO: Canonicalization for dynamic position not implemented yet.
-    if (currentOp.hasDynamicPosition())
-      return failure();
-    ArrayRef<int64_t> extrPos = currentOp.getStaticPosition();
-    globalPosition.append(extrPos.rbegin(), extrPos.rend());
+    SmallVector<OpFoldResult> pos = currentOp.getMixedPosition();
+    globalPosition.insert(globalPosition.begin(), pos.begin(), pos.end());
   }
-  extractOp.setOperand(0, currentOp.getVector());
-  // OpBuilder is only used as a helper to build an I64ArrayAttr.
-  OpBuilder b(extractOp.getContext());
-  std::reverse(globalPosition.begin(), globalPosition.end());
-  extractOp.setStaticPosition(globalPosition);
+  auto [staticPos, dynPos] = decomposeMixedValues(globalPosition);
+  Value source = currentOp.getSource();
+  extractOp->setOperands(
+      llvm::to_vector(llvm::concat<Value>(ValueRange(source), dynPos)));
+  extractOp.setStaticPosition(staticPos);
   return success();
 }
 
@@ -1568,6 +1719,10 @@ LogicalResult ExtractFromInsertTransposeChainState::handleTransposeOp() {
 
   if (!nextTransposeOp)
     return failure();
+
+  if (nextTransposeOp.getResultVectorType().getRank() == 0)
+    return success();
+
   AffineMap m = inversePermutation(AffineMap::getPermutationMap(
       nextTransposeOp.getPermutation(), extractOp.getContext()));
   extractPosition = applyPermutationMap(m, ArrayRef(extractPosition));
@@ -1625,7 +1780,7 @@ Value ExtractFromInsertTransposeChainState::tryToFoldExtractOpInPlace(
     return Value();
 
   // If we can't fold (either internal transposition, or nothing to fold), bail.
-  bool nothingToFold = (source == extractOp.getVector());
+  bool nothingToFold = (source == extractOp.getSource());
   if (nothingToFold || !canFold())
     return Value();
 
@@ -1633,7 +1788,7 @@ Value ExtractFromInsertTransposeChainState::tryToFoldExtractOpInPlace(
   OpBuilder b(extractOp.getContext());
   extractOp.setStaticPosition(
       ArrayRef(extractPosition).take_front(extractedRank));
-  extractOp.getVectorMutable().assign(source);
+  extractOp.getSourceMutable().assign(source);
   return extractOp.getResult();
 }
 
@@ -1643,7 +1798,7 @@ Value ExtractFromInsertTransposeChainState::fold() {
   if (extractOp.hasDynamicPosition())
     return Value();
 
-  Value valueToExtractFrom = extractOp.getVector();
+  Value valueToExtractFrom = extractOp.getSource();
   updateStateForNextIteration(valueToExtractFrom);
   while (nextInsertOp || nextTransposeOp) {
     // Case 1. If we hit a transpose, just compose the map and iterate.
@@ -1690,59 +1845,99 @@ static bool hasZeroDimVectors(Operation *op) {
          llvm::any_of(op->getResultTypes(), hasZeroDimVectorType);
 }
 
-/// Fold extractOp with scalar result coming from BroadcastOp or SplatOp.
+/// All BroadcastOps, as well as ShapeCastOps that only prepend 1s, are
+/// considered to be 'broadcastlike'.
+static bool isBroadcastLike(Operation *op) {
+  if (isa<BroadcastOp>(op))
+    return true;
+
+  auto shapeCast = dyn_cast<ShapeCastOp>(op);
+  if (!shapeCast)
+    return false;
+
+  // Check that shape_cast **only** prepends 1s, like (2,3) -> (1,1,2,3).
+  // Checking that the destination shape has a prefix of 1s is not sufficient,
+  // for example (2,3) -> (1,3,2) is not broadcastlike. A sufficient condition
+  // is that the source shape is a suffix of the destination shape.
+  VectorType srcType = shapeCast.getSourceVectorType();
+  ArrayRef<int64_t> srcShape = srcType.getShape();
+  uint64_t srcRank = srcType.getRank();
+  ArrayRef<int64_t> dstShape = shapeCast.getType().getShape();
+  return dstShape.size() >= srcRank && dstShape.take_back(srcRank) == srcShape;
+}
+
+/// Fold extract(broadcast(X)) to either extract(X) or just X.
+///
+/// Example:
+///
+///        broadcast             extract [1][2]
+/// (3, 4) --------> (2, 3, 4) ----------------> (4)
+///
+/// becomes
+///                  extract [1]
+/// (3,4) -------------------------------------> (4)
+///
+///
+/// The variable names used in this implementation correspond to the above
+/// shapes as,
+///
+/// - (3, 4) is `input` shape.
+/// - (2, 3, 4) is `broadcast` shape.
+/// - (4) is `extract` shape.
+///
+/// This folding is possible when the suffix of `input` shape is the same as
+/// `extract` shape.
 static Value foldExtractFromBroadcast(ExtractOp extractOp) {
-  Operation *defOp = extractOp.getVector().getDefiningOp();
-  if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
+
+  Operation *defOp = extractOp.getSource().getDefiningOp();
+  if (!defOp || !isBroadcastLike(defOp))
     return Value();
 
-  Value source = defOp->getOperand(0);
-  if (extractOp.getType() == source.getType())
-    return source;
-  auto getRank = [](Type type) {
-    return llvm::isa<VectorType>(type) ? llvm::cast<VectorType>(type).getRank()
-                                       : 0;
-  };
+  Value input = defOp->getOperand(0);
 
-  // If splat or broadcast from a scalar, just return the source scalar.
-  unsigned broadcastSrcRank = getRank(source.getType());
-  if (broadcastSrcRank == 0 && source.getType() == extractOp.getType())
-    return source;
+  // Replace extract(broadcast(X)) with X
+  if (extractOp.getType() == input.getType())
+    return input;
 
-  unsigned extractResultRank = getRank(extractOp.getType());
-  if (extractResultRank > broadcastSrcRank)
-    return Value();
-  // Check that the dimension of the result haven't been broadcasted.
-  auto extractVecType = llvm::dyn_cast<VectorType>(extractOp.getType());
-  auto broadcastVecType = llvm::dyn_cast<VectorType>(source.getType());
-  if (extractVecType && broadcastVecType &&
-      extractVecType.getShape() !=
-          broadcastVecType.getShape().take_back(extractResultRank))
+  // Get required types and ranks in the chain
+  //    input -> broadcast -> extract
+  // (scalars are treated as rank-0).
+  auto inputType = llvm::dyn_cast<VectorType>(input.getType());
+  auto extractType = llvm::dyn_cast<VectorType>(extractOp.getType());
+  unsigned inputRank = inputType ? inputType.getRank() : 0;
+  unsigned broadcastRank = extractOp.getSourceVectorType().getRank();
+  unsigned extractRank = extractType ? extractType.getRank() : 0;
+
+  // Cannot do without the broadcast if overall the rank increases.
+  if (extractRank > inputRank)
     return Value();
 
-  auto broadcastOp = cast<vector::BroadcastOp>(defOp);
-  int64_t broadcastDstRank = broadcastOp.getResultVectorType().getRank();
+  // The above condition guarantees that input is a vector.
+  assert(inputType && "input must be a vector type because of previous checks");
+  ArrayRef<int64_t> inputShape = inputType.getShape();
 
-  // Detect all the positions that come from "dim-1" broadcasting.
-  // These dimensions correspond to "dim-1" broadcasted dims; set the mathching
-  // extract position to `0` when extracting from the source operand.
-  llvm::SetVector<int64_t> broadcastedUnitDims =
-      broadcastOp.computeBroadcastedUnitDims();
-  SmallVector<OpFoldResult> extractPos(extractOp.getMixedPosition());
-  OpBuilder b(extractOp.getContext());
-  int64_t broadcastRankDiff = broadcastDstRank - broadcastSrcRank;
-  for (int64_t i = broadcastRankDiff, e = extractPos.size(); i < e; ++i)
-    if (broadcastedUnitDims.contains(i))
-      extractPos[i] = b.getIndexAttr(0);
-  // `rankDiff` leading dimensions correspond to new broadcasted dims, drop the
-  // matching extract position when extracting from the source operand.
-  int64_t rankDiff = broadcastSrcRank - extractResultRank;
-  extractPos.erase(extractPos.begin(),
-                   std::next(extractPos.begin(), extractPos.size() - rankDiff));
-  // OpBuilder is only used as a helper to build an I64ArrayAttr.
-  auto [staticPos, dynPos] = decomposeMixedValues(extractPos);
+  // In the case where there is a broadcast dimension in the suffix, it is not
+  // possible to replace extract(broadcast(X)) with extract(X). Example:
+  //
+  //     broadcast       extract
+  // (1) --------> (3,4) ------> (4)
+  if (extractType &&
+      extractType.getShape() != inputShape.take_back(extractRank))
+    return Value();
+
+  // Replace extract(broadcast(X)) with extract(X).
+  // First, determine the new extraction position.
+  unsigned deltaOverall = inputRank - extractRank;
+  unsigned deltaBroadcast = broadcastRank - inputRank;
+  SmallVector<OpFoldResult> oldPositions = extractOp.getMixedPosition();
+  SmallVector<OpFoldResult> newPositions(deltaOverall);
+  IntegerAttr zero = OpBuilder(extractOp.getContext()).getIndexAttr(0);
+  for (auto [i, size] : llvm::enumerate(inputShape.take_front(deltaOverall))) {
+    newPositions[i] = size == 1 ? zero : oldPositions[i + deltaBroadcast];
+  }
+  auto [staticPos, dynPos] = decomposeMixedValues(newPositions);
   extractOp->setOperands(
-      llvm::to_vector(llvm::concat<Value>(ValueRange(source), dynPos)));
+      llvm::to_vector(llvm::concat<Value>(ValueRange(input), dynPos)));
   extractOp.setStaticPosition(staticPos);
   return extractOp.getResult();
 }
@@ -1763,7 +1958,7 @@ static Value foldExtractFromShuffle(ExtractOp extractOp) {
   if (extractOp.hasDynamicPosition())
     return Value();
 
-  auto shuffleOp = extractOp.getVector().getDefiningOp<ShuffleOp>();
+  auto shuffleOp = extractOp.getSource().getDefiningOp<ShuffleOp>();
   if (!shuffleOp)
     return Value();
 
@@ -1794,7 +1989,7 @@ static Value foldExtractFromShapeCast(ExtractOp extractOp) {
   if (extractOp.hasDynamicPosition())
     return Value();
 
-  auto shapeCastOp = extractOp.getVector().getDefiningOp<vector::ShapeCastOp>();
+  auto shapeCastOp = extractOp.getSource().getDefiningOp<vector::ShapeCastOp>();
   if (!shapeCastOp)
     return Value();
 
@@ -1860,7 +2055,7 @@ static Value foldExtractFromExtractStrided(ExtractOp extractOp) {
     return Value();
 
   auto extractStridedSliceOp =
-      extractOp.getVector().getDefiningOp<vector::ExtractStridedSliceOp>();
+      extractOp.getSource().getDefiningOp<vector::ExtractStridedSliceOp>();
   if (!extractStridedSliceOp)
     return Value();
 
@@ -1897,7 +2092,7 @@ static Value foldExtractFromExtractStrided(ExtractOp extractOp) {
   assert(extractedPos.size() >= sliceOffsets.size());
   for (size_t i = 0, e = sliceOffsets.size(); i < e; i++)
     extractedPos[i] = extractedPos[i] + sliceOffsets[i];
-  extractOp.getVectorMutable().assign(extractStridedSliceOp.getVector());
+  extractOp.getSourceMutable().assign(extractStridedSliceOp.getSource());
 
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
   OpBuilder b(extractOp.getContext());
@@ -1915,7 +2110,7 @@ static Value foldExtractStridedOpFromInsertChain(ExtractOp extractOp) {
       llvm::isa<VectorType>(extractOp.getType())
           ? llvm::cast<VectorType>(extractOp.getType()).getRank()
           : 0;
-  auto insertOp = extractOp.getVector().getDefiningOp<InsertStridedSliceOp>();
+  auto insertOp = extractOp.getSource().getDefiningOp<InsertStridedSliceOp>();
   if (!insertOp)
     return Value();
 
@@ -1967,7 +2162,7 @@ static Value foldExtractStridedOpFromInsertChain(ExtractOp extractOp) {
                                                     insertRankDiff))
           return Value();
       }
-      extractOp.getVectorMutable().assign(insertOp.getValueToStore());
+      extractOp.getSourceMutable().assign(insertOp.getValueToStore());
       // OpBuilder is only used as a helper to build an I64ArrayAttr.
       OpBuilder b(extractOp.getContext());
       extractOp.setStaticPosition(offsetDiffs);
@@ -1992,7 +2187,7 @@ static Value foldScalarExtractFromFromElements(ExtractOp extractOp) {
     return {};
 
   // Look for extract(from_elements).
-  auto fromElementsOp = extractOp.getVector().getDefiningOp<FromElementsOp>();
+  auto fromElementsOp = extractOp.getSource().getDefiningOp<FromElementsOp>();
   if (!fromElementsOp)
     return {};
 
@@ -2043,7 +2238,7 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
   // `opChange` is a flag. If it is true, it means to update `op` in place.
   bool opChange = false;
   for (unsigned i = 0, e = staticPosition.size(); i < e; ++i) {
-    if (!ShapedType::isDynamic(staticPosition[i]))
+    if (ShapedType::isStatic(staticPosition[i]))
       continue;
     Attribute positionAttr = dynamicPositionAttr[index];
     Value position = dynamicPosition[index++];
@@ -2063,6 +2258,7 @@ static Value extractInsertFoldConstantOp(OpType op, AdaptorType adaptor,
   if (opChange) {
     op.setStaticPosition(staticPosition);
     op.getOperation()->setOperands(operands);
+    // Return the original result to indicate an in-place folding happened.
     return op.getResult();
   }
   return {};
@@ -2081,7 +2277,7 @@ static Attribute foldPoisonIndexInsertExtractOp(MLIRContext *context,
 
 /// Fold a vector extract from is a poison source.
 static Attribute foldPoisonSrcExtractOp(Attribute srcAttr) {
-  if (isa_and_nonnull<ub::PoisonAttr>(srcAttr))
+  if (matchPattern(srcAttr, ub::m_Poison()))
     return srcAttr;
 
   return {};
@@ -2142,19 +2338,20 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
   // Fold "vector.extract %v[] : vector<2x2xf32> from vector<2x2xf32>" to %v.
   // Note: Do not fold "vector.extract %v[] : f32 from vector<f32>" (type
   // mismatch).
-  if (getNumIndices() == 0 && getVector().getType() == getResult().getType())
-    return getVector();
-  if (auto res = foldPoisonSrcExtractOp(adaptor.getVector()))
+  if (getNumIndices() == 0 && getSource().getType() == getResult().getType())
+    return getSource();
+  if (auto res = foldPoisonSrcExtractOp(adaptor.getSource()))
     return res;
-  // Fold `arith.constant` indices into the `vector.extract` operation. Make
-  // sure that patterns requiring constant indices are added after this fold.
-  SmallVector<Value> operands = {getVector()};
-  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
-    return val;
+  // Fold `arith.constant` indices into the `vector.extract` operation.
+  // Do not stop here as this fold may enable subsequent folds that require
+  // constant indices.
+  SmallVector<Value> operands = {getSource()};
+  auto inplaceFolded = extractInsertFoldConstantOp(*this, adaptor, operands);
+
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
-  if (auto res = foldDenseElementsAttrSrcExtractOp(*this, adaptor.getVector()))
+  if (auto res = foldDenseElementsAttrSrcExtractOp(*this, adaptor.getSource()))
     return res;
   if (succeeded(foldExtractOpFromExtractChain(*this)))
     return getResult();
@@ -2172,7 +2369,8 @@ OpFoldResult ExtractOp::fold(FoldAdaptor adaptor) {
     return val;
   if (auto val = foldScalarExtractFromFromElements(*this))
     return val;
-  return OpFoldResult();
+
+  return inplaceFolded;
 }
 
 namespace {
@@ -2180,36 +2378,22 @@ namespace {
 // Pattern to rewrite a ExtractOp(Broadcast) -> Broadcast.
 class ExtractOpFromBroadcast final : public OpRewritePattern<ExtractOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
-    Operation *defOp = extractOp.getVector().getDefiningOp();
-    if (!defOp || !isa<vector::BroadcastOp, SplatOp>(defOp))
+
+    Operation *defOp = extractOp.getSource().getDefiningOp();
+    VectorType outType = dyn_cast<VectorType>(extractOp.getType());
+    if (!defOp || !isBroadcastLike(defOp) || !outType)
       return failure();
 
     Value source = defOp->getOperand(0);
-    if (extractOp.getType() == source.getType())
-      return failure();
-    auto getRank = [](Type type) {
-      return llvm::isa<VectorType>(type)
-                 ? llvm::cast<VectorType>(type).getRank()
-                 : 0;
-    };
-    unsigned broadcastSrcRank = getRank(source.getType());
-    unsigned extractResultRank = getRank(extractOp.getType());
-    // We only consider the case where the rank of the source is less than or
-    // equal to the rank of the extract dst. The other cases are handled in the
-    // folding patterns.
-    if (extractResultRank < broadcastSrcRank)
-      return failure();
-    // For scalar result, the input can only be a rank-0 vector, which will
-    // be handled by the folder.
-    if (extractResultRank == 0)
+    if (isBroadcastableTo(source.getType(), outType) !=
+        BroadcastableToResult::Success)
       return failure();
 
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        extractOp, extractOp.getType(), source);
+    rewriter.replaceOpWithNewOp<BroadcastOp>(extractOp, outType, source);
     return success();
   }
 };
@@ -2217,12 +2401,12 @@ public:
 // Pattern to rewrite a ExtractOp(CreateMask) -> CreateMask.
 class ExtractOpFromCreateMask final : public OpRewritePattern<ExtractOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractOp extractOp,
                                 PatternRewriter &rewriter) const override {
     auto createMaskOp =
-        extractOp.getVector().getDefiningOp<vector::CreateMaskOp>();
+        extractOp.getSource().getDefiningOp<vector::CreateMaskOp>();
     if (!createMaskOp)
       return failure();
 
@@ -2279,11 +2463,75 @@ public:
   }
 };
 
+// Pattern to rewrite a ExtractOp(ConstantMask) -> ConstantMask.
+class ExtractOpFromConstantMask final : public OpRewritePattern<ExtractOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    auto constantMaskOp =
+        extractOp.getSource().getDefiningOp<vector::ConstantMaskOp>();
+    if (!constantMaskOp)
+      return failure();
+
+    Type resultType = extractOp.getResult().getType();
+    auto extractedMaskType = dyn_cast<VectorType>(resultType);
+
+    ArrayRef<int64_t> extractOpPos = extractOp.getStaticPosition();
+    ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
+
+    VectorType maskType = constantMaskOp.getVectorType();
+
+    // Check if any extracted position is outside the mask bounds.
+    for (size_t dimIdx = 0; dimIdx < extractOpPos.size(); dimIdx++) {
+      int64_t pos = extractOpPos[dimIdx];
+      if (pos == ShapedType::kDynamic) {
+        // If the dim is all-true, a dynamic index is fine — any position
+        // is within the masked region.
+        if (maskDimSizes[dimIdx] == maskType.getDimSize(dimIdx))
+          continue;
+        // Otherwise we don't know if the position is inside or outside of
+        // the masked area, so bail out.
+        return failure();
+      }
+
+      // If the position is statically outside of the masked area, the result
+      // will be all-false.
+      if (pos >= maskDimSizes[dimIdx]) {
+        if (extractedMaskType) {
+          rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+              extractOp, DenseElementsAttr::get(extractedMaskType, false));
+        } else {
+          rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+              extractOp, rewriter.getIntegerAttr(resultType, false));
+        }
+        return success();
+      }
+    }
+
+    // All positions are within the mask bounds.
+    if (extractedMaskType) {
+      // Vector result: the result is a constant_mask with the remaining
+      // dimensions.
+      rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
+          extractOp, extractedMaskType,
+          maskDimSizes.drop_front(extractOpPos.size()));
+    } else {
+      // Scalar result: all positions are within the masked region, so the
+      // result is true.
+      rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+          extractOp, rewriter.getIntegerAttr(resultType, true));
+    }
+    return success();
+  }
+};
+
 // Folds extract(shape_cast(..)) into shape_cast when the total element count
 // does not change.
 LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
                                                   PatternRewriter &rewriter) {
-  auto castOp = extractOp.getVector().getDefiningOp<ShapeCastOp>();
+  auto castOp = extractOp.getSource().getDefiningOp<ShapeCastOp>();
   if (!castOp)
     return failure();
 
@@ -2318,7 +2566,7 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
     return failure();
 
   // Look for extracts from a from_elements op.
-  auto fromElementsOp = extractOp.getVector().getDefiningOp<FromElementsOp>();
+  auto fromElementsOp = extractOp.getSource().getDefiningOp<FromElementsOp>();
   if (!fromElementsOp)
     return failure();
   VectorType inputType = fromElementsOp.getType();
@@ -2347,11 +2595,108 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
   return success();
 }
 
+/// Replace `vector.extract` with `vector.shape_cast`.
+///
+/// BEFORE:
+/// %0 = vector.extract %arg0[0] : vector<4xf32> from vector<1x4xf32>
+/// AFTER:
+/// %0 = vector.shape_cast %arg0 : vector<1x4xf32> to vector<4xf32>
+///
+/// The canonical form of vector operations that reshape vectors is shape_cast.
+struct ExtractToShapeCast final : OpRewritePattern<vector::ExtractOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    VectorType sourceType = extractOp.getSourceVectorType();
+    VectorType outType = dyn_cast<VectorType>(extractOp.getType());
+    if (!outType)
+      return failure();
+
+    if (sourceType.getNumElements() != outType.getNumElements())
+      return rewriter.notifyMatchFailure(
+          extractOp, "extract to vector with fewer elements");
+
+    // Negative values in `position` means that the extacted value is poison.
+    // There is a vector.extract folder for this.
+    if (llvm::any_of(extractOp.getMixedPosition(),
+                     [](OpFoldResult v) { return !isConstantIntValue(v, 0); }))
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "leaving for extract poison folder");
+
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(extractOp, outType,
+                                                     extractOp.getSource());
+
+    return success();
+  }
+};
+
+/// Folds vector.extract from vector.insert when the extract position is a
+/// prefix of the insert position and the remaining (un-indexed) dimensions
+/// of the extracted sub-vector are all size 1. In that case the extracted
+/// value is fully determined by the inserted value.
+///
+/// Examples:
+///   %ins = vector.insert %s, %v [3, 0] : f32 into vector<16x1xf32>
+///   %ext = vector.extract %ins [3] : vector<1xf32> from vector<16x1xf32>
+/// folds to:
+///   %ext = vector.broadcast %s : f32 to vector<1xf32>
+///
+///   %ins = vector.insert %s, %v [0, 0] : vector<1xf32> into vector<16x1x1xf32>
+//    %ext = vector.extract %ins [0] : vector<1x1xf32> from vector<16x1x1xf32>
+/// folds to:
+///   %ext = vector.shape_cast %arg0 : vector<1xf32> to vector<1x1xf32>
+struct FoldExtractFromInsertUnitDim final
+    : OpRewritePattern<vector::ExtractOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    if (extractOp.hasDynamicPosition())
+      return failure();
+
+    auto insertOp = extractOp.getSource().getDefiningOp<vector::InsertOp>();
+    if (!insertOp || insertOp.hasDynamicPosition())
+      return failure();
+
+    ArrayRef<int64_t> extractPos = extractOp.getStaticPosition();
+    ArrayRef<int64_t> insertPos = insertOp.getStaticPosition();
+
+    // The extract position must be a strict prefix of the insert position.
+    if (extractPos.size() >= insertPos.size() ||
+        extractPos != insertPos.take_front(extractPos.size()))
+      return failure();
+
+    // The remaining dimensions (those not indexed by the extract) must all
+    // be size 1 in the source vector type. This guarantees that the inserted
+    // value fully determines the extracted sub-vector.
+    auto srcVecType = extractOp.getSourceVectorType();
+    for (int64_t i = extractPos.size(), e = srcVecType.getRank(); i < e; ++i)
+      if (srcVecType.getDimSize(i) != 1)
+        return failure();
+
+    Value inserted = insertOp.getValueToStore();
+    Type extractedType = extractOp.getResult().getType();
+    if (isa<VectorType>(inserted.getType())) {
+      rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(extractOp, extractedType,
+                                                       inserted);
+    } else {
+      // The inserted value fully determines the extracted sub-vector; broadcast
+      // it to the extracted type.
+      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+          extractOp, extractOp.getResult().getType(),
+          insertOp.getValueToStore());
+    }
+    return success();
+  }
+};
+
 } // namespace
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
+  results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask,
+              ExtractOpFromConstantMask, ExtractToShapeCast,
+              FoldExtractFromInsertUnitDim>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
 }
@@ -2366,25 +2711,284 @@ static void populateFromInt64AttrArray(ArrayAttr arrayAttr,
 // FmaOp
 //===----------------------------------------------------------------------===//
 
-std::optional<SmallVector<int64_t, 4>> FMAOp::getShapeForUnroll() {
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>> FMAOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
+}
+
+//===----------------------------------------------------------------------===//
+// ToElementsOp
+//===----------------------------------------------------------------------===//
+
+/// Returns true if all the `operands` are defined by `defOp`.
+/// Otherwise, returns false.
+static bool haveSameDefiningOp(OperandRange operands, Operation *defOp) {
+  if (operands.empty())
+    return false;
+
+  return llvm::all_of(operands, [&](Value operand) {
+    Operation *currentDef = operand.getDefiningOp();
+    return currentDef == defOp;
+  });
+}
+
+/// Folds vector.to_elements(vector.from_elements(%e0, %e1, ...)) into
+/// (%e0, %e1, ...). For example:
+///
+///   %0 = vector.from_elements %a, %b, %c : vector<3xf32>
+///   %1:3 = vector.to_elements %0 : vector<3xf32>
+///   user_op %1#0, %1#1, %1#2
+///
+/// becomes:
+///
+///   user_op %a, %b, %c
+///
+static LogicalResult
+foldToElementsFromElements(ToElementsOp toElementsOp,
+                           SmallVectorImpl<OpFoldResult> &results) {
+  auto fromElementsOp =
+      toElementsOp.getSource().getDefiningOp<FromElementsOp>();
+  if (!fromElementsOp)
+    return failure();
+
+  llvm::append_range(results, fromElementsOp.getElements());
+  return success();
+}
+
+/// Folds vector.to_elements(vector.broadcast(%x)) for the scalar case only.
+///
+/// Example:
+///  %b = vector.broadcast %x : i32 to vector<3xf32>
+///  %e:3 = vector.to_elements %b : vector<3xf32>
+///  user_op %e#0, %e#1, %e#2
+/// becomes:
+///  user_op %x, %x, %x
+///
+/// The vector source case is handled by a canonicalization pattern.
+static LogicalResult
+foldToElementsOfBroadcast(ToElementsOp toElementsOp,
+                          SmallVectorImpl<OpFoldResult> &results) {
+  auto bcastOp = toElementsOp.getSource().getDefiningOp<BroadcastOp>();
+  if (!bcastOp)
+    return failure();
+  // Vectors are handled in the ToElementsOfBroadcast RewritePattern.
+  if (isa<VectorType>(bcastOp.getSource().getType()))
+    return failure();
+
+  auto resultVecType = cast<VectorType>(toElementsOp.getSource().getType());
+
+  Value scalar = bcastOp.getSource();
+  results.assign(resultVecType.getNumElements(), scalar);
+  return success();
+}
+
+LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
+                                 SmallVectorImpl<OpFoldResult> &results) {
+  if (succeeded(foldToElementsFromElements(*this, results)))
+    return success();
+
+  // Y = ToElements(ShapeCast(X)) -> Y = ToElements(X)
+  if (auto shapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
+    setOperand(shapeCast.getSource());
+    return success();
+  }
+
+  return foldToElementsOfBroadcast(*this, results);
+}
+
+LogicalResult
+ToElementsOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> loc,
+                               ToElementsOp::Adaptor adaptor,
+                               SmallVectorImpl<Type> &inferredReturnTypes) {
+  auto vecType = cast<VectorType>(adaptor.getSource().getType());
+  Type elType = vecType.getElementType();
+  inferredReturnTypes.append(vecType.getNumElements(), elType);
+  return success();
+}
+
+/// Canonicalize `vector.to_elements(vector.broadcast(%v))` where `%v` is a
+/// vector.
+/// - Build `vector.to_elements %v` and remap each destination element to the
+///   corresponding source element using broadcast rules (match or 1 →
+///   replicate).
+///
+/// Example:
+///   %v = vector.broadcast %src : vector<2xf32> to vector<3x2xf32>
+///   %e:6 = vector.to_elements %v : vector<3x2xf32>
+/// becomes:
+///   %src_elems:2 = vector.to_elements %src : vector<2xf32>
+///   // uses: %src_elems#0, %src_elems#1, %src_elems#0,
+///   //       %src_elems#1, %src_elems#0, %src_elems#1
+struct ToElementsOfBroadcast final : OpRewritePattern<ToElementsOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ToElementsOp toElementsOp,
+                                PatternRewriter &rewriter) const override {
+    auto bcastOp = toElementsOp.getSource().getDefiningOp<BroadcastOp>();
+    if (!bcastOp)
+      return failure();
+
+    // Only handle broadcasts from a vector source here.
+    auto srcType = dyn_cast<VectorType>(bcastOp.getSource().getType());
+    if (!srcType)
+      return failure();
+
+    auto dstType = cast<VectorType>(toElementsOp.getSource().getType());
+
+    ArrayRef<int64_t> dstShape = dstType.getShape();
+    ArrayRef<int64_t> srcShape = srcType.getShape();
+
+    int64_t dstRank = dstShape.size();
+    int64_t srcRank = srcShape.size();
+
+    // Create elements for the broadcast source vector.
+    auto srcElems = vector::ToElementsOp::create(
+        rewriter, toElementsOp.getLoc(), bcastOp.getSource());
+
+    int64_t dstCount = llvm::product_of(dstShape);
+
+    SmallVector<Value> replacements;
+    replacements.reserve(dstCount);
+
+    // For each element of the destination, determine which element of the
+    // source should be used. We walk all destination positions using a single
+    // counter, decode it into per-dimension indices, then build the matching
+    // source position: use the same index where sizes match, and use 0 where
+    // the source size is 1 (replication). This mapping is needed so we can
+    // replace each result of to_elements with the corresponding element from
+    // the broadcast source.
+    // Inner-dimension stretch example:
+    //   %v = vector.broadcast %src : vector<2x1x2xf32> to vector<2x3x2xf32>
+    //   %e:12 = vector.to_elements %v : vector<2x3x2xf32>
+    // becomes:
+    //   %src_elems:4 = vector.to_elements %src : vector<2x1x2xf32>
+    //   // uses: %src_elems#0, %src_elems#1, %src_elems#0,
+    //   //       %src_elems#1, %src_elems#0, %src_elems#1,
+    //   //       %src_elems#2, %src_elems#3, %src_elems#2,
+    //   //       %src_elems#3, %src_elems#2, %src_elems#3
+
+    // Row-major strides for the destination shape.
+    SmallVector<int64_t> dstStrides = computeStrides(dstShape);
+    // Row-major strides for the source shape.
+    SmallVector<int64_t> srcStrides = computeStrides(srcShape);
+    SmallVector<int64_t> dstIdx(dstRank);
+    SmallVector<int64_t> srcIdx(srcRank);
+    for (int64_t lin = 0; lin < dstCount; ++lin) {
+      // Convert linear destination index to per-dimension indices.
+      dstIdx = delinearize(lin, dstStrides);
+      for (int64_t k = 0; k < srcRank; ++k)
+        srcIdx[k] = (srcShape[k] == 1) ? 0 : dstIdx[dstRank - srcRank + k];
+      // Convert per-dimension source indices back to a linear index.
+      int64_t srcLin = linearize(srcIdx, srcStrides);
+      replacements.push_back(srcElems.getResult(srcLin));
+    }
+
+    rewriter.replaceOp(toElementsOp, replacements);
+    return success();
+  }
+};
+
+void ToElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<ToElementsOfBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
 // FromElementsOp
 //===----------------------------------------------------------------------===//
 
-/// Rewrite a vector.from_elements into a vector.splat if all elements are the
-/// same SSA value. E.g.:
+/// Folds vector.from_elements(vector.to_elements(%vector)) into %vector.
 ///
-/// %0 = vector.from_elements %a, %a, %a : vector<3xf32>
-/// ==> rewrite to vector.splat %a : vector<3xf32>
-static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
-                                                PatternRewriter &rewriter) {
+/// Case #1: Input and output vectors are the same.
+///
+///   %0:3 = vector.to_elements %a : vector<3xf32>
+///   %1 = vector.from_elements %0#0, %0#1, %0#2 : vector<3xf32>
+///   user_op %1
+///
+/// becomes:
+///
+///   user_op %a
+///
+static OpFoldResult foldFromElementsToElements(FromElementsOp fromElementsOp) {
+  OperandRange fromElemsOperands = fromElementsOp.getElements();
+  if (fromElemsOperands.empty())
+    return {};
+
+  auto toElementsOp = fromElemsOperands[0].getDefiningOp<ToElementsOp>();
+  if (!toElementsOp)
+    return {};
+
+  if (!haveSameDefiningOp(fromElemsOperands, toElementsOp))
+    return {};
+
+  // Case #1: Input and output vectors are the same. Forward the input vector.
+  Value toElementsInput = toElementsOp.getSource();
+  if (fromElementsOp.getType() == toElementsInput.getType() &&
+      llvm::equal(fromElemsOperands, toElementsOp.getResults())) {
+    return toElementsInput;
+  }
+
+  // TODO: Support cases with different input and output shapes and different
+  // number of elements.
+
+  return {};
+}
+
+/// Fold vector.from_elements to a constant when all operands are constants.
+/// Example:
+///   %c1 = arith.constant 1 : i32
+///   %c2 = arith.constant 2 : i32
+///   %v = vector.from_elements %c1, %c2 : vector<2xi32>
+/// =>
+///   %v = arith.constant dense<[1, 2]> : vector<2xi32>
+///
+static OpFoldResult foldFromElementsToConstant(FromElementsOp fromElementsOp,
+                                               ArrayRef<Attribute> elements) {
+  // Check for null or poison attributes before any processing.
+  if (llvm::any_of(elements, [](Attribute attr) {
+        return !attr || matchPattern(attr, ub::m_Poison());
+      }))
+    return {};
+
+  // DenseElementsAttr only supports int/index/float/complex types.
+  auto resVecType = fromElementsOp.getResult().getType();
+  auto resEltType = resVecType.getElementType();
+  if (!resEltType.isIntOrIndexOrFloat() && !isa<ComplexType>(resEltType))
+    return {};
+
+  // Constant attributes might have a different type than the return type.
+  // Convert them before creating the dense elements attribute.
+  auto convertedElements = llvm::map_to_vector(elements, [&](Attribute attr) {
+    return convertNumericAttr(attr, resEltType);
+  });
+
+  return DenseElementsAttr::get(resVecType, convertedElements);
+}
+
+OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
+  if (auto res = foldFromElementsToElements(*this))
+    return res;
+  if (auto res = foldFromElementsToConstant(*this, adaptor.getElements()))
+    return res;
+
+  return {};
+}
+
+/// Rewrite vector.from_elements as vector.broadcast if the elements are the
+/// same. Example:
+///    %0 = vector.from_elements %a, %a, %a : vector<3xf32>
+/// =>
+///    %0 = vector.broadcast %a : f32 to vector<3xf32>
+static LogicalResult
+rewriteFromElementsAsBroadcast(FromElementsOp fromElementsOp,
+                               PatternRewriter &rewriter) {
   if (!llvm::all_equal(fromElementsOp.getElements()))
     return failure();
-  rewriter.replaceOpWithNewOp<SplatOp>(fromElementsOp, fromElementsOp.getType(),
-                                       fromElementsOp.getElements().front());
+  rewriter.replaceOpWithNewOp<BroadcastOp>(
+      fromElementsOp, fromElementsOp.getType(),
+      fromElementsOp.getElements().front());
   return success();
 }
 
@@ -2410,12 +3014,12 @@ static LogicalResult rewriteFromElementsAsSplat(FromElementsOp fromElementsOp,
 
 class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
 
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(FromElementsOp fromElements,
                                 PatternRewriter &rewriter) const override {
 
-    // Handled by `rewriteFromElementsAsSplat`
+    // Handled by `rewriteFromElementsAsBroadcast`.
     if (fromElements.getType().getNumElements() == 1)
       return failure();
 
@@ -2431,8 +3035,7 @@ class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
          llvm::enumerate(fromElements.getElements())) {
 
       // Check that the element is from a vector.extract operation.
-      auto extractOp =
-          dyn_cast_if_present<vector::ExtractOp>(element.getDefiningOp());
+      auto extractOp = element.getDefiningOp<vector::ExtractOp>();
       if (!extractOp) {
         return rewriter.notifyMatchFailure(fromElements,
                                            "element not from vector.extract");
@@ -2441,8 +3044,8 @@ class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
       // Check condition (i) by checking that all elements have the same source
       // as the first element.
       if (insertIndex == 0) {
-        source = extractOp.getVector();
-      } else if (extractOp.getVector() != source) {
+        source = extractOp.getSource();
+      } else if (extractOp.getSource() != source) {
         return rewriter.notifyMatchFailure(fromElements,
                                            "element from different vector");
       }
@@ -2509,7 +3112,7 @@ class FromElementsToShapeCast : public OpRewritePattern<FromElementsOp> {
 
 void FromElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
-  results.add(rewriteFromElementsAsSplat);
+  results.add(rewriteFromElementsAsBroadcast);
   results.add<FromElementsToShapeCast>(context);
 }
 
@@ -2522,7 +3125,11 @@ void BroadcastOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   setResultRanges(getResult(), argRanges.front());
 }
 
-std::optional<SmallVector<int64_t, 4>> BroadcastOp::getShapeForUnroll() {
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+BroadcastOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
 }
 
@@ -2661,61 +3268,6 @@ Value BroadcastOp::createOrFoldBroadcastOp(
   return res;
 }
 
-BroadcastableToResult mlir::vector::isBroadcastableTo(
-    Type srcType, VectorType dstVectorType,
-    std::pair<VectorDim, VectorDim> *mismatchingDims) {
-  // Broadcast scalar to vector of the same element type.
-  if (srcType.isIntOrIndexOrFloat() && dstVectorType &&
-      getElementTypeOrSelf(srcType) == getElementTypeOrSelf(dstVectorType))
-    return BroadcastableToResult::Success;
-  // From now on, only vectors broadcast.
-  VectorType srcVectorType = llvm::dyn_cast<VectorType>(srcType);
-  if (!srcVectorType)
-    return BroadcastableToResult::SourceTypeNotAVector;
-
-  int64_t srcRank = srcVectorType.getRank();
-  int64_t dstRank = dstVectorType.getRank();
-  if (srcRank > dstRank)
-    return BroadcastableToResult::SourceRankHigher;
-  // Source has an exact match or singleton value for all trailing dimensions
-  // (all leading dimensions are simply duplicated).
-  int64_t lead = dstRank - srcRank;
-  for (int64_t dimIdx = 0; dimIdx < srcRank; ++dimIdx) {
-    // Have mismatching dims (in the sense of vector.broadcast semantics) been
-    // encountered?
-    bool foundMismatchingDims = false;
-
-    // Check fixed-width dims.
-    int64_t srcDim = srcVectorType.getDimSize(dimIdx);
-    int64_t dstDim = dstVectorType.getDimSize(lead + dimIdx);
-    if (srcDim != 1 && srcDim != dstDim)
-      foundMismatchingDims = true;
-
-    // Check scalable flags.
-    bool srcDimScalableFlag = srcVectorType.getScalableDims()[dimIdx];
-    bool dstDimScalableFlag = dstVectorType.getScalableDims()[lead + dimIdx];
-    if ((srcDim == 1 && srcDimScalableFlag && dstDim != 1) ||
-        // 1 -> [N] is fine, everything else should be rejected when mixing
-        // fixed-width and scalable dims
-        (srcDimScalableFlag != dstDimScalableFlag &&
-         (srcDim != 1 || srcDimScalableFlag)))
-      foundMismatchingDims = true;
-
-    if (foundMismatchingDims) {
-      if (mismatchingDims != nullptr) {
-        mismatchingDims->first.dim = srcDim;
-        mismatchingDims->first.isScalable = srcDimScalableFlag;
-
-        mismatchingDims->second.dim = dstDim;
-        mismatchingDims->second.isScalable = dstDimScalableFlag;
-      }
-      return BroadcastableToResult::DimensionMismatch;
-    }
-  }
-
-  return BroadcastableToResult::Success;
-}
-
 LogicalResult BroadcastOp::verify() {
   std::pair<VectorDim, VectorDim> mismatchingDims;
   BroadcastableToResult res = isBroadcastableTo(
@@ -2738,9 +3290,47 @@ LogicalResult BroadcastOp::verify() {
   llvm_unreachable("unexpected vector.broadcast op error");
 }
 
+// Fold broadcast(shape_cast(x)) into broadcast(x) if x's type is compatible
+// with broadcast's result type and shape_cast only adds or removes ones in the
+// leading dimensions.
+static LogicalResult foldBroadcastOfShapeCast(BroadcastOp broadcastOp) {
+  auto srcShapeCast = broadcastOp.getSource().getDefiningOp<ShapeCastOp>();
+  if (!srcShapeCast)
+    return failure();
+
+  VectorType srcType = srcShapeCast.getSourceVectorType();
+  VectorType destType = broadcastOp.getResultVectorType();
+  // Check type compatibility.
+  if (vector::isBroadcastableTo(srcType, destType) !=
+      BroadcastableToResult::Success)
+    return failure();
+
+  ArrayRef<int64_t> srcShape = srcType.getShape();
+  ArrayRef<int64_t> shapecastShape =
+      srcShapeCast.getResultVectorType().getShape();
+  // Trailing dimensions should be the same if shape_cast only alters the
+  // leading dimensions.
+  unsigned numTrailingDims = std::min(srcShape.size(), shapecastShape.size());
+  if (!llvm::equal(srcShape.take_back(numTrailingDims),
+                   shapecastShape.take_back(numTrailingDims)))
+    return failure();
+
+  assert(all_of(srcShape.drop_back(numTrailingDims),
+                [](int64_t E) { return E == 1; }) &&
+         all_of(shapecastShape.drop_back(numTrailingDims),
+                [](int64_t E) { return E == 1; }) &&
+         "ill-formed shape_cast");
+
+  broadcastOp.getSourceMutable().assign(srcShapeCast.getSource());
+  return success();
+}
+
 OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   if (getSourceType() == getResultVectorType())
     return getSource();
+  if (succeeded(foldBroadcastOfShapeCast(*this)))
+    return getResult();
+
   if (!adaptor.getSource())
     return {};
   auto vectorType = getResultVectorType();
@@ -2756,7 +3346,7 @@ OpFoldResult BroadcastOp::fold(FoldAdaptor adaptor) {
   }
   if (auto attr = llvm::dyn_cast<SplatElementsAttr>(adaptor.getSource()))
     return DenseElementsAttr::get(vectorType, attr.getSplatValue<Attribute>());
-  if (llvm::dyn_cast<ub::PoisonAttr>(adaptor.getSource()))
+  if (matchPattern(adaptor.getSource(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
   return {};
 }
@@ -2765,7 +3355,7 @@ namespace {
 
 // Fold broadcast1(broadcast2(x)) into broadcast1(x).
 struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(BroadcastOp broadcastOp,
                                 PatternRewriter &rewriter) const override {
@@ -2778,13 +3368,43 @@ struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
     return success();
   }
 };
+
+/// Replace `vector.broadcast` with `vector.shape_cast`.
+///
+/// BEFORE:
+/// %0 = vector.broadcast %arg0 : vector<4xi8> to vector<1x1x4xi8>
+/// AFTER:
+/// %0 = vector.shape_cast %arg0 : vector<4xi8> to vector<1x1x4xi8>
+///
+/// The canonical form of vector operations that reshape vectors is shape_cast.
+struct BroadcastToShapeCast final
+    : public OpRewritePattern<vector::BroadcastOp> {
+  using Base::Base;
+  LogicalResult matchAndRewrite(vector::BroadcastOp broadcast,
+                                PatternRewriter &rewriter) const override {
+
+    auto sourceType = dyn_cast<VectorType>(broadcast.getSourceType());
+    if (!sourceType) {
+      return rewriter.notifyMatchFailure(
+          broadcast, "source is a scalar, shape_cast doesn't support scalar");
+    }
+
+    VectorType outType = broadcast.getType();
+    if (sourceType.getNumElements() != outType.getNumElements()) {
+      return rewriter.notifyMatchFailure(
+          broadcast, "broadcast to a greater number of elements");
+    }
+
+    rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(broadcast, outType,
+                                                     broadcast.getSource());
+    return success();
+  }
+};
 } // namespace
 
 void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  // BroadcastToShapeCast is not a default canonicalization, it is opt-in by
-  // calling `populateCastAwayVectorLeadingOneDimPatterns`
-  results.add<BroadcastFolder>(context);
+  results.add<BroadcastFolder, BroadcastToShapeCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2830,10 +3450,13 @@ LogicalResult ShuffleOp::verify() {
 }
 
 LogicalResult
-ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location>,
+ShuffleOp::inferReturnTypes(MLIRContext *, std::optional<Location> loc,
                             ShuffleOp::Adaptor adaptor,
                             SmallVectorImpl<Type> &inferredReturnTypes) {
-  auto v1Type = llvm::cast<VectorType>(adaptor.getV1().getType());
+  auto v1Type = llvm::dyn_cast<VectorType>(adaptor.getV1().getType());
+  if (!v1Type) {
+    return emitOptionalError(loc, "expected vector type");
+  }
   auto v1Rank = v1Type.getRank();
   // Construct resulting type: leading dimension matches mask
   // length, all trailing dimensions match the operands.
@@ -2856,40 +3479,65 @@ static bool isStepIndexArray(ArrayRef<T> idxArr, uint64_t begin, size_t width) {
          });
 }
 
-OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
-  auto v1Type = getV1VectorType();
-  auto v2Type = getV2VectorType();
-
-  assert(!v1Type.isScalable() && !v2Type.isScalable() &&
-         "Vector shuffle does not support scalable vectors");
-
-  // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
-  // but must be a canonicalization into a vector.broadcast.
-  if (v1Type.getRank() == 0)
-    return {};
-
-  // Fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1.
-  auto mask = getMask();
+/// Fold shuffle V1, V2, [0, 1, 2, 3] : <4xi32>, <2xi32> -> V1.
+/// Fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2.
+static OpFoldResult foldShuffleIdentityMask(ShuffleOp op) {
+  auto v1Type = op.getV1VectorType();
+  auto v2Type = op.getV2VectorType();
+  auto mask = op.getMask();
   if (isStepIndexArray(mask, 0, v1Type.getDimSize(0)))
-    return getV1();
-  // Fold shuffle V1, V2, [4, 5] : <4xi32>, <2xi32> -> V2.
+    return op.getV1();
   if (isStepIndexArray(mask, v1Type.getDimSize(0), v2Type.getDimSize(0)))
-    return getV2();
+    return op.getV2();
+  return {};
+}
 
-  Attribute v1Attr = adaptor.getV1(), v2Attr = adaptor.getV2();
-  if (!v1Attr || !v2Attr)
+/// If a shuffle operand is poison, replace all mask indices that reference it
+/// with kPoisonIndex. This is an in-place fold.
+static OpFoldResult foldShufflePoisonOperandToMask(ShuffleOp op) {
+  bool isV1Poison = matchPattern(op.getV1(), ub::m_Poison());
+  bool isV2Poison = matchPattern(op.getV2(), ub::m_Poison());
+  if (!isV1Poison && !isV2Poison)
     return {};
 
-  // Fold shuffle poison, poison -> poison.
-  bool isV1Poison = isa<ub::PoisonAttr>(v1Attr);
-  bool isV2Poison = isa<ub::PoisonAttr>(v2Attr);
-  if (isV1Poison && isV2Poison)
-    return ub::PoisonAttr::get(getContext());
+  int64_t v1Size = op.getV1VectorType().getDimSize(0);
+  bool changed = false;
+  SmallVector<int64_t> newMask = llvm::to_vector(op.getMask());
+  for (int64_t &idx : newMask) {
+    if (idx == ShuffleOp::kPoisonIndex)
+      continue;
+    if ((isV1Poison && idx < v1Size) || (isV2Poison && idx >= v1Size)) {
+      idx = ShuffleOp::kPoisonIndex;
+      changed = true;
+    }
+  }
 
-  // Only support 1-D for now to avoid complicated n-D DenseElementsAttr
-  // manipulation.
+  if (!changed)
+    return {};
+
+  op.setMask(newMask);
+  return op.getResult();
+}
+
+/// Fold shuffle poison, poison -> poison.
+static OpFoldResult foldShufflePoisonInputs(MLIRContext *context,
+                                            Attribute v1Attr,
+                                            Attribute v2Attr) {
+  if (matchPattern(v1Attr, ub::m_Poison()) &&
+      matchPattern(v2Attr, ub::m_Poison()))
+    return ub::PoisonAttr::get(context);
+  return {};
+}
+
+/// Fold a shuffle of constant 1-D inputs by evaluating the mask.
+static OpFoldResult foldShuffleConstantInputs(ShuffleOp op, Attribute v1Attr,
+                                              Attribute v2Attr) {
+  auto v1Type = op.getV1VectorType();
   if (v1Type.getRank() != 1)
     return {};
+
+  bool isV1Poison = matchPattern(v1Attr, ub::m_Poison());
+  bool isV2Poison = matchPattern(v2Attr, ub::m_Poison());
 
   // Poison input attributes need special handling as they are not
   // DenseElementsAttr. If an index is poison, we select the first element of
@@ -2897,16 +3545,21 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
   SmallVector<Attribute> v1Elements, v2Elements;
   Attribute poisonElement;
   if (!isV2Poison) {
-    v2Elements =
-        to_vector(cast<DenseElementsAttr>(v2Attr).getValues<Attribute>());
+    auto v2DenseAttr = dyn_cast<DenseElementsAttr>(v2Attr);
+    if (!v2DenseAttr)
+      return {};
+    v2Elements = to_vector(v2DenseAttr.getValues<Attribute>());
     poisonElement = v2Elements[0];
   }
   if (!isV1Poison) {
-    v1Elements =
-        to_vector(cast<DenseElementsAttr>(v1Attr).getValues<Attribute>());
+    auto v1DenseAttr = dyn_cast<DenseElementsAttr>(v1Attr);
+    if (!v1DenseAttr)
+      return {};
+    v1Elements = to_vector(v1DenseAttr.getValues<Attribute>());
     poisonElement = v1Elements[0];
   }
 
+  ArrayRef<int64_t> mask = op.getMask();
   SmallVector<Attribute> results;
   int64_t v1Size = v1Type.getDimSize(0);
   for (int64_t maskIdx : mask) {
@@ -2924,7 +3577,35 @@ OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
     results.push_back(indexedElm);
   }
 
-  return DenseElementsAttr::get(getResultVectorType(), results);
+  return DenseElementsAttr::get(op.getResultVectorType(), results);
+}
+
+OpFoldResult vector::ShuffleOp::fold(FoldAdaptor adaptor) {
+  auto v1Type = getV1VectorType();
+
+  assert(!v1Type.isScalable() && !getV2VectorType().isScalable() &&
+         "Vector shuffle does not support scalable vectors");
+
+  // For consistency: 0-D shuffle return type is 1-D, this cannot be a folding
+  // but must be a canonicalization into a vector.broadcast.
+  if (v1Type.getRank() == 0)
+    return {};
+
+  if (auto res = foldShuffleIdentityMask(*this))
+    return res;
+  if (auto res = foldShufflePoisonOperandToMask(*this))
+    return res;
+
+  Attribute v1Attr = adaptor.getV1(), v2Attr = adaptor.getV2();
+  if (!v1Attr || !v2Attr)
+    return {};
+
+  if (auto res = foldShufflePoisonInputs(getContext(), v1Attr, v2Attr))
+    return res;
+  if (auto res = foldShuffleConstantInputs(*this, v1Attr, v2Attr))
+    return res;
+
+  return {};
 }
 
 namespace {
@@ -2932,7 +3613,7 @@ namespace {
 // Pattern to rewrite a 0-D shuffle with [0] or [1] mask returning a 1-D vector
 // to a broadcast.
 struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShuffleOp shuffleOp,
                                 PatternRewriter &rewriter) const override {
@@ -2953,23 +3634,45 @@ struct Canonicalize0DShuffleOp : public OpRewritePattern<ShuffleOp> {
   }
 };
 
-/// Pattern to rewrite a ShuffleOp(SplatOp, SplatOp) to SplatOp.
+/// Consider the defining operation `defOp` of `value`. If `defOp` is a
+/// vector.broadcast with a scalar operand, return the scalar value that is
+/// splatted. Otherwise return null.
+///
+/// Example:
+///
+/// scalar_source --> vector.broadcast --> value - return scalar_source
+static Value getScalarSplatSource(Value value) {
+  // Block argument:
+  Operation *defOp = value.getDefiningOp();
+  if (!defOp)
+    return {};
+
+  auto broadcast = dyn_cast<vector::BroadcastOp>(defOp);
+
+  // Not broadcast (and not splat):
+  if (!broadcast)
+    return {};
+
+  // Broadcast of a vector:
+  if (isa<VectorType>(broadcast.getSourceType()))
+    return {};
+
+  // Broadcast of a scalar:
+  return broadcast.getSource();
+}
+
+/// Pattern to rewrite shuffle(splat-like(v), splat-like(v)) as broadcast(v).
 class ShuffleSplat final : public OpRewritePattern<ShuffleOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShuffleOp op,
                                 PatternRewriter &rewriter) const override {
-    auto v1Splat = op.getV1().getDefiningOp<SplatOp>();
-    auto v2Splat = op.getV2().getDefiningOp<SplatOp>();
-
-    if (!v1Splat || !v2Splat)
+    Value splat = getScalarSplatSource(op.getV1());
+    if (!splat || getScalarSplatSource(op.getV2()) != splat)
       return failure();
 
-    if (v1Splat.getInput() != v2Splat.getInput())
-      return failure();
-
-    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), v1Splat.getInput());
+    rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(), splat);
     return success();
   }
 };
@@ -2978,7 +3681,7 @@ public:
 /// vector.interleave.
 class ShuffleInterleave : public OpRewritePattern<ShuffleOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShuffleOp op,
                                 PatternRewriter &rewriter) const override {
@@ -3013,66 +3716,66 @@ public:
   }
 };
 
+/// Pattern to replace usused shuffle operands / results with poison.
+///
+/// Example Input:
+///   %r = vector.shuffle %v1, %v2 [2, 3, 3, 3] : vector<2xi32>, vector<2xi32>
+///
+/// Example Output:
+///   %0 = ub.poison : vector<2xi32>
+///   %r = vector.shuffle %0, %v2 [2, 3, 3, 3] : vector<2xi32>, vector<2xi32>
+class FoldUnusedShuffleOperand final : public OpRewritePattern<ShuffleOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShuffleOp op,
+                                PatternRewriter &rewriter) const override {
+    // Replace with poison if all mask elements are poison.
+    if (llvm::all_of(op.getMask(), [](int64_t mask) {
+          return mask == ShuffleOp::kPoisonIndex;
+        })) {
+      rewriter.replaceOpWithNewOp<ub::PoisonOp>(op, op.getType());
+      return success();
+    }
+
+    // Helper function to replace an operand with poison.
+    auto replaceOperandWithPoison = [&](OpOperand &operand) {
+      // Do not replace if the operand is already poison.
+      if (!matchPattern(operand.get(), ub::m_Poison())) {
+        Value poison = ub::PoisonOp::create(rewriter, op.getLoc(),
+                                            operand.get().getType());
+        rewriter.modifyOpInPlace(op, [&]() { operand.set(poison); });
+        return success();
+      }
+      return failure();
+    };
+
+    // Replace V1 with poison if it is not used.
+    int64_t leadingV1Size = op.getV1VectorType().getRank() > 0
+                                ? op.getV1VectorType().getDimSize(0)
+                                : 1;
+    bool isV1Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask < leadingV1Size;
+    });
+    if (!isV1Used && succeeded(replaceOperandWithPoison(op.getV1Mutable())))
+      return success();
+
+    // Replace V2 with poison if it is not used.
+    bool isV2Used = llvm::any_of(op.getMask(), [&](int64_t mask) {
+      return mask != ShuffleOp::kPoisonIndex && mask >= leadingV1Size;
+    });
+    if (!isV2Used && succeeded(replaceOperandWithPoison(op.getV2Mutable())))
+      return success();
+
+    return failure();
+  }
+};
 } // namespace
 
 void ShuffleOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp>(
-      context);
-}
-
-//===----------------------------------------------------------------------===//
-// InsertElementOp
-//===----------------------------------------------------------------------===//
-
-void InsertElementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                        SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), argRanges[0].rangeUnion(argRanges[1]));
-}
-
-void InsertElementOp::build(OpBuilder &builder, OperationState &result,
-                            Value source, Value dest) {
-  build(builder, result, source, dest, {});
-}
-
-LogicalResult InsertElementOp::verify() {
-  auto dstVectorType = getDestVectorType();
-  if (dstVectorType.getRank() == 0) {
-    if (getPosition())
-      return emitOpError("expected position to be empty with 0-D vector");
-    return success();
-  }
-  if (dstVectorType.getRank() != 1)
-    return emitOpError("unexpected >1 vector rank");
-  if (!getPosition())
-    return emitOpError("expected position for 1-D vector");
-  return success();
-}
-
-OpFoldResult vector::InsertElementOp::fold(FoldAdaptor adaptor) {
-  // Skip the 0-D vector here.
-  if (!adaptor.getPosition())
-    return {};
-
-  auto src = dyn_cast_or_null<TypedAttr>(adaptor.getSource());
-  auto dst = dyn_cast_or_null<DenseElementsAttr>(adaptor.getDest());
-  auto pos = dyn_cast_or_null<IntegerAttr>(adaptor.getPosition());
-  if (!src || !dst || !pos)
-    return {};
-
-  if (src.getType() != getDestVectorType().getElementType())
-    return {};
-
-  auto dstElements = dst.getValues<Attribute>();
-
-  SmallVector<Attribute> results(dstElements);
-
-  uint64_t posIdx = pos.getInt();
-  if (posIdx >= results.size())
-    return {};
-  results[posIdx] = src;
-
-  return DenseElementsAttr::get(getDestVectorType(), results);
+  results.add<ShuffleSplat, ShuffleInterleave, Canonicalize0DShuffleOp,
+              FoldUnusedShuffleOperand>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3122,6 +3825,11 @@ void vector::InsertOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult InsertOp::verify() {
+  if (auto srcTy = dyn_cast<VectorType>(getValueToStoreType()))
+    if (srcTy.getRank() == 0)
+      return emitError(
+          "expected a scalar instead of a 0-d vector as the source operand");
+
   SmallVector<OpFoldResult> position = getMixedPosition();
   auto destVectorType = getDestVectorType();
   if (position.size() > static_cast<unsigned>(destVectorType.getRank()))
@@ -3153,13 +3861,25 @@ LogicalResult InsertOp::verify() {
   return success();
 }
 
+// Calculate the linearized position of the continuous chunk of elements to
+// insert, based on the shape of the value to insert and the positions to insert
+// at.
+static int64_t calculateInsertPosition(VectorType destTy,
+                                       ArrayRef<int64_t> positions) {
+  llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
+  assert(positions.size() <= completePositions.size() &&
+         "positions size must be less than or equal to destTy rank");
+  copy(positions, completePositions.begin());
+  return linearize(completePositions, computeStrides(destTy.getShape()));
+}
+
 namespace {
 
 // If insertOp is only inserting unit dimensions it can be transformed to a
 // broadcast.
 class InsertToBroadcast final : public OpRewritePattern<InsertOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -3174,23 +3894,144 @@ public:
   }
 };
 
-/// Pattern to rewrite a InsertOp(SplatOp, SplatOp) to SplatOp.
+/// Pattern to rewrite a insert(splat-like(v), splat-like(v)) as broadcast(v).
 class InsertSplatToSplat final : public OpRewritePattern<InsertOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertOp op,
                                 PatternRewriter &rewriter) const override {
-    auto srcSplat = op.getValueToStore().getDefiningOp<SplatOp>();
-    auto dstSplat = op.getDest().getDefiningOp<SplatOp>();
 
-    if (!srcSplat || !dstSplat)
+    Value splat = getScalarSplatSource(op.getValueToStore());
+    if (!splat || getScalarSplatSource(op.getDest()) != splat)
       return failure();
 
-    if (srcSplat.getInput() != dstSplat.getInput())
+    rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(), splat);
+    return success();
+  }
+};
+
+/// Pattern to optimize a chain of insertions.
+///
+/// This pattern identifies chains of vector.insert operations that:
+/// 1. Only insert values at static positions.
+/// 2. Completely initialize all elements in the resulting vector.
+/// 3. All intermediate insert operations have only one use.
+///
+/// When these conditions are met, the entire chain can be replaced with a
+/// single vector.from_elements operation.
+///
+/// To keep this pattern simple, and avoid spending too much time on matching
+/// fragmented insert chains, this pattern only considers the last insert op in
+/// the chain.
+///
+/// Example transformation:
+///   %poison = ub.poison : vector<2xi32>
+///   %0 = vector.insert %c1, %poison[0] : i32 into vector<2xi32>
+///   %1 = vector.insert %c2, %0[1] : i32 into vector<2xi32>
+/// ->
+///   %result = vector.from_elements %c1, %c2 : vector<2xi32>
+class InsertChainFullyInitialized final : public OpRewritePattern<InsertOp> {
+public:
+  using Base::Base;
+  LogicalResult matchAndRewrite(InsertOp op,
+                                PatternRewriter &rewriter) const override {
+
+    VectorType destTy = op.getDestVectorType();
+    if (destTy.isScalable())
+      return failure();
+    // Ensure this is the trailing vector.insert op in a chain of inserts.
+    for (Operation *user : op.getResult().getUsers())
+      if (auto insertOp = dyn_cast<InsertOp>(user))
+        if (insertOp.getDest() == op.getResult())
+          return failure();
+
+    InsertOp currentOp = op;
+    SmallVector<InsertOp> chainInsertOps;
+    while (currentOp) {
+      // Check cond 1: Dynamic position is not supported.
+      if (currentOp.hasDynamicPosition())
+        return failure();
+
+      chainInsertOps.push_back(currentOp);
+      currentOp = currentOp.getDest().getDefiningOp<InsertOp>();
+      // Check cond 3: Intermediate inserts have only one use to avoid an
+      // explosion of vectors.
+      if (currentOp && !currentOp->hasOneUse())
+        return failure();
+    }
+
+    int64_t vectorSize = destTy.getNumElements();
+    int64_t initializedCount = 0;
+    SmallVector<bool> initializedDestIdxs(vectorSize, false);
+    SmallVector<int64_t> pendingInsertPos;
+    SmallVector<int64_t> pendingInsertSize;
+    SmallVector<Value> pendingInsertValues;
+
+    for (auto insertOp : chainInsertOps) {
+      // This pattern can do nothing with poison index.
+      if (is_contained(insertOp.getStaticPosition(), InsertOp::kPoisonIndex))
+        return failure();
+
+      // Calculate the linearized position for inserting elements.
+      int64_t insertBeginPosition =
+          calculateInsertPosition(destTy, insertOp.getStaticPosition());
+
+      // The valueToStore operand may be a vector or a scalar. Need to handle
+      // both cases.
+      int64_t insertSize = 1;
+      if (auto srcVectorType =
+              llvm::dyn_cast<VectorType>(insertOp.getValueToStoreType()))
+        insertSize = srcVectorType.getNumElements();
+
+      assert(insertBeginPosition + insertSize <= vectorSize &&
+             "insert would overflow the vector");
+
+      for (auto index : llvm::seq<int64_t>(insertBeginPosition,
+                                           insertBeginPosition + insertSize)) {
+        if (initializedDestIdxs[index])
+          continue;
+        initializedDestIdxs[index] = true;
+        ++initializedCount;
+      }
+
+      // Defer the creation of ops before we can make sure the pattern can
+      // succeed.
+      pendingInsertPos.push_back(insertBeginPosition);
+      pendingInsertSize.push_back(insertSize);
+      pendingInsertValues.push_back(insertOp.getValueToStore());
+
+      if (initializedCount == vectorSize)
+        break;
+    }
+
+    // Check cond 2: all positions must be initialized.
+    if (initializedCount != vectorSize)
       return failure();
 
-    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), srcSplat.getInput());
+    SmallVector<Value> elements(vectorSize);
+    for (auto [insertBeginPosition, insertSize, valueToStore] :
+         llvm::reverse(llvm::zip(pendingInsertPos, pendingInsertSize,
+                                 pendingInsertValues))) {
+      auto srcVectorType = llvm::dyn_cast<VectorType>(valueToStore.getType());
+
+      if (!srcVectorType) {
+        elements[insertBeginPosition] = valueToStore;
+        continue;
+      }
+
+      Repeated<Type> elementToInsertTypes(insertSize,
+                                          srcVectorType.getElementType());
+      // Get all elements from the vector in row-major order.
+      auto elementsToInsert = vector::ToElementsOp::create(
+          rewriter, op.getLoc(), elementToInsertTypes, valueToStore);
+      for (int64_t linearIdx = 0; linearIdx < insertSize; linearIdx++) {
+        elements[insertBeginPosition + linearIdx] =
+            elementsToInsert.getResult(linearIdx);
+      }
+    }
+
+    rewriter.replaceOpWithNewOp<vector::FromElementsOp>(op, destTy, elements);
     return success();
   }
 };
@@ -3221,34 +4062,24 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
       !insertOp->hasOneUse())
     return {};
 
-  // Calculate the linearized position of the continuous chunk of elements to
-  // insert.
-  llvm::SmallVector<int64_t> completePositions(destTy.getRank(), 0);
-  copy(insertOp.getStaticPosition(), completePositions.begin());
-  int64_t insertBeginPosition =
-      linearize(completePositions, computeStrides(destTy.getShape()));
+  // Bail out on poison indices (kPoisonIndex = -1) to avoid computing an
+  // invalid (negative) linearized position which would cause UB below.
+  if (is_contained(insertOp.getStaticPosition(), InsertOp::kPoisonIndex))
+    return {};
 
+  // Calculate the linearized position for inserting elements.
+  int64_t insertBeginPosition =
+      calculateInsertPosition(destTy, insertOp.getStaticPosition());
   SmallVector<Attribute> insertedValues;
   Type destEltType = destTy.getElementType();
 
-  /// Converts the expected type to an IntegerAttr if there's
+  /// Converts attribute to the expected type if there's
   /// a mismatch.
-  auto convertIntegerAttr = [](Attribute attr, Type expectedType) -> Attribute {
-    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(attr)) {
-      if (intAttr.getType() != expectedType)
-        return IntegerAttr::get(expectedType, intAttr.getInt());
-    }
-    return attr;
-  };
-
-  // The `convertIntegerAttr` method specifically handles the case
-  // for `llvm.mlir.constant` which can hold an attribute with a
-  // different type than the return type.
   if (auto denseSource = llvm::dyn_cast<DenseElementsAttr>(srcAttr)) {
     for (auto value : denseSource.getValues<Attribute>())
-      insertedValues.push_back(convertIntegerAttr(value, destEltType));
+      insertedValues.push_back(convertNumericAttr(value, destEltType));
   } else {
-    insertedValues.push_back(convertIntegerAttr(srcAttr, destEltType));
+    insertedValues.push_back(convertNumericAttr(srcAttr, destEltType));
   }
 
   auto allValues = llvm::to_vector(denseDst.getValues<Attribute>());
@@ -3258,12 +4089,27 @@ foldDenseElementsAttrDestInsertOp(InsertOp insertOp, Attribute srcAttr,
   return newAttr;
 }
 
-void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                           MLIRContext *context) {
-  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat>(context);
+/// Folder to replace the `dest` operand of the insert op with the root dest of
+/// the insert op use chain.
+static Value foldInsertUseChain(InsertOp insertOp) {
+  auto destInsert = insertOp.getDest().getDefiningOp<InsertOp>();
+  if (!destInsert)
+    return {};
+
+  if (insertOp.getMixedPosition() != destInsert.getMixedPosition())
+    return {};
+
+  insertOp.setOperand(1, destInsert.getDest());
+  return insertOp.getResult();
 }
 
-OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
+void InsertOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                           MLIRContext *context) {
+  results.add<InsertToBroadcast, BroadcastFolder, InsertSplatToSplat,
+              InsertChainFullyInitialized>(context);
+}
+
+OpFoldResult InsertOp::fold(FoldAdaptor adaptor) {
   // Do not create constants with more than `vectorSizeFoldThreashold` elements,
   // unless the source vector constant has a single use.
   constexpr int64_t vectorSizeFoldThreshold = 256;
@@ -3272,11 +4118,14 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
   // (type mismatch).
   if (getNumIndices() == 0 && getValueToStoreType() == getType())
     return getValueToStore();
-  // Fold `arith.constant` indices into the `vector.insert` operation. Make
-  // sure that patterns requiring constant indices are added after this fold.
+  // Fold `arith.constant` indices into the `vector.insert` operation.
+  // Do not stop here as this fold may enable subsequent folds that require
+  // constant indices.
   SmallVector<Value> operands = {getValueToStore(), getDest()};
-  if (auto val = extractInsertFoldConstantOp(*this, adaptor, operands))
-    return val;
+  auto inplaceFolded = extractInsertFoldConstantOp(*this, adaptor, operands);
+
+  if (auto res = foldInsertUseChain(*this))
+    return res;
   if (auto res = foldPoisonIndexInsertExtractOp(
           getContext(), adaptor.getStaticPosition(), kPoisonIndex))
     return res;
@@ -3286,7 +4135,7 @@ OpFoldResult vector::InsertOp::fold(FoldAdaptor adaptor) {
     return res;
   }
 
-  return {};
+  return inplaceFolded;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3453,27 +4302,21 @@ LogicalResult InsertStridedSliceOp::verify() {
 }
 
 namespace {
-/// Pattern to rewrite an InsertStridedSliceOp(SplatOp(X):src_type,
-/// SplatOp(X):dst_type) to SplatOp(X):dst_type.
+/// Rewrite insert_strided_slice(splat-like(v), splat-like(v)) as v.
 class FoldInsertStridedSliceSplat final
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertStridedSliceOp insertStridedSliceOp,
                                 PatternRewriter &rewriter) const override {
-    auto srcSplatOp =
-        insertStridedSliceOp.getValueToStore().getDefiningOp<vector::SplatOp>();
-    auto destSplatOp =
-        insertStridedSliceOp.getDest().getDefiningOp<vector::SplatOp>();
 
-    if (!srcSplatOp || !destSplatOp)
+    auto dst = insertStridedSliceOp.getDest();
+    auto splat = getScalarSplatSource(insertStridedSliceOp.getValueToStore());
+    if (!splat || getScalarSplatSource(dst) != splat)
       return failure();
 
-    if (srcSplatOp.getInput() != destSplatOp.getInput())
-      return failure();
-
-    rewriter.replaceOp(insertStridedSliceOp, insertStridedSliceOp.getDest());
+    rewriter.replaceOp(insertStridedSliceOp, dst);
     return success();
   }
 };
@@ -3483,7 +4326,7 @@ public:
 class FoldInsertStridedSliceOfExtract final
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(InsertStridedSliceOp insertStridedSliceOp,
                                 PatternRewriter &rewriter) const override {
@@ -3513,7 +4356,7 @@ public:
 class InsertStridedSliceConstantFolder final
     : public OpRewritePattern<InsertStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   // Do not create constants with more than `vectorSizeFoldThreashold` elements,
   // unless the source vector constant has a single use.
@@ -3543,7 +4386,8 @@ public:
       return failure();
 
     // TODO: Support poison.
-    if (isa<ub::PoisonAttr>(vectorDestCst) || isa<ub::PoisonAttr>(sourceCst))
+    if (matchPattern(vectorDestCst, ub::m_Poison()) ||
+        matchPattern(sourceCst, ub::m_Poison()))
       return failure();
 
     // TODO: Handle non-unit strides when they become available.
@@ -3616,7 +4460,10 @@ void OuterProductOp::print(OpAsmPrinter &p) {
   p << " " << getLhs() << ", " << getRhs();
   if (getAcc()) {
     p << ", " << getAcc();
-    p.printOptionalAttrDict((*this)->getAttrs());
+    SmallVector<NamedAttribute> attrs((*this)->getDiscardableAttrs());
+    attrs.emplace_back(getKindAttrName(), getKindAttr());
+    llvm::sort(attrs);
+    p.printOptionalAttrDict(attrs);
   }
   p << " : " << getLhs().getType() << ", " << getRhs().getType();
 }
@@ -3637,6 +4484,15 @@ ParseResult OuterProductOp::parse(OpAsmParser &parser, OperationState &result) {
   if (!vLHS)
     return parser.emitError(parser.getNameLoc(),
                             "expected vector type for operand #1");
+  // The result type is built below from dimension 0 of the operands, which a
+  // 0-d vector does not have. Only that case has to be caught here; a higher
+  // rank still reaches the verifier, which rejects it with the same wording.
+  if (vLHS.getRank() == 0)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected 1-d vector for operand #1");
+  if (vRHS && vRHS.getRank() == 0)
+    return parser.emitError(parser.getNameLoc(),
+                            "expected 1-d vector for operand #2");
 
   VectorType resType;
   if (vRHS) {
@@ -3701,6 +4557,11 @@ LogicalResult OuterProductOp::verify() {
 
   if (vACC && vACC != vRES)
     return emitOpError("expected operand #3 of same type as result type");
+
+  if (!getKindAttr()) {
+    return emitOpError("expected 'kind' attribute of type CombiningKind (e.g. "
+                       "'vector.kind<add>')");
+  }
 
   // Verify supported combining kind.
   if (!isSupportedCombiningKind(getKind(), vRES.getElementType()))
@@ -3828,7 +4689,7 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
   ArrayAttr extractOffsets = op.getOffsets();
   ArrayAttr extractStrides = op.getStrides();
   ArrayAttr extractSizes = op.getSizes();
-  auto insertOp = op.getVector().getDefiningOp<InsertStridedSliceOp>();
+  auto insertOp = op.getSource().getDefiningOp<InsertStridedSliceOp>();
   while (insertOp) {
     if (op.getSourceVectorType().getRank() !=
         insertOp.getSourceVectorType().getRank())
@@ -3932,17 +4793,17 @@ foldExtractStridedSliceNonSplatConstant(ExtractStridedSliceOp op,
 
 OpFoldResult ExtractStridedSliceOp::fold(FoldAdaptor adaptor) {
   if (getSourceVectorType() == getResult().getType())
-    return getVector();
+    return getSource();
   if (succeeded(foldExtractStridedOpFromInsertChain(*this)))
     return getResult();
 
   // ExtractStridedSliceOp(splat ConstantOp) -> ConstantOp.
   if (auto splat =
-          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getVector()))
-    DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
+    return DenseElementsAttr::get(getType(), splat.getSplatValue<Attribute>());
 
   // ExtractStridedSliceOp(non-splat ConstantOp) -> ConstantOp.
-  return foldExtractStridedSliceNonSplatConstant(*this, adaptor.getVector());
+  return foldExtractStridedSliceNonSplatConstant(*this, adaptor.getSource());
 }
 
 void ExtractStridedSliceOp::getOffsets(SmallVectorImpl<int64_t> &results) {
@@ -3951,18 +4812,149 @@ void ExtractStridedSliceOp::getOffsets(SmallVectorImpl<int64_t> &results) {
 
 namespace {
 
+// Pattern to rewrite nested ExtractStridedSliceOp into a single one.
+//
+// Example:
+//
+// %0 = vector.extract_strided_slice %arg0
+//        {offsets = [1, 2], sizes = [3, 4], strides = [1, 1]}
+//          : vector<4x8x16xf32> to vector<3x4x16xf32>
+// %1 = vector.extract_strided_slice %0
+//        {offsets = [0, 1], sizes = [2, 2], strides = [1, 1]}
+//          : vector<3x4x16xf32> to vector<2x2x16xf32>
+//
+// to
+//
+// %1 = vector.extract_strided_slice %arg0
+//        {offsets = [1, 3], sizes = [2, 2], strides = [1, 1]}
+//          : vector<4x8x16xf32> to vector<2x2x16xf32>
+class StridedSliceFolder final
+    : public OpRewritePattern<ExtractStridedSliceOp> {
+public:
+  using OpRewritePattern<ExtractStridedSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractStridedSliceOp secondOp,
+                                PatternRewriter &rewriter) const override {
+    auto firstOp = secondOp.getSource().getDefiningOp<ExtractStridedSliceOp>();
+    if (!firstOp)
+      return failure();
+
+    if (secondOp.hasNonUnitStrides() || firstOp.hasNonUnitStrides())
+      return failure();
+
+    SmallVector<int64_t> firstOffsets = getI64SubArray(firstOp.getOffsets());
+    SmallVector<int64_t> firstSizes = getI64SubArray(firstOp.getSizes());
+    SmallVector<int64_t> secondOffsets = getI64SubArray(secondOp.getOffsets());
+    SmallVector<int64_t> secondSizes = getI64SubArray(secondOp.getSizes());
+
+    unsigned newRank = std::max(firstOffsets.size(), secondOffsets.size());
+    SmallVector<int64_t> combinedOffsets(newRank, 0);
+    SmallVector<int64_t> combinedSizes(newRank);
+    ArrayRef<int64_t> firstSourceShape =
+        firstOp.getSourceVectorType().getShape();
+    for (unsigned i = 0; i < newRank; ++i) {
+      int64_t off1 = (i < firstOffsets.size()) ? firstOffsets[i] : 0;
+      int64_t off2 = (i < secondOffsets.size()) ? secondOffsets[i] : 0;
+      combinedOffsets[i] = off1 + off2;
+
+      if (i < secondSizes.size()) {
+        combinedSizes[i] = secondSizes[i];
+      } else if (i < firstSizes.size()) {
+        combinedSizes[i] = firstSizes[i];
+      } else {
+        combinedSizes[i] = firstSourceShape[i];
+      }
+    }
+
+    SmallVector<int64_t> combinedStrides(newRank, 1);
+    rewriter.replaceOpWithNewOp<ExtractStridedSliceOp>(
+        secondOp, firstOp.getSource(), combinedOffsets, combinedSizes,
+        combinedStrides);
+    return success();
+  }
+};
+
+// Pattern to rewrite an ExtractStridedSliceOp(CreateMaskOp) to
+// CreateMaskOp.
+//
+// Example:
+//
+// %mask = vector.create_mask %ub : vector<16xi1>
+// %slice = vector.extract_strided_slice [%offset] [8] [1]
+//
+// to
+//
+// %new_ub = arith.subi %ub, %offset
+// %mask = vector.create_mask %new_ub : vector<8xi1>
+class StridedSliceCreateMaskFolder final
+    : public OpRewritePattern<ExtractStridedSliceOp> {
+  using Base::Base;
+
+public:
+  LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = extractStridedSliceOp.getLoc();
+    // Return if 'extractStridedSliceOp' operand is not defined by a
+    // CreateMaskOp.
+    auto createMaskOp =
+        extractStridedSliceOp.getSource().getDefiningOp<CreateMaskOp>();
+    if (!createMaskOp)
+      return failure();
+    // Return if 'extractStridedSliceOp' has non-unit strides.
+    if (extractStridedSliceOp.hasNonUnitStrides())
+      return failure();
+    // Gather constant mask dimension sizes.
+    SmallVector<Value> maskDimSizes(createMaskOp.getOperands());
+    // Gather strided slice offsets and sizes.
+    SmallVector<int64_t> sliceOffsets;
+    populateFromInt64AttrArray(extractStridedSliceOp.getOffsets(),
+                               sliceOffsets);
+    SmallVector<int64_t> sliceSizes;
+    populateFromInt64AttrArray(extractStridedSliceOp.getSizes(), sliceSizes);
+
+    // Compute slice of vector mask region.
+    SmallVector<Value> sliceMaskDimSizes;
+    sliceMaskDimSizes.reserve(maskDimSizes.size());
+    // sliceOffsets.size() <= maskDimSizes.size(), so we use llvm::zip and
+    // only iterate on the leading dim sizes. The tail accounts for the
+    // remaining dim sizes.
+    for (auto [maskDimSize, sliceOffset, sliceSize] :
+         llvm::zip(maskDimSizes, sliceOffsets, sliceSizes)) {
+      // No need to clamp on min/max values, because create_mask has clamping
+      // semantics, i.e. the sliceMaskDimSize is allowed to be negative or
+      // greater than the vector dim size.
+      IntegerAttr offsetAttr =
+          rewriter.getIntegerAttr(maskDimSize.getType(), sliceOffset);
+      Value offset = arith::ConstantOp::create(rewriter, loc, offsetAttr);
+      Value sliceMaskDimSize =
+          arith::SubIOp::create(rewriter, loc, maskDimSize, offset);
+      sliceMaskDimSizes.push_back(sliceMaskDimSize);
+    }
+    // Add unchanged dimensions.
+    llvm::append_range(
+        sliceMaskDimSizes,
+        llvm::drop_begin(maskDimSizes, sliceMaskDimSizes.size()));
+    // Replace 'extractStridedSliceOp' with CreateMaskOp with sliced mask
+    // region.
+    rewriter.replaceOpWithNewOp<CreateMaskOp>(
+        extractStridedSliceOp, extractStridedSliceOp.getResult().getType(),
+        sliceMaskDimSizes);
+    return success();
+  }
+};
+
 // Pattern to rewrite an ExtractStridedSliceOp(ConstantMaskOp) to
 // ConstantMaskOp.
 class StridedSliceConstantMaskFolder final
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp extractStridedSliceOp,
                                 PatternRewriter &rewriter) const override {
     // Return if 'extractStridedSliceOp' operand is not defined by a
     // ConstantMaskOp.
-    auto *defOp = extractStridedSliceOp.getVector().getDefiningOp();
+    auto *defOp = extractStridedSliceOp.getSource().getDefiningOp();
     auto constantMaskOp = dyn_cast_or_null<ConstantMaskOp>(defOp);
     if (!constantMaskOp)
       return failure();
@@ -3972,14 +4964,14 @@ public:
     // Gather constant mask dimension sizes.
     ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
     // Gather strided slice offsets and sizes.
-    SmallVector<int64_t, 4> sliceOffsets;
+    SmallVector<int64_t> sliceOffsets;
     populateFromInt64AttrArray(extractStridedSliceOp.getOffsets(),
                                sliceOffsets);
-    SmallVector<int64_t, 4> sliceSizes;
+    SmallVector<int64_t> sliceSizes;
     populateFromInt64AttrArray(extractStridedSliceOp.getSizes(), sliceSizes);
 
     // Compute slice of vector mask region.
-    SmallVector<int64_t, 4> sliceMaskDimSizes;
+    SmallVector<int64_t> sliceMaskDimSizes;
     sliceMaskDimSizes.reserve(maskDimSizes.size());
     for (auto [maskDimSize, sliceOffset, sliceSize] :
          llvm::zip(maskDimSizes, sliceOffsets, sliceSizes)) {
@@ -4011,11 +5003,11 @@ public:
 class StridedSliceBroadcast final
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
-    auto broadcast = op.getVector().getDefiningOp<BroadcastOp>();
+    auto broadcast = op.getSource().getDefiningOp<BroadcastOp>();
     if (!broadcast)
       return failure();
     auto srcVecType =
@@ -4024,45 +5016,56 @@ public:
     auto dstVecType = llvm::cast<VectorType>(op.getType());
     unsigned dstRank = dstVecType.getRank();
     unsigned rankDiff = dstRank - srcRank;
-    // Check if the most inner dimensions of the source of the broadcast are the
-    // same as the destination of the extract. If this is the case we can just
-    // use a broadcast as the original dimensions are untouched.
-    bool lowerDimMatch = true;
+    // Source dimensions can be broadcasted (1 -> n with n > 1) or sliced
+    // (n -> m with n > m). If they are originally both broadcasted *and*
+    // sliced, this can be simplified to just broadcasting.
+    bool needsSlice = false;
     for (unsigned i = 0; i < srcRank; i++) {
-      if (srcVecType.getDimSize(i) != dstVecType.getDimSize(i + rankDiff)) {
-        lowerDimMatch = false;
+      if (srcVecType.getDimSize(i) != 1 &&
+          srcVecType.getDimSize(i) != dstVecType.getDimSize(i + rankDiff)) {
+        needsSlice = true;
         break;
       }
     }
     Value source = broadcast.getSource();
-    // If the inner dimensions don't match, it means we need to extract from the
-    // source of the orignal broadcast and then broadcast the extracted value.
-    // We also need to handle degenerated cases where the source is effectively
-    // just a single scalar.
-    bool isScalarSrc = (srcRank == 0 || srcVecType.getNumElements() == 1);
-    if (!lowerDimMatch && !isScalarSrc) {
-      source = rewriter.create<ExtractStridedSliceOp>(
-          op->getLoc(), source,
-          getI64SubArray(op.getOffsets(), /* dropFront=*/rankDiff),
-          getI64SubArray(op.getSizes(), /* dropFront=*/rankDiff),
-          getI64SubArray(op.getStrides(), /* dropFront=*/rankDiff));
+    if (needsSlice) {
+      SmallVector<int64_t> offsets =
+          getI64SubArray(op.getOffsets(), /*dropFront=*/rankDiff);
+      SmallVector<int64_t> sizes =
+          getI64SubArray(op.getSizes(), /*dropFront=*/rankDiff);
+      // Slice attributes (i.e. offsets, sizes, etc) are only required for the
+      // leading/prefix source dimensions. This is why we use
+      // `offset.size()` instead of `srcRank` below.
+      for (unsigned i = 0; i < offsets.size(); i++) {
+        if (srcVecType.getDimSize(i) == 1) {
+          // In case this dimension was broadcasted *and* sliced, the offset
+          // and size need to be updated now that there is no broadcast before
+          // the slice.
+          offsets[i] = 0;
+          sizes[i] = 1;
+        }
+      }
+      source = ExtractStridedSliceOp::create(
+          rewriter, op->getLoc(), source, offsets, sizes,
+          getI64SubArray(op.getStrides(), /*dropFront=*/rankDiff));
     }
     rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(), source);
     return success();
   }
 };
 
-/// Pattern to rewrite an ExtractStridedSliceOp(SplatOp) to SplatOp.
+/// Rewrite extract_strided_slice(splat-like(v)) with broadcast(v).
 class StridedSliceSplat final : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
-    auto splat = op.getVector().getDefiningOp<SplatOp>();
+
+    Value splat = getScalarSplatSource(op.getSource());
     if (!splat)
       return failure();
-    rewriter.replaceOpWithNewOp<SplatOp>(op, op.getType(), splat.getInput());
+    rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(), splat);
     return success();
   }
 };
@@ -4086,7 +5089,7 @@ public:
 class ContiguousExtractStridedSliceToExtract final
     : public OpRewritePattern<ExtractStridedSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
                                 PatternRewriter &rewriter) const override {
@@ -4136,8 +5139,8 @@ public:
 
     SmallVector<int64_t> offsets = getI64SubArray(op.getOffsets());
     auto extractOffsets = ArrayRef(offsets).take_front(numOffsets);
-    Value extract = rewriter.create<vector::ExtractOp>(op->getLoc(), source,
-                                                       extractOffsets);
+    Value extract = vector::ExtractOp::create(rewriter, op->getLoc(), source,
+                                              extractOffsets);
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(op, op.getType(), extract);
     return success();
   }
@@ -4149,7 +5152,8 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   // Pattern to rewrite a ExtractStridedSliceOp(ConstantMaskOp) ->
   // ConstantMaskOp and ExtractStridedSliceOp(ConstantOp) -> ConstantOp.
-  results.add<StridedSliceConstantMaskFolder, StridedSliceBroadcast,
+  results.add<StridedSliceFolder, StridedSliceCreateMaskFolder,
+              StridedSliceConstantMaskFolder, StridedSliceBroadcast,
               StridedSliceSplat, ContiguousExtractStridedSliceToExtract>(
       context);
 }
@@ -4159,58 +5163,55 @@ void ExtractStridedSliceOp::getCanonicalizationPatterns(
 //===----------------------------------------------------------------------===//
 
 /// 1. Builder that sets padding to zero and an empty mask (variant with attrs).
+/// If `padding` is null, a poison value is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
-                           ValueRange indices, AffineMapAttr permutationMapAttr,
+                           ValueRange indices, std::optional<Value> padding,
+                           AffineMapAttr permutationMapAttr,
                            /*optional*/ ArrayAttr inBoundsAttr) {
+
   Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  Value padding = builder.create<arith::ConstantOp>(
-      result.location, elemType, builder.getZeroAttr(elemType));
+  if (!padding)
+    padding = ub::PoisonOp::create(builder, result.location, elemType);
+  // Delegate to the most general builder (see
+  // `mlir/Dialect/Vector/IR/VectorOps.cpp.inc`)
   build(builder, result, vectorType, source, indices, permutationMapAttr,
-        padding, /*mask=*/Value(), inBoundsAttr);
+        *padding, /*mask=*/Value(), inBoundsAttr);
 }
 
-/// 2. Builder that sets padding to zero an empty mask (variant without attrs).
+/// 2. Builder that sets padding to zero and an empty mask (variant without
+/// attrs).
+/// If `padding` is null, a poison value is used.
+/// If `permutationMap` is null, a minor identity map is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
-                           ValueRange indices, AffineMap permutationMap,
+                           ValueRange indices, std::optional<Value> padding,
+                           AffineMap permutationMap,
                            std::optional<ArrayRef<bool>> inBounds) {
+  if (!permutationMap)
+    permutationMap = getTransferMinorIdentityMap(
+        llvm::cast<ShapedType>(source.getType()), vectorType);
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr = (inBounds && !inBounds.value().empty())
                           ? builder.getBoolArrayAttr(inBounds.value())
                           : builder.getBoolArrayAttr(
                                 SmallVector<bool>(vectorType.getRank(), false));
-  build(builder, result, vectorType, source, indices, permutationMapAttr,
-        inBoundsAttr);
+  // Delegate to Builder 1
+  build(builder, result, vectorType, source, indices, padding,
+        permutationMapAttr, inBoundsAttr);
 }
 
 /// 3. Builder that sets permutation map to 'getMinorIdentityMap'.
+/// If `padding` is null, a poison value is used.
+/// If `inBounds` is null, an empty mask is used.
 void TransferReadOp::build(OpBuilder &builder, OperationState &result,
                            VectorType vectorType, Value source,
-                           ValueRange indices, Value padding,
+                           ValueRange indices, std::optional<Value> padding,
                            std::optional<ArrayRef<bool>> inBounds) {
-  AffineMap permutationMap = getTransferMinorIdentityMap(
-      llvm::cast<ShapedType>(source.getType()), vectorType);
-  auto permutationMapAttr = AffineMapAttr::get(permutationMap);
-  auto inBoundsAttr = (inBounds && !inBounds.value().empty())
-                          ? builder.getBoolArrayAttr(inBounds.value())
-                          : builder.getBoolArrayAttr(
-                                SmallVector<bool>(vectorType.getRank(), false));
-  build(builder, result, vectorType, source, indices, permutationMapAttr,
-        padding,
-        /*mask=*/Value(), inBoundsAttr);
-}
-
-/// 4. Builder that sets padding to zero and permutation map to
-/// 'getMinorIdentityMap'.
-void TransferReadOp::build(OpBuilder &builder, OperationState &result,
-                           VectorType vectorType, Value source,
-                           ValueRange indices,
-                           std::optional<ArrayRef<bool>> inBounds) {
-  Type elemType = llvm::cast<ShapedType>(source.getType()).getElementType();
-  Value padding = builder.create<arith::ConstantOp>(
-      result.location, elemType, builder.getZeroAttr(elemType));
-  build(builder, result, vectorType, source, indices, padding, inBounds);
+  // Delegate to Builder 2
+  build(builder, result, vectorType, source, indices, padding,
+        /*permutationMap=*/AffineMap(), inBounds);
 }
 
 template <typename EmitFun>
@@ -4247,7 +5248,7 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
                  VectorType vectorType, VectorType maskType,
                  VectorType inferredMaskType, AffineMap permutationMap,
                  ArrayAttr inBounds) {
-  if (op->hasAttr("masked")) {
+  if (op->hasDiscardableAttr("masked")) {
     return op->emitOpError("masked attribute has been removed. "
                            "Use in_bounds instead.");
   }
@@ -4323,14 +5324,15 @@ verifyTransferOp(VectorTransferOpInterface op, ShapedType shapedType,
 }
 
 static void printTransferAttrs(OpAsmPrinter &p, VectorTransferOpInterface op) {
-  SmallVector<StringRef, 3> elidedAttrs;
-  elidedAttrs.push_back(TransferReadOp::getOperandSegmentSizeAttr());
-  if (op.getPermutationMap().isMinorIdentity())
-    elidedAttrs.push_back(op.getPermutationMapAttrName());
+  SmallVector<NamedAttribute> attrs(op->getDiscardableAttrs());
   // Elide in_bounds attribute if all dims are out-of-bounds.
-  if (llvm::none_of(op.getInBoundsValues(), [](bool b) { return b; }))
-    elidedAttrs.push_back(op.getInBoundsAttrName());
-  p.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
+  if (llvm::any_of(op.getInBoundsValues(), [](bool b) { return b; }))
+    attrs.emplace_back(op.getInBoundsAttrName(), op.getInBounds());
+  if (!op.getPermutationMap().isMinorIdentity())
+    attrs.emplace_back(op.getPermutationMapAttrName(),
+                       AffineMapAttr::get(op.getPermutationMap()));
+  llvm::sort(attrs);
+  p.printOptionalAttrDict(attrs);
 }
 
 void TransferReadOp::print(OpAsmPrinter &p) {
@@ -4491,15 +5493,19 @@ Type TransferReadOp::getExpectedMaskType() {
 //===----------------------------------------------------------------------===//
 // TransferReadOp: VectorTransferOpInterface methods.
 //===----------------------------------------------------------------------===//
-VectorType TransferReadOp::getVectorType() {
-  return cast<VectorType>(getVector().getType());
-}
+VectorType TransferReadOp::getVectorType() { return getResult().getType(); }
+
+Value TransferReadOp::getVector() { return getResult(); }
 
 template <typename TransferOp>
 static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
   // TODO: support more aggressive createOrFold on:
   // op.getIndices()[indicesIdx] + vectorType < dim(op.getSource(), indicesIdx)
   if (op.getShapedType().isDynamicDim(indicesIdx))
+    return false;
+  // Scalable dimensions are `vscale` times larger at runtime, so the static
+  // size is only a lower bound and cannot prove that the transfer fits.
+  if (op.getVectorType().getScalableDims()[resultIdx])
     return false;
   Value index = op.getIndices()[indicesIdx];
   std::optional<int64_t> cstOp = getConstantIntValue(index);
@@ -4508,8 +5514,16 @@ static bool isInBounds(TransferOp op, int64_t resultIdx, int64_t indicesIdx) {
 
   int64_t sourceSize = op.getShapedType().getDimSize(indicesIdx);
   int64_t vectorSize = op.getVectorType().getDimSize(resultIdx);
+  // Largest index at which a full vector still fits. Computed as a subtraction
+  // rather than adding to the index, which could overflow. The subtraction is
+  // safe only because of the `isDynamicDim` early return above: `sourceSize`
+  // is a real static extent here, never `ShapedType::kDynamic`, which is
+  // `INT64_MIN` and would make this signed overflow.
+  int64_t maxStart = sourceSize - vectorSize;
 
-  return cstOp.value() + vectorSize <= sourceSize;
+  // `in_bounds` guarantees that the transfer stays within the source *including
+  // its starting point*, so a negative index is not in bounds.
+  return *cstOp >= 0 && *cstOp <= maxStart;
 }
 
 template <typename TransferOp>
@@ -4580,6 +5594,31 @@ static LogicalResult foldTransferFullMask(TransferOp op) {
   return success();
 }
 
+/// When the vector type is `vector<1xT>`, the permutation map is irrelevant:
+/// the single vector lane always has iteration offset 0, so the element is at
+/// `indices` regardless of which source dimension the map points at. Replace
+/// with the minor identity to unblock lowering to vector.load / vector.store.
+template <typename TransferOp>
+static LogicalResult foldSize1TransferPermutationMap(TransferOp op) {
+  VectorType vecType = op.getVectorType();
+  if (vecType.getRank() != 1 || vecType.getShape()[0] != 1 ||
+      vecType.isScalable())
+    return failure();
+
+  AffineMap map = op.getPermutationMap();
+  if (map.isMinorIdentity())
+    return failure();
+
+  int64_t srcRank = op.getShapedType().getRank();
+  if (srcRank < 1)
+    return failure();
+
+  AffineMap minorIdentity =
+      AffineMap::getMinorIdentityMap(srcRank, 1, op.getContext());
+  op.setPermutationMapAttr(AffineMapAttr::get(minorIdentity));
+  return success();
+}
+
 ///  ```
 ///  %w0 = vector.transfer_write %v0, %arg0[%c1, %c0] {in_bounds = [true, true]}
 ///    : vector<1x4xf32>, tensor<4x4xf32>
@@ -4614,6 +5653,8 @@ OpFoldResult TransferReadOp::fold(FoldAdaptor) {
     return getResult();
   if (succeeded(foldTransferFullMask(*this)))
     return getResult();
+  if (succeeded(foldSize1TransferPermutationMap(*this)))
+    return getResult();
   if (succeeded(memref::foldMemRefCast(*this)))
     return getResult();
   if (succeeded(tensor::foldTensorCast(*this)))
@@ -4621,7 +5662,11 @@ OpFoldResult TransferReadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
-std::optional<SmallVector<int64_t, 4>> TransferReadOp::getShapeForUnroll() {
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+TransferReadOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -4637,6 +5682,22 @@ Speculation::Speculatability TransferReadOp::getSpeculatability() {
   if (hasPureTensorSemantics())
     return Speculation::Speculatable;
   return Speculation::NotSpeculatable;
+}
+
+/// Given a projected permutation, inverse an affine map, making the unused dims
+/// 0 in the result.
+static AffineMap inverseWithUnusedDims(AffineMap map) {
+  assert(map.isProjectedPermutation() &&
+         "expected a projected permutation map");
+  SmallVector<AffineExpr> results(map.getNumInputs(),
+                                  getAffineConstantExpr(0, map.getContext()));
+  for (auto [idx, result] : llvm::enumerate(map.getResults())) {
+    // We should only have dim exprs because this is a projected permutation.
+    int64_t pos = cast<AffineDimExpr>(result).getPosition();
+    results[pos] = getAffineDimExpr(idx, map.getContext());
+  }
+  return AffineMap::get(/*dimCount=*/map.getNumResults(), /*symbolCount=*/0,
+                        results, map.getContext());
 }
 
 namespace {
@@ -4664,7 +5725,7 @@ namespace {
 /// ```
 struct TransferReadAfterWriteToBroadcast
     : public OpRewritePattern<TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
@@ -4674,6 +5735,15 @@ struct TransferReadAfterWriteToBroadcast
     // Bail if we need an alias analysis.
     if (!readOp.hasPureTensorSemantics() || !defWrite.hasPureTensorSemantics())
       return failure();
+    // Bail in the masked case (too complex atm and needed to properly account
+    // for padding). This includes an enclosing vector.mask.
+    // TODO: Support mask operands and reads nested in vector.mask while
+    // properly accounting for padding.
+    if (readOp.getMask() || defWrite.getMask() || readOp.isMasked())
+      return failure();
+    // If indices are not the same a shift may be required, bail.
+    if (readOp.getIndices() != defWrite.getIndices())
+      return failure();
     // Bail if we need a bounds analysis.
     if (readOp.hasOutOfBoundsDim() || defWrite.hasOutOfBoundsDim())
       return failure();
@@ -4682,60 +5752,50 @@ struct TransferReadAfterWriteToBroadcast
     if (readOp.getTransferChunkAccessed() !=
         defWrite.getTransferChunkAccessed())
       return failure();
-    // TODO: Support cases where a dim is explicitly written but implicitly
-    // read (i.e., a unit dim that is rank reduced).
-    if (getUnusedDimsBitVector({readOp.getPermutationMap()}) !=
-        getUnusedDimsBitVector({defWrite.getPermutationMap()}))
+    // WriteMap: tensor -> w_vec
+    // ReadMap: tensor -> r_vec
+    //
+    // inv(WriteMap): w_vec -> tensor
+    // inv(WriteMap) o ReadMap: w_vec -> r_vec
+    AffineMap readMap = readOp.getPermutationMap();
+    AffineMap writeMap = defWrite.getPermutationMap();
+    AffineMap invWriteMap = inverseWithUnusedDims(writeMap);
+    AffineMap composedMap = readMap.compose(invWriteMap);
+    // If there are any unused dims in the composedMap, we have to drop some
+    // unit dims from the written vector before we can do transpose(broadcast).
+    // TODO: Support this case.
+    if (getUnusedDimsBitVector(composedMap).any())
       return failure();
-    // This pattern should only catch the broadcast case, the non-broadcast case
-    // should be done separately to keep application conditions clean and
-    // separate.
-    AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
-    AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
-    bool bcast = !readMap.getBroadcastDims().empty() ||
-                 !writeMap.getBroadcastDims().empty();
-    if (!bcast)
-      return failure();
-    // At this point, we know we have a bcast.
-    // Bail in the masked case (too complex atm and needed to properly account
-    // for padding).
-    if (readOp.getMask() || defWrite.getMask())
-      return failure();
-    // If indices are not the same a shift may be required, bail.
-    if (readOp.getIndices() != defWrite.getIndices())
-      return failure();
-
-    Value vec = defWrite.getVector();
-    // TODO: loop through the chain of transfer_write if we can prove that they
-    // don't overlap with the transfer_read. This requires improving
-    // `isDisjointTransferIndices` helper.
-    AffineMap map = readMap.compose(writeMap);
-    if (map.getNumResults() == 0)
-      return failure();
-    // Calculate the permutation to apply to go from the vector stored to the
-    // vector read.
-    SmallVector<unsigned> permutation;
-    if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
-      return failure();
-
-    Location loc = readOp.getLoc();
-    // Calculate the broadcast shape by applying the reverse permutation to the
-    // final shape we want.
-    ArrayRef<int64_t> destShape = readOp.getVectorType().getShape();
-    SmallVector<int64_t> broadcastShape(destShape.size());
-    SmallVector<bool> broadcastScalableFlags(destShape.size());
-    for (const auto &pos : llvm::enumerate(permutation)) {
-      broadcastShape[pos.value()] = destShape[pos.index()];
-      broadcastScalableFlags[pos.value()] =
-          readOp.getVectorType().getScalableDims()[pos.index()];
+    // readVec = transpose(broadcast(writeVec))
+    //
+    // Build a transpose permutation for the above transpose operation.
+    //
+    // Treat the composed map as having extra leading dimensions which are
+    // the broadcasted dimensions, and treat the zeros as these new broadcasted
+    // dimensions.
+    SmallVector<unsigned> broadcastedDims = composedMap.getBroadcastDims();
+    int64_t numBroadcastedDims = broadcastedDims.size();
+    auto invPerm = llvm::to_vector_of<int64_t>(broadcastedDims);
+    invPerm.resize(composedMap.getNumResults());
+    for (auto [idx, expr] : llvm::enumerate(composedMap.getResults())) {
+      if (auto dim = dyn_cast<AffineDimExpr>(expr)) {
+        int64_t effectiveDim = dim.getPosition() + numBroadcastedDims;
+        invPerm[effectiveDim] = idx;
+      }
     }
-    VectorType broadcastedType = VectorType::get(
-        broadcastShape, defWrite.getVectorType().getElementType(),
-        broadcastScalableFlags);
-    vec = rewriter.create<vector::BroadcastOp>(loc, broadcastedType, vec);
-    SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
-    rewriter.replaceOpWithNewOp<vector::TransposeOp>(readOp, vec,
-                                                     transposePerm);
+    // Applying the inverse permutation on the readVecTy will give us the
+    // broadcast result type.
+    VectorType readVecTy = readOp.getVectorType();
+    SmallVector<int64_t> permutation = invertPermutationVector(invPerm);
+    auto broadcastedVecTy =
+        VectorType::get(applyPermutation(readVecTy.getShape(), invPerm),
+                        readVecTy.getElementType(),
+                        applyPermutation(readVecTy.getScalableDims(), invPerm));
+    // Build the transpose(broadcast) transformation.
+    Value vec = defWrite.getVector();
+    Location loc = readOp.getLoc();
+    vec = vector::BroadcastOp::create(rewriter, loc, broadcastedVecTy, vec);
+    rewriter.replaceOpWithNewOp<vector::TransposeOp>(readOp, vec, permutation);
     return success();
   }
 };
@@ -4744,6 +5804,14 @@ struct TransferReadAfterWriteToBroadcast
 void TransferReadOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                  MLIRContext *context) {
   results.add<TransferReadAfterWriteToBroadcast>(context);
+}
+
+FailureOr<std::optional<SmallVector<Value>>>
+TransferReadOp::bubbleDownCasts(OpBuilder &builder) {
+  if (!hasPureBufferSemantics())
+    return failure();
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
 }
 
 //===----------------------------------------------------------------------===//
@@ -4771,11 +5839,15 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 }
 
 /// 3. Builder with type inference that sets an empty mask (variant without
-/// attrs)
+/// attrs). If `permutationMap` is null, a minor identity map is used.
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             AffineMap permutationMap,
                             std::optional<ArrayRef<bool>> inBounds) {
+  if (!permutationMap)
+    permutationMap =
+        getTransferMinorIdentityMap(llvm::cast<ShapedType>(dest.getType()),
+                                    llvm::cast<VectorType>(vector.getType()));
   auto permutationMapAttr = AffineMapAttr::get(permutationMap);
   auto inBoundsAttr =
       (inBounds && !inBounds.value().empty())
@@ -4791,10 +5863,8 @@ void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
 void TransferWriteOp::build(OpBuilder &builder, OperationState &result,
                             Value vector, Value dest, ValueRange indices,
                             std::optional<ArrayRef<bool>> inBounds) {
-  auto vectorType = llvm::cast<VectorType>(vector.getType());
-  AffineMap permutationMap = getTransferMinorIdentityMap(
-      llvm::cast<ShapedType>(dest.getType()), vectorType);
-  build(builder, result, vector, dest, indices, permutationMap, inBounds);
+  build(builder, result, vector, dest, indices, /*permutationMap=*/AffineMap(),
+        inBounds);
 }
 
 ParseResult TransferWriteOp::parse(OpAsmParser &parser,
@@ -4972,6 +6042,10 @@ static LogicalResult foldReadInitWrite(TransferWriteOp write,
   // Bail on potential out-of-bounds accesses.
   if (read.hasOutOfBoundsDim() || write.hasOutOfBoundsDim())
     return failure();
+  // Masked transfers have padding/select semantics and are not identity folds.
+  // This includes a write under an enclosing vector.mask.
+  if (read.getMask() || write.getMask() || write.isMasked())
+    return failure();
   // Tensor types must be the same.
   if (read.getBase().getType() != rankedTensorType)
     return failure();
@@ -5040,13 +6114,16 @@ LogicalResult TransferWriteOp::fold(FoldAdaptor adaptor,
     return success();
   if (succeeded(foldTransferFullMask(*this)))
     return success();
+  if (succeeded(foldSize1TransferPermutationMap(*this)))
+    return success();
   return memref::foldMemRefCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
 // TransferWriteOp: other methods.
 //===----------------------------------------------------------------------===//
-std::optional<SmallVector<int64_t, 4>> TransferWriteOp::getShapeForUnroll() {
+std::optional<SmallVector<int64_t, 4>>
+TransferWriteOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getVectorType().getShape());
 }
 
@@ -5091,7 +6168,7 @@ namespace {
 /// any other uses.
 class FoldWaw final : public OpRewritePattern<TransferWriteOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(TransferWriteOp writeOp,
                                 PatternRewriter &rewriter) const override {
     if (!llvm::isa<RankedTensorType>(writeOp.getShapedType()))
@@ -5147,7 +6224,7 @@ public:
 struct SwapExtractSliceOfTransferWrite
     : public OpRewritePattern<tensor::InsertSliceOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tensor::InsertSliceOp insertOp,
                                 PatternRewriter &rewriter) const override {
@@ -5210,13 +6287,14 @@ public:
     // Swap the tensor::ExtractSliceOp in front of the vector::TransferWriteOp.
     // Set all in_bounds to false and let the folder infer them.
     SmallVector<bool> newInBounds(vectorShape.size(), false);
-    auto newExtractOp = rewriter.create<tensor::ExtractSliceOp>(
-        extractOp.getLoc(), insertOp.getSourceType(), insertOp.getDest(),
-        insertOp.getMixedOffsets(), insertOp.getMixedSizes(),
-        insertOp.getMixedStrides());
-    auto newTransferWriteOp = rewriter.create<TransferWriteOp>(
-        transferOp.getLoc(), transferOp.getVector(), newExtractOp.getResult(),
-        transferOp.getIndices(), transferOp.getPermutationMapAttr(),
+    auto newExtractOp = tensor::ExtractSliceOp::create(
+        rewriter, extractOp.getLoc(), insertOp.getSourceType(),
+        insertOp.getDest(), insertOp.getMixedOffsets(),
+        insertOp.getMixedSizes(), insertOp.getMixedStrides());
+    auto newTransferWriteOp = TransferWriteOp::create(
+        rewriter, transferOp.getLoc(), transferOp.getVector(),
+        newExtractOp.getResult(), transferOp.getIndices(),
+        transferOp.getPermutationMapAttr(),
         rewriter.getBoolArrayAttr(newInBounds));
     rewriter.modifyOpInPlace(insertOp, [&]() {
       insertOp.getSourceMutable().assign(newTransferWriteOp.getResult());
@@ -5232,20 +6310,47 @@ void TransferWriteOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<FoldWaw, SwapExtractSliceOfTransferWrite>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+TransferWriteOp::bubbleDownCasts(OpBuilder &builder) {
+  if (!hasPureBufferSemantics())
+    return failure();
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
+}
+
 //===----------------------------------------------------------------------===//
 // LoadOp
 //===----------------------------------------------------------------------===//
 
-static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
-                                                 VectorType vecTy,
-                                                 MemRefType memRefTy) {
+static ParseResult parseBoolAttr(OpAsmParser &parser, BoolAttr &result) {
+  Attribute attr;
+  if (parser.parseAttribute(attr))
+    return failure();
+  result = dyn_cast<BoolAttr>(attr);
+  if (!result)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "expected boolean attribute");
+  return success();
+}
+
+static void printBoolAttr(OpAsmPrinter &printer, Operation *, BoolAttr attr) {
+  printer.printAttribute(attr);
+}
+
+bool vector::isValidLoadStoreMemRefLayout(VectorType vecTy,
+                                          MemRefType memRefTy) {
   // If rank==0 or size==1 it's equivalent to scalar load/store, so we don't
   // need any strides limitations.
   if (!vecTy.isScalable() &&
       (vecTy.getRank() == 0 || vecTy.getNumElements() == 1))
-    return success();
+    return true;
+  return memRefTy.isLastDimUnitStride();
+}
 
-  if (!memRefTy.isLastDimUnitStride())
+static LogicalResult verifyLoadStoreMemRefLayout(Operation *op,
+                                                 VectorType vecTy,
+                                                 MemRefType memRefTy) {
+  if (!isValidLoadStoreMemRefLayout(vecTy, memRefTy))
     return op->emitOpError("most minor memref dim must have unit stride");
   return success();
 }
@@ -5256,6 +6361,12 @@ LogicalResult vector::LoadOp::verify() {
 
   if (failed(verifyLoadStoreMemRefLayout(*this, resVecTy, memRefTy)))
     return failure();
+
+  // Negative strides are not supported on vector.load. The lowering to LLVM
+  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
+  // non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memRefTy))
+    return emitOpError("memref strides must be non-negative");
 
   if (memRefTy.getRank() < resVecTy.getRank())
     return emitOpError(
@@ -5282,6 +6393,19 @@ OpFoldResult LoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+LoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>> LoadOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
+}
+
 //===----------------------------------------------------------------------===//
 // StoreOp
 //===----------------------------------------------------------------------===//
@@ -5292,6 +6416,12 @@ LogicalResult vector::StoreOp::verify() {
 
   if (failed(verifyLoadStoreMemRefLayout(*this, valueVecTy, memRefTy)))
     return failure();
+
+  // Negative strides are not supported on vector.store. The lowering to LLVM
+  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
+  // non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memRefTy))
+    return emitOpError("memref strides must be non-negative");
 
   if (memRefTy.getRank() < valueVecTy.getRank())
     return emitOpError("source memref has lower rank than the vector to store");
@@ -5317,6 +6447,19 @@ LogicalResult StoreOp::fold(FoldAdaptor adaptor,
   return memref::foldMemRefCast(*this);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+StoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>> StoreOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
+}
+
 //===----------------------------------------------------------------------===//
 // MaskedLoadOp
 //===----------------------------------------------------------------------===//
@@ -5327,8 +6470,18 @@ LogicalResult MaskedLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (resVType.getElementType() != memType.getElementType())
-    return emitOpError("base and result element type should match");
+  if (failed(verifyLoadStoreMemRefLayout(*this, resVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.maskedload. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
+
+  if (failed(
+          verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
+    return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
   if (resVType.getShape() != maskVType.getShape())
@@ -5341,7 +6494,7 @@ LogicalResult MaskedLoadOp::verify() {
 namespace {
 class MaskedLoadFolder final : public OpRewritePattern<MaskedLoadOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(MaskedLoadOp load,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(load.getMask())) {
@@ -5371,6 +6524,12 @@ OpFoldResult MaskedLoadOp::fold(FoldAdaptor) {
   return OpFoldResult();
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+MaskedLoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
+}
+
 //===----------------------------------------------------------------------===//
 // MaskedStoreOp
 //===----------------------------------------------------------------------===//
@@ -5380,8 +6539,18 @@ LogicalResult MaskedStoreOp::verify() {
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (valueVType.getElementType() != memType.getElementType())
-    return emitOpError("base and valueToStore element type should match");
+  if (failed(verifyLoadStoreMemRefLayout(*this, valueVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.maskedstore. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
+
+  if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
+                                     "valueToStore")))
+    return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
   if (valueVType.getShape() != maskVType.getShape())
@@ -5392,7 +6561,7 @@ LogicalResult MaskedStoreOp::verify() {
 namespace {
 class MaskedStoreFolder final : public OpRewritePattern<MaskedStoreOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(MaskedStoreOp store,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(store.getMask())) {
@@ -5421,6 +6590,12 @@ LogicalResult MaskedStoreOp::fold(FoldAdaptor adaptor,
   return memref::foldMemRefCast(*this);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+MaskedStoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
+}
+
 //===----------------------------------------------------------------------===//
 // GatherOp
 //===----------------------------------------------------------------------===//
@@ -5434,9 +6609,17 @@ LogicalResult GatherOp::verify() {
   if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
     return emitOpError("requires base to be a memref or ranked tensor type");
 
-  if (resVType.getElementType() != baseType.getElementType())
-    return emitOpError("base and result element type should match");
-  if (llvm::size(getIndices()) != baseType.getRank())
+  // Negative strides are not supported on vector.gather.
+  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
+  // flags that assume non-negative strides to avoid undefined behavior.
+  if (auto memRefType = dyn_cast<MemRefType>(baseType))
+    if (memref::hasNegativeStaticStride(memRefType))
+      return emitOpError("memref strides must be non-negative");
+
+  if (failed(
+          verifyElementTypesMatch(*this, baseType, resVType, "base", "result")))
+    return failure();
+  if (llvm::size(getOffsets()) != baseType.getRank())
     return emitOpError("requires ") << baseType.getRank() << " indices";
   if (resVType.getShape() != indVType.getShape())
     return emitOpError("expected result dim to match indices dim");
@@ -5444,24 +6627,16 @@ LogicalResult GatherOp::verify() {
     return emitOpError("expected result dim to match mask dim");
   if (resVType != getPassThruVectorType())
     return emitOpError("expected pass_thru of same type as result type");
+  if (getAlignmentAttr() && !isa<MemRefType>(baseType)) {
+    return emitOpError(
+        "alignment is only supported for memref bases, not tensor bases");
+  }
   return success();
 }
 
+//-----------------------------------------------------------------------------
 // MaskableOpInterface methods.
-
-/// Returns the mask type expected by this operation. Mostly used for
-/// verification purposes. It requires the operation to be vectorized."
-Type GatherOp::getExpectedMaskType() {
-  auto vecType = this->getIndexVectorType();
-  return VectorType::get(vecType.getShape(),
-                         IntegerType::get(vecType.getContext(), /*width=*/1),
-                         vecType.getScalableDims());
-}
-
-std::optional<SmallVector<int64_t, 4>> GatherOp::getShapeForUnroll() {
-  return llvm::to_vector<4>(getVectorType().getShape());
-}
-
+//-----------------------------------------------------------------------------
 /// Cheeck if `indexVec` is constant 1D vec of consecutive values [0, 1, 2, ...]
 static LogicalResult isZeroBasedContiguousSeq(Value indexVec) {
   auto vecType = dyn_cast<VectorType>(indexVec.getType());
@@ -5479,10 +6654,17 @@ static LogicalResult isZeroBasedContiguousSeq(Value indexVec) {
       llvm::equal(elements, llvm::seq<int64_t>(0, vecType.getNumElements())));
 }
 
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>> GatherOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getVectorType().getShape());
+}
+
 namespace {
 class GatherFolder final : public OpRewritePattern<GatherOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(GatherOp gather,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(gather.getMask())) {
@@ -5502,17 +6684,17 @@ public:
 /// maskedload. Only 1D fixed vectors are supported for now.
 class FoldContiguousGather final : public OpRewritePattern<GatherOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(GatherOp op,
                                 PatternRewriter &rewriter) const override {
     if (!isa<MemRefType>(op.getBase().getType()))
       return rewriter.notifyMatchFailure(op, "base must be of memref type");
 
-    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
+    if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
 
     rewriter.replaceOpWithNewOp<MaskedLoadOp>(op, op.getType(), op.getBase(),
-                                              op.getIndices(), op.getMask(),
+                                              op.getOffsets(), op.getMask(),
                                               op.getPassThru());
     return success();
   }
@@ -5524,6 +6706,12 @@ void GatherOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<GatherFolder, FoldContiguousGather>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+GatherOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
+}
+
 //===----------------------------------------------------------------------===//
 // ScatterOp
 //===----------------------------------------------------------------------===//
@@ -5532,30 +6720,55 @@ LogicalResult ScatterOp::verify() {
   VectorType indVType = getIndexVectorType();
   VectorType maskVType = getMaskVectorType();
   VectorType valueVType = getVectorType();
-  MemRefType memType = getMemRefType();
+  ShapedType baseType = getBaseType();
 
-  if (valueVType.getElementType() != memType.getElementType())
-    return emitOpError("base and valueToStore element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
+  if (!llvm::isa<MemRefType, RankedTensorType>(baseType))
+    return emitOpError("requires base to be a memref or ranked tensor type");
+
+  // Negative strides are not supported on vector.scatter.
+  // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
+  // flags that assume non-negative strides to avoid undefined behavior.
+  if (auto memRefType = dyn_cast<MemRefType>(baseType))
+    if (memref::hasNegativeStaticStride(memRefType))
+      return emitOpError("memref strides must be non-negative");
+
+  if (failed(verifyElementTypesMatch(*this, baseType, valueVType, "base",
+                                     "valueToStore")))
+    return failure();
+  if (llvm::size(getOffsets()) != baseType.getRank())
+    return emitOpError("requires ") << baseType.getRank() << " indices";
   if (valueVType.getShape() != indVType.getShape())
     return emitOpError("expected valueToStore dim to match indices dim");
   if (valueVType.getShape() != maskVType.getShape())
     return emitOpError("expected valueToStore dim to match mask dim");
+  if (getAlignmentAttr() && !isa<MemRefType>(baseType)) {
+    return emitOpError(
+        "alignment is only supported for memref bases, not tensor bases");
+  }
   return success();
 }
-
 namespace {
 class ScatterFolder final : public OpRewritePattern<ScatterOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp scatter,
                                 PatternRewriter &rewriter) const override {
+    ShapedType baseType = scatter.getBaseType();
+    bool isMemRef = isa<MemRefType>(baseType);
+    if (!isMemRef && !isa<RankedTensorType>(baseType))
+      return failure();
+
+    // Memrefs have no result, so an all-false mask can simply erase the op.
+    // Tensors carry the updated value, so we must replace uses with the
+    // original base tensor instead of erasing.
     switch (getMaskFormat(scatter.getMask())) {
     case MaskFormat::AllTrue:
       return failure(); // no unmasked equivalent
     case MaskFormat::AllFalse:
-      rewriter.eraseOp(scatter);
+      if (isMemRef)
+        rewriter.eraseOp(scatter);
+      else
+        rewriter.replaceOp(scatter, scatter.getBase());
       return success();
     case MaskFormat::Unknown:
       return failure();
@@ -5568,14 +6781,19 @@ public:
 /// maskedstore. Only 1D fixed vectors are supported for now.
 class FoldContiguousScatter final : public OpRewritePattern<ScatterOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(ScatterOp op,
                                 PatternRewriter &rewriter) const override {
-    if (failed(isZeroBasedContiguousSeq(op.getIndexVec())))
+    // Fold only for memrefs: the replacement uses maskedstore, which does not
+    // support tensor bases. Tensor cases intentionally bail out.
+    if (!isa<MemRefType>(op.getBase().getType()))
+      return failure();
+
+    if (failed(isZeroBasedContiguousSeq(op.getIndices())))
       return failure();
 
     rewriter.replaceOpWithNewOp<MaskedStoreOp>(
-        op, op.getBase(), op.getIndices(), op.getMask(), op.getValueToStore());
+        op, op.getBase(), op.getOffsets(), op.getMask(), op.getValueToStore());
     return success();
   }
 };
@@ -5584,6 +6802,12 @@ public:
 void ScatterOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<ScatterFolder, FoldContiguousScatter>(context);
+}
+
+FailureOr<std::optional<SmallVector<Value>>>
+ScatterOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5596,12 +6820,25 @@ LogicalResult ExpandLoadOp::verify() {
   VectorType resVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (resVType.getElementType() != memType.getElementType())
-    return emitOpError("base and result element type should match");
+  if (failed(verifyLoadStoreMemRefLayout(*this, resVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.expandload. The lowering to
+  // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
+
+  if (failed(
+          verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
+    return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (resVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected result dim to match mask dim");
+  if (resVType.getShape() != maskVType.getShape())
+    return emitOpError("expected result shape to match mask shape");
+  if (resVType.getScalableDims() != maskVType.getScalableDims())
+    return emitOpError(
+        "expected result scalable dims to match mask scalable dims");
   if (resVType != passVType)
     return emitOpError("expected pass_thru of same type as result type");
   return success();
@@ -5610,7 +6847,7 @@ LogicalResult ExpandLoadOp::verify() {
 namespace {
 class ExpandLoadFolder final : public OpRewritePattern<ExpandLoadOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(ExpandLoadOp expand,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(expand.getMask())) {
@@ -5634,6 +6871,12 @@ void ExpandLoadOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ExpandLoadFolder>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+ExpandLoadOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            getResult());
+}
+
 //===----------------------------------------------------------------------===//
 // CompressStoreOp
 //===----------------------------------------------------------------------===//
@@ -5643,19 +6886,32 @@ LogicalResult CompressStoreOp::verify() {
   VectorType valueVType = getVectorType();
   MemRefType memType = getMemRefType();
 
-  if (valueVType.getElementType() != memType.getElementType())
-    return emitOpError("base and valueToStore element type should match");
+  if (failed(verifyLoadStoreMemRefLayout(*this, valueVType, memType)))
+    return failure();
+
+  // Negative strides are not supported on vector.compressstore. The lowering
+  // to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
+  // assume non-negative strides to avoid undefined behavior.
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
+
+  if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
+                                     "valueToStore")))
+    return failure();
   if (llvm::size(getIndices()) != memType.getRank())
     return emitOpError("requires ") << memType.getRank() << " indices";
-  if (valueVType.getDimSize(0) != maskVType.getDimSize(0))
-    return emitOpError("expected valueToStore dim to match mask dim");
+  if (valueVType.getShape() != maskVType.getShape())
+    return emitOpError("expected valueToStore shape to match mask shape");
+  if (valueVType.getScalableDims() != maskVType.getScalableDims())
+    return emitOpError(
+        "expected valueToStore scalable dims to match mask scalable dims");
   return success();
 }
 
 namespace {
 class CompressStoreFolder final : public OpRewritePattern<CompressStoreOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(CompressStoreOp compress,
                                 PatternRewriter &rewriter) const override {
     switch (getMaskFormat(compress.getMask())) {
@@ -5680,6 +6936,12 @@ void CompressStoreOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<CompressStoreFolder>(context);
 }
 
+FailureOr<std::optional<SmallVector<Value>>>
+CompressStoreOp::bubbleDownCasts(OpBuilder &builder) {
+  return mlir::detail::bubbleDownInPlaceMemorySpaceCastImpl(getBaseMutable(),
+                                                            ValueRange());
+}
+
 //===----------------------------------------------------------------------===//
 // ShapeCastOp
 //===----------------------------------------------------------------------===//
@@ -5695,8 +6957,9 @@ LogicalResult ShapeCastOp::verify() {
   VectorType resultType = getResultVectorType();
 
   // Check that element type is preserved
-  if (sourceType.getElementType() != resultType.getElementType())
-    return emitOpError("has different source and result element types");
+  if (failed(verifyElementTypesMatch(*this, sourceType, resultType, "source",
+                                     "result")))
+    return failure();
 
   // Check that number of elements is preserved
   int64_t sourceNElms = sourceType.getNumElements();
@@ -5716,6 +6979,39 @@ LogicalResult ShapeCastOp::verify() {
                          << resultNScalableDims << ")";
 
   return success();
+}
+
+/// Check whether this ShapeCastOp is effectively a BroadcastOp.
+///
+/// The only case in which this method can return `true` is when the underlying
+/// op merely adds leading unit dimensions, e.g.:
+///   %res = vector.shape_cast %src : vector<8x4xi32> to vector<1x8x4xi32>
+///
+bool ShapeCastOp::isBroadcastLike() {
+  auto srcType = getSourceVectorType();
+  auto resType = getResultVectorType();
+
+  // Is srcType broadcastable to resType?
+  std::pair<VectorDim, VectorDim> mismatchingDims;
+  if (isBroadcastableTo(srcType, resType, &mismatchingDims) !=
+      BroadcastableToResult::Success)
+    return false;
+
+  // Do ranks mismatch?
+  //
+  // The only case where ranks match and this ShapeCastOp is also a broadcast,
+  // is when it's effectively a NOp, but that's an uninteresting edge case.
+  size_t rankDiff = resType.getRank() - srcType.getRank();
+  if (rankDiff == 0)
+    return false;
+
+  // Are all newly added leading dims unit?
+  if (!llvm::all_of(resType.getShape().take_front(rankDiff),
+                    [](int64_t dim) { return dim == 1; }))
+    return false;
+
+  // Do all trailing dims match?
+  return resType.getShape().take_back(srcType.getRank()) == srcType.getShape();
 }
 
 /// Return true if `transpose` does not permute a pair of non-unit dims.
@@ -5758,18 +7054,7 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
 
   // shape_cast(transpose(x)) -> shape_cast(x)
   if (auto transpose = getSource().getDefiningOp<TransposeOp>()) {
-    // This folder does
-    //    shape_cast(transpose) -> shape_cast
-    // But another pattern, ConvertIllegalShapeCastOpsToTransposes, does
-    //    shape_cast -> shape_cast(transpose)
-    // i.e. the complete opposite. When paired, these 2 patterns can cause
-    // infinite cycles in pattern rewriting.
-    // ConvertIllegalShapeCastOpsToTransposes only matches on scalable
-    // vectors, so by disabling this folder for scalable vectors the
-    // cycle is avoided.
-    // TODO: Check if ConvertIllegalShapeCastOpsToTransposes is
-    // still needed. If it's not, then we can fold here.
-    if (!transpose.getType().isScalable() && isOrderPreserving(transpose)) {
+    if (isOrderPreserving(transpose)) {
       setOperand(transpose.getVector());
       return getResult();
     }
@@ -5784,26 +7069,62 @@ OpFoldResult ShapeCastOp::fold(FoldAdaptor adaptor) {
   }
 
   // shape_cast(constant) -> constant
-  if (auto splatAttr =
-          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource()))
-    return splatAttr.reshape(getType());
+  if (auto denseAttr =
+          dyn_cast_if_present<DenseElementsAttr>(adaptor.getSource()))
+    return denseAttr.reshape(getType());
 
   // shape_cast(poison) -> poison
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getSource())) {
+  if (matchPattern(adaptor.getSource(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
-  }
 
   return {};
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+ShapeCastOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+std::optional<SmallVector<int64_t>> ShapeCastOp::getDefaultUnrollTargetShape() {
+  auto resultShape = this->getResultVectorType().getShape();
+  // Special case with leading unit dims and different inner dim
+  // for result and target shape.
+  if (resultShape.size() == 2 && resultShape[0] == 1 && resultShape[1] == 32) {
+    return SmallVector<int64_t>{1, 16};
+  }
+  if (resultShape.size() == 2 && resultShape[0] == 2 && resultShape[1] == 1) {
+    return SmallVector<int64_t>{1, 1};
+  }
+  // Multi-group cases: tile contiguous per reassociation group
+  // but strided in the whole result.
+  auto sourceShape = this->getSourceVectorType().getShape();
+  if (resultShape.size() == 3 && resultShape[0] == 8 && resultShape[1] == 1 &&
+      resultShape[2] == 32) {
+    return SmallVector<int64_t>{8, 1, 4};
+  }
+  if (sourceShape.size() == 3 && resultShape.size() == 2 &&
+      resultShape[0] == 4 && resultShape[1] == 4) {
+    return SmallVector<int64_t>{2, 2};
+  }
+  if (resultShape.size() == 3 && resultShape[0] == 2 && resultShape[1] == 8 &&
+      resultShape[2] == 4) {
+    return SmallVector<int64_t>{2, 2, 2};
+  }
+  // Default case: [2,4] for all tests.
+  return SmallVector<int64_t>{2, 4};
 }
 
 namespace {
 
 /// Helper function that computes a new vector type based on the input vector
-/// type by removing the trailing one dims:
+/// type by removing the _trailing_ unit dims:
 ///
 ///   vector<4x1x1xi1> --> vector<4x1xi1>
 ///
-static VectorType trimTrailingOneDims(VectorType oldType) {
+static VectorType trimTrailingUnitDims(VectorType oldType) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
   ArrayRef<int64_t> newShape = oldShape;
 
@@ -5825,22 +7146,62 @@ static VectorType trimTrailingOneDims(VectorType oldType) {
   return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
+/// Helper function that computes a new vector type based on the input vector
+/// type by removing the _leading_ unit dims:
+///
+///   vector<1x1x4xi1> --> vector<4x1xi1>
+///
+static VectorType trimLeadingUnitDims(VectorType oldType) {
+  ArrayRef<int64_t> oldShape = oldType.getShape();
+  ArrayRef<int64_t> newShape = oldShape;
+
+  ArrayRef<bool> oldScalableDims = oldType.getScalableDims();
+  ArrayRef<bool> newScalableDims = oldScalableDims;
+
+  while (!newShape.empty() && newShape.front() == 1 &&
+         !newScalableDims.front()) {
+    newShape = newShape.drop_front(1);
+    newScalableDims = newScalableDims.drop_front(1);
+  }
+
+  // Make sure we have at least 1 dimension.
+  // TODO: Add support for 0-D vectors.
+  if (newShape.empty()) {
+    newShape = oldShape.take_back();
+    newScalableDims = oldScalableDims.take_back();
+  }
+
+  return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
+}
+
+enum class UnitDimSide { Leading, Trailing };
+
 /// Folds qualifying shape_cast(create_mask) into a new create_mask
 ///
-/// Looks at `vector.shape_cast` Ops that simply "drop" the trailing unit
-/// dimension. If the input vector comes from `vector.create_mask` for which
-/// the corresponding mask input value is 1 (e.g. `%c1` below), then it is safe
-/// to fold shape_cast into create_mask.
+/// Looks at `vector.shape_cast` Ops that simply "drop" either the _trailing_ or
+/// the _leading_unit dimension (configured with the template parameter). If the
+/// input vector comes from `vector.create_mask` for which the corresponding
+/// mask input value is 1 (e.g. `%c1` below), then it is safe to fold shape_cast
+/// into create_mask.
 ///
+/// EX 1 (trailing unit dims)
 /// BEFORE:
 ///    %1 = vector.create_mask %c1, %dim, %c1, %c1 : vector<1x[4]x1x1xi1>
 ///    %2 = vector.shape_cast %1 : vector<1x[4]x1x1xi1> to vector<1x[4]xi1>
 /// AFTER:
 ///    %0 = vector.create_mask %c1, %dim : vector<1x[4]xi1>
-class ShapeCastCreateMaskFolderTrailingOneDim final
+///
+/// EX 2 (leading unit dims)
+/// BEFORE:
+///    %1 = vector.create_mask %c1, %c1, %dim, %c1 : vector<1x1x[4]x1xi1>
+///    %2 = vector.shape_cast %1 : vector<1x1x[4]x1xi1> to vector<[4]x1xi1>
+/// AFTER:
+///    %0 = vector.create_mask %c1, %dim : vector<[4]xi1>
+template <UnitDimSide Side>
+class ShapeCastCreateMaskFolderBoundaryUnitDim final
     : public OpRewritePattern<ShapeCastOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShapeCastOp shapeOp,
                                 PatternRewriter &rewriter) const override {
@@ -5853,31 +7214,47 @@ public:
     VectorType shapeOpResTy = shapeOp.getResultVectorType();
     VectorType shapeOpSrcTy = shapeOp.getSourceVectorType();
 
-    VectorType newVecType = trimTrailingOneDims(shapeOpSrcTy);
-    if (newVecType != shapeOpResTy)
-      return failure();
+    VectorType newVecType = (Side == UnitDimSide::Trailing)
+                                ? trimTrailingUnitDims(shapeOpSrcTy)
+                                : trimLeadingUnitDims(shapeOpSrcTy);
 
-    auto numDimsToDrop =
-        shapeOpSrcTy.getShape().size() - shapeOpResTy.getShape().size();
+    if (newVecType != shapeOpResTy) {
+      return (Side == UnitDimSide::Trailing)
+                 ? rewriter.notifyMatchFailure(
+                       shapeOp, "Non-trailing-unit-dim dropping shape_cast Op")
+                 : rewriter.notifyMatchFailure(
+                       shapeOp, "Non-leading-unit-dim dropping shape_cast Op");
+    }
+
+    auto numDimsToDrop = shapeOpSrcTy.getRank() - shapeOpResTy.getRank();
 
     // No unit dims to drop
-    if (!numDimsToDrop)
-      return failure();
+    if (!numDimsToDrop) {
+      return (Side == UnitDimSide::Trailing)
+                 ? rewriter.notifyMatchFailure(
+                       shapeOp, "Non-trailing-unit-dim dropping shape_cast Op")
+                 : rewriter.notifyMatchFailure(
+                       shapeOp, "Non-leading-unit-dim dropping shape_cast Op");
+    }
 
     if (createMaskOp) {
       auto maskOperands = createMaskOp.getOperands();
-      auto numMaskOperands = maskOperands.size();
 
-      // Check every mask dim size to see whether it can be dropped
-      for (size_t i = numMaskOperands - 1; i >= numMaskOperands - numDimsToDrop;
-           --i) {
-        auto constant = maskOperands[i].getDefiningOp<arith::ConstantIndexOp>();
-        if (!constant || (constant.value() != 1))
-          return failure();
-      }
-      SmallVector<Value> newMaskOperands =
-          maskOperands.drop_back(numDimsToDrop);
+      auto maskOperandsToDrop = (Side == UnitDimSide::Trailing)
+                                    ? maskOperands.take_back(numDimsToDrop)
+                                    : maskOperands.take_front(numDimsToDrop);
 
+      // Check that every mask-dim-size to-be-dropped is constant and == 1. We
+      // could also check for == 0, but that's left as a TODO.
+      if (llvm::any_of(maskOperandsToDrop, [](Value maskDim) {
+            auto cst = maskDim.getDefiningOp<arith::ConstantIndexOp>();
+            return !cst || (cst.value() != 1);
+          }))
+        return failure();
+
+      auto newMaskOperands = (Side == UnitDimSide::Trailing)
+                                 ? maskOperands.drop_back(numDimsToDrop)
+                                 : maskOperands.drop_front(numDimsToDrop);
       rewriter.replaceOpWithNewOp<vector::CreateMaskOp>(shapeOp, shapeOpResTy,
                                                         newMaskOperands);
       return success();
@@ -5885,18 +7262,24 @@ public:
 
     if (constantMaskOp) {
       auto maskDimSizes = constantMaskOp.getMaskDimSizes();
-      auto numMaskOperands = maskDimSizes.size();
 
-      // Check every mask dim size to see whether it can be dropped
-      for (size_t i = numMaskOperands - 1; i >= numMaskOperands - numDimsToDrop;
-           --i) {
-        if (maskDimSizes[i] != 1)
-          return failure();
-      }
+      ArrayRef<int64_t> maskDimSizesToDrop =
+          (Side == UnitDimSide::Trailing)
+              ? maskDimSizes.take_back(numDimsToDrop)
+              : maskDimSizes.take_front(numDimsToDrop);
 
-      auto newMaskOperands = maskDimSizes.drop_back(numDimsToDrop);
+      // Check that every mask-dim-size to-be-dropped is constant and == 1. We
+      // could also check for == 0, but that's left as a TODO.
+      if (llvm::any_of(maskDimSizesToDrop,
+                       [](int64_t dim) { return dim != 1; }))
+        return failure();
+
+      ArrayRef<int64_t> newMaskDimSizes =
+          (Side == UnitDimSide::Trailing)
+              ? maskDimSizes.drop_back(numDimsToDrop)
+              : maskDimSizes.drop_front(numDimsToDrop);
       rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(shapeOp, shapeOpResTy,
-                                                          newMaskOperands);
+                                                          newMaskDimSizes);
       return success();
     }
 
@@ -5904,54 +7287,114 @@ public:
   }
 };
 
-/// Pattern to rewrite Y = ShapeCast(Broadcast(X)) as either
-///   i) Y = ShapeCast(X), or
-///  ii) Y = Broadcast(X)
-/// If both (i) and (ii) are possible, (i) is chosen.
+/// Pattern to rewrite Y = ShapeCast(Broadcast(X)) as Y = Broadcast(X)
 class ShapeCastBroadcastFolder final : public OpRewritePattern<ShapeCastOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
                                 PatternRewriter &rewriter) const override {
-    auto broadcastOp =
-        shapeCastOp.getSource().getDefiningOp<vector::BroadcastOp>();
-    if (!broadcastOp)
+    auto oldBcOp = shapeCastOp.getSource().getDefiningOp<vector::BroadcastOp>();
+    if (!oldBcOp)
       return failure();
-
-    auto srcVectorType = dyn_cast<VectorType>(broadcastOp.getSourceType());
-    bool srcIsScalar = !srcVectorType;
-
-    // Replace Y = ShapeCast(Broadcast(X)) with Y = ShapeCast(X).
-    // Example:
-    // %0 = vector.broadcast %in : vector<3x4xf32> to vector<1x3x4xf32>
-    // %1 = vector.shape_cast %0 : vector<1x3x4xf32> to vector<12xf32>
-    // to
-    // %1 = vector.shape_cast %in : vector<3x4xf32> to vector<12xf32>
-    if (srcVectorType) {
-      if (srcVectorType.getNumElements() ==
-          shapeCastOp.getResultVectorType().getNumElements()) {
-        rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
-            shapeCastOp, shapeCastOp.getResultVectorType(),
-            broadcastOp.getSource());
-        return success();
-      }
-    }
 
     // Replace Y = ShapeCast(Broadcast(X)) with Y = Broadcast(X)
     // Example
-    // %0 = vector.broadcast %in : vector<3xf32> to vector<2x4x3xf32>
-    // %1 = vector.shape_cast %0 : vector<2x4x3xf32> to vector<8x3xf32>
+    // %oldBc = vector.broadcast %src : vector<3xf32> to vector<2x4x3xf32>
+    // %res = vector.shape_cast %oldBc : vector<2x4x3xf32> to vector<8x3xf32>
     // to
-    // %1 = vector.broadcast %in : vector<3xf32> to vector<8x3xf32>
-    VectorType dstVectorType = shapeCastOp.getResultVectorType();
-    if (srcIsScalar || isBroadcastableTo(srcVectorType, dstVectorType) ==
-                           BroadcastableToResult::Success) {
-      rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-          shapeCastOp, dstVectorType, broadcastOp.getSource());
-      return success();
+    // %newBc = vector.broadcast %src : vector<3xf32> to vector<8x3xf32>
+    VectorType resVectorType = shapeCastOp.getResultVectorType();
+
+    // Limit this pattern to vectors with at most one scalable dimension for
+    // now.
+    if (resVectorType.getNumScalableDims() > 1)
+      return failure();
+
+    auto srcVectorType = dyn_cast<VectorType>(oldBcOp.getSourceType());
+    bool srcIsScalar = !srcVectorType;
+
+    if (!srcIsScalar) {
+      if (isBroadcastableTo(srcVectorType, resVectorType) !=
+          BroadcastableToResult::Success) {
+        return failure();
+      }
+      // For a fixed source shape, the result strides determine which source
+      // element supplies each linear position in the broadcast result (see the
+      // `BroadcastOp` definition for the closed-form mapping). Since
+      // `shape_cast` preserves the flattened 1-D (row-major) element order,
+      // folding into `%newBc` is valid when every non-unit `%src` dimension has
+      // the same stride (both static product and scalability) in `%oldBc` and
+      // `%res`. Note that a scalable `[1]` has runtime size `vscale` and is not
+      // a unit dimension.
+      VectorType oldBcVectorType = oldBcOp.getResultVectorType();
+      int64_t srcRank = srcVectorType.getRank();
+      int64_t oldBcRank = oldBcVectorType.getRank();
+      int64_t resRank = resVectorType.getRank();
+      ArrayRef<int64_t> srcShape = srcVectorType.getShape();
+      ArrayRef<int64_t> oldBcShape = oldBcVectorType.getShape();
+      ArrayRef<int64_t> resShape = resVectorType.getShape();
+      ArrayRef<bool> srcScalable = srcVectorType.getScalableDims();
+      ArrayRef<bool> oldBcScalable = oldBcVectorType.getScalableDims();
+      ArrayRef<bool> resScalable = resVectorType.getScalableDims();
+
+      // Iterate from the innermost (trailing) dimension outward, aligning each
+      // `%src` dimension with the corresponding trailing dimension of `%oldBc`
+      // and `%res`.
+      int64_t oldBcStride = 1, resStride = 1;
+      bool isOldBcStrideScalable = false, isResStrideScalable = false;
+      for (int64_t i = 0; i < srcRank; ++i) {
+        int64_t srcDim = srcRank - 1 - i;
+        int64_t oldBcDim = oldBcRank - 1 - i;
+        int64_t resDim = resRank - 1 - i;
+
+        bool isUnitDim = srcShape[srcDim] == 1 && !srcScalable[srcDim];
+        if (!isUnitDim && (oldBcStride != resStride ||
+                           isOldBcStrideScalable != isResStrideScalable)) {
+          return failure();
+        }
+
+        oldBcStride *= oldBcShape[oldBcDim];
+        resStride *= resShape[resDim];
+        isOldBcStrideScalable |= oldBcScalable[oldBcDim];
+        isResStrideScalable |= resScalable[resDim];
+      }
     }
-    return failure();
+
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(shapeCastOp, resVectorType,
+                                                     oldBcOp.getSource());
+    return success();
+  }
+};
+
+/// Pattern to rewrite Y = ShapeCast(FromElements(X)) as Y = FromElements(X)
+///
+/// BEFORE:
+///    %1 = vector.from_elements %c1, %c2, %c3 : vector<3xf32>
+///    %2 = vector.shape_cast %1 : vector<3xf32> to vector<1x3xf32>
+/// AFTER:
+///    %2 = vector.from_elements %c1, %c2, %c3 : vector<1x3xf32>
+///
+/// Note: this transformation is implemented as an OpRewritePattern, not as a
+/// fold, because we have to create new op FromElementsOp with updated result
+/// type. This cannot be done with a fold, because fold cannot create new ops
+/// and the existing FromElementsOp result type differs from the ShapeCastOp
+/// result type. Mutating the FromElementsOp (not root op) would violate the
+/// fold contract and break other users.
+class FoldShapeCastOfFromElements final : public OpRewritePattern<ShapeCastOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto fromElements = shapeCastOp.getSource().getDefiningOp<FromElementsOp>();
+    if (!fromElements)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<FromElementsOp>(
+        shapeCastOp, shapeCastOp.getResultVectorType(),
+        fromElements.getElements());
+    return success();
   }
 };
 
@@ -5959,9 +7402,9 @@ public:
 
 void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results
-      .add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder>(
-          context);
+  results.add<ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Leading>,
+              ShapeCastCreateMaskFolderBoundaryUnitDim<UnitDimSide::Trailing>,
+              ShapeCastBroadcastFolder, FoldShapeCastOfFromElements>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6038,7 +7481,7 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
     if (intPack.isSplat()) {
       auto splat = intPack.getSplatValue<IntegerAttr>();
 
-      if (llvm::isa<IntegerType>(dstElemType)) {
+      if (llvm::isa<IntegerType>(dstElemType) && srcElemType.isIntOrFloat()) {
         uint64_t srcBitWidth = srcElemType.getIntOrFloatBitWidth();
         uint64_t dstBitWidth = dstElemType.getIntOrFloatBitWidth();
 
@@ -6056,6 +7499,17 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
   }
 
   return {};
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>> BitCastOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+std::optional<SmallVector<int64_t>> BitCastOp::getDefaultUnrollTargetShape() {
+  return SmallVector<int64_t>{4, 4};
 }
 
 //===----------------------------------------------------------------------===//
@@ -6135,7 +7589,7 @@ OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
     return splat.reshape(getResultVectorType());
 
   // Eliminate poison transpose ops.
-  if (llvm::dyn_cast_if_present<ub::PoisonAttr>(adaptor.getVector()))
+  if (matchPattern(adaptor.getVector(), ub::m_Poison()))
     return ub::PoisonAttr::get(getContext());
 
   // Eliminate identity transposes, and more generally any transposes that
@@ -6180,8 +7634,21 @@ LogicalResult vector::TransposeOp::verify() {
   return success();
 }
 
-std::optional<SmallVector<int64_t, 4>> TransposeOp::getShapeForUnroll() {
+void TransposeOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                    SetIntRangeFn setResultRanges) {
+  setResultRanges(getResult(), argRanges.front());
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+TransposeOp::getIterationShapeToUnroll() {
   return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+std::optional<SmallVector<int64_t>> TransposeOp::getDefaultUnrollTargetShape() {
+  return SmallVector<int64_t>{1, 3, 4, 2};
 }
 
 namespace {
@@ -6189,7 +7656,7 @@ namespace {
 // Rewrites two back-to-back TransposeOp operations into a single TransposeOp.
 class TransposeFolder final : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
@@ -6218,19 +7685,19 @@ public:
   }
 };
 
-// Folds transpose(splat x : src_type) : res_type into splat x : res_type.
+/// Replace transpose(splat-like(v)) with broadcast(v)
 class FoldTransposeSplat final : public OpRewritePattern<TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
-    auto splatOp = transposeOp.getVector().getDefiningOp<vector::SplatOp>();
-    if (!splatOp)
+    Value splat = getScalarSplatSource(transposeOp.getVector());
+    if (!splat)
       return failure();
 
-    rewriter.replaceOpWithNewOp<vector::SplatOp>(
-        transposeOp, transposeOp.getResultVectorType(), splatOp.getInput());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+        transposeOp, transposeOp.getResultVectorType(), splat);
     return success();
   }
 };
@@ -6238,7 +7705,7 @@ public:
 /// Folds transpose(create_mask) into a new transposed create_mask.
 class FoldTransposeCreateMask final : public OpRewritePattern<TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TransposeOp transpOp,
                                 PatternRewriter &rewriter) const override {
@@ -6275,7 +7742,7 @@ public:
 /// Folds transpose(shape_cast) into a new shape_cast.
 class FoldTransposeShapeCast final : public OpRewritePattern<TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(TransposeOp transposeOp,
                                 PatternRewriter &rewriter) const override {
@@ -6294,6 +7761,73 @@ public:
 
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(transposeOp, resultType,
                                                      shapeCastOp.getSource());
+    return success();
+  }
+};
+
+/// Folds transpose(from_elements(...)) into a new from_elements with permuted
+/// operands matching the transposed shape.
+///
+/// Example:
+///
+///   %v = vector.from_elements %a00, %a01, %a02, %a10, %a11, %a12 :
+///   vector<2x3xi32> %t = vector.transpose %v, [1, 0] : vector<2x3xi32> to
+///   vector<3x2xi32>
+///
+/// becomes ->
+///
+///   %r = vector.from_elements %a00, %a10, %a01, %a11, %a02, %a12 :
+///   vector<3x2xi32>
+///
+class FoldTransposeFromElements final : public OpRewritePattern<TransposeOp> {
+public:
+  using Base::Base;
+  LogicalResult matchAndRewrite(vector::TransposeOp transposeOp,
+                                PatternRewriter &rewriter) const override {
+    auto fromElementsOp =
+        transposeOp.getVector().getDefiningOp<vector::FromElementsOp>();
+    if (!fromElementsOp)
+      return failure();
+
+    VectorType srcTy = fromElementsOp.getResult().getType();
+    VectorType dstTy = transposeOp.getType();
+
+    ArrayRef<int64_t> permutation = transposeOp.getPermutation();
+    int64_t rank = srcTy.getRank();
+
+    // Build inverse permutation to map destination indices back to source.
+    SmallVector<int64_t> inversePerm(rank, 0);
+    for (int64_t i = 0; i < rank; ++i)
+      inversePerm[permutation[i]] = i;
+
+    ArrayRef<int64_t> srcShape = srcTy.getShape();
+    ArrayRef<int64_t> dstShape = dstTy.getShape();
+    SmallVector<int64_t> srcIdx(rank, 0);
+    SmallVector<int64_t> dstIdx(rank, 0);
+    SmallVector<int64_t> srcStrides = computeStrides(srcShape);
+    SmallVector<int64_t> dstStrides = computeStrides(dstShape);
+
+    auto elementsOld = fromElementsOp.getElements();
+    SmallVector<Value> elementsNew;
+    int64_t dstNumElements = dstTy.getNumElements();
+    elementsNew.reserve(dstNumElements);
+
+    // For each element in destination row-major order, pick the corresponding
+    // source element.
+    for (int64_t linearIdx = 0; linearIdx < dstNumElements; ++linearIdx) {
+      // Pick the destination element index.
+      dstIdx = delinearize(linearIdx, dstStrides);
+      // Map the destination element index to the source element index.
+      for (int64_t j = 0; j < rank; ++j)
+        srcIdx[j] = dstIdx[inversePerm[j]];
+      // Linearize the source element index.
+      int64_t srcLin = linearize(srcIdx, srcStrides);
+      // Add the source element to the new elements.
+      elementsNew.push_back(elementsOld[srcLin]);
+    }
+
+    rewriter.replaceOpWithNewOp<FromElementsOp>(transposeOp, dstTy,
+                                                elementsNew);
     return success();
   }
 };
@@ -6325,7 +7859,7 @@ public:
 /// within the groups [0,1] and [3,4], like (1 0 2 4 3 5 6).
 class FoldTransposeBroadcast : public OpRewritePattern<vector::TransposeOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   FoldTransposeBroadcast(MLIRContext *context, PatternBenefit benefit = 1)
       : OpRewritePattern<vector::TransposeOp>(context, benefit) {}
 
@@ -6398,7 +7932,8 @@ public:
 void vector::TransposeOp::getCanonicalizationPatterns(
     RewritePatternSet &results, MLIRContext *context) {
   results.add<FoldTransposeCreateMask, FoldTransposeShapeCast, TransposeFolder,
-              FoldTransposeSplat, FoldTransposeBroadcast>(context);
+              FoldTransposeSplat, FoldTransposeFromElements,
+              FoldTransposeBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6409,10 +7944,12 @@ void ConstantMaskOp::build(OpBuilder &builder, OperationState &result,
                            VectorType type, ConstantMaskKind kind) {
   assert(kind == ConstantMaskKind::AllTrue ||
          kind == ConstantMaskKind::AllFalse);
-  build(builder, result, type,
-        kind == ConstantMaskKind::AllTrue
-            ? type.getShape()
-            : SmallVector<int64_t>(type.getRank(), 0));
+  auto maskDimSizes = llvm::to_vector(type.getShape());
+  if (maskDimSizes.empty())
+    maskDimSizes.push_back(1);
+  if (kind == ConstantMaskKind::AllFalse)
+    maskDimSizes.assign(maskDimSizes.size(), 0);
+  build(builder, result, type, maskDimSizes);
 }
 
 LogicalResult ConstantMaskOp::verify() {
@@ -6470,6 +8007,33 @@ bool ConstantMaskOp::isAllOnesMask() {
   return true;
 }
 
+OpFoldResult ConstantMaskOp::fold(FoldAdaptor adaptor) {
+  ArrayRef<int64_t> bounds = getMaskDimSizes();
+  ArrayRef<int64_t> vectorSizes = getVectorType().getShape();
+
+  auto createBoolSplat = [&](bool x) {
+    return SplatElementsAttr::get(getVectorType(),
+                                  BoolAttr::get(getContext(), x));
+  };
+
+  // Check the corner case of 0-D vectors first.
+  if (vectorSizes.empty()) {
+    assert(bounds.size() == 1 && "invalid sizes for zero rank mask");
+    return createBoolSplat(bounds[0] == 1);
+  }
+  // Fold vector.constant_mask to splat if possible.
+  if (bounds == vectorSizes)
+    return createBoolSplat(true);
+  if (llvm::all_of(bounds, [](int64_t x) { return x == 0; }))
+    return createBoolSplat(false);
+  return OpFoldResult();
+}
+
+std::optional<SmallVector<int64_t>>
+ConstantMaskOp::getDefaultUnrollTargetShape() {
+  return getDefaultTargetMaskShapeForUnroll();
+}
+
 //===----------------------------------------------------------------------===//
 // CreateMaskOp
 //===----------------------------------------------------------------------===//
@@ -6495,6 +8059,11 @@ LogicalResult CreateMaskOp::verify() {
         "must specify an operand for each result vector dimension");
   }
   return success();
+}
+
+std::optional<SmallVector<int64_t>>
+CreateMaskOp::getDefaultUnrollTargetShape() {
+  return getDefaultTargetMaskShapeForUnroll();
 }
 
 namespace {
@@ -6524,7 +8093,7 @@ namespace {
 ///   %0 = vector.constant_mask [8, 16] : vector<8x[16]xi1>
 class CreateMaskFolder final : public OpRewritePattern<CreateMaskOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(CreateMaskOp createMaskOp,
                                 PatternRewriter &rewriter) const override {
@@ -6687,7 +8256,8 @@ void mlir::vector::MaskOp::print(OpAsmPrinter &p) {
     p.printCustomOrGenericOp(&singleBlock->front());
   p << " }";
 
-  p.printOptionalAttrDict(getOperation()->getAttrs());
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 
   p << " : " << getMask().getType();
   if (getNumResults() > 0)
@@ -6721,7 +8291,7 @@ void MaskOp::ensureTerminator(Region &region, Builder &builder, Location loc) {
   OpBuilder opBuilder(builder.getContext());
   Operation *maskedOp = &block.front();
   opBuilder.setInsertionPointToEnd(&block);
-  opBuilder.create<vector::YieldOp>(loc, maskedOp->getResults());
+  vector::YieldOp::create(opBuilder, loc, maskedOp->getResults());
 }
 
 LogicalResult MaskOp::verify() {
@@ -6768,6 +8338,22 @@ LogicalResult MaskOp::verify() {
                      [](Type t) { return llvm::isa<VectorType>(t); }) > 1)
     return emitOpError("multiple vector results not supported");
 
+  // TODO: Remove once https://github.com/llvm/llvm-project/issues/239511 is
+  // completed
+  auto transferOp =
+      dyn_cast<VectorTransferOpInterface>(maskableOp.getOperation());
+  if (transferOp && transferOp.getMask())
+    return emitOpError(
+        "doesn't expect a mask operand for the masked transfer operation");
+
+  // TODO: This does not belong here, but there is just no good way to mask
+  // transfer Ops with vector elements. Instead, cnsider removing support for
+  // vector elements in XFer ops.
+  if (transferOp &&
+      isa<VectorType>(transferOp.getShapedType().getElementType()))
+    return emitOpError("does not support masking a transfer operation on a "
+                       "source with vector element type");
+
   // Mask checks.
   Type expectedMaskType = maskableOp.getExpectedMaskType();
   if (getMask().getType() != expectedMaskType)
@@ -6812,10 +8398,8 @@ static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
 
   Block *block = maskOp.getMaskBlock();
   auto terminator = cast<vector::YieldOp>(block->front());
-  if (terminator.getNumOperands() == 0) {
-    // `vector.mask` has no results, just remove the `vector.mask`.
-    return success();
-  }
+  if (terminator.getNumOperands() == 0)
+    return failure();
 
   // `vector.mask` has results, propagate the results.
   llvm::append_range(results, terminator.getOperands());
@@ -6832,7 +8416,11 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
     return failure();
 
   // Move maskable operation outside of the `vector.mask` region.
+  // If there is no maskable op (empty body), the fold cannot proceed; the
+  // canonicalizer handles this case instead.
   Operation *maskableOp = getMaskableOp();
+  if (!maskableOp)
+    return failure();
   maskableOp->dropAllUses();
   maskableOp->moveBefore(getOperation());
 
@@ -6853,7 +8441,7 @@ LogicalResult MaskOp::fold(FoldAdaptor adaptor,
 ///   %0 = arith.select %mask, %a, %passthru : vector<8xf32>
 ///
 class CanonializeEmptyMaskOp : public OpRewritePattern<MaskOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(MaskOp maskOp,
                                 PatternRewriter &rewriter) const override {
@@ -6862,6 +8450,17 @@ class CanonializeEmptyMaskOp : public OpRewritePattern<MaskOp> {
 
     if (!maskOp.hasPassthru())
       return failure();
+
+    // arith.select with a vector condition requires the value types to be
+    // vectors of the same shape. Since vector.mask always has a vector mask
+    // type, bail out when any result type doesn't match the mask shape to
+    // avoid creating invalid IR.
+    VectorType maskType = maskOp.getMask().getType();
+    for (Type resultType : maskOp.getResultTypes()) {
+      auto vecResultType = dyn_cast<VectorType>(resultType);
+      if (!vecResultType || vecResultType.getShape() != maskType.getShape())
+        return failure();
+    }
 
     Block *block = maskOp.getMaskBlock();
     auto terminator = cast<vector::YieldOp>(block->front());
@@ -6946,24 +8545,6 @@ void mlir::vector::populateVectorToVectorCanonicalizationPatterns(
           patterns.getContext(), benefit);
 }
 
-//===----------------------------------------------------------------------===//
-// SplatOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
-  auto constOperand = adaptor.getInput();
-  if (!isa_and_nonnull<IntegerAttr, FloatAttr>(constOperand))
-    return {};
-
-  // SplatElementsAttr::get treats single value for second arg as being a splat.
-  return SplatElementsAttr::get(getType(), {constOperand});
-}
-
-void SplatOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
-                                SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), argRanges.front());
-}
-
 Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
                                        CombiningKind kind, Value v1, Value acc,
                                        arith::FastMathFlagsAttr fastmath,
@@ -6990,6 +8571,11 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
            "expected float values");
     result = b.createOrFold<arith::MaxNumFOp>(loc, v1, acc, fastmath);
     break;
+  case CombiningKind::MAXIMUMNUMF:
+    assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
+           "expected float values");
+    result = b.createOrFold<arith::MaximumNumFOp>(loc, v1, acc, fastmath);
+    break;
   case CombiningKind::MAXIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
@@ -6999,6 +8585,11 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
            "expected float values");
     result = b.createOrFold<arith::MinNumFOp>(loc, v1, acc, fastmath);
+    break;
+  case CombiningKind::MINIMUMNUMF:
+    assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
+           "expected float values");
+    result = b.createOrFold<arith::MinimumNumFOp>(loc, v1, acc, fastmath);
     break;
   case CombiningKind::MINIMUMF:
     assert(llvm::isa<FloatType>(t1) && llvm::isa<FloatType>(tAcc) &&
@@ -7044,6 +8635,136 @@ Value mlir::vector::makeArithReduction(OpBuilder &b, Location loc,
 }
 
 //===----------------------------------------------------------------------===//
+// StepOp
+//===----------------------------------------------------------------------===//
+
+void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                               SetIntRangeFn setResultRanges) {
+  auto resultType = cast<VectorType>(getType());
+  if (resultType.isScalable()) {
+    return;
+  }
+  unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
+  // The result holds the sequence [0, 1, ..., N-1], with each value truncated
+  // to the result element type.
+  uint64_t maxIndex = resultType.getDimSize(0) - 1;
+  APInt umin = APInt::getZero(bitwidth);
+  APInt umax = APInt::getMaxValue(bitwidth).ugt(maxIndex)
+                   ? APInt(bitwidth, maxIndex)
+                   : APInt::getMaxValue(bitwidth);
+  setResultRanges(getResult(), ConstantIntRanges::fromUnsigned(umin, umax));
+}
+
+std::optional<SmallVector<int64_t>> StepOp::getDefaultUnrollTargetShape() {
+  return SmallVector<int64_t>{8};
+}
+
+namespace {
+
+/// Fold `vector.step -> arith.cmpi` when the step value is compared to a
+/// constant large enough such that the result is the same at all indices.
+///
+/// For example, rewrite the 'greater than' comparison below,
+///
+/// ```mlir
+/// %cst = arith.constant dense<7> : vector<3xindex>
+/// %stp = vector.step : vector<3xindex>
+/// %out = arith.cmpi ugt, %stp, %cst : vector<3xindex>
+/// ```
+///
+/// as,
+///
+/// ```mlir
+/// %out = arith.constant dense<false> : vector<3xi1>.
+/// ```
+///
+/// Above `[0, 1, 2] > [7, 7, 7]` => `[false, false, false]`. Because the result
+/// is false at ALL indices we fold. If the constant was 1, then
+/// `[0, 1, 2] > [1, 1, 1]` => `[false, false, true]` and we do fold,
+/// conservatively preferring the 'compact' vector.step representation.
+///
+/// Note: this folder only works for the case where the constant (`%cst` above)
+/// is the second operand of the comparison. The arith.cmpi canonicalizer will
+/// ensure that constants are always second (on the right).
+struct StepCompareFolder : public OpRewritePattern<StepOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(StepOp stepOp,
+                                PatternRewriter &rewriter) const override {
+    const int64_t stepSize = stepOp.getResult().getType().getNumElements();
+
+    for (OpOperand &use : stepOp.getResult().getUses()) {
+      auto cmpiOp = dyn_cast<arith::CmpIOp>(use.getOwner());
+      if (!cmpiOp)
+        continue;
+
+      // arith.cmpi canonicalizer makes constants final operands.
+      const unsigned stepOperandNumber = use.getOperandNumber();
+      if (stepOperandNumber != 0)
+        continue;
+
+      // Check that operand 1 is a constant.
+      unsigned constOperandNumber = 1;
+      Value otherOperand = cmpiOp.getOperand(constOperandNumber);
+      std::optional<int64_t> maybeConstValue =
+          getConstantIntValue(otherOperand);
+      if (!maybeConstValue.has_value())
+        continue;
+
+      int64_t constValue = maybeConstValue.value();
+      arith::CmpIPredicate pred = cmpiOp.getPredicate();
+
+      auto maybeSplat = [&]() -> std::optional<bool> {
+        // Handle ult (unsigned less than) and uge (unsigned greater equal).
+        if ((pred == arith::CmpIPredicate::ult ||
+             pred == arith::CmpIPredicate::uge) &&
+            stepSize <= constValue)
+          return pred == arith::CmpIPredicate::ult;
+
+        // Handle ule and ugt.
+        if ((pred == arith::CmpIPredicate::ule ||
+             pred == arith::CmpIPredicate::ugt) &&
+            stepSize - 1 <= constValue) {
+          return pred == arith::CmpIPredicate::ule;
+        }
+
+        // Handle eq and ne.
+        if ((pred == arith::CmpIPredicate::eq ||
+             pred == arith::CmpIPredicate::ne) &&
+            stepSize <= constValue)
+          return pred == arith::CmpIPredicate::ne;
+
+        return std::nullopt;
+      }();
+
+      if (!maybeSplat.has_value())
+        continue;
+
+      rewriter.setInsertionPointAfter(cmpiOp);
+
+      auto type = dyn_cast<VectorType>(cmpiOp.getResult().getType());
+      if (!type)
+        continue;
+
+      auto boolAttr = DenseElementsAttr::get(type, maybeSplat.value());
+      Value splat = mlir::arith::ConstantOp::create(rewriter, cmpiOp.getLoc(),
+                                                    type, boolAttr);
+
+      rewriter.replaceOp(cmpiOp, splat);
+      return success();
+    }
+
+    return failure();
+  }
+};
+} // namespace
+
+void StepOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<StepCompareFolder>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // Vector Masking Utilities
 //===----------------------------------------------------------------------===//
 
@@ -7056,7 +8777,7 @@ void mlir::vector::createMaskOpRegion(OpBuilder &builder,
   // Create a block and move the op to that block.
   insBlock->getOperations().splice(
       insBlock->begin(), maskableOp->getBlock()->getOperations(), maskableOp);
-  builder.create<YieldOp>(maskableOp->getLoc(), maskableOp->getResults());
+  YieldOp::create(builder, maskableOp->getLoc(), maskableOp->getResults());
 }
 
 /// Creates a vector.mask operation around a maskable operation. Returns the
@@ -7068,12 +8789,12 @@ Operation *mlir::vector::maskOperation(OpBuilder &builder,
   if (!mask)
     return maskableOp;
   if (passthru)
-    return builder.create<MaskOp>(maskableOp->getLoc(),
-                                  maskableOp->getResultTypes(), mask, passthru,
-                                  maskableOp, createMaskOpRegion);
-  return builder.create<MaskOp>(maskableOp->getLoc(),
-                                maskableOp->getResultTypes(), mask, maskableOp,
-                                createMaskOpRegion);
+    return MaskOp::create(builder, maskableOp->getLoc(),
+                          maskableOp->getResultTypes(), mask, passthru,
+                          maskableOp, createMaskOpRegion);
+  return MaskOp::create(builder, maskableOp->getLoc(),
+                        maskableOp->getResultTypes(), mask, maskableOp,
+                        createMaskOpRegion);
 }
 
 /// Creates a vector select operation that picks values from `newValue` or
@@ -7088,8 +8809,105 @@ Value mlir::vector::selectPassthru(OpBuilder &builder, Value mask,
   if (!mask)
     return newValue;
 
-  return builder.create<arith::SelectOp>(newValue.getLoc(), newValue.getType(),
-                                         mask, newValue, passthru);
+  return arith::SelectOp::create(builder, newValue.getLoc(), newValue.getType(),
+                                 mask, newValue, passthru);
+}
+
+//===----------------------------------------------------------------------===//
+// InterleaveOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+/// This folder works on the following round-trip identity:
+///  interleave(deinterleave(x).even, deinterleave(x).odd) -> x
+struct InterleaveDeinterleaveFolder : public OpRewritePattern<InterleaveOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(InterleaveOp interleaveOp,
+                                PatternRewriter &rewriter) const override {
+    auto lhsDefOp = interleaveOp.getLhs().getDefiningOp<DeinterleaveOp>();
+    auto rhsDefOp = interleaveOp.getRhs().getDefiningOp<DeinterleaveOp>();
+    if (!lhsDefOp || !rhsDefOp || lhsDefOp != rhsDefOp)
+      return failure();
+    for (auto [idx, operand] : llvm::enumerate(interleaveOp.getOperands())) {
+      if (cast<OpResult>(operand).getResultNumber() != idx)
+        return failure();
+    }
+    rewriter.replaceOp(interleaveOp, lhsDefOp.getSource());
+    return success();
+  }
+};
+} // namespace
+
+void InterleaveOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                               MLIRContext *context) {
+  results.add<InterleaveDeinterleaveFolder>(context);
+}
+
+OpFoldResult InterleaveOp::fold(FoldAdaptor adaptor) {
+  // interleave(splat(x), splat(x)) -> widened splat(x)
+  auto splat = dyn_cast_if_present<SplatElementsAttr>(adaptor.getLhs());
+  if (!splat || adaptor.getLhs() != adaptor.getRhs())
+    return {};
+  return SplatElementsAttr::get(getResultVectorType(),
+                                splat.getSplatValue<Attribute>());
+}
+
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+std::optional<SmallVector<int64_t, 4>>
+InterleaveOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+
+std::optional<SmallVector<int64_t>>
+InterleaveOp::getDefaultUnrollTargetShape() {
+  return getDefaultTargetInterleaveShapeForUnroll();
+}
+
+//===----------------------------------------------------------------------===//
+// DeinterleaveOp
+//===----------------------------------------------------------------------===//
+//-----------------------------------------------------------------------------
+// VectorUnrollOpInterface methods
+//-----------------------------------------------------------------------------
+
+std::optional<SmallVector<int64_t, 4>>
+DeinterleaveOp::getIterationShapeToUnroll() {
+  return llvm::to_vector<4>(getResultVectorType().getShape());
+}
+std::optional<SmallVector<int64_t>>
+DeinterleaveOp::getDefaultUnrollTargetShape() {
+  return getDefaultTargetInterleaveShapeForUnroll();
+}
+
+//===----------------------------------------------------------------------===//
+// VectorDialect canonicalization
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// A broadcast of a scalar condition selects the same arm in every lane.
+struct SelectBroadcastCondition : OpRewritePattern<arith::SelectOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(arith::SelectOp select,
+                                PatternRewriter &rewriter) const override {
+    auto broadcast = select.getCondition().getDefiningOp<BroadcastOp>();
+    if (!broadcast || !broadcast.getSourceType().isSignlessInteger(1))
+      return failure();
+    rewriter.modifyOpInPlace(select, [&] {
+      select.getConditionMutable().assign(broadcast.getSource());
+    });
+    return success();
+  }
+};
+} // namespace
+
+void VectorDialect::getCanonicalizationPatterns(
+    RewritePatternSet &results) const {
+  results.add<SelectBroadcastCondition>(getContext());
 }
 
 //===----------------------------------------------------------------------===//

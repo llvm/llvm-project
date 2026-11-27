@@ -95,7 +95,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_jitloadergdb_properties);
+    m_collection_sp->Initialize(g_jitloadergdb_properties_def);
   }
 
   EnableJITLoaderGDB GetEnable() const {
@@ -323,8 +323,16 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
 
       char jit_name[64];
       snprintf(jit_name, 64, "JIT(0x%" PRIx64 ")", symbolfile_addr);
-      module_sp = m_process->ReadModuleFromMemory(
-          FileSpec(jit_name), symbolfile_addr, symbolfile_size);
+      llvm::Expected<ModuleSP> module_sp_or_err =
+          m_process->ReadModuleFromMemory(FileSpec(jit_name), symbolfile_addr,
+                                          symbolfile_size);
+      if (auto err = module_sp_or_err.takeError())
+        LLDB_LOG_ERROR(
+            log, std::move(err),
+            "JITLoaderGDB::{1} failed to read module from memory: {0}",
+            __FUNCTION__);
+      else
+        module_sp = *module_sp_or_err;
 
       if (module_sp && module_sp->GetObjectFile()) {
         // Object formats (like ELF) have no representation for a JIT type.

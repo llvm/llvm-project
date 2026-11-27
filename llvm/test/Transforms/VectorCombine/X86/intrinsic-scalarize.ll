@@ -13,8 +13,7 @@ define <2 x float> @maxnum(float %x, float %y) {
 ; AVX2-LABEL: define <2 x float> @maxnum(
 ; AVX2-SAME: float [[X:%.*]], float [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; AVX2-NEXT:    [[V_SCALAR:%.*]] = call float @llvm.maxnum.f32(float [[X]], float [[Y]])
-; AVX2-NEXT:    [[TMP1:%.*]] = call <2 x float> @llvm.maxnum.v2f32(<2 x float> poison, <2 x float> poison)
-; AVX2-NEXT:    [[V:%.*]] = insertelement <2 x float> [[TMP1]], float [[V_SCALAR]], i64 0
+; AVX2-NEXT:    [[V:%.*]] = insertelement <2 x float> poison, float [[V_SCALAR]], i64 0
 ; AVX2-NEXT:    ret <2 x float> [[V]]
 ;
   %x.insert = insertelement <2 x float> poison, float %x, i32 0

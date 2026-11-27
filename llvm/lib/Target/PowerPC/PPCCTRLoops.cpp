@@ -39,6 +39,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
@@ -300,7 +301,7 @@ void PPCCTRLoops::expandNormalLoops(MachineLoop *ML, MachineInstr *Start,
 
   BuildMI(*Exiting, Dec, Dec->getDebugLoc(), TII->get(TargetOpcode::COPY),
           Dec->getOperand(0).getReg())
-      .addReg(CMPMIB->getOperand(0).getReg(), 0, PPC::sub_gt);
+      .addReg(CMPMIB->getOperand(0).getReg(), {}, PPC::sub_gt);
 
   // Remove the pseudo instructions.
   Start->eraseFromParent();

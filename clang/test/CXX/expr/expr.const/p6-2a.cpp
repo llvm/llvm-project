@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a -verify %s
+// RUN: %clang_cc1 -std=c++2a -verify %s -fexperimental-new-constant-interpreter
 
 constexpr int non_class = 42;
 constexpr int arr_non_class[5] = {1, 2, 3};

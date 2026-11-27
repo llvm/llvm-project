@@ -59,6 +59,9 @@ public:
 
   uint32_t GetDefaultMemoryCacheLineSize() override;
 
+  uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
+                         ProcessInstanceInfoList &process_infos) override;
+
 protected:
   const char *GetCacheHostname() override;
 
@@ -75,14 +78,14 @@ protected:
   typedef std::unique_ptr<AdbClient> AdbClientUP;
   virtual AdbClientUP GetAdbClient(Status &error);
 
-  virtual llvm::StringRef GetPropertyPackageName();
-
   std::string GetRunAs();
 
-private:
-  AdbClient::SyncService *GetSyncService(Status &error);
+public:
+  virtual llvm::StringRef GetPropertyPackageName();
 
-  std::unique_ptr<AdbClient::SyncService> m_adb_sync_svc;
+protected:
+  virtual std::unique_ptr<AdbSyncService> GetSyncService(Status &error);
+
   std::string m_device_id;
   uint32_t m_sdk_version;
 };

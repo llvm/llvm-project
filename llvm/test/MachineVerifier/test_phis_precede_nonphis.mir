@@ -1,4 +1,4 @@
-# RUN: not --crash llc -run-pass=machineverifier %s -o - 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 --- |
@@ -26,8 +26,7 @@
 ...
 
 ---
-name:            valid
-tracksRegLiveness: true
+name: valid
 body: |
   bb.0.entry:
     liveins: $w1
@@ -54,8 +53,7 @@ body: |
 ...
 
 ---
-name:            broken
-tracksRegLiveness: true
+name: broken
 body: |
   bb.0.entry:
     liveins: $w1

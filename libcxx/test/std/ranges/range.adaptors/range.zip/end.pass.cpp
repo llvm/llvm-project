@@ -11,10 +11,12 @@
 // constexpr auto end() requires(!(simple-view<Views> && ...))
 // constexpr auto end() const requires(range<const Views>&&...)
 
+#include <cassert>
 #include <ranges>
 #include <tuple>
+#include <utility>
 
-#include "types.h"
+#include "../range_adaptor_types.h"
 
 // ID | simple | common | bidi | random | sized | #views |     v.end()    | as_const(v)
 //    |        |        |      | access |       |        |                |   .end()

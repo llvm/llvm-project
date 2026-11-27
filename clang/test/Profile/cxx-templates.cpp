@@ -1,12 +1,12 @@
 // Tests for instrumentation of templated code. Each instantiation of a template
 // should be instrumented separately.
 
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-templates.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument=clang > %tgen
+// RUN: %clang_cc1 -x c++ %s -triple x86_64-unknown-linux-gnu -main-file-name cxx-templates.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument=clang > %tgen
 // RUN: FileCheck --input-file=%tgen -check-prefix=T0GEN -check-prefix=ALL %s
 // RUN: FileCheck --input-file=%tgen -check-prefix=T100GEN -check-prefix=ALL %s
 
 // RUN: llvm-profdata merge %S/Inputs/cxx-templates.proftext -o %t.profdata
-// RUN: %clang_cc1 -x c++ %s -triple %itanium_abi_triple -main-file-name cxx-templates.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument-use-path=%t.profdata > %tuse
+// RUN: %clang_cc1 -x c++ %s -triple x86_64-unknown-linux-gnu -main-file-name cxx-templates.cpp -std=c++11 -o - -emit-llvm -fprofile-instrument-use=clang -fprofile-instrument-use-path=%t.profdata > %tuse
 // RUN: FileCheck --input-file=%tuse -check-prefix=T0USE -check-prefix=ALL %s
 // RUN: FileCheck --input-file=%tuse -check-prefix=T100USE -check-prefix=ALL %s
 
@@ -25,9 +25,9 @@ template <unsigned N> void loop() {
   // T100GEN: store {{.*}} @[[T100C]]
 
   // ALL-NOT: ret
-  // T0GEN: store {{.*}} @[[T0C]], i32 0, i32 1
+  // T0GEN: store {{.*}} @[[T0C]], i64 8
   // T0USE: br {{.*}} !prof ![[T01:[0-9]+]]
-  // T100GEN: store {{.*}} @[[T100C]], i32 0, i32 1
+  // T100GEN: store {{.*}} @[[T100C]], i64 8
   // T100USE: br {{.*}} !prof ![[T1001:[0-9]+]]
   for (unsigned I = 0; I < N; ++I) {}
 

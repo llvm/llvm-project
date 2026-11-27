@@ -15,9 +15,7 @@
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Transforms/IPO/ProfiledCallGraph.h"
 #include "llvm/Transforms/IPO/SampleContextTracker.h"
-
-using namespace llvm;
-using namespace sampleprof;
+#include "llvm/Transforms/IPO/SampleProfile.h"
 
 namespace llvm {
 namespace sampleprof {
@@ -88,6 +86,7 @@ private:
   SampleContextTracker &ContextTracker;
   ProfiledBinary &Binary;
   ProfileSummary *Summary;
+  SampleProfileInlineOptions InlineOpts;
 };
 
 } // end namespace sampleprof

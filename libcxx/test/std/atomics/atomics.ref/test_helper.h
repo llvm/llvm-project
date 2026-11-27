@@ -48,9 +48,9 @@ void test_seq_cst(StoreOp store_op, LoadOp load_op) {
     T old_value(make_value<T>(0));
     T new_value(make_value<T>(1));
 
-    T copy_x = old_value;
+    alignas(std::atomic_ref<T>::required_alignment) T copy_x = old_value;
     std::atomic_ref<T> const x(copy_x);
-    T copy_y = old_value;
+    alignas(std::atomic_ref<T>::required_alignment) T copy_y = old_value;
     std::atomic_ref<T> const y(copy_y);
 
     std::atomic_bool x_updated_first(false);
@@ -101,7 +101,7 @@ void test_acquire_release(StoreOp store_op, LoadOp load_op) {
     T old_value(make_value<T>(0));
     T new_value(make_value<T>(1));
 
-    T copy = old_value;
+    alignas(std::atomic_ref<T>::required_alignment) T copy = old_value;
     std::atomic_ref<T> const at(copy);
     int non_atomic = 5;
 

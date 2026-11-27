@@ -43,7 +43,6 @@ public:
 private:
   const LLVMState &State_;
   std::unique_ptr<MCContext> Context_;
-  std::unique_ptr<MCAsmInfo> AsmInfo_;
   std::unique_ptr<MCInstPrinter> InstPrinter_;
   std::unique_ptr<MCDisassembler> Disasm_;
 };

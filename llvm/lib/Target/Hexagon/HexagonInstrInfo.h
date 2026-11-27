@@ -23,11 +23,14 @@
 #include <cstdint>
 #include <vector>
 
+#include "HexagonRegisterInfo.h"
+
 #define GET_INSTRINFO_HEADER
 #include "HexagonGenInstrInfo.inc"
 
 namespace llvm {
 
+class AAResults;
 class HexagonSubtarget;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
@@ -36,6 +39,7 @@ class MachineOperand;
 class TargetRegisterInfo;
 
 class HexagonInstrInfo : public HexagonGenInstrInfo {
+  const HexagonRegisterInfo RegInfo;
   const HexagonSubtarget &Subtarget;
 
   enum BundleAttribute {
@@ -45,7 +49,29 @@ class HexagonInstrInfo : public HexagonGenInstrInfo {
   virtual void anchor();
 
 public:
-  explicit HexagonInstrInfo(HexagonSubtarget &ST);
+  explicit HexagonInstrInfo(const HexagonSubtarget &ST);
+
+  const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
+
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &Hexagon::IntRegsRegClass;
+  }
+
+  bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
+
+  /// Copies the debug values of the variables that read the register First and
+  /// Second define to just after \p Second, in their original order, and sets
+  /// each dependent original undef. If a copy would read a value that changes
+  /// in between, nothing is copied and only the originals are set undef.
+  ///
+  /// Call this before the replacement for First and Second is created, and
+  /// insert the replacement before \p Second. The replacement must not write a
+  /// register the copies read, unless First or Second writes it too.
+  void moveDependentDebugValues(MachineInstr &First,
+                                MachineInstr &Second) const;
+
+  bool hasQFPInstrs(const MachineFunction &MF) const;
 
   /// TargetInstrInfo overrides.
 
@@ -78,6 +104,8 @@ public:
   bool hasStoreToStackSlot(
       const MachineInstr &MI,
       SmallVectorImpl<const MachineMemOperand *> &Accesses) const override;
+
+  using TargetInstrInfo::analyzeBranch;
 
   /// Analyze the branching code at the end of MBB, returning
   /// true if it cannot be understood (e.g. it's a switch dispatch or isn't
@@ -183,8 +211,7 @@ public:
   /// is true, the register operand is the last use and must be marked kill.
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   /// Load the specified register of the given register class from the specified
@@ -193,7 +220,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   /// This function is called for all pseudo instructions
@@ -208,8 +235,7 @@ public:
   bool getMemOperandsWithOffsetWidth(
       const MachineInstr &LdSt,
       SmallVectorImpl<const MachineOperand *> &BaseOps, int64_t &Offset,
-      bool &OffsetIsScalable, LocationSize &Width,
-      const TargetRegisterInfo *TRI) const override;
+      bool &OffsetIsScalable, LocationSize &Width) const override;
 
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
@@ -225,6 +251,7 @@ public:
 
   /// Return true for post-incremented instructions.
   bool isPostIncrement(const MachineInstr &MI) const override;
+  bool isPostIncWithImmOffset(const MachineInstr &MI) const;
 
   /// Convert the instruction into a predicated instruction.
   /// It returns true if the operation was successful.
@@ -292,6 +319,12 @@ public:
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
+
+  /// Return true if the memory accesses of \p MIa and \p MIb may depend on
+  /// each other. Uses \p AA, if not null, for accesses that are not
+  /// trivially disjoint.
+  bool areMemAccessesDependent(AAResults *AA, const MachineInstr *MIa,
+                               const MachineInstr *MIb) const;
 
   /// For instructions with a base and offset, return the position of the
   /// base register and offset operands.
@@ -364,8 +397,27 @@ public:
   bool isDependent(const MachineInstr &ProdMI,
                    const MachineInstr &ConsMI) const;
   bool isDotCurInst(const MachineInstr &MI) const;
+  bool isDotCurOperand(const MachineInstr &MI, unsigned OpIndex) const;
+  bool isDotNewOperand(const MachineInstr &MI, unsigned OpIndex) const;
+  bool isDotTmpInst(const MachineInstr &MI) const;
+  bool isDotTmpOperand(const MachineInstr &MI, unsigned OpIndex) const;
+  /// A use (\p UseMI) can share a bundle with an instruction that redefines the
+  /// same register (\p DefMI), the use still sees the old value (WAR).
+  /// Returns true when that holds: no operand forwarding (.new/.tmp/.cur)
+  /// exposes the new value. Caller ensures same-bundle intent. \p IsPullDown
+  /// (push-down) is not yet supported and always returns false.
+  /// \p DefViaRegMask = true when the def is a regmask clobber (no operand):
+  /// such a def never forwards, so the def-side operand checks are skipped.
+  bool isSafeInBundleWAR(const MachineInstr &DefMI, unsigned DefOpIdx,
+                         const MachineInstr &UseMI, unsigned UseOpIdx,
+                         bool IsPullDown = false,
+                         bool DefViaRegMask = false) const;
   bool isDotNewInst(const MachineInstr &MI) const;
   bool isDuplexPair(const MachineInstr &MIa, const MachineInstr &MIb) const;
+  bool isHMXActivateInstr(const MachineInstr &MI) const;
+  bool isHMXWeightInstr(const MachineInstr &MI) const;
+  bool isActivateWeightPair(const MachineInstr &MIa,
+                            const MachineInstr &MIb) const;
   bool isEndLoopN(unsigned Opcode) const;
   bool isExpr(unsigned OpType) const;
   bool isExtendable(const MachineInstr &MI) const;
@@ -408,9 +460,9 @@ public:
   bool isToBeScheduledASAP(const MachineInstr &MI1,
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
+  bool isHLXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
-  bool isValidOffset(unsigned Opcode, int Offset,
-                     const TargetRegisterInfo *TRI, bool Extend = true) const;
+  bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
   bool isVecALU(const MachineInstr &MI) const;
   bool isVecUsableNextPacket(const MachineInstr &ProdMI,
@@ -424,10 +476,12 @@ public:
   bool doesNotReturn(const MachineInstr &CallMI) const;
   bool hasEHLabel(const MachineBasicBlock *B) const;
   bool hasNonExtEquivalent(const MachineInstr &MI) const;
-  bool hasPseudoInstrPair(const MachineInstr &MI) const;
   bool hasUncondBranch(const MachineBasicBlock *B) const;
   bool mayBeCurLoad(const MachineInstr &MI) const;
   bool mayBeNewStore(const MachineInstr &MI) const;
+  // Identify HLX pseudos that expand to a tmp load or new store and a copy.
+  bool isTmpLoadPseudo(const MachineInstr &MI) const;
+  bool isNewStorePseudo(const MachineInstr &MI) const;
   bool producesStall(const MachineInstr &ProdMI,
                      const MachineInstr &ConsMI) const;
   bool producesStall(const MachineInstr &MI,
@@ -455,9 +509,8 @@ public:
   int getDotNewPredOp(const MachineInstr &MI,
                       const MachineBranchProbabilityInfo *MBPI) const;
   int getDotOldOp(const MachineInstr &MI) const;
-  HexagonII::SubInstructionGroup getDuplexCandidateGroup(const MachineInstr &MI)
-                                                         const;
-  short getEquivalentHWInstr(const MachineInstr &MI) const;
+  HexagonII::SubInstructionGroup
+  getDuplexCandidateGroup(const MachineInstr &MI) const;
   unsigned getInstrTimingClassLatency(const InstrItineraryData *ItinData,
                                       const MachineInstr &MI) const;
   bool getInvertedPredSense(SmallVectorImpl<MachineOperand> &Cond) const;
@@ -467,8 +520,7 @@ public:
   int getMinValue(const MachineInstr &MI) const;
   short getNonExtOpcode(const MachineInstr &MI) const;
   bool getPredReg(ArrayRef<MachineOperand> Cond, Register &PredReg,
-                  unsigned &PredRegPos, unsigned &PredRegFlags) const;
-  short getPseudoInstrPair(const MachineInstr &MI) const;
+                  unsigned &PredRegPos, RegState &PredRegFlags) const;
   short getRegForm(const MachineInstr &MI) const;
   unsigned getSize(const MachineInstr &MI) const;
   uint64_t getType(const MachineInstr &MI) const;
@@ -501,6 +553,9 @@ public:
                              bool ToBigInstrs = true) const;
   void translateInstrsForDup(MachineBasicBlock::instr_iterator MII,
                              bool ToBigInstrs) const;
+  bool useMachineCombiner() const override { return true; }
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
 
   // Addressing mode relations.
   short changeAddrMode_abs_io(short Opc) const;
@@ -532,6 +587,18 @@ public:
   }
 
   MCInst getNop() const override;
+  bool isQFPMul(const MachineInstr *MF) const;
+
+  // Check if the instruction uses a qf32/qf16 operand.
+  // 'Index' specifies the input operand number (1..3). If 0, check any.
+  bool usesQF32Operand(MachineInstr *MI, unsigned Index = 0) const;
+  bool usesQF16Operand(MachineInstr *MI, unsigned Index = 0) const;
+  bool usesQFOperand(MachineInstr *MI, unsigned Index = 0) const;
+
+  // Check if the instruction has a qf32/qf16 output.
+  bool isQFP32Instr(MachineInstr *MI) const;
+  bool isQFP16Instr(MachineInstr *MI) const;
+  bool isQFPInstr(MachineInstr *MI) const;
 };
 
 /// \brief Create RegSubRegPair from a register MachineOperand

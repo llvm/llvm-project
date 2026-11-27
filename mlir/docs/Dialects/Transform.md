@@ -415,9 +415,25 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/TransformOps.md"]
 
+## Tune Extension Operations
+
+[include "Dialects/TuneExtensionOps.md"]
+
+## SMT Extension Operations
+
+[include "Dialects/SMTExtensionOps.md"]
+
 ## Affine Transform Operations
 
 [include "Dialects/AffineLoopTransformOps.md"]
+
+## ARM Neon Transform Operations
+
+[include "Dialects/ArmNeonVectorTransformOps.md"]
+
+## ARM SVE Transform Operations
+
+[include "Dialects/ArmSVEVectorTransformOps.md"]
 
 ## Bufferization Transform Operations
 

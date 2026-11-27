@@ -1167,6 +1167,33 @@ TEST(TBDv5, InvalidMinOS) {
   EXPECT_EQ("invalid min_deployment section\n", ErrorMessage);
 }
 
+TEST(TBDv5, RISCV) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "riscv32-ios",
+      "min_deployment": "34.1" 
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  Target ExpectedTarget = Target(AK_riscv32, PLATFORM_IOS, VersionTuple(34, 1));
+  TBDFile ReadFile = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, ReadFile->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"),
+            ReadFile->getInstallName());
+  EXPECT_TRUE(ReadFile->targets().begin() != ReadFile->targets().end());
+  EXPECT_EQ(*ReadFile->targets().begin(), ExpectedTarget);
+}
+
 TEST(TBDv5, SimSupport) {
   static const char TBDv5File[] = R"({ 
 "tapi_tbd_version": 5,
@@ -2451,4 +2478,164 @@ TEST(TBDv5, InlineIF) {
   EXPECT_TRUE(
       std::equal(Exports.begin(), Exports.end(), std::begin(ExpectedExports)));
 }
+
+TEST(TBDv5, SkipUnknownArch) {
+  static const char TBDv5WithUnknownArch[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    { "target": "x86_64-macos" },
+    { "target": "foo-macos" }
+  ],
+  "install_names": [
+    { "name": "Test.dylib" }
+  ],
+  "exported_symbols": [
+    {
+      "targets": [ "x86_64-macos" ],
+      "data": { "global": [ "_knownSym" ] }
+    },
+    {
+      "targets": [ "foo-macos" ],
+      "data": { "global": [ "_unknownSym" ] }
+    },
+    {
+      "targets": [ "x86_64-macos", "foo-macos" ],
+      "data": { "global": [ "_mixedSym" ] }
+    }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5WithUnknownArch, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  EXPECT_EQ(1U, llvm::size(File->targets()));
+  EXPECT_EQ(Target(AK_x86_64, PLATFORM_MACOS), *File->targets().begin());
+
+  llvm::DenseSet<StringRef> SymbolNames;
+  for (const auto *Sym : File->exports())
+    SymbolNames.insert(Sym->getName());
+
+  EXPECT_TRUE(SymbolNames.count("_knownSym"));
+  EXPECT_TRUE(SymbolNames.count("_mixedSym"));
+  EXPECT_FALSE(SymbolNames.count("_unknownSym"));
+}
+
+TEST(TBDv5, SkipUnknownPlatform) {
+  static const char TBDv5WithUnknownPlatform[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    { "target": "x86_64-macos" },
+    { "target": "x86_64-unknownos" }
+  ],
+  "install_names": [
+    { "name": "Test.dylib" }
+  ],
+  "exported_symbols": [
+    {
+      "targets": [ "x86_64-macos" ],
+      "data": { "global": [ "_knownSym" ] }
+    },
+    {
+      "targets": [ "x86_64-unknownos" ],
+      "data": { "global": [ "_unknownSym" ] }
+    }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5WithUnknownPlatform, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  EXPECT_EQ(1U, llvm::size(File->targets()));
+  EXPECT_EQ(Target(AK_x86_64, PLATFORM_MACOS), *File->targets().begin());
+
+  llvm::DenseSet<StringRef> SymbolNames;
+  for (const auto *Sym : File->exports())
+    SymbolNames.insert(Sym->getName());
+
+  EXPECT_TRUE(SymbolNames.count("_knownSym"));
+  EXPECT_FALSE(SymbolNames.count("_unknownSym"));
+}
+
+TEST(TBDv5, SkipAllUnknownTargets) {
+  static const char TBDv5AllUnknown[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    { "target": "foo-macos" },
+    { "target": "bar-ios" }
+  ],
+  "install_names": [
+    { "name": "Test.dylib" }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5AllUnknown, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  EXPECT_EQ(0U, llvm::size(File->targets()));
+}
+
+TEST(TBDv5, SkipUnknownWithInlinedLibs) {
+  static const char TBDv5WithInlined[] = R"({
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    { "target": "x86_64-macos" },
+    { "target": "foo-macos" }
+  ],
+  "install_names": [
+    { "name": "/S/L/F/Umbrella.framework/Umbrella" }
+  ],
+  "reexported_libraries": [
+    { "names": [ "/S/L/F/A.framework/A" ] }
+  ]
+},
+"libraries": [
+  {
+    "target_info": [
+      { "target": "x86_64-macos" }
+    ],
+    "install_names": [
+      { "name": "/S/L/F/A.framework/A" }
+    ],
+    "exported_symbols": [
+      {
+        "data": { "global": [ "_inlinedSym" ] }
+      }
+    ]
+  }
+]
+})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5WithInlined, "Test.tbd"),
+                         /*SkipUnknownTriples=*/true);
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+
+  EXPECT_EQ(1U, llvm::size(File->targets()));
+  EXPECT_EQ(Target(AK_x86_64, PLATFORM_MACOS), *File->targets().begin());
+
+  EXPECT_EQ(1U, File->documents().size());
+  TBDReexportFile Document = File->documents().front();
+  EXPECT_EQ(1U, llvm::size(Document->targets()));
+  EXPECT_EQ(Target(AK_x86_64, PLATFORM_MACOS), *Document->targets().begin());
+
+  llvm::DenseSet<StringRef> SymbolNames;
+  for (const auto *Sym : Document->exports())
+    SymbolNames.insert(Sym->getName());
+  EXPECT_TRUE(SymbolNames.count("_inlinedSym"));
+}
+
 } // end namespace TBDv5

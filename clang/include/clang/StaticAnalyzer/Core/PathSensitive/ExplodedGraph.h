@@ -64,13 +64,8 @@ class ExplodedGraph;
 // successors to it at any time after creating it.
 
 class ExplodedNode : public llvm::FoldingSetNode {
-  friend class BranchNodeBuilder;
   friend class CoreEngine;
-  friend class EndOfFunctionNodeBuilder;
   friend class ExplodedGraph;
-  friend class IndirectGotoNodeBuilder;
-  friend class NodeBuilder;
-  friend class SwitchNodeBuilder;
 
   /// Efficiently stores a list of ExplodedNodes, or an optional flag.
   ///
@@ -144,26 +139,27 @@ public:
   /// getLocation - Returns the edge associated with the given node.
   ProgramPoint getLocation() const { return Location; }
 
-  const LocationContext *getLocationContext() const {
-    return getLocation().getLocationContext();
-  }
-
-  const StackFrameContext *getStackFrame() const {
+  const StackFrame *getStackFrame() const {
     return getLocation().getStackFrame();
   }
 
-  const Decl &getCodeDecl() const { return *getLocationContext()->getDecl(); }
+  /// Iterates over the current stack frame and all of its ancestors.
+  llvm::iterator_range<StackFrame::parent_iterator> stackframes() const {
+    return getStackFrame()->parentsIncludingSelf();
+  }
 
-  CFG &getCFG() const { return *getLocationContext()->getCFG(); }
+  const Decl &getCodeDecl() const { return *getStackFrame()->getDecl(); }
+
+  CFG &getCFG() const { return *getStackFrame()->getCFG(); }
 
   const CFGBlock *getCFGBlock() const;
 
   const ParentMap &getParentMap() const {
-    return getLocationContext()->getParentMap();
+    return getStackFrame()->getParentMap();
   }
 
   template <typename T> T &getAnalysis() const {
-    return *getLocationContext()->getAnalysis<T>();
+    return *getStackFrame()->getAnalysis<T>();
   }
 
   const ProgramStateRef &getState() const { return State; }
@@ -173,22 +169,20 @@ public:
   }
 
   /// Get the value of an arbitrary expression at this node.
-  SVal getSVal(const Stmt *S) const {
-    return getState()->getSVal(S, getLocationContext());
+  SVal getSVal(const Expr *E) const {
+    return getState()->getSVal(E, getStackFrame());
   }
 
-  static void Profile(llvm::FoldingSetNodeID &ID,
-                      const ProgramPoint &Loc,
-                      const ProgramStateRef &state,
-                      bool IsSink) {
+  static void Profile(llvm::FoldingSetNodeID &ID, const ProgramPoint &Loc,
+                      const ProgramState *state, bool IsSink) {
     ID.Add(Loc);
-    ID.AddPointer(state.get());
+    ID.AddPointer(state);
     ID.AddBoolean(IsSink);
   }
 
   void Profile(llvm::FoldingSetNodeID& ID) const {
     // We avoid copy constructors by not using accessors.
-    Profile(ID, Location, State, isSink());
+    Profile(ID, Location, State.get(), isSink());
   }
 
   /// addPredeccessor - Adds a predecessor to the current node, and
@@ -350,9 +344,8 @@ public:
   /// Retrieve the node associated with a (Location, State) pair, where the
   /// 'Location' is a ProgramPoint in the CFG. If no node for this pair exists,
   /// it is created. IsNew is set to true if the node was freshly created.
-  ExplodedNode *getNode(const ProgramPoint &L, ProgramStateRef State,
-                        bool IsSink = false,
-                        bool* IsNew = nullptr);
+  ExplodedNode *getNode(const ProgramPoint &L, const ProgramState *State,
+                        bool IsSink = false, bool *IsNew = nullptr);
 
   /// Create a node for a (Location, State) pair, but don't store it for
   /// deduplication later. This is useful when copying some nodes from an
@@ -442,21 +435,22 @@ private:
   void collectNode(ExplodedNode *node);
 };
 
+/// ExplodedNodeSet is a set of `ExplodedNode *` elements with the invariant
+/// that its elements cannot be nullpointers or sink nodes. Insertion of null
+/// or sink nodes is silently ignored (which is comfortable in many use cases).
+/// Note that `ExplodedNode *` is implicitly convertible to an
+/// `ExplodedNodeSet` containing 0 or 1 elements (where null pointers and sink
+/// nodes converted to the empty set).
+/// This type has set semantics (repeated insertions are ignored), but the
+/// iteration order is always the order of (first) insertion.
 class ExplodedNodeSet {
   using ImplTy = llvm::SmallSetVector<ExplodedNode *, 4>;
   ImplTy Impl;
 
 public:
-  ExplodedNodeSet(ExplodedNode *N) {
-    assert(N && !static_cast<ExplodedNode*>(N)->isSink());
-    Impl.insert(N);
-  }
+  ExplodedNodeSet(ExplodedNode *N) { insert(N); }
 
   ExplodedNodeSet() = default;
-
-  void Add(ExplodedNode *N) {
-    if (N && !static_cast<ExplodedNode*>(N)->isSink()) Impl.insert(N);
-  }
 
   using iterator = ImplTy::iterator;
   using const_iterator = ImplTy::const_iterator;
@@ -467,8 +461,14 @@ public:
 
   void clear() { Impl.clear(); }
 
+  void insert(ExplodedNode *N) {
+    if (N && !N->isSink())
+      Impl.insert(N);
+  }
+
   void insert(const ExplodedNodeSet &S) {
-    assert(&S != this);
+    if (&S == this)
+      return;
     if (empty())
       Impl = S.Impl;
     else

@@ -86,7 +86,7 @@ TEST(Backtrace, ExceedsStorableLength) {
   gwp_asan::AllocationMetadata Meta;
   Meta.AllocationTrace.RecordBacktrace(
       [](uintptr_t *TraceBuffer, size_t Size) -> size_t {
-        // Need to inintialise the elements that will be packed.
+        // Need to initialize the elements that will be packed.
         memset(TraceBuffer, 0u, Size * sizeof(*TraceBuffer));
 
         // Indicate that there were more frames, and we just didn't have enough

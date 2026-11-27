@@ -91,13 +91,11 @@ doesn't matter. See `ConversionTarget::getOpInfo` for the details.
 After the conversion target has been defined, we can define how to convert the
 *illegal* operations into *legal* ones. Similarly to the canonicalization
 framework introduced in [chapter 3](Ch-3.md), the
-[`DialectConversion` framework](../../DialectConversion.md) also uses
-[RewritePatterns](../QuickstartRewrites.md) to perform the conversion logic.
-These patterns may be the `RewritePatterns` seen before or a new type of pattern
-specific to the conversion framework `ConversionPattern`. `ConversionPatterns`
+[`DialectConversion` framework](../../DialectConversion.md) uses a special kind
+of `ConversionPattern` to perform the conversion logic. `ConversionPatterns`
 are different from traditional `RewritePatterns` in that they accept an
-additional `operands` parameter containing operands that have been
-remapped/replaced. This is used when dealing with type conversions, as the
+additional `operands` (or `adaptor`) parameter containing operands that have
+been remapped/replaced. This is used when dealing with type conversions, as the
 pattern will want to operate on values of the new type but match against the
 old. For our lowering, this invariant will be useful as it translates from the
 [TensorType](../../Dialects/Builtin.md/#rankedtensortype) currently being
@@ -106,38 +104,23 @@ look at a snippet of lowering the `toy.transpose` operation:
 
 ```c++
 /// Lower the `toy.transpose` operation to an affine loop nest.
-struct TransposeOpLowering : public mlir::ConversionPattern {
-  TransposeOpLowering(mlir::MLIRContext *ctx)
-      : mlir::ConversionPattern(TransposeOp::getOperationName(), 1, ctx) {}
+struct TransposeOpLowering : public OpConversionPattern<toy::TransposeOp> {
+  using OpConversionPattern<toy::TransposeOp>::OpConversionPattern;
 
-  /// Match and rewrite the given `toy.transpose` operation, with the given
-  /// operands that have been remapped from `tensor<...>` to `memref<...>`.
-  llvm::LogicalResult
-  matchAndRewrite(mlir::Operation *op, ArrayRef<mlir::Value> operands,
-                  mlir::ConversionPatternRewriter &rewriter) const final {
+  LogicalResult
+  matchAndRewrite(toy::TransposeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const final {
     auto loc = op->getLoc();
+    lowerOpToLoops(op, rewriter,
+                   [&](OpBuilder &builder, ValueRange loopIvs) {
+                     Value input = adaptor.getInput();
 
-    // Call to a helper function that will lower the current operation to a set
-    // of affine loops. We provide a functor that operates on the remapped
-    // operands, as well as the loop induction variables for the inner most
-    // loop body.
-    lowerOpToLoops(
-        op, operands, rewriter,
-        [loc](mlir::PatternRewriter &rewriter,
-              ArrayRef<mlir::Value> memRefOperands,
-              ArrayRef<mlir::Value> loopIvs) {
-          // Generate an adaptor for the remapped operands of the TransposeOp.
-          // This allows for using the nice named accessors that are generated
-          // by the ODS. This adaptor is automatically provided by the ODS
-          // framework.
-          TransposeOpAdaptor transposeAdaptor(memRefOperands);
-          mlir::Value input = transposeAdaptor.input();
-
-          // Transpose the elements by generating a load from the reverse
-          // indices.
-          SmallVector<mlir::Value, 2> reverseIvs(llvm::reverse(loopIvs));
-          return rewriter.create<mlir::AffineLoadOp>(loc, input, reverseIvs);
-        });
+                     // Transpose the elements by generating a load from the
+                     // reverse indices.
+                     SmallVector<Value, 2> reverseIvs(llvm::reverse(loopIvs));
+                     return affine::AffineLoadOp::create(builder, loc, input,
+                                                         reverseIvs);
+                   });
     return success();
   }
 };

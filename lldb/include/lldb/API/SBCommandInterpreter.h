@@ -258,7 +258,7 @@ public:
   /// thread.
   ///
   /// \return
-  ///   \b true if there was a command in progress to recieve the interrupt.
+  ///   \b true if there was a command in progress to receive the interrupt.
   ///   \b false if there's no command currently in flight.
   bool InterruptCommand();
 
@@ -353,7 +353,12 @@ private:
 #ifndef SWIG
 class SBCommandPluginInterface {
 public:
-  virtual ~SBCommandPluginInterface() = default;
+  SBCommandPluginInterface();
+
+  // This must be a pure virtual so that it is not the key function of the
+  // class. Clients will emit the type info themselves. liblldb (built without
+  // RTTI) only provides the constructor and destructor bodies.
+  virtual ~SBCommandPluginInterface() = 0;
 
   virtual bool DoExecute(lldb::SBDebugger /*debugger*/, char ** /*command*/,
                          lldb::SBCommandReturnObject & /*result*/) {
@@ -364,6 +369,18 @@ public:
 class SBCommand {
 public:
   SBCommand();
+
+  SBCommand(const lldb::SBCommand &rhs);
+
+  lldb::SBCommand &operator=(const lldb::SBCommand &rhs);
+
+#ifndef SWIG
+  SBCommand(lldb::SBCommand &&rhs);
+
+  lldb::SBCommand &operator=(lldb::SBCommand &&rhs);
+#endif
+
+  ~SBCommand();
 
   explicit operator bool() const;
 

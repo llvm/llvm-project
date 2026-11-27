@@ -10,4 +10,4 @@
 
 #include "src/math/nextupl.h"
 
-LIST_NEXTUP_TESTS(long double, LIBC_NAMESPACE::nextupl)
+LIST_NEXTUP_TESTS(Nextupl, long double, LIBC_NAMESPACE::nextupl)

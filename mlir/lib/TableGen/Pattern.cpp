@@ -18,6 +18,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Path.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 
@@ -51,6 +52,16 @@ bool DagLeaf::isAttrMatcher() const {
   return isSubClassOf("AttrConstraint");
 }
 
+bool DagLeaf::isPropMatcher() const {
+  // Property matchers specify a property constraint.
+  return isSubClassOf("PropConstraint");
+}
+
+bool DagLeaf::isPropDefinition() const {
+  // Property matchers specify a property definition.
+  return isSubClassOf("Property");
+}
+
 bool DagLeaf::isNativeCodeCall() const {
   return isSubClassOf("NativeCodeCall");
 }
@@ -59,12 +70,24 @@ bool DagLeaf::isConstantAttr() const { return isSubClassOf("ConstantAttr"); }
 
 bool DagLeaf::isEnumCase() const { return isSubClassOf("EnumCase"); }
 
+bool DagLeaf::isConstantProp() const { return isSubClassOf("ConstantProp"); }
+
 bool DagLeaf::isStringAttr() const { return isa<llvm::StringInit>(def); }
 
 Constraint DagLeaf::getAsConstraint() const {
-  assert((isOperandMatcher() || isAttrMatcher()) &&
-         "the DAG leaf must be operand or attribute");
+  assert((isOperandMatcher() || isAttrMatcher() || isPropMatcher()) &&
+         "the DAG leaf must be operand, attribute, or property");
   return Constraint(cast<DefInit>(def)->getDef());
+}
+
+PropConstraint DagLeaf::getAsPropConstraint() const {
+  assert(isPropMatcher() && "the DAG leaf must be a property matcher");
+  return PropConstraint(cast<DefInit>(def)->getDef());
+}
+
+Property DagLeaf::getAsProperty() const {
+  assert(isPropDefinition() && "the DAG leaf must be a property definition");
+  return Property(cast<DefInit>(def)->getDef());
 }
 
 ConstantAttr DagLeaf::getAsConstantAttr() const {
@@ -75,6 +98,11 @@ ConstantAttr DagLeaf::getAsConstantAttr() const {
 EnumCase DagLeaf::getAsEnumCase() const {
   assert(isEnumCase() && "the DAG leaf must be an enum attribute case");
   return EnumCase(cast<DefInit>(def));
+}
+
+ConstantProp DagLeaf::getAsConstantProp() const {
+  assert(isConstantProp() && "the DAG leaf must be a constant property value");
+  return ConstantProp(cast<DefInit>(def));
 }
 
 std::string DagLeaf::getConditionTemplate() const {
@@ -232,6 +260,7 @@ SymbolInfoMap::SymbolInfo::SymbolInfo(
 int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
   switch (kind) {
   case Kind::Attr:
+  case Kind::Prop:
   case Kind::Operand:
   case Kind::Value:
     return 1;
@@ -257,6 +286,18 @@ std::string SymbolInfoMap::SymbolInfo::getVarTypeStr(StringRef name) const {
           .str();
     // TODO(suderman): Use a more exact type when available.
     return "::mlir::Attribute";
+  }
+  case Kind::Prop: {
+    if (op)
+      return cast<NamedProperty *>(op->getArg(getArgIndex()))
+          ->prop.getInterfaceType()
+          .str();
+    assert(dagAndConstant && dagAndConstant->dag &&
+           "generic properties must carry their constraint");
+    return reinterpret_cast<const DagLeaf *>(dagAndConstant->dag)
+        ->getAsPropConstraint()
+        .getInterfaceType()
+        .str();
   }
   case Kind::Operand: {
     // Use operand range for captured operands (to support potential variadic
@@ -298,6 +339,12 @@ std::string SymbolInfoMap::SymbolInfo::getValueAndRangeUse(
     assert(index < 0);
     auto repl = formatv(fmt, name);
     LLVM_DEBUG(dbgs() << repl << " (Attr)\n");
+    return std::string(repl);
+  }
+  case Kind::Prop: {
+    assert(index < 0);
+    auto repl = formatv(fmt, name);
+    LLVM_DEBUG(dbgs() << repl << " (Prop)\n");
     return std::string(repl);
   }
   case Kind::Operand: {
@@ -388,10 +435,11 @@ std::string SymbolInfoMap::SymbolInfo::getAllRangeUse(
   LLVM_DEBUG(dbgs() << "getAllRangeUse for '" << name << "': ");
   switch (kind) {
   case Kind::Attr:
+  case Kind::Prop:
   case Kind::Operand: {
     assert(index < 0 && "only allowed for symbol bound to result");
     auto repl = formatv(fmt, name);
-    LLVM_DEBUG(dbgs() << repl << " (Operand/Attr)\n");
+    LLVM_DEBUG(dbgs() << repl << " (Operand/Attr/Prop)\n");
     return std::string(repl);
   }
   case Kind::Result: {
@@ -449,9 +497,11 @@ bool SymbolInfoMap::bindOpArgument(DagNode node, StringRef symbol,
     PrintFatalError(loc, error);
   }
 
-  auto symInfo =
-      isa<NamedAttribute *>(op.getArg(argIndex))
-          ? SymbolInfo::getAttr(&op, argIndex)
+  Argument arg = op.getArg(argIndex);
+  SymbolInfo symInfo =
+      isa<NamedAttribute *>(arg) ? SymbolInfo::getAttr(&op, argIndex)
+      : isa<NamedProperty *>(arg)
+          ? SymbolInfo::getProp(&op, argIndex)
           : SymbolInfo::getOperand(node, &op, argIndex, variadicSubIndex);
 
   std::string key = symbol.str();
@@ -500,6 +550,13 @@ bool SymbolInfoMap::bindMultipleValues(StringRef symbol, int numValues) {
 
 bool SymbolInfoMap::bindAttr(StringRef symbol) {
   auto inserted = symbolInfoMap.emplace(symbol.str(), SymbolInfo::getAttr());
+  return symbolInfoMap.count(inserted->first) == 1;
+}
+
+bool SymbolInfoMap::bindProp(StringRef symbol,
+                             const PropConstraint &constraint) {
+  auto inserted =
+      symbolInfoMap.emplace(symbol.str(), SymbolInfo::getProp(&constraint));
   return symbolInfoMap.count(inserted->first) == 1;
 }
 
@@ -715,15 +772,27 @@ int Pattern::getBenefit() const {
   return initBenefit + dyn_cast<IntInit>(delta->getArg(0))->getValue();
 }
 
-std::vector<Pattern::IdentifierLine> Pattern::getLocation() const {
+std::vector<Pattern::IdentifierLine>
+Pattern::getLocation(bool forSourceOutput) const {
   std::vector<std::pair<StringRef, unsigned>> result;
   result.reserve(def.getLoc().size());
   for (auto loc : def.getLoc()) {
     unsigned buf = llvm::SrcMgr.FindBufferContainingLoc(loc);
     assert(buf && "invalid source location");
-    result.emplace_back(
-        llvm::SrcMgr.getBufferInfo(buf).Buffer->getBufferIdentifier(),
-        llvm::SrcMgr.getLineAndColumn(loc, buf).first);
+
+    StringRef bufferName =
+        llvm::SrcMgr.getBufferInfo(buf).Buffer->getBufferIdentifier();
+    // If we're emitting a generated file, we'd like to have some indication of
+    // where our patterns came from. However, LLVM's build rules use absolute
+    // paths as arguments to TableGen, and naively echoing such paths makes the
+    // contents of the generated source file depend on the build location,
+    // making MLIR builds substantially less reproducable. As a compromise, we
+    // trim absolute paths back to only the filename component.
+    if (forSourceOutput && llvm::sys::path::is_absolute(bufferName))
+      bufferName = llvm::sys::path::filename(bufferName);
+
+    result.emplace_back(bufferName,
+                        llvm::SrcMgr.getLineAndColumn(loc, buf).first);
   }
   return result;
 }
@@ -774,10 +843,23 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
       if (!treeArgName.empty() && treeArgName != "_") {
         DagLeaf leaf = tree.getArgAsLeaf(i);
 
-        // In (NativeCodeCall<"Foo($_self, $0, $1, $2)"> I8Attr:$a, I8:$b, $c),
+        // In (NativeCodeCall<"Foo($_self, $0, $1, $2, $3)"> I8Attr:$a, I8:$b,
+        //     $c, I8Prop:$d),
         if (leaf.isUnspecified()) {
           // This is case of $c, a Value without any constraints.
           verifyBind(infoMap.bindValue(treeArgName), treeArgName);
+        } else if (leaf.isPropMatcher()) {
+          // This is case of $d, a binding to a certain property.
+          auto propConstraint = leaf.getAsPropConstraint();
+          if (propConstraint.getInterfaceType().empty()) {
+            PrintFatalError(&def,
+                            formatv("binding symbol '{0}' in NativeCodeCall to "
+                                    "a property constraint without specifying "
+                                    "that constraint's type is unsupported",
+                                    treeArgName));
+          }
+          verifyBind(infoMap.bindProp(treeArgName, propConstraint),
+                     treeArgName);
         } else {
           auto constraint = leaf.getAsConstraint();
           bool isAttr = leaf.isAttrMatcher() || leaf.isEnumCase() ||

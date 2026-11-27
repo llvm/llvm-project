@@ -1,4 +1,4 @@
-//===--- VirtualClassDestructorCheck.cpp - clang-tidy -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -56,19 +56,19 @@ getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
   if (Destructor.getLocation().isMacroID())
     return std::nullopt;
 
-  SourceLocation VirtualBeginLoc = Destructor.getBeginLoc();
-  SourceLocation VirtualBeginSpellingLoc =
+  const SourceLocation VirtualBeginLoc = Destructor.getBeginLoc();
+  const SourceLocation VirtualBeginSpellingLoc =
       SM.getSpellingLoc(Destructor.getBeginLoc());
-  SourceLocation VirtualEndLoc = VirtualBeginSpellingLoc.getLocWithOffset(
+  const SourceLocation VirtualEndLoc = VirtualBeginSpellingLoc.getLocWithOffset(
       Lexer::MeasureTokenLength(VirtualBeginSpellingLoc, SM, LangOpts));
 
   /// Range ends with \c StartOfNextToken so that any whitespace after \c
   /// virtual is included.
   std::optional<Token> NextToken =
-      Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
+      utils::lexer::findNextTokenSkippingComments(VirtualEndLoc, SM, LangOpts);
   if (!NextToken)
     return std::nullopt;
-  SourceLocation StartOfNextToken = NextToken->getLocation();
+  const SourceLocation StartOfNextToken = NextToken->getLocation();
 
   return CharSourceRange::getCharRange(VirtualBeginLoc, StartOfNextToken);
 }
@@ -79,7 +79,7 @@ getPublicASDecl(const CXXRecordDecl &StructOrClass) {
            AS{StructOrClass.decls_begin()},
        ASEnd{StructOrClass.decls_end()};
        AS != ASEnd; ++AS) {
-    AccessSpecDecl *ASDecl = *AS;
+    const AccessSpecDecl *ASDecl = *AS;
     if (ASDecl->getAccess() == AccessSpecifier::AS_public)
       return ASDecl;
   }
@@ -125,7 +125,7 @@ static std::string getSourceText(const CXXDestructorDecl &Destructor) {
 
 static std::string eraseKeyword(std::string &DestructorString,
                                 const std::string &Keyword) {
-  size_t KeywordIndex = DestructorString.find(Keyword);
+  const size_t KeywordIndex = DestructorString.find(Keyword);
   if (KeywordIndex != std::string::npos)
     DestructorString.erase(KeywordIndex, Keyword.length());
   return DestructorString;
@@ -159,7 +159,7 @@ static FixItHint changePrivateDestructorVisibilityTo(
   else
     EndLocation = Destructor.getEndLoc().getLocWithOffset(1);
 
-  auto OriginalDestructorRange =
+  const auto OriginalDestructorRange =
       CharSourceRange::getCharRange(Destructor.getBeginLoc(), EndLocation);
   return FixItHint::CreateReplacement(OriginalDestructorRange,
                                       DestructorString);
@@ -167,7 +167,6 @@ static FixItHint changePrivateDestructorVisibilityTo(
 
 void VirtualClassDestructorCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   const auto *MatchedClassOrStruct =
       Result.Nodes.getNodeAs<CXXRecordDecl>("ProblematicClassOrStruct");
 
@@ -175,15 +174,21 @@ void VirtualClassDestructorCheck::check(
   if (!Destructor)
     return;
 
+  const bool HasUserDeclaredDtor =
+      MatchedClassOrStruct->hasUserDeclaredDestructor();
+
+  const SourceLocation DiagLoc = HasUserDeclaredDtor
+                                     ? Destructor->getLocation()
+                                     : MatchedClassOrStruct->getLocation();
+
   if (Destructor->getAccess() == AccessSpecifier::AS_private) {
-    diag(MatchedClassOrStruct->getLocation(),
-         "destructor of %0 is private and prevents using the type")
+    diag(DiagLoc, "destructor of %0 is private and prevents using the type")
         << MatchedClassOrStruct;
-    diag(MatchedClassOrStruct->getLocation(),
+    diag(DiagLoc,
          /*Description=*/"make it public and virtual", DiagnosticIDs::Note)
         << changePrivateDestructorVisibilityTo(
                "public", *Destructor, *Result.SourceManager, getLangOpts());
-    diag(MatchedClassOrStruct->getLocation(),
+    diag(DiagLoc,
          /*Description=*/"make it protected", DiagnosticIDs::Note)
         << changePrivateDestructorVisibilityTo(
                "protected", *Destructor, *Result.SourceManager, getLangOpts());
@@ -195,7 +200,7 @@ void VirtualClassDestructorCheck::check(
   bool ProtectedAndVirtual = false;
   FixItHint Fix;
 
-  if (MatchedClassOrStruct->hasUserDeclaredDestructor()) {
+  if (HasUserDeclaredDtor) {
     if (Destructor->getAccess() == AccessSpecifier::AS_public) {
       Fix = FixItHint::CreateInsertion(Destructor->getLocation(), "virtual ");
     } else if (Destructor->getAccess() == AccessSpecifier::AS_protected) {
@@ -210,11 +215,11 @@ void VirtualClassDestructorCheck::check(
                                          *Result.SourceManager);
   }
 
-  diag(MatchedClassOrStruct->getLocation(),
+  diag(DiagLoc,
        "destructor of %0 is %select{public and non-virtual|protected and "
        "virtual}1")
       << MatchedClassOrStruct << ProtectedAndVirtual;
-  diag(MatchedClassOrStruct->getLocation(),
+  diag(DiagLoc,
        "make it %select{public and virtual|protected and non-virtual}0",
        DiagnosticIDs::Note)
       << ProtectedAndVirtual << Fix;

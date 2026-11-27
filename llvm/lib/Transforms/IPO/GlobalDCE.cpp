@@ -15,13 +15,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/GlobalDCE.h"
+#include "IPOOptions.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/InitializePasses.h"
+#include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
@@ -30,9 +33,32 @@ using namespace llvm;
 
 #define DEBUG_TYPE "globaldce"
 
-static cl::opt<bool>
-    ClEnableVFE("enable-vfe", cl::Hidden, cl::init(true),
-                cl::desc("Enable virtual function elimination"));
+namespace {
+class GlobalDCELegacyPass : public ModulePass {
+public:
+  static char ID; // Pass identification, replacement for typeid
+  GlobalDCELegacyPass() : ModulePass(ID) {}
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+    // Note: GlobalDCEPass does not use any analyses, so we're safe to call the
+    // new-pm style pass with a default-initialized analysis manager here
+    ModuleAnalysisManager MAM;
+    auto PA = Impl.run(M, MAM);
+    return !PA.areAllPreserved();
+  }
+
+private:
+  GlobalDCEPass Impl;
+};
+} // namespace
+
+char GlobalDCELegacyPass::ID = 0;
+INITIALIZE_PASS(GlobalDCELegacyPass, "globaldce", "Dead Global Elimination",
+                false, false)
+
+// Public interface to the GlobalDCEPass.
+ModulePass *llvm::createGlobalDCEPass() { return new GlobalDCELegacyPass(); }
 
 STATISTIC(NumAliases  , "Number of global aliases removed");
 STATISTIC(NumFunctions, "Number of functions removed");
@@ -47,7 +73,7 @@ static bool isEmptyFunction(Function *F) {
     return false;
   BasicBlock &Entry = F->getEntryBlock();
   for (auto &I : Entry) {
-    if (I.isDebugOrPseudoInst())
+    if (isa<PseudoProbeInst>(I))
       continue;
     if (auto *RI = dyn_cast<ReturnInst>(&I))
       return !RI->getReturnValue();
@@ -67,13 +93,17 @@ void GlobalDCEPass::ComputeDependencies(Value *V,
     Deps.insert(GV);
   } else if (auto *CE = dyn_cast<Constant>(V)) {
     // Avoid walking the whole tree of a big ConstantExprs multiple times.
-    auto [Where, Inserted] = ConstantDependenciesCache.try_emplace(CE);
-    SmallPtrSetImpl<GlobalValue *> &LocalDeps = Where->second;
-    if (Inserted) {
+    auto Where = ConstantDependenciesCache.find(CE);
+    if (Where == ConstantDependenciesCache.end()) {
+      // Compute into a local set first: the recursion can insert into the
+      // cache, which would invalidate references into it.
+      SmallPtrSet<GlobalValue *, 8> LocalDeps;
       for (User *CEUser : CE->users())
         ComputeDependencies(CEUser, LocalDeps);
+      Where =
+          ConstantDependenciesCache.try_emplace(CE, std::move(LocalDeps)).first;
     }
-    Deps.insert_range(LocalDeps);
+    Deps.insert_range(Where->second);
   }
 }
 
@@ -140,14 +170,12 @@ void GlobalDCEPass::ScanVTables(Module &M) {
     // If the type corresponding to the vtable is private to this translation
     // unit, we know that we can see all virtual functions which might use it,
     // so VFE is safe.
-    if (auto GO = dyn_cast<GlobalObject>(&GV)) {
-      GlobalObject::VCallVisibility TypeVis = GO->getVCallVisibility();
-      if (TypeVis == GlobalObject::VCallVisibilityTranslationUnit ||
-          (InLTOPostLink &&
-           TypeVis == GlobalObject::VCallVisibilityLinkageUnit)) {
-        LLVM_DEBUG(dbgs() << GV.getName() << " is safe for VFE\n");
-        VFESafeVTables.insert(&GV);
-      }
+    GlobalObject::VCallVisibility TypeVis = GV.getVCallVisibility();
+    if (TypeVis == GlobalObject::VCallVisibilityTranslationUnit ||
+        (InLTOPostLink &&
+         TypeVis == GlobalObject::VCallVisibilityLinkageUnit)) {
+      LLVM_DEBUG(dbgs() << GV.getName() << " is safe for VFE\n");
+      VFESafeVTables.insert(&GV);
     }
   }
 }
@@ -176,7 +204,7 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
 
     LLVM_DEBUG(dbgs() << "vfunc dep " << Caller->getName() << " -> "
                       << Callee->getName() << "\n");
-    GVDependencies[Caller].insert(Callee);
+    VFuncDependencies[Caller].insert({VTable, Callee});
   }
 }
 
@@ -186,6 +214,10 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
       Intrinsic::getDeclarationIfExists(&M, Intrinsic::type_checked_load);
   Function *TypeCheckedLoadRelativeFunc = Intrinsic::getDeclarationIfExists(
       &M, Intrinsic::type_checked_load_relative);
+
+  // Keep track of which (function, type id, offset) triples we've already
+  // scanned, to prevent repeated work.
+  DenseSet<std::tuple<Function *, Metadata *, uint64_t>> ScannedLoads;
 
   auto scan = [&](Function *CheckedLoadFunc) {
     if (!CheckedLoadFunc)
@@ -201,7 +233,10 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
       auto *TypeId = cast<MetadataAsValue>(TypeIdValue)->getMetadata();
 
       if (Offset) {
-        ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
+        if (ScannedLoads
+                .insert({CI->getFunction(), TypeId, Offset->getZExtValue()})
+                .second)
+          ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
       } else {
         // type.checked.load with a non-constant offset, so assume every entry
         // in every matching vtable is used.
@@ -217,7 +252,7 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
 }
 
 void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
-  if (!ClEnableVFE)
+  if (!getIPOOptions(M).enable_vfe)
     return;
 
   // If the Virtual Function Elim module flag is present and set to zero, then
@@ -246,13 +281,27 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
 PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   bool Changed = false;
 
+  // Only the analyses of the deleted functions need to be cleared.
+  FunctionAnalysisManager *FAM = nullptr;
+  if (MAM.isPassRegistered<FunctionAnalysisManagerModuleProxy>()) {
+    if (auto *FAMProxy =
+            MAM.getCachedResult<FunctionAnalysisManagerModuleProxy>(M))
+      FAM = &FAMProxy->getManager();
+  }
+
   // The algorithm first computes the set L of global variables that are
-  // trivially live.  Then it walks the initialization of these variables to
-  // compute the globals used to initialize them, which effectively builds a
-  // directed graph where nodes are global variables, and an edge from A to B
-  // means B is used to initialize A.  Finally, it propagates the liveness
-  // information through the graph starting from the nodes in L. Nodes note
-  // marked as alive are discarded.
+  // trivially live.
+  //
+  // Then it walks the initialization of these variables to compute the globals
+  // used to initialize them, which effectively builds a directed graph where
+  // nodes are global variables, and an edge from A to B means B is used to
+  // initialize A.
+  //
+  // Finally, it propagates the liveness information through the graph starting
+  // from the nodes in L. A virtual call only keeps a virtual function alive
+  // when its vtable is also live.
+  //
+  // Nodes not marked as alive are discarded.
 
   // Remove empty functions from the global ctors list.
   Changed |= optimizeGlobalCtorsList(
@@ -314,6 +363,29 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
     GlobalValue *LGV = NewLiveGVs.pop_back_val();
     for (auto *GVD : GVDependencies[LGV])
       MarkLive(*GVD, &NewLiveGVs);
+
+    // A virtual call keeps a virtual function alive only if the vtable it is
+    // loaded from is alive too. If the vtable is not live, defer the function:
+    // the vtable may become live later.
+    if (auto *F = dyn_cast<Function>(LGV)) {
+      if (auto It = VFuncDependencies.find(F); It != VFuncDependencies.end()) {
+        for (auto [VTable, VFunc] : It->second) {
+          if (AliveGlobals.contains(VTable))
+            MarkLive(*VFunc, &NewLiveGVs);
+          else
+            PendingVFuncs[VTable].push_back(VFunc);
+        }
+      }
+    }
+
+    // If LGV is a vtable that became alive later, mark its deferred functions
+    // live.
+    if (auto *VT = dyn_cast<GlobalVariable>(LGV)) {
+      if (auto It = PendingVFuncs.find(VT); It != PendingVFuncs.end()) {
+        for (auto *VFunc : It->second)
+          MarkLive(*VFunc, &NewLiveGVs);
+      }
+    }
   }
 
   // Now that all globals which are needed are in the AliveGlobals set, we loop
@@ -338,6 +410,8 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   for (Function &F : M)
     if (!AliveGlobals.count(&F)) {
       DeadFunctions.push_back(&F);         // Keep track of dead globals
+      if (FAM)
+        FAM->clear(F, F.getName());
       if (!F.isDeclaration())
         F.deleteBody();
     }
@@ -405,13 +479,19 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   AliveGlobals.clear();
   ConstantDependenciesCache.clear();
   GVDependencies.clear();
+  VFuncDependencies.clear();
+  PendingVFuncs.clear();
   ComdatMembers.clear();
   TypeIdMap.clear();
   VFESafeVTables.clear();
 
-  if (Changed)
-    return PreservedAnalyses::none();
-  return PreservedAnalyses::all();
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }
 
 void GlobalDCEPass::printPipeline(

@@ -1,5 +1,12 @@
 // RUN: mlir-opt %s --test-walk-pattern-rewrite-driver="dump-notifications=true" \
-// RUN:   --allow-unregistered-dialect --split-input-file | FileCheck %s
+// RUN:   --split-input-file | FileCheck %s
+
+// Check that newly created operations and blocks may be erased without
+// invalidating the walk, while still forwarding listener notifications.
+// CHECK: notifyOperationInserted: test.transient_op, was unlinked
+// CHECK-NEXT: notifyOperationErased: test.transient_op
+// CHECK-NEXT: notifyBlockInserted into func.func: was unlinked
+// CHECK-NEXT: notifyBlockErased
 
 // The following op is updated in-place and will not be added back to the worklist.
 // CHECK-LABEL: func.func @inplace_update()
@@ -40,12 +47,12 @@ func.func @move_before(%cond : i1) {
 }
 
 // Check that the driver handles rewriter.moveAfter. In this case, we expect
-// the moved op to be visited only once since walk uses `make_early_inc_range`.
+// the moved op to be visited twice.
 // CHECK-LABEL: func.func @move_after(
 // CHECK: scf.if
 // CHECK: }
 // CHECK: "test.move_after_parent_op"
-// CHECK: "test.any_attr_of_i32_str"() <{attr = 1 : i32}> : () -> ()
+// CHECK: "test.any_attr_of_i32_str"() <{attr = 2 : i32}> : () -> ()
 // CHECK: return
 func.func @move_after(%cond : i1) {
   scf.if %cond {
@@ -109,13 +116,38 @@ func.func @replace_with_new_op() -> i32 {
 // Check that we can erase nested blocks.
 // CHECK-LABEL: func.func @erase_nested_block
 // CHECK:         %[[RES:.+]] = "test.erase_first_block"
-// CHECK-NEXT:    foo.bar
+// CHECK-NEXT:    test.bar
 // CHECK:         return %[[RES]]
 func.func @erase_nested_block() -> i32 {
   %a = "test.erase_first_block"() ({
-    "foo.foo"() : () -> ()
+    "test.foo"() : () -> ()
     ^bb1:
-    "foo.bar"() : () -> ()
+    "test.bar"() : () -> ()
   }): () -> (i32)
   return %a : i32
+}
+
+// CHECK-LABEL: func.func @create_and_erase_op_and_block
+// CHECK: "test.create_and_erase_op_and_block"() {was_rewritten}
+func.func @create_and_erase_op_and_block() {
+  "test.create_and_erase_op_and_block"() : () -> ()
+  return
+}
+
+// CHECK-LABEL: func.func @unreachable_replace_with_new_op
+// CHECK: "test.new_op"
+// CHECK: "test.replace_with_new_op"
+// CHECK-SAME: unreachable
+// CHECK: "test.new_op"
+func.func @unreachable_replace_with_new_op() {
+  "test.br"()[^bb1] : () -> ()
+^bb1:
+  %a = "test.replace_with_new_op"() : () -> (i32)
+  "test.br"()[^end] : () -> () // Test jumping over the unreachable block is visited as well.
+^unreachable:
+  %b = "test.replace_with_new_op"() {test.unreachable} : () -> (i32)
+  return
+^end:
+  %c = "test.replace_with_new_op"() : () -> (i32)
+  return
 }

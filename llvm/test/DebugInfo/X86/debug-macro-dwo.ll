@@ -1,10 +1,11 @@
 ; This test checks emission of .debug_macro.dwo section when
 ; -gdwarf-5 -gsplit-dwarf -fdebug-macro is specified.
 
-; RUN: llc -dwarf-version=5 -O0 -filetype=obj \
-; RUN: -split-dwarf-file=foo.dwo < %s | llvm-dwarfdump -debug-macro -debug-info -debug-line -v - | FileCheck %s
+; RUN: llc -dwarf-version=5 -O0 -filetype=obj -split-dwarf-output=%t.dwo \
+; RUN: -split-dwarf-file=%t.dwo -o %t.o < %s
+; RUN: llvm-dwarfdump -debug-macro -debug-info -debug-line -v %t.dwo | FileCheck %s
 
-; CHECK-LABEL:  .debug_info contents:
+; CHECK-LABEL:  .debug_info.dwo contents:
 ; CHECK: DW_AT_macros [DW_FORM_sec_offset] (0x00000000)
 
 ; CHECK-LABEL:  .debug_macro.dwo contents:

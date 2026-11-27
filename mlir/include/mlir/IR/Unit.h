@@ -22,7 +22,7 @@ class Region;
 class Block;
 class Value;
 
-/// IRUnit is a union of the different types of IR objects that consistute the
+/// IRUnit is a union of the different types of IR objects that constitute the
 /// IR structure (other than Type and Attribute), that is Operation, Region, and
 /// Block.
 class IRUnit : public PointerUnion<Operation *, Region *, Block *, Value> {

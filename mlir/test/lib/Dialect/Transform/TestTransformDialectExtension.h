@@ -14,12 +14,10 @@
 #ifndef MLIR_TESTTRANSFORMDIALECTEXTENSION_H
 #define MLIR_TESTTRANSFORMDIALECTEXTENSION_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
-#include "mlir/IR/OpImplementation.h"
 
 namespace mlir {
 class DialectRegistry;
@@ -27,6 +25,9 @@ class DialectRegistry;
 
 #define GET_TYPEDEF_CLASSES
 #include "TestTransformDialectExtensionTypes.h.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "TestTransformDialectExtensionAttrs.h.inc"
 
 #define GET_OP_CLASSES
 #include "TestTransformDialectExtension.h.inc"

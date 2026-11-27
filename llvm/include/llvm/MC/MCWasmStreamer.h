@@ -20,29 +20,22 @@ namespace llvm {
 class MCExpr;
 class MCInst;
 
-class MCWasmStreamer : public MCObjectStreamer {
+class LLVM_ABI MCWasmStreamer : public MCObjectStreamer {
 public:
   MCWasmStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                  std::unique_ptr<MCObjectWriter> OW,
                  std::unique_ptr<MCCodeEmitter> Emitter)
       : MCObjectStreamer(Context, std::move(TAB), std::move(OW),
-                         std::move(Emitter)),
-        SeenIdent(false) {}
+                         std::move(Emitter)) {}
 
   ~MCWasmStreamer() override;
-
-  /// state management
-  void reset() override {
-    SeenIdent = false;
-    MCObjectStreamer::reset();
-  }
 
   /// \name MCStreamer Interface
   /// @{
 
   void changeSection(MCSection *Section, uint32_t Subsection) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
-  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
+  void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
                       uint64_t Offset) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -56,11 +49,6 @@ public:
   void emitIdent(StringRef IdentString) override;
 
   void finishImpl() override;
-
-private:
-  void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &) override;
-
-  bool SeenIdent;
 };
 
 } // end namespace llvm

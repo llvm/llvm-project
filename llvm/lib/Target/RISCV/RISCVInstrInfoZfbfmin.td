@@ -29,18 +29,17 @@ def FCVT_S_BF16 : FPUnaryOp_r_frmlegacy<0b0100000, 0b00110, FPR32, FPR16, "fcvt.
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZfbfmin] in {
-def : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), GPR:$rhs, cond,
-                                   (bf16 FPR16:$truev), FPR16:$falsev),
+def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), GPR:$rhs, cond:$cc,
+                          (bf16 FPR16:$truev), FPR16:$falsev),
           (Select_FPR16_Using_CC_GPR GPR:$lhs, GPR:$rhs,
-           (IntCCtoRISCVCC $cc), FPR16:$truev, FPR16:$falsev)>;
+           (CCtoRISCVCC $cc), FPR16:$truev, FPR16:$falsev)>;
 
 // Explicitly select 0 in the condition to X0. The register coalescer doesn't
 // always do it.
-def : Pat<(riscv_selectcc_frag:$cc (XLenVT GPR:$lhs), 0, cond,
-                                   (bf16 FPR16:$truev),
-                                   FPR16:$falsev),
+def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), 0, cond:$cc,
+                          (bf16 FPR16:$truev), FPR16:$falsev),
           (Select_FPR16_Using_CC_GPR GPR:$lhs, (XLenVT X0),
-           (IntCCtoRISCVCC $cc), FPR16:$truev, FPR16:$falsev)>;
+           (CCtoRISCVCC $cc), FPR16:$truev, FPR16:$falsev)>;
 
 /// Loads
 def : LdPat<load, FLH, bf16>;
@@ -69,4 +68,11 @@ def : Pat<(bf16 (fpround FPR64:$rs1)),
 // bf16 -> f64
 def : Pat<(fpextend (bf16 FPR16:$rs1)),
           (FCVT_D_S (FCVT_S_BF16 FPR16:$rs1, FRM_DYN), FRM_RNE)>;
+}
+
+let Predicates = [HasStdExtZfhmin, HasStdExtZfbfmin] in {
+// bf16 -> f16
+def : Pat<(f16 (bitconvert (bf16 FPR16:$src))), (f16 FPR16:$src)>;
+// f16 -> bf16
+def : Pat<(bf16 (bitconvert (f16 FPR16:$src))), (bf16 FPR16:$src)>;
 }

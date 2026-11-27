@@ -23,11 +23,11 @@
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/TemplateBase.h"
-#include "clang/AST/Type.h"
+#include "clang/AST/TypeBase.h"
+#include "clang/Basic/BuiltinTraits.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
-#include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -40,29 +40,33 @@
 #include <optional>
 
 namespace clang {
-  class APValue;
-  class ASTContext;
-  class BlockDecl;
-  class CXXBaseSpecifier;
-  class CXXMemberCallExpr;
-  class CXXOperatorCallExpr;
-  class CastExpr;
-  class Decl;
-  class IdentifierInfo;
-  class MaterializeTemporaryExpr;
-  class NamedDecl;
-  class ObjCPropertyRefExpr;
-  class OpaqueValueExpr;
-  class ParmVarDecl;
-  class StringLiteral;
-  class TargetInfo;
-  class ValueDecl;
+class AllocSizeAttr;
+class APValue;
+class ASTContext;
+class BlockDecl;
+class CXXBaseSpecifier;
+class CXXMemberCallExpr;
+class CXXOperatorCallExpr;
+class CastExpr;
+class Decl;
+class IdentifierInfo;
+class MaterializeTemporaryExpr;
+class NamedDecl;
+class ObjCPropertyRefExpr;
+class OpaqueValueExpr;
+class ParmVarDecl;
+class SemaProxy;
+class StringLiteral;
+class TargetInfo;
+class ValueDecl;
+class WarnUnusedResultAttr;
 
 /// A simple array of base specifiers.
-typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
+typedef SmallVector<CXXBaseSpecifier *, 4> CXXCastPath;
 
 /// An adjustment to be made to the temporary created when emitting a
-/// reference binding, which accesses a particular subobject of that temporary.
+/// reference binding, which accesses a particular subobject of that
+/// temporary.
 struct SubobjectAdjustment {
   enum {
     DerivedToBaseAdjustment,
@@ -88,7 +92,7 @@ struct SubobjectAdjustment {
 
   SubobjectAdjustment(const CastExpr *BasePath,
                       const CXXRecordDecl *DerivedClass)
-    : Kind(DerivedToBaseAdjustment) {
+      : Kind(DerivedToBaseAdjustment) {
     DerivedToBase.BasePath = BasePath;
     DerivedToBase.DerivedClass = DerivedClass;
   }
@@ -98,7 +102,7 @@ struct SubobjectAdjustment {
   }
 
   SubobjectAdjustment(const MemberPointerType *MPT, Expr *RHS)
-    : Kind(MemberPointerAdjustment) {
+      : Kind(MemberPointerAdjustment) {
     this->Ptr.MPT = MPT;
     this->Ptr.RHS = RHS;
   }
@@ -262,6 +266,12 @@ public:
                               SourceRange &R1, SourceRange &R2,
                               ASTContext &Ctx) const;
 
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  static std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttrImpl(const Decl *Callee, QualType ReturnType);
+
   /// isLValue - True if this expression is an "l-value" according to
   /// the rules of the current language.  C and C++ give somewhat
   /// different rules for this concept, but in general, the result of
@@ -283,6 +293,7 @@ public:
     LV_NotObjectType,
     LV_IncompleteVoidType,
     LV_DuplicateVectorComponents,
+    LV_DuplicateMatrixComponents,
     LV_InvalidExpression,
     LV_InvalidMessageExpression,
     LV_MemberFunction,
@@ -298,8 +309,9 @@ public:
     MLV_NotObjectType,
     MLV_IncompleteVoidType,
     MLV_DuplicateVectorComponents,
+    MLV_DuplicateMatrixComponents,
     MLV_InvalidExpression,
-    MLV_LValueCast,           // Specialized form of MLV_InvalidExpression.
+    MLV_LValueCast, // Specialized form of MLV_InvalidExpression.
     MLV_IncompleteType,
     MLV_ConstQualified,
     MLV_ConstQualifiedField,
@@ -332,16 +344,17 @@ public:
     enum Kinds {
       CL_LValue,
       CL_XValue,
-      CL_Function, // Functions cannot be lvalues in C.
-      CL_Void, // Void cannot be an lvalue in C.
+      CL_Function,        // Functions cannot be lvalues in C.
+      CL_Void,            // Void cannot be an lvalue in C.
       CL_AddressableVoid, // Void expression whose address can be taken in C.
       CL_DuplicateVectorComponents, // A vector shuffle with dupes.
+      CL_DuplicateMatrixComponents, // A matrix shuffle with dupes.
       CL_MemberFunction, // An expression referring to a member function
       CL_SubObjCPropertySetting,
-      CL_ClassTemporary, // A temporary of class type, or subobject thereof.
-      CL_ArrayTemporary, // A temporary of array type.
+      CL_ClassTemporary,    // A temporary of class type, or subobject thereof.
+      CL_ArrayTemporary,    // A temporary of array type.
       CL_ObjCMessageRValue, // ObjC message is an rvalue
-      CL_PRValue // A prvalue for any other reason, of any other type
+      CL_PRValue            // A prvalue for any other reason, of any other type
     };
     /// The results of modification testing.
     enum ModifiableType {
@@ -546,17 +559,18 @@ public:
       bool IgnoreTemplateOrMacroSubstitution = false) const;
 
   /// isIntegerConstantExpr - Return the value if this expression is a valid
-  /// integer constant expression.  If not a valid i-c-e, return std::nullopt
-  /// and fill in Loc (if specified) with the location of the invalid
-  /// expression.
+  /// integer constant expression.  If not a valid i-c-e, return std::nullopt.
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
+  ///
+  /// If \p AllowRelaxedEval is \c true, this will allow certain constructs that
+  /// are not valid per the specification.
+  // FIXME: Add proper documentation about the constructs we allow.
   std::optional<llvm::APSInt>
   getIntegerConstantExpr(const ASTContext &Ctx,
-                         SourceLocation *Loc = nullptr) const;
-  bool isIntegerConstantExpr(const ASTContext &Ctx,
-                             SourceLocation *Loc = nullptr) const;
+                         bool AllowRelaxedEval = false) const;
+  bool isIntegerConstantExpr(const ASTContext &Ctx) const;
 
   /// isCXX98IntegralConstantExpr - Return true if this expression is an
   /// integral constant expression in C++98. Can only be used in C++.
@@ -567,8 +581,12 @@ public:
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
-                           SourceLocation *Loc = nullptr) const;
+  ///
+  /// If \p AllowRelaxedEval is \c true, this will allow certain constructs that
+  /// are not valid per the specification.
+  // FIXME: Add proper documentation about the constructs we allow.
+  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue &Result,
+                           bool AllowRelaxedEval = false) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
   /// might be usable in a constant expression in C++11, if it were marked
@@ -588,11 +606,11 @@ public:
                                                  SmallVectorImpl<
                                                    PartialDiagnosticAt> &Diags);
 
-  /// isConstantInitializer - Returns true if this expression can be emitted to
+  /// Returns true if this expression can be emitted to
   /// IR as a constant, and thus can be used as a constant initializer in C.
   /// If this expression is not constant and Culprit is non-null,
   /// it is used to store the address of first non constant expr.
-  bool isConstantInitializer(ASTContext &Ctx, bool ForRef,
+  bool isConstantInitializer(ASTContext &Ctx, bool ForRef = false,
                              const Expr **Culprit = nullptr) const;
 
   /// If this expression is an unambiguous reference to a single declaration,
@@ -612,6 +630,10 @@ public:
     /// Likewise, INT_MAX + 1 can be folded to INT_MIN, but has UB.
     bool HasUndefinedBehavior = false;
 
+    /// Whether any diagnostic has been emitted. This is set regardless of
+    /// whether @ref #Diag is set or not.
+    bool DiagEmitted = false;
+
     /// Diag - If this is non-null, it will be filled in with a stack of notes
     /// indicating why evaluation failed (or why it failed to produce a constant
     /// expression).
@@ -628,10 +650,14 @@ public:
     /// to a string representation).
     SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr;
 
+    /// Location where we spot ptr to int cast or null subobject while
+    /// evaluating constant expression in MS compatibility mode.
+    SmallVectorImpl<PartialDiagnosticAt> *ExtendedDiag = nullptr;
+
     EvalStatus() = default;
 
-    // hasSideEffects - Return true if the evaluated expression has
-    // side effects.
+    /// Return true if the evaluated expression has
+    /// side effects.
     bool hasSideEffects() const {
       return HasSideEffects;
     }
@@ -642,8 +668,8 @@ public:
     /// Val - This is the value the expression can be folded to.
     APValue Val;
 
-    // isGlobalLValue - Return true if the evaluated lvalue expression
-    // is global.
+    /// Return true if the evaluated lvalue expression
+    /// is global.
     bool isGlobalLValue() const;
   };
 
@@ -655,6 +681,13 @@ public:
   /// applied.
   bool EvaluateAsRValue(EvalResult &Result, const ASTContext &Ctx,
                         bool InConstantContext = false) const;
+
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression, and fold the resulting rvalue constant into Result. If the
+  /// expression is a glvalue, an lvalue-to-rvalue conversion will be applied.
+  bool EvaluateAsMandatedConstantRValue(EvalResult &Result,
+                                        const ASTContext &Ctx,
+                                        SemaProxy &SProxy) const;
 
   /// EvaluateAsBooleanCondition - Return true if this is a constant
   /// which we can fold and convert to a boolean condition using
@@ -711,9 +744,7 @@ public:
   /// EvaluateKnownConstInt - Call EvaluateAsRValue and return the folded
   /// integer. This must be called on an expression that constant folds to an
   /// integer.
-  llvm::APSInt EvaluateKnownConstInt(
-      const ASTContext &Ctx,
-      SmallVectorImpl<PartialDiagnosticAt> *Diag = nullptr) const;
+  llvm::APSInt EvaluateKnownConstInt(const ASTContext &Ctx) const;
 
   llvm::APSInt EvaluateKnownConstIntCheckOverflow(
       const ASTContext &Ctx,
@@ -730,10 +761,16 @@ public:
   /// initializer of the given declaration. Returns true if the initializer
   /// can be folded to a constant, and produces any relevant notes. In C++11,
   /// notes will be produced if the expression is not a constant expression.
-  bool EvaluateAsInitializer(APValue &Result, const ASTContext &Ctx,
-                             const VarDecl *VD,
-                             SmallVectorImpl<PartialDiagnosticAt> &Notes,
+  bool EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
+                             EvalResult &Result,
                              bool IsConstantInitializer) const;
+
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression.
+  bool EvaluateAsMandatedConstantInitializer(EvalResult &Result,
+                                             const ASTContext &Ctx,
+                                             SemaProxy &SProxy,
+                                             const VarDecl *VD) const;
 
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context
   /// of a call to the given function with the given arguments, inside an
@@ -757,12 +794,22 @@ public:
     /// evaluation is not part of the evaluation, but all other temporaries
     /// are destroyed.
     ImmediateInvocation,
+    /// The initializer of an object with static storage duration. The object
+    /// is not destroyed, and undefined behavior is folded through like
+    /// isConstantInitializer allows.
+    Initializer,
   };
 
   /// Evaluate an expression that is required to be a constant expression. Does
   /// not check the syntactic constraints for C and C++98 constant expressions.
   bool EvaluateAsConstantExpr(
       EvalResult &Result, const ASTContext &Ctx,
+      ConstantExprKind Kind = ConstantExprKind::Normal) const;
+
+  /// Evaluate an expression that is required by the language to be a constant
+  /// expression.
+  bool EvaluateAsMandatedConstantExpr(
+      EvalResult &Result, const ASTContext &Ctx, SemaProxy &SProxy,
       ConstantExprKind Kind = ConstantExprKind::Normal) const;
 
   /// If the current Expr is a pointer, this will try to statically
@@ -772,23 +819,23 @@ public:
   ///
   /// \param Type - How to evaluate the size of the Expr, as defined by the
   /// "type" parameter of __builtin_object_size
-  bool tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
-                             unsigned Type) const;
+  std::optional<uint64_t> tryEvaluateObjectSize(const ASTContext &Ctx,
+                                                unsigned Type) const;
 
   /// If the current Expr is a pointer, this will try to statically
   /// determine the strlen of the string pointed to.
   /// Returns true if all of the above holds and we were able to figure out the
   /// strlen, false otherwise.
-  bool tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const;
+  std::optional<uint64_t> tryEvaluateStrLen(const ASTContext &Ctx) const;
 
   bool EvaluateCharRangeAsString(std::string &Result,
                                  const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
-                                 EvalResult &Status) const;
+                                 SemaProxy &SProxy, EvalResult &Status) const;
 
   bool EvaluateCharRangeAsString(APValue &Result, const Expr *SizeExpression,
                                  const Expr *PtrExpression, ASTContext &Ctx,
-                                 EvalResult &Status) const;
+                                 SemaProxy &SProxy, EvalResult &Status) const;
 
   /// If the current Expr can be evaluated to a pointer to a null-terminated
   /// constant string, return the constant string (without the terminating
@@ -1034,7 +1081,7 @@ public:
 // PointerLikeTypeTraits is specialized so it can be used with a forward-decl of
 // Expr. Verify that we got it right.
 static_assert(llvm::PointerLikeTypeTraits<Expr *>::NumLowBitsAvailable <=
-                  llvm::detail::ConstantLog2<alignof(Expr)>::value,
+                  llvm::ConstantLog2<alignof(Expr)>(),
               "PointerLikeTypeTraits<Expr*> assumes too much alignment.");
 
 using ConstantExprKind = Expr::ConstantExprKind;
@@ -1073,8 +1120,8 @@ public:
 /// Describes the kind of result that can be tail-allocated.
 enum class ConstantResultStorageKind { None, Int64, APValue };
 
-/// ConstantExpr - An expression that occurs in a constant context and
-/// optionally the result of evaluating the expression.
+/// An expression that occurs in a constant context and
+/// the result of evaluating the expression.
 class ConstantExpr final
     : public FullExpr,
       private llvm::TrailingObjects<ConstantExpr, APValue, uint64_t> {
@@ -1366,7 +1413,7 @@ public:
 
   /// If the name was qualified, retrieves the nested-name-specifier
   /// that precedes the name. Otherwise, returns NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -1834,8 +1881,7 @@ class StringLiteral final
 
   /// Build a string literal.
   StringLiteral(const ASTContext &Ctx, StringRef Str, StringLiteralKind Kind,
-                bool Pascal, QualType Ty, const SourceLocation *Loc,
-                unsigned NumConcatenated);
+                bool Pascal, QualType Ty, ArrayRef<SourceLocation> Locs);
 
   /// Build an empty string literal.
   StringLiteral(EmptyShell Empty, unsigned NumConcatenated, unsigned Length,
@@ -1853,18 +1899,10 @@ class StringLiteral final
 
 public:
   /// This is the "fully general" constructor that allows representation of
-  /// strings formed from multiple concatenated tokens.
+  /// strings formed from one or more concatenated tokens.
   static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
                                StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               const SourceLocation *Loc,
-                               unsigned NumConcatenated);
-
-  /// Simple constructor for string literals made from one token.
-  static StringLiteral *Create(const ASTContext &Ctx, StringRef Str,
-                               StringLiteralKind Kind, bool Pascal, QualType Ty,
-                               SourceLocation Loc) {
-    return Create(Ctx, Str, Kind, Pascal, Ty, &Loc, 1);
-  }
+                               ArrayRef<SourceLocation> Locs);
 
   /// Construct an empty string literal.
   static StringLiteral *CreateEmpty(const ASTContext &Ctx,
@@ -1884,17 +1922,21 @@ public:
     return StringRef(getStrDataAsChar(), getByteLength());
   }
 
+  /// Prints the contents of the string to \p OS.
   void outputString(raw_ostream &OS) const;
 
-  uint32_t getCodeUnit(size_t i) const {
-    assert(i < getLength() && "out of bounds access");
+  /// Return the code unit at the given position.
+  ///
+  /// \pre \p I < getLength()
+  uint32_t getCodeUnit(size_t I) const {
+    assert(I < getLength() && "out of bounds access");
     switch (getCharByteWidth()) {
     case 1:
-      return static_cast<unsigned char>(getStrDataAsChar()[i]);
+      return static_cast<unsigned char>(getStrDataAsChar()[I]);
     case 2:
-      return getStrDataAsUInt16()[i];
+      return getStrDataAsUInt16()[I];
     case 4:
-      return getStrDataAsUInt32()[i];
+      return getStrDataAsUInt32()[I];
     }
     llvm_unreachable("Unsupported character width!");
   }
@@ -1912,8 +1954,20 @@ public:
     return V;
   }
 
+  /// Scan the string literal contents for a code unit with value 0.
+  /// If \p StartIndex is outside of the length of the string, this returns \c
+  /// std::nullopt.
+  ///
+  /// Otherwise, returns the offset (in code units, not bytes) of the zero code
+  /// unit, starting at index \p StartIndex. If no such code unit could be
+  /// found, this returns `getLength() - StartIndex`.
+  UnsignedOrNone findZeroCodeUnit(unsigned StartIndex = 0) const;
+
+  /// \returns The length of the full string in bytes.
   unsigned getByteLength() const { return getCharByteWidth() * getLength(); }
+  /// \returns The length of the full string in characters.
   unsigned getLength() const { return *getTrailingObjects<unsigned>(); }
+  /// \returns The size of one character in the string, in bytes.
   unsigned getCharByteWidth() const { return StringLiteralBits.CharByteWidth; }
 
   StringLiteralKind getKind() const {
@@ -1928,6 +1982,10 @@ public:
   bool isUnevaluated() const { return getKind() == StringLiteralKind::Unevaluated; }
   bool isPascal() const { return StringLiteralBits.IsPascal; }
 
+  /// Scans the string contents for any non-ascii characters.
+  ///
+  /// \pre isUnevaluated() || getCharByteWidth() == 1
+  /// \returns \c true if a non-ascii character was found, \c false otherwise.
   bool containsNonAscii() const {
     for (auto c : getString())
       if (!isASCII(c))
@@ -1935,6 +1993,11 @@ public:
     return false;
   }
 
+  /// Scans the string contents for any non-ascii or null characters.
+  ///
+  /// \pre isUnevaluated() || getCharByteWidth() == 1
+  /// \returns \c true if a non-ascii or null character was found, \c false
+  /// otherwise.
   bool containsNonAsciiOrNull() const {
     for (auto c : getString())
       if (!isASCII(c) || !c)
@@ -1942,7 +2005,7 @@ public:
     return false;
   }
 
-  /// getNumConcatenated - Get the number of string literal tokens that were
+  /// Get the number of string literal tokens that were
   /// concatenated in translation phase #6 to form this string literal.
   unsigned getNumConcatenated() const {
     return StringLiteralBits.NumConcatenated;
@@ -1954,13 +2017,12 @@ public:
     return getTrailingObjects<SourceLocation>()[TokNum];
   }
 
-  /// getLocationOfByte - Return a source location that points to the specified
+  /// Return a source location that points to the specified
   /// byte of this string literal.
   ///
   /// Strings are amazingly complex.  They can be formed from multiple tokens
   /// and can have escape sequences in them in addition to the usual trigraph
   /// and escaped newline business.  This routine handles this complexity.
-  ///
   SourceLocation
   getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                     const LangOptions &Features, const TargetInfo &Target,
@@ -2469,7 +2531,7 @@ public:
         Data(reinterpret_cast<uintptr_t>(Field) | OffsetOfNode::Field) {}
 
   /// Create an offsetof node that refers to an identifier.
-  OffsetOfNode(SourceLocation DotLoc, IdentifierInfo *Name,
+  OffsetOfNode(SourceLocation DotLoc, const IdentifierInfo *Name,
                SourceLocation NameLoc)
       : Range(DotLoc.isValid() ? DotLoc : NameLoc, NameLoc),
         Data(reinterpret_cast<uintptr_t>(Name) | Identifier) {}
@@ -2496,7 +2558,7 @@ public:
 
   /// For a field or identifier offsetof node, returns the name of
   /// the field.
-  IdentifierInfo *getFieldName() const;
+  const IdentifierInfo *getFieldName() const;
 
   /// For a base class node, returns the base specifier.
   CXXBaseSpecifier *getBase() const {
@@ -2791,6 +2853,72 @@ public:
   // Iterators
   child_range children() {
     return child_range(&SubExprs[0], &SubExprs[0]+END_EXPR);
+  }
+  const_child_range children() const {
+    return const_child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
+  }
+};
+
+/// MatrixSingleSubscriptExpr - Matrix single subscript expression for the
+/// MatrixType extension when you want to get\set a vector from a Matrix.
+class MatrixSingleSubscriptExpr : public Expr {
+  enum { BASE, ROW_IDX, END_EXPR };
+  Stmt *SubExprs[END_EXPR];
+
+public:
+  /// matrix[row]
+  ///
+  /// \param Base        The matrix expression.
+  /// \param RowIdx      The row index expression.
+  /// \param T           The type of the row (usually a vector type).
+  /// \param RBracketLoc Location of the closing ']'.
+  MatrixSingleSubscriptExpr(Expr *Base, Expr *RowIdx, QualType T,
+                            SourceLocation RBracketLoc)
+      : Expr(MatrixSingleSubscriptExprClass, T,
+             Base->getValueKind(), // lvalue/rvalue follows the matrix base
+             OK_MatrixComponent) {
+    SubExprs[BASE] = Base;
+    SubExprs[ROW_IDX] = RowIdx;
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = RBracketLoc;
+    setDependence(computeDependence(this));
+  }
+
+  /// Create an empty matrix single-subscript expression.
+  explicit MatrixSingleSubscriptExpr(EmptyShell Shell)
+      : Expr(MatrixSingleSubscriptExprClass, Shell) {}
+
+  Expr *getBase() { return cast<Expr>(SubExprs[BASE]); }
+  const Expr *getBase() const { return cast<Expr>(SubExprs[BASE]); }
+  void setBase(Expr *E) { SubExprs[BASE] = E; }
+
+  Expr *getRowIdx() { return cast<Expr>(SubExprs[ROW_IDX]); }
+  const Expr *getRowIdx() const { return cast<Expr>(SubExprs[ROW_IDX]); }
+  void setRowIdx(Expr *E) { SubExprs[ROW_IDX] = E; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getBase()->getBeginLoc();
+  }
+
+  SourceLocation getEndLoc() const { return getRBracketLoc(); }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return getBase()->getExprLoc();
+  }
+
+  SourceLocation getRBracketLoc() const {
+    return ArrayOrMatrixSubscriptExprBits.RBracketLoc;
+  }
+  void setRBracketLoc(SourceLocation L) {
+    ArrayOrMatrixSubscriptExprBits.RBracketLoc = L;
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == MatrixSingleSubscriptExprClass;
+  }
+
+  // Iterators
+  child_range children() {
+    return child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
   }
   const_child_range children() const {
     return const_child_range(&SubExprs[0], &SubExprs[0] + END_EXPR);
@@ -3106,9 +3234,9 @@ public:
   /// Compute and set dependence bits.
   void computeDependence() {
     setDependence(clang::computeDependence(
-        this, llvm::ArrayRef(
-                  reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
-                  getNumPreArgs())));
+        this,
+        ArrayRef(reinterpret_cast<Expr **>(getTrailingStmts() + PREARGS_START),
+                 getNumPreArgs())));
   }
 
   /// Reduce the number of arguments in this call expression. This is used for
@@ -3152,9 +3280,8 @@ public:
   /// a CallExpr without going through the slower virtual child_iterator
   /// interface.  This provides efficient reverse iteration of the
   /// subexpressions.  This is currently used for CFG construction.
-  ArrayRef<Stmt *> getRawSubExprs() {
-    return llvm::ArrayRef(getTrailingStmts(),
-                          PREARGS_START + getNumPreArgs() + getNumArgs());
+  ArrayRef<Stmt *> getRawSubExprs() const {
+    return {getTrailingStmts(), PREARGS_START + getNumPreArgs() + getNumArgs()};
   }
 
   /// Get FPOptionsOverride from trailing storage.
@@ -3200,11 +3327,13 @@ public:
   /// type.
   QualType getCallReturnType(const ASTContext &Ctx) const;
 
-  /// Returns the WarnUnusedResultAttr that is either declared on the called
-  /// function, or its return type declaration, together with a NamedDecl that
-  /// refers to the declaration the attribute is attached onto.
-  std::pair<const NamedDecl *, const Attr *>
-  getUnusedResultAttr(const ASTContext &Ctx) const;
+  /// Returns the WarnUnusedResultAttr that is declared on the callee
+  /// or its return type declaration, together with a NamedDecl that
+  /// refers to the declaration the attribute is attached to.
+  std::pair<const NamedDecl *, const WarnUnusedResultAttr *>
+  getUnusedResultAttr(const ASTContext &Ctx) const {
+    return getUnusedResultAttrImpl(getCalleeDecl(), getCallReturnType(Ctx));
+  }
 
   /// Returns true if this call expression should warn on unused results.
   bool hasUnusedResultAttr(const ASTContext &Ctx) const {
@@ -3265,6 +3394,15 @@ public:
   void markDependentForPostponedNameLookup() {
     setDependence(getDependence() | ExprDependence::TypeValueInstantiation);
   }
+
+  /// Try to get the alloc_size attribute of the callee. May return null.
+  const AllocSizeAttr *getCalleeAllocSizeAttr() const;
+
+  /// Evaluates the total size in bytes allocated by calling a function
+  /// decorated with alloc_size. Returns std::nullopt if the the result cannot
+  /// be evaluated.
+  std::optional<llvm::APInt>
+  evaluateBytesReturnedByAllocSizeCall(const ASTContext &Ctx) const;
 
   bool isCallToStdMove() const;
 
@@ -3403,7 +3541,7 @@ public:
   /// If the member name was qualified, retrieves the
   /// nested-name-specifier that precedes the member name. Otherwise, returns
   /// NULL.
-  NestedNameSpecifier *getQualifier() const {
+  NestedNameSpecifier getQualifier() const {
     return getQualifierLoc().getNestedNameSpecifier();
   }
 
@@ -3544,11 +3682,16 @@ class CompoundLiteralExpr : public Expr {
   /// The int part of the pair stores whether this expr is file scope.
   llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfoAndScope;
   Stmt *Init;
+
+  /// Value of constant literals with static storage duration.
+  mutable APValue *StaticValue = nullptr;
+
 public:
   CompoundLiteralExpr(SourceLocation lparenloc, TypeSourceInfo *tinfo,
                       QualType T, ExprValueKind VK, Expr *init, bool fileScope)
       : Expr(CompoundLiteralExprClass, T, VK, OK_Ordinary),
         LParenLoc(lparenloc), TInfoAndScope(tinfo, fileScope), Init(init) {
+    assert(Init && "Init is a nullptr");
     setDependence(computeDependence(this));
   }
 
@@ -3573,20 +3716,16 @@ public:
     TInfoAndScope.setPointer(tinfo);
   }
 
+  bool hasStaticStorage() const { return isFileScope() && isGLValue(); }
+  APValue &getOrCreateStaticValue(ASTContext &Ctx) const;
+  APValue &getStaticValue() const;
+
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
     if (LParenLoc.isInvalid())
       return Init->getBeginLoc();
     return LParenLoc;
   }
-  SourceLocation getEndLoc() const LLVM_READONLY {
-    // FIXME: Init should never be null.
-    if (!Init)
-      return SourceLocation();
-    return Init->getEndLoc();
-  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Init->getEndLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CompoundLiteralExprClass;
@@ -4885,28 +5024,37 @@ public:
 
 /// Represents a call to the builtin function \c __builtin_va_arg.
 class VAArgExpr : public Expr {
+public:
+  enum VarArgKind { VA_Std = 0, VA_MS, VA_ZOS };
+
+private:
   Stmt *Val;
-  llvm::PointerIntPair<TypeSourceInfo *, 1, bool> TInfo;
+  llvm::PointerIntPair<TypeSourceInfo *, 2, VarArgKind> TInfo;
   SourceLocation BuiltinLoc, RParenLoc;
 public:
   VAArgExpr(SourceLocation BLoc, Expr *e, TypeSourceInfo *TInfo,
-            SourceLocation RPLoc, QualType t, bool IsMS)
+            SourceLocation RPLoc, QualType t, VarArgKind VaKind)
       : Expr(VAArgExprClass, t, VK_PRValue, OK_Ordinary), Val(e),
-        TInfo(TInfo, IsMS), BuiltinLoc(BLoc), RParenLoc(RPLoc) {
+        TInfo(TInfo, VaKind), BuiltinLoc(BLoc), RParenLoc(RPLoc) {
     setDependence(computeDependence(this));
   }
 
   /// Create an empty __builtin_va_arg expression.
   explicit VAArgExpr(EmptyShell Empty)
-      : Expr(VAArgExprClass, Empty), Val(nullptr), TInfo(nullptr, false) {}
+      : Expr(VAArgExprClass, Empty), Val(nullptr), TInfo(nullptr, VA_Std) {}
 
   const Expr *getSubExpr() const { return cast<Expr>(Val); }
   Expr *getSubExpr() { return cast<Expr>(Val); }
   void setSubExpr(Expr *E) { Val = E; }
 
+  VarArgKind getVarargABI() const { return TInfo.getInt(); }
+  void setVarargABI(VarArgKind Kind) { TInfo.setInt(Kind); }
+
   /// Returns whether this is really a Win64 ABI va_arg expression.
-  bool isMicrosoftABI() const { return TInfo.getInt(); }
-  void setIsMicrosoftABI(bool IsMS) { TInfo.setInt(IsMS); }
+  bool isMicrosoftABI() const { return TInfo.getInt() == VA_MS; }
+
+  /// Returns whether this is really a z/OS ABI va_arg expression.
+  bool isZOSABI() const { return TInfo.getInt() == VA_ZOS; }
 
   TypeSourceInfo *getWrittenTypeInfo() const { return TInfo.getPointer(); }
   void setWrittenTypeInfo(TypeSourceInfo *TI) { TInfo.setPointer(TI); }
@@ -5052,7 +5200,7 @@ struct EmbedDataStorage {
 ///  { {EE(9th and 10th element), { zeroinitializer }}}
 ///
 /// EmbedExpr inside of a semantic initializer list and referencing more than
-/// one element can only appear for arrays of scalars.
+/// one element can only appear for arrays of integer or floating-point type.
 class EmbedExpr final : public Expr {
   SourceLocation EmbedKeywordLoc;
   IntegerLiteral *FakeChildNode = nullptr;
@@ -5064,7 +5212,7 @@ class EmbedExpr final : public Expr {
 public:
   EmbedExpr(const ASTContext &Ctx, SourceLocation Loc, EmbedDataStorage *Data,
             unsigned Begin, unsigned NumOfElements);
-  explicit EmbedExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
+  explicit EmbedExpr(EmptyShell Empty) : Expr(EmbedExprClass, Empty) {}
 
   SourceLocation getLocation() const { return EmbedKeywordLoc; }
   SourceLocation getBeginLoc() const { return EmbedKeywordLoc; }
@@ -5107,9 +5255,9 @@ public:
              "trying to dereference an invalid iterator");
       IntegerLiteral *N = EExpr->FakeChildNode;
       N->setValue(*EExpr->Ctx,
-                  llvm::APInt(N->getValue().getBitWidth(),
+                  llvm::APInt(N->getBitWidth(),
                               EExpr->Data->BinaryData->getCodeUnit(CurOffset),
-                              N->getType()->isSignedIntegerType()));
+                              /*Signed=*/true));
       // We want to return a reference to the fake child node in the
       // EmbedExpr, not the local variable N.
       return const_cast<typename BaseTy::reference>(EExpr->FakeChildNode);
@@ -5250,11 +5398,14 @@ class InitListExpr : public Expr {
 
 public:
   InitListExpr(const ASTContext &C, SourceLocation lbraceloc,
-               ArrayRef<Expr*> initExprs, SourceLocation rbraceloc);
+               ArrayRef<Expr *> initExprs, SourceLocation rbraceloc,
+               bool isExplicit);
 
   /// Build an empty initializer list.
   explicit InitListExpr(EmptyShell Empty)
-    : Expr(InitListExprClass, Empty), AltForm(nullptr, true) { }
+      : Expr(InitListExprClass, Empty), AltForm(nullptr, true) {
+    InitListExprBits.IsExplicit = false;
+  }
 
   unsigned getNumInits() const { return InitExprs.size(); }
 
@@ -5263,9 +5414,20 @@ public:
   unsigned getNumInitsWithEmbedExpanded() const {
     unsigned Sum = InitExprs.size();
     for (auto *IE : InitExprs)
-      if (auto *EE = dyn_cast<EmbedExpr>(IE))
+      if (auto *EE = dyn_cast<EmbedExpr>(cast<Expr>(IE)->IgnoreParenImpCasts()))
         Sum += EE->getDataElementCount() - 1;
     return Sum;
+  }
+
+  bool hasZeroInits() const { return InitExprs.empty(); }
+
+  /// Whether getNumInitsWithEmbedExpanded() is 1, without walking the list.
+  bool hasOneInit() const {
+    if (InitExprs.size() != 1)
+      return false;
+    auto *EE =
+        dyn_cast<EmbedExpr>(cast<Expr>(InitExprs[0])->IgnoreParenImpCasts());
+    return !EE || EE->getDataElementCount() == 1;
   }
 
   /// Retrieve the set of initializers.
@@ -5276,11 +5438,7 @@ public:
     return reinterpret_cast<Expr * const *>(InitExprs.data());
   }
 
-  ArrayRef<Expr *> inits() { return llvm::ArrayRef(getInits(), getNumInits()); }
-
-  ArrayRef<Expr *> inits() const {
-    return llvm::ArrayRef(getInits(), getNumInits());
-  }
+  ArrayRef<Expr *> inits() const { return {getInits(), getNumInits()}; }
 
   const Expr *getInit(unsigned Init) const {
     assert(Init < getNumInits() && "Initializer access out of range!");
@@ -5370,11 +5528,7 @@ public:
 
   // Explicit InitListExpr's originate from source code (and have valid source
   // locations). Implicit InitListExpr's are created by the semantic analyzer.
-  // FIXME: This is wrong; InitListExprs created by semantic analysis have
-  // valid source locations too!
-  bool isExplicit() const {
-    return LBraceLoc.isValid() && RBraceLoc.isValid();
-  }
+  bool isExplicit() const { return InitListExprBits.IsExplicit; }
 
   /// Is this an initializer for an array of characters, initialized by a string
   /// literal or an @encode?
@@ -5508,7 +5662,7 @@ private:
   Designator *Designators;
 
   DesignatedInitExpr(const ASTContext &C, QualType Ty,
-                     llvm::ArrayRef<Designator> Designators,
+                     ArrayRef<Designator> Designators,
                      SourceLocation EqualOrColonLoc, bool GNUSyntax,
                      ArrayRef<Expr *> IndexExprs, Expr *Init);
 
@@ -5701,8 +5855,8 @@ public:
   };
 
   static DesignatedInitExpr *Create(const ASTContext &C,
-                                    llvm::ArrayRef<Designator> Designators,
-                                    ArrayRef<Expr*> IndexExprs,
+                                    ArrayRef<Designator> Designators,
+                                    ArrayRef<Expr *> IndexExprs,
                                     SourceLocation EqualOrColonLoc,
                                     bool GNUSyntax, Expr *Init);
 
@@ -5713,11 +5867,11 @@ public:
   unsigned size() const { return NumDesignators; }
 
   // Iterator access to the designators.
-  llvm::MutableArrayRef<Designator> designators() {
+  MutableArrayRef<Designator> designators() {
     return {Designators, NumDesignators};
   }
 
-  llvm::ArrayRef<Designator> designators() const {
+  ArrayRef<Designator> designators() const {
     return {Designators, NumDesignators};
   }
 
@@ -6052,7 +6206,11 @@ public:
 
   Expr **getExprs() { return reinterpret_cast<Expr **>(getTrailingObjects()); }
 
-  ArrayRef<Expr *> exprs() { return llvm::ArrayRef(getExprs(), getNumExprs()); }
+  Expr *const *getExprs() const {
+    return reinterpret_cast<Expr *const *>(getTrailingObjects());
+  }
+
+  ArrayRef<Expr *> exprs() const { return {getExprs(), getNumExprs()}; }
 
   SourceLocation getLParenLoc() const { return LParenLoc; }
   SourceLocation getRParenLoc() const { return RParenLoc; }
@@ -6162,12 +6320,14 @@ class GenericSelectionExpr final
   // GenericSelectionExpr is followed by several trailing objects.
   // They are (in order):
   //
-  // * A single Stmt * for the controlling expression or a TypeSourceInfo * for
-  //   the controlling type, depending on the result of isTypePredicate() or
-  //   isExprPredicate().
-  // * An array of getNumAssocs() Stmt * for the association expressions.
-  // * An array of getNumAssocs() TypeSourceInfo *, one for each of the
-  //   association expressions.
+  // * An array of either
+  //   - getNumAssocs() (if what controls the generic is not an expression), or
+  //   - getNumAssocs() + 1 (if what controls the generic is an expression)
+  //   Stmt * for the association expressions.
+  // * An array of
+  //   - getNumAssocs() (if what controls the generic is not a type), or
+  //   - getNumAssocs() + 1 (if what controls the generic is a type)
+  //   TypeSourceInfo * for the association types.
   unsigned numTrailingObjects(OverloadToken<Stmt *>) const {
     // Add one to account for the controlling expression; the remainder
     // are the associated expressions.
@@ -6486,30 +6646,24 @@ public:
 // Clang Extensions
 //===----------------------------------------------------------------------===//
 
-/// ExtVectorElementExpr - This represents access to specific elements of a
-/// vector, and may occur on the left hand side or right hand side.  For example
-/// the following is legal:  "V.xy = V.zw" if V is a 4 element extended vector.
-///
-/// Note that the base may have either vector or pointer to vector type, just
-/// like a struct field reference.
-///
-class ExtVectorElementExpr : public Expr {
+template <class Derived> class ElementAccessExprBase : public Expr {
+protected:
   Stmt *Base;
   IdentifierInfo *Accessor;
   SourceLocation AccessorLoc;
-public:
-  ExtVectorElementExpr(QualType ty, ExprValueKind VK, Expr *base,
-                       IdentifierInfo &accessor, SourceLocation loc)
-      : Expr(ExtVectorElementExprClass, ty, VK,
-             (VK == VK_PRValue ? OK_Ordinary : OK_VectorComponent)),
-        Base(base), Accessor(&accessor), AccessorLoc(loc) {
-    setDependence(computeDependence(this));
+
+  ElementAccessExprBase(StmtClass SC, QualType Ty, ExprValueKind VK, Expr *Base,
+                        IdentifierInfo &Accessor, SourceLocation Loc,
+                        ExprObjectKind OK)
+      : Expr(SC, Ty, VK, OK), Base(Base), Accessor(&Accessor),
+        AccessorLoc(Loc) {
+    setDependence(computeDependence(static_cast<Derived *>(this)));
   }
 
-  /// Build an empty vector element expression.
-  explicit ExtVectorElementExpr(EmptyShell Empty)
-    : Expr(ExtVectorElementExprClass, Empty) { }
+  explicit ElementAccessExprBase(StmtClass SC, EmptyShell Empty)
+      : Expr(SC, Empty) {}
 
+public:
   const Expr *getBase() const { return cast<Expr>(Base); }
   Expr *getBase() { return cast<Expr>(Base); }
   void setBase(Expr *E) { Base = E; }
@@ -6519,6 +6673,37 @@ public:
 
   SourceLocation getAccessorLoc() const { return AccessorLoc; }
   void setAccessorLoc(SourceLocation L) { AccessorLoc = L; }
+
+  SourceLocation getBeginLoc() const LLVM_READONLY {
+    return getBase()->getBeginLoc();
+  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return AccessorLoc; }
+
+  child_range children() { return child_range(&Base, &Base + 1); }
+  const_child_range children() const {
+    return const_child_range(&Base, &Base + 1);
+  }
+};
+
+/// ExtVectorElementExpr - This represents access to specific elements of a
+/// vector, and may occur on the left hand side or right hand side.  For example
+/// the following is legal:  "V.xy = V.zw" if V is a 4 element extended vector.
+///
+/// Note that the base may have either vector or pointer to vector type, just
+/// like a struct field reference.
+///
+class ExtVectorElementExpr
+    : public ElementAccessExprBase<ExtVectorElementExpr> {
+public:
+  ExtVectorElementExpr(QualType Ty, ExprValueKind VK, Expr *Base,
+                       IdentifierInfo &Accessor, SourceLocation Loc)
+      : ElementAccessExprBase(
+            ExtVectorElementExprClass, Ty, VK, Base, Accessor, Loc,
+            (VK == VK_PRValue ? OK_Ordinary : OK_VectorComponent)) {}
+
+  /// Build an empty vector element expression.
+  explicit ExtVectorElementExpr(EmptyShell Empty)
+      : ElementAccessExprBase(ExtVectorElementExprClass, Empty) {}
 
   /// getNumElements - Get the number of components being selected.
   unsigned getNumElements() const;
@@ -6531,11 +6716,6 @@ public:
   /// aggregate Constant of ConstantInt(s).
   void getEncodedElementAccess(SmallVectorImpl<uint32_t> &Elts) const;
 
-  SourceLocation getBeginLoc() const LLVM_READONLY {
-    return getBase()->getBeginLoc();
-  }
-  SourceLocation getEndLoc() const LLVM_READONLY { return AccessorLoc; }
-
   /// isArrow - Return true if the base expression is a pointer to vector,
   /// return false if the base expression is a vector.
   bool isArrow() const;
@@ -6543,11 +6723,33 @@ public:
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ExtVectorElementExprClass;
   }
+};
 
-  // Iterators
-  child_range children() { return child_range(&Base, &Base+1); }
-  const_child_range children() const {
-    return const_child_range(&Base, &Base + 1);
+class MatrixElementExpr : public ElementAccessExprBase<MatrixElementExpr> {
+public:
+  MatrixElementExpr(QualType Ty, ExprValueKind VK, Expr *Base,
+                    IdentifierInfo &Accessor, SourceLocation Loc)
+      : ElementAccessExprBase(
+            MatrixElementExprClass, Ty, VK, Base, Accessor, Loc,
+            OK_Ordinary /*TODO: Should we add a new OK_MatrixComponent?*/) {}
+
+  /// Build an empty matrix element expression.
+  explicit MatrixElementExpr(EmptyShell Empty)
+      : ElementAccessExprBase(MatrixElementExprClass, Empty) {}
+
+  /// getNumElements - Get the number of components being selected.
+  unsigned getNumElements() const;
+
+  /// containsDuplicateElements - Return true if any element access is
+  /// repeated.
+  bool containsDuplicateElements() const;
+
+  /// getEncodedElementAccess - Encode the elements accessed into an llvm
+  /// aggregate Constant of ConstantInt(s).
+  void getEncodedElementAccess(SmallVectorImpl<uint32_t> &Elts) const;
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == MatrixElementExprClass;
   }
 };
 
@@ -6906,6 +7108,21 @@ public:
            getOp() == AO__scoped_atomic_compare_exchange_n;
   }
 
+  bool hasVal1Operand() const {
+    switch (getOp()) {
+    case AO__atomic_load_n:
+    case AO__scoped_atomic_load_n:
+    case AO__c11_atomic_load:
+    case AO__opencl_atomic_load:
+    case AO__hip_atomic_load:
+    case AO__atomic_test_and_set:
+    case AO__atomic_clear:
+      return false;
+    default:
+      return true;
+    }
+  }
+
   bool isOpenCL() const {
     return getOp() >= AO__opencl_atomic_compare_exchange_strong &&
            getOp() <= AO__opencl_atomic_store;
@@ -7143,6 +7360,18 @@ public:
   /// Return original type of the base expression for array section.
   static QualType getBaseOriginalType(const Expr *Base);
 
+  /// Return the effective 'element' type of this array section. As the array
+  /// section itself returns a collection of elements (closer to its `getBase`
+  /// type), this is only useful for figuring out the effective type of this if
+  /// it were a normal Array subscript expr.
+  QualType getElementType() const;
+
+  /// Returns the effective 'type' of the base of this array section.  This
+  /// should be the array/pointer type that this operates on.  Just
+  /// getBase->getType isn't sufficient, since it doesn't look through existing
+  /// Array sections to figure out the actual 'base' of this.
+  QualType getBaseType() const;
+
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == ArraySectionExprClass;
   }
@@ -7364,17 +7593,14 @@ public:
                               ArrayRef<Expr *> SubExprs);
   static RecoveryExpr *CreateEmpty(ASTContext &Ctx, unsigned NumSubExprs);
 
-  ArrayRef<Expr *> subExpressions() {
-    auto *B = getTrailingObjects<Expr *>();
-    return llvm::ArrayRef(B, B + NumExprs);
-  }
+  ArrayRef<Expr *> subExpressions() { return getTrailingObjects(NumExprs); }
 
   ArrayRef<const Expr *> subExpressions() const {
     return const_cast<RecoveryExpr *>(this)->subExpressions();
   }
 
   child_range children() {
-    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects<Expr *>());
+    Stmt **B = reinterpret_cast<Stmt **>(getTrailingObjects());
     return child_range(B, B + NumExprs);
   }
 
@@ -7407,6 +7633,22 @@ inline const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
   DB.AddTaggedVal(reinterpret_cast<uint64_t>(E), DiagnosticsEngine::ak_expr);
   return DB;
 }
+
+/// Walk @p E through parens, implicit casts, unary &/*, array subscripts and
+/// comma operators to find the head of a struct-field access -- typically a
+/// MemberExpr, or an LValueToRValue ImplicitCastExpr over a pointer-typed
+/// field. Returns nullptr for shapes we don't handle (multiple subscripts,
+/// non-comma binary ops, or '&fam' on an array lvalue which designates the
+/// array-as-a-whole rather than an element pointer).
+///
+/// If @p OutArrayIndex / @p OutArrayElementTy are non-null, they receive the
+/// index expression and base array type for forms like '&p->fam[idx]'.
+///
+/// Shared by CGBuiltin's __builtin_*_object_size lowering and the AST
+/// constant evaluator so they recognize the same 'counted_by' access shapes.
+const Expr *findStructFieldAccess(const Expr *E,
+                                  const Expr **OutArrayIndex = nullptr,
+                                  QualType *OutArrayElementTy = nullptr);
 
 } // end namespace clang
 

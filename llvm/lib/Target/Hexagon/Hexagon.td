@@ -25,6 +25,8 @@ include "HexagonDepArch.td"
 
 def ProcTinyCore: SubtargetFeature<"tinycore", "HexagonProcFamily",
       "TinyCore", "Hexagon Tiny Core">;
+def ProcHLX2048B: SubtargetFeature<"hlx-length2048b", "HexagonProcFamily",
+      "HLX2048B", "Hexagon HLX 2048B Instructions">;
 
 // Hexagon ISA Extensions
 def ExtensionZReg: SubtargetFeature<"zreg", "UseZRegOps", "true",
@@ -79,6 +81,26 @@ def ExtensionHVXV79: SubtargetFeature<"hvxv79", "HexagonHVXVersion",
        ExtensionHVXV67, ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
        ExtensionHVXV73, ExtensionHVXV75]>;
 
+def ExtensionHVXV81: SubtargetFeature<"hvxv81", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V81", "Hexagon HVX instructions",
+      [ExtensionHVXV65, ExtensionHVXV66, ExtensionHVXV67,
+       ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
+       ExtensionHVXV73, ExtensionHVXV75, ExtensionHVXV79]>;
+
+def ExtensionHVXV83: SubtargetFeature<"hvxv83", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V83", "Hexagon HVX instructions",
+      [ExtensionHVXV65, ExtensionHVXV66, ExtensionHVXV67,
+       ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
+       ExtensionHVXV73, ExtensionHVXV75, ExtensionHVXV79,
+       ExtensionHVXV81]>;
+
+def ExtensionHVXV85: SubtargetFeature<"hvxv85", "HexagonHVXVersion",
+      "Hexagon::ArchEnum::V85", "Hexagon HVX instructions",
+      [ExtensionHVXV65, ExtensionHVXV66, ExtensionHVXV67,
+       ExtensionHVXV68, ExtensionHVXV69, ExtensionHVXV71,
+       ExtensionHVXV73, ExtensionHVXV75, ExtensionHVXV79,
+       ExtensionHVXV81, ExtensionHVXV83]>;
+
 def ExtensionHVX64B: SubtargetFeature<"hvx-length64b", "UseHVX64BOps",
       "true", "Hexagon HVX 64B instructions", [ExtensionHVX]>;
 def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
@@ -86,6 +108,11 @@ def ExtensionHVX128B: SubtargetFeature<"hvx-length128b", "UseHVX128BOps",
 
 def ExtensionAudio: SubtargetFeature<"audio", "UseAudioOps", "true",
       "Hexagon Audio extension instructions">;
+def ExtensionHMX: SubtargetFeature<"hmx", "UseHMXOps", "true",
+      "Hexagon Matrix eXtension instructions">;
+
+def ExtensionHLX: SubtargetFeature<"hlx", "UseHLXOps", "true",
+      "Hexagon eLementwise eXtension instructions">;
 
 def ExtensionHVXIEEEFP: SubtargetFeature<"hvx-ieee-fp", "UseHVXIEEEFPOps",
       "true", "Hexagon HVX IEEE floating point instructions">;
@@ -110,10 +137,18 @@ def FeatureSmallData: SubtargetFeature<"small-data", "UseSmallData", "true",
       "Allow GP-relative addressing of global variables">;
 def FeatureDuplex: SubtargetFeature<"duplex", "EnableDuplex", "true",
       "Enable generation of duplex instruction">;
-def FeatureUnsafeFP: SubtargetFeature<"unsafe-fp", "UseUnsafeMath", "true",
-      "Use unsafe FP math">;
-def FeatureReservedR19: SubtargetFeature<"reserved-r19", "ReservedR19",
-      "true", "Reserve register R19">;
+foreach i = {6-28} in
+    def FeatureReservedR#i : SubtargetFeature<"reserved-r"#i,
+        "UserReservedRegister[Hexagon::R"#i#"]",
+        "true", "Reserve register R"#i>;
+// Selects which register holds the shadow call stack pointer.  Only the
+// callee-saved registers (R16-R27, see the Hexagon ABI "Register usage across
+// calls") can hold a value across a call, so only those are offered here.  At
+// most one may be selected; if none is, R18 is used (see getSCSPReg()).
+foreach i = {16-27} in
+    def FeatureSCSRegR#i : SubtargetFeature<"scs-reg-r"#i,
+        "SCSPointerRegister[Hexagon::R"#i#"]",
+        "true", "Use register R"#i#" as the shadow call stack pointer">;
 def FeatureNoreturnStackElim: SubtargetFeature<"noreturn-stack-elim",
       "NoreturnStackElim", "true",
       "Eliminate stack allocation in a noreturn function when possible">;
@@ -131,6 +166,7 @@ def UseHVX128B         : Predicate<"HST->useHVX128BOps()">,
                          AssemblerPredicate<(all_of ExtensionHVX128B)>;
 def UseHVX             : Predicate<"HST->useHVXOps()">,
                          AssemblerPredicate<(all_of ExtensionHVXV60)>;
+def NoHVX              : Predicate<"!HST->useHVXOps()">;
 def UseHVXV60          : Predicate<"HST->useHVXV60Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV60)>;
 def UseHVXV62          : Predicate<"HST->useHVXV62Ops()">,
@@ -153,6 +189,12 @@ def UseHVXV75          : Predicate<"HST->useHVXV75Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV75)>;
 def UseHVXV79          : Predicate<"HST->useHVXV79Ops()">,
                          AssemblerPredicate<(all_of ExtensionHVXV79)>;
+def UseHVXV81          : Predicate<"HST->useHVXV81Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV81)>;
+def UseHVXV83          : Predicate<"HST->useHVXV83Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV83)>;
+def UseHVXV85          : Predicate<"HST->useHVXV85Ops()">,
+                         AssemblerPredicate<(all_of ExtensionHVXV85)>;
 def UseAudio           : Predicate<"HST->useAudioOps()">,
                          AssemblerPredicate<(all_of ExtensionAudio)>;
 def UseZReg            : Predicate<"HST->useZRegOps()">,
@@ -162,12 +204,19 @@ def HasPreV65          : Predicate<"HST->hasPreV65()">,
                          AssemblerPredicate<(all_of FeaturePreV65)>;
 def UseHVXIEEEFP       : Predicate<"HST->useHVXIEEEFPOps()">,
                          AssemblerPredicate<(all_of ExtensionHVXIEEEFP)>;
+def NoHLX              : Predicate<"!HST->useHLXOps()">;
+def UseHLX             : Predicate<"HST->useHLXOps()">,
+                         AssemblerPredicate<(all_of ExtensionHLX), "hlx">;
+def UseHLX2048B        : Predicate<"HST->useHLX2048BOps()">,
+                         AssemblerPredicate<(all_of ExtensionHLX),
+                                            "hlx-length2048b">;
 def UseHVXQFloat       : Predicate<"HST->useHVXQFloatOps()">,
                          AssemblerPredicate<(all_of ExtensionHVXQFloat)>;
 def UseHVXFloatingPoint: Predicate<"HST->useHVXFloatingPoint()">;
+def UseHMX             : Predicate<"HST->useHMXOps()">,
+                         AssemblerPredicate<(all_of ExtensionHMX), "hmx">;
 def HasMemNoShuf       : Predicate<"HST->hasMemNoShuf()">,
                          AssemblerPredicate<(all_of FeatureMemNoShuf)>;
-def UseUnsafeMath      : Predicate<"HST->useUnsafeMath()">;
 def NotOptTinyCore     : Predicate<"!HST->isTinyCore() ||"
                                    "MF->getFunction().hasOptSize()"> {
   let RecomputePerFunction = 1;
@@ -176,8 +225,11 @@ def UseSmallData       : Predicate<"HST->useSmallData()">;
 def UseCabac           : Predicate<"HST->useCabac()">,
                          AssemblerPredicate<(any_of FeatureCabac)>;
 
-def Hvx64:  HwMode<"+hvx-length64b", [UseHVX64B]>;
-def Hvx128: HwMode<"+hvx-length128b", [UseHVX128B]>;
+def : HwModePredicateProlog<[{
+  const auto *HST = static_cast<const HexagonSubtarget *>(this);
+}]>;
+def Hvx64:  HwMode<[UseHVX64B]>;
+def Hvx128: HwMode<[UseHVX128B]>;
 
 //===----------------------------------------------------------------------===//
 // Classes used for relation maps.
@@ -197,7 +249,6 @@ class PredNewRel: PredRel;
 class NewValueRel: PredNewRel;
 class AddrModeRel: NewValueRel;
 class PostInc_BaseImm;
-class IntrinsicsRel;
 // ... through here.
 
 //===----------------------------------------------------------------------===//
@@ -379,13 +430,6 @@ def takenBranchPrediction : InstrMapping {
   let ValueCols = [["true"]];
 }
 
-def getRealHWInstr : InstrMapping {
-  let FilterClass = "IntrinsicsRel";
-  let RowFields = ["BaseOpcode"];
-  let ColFields = ["InstrType"];
-  let KeyCol = ["Pseudo"];
-  let ValueCols = [["Pseudo"], ["Real"]];
-}
 //===----------------------------------------------------------------------===//
 // Register File, Instruction Descriptions
 //===----------------------------------------------------------------------===//
@@ -401,9 +445,12 @@ include "HexagonCallingConv.td"
 include "HexagonPseudo.td"
 include "HexagonPatterns.td"
 include "HexagonPatternsHVX.td"
+include "HexagonPatternsHLX.td"
 include "HexagonPatternsV65.td"
 include "HexagonDepMappings.td"
 include "HexagonIntrinsics.td"
+
+defm : RemapAllTargetPseudoPointerOperands<IntRegs>;
 
 def HexagonInstrInfo : InstrInfo;
 
@@ -488,6 +535,23 @@ def : Proc<"hexagonv79", HexagonModelV79,
            ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79,
            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv81", HexagonModelV81,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79, ArchV81,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv83", HexagonModelV83,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79, ArchV81,
+            ArchV83,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
+def : Proc<"hexagonv85", HexagonModelV85,
+           [ArchV5, ArchV55, ArchV60, ArchV62, ArchV65, ArchV66, ArchV67,
+            ArchV68, ArchV69, ArchV71, ArchV73, ArchV75, ArchV79, ArchV81,
+            ArchV83, ArchV85, ProcHLX2048B,
+            FeatureCompound, FeatureDuplex, FeatureMemNoShuf, FeatureMemops,
+            FeatureNVJ, FeatureNVS, FeaturePackets, FeatureSmallData]>;
 
 // Need to update the correct features for tiny core.
 // Disable NewValueJumps since the packetizer is unable to handle a packet with

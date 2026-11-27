@@ -1,4 +1,4 @@
-//===--- TwineLocalCheck.cpp - clang-tidy ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::llvm_check {
 
 void TwineLocalCheck::registerMatchers(MatchFinder *Finder) {
-  auto TwineType =
+  const auto TwineType =
       qualType(hasDeclaration(cxxRecordDecl(hasName("::llvm::Twine"))));
   Finder->addMatcher(
       varDecl(unless(parmVarDecl()), hasType(TwineType)).bind("variable"),
@@ -25,8 +25,8 @@ void TwineLocalCheck::registerMatchers(MatchFinder *Finder) {
 
 void TwineLocalCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *VD = Result.Nodes.getNodeAs<VarDecl>("variable");
-  auto Diag = diag(VD->getLocation(),
-                   "twine variables are prone to use-after-free bugs");
+  const auto Diag = diag(VD->getLocation(),
+                         "twine variables are prone to use-after-free bugs");
 
   // If this VarDecl has an initializer try to fix it.
   if (VD->hasInit()) {
@@ -40,13 +40,13 @@ void TwineLocalCheck::check(const MatchFinder::MatchResult &Result) {
       C = cast<CXXConstructExpr>(C)->getArg(0)->IgnoreParenImpCasts();
     }
 
-    SourceRange TypeRange =
+    const SourceRange TypeRange =
         VD->getTypeSourceInfo()->getTypeLoc().getSourceRange();
 
     // A real Twine, turn it into a std::string.
     if (VD->getType()->getCanonicalTypeUnqualified() ==
         C->getType()->getCanonicalTypeUnqualified()) {
-      SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+      const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
           VD->getInit()->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
       Diag << FixItHint::CreateReplacement(TypeRange, "std::string")
            << FixItHint::CreateInsertion(VD->getInit()->getBeginLoc(), "(")

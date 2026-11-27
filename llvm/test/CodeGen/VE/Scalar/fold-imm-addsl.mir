@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=ve -verify-machineinstrs -run-pass peephole-opt -o - %s | FileCheck %s
+# RUN: llc -mtriple=ve -run-pass peephole-opt -o - %s | FileCheck %s
 
 ---
 ## Ensure fold immediate as simm7 at rhs
@@ -11,11 +11,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: i64, preferred-register: '' }
-  - { id: 1, class: i64, preferred-register: '' }
 liveins:
   - { reg: '$sx0', virtual-reg: '%0' }
 frameInfo:
@@ -35,8 +31,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 callSites:       []
@@ -66,11 +62,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: i64, preferred-register: '' }
-  - { id: 1, class: i64, preferred-register: '' }
 liveins:
   - { reg: '$sx0', virtual-reg: '%0' }
 frameInfo:
@@ -90,8 +82,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 callSites:       []
@@ -121,11 +113,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: i64, preferred-register: '' }
-  - { id: 1, class: i64, preferred-register: '' }
 liveins:
   - { reg: '$sx0', virtual-reg: '%0' }
 frameInfo:
@@ -145,8 +133,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 callSites:       []
@@ -176,11 +164,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: i64, preferred-register: '' }
-  - { id: 1, class: i64, preferred-register: '' }
 liveins:
   - { reg: '$sx0', virtual-reg: '%0' }
 frameInfo:
@@ -200,8 +184,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 callSites:       []

@@ -24,13 +24,11 @@ include_directories(
 add_extra_unittest(ClangDocTests
   BitcodeTest.cpp
   ClangDocTest.cpp
+  ConcurrentStringPoolTest.cpp
   GeneratorTest.cpp
   HTMLGeneratorTest.cpp
-  HTMLMustacheGeneratorTest.cpp
-  MDGeneratorTest.cpp
   MergeTest.cpp
   SerializeTest.cpp
-  YAMLGeneratorTest.cpp
   JSONGeneratorTest.cpp
   )
 

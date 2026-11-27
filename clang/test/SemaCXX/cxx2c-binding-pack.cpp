@@ -1,10 +1,11 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c++26 %s -verify
+// RUN: %clang_cc1 -fsyntax-only -std=c++26 %s -verify -fexperimental-new-constant-interpreter
 
 template <typename T>
 struct type_ { };
 
 template <typename ...T>
-auto sum(T... t) { return (t + ...); }
+constexpr auto sum(T... t) { return (t + ...); }
 
 struct my_struct {
   int a;
@@ -17,7 +18,7 @@ struct fake_tuple {
   int arr[4] = {1, 2, 3, 6};
 
   template <unsigned i>
-  int get() {
+  constexpr int& get() {
     return arr[i];
   }
 };
@@ -81,7 +82,7 @@ void decompose_array() {
   static_assert(sizeof...(b) == 0);
   auto [...c] = arr1;
   static_assert(sizeof...(c) == 1);
-  auto [a1, ...b1, c1] = arr1; // expected-error{{decomposes into 1 element, but 3 names were provided}}
+  auto [a1, ...b1, c1] = arr1; // expected-error{{binds to 1 element, but 3 names were provided}}
 }
 
 // Test case by Younan Zhang.
@@ -159,7 +160,7 @@ void now_i_know_my() {
   static_assert(sizeof...(e) == 2);
   auto [h, i, j, ...k] = C(); // OK, the pack k is empty
   static_assert(sizeof...(e) == 0);
-  auto [l, m, n, o, ...p] = C(); // expected-error{{{decomposes into 3 elements, but 5 names were provided}}}
+  auto [l, m, n, o, ...p] = C(); // expected-error{{{binds to 3 elements, but 5 names were provided}}}
 }
 }  // namespace
 
@@ -224,7 +225,7 @@ namespace GH125165 {
 template <typename = void>
 auto f(auto t) {
     const auto& [...pack] = t;
-    // expected-error@-1 {{cannot decompose non-class, non-array type 'char const'}}
+    // expected-error@-1 {{cannot bind non-class, non-array type 'char const'}}
     (pack, ...);
 };
 
@@ -233,3 +234,70 @@ void g() {
 }
 
 }
+
+namespace constant_interpreter {
+using Arr = int[2];
+struct Triple { int x, y, z = 3; };
+
+constexpr int ref_to_same_obj(auto&& arg) {
+  auto& [...xs] = arg;
+  auto& [...ys] = arg;
+  (..., (xs += 2));
+  return sum(ys...);
+}
+static_assert(ref_to_same_obj(Arr{}) == 4);
+static_assert(ref_to_same_obj(fake_tuple{}) == 20);
+static_assert(ref_to_same_obj(Triple{}) == 9);
+
+constexpr int copy_obj(auto&& arg) {
+  auto& [...xs] = arg;
+  auto [...ys] = arg;
+  (..., (xs += 2));
+  return sum(ys...);
+}
+static_assert(copy_obj(Arr{}) == 0);
+static_assert(copy_obj(fake_tuple{}) == 12);
+static_assert(copy_obj(Triple{}) == 3);
+}
+
+namespace GH214160 {
+struct S {
+  int x, y;
+};
+
+template <typename = void>
+void f() {
+    ([&]{ auto [...tmp] = S{}; tmp; }(), ...);
+  // expected-error@-1 {{expression contains unexpanded parameter pack 'tmp'}}
+  // expected-error@-2 {{pack expansion does not contain any unexpanded parameter packs}}
+}
+
+template void f<void>();
+
+template <typename = void>
+void g() {
+  ([&]{ auto [...tmp] = S{}; ((void)tmp, ...); }(), ...);
+  // expected-error@-1 {{pack expansion does not contain any unexpanded parameter packs}}
+}
+
+template void g<void>();
+
+template <typename = void>
+void h() {
+  auto [...tmp] = S{};
+  ([&]{ (void)tmp; }(), ...);
+}
+
+template void h<void>();
+
+template <typename = void>
+void i() {
+  [] {
+    auto [...tmp] = S{};
+    ([&]{ (void)tmp; }(), ...);
+  }();
+}
+
+template void i<void>();
+
+} // namespace GH214160

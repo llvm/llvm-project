@@ -33,7 +33,6 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -42,23 +41,19 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-hard-clauses"
 
-static cl::opt<unsigned>
-    HardClauseLengthLimit("amdgpu-hard-clause-length-limit",
-                          cl::desc("Maximum number of memory instructions to "
-                                   "place in the same hard clause"),
-                          cl::Hidden);
-
 namespace {
 
 enum HardClauseType {
-  // For GFX10:
+  // For targets where loads, stores and atomics share one clause type per
+  // memory class (see hasMixedLoadStoreClauses):
 
   // Texture, buffer, global or scratch memory instructions.
   HARDCLAUSE_VMEM,
   // Flat (not global or scratch) memory instructions.
   HARDCLAUSE_FLAT,
 
-  // For GFX11:
+  // For targets where each memory class is typed separately for loads,
+  // stores and atomics:
 
   // Texture memory instructions.
   HARDCLAUSE_MIMG_LOAD,
@@ -101,8 +96,11 @@ public:
   const GCNSubtarget *ST = nullptr;
 
   HardClauseType getHardClauseType(const MachineInstr &MI) {
+    // The replay expands to scalar EXEC moves surrounding its memory operation.
+    if (MI.getOpcode() == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay)
+      return HARDCLAUSE_ILLEGAL;
     if (MI.mayLoad() || (MI.mayStore() && ST->shouldClusterStores())) {
-      if (ST->getGeneration() == AMDGPUSubtarget::GFX10) {
+      if (ST->hasMixedLoadStoreClauses()) {
         if ((SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isFLAT(MI)) ||
             SIInstrInfo::isSegmentSpecificFLAT(MI)) {
           if (ST->hasNSAClauseBug()) {
@@ -115,7 +113,6 @@ public:
         if (SIInstrInfo::isFLAT(MI))
           return HARDCLAUSE_FLAT;
       } else {
-        assert(ST->getGeneration() >= AMDGPUSubtarget::GFX11);
         if (SIInstrInfo::isMIMG(MI)) {
           const AMDGPU::MIMGInfo *Info = AMDGPU::getMIMGInfo(MI.getOpcode());
           const AMDGPU::MIMGBaseOpcodeInfo *BaseInfo =
@@ -190,27 +187,56 @@ public:
     return true;
   }
 
+  // \return if scopes are different on gfx1250 and disallowed to be claused.
+  bool isIncompatibleScope(const MachineInstr &MI1, const MachineInstr &MI2,
+                           const SIInstrInfo *SII) const {
+    assert(ST->getGeneration() == AMDGPUSubtarget::GFX12 &&
+           ST->hasGFX1250Insts());
+    int CPol1 = 0, CPol2 = 0;
+    if (const MachineOperand *Op =
+            SII->getNamedOperand(MI1, AMDGPU::OpName::cpol)) {
+      CPol1 = Op->getImm() & AMDGPU::CPol::SCOPE;
+    }
+    if (const MachineOperand *Op =
+            SII->getNamedOperand(MI2, AMDGPU::OpName::cpol)) {
+      CPol2 = Op->getImm() & AMDGPU::CPol::SCOPE;
+    }
+    return CPol1 != CPol2;
+  }
+
   bool run(MachineFunction &MF) {
     ST = &MF.getSubtarget<GCNSubtarget>();
     if (!ST->hasHardClauses())
       return false;
 
-    unsigned MaxClauseLength = MF.getFunction().getFnAttributeAsParsedInteger(
-        "amdgpu-hard-clause-length-limit", 255);
-    if (HardClauseLengthLimit.getNumOccurrences())
-      MaxClauseLength = HardClauseLengthLimit;
+    unsigned MaxClauseLength =
+        ST->getCLOpts().hard_clause_length_limit.value_or(
+            MF.getFunction().getFnAttributeAsParsedInteger(
+                "amdgpu-hard-clause-length-limit", 255));
     MaxClauseLength = std::min(MaxClauseLength, ST->maxHardClauseLength());
     if (MaxClauseLength <= 1)
       return false;
 
     const SIInstrInfo *SII = ST->getInstrInfo();
-    const TargetRegisterInfo *TRI = ST->getRegisterInfo();
 
     bool Changed = false;
     for (auto &MBB : MF) {
       ClauseInfo CI;
+      unsigned ExistingClauseRemaining = 0;
       for (auto &MI : MBB) {
-        HardClauseType Type = getHardClauseType(MI);
+        HardClauseType Type;
+        if (ExistingClauseRemaining) {
+          if (!MI.isMetaInstruction())
+            ExistingClauseRemaining--;
+          Type = HARDCLAUSE_ILLEGAL;
+        } else if (MI.getOpcode() == AMDGPU::S_CLAUSE) {
+          // Respect existing explicit clauses. Re-clausing instructions that
+          // are already covered by an S_CLAUSE can create nested clauses.
+          ExistingClauseRemaining = (MI.getOperand(0).getImm() & 63) + 1;
+          Type = HARDCLAUSE_ILLEGAL;
+        } else {
+          Type = getHardClauseType(MI);
+        }
 
         int64_t Dummy1;
         bool Dummy2;
@@ -218,7 +244,7 @@ public:
         SmallVector<const MachineOperand *, 4> BaseOps;
         if (Type <= LAST_REAL_HARDCLAUSE_TYPE) {
           if (!SII->getMemOperandsWithOffsetWidth(MI, BaseOps, Dummy1, Dummy2,
-                                                  Dummy3, TRI)) {
+                                                  Dummy3)) {
             // We failed to get the base operands, so we'll never clause this
             // instruction with any other, so pretend it's illegal.
             Type = HARDCLAUSE_ILLEGAL;
@@ -229,15 +255,12 @@ public:
             (CI.Length && Type != HARDCLAUSE_INTERNAL &&
              Type != HARDCLAUSE_IGNORE &&
              (Type != CI.Type ||
-              // Note that we lie to shouldClusterMemOps about the size of the
-              // cluster. When shouldClusterMemOps is called from the machine
-              // scheduler it limits the size of the cluster to avoid increasing
-              // register pressure too much, but this pass runs after register
-              // allocation so there is no need for that kind of limit.
-              // We also lie about the Offset and OffsetIsScalable parameters,
-              // as they aren't used in the SIInstrInfo implementation.
-              !SII->shouldClusterMemOps(CI.BaseOps, 0, false, BaseOps, 0, false,
-                                        2, 2)))) {
+              // shouldClusterMemOps() would also apply the pre-RA memory
+              // cluster budget, which must not limit clauses formed after
+              // register allocation.
+              !SII->memOpsHaveSameBase(CI.BaseOps, BaseOps))) ||
+            (CI.Length && ST->hasGFX1250_STRICT() &&
+             isIncompatibleScope(MI, *CI.Last, SII))) {
           // Finish the current clause.
           Changed |= emitClause(CI, SII);
           CI = ClauseInfo();

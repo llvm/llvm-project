@@ -480,6 +480,9 @@ protected:
   bool ShouldMarkAsGlobal = true;
   /// List of the emitted declarations.
   llvm::DenseSet<CanonicalDeclPtr<const Decl>> AlreadyEmittedTargetDecls;
+  /// Implicitly-defined constructors already scanned for target regions; only
+  /// lambdas can hold such regions there and they compute their own parent.
+  llvm::SmallPtrSet<const CXXConstructorDecl *, 8> ScannedImplicitCtors;
   /// List of the global variables with their addresses that should not be
   /// emitted for the target.
   llvm::StringMap<llvm::WeakTrackingVH> EmittedNonTargetVariables;
@@ -522,6 +525,10 @@ protected:
   /// \param S Starting statement.
   /// \param ParentName Name of the function declaration that is being scanned.
   void scanForTargetRegionsFunctions(const Stmt *S, StringRef ParentName);
+
+  /// Scans the mem-initializers and the body of \a Ctor for target regions.
+  void scanConstructorForTargetRegions(const CXXConstructorDecl *Ctor,
+                                       StringRef ParentName);
 
   /// Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
@@ -604,6 +611,9 @@ protected:
   void emitDepobjElements(CodeGenFunction &CGF, QualType &KmpDependInfoTy,
                           LValue PosLVal, const OMPTaskDataTy::DependData &Data,
                           Address DependenciesArray);
+
+  /// Keep track of VTable Declarations so we don't register duplicate VTable.
+  llvm::SmallDenseMap<CXXRecordDecl *, const VarDecl *> VTableDeclMap;
 
 public:
   explicit CGOpenMPRuntime(CodeGenModule &CGM);
@@ -777,11 +787,22 @@ public:
   /// specified, nullptr otherwise.
   /// \param NumThreads The value corresponding to the num_threads clause, if
   /// any, or nullptr.
+  /// \param NumThreadsModifier The modifier of the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Severity The severity corresponding to the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Message The message string corresponding to the num_threads clause,
+  /// if any, or nullptr.
   ///
-  virtual void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
-                                llvm::Function *OutlinedFn,
-                                ArrayRef<llvm::Value *> CapturedVars,
-                                const Expr *IfCond, llvm::Value *NumThreads);
+  virtual void
+  emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
+                   llvm::Function *OutlinedFn,
+                   ArrayRef<llvm::Value *> CapturedVars, const Expr *IfCond,
+                   llvm::Value *NumThreads,
+                   OpenMPNumThreadsClauseModifier NumThreadsModifier =
+                       OMPC_NUMTHREADS_unknown,
+                   OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+                   const Expr *Message = nullptr);
 
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
@@ -1037,13 +1058,28 @@ public:
                                    Address IL, Address LB,
                                    Address UB, Address ST);
 
+  virtual llvm::Value *emitMessageClause(CodeGenFunction &CGF,
+                                         const Expr *Message,
+                                         SourceLocation Loc);
+
+  virtual llvm::Value *emitSeverityClause(OpenMPSeverityClauseKind Severity,
+                                          SourceLocation Loc);
+
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.
+  /// If the modifier 'strict' is given:
+  /// Emits call to void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 num_threads, int severity, const char *message) to
+  /// generate code for 'num_threads' clause with 'strict' modifier.
   /// \param NumThreads An integer value of threads.
-  virtual void emitNumThreadsClause(CodeGenFunction &CGF,
-                                    llvm::Value *NumThreads,
-                                    SourceLocation Loc);
+  virtual void emitNumThreadsClause(
+      CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+      OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
+      OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+      SourceLocation SeverityLoc = SourceLocation(),
+      const Expr *Message = nullptr,
+      SourceLocation MessageLoc = SourceLocation());
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.
@@ -1085,6 +1121,23 @@ public:
   virtual void emitDeclareTargetFunction(const FunctionDecl *FD,
                                          llvm::GlobalValue *GV);
 
+  /// Register VTable to OpenMP offload entry.
+  /// \param VTable VTable of the C++ class.
+  /// \param RD C++ class decl.
+  virtual void registerVTableOffloadEntry(llvm::GlobalVariable *VTable,
+                                          const VarDecl *VD);
+  /// Emit code for registering vtable by scanning through map clause
+  /// in OpenMP target region.
+  /// \param D OpenMP target directive.
+  virtual void registerVTable(const OMPExecutableDirective &D);
+
+  /// Emit and register VTable for the C++ class in OpenMP offload entry.
+  /// \param CXXRecord C++ class decl.
+  /// \param VD Variable decl which holds VTable.
+  virtual void emitAndRegisterVTable(CodeGenModule &CGM,
+                                     CXXRecordDecl *CXXRecord,
+                                     const VarDecl *VD);
+
   /// Creates artificial threadprivate variable with name \p Name and type \p
   /// VarType.
   /// \param VarType Type of the artificial threadprivate variable.
@@ -1095,6 +1148,8 @@ public:
 
   /// Emit flush of the variables specified in 'omp flush' directive.
   /// \param Vars List of variables to flush.
+  /// \param AO Memory ordering of the flush, or NotAtomic for a flush with a
+  /// list (a strong flush).
   virtual void emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *> Vars,
                          SourceLocation Loc, llvm::AtomicOrdering AO);
 
@@ -1351,6 +1406,12 @@ public:
                               const Expr *IfCond,
                               OpenMPDirectiveKind CancelRegion);
 
+  /// Emit the '<kernel>_kernel_environment' global for a target region that
+  /// is compiled for a non-GPU (host-style) offload target, which does not
+  /// go through the GPU device-side runtime init/deinit sequence.
+  void emitHostKernelEnvironment(const OMPExecutableDirective &D,
+                                 CodeGenFunction &CGF);
+
   /// Emit outilined function for 'target' directive.
   /// \param D Directive to emit.
   /// \param ParentName Name of the function that encloses the target region.
@@ -1366,6 +1427,11 @@ public:
                                           llvm::Constant *&OutlinedFnID,
                                           bool IsOffloadEntry,
                                           const RegionCodeGenTy &CodeGen);
+
+  /// Returns the parent name of the target regions in \a FD: its enclosing
+  /// non-closure function if \a FD is a closure, otherwise \a FD itself;
+  /// constructors and destructors use their complete variant.
+  StringRef getTargetRegionParentName(const FunctionDecl *FD) const;
 
   /// Emit the target offloading code associated with \a D. The emitted
   /// code attempts offloading the execution to the device, an the event of
@@ -1656,8 +1722,9 @@ public:
   /// Updates the dependency kind in the specified depobj object.
   /// \param DepobjLVal LValue for the main depobj object.
   /// \param NewDepKind New dependency kind.
-  void emitUpdateClause(CodeGenFunction &CGF, LValue DepobjLVal,
-                        OpenMPDependClauseKind NewDepKind, SourceLocation Loc);
+  void emitUpdateDependObjectsClause(CodeGenFunction &CGF, LValue DepobjLVal,
+                                     OpenMPDependClauseKind NewDepKind,
+                                     SourceLocation Loc);
 
   /// Initializes user defined allocators specified in the uses_allocators
   /// clauses.
@@ -1737,11 +1804,21 @@ public:
   /// specified, nullptr otherwise.
   /// \param NumThreads The value corresponding to the num_threads clause, if
   /// any, or nullptr.
+  /// \param NumThreadsModifier The modifier of the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Severity The severity corresponding to the num_threads clause, if
+  /// any, ignored otherwise.
+  /// \param Message The message string corresponding to the num_threads clause,
+  /// if any, or nullptr.
   ///
   void emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
                         llvm::Function *OutlinedFn,
                         ArrayRef<llvm::Value *> CapturedVars,
-                        const Expr *IfCond, llvm::Value *NumThreads) override;
+                        const Expr *IfCond, llvm::Value *NumThreads,
+                        OpenMPNumThreadsClauseModifier NumThreadsModifier =
+                            OMPC_NUMTHREADS_unknown,
+                        OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+                        const Expr *Message = nullptr) override;
 
   /// Emits a critical region.
   /// \param CriticalName Name of the critical region.
@@ -1911,9 +1988,18 @@ public:
   /// Emits call to void __kmpc_push_num_threads(ident_t *loc, kmp_int32
   /// global_tid, kmp_int32 num_threads) to generate code for 'num_threads'
   /// clause.
+  /// If the modifier 'strict' is given:
+  /// Emits call to void __kmpc_push_num_threads_strict(ident_t *loc, kmp_int32
+  /// global_tid, kmp_int32 num_threads, int severity, const char *message) to
+  /// generate code for 'num_threads' clause with 'strict' modifier.
   /// \param NumThreads An integer value of threads.
-  void emitNumThreadsClause(CodeGenFunction &CGF, llvm::Value *NumThreads,
-                            SourceLocation Loc) override;
+  void emitNumThreadsClause(
+      CodeGenFunction &CGF, llvm::Value *NumThreads, SourceLocation Loc,
+      OpenMPNumThreadsClauseModifier Modifier = OMPC_NUMTHREADS_unknown,
+      OpenMPSeverityClauseKind Severity = OMPC_SEVERITY_fatal,
+      SourceLocation SeverityLoc = SourceLocation(),
+      const Expr *Message = nullptr,
+      SourceLocation MessageLoc = SourceLocation()) override;
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.

@@ -11,7 +11,6 @@
 
 #include "../llvm-libc-macros/link-macros.h"
 #include "size_t.h"
-#include <elf.h>
 #include <stdint.h>
 
 struct dl_phdr_info {

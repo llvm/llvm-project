@@ -90,12 +90,30 @@ define dso_local spir_func void @umulo_v2i64(<2 x i64> %a, <2 x i64> %b, ptr %p)
 ; CHECK: OpIAddCarry %[[StructLong]]
 ; CHECK: OpIAddCarry %[[StructLong]]
 ; CHECK: OpReturn
-define void @foo(i64 %a, i64 %b) {
+define i64 @foo(i64 %a, i64 %b) {
   %r1 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
   %r2 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %a, i64 %b)
   %d1 = extractvalue  { i64, i1 } %r1, 0
   %d2 = extractvalue  { i64, i1 } %r2, 0
-  ret void
+  %sum = add i64 %d1, %d2
+  ret i64 %sum
+}
+
+; CHECK: OpFunction
+; CHECK: OpBranchConditional
+; CHECK: OpLabel
+; CHECK: OpIAddCarry %[[StructChar]]
+; CHECK: OpReturnValue
+define spir_func i8 @non_entry(i8 %a, i8 %b, i1 %c) {
+entry:
+  br i1 %c, label %bb, label %exit
+bb:
+  %r = call { i8, i1 } @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
+  %v = extractvalue { i8, i1 } %r, 0
+  br label %exit
+exit:
+  %p = phi i8 [ 0, %entry ], [ %v, %bb ]
+  ret i8 %p
 }
 
 declare {i8, i1} @llvm.uadd.with.overflow.i8(i8, i8)

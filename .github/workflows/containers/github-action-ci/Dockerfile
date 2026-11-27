@@ -1,8 +1,8 @@
-FROM docker.io/library/ubuntu:24.04 as base
+FROM docker.io/library/ubuntu:26.04 AS base
 ENV LLVM_SYSROOT=/opt/llvm
 
-FROM base as stage1-toolchain
-ENV LLVM_VERSION=20.1.4
+FROM base AS stage1-toolchain
+ENV LLVM_VERSION=23.1.1
 
 RUN apt-get update && \
     apt-get install -y \
@@ -37,7 +37,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
 
 RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution
 
-FROM base as ci-container
+FROM base AS ci-container
 
 COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 
@@ -45,31 +45,39 @@ COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 # Need nodejs for some of the GitHub actions.
 # Need perl-modules for clang analyzer tests.
 # Need git for SPIRV-Tools tests.
+# Need binutils-dev instead of binutils to build the linker LTO plugin.
+# Need libedit, libxml2 and lzma for LLDB.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    binutils \
+    binutils-dev \
     cmake \
     curl \
     git \
+    libedit-dev \
+    liblzma-dev \
     libstdc++-11-dev \
+    libxml2-dev \
     ninja-build \
     nodejs \
     perl-modules \
     python3-psutil \
     sudo \
     # These are needed by the premerge pipeline. Pip is used to install
-    # dependent python packages and ccache is used for build caching. File and
-    # tzdata are used for tests.
+    # dependent python packages. File and tzdata are used for tests.
+    # Having a symlink from python to python3 enables code sharing between
+    # the Linux and Windows pipelines.
     python3-pip \
-    ccache \
     file \
     tzdata \
+    python-is-python3 \
     sccache && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 ENV LLVM_SYSROOT=$LLVM_SYSROOT
 ENV PATH=${LLVM_SYSROOT}/bin:${PATH}
+ENV CC=clang
+ENV CXX=clang++
 
 # Create a new user to avoid test failures related to a lack of expected
 # permissions issues in some tests. Set the user id to 1001 as that is the
@@ -84,9 +92,9 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 USER gha
 WORKDIR /home/gha
 
-FROM ci-container as ci-container-agent
+FROM ci-container AS ci-container-agent
 
-ENV GITHUB_RUNNER_VERSION=2.325.0
+ENV GITHUB_RUNNER_VERSION=2.338.2
 
 RUN mkdir actions-runner && \
     cd actions-runner && \

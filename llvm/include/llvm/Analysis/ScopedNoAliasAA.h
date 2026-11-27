@@ -22,13 +22,20 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
+class FenceInst;
 class Function;
+class LLVMContext;
 class MDNode;
 class MemoryLocation;
 
 /// A simple AA result which uses scoped-noalias metadata to answer queries.
 class ScopedNoAliasAAResult : public AAResultBase {
+  const AnalysisOptions &Opts;
+
 public:
+  LLVM_ABI explicit ScopedNoAliasAAResult(const LLVMContext &C);
+
   /// Handle invalidation events from the new pass manager.
   ///
   /// By definition, this result is stateless and so remains valid.
@@ -38,20 +45,32 @@ public:
   }
 
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
-                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
-                             const Instruction *CtxI);
+                             const MemoryLocation &LocB);
+  LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
+                             const MemoryLocation &LocB, AAQueryInfo &,
+                             const Instruction *);
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2, AAQueryInfo &AAQI);
+  LLVM_ABI ModRefInfo getModRefInfo(const FenceInst *F,
+                                    const MemoryLocation &Loc,
+                                    AAQueryInfo &AAQI);
 
-  LLVM_ABI void
+  LLVM_ABI static void
   collectScopedDomains(const MDNode *NoAlias,
-                       SmallPtrSetImpl<const MDNode *> &Domains) const;
+                       SmallPtrSetImpl<const MDNode *> &Domains,
+                       bool DisjointOnly = false);
 
-private:
-  bool mayAliasInScopes(const MDNode *Scopes, const MDNode *NoAlias) const;
+  LLVM_ABI static bool mayAliasInScopes(const MDNode *Scopes,
+                                        const MDNode *NoAlias);
+
+  /// Return false if two accesses with scope lists \p Scopes1 and \p Scopes2
+  /// are kept apart because they use different scopes of a disjoint-scope
+  /// domain.
+  LLVM_ABI static bool mayAliasInDisjointDomains(const MDNode *Scopes1,
+                                                 const MDNode *Scopes2);
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.

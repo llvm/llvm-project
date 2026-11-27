@@ -9,6 +9,6 @@ vldr s0, foo     @ arm_pcrel_10 / t2_pcrel_10
 vldr d0, foo     @ arm_pcrel_10 / t2_pcrel_10
 vldr.16 s0,foo   @ arm_pcrel_9 / t2_pcrel_9
 
-@ CHECK: :[[#@LINE-4]]:1: error: unsupported relocation type
-@ CHECK: :[[#@LINE-4]]:1: error: unsupported relocation type
-@ CHECK: :[[#@LINE-4]]:1: error: unsupported relocation type
+@ CHECK: :[[#@LINE-4]]:10: error: unsupported relocation type
+@ CHECK: :[[#@LINE-4]]:10: error: unsupported relocation type
+@ CHECK: :[[#@LINE-4]]:12: error: unsupported relocation type

@@ -15,6 +15,7 @@
 #define MLIR_DIALECT_SPIRV_IR_CONTROLFLOW_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -187,7 +188,8 @@ def SPIRV_BranchConditionalOp : SPIRV_Op<"BranchConditional", [
 // -----
 
 def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
-    InFunctionScope, DeclareOpInterfaceMethods<CallOpInterface>]> {
+    InFunctionScope, DeclareOpInterfaceMethods<CallOpInterface>,
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Call a function.";
 
   let description = [{
@@ -235,9 +237,170 @@ def SPIRV_FunctionCallOp : SPIRV_Op<"FunctionCall", [
   let autogenSerialization = 0;
 
   let assemblyFormat = [{
-    $callee `(` $arguments `)` attr-dict `:`
+    $callee `(` $arguments `)`
+      (`arg_attrs` `=` $arg_attrs^)?
+      (`res_attrs` `=` $res_attrs^)?
+      attr-dict `:`
       functional-type($arguments, results)
   }];
+}
+
+// -----
+
+def SPIRV_SwitchOp : SPIRV_Op<"Switch",
+    [AttrSizedOperandSegments, InFunctionScope,
+     DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     Pure, Terminator]> {
+  let summary = [{
+    Multi-way branch to one of the operand label `<id>`.
+  }];
+
+  let description = [{
+    Selector must have a type of OpTypeInt. Selector is compared for equality to
+    the Target literals.
+
+    Default must be the `<id>` of a label. If Selector does not equal any of the
+    Target literals, control flow branches to the Default label `<id>`.
+
+    Target must be alternating scalar integer literals and the `<id>` of a label.
+    If Selector equals a literal, control flow branches to the following label
+    `<id>`. It is invalid for any two literal to be equal to each other. If Selector
+    does not equal any literal, control flow branches to the Default label `<id>`.
+    Each literal is interpreted with the type of Selector: The bit width of
+    Selector’s type is the width of each literal’s type. If this width is not a
+    multiple of 32-bits and the OpTypeInt Signedness is set to 1, the literal values
+    are interpreted as being sign extended.
+
+    If Selector is an OpUndef, behavior is undefined.
+
+    This instruction must be the last instruction in a block.
+
+    #### Example:
+
+    ```mlir
+    spirv.Switch %selector : si32, [
+      default: ^bb1(%a : i32),
+      0: ^bb1(%b : i32),
+      1: ^bb3(%c : i32)
+    ]
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Integer:$selector,
+    Variadic<AnyType>:$defaultOperands,
+    VariadicOfVariadic<AnyType, "case_operand_segments">:$targetOperands,
+    OptionalAttr<AnyIntElementsAttr>:$literals,
+    DenseI32ArrayAttr:$case_operand_segments
+  );
+
+  let results = (outs);
+
+  let successors = (successor AnySuccessor:$defaultTarget,
+                              VariadicSuccessor<AnySuccessor>:$targets);
+
+  let builders = [
+    OpBuilder<(ins "Value":$selector,
+      "Block *":$defaultTarget,
+      "ValueRange":$defaultOperands,
+      CArg<"ArrayRef<APInt>", "{}">:$literals,
+      CArg<"BlockRange", "{}">:$targets,
+      CArg<"ArrayRef<ValueRange>", "{}">:$targetOperands)>,
+    OpBuilder<(ins "Value":$selector,
+      "Block *":$defaultTarget,
+      "ValueRange":$defaultOperands,
+      CArg<"ArrayRef<int32_t>", "{}">:$literals,
+      CArg<"BlockRange", "{}">:$targets,
+      CArg<"ArrayRef<ValueRange>", "{}">:$targetOperands)>,
+    OpBuilder<(ins "Value":$selector,
+      "Block *":$defaultTarget,
+      "ValueRange":$defaultOperands,
+      CArg<"DenseIntElementsAttr", "{}">:$literals,
+      CArg<"BlockRange", "{}">:$targets,
+      CArg<"ArrayRef<ValueRange>", "{}">:$targetOperands)>
+  ];
+
+  let assemblyFormat = [{
+    $selector `:` type($selector) `,` `[` `\n`
+      custom<SwitchOpCases>(ref(type($selector)),$defaultTarget,
+                            $defaultOperands,
+                            type($defaultOperands),
+                            $literals,
+                            $targets,
+                            $targetOperands,
+                            type($targetOperands))
+   `]`
+    attr-dict
+  }];
+
+  let extraClassDeclaration = [{
+    /// Return the operands for the target block at the given index.
+    OperandRange getTargetOperands(unsigned index) {
+      return getTargetOperands()[index];
+    }
+
+    /// Return a mutable range of operands for the target block at the
+    /// given index.
+    MutableOperandRange getTargetOperandsMutable(unsigned index) {
+      return getTargetOperandsMutable()[index];
+    }
+  }];
+
+  let autogenSerialization = 0;
+  let hasVerifier = 1;
+}
+
+
+// -----
+
+def SPIRV_KHRAbortOp : SPIRV_KhrVendorOp<"Abort", [InFunctionScope,
+                                                   Terminator]> {
+  let summary = [{
+    Ceases all further processing in the invocation that executes it.
+  }];
+
+  let description = [{
+    Only instructions executed before OpAbortKHR will have side effects.
+    Other invocations in the same Device scope instance will also be
+    terminated in finite time, though may reach completion.
+
+    Message Type is the type of the data to be written. Message Type must be
+    a concrete type. If the Shader capability is declared, Message Type must
+    have an explicit layout.
+
+    Message is data that is passed to the client API after termination.
+    Message Type must logically match the type of Message, as defined in
+    OpCopyLogical.
+
+    This instruction must be the last instruction in a block.
+
+    <!-- End of AutoGen section -->
+
+    Message Type is always the type of Message.
+
+    #### Example:
+
+    ```mlir
+    spirv.KHR.Abort %msg : i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_KHR_abort]>,
+    Capability<[SPIRV_C_AbortKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_Type:$message
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = "$message attr-dict `:` type($message)";
+
+  let autogenSerialization = 0;
 }
 
 // -----
@@ -280,6 +443,94 @@ def SPIRV_KillOp : SPIRV_Op<"Kill", [Terminator]> {
   let results = (outs);
   let assemblyFormat = "attr-dict";
   let hasVerifier = 0;
+}
+
+// -----
+
+def SPIRV_LifetimeStartOp : SPIRV_Op<"LifetimeStart", [InFunctionScope]> {
+  let summary = "Declare that an object was not defined before this instruction.";
+
+  let description = [{
+    Pointer is a pointer to the object whose lifetime is starting. Its type
+    must be an OpTypePointer with Storage Class Function.
+
+    Size is an unsigned 32-bit integer. Size must be 0 if Pointer is a
+    pointer to a non-void type or the Addresses capability is not declared.
+    If Size is non-zero, it is the number of bytes of memory whose lifetime
+    is starting.
+
+    <!-- End of AutoGen section -->
+
+    Only zero sizes are currently supported because SPIR-V dialect pointers
+    cannot point to void.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    spirv.LifetimeStart %0, 0 : !spirv.ptr<f32, Function>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = "$pointer `,` $size attr-dict `:` type($pointer)";
+}
+
+// -----
+
+def SPIRV_LifetimeStopOp : SPIRV_Op<"LifetimeStop", [InFunctionScope]> {
+  let summary = "Declare that an object is dead after this instruction.";
+
+  let description = [{
+    Pointer is a pointer to the object whose lifetime is ending. Its type
+    must be an OpTypePointer with Storage Class Function.
+
+    Size is an unsigned 32-bit integer. Size must be 0 if Pointer is a
+    pointer to a non-void type or the Addresses capability is not declared.
+    If Size is non-zero, it is the number of bytes of memory whose lifetime
+    is ending.
+
+    <!-- End of AutoGen section -->
+
+    Only zero sizes are currently supported because SPIR-V dialect pointers
+    cannot point to void.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.Variable : !spirv.ptr<f32, Function>
+    spirv.LifetimeStop %0, 0 : !spirv.ptr<f32, Function>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    ConfinedAttr<I32Attr, [IntIsOneOf<[0]>]>:$size
+  );
+
+  let results = (outs);
+
+  let assemblyFormat = "$pointer `,` $size attr-dict `:` type($pointer)";
 }
 
 // -----
@@ -399,7 +650,7 @@ def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [
 // -----
 
 def SPIRV_ReturnOp : SPIRV_Op<"Return", [InFunctionScope, Pure,
-                                     Terminator]> {
+                                         ReturnLike, Terminator]> {
   let summary = "Return with no value from a function with void return type.";
 
   let description = [{
@@ -438,7 +689,7 @@ def SPIRV_UnreachableOp : SPIRV_Op<"Unreachable", [InFunctionScope, Terminator]>
 // -----
 
 def SPIRV_ReturnValueOp : SPIRV_Op<"ReturnValue", [InFunctionScope, Pure,
-                                               Terminator]> {
+                                                   ReturnLike, Terminator]> {
   let summary = "Return a value from a function.";
 
   let description = [{

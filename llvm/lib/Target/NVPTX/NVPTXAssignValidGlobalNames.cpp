@@ -25,42 +25,66 @@
 
 using namespace llvm;
 
-namespace {
-/// NVPTXAssignValidGlobalNames
-class NVPTXAssignValidGlobalNames : public ModulePass {
-public:
-  static char ID;
-  NVPTXAssignValidGlobalNames() : ModulePass(ID) {}
+/// Give \p GV a name that is a valid PTX identifier, returning whether it had
+/// to be renamed. Invalid names are rare, so checking first lets the pass
+/// report accurately that it left the module alone.
+///
+/// Note: this does not create collisions - if setName is asked to set the name
+/// to something that already exists, it adds a proper postfix to avoid
+/// collisions.
+static bool assignValidName(GlobalValue &GV) {
+  std::string ValidName = NVPTX::getValidPTXIdentifier(GV.getName());
+  if (ValidName == GV.getName())
+    return false;
+  GV.setName(ValidName);
+  return true;
+}
 
-  bool runOnModule(Module &M) override;
-};
-} // namespace
-
-char NVPTXAssignValidGlobalNames::ID = 0;
-
-INITIALIZE_PASS(NVPTXAssignValidGlobalNames, "nvptx-assign-valid-global-names",
-                "Assign valid PTX names to globals", false, false)
-
-bool NVPTXAssignValidGlobalNames::runOnModule(Module &M) {
+static bool assignValidGlobalNames(Module &M) {
+  bool Changed = false;
   for (GlobalVariable &GV : M.globals()) {
-    // We are only allowed to rename local symbols.
-    if (GV.hasLocalLinkage()) {
-      // setName doesn't do extra work if the name does not change.
-      // Note: this does not create collisions - if setName is asked to set the
-      // name to something that already exists, it adds a proper postfix to
-      // avoid collisions.
-      GV.setName(NVPTX::getValidPTXIdentifier(GV.getName()));
-    }
+    // We are only allowed to rename symbols that are not externally linked by
+    // name
+    // - local symbols, as all references will be renamed
+    // - .extern .shared symbols, as they're the same regardless of name
+    if (GV.hasLocalLinkage() ||
+        (GV.hasExternalLinkage() &&
+         GV.getAddressSpace() == NVPTX::AddressSpace::Shared))
+      Changed |= assignValidName(GV);
   }
 
   // Do the same for local functions.
   for (Function &F : M.functions())
     if (F.hasLocalLinkage())
-      F.setName(NVPTX::getValidPTXIdentifier(F.getName()));
+      Changed |= assignValidName(F);
 
-  return true;
+  return Changed;
 }
 
-ModulePass *llvm::createNVPTXAssignValidGlobalNamesPass() {
-  return new NVPTXAssignValidGlobalNames();
+namespace {
+/// NVPTXAssignValidGlobalNamesLegacyPass
+class NVPTXAssignValidGlobalNamesLegacyPass : public ModulePass {
+public:
+  static char ID;
+  NVPTXAssignValidGlobalNamesLegacyPass() : ModulePass(ID) {}
+
+  bool runOnModule(Module &M) override { return assignValidGlobalNames(M); }
+};
+} // namespace
+
+char NVPTXAssignValidGlobalNamesLegacyPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXAssignValidGlobalNamesLegacyPass,
+                "nvptx-assign-valid-global-names",
+                "Assign valid PTX names to globals", false, false)
+
+ModulePass *llvm::createNVPTXAssignValidGlobalNamesLegacyPass() {
+  return new NVPTXAssignValidGlobalNamesLegacyPass();
+}
+
+PreservedAnalyses
+NVPTXAssignValidGlobalNamesPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  if (!assignValidGlobalNames(M))
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none().preserveSet<CFGAnalyses>();
 }

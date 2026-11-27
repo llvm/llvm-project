@@ -13,7 +13,7 @@
 // This test ensures that we don't use a non-uglified name 'base' in the
 // implementation of scoped_allocator_adaptor.
 //
-// See https://github.com/llvm/llvm-project/issues/78754.
+// See https://llvm.org/PR78754.
 
 #include <memory>
 #include <scoped_allocator>

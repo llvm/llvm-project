@@ -1,0 +1,244 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc wchar.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "btowc_test",
+    srcs = ["btowc_test.cpp"],
+    deps = [
+        "//libc/hdr:wchar_macros",
+        "//libc/src/wchar:btowc",
+    ],
+)
+
+libc_test(
+    name = "wcpcpy_test",
+    srcs = ["wcpcpy_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcpcpy",
+    ],
+)
+
+libc_test(
+    name = "wcpncpy_test",
+    srcs = ["wcpncpy_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcpncpy",
+    ],
+)
+
+libc_test(
+    name = "wcscat_test",
+    srcs = ["wcscat_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcscat",
+    ],
+)
+
+libc_test(
+    name = "wcschr_test",
+    srcs = ["wcschr_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcschr",
+    ],
+)
+
+libc_test(
+    name = "wcscmp_test",
+    srcs = ["wcscmp_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcscmp",
+    ],
+)
+
+libc_test(
+    name = "wcscpy_test",
+    srcs = ["wcscpy_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcscpy",
+    ],
+)
+
+libc_test(
+    name = "wcscspn_test",
+    srcs = ["wcscspn_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcscspn",
+    ],
+)
+
+libc_test(
+    name = "wcslcat_test",
+    srcs = ["wcslcat_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcslcat",
+    ],
+)
+
+libc_test(
+    name = "wcslcpy_test",
+    srcs = ["wcslcpy_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcslcpy",
+    ],
+)
+
+libc_test(
+    name = "wcslen_test",
+    srcs = ["wcslen_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcslen",
+    ],
+)
+
+libc_test(
+    name = "wcsncat_test",
+    srcs = ["wcsncat_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcsncat",
+    ],
+)
+
+libc_test(
+    name = "wcsncmp_test",
+    srcs = ["wcsncmp_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcsncmp",
+    ],
+)
+
+libc_test(
+    name = "wcsncpy_test",
+    srcs = ["wcsncpy_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcsncpy",
+    ],
+)
+
+libc_test(
+    name = "wcsrchr_test",
+    srcs = ["wcsrchr_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcsrchr",
+    ],
+)
+
+libc_test(
+    name = "wcspbrk_test",
+    srcs = ["wcspbrk_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcspbrk",
+    ],
+)
+
+libc_test(
+    name = "wcsspn_test",
+    srcs = ["wcsspn_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcsspn",
+    ],
+)
+
+libc_test(
+    name = "wcsstr_test",
+    srcs = ["wcsstr_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wcsstr",
+    ],
+)
+
+libc_test(
+    name = "wctob_test",
+    srcs = ["wctob_test.cpp"],
+    deps = [
+        "//libc/hdr:stdio_macros",
+        "//libc/src/wchar:wctob",
+    ],
+)
+
+libc_test(
+    name = "wmemchr_test",
+    srcs = ["wmemchr_test.cpp"],
+    deps = [
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wmemchr",
+    ],
+)
+
+libc_test(
+    name = "wmemcmp_test",
+    srcs = ["wmemcmp_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wmemcmp",
+    ],
+)
+
+libc_test(
+    name = "wmemcpy_test",
+    srcs = ["wmemcpy_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wmemcpy",
+    ],
+)
+
+libc_test(
+    name = "wmemmove_test",
+    srcs = ["wmemmove_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wmemmove",
+    ],
+)
+
+libc_test(
+    name = "wmempcpy_test",
+    srcs = ["wmempcpy_test.cpp"],
+    deps = [
+        "//libc/src/wchar:wmempcpy",
+    ],
+)
+
+libc_test(
+    name = "wmemset_test",
+    srcs = ["wmemset_test.cpp"],
+    deps = [
+        "//libc/hdr/types:size_t",
+        "//libc/hdr/types:wchar_t",
+        "//libc/src/wchar:wmemset",
+    ],
+)

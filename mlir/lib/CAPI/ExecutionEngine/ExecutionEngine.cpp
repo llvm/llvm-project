@@ -15,6 +15,7 @@
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
 
 using namespace mlir;
@@ -22,7 +23,7 @@ using namespace mlir;
 extern "C" MlirExecutionEngine
 mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
                           const MlirStringRef *sharedLibPaths,
-                          bool enableObjectDump) {
+                          bool enableObjectDump, bool enablePIC) {
   static bool initOnce = [] {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmParser(); // needed for inline_asm
@@ -38,12 +39,16 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
 
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
   if (!tmBuilderOrError) {
-    llvm::errs() << "Failed to create a JITTargetMachineBuilder for the host\n";
+    consumeError(tmBuilderOrError.takeError());
     return MlirExecutionEngine{nullptr};
   }
+  if (enablePIC)
+    tmBuilderOrError->setRelocationModel(llvm::Reloc::PIC_);
+  tmBuilderOrError->getOptions().MCOptions.LibraryOptions =
+      &llvm::cl::getCAPILibraryOptions();
   auto tmOrError = tmBuilderOrError->createTargetMachine();
   if (!tmOrError) {
-    llvm::errs() << "Failed to create a TargetMachine for the host\n";
+    consumeError(tmOrError.takeError());
     return MlirExecutionEngine{nullptr};
   }
 
@@ -56,16 +61,22 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   auto transformer = mlir::makeOptimizingTransformer(
       optLevel, /*sizeLevel=*/0, /*targetMachine=*/tmOrError->get());
   ExecutionEngineOptions jitOptions;
+  jitOptions.libraryOptions = &llvm::cl::getCAPILibraryOptions();
   jitOptions.transformer = transformer;
   jitOptions.jitCodeGenOptLevel = static_cast<llvm::CodeGenOptLevel>(optLevel);
   jitOptions.sharedLibPaths = libPaths;
   jitOptions.enableObjectDump = enableObjectDump;
-  auto jitOrError = ExecutionEngine::create(unwrap(op), jitOptions);
+  auto jitOrError = ExecutionEngine::create(unwrap(op), jitOptions,
+                                            std::move(tmOrError.get()));
   if (!jitOrError) {
     consumeError(jitOrError.takeError());
     return MlirExecutionEngine{nullptr};
   }
   return wrap(jitOrError->release());
+}
+
+extern "C" void mlirExecutionEngineInitialize(MlirExecutionEngine jit) {
+  unwrap(jit)->initialize();
 }
 
 extern "C" void mlirExecutionEngineDestroy(MlirExecutionEngine jit) {
@@ -106,9 +117,8 @@ extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,
                                                   void *sym) {
   unwrap(jit)->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
-    symbolMap[interner(unwrap(name))] =
-        { llvm::orc::ExecutorAddr::fromPtr(sym),
-          llvm::JITSymbolFlags::Exported };
+    symbolMap[interner(unwrap(name))] = {llvm::orc::ExecutorAddr::fromPtr(sym),
+                                         llvm::JITSymbolFlags::Exported};
     return symbolMap;
   });
 }

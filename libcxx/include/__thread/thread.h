@@ -11,11 +11,13 @@
 #define _LIBCPP___THREAD_THREAD_H
 
 #include <__assert>
+#include <__charconv/to_chars_integral.h>
 #include <__condition_variable/condition_variable.h>
 #include <__config>
 #include <__exception/terminate.h>
 #include <__functional/hash.h>
 #include <__functional/unary_function.h>
+#include <__fwd/ostream.h>
 #include <__memory/addressof.h>
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
@@ -24,15 +26,17 @@
 #include <__thread/support.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/enable_if.h>
+#include <__type_traits/invoke.h>
+#include <__type_traits/is_constructible.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_pointer.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
+#include <__utility/exchange.h>
 #include <__utility/forward.h>
+#include <cstdint>
+#include <limits>
 #include <tuple>
-
-#if _LIBCPP_HAS_LOCALIZATION
-#  include <locale>
-#  include <sstream>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,6 +46,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if _LIBCPP_HAS_THREADS
 
@@ -142,21 +147,27 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
   //
   // Since various flags in the output stream can affect how the
   // thread id is represented (e.g. numpunct or showbase), we
-  // use a temporary stream instead and just output the thread
-  // id representation as a string.
+  // use `to_chars` directly and output the id as a string.
 
-  basic_ostringstream<_CharT, _Traits> __sstr;
-  __sstr.imbue(locale::classic());
-  __sstr << __id.__id_;
-  return __os << __sstr.str();
+  static_assert(is_pointer<__libcpp_thread_id>::value || is_integral<__libcpp_thread_id>::value);
+
+  using __int_type = __conditional_t<is_pointer<__libcpp_thread_id>::value, uintptr_t, __libcpp_thread_id>;
+
+  static const size_t __buffer_size = numeric_limits<__int_type>::digits10 + 2;
+  char __buffer[__buffer_size];
+  auto __ret =
+      std::__to_chars_integral(__buffer, __buffer + __buffer_size - 1, reinterpret_cast<__int_type>(__id.__id_), 10);
+  _LIBCPP_ASSERT_INTERNAL(__ret.__ec == std::errc(), "to_chars failed!");
+  *__ret.__ptr = '\0';
+  return __os << __buffer;
 }
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
 #  ifndef _LIBCPP_CXX03_LANG
 
 template <class _TSp, class _Fp, class... _Args, size_t... _Indices>
-inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __tuple_indices<_Indices...>) {
-  std::__invoke(std::move(std::get<1>(__t)), std::move(std::get<_Indices>(__t))...);
+inline _LIBCPP_HIDE_FROM_ABI void __thread_execute(tuple<_TSp, _Fp, _Args...>& __t, __index_sequence<_Indices...>) {
+  std::__invoke(std::move(std::get<_Indices + 1>(__t))...);
 }
 
 template <class _Fp>
@@ -164,8 +175,7 @@ _LIBCPP_HIDE_FROM_ABI void* __thread_proxy(void* __vp) {
   // _Fp = tuple< unique_ptr<__thread_struct>, Functor, Args...>
   unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
   __thread_local_data().set_pointer(std::get<0>(*__p.get()).release());
-  typedef typename __make_tuple_indices<tuple_size<_Fp>::value, 2>::type _Index;
-  std::__thread_execute(*__p.get(), _Index());
+  std::__thread_execute(*__p.get(), __make_index_sequence<tuple_size<_Fp>::value - 1>());
   return nullptr;
 }
 
@@ -206,6 +216,10 @@ public:
 #  ifndef _LIBCPP_CXX03_LANG
   template <class _Fp, class... _Args, __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit thread(_Fp&& __f, _Args&&... __args) {
+    static_assert(is_constructible<__decay_t<_Fp>, _Fp>::value, "");
+    static_assert(_And<is_constructible<__decay_t<_Args>, _Args>...>::value, "");
+    static_assert(__is_invocable_v<__decay_t<_Fp>, __decay_t<_Args>...>, "");
+
     typedef unique_ptr<__thread_struct> _TSPtr;
     _TSPtr __tsp(new __thread_struct);
     typedef tuple<_TSPtr, __decay_t<_Fp>, __decay_t<_Args>...> _Gp;
@@ -231,31 +245,31 @@ public:
 #  endif
   ~thread();
 
-  _LIBCPP_HIDE_FROM_ABI thread(thread&& __t) _NOEXCEPT : __t_(__t.__t_) { __t.__t_ = _LIBCPP_NULL_THREAD; }
+  _LIBCPP_HIDE_FROM_ABI thread(thread&& __t) _NOEXCEPT : __t_(std::__exchange(__t.__t_, __libcpp_thread_t())) {}
 
   _LIBCPP_HIDE_FROM_ABI thread& operator=(thread&& __t) _NOEXCEPT {
     if (!__libcpp_thread_isnull(&__t_))
       terminate();
-    __t_     = __t.__t_;
-    __t.__t_ = _LIBCPP_NULL_THREAD;
+    __t_ = std::__exchange(__t.__t_, __libcpp_thread_t());
     return *this;
   }
 
   _LIBCPP_HIDE_FROM_ABI void swap(thread& __t) _NOEXCEPT { std::swap(__t_, __t.__t_); }
 
-  _LIBCPP_HIDE_FROM_ABI bool joinable() const _NOEXCEPT { return !__libcpp_thread_isnull(&__t_); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool joinable() const _NOEXCEPT { return !__libcpp_thread_isnull(&__t_); }
   void join();
   void detach();
-  _LIBCPP_HIDE_FROM_ABI id get_id() const _NOEXCEPT { return __libcpp_thread_get_id(&__t_); }
-  _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() _NOEXCEPT { return __t_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI id get_id() const _NOEXCEPT { return __libcpp_thread_get_id(&__t_); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI native_handle_type native_handle() _NOEXCEPT { return __t_; }
 
-  static unsigned hardware_concurrency() _NOEXCEPT;
+  [[__nodiscard__]] static unsigned hardware_concurrency() _NOEXCEPT;
 };
 
 inline _LIBCPP_HIDE_FROM_ABI void swap(thread& __x, thread& __y) _NOEXCEPT { __x.swap(__y); }
 
 #endif // _LIBCPP_HAS_THREADS
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

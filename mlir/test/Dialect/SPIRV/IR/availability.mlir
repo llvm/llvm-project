@@ -1,4 +1,4 @@
-// RUN: mlir-opt -mlir-disable-threading -test-spirv-op-availability %s | FileCheck %s
+// RUN: mlir-opt --mlir-disable-threading --test-spirv-op-availability %s | FileCheck %s
 
 // CHECK-LABEL: iadd
 func.func @iadd(%arg: i32) -> i32 {
@@ -26,7 +26,7 @@ func.func @subgroup_ballot(%predicate: i1) -> vector<4xi32> {
   // CHECK: max version: v1.6
   // CHECK: extensions: [ ]
   // CHECK: capabilities: [ [GroupNonUniformBallot] ]
-  %0 = spirv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xi32>
+  %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
   return %0: vector<4xi32>
 }
 
@@ -82,6 +82,16 @@ func.func @sdot_vector_4xi16_i64(%a: vector<4xi16>) -> i64 {
   // CHECK: capabilities: [ [DotProduct] [DotProductInputAll] ]
   %r = spirv.SDot %a, %a: vector<4xi16> -> i64
   return %r: i64
+}
+
+// CHECK-LABEL: sdot_vector_2xi8_i32
+func.func @sdot_vector_2xi8_i32(%a: vector<2xi8>) -> i32 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_integer_dot_product] ]
+  // CHECK: capabilities: [ [DotProduct] [DotProductInputAll] ]
+  %r = spirv.SDot %a, %a: vector<2xi8> -> i32
+  return %r: i32
 }
 
 // CHECK-LABEL: sudot_scalar_i32_i32
@@ -235,6 +245,20 @@ func.func @udot_acc_sat_vector_4xi16_i64(%a: vector<4xi16>, %acc: i64) -> i64 {
 }
 
 //===----------------------------------------------------------------------===//
+// Dot Product op with bfloat16
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: dot_vector_4xbf16_bf16
+func.func @dot_vector_4xbf16_bf16(%a: vector<4xbf16>, %b: vector<4xbf16>) -> bf16 {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_KHR_bfloat16] ]
+  // CHECK: capabilities: [ [BFloat16DotProductKHR] ]
+  %r = spirv.Dot %a, %a: vector<4xbf16> -> bf16
+  return %r: bf16
+}
+
+//===----------------------------------------------------------------------===//
 // Primitive ops
 //===----------------------------------------------------------------------===//
 
@@ -277,4 +301,45 @@ func.func @set_mesh_outputs(%0 : i32, %1 : i32) -> () {
   // CHECK: capabilities: [ [MeshShadingEXT] ]
   spirv.EXT.SetMeshOutputs %0, %1 : i32, i32
   spirv.Return
+}
+
+// CHECK-LABEL: bitcast_extract_ext
+func.func @bitcast_extract_ext(%base: i32, %offset: i32) -> f4E2M1FN {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_EXT_ocp_microscaling_types] [SPV_EXT_float8] ]
+  // CHECK: capabilities: [ [BitcastExtractEXT] ]
+  %0 = spirv.BitcastExtractEXT %base, %offset : i32, i32 to f4E2M1FN
+  return %0 : f4E2M1FN
+}
+
+//===----------------------------------------------------------------------===//
+// Replicated Composite Constant op
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: constant_composite_replicate
+func.func @constant_composite_replicate() -> () {
+  // CHECK: min version: v1.0
+  // CHECK: max version: v1.6
+  // CHECK: extensions: [ [SPV_EXT_replicated_composites] ]
+  // CHECK: capabilities: [ [ReplicatedCompositesEXT] ]
+  %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : vector<2xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// GraphARM ops
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: graph_arm
+spirv.ARM.Graph @graph_arm(%arg0: !spirv.arm.tensor<1x16x16x16xi8>) -> !spirv.arm.tensor<1x16x16x16xi8> {
+  // CHECK: spirv.ARM.GraphOutputs min version: v1.0
+  // CHECK: spirv.ARM.GraphOutputs max version: v1.6
+  // CHECK: spirv.ARM.GraphOutputs extensions: [ [SPV_ARM_graph, SPV_ARM_tensors] ]
+  // CHECK: spirv.ARM.GraphOutputs capabilities: [ [GraphARM] ]
+  spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<1x16x16x16xi8>
+// CHECK: spirv.ARM.Graph min version: v1.0
+// CHECK: spirv.ARM.Graph max version: v1.6
+// CHECK: spirv.ARM.Graph extensions: [ [SPV_ARM_graph, SPV_ARM_tensors] ]
+// CHECK: spirv.ARM.Graph capabilities: [ [GraphARM] ]
 }

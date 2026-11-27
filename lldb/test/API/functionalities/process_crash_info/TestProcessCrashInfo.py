@@ -22,8 +22,18 @@ class PlatformProcessCrashInfoTestCase(TestBase):
         self.runCmd("settings clear auto-confirm")
         TestBase.tearDown(self)
 
+    def containsLibmallocError(self, output):
+        for error in [
+            "pointer being freed was not allocated",
+            "not an allocated block",
+            "MTE tag mismatch",
+        ]:
+            if error in output:
+                return True
+        return False
+
     @skipIfAsan  # The test process intentionally double-frees.
-    @skipUnlessDarwin
+    @requireDarwin
     def test_cli(self):
         """Test that `process status --verbose` fetches the extended crash
         information dictionary from the command-line properly."""
@@ -33,17 +43,17 @@ class PlatformProcessCrashInfoTestCase(TestBase):
 
         self.expect("process launch", patterns=["Process .* launched: .*a.out"])
 
-        self.expect(
-            "process status --verbose",
-            patterns=[
-                "Extended Crash Information",
-                "Crash-Info Annotations",
-                "pointer being freed was not allocated",
-            ],
+        result = lldb.SBCommandReturnObject()
+        self.dbg.GetCommandInterpreter().HandleCommand(
+            "process status --verbose", result
         )
 
+        self.assertIn("Extended Crash Information", result.GetOutput())
+        self.assertIn("Crash-Info Annotations", result.GetOutput())
+        self.assertTrue(self.containsLibmallocError(result.GetOutput()))
+
     @skipIfAsan  # The test process intentionally hits a memory bug.
-    @skipUnlessDarwin
+    @requireDarwin
     def test_api(self):
         """Test that lldb can fetch a crashed process' extended crash information
         dictionary from the api properly."""
@@ -67,7 +77,7 @@ class PlatformProcessCrashInfoTestCase(TestBase):
 
         self.assertTrue(crash_info.IsValid())
 
-        self.assertIn("pointer being freed was not allocated", stream.GetData())
+        self.assertTrue(self.containsLibmallocError(stream.GetData()))
 
     # dyld leaves permanent crash_info records when testing on device.
     @skipIfDarwinEmbedded

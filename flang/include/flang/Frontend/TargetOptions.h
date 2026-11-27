@@ -48,11 +48,16 @@ public:
   /// The integer KINDs disabled for this target
   std::vector<int> disabledIntegerKinds;
 
-  /// Extended Altivec ABI on AIX
-  bool EnableAIXExtendedAltivecABI;
-
   /// Print verbose assembly
   bool asmVerbose = false;
+
+  /// Enable splitting of machine functions using profile information.
+  bool SplitMachineFunctions = false;
+
+  /// Atomic control options
+  bool atomicIgnoreDenormalMode = false;
+  bool atomicRemoteMemory = false;
+  bool atomicFineGrainedMemory = false;
 };
 
 } // end namespace Fortran::frontend

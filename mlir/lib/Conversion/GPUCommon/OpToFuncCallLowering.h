@@ -9,9 +9,13 @@
 #define MLIR_CONVERSION_GPUCOMMON_OPTOFUNCCALLLOWERING_H_
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithAttributes.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/Builders.h"
 
 namespace mlir {
@@ -54,14 +58,14 @@ using has_get_fastmath_t = decltype(std::declval<T>().getFastmath());
 template <typename SourceOp>
 struct OpToFuncCallLowering : public ConvertOpToLLVMPattern<SourceOp> {
 public:
-  explicit OpToFuncCallLowering(const LLVMTypeConverter &lowering,
-                                StringRef f32Func, StringRef f64Func,
-                                StringRef f32ApproxFunc, StringRef f16Func,
-                                StringRef i32Func = "",
-                                PatternBenefit benefit = 1)
+  explicit OpToFuncCallLowering(
+      const LLVMTypeConverter &lowering, StringRef f32Func, StringRef f64Func,
+      StringRef f32ApproxFunc, StringRef f16Func, StringRef i32Func = "",
+      PatternBenefit benefit = 1,
+      LLVM::cconv::CConv cconv = LLVM::cconv::CConv::C)
       : ConvertOpToLLVMPattern<SourceOp>(lowering, benefit), f32Func(f32Func),
         f64Func(f64Func), f32ApproxFunc(f32ApproxFunc), f16Func(f16Func),
-        i32Func(i32Func) {}
+        i32Func(i32Func), cconv(cconv) {}
 
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
@@ -72,7 +76,15 @@ public:
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
 
-    bool isResultBool = op->getResultTypes().front().isInteger(1);
+    // This pattern only handles scalar ops. Ops with shaped (e.g. vector)
+    // result types, such as `math.isinf` on `vector<Nxf32>`, are expected to be
+    // scalarized first by `ScalarizeVectorOpLowering`, which is co-registered
+    // for these ops; bail out so that pattern can take over.
+    Type opResultType = op->getResultTypes().front();
+    if (!opResultType.isIntOrIndexOrFloat())
+      return rewriter.notifyMatchFailure(op, "expected scalar result type");
+
+    bool isResultBool = opResultType.isInteger(1);
     if constexpr (!std::is_base_of<OpTrait::SameOperandsAndResultType<SourceOp>,
                                    SourceOp>::value) {
       assert(op->getNumOperands() > 0 &&
@@ -103,7 +115,8 @@ public:
 
     LLVMFuncOp funcOp = appendOrGetFuncOp(funcName, funcType, op);
     auto callOp =
-        rewriter.create<LLVM::CallOp>(op->getLoc(), funcOp, castedOperands);
+        LLVM::CallOp::create(rewriter, op->getLoc(), funcOp, castedOperands);
+    callOp.setCConv(cconv);
 
     if (resultType == adaptor.getOperands().front().getType()) {
       rewriter.replaceOp(op, {callOp.getResult()});
@@ -115,19 +128,20 @@ public:
     // there is no guarantee of a specific value being used to indicate true,
     // compare for inequality with zero (rather than truncate or shift).
     if (isResultBool) {
-      Value zero = rewriter.create<LLVM::ConstantOp>(
-          op->getLoc(), rewriter.getIntegerType(32),
-          rewriter.getI32IntegerAttr(0));
-      Value truncated = rewriter.create<LLVM::ICmpOp>(
-          op->getLoc(), LLVM::ICmpPredicate::ne, callOp.getResult(), zero);
+      Value zero = LLVM::ConstantOp::create(rewriter, op->getLoc(),
+                                            rewriter.getIntegerType(32),
+                                            rewriter.getI32IntegerAttr(0));
+      Value truncated =
+          LLVM::ICmpOp::create(rewriter, op->getLoc(), LLVM::ICmpPredicate::ne,
+                               callOp.getResult(), zero);
       rewriter.replaceOp(op, {truncated});
       return success();
     }
 
     assert(callOp.getResult().getType().isF32() &&
            "only f32 types are supposed to be truncated back");
-    Value truncated = rewriter.create<LLVM::FPTruncOp>(
-        op->getLoc(), adaptor.getOperands().front().getType(),
+    Value truncated = LLVM::FPTruncOp::create(
+        rewriter, op->getLoc(), adaptor.getOperands().front().getType(),
         callOp.getResult());
     rewriter.replaceOp(op, {truncated});
     return success();
@@ -142,8 +156,9 @@ public:
     if (!f16Func.empty() && isa<Float16Type>(type))
       return operand;
 
-    return rewriter.create<LLVM::FPExtOp>(
-        operand.getLoc(), Float32Type::get(rewriter.getContext()), operand);
+    return LLVM::FPExtOp::create(rewriter, operand.getLoc(),
+                                 Float32Type::get(rewriter.getContext()),
+                                 operand);
   }
 
   Type getFunctionType(Type resultType, ValueRange operands) const {
@@ -164,7 +179,14 @@ public:
     auto parentFunc = op->getParentOfType<FunctionOpInterface>();
     assert(parentFunc && "expected there to be a parent function");
     OpBuilder b(parentFunc);
-    return b.create<LLVMFuncOp>(op->getLoc(), funcName, funcType);
+
+    // Create a valid global location removing any metadata attached to the
+    // location as debug info metadata inside of a function cannot be used
+    // outside of that function.
+    auto globalloc = op->getLoc()->findInstanceOfOrUnknown<FileLineColLoc>();
+    auto newFuncOp = LLVMFuncOp::create(b, globalloc, funcName, funcType);
+    newFuncOp.setCConv(cconv);
+    return newFuncOp;
   }
 
   StringRef getFunctionName(Type type, SourceOp op) const {
@@ -195,6 +217,7 @@ public:
   const std::string f32ApproxFunc;
   const std::string f16Func;
   const std::string i32Func;
+  const LLVM::cconv::CConv cconv;
 };
 
 } // namespace mlir

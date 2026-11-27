@@ -14,15 +14,15 @@ define void @Rf_GReset() {
 ; CHECK-LABEL: @Rf_GReset(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr @d, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> splat (double -0.000000e+00), [[TMP1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr inttoptr (i64 115 to ptr), @Rf_gpptr
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN:%.*]], label [[IF_END7:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], undef
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], undef
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN6:%.*]], label [[IF_END7]]
 ; CHECK:       if.then6:
@@ -57,15 +57,15 @@ define void @Rf_GReset_unary_fneg() {
 ; CHECK-LABEL: @Rf_GReset_unary_fneg(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr @d, align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> <double poison, double undef>, double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = fneg <2 x double> [[TMP1]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq ptr inttoptr (i64 115 to ptr), @Rf_gpptr
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF_THEN:%.*]], label [[IF_END7:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], undef
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], undef
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN6:%.*]], label [[IF_END7]]
 ; CHECK:       if.then6:

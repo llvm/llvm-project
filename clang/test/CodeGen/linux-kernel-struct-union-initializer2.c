@@ -74,7 +74,7 @@ void test2(long long y) {
 
 // Test non-const initializer for struct with padding and bit fields.
 // CHECK-LABEL: define dso_local void @test3(
-// CHECK-SAME: i8 noundef zeroext [[B:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S2:%.*]], align 4
@@ -147,7 +147,7 @@ void test5(int a, int b) {
 }
 
 // CHECK-LABEL: define dso_local void @test6(
-// CHECK-SAME: i8 noundef signext [[X:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i8 noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i8, align 1
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S5:%.*]], align 1
@@ -174,8 +174,7 @@ void test6(char x) {
 }
 //.
 // CHECK: attributes #[[ATTR0]] = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
-// CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
+// CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 //.
-// CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+// CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
 //.

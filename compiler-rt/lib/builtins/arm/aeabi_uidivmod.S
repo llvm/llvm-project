@@ -56,9 +56,9 @@ LOCAL_LABEL(case_denom_larger):
         add     sp, sp, #4
 #if defined(__ARM_FEATURE_PAC_DEFAULT)
         pop     { r12, lr }
-        bxaut   r12, lr, sp
+        PAC_RETURN
 #else
-        pop     { pc }
+        POP_PC
 #endif
 #endif
 END_COMPILERRT_FUNCTION(__aeabi_uidivmod)

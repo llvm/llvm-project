@@ -1,9 +1,5 @@
-import os
+from clang.cindex import CursorKind, SourceLocation, SourceRange, TokenKind
 
-from clang.cindex import Config, CursorKind, SourceLocation, SourceRange, TokenKind
-
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import unittest
 
@@ -53,3 +49,9 @@ class TestTokens(unittest.TestCase):
 
         self.assertEqual(extent.start.offset, 4)
         self.assertEqual(extent.end.offset, 7)
+
+    def test_null_cursor(self):
+        """Ensure that the cursor property converts null cursors to None"""
+        tu = get_tu("int i = 5;")
+        tokens = list(tu.get_tokens(extent=tu.cursor.extent))
+        self.assertEqual(tokens[-1].cursor, None)

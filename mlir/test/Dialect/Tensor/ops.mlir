@@ -312,14 +312,33 @@ func.func @pad_to_static_size(%arg0: tensor<?x?xf32>, %ub0: index, %ub1: index,
 
 // -----
 
+func.func @pad_positive_constant(%arg0: tensor<4xf32>, %pad_value: f32) -> tensor<?xf32> {
+  %c2 = arith.constant 2 : index
+  %0 = tensor.pad %arg0 low[%c2] high[0] {
+    ^bb0(%arg1: index):
+      tensor.yield %pad_value : f32
+    } : tensor<4xf32> to tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+// CHECK-LABEL: func @pad_positive_constant
+//       CHECK:   tensor.pad
+//  CHECK-SAME:     low[%{{.*}}]
+//       CHECK:    : tensor<4xf32> to tensor<?xf32>
+
+// -----
+
 // CHECK-LABEL: func @test_splat_op
-// CHECK-SAME: [[S:%arg[0-9]+]]: f32
-func.func @test_splat_op(%s : f32) {
-  // CHECK: tensor.splat [[S]] : tensor<8xf32>
+// CHECK-SAME: %[[S:.*]]: f32
+// CHECK-SAME: %[[P:.*]]: !llvm.ptr
+func.func @test_splat_op(%s : f32, %p : !llvm.ptr) {
+  // CHECK: tensor.splat %[[S]] : tensor<8xf32>
   %v = tensor.splat %s : tensor<8xf32>
 
-  // CHECK: tensor.splat [[S]] : tensor<4xf32>
+  // CHECK: tensor.splat %[[S]] : tensor<4xf32>
   %u = "tensor.splat"(%s) : (f32) -> tensor<4xf32>
+
+  // CHECK: tensor.splat %[[P]] : tensor<8x!llvm.ptr>
+  %w = tensor.splat %p : tensor<8x!llvm.ptr>
   return
 }
 

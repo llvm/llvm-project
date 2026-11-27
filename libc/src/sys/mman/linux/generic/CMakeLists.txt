@@ -1,0 +1,9 @@
+add_header_library(
+  pkey_common
+  HDRS
+    pkey_common.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.__support.common
+    libc.src.__support.error_or
+)

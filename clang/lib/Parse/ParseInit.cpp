@@ -516,6 +516,25 @@ ExprResult Parser::ParseBraceInitializer() {
   return ExprError(); // an error occurred.
 }
 
+ExprResult Parser::ParseExpansionInitList() {
+  BalancedDelimiterTracker T(*this, tok::l_brace);
+  T.consumeOpen();
+
+  ExprVector InitExprs;
+
+  if (!Tok.is(tok::r_brace) &&
+      ParseExpressionList(InitExprs, /*ExpressionStarts=*/{},
+                          /*FailImmediatelyOnInvalidExpr=*/false,
+                          /*ParsingExpansionStmtInitList=*/true)) {
+    T.consumeClose();
+    return ExprError();
+  }
+
+  T.consumeClose();
+  return Actions.ActOnCXXExpansionInitList(InitExprs, T.getOpenLocation(),
+                                           T.getCloseLocation());
+}
+
 bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
                                                     bool &InitExprsOk) {
   bool trailingComma = false;
@@ -580,4 +599,27 @@ bool Parser::ParseMicrosoftIfExistsBraceInitializer(ExprVector &InitExprs,
   Braces.consumeClose();
 
   return !trailingComma;
+}
+
+ExprResult Parser::ParseInitializer(Decl *DeclForInitializer) {
+  // Set DeclForInitializer for file-scope variables.
+  // For constexpr references, set it to suppress runtime warnings.
+  // For non-constexpr references, don't set it to avoid evaluation issues
+  // with self-referencing initializers. Local variables (including local
+  // constexpr) should emit runtime warnings.
+  if (DeclForInitializer && !Actions.ExprEvalContexts.empty()) {
+    if (auto *VD = dyn_cast<VarDecl>(DeclForInitializer);
+        VD && VD->isFileVarDecl() &&
+        (!VD->getType()->isReferenceType() || VD->isConstexpr()))
+      Actions.ExprEvalContexts.back().DeclForInitializer = VD;
+  }
+
+  ExprResult init;
+  if (Tok.isNot(tok::l_brace)) {
+    init = ParseAssignmentExpression();
+  } else {
+    init = ParseBraceInitializer();
+  }
+
+  return init;
 }

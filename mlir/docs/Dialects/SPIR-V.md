@@ -242,6 +242,73 @@ decorated for memory layouting purpose (e.g., `ArrayStride`, `Offset`, etc.);
 scalar/vector types are required to be uniqued in SPIR-V. Therefore, we can just
 encode them directly in the dialect-specific type.
 
+### Function parameter and return decorations
+
+Decorations on `OpFunctionParameter` are represented by argument attributes on
+`spirv.func`. In addition to `spirv.decoration`, function parameters support:
+
+* `spirv.alignment`: a signless `i32` integer attribute holding the unsigned
+  32-bit `Alignment` literal. The parameter must have a SPIR-V pointer type.
+  Values with the high bit set print using a negative spelling without changing
+  the bit pattern.
+* `spirv.func_param_attr`: a non-empty array of
+  `#spirv.function_parameter_attribute<...>` enum attributes. Each element
+  represents one `FuncParamAttr` decoration. The supported core values are `Zext`,
+  `Sext`, `ByVal`, `Sret`, `NoAlias`, `NoCapture`, `NoWrite`, and `NoReadWrite`.
+
+For example, a pointer parameter can carry alignment, aliasing, and access
+information together:
+
+```mlir
+spirv.func @read(%p: !spirv.ptr<f32, CrossWorkgroup> {
+  spirv.alignment = 16 : i32,
+  spirv.decoration = #spirv.decoration<Restrict>,
+  spirv.func_param_attr = [#spirv.function_parameter_attribute<NoCapture>,
+                           #spirv.function_parameter_attribute<NoWrite>]
+}) "None" {
+  spirv.Return
+}
+```
+
+Serialization emits a separate `OpDecorate` for each function parameter
+attribute and preserves their order. Deserialization rejects unsupported
+parameter decorations, even when supported decorations are also present.
+
+`FuncParamAttr` on an `OpFunction` result id describes its return value. It is
+represented by a `spirv.func_param_attr` result attribute on `spirv.func`, stored
+in `res_attrs`, and serialized as a decoration of the function id. Only `Zext`
+and `Sext` are supported on results; both require an integer result. For example:
+
+```mlir
+spirv.func @extend(%v: i8) ->
+    (i8 {spirv.func_param_attr = [#spirv.function_parameter_attribute<Zext>]}) "None" {
+  spirv.ReturnValue %v : i8
+}
+```
+
+Parameter and result decorations are preserved on both function definitions and
+declarations. A `FuncParamAttr` decoration on a void function or a target other
+than `OpFunctionParameter` or `OpFunction` is diagnosed.
+
+The [SPIR-V specification, section 3.2.18](
+https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_a_id_function_parameter_attribute_a_function_parameter_attribute)
+explicitly states: "Only one of Zext and Sext can be used to decorate the same
+&lt;id&gt;" and "no attribute may be used multiple times". The verifier therefore
+rejects duplicate attributes and the combination of `Zext` with `Sext` on either
+a parameter or a result. The dialect requires integer parameters for `Zext` and
+`Sext`. The other supported attributes require pointer parameters, cannot appear
+on results, and `Sret` additionally requires the first parameter.
+
+`Alignment` is also preserved on module-scope and function-local variables, using
+an unprefixed `alignment` attribute on `spirv.GlobalVariable` and `spirv.Variable`:
+
+```mlir
+spirv.GlobalVariable @buffer {alignment = 16 : i32} : !spirv.ptr<f32, CrossWorkgroup>
+
+// Inside a function:
+%local = spirv.Variable {alignment = 16 : i32} : !spirv.ptr<f32, Function>
+```
+
 ## Types
 
 Theoretically we can define all SPIR-V types using MLIR extensible type system,
@@ -566,7 +633,7 @@ merge block.
 For example, for the given function
 
 ```c++
-void loop(bool cond) {
+void if(bool cond) {
   int x = 0;
   if (cond) {
     x = 1;
@@ -595,6 +662,62 @@ func.func @selection(%cond: i1) -> () {
 
   ^else:
     spirv.Store "Function" %x, %two : i32
+    spirv.Branch ^merge
+
+  ^merge:
+    spirv.mlir.merge
+  }
+
+  // ...
+}
+```
+
+Similarly, for the give function with a `switch` statement
+
+```c++
+void switch(int selector) {
+  int x = 0;
+  switch (selector) {
+  case 0:
+    x = 2;
+    break;
+  case 1:
+    x = 3;
+    break;
+  default:
+    x = 1;
+    break;
+  }
+  // ...
+}
+```
+
+It will be represented as
+
+```mlir
+func.func @selection(%selector: i32) -> () {
+  %zero = spirv.Constant 0: i32
+  %one = spirv.Constant 1: i32
+  %two = spirv.Constant 2: i32
+  %three = spirv.Constant 3: i32
+  %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
+
+  spirv.mlir.selection {
+    spirv.Switch %selector : i32, [
+      default: ^default,
+      0: ^case0,
+      1: ^case1
+    ]
+  ^default:
+    spirv.Store "Function" %var, %one : i32
+    spirv.Branch ^merge
+
+  ^case0:
+    spirv.Store "Function" %var, %two : i32
+    spirv.Branch ^merge
+
+  ^case1:
+    spirv.Store "Function" %var, %three : i32
     spirv.Branch ^merge
 
   ^merge:
@@ -1034,8 +1157,16 @@ Similarly, a few transformations are performed during deserialization:
     capabilities, extended instruction sets, etc.) will be placed as attributes
     on `spirv.module`.
 *   `OpType*` instructions will be converted into proper `mlir::Type`s.
-*   `OpConstant*` instructions are materialized as `spirv.Constant` at each use
-    site.
+*   `OpConstant*` and `OpUndef` instructions are materialized as `spirv.Constant`
+    and `spirv.Undef` once in each block that uses them.
+*   `OpConstantNull` instructions for arrays, structs, and pointers become
+    `spirv.Constant` ops with a `#spirv.null` value. These values serialize back
+    into `OpConstantNull` instructions.
+*   `OpConstantComposite` vectors, arrays, and structs with `OpUndef`
+    constituents are materialized as `spirv.CompositeConstruct` once in each
+    block that uses them, since `spirv.Constant` cannot hold undefined values.
+    Such composites are not supported as variable initializers or
+    `OpSpecConstantOp` operands.
 *   `OpVariable` instructions will be converted to `spirv.GlobalVariable` ops if
     in module-level; otherwise they will be converted into `spirv.Variable` ops.
 *   Every use of a module-level `OpVariable` instruction will materialize a
@@ -1375,7 +1506,7 @@ the proper file in test/Dialect/SPIRV/.
 
 The generated op will automatically gain the logic for (de)serialization.
 However, tests still need to be coupled with the change to make sure no
-surprises. Serialization tests live in test/Dialect/SPIRV/Serialization.
+surprises (see [Add a new test](#add-a-new-test) below).
 
 ### Add a new enum
 
@@ -1415,6 +1546,40 @@ conversion][MlirDialectConversionSignatureConversion] might be needed as well.
 **Note**: The current validation rules of `spirv.module` require that all
 operations contained within its region are valid operations in the SPIR-V
 dialect.
+
+### Add a new test
+
+Currently the SPIR-V dialect has three types of tests that should be added or
+updated accordingly:
+
+1.  **Dialect tests** - Those tests check different aspects of the op in isolation.
+    They should include both positive and negative case, and exercise the verifier,
+    parser and printer. Dialect tests do not have to form a valid SPIR-V code and
+    should be kept as simple as possible. They are run with `mlir-opt`; and are
+    also used to test transformations.
+
+2.  **Target tests** - Those tests are designed to exercise serialization and
+    deserialization, so each module should be a valid SPIR-V module. (De)serialization
+    is tested using the `mlir-translate --test-spirv-roundtrip` option.
+
+    To ensure that the SPIR-V MLIR forms and serializes into a valid SPIR-V, the
+    `spriv-val` tool should be run on a serialized binary (`--serialize-spirv`).
+    This can be automated by adding a conditional validation section to the test:
+
+    ```
+    // RUN: %if spirv-tools %{ rm -rf %t %}
+    // RUN: %if spirv-tools %{ mkdir %t %}
+    // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
+    // RUN: %if spirv-tools %{ spirv-val %t %}
+    ```
+
+    This sequence serializes and dumps each MLIR SPIR-V module into a separate
+    SPIR-V binary (MLIR allows multiple modules per files, however the SPIR-V
+    spec restricts each binary to a single module), and then runs `spirv-val`
+    on each of the file.
+
+3.  **Integration tests** - Those tests execute the MLIR code using the `mlir-runner`
+    to verify its functional correctness.
 
 ## Operation definitions
 

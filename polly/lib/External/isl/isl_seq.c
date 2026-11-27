@@ -46,6 +46,17 @@ void isl_seq_cpy(isl_int *dst, isl_int *src, unsigned len)
 		isl_int_set(dst[i], src[i]);
 }
 
+/* Subtract the sequence "src" from the sequence "dst",
+ * both of length "len".
+ */
+void isl_seq_sub(isl_int *dst, isl_int *src, unsigned len)
+{
+	int i;
+
+	for (i = 0; i < len; ++i)
+		isl_int_sub(dst[i], dst[i], src[i]);
+}
+
 void isl_seq_submul(isl_int *dst, isl_int f, isl_int *src, unsigned len)
 {
 	int i;
@@ -211,6 +222,14 @@ int isl_seq_last_non_zero(isl_int *p, unsigned len)
 		if (!isl_int_is_zero(p[i]))
 			return i;
 	return -1;
+}
+
+/* Does the sequence of length "len" starting at "p"
+ * contain any non-zero element?
+ */
+int isl_seq_any_non_zero(isl_int *p, unsigned len)
+{
+	return isl_seq_first_non_zero(p, len) != -1;
 }
 
 void isl_seq_abs_max(isl_int *p, unsigned len, isl_int *max)

@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// member virtual function and anything other than null-pointer-constant.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/compare-pointer-to-member-virtual-function.html
 class ComparePointerToMemberVirtualFunctionCheck : public ClangTidyCheck {
 public:
   ComparePointerToMemberVirtualFunctionCheck(StringRef Name,

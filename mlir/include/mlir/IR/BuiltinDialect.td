@@ -21,18 +21,17 @@ def Builtin_Dialect : Dialect {
     "A dialect containing the builtin Attributes, Operations, and Types";
   let name = "builtin";
   let cppNamespace = "::mlir";
+  let useDefaultOperationRegistration = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 0;
   let extraClassDeclaration = [{
-  private:
-    // Register the builtin Attributes.
-    void registerAttributes();
-    // Register the builtin Location Attributes.
-    void registerLocationAttributes();
-    // Register the builtin Types.
-    void registerTypes();
+    std::optional<BuiltinDialectVersion> getVersion() const { return version; }
+    void setVersion(std::optional<BuiltinDialectVersion> v) { version = v; }
 
-  public:
+  private:
+    std::optional<BuiltinDialectVersion> version;
   }];
 
 }

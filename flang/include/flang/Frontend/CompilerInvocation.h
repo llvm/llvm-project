@@ -1,4 +1,4 @@
-//===- CompilerInvocation.h - Compiler Invocation Helper Data ---*- C -*-===//
+//===- CompilerInvocation.h - Compiler Invocation Helper Data ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,12 +24,9 @@
 #include "mlir/Support/Timing.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 #include <memory>
-
-namespace llvm {
-class TargetMachine;
-} // namespace llvm
 
 namespace Fortran::frontend {
 
@@ -102,8 +99,6 @@ class CompilerInvocation : public CompilerInvocationBase {
   bool debugModuleDir = false;
   bool hermeticModuleFileOutput = false;
 
-  bool warnAsErr = false;
-
   // Executable name
   const char *argv0;
 
@@ -116,6 +111,9 @@ class CompilerInvocation : public CompilerInvocationBase {
   // Fortran Dialect options
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;
 
+  // Fortran Error options
+  size_t maxErrors = 0;
+  bool warnAsErr = false;
   // Fortran Warning options
   bool enableConformanceChecks = false;
   bool enableUsageChecks = false;
@@ -174,7 +172,7 @@ public:
   /// Creates and configures semantics context based on the compilation flags.
   std::unique_ptr<Fortran::semantics::SemanticsContext>
   getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources,
-                  const llvm::TargetMachine &);
+                  llvm::StringRef targetFeatures);
 
   std::string &getModuleDir() { return moduleDir; }
   const std::string &getModuleDir() const { return moduleDir; }
@@ -189,6 +187,8 @@ public:
   const bool &getHermeticModuleFileOutput() const {
     return hermeticModuleFileOutput;
   }
+  size_t &getMaxErrors() { return maxErrors; }
+  const size_t &getMaxErrors() const { return maxErrors; }
 
   bool &getWarnAsErr() { return warnAsErr; }
   const bool &getWarnAsErr() const { return warnAsErr; }
@@ -261,6 +261,7 @@ public:
     hermeticModuleFileOutput = flag;
   }
 
+  void setMaxErrors(size_t maxErrors) { this->maxErrors = maxErrors; }
   void setWarnAsErr(bool flag) { warnAsErr = flag; }
 
   void setUseAnalyzedObjectsForUnparse(bool flag) {

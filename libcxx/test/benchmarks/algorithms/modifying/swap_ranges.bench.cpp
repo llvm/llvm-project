@@ -17,19 +17,18 @@
 #include <vector>
 
 #include "benchmark/benchmark.h"
+#include "test_macros.h"
 #include "../../GenerateInput.h"
 
 int main(int argc, char** argv) {
-  auto std_swap_ranges = [](auto first1, auto last1, auto first2, auto) {
-    return std::swap_ranges(first1, last1, first2);
-  };
+  auto std_swap_ranges = [](auto first1, auto last1, auto first2) { return std::swap_ranges(first1, last1, first2); };
 
-  // {std,ranges}::swap_ranges(normal container)
+  // std::swap_ranges(normal container)
   {
     auto bm = []<class Container>(std::string name, auto swap_ranges) {
       benchmark::RegisterBenchmark(
           name,
-          [swap_ranges](auto& st) {
+          [swap_ranges](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size = st.range(0);
             using ValueType        = typename Container::value_type;
             Container c1, c2;
@@ -39,7 +38,7 @@ int main(int argc, char** argv) {
             for ([[maybe_unused]] auto _ : st) {
               benchmark::DoNotOptimize(c1);
               benchmark::DoNotOptimize(c2);
-              auto result = swap_ranges(c1.begin(), c1.end(), c2.begin(), c2.end());
+              auto result = swap_ranges(c1.begin(), c1.end(), c2.begin());
               benchmark::DoNotOptimize(result);
               benchmark::DoNotOptimize(c1);
               benchmark::DoNotOptimize(c2);
@@ -53,9 +52,36 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::swap_ranges(vector<int>)", std_swap_ranges);
     bm.operator()<std::deque<int>>("std::swap_ranges(deque<int>)", std_swap_ranges);
     bm.operator()<std::list<int>>("std::swap_ranges(list<int>)", std_swap_ranges);
-    bm.operator()<std::vector<int>>("rng::swap_ranges(vector<int>)", std::ranges::swap_ranges);
-    bm.operator()<std::deque<int>>("rng::swap_ranges(deque<int>)", std::ranges::swap_ranges);
-    bm.operator()<std::list<int>>("rng::swap_ranges(list<int>)", std::ranges::swap_ranges);
+  }
+
+  // std::swap_ranges(vector<bool>)
+  {
+    auto bm = []<bool Aligned>(std::string name, auto swap_ranges) {
+      benchmark::RegisterBenchmark(
+          name,
+          [swap_ranges](auto& st) TEST_ALIGN_BENCHMARK {
+            std::size_t const size = st.range(0);
+            std::vector<bool> c1(size, true);
+            std::vector<bool> c2(Aligned ? size : size + 4, false);
+            auto first1 = c1.begin();
+            auto last1  = c1.end();
+            auto first2 = Aligned ? c2.begin() : c2.begin() + 4;
+
+            for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(c1);
+              benchmark::DoNotOptimize(c2);
+              auto result = swap_ranges(first1, last1, first2);
+              benchmark::DoNotOptimize(result);
+            }
+          })
+          ->Arg(32)
+          ->Arg(50) // non power-of-two
+          ->Arg(1024)
+          ->Arg(8192)
+          ->Arg(1 << 20);
+    };
+    bm.operator()<true>("std::swap_ranges(vector<bool>) (aligned)", std_swap_ranges);
+    bm.operator()<false>("std::swap_ranges(vector<bool>) (unaligned)", std_swap_ranges);
   }
 
   benchmark::Initialize(&argc, argv);

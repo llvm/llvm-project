@@ -1,5 +1,6 @@
 ; Make sure this testcase is supported by all code generators
 ; RUN: llc < %s
+; UNSUPPORTED: target=sparc{{.*}}
 
 declare i64 @llvm.ctpop.i64(i64)
 

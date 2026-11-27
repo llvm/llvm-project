@@ -37,7 +37,7 @@ program openacc_atomic_validity
 
   !$acc atomic read
   i = c(i)
-  
+
   !$acc atomic read if(.true.)
   i = c(i)
 
@@ -45,19 +45,46 @@ program openacc_atomic_validity
   i = c(i)
   !$acc end atomic
 
-  !$acc atomic read if(l) 
+  !$acc atomic read if(l)
   i = c(i)
   !$acc end atomic
 
   !ERROR: FINALIZE clause is not allowed on the ATOMIC READ FINALIZE IF(L)
-  !$acc atomic read finalize if(l) 
+  !$acc atomic read finalize if(l)
   i = c(i)
   !$acc end atomic
 
+  !TODO: Should error because c(i) references i which is the atomic update variable.
   !$acc atomic capture
   c(i) = i
   i = i + 1
   !$acc end atomic
+
+  !ERROR: The variables assigned in this atomic capture construct must be distinct
+  !$acc atomic capture
+  c(1) = c(2)
+  c(1) = c(3)
+  !$acc end atomic
+
+  !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
+  !$acc atomic capture
+  c(1) = c(2)
+  c(2) = c(2)
+  !$acc end atomic
+
+  !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
+  !$acc atomic capture
+  c(1) = c(2)
+  c(2) = c(1)
+  !$acc end atomic
+
+  !ERROR: The assignments in this atomic capture construct do not update a variable and capture either its initial or final value
+  !$acc atomic capture
+  c(1) = c(2)
+  c(3) = c(2)
+  !$acc end atomic
+
+
 
   !$acc atomic capture if(l .EQV. .false.)
   c(i) = i
@@ -78,4 +105,116 @@ program openacc_atomic_validity
 
   !$acc end parallel
 
+  !ERROR: COPY clause is not allowed on the ATOMIC UPDATE COPY(I)
+  !$acc atomic update copy(i)
+  c(i) = c(i) + 1
+
 end program openacc_atomic_validity
+
+subroutine capture_with_convert_f64_to_i32()
+  integer :: x
+  real(8) :: v, w
+  x = 1
+  v = 0
+  w = 2
+
+  !$acc atomic capture
+  x = x * 2.5_8
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  !TODO: The rhs side of this update statement cannot reference v.
+  x = x * v
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  !TODO: The rhs side of this update statement cannot reference v.
+  x = v * x
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  !ERROR: The RHS of this atomic update statement must reference the updated variable: x
+  x = v * v
+  v = x
+  !$acc end atomic
+
+  !$acc atomic capture
+  x = v
+  !ERROR: The updated variable, v, cannot appear more than once in the atomic update operation
+  v = v * v
+  !$acc end atomic
+
+  !$acc atomic capture
+  v = x
+  x = w * w
+  !$acc end atomic
+end subroutine capture_with_convert_f64_to_i32
+
+subroutine atomic_derived_type()
+  type :: struct
+    integer :: m
+  end type
+  type(struct) :: x, v
+
+  !$acc atomic write
+  !ERROR: LHS of atomic write statement must be of intrinsic type
+  !ERROR: RHS of atomic write statement must be of intrinsic type
+  x = v
+
+  !$acc atomic update
+  !ERROR: LHS of atomic update statement must be of intrinsic type
+  !ERROR: RHS of atomic update statement must be of intrinsic type
+  !ERROR: Invalid atomic update operation, can only use: *, +, -, *, /, and, or, eqv, neqv, max, min, iand, ior, ieor
+  x = v
+end subroutine atomic_derived_type
+
+subroutine atomic_derived_read_capture()
+  type :: struct
+    integer :: m
+  end type
+  type(struct) :: x, v, w
+
+  !$acc atomic read
+  !ERROR: LHS of atomic capture statement must be of intrinsic type
+  !ERROR: RHS of atomic capture statement must be of intrinsic type
+  v = x
+
+  !$acc atomic capture
+  !ERROR: LHS of atomic capture statement must be of intrinsic type
+  !ERROR: RHS of atomic capture statement must be of intrinsic type
+  v = x
+  !ERROR: LHS of atomic write statement must be of intrinsic type
+  !ERROR: RHS of atomic write statement must be of intrinsic type
+  x = w
+  !$acc end atomic
+end subroutine atomic_derived_read_capture
+
+subroutine atomic_character_write()
+  character(len=1) :: x
+
+  !$acc atomic write
+  x = 'a'
+end subroutine atomic_character_write
+
+subroutine atomic_select_type_polymorphic(x)
+  class(*), intent(inout) :: x
+
+  select type (x)
+  type is (integer)
+    !$acc atomic update
+    x = x + 1
+  end select
+end subroutine atomic_select_type_polymorphic
+
+subroutine atomic_diagnostic_locations()
+  integer :: a(2)
+
+  !$acc atomic update
+  !ERROR: LHS of atomic update statement must be scalar
+  a = &
+  !ERROR: RHS of atomic update statement must be scalar
+      & a + 1
+end subroutine atomic_diagnostic_locations

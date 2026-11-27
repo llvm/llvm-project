@@ -1,0 +1,174 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc mman.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "madvise_test",
+    srcs = ["linux/madvise_test.cpp"],
+    deps = [
+        "//libc/hdr:sys_mman_macros",
+        "//libc/src/sys/mman:madvise",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munmap",
+    ],
+)
+
+libc_test(
+    name = "mincore_test",
+    srcs = ["linux/mincore_test.cpp"],
+    deps = [
+        "//libc/hdr:sys_mman_macros",
+        "//libc/src/sys/mman:madvise",
+        "//libc/src/sys/mman:mincore",
+        "//libc/src/sys/mman:mlock",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munlock",
+        "//libc/src/sys/mman:munmap",
+        "//libc/src/unistd:getpagesize",
+    ],
+)
+
+libc_test(
+    name = "mlock_test",
+    srcs = ["linux/mlock_test.cpp"],
+    deps = [
+        "//libc/hdr:sys_mman_macros",
+        "//libc/hdr:sys_resource_macros",
+        "//libc/hdr/types:struct_rlimit",
+        "//libc/src/__support/CPP:scope",
+        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/macros:sanitizer",
+        "//libc/src/sys/mman:madvise",
+        "//libc/src/sys/mman:mincore",
+        "//libc/src/sys/mman:mlock",
+        "//libc/src/sys/mman:mlock2",
+        "//libc/src/sys/mman:mlockall",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munlock",
+        "//libc/src/sys/mman:munlockall",
+        "//libc/src/sys/mman:munmap",
+        "//libc/src/sys/resource:getrlimit",
+        "//libc/src/sys/resource:setrlimit",
+        "//libc/src/unistd:getpagesize",
+    ],
+)
+
+libc_test(
+    name = "mmap_test",
+    srcs = ["linux/mmap_test.cpp"],
+    deps = [
+        "//libc/hdr:sys_mman_macros",
+        "//libc/src/__support/CPP:scope",
+        "//libc/src/sys/mman:memfd_create",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munmap",
+        "//libc/src/unistd:close",
+    ],
+)
+
+libc_test(
+    name = "mprotect_test",
+    srcs = ["linux/mprotect_test.cpp"],
+    deps = [
+        "//libc/hdr:signal_macros",
+        "//libc/hdr:sys_mman_macros",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:mprotect",
+        "//libc/src/sys/mman:munmap",
+    ],
+)
+
+libc_test(
+    name = "mremap_test",
+    srcs = ["linux/mremap_test.cpp"],
+    deps = [
+        "//libc/hdr:sys_mman_macros",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:mremap",
+        "//libc/src/sys/mman:munmap",
+    ],
+)
+
+libc_test(
+    name = "msync_test",
+    srcs = ["linux/msync_test.cpp"],
+    deps = [
+        "//libc/hdr:sys_mman_macros",
+        "//libc/src/sys/mman:mlock",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:msync",
+        "//libc/src/sys/mman:munlock",
+        "//libc/src/sys/mman:munmap",
+        "//libc/src/unistd:getpagesize",
+    ],
+)
+
+libc_test(
+    name = "pkey_test",
+    srcs = ["linux/pkey_test.cpp"],
+    deps = [
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:signal_macros",
+        "//libc/hdr:sys_mman_macros",
+        "//libc/hdr/types:size_t",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munmap",
+        "//libc/src/sys/mman:pkey_alloc",
+        "//libc/src/sys/mman:pkey_free",
+        "//libc/src/sys/mman:pkey_get",
+        "//libc/src/sys/mman:pkey_mprotect",
+        "//libc/src/sys/mman:pkey_set",
+        "//libc/test/UnitTest:test_logger",
+    ],
+)
+
+libc_test(
+    name = "posix_madvise_test",
+    srcs = ["linux/posix_madvise_test.cpp"],
+    deps = [
+        "//libc/hdr:sys_mman_macros",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munmap",
+        "//libc/src/sys/mman:posix_madvise",
+    ],
+)
+
+libc_test(
+    name = "remap_file_pages_test",
+    srcs = ["linux/remap_file_pages_test.cpp"],
+    deps = [
+        "//libc/hdr:sys_mman_macros",
+        "//libc/hdr:sys_stat_macros",
+        "//libc/src/fcntl:open",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munmap",
+        "//libc/src/sys/mman:remap_file_pages",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:getpagesize",
+    ],
+)
+
+libc_test(
+    name = "shm_test",
+    srcs = ["linux/shm_test.cpp"],
+    deps = [
+        "//libc/hdr:fcntl_macros",
+        "//libc/hdr:sys_mman_macros",
+        "//libc/src/fcntl",
+        "//libc/src/fcntl:open",
+        "//libc/src/sys/mman:mmap",
+        "//libc/src/sys/mman:munmap",
+        "//libc/src/sys/mman:shm_open",
+        "//libc/src/sys/mman:shm_unlink",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:ftruncate",
+    ],
+)

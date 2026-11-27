@@ -6,6 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/pthread_macros.h"
+#include "hdr/sched_macros.h"
+#include "hdr/sys_mman_macros.h"
+#include "hdr/types/struct_sched_param.h"
 #include "src/pthread/pthread_attr_destroy.h"
 #include "src/pthread/pthread_attr_getdetachstate.h"
 #include "src/pthread/pthread_attr_getguardsize.h"
@@ -14,9 +18,14 @@
 #include "src/pthread/pthread_attr_init.h"
 #include "src/pthread/pthread_attr_setdetachstate.h"
 #include "src/pthread/pthread_attr_setguardsize.h"
+#include "src/pthread/pthread_attr_setinheritsched.h"
+#include "src/pthread/pthread_attr_setschedparam.h"
+#include "src/pthread/pthread_attr_setschedpolicy.h"
 #include "src/pthread/pthread_attr_setstack.h"
 #include "src/pthread/pthread_attr_setstacksize.h"
 #include "src/pthread/pthread_create.h"
+#include "src/pthread/pthread_getschedparam.h"
+#include "src/pthread/pthread_getunique_np.h"
 #include "src/pthread/pthread_join.h"
 #include "src/pthread/pthread_self.h"
 
@@ -27,12 +36,12 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/threads/thread.h"
-
-#include "src/__support/libc_errno.h"
 
 #include "test/IntegrationTest/test.h"
 
+#include <errno.h>
 #include <linux/param.h> // For EXEC_PAGESIZE.
 #include <pthread.h>
 
@@ -109,14 +118,14 @@ static void *successThread(void *Arg) {
     volatile uint8_t *bytes_on_stack =
         (volatile uint8_t *)__builtin_alloca(test_stacksize);
 
-    for (size_t I = 0; I < test_stacksize; ++I) {
+    for (size_t i = 0; i < test_stacksize; ++i) {
       // Write permissions
-      bytes_on_stack[I] = static_cast<uint8_t>(I);
+      bytes_on_stack[i] = static_cast<uint8_t>(i);
     }
 
-    for (size_t I = 0; I < test_stacksize; ++I) {
+    for (size_t i = 0; i < test_stacksize; ++i) {
       // Read/write permissions
-      bytes_on_stack[I] += static_cast<uint8_t>(I);
+      bytes_on_stack[i] += static_cast<uint8_t>(i);
     }
   }
 
@@ -179,6 +188,9 @@ static void run_success_config(int detachstate, size_t guardsize,
                                            reinterpret_cast<void *>(th_arg)),
             0);
   ASSERT_ERRNO_SUCCESS();
+  pthread_id_np_t id;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_getunique_np(&tid, &id), 0);
+  ASSERT_NE(id, 0);
 
   if (detachstate == PTHREAD_CREATE_JOINABLE) {
     void *th_ret;
@@ -329,11 +341,238 @@ static void run_failure_tests() {
   ASSERT_ERRNO_SUCCESS();
   attr.__detachstate = -1;
   create_and_check_failure_thread(&attr);
+
+  // Inheritsched is unknown.
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+  ASSERT_ERRNO_SUCCESS();
+  attr.__inheritsched = -1;
+  create_and_check_failure_thread(&attr);
+
+  // Schedpolicy is invalid when explicit sched is requested.
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setinheritsched(
+                &attr, PTHREAD_EXPLICIT_SCHED),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+  attr.__schedpolicy = -1;
+  create_and_check_failure_thread(&attr);
+
+  // Sched priority is invalid for policy.
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setinheritsched(
+                &attr, PTHREAD_EXPLICIT_SCHED),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, SCHED_OTHER), 0);
+  ASSERT_ERRNO_SUCCESS();
+  sched_param bad_param;
+  bad_param.sched_priority = 1;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedparam(&attr, &bad_param), 0);
+  ASSERT_ERRNO_SUCCESS();
+  create_and_check_failure_thread(&attr);
+}
+
+struct SchedThreadArgs {
+  LIBC_NAMESPACE::cpp::Atomic<bool> executed = false;
+  int policy = 0;
+  int priority = 0;
+};
+
+static void *sched_runner(void *arg) {
+  auto *args = reinterpret_cast<SchedThreadArgs *>(arg);
+  sched_param param;
+  int policy;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_getschedparam(
+                LIBC_NAMESPACE::pthread_self(), &policy, &param),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+  args->policy = policy;
+  args->priority = param.sched_priority;
+  args->executed.store(true);
+  return nullptr;
+}
+
+static void test_sched_inherit() {
+  pthread_t self = LIBC_NAMESPACE::pthread_self();
+  int parent_policy = 0;
+  sched_param parent_param;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_getschedparam(self, &parent_policy,
+                                                  &parent_param),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+
+  // 1. With default attr (nullptr)
+  {
+    SchedThreadArgs args;
+    pthread_t tid;
+    ASSERT_EQ(
+        LIBC_NAMESPACE::pthread_create(&tid, nullptr, sched_runner, &args), 0);
+    ASSERT_ERRNO_SUCCESS();
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_join(tid, nullptr), 0);
+    ASSERT_ERRNO_SUCCESS();
+    ASSERT_TRUE(args.executed.load());
+    ASSERT_EQ(args.policy, parent_policy);
+    ASSERT_EQ(args.priority, parent_param.sched_priority);
+  }
+
+  // 2. Explicit PTHREAD_INHERIT_SCHED in attr, while setting schedpolicy to
+  // SCHED_BATCH
+  {
+    pthread_attr_t attr;
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+    ASSERT_ERRNO_SUCCESS();
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setinheritsched(
+                  &attr, PTHREAD_INHERIT_SCHED),
+              0);
+    ASSERT_ERRNO_SUCCESS();
+    // Even if schedpolicy is modified in attr, PTHREAD_INHERIT_SCHED means it
+    // must be ignored.
+    int dummy_policy =
+        (parent_policy == SCHED_OTHER) ? SCHED_BATCH : SCHED_OTHER;
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, dummy_policy),
+              0);
+    ASSERT_ERRNO_SUCCESS();
+
+    SchedThreadArgs args;
+    pthread_t tid;
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&tid, &attr, sched_runner, &args),
+              0);
+    ASSERT_ERRNO_SUCCESS();
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_join(tid, nullptr), 0);
+    ASSERT_ERRNO_SUCCESS();
+    ASSERT_TRUE(args.executed.load());
+    ASSERT_EQ(args.policy, parent_policy);
+    ASSERT_EQ(args.priority, parent_param.sched_priority);
+
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
+    ASSERT_ERRNO_SUCCESS();
+  }
+}
+
+static void verify_sched_policy(pthread_attr_t &attr, int expected_policy,
+                                int expected_priority) {
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, expected_policy),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+  sched_param param;
+  param.sched_priority = expected_priority;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedparam(&attr, &param), 0);
+  ASSERT_ERRNO_SUCCESS();
+
+  SchedThreadArgs args;
+  pthread_t tid;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_create(&tid, &attr, sched_runner, &args),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+
+  int detachstate;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getdetachstate(&attr, &detachstate),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+  if (detachstate == PTHREAD_CREATE_DETACHED) {
+    // A detached thread can't be joined, so wait for it to report back.
+    // sched_runner doesn't access args after setting executed.
+    while (!args.executed.load())
+      ;
+  } else {
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_join(tid, nullptr), 0);
+    ASSERT_ERRNO_SUCCESS();
+  }
+  ASSERT_TRUE(args.executed.load());
+  ASSERT_EQ(args.policy, expected_policy);
+  ASSERT_EQ(args.priority, expected_priority);
+}
+
+static void test_sched_explicit_success() {
+  pthread_attr_t attr;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setinheritsched(
+                &attr, PTHREAD_EXPLICIT_SCHED),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+
+  verify_sched_policy(attr, SCHED_OTHER, 0);
+  verify_sched_policy(attr, SCHED_BATCH, 0);
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
+  ASSERT_ERRNO_SUCCESS();
+}
+
+static void test_sched_explicit_detached() {
+  pthread_attr_t attr;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setinheritsched(
+                &attr, PTHREAD_EXPLICIT_SCHED),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setdetachstate(
+                &attr, PTHREAD_CREATE_DETACHED),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+
+  verify_sched_policy(attr, SCHED_BATCH, 0);
+
+  // If the scheduling parameters can't be applied, pthread_create must fail
+  // without running the thread, even though it is detached.
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, SCHED_OTHER), 0);
+  ASSERT_ERRNO_SUCCESS();
+  sched_param bad_param;
+  bad_param.sched_priority = 1;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedparam(&attr, &bad_param), 0);
+  ASSERT_ERRNO_SUCCESS();
+  // This also destroys attr.
+  create_and_check_failure_thread(&attr);
+}
+
+static void test_sched_realtime_permission() {
+  pthread_attr_t attr;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_init(&attr), 0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setinheritsched(
+                &attr, PTHREAD_EXPLICIT_SCHED),
+            0);
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedpolicy(&attr, SCHED_FIFO), 0);
+  ASSERT_ERRNO_SUCCESS();
+  sched_param param;
+  param.sched_priority = 1;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_setschedparam(&attr, &param), 0);
+  ASSERT_ERRNO_SUCCESS();
+
+  SchedThreadArgs args;
+  pthread_t tid;
+  int res = LIBC_NAMESPACE::pthread_create(&tid, &attr, sched_runner, &args);
+  // Setting realtime scheduling policy SCHED_FIFO requires CAP_SYS_NICE or
+  // sufficient RLIMIT_RTPRIO. In unprivileged environments this will fail with
+  // EPERM, while in privileged environments it will succeed with 0.
+  ASSERT_TRUE(res == EPERM || res == 0);
+  ASSERT_ERRNO_SUCCESS();
+
+  if (res == 0) {
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_join(tid, nullptr), 0);
+    ASSERT_ERRNO_SUCCESS();
+    ASSERT_TRUE(args.executed.load());
+    ASSERT_EQ(args.policy, SCHED_FIFO);
+    ASSERT_EQ(args.priority, 1);
+  } else {
+    ASSERT_FALSE(args.executed.load());
+  }
+
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
+  ASSERT_ERRNO_SUCCESS();
 }
 
 TEST_MAIN() {
-  libc_errno = 0;
+  errno = 0;
   run_success_tests();
   run_failure_tests();
+  test_sched_inherit();
+  test_sched_explicit_success();
+  test_sched_explicit_detached();
+  test_sched_realtime_permission();
   return 0;
 }

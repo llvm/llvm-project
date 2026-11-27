@@ -17,6 +17,7 @@
 
 #include "benchmark/benchmark.h"
 #include "common.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_partial_sort_copy = [](auto first, auto last, auto dfirst, auto dlast) {
@@ -32,7 +33,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto partial_sort_copy, auto generate_data) {
       benchmark::RegisterBenchmark(
           name,
-          [partial_sort_copy, generate_data](auto& st) {
+          [partial_sort_copy, generate_data](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size      = st.range(0);
             using ValueType             = typename Container::value_type;
             std::vector<ValueType> data = generate_data(size);
@@ -63,15 +64,6 @@ int main(int argc, char** argv) {
           name("std::partial_sort_copy(vector<NonIntegral>)"), std_partial_sort_copy, gen2);
       bm.operator()<std::deque<int>>(name("std::partial_sort_copy(deque<int>)"), std_partial_sort_copy, generate);
       bm.operator()<std::list<int>>(name("std::partial_sort_copy(list<int>)"), std_partial_sort_copy, generate);
-
-      bm.operator()<std::vector<int>>(
-          name("rng::partial_sort_copy(vector<int>)"), std::ranges::partial_sort_copy, generate);
-      bm.operator()<std::vector<support::NonIntegral>>(
-          name("rng::partial_sort_copy(vector<NonIntegral>)"), std::ranges::partial_sort_copy, gen2);
-      bm.operator()<std::deque<int>>(
-          name("rng::partial_sort_copy(deque<int>)"), std::ranges::partial_sort_copy, generate);
-      bm.operator()<std::list<int>>(
-          name("rng::partial_sort_copy(list<int>)"), std::ranges::partial_sort_copy, generate);
     };
 
     register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");

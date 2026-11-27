@@ -58,7 +58,7 @@ DbgVariableLocation::extractFromMachineInstruction(
   while (Op != DIExpr->expr_op_end()) {
     switch (Op->getOp()) {
     case dwarf::DW_OP_constu: {
-      int Value = Op->getArg(0);
+      int Value = cast<DIExpression::ConstuOp>(*Op).getValue();
       ++Op;
       if (Op != DIExpr->expr_op_end()) {
         switch (Op->getOp()) {
@@ -74,11 +74,14 @@ DbgVariableLocation::extractFromMachineInstruction(
       }
     } break;
     case dwarf::DW_OP_plus_uconst:
-      Offset += Op->getArg(0);
+      Offset += cast<DIExpression::PlusUconstOp>(*Op).getOffset();
       break;
-    case dwarf::DW_OP_LLVM_fragment:
-      Location.FragmentInfo = {Op->getArg(1), Op->getArg(0)};
+    case dwarf::DW_OP_LLVM_fragment: {
+      auto Fragment = cast<DIExpression::FragmentOp>(*Op);
+      Location.FragmentInfo = {Fragment.getSizeInBits(),
+                               Fragment.getOffsetInBits()};
       break;
+    }
     case dwarf::DW_OP_deref:
       Location.LoadChain.push_back(Offset);
       Offset = 0;
@@ -222,7 +225,8 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
            T == dwarf::DW_TAG_volatile_type ||
            T == dwarf::DW_TAG_restrict_type || T == dwarf::DW_TAG_atomic_type ||
            T == dwarf::DW_TAG_immutable_type ||
-           T == dwarf::DW_TAG_template_alias);
+           T == dwarf::DW_TAG_template_alias ||
+           T == dwarf::DW_TAG_LLVM_ptrauth_type);
     assert(DTy->getBaseType() && "Expected valid base type");
     return isUnsignedDIType(DTy->getBaseType());
   }
@@ -238,6 +242,8 @@ bool DebugHandlerBase::isUnsignedDIType(const DIType *Ty) {
           Encoding == dwarf::DW_ATE_complex_float ||
           Encoding == dwarf::DW_ATE_signed_fixed ||
           Encoding == dwarf::DW_ATE_unsigned_fixed ||
+          (Encoding >= dwarf::DW_ATE_lo_user &&
+           Encoding <= dwarf::DW_ATE_hi_user) ||
           (Ty->getTag() == dwarf::DW_TAG_unspecified_type &&
            Ty->getName() == "decltype(nullptr)")) &&
          "Unsupported encoding");
@@ -269,7 +275,7 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
 
   // Grab the lexical scopes for the function, if we don't have any of those
   // then we're not going to be able to do anything.
-  LScopes.initialize(*MF);
+  LScopes.scanFunction(*MF);
   if (LScopes.empty()) {
     beginFunctionImpl(MF);
     return;
@@ -283,10 +289,12 @@ void DebugHandlerBase::beginFunction(const MachineFunction *MF) {
   assert(DbgLabels.empty() && "DbgLabels map wasn't cleaned!");
   calculateDbgEntityHistory(MF, Asm->MF->getSubtarget().getRegisterInfo(),
                             DbgValues, DbgLabels);
-  InstOrdering.initialize(*MF);
-  if (TrimVarLocs)
-    DbgValues.trimLocationRanges(*MF, LScopes, InstOrdering);
-  LLVM_DEBUG(DbgValues.dump(MF->getName()));
+  if (!DbgValues.empty()) {
+    InstOrdering.initialize(*MF);
+    if (TrimVarLocs)
+      DbgValues.trimLocationRanges(*MF, LScopes, InstOrdering);
+    LLVM_DEBUG(DbgValues.dump(MF->getName()));
+  }
 
   // Request labels for the full history.
   for (const auto &I : DbgValues) {
@@ -365,8 +373,7 @@ void DebugHandlerBase::beginInstruction(const MachineInstr *MI) {
   CurMI = MI;
 
   // Insert labels where requested.
-  DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
-      LabelsBeforeInsn.find(MI);
+  auto I = LabelsBeforeInsn.find(MI);
 
   // No label needed.
   if (I == LabelsBeforeInsn.end())
@@ -395,8 +402,7 @@ void DebugHandlerBase::endInstruction() {
     PrevInstBB = CurMI->getParent();
   }
 
-  DenseMap<const MachineInstr *, MCSymbol *>::iterator I =
-      LabelsAfterInsn.find(CurMI);
+  auto I = LabelsAfterInsn.find(CurMI);
 
   // No label needed or label already assigned.
   if (I == LabelsAfterInsn.end() || I->second) {

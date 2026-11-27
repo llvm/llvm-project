@@ -9,9 +9,7 @@
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include <optional>
 
@@ -19,18 +17,6 @@ using namespace mlir;
 using namespace mlir::pdl;
 
 #include "mlir/Dialect/PDL/IR/PDLOpsDialect.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// PDLDialect
-//===----------------------------------------------------------------------===//
-
-void PDLDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/PDL/IR/PDLOps.cpp.inc"
-      >();
-  registerTypes();
-}
 
 //===----------------------------------------------------------------------===//
 // PDL Operations
@@ -71,7 +57,7 @@ static void visit(Operation *op, DenseSet<Operation *> &visited) {
 
   // Traverse the operands / parent.
   TypeSwitch<Operation *>(op)
-      .Case<OperationOp>([&visited](auto operation) {
+      .Case([&visited](OperationOp operation) {
         for (Value operand : operation.getOperandValues())
           visit(operand.getDefiningOp(), visited);
       })
@@ -388,7 +374,8 @@ void PatternOp::build(OpBuilder &builder, OperationState &state,
                       std::optional<uint16_t> benefit,
                       std::optional<StringRef> name) {
   build(builder, state, builder.getI16IntegerAttr(benefit.value_or(0)),
-        name ? builder.getStringAttr(*name) : StringAttr());
+        name ? builder.getStringAttr(*name) : StringAttr(),
+        /*sym_visibility=*/nullptr);
   state.regions[0]->emplaceBlock();
 }
 

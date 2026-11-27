@@ -10,48 +10,47 @@
 #ifndef _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
 #define _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H
 
-#include <__bit/popcount.h>
+#include <__atomic/atomic.h>
+#include <__atomic/memory_order.h>
+#include <__bit/has_single_bit.h>
 #include <__config>
-#include <atomic>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // This class implements an RAII unique_lock without a mutex.
 // It uses std::atomic<State>,
 // where State contains a lock bit and might contain other data,
 // and LockedBit is the value of State when the lock bit is set, e.g  1 << 2
 template <class _State, _State _LockedBit>
-class _LIBCPP_AVAILABILITY_SYNC __atomic_unique_lock {
-  static_assert(std::__popcount(static_cast<unsigned long long>(_LockedBit)) == 1,
+class __atomic_unique_lock {
+  static_assert(std::has_single_bit(static_cast<unsigned long long>(_LockedBit)),
                 "LockedBit must be an integer where only one bit is set");
 
   std::atomic<_State>& __state_;
   bool __is_locked_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __atomic_unique_lock(std::atomic<_State>& __state) noexcept
-      : __state_(__state), __is_locked_(true) {
+  explicit __atomic_unique_lock(std::atomic<_State>& __state) noexcept : __state_(__state), __is_locked_(true) {
     __lock();
   }
 
   template <class _Pred>
-  _LIBCPP_HIDE_FROM_ABI __atomic_unique_lock(std::atomic<_State>& __state, _Pred&& __give_up_locking) noexcept
+  __atomic_unique_lock(std::atomic<_State>& __state, _Pred&& __give_up_locking) noexcept
       : __state_(__state), __is_locked_(false) {
     __is_locked_ = __lock_impl(__give_up_locking, __set_locked_bit, std::memory_order_acquire);
   }
 
   template <class _Pred, class _UnaryFunction>
-  _LIBCPP_HIDE_FROM_ABI __atomic_unique_lock(
-      std::atomic<_State>& __state,
-      _Pred&& __give_up_locking,
-      _UnaryFunction&& __state_after_lock,
-      std::memory_order __locked_ordering) noexcept
+  __atomic_unique_lock(std::atomic<_State>& __state,
+                       _Pred&& __give_up_locking,
+                       _UnaryFunction&& __state_after_lock,
+                       std::memory_order __locked_ordering) noexcept
       : __state_(__state), __is_locked_(false) {
     __is_locked_ = __lock_impl(__give_up_locking, __state_after_lock, __locked_ordering);
   }
@@ -61,15 +60,15 @@ public:
   __atomic_unique_lock& operator=(const __atomic_unique_lock&) = delete;
   __atomic_unique_lock& operator=(__atomic_unique_lock&&)      = delete;
 
-  _LIBCPP_HIDE_FROM_ABI ~__atomic_unique_lock() {
+  ~__atomic_unique_lock() {
     if (__is_locked_) {
       __unlock();
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool __owns_lock() const noexcept { return __is_locked_; }
+  bool __owns_lock() const noexcept { return __is_locked_; }
 
-  _LIBCPP_HIDE_FROM_ABI void __lock() noexcept {
+  void __lock() noexcept {
     const auto __never_give_up_locking = [](_State) { return false; };
     // std::memory_order_acquire because we'd like to make sure that all the read operations after the lock can read the
     // up-to-date values.
@@ -77,7 +76,7 @@ public:
     __is_locked_ = true;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __unlock() noexcept {
+  void __unlock() noexcept {
     // unset the _LockedBit. `memory_order_release` because we need to make sure all the write operations before calling
     // `__unlock` will be made visible to other threads
     __state_.fetch_and(static_cast<_State>(~_LockedBit), std::memory_order_release);
@@ -87,11 +86,10 @@ public:
 
 private:
   template <class _Pred, class _UnaryFunction>
-  _LIBCPP_HIDE_FROM_ABI bool
-  __lock_impl(_Pred&& __give_up_locking, // while trying to lock the state, if the predicate returns true, give up
-                                         // locking and return
-              _UnaryFunction&& __state_after_lock,
-              std::memory_order __locked_ordering) noexcept {
+  bool __lock_impl(_Pred&& __give_up_locking, // while trying to lock the state, if the predicate returns true, give up
+                                              // locking and return
+                   _UnaryFunction&& __state_after_lock,
+                   std::memory_order __locked_ordering) noexcept {
     // At this stage, until we exit the inner while loop, other than the atomic state, we are not reading any order
     // dependent values that is written on other threads, or writing anything that needs to be seen on other threads.
     // Therefore `memory_order_relaxed` is enough.
@@ -130,11 +128,11 @@ private:
     return true;
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __set_locked_bit = [](_State __state) { return __state | _LockedBit; };
+  static constexpr auto __set_locked_bit = [](_State __state) { return __state | _LockedBit; };
 };
 
-#endif // _LIBCPP_STD_VER >= 20 && _LIBCPP_HAS_THREADS
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___STOP_TOKEN_ATOMIC_UNIQUE_LOCK_H

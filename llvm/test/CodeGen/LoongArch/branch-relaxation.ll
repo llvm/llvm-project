@@ -119,8 +119,9 @@ define i32 @relax_b28(i1 %a) {
 ; LA32R-NEXT:    andi $a0, $a0, 1
 ; LA32R-NEXT:    bne $a0, $zero, .LBB2_1
 ; LA32R-NEXT:  # %bb.3:
-; LA32R-NEXT:    pcalau12i $a0, %pc_hi20(.LBB2_2)
-; LA32R-NEXT:    addi.w $a0, $a0, %pc_lo12(.LBB2_2)
+; LA32R-NEXT:  .Lpcadd_hi0:
+; LA32R-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LBB2_2)
+; LA32R-NEXT:    addi.w $a0, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32R-NEXT:    jr $a0
 ; LA32R-NEXT:  .LBB2_1: # %iftrue
 ; LA32R-NEXT:    ori $a0, $zero, 1

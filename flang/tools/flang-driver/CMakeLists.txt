@@ -26,6 +26,7 @@ target_link_libraries(flang
 clang_target_link_libraries(flang
   PRIVATE
   clangDriver
+  clangOptions
   clangBasic
 )
 

@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-win32 | FileCheck %s
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-mingw32 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-mingw32  | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-cygwin   | FileCheck %s
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-windows-msvc-elf | FileCheck %s --check-prefix=ELF32
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-win32 | FileCheck %s --check-prefix=X64
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-mingw32 | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-mingw32  | FileCheck %s --check-prefix=X64
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-cygwin   | FileCheck %s --check-prefix=X64
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-pc-windows-msvc-elf | FileCheck %s --check-prefix=ELF64
 
 // CHECK: target datalayout = "e-m:x-{{.*}}"
@@ -47,7 +49,7 @@ void __fastcall f8(long long a) {}
 // X64: define dso_local void @f8(
 
 void __fastcall f9(long long a, char b, char c, short d) {}
-// CHECK: define dso_local x86_fastcallcc void @"\01@f9@20"(i64 noundef %a, i8 inreg noundef signext %b, i8 inreg noundef signext %c, i16 noundef signext %d)
+// CHECK: define dso_local x86_fastcallcc void @"\01@f9@20"(i64 noundef %a, i8 inreg noundef %b, i8 inreg noundef %c, i16 noundef %d)
 // X64: define dso_local void @f9(
 
 void f12(void) {}
@@ -83,4 +85,4 @@ void __vectorcall v6(char a, char b) {}
 // X64: define dso_local x86_vectorcallcc void @"\01v6@@16"(
 
 void __vectorcall v7(long long a, char b, char c, short d) {}
-// CHECK: define dso_local x86_vectorcallcc void @"\01v7@@20"(i64 noundef %a, i8 inreg noundef signext %b, i8 inreg noundef signext %c, i16 noundef signext %d)
+// CHECK: define dso_local x86_vectorcallcc void @"\01v7@@20"(i64 noundef %a, i8 inreg noundef %b, i8 inreg noundef %c, i16 noundef %d)

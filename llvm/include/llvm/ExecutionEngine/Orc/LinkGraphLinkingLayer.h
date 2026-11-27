@@ -29,12 +29,9 @@
 #include <utility>
 #include <vector>
 
+class LinkGraphLinkingLayerTests;
+
 namespace llvm {
-
-namespace jitlink {
-class EHFrameRegistrar;
-} // namespace jitlink
-
 namespace orc {
 
 /// LinkGraphLinkingLayer links LinkGraphs into the Executor using JITLink.
@@ -43,6 +40,7 @@ namespace orc {
 /// serves as a base for the ObjectLinkingLayer that can link object files.
 class LLVM_ABI LinkGraphLinkingLayer : public LinkGraphLayer,
                                        private ResourceManager {
+  friend class ::LinkGraphLinkingLayerTests;
   class JITLinkCtx;
 
 public:
@@ -63,7 +61,6 @@ public:
                                      jitlink::JITLinkContext &Ctx,
                                      MemoryBufferRef InputObject) {}
 
-    virtual void notifyLoaded(MaterializationResponsibility &MR) {}
     virtual Error notifyEmitted(MaterializationResponsibility &MR) {
       return Error::success();
     }
@@ -73,11 +70,7 @@ public:
                                              ResourceKey SrcKey) = 0;
   };
 
-  /// Construct a LinkGraphLinkingLayer using the ExecutorProcessControl
-  /// instance's memory manager.
-  LinkGraphLinkingLayer(ExecutionSession &ES);
-
-  /// Construct a LinkGraphLinkingLayer using a custom memory manager.
+  /// Construct a LinkGraphLinkingLayer.
   LinkGraphLinkingLayer(ExecutionSession &ES,
                         jitlink::JITLinkMemoryManager &MemMgr);
 
@@ -89,7 +82,7 @@ public:
                         std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr);
 
   /// Destroy the LinkGraphLinkingLayer.
-  ~LinkGraphLinkingLayer();
+  ~LinkGraphLinkingLayer() override;
 
   /// Add a plugin.
   LinkGraphLinkingLayer &addPlugin(std::shared_ptr<Plugin> P) {
@@ -159,9 +152,16 @@ protected:
 private:
   using FinalizedAlloc = jitlink::JITLinkMemoryManager::FinalizedAlloc;
 
+  struct SymbolDepGroup {
+    SmallVector<jitlink::Symbol *> Defs;
+    DenseSet<jitlink::Symbol *> Deps;
+  };
+
+  // Provides the basis for calculating orc::SymbolDependenceGroups.
+  static SmallVector<SymbolDepGroup> calculateDepGroups(jitlink::LinkGraph &G);
+
   Error recordFinalizedAlloc(MaterializationResponsibility &MR,
                              FinalizedAlloc FA);
-
   Error handleRemoveResources(JITDylib &JD, ResourceKey K) override;
   void handleTransferResources(JITDylib &JD, ResourceKey DstKey,
                                ResourceKey SrcKey) override;

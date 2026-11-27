@@ -33,11 +33,11 @@
 using namespace llvm;
 
 WinException::WinException(AsmPrinter *A) : EHStreamer(A) {
-  // MSVC's EH tables are always composed of 32-bit words.  All known 64-bit
-  // platforms use an imagerel32 relocation to refer to symbols.
-  useImageRel32 = (A->getDataLayout().getPointerSizeInBits() == 64);
+  // MSVC's EH tables are always composed of 32-bit words. All known
+  // architectures use an imagerel32 relocation to refer to symbols, except
+  // 32-bit x86.
+  useImageRel32 = A->TM.getTargetTriple().getArch() != Triple::x86;
   isAArch64 = Asm->TM.getTargetTriple().isAArch64();
-  isThumb = Asm->TM.getTargetTriple().isThumb();
 }
 
 WinException::~WinException() = default;
@@ -69,7 +69,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   const Function &F = MF->getFunction();
 
-  shouldEmitMoves = Asm->needsSEHMoves() && MF->hasWinCFI();
+  shouldEmitMoves = MF->hasWinCFI() && MF->needsWinCFI();
 
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
   unsigned PerEncoding = TLOF.getPersonalityEncoding();
@@ -85,9 +85,13 @@ void WinException::beginFunction(const MachineFunction *MF) {
                               !isNoOpWithoutInvoke(Per) &&
                               F.needsUnwindTableEntry();
 
+  // A personality that is not a function, such as a null pointer, leaves PerFn
+  // empty. Nothing downstream can emit a symbol for it, so gate both cases on
+  // it, the same way DwarfCFIException does.
   shouldEmitPersonality =
-      forceEmitPersonality || ((hasLandingPads || hasEHFunclets) &&
-                               PerEncoding != dwarf::DW_EH_PE_omit && PerFn);
+      (forceEmitPersonality || ((hasLandingPads || hasEHFunclets) &&
+                                PerEncoding != dwarf::DW_EH_PE_omit)) &&
+      PerFn;
 
   unsigned LSDAEncoding = TLOF.getLSDAEncoding();
   shouldEmitLSDA = shouldEmitPersonality &&
@@ -95,7 +99,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
   // If we're not using CFI, we don't want the CFI or the personality, but we
   // might want EH tables if we had EH pads.
-  if (!Asm->MAI->usesWindowsCFI()) {
+  if (!MF->usesWindowsUnwindInfo()) {
     if (Per == EHPersonality::MSVC_X86SEH && !hasEHFunclets) {
       // If this is 32-bit SEH and we don't have any funclets (really invokes),
       // make sure we emit the parent offset label. Some unreferenced filter
@@ -204,8 +208,8 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
 
     // We want our funclet's entry point to be aligned such that no nops will be
     // present after the label.
-    Asm->emitAlignment(std::max(Asm->MF->getAlignment(), MBB.getAlignment()),
-                       &F);
+    Asm->emitAlignment(
+        std::max(Asm->MF->getPreferredAlignment(), MBB.getAlignment()), &F);
 
     // Now that we've emitted the alignment directive, point at our funclet.
     Asm->OutStreamer->emitLabel(Sym);
@@ -308,10 +312,8 @@ void WinException::endFuncletImpl() {
 const MCExpr *WinException::create32bitRef(const MCSymbol *Value) {
   if (!Value)
     return MCConstantExpr::create(0, Asm->OutContext);
-  return MCSymbolRefExpr::create(Value, useImageRel32
-                                            ? MCSymbolRefExpr::VK_COFF_IMGREL32
-                                            : MCSymbolRefExpr::VK_None,
-                                 Asm->OutContext);
+  auto Spec = useImageRel32 ? uint16_t(MCSymbolRefExpr::VK_COFF_IMGREL32) : 0;
+  return MCSymbolRefExpr::create(Value, Spec, Asm->OutContext);
 }
 
 const MCExpr *WinException::create32bitRef(const GlobalValue *GV) {
@@ -322,12 +324,6 @@ const MCExpr *WinException::create32bitRef(const GlobalValue *GV) {
 
 const MCExpr *WinException::getLabel(const MCSymbol *Label) {
   return MCSymbolRefExpr::create(Label, MCSymbolRefExpr::VK_COFF_IMGREL32,
-                                 Asm->OutContext);
-}
-
-const MCExpr *WinException::getLabelPlusOne(const MCSymbol *Label) {
-  return MCBinaryExpr::createAdd(getLabel(Label),
-                                 MCConstantExpr::create(1, Asm->OutContext),
                                  Asm->OutContext);
 }
 
@@ -349,7 +345,7 @@ int WinException::getFrameIndexOffset(int FrameIndex,
                                       const WinEHFuncInfo &FuncInfo) {
   const TargetFrameLowering &TFI = *Asm->MF->getSubtarget().getFrameLowering();
   Register UnusedReg;
-  if (Asm->MAI->usesWindowsCFI()) {
+  if (Asm->MF->usesWindowsUnwindInfo()) {
     StackOffset Offset =
         TFI.getFrameIndexReferencePreferSP(*Asm->MF, FrameIndex, UnusedReg,
                                            /*IgnoreSPUpdates*/ true);
@@ -657,7 +653,7 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
     AddComment("LabelStart");
     OS.emitValue(getLabel(BeginLabel), 4);
     AddComment("LabelEnd");
-    OS.emitValue(getLabelPlusOne(EndLabel), 4);
+    OS.emitValue(getLabel(EndLabel), 4);
     AddComment(UME.IsFinally ? "FinallyFunclet" : UME.Filter ? "FilterFunction"
                                                              : "CatchAll");
     OS.emitValue(FilterOrFinally, 4);
@@ -693,8 +689,8 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   // second check further below) can be removed if MS C++ unwinding is
   // implemented for ARM, when test/CodeGen/ARM/Windows/wineh-basic.ll
   // passes without the check.
-  if (Asm->MAI->usesWindowsCFI() &&
-      FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max())
+  if (FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max() &&
+      MF->usesWindowsUnwindInfo())
     UnwindHelpOffset =
         getFrameIndexOffset(FuncInfo.UnwindHelpFrameIdx, FuncInfo);
 
@@ -756,8 +752,8 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   AddComment("IPToStateXData");
   OS.emitValue(create32bitRef(IPToStateXData), 4);
 
-  if (Asm->MAI->usesWindowsCFI() &&
-      FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max()) {
+  if (FuncInfo.UnwindHelpFrameIdx != std::numeric_limits<int>::max() &&
+      MF->usesWindowsUnwindInfo()) {
     AddComment("UnwindHelp");
     OS.emitInt32(UnwindHelpOffset);
   }
@@ -952,13 +948,7 @@ void WinException::computeIP2StateTable(
       if (!ChangeLabel)
         ChangeLabel = StateChange.PreviousEndLabel;
       // Emit an entry indicating that PCs after 'Label' have this EH state.
-      // NOTE: On ARM architectures, the StateFromIp automatically takes into
-      // account that the return address is after the call instruction (whose EH
-      // state we should be using), but on other platforms we need to +1 to the
-      // label so that we are using the correct EH state.
-      const MCExpr *LabelExpression = (isAArch64 || isThumb)
-                                          ? getLabel(ChangeLabel)
-                                          : getLabelPlusOne(ChangeLabel);
+      const MCExpr *LabelExpression = getLabel(ChangeLabel);
       IPToStateTable.push_back(
           std::make_pair(LabelExpression, StateChange.NewState));
       // FIXME: assert that NewState is between CatchLow and CatchHigh.

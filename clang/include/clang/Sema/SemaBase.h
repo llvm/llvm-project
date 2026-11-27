@@ -21,6 +21,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/Ownership.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
 #include <optional>
 #include <type_traits>
 #include <utility>
@@ -36,6 +38,13 @@ class Sema;
 class SemaBase {
 public:
   SemaBase(Sema &S);
+
+  /// A pair of a canonical FunctionDecl and a SourceLocation.  When used as the
+  /// key in a hashtable, both the FD and location are hashed.
+  struct FunctionDeclAndLoc {
+    CanonicalDeclPtr<const FunctionDecl> FD;
+    SourceLocation Loc;
+  };
 
   Sema &SemaRef;
 
@@ -212,21 +221,38 @@ public:
   };
 
   /// Emit a diagnostic.
-  SemaDiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID,
-                             bool DeferHint = false);
+  SemaDiagnosticBuilder Diag(SourceLocation Loc, unsigned DiagID);
 
   /// Emit a partial diagnostic.
-  SemaDiagnosticBuilder Diag(SourceLocation Loc, const PartialDiagnostic &PD,
-                             bool DeferHint = false);
+  SemaDiagnosticBuilder Diag(SourceLocation Loc, const PartialDiagnostic &PD);
 
   /// Emit a compatibility diagnostic.
-  SemaDiagnosticBuilder DiagCompat(SourceLocation Loc, unsigned CompatDiagId,
-                                   bool DeferHint = false);
+  SemaDiagnosticBuilder DiagCompat(SourceLocation Loc, unsigned CompatDiagId);
 
   /// Build a partial diagnostic.
   PartialDiagnostic PDiag(unsigned DiagID = 0);
 };
 
 } // namespace clang
+
+namespace llvm {
+// Hash a FunctionDeclAndLoc by looking at both its FunctionDecl and its
+// SourceLocation.
+template <> struct DenseMapInfo<clang::SemaBase::FunctionDeclAndLoc> {
+  using FunctionDeclAndLoc = clang::SemaBase::FunctionDeclAndLoc;
+  using FDBaseInfo =
+      DenseMapInfo<clang::CanonicalDeclPtr<const clang::FunctionDecl>>;
+
+  static unsigned getHashValue(const FunctionDeclAndLoc &FDL) {
+    return hash_combine(FDBaseInfo::getHashValue(FDL.FD),
+                        FDL.Loc.getHashValue());
+  }
+
+  static bool isEqual(const FunctionDeclAndLoc &LHS,
+                      const FunctionDeclAndLoc &RHS) {
+    return LHS.FD == RHS.FD && LHS.Loc == RHS.Loc;
+  }
+};
+} // namespace llvm
 
 #endif

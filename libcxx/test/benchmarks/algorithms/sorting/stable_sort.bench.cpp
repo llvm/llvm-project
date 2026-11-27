@@ -18,6 +18,7 @@
 #include "benchmark/benchmark.h"
 #include "common.h"
 #include "count_new.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   auto std_stable_sort = [](auto first, auto last) { return std::stable_sort(first, last); };
@@ -33,7 +34,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_sort, auto generate_data) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_sort, generate_data](auto& st) {
+          [stable_sort, generate_data](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 32;
             using ValueType                 = typename Container::value_type;
@@ -71,11 +72,6 @@ int main(int argc, char** argv) {
       bm.operator()<std::vector<support::NonIntegral>>(
           name("std::stable_sort(vector<NonIntegral>)"), std_stable_sort, gen2);
       bm.operator()<std::deque<int>>(name("std::stable_sort(deque<int>)"), std_stable_sort, generate);
-
-      bm.operator()<std::vector<int>>(name("rng::stable_sort(vector<int>)"), std::ranges::stable_sort, generate);
-      bm.operator()<std::vector<support::NonIntegral>>(
-          name("rng::stable_sort(vector<NonIntegral>)"), std::ranges::stable_sort, gen2);
-      bm.operator()<std::deque<int>>(name("rng::stable_sort(deque<int>)"), std::ranges::stable_sort, generate);
     };
 
     register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");
@@ -93,7 +89,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto stable_sort, auto generate_data) {
       benchmark::RegisterBenchmark(
           name,
-          [stable_sort, generate_data](auto& st) {
+          [stable_sort, generate_data](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 32;
             using ValueType                 = typename Container::value_type;
@@ -136,11 +132,6 @@ int main(int argc, char** argv) {
       bm.operator()<std::vector<support::NonIntegral>>(
           name("std::stable_sort(vector<NonIntegral>)"), std_stable_sort, gen2);
       bm.operator()<std::deque<int>>(name("std::stable_sort(deque<int>)"), std_stable_sort, generate);
-
-      bm.operator()<std::vector<int>>(name("rng::stable_sort(vector<int>)"), std::ranges::stable_sort, generate);
-      bm.operator()<std::vector<support::NonIntegral>>(
-          name("rng::stable_sort(vector<NonIntegral>)"), std::ranges::stable_sort, gen2);
-      bm.operator()<std::deque<int>>(name("rng::stable_sort(deque<int>)"), std::ranges::stable_sort, generate);
     };
 
     register_bm(support::quicksort_adversarial_data<int>, "qsort adversarial");

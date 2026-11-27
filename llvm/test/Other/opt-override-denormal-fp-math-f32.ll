@@ -14,10 +14,10 @@ entry:
   ret i32 0
 }
 
-; ALL-DAG: attributes [[ATTR]] = { nounwind "denormal-fp-math-f32"="preserve-sign,ieee" }
-; IEEE-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-f32"="ieee,ieee" }
-; PRESERVESIGN-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-; POSITIVEZERO-DAG: attributes [[NOATTR]] = { nounwind "denormal-fp-math-f32"="positive-zero,positive-zero" }
+; ALL-DAG: attributes [[ATTR]] = { nounwind denormal_fpenv(float: preservesign|ieee) }
+; IEEE-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(ieee) }
+; PRESERVESIGN-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(float: preservesign) }
+; POSITIVEZERO-DAG: attributes [[NOATTR]] = { nounwind denormal_fpenv(float: positivezero) }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "denormal-fp-math-f32"="preserve-sign,ieee" }
+attributes #1 = { nounwind denormal_fpenv(float: preservesign|ieee) }

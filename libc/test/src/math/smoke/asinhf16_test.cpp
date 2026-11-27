@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
+#include "hdr/errno_macros.h"
 #include "src/math/asinhf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -14,7 +14,6 @@
 using LlvmLibcAsinhf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAsinhf16Test, SpecialNumbers) {
-  libc_errno = 0;
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::asinhf16(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -33,3 +32,18 @@ TEST_F(LlvmLibcAsinhf16Test, SpecialNumbers) {
   EXPECT_FP_EQ(neg_inf, LIBC_NAMESPACE::asinhf16(neg_inf));
   EXPECT_MATH_ERRNO(0);
 }
+
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+TEST_F(LlvmLibcAsinhf16Test, TinySignedZeros) {
+  using Bits = LIBC_NAMESPACE::fputil::FPBits<float16>;
+  EXPECT_FP_EQ_ROUNDING_UPWARD(
+      Bits::zero(LIBC_NAMESPACE::Sign::NEG).get_val(),
+      LIBC_NAMESPACE::asinhf16(Bits(uint16_t(0x8001)).get_val()));
+  EXPECT_FP_EQ_ROUNDING_TOWARD_ZERO(
+      Bits::zero(LIBC_NAMESPACE::Sign::NEG).get_val(),
+      LIBC_NAMESPACE::asinhf16(Bits(uint16_t(0x8001)).get_val()));
+  EXPECT_FP_EQ_ROUNDING_DOWNWARD(
+      Bits::zero().get_val(),
+      LIBC_NAMESPACE::asinhf16(Bits(uint16_t(1)).get_val()));
+}
+#endif

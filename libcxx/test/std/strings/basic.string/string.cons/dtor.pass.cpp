@@ -12,11 +12,12 @@
 
 // ~basic_string() // implied noexcept; // constexpr since C++20
 
-#include <string>
 #include <cassert>
+#include <string>
+#include <type_traits>
 
-#include "test_macros.h"
 #include "test_allocator.h"
+#include "test_macros.h"
 
 template <class T>
 struct throwing_alloc {
@@ -44,6 +45,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   {
     std::basic_string<char, std::char_traits<char>, test_allocator<char>> str2((test_allocator<char>(&alloc_stats)));
     str2 = "long long string so no SSO";
+    (void)str2;
     assert(alloc_stats.alloc_count > 0);
     LIBCPP_ASSERT(alloc_stats.alloc_count == 1);
   }

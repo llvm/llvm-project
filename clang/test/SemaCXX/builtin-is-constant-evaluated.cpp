@@ -154,3 +154,17 @@ namespace narrowing {
     // expected-note {{insert an explicit cast to silence this issue}}
   }
 }
+
+struct GH99680 {
+  static const int x1 = 1/(1-__builtin_is_constant_evaluated()); // expected-error {{in-class initializer for static data member is not a constant expression}} \
+    // expected-note {{division by zero}}
+  static const int x2 = __builtin_is_constant_evaluated();
+  static_assert(x2 == 1);
+  static const float x3 = 1/(1-__builtin_is_constant_evaluated());  // expected-error {{in-class initializer for static data member of type 'const float' requires 'constexpr' specifier}} \
+  // expected-note {{add 'constexpr'}} \
+  // expected-error {{in-class initializer for static data member is not a constant expression}} \
+  // expected-note {{division by zero}}
+  static const float x4 = __builtin_is_constant_evaluated(); // expected-error {{in-class initializer for static data member of type 'const float' requires 'constexpr' specifier}} \
+  // expected-note {{add 'constexpr'}}
+  static_assert(fold(x4 == 1));
+};

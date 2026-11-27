@@ -26,12 +26,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/StringSaver.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 #include "llvm/Support/raw_ostream.h"
-#include <sys/stat.h>
-#include <sys/resource.h>
-#include <signal.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -532,8 +531,21 @@ std::error_code
 llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
                                  WindowsEncodingMethod Encoding /*unused*/) {
   std::error_code EC;
+#if defined(__MVS__)
+  // On Unix-like systems, this function always writes UTF-8 data, but on z/OS
+  // USS, text content is always converted to EBCDIC. Use a special class to
+  // force UTF-8 content.
+  struct Utf8Stream : public llvm::raw_fd_ostream {
+    Utf8Stream(StringRef Filename, std::error_code &EC)
+        : raw_fd_ostream(Filename, EC) {
+      setzOSFileTag(get_fd(), CCSID_UTF_8, true);
+    }
+  };
+  Utf8Stream OS(FileName, EC);
+#else
   llvm::raw_fd_ostream OS(FileName, EC,
                           llvm::sys::fs::OpenFlags::OF_TextWithCRLF);
+#endif
 
   if (EC)
     return EC;

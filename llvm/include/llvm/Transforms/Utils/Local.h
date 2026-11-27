@@ -28,17 +28,18 @@ class DataLayout;
 class Value;
 class WeakTrackingVH;
 class WeakVH;
+template <typename PtrType> class SmallPtrSetImpl;
 template <typename T> class SmallVectorImpl;
 class AAResults;
 class AllocaInst;
 class AssumptionCache;
 class BasicBlock;
-class BranchInst;
 class CallBase;
 class CallInst;
-class DbgVariableIntrinsic;
+class CondBrInst;
 class DIBuilder;
 class DomTreeUpdater;
+class FreezeInst;
 class Function;
 class Instruction;
 class InvokeInst;
@@ -84,14 +85,6 @@ LLVM_ABI bool
 wouldInstructionBeTriviallyDead(const Instruction *I,
                                 const TargetLibraryInfo *TLI = nullptr);
 
-/// Return true if the result produced by the instruction has no side effects on
-/// any paths other than where it is used. This is less conservative than
-/// wouldInstructionBeTriviallyDead which is based on the assumption
-/// that the use count will be 0. An example usage of this API is for
-/// identifying instructions that can be sunk down to use(s).
-LLVM_ABI bool wouldInstructionBeTriviallyDeadOnUnusedPaths(
-    Instruction *I, const TargetLibraryInfo *TLI = nullptr);
-
 /// If the specified value is a trivially dead instruction, delete it.
 /// If that makes any of its operands trivially dead, delete them too,
 /// recursively. Return true if any instructions were deleted.
@@ -130,10 +123,10 @@ LLVM_ABI bool RecursivelyDeleteTriviallyDeadInstructionsPermissive(
 /// by a trivially dead instruction, delete it. If that makes any of its
 /// operands trivially dead, delete them too, recursively. Return true if a
 /// change was made.
-LLVM_ABI bool
-RecursivelyDeleteDeadPHINode(PHINode *PN,
-                             const TargetLibraryInfo *TLI = nullptr,
-                             MemorySSAUpdater *MSSAU = nullptr);
+LLVM_ABI bool RecursivelyDeleteDeadPHINode(
+    PHINode *PN, const TargetLibraryInfo *TLI = nullptr,
+    MemorySSAUpdater *MSSAU = nullptr,
+    SmallPtrSetImpl<PHINode *> *KnownNonDeadPHIs = nullptr);
 
 /// Scan the specified basic block and try to simplify any instructions in it
 /// and recursively delete dead instructions.
@@ -143,12 +136,6 @@ RecursivelyDeleteDeadPHINode(PHINode *PN,
 LLVM_ABI bool
 SimplifyInstructionsInBlock(BasicBlock *BB,
                             const TargetLibraryInfo *TLI = nullptr);
-
-/// Replace all the uses of an SSA value in @llvm.dbg intrinsics with
-/// undef. This is useful for signaling that a variable, e.g. has been
-/// found dead and hence it's unavailable at a given program point.
-/// Returns true if the dbg values have been changed.
-LLVM_ABI bool replaceDbgUsesWithUndef(Instruction *I);
 
 //===----------------------------------------------------------------------===//
 //  Control Flow Graph Restructuring.
@@ -203,10 +190,11 @@ LLVM_ABI bool FlattenCFG(BasicBlock *BB, AAResults *AA = nullptr);
 /// If this basic block is ONLY a setcc and a branch, and if a predecessor
 /// branches to us and one of our successors, fold the setcc into the
 /// predecessor and use logical operations to pick the right destination.
-LLVM_ABI bool foldBranchToCommonDest(BranchInst *BI,
+LLVM_ABI bool foldBranchToCommonDest(CondBrInst *BI,
                                      llvm::DomTreeUpdater *DTU = nullptr,
                                      MemorySSAUpdater *MSSAU = nullptr,
                                      const TargetTransformInfo *TTI = nullptr,
+                                     AssumptionCache *AC = nullptr,
                                      unsigned BonusInstThreshold = 1);
 
 /// This function takes a virtual register computed by an Instruction and
@@ -245,16 +233,16 @@ LLVM_ABI Align tryEnforceAlignment(Value *V, Align PrefAlign,
 /// alignment from the beginning.
 LLVM_ABI Align getOrEnforceKnownAlignment(Value *V, MaybeAlign PrefAlign,
                                           const DataLayout &DL,
-                                          const Instruction *CxtI = nullptr,
+                                          const Instruction *CtxI = nullptr,
                                           AssumptionCache *AC = nullptr,
                                           const DominatorTree *DT = nullptr);
 
 /// Try to infer an alignment for the specified pointer.
 inline Align getKnownAlignment(Value *V, const DataLayout &DL,
-                               const Instruction *CxtI = nullptr,
+                               const Instruction *CtxI = nullptr,
                                AssumptionCache *AC = nullptr,
                                const DominatorTree *DT = nullptr) {
-  return getOrEnforceKnownAlignment(V, MaybeAlign(), DL, CxtI, AC, DT);
+  return getOrEnforceKnownAlignment(V, MaybeAlign(), DL, CtxI, AC, DT);
 }
 
 /// Create a call that matches the invoke \p II in terms of arguments,
@@ -275,36 +263,23 @@ LLVM_ABI CallInst *changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
 LLVM_ABI void InsertDebugValueAtStoreLoc(DbgVariableRecord *DVR, StoreInst *SI,
                                          DIBuilder &Builder);
 
-/// Creates and inserts an llvm.dbg.value intrinsic before a store
-/// that has an associated llvm.dbg.value intrinsic.
-LLVM_ABI void InsertDebugValueAtStoreLoc(DbgVariableIntrinsic *DII,
-                                         StoreInst *SI, DIBuilder &Builder);
-
-/// Inserts a llvm.dbg.value intrinsic before a store to an alloca'd value
-/// that has an associated llvm.dbg.declare intrinsic.
-LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
-                                              StoreInst *SI,
-                                              DIBuilder &Builder);
+/// Inserts a dbg.value record before a store to an alloca'd value
+/// that has an associated dbg.declare record.
 LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
                                               StoreInst *SI,
                                               DIBuilder &Builder);
 
-/// Inserts a llvm.dbg.value intrinsic before a load of an alloca'd value
-/// that has an associated llvm.dbg.declare intrinsic.
-LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
-                                              LoadInst *LI, DIBuilder &Builder);
+/// Inserts a dbg.value record before a load of an alloca'd value
+/// that has an associated dbg.declare record.
 LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
                                               LoadInst *LI, DIBuilder &Builder);
 
-/// Inserts a llvm.dbg.value intrinsic after a phi that has an associated
-/// llvm.dbg.declare intrinsic.
-LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableIntrinsic *DII,
-                                              PHINode *LI, DIBuilder &Builder);
+/// Inserts a dbg.value record after a phi that has an associated
+/// llvm.dbg.declare record.
 LLVM_ABI void ConvertDebugDeclareToDebugValue(DbgVariableRecord *DVR,
                                               PHINode *LI, DIBuilder &Builder);
 
-/// Lowers llvm.dbg.declare intrinsics into appropriate set of
-/// llvm.dbg.value intrinsics.
+/// Lowers dbg.declare records into appropriate set of dbg.value records.
 LLVM_ABI bool LowerDbgDeclare(Function &F);
 
 /// Propagate dbg.value intrinsics through the newly inserted PHIs.
@@ -312,7 +287,7 @@ LLVM_ABI void
 insertDebugValuesForPHIs(BasicBlock *BB,
                          SmallVectorImpl<PHINode *> &InsertedPHIs);
 
-/// Replaces llvm.dbg.declare instruction when the address it
+/// Replaces dbg.declare record when the address it
 /// describes is replaced with a new value. If Deref is true, an
 /// additional DW_OP_deref is prepended to the expression. If Offset
 /// is non-zero, a constant displacement is added to the expression
@@ -321,26 +296,32 @@ LLVM_ABI bool replaceDbgDeclare(Value *Address, Value *NewAddress,
                                 DIBuilder &Builder, uint8_t DIExprFlags,
                                 int Offset);
 
-/// Replaces multiple llvm.dbg.value instructions when the alloca it describes
+/// Replaces multiple dbg.value records when the alloca it describes
 /// is replaced with a new value. If Offset is non-zero, a constant displacement
 /// is added to the expression (after the mandatory Deref). Offset can be
-/// negative. New llvm.dbg.value instructions are inserted at the locations of
+/// negative. New dbg.value records are inserted at the locations of
 /// the instructions they replace.
 LLVM_ABI void replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                        DIBuilder &Builder, int Offset = 0);
 
-/// Assuming the instruction \p I is going to be deleted, attempt to salvage
-/// debug users of \p I by writing the effect of \p I in a DIExpression. If it
-/// cannot be salvaged changes its debug uses to undef.
+/// Salvage debug records that use \p I before the instruction is deleted.
+/// Rewrite those uses in terms of its operands where we can, and encode the
+/// instruction's effect in the record's DIExpression. Deleting the instruction
+/// replaces any remaining debug-record uses with poison.
 LLVM_ABI void salvageDebugInfo(Instruction &I);
 
-/// Implementation of salvageDebugInfo, applying only to instructions in
-/// \p Insns, rather than all debug users from findDbgUsers( \p I).
-/// Mark undef if salvaging cannot be completed.
+/// Salvage only the records in \p DbgRecords instead of finding every debug
+/// user of \p I. Every record must be a debug user of the instruction.
+///
+/// Process records in order. For a dbg.assign, salvage a matching address
+/// before its variable location since replacing a variable-location operand
+/// can also replace the address. Stop when a checked variable location cannot
+/// be salvaged. A matching address counts as processed even if salvage leaves
+/// it unchanged. If nothing was processed, call setKillLocation() on every
+/// supplied record.
 LLVM_ABI void
 salvageDebugInfoForDbgValues(Instruction &I,
-                             ArrayRef<DbgVariableIntrinsic *> Insns,
-                             ArrayRef<DbgVariableRecord *> DPInsns);
+                             ArrayRef<DbgVariableRecord *> DbgRecords);
 
 /// Given an instruction \p I and DIExpression \p DIExpr operating on
 /// it, append the effects of \p I to the DIExpression operand list
@@ -394,12 +375,9 @@ handleUnreachableTerminator(Instruction *I,
                             SmallVectorImpl<Value *> &PoisonedValues);
 
 /// Remove all instructions from a basic block other than its terminator
-/// and any present EH pad instructions. Returns a pair where the first element
-/// is the number of instructions (excluding debug info intrinsics) that have
-/// been removed, and the second element is the number of debug info intrinsics
+/// and any present EH pad instructions. Returns the number of instructions
 /// that have been removed.
-LLVM_ABI std::pair<unsigned, unsigned>
-removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
+LLVM_ABI unsigned removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB);
 
 /// Insert an unreachable instruction before the specified
 /// instruction, making it and the rest of the code in the block dead.
@@ -427,11 +405,14 @@ LLVM_ABI Instruction *removeUnwindEdge(BasicBlock *BB,
                                        DomTreeUpdater *DTU = nullptr);
 
 /// Remove all blocks that can not be reached from the function's entry.
+/// When \p FoldInstsToUnreachable is true, it will also convert obviously
+/// unreachable instructions into unreachable (e.g, store to null).
 ///
-/// Returns true if any basic block was removed.
+/// Returns true if any basic block was removed or any instruction was folded.
 LLVM_ABI bool removeUnreachableBlocks(Function &F,
                                       DomTreeUpdater *DTU = nullptr,
-                                      MemorySSAUpdater *MSSAU = nullptr);
+                                      MemorySSAUpdater *MSSAU = nullptr,
+                                      bool FoldInstsToUnreachable = true);
 
 /// Combine the metadata of two instructions so that K can replace J. This
 /// specifically handles the case of CSE-like transformations. Some
@@ -452,9 +433,10 @@ LLVM_ABI void combineAAMetadata(Instruction *K, const Instruction *J);
 LLVM_ABI void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
 
 /// Patch the replacement so that it is not more restrictive than the value
-/// being replaced. It assumes that the replacement does not get moved from
-/// its original position.
-LLVM_ABI void patchReplacementInstruction(Instruction *I, Value *Repl);
+/// being replaced. Unless DoesKMove is set, it assumes that the replacement
+/// does not get moved from its original position.
+LLVM_ABI void patchReplacementInstruction(Instruction *I, Value *Repl,
+                                          bool DoesKMove = false);
 
 // Replace each use of 'From' with 'To', if that use does not belong to basic
 // block where 'From' is defined. Returns the number of replacements made.
@@ -470,6 +452,11 @@ LLVM_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To,
 LLVM_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To,
                                            DominatorTree &DT,
                                            const BasicBlock *BB);
+/// Replace each use of 'From' with 'To' if that use is dominated by the
+/// given instruction. Returns the number of replacements made.
+LLVM_ABI unsigned replaceDominatedUsesWith(Value *From, Value *To,
+                                           DominatorTree &DT,
+                                           const Instruction *I);
 /// Replace each use of 'From' with 'To' if that use is dominated by
 /// the given edge and the callback ShouldReplace returns true. Returns the
 /// number of replacements made.
@@ -481,6 +468,12 @@ LLVM_ABI unsigned replaceDominatedUsesWithIf(
 /// Returns the number of replacements made.
 LLVM_ABI unsigned replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlock *BB,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
+/// Replace each use of 'From' with 'To' if that use is dominated by
+/// the given instruction and the callback ShouldReplace returns true. Returns
+/// the number of replacements made.
+LLVM_ABI unsigned replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const Instruction *I,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace);
 
 /// Return true if this call calls a gc leaf function.
@@ -574,6 +567,13 @@ LLVM_ABI bool canReplaceOperandWithVariable(const Instruction *I,
 
 /// Invert the given true/false value, possibly reusing an existing copy.
 LLVM_ABI Value *invertCondition(Value *Condition);
+
+/// Move \p FI right after the definition of its operand, and replace the uses
+/// of the operand that it dominates with \p FI. Users whose operand was
+/// replaced are added to \p Users. Returns whether anything changed, which is
+/// not the case if there is no position to move \p FI to.
+LLVM_ABI bool freezeUsesAfterDef(FreezeInst &FI, DominatorTree &DT,
+                                 SmallVectorImpl<User *> *Users = nullptr);
 
 //===----------------------------------------------------------------------===//
 //  Assorted

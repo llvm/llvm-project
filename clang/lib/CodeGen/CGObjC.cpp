@@ -20,6 +20,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/NSAPI.h"
 #include "clang/AST/StmtObjC.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
@@ -62,6 +63,14 @@ llvm::Value *CodeGenFunction::EmitObjCStringLiteral(const ObjCStringLiteral *E)
 ///
 llvm::Value *
 CodeGenFunction::EmitObjCBoxedExpr(const ObjCBoxedExpr *E) {
+  // If decided in Sema constant initializers are supported by the runtime, not
+  // disabled, and the contents can be emitted as a constant NSNumber subclass;
+  // use the ConstEmitter
+  if (E->isExpressibleAsConstantInitializer()) {
+    ConstantEmitter ConstEmitter(CGM);
+    return ConstEmitter.tryEmitAbstract(E, E->getType());
+  }
+
   // Generate the correct selector for this literal's concrete type.
   // Get the method.
   const ObjCMethodDecl *BoxingMethod = E->getBoxingMethod();
@@ -128,9 +137,18 @@ llvm::Value *CodeGenFunction::EmitObjCCollectionLiteral(const Expr *E,
   if (!ALE)
     DLE = cast<ObjCDictionaryLiteral>(E);
 
-  // Optimize empty collections by referencing constants, when available.
-  uint64_t NumElements =
-    ALE ? ALE->getNumElements() : DLE->getNumElements();
+  const bool CanBeExpressedAsConstant =
+      ALE ? ALE->isExpressibleAsConstantInitializer()
+          : DLE->isExpressibleAsConstantInitializer();
+  if (CanBeExpressedAsConstant) {
+    ConstantEmitter ConstEmitter(CGM);
+    return ConstEmitter.tryEmitAbstract(E, E->getType());
+  }
+
+  // Optimize empty collections by referencing constants, when available and
+  // constant initializers aren't supported
+  uint64_t NumElements = ALE ? ALE->getNumElements() : DLE->getNumElements();
+
   if (NumElements == 0 && CGM.getLangOpts().ObjCRuntime.hasEmptyCollections()) {
     StringRef ConstantName = ALE ? "__NSArray0__" : "__NSDictionary0__";
     QualType IdTy(CGM.getContext().getObjCIdType());
@@ -761,7 +779,22 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
 
   const CGFunctionInfo &FI = CGM.getTypes().arrangeObjCMethodDeclaration(OMD);
   if (OMD->isDirectMethod()) {
+    // Default hidden visibility
     Fn->setVisibility(llvm::Function::HiddenVisibility);
+    if (CGM.isObjCDirectPreconditionThunkEnabled()) {
+      // However, if we expose the symbol, respect an explicit visibility
+      // attribute. If the method is an accessor and the property also sets
+      // the attribute, prefer the method's, as it's the more specific one.
+      auto V = OMD->getExplicitVisibility(NamedDecl::VisibilityForValue);
+      if (!V) {
+        // Find the property through the method's declaration: a hand-written
+        // accessor isn't marked as an accessor, but its declaration is.
+        if (const auto *PD = OMD->getCanonicalDecl()->findPropertyDecl())
+          V = PD->getExplicitVisibility(NamedDecl::VisibilityForValue);
+      }
+      if (V)
+        Fn->setVisibility(CGM.GetLLVMVisibility(*V));
+    }
     CGM.SetLLVMFunctionAttributes(OMD, FI, Fn, /*IsThunk=*/false);
     CGM.SetLLVMFunctionAttributesForDefinition(OMD, Fn);
   } else {
@@ -781,10 +814,6 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
                 OMD->getLocation(), StartLoc);
 
   if (OMD->isDirectMethod()) {
-    // This function is a direct call, it has to implement a nil check
-    // on entry.
-    //
-    // TODO: possibly have several entry points to elide the check
     CGM.getObjCRuntime().GenerateDirectMethodPrologue(*this, Fn, OMD, CD);
   }
 
@@ -842,19 +871,9 @@ static void emitStructGetterCall(CodeGenFunction &CGF, ObjCIvarDecl *ivar,
                callee, ReturnValueSlot(), args);
 }
 
-/// Determine whether the given architecture supports unaligned atomic
-/// accesses.  They don't have to be fast, just faster than a function
-/// call and a mutex.
-static bool hasUnalignedAtomics(llvm::Triple::ArchType arch) {
-  // FIXME: Allow unaligned atomic load/store on x86.  (It is not
-  // currently supported by the backend.)
-  return false;
-}
-
 /// Return the maximum size that permits atomic accesses for the given
 /// architecture.
-static CharUnits getMaxAtomicAccessSize(CodeGenModule &CGM,
-                                        llvm::Triple::ArchType arch) {
+static CharUnits getMaxAtomicAccessSize(CodeGenModule &CGM) {
   // ARM has 8-byte atomic accesses, but it's not clear whether we
   // want to rely on them here.
 
@@ -999,8 +1018,8 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
 
   // Compute whether the ivar has strong members.
   if (CGM.getLangOpts().getGC())
-    if (const RecordType *recordType = ivarType->getAs<RecordType>())
-      HasStrong = recordType->getDecl()->hasObjectMember();
+    if (const auto *RD = ivarType->getAsRecordDecl())
+      HasStrong = RD->hasObjectMember();
 
   // We can never access structs with object members with a native
   // access, because we need to use write barriers.  This is what
@@ -1015,25 +1034,22 @@ PropertyImplStrategy::PropertyImplStrategy(CodeGenModule &CGM,
 
   // If the size of the ivar is not a power of two, give up.  We don't
   // want to get into the business of doing compare-and-swaps.
-  if (!IvarSize.isPowerOfTwo()) {
+  if (!IvarSize.isZero() && !IvarSize.isPowerOfTwo()) {
     Kind = CopyStruct;
     return;
   }
 
-  llvm::Triple::ArchType arch =
-    CGM.getTarget().getTriple().getArch();
-
   // Most architectures require memory to fit within a single cache
   // line, so the alignment has to be at least the size of the access.
   // Otherwise we have to grab a lock.
-  if (IvarAlignment < IvarSize && !hasUnalignedAtomics(arch)) {
+  if (IvarAlignment < IvarSize) {
     Kind = CopyStruct;
     return;
   }
 
   // If the ivar's size exceeds the architecture's maximum atomic
   // access size, we have to use CopyStruct.
-  if (IvarSize > getMaxAtomicAccessSize(CGM, arch)) {
+  if (IvarSize > getMaxAtomicAccessSize(CGM)) {
     Kind = CopyStruct;
     return;
   }
@@ -1193,16 +1209,28 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     ivarAddr = ivarAddr.withElementType(bitcastType);
     llvm::LoadInst *load = Builder.CreateLoad(ivarAddr, "load");
     load->setAtomic(llvm::AtomicOrdering::Unordered);
+    llvm::Value *ivarVal = load;
+    if (PointerAuthQualifier PAQ = ivar->getType().getPointerAuth()) {
+      CGPointerAuthInfo SrcInfo = EmitPointerAuthInfo(PAQ, ivarAddr);
+      CGPointerAuthInfo TargetInfo =
+          CGM.getPointerAuthInfoForType(getterMethod->getReturnType());
+      ivarVal = emitPointerAuthResign(ivarVal, ivar->getType(), SrcInfo,
+                                      TargetInfo, /*isKnownNonNull=*/false);
+    }
 
     // Store that value into the return address.  Doing this with a
     // bitcast is likely to produce some pretty ugly IR, but it's not
     // the *most* terrible thing in the world.
     llvm::Type *retTy = ConvertType(getterMethod->getReturnType());
     uint64_t retTySize = CGM.getDataLayout().getTypeSizeInBits(retTy);
-    llvm::Value *ivarVal = load;
     if (ivarSize > retTySize) {
       bitcastType = llvm::Type::getIntNTy(getLLVMContext(), retTySize);
-      ivarVal = Builder.CreateTrunc(load, bitcastType);
+      if (getterMethod->getReturnType()->hasBooleanRepresentation() &&
+          CGM.getCodeGenOpts().isConvertingBoolWithCmp0())
+        ivarVal = Builder.CreateICmpNE(
+            ivarVal, llvm::Constant::getNullValue(ivarVal->getType()));
+      else
+        ivarVal = Builder.CreateTrunc(ivarVal, bitcastType);
     }
     Builder.CreateStore(ivarVal, ReturnValue.withElementType(bitcastType));
 
@@ -1214,6 +1242,16 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
   case PropertyImplStrategy::GetSetProperty: {
     llvm::FunctionCallee getPropertyFn =
         CGM.getObjCRuntime().GetPropertyGetFunction();
+
+    if (ivar->getType().getPointerAuth()) {
+      // This currently cannot be hit, but if we ever allow objc pointers
+      // to be signed, this will become possible. Reaching here would require
+      // a copy, weak, etc property backed by an authenticated pointer.
+      CGM.ErrorUnsupported(propImpl,
+                           "Obj-C getter requiring pointer authentication");
+      return;
+    }
+
     if (!getPropertyFn) {
       CGM.ErrorUnsupported(propImpl, "Obj-C getter requiring atomic copy");
       return;
@@ -1269,7 +1307,9 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     LValue LV = EmitLValueForIvar(TypeOfSelfObject(), LoadObjCSelf(), ivar, 0);
 
     QualType ivarType = ivar->getType();
-    switch (getEvaluationKind(ivarType)) {
+    auto EvaluationKind = getEvaluationKind(ivarType);
+    assert(!ivarType.getPointerAuth() || EvaluationKind == TEK_Scalar);
+    switch (EvaluationKind) {
     case TEK_Complex: {
       ComplexPairTy pair = EmitLoadOfComplex(LV, SourceLocation());
       EmitStoreOfComplex(pair, MakeAddrLValue(ReturnValue, ivarType),
@@ -1287,6 +1327,11 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     case TEK_Scalar: {
       llvm::Value *value;
       if (propType->isReferenceType()) {
+        if (ivarType.getPointerAuth()) {
+          CGM.ErrorUnsupported(propImpl,
+                               "Obj-C getter for authenticated reference type");
+          return;
+        }
         value = LV.getAddress().emitRawPointer(*this);
       } else {
         // We want to load and autoreleaseReturnValue ARC __weak ivars.
@@ -1300,7 +1345,19 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
         // Otherwise we want to do a simple load, suppressing the
         // final autorelease.
         } else {
-          value = EmitLoadOfLValue(LV, SourceLocation()).getScalarVal();
+          if (PointerAuthQualifier PAQ = ivar->getType().getPointerAuth()) {
+            Address ivarAddr = LV.getAddress();
+            llvm::LoadInst *LoadInst = Builder.CreateLoad(ivarAddr, "load");
+            llvm::Value *Load = LoadInst;
+            auto SrcInfo = EmitPointerAuthInfo(PAQ, ivarAddr);
+            auto TargetInfo =
+                CGM.getPointerAuthInfoForType(getterMethod->getReturnType());
+            Load = emitPointerAuthResign(Load, ivarType, SrcInfo, TargetInfo,
+                                         /*isKnownNonNull=*/false);
+            value = Load;
+          } else
+            value = EmitLoadOfLValue(LV, SourceLocation()).getScalarVal();
+
           AutoreleaseResult = false;
         }
 
@@ -1489,6 +1546,14 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
     ivarAddr = ivarAddr.withElementType(castType);
 
     llvm::Value *load = Builder.CreateLoad(argAddr);
+
+    if (PointerAuthQualifier PAQ = ivar->getType().getPointerAuth()) {
+      QualType PropertyType = propImpl->getPropertyDecl()->getType();
+      CGPointerAuthInfo SrcInfo = CGM.getPointerAuthInfoForType(PropertyType);
+      CGPointerAuthInfo TargetInfo = EmitPointerAuthInfo(PAQ, ivarAddr);
+      load = emitPointerAuthResign(load, ivar->getType(), SrcInfo, TargetInfo,
+                                   /*isKnownNonNull=*/false);
+    }
 
     // Perform an atomic store.  There are no memory ordering requirements.
     llvm::StoreInst *store = Builder.CreateStore(load, ivarAddr);
@@ -2012,7 +2077,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     EmitAutoVarCleanups(variable);
 
   // Perform the loop body, setting up break and continue labels.
-  BreakContinueStack.push_back(BreakContinue(LoopEnd, AfterBody));
+  BreakContinueStack.push_back(BreakContinue(S, LoopEnd, AfterBody));
   {
     RunCleanupsScope Scope(*this);
     EmitStmt(S.getBody());
@@ -2972,13 +3037,12 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
     value = doFallback(CGF, value);
   } else if (llvm::CallInst *call = dyn_cast<llvm::CallInst>(value)) {
     // Place the retain immediately following the call.
-    CGF.Builder.SetInsertPoint(call->getParent(),
-                               ++llvm::BasicBlock::iterator(call));
+    CGF.Builder.SetInsertPoint(++llvm::BasicBlock::iterator(call));
     value = doAfterCall(CGF, value);
   } else if (llvm::InvokeInst *invoke = dyn_cast<llvm::InvokeInst>(value)) {
     // Place the retain at the beginning of the normal destination block.
     llvm::BasicBlock *BB = invoke->getNormalDest();
-    CGF.Builder.SetInsertPoint(BB, BB->begin());
+    CGF.Builder.SetInsertPoint(BB->begin());
     value = doAfterCall(CGF, value);
 
   // Bitcasts can arise because of related-result returns.  Rewrite
@@ -2986,7 +3050,7 @@ static llvm::Value *emitARCOperationAfterCall(CodeGenFunction &CGF,
   } else if (llvm::BitCastInst *bitcast = dyn_cast<llvm::BitCastInst>(value)) {
     // Change the insert point to avoid emitting the fall-back call after the
     // bitcast.
-    CGF.Builder.SetInsertPoint(bitcast->getParent(), bitcast->getIterator());
+    CGF.Builder.SetInsertPoint(bitcast->getIterator());
     llvm::Value *operand = bitcast->getOperand(0);
     operand = emitARCOperationAfterCall(CGF, operand, doAfterCall, doFallback);
     bitcast->setOperand(0, operand);
@@ -3173,8 +3237,8 @@ ARCExprEmitter<Impl,Result>::visitPseudoObjectExpr(const PseudoObjectExpr *E) {
   }
 
   // Unbind all the opaques now.
-  for (unsigned i = 0, e = opaques.size(); i != e; ++i)
-    opaques[i].unbind(CGF);
+  for (CodeGenFunction::OpaqueValueMappingData &opaque : opaques)
+    opaque.unbind(CGF);
 
   return result;
 }

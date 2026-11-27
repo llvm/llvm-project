@@ -1,4 +1,4 @@
-//===--- ArgumentCommentCheck.h - clang-tidy --------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,8 @@
 
 namespace clang::tidy::bugprone {
 
-/// Checks that argument comments match parameter names.
+/// Checks that argument comments match parameter names and can optionally add
+/// missing comments for literals, init-lists, and constructed temporaries.
 ///
 /// The check understands argument comments in the form `/*parameter_name=*/`
 /// that are placed right before the argument.
@@ -28,7 +29,8 @@ namespace clang::tidy::bugprone {
 ///   'foo'
 /// \endcode
 ///
-/// The check tries to detect typos and suggest automated fixes for them.
+/// The check tries to detect typos and suggest automated fixes for them. It can
+/// also insert missing comments for configured argument kinds.
 class ArgumentCommentCheck : public ClangTidyCheck {
 public:
   ArgumentCommentCheck(StringRef Name, ClangTidyContext *Context);
@@ -37,25 +39,50 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
+  enum class IntegerLiteralKind { None, ZeroOnly, All };
+
 private:
+  enum class CommentKind {
+    None,
+    Literal,
+    NonLiteral,
+  };
+
   const unsigned StrictMode : 1;
+  const unsigned IgnoreMacros : 1;
   const unsigned IgnoreSingleArgument : 1;
+  const unsigned CommentAnonymousInitLists : 1;
   const unsigned CommentBoolLiterals : 1;
-  const unsigned CommentIntegerLiterals : 1;
-  const unsigned CommentFloatLiterals : 1;
-  const unsigned CommentStringLiterals : 1;
-  const unsigned CommentUserDefinedLiterals : 1;
   const unsigned CommentCharacterLiterals : 1;
+  const unsigned CommentFloatLiterals : 1;
   const unsigned CommentNullPtrs : 1;
+  const unsigned CommentParenthesizedTemporaries : 1;
+  const unsigned CommentStringLiterals : 1;
+  const unsigned CommentTypedInitLists : 1;
+  const unsigned CommentUserDefinedLiterals : 1;
+  const std::vector<StringRef> IgnoredParameterNames;
+  std::vector<llvm::Regex> IgnoredParameterNameRegexes;
+  const IntegerLiteralKind CommentIntegerLiterals;
+  const std::vector<StringRef> NullPtrMacros;
+  const std::vector<StringRef> BoolLiteralMacros;
   llvm::Regex IdentRE;
 
   void checkCallArgs(ASTContext *Ctx, const FunctionDecl *Callee,
-                     SourceLocation ArgBeginLoc,
+                     SourceLocation ArgBeginLoc, SourceLocation CloseLoc,
                      llvm::ArrayRef<const Expr *> Args);
 
-  bool shouldAddComment(const Expr *Arg) const;
+  CommentKind shouldAddComment(const Expr *Arg, const ASTContext &Ctx) const;
 };
 
 } // namespace clang::tidy::bugprone
+
+namespace clang::tidy {
+template <>
+struct OptionEnumMapping<bugprone::ArgumentCommentCheck::IntegerLiteralKind> {
+  static ArrayRef<
+      std::pair<bugprone::ArgumentCommentCheck::IntegerLiteralKind, StringRef>>
+  getEnumMapping();
+};
+} // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_ARGUMENTCOMMENTCHECK_H

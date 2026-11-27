@@ -1,0 +1,55 @@
+REQUIRES: ld.lld,llvm-ar
+
+# Test that a DTLTO link succeeds and outputs the expected set of files
+# correctly when FatLTO objects are present.
+RUN: rm -rf %t && split-file %s %t && cd %t
+
+# Compile bitcode. -O2 is required for cross-module importing.
+RUN: %clang -O2 --target=x86_64-linux-gnu -flto=thin -ffat-lto-objects -c \
+RUN:   foo.c boo.c start.c
+
+# We want to test FatLTO objects when included in archives.
+RUN: llvm-ar rcs foo.a foo.o
+RUN: llvm-ar rcsT boo.a boo.o
+
+# Build with DTLTO.
+RUN: %clang --target=x86_64-linux-gnu -flto=thin -ffat-lto-objects \
+RUN:   -fuse-ld=lld -nostdlib foo.a boo.a start.o -Wl,--save-temps \
+RUN:   -fthinlto-distributor=%python \
+RUN:   -Xthinlto-distributor=%llvm_src_root/utils/dtlto/local.py
+
+# Check that the required output files have been created.
+RUN: ls | FileCheck %s
+
+# thin archive member: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o
+CHECK-DAG: {{^}}boo.a(boo.o at [[#BOO_OFFSET:]]).3.[[#%X,HEXPID:]].3.[[#PID:]].native.o{{$}}
+# archive member: <archive>(<member> at <offset>).<task>.<pid>.<task>.<pid>.native.o
+CHECK-DAG: {{^}}foo.a(foo.o at [[#FOO_OFFSET:]]).2.[[#%X,HEXPID]].2.[[#PID]].native.o{{$}}
+# FatLTO object: <file>.<task>.<pid>.<task>.<pid>.native.o.
+CHECK-DAG: {{^}}start.o.1.[[#%X,HEXPID]].1.[[#PID]].native.o{{$}}
+
+# Check that all objects are named in all of the index files.
+# We expect this to happen because each object references symbols from the
+# others.
+RUN: llvm-dis *.1.*.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=OBJECTS
+RUN: llvm-dis *.2.*.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=OBJECTS
+RUN: llvm-dis *.3.*.thinlto.bc -o - | \
+RUN:   FileCheck %s --check-prefixes=OBJECTS
+
+OBJECTS-DAG: foo.o
+OBJECTS-DAG: boo.o
+OBJECTS-DAG: start.o
+
+#--- foo.c
+extern int boo(int), _start(int);
+__attribute__((retain)) int foo(int x) { return x + boo(x) + _start(x); }
+
+#--- boo.c
+extern int foo(int), _start(int);
+__attribute__((retain)) int boo(int x) { return x + foo(x) + _start(x); }
+
+#--- start.c
+extern int foo(int), boo(int);
+__attribute__((retain)) int _start(int x) { return x + foo(x) + boo(x); }

@@ -7,4 +7,4 @@
 // CHECK-MESSAGES: warning: The check 'misc-include-cleaner' will not perform any analysis because 'UnusedIncludes' and 'MissingIncludes' are both false. [clang-tidy-config]
 
 #include "bar.h"
-// CHECK-FIXES-NOT: {{^}}#include "baz.h"{{$}}
+// CHECK-FIXES-NOT: #include "baz.h"

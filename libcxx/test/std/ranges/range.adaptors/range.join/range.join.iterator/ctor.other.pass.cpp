@@ -15,6 +15,7 @@
 
 #include <cassert>
 #include <ranges>
+#include <utility>
 
 #include "test_macros.h"
 #include "../types.h"

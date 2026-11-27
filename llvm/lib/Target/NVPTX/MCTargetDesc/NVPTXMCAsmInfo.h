@@ -19,8 +19,6 @@ namespace llvm {
 class Triple;
 
 class NVPTXMCAsmInfo : public MCAsmInfo {
-  virtual void anchor();
-
 public:
   explicit NVPTXMCAsmInfo(const Triple &TheTriple,
                           const MCTargetOptions &Options);

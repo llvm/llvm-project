@@ -1,0 +1,27 @@
+; Basic block names that are not plain identifiers must be quoted when printed,
+; otherwise the MIR that llc emits cannot be parsed back by llc. The names here
+; contain commas and spaces, which is the shape a Fortran front end emits.
+;
+; Check both that the name is quoted on the way out and that the result parses.
+
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -stop-before=greedy -o %t.mir %s
+; RUN: FileCheck %s < %t.mir
+; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -x mir -start-before=greedy -o /dev/null %t.mir
+
+; CHECK: bb.0.entry:
+; CHECK: bb.1.", bb71":
+; CHECK: bb.2."file f.f90, line 12, bb99":
+
+define amdgpu_kernel void @k(ptr addrspace(1) %o, i32 %n) {
+entry:
+  %c = icmp sgt i32 %n, 0
+  br i1 %c, label %", bb71", label %"file f.f90, line 12, bb99"
+
+", bb71":
+  store i32 1, ptr addrspace(1) %o, align 4
+  br label %"file f.f90, line 12, bb99"
+
+"file f.f90, line 12, bb99":
+  store i32 2, ptr addrspace(1) %o, align 4
+  ret void
+}

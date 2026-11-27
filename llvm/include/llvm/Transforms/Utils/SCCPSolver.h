@@ -74,8 +74,12 @@ public:
 
   LLVM_ABI ~SCCPSolver();
 
+  LLVM_ABI const DataLayout &getDataLayout() const;
+
   LLVM_ABI void addPredicateInfo(Function &F, DominatorTree &DT,
                                  AssumptionCache &AC);
+
+  LLVM_ABI void removeSSACopies(Function &F);
 
   /// markBlockExecutable - This method can be used by clients to mark all of
   /// the blocks that are known to be intrinsically live in the processed unit.
@@ -216,6 +220,11 @@ public:
   // old ValueLatticeElement::isOverdefined() and is intended to be used in the
   // transition to ValueLatticeElement.
   LLVM_ABI static bool isOverdefined(const ValueLatticeElement &LV);
+
+  // Helper to check if \p LV is a replaceable constant. A pointer constant with
+  // potentially different provenance may not be unconditionally propagated to
+  // all uses.
+  LLVM_ABI static bool isReplaceableConstant(const ValueLatticeElement &LV);
 };
 } // namespace llvm
 

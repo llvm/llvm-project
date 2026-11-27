@@ -261,8 +261,43 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
     return false;
   }
 
-  for (Value *Arg : CB.args())
-    Formals.push_back(getVal(Arg));
+  for (unsigned I = 0, E = CB.arg_size(); I != E; ++I) {
+    Constant *Arg = getVal(CB.getArgOperand(I));
+    if (CB.isByValArgument(I)) {
+      constexpr uint64_t MaxByValCopySize = 256;
+      std::optional<Align> ParamAlign = CB.getParamAlign(I);
+      Type *ByValTy = CB.getParamByValType(I);
+      uint64_t Size = DL.getTypeAllocSize(ByValTy);
+      APInt Base(DL.getIndexTypeSizeInBits(Arg->getType()), 0);
+      auto *GV = dyn_cast<GlobalVariable>(
+          Arg->stripAndAccumulateConstantOffsets(DL, Base, true));
+      if (!GV || !ParamAlign || Size > MaxByValCopySize) {
+        LLVM_DEBUG(dbgs() << "Cannot copy the byval argument.\n");
+        return false;
+      }
+      Type *I8Ty = Type::getInt8Ty(CB.getContext());
+      SmallVector<Constant *, 32> Bytes;
+      for (uint64_t Off = 0; Off != Size; ++Off) {
+        Constant *Byte =
+            ComputeLoadResult(GV, I8Ty, Base + APInt(Base.getBitWidth(), Off));
+        if (!Byte) {
+          LLVM_DEBUG(dbgs() << "Cannot read the byval argument.\n");
+          return false;
+        }
+        Bytes.push_back(Byte);
+      }
+      ArrayType *CopyTy = ArrayType::get(I8Ty, Size);
+      auto NewGV = std::make_unique<GlobalVariable>(
+          CopyTy, false, GlobalValue::InternalLinkage,
+          ConstantArray::get(CopyTy, Bytes), "byval.copy",
+          /*TLMode=*/GlobalValue::NotThreadLocal,
+          Arg->getType()->getPointerAddressSpace());
+      NewGV->setAlignment(*ParamAlign);
+      AllocaTmps.push_back(std::move(NewGV));
+      Arg = AllocaTmps.back().get();
+    }
+    Formals.push_back(Arg);
+  }
   return true;
 }
 
@@ -270,7 +305,8 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
 /// if we can't evaluate it.  NewBB returns the next BB that control flows into,
 /// or null upon return. StrippedPointerCastsForAliasAnalysis is set to true if
 /// we looked through pointer casts to evaluate something.
-bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
+bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
+                              TargetLibraryInfo *TLI, BasicBlock *&NextBB,
                               bool &StrippedPointerCastsForAliasAnalysis) {
   // This is the main evaluation loop.
   while (true) {
@@ -296,7 +332,13 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           DL, Offset, /* AllowNonInbounds */ true));
       Offset = Offset.sextOrTrunc(DL.getIndexTypeSizeInBits(Ptr->getType()));
       auto *GV = dyn_cast<GlobalVariable>(Ptr);
-      if (!GV || !GV->hasUniqueInitializer()) {
+      if (!GV || !GV->hasUniqueInitializer() || GV->hasSection()) {
+        // hasUniqueInitializer() ensures that if we modify the initializer,
+        // the modified initializer will be used.
+        //
+        // We can't modify global variables with an explicit section because
+        // it might not be legal to emit the resulting initializer (for
+        // example, emitting a non-zero value into a BSS section).
         LLVM_DEBUG(dbgs() << "Store is not to global with unique initializer: "
                           << *Ptr << "\n");
         return false;
@@ -352,13 +394,6 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
       LLVM_DEBUG(dbgs() << "Found an alloca. Result: " << *InstResult << "\n");
     } else if (isa<CallInst>(CurInst) || isa<InvokeInst>(CurInst)) {
       CallBase &CB = *cast<CallBase>(&*CurInst);
-
-      // Debug info can safely be ignored here.
-      if (isa<DbgInfoIntrinsic>(CB)) {
-        LLVM_DEBUG(dbgs() << "Ignoring debug info.\n");
-        ++CurInst;
-        continue;
-      }
 
       // Cannot handle inline asm.
       if (CB.isInlineAsm()) {
@@ -438,10 +473,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
           Value *PtrArg = getVal(II->getArgOperand(1));
           Value *Ptr = PtrArg->stripPointerCasts();
           if (GlobalVariable *GV = dyn_cast<GlobalVariable>(Ptr)) {
-            Type *ElemTy = GV->getValueType();
+            uint64_t MinGVSize = GV->getGlobalSize(DL);
             if (!Size->isMinusOne() &&
-                Size->getValue().getLimitedValue() >=
-                    DL.getTypeStoreSize(ElemTy)) {
+                Size->getValue().getLimitedValue() >= MinGVSize) {
               Invariants.insert(GV);
               LLVM_DEBUG(dbgs() << "Found a global var that is an invariant: "
                                 << *GV << "\n");
@@ -534,16 +568,13 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
     } else if (CurInst->isTerminator()) {
       LLVM_DEBUG(dbgs() << "Found a terminator instruction.\n");
 
-      if (BranchInst *BI = dyn_cast<BranchInst>(CurInst)) {
-        if (BI->isUnconditional()) {
-          NextBB = BI->getSuccessor(0);
-        } else {
-          ConstantInt *Cond =
-            dyn_cast<ConstantInt>(getVal(BI->getCondition()));
-          if (!Cond) return false;  // Cannot determine.
-
-          NextBB = BI->getSuccessor(!Cond->getZExtValue());
-        }
+      if (UncondBrInst *BI = dyn_cast<UncondBrInst>(CurInst)) {
+        NextBB = BI->getSuccessor(0);
+      } else if (CondBrInst *BI = dyn_cast<CondBrInst>(CurInst)) {
+        ConstantInt *Cond = dyn_cast<ConstantInt>(getVal(BI->getCondition()));
+        if (!Cond)
+          return false; // Cannot determine.
+        NextBB = BI->getSuccessor(!Cond->getZExtValue());
       } else if (SwitchInst *SI = dyn_cast<SwitchInst>(CurInst)) {
         ConstantInt *Val =
           dyn_cast<ConstantInt>(getVal(SI->getCondition()));
@@ -599,8 +630,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
 /// Evaluate a call to function F, returning true if successful, false if we
 /// can't evaluate it.  ActualArgs contains the formal arguments for the
 /// function.
-bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
-                                 const SmallVectorImpl<Constant*> &ActualArgs) {
+bool Evaluator::EvaluateFunction(
+    Function *F, Constant *&RetVal,
+    const SmallVectorImpl<Constant *> &ActualArgs) {
   assert(ActualArgs.size() == F->arg_size() && "wrong number of arguments");
 
   // Check to see if this function is already executing (recursion).  If so,
@@ -624,13 +656,15 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
 
   BasicBlock::iterator CurInst = CurBB->begin();
 
+  TargetLibraryInfo *TLI = GetTLI ? &GetTLI(*F) : nullptr;
   while (true) {
     BasicBlock *NextBB = nullptr; // Initialized to avoid compiler warnings.
     LLVM_DEBUG(dbgs() << "Trying to evaluate BB: " << *CurBB << "\n");
 
     bool StrippedPointerCastsForAliasAnalysis = false;
 
-    if (!EvaluateBlock(CurInst, NextBB, StrippedPointerCastsForAliasAnalysis))
+    if (!EvaluateBlock(CurInst, TLI, NextBB,
+                       StrippedPointerCastsForAliasAnalysis))
       return false;
 
     if (!NextBB) {

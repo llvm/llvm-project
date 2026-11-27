@@ -37,7 +37,7 @@ template <> struct MappingTraits<HashNodeStable> {
 template <> struct CustomMappingTraits<IdHashNodeStableMapTy> {
   static void inputOne(IO &io, StringRef Key, IdHashNodeStableMapTy &V) {
     HashNodeStable NodeStable;
-    io.mapRequired(Key.str().c_str(), NodeStable);
+    io.mapRequired(Key, NodeStable);
     unsigned Id;
     if (Key.getAsInteger(0, Id)) {
       io.setError("Id not an integer");
@@ -48,7 +48,7 @@ template <> struct CustomMappingTraits<IdHashNodeStableMapTy> {
 
   static void output(IO &io, IdHashNodeStableMapTy &V) {
     for (auto Iter = V.begin(); Iter != V.end(); ++Iter)
-      io.mapRequired(utostr(Iter->first).c_str(), Iter->second);
+      io.mapRequired(utostr(Iter->first), Iter->second);
   }
 };
 

@@ -182,7 +182,7 @@ define void @f6(i64 %x) nounwind {
 
 define void @f7(i64 %x) nounwind {
 ; CHECK-LABEL: @f7(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[X:%.*]], 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP1]], 0, !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 16, !nosanitize [[META0]]
@@ -231,9 +231,9 @@ define void @f9(ptr %arg) nounwind {
 
 define void @f10(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: @f10(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 16, [[X:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[X:%.*]], 16
 ; CHECK-NEXT:    [[TMP2:%.*]] = alloca i128, i64 [[X]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 16, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[Y:%.*]], 16
 ; CHECK-NEXT:    [[TMP4:%.*]] = alloca i128, i64 [[Y]], align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = select i1 undef, i64 [[TMP1]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = select i1 undef, ptr [[TMP2]], ptr [[TMP4]]
@@ -470,7 +470,7 @@ define <vscale x 1 x i32> @load_scalable_vector(i64 %y) nounwind {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 0, [[DOTIDX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 [[Y]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64(), !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP4]], 4, !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4, !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 256, [[TMP2]], !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i64 256, [[TMP2]], !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]], !nosanitize [[META0]]
@@ -492,16 +492,16 @@ define <vscale x 1 x i32> @load_scalable_vector(i64 %y) nounwind {
 define void @scalable_alloca(i64 %y) nounwind {
 ; CHECK-LABEL: @scalable_alloca(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 8
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 5
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 5, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = alloca <vscale x 4 x i16>, i32 5, align 8
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 8
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 8
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[Y:%.*]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 0, [[DOTIDX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <vscale x 4 x i16>, ptr [[TMP4]], i64 [[Y]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64(), !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 8, !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8, !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP3]], [[TMP7]], !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[TMP3]], [[TMP7]], !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i64 [[TMP11]], [[TMP10]], !nosanitize [[META0]]
@@ -525,24 +525,23 @@ define void @scalable_alloca(i64 %y) nounwind {
 define void @scalable_alloca2(i64 %y) nounwind {
 ; CHECK-LABEL: @scalable_alloca2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 32
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 32
 ; CHECK-NEXT:    [[TMP4:%.*]] = alloca <vscale x 4 x i64>, align 32
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[TMP5]], 32
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 32
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[Y:%.*]], [[TMP6]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i64 0, [[DOTIDX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds <vscale x 4 x i64>, ptr [[TMP4]], i64 [[Y]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64(), !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 32, !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP3]], [[TMP7]], !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[TMP3]], [[TMP7]], !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 32, !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP2]], [[TMP7]], !nosanitize [[META0]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp ult i64 [[TMP2]], [[TMP7]], !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i64 [[TMP11]], [[TMP10]], !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = or i1 [[TMP12]], [[TMP13]], !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp slt i64 [[TMP7]], 0, !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[TMP15]], [[TMP14]], !nosanitize [[META0]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[TRAP:%.*]], label [[TMP17:%.*]]
-; CHECK:       17:
+; CHECK:       16:
 ; CHECK-NEXT:    [[TMP18:%.*]] = load <vscale x 4 x i64>, ptr [[TMP8]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       trap:

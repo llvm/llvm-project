@@ -2,7 +2,7 @@
 
 ; Checks the dbg informations about promise and coroutine frames under O2.
 
-; CHECK-LABEL: define internal fastcc void @f.resume({{.*}})
+; CHECK-LABEL: define internal void @f.resume({{.*}})
 ; CHECK:       entry.resume:
 ; CHECK:        #dbg_value(ptr poison, ![[PROMISEVAR_RESUME:[0-9]+]], !DIExpression(DW_OP_deref, DW_OP_plus_uconst, 16
 ; CHECK:        #dbg_value(ptr %begin, ![[CORO_FRAME:[0-9]+]], !DIExpression(DW_OP_deref)
@@ -112,7 +112,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
     br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-    %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
+    call void @llvm.coro.end(ptr null, i1 false, token none)
     ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -128,7 +128,7 @@ declare token @llvm.coro.save(ptr)
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare i8 @llvm.coro.suspend(token, i1)
 declare ptr @llvm.coro.free(token, ptr nocapture readonly)
-declare i1 @llvm.coro.end(ptr, i1, token)
+declare void @llvm.coro.end(ptr, i1, token)
 
 declare ptr @new(i64)
 declare void @delete(ptr)
@@ -153,7 +153,7 @@ declare void @final_suspend()
 !5 = !{!"clang version 11.0.0"}
 !6 = !DILocalVariable(name: "__promise", scope: !7, file: !1, line: 24, type: !10)
 !7 = distinct !DILexicalBlock(scope: !8, file: !1, line: 23, column: 12)
-!8 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !8, file: !1, line: 23, type: !9, scopeLine: 23, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
+!8 = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov", scope: !1, file: !1, line: 23, type: !9, scopeLine: 23, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !2)
 !10 = !DIDerivedType(tag: DW_TAG_typedef, name: "promise_type", scope: !8, file: !1, line: 15, baseType: !11)
 !11 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "promise_type", scope: !8, file: !1, line: 10, size: 128, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !12, identifier: "_ZTSN4coro12promise_typeE")

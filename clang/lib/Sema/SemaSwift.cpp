@@ -39,6 +39,16 @@ SwiftNameAttr *SemaSwift::mergeNameAttr(Decl *D, const SwiftNameAttr &SNA,
   return ::new (getASTContext()) SwiftNameAttr(getASTContext(), SNA, Name);
 }
 
+SwiftAttrAttr *SemaSwift::mergeAttrAttr(Decl *D, const SwiftAttrAttr &SAA) {
+  // A declaration may carry any number of 'swift_attr's; the string argument
+  // identifies each one, so only an identical one is a duplicate.
+  for (const auto *A : D->specific_attrs<SwiftAttrAttr>())
+    if (A->getAttribute() == SAA.getAttribute())
+      return nullptr;
+  return ::new (getASTContext())
+      SwiftAttrAttr(getASTContext(), SAA, SAA.getAttribute());
+}
+
 /// Pointer-like types in the default address space.
 static bool isValidSwiftContextType(QualType Ty) {
   if (!Ty->hasPointerRepresentation())
@@ -70,6 +80,80 @@ static bool isValidSwiftErrorResultType(QualType Ty) {
   if (!Ty.getQualifiers().empty())
     return false;
   return isValidSwiftContextType(Ty);
+}
+
+static bool isValidIdentifierEscapedChar(char c) {
+  if (c == '`' || c == '\\')
+    return false;
+
+  unsigned char uc = static_cast<unsigned char>(c);
+  // ASCII control characters and non-ASCII characters are not allowed.
+  if (uc < 0x20 || uc >= 0x7F)
+    return false;
+
+  return true;
+}
+
+static bool isValidAsEscapedIdentifier(StringRef string) {
+  if (string.empty())
+    return false;
+
+  bool allSpace = true;
+  for (char c : string) {
+    if (!isValidIdentifierEscapedChar(c))
+      return false;
+    if (c != ' ')
+      allSpace = false;
+  }
+
+  return !allSpace;
+}
+
+static std::pair<StringRef, StringRef> backtickAwareSplit(StringRef text,
+                                                          char separator) {
+  bool inBackticks = false;
+  for (size_t i = 0; i < text.size(); ++i) {
+    char c = text[i];
+    if (c == '`') {
+      inBackticks = !inBackticks;
+    } else if (c == separator && !inBackticks) {
+      return {text.substr(0, i), text.substr(i + 1)};
+    }
+  }
+  return {text, StringRef()};
+}
+
+static std::pair<StringRef, StringRef> backtickAwareRSplit(StringRef text,
+                                                           char separator) {
+  bool inBackticks = false;
+  for (size_t i = text.size(); i > 0; --i) {
+    char c = text[i - 1];
+    if (c == '`') {
+      inBackticks = !inBackticks;
+    } else if (c == separator && !inBackticks) {
+      return {text.substr(0, i - 1), text.substr(i)};
+    }
+  }
+  return {text, StringRef()};
+}
+
+/// Returns true if the string is a valid ASCII Swift identifier. This includes
+/// raw identifiers if they are surrounded by backticks (e.g., "`My Struct`").
+static bool isValidSwiftIdentifier(StringRef text) {
+  if (text.size() > 2 && text.front() == '`' && text.back() == '`')
+    return isValidAsEscapedIdentifier(text.drop_front().drop_back());
+  return isValidAsciiIdentifier(text);
+}
+
+static bool isValidSwiftContextName(StringRef ContextName) {
+  // ContextName might be qualified, e.g. 'MyNamespace.MyStruct'.
+  StringRef First, Rest = ContextName;
+  do {
+    std::tie(First, Rest) = backtickAwareSplit(Rest, '.');
+    if (!isValidSwiftIdentifier(First))
+      return false;
+  } while (!Rest.empty());
+  return true;
 }
 
 void SemaSwift::handleAttrAttr(Decl *D, const ParsedAttr &AL) {
@@ -120,9 +204,9 @@ static bool isErrorParameter(Sema &S, QualType QT) {
 
   // Check for CFError**.
   if (const auto *PT = Pointee->getAs<PointerType>())
-    if (const auto *RT = PT->getPointeeType()->getAs<RecordType>())
-      if (S.ObjC().isCFError(RT->getDecl()))
-        return true;
+    if (auto *RD = PT->getPointeeType()->getAsRecordDecl();
+        RD && S.ObjC().isCFError(RD))
+      return true;
 
   return false;
 }
@@ -262,11 +346,10 @@ static void checkSwiftAsyncErrorBlock(Sema &S, Decl *D,
       }
       // Check for CFError *.
       if (const auto *PtrTy = Param->getAs<PointerType>()) {
-        if (const auto *RT = PtrTy->getPointeeType()->getAs<RecordType>()) {
-          if (S.ObjC().isCFError(RT->getDecl())) {
-            AnyErrorParams = true;
-            break;
-          }
+        if (auto *RD = PtrTy->getPointeeType()->getAsRecordDecl();
+            RD && S.ObjC().isCFError(RD)) {
+          AnyErrorParams = true;
+          break;
         }
       }
     }
@@ -344,7 +427,7 @@ static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
   else if (Name.consume_front("setter:"))
     IsSetter = true;
 
-  if (Name.back() != ')') {
+  if (Name.empty() || Name.back() != ')') {
     S.Diag(Loc, diag::warn_attr_swift_name_function) << AL;
     return false;
   }
@@ -352,15 +435,15 @@ static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
   bool IsMember = false;
   StringRef ContextName, BaseName, Parameters;
 
-  std::tie(BaseName, Parameters) = Name.split('(');
+  std::tie(BaseName, Parameters) = backtickAwareSplit(Name, '(');
 
-  // Split at the first '.', if it exists, which separates the context name
+  // Split at the last '.', if it exists, which separates the context name
   // from the base name.
-  std::tie(ContextName, BaseName) = BaseName.split('.');
+  std::tie(ContextName, BaseName) = backtickAwareRSplit(BaseName, '.');
   if (BaseName.empty()) {
     BaseName = ContextName;
     ContextName = StringRef();
-  } else if (ContextName.empty() || !isValidAsciiIdentifier(ContextName)) {
+  } else if (ContextName.empty() || !isValidSwiftContextName(ContextName)) {
     S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
         << AL << /*context*/ 1;
     return false;
@@ -368,7 +451,7 @@ static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
     IsMember = true;
   }
 
-  if (!isValidAsciiIdentifier(BaseName) || BaseName == "_") {
+  if (!isValidSwiftIdentifier(BaseName) || BaseName == "_") {
     S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
         << AL << /*basename*/ 0;
     return false;
@@ -416,9 +499,9 @@ static bool validateSwiftFunctionName(Sema &S, const ParsedAttr &AL,
   unsigned NewValueCount = 0;
   std::optional<unsigned> NewValueLocation;
   do {
-    std::tie(CurrentParam, Parameters) = Parameters.split(':');
+    std::tie(CurrentParam, Parameters) = backtickAwareSplit(Parameters, ':');
 
-    if (!isValidAsciiIdentifier(CurrentParam)) {
+    if (!isValidSwiftIdentifier(CurrentParam)) {
       S.Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
           << AL << /*parameter*/ 2;
       return false;
@@ -584,17 +667,17 @@ bool SemaSwift::DiagnoseName(Decl *D, StringRef Name, SourceLocation Loc,
              !IsAsync) {
     StringRef ContextName, BaseName;
 
-    std::tie(ContextName, BaseName) = Name.split('.');
+    std::tie(ContextName, BaseName) = backtickAwareRSplit(Name, '.');
     if (BaseName.empty()) {
       BaseName = ContextName;
       ContextName = StringRef();
-    } else if (!isValidAsciiIdentifier(ContextName)) {
+    } else if (!isValidSwiftContextName(ContextName)) {
       Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
           << AL << /*context*/ 1;
       return false;
     }
 
-    if (!isValidAsciiIdentifier(BaseName)) {
+    if (!isValidSwiftIdentifier(BaseName)) {
       Diag(Loc, diag::warn_attr_swift_name_invalid_identifier)
           << AL << /*basename*/ 0;
       return false;

@@ -41,7 +41,7 @@ void test_output(int n) {
   // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "conj_$
   // CHECK-NEXT:    ]},
   // CHECK-NEXT:    { "cluster": "objfirst", "pointer": "0x{{[0-9a-f]+}}", "items": [
-  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "conj_$
+  // CHECK-NEXT:      { "kind": "Default", "offset": 0, "value": "lazyCompoundVal
   // CHECK-NEXT:      { "kind": "Direct", "offset": 320, "value": "1 S32b" },
   // CHECK-NEXT:      { "kind": "Direct", "offset": 352, "value": "2 S32b" },
   // CHECK-NEXT:      { "kind": "Direct", "offset": 384, "value": "3 S32b" }

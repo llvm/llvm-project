@@ -12,6 +12,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/HLSL/HLSLBinding.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/PassManager.h"
@@ -20,6 +21,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include <cstdint>
+#include <variant>
 
 namespace llvm {
 class CallInst;
@@ -34,7 +36,7 @@ namespace dxil {
 
 // Returns the resource name from dx_resource_handlefrombinding or
 // dx_resource_handlefromimplicitbinding call
-StringRef getResourceNameFromBindingCall(CallInst *CI);
+LLVM_ABI StringRef getResourceNameFromBindingCall(CallInst *CI);
 
 /// The dx.RawBuffer target extension type
 ///
@@ -209,6 +211,14 @@ public:
   AnyResourceExtType(const AnyResourceExtType &) = delete;
   AnyResourceExtType &operator=(const AnyResourceExtType &) = delete;
 
+  Type *getResourceType() const {
+    // Sampler and feedback resources do not have an underlying type.
+    if (isa<SamplerExtType>(this) || isa<FeedbackTextureExtType>(this))
+      return nullptr;
+    // All other resources store the type in a parameter.
+    return getTypeParameter(0);
+  }
+
   static bool classof(const TargetExtType *T) {
     return isa<RawBufferExtType>(T) || isa<TypedBufferExtType>(T) ||
            isa<TextureExtType>(T) || isa<MSTextureExtType>(T) ||
@@ -236,6 +246,25 @@ public:
 
   static bool classof(const TargetExtType *T) {
     return T->getName() == "dx.Layout";
+  }
+  static bool classof(const Type *T) {
+    return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
+  }
+};
+
+/// The dx.Padding target extension type
+///
+/// `target("dx.Padding", NumBytes)`
+class PaddingExtType : public TargetExtType {
+public:
+  PaddingExtType() = delete;
+  PaddingExtType(const PaddingExtType &) = delete;
+  PaddingExtType &operator=(const PaddingExtType &) = delete;
+
+  unsigned getNumBytes() const { return getIntParameter(0); }
+
+  static bool classof(const TargetExtType *T) {
+    return T->getName() == "dx.Padding";
   }
   static bool classof(const Type *T) {
     return isa<TargetExtType>(T) && classof(cast<TargetExtType>(T));
@@ -273,6 +302,7 @@ public:
 
   struct TypedInfo {
     dxil::ElementType ElementTy;
+    dxil::ElementType DXILStorageTy;
     uint32_t ElementCount;
 
     bool operator==(const TypedInfo &RHS) const {
@@ -342,29 +372,44 @@ enum class ResourceCounterDirection {
 class ResourceInfo {
 public:
   struct ResourceBinding {
-    uint32_t RecordID;
+    uint32_t BindingID = 0;
     uint32_t Space;
     uint32_t LowerBound;
     uint32_t Size;
 
+    ResourceBinding() : BindingID(0), Space(0), LowerBound(0), Size(0) {}
+    ResourceBinding(uint32_t BindingID, uint32_t Space, uint32_t LowerBound,
+                    uint32_t Size)
+        : BindingID(BindingID), Space(Space), LowerBound(LowerBound),
+          Size(Size) {}
+
     bool operator==(const ResourceBinding &RHS) const {
-      return std::tie(RecordID, Space, LowerBound, Size) ==
-             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+      return std::tie(BindingID, Space, LowerBound, Size) ==
+             std::tie(RHS.BindingID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
     bool operator!=(const ResourceBinding &RHS) const {
       return !(*this == RHS);
     }
     bool operator<(const ResourceBinding &RHS) const {
-      return std::tie(RecordID, Space, LowerBound, Size) <
-             std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
+      // a size of 0 indicates unbounded. Accounting for when the size is 0
+      // guarantees a well ordered results.
+      const bool LHSIsUnbounded = Size == 0;
+      const bool RHSIsUnbounded = RHS.Size == 0;
+      return std::tie(BindingID, Space, LowerBound, LHSIsUnbounded, Size) <
+             std::tie(RHS.BindingID, RHS.Space, RHS.LowerBound, RHSIsUnbounded,
+                      RHS.Size);
     }
     bool overlapsWith(const ResourceBinding &RHS) const {
-      return Space == RHS.Space && LowerBound + Size - 1 >= RHS.LowerBound;
+      if (Space != RHS.Space)
+        return false;
+      if (Size == 0)
+        return LowerBound < RHS.LowerBound;
+      return LowerBound + Size - 1 >= RHS.LowerBound;
     }
   };
 
 private:
-  ResourceBinding Binding;
+  std::variant<ResourceBinding, uint32_t> BindingOrHeapID;
   TargetExtType *HandleTy;
   StringRef Name;
   GlobalVariable *Symbol = nullptr;
@@ -372,22 +417,46 @@ private:
 public:
   bool GloballyCoherent = false;
   ResourceCounterDirection CounterDirection = ResourceCounterDirection::Unknown;
+  bool HasAtomic64Use = false;
 
-  ResourceInfo(uint32_t RecordID, uint32_t Space, uint32_t LowerBound,
-               uint32_t Size, TargetExtType *HandleTy, StringRef Name = "",
+  ResourceInfo(uint32_t Space, uint32_t LowerBound, uint32_t Size,
+               TargetExtType *HandleTy, StringRef Name = "",
                GlobalVariable *Symbol = nullptr)
-      : Binding{RecordID, Space, LowerBound, Size}, HandleTy(HandleTy),
-        Name(Name), Symbol(Symbol) {}
+      : BindingOrHeapID{ResourceBinding{0, Space, LowerBound, Size}},
+        HandleTy(HandleTy), Name(Name), Symbol(Symbol) {}
 
-  void setBindingID(unsigned ID) { Binding.RecordID = ID; }
+  ResourceInfo(uint32_t HeapResourceID, TargetExtType *HandleTy)
+      : BindingOrHeapID{HeapResourceID}, HandleTy(HandleTy), Name(""),
+        Symbol(nullptr) {}
+
+  bool hasBinding() const {
+    return std::holds_alternative<ResourceBinding>(BindingOrHeapID);
+  }
+  void setBindingID(unsigned ID) {
+    assert(hasBinding() && "Resource does not have a binding");
+    std::get<ResourceBinding>(BindingOrHeapID).BindingID = ID;
+  }
 
   bool hasCounter() const {
     return CounterDirection != ResourceCounterDirection::Unknown;
   }
 
-  const ResourceBinding &getBinding() const { return Binding; }
+  const ResourceBinding &getBinding() const {
+    assert(hasBinding() && "Resource does not have a binding");
+    return std::get<ResourceBinding>(BindingOrHeapID);
+  }
+
+  uint32_t getHeapID() const {
+    assert(!hasBinding() && "Resource does not have a heap ID");
+    return std::get<uint32_t>(BindingOrHeapID);
+  }
+
+  uint32_t getSize() const {
+    return hasBinding() ? std::get<ResourceBinding>(BindingOrHeapID).Size : 1;
+  }
+
   TargetExtType *getHandleTy() const { return HandleTy; }
-  const StringRef getName() const { return Name; }
+  StringRef getName() const { return Name; }
 
   bool hasSymbol() const { return Symbol; }
   LLVM_ABI GlobalVariable *createSymbol(Module &M, StructType *Ty);
@@ -397,12 +466,12 @@ public:
   getAnnotateProps(Module &M, dxil::ResourceTypeInfo &RTI) const;
 
   bool operator==(const ResourceInfo &RHS) const {
-    return std::tie(Binding, HandleTy, Symbol, Name) ==
-           std::tie(RHS.Binding, RHS.HandleTy, RHS.Symbol, RHS.Name);
+    return std::tie(BindingOrHeapID, HandleTy, Symbol, Name) ==
+           std::tie(RHS.BindingOrHeapID, RHS.HandleTy, RHS.Symbol, RHS.Name);
   }
   bool operator!=(const ResourceInfo &RHS) const { return !(*this == RHS); }
   bool operator<(const ResourceInfo &RHS) const {
-    return Binding < RHS.Binding;
+    return BindingOrHeapID < RHS.BindingOrHeapID;
   }
 
   LLVM_ABI void print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
@@ -476,8 +545,11 @@ class DXILResourceMap {
   void populate(Module &M, DXILResourceTypeMap &DRTM);
   /// Populate the map given the resource binding calls in the given module.
   void populateResourceInfos(Module &M, DXILResourceTypeMap &DRTM);
-  /// Analyze and populate the directions of the resource counters.
-  void populateCounterDirections(Module &M);
+  /// Analyze uses to fill in per-resource dynamic state — counter directions
+  /// and 64-bit atomic use.
+  void populateFromInstructions(Module &M);
+  void populateAtomicUses(Instruction &I);
+  void populateRecordCounterDirection(Instruction &I);
 
   /// Resolves a resource handle into a vector of ResourceInfos that
   /// represent the possible unique creations of the handle. Certain cases are
@@ -584,15 +656,14 @@ public:
 };
 
 /// Printer pass for the \c DXILResourceAnalysis results.
-class DXILResourcePrinterPass : public PassInfoMixin<DXILResourcePrinterPass> {
+class DXILResourcePrinterPass
+    : public RequiredPassInfoMixin<DXILResourcePrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit DXILResourcePrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 class LLVM_ABI DXILResourceWrapperPass : public ModulePass {
@@ -631,86 +702,25 @@ LLVM_ABI ModulePass *createDXILResourceWrapperPassPass();
 // register slots to resources with implicit bindings, and in a
 // post-optimization validation pass that will raise diagnostic about
 // overlapping bindings.
-//
-// For example for these resource bindings:
-//
-// RWBuffer<float> A[10] : register(u3);
-// RWBuffer<float> B[] : register(u5, space2)
-//
-// The analysis result for UAV binding type will look like this:
-//
-// UAVSpaces {
-//   ResClass = ResourceClass::UAV,
-//   Spaces = {
-//     { Space = 0, FreeRanges = {{ 0, 2 }, { 13, UINT32_MAX }} },
-//     { Space = 2, FreeRanges = {{ 0, 4 }} }
-//   }
-// }
-//
 class DXILResourceBindingInfo {
-public:
-  struct BindingRange {
-    uint32_t LowerBound;
-    uint32_t UpperBound;
-    BindingRange(uint32_t LB, uint32_t UB) : LowerBound(LB), UpperBound(UB) {}
-  };
-
-  struct RegisterSpace {
-    uint32_t Space;
-    SmallVector<BindingRange> FreeRanges;
-    RegisterSpace(uint32_t Space) : Space(Space) {
-      FreeRanges.emplace_back(0, UINT32_MAX);
-    }
-    // Size == -1 means unbounded array
-    LLVM_ABI std::optional<uint32_t> findAvailableBinding(int32_t Size);
-  };
-
-  struct BindingSpaces {
-    dxil::ResourceClass RC;
-    llvm::SmallVector<RegisterSpace> Spaces;
-    BindingSpaces(dxil::ResourceClass RC) : RC(RC) {}
-    LLVM_ABI RegisterSpace &getOrInsertSpace(uint32_t Space);
-  };
-
-private:
-  BindingSpaces SRVSpaces, UAVSpaces, CBufferSpaces, SamplerSpaces;
-  bool ImplicitBinding;
-  bool OverlappingBinding;
+  hlsl::BindingInfo Bindings;
+  bool HasImplicitBinding = false;
+  bool HasOverlappingBinding = false;
 
   // Populate the resource binding info given explicit resource binding calls
   // in the module.
   void populate(Module &M, DXILResourceTypeMap &DRTM);
 
 public:
-  DXILResourceBindingInfo()
-      : SRVSpaces(dxil::ResourceClass::SRV),
-        UAVSpaces(dxil::ResourceClass::UAV),
-        CBufferSpaces(dxil::ResourceClass::CBuffer),
-        SamplerSpaces(dxil::ResourceClass::Sampler), ImplicitBinding(false),
-        OverlappingBinding(false) {}
+  bool hasImplicitBinding() const { return HasImplicitBinding; }
+  void setHasImplicitBinding(bool Value) { HasImplicitBinding = Value; }
+  bool hasOverlappingBinding() const { return HasOverlappingBinding; }
+  void setHasOverlappingBinding(bool Value) { HasOverlappingBinding = Value; }
 
-  bool hasImplicitBinding() const { return ImplicitBinding; }
-  void setHasImplicitBinding(bool Value) { ImplicitBinding = Value; }
-  bool hasOverlappingBinding() const { return OverlappingBinding; }
-
-  BindingSpaces &getBindingSpaces(dxil::ResourceClass RC) {
-    switch (RC) {
-    case dxil::ResourceClass::SRV:
-      return SRVSpaces;
-    case dxil::ResourceClass::UAV:
-      return UAVSpaces;
-    case dxil::ResourceClass::CBuffer:
-      return CBufferSpaces;
-    case dxil::ResourceClass::Sampler:
-      return SamplerSpaces;
-    }
-
-    llvm_unreachable("Invalid resource class");
+  std::optional<uint32_t> findAvailableBinding(dxil::ResourceClass RC,
+                                               uint32_t Space, int32_t Size) {
+    return Bindings.findAvailableBinding(RC, Space, Size);
   }
-
-  // Size == -1 means unbounded array
-  LLVM_ABI std::optional<uint32_t>
-  findAvailableBinding(dxil::ResourceClass RC, uint32_t Space, int32_t Size);
 
   friend class DXILResourceBindingAnalysis;
   friend class DXILResourceBindingWrapperPass;

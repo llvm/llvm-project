@@ -19,6 +19,8 @@
 namespace llvm {
 
 class BasicBlock;
+class CallBrInst;
+class LoopInfo;
 class DomTreeUpdater;
 
 /// Given a set of branch descriptors [BB, Succ0, Succ1], create a "hub" such
@@ -30,8 +32,9 @@ class DomTreeUpdater;
 /// argument vector.
 ///
 /// This also updates any PHINodes in the successor. For each such PHINode, the
-/// operands corresponding to incoming blocks are moved to a new PHINode in the
-/// hub, and the hub is made an operand of the original PHINode.
+/// operands for the edges that are rerouted through the hub are moved to a new
+/// PHINode in the hub, and the hub is made an operand of the original PHINode.
+/// Operands for edges that are not rerouted are kept.
 ///
 /// Note that for some block BB with a conditional branch, it is not necessary
 /// that both successors are rerouted. The client specifies this by setting
@@ -104,7 +107,8 @@ struct ControlFlowHub {
         : BB(BB), Succ0(Succ0), Succ1(Succ1) {}
   };
 
-  void addBranch(BasicBlock *BB, BasicBlock *Succ0, BasicBlock *Succ1) {
+  void addBranch(BasicBlock *BB, BasicBlock *Succ0,
+                 BasicBlock *Succ1 = nullptr) {
     assert(BB);
     assert(Succ0 || Succ1);
     Branches.emplace_back(BB, Succ0, Succ1);
@@ -112,7 +116,7 @@ struct ControlFlowHub {
 
   /// Return the unified loop exit block and a flag indicating if the CFG was
   /// changed at all.
-  std::pair<BasicBlock *, bool>
+  LLVM_ABI std::pair<BasicBlock *, bool>
   finalize(DomTreeUpdater *DTU, SmallVectorImpl<BasicBlock *> &GuardBlocks,
            const StringRef Prefix,
            std::optional<unsigned> MaxControlFlowBooleans = std::nullopt);

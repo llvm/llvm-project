@@ -75,6 +75,10 @@ TEST_CONSTEXPR_CXX23 void test_pointer() {
   }
   if (!TEST_IS_CONSTANT_EVALUATED)
     assert(A::count == 0);
+// TODO: Remove this check once https://llvm.org/PR154567 is fixed
+#if TEST_STD_VER >= 23 && defined(TEST_COMPILER_CLANG)
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
     A* p = newValue<ValueT>(expect_alive);
     if (!TEST_IS_CONSTANT_EVALUATED)

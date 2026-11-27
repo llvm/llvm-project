@@ -2,7 +2,7 @@
 # RUN: llvm-mca -mtriple=x86_64-unknown-unknown -mcpu=skylake -timeline -iterations=2 < %s | FileCheck %s
 
 # PR51495: If the two destination registers are the same, the destination will
-# contain teh high half of the multiplication result.
+# contain the high half of the multiplication result.
 
 # LLVM-MCA-BEGIN
 mulxl %eax, %eax, %eax

@@ -6,13 +6,11 @@
 
 include "APIDefs.td"
 
-def : Handle {
-    let name = "ol_foo_handle_t";
+def ol_foo_handle_t : Handle {
     let desc = "Example handle type";
 }
 
-def : Function {
-    let name = "FunctionA";
+def FunctionA : Function {
     let desc = "Function A description";
     let details = [ "Function A detailed information" ];
     let params = [
@@ -25,7 +23,9 @@ def : Function {
 }
 
 // CHECK-API: /// @returns
-// CHECK-API: OL_RESULT_SUCCESS
+// CHECK-API: OL_SUCCESS
+// CHECK-API-NEXT: The call succeeded
+// CHECK-API: OL_ERRC_UNINITIALIZED
 // CHECK-API: OL_ERRC_INVALID_NULL_HANDLE
 // CHECK-API-NEXT: `NULL == ParamHandle`
 // CHECK-API: OL_ERRC_INVALID_NULL_POINTER

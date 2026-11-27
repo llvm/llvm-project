@@ -19,7 +19,7 @@
 // RUN: FileCheck -check-prefix=ERROR < %t.3.stderr %s
 
 // Cros target without sysroot causes no warning.
-// RUN: %clang -Wpoison-system-directories -Werror -target x86_64 -I/usr/include -c -o - %s
+// RUN: %clang -Wpoison-system-directories -Werror -target x86_64 -I/usr/include --sysroot= -c -o - %s
 
 // By default the warning is off.
 // RUN: %clang -Werror -target x86_64 -I/usr/include --sysroot %S/Inputs/sysroot_x86_64_cross_linux_tree -c -o - %s

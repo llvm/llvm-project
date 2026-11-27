@@ -1,4 +1,4 @@
-//===--- MisleadingSetterOfReferenceCheck.cpp - clang-tidy-----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,25 +15,25 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::bugprone {
 
 void MisleadingSetterOfReferenceCheck::registerMatchers(MatchFinder *Finder) {
-  auto RefField = fieldDecl(hasType(hasCanonicalType(referenceType(
-                                pointee(equalsBoundNode("type"))))))
-                      .bind("member");
-  auto AssignLHS = memberExpr(
+  const auto RefField = fieldDecl(hasType(hasCanonicalType(referenceType(
+                                      pointee(equalsBoundNode("type"))))))
+                            .bind("member");
+  const auto AssignLHS = memberExpr(
       hasObjectExpression(ignoringParenCasts(cxxThisExpr())), member(RefField));
-  auto DerefOperand = expr(ignoringParenCasts(
+  const auto DerefOperand = expr(ignoringParenCasts(
       declRefExpr(to(parmVarDecl(equalsBoundNode("parm"))))));
-  auto AssignRHS = expr(ignoringParenCasts(
+  const auto AssignRHS = expr(ignoringParenCasts(
       unaryOperator(hasOperatorName("*"), hasUnaryOperand(DerefOperand))));
 
-  auto BinaryOpAssign = binaryOperator(hasOperatorName("="), hasLHS(AssignLHS),
-                                       hasRHS(AssignRHS));
-  auto CXXOperatorCallAssign = cxxOperatorCallExpr(
+  const auto BinaryOpAssign = binaryOperator(
+      hasOperatorName("="), hasLHS(AssignLHS), hasRHS(AssignRHS));
+  const auto CXXOperatorCallAssign = cxxOperatorCallExpr(
       hasOverloadedOperatorName("="), hasLHS(AssignLHS), hasRHS(AssignRHS));
 
-  auto SetBody =
+  const auto SetBody =
       compoundStmt(statementCountIs(1),
                    anyOf(has(BinaryOpAssign), has(CXXOperatorCallAssign)));
-  auto BadSetFunction =
+  const auto BadSetFunction =
       cxxMethodDecl(
           parameterCountIs(1),
           hasParameter(
@@ -50,6 +50,8 @@ void MisleadingSetterOfReferenceCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Found = Result.Nodes.getNodeAs<CXXMethodDecl>("bad-set-function");
   const auto *Member = Result.Nodes.getNodeAs<FieldDecl>("member");
+  assert(Found != nullptr);
+  assert(Member != nullptr);
 
   diag(Found->getBeginLoc(),
        "function '%0' can be mistakenly used in order to change the "

@@ -28,6 +28,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MemAlloc.h"
 #include <type_traits>
+#include <utility>
 
 namespace llvm {
 
@@ -72,7 +73,8 @@ public:
   // core methods.
 
   /// Allocate space for a sequence of objects without constructing them.
-  template <typename T> T *Allocate(size_t Num = 1) {
+  template <typename T>
+  LLVM_NO_SANITIZE_CFI_UNRELATED_CAST T *Allocate(size_t Num = 1) {
     return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
 
@@ -111,7 +113,7 @@ template <typename Alloc> class AllocatorHolder : Alloc {
 public:
   AllocatorHolder() = default;
   AllocatorHolder(const Alloc &A) : Alloc(A) {}
-  AllocatorHolder(Alloc &&A) : Alloc(static_cast<Alloc &&>(A)) {}
+  AllocatorHolder(Alloc &&A) : Alloc(std::move(A)) {}
   Alloc &getAllocator() { return *this; }
   const Alloc &getAllocator() const { return *this; }
 };

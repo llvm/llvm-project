@@ -18,6 +18,7 @@ include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "mlir/Dialect/LLVMIR/LLVMInterfaces.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/CallInterfaces.td"
 
 //===----------------------------------------------------------------------===//
 // LLVM dialect type constraints.
@@ -28,11 +29,11 @@ def LLVM_Type : DialectType<LLVM_Dialect,
                             CPred<"::mlir::LLVM::isCompatibleOuterType($_self)">,
                             "LLVM dialect-compatible type">;
 
-// Type constraint accepting LLVM token type.
-def LLVM_TokenType : Type<
-  CPred<"::llvm::isa<::mlir::LLVM::LLVMTokenType>($_self)">,
-  "LLVM token type">,
-  BuildableType<"::mlir::LLVM::LLVMTokenType::get($_builder.getContext())">;
+// Type constraint accepting LLVM metadata type.
+def LLVM_MetadataType : Type<
+  CPred<"::llvm::isa<::mlir::LLVM::LLVMMetadataType>($_self)">,
+  "LLVM metadata type">,
+  BuildableType<"::mlir::LLVM::LLVMMetadataType::get($_builder.getContext())">;
 
 // Type constraint accepting LLVM primitive types, i.e. all types except void
 // and function.
@@ -94,8 +95,7 @@ def LLVM_NonLoadableTargetExtType : Type<
 // type that has size (not void, function, opaque struct type or target
 // extension type which does not support memory operations).
 def LLVM_LoadableType : Type<
-  Or<[And<[LLVM_PrimitiveType.predicate, Neg<LLVM_OpaqueStruct.predicate>,
-          Neg<LLVM_NonLoadableTargetExtType.predicate>]>,
+  Or<[CPred<"mlir::LLVM::isLoadableType($_self)">,
       LLVM_PointerElementTypeInterface.predicate]>,
   "LLVM type with size">;
 
@@ -142,6 +142,63 @@ class LLVM_VectorOf<Type element> : Type<
 // Type constraint accepting a constrained type, or a vector of such types.
 class LLVM_ScalarOrVectorOf<Type element> :
     AnyTypeOf<[element, LLVM_VectorOf<element>]>;
+
+//===----------------------------------------------------------------------===//
+// LLVM dialect op partitions, by section of https://llvm.org/docs/LangRef.html.
+//===----------------------------------------------------------------------===//
+
+// "Aggregate Operations".
+def LLVM_AggregatePartition : Partition<"Aggregate">;
+// "Unary Operations", "Binary Operations", "Bitwise Binary Operations", and
+// icmp, fcmp, select and freeze of "Other Operations".
+def LLVM_ArithPartition : Partition<"Arith">;
+// call and landingpad of "Other Operations", invoke of "Terminator
+// Instructions", "Inline Assembler Expressions", and the MLIR-specific
+// call_intrinsic op.
+def LLVM_CallPartition : Partition<"Call">;
+// "Constants".
+def LLVM_ConstantPartition : Partition<"Constant">;
+// "Conversion Operations".
+def LLVM_ConversionPartition : Partition<"Conversion">;
+// "Memory Access and Addressing Operations".
+def LLVM_MemoryPartition : Partition<"Memory">;
+// "High Level Structure".
+def LLVM_ModulePartition : Partition<"Module">;
+// "Terminator Instructions".
+def LLVM_TerminatorPartition : Partition<"Terminator">;
+// "Variable Argument Handling Intrinsics", and va_arg of "Other Operations".
+def LLVM_VarArgPartition : Partition<"VarArg">;
+// "Vector Operations".
+def LLVM_VectorPartition : Partition<"Vector">;
+
+// "Code Generator Intrinsics".
+def LLVM_CodeGenIntrinsicPartition : Partition<"CodeGenIntrinsic">;
+// "Constrained Floating-Point Intrinsics", "Constrained libm-equivalent
+// Intrinsics".
+def LLVM_ConstrainedIntrinsicPartition : Partition<"ConstrainedIntrinsic">;
+// "Intrinsics" of https://llvm.org/docs/Coroutines.html.
+def LLVM_CoroIntrinsicPartition : Partition<"CoroIntrinsic">;
+// "Debugger Intrinsics".
+def LLVM_DebugIntrinsicPartition : Partition<"DebugIntrinsic">;
+// "Standard C/C++ Library Intrinsics" on floating-point values, fmuladd of
+// "Specialized Arithmetic Intrinsics", "Floating-Point Test Intrinsics".
+def LLVM_FloatIntrinsicPartition : Partition<"FloatIntrinsic">;
+// "General Intrinsics", "Exception Handling Intrinsics".
+def LLVM_GeneralIntrinsicPartition : Partition<"GeneralIntrinsic">;
+// "Standard C/C++ Library Intrinsics" on integers, "Bit Manipulation
+// Intrinsics", "Arithmetic with Overflow Intrinsics", "Saturation Arithmetic
+// Intrinsics", smulh and umulh of "Specialized Arithmetic Intrinsics".
+def LLVM_IntegerIntrinsicPartition : Partition<"IntegerIntrinsic">;
+// memcpy, memmove and memset of "Standard C/C++ Library Intrinsics", "Memory
+// Use Markers".
+def LLVM_MemoryIntrinsicPartition : Partition<"MemoryIntrinsic">;
+// "Vector Predication Intrinsics".
+def LLVM_VPIntrinsicPartition : Partition<"VPIntrinsic">;
+// "Vector Reduction Intrinsics", "Vector Manipulation Intrinsics", "Vector
+// Mask Intrinsics", "Matrix Intrinsics", "Masked Vector Load and Store
+// Intrinsics", "Masked Vector Gather and Scatter Intrinsics", "Masked Vector
+// Expanding Load and Compressing Store Intrinsics".
+def LLVM_VectorIntrinsicPartition : Partition<"VectorIntrinsic">;
 
 // Base class for LLVM operations. Defines the interface to the llvm::IRBuilder
 // used to translate to proper LLVM IR and the interface to the mlir::OpBuilder
@@ -216,6 +273,13 @@ class LLVM_MemOpPatterns {
   code setVolatileCode = [{
     inst->setVolatile($volatile_);
   }];
+  code setIgnoreDenormalModeCode = [{
+    if ($ignore_denormal_mode) {
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+      inst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                        metadata);
+    }
+  }];
   code setSyncScopeCode = [{
     if ($syncscope.has_value()) {
       llvm::LLVMContext &llvmContext = builder.getContext();
@@ -235,9 +299,15 @@ class LLVM_MemOpPatterns {
   }];
   code setInvariantGroupCode = [{
     if ($invariantGroup) {
-      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(),
-                                                 std::nullopt);
+      llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
       inst->setMetadata(llvm::LLVMContext::MD_invariant_group, metadata);
+    }
+  }];
+  code setRangeCode = [{
+    if ($range) {
+      llvm::MDNode *metadata = llvm::MDBuilder(inst->getContext())
+          .createRange($range->getLower(), $range->getUpper());
+      inst->setMetadata(llvm::LLVMContext::MD_range, metadata);
     }
   }];
   code setAccessGroupsMetadataCode = [{
@@ -246,6 +316,9 @@ class LLVM_MemOpPatterns {
   code setAliasAnalysisMetadataCode = [{
     moduleTranslation.setAliasScopeMetadata(op, inst);
     moduleTranslation.setTBAAMetadata(op, inst);
+  }];
+  code setTBAAStructMetadataCode = [{
+    moduleTranslation.setTBAAStructMetadata(op.getTbaaStructAttr(), inst);
   }];
 }
 
@@ -287,22 +360,26 @@ class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
 // intrinsic and "enumName" contains the name of the intrinsic as appears in
 // `llvm::Intrinsic` enum; one usually wants these to be related. Additionally,
 // the base class also defines the "mlirBuilder" field to support the inverse
-// translation starting from an LLVM IR intrinsic. The "requiresAccessGroup",
-// "requiresAliasAnalysis", and "requiresFastmath" flags specify which
-// interfaces the intrinsic implements. If the corresponding flags are set, the
-// "aliasAttrs" list contains the arguments required by the access group and
-// alias analysis interfaces. Derived intrinsics should append the "aliasAttrs"
-// to their argument list if they set one of the flags. LLVM `immargs` can be
-// represented as MLIR attributes by providing both the `immArgPositions` and
-// `immArgAttrNames` lists. These two lists should have equal length, with
-// `immArgPositions` containing the argument positions on the LLVM IR attribute
-// that are `immargs`, and `immArgAttrNames` mapping these to corresponding
-// MLIR attributes.
+// translation starting from an LLVM IR intrinsic.
+//
+// The flags "requiresAccessGroup", "requiresAliasAnalysis",
+// "requiresFastmath", and "requiresArgAndResultAttrs" indicate which
+// interfaces the intrinsic implements. When a flag is set, the "baseArgs"
+// list includes the arguments required by the corresponding interface.
+// Derived intrinsics must append "baseArgs" to their argument list if they
+// enable any of these flags.
+//
+// LLVM `immargs` can be represented as MLIR attributes by providing both
+// the `immArgPositions` and `immArgAttrNames` lists. These two lists should
+// have equal length, with `immArgPositions` containing the argument
+// positions on the LLVM IR attribute that are `immargs`, and
+// `immArgAttrNames` mapping these to corresponding MLIR attributes.
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<Trait> traits, int numResults,
                       bit requiresAccessGroup = 0, bit requiresAliasAnalysis = 0,
-                      bit requiresFastmath = 0, bit requiresOpBundles = 0,
+                      bit requiresFastmath = 0, bit requiresArgAndResultAttrs = 0,
+                      bit requiresOpBundles = 0,
                       list<int> immArgPositions = [],
                       list<string> immArgAttrNames = []>
     : LLVM_OpBase<dialect, opName, !listconcat(
@@ -312,10 +389,12 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
             [DeclareOpInterfaceMethods<AliasAnalysisOpInterface>], []),
         !if(!gt(requiresFastmath, 0),
             [DeclareOpInterfaceMethods<FastmathFlagsInterface>], []),
+        !if(!gt(requiresArgAndResultAttrs, 0),
+            [DeclareOpInterfaceMethods<ArgAndResultAttrsOpInterface>], []),
         traits)>,
       LLVM_MemOpPatterns,
       Results<!if(!gt(numResults, 0), (outs LLVM_Type:$res), (outs))> {
-  dag aliasAttrs = !con(
+  dag baseArgs = !con(
         !if(!gt(requiresAccessGroup, 0),
             (ins OptionalAttr<LLVM_AccessGroupArrayAttr>:$access_groups),
             (ins )),
@@ -323,13 +402,17 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
             (ins OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes,
                  OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes,
                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa),
+            (ins )),
+        !if(!gt(requiresArgAndResultAttrs, 0),
+            (ins OptionalAttr<DictArrayAttr>:$arg_attrs,
+                 OptionalAttr<DictArrayAttr>:$res_attrs),
+            (ins )),
+        !if(!gt(requiresOpBundles, 0),
+            (ins VariadicOfVariadic<LLVM_Type,
+                  "op_bundle_sizes">:$op_bundle_operands,
+                 DenseI32ArrayAttr:$op_bundle_sizes,
+                 OptionalAttr<ArrayAttr>:$op_bundle_tags),
             (ins )));
-  dag opBundleArgs = !if(!gt(requiresOpBundles, 0),
-                         (ins VariadicOfVariadic<LLVM_Type,
-                                "op_bundle_sizes">:$op_bundle_operands,
-                              DenseI32ArrayAttr:$op_bundle_sizes,
-                              OptionalAttr<ArrayAttr>:$op_bundle_tags),
-                         (ins ));
   string llvmEnumName = enumName;
   string overloadedResultsCpp =  "{" # !interleave(overloadedResults, ", ") # "}";
   string overloadedOperandsCpp =  "{" # !interleave(overloadedOperands, ", ") # "}";
@@ -343,33 +426,61 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
         immArgPositionsCpp, immArgAttrNamesCpp], ",") # [{);
     (void) inst;
     }];
+  string baseLlvmBuilderArgAndResultAttrs = [{
+    if (failed(moduleTranslation.convertArgAndResultAttrs(
+        op,
+        inst,
+        }] # immArgPositionsCpp # [{))) {
+      return failure();
+    }
+  }];
   string baseLlvmBuilderCoda = !if(!gt(numResults, 0), "$res = inst;", "");
-  let llvmBuilder =  baseLlvmBuilder # !if(!gt(requiresAccessGroup, 0), setAccessGroupsMetadataCode, "")
-       # !if(!gt(requiresAliasAnalysis, 0), setAliasAnalysisMetadataCode, "")
-       # baseLlvmBuilderCoda;
+  let llvmBuilder = baseLlvmBuilder
+      # !if(!gt(requiresAccessGroup, 0),
+        setAccessGroupsMetadataCode, "")
+      # !if(!gt(requiresAliasAnalysis, 0),
+        setAliasAnalysisMetadataCode, "")
+      # !if(!gt(requiresArgAndResultAttrs, 0),
+        baseLlvmBuilderArgAndResultAttrs, "")
+      # baseLlvmBuilderCoda;
 
   string baseMlirBuilder = [{
     SmallVector<Value> mlirOperands;
     SmallVector<NamedAttribute> mlirAttrs;
     if (failed(moduleImport.convertIntrinsicArguments(
-      llvmOperands,
-      llvmOpBundles,
-      }] # !if(!gt(requiresOpBundles, 0), "true", "false") # [{,
-      }] # immArgPositionsCpp # [{,
-      }] # immArgAttrNamesCpp # [{,
-      mlirOperands,
-      mlirAttrs))
-    ) {
+        llvmOperands,
+        llvmOpBundles,
+        }] # !if(!gt(requiresOpBundles, 0), "true", "false") # [{,
+        }] # immArgPositionsCpp # [{,
+        }] # immArgAttrNamesCpp # [{,
+        mlirOperands,
+        mlirAttrs))) {
       return failure();
     }
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
-    auto op = $_builder.create<$_qualCppClassName>(
-      $_location, resultTypes, mlirOperands, mlirAttrs);
+    $_qualCppClassName::Properties properties{};
+    $_qualCppClassName::populateDefaultProperties(
+      OperationName($_qualCppClassName::getOperationName(),
+                    $_builder.getContext()), properties);
+    if (failed($_qualCppClassName::setPropertiesFromAttr(
+          properties, $_builder.getDictionaryAttr(mlirAttrs),
+          [&]() { return emitError($_location); }))) {
+      return failure();
+    }
+    auto op = $_qualCppClassName::create($_builder,
+      $_location, resultTypes, mlirOperands, properties, {});
+    }];
+  string baseMlirBuilderArgAndResultAttrs = [{
+    moduleImport.convertArgAndResultAttrs(
+      inst, op, }] # immArgPositionsCpp # [{);
     }];
   string baseMlirBuilderCoda = !if(!gt(numResults, 0), "$res = op;", "$_op = op;");
-  let mlirBuilder = baseMlirBuilder # !if(!gt(requiresFastmath, 0),
+  let mlirBuilder = baseMlirBuilder
+    # !if(!gt(requiresFastmath, 0),
       "moduleImport.setFastmathFlagsAttr(inst, op);", "")
+    # !if(!gt(requiresArgAndResultAttrs, 0),
+      baseMlirBuilderArgAndResultAttrs, "")
     # baseMlirBuilderCoda;
 
   // Code for handling a `range` attribute that holds the constant range of the
@@ -400,14 +511,14 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
                   list<int> overloadedOperands, list<Trait> traits,
                   int numResults, bit requiresAccessGroup = 0,
                   bit requiresAliasAnalysis = 0, bit requiresFastmath = 0,
-                  bit requiresOpBundles = 0,
+                  bit requiresArgAndResultAttrs = 0, bit requiresOpBundles = 0,
                   list<int> immArgPositions = [],
                   list<string> immArgAttrNames = []>
     : LLVM_IntrOpBase<LLVM_Dialect, "intr." # mnem, !subst(".", "_", mnem),
                       overloadedResults, overloadedOperands, traits,
                       numResults, requiresAccessGroup, requiresAliasAnalysis,
-                      requiresFastmath, requiresOpBundles, immArgPositions,
-                      immArgAttrNames>;
+                      requiresFastmath, requiresArgAndResultAttrs,
+                      requiresOpBundles, immArgPositions, immArgAttrNames>;
 
 // Base class for LLVM intrinsic operations returning no results. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.".
@@ -427,13 +538,14 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
                             list<Trait> traits = [],
                             bit requiresAccessGroup = 0,
                             bit requiresAliasAnalysis = 0,
+                            bit requiresArgAndResultAttrs = 0,
                             bit requiresOpBundles = 0,
                             list<int> immArgPositions = [],
                             list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, [], overloadedOperands, traits, /*numResults=*/0,
                   requiresAccessGroup, requiresAliasAnalysis,
-                  /*requiresFastMath=*/0, requiresOpBundles, immArgPositions,
-                  immArgAttrNames>;
+                  /*requiresFastMath=*/0, requiresArgAndResultAttrs,
+                  requiresOpBundles, immArgPositions, immArgAttrNames>;
 
 // Base class for LLVM intrinsic operations returning one result. Places the
 // intrinsic into the LLVM dialect and prefixes its name with "intr.". This is
@@ -444,12 +556,16 @@ class LLVM_ZeroResultIntrOp<string mnem, list<int> overloadedOperands = [],
 class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<int> overloadedOperands = [],
                            list<Trait> traits = [],
+                           bit requiresAccessGroup = 0,
+                           bit requiresAliasAnalysis = 0,
                            bit requiresFastmath = 0,
+                           bit requiresArgAndResultAttrs = 0,
                            list<int> immArgPositions = [],
                            list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 1,
-                  /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-                  requiresFastmath, /*requiresOpBundles=*/0, immArgPositions,
+                  requiresAccessGroup, requiresAliasAnalysis,
+                  requiresFastmath, requiresArgAndResultAttrs,
+                  /*requiresOpBundles=*/0, immArgPositions,
                   immArgAttrNames>;
 
 // Base class for LLVM intrinsic operations returning two results. Places the
@@ -466,7 +582,8 @@ class LLVM_TwoResultIntrOp<string mnem, list<int> overloadedResults = [],
                            list<string> immArgAttrNames = []>
     : LLVM_IntrOp<mnem, overloadedResults, overloadedOperands, traits, 2,
                   /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-                  requiresFastmath, /*requiresOpBundles=*/0, immArgPositions,
+                  requiresFastmath, /*requiresArgAndResultAttrs=*/0,
+                  /*requiresOpBundles=*/0, immArgPositions,
                   immArgAttrNames>;
 
 def LLVM_OneResultOpBuilder :

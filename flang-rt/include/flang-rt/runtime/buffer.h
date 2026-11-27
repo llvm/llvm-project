@@ -150,16 +150,33 @@ private:
     if (bytes > size_) {
       char *old{buffer_};
       auto oldSize{size_};
-      size_ = std::max<std::int64_t>(bytes, size_ + minBuffer);
-      buffer_ =
-          reinterpret_cast<char *>(AllocateMemoryOrCrash(terminator, size_));
+      std::int64_t newSize{size_ + static_cast<std::int64_t>(minBuffer)};
+      // Grow the buffer geometrically. Using larger expansion steps reduces the
+      // number of reallocations and prevents excessive mmap/munmap activity.
+      if (newSize > 65536 * 16) {
+        if (newSize < 65536 * 1024) {
+          // Between 1 MB and 64 MB -> 2×
+          newSize *= 2;
+        } else {
+          // Above 64 MB -> 1.5×
+          newSize += newSize / 2;
+        }
+      }
+      size_ = std::max<std::int64_t>(bytes, newSize);
+      std::int64_t toAllocate{size_};
+#ifdef RT_USE_PSEUDO_FILE_UNIT
+      // PseudoOpenFile::Write() needs extra space for a NUL byte.
+      ++toAllocate;
+#endif
+      buffer_ = reinterpret_cast<char *>(
+          AllocateMemoryOrCrash(terminator, toAllocate));
       auto chunk{std::min<std::int64_t>(length_, oldSize - start_)};
       // "memcpy" in glibc has a "nonnull" attribute on the source pointer.
       // Avoid passing a null pointer, since it would result in an undefined
       // behavior.
       if (old != nullptr) {
-        std::memcpy(buffer_, old + start_, chunk);
-        std::memcpy(buffer_ + chunk, old, length_ - chunk);
+        runtime::memcpy(buffer_, old + start_, chunk);
+        runtime::memcpy(buffer_ + chunk, old, length_ - chunk);
         FreeMemory(old);
       }
       start_ = 0;

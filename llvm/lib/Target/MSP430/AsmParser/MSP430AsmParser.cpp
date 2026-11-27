@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MSP430.h"
-#include "MSP430RegisterInfo.h"
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
+#include "MSP430.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 
 #include "llvm/ADT/APInt.h"
@@ -19,11 +18,13 @@
 #include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "msp430-asm-parser"
@@ -34,9 +35,7 @@ namespace {
 
 /// Parses MSP430 assembly from a stream.
 class MSP430AsmParser : public MCTargetAsmParser {
-  const MCSubtargetInfo &STI;
   MCAsmParser &Parser;
-  const MCRegisterInfo *MRI;
 
   bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -52,9 +51,6 @@ class MSP430AsmParser : public MCTargetAsmParser {
 
   ParseStatus parseDirective(AsmToken DirectiveID) override;
   bool ParseDirectiveRefSym(AsmToken DirectiveID);
-
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
-                                      unsigned Kind) override;
 
   bool parseJccInstruction(ParseInstructionInfo &Info, StringRef Name,
                            SMLoc NameLoc, OperandVector &Operands);
@@ -76,10 +72,9 @@ class MSP430AsmParser : public MCTargetAsmParser {
 
 public:
   MSP430AsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
-                  const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, STI, MII), STI(STI), Parser(Parser) {
+                  const MCInstrInfo &MII)
+      : MCTargetAsmParser(STI, MII), Parser(Parser) {
     MCAsmParserExtension::Initialize(Parser);
-    MRI = getContext().getRegisterInfo();
 
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
@@ -112,14 +107,13 @@ class MSP430Operand : public MCParsedAsmOperand {
   SMLoc Start, End;
 
 public:
-  MSP430Operand(StringRef Tok, SMLoc const &S)
+  MSP430Operand(StringRef Tok, SMLoc S)
       : Kind(k_Tok), Tok(Tok), Start(S), End(S) {}
-  MSP430Operand(KindTy Kind, MCRegister Reg, SMLoc const &S, SMLoc const &E)
+  MSP430Operand(KindTy Kind, MCRegister Reg, SMLoc S, SMLoc E)
       : Kind(Kind), Reg(Reg), Start(S), End(E) {}
-  MSP430Operand(MCExpr const *Imm, SMLoc const &S, SMLoc const &E)
+  MSP430Operand(MCExpr const *Imm, SMLoc S, SMLoc E)
       : Kind(k_Imm), Imm(Imm), Start(S), End(E) {}
-  MSP430Operand(MCRegister Reg, MCExpr const *Expr, SMLoc const &S,
-                SMLoc const &E)
+  MSP430Operand(MCRegister Reg, MCExpr const *Expr, SMLoc S, SMLoc E)
       : Kind(k_Mem), Mem({Reg, Expr}), Start(S), End(E) {}
 
   void addRegOperands(MCInst &Inst, unsigned N) const {
@@ -186,11 +180,6 @@ public:
     return Reg;
   }
 
-  void setReg(MCRegister RegNo) {
-    assert(Kind == k_Reg && "Invalid access!");
-    Reg = RegNo;
-  }
-
   static std::unique_ptr<MSP430Operand> CreateToken(StringRef Str, SMLoc S) {
     return std::make_unique<MSP430Operand>(Str, S);
   }
@@ -223,26 +212,27 @@ public:
   SMLoc getStartLoc() const override { return Start; }
   SMLoc getEndLoc() const override { return End; }
 
-  void print(raw_ostream &O) const override {
+  void print(raw_ostream &O, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_Tok:
       O << "Token " << Tok;
       break;
     case k_Reg:
-      O << "Register " << Reg;
+      O << "Register " << Reg.id();
       break;
     case k_Imm:
-      O << "Immediate " << *Imm;
+      O << "Immediate ";
+      MAI.printExpr(O, *Imm);
       break;
     case k_Mem:
       O << "Memory ";
-      O << *Mem.Offset << "(" << Reg << ")";
+      MAI.printExpr(O, *Mem.Offset);
       break;
     case k_IndReg:
-      O << "RegInd " << Reg;
+      O << "RegInd " << Reg.id();
       break;
     case k_PostIndReg:
-      O << "PostInc " << Reg;
+      O << "PostInc " << Reg.id();
       break;
     }
   }
@@ -261,7 +251,7 @@ bool MSP430AsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
   switch (MatchResult) {
   case Match_Success:
     Inst.setLoc(Loc);
-    Out.emitInstruction(Inst, STI);
+    Out.emitInstruction(Inst, *STI);
     return false;
   case Match_MnemonicFail:
     return Error(Loc, "invalid instruction mnemonic");
@@ -534,52 +524,11 @@ bool MSP430AsmParser::ParseLiteralValues(unsigned Size, SMLoc L) {
   return (parseMany(parseOne));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMSP430AsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMSP430AsmParser() {
   RegisterMCAsmParser<MSP430AsmParser> X(getTheMSP430Target());
 }
 
 #define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #include "MSP430GenAsmMatcher.inc"
-
-static MCRegister convertGR16ToGR8(MCRegister Reg) {
-  switch (Reg.id()) {
-  default:
-    llvm_unreachable("Unknown GR16 register");
-  case MSP430::PC:  return MSP430::PCB;
-  case MSP430::SP:  return MSP430::SPB;
-  case MSP430::SR:  return MSP430::SRB;
-  case MSP430::CG:  return MSP430::CGB;
-  case MSP430::R4:  return MSP430::R4B;
-  case MSP430::R5:  return MSP430::R5B;
-  case MSP430::R6:  return MSP430::R6B;
-  case MSP430::R7:  return MSP430::R7B;
-  case MSP430::R8:  return MSP430::R8B;
-  case MSP430::R9:  return MSP430::R9B;
-  case MSP430::R10: return MSP430::R10B;
-  case MSP430::R11: return MSP430::R11B;
-  case MSP430::R12: return MSP430::R12B;
-  case MSP430::R13: return MSP430::R13B;
-  case MSP430::R14: return MSP430::R14B;
-  case MSP430::R15: return MSP430::R15B;
-  }
-}
-
-unsigned MSP430AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                     unsigned Kind) {
-  MSP430Operand &Op = static_cast<MSP430Operand &>(AsmOp);
-
-  if (!Op.isReg())
-    return Match_InvalidOperand;
-
-  MCRegister Reg = Op.getReg();
-  bool isGR16 =
-      MSP430MCRegisterClasses[MSP430::GR16RegClassID].contains(Reg);
-
-  if (isGR16 && (Kind == MCK_GR8)) {
-    Op.setReg(convertGR16ToGR8(Reg));
-    return Match_Success;
-  }
-
-  return Match_InvalidOperand;
-}

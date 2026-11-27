@@ -48,3 +48,21 @@ define dso_local noundef <2 x i64> @v11l() local_unnamed_addr {
 entry:
   ret <2 x i64> splat (i64 -11)
 }
+
+declare <4 x i32> @llvm.ppc.altivec.vextsb2w(<16 x i8>)
+
+define i32 @crash(ptr %p) {
+; CHECK-LABEL: crash:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xxspltib v2, 127
+; CHECK-NEXT:    vextsb2w v2, v2
+; CHECK-NEXT:    stxv v2, 0(r3)
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    stxv v2, 0(0)
+; CHECK-NEXT:    blr
+entry:
+  store <4 x i32> <i32 127, i32 127, i32 127, i32 127>, ptr %p, align 16
+  %0 = call <4 x i32> @llvm.ppc.altivec.vextsb2w(<16 x i8> <i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127, i8 127>)
+  store <4 x i32> %0, ptr null, align 16
+  ret i32 0
+}

@@ -99,7 +99,7 @@ public:
     if (CallDescription{CDM::SimpleFunc, {"error"}, 0}.matches(Call)) {
       if (C.getState()->get<ErrorPrevented>())
         return;
-      const ExplodedNode *N = C.generateErrorNode();
+      const ExplodedNode *N = C.addSink();
       if (!N)
         return;
       auto R =
@@ -140,7 +140,7 @@ void addNonThoroughStatefulChecker(AnalysisASTConsumer &AnalysisConsumer,
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry
         .addChecker<StatefulChecker<NonThoroughErrorNotPreventedFuncVisitor>>(
-            "test.StatefulChecker", "Description", "");
+            "test.StatefulChecker", "MockDescription");
   });
 }
 
@@ -233,7 +233,7 @@ void addThoroughStatefulChecker(AnalysisASTConsumer &AnalysisConsumer,
   AnOpts.CheckersAndPackages = {{"test.StatefulChecker", true}};
   AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {
     Registry.addChecker<StatefulChecker<ThoroughErrorNotPreventedFuncVisitor>>(
-        "test.StatefulChecker", "Description", "");
+        "test.StatefulChecker", "MockDescription");
   });
 }
 

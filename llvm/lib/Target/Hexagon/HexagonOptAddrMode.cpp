@@ -15,7 +15,9 @@
 #include "MCTargetDesc/HexagonBaseInfo.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominanceFrontier.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -65,7 +67,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<MachineDominanceFrontier>();
+    AU.addRequired<MachineDominanceFrontierWrapperPass>();
     AU.setPreservesAll();
   }
 
@@ -82,7 +84,6 @@ private:
   const HexagonRegisterInfo *HRI = nullptr;
   MachineDominatorTree *MDT = nullptr;
   DataFlowGraph *DFG = nullptr;
-  DataFlowGraph::DefStackMap DefM;
   Liveness *LV = nullptr;
   MISetType Deleted;
 
@@ -107,7 +108,7 @@ private:
   bool canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN, MachineInstr &MI,
                        const NodeList &UNodeList);
   bool isSafeToExtLR(NodeAddr<StmtNode *> SN, MachineInstr *MI,
-                     unsigned LRExtReg, const NodeList &UNodeList);
+                     Register LRExtReg, const NodeList &UNodeList);
   void getAllRealUses(NodeAddr<StmtNode *> SN, NodeList &UNodeList);
   bool allValidCandidates(NodeAddr<StmtNode *> SA, NodeList &UNodeList);
   short getBaseWithLongOffset(const MachineInstr &MI) const;
@@ -128,7 +129,7 @@ char HexagonOptAddrMode::ID = 0;
 INITIALIZE_PASS_BEGIN(HexagonOptAddrMode, "amode-opt",
                       "Optimize addressing mode", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(HexagonOptAddrMode, "amode-opt", "Optimize addressing mode",
                     false, false)
 
@@ -177,7 +178,7 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
   NodeId OffsetRegRD = 0;
   for (NodeAddr<UseNode *> UA : AddAslSN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef RR = UA.Addr->getRegRef(*DFG);
-    if (OffsetReg == RR.Reg) {
+    if (OffsetReg == RR.asMCReg()) {
       OffsetRR = RR;
       OffsetRegRD = UA.Addr->getReachingDef();
     }
@@ -198,7 +199,7 @@ bool HexagonOptAddrMode::canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN,
     // Reaching Def to an offset register can't be a phi.
     if ((OffsetRegDN.Addr->getFlags() & NodeAttrs::PhiRef) &&
         MI.getParent() != UseMI.getParent())
-    return false;
+      return false;
 
     const MCInstrDesc &UseMID = UseMI.getDesc();
     if ((!UseMID.mayLoad() && !UseMID.mayStore()) ||
@@ -300,7 +301,7 @@ void HexagonOptAddrMode::getAllRealUses(NodeAddr<StmtNode *> SA,
 }
 
 bool HexagonOptAddrMode::isSafeToExtLR(NodeAddr<StmtNode *> SN,
-                                       MachineInstr *MI, unsigned LRExtReg,
+                                       MachineInstr *MI, Register LRExtReg,
                                        const NodeList &UNodeList) {
   RegisterRef LRExtRR;
   NodeId LRExtRegRD = 0;
@@ -308,7 +309,7 @@ bool HexagonOptAddrMode::isSafeToExtLR(NodeAddr<StmtNode *> SN,
   // for the LRExtReg.
   for (NodeAddr<UseNode *> UA : SN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef RR = UA.Addr->getRegRef(*DFG);
-    if (LRExtReg == RR.Reg) {
+    if (LRExtReg == RR.asMCReg()) {
       LRExtRR = RR;
       LRExtRegRD = UA.Addr->getReachingDef();
     }
@@ -364,13 +365,13 @@ bool HexagonOptAddrMode::isValidOffset(MachineInstr *MI, int Offset) {
     case Hexagon::V6_vgathermhq_pseudo:
     case Hexagon::V6_vgathermwq_pseudo:
     case Hexagon::V6_vgathermhwq_pseudo:
-      return HII->isValidOffset(MI->getOpcode(), Offset, HRI, false);
+      return HII->isValidOffset(MI->getOpcode(), Offset, false);
     default:
       if (HII->getAddrMode(*MI) == HexagonII::BaseImmOffset) {
         // The immediates are mentioned in multiples of vector counts
         unsigned AlignMask = HII->getMemAccessSize(*MI) - 1;
         if ((AlignMask & Offset) == 0)
-          return HII->isValidOffset(MI->getOpcode(), Offset, HRI, false);
+          return HII->isValidOffset(MI->getOpcode(), Offset, false);
       }
       return false;
     }
@@ -399,7 +400,7 @@ bool HexagonOptAddrMode::isValidOffset(MachineInstr *MI, int Offset) {
 
   if ((AlignMask & Offset) != 0)
     return false;
-  return HII->isValidOffset(MI->getOpcode(), Offset, HRI, false);
+  return HII->isValidOffset(MI->getOpcode(), Offset, false);
 }
 
 unsigned HexagonOptAddrMode::getBaseOpPosition(MachineInstr *MI) {
@@ -448,9 +449,7 @@ bool HexagonOptAddrMode::usedInLoadStore(NodeAddr<StmtNode *> CurrentInstSN,
 
   getAllRealUses(CurrentInstSN, LoadStoreUseList);
   bool FoundLoadStoreUse = false;
-  for (auto I = LoadStoreUseList.begin(), E = LoadStoreUseList.end(); I != E;
-       ++I) {
-    NodeAddr<UseNode *> UN = *I;
+  for (NodeAddr<UseNode *> UN : LoadStoreUseList) {
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
     MachineInstr *LoadStoreMI = SN.Addr->getCode();
     const MCInstrDesc &MID = LoadStoreMI->getDesc();
@@ -554,7 +553,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
   // Find the UseNode that contains the base register and it's reachingDef
   for (NodeAddr<UseNode *> UA : AddSN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef URR = UA.Addr->getRegRef(*DFG);
-    if (BaseReg != URR.Reg)
+    if (BaseReg != URR.asMCReg())
       continue;
 
     UAReachingDefID = UA.Addr->getReachingDef();
@@ -579,8 +578,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
   // Find all Addi instructions that share the same base register and add them
   // to the AddiList
   getAllRealUses(ReachingDefStmt, AddiUseList);
-  for (auto I = AddiUseList.begin(), E = AddiUseList.end(); I != E; ++I) {
-    NodeAddr<UseNode *> UN = *I;
+  for (NodeAddr<UseNode *> UN : AddiUseList) {
     NodeAddr<StmtNode *> SN = UN.Addr->getOwner(*DFG);
     MachineInstr *MI = SN.Addr->getCode();
 
@@ -612,7 +610,7 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
   MachineInstr *FirstReachedMI = FirstReachedUseSN.Addr->getCode();
   const MachineOperand FirstReachedMIImmOp = FirstReachedMI->getOperand(2);
   if (!FirstReachedMIImmOp.isImm())
-    return false;
+    return Changed;
 
   for (auto &I : AddiList) {
     NodeAddr<StmtNode *> CurrentInstSN = I.first;
@@ -645,9 +643,8 @@ bool HexagonOptAddrMode::processAddBases(NodeAddr<StmtNode *> AddSN,
     // we create RAW dependence between the FirstReached Addi and the current
     // one, which could result in extra packets. So we only do this change if
     // we know the current Addi would get removed later
-    if (!usedInLoadStore(CurrentInstSN, NewOffset)) {
-      return false;
-    }
+    if (!usedInLoadStore(CurrentInstSN, NewOffset))
+      return Changed;
 
     // Verify whether the First Addi's definition register is still live when
     // we reach the current Addi
@@ -694,8 +691,19 @@ bool HexagonOptAddrMode::updateAddBases(MachineInstr *CurrentMI,
   CurrentMIBaseOp.setIsUndef(FirstReachedDef.isUndef());
   CurrentMIBaseOp.setImplicit(FirstReachedDef.isImplicit());
   CurrentMIImmOp.setImm(NewOffset);
+
+  // CurrentMI now reads FirstReachedMI's definition register, so that register
+  // has to stay live until CurrentMI. An earlier use of it (e.g. the previous
+  // base of CurrentMI being folded away) may have been marked as the last use
+  // with a kill flag, which would leave this new use reading a dead register.
+  // Clear any such kill flags between the two instructions. Both are in the
+  // same basic block (verified by the caller).
+  for (MachineBasicBlock::iterator I = FirstReachedMI->getIterator(),
+                                   E = CurrentMI->getIterator();
+       I != E; ++I)
+    I->clearRegisterKills(FirstDefRegister, TRI);
+
   ProcessedAddiInsts.insert(CurrentMI);
-  MRI->clearKillFlags(FirstDefRegister);
   return true;
 }
 
@@ -726,24 +734,26 @@ bool HexagonOptAddrMode::processAddUses(NodeAddr<StmtNode *> AddSN,
     int64_t newOffset = OffsetOp.getImm() + AddMI->getOperand(2).getImm();
     if (!isValidOffset(MI, newOffset))
       return false;
-
-    // Since we'll be extending the live range of Rt in the following example,
-    // make sure that is safe. another definition of Rt doesn't exist between 'add'
-    // and load/store instruction.
-    //
-    // Ex: Rx= add(Rt,#10)
-    //     memw(Rx+#0) = Rs
-    // will be replaced with =>  memw(Rt+#10) = Rs
-    if (!isSafeToExtLR(AddSN, AddMI, BaseReg, UNodeList))
-      return false;
   }
+
+  // Since we'll be extending the live range of Rt in the following example,
+  // make sure that is safe. another definition of Rt doesn't exist between
+  // 'add' and load/store instruction.
+  //
+  // Ex: Rx= add(Rt,#10)
+  //     memw(Rx+#0) = Rs
+  // will be replaced with =>  memw(Rt+#10) = Rs
+  // Note: isSafeToExtLR arguments are loop-invariant; call it once after
+  // validating all uses to avoid O(N^2) behavior when UNodeList is large.
+  if (!isSafeToExtLR(AddSN, AddMI, BaseReg, UNodeList))
+    return false;
 
   NodeId LRExtRegRD = 0;
   // Iterate through all the UseNodes in SN and find the reaching def
   // for the LRExtReg.
   for (NodeAddr<UseNode *> UA : AddSN.Addr->members_if(DFG->IsUse, *DFG)) {
     RegisterRef RR = UA.Addr->getRegRef(*DFG);
-    if (BaseReg == RR.Reg)
+    if (BaseReg == RR.asMCReg())
       LRExtRegRD = UA.Addr->getReachingDef();
   }
 
@@ -786,7 +796,6 @@ bool HexagonOptAddrMode::updateAddUses(MachineInstr *AddMI,
   BaseOp.setIsUndef(AddRegOp.isUndef());
   BaseOp.setImplicit(AddRegOp.isImplicit());
   OffsetOp.setImm(ImmOp.getImm() + OffsetOp.getImm());
-  MRI->clearKillFlags(NewReg);
 
   return true;
 }
@@ -1158,7 +1167,7 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   HII = HST.getInstrInfo();
   HRI = HST.getRegisterInfo();
-  const auto &MDF = getAnalysis<MachineDominanceFrontier>();
+  const auto &MDF = getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
   DataFlowGraph G(MF, *HII, *HRI, *MDT, MDF);
@@ -1187,6 +1196,30 @@ bool HexagonOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
     G.build();
     L.computeLiveIns();
     L.resetLiveIns();
+
+    // The RDF-based recomputation can leave stale (over-approximate) live-ins,
+    // which later confuses passes like IfConversion into inserting incorrect
+    // implicit-use operands. Correct them with a conventional backward
+    // recomputation in post-order (successors before predecessors). Skip the
+    // entry block (its calling-convention live-ins were set from the RDF
+    // LiveMap by resetLiveIns() and can't be recovered by a backward walk) and
+    // EH pads (exception pointer/selector are runtime-established).
+    SmallVector<MachineBasicBlock *, 16> Candidates;
+    for (MachineBasicBlock *MBB : post_order(&MF))
+      if (!MBB->isEntryBlock() && !MBB->isEHPad())
+        Candidates.push_back(MBB);
+
+    // Repeat while live-ins change (predecessors may need updating), bounded
+    // to keep compile time in check.
+    constexpr unsigned MaxLiveInSweeps = 8;
+    for (unsigned Sweep = 0; Sweep != MaxLiveInSweeps; ++Sweep) {
+      bool AnyChanged = false;
+      for (MachineBasicBlock *MBB : Candidates)
+        AnyChanged |= recomputeLiveIns(*MBB);
+      if (!AnyChanged)
+        break;
+    }
+
     L.resetKills();
   }
 

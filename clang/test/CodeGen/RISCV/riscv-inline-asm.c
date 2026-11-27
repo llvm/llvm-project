@@ -78,6 +78,7 @@ void test_K(void) {
 
 float f;
 double d;
+__bf16 bf;
 void test_f(void) {
 // CHECK-LABEL: define{{.*}} void @test_f()
 // CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load float, ptr @f
@@ -86,6 +87,9 @@ void test_f(void) {
 // CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load double, ptr @d
 // CHECK: call void asm sideeffect "", "f"(double [[FLT_ARG]])
   asm volatile ("" :: "f"(d));
+// CHECK: [[FLT_ARG:%[a-zA-Z_0-9]+]] = load bfloat, ptr @bf
+// CHECK: call void asm sideeffect "", "f"(bfloat [[FLT_ARG]])
+  asm volatile ("" :: "f"(bf));
 }
 
 void test_A(int *p) {

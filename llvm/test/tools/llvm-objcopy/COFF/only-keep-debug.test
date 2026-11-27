@@ -17,43 +17,43 @@ SECTIONS-NEXT:   Number: 1
 SECTIONS-NEXT:   Name: .text
 SECTIONS-NEXT:   VirtualSize: 0x4
 SECTIONS-NEXT:   VirtualAddress:
-SECTIONS-NEXT:   RawDataSize: 0
+SECTIONS-NEXT:   RawDataSize: 0x0
 SECTIONS:       Section {
 SECTIONS-NEXT:   Number: 2
 SECTIONS-NEXT:   Name: .rdata
 SECTIONS-NEXT:   VirtualSize: 0x4
 SECTIONS-NEXT:   VirtualAddress:
-SECTIONS-NEXT:   RawDataSize: 0
+SECTIONS-NEXT:   RawDataSize: 0x0
 SECTIONS:       Section {
 SECTIONS-NEXT:   Number: 3
 SECTIONS-NEXT:   Name: .buildid
 SECTIONS-NEXT:   VirtualSize: 0x4
 SECTIONS-NEXT:   VirtualAddress:
-SECTIONS-NEXT:   RawDataSize: 512
+SECTIONS-NEXT:   RawDataSize: 0x200
 SECTIONS:       Section {
 SECTIONS-NEXT:   Number: 4
 SECTIONS-NEXT:   Name: .reloc
 SECTIONS-NEXT:   VirtualSize: 0x4
 SECTIONS-NEXT:   VirtualAddress:
-SECTIONS-NEXT:   RawDataSize: 0
+SECTIONS-NEXT:   RawDataSize: 0x0
 SECTIONS:       Section {
 SECTIONS-NEXT:   Number: 5
 SECTIONS-NEXT:   Name: .debug_discardable
 SECTIONS-NEXT:   VirtualSize: 0x4
 SECTIONS-NEXT:   VirtualAddress:
-SECTIONS-NEXT:   RawDataSize: 512
+SECTIONS-NEXT:   RawDataSize: 0x200
 SECTIONS:       Section {
 SECTIONS-NEXT:   Number: 6
 SECTIONS-NEXT:   Name: .debug_undiscardable
 SECTIONS-NEXT:   VirtualSize: 0x4
 SECTIONS-NEXT:   VirtualAddress:
-SECTIONS-NEXT:   RawDataSize: 512
+SECTIONS-NEXT:   RawDataSize: 0x200
 SECTIONS:       Section {
 SECTIONS-NEXT:   Number: 7
 SECTIONS-NEXT:   Name: .unflagged
 SECTIONS-NEXT:   VirtualSize: 0x4
 SECTIONS-NEXT:   VirtualAddress:
-SECTIONS-NEXT:   RawDataSize: 512
+SECTIONS-NEXT:   RawDataSize: 0x200
 
 SYMBOLS:      SYMBOL TABLE:
 SYMBOLS-NEXT: main

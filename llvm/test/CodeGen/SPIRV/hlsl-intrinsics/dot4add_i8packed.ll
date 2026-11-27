@@ -25,7 +25,7 @@ entry:
 
 ; Test that we use the dot product op when capabilities allow
 
-; CHECK-DOT: %[[#DOT:]] = OpSDot %[[#int_32]] %[[#X]] %[[#Y]]
+; CHECK-DOT: %[[#DOT:]] = OpSDot %[[#int_32]] %[[#X]] %[[#Y]] PackedVectorFormat4x8Bit
 ; CHECK-DOT: %[[#RES:]] = OpIAdd %[[#int_32]] %[[#DOT]] %[[#ACC]]
 
 ; Test expansion is used when spirv dot product capabilities aren't available:

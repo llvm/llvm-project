@@ -36,7 +36,6 @@
 #include <cstddef>
 #include <functional>
 #include <memory>
-#include <set>
 #include <tuple>
 #include <utility>
 
@@ -83,7 +82,15 @@ namespace llvm {
 
     /// Mark this value as unused.
     void markUnused() { def = SlotIndex(); }
+
+    LLVM_ABI void print(raw_ostream &OS) const;
+    LLVM_ABI void dump() const;
   };
+
+  inline raw_ostream &operator<<(raw_ostream &OS, const VNInfo &VNI) {
+    VNI.print(OS);
+    return OS;
+  }
 
   /// Result of a LiveRange query. This class hides the implementation details
   /// of live ranges, and it should be used as the primary interface for
@@ -204,12 +211,6 @@ namespace llvm {
     Segments segments;   // the liveness segments
     VNInfoList valnos;   // value#'s
 
-    // The segment set is used temporarily to accelerate initial computation
-    // of live ranges of physical registers in computeRegUnitRange.
-    // After that the set is flushed to the segment vector and deleted.
-    using SegmentSet = std::set<Segment>;
-    std::unique_ptr<SegmentSet> segmentSet;
-
     using iterator = Segments::iterator;
     using const_iterator = Segments::const_iterator;
 
@@ -237,15 +238,11 @@ namespace llvm {
     }
 
     /// Constructs a new LiveRange object.
-    LiveRange(bool UseSegmentSet = false)
-        : segmentSet(UseSegmentSet ? std::make_unique<SegmentSet>()
-                                   : nullptr) {}
+    LiveRange() = default;
 
     /// Constructs a new LiveRange object by copying segments and valnos from
     /// another LiveRange.
     LiveRange(const LiveRange &Other, BumpPtrAllocator &Allocator) {
-      assert(Other.segmentSet == nullptr &&
-             "Copying of LiveRanges with active SegmentSets is not supported");
       assign(Other, Allocator);
     }
 
@@ -254,8 +251,6 @@ namespace llvm {
       if (this == &Other)
         return;
 
-      assert(Other.segmentSet == nullptr &&
-             "Copying of LiveRanges with active SegmentSets is not supported");
       // Duplicate valnos.
       for (const VNInfo *VNI : Other.valnos)
         createValueCopy(VNI, Allocator);
@@ -448,7 +443,7 @@ namespace llvm {
     /// overlaps - Return true if the intersection of the two live ranges is
     /// not empty.
     bool overlaps(const LiveRange &other) const {
-      if (other.empty())
+      if (empty() || other.empty())
         return false;
       return overlapsFrom(other, other.begin());
     }
@@ -481,6 +476,17 @@ namespace llvm {
     /// appropriate.  This returns an iterator to the inserted segment (which
     /// may have grown since it was inserted).
     LLVM_ABI iterator addSegment(Segment S);
+
+    /// Add \p NewSegs, sorted by start, in one pass. Gives the same result as
+    /// calling addSegment() for each.
+    LLVM_ABI void addSegments(ArrayRef<Segment> NewSegs);
+
+    /// Merge the segment pointed to by @p I with its immediate neighbors when
+    /// they use the same value number and touch it. @p I must be a valid
+    /// iterator into this live range. Returns an iterator to the merged
+    /// segment, which may be @p I or the previous segment if @p I was merged
+    /// into it.
+    LLVM_ABI iterator mergeAdjacentSegments(iterator I);
 
     /// Attempt to extend a value defined after @p StartIdx to include @p Use.
     /// Both @p StartIdx and @p Use should be in the same basic block. In case
@@ -615,12 +621,6 @@ namespace llvm {
       });
     }
 
-    /// Flush segment set into the regular segment vector.
-    /// The method is to be called after the live range
-    /// has been created, if use of the segment set was
-    /// activated in the constructor of the live range.
-    LLVM_ABI void flushSegmentSet();
-
     /// Stores indexes from the input index sequence R at which this LiveRange
     /// is live to the output O iterator.
     /// R is a range of _ascending sorted_ _random_ access iterators
@@ -676,7 +676,6 @@ namespace llvm {
 
   private:
     friend class LiveRangeUpdater;
-    void addSegmentToSet(Segment S);
     void markValNoForDeletion(VNInfo *V);
   };
 
@@ -1015,8 +1014,9 @@ namespace llvm {
   public:
     explicit ConnectedVNInfoEqClasses(LiveIntervals &lis) : LIS(lis) {}
 
-    /// Classify the values in \p LR into connected components.
-    /// Returns the number of connected components.
+    /// Classify the values in \p LR into connected components. A component
+    /// made only of phi-defs in unreachable blocks has no def of its own, so
+    /// it is joined with one that does. Returns the number of components.
     LLVM_ABI unsigned Classify(const LiveRange &LR);
 
     /// getEqClass - Classify creates equivalence classes numbered 0..N. Return

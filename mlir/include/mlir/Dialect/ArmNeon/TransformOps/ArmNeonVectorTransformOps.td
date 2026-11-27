@@ -17,8 +17,19 @@ def ApplyArmNeonContractionToI8MMPatternsOp
          "apply_patterns.arm_neon.vector_contract_to_i8mm",
          [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that vector.contract operations should be lowered to
-    finer-grained vector primitives from the ArmNeon dialect.
+    Indicates that vector contract operations should be lowered to
+    to ArmNeon dialect operations mapping to instructions from FEAT_I8MM.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyArmNeonContractionToBFMMLAPatternsOp
+    : Op<Transform_Dialect, "apply_patterns.arm_neon.vector_contract_to_bfmmla",
+         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector contract operations should be lowered to
+    to ArmNeon dialect operations mapping to instructions from FEAT_BF16.
   }];
 
   let assemblyFormat = "attr-dict";

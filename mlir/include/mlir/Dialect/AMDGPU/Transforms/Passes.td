@@ -16,19 +16,28 @@
 include "mlir/Pass/PassBase.td"
 
 def AmdgpuEmulateAtomicsPass : Pass<"amdgpu-emulate-atomics"> {
-  let summary = "Emulate atomic operations on chipsets that do not support them";
+  let summary = "Emulate atomic operations the target does not support";
   let description = [{
-    This pass rewrites any AMDGPU-specific atomic operation that is not supported
-    on the given `chipset` into a compare-and-swap loop.
+    This pass rewrites any AMDGPU-specific atomic operation that the target does
+    not support into a compare-and-swap loop.
   }];
   let dependentDialects = [
     "cf::ControlFlowDialect",
     "arith::ArithDialect",
     "vector::VectorDialect"
   ];
-  let options = [Option<"chipset", "chipset", "std::string",
-                        /*default=*/"\"gfx000\"",
-                        "Chipset that these operations will run on">];
+  let options = [
+    Option<"arch", "arch", "std::string",
+           /*default=*/"\"invalid\"",
+           "Target architecture, as in Clang, with optional target-ID "
+           "modifiers. New-style triples such as amdgpu9.42-amd-amdhsa are "
+           "preferred, and can be extended to a full target ID like "
+           "amdgpu9.42-amd-amdhsa--gfx942:xnack+:sramecc-. Bare chip names "
+           "like gfx1250 or gfx942:xnack- are also supported. Defaults to an "
+           "invalid target so that one must be given explicitly">,
+    Option<"chipset", "chipset", "std::string", /*default=*/"\"\"",
+           "Deprecated alias for 'arch'.">,
+  ];
 }
 
 def AmdgpuResolveStridedMetadataPass : Pass<"amdgpu-resolve-strided-metadata"> {
@@ -51,8 +60,8 @@ def AmdgpuResolveStridedMetadataPass : Pass<"amdgpu-resolve-strided-metadata"> {
   ];
 }
 
-def AmdgpuTransferReadToLoadPass : Pass<"amdgpu-transfer-read-to-load"> {
-  let summary = "Lower the operations from the vector transfer_read to vector load";
+def AmdgpuMaskedloadToLoadPass : Pass<"amdgpu-maskedload-to-load"> {
+  let summary = "Lower the operations from the vector maskedload to vector load";
   let description = [{
     This pass creates a transfer read op lowering optimization. The lowering
     will produce a conditional check at runtime. If within bounds, a vector
@@ -70,4 +79,5 @@ def AmdgpuTransferReadToLoadPass : Pass<"amdgpu-transfer-read-to-load"> {
     "memref::MemRefDialect"
   ];
 }
+
 #endif // MLIR_DIALECT_AMDGPU_TRANSFORMS_PASSES_TD_

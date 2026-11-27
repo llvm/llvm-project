@@ -81,6 +81,41 @@ public:
 
   void SetObjectSP(const StructuredData::ObjectSP &obj) { m_data_sp = obj; }
 
+  void SetValueForKey(llvm::StringRef key,
+                      const StructuredData::ObjectSP &value) {
+    if (!m_data_sp ||
+        m_data_sp->GetType() != lldb::eStructuredDataTypeDictionary) {
+      m_data_sp = StructuredData::FromKeyValue(key, value);
+    } else if (StructuredData::Dictionary *dict =
+                   m_data_sp->GetAsDictionary()) {
+      dict->AddItem(key, value);
+    }
+  }
+
+  void SetUnsignedIntegerValue(uint64_t value) {
+    m_data_sp = StructuredData::FromInteger(value);
+  }
+
+  void SetSignedIntegerValue(int64_t value) {
+    m_data_sp = StructuredData::FromInteger(value);
+  }
+
+  void SetFloatValue(double value) {
+    m_data_sp = StructuredData::FromFloat(value);
+  }
+
+  void SetBooleanValue(bool value) {
+    m_data_sp = StructuredData::FromBoolean(value);
+  }
+
+  void SetStringValue(llvm::StringRef value) {
+    m_data_sp = StructuredData::FromString(value);
+  }
+
+  void SetGenericValue(void *value) {
+    m_data_sp = StructuredData::FromGeneric(value);
+  }
+
   lldb::StructuredDataType GetType() const {
     return (m_data_sp ? m_data_sp->GetType() :
         lldb::eStructuredDataTypeInvalid);
@@ -144,11 +179,15 @@ public:
     if (result.empty())
       return 0;
 
-    if (!dst || !dst_len) {
-      char s[1];
-      return (::snprintf(s, 1, "%s", result.data()));
+    const size_t needed_len = result.size() + 1; // for the NULL byte.
+    if (dst && dst_len != 0) {
+      const size_t min_len = std::min(needed_len, dst_len);
+      const size_t copy_len = min_len - 1; // exclude space for NULL byte.
+      ::memcpy(dst, result.data(), copy_len);
+      dst[copy_len] = '\0';
     }
-    return (::snprintf(dst, dst_len, "%s", result.data()));
+
+    return needed_len;
   }
 
   void *GetGenericValue() const {

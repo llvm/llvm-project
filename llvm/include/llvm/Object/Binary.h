@@ -72,6 +72,7 @@ protected:
 
     ID_GOFF,
     ID_Wasm,
+    ID_DXContainer,
 
     ID_EndObjects
   };
@@ -95,7 +96,7 @@ public:
   Binary(const Binary &other) = delete;
   virtual ~Binary();
 
-  virtual Error initContent() { return Error::success(); };
+  virtual Error initContent() { return Error::success(); }
 
   StringRef getData() const;
   StringRef getFileName() const;
@@ -160,6 +161,8 @@ public:
   }
 
   bool isWinRes() const { return TypeID == ID_WinRes; }
+
+  bool isDXContainer() const { return TypeID == ID_DXContainer; }
 
   Triple::ObjectFormatType getTripleObjectFormat() const {
     if (isCOFF())

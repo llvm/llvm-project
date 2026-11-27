@@ -20,6 +20,7 @@ include "mlir/IR/OpBase.td"
 
 def CUFDialect : Dialect {
   let name = "cuf";
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   let summary = "CUDA Fortran dialect";
 
@@ -28,16 +29,11 @@ def CUFDialect : Dialect {
     the FIR types and are tightly coupled with FIR and HLFIR.
   }];
 
-  let useDefaultAttributePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
+  let hasAttributes = 1;
+  let hasInitializer = 0;
   let cppNamespace = "::cuf";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = ["fir::FIROpsDialect"];
-
-  let extraClassDeclaration = [{
-  private:
-    // Register the CUF Attributes.
-    void registerAttributes();
-  }];
 }
 
 #endif // FORTRAN_DIALECT_CUF_CUFDIALECT

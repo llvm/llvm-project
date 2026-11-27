@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+experimental-xqccmp %s \
+# RUN: not llvm-mc -disassemble -triple=riscv32 -mattr=+xqccmp %s \
 # RUN:   | FileCheck -check-prefixes=CHECK,CHECK-XQCCMP %s
 
 [0x00,0x00]

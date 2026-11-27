@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 namespace cir {
 
@@ -23,6 +24,19 @@ class CIRDataLayout {
   // This is starting with the minimum functionality needed for code that is
   // being upstreamed. Additional methods and members will be added as needed.
   bool bigEndian = false;
+
+  unsigned programAddrSpace = 0;
+
+  /// TargetInfo::getBitIntMaxAlign(), in bits, from the module's
+  /// #cir.bitint_spec entry.
+  uint64_t bitIntMaxAlignBits = 0;
+
+  /// TargetInfo::getMaxVectorAlign(), in bits, from the module's
+  /// #cir.vector_spec entry, or 0 when there is no entry.
+  uint64_t vectorMaxAlignBits = 0;
+
+  /// The module whose cir.record_layouts entries give record alignments.
+  mlir::ModuleOp module;
 
 public:
   mlir::DataLayout layout;
@@ -34,6 +48,114 @@ public:
   void reset(mlir::DataLayoutSpecInterface spec);
 
   bool isBigEndian() const { return bigEndian; }
+
+  unsigned getProgramAddressSpace() const { return programAddrSpace; }
+
+  /// Internal helper method that returns requested alignment for type.
+  llvm::Align getAlignment(mlir::Type ty, bool useABIAlign) const;
+
+  llvm::Align getABITypeAlign(mlir::Type ty) const {
+    return getAlignment(ty, true);
+  }
+
+  /// Returns the alignment, in bytes, that the source language requires for
+  /// an object of type \p ty. ABI classification, coercion temporaries, and
+  /// accesses with no explicit alignment use it. The ABI alignment of \p ty is
+  /// the alignment of the memory representation \p ty lowers to, which record
+  /// layout and array strides use.
+  uint64_t getTypeLanguageAlignment(mlir::Type ty) const;
+
+  /// Returns the maximum number of bytes that may be overwritten by
+  /// storing the specified type.
+  ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
+  /// For example, returns 5 for i36 and 10 for x86_fp80.
+  llvm::TypeSize getTypeStoreSize(mlir::Type ty) const {
+    llvm::TypeSize baseSize = getTypeSizeInBits(ty);
+    return {llvm::divideCeil(baseSize.getKnownMinValue(), 8),
+            baseSize.isScalable()};
+  }
+
+  /// Returns the maximum number of bits that may be overwritten by
+  /// storing the specified type; always a multiple of 8.
+  ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
+  /// For example, returns 40 for i36 and 80 for x86_fp80.
+  llvm::TypeSize getTypeStoreSizeInBits(mlir::Type ty) const {
+    llvm::TypeSize baseSize = getTypeSizeInBits(ty);
+    uint64_t alignedSizeInBits =
+        llvm::alignToPowerOf2(baseSize.getKnownMinValue(), 8);
+    return {alignedSizeInBits, baseSize.isScalable()};
+  }
+
+  /// Returns the offset in bytes between successive objects of the
+  /// specified type, including alignment padding.
+  ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
+  /// This is the amount that alloca reserves for this type. For example,
+  /// returns 12 or 16 for x86_fp80, depending on alignment.
+  llvm::TypeSize getTypeAllocSize(mlir::Type ty) const {
+    // Round up to the next alignment boundary.
+    return llvm::alignTo(getTypeStoreSize(ty), getABITypeAlign(ty).value());
+  }
+
+  /// Returns the offset in bits between successive objects of the
+  /// specified type, including alignment padding; always a multiple of 8.
+  ///
+  /// If Ty is a scalable vector type, the scalable property will be set and
+  /// the runtime size will be a positive integer multiple of the base size.
+  ///
+  /// This is the amount that alloca reserves for this type. For example,
+  /// returns 96 or 128 for x86_fp80, depending on alignment.
+  llvm::TypeSize getTypeAllocSizeInBits(mlir::Type ty) const {
+    return 8 * getTypeAllocSize(ty);
+  }
+
+  llvm::TypeSize getTypeSizeInBits(mlir::Type ty) const;
+
+  llvm::TypeSize getPointerTypeSizeInBits(mlir::Type ty) const {
+    assert(mlir::isa<cir::PointerType>(ty) &&
+           "This should only be called with a pointer type");
+    return layout.getTypeSizeInBits(ty);
+  }
+
+  mlir::Type getIntPtrType(mlir::Type ty) const {
+    assert(mlir::isa<cir::PointerType>(ty) && "Expected pointer type");
+    return cir::IntType::get(ty.getContext(), getPointerTypeSizeInBits(ty),
+                             false);
+  }
+
+  /// Returns true if no extra padding bits are needed when storing the
+  /// specified type.
+  ///
+  /// For example, returns false for i19 that has a 24-bit store size.
+  bool typeSizeEqualsStoreSize(mlir::Type ty) const {
+    return getTypeSizeInBits(ty) == getTypeStoreSizeInBits(ty);
+  }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getAllocaAddrSpace(mlir::MLIRContext *ctx) {
+    auto allocaASAttr = mlir::dyn_cast_if_present<mlir::IntegerAttr>(
+        layout.getAllocaMemorySpace());
+    if (!allocaASAttr)
+      return {};
+    return cir::TargetAddressSpaceAttr::get(ctx, allocaASAttr.getUInt());
+  }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getDefaultGlobalsAddrSpace(mlir::MLIRContext *ctx) const {
+    auto globalsASAttr = mlir::dyn_cast_if_present<mlir::IntegerAttr>(
+        layout.getGlobalMemorySpace());
+    if (!globalsASAttr || globalsASAttr.getUInt() == 0)
+      return {};
+    return cir::TargetAddressSpaceAttr::get(ctx, globalsASAttr.getUInt());
+  }
 };
 
 } // namespace cir

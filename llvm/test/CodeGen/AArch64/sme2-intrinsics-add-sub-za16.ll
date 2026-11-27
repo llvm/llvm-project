@@ -6,9 +6,7 @@ target triple = "aarch64-linux"
 define void @add_f16_vg1x2(i32 %slice, <vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1) #0 {
 ; CHECK-LABEL: add_f16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fadd za.h[w8, 0, vgx2], { z0.h, z1.h }
 ; CHECK-NEXT:    fadd za.h[w8, 7, vgx2], { z0.h, z1.h }
 ; CHECK-NEXT:    ret
@@ -21,11 +19,7 @@ define void @add_f16_vg1x2(i32 %slice, <vscale x 8 x half> %zn0, <vscale x 8 x h
 define void @add_f16_vg1x4(i32 %slice, <vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1,
 ; CHECK-LABEL: add_f16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fadd za.h[w8, 0, vgx4], { z0.h - z3.h }
 ; CHECK-NEXT:    fadd za.h[w8, 7, vgx4], { z0.h - z3.h }
 ; CHECK-NEXT:    ret
@@ -41,9 +35,7 @@ define void @add_f16_vg1x4(i32 %slice, <vscale x 8 x half> %zn0, <vscale x 8 x h
 define void @sub_f16_vg1x2(i32 %slice, <vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1) #1 {
 ; CHECK-LABEL: sub_f16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    fsub za.h[w8, 0, vgx2], { z0.h, z1.h }
 ; CHECK-NEXT:    fsub za.h[w8, 7, vgx2], { z0.h, z1.h }
 ; CHECK-NEXT:    ret
@@ -56,11 +48,7 @@ define void @sub_f16_vg1x2(i32 %slice, <vscale x 8 x half> %zn0, <vscale x 8 x h
 define void @sub_f16_vg1x4(i32 %slice, <vscale x 8 x half> %zn0, <vscale x 8 x half> %zn1,
 ; CHECK-LABEL: sub_f16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    fsub za.h[w8, 0, vgx4], { z0.h - z3.h }
 ; CHECK-NEXT:    fsub za.h[w8, 7, vgx4], { z0.h - z3.h }
 ; CHECK-NEXT:    ret
@@ -76,9 +64,7 @@ define void @sub_f16_vg1x4(i32 %slice, <vscale x 8 x half> %zn0, <vscale x 8 x h
 define void @add_bf16_vg1x2(i32 %slice, <vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1) #2 {
 ; CHECK-LABEL: add_bf16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bfadd za.h[w8, 0, vgx2], { z0.h, z1.h }
 ; CHECK-NEXT:    bfadd za.h[w8, 7, vgx2], { z0.h, z1.h }
 ; CHECK-NEXT:    ret
@@ -91,11 +77,7 @@ define void @add_bf16_vg1x2(i32 %slice, <vscale x 8 x bfloat> %zn0, <vscale x 8 
 define void @add_bf16_vg1x4(i32 %slice, <vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1,
 ; CHECK-LABEL: add_bf16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    bfadd za.h[w8, 0, vgx4], { z0.h - z3.h }
 ; CHECK-NEXT:    bfadd za.h[w8, 7, vgx4], { z0.h - z3.h }
 ; CHECK-NEXT:    ret
@@ -111,9 +93,7 @@ define void @add_bf16_vg1x4(i32 %slice, <vscale x 8 x bfloat> %zn0, <vscale x 8 
 define void @sub_bf16_vg1x2(i32 %slice, <vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1) #2 {
 ; CHECK-LABEL: sub_bf16_vg1x2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1 def $z0_z1
 ; CHECK-NEXT:    bfsub za.h[w8, 0, vgx2], { z0.h, z1.h }
 ; CHECK-NEXT:    bfsub za.h[w8, 7, vgx2], { z0.h, z1.h }
 ; CHECK-NEXT:    ret
@@ -126,11 +106,7 @@ define void @sub_bf16_vg1x2(i32 %slice, <vscale x 8 x bfloat> %zn0, <vscale x 8 
 define void @sub_bf16_vg1x4(i32 %slice, <vscale x 8 x bfloat> %zn0, <vscale x 8 x bfloat> %zn1,
 ; CHECK-LABEL: sub_bf16_vg1x4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    mov w8, w0
-; CHECK-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; CHECK-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; CHECK-NEXT:    bfsub za.h[w8, 0, vgx4], { z0.h - z3.h }
 ; CHECK-NEXT:    bfsub za.h[w8, 7, vgx4], { z0.h - z3.h }
 ; CHECK-NEXT:    ret

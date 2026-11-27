@@ -13,11 +13,16 @@
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/RegionGraphTraits.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <queue>
 
 #define DEBUG_TYPE "licm"
@@ -64,8 +69,9 @@ size_t mlir::moveLoopInvariantCode(
   size_t numMoved = 0;
 
   for (Region *region : regions) {
-    LLVM_DEBUG(llvm::dbgs() << "Original loop:\n"
-                            << *region->getParentOp() << "\n");
+    LDBG() << "Original loop:\n"
+           << OpWithFlags(region->getParentOp(),
+                          OpPrintingFlags().skipRegions());
 
     std::queue<Operation *> worklist;
     // Add top-level operations in the loop body to the worklist.
@@ -83,12 +89,14 @@ size_t mlir::moveLoopInvariantCode(
       if (op->getParentRegion() != region)
         continue;
 
-      LLVM_DEBUG(llvm::dbgs() << "Checking op: " << *op << "\n");
+      LDBG() << "Checking op: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       if (!shouldMoveOutOfRegion(op, region) ||
           !canBeHoisted(op, definedOutside))
         continue;
 
-      LLVM_DEBUG(llvm::dbgs() << "Moving loop-invariant op: " << *op << "\n");
+      LDBG() << "Moving loop-invariant op: "
+             << OpWithFlags(op, OpPrintingFlags().skipRegions());
       moveOutOfRegion(op, region);
       ++numMoved;
 
@@ -104,15 +112,57 @@ size_t mlir::moveLoopInvariantCode(
 }
 
 size_t mlir::moveLoopInvariantCode(LoopLikeOpInterface loopLike) {
-  return moveLoopInvariantCode(
+  size_t numMoved = moveLoopInvariantCode(
       loopLike.getLoopRegions(),
       [&](Value value, Region *) {
         return loopLike.isDefinedOutsideOfLoop(value);
       },
-      [&](Operation *op, Region *) {
-        return isMemoryEffectFree(op) && isSpeculatable(op);
-      },
+      [&](Operation *op, Region *) { return isPure(op); },
       [&](Operation *op, Region *) { loopLike.moveOutOfLoop(op); });
+  return numMoved + moveLoopInvariantCodeFromNestedRegions(loopLike);
+}
+
+/// Hoists pure loop-invariant ops out of the control-flow regions nested in
+/// `region`, which is part of the body of `loopLike`. Ops directly in `region`
+/// are hoisted only if `isNested` is set, i.e., if `region` is not a region of
+/// the loop itself. Returns the number of ops moved.
+static size_t hoistFromNestedRegions(Region &region,
+                                     LoopLikeOpInterface loopLike,
+                                     bool isNested) {
+  if (region.empty())
+    return 0;
+  size_t numMoved = 0;
+  auto definedOutside = [&](Value value) {
+    return loopLike.isDefinedOutsideOfLoop(value);
+  };
+  // Unreachable blocks are skipped: dominance is not verified there. Reachable
+  // blocks are visited in an order in which definitions precede their uses.
+  for (Block *block : llvm::depth_first(&region.front())) {
+    for (Operation &op : llvm::make_early_inc_range(*block)) {
+      if (isNested && isPure(&op) && canBeHoisted(&op, definedOutside)) {
+        LDBG() << "Moving loop-invariant op: "
+               << OpWithFlags(&op, OpPrintingFlags().skipRegions());
+        loopLike.moveOutOfLoop(&op);
+        ++numMoved;
+        continue;
+      }
+      // Descend into control-flow ops only: ops in other regions may depend on
+      // the enclosing op, and nested loops are processed on their own.
+      if (!isa<RegionBranchOpInterface>(op) || isa<LoopLikeOpInterface>(op))
+        continue;
+      for (Region &nested : op.getRegions())
+        numMoved += hoistFromNestedRegions(nested, loopLike, /*isNested=*/true);
+    }
+  }
+  return numMoved;
+}
+
+size_t
+mlir::moveLoopInvariantCodeFromNestedRegions(LoopLikeOpInterface loopLike) {
+  size_t numMoved = 0;
+  for (Region *region : loopLike.getLoopRegions())
+    numMoved += hoistFromNestedRegions(*region, loopLike, /*isNested=*/false);
+  return numMoved;
 }
 
 namespace {
@@ -268,6 +318,10 @@ MatchingSubsets::populateSubsetOpsAtIterArg(LoopLikeOpInterface loopLike,
         if (failed(populateSubsetOpsAtIterArg(nestedLoop, nestedIterArg,
                                               /*collectHoistableOps=*/false)))
           return failure();
+        // There must be a single use-def chain. Bail if there are multiple
+        // nested loops using this value.
+        if (nextValue)
+          return failure();
         nextValue = nestedLoop.getTiedLoopResult(&use);
         continue;
       }
@@ -275,7 +329,7 @@ MatchingSubsets::populateSubsetOpsAtIterArg(LoopLikeOpInterface loopLike,
       auto subsetOp = dyn_cast<SubsetOpInterface>(use.getOwner());
       if (!subsetOp)
         return failure();
-      insert(subsetOp);
+      insert(subsetOp, collectHoistableOps);
 
       if (auto insertionOp =
               dyn_cast<SubsetInsertionOpInterface>(use.getOwner())) {
@@ -322,7 +376,7 @@ static LoopLikeOpInterface hoistSubsetAtIterArg(RewriterBase &rewriter,
                                                 LoopLikeOpInterface loopLike,
                                                 BlockArgument iterArg) {
   assert(iterArg.getOwner()->getParentOp() == loopLike && "invalid iter_arg");
-  auto it = llvm::find(loopLike.getRegionIterArgs(), iterArg);
+  BlockArgument *it = llvm::find(loopLike.getRegionIterArgs(), iterArg);
   int64_t iterArgIdx = std::distance(loopLike.getRegionIterArgs().begin(), it);
   MatchingSubsets subsets;
   if (failed(subsets.populateSubsetOpsAtIterArg(loopLike, iterArg)))

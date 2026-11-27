@@ -1,13 +1,13 @@
 # Xqcibi - Qualcomm uC Branch Immediate Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibi -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcibi -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibi < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcibi -M no-aliases -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcibi < %s \
+# RUN:     | llvm-objdump --mattr=+xqcibi -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibi -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcibi -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibi < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcibi -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcibi < %s \
+# RUN:     | llvm-objdump --mattr=+xqcibi -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-OBJ %s
 
 # CHECK-INST:  qc.beqi     s0, 12, 346

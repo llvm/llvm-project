@@ -10,6 +10,7 @@
 #define LLVM_SUPPORT_BINARYSTREAMWRITER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BinaryStreamArray.h"
 #include "llvm/Support/BinaryStreamError.h"
@@ -69,8 +70,7 @@ public:
     static_assert(std::is_enum<T>::value,
                   "Cannot call writeEnum with non-Enum type");
 
-    using U = std::underlying_type_t<T>;
-    return writeInteger<U>(static_cast<U>(Num));
+    return writeInteger(llvm::to_underlying(Num));
   }
 
   /// Write the unsigned integer Value to the underlying stream using ULEB128

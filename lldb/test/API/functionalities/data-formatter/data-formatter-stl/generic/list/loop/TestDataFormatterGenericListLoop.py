@@ -9,35 +9,21 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-USE_LIBSTDCPP = "USE_LIBSTDCPP"
-USE_LIBCPP = "USE_LIBCPP"
-
 
 class GenericListDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
-    def do_test_with_run_command(self, stdlib_type):
-        self.build(dictionary={stdlib_type: "1"})
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target and target.IsValid(), "Target is valid")
-
+    def do_test_with_run_command(self):
         file_spec = lldb.SBFileSpec("main.cpp", False)
-        breakpoint1 = target.BreakpointCreateBySourceRegex(
-            "// Set break point at this line.", file_spec
+        # Run the program, it should stop at breakpoint 1.
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", file_spec
         )
-        self.assertTrue(breakpoint1 and breakpoint1.IsValid())
         breakpoint2 = target.BreakpointCreateBySourceRegex(
             "// Set second break point at this line.", file_spec
         )
         self.assertTrue(breakpoint2 and breakpoint2.IsValid())
-
-        # Run the program, it should stop at breakpoint 1.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process and process.IsValid(), PROCESS_IS_VALID)
-        self.assertEqual(
-            len(lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint1)), 1
-        )
 
         # verify our list is displayed correctly
         self.expect(
@@ -64,8 +50,16 @@ class GenericListDataFormatterTestCase(TestBase):
 
     @add_test_categories(["libstdcxx"])
     def test_with_run_command_libstdcpp(self):
-        self.do_test_with_run_command(USE_LIBSTDCPP)
+        self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test_with_run_command()
 
     @add_test_categories(["libc++"])
     def test_with_run_command_libcpp(self):
-        self.do_test_with_run_command(USE_LIBCPP)
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test_with_run_command()
+
+    @add_test_categories(["msvcstl"])
+    def test_with_run_command_msvcstl(self):
+        # No flags, because the "msvcstl" category checks that the MSVC STL is used by default.
+        self.build()
+        self.do_test_with_run_command()

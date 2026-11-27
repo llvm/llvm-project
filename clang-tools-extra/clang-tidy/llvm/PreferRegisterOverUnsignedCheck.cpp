@@ -1,4 +1,4 @@
-//===--- PreferRegisterOverUnsignedCheck.cpp - clang-tidy -----------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,7 +14,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::llvm_check {
 
 void PreferRegisterOverUnsignedCheck::registerMatchers(MatchFinder *Finder) {
-  auto RegisterClassMatch = hasType(
+  const auto RegisterClassMatch = hasType(
       cxxRecordDecl(hasName("::llvm::Register")).bind("registerClassDecl"));
 
   Finder->addMatcher(
@@ -37,10 +37,10 @@ void PreferRegisterOverUnsignedCheck::check(
   bool NeedsQualification = true;
   const DeclContext *Context = UserVarDecl->getDeclContext();
   while (Context) {
-    if (const auto *Namespace = dyn_cast<NamespaceDecl>(Context))
-      if (isa<TranslationUnitDecl>(Namespace->getDeclContext()) &&
-          Namespace->getName() == "llvm")
-        NeedsQualification = false;
+    if (const auto *Namespace = dyn_cast<NamespaceDecl>(Context);
+        Namespace && isa<TranslationUnitDecl>(Namespace->getDeclContext()) &&
+        Namespace->getName() == "llvm")
+      NeedsQualification = false;
     for (const auto *UsingDirective : Context->using_directives()) {
       const NamespaceDecl *Namespace = UsingDirective->getNominatedNamespace();
       if (isa<TranslationUnitDecl>(Namespace->getDeclContext()) &&

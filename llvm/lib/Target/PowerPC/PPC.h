@@ -39,7 +39,7 @@ class ModulePass;
   FunctionPass *createPPCLoopInstrFormPrepPass(PPCTargetMachine &TM);
   FunctionPass *createPPCTOCRegDepsPass();
   FunctionPass *createPPCEarlyReturnPass();
-  FunctionPass *createPPCVSXCopyPass();
+  FunctionPass *createPPCVSXWACCCopyPass();
   FunctionPass *createPPCVSXFMAMutatePass();
   FunctionPass *createPPCVSXSwapRemovalPass();
   FunctionPass *createPPCReduceCRLogicalsPass();
@@ -49,13 +49,14 @@ class ModulePass;
   FunctionPass *createPPCISelDag(PPCTargetMachine &TM, CodeGenOptLevel OL);
   FunctionPass *createPPCTLSDynamicCallPass();
   FunctionPass *createPPCBoolRetToIntPass();
-  FunctionPass *createPPCExpandISELPass();
   FunctionPass *createPPCPreEmitPeepholePass();
   FunctionPass *createPPCExpandAtomicPseudoPass();
   FunctionPass *createPPCCTRLoopsPass();
+  ModulePass *createPPCPrepareIFuncsOnAIXPass();
   void LowerPPCMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                     AsmPrinter &AP);
-  bool LowerPPCMachineOperandToMCOperand(const MachineOperand &MO,
+  bool LowerPPCMachineOperandToMCOperand(unsigned MIOpcode,
+                                         const MachineOperand &MO,
                                          MCOperand &OutMO, AsmPrinter &AP);
 
 #ifndef NDEBUG
@@ -64,20 +65,20 @@ class ModulePass;
   void initializePPCLoopInstrFormPrepPass(PassRegistry&);
   void initializePPCTOCRegDepsPass(PassRegistry&);
   void initializePPCEarlyReturnPass(PassRegistry&);
-  void initializePPCVSXCopyPass(PassRegistry&);
+  void initializePPCVSXWACCCopyPass(PassRegistry &);
   void initializePPCVSXFMAMutatePass(PassRegistry&);
   void initializePPCVSXSwapRemovalPass(PassRegistry&);
   void initializePPCReduceCRLogicalsPass(PassRegistry&);
   void initializePPCBSelPass(PassRegistry&);
   void initializePPCBranchCoalescingPass(PassRegistry&);
-  void initializePPCBoolRetToIntPass(PassRegistry&);
-  void initializePPCExpandISELPass(PassRegistry &);
+  void initializePPCBoolRetToIntPass(PassRegistry &);
   void initializePPCPreEmitPeepholePass(PassRegistry &);
   void initializePPCTLSDynamicCallPass(PassRegistry &);
   void initializePPCMIPeepholePass(PassRegistry&);
   void initializePPCExpandAtomicPseudoPass(PassRegistry &);
   void initializePPCCTRLoopsPass(PassRegistry &);
   void initializePPCDAGToDAGISelLegacyPass(PassRegistry &);
+  void initializePPCPrepareIFuncsOnAIXPass(PassRegistry &);
   void initializePPCLinuxAsmPrinterPass(PassRegistry &);
   void initializePPCAIXAsmPrinterPass(PassRegistry &);
 
@@ -94,6 +95,16 @@ class ModulePass;
   InstructionSelector *
   createPPCInstructionSelector(const PPCTargetMachine &, const PPCSubtarget &,
                                const PPCRegisterBankInfo &);
+
+  /// The PowerPC ABI variant. PPC_ABI_AIX_EXTABI is the AIX extended Altivec
+  /// ABI ("vec-extabi").
+  enum PPCABI {
+    PPC_ABI_UNKNOWN,
+    PPC_ABI_ELFv1,
+    PPC_ABI_ELFv2,
+    PPC_ABI_AIX_EXTABI
+  };
+
   namespace PPCII {
 
   /// Target Operand Flag enum.

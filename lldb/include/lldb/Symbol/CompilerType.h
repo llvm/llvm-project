@@ -23,6 +23,7 @@ namespace lldb_private {
 
 class DataExtractor;
 class TypeSystem;
+struct ChildTypeInfo;
 
 /// Generic representation of a type in a programming language.
 ///
@@ -126,8 +127,6 @@ public:
   bool IsVectorType(CompilerType *element_type = nullptr,
                     uint64_t *size = nullptr) const;
 
-  bool IsArrayOfScalarType() const;
-
   bool IsAggregateType() const;
 
   bool IsAnonymousType() const;
@@ -144,7 +143,13 @@ public:
 
   bool IsDefined() const;
 
-  bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
+  bool IsComplexType() const;
+
+  /// Returns \c true for floating point types (including complex floats).
+  bool IsFloatingPointType() const;
+
+  /// Returns \c true for non-complex float types.
+  bool IsRealFloatingPointType() const;
 
   bool IsFunctionType() const;
 
@@ -160,6 +165,8 @@ public:
 
   bool IsMemberFunctionPointerType() const;
 
+  bool IsMemberDataPointerType() const;
+
   bool
   IsBlockPointerType(CompilerType *function_pointer_type_ptr = nullptr) const;
 
@@ -174,8 +181,6 @@ public:
   /// \param target_type    Can pass nullptr.
   bool IsPossibleDynamicType(CompilerType *target_type, bool check_cplusplus,
                              bool check_objc) const;
-
-  bool IsPointerToScalarType() const;
 
   bool IsRuntimeGeneratedType() const;
 
@@ -196,10 +201,12 @@ public:
 
   bool IsVoidType() const;
 
+  bool HasPointerAuthQualifier() const;
+
+  std::optional<uint32_t> GetTargetAddressSpace() const;
+
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
-
-  bool IsFloat() const;
 
   /// This is used when you don't care about the signedness of the enum.
   bool IsEnumerationType() const;
@@ -218,6 +225,8 @@ public:
 
   bool IsScalarOrUnscopedEnumerationType() const;
 
+  /// Checks if the type is eligible for integral promotion.
+  /// \see GetPromotedIntegerType
   bool IsPromotableIntegerType() const;
 
   bool IsPointerToVoid() const;
@@ -389,6 +398,11 @@ public:
   /// supports ptrauth modifiers, else return an invalid type. Note that this
   /// does not check if this type is a pointer.
   CompilerType AddPtrAuthModifier(uint32_t payload) const;
+
+  /// Return a new CompilerType that qualifies this type with the given target
+  /// address space if this type is valid and the type system supports target
+  /// address spaces.
+  CompilerType AddAddressSpaceModifier(uint32_t address_space) const;
   /// \}
 
   /// Exploring the type.
@@ -400,7 +414,11 @@ public:
   /// Return the size of the type in bits.
   llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
-  lldb::Encoding GetEncoding(uint64_t &count) const;
+  /// Return the stride of the type in bytes. This is the distance between
+  /// consecutive elements of this type in contiguous storage (e.g. array).
+  std::optional<uint64_t> GetByteStride() const;
+
+  lldb::Encoding GetEncoding() const;
 
   lldb::Format GetFormat() const;
 
@@ -443,14 +461,11 @@ public:
                       uint32_t &deref_byte_size, int32_t &deref_byte_offset,
                       ValueObject *valobj, uint64_t &language_flags) const;
 
-  llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
-      ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
-      bool omit_empty_base_classes, bool ignore_array_bounds,
-      std::string &child_name, uint32_t &child_byte_size,
-      int32_t &child_byte_offset, uint32_t &child_bitfield_bit_size,
-      uint32_t &child_bitfield_bit_offset, bool &child_is_base_class,
-      bool &child_is_deref_of_parent, ValueObject *valobj,
-      uint64_t &language_flags) const;
+  /// Get the child at \p idx, such as a field, a base class or a pointee.
+  llvm::Expected<ChildTypeInfo>
+  GetChildAtIndex(ExecutionContext *exe_ctx, size_t idx,
+                  bool transparent_pointers, bool omit_empty_base_classes,
+                  bool ignore_array_bounds, ValueObject *valobj) const;
 
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
@@ -499,6 +514,11 @@ public:
   GetIntegralTemplateArgument(size_t idx, bool expand_pack = false) const;
 
   CompilerType GetTypeForFormatters() const;
+
+  /// If the type is promotable, returns the type promoted to a larger
+  /// integer type according to the type system rules.
+  /// \see IsPromotableIntegerType
+  CompilerType GetPromotedIntegerType() const;
 
   LazyBool ShouldPrintAsOneLiner(ValueObject *valobj) const;
 
@@ -556,6 +576,19 @@ bool operator!=(const CompilerType &lhs, const CompilerType &rhs);
 struct CompilerType::IntegralTemplateArgument {
   Scalar value;
   CompilerType type;
+};
+
+/// A child of a type, as returned by CompilerType::GetChildAtIndex.
+struct ChildTypeInfo {
+  CompilerType type;
+  std::string name;
+  uint32_t byte_size = 0;
+  int32_t byte_offset = 0;
+  uint32_t bitfield_bit_size = 0;
+  uint32_t bitfield_bit_offset = 0;
+  bool is_base_class = false;
+  bool is_deref_of_parent = false;
+  uint64_t language_flags = 0;
 };
 
 } // namespace lldb_private

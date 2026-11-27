@@ -151,9 +151,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       
 liveins:         
   - { reg: '$edi', virtual-reg: '' }
 frameInfo:       
@@ -173,8 +171,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
 stack:           
 constants:       
@@ -194,9 +192,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:       
@@ -216,8 +212,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
   - { id: 0, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
       callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 
@@ -268,9 +264,7 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:       
 liveins:         
   - { reg: '$rdi', virtual-reg: '' }
 frameInfo:       
@@ -290,8 +284,8 @@ frameInfo:
   hasVAStart:      false
   hasMustTailInVarArgFunc: false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      
   - { id: 0, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$rbx', callee-saved-restored: true, debug-info-variable: '', 

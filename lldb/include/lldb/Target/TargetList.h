@@ -61,7 +61,7 @@ public:
   /// \param[in] user_exe_path
   ///     The main executable file for a debug target. This value
   ///     can be empty and the file can be set later using:
-  ///     Target::SetExecutableModule (ModuleSP&)
+  ///     Target::RebuildModuleListWithExecutable (ModuleSP&)
   ///
   /// \param[in] triple_str
   ///     A target triple string to be used for the target. This can
@@ -159,6 +159,17 @@ public:
 
   lldb::TargetSP FindTargetWithProcess(lldb_private::Process *process) const;
 
+  /// Find the target that has a globally unique ID that matches ID \a id.
+  ///
+  /// \param[in] id
+  ///     The globally unique target ID to search our target list for.
+  ///
+  /// \return
+  ///     A shared pointer to a target object. The returned shared
+  ///     pointer will contain nullptr if no target objects has a
+  ///     matching target ID.
+  lldb::TargetSP FindTargetByGloballyUniqueID(lldb::user_id_t id) const;
+
   lldb::TargetSP GetTargetSP(Target *target) const;
 
   /// Send an async interrupt to one or all processes.
@@ -205,6 +216,11 @@ private:
       llvm::StringRef triple_str, LoadDependentFiles load_dependent_files,
       const OptionGroupPlatform *platform_options, lldb::TargetSP &target_sp);
 
+  // Create Target Internal does not modify any state directly, and should not
+  // be called under the target list mutex. Instead any state changes should
+  // call into methods which themselves are protected by the target list mutex.
+  // We need to do this so the locate module call back doesn't cause a re-entry
+  // dead lock when creating the target.
   static Status CreateTargetInternal(Debugger &debugger,
                                      llvm::StringRef user_exe_path,
                                      const ArchSpec &arch,

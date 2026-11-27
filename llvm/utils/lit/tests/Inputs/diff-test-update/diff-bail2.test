@@ -1,0 +1,7 @@
+# RUN: mkdir %t
+# RUN: cp %S/1.in %t/1.txt
+# RUN: cp %S/2.in %t/2.txt
+
+# There is no indication here of which file is the reference file to update
+# RUN: diff %t/1.txt %t/2.txt
+

@@ -13,6 +13,8 @@
 #ifndef LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 #define LLVM_LIB_TARGET_X86_X86REGISTERINFO_H
 
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -74,22 +76,11 @@ public:
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;
 
-  /// getPointerRegClass - Returns a TargetRegisterClass used for pointer
-  /// values.
-  const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override;
-
   /// getCrossCopyRegClass - Returns a legal register class to copy a register
   /// in the specified class to or from. Returns NULL if it is possible to copy
   /// between a two registers of the specified class.
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
-
-  /// getGPRsForTailCall - Returns a register class with registers that can be
-  /// used in forming tail calls.
-  const TargetRegisterClass *
-  getGPRsForTailCall(const MachineFunction &MF) const;
 
   unsigned getRegPressureLimit(const TargetRegisterClass *RC,
                                MachineFunction &MF) const override;
@@ -172,7 +163,7 @@ public:
   unsigned getSlotSize() const { return SlotSize; }
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
@@ -180,6 +171,20 @@ public:
   constrainRegClassToNonRex2(const TargetRegisterClass *RC) const;
 
   bool isNonRex2RegClass(const TargetRegisterClass *RC) const;
+
+  bool requiresRegisterScavenging(const MachineFunction &MF) const override {
+    return true;
+  }
+
+  unsigned getCSRFirstUseCost(const MachineFunction &MF) const override;
+  unsigned getCSRCostScale(const MachineFunction &MF) const override {
+    return 30;
+  }
+
+  const TargetRegisterClass *
+  getRegClassToMinimizeDomainCrossings() const override {
+    return &X86::VR128XRegClass;
+  }
 };
 
 } // End llvm namespace

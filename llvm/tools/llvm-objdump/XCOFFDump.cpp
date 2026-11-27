@@ -129,7 +129,6 @@ void XCOFFDumper::checkAndPrintAuxHeaderParseError(
   if (PartialFieldOffset < AuxSize) {
     std::string Buf;
     raw_string_ostream OS(Buf);
-    OS.flush();
     OS << FormattedString("Raw data", 0, FormattedString::JustifyLeft) << " ("
        << format_bytes(
               ArrayRef<uint8_t>(reinterpret_cast<const uint8_t *>(&AuxHeader) +
@@ -490,9 +489,9 @@ void objdump::dumpTracebackTable(ArrayRef<uint8_t> Bytes, uint64_t Address,
                   << "\n>>> Raw traceback table data is:\n";
 
     uint64_t LastNonZero = Index;
-    for (uint64_t I = Index; I < Size; I += 4)
+    for (uint64_t I = Index; I <= Size - 4; I += 4)
       if (support::endian::read32be(Bytes.slice(I, 4).data()) != 0)
-        LastNonZero = I + 4 > Size ? Size : I + 4;
+        LastNonZero = I + 4;
 
     if (Size - LastNonZero <= 4)
       LastNonZero = Size;

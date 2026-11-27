@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <chrono>  // NOLINT
 #include <cmath>
+#include <csignal>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>

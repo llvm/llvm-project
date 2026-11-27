@@ -1,12 +1,19 @@
-//===-- Unittests for hash ------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for hash.
+///
+//===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/alloc-checker.h"
 #include "src/__support/hash.h"
 #include "src/stdlib/rand.h"
 #include "src/stdlib/srand.h"
@@ -15,17 +22,14 @@
 
 template <class T> struct AlignedMemory {
   T *data;
-  size_t offset;
   std::align_val_t alignment;
-  AlignedMemory(size_t size, size_t alignment, size_t offset)
-      : offset(offset), alignment{alignment} {
+  AlignedMemory(size_t size, size_t alignment) : alignment{alignment} {
     size_t sz = size * sizeof(T);
     size_t aligned = sz + ((-sz) & (alignment - 1)) + alignment;
     LIBC_NAMESPACE::AllocChecker ac;
     data = static_cast<T *>(operator new(aligned, this->alignment, ac));
-    data += offset % alignment;
   }
-  ~AlignedMemory() { operator delete(data - offset, alignment); }
+  ~AlignedMemory() { operator delete(data, alignment); }
 };
 
 size_t sizes[] = {0, 1, 23, 59, 1024, 5261};
@@ -34,33 +38,24 @@ uint8_t values[] = {0, 1, 23, 59, 102, 255};
 // Hash value should not change with different alignments.
 TEST(LlvmLibcHashTest, SanityCheck) {
   for (size_t sz : sizes) {
+    // Allocate a bit more memory in order to test different alignments.
+    size_t alloc_sz = sz + 64;
+    AlignedMemory<char> mem(alloc_sz, 64);
     for (uint8_t val : values) {
+      LIBC_NAMESPACE::memset(mem.data, val, alloc_sz);
       uint64_t hash;
       {
-        AlignedMemory<char> mem(sz, 64, 0);
-        LIBC_NAMESPACE::memset(mem.data, val, sz);
         LIBC_NAMESPACE::internal::HashState state{0x1234567890abcdef};
         state.update(mem.data, sz);
         hash = state.finish();
       }
       for (size_t offset = 1; offset < 64; ++offset) {
-        AlignedMemory<char> mem(sz, 64, offset);
-        LIBC_NAMESPACE::memset(mem.data, val, sz);
         LIBC_NAMESPACE::internal::HashState state{0x1234567890abcdef};
-        state.update(mem.data, sz);
+        state.update(mem.data + offset, sz);
         ASSERT_EQ(hash, state.finish());
       }
     }
   }
-}
-
-static inline size_t popcnt(uint64_t x) {
-  size_t count = 0;
-  while (x) {
-    count += x & 1;
-    x >>= 1;
-  }
-  return count;
 }
 
 // Mutate a single bit in a rather large input. The hash should change
@@ -69,7 +64,7 @@ TEST(LlvmLibcHashTest, Avalanche) {
   for (size_t sz : sizes) {
     for (uint8_t val : values) {
       uint64_t hash;
-      AlignedMemory<char> mem(sz, 64, 0);
+      AlignedMemory<char> mem(sz, 64);
       LIBC_NAMESPACE::memset(mem.data, val, sz);
       {
         LIBC_NAMESPACE::internal::HashState state{0xabcdef1234567890};
@@ -84,7 +79,7 @@ TEST(LlvmLibcHashTest, Avalanche) {
             LIBC_NAMESPACE::internal::HashState state{0xabcdef1234567890};
             state.update(mem.data, sz);
             uint64_t new_hash = state.finish();
-            ASSERT_GE(popcnt(hash ^ new_hash), size_t{13});
+            ASSERT_GE(LIBC_NAMESPACE::cpp::popcount(hash ^ new_hash), 13);
           }
           mem.data[i] ^= mask;
         }
@@ -98,7 +93,7 @@ TEST(LlvmLibcHashTest, Avalanche) {
 TEST(LlvmLibcHashTest, UniformLSB) {
   LIBC_NAMESPACE::srand(0xffffffff);
   for (size_t sz : sizes) {
-    AlignedMemory<size_t> counters(sz, sizeof(size_t), 0);
+    AlignedMemory<size_t> counters(sz, sizeof(size_t));
     LIBC_NAMESPACE::memset(counters.data, 0, sz * sizeof(size_t));
     for (size_t i = 0; i < 200 * sz; ++i) {
       int randomness[8] = {LIBC_NAMESPACE::rand(), LIBC_NAMESPACE::rand(),
@@ -125,7 +120,7 @@ TEST(LlvmLibcHashTest, UniformLSB) {
 // the hash table.
 TEST(LlvmLibcHashTest, UniformMSB) {
   size_t sz = 1 << 7;
-  AlignedMemory<size_t> counters(sz, sizeof(size_t), 0);
+  AlignedMemory<size_t> counters(sz, sizeof(size_t));
   LIBC_NAMESPACE::memset(counters.data, 0, sz * sizeof(size_t));
   for (size_t i = 0; i < 200 * sz; ++i) {
     LIBC_NAMESPACE::internal::HashState state{0xa1b2c3d4e5f6a7b8};

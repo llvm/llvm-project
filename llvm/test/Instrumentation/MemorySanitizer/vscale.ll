@@ -44,13 +44,13 @@ define void @test_load_store_i32(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       14:
 ; ORIGIN-NEXT:    [[TMP15:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP7]])
 ; ORIGIN-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 16
+; ORIGIN-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 16
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], 3
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = udiv i64 [[TMP18]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP14]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP12]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr [4 x i8], ptr [[TMP12]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP15]], ptr [[TMP20]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP19]]
@@ -125,13 +125,13 @@ define void @test_load_store_add_int(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       25:
 ; ORIGIN-NEXT:    [[TMP26:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP14]])
 ; ORIGIN-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 64
+; ORIGIN-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 64
 ; ORIGIN-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], 3
 ; ORIGIN-NEXT:    [[TMP30:%.*]] = udiv i64 [[TMP29]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP25]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP23]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr [4 x i8], ptr [[TMP23]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP26]], ptr [[TMP31]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP30]]
@@ -188,13 +188,13 @@ define void @test_load_store_float(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       14:
 ; ORIGIN-NEXT:    [[TMP15:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP7]])
 ; ORIGIN-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP17:%.*]] = mul i64 [[TMP16]], 16
+; ORIGIN-NEXT:    [[TMP17:%.*]] = mul nuw i64 [[TMP16]], 16
 ; ORIGIN-NEXT:    [[TMP18:%.*]] = add i64 [[TMP17]], 3
 ; ORIGIN-NEXT:    [[TMP19:%.*]] = udiv i64 [[TMP18]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP14]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[TMP12]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP20:%.*]] = getelementptr [4 x i8], ptr [[TMP12]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP15]], ptr [[TMP20]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP19]]
@@ -269,13 +269,13 @@ define void @test_load_store_add_float(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       25:
 ; ORIGIN-NEXT:    [[TMP26:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP14]])
 ; ORIGIN-NEXT:    [[TMP27:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP27]], 8
+; ORIGIN-NEXT:    [[TMP28:%.*]] = mul nuw i64 [[TMP27]], 8
 ; ORIGIN-NEXT:    [[TMP29:%.*]] = add i64 [[TMP28]], 3
 ; ORIGIN-NEXT:    [[TMP30:%.*]] = udiv i64 [[TMP29]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP25]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr i32, ptr [[TMP23]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP31:%.*]] = getelementptr [4 x i8], ptr [[TMP23]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP26]], ptr [[TMP31]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP30]]
@@ -363,13 +363,13 @@ define void @test_ret(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN:       11:
 ; ORIGIN-NEXT:    [[TMP12:%.*]] = call i32 @__msan_chain_origin(i32 [[TMP4]])
 ; ORIGIN-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP14:%.*]] = mul i64 [[TMP13]], 8
+; ORIGIN-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 8
 ; ORIGIN-NEXT:    [[TMP15:%.*]] = add i64 [[TMP14]], 3
 ; ORIGIN-NEXT:    [[TMP16:%.*]] = udiv i64 [[TMP15]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP11]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP17:%.*]] = getelementptr i32, ptr [[TMP9]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP17:%.*]] = getelementptr [4 x i8], ptr [[TMP9]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP12]], ptr [[TMP17]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP16]]
@@ -411,13 +411,13 @@ define void @fn_param(<vscale x 2 x float> %a, ptr %b) sanitize_memory {
 ; ORIGIN:       7:
 ; ORIGIN-NEXT:    [[TMP8:%.*]] = call i32 @__msan_chain_origin(i32 0)
 ; ORIGIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP9]], 8
+; ORIGIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
 ; ORIGIN-NEXT:    [[TMP11:%.*]] = add i64 [[TMP10]], 3
 ; ORIGIN-NEXT:    [[TMP12:%.*]] = udiv i64 [[TMP11]], 4
 ; ORIGIN-NEXT:    br label [[DOTSPLIT:%.*]]
 ; ORIGIN:       .split:
 ; ORIGIN-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[DOTSPLIT]] ]
-; ORIGIN-NEXT:    [[TMP13:%.*]] = getelementptr i32, ptr [[TMP5]], i64 [[IV]]
+; ORIGIN-NEXT:    [[TMP13:%.*]] = getelementptr [4 x i8], ptr [[TMP5]], i64 [[IV]]
 ; ORIGIN-NEXT:    store i32 [[TMP8]], ptr [[TMP13]], align 4
 ; ORIGIN-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; ORIGIN-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP12]]
@@ -435,7 +435,7 @@ define void @fn_param(<vscale x 2 x float> %a, ptr %b) sanitize_memory {
 define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ; CHECK-LABEL: define void @test_param(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 2 x float>, ptr [[A]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[A]] to i64
@@ -447,7 +447,7 @@ define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ; CHECK-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP6]], 0
 ; CHECK-NEXT:    br i1 [[_MSCMP]], label [[TMP7:%.*]], label [[TMP8:%.*]], !prof [[PROF1:![0-9]+]]
 ; CHECK:       7:
-; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       8:
 ; CHECK-NEXT:    call void @fn_param(<vscale x 2 x float> [[TMP2]], ptr [[B]])
@@ -455,8 +455,8 @@ define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ;
 ; ORIGIN-LABEL: define void @test_param(
 ; ORIGIN-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
-; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_tls to i64), i64 8) to ptr), align 8
-; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @__msan_param_origin_tls to i64), i64 8) to ptr), align 4
+; ORIGIN-NEXT:    [[TMP1:%.*]] = load i64, ptr getelementptr (i8, ptr @__msan_param_tls, i64 8), align 8
+; ORIGIN-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr (i8, ptr @__msan_param_origin_tls, i64 8), align 4
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = load <vscale x 2 x float>, ptr [[A]], align 8
 ; ORIGIN-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
@@ -472,7 +472,7 @@ define void @test_param(ptr %a, ptr %b) sanitize_memory {
 ; ORIGIN-NEXT:    [[_MSCMP:%.*]] = icmp ne i32 [[TMP10]], 0
 ; ORIGIN-NEXT:    br i1 [[_MSCMP]], label [[TMP11:%.*]], label [[TMP12:%.*]], !prof [[PROF1]]
 ; ORIGIN:       11:
-; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP9]]) #[[ATTR5:[0-9]+]]
+; ORIGIN-NEXT:    call void @__msan_warning_with_origin_noreturn(i32 [[TMP9]]) #[[ATTR6:[0-9]+]]
 ; ORIGIN-NEXT:    unreachable
 ; ORIGIN:       12:
 ; ORIGIN-NEXT:    call void @fn_param(<vscale x 2 x float> [[TMP3]], ptr [[B]])
@@ -490,7 +490,7 @@ define void @test_alloca1() sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 64 x i1>, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -503,7 +503,7 @@ define void @test_alloca1() sanitize_memory {
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[X:%.*]] = alloca <vscale x 64 x i1>, align 4
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 8
+; ORIGIN-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 8
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; ORIGIN-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -526,7 +526,7 @@ define void @test_alloca2() sanitize_memory {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[X:%.*]] = alloca <vscale x 64 x double>, align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 512
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 512
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -539,7 +539,7 @@ define void @test_alloca2() sanitize_memory {
 ; ORIGIN-NEXT:    call void @llvm.donothing()
 ; ORIGIN-NEXT:    [[X:%.*]] = alloca <vscale x 64 x double>, align 4
 ; ORIGIN-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; ORIGIN-NEXT:    [[TMP1:%.*]] = mul i64 [[TMP0]], 512
+; ORIGIN-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 512
 ; ORIGIN-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[X]] to i64
 ; ORIGIN-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; ORIGIN-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr

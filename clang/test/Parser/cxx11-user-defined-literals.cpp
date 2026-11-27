@@ -3,8 +3,8 @@
 // A ud-suffix cannot be used on string literals in a whole bunch of contexts:
 
 #include "foo"_bar // expected-error {{expected "FILENAME" or <FILENAME>}}
-#line 1 "foo"_bar // expected-error {{user-defined suffix cannot be used here}}
-# 1 "foo"_bar 1 // expected-error {{user-defined suffix cannot be used here}}
+#line 1 "foo"_bar // expected-error {{invalid filename for #line directive}}
+# 1 "foo"_bar 1 // expected-error {{invalid filename for #line directive}}
 #ident "foo"_bar // expected-error {{user-defined suffix cannot be used here}}
 _Pragma("foo"_bar) // expected-error {{user-defined suffix cannot be used here}}
 #pragma comment(lib, "foo"_bar) // expected-error {{user-defined suffix cannot be used here}}
@@ -22,7 +22,7 @@ int f() {
 }
 
 static_assert(true, "foo"_bar); // expected-error {{no matching literal operator for call to 'operator""_bar'}}
-// expected-warning@-1 {{'static_assert' with a user-generated message is a C++26 extension}}
+// expected-warning@-1 {{'static_assert' with a user-generated message is a C++2c extension}}
 
 int cake() __attribute__((availability(macosx, unavailable, message = "is a lie"_x))); // expected-error {{user-defined suffix cannot be used here}}
 
@@ -148,6 +148,6 @@ void operator""_℮""_℮(unsigned long long) {} // expected-note {{previous}}
 void operator""_\u212e""_\u212e(unsigned long long) {} // expected-error {{redefinition}}
 
 #define ¢ *0.01 // expected-error {{macro name must be an identifier}}
-constexpr int operator""_¢(long double d) { return d * 100; }  // expected-error {{character <U+00A2> not allowed in an identifier}}
-constexpr int operator""_¢(unsigned long long n) { return n; } // expected-error {{character <U+00A2> not allowed in an identifier}}
-static_assert(0.02_¢ == 2_¢, "");                              // expected-error 2{{character <U+00A2> not allowed in an identifier}}
+constexpr int operator""_¢(long double d) { return d * 100; }  // expected-error {{character '¢' U+00A2 not allowed in an identifier}}
+constexpr int operator""_¢(unsigned long long n) { return n; } // expected-error {{character '¢' U+00A2 not allowed in an identifier}}
+static_assert(0.02_¢ == 2_¢, "");                              // expected-error 2{{character '¢' U+00A2 not allowed in an identifier}}

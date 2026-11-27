@@ -19,7 +19,6 @@
 #include "llvm/Support/RWMutex.h"
 #include <queue>
 #include <stack>
-#include <unordered_set>
 
 #define DEBUG_TYPE "bolt-instrumentation"
 
@@ -32,24 +31,30 @@ cl::opt<std::string> InstrumentationFilename(
     "instrumentation-file",
     cl::desc("file name where instrumented profile will be saved (default: "
              "/tmp/prof.fdata)"),
-    cl::init("/tmp/prof.fdata"), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init("/tmp/prof.fdata"), cl::cat(BoltInstrCategory));
 
 cl::opt<std::string> InstrumentationBinpath(
     "instrumentation-binpath",
     cl::desc("path to instrumented binary in case if /proc/self/map_files "
              "is not accessible due to access restriction issues"),
-    cl::Optional, cl::cat(BoltInstrCategory));
+    cl::cat(BoltInstrCategory));
 
 cl::opt<bool> InstrumentationFileAppendPID(
     "instrumentation-file-append-pid",
     cl::desc("append PID to saved profile file name (default: false)"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 
 cl::opt<bool> ConservativeInstrumentation(
     "conservative-instrumentation",
     cl::desc("disable instrumentation optimizations that sacrifice profile "
              "accuracy (for debugging, default: false)"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
+
+cl::opt<uint32_t> InstrumentationMaxSize(
+    "instrumentation-max-size",
+    cl::desc("Set max memory size of the instrumentation bump allocator "
+             "default: 0x6400000)"),
+    cl::init(0x6400000), cl::cat(BoltInstrCategory));
 
 cl::opt<uint32_t> InstrumentationSleepTime(
     "instrumentation-sleep-time",
@@ -57,50 +62,51 @@ cl::opt<uint32_t> InstrumentationSleepTime(
              "program end).  This is useful for service workloads when you "
              "want to dump profile every X minutes or if you are killing the "
              "program and the profile is not being dumped at the end."),
-    cl::init(0), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(0), cl::cat(BoltInstrCategory));
 
 cl::opt<bool> InstrumentationNoCountersClear(
     "instrumentation-no-counters-clear",
     cl::desc("Don't clear counters across dumps "
              "(use with instrumentation-sleep-time option)"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 
 cl::opt<bool> InstrumentationWaitForks(
     "instrumentation-wait-forks",
     cl::desc("Wait until all forks of instrumented process will finish "
              "(use with instrumentation-sleep-time option)"),
-    cl::init(false), cl::Optional, cl::cat(BoltInstrCategory));
+    cl::init(false), cl::cat(BoltInstrCategory));
 
 cl::opt<bool>
     InstrumentHotOnly("instrument-hot-only",
                       cl::desc("only insert instrumentation on hot functions "
                                "(needs profile, default: false)"),
-                      cl::init(false), cl::Optional,
-                      cl::cat(BoltInstrCategory));
+                      cl::init(false), cl::cat(BoltInstrCategory));
 
 cl::opt<bool> InstrumentCalls("instrument-calls",
                               cl::desc("record profile for inter-function "
                                        "control flow activity (default: true)"),
-                              cl::init(true), cl::Optional,
-                              cl::cat(BoltInstrCategory));
+                              cl::init(true), cl::cat(BoltInstrCategory));
 } // namespace opts
 
 namespace llvm {
 namespace bolt {
 
-static bool hasAArch64ExclusiveMemop(
-    BinaryFunction &Function,
-    std::unordered_set<const BinaryBasicBlock *> &BBToSkip) {
+static bool
+hasExclusiveMemop(BinaryFunction &Function,
+                  DenseMap<const BinaryBasicBlock *, bool> &BBToSkip) {
   // FIXME ARMv8-a architecture reference manual says that software must avoid
   // having any explicit memory accesses between exclusive load and associated
   // store instruction. So for now skip instrumentation for basic blocks that
   // have these instructions, since it might lead to runtime deadlock.
+  // BBToSkip maps each such block to whether it is entered with an exclusive
+  // load still pending, where even a counter at the start of the block is
+  // unsafe.
   BinaryContext &BC = Function.getBinaryContext();
   std::queue<std::pair<BinaryBasicBlock *, bool>> BBQueue; // {BB, isLoad}
-  std::unordered_set<BinaryBasicBlock *> Visited;
+  DenseSet<BinaryBasicBlock *> Visited;
 
   if (Function.getLayout().block_begin() == Function.getLayout().block_end())
-    return 0;
+    return false;
 
   BinaryBasicBlock *BBfirst = *Function.getLayout().block_begin();
   BBQueue.push({BBfirst, false});
@@ -112,9 +118,15 @@ static bool hasAArch64ExclusiveMemop(
     if (!Visited.insert(BB).second)
       continue;
 
+    const bool EnteredInRegion = IsLoad;
+    // An empty block entered inside a region has no instruction to mark it
+    // in the loop below.
+    if (EnteredInRegion && BB->empty())
+      BBToSkip.try_emplace(BB, true);
+
     for (const MCInst &Inst : *BB) {
       // Two loads one after another - skip whole function
-      if (BC.MIB->isAArch64ExclusiveLoad(Inst) && IsLoad) {
+      if (BC.MIB->isExclusiveLoad(Inst) && IsLoad) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: function " << Function.getPrintName()
                  << " has two exclusive loads. Ignoring the function.\n";
@@ -122,10 +134,10 @@ static bool hasAArch64ExclusiveMemop(
         return true;
       }
 
-      if (BC.MIB->isAArch64ExclusiveLoad(Inst))
+      if (BC.MIB->isExclusiveLoad(Inst))
         IsLoad = true;
 
-      if (IsLoad && BBToSkip.insert(BB).second) {
+      if (IsLoad && BBToSkip.try_emplace(BB, EnteredInRegion).second) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: skip BB " << BB->getName()
                  << " due to exclusive instruction in function "
@@ -133,7 +145,7 @@ static bool hasAArch64ExclusiveMemop(
         }
       }
 
-      if (!IsLoad && BC.MIB->isAArch64ExclusiveStore(Inst)) {
+      if (!IsLoad && BC.MIB->isExclusiveStore(Inst)) {
         if (opts::Verbosity >= 2) {
           outs() << "BOLT-INSTRUMENTER: function " << Function.getPrintName()
                  << " has exclusive store without corresponding load. Ignoring "
@@ -142,8 +154,8 @@ static bool hasAArch64ExclusiveMemop(
         return true;
       }
 
-      if (IsLoad && (BC.MIB->isAArch64ExclusiveStore(Inst) ||
-                     BC.MIB->isAArch64ExclusiveClear(Inst)))
+      if (IsLoad &&
+          (BC.MIB->isExclusiveStore(Inst) || BC.MIB->isExclusiveClear(Inst)))
         IsLoad = false;
     }
 
@@ -267,17 +279,6 @@ Instrumentation::createInstrumentationSnippet(BinaryContext &BC, bool IsLeaf) {
                                       BC.AsmInfo->getCodePointerSize());
 }
 
-// Helper instruction sequence insertion function
-static BinaryBasicBlock::iterator
-insertInstructions(InstructionListType &Instrs, BinaryBasicBlock &BB,
-                   BinaryBasicBlock::iterator Iter) {
-  for (MCInst &NewInst : Instrs) {
-    Iter = BB.insertInstruction(Iter, NewInst);
-    ++Iter;
-  }
-  return Iter;
-}
-
 void Instrumentation::instrumentLeafNode(BinaryBasicBlock &BB,
                                          BinaryBasicBlock::iterator Iter,
                                          bool IsLeaf,
@@ -286,7 +287,7 @@ void Instrumentation::instrumentLeafNode(BinaryBasicBlock &BB,
   createLeafNodeDescription(FuncDesc, Node);
   InstructionListType CounterInstrs = createInstrumentationSnippet(
       BB.getFunction()->getBinaryContext(), IsLeaf);
-  insertInstructions(CounterInstrs, BB, Iter);
+  BB.insertInstructions(Iter, CounterInstrs.begin(), CounterInstrs.end());
 }
 
 void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
@@ -306,7 +307,8 @@ void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
       IndCallSiteID, &*BC.Ctx);
 
   Iter = BB.eraseInstruction(Iter);
-  Iter = insertInstructions(CounterInstrs, BB, Iter);
+  Iter =
+      BB.insertInstructions(Iter, CounterInstrs.begin(), CounterInstrs.end());
   --Iter;
 }
 
@@ -338,7 +340,8 @@ bool Instrumentation::instrumentOneTarget(
     // This code handles both
     // - (regular) inter-function calls (cross-function control transfer),
     // - (rare) intra-function calls (function-local control transfer)
-    Iter = insertInstructions(CounterInstrs, FromBB, Iter);
+    Iter = FromBB.insertInstructions(Iter, CounterInstrs.begin(),
+                                     CounterInstrs.end());
     return true;
   }
 
@@ -353,11 +356,13 @@ bool Instrumentation::instrumentOneTarget(
   // paths that reach it at this point will be taken and going to the target.
   if (TargetBB->pred_size() == 1 && &FromBB != TargetBB &&
       !TargetBB->isEntryPoint()) {
-    insertInstructions(CounterInstrs, *TargetBB, TargetBB->begin());
+    TargetBB->insertInstructions(TargetBB->begin(), CounterInstrs.begin(),
+                                 CounterInstrs.end());
     return true;
   }
   if (FromBB.succ_size() == 1 && &FromBB != TargetBB) {
-    Iter = insertInstructions(CounterInstrs, FromBB, Iter);
+    Iter = FromBB.insertInstructions(Iter, CounterInstrs.begin(),
+                                     CounterInstrs.end());
     return true;
   }
   // Critical edge, create BB and put counter there
@@ -375,8 +380,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (BC.isMachO() && Function.hasName("___GLOBAL_init_65535/1"))
     return;
 
-  std::unordered_set<const BinaryBasicBlock *> BBToSkip;
-  if (BC.isAArch64() && hasAArch64ExclusiveMemop(Function, BBToSkip))
+  DenseMap<const BinaryBasicBlock *, bool> BBToSkip;
+  if ((BC.isAArch64() || BC.isRISCV()) && hasExclusiveMemop(Function, BBToSkip))
     return;
 
   SplitWorklistTy SplitWorklist;
@@ -393,20 +398,19 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   Function.disambiguateJumpTables(AllocId);
   Function.deleteConservativeEdges();
 
-  std::unordered_map<const BinaryBasicBlock *, uint32_t> BBToID;
+  DenseMap<const BinaryBasicBlock *, uint32_t> BBToID;
   uint32_t Id = 0;
   for (auto BBI = Function.begin(); BBI != Function.end(); ++BBI) {
     BBToID[&*BBI] = Id++;
   }
-  std::unordered_set<const BinaryBasicBlock *> VisitedSet;
+  DenseSet<const BinaryBasicBlock *> VisitedSet;
   // DFS to establish edges we will use for a spanning tree. Edges in the
   // spanning tree can be instrumentation-free since their count can be
   // inferred by solving flow equations on a bottom-up traversal of the tree.
   // Exit basic blocks are always instrumented so we start the traversal with
   // a minimum number of defined variables to make the equation solvable.
   std::stack<std::pair<const BinaryBasicBlock *, BinaryBasicBlock *>> Stack;
-  std::unordered_map<const BinaryBasicBlock *,
-                     std::set<const BinaryBasicBlock *>>
+  DenseMap<const BinaryBasicBlock *, SmallVector<const BinaryBasicBlock *>>
       STOutSet;
   for (auto BBI = Function.getLayout().block_rbegin();
        BBI != Function.getLayout().block_rend(); ++BBI) {
@@ -434,7 +438,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 
       VisitedSet.insert(BB);
       if (Pred)
-        STOutSet[Pred].insert(BB);
+        STOutSet[Pred].push_back(BB);
 
       for (BinaryBasicBlock *SuccBB : BB->successors())
         Stack.push(std::make_pair(BB, SuccBB));
@@ -501,7 +505,9 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       }
       if (TargetFunc) {
         // Do not instrument edges in the spanning tree
-        if (llvm::is_contained(STOutSet[&BB], TargetBB)) {
+        auto STIt = STOutSet.find(&BB);
+        if (STIt != STOutSet.end() &&
+            llvm::is_contained(STIt->second, TargetBB)) {
           auto L = BC.scopeLock();
           createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                 Function, ToOffset, BBToID[TargetBB],
@@ -516,9 +522,11 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       }
 
       if (IsJumpTable) {
+        auto STIt = STOutSet.find(&BB);
+        bool Found = STIt != STOutSet.end();
         for (BinaryBasicBlock *&Succ : BB.successors()) {
           // Do not instrument edges in the spanning tree
-          if (llvm::is_contained(STOutSet[&BB], &*Succ)) {
+          if (Found && llvm::is_contained(STIt->second, &*Succ)) {
             auto L = BC.scopeLock();
             createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                   Function, Succ->getInputOffset(),
@@ -561,7 +569,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       FromOffset = *BC.MIB->getOffset(*LastInstr);
 
       // Do not instrument edges in the spanning tree
-      if (llvm::is_contained(STOutSet[&BB], FTBB)) {
+      auto STIt = STOutSet.find(&BB);
+      if (STIt != STOutSet.end() && llvm::is_contained(STIt->second, FTBB)) {
         auto L = BC.scopeLock();
         createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                               Function, FTBB->getInputOffset(), BBToID[FTBB],
@@ -579,7 +588,16 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   if (!opts::ConservativeInstrumentation) {
     for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
       BinaryBasicBlock &BB = *BBI;
-      if (STOutSet[&BB].size() == 0)
+
+      // The counter goes at the start of the block, so unlike the edge
+      // counters above, it only has to stay out of blocks entered inside an
+      // exclusive region (mapped to true in BBToSkip). A block that starts a
+      // region keeps its counter, which runs before the exclusive load.
+      if (BBToSkip.lookup(&BB))
+        continue;
+
+      auto STIt = STOutSet.find(&BB);
+      if (STIt == STOutSet.end() || STIt->second.empty())
         instrumentLeafNode(BB, BB.begin(), IsLeafFunction, *FuncDesc,
                            BBToID[&BB]);
     }
@@ -600,6 +618,22 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 }
 
 Error Instrumentation::runOnFunctions(BinaryContext &BC) {
+  if (BC.usesBTI())
+    return createFatalBOLTError(
+        "BOLT-ERROR: instrumenting binaries using BTI is not supported.\n");
+  /* BTI TODO:
+   Instrumentation functions add indirect branches into the .text.injected
+   section, see:
+   - __bolt_instr_ind_call_handler
+   - __bolt_instr_ind_tail_call_handler
+   - __bolt_instr_ind_tailcall_handler_func
+   - __bolt_start_trampoline
+   - __bolt_fini_trampoline
+   We cannot add BTIs to their targets when they are created, because the
+   instrumentation snippets get added later to these targets, and the added BTI
+   instruction will not be the first (rendering it useless).
+   */
+
   const unsigned Flags = BinarySection::getFlags(/*IsReadOnly=*/false,
                                                  /*IsText=*/false,
                                                  /*IsAllocatable=*/true);
@@ -666,8 +700,7 @@ Error Instrumentation::runOnFunctions(BinaryContext &BC) {
       auto IsLEA = [&BC](const MCInst &Inst) { return BC.MIB->isLEA64r(Inst); };
       const auto LEA = std::find_if(
           std::next(llvm::find_if(reverse(BB), IsLEA)), BB.rend(), IsLEA);
-      LEA->getOperand(4).setExpr(
-          MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *BC.Ctx));
+      LEA->getOperand(4).setExpr(MCSymbolRefExpr::create(Target, *BC.Ctx));
     } else {
       BC.errs() << "BOLT-WARNING: ___GLOBAL_init_65535 not found\n";
     }
@@ -754,6 +787,8 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
       createSimpleFunction("__bolt_fini_trampoline",
                            BC.MIB->createReturnInstructionList(BC.Ctx.get()));
     }
+    if (BC.isAArch64())
+      BC.MIB->createInstrCounterIncrFunc(BC);
   }
 }
 

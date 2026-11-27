@@ -1,4 +1,4 @@
-//===--- NoexceptDestructorCheck.h - clang-tidy -----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,10 +27,9 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
 
 private:
-  DiagnosticBuilder
-  reportMissingNoexcept(const FunctionDecl *FuncDecl) final override;
+  DiagnosticBuilder reportMissingNoexcept(const FunctionDecl *FuncDecl) final;
   void reportNoexceptEvaluatedToFalse(const FunctionDecl *FuncDecl,
-                                      const Expr *NoexceptExpr) final override;
+                                      const Expr *NoexceptExpr) final;
 };
 
 } // namespace clang::tidy::performance

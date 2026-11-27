@@ -10,7 +10,7 @@ let () = Llvm_all_backends.initialize ()
 
 (*===-- Fixture -----------------------------------------------------------===*)
 
-let context = Llvm.global_context ()
+let context = Llvm.create_context ()
 
 let m = Llvm.create_module context "mymodule"
 
@@ -23,7 +23,7 @@ let () =
   in
   let foo = Llvm.define_function "foo" ty m in
   let entry = Llvm.entry_block foo in
-  let builder = Llvm.builder_at_end context entry in
+  let builder = Llvm.builder_at_end entry in
   ignore
     (Llvm.build_store
        (Llvm.const_int (Llvm.i8_type context) 42) (Llvm.param foo 1) builder);
@@ -71,4 +71,5 @@ let () =
 
 let () =
   Llvm_passbuilder.dispose_passbuilder_options options;
-  Llvm.dispose_module m
+  Llvm.dispose_module m;
+  Llvm.dispose_context context

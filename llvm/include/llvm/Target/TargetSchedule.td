@@ -102,6 +102,9 @@ class SchedMachineModel {
   // enabled.
   bit FullInstRWOverlapCheck = true;
 
+  // Warn about InstRWs that resolve to the same entries as the base SchedRW.
+  bit WarnRedundantInstRW = true;
+
   // A processor may only implement part of published ISA, due to either new ISA
   // extensions, (e.g. Pentium 4 doesn't have AVX) or implementation
   // (ARM/MIPS/PowerPC/SPARC soft float cores).
@@ -377,6 +380,12 @@ class MCSchedPredicate<MCInstPredicate P> : SchedPredicateBase {
   SchedMachineModel SchedModel = ?;
 }
 
+// A scheduling predicate whose logic depends on a SubtargetFeature.
+class FeatureSchedPredicate<SubtargetFeature SF> : SchedPredicateBase {
+  SubtargetFeature Feature = SF;
+  SchedMachineModel SchedModel = ?;
+}
+
 // Define a predicate to determine which SchedVariant applies to a
 // particular MachineInstr. The code snippet is used as an
 // if-statement's expression. Available variables are MI, SchedModel,
@@ -392,6 +401,21 @@ class SchedPredicate<code pred> : SchedPredicateBase {
 // SchedVariant.  It the SchedVariant does not use any other predicate based on
 // MCSchedPredicate, this is the default scheduling case used by llvm-mca.
 def NoSchedPred : MCSchedPredicate<TruePred>;
+
+// Logical combiners for schedule predicates.
+class SchedPredicateCombiner<list<SchedPredicateBase> predicates>
+    : SchedPredicateBase {
+  SchedMachineModel SchedModel = ?;
+  list<SchedPredicateBase> Predicates = predicates;
+}
+class AllOfSchedPreds<list<SchedPredicateBase> predicates>
+    : SchedPredicateCombiner<predicates>;
+class AnyOfSchedPreds<list<SchedPredicateBase> predicates>
+    : SchedPredicateCombiner<predicates>;
+class NotSchedPred<SchedPredicateBase predicate>
+    : SchedPredicateCombiner<[predicate]>;
+class NoneOfSchedPreds<list<SchedPredicateBase> predicates>
+    : NotSchedPred<AnyOfSchedPreds<predicates>>;
 
 // Associate a predicate with a list of SchedReadWrites. By default,
 // the selected SchedReadWrites are still associated with a single

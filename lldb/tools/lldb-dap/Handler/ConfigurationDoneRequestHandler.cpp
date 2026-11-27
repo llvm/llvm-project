@@ -29,6 +29,11 @@ namespace lldb_dap {
 /// `supportsConfigurationDoneRequest` is true.
 llvm::Error
 ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
+  // The callback is only created on successful launch or attach.
+  if (!dap.on_configuration_done)
+    return make_error<DAPError>(
+        "'configurationDone' is only expected after the 'initialized' event.");
+
   dap.configuration_done = true;
 
   // Ensure any command scripts did not leave us in an unexpected state.
@@ -44,7 +49,12 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   // Waiting until 'configurationDone' to send target based capabilities in case
   // the launch or attach scripts adjust the target. The initial dummy target
   // may have different capabilities than the final target.
-  SendTargetBasedCapabilities(dap);
+
+  /// Also send here custom capabilities to the client, which is consumed by the
+  /// lldb-dap specific editor extension.
+  SendExtraCapabilities(dap);
+
+  PrintIntroductionMessage();
 
   // Clients can request a baseline of currently existing threads after
   // we acknowledge the configurationDone request.
@@ -57,9 +67,18 @@ ConfigurationDoneRequestHandler::Run(const ConfigurationDoneArguments &) const {
   SendProcessEvent(dap, dap.is_attach ? Attach : Launch);
 
   if (dap.stop_at_entry)
-    return SendThreadStoppedEvent(dap, /*on_entry=*/true);
+    return SendThreadStoppedEvent(dap, /*on_entry=*/dap.is_live_session);
 
   return ToError(process.Continue());
+}
+
+void ConfigurationDoneRequestHandler::PostRun() const {
+  if (!dap.on_configuration_done)
+    return;
+
+  dap.on_configuration_done();
+  // Clear the callback to ensure any captured resources are released.
+  dap.on_configuration_done = nullptr;
 }
 
 } // namespace lldb_dap

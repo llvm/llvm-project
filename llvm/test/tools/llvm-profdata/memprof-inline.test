@@ -5,7 +5,7 @@ RUN: llvm-profdata show --memory %p/Inputs/inline.memprofraw --profiled-binary %
 
 CHECK:  MemprofProfile:
 CHECK-NEXT:  Summary:
-CHECK-NEXT:    Version: 4
+CHECK-NEXT:    Version: 5
 CHECK-NEXT:    NumSegments: {{[0-9]+}}
 CHECK-NEXT:    NumMibInfo: 2
 CHECK-NEXT:    NumAllocFunctions: 2

@@ -1,0 +1,12 @@
+# RUN: llc -run-pass=none -o - %s | FileCheck %s
+
+...
+---
+name:            test
+prefetch-targets: [ 'bb_id 0, 0, 1', 'bb_id 1, 0, 2' ]
+body:             |
+  bb.0:
+...
+
+# CHECK: name: test
+# CHECK: prefetch-targets: [ bb_id 0, 0, 1, bb_id 1, 0, 2 ]

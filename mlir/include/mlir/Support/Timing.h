@@ -44,7 +44,7 @@ class DefaultTimingManagerImpl;
 /// This is a POD type with pointer size, so it should be passed around by
 /// value. The underlying data is owned by the `TimingManager`.
 class TimingIdentifier {
-  using EntryType = llvm::StringMapEntry<std::nullopt_t>;
+  using EntryType = llvm::StringMapEntry<llvm::EmptyStringSetTag>;
 
 public:
   TimingIdentifier(const TimingIdentifier &) = default;
@@ -114,6 +114,12 @@ class TimingManager {
 public:
   explicit TimingManager();
   virtual ~TimingManager();
+
+  /// Whether timer operations may run concurrently on different threads. Each
+  /// timer must still be started and stopped on one thread, and parent timers
+  /// must outlive their children. Configuration and reporting are not covered
+  /// by this guarantee.
+  virtual bool isThreadSafe() const { return false; }
 
   /// Get the root timer of this timing manager. The returned timer must be
   /// started and stopped manually. Execution time can be measured by nesting
@@ -205,6 +211,9 @@ public:
   /// performance low.
   explicit operator bool() const { return tm != nullptr; }
 
+  /// Whether the timing manager supports concurrent timer operations.
+  bool isThreadSafe() const { return !tm || tm->isThreadSafe(); }
+
   /// Start the timer. This must be accompanied by a corresponding call to
   /// `stop()` at a later point.
   void start() {
@@ -291,6 +300,9 @@ public:
 
   /// Check if the timing scope actually contains a valid timer.
   explicit operator bool() const { return bool(timer); }
+
+  /// Whether the timing manager supports concurrent timer operations.
+  bool isThreadSafe() const { return timer.isThreadSafe(); }
 
   // Disable copying of the `TimingScope`.
   TimingScope(const TimingScope &) = delete;
@@ -411,6 +423,8 @@ public:
   DefaultTimingManager(DefaultTimingManager &&rhs);
   ~DefaultTimingManager() override;
 
+  bool isThreadSafe() const override { return true; }
+
   // Disable copying of the `DefaultTimingManager`.
   DefaultTimingManager(const DefaultTimingManager &rhs) = delete;
   DefaultTimingManager &operator=(const DefaultTimingManager &rhs) = delete;
@@ -472,6 +486,11 @@ void registerDefaultTimingManagerCLOptions();
 /// Apply any values that were registered with
 /// 'registerDefaultTimingManagerOptions' to a `DefaultTimingManager`.
 void applyDefaultTimingManagerCLOptions(DefaultTimingManager &tm);
+
+/// Create an output strategy for the specified format, to be passed to
+/// DefaultTimingManager::setOutput().
+std::unique_ptr<OutputStrategy>
+createOutputStrategy(DefaultTimingManager::OutputFormat fmt, raw_ostream &os);
 
 } // namespace mlir
 

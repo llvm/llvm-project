@@ -28,7 +28,7 @@ RT_API_ATTRS OwningPtr<char> SaveDefaultCharacter(
     const char *s, std::size_t length, const Terminator &terminator) {
   if (s) {
     auto *p{static_cast<char *>(AllocateMemoryOrCrash(terminator, length + 1))};
-    std::memcpy(p, s, length);
+    runtime::memcpy(p, s, length);
     p[length] = '\0';
     return OwningPtr<char>{p};
   } else {
@@ -75,10 +75,10 @@ RT_API_ATTRS void ToFortranDefaultCharacter(
     char *to, std::size_t toLength, const char *from) {
   std::size_t len{Fortran::runtime::strlen(from)};
   if (len < toLength) {
-    std::memcpy(to, from, len);
-    std::memset(to + len, ' ', toLength - len);
+    runtime::memcpy(to, from, len);
+    runtime::memset(to + len, ' ', toLength - len);
   } else {
-    std::memcpy(to, from, toLength);
+    runtime::memcpy(to, from, toLength);
   }
 }
 
@@ -127,10 +127,10 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToDiscontiguous(
       toIt.Advance(), fromIt.Advance()) {
     // typeElementBytes == 1 when P is a char - the non-specialised case
     if constexpr (typeElementBytes != 1) {
-      std::memcpy(
+      runtime::memcpy(
           toIt.template Get<P>(), fromIt.template Get<P>(), typeElementBytes);
     } else {
-      std::memcpy(
+      runtime::memcpy(
           toIt.template Get<P>(), fromIt.template Get<P>(), elementBytes);
     }
   }
@@ -150,9 +150,9 @@ RT_API_ATTRS void ShallowCopyDiscontiguousToContiguous(
   for (std::size_t n{to.Elements()}; n-- > 0;
       toAt += elementBytes, fromIt.Advance()) {
     if constexpr (typeElementBytes != 1) {
-      std::memcpy(toAt, fromIt.template Get<P>(), typeElementBytes);
+      runtime::memcpy(toAt, fromIt.template Get<P>(), typeElementBytes);
     } else {
-      std::memcpy(toAt, fromIt.template Get<P>(), elementBytes);
+      runtime::memcpy(toAt, fromIt.template Get<P>(), elementBytes);
     }
   }
 }
@@ -170,9 +170,9 @@ RT_API_ATTRS void ShallowCopyContiguousToDiscontiguous(
   for (std::size_t n{to.Elements()}; n-- > 0;
       toIt.Advance(), fromAt += elementBytes) {
     if constexpr (typeElementBytes != 1) {
-      std::memcpy(toIt.template Get<P>(), fromAt, typeElementBytes);
+      runtime::memcpy(toIt.template Get<P>(), fromAt, typeElementBytes);
     } else {
-      std::memcpy(toIt.template Get<P>(), fromAt, elementBytes);
+      runtime::memcpy(toIt.template Get<P>(), fromAt, elementBytes);
     }
   }
 }
@@ -187,7 +187,7 @@ RT_API_ATTRS void ShallowCopyInner(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous) {
   if (toIsContiguous) {
     if (fromIsContiguous) {
-      std::memcpy(to.OffsetElement(), from.OffsetElement(),
+      runtime::memcpy(to.OffsetElement(), from.OffsetElement(),
           to.Elements() * to.ElementBytes());
     } else {
       ShallowCopyDiscontiguousToContiguous<P, RANK>(to, from);
@@ -201,37 +201,35 @@ RT_API_ATTRS void ShallowCopyInner(const Descriptor &to, const Descriptor &from,
   }
 }
 
-// Most arrays are much closer to rank-1 than to maxRank.
-// Doing the recursion upwards instead of downwards puts the more common
-// cases earlier in the if-chain and has a tangible impact on performance.
-template <typename P, int RANK> struct ShallowCopyRankSpecialize {
-  static bool execute(const Descriptor &to, const Descriptor &from,
-      bool toIsContiguous, bool fromIsContiguous) {
-    if (to.rank() == RANK && from.rank() == RANK) {
-      ShallowCopyInner<P, RANK>(to, from, toIsContiguous, fromIsContiguous);
-      return true;
-    }
-    return ShallowCopyRankSpecialize<P, RANK + 1>::execute(
-        to, from, toIsContiguous, fromIsContiguous);
-  }
-};
-
-template <typename P> struct ShallowCopyRankSpecialize<P, maxRank + 1> {
-  static bool execute(const Descriptor &to, const Descriptor &from,
-      bool toIsContiguous, bool fromIsContiguous) {
-    return false;
-  }
-};
-
 // ShallowCopy helper for specialising the variants based on array rank
 template <typename P>
 RT_API_ATTRS void ShallowCopyRank(const Descriptor &to, const Descriptor &from,
     bool toIsContiguous, bool fromIsContiguous) {
-  // Try to call a specialised ShallowCopy variant from rank-1 up to maxRank
-  bool specialized{ShallowCopyRankSpecialize<P, 1>::execute(
-      to, from, toIsContiguous, fromIsContiguous)};
-  if (!specialized) {
+  INTERNAL_CHECK(to.rank() == from.rank());
+  // Specialize only common low ranks; use generic fallback for higher ranks
+  switch (to.rank()) {
+  case 1:
+    ShallowCopyInner<P, 1>(to, from, toIsContiguous, fromIsContiguous);
+    return;
+  case 2:
+    ShallowCopyInner<P, 2>(to, from, toIsContiguous, fromIsContiguous);
+    return;
+  case 3:
+    ShallowCopyInner<P, 3>(to, from, toIsContiguous, fromIsContiguous);
+    return;
+  case 4:
+    ShallowCopyInner<P, 4>(to, from, toIsContiguous, fromIsContiguous);
+    return;
+  default:
+    // Generic fallback for rank > 4 (and rank 0, though that's handled
+    // by the contiguous-to-contiguous case in ShallowCopyInner).
+    // We limit rank specializations to 1-4 to balance compile-time cost
+    // against runtime performance. Specializing higher ranks would create
+    // many additional template instantiations, significantly increasing
+    // compile time with minimal benefit since ranks 1-4 cover the vast
+    // majority of real-world Fortran code.
     ShallowCopyInner<P>(to, from, toIsContiguous, fromIsContiguous);
+    return;
   }
 }
 
@@ -277,7 +275,7 @@ RT_API_ATTRS char *EnsureNullTerminated(
     char *str, std::size_t length, Terminator &terminator) {
   if (runtime::memchr(str, '\0', length) == nullptr) {
     char *newCmd{(char *)AllocateMemoryOrCrash(terminator, length + 1)};
-    std::memcpy(newCmd, str, length);
+    runtime::memcpy(newCmd, str, length);
     newCmd[length] = '\0';
     return newCmd;
   } else {
@@ -309,7 +307,7 @@ RT_API_ATTRS std::int32_t CopyCharsToDescriptor(const Descriptor &value,
     return ToErrmsg(errmsg, StatValueTooShort);
   }
 
-  std::memcpy(value.OffsetElement(offset), rawValue, toCopy);
+  runtime::memcpy(value.OffsetElement(offset), rawValue, toCopy);
 
   if (static_cast<std::int64_t>(rawValueLength) > toCopy) {
     return ToErrmsg(errmsg, StatValueTooShort);
@@ -332,7 +330,7 @@ template <int KIND> struct FitsInIntegerKind {
       return true;
     } else {
       return value <=
-          std::numeric_limits<
+          common::numeric_limits<
               CppTypeFor<Fortran::common::TypeCategory::Integer, KIND>>::max();
     }
   }
@@ -364,6 +362,169 @@ RT_API_ATTRS void CreatePartialReductionResult(Descriptor &result,
   if (int stat{result.Allocate(kNoAsyncObject)}) {
     terminator.Crash(
         "%s: could not allocate memory for result; STAT=%d", intrinsic, stat);
+  }
+}
+
+// The ShallowCopyModifiedSuffix family must stay inside the offload API
+// group: its callers CopyOutAssignDirect and CopyOutAssign are offload API
+// entry points (see the RT_EXT_API_GROUP markers in assign.cpp), so offload
+// builds compile and call them in device code.
+// Compares one element bitwise. As in the ShallowCopy* helpers above, the
+// compile-time element size lets the compiler inline the comparison.
+template <typename P>
+static inline RT_API_ATTRS bool ElementIsModified(
+    const char *toAt, const char *fromAt, std::size_t elementBytes) {
+  constexpr std::size_t typeElementBytes{sizeof(P)};
+  if constexpr (typeElementBytes != 1) {
+    return runtime::memcmp(toAt, fromAt, typeElementBytes) != 0;
+  } else {
+    return runtime::memcmp(toAt, fromAt, elementBytes) != 0;
+  }
+}
+
+template <typename P>
+static inline RT_API_ATTRS void CopyElement(
+    char *toAt, const char *fromAt, std::size_t elementBytes) {
+  constexpr std::size_t typeElementBytes{sizeof(P)};
+  if constexpr (typeElementBytes != 1) {
+    runtime::memcpy(toAt, fromAt, typeElementBytes);
+  } else {
+    runtime::memcpy(toAt, fromAt, elementBytes);
+  }
+}
+
+// Scans for the first bitwise difference; when one is found, copies that
+// element and everything after it, reusing the scan's position (fused, one
+// pass). Elements before the first difference are bitwise-identical and are
+// not stored to, so an unmodified copy-out performs no stores at all, and a
+// copy-out never traverses the data more than once nor stores more elements
+// than the unconditional copy would.
+template <typename P, int RANK = -1>
+static RT_API_ATTRS void ShallowCopyModifiedSuffixInner(const Descriptor &to,
+    const Descriptor &from, bool toIsContiguous, bool fromIsContiguous) {
+  std::size_t elementBytes{to.ElementBytes()};
+  std::size_t n{to.Elements()};
+  if (toIsContiguous) {
+    char *toAt{to.OffsetElement()};
+    if (fromIsContiguous) {
+      const char *fromAt{from.OffsetElement()};
+      for (; n > 0; --n, toAt += elementBytes, fromAt += elementBytes) {
+        if (ElementIsModified<P>(toAt, fromAt, elementBytes)) {
+          // Copy the remaining elements, including this one, in one block.
+          runtime::memcpy(toAt, fromAt, n * elementBytes);
+          return;
+        }
+      }
+    } else {
+      DescriptorIterator<RANK> fromIt{from};
+      for (; n > 0; --n, toAt += elementBytes, fromIt.Advance()) {
+        if (ElementIsModified<P>(
+                toAt, fromIt.template Get<char>(), elementBytes)) {
+          break;
+        }
+      }
+      for (; n > 0; --n, toAt += elementBytes, fromIt.Advance()) {
+        CopyElement<P>(toAt, fromIt.template Get<char>(), elementBytes);
+      }
+    }
+  } else {
+    DescriptorIterator<RANK> toIt{to};
+    if (fromIsContiguous) {
+      const char *fromAt{from.OffsetElement()};
+      for (; n > 0; --n, toIt.Advance(), fromAt += elementBytes) {
+        if (ElementIsModified<P>(
+                toIt.template Get<char>(), fromAt, elementBytes)) {
+          break;
+        }
+      }
+      for (; n > 0; --n, toIt.Advance(), fromAt += elementBytes) {
+        CopyElement<P>(toIt.template Get<char>(), fromAt, elementBytes);
+      }
+    } else {
+      DescriptorIterator<RANK> fromIt{from};
+      for (; n > 0; --n, toIt.Advance(), fromIt.Advance()) {
+        if (ElementIsModified<P>(toIt.template Get<char>(),
+                fromIt.template Get<char>(), elementBytes)) {
+          break;
+        }
+      }
+      for (; n > 0; --n, toIt.Advance(), fromIt.Advance()) {
+        CopyElement<P>(toIt.template Get<char>(), fromIt.template Get<char>(),
+            elementBytes);
+      }
+    }
+  }
+}
+
+template <typename P>
+static RT_API_ATTRS void ShallowCopyModifiedSuffixRank(const Descriptor &to,
+    const Descriptor &from, bool toIsContiguous, bool fromIsContiguous) {
+  INTERNAL_CHECK(to.rank() == from.rank());
+  // Mirror ShallowCopyRank's rank specialization policy.
+  switch (to.rank()) {
+  case 1:
+    ShallowCopyModifiedSuffixInner<P, 1>(
+        to, from, toIsContiguous, fromIsContiguous);
+    return;
+  case 2:
+    ShallowCopyModifiedSuffixInner<P, 2>(
+        to, from, toIsContiguous, fromIsContiguous);
+    return;
+  case 3:
+    ShallowCopyModifiedSuffixInner<P, 3>(
+        to, from, toIsContiguous, fromIsContiguous);
+    return;
+  case 4:
+    ShallowCopyModifiedSuffixInner<P, 4>(
+        to, from, toIsContiguous, fromIsContiguous);
+    return;
+  default:
+    ShallowCopyModifiedSuffixInner<P>(
+        to, from, toIsContiguous, fromIsContiguous);
+    return;
+  }
+}
+
+RT_API_ATTRS void ShallowCopyModifiedSuffix(
+    const Descriptor &to, const Descriptor &from) {
+  bool toIsContiguous{to.IsContiguous()};
+  bool fromIsContiguous{from.IsContiguous()};
+  std::size_t elementBytes{to.ElementBytes()};
+  // Same type-based dispatch as ShallowCopy() above, so the per-element
+  // comparison and copy inline to fixed-size operations.
+  if (to.type().IsInteger()) {
+    if (elementBytes == sizeof(int64_t)) {
+      ShallowCopyModifiedSuffixRank<int64_t>(
+          to, from, toIsContiguous, fromIsContiguous);
+    } else if (elementBytes == sizeof(int32_t)) {
+      ShallowCopyModifiedSuffixRank<int32_t>(
+          to, from, toIsContiguous, fromIsContiguous);
+    } else if (elementBytes == sizeof(int16_t)) {
+      ShallowCopyModifiedSuffixRank<int16_t>(
+          to, from, toIsContiguous, fromIsContiguous);
+#if defined USING_NATIVE_INT128_T
+    } else if (elementBytes == sizeof(__int128_t)) {
+      ShallowCopyModifiedSuffixRank<__int128_t>(
+          to, from, toIsContiguous, fromIsContiguous);
+#endif
+    } else {
+      ShallowCopyModifiedSuffixRank<char>(
+          to, from, toIsContiguous, fromIsContiguous);
+    }
+  } else if (to.type().IsReal()) {
+    if (elementBytes == sizeof(double)) {
+      ShallowCopyModifiedSuffixRank<double>(
+          to, from, toIsContiguous, fromIsContiguous);
+    } else if (elementBytes == sizeof(float)) {
+      ShallowCopyModifiedSuffixRank<float>(
+          to, from, toIsContiguous, fromIsContiguous);
+    } else {
+      ShallowCopyModifiedSuffixRank<char>(
+          to, from, toIsContiguous, fromIsContiguous);
+    }
+  } else {
+    ShallowCopyModifiedSuffixRank<char>(
+        to, from, toIsContiguous, fromIsContiguous);
   }
 }
 

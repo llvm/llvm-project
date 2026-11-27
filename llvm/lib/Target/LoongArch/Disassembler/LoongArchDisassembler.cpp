@@ -13,15 +13,18 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "loongarch-disassembler"
 
@@ -45,7 +48,8 @@ static MCDisassembler *createLoongArchDisassembler(const Target &T,
   return new LoongArchDisassembler(STI, Ctx);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLoongArchDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeLoongArchDisassembler() {
   // Register the disassembler for each target.
   TargetRegistry::RegisterMCDisassembler(getTheLoongArch32Target(),
                                          createLoongArchDisassembler);
@@ -138,18 +142,53 @@ static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address,
                                       const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
-  Inst.addOperand(MCOperand::createImm(Imm + P));
+  const int64_t DecodedImm = Imm + P;
+  if (!Decoder->tryAddingSymbolicOperand(Inst, DecodedImm, Address,
+                                         /*IsBranch=*/false, /*Offset=*/0,
+                                         /*OpSize=*/0, /*InstSize=*/4))
+    Inst.addOperand(MCOperand::createImm(DecodedImm));
   return MCDisassembler::Success;
 }
 
-template <unsigned N, unsigned S = 0>
+template <unsigned N, unsigned S = 0, bool IsPCRelBranch = false>
 static DecodeStatus decodeSImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address,
                                       const MCDisassembler *Decoder) {
   assert(isUInt<N>(Imm) && "Invalid immediate");
   // Shift left Imm <S> bits, then sign-extend the number in the bottom <N+S>
   // bits.
-  Inst.addOperand(MCOperand::createImm(SignExtend64<N + S>(Imm << S)));
+  const int64_t DecodedImm = SignExtend64<N + S>(Imm << S);
+  const int64_t Value =
+      IsPCRelBranch ? static_cast<int64_t>(static_cast<uint64_t>(Address) +
+                                           static_cast<uint64_t>(DecodedImm))
+                    : DecodedImm;
+  if (!Decoder->tryAddingSymbolicOperand(Inst, Value, Address, IsPCRelBranch,
+                                         /*Offset=*/0, /*OpSize=*/0,
+                                         /*InstSize=*/4))
+    Inst.addOperand(MCOperand::createImm(DecodedImm));
+  return MCDisassembler::Success;
+}
+
+// Decode AMSWAP.W and UD, which share the same base encoding.
+// If rk == 1 and rd == rj, interpret the instruction as UD;
+// otherwise decode as AMSWAP.W.
+static DecodeStatus DecodeAMOrUDInstruction(MCInst &Inst, unsigned Insn,
+                                            uint64_t Address,
+                                            const MCDisassembler *Decoder) {
+  unsigned Rd = fieldFromInstruction(Insn, 0, 5);
+  unsigned Rj = fieldFromInstruction(Insn, 5, 5);
+  unsigned Rk = fieldFromInstruction(Insn, 10, 5);
+
+  if (Rk == 1 && Rd == Rj) {
+    Inst.setOpcode(LoongArch::UD);
+    Inst.addOperand(MCOperand::createImm(Rd));
+  } else {
+    Inst.setOpcode(LoongArch::AMSWAP_W);
+    Inst.addOperand(MCOperand::createReg(LoongArch::R0 + Rd));
+    Inst.addOperand(MCOperand::createReg(LoongArch::R0 + Rk));
+    Inst.addOperand(MCOperand::createReg(LoongArch::R0 + Rj));
+  }
+
   return MCDisassembler::Success;
 }
 
@@ -159,6 +198,8 @@ DecodeStatus LoongArchDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                                    ArrayRef<uint8_t> Bytes,
                                                    uint64_t Address,
                                                    raw_ostream &CS) const {
+  CommentStream = &CS;
+
   uint32_t Insn;
   DecodeStatus Result;
 

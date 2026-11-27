@@ -265,9 +265,9 @@ def get_function_body(
     # TODO Clean up duplication of asm/common build_function_body_dictionary
     for extra_command in extra_commands:
         extra_args = shlex.split(extra_command)
-        with tempfile.NamedTemporaryFile() as f:
+        with tempfile.NamedTemporaryFile(delete=False) as f:
             f.write(raw_tool_output.encode())
-            f.flush()
+        try:
             if extra_args[0] == "opt":
                 if args.opt is None:
                     print(
@@ -278,6 +278,8 @@ def get_function_body(
                     sys.exit(1)
                 extra_args[0] = args.opt
             raw_tool_output = common.invoke_tool(extra_args[0], extra_args[1:], f.name)
+        finally:
+            os.remove(f.name)
     if "-emit-llvm" in clang_args:
         builder.process_run_line(
             common.OPT_FUNCTION_RE, common.scrub_body, raw_tool_output, prefixes
@@ -316,7 +318,7 @@ def update_test(ti: common.TestInfo):
     }
 
     for l in ti.run_lines:
-        commands = [cmd.strip() for cmd in l.split("|")]
+        commands = [cmd.strip() for cmd in common.unwrap_lit_if(l).split("|")]
 
         triple_in_cmd = None
         m = common.TRIPLE_ARG_RE.search(commands[0])
@@ -365,6 +367,7 @@ def update_test(ti: common.TestInfo):
         ginfo=ginfo,
     )
 
+    global_tbaa_records_for_prefixes = {}
     for prefixes, args, extra_commands, triple_in_cmd in run_list:
         # Execute non-filechecked runline.
         if not prefixes:
@@ -390,6 +393,10 @@ def update_test(ti: common.TestInfo):
             prefixes,
             raw_tool_output,
         )
+
+        # Extract TBAA metadata for later usage in check lines.
+        tbaa_map = common.get_tbaa_records(ti.args.version, raw_tool_output)
+        global_tbaa_records_for_prefixes[tuple(prefixes)] = tbaa_map
 
         # Invoke clang -Xclang -ast-dump=json to get mapping from start lines to
         # mangled names. Forward all clang args for now.
@@ -436,6 +443,7 @@ def update_test(ti: common.TestInfo):
                 ti.args.function_signature,
                 ginfo,
                 global_vars_seen_dict,
+                global_tbaa_records_for_prefixes,
                 is_filtered=builder.is_filtered(),
             )
 
@@ -448,6 +456,7 @@ def update_test(ti: common.TestInfo):
                     output_lines,
                     ginfo,
                     global_vars_seen_dict,
+                    global_tbaa_records_for_prefixes,
                     False,
                     True,
                     ti.args.check_globals,
@@ -509,6 +518,7 @@ def update_test(ti: common.TestInfo):
                                     output_lines,
                                     ginfo,
                                     global_vars_seen_dict,
+                                    global_tbaa_records_for_prefixes,
                                     False,
                                     True,
                                     ti.args.check_globals,
@@ -529,6 +539,7 @@ def update_test(ti: common.TestInfo):
                                 args.function_signature,
                                 ginfo,
                                 global_vars_seen_dict,
+                                global_tbaa_records_for_prefixes,
                                 is_filtered=builder.is_filtered(),
                             )
                         )
@@ -547,6 +558,7 @@ def update_test(ti: common.TestInfo):
                 output_lines,
                 ginfo,
                 global_vars_seen_dict,
+                global_tbaa_records_for_prefixes,
                 False,
                 False,
                 ti.args.check_globals,

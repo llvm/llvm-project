@@ -24,16 +24,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-form-memory-clauses"
 
-// Clauses longer then 15 instructions would overflow one of the counters
-// and stall. They can stall even earlier if there are outstanding counters.
-static cl::opt<unsigned>
-MaxClause("amdgpu-max-memory-clause", cl::Hidden, cl::init(15),
-          cl::desc("Maximum length of a memory clause, instructions"));
-
 namespace {
 
 class SIFormMemoryClausesImpl {
-  using RegUse = DenseMap<unsigned, std::pair<unsigned, LaneBitmask>>;
+  using RegUse = DenseMap<unsigned, std::pair<RegState, LaneBitmask>>;
 
   bool canBundle(const MachineInstr &MI, const RegUse &Defs,
                  const RegUse &Uses) const;
@@ -61,9 +55,7 @@ class SIFormMemoryClausesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIFormMemoryClausesLegacy() : MachineFunctionPass(ID) {
-    initializeSIFormMemoryClausesLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SIFormMemoryClausesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -93,10 +85,6 @@ INITIALIZE_PASS_END(SIFormMemoryClausesLegacy, DEBUG_TYPE,
 char SIFormMemoryClausesLegacy::ID = 0;
 
 char &llvm::SIFormMemoryClausesID = SIFormMemoryClausesLegacy::ID;
-
-FunctionPass *llvm::createSIFormMemoryClausesLegacyPass() {
-  return new SIFormMemoryClausesLegacy();
-}
 
 static bool isVMEMClauseInst(const MachineInstr &MI) {
   return SIInstrInfo::isVMEM(MI);
@@ -132,8 +120,8 @@ static bool isValidClauseInst(const MachineInstr &MI, bool IsVMEMClause) {
   return true;
 }
 
-static unsigned getMopState(const MachineOperand &MO) {
-  unsigned S = 0;
+static RegState getMopState(const MachineOperand &MO) {
+  RegState S = {};
   if (MO.isImplicit())
     S |= RegState::Implicit;
   if (MO.isDead())
@@ -191,13 +179,16 @@ bool SIFormMemoryClausesImpl::canBundle(const MachineInstr &MI,
 // bundled into a memory clause.
 bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
                                             GCNDownwardRPTracker &RPT) {
-  // NB: skip advanceBeforeNext() call. Since all defs will be marked
-  // early-clobber they will all stay alive at least to the end of the
-  // clause. Therefor we should not decrease pressure even if load
-  // pointer becomes dead and could otherwise be reused for destination.
-  RPT.advanceToNext();
+  // NB: do not retire the uses of MI. Since all defs will be marked
+  // early-clobber they will all stay alive at least to the end of the clause.
+  // Therefore we should not decrease pressure even if load pointer becomes
+  // dead and could otherwise be reused for destination. The tracker is reset
+  // after the clause is formed, so its position does not need to be updated.
+  RPT.addDefs(MI);
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
-  unsigned Occupancy = MaxPressure.getOccupancy(*ST);
+  unsigned Occupancy = MaxPressure.getOccupancy(
+      *ST,
+      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
 
   // Don't push over half the register budget. We don't want to introduce
   // spilling just to form a soft clause.
@@ -232,7 +223,7 @@ void SIFormMemoryClausesImpl::collectRegUses(const MachineInstr &MI,
                            : LaneBitmask::getAll();
     RegUse &Map = MO.isDef() ? Defs : Uses;
 
-    unsigned State = getMopState(MO);
+    RegState State = getMopState(MO);
     auto [Loc, Inserted] = Map.try_emplace(Reg, State, Mask);
     if (!Inserted) {
       Loc->second.first |= State;
@@ -272,7 +263,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
   MaxVGPRs = TRI->getAllocatableSet(MF, &AMDGPU::VGPR_32RegClass).count();
   MaxSGPRs = TRI->getAllocatableSet(MF, &AMDGPU::SGPR_32RegClass).count();
   unsigned FuncMaxClause = MF.getFunction().getFnAttributeAsParsedInteger(
-      "amdgpu-max-memory-clause", MaxClause);
+      "amdgpu-max-memory-clause", ST->getCLOpts().max_memory_clause);
 
   for (MachineBasicBlock &MBB : MF) {
     GCNDownwardRPTracker RPT(*LIS);
@@ -290,7 +281,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         continue;
 
       if (!RPT.getNext().isValid())
-        RPT.reset(MI);
+        RPT.reset(MI, MBB.end());
       else { // Advance the state to the current MI.
         RPT.advance(MachineBasicBlock::const_iterator(MI));
         RPT.advanceBeforeNext();
@@ -299,7 +290,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
       const GCNRPTracker::LiveRegSet LiveRegsCopy(RPT.getLiveRegs());
       RegUse Defs, Uses;
       if (!processRegUses(MI, Defs, Uses, RPT)) {
-        RPT.reset(MI, &LiveRegsCopy);
+        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
         continue;
       }
 
@@ -323,7 +314,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         ++Length;
       }
       if (Length < 2) {
-        RPT.reset(MI, &LiveRegsCopy);
+        RPT.reset(MI, MBB.end(), &LiveRegsCopy);
         continue;
       }
 
@@ -347,13 +338,12 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
           continue;
 
         // Collect the register operands we should extend the live ranges of.
-        SmallVector<std::tuple<unsigned, unsigned>> KillOps;
+        SmallVector<std::tuple<RegState, unsigned>> KillOps;
         const LiveInterval &LI = LIS->getInterval(R.first);
 
         if (!LI.hasSubRanges()) {
           if (!LI.liveAt(ClauseLiveOutIdx)) {
-            KillOps.emplace_back(R.second.first | RegState::Kill,
-                                 AMDGPU::NoSubRegister);
+            KillOps.emplace_back(R.second.first, AMDGPU::NoSubRegister);
           }
         } else {
           LaneBitmask KilledMask;
@@ -371,7 +361,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
           (void)Success;
           assert(Success && "Failed to find subregister mask to cover lanes");
           for (unsigned SubReg : KilledIndexes) {
-            KillOps.emplace_back(R.second.first | RegState::Kill, SubReg);
+            KillOps.emplace_back(R.second.first, SubReg);
           }
         }
 
@@ -385,13 +375,13 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
         // bundle.
         Kill = BuildMI(*MI.getParent(), std::next(LastClauseInst),
                        DebugLoc(), TII->get(AMDGPU::KILL));
-        for (auto &Op : KillOps)
-          Kill.addUse(Reg, std::get<0>(Op), std::get<1>(Op));
+        for (auto [State, SubReg] : KillOps)
+          Kill.addUse(Reg, State, SubReg);
         Ind->insertMachineInstrInMaps(*Kill);
       }
 
       // Restore the state after processing the end of the bundle.
-      RPT.reset(MI, &LiveRegsCopy);
+      RPT.reset(MI, MBB.end(), &LiveRegsCopy);
 
       if (!Kill)
         continue;

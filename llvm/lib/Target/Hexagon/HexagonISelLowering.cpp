@@ -77,30 +77,9 @@ static cl::opt<int> MinimumJumpTables("minimum-jump-tables", cl::Hidden,
                                       cl::init(5),
                                       cl::desc("Set minimum jump tables"));
 
-static cl::opt<int>
-    MaxStoresPerMemcpyCL("max-store-memcpy", cl::Hidden, cl::init(6),
-                         cl::desc("Max #stores to inline memcpy"));
-
-static cl::opt<int>
-    MaxStoresPerMemcpyOptSizeCL("max-store-memcpy-Os", cl::Hidden, cl::init(4),
-                                cl::desc("Max #stores to inline memcpy"));
-
-static cl::opt<int>
-    MaxStoresPerMemmoveCL("max-store-memmove", cl::Hidden, cl::init(6),
-                          cl::desc("Max #stores to inline memmove"));
-
-static cl::opt<int>
-    MaxStoresPerMemmoveOptSizeCL("max-store-memmove-Os", cl::Hidden,
-                                 cl::init(4),
-                                 cl::desc("Max #stores to inline memmove"));
-
-static cl::opt<int>
-    MaxStoresPerMemsetCL("max-store-memset", cl::Hidden, cl::init(8),
-                         cl::desc("Max #stores to inline memset"));
-
-static cl::opt<int>
-    MaxStoresPerMemsetOptSizeCL("max-store-memset-Os", cl::Hidden, cl::init(4),
-                                cl::desc("Max #stores to inline memset"));
+static cl::opt<bool>
+    ConstantLoadsToImm("constant-loads-to-imm", cl::Hidden, cl::init(true),
+                       cl::desc("Convert constant loads to immediate values."));
 
 static cl::opt<bool> AlignLoads("hexagon-align-loads",
   cl::Hidden, cl::init(false),
@@ -111,23 +90,6 @@ static cl::opt<bool>
                             cl::init(false),
                             cl::desc("Disable minimum alignment of 1 for "
                                      "arguments passed by value on stack"));
-
-namespace {
-
-  class HexagonCCState : public CCState {
-    unsigned NumNamedVarArgParams = 0;
-
-  public:
-    HexagonCCState(CallingConv::ID CC, bool IsVarArg, MachineFunction &MF,
-                   SmallVectorImpl<CCValAssign> &locs, LLVMContext &C,
-                   unsigned NumNamedArgs)
-        : CCState(CC, IsVarArg, MF, locs, C),
-          NumNamedVarArgParams(NumNamedArgs) {}
-    unsigned getNumNamedVarArgParams() const { return NumNamedVarArgParams; }
-  };
-
-} // end anonymous namespace
-
 
 // Implement calling convention for Hexagon.
 
@@ -151,13 +113,121 @@ static bool CC_SkipOdd(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   return false;
 }
 
+// HLX vectors that do not fit in registers are passed on the VTCM stack.
+// CCState only tracks the scalar stack, so add a custom memory location here
+// and let assignVTCMStackOffsets set its offset.
+static bool CC_Hexagon_VTCM_Stack(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                                  CCValAssign::LocInfo &LocInfo,
+                                  ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT, 0, LocVT, LocInfo));
+  return true;
+}
+
+// Assign VTCM stack offsets to the HLX arguments, in argument order, and
+// return the size of the VTCM argument area.
+static unsigned assignVTCMStackOffsets(SmallVectorImpl<CCValAssign> &ArgLocs) {
+  unsigned Size = 0;
+  for (CCValAssign &VA : ArgLocs) {
+    if (!VA.isMemLoc() || !VA.needsCustom())
+      continue;
+    VA.convertToMem(Size);
+    Size += VA.getLocVT().getStoreSize();
+  }
+  return Size;
+}
+
+#define GET_CALLING_CONV_IMPL
 #include "HexagonGenCallingConv.inc"
 
+unsigned HexagonTargetLowering::getVectorTypeBreakdownForCallingConv(
+    LLVMContext &Context, CallingConv::ID CC, EVT VT, EVT &IntermediateVT,
+    unsigned &NumIntermediates, MVT &RegisterVT) const {
+
+  bool isBoolVector = VT.getVectorElementType() == MVT::i1;
+  bool isPowerOf2 = VT.isPow2VectorType();
+  unsigned NumElts = VT.getVectorNumElements();
+
+  // Split vectors of type vXi1 into (X/8) vectors of type v8i1,
+  // where X is divisible by 8.
+  if (isBoolVector && !Subtarget.useHVXOps() && isPowerOf2 && NumElts >= 8) {
+    RegisterVT = MVT::v8i8;
+    IntermediateVT = MVT::v8i1;
+    NumIntermediates = NumElts / 8;
+    return NumIntermediates;
+  }
+
+  // In HVX 64-byte mode, vectors of type vXi1 are split into (X / 64) vectors
+  // of type v64i1, provided that X is divisible by 64.
+  if (isBoolVector && Subtarget.useHVX64BOps() && isPowerOf2 && NumElts >= 64) {
+    RegisterVT = MVT::v64i8;
+    IntermediateVT = MVT::v64i1;
+    NumIntermediates = NumElts / 64;
+    return NumIntermediates;
+  }
+
+  // In HVX 128-byte mode, vectors of type vXi1 are split into (X / 128) vectors
+  // of type v128i1, provided that X is divisible by 128.
+  if (isBoolVector && Subtarget.useHVX128BOps() && isPowerOf2 &&
+      NumElts >= 128) {
+    RegisterVT = MVT::v128i8;
+    IntermediateVT = MVT::v128i1;
+    NumIntermediates = NumElts / 128;
+    return NumIntermediates;
+  }
+
+  return TargetLowering::getVectorTypeBreakdownForCallingConv(
+      Context, CC, VT, IntermediateVT, NumIntermediates, RegisterVT);
+}
+
+std::pair<MVT, unsigned>
+HexagonTargetLowering::handleMaskRegisterForCallingConv(
+    const HexagonSubtarget &Subtarget, EVT VT) const {
+  assert(VT.getVectorElementType() == MVT::i1);
+
+  const unsigned NumElems = VT.getVectorNumElements();
+
+  if (!VT.isPow2VectorType())
+    return {MVT::INVALID_SIMPLE_VALUE_TYPE, 0};
+
+  if (!Subtarget.useHVXOps() && NumElems >= 8)
+    return {MVT::v8i8, NumElems / 8};
+
+  if (Subtarget.useHVX64BOps() && NumElems >= 64)
+    return {MVT::v64i8, NumElems / 64};
+
+  if (Subtarget.useHVX128BOps() && NumElems >= 128)
+    return {MVT::v128i8, NumElems / 128};
+
+  return {MVT::INVALID_SIMPLE_VALUE_TYPE, 0};
+}
+
+MVT HexagonTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
+                                                         CallingConv::ID CC,
+                                                         EVT VT) const {
+
+  if (VT.isVectorOf(MVT::i1)) {
+    auto [RegisterVT, NumRegisters] =
+        handleMaskRegisterForCallingConv(Subtarget, VT);
+    if (RegisterVT != MVT::INVALID_SIMPLE_VALUE_TYPE)
+      return RegisterVT;
+  }
+
+  return TargetLowering::getRegisterTypeForCallingConv(Context, CC, VT);
+}
 
 SDValue
 HexagonTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG)
       const {
-  return SDValue();
+  unsigned IntNo = Op.getConstantOperandVal(0);
+  SDLoc dl(Op);
+  switch (IntNo) {
+  default:
+    return SDValue(); // Don't custom lower most intrinsics.
+  case Intrinsic::thread_pointer: {
+    EVT PtrVT = getPointerTy(DAG.getDataLayout());
+    return DAG.getNode(HexagonISD::THREAD_POINTER, dl, PtrVT);
+  }
+  }
 }
 
 /// CreateCopyOfByValArgument - Make a copy of an aggregate at address specified
@@ -169,10 +239,11 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
-  return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
-      /*isVolatile=*/false, /*AlwaysInline=*/false,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  Align Alignment = Flags.getNonZeroByValAlign();
+  return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile=*/false, /*AlwaysInline=*/false,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 bool
@@ -183,8 +254,6 @@ HexagonTargetLowering::CanLowerReturn(
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
 
-  if (MF.getSubtarget<HexagonSubtarget>().useHVXOps())
-    return CCInfo.CheckReturn(Outs, RetCC_Hexagon_HVX);
   return CCInfo.CheckReturn(Outs, RetCC_Hexagon);
 }
 
@@ -205,10 +274,7 @@ HexagonTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                  *DAG.getContext());
 
   // Analyze return values of ISD::RET
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon_HVX);
-  else
-    CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon);
+  CCInfo.AnalyzeReturn(Outs, RetCC_Hexagon);
 
   SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
@@ -329,10 +395,7 @@ Register HexagonTargetLowering::getRegisterByName(
                      .Case("cs0", Hexagon::CS0)
                      .Case("cs1", Hexagon::CS1)
                      .Default(Register());
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+  return Reg;
 }
 
 /// LowerCallResult - Lower the result values of an ISD::CALL into the
@@ -351,10 +414,7 @@ SDValue HexagonTargetLowering::LowerCallResult(
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
 
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeCallResult(Ins, RetCC_Hexagon_HVX);
-  else
-    CCInfo.AnalyzeCallResult(Ins, RetCC_Hexagon);
+  CCInfo.AnalyzeCallResult(Ins, RetCC_Hexagon);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0; i != RVLocs.size(); ++i) {
@@ -412,7 +472,6 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   MachineFrameInfo &MFI = MF.getFrameInfo();
   auto PtrVT = getPointerTy(MF.getDataLayout());
 
-  unsigned NumParams = CLI.CB ? CLI.CB->getFunctionType()->getNumParams() : 0;
   if (GlobalAddressSDNode *GAN = dyn_cast<GlobalAddressSDNode>(Callee))
     Callee = DAG.getTargetGlobalAddress(GAN->getGlobal(), dl, MVT::i32);
 
@@ -421,15 +480,13 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Analyze operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
-  HexagonCCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext(),
-                        NumParams);
+  CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_HVX);
-  else if (DisableArgsMinAlignment)
+  if (DisableArgsMinAlignment)
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
+  unsigned NumVTCMBytes = assignVTCMStackOffsets(ArgLocs);
 
   if (CLI.IsTailCall) {
     bool StructAttrFlag = MF.getFunction().hasStructRetAttr();
@@ -454,6 +511,13 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
   SDValue StackPtr =
       DAG.getCopyFromReg(Chain, dl, HRI.getStackRegister(), PtrVT);
+  SDValue VTCMStackPtr;
+  if (NumVTCMBytes) {
+    VTCMStackPtr =
+        DAG.getCopyFromReg(Chain, dl, HRI.getVTCMStackRegister(), PtrVT);
+    MF.getInfo<HexagonMachineFunctionInfo>()->reserveVTCMCallFrame(
+        NumVTCMBytes);
+  }
 
   bool NeedsArgAlign = false;
   Align LargestAlignSeen;
@@ -489,9 +553,10 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
     if (VA.isMemLoc()) {
       unsigned LocMemOffset = VA.getLocMemOffset();
-      SDValue MemAddr = DAG.getConstant(LocMemOffset, dl,
-                                        StackPtr.getValueType());
-      MemAddr = DAG.getNode(ISD::ADD, dl, MVT::i32, StackPtr, MemAddr);
+      SDValue BasePtr = VA.needsCustom() ? VTCMStackPtr : StackPtr;
+      SDValue MemAddr =
+          DAG.getConstant(LocMemOffset, dl, BasePtr.getValueType());
+      MemAddr = DAG.getNode(ISD::ADD, dl, MVT::i32, BasePtr, MemAddr);
       if (ArgAlign)
         LargestAlignSeen = std::max(
             LargestAlignSeen, Align(VA.getLocVT().getStoreSizeInBits() / 8));
@@ -503,8 +568,13 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       } else {
         MachinePointerInfo LocPI = MachinePointerInfo::getStack(
             DAG.getMachineFunction(), LocMemOffset);
-        SDValue S = DAG.getStore(Chain, dl, Arg, MemAddr, LocPI);
-        MemOpChains.push_back(S);
+        if (isHlxPairTy(VA.getLocVT())) {
+          splitHlxPairArgStore(DAG, dl, Chain, Arg, MemAddr, VA.getLocVT(),
+                               LocPI, MemOpChains);
+        } else {
+          SDValue S = DAG.getStore(Chain, dl, Arg, MemAddr, LocPI);
+          MemOpChains.push_back(S);
+        }
       }
       continue;
     }
@@ -583,7 +653,19 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   for (const auto &R : RegsToPass)
     Ops.push_back(DAG.getRegister(R.first, R.second.getValueType()));
 
-  const uint32_t *Mask = HRI.getCallPreservedMask(MF, CallConv);
+  // Callees that take or return HLX values preserve L12-L15.
+  bool HasHLXLocs =
+      any_of(ArgLocs,
+             [](const CCValAssign &VA) {
+               return VA.isRegLoc() &&
+                      (Hexagon::HlxLRRegClass.contains(VA.getLocReg()) ||
+                       Hexagon::HlxLLRRegClass.contains(VA.getLocReg()));
+             }) ||
+      any_of(Ins, [this](const ISD::InputArg &In) {
+        return Subtarget.isHLXVectorType(In.VT);
+      });
+  const uint32_t *Mask = HasHLXLocs ? HRI.getHLXCallPreservedMask()
+                                    : HRI.getCallPreservedMask(MF, CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));
 
@@ -602,6 +684,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   unsigned OpCode = DoesNotReturn ? HexagonISD::CALLnr : HexagonISD::CALL;
   Chain = DAG.getNode(OpCode, dl, {MVT::Other, MVT::Glue}, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   Glue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -713,32 +797,8 @@ SDValue HexagonTargetLowering::LowerPREFETCH(SDValue Op,
   return DAG.getNode(HexagonISD::DCFETCH, DL, MVT::Other, Chain, Addr, Zero);
 }
 
-// Custom-handle ISD::READCYCLECOUNTER because the target-independent SDNode
-// is marked as having side-effects, while the register read on Hexagon does
-// not have any. TableGen refuses to accept the direct pattern from that node
-// to the A4_tfrcpp.
-SDValue HexagonTargetLowering::LowerREADCYCLECOUNTER(SDValue Op,
-                                                     SelectionDAG &DAG) const {
-  SDValue Chain = Op.getOperand(0);
-  SDLoc dl(Op);
-  SDVTList VTs = DAG.getVTList(MVT::i64, MVT::Other);
-  return DAG.getNode(HexagonISD::READCYCLE, dl, VTs, Chain);
-}
-
-// Custom-handle ISD::READSTEADYCOUNTER because the target-independent SDNode
-// is marked as having side-effects, while the register read on Hexagon does
-// not have any. TableGen refuses to accept the direct pattern from that node
-// to the A4_tfrcpp.
-SDValue HexagonTargetLowering::LowerREADSTEADYCOUNTER(SDValue Op,
-                                                      SelectionDAG &DAG) const {
-  SDValue Chain = Op.getOperand(0);
-  SDLoc dl(Op);
-  SDVTList VTs = DAG.getVTList(MVT::i64, MVT::Other);
-  return DAG.getNode(HexagonISD::READTIMER, dl, VTs, Chain);
-}
-
 SDValue HexagonTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
-      SelectionDAG &DAG) const {
+                                                   SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
   unsigned IntNo = Op.getConstantOperandVal(1);
   // Lower the hexagon_prefetch builtin to DCFETCH, as above.
@@ -782,6 +842,45 @@ HexagonTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   return AA;
 }
 
+SDValue HexagonTargetLowering::LowerFMINFMAX(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  EVT OpVT = Op.getValueType();
+  MVT SimpleVT = OpVT.getSimpleVT();
+  SDLoc DL(Op);
+
+  // Check if any of the inputs are NaN. If so, propagate the NaN
+  // to the output, otherwise return the maximum/minimum of the inputs.
+  // We can safely use ISD::FMINNUM/ISD::FMAXNUM to run
+  // Hexagon's F2_sfmin/F2_sfmax, when no operand is NaN.
+  // Note: We cannot directly compare nodes against NaN node to find NaNs,
+  // because comparing NaN with anything always returns False (except for !=0
+  // which always return True). To work around that, we compare input operands
+  // with themselves under ISD::SETUO, which only returns true if the operand is
+  // NaN.
+
+  SDValue Op1 = Op.getOperand(0);
+  SDValue Op2 = Op.getOperand(1);
+  SDValue isOp1NaN = DAG.getSetCC(DL, MVT::i1, Op1, Op1, ISD::SETUO);
+  SDValue isOp2NaN = DAG.getSetCC(DL, MVT::i1, Op2, Op2, ISD::SETUO);
+
+  switch (Op.getOpcode()) {
+  case ISD::FMAXIMUM: {
+    SDValue FmaxNode = DAG.getNode(ISD::FMAXNUM, DL, SimpleVT, Op1, Op2);
+    SDValue result =
+        DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp2NaN, Op2, FmaxNode);
+    return DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp1NaN, Op1, result);
+  }
+  case ISD::FMINIMUM: {
+    SDValue FminNode = DAG.getNode(ISD::FMINNUM, DL, SimpleVT, Op1, Op2);
+    SDValue result =
+        DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp2NaN, Op2, FminNode);
+    return DAG.getNode(ISD::SELECT, DL, SimpleVT, isOp1NaN, Op1, result);
+  }
+  default:
+    llvm_unreachable("Invalid opcode for LowerFMINFMAX");
+  }
+}
+
 SDValue HexagonTargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
@@ -795,16 +894,13 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  HexagonCCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs,
-                        *DAG.getContext(),
-                        MF.getFunction().getFunctionType()->getNumParams());
+  CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (Subtarget.useHVXOps())
-    CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_HVX);
-  else if (DisableArgsMinAlignment)
+  if (DisableArgsMinAlignment)
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon);
+  assignVTCMStackOffsets(ArgLocs);
 
   // For LLVM, in the case when returning a struct by value (>8byte),
   // the first argument is a pointer that points to the location on caller's
@@ -822,6 +918,10 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
       return Reg - Hexagon::V0 + 1;
     case Hexagon::HvxWRRegClassID:
       return (Reg - Hexagon::W0 + 1) * 2;
+    case Hexagon::HlxLRRegClassID:
+      return Reg - Hexagon::L0 + 1;
+    case Hexagon::HlxLLRRegClassID:
+      return (Reg - Hexagon::LL0 + 1) * 2;
     }
     llvm_unreachable("Unexpected register class");
   };
@@ -837,7 +937,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
     bool ByVal = Flags.isByVal();
 
     // Arguments passed in registers:
-    // 1. 32- and 64-bit values and HVX vectors are passed directly,
+    // 1. 32- and 64-bit values and HVX/HLX vectors are passed directly,
     // 2. Large structs are passed via an address, and the address is
     //    passed in a register.
     if (VA.isRegLoc() && ByVal && Flags.getByValSize() <= 8)
@@ -868,7 +968,8 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 #ifndef NDEBUG
         unsigned RegSize = RegVT.getSizeInBits();
         assert(RegSize == 32 || RegSize == 64 ||
-               Subtarget.isHVXVectorType(RegVT));
+               Subtarget.isHVXVectorType(RegVT) ||
+               Subtarget.isHLXVectorType(RegVT));
 #endif
       }
       InVals.push_back(Copy);
@@ -883,9 +984,16 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
                             ? Flags.getByValSize()
                             : VA.getLocVT().getStoreSizeInBits() / 8;
 
-      // Create the frame index object for this incoming parameter.
-      int Offset = HEXAGON_LRFP_SIZE + VA.getLocMemOffset();
+      // Create the frame index object for this incoming parameter. HLX
+      // arguments are in the caller's VTCM argument area, not on the scalar
+      // stack. Mark them NoAlloc so that the scalar frame layout skips them;
+      // computeVTCMStackOffsets moves every NoAlloc fixed object to the VTCM
+      // frame. Hexagon uses NoAlloc only for these objects.
+      int Offset = VA.needsCustom() ? VA.getLocMemOffset()
+                                    : HEXAGON_LRFP_SIZE + VA.getLocMemOffset();
       int FI = MFI.CreateFixedObject(ObjSize, Offset, true);
+      if (VA.needsCustom())
+        MFI.setStackID(FI, TargetStackID::NoAlloc);
       SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
 
       if (Flags.isByVal()) {
@@ -893,6 +1001,10 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
         // location. Instead, we should generate a reference to the stack
         // location.
         InVals.push_back(FIN);
+      } else if (isHlxPairTy(VA.getValVT())) {
+        InVals.push_back(
+            splitHlxPairArgLoad(DAG, dl, Chain, FIN, VA.getValVT(),
+                                MachinePointerInfo::getFixedStack(MF, FI, 0)));
       } else {
         SDValue L = DAG.getLoad(VA.getValVT(), dl, Chain, FIN,
                                 MachinePointerInfo::getFixedStack(MF, FI, 0));
@@ -1031,25 +1143,24 @@ HexagonTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   // Size of the va_list is 12 bytes as it has 3 pointers. Therefore,
   // we need to memcopy 12 bytes from va_list to another similar list.
-  return DAG.getMemcpy(
-      Chain, DL, DestPtr, SrcPtr, DAG.getIntPtrConstant(12, DL), Align(4),
-      /*isVolatile*/ false, false, /*CI=*/nullptr, std::nullopt,
-      MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
+  return DAG.getMemcpy(Chain, DL, DestPtr, SrcPtr,
+                       DAG.getIntPtrConstant(12, DL), Align(4), Align(4),
+                       /*isVolatile*/ false, false, /*CI=*/nullptr,
+                       std::nullopt, MachinePointerInfo(DestSV),
+                       MachinePointerInfo(SrcSV));
 }
 
 SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   MVT ResTy = ty(Op);
   MVT OpTy = ty(LHS);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
-    MVT WideTy = MVT::getVectorVT(MVT::getIntegerVT(2*ElemTy.getSizeInBits()),
-                                  OpTy.getVectorNumElements());
+    assert(OpTy.getVectorElementType().isScalarInteger());
+    MVT WideTy = OpTy.widenIntegerElementType();
     return DAG.getSetCC(dl, ResTy,
                         DAG.getSExtOrTrunc(LHS, SDLoc(LHS), WideTy),
                         DAG.getSExtOrTrunc(RHS, SDLoc(RHS), WideTy), CC);
@@ -1059,9 +1170,10 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   if (ResTy.isVector())
     return Op;
 
-  // Comparisons of short integers should use sign-extend, not zero-extend,
-  // since we can represent small negative values in the compare instructions.
-  // The LLVM default is to use zero-extend arbitrarily in these cases.
+  // Equality comparisons of short integers should use sign-extend, not
+  // zero-extend, since we can represent small negative values in the compare
+  // instructions.  The LLVM default is to use zero-extend arbitrarily in
+  // these cases.
   auto isSExtFree = [this](SDValue N) {
     switch (N.getOpcode()) {
       case ISD::TRUNCATE: {
@@ -1084,7 +1196,14 @@ SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
     return false;
   };
 
-  if (OpTy == MVT::i8 || OpTy == MVT::i16) {
+  // Only do this for equality comparisons.  Signed comparisons are already
+  // sign-extended by the generic operand promotion, and for unsigned
+  // comparisons a sign-extension is never profitable: it does not change the
+  // result (sign-extension preserves the unsigned ordering of the values of
+  // the narrower type), but it turns constants with the sign bit of the
+  // narrower type set into large 32-bit values, which then have to be
+  // materialized in a register or use a constant extender.
+  if ((OpTy == MVT::i8 || OpTy == MVT::i16) && ISD::isIntEqualitySetCC(CC)) {
     ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS);
     bool IsNegative = C && C->getAPIntValue().isNegative();
     if (IsNegative || isSExtFree(LHS) || isSExtFree(RHS))
@@ -1104,10 +1223,8 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
 
   if (OpTy == MVT::v2i16 || OpTy == MVT::v4i8) {
-    MVT ElemTy = OpTy.getVectorElementType();
-    assert(ElemTy.isScalarInteger());
-    MVT WideTy = MVT::getVectorVT(MVT::getIntegerVT(2*ElemTy.getSizeInBits()),
-                                  OpTy.getVectorNumElements());
+    assert(OpTy.getVectorElementType().isScalarInteger());
+    MVT WideTy = OpTy.widenIntegerElementType();
     // Generate (trunc (select (_, sext, sext))).
     return DAG.getSExtOrTrunc(
               DAG.getSelect(dl, WideTy, PredOp,
@@ -1119,6 +1236,31 @@ HexagonTargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+// Lower SELECT with a scalar condition and a predicate-vector result.
+// Such a vector cannot be promoted to a vector of i32 the way the wider vector
+// types are, because v2i1/v4i1/v8i1 are only 2/4/8 bits wide.
+SDValue HexagonTargetLowering::LowerBoolVectorSelect(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  MVT ResTy = ty(Op);
+  if (ResTy != MVT::v2i1 && ResTy != MVT::v4i1 && ResTy != MVT::v8i1)
+    return SDValue();
+
+  const SDLoc &dl(Op);
+  // Each of these vectors occupies all 8 bits of a predicate register, with
+  // every element repeated over 8/NumElts of them (see extractVectorPred).
+  // The condition is a scalar, so the same source is picked for every element
+  // and the whole 8-bit pattern can be selected at once -- no per-element mask
+  // arithmetic is needed here, unlike in LowerBUILD_VECTOR.  Move both
+  // predicates into general-purpose registers, select there, and move the
+  // result back, as insertVectorPred does.
+  SDValue T =
+      getInstr(Hexagon::C2_tfrpr, dl, MVT::i32, {Op.getOperand(1)}, DAG);
+  SDValue F =
+      getInstr(Hexagon::C2_tfrpr, dl, MVT::i32, {Op.getOperand(2)}, DAG);
+  SDValue S = DAG.getSelect(dl, MVT::i32, Op.getOperand(0), T, F);
+  return getInstr(Hexagon::C2_tfrrp, dl, ResTy, {S}, DAG);
+}
+
 SDValue
 HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   EVT ValTy = Op.getValueType();
@@ -1127,13 +1269,13 @@ HexagonTargetLowering::LowerConstantPool(SDValue Op, SelectionDAG &DAG) const {
   bool isVTi1Type = false;
   if (auto *CV = dyn_cast<ConstantVector>(CPN->getConstVal())) {
     if (cast<VectorType>(CV->getType())->getElementType()->isIntegerTy(1)) {
-      IRBuilder<> IRB(CV->getContext());
       SmallVector<Constant*, 128> NewConst;
       unsigned VecLen = CV->getNumOperands();
       assert(isPowerOf2_32(VecLen) &&
              "conversion only supported for pow2 VectorSize");
       for (unsigned i = 0; i < VecLen; ++i)
-        NewConst.push_back(IRB.getInt8(CV->getOperand(i)->isZeroValue()));
+        NewConst.push_back(ConstantInt::get(Type::getInt8Ty(CV->getContext()),
+                                            CV->getOperand(i)->isNullValue()));
 
       CVal = ConstantVector::get(NewConst);
       isVTi1Type = true;
@@ -1181,9 +1323,6 @@ HexagonTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
@@ -1443,8 +1582,8 @@ HexagonTargetLowering::LowerGlobalTLSAddress(SDValue Op,
 
 HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
                                              const HexagonSubtarget &ST)
-    : TargetLowering(TM), HTM(static_cast<const HexagonTargetMachine&>(TM)),
-      Subtarget(ST) {
+    : TargetLowering(TM, ST),
+      HTM(static_cast<const HexagonTargetMachine &>(TM)), Subtarget(ST) {
   auto &HRI = *Subtarget.getRegisterInfo();
 
   setPrefLoopAlignment(Align(16));
@@ -1463,12 +1602,14 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     setSchedulingPreference(Sched::Source);
 
   // Limits for inline expansion of memcpy/memmove
-  MaxStoresPerMemcpy = MaxStoresPerMemcpyCL;
-  MaxStoresPerMemcpyOptSize = MaxStoresPerMemcpyOptSizeCL;
-  MaxStoresPerMemmove = MaxStoresPerMemmoveCL;
-  MaxStoresPerMemmoveOptSize = MaxStoresPerMemmoveOptSizeCL;
-  MaxStoresPerMemset = MaxStoresPerMemsetCL;
-  MaxStoresPerMemsetOptSize = MaxStoresPerMemsetOptSizeCL;
+  MaxStoresPerMemcpy = 6;
+  MaxStoresPerMemcpyOptSize = 4;
+  MaxStoresPerMemmove = 6;
+  MaxStoresPerMemmoveOptSize = 4;
+  MaxStoresPerMemset = 8;
+  MaxStoresPerMemsetOptSize = 4;
+
+  setTargetDAGCombine(ISD::VECREDUCE_ADD);
 
   //
   // Set up register classes.
@@ -1513,9 +1654,11 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INLINEASM,            MVT::Other, Custom);
   setOperationAction(ISD::INLINEASM_BR,         MVT::Other, Custom);
   setOperationAction(ISD::PREFETCH,             MVT::Other, Custom);
-  setOperationAction(ISD::READCYCLECOUNTER,     MVT::i64,   Custom);
-  setOperationAction(ISD::READSTEADYCOUNTER,    MVT::i64,   Custom);
+  setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
+  setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Legal);
+  setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::INTRINSIC_VOID,       MVT::Other, Custom);
+  setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::Other, Custom);
   setOperationAction(ISD::EH_RETURN,            MVT::Other, Custom);
   setOperationAction(ISD::GLOBAL_OFFSET_TABLE,  MVT::i32,   Custom);
   setOperationAction(ISD::GlobalTLSAddress,     MVT::i32,   Custom);
@@ -1599,12 +1742,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
     for (MVT VT : MVT::integer_valuetypes())
       setOperationAction(IntExpOp, VT, Expand);
   }
-
-  for (unsigned FPExpOp :
-       {ISD::FDIV, ISD::FREM, ISD::FSQRT, ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
-        ISD::FPOW, ISD::FCOPYSIGN}) {
-    for (MVT VT : MVT::fp_valuetypes())
+  for (MVT VT : MVT::fp_valuetypes()) {
+    for (unsigned FPExpOp : {ISD::FDIV, ISD::FSQRT, ISD::FSIN, ISD::FCOS,
+                             ISD::FSINCOS, ISD::FPOW, ISD::FCOPYSIGN})
       setOperationAction(FPExpOp, VT, Expand);
+
+    setOperationAction(ISD::FREM, VT, LibCall);
   }
 
   // No extending loads from i32.
@@ -1615,6 +1758,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   }
   // Turn FP truncstore into trunc + store.
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+  setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
+  setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
   // Turn FP extload into load/fpextend.
   for (MVT VT : MVT::fp_valuetypes())
     setLoadExtAction(ISD::EXTLOAD, VT, MVT::f32, Expand);
@@ -1678,16 +1823,29 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       setTruncStoreAction(VT, TargetVT, Expand);
     }
 
-    // Normalize all inputs to SELECT to be vectors of i32.
+    // Normalize inputs to SELECT to be vectors of i32 if the vector is an
+    // exact, non-zero multiple of 32 bits wide. For anything narrower the
+    // element count below truncates to zero and MVT::getVectorVT would
+    // build an invalid type. The types that actually reach this are the
+    // vXi1 predicate vectors (v2i1/v4i1/v8i1); they are given a Custom
+    // action further down.
     if (VT.getVectorElementType() != MVT::i32) {
-      MVT VT32 = MVT::getVectorVT(MVT::i32, VT.getSizeInBits()/32);
-      setOperationAction(ISD::SELECT, VT, Promote);
-      AddPromotedToType(ISD::SELECT, VT, VT32);
+      unsigned Width = VT.getSizeInBits();
+      if (Width >= 32 && Width % 32 == 0) {
+        MVT VT32 = MVT::getVectorVT(MVT::i32, VT.getSizeInBits() / 32);
+        setOperationAction(ISD::SELECT, VT, Promote);
+        AddPromotedToType(ISD::SELECT, VT, VT32);
+      } else {
+        setOperationAction(ISD::SELECT, VT, Expand);
+      }
     }
     setOperationAction(ISD::SRA, VT, Custom);
     setOperationAction(ISD::SHL, VT, Custom);
     setOperationAction(ISD::SRL, VT, Custom);
   }
+
+  setOperationAction(ISD::SADDSAT, MVT::i32, Legal);
+  setOperationAction(ISD::SADDSAT, MVT::i64, Legal);
 
   // Extending loads from (native) vectors of i8 into (native) vectors of i16
   // are legal.
@@ -1723,6 +1881,10 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SPLAT_VECTOR, NativeVT, Legal);
       setOperationAction(ISD::BSWAP,        NativeVT, Legal);
       setOperationAction(ISD::BITREVERSE,   NativeVT, Legal);
+    } else {
+      // A predicate vector is too narrow to promote SELECT to a vector of i32
+      // (see above), so lower it directly.
+      setOperationAction(ISD::SELECT, NativeVT, Custom);
     }
   }
 
@@ -1787,6 +1949,12 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::FMINIMUMNUM, MVT::f32, Legal);
   setOperationAction(ISD::FMAXIMUMNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMINNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMAXNUM, MVT::f32, Legal);
+  setOperationAction(ISD::FMAXIMUM, MVT::f32, Custom);
+  setOperationAction(ISD::FMAXIMUM, MVT::f16, Custom);
+  setOperationAction(ISD::FMINIMUM, MVT::f32, Custom);
+  setOperationAction(ISD::FMINIMUM, MVT::f16, Custom);
 
   setOperationAction(ISD::FP_TO_UINT, MVT::i1,  Promote);
   setOperationAction(ISD::FP_TO_UINT, MVT::i8,  Promote);
@@ -1807,9 +1975,15 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+  setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::FP_TO_BF16, MVT::f64, Expand);
 
   setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
+
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
   setTruncStoreAction(MVT::f64, MVT::f16, Expand);
 
@@ -1836,6 +2010,8 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   if (Subtarget.hasV67Ops()) {
     setOperationAction(ISD::FMINIMUMNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMAXIMUMNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
+    setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
     setOperationAction(ISD::FMUL,    MVT::f64, Legal);
   }
 
@@ -1846,65 +2022,10 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   if (Subtarget.useHVXOps())
     initializeHVXLowering();
 
-  computeRegisterProperties(&HRI);
-}
+  if (Subtarget.useHLXOps())
+    initializeHLXLowering();
 
-const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
-  switch ((HexagonISD::NodeType)Opcode) {
-  case HexagonISD::ADDC:          return "HexagonISD::ADDC";
-  case HexagonISD::SUBC:          return "HexagonISD::SUBC";
-  case HexagonISD::ALLOCA:        return "HexagonISD::ALLOCA";
-  case HexagonISD::AT_GOT:        return "HexagonISD::AT_GOT";
-  case HexagonISD::AT_PCREL:      return "HexagonISD::AT_PCREL";
-  case HexagonISD::BARRIER:       return "HexagonISD::BARRIER";
-  case HexagonISD::CALL:          return "HexagonISD::CALL";
-  case HexagonISD::CALLnr:        return "HexagonISD::CALLnr";
-  case HexagonISD::CALLR:         return "HexagonISD::CALLR";
-  case HexagonISD::COMBINE:       return "HexagonISD::COMBINE";
-  case HexagonISD::CONST32_GP:    return "HexagonISD::CONST32_GP";
-  case HexagonISD::CONST32:       return "HexagonISD::CONST32";
-  case HexagonISD::CP:            return "HexagonISD::CP";
-  case HexagonISD::DCFETCH:       return "HexagonISD::DCFETCH";
-  case HexagonISD::EH_RETURN:     return "HexagonISD::EH_RETURN";
-  case HexagonISD::TSTBIT:        return "HexagonISD::TSTBIT";
-  case HexagonISD::EXTRACTU:      return "HexagonISD::EXTRACTU";
-  case HexagonISD::INSERT:        return "HexagonISD::INSERT";
-  case HexagonISD::JT:            return "HexagonISD::JT";
-  case HexagonISD::RET_GLUE:      return "HexagonISD::RET_GLUE";
-  case HexagonISD::TC_RETURN:     return "HexagonISD::TC_RETURN";
-  case HexagonISD::VASL:          return "HexagonISD::VASL";
-  case HexagonISD::VASR:          return "HexagonISD::VASR";
-  case HexagonISD::VLSR:          return "HexagonISD::VLSR";
-  case HexagonISD::MFSHL:         return "HexagonISD::MFSHL";
-  case HexagonISD::MFSHR:         return "HexagonISD::MFSHR";
-  case HexagonISD::SSAT:          return "HexagonISD::SSAT";
-  case HexagonISD::USAT:          return "HexagonISD::USAT";
-  case HexagonISD::SMUL_LOHI:     return "HexagonISD::SMUL_LOHI";
-  case HexagonISD::UMUL_LOHI:     return "HexagonISD::UMUL_LOHI";
-  case HexagonISD::USMUL_LOHI:    return "HexagonISD::USMUL_LOHI";
-  case HexagonISD::VEXTRACTW:     return "HexagonISD::VEXTRACTW";
-  case HexagonISD::VINSERTW0:     return "HexagonISD::VINSERTW0";
-  case HexagonISD::VROR:          return "HexagonISD::VROR";
-  case HexagonISD::READCYCLE:     return "HexagonISD::READCYCLE";
-  case HexagonISD::READTIMER:     return "HexagonISD::READTIMER";
-  case HexagonISD::PTRUE:         return "HexagonISD::PTRUE";
-  case HexagonISD::PFALSE:        return "HexagonISD::PFALSE";
-  case HexagonISD::D2P:           return "HexagonISD::D2P";
-  case HexagonISD::P2D:           return "HexagonISD::P2D";
-  case HexagonISD::V2Q:           return "HexagonISD::V2Q";
-  case HexagonISD::Q2V:           return "HexagonISD::Q2V";
-  case HexagonISD::QCAT:          return "HexagonISD::QCAT";
-  case HexagonISD::QTRUE:         return "HexagonISD::QTRUE";
-  case HexagonISD::QFALSE:        return "HexagonISD::QFALSE";
-  case HexagonISD::TL_EXTEND:     return "HexagonISD::TL_EXTEND";
-  case HexagonISD::TL_TRUNCATE:   return "HexagonISD::TL_TRUNCATE";
-  case HexagonISD::TYPECAST:      return "HexagonISD::TYPECAST";
-  case HexagonISD::VALIGN:        return "HexagonISD::VALIGN";
-  case HexagonISD::VALIGNADDR:    return "HexagonISD::VALIGNADDR";
-  case HexagonISD::ISEL:          return "HexagonISD::ISEL";
-  case HexagonISD::OP_END:        break;
-  }
-  return nullptr;
+  computeRegisterProperties(&HRI);
 }
 
 bool
@@ -1915,7 +2036,7 @@ HexagonTargetLowering::validateConstPtrAlignment(SDValue Ptr, Align NeedAlign,
     return true;
   unsigned Addr = CA->getZExtValue();
   Align HaveAlign =
-      Addr != 0 ? Align(1ull << llvm::countr_zero(Addr)) : NeedAlign;
+      Addr != 0 ? Align::fromLog2(llvm::countr_zero(Addr)) : NeedAlign;
   if (HaveAlign >= NeedAlign)
     return true;
 
@@ -2017,15 +2138,43 @@ static Value *returnEdge(const PHINode *PN, Value *IntrBaseVal) {
 // Bit-reverse Load Intrinsic: Figure out the underlying object the base
 // pointer points to, for the bit-reverse load intrinsic. Setting this to
 // memoperand might help alias analysis to figure out the dependencies.
-static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
+// A bit-reverse load accesses the base pointer with its low 16 bits reversed,
+// and post-increments the base pointer by the modifier value. For a chain of
+// bit-reverse loads, the offset that a load accesses relative to the
+// underlying object is the bit-reverse of the sum of the modifiers of the
+// preceding loads in the chain. Offset is set to that value, and HasOffset is
+// set to true, when the sum is known, that is when all of those modifiers are
+// constants and the sum fits in 16 unsigned bits. Otherwise HasOffset is set
+// to false and Offset is left unchanged.
+static Value *getUnderLyingObjectForBrevLdIntr(Value *V, int &Offset,
+                                               bool &HasOffset) {
   Value *IntrBaseVal = V;
   Value *BaseVal;
+  int64_t Sum = 0;
+  HasOffset = true;
   // Loop over till we return the same Value, implies we either figure out
   // the object or we hit a PHI
   do {
     BaseVal = V;
     V = getBrevLdObject(V);
+    // Identify if this is part of a chain of bit-reverse loads, and accumulate
+    // the modifier of the preceding load in the chain.
+    if (HasOffset && BaseVal != V && isa<IntrinsicInst>(V) &&
+        isBrevLdIntrinsic(V)) {
+      Value *Modifier = cast<IntrinsicInst>(V)->getOperand(1);
+      if (auto *CN = dyn_cast<ConstantInt>(Modifier))
+        Sum += CN->getSExtValue();
+      else
+        HasOffset = false;
+    }
   } while (BaseVal != V);
+
+  // Only the low 16 bits of the base pointer take part in the bit-reverse. A
+  // sum that does not fit in them would also change the remaining bits.
+  if (HasOffset && Sum >= 0 && isUInt<16>(Sum))
+    Offset = APInt(16, Sum).reverseBits().getZExtValue();
+  else
+    HasOffset = false;
 
   // Identify the object from PHINode.
   if (const PHINode *PN = dyn_cast<PHINode>(V))
@@ -2035,15 +2184,41 @@ static Value *getUnderLyingObjectForBrevLdIntr(Value *V) {
     return V;
 }
 
+/// Infer IntrinsicInfo for an HLX memory intrinsic from its IR signature.
+/// Loads return a vector type; stores have a void return and pass the vector
+/// as an argument.
+static void getHlxMemIntrinsicInfo(const CallBase &I,
+                                   const HexagonSubtarget &ST,
+                                   TargetLowering::IntrinsicInfo &Info) {
+  Type *RetTy = I.getCalledFunction()->getReturnType();
+  bool IsLoad = RetTy->isVectorTy();
+  Type *VecTy = IsLoad ? RetTy : I.getArgOperand(1)->getType();
+  assert(VecTy->isVectorTy() && ST.isHLXVectorType(MVT::getVT(VecTy)) &&
+         "Expected HLX vector type in HLX intrinsic");
+
+  Info.opc = IsLoad ? ISD::INTRINSIC_W_CHAIN : ISD::INTRINSIC_VOID;
+  Info.memVT = MVT::getVT(VecTy);
+  Info.ptrVal = I.getArgOperand(0);
+  Info.offset = 0;
+  Info.align = Align(ST.getHLXVectorLength());
+  Info.flags = IsLoad ? MachineMemOperand::MOLoad : MachineMemOperand::MOStore;
+}
+
 /// Given an intrinsic, checks if on the target the intrinsic will need to map
-/// to a MemIntrinsicNode (touches memory). If this is the case, it returns
-/// true and store the intrinsic information into the IntrinsicInfo that was
-/// passed to the function.
-bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                               const CallInst &I,
-                                               MachineFunction &MF,
-                                               unsigned Intrinsic) const {
+/// to a MemIntrinsicNode (touches memory). If this is the case, it stores
+/// the intrinsic information into the Infos vector.
+void HexagonTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   switch (Intrinsic) {
+  case Intrinsic::hexagon_LX_L16b_tmp:
+  case Intrinsic::hexagon_LX_LL16b_tmp:
+  case Intrinsic::hexagon_LX_S16b_new:
+  case Intrinsic::hexagon_LX_SS16b_new:
+    getHlxMemIntrinsicInfo(I, Subtarget, Info);
+    Infos.push_back(Info);
+    return;
   case Intrinsic::hexagon_L2_loadrd_pbr:
   case Intrinsic::hexagon_L2_loadri_pbr:
   case Intrinsic::hexagon_L2_loadrh_pbr:
@@ -2059,13 +2234,28 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Type *ElTy = I.getCalledFunction()->getReturnType()->getStructElementType(0);
     Info.memVT = MVT::getVT(ElTy);
     llvm::Value *BasePtrVal = I.getOperand(0);
-    Info.ptrVal = getUnderLyingObjectForBrevLdIntr(BasePtrVal);
-    // The offset value comes through Modifier register. For now, assume the
-    // offset is 0.
+    // The offset value comes through the Modifier register. Determine the
+    // offset that is going to be accessed relative to the underlying object.
+    // If it cannot be determined, leave the pointer information out of the
+    // memory operand, so that alias analysis stays conservative.
+    bool HasOffset = false;
     Info.offset = 0;
+    Value *UnderlyingObj =
+        getUnderLyingObjectForBrevLdIntr(BasePtrVal, Info.offset, HasOffset);
+    // The underlying object is unknown if the base pointer could not be traced
+    // back to a pointer value. Also, unless the object is aligned to 64K, the
+    // low 16 bits of the base pointer are not known, and reversing them can
+    // produce an address anywhere in the surrounding 64K region, possibly
+    // outside of the object.
+    if (!UnderlyingObj->getType()->isPointerTy() ||
+        UnderlyingObj->getPointerAlignment(DL) < Align(65536))
+      HasOffset = false;
+    if (HasOffset)
+      Info.ptrVal = UnderlyingObj;
     Info.align = DL.getABITypeAlign(Info.memVT.getTypeForEVT(Cont));
     Info.flags = MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::hexagon_V6_vgathermw:
   case Intrinsic::hexagon_V6_vgathermw_128B:
@@ -2078,24 +2268,26 @@ bool HexagonTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::hexagon_V6_vgathermhq:
   case Intrinsic::hexagon_V6_vgathermhq_128B:
   case Intrinsic::hexagon_V6_vgathermhwq:
-  case Intrinsic::hexagon_V6_vgathermhwq_128B: {
+  case Intrinsic::hexagon_V6_vgathermhwq_128B:
+  case Intrinsic::hexagon_V6_vgather_vscattermh:
+  case Intrinsic::hexagon_V6_vgather_vscattermh_128B: {
     const Module &M = *I.getParent()->getParent()->getParent();
     Info.opc = ISD::INTRINSIC_W_CHAIN;
-    Type *VecTy = I.getArgOperand(1)->getType();
+    Type *VecTy = I.getArgOperand(I.arg_size() - 1)->getType();
+    assert(VecTy->isVectorTy() && "Expected vector operand for vgather");
     Info.memVT = MVT::getVT(VecTy);
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.align =
         MaybeAlign(M.getDataLayout().getTypeAllocSizeInBits(VecTy) / 8);
-    Info.flags = MachineMemOperand::MOLoad |
-                 MachineMemOperand::MOStore |
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                  MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   default:
     break;
   }
-  return false;
 }
 
 bool HexagonTargetLowering::hasBitTest(SDValue X, SDValue Y) const {
@@ -2123,18 +2315,21 @@ bool HexagonTargetLowering::shouldExpandBuildVectorWithShuffles(EVT VT,
   return false;
 }
 
-bool HexagonTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
-      unsigned Index) const {
+TargetLowering::ExtractSubvectorCost
+HexagonTargetLowering::getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
+                                               unsigned Index) const {
   assert(ResVT.getVectorElementType() == SrcVT.getVectorElementType());
   if (!ResVT.isSimple() || !SrcVT.isSimple())
-    return false;
+    return ExtractSubvectorCost::Expensive;
 
   MVT ResTy = ResVT.getSimpleVT(), SrcTy = SrcVT.getSimpleVT();
   if (ResTy.getVectorElementType() != MVT::i1)
-    return true;
+    return ExtractSubvectorCost::Free;
 
   // Non-HVX bool vectors are relatively cheap.
-  return SrcTy.getVectorNumElements() <= 8;
+  if (SrcTy.getVectorNumElements() <= 8)
+    return ExtractSubvectorCost::Free;
+  return ExtractSubvectorCost::Expensive;
 }
 
 bool HexagonTargetLowering::isTargetCanonicalConstantNode(SDValue Op) const {
@@ -2351,9 +2546,18 @@ HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
     default:
       llvm_unreachable("Unexpected shift opcode");
   }
+  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG)) {
+    const SDLoc dl(Op);
+    // Canonicalize shift amount to i32 as required.
+    SDValue Sh = Sp;
+    if (Sh.getValueType() != MVT::i32)
+      Sh = DAG.getZExtOrTrunc(Sh, dl, MVT::i32);
 
-  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG))
-    return DAG.getNode(NewOpc, SDLoc(Op), ty(Op), Op.getOperand(0), Sp);
+    assert(Sh.getValueType() == MVT::i32 &&
+           "Hexagon vector shift-by-int must use i32 shift operand");
+    return DAG.getNode(NewOpc, dl, ty(Op), Op.getOperand(0), Sh);
+  }
+
   return SDValue();
 }
 
@@ -2450,7 +2654,8 @@ HexagonTargetLowering::getBuildVectorConstInts(ArrayRef<SDValue> Values,
     // Make sure to always cast to IntTy.
     if (auto *CN = dyn_cast<ConstantSDNode>(V.getNode())) {
       const ConstantInt *CI = CN->getConstantIntValue();
-      Consts[i] = ConstantInt::get(IntTy, CI->getValue().getSExtValue());
+      Consts[i] = cast<ConstantInt>(
+          ConstantInt::get(IntTy, CI->getValue().trunc(ElemWidth)));
     } else if (auto *CN = dyn_cast<ConstantFPSDNode>(V.getNode())) {
       const ConstantFP *CF = CN->getConstantFPValue();
       APInt A = CF->getValueAPF().bitcastToAPInt();
@@ -2872,16 +3077,15 @@ HexagonTargetLowering::getCombine(SDValue Hi, SDValue Lo, const SDLoc &dl,
 
   if (!ElemTy.isVector()) {
     assert(ElemTy.isScalarInteger());
-    MVT PairTy = MVT::getIntegerVT(2 * ElemTy.getSizeInBits());
+    MVT PairTy = ElemTy.widenIntegerElementType();
     SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, PairTy, Lo, Hi);
     return DAG.getBitcast(ResTy, Pair);
   }
 
   unsigned Width = ElemTy.getSizeInBits();
   MVT IntTy = MVT::getIntegerVT(Width);
-  MVT PairTy = MVT::getIntegerVT(2 * Width);
   SDValue Pair =
-      DAG.getNode(ISD::BUILD_PAIR, dl, PairTy,
+      DAG.getNode(ISD::BUILD_PAIR, dl, IntTy.widenIntegerElementType(),
                   {DAG.getBitcast(IntTy, Lo), DAG.getBitcast(IntTy, Hi)});
   return DAG.getBitcast(ResTy, Pair);
 }
@@ -3058,7 +3262,7 @@ HexagonTargetLowering::LowerLoad(SDValue Op, SelectionDAG &DAG) const {
         LN->getAddressingMode(), ISD::ZEXTLOAD, MVT::i32, dl, LN->getChain(),
         LN->getBasePtr(), LN->getOffset(), LN->getPointerInfo(),
         /*MemoryVT*/ MVT::i8, LN->getAlign(), LN->getMemOperand()->getFlags(),
-        LN->getAAInfo(), LN->getRanges());
+        MMOMetadata(LN->getAAInfo(), LN->getRanges()));
     LN = cast<LoadSDNode>(NL.getNode());
   }
 
@@ -3185,7 +3389,7 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
     MachineFunction &MF = DAG.getMachineFunction();
     WideMMO = MF.getMachineMemOperand(
         MMO->getPointerInfo(), MMO->getFlags(), 2 * LoadLen, Align(LoadLen),
-        MMO->getAAInfo(), MMO->getRanges(), MMO->getSyncScopeID(),
+        MMOMetadata(MMO->getAAInfo(), MMO->getRanges()), MMO->getSyncScopeID(),
         MMO->getSuccessOrdering(), MMO->getFailureOrdering());
   }
 
@@ -3285,12 +3489,15 @@ HexagonTargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   unsigned Opc = Op.getOpcode();
-
   // Handle INLINEASM first.
   if (Opc == ISD::INLINEASM || Opc == ISD::INLINEASM_BR)
     return LowerINLINEASM(Op, DAG);
 
-  if (isHvxOperation(Op.getNode(), DAG)) {
+  if (isHlxOperation(Op.getNode(), DAG)) {
+    // If HLX lowering returns nothing, try the default lowering.
+    if (SDValue V = LowerHlxOperation(Op, DAG))
+      return V;
+  } else if (isHvxOperation(Op.getNode(), DAG)) {
     // If HVX lowering returns nothing, try the default lowering.
     if (SDValue V = LowerHvxOperation(Op, DAG))
       return V;
@@ -3300,8 +3507,6 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     default:
 #ifndef NDEBUG
       Op.getNode()->dumpr(&DAG);
-      if (Opc > HexagonISD::OP_BEGIN && Opc < HexagonISD::OP_END)
-        errs() << "Error: check for a non-legal type in this operation\n";
 #endif
       llvm_unreachable("Should not custom lower this!");
 
@@ -3340,11 +3545,20 @@ HexagonTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::DYNAMIC_STACKALLOC:   return LowerDYNAMIC_STACKALLOC(Op, DAG);
     case ISD::SETCC:                return LowerSETCC(Op, DAG);
     case ISD::VSELECT:              return LowerVSELECT(Op, DAG);
+    case ISD::SELECT:
+      return LowerBoolVectorSelect(Op, DAG);
     case ISD::INTRINSIC_WO_CHAIN:   return LowerINTRINSIC_WO_CHAIN(Op, DAG);
     case ISD::INTRINSIC_VOID:       return LowerINTRINSIC_VOID(Op, DAG);
-    case ISD::PREFETCH:             return LowerPREFETCH(Op, DAG);
-    case ISD::READCYCLECOUNTER:     return LowerREADCYCLECOUNTER(Op, DAG);
-    case ISD::READSTEADYCOUNTER:    return LowerREADSTEADYCOUNTER(Op, DAG);
+    // INTRINSIC_W_CHAIN is marked Custom only so HLX memory intrinsics can be
+    // lowered (handled above via LowerHlxOperation). Any other W_CHAIN
+    // intrinsic is left unchanged for normal instruction selection.
+    case ISD::INTRINSIC_W_CHAIN:
+      return Op;
+    case ISD::PREFETCH:
+      return LowerPREFETCH(Op, DAG);
+    case ISD::FMAXIMUM:
+    case ISD::FMINIMUM:
+      return LowerFMINFMAX(Op, DAG);
       break;
   }
 
@@ -3415,15 +3629,49 @@ HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
 SDValue
 HexagonTargetLowering::PerformDAGCombine(SDNode *N,
                                          DAGCombinerInfo &DCI) const {
+  SDValue Op(N, 0);
+  const SDLoc &dl(Op);
+  unsigned Opc = Op.getOpcode();
+
+  // Combining transformations applicable for arbitrary vector sizes.
+  if (DCI.isBeforeLegalizeOps()) {
+    switch (Opc) {
+    case ISD::VECREDUCE_ADD:
+      if (SDValue V = splitVecReduceAdd(N, DCI.DAG))
+        return V;
+      if (SDValue V = expandVecReduceAdd(N, DCI.DAG))
+        return V;
+      return SDValue();
+    case ISD::PARTIAL_REDUCE_SMLA:
+    case ISD::PARTIAL_REDUCE_UMLA:
+    case ISD::PARTIAL_REDUCE_SUMLA:
+      if (SDValue V = splitExtendingPartialReduceMLA(N, DCI.DAG))
+        return V;
+      return SDValue();
+    }
+  } else {
+    switch (Opc) {
+    case ISD::VSELECT: {
+      // (vselect (xor x, ptrue), v0, v1) -> (vselect x, v1, v0)
+      SDValue Cond = Op.getOperand(0);
+      if (Cond->getOpcode() == ISD::XOR) {
+        SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
+        if (C1->getOpcode() == HexagonISD::PTRUE) {
+          SDValue VSel = DCI.DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
+                                         Op.getOperand(2), Op.getOperand(1));
+          return VSel;
+        }
+      }
+      return SDValue();
+    }
+    }
+  }
+
   if (isHvxOperation(N, DCI.DAG)) {
     if (SDValue V = PerformHvxDAGCombine(N, DCI))
       return V;
     return SDValue();
   }
-
-  SDValue Op(N, 0);
-  const SDLoc &dl(Op);
-  unsigned Opc = Op.getOpcode();
 
   if (Opc == ISD::TRUNCATE) {
     SDValue Op0 = Op.getOperand(0);
@@ -3443,7 +3691,8 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  if (Opc == HexagonISD::P2D) {
+  switch (Opc) {
+  case HexagonISD::P2D: {
     SDValue P = Op.getOperand(0);
     switch (P.getOpcode()) {
     case HexagonISD::PTRUE:
@@ -3453,20 +3702,9 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
     default:
       break;
     }
-  } else if (Opc == ISD::VSELECT) {
-    // This is pretty much duplicated in HexagonISelLoweringHVX...
-    //
-    // (vselect (xor x, ptrue), v0, v1) -> (vselect x, v1, v0)
-    SDValue Cond = Op.getOperand(0);
-    if (Cond->getOpcode() == ISD::XOR) {
-      SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
-      if (C1->getOpcode() == HexagonISD::PTRUE) {
-        SDValue VSel = DCI.DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
-                                       Op.getOperand(2), Op.getOperand(1));
-        return VSel;
-      }
-    }
-  } else if (Opc == ISD::TRUNCATE) {
+    break;
+  }
+  case ISD::TRUNCATE: {
     SDValue Op0 = Op.getOperand(0);
     // fold (truncate (build pair x, y)) -> (truncate x) or x
     if (Op0.getOpcode() == ISD::BUILD_PAIR) {
@@ -3479,7 +3717,9 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
       if (ty(Elem0).bitsGT(TruncTy))
         return DCI.DAG.getNode(ISD::TRUNCATE, dl, TruncTy, Elem0);
     }
-  } else if (Opc == ISD::OR) {
+    break;
+  }
+  case ISD::OR: {
     // fold (or (shl xx, s), (zext y)) -> (COMBINE (shl xx, s-32), y)
     // if s >= 32
     auto fold0 = [&, this](SDValue Op) {
@@ -3509,6 +3749,8 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (SDValue R = fold0(Op))
       return R;
+    break;
+  }
   }
 
   return SDValue();
@@ -3602,12 +3844,23 @@ HexagonTargetLowering::getRegForInlineAsmConstraint(
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
 }
 
-/// isFPImmLegal - Returns true if the target can instruction select the
-/// specified FP immediate natively. If false, the legalizer will
-/// materialize the FP immediate as a load from a constant pool.
-bool HexagonTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool ForCodeSize) const {
-  return true;
+/// Returns how to materialize the specified FP immediate.
+TargetLowering::FPImmAction
+HexagonTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                      bool ForCodeSize) const {
+  return FPImmAction::Legal;
+}
+
+/// Returns true if it is beneficial to convert a load of a constant
+/// to just the constant itself.
+bool HexagonTargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
+                                                              Type *Ty) const {
+  if (!ConstantLoadsToImm)
+    return false;
+
+  assert(Ty->isIntegerTy());
+  unsigned BitSize = Ty->getPrimitiveSizeInBits();
+  return (BitSize > 0 && BitSize <= 64);
 }
 
 /// isLegalAddressingMode - Return true if the addressing mode represented by
@@ -3729,7 +3982,8 @@ bool HexagonTargetLowering::IsEligibleForTailCallOptimization(
 /// does not need to be loaded.  It returns EVT::Other if the type should be
 /// determined using generic target-independent logic.
 EVT HexagonTargetLowering::getOptimalMemOpType(
-    const MemOp &Op, const AttributeList &FuncAttributes) const {
+    LLVMContext &Context, const MemOp &Op,
+    const AttributeList &FuncAttributes) const {
   if (Op.size() >= 8 && Op.isAligned(Align(8)))
     return MVT::i64;
   if (Op.size() >= 4 && Op.isAligned(Align(4)))
@@ -3739,12 +3993,86 @@ EVT HexagonTargetLowering::getOptimalMemOpType(
   return MVT::Other;
 }
 
+// The helpers below are versions of llvm::getShuffleReduction and
+// llvm::getOrderedReduction, adapted to use during DAG passes and simplified as
+// follows:
+// - ICmp and FCmp are not handled;
+// - in every step in getShuffleReduction, the input is split into halves (not
+// pairwise).
+
+static SDValue getOrderedReduction(SDValue Vec, unsigned Op,
+                                   SelectionDAG &DAG) {
+  assert(Op != Instruction::ICmp && Op != Instruction::FCmp);
+
+  EVT VT = Vec.getValueType();
+  EVT EltT = VT.getVectorElementType();
+  unsigned VF = VT.getVectorNumElements();
+  assert(VF > 0 &&
+         "Reduction emission only supported for non-zero length vectors!");
+
+  SDLoc DL(Vec);
+  SDValue Result = DAG.getExtractVectorElt(DL, EltT, Vec, 0);
+  for (unsigned ExtractIdx = 1; ExtractIdx < VF; ++ExtractIdx) {
+    SDValue Ext = DAG.getExtractVectorElt(DL, EltT, Vec, ExtractIdx);
+    Result = DAG.getNode(Op, DL, EltT, {Result, Ext});
+  }
+
+  return Result;
+}
+
+static SDValue getShuffleReduction(SDValue Vec, unsigned Op,
+                                   SelectionDAG &DAG) {
+  assert(Op != Instruction::ICmp && Op != Instruction::FCmp);
+
+  EVT VT = Vec.getValueType();
+  unsigned VF = VT.getVectorNumElements();
+  if (VF == 0)
+    llvm_unreachable("Vector must be non-zero length");
+  // VF is a power of 2 so we can emit the reduction using log2(VF) shuffles
+  // and vector ops, reducing the set of values being computed by half each
+  // round.
+  assert(isPowerOf2_32(VF) &&
+         "Reduction emission only supported for pow2 vectors!");
+
+  SDLoc DL(Vec);
+  // TODO: Is it correct to create double-vector shuffle and fill 3/4 of it with
+  // undefs?
+  SmallVector<int, 32> ShuffleMask(VF);
+  for (unsigned i = VF; i > 1; i >>= 1) {
+    // Move the upper half of the vector to the lower half.
+    for (unsigned j = 0; j != i / 2; ++j)
+      ShuffleMask[j] = i / 2 + j;
+    // Fill the rest of the mask with undef.
+    std::fill(&ShuffleMask[i / 2], ShuffleMask.end(), -1);
+
+    SDValue Shuf =
+        DAG.getVectorShuffle(VT, DL, Vec, DAG.getUNDEF(VT), ShuffleMask);
+
+    Vec = DAG.getNode(Op, DL, VT, {Vec, Shuf});
+  }
+  // The result is in the first element of the vector.
+  return DAG.getExtractVectorElt(DL, VT.getVectorElementType(), Vec, 0);
+}
+
+SDValue HexagonTargetLowering::expandVecReduceAdd(SDNode *N,
+                                                  SelectionDAG &DAG) const {
+  // Since we disabled automatic reduction expansion, generate log2 ladder code
+  // if the vector is of a power-of-two length.
+  SDValue Input = N->getOperand(0);
+  if (isPowerOf2_32(Input.getValueType().getVectorNumElements()))
+    return getShuffleReduction(Input, ISD::ADD, DAG);
+  // Otherwise, reduction will be scalarized.
+  return getOrderedReduction(Input, ISD::ADD, DAG);
+}
+
 bool HexagonTargetLowering::allowsMemoryAccess(
     LLVMContext &Context, const DataLayout &DL, EVT VT, unsigned AddrSpace,
     Align Alignment, MachineMemOperand::Flags Flags, unsigned *Fast) const {
   if (!VT.isSimple())
     return false;
   MVT SVT = VT.getSimpleVT();
+  if (Subtarget.isHLXVectorType(SVT))
+    return allowsHlxMemoryAccess(SVT, Flags, Fast);
   if (Subtarget.isHVXVectorType(SVT, true))
     return allowsHvxMemoryAccess(SVT, Flags, Fast);
   return TargetLoweringBase::allowsMemoryAccess(
@@ -3847,7 +4175,7 @@ Value *HexagonTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
 }
 
 TargetLowering::AtomicExpansionKind
-HexagonTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+HexagonTargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   // Do not expand loads and stores that don't exceed 64 bits.
   return LI->getType()->getPrimitiveSizeInBits() > 64
              ? AtomicExpansionKind::LLOnly
@@ -3855,7 +4183,7 @@ HexagonTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+HexagonTargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   // Do not expand loads and stores that don't exceed 64 bits.
   return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() > 64
              ? AtomicExpansionKind::Expand
@@ -3864,6 +4192,109 @@ HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
-    AtomicCmpXchgInst *AI) const {
+    const AtomicCmpXchgInst *AI) const {
   return AtomicExpansionKind::LLSC;
+}
+
+MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
+    // These are lowered in the AsmPrinter.
+    return BB;
+  default:
+    llvm_unreachable("Unexpected instruction with custom inserter");
+  }
+}
+
+MachineInstr *
+HexagonTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::instr_iterator &MBBI,
+                                     const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  switch (MBBI->getOpcode()) {
+  case Hexagon::J2_callr:
+  case Hexagon::PS_callr_nr:
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  MachineOperand &Target = MBBI->getOperand(0);
+  assert(Target.isReg() && "Invalid target operand for an indirect call");
+  Target.setIsRenamable(false);
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Hexagon::KCFI_CHECK))
+      .addReg(Target.getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
+}
+
+bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(
+    const Instruction &AndI) const {
+  // Only sink 'and' mask to cmp use block if it is masking a single bit since
+  // this will fold the and/cmp/br into a single tstbit instruction.
+  ConstantInt *Mask = dyn_cast<ConstantInt>(AndI.getOperand(1));
+  if (!Mask)
+    return false;
+  return Mask->getValue().isPowerOf2();
+}
+
+// Check if the result of the node is only used as a return value, as
+// otherwise we can't perform a tail-call.
+bool HexagonTargetLowering::isUsedByReturnOnly(SDNode *N,
+                                               SDValue &Chain) const {
+  if (N->getNumValues() != 1)
+    return false;
+  if (!N->hasNUsesOfValue(1, 0))
+    return false;
+
+  SDNode *Copy = *N->user_begin();
+
+  if (Copy->getOpcode() == ISD::BITCAST) {
+    return isUsedByReturnOnly(Copy, Chain);
+  }
+
+  if (Copy->getOpcode() != ISD::CopyToReg) {
+    return false;
+  }
+
+  // If the ISD::CopyToReg has a glue operand, we conservatively assume it
+  // isn't safe to perform a tail call.
+  if (Copy->getOperand(Copy->getNumOperands() - 1).getValueType() == MVT::Glue)
+    return false;
+
+  // The copy must be used by a HexagonISD::RET_GLUE, and nothing else.
+  bool HasRet = false;
+  for (SDNode *Node : Copy->users()) {
+    if (Node->getOpcode() != HexagonISD::RET_GLUE)
+      return false;
+    HasRet = true;
+  }
+  if (!HasRet)
+    return false;
+
+  Chain = Copy->getOperand(0);
+  return true;
+}
+
+bool HexagonTargetLowering::hasInlineStackProbe(
+    const MachineFunction &MF) const {
+  if (MF.getFunction().hasFnAttribute("probe-stack"))
+    return MF.getFunction().getFnAttribute("probe-stack").getValueAsString() ==
+           "inline-asm";
+  return false;
+}
+
+unsigned HexagonTargetLowering::getStackProbeSize(const MachineFunction &MF,
+                                                  Align StackAlign) const {
+  const Function &Fn = MF.getFunction();
+  unsigned StackProbeSize =
+      Fn.getFnAttributeAsParsedInteger("stack-probe-size", 4096);
+  // Round down to the stack alignment.
+  StackProbeSize = alignDown(StackProbeSize, StackAlign.value());
+  return StackProbeSize ? StackProbeSize : StackAlign.value();
 }

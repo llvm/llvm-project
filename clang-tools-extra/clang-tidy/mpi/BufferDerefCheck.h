@@ -1,4 +1,4 @@
-//===--- BufferDerefCheck.h - clang-tidy-------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFER_DEREF_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFER_DEREF_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFERDEREFCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFERDEREFCHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
@@ -23,7 +23,7 @@ namespace clang::tidy::mpi {
 /// emitted.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/mpi/buffer-deref.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/mpi/buffer-deref.html
 class BufferDerefCheck : public ClangTidyCheck {
 public:
   BufferDerefCheck(StringRef Name, ClangTidyContext *Context)
@@ -48,4 +48,4 @@ private:
 
 } // namespace clang::tidy::mpi
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFER_DEREF_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_BUFFERDEREFCHECK_H

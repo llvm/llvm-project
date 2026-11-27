@@ -4,5 +4,4 @@ add_lldb_library(lldbPluginObjCPlusPlusLanguage PLUGIN
   LINK_LIBS
     lldbCore
     lldbTarget
-    lldbPluginClangCommon
 )

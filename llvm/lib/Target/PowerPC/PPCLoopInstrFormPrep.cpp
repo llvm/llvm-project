@@ -80,7 +80,6 @@
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -95,9 +94,9 @@
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
@@ -112,65 +111,6 @@
 #define DEBUG_TYPE "ppc-loop-instr-form-prep"
 
 using namespace llvm;
-
-static cl::opt<unsigned>
-    MaxVarsPrep("ppc-formprep-max-vars", cl::Hidden, cl::init(24),
-                cl::desc("Potential common base number threshold per function "
-                         "for PPC loop prep"));
-
-static cl::opt<bool> PreferUpdateForm("ppc-formprep-prefer-update",
-                                 cl::init(true), cl::Hidden,
-  cl::desc("prefer update form when ds form is also a update form"));
-
-static cl::opt<bool> EnableUpdateFormForNonConstInc(
-    "ppc-formprep-update-nonconst-inc", cl::init(false), cl::Hidden,
-    cl::desc("prepare update form when the load/store increment is a loop "
-             "invariant non-const value."));
-
-static cl::opt<bool> EnableChainCommoning(
-    "ppc-formprep-chain-commoning", cl::init(false), cl::Hidden,
-    cl::desc("Enable chain commoning in PPC loop prepare pass."));
-
-// Sum of following 3 per loop thresholds for all loops can not be larger
-// than MaxVarsPrep.
-// now the thresholds for each kind prep are exterimental values on Power9.
-static cl::opt<unsigned> MaxVarsUpdateForm("ppc-preinc-prep-max-vars",
-                                 cl::Hidden, cl::init(3),
-  cl::desc("Potential PHI threshold per loop for PPC loop prep of update "
-           "form"));
-
-static cl::opt<unsigned> MaxVarsDSForm("ppc-dsprep-max-vars",
-                                 cl::Hidden, cl::init(3),
-  cl::desc("Potential PHI threshold per loop for PPC loop prep of DS form"));
-
-static cl::opt<unsigned> MaxVarsDQForm("ppc-dqprep-max-vars",
-                                 cl::Hidden, cl::init(8),
-  cl::desc("Potential PHI threshold per loop for PPC loop prep of DQ form"));
-
-// Commoning chain will reduce the register pressure, so we don't consider about
-// the PHI nodes number.
-// But commoning chain will increase the addi/add number in the loop and also
-// increase loop ILP. Maximum chain number should be same with hardware
-// IssueWidth, because we won't benefit from ILP if the parallel chains number
-// is bigger than IssueWidth. We assume there are 2 chains in one bucket, so
-// there would be 4 buckets at most on P9(IssueWidth is 8).
-static cl::opt<unsigned> MaxVarsChainCommon(
-    "ppc-chaincommon-max-vars", cl::Hidden, cl::init(4),
-    cl::desc("Bucket number per loop for PPC loop chain common"));
-
-// If would not be profitable if the common base has only one load/store, ISEL
-// should already be able to choose best load/store form based on offset for
-// single load/store. Set minimal profitable value default to 2 and make it as
-// an option.
-static cl::opt<unsigned> DispFormPrepMinThreshold("ppc-dispprep-min-threshold",
-                                    cl::Hidden, cl::init(2),
-  cl::desc("Minimal common base load/store instructions triggering DS/DQ form "
-           "preparation"));
-
-static cl::opt<unsigned> ChainCommonPrepMinThreshold(
-    "ppc-chaincommon-min-threshold", cl::Hidden, cl::init(4),
-    cl::desc("Minimal common base load/store instructions triggering chain "
-             "commoning preparation. Must be not smaller than 4"));
 
 STATISTIC(PHINodeAlreadyExistsUpdate, "PHI node already in pre-increment form");
 STATISTIC(PHINodeAlreadyExistsDS, "PHI node already in DS form");
@@ -220,7 +160,8 @@ namespace {
   public:
     static char ID; // Pass ID, replacement for typeid
 
-    PPCLoopInstrFormPrep(PPCTargetMachine &TM) : FunctionPass(ID), TM(&TM) {}
+    PPCLoopInstrFormPrep(PPCTargetMachine &TM)
+        : FunctionPass(ID), CLOpts(TM.getCLOpts()), TM(&TM) {}
 
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addPreserved<DominatorTreeWrapperPass>();
@@ -232,6 +173,7 @@ namespace {
     bool runOnFunction(Function &F) override;
 
   private:
+    const PPCOptions &CLOpts;
     PPCTargetMachine *TM = nullptr;
     const PPCSubtarget *ST;
     DominatorTree *DT;
@@ -264,9 +206,8 @@ namespace {
     bool prepareBasesForCommoningChains(Bucket &BucketChain);
 
     /// Rewrite load/store according to the common chains.
-    bool
-    rewriteLoadStoresForCommoningChains(Loop *L, Bucket &Bucket,
-                                        SmallSet<BasicBlock *, 16> &BBChanged);
+    bool rewriteLoadStoresForCommoningChains(
+        Loop *L, Bucket &Bucket, SmallPtrSet<BasicBlock *, 16> &BBChanged);
 
     /// Collect condition matched(\p isValidCandidate() returns true)
     /// candidates in Loop \p L.
@@ -309,7 +250,7 @@ namespace {
     /// Rewrite load/store instructions in \p BucketChain according to
     /// preparation.
     bool rewriteLoadStores(Loop *L, Bucket &BucketChain,
-                           SmallSet<BasicBlock *, 16> &BBChanged,
+                           SmallPtrSet<BasicBlock *, 16> &BBChanged,
                            PrepForm Form);
 
     /// Rewrite for the base load/store of a chain.
@@ -433,9 +374,9 @@ bool PPCLoopInstrFormPrep::prepareBasesForCommoningChains(Bucket &CBucket) {
   //
   // There is benefit because of reuse of offest 'X'.
 
-  assert(ChainCommonPrepMinThreshold >= 4 &&
+  assert(CLOpts.chaincommon_min_threshold >= 4 &&
          "Thredhold can not be smaller than 4!\n");
-  if (CBucket.Elements.size() < ChainCommonPrepMinThreshold)
+  if (CBucket.Elements.size() < CLOpts.chaincommon_min_threshold)
     return false;
 
   // We simply select the FirstOffset as the first reusable offset between each
@@ -523,7 +464,7 @@ bool PPCLoopInstrFormPrep::chainCommoning(Loop *L,
   if (Buckets.empty())
     return MadeChange;
 
-  SmallSet<BasicBlock *, 16> BBChanged;
+  SmallPtrSet<BasicBlock *, 16> BBChanged;
 
   for (auto &Bucket : Buckets) {
     if (prepareBasesForCommoningChains(Bucket))
@@ -537,7 +478,7 @@ bool PPCLoopInstrFormPrep::chainCommoning(Loop *L,
 }
 
 bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
-    Loop *L, Bucket &Bucket, SmallSet<BasicBlock *, 16> &BBChanged) {
+    Loop *L, Bucket &Bucket, SmallPtrSet<BasicBlock *, 16> &BBChanged) {
   bool MadeChange = false;
 
   assert(Bucket.Elements.size() ==
@@ -545,17 +486,16 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
          "invalid bucket for chain commoning!\n");
   SmallPtrSet<Value *, 16> DeletedPtrs;
 
-  BasicBlock *Header = L->getHeader();
   BasicBlock *LoopPredecessor = L->getLoopPredecessor();
 
-  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
-                     "loopprepare-chaincommon");
+  SCEVExpander SCEVE(*SE, "loopprepare-chaincommon");
 
   for (unsigned ChainIdx = 0; ChainIdx < Bucket.ChainBases.size(); ++ChainIdx) {
     unsigned BaseElemIdx = Bucket.ChainSize * ChainIdx;
     const SCEV *BaseSCEV =
         ChainIdx ? SE->getAddExpr(Bucket.BaseSCEV,
                                   Bucket.Elements[BaseElemIdx].Offset)
+                       .getPointer()
                  : Bucket.BaseSCEV;
     const SCEVAddRecExpr *BasePtrSCEV = cast<SCEVAddRecExpr>(BaseSCEV);
 
@@ -632,7 +572,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStoresForCommoningChains(
 //   ...
 //   %add = getelementptr %phinode, %inc
 //
-// First returned instruciton is %phinode (or a type cast to %phinode), caller
+// First returned instruction is %phinode (or a type cast to %phinode), caller
 // needs this value to rewrite other load/stores in the same chain.
 // Second returned instruction is %add, caller needs this value to rewrite other
 // load/stores in the same chain.
@@ -669,7 +609,8 @@ PPCLoopInstrFormPrep::rewriteForBase(Loop *L, const SCEVAddRecExpr *BasePtrSCEV,
     return std::make_pair(nullptr, nullptr);
   }
 
-  if (Form == UpdateForm && !IsConstantInc && !EnableUpdateFormForNonConstInc) {
+  if (Form == UpdateForm && !IsConstantInc &&
+      !CLOpts.formprep_update_nonconst_inc) {
     LLVM_DEBUG(
         dbgs()
         << "Update form prepare for non-const increment is not enabled!\n");
@@ -935,7 +876,8 @@ bool PPCLoopInstrFormPrep::prepareBaseForDispFormChain(Bucket &BucketChain,
       MaxCountRemainder = j;
 
   // Abort when there are too few insts with common base.
-  if (RemainderOffsetInfo[MaxCountRemainder].second < DispFormPrepMinThreshold)
+  if (RemainderOffsetInfo[MaxCountRemainder].second <
+      CLOpts.dispprep_min_threshold)
     return false;
 
   // If the first value is most profitable, no needed to adjust BucketChain
@@ -1006,7 +948,7 @@ bool PPCLoopInstrFormPrep::prepareBaseForUpdateFormChain(Bucket &BucketChain) {
 }
 
 bool PPCLoopInstrFormPrep::rewriteLoadStores(
-    Loop *L, Bucket &BucketChain, SmallSet<BasicBlock *, 16> &BBChanged,
+    Loop *L, Bucket &BucketChain, SmallPtrSet<BasicBlock *, 16> &BBChanged,
     PrepForm Form) {
   bool MadeChange = false;
 
@@ -1015,9 +957,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(
   if (!BasePtrSCEV->isAffine())
     return MadeChange;
 
-  BasicBlock *Header = L->getHeader();
-  SCEVExpander SCEVE(*SE, Header->getDataLayout(),
-                     "loopprepare-formrewrite");
+  SCEVExpander SCEVE(*SE, "loopprepare-formrewrite");
   if (!SCEVE.isSafeToExpand(BasePtrSCEV->getStart()))
     return MadeChange;
 
@@ -1032,7 +972,7 @@ bool PPCLoopInstrFormPrep::rewriteLoadStores(
                      !cast<SCEVConstant>(BasePtrSCEV->getStepRecurrence(*SE))
                           ->getAPInt()
                           .urem(4) &&
-                     PreferUpdateForm));
+                     CLOpts.formprep_prefer_update));
 
   std::pair<Instruction *, Instruction *> Base =
       rewriteForBase(L, BasePtrSCEV, BucketChain.Elements.begin()->Instr,
@@ -1089,7 +1029,7 @@ bool PPCLoopInstrFormPrep::updateFormPrep(Loop *L,
   bool MadeChange = false;
   if (Buckets.empty())
     return MadeChange;
-  SmallSet<BasicBlock *, 16> BBChanged;
+  SmallPtrSet<BasicBlock *, 16> BBChanged;
   for (auto &Bucket : Buckets)
     // The base address of each bucket is transformed into a phi and the others
     // are rewritten based on new base.
@@ -1110,9 +1050,9 @@ bool PPCLoopInstrFormPrep::dispFormPrep(Loop *L,
   if (Buckets.empty())
     return MadeChange;
 
-  SmallSet<BasicBlock *, 16> BBChanged;
+  SmallPtrSet<BasicBlock *, 16> BBChanged;
   for (auto &Bucket : Buckets) {
-    if (Bucket.Elements.size() < DispFormPrepMinThreshold)
+    if (Bucket.Elements.size() < CLOpts.dispprep_min_threshold)
       continue;
     if (prepareBaseForDispFormChain(Bucket, Form))
       MadeChange |= rewriteLoadStores(L, Bucket, BBChanged, Form);
@@ -1280,7 +1220,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
     return MadeChange;
 
   // Return if already done enough preparation.
-  if (SuccPrepCount >= MaxVarsPrep)
+  if (SuccPrepCount >= CLOpts.formprep_max_vars)
     return MadeChange;
 
   LLVM_DEBUG(dbgs() << "PIP: Examining: " << *L << "\n");
@@ -1318,7 +1258,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
     // useless and possible to break some original well-form addressing mode
     // to make this pre-inc prep for it.
     if (PointerElementType->isIntegerTy(64)) {
-      const SCEV *LSCEV = SE->getSCEVAtScope(const_cast<Value *>(PtrValue), L);
+      const SCEV *LSCEV = SE->getSCEVAtScope(PtrValue, L);
       const SCEVAddRecExpr *LARSCEV = dyn_cast<SCEVAddRecExpr>(LSCEV);
       if (!LARSCEV || LARSCEV->getLoop() != L)
         return false;
@@ -1434,8 +1374,9 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   LLVM_DEBUG(dbgs() << "Start to prepare for update form.\n");
   // Collect buckets of comparable addresses used by loads and stores for update
   // form.
-  SmallVector<Bucket, 16> UpdateFormBuckets = collectCandidates(
-      L, isUpdateFormCandidate, isValidConstantDiff, MaxVarsUpdateForm);
+  SmallVector<Bucket, 16> UpdateFormBuckets =
+      collectCandidates(L, isUpdateFormCandidate, isValidConstantDiff,
+                        CLOpts.preinc_prep_max_vars);
 
   // Prepare for update form.
   if (!UpdateFormBuckets.empty())
@@ -1452,7 +1393,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   // Collect buckets of comparable addresses used by loads and stores for DS
   // form.
   SmallVector<Bucket, 16> DSFormBuckets = collectCandidates(
-      L, isDSFormCandidate, isValidConstantDiff, MaxVarsDSForm);
+      L, isDSFormCandidate, isValidConstantDiff, CLOpts.dsprep_max_vars);
 
   // Prepare for DS form.
   if (!DSFormBuckets.empty())
@@ -1462,7 +1403,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   // Collect buckets of comparable addresses used by loads and stores for DQ
   // form.
   SmallVector<Bucket, 16> DQFormBuckets = collectCandidates(
-      L, isDQFormCandidate, isValidConstantDiff, MaxVarsDQForm);
+      L, isDQFormCandidate, isValidConstantDiff, CLOpts.dqprep_max_vars);
 
   // Prepare for DQ form.
   if (!DQFormBuckets.empty())
@@ -1471,7 +1412,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   // Collect buckets of comparable addresses used by loads and stores for chain
   // commoning. With chain commoning, we reuse offsets between the chains, so
   // the register pressure will be reduced.
-  if (!EnableChainCommoning) {
+  if (!CLOpts.formprep_chain_commoning) {
     LLVM_DEBUG(dbgs() << "Chain commoning is not enabled.\n");
     return MadeChange;
   }
@@ -1479,7 +1420,7 @@ bool PPCLoopInstrFormPrep::runOnLoop(Loop *L) {
   LLVM_DEBUG(dbgs() << "Start to prepare for chain commoning.\n");
   SmallVector<Bucket, 16> Buckets =
       collectCandidates(L, isChainCommoningCandidate, isValidChainCommoningDiff,
-                        MaxVarsChainCommon);
+                        CLOpts.chaincommon_max_vars);
 
   // Prepare for chain commoning.
   if (!Buckets.empty())

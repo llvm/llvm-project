@@ -1,0 +1,70 @@
+# REQUIRES: lldb-formatters-compatibility
+#
+# RUN: split-file %s %t
+# RUN: lldb -x \
+# RUN:   -o 'command script import %llvm_src_root/utils/lldbDataFormatters.py' \
+# RUN:   -s %t/commands.input %llvm_tools_dir/check-lldb-llvm-support-pointer-int-pair \
+# RUN:   -o quit \
+# RUN:   | FileCheck %t/checks
+
+#--- commands.input
+break set -p "Break here"
+run
+
+p &a
+v -T float_pair
+v -T nested
+p &s
+v -T enum_pair
+
+continue
+
+p &s2
+p enum_pair
+p enum_pair.Pointer
+p enum_pair.Int
+
+#--- checks
+# CHECK:      (lldb) p &a
+# CHECK-NEXT: (float *) [[PTR_A:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) v -T float_pair
+# CHECK-NEXT: (llvm::PointerIntPair<float *, 1, bool>) float_pair = {
+# CHECK-NEXT:   (float *) Pointer = [[PTR_A]]
+# CHECK-NEXT:   (bool) Int = true
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T nested
+# CHECK-NEXT: (llvm::PointerIntPair<llvm::PointerIntPair<void *, 1, bool>, 1, bool>) nested = {
+# CHECK-NEXT:   (llvm::PointerIntPair<void *, 1, bool>) Pointer = {
+# CHECK-NEXT:     (void *) Pointer = [[PTR_A]]
+# CHECK-NEXT:     (bool) Int = false
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Int = true
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) p &s
+# CHECK-NEXT: (S *) [[PTR_S:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) v -T enum_pair
+# CHECK-NEXT: (llvm::PointerIntPair<S *, 2, E>) enum_pair = {
+# CHECK-NEXT:   (S *) Pointer = [[PTR_S]]
+# CHECK-NEXT:   (E) Int = Case2
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) continue
+
+# CHECK:      (lldb) p &s2
+# CHECK-NEXT: (S *) [[PTR_S2:0x[0-9a-zA-Z]+]]
+
+# CHECK:      (lldb) p enum_pair
+# CHECK-NEXT: (llvm::PointerIntPair<S *, 2, E>) {
+# CHECK-NEXT:   Pointer = [[PTR_S2]]
+# CHECK-NEXT:   Int = Case3
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) p enum_pair.Pointer
+# CHECK-NEXT: (S *) [[PTR_S2]]
+
+# CHECK:      (lldb) p enum_pair.Int
+# CHECK-NEXT: (E) Case3

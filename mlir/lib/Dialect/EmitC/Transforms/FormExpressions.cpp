@@ -36,7 +36,7 @@ struct FormExpressionsPass
     // Wrap each C operator op with an expression op.
     OpBuilder builder(context);
     auto matchFun = [&](Operation *op) {
-      if (op->hasTrait<OpTrait::emitc::CExpression>() &&
+      if (isa<emitc::CExpressionInterface>(*op) &&
           !op->getParentOfType<emitc::ExpressionOp>() &&
           op->getNumResults() == 1)
         createExpression(op, builder);
@@ -49,10 +49,6 @@ struct FormExpressionsPass
 
     if (failed(applyPatternsGreedily(rootOp, std::move(patterns))))
       return signalPassFailure();
-  }
-
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<emitc::EmitCDialect>();
   }
 };
 } // namespace

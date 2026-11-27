@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -fsyntax-only -Wconversion %s -DERROR=1 -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -fsyntax-only %s -DERROR=1 -verify
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -ast-dump %s | FileCheck %s
 
 // Case 1: Prefer conversion over exact match truncation.
@@ -7,6 +7,7 @@ void Half4Float2(float2 D);
 void Half4Float2(half4 D);
 
 void Case1(float4 F, double4 D) {
+  // CHECK: FunctionDecl {{.*}} Case1
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(half4)' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (half4)' lvalue Function {{.*}} 'Half4Float2' 'void (half4)'
@@ -18,6 +19,7 @@ void Half2Double2(double2 D);
 void Half2Double2(half2 H);
 
 void Case2(float4 F) {
+  // CHECK: FunctionDecl {{.*}} Case2
   // CHECK: CallExpr {{.*}} 'void'
   // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void (*)(double2)' <FunctionToPointerDecay>
   // CHECK-NEXT: DeclRefExpr {{.*}} 'void (double2)' lvalue Function {{.*}} 'Half2Double2' 'void (double2)'

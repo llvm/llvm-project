@@ -12,7 +12,7 @@
 #include <__concepts/common_reference_with.h>
 #include <__concepts/same_as.h>
 #include <__config>
-#include <__type_traits/add_lvalue_reference.h>
+#include <__type_traits/add_reference.h>
 #include <__type_traits/common_reference.h>
 #include <__type_traits/common_type.h>
 #include <__utility/declval.h>
@@ -21,9 +21,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [concept.common]
 
@@ -45,8 +45,8 @@ concept common_with =
             add_lvalue_reference_t<const _Up>>>;
 // clang-format on
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___CONCEPTS_COMMON_WITH_H

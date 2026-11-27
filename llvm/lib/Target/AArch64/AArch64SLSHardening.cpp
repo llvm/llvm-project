@@ -11,12 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64Subtarget.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/CodeGen/IndirectThunks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -135,6 +137,8 @@ private:
   }
 };
 
+} // end anonymous namespace
+
 struct SLSHardeningInserter : ThunkInserter<SLSHardeningInserter, ThunksSet> {
 public:
   const char *getThunkPrefix() { return CommonNamePrefix.data(); }
@@ -160,8 +164,6 @@ private:
                       MachineBasicBlock::instr_iterator MBBI,
                       ThunksSet &Thunks);
 };
-
-} // end anonymous namespace
 
 const ThunkKind ThunkKind::BR = {ThunkBR, "", /*HasXmOperand=*/false,
                                  /*NeedsPAuth=*/false, AArch64::BR};
@@ -319,7 +321,7 @@ parseThunkName(StringRef ThunkName) {
 
   // Parse register operands.
   Register Xn = ParseRegName(XnStr);
-  Register Xm = Kind.HasXmOperand ? ParseRegName(XmStr) : AArch64::NoRegister;
+  Register Xm = Kind.HasXmOperand ? ParseRegName(XmStr) : Register();
 
   return std::make_tuple(std::ref(Kind), Xn, Xm);
 }
@@ -367,7 +369,7 @@ void SLSHardeningInserter::populateThunk(MachineFunction &MF) {
       .addImm(0);
   MachineInstrBuilder Builder =
       BuildMI(Entry, DebugLoc(), TII->get(Kind.BROpcode)).addReg(AArch64::X16);
-  if (Xm != AArch64::NoRegister) {
+  if (Xm.isValid()) {
     Entry->addLiveIn(Xm);
     Builder.addReg(Xm);
   }
@@ -427,8 +429,7 @@ void SLSHardeningInserter::convertBLRToBL(
   assert(BLR.getNumExplicitOperands() == NumRegOperands &&
          "Expected one or two register inputs");
   Register Xn = BLR.getOperand(0).getReg();
-  Register Xm =
-      Kind.HasXmOperand ? BLR.getOperand(1).getReg() : AArch64::NoRegister;
+  Register Xm = Kind.HasXmOperand ? BLR.getOperand(1).getReg() : Register();
 
   DebugLoc DL = BLR.getDebugLoc();
 
@@ -506,22 +507,47 @@ bool SLSHardeningInserter::hardenBLRs(MachineModuleInfo &MMI,
 }
 
 namespace {
-class AArch64SLSHardening : public ThunkInserterPass<SLSHardeningInserter> {
+class AArch64SLSHardeningLegacy
+    : public ThunkInserterPass<SLSHardeningInserter> {
 public:
   static char ID;
 
-  AArch64SLSHardening() : ThunkInserterPass(ID) {}
+  AArch64SLSHardeningLegacy() : ThunkInserterPass(ID) {}
 
   StringRef getPassName() const override { return AARCH64_SLS_HARDENING_NAME; }
 };
 
 } // end anonymous namespace
 
-char AArch64SLSHardening::ID = 0;
+char AArch64SLSHardeningLegacy::ID = 0;
 
-INITIALIZE_PASS(AArch64SLSHardening, "aarch64-sls-hardening",
+INITIALIZE_PASS(AArch64SLSHardeningLegacy, "aarch64-sls-hardening",
                 AARCH64_SLS_HARDENING_NAME, false, false)
 
-FunctionPass *llvm::createAArch64SLSHardeningPass() {
-  return new AArch64SLSHardening();
+FunctionPass *llvm::createAArch64SLSHardeningLegacyPass() {
+  return new AArch64SLSHardeningLegacy();
+}
+
+AArch64SLSHardeningPass::AArch64SLSHardeningPass()
+    : Inserter(std::make_unique<SLSHardeningInserter>()) {}
+
+AArch64SLSHardeningPass::AArch64SLSHardeningPass(AArch64SLSHardeningPass &&) =
+    default;
+AArch64SLSHardeningPass::~AArch64SLSHardeningPass() = default;
+
+PreservedAnalyses
+AArch64SLSHardeningPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  MachineModuleAnalysis::Result *MMI =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<MachineModuleAnalysis>(
+              *MF.getFunction().getParent());
+  assert(MMI && "MachineModuleAnalysis must be available");
+
+  if (Inserter->run(MMI->getMMI(), MF)) {
+    PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+    PA.preserveSet<CFGAnalyses>();
+    return PA;
+  }
+  return PreservedAnalyses::all();
 }

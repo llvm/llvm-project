@@ -9,12 +9,14 @@
 #ifndef _LIBCPP___ALGORITHM_RANGES_FILL_H
 #define _LIBCPP___ALGORITHM_RANGES_FILL_H
 
-#include <__algorithm/ranges_fill_n.h>
+#include <__algorithm/fill.h>
+#include <__algorithm/fill_n.h>
 #include <__config>
 #include <__iterator/concepts.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,18 +32,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 struct __fill {
   template <class _Type, output_iterator<const _Type&> _Iter, sentinel_for<_Iter> _Sent>
-  _LIBCPP_HIDE_FROM_ABI constexpr _Iter operator()(_Iter __first, _Sent __last, const _Type& __value) const {
-    if constexpr (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>) {
-      return ranges::fill_n(__first, __last - __first, __value);
+  constexpr _Iter operator()(_Iter __first, _Sent __last, const _Type& __value) const {
+    if constexpr (sized_sentinel_for<_Sent, _Iter>) {
+      auto __n = __last - __first;
+      return std::__fill_n(std::move(__first), __n, __value);
     } else {
-      for (; __first != __last; ++__first)
-        *__first = __value;
-      return __first;
+      return std::__fill(std::move(__first), std::move(__last), __value);
     }
   }
 
   template <class _Type, output_range<const _Type&> _Range>
-  _LIBCPP_HIDE_FROM_ABI constexpr borrowed_iterator_t<_Range> operator()(_Range&& __range, const _Type& __value) const {
+  constexpr borrowed_iterator_t<_Range> operator()(_Range&& __range, const _Type& __value) const {
     return (*this)(ranges::begin(__range), ranges::end(__range), __value);
   }
 };

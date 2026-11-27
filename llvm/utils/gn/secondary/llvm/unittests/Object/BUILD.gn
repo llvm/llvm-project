@@ -10,6 +10,7 @@ unittest("ObjectTests") {
   ]
   sources = [
     "ArchiveTest.cpp",
+    "BuildIDTest.cpp",
     "COFFObjectFileTest.cpp",
     "DXContainerTest.cpp",
     "ELFObjectFileTest.cpp",
@@ -22,6 +23,7 @@ unittest("ObjectTests") {
     "OffloadingTest.cpp",
     "SymbolSizeTest.cpp",
     "SymbolicFileTest.cpp",
+    "WindowsMachineFlagTest.cpp",
     "XCOFFObjectFileTest.cpp",
   ]
 }

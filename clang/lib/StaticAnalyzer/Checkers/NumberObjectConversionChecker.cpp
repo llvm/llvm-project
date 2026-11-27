@@ -44,8 +44,13 @@ class NumberObjectConversionChecker : public Checker<check::ASTCodeBody> {
 public:
   bool Pedantic;
 
+  NumberObjectConversionChecker();
+
   void checkASTCodeBody(const Decl *D, AnalysisManager &AM,
                         BugReporter &BR) const;
+
+private:
+  StatementMatcher Matcher;
 };
 
 class Callback : public MatchFinder::MatchCallback {
@@ -192,14 +197,12 @@ void Callback::run(const MatchFinder::MatchResult &Result) {
       Conv->getSourceRange());
 }
 
-void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
-                                                     AnalysisManager &AM,
-                                                     BugReporter &BR) const {
+static StatementMatcher buildMatcher() {
   // Currently this matches CoreFoundation opaque pointer typedefs.
   auto CSuspiciousNumberObjectExprM = expr(ignoringParenImpCasts(
-      expr(hasType(elaboratedType(namesType(typedefType(
+      expr(hasType(typedefType(
                hasDeclaration(anyOf(typedefDecl(hasName("CFNumberRef")),
-                                    typedefDecl(hasName("CFBooleanRef")))))))))
+                                    typedefDecl(hasName("CFBooleanRef")))))))
           .bind("c_object")));
 
   // Currently this matches XNU kernel number-object pointers.
@@ -238,8 +241,7 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
 
   // The .bind here is in order to compose the error message more accurately.
   auto ObjCSuspiciousScalarBooleanTypeM =
-      qualType(elaboratedType(namesType(
-                   typedefType(hasDeclaration(typedefDecl(hasName("BOOL")))))))
+      qualType(typedefType(hasDeclaration(typedefDecl(hasName("BOOL")))))
           .bind("objc_bool_type");
 
   // The .bind here is in order to compose the error message more accurately.
@@ -252,8 +254,8 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
   // for storing pointers.
   auto SuspiciousScalarNumberTypeM =
       qualType(hasCanonicalType(isInteger()),
-               unless(elaboratedType(namesType(typedefType(hasDeclaration(
-                   typedefDecl(matchesName("^::u?intptr_t$"))))))))
+               unless(typedefType(
+                   hasDeclaration(typedefDecl(matchesName("^::u?intptr_t$"))))))
           .bind("int_type");
 
   auto SuspiciousScalarTypeM =
@@ -334,10 +336,28 @@ void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
                            ConversionThroughExplicitNumberCastM,
                            ConversionThroughInitializerM)).bind("conv");
 
+  return traverse(TK_AsIs, stmt(forEachDescendant(FinalM)));
+}
+
+NumberObjectConversionChecker::NumberObjectConversionChecker()
+    : Matcher(buildMatcher()) {}
+
+void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
+                                                     AnalysisManager &AM,
+                                                     BugReporter &BR) const {
+  static constexpr llvm::StringLiteral Names[] = {
+      "CFNumberRef", "CFBooleanRef", "OSBoolean", "OSNumber", "NSNumber"};
+  const IdentifierTable &Idents = AM.getASTContext().Idents;
+  auto IsDeclared = [&Idents](StringRef Name) {
+    return llvm::is_contained(Idents, Name);
+  };
+  if (llvm::none_of(Names, IsDeclared))
+    return;
+
   MatchFinder F;
   Callback CB(this, BR, AM.getAnalysisDeclContext(D));
 
-  F.addMatcher(traverse(TK_AsIs, stmt(forEachDescendant(FinalM))), &CB);
+  F.addMatcher(Matcher, &CB);
   F.match(*D->getBody(), AM.getASTContext());
 }
 

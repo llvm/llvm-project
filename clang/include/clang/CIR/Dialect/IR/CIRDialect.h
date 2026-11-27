@@ -10,53 +10,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+#define CLANG_CIR_DIALECT_IR_CIRDIALECT_H
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
-#include "mlir/Interfaces/CallInterfaces.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIROpsDialect.h.inc"
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
+#include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIRLoopOpInterface.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
-namespace mlir {
-namespace OpTrait {
+#include "llvm/TargetParser/Triple.h"
 
-namespace impl {
-// These functions are out-of-line implementations of the methods in the
-// corresponding trait classes.  This avoids them being template
-// instantiated/duplicated.
-LogicalResult verifySameFirstOperandAndResultType(Operation *op);
-} // namespace impl
-
-/// This class provides verification for ops that are known to have the same
-/// first operand and result type.
-///
-template <typename ConcreteType>
-class SameFirstOperandAndResultType
-    : public TraitBase<ConcreteType, SameFirstOperandAndResultType> {
-public:
-  static llvm::LogicalResult verifyTrait(Operation *op) {
-    return impl::verifySameFirstOperandAndResultType(op);
-  }
-};
-
-} // namespace OpTrait
-} // namespace mlir
+#include <optional>
 
 using BuilderCallbackRef =
     llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>;
@@ -65,6 +38,67 @@ using BuilderOpStateCallbackRef = llvm::function_ref<void(
 
 namespace cir {
 void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);
+
+/// The process floating-point environment, including its rounding mode and
+/// exception state.
+struct FloatingPointEnvironmentResource
+    : public mlir::SideEffects::Resource::Base<
+          FloatingPointEnvironmentResource> {
+  mlir::StringRef getName() const final { return "FloatingPointEnvironment"; }
+  bool isAddressable() const final { return false; }
+};
+
+template <typename ConcreteType>
+class FenvOpTrait : public mlir::OpTrait::TraitBase<ConcreteType, FenvOpTrait> {
+public:
+  mlir::Speculation::Speculatability getSpeculatability() {
+    // Masked exceptions cannot trap. When strict_except is false, exception
+    // side effects are non-deterministic, so speculation is still safe.
+    FPEnvConstrainedOpInterface fenvOp = getFenvOp();
+    if (fenvOp.getFenvExceptionMode() == cir::FPExceptionMode::Masked &&
+        !fenvOp.getFenvStrictExcept())
+      return mlir::Speculation::Speculatable;
+
+    return mlir::Speculation::NotSpeculatable;
+  }
+
+  void getEffects(
+      llvm::SmallVectorImpl<mlir::MemoryEffects::EffectInstance> &effects) {
+    if (!getFenvOp().getFenvAttr())
+      return;
+    effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                         FloatingPointEnvironmentResource::get());
+    effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                         FloatingPointEnvironmentResource::get());
+  }
+
+private:
+  FPEnvConstrainedOpInterface getFenvOp() {
+    return mlir::cast<FPEnvConstrainedOpInterface>(this->getOperation());
+  }
+};
+
+/// The properties of \p Op with every ODS-declared default applied.  The
+/// aggregate op builders that take a `Properties` struct do not apply those
+/// defaults themselves, so callers of those builders have to do it here.
+template <typename Op>
+typename Op::Properties getDefaultProperties(mlir::MLIRContext *context) {
+  typename Op::Properties properties{};
+  Op::populateDefaultProperties(
+      mlir::OperationName(Op::getOperationName(), context), properties);
+  return properties;
+}
+
+/// Look up the RecordLayoutAttr for a named record in the module's
+/// cir.record_layouts dictionary.  Asserts if the entry is missing.
+RecordLayoutAttr getRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
+
+/// Same lookup as getRecordLayout, but returns a null attribute instead of
+/// asserting when the record has no layout entry.
+RecordLayoutAttr tryGetRecordLayout(mlir::ModuleOp mod, mlir::StringAttr name);
+
+/// Attempts to construct an llvm::Triple from a module's cir.triple attribute.
+std::optional<llvm::Triple> getTripleFromModule(mlir::ModuleOp mod);
 } // namespace cir
 
 // TableGen'erated files for MLIR dialects require that a macro be defined when
@@ -73,4 +107,23 @@ void buildTerminatedBody(mlir::OpBuilder &builder, mlir::Location loc);
 #define GET_OP_CLASSES
 #include "clang/CIR/Dialect/IR/CIROps.h.inc"
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT_H
+namespace cir {
+/// The alloca that defines \p addr, looking through casts that preserve the
+/// underlying storage.  Null when the chain does not end at an alloca.
+///
+/// Use the result only to inspect the allocation, such as its alignment or
+/// its allocated type.  Addressing has to keep using \p addr, whose type and
+/// address space may differ from the alloca's own result.
+AllocaOp getUnderlyingAlloca(mlir::Value addr);
+
+/// Whether the C++ vtables of \p module use the relative layout.
+bool usesRelativeVTables(mlir::ModuleOp mod);
+
+/// The size in bytes of an entry of a C++ vtable in \p module. Operations
+/// address vtable entries by index, so this is the one place that relates the
+/// index of an entry to its distance from the address point.
+uint64_t getVTableEntrySize(mlir::ModuleOp mod,
+                            const mlir::DataLayout &dataLayout);
+} // namespace cir
+
+#endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_H

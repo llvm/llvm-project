@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ffreestanding %s -Wno-implicit-function-declaration -triple=i386-unknown-unknown -target-feature +movrs -target-feature +avx10.2-256 -verify
+// RUN: %clang_cc1 -ffreestanding %s -Wno-implicit-function-declaration -triple=i386-unknown-unknown -target-feature +movrs -target-feature +avx10.2 -verify
 
 #include <immintrin.h>
 __m128i test_mm_loadrs_epi8(const __m128i * __A) {

@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "llvm/Analysis/RuntimeLibcallInfo.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
 #include "llvm/Config/llvm-config.h"
@@ -28,45 +29,47 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
+#include "llvm/Transforms/Utils/AssignGUID.h"
 #include "llvm/Transforms/Utils/Debugify.h"
+#include "llvm/Transforms/Utils/ProfileVerify.h"
 
 using namespace llvm;
 using namespace opt_tool;
 
-namespace llvm {
-cl::opt<bool> DebugifyEach(
+cl::opt<bool> llvm::DebugifyEach(
     "debugify-each",
     cl::desc("Start each pass with debugify and end it with check-debugify"));
 
-cl::opt<std::string>
-    DebugifyExport("debugify-export",
-                   cl::desc("Export per-pass debugify statistics to this file"),
-                   cl::value_desc("filename"));
+cl::opt<std::string> llvm::DebugifyExport(
+    "debugify-export",
+    cl::desc("Export per-pass debugify statistics to this file"),
+    cl::value_desc("filename"));
 
-cl::opt<bool> VerifyEachDebugInfoPreserve(
+cl::opt<bool> llvm::VerifyEachDebugInfoPreserve(
     "verify-each-debuginfo-preserve",
     cl::desc("Start each pass with collecting and end it with checking of "
              "debug info preservation."));
 
-cl::opt<std::string>
-    VerifyDIPreserveExport("verify-di-preserve-export",
-                   cl::desc("Export debug info preservation failures into "
-                            "specified (JSON) file (should be abs path as we use"
-                            " append mode to insert new JSON objects)"),
-                   cl::value_desc("filename"), cl::init(""));
+cl::opt<std::string> llvm::VerifyDIPreserveExport(
+    "verify-di-preserve-export",
+    cl::desc("Export debug info preservation failures into "
+             "specified (JSON) file (should be abs path as we use"
+             " append mode to insert new JSON objects)"),
+    cl::value_desc("filename"), cl::init(""));
 
-} // namespace llvm
+static cl::opt<bool> EnableLoopFusion("enable-loopfusion", cl::init(false),
+                                      cl::Hidden,
+                                      cl::desc("Enable the LoopFuse Pass"));
 
 enum class DebugLogging { None, Normal, Verbose, Quiet };
 
@@ -159,6 +162,18 @@ static cl::opt<std::string> FullLinkTimeOptimizationLastEPPipeline(
     "passes-ep-full-link-time-optimization-last",
     cl::desc("A textual description of the module pass pipeline inserted at "
              "the FullLinkTimeOptimizationLast extension point into default "
+             "pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> ThinLinkTimeOptimizationEarlyEPPipeline(
+    "passes-ep-thin-link-time-optimization-early",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the ThinLinkTimeOptimizationEarly extension point into default "
+             "pipelines"),
+    cl::Hidden);
+static cl::opt<std::string> ThinLinkTimeOptimizationLastEPPipeline(
+    "passes-ep-thin-link-time-optimization-last",
+    cl::desc("A textual description of the module pass pipeline inserted at "
+             "the ThinLinkTimeOptimizationLast extension point into default "
              "pipelines"),
     cl::Hidden);
 /// @}}
@@ -340,44 +355,54 @@ static void registerEPCallbacks(PassBuilder &PB) {
               "Unable to parse FullLinkTimeOptimizationLastEP pipeline: ");
           Err(PB.parsePassPipeline(PM, FullLinkTimeOptimizationLastEPPipeline));
         });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, ThinLinkTimeOptimizationEarlyEPPipeline))
+    PB.registerThinLinkTimeOptimizationEarlyEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse ThinLinkTimeOptimizationEarlyEP pipeline: ");
+          Err(PB.parsePassPipeline(PM,
+                                   ThinLinkTimeOptimizationEarlyEPPipeline));
+        });
+  if (tryParsePipelineText<ModulePassManager>(
+          PB, ThinLinkTimeOptimizationLastEPPipeline))
+    PB.registerThinLinkTimeOptimizationLastEPCallback(
+        [&PB](ModulePassManager &PM, OptimizationLevel) {
+          ExitOnError Err(
+              "Unable to parse ThinLinkTimeOptimizationLastEP pipeline: ");
+          Err(PB.parsePassPipeline(PM, ThinLinkTimeOptimizationLastEPPipeline));
+        });
 }
-
-#define HANDLE_EXTENSION(Ext)                                                  \
-  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
 bool llvm::runPassPipeline(
     StringRef Arg0, Module &M, TargetMachine *TM, TargetLibraryInfoImpl *TLII,
     ToolOutputFile *Out, ToolOutputFile *ThinLTOLinkOut,
     ToolOutputFile *OptRemarkFile, StringRef PassPipeline,
-    ArrayRef<PassPlugin> PassPlugins,
-    ArrayRef<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks,
+    ArrayRef<PassPluginLibraryInfo> Extensions,
+    ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks,
     OutputKind OK, VerifierKind VK, bool ShouldPreserveAssemblyUseListOrder,
     bool ShouldPreserveBitcodeUseListOrder, bool EmitSummaryIndex,
     bool EmitModuleHash, bool EnableDebugify, bool VerifyDIPreserve,
-    bool UnifiedLTO) {
-  auto FS = vfs::getRealFileSystem();
+    bool EnableProfcheck, bool UnifiedLTO) {
   std::optional<PGOOptions> P;
   switch (PGOKindFlag) {
   case InstrGen:
-    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, FS,
-                   PGOOptions::IRInstr, PGOOptions::NoCSAction,
-                   PGOColdFuncAttr);
+    P = PGOOptions(ProfileFile, "", "", MemoryProfileFile, PGOOptions::IRInstr,
+                   PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case InstrUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile,
                    PGOOptions::IRUse, PGOOptions::NoCSAction, PGOColdFuncAttr);
     break;
   case SampleUse:
-    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile, FS,
+    P = PGOOptions(ProfileFile, "", ProfileRemappingFile, MemoryProfileFile,
                    PGOOptions::SampleUse, PGOOptions::NoCSAction,
                    PGOColdFuncAttr);
     break;
   case NoPGO:
     if (DebugInfoForProfiling || PseudoProbeForProfiling ||
         !MemoryProfileFile.empty())
-      P = PGOOptions("", "", "", MemoryProfileFile, FS, PGOOptions::NoAction,
+      P = PGOOptions("", "", "", MemoryProfileFile, PGOOptions::NoAction,
                      PGOOptions::NoCSAction, PGOColdFuncAttr,
                      DebugInfoForProfiling, PseudoProbeForProfiling);
     else
@@ -399,7 +424,7 @@ bool llvm::runPassPipeline(
         P->CSProfileGenFile = CSProfileGenFile;
       } else
         P = PGOOptions("", CSProfileGenFile, ProfileRemappingFile,
-                       /*MemoryProfile=*/"", FS, PGOOptions::NoAction,
+                       /*MemoryProfile=*/"", PGOOptions::NoAction,
                        PGOOptions::CSIRInstr);
     } else /* CSPGOKindFlag == CSInstrUse */ {
       if (!P) {
@@ -409,13 +434,20 @@ bool llvm::runPassPipeline(
       P->CSAction = PGOOptions::CSIRUse;
     }
   }
-  if (TM)
-    TM->setPGOOption(P);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
+
+  if (TM) {
+    TM->setPGOOption(P);
+
+    MAM.registerPass([&] {
+      const TargetOptions &Options = TM->Options;
+      return RuntimeLibraryAnalysis(Options.MCOptions.ABIName, Options.VecLib);
+    });
+  }
 
   PassInstrumentationCallbacks PIC;
   PrintPassOptions PrintPassOpts;
@@ -445,21 +477,18 @@ bool llvm::runPassPipeline(
   // option has been enabled.
   PTO.LoopUnrolling = !DisableLoopUnrolling;
   PTO.UnifiedLTO = UnifiedLTO;
-  PassBuilder PB(TM, PTO, P, &PIC);
+  PTO.LoopFusion = EnableLoopFusion;
+  PassBuilder PB(M.getContext(), TM, PTO, P, &PIC);
   registerEPCallbacks(PB);
 
-  // For any loaded plugins, let them register pass builder callbacks.
-  for (auto &PassPlugin : PassPlugins)
-    PassPlugin.registerPassBuilderCallbacks(PB);
+  // Let plugins and linked extensions register pass builder callbacks.
+  for (const PassPluginLibraryInfo &Info : Extensions)
+    if (Info.RegisterPassBuilderCallbacks)
+      Info.RegisterPassBuilderCallbacks(PB);
 
   // Load any explicitly specified plugins.
   for (auto &PassCallback : PassBuilderCallbacks)
     PassCallback(PB);
-
-#define HANDLE_EXTENSION(Ext)                                                  \
-  get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
-#include "llvm/Support/Extension.def"
-#undef HANDLE_EXTENSION
 
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.
@@ -487,7 +516,8 @@ bool llvm::runPassPipeline(
   if (VerifyDIPreserve)
     MPM.addPass(NewPMDebugifyPass(DebugifyMode::OriginalDebugInfo, "",
                                   &DebugInfoBeforePass));
-
+  if (EnableProfcheck)
+    MPM.addPass(createModuleToFunctionPassAdaptor(ProfileInjectorPass()));
   // Add passes according to the -passes options.
   if (!PassPipeline.empty()) {
     if (auto Err = PB.parsePassPipeline(MPM, PassPipeline)) {
@@ -504,20 +534,30 @@ bool llvm::runPassPipeline(
     MPM.addPass(NewPMCheckDebugifyPass(
         false, "", nullptr, DebugifyMode::OriginalDebugInfo,
         &DebugInfoBeforePass, VerifyDIPreserveExport));
+  if (EnableProfcheck)
+    MPM.addPass(ProfileVerifierPass());
 
   // Add any relevant output pass at the end of the pipeline.
   switch (OK) {
   case OK_NoOutput:
     break; // No output pass needed.
   case OK_OutputAssembly:
+    if (EmitSummaryIndex) {
+      MPM.addPass(AssignGUIDPass());
+    }
     MPM.addPass(PrintModulePass(
-        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex));
+        Out->os(), "", ShouldPreserveAssemblyUseListOrder, EmitSummaryIndex,
+        /*ShouldRenumberMetadata=*/true));
     break;
   case OK_OutputBitcode:
+    if (EmitSummaryIndex) {
+      MPM.addPass(AssignGUIDPass());
+    }
     MPM.addPass(BitcodeWriterPass(Out->os(), ShouldPreserveBitcodeUseListOrder,
                                   EmitSummaryIndex, EmitModuleHash));
     break;
   case OK_OutputThinLTOBitcode:
+    MPM.addPass(AssignGUIDPass());
     MPM.addPass(ThinLTOBitcodeWriterPass(
         Out->os(), ThinLTOLinkOut ? &ThinLTOLinkOut->os() : nullptr,
         ShouldPreserveBitcodeUseListOrder));
@@ -529,14 +569,15 @@ bool llvm::runPassPipeline(
 
   // Print a textual, '-passes=' compatible, representation of pipeline if
   // requested.
-  if (PrintPipelinePasses) {
+  if (std::optional<PrintPipelinePassesFormat> Format =
+          PB.getPrintPipelinePasses()) {
     std::string Pipeline;
     raw_string_ostream SOS(Pipeline);
     MPM.printPipeline(SOS, [&PIC](StringRef ClassName) {
       auto PassName = PIC.getPassNameForClassName(ClassName);
       return PassName.empty() ? ClassName : PassName;
     });
-    outs() << Pipeline;
+    printFormattedPipelinePasses(outs(), Pipeline, *Format);
     outs() << "\n";
 
     if (!DisablePipelineVerification) {
@@ -555,6 +596,13 @@ bool llvm::runPassPipeline(
 
   // Now that we have all of the passes ready, run them.
   MPM.run(M, MAM);
+
+  // If a pass reported an error via LLVMContext::emitError, fail without
+  // writing the output module.
+  if (auto *DH = M.getContext().getDiagHandlerPtr()) {
+    if (DH->HasErrors)
+      return false;
+  }
 
   // Declare success.
   if (OK != OK_NoOutput) {
@@ -575,7 +623,7 @@ bool llvm::runPassPipeline(
   return true;
 }
 
-void llvm::printPasses(raw_ostream &OS) {
-  PassBuilder PB;
+void llvm::printPasses(LLVMContext &Context, raw_ostream &OS) {
+  PassBuilder PB(Context);
   PB.printPassNames(OS);
 }

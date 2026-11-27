@@ -1,5 +1,6 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic -Werror -fno-out-of-bounds-subscripts
 ! Check out-of-range subscripts
+! These are warnings by default; -fno-out-of-bounds-subscripts makes them errors.
 subroutine subr(da)
   real a(10), da(2,1), empty(1:0,1)
   integer, parameter :: n(2) = [1, 2]
@@ -43,6 +44,6 @@ subroutine subr(da)
   print *, empty(1:0,1) ! ok
   print *, empty(:,1) ! ok
   print *, empty(i:j,k) ! ok
-  !WARNING: Empty array dimension 1 should not be subscripted as an element or non-empty array section
+  !WARNING: Empty array dimension 1 should not be subscripted as an element or non-empty array section [-Wsubscripted-empty-array]
   print *, empty(i,1)
 end

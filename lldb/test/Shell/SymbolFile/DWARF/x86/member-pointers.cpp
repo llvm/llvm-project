@@ -1,7 +1,7 @@
 // REQUIRES: lld
 
 // Itanium ABI:
-// RUN: %clang --target=x86_64-pc-linux -gdwarf -c -o %t_linux.o %s
+// RUN: %clangxx --target=x86_64-pc-linux -gdwarf -c -o %t_linux.o %s
 // RUN: %lldb -f %t_linux.o -b -o "target variable s1 s2 m1 m2 v1 v2 v3 v4" | FileCheck --check-prefix=CHECK-GNU %s
 //
 // CHECK-GNU: (void (Single1::*)()) s1 = 0x00000000000000000000000000000000

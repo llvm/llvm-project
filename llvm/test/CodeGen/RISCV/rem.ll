@@ -145,41 +145,41 @@ define i32 @srem_pow2(i32 %a) nounwind {
 define i32 @srem_pow2_2(i32 %a) nounwind {
 ; RV32I-LABEL: srem_pow2_2:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    srai a1, a0, 31
-; RV32I-NEXT:    srli a1, a1, 16
-; RV32I-NEXT:    add a1, a0, a1
-; RV32I-NEXT:    lui a2, 1048560
-; RV32I-NEXT:    and a1, a1, a2
+; RV32I-NEXT:    lui a1, 1048560
+; RV32I-NEXT:    srai a2, a0, 31
+; RV32I-NEXT:    srli a2, a2, 16
+; RV32I-NEXT:    add a2, a0, a2
+; RV32I-NEXT:    and a1, a2, a1
 ; RV32I-NEXT:    sub a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV32IM-LABEL: srem_pow2_2:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    srai a1, a0, 31
-; RV32IM-NEXT:    srli a1, a1, 16
-; RV32IM-NEXT:    add a1, a0, a1
-; RV32IM-NEXT:    lui a2, 1048560
-; RV32IM-NEXT:    and a1, a1, a2
+; RV32IM-NEXT:    lui a1, 1048560
+; RV32IM-NEXT:    srai a2, a0, 31
+; RV32IM-NEXT:    srli a2, a2, 16
+; RV32IM-NEXT:    add a2, a0, a2
+; RV32IM-NEXT:    and a1, a2, a1
 ; RV32IM-NEXT:    sub a0, a0, a1
 ; RV32IM-NEXT:    ret
 ;
 ; RV64I-LABEL: srem_pow2_2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sraiw a1, a0, 31
-; RV64I-NEXT:    srliw a1, a1, 16
-; RV64I-NEXT:    add a1, a0, a1
-; RV64I-NEXT:    lui a2, 1048560
-; RV64I-NEXT:    and a1, a1, a2
+; RV64I-NEXT:    lui a1, 1048560
+; RV64I-NEXT:    sraiw a2, a0, 31
+; RV64I-NEXT:    srliw a2, a2, 16
+; RV64I-NEXT:    add a2, a0, a2
+; RV64I-NEXT:    and a1, a2, a1
 ; RV64I-NEXT:    subw a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: srem_pow2_2:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    sraiw a1, a0, 31
-; RV64IM-NEXT:    srliw a1, a1, 16
-; RV64IM-NEXT:    add a1, a0, a1
-; RV64IM-NEXT:    lui a2, 1048560
-; RV64IM-NEXT:    and a1, a1, a2
+; RV64IM-NEXT:    lui a1, 1048560
+; RV64IM-NEXT:    sraiw a2, a0, 31
+; RV64IM-NEXT:    srliw a2, a2, 16
+; RV64IM-NEXT:    add a2, a0, a2
+; RV64IM-NEXT:    and a1, a2, a1
 ; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret
   %1 = srem i32 %a, 65536
@@ -419,8 +419,8 @@ define i8 @urem8_constant_lhs(i8 %a) nounwind {
 ;
 ; RV32IM-LABEL: urem8_constant_lhs:
 ; RV32IM:       # %bb.0:
-; RV32IM-NEXT:    zext.b a0, a0
 ; RV32IM-NEXT:    li a1, 10
+; RV32IM-NEXT:    zext.b a0, a0
 ; RV32IM-NEXT:    remu a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
@@ -437,8 +437,8 @@ define i8 @urem8_constant_lhs(i8 %a) nounwind {
 ;
 ; RV64IM-LABEL: urem8_constant_lhs:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    zext.b a0, a0
 ; RV64IM-NEXT:    li a1, 10
+; RV64IM-NEXT:    zext.b a0, a0
 ; RV64IM-NEXT:    remuw a0, a1, a0
 ; RV64IM-NEXT:    ret
   %1 = urem i8 10, %a
@@ -509,9 +509,9 @@ define i8 @srem8_constant_lhs(i8 %a) nounwind {
 ;
 ; RV32IM-LABEL: srem8_constant_lhs:
 ; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    li a1, -10
 ; RV32IM-NEXT:    slli a0, a0, 24
 ; RV32IM-NEXT:    srai a0, a0, 24
-; RV32IM-NEXT:    li a1, -10
 ; RV32IM-NEXT:    rem a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
@@ -529,9 +529,9 @@ define i8 @srem8_constant_lhs(i8 %a) nounwind {
 ;
 ; RV64IM-LABEL: srem8_constant_lhs:
 ; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    slli a0, a0, 56
 ; RV64IM-NEXT:    srai a0, a0, 56
-; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    remw a0, a1, a0
 ; RV64IM-NEXT:    ret
   %1 = srem i8 -10, %a
@@ -602,9 +602,9 @@ define i16 @urem16_constant_lhs(i16 %a) nounwind {
 ;
 ; RV32IM-LABEL: urem16_constant_lhs:
 ; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    li a1, 10
 ; RV32IM-NEXT:    slli a0, a0, 16
 ; RV32IM-NEXT:    srli a0, a0, 16
-; RV32IM-NEXT:    li a1, 10
 ; RV32IM-NEXT:    remu a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
@@ -622,9 +622,9 @@ define i16 @urem16_constant_lhs(i16 %a) nounwind {
 ;
 ; RV64IM-LABEL: urem16_constant_lhs:
 ; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    slli a0, a0, 48
 ; RV64IM-NEXT:    srli a0, a0, 48
-; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    remuw a0, a1, a0
 ; RV64IM-NEXT:    ret
   %1 = urem i16 10, %a
@@ -694,9 +694,9 @@ define i16 @srem16_constant_lhs(i16 %a) nounwind {
 ;
 ; RV32IM-LABEL: srem16_constant_lhs:
 ; RV32IM:       # %bb.0:
+; RV32IM-NEXT:    li a1, -10
 ; RV32IM-NEXT:    slli a0, a0, 16
 ; RV32IM-NEXT:    srai a0, a0, 16
-; RV32IM-NEXT:    li a1, -10
 ; RV32IM-NEXT:    rem a0, a1, a0
 ; RV32IM-NEXT:    ret
 ;
@@ -714,9 +714,9 @@ define i16 @srem16_constant_lhs(i16 %a) nounwind {
 ;
 ; RV64IM-LABEL: srem16_constant_lhs:
 ; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    slli a0, a0, 48
 ; RV64IM-NEXT:    srai a0, a0, 48
-; RV64IM-NEXT:    li a1, -10
 ; RV64IM-NEXT:    remw a0, a1, a0
 ; RV64IM-NEXT:    ret
   %1 = srem i16 -10, %a

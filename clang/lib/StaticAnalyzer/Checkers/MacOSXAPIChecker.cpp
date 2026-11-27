@@ -125,12 +125,12 @@ void MacOSXAPIChecker::CheckDispatchOnce(CheckerContext &C, const CallExpr *CE,
   } else {
     os << " stack allocated memory";
   }
-  os << " for the predicate value.  Using such transient memory for "
-        "the predicate is potentially dangerous.";
+  os << " for the predicate value; using such transient memory for "
+        "the predicate is potentially dangerous";
   if (SuggestStatic)
-    os << "  Perhaps you intended to declare the variable as 'static'?";
+    os << "; perhaps you intended to declare the variable as 'static'?";
 
-  ExplodedNode *N = C.generateErrorNode();
+  ExplodedNode *N = C.addSink();
   if (!N)
     return;
 
@@ -151,12 +151,10 @@ void MacOSXAPIChecker::checkPreStmt(const CallExpr *CE,
     return;
 
   SubChecker SC =
-    llvm::StringSwitch<SubChecker>(Name)
-      .Cases("dispatch_once",
-             "_dispatch_once",
-             "dispatch_once_f",
-             &MacOSXAPIChecker::CheckDispatchOnce)
-      .Default(nullptr);
+      llvm::StringSwitch<SubChecker>(Name)
+          .Cases({"dispatch_once", "_dispatch_once", "dispatch_once_f"},
+                 &MacOSXAPIChecker::CheckDispatchOnce)
+          .Default(nullptr);
 
   if (SC)
     (this->*SC)(C, CE, Name);

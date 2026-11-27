@@ -42,6 +42,7 @@ copy_files() {
     chmod -w $dst/README.txt
 
     for I in $hdrs ; do
+	    echo "Copying ${src}/$I to ${dst}/$I"
 	    rm -f $dst/$I
 	    dash=$(echo "$I---------------------------" | cut -c -27 |\
 		       sed 's|[^-]*||')
@@ -53,6 +54,6 @@ copy_files() {
 }
 
 if [[ $ANSWER =~ ^[Yy]$ ]]; then
-    copy_files . $LLVM_DEMANGLE_DIR $HDRS
-    copy_files ../../test $LLVM_TESTING_DIR $TEST_HDRS
+    copy_files . $LLVM_DEMANGLE_DIR "${HDRS}"
+    copy_files ../../test $LLVM_TESTING_DIR "${TEST_HDRS}"
 fi

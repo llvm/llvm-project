@@ -20,7 +20,7 @@ static constexpr uint32_t POS_START = 0x0000'0000U;
 static constexpr uint32_t POS_STOP = 0x7f80'0000U;
 
 // Range: [0, Inf]
-TEST_F(LlvmLibcSinpifExhaustiveTest, PostiveRange) {
+TEST_F(LlvmLibcSinpifExhaustiveTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP);
 }
 

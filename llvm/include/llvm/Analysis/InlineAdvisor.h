@@ -331,22 +331,21 @@ public:
   };
 
   Result run(Module &M, ModuleAnalysisManager &MAM) { return Result(M, MAM); }
+
+private:
+  static bool initializeIR2VecVocabIfRequested(Module &M,
+                                               ModuleAnalysisManager &MAM);
 };
 
 /// Printer pass for the InlineAdvisorAnalysis results.
 class InlineAdvisorAnalysisPrinterPass
-    : public PassInfoMixin<InlineAdvisorAnalysisPrinterPass> {
+    : public RequiredPassInfoMixin<InlineAdvisorAnalysisPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit InlineAdvisorAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-
-  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &InitialC,
-                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
-                                 CGSCCUpdateResult &UR);
-  static bool isRequired() { return true; }
 };
 
 LLVM_ABI std::unique_ptr<InlineAdvisor>
@@ -365,7 +364,7 @@ getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
 /// using that cost, so we won't do so from this function. Return std::nullopt
 /// if inlining should not be attempted.
 LLVM_ABI std::optional<InlineCost>
-shouldInline(CallBase &CB, TargetTransformInfo &CalleeTTI,
+shouldInline(CallBase &CB, TargetTransformInfo &CallerTTI,
              function_ref<InlineCost(CallBase &CB)> GetInlineCost,
              OptimizationRemarkEmitter &ORE, bool EnableDeferral = true);
 

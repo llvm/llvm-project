@@ -65,6 +65,23 @@ def Transform_AnyParamType : TypeDef<Transform_Dialect, "AnyParam",
   let assemblyFormat = "";
 }
 
+def Transform_NormalizedOpType
+    : TypeDef<Transform_Dialect, "NormalizedOp",
+              [DeclareTypeInterfaceMethods<TransformHandleTypeInterface>]> {
+  let description = [{
+    Transform IR handle to operations that satisfy additional constraints
+    required by normal form attributes parameterizing this type. When used for
+    operands, serves as a guarantee of transform preconditions being satisfied.
+    When used for results, serves as a guarantee of transform postcondition.
+  }];
+  let mnemonic = "normalized_op";
+  let parameters = (ins ArrayRefParameter<
+      "::mlir::transform::NormalFormAttrInterface",
+      "Normal forms satisfied by the associated payload">:$normal_forms);
+  let assemblyFormat = "`<` $normal_forms `>`";
+  let genVerifyDecl = 1;
+}
+
 def Transform_ParamType : TypeDef<Transform_Dialect, "Param",
     [DeclareTypeInterfaceMethods<TransformParamTypeInterface>]> {
   let description = [{
@@ -102,5 +119,10 @@ def TransformAnyHandle : Type<
     Or<[TransformHandleTypeInterface.predicate,
         TransformValueHandleTypeInterface.predicate]>,
     "transform operation or value handle">;
+
+def TransformAnyParamTypeOrAnyHandle : Type<
+    Or<[TransformHandleTypeInterface.predicate,
+        TransformParamTypeInterface.predicate]>,
+    "transform any param type or any handle type">;
 
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES

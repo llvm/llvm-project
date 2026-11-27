@@ -34,7 +34,7 @@ define void @test_256_load(ptr nocapture %d, ptr nocapture %f, ptr nocapture %i)
 ;
 ; CHECK_O0-LABEL: test_256_load:
 ; CHECK_O0:       # %bb.0: # %entry
-; CHECK_O0-NEXT:    subq $184, %rsp
+; CHECK_O0-NEXT:    subq $136, %rsp
 ; CHECK_O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK_O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK_O0-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -54,7 +54,7 @@ define void @test_256_load(ptr nocapture %d, ptr nocapture %f, ptr nocapture %i)
 ; CHECK_O0-NEXT:    vmovapd %ymm2, (%rdi)
 ; CHECK_O0-NEXT:    vmovaps %ymm1, (%rsi)
 ; CHECK_O0-NEXT:    vmovdqa %ymm0, (%rdx)
-; CHECK_O0-NEXT:    addq $184, %rsp
+; CHECK_O0-NEXT:    addq $136, %rsp
 ; CHECK_O0-NEXT:    vzeroupper
 ; CHECK_O0-NEXT:    retq
 entry:

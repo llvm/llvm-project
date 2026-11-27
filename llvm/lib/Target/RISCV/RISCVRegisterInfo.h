@@ -15,6 +15,7 @@
 
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
+#include <bitset>
 
 #define GET_REGINFO_HEADER
 #include "RISCVGenRegisterInfo.inc"
@@ -37,6 +38,13 @@ enum : uint8_t {
   NFShiftMask = 0b111 << NFShift,
 };
 
+/// Register allocation hints for Zilsd register pairs
+enum {
+  // Used for Zilsd LD/SD register pairs
+  RegPairOdd = 1,
+  RegPairEven = 2,
+};
+
 /// \returns the IsVRegClass for the register class.
 static inline bool isVRegClass(uint8_t TSFlags) {
   return (TSFlags & IsVRegClassShiftMask) >> IsVRegClassShift;
@@ -56,12 +64,14 @@ static inline unsigned getNF(uint8_t TSFlags) {
 
 struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
-  RISCVRegisterInfo(unsigned HwMode);
+  /// \p UserReservedXRegs is the set of X registers reserved by the reserve-xN
+  /// features, indexed by N.
+  RISCVRegisterInfo(unsigned HwMode, const std::bitset<32> &UserReservedXRegs);
 
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
                                        CallingConv::ID) const override;
 
-  unsigned getCSRFirstUseCost() const override {
+  unsigned getCSRCost() const override {
     // The cost will be compared against BlockFrequency where entry has the
     // value of 1 << 14. A value of 5 will choose to spill or split cold
     // path instead of using a callee-saved register.
@@ -70,9 +80,22 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
+  const TargetRegisterClass *
+  getConstrainedRegClassForReg(Register Reg,
+                               const MachineRegisterInfo &MRI) const override;
+
+  const TargetRegisterClass *
+  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &RB, bool Is64Bit) const;
+
   const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
+
+  /// Returns true if \p Reg is, or overlaps, a register reserved by the
+  /// reserve-xN features, e.g. X10_W, X10_H or a GPRPair containing X10.
+  bool isRegisterReservedByUser(MCRegister Reg) const {
+    return UserReservedRegs.test(Reg.id());
+  }
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
 
@@ -107,10 +130,13 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   int64_t getFrameIndexInstrOffset(const MachineInstr *MI,
                                    int Idx) const override;
 
-  void lowerVSPILL(MachineBasicBlock::iterator II) const;
-  void lowerVRELOAD(MachineBasicBlock::iterator II) const;
+  void lowerSegmentSpillReload(MachineBasicBlock::iterator II,
+                               bool IsSpill) const;
 
   Register getFrameRegister(const MachineFunction &MF) const override;
+
+  bool isArgumentRegister(const MachineFunction &MF,
+                          MCRegister Reg) const override;
 
   StringRef getRegAsmName(MCRegister Reg) const override;
 
@@ -123,26 +149,30 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   }
 
   const TargetRegisterClass *
-  getPointerRegClass(const MachineFunction &MF,
-                     unsigned Kind = 0) const override {
-    return &RISCV::GPRRegClass;
-  }
-
-  const TargetRegisterClass *
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &) const override;
 
   void getOffsetOpcodes(const StackOffset &Offset,
                         SmallVectorImpl<uint64_t> &Ops) const override;
 
+  // Returns the even and odd GPRs that make up a GPRPair register. X0_Pair has
+  // no real odd subregister, so both halves are X0.
+  std::pair<Register, Register> getGPRPairSubRegs(MCRegister Pair) const;
+
   unsigned getRegisterCostTableIndex(const MachineFunction &MF) const override;
 
   float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
-                             SmallVectorImpl<MCPhysReg> &Hints,
+                             SmallSetVector<MCPhysReg, 16> &Hints,
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
+
+  void updateRegAllocHint(Register Reg, Register NewReg,
+                          MachineFunction &MF) const override;
+
+  MCRegister findVRegWithEncoding(const TargetRegisterClass &RegClass,
+                                  uint16_t Encoding) const;
 
   static bool isVRRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags) &&
@@ -156,6 +186,17 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   static bool isRVVRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags);
   }
+
+  static bool isFPRegister(MCRegister Reg) {
+    return RISCV::FPR16RegClass.contains(Reg) ||
+           RISCV::FPR32RegClass.contains(Reg) ||
+           RISCV::FPR64RegClass.contains(Reg) ||
+           RISCV::FPR128RegClass.contains(Reg);
+  }
+
+private:
+  // The registers reserved by the reserve-xN features and all their aliases.
+  BitVector UserReservedRegs;
 };
 } // namespace llvm
 

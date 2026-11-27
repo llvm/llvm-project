@@ -16,6 +16,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -91,10 +92,10 @@ void ModuleDependencyCollector::attachToPreprocessor(Preprocessor &PP) {
       std::make_unique<ModuleDependencyMMCallbacks>(*this));
 }
 
-static bool isCaseSensitivePath(StringRef Path) {
+static bool isCaseSensitivePath(llvm::vfs::FileSystem &VFS, StringRef Path) {
   SmallString<256> TmpDest = Path, UpperDest, RealDest;
   // Remove component traversals, links, etc.
-  if (llvm::sys::fs::real_path(Path, TmpDest))
+  if (VFS.getRealPath(Path, TmpDest))
     return true; // Current default value in vfs.yaml
   Path = TmpDest;
 
@@ -104,7 +105,7 @@ static bool isCaseSensitivePath(StringRef Path) {
   // already expects when sensitivity isn't setup.
   for (auto &C : Path)
     UpperDest.push_back(toUppercase(C));
-  if (!llvm::sys::fs::real_path(UpperDest, RealDest) && Path == RealDest)
+  if (!VFS.getRealPath(UpperDest, RealDest) && Path == RealDest)
     return false;
   return true;
 }
@@ -121,7 +122,8 @@ void ModuleDependencyCollector::writeFileMap() {
 
   // Explicitly set case sensitivity for the YAML writer. For that, find out
   // the sensitivity at the path where the headers all collected to.
-  VFSWriter.setCaseSensitivity(isCaseSensitivePath(VFSDir));
+  VFSWriter.setCaseSensitivity(
+      isCaseSensitivePath(Canonicalizer.getFileSystem(), VFSDir));
 
   // Do not rely on real path names when executing the crash reproducer scripts
   // since we only want to actually use the files we have on the VFS cache.
@@ -153,18 +155,23 @@ std::error_code ModuleDependencyCollector::copyToRoot(StringRef Src,
   } else {
     // When collecting entries from input vfsoverlays, copy the external
     // contents into the cache but still map from the source.
-    if (!fs::exists(Dst))
+    if (!Canonicalizer.getFileSystem().exists(Dst))
       return std::error_code();
     path::append(CacheDst, Dst);
     Paths.CopyFrom = Dst;
   }
 
   // Copy the file into place.
-  if (std::error_code EC = fs::create_directories(path::parent_path(CacheDst),
-                                                  /*IgnoreExisting=*/true))
-    return EC;
-  if (std::error_code EC = fs::copy_file(Paths.CopyFrom, CacheDst))
-    return EC;
+  {
+    // FIXME(sandboxing): Implement this via vfs::{FileSystem,OutputBackend}.
+    auto BypassSandbox = sandbox::scopedDisable();
+
+    if (std::error_code EC = fs::create_directories(path::parent_path(CacheDst),
+                                                    /*IgnoreExisting=*/true))
+      return EC;
+    if (std::error_code EC = fs::copy_file(Paths.CopyFrom, CacheDst))
+      return EC;
+  }
 
   // Always map a canonical src path to its real path into the YAML, by doing
   // this we map different virtual src paths to the same entry in the VFS

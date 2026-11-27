@@ -13,7 +13,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm-c/Remarks.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Remarks/Remark.h"
@@ -28,7 +27,6 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/Program.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -274,7 +272,7 @@ static bool writeReport(LocationInfoTy &LocationInfo) {
   for (auto &FI : LocationInfo) {
     SmallString<128> FileName(FI.first);
     if (!InputRelDir.empty())
-      sys::fs::make_absolute(InputRelDir, FileName);
+      sys::path::make_absolute(InputRelDir, FileName);
 
     const auto &FileInfo = FI.second;
 

@@ -11,6 +11,7 @@
 
 #include "flang/Common/optional.h"
 #include "flang/Decimal/decimal.h"
+#include "flang/Runtime/entry-names.h"
 
 struct EnvironmentDefaultList;
 
@@ -31,17 +32,30 @@ RT_OFFLOAD_VAR_GROUP_END
 // External unformatted I/O data conversions
 enum class Convert { Unknown, Native, LittleEndian, BigEndian, Swap };
 
-RT_API_ATTRS Fortran::common::optional<Convert> GetConvertFromString(
+RT_API_ATTRS common::optional<Convert> GetConvertFromString(
     const char *, std::size_t);
 
 struct ExecutionEnvironment {
-#if !defined(_OPENMP)
-  // FIXME: https://github.com/llvm/llvm-project/issues/84942
-  constexpr
-#endif
-      ExecutionEnvironment(){};
+
+  // List of unit(s) from environment variable FORT_CONVERT_UNIT with specific
+  // conversion rules.
+  struct ConvertUnit {
+    Convert conversion;
+    std::int32_t startUnit;
+    std::int32_t endUnit;
+  };
+
+  typedef void (*ConfigEnvCallbackPtr)(
+      int, const char *[], const char *[], const EnvironmentDefaultList *);
+
+  constexpr ExecutionEnvironment() {};
   void Configure(int argc, const char *argv[], const char *envp[],
       const EnvironmentDefaultList *envDefaults);
+
+  // Maximum number of registered pre and post ExecutionEnvironment::Configure()
+  // callback functions.
+  static constexpr int nConfigEnvCallback{8};
+
   const char *GetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);
 
@@ -52,6 +66,9 @@ struct ExecutionEnvironment {
   std::int32_t UnsetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);
 
+  bool ParseFortConvertUnit(const char *);
+  Convert UnitRtConvert(int);
+
   int argc{0};
   const char **argv{nullptr};
   char **envp{nullptr};
@@ -60,19 +77,44 @@ struct ExecutionEnvironment {
   enum decimal::FortranRounding defaultOutputRoundingMode{
       decimal::FortranRounding::RoundNearest}; // RP(==PN)
   Convert conversion{Convert::Unknown}; // FORT_CONVERT
+  ConvertUnit *convertUnits{nullptr}; // FORT_CONVERT_UNIT
+  std::size_t numConvertUnits{0};
   bool noStopMessage{false}; // NO_STOP_MESSAGE=1 inhibits "Fortran STOP"
+  // FLANG_TIMEF_IN_MILLISECONDS=1 sets TIMEF resolution to milliseconds.
+  // Default resolution is seconds.
+  bool timefInMillisec{false};
   bool defaultUTF8{false}; // DEFAULT_UTF8
   bool checkPointerDeallocation{true}; // FORT_CHECK_POINTER_DEALLOCATION
+  bool truncateStream{true}; // FORT_TRUNCATE_STREAM
+  bool noEmptyAllocation{false}; // FORT_NO_EMPTY_ALLOCATION
+  // The system environment variable FLANG_RT_COPYOUT_MODIFIED_ONLY=0
+  // restores the unconditional copy-out of argument temporaries
+  // (CopyOutAssign then copies every element back instead of only the
+  // suffix from the first modified element through the end).
+  bool copyOutModifiedOnly{true}; // FLANG_RT_COPYOUT_MODIFIED_ONLY
+
+  enum InternalDebugging { WorkQueue = 1 };
+  int internalDebugging{0}; // FLANG_RT_DEBUG
 
   // CUDA related variables
   std::size_t cudaStackLimit{0}; // ACC_OFFLOAD_STACK_SIZE
   bool cudaDeviceIsManaged{false}; // NV_CUDAFOR_DEVICE_IS_MANAGED
+  bool cudaCheckError{false}; // NV_CUDAFOR_CHECK_ERROR
 };
 
 RT_OFFLOAD_VAR_GROUP_BEGIN
 extern RT_VAR_ATTRS ExecutionEnvironment executionEnvironment;
 RT_OFFLOAD_VAR_GROUP_END
 
-} // namespace Fortran::runtime
+// ExecutionEnvironment::Configure() allows for optional callback functions
+// to be run pre and post the core logic.
+// Most likely scenario is when a user supplied constructor function is
+// run prior to _QQmain calling RTNAME(ProgramStart)().
 
+extern "C" {
+bool RTNAME(RegisterConfigureEnv)(ExecutionEnvironment::ConfigEnvCallbackPtr,
+    ExecutionEnvironment::ConfigEnvCallbackPtr);
+}
+
+} // namespace Fortran::runtime
 #endif // FLANG_RT_RUNTIME_ENVIRONMENT_H_

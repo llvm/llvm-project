@@ -10,14 +10,14 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLIBMPASS
@@ -85,20 +85,22 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   auto shape = vecType.getShape();
   int64_t numElements = vecType.getNumElements();
 
-  Value result = rewriter.create<arith::ConstantOp>(
-      loc, DenseElementsAttr::get(
-               vecType, FloatAttr::get(vecType.getElementType(), 0.0)));
+  Value result = arith::ConstantOp::create(
+      rewriter, loc,
+      DenseElementsAttr::get(vecType,
+                             FloatAttr::get(vecType.getElementType(), 0.0)));
   SmallVector<int64_t> strides = computeStrides(shape);
   for (auto linearIndex = 0; linearIndex < numElements; ++linearIndex) {
     SmallVector<int64_t> positions = delinearize(linearIndex, strides);
     SmallVector<Value> operands;
     for (auto input : op->getOperands())
       operands.push_back(
-          rewriter.create<vector::ExtractOp>(loc, input, positions));
-    Value scalarOp =
-        rewriter.create<Op>(loc, vecType.getElementType(), operands);
+          vector::ExtractOp::create(rewriter, loc, input, positions));
+    Value scalarOp = Op::create(
+        rewriter, loc, TypeRange{vecType.getElementType()}, operands,
+        op.getProperties(), op->getDiscardableAttrDictionary().getValue());
     result =
-        rewriter.create<vector::InsertOp>(loc, scalarOp, result, positions);
+        vector::InsertOp::create(rewriter, loc, scalarOp, result, positions);
   }
   rewriter.replaceOp(op, {result});
   return success();
@@ -113,11 +115,15 @@ PromoteOpToF32<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
 
   auto loc = op.getLoc();
   auto f32 = rewriter.getF32Type();
-  auto extendedOperands = llvm::to_vector(
-      llvm::map_range(op->getOperands(), [&](Value operand) -> Value {
-        return rewriter.create<arith::ExtFOp>(loc, f32, operand);
-      }));
-  auto newOp = rewriter.create<Op>(loc, f32, extendedOperands);
+  auto extendedOperands =
+      llvm::map_to_vector(op->getOperands(), [&](Value operand) -> Value {
+        return arith::ExtFOp::create(rewriter, loc, TypeRange{f32},
+                                     ValueRange{operand},
+                                     arith::ExtFOp::Properties{});
+      });
+  auto newOp = Op::create(rewriter, loc, TypeRange{f32}, extendedOperands,
+                          op.getProperties(),
+                          op->getDiscardableAttrDictionary().getValue());
   rewriter.replaceOpWithNewOp<arith::TruncFOp>(op, opType, newOp);
   return success();
 }
@@ -140,8 +146,8 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
     rewriter.setInsertionPointToStart(&module->getRegion(0).front());
     auto opFunctionTy = FunctionType::get(
         rewriter.getContext(), op->getOperandTypes(), op->getResultTypes());
-    opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name,
-                                           opFunctionTy);
+    opFunc = func::FuncOp::create(rewriter, rewriter.getUnknownLoc(), name,
+                                  opFunctionTy);
     opFunc.setPrivate();
 
     // By definition Math dialect operations imply LLVM's "readnone"
@@ -149,8 +155,8 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
     // optimization opportunities (e.g. LICM) for backends targeting LLVM IR.
     // This will have to be changed, when strict FP behavior is supported
     // by Math dialect.
-    opFunc->setAttr(LLVM::LLVMDialect::getReadnoneAttrName(),
-                    UnitAttr::get(rewriter.getContext()));
+    opFunc->setDiscardableAttr(LLVM::LLVMDialect::getReadnoneAttrName(),
+                               UnitAttr::get(rewriter.getContext()));
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));
 

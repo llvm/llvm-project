@@ -9,7 +9,7 @@
 ; RUN:  llvm-nm %t2.bc.thinlto.o | FileCheck  %s --check-prefix=NM1
 
 ; RUN: llvm-lto2 run %t1.bc %t2.bc -o %t.o -save-temps \
-; RUN:     -r=%t1.bc,foo,plx \
+; RUN:     -r=%t1.bc,foo,lx \
 ; RUN:     -r=%t1.bc,globalfunc,plx \
 ; RUN:     -r=%t1.bc,globalfunc,lx \
 ; RUN:     -r=%t1.bc,weakfunc,plx \

@@ -13,3 +13,4 @@ add_llvm_tool(llvm-mc
   llvm-mc.cpp
   Disassembler.cpp
   )
+

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ScriptInterpreterLua_h_
-#define liblldb_ScriptInterpreterLua_h_
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H
 
 #include <vector>
 
@@ -18,7 +18,7 @@
 #include "lldb/lldb-enumerations.h"
 
 namespace lldb_private {
-class Lua;
+class LuaState;
 class ScriptInterpreterLua : public ScriptInterpreter {
 public:
   class CommandDataLua : public BreakpointOptions::CommandData {
@@ -41,7 +41,7 @@ public:
       llvm::StringRef command, CommandReturnObject *result,
       const ExecuteScriptOptions &options = ExecuteScriptOptions()) override;
 
-  void ExecuteInterpreterLoop() override;
+  llvm::Error ExecuteInterpreterLoop() override;
 
   bool LoadScriptingModule(const char *filename,
                            const LoadScriptOptions &options,
@@ -57,7 +57,8 @@ public:
 
   static void Terminate();
 
-  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger);
+  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger,
+                                                  lldb::ScriptLanguage);
 
   static llvm::StringRef GetPluginNameStatic() { return "script-lua"; }
 
@@ -75,7 +76,7 @@ public:
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  Lua &GetLua();
+  LuaState &GetLuaState();
 
   llvm::Error EnterSession(lldb::user_id_t debugger_id);
   llvm::Error LeaveSession();
@@ -88,25 +89,26 @@ public:
   CollectDataForWatchpointCommandCallback(WatchpointOptions *wp_options,
                                           CommandReturnObject &result) override;
 
-  Status SetBreakpointCommandCallback(BreakpointOptions &bp_options,
-                                      const char *command_body_text,
-                                      bool is_callback) override;
+  llvm::Error SetBreakpointCommandCallback(BreakpointOptions &bp_options,
+                                           const char *command_body_text,
+                                           bool is_callback) override;
 
-  void SetWatchpointCommandCallback(WatchpointOptions *wp_options,
-                                    const char *command_body_text,
-                                    bool is_callback) override;
+  llvm::Error SetWatchpointCommandCallback(WatchpointOptions *wp_options,
+                                           const char *command_body_text,
+                                           bool is_callback) override;
 
-  Status SetBreakpointCommandCallbackFunction(
+  llvm::Error SetBreakpointCommandCallbackFunction(
       BreakpointOptions &bp_options, const char *function_name,
       StructuredData::ObjectSP extra_args_sp) override;
 
 private:
-  std::unique_ptr<Lua> m_lua;
+  std::unique_ptr<LuaState> m_lua_state;
   bool m_session_is_active = false;
 
-  Status RegisterBreakpointCallback(BreakpointOptions &bp_options,
-                                    const char *command_body_text,
-                                    StructuredData::ObjectSP extra_args_sp);
+  llvm::Error
+  RegisterBreakpointCallback(BreakpointOptions &bp_options,
+                             const char *command_body_text,
+                             StructuredData::ObjectSP extra_args_sp);
 
   Status RegisterWatchpointCallback(WatchpointOptions *wp_options,
                                     const char *command_body_text,
@@ -115,4 +117,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ScriptInterpreterLua_h_
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H

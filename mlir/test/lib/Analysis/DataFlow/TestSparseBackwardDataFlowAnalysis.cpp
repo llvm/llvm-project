@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
@@ -71,6 +70,8 @@ struct WrittenTo : public Lattice<WrittenToLatticeValue> {
 /// is eventually written to.
 class WrittenToAnalysis : public SparseBackwardDataFlowAnalysis<WrittenTo> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(WrittenToAnalysis)
+
   WrittenToAnalysis(DataFlowSolver &solver, SymbolTableCollection &symbolTable,
                     bool assumeFuncWrites)
       : SparseBackwardDataFlowAnalysis(solver, symbolTable),
@@ -82,6 +83,10 @@ public:
   void visitBranchOperand(OpOperand &operand) override;
 
   void visitCallOperand(OpOperand &operand) override;
+
+  void
+  visitNonControlFlowArguments(RegionSuccessor &successor,
+                               ArrayRef<BlockArgument> arguments) override {}
 
   void visitExternalCall(CallOpInterface call, ArrayRef<WrittenTo *> operands,
                          ArrayRef<const WrittenTo *> results) override;
@@ -99,7 +104,7 @@ WrittenToAnalysis::visitOperation(Operation *op, ArrayRef<WrittenTo *> operands,
                                   ArrayRef<const WrittenTo *> results) {
   if (auto store = dyn_cast<memref::StoreOp>(op)) {
     SetVector<StringAttr> newWrites;
-    newWrites.insert(op->getAttrOfType<StringAttr>("tag_name"));
+    newWrites.insert(op->getDiscardableAttrOfType<StringAttr>("tag_name"));
     propagateIfChanged(operands[0],
                        operands[0]->getValue().addWrites(newWrites));
     return success();
@@ -143,7 +148,7 @@ void WrittenToAnalysis::visitExternalCall(CallOpInterface call,
 
   for (WrittenTo *lattice : operands) {
     SetVector<StringAttr> newWrites;
-    StringAttr name = call->getAttrOfType<StringAttr>("tag_name");
+    StringAttr name = call->getDiscardableAttrOfType<StringAttr>("tag_name");
     if (!name) {
       name = StringAttr::get(call->getContext(),
                              call.getOperation()->getName().getStringRef());
@@ -182,28 +187,36 @@ struct TestWrittenToPass
     SymbolTableCollection symbolTable;
 
     DataFlowSolver solver(DataFlowConfig().setInterprocedural(interprocedural));
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
+    loadBaselineAnalyses(solver);
     solver.load<WrittenToAnalysis>(symbolTable, assumeFuncWrites);
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 
     raw_ostream &os = llvm::outs();
     op->walk([&](Operation *op) {
-      auto tag = op->getAttrOfType<StringAttr>("tag");
+      auto tag = op->getDiscardableAttrOfType<StringAttr>("tag");
       if (!tag)
         return;
       os << "test_tag: " << tag.getValue() << ":\n";
       for (auto [index, operand] : llvm::enumerate(op->getOperands())) {
         const WrittenTo *writtenTo = solver.lookupState<WrittenTo>(operand);
-        assert(writtenTo && "expected a sparse lattice");
+        if (!writtenTo) {
+          // The lattice may not be computed for values in unreachable code
+          // (e.g., private functions not called from anywhere in
+          // interprocedural analysis mode).
+          os << " operand #" << index << ": <not computed>\n";
+          continue;
+        }
         os << " operand #" << index << ": ";
         writtenTo->print(os);
         os << "\n";
       }
       for (auto [index, operand] : llvm::enumerate(op->getResults())) {
         const WrittenTo *writtenTo = solver.lookupState<WrittenTo>(operand);
-        assert(writtenTo && "expected a sparse lattice");
+        if (!writtenTo) {
+          os << " result #" << index << ": <not computed>\n";
+          continue;
+        }
         os << " result #" << index << ": ";
         writtenTo->print(os);
         os << "\n";

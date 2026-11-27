@@ -1,7 +1,7 @@
-# RUN: llvm-mc -filetype=asm -triple x86_64-pc-linux-gnu %s -o - 2>&1 | FileCheck %s
+# RUN: llvm-mc -filetype=asm -triple x86_64 %s | FileCheck %s
 
-# Just a simple test for the assembly emitter - making sure it emits back the
-# bundling directives.
+## Just a simple test for the assembly emitter - making sure it emits back the
+## bundling directives.
 
   .text
 foo:
@@ -18,5 +18,3 @@ foo:
 # CHECK: .bundle_lock align_to_end
   add     %rbx, %rdx
   .bundle_unlock
-
-

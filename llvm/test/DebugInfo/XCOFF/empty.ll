@@ -1,6 +1,7 @@
-; RUN: llc -debugger-tune=gdb -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff < %s | \
+; RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s > %t.gdb.ll
+; RUN: llc -mcpu=ppc -mtriple powerpc-ibm-aix-xcoff < %t.gdb.ll | \
 ; RUN:   FileCheck %s --check-prefix=ASM32
-; RUN: llc -debugger-tune=gdb -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN: llc -mcpu=ppc -mtriple powerpc64-ibm-aix-xcoff < %t.gdb.ll | \
 ; RUN:   FileCheck %s --check-prefix=ASM64
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj < %s | \
 ; RUN:   llvm-dwarfdump --all - | FileCheck %s --check-prefix=DWARF32
@@ -17,7 +18,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4, !5, !6}
+!llvm.module.flags = !{!3, !4, !5, !6, !100}
 !llvm.ident = !{!7}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 12.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, nameTableKind: None)
@@ -27,6 +28,7 @@ entry:
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 2}
 !6 = !{i32 7, !"PIC Level", i32 2}
+!100 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}
 !7 = !{!"clang version 12.0.0"}
 !8 = distinct !DISubprogram(name: "main", scope: !1, file: !1, line: 1, type: !9, scopeLine: 2, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !2)
 !9 = !DISubroutineType(types: !10)
@@ -61,7 +63,7 @@ entry:
 ; ASM32-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; ASM32-NEXT:          .byte   0x00                            # Version = 0
 ; ASM32-NEXT:          .byte   0x09                            # Language = CPlusPlus
-; ASM32-NEXT:          .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; ASM32-NEXT:          .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; ASM32-NEXT:                                          # +HasTraceBackTableOffset, -IsInternalProcedure
 ; ASM32-NEXT:                                          # -HasControlledStorage, -IsTOCless
 ; ASM32-NEXT:                                          # -IsFloatingPointPresent
@@ -264,7 +266,7 @@ entry:
 ; ASM64-NEXT:          .vbyte  4, 0x00000000                   # Traceback table begin
 ; ASM64-NEXT:          .byte   0x00                            # Version = 0
 ; ASM64-NEXT:          .byte   0x09                            # Language = CPlusPlus
-; ASM64-NEXT:          .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+; ASM64-NEXT:          .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ; ASM64-NEXT:                                          # +HasTraceBackTableOffset, -IsInternalProcedure
 ; ASM64-NEXT:                                          # -HasControlledStorage, -IsTOCless
 ; ASM64-NEXT:                                          # -IsFloatingPointPresent

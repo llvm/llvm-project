@@ -16,10 +16,13 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/Support/SwapByteOrder.h"
+
+#include <atomic>
+#include <memory>
 
 namespace lld {
 namespace macho {
@@ -54,10 +57,14 @@ public:
   std::string getLocation(uint64_t off) const;
   // Return the source line corresponding to an address, or the empty string.
   // Format: Source.cpp:123 (/path/to/Source.cpp:123)
-  std::string getSourceLocation(uint64_t off) const;
+  // If \p symName is non-empty, it is used directly for variable DWARF lookups
+  // instead of searching `symbols` via getContainingSymbol(), which may not
+  // contain the original symbol (e.g. after a duplicate symbol overwrote it).
+  std::string getSourceLocation(uint64_t off, StringRef symName = {}) const;
   // Return the relocation at \p off, if it exists. This does a linear search.
-  const Reloc *getRelocAt(uint32_t off) const;
-  // Whether the data at \p off in this InputSection is live.
+  const Relocation *getRelocAt(uint32_t off) const;
+  // Whether the data at \p off in this InputSection is live. isLive() and
+  // markLive() are safe to call from several threads at once.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
   virtual InputSection *canonical() { return this; }
@@ -66,12 +73,13 @@ public:
 protected:
   InputSection(Kind kind, const Section &section, ArrayRef<uint8_t> data,
                uint32_t align)
-      : sectionKind(kind), keepUnique(false), hasAltEntry(false), align(align),
-        data(data), section(section) {}
+      : sectionKind(kind), keepUnique(false), hasAltEntry(false), isCold(false),
+        align(align), data(data), section(section) {}
 
   InputSection(const InputSection &rhs)
       : sectionKind(rhs.sectionKind), keepUnique(false), hasAltEntry(false),
-        align(rhs.align), data(rhs.data), section(rhs.section) {}
+        isCold(rhs.isCold), align(rhs.align), data(rhs.data),
+        section(rhs.section) {}
 
   Kind sectionKind;
 
@@ -84,11 +92,23 @@ public:
   // Does this section have symbols at offsets other than zero? (NOTE: only
   // applies to ConcatInputSections.)
   bool hasAltEntry : 1;
+  // Is this considered cold? Computed before ICF. Currently reflects whether
+  // any symbol in the section has the N_COLD_FUNC nlist flag set. Cold
+  // sections are placed at the end of their containing output section to
+  // improve locality of non-cold input sections. When a section is given an
+  // explicit priority (via order file, --bp-startup-sort, or
+  // --bp-compression-sort), this flag is unset so that the priority-based
+  // ordering takes precedence over cold partitioning.
+  bool isCold : 1;
   uint32_t align = 1;
 
   OutputSection *parent = nullptr;
   ArrayRef<uint8_t> data;
-  std::vector<Reloc> relocs;
+  // Relocations are sorted in ascending address order at parse time. If the
+  // array does not contain any branch relocations, later operations are allowed
+  // to modify it such that it is no longer fully sorted. Thunk emission
+  // requires relocations to be sorted.
+  RelocArray relocs;
   // The symbols that belong to this InputSection, sorted by value. With
   // .subsections_via_symbols, there is typically only one element here.
   llvm::TinyPtrVector<Defined *> symbols;
@@ -111,8 +131,12 @@ public:
   uint64_t getOffset(uint64_t off) const override { return outSecOff + off; }
   uint64_t getVA() const { return InputSection::getVA(0); }
   // ConcatInputSections are entirely live or dead, so the offset is irrelevant.
-  bool isLive(uint64_t off) const override { return live; }
-  void markLive(uint64_t off) override { live = true; }
+  bool isLive(uint64_t off) const override {
+    return utils::atomicRef(live).load(std::memory_order_relaxed);
+  }
+  void markLive(uint64_t off) override {
+    utils::atomicRef(live).store(true, std::memory_order_relaxed);
+  }
   bool isCoalescedWeak() const { return wasCoalesced && symbols.empty(); }
   bool shouldOmitFromOutput() const { return !live || isCoalescedWeak(); }
   void writeTo(uint8_t *buf);
@@ -142,7 +166,6 @@ public:
   // first and not copied to the output.
   bool wasCoalesced = false;
   bool live = !config->deadStrip;
-  bool hasCallSites = false;
   // This variable has two usages. Initially, it represents the input order.
   // After assignAddresses is called, it represents the offset from the
   // beginning of the output section this section was assigned to.
@@ -182,6 +205,27 @@ struct StringPiece {
 
   StringPiece(uint64_t off, uint32_t hash)
       : inSecOff(off), live(!config->deadStrip), hash(hash) {}
+
+  // Thread-safe iff `hash` is not modified concurrently.
+  bool isLive() const {
+    // &inSecOff + 1 points to the `live` bitfield.
+    auto &word = utils::atomicRef(*(&inSecOff + 1));
+    return word.load(std::memory_order_relaxed) & liveBit;
+  }
+
+  void markLive() {
+    auto &word = utils::atomicRef(*(&inSecOff + 1));
+    uint32_t w = word.load(std::memory_order_relaxed);
+    // No atomic OR is needed: while markLive runs, `hash` does not change and
+    // `live` only goes from false to true, so threads racing here all store the
+    // same value.
+    if (!(w & liveBit))
+      word.store(w | liveBit, std::memory_order_relaxed);
+  }
+
+  // The bit of the word after inSecOff that holds `live`.
+  static constexpr uint32_t liveBit =
+      llvm::sys::IsBigEndianHost ? (1U << 31) : 1U;
 };
 
 static_assert(sizeof(StringPiece) == 16, "StringPiece is too big!");
@@ -204,8 +248,10 @@ public:
         deduplicateLiterals(dedupLiterals) {}
 
   uint64_t getOffset(uint64_t off) const override;
-  bool isLive(uint64_t off) const override { return getStringPiece(off).live; }
-  void markLive(uint64_t off) override { getStringPiece(off).live = true; }
+  bool isLive(uint64_t off) const override {
+    return getStringPiece(off).isLive();
+  }
+  void markLive(uint64_t off) override { getStringPiece(off).markLive(); }
   // Find the StringPiece that contains this offset.
   StringPiece &getStringPiece(uint64_t off);
   const StringPiece &getStringPiece(uint64_t off) const;
@@ -251,10 +297,10 @@ public:
                           uint32_t align);
   uint64_t getOffset(uint64_t off) const override;
   bool isLive(uint64_t off) const override {
-    return live[off >> power2LiteralSize];
+    return live[off >> power2LiteralSize].load(std::memory_order_relaxed);
   }
   void markLive(uint64_t off) override {
-    live[off >> power2LiteralSize] = true;
+    live[off >> power2LiteralSize].store(true, std::memory_order_relaxed);
   }
 
   static bool classof(const InputSection *isec) {
@@ -264,7 +310,7 @@ public:
 private:
   unsigned power2LiteralSize;
   // The liveness of data[off] is tracked by live[off >> power2LiteralSize].
-  llvm::BitVector live;
+  std::unique_ptr<std::atomic<bool>[]> live;
 };
 
 inline uint8_t sectionType(uint32_t flags) {
@@ -302,9 +348,12 @@ bool isClassRefsSection(const InputSection *);
 bool isSelRefsSection(const InputSection *);
 bool isEhFrameSection(const InputSection *);
 bool isGccExceptTabSection(const InputSection *);
+bool usesAuthGot(const InputSection *);
+const AuthInfo *getImplicitAuthInfo(const InputSection *isec,
+                                    const Symbol *sym);
 
 extern std::vector<ConcatInputSection *> inputSections;
-// This is used as a counter for specyfing input order for input sections
+// This is used as a counter for specifying input order for input sections.
 extern int inputSectionsOrder;
 
 namespace section_names {
@@ -324,6 +373,7 @@ constexpr const char data[] = "__data";
 constexpr const char debugAbbrev[] = "__debug_abbrev";
 constexpr const char debugInfo[] = "__debug_info";
 constexpr const char debugLine[] = "__debug_line";
+constexpr const char debugLineStr[] = "__debug_line_str";
 constexpr const char debugStr[] = "__debug_str";
 constexpr const char debugStrOffs[] = "__debug_str_offs";
 constexpr const char ehFrame[] = "__eh_frame";
@@ -336,6 +386,7 @@ constexpr const char header[] = "__mach_header";
 constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
 constexpr const char initOffsets[] = "__init_offsets";
 constexpr const char const_[] = "__const";
+constexpr const char constCfObj2[] = "__const_cfobj2";
 constexpr const char lazySymbolPtr[] = "__la_symbol_ptr";
 constexpr const char lazyBinding[] = "__lazy_binding";
 constexpr const char literals[] = "__literals";
@@ -343,12 +394,20 @@ constexpr const char functionMap[] = "__llvm_merge";
 constexpr const char moduleInitFunc[] = "__mod_init_func";
 constexpr const char moduleTermFunc[] = "__mod_term_func";
 constexpr const char nonLazySymbolPtr[] = "__nl_symbol_ptr";
+constexpr const char objcArrayData[] = "__objc_arraydata";
+constexpr const char objcArrayObj[] = "__objc_arrayobj";
 constexpr const char objcCatList[] = "__objc_catlist";
+constexpr const char objcCatList2[] = "__objc_catlist2";
 constexpr const char objcClassList[] = "__objc_classlist";
 constexpr const char objcMethList[] = "__objc_methlist";
 constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";
+constexpr const char objcDateObj[] = "__objc_dateobj";
+constexpr const char objcDictObj[] = "__objc_dictobj";
+constexpr const char objcDoubleObj[] = "__objc_doubleobj";
+constexpr const char objcFloatObj[] = "__objc_floatobj";
 constexpr const char objCImageInfo[] = "__objc_imageinfo";
+constexpr const char objcIntObj[] = "__objc_intobj";
 constexpr const char objcStubs[] = "__objc_stubs";
 constexpr const char objcSelrefs[] = "__objc_selrefs";
 constexpr const char objcMethname[] = "__objc_methname";
@@ -363,11 +422,11 @@ constexpr const char staticInit[] = "__StaticInit";
 constexpr const char stringTable[] = "__string_table";
 constexpr const char stubHelper[] = "__stub_helper";
 constexpr const char stubs[] = "__stubs";
+constexpr const char authStubs[] = "__auth_stubs";
 constexpr const char swift[] = "__swift";
 constexpr const char symbolTable[] = "__symbol_table";
 constexpr const char textCoalNt[] = "__textcoal_nt";
 constexpr const char text[] = "__text";
-constexpr const char threadPtrs[] = "__thread_ptrs";
 constexpr const char threadVars[] = "__thread_vars";
 constexpr const char unwindInfo[] = "__unwind_info";
 constexpr const char weakBinding[] = "__weak_binding";
@@ -377,6 +436,8 @@ constexpr const char addrSig[] = "__llvm_addrsig";
 } // namespace section_names
 
 void addInputSection(InputSection *inputSection);
+
+uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type, int64_t offset);
 } // namespace macho
 
 std::string toString(const macho::InputSection *);

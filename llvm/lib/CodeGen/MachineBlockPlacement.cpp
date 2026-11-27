@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/MBFIWrapper.h"
@@ -44,6 +45,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TailDuplicator.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -103,6 +105,12 @@ static cl::opt<unsigned> MaxBytesForAlignmentOverride(
     cl::desc("Forces the maximum bytes allowed to be emitted when padding for "
              "alignment"),
     cl::init(0), cl::Hidden);
+
+static cl::opt<unsigned> PredecessorLimit(
+    "block-placement-predecessor-limit",
+    cl::desc("For blocks with more predecessors, certain layout optimizations"
+             "will be disabled to prevent quadratic compile time."),
+    cl::init(1000), cl::Hidden);
 
 // FIXME: Find a good default for this flag and remove the flag.
 static cl::opt<unsigned> ExitBlockBias(
@@ -235,9 +243,6 @@ extern cl::opt<unsigned> ProfileLikelyProb;
 // -view-block-layout-with-bfi=
 extern cl::opt<GVDAGType> ViewBlockLayoutWithBFI;
 
-// Command line option to specify the name of the function for CFG dump
-// Defined in Analysis/BlockFrequencyInfo.cpp:  -view-bfi-func-name=
-extern cl::opt<std::string> ViewBlockFreqFuncName;
 } // namespace llvm
 
 namespace {
@@ -632,9 +637,7 @@ class MachineBlockPlacementLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
@@ -665,6 +668,7 @@ public:
     AU.addRequired<MachineLoopInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -694,7 +698,6 @@ static std::string getBlockName(const MachineBasicBlock *BB) {
   raw_string_ostream OS(Result);
   OS << printMBBReference(*BB);
   OS << " ('" << BB->getName() << "')";
-  OS.flush();
   return Result;
 }
 #endif
@@ -1030,6 +1033,11 @@ bool MachineBlockPlacement::isTrellis(
   SmallPtrSet<const MachineBasicBlock *, 8> SeenPreds;
 
   for (MachineBasicBlock *Succ : ViableSuccs) {
+    // Compile-time optimization: runtime is quadratic in the number of
+    // predecessors. For such uncommon cases, exit early.
+    if (Succ->pred_size() > PredecessorLimit)
+      return false;
+
     int PredCount = 0;
     for (auto *SuccPred : Succ->predecessors()) {
       // Allow triangle successors, but don't count them.
@@ -1444,11 +1452,15 @@ getLayoutSuccessorProbThreshold(const MachineBasicBlock *BB) {
        *   So the threshold T in the calculation below
        *   (1-T) * Prob(BB->Succ) > T * Prob(BB->Pred)
        *   So T / (1 - T) = 2, Yielding T = 2/3
-       * Also adding user specified branch bias, we have
-       *   T = (2/3)*(ProfileLikelyProb/50)
-       *     = (2*ProfileLikelyProb)/150)
+       *
+       * Then remap the user-controlled ProfileLikelyProb into
+       * a triangle-specific threshold T.
+       *   T = (2/3) * (ProfileLikelyProb / 50)
+       *     = (2 * ProfileLikelyProb) / 150
+       * This preserves T = 2/3 at ProfileLikelyProb = 50.
+       * The result is capped at 1.
        */
-      return BranchProbability(2 * ProfileLikelyProb, 150);
+      return BranchProbability(ProfileLikelyProb, 150) * 2;
     }
   }
   return BranchProbability(ProfileLikelyProb, 100);
@@ -1470,6 +1482,11 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
 
   // There isn't a better layout when there are no unscheduled predecessors.
   if (SuccChain.UnscheduledPredecessors == 0)
+    return false;
+
+  // Compile-time optimization: runtime is quadratic in the number of
+  // predecessors. For such uncommon cases, exit early.
+  if (Succ->pred_size() > PredecessorLimit)
     return false;
 
   // There are two basic scenarios here:
@@ -1662,12 +1679,13 @@ MachineBlockPlacement::selectBestSuccessor(const MachineBasicBlock *BB,
   // applicable.
   auto FoundEdge = ComputedEdges.find(BB);
   if (FoundEdge != ComputedEdges.end()) {
-    MachineBasicBlock *Succ = FoundEdge->second.BB;
+    BlockAndTailDupResult Result = FoundEdge->second;
     ComputedEdges.erase(FoundEdge);
-    BlockChain *SuccChain = BlockToChain[Succ];
-    if (BB->isSuccessor(Succ) && (!BlockFilter || BlockFilter->count(Succ)) &&
-        SuccChain != &Chain && Succ == *SuccChain->begin())
-      return FoundEdge->second;
+    BlockChain *SuccChain = BlockToChain[Result.BB];
+    if (BB->isSuccessor(Result.BB) &&
+        (!BlockFilter || BlockFilter->count(Result.BB)) &&
+        SuccChain != &Chain && Result.BB == *SuccChain->begin())
+      return Result;
   }
 
   // if BB is part of a trellis, Use the trellis to determine the optimal
@@ -3012,7 +3030,9 @@ void MachineBlockPlacement::alignBlocks() {
     if (!L)
       continue;
 
-    const Align TLIAlign = TLI->getPrefLoopAlignment(L);
+    // Query the block being aligned rather than only the LoopInfo header.
+    // After loop rotation, ChainBB can be a different backedge destination.
+    const Align TLIAlign = TLI->getPrefLoopAlignment(L, ChainBB);
     unsigned MDAlign = 1;
     MDNode *LoopID = L->getLoopID();
     if (LoopID) {
@@ -3024,11 +3044,8 @@ void MachineBlockPlacement::alignBlocks() {
         if (S == nullptr)
           continue;
         if (S->getString() == "llvm.loop.align") {
-          assert(MD->getNumOperands() == 2 &&
-                 "per-loop align metadata should have two operands.");
           MDAlign =
               mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-          assert(MDAlign >= 1 && "per-loop align value must be positive.");
         }
       }
     }
@@ -3099,10 +3116,10 @@ void MachineBlockPlacement::alignBlocks() {
     // Align all of the blocks in the function to a specific alignment.
     for (MachineBasicBlock &MBB : *F) {
       if (HasMaxBytesOverride)
-        MBB.setAlignment(Align(1ULL << AlignAllBlock),
+        MBB.setAlignment(Align::fromLog2(AlignAllBlock),
                          MaxBytesForAlignmentOverride);
       else
-        MBB.setAlignment(Align(1ULL << AlignAllBlock));
+        MBB.setAlignment(Align::fromLog2(AlignAllBlock));
     }
   else if (AlignAllNonFallThruBlocks) {
     // Align all of the blocks that have no fall-through predecessors to a
@@ -3111,10 +3128,10 @@ void MachineBlockPlacement::alignBlocks() {
       auto LayoutPred = std::prev(MBI);
       if (!LayoutPred->isSuccessor(&*MBI)) {
         if (HasMaxBytesOverride)
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks),
+          MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks),
                             MaxBytesForAlignmentOverride);
         else
-          MBI->setAlignment(Align(1ULL << AlignAllNonFallThruBlocks));
+          MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks));
       }
     }
   }
@@ -3212,13 +3229,9 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     // Signal to outer function
     Removed = true;
 
-    // Conservative default.
-    bool InWorkList = true;
     // Remove from the Chain and Chain Map
     if (auto It = BlockToChain.find(RemBB); It != BlockToChain.end()) {
-      BlockChain *Chain = It->second;
-      InWorkList = Chain->UnscheduledPredecessors == 0;
-      Chain->remove(RemBB);
+      It->second->remove(RemBB);
       BlockToChain.erase(It);
     }
 
@@ -3228,11 +3241,10 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     }
 
     // Handle the Work Lists
-    if (InWorkList) {
-      SmallVectorImpl<MachineBasicBlock *> &RemoveList = BlockWorkList;
-      if (RemBB->isEHPad())
-        RemoveList = EHPadWorkList;
-      llvm::erase(RemoveList, RemBB);
+    if (RemBB->isEHPad()) {
+      llvm::erase(EHPadWorkList, RemBB);
+    } else {
+      llvm::erase(BlockWorkList, RemBB);
     }
 
     // Handle the filter set
@@ -3536,14 +3548,13 @@ MachineBlockPlacementPass::run(MachineFunction &MF,
   if (!PSI)
     report_fatal_error("MachineBlockPlacement requires ProfileSummaryAnalysis",
                        false);
-
   MachineBlockPlacement MBP(MBPI, MLI, PSI, std::move(MBFI), MPDT,
                             AllowTailMerge);
 
-  if (!MBP.run(MF))
-    return PreservedAnalyses::all();
+  if (MBP.run(MF))
+    return getMachineFunctionPassPreservedAnalyses();
 
-  return getMachineFunctionPassPreservedAnalyses();
+  return PreservedAnalyses::all();
 }
 
 void MachineBlockPlacementPass::printPipeline(
@@ -3586,10 +3597,10 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   bool UseExtTspForPerf = false;
   bool UseExtTspForSize = false;
   if (3 <= MF.size() && MF.size() <= ExtTspBlockPlacementMaxBlocks) {
-    UseExtTspForPerf =
-        EnableExtTspBlockPlacement &&
-        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
     UseExtTspForSize = OptForSize && ApplyExtTspForSize;
+    UseExtTspForPerf =
+        !UseExtTspForSize && EnableExtTspBlockPlacement &&
+        (ApplyExtTspWithoutProfile || MF.getFunction().hasProfileData());
   }
 
   // Apply tail duplication.
@@ -3653,9 +3664,10 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
   ChainAllocator.DestroyAll();
 
   // View the function.
-  if (ViewBlockLayoutWithBFI != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       F->getFunction().getName() == ViewBlockFreqFuncName)) {
+  StringRef ViewFuncName =
+      getViewBlockFreqFuncName(F->getFunction().getContext());
+  if (ViewBlockLayoutWithBFI != GVDAGType::None &&
+      (ViewFuncName.empty() || F->getFunction().getName() == ViewFuncName)) {
     if (RenumberBlocksBeforeView)
       MF.RenumberBlocks();
     MBFI->view("MBP." + MF.getName(), false);
@@ -3760,11 +3772,6 @@ void MachineBlockPlacement::assignBlockOrder(
     const std::vector<const MachineBasicBlock *> &NewBlockOrder) {
   assert(F->size() == NewBlockOrder.size() && "Incorrect size of block order");
   F->RenumberBlocks();
-  // At this point, we possibly removed blocks from the function, so we can't
-  // renumber the domtree. At this point, we don't need it anymore, though.
-  // TODO: move this to the point where the dominator tree is actually
-  // invalidated (i.e., where blocks are removed without updating the domtree).
-  MPDT = nullptr;
 
   bool HasChanges = false;
   for (size_t I = 0; I < NewBlockOrder.size(); I++) {
@@ -3857,10 +3864,7 @@ class MachineBlockPlacementStatsLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {
-    initializeMachineBlockPlacementStatsLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  MachineBlockPlacementStatsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &F) override {
     auto *MBPI =

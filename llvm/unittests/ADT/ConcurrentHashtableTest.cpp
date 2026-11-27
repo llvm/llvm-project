@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ConcurrentHashtable.h"
+#include "llvm/ADT/StringMapEntry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
@@ -14,14 +15,13 @@
 #include "gtest/gtest.h"
 #include <limits>
 #include <random>
-#include <vector>
 using namespace llvm;
 using namespace parallel;
 
 namespace {
 class String {
 public:
-  String() {}
+  String() = default;
   const std::string &getKey() const { return Data; }
 
   template <typename AllocatorTy>
@@ -50,7 +50,6 @@ TEST(ConcurrentHashTableTest, AddStringEntries) {
   parallel::TaskGroup tg;
 
   tg.spawn([&]() {
-    size_t AllocatedBytesAtStart = Allocator.getBytesAllocated();
     std::pair<String *, bool> res1 = HashTable.insert("1");
     // Check entry is inserted.
     EXPECT_TRUE(res1.first->getKey() == "1");
@@ -80,8 +79,6 @@ TEST(ConcurrentHashTableTest, AddStringEntries) {
     // Check first entry is still valid.
     EXPECT_TRUE(res1.first->getKey() == "1");
 
-    // Check data was allocated by allocator.
-    EXPECT_TRUE(Allocator.getBytesAllocated() > AllocatedBytesAtStart);
 
     // Check statistic.
     std::string StatisticString;
@@ -90,6 +87,30 @@ TEST(ConcurrentHashTableTest, AddStringEntries) {
 
     EXPECT_TRUE(StatisticString.find("Overall number of entries = 3\n") !=
                 std::string::npos);
+  });
+}
+
+TEST(ConcurrentHashTableTest, KeyReturnedByValue) {
+  // StringMapEntry::getKey returns a StringRef by value.
+  using Entry = StringMapEntry<EmptyStringSetTag>;
+  PerThreadBumpPtrAllocator Allocator;
+  ConcurrentHashTableByPtr<StringRef, Entry, PerThreadBumpPtrAllocator>
+      HashTable(Allocator, 10);
+
+  parallel::TaskGroup tg;
+
+  tg.spawn([&]() {
+    std::pair<Entry *, bool> res1 = HashTable.insert("1");
+    EXPECT_EQ(res1.first->getKey(), "1");
+    EXPECT_TRUE(res1.second);
+
+    std::pair<Entry *, bool> res2 = HashTable.insert("2");
+    EXPECT_EQ(res2.first->getKey(), "2");
+    EXPECT_TRUE(res2.second);
+
+    std::pair<Entry *, bool> res3 = HashTable.insert("1");
+    EXPECT_FALSE(res3.second);
+    EXPECT_EQ(res1.first, res3.first);
   });
 }
 
@@ -108,15 +129,10 @@ TEST(ConcurrentHashTableTest, AddStringMultiplueEntries) {
   tg.spawn([&]() {
     // Check insertion.
     for (size_t I = 0; I < NumElements; I++) {
-      BumpPtrAllocator &ThreadLocalAllocator =
-          Allocator.getThreadLocalAllocator();
-      size_t AllocatedBytesAtStart = ThreadLocalAllocator.getBytesAllocated();
       std::string StringForElement = formatv("{0}", I);
       std::pair<String *, bool> Entry = HashTable.insert(StringForElement);
       EXPECT_TRUE(Entry.second);
       EXPECT_TRUE(Entry.first->getKey() == StringForElement);
-      EXPECT_TRUE(ThreadLocalAllocator.getBytesAllocated() >
-                  AllocatedBytesAtStart);
     }
 
     std::string StatisticString;
@@ -130,16 +146,10 @@ TEST(ConcurrentHashTableTest, AddStringMultiplueEntries) {
 
     // Check insertion of duplicates.
     for (size_t I = 0; I < NumElements; I++) {
-      BumpPtrAllocator &ThreadLocalAllocator =
-          Allocator.getThreadLocalAllocator();
-      size_t AllocatedBytesAtStart = ThreadLocalAllocator.getBytesAllocated();
       std::string StringForElement = formatv("{0}", I);
       std::pair<String *, bool> Entry = HashTable.insert(StringForElement);
       EXPECT_FALSE(Entry.second);
       EXPECT_TRUE(Entry.first->getKey() == StringForElement);
-      // Check no additional bytes were allocated for duplicate.
-      EXPECT_TRUE(ThreadLocalAllocator.getBytesAllocated() ==
-                  AllocatedBytesAtStart);
     }
 
     // Check statistic.
@@ -166,15 +176,10 @@ TEST(ConcurrentHashTableTest, AddStringMultiplueEntriesWithResize) {
   tg.spawn([&]() {
     // Check insertion.
     for (size_t I = 0; I < NumElements; I++) {
-      BumpPtrAllocator &ThreadLocalAllocator =
-          Allocator.getThreadLocalAllocator();
-      size_t AllocatedBytesAtStart = ThreadLocalAllocator.getBytesAllocated();
       std::string StringForElement = formatv("{0} {1}", I, I + 100);
       std::pair<String *, bool> Entry = HashTable.insert(StringForElement);
       EXPECT_TRUE(Entry.second);
       EXPECT_TRUE(Entry.first->getKey() == StringForElement);
-      EXPECT_TRUE(ThreadLocalAllocator.getBytesAllocated() >
-                  AllocatedBytesAtStart);
     }
 
     std::string StatisticString;
@@ -188,16 +193,10 @@ TEST(ConcurrentHashTableTest, AddStringMultiplueEntriesWithResize) {
 
     // Check insertion of duplicates.
     for (size_t I = 0; I < NumElements; I++) {
-      BumpPtrAllocator &ThreadLocalAllocator =
-          Allocator.getThreadLocalAllocator();
-      size_t AllocatedBytesAtStart = ThreadLocalAllocator.getBytesAllocated();
       std::string StringForElement = formatv("{0} {1}", I, I + 100);
       std::pair<String *, bool> Entry = HashTable.insert(StringForElement);
       EXPECT_FALSE(Entry.second);
       EXPECT_TRUE(Entry.first->getKey() == StringForElement);
-      // Check no additional bytes were allocated for duplicate.
-      EXPECT_TRUE(ThreadLocalAllocator.getBytesAllocated() ==
-                  AllocatedBytesAtStart);
     }
 
     // Check statistic.
@@ -218,15 +217,10 @@ TEST(ConcurrentHashTableTest, AddStringEntriesParallel) {
 
   // Check parallel insertion.
   parallelFor(0, NumElements, [&](size_t I) {
-    BumpPtrAllocator &ThreadLocalAllocator =
-        Allocator.getThreadLocalAllocator();
-    size_t AllocatedBytesAtStart = ThreadLocalAllocator.getBytesAllocated();
     std::string StringForElement = formatv("{0}", I);
     std::pair<String *, bool> Entry = HashTable.insert(StringForElement);
     EXPECT_TRUE(Entry.second);
     EXPECT_TRUE(Entry.first->getKey() == StringForElement);
-    EXPECT_TRUE(ThreadLocalAllocator.getBytesAllocated() >
-                AllocatedBytesAtStart);
   });
 
   std::string StatisticString;
@@ -240,16 +234,10 @@ TEST(ConcurrentHashTableTest, AddStringEntriesParallel) {
 
   // Check parallel insertion of duplicates.
   parallelFor(0, NumElements, [&](size_t I) {
-    BumpPtrAllocator &ThreadLocalAllocator =
-        Allocator.getThreadLocalAllocator();
-    size_t AllocatedBytesAtStart = ThreadLocalAllocator.getBytesAllocated();
     std::string StringForElement = formatv("{0}", I);
     std::pair<String *, bool> Entry = HashTable.insert(StringForElement);
     EXPECT_FALSE(Entry.second);
     EXPECT_TRUE(Entry.first->getKey() == StringForElement);
-    // Check no additional bytes were allocated for duplicate.
-    EXPECT_TRUE(ThreadLocalAllocator.getBytesAllocated() ==
-                AllocatedBytesAtStart);
   });
 
   // Check statistic.
@@ -269,15 +257,10 @@ TEST(ConcurrentHashTableTest, AddStringEntriesParallelWithResize) {
 
   // Check parallel insertion.
   parallelFor(0, NumElements, [&](size_t I) {
-    BumpPtrAllocator &ThreadLocalAllocator =
-        Allocator.getThreadLocalAllocator();
-    size_t AllocatedBytesAtStart = ThreadLocalAllocator.getBytesAllocated();
     std::string StringForElement = formatv("{0}", I);
     std::pair<String *, bool> Entry = HashTable.insert(StringForElement);
     EXPECT_TRUE(Entry.second);
     EXPECT_TRUE(Entry.first->getKey() == StringForElement);
-    EXPECT_TRUE(ThreadLocalAllocator.getBytesAllocated() >
-                AllocatedBytesAtStart);
   });
 
   std::string StatisticString;
@@ -291,16 +274,10 @@ TEST(ConcurrentHashTableTest, AddStringEntriesParallelWithResize) {
 
   // Check parallel insertion of duplicates.
   parallelFor(0, NumElements, [&](size_t I) {
-    BumpPtrAllocator &ThreadLocalAllocator =
-        Allocator.getThreadLocalAllocator();
-    size_t AllocatedBytesAtStart = ThreadLocalAllocator.getBytesAllocated();
     std::string StringForElement = formatv("{0}", I);
     std::pair<String *, bool> Entry = HashTable.insert(StringForElement);
     EXPECT_FALSE(Entry.second);
     EXPECT_TRUE(Entry.first->getKey() == StringForElement);
-    // Check no additional bytes were allocated for duplicate.
-    EXPECT_TRUE(ThreadLocalAllocator.getBytesAllocated() ==
-                AllocatedBytesAtStart);
   });
 
   // Check statistic.

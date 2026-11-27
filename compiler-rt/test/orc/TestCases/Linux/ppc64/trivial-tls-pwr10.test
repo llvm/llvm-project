@@ -2,6 +2,9 @@
 // RUN: %clangxx -fPIC -c -o %t/main.o %S/Inputs/trivial-tls-main.cpp
 // RUN: %clangxx -fPIC -c -o %t/pwr10.o %S/Inputs/trivial-tls-pwr10.cpp
 // RUN: %llvm_jitlink %t/main.o %t/pwr10.o
+// REQUIRES: disabled
+//// https://github.com/llvm/llvm-project/issues/175094
+
 // FIXME: We separate pwr10 code from main object file due to currrent
 // implementation only supports one PLT stub for the same symbol.
 // For example, `bl __tls_get_addr` in one object file has only one PLT stub,

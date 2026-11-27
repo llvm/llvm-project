@@ -1,4 +1,4 @@
-//===--- ArgumentCommentCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,17 +11,34 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
+#include "llvm/Support/YAMLParser.h"
 
 #include "../utils/LexerUtils.h"
+#include "../utils/OptionsUtils.h"
 
 using namespace clang::ast_matchers;
 
+namespace clang::tidy {
+using IntegerLiteralKind = bugprone::ArgumentCommentCheck::IntegerLiteralKind;
+
+llvm::ArrayRef<std::pair<IntegerLiteralKind, StringRef>>
+OptionEnumMapping<IntegerLiteralKind>::getEnumMapping() {
+  static constexpr std::pair<IntegerLiteralKind, StringRef> Mapping[] = {
+      {IntegerLiteralKind::None, "None"},
+      {IntegerLiteralKind::ZeroOnly, "ZeroOnly"},
+      {IntegerLiteralKind::All, "All"}};
+  return {Mapping};
+}
+} // namespace clang::tidy
+
 namespace clang::tidy::bugprone {
+
+using utils::lexer::CommentToken;
 namespace {
 AST_MATCHER(Decl, isFromStdNamespaceOrSystemHeader) {
-  if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext())
-    if (D->isStdNamespace())
-      return true;
+  if (const auto *D = Node.getDeclContext()->getEnclosingNamespaceContext();
+      D && D->isStdNamespace())
+    return true;
   if (Node.getLocation().isInvalid())
     return false;
   return Node.getASTContext().getSourceManager().isInSystemHeader(
@@ -29,31 +46,81 @@ AST_MATCHER(Decl, isFromStdNamespaceOrSystemHeader) {
 }
 } // namespace
 
+// CommentIntegerLiterals used to be a boolean option, so existing `.clang-tidy`
+// files set it to `true` or `false`. Accept the spellings that
+// OptionsView::get<bool>() accepts, as All and None.
+static IntegerLiteralKind
+getCommentIntegerLiterals(const ClangTidyCheck::OptionsView &Options) {
+  if (const std::optional<StringRef> Value =
+          Options.get("CommentIntegerLiterals")) {
+    if (const std::optional<bool> Bool = llvm::yaml::parseBool(*Value))
+      return *Bool ? IntegerLiteralKind::All : IntegerLiteralKind::None;
+    long long Number = 0;
+    if (!Value->getAsInteger(10, Number))
+      return Number != 0 ? IntegerLiteralKind::All : IntegerLiteralKind::None;
+  }
+  return Options.get("CommentIntegerLiterals", IntegerLiteralKind::None);
+}
+
 ArgumentCommentCheck::ArgumentCommentCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
+      StrictMode(Options.get("StrictMode", false)),
+      IgnoreMacros(Options.get("IgnoreMacros", true)),
       IgnoreSingleArgument(Options.get("IgnoreSingleArgument", false)),
+      CommentAnonymousInitLists(
+          Options.get("CommentAnonymousInitLists", false)),
       CommentBoolLiterals(Options.get("CommentBoolLiterals", false)),
-      CommentIntegerLiterals(Options.get("CommentIntegerLiterals", false)),
+      CommentCharacterLiterals(Options.get("CommentCharacterLiterals", false)),
       CommentFloatLiterals(Options.get("CommentFloatLiterals", false)),
+      CommentNullPtrs(Options.get("CommentNullPtrs", false)),
+      CommentParenthesizedTemporaries(
+          Options.get("CommentParenthesizedTemporaries", false)),
       CommentStringLiterals(Options.get("CommentStringLiterals", false)),
+      CommentTypedInitLists(Options.get("CommentTypedInitLists", false)),
       CommentUserDefinedLiterals(
           Options.get("CommentUserDefinedLiterals", false)),
-      CommentCharacterLiterals(Options.get("CommentCharacterLiterals", false)),
-      CommentNullPtrs(Options.get("CommentNullPtrs", false)),
-      IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {}
+      IgnoredParameterNames(utils::options::parseStringList(
+          Options.get("IgnoredParameterNames", ""))),
+      CommentIntegerLiterals(getCommentIntegerLiterals(Options)),
+      NullPtrMacros(utils::options::parseStringList(
+          Options.get("NullPtrMacros", "NULL"))),
+      BoolLiteralMacros(utils::options::parseStringList(
+          Options.get("BoolLiteralMacros", "true;false"))),
+      IdentRE("^(/\\* *)([_A-Za-z][_A-Za-z0-9]*)( *= *\\*/)$") {
+  for (const StringRef Name : IgnoredParameterNames) {
+    llvm::Regex Regex(Name);
+    if (!Regex.isValid()) {
+      configurationDiag("Invalid regular expression '%0' in "
+                        "IgnoredParameterNames")
+          << Name;
+      continue;
+    }
+    IgnoredParameterNameRegexes.push_back(std::move(Regex));
+  }
+}
 
 void ArgumentCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "IgnoreMacros", IgnoreMacros);
   Options.store(Opts, "IgnoreSingleArgument", IgnoreSingleArgument);
+  Options.store(Opts, "CommentAnonymousInitLists", CommentAnonymousInitLists);
   Options.store(Opts, "CommentBoolLiterals", CommentBoolLiterals);
-  Options.store(Opts, "CommentIntegerLiterals", CommentIntegerLiterals);
-  Options.store(Opts, "CommentFloatLiterals", CommentFloatLiterals);
-  Options.store(Opts, "CommentStringLiterals", CommentStringLiterals);
-  Options.store(Opts, "CommentUserDefinedLiterals", CommentUserDefinedLiterals);
   Options.store(Opts, "CommentCharacterLiterals", CommentCharacterLiterals);
+  Options.store(Opts, "CommentFloatLiterals", CommentFloatLiterals);
+  Options.store(Opts, "CommentIntegerLiterals", CommentIntegerLiterals);
   Options.store(Opts, "CommentNullPtrs", CommentNullPtrs);
+  Options.store(Opts, "CommentParenthesizedTemporaries",
+                CommentParenthesizedTemporaries);
+  Options.store(Opts, "CommentStringLiterals", CommentStringLiterals);
+  Options.store(Opts, "CommentTypedInitLists", CommentTypedInitLists);
+  Options.store(Opts, "CommentUserDefinedLiterals", CommentUserDefinedLiterals);
+  Options.store(Opts, "IgnoredParameterNames",
+                utils::options::serializeStringList(IgnoredParameterNames));
+  Options.store(Opts, "NullPtrMacros",
+                utils::options::serializeStringList(NullPtrMacros));
+  Options.store(Opts, "BoolLiteralMacros",
+                utils::options::serializeStringList(BoolLiteralMacros));
 }
 
 void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
@@ -77,100 +144,57 @@ void ArgumentCommentCheck::registerMatchers(MatchFinder *Finder) {
                      this);
 }
 
-static std::vector<std::pair<SourceLocation, StringRef>>
-getCommentsInRange(ASTContext *Ctx, CharSourceRange Range) {
-  std::vector<std::pair<SourceLocation, StringRef>> Comments;
-  auto &SM = Ctx->getSourceManager();
-  std::pair<FileID, unsigned> BeginLoc = SM.getDecomposedLoc(Range.getBegin()),
-                              EndLoc = SM.getDecomposedLoc(Range.getEnd());
-
-  if (BeginLoc.first != EndLoc.first)
-    return Comments;
-
-  bool Invalid = false;
-  StringRef Buffer = SM.getBufferData(BeginLoc.first, &Invalid);
-  if (Invalid)
-    return Comments;
-
-  const char *StrData = Buffer.data() + BeginLoc.second;
-
-  Lexer TheLexer(SM.getLocForStartOfFile(BeginLoc.first), Ctx->getLangOpts(),
-                 Buffer.begin(), StrData, Buffer.end());
-  TheLexer.SetCommentRetentionState(true);
-
-  while (true) {
-    Token Tok;
-    if (TheLexer.LexFromRawLexer(Tok))
-      break;
-    if (Tok.getLocation() == Range.getEnd() || Tok.is(tok::eof))
-      break;
-
-    if (Tok.is(tok::comment)) {
-      std::pair<FileID, unsigned> CommentLoc =
-          SM.getDecomposedLoc(Tok.getLocation());
-      assert(CommentLoc.first == BeginLoc.first);
-      Comments.emplace_back(
-          Tok.getLocation(),
-          StringRef(Buffer.begin() + CommentLoc.second, Tok.getLength()));
-    } else {
-      // Clear comments found before the different token, e.g. comma.
-      Comments.clear();
-    }
-  }
-
-  return Comments;
-}
-
-static std::vector<std::pair<SourceLocation, StringRef>>
-getCommentsBeforeLoc(ASTContext *Ctx, SourceLocation Loc) {
-  std::vector<std::pair<SourceLocation, StringRef>> Comments;
+static std::vector<CommentToken> getCommentsBeforeLoc(ASTContext *Ctx,
+                                                      SourceLocation Loc) {
+  std::vector<CommentToken> Comments;
   while (Loc.isValid()) {
-    clang::Token Tok = utils::lexer::getPreviousToken(
+    const std::optional<Token> Tok = utils::lexer::getPreviousToken(
         Loc, Ctx->getSourceManager(), Ctx->getLangOpts(),
         /*SkipComments=*/false);
-    if (Tok.isNot(tok::comment))
+    if (!Tok || Tok->isNot(tok::comment))
       break;
-    Loc = Tok.getLocation();
-    Comments.emplace_back(
+    Loc = Tok->getLocation();
+    Comments.emplace_back(CommentToken{
         Loc,
         Lexer::getSourceText(CharSourceRange::getCharRange(
-                                 Loc, Loc.getLocWithOffset(Tok.getLength())),
-                             Ctx->getSourceManager(), Ctx->getLangOpts()));
+                                 Loc, Loc.getLocWithOffset(Tok->getLength())),
+                             Ctx->getSourceManager(), Ctx->getLangOpts()),
+    });
   }
   return Comments;
 }
 
-static bool isLikelyTypo(llvm::ArrayRef<ParmVarDecl *> Params,
-                         StringRef ArgName, unsigned ArgIndex) {
-  std::string ArgNameLowerStr = ArgName.lower();
-  StringRef ArgNameLower = ArgNameLowerStr;
+template <typename NamedDeclRange>
+static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
+                         StringRef TargetName) {
+  const std::string ArgNameLowerStr = ArgName.lower();
+  const StringRef ArgNameLower = ArgNameLowerStr;
   // The threshold is arbitrary.
-  unsigned UpperBound = (ArgName.size() + 2) / 3 + 1;
-  unsigned ThisED = ArgNameLower.edit_distance(
-      Params[ArgIndex]->getIdentifier()->getName().lower(),
-      /*AllowReplacements=*/true, UpperBound);
+  const unsigned UpperBound = ((ArgName.size() + 2) / 3) + 1;
+  const unsigned ThisED =
+      ArgNameLower.edit_distance(TargetName.lower(),
+                                 /*AllowReplacements=*/true, UpperBound);
   if (ThisED >= UpperBound)
     return false;
 
-  for (unsigned I = 0, E = Params.size(); I != E; ++I) {
-    if (I == ArgIndex)
-      continue;
-    IdentifierInfo *II = Params[I]->getIdentifier();
+  return llvm::all_of(Candidates, [&](const auto &Candidate) {
+    const IdentifierInfo *II = Candidate->getIdentifier();
     if (!II)
-      continue;
+      return true;
+
+    // Skip the target itself.
+    if (II->getName() == TargetName)
+      return true;
 
     const unsigned Threshold = 2;
-    // Other parameters must be an edit distance at least Threshold more away
-    // from this parameter. This gives us greater confidence that this is a
-    // typo of this parameter and not one with a similar name.
-    unsigned OtherED = ArgNameLower.edit_distance(II->getName().lower(),
-                                                  /*AllowReplacements=*/true,
-                                                  ThisED + Threshold);
-    if (OtherED < ThisED + Threshold)
-      return false;
-  }
-
-  return true;
+    // Other candidates must be an edit distance at least Threshold more away
+    // from this candidate. This gives us greater confidence that this is a
+    // typo of this candidate and not one with a similar name.
+    const unsigned OtherED = ArgNameLower.edit_distance(
+        II->getName().lower(),
+        /*AllowReplacements=*/true, ThisED + Threshold);
+    return OtherED >= ThisED + Threshold;
+  });
 }
 
 static bool sameName(StringRef InComment, StringRef InDecl, bool StrictMode) {
@@ -216,10 +240,11 @@ static const CXXMethodDecl *findMockedMethod(const CXXMethodDecl *Method) {
     return nullptr;
   }
   if (const auto *Next =
-          dyn_cast_or_null<CXXMethodDecl>(Method->getNextDeclInContext())) {
-    if (looksLikeExpectMethod(Next) && areMockAndExpectMethods(Method, Next))
-      return Method;
-  }
+          dyn_cast_or_null<CXXMethodDecl>(Method->getNextDeclInContext());
+      Next && looksLikeExpectMethod(Next) &&
+      areMockAndExpectMethods(Method, Next))
+    return Method;
+
   return nullptr;
 }
 
@@ -232,46 +257,172 @@ static const FunctionDecl *resolveMocks(const FunctionDecl *Func) {
     if (const auto *MockedMethod = findMockedMethod(Method)) {
       // If mocked method overrides the real one, we can use its parameter
       // names, otherwise we're out of luck.
-      if (MockedMethod->size_overridden_methods() > 0) {
+      if (MockedMethod->size_overridden_methods() > 0)
         return *MockedMethod->begin_overridden_methods();
-      }
       return nullptr;
     }
   }
   return Func;
 }
 
-// Given the argument type and the options determine if we should
-// be adding an argument comment.
-bool ArgumentCommentCheck::shouldAddComment(const Expr *Arg) const {
-  Arg = Arg->IgnoreImpCasts();
-  if (isa<UnaryOperator>(Arg))
-    Arg = cast<UnaryOperator>(Arg)->getSubExpr();
-  if (Arg->getExprLoc().isMacroID())
-    return false;
-  return (CommentBoolLiterals && isa<CXXBoolLiteralExpr>(Arg)) ||
-         (CommentIntegerLiterals && isa<IntegerLiteral>(Arg)) ||
-         (CommentFloatLiterals && isa<FloatingLiteral>(Arg)) ||
-         (CommentUserDefinedLiterals && isa<UserDefinedLiteral>(Arg)) ||
-         (CommentCharacterLiterals && isa<CharacterLiteral>(Arg)) ||
-         (CommentStringLiterals && isa<StringLiteral>(Arg)) ||
-         (CommentNullPtrs && isa<CXXNullPtrLiteralExpr>(Arg));
+namespace {
+
+enum class InitListKind {
+  None,
+  Anonymous,
+  Typed,
+};
+
+} // namespace
+
+static InitListKind getInitListKind(const Expr *Arg) {
+  Arg = Arg->IgnoreUnlessSpelledInSource();
+
+  if (const auto *StdInit = dyn_cast<CXXStdInitializerListExpr>(Arg))
+    Arg = StdInit->getSubExpr()->IgnoreUnlessSpelledInSource();
+
+  if (isa<InitListExpr>(Arg))
+    return InitListKind::Anonymous;
+
+  if (const auto *Ctor = dyn_cast<CXXConstructExpr>(Arg)) {
+    if (!Ctor->isListInitialization())
+      return InitListKind::None;
+    // CXXTemporaryObjectExpr corresponds to explicit Type{...} syntax.
+    if (isa<CXXTemporaryObjectExpr>(Ctor))
+      return InitListKind::Typed;
+    // Other list-initialized constructions (for example '{}') have no
+    // explicit type at the call site.
+    return InitListKind::Anonymous;
+  }
+
+  // std::initializer_list<T>{...} is represented as a functional cast whose
+  // subexpression carries the list-initialization spelling.
+  if (const auto *FuncCast = dyn_cast<CXXFunctionalCastExpr>(Arg)) {
+    const Expr *SubExpr = FuncCast->getSubExpr()->IgnoreImplicit();
+    if (FuncCast->isListInitialization() ||
+        isa<CXXStdInitializerListExpr>(SubExpr))
+      return InitListKind::Typed;
+  }
+
+  return InitListKind::None;
+}
+
+// Returns the file location of Arg. Returns an invalid location when Arg and
+// the closing parenthesis of the call at CloseLoc don't map to one range of the
+// file that starts at Arg. That happens when a macro body contains Arg or the
+// closing parenthesis, or when Arg is in another macro argument than the
+// closing parenthesis, such as the `0` in `f(ID(0))`.
+static SourceLocation getWrittenArgLoc(const Expr *Arg, SourceLocation CloseLoc,
+                                       const SourceManager &SM,
+                                       const LangOptions &LangOpts) {
+  const CharSourceRange Range = Lexer::makeFileCharRange(
+      CharSourceRange::getTokenRange(Arg->getBeginLoc(), CloseLoc), SM,
+      LangOpts);
+  const SourceLocation ArgLoc =
+      SM.getExpansionLoc(SM.getTopMacroCallerLoc(Arg->getBeginLoc()));
+  if (Range.isInvalid() || Range.getBegin() != ArgLoc)
+    return {};
+  return ArgLoc;
+}
+
+static bool isParenthesizedTemporary(const Expr *Arg) {
+  Arg = Arg->IgnoreUnlessSpelledInSource();
+  if (const auto *TempObject = dyn_cast<CXXTemporaryObjectExpr>(Arg))
+    return !TempObject->isListInitialization();
+  // CXXFunctionalCastExpr with CXXParenListInitExpr corresponds to explicit
+  // Type(...) aggregate temporary initialization syntax.
+  const auto *FuncCast = dyn_cast<CXXFunctionalCastExpr>(Arg);
+  return FuncCast &&
+         isa<CXXParenListInitExpr>(FuncCast->getSubExpr()->IgnoreImplicit());
+}
+
+// Given the argument type and the options determine if we should be adding an
+// argument comment and which diagnostic wording to use.
+ArgumentCommentCheck::CommentKind
+ArgumentCommentCheck::shouldAddComment(const Expr *Arg,
+                                       const ASTContext &Ctx) const {
+  const SourceManager &SM = Ctx.getSourceManager();
+  const InitListKind Kind = getInitListKind(Arg);
+  const bool IsParenthesizedTemporary = isParenthesizedTemporary(Arg);
+
+  // Strip implicit wrappers so brace-init arguments bound to references still
+  // look like list-initialization at this point.
+  Arg = Arg->IgnoreImplicit();
+  // Check the value before stripping the unary operator, because `~0` and `!0`
+  // are not zero.
+  const auto *IntegerLit = dyn_cast<IntegerLiteral>(Arg);
+  const bool IsZero = IntegerLit && IntegerLit->getValue().isZero();
+  if (const auto *UO = dyn_cast<UnaryOperator>(Arg))
+    Arg = UO->getSubExpr()->IgnoreImplicit();
+
+  // C spells the null pointer constant with the macro `NULL`, and the boolean
+  // constants before C23 with the macros `true` and `false`. The options
+  // NullPtrMacros and BoolLiteralMacros contain `NULL`, `true` and `false` by
+  // default. Other macros, such as `MAX_SIZE`, already name their value and
+  // need no comment.
+  if (SM.getTopMacroCallerLoc(Arg->getExprLoc()).isMacroID()) {
+    const StringRef MacroName =
+        Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                 SM.getTopMacroCallerLoc(Arg->getBeginLoc()),
+                                 SM.getTopMacroCallerLoc(Arg->getEndLoc())),
+                             SM, Ctx.getLangOpts());
+    if ((CommentNullPtrs && llvm::is_contained(NullPtrMacros, MacroName)) ||
+        (CommentBoolLiterals &&
+         llvm::is_contained(BoolLiteralMacros, MacroName)))
+      return CommentKind::Literal;
+    return CommentKind::None;
+  }
+
+  if ((CommentAnonymousInitLists && Kind == InitListKind::Anonymous) ||
+      (CommentTypedInitLists && Kind == InitListKind::Typed) ||
+      (CommentParenthesizedTemporaries && IsParenthesizedTemporary)) {
+    return CommentKind::NonLiteral;
+  }
+
+  const bool CommentInteger =
+      CommentIntegerLiterals == IntegerLiteralKind::All ||
+      (CommentIntegerLiterals == IntegerLiteralKind::ZeroOnly && IsZero);
+  if ((CommentBoolLiterals && isa<CXXBoolLiteralExpr>(Arg)) ||
+      (CommentInteger && isa<IntegerLiteral>(Arg)) ||
+      (CommentFloatLiterals && isa<FloatingLiteral>(Arg)) ||
+      (CommentUserDefinedLiterals && isa<UserDefinedLiteral>(Arg)) ||
+      (CommentCharacterLiterals && isa<CharacterLiteral>(Arg)) ||
+      (CommentStringLiterals && isa<StringLiteral>(Arg)) ||
+      (CommentNullPtrs && isa<CXXNullPtrLiteralExpr>(Arg))) {
+    return CommentKind::Literal;
+  }
+
+  return CommentKind::None;
 }
 
 void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
                                          const FunctionDecl *OriginalCallee,
                                          SourceLocation ArgBeginLoc,
+                                         SourceLocation CloseLoc,
                                          llvm::ArrayRef<const Expr *> Args) {
   const FunctionDecl *Callee = resolveMocks(OriginalCallee);
   if (!Callee)
     return;
 
   Callee = Callee->getFirstDecl();
-  unsigned NumArgs = std::min<unsigned>(Args.size(), Callee->getNumParams());
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Callee);
+      Ctor && Ctor->isInheritingConstructor()) {
+    if (const auto *BaseCtor = Ctor->getInheritedConstructor().getConstructor())
+      Callee = BaseCtor->getFirstDecl();
+  }
+  const unsigned NumArgs =
+      std::min<unsigned>(Args.size(), Callee->getNumParams());
   if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
     return;
 
-  auto MakeFileCharRange = [Ctx](SourceLocation Begin, SourceLocation End) {
+  const SourceManager &SM = Ctx->getSourceManager();
+  // A call whose closing parenthesis is a macro location is in a macro
+  // argument, such as `f(0)` in `ASSERT(f(0))`. getWrittenArgLoc() rejects
+  // calls in a macro body.
+  const bool AddMissingComments = !IgnoreMacros || CloseLoc.isFileID();
+
+  const auto MakeFileCharRange = [Ctx](SourceLocation Begin,
+                                       SourceLocation End) {
     return Lexer::makeFileCharRange(CharSourceRange::getCharRange(Begin, End),
                                     Ctx->getSourceManager(),
                                     Ctx->getLangOpts());
@@ -279,46 +430,51 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
 
   for (unsigned I = 0; I < NumArgs; ++I) {
     const ParmVarDecl *PVD = Callee->getParamDecl(I);
-    IdentifierInfo *II = PVD->getIdentifier();
-    if (!II)
+    const IdentifierInfo *II = PVD->getIdentifier();
+    if (!II || llvm::any_of(IgnoredParameterNameRegexes,
+                            [II](const llvm::Regex &Regex) {
+                              return Regex.match(II->getName());
+                            }))
       continue;
-    if (FunctionDecl *Template = Callee->getTemplateInstantiationPattern()) {
-      // Don't warn on arguments for parameters instantiated from template
-      // parameter packs. If we find more arguments than the template
-      // definition has, it also means that they correspond to a parameter
-      // pack.
-      if (Template->getNumParams() <= I ||
-          Template->getParamDecl(I)->isParameterPack()) {
-        continue;
-      }
-    }
+    // Don't warn on arguments for parameters instantiated from template
+    // parameter packs. If we find more arguments than the template
+    // definition has, it also means that they correspond to a parameter
+    // pack.
+    if (FunctionDecl *Template = Callee->getTemplateInstantiationPattern();
+        Template && (Template->getNumParams() <= I ||
+                     Template->getParamDecl(I)->isParameterPack()))
+      continue;
 
-    CharSourceRange BeforeArgument =
+    const CharSourceRange BeforeArgument =
         MakeFileCharRange(ArgBeginLoc, Args[I]->getBeginLoc());
     ArgBeginLoc = Args[I]->getEndLoc();
 
-    std::vector<std::pair<SourceLocation, StringRef>> Comments;
+    std::vector<CommentToken> Comments;
     if (BeforeArgument.isValid()) {
-      Comments = getCommentsInRange(Ctx, BeforeArgument);
+      Comments = utils::lexer::getTrailingCommentsInRange(
+          BeforeArgument, Ctx->getSourceManager(), Ctx->getLangOpts());
     } else {
-      // Fall back to parsing back from the start of the argument.
-      CharSourceRange ArgsRange =
-          MakeFileCharRange(Args[I]->getBeginLoc(), Args[I]->getEndLoc());
+      // Fall back to parsing back from the start of the argument. The range
+      // is empty because a range that ends inside a macro expansion, such as
+      // the `)` of `NULL`, has no file range.
+      const CharSourceRange ArgsRange =
+          MakeFileCharRange(Args[I]->getBeginLoc(), Args[I]->getBeginLoc());
       Comments = getCommentsBeforeLoc(Ctx, ArgsRange.getBegin());
     }
 
-    for (auto Comment : Comments) {
-      llvm::SmallVector<StringRef, 2> Matches;
-      if (IdentRE.match(Comment.second, &Matches) &&
+    for (const auto &Comment : Comments) {
+      SmallVector<StringRef, 2> Matches;
+      if (IdentRE.match(Comment.Text, &Matches) &&
           !sameName(Matches[2], II->getName(), StrictMode)) {
         {
-          DiagnosticBuilder Diag =
-              diag(Comment.first, "argument name '%0' in comment does not "
-                                  "match parameter name %1")
+          const DiagnosticBuilder Diag =
+              diag(Comment.Loc, "argument name '%0' in comment does not "
+                                "match parameter name %1")
               << Matches[2] << II;
-          if (isLikelyTypo(Callee->parameters(), Matches[2], I)) {
+          if (isLikelyTypo(Callee->parameters(), Matches[2], II->getName())) {
             Diag << FixItHint::CreateReplacement(
-                Comment.first, (Matches[1] + II->getName() + Matches[3]).str());
+                Comment.Loc,
+                llvm::Twine(Matches[1] + II->getName() + Matches[3]).str());
           }
         }
         diag(PVD->getLocation(), "%0 declared here", DiagnosticIDs::Note) << II;
@@ -330,15 +486,24 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
       }
     }
 
-    // If the argument comments are missing for literals add them.
-    if (Comments.empty() && shouldAddComment(Args[I])) {
-      std::string ArgComment =
-          (llvm::Twine("/*") + II->getName() + "=*/").str();
-      DiagnosticBuilder Diag =
-          diag(Args[I]->getBeginLoc(),
-               "argument comment missing for literal argument %0")
-          << II
-          << FixItHint::CreateInsertion(Args[I]->getBeginLoc(), ArgComment);
+    // If the argument comments are missing for configured argument kinds, add
+    // them.
+    if (!AddMissingComments || !Comments.empty())
+      continue;
+    const SourceLocation ArgLoc =
+        getWrittenArgLoc(Args[I], CloseLoc, SM, Ctx->getLangOpts());
+    if (ArgLoc.isInvalid())
+      continue;
+    const CommentKind Kind = shouldAddComment(Args[I], *Ctx);
+    if (Kind != CommentKind::None) {
+      SmallString<32> ArgComment;
+      llvm::Twine(llvm::Twine("/*") + II->getName() + "=*/")
+          .toStringRef(ArgComment);
+      const DiagnosticBuilder Diag =
+          diag(ArgLoc, "argument comment missing for %select{literal argument|"
+                       "argument}0 %1")
+          << (Kind == CommentKind::Literal ? 0 : 1) << II
+          << FixItHint::CreateInsertion(ArgLoc, ArgComment);
     }
   }
 }
@@ -351,6 +516,7 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     checkCallArgs(Result.Context, Callee, Call->getCallee()->getEndLoc(),
+                  Call->getEndLoc(),
                   llvm::ArrayRef(Call->getArgs(), Call->getNumArgs()));
   } else {
     const auto *Construct = cast<CXXConstructExpr>(E);
@@ -361,7 +527,7 @@ void ArgumentCommentCheck::check(const MatchFinder::MatchResult &Result) {
     }
     checkCallArgs(
         Result.Context, Construct->getConstructor(),
-        Construct->getParenOrBraceRange().getBegin(),
+        Construct->getParenOrBraceRange().getBegin(), Construct->getEndLoc(),
         llvm::ArrayRef(Construct->getArgs(), Construct->getNumArgs()));
   }
 }

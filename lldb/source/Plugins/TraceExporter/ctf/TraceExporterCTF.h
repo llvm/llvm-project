@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_TRACE_EXPORTER_CTF_H
-#define LLDB_SOURCE_PLUGINS_TRACE_EXPORTER_CTF_H
+#ifndef LLDB_SOURCE_PLUGINS_TRACEEXPORTER_CTF_TRACEEXPORTERCTF_H
+#define LLDB_SOURCE_PLUGINS_TRACEEXPORTER_CTF_TRACEEXPORTERCTF_H
 
 #include "lldb/Target/TraceExporter.h"
 
@@ -39,4 +39,4 @@ public:
 } // namespace ctf
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_TRACE_EXPORTER_CTF_H
+#endif // LLDB_SOURCE_PLUGINS_TRACEEXPORTER_CTF_TRACEEXPORTERCTF_H

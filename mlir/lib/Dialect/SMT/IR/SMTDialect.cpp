@@ -14,15 +14,6 @@
 using namespace mlir;
 using namespace smt;
 
-void SMTDialect::initialize() {
-  registerAttributes();
-  registerTypes();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/SMT/IR/SMT.cpp.inc"
-      >();
-}
-
 Operation *SMTDialect::materializeConstant(OpBuilder &builder, Attribute value,
                                            Type type, Location loc) {
   // BitVectorType constants can materialize into smt.bv.constant
@@ -30,14 +21,14 @@ Operation *SMTDialect::materializeConstant(OpBuilder &builder, Attribute value,
     if (auto attrValue = dyn_cast<BitVectorAttr>(value)) {
       assert(bvType == attrValue.getType() &&
              "attribute and desired result types have to match");
-      return builder.create<BVConstantOp>(loc, attrValue);
+      return BVConstantOp::create(builder, loc, attrValue);
     }
   }
 
   // BoolType constants can materialize into smt.constant
   if (auto boolType = dyn_cast<BoolType>(type)) {
     if (auto attrValue = dyn_cast<BoolAttr>(value))
-      return builder.create<BoolConstantOp>(loc, attrValue);
+      return BoolConstantOp::create(builder, loc, attrValue);
   }
 
   return nullptr;

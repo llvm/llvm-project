@@ -70,6 +70,9 @@ RT_API_ATTRS const char *StatErrorString(int stat) {
     return "DEALLOCATE of a pointer that is not the whole content of a pointer "
            "ALLOCATE";
 
+  case StatEnumBoundary:
+    return "NEXT or PREVIOUS of enumeration type at boundary";
+
   default:
     return nullptr;
   }
@@ -84,10 +87,10 @@ RT_API_ATTRS int ToErrmsg(const Descriptor *errmsg, int stat) {
       std::size_t bufferLength{errmsg->ElementBytes()};
       std::size_t msgLength{Fortran::runtime::strlen(msg)};
       if (msgLength >= bufferLength) {
-        std::memcpy(buffer, msg, bufferLength);
+        runtime::memcpy(buffer, msg, bufferLength);
       } else {
-        std::memcpy(buffer, msg, msgLength);
-        std::memset(buffer + msgLength, ' ', bufferLength - msgLength);
+        runtime::memcpy(buffer, msg, msgLength);
+        runtime::memset(buffer + msgLength, ' ', bufferLength - msgLength);
       }
     }
   }

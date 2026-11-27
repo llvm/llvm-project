@@ -52,11 +52,9 @@ struct InstructionMemo {
   InstructionMemo(const InstructionMemo &Other) = delete;
   InstructionMemo(InstructionMemo &&Other) = default;
 };
-} // End anonymous namespace
 
 /// ImmPredicateSet - This uniques predicates (represented as a string) and
 /// gives them unique (small) integer ID's that start at 0.
-namespace {
 class ImmPredicateSet {
   DenseMap<TreePattern *, unsigned> ImmIDs;
   std::vector<TreePredicateFn> PredsByName;
@@ -73,23 +71,21 @@ public:
 
   const TreePredicateFn &getPredicate(unsigned Idx) { return PredsByName[Idx]; }
 
-  typedef std::vector<TreePredicateFn>::const_iterator iterator;
+  using iterator = std::vector<TreePredicateFn>::const_iterator;
   iterator begin() const { return PredsByName.begin(); }
   iterator end() const { return PredsByName.end(); }
 };
-} // End anonymous namespace
 
 /// OperandsSignature - This class holds a description of a list of operand
 /// types. It has utility methods for emitting text based on the operands.
 ///
-namespace {
 struct OperandsSignature {
   class OpKind {
     enum { OK_Reg, OK_FP, OK_Imm, OK_Invalid = -1 };
-    char Repr;
+    char Repr = OK_Invalid;
 
   public:
-    OpKind() : Repr(OK_Invalid) {}
+    OpKind() = default;
 
     bool operator<(OpKind RHS) const { return Repr < RHS.Repr; }
     bool operator==(OpKind RHS) const { return Repr == RHS.Repr; }
@@ -179,10 +175,8 @@ struct OperandsSignature {
 
       // Emit the type check.
       TreePattern *TP = PredFn.getOrigPatFragRecord();
-      ValueTypeByHwMode VVT = TP->getTree(0)->getType(0);
-      assert(VVT.isSimple() &&
-             "Cannot use variable value types with fast isel");
-      OS << LS << "VT == " << getEnumName(VVT.getSimple().SimpleTy) << " && ";
+      MVT VT = TP->getTree(0)->getSimpleType(0);
+      OS << LS << "VT == " << getEnumName(VT) << " && ";
 
       OS << PredFn.getFnName() << "(imm" << Idx << ')';
     }
@@ -193,7 +187,7 @@ struct OperandsSignature {
   /// are supported, false otherwise.
   ///
   bool initialize(TreePatternNode &InstPatNode, const CodeGenTarget &Target,
-                  MVT::SimpleValueType VT, ImmPredicateSet &ImmediatePredicates,
+                  MVT VT, ImmPredicateSet &ImmediatePredicates,
                   const CodeGenRegisterClass *OrigDstRC) {
     if (InstPatNode.isLeaf())
       return false;
@@ -251,7 +245,9 @@ struct OperandsSignature {
         return false;
       }
 
-      assert(Op.hasConcreteType(0) && "Type infererence not done?");
+      // Skip operands whose type depends on a HwMode.
+      if (!Op.getExtType(0).isMachineValueType())
+        return false;
 
       // For now, all the operands must have the same type (if they aren't
       // immediates).  Note that this causes us to reject variable sized shifts
@@ -366,24 +362,21 @@ struct OperandsSignature {
       Opnd.printManglingSuffix(OS, ImmPredicates, StripImmCodes);
   }
 };
-} // End anonymous namespace
 
-namespace {
 class FastISelMap {
   // A multimap is needed instead of a "plain" map because the key is
   // the instruction's complexity (an int) and they are not unique.
-  typedef std::multimap<int, InstructionMemo> PredMap;
-  typedef std::map<MVT::SimpleValueType, PredMap> RetPredMap;
-  typedef std::map<MVT::SimpleValueType, RetPredMap> TypeRetPredMap;
-  typedef std::map<StringRef, TypeRetPredMap> OpcodeTypeRetPredMap;
-  typedef std::map<OperandsSignature, OpcodeTypeRetPredMap>
-      OperandsOpcodeTypeRetPredMap;
+  using PredMap = std::multimap<int, InstructionMemo>;
+  using RetPredMap = std::map<MVT, PredMap>;
+  using TypeRetPredMap = std::map<MVT, RetPredMap>;
+  using OpcodeTypeRetPredMap = std::map<StringRef, TypeRetPredMap>;
+  using OperandsOpcodeTypeRetPredMap =
+      std::map<OperandsSignature, OpcodeTypeRetPredMap>;
 
   OperandsOpcodeTypeRetPredMap SimplePatterns;
 
   // This is used to check that there are no duplicate predicates
-  std::set<std::tuple<OperandsSignature, StringRef, MVT::SimpleValueType,
-                      MVT::SimpleValueType, std::string>>
+  std::set<std::tuple<OperandsSignature, StringRef, MVT, MVT, std::string>>
       SimplePatternsCheck;
 
   std::map<OperandsSignature, std::vector<OperandsSignature>>
@@ -446,7 +439,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
     const Record *Op = Dst.getOperator();
     if (!Op->isSubClassOf("Instruction"))
       continue;
-    CodeGenInstruction &Inst = CGP.getTargetInfo().getInstruction(Op);
+    const CodeGenInstruction &Inst = CGP.getTargetInfo().getInstruction(Op);
     if (Inst.Operands.empty())
       continue;
 
@@ -470,11 +463,13 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
     if (MultiInsts)
       continue;
 
-    // For now, ignore instructions where the first operand is not an
-    // output register.
+    // For now, ignore instructions that do not define the result in their
+    // first operand.
     const CodeGenRegisterClass *DstRC = nullptr;
     std::string SubRegNo;
     if (Op->getName() != "EXTRACT_SUBREG") {
+      if (Inst.Operands.NumDefs == 0)
+        continue;
       const Record *Op0Rec = Inst.Operands[0].Rec;
       if (Op0Rec->isSubClassOf("RegisterOperand"))
         Op0Rec = Op0Rec->getValueAsDef("RegClass");
@@ -507,12 +502,19 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
 
     const Record *InstPatOp = InstPatNode.getOperator();
     StringRef OpcodeName = CGP.getSDNodeInfo(InstPatOp).getEnumName();
-    MVT::SimpleValueType RetVT = MVT::isVoid;
-    if (InstPatNode.getNumTypes())
+    // FastISel needs a single MVT for the result and first operand. Skip
+    // patterns whose types depend on a HwMode.
+    MVT RetVT = MVT::isVoid;
+    if (InstPatNode.getNumTypes()) {
+      if (!InstPatNode.getExtType(0).isMachineValueType())
+        continue;
       RetVT = InstPatNode.getSimpleType(0);
-    MVT::SimpleValueType VT = RetVT;
+    }
+    MVT VT = RetVT;
     if (InstPatNode.getNumChildren()) {
       assert(InstPatNode.getChild(0).getNumTypes() == 1);
+      if (!InstPatNode.getChild(0).getExtType(0).isMachineValueType())
+        continue;
       VT = InstPatNode.getChild(0).getSimpleType(0);
     }
 
@@ -561,7 +563,7 @@ void FastISelMap::collectPatterns(const CodeGenDAGPatterns &CGP) {
     raw_string_ostream SuffixOS(ManglingSuffix);
     Operands.PrintManglingSuffix(SuffixOS, ImmediatePredicates, true);
     if (!StringSwitch<bool>(ManglingSuffix)
-             .Cases("", "r", "rr", "ri", "i", "f", true)
+             .Cases({"", "r", "rr", "ri", "i", "f"}, true)
              .Default(false))
       continue;
 

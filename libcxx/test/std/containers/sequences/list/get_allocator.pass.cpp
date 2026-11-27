@@ -10,7 +10,7 @@
 
 // class list
 
-// allocator_type get_allocator() const
+// allocator_type get_allocator() const // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -18,7 +18,7 @@
 #include "test_allocator.h"
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::allocator<int> alloc;
     const std::list<int> l(alloc);
@@ -29,6 +29,15 @@ int main(int, char**) {
     const std::list<int, other_allocator<int> > l(alloc);
     assert(l.get_allocator() == alloc);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

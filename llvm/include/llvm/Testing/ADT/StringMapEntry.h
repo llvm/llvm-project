@@ -9,6 +9,7 @@
 #ifndef LLVM_TESTING_ADT_STRINGMAPENTRY_H_
 #define LLVM_TESTING_ADT_STRINGMAPENTRY_H_
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "gmock/gmock.h"
 #include <ostream>
@@ -17,13 +18,9 @@
 namespace llvm {
 namespace detail {
 
-template <typename T, typename = std::void_t<>>
-struct CanOutputToOStream : std::false_type {};
-
 template <typename T>
-struct CanOutputToOStream<T, std::void_t<decltype(std::declval<std::ostream &>()
-                                                  << std::declval<T>())>>
-    : std::true_type {};
+using check_ostream =
+    decltype(std::declval<std::ostream &>() << std::declval<T>());
 
 } // namespace detail
 
@@ -32,7 +29,8 @@ struct CanOutputToOStream<T, std::void_t<decltype(std::declval<std::ostream &>()
 template <typename T>
 std::ostream &operator<<(std::ostream &OS, const StringMapEntry<T> &E) {
   OS << "{\"" << E.getKey().data() << "\": ";
-  if constexpr (detail::CanOutputToOStream<decltype(E.getValue())>::value) {
+  if constexpr (is_detected<detail::check_ostream,
+                            decltype(E.getValue())>::value) {
     OS << E.getValue();
   } else {
     OS << "non-printable value";

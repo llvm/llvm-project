@@ -12,7 +12,7 @@ check_file() {
 
     fuser -s "$file"
     local ret=$?
-    if [ $ret -eq 1 ]; then # noone has file open
+    if [ $ret -eq 1 ]; then # no one has file open
         return 0
     fi
     if [ $ret -eq 0 ]; then # file open by some processes

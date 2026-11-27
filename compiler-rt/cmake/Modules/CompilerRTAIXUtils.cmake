@@ -34,12 +34,10 @@ macro(archive_aix_libatomic name libname)
       if(TARGET ${target})
         file(MAKE_DIRECTORY ${output_dir})
         add_custom_command(OUTPUT "${output_dir}/libatomic.so.1"
-                           POST_BUILD
                            COMMAND ${CMAKE_COMMAND} -E
                            copy "$<TARGET_FILE:${target}>"
                                 "${output_dir}/libatomic.so.1"
                            # If built with MODULE, F_LOADONLY is set.
-                           # We have to remove this flag at POST_BUILD.
                            COMMAND ${CMAKE_STRIP} -X32_64 -E
                                 "${output_dir}/libatomic.so.1"
                            DEPENDS ${target})
@@ -65,7 +63,8 @@ macro(archive_aix_libatomic name libname)
                        ${objects_to_archive}
                        DEPENDS ${objects_to_archive})
     install(FILES "${output_dir}/${libname}.a"
-            DESTINATION ${install_dir})
+            DESTINATION ${install_dir}
+            COMPONENT ${LIB_PARENT_TARGET})
     add_custom_target(aix-${libname}
                       DEPENDS "${output_dir}/${libname}.a")
     add_dependencies(${LIB_PARENT_TARGET} aix-${libname})

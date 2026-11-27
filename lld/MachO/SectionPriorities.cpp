@@ -15,18 +15,22 @@
 #include "BPSectionOrderer.h"
 #include "Config.h"
 #include "InputFiles.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
 
 #include "lld/Common/Args.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Utils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/xxhash.h"
 
 #include <numeric>
 
@@ -246,33 +250,47 @@ DenseMap<const InputSection *, int> CallGraphSort::run() {
   return orderMap;
 }
 
-std::optional<int>
-macho::PriorityBuilder::getSymbolOrCStringPriority(const StringRef key,
-                                                   InputFile *f) {
+void macho::PriorityBuilder::SymbolPriorityEntry::setPriority(
+    int priority, StringRef objectFile) {
+  if (!objectFile.empty())
+    objectFiles.try_emplace(objectFile, priority);
+  else
+    anyObjectFile = std::min(anyObjectFile, priority);
+}
 
-  auto it = priorities.find(key);
-  if (it == priorities.end())
-    return std::nullopt;
-  const SymbolPriorityEntry &entry = it->second;
-  if (!f)
-    return entry.anyObjectFile;
+int macho::PriorityBuilder::SymbolPriorityEntry::getPriority(
+    const InputFile *f) const {
+  if (!f || objectFiles.empty())
+    return anyObjectFile;
   // We don't use toString(InputFile *) here because it returns the full path
   // for object files, and we only want the basename.
-  StringRef filename;
-  if (f->archiveName.empty())
-    filename = path::filename(f->getName());
-  else
-    filename = saver().save(path::filename(f->archiveName) + "(" +
-                            path::filename(f->getName()) + ")");
-  return std::min(entry.objectFiles.lookup(filename), entry.anyObjectFile);
+  StringRef basename = path::filename(f->getName());
+  SmallString<128> buf;
+  StringRef filename =
+      f->archiveName.empty()
+          ? basename
+          : (path::filename(f->archiveName) + "(" + basename + ")")
+                .toStringRef(buf);
+  return std::min(objectFiles.lookup(filename), anyObjectFile);
 }
 
 std::optional<int>
-macho::PriorityBuilder::getSymbolPriority(const Defined *sym) {
+macho::PriorityBuilder::getCStringPriority(uint32_t hash,
+                                           const InputFile *f) const {
+  auto it = cStringPriorities.find(hash);
+  if (it == cStringPriorities.end())
+    return std::nullopt;
+  return it->second.getPriority(f);
+}
+
+std::optional<int>
+macho::PriorityBuilder::getSymbolPriority(const Defined *sym) const {
   if (sym->isAbsolute())
     return std::nullopt;
-  return getSymbolOrCStringPriority(utils::getRootSymbol(sym->getName()),
-                                    sym->isec()->getFile());
+  auto it = priorities.find(utils::getRootSymbol(sym->getName()));
+  if (it == priorities.end())
+    return std::nullopt;
+  return it->second.getPriority(sym->isec()->getFile());
 }
 
 void macho::PriorityBuilder::extractCallGraphProfile() {
@@ -307,7 +325,7 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
   int prio = std::numeric_limits<int>::min();
   MemoryBufferRef mbref = *buffer;
   for (StringRef line : args::getLines(mbref)) {
-    StringRef objectFile, symbolOrCStrHash;
+    StringRef objectFile;
     line = line.take_until([](char c) { return c == '#'; }); // ignore comments
     line = line.ltrim();
 
@@ -338,22 +356,18 @@ void macho::PriorityBuilder::parseOrderFile(StringRef path) {
     }
 
     // The rest of the line is either <symbol name> or
-    // CStringEntryPrefix<cstring hash>
+    // cStringEntryPrefix<cstring hash>
     line = line.trim();
-    if (line.starts_with(CStringEntryPrefix)) {
-      StringRef possibleHash = line.drop_front(CStringEntryPrefix.size());
+    if (line.consume_front(cStringEntryPrefix)) {
       uint32_t hash = 0;
-      if (to_integer(possibleHash, hash))
-        symbolOrCStrHash = possibleHash;
-    } else
-      symbolOrCStrHash = utils::getRootSymbol(line);
-
-    if (!symbolOrCStrHash.empty()) {
-      SymbolPriorityEntry &entry = priorities[symbolOrCStrHash];
-      if (!objectFile.empty())
-        entry.objectFiles.insert(std::make_pair(objectFile, prio));
-      else
-        entry.anyObjectFile = std::min(entry.anyObjectFile, prio);
+      // Only accept hex (0x prefix) or decimal format
+      if (line.consume_front_insensitive("0x") ? !line.getAsInteger(16, hash)
+                                               : !line.getAsInteger(10, hash))
+        cStringPriorities[hash].setPriority(prio, objectFile);
+    } else {
+      StringRef symbol = utils::getRootSymbol(line);
+      if (!symbol.empty())
+        priorities[symbol].setPriority(prio, objectFile);
     }
 
     ++prio;
@@ -364,11 +378,12 @@ DenseMap<const InputSection *, int>
 macho::PriorityBuilder::buildInputSectionPriorities() {
   DenseMap<const InputSection *, int> sectionPriorities;
   if (config->bpStartupFunctionSort || config->bpFunctionOrderForCompression ||
-      config->bpDataOrderForCompression) {
+      config->bpDataOrderForCompression ||
+      !config->bpCompressionSortSpecs.empty()) {
     TimeTraceScope timeScope("Balanced Partitioning Section Orderer");
     sectionPriorities = runBalancedPartitioning(
         config->bpStartupFunctionSort ? config->irpgoProfilePath : "",
-        config->bpFunctionOrderForCompression,
+        config->bpCompressionSortSpecs, config->bpFunctionOrderForCompression,
         config->bpDataOrderForCompression,
         config->bpCompressionSortStartupFunctions,
         config->bpVerboseSectionOrderer);
@@ -386,59 +401,79 @@ macho::PriorityBuilder::buildInputSectionPriorities() {
   if (priorities.empty())
     return sectionPriorities;
 
-  auto addSym = [&](const Defined *sym) {
-    std::optional<int> symbolPriority = getSymbolPriority(sym);
-    if (!symbolPriority)
-      return;
-    int &priority = sectionPriorities[sym->isec()];
-    priority = std::min(priority, *symbolPriority);
-  };
+  // getSymbolPriority() is expensive, and there are many symbols, so call it
+  // in parallel and then process the matches serially.
+  // We get external symbols from the symbol table (in chunks) and iterate the
+  // object files for the local ones.
+  using Matches = std::vector<std::pair<InputSection *, int>>;
+  std::vector<std::pair<ArrayRef<Symbol *>, Matches>> work;
+  const size_t chunkSize = 4096;
+  for (ArrayRef<Symbol *> syms = symtab->getSymbols(); !syms.empty();
+       syms = syms.drop_front(std::min(chunkSize, syms.size())))
+    work.emplace_back(syms.take_front(chunkSize), Matches());
+  size_t numSymtabChunks = work.size();
+  for (const InputFile *file : inputFiles)
+    if (auto *obj = dyn_cast<ObjFile>(file))
+      work.emplace_back(obj->symbols, Matches());
+
+  // The symbol table chunks from the getSymbols() loop above contain most of
+  // the work in the first few items. Use parallelForEachFineGrained() to
+  // split them over more than one or two threads.
+  parallelForFineGrained(work.size(), [&](size_t i) {
+    auto &[syms, matches] = work[i];
+    bool external = i < numSymtabChunks;
+    for (Symbol *sym : syms)
+      if (auto *d = dyn_cast_or_null<Defined>(sym))
+        if (d->isExternal() == external)
+          if (std::optional<int> priority = getSymbolPriority(d))
+            matches.emplace_back(d->isec(), *priority);
+  });
 
   // TODO: Make sure this handles weak symbols correctly.
-  for (const InputFile *file : inputFiles) {
-    if (isa<ObjFile>(file))
-      for (Symbol *sym : file->symbols)
-        if (auto *d = dyn_cast_or_null<Defined>(sym))
-          addSym(d);
-  }
+  for (const auto &[_, matches] : work)
+    for (auto [isec, symbolPriority] : matches) {
+      int &priority = sectionPriorities[isec];
+      priority = std::min(priority, symbolPriority);
+      // Order file takes precedence over cold partitioning.
+      isec->isCold = false;
+    }
 
   return sectionPriorities;
 }
 
-std::vector<StringPiecePair> macho::PriorityBuilder::buildCStringPriorities(
-    ArrayRef<CStringInputSection *> inputs) {
-  // Split the input strings into hold and cold sets.
-  // Order hot set based on -order_file_cstring for performance improvement;
-  // TODO: Order cold set of cstrings for compression via BP.
-  std::vector<std::pair<int, StringPiecePair>>
-      hotStringPrioritiesAndStringPieces;
-  std::vector<StringPiecePair> coldStringPieces;
-  std::vector<StringPiecePair> orderedStringPieces;
-
+void macho::PriorityBuilder::forEachStringPiece(
+    ArrayRef<CStringInputSection *> inputs,
+    std::function<void(CStringInputSection &, StringPiece &, size_t)> f,
+    bool forceInputOrder, bool computeHash) const {
+  std::vector<std::tuple<int, CStringInputSection *, size_t>> orderedPieces;
+  std::vector<std::pair<CStringInputSection *, size_t>> unorderedPieces;
   for (CStringInputSection *isec : inputs) {
     for (const auto &[stringPieceIdx, piece] : llvm::enumerate(isec->pieces)) {
       if (!piece.live)
         continue;
-
-      std::optional<int> priority = getSymbolOrCStringPriority(
-          std::to_string(piece.hash), isec->getFile());
-      if (!priority)
-        coldStringPieces.emplace_back(isec, stringPieceIdx);
+      // Process pieces in input order if we have no cstrings in our orderfile
+      if (forceInputOrder || cStringPriorities.empty()) {
+        f(*isec, piece, stringPieceIdx);
+        continue;
+      }
+      uint32_t hash =
+          computeHash
+              ? (xxh3_64bits(isec->getStringRef(stringPieceIdx)) & 0x7fffffff)
+              : piece.hash;
+      if (auto priority = getCStringPriority(hash, isec->getFile()))
+        orderedPieces.emplace_back(*priority, isec, stringPieceIdx);
       else
-        hotStringPrioritiesAndStringPieces.emplace_back(
-            *priority, std::make_pair(isec, stringPieceIdx));
+        unorderedPieces.emplace_back(isec, stringPieceIdx);
     }
   }
-
-  // Order hot set for perf
-  llvm::stable_sort(hotStringPrioritiesAndStringPieces);
-  for (auto &[priority, stringPiecePair] : hotStringPrioritiesAndStringPieces)
-    orderedStringPieces.push_back(stringPiecePair);
-
-  // TODO: Order cold set for compression
-
-  orderedStringPieces.insert(orderedStringPieces.end(),
-                             coldStringPieces.begin(), coldStringPieces.end());
-
-  return orderedStringPieces;
+  if (orderedPieces.empty() && unorderedPieces.empty())
+    return;
+  llvm::stable_sort(orderedPieces, [](const auto &left, const auto &right) {
+    return std::get<0>(left) < std::get<0>(right);
+  });
+  for (auto &[priority, isec, pieceIdx] : orderedPieces)
+    f(*isec, isec->pieces[pieceIdx], pieceIdx);
+  // TODO: Add option to order the remaining cstrings for compression
+  for (auto &[isec, pieceIdx] : unorderedPieces)
+    f(*isec, isec->pieces[pieceIdx], pieceIdx);
 }

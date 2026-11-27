@@ -14,10 +14,9 @@ include "mlir/IR/EnumAttr.td"
 // Lower transpose into element-wise extract and inserts.
 def VectorTransposeLowering_Elementwise:
   I32EnumAttrCase<"EltWise",  0, "eltwise">;
-// Lower 2-D transpose to `vector.flat_transpose`, maps 1-1 to LLVM matrix
-// intrinsics.
-def VectorTransposeLowering_FlatTranspose:
-  I32EnumAttrCase<"Flat",  1, "flat_transpose">;
+// Lower directly to LLVM matrix intrinsics.
+def VectorTransposeLowering_LLVMIntr:
+  I32EnumAttrCase<"LLVMIntr",  1, "llvmintr">;
 // Lower 2-D transpose to `vector.shuffle` on 1-D vector.
 def VectorTransposeLowering_Shuffle1D:
   I32EnumAttrCase<"Shuffle1D",  2, "shuffle_1d">;
@@ -27,7 +26,7 @@ def VectorTransposeLowering_Shuffle16x16:
 def VectorTransposeLoweringAttr : I32EnumAttr<
     "VectorTransposeLowering",
     "control the lowering of `vector.transpose` operations.",
-    [VectorTransposeLowering_Elementwise, VectorTransposeLowering_FlatTranspose,
+    [VectorTransposeLowering_Elementwise, VectorTransposeLowering_LLVMIntr,
      VectorTransposeLowering_Shuffle1D, VectorTransposeLowering_Shuffle16x16]> {
   let cppNamespace = "::mlir::vector";
 }
@@ -48,9 +47,9 @@ def VectorMultiReductionLoweringAttr: I32EnumAttr<
 
 // Progressively lower to finer grained `vector.contract` and dot-products.
 def VectorContractLowering_Dot: I32EnumAttrCase<"Dot", 0, "dot">;
-// Lower to `vector.matrix_multiply`, maps 1-1 to LLVM matrix intrinsics.
-def VectorContractLowering_Matmul:
-  I32EnumAttrCase<"Matmul", 1, "matmulintrinsics">;
+// Lower directly to LLVM intrinsics. 
+def VectorContractLowering_LLVMIntr:
+  I32EnumAttrCase<"LLVMIntr", 1, "llvmintr">;
 // Lower to `vector.outerproduct`.
 def VectorContractLowering_OuterProduct:
   I32EnumAttrCase<"OuterProduct", 2, "outerproduct">;
@@ -61,7 +60,7 @@ def VectorContractLowering_ParallelArith:
 def VectorContractLoweringAttr: I32EnumAttr<
     "VectorContractLowering",
     "control the lowering of `vector.contract` operations.",
-  [VectorContractLowering_Dot, VectorContractLowering_Matmul,
+  [VectorContractLowering_Dot, VectorContractLowering_LLVMIntr,
    VectorContractLowering_OuterProduct, VectorContractLowering_ParallelArith]> {
   let cppNamespace = "::mlir::vector";
 }
@@ -71,10 +70,9 @@ def VectorTransferSplit_None: I32EnumAttrCase<"None", 0, "none">;
 // Split using in-bounds + out-of-bounds vector.transfer operations.
 def VectorTransferSplit_VectorTransfer:
   I32EnumAttrCase<"VectorTransfer", 1, "vector-transfer">;
-// Split using an in-bounds vector.transfer + linalg.fill + linalg.copy
-// operations.
-def VectorTransferSplit_LinalgCopy:
-  I32EnumAttrCase<"LinalgCopy", 2, "linalg-copy">;
+// Split using an in-bounds vector.transfer + memref.copy operations.
+def VectorTransferSplit_MemRefCopy:
+  I32EnumAttrCase<"MemRefCopy", 2, "memref-copy">;
 // Do not split vector transfer operation but instead mark it as "in-bounds".
 def VectorTransferSplit_ForceInBounds:
   I32EnumAttrCase<"ForceInBounds", 3, "force-in-bounds">;
@@ -83,7 +81,7 @@ def VectorTransferSplitAttr: I32EnumAttr<
     "control the splitting of `vector.transfer` operations into in-bounds"
     " and out-of-bounds variants.",
   [VectorTransferSplit_None, VectorTransferSplit_VectorTransfer,
-   VectorTransferSplit_LinalgCopy, VectorTransferSplit_ForceInBounds]> {
+   VectorTransferSplit_MemRefCopy, VectorTransferSplit_ForceInBounds]> {
   let cppNamespace = "::mlir::vector";
 }
 #endif

@@ -40,6 +40,7 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
@@ -47,11 +48,6 @@
 namespace llvm {
 using namespace sampleprof;
 using namespace sampleprofutil;
-using ProfileCount = Function::ProfileCount;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 #define DEBUG_TYPE "sample-profile-impl"
 
@@ -87,6 +83,7 @@ template <> struct IRTraits<BasicBlock> {
 // SampleProfileProber.
 class PseudoProbeManager {
   DenseMap<uint64_t, PseudoProbeDescriptor> GUIDToProbeDescMap;
+  DenseSet<uint64_t> GUIDIsWeakSymbol;
 
 public:
   PseudoProbeManager(const Module &M) {
@@ -100,6 +97,14 @@ public:
                         ->getZExtValue();
         GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
       }
+      for (const auto &Func : M) {
+        if (Func.hasWeakLinkage() || Func.hasExternalWeakLinkage()) {
+          auto GUID = Function::getGUIDAssumingExternalLinkage(
+              FunctionSamples::getCanonicalFnName(Func));
+          if (GUIDToProbeDescMap.contains(GUID))
+            GUIDIsWeakSymbol.insert(GUID);
+        }
+      }
     }
   }
 
@@ -109,12 +114,17 @@ public:
   }
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
-    return getDesc(Function::getGUIDAssumingExternalLinkage(FProfileName));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(
+        FunctionSamples::getCanonicalFnName(FProfileName)));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {
     return getDesc(Function::getGUIDAssumingExternalLinkage(
         FunctionSamples::getCanonicalFnName(F)));
+  }
+
+  bool probeFromWeakSymbol(uint64_t GUID) const {
+    return GUIDIsWeakSymbol.count(GUID);
   }
 
   bool profileIsHashMismatched(const PseudoProbeDescriptor &FuncDesc,
@@ -149,9 +159,7 @@ public:
   }
 };
 
-
-
-extern cl::opt<bool> SampleProfileUseProfi;
+extern LLVM_ABI cl::opt<bool> SampleProfileUseProfi;
 
 static inline bool skipProfileForFunction(const Function &F) {
   return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
@@ -1057,9 +1065,7 @@ void SampleProfileLoaderBaseImpl<BT>::initWeightPropagation(
   // Sets the GUIDs that are inlined in the profiled binary. This is used
   // for ThinLink to make correct liveness analysis, and also make the IR
   // match the profiled binary before annotation.
-  getFunction(F).setEntryCount(
-      ProfileCount(Samples->getHeadSamples() + 1, Function::PCT_Real),
-      &InlinedGUIDs);
+  getFunction(F).setEntryCount(Samples->getHeadSamples() + 1, &InlinedGUIDs);
 
   if (!SampleProfileUseProfi) {
     // Compute dominance and loop info needed for propagation.
@@ -1088,11 +1094,8 @@ void SampleProfileLoaderBaseImpl<BT>::finalizeWeightPropagation(
   // Samples->getHeadSamples() + 1 to avoid functions with zero count.
   if (SampleProfileUseProfi) {
     const BasicBlockT *EntryBB = getEntryBB(&F);
-    ErrorOr<uint64_t> EntryWeight = getBlockWeight(EntryBB);
     if (BlockWeights[EntryBB] > 0) {
-      getFunction(F).setEntryCount(
-          ProfileCount(BlockWeights[EntryBB], Function::PCT_Real),
-          &InlinedGUIDs);
+      getFunction(F).setEntryCount(BlockWeights[EntryBB], &InlinedGUIDs);
     }
   }
 }

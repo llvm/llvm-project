@@ -42,7 +42,6 @@ program main
   !$omp end teams
   end do
 
-  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead.
   !$omp master
   !ERROR: TEAMS region can only be strictly nested within the implicit parallel region or TARGET region
   !$omp teams

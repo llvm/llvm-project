@@ -21,6 +21,7 @@ include "flang/Optimizer/Dialect/FIRTypes.td"
 
 def hlfir_Dialect : Dialect {
   let name = "hlfir";
+  let useStrictPropertiesInAssemblyFormat = 1;
 
   let summary = "High Level Fortran IR.";
 
@@ -38,9 +39,10 @@ def hlfir_Dialect : Dialect {
     into sequence of lower level FIR operations operating on memory.
   }];
 
-  let useDefaultTypePrinterParser = 1;
-  let usePropertiesForAttributes = 1;
+  let hasTypes = 1;
+  let hasInitializer = 0;
   let cppNamespace = "hlfir";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = ["fir::FIROpsDialect"];
 }
 
@@ -95,9 +97,9 @@ def IsFortranValuePred : CPred<"::hlfir::isFortranValueType($_self)">;
 def AnyFortranValue
         : TypeConstraint<IsFortranValuePred, "any Fortran value type">;
 
-
-def AnyFortranEntity : TypeConstraint<Or<[AnyFortranVariable.predicate,
-    AnyFortranValue.predicate]>, "any Fortran value or variable type">;
+def AnyFortranEntity
+    : Type<Or<[AnyFortranVariable.predicate, AnyFortranValue.predicate]>,
+           "any Fortran value or variable type">;
 
 def IsFortranScalarCharacterPred
         : CPred<"::hlfir::isFortranScalarCharacterType($_self)">;

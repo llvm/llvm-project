@@ -8,11 +8,10 @@
 
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -59,8 +58,8 @@ static void ensureDistinctSuccessors(Block &bb) {
       terminator->setSuccessor(dummyBlock, position);
       for (BlockArgument arg : successor.first->getArguments())
         dummyBlock->addArgument(arg.getType(), arg.getLoc());
-      builder.create<LLVM::BrOp>(terminator->getLoc(),
-                                 dummyBlock->getArguments(), successor.first);
+      LLVM::BrOp::create(builder, terminator->getLoc(),
+                         dummyBlock->getArguments(), successor.first);
     }
   }
 }

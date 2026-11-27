@@ -14,5 +14,15 @@ class HardwareBreakpointTestBase(TestBase):
         self.runCmd("breakpoint set -b main --hardware")
         self.runCmd("run")
         if "stopped" in self.res.GetOutput():
+            return True
+        return False
+
+    def hw_breakpoints_supported(self):
+        if self.supports_hw_breakpoints():
             return "Hardware breakpoints are supported"
+        return None
+
+    def hw_breakpoints_unsupported(self):
+        if not self.supports_hw_breakpoints():
+            return "Hardware breakpoints are unsupported"
         return None

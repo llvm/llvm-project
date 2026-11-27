@@ -17,13 +17,13 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenSchedule.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <iterator>
 #include <tuple>
 using namespace llvm;
 
@@ -40,18 +40,25 @@ static cl::opt<unsigned>
                  cl::desc("Make -gen-asm-writer emit assembly writer #N"),
                  cl::cat(AsmWriterCat));
 
-/// getValueType - Return the MVT::SimpleValueType that the specified TableGen
+/// Returns the MVT that the specified TableGen
 /// record corresponds to.
-MVT::SimpleValueType llvm::getValueType(const Record *Rec) {
-  return (MVT::SimpleValueType)Rec->getValueAsInt("Value");
+MVT llvm::getValueType(const Record *Rec) {
+  static const DenseMap<StringRef, MVT> ValueTypes = {
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)      \
+  {#Ty, MVT::Ty},
+#include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
+      {"INVALID_SIMPLE_VALUE_TYPE", MVT::INVALID_SIMPLE_VALUE_TYPE}};
+  return ValueTypes.lookup(Rec->getValueAsString("LLVMName"));
 }
 
-StringRef llvm::getEnumName(MVT::SimpleValueType T) {
+StringRef llvm::getEnumName(MVT T) {
   // clang-format off
-  switch (T) {
-#define GET_VT_ATTR(Ty, N, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)   \
+  switch (T.SimpleTy) {
+#define GET_VT_ATTR(Ty, Sz, Any, Int, FP, Vec, Sc, Tup, NF, NElem, EltTy)   \
   case MVT::Ty: return "MVT::" # Ty;
 #include "llvm/CodeGen/GenVT.inc"
+#undef GET_VT_ATTR
   default: llvm_unreachable("ILLEGAL VALUE TYPE!");
   }
   // clang-format on
@@ -77,18 +84,51 @@ CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
   if (Targets.size() != 1)
     PrintFatalError("Multiple subclasses of Target defined!");
   TargetRec = Targets[0];
-  MacroFusions = Records.getAllDerivedDefinitions("Fusion");
+  MacroFusions = Records.getAllDerivedDefinitions("FusionPredicates");
+  llvm::sort(MacroFusions, [](const Record *LHS, const Record *RHS) {
+    return std::tuple(getMacroFusionName(LHS), LHS->getID()) <
+           std::tuple(getMacroFusionName(RHS), RHS->getID());
+  });
+
+  auto Dup = adjacent_find(MacroFusions, [](const Record *A, const Record *B) {
+    return getMacroFusionName(A) == getMacroFusionName(B);
+  });
+  if (Dup != MacroFusions.end()) {
+    const Record *Fusion = *std::next(Dup);
+    PrintError(Fusion, "duplicate macro fusion for '" +
+                           getMacroFusionName(Fusion) + "'");
+    PrintFatalNote(*Dup, "previous definition here");
+  }
 }
 
-CodeGenTarget::~CodeGenTarget() {}
+StringRef CodeGenTarget::getMacroFusionName(const Record *Fusion) {
+  if (Fusion->isSubClassOf("FusionFor"))
+    return Fusion->getValueAsDef("Feature")->getName();
+  return Fusion->getName();
+}
+
+CodeGenTarget::~CodeGenTarget() = default;
 
 StringRef CodeGenTarget::getName() const { return TargetRec->getName(); }
+
+ArrayRef<const Record *> CodeGenTarget::getAllRegClassByHwMode() const {
+  if (!RegClassByHwModeList) {
+    RegClassByHwModeList.emplace();
+    for (const Record *R :
+         Records.getAllDerivedDefinitions("RegClassByHwMode")) {
+      if (!R->getValueAsListOfDefs("Objects").empty())
+        RegClassByHwModeList->push_back(R);
+    }
+  }
+
+  return *RegClassByHwModeList;
+}
 
 /// getInstNamespace - Find and return the target machine's instruction
 /// namespace. The namespace is cached because it is requested multiple times.
 StringRef CodeGenTarget::getInstNamespace() const {
   if (InstNamespace.empty()) {
-    for (const CodeGenInstruction *Inst : getInstructionsByEnumValue()) {
+    for (const CodeGenInstruction *Inst : getInstructions()) {
       // We are not interested in the "TargetOpcode" namespace.
       if (Inst->Namespace != "TargetOpcode") {
         InstNamespace = Inst->Namespace;
@@ -110,7 +150,11 @@ const Record *CodeGenTarget::getInstructionSet() const {
 }
 
 bool CodeGenTarget::getAllowRegisterRenaming() const {
-  return TargetRec->getValueAsInt("AllowRegisterRenaming");
+  return TargetRec->getValueAsBit("AllowRegisterRenaming");
+}
+
+bool CodeGenTarget::getRegistersAreIntervals() const {
+  return TargetRec->getValueAsBit("RegistersAreIntervals");
 }
 
 /// getAsmParser - Return the AssemblyParser definition for this target.
@@ -156,7 +200,8 @@ const Record *CodeGenTarget::getAsmWriter() const {
 
 CodeGenRegBank &CodeGenTarget::getRegBank() const {
   if (!RegBank)
-    RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes());
+    RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes(),
+                                               getRegistersAreIntervals());
   return *RegBank;
 }
 
@@ -167,8 +212,8 @@ const CodeGenRegister *CodeGenTarget::getRegisterByName(StringRef Name) const {
 }
 
 const CodeGenRegisterClass &
-CodeGenTarget::getRegisterClass(const Record *R) const {
-  return *getRegBank().getRegClass(R);
+CodeGenTarget::getRegisterClass(const Record *R, ArrayRef<SMLoc> Loc) const {
+  return *getRegBank().getRegClass(R, Loc);
 }
 
 std::vector<ValueTypeByHwMode>
@@ -197,6 +242,40 @@ void CodeGenTarget::ReadLegalValueTypes() const {
   LegalValueTypes.erase(llvm::unique(LegalValueTypes), LegalValueTypes.end());
 }
 
+const Record *CodeGenTarget::getInitValueAsRegClass(
+    const Init *V, bool AssumeRegClassByHwModeIsDefault) const {
+  const Record *RegClassLike = getInitValueAsRegClassLike(V);
+  if (!RegClassLike || RegClassLike->isSubClassOf("RegisterClass"))
+    return RegClassLike;
+
+  // FIXME: We should figure out the hwmode and dispatch. But this interface
+  // is broken, we should be returning a register class. The expected uses
+  // will use the same RegBanks in all modes.
+  if (AssumeRegClassByHwModeIsDefault &&
+      RegClassLike->isSubClassOf("RegClassByHwMode")) {
+    const HwModeSelect &ModeSelect = getHwModes().getHwModeSelect(RegClassLike);
+    if (ModeSelect.Items.empty())
+      return nullptr;
+    return ModeSelect.Items.front().second;
+  }
+
+  return nullptr;
+}
+
+const Record *CodeGenTarget::getInitValueAsRegClassLike(const Init *V) const {
+  const DefInit *VDefInit = dyn_cast<DefInit>(V);
+  if (!VDefInit)
+    return nullptr;
+  return getAsRegClassLike(VDefInit->getDef());
+}
+
+const Record *CodeGenTarget::getAsRegClassLike(const Record *Rec) const {
+  if (Rec->isSubClassOf("RegisterOperand"))
+    return Rec->getValueAsDef("RegClass");
+
+  return Rec->isSubClassOf("RegisterClassLike") ? Rec : nullptr;
+}
+
 CodeGenSchedModels &CodeGenTarget::getSchedModels() const {
   if (!SchedModels)
     SchedModels = std::make_unique<CodeGenSchedModels>(Records, *this);
@@ -211,10 +290,9 @@ void CodeGenTarget::ReadInstructions() const {
 
   // Parse the instructions defined in the .td file.
   for (const Record *R : Insts) {
-    auto &Inst = Instructions[R];
-    Inst = std::make_unique<CodeGenInstruction>(R);
-    if (Inst->isVariableLengthEncoding())
-      HasVariableLengthEncodings = true;
+    auto [II, _] =
+        InstructionMap.try_emplace(R, std::make_unique<CodeGenInstruction>(R));
+    HasVariableLengthEncodings |= II->second->isVariableLengthEncoding();
   }
 }
 
@@ -242,9 +320,9 @@ unsigned CodeGenTarget::getNumFixedInstructions() {
 /// Return all of the instructions defined by the target, ordered by
 /// their enum value.
 void CodeGenTarget::ComputeInstrsByEnum() const {
-  const auto &Insts = getInstructions();
+  const auto &InstMap = getInstructionMap();
   for (const char *Name : FixedInstrs) {
-    const CodeGenInstruction *Instr = GetInstByName(Name, Insts, Records);
+    const CodeGenInstruction *Instr = GetInstByName(Name, InstMap, Records);
     assert(Instr && "Missing target independent instruction");
     assert(Instr->Namespace == "TargetOpcode" && "Bad namespace");
     InstrsByEnum.push_back(Instr);
@@ -253,25 +331,36 @@ void CodeGenTarget::ComputeInstrsByEnum() const {
   assert(EndOfPredefines == getNumFixedInstructions() &&
          "Missing generic opcode");
 
-  for (const auto &I : Insts) {
-    const CodeGenInstruction *CGI = I.second.get();
+  [[maybe_unused]] unsigned SkippedInsts = 0;
+
+  for (const auto &[_, CGIUp] : InstMap) {
+    const CodeGenInstruction *CGI = CGIUp.get();
     if (CGI->Namespace != "TargetOpcode") {
+
+      if (CGI->TheDef->isSubClassOf(
+              "TargetSpecializedStandardPseudoInstruction")) {
+        ++SkippedInsts;
+        continue;
+      }
+
       InstrsByEnum.push_back(CGI);
-      if (CGI->TheDef->getValueAsBit("isPseudo"))
-        ++NumPseudoInstructions;
+      NumPseudoInstructions += CGI->TheDef->getValueAsBit("isPseudo");
     }
   }
 
-  assert(InstrsByEnum.size() == Insts.size() && "Missing predefined instr");
+  assert(InstrsByEnum.size() + SkippedInsts == InstMap.size() &&
+         "Missing predefined instr");
 
   // All of the instructions are now in random order based on the map iteration.
   llvm::sort(
       InstrsByEnum.begin() + EndOfPredefines, InstrsByEnum.end(),
       [](const CodeGenInstruction *Rec1, const CodeGenInstruction *Rec2) {
-        const auto &D1 = *Rec1->TheDef;
-        const auto &D2 = *Rec2->TheDef;
-        return std::tuple(!D1.getValueAsBit("isPseudo"), D1.getName()) <
-               std::tuple(!D2.getValueAsBit("isPseudo"), D2.getName());
+        const Record &D1 = *Rec1->TheDef;
+        const Record &D2 = *Rec2->TheDef;
+        // Sort all pseudo instructions before non-pseudo ones, and sort by name
+        // within.
+        return std::tuple(!Rec1->isPseudo, D1.getName()) <
+               std::tuple(!Rec2->isPseudo, D2.getName());
       });
 
   // Assign an enum value to each instruction according to the sorted order.
@@ -286,46 +375,27 @@ bool CodeGenTarget::isLittleEndianEncoding() const {
   return getInstructionSet()->getValueAsBit("isLittleEndianEncoding");
 }
 
-/// reverseBitsForLittleEndianEncoding - For little-endian instruction bit
-/// encodings, reverse the bit order of all instructions.
-void CodeGenTarget::reverseBitsForLittleEndianEncoding() {
+ArrayRef<const Init *>
+CodeGenTarget::getInstructionEncodingBits(const Record *EncodingDef) const {
+  ArrayRef<const Init *> Bits =
+      EncodingDef->getValueAsBitsInit("Inst")->getBits();
   if (!isLittleEndianEncoding())
-    return;
+    return Bits;
 
-  for (const Record *R :
-       Records.getAllDerivedDefinitions("InstructionEncoding")) {
-    if (R->getValueAsString("Namespace") == "TargetOpcode" ||
-        R->getValueAsBit("isPseudo"))
-      continue;
+  // Pseudo instructions are not encoded.
+  if (EncodingDef->isSubClassOf("Instruction") &&
+      (EncodingDef->getValueAsString("Namespace") == "TargetOpcode" ||
+       EncodingDef->getValueAsBit("isPseudo")))
+    return Bits;
 
-    const BitsInit *BI = R->getValueAsBitsInit("Inst");
-
-    unsigned numBits = BI->getNumBits();
-
-    SmallVector<const Init *, 16> NewBits(numBits);
-
-    for (unsigned bit = 0, end = numBits / 2; bit != end; ++bit) {
-      unsigned bitSwapIdx = numBits - bit - 1;
-      const Init *OrigBit = BI->getBit(bit);
-      const Init *BitSwap = BI->getBit(bitSwapIdx);
-      NewBits[bit] = BitSwap;
-      NewBits[bitSwapIdx] = OrigBit;
-    }
-    if (numBits % 2) {
-      unsigned middle = (numBits + 1) / 2;
-      NewBits[middle] = BI->getBit(middle);
-    }
-
-    RecordKeeper &MutableRC = const_cast<RecordKeeper &>(Records);
-    const BitsInit *NewBI = BitsInit::get(MutableRC, NewBits);
-
-    // Update the bits in reversed order so that emitters will get the correct
-    // endianness.
-    // FIXME: Eliminate mutation of TG records by creating a helper function
-    // to reverse bits and maintain a cache instead of mutating records.
-    Record *MutableR = const_cast<Record *>(R);
-    MutableR->getValue("Inst")->setValue(NewBI);
+  auto [It, Inserted] = ReversedEncodingBits.try_emplace(EncodingDef);
+  if (Inserted) {
+    const Init **Reversed =
+        ReversedEncodingBitsAllocator.Allocate<const Init *>(Bits.size());
+    llvm::copy(reverse(Bits), Reversed);
+    It->second = ArrayRef(Reversed, Bits.size());
   }
+  return It->second;
 }
 
 /// guessInstructionProperties - Return true if it's OK to guess instruction

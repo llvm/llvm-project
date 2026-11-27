@@ -6,11 +6,20 @@
 // RUN:   misc-const-correctness.TransformPointersAsValues: false} \
 // RUN:   }" -- -fno-delayed-template-parsing
 
+#include <string>
+#include <utility>
+
 template <typename T>
 void type_dependent_variables() {
   T value = 42;
-  auto &ref = value;
   T &templateRef = value;
+
+  auto &ref = value;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'ref' of type 'int &' can be declared 'const'
+  // CHECK-FIXES: auto  const&ref = value;
+  // FIXME: This is a false positive, the reference points to a template type
+  // and needs to be excluded from analysis. See the 'more_template_locals()'
+  // test in 'const-correctness-values.cpp' for more examples of the problem.
 
   int value_int = 42;
   // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'value_int' of type 'int' can be declared 'const'
@@ -20,6 +29,23 @@ void instantiate_template_cases() {
   type_dependent_variables<int>();
   type_dependent_variables<float>();
 }
+
+namespace gh225395 {
+
+template <typename T> void my_swap(T &t1, T &t2) {
+  auto tmp = std::move(t1);
+  t1 = std::move(t2);
+  t2 = std::move(tmp);
+}
+void instantiate() {
+  std::string a;
+  std::string b;
+  my_swap(a, b);
+  int x = 0;
+  int y = 0;
+  my_swap(x, y);
+}
+} // namespace gh225395
 
 namespace gh57297{
 // The expression to check may not be the dependent operand in a dependent

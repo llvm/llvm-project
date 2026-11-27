@@ -1,5 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
+llvm_tablegen(Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(COFFOptionsTableGen)
 
 add_lld_library(lldCOFF
@@ -32,6 +32,7 @@ add_lld_library(lldCOFF
   DebugInfoMSF
   DebugInfoPDB
   Demangle
+  DTLTO
   LibDriver
   LTO
   MC

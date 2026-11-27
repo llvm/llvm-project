@@ -18,6 +18,7 @@
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
 
 namespace llvm {
 namespace orc {
@@ -32,7 +33,7 @@ public:
                     ExecutorAddr RegisterPerfEndAddr,
                     ExecutorAddr RegisterPerfImplAddr, bool EmitDebugInfo,
                     bool EmitUnwindInfo);
-  ~PerfSupportPlugin();
+  ~PerfSupportPlugin() override;
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &G,
@@ -55,8 +56,8 @@ public:
 
 private:
   ExecutorProcessControl &EPC;
-  ExecutorAddr RegisterPerfStartAddr;
-  ExecutorAddr RegisterPerfEndAddr;
+  Proxy<void()> RegisterPerfStart;
+  Proxy<void()> RegisterPerfEnd;
   ExecutorAddr RegisterPerfImplAddr;
   std::atomic<uint64_t> CodeIndex;
   bool EmitDebugInfo;

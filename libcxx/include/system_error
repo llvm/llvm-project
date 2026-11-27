@@ -98,7 +98,7 @@ public:
     // observers:
     int value() const noexcept;
     const error_category& category() const noexcept;
-    string message() const noexcept;
+    string message() const;
     explicit operator bool() const noexcept;
 };
 
@@ -164,13 +164,6 @@ template <> struct hash<std::error_condition>;
 #    pragma GCC system_header
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
-#    include <cstdint>
-#    include <cstring>
-#    include <limits>
-#    include <optional>
-#    include <type_traits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SYSTEM_ERROR

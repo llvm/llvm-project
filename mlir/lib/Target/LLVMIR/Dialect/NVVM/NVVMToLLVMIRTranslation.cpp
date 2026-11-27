@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -22,6 +22,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/NVVMAttributes.h"
+#include <cmath>
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -35,34 +37,31 @@ using mlir::LLVM::detail::createIntrinsicCall;
   hasAbs ? REDUX_F32_ID_IMPL(op, _abs, hasNaN) : REDUX_F32_ID_IMPL(op, , hasNaN)
 
 static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
-                                               NVVM::ReduxKind kind,
+                                               NVVM::ReductionKind kind,
                                                bool hasAbs, bool hasNaN) {
-  if (!(resultType->isIntegerTy(32) || resultType->isFloatTy()))
-    llvm_unreachable("unsupported data type for redux");
-
   switch (kind) {
-  case NVVM::ReduxKind::ADD:
+  case NVVM::ReductionKind::ADD:
     return llvm::Intrinsic::nvvm_redux_sync_add;
-  case NVVM::ReduxKind::UMAX:
+  case NVVM::ReductionKind::UMAX:
     return llvm::Intrinsic::nvvm_redux_sync_umax;
-  case NVVM::ReduxKind::UMIN:
+  case NVVM::ReductionKind::UMIN:
     return llvm::Intrinsic::nvvm_redux_sync_umin;
-  case NVVM::ReduxKind::AND:
+  case NVVM::ReductionKind::AND:
     return llvm::Intrinsic::nvvm_redux_sync_and;
-  case NVVM::ReduxKind::OR:
+  case NVVM::ReductionKind::OR:
     return llvm::Intrinsic::nvvm_redux_sync_or;
-  case NVVM::ReduxKind::XOR:
+  case NVVM::ReductionKind::XOR:
     return llvm::Intrinsic::nvvm_redux_sync_xor;
-  case NVVM::ReduxKind::MAX:
+  case NVVM::ReductionKind::MAX:
     return llvm::Intrinsic::nvvm_redux_sync_max;
-  case NVVM::ReduxKind::MIN:
+  case NVVM::ReductionKind::MIN:
     return llvm::Intrinsic::nvvm_redux_sync_min;
-  case NVVM::ReduxKind::FMIN:
+  case NVVM::ReductionKind::FMIN:
     return GET_REDUX_F32_ID(min, hasAbs, hasNaN);
-  case NVVM::ReduxKind::FMAX:
+  case NVVM::ReductionKind::FMAX:
     return GET_REDUX_F32_ID(max, hasAbs, hasNaN);
   }
-  llvm_unreachable("unknown redux kind");
+  llvm_unreachable("unknown reduction kind");
 }
 
 static llvm::Intrinsic::ID getShflIntrinsicId(llvm::Type *resultType,
@@ -119,6 +118,7 @@ static llvm::Intrinsic::ID getMatchSyncIntrinsicId(Type valType,
     return valType.isInteger(32) ? llvm::Intrinsic::nvvm_match_all_sync_i32p
                                  : llvm::Intrinsic::nvvm_match_all_sync_i64p;
   }
+  llvm_unreachable("unsupported match sync kind");
 }
 
 static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
@@ -135,42 +135,128 @@ static llvm::Intrinsic::ID getVoteSyncIntrinsicId(NVVM::VoteSyncKind kind) {
   llvm_unreachable("unsupported vote kind");
 }
 
-/// Return the intrinsic ID associated with ldmatrix for the given paramters.
-static llvm::Intrinsic::ID getLdMatrixIntrinsicId(NVVM::MMALayout layout,
-                                                  int32_t num) {
-  if (layout == NVVM::MMALayout::row) {
+static llvm::Intrinsic::ID
+getLdMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
+                       NVVM::LdStMatrixShapeAttr shape,
+                       NVVM::LdStMatrixEltType eltType) {
+  if (shape.getM() == 8 && shape.getN() == 8) {
     switch (num) {
     case 1:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16;
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_b16
+                 : llvm::Intrinsic::
+                       nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16;
     case 2:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16;
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_b16
+                 : llvm::Intrinsic::
+                       nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16;
     case 4:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16;
-    default:
-      llvm_unreachable("unsupported number of matrix");
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_b16
+                 : llvm::Intrinsic::
+                       nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16;
     }
-
-  } else {
-    switch (num) {
-    case 1:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x1_trans_b16;
-    case 2:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x2_trans_b16;
-    case 4:
-      return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n8_x4_trans_b16;
-    default:
-      llvm_unreachable("unsupported number of matrix");
+  } else if (shape.getM() == 8 && shape.getN() == 16) {
+    if (eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b6x16_p32;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b6x16_p32;
+      case 4:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b6x16_p32;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x1_b8x16_b4x16_p64;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x2_b8x16_b4x16_p64;
+      case 4:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m8n16_x4_b8x16_b4x16_p64;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::S8_S4) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x1_s8_s4;
+      case 2:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x2_s8_s4;
+      case 4:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m8n16_x4_s8_s4;
+      }
+    }
+  } else if (shape.getM() == 16 && shape.getN() == 16) {
+    if (eltType == NVVM::LdStMatrixEltType::B8) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8;
+      case 2:
+        return llvm::Intrinsic::nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B6X16_P32) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b6x16_p32;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b6x16_p32;
+      }
+    } else if (eltType == NVVM::LdStMatrixEltType::B8X16_B4X16_P64) {
+      switch (num) {
+      case 1:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x1_trans_b8x16_b4x16_p64;
+      case 2:
+        return llvm::Intrinsic::
+            nvvm_ldmatrix_sync_aligned_m16n16_x2_trans_b8x16_b4x16_p64;
+      }
     }
   }
+  llvm_unreachable("unknown ldmatrix kind");
 }
 
-/// Return the intrinsic ID associated with st.bulk for the given address type.
+/// Return the intrinsic ID associated with stmatrix for the given paramters.
 static llvm::Intrinsic::ID
-getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {
-  bool isSharedMemory =
-      addrType.getAddressSpace() == NVVM::NVVMMemorySpace::kSharedMemorySpace;
-  return isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
-                        : llvm::Intrinsic::nvvm_st_bulk;
+getStMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
+                       NVVM::LdStMatrixShapeAttr shape,
+                       NVVM::LdStMatrixEltType eltType) {
+  if (shape.getM() == 8 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x1_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x1_trans_b16;
+    case 2:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x2_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x2_trans_b16;
+    case 4:
+      return (layout == NVVM::MMALayout::row)
+                 ? llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m8n8_x4_b16
+                 : llvm::Intrinsic::
+                       nvvm_stmatrix_sync_aligned_m8n8_x4_trans_b16;
+    }
+  } else if (shape.getM() == 16 && shape.getN() == 8) {
+    switch (num) {
+    case 1:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x1_trans_b8;
+    case 2:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x2_trans_b8;
+    case 4:
+      return llvm::Intrinsic::nvvm_stmatrix_sync_aligned_m16n8_x4_trans_b8;
+    }
+  }
+  llvm_unreachable("unknown stmatrix kind");
 }
 
 static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
@@ -206,6 +292,20 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
     llvm_unreachable("Unknown scope for uni-directional fence.proxy operation");
   }
   llvm_unreachable("Unsupported proxy kinds");
+}
+
+static unsigned getMembarIntrinsicID(NVVM::MemScopeKind scope) {
+  switch (scope) {
+  case NVVM::MemScopeKind::CTA:
+    return llvm::Intrinsic::nvvm_membar_cta;
+  case NVVM::MemScopeKind::CLUSTER:
+    return llvm::Intrinsic::nvvm_fence_sc_cluster;
+  case NVVM::MemScopeKind::GPU:
+    return llvm::Intrinsic::nvvm_membar_gl;
+  case NVVM::MemScopeKind::SYS:
+    return llvm::Intrinsic::nvvm_membar_sys;
+  }
+  llvm_unreachable("Unknown scope for memory barrier");
 }
 
 #define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM
@@ -314,6 +414,241 @@ getTcgen05StIntrinsicID(mlir::NVVM::Tcgen05LdStShape shape, uint32_t num) {
   llvm_unreachable("unhandled tcgen05.st lowering");
 }
 
+static llvm::Intrinsic::ID getFenceSyncRestrictID(NVVM::MemOrderKind order) {
+  return order == NVVM::MemOrderKind::ACQUIRE
+             ? llvm::Intrinsic::
+                   nvvm_fence_acquire_sync_restrict_space_cluster_scope_cluster
+             : llvm::Intrinsic::
+                   nvvm_fence_release_sync_restrict_space_cta_scope_cluster;
+}
+
+static llvm::Intrinsic::ID
+getFenceProxyID(NVVM::ProxyKind kind, std::optional<NVVM::SharedSpace> space) {
+  switch (kind) {
+  case NVVM::ProxyKind::alias:
+    return llvm::Intrinsic::nvvm_fence_proxy_alias;
+  case NVVM::ProxyKind::async:
+    return llvm::Intrinsic::nvvm_fence_proxy_async;
+  case NVVM::ProxyKind::async_global:
+    return llvm::Intrinsic::nvvm_fence_proxy_async_global;
+  case NVVM::ProxyKind::async_shared:
+    return *space == NVVM::SharedSpace::shared_cta
+               ? llvm::Intrinsic::nvvm_fence_proxy_async_shared_cta
+               : llvm::Intrinsic::nvvm_fence_proxy_async_shared_cluster;
+  default:
+    llvm_unreachable("unsupported proxy kind");
+  }
+}
+
+static llvm::Intrinsic::ID
+getFenceProxySyncRestrictID(NVVM::MemOrderKind order) {
+  return order == NVVM::MemOrderKind::ACQUIRE
+             ? llvm::Intrinsic::
+                   nvvm_fence_proxy_async_generic_acquire_sync_restrict_space_cluster_scope_cluster
+             : llvm::Intrinsic::
+                   nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster;
+}
+
+static llvm::RoundingMode
+getLLVMRoundingModeForFPArith(NVVM::FPRoundingMode rndMode) {
+  switch (rndMode) {
+  case NVVM::FPRoundingMode::RN:
+    return llvm::RoundingMode::NearestTiesToEven;
+  case NVVM::FPRoundingMode::RM:
+    return llvm::RoundingMode::TowardNegative;
+  case NVVM::FPRoundingMode::RP:
+    return llvm::RoundingMode::TowardPositive;
+  case NVVM::FPRoundingMode::RZ:
+    return llvm::RoundingMode::TowardZero;
+  default:
+    // default rounding mode is RN
+    assert(rndMode == NVVM::FPRoundingMode::NONE &&
+           "unsupported rounding mode for nvvm fp arithmetic");
+    return llvm::RoundingMode::NearestTiesToEven;
+  }
+}
+
+// Calls an LLVM intrinsic on the given operands. For f32/f64 vector types,
+// the intrinsic is called per-element and the results are packed back into a
+// vector. If retType is non-null, it is forwarded as the return-type
+// overload to `createIntrinsicCall`.
+static llvm::Value *
+createScalarizedIntrinsicCall(llvm::IRBuilderBase &builder,
+                              llvm::Intrinsic::ID IID, llvm::Type *opTypeLLVM,
+                              ArrayRef<llvm::Value *> operands,
+                              llvm::Type *retType) {
+  if (opTypeLLVM->isVectorTy() && (opTypeLLVM->getScalarType()->isFloatTy() ||
+                                   opTypeLLVM->getScalarType()->isDoubleTy())) {
+    llvm::Value *result = llvm::PoisonValue::get(
+        llvm::FixedVectorType::get(opTypeLLVM->getScalarType(), 2));
+    for (int64_t i = 0; i < 2; ++i) {
+      llvm::SmallVector<llvm::Value *> scalarArgs;
+      for (llvm::Value *op : operands)
+        scalarArgs.push_back(
+            op->getType()->isVectorTy()
+                ? builder.CreateExtractElement(op, builder.getInt32(i))
+                : op);
+      llvm::Value *res = createIntrinsicCall(builder, IID, retType, scalarArgs);
+      result = builder.CreateInsertElement(result, res, builder.getInt32(i));
+    }
+    return result;
+  }
+
+  return createIntrinsicCall(builder, IID, retType, operands);
+}
+
+// Lowers a binary FP arithmetic op to the intrinsic selected from `ids`, which
+// is indexed by [ftz][sat].
+static void lowerFloatBinaryOpToLLVMIR(const llvm::Intrinsic::ID (&ids)[2][2],
+                                       llvm::Value *argLHS, llvm::Value *argRHS,
+                                       Value res, NVVM::FPRoundingMode rndMode,
+                                       NVVM::SaturationMode satMode, bool isFTZ,
+                                       LLVM::ModuleTranslation &mt,
+                                       llvm::IRBuilderBase &builder) {
+  llvm::Type *opTypeLLVM = argLHS->getType();
+  bool isSat = satMode != NVVM::SaturationMode::NONE;
+
+  llvm::Intrinsic::ID id = ids[isFTZ][isSat];
+  llvm::Value *rnd = builder.getInt32(
+      static_cast<int>(getLLVMRoundingModeForFPArith(rndMode)));
+
+  // For f64 vectors, and f32 vectors with saturation, we need to scalarize
+  // the intrinsic call.
+  llvm::Type *scalarTypeLLVM = opTypeLLVM->getScalarType();
+  if (opTypeLLVM->isVectorTy() && (scalarTypeLLVM->isDoubleTy() ||
+                                   (isSat && scalarTypeLLVM->isFloatTy()))) {
+    mt.mapValue(res, createScalarizedIntrinsicCall(builder, id, opTypeLLVM,
+                                                   {argLHS, argRHS, rnd},
+                                                   scalarTypeLLVM));
+    return;
+  }
+
+  mt.mapValue(
+      res, createIntrinsicCall(builder, id, opTypeLLVM, {argLHS, argRHS, rnd}));
+}
+
+void NVVM::AddFOp::lowerAddFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
+                                     Value res, NVVM::FPRoundingMode rndMode,
+                                     NVVM::SaturationMode satMode, bool isFTZ,
+                                     LLVM::ModuleTranslation &mt,
+                                     llvm::IRBuilderBase &builder) {
+  static constexpr llvm::Intrinsic::ID addIDs[2][2] = {
+      {llvm::Intrinsic::nvvm_fadd, llvm::Intrinsic::nvvm_fadd_sat},
+      {llvm::Intrinsic::nvvm_fadd_ftz, llvm::Intrinsic::nvvm_fadd_ftz_sat}};
+  lowerFloatBinaryOpToLLVMIR(addIDs, argLHS, argRHS, res, rndMode, satMode,
+                             isFTZ, mt, builder);
+}
+
+void NVVM::MulFOp::lowerMulFToLLVMIR(llvm::Value *argLHS, llvm::Value *argRHS,
+                                     Value res, NVVM::FPRoundingMode rndMode,
+                                     NVVM::SaturationMode satMode, bool isFTZ,
+                                     LLVM::ModuleTranslation &mt,
+                                     llvm::IRBuilderBase &builder) {
+  static constexpr llvm::Intrinsic::ID mulIDs[2][2] = {
+      {llvm::Intrinsic::nvvm_fmul, llvm::Intrinsic::nvvm_fmul_sat},
+      {llvm::Intrinsic::nvvm_fmul_ftz, llvm::Intrinsic::nvvm_fmul_ftz_sat}};
+  lowerFloatBinaryOpToLLVMIR(mulIDs, argLHS, argRHS, res, rndMode, satMode,
+                             isFTZ, mt, builder);
+}
+
+void NVVM::FmaOp::lowerFmaToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
+                                   llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::FmaOp>(op);
+  mlir::NVVM::FPRoundingMode rndMode = thisOp.getRnd();
+  bool isFTZ = thisOp.getFtz();
+  bool isRelu = thisOp.getRelu();
+  bool isSat = thisOp.getSat() == NVVM::SaturationMode::SAT;
+  bool isOOB = thisOp.getOob();
+
+  mlir::Type opType = thisOp.getRes().getType();
+  llvm::Type *opTypeLLVM = mt.convertType(opType);
+
+  llvm::Value *argA = mt.lookupValue(thisOp.getA());
+  llvm::Value *argB = mt.lookupValue(thisOp.getB());
+  llvm::Value *argC = mt.lookupValue(thisOp.getC());
+
+  // The oob variants only support RN and take no rounding-mode operand.
+  if (isOOB) {
+    llvm::Intrinsic::ID id = isRelu ? llvm::Intrinsic::nvvm_fma_rn_oob_relu
+                                    : llvm::Intrinsic::nvvm_fma_rn_oob;
+    mt.mapValue(thisOp.getRes(), createIntrinsicCall(builder, id, opTypeLLVM,
+                                                     {argA, argB, argC}));
+    return;
+  }
+
+  static constexpr llvm::Intrinsic::ID fmaIDs[2][3] = {
+      {llvm::Intrinsic::nvvm_fma, llvm::Intrinsic::nvvm_fma_sat,
+       llvm::Intrinsic::nvvm_fma_relu},
+      {llvm::Intrinsic::nvvm_fma_ftz, llvm::Intrinsic::nvvm_fma_ftz_sat,
+       llvm::Intrinsic::nvvm_fma_ftz_relu}};
+
+  llvm::Intrinsic::ID id = fmaIDs[isFTZ][isSat ? 1 : (isRelu ? 2 : 0)];
+  llvm::Value *rnd = builder.getInt32(
+      static_cast<int>(getLLVMRoundingModeForFPArith(rndMode)));
+
+  // For f64 vector fma, and f32 vector fma with saturation, we need to
+  // scalarize the intrinsic call.
+  llvm::Type *scalarTypeLLVM = opTypeLLVM->getScalarType();
+  if (opTypeLLVM->isVectorTy() && (scalarTypeLLVM->isDoubleTy() ||
+                                   (isSat && scalarTypeLLVM->isFloatTy()))) {
+    mt.mapValue(thisOp.getRes(), createScalarizedIntrinsicCall(
+                                     builder, id, opTypeLLVM,
+                                     {argA, argB, argC, rnd}, scalarTypeLLVM));
+    return;
+  }
+
+  mt.mapValue(thisOp.getRes(), createIntrinsicCall(builder, id, opTypeLLVM,
+                                                   {argA, argB, argC, rnd}));
+}
+
+// Returns the LLVM type the sp{de}compress intrinsics use for metadata: i32 for
+// a single register (including vector<1xi32>) and a vector of i32 otherwise.
+static llvm::Type *getSPMetadataType(Type type, llvm::IRBuilderBase &builder) {
+  auto vecTy = dyn_cast<VectorType>(type);
+  if (!vecTy || vecTy.getNumElements() == 1)
+    return builder.getInt32Ty();
+  return llvm::FixedVectorType::get(builder.getInt32Ty(),
+                                    vecTy.getNumElements());
+}
+
+void NVVM::SparseCompressOp::lowerToLLVMIR(Operation &op,
+                                           LLVM::ModuleTranslation &mt,
+                                           llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SparseCompressOp>(op);
+  Value metadata = thisOp.getMetadata();
+  Value compressedData = thisOp.getCompressedData();
+  llvm::Type *resultTy =
+      llvm::StructType::get(getSPMetadataType(metadata.getType(), builder),
+                            mt.convertType(compressedData.getType()));
+
+  llvm::Value *result = createIntrinsicCall(
+      builder, llvm::Intrinsic::nvvm_spcompress, resultTy,
+      {mt.lookupValue(thisOp.getData()), mt.lookupValue(thisOp.getSpDesc()),
+       builder.getInt32(thisOp.getIdxSize()),
+       // spcompress only supports the 2:4 sparsity factor.
+       builder.getInt32(4)});
+
+  mt.mapValue(metadata) =
+      builder.CreateBitCast(builder.CreateExtractValue(result, 0),
+                            mt.convertType(metadata.getType()));
+  mt.mapValue(compressedData) = builder.CreateExtractValue(result, 1);
+}
+
+void NVVM::SparseDecompressOp::lowerToLLVMIR(Operation &op,
+                                             LLVM::ModuleTranslation &mt,
+                                             llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::SparseDecompressOp>(op);
+  Value metadata = thisOp.getMetadata();
+  mt.mapValue(thisOp.getData()) = createIntrinsicCall(
+      builder, llvm::Intrinsic::nvvm_spdecompress,
+      mt.convertType(thisOp.getData().getType()),
+      {builder.CreateBitCast(mt.lookupValue(metadata),
+                             getSPMetadataType(metadata.getType(), builder)),
+       mt.lookupValue(thisOp.getCompressedData()),
+       builder.getInt32(thisOp.getIdxSize()),
+       builder.getInt32(thisOp.getNumTgt())});
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the NVVM dialect to LLVM IR.
@@ -327,17 +662,41 @@ public:
   LogicalResult
   convertOperation(Operation *op, llvm::IRBuilderBase &builder,
                    LLVM::ModuleTranslation &moduleTranslation) const final {
+    // All NVVM ops are instruction-level and require an active insertion point.
+    // A null insert block means the op is misplaced (e.g., at module scope),
+    // which would otherwise cause a null dereference in createIntrinsicCall.
+    if (!builder.GetInsertBlock())
+      return op->emitOpError(
+          "cannot be translated to LLVM IR without an active insertion "
+          "point; make sure the op is inside a function");
     Operation &opInst = *op;
 #include "mlir/Dialect/LLVMIR/NVVMConversions.inc"
 
     return failure();
   }
 
-  /// Attaches module-level metadata for functions marked as kernels.
+  /// Attaches module-level metadata for functions marked as kernels
+  /// and managed annotations for global variables.
   LogicalResult
   amendOperation(Operation *op, ArrayRef<llvm::Instruction *> instructions,
                  NamedAttribute attribute,
                  LLVM::ModuleTranslation &moduleTranslation) const final {
+    if (auto globalOp = dyn_cast<LLVM::GlobalOp>(op)) {
+      if (attribute.getName() == NVVM::NVVMDialect::getManagedAttrName()) {
+        auto *gv = cast<llvm::GlobalVariable>(
+            moduleTranslation.lookupGlobal(globalOp));
+        llvm::Module *m = gv->getParent();
+        llvm::LLVMContext &ctx = m->getContext();
+        llvm::NamedMDNode *md = m->getOrInsertNamedMetadata("nvvm.annotations");
+        md->addOperand(llvm::MDNode::get(
+            ctx, {llvm::ConstantAsMetadata::get(gv),
+                  llvm::MDString::get(ctx, "managed"),
+                  llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                      llvm::Type::getInt32Ty(ctx), 1))}));
+      }
+      return success();
+    }
+
     auto func = dyn_cast<LLVM::LLVMFuncOp>(op);
     if (!func)
       return failure();
@@ -350,7 +709,7 @@ public:
       const std::string attr = llvm::formatv(
           "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
                                        values.asArrayRef().end()));
-      llvmFunc->addFnAttr("nvvm.maxntid", attr);
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MaxNTID, attr);
     } else if (attribute.getName() == NVVM::NVVMDialect::getReqntidAttrName()) {
       if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
         return failure();
@@ -358,7 +717,7 @@ public:
       const std::string attr = llvm::formatv(
           "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
                                        values.asArrayRef().end()));
-      llvmFunc->addFnAttr("nvvm.reqntid", attr);
+      llvmFunc->addFnAttr(llvm::NVVMAttr::ReqNTID, attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterDimAttrName()) {
       if (!isa<DenseI32ArrayAttr>(attribute.getValue()))
@@ -367,22 +726,29 @@ public:
       const std::string attr = llvm::formatv(
           "{0:$[,]}", llvm::make_range(values.asArrayRef().begin(),
                                        values.asArrayRef().end()));
-      llvmFunc->addFnAttr("nvvm.cluster_dim", attr);
+      llvmFunc->addFnAttr(llvm::NVVMAttr::ClusterDim, attr);
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getClusterMaxBlocksAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      llvmFunc->addFnAttr("nvvm.maxclusterrank", llvm::utostr(value.getInt()));
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MaxClusterRank,
+                          llvm::utostr(value.getInt()));
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getMinctasmAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      llvmFunc->addFnAttr("nvvm.minctasm", llvm::utostr(value.getInt()));
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MinCTASm,
+                          llvm::utostr(value.getInt()));
     } else if (attribute.getName() == NVVM::NVVMDialect::getMaxnregAttrName()) {
       auto value = dyn_cast<IntegerAttr>(attribute.getValue());
-      llvmFunc->addFnAttr("nvvm.maxnreg", llvm::utostr(value.getInt()));
+      llvmFunc->addFnAttr(llvm::NVVMAttr::MaxNReg,
+                          llvm::utostr(value.getInt()));
     } else if (attribute.getName() ==
                NVVM::NVVMDialect::getKernelFuncAttrName()) {
       llvmFunc->setCallingConv(llvm::CallingConv::PTX_Kernel);
+    } else if (attribute.getName() ==
+               NVVM::NVVMDialect::getBlocksAreClustersAttrName()) {
+      llvmFunc->addFnAttr(llvm::NVVMAttr::BlocksAreClusters);
     }
+
     return success();
   }
 
@@ -393,51 +759,11 @@ public:
     llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
     llvm::Function *llvmFunc =
         moduleTranslation.lookupFunction(funcOp.getName());
-    llvm::NamedMDNode *nvvmAnnotations =
-        moduleTranslation.getOrInsertNamedModuleMetadata("nvvm.annotations");
 
     if (attribute.getName() == NVVM::NVVMDialect::getGridConstantAttrName()) {
-      llvm::MDNode *gridConstantMetaData = nullptr;
-
-      // Check if a 'grid_constant' metadata node exists for the given function
-      for (llvm::MDNode *opnd : llvm::reverse(nvvmAnnotations->operands())) {
-        if (opnd->getNumOperands() == 3 &&
-            opnd->getOperand(0) == llvm::ValueAsMetadata::get(llvmFunc) &&
-            opnd->getOperand(1) ==
-                llvm::MDString::get(llvmContext, "grid_constant")) {
-          gridConstantMetaData = opnd;
-          break;
-        }
-      }
-
-      // 'grid_constant' is a function-level meta data node with a list of
-      // integers, where each integer n denotes that the nth parameter has the
-      // grid_constant annotation (numbering from 1). This requires aggregating
-      // the indices of the individual parameters that have this attribute.
-      llvm::Type *i32 = llvm::IntegerType::get(llvmContext, 32);
-      if (gridConstantMetaData == nullptr) {
-        // Create a new 'grid_constant' metadata node
-        SmallVector<llvm::Metadata *> gridConstMetadata = {
-            llvm::ValueAsMetadata::getConstant(
-                llvm::ConstantInt::get(i32, argIdx + 1))};
-        llvm::Metadata *llvmMetadata[] = {
-            llvm::ValueAsMetadata::get(llvmFunc),
-            llvm::MDString::get(llvmContext, "grid_constant"),
-            llvm::MDNode::get(llvmContext, gridConstMetadata)};
-        llvm::MDNode *llvmMetadataNode =
-            llvm::MDNode::get(llvmContext, llvmMetadata);
-        nvvmAnnotations->addOperand(llvmMetadataNode);
-      } else {
-        // Append argIdx + 1 to the 'grid_constant' argument list
-        if (auto argList =
-                dyn_cast<llvm::MDTuple>(gridConstantMetaData->getOperand(2))) {
-          llvm::TempMDTuple clonedArgList = argList->clone();
-          clonedArgList->push_back((llvm::ValueAsMetadata::getConstant(
-              llvm::ConstantInt::get(i32, argIdx + 1))));
-          gridConstantMetaData->replaceOperandWith(
-              2, llvm::MDNode::replaceWithUniqued(std::move(clonedArgList)));
-        }
-      }
+      llvmFunc->addParamAttr(
+          argIdx,
+          llvm::Attribute::get(llvmContext, llvm::NVVMAttr::GridConstant));
     }
     return success();
   }

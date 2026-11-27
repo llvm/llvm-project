@@ -37,6 +37,7 @@ class Metadata;
 class ModuleSummaryIndex;
 class Type;
 class Value;
+struct ValueInfo;
 
 // Callback to override the data layout string of an imported bitcode module.
 // The first argument is the target triple, the second argument the data layout
@@ -84,6 +85,14 @@ struct ParserCallbacks {
   /// The MDType callback is called for every value in metadata.
   std::optional<MDTypeCallbackTy> MDType;
 
+  /// If true, do not auto-upgrade debug intrinsic calls (llvm.dbg.*) to
+  /// non-instruction debug records during bitcode read. This flag allows
+  /// direct manipulation of the old intrinsic-form debug info; beware that
+  /// LLVM does not support using these intrinsics any more. The caller is
+  /// responsible for performing the upgrade manually (e.g. via
+  /// Module::convertToNewDbgValues()).
+  bool SkipDebugIntrinsicUpgrade = false;
+
   ParserCallbacks() = default;
   explicit ParserCallbacks(DataLayoutCallbackFuncTy DataLayout)
       : DataLayout(DataLayout) {}
@@ -120,7 +129,7 @@ struct ParserCallbacks {
           IdentificationBit(IdentificationBit), ModuleBit(ModuleBit) {}
 
     // Calls the ctor.
-    LLVM_ABI_FRIEND friend Expected<BitcodeFileContents>
+    LLVM_ABI friend Expected<BitcodeFileContents>
     getBitcodeFileContents(MemoryBufferRef Buffer);
 
     Expected<std::unique_ptr<Module>>
@@ -136,6 +145,11 @@ struct ParserCallbacks {
     StringRef getStrtab() const { return Strtab; }
 
     StringRef getModuleIdentifier() const { return ModuleIdentifier; }
+
+    // Assign a new module identifier to this bitcode module.
+    void setModuleIdentifier(llvm::StringRef ModuleId) {
+      ModuleIdentifier = ModuleId;
+    }
 
     /// Read the bitcode module and prepare for lazy deserialization of function
     /// bodies. If ShouldLazyLoadMetadata is true, lazily load metadata as well.
@@ -160,7 +174,8 @@ struct ParserCallbacks {
     /// into CombinedIndex.
     LLVM_ABI Error
     readSummary(ModuleSummaryIndex &CombinedIndex, StringRef ModulePath,
-                std::function<bool(GlobalValue::GUID)> IsPrevailing = nullptr);
+                std::function<bool(StringRef)> IsPrevailing = nullptr,
+                std::function<void(ValueInfo)> OnValueInfo = nullptr);
   };
 
   struct BitcodeFileContents {

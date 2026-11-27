@@ -17,6 +17,9 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/StackExhaustionHandler.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -45,12 +48,25 @@ public:
 };
 } // end anonymous namespace
 
-IdentifierInfo *Parser::getSEHExceptKeyword() {
-  // __except is accepted as a (contextual) keyword
+bool Parser::isTokenSEHExcept() {
+  if (!Tok.is(tok::identifier))
+    return false;
+
   if (!Ident__except && (getLangOpts().MicrosoftExt || getLangOpts().Borland))
     Ident__except = PP.getIdentifierInfo("__except");
 
-  return Ident__except;
+  const IdentifierInfo *Identifier = Tok.getIdentifierInfo();
+  if (Identifier == Ident__except)
+    return true;
+
+  if (getLangOpts().MSVCCompat) {
+    if (!Ident_except)
+      Ident_except = PP.getIdentifierInfo("_except");
+    if (Identifier == Ident_except)
+      return true;
+  }
+
+  return false;
 }
 
 Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
@@ -58,11 +74,10 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
       PreferredType(&actions.getASTContext(), pp.isCodeCompletionEnabled()),
       Actions(actions), Diags(PP.getDiagnostics()), StackHandler(Diags),
       GreaterThanIsOperator(true), ColonIsSacred(false),
-      InMessageExpression(false), ParsingInObjCContainer(false),
-      TemplateParameterDepth(0) {
+      ParsingGenericAssociationType(false), InMessageExpression(false),
+      ParsingInObjCContainer(false), TemplateParameterDepth(0) {
   SkipFunctionBodies = pp.isCodeCompletionEnabled() || skipFunctionBodies;
-  Tok.startToken();
-  Tok.setKind(tok::eof);
+  Tok = Token::createEof();
   Actions.CurScope = nullptr;
   NumCachedScopes = 0;
   CurParsedObjCImpl = nullptr;
@@ -92,8 +107,7 @@ DiagnosticBuilder Parser::Diag(const Token &Tok, unsigned DiagID) {
 
 DiagnosticBuilder Parser::DiagCompat(SourceLocation Loc,
                                      unsigned CompatDiagId) {
-  return Diag(Loc,
-              DiagnosticIDs::getCXXCompatDiagId(getLangOpts(), CompatDiagId));
+  return Diag(Loc, DiagnosticIDs::getCompatDiagId(getLangOpts(), CompatDiagId));
 }
 
 DiagnosticBuilder Parser::DiagCompat(const Token &Tok, unsigned CompatDiagId) {
@@ -189,6 +203,11 @@ bool Parser::ExpectAndConsumeSemi(unsigned DiagID, StringRef TokenUsed) {
   }
 
   return ExpectAndConsume(tok::semi, DiagID , TokenUsed);
+}
+
+bool Parser::isLikelyAtStartOfNewDeclaration() {
+  return Tok.isAtStartOfLine() &&
+         isDeclarationSpecifier(ImplicitTypenameContext::No);
 }
 
 void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
@@ -335,7 +354,6 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
-    case tok::annot_repl_input_end:
       // Stop before we change submodules. They generally indicate a "good"
       // place to pick up parsing again (except in the special case where
       // we're trying to skip to EOF).
@@ -514,11 +532,7 @@ void Parser::Initialize() {
   Ident_sealed = nullptr;
   Ident_abstract = nullptr;
   Ident_override = nullptr;
-  Ident_trivially_relocatable_if_eligible = nullptr;
-  Ident_replaceable_if_eligible = nullptr;
   Ident_GNU_final = nullptr;
-  Ident_import = nullptr;
-  Ident_module = nullptr;
 
   Ident_super = &PP.getIdentifierTable().get("super");
 
@@ -545,6 +559,7 @@ void Parser::Initialize() {
       nullptr;
 
   Ident__except = nullptr;
+  Ident_except = nullptr;
 
   Ident__exception_code = Ident__exception_info = nullptr;
   Ident__abnormal_termination = Ident___exception_code = nullptr;
@@ -572,11 +587,6 @@ void Parser::Initialize() {
     PP.SetPoisonReason(Ident__abnormal_termination,diag::err_seh___finally_block);
     PP.SetPoisonReason(Ident___abnormal_termination,diag::err_seh___finally_block);
     PP.SetPoisonReason(Ident_AbnormalTermination,diag::err_seh___finally_block);
-  }
-
-  if (getLangOpts().CPlusPlusModules) {
-    Ident_import = PP.getIdentifierInfo("import");
-    Ident_module = PP.getIdentifierInfo("module");
   }
 
   Actions.Initialize();
@@ -626,25 +636,8 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     switch (NextToken().getKind()) {
     case tok::kw_module:
       goto module_decl;
-
-    // Note: no need to handle kw_import here. We only form kw_import under
-    // the Standard C++ Modules, and in that case 'export import' is parsed as
-    // an export-declaration containing an import-declaration.
-
-    // Recognize context-sensitive C++20 'export module' and 'export import'
-    // declarations.
-    case tok::identifier: {
-      IdentifierInfo *II = NextToken().getIdentifierInfo();
-      if ((II == Ident_module || II == Ident_import) &&
-          GetLookAheadToken(2).isNot(tok::coloncolon)) {
-        if (II == Ident_module)
-          goto module_decl;
-        else
-          goto import_decl;
-      }
-      break;
-    }
-
+    case tok::kw_import:
+      goto import_decl;
     default:
       break;
     }
@@ -696,7 +689,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     return false;
 
   case tok::eof:
-  case tok::annot_repl_input_end:
     // Check whether -fmax-tokens= was reached.
     if (PP.getMaxTokens() != 0 && PP.getTokenCount() > PP.getMaxTokens()) {
       PP.Diag(Tok.getLocation(), diag::warn_max_tokens_total)
@@ -708,26 +700,10 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     }
 
     // Late template parsing can begin.
-    Actions.SetLateTemplateParser(LateTemplateParserCallback, nullptr, this);
+    Actions.SetLateTemplateParser(LateTemplateParserCallback, this);
     Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
-
-  case tok::identifier:
-    // C++2a [basic.link]p3:
-    //   A token sequence beginning with 'export[opt] module' or
-    //   'export[opt] import' and not immediately followed by '::'
-    //   is never interpreted as the declaration of a top-level-declaration.
-    if ((Tok.getIdentifierInfo() == Ident_module ||
-         Tok.getIdentifierInfo() == Ident_import) &&
-        NextToken().isNot(tok::coloncolon)) {
-      if (Tok.getIdentifierInfo() == Ident_module)
-        goto module_decl;
-      else
-        goto import_decl;
-    }
-    break;
-
   default:
     break;
   }
@@ -842,6 +818,9 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
     return nullptr;
+  case tok::annot_pragma_export:
+    HandlePragmaExport();
+    return nullptr;
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl =
@@ -920,8 +899,10 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::kw_import: {
     Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
     if (getLangOpts().CPlusPlusModules) {
-      llvm_unreachable("not expecting a c++20 import here");
-      ProhibitAttributes(Attrs);
+      Diag(Tok, diag::err_unexpected_module_or_import_decl)
+          << /*IsImport*/ true;
+      SkipUntil(tok::semi);
+      return nullptr;
     }
     SingleDecl = ParseModuleImport(SourceLocation(), IS);
   } break;
@@ -998,9 +979,8 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
       // Extern templates
       SourceLocation ExternLoc = ConsumeToken();
       SourceLocation TemplateLoc = ConsumeToken();
-      Diag(ExternLoc, getLangOpts().CPlusPlus11 ?
-             diag::warn_cxx98_compat_extern_template :
-             diag::ext_extern_template) << SourceRange(ExternLoc, TemplateLoc);
+      DiagCompat(ExternLoc, diag_compat::extern_template)
+          << SourceRange(ExternLoc, TemplateLoc);
       SourceLocation DeclEnd;
       return ParseExplicitInstantiation(DeclaratorContext::File, ExternLoc,
                                         TemplateLoc, DeclEnd, Attrs);
@@ -1013,7 +993,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     return nullptr;
 
   case tok::kw_module:
-    Diag(Tok, diag::err_unexpected_module_decl);
+    Diag(Tok, diag::err_unexpected_module_or_import_decl) << /*IsImport*/ false;
     SkipUntil(tok::semi);
     return nullptr;
 
@@ -1083,7 +1063,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
          "expected uninitialised source range");
   DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
   DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
-  DS.takeAttributesFrom(DeclSpecAttrs);
+  DS.takeAttributesAppendingingFrom(DeclSpecAttrs);
 
   ParsedTemplateInfo TemplateInfo;
   MaybeParseMicrosoftAttributes(DS.getAttributes());
@@ -1100,30 +1080,25 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
   // C99 6.7.2.3p6: Handle "struct-or-union identifier;", "enum { X };"
   // declaration-specifiers init-declarator-list[opt] ';'
   if (Tok.is(tok::semi)) {
-    auto LengthOfTSTToken = [](DeclSpec::TST TKind) {
-      assert(DeclSpec::isDeclRep(TKind));
-      switch(TKind) {
-      case DeclSpec::TST_class:
-        return 5;
-      case DeclSpec::TST_struct:
-        return 6;
-      case DeclSpec::TST_union:
-        return 5;
-      case DeclSpec::TST_enum:
-        return 4;
-      case DeclSpec::TST_interface:
-        return 9;
-      default:
-        llvm_unreachable("we only expect to get the length of the class/struct/union/enum");
+    // Suggest correct location to fix '[[attrib]] struct' to 'struct
+    // [[attrib]]'
+    SourceLocation CorrectLocationForAttributes{};
+    TypeSpecifierType TKind = DS.getTypeSpecType();
+    if (DeclSpec::isDeclRep(TKind)) {
+      if (TKind == DeclSpec::TST_enum) {
+        if (const auto *ED = dyn_cast_or_null<EnumDecl>(DS.getRepAsDecl())) {
+          CorrectLocationForAttributes =
+              PP.getLocForEndOfToken(ED->getEnumKeyRange().getEnd());
+        }
       }
-
-    };
-    // Suggest correct location to fix '[[attrib]] struct' to 'struct [[attrib]]'
-    SourceLocation CorrectLocationForAttributes =
-        DeclSpec::isDeclRep(DS.getTypeSpecType())
-            ? DS.getTypeSpecTypeLoc().getLocWithOffset(
-                  LengthOfTSTToken(DS.getTypeSpecType()))
-            : SourceLocation();
+      if (CorrectLocationForAttributes.isInvalid()) {
+        const auto &Policy = Actions.getASTContext().getPrintingPolicy();
+        unsigned Offset =
+            StringRef(DeclSpec::getSpecifierName(TKind, Policy)).size();
+        CorrectLocationForAttributes =
+            DS.getTypeSpecTypeLoc().getLocWithOffset(Offset);
+      }
+    }
     ProhibitAttributes(Attrs, CorrectLocationForAttributes);
     ConsumeToken();
     RecordDecl *AnonRecord = nullptr;
@@ -1155,7 +1130,7 @@ Parser::DeclGroupPtrTy Parser::ParseDeclOrFunctionDefInternal(
     }
 
     DS.abort();
-    DS.takeAttributesFrom(Attrs);
+    DS.takeAttributesAppendingingFrom(Attrs);
 
     const char *PrevSpec = nullptr;
     unsigned DiagID;
@@ -1227,7 +1202,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // declaration-specifiers are completely optional in the grammar.
   if (getLangOpts().isImplicitIntRequired() && D.getDeclSpec().isEmpty()) {
     Diag(D.getIdentifierLoc(), diag::warn_missing_type_specifier)
-        << D.getDeclSpec().getSourceRange();
+        << D.getDeclSpec().getSourceRange()
+        << FixItHint::CreateInsertion(D.getDeclSpec().getBeginLoc(), "int ");
     const char *PrevSpec;
     unsigned DiagID;
     const PrintingPolicy &Policy = Actions.getASTContext().getPrintingPolicy();
@@ -1272,7 +1248,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   // tokens and store them for late parsing at the end of the translation unit.
   if (getLangOpts().DelayedTemplateParsing && Tok.isNot(tok::equal) &&
       TemplateInfo.Kind == ParsedTemplateKind::Template &&
-      Actions.canDelayFunctionBody(D)) {
+      LateParsedAttrs->empty() && Actions.canDelayFunctionBody(D)) {
     MultiTemplateParamsArg TemplateParameterLists(*TemplateInfo.TemplateParams);
 
     ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
@@ -1301,10 +1277,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     }
     return DP;
   }
-  else if (CurParsedObjCImpl &&
-           !TemplateInfo.TemplateParams &&
-           (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) ||
-            Tok.is(tok::colon)) &&
+  if (CurParsedObjCImpl && !TemplateInfo.TemplateParams &&
+      (Tok.is(tok::l_brace) || Tok.is(tok::kw_try) || Tok.is(tok::colon)) &&
       Actions.CurContext->isTranslationUnit()) {
     ParseScope BodyScope(this, Scope::FnScope | Scope::DeclScope |
                                    Scope::CompoundStmtScope);
@@ -1337,18 +1311,16 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     assert(getLangOpts().CPlusPlus && "Only C++ function definitions have '='");
 
     if (TryConsumeToken(tok::kw_delete, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
+      D.SetRangeEnd(PrevTokLocation);
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
-      Diag(KWLoc, getLangOpts().CPlusPlus11
-                      ? diag::warn_cxx98_compat_defaulted_deleted_function
-                      : diag::ext_defaulted_deleted_function)
+      DiagCompat(KWLoc, diag_compat::defaulted_deleted_function)
           << 0 /* defaulted */;
       BodyKind = Sema::FnBodyKind::Default;
+      D.SetRangeEnd(PrevTokLocation);
     } else {
       llvm_unreachable("function definition after = not 'delete' or 'default'");
     }
@@ -1403,7 +1375,8 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
   D.getMutableDeclSpec().abort();
 
   if (BodyKind != Sema::FnBodyKind::Other) {
-    Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind, DeletedMessage);
+    Actions.SetFunctionBodyKind(Res, KWLoc, BodyKind, DeletedMessage,
+                                getCurScope());
     Stmt *GeneratedBody = Res ? Res->getBody() : nullptr;
     Actions.ActOnFinishFunctionBody(Res, GeneratedBody, false);
     return Res;
@@ -1418,6 +1391,11 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     // parameter list was specified.
     CurTemplateDepthTracker.addDepth(1);
 
+  // Late attributes are parsed in the same scope as the function body.
+  if (LateParsedAttrs)
+    ParseLexedAttributeList(*LateParsedAttrs, Res, /*EnterScope=*/false,
+                            /*OnDefinition=*/true);
+
   if (SkipFunctionBodies && (!Res || Actions.canSkipFunctionBody(Res)) &&
       trySkippingFunctionBody()) {
     BodyScope.Exit();
@@ -1425,28 +1403,30 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
     return Actions.ActOnFinishFunctionBody(Res, nullptr, false);
   }
 
+  return ParseFunctionBody(Res, BodyScope);
+}
+
+Decl *Parser::ParseFunctionBody(Decl *D, ParseScope &BodyScope) {
   if (Tok.is(tok::kw_try))
-    return ParseFunctionTryBlock(Res, BodyScope);
+    return ParseFunctionTryBlock(D, BodyScope);
 
   // If we have a colon, then we're probably parsing a C++
   // ctor-initializer.
   if (Tok.is(tok::colon)) {
-    ParseConstructorInitializer(Res);
+    ParseConstructorInitializer(D);
 
     // Recover from error.
     if (!Tok.is(tok::l_brace)) {
       BodyScope.Exit();
-      Actions.ActOnFinishFunctionBody(Res, nullptr);
-      return Res;
+      if (D)
+        D->getAsFunction()->setInvalidDecl();
+      Actions.ActOnFinishFunctionBody(D, nullptr);
+      return D;
     }
   } else
-    Actions.ActOnDefaultCtorInitializers(Res);
+    Actions.ActOnDefaultCtorInitializers(D);
 
-  // Late attributes are parsed in the same scope as the function body.
-  if (LateParsedAttrs)
-    ParseLexedAttributeList(*LateParsedAttrs, Res, false, true);
-
-  return ParseFunctionStatementBody(Res, BodyScope);
+  return ParseFunctionStatementBody(D, BodyScope);
 }
 
 void Parser::SkipFunctionBody() {
@@ -1587,8 +1567,11 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
 
   ExprResult AsmString;
+  bool IsConstexpr = false;
   if (isTokenStringLiteral()) {
-    AsmString = ParseStringLiteralExpression();
+    AsmString = ParseStringLiteralExpression(/*AllowUserDefinedLiteral=*/false,
+                                             /*Unevaluated=*/false,
+                                             CA_ToLiteralEncodingForAsm);
     if (AsmString.isInvalid())
       return AsmString;
 
@@ -1600,14 +1583,16 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
     }
   } else if (!ForAsmLabel && getLangOpts().CPlusPlus11 &&
              Tok.is(tok::l_paren)) {
+    IsConstexpr = true;
     ParenParseOption ExprType = ParenParseOption::SimpleExpr;
     SourceLocation RParenLoc;
     ParsedType CastTy;
 
     EnterExpressionEvaluationContext ConstantEvaluated(
         Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
-    AsmString = ParseParenExpression(ExprType, true /*stopIfCastExpr*/, false,
-                                     CastTy, RParenLoc);
+    AsmString = ParseParenExpression(
+        ExprType, /*StopIfCastExr=*/true, ParenExprKind::Unknown,
+        TypoCorrectionTypeBehavior::AllowBoth, CastTy, RParenLoc);
     if (!AsmString.isInvalid())
       AsmString = Actions.ActOnConstantExpression(AsmString);
 
@@ -1618,7 +1603,8 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
         (getLangOpts().CPlusPlus11 && !ForAsmLabel) ? 0 : 1);
   }
 
-  return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel);
+  return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel,
+                                       IsConstexpr);
 }
 
 ExprResult Parser::ParseSimpleAsm(bool ForAsmLabel, SourceLocation *EndLoc) {
@@ -1773,9 +1759,9 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
     /// An Objective-C object type followed by '<' is a specialization of
     /// a parameterized class type or a protocol-qualified type.
     ParsedType Ty = Classification.getType();
+    QualType T = Actions.GetTypeFromParser(Ty);
     if (getLangOpts().ObjC && NextToken().is(tok::less) &&
-        (Ty.get()->isObjCObjectType() ||
-         Ty.get()->isObjCObjectPointerType())) {
+        (T->isObjCObjectType() || T->isObjCObjectPointerType())) {
       // Consume the name.
       SourceLocation IdentifierLoc = ConsumeToken();
       SourceLocation NewEndLoc;
@@ -1837,7 +1823,8 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
 
   case NameClassificationKind::TypeTemplate:
     if (Next.isNot(tok::less)) {
-      // This may be a type template being used as a template template argument.
+      // This may be a type or variable template being used as a template
+      // template argument.
       if (SS.isNotEmpty())
         AnnotateScopeToken(SS, !WasScopeAnnotation);
       return AnnotatedNameKind::TemplateName;
@@ -1851,10 +1838,10 @@ Parser::TryAnnotateName(CorrectionCandidateCallback *CCC,
         Classification.getKind() == NameClassificationKind::Concept;
     // We have a template name followed by '<'. Consume the identifier token so
     // we reach the '<' and annotate it.
-    if (Next.is(tok::less))
-      ConsumeToken();
     UnqualifiedId Id;
     Id.setIdentifier(Name, NameLoc);
+    if (Next.is(tok::less))
+      ConsumeToken();
     if (AnnotateTemplateIdToken(
             TemplateTy::make(Classification.getTemplateName()),
             Classification.getTemplateNameKind(), SS, SourceLocation(), Id,
@@ -1880,17 +1867,26 @@ SourceLocation Parser::getEndOfPreviousToken() const {
 
 bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
   assert(Tok.isNot(tok::identifier));
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+
+  // A token lexed and cached before an earlier fallback reverted this keyword
+  // still carries the stale keyword kind; it is already an identifier.
+  if (II->getTokenID() == tok::identifier) {
+    Tok.setKind(tok::identifier);
+    return true;
+  }
+
   Diag(Tok, diag::ext_keyword_as_ident)
     << PP.getSpelling(Tok)
     << DisableKeyword;
   if (DisableKeyword)
-    Tok.getIdentifierInfo()->revertTokenIDToIdentifier();
+    II->revertTokenIDToIdentifier();
   Tok.setKind(tok::identifier);
   return true;
 }
 
 bool Parser::TryAnnotateTypeOrScopeToken(
-    ImplicitTypenameContext AllowImplicitTypename) {
+    ImplicitTypenameContext AllowImplicitTypename, bool IsAddressOfOperand) {
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
@@ -2006,9 +2002,11 @@ bool Parser::TryAnnotateTypeOrScopeToken(
 
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus)
-    if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHasErrors=*/false,
-                                       /*EnteringContext*/ false))
+    if (ParseOptionalCXXScopeSpecifier(
+            SS, /*ObjectType=*/nullptr,
+            /*ObjectHasErrors=*/false,
+            /*EnteringContext=*/false,
+            /*IsAddressOfOperand=*/IsAddressOfOperand))
       return true;
 
   return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation,
@@ -2030,11 +2028,12 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
       if (SS.isNotEmpty()) // it was a C++ qualified type name.
         BeginLoc = SS.getBeginLoc();
 
+      QualType T = Actions.GetTypeFromParser(Ty);
+
       /// An Objective-C object type followed by '<' is a specialization of
       /// a parameterized class type or a protocol-qualified type.
       if (getLangOpts().ObjC && NextToken().is(tok::less) &&
-          (Ty.get()->isObjCObjectType() ||
-           Ty.get()->isObjCObjectPointerType())) {
+          (T->isObjCObjectType() || T->isObjCObjectPointerType())) {
         // Consume the name.
         SourceLocation IdentifierLoc = ConsumeToken();
         SourceLocation NewEndLoc;
@@ -2236,6 +2235,11 @@ void Parser::CodeCompleteNaturalLanguage() {
   Actions.CodeCompletion().CodeCompleteNaturalLanguage();
 }
 
+void Parser::CodeCompleteModuleImport(SourceLocation ImportLoc,
+                                      ModuleIdPath Path) {
+  Actions.CodeCompletion().CodeCompleteModuleImport(ImportLoc, Path);
+}
+
 bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
   assert((Tok.is(tok::kw___if_exists) || Tok.is(tok::kw___if_not_exists)) &&
          "Expected '__if_exists' or '__if_not_exists'");
@@ -2340,16 +2344,15 @@ void Parser::ParseMicrosoftIfExistsExternalDeclaration() {
 
 Parser::DeclGroupPtrTy
 Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
-  SourceLocation StartLoc = Tok.getLocation();
+  Token Introducer = Tok;
+  SourceLocation StartLoc = Introducer.getLocation();
 
   Sema::ModuleDeclKind MDK = TryConsumeToken(tok::kw_export)
                                  ? Sema::ModuleDeclKind::Interface
                                  : Sema::ModuleDeclKind::Implementation;
 
-  assert(
-      (Tok.is(tok::kw_module) ||
-       (Tok.is(tok::identifier) && Tok.getIdentifierInfo() == Ident_module)) &&
-      "not a module declaration");
+  assert(Tok.is(tok::kw_module) && "not a module declaration");
+
   SourceLocation ModuleLoc = ConsumeToken();
 
   // Attributes appear after the module name, not before.
@@ -2359,9 +2362,10 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
   // Parse a global-module-fragment, if present.
   if (getLangOpts().CPlusPlusModules && Tok.is(tok::semi)) {
     SourceLocation SemiLoc = ConsumeToken();
-    if (ImportState != Sema::ModuleImportState::FirstDecl) {
+    if (ImportState != Sema::ModuleImportState::FirstDecl ||
+        Introducer.hasSeenNoTrivialPPDirective()) {
       Diag(StartLoc, diag::err_global_module_introducer_not_at_start)
-        << SourceRange(StartLoc, SemiLoc);
+          << SourceRange(StartLoc, SemiLoc);
       return nullptr;
     }
     if (MDK == Sema::ModuleDeclKind::Interface) {
@@ -2383,12 +2387,15 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
     SourceLocation PrivateLoc = ConsumeToken();
     DiagnoseAndSkipCXX11Attributes();
     ExpectAndConsumeSemi(diag::err_private_module_fragment_expected_semi);
-    ImportState = ImportState == Sema::ModuleImportState::ImportAllowed
-                      ? Sema::ModuleImportState::PrivateFragmentImportAllowed
-                      : Sema::ModuleImportState::PrivateFragmentImportFinished;
-    return Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
+    auto Result = Actions.ActOnPrivateModuleFragmentDecl(ModuleLoc, PrivateLoc);
+    if (Result) {
+      ImportState =
+          ImportState == Sema::ModuleImportState::ImportAllowed
+              ? Sema::ModuleImportState::PrivateFragmentImportAllowed
+              : Sema::ModuleImportState::PrivateFragmentImportFinished;
+    }
+    return nullptr;
   }
-
   SmallVector<IdentifierLoc, 2> Path;
   if (ParseModuleName(ModuleLoc, Path, /*IsImport*/ false))
     return nullptr;
@@ -2405,6 +2412,12 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
       return nullptr;
   }
 
+  if (Tok.isNoneOf(tok::semi, tok::l_square, tok::eof)) {
+    Diag(Tok, diag::err_unexpected_tok_after_module_name)
+        << PP.getSpelling(Tok);
+    SkipUntil(tok::semi, SkipUntilFlags::StopBeforeMatch);
+  }
+
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
@@ -2413,10 +2426,13 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
-  ExpectAndConsumeSemi(diag::err_module_expected_semi);
+  if (ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
+                           tok::getKeywordSpelling(tok::kw_module)))
+    SkipUntil(tok::semi);
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
-                                 ImportState);
+                                 ImportState,
+                                 Introducer.hasSeenNoTrivialPPDirective());
 }
 
 Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
@@ -2426,7 +2442,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   SourceLocation ExportLoc;
   TryConsumeToken(tok::kw_export, ExportLoc);
 
-  assert((AtLoc.isInvalid() ? Tok.isOneOf(tok::kw_import, tok::identifier)
+  assert((AtLoc.isInvalid() ? Tok.is(tok::kw_import)
                             : Tok.isObjCAtKeyword(tok::objc_import)) &&
          "Improper start to module import");
   bool IsObjCAtImport = Tok.isObjCAtKeyword(tok::objc_import);
@@ -2451,12 +2467,12 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
       Diag(ColonLoc, diag::err_unsupported_module_partition)
           << SourceRange(ColonLoc, Path.back().getLoc());
     // Recover by leaving partition empty.
-    else if (ParseModuleName(ColonLoc, Path, /*IsImport*/ true))
+    else if (ParseModuleName(ColonLoc, Path, /*IsImport=*/true))
       return nullptr;
     else
       IsPartition = true;
   } else {
-    if (ParseModuleName(ImportLoc, Path, /*IsImport*/ true))
+    if (ParseModuleName(ImportLoc, Path, /*IsImport=*/true))
       return nullptr;
   }
 
@@ -2468,7 +2484,13 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
-  if (PP.hadModuleLoaderFatalFailure()) {
+  // Clang modules can inject token streams while loading, so a fatal loader
+  // failure must stop parsing. C++20 named module imports are ordinary
+  // declarations, and a prior failed import should not hide later diagnostics.
+  bool IsCXX20NamedModuleImport =
+      getLangOpts().CPlusPlusModules && !IsObjCAtImport && !Path.empty();
+
+  if (PP.hadModuleLoaderFatalFailure() && !IsCXX20NamedModuleImport) {
     // With a fatal failure in the module loader, we abort parsing.
     cutOffParsing();
     return nullptr;
@@ -2516,7 +2538,27 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
       SeenError = false;
     break;
   }
-  ExpectAndConsumeSemi(diag::err_module_expected_semi);
+
+  // FIXME: If the previous token is tok::header_name like the following:
+  //
+  //  import <%%>
+  //
+  // The diagnostic location is incorrect.
+  //
+  //  <source file>:1:10: error: import directive must end with a ';'
+  //   1 | import <%%>
+  //     |          ^
+  //     |          ;
+  bool LexedSemi = false;
+  if (getLangOpts().CPlusPlusModules)
+    LexedSemi =
+        !ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
+                              tok::getKeywordSpelling(tok::kw_import));
+  else
+    LexedSemi = !ExpectAndConsumeSemi(diag::err_module_expected_semi);
+
+  if (!LexedSemi)
+    SkipUntil(tok::semi);
 
   if (SeenError)
     return nullptr;
@@ -2547,29 +2589,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 bool Parser::ParseModuleName(SourceLocation UseLoc,
                              SmallVectorImpl<IdentifierLoc> &Path,
                              bool IsImport) {
-  // Parse the module path.
-  while (true) {
-    if (!Tok.is(tok::identifier)) {
-      if (Tok.is(tok::code_completion)) {
-        cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteModuleImport(UseLoc, Path);
-        return true;
-      }
-
-      Diag(Tok, diag::err_module_expected_ident) << IsImport;
-      SkipUntil(tok::semi);
-      return true;
-    }
-
-    // Record this part of the module path.
-    Path.emplace_back(Tok.getLocation(), Tok.getIdentifierInfo());
-    ConsumeToken();
-
-    if (Tok.isNot(tok::period))
-      return false;
-
-    ConsumeToken();
+  if (Tok.isNot(tok::annot_module_name)) {
+    SkipUntil(tok::semi);
+    return true;
   }
+  ModuleNameLoc *NameLoc =
+      static_cast<ModuleNameLoc *>(Tok.getAnnotationValue());
+  Path.assign(NameLoc->getModuleIdPath().begin(),
+              NameLoc->getModuleIdPath().end());
+  ConsumeAnnotationToken();
+  return false;
 }
 
 bool Parser::parseMisplacedModuleImport() {

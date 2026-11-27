@@ -48,7 +48,7 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 LoadDependentFiles load_dependent_files,
                                 const OptionGroupPlatform *platform_options,
                                 TargetSP &target_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+
   auto result = TargetList::CreateTargetInternal(
       debugger, user_exe_path, triple_str, load_dependent_files,
       platform_options, target_sp);
@@ -63,7 +63,7 @@ Status TargetList::CreateTarget(Debugger &debugger,
                                 const ArchSpec &specified_arch,
                                 LoadDependentFiles load_dependent_files,
                                 PlatformSP &platform_sp, TargetSP &target_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+
   auto result = TargetList::CreateTargetInternal(
       debugger, user_exe_path, specified_arch, load_dependent_files,
       platform_sp, target_sp);
@@ -135,14 +135,13 @@ Status TargetList::CreateTargetInternal(
 
     lldb::offset_t file_offset = 0;
     lldb::offset_t file_size = 0;
-    ModuleSpecList module_specs;
-    const size_t num_specs = ObjectFile::GetModuleSpecifications(
-        module_spec.GetFileSpec(), file_offset, file_size, module_specs);
+    ModuleSpecList module_specs = ObjectFile::GetModuleSpecifications(
+        module_spec.GetFileSpec(), file_offset, file_size);
 
-    if (num_specs > 0) {
+    if (module_specs.GetSize() > 0) {
       ModuleSpec matching_module_spec;
 
-      if (num_specs == 1) {
+      if (module_specs.GetSize() == 1) {
         if (module_specs.GetModuleSpecAtIndex(0, matching_module_spec)) {
           if (platform_arch.IsValid()) {
             if (platform_arch.IsCompatibleMatch(
@@ -206,7 +205,7 @@ Status TargetList::CreateTargetInternal(
             error_strm.PutCString(platform_name);
             platform_set.insert(platform_name);
           }
-          error_strm.Printf("), specify an architecture to disambiguate");
+          error_strm.PutCString("), specify an architecture to disambiguate");
           error = Status(error_strm.GetString().str());
           return error;
         }
@@ -304,13 +303,13 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
 
     ModuleSP exe_module_sp;
     if (platform_sp) {
-      FileSpecList executable_search_paths(
-          Target::GetDefaultExecutableSearchPaths());
       ModuleSpec module_spec(file, arch);
-      error = platform_sp->ResolveExecutable(module_spec, exe_module_sp,
-                                             executable_search_paths.GetSize()
-                                                 ? &executable_search_paths
-                                                 : nullptr);
+      module_spec.SetTarget(target_sp);
+      // Set the platform so that GetSharedModule can use it for the locate
+      // module callback, even when Target is not yet available (during target
+      // creation for launch mode).
+      module_spec.SetPlatform(platform_sp);
+      error = platform_sp->ResolveExecutable(module_spec, exe_module_sp);
     }
 
     if (error.Success() && exe_module_sp) {
@@ -327,7 +326,12 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       }
       target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
       debugger.GetTargetList().RegisterInProcessTarget(target_sp);
-      target_sp->SetExecutableModule(exe_module_sp, load_dependent_files);
+      // Prime the target before loading its executable: the executable's dSYM
+      // script can add stop hooks and breakpoints, and priming would replace
+      // them with the dummy target's.
+      target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
+      target_sp->RebuildModuleListWithExecutable(exe_module_sp,
+                                                 load_dependent_files);
       if (user_exe_path_is_bundle)
         exe_module_sp->GetFileSpec().GetPath(resolved_bundle_exe_path,
                                              sizeof(resolved_bundle_exe_path));
@@ -339,6 +343,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     // valid arch was specified
     target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
     debugger.GetTargetList().RegisterInProcessTarget(target_sp);
+    target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
   }
 
   if (!target_sp)
@@ -357,14 +362,11 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       target_sp->SetArg0(file.GetPath().c_str());
     }
   }
-  if (file.GetDirectory()) {
+  if (!file.GetDirectory().empty()) {
     FileSpec file_dir;
     file_dir.SetDirectory(file.GetDirectory());
     target_sp->AppendExecutableSearchPaths(file_dir);
   }
-
-  // Now prime this from the dummy target:
-  target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
 
   return error;
 }
@@ -426,6 +428,18 @@ TargetSP TargetList::FindTargetWithProcess(Process *process) const {
     target_sp = *it;
 
   return target_sp;
+}
+
+TargetSP TargetList::FindTargetByGloballyUniqueID(lldb::user_id_t id) const {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  auto it = llvm::find_if(m_target_list, [id](const TargetSP &item) {
+    return item->GetGloballyUniqueID() == id;
+  });
+
+  if (it != m_target_list.end())
+    return *it;
+
+  return TargetSP();
 }
 
 TargetSP TargetList::GetTargetSP(Target *target) const {
@@ -513,6 +527,7 @@ uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
 }
 
 void TargetList::AddTargetInternal(TargetSP target_sp, bool do_select) {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   lldbassert(!llvm::is_contained(m_target_list, target_sp) &&
              "target already exists it the list");
   UnregisterInProcessTarget(target_sp);

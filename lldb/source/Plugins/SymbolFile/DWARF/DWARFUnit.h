@@ -119,6 +119,9 @@ public:
   // Size of the CU data incl. header but without initial length.
   dw_offset_t GetLength() const { return m_header.getLength(); }
   uint16_t GetVersion() const override { return m_header.getVersion(); }
+  const llvm::dwarf::FormParams &GetFormParams() const {
+    return m_header.getFormParams();
+  }
   const llvm::DWARFAbbreviationDeclarationSet *GetAbbreviations() const;
   dw_offset_t GetAbbrevOffset() const;
   uint8_t GetAddressByteSize() const override {
@@ -154,16 +157,19 @@ public:
   /// error or if the attribute is not present.
   llvm::StringRef PeekDIEName(dw_offset_t die_offset);
 
-  llvm::Expected<std::pair<uint64_t, bool>>
-  GetDIEBitSizeAndSign(uint64_t relative_die_offset) const override;
+  llvm::Expected<std::pair<uint64_t, llvm::dwarf::TypeKind>>
+  GetDIEBitSizeAndEncoding(uint64_t relative_die_offset) const override;
 
   lldb::offset_t GetVendorDWARFOpcodeSize(const DataExtractor &data,
                                           const lldb::offset_t data_offset,
                                           const uint8_t op) const override;
 
-  bool ParseVendorDWARFOpcode(uint8_t op, const DataExtractor &opcodes,
-                              lldb::offset_t &offset,
-                              std::vector<Value> &stack) const override;
+  virtual bool ParseVendorDWARFOpcode(uint8_t op,
+                                      const llvm::DataExtractor &opcodes,
+                                      lldb::offset_t &offset,
+                                      RegisterContext *reg_ctx,
+                                      lldb::RegisterKind reg_kind,
+                                      std::vector<Value> &stack) const override;
 
   bool ParseDWARFLocationList(const DataExtractor &data,
                               DWARFExpressionList &loc_list) const;
@@ -359,6 +365,7 @@ protected:
   dw_offset_t m_line_table_offset = DW_INVALID_OFFSET;
 
   dw_offset_t m_str_offsets_base = 0; // Value of DW_AT_str_offsets_base.
+  dw_offset_t m_str_offset_size = 4;  // Size in bytes of a string offset.
 
   std::optional<llvm::DWARFDebugRnglistTable> m_rnglist_table;
   bool m_rnglist_table_done = false;
@@ -377,6 +384,7 @@ protected:
 private:
   void ParseProducerInfo();
   void ExtractDIEsRWLocked();
+  void ExtractDIEsNoDwoRWLocked();
   void ClearDIEsRWLocked();
 
   void AddUnitDIE(const DWARFDebugInfoEntry &cu_die);

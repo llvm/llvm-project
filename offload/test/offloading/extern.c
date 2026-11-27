@@ -1,6 +1,7 @@
+// clang-format off
 // RUN: %libomptarget-compile-generic -DVAR -c -o %t.o
 // RUN: %libomptarget-compile-generic %t.o && %libomptarget-run-generic | %fcheck-generic
-
+// clang-format on
 #ifdef VAR
 int x = 1;
 #else

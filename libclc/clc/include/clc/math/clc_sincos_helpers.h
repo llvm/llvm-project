@@ -9,18 +9,20 @@
 #ifndef __CLC_MATH_CLC_SINCOS_HELPERS_H__
 #define __CLC_MATH_CLC_SINCOS_HELPERS_H__
 
-#define __FLOAT_ONLY
-#define __CLC_BODY <clc/math/clc_sincos_helpers.inc>
+#define __CLC_FLOAT_ONLY
+#define __CLC_BODY "clc/math/clc_sincos_helpers_decl.inc"
 
-#include <clc/math/gentype.inc>
+#include "clc/math/gentype.inc"
 
-#undef __FLOAT_ONLY
+#define __CLC_DOUBLE_ONLY
+#define __CLC_BODY "clc/math/clc_sincos_helpers_fp64_decl.inc"
 
-#define __DOUBLE_ONLY
-#define __CLC_BODY <clc/math/clc_sincos_helpers_fp64.inc>
+#include "clc/math/gentype.inc"
 
-#include <clc/math/gentype.inc>
-
-#undef __DOUBLE_ONLY
+#ifdef cl_khr_fp16
+#define __CLC_HALF_ONLY
+#define __CLC_BODY "clc/math/clc_sincos_helpers_fp16_decl.inc"
+#include "clc/math/gentype.inc"
+#endif
 
 #endif // __CLC_MATH_CLC_SINCOS_HELPERS_H__

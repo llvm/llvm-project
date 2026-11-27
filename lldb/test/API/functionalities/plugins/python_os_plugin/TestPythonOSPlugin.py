@@ -18,7 +18,11 @@ class PluginPythonOSPlugin(TestBase):
         self.build()
         self.run_python_os_funcionality()
 
-    @skipIfWindows  # This is flaky on Windows
+    @skipIfWindowsAndNoLLDBServer  # This is flaky on Windows
+    @skipIfWindowsAndLLDBServer(
+        archs=["aarch64"],
+        bugnumber="https://github.com/llvm/llvm-project/issues/240868",
+    )
     def test_run_python_os_step(self):
         """Test that the Python operating system plugin works correctly when single stepping a virtual thread"""
         self.build()
@@ -42,26 +46,10 @@ class PluginPythonOSPlugin(TestBase):
         # Set debugger into synchronous mode
         self.dbg.SetAsync(False)
 
-        # Create a target by the debugger.
-        exe = self.getBuildArtifact("a.out")
         python_os_plugin_path = os.path.join(self.getSourceDir(), "operating_system.py")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set breakpoints inside and outside methods that take pointers to the
-        # containing struct.
-        lldbutil.run_break_set_by_source_regexp(self, "// Set breakpoint here")
-
-        # Register our shared libraries for remote targets so they get
-        # automatically uploaded
-        arguments = None
-        environment = None
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            arguments, environment, self.get_process_working_directory()
+        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "// Set breakpoint here", lldb.SBFileSpec("main.c")
         )
-        self.assertTrue(process, PROCESS_IS_VALID)
 
         # Make sure there are no OS plug-in created thread when we first stop
         # at our breakpoint in main
@@ -157,28 +145,13 @@ class PluginPythonOSPlugin(TestBase):
         # Set debugger into synchronous mode
         self.dbg.SetAsync(False)
 
-        # Create a target by the debugger.
-        exe = self.getBuildArtifact("a.out")
         python_os_plugin_path = os.path.join(
             self.getSourceDir(), "operating_system2.py"
         )
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set breakpoints inside and outside methods that take pointers to the
-        # containing struct.
-        lldbutil.run_break_set_by_source_regexp(self, "// Set breakpoint here")
-
-        # Register our shared libraries for remote targets so they get
-        # automatically uploaded
-        arguments = None
-        environment = None
-
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(
-            arguments, environment, self.get_process_working_directory()
+        target, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "// Set breakpoint here", lldb.SBFileSpec("main.c")
         )
-        self.assertTrue(process, PROCESS_IS_VALID)
+        stop_line = line_number("main.c", "// Set breakpoint here")
 
         core_thread_zero = process.GetThreadAtIndex(0)
 
@@ -219,10 +192,12 @@ class PluginPythonOSPlugin(TestBase):
         self.assertEqual(
             line_entry.GetFileSpec().GetFilename(),
             "main.c",
-            "Make sure we stopped on line 5 in main.c",
+            "Make sure we stopped on the breakpoint line in main.c",
         )
         self.assertEqual(
-            line_entry.GetLine(), 5, "Make sure we stopped on line 5 in main.c"
+            line_entry.GetLine(),
+            stop_line,
+            "Make sure we stopped on the breakpoint line in main.c",
         )
 
         # Now single step thread 0x111111111 and make sure it does what we need
@@ -243,12 +218,12 @@ class PluginPythonOSPlugin(TestBase):
         self.assertEqual(
             line_entry.GetFileSpec().GetFilename(),
             "main.c",
-            "Make sure we stepped from line 5 to line 6 in main.c",
+            "Make sure we stepped to the next line in main.c",
         )
         self.assertEqual(
             line_entry.GetLine(),
-            6,
-            "Make sure we stepped from line 5 to line 6 in main.c",
+            stop_line + 1,
+            "Make sure we stepped to the next line in main.c",
         )
 
         thread_bp_number = lldbutil.run_break_set_by_source_regexp(

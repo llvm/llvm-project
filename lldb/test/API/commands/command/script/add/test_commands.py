@@ -16,10 +16,16 @@ class ReportingCmd(ParsedCommand):
         if len(opt_def):
             result.AppendMessage("Options:\n")
             for long_option, elem in opt_def.items():
-                dest = elem["dest"]
-                result.AppendMessage(
-                    f"{long_option} (set: {elem['_value_set']}): {object.__getattribute__(self.get_parser(), dest)}\n"
-                )
+                if "value_type" in elem:
+                    print(f"Looking at {long_option} - {elem}")
+                    dest = elem["dest"]
+                    result.AppendMessage(
+                        f"{long_option} (set: {elem['_value_set']}): {object.__getattribute__(self.get_parser(), dest)}\n"
+                    )
+                else:
+                    result.AppendMessage(
+                        f"{long_option} (set: {elem['_value_set']}): flag value\n"
+                    )
         else:
             result.AppendMessage("No options\n")
 
@@ -77,6 +83,8 @@ class NoArgsCommand(ReportingCmd):
             dest="disk_file_name",
             default=None,
         )
+
+        ov_parser.add_option("f", "flag-value", "This is a flag value")
 
         ov_parser.add_option(
             "l",
@@ -245,6 +253,19 @@ class TwoArgGroupsCommand(ReportingCmd):
     def get_long_help(self):
         return self.help_string
 
+
+class FailCommand(ParsedCommand):
+    program: str = "fail_cmd"
+
+    def __call__(self, debugger, args_list, exe_ctx, result):
+        result.AppendMessage("hello world")
+
+    def setup_command_definition(self):
+        parser = self.get_parser()
+        # add_argument_set is expecting a list not dict.
+        parser.add_argument_set(
+            parser.make_argument_element(lldb.eArgTypeSymbol, "plain")
+        )
 
 def __lldb_init_module(debugger, dict):
     # Register all classes that have a register_lldb_command method

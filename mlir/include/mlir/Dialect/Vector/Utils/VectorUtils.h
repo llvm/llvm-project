@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -47,37 +48,41 @@ Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source, int64_t dim);
 /// on a 2D slice. Otherwise, returns a failure.
 FailureOr<std::pair<int, int>> isTranspose2DSlice(vector::TransposeOp op);
 
-/// Return true if `vectorType` is a contiguous slice of `memrefType`.
+/// Return true if `vectorType` is a contiguous slice of `memrefType`,
+/// in the sense that it can be read/written from/to a contiguous area
+/// of the memref.
 ///
-/// Only the N = vectorType.getRank() trailing dims of `memrefType` are
-/// checked (the other dims are not relevant). Note that for `vectorType` to be
-/// a contiguous slice of `memrefType`, the trailing dims of the latter have
-/// to be contiguous - this is checked by looking at the corresponding strides.
+/// The leading unit dimensions of the vector type are ignored as they
+/// are not relevant to the result. Let N be the number of the vector
+/// dimensions after ignoring a leading sequence of unit ones.
 ///
-/// There might be some restriction on the leading dim of `VectorType`:
+/// For `vectorType` to be a contiguous slice of `memrefType`
+///   a) the N trailing dimensions of `memrefType` must be contiguous, and
+///   b) the N-1 trailing dimensions of `vectorType` and `memrefType`
+///      must match.
 ///
-/// Case 1. If all the trailing dims of `vectorType` match the trailing dims
-///         of `memrefType` then the leading dim of `vectorType` can be
-///         arbitrary.
+/// Examples:
 ///
-///        Ex. 1.1 contiguous slice, perfect match
-///          vector<4x3x2xi32> from memref<5x4x3x2xi32>
-///        Ex. 1.2 contiguous slice, the leading dim does not match (2 != 4)
-///          vector<2x3x2xi32> from memref<5x4x3x2xi32>
-///
-/// Case 2. If an "internal" dim of `vectorType` does not match the
-///         corresponding trailing dim in `memrefType` then the remaining
-///         leading dims of `vectorType` have to be 1 (the first non-matching
-///         dim can be arbitrary).
-///
-///        Ex. 2.1 non-contiguous slice, 2 != 3 and the leading dim != <1>
-///          vector<2x2x2xi32> from memref<5x4x3x2xi32>
-///        Ex. 2.2  contiguous slice, 2 != 3 and the leading dim == <1>
-///          vector<1x2x2xi32> from memref<5x4x3x2xi32>
-///        Ex. 2.3. contiguous slice, 2 != 3 and the leading dims == <1x1>
-///          vector<1x1x2x2xi32> from memref<5x4x3x2xi32>
-///        Ex. 2.4. non-contiguous slice, 2 != 3 and the leading dims != <1x1>
-///         vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
+///   Ex.1 contiguous slice, perfect match
+///     vector<4x3x2xi32> from memref<5x4x3x2xi32>
+///   Ex.2 contiguous slice, the leading dim does not match (2 != 4)
+///     vector<2x3x2xi32> from memref<5x4x3x2xi32>
+///   Ex.3 non-contiguous slice, 2 != 3
+///     vector<2x2x2xi32> from memref<5x4x3x2xi32>
+///   Ex.4 contiguous slice, leading unit dimension of the vector ignored,
+///        2 != 3 (allowed)
+///     vector<1x2x2xi32> from memref<5x4x3x2xi32>
+///   Ex.5. contiguous slice, leading two unit dims of the vector ignored,
+///         2 != 3 (allowed)
+///     vector<1x1x2x2xi32> from memref<5x4x3x2xi32>
+///   Ex.6. non-contiguous slice, 2 != 3, no leading sequence of unit dims
+///     vector<2x1x2x2xi32> from memref<5x4x3x2xi32>)
+///   Ex.7 contiguous slice, memref needs to be contiguous only in the last
+///        dimension
+///     vector<1x1x2xi32> from memref<2x2x2xi32, strided<[8, 4, 1]>>
+///   Ex.8 non-contiguous slice, memref needs to be contiguous in the last
+///        two dimensions, and it isn't
+///     vector<1x2x2xi32> from memref<2x2x2xi32, strided<[8, 4, 1]>>
 bool isContiguousSlice(MemRefType memrefType, VectorType vectorType);
 
 /// Returns an iterator for all positions in the leading dimensions of `vType`
@@ -114,9 +119,10 @@ inline auto makeVscaleConstantBuilder(PatternRewriter &rewriter, Location loc) {
   Value vscale = nullptr;
   return [loc, vscale, &rewriter](int64_t multiplier) mutable {
     if (!vscale)
-      vscale = rewriter.create<vector::VectorScaleOp>(loc);
-    return rewriter.create<arith::MulIOp>(
-        loc, vscale, rewriter.create<arith::ConstantIndexOp>(loc, multiplier));
+      vscale = vector::VectorScaleOp::create(rewriter, loc);
+    return arith::MulIOp::create(
+        rewriter, loc, vscale,
+        arith::ConstantIndexOp::create(rewriter, loc, multiplier));
   };
 }
 
@@ -201,6 +207,29 @@ public:
                             PatternRewriter &rewriter) const = 0;
 };
 
+/// Convenience wrapper for patterns that are only intended for default
+/// contractions, i.e. contractions for which the combining op is an ADD.
+///
+/// When using this wrapper, implement `matchAndRewriteAddContractOp` instead
+/// of plain `matchAndRewrite`.
+struct AddContractionOpRewritePattern : OpRewritePattern<ContractionOp> {
+  using OpRewritePattern<ContractionOp>::OpRewritePattern;
+  using Base = AddContractionOpRewritePattern;
+
+private:
+  LogicalResult matchAndRewrite(vector::ContractionOp sourceOp,
+                                PatternRewriter &rewriter) const final {
+    if (sourceOp.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(sourceOp, "expected ADD contraction");
+    return matchAndRewriteAddContractOp(sourceOp, rewriter);
+  }
+
+public:
+  virtual LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const = 0;
+};
+
 /// Returns true if the input Vector type can be linearized.
 ///
 /// Linearization is meant in the sense of flattening vectors, e.g.:
@@ -213,16 +242,43 @@ bool isLinearizableVector(VectorType type);
 
 /// Creates a TransferReadOp from `source`.
 ///
-/// The shape of the vector to read is specified via `inputVectorSizes`. If the
-/// shape of the output vector differs from the shape of the value being read,
+/// The read is masked unless it is statically in bounds. The mask has a size
+/// of `dim - index` for each `source` dim that `permutationMap` selects (all
+/// dims without a map). Set `useInBoundsInsteadOfMasking` to `true` to use the
+/// "in_bounds" attribute instead of a mask.
+///
+/// In that case, when `permutationMap` is provided the in_bounds attribute is
+/// inferred from it: dimension i is in-bounds when the map result is an
+/// AffineDimExpr pointing to a static memref dimension divisible by the vector
+/// size, or an AffineConstantExpr (broadcast). Custom `indices` must also be
+/// supplied in that case; if `indices` is empty, all offsets default to 0.
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             const VectorType &vecToReadTy,
+                             std::optional<Value> padValue = std::nullopt,
+                             bool useInBoundsInsteadOfMasking = false,
+                             ArrayRef<Value> indices = {},
+                             AffineMap permutationMap = AffineMap());
+
+Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
+                             ArrayRef<int64_t> inputVectorSizes,
+                             std::optional<Value> padValue = std::nullopt,
+                             bool useInBoundsInsteadOfMasking = false,
+                             ArrayRef<bool> inputScalableVecDims = {});
+
+/// Create a TransferWriteOp of `vecToStore` into `dest`.
+///
+/// If the shape of the vector to write differs from the destination shape,
 /// masking is used to avoid out-of-bounds accesses. Set
 /// `useInBoundsInsteadOfMasking` to `true` to use the "in_bounds" attribute
 /// instead of explicit masks.
-///
-/// Note: all read offsets are set to 0.
-Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
-                             ArrayRef<int64_t> inputVectorSizes, Value padValue,
-                             bool useInBoundsInsteadOfMasking = false);
+/// `writeIndices` specifies the offsets to use. If empty, all indices are set
+/// to 0. When `permutationMap` is provided, the in_bounds attribute is
+/// inferred from the map instead of the destination shape.
+Operation *createWriteOrMaskedWrite(OpBuilder &builder, Location loc,
+                                    Value vecToStore, Value dest,
+                                    SmallVector<Value> writeIndices = {},
+                                    bool useInBoundsInsteadOfMasking = false,
+                                    AffineMap permutationMap = AffineMap());
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:
@@ -232,6 +288,28 @@ Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
 ///      static sizes in `shape`.
 LogicalResult isValidMaskedInputVector(ArrayRef<int64_t> shape,
                                        ArrayRef<int64_t> inputVectorSizes);
+
+/// Generic utility for unrolling n-D vector operations to (n-1)-D operations.
+/// This handles the common pattern of:
+/// 1. Check if already 1-D. If so, return failure.
+/// 2. Check for scalable dimensions. If so, return failure.
+/// 3. Create poison initialized result.
+/// 4. Loop through the outermost dimension, execute the UnrollVectorOpFn to
+/// create sub vectors.
+/// 5. Insert the sub vectors back into the final vector.
+/// 6. Replace the original op with the new result.
+using UnrollVectorOpFn =
+    function_ref<Value(PatternRewriter &, Location, VectorType, int64_t)>;
+
+LogicalResult unrollVectorOp(Operation *op, PatternRewriter &rewriter,
+                             UnrollVectorOpFn unrollFn);
+
+/// Generic utility for unrolling values of type vector<NxAxBx...>
+/// to N values of type vector<AxBx...> using vector.extract. If the input
+/// is rank-1 or has leading scalable dimension, failure is returned.
+FailureOr<SmallVector<Value>> unrollVectorValue(TypedValue<VectorType>,
+                                                RewriterBase &);
+
 } // namespace vector
 
 /// Constructs a permutation map of invariant memref indices to vector

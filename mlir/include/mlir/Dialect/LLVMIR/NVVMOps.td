@@ -13,88 +13,26 @@
 #ifndef NVVMIR_OPS
 #define NVVMIR_OPS
 
-include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
-include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
-include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
-include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
-include "mlir/Interfaces/InferIntRangeInterface.td"
+include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Dialect/LLVMIR/LLVMTypes.td"
+include "mlir/Dialect/LLVMIR/NVVMDialect.td"
+include "mlir/Dialect/LLVMIR/NVVMEnums.td"
+include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.td"
+include "mlir/IR/CommonAttrConstraints.td"
+include "mlir/IR/EnumAttr.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def LLVM_PointerGeneric : LLVM_PointerInAddressSpace<0>;
 def LLVM_PointerGlobal : LLVM_PointerInAddressSpace<1>;
 def LLVM_PointerShared : LLVM_PointerInAddressSpace<3>;
+def LLVM_PointerConst : LLVM_PointerInAddressSpace<4>;
 def LLVM_PointerLocal : LLVM_PointerInAddressSpace<5>;
 def LLVM_PointerTensor : LLVM_PointerInAddressSpace<6>;
 def LLVM_PointerSharedCluster : LLVM_PointerInAddressSpace<7>;
-
-//===----------------------------------------------------------------------===//
-// NVVM dialect definitions
-//===----------------------------------------------------------------------===//
-
-def NVVM_Dialect : Dialect {
-  let name = "nvvm";
-  let cppNamespace = "::mlir::NVVM";
-  let dependentDialects = ["LLVM::LLVMDialect"];
-  let hasOperationAttrVerify = 1;
-
-  let extraClassDeclaration = [{
-    /// Get the name of the attribute used to annotate external kernel
-    /// functions.
-    static StringRef getKernelFuncAttrName() { return "nvvm.kernel"; }
-    /// Get the name of the attribute used to annotate max threads required
-    /// per CTA for kernel functions.
-    static StringRef getMaxntidAttrName() { return "nvvm.maxntid"; }
-    /// Get the name of the metadata names for each dimension
-    static StringRef getMaxntidXName() { return "maxntidx"; }
-    static StringRef getMaxntidYName() { return "maxntidy"; }
-    static StringRef getMaxntidZName() { return "maxntidz"; }
-
-    /// Get the name of the attribute used to annotate exact threads required
-    /// per CTA for kernel functions.
-    static StringRef getReqntidAttrName() { return "nvvm.reqntid"; }
-    /// Get the name of the metadata names for each dimension
-    static StringRef getReqntidXName() { return "reqntidx"; }
-    static StringRef getReqntidYName() { return "reqntidy"; }
-    static StringRef getReqntidZName() { return "reqntidz"; }
-
-    /// Get the name of the attribute used to annotate exact CTAs required
-    /// per cluster for kernel functions.
-    static StringRef getClusterDimAttrName() { return "nvvm.cluster_dim"; }
-    /// Get the name of the metadata names for each dimension
-    static StringRef getClusterDimXName() { return "cluster_dim_x"; }
-    static StringRef getClusterDimYName() { return "cluster_dim_y"; }
-    static StringRef getClusterDimZName() { return "cluster_dim_z"; }
-
-    /// Get the name of the attribute used to annotate maximum number of
-    /// CTAs per cluster for kernel functions.
-    static StringRef getClusterMaxBlocksAttrName() {  return "nvvm.cluster_max_blocks"; }
-
-    /// Get the name of the attribute used to annotate min CTA required
-    /// per SM for kernel functions.
-    static StringRef getMinctasmAttrName() { return "nvvm.minctasm"; }
-
-    /// Get the name of the attribute used to annotate max number of
-    /// registers that can be allocated per thread.
-    static StringRef getMaxnregAttrName() { return "nvvm.maxnreg"; }
-
-    /// Get the name of the attribute used to annotate kernel arguments that
-    /// are grid constants.
-    static StringRef getGridConstantAttrName() { return "nvvm.grid_constant"; }
-
-    /// Verify an attribute from this dialect on the argument at 'argIndex' for
-    /// the region at 'regionIndex' on the given operation. Returns failure if
-    /// the verification failed, success otherwise. This hook may optionally be
-    /// invoked from any operation containing a region.
-    LogicalResult verifyRegionArgAttribute(Operation *op,
-                                           unsigned regionIndex,
-                                           unsigned argIndex,
-                                           NamedAttribute argAttr) override;
-  }];
-
-  let useDefaultAttributePrinterParser = 1;
-}
 
 //===----------------------------------------------------------------------===//
 // NVVM op definitions
@@ -105,10 +43,41 @@ class NVVM_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 /// Base class that defines BasicPtxBuilderOpInterface. 
-class NVVM_PTXBuilder_Op<string mnemonic, 
-  list<Trait> traits = [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> :
-  LLVM_OpBase<NVVM_Dialect, mnemonic, traits> {
+class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
+  LLVM_OpBase<NVVM_Dialect, mnemonic,
+              !listconcat([DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>],
+                          extraTraits)> {
 }
+
+// Op partitions of the NVVM dialect ops, grouped by instruction category:
+//  - `Arith`: integer, floating-point, comparison and logic instructions.
+//  - `Convert`: the `cvt` data conversion instructions.
+//  - `AsyncCopy`: the asynchronous copy instructions and `tensormap.replace`.
+//  - `DataMovement`: the other data movement and conversion instructions.
+//  - `MBarrier`: the mbarrier instructions.
+//  - `Sync`: the other parallel synchronization and communication
+//    instructions.
+//  - `Mma`: warp-level matrix multiply-accumulate instructions.
+//  - `Wgmma`: asynchronous warpgroup-level matrix multiply-accumulate
+//    instructions.
+//  - `Tcgen05`: TensorCore 5th generation family instructions.
+//  - `IndexSReg` and `MiscSReg`: special registers that identify a thread in
+//    the thread hierarchy and all others. Their ops set the partition in their
+//    base classes.
+//  - `Misc`: control flow and miscellaneous instructions, and ops without a
+//    PTX instruction.
+def NVVM_ArithPartition : Partition<"Arith">;
+def NVVM_AsyncCopyPartition : Partition<"AsyncCopy">;
+def NVVM_ConvertPartition : Partition<"Convert">;
+def NVVM_DataMovementPartition : Partition<"DataMovement">;
+def NVVM_IndexSRegPartition : Partition<"IndexSReg">;
+def NVVM_MBarrierPartition : Partition<"MBarrier">;
+def NVVM_MiscPartition : Partition<"Misc">;
+def NVVM_MiscSRegPartition : Partition<"MiscSReg">;
+def NVVM_MmaPartition : Partition<"Mma">;
+def NVVM_SyncPartition : Partition<"Sync">;
+def NVVM_Tcgen05Partition : Partition<"Tcgen05">;
+def NVVM_WgmmaPartition : Partition<"Wgmma">;
 
 //===----------------------------------------------------------------------===//
 // NVVM attribute definitions
@@ -116,26 +85,8 @@ class NVVM_PTXBuilder_Op<string mnemonic,
 
 class NVVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<NVVM_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/NVVMAttributes.h"];
   let mnemonic = attrMnemonic;
-}
-
-// Cache Eviction Priority enum definitions
-def EvictNormal : I32EnumCase<"EvictNormal", 0, "evict_normal">;
-def EvictFirst : I32EnumCase<"EvictFirst", 1, "evict_first">;
-def EvictLast : I32EnumCase<"EvictLast", 2, "evict_last">;
-def EvictUnchanged : I32EnumCase<"EvictUnchanged", 3, "evict_unchanged">;
-def NoAllocate : I32EnumCase<"NoAllocate", 4, "no_allocate">;
-
-def CacheEvictionPriority : I32Enum<"CacheEvictionPriority",
-                                    "NVVM Cache Eviction Priority",
-                                    [EvictNormal, EvictFirst, EvictLast,   
-                                     EvictUnchanged, NoAllocate]> {
-  let cppNamespace = "::mlir::NVVM";
-}
-
-def CacheEvictionPriorityAttr : EnumAttr<NVVM_Dialect, CacheEvictionPriority, 
-                                         "cache_eviction_priority"> {
-  let assemblyFormat = "$value";
 }
 
 //===----------------------------------------------------------------------===//
@@ -149,24 +100,79 @@ class NVVM_IntrOp<string mnem, list<Trait> traits = [],
                     /*list<int> overloadedOperands=*/[],
                     traits, numResults>;
 
+class NVVM_IntrinsicLoweringOp<string mnemonic, list<Trait> traits = []> : 
+    NVVM_Op<mnemonic, traits> {
+  string cppClass = !subst("NVVM_", "", NAME);
+  let extraClassDeclaration = [{
+    static NVVM::IDArgPair
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase &builder);
+  }];
+}
+
+class NVVM_VoidIntrinsicOp<string mnemonic, list<Trait> traits = []> :
+  NVVM_IntrinsicLoweringOp<mnemonic, traits> {
+  let llvmBuilder = [{
+    auto [id, args] = NVVM::}] # cppClass # [{::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
+  }];
+}
+
+class NVVM_SingleResultIntrinsicOp<string mnemonic, list<Trait> traits = [], string resultStr = "$res"> :
+  NVVM_IntrinsicLoweringOp<mnemonic, traits> {
+  string getFuncCall = "get" # !toupper(!substr(resultStr, 1, 1)) # !substr(resultStr, 2);
+  let llvmBuilder = [{
+    auto [id, args] = NVVM::}] # cppClass # [{::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    if (op->getNumResults() > 0)
+      }] # resultStr # [{ = createIntrinsicCall(builder, id, moduleTranslation.convertType(op.}] # getFuncCall # [{().getType()), args);
+    else
+      createIntrinsicCall(builder, id, builder.getVoidTy(), args);
+  }];
+}
+
+class NVVM_F32UnaryApproxOp<string mnemonic, list<Trait> traits = []> :
+    NVVM_SingleResultIntrinsicOp<mnemonic,
+        traits # [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins F32:$src,
+                       DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs F32:$res);
+  let assemblyFormat = [{
+    $src oilist(`ftz` `=` $ftz) attr-dict `:` type($src)
+  }];
+}
+
+
 //===----------------------------------------------------------------------===//
 // NVVM special register op definitions
 //===----------------------------------------------------------------------===//
 
-class NVVM_SpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
+class NVVM_PureSpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
   NVVM_IntrOp<mnemonic, !listconcat(traits, [Pure]), 1> {
+  let partition = NVVM_MiscSRegPartition;
   let arguments = (ins);
+  let results = (outs I32:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-class NVVM_SpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = []> :
-  NVVM_SpecialRegisterOp<mnemonic,
+class NVVM_SpecialRegisterOp<string mnemonic, Type resultType = I32,
+                                              list<Trait> traits = []> :
+  NVVM_IntrOp<mnemonic, traits, 1> {
+  let partition = NVVM_MiscSRegPartition;
+  let arguments = (ins);
+  let results = (outs resultType:$res);
+  let assemblyFormat = "attr-dict `:` type($res)";
+}
+
+class NVVM_PureSpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = []> :
+  NVVM_PureSpecialRegisterOp<mnemonic,
     !listconcat(traits,
       [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>])> {
+  let partition = NVVM_IndexSRegPartition;
   let arguments = (ins OptionalAttr<LLVM_ConstantRangeAttr>:$range);
   let assemblyFormat = "(`range` $range^)? attr-dict `:` type($res)";
   let llvmBuilder = baseLlvmBuilder # setRangeRetAttrCode # baseLlvmBuilderCoda;
   let mlirBuilder = baseMlirBuilder # importRangeRetAttrCode # baseMlirBuilderCoda;
+  let hasVerifier = 1;
 
   // Backwards-compatibility builder for an unspecified range.
   let builders = [
@@ -181,7 +187,13 @@ class NVVM_SpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = []> 
     void $cppClass::inferResultRanges(
         ArrayRef<::mlir::ConstantIntRanges> argRanges,
         SetIntRangeFn setResultRanges) {
-        nvvmInferResultRanges(getOperation(), getResult(), argRanges, setResultRanges);
+        nvvmInferResultRanges(getRange(), getResult(), argRanges,
+                              setResultRanges);
+    }
+
+    // Verify the range attribute satisfies LLVM ConstantRange constructor requirements.
+    ::llvm::LogicalResult $cppClass::verify() {
+      return verifyConstantRangeAttr(getOperation(), getRange());
     }
   }];
 
@@ -189,74 +201,81 @@ class NVVM_SpecialRangeableRegisterOp<string mnemonic, list<Trait> traits = []> 
 
 //===----------------------------------------------------------------------===//
 // Lane, Warp, SM, Grid index and range
-def NVVM_LaneIdOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.laneid">;
-def NVVM_WarpSizeOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.warpsize">;
-def NVVM_WarpIdOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.warpid">;
-def NVVM_WarpDimOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nwarpid">;
-def NVVM_SmIdOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.smid">;
-def NVVM_SmDimOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nsmid">;
-def NVVM_GridIdOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.gridid">;
+def NVVM_LaneIdOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.laneid">;
+def NVVM_WarpSizeOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.warpsize">;
+def NVVM_WarpIdOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.warpid">;
+def NVVM_WarpDimOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nwarpid">;
+def NVVM_SmIdOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.smid">;
+def NVVM_SmDimOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nsmid">;
+def NVVM_GridIdOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.gridid">;
 
 //===----------------------------------------------------------------------===//
 // Lane Mask Comparison Ops
-def NVVM_LaneMaskEqOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.lanemask.eq">;
-def NVVM_LaneMaskLeOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.lanemask.le">;
-def NVVM_LaneMaskLtOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.lanemask.lt">;
-def NVVM_LaneMaskGeOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.lanemask.ge">;
-def NVVM_LaneMaskGtOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.lanemask.gt">;
+def NVVM_LaneMaskEqOp : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.lanemask.eq">;
+def NVVM_LaneMaskLeOp : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.lanemask.le">;
+def NVVM_LaneMaskLtOp : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.lanemask.lt">;
+def NVVM_LaneMaskGeOp : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.lanemask.ge">;
+def NVVM_LaneMaskGtOp : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.lanemask.gt">;
 
 //===----------------------------------------------------------------------===//
 // Thread index and range
-def NVVM_ThreadIdXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.tid.x">;
-def NVVM_ThreadIdYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.tid.y">;
-def NVVM_ThreadIdZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.tid.z">;
-def NVVM_BlockDimXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.ntid.x">;
-def NVVM_BlockDimYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.ntid.y">;
-def NVVM_BlockDimZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.ntid.z">;
+def NVVM_ThreadIdXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.tid.x">;
+def NVVM_ThreadIdYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.tid.y">;
+def NVVM_ThreadIdZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.tid.z">;
+def NVVM_BlockDimXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.ntid.x">;
+def NVVM_BlockDimYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.ntid.y">;
+def NVVM_BlockDimZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.ntid.z">;
 
 //===----------------------------------------------------------------------===//
 // Block index and range
-def NVVM_BlockIdXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.ctaid.x">;
-def NVVM_BlockIdYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.ctaid.y">;
-def NVVM_BlockIdZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.ctaid.z">;
-def NVVM_GridDimXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nctaid.x">;
-def NVVM_GridDimYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nctaid.y">;
-def NVVM_GridDimZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nctaid.z">;
+def NVVM_BlockIdXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.ctaid.x">;
+def NVVM_BlockIdYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.ctaid.y">;
+def NVVM_BlockIdZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.ctaid.z">;
+def NVVM_GridDimXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nctaid.x">;
+def NVVM_GridDimYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nctaid.y">;
+def NVVM_GridDimZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nctaid.z">;
 
 //===----------------------------------------------------------------------===//
 // CTA Cluster index and range
-def NVVM_ClusterIdXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.x", [NVVMRequiresSM<90>]>;
-def NVVM_ClusterIdYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.y">;
-def NVVM_ClusterIdZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.z">;
-def NVVM_ClusterDimXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nclusterid.x">;
-def NVVM_ClusterDimYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nclusterid.y">;
-def NVVM_ClusterDimZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.nclusterid.z">;
+def NVVM_ClusterIdXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.x", [NVVMRequiresSM<90>]>;
+def NVVM_ClusterIdYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.y">;
+def NVVM_ClusterIdZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.z">;
+def NVVM_ClusterDimXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nclusterid.x">;
+def NVVM_ClusterDimYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nclusterid.y">;
+def NVVM_ClusterDimZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nclusterid.z">;
 
 
 //===----------------------------------------------------------------------===//
 // CTA index and range within Cluster
-def NVVM_BlockInClusterIdXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.x", [NVVMRequiresSM<90>]>;
-def NVVM_BlockInClusterIdYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.y", [NVVMRequiresSM<90>]>;
-def NVVM_BlockInClusterIdZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.z", [NVVMRequiresSM<90>]>;
-def NVVM_ClusterDimBlocksXOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.x", [NVVMRequiresSM<90>]>;
-def NVVM_ClusterDimBlocksYOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.y", [NVVMRequiresSM<90>]>;
-def NVVM_ClusterDimBlocksZOp : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.z">;
+def NVVM_BlockInClusterIdXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.x", [NVVMRequiresSM<90>]>;
+def NVVM_BlockInClusterIdYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.y", [NVVMRequiresSM<90>]>;
+def NVVM_BlockInClusterIdZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.z", [NVVMRequiresSM<90>]>;
+def NVVM_ClusterDimBlocksXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.x", [NVVMRequiresSM<90>]>;
+def NVVM_ClusterDimBlocksYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.y", [NVVMRequiresSM<90>]>;
+def NVVM_ClusterDimBlocksZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.z">;
 
 //===----------------------------------------------------------------------===//
 // CTA index and across Cluster dimensions
-def NVVM_ClusterId : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctarank", [NVVMRequiresSM<90>]>;
-def NVVM_ClusterDim : NVVM_SpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctarank">;
+def NVVM_ClusterId : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctarank", [NVVMRequiresSM<90>]>;
+def NVVM_ClusterDim : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctarank">;
+
+//===----------------------------------------------------------------------===//
+// Various configurations of Shared memory sizes
+def NVVM_TotalSmemSize   : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.total.smem.size">;
+def NVVM_DynamicSmemSize : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.dynamic.smem.size">;
+def NVVM_AggrSmemSize    : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.aggr.smem.size", [NVVMRequiresSM<90>]>;
 
 //===----------------------------------------------------------------------===//
 // Clock registers
 def NVVM_ClockOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock">;
-def NVVM_Clock64Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock64">;
-def NVVM_GlobalTimerOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.globaltimer">;
+def NVVM_Clock64Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.clock64", I64>;
+def NVVM_GlobalTimerOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.globaltimer", I64>;
+def NVVM_GlobalTimerLoOp : NVVM_SpecialRegisterOp<"read.ptx.sreg.globaltimer.lo">;
 
 //===----------------------------------------------------------------------===//
 // envreg registers
 foreach index = !range(0, 32) in {
-  def NVVM_EnvReg # index # Op : NVVM_SpecialRegisterOp<"read.ptx.sreg.envreg" # index>;
+  def NVVM_EnvReg # index # Op : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.envreg" # index>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -275,16 +294,22 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
     `BasicPtxBuilderInterface` to abstract away low-level details of 
     PTX assembly formatting.
 
-    The `predicate` attribute is used to specify a predicate for the 
+    The `predicate` attribute is used to specify a predicate for the
     PTX instruction.
+
+    The `memory_clobber` attribute appends a "~{memory}" clobber to the
+    constraints of the generated inline assembly. Set it when the PTX reads
+    or writes memory beyond its listed operands (e.g. stores, atomics, or
+    instructions with acquire/release semantics such as mbarrier), so that
+    LLVM does not reorder memory accesses across the inline assembly.
 
     Example 1: Read-only Parameters
     ```mlir
-    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" (%barrier_gen, %count) : !llvm.ptr, i32
+    nvvm.inline_ptx "mbarrier.init.b64 [$0], $1;" ro(%barrier_gen, %count : !llvm.ptr, i32) memory_clobber = true
 
     // Lowers to:
-    llvm.inline_asm has_side_effects asm_dialect = att 
-      "mbarrier.init.b64 [$0], $1;", "l,r" %arg0, %arg2 : (!llvm.ptr, i32) -> ()
+    llvm.inline_asm has_side_effects asm_dialect = att
+      "mbarrier.init.b64 [$0], $1;", "l,r,~{memory}" %arg0, %arg2 : (!llvm.ptr, i32) -> ()
     ```
 
     Example 2: Read-only and Write-only Parameters
@@ -307,25 +332,36 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
       : (!llvm.ptr, i32, i1) -> ()
     ```
   }];
+  let partition = NVVM_MiscPartition;
 
-  let arguments = (ins Variadic<AnyType>:$readOnlyArgs, 
+  let arguments = (ins Variadic<AnyType>:$readOnlyArgs,
+                       Variadic<AnyType>:$readWriteArgs,
                        StrAttr:$ptxCode,
-                       PtxPredicate:$predicate);
-                      
+                       PtxPredicate:$predicate,
+                       DefaultValuedAttr<BoolAttr, "false">:$memoryClobber);
+
   let results = (outs Variadic<AnyType>:$writeOnlyArgs);
 
-  let assemblyFormat = [{ 
-    $ptxCode `(` $readOnlyArgs `)` 
-    (`,` `predicate` `=` $predicate^)? attr-dict 
-    `:` type(operands) 
-    (`->` type($writeOnlyArgs)^)?
+  let assemblyFormat = [{
+    $ptxCode
+    ( `ro` `(` $readOnlyArgs^ `:` type($readOnlyArgs) `)` )?
+    ( `rw` `(` $readWriteArgs^ `:` type($readWriteArgs) `)` )?
+    ( `memory_clobber` `=` $memoryClobber^ )?
+    (`,` `predicate` `=` $predicate^)?
+    attr-dict
+    ( `->` type($writeOnlyArgs)^ )?
   }];
-  
+
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
       StringRef ptxInstStr = getPtxCode();
       return std::string(ptxInstStr.data());
     }
+  }];
+
+  let extraClassDeclaration = [{
+    bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
+    bool hasMemoryClobber() { return getMemoryClobber(); }
   }];
 }
 
@@ -333,6 +369,7 @@ def NVVM_InlinePtxOp : NVVM_Op<"inline_ptx",
 // NVVM approximate op definitions
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_ArithPartition in {
 def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
   let arguments = (ins F32:$arg);
   let results = (outs F32:$res);
@@ -340,36 +377,107 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM transcendental op definitions
+//===----------------------------------------------------------------------===//
+// PTX provides only fast approximations for sin/cos/log2/ex2/tanh. Exposing
+// these as plain `nvvm.{sin,cos,log2,ex2,tanh}` (without a `.approx` suffix)
+// keeps the NVVM dialect self-contained -- users don't need to reach for
+// `math.*` ops for something that already has a PTX instruction.
+
+def NVVM_SinOp : NVVM_F32UnaryApproxOp<"sin"> {
+  let summary = "Sine (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the sine of the input value (in radians).
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
+    sign-preserving zero.
+
+    For more information, see PTX ISA:
+    [sin](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sin)
+  }];
+}
+
+def NVVM_CosOp : NVVM_F32UnaryApproxOp<"cos"> {
+  let summary = "Cosine (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the cosine of the input value (in
+    radians). The `ftz` attribute, when set, flushes subnormal inputs
+    and results to sign-preserving zero.
+  }];
+}
+
+def NVVM_Log2Op : NVVM_F32UnaryApproxOp<"log2"> {
+  let summary = "Base-2 logarithm (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the base-2 logarithm of the input
+    value. The `ftz` attribute, when set, flushes subnormal inputs and
+    results to sign-preserving zero.
+  }];
+}
+
+def NVVM_Ex2Op
+    : NVVM_SingleResultIntrinsicOp<"ex2", [Pure, SameOperandsAndResultType]> {
+  let summary = "Base-2 exponential (fast approximation)";
+  let description = [{
+    Computes a fast approximation of 2 raised to the power of the input value.
+    Supports f32, vector<1xf32>, and packed f16x2 and bf16x2 values. The `ftz`
+    attribute is optional for f32 and vector<1xf32>, unavailable for f16x2,
+    and required for bf16x2.
+  }];
+  let arguments = (ins
+    AnyTypeOf<[F32, VectorOfLengthAndType<[1], [F32]>,
+               VectorOfLengthAndType<[2], [F16]>,
+               VectorOfLengthAndType<[2], [BF16]>]>:$src,
+    DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs
+    AnyTypeOf<[F32, VectorOfLengthAndType<[1], [F32]>,
+               VectorOfLengthAndType<[2], [F16]>,
+               VectorOfLengthAndType<[2], [BF16]>]>:$res);
+  let assemblyFormat = [{
+    $src oilist(`ftz` `=` $ftz) attr-dict `:` type($src)
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM rsqrt op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_RsqrtOp
+    : NVVM_SingleResultIntrinsicOp<"rsqrt", [Pure, SameOperandsAndResultType]> {
+  let summary = "Reciprocal square root (fast approximation)";
+  let description = [{
+    Computes an approximation of the reciprocal of the square root of the
+    input value: `d = 1 / sqrt(a)`. Supports both f32 and f64. The maximum
+    relative error for the f32 form over the entire positive finite range
+    is 2^-22.9.
+
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
+    sign-preserving zero. For f64 inputs, `ftz=true` selects a coarser
+    approximation that uses only the upper 32 bits of the input (the lower
+    32 bits of the result are zeroed).
+
+    For more information, see PTX ISA:
+    [rsqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-rsqrt)
+  }];
+
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$src,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = [{
+    $src oilist(`ftz` `=` $ftz) attr-dict `:` type($src)
+  }];
+}
+} // let partition = NVVM_ArithPartition
+
+//===----------------------------------------------------------------------===//
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
 
-def ReduxKindNone : I32EnumAttrCase<"NONE", 0, "none">;
-def ReduxKindAdd  : I32EnumAttrCase<"ADD", 1, "add">;
-def ReduxKindAnd  : I32EnumAttrCase<"AND", 2, "and">;
-def ReduxKindMax  : I32EnumAttrCase<"MAX", 3, "max">;
-def ReduxKindMin  : I32EnumAttrCase<"MIN", 4, "min">;
-def ReduxKindOr   : I32EnumAttrCase<"OR", 5, "or">;
-def ReduxKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
-def ReduxKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
-def ReduxKindXor  : I32EnumAttrCase<"XOR", 8, "xor">; 
-def ReduxKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
-def ReduxKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
-
-/// Enum attribute of the different kinds.
-def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
-  [ReduxKindAdd, ReduxKindAnd, ReduxKindMax, ReduxKindMin, ReduxKindOr, 
-   ReduxKindUmax, ReduxKindUmin, ReduxKindXor, ReduxKindFmin, ReduxKindFmax]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-
-def ReduxKindAttr : EnumAttr<NVVM_Dialect, ReduxKind, "redux_kind">;
-
 def NVVM_ReduxOp :
-  NVVM_Op<"redux.sync", [NVVMRequiresSM<80>]>,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_Type:$val,
-                 ReduxKindAttr:$kind,
+  NVVM_Op<"redux.sync", [NVVMRequiresSM<80>, AllTypesMatch<["res", "val"]>]>,
+  Results<(outs AnyTypeOf<[I32, F32]>:$res)>,
+  Arguments<(ins AnyTypeOf<[I32, F32]>:$val,
+                 ReductionKindAttr:$kind,
                  I32:$mask_and_clamp,
                  DefaultValuedAttr<BoolAttr, "false">:$abs,
                  DefaultValuedAttr<BoolAttr, "false">:$nan)> {
@@ -386,215 +494,793 @@ def NVVM_ReduxOp :
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-redux-sync)
   }];
+  let partition = NVVM_SyncPartition;
+  let hasVerifier = 1;
+
   string llvmBuilder = [{
       auto intId = getReduxIntrinsicId($_resultType, $kind, $abs, $nan);
       $res = createIntrinsicCall(builder, intId, {$val, $mask_and_clamp});
   }];
   let assemblyFormat = [{
-    $kind $val `,` $mask_and_clamp  attr-dict `:` type($val) `->` type($res)
+    enum($kind) $val `,` $mask_and_clamp oilist(
+      `abs` `=` $abs | `nan` `=` $nan
+    ) attr-dict `:` type($val) `->` type($res)
    }];   
 }
+
+//===----------------------------------------------------------------------===//
+// NVVM nanosleep
+//===----------------------------------------------------------------------===//
+
+let partition = NVVM_MiscPartition in {
+def NVVM_NanosleepOp : NVVM_Op<"nanosleep">,
+  Arguments<(ins I32:$duration)> 
+{
+  let summary = "Suspends the thread for a specified duration.";
+
+  let description = [{
+    The op suspends the thread for a sleep duration approximately close to the 
+    delay `$duration`, specified in nanoseconds. 
+
+    The sleep duration is approximated, but guaranteed to be in the 
+    interval [0, 2*t]. The maximum sleep duration is 1 millisecond. 
+    The implementation may reduce the sleep duration for individual threads 
+    within a warp such that all sleeping threads in the warp wake up together.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-nanosleep)
+  }];
+  
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, 
+                          llvm::Intrinsic::nvvm_nanosleep, {$duration});
+  }];
+  let assemblyFormat = "attr-dict $duration";
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Performance Monitor events
+//===----------------------------------------------------------------------===//
+
+def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
+  Arguments<(ins OptionalAttr<I16Attr>:$maskedEventId, 
+                 OptionalAttr<I32Attr>:$eventId)> {
+  let summary = "Trigger one or more Performance Monitor events.";
+
+  let description = [{
+    Triggers one or more of a fixed number of performance monitor events, with
+    event index or mask specified by immediate operand.
+
+    Without `mask` it triggers a single performance monitor event indexed by
+    immediate operand a, in the range 0..15.
+
+    With `mask` it triggers one or more of the performance monitor events. Each
+    bit in the 16-bit immediate operand controls an event.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent)
+  }];
+  
+  let assemblyFormat = "attr-dict (`id` `=` $eventId^)? (`mask` `=` $maskedEventId^)?";
+  let hasVerifier = 1;
+}
+} // let partition = NVVM_MiscPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Split arrive/wait barrier
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_MBarrierPartition in {
 /// mbarrier.init instruction with generic pointer type
-def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init">,
-  Arguments<(ins LLVM_AnyPointer:$addr, I32:$count, PtxPredicate:$predicate)> {
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init, {$addr, $count});
+def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init",
+    [NVVMRequiresSM<80>]>,
+  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+                 I32:$count,
+                 DefaultValuedAttr<ConfinedAttr<I32Attr,
+                   [IntMinValue<0>, IntMaxValue<1>]>, "0">:$layout,
+                 PtxPredicate:$predicate)> {
+  let summary = "MBarrier Initialization Op";
+  let description = [{
+    The `nvvm.mbarrier.init` operation initializes an *mbarrier object* at the specified 
+    memory location. 
+
+    This operation initializes the *mbarrier object* with the following state:
+    - Current phase: 0
+    - Expected arrival count: `count`
+    - Pending arrival count: `count`  
+    - Transaction count (tx-count): 0
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. The `addr`
+      must be a pointer to generic or shared::cta memory. When it is generic, the
+      underlying address must be within the shared::cta memory space; otherwise
+      the behavior is undefined.
+    - `count`: Integer specifying the number of threads that will participate in barrier
+      synchronization. Must be in the range [1, 2²⁰ - 1].
+    - `layout`: Optional in-memory layout to initialize the *mbarrier object*
+      with. Only `0` (`layout::v0`) and `1` (`layout::v1`) are valid values.
+      When it is omitted, it defaults to `0`. The layout of an existing
+      *mbarrier object* can be queried with `nvvm.mbarrier.check_layout`.
+    - `predicate`: Optional predicate for conditional execution.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-init)
   }];
-  let assemblyFormat = "$addr `,` $count (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
+  let assemblyFormat = "$addr `,` $count (`layout` `=` $layout^)? (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
+
   let extraClassDeclaration = [{
     bool hasIntrinsic() { if(getPredicate()) return false; return true; }
+
+    bool getAsmValues(RewriterBase &rewriter,
+      llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
+
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
   }];
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.init.b64 [%0], %1;"); }
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierInitOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
-/// mbarrier.init instruction with shared pointer type
-def NVVM_MBarrierInitSharedOp : NVVM_PTXBuilder_Op<"mbarrier.init.shared", [NVVMRequiresSM<80>, DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Arguments<(ins LLVM_PointerShared:$addr, I32:$count, PtxPredicate:$predicate)> {
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_init_shared, {$addr, $count});
-  }];
-  let assemblyFormat = "$addr `,` $count (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
-  let extraClassDeclaration = "bool hasIntrinsic() { return !getPredicate(); }";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.init.shared.b64 [%0], %1;"); }
-  }];
-}
+def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval",
+    [NVVMRequiresSM<80>]>,
+  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr)> {
+  let summary = "MBarrier Invalidation Operation";
+  let description = [{
+    The `nvvm.mbarrier.inval` operation invalidates an *mbarrier object* at the 
+    specified memory location. 
 
-def NVVM_MBarrierInvalOp : NVVM_Op<"mbarrier.inval">,
-  Arguments<(ins LLVM_AnyPointer:$addr)> {
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_inval, {$addr});
+    This operation marks the *mbarrier object* as invalid, making it safe to repurpose 
+    the memory location for other uses or to reinitialize it as a new *mbarrier object*.
+    It is undefined behavior if the *mbarrier object* is already invalid.
+    
+    The operation takes the following operand:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. The `addr`
+      must be a pointer to generic or shared::cta memory. When it is generic, the
+      underlying address must be within the shared::cta memory space; otherwise
+      the behavior is undefined.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-inval)
   }];
+
   let assemblyFormat = "$addr attr-dict `:` type(operands)";
 }
 
-def NVVM_MBarrierInvalSharedOp : NVVM_Op<"mbarrier.inval.shared">,
-  Arguments<(ins LLVM_PointerShared:$addr)> {
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_inval_shared, {$addr});
+def NVVM_MBarrierCheckLayoutOp :
+    NVVM_SingleResultIntrinsicOp<"mbarrier.check_layout",
+                                 [NVVMRequiresSM<90>]> {
+  let summary = "MBarrier Check-Layout Operation";
+  let description = [{
+    The `nvvm.mbarrier.check_layout` operation tests whether the *mbarrier
+    object* at `addr` was initialized with the layout named by `layout`.
+
+    - `res`: An `i1` that is `true` when the *mbarrier object* has the queried
+      layout and `false` otherwise.
+
+    The operation takes the following operand and attribute:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. The
+      `addr` must be a pointer to generic or shared::cta memory. When it is
+      generic, the underlying address must be within the shared::cta memory
+      space; otherwise the behavior is undefined.
+    - `layout`: The mbarrier layout version to test for. Only `0`
+      (`layout::v0`) and `1` (`layout::v1`) are valid values. When it is
+      omitted, it defaults to `0`.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-check-layout)
   }];
-  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+
+  let results = (outs I1:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+    DefaultValuedAttr<ConfinedAttr<I32Attr,
+                   [IntMinValue<0>, IntMaxValue<1>]>, "0">:$layout);
+
+  let assemblyFormat =
+    "$addr (`layout` `=` $layout^)? attr-dict `:` type($addr) `->` type($res)";
 }
 
-def NVVM_MBarrierArriveOp : NVVM_Op<"mbarrier.arrive">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_AnyPointer:$addr)> {
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive, {$addr});
+def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx",
+    [NVVMRequiresSM<90>]> {
+  let summary = "MBarrier expect-tx Operation";
+  let description = [{
+    The `nvvm.mbarrier.expect_tx` operation increases the transaction count
+    of the mbarrier located at `addr` by `txcount` amount. The `scope`
+    specifies the set of threads that can directly observe the memory
+    synchronizing effect of the `mbarrier.expect_tx` operation. `CTA`
+    and `CLUSTER` are the only allowed values for `scope`.
+
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-expect-tx)
   }];
-  let assemblyFormat = "$addr attr-dict `:` type($addr) `->` type($res)";
+
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    I32:$txcount,
+    Optional<I32>:$multicastMask,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
+
+  let assemblyFormat = [{
+    $addr `,` $txcount (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
+  }];
+
+  let hasVerifier = 1;
 }
 
-def NVVM_MBarrierArriveSharedOp : NVVM_Op<"mbarrier.arrive.shared">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_PointerShared:$addr)> {
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_shared, {$addr});
+def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx",
+    [NVVMRequiresSM<90>]> {
+  let summary = "MBarrier complete-tx Operation";
+  let description = [{
+    The `nvvm.mbarrier.complete_tx` operation decrements the transaction
+    count of the *mbarrier object* at `addr` by `txcount`. It also signals
+    the completion of asynchronous transactions that were tracked by the
+    current phase. The `scope` specifies the set of threads that can directly
+    observe the memory synchronizing effect of the `mbarrier.complete_tx`
+    operation. `CTA` and `CLUSTER` are the only allowed values for `scope`.
+
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-complete-tx)
   }];
-  let assemblyFormat = "$addr attr-dict `:` qualified(type($addr)) `->` type($res)";
+
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    I32:$txcount,
+    Optional<I32>:$multicastMask,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope);
+
+  let assemblyFormat = [{
+    $addr `,` $txcount (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope)) attr-dict `:` type(operands)
+  }];
+
+  let hasVerifier = 1;
 }
 
-def NVVM_MBarrierArriveNocompleteOp : NVVM_Op<"mbarrier.arrive.nocomplete">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_AnyPointer:$addr, I32:$count)> {
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete, {$addr, $count});
+def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
+     NVVMRequiresSM<80>]> {
+  let summary = "MBarrier Arrive Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
+    *mbarrier object* at the specified address. Uses the default `.release.cta` semantics. 
+    This release pattern establishes memory ordering for operations occurring in program 
+    order before this arrive instruction by making operations from the current thread 
+    visible to subsequent operations in other threads within the CTA. When other threads 
+    perform corresponding acquire operations (like 'mbarrier.test.wait'), they synchronize 
+    with this release pattern.
+
+    This operation causes the executing thread to signal its arrival at the barrier.
+
+    - `res`: When the `space` is not shared_cluster, this operation returns an
+      opaque 64-bit value capturing the phase of the *mbarrier object* prior to
+      the arrive-on operation. The contents of this return value are
+      implementation-specific. An *mbarrier object* located in the shared_cluster
+      space cannot return a value.
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. The `addr`
+      must be a pointer to generic or shared_cta or shared_cluster memory. When it
+      is generic, the underlying address must be within the shared_cta memory space;
+      otherwise the behavior is undefined.
+    - `count`: This specifies the amount by which the pending arrival count is
+      decremented. If the `count` argument is not specified, the pending arrival
+      count is decremented by 1.
+    - `scope`: This specifies the set of threads that directly observe the memory
+      synchronizing effect of the `mbarrier.arrive` operation.
+    - `space`: This indicates the memory space where the mbarrier object resides.
+    - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
+      and does not provide any ordering or visibility guarantees.
+
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
   }];
+
+  let results = (outs Optional<I64>:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    Optional<I32>:$count,
+    Optional<I32>:$multicastMask,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = [{
+    $addr (`,` $count^)? (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    attr-dict `:` type($addr)
+    (`->` type($res)^)?
+  }];
+
+  let hasVerifier = 1;
+}
+
+def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop",
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
+     NVVMRequiresSM<80>]> {
+  let summary = "MBarrier Arrive-Drop Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive_drop` operation decrements the expected arrival
+    count of the *mbarrier object* by `count` and then performs an arrive-on
+    operation. When `count` is not specified, it defaults to 1. The decrement
+    of the expected arrival count applies to all the subsequent phases of the
+    *mbarrier object*. The remaining semantics are identical to those of the
+    `nvvm.mbarrier.arrive` operation.
+
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
+  }];
+
+  let results = (outs Optional<I64>:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    Optional<I32>:$count,
+    Optional<I32>:$multicastMask,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = [{
+    $addr (`,` $count^)? (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    attr-dict `:` type($addr)
+    (`->` type($res)^)?
+  }];
+
+  let hasVerifier = 1;
+}
+
+def NVVM_MBarrierArriveNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive.nocomplete",
+    [NVVMRequiresSM<80>]>,
+  Results<(outs I64:$res)>,
+  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+                 I32:$count)> {
+  let summary = "MBarrier Arrive No-Complete Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive.nocomplete` operation performs an arrive-on operation 
+    on the *mbarrier object* with the guarantee that it will not cause the barrier to 
+    complete its current phase. Uses the default `.release.cta` semantics. This release 
+    pattern establishes memory ordering for operations occurring in program order before 
+    this arrive instruction by making operations from the current thread visible to 
+    subsequent operations in other threads within the CTA. When other threads perform 
+    corresponding acquire operations (like 'mbarrier.test.wait'), they synchronize with 
+    this release pattern.
+
+    This operation causes the executing thread to signal its arrival at the barrier 
+    with a specified count, but ensures that the barrier phase will not complete as 
+    a result of this operation. The operation returns an opaque value that 
+    captures the phase of the *mbarrier object* prior to the arrive-on operation.
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. The `addr`
+      must be a pointer to generic or shared::cta memory. When it is generic, the
+      underlying address must be within the shared::cta memory space; otherwise
+      the behavior is undefined.
+    - `count`: Integer specifying the count argument to the arrive-on operation. 
+      Must be in the valid range as specified in the *mbarrier object* contents.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive)
+  }];
+
   let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
 }
 
-def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.shared">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_PointerShared:$addr, I32:$count)> {
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_arrive_noComplete_shared, {$addr, $count});
+def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.nocomplete",
+    [NVVMRequiresSM<80>]>,
+  Results<(outs I64:$res)>,
+  Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+                 I32:$count)> {
+  let summary = "MBarrier Arrive-Drop No-Complete Operation";
+  let description = [{
+    The `nvvm.mbarrier.arrive_drop.nocomplete` operation decrements the expected
+    arrival count of the *mbarrier object* by the amount `count` and then performs
+    an arrive-on operation on the *mbarrier object* with the guarantee that it
+    will not cause the barrier to complete its current phase.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
+
   let assemblyFormat = "$addr `,` $count attr-dict `:` type(operands) `->` type($res)";
 }
 
-def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx">,  
-  Arguments<(ins LLVM_AnyPointer:$addr, I32:$txcount, PtxPredicate:$predicate)> {
-  let assemblyFormat = "$addr `,` $txcount (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.b64 _, [%0], %1;"); }
-  }];
-}
+def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx",
+    [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
+     NVVMRequiresSM<90>]> {
+  let summary = "MBarrier Arrive with Expected Transaction Count";
+  let description = [{
+    The `nvvm.mbarrier.arrive.expect_tx` operation performs an expect-tx operation 
+    followed by an arrive-on operation on the *mbarrier object*. Uses the default 
+    `.release.cta` semantics. This release pattern establishes memory ordering for 
+    operations occurring in program order before this arrive instruction by making 
+    operations from the current thread visible to subsequent operations in other 
+    threads within the CTA. When other threads perform corresponding acquire operations 
+    (like 'mbarrier.test.wait'), they synchronize with this release pattern.
 
-def NVVM_MBarrierArriveExpectTxSharedOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx.shared">,  
-  Arguments<(ins LLVM_PointerShared:$addr, I32:$txcount, PtxPredicate:$predicate)> {    
-  let assemblyFormat = "$addr `,` $txcount (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.shared.b64 _, [%0], %1;"); }
-  }];
-}
+    This operation first performs an expect-tx operation with the specified transaction
+    count, then performs an arrive-on operation with an implicit count of 1. The
+    expect-tx operation increases the expect-count of the *mbarrier object* by the
+    specified value (i.e. `txcount`), setting the current phase to expect and track
+    the completion of additional asynchronous transactions.
 
-def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity">,  
-  Arguments<(ins LLVM_AnyPointer:$addr, I32:$phase, I32:$ticks)> {  
-  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() {
-      return std::string(
-        "{\n\t"
-        ".reg .pred       P1; \n\t"
-        "LAB_WAIT: \n\t"
-        "mbarrier.try_wait.parity.b64 P1, [%0], %1, %2; \n\t"
-        "@P1 bra.uni DONE; \n\t"
-        "bra.uni     LAB_WAIT; \n\t"
-        "DONE: \n\t"
-        "}"
-      ); 
-    }
-  }];
-}
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
+      addressing, but the address must still be in the shared memory space.
+    - `txcount`: An unsigned integer specifying the expected transaction count 
+      for the expect-tx operation. This represents the number of asynchronous transactions 
+      expected to complete before the barrier phase completes.
+    - `scope`: This specifies the set of threads that directly observe the memory
+      synchronizing effect of the `mbarrier.test.wait` operation.
+    - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
+      and does not provide any ordering or visibility guarantees.
+    - `predicate`: Optional predicate for conditional execution used only when lowering to
+      inline-ptx.
 
-def NVVM_MBarrierTryWaitParitySharedOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity.shared">,  
-  Arguments<(ins LLVM_PointerShared:$addr, I32:$phase, I32:$ticks)> {  
-  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() {
-      return std::string(
-        "{\n\t"
-        ".reg .pred       P1; \n\t"
-        "LAB_WAIT: \n\t"
-        "mbarrier.try_wait.parity.shared.b64 P1, [%0], %1, %2; \n\t"
-        "@P1 bra.uni DONE; \n\t"
-        "bra.uni     LAB_WAIT; \n\t"
-        "DONE: \n\t"
-        "}"
-      ); 
-    }
-  }];
-}
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
 
-def NVVM_MBarrierTestWaitOp : NVVM_Op<"mbarrier.test.wait">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_AnyPointer:$addr, LLVM_Type:$state)> {
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
+  }];
+
+  let results = (outs Optional<I64>:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    I32:$txcount,
+    Optional<I32>:$multicastMask,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed,
+    PtxPredicate:$predicate);
+
+  let assemblyFormat = [{
+    $addr `,` $txcount (`,` `predicate` `=` $predicate^)?
+    (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    attr-dict `:` type(operands) (`->` type($res)^)?
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasIntrinsic() { return !getPredicate(); }
+
+    bool getAsmValues(RewriterBase &rewriter,
+      llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
+
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
   string llvmBuilder = [{
-      $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_test_wait, {$addr, $state});
+    auto [id, args] = NVVM::MBarrierArriveExpectTxOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+
+    if (op.getNumResults() > 0)
+      $res = createIntrinsicCall(builder, id, args);
+    else
+      createIntrinsicCall(builder, id, args);
   }];
-  let assemblyFormat = "$addr `,` $state attr-dict `:` type(operands) `->` type($res)";
 }
 
-def NVVM_MBarrierTestWaitSharedOp : NVVM_Op<"mbarrier.test.wait.shared">,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_PointerShared:$addr, LLVM_Type:$state)> {
-  string llvmBuilder = [{
-      $res = createIntrinsicCall(builder, llvm::Intrinsic::nvvm_mbarrier_test_wait_shared, {$addr, $state});
+def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.expect_tx",
+    [InferTypeOpAdaptorWithIsCompatible, NVVMRequiresSM<90>]> {
+  let summary = "MBarrier arrive_drop with expected transaction count";
+  let description = [{
+    The `nvvm.mbarrier.arrive_drop.expect_tx` operation is similar to the
+    `nvvm.mbarrier.arrive.expect_tx` operation except that it performs an
+    `arrive_drop` operation instead of only an `arrive` operation.
+
+    When `multicastMask` is present, the operation updates the barrier at the
+    same shared-memory offset in each CTA selected by the 32-bit mask. The
+    `addr` must be in shared::cluster space. Both CTA and cluster scopes are
+    supported. Omitting the mask preserves the non-multicast behavior.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-arrive-drop)
   }];
-  let assemblyFormat = "$addr `,` $state attr-dict `:` type(operands) `->` type($res)";
+
+  let results = (outs Optional<I64>:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared, LLVM_PointerSharedCluster]>:$addr,
+    I32:$txcount,
+    Optional<I32>:$multicastMask,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = [{
+    $addr `,` $txcount (`multicast_mask` `=` $multicastMask^)?
+    oilist(`scope` `=` enum($scope) | `relaxed` `=` $relaxed)
+    attr-dict `:` type(operands)
+    (`->` type($res)^)?
+  }];
+  let hasVerifier = 1;
 }
+
+def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity",
+    [NVVMRequiresSM<90>]>,
+  Arguments<(ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+    I32:$phase, I32:$ticks)> {
+  let summary = "MBarrier Potentially-Blocking Try Wait with Phase Parity";
+  let description = [{
+    The `nvvm.mbarrier.try_wait.parity` operation performs a potentially-blocking 
+    test for the completion of a specific phase of an *mbarrier object* using phase 
+    parity. It uses the default `.acquire.cta` semantics. This acquire pattern 
+    establishes memory ordering for operations occurring in program order after this 
+    wait instruction by making operations from other threads in the CTA visible to subsequent 
+    operations in the current thread. When this wait completes, it synchronizes with 
+    the corresponding release pattern from the `mbarrier.arrive` operation, establishing 
+    memory ordering within the CTA.
+
+    This operation waits for the completion of the mbarrier phase indicated by the 
+    phase parity. While it uses the underlying PTX `mbarrier.try_wait.parity` 
+    instruction, this MLIR operation generates a loop that enforces the test to 
+    complete before continuing execution, ensuring the barrier phase is actually 
+    completed rather than potentially timing out.
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic 
+      addressing, but the address must still be in the shared memory space.
+    - `phase`: An integer specifying the phase parity (0 or 1). Even phases 
+      have parity 0, odd phases have parity 1.
+    - `ticks`: An unsigned integer specifying the suspend time hint in 
+      nanoseconds. This may be used instead of the system-dependent time limit.
+
+    **Memory ordering guarantees**: When this wait returns true, the following 
+    ordering guarantees hold:
+
+    1. All memory accesses (except async operations) requested prior to
+       `mbarrier.arrive` having release semantics by participating CTA threads
+       are visible to the executing thread.
+    2. All `cp.async` operations requested prior to `cp.async.mbarrier.arrive`
+       by participating CTA threads are visible to the executing thread.
+    3. All `cp.async.bulk` operations using the same *mbarrier object* requested
+       prior to `mbarrier.arrive` having release semantics by participating CTA
+       threads are visible to the executing thread.
+    4. Memory accesses requested after this wait are not visible to memory
+       accesses performed prior to `mbarrier.arrive` by other participating
+       threads.
+    5. No ordering guarantee exists for memory accesses by the same thread
+       between `mbarrier.arrive` and this wait.
+
+    **Implementation behavior**:
+    This operation generates a PTX loop that repeatedly calls the underlying 
+    `mbarrier.try_wait.parity` instruction until the barrier phase completes. 
+    Unlike the raw PTX instruction which may return without completion after a 
+    timeout, this MLIR operation guarantees completion by continuing to loop until 
+    the specified phase is reached.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
+  }];  
+  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
+}
+
+def NVVM_MBarrierTestWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.test.wait",
+    [NVVMRequiresSM<80>]> {
+  let summary = "MBarrier Non-Blocking Test Wait Operation";
+  let description = [{
+    The `nvvm.mbarrier.test.wait` operation performs a non-blocking test for the
+    completion of a specific phase of an *mbarrier object*. It uses the default
+    `.acquire.cta` semantics. This acquire pattern establishes memory ordering for
+    operations occurring in program order after this wait instruction by making
+    operations from other threads in the CTA visible to subsequent operations in the current
+    thread. When this wait completes, it synchronizes with the corresponding release
+    pattern from the `mbarrier.arrive` operation, establishing memory ordering within
+    the CTA.
+
+    This operation tests whether the mbarrier phase specified by the state operand
+    has completed. It is a non-blocking instruction that immediately returns the
+    completion status without suspending the executing thread.
+
+    The operation takes the following operands:
+    - `addr`: A pointer to the memory location of the *mbarrier object*. Uses generic
+      addressing, but the address must still be in the shared memory space.
+    - `stateOrPhase`: This argument represents a `state` when it is a 64-bit value
+      and represents a `phase` when it is a 32-bit value. The `state` is an opaque
+      value returned by a previous `mbarrier.arrive` operation on the same
+      *mbarrier object* during the current or immediately preceding phase.
+      The `phase` is an integer specifying the phase parity (0 or 1).
+      Even phases have parity 0, odd phases have parity 1.
+    - `scope`: This specifies the set of threads that directly observe the memory
+      synchronizing effect of the `mbarrier.test.wait` operation.
+    - `relaxed`: When set to true, the `arrive` operation has relaxed memory semantics
+      and does not provide any ordering or visibility guarantees.
+
+    The operation returns a boolean value indicating whether the specified phase 
+    has completed:
+    - `true`: The immediately preceding phase has completed
+    - `false`: The phase is still incomplete (current phase)
+
+    **Memory ordering guarantees**: When this wait returns true, the following 
+    ordering guarantees hold:
+
+    1. All memory accesses (except async operations) requested prior to
+       `mbarrier.arrive` having release semantics by participating CTA threads
+       are visible to the executing thread.
+    2. All `cp.async` operations requested prior to `cp.async.mbarrier.arrive`
+       by participating CTA threads are visible to the executing thread.
+    3. All `cp.async.bulk` operations using the same *mbarrier object* requested
+       prior to `mbarrier.arrive` having release semantics by participating CTA
+       threads are visible to the executing thread.
+    4. Memory accesses requested after this wait are not visible to memory
+       accesses performed prior to `mbarrier.arrive` by other participating
+       threads.
+    5. No ordering guarantee exists for memory accesses by the same thread
+       between `mbarrier.arrive` and this wait.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
+  }];
+
+  let results = (outs I1:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+    AnyTypeOf<[I64, I32]>:$stateOrPhase,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = [{
+    $addr `,` $stateOrPhase oilist(
+      `scope` `=` enum($scope) | `relaxed` `=` $relaxed
+    ) attr-dict `:` type(operands) `->` type($res)
+  }];
+  let hasVerifier = 1;
+}
+
+def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait",
+    [NVVMRequiresSM<90>]> {
+  let summary = "MBarrier try wait on state or phase with an optional timelimit";
+  let description = [{
+    The `nvvm.mbarrier.try_wait` operation checks whether the specified
+    *mbarrier object* at `addr` has completed the given phase. Note that
+    unlike the `nvvm.mbarrier.test.wait` operation, the try_wait operation
+    is a potentially-blocking one. If the phase is not yet complete, the
+    calling thread may be suspended. A suspended thread resumes execution
+    once the phase completes or when a system-defined timeout occurs.
+    Optionally, the `ticks` operand can be used to provide a custom timeout
+    (in nanoseconds), overriding the system-defined one. The semantics of
+    this operation and its operands are otherwise similar to those of the
+    `nvvm.mbarrier.test.wait` Op.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait)
+  }];
+
+  let results = (outs I1:$res);
+  let arguments = (ins
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+    AnyTypeOf<[I64, I32]>:$stateOrPhase,
+    Optional<I32>:$ticks,
+    DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
+    DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let assemblyFormat = [{
+    $addr `,` $stateOrPhase (`,` $ticks^)? oilist(
+      `scope` `=` enum($scope) | `relaxed` `=` $relaxed
+    ) attr-dict `:` type(operands) `->` type($res)
+  }];
+  let hasVerifier = 1;
+}
+} // let partition = NVVM_MBarrierPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM synchronization op definitions
 //===----------------------------------------------------------------------===//
 
-def NVVM_Barrier0Op : NVVM_Op<"barrier0"> {
-  let assemblyFormat = "attr-dict";
-  string llvmBuilder = [{
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all,
-          {builder.getInt32(0)});
+let partition = NVVM_SyncPartition in {
+def NVVM_BarrierOp : NVVM_VoidIntrinsicOp<"barrier",
+    [AttrSizedOperandSegments]> {
+  let summary = "CTA Barrier Synchronization Op";
+  let description = [{
+    The `nvvm.barrier` operation performs barrier synchronization and communication 
+    within a CTA (Cooperative Thread Array). It causes executing threads to wait for 
+    all non-exited threads participating in the barrier to arrive.
+
+    The operation takes the following optional operands and attributes:
+
+    - `barrierId`: Specifies a logical barrier resource with value 0 through 15. 
+      Each CTA instance has sixteen barriers numbered 0..15. Defaults to 0 if not specified.
+    - `numberOfThreads`: Specifies the number of threads participating in the barrier. 
+      When specified, the value must be a multiple of the warp size. If not specified, 
+      all threads in the CTA participate in the barrier.
+    - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
+      underlying `@llvm.nvvm.barrier.cta.*` intrinsic family. Defaults to true,
+      which requires every thread in the CTA to reach this same barrier
+      instruction, otherwise the behavior is undefined. Set it to false to emit
+      the non-`.aligned` form.
+
+    Reduction variants of the barrier instruction are modeled by the
+    `nvvm.barrier.reduction` op.
+
+    The barrier operation guarantees that when the barrier completes, prior memory 
+    accesses requested by participating threads are performed relative to all threads 
+    participating in the barrier. It also ensures that no new memory access is 
+    requested by participating threads before the barrier completes.
+
+    When a barrier completes, the waiting threads are restarted without delay, and
+    the barrier is reinitialized so that it can be immediately reused.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
-}
 
-def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
-  let arguments = (ins     
-    Optional<I32>:$barrierId,
-    Optional<I32>:$numberOfThreads);
-  string llvmBuilder = [{
-    llvm::Value *id = $barrierId ? $barrierId : builder.getInt32(0);
-    if ($numberOfThreads)
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_count,
-          {id, $numberOfThreads});
-    else
-      createIntrinsicCall(
-          builder, llvm::Intrinsic::nvvm_barrier_cta_sync_aligned_all, {id});
+  let arguments = (ins
+      Optional<I32>:$barrierId,
+      Optional<I32>:$numberOfThreads,
+      DefaultValuedAttr<BoolAttr, "true">:$aligned);
+
+  let assemblyFormat = [{
+    oilist(
+      `id` `=` $barrierId | `number_of_threads` `=` $numberOfThreads
+      | `aligned` `=` $aligned
+    ) attr-dict
   }];
-  let hasVerifier = 1;
 
-  let assemblyFormat = "(`id` `=` $barrierId^)? (`number_of_threads` `=` $numberOfThreads^)? attr-dict";
-
-  let builders = [
-    OpBuilder<(ins), [{
+  let builders = [OpBuilder<(ins), [{
       return build($_builder, $_state, Value{}, Value{});
-    }]>,
-    OpBuilder<(ins "Value":$barrierId), [{
-      return build($_builder, $_state, barrierId, Value{});
-    }]>
-  ];
+    }]>];
 }
 
-def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
+def NVVM_BarrierReductionOp :
+    NVVM_IntrinsicLoweringOp<"barrier.reduction"> {
+  let summary = "CTA Barrier Reduction Op";
+  let description = [{
+    The `nvvm.barrier.reduction` operation performs barrier synchronization with a
+    reduction across the per-thread predicates contributed by participating threads
+    in a CTA.
+
+    - `barrierId`: Specifies a logical barrier resource with value 0 through 15.
+      Optional; defaults to barrier id 0 when not specified.
+    - `reductionOp`: The reduction kind (`popc`, `and`, `or`) applied across the
+      per-thread predicates.
+    - `reductionPredicate`: The per-thread i32 predicate. It is compared against
+      zero to form the i1 value fed into the reduction.
+    - `aligned`: Selects between the `.aligned` and non-`.aligned` forms of the
+      underlying `@llvm.nvvm.barrier.cta.red.*` intrinsic family. Defaults to
+      true, which requires every thread in the CTA to reach this same barrier
+      instruction, otherwise the behavior is undefined. Set it to false to emit
+      the non-`.aligned` form.
+
+    The result is the i32 reduction value computed across all threads
+    participating in the barrier.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
+  }];
+
+  let arguments = (ins
+      Optional<I32>:$barrierId,
+      BarrierReductionAttr:$reductionOp,
+      I32:$reductionPredicate,
+      DefaultValuedAttr<BoolAttr, "true">:$aligned);
+  let results = (outs I32:$res);
+
+  let assemblyFormat =
+      "qualified($reductionOp) $reductionPredicate "
+      "(`id` `=` $barrierId^)? `->` type($res) "
+      "(`aligned` `=` $aligned^)? attr-dict";
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::BarrierReductionOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    $res = builder.CreateZExt(createIntrinsicCall(builder, id, args),
+                              builder.getInt32Ty());
+  }];
+}
+
+def NVVM_BarrierArriveOp : NVVM_VoidIntrinsicOp<"barrier.arrive">
 {
-  let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads);
+  let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads,
+                       DefaultValuedAttr<BoolAttr, "true">:$aligned);
 
   let description = [{
     Thread that executes this op announces their arrival at the barrier with 
@@ -603,22 +1289,20 @@ def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive">
     The default barrier id is 0 that is similar to `nvvm.barrier` Op. When 
     `barrierId` is not present, the default barrier id is used. 
 
+    The `aligned` attribute, which defaults to `true`, generates the aligned
+    form of the barrier (all threads in the CTA execute the same barrier
+    instruction). When set to `false`, the unaligned form is generated.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar)
   }];
   
-  let assemblyFormat = "(`id` `=` $barrierId^)? `number_of_threads` `=` $numberOfThreads attr-dict";
-
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() {
-      std::string ptx = "bar.arrive ";
-      if (getBarrierId()) { ptx += "%0, %1;"; } 
-      else { ptx += "0, %0;"; }
-      return ptx;
-    }
+  let assemblyFormat = [{
+    (`id` `=` $barrierId^)? `number_of_threads` `=` $numberOfThreads
+    (`aligned` `=` $aligned^)? attr-dict
   }];
 }
 
-def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
+def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive", [NVVMRequiresSM<90>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Arrive Op";
@@ -638,7 +1322,7 @@ def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
       else
         createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive);
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`aligned` $aligned^)? attr-dict";
 }
 
 def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed", [NVVMRequiresSM<90>]> {
@@ -664,7 +1348,7 @@ def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed", [NVVMRequire
       else
         createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_arrive_relaxed);
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`aligned` $aligned^)? attr-dict";
 }
 
 def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait", [NVVMRequiresSM<90>]> {
@@ -685,7 +1369,28 @@ def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait", [NVVMRequiresSM<90>]> {
       else
         createIntrinsicCall(builder, llvm::Intrinsic::nvvm_barrier_cluster_wait);
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`aligned` $aligned^)? attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Member/Fence
+//===----------------------------------------------------------------------===//
+
+def NVVM_MembarOp : NVVM_Op<"memory.barrier">,
+                    Arguments<(ins MemScopeKindAttr:$scope)> {
+  let summary = "Memory barrier operation";
+  let description = [{
+    `membar` operation guarantees that prior memory accesses requested by this
+    thread are performed at the specified `scope`, before later memory
+    operations requested by this thread following the membar instruction.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-membar)
+  }];
+
+  let assemblyFormat = "enum($scope) attr-dict";
+  let llvmBuilder = [{
+    createIntrinsicCall(builder, getMembarIntrinsicID($scope));
+  }];
 }
 
 def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
@@ -694,36 +1399,52 @@ def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
   }];
   let assemblyFormat = "attr-dict";
 }
+} // let partition = NVVM_SyncPartition
 
-def SharedSpaceCTA : I32EnumAttrCase<"shared_cta", 0, "cta">;
-def SharedSpaceCluster   : I32EnumAttrCase<"shared_cluster", 1, "cluster">;
-def SharedSpace : I32EnumAttr<"SharedSpace", "Shared memory space",
-  [SharedSpaceCTA, SharedSpaceCluster]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def SharedSpaceAttr : EnumAttr<NVVM_Dialect, SharedSpace, "shared_space"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+defvar MemOrderAcquireOrRelease =
+  ConfinedAttr<MemOrderKindAttr,
+    [EnumAttrIsOneOf<MemOrderKindAttr,
+      [MemOrderKindAcquire, MemOrderKindRelease]>]>;
 
-def ProxyAlias : I32EnumAttrCase<"alias", 0, "alias">;
-def ProxyAsync   : I32EnumAttrCase<"async", 1, "async">;
-def ProxyAsyncGlobal   : I32EnumAttrCase<"async_global", 2, "async.global">;
-def ProxyAsyncShared   : I32EnumAttrCase<"async_shared", 3, "async.shared">;
-def ProxyTensorMap : I32EnumAttrCase<"TENSORMAP", 4, "tensormap">;
-def ProxyGeneric : I32EnumAttrCase<"GENERIC", 5, "generic">;
-def ProxyKind : I32EnumAttr<"ProxyKind", "Proxy kind",
-  [ProxyAlias, ProxyAsync, ProxyAsyncGlobal, ProxyAsyncShared, ProxyTensorMap, ProxyGeneric]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
+let partition = NVVM_SyncPartition in {
+def NVVM_FenceSyncRestrictOp : NVVM_Op<"fence.sync_restrict">,
+                               Arguments<(ins MemOrderAcquireOrRelease:$order)> {
+  let summary = "Uni-directional thread fence operation";
+  let description = [{
+    The `nvvm.fence.sync_restrict` Op restricts the class of memory
+    operations for which the fence instruction provides the memory ordering guarantees.
+    `sync_restrict` restricts `acquire` memory semantics to `shared_cluster` and
+    `release` memory semantics to `shared_cta` with cluster scope.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
 
-def ProxyKindAttr : EnumAttr<NVVM_Dialect, ProxyKind, "proxy_kind"> {
-  let assemblyFormat = "`<` $value `>`";
+  let assemblyFormat = "$order attr-dict";
+  let llvmBuilder = [{
+    createIntrinsicCall(builder, getFenceSyncRestrictID($order));
+  }];
 }
 
-def NVVM_FenceProxyOp : NVVM_PTXBuilder_Op<"fence.proxy">,
-  Arguments<(ins ProxyKindAttr:$kind,
+def NVVM_FenceMbarrierInitOp : NVVM_Op<"fence.mbarrier.init"> {
+    let description = [{
+    Fence operation that applies on the prior nvvm.mbarrier.init
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
+
+  let assemblyFormat = "attr-dict";
+  let llvmBuilder = [{
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_fence_mbarrier_init_release_cluster);
+  }];
+}
+} // let partition = NVVM_SyncPartition
+
+defvar ProxyKindNotTensormapOrGeneric =
+  ConfinedAttr<ProxyKindAttr,
+    [EnumAttrIsNoneOf<ProxyKindAttr, [ProxyTensorMap, ProxyGeneric]>]>;
+
+let partition = NVVM_SyncPartition in {
+def NVVM_FenceProxyOp : NVVM_Op<"fence.proxy">,
+  Arguments<(ins ProxyKindNotTensormapOrGeneric:$kind,
                  OptionalAttr<SharedSpaceAttr>:$space)> {
   let description = [{
     Fence operation with proxy to establish an ordering between memory accesses
@@ -732,33 +1453,15 @@ def NVVM_FenceProxyOp : NVVM_PTXBuilder_Op<"fence.proxy">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
   }];
   
-  let assemblyFormat = "attr-dict";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() {
-      std::string ptx = "fence.proxy.";
-      ptx += stringifyProxyKind(getKind());
-      if(getKind() == NVVM::ProxyKind::async_shared)
-        { ptx += "::"; ptx += stringifySharedSpace(getSpace().value()); }
-      ptx += ";";
-      return ptx;
-    }
+  let assemblyFormat = [{
+    $kind (`,` `space` `=` $space^)? attr-dict
   }];
+
+  let llvmBuilder = [{
+    createIntrinsicCall(builder, getFenceProxyID($kind, $space));
+  }];
+
   let hasVerifier = 1;
-}
-
-// Attrs describing the scope of the Memory Operation
-def MemScopeKindCTA      : I32EnumAttrCase<"CTA", 0, "cta">;
-def MemScopeKindCluster  : I32EnumAttrCase<"CLUSTER", 1, "cluster">;
-def MemScopeKindGPU      : I32EnumAttrCase<"GPU", 2, "gpu">;
-def MemScopeKindSYS      : I32EnumAttrCase<"SYS", 3, "sys">;
-
-def MemScopeKind : I32EnumAttr<"MemScopeKind", "NVVM Memory Scope kind",
-  [MemScopeKindCTA, MemScopeKindCluster, MemScopeKindGPU, MemScopeKindSYS]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def MemScopeKindAttr : EnumAttr<NVVM_Dialect, MemScopeKind, "mem_scope"> {
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,
@@ -783,7 +1486,11 @@ def NVVM_FenceProxyAcquireOp : NVVM_Op<"fence.proxy.acquire">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
   }];
 
-  let assemblyFormat = "$scope $addr `,` $size (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? attr-dict";
+  let assemblyFormat = [{
+    enum($scope) $addr `,` $size oilist(
+      `from_proxy` `=` $fromProxy | `to_proxy` `=` $toProxy
+    ) attr-dict
+  }];
   let llvmBuilder = [{
     createIntrinsicCall(
         builder,
@@ -811,7 +1518,11 @@ def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
   }];
 
-  let assemblyFormat = "$scope (`from_proxy` `=` $fromProxy^)? (`to_proxy` `=` $toProxy^)? attr-dict";
+  let assemblyFormat = [{
+    enum($scope) oilist(
+      `from_proxy` `=` $fromProxy | `to_proxy` `=` $toProxy
+    ) attr-dict
+  }];
   let llvmBuilder = [{
     createIntrinsicCall(builder, getUnidirectionalFenceProxyID(
                                      $fromProxy, $toProxy, $scope, true));
@@ -820,18 +1531,37 @@ def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,
   let hasVerifier = 1;
 }
 
-def SetMaxRegisterActionIncrease : I32EnumAttrCase<"increase", 0>;
-def SetMaxRegisterActionDecrease   : I32EnumAttrCase<"decrease", 1>;
-def SetMaxRegisterAction : I32EnumAttr<"SetMaxRegisterAction", "NVVM set max register action",
-  [SetMaxRegisterActionDecrease, SetMaxRegisterActionIncrease]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
+def NVVM_FenceProxySyncRestrictOp : NVVM_Op<"fence.proxy.sync_restrict">,
+      Arguments<(ins MemOrderAcquireOrRelease:$order,
+                     DefaultValuedAttr<ProxyKindAttr, "ProxyKind::GENERIC">:$fromProxy,
+                     DefaultValuedAttr<ProxyKindAttr, "ProxyKind::async">:$toProxy)> {
+  let summary = "Uni-directional proxy fence operation with sync_restrict";
+  let description = [{
+    The `nvvm.fence.proxy.sync_restrict` Op used to establish
+    ordering between a prior memory access performed between proxies. Currently,
+    the ordering is only supported between async and generic proxies. `sync_restrict`
+    restricts `acquire` memory semantics to `shared_cluster` and `release` memory
+    semantics to `shared_cta` with cluster scope.
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
+  }];
+
+  let assemblyFormat = [{
+    $order oilist(
+      `from_proxy` `=` $fromProxy | `to_proxy` `=` $toProxy
+    ) attr-dict
+  }];
+  let llvmBuilder = [{
+    createIntrinsicCall(builder, getFenceProxySyncRestrictID($order));
+  }];
+
+  let hasVerifier = 1;
 }
-def SetMaxRegisterActionAttr : EnumAttr<NVVM_Dialect, SetMaxRegisterAction, "action">;
+} // let partition = NVVM_SyncPartition
 
 def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
+  let partition = NVVM_MiscPartition;
   let arguments = (ins I32Attr:$regCount, SetMaxRegisterActionAttr:$action);
-  let assemblyFormat = "$action $regCount attr-dict";
+  let assemblyFormat = "enum($action) $regCount attr-dict";
   let hasVerifier = 1;
   string llvmBuilder = [{
     auto intId = (op.getAction() == NVVM::SetMaxRegisterAction::increase) ?
@@ -842,40 +1572,11 @@ def NVVM_SetMaxRegisterOp : NVVM_Op<"setmaxregister"> {
   }];
 }
 
-def NVVM_FenceMbarrierInitOp : NVVM_PTXBuilder_Op<"fence.mbarrier.init"> {
-  let arguments = (ins );
-    let description = [{
-    Fence operation that applies on the prior nvvm.mbarrier.init
-    
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-membar)
-  }];
-  
-  let assemblyFormat = "attr-dict";
-  let extraClassDefinition = [{        
-    std::string $cppClass::getPtx() {
-      return std::string("fence.mbarrier_init.release.cluster;");
-    }
-  }];
-}
-
-def ShflKindBfly : I32EnumAttrCase<"bfly", 0>;
-def ShflKindUp   : I32EnumAttrCase<"up", 1>;
-def ShflKindDown : I32EnumAttrCase<"down", 2>;
-def ShflKindIdx  : I32EnumAttrCase<"idx", 3>;
-
-/// Enum attribute of the different shuffle kinds.
-def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
-  [ShflKindBfly, ShflKindUp, ShflKindDown, ShflKindIdx]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
-
 def NVVM_ShflOp :
-  NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>]>,
-  Results<(outs LLVM_Type:$res)>,
+  NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>, InferTypeOpAdaptor]>,
+  Results<(outs AnyTypeOf<[I32, F32, LLVMStructType]>:$res)>,
   Arguments<(ins I32:$thread_mask,
-                 LLVM_Type:$val,
+                 AnyTypeOf<[I32, F32]>:$val,
                  I32:$offset,
                  I32:$mask_and_clamp,
                  ShflKindAttr:$kind,
@@ -884,15 +1585,21 @@ def NVVM_ShflOp :
   let description = [{
     The `shfl.sync` Op implements data shuffle within threads of a warp.
     The `thread_mask` denotes the threads participating in the Op where
-    the bit position corresponds to a particular thread’s laneid.
+    the bit position corresponds to a particular thread's laneid.
     The `offset` specifies a source lane or source lane offset
     (depending on `kind`). The `val` is the input value to be copied from
     the source. The `mask_and_clamp` contains two packed values specifying
     a mask for logically splitting warps into sub-segments and an upper bound
     for clamping the source lane index.
     
+    The `return_value_and_is_valid` unit attribute can be specified to indicate 
+    that the return value is a two-element struct, where the first element is 
+    the result value and the second element is a predicate indicating if the 
+    computed source lane index is valid.
+    
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-shfl-sync)
   }];
+  let partition = NVVM_DataMovementPartition;
   string llvmBuilder = [{
       auto intId = getShflIntrinsicId(
           $_resultType, $kind, static_cast<bool>($return_value_and_is_valid));
@@ -900,28 +1607,16 @@ def NVVM_ShflOp :
           intId, {$thread_mask, $val, $offset, $mask_and_clamp});
   }];
   let assemblyFormat = [{
-    $kind $thread_mask `,` $val `,` $offset `,` $mask_and_clamp  attr-dict
+    enum($kind) $thread_mask `,` $val `,` $offset `,` $mask_and_clamp
+    (`return_value_and_is_valid` $return_value_and_is_valid^)? attr-dict
      `:` type($val) `->` type($res)
    }];
    let hasVerifier = 1;
 }
 
-def VoteSyncKindAny : I32EnumAttrCase<"any", 0>;
-def VoteSyncKindAll : I32EnumAttrCase<"all", 1>;
-def VoteSyncKindBallot : I32EnumAttrCase<"ballot", 2>;
-def VoteSyncKindUni : I32EnumAttrCase<"uni", 3>;
-
-def VoteSyncKind : I32EnumAttr<"VoteSyncKind", "NVVM vote sync kind",
-                               [VoteSyncKindAny, VoteSyncKindAll,
-                                VoteSyncKindBallot, VoteSyncKindUni]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-
-def VoteSyncKindAttr : EnumAttr<NVVM_Dialect, VoteSyncKind, "vote_sync_kind">;
-
+let partition = NVVM_SyncPartition in {
 def NVVM_VoteSyncOp
-    : NVVM_Op<"vote.sync">,
+    : NVVM_Op<"vote.sync", [InferTypeOpAdaptor]>,
       Results<(outs AnyTypeOf<[I32, I1]>:$res)>,
       Arguments<(ins I32:$mask, I1:$pred, VoteSyncKindAttr:$kind)> {
   let summary = "Vote across thread group";
@@ -939,7 +1634,7 @@ def NVVM_VoteSyncOp
     - `ballot`: In the ballot form, the destination result is a 32 bit integer.
       In this form, the predicate from each thread in membermask are copied into
       the corresponding bit position of the result, where the bit position
-      corresponds to the thread’s lane id.
+      corresponds to the thread's lane id.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-vote-sync)
   }];
@@ -947,16 +1642,40 @@ def NVVM_VoteSyncOp
     auto intId = getVoteSyncIntrinsicId($kind);
     $res = createIntrinsicCall(builder, intId, {$mask, $pred});
   }];
-  let assemblyFormat = "$kind $mask `,` $pred attr-dict `->` type($res)";
+  let assemblyFormat = "enum($kind) $mask `,` $pred attr-dict `->` type($res)";
   let hasVerifier = 1;
 }
 
 def NVVM_SyncWarpOp :
-  NVVM_Op<"bar.warp.sync">,
-  Arguments<(ins LLVM_Type:$mask)> {
-  string llvmBuilder = [{
-      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_bar_warp_sync, {$mask});
+  NVVM_IntrOp<"bar.warp.sync">,
+  Arguments<(ins I32:$mask)> {
+  let summary = "Warp Barrier Synchronization Op";
+  let description = [{
+    The `nvvm.bar.warp.sync` operation performs barrier synchronization for threads 
+    within a warp. 
+
+    This operation causes the executing thread to wait until all threads corresponding 
+    to the `mask` operand have executed a `bar.warp.sync` with the same mask value 
+    before resuming execution.
+
+    The `mask` operand specifies the threads participating in the barrier, where each 
+    bit position corresponds to the thread's lane ID within the warp. Only threads with 
+    their corresponding bit set in the mask participate in the barrier synchronization.
+
+    **Important constraints**:
+    - The behavior is undefined if the executing thread is not included in the mask 
+      (i.e., the bit corresponding to the thread's lane ID is not set)
+    - For compute capability sm_6x or below, all threads in the mask must execute 
+      the same `bar.warp.sync` instruction in convergence
+
+    This operation also guarantees memory ordering among participating threads. 
+    Threads within the warp that wish to communicate via memory can store to memory, 
+    execute `bar.warp.sync`, and then safely read values stored by other threads 
+    in the warp.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-bar-warp-sync)
   }];
+
   let assemblyFormat = "$mask attr-dict `:` type($mask)";
 }
 
@@ -965,53 +1684,132 @@ def NVVM_ElectSyncOp : NVVM_Op<"elect.sync">
   let summary = "Elect one leader thread";
   let description = [{
     The `elect.sync` instruction elects one predicated active leader
-    thread from among a set of threads specified in membermask.
-    The membermask is set to `0xFFFFFFFF` for the current version
-    of this Op. The predicate result is set to `True` for the
-    leader thread, and `False` for all other threads.
+    thread from among a set of threads specified in the `membermask`.
+    When the `membermask` is not provided explicitly, a default value
+    of `0xFFFFFFFF` is used. The predicate result is set to `True` for
+    the leader thread, and `False` for all other threads.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-elect-sync)
   }];
 
+  let arguments = (ins Optional<I32>:$membermask);
   let results = (outs I1:$pred);
-  let assemblyFormat = "attr-dict `->` type(results)";  
+  let assemblyFormat = "($membermask^)? attr-dict `->` type(results)";
   string llvmBuilder = [{
     auto *resultTuple = createIntrinsicCall(builder,
-        llvm::Intrinsic::nvvm_elect_sync, {builder.getInt32(0xFFFFFFFF)});
+        llvm::Intrinsic::nvvm_elect_sync,
+        {$membermask ? $membermask : builder.getInt32(0xFFFFFFFF)});
     // Extract the second value into $pred
     $pred = builder.CreateExtractValue(resultTuple, 1);
   }];
 }
+} // let partition = NVVM_SyncPartition
 
-def LoadCacheModifierCA : I32EnumAttrCase<"CA", 0, "ca">;
-def LoadCacheModifierCG : I32EnumAttrCase<"CG", 1, "cg">;
-def LoadCacheModifierCS : I32EnumAttrCase<"CS", 2, "cs">;
-def LoadCacheModifierLU : I32EnumAttrCase<"LU", 3, "lu">;
-def LoadCacheModifierCV : I32EnumAttrCase<"CV", 4, "cv">;
+//===----------------------------------------------------------------------===//
+// Permute Bytes (Prmt)
+//===----------------------------------------------------------------------===//
 
-/// Enum attribute of the different kinds.
-def LoadCacheModifierKind : I32EnumAttr<"LoadCacheModifierKind", 
-                                "NVVM load cache modifier kind",
-  [LoadCacheModifierCA, LoadCacheModifierCG, LoadCacheModifierCS, 
-    LoadCacheModifierLU, LoadCacheModifierCV]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
+def NVVM_PermuteOp : NVVM_SingleResultIntrinsicOp<"prmt", [Pure]>,
+                     Results<(outs I32:$res)>,
+                     Arguments<(ins I32:$lo, Optional<I32>:$hi, I32:$selector,
+                         PermuteModeAttr:$mode)> {
+  let summary = "Permute bytes from two 32-bit registers";
   let description = [{
-    Enum attribute of the different kinds of cache operators for load instructions.
+    The `nvvm.prmt` operation constructs a permutation of the
+    bytes of the first one or two operands, selecting based on 
+    the 2 least significant bits of the final operand.
+    
+    The bytes in the first one or two source operands are numbered. 
+    The first source operand (%lo) is numbered {b3, b2, b1, b0}, 
+    in the case of the '``default``', '``f4e``' and '``b4e``' variants, 
+    the second source operand (%hi) is numbered {b7, b6, b5, b4}.
 
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#id62)    
+    Modes:
+    - `default`: Index mode         - each nibble in `selector` selects a byte from the 8-byte pool
+    - `f4e`    : Forward 4 extract  - extracts 4 contiguous bytes starting from position in `selector`
+    - `b4e`    : Backward 4 extract - extracts 4 contiguous bytes in reverse order
+    - `rc8`    : Replicate 8        - replicates the lower 8 bits across the 32-bit result
+    - `ecl`    : Edge clamp left    - clamps out-of-range indices to the leftmost valid byte
+    - `ecr`    : Edge clamp right   - clamps out-of-range indices to the rightmost valid byte  
+    - `rc16`   : Replicate 16       - replicates the lower 16 bits across the 32-bit result
+
+    Depending on the 2 least significant bits of the %selector operand, the result
+    of the permutation is defined as follows:
+
+    +------------+----------------+--------------+
+    |    Mode    | %selector[1:0] |    Output    |
+    +------------+----------------+--------------+
+    | '``f4e``'  | 0              | {3, 2, 1, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {4, 3, 2, 1} |
+    |            +----------------+--------------+
+    |            | 2              | {5, 4, 3, 2} |
+    |            +----------------+--------------+
+    |            | 3              | {6, 5, 4, 3} |
+    +------------+----------------+--------------+
+    | '``b4e``'  | 0              | {5, 6, 7, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {6, 7, 0, 1} |
+    |            +----------------+--------------+
+    |            | 2              | {7, 0, 1, 2} |
+    |            +----------------+--------------+
+    |            | 3              | {0, 1, 2, 3} |
+    +------------+----------------+--------------+
+    | '``rc8``'  | 0              | {0, 0, 0, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {1, 1, 1, 1} |
+    |            +----------------+--------------+
+    |            | 2              | {2, 2, 2, 2} |
+    |            +----------------+--------------+
+    |            | 3              | {3, 3, 3, 3} |
+    +------------+----------------+--------------+
+    | '``ecl``'  | 0              | {3, 2, 1, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {3, 2, 1, 1} |
+    |            +----------------+--------------+
+    |            | 2              | {3, 2, 2, 2} |
+    |            +----------------+--------------+
+    |            | 3              | {3, 3, 3, 3} |
+    +------------+----------------+--------------+
+    | '``ecr``'  | 0              | {0, 0, 0, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {1, 1, 1, 0} |
+    |            +----------------+--------------+
+    |            | 2              | {2, 2, 1, 0} |
+    |            +----------------+--------------+
+    |            | 3              | {3, 2, 1, 0} |
+    +------------+----------------+--------------+
+    | '``rc16``' | 0              | {1, 0, 1, 0} |
+    |            +----------------+--------------+
+    |            | 1              | {3, 2, 3, 2} |
+    |            +----------------+--------------+
+    |            | 2              | {1, 0, 1, 0} |
+    |            +----------------+--------------+
+    |            | 3              | {3, 2, 3, 2} |
+    +------------+----------------+--------------+
+    
+    [For more information, see PTX ISA]
+    (https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prmt)
   }];
+  let partition = NVVM_DataMovementPartition;
+
+  let assemblyFormat = [{
+    $mode $selector `,` $lo  (`,` $hi^)?  attr-dict `:` type($res)
+  }];
+
+  let hasVerifier = 1;
 }
 
-def LoadCacheModifierAttr : EnumAttr<NVVM_Dialect, LoadCacheModifierKind, "load_cache_modifier">;
-
+let partition = NVVM_AsyncCopyPartition in {
 def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
   Arguments<(ins LLVM_PointerShared:$dst,
                  LLVM_PointerGlobal:$src,
                  I32Attr:$size,
                  LoadCacheModifierAttr:$modifier,
-                 Optional<LLVM_Type>:$cpSize)> {
-  let assemblyFormat = "$dst `,` $src `,` $size `,` `cache` `=` $modifier (`,` $cpSize^)? attr-dict `:` type(operands)";
+                 Optional<I32>:$cpSize)> {
+  let assemblyFormat = "$dst `,` $src `,` $size `,` `cache` `=` "
+                       "enum($modifier) (`,` $cpSize^)? attr-dict `:` "
+                       "type(operands)";
   let hasVerifier = 1;
   let extraClassDeclaration = [{
     static llvm::Intrinsic::ID
@@ -1045,54 +1843,29 @@ def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
   }];
   let assemblyFormat = "$n attr-dict";
 }
+} // let partition = NVVM_AsyncCopyPartition
 
-def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive"> {
+def NVVM_CpAsyncMBarrierArriveOp : NVVM_VoidIntrinsicOp<"cp.async.mbarrier.arrive"> {
   let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive";
   let description = [{
-    The `cp.async.mbarrier.arrive` Op makes the mbarrier object track
+    The `cp.async.mbarrier.arrive` Op makes the *mbarrier object* track
     all prior cp.async operations initiated by the executing thread.
-    The `addr` operand specifies the address of the mbarrier object
-    in generic address space. The `noinc` attr impacts how the
-    mbarrier's state is updated.
+    The `addr` operand specifies the address of the *mbarrier object*
+    in generic or shared::cta address space. When it is generic, the
+    underlying memory should fall within the shared::cta space;
+    otherwise the behavior is undefined. The `noinc` attr impacts
+    how the mbarrier's state is updated.
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-cp-async-mbarrier-arrive)
   }];
-  let assemblyFormat = "$addr attr-dict `:` type(operands)";
+  let partition = NVVM_MBarrierPartition;
 
   let arguments = (ins
-    LLVM_AnyPointer:$addr, DefaultValuedAttr<I1Attr, "0">:$noinc);
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
+    DefaultValuedAttr<I1Attr, "0">:$noinc);
 
-  string llvmBuilder = [{
-    auto intId = $noinc ?
-      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc :
-      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive;
-
-    createIntrinsicCall(builder, intId, {$addr});
-  }];
-}
-
-def NVVM_CpAsyncMBarrierArriveSharedOp : NVVM_Op<"cp.async.mbarrier.arrive.shared"> {
-  let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive.shared";
-  let description = [{
-    The `cp.async.mbarrier.arrive.shared` Op makes the mbarrier object
-    track all prior cp.async operations initiated by the executing thread.
-    The `addr` operand specifies the address of the mbarrier object in
-    shared memory. The `noinc` attr impacts how the mbarrier's state
-    is updated. 
-    
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-cp-async-mbarrier-arrive)
-  }];
-  let assemblyFormat = "$addr attr-dict `:` type(operands)";
-
-  let arguments = (ins
-    LLVM_PointerShared:$addr, DefaultValuedAttr<I1Attr, "0">:$noinc);
-
-  string llvmBuilder = [{
-    auto intId = $noinc ?
-      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_noinc_shared :
-      llvm::Intrinsic::nvvm_cp_async_mbarrier_arrive_shared;
-
-    createIntrinsicCall(builder, intId, {$addr});
+  let assemblyFormat = [{
+    $addr oilist(`noinc` `=` $noinc) attr-dict `:` type(operands)
   }];
 }
 
@@ -1100,36 +1873,7 @@ def NVVM_CpAsyncMBarrierArriveSharedOp : NVVM_Op<"cp.async.mbarrier.arrive.share
 // NVVM Conversion Ops (for "cvt.*" family of PTX instructions)
 //===----------------------------------------------------------------------===//
 
-// Attributes for the floating point rounding modes supported by PTX
-def FPRoundingModeNone : I32EnumAttrCase<"NONE", 0, "none">;
-def FPRoundingModeRN   : I32EnumAttrCase<"RN",   1, "rn">;
-def FPRoundingModeRM   : I32EnumAttrCase<"RM",   2, "rm">;
-def FPRoundingModeRP   : I32EnumAttrCase<"RP",   3, "rp">;
-def FPRoundingModeRZ   : I32EnumAttrCase<"RZ",   4, "rz">;
-def FPRoundingModeRNA  : I32EnumAttrCase<"RNA",  5, "rna">;
-
-def FPRoundingMode : I32EnumAttr<"FPRoundingMode", "NVVM FPRoundingMode kind",
-  [FPRoundingModeNone, FPRoundingModeRN, FPRoundingModeRM,
-    FPRoundingModeRP, FPRoundingModeRZ, FPRoundingModeRNA]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def FPRoundingModeAttr : EnumAttr<NVVM_Dialect, FPRoundingMode, "fp_rnd_mode"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def SaturationModeNone   : I32EnumAttrCase<"NONE", 0, "none">;
-def SaturationModeFinite : I32EnumAttrCase<"SATFINITE", 1, "satfinite">;
-
-def SaturationMode : I32EnumAttr<"SaturationMode", "NVVM SaturationMode kind",
-  [SaturationModeNone, SaturationModeFinite]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
+let partition = NVVM_ConvertPartition in {
 def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
   let summary = "Convert the given float input to TF32";
   let description = [{
@@ -1150,7 +1894,11 @@ def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     DefaultValuedAttr<BoolAttr, "false">:$relu);
 
-  let assemblyFormat = "$src attr-dict";
+  let assemblyFormat = [{
+    $src oilist(
+      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu
+    ) attr-dict
+  }];
 
   let extraClassDeclaration = [{
     static llvm::Intrinsic::ID getIntrinsicID(NVVM::FPRoundingMode,
@@ -1164,17 +1912,101 @@ def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
   }];
 }
 
-def ConvertFP6E2M3 : I32EnumAttrCase<"E2M3", 0, "e2m3">;
-def ConvertFP6E3M2 : I32EnumAttrCase<"E3M2", 1, "e3m2">;
+def NVVM_ConvertF32x2ToF4x2Op : NVVM_Op<"convert.f32x2.to.f4x2"> {
+  let summary = "Convert a pair of float inputs to f4x2";
+  let description = [{
+    This Op converts each of the given float inputs to the specified fp4 type.
+    The result `dst` is returned as an i8 type where the converted values are 
+    packed such that the value converted from `a` is stored in the upper 4 bits 
+    of `dst` and the value converted from `b` is stored in the lower 4 bits of 
+    `dst`.
+    The `rnd` attribute specifies the rounding mode (`rn` or `rz`).
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
 
-def ConvertFP6Type : I32EnumAttr<"ConvertFP6Type", "NVVM ConvertFP6Type kind",
-  [ConvertFP6E2M3, ConvertFP6E3M2]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs I8:$dst);
+  let arguments = (ins F32:$a, F32:$b, Optional<I8>:$scale_factor,
+                       DefaultValuedAttr<BoolAttr, "false">:$relu,
+                       TypeAttr:$dstTy,
+                       DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
+                         [EnumAttrIsOneOf<FPRoundingModeAttr,
+                           [FPRoundingModeRN, FPRoundingModeRZ]>]>,
+                         "FPRoundingMode::RN">:$rnd,
+                       DefaultValuedAttr<BoolAttr, "false">:$pzo);
+  let assemblyFormat = [{
+    $a `,` $b (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($dst) `(` $dstTy `)`
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op, 
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [intId, args] = NVVM::ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
+    $dst = builder.CreateTruncOrBitCast(packedI16, llvm::Type::getInt8Ty(builder.getContext()));
+  }];
 }
-def ConvertFP6TypeAttr : EnumAttr<NVVM_Dialect, ConvertFP6Type, "convert_fp6_type"> {
-  let assemblyFormat = "`<` $value `>`";
+
+class NVVM_ConvertFPx2ToF4x2Op<string srcType>
+    : NVVM_Op<"convert."#!tolower(srcType)#"x2.to.f4x2"> {
+  let summary = "Convert an " # !tolower(srcType) # "x2 input to f4x2";
+  let description = [{
+    This Op converts each of the given }]#srcType#[{ inputs in an }]#!tolower
+    (srcType)#[{x2 vector to the specified fp4 type.
+    The result `dst` is returned as an i8 type where the converted values are 
+    packed such that the value converted from the first element of `a` is 
+    stored in the lower 4 bits of `dst` and the value converted from the second 
+    element of `a` is stored in the upper 4 bits of `dst`.
+    The `rnd` attribute specifies the rounding mode (`rn` or `rz`).
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
+    }];
+  let results = (outs I8:$dst);
+  let arguments = (ins
+      VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
+      Optional<I8>:$scale_factor,
+      DefaultValuedAttr<BoolAttr, "false">:$relu,
+      TypeAttrOf<F4E2M1FN>:$dstTy,
+      DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
+        [EnumAttrIsOneOf<FPRoundingModeAttr,
+          [FPRoundingModeRN, FPRoundingModeRZ]>]>,
+        "FPRoundingMode::RN">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$pzo);
+
+  let assemblyFormat = [{
+    $src (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`
+  }];
+
+  let extraClassDeclaration = [{
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::Convert}]#srcType#[{x2ToF4x2Op &op, 
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [intId, args] = NVVM::Convert}]#srcType#[{x2ToF4x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
+    $dst = builder.CreateTruncOrBitCast(packedI16, llvm::Type::getInt8Ty(builder.getContext()));
+  }];
 }
+
+def NVVM_ConvertF16x2ToF4x2Op : NVVM_ConvertFPx2ToF4x2Op<"F16">;
+def NVVM_ConvertBF16x2ToF4x2Op : NVVM_ConvertFPx2ToF4x2Op<"BF16">;
 
 def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
   let summary = "Convert a pair of float inputs to f6x2";
@@ -1188,28 +2020,45 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
     stored in the lower 8 bits of `dst` with 2 MSB bits padded with zeros.
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
+    The `rnd` attribute specifies the rounding mode (`rn` or `rz`).
     The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
 
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins 
-    ConvertFP6TypeAttr:$type,
     F32:$a,
     F32:$b,
-    DefaultValuedAttr<BoolAttr, "false">:$relu);
-  let assemblyFormat = "$type $a `,` $b attr-dict `:` type($dst)";
-  
+    Optional<I8>:$scale_factor,
+    DefaultValuedAttr<BoolAttr, "false">:$relu,
+    TypeAttr:$dstTy,
+    DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
+      [EnumAttrIsOneOf<FPRoundingModeAttr,
+        [FPRoundingModeRN, FPRoundingModeRZ]>]>,
+      "FPRoundingMode::RN">:$rnd,
+    DefaultValuedAttr<BoolAttr, "false">:$pzo);
+  let assemblyFormat = [{
+    $a `,` $b (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($dst) `(` $dstTy `)`
+  }];
+  let hasVerifier = 1;
+
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP6Type,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF6x2Op &op,
+                          LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF32x2ToF6x2Op::getIntrinsicID($type, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    auto [intId, args] =
+        NVVM::ConvertF32x2ToF6x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -1218,18 +2067,64 @@ def NVVM_ConvertF32x2ToF6x2Op : NVVM_Op<"convert.f32x2.to.f6x2"> {
   }];
 }
 
-def ConvertFP8E4M3 : I32EnumAttrCase<"E4M3", 0, "e4m3">;
-def ConvertFP8E5M2 : I32EnumAttrCase<"E5M2", 1, "e5m2">;
-def ConvertFP8UE8M0 : I32EnumAttrCase<"UE8M0", 2, "ue8m0">;
+class NVVM_ConvertFPx2ToF6x2Op<string srcType>
+    : NVVM_Op<"convert."#!tolower(srcType)#"x2.to.f6x2"> {
+  let summary = "Convert an " # !tolower(srcType) # "x2 input to f6x2";
+  let description = [{
+    This Op converts each of the given }]#srcType#[{ inputs in an }]#!tolower
+    (srcType)#[{x2 vector to the specified fp6 type. The result `dst` is 
+    represented either as an i16 type or as a vector of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from the first element of `a` is stored in the 
+    lower 8 bits of `dst` with 2 MSB bits padded with zeros and the value 
+    converted from the second element of `a` is stored in the upper 8 bits of 
+    `dst` with 2 MSB bits padded with zeros.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector with 2 MSB bits padded with zeros.
+    The `rnd` attribute specifies the rounding mode (`rn` or `rz`).
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
+  }];
 
-def ConvertFP8Type : I32EnumAttr<"ConvertFP8Type", "NVVM ConvertFP8Type kind",
-  [ConvertFP8E4M3, ConvertFP8E5M2, ConvertFP8UE8M0]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins
+      VectorOfLengthAndType<[2], [!cast<Type>(srcType)]>:$src,
+      Optional<I8>:$scale_factor,
+      DefaultValuedAttr<BoolAttr, "false">:$relu,
+      TypeAttrOf<AnyTypeOf<[F6E2M3FN, F6E3M2FN]>>:$dstTy,
+      DefaultValuedAttr<ConfinedAttr<FPRoundingModeAttr,
+        [EnumAttrIsOneOf<FPRoundingModeAttr,
+          [FPRoundingModeRN, FPRoundingModeRZ]>]>,
+        "FPRoundingMode::RN">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$pzo);
+  let assemblyFormat = [{
+    $src (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($src) `->` type($dst) `(` $dstTy `)`
+  }];
+  let extraClassDeclaration = [{
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::Convert}]#srcType#[{x2ToF6x2Op &op,
+                          LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [intId, args] = NVVM::Convert}]#srcType#[{x2ToF6x2Op::getIntrinsicIDAndArgs(
+        op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                        llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
 }
-def ConvertFP8TypeAttr : EnumAttr<NVVM_Dialect, ConvertFP8Type, "convert_fp8_type"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+
+def NVVM_ConvertF16x2ToF6x2Op : NVVM_ConvertFPx2ToF6x2Op<"F16">;
+def NVVM_ConvertBF16x2ToF6x2Op : NVVM_ConvertFPx2ToF6x2Op<"BF16">;
 
 def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   let summary = "Convert a pair of float inputs to f8x2";
@@ -1243,8 +2138,13 @@ def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
     The `rnd` and `sat` attributes specify the rounding and saturation modes respectively.
+    Conversions to `f8E4M3FN` and `f8E5M2` support `rn` and `rz` rounding.
     The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction. `pzo` is not supported for
+    conversions to `f8E8M0FNU` or `f8E5M3FNU`.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
+    Scaled conversions to `f8E5M3FNU` support `rn` and `rz` only.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -1252,24 +2152,29 @@ def NVVM_ConvertF32x2ToF8x2Op : NVVM_Op<"convert.f32x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    ConvertFP8TypeAttr:$type,
     F32:$a,
     F32:$b,
+    Optional<I8>:$scale_factor,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
-    DefaultValuedAttr<BoolAttr, "false">:$relu);
-  let assemblyFormat = "$type $a `,` $b attr-dict `:` type($dst)";
+    DefaultValuedAttr<BoolAttr, "false">:$relu,
+    TypeAttr:$dstTy,
+    DefaultValuedAttr<BoolAttr, "false">:$pzo);
+  let assemblyFormat = [{
+    $a `,` $b (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($dst) `(` $dstTy `)`
+  }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP8Type to,
-                                              NVVM::FPRoundingMode rnd,
-                                              NVVM::SaturationMode sat,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF8x2Op &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
   
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicID($type, $rnd, $sat, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a, $b});
+    auto [intId, args] = NVVM::ConvertF32x2ToF8x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -1291,8 +2196,14 @@ def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
     second element of `a` is stored in the lower 8 bits of `dst`.
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
+    The `rnd` attribute specifies the rounding mode. Conversions to
+    `f8E4M3FN` and `f8E5M2` support `rn` and `rz`. Conversions to
+    `f8E5M3FNU` also support `rp`, except when a scale factor is present.
     The `relu` attribute, when set, lowers to the '.relu' variant of
-    the cvt instruction.
+    the cvt instruction. The `pzo` attribute, when set, lowers to the
+    '.pzo' variant of the cvt instruction. `relu` and `pzo` are not
+    supported for conversions to `f8E5M3FNU`.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -1300,19 +2211,29 @@ def NVVM_ConvertF16x2ToF8x2Op : NVVM_Op<"convert.f16x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    ConvertFP8TypeAttr:$type,
     VectorOfLengthAndType<[2], [F16]>:$a,
-    DefaultValuedAttr<BoolAttr, "false">:$relu);
-  let assemblyFormat = "$type $a attr-dict `:` type($a) `->` type($dst)";
+    Optional<I8>:$scale_factor,
+    DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+    DefaultValuedAttr<BoolAttr, "false">:$relu,
+    TypeAttr:$dstTy,
+    DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::RN">:$rnd,
+    DefaultValuedAttr<BoolAttr, "false">:$pzo);
+  let assemblyFormat = [{
+    $a (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict `:` type($a) `->` type($dst) `(` $dstTy `)`
+  }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::ConvertFP8Type to,
-                                              bool hasRelu);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertF16x2ToF8x2Op &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertF16x2ToF8x2Op::getIntrinsicID($type, $relu);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    auto [intId, args] =
+        NVVM::ConvertF16x2ToF8x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -1325,17 +2246,22 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let summary = "Convert a pair of bf16 inputs to f8x2";
   let description = [{
     This Op converts the given bf16 inputs in a bf16x2 vector to the specified 
-    f8 type.
-    The result `dst` is represented as an i16 type or as a vector
-    of two i8 types.
-    If `dst` is returned as an i16 type, the converted values from `a`
-    are packed such that the value converted from the first element of `a`
-    is stored in the upper 8 bits of `dst` and the value converted from the
-    second element of `a` is stored in the lower 8 bits of `dst`.
+    f8 type. The result `dst` is represented either as a packed i16 type or as 
+    a vector of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from the first element of `a` is stored in the 
+    lower 8 bits of `dst` and the value converted from the second element of 
+    `a` is stored in the upper 8 bits of `dst`.
     If `dst` is returned as a vector type, each converted value is stored as an 
     i8 element in the vector.
     The `rnd` and `sat` attributes specify the rounding and saturation modes 
-    respectively.
+    respectively. Conversions to `f8E4M3FN` and `f8E5M2` support `rn` and `rz`
+    rounding. The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction. The `pzo` attribute, when set, lowers to the '.pzo'
+    variant of the cvt instruction. `pzo` is not supported for conversions to
+    `f8E8M0FNU` or `f8E5M3FNU`.
+    The optional `scale_factor` operand is an i8 `ue8m0` scale.
+    Scaled conversions to `f8E5M3FNU` support `rn` and `rz` only.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
   }];
@@ -1343,20 +2269,31 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
   let hasVerifier = 1;
   let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
   let arguments = (ins
-    ConvertFP8TypeAttr:$type,
-    VectorOfLengthAndType<[2], [BF16]>:$a,
+    VectorOfLengthAndType<[2], [BF16]>:$src,
+    Optional<I8>:$scale_factor,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
-    DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat);
-  let assemblyFormat = "$type $a attr-dict `:` type($a) `->` type($dst)";
-  
+    DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+    DefaultValuedAttr<BoolAttr, "false">:$relu,
+    TypeAttrOf<AnyTypeOf<[F8E8M0FNU, F8E5M3FNU, F8E4M3FN, F8E5M2]>>:$dstTy,
+    DefaultValuedAttr<BoolAttr, "false">:$pzo);
+  let assemblyFormat = [{
+    $src (`,` $scale_factor^)? oilist(
+      `rnd` `=` $rnd | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
+    ) attr-dict
+    `:` type($src) `->` type($dst) `(` $dstTy `)`
+  }];
+
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::FPRoundingMode rnd,
-                                              NVVM::SaturationMode sat);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::ConvertBF16x2ToF8x2Op &op,
+                          LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
   }];
 
   string llvmBuilder = [{
-    auto intId = NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicID($rnd, $sat);
-    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, {$a});
+    auto [intId, args] =
+        NVVM::ConvertBF16x2ToF8x2Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, intId, args);
     if(op.getDst().getType().isInteger(16))
       $dst = packedI16;
     else
@@ -1364,6 +2301,363 @@ def NVVM_ConvertBF16x2ToF8x2Op : NVVM_Op<"convert.bf16x2.to.f8x2"> {
                       llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
   }];
 }
+} // let partition = NVVM_ConvertPartition
+
+def SaturationModeSatfiniteOrNone :
+  ConfinedAttr<SaturationModeAttr, [EnumAttrIsOneOf<SaturationModeAttr,
+                [SaturationModeNone, SaturationModeFinite]>]>;
+
+class NVVM_ConvertToFP16x2Op_Base <string srcTypeStr, Type srcStorageType, string dstTypeStr, list<Type> supportedTypes, int needVerify = 0>
+: NVVM_SingleResultIntrinsicOp<"convert." # !tolower(srcTypeStr) # "x2.to." # !tolower(dstTypeStr) # "x2", [], "$dst"> {
+  let summary = "Convert a pair of " # !tolower(srcTypeStr) # " inputs to " # !tolower(dstTypeStr) # "x2";
+  let description = [{
+    This Op converts the given }] # !tolower(srcTypeStr) # [{ inputs in a }] #
+    !if(!eq(srcTypeStr, "F4"), "packed i8", "i8x2 vector") # [{ to }] #
+    !tolower(dstTypeStr) # [{.
+
+    The result `dst` is represented as a vector of }] # !tolower(dstTypeStr) # [{ elements.
+
+    The `relu` attribute, when set, lowers to the '.relu' variant of
+    the cvt instruction.}] #
+
+    !if(!eq(dstTypeStr, "BF16"),
+    [{
+
+    The `sat` attribute specifies the saturation mode.
+
+    The optional scaling-factors for each of the inputs are provided through
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported
+    as the type of the scale-factor currently.}], "") # [{
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+  let results = (outs VectorOfLengthAndType<[2], [!cast<Type>(dstTypeStr)]>:$dst);
+  let arguments = !if(!eq(dstTypeStr, "F16"),
+    (ins srcStorageType:$src,
+         TypeAttrOf<AnyTypeOf<supportedTypes>>:$srcType,
+         DefaultValuedAttr<BoolAttr, "false">:$relu),
+    (ins srcStorageType:$src,
+         Optional<I16>:$scaleFactor,
+         TypeAttrOf<AnyTypeOf<supportedTypes>>:$srcType,
+         DefaultValuedAttr<SaturationModeSatfiniteOrNone, "SaturationMode::NONE">:$sat,
+         DefaultValuedAttr<BoolAttr, "false">:$relu));
+  let assemblyFormat = 
+    !if(!eq(dstTypeStr, "F16"),
+      "$src oilist(`relu` `=` $relu) attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)",
+      "$src oilist(`scale_factor` `=` $scaleFactor | `sat` `=` $sat | `relu` `=` $relu) attr-dict `:` type($src) `(` $srcType `)` `->` type($dst)");
+  let hasVerifier = needVerify;
+}
+
+let partition = NVVM_ConvertPartition in {
+def NVVM_ConvertF8x2ToF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "F16",
+    [F8E4M3FN, F8E5M2, F8E5M3FNU], 1>;
+def NVVM_ConvertF8x2ToBF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F8", VectorOfLengthAndType<[2], [I8]>, "BF16",
+    [F8E8M0FNU, F8E4M3FN, F8E5M2, F8E5M3FNU], 1> {
+  let append description = [{
+
+    Example:
+
+    ```mlir
+    // Basic conversion from f8E4M3FN.
+    %res1 = nvvm.convert.f8x2.to.bf16x2 %src
+        : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+
+    // Conversion from f8E5M2 with relu and saturation.
+    %res2 = nvvm.convert.f8x2.to.bf16x2 %src
+        sat = <satfinite> relu = true
+        : vector<2xi8> (f8E5M2) -> vector<2xbf16>
+
+    // Conversion with a packed ue8m0 scale-factor.
+    %res3 = nvvm.convert.f8x2.to.bf16x2 %src
+        scale_factor = %scaleFactor
+        : vector<2xi8> (f8E4M3FN) -> vector<2xbf16>
+    ```
+  }];
+}
+def NVVM_ConvertF6x2ToF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "F16", 
+    [F6E2M3FN, F6E3M2FN]>;
+def NVVM_ConvertF6x2ToBF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F6", VectorOfLengthAndType<[2], [I8]>, "BF16",
+    [F6E2M3FN, F6E3M2FN]> {
+  let append description = [{
+
+    Example:
+
+    ```mlir
+    // Basic conversion from f6E2M3FN.
+    %res1 = nvvm.convert.f6x2.to.bf16x2 %src
+        : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+
+    // Conversion from f6E3M2FN with relu and saturation.
+    %res2 = nvvm.convert.f6x2.to.bf16x2 %src
+        sat = <satfinite> relu = true
+        : vector<2xi8> (f6E3M2FN) -> vector<2xbf16>
+
+    // Conversion with a packed ue8m0 scale-factor.
+    %res3 = nvvm.convert.f6x2.to.bf16x2 %src
+        scale_factor = %scaleFactor
+        : vector<2xi8> (f6E2M3FN) -> vector<2xbf16>
+    ```
+  }];
+}
+def NVVM_ConvertF4x2ToF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F4", I8, "F16", [F4E2M1FN]>;
+def NVVM_ConvertF4x2ToBF16x2Op :
+  NVVM_ConvertToFP16x2Op_Base<"F4", I8, "BF16", [F4E2M1FN]> {
+  let append description = [{
+
+    Example:
+
+    ```mlir
+    // Basic conversion; the f4x2 source is packed in a single i8.
+    %res1 = nvvm.convert.f4x2.to.bf16x2 %src
+        : i8 (f4E2M1FN) -> vector<2xbf16>
+
+    // Conversion with relu and saturation.
+    %res2 = nvvm.convert.f4x2.to.bf16x2 %src
+        sat = <satfinite> relu = true
+        : i8 (f4E2M1FN) -> vector<2xbf16>
+
+    // Conversion with a packed ue8m0 scale-factor.
+    %res3 = nvvm.convert.f4x2.to.bf16x2 %src
+        scale_factor = %scaleFactor
+        : i8 (f4E2M1FN) -> vector<2xbf16>
+    ```
+  }];
+}
+
+def NVVM_ConvertF32x2ToS2F6x2Op : NVVM_Op<"convert.f32x2.to.s2f6x2"> {
+  let summary = "Convert a pair of f32 inputs to S2F6x2";
+  let description = [{
+    This Op converts each of the given f32 inputs to the
+    S2F6x2 type. The result `dst` can be either a packed i16 type or a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from `a` is stored in the upper 8 bits of `dst` 
+    and the value converted from `b` is stored in the lower 8 bits of `dst`.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
+    The `relu` attribute, when set, lowers to the '.relu' variant
+    of the cvt instruction.
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins F32:$a, F32:$b,
+      Optional<I16>:$scaleFactor,
+      DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat =
+      "$a `,` $b oilist(`scale_factor` `=` $scaleFactor | `relu` `=` $relu) "
+      "attr-dict `:` type($dst)";
+  let extraClassDeclaration = [{
+    static IDArgPair getIntrinsicIDAndArgs(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::ConvertF32x2ToS2F6x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, id, args);
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                      llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
+}
+
+def NVVM_ConvertBF16x2ToS2F6x2Op : NVVM_Op<"convert.bf16x2.to.s2f6x2"> {
+  let summary = "Convert a pair of BF16 inputs to S2F6x2";
+  let description = [{
+    This Op converts each of the given BF16 inputs in a bf16x2 vector to the
+    S2F6x2 type. The result `dst` can be either a packed i16 type or a vector
+    of two i8 types.
+    If `dst` is returned as an i16 type, the converted values are packed such 
+    that the value converted from the first element of `a` is stored in the 
+    lower 8 bits of `dst` and the value converted from the second element of 
+    `a` is stored in the upper 8 bits of `dst`.
+    If `dst` is returned as a vector type, each converted value is stored as an 
+    i8 element in the vector.
+    The `relu` attribute, when set, lowers to the '.relu' variant
+    of the cvt instruction.
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs AnyTypeOf<[I16, VectorOfLengthAndType<[2], [I8]>]>:$dst);
+  let arguments = (ins
+      VectorOfLengthAndType<[2], [BF16]>:$src,
+      Optional<I16>:$scaleFactor,
+      DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat =
+      "$src oilist(`scale_factor` `=` $scaleFactor | `relu` `=` $relu) "
+      "attr-dict `:` type($src) `->` type($dst)";
+  let extraClassDeclaration = [{
+    static IDArgPair getIntrinsicIDAndArgs(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::ConvertBF16x2ToS2F6x2Op::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    llvm::Value *packedI16 = createIntrinsicCall(builder, id, args);
+    if(op.getDst().getType().isInteger(16))
+      $dst = packedI16;
+    else
+      $dst = builder.CreateBitCast(packedI16,
+                      llvm::FixedVectorType::get(llvm::Type::getInt8Ty(builder.getContext()), 2));
+  }];
+}
+
+def NVVM_ConvertS2F6x2ToBF16x2Op : NVVM_SingleResultIntrinsicOp<"convert.s2f6x2.to.bf16x2", [], "$dst"> {
+  let summary = "Convert s2f6x2 to bf16x2";
+  let description = [{
+    This Op converts a pair of s2f6x2 inputs to bf16x2 type. The result `dst` 
+    is represented as a vector of two bf16 elements.
+
+    The `relu` attribute, when set, lowers to the '.relu' variant
+    of the cvt instruction.
+    
+    The optional scaling-factors for each of the inputs are provided through 
+    the operand `scaleFactor` as a packed i16 type. Only `ue8m0` is supported 
+    as the type of the scale-factor currently.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+
+  let results = (outs VectorOfLengthAndType<[2], [BF16]>:$dst);
+  let arguments = (ins VectorOfLengthAndType<[2], [I8]>:$src,
+      Optional<I16>:$scaleFactor,
+      DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+      DefaultValuedAttr<BoolAttr, "false">:$relu);
+  let assemblyFormat =
+      "$src oilist(`scale_factor` `=` $scaleFactor | `sat` `=` $sat | `relu` `=` $relu) "
+      "attr-dict `:` type($src) `->` type($dst)";
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Stochastic Rounding Conversion Ops
+//===----------------------------------------------------------------------===//
+
+// Base class for conversions from F32x2 to FPx2 formats
+// (F16x2, BF16x2)
+class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstType> :
+  NVVM_Op<mnemonic, [Pure]>,
+  Results<(outs dstType:$dst)>,
+  Arguments<(ins F32:$src_hi, F32:$src_lo,
+                 Optional<I32>:$random_bits,
+                 DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
+                 DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+                 DefaultValuedAttr<BoolAttr, "false">:$relu,
+                 DefaultValuedAttr<BoolAttr, "false">:$pzo)> {
+  let summary = "Convert two F32 values to packed " # !tolower(dstFormat) # ".";
+  let description = [{
+    Converts two F32 values to packed }] # !tolower(dstFormat) # [{ format with 
+    the specified rounding mode. The `src_hi` and `src_lo` parameters 
+    correspond to operands `a` and `b` in the PTX ISA, respectively.
+    
+    The `random_bits` parameter is required for stochastic rounding and 
+    provides the [random bits](}] #
+    !if(!eq(dstFormat, "F16x2"),
+    "https://docs.nvidia.com/cuda/parallel-thread-execution/#cvt-rs-rbits-layout-f16",
+    "https://docs.nvidia.com/cuda/parallel-thread-execution/#cvt-rs-rbits-layout-bf16") #
+    [{) to be used for the conversion.
+
+    The `relu` attribute clamps negative results to 0.
+
+    The `sat` attribute determines saturation behavior.
+
+    The `pzo` attribute, when set, lowers to the '.pzo' variant of the cvt
+    instruction. `pzo` is not supported with the RS rounding mode.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+  
+  let assemblyFormat = [{
+    $src_hi `,` $src_lo oilist(
+      `random_bits` `=` $random_bits | `rnd` `=` $rnd
+      | `sat` `=` $sat | `relu` `=` $relu | `pzo` `=` $pzo
+    )
+    attr-dict `:` type($dst)
+  }];
+
+  let hasVerifier = 1;
+  
+  let extraClassDeclaration = [{
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(
+      NVVM::ConvertF32x2To}] # dstFormat # [{Op &op, 
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+  
+  string llvmBuilder = [{
+    auto [intId, args] = mlir::NVVM::ConvertF32x2To}] # dstFormat # 
+    [{Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
+    $dst = createIntrinsicCall(builder, intId, args);
+  }];
+}
+
+// F32x2 -> F16x2
+def NVVM_ConvertF32x2ToF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"F16x2", "convert.f32x2.to.f16x2", VectorOfLengthAndType<[2], [F16]>>;
+
+// F32x2 -> BF16x2
+def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"BF16x2", "convert.f32x2.to.bf16x2", VectorOfLengthAndType<[2], [BF16]>>;
+
+// Base class for stochastic rounding conversions from F32x4 to FPx4 formats
+// (E4M3x4, E5M2x4, E2M3x4, E3M2x4, E2M1x4)
+// These operations always use RS (stochastic rounding) mode with SATFINITE saturation.
+class NVVM_ConvertF32x4ToFPx4OpBase<string dstFormat, string mnemonic, Type dstType> :
+  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
+  Results<(outs dstType:$dst)>,
+  Arguments<(ins VectorOfLengthAndType<[4], [F32]>:$src, I32:$rbits,
+                 DefaultValuedAttr<BoolAttr, "false">:$relu,
+                 TypeAttr:$dstTy)> {
+  let summary = "Convert vector<4xf32> to packed " # dstFormat # " with stochastic rounding (.rs) and satfinite";
+  let description = [{
+    Converts a vector<4xf32> to packed }] # dstFormat # [{ format using 
+    stochastic rounding (.rs) mode with SATFINITE saturation. Randomness is 
+    provided by the `rbits` parameter. The `dstTy` attribute specifies the 
+    target floating-point format. The `relu` attribute clamps negative results to 0.
+    
+    Note: These operations always use RS rounding mode and SATFINITE saturation mode.
+    
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cvt)
+  }];
+  
+  let assemblyFormat = [{
+    $src `,` $rbits oilist(`relu` `=` $relu) attr-dict
+    `:` type($src) `->` type($dst) `(` $dstTy `)`
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    llvm::Intrinsic::ID getIntrinsicID();
+  }];
+  
+  string llvmBuilder = [{
+    auto intId = op.getIntrinsicID();
+    $dst = createIntrinsicCall(builder, intId, {$src, $rbits});
+  }];
+}
+
+// F32x4 -> F8x4 with stochastic rounding (supports E4M3FN, E5M2)
+def NVVM_ConvertF32x4ToF8x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f8x4", "convert.f32x4.to.f8x4", VectorOfLengthAndType<[4], [I8]>>;
+
+// F32x4 -> F6x4 with stochastic rounding (supports E2M3FN, E3M2FN)
+def NVVM_ConvertF32x4ToF6x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f6x4", "convert.f32x4.to.f6x4", VectorOfLengthAndType<[4], [I8]>>;
+
+// F32x4 -> F4x4 with stochastic rounding (supports E2M1FN)
+def NVVM_ConvertF32x4ToF4x4Op : NVVM_ConvertF32x4ToFPx4OpBase<"f4x4", "convert.f32x4.to.f4x4", I16>;
+} // let partition = NVVM_ConvertPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM MMA Ops
@@ -1402,6 +2696,12 @@ class WMMA_NAME_LDST<string Op, WMMA_REGS Frag, string Layout, int WithStride> {
 /// Generate the signature part of the mma intrinsic name.
 class MMA_SIGNATURE<WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
   list<WMMA_REGS> id_frags = !cond(
+     // FP8/F8F6F4 ops are identified by A,B inputs & accomulator & result type.
+     !or(!eq(A.ptx_elt_type, "e4m3"),
+         !eq(A.ptx_elt_type, "e5m2"),
+         !eq(A.ptx_elt_type, "e3m2"),
+         !eq(A.ptx_elt_type, "e2m3"),
+         !eq(A.ptx_elt_type, "e2m1")): [D, A, B, C],
      // FP16 ops are identified by accumulator & result type.
      !eq(A.ptx_elt_type, "f16") : [D, C],
      // other ops are identified by input types.
@@ -1458,6 +2758,9 @@ class MMA_LDST_OPS<list<GEOM> Geom, list<string> Frags, list<string> Types> {
 // llvm supports and can be extended as needed.
 class NVVM_MMA_OPS {
   // "wmma" operations
+  list<list<WMMA_REGS>> fp64_wmma_ops = MMA_OPS<
+            [GEOM<8, 8, 4>],
+            ["f64"], [], ["f64"], []>.ret;
   list<list<WMMA_REGS>> tf32_wmma_ops = MMA_OPS<
             [GEOM<16, 16, 8>],
             ["tf32"], [], ["f32"], []>.ret;
@@ -1468,6 +2771,7 @@ class NVVM_MMA_OPS {
             [GEOM<16, 16, 16>, GEOM<32, 8, 16>, GEOM<8, 32, 16>],
             ["s8","u8"], [], ["s32"], []>.ret;
   list<list<WMMA_REGS>> all_wmma_ops = !listconcat(
+            fp64_wmma_ops,
             tf32_wmma_ops,
             fp_wmma_ops,
             i8_wmma_ops);
@@ -1484,9 +2788,17 @@ class NVVM_MMA_OPS {
   list<WMMA_REGS> ldst_tf32_cd_ops = MMA_LDST_OPS<
             [GEOM<16, 16, 8>],
             ["c", "d"], ["f32"]>.ret;
+  list<WMMA_REGS> ldst_f64_ab_ops = MMA_LDST_OPS<
+            [GEOM<8, 8, 4>],
+            ["a", "b"], ["f64"]>.ret;
+  list<WMMA_REGS> ldst_f64_cd_ops = MMA_LDST_OPS<
+            [GEOM<8, 8, 4>],
+            ["c", "d"], ["f64"]>.ret;
   list<WMMA_REGS> all_ldst_ops = !listconcat(ldst_ab_ops, ldst_cd_ops,
                                              ldst_tf32_ab_ops,
-                                             ldst_tf32_cd_ops);
+                                             ldst_tf32_cd_ops, 
+                                             ldst_f64_ab_ops,
+                                             ldst_f64_cd_ops);
   // Separate A/B/C fragments (loads) from D (stores).
   list<WMMA_REGS> all_ld_ops = !filter(op, all_ldst_ops, !ne(op.frag, "d"));
   list<WMMA_REGS> all_st_ops = !filter(op, all_ldst_ops, !eq(op.frag, "d"));
@@ -1513,9 +2825,62 @@ class NVVM_MMA_OPS {
   list<list<WMMA_REGS>> bit_mma_ops = MMA_OPS<
             [GEOM<8,8,128>, GEOM<16,8,128>, GEOM<16,8,256>],
             ["b1"], [], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> fp8_mma_ops = MMA_OPS<
+            [GEOM<16,8,16>, GEOM<16,8,32>],
+            ["e4m3", "e5m2"], ["e4m3", "e5m2"], ["f16", "f32"], []>.ret;
   list<list<WMMA_REGS>> all_mma_sync_ops = !listconcat(
             tf32_mma_ops, bf16_mma_ops, f64_mma_ops,
-            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops);
+            fp_mma_ops, int_mma_ops, subint_mma_ops, bit_mma_ops,
+            fp8_mma_ops);
+
+  list<list<WMMA_REGS>> bf16_mma_sp_ops = MMA_OPS<
+            [GEOM<16,8,16>, GEOM<16,8,32>],
+            ["bf16"], [], ["f32"], []>.ret;
+  list<list<WMMA_REGS>> tf32_mma_sp_ops = MMA_OPS<
+            [GEOM<16,8,8>, GEOM<16,8,16>],
+            ["tf32"], [], ["f32"], []>.ret;
+  list<list<WMMA_REGS>> fp_mma_sp_ops = MMA_OPS<
+            [GEOM<16,8,16>, GEOM<16,8,32>],
+            ["f16"], [], ["f16", "f32"], ["f16", "f32"]>.ret;
+  list<list<WMMA_REGS>> fp8_mma_sp_ops = MMA_OPS<
+            [GEOM<16,8,64>],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["f16", "f32"], ["f16", "f32"]>.ret;
+  list<list<WMMA_REGS>> subint_mma_sp_ops = MMA_OPS<
+            [GEOM<16,8,64>, GEOM<16,8,128>],
+            ["s4", "u4"], ["s4", "u4"], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> int_mma_sp_ops = MMA_OPS<
+            [GEOM<16,8,32>, GEOM<16,8,64>],
+            ["s8", "u8"], ["s8", "u8"], ["s32"], []>.ret;
+  list<list<WMMA_REGS>> all_mma_sp_sync_ops = !listconcat(
+            bf16_mma_sp_ops, tf32_mma_sp_ops, fp_mma_sp_ops, fp8_mma_sp_ops,
+            subint_mma_sp_ops, int_mma_sp_ops);
+
+  // Block scale MMA operations (dense)
+  list<list<WMMA_REGS>> mxf4_mma_ops = MMA_OPS<
+            [GEOM<16,8,64>],
+            ["e2m1"], ["e2m1"], ["f32"], []>.ret;
+  list<list<WMMA_REGS>> mxf8f6f4_mma_ops = MMA_OPS<
+            [GEOM<16,8,32>],
+            ["e2m1", "e2m3", "e3m2", "e5m2", "e4m3"],
+            ["e2m1", "e2m3", "e3m2", "e5m2", "e4m3"],
+            ["f32"], []>.ret;
+  list<list<WMMA_REGS>> all_mma_block_scale_ops = !listconcat(
+            mxf4_mma_ops, mxf8f6f4_mma_ops);
+
+  // Block scale sparse MMA operations
+  list<list<WMMA_REGS>> mxf4xx_mma_sp_ops = MMA_OPS<
+            [GEOM<16,8,128>],
+            ["e2m1"], ["e2m1"], ["f32"], []>.ret;
+  list<list<WMMA_REGS>> mxf8f6f4_mma_sp_ops = MMA_OPS<
+            [GEOM<16,8,64>],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["e4m3", "e5m2", "e3m2", "e2m3", "e2m1"],
+            ["f32"], []>.ret;
+  list<list<WMMA_REGS>> all_mma_sp_block_scale_ops = !listconcat(
+            mxf4xx_mma_sp_ops, mxf8f6f4_mma_sp_ops);
+
 }
 
 def NVVM_MMA_OPS : NVVM_MMA_OPS;
@@ -1597,31 +2962,6 @@ class MMA_MMA_INTR<string opName> {
   string id = !foldl("", f, acc, el, acc # "\n" # el);
 }
 
-/// Enum attribute for binary (b1) MMA operation type
-def MMAB1OpNone : I32EnumAttrCase<"none", 0>;
-def MMAB1OpXorPopc : I32EnumAttrCase<"xor_popc", 1>;
-def MMAB1OpAndPopc : I32EnumAttrCase<"and_popc", 2>;
-def MMAB1Op : I32EnumAttr<"MMAB1Op", "MMA binary operations",
-  [MMAB1OpNone, MMAB1OpXorPopc, MMAB1OpAndPopc]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def MMAB1OpAttr : EnumAttr<NVVM_Dialect, MMAB1Op, "mma_b1op"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-/// Enum attribute type for the overflow behavior of MMA integer operations
-def MMAIntOverflowWrap : I32EnumAttrCase<"wrapped", 0>;
-def MMAIntOverflowSat : I32EnumAttrCase<"satfinite", 1>;
-def MMAIntOverflow : I32EnumAttr<"MMAIntOverflow", "MMA overflow options",
-  [MMAIntOverflowSat, MMAIntOverflowWrap]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def MMAIntOverflowAttr : EnumAttr<NVVM_Dialect, MMAIntOverflow, "mma_int_overflow"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
 /// Attribute to hold the MMA shape
 def NVVM_MMAShapeAttr : NVVM_Attr<"MMAShape", "shape"> {
   let summary = "Attribute for MMA operation shape.";
@@ -1670,8 +3010,9 @@ class NVVM_MMA_SUPPORTED<list<WMMA_REGS> frags, string layout_a, string layout_b
          !or(!ne(a_type, b_type),
              !ne(c_type, d_type))): false,
 
-    // m16n8k8 requires C and D to be the same type.
-    !and(!eq(geom, "m16n8k8"),
+    // m16n8k16/m16n8k32 requires C and D to be the same type
+    !and(!or(!eq(geom, "m16n8k16"),
+             !eq(geom, "m16n8k32")),
          !ne(c_type, d_type)): false,
 
     // All other are OK.
@@ -1739,60 +3080,9 @@ class MMA_SYNC_INTR {
   string id = !foldl("", f3, acc, el, acc # "\n" # el);
 }
 
-def MMALayoutRow : I32EnumAttrCase<"row", 0>;
-def MMALayoutCol : I32EnumAttrCase<"col", 1>;
-
-/// Enum attribute of the different matrix layout.
-def MMALayout : I32EnumAttr<"MMALayout", "NVVM MMA layout",
-  [MMALayoutRow, MMALayoutCol]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def MMALayoutAttr : EnumAttr<NVVM_Dialect, MMALayout, "mma_layout"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-/// Enum attribute of the different PTX element types used for MMA operands.
-def MMATypeF16  : I32EnumAttrCase<"f16", 0>;
-def MMATypeF32  : I32EnumAttrCase<"f32", 1>;
-def MMATypeTF32 : I32EnumAttrCase<"tf32", 2>;
-def MMATypeU8 : I32EnumAttrCase<"u8", 3>;
-def MMATypeS8 : I32EnumAttrCase<"s8", 4>;
-def MMATypeS32 : I32EnumAttrCase<"s32", 5>;
-def MMATypeB1 : I32EnumAttrCase<"b1", 6>;
-def MMATypeU4 : I32EnumAttrCase<"u4", 7>;
-def MMATypeS4 : I32EnumAttrCase<"s4", 8>;
-def MMATypeBF16 : I32EnumAttrCase<"bf16", 9>;
-def MMATypeF64 : I32EnumAttrCase<"f64", 10>;
-
-def MMATypes : I32EnumAttr<"MMATypes", "NVVM MMA types",
-  [MMATypeF16, MMATypeF32, MMATypeTF32,
-  MMATypeBF16, MMATypeS8, MMATypeU8,
-  MMATypeS32, MMATypeS4, MMATypeU4,
-  MMATypeB1, MMATypeF64]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def MMATypesAttr : EnumAttr<NVVM_Dialect, MMATypes, "mma_type"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def MMAFragA : I32EnumAttrCase<"a", 0>;
-def MMAFragB : I32EnumAttrCase<"b", 1>;
-def MMAFragC : I32EnumAttrCase<"c", 2>;
-
-/// Enum attribute of the different frag types.
-def MMAFrag: I32EnumAttr<"MMAFrag", "NVVM MMA frag type",
-  [MMAFragA, MMAFragB, MMAFragC]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def MMAFragAttr : EnumAttr<NVVM_Dialect, MMAFrag, "mma_frag"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
+let partition = NVVM_MmaPartition in {
 def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
-  Results<(outs LLVM_AnyStruct:$res)>,
+  Results<(outs AnyTypeOf<[LLVM_AnyStruct, F64]>:$res)>,
   Arguments<(ins LLVM_AnyPointer: $ptr, I32: $stride, I32Attr:$m,
              I32Attr:$n, I32Attr:$k, MMALayoutAttr:$layout,
              MMATypesAttr:$eltype, MMAFragAttr:$frag)> {
@@ -1860,13 +3150,18 @@ def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
     Example:
 
     ```mlir
-    %2 = nvvm.wmma.load %0, %1
-      {eltype = "f16", frag = "a", k = 16 : i32, layout = "row", m = 16 : i32, n = 16 : i32}
+    %2 = nvvm.wmma.load %0, %1, m = 16, n = 16, k = 16,
+      layout = <row>, element_type = <f16>, fragment = a
       : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     ```
     }];
 
-  let assemblyFormat = "$ptr `,` $stride attr-dict `:` functional-type($ptr, $res)";
+  let assemblyFormat = [{
+    $ptr `,` $stride `,` `m` `=` $m `,` `n` `=` $n `,` `k` `=` $k
+    `,` `layout` `=` $layout
+    `,` `element_type` `=` $eltype
+    `,` `fragment` `=` enum($frag) attr-dict `:` functional-type($ptr, $res)
+  }];
   let hasVerifier = 1;
 }
 
@@ -1916,14 +3211,16 @@ def NVVM_WMMAStoreOp : NVVM_Op<"wmma.store">,
 
     ```mlir
     nvvm.wmma.store %0, %1, %2, %3, %4, %5
-      {eltype = "f16", k = 16 : i32, layout = "row", m = 16 : i32, n = 16 : i32}
+      m = 16, n = 16, k = 16, layout = <row>, element_type = <f16>
       : !llvm.ptr<3>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>
     ```
   }];
 
   let assemblyFormat = [{
-    $ptr `,` $stride `,` $args attr-dict `:` qualified(type($ptr)) `,`
-    type($args)
+    $ptr `,` $stride `,` $args `m` `=` $m `,` `n` `=` $n
+    `,` `k` `=` $k `,` `layout` `=` $layout
+    `,` `element_type` `=` $eltype attr-dict
+    `:` qualified(type($ptr)) `,` type($args)
   }];
   let hasVerifier = 1;
 }
@@ -1972,20 +3269,35 @@ def NVVM_WMMAMmaOp : NVVM_Op<"wmma.mma">,
 
     ```mlir
     %16 = nvvm.wmma.mma %0, %1, %2, %3, %4, %5, %6, %7, %8, %9, %10, %11, %12, %13, %14, %15
-      {eltypeA = "tf32", eltypeB = "f32", k = 8 : i32, layoutA = "row", layoutB = "row", m = 16 : i32, n = 16 : i32}
+      m = 16, n = 16, k = 8, layout_a = <row>, layout_b = <row>,
+      element_type_a = <tf32>, element_type_b = <f32>
       : (i32, i32, i32, i32, i32, i32, i32, i32, f32, f32, f32, f32, f32, f32, f32, f32)
       -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
     ```
   }];
 
-  let assemblyFormat = "$args attr-dict `:` functional-type($args, $res)";
+  let assemblyFormat = [{
+    $args `m` `=` $m `,` `n` `=` $n `,` `k` `=` $k
+    `,` `layout_a` `=` $layoutA
+    `,` `layout_b` `=` $layoutB
+    `,` `element_type_a` `=` $eltypeA
+    `,` `element_type_b` `=` $eltypeB
+    attr-dict `:` functional-type($args, $res)
+  }];
   let hasVerifier = 1;
 }
+} // let partition = NVVM_MmaPartition
 
-def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">, 
-  Arguments<(ins LLVM_PointerShared:$ptr, 
-                 Variadic<I32>:$sources, 
-                 MMALayoutAttr:$layout)> {
+def LdStMatrixShapeAttr : NVVM_Attr<"LdStMatrixShape", "ld_st_matrix_shape"> {
+  let summary = "Matrix shape for ldmatrix and stmatrix";
+  let parameters = (ins "int":$m, "int":$n);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+let partition = NVVM_MmaPartition in {
+def NVVM_StMatrixOp: NVVM_Op<"stmatrix">,
+  Arguments<(ins LLVM_PointerShared: $ptr, Variadic<I32>:$sources, MMALayoutAttr:$layout,
+             LdStMatrixShapeAttr:$shape, LdStMatrixEltTypeAttr:$eltType)> {
   let summary = "cooperative matrix store";
   let description = [{
     Collectively store one or more matrices across all threads in a warp to the
@@ -1993,33 +3305,32 @@ def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">,
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-store-instruction-stmatrix)
   }];
-  
-  let assemblyFormat = "$ptr `,` $sources attr-dict `:` type(operands)";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() {
-      int d = getSources().size();
-      std::string ptx = "stmatrix.sync.aligned";
-      ptx += ".x" + std::to_string(d);
-      if (getLayout() == NVVM::MMALayout::col)
-        ptx += ".trans";
-      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1};";
-      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2};";
-      if(d == 4) ptx += ".m8n8.shared.b16 [%0], {%1, %2, %3, %4};";
-      return ptx;
-    }
+  string llvmBuilder = [{
+      auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+      auto intId = getStMatrixIntrinsicId($layout, $sources.size(), $shape, $eltType);
+      createIntrinsicCall(builder, intId, operands, operands[0]->getType());
+  }];
+  let assemblyFormat = [{
+    $ptr `,` $sources `layout` `=` $layout
+    `,` `shape` `=` $shape
+    `,` `element_type` `=` $eltType
+    attr-dict `:` type(operands)
   }];
   let hasVerifier = 1;
 }
 
-def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
+def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix", [InferTypeOpAdaptor]>,
   Results<(outs AnyType:$res)>,
-  Arguments<(ins LLVM_AnyPointer: $ptr, I32Attr:$num, MMALayoutAttr:$layout)> {
+  Arguments<(ins LLVM_PointerShared:$ptr, I32Attr:$num,
+                 MMALayoutAttr:$layout,
+                 LdStMatrixShapeAttr:$shape,
+                 LdStMatrixEltTypeAttr:$eltType)> {
 
   let summary = "cooperative matrix load";
 
   string llvmBuilder = [{
       auto operands = moduleTranslation.lookupValues(opInst.getOperands());
-      auto intId = getLdMatrixIntrinsicId($layout, $num);
+      auto intId = getLdMatrixIntrinsicId($layout, $num, $shape, $eltType);
       $res = createIntrinsicCall(builder, intId, operands, {operands[0]->getType()});
   }];
 
@@ -2044,14 +3355,66 @@ def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
 
     Example:
     ```mlir
-    %l1 = nvvm.ldmatrix %ptr {num = 1 : i32, layout = #nvvm.mma_layout<row>} :
+    %l1 = nvvm.ldmatrix %ptr, num = 1, layout = <row>,
+      shape = <m = 8, n = 8>, element_type = <b16> :
       (!llvm.ptr<3>) -> i32
-    %l2 = nvvm.ldmatrix %ptr {num = 4 : i32, layout = #nvvm.mma_layout<row>} :
+    %l2 = nvvm.ldmatrix %ptr, num = 4, layout = <row>,
+      shape = <m = 8, n = 8>, element_type = <b16> :
       (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
+    // Load an 8x16 matrix of signed 4-bit elements, sign-extended to 8 bits.
+    %l3 = nvvm.ldmatrix %ptr, num = 1, layout = <row>,
+      shape = <m = 8, n = 16>, element_type = <s8.s4> :
+      (!llvm.ptr<3>) -> i32
+    ```
+
+    For the 8x16 shape, element type `s8.s4` loads signed 4-bit elements and
+    sign-extends each of them to a signed 8-bit value during the load.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-instructions-ldmatrix)
+  }];
+
+  let assemblyFormat = [{
+    $ptr `,` `num` `=` $num
+    `,` `layout` `=` $layout
+    `,` `shape` `=` $shape
+    `,` `element_type` `=` $eltType
+    attr-dict `:` functional-type($ptr, $res)
+  }];
+  let hasVerifier = 1;
+}
+
+def NVVM_MovMatrixOp
+    : NVVM_SingleResultIntrinsicOp<"movmatrix", [NVVMRequiresSM<75>], "$dst"> {
+  let summary = "Warp-level matrix transpose";
+  let description = [{
+    Moves a row-major matrix across all threads in a warp, reading elements
+    from source `$src`, and writing the transposed elements to destination
+    `$dst`.
+
+    The `shape` attribute indicates the dimensions of the matrix being
+    transposed. Each matrix element holds 16-bit data as indicated by the
+    `eltType` attribute.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#warp-level-matrix-movmatrix-instruction)
+
+    Example:
+    ```mlir
+    %dst = nvvm.movmatrix %src, shape = <m = 8, n = 8>,
+                          element_type = <b16> : i32
     ```
   }];
 
-  let assemblyFormat = "$ptr attr-dict `:` functional-type($ptr, $res)";
+  let results = (outs I32:$dst);
+  let arguments = (ins I32:$src, LdStMatrixShapeAttr:$shape,
+      DefaultValuedAttr<MMALayoutAttr, "MMALayout::col">:$layout,
+      LdStMatrixEltTypeAttr:$eltType);
+
+  let assemblyFormat = [{
+    $src `,` `shape` `=` $shape
+    `,` `element_type` `=` $eltType
+    (`,` `layout` `=` $layout^)?
+    attr-dict `:` type($src)
+  }];
   let hasVerifier = 1;
 }
 
@@ -2082,9 +3445,9 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     `intOverflowBehavior` is only relevant when the `multiplicandType` attribute
     is one of `u8, s8, u4, s4`, this attribute describes how overflow is handled
     in the accumulator. When the attribute is `satfinite`, the accumulator values
-    are clamped in the int32 range on overflow. This is the default behavior.
-    Alternatively, accumulator behavior `wrapped` can also be specified, in
-    which case overflow wraps from one end of the range to the other.
+    are clamped in the int32 range on overflow. Alternatively, accumulator
+    behavior `wrapped` can be specified (this is the default), in which case
+    overflow wraps from one end of the range to the other.
 
     `layoutA` and `layoutB` are required and should generally be set to
     `#nvvm.mma_layout<row>` and `#nvvm.mma_layout<col>` respectively, but other
@@ -2118,9 +3481,8 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
     %128 = nvvm.mma.sync A[%120, %121, %122, %123]
                          B[%124, %125]
                          C[%126, %127]
-                         {layoutA = #nvvm.mma_layout<row>,
-                          layoutB = #nvvm.mma_layout<col>,
-                          shape = {k = 16 : i32, m = 16 : i32, n = 8 : i32}}
+                         shape = <m = 16, n = 8, k = 16>,
+                         layout_a = row, layout_b = col
         : (vector<2xf16>, vector<2xf16>, vector<2xf16>)
            -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
     ```
@@ -2175,9 +3537,16 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
 
   string llvmBuilder = [{
     auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+    // `intOverflowBehavior` is optional and defaults to `wrapped` when omitted.
+    // We initialize it to a concrete value so that the intrinsic selector never
+    // speculatively reads an empty optional's uninitialized payload (benign,
+    // but flagged by Valgrind).
+    std::optional<mlir::NVVM::MMAIntOverflow> intOverflow = mlir::NVVM::MMAIntOverflow::wrapped;
+    if (mlir::NVVM::MMAIntOverflowAttr satAttr = op.getIntOverflowBehaviorAttr())
+      intOverflow = satAttr.getValue();
     auto intId = mlir::NVVM::MmaOp::getIntrinsicID(
         $shape.getM(), $shape.getN(), $shape.getK(),
-        $b1Op, $intOverflowBehavior,
+        $b1Op, intOverflow,
         $layoutA, $layoutB,
         *$multiplicandAPtxType,
         *$multiplicandBPtxType,
@@ -2191,11 +3560,596 @@ def NVVM_MmaOp : NVVM_Op<"mma.sync", [AttrSizedOperandSegments]> {
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
+} // let partition = NVVM_MmaPartition
+
+/// Generate enum value of the mma.sync intrinsic.
+class MMA_SP_SYNC_NAME<string Metadata, string Kind, int Satfinite,
+                       WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
+  string signature = MMA_SIGNATURE<A, B, C, D>.ret;
+  string id = "llvm::Intrinsic::nvvm_mma"
+              # "_" # !subst("::", "_", Metadata)
+              # "_" # A.geom
+              # "_row_col"
+              # !if(!ne(Kind, ""), !strconcat("_", !subst("::", "_", Kind)), "")
+              # !if(Satfinite, "_satfinite", "")
+              # signature;
+}
+
+// Returns true if this combination of layout/kind/satf for MMA.SP ops is supported;
+// false otherwise.
+// E.g.
+// if NVVM_MMA_SP_SUPPORTED<...>.ret then
+//   def : FOO<>; // The record will only be defined for supported ops.
+//
+class NVVM_MMA_SP_SUPPORTED<list<WMMA_REGS> frags, string metadata,
+                            string kind, int satf> {
+  // MMA.SP ops check both layouts.
+  string a_type = frags[0].ptx_elt_type;
+  string b_type = frags[1].ptx_elt_type;
+  string c_type = frags[2].ptx_elt_type;
+  string d_type = frags[3].ptx_elt_type;
+  string geom = frags[0].geom;
+
+  bit is_int = !or(!eq(a_type, "s8"),
+                   !eq(a_type, "u8"),
+                   !eq(a_type, "s4"),
+                   !eq(a_type, "u4"));
+
+  bit ret = !cond(
+
+    // Limit satf to valid types
+    !and(!eq(satf, 1),
+         !eq(is_int, 0)): false,
+
+    // f16/bf16/tf32 requires A and B to be the same type.
+    !and(!or(!eq(a_type, "f16"),
+             !eq(a_type, "bf16"),
+             !eq(a_type, "tf32")),
+         !ne(a_type, b_type)): false,
+
+    // m16n8k16, m16n8k32 and m16n8k64 requires C and D to be the same type.
+    !and(!or(!eq(geom, "m16n8k16"),
+             !eq(geom, "m16n8k32"),
+             !eq(geom, "m16n8k64")),
+         !ne(c_type, d_type)): false,
+
+    !and(!eq(kind, ""),
+         !or(!eq(a_type, "e3m2"),
+             !eq(a_type, "e2m3"),
+             !eq(a_type, "e2m1"),
+             !eq(b_type, "e3m2"),
+             !eq(b_type, "e2m3"),
+             !eq(b_type, "e2m1"))): false,
+
+    !and(!eq(kind, ""),
+         !eq(geom, "m16n8k64"),
+         !or(!eq(c_type, "f16"),
+             !eq(d_type, "f16"))): false,
+
+    !and(!ne(kind, ""),
+         !or(!eq(metadata, "sp"),
+             !ne(geom, "m16n8k64"),
+             !eq(is_int, 1))): false,
+
+    // All other are OK.
+    true: true
+  );
+}
+
+/// Helper to create the mapping between the configuration and the mma.sp.sync
+/// intrinsic enum value.
+class MMA_SP_SYNC_INTR {
+  list<list<list<list<string>>>> cond0 =
+    !foreach(op, NVVM_MMA_OPS.all_mma_sp_sync_ops,
+      !foreach(metadata, ["sp", "sp::ordered_metadata"],
+        !foreach(kind, ["", "kind::f8f6f4"],
+          !foreach (satf, [0, 1],
+            !if(NVVM_MMA_SP_SUPPORTED<op, metadata, kind, satf>.ret,
+                "if (m == " # op[0].m # " && n == " # op[0].n # " && k == " # op[0].k
+                # " && \"" # op[0].ptx_elt_type # "\" == eltypeA"
+                # " && \"" # op[1].ptx_elt_type # "\" == eltypeB"
+                # " && \"" # op[2].ptx_elt_type # "\" == eltypeC"
+                # " && \"" # op[3].ptx_elt_type # "\" == eltypeD"
+                # " && (satf.has_value()  ? " # satf # " == static_cast<int>(*satf) : true)"
+                # " && " # !if(!eq(metadata, "sp"), "!orderedMetadata", "orderedMetadata") # ")\n"
+                # "  return " #
+                MMA_SP_SYNC_NAME<metadata, kind, satf, op[0], op[1], op[2], op[3]>.id # ";",
+                "") // if supported
+          ) // satf
+        ) // kind
+      ) // metadata
+    ); // all_mma_sp_sync_ops
+  list<list<list<string>>> f1 = !foldl([[[""]]], cond0, acc, el,
+                                       !listconcat(acc, el));
+  list<list<string>> f2 = !foldl([[""]], f1, acc, el, !listconcat(acc, el));
+  list<string> f3 = !foldl([""], f2, acc, el, !listconcat(acc, el));
+  string id = !foldl("", f3, acc, el, acc # "\n" # el);
+}
+
+def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
+  let summary = "cooperative sparse matrix-multiply and accumulate";
+
+  let description = [{
+    The `nvvm.mma.sp.sync` operation collectively performs the sparse operation
+    `D = matmul(A_sparse, B) + C` using all threads in a warp.
+
+    This operation is similar to `nvvm.mma.sync` but with structured sparsity
+    in the A operand. The sparsity follows the 2:4 structured sparse pattern
+    where 2 out of every 4 elements are non-zero.
+
+    All the threads in the warp must execute the same `mma.sp.sync` operation.
+
+    The `sparseMetadata` operand provides the sparsity indices that indicate
+    which elements in the A operand are non-zero. The `sparsitySelector`
+    controls how the indices are distributed among threads in the warp and
+    should typically be 0 or 1.
+
+    The optional `orderedMetadata` attribute specifies the metadata ordering:
+    - Absence (default): Uses standard sparse metadata ordering
+    - Presence: Uses ordered metadata (PTX ISA 8.5+, sm_90+)
+
+    The optional `kind` attribute specifies mixed-precision modes for FP8 operations:
+    - `f8f6f4`: Enables e3m2, e2m3, e2m1 FP8 types and f16 accumulator (PTX ISA 8.7+, sm_90+)
+    - Only valid with ordered metadata and m16n8k64 shape
+
+    The shapes, layouts, and data types follow the same constraints as the
+    regular `nvvm.mma.sync` operation, but the A operand contains only the
+    non-zero elements in compressed format.
+
+    Example:
+    ```mlir
+    %d = nvvm.mma.sp.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1]
+                          sparseMetadata[%meta] selector[%sel]
+                          shape = <m = 16, n = 8, k = 32>
+        : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+
+    // With ordered metadata:
+    %d = nvvm.mma.sp.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1]
+                          sparseMetadata[%meta] selector[%sel]
+                          shape = <m = 16, n = 8, k = 32>, ordered_metadata
+        : (vector<2xf16>, vector<2xf16>, vector<2xf16>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>)>
+    ```
+  }];
+
+  let partition = NVVM_MmaPartition;
+
+  let results = (outs LLVM_AnyStruct:$res);
+  let arguments = (ins NVVM_MMAShapeAttr:$shape,
+             OptionalAttr<MMAIntOverflowAttr>:$intOverflowBehavior,
+             OptionalAttr<MMATypesAttr>:$multiplicandAPtxType,
+             OptionalAttr<MMATypesAttr>:$multiplicandBPtxType,
+             UnitAttr:$orderedMetadata,
+             OptionalAttr<MMAKindAttr>:$kind,
+             Variadic<LLVM_Type>:$operandA,
+             Variadic<LLVM_Type>:$operandB,
+             Variadic<LLVM_Type>:$operandC,
+             I32:$sparseMetadata,
+             I32:$sparsitySelector);
+
+  let extraClassDeclaration = !strconcat([{
+      static llvm::Intrinsic::ID getIntrinsicID(
+            int64_t m, int64_t n, uint64_t k,
+            std::optional<MMAIntOverflow> satf,
+            bool orderedMetadata,
+            std::optional<MMAKind> kind,
+            mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
+            mlir::NVVM::MMATypes eltypeCEnum, mlir::NVVM::MMATypes eltypeDEnum) {
+        llvm::StringRef eltypeA = stringifyEnum(eltypeAEnum);
+        llvm::StringRef eltypeB = stringifyEnum(eltypeBEnum);
+        llvm::StringRef eltypeC = stringifyEnum(eltypeCEnum);
+        llvm::StringRef eltypeD = stringifyEnum(eltypeDEnum);
+        }],
+        MMA_SP_SYNC_INTR<>.id, [{
+          return 0;
+      }
+
+      static std::optional<mlir::NVVM::MMATypes> inferOperandMMAType(Type operandElType,
+        bool isAccumulator);
+
+      MMATypes accumPtxType();
+      MMATypes resultPtxType();
+
+      static mlir::NVVM::IDArgPair
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase& builder);
+    }]);
+
+  let builders = [
+      OpBuilder<(ins  "Type":$resultType, "ValueRange":$operandA,
+        "ValueRange":$operandB, "ValueRange":$operandC,
+        "Value":$sparseMetadata, "Value":$sparsitySelector,
+        "ArrayRef<int64_t>":$shape,
+        "std::optional<MMAIntOverflow>":$intOverflow,
+        "std::optional<std::array<MMATypes, 2>>":$multiplicandPtxTypes)>
+    ];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MmaSpOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+/// Generate enum value of the mma.block_scale intrinsic.
+class MMA_BLOCK_SCALE_NAME<string Kind, string SType, string ScaleVecSize,
+                           WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
+  string signature = MMA_SIGNATURE<A, B, C, D>.ret;
+  string id = "llvm::Intrinsic::nvvm_mma_block_scale"
+              # "_" # A.geom
+              # "_row_col"
+              # "_" # Kind
+              # !subst(".", "_", ScaleVecSize)
+              # signature
+              # "_" # SType;
+}
+
+/// Generate enum value of the mma.sp.block_scale intrinsic.
+class MMA_SP_BLOCK_SCALE_NAME<string Kind, string SType, string ScaleVecSize,
+                              WMMA_REGS A, WMMA_REGS B, WMMA_REGS C, WMMA_REGS D> {
+  string signature = MMA_SIGNATURE<A, B, C, D>.ret;
+  string id = "llvm::Intrinsic::nvvm_mma_sp_ordered_metadata_block_scale"
+              # "_" # A.geom
+              # "_row_col"
+              # "_" # Kind
+              # !subst(".", "_", ScaleVecSize)
+              # signature
+              # "_" # SType;
+}
+
+// Returns true if this combination is supported for MMA.BLOCK_SCALE ops.
+// This references the NVVM_MMA_BLOCK_SCALE_SUPPORTED class from IntrinsicsNVVM.td
+class NVVM_MMA_BLOCK_SCALE_SUPPORTED<list<WMMA_REGS> frags, string kind,
+                                     string stype, string scale_vec_size> {
+  string geom = frags[0].geom;
+  bit ret = !cond(
+    !and(!eq(geom, "m16n8k64"),
+         !eq(kind, "mxf4"),
+         !or(!eq(scale_vec_size, ""),
+             !eq(scale_vec_size, ".scale_2x")),
+         !eq(stype, "ue8m0")) : true,
+    !and(!eq(geom, "m16n8k64"),
+         !eq(kind, "mxf4nvf4"),
+         !eq(scale_vec_size, ".scale_2x"),
+         !eq(stype, "ue8m0")) : true,
+    !and(!eq(geom, "m16n8k64"),
+         !eq(kind, "mxf4nvf4"),
+         !eq(scale_vec_size, ".scale_4x"),
+         !or(!eq(stype, "ue4m3"),
+             !eq(stype, "ue8m0"))) : true,
+    !and(!eq(geom, "m16n8k32"),
+         !eq(kind, "mxf8f6f4"),
+         !or(!eq(scale_vec_size, ""),
+             !eq(scale_vec_size, ".scale_1x")),
+         !eq(stype, "ue8m0")) : true,
+    true: false
+  );
+}
+
+// Returns true if this combination is supported for MMA.SP.BLOCK_SCALE ops.
+// This references the NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED class from IntrinsicsNVVM.td
+class NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<list<WMMA_REGS> frags, string kind,
+                                        string stype, string scale_vec_size> {
+  string geom = frags[0].geom;
+  bit ret = !cond(
+    !and(!eq(geom, "m16n8k128"),
+         !eq(kind, "mxf4"),
+         !eq(stype, "ue8m0"),
+         !or(!eq(scale_vec_size, ""),
+             !eq(scale_vec_size, ".scale_2x"))): true,
+    !and(!eq(geom, "m16n8k128"),
+         !eq(kind, "mxf4nvf4"),
+         !eq(stype, "ue8m0"),
+         !eq(scale_vec_size, ".scale_2x")): true,
+    !and(!eq(geom, "m16n8k128"),
+         !eq(kind, "mxf4nvf4"),
+         !or(!eq(stype, "ue4m3"),
+             !eq(stype, "ue8m0")),
+         !eq(scale_vec_size, ".scale_4x")): true,
+    !and(!eq(geom, "m16n8k64"),
+         !eq(kind, "mxf8f6f4"),
+         !eq(stype, "ue8m0"),
+         !or(!eq(scale_vec_size, ""),
+             !eq(scale_vec_size, ".scale_1x"))): true,
+    true: false
+  );
+}
+
+/// Helper to create the mapping between the configuration and the mma.block_scale
+/// intrinsic enum value.
+class MMA_BLOCK_SCALE_INTR {
+  list<list<list<list<string>>>> cond0 =
+    !foreach(op, NVVM_MMA_OPS.all_mma_block_scale_ops,
+      !foreach(kind, ["mxf4", "mxf4nvf4", "mxf8f6f4"],
+        !foreach(scale_vec_size, ["", ".scale_1x", ".scale_2x", ".scale_4x"],
+          !foreach(stype, ["ue8m0", "ue4m3"],
+            !if(NVVM_MMA_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret,
+                "if (m == " # op[0].m # " && n == " # op[0].n # " && k == " # op[0].k
+                # " && \"" # op[0].ptx_elt_type # "\" == eltypeA"
+                # " && \"" # op[1].ptx_elt_type # "\" == eltypeB"
+                # " && \"" # op[2].ptx_elt_type # "\" == eltypeC"
+                # " && \"" # kind # "\" == stringifyEnum(kind)"
+                # " && \"" # stype # "\" == stringifyEnum(blockScaleFormat)"
+                # " && \"" # scale_vec_size # "\" == getScaleVecSizeStr(scaleVecSize))\n"
+                # "  return " #
+                MMA_BLOCK_SCALE_NAME<kind, stype, scale_vec_size, op[0], op[1], op[2], op[3]>.id # ";",
+                "") // if supported
+          ) // stype
+        ) // scale_vec_size
+      ) // kind
+    ); // all_mma_block_scale_ops
+  list<list<list<string>>> f1 = !foldl([[[""]]], cond0, acc, el,
+                                       !listconcat(acc, el));
+  list<list<string>> f2 = !foldl([[""]], f1, acc, el, !listconcat(acc, el));
+  list<string> f3 = !foldl([""], f2, acc, el, !listconcat(acc, el));
+  string id = !foldl("", f3, acc, el, acc # "\n" # el);
+}
+
+/// Helper to create the mapping between the configuration and the mma.sp.block_scale
+/// intrinsic enum value.
+class MMA_SP_BLOCK_SCALE_INTR {
+  list<list<list<list<string>>>> cond0 =
+    !foreach(op, NVVM_MMA_OPS.all_mma_sp_block_scale_ops,
+      !foreach(kind, ["mxf4", "mxf4nvf4", "mxf8f6f4"],
+        !foreach(scale_vec_size, ["", ".scale_1x", ".scale_2x", ".scale_4x"],
+          !foreach(stype, ["ue8m0", "ue4m3"],
+            !if(NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<op, kind, stype, scale_vec_size>.ret,
+                "if (m == " # op[0].m # " && n == " # op[0].n # " && k == " # op[0].k
+                # " && \"" # op[0].ptx_elt_type # "\" == eltypeA"
+                # " && \"" # op[1].ptx_elt_type # "\" == eltypeB"
+                # " && \"" # op[2].ptx_elt_type # "\" == eltypeC"
+                # " && \"" # kind # "\" == stringifyEnum(kind)"
+                # " && \"" # stype # "\" == stringifyEnum(blockScaleFormat)"
+                # " && \"" # scale_vec_size # "\" == getScaleVecSizeStr(scaleVecSize))\n"
+                # "  return " #
+                MMA_SP_BLOCK_SCALE_NAME<kind, stype, scale_vec_size, op[0], op[1], op[2], op[3]>.id # ";",
+                "") // if supported
+          ) // stype
+        ) // scale_vec_size
+      ) // kind
+    ); // all_mma_sp_block_scale_ops
+  list<list<list<string>>> f1 = !foldl([[[""]]], cond0, acc, el,
+                                       !listconcat(acc, el));
+  list<list<string>> f2 = !foldl([[""]], f1, acc, el, !listconcat(acc, el));
+  list<string> f3 = !foldl([""], f2, acc, el, !listconcat(acc, el));
+  string id = !foldl("", f3, acc, el, acc # "\n" # el);
+}
+
+// Common base class for MMA block scale operations (dense and sparse)
+class NVVM_MmaBlockScaleBase<string mnemonic, list<Trait> traits = []> :
+    NVVM_Op<mnemonic, !listconcat([AttrSizedOperandSegments], traits)> {
+
+  let results = (outs LLVM_AnyStruct:$res);
+
+  // Common attributes shared by both dense and sparse variants
+  dag commonArguments = (ins
+           NVVM_MMAShapeAttr:$shape,
+           OptionalAttr<MMATypesAttr>:$multiplicandAPtxType,
+           OptionalAttr<MMATypesAttr>:$multiplicandBPtxType,
+           ScaleVecSizeAttr:$scaleVecSize,
+           BlockScaleFormatAttr:$blockScaleFormat,
+           MMABlockScaleKindAttr:$kind);
+
+  // Common variadic operands for A, B, C matrices
+  dag commonVariadicOperands = (ins
+           Variadic<LLVM_Type>:$operandA,
+           Variadic<LLVM_Type>:$operandB,
+           Variadic<LLVM_Type>:$operandC);
+
+  // Common scale operands for both A and B
+  dag commonScaleOperands = (ins
+             I32:$scaleAData,
+             I16:$byteIdA,
+             I16:$threadIdA,
+             I32:$scaleBData,
+             I16:$byteIdB,
+             I16:$threadIdB);
+
+  let extraClassDeclaration = !strconcat([{
+      static llvm::Intrinsic::ID getIntrinsicID(
+            int64_t m, int64_t n, uint64_t k,
+            mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
+            mlir::NVVM::MMATypes eltypeCEnum,
+            mlir::NVVM::ScaleVecSize scaleVecSize,
+            mlir::NVVM::BlockScaleFormat blockScaleFormat,
+            mlir::NVVM::MMABlockScaleKind kind) {
+        llvm::StringRef eltypeA = stringifyEnum(eltypeAEnum);
+        llvm::StringRef eltypeB = stringifyEnum(eltypeBEnum);
+        llvm::StringRef eltypeC = stringifyEnum(eltypeCEnum);
+
+        auto getScaleVecSizeStr = [](ScaleVecSize svs) -> std::string {
+          switch (svs) {
+            case ScaleVecSize::X1: return ".scale_1x";
+            case ScaleVecSize::X2: return ".scale_2x";
+            case ScaleVecSize::X4: return ".scale_4x";
+          }
+          return "";
+        };
+        }],
+        MMA_BLOCK_SCALE_INTR<>.id, [{
+        return 0;
+      }
+
+      static mlir::NVVM::IDArgPair
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase& builder);
+    }]);
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
+}
+
+let partition = NVVM_MmaPartition in {
+def NVVM_MmaBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.block_scale"> {
+
+  let summary = "cooperative matrix-multiply and accumulate with block scaling";
+
+  let description = [{
+    The `nvvm.mma.block_scale` operation collectively performs the operation
+    `D = matmul(A * SF_A, B * SF_B) + C` using all threads in a warp.
+
+    A, B, C and D are dense matrices and SF_A and SF_B are scaling factors.
+    Dimensions of SF_A and SF_B are based on scale vector sizes (x1, x2, x4),
+    and the data type must be either ue8m0 or ue4m3.
+
+    All the threads in the warp must execute the same `mma.block_scale` operation.
+
+    This operation follows the same design pattern as `nvvm.mma.sync`, with additional
+    scaling operands for both A and B matrices.
+
+    Example:
+    ```mlir
+    %d = nvvm.mma.block_scale A[%a0, %a1] B[%b0, %b1] C[%c0, %c1]
+                              scaleA[%scaleAData, %byteIdA, %threadIdA]
+                              scaleB[%scaleBData, %byteIdB, %threadIdB]
+                              shape = <m = 16, n = 8, k = 64>,
+                              multiplicand_a_ptx_type = e2m1,
+                              multiplicand_b_ptx_type = e2m1,
+                              scale_vec_size = x2,
+                              block_scale_format = ue8m0,
+                              kind = mxf4nvf4
+        : (vector<4xf16>, vector<2xf16>, vector<2xf32>) -> !llvm.struct<(f32, f32)>
+    ```
+  }];
+
+  // Combine common attributes and operands
+  let arguments = !con(commonArguments, commonVariadicOperands, commonScaleOperands);
+
+  let builders = [
+      OpBuilder<(ins "Type":$resultType, "ValueRange":$operandA,
+        "ValueRange":$operandB, "ValueRange":$operandC,
+        "Value":$scaleAData, "Value":$byteIdA, "Value":$threadIdA,
+        "Value":$scaleBData, "Value":$byteIdB, "Value":$threadIdB,
+        "ArrayRef<int64_t>":$shape,
+        "std::optional<std::array<MMATypes, 2>>":$multiplicandPtxTypes,
+        "ScaleVecSize":$scaleVecSize,
+        "BlockScaleFormat":$blockScaleFormat,
+        "MMABlockScaleKind":$kind)>
+    ];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MmaBlockScaleOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_MmaSpBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.sp.block_scale"> {
+
+  let summary = "cooperative sparse matrix-multiply and accumulate with block scaling";
+
+  let description = [{
+    The `nvvm.mma.sp.block_scale` operation collectively performs the operation
+    `D = matmul(A_sparse * SF_A, B * SF_B) + C` using all threads in a warp.
+
+    A is a sparse matrix, and B, C and D are dense matrices.
+    SF_A and SF_B are scaling factors.
+    Dimensions of SF_A and SF_B are based on scale vector sizes (x1, x2, x4),
+    and the data type must be either ue8m0 or ue4m3.
+
+    This operation is similar to `nvvm.mma.block_scale` but with structured sparsity
+    in the A operand. The sparsity follows the 2:4 structured sparse pattern
+    where 2 out of every 4 elements are non-zero.
+
+    All the threads in the warp must execute the same `mma.sp.block_scale` operation.
+
+    The `sparseMetadata` operand provides the sparsity indices that indicate
+    which elements in the A operand are non-zero. The `sparsitySelector`
+    controls how the indices are distributed among threads in the warp and
+    should typically be 0 or 1.
+
+    This operation follows the same design pattern as `nvvm.mma.sp.sync`, with additional
+    scaling operands for both A and B matrices. Note that sparse block scale operations
+    always use ordered metadata (sm_90+).
+
+    Example:
+    ```mlir
+    %d = nvvm.mma.sp.block_scale A[%a0, %a1] B[%b0, %b1] C[%c0, %c1]
+                                 sparseMetadata[%meta] selector[%sel]
+                                 scaleA[%scaleAData, %byteIdA, %threadIdA]
+                                 scaleB[%scaleBData, %byteIdB, %threadIdB]
+                                 shape = <m = 16, n = 8, k = 128>,
+                                 multiplicand_a_ptx_type = e2m1,
+                                 multiplicand_b_ptx_type = e2m1,
+                                 ordered_metadata, scale_vec_size = x2,
+                                 block_scale_format = ue8m0,
+                                 kind = mxf4
+        : (vector<2xf16>, vector<2xf16>, vector<2xf32>) -> !llvm.struct<(f32, f32)>
+    ```
+  }];
+
+  // Sparse-specific attributes and operands
+  dag sparseSpecificArguments = (ins
+           UnitAttr:$orderedMetadata);
+
+  dag sparseSpecificOperands = (ins
+             I32:$sparseMetadata,
+             I32:$sparsitySelector);
+
+  // Combine common and sparse-specific attributes and operands
+  let arguments = !con(commonArguments, sparseSpecificArguments, 
+                       commonVariadicOperands, sparseSpecificOperands,
+                       commonScaleOperands);
+
+  // Override extraClassDeclaration to use sparse intrinsics
+  let extraClassDeclaration = !strconcat([{
+      static llvm::Intrinsic::ID getIntrinsicID(
+            int64_t m, int64_t n, uint64_t k,
+            mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
+            mlir::NVVM::MMATypes eltypeCEnum,
+            mlir::NVVM::ScaleVecSize scaleVecSize,
+            mlir::NVVM::BlockScaleFormat blockScaleFormat,
+            mlir::NVVM::MMABlockScaleKind kind) {
+        llvm::StringRef eltypeA = stringifyEnum(eltypeAEnum);
+        llvm::StringRef eltypeB = stringifyEnum(eltypeBEnum);
+        llvm::StringRef eltypeC = stringifyEnum(eltypeCEnum);
+
+        auto getScaleVecSizeStr = [](ScaleVecSize svs) -> std::string {
+          switch (svs) {
+            case ScaleVecSize::X1: return ".scale_1x";
+            case ScaleVecSize::X2: return ".scale_2x";
+            case ScaleVecSize::X4: return ".scale_4x";
+          }
+          return "";
+        };
+        }],
+        MMA_SP_BLOCK_SCALE_INTR<>.id, [{
+        return 0;
+      }
+
+      static mlir::NVVM::IDArgPair
+      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                            llvm::IRBuilderBase& builder);
+    }]);
+
+  let builders = [
+      OpBuilder<(ins "Type":$resultType, "ValueRange":$operandA,
+        "ValueRange":$operandB, "ValueRange":$operandC,
+        "Value":$sparseMetadata, "Value":$sparsitySelector,
+        "Value":$scaleAData, "Value":$byteIdA, "Value":$threadIdA,
+        "Value":$scaleBData, "Value":$byteIdB, "Value":$threadIdB,
+        "ArrayRef<int64_t>":$shape,
+        "std::optional<std::array<MMATypes, 2>>":$multiplicandPtxTypes,
+        "ScaleVecSize":$scaleVecSize,
+        "BlockScaleFormat":$blockScaleFormat,
+        "MMABlockScaleKind":$kind)>
+    ];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::MmaSpBlockScaleOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    $res = createIntrinsicCall(builder, id, args);
+  }];
+}
+} // let partition = NVVM_MmaPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM TMA Ops
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_AsyncCopyPartition in {
 def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   Arguments<(ins )> {
   let assemblyFormat = "attr-dict";
@@ -2215,7 +4169,7 @@ def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group", [NVVMRequi
   Arguments<(ins 
     ConfinedAttr<I32Attr, [IntMinValue<0>]>:$group, 
     OptionalAttr<UnitAttr>:$read)> {
-  let assemblyFormat = "$group attr-dict";
+  let assemblyFormat = "$group (`read` $read^)? attr-dict";
   let description = [{
     Op waits for completion of the most recent bulk async-groups.
 
@@ -2238,30 +4192,25 @@ def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group", [NVVMRequi
   }];
 }
 
-def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : 
+def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
   AttrSizedOperandSegments, NVVMRequiresSM<90>]>,
-  Arguments<(ins  LLVM_PointerShared:$dstMem,
-                  LLVM_AnyPointer:$tmaDescriptor,
+  Arguments<(ins  AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$dstMem,
+                  LLVM_PointerGeneric:$tmaDescriptor,
                   Variadic<I32>:$coordinates,
                   LLVM_PointerShared:$mbar,                  
                   Variadic<I16>:$im2colOffsets,
                   Optional<I16>:$multicastMask,
                   Optional<I64>:$l2CacheHint,
+                  DefaultValuedAttr<TMALoadModeAttr, "TMALoadMode::TILE">:$mode,
+                  DefaultValuedAttr<BoolAttr, "false">:$isCTAOnly,
+                  OptionalAttr<CTAGroupKindAttr>:$group,
                   PtxPredicate:$predicate)> {
   let description = [{
     Initiates an asynchronous copy operation on the tensor data from global 
-    memory to shared memory. 
-
-    The Op operates has two load modes:
-    1) Tiled Mode: It's the default mode. The source multi-dimensional tensor 
-    layout is preserved at the destination. 
-
-    2) Im2col Mode: This mode is used when `im2colOffsets` operands are present.
-    the elements in the Bounding Box of the source tensor are rearranged into
-    columns at the destination. In this mode, the tensor has to be at least 
-    3-dimensional. 
+    memory to shared::cluster (or) shared::cta memory. This Op supports all
+    the load modes specified in `TMALoadMode`.
 
     The `multicastMask` operand is optional. When it is present, the Op copies
     data from global memory to shared memory of multiple CTAs in the cluster.
@@ -2272,6 +4221,10 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
     The `l2CacheHint` operand is optional, and it is used to specify cache 
     eviction policy that may be used during the memory access.
     
+    When the `isCTAOnly` attribute is set to true, the destination is
+    shared::cta only. Hence, `multicastMask` and `CTAGroup` are not applicable
+    when `isCTAOnly` is true.
+
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor)
   }];
 
@@ -2280,10 +4233,13 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
     $tmaDescriptor `,` 
     $mbar `,` 
     `box` `[`$coordinates `]` 
-    (`im2col` `[` $im2colOffsets^ `]` )?
-    (`multicast_mask` `=` $multicastMask^ )?
-    (`l2_cache_hint` `=` $l2CacheHint^ )?
-    (`predicate` `=` $predicate^)? 
+    oilist(
+      `im2col` `[` $im2colOffsets `]`
+      | `multicast_mask` `=` $multicastMask
+      | `l2_cache_hint` `=` $l2CacheHint | `predicate` `=` $predicate
+      | `mode` `=` enum($mode) | `cta_only` `=` $isCTAOnly
+      | `group` `=` custom<CTAGroup>($group)
+    )
     attr-dict  `:` type($dstMem) `,` type($tmaDescriptor)
   }];
 
@@ -2319,23 +4275,68 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
     }
   }];
   let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    bool hasIntrinsic() { return !getPredicate(); }
+
+    bool getAsmValues(RewriterBase &rewriter,
+      llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
+
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
+  }];
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM TMA Shared to Global Ops
+//===----------------------------------------------------------------------===//
+
 def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp : 
-  NVVM_Op<"cp.async.bulk.tensor.global.shared.cta", 
-  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
-  AttrSizedOperandSegments]>,
-  Arguments<(ins  LLVM_AnyPointer:$tmaDescriptor,
-                  LLVM_PointerShared:$srcMem,
-                  Variadic<I32>:$coordinates,
-                  PtxPredicate:$predicate)> {
+  NVVM_PTXBuilder_Op<"cp.async.bulk.tensor.global.shared.cta",
+  [AttrSizedOperandSegments]>,
+  Arguments<(ins LLVM_PointerGeneric:$tmaDescriptor,
+                 LLVM_PointerShared:$srcMem,
+                 Variadic<I32>:$coordinates,
+                 Optional<I64>:$l2CacheHint,
+                 DefaultValuedAttr<TMAStoreModeAttr, "TMAStoreMode::TILE">:$mode,
+                 PtxPredicate:$predicate)> {
+  let description = [{
+    Initiates an asynchronous copy of the tensor data from shared::cta
+    memory to global memory. This Op supports all the store modes specified in
+    `TMAStoreMode`.
+
+    The `l2CacheHint` operand is optional, and it is used to specify cache
+    eviction policy that may be used during the memory access.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cp-async-bulk-tensor)
+  }];
+
   let assemblyFormat = [{ 
     $tmaDescriptor `,` 
     $srcMem `,` 
     `box` `[`$coordinates `]` 
-    (`,` `predicate` `=` $predicate^)?  
-    attr-dict  `:` type(operands)
+    oilist(
+      `l2_cache_hint` `=` $l2CacheHint | `predicate` `=` $predicate
+      | `mode` `=` enum($mode)
+    )
+    attr-dict `:` type($tmaDescriptor) `,` type($srcMem)
   }];
+
+  let extraClassDeclaration = [{
+    bool hasIntrinsic() { return !getPredicate(); }
+
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
+
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
       int dim = getCoordinates().size();
@@ -2351,34 +4352,134 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
     }
   }];
   let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
 }
+
+def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp :
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.tensor.global.shared.cta.override",
+                       [AttrSizedOperandSegments]> {
+    let arguments = (ins
+      LLVM_PointerGeneric:$tmaDescriptor,
+      LLVM_PointerShared:$srcMem,
+      LLVM_PointerGlobal:$overrideAddr,
+      Variadic<I32>:$coordinates,
+      Variadic<I16>:$tensorSize,
+      Variadic<I32>:$lowerStride,
+      Optional<I16>:$upperStride,
+      Optional<I64>:$l2CacheHint,
+      DefaultValuedAttr<TMAStoreModeAttr, "TMAStoreMode::TILE">:$mode);
+
+    let summary = "Async bulk tensor copy from shared::cta to global memory with "
+                  "tensor-map field overrides";
+    let description = [{
+      Initiates an asynchronous copy of tensor data from shared::cta memory to global
+      memory while overriding specific fields of the opaque tensor-map object with
+      explicit operands. It corresponds to the `cp.async.bulk.tensor.[1-5]d.*` PTX
+      instructions qualified with `.override::*`.
+
+      The `mode` attribute selects the store mode. The override variant is selected by
+      which optional operands are provided:
+
+      - `override.addr` (`.override::global_address`): only `overrideAddr` is given; the
+        global base address from the tensor-map is replaced. Supported in `TILE` (1D–5D),
+        `IM2COL`/`IM2COL_W` (3D–5D), and `TILE_SCATTER4` (2D, requires 5 coordinates).
+      - `override.addr.dim` (1D, `TILE` only): `overrideAddr` plus `tensorSize` (one
+        element); also overrides the tensor global dimension.
+      - `override.addr.dim.stride` (2D–5D, `TILE` only): `overrideAddr` plus `tensorSize`,
+        `lowerStride`, and `upperStride`; also overrides the global dimensions and strides.
+        The effective global stride is
+        `global_stride[i] = ((%stride{i} + (%upper_stride{i} << 32)) << 4)`.
+
+      `overrideAddr` must be 16B aligned (a runtime error is raised otherwise) and the
+      memory range `[%override_addr, %override_addr + 128 KiB)` must be allocated and
+      accessible during execution. When overriding dimensions/strides, the base-address
+      override is mandatory and the tensor start coordinates must be zero; otherwise the
+      behavior is undefined.
+
+      The optional `l2CacheHint` specifies a cache-eviction policy for the access.
+
+      Examples:
+
+      // override.addr (TILE, 1D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr, box[%d0] : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr (IM2COL, 3D) with L2 cache hint
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr, box[%d0, %d1, %d2]
+        l2_cache_hint = %ch mode = im2col : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr (TILE_SCATTER4, 2D) — 5 coordinates: x0, y0, y1, y2, y3
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr, box[%x0, %y0, %y1, %y2, %y3]
+        mode = tile_scatter4 : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr.dim (TILE, 1D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr,
+        box[%d0] tensor_size[%ts0] : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr.dim.stride (TILE, 2D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.global.shared.cta.override %tma_desc, %src, %override_addr,
+        box[%d0, %d1] tensor_size[%ts0, %ts1] lower_stride[%lstrd0] upper_stride[%ustrd] : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor)
+    }];
+
+    let assemblyFormat = [{
+      $tmaDescriptor `,`
+      $srcMem `,`
+      $overrideAddr `,`
+      `box` `[`$coordinates `]`
+      oilist(
+        `tensor_size` `[` $tensorSize `]`
+        | `lower_stride` `[` $lowerStride `]`
+        | `upper_stride` `[` $upperStride `]`
+        | `l2_cache_hint` `=` $l2CacheHint
+        | `mode` `=` enum($mode)
+      )
+      attr-dict `:` type($tmaDescriptor) `,` type($srcMem) `,` type($overrideAddr)
+    }];
+
+    let hasVerifier = 1;
+}
+} // let partition = NVVM_AsyncCopyPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Prefetch Op
 //===----------------------------------------------------------------------===//
 
-def PrefetchCacheLevelL1 : I32EnumCase<"L1", 0, "L1">;
-def PrefetchCacheLevelL2 : I32EnumCase<"L2", 1, "L2">;
-
-def PrefetchCacheLevel : I32Enum<"PrefetchCacheLevel",
-                                 "NVVM Prefetch Cache Level",
-                                 [PrefetchCacheLevelL1, PrefetchCacheLevelL2]> {
-  let cppNamespace = "::mlir::NVVM";
-}
-
-def PrefetchCacheLevelAttr : EnumAttr<NVVM_Dialect, PrefetchCacheLevel, "prefetch_cache_level"> {
-  let assemblyFormat = "$value";
-}
-
-def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
+let partition = NVVM_DataMovementPartition in {
+def NVVM_PrefetchOp : NVVM_Op<"prefetch",
+    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> {
   let summary = "Brings the cache line containing an address into the specified cache level";
   let description = [{
-    Operand `addr` can be a global, local or generic address pointer. No 
-    operation is performed if `addr` maps to a `shared` memory location.
+    Prefetches the cache line containing the address given by `addr`. The 
+    operand may be a global, local, or generic pointer. When `tensormap` is 
+    specified, the operand may instead be a constant or generic pointer. If the 
+    address maps to shared memory, the operation has no effect.
 
-    The `cacheLevel` attribute specifies the cache level to which the cache line
-    containing the specified address is brought.
-    
+    At most one of `cacheLevel` or `tensormap` may be present. The `cacheLevel` 
+    attribute selects the target cache level. When combined with `uniform`, the 
+    prefetch is performed to the uniform cache, in which case `addr` must be a 
+    generic pointer.
+
+    When `tensormap` is used, the line containing `addr` is brought from the 
+    constant or parameter state space for later use by `cp.async.bulk.tensor`. 
+    If `in_param_space` is specified, the generic pointer is interpreted as 
+    referring to the parameter state space.
+
     `uniform` can be specified after the `cacheLevel` to indicate that the 
     prefetch is performed to the specified uniform cache level. If `uniform` is 
     specified, `addr` must be a generic address pointer and no operation is 
@@ -2389,36 +4490,84 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch"> {
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-prefetch-prefetchu)
   }];
-  let arguments = (ins PrefetchCacheLevelAttr:$cacheLevel,
-                       UnitAttr:$uniform,
+  let arguments = (ins OptionalAttr<PrefetchCacheLevelAttr>:$cacheLevel,
+                       OptionalAttr<CacheEvictionPriorityAttr>:$evictPriority,
                        AnyTypeOf<[LLVM_PointerGlobal,
                                   LLVM_PointerLocal,
-                                  LLVM_PointerGeneric]>:$addr,
-                       OptionalAttr<CacheEvictionPriorityAttr>:$evictPriority);
-  let assemblyFormat = "`level` `=` $cacheLevel (`uniform` $uniform^)? `,` $addr (`,` `evict_priority` `=` $evictPriority^)? attr-dict `:` type($addr)";
+                                  LLVM_PointerGeneric,
+                                  LLVM_PointerConst]>:$addr,
+                       PtxPredicate:$predicate,
+                       UnitAttr:$tensormap,
+                       UnitAttr:$uniform,
+                       UnitAttr:$in_param_space);
+  let assemblyFormat = "(`level` `=` enum($cacheLevel)^ "
+                       "(`uniform` $uniform^)? `,`)? "
+                       "(`tensormap` $tensormap^ "
+                       "(`in_param_space` $in_param_space^)? `,`)? "
+                       "(`evict_priority` `=` enum($evictPriority)^ `,`)? "
+                       "$addr (`,` `predicate` `=` $predicate^)? attr-dict "
+                       "`:` type(operands)";
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(NVVM::PrefetchOp &op);
+    static NVVM::IDArgPair
+    getIntrinsicIDAndArgs(NVVM::PrefetchOp &op,LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+    bool hasIntrinsic() { return !getPredicate() || !getTensormap(); }
   }];
-  let llvmBuilder = [{
-    auto intId = NVVM::PrefetchOp::getIntrinsicID(op);
-    createIntrinsicCall(builder, intId, $addr);
-  }];
-}
-
-def NVVM_PrefetchTensorMapOp : NVVM_Op<"prefetch.tensormap",
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Arguments<(ins LLVM_AnyPointer:$tmaDescriptor, PtxPredicate:$predicate)> {
-  let assemblyFormat = "$tmaDescriptor (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
   let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { 
+    std::string $cppClass::getPtx() {
+      // Inline PTX is only supported for prefetch tensormap
       return std::string("prefetch.tensormap [%0];");
     }
   }];
+  let llvmBuilder = [{
+    auto [id, args] = NVVM::PrefetchOp::getIntrinsicIDAndArgs(op,
+                                          moduleTranslation, builder);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
+  }];
 }
 
-def NVVM_CpAsyncBulkPrefetchOp : NVVM_Op<"cp.async.bulk.prefetch"> {
+def NVVM_PrefetchValidAddrOp :
+  NVVM_Op<"prefetch.valid_addr", [NVVMRequiresSM<90>]> {
+  let summary = "Prefetch from a valid global address into the selected cache";
+  let description = [{
+    Prefetches data from the address given by `addr` into the cache selected by
+    `cacheLevel`. Currently, only L1 is supported and the operation requests a
+    prefetch of at least 32 bytes.
+
+    The operand must be a global or generic pointer. A generic address must
+    refer to the global state space. At least one byte at `addr` must be valid
+    and accessible for this access; otherwise, behavior is undefined and the
+    instruction may fault.
+
+    Examples:
+    ```mlir
+    nvvm.prefetch.valid_addr level = L1, %global_ptr : !llvm.ptr<1>
+    nvvm.prefetch.valid_addr level = L1, %generic_ptr : !llvm.ptr
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-prefetch-prefetchu)
+  }];
+
+  let arguments = (ins
+    ConfinedAttr<PrefetchCacheLevelAttr,
+      [EnumAttrIsOneOf<PrefetchCacheLevelAttr,
+                      [PrefetchCacheLevelL1]>]>:$cacheLevel,
+    AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerGlobal]>:$addr);
+  let assemblyFormat =
+    "`level` `=` enum($cacheLevel) `,` $addr attr-dict `:` type($addr)";
+
+  let llvmBuilder = [{
+    createIntrinsicCall(builder,
+                        llvm::Intrinsic::nvvm_prefetch_L1_32B_valid_addr,
+                        builder.getVoidTy(), {$addr});
+  }];
+}
+} // let partition = NVVM_DataMovementPartition
+
+let partition = NVVM_AsyncCopyPartition in {
+def NVVM_CpAsyncBulkPrefetchOp : NVVM_VoidIntrinsicOp<"cp.async.bulk.prefetch"> {
   let summary = "Async bulk prefetch from global memory to L2 cache";
   let description = [{
     Initiates an asynchronous prefetch of data from the location
@@ -2447,40 +4596,21 @@ def NVVM_CpAsyncBulkPrefetchOp : NVVM_Op<"cp.async.bulk.prefetch"> {
     $srcMem `,` $size (`l2_cache_hint` `=` $l2CacheHint^ )?
     attr-dict  `:` type($srcMem)
   }];
-
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkPrefetchOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
 def NVVM_CpAsyncBulkTensorPrefetchOp :
-  NVVM_Op<"cp.async.bulk.tensor.prefetch", [AttrSizedOperandSegments]> {
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.tensor.prefetch", [AttrSizedOperandSegments]> {
   let arguments = (ins
-    LLVM_AnyPointer:$tmaDescriptor,
+    LLVM_PointerGeneric:$tmaDescriptor,
     Variadic<I32>:$coordinates,
     Variadic<I16>:$im2colOffsets,
+    DefaultValuedAttr<TMALoadModeAttr, "TMALoadMode::TILE">:$mode,
     Optional<I64>:$l2CacheHint);
 
   let description = [{
     Initiates an asynchronous prefetch operation on the tensor data from global
-    memory to L2 cache.
-
-    The Op has two modes:
-    1) Tiled Mode: It's the default mode. The source multi-dimensional tensor
-    layout is preserved at the destination.
-
-    2) Im2col Mode: This mode is used when `im2colOffsets` operands are present.
-    the elements in the Bounding Box of the source tensor are rearranged into
-    columns at the destination. In this mode, the tensor has to be at least
-    3-dimensional.
+    memory to L2 cache. This Op supports all the load modes specified in
+    `TMALoadMode`.
 
     The `l2CacheHint` operand is optional, and it is used to specify cache
     eviction policy that may be used during the memory access.
@@ -2491,76 +4621,19 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
   let assemblyFormat = [{
     $tmaDescriptor `,`
     `box` `[`$coordinates `]`
-    (`im2col` `[` $im2colOffsets^ `]` )?
-    (`l2_cache_hint` `=` $l2CacheHint^ )?
+    oilist(
+      `im2col` `[` $im2colOffsets `]`
+      | `l2_cache_hint` `=` $l2CacheHint | `mode` `=` enum($mode)
+    )
     attr-dict  `:` type($tmaDescriptor)
   }];
 
-  let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(int tensorDims, bool isIm2Col);
-  }];
-
   let hasVerifier = 1;
-
-  string llvmBuilder = [{
-    // Arguments to the intrinsic:
-    // tmaDesc, tensorDims, im2colOffsets
-    // cache_hint(if applicable) and flag(boolean)
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    translatedOperands.push_back($tmaDescriptor);
-
-    for (auto v : op.getCoordinates())
-      translatedOperands.push_back(moduleTranslation.lookupValue(v));
-
-    for (auto v : op.getIm2colOffsets())
-      translatedOperands.push_back(moduleTranslation.lookupValue(v));
-
-    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i64Unused = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
-
-    bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Unused);
-    translatedOperands.push_back(builder.getInt1(isCacheHint));
-
-    auto intId = NVVM::CpAsyncBulkTensorPrefetchOp::getIntrinsicID(
-        op.getCoordinates().size(), op.getIm2colOffsets().size() > 0);
-    createIntrinsicCall(builder, intId, translatedOperands);
-  }];
 }
 
-// List of modes supported for TMA Store and Reduction Ops
-def TMAStoreModeTile   : I32EnumAttrCase<"TILE", 0, "tile">;
-def TMAStoreModeIm2Col : I32EnumAttrCase<"IM2COL", 1, "im2col">;
-
-def TMAStoreMode : I32EnumAttr<"TMAStoreMode", "NVVM TMA Store Mode",
-    [TMAStoreModeTile, TMAStoreModeIm2Col]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def TMAStoreModeAttr : EnumAttr<NVVM_Dialect, TMAStoreMode, "tma_store_mode"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-// List of Reduction Ops supported with TMA Store
-def TMAReduxKindAdd : I32EnumAttrCase<"ADD", 0, "add">;
-def TMAReduxKindMin : I32EnumAttrCase<"MIN", 1, "min">;
-def TMAReduxKindMax : I32EnumAttrCase<"MAX", 2, "max">;
-def TMAReduxKindInc : I32EnumAttrCase<"INC", 3, "inc">;
-def TMAReduxKindDec : I32EnumAttrCase<"DEC", 4, "dec">;
-def TMAReduxKindAnd : I32EnumAttrCase<"AND", 5, "and">;
-def TMAReduxKindOr  : I32EnumAttrCase<"OR",  6, "or">;
-def TMAReduxKindXor : I32EnumAttrCase<"XOR", 7, "xor">;
-
-def TMAReduxKind : I32EnumAttr<"TMAReduxKind", "NVVM TMA redux kind",
-    [TMAReduxKindAdd, TMAReduxKindMax, TMAReduxKindMin,
-     TMAReduxKindInc, TMAReduxKindDec, TMAReduxKindAnd,
-     TMAReduxKindOr,  TMAReduxKindXor]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def TMAReduxKindAttr : EnumAttr<NVVM_Dialect, TMAReduxKind, "tma_redux_kind"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+//===----------------------------------------------------------------------===//
+// NVVM Reduction Ops
+//===----------------------------------------------------------------------===//
 
 def NVVM_CpAsyncBulkTensorReduceOp :
   NVVM_Op<"cp.async.bulk.tensor.reduce", [AttrSizedOperandSegments]> {
@@ -2592,54 +4665,114 @@ def NVVM_CpAsyncBulkTensorReduceOp :
     $srcMem `,`
     `box` `[`$coordinates `]`
     (`l2_cache_hint` `=` $l2CacheHint^ )?
+    `,` `reduction` `=` enum($redKind) oilist(`mode` `=` enum($mode))
     attr-dict  `:` type($tmaDescriptor) `,` type($srcMem)
   }];
 
   let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID getIntrinsicID(int tensorDims,
-                                              NVVM::TMAReduxKind kind,
-                                              bool isIm2Col);
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op,
+      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase& builder);
   }];
 
   let hasVerifier = 1;
 
   string llvmBuilder = [{
-    // Arguments to the intrinsic:
-    // shared_mem_ptr, tmaDesc, tensorDims
-    // cache_hint(if applicable) and flag(boolean)
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    translatedOperands.push_back($srcMem);
-    translatedOperands.push_back($tmaDescriptor);
-
-    for (auto v : op.getCoordinates())
-      translatedOperands.push_back(moduleTranslation.lookupValue(v));
-
-    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i64Undef = llvm::UndefValue::get(llvm::IntegerType::get(ctx, 64));
-
-    bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Undef);
-    translatedOperands.push_back(builder.getInt1(isCacheHint));
-
-    auto intId = NVVM::CpAsyncBulkTensorReduceOp::getIntrinsicID(
-                 op.getCoordinates().size(), $redKind,
-                 (op.getMode() == NVVM::TMAStoreMode::IM2COL));
-    createIntrinsicCall(builder, intId, translatedOperands);
+    auto [id, args] = NVVM::CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
   }];
+}
+
+def NVVM_CpAsyncBulkTensorReduceOverrideAddrOp :
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.tensor.reduce.override",
+                       [AttrSizedOperandSegments]> {
+    let arguments = (ins
+      LLVM_PointerGeneric:$tmaDescriptor,
+      LLVM_PointerShared:$srcMem,
+      LLVM_PointerGlobal:$overrideAddr,
+      Variadic<I32>:$coordinates,
+      Variadic<I16>:$tensorSize,
+      Variadic<I32>:$lowerStride,
+      Optional<I16>:$upperStride,
+      Optional<I64>:$l2CacheHint,
+      TMAReduxKindAttr:$redKind,
+      DefaultValuedAttr<TMAStoreModeAttr, "TMAStoreMode::TILE">:$mode
+      );
+
+    let summary = "Async bulk tensor reduction from shared::cta to global memory with "
+                  "tensor-map field overrides";
+    let description = [{
+      Initiates an asynchronous reduction of tensor data in global memory with the tensor
+      data in shared::cta memory, while overriding specific fields of the opaque tensor-map
+      object with explicit operands. It corresponds to the
+      `cp.reduce.async.bulk.tensor.[1-5]d.global.shared::cta.*` PTX instructions qualified
+      with `.override::*`.
+
+      The `mode` attribute selects the store mode and `redKind` selects the reduction
+      operation (`ADD`, `MIN`, `MAX`, `INC`, `DEC`, `AND`, `OR`, `XOR`) that combines the
+      source data in shared memory with the destination data in global memory. The override
+      variant is similar to the `cp.async.bulk.tensor.global.shared.cta.override` op described above.
+
+      The optional `l2CacheHint` specifies a cache-eviction policy for the access.
+
+      Examples:
+
+      // override.addr (TILE, 1D) with ADD reduction
+      ```mlir
+      nvvm.cp.async.bulk.tensor.reduce.override %tma_desc, %src, %override_addr, box[%d0], reduction = add : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr (IM2COL, 3D) with L2 cache hint and MIN reduction
+      ```mlir
+      nvvm.cp.async.bulk.tensor.reduce.override %tma_desc, %src, %override_addr, box[%d0, %d1, %d2]
+        l2_cache_hint = %ch, reduction = min mode = im2col : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr.dim (TILE, 1D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.reduce.override %tma_desc, %src, %override_addr,
+        box[%d0] tensor_size[%ts0], reduction = add : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      // override.addr.dim.stride (TILE, 2D)
+      ```mlir
+      nvvm.cp.async.bulk.tensor.reduce.override %tma_desc, %src, %override_addr,
+        box[%d0, %d1] tensor_size[%ts0, %ts1] lower_stride[%lstrd0] upper_stride[%ustrd], reduction = and : !llvm.ptr, !llvm.ptr<3>, !llvm.ptr<1>
+      ```
+
+      [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-reduce-async-bulk-tensor)
+    }];
+
+    let assemblyFormat = [{
+      $tmaDescriptor `,`
+      $srcMem `,`
+      $overrideAddr `,`
+      `box` `[`$coordinates `]`
+      (`tensor_size` `[`$tensorSize^ `]`)?
+      (`lower_stride` `[`$lowerStride^ `]`)?
+      (`upper_stride` `[`$upperStride^ `]`)?
+      (`l2_cache_hint` `=` $l2CacheHint^)?
+      `,` `reduction` `=` enum($redKind) oilist(`mode` `=` enum($mode))
+      attr-dict  `:` type($tmaDescriptor) `,` type($srcMem) `,` type($overrideAddr)
+    }];
+
+    let hasVerifier = 1;
 }
 
 def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
   NVVM_Op<"cp.async.bulk.shared.cluster.global", [AttrSizedOperandSegments]> {
-  let summary = "Async bulk copy from global memory to Shared cluster memory";
+  let summary = "Async bulk copy from global to Shared {cta or cluster} memory";
   let description = [{
-    Initiates an asynchronous copy operation from global memory to cluster's
-    shared memory.
+    Initiates an asynchronous copy operation from global memory to shared
+    memory or shared_cluster memory.
 
-    The `multicastMask` operand is optional. When it is present, the Op copies
+    The `multicastMask` operand is optional and can be used only when the
+    destination is shared::cluster memory. When it is present, this Op copies
     data from global memory to shared memory of multiple CTAs in the cluster.
     Operand `multicastMask` specifies the destination CTAs in the cluster such
     that each bit position in the 16-bit `multicastMask` operand corresponds to
-    the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.
+    the `nvvm.read.ptx.sreg.ctaid` of the destination CTA. 
 
     The `l2CacheHint` operand is optional, and it is used to specify cache
     eviction policy that may be used during the memory access.
@@ -2648,7 +4781,7 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
   }];
 
   let arguments = (ins
-    LLVM_PointerSharedCluster:$dstMem,
+    AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$dstMem,
     LLVM_PointerGlobal:$srcMem,
     LLVM_PointerShared:$mbar,
     I32:$size,
@@ -2662,35 +4795,17 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
     attr-dict  `:` type($dstMem) `,` type($srcMem)
   }];
 
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase& builder);
+  }];
   string llvmBuilder = [{
-    // Arguments to the intrinsic:
-    // dst, mbar, src, size
-    // multicast_mask, cache_hint,
-    // flag for multicast_mask,
-    // flag for cache_hint
-    llvm::SmallVector<llvm::Value *> translatedOperands;
-    translatedOperands.push_back($dstMem);
-    translatedOperands.push_back($mbar);
-    translatedOperands.push_back($srcMem);
-    translatedOperands.push_back($size);
-
-    // Multicast, if available
-    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
-    auto *i16Unused = llvm::ConstantInt::get(llvm::Type::getInt16Ty(ctx), 0);
-    bool isMulticast = op.getMulticastMask() ? true : false;
-    translatedOperands.push_back(isMulticast ? $multicastMask : i16Unused);
-
-    // Cachehint, if available
-    auto *i64Unused = llvm::ConstantInt::get(llvm::Type::getInt64Ty(ctx), 0);
-    bool isCacheHint = op.getL2CacheHint() ? true : false;
-    translatedOperands.push_back(isCacheHint ? $l2CacheHint : i64Unused);
-
-    // Flag arguments for multicast and cachehint
-    translatedOperands.push_back(builder.getInt1(isMulticast));
-    translatedOperands.push_back(builder.getInt1(isCacheHint));
-
-    createIntrinsicCall(builder,
-      llvm::Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster, translatedOperands);
+    auto [id, args] = NVVM::CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
+                      *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
@@ -2782,11 +4897,13 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
     createIntrinsicCall(builder, id, args);
   }];
 }
+} // let partition = NVVM_AsyncCopyPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Wgmma Ops
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_WgmmaPartition in {
 def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMa<[90]>]> {
   let arguments = (ins);
   let description = [{
@@ -2825,55 +4942,7 @@ def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", [NVVMRe
     createIntrinsicCall(builder, llvm::Intrinsic::nvvm_wgmma_wait_group_sync_aligned, builder.getInt64($group));
   }];
 }
-
-/// Enum attribute type for the negating of input operands
-def WGMMAScaleInNeg : I32EnumAttrCase<"neg", -1>;
-def WGMMAScaleInOne : I32EnumAttrCase<"one", 1>;
-def WGMMAScaleIn : I32EnumAttr<"WGMMAScaleIn", "WGMMA overflow options",
-  [WGMMAScaleInOne, WGMMAScaleInNeg]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def WGMMAScaleInAttr : EnumAttr<NVVM_Dialect, WGMMAScaleIn, "wgmma_scale_in"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-/// Enum attribute type for the output operand
-def WGMMAScaleOutZero : I32EnumAttrCase<"zero", 0>;
-def WGMMAScaleOutOne : I32EnumAttrCase<"one", 1>;
-def WGMMAScaleOut : I32EnumAttr<"WGMMAScaleOut", "WGMMA input predicate",
-  [WGMMAScaleOutZero, WGMMAScaleOutOne]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def WGMMAScaleOutAttr : EnumAttr<NVVM_Dialect, WGMMAScaleOut, "wgmma_scale_out"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-/// Enum attribute of the different PTX element types used for WGMMA operands.
-def WGMMATypeF16  : I32EnumAttrCase<"f16", 0>;
-def WGMMATypeTF32 : I32EnumAttrCase<"tf32", 1>;
-def WGMMATypeU8 : I32EnumAttrCase<"u8", 2>;
-def WGMMATypeS8 : I32EnumAttrCase<"s8", 3>;
-def WGMMATypeB1 : I32EnumAttrCase<"b1", 4>;
-def WGMMATypeBF16 : I32EnumAttrCase<"bf16", 5>;
-def WGMMATypeF8E4M3 : I32EnumAttrCase<"e4m3", 6>;
-def WGMMATypeF8E5M2 : I32EnumAttrCase<"e5m2", 7>;
-def WGMMATypeF32 : I32EnumAttrCase<"f32", 8>;
-def WGMMATypeS32 : I32EnumAttrCase<"s32", 9>;
-
-def WGMMATypes : I32EnumAttr<"WGMMATypes", "NVVM WGMMA types",
-  [WGMMATypeF16, WGMMATypeTF32,
-    WGMMATypeU8, WGMMATypeS8,
-    WGMMATypeB1, WGMMATypeBF16, WGMMATypeF8E4M3, 
-    WGMMATypeF8E5M2, WGMMATypeF32, WGMMATypeS32]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def WGMMATypesAttr : EnumAttr<NVVM_Dialect, WGMMATypes, "wgmma_type"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
+} // let partition = NVVM_WgmmaPartition
 
 def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async", 
               [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
@@ -2902,7 +4971,7 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
       `D` `[` $typeD `,` $scaleD (`,` $satfinite^)? `]` `,`
       `A` `[` $typeA `,` $scaleA `,` $layoutA `]` `,` 
       `B` `[` $typeB `,` $scaleB `,` $layoutB `]`
-      attr-dict `:` 
+      attr-dict `:`
       type($inouts) `->` type($results)
     }];
   
@@ -2963,12 +5032,13 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions)
   }];
+
+  let partition = NVVM_WgmmaPartition;
   
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    void getAsmValues(RewriterBase &rewriter, 
-        llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
+    bool getAsmValues(RewriterBase &, llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &);
   }];
 }
 
@@ -2976,30 +5046,37 @@ def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async",
 // NVVM Griddepcontrol Ops
 //===----------------------------------------------------------------------===//
 
-def NVVM_GriddepcontrolWaitOp : NVVM_IntrOp<"griddepcontrol.wait", [], 0> {
-  let assemblyFormat = "attr-dict";
-
+def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
   let description = [{
-    Causes the executing thread to wait until all prerequisite grids in flight 
+    If the $kind attribute is set to `wait`, it causes the 
+    executing thread to wait until all prerequisite grids in flight 
     have completed and all the memory operations from the prerequisite grids 
     are performed and made visible to the current grid.
 
+    When the $kind is launch_dependents, it signals that specific dependents 
+    the runtime system designated to react to this instruction can be scheduled 
+    as soon as all other CTAs in the grid issue the same instruction or have 
+    completed.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
   }];
-}
+  let partition = NVVM_SyncPartition;
 
-def NVVM_GriddepcontrolLaunchDependentsOp
-    : NVVM_IntrOp<"griddepcontrol.launch.dependents", [], 0> {
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins GridDepActionAttr:$kind);
 
-  let description = [{
-    Signals that specific dependents the runtime system designated to react to 
-    this instruction can be scheduled as soon as all other CTAs in the grid 
-    issue the same instruction or have completed.
+  let assemblyFormat = "enum($kind) attr-dict";
 
-
-    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-griddepcontrol)
+  string llvmBuilder = [{
+    llvm::Intrinsic::ID id;
+      switch ($kind) {
+        case NVVM::GridDepActionKind::wait:
+          id = llvm::Intrinsic::nvvm_griddepcontrol_wait;
+          break;
+        case NVVM::GridDepActionKind::launch_dependents:
+          id = llvm::Intrinsic::nvvm_griddepcontrol_launch_dependents;
+          break;
+      }
+      createIntrinsicCall(builder, id);
   }];
 }
 
@@ -3008,15 +5085,17 @@ def NVVM_GriddepcontrolLaunchDependentsOp
 //===----------------------------------------------------------------------===//
 
 def NVVM_MapaOp: NVVM_Op<"mapa",
-    [TypesMatchWith<"`res` and `a` should have the same type",
-                    "a", "res", "$_self">, NVVMRequiresSM<90>]> {
-  let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$res);
+  [InputAddressIsCombinationOf<["a", "res"],
+    [[LLVM_PointerShared, LLVM_PointerSharedCluster], [LLVM_PointerGeneric, LLVM_PointerGeneric]],
+    "Valid address-space check(or mapping) for mapa Op">, NVVMRequiresSM<90>]> {
+  let partition = NVVM_DataMovementPartition;
+  let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerSharedCluster]>:$res);
   let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$a, I32:$b);
 
   string llvmBuilder = [{
     int addrSpace = llvm::cast<LLVMPointerType>(op.getA().getType()).getAddressSpace();
     
-    bool isSharedMemory = addrSpace == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+    bool isSharedMemory = addrSpace == static_cast<int> (NVVM::NVVMMemorySpace::Shared);
 
     auto intId = isSharedMemory? llvm::Intrinsic::nvvm_mapa_shared_cluster : llvm::Intrinsic::nvvm_mapa;
     $res = createIntrinsicCall(builder, intId, {$a, $b});
@@ -3029,18 +5108,7 @@ def NVVM_MapaOp: NVVM_Op<"mapa",
 // NVVM match.sync Op
 //===----------------------------------------------------------------------===//
 
-def MatchSyncKindAny : I32EnumAttrCase<"any", 0>;
-def MatchSyncKindAll : I32EnumAttrCase<"all", 1>;
-
-def MatchSyncKind : I32EnumAttr<"MatchSyncKind", "NVVM match sync kind",
-  [MatchSyncKindAny, MatchSyncKindAll]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-
-def MatchSyncKindAttr : EnumAttr<NVVM_Dialect, MatchSyncKind, "match_sync_kind">;
-
-def NVVM_MatchSyncOp : NVVM_Op<"match.sync">,
+def NVVM_MatchSyncOp : NVVM_Op<"match.sync", [InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, LLVMStructType]>:$res)>,
   Arguments<(ins I32:$thread_mask,
                  AnyTypeOf<[I32, I64]>:$val,
@@ -3061,13 +5129,15 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync">,
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-match-sync)
   }];
+  let partition = NVVM_SyncPartition;
   string llvmBuilder = [{
     auto intId = getMatchSyncIntrinsicId(
         op.getVal().getType(), $kind);
     $res = createIntrinsicCall(builder,
         intId, {$thread_mask, $val});
   }];
-  let assemblyFormat = "$kind $thread_mask `,` $val attr-dict `:` type($val) `->` type($res)";
+  let assemblyFormat = "enum($kind) $thread_mask `,` $val attr-dict `:` "
+                       "type($val) `->` type($res)";
   let hasVerifier = 1;
 }
 
@@ -3075,8 +5145,9 @@ def NVVM_MatchSyncOp : NVVM_Op<"match.sync">,
 // NVVM Bulk Store Op
 //===----------------------------------------------------------------------===//
 
+let partition = NVVM_DataMovementPartition in {
 def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
-  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, I64:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
+  let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr, AnyTypeOf<[I32, I64]>:$size, DefaultValuedAttr<I64Attr, "0">:$initVal);
 
   let summary = "Bulk Store Op";
   let description = [{
@@ -3090,17 +5161,73 @@ def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
   }];
 
   string llvmBuilder = [{
-    auto intId = getStBulkIntrinsicId(
-          llvm::cast<LLVM::LLVMPointerType>(op.getAddr().getType()));
-    createIntrinsicCall(builder, intId,
-                      {$addr, $size, builder.getInt64($initVal)});
+    createIntrinsicCall(builder, llvm::Intrinsic::nvvm_st_bulk,
+                        builder.getVoidTy(),
+                        {$addr, $size, builder.getInt64($initVal)});
   }];
   
-  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr)";
+  let assemblyFormat = "$addr `,` `size` `=` $size (`,` `init` `=` $initVal^)? attr-dict `:` type($addr) `,` type($size)";
   
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM Asynchronous Store Ops
+//===----------------------------------------------------------------------===//
+
+def NVVM_AsyncStoreGlobalOp: NVVM_VoidIntrinsicOp<"store.async.global", 
+                                                  [NVVMRequiresSM<100>]> {
+  let description = [{
+    Performs an asynchronous store to global memory to the address given by 
+    `addr`.
+    The `value` operand specifies the value to store.
+    The `scope` operand specifies the scope of the store and must be one of the 
+    following:
+    - `sys`: Synchronization with all threads in the system.
+    - `gpu`: Synchronization with all threads in the same GPU.
+    The `multimem` operand specifies whether the store is performed on a 
+    multimem address.
+    The `mmio` operand specifies whether this is an MMIO operation.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-st-async)
+  }];
+  let summary = "Asynchronous Store Op to global memory";
+  let arguments = (ins LLVM_PointerGlobal:$addr,
+                       AnyTypeOf<[I8, I16, I32, I64]>:$value, 
+                       MemScopeKindAttr:$scope,
+                       DefaultValuedAttr<BoolAttr, "false">:$multimem,
+                       DefaultValuedAttr<BoolAttr, "false">:$mmio);
+  let results = (outs );
+  let assemblyFormat = [{
+    $addr `,` $value `scope` `=` enum($scope)
+    oilist(`multimem` `=` $multimem | `mmio` `=` $mmio)
+    attr-dict `:` type($addr) `,` type($value)
+  }];
+  let hasVerifier = 1;
+}
+
+def NVVM_AsyncStoreSharedOp: 
+  LLVM_IntrOpBase<NVVM_Dialect, "store.async.shared", "nvvm_st_async",
+                  /*overloadedResults=*/[], /*overloadedOperands=*/[1],
+                  [NVVMRequiresSM<90>], /*numResults=*/0> {
+  let description = [{
+    Performs an asynchronous store to shared cluster memory to the address 
+    given by `addr`.
+    The `value` operand specifies the value to store.
+    The `mbarrier` operand specifies the mbarrier object which signals the 
+    completion of the store.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-st-async)
+  }];
+  let summary = "Asynchronous Store Op to shared cluster memory";
+  let arguments = (ins LLVM_PointerSharedCluster:$addr,
+                       AnyTypeOf<[I32, I64, I128]>:$value, 
+                       LLVM_PointerSharedCluster:$mbarrier);
+  let assemblyFormat = "$addr `,` $value `,` `mbarrier` `=` $mbarrier attr-dict `:` type($addr) `,` type($value) `,` type($mbarrier)";
+}
+} // let partition = NVVM_DataMovementPartition
+
+let partition = NVVM_MiscPartition in {
 def NVVM_Exit : NVVM_Op<"exit"> {
   let summary = "Exit Op";
   let description = [{
@@ -3131,110 +5258,70 @@ def NVVM_Breakpoint : NVVM_Op<"breakpoint"> {
 
   let assemblyFormat = "attr-dict";
 }
+} // let partition = NVVM_MiscPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM TCGEN05 Ops
 //===----------------------------------------------------------------------===//
-// Num CTAs in a group participating in the TCGEN05 operation.
-// This corresponds to the "cta_group::1", "cta_group::2"
-// modifiers in the PTX instructions.
-def Tcgen05GroupCTA_1 : I32EnumAttrCase<"CTA_1", 0, "cta_1">;
-def Tcgen05GroupCTA_2 : I32EnumAttrCase<"CTA_2", 1, "cta_2">;
 
-def Tcgen05GroupKind : I32EnumAttr<"Tcgen05GroupKind",
-                            "NVVM Tcgen05 group kind",
-  [Tcgen05GroupCTA_1, Tcgen05GroupCTA_2]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def Tcgen05GroupKindAttr :
-  EnumAttr<NVVM_Dialect, Tcgen05GroupKind, "tcgen05_group"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def Tcgen05FenceBefore : I32EnumAttrCase<"BEFORE_THREAD_SYNC", 0, "before">;
-def Tcgen05FenceAfter  : I32EnumAttrCase<"AFTER_THREAD_SYNC",  1, "after">;
-def Tcgen05FenceKind : I32EnumAttr<"Tcgen05FenceKind", "NVVM Tcgen05 fence kind",
-  [Tcgen05FenceBefore, Tcgen05FenceAfter]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def Tcgen05FenceKindAttr :
-  EnumAttr<NVVM_Dialect, Tcgen05FenceKind, "tcgen05_fence"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def Tcgen05WaitLoad  : I32EnumAttrCase<"LOAD",  0, "load">;
-def Tcgen05WaitStore : I32EnumAttrCase<"STORE", 1, "store">;
-def Tcgen05WaitKind : I32EnumAttr<"Tcgen05WaitKind", "NVVM Tcgen05 wait kind",
-  [Tcgen05WaitLoad, Tcgen05WaitStore]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-def Tcgen05WaitKindAttr :
-  EnumAttr<NVVM_Dialect, Tcgen05WaitKind, "tcgen05_wait"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def NVVM_Tcgen05AllocOp : NVVM_Op<"tcgen05.alloc", [NVVMRequiresSMa<[100, 101]>]> {
+let partition = NVVM_Tcgen05Partition in {
+def NVVM_Tcgen05AllocOp : NVVM_VoidIntrinsicOp<"tcgen05.alloc",
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 alloc operation";
   let description = [{
     The `tcgen05.alloc` Op allocates tensor core memory for
     the amount specified by `nCols` and writes the destination
     address to the `addr` argument. The `nCols` operand specifies the
-    number of columns to be allocated and it must be a power-of-two.
+    number of columns to be allocated and it must be a power-of-two
+    for non-exclusive allocations and a multiple of 32 for exclusive
+    allocations. The `exclusive` attribute requests an exclusive
+    allocation and defaults to `false`. When `exclusive` is `true`, the
+    `.exclusive` variant is emitted, which claims ownership of the
+    allocation permit. No other allocation may exist at the same time
+    as an exclusive allocation.
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_AnyPointer, LLVM_PointerShared]>:$addr,
     I32:$nCols,
-    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group,
+    DefaultValuedAttr<BoolAttr, "false">:$isExclusive);
 
-  let assemblyFormat = "$addr `,` $nCols attr-dict `:` type(operands)";
-
-  let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::SmallVector<llvm::Value *> &args);
-  }];
-  string llvmBuilder = [{
-    llvm::SmallVector<llvm::Value *> args;
-    auto id = NVVM::Tcgen05AllocOp::getIntrinsicIDAndArgs(
-      *op, moduleTranslation, args);
-    createIntrinsicCall(builder, id, args);
+  let assemblyFormat = [{
+    $addr `,` $nCols (`,` `group` `=` $group^)?
+    (`exclusive` `=` $isExclusive^)? attr-dict `:` type(operands)
   }];
 }
 
-def NVVM_Tcgen05DeallocOp : NVVM_Op<"tcgen05.dealloc", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05DeallocOp : NVVM_VoidIntrinsicOp<"tcgen05.dealloc",
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 dealloc operation";
   let description = [{
     The `tcgen05.dealloc` Op de-allocates the tensor core memory
     specified by `tmemAddr`, which must be from a previous tensor
     memory allocation. The `nCols` operand specifies the number
-    of columns to be de-allocated, and it must be a power-of-two.
+    of columns to be de-allocated, and it must be a power-of-two
+    for non-exclusive deallocations and a multiple of 32 for exclusive
+    deallocations. The `exclusive` attribute defaults to `false`. When
+    `exclusive` is `true`, the `.exclusive` variant is emitted. Memory
+    must be deallocated with `exclusive` if and only if it was allocated
+    with `exclusive`.
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-memory-alloc-manage-instructions)
   }];
 
   let arguments = (ins LLVM_PointerTensor:$taddr, I32:$nCols,
-    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group,
+    DefaultValuedAttr<BoolAttr, "false">:$isExclusive);
 
-  let assemblyFormat = "$taddr `,` $nCols attr-dict `:` type(operands)";
-
-  let extraClassDeclaration = [{
-    static llvm::Intrinsic::ID
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::SmallVector<llvm::Value *> &args);
-  }];
-  string llvmBuilder = [{
-    llvm::SmallVector<llvm::Value *> args;
-    auto id = NVVM::Tcgen05DeallocOp::getIntrinsicIDAndArgs(
-      *op, moduleTranslation, args);
-    createIntrinsicCall(builder, id, args);
+  let assemblyFormat = [{
+    $taddr `,` $nCols (`,` `group` `=` $group^)?
+    (`exclusive` `=` $isExclusive^)? attr-dict `:` type(operands)
   }];
 }
 
-def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_permit", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_permit",
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 Op to relinquish the right to allocate";
   let description = [{
     The `tcgen05.relinquish_alloc_permit` Op specifies that the CTA
@@ -3245,19 +5332,19 @@ def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_perm
   }];
 
   let arguments = (ins
-    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group);
 
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`group` `=` $group^)? attr-dict";
 
   string llvmBuilder = [{
-    auto id = ($group == NVVM::Tcgen05GroupKind::CTA_1) ?
+    auto id = ($group == NVVM::CTAGroupKind::CTA_1) ?
       llvm::Intrinsic::nvvm_tcgen05_relinq_alloc_permit_cg1 :
       llvm::Intrinsic::nvvm_tcgen05_relinq_alloc_permit_cg2;
     createIntrinsicCall(builder, id);
   }];
 }
 
-def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 fence operations";
   let description = [{
     The `tcgen05.fence<before>` orders all prior async tcgen05 operations
@@ -3279,7 +5366,7 @@ def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSMa<[100, 101]>]
   }];
 }
 
-def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 wait operations";
   let description = [{
     The `tcgen05.wait<load>` causes the executing thread to block until
@@ -3301,27 +5388,32 @@ def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMa<[100, 101]>]> 
   }];
 }
 
-def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 commit operations";
   let description = [{
-    The `tcgen05.commit` makes the mbarrier object, specified by
+    The `tcgen05.commit` makes the *mbarrier object*, specified by
     the operand `addr`, track the completion of all the prior
     async-tcgen05 operations initiated by the executing thread.
-    The multicast variants allow signaling on the mbarrier objects
+    The multicast variants allow signaling on the *mbarrier objects*
     of multiple CTAs within the cluster. Operand `multicastMask`,
     when present, specifies the destination CTAs in the cluster such
-    that each bit position in the 16-bit `multicastMask` operand
+    that each bit position in the 16-bit or 32-bit `multicastMask` operand
     corresponds to the `nvvm.read.ptx.sreg.ctaid` of the destination CTA.
+    When present, the `smem_a_read` attribute restricts tracking to
+    shared-memory reads of matrix A performed by prior `tcgen05.mma`
+    operations.
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen-async-sync-operations-commit)
   }];
 
   let arguments = (ins
     AnyTypeOf<[LLVM_AnyPointer, LLVM_PointerShared]>:$addr,
-    Optional<I16>:$multicastMask,
-    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+    Optional<AnyTypeOf<[I16, I32]>>:$multicastMask,
+    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group,
+    DefaultValuedAttr<BoolAttr, "false">:$smem_a_read);
 
   let assemblyFormat = [{
     $addr (`,` `multicast_mask` `=` $multicastMask^)?
+    oilist(`group` `=` $group | `smem_a_read` `=` $smem_a_read)
     attr-dict `:` type(operands)
   }];
 
@@ -3335,11 +5427,12 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMa<[100, 101]
     llvm::SmallVector<llvm::Value *> args;
     auto id = NVVM::Tcgen05CommitOp::getIntrinsicIDAndArgs(
       *op, moduleTranslation, args);
-    createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
-def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift", [NVVMRequiresSMa<[100, 101, 103]>]> {
+def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift",
+    [NVVMRequiresSMa<[100, 101, 103, 110]>]> {
   let summary = "Tcgen05 shift operation";
   let description = [{
     The `tcgen05.shift` is an asynchronous instruction which initiates
@@ -3351,61 +5444,21 @@ def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift", [NVVMRequiresSMa<[100, 101, 1
   }];
 
   let arguments = (ins LLVM_PointerTensor:$taddr,
-    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group);
+    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group);
 
-  let assemblyFormat = "$taddr attr-dict `:` type(operands)";
+  let assemblyFormat = [{
+    $taddr (`,` `group` `=` $group^)? attr-dict `:` type(operands)
+  }];
 
   string llvmBuilder = [{
-    auto id = ($group == NVVM::Tcgen05GroupKind::CTA_1) ?
+    auto id = ($group == NVVM::CTAGroupKind::CTA_1) ?
       llvm::Intrinsic::nvvm_tcgen05_shift_down_cg1 :
       llvm::Intrinsic::nvvm_tcgen05_shift_down_cg2;
     createIntrinsicCall(builder, id, {$taddr});
   }];
 }
 
-def Shape128x256b : I32EnumAttrCase<"SHAPE_128x256b", 0, "shape_128x256b">;
-def Shape4x256b   : I32EnumAttrCase<"SHAPE_4x256b",   1, "shape_4x256b">;
-def Shape128x128b : I32EnumAttrCase<"SHAPE_128x128b", 2, "shape_128x128b">;
-def Shape64x128b  : I32EnumAttrCase<"SHAPE_64x128b",  3, "shape_64x128b">;
-def Shape32x128b  : I32EnumAttrCase<"SHAPE_32x128b",  4, "shape_32x128b">;
-
-def Tcgen05CpShape : I32EnumAttr<"Tcgen05CpShape", "tcgen05 cp shapes",
-  [Shape128x256b, Shape4x256b, Shape128x128b, Shape64x128b, Shape32x128b]> {
-    let cppNamespace = "::mlir::NVVM";
-    let genSpecializedAttr = 0;
-}
-def Tcgen05CpShapeAttr : EnumAttr<NVVM_Dialect, Tcgen05CpShape, "tcgen05_cp_shape"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def Tcgen05CpMulticastNone: I32EnumAttrCase<"NONE", 0, "none">;
-def Tcgen05CpMulticastWarpx2_02_13: I32EnumAttrCase<"WARPX2_02_13", 1, "warpx2_02_13">;
-def Tcgen05CpMulticastWarpx2_01_23: I32EnumAttrCase<"WARPX2_01_23", 2, "warpx2_01_23">;
-def Tcgen05CpMulticastWarpx4: I32EnumAttrCase<"WARPX4", 3, "warpx4">;
-
-def Tcgen05CpMulticast : I32EnumAttr<"Tcgen05CpMulticast", "tcgen05 cp multicast",
-  [Tcgen05CpMulticastNone, Tcgen05CpMulticastWarpx2_02_13,
-   Tcgen05CpMulticastWarpx2_01_23, Tcgen05CpMulticastWarpx4]> {
-    let cppNamespace = "::mlir::NVVM";
-    let genSpecializedAttr = 0;
-}
-def Tcgen05CpMulticastAttr : EnumAttr<NVVM_Dialect, Tcgen05CpMulticast, "tcgen05_cp_multicast"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def FormatB6x16_P32: I32EnumAttrCase<"B6x16_P32", 0, "b6x16_p32">;
-def FormatB4x16_P64: I32EnumAttrCase<"B4x16_P64", 1, "b4x16_p64">;
-
-def Tcgen05CpSrcFormat : I32EnumAttr<"Tcgen05CpSrcFormat", "tcgen05 cp source format",
-  [FormatB6x16_P32, FormatB4x16_P64]> {
-    let cppNamespace = "::mlir::NVVM";
-    let genSpecializedAttr = 0;
-}
-def Tcgen05CpSrcFormatAttr : EnumAttr<NVVM_Dialect, Tcgen05CpSrcFormat, "tcgen05_cp_src_fmt"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 copy operation";
   let description = [{
     Instruction tcgen05.cp initiates an asynchronous copy operation from
@@ -3416,25 +5469,28 @@ def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMa<[100, 101]>]> {
 
     Example:
     ```mlir
-      nvvm.tcgen05.cp %taddr, %smem_desc {
-        group = #nvvm.tcgen05_group<cta_2>,
-        shape = #nvvm.tcgen05_cp_shape<shape_64x128b>,
-        multicast = #nvvm.tcgen05_cp_multicast<warpx2_01_23>,
-        srcFormat = #nvvm.tcgen05_cp_src_fmt<b6x16_p32>
-      }
+      nvvm.tcgen05.cp %taddr, %smem_desc, shape = shape_64x128b
+        group = <cta_2> multicast = warpx2_01_23
+        source_format = #nvvm.tcgen05_cp_src_fmt<b6x16_p32>
     ```
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensorcore-5th-generation-instructions-tcgen05-cp)
   }];
 
   let arguments = (ins
     Tcgen05CpShapeAttr:$shape,
-    DefaultValuedAttr<Tcgen05GroupKindAttr, "Tcgen05GroupKind::CTA_1">:$group,
+    DefaultValuedAttr<CTAGroupKindAttr, "CTAGroupKind::CTA_1">:$group,
     DefaultValuedAttr<Tcgen05CpMulticastAttr, "Tcgen05CpMulticast::NONE">:$multicast,
     OptionalAttr<Tcgen05CpSrcFormatAttr>:$srcFormat,
     LLVM_PointerTensor:$taddr,
     I64:$smem_desc);
 
-  let assemblyFormat = "$taddr`,` $smem_desc attr-dict";
+  let assemblyFormat = [{
+    $taddr `,` $smem_desc `,` `shape` `=` enum($shape)
+    oilist(
+      `group` `=` $group | `multicast` `=` enum($multicast)
+      | `source_format` `=` $srcFormat
+    ) attr-dict
+  }];
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
@@ -3455,6 +5511,7 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
     properties of multiplicand matrix in shared memory including its location
     in the shared memory of the current CTA.
 
+    ```
     +-----------+------+------------------------------------------------------+
     | Bit-field | Size | Description                                          |
     +-----------+------+------------------------------------------------------+
@@ -3477,6 +5534,7 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
     |           |      |   6: 32-Byte swizzling                               |
     |           |      |   (Values 3, 5 and 7 are invalid)                    |
     +-----------+------+------------------------------------------------------+    
+    ```
 
     Example:
     ```mlir
@@ -3512,34 +5570,10 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
 }
 
 //===----------------------------------------------------------------------===//
-// NVVM tcgen05 LdSt Shape Attr
-//===----------------------------------------------------------------------===//
-
-def Tcgen05LdStShape16x64b: I32EnumAttrCase<"SHAPE_16X64B", 0, "shape_16x64b">;
-def Tcgen05LdStShape16x128b: I32EnumAttrCase<"SHAPE_16X128B", 1, "shape_16x128b">;
-def Tcgen05LdStShape16x256b: I32EnumAttrCase<"SHAPE_16X256B", 2, "shape_16x256b">;
-def Tcgen05LdStShape32x32b: I32EnumAttrCase<"SHAPE_32X32B", 3, "shape_32x32b">;
-def Tcgen05LdStShape16x32bx2: I32EnumAttrCase<"SHAPE_16X32BX2", 4, "shape_16x32bx2">;
-
-def Tcgen05LdStShape: I32EnumAttr<
-  "Tcgen05LdStShape",
-  "",
-  [Tcgen05LdStShape16x64b, Tcgen05LdStShape16x128b, Tcgen05LdStShape16x256b,
-   Tcgen05LdStShape32x32b, Tcgen05LdStShape16x32bx2]
-> {
-  let cppNamespace = "::mlir::NVVM";
-  let genSpecializedAttr = 0;
-}
-
-def Tcgen05LdStShapeAttr: EnumAttr<NVVM_Dialect, Tcgen05LdStShape, "tcgen05_ldst_shape"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-//===----------------------------------------------------------------------===//
 // NVVM tcgen05.ld Op
 //===----------------------------------------------------------------------===//
 
-def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "tensor memory load instructions";
   let arguments = (ins
     // Attributes
@@ -3550,11 +5584,12 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
     Optional<I64>:$offset
   );
 
-  let results = (outs AnyTypeOf<[I32, VectorOfLengthAndType<
-                                  [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$res);
+  let results = (outs VectorOfLengthAndType<
+                        [1, 2, 4, 8, 16, 32, 64, 128], [I32]>:$res);
 
   let assemblyFormat = [{
-    $tmemAddr (`,` $offset^)? (`pack` $pack^)? attr-dict `:` type($res)
+    $tmemAddr (`,` $offset^)? (`pack` $pack^)?
+    `shape` `=` enum($shape) attr-dict `:` type($res)
   }];
 
   let description = [{
@@ -3578,7 +5613,8 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
     elements from adjacent columns into a single 32-bit element during the load.
 
     The following table describes the size of the vector for various combinations
-    of `num` and `shape` attributes
+    of `num` and `shape` attributes:
+    ```
     |=====================================================================|
     | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
     |=====================================================================|
@@ -3591,12 +5627,12 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
     | x64            |          64                |    128     |    NA    |
     | x128           |          128               |    NA      |    NA    |
     |=====================================================================|
+    ```
 
     Example:
     ```mlir
-      nvvm.tcgen05.ld %tmemAddr, %offset pack {
-        shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
-      } : <2xi32>
+      nvvm.tcgen05.ld %tmemAddr, %offset pack
+        shape = shape_16x32bx2 : vector<2xi32>
     ```
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st)
@@ -3608,11 +5644,9 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
     llvm::LLVMContext &Context = moduleTranslation.getLLVMContext();
     auto Pack = llvm::ConstantInt::get(Context, llvm::APInt(1, $pack));
 
-    unsigned num = $_resultType->isVectorTy()
-                       ? llvm::cast<llvm::VectorType>($_resultType)
+    unsigned num = llvm::cast<llvm::VectorType>($_resultType)
                              ->getElementCount()
-                             .getFixedValue()
-                       : 1;
+                             .getFixedValue();
 
     auto ID = getTcgen05LdIntrinsicID($shape, num);
     if (ID == llvm::Intrinsic::not_intrinsic)
@@ -3626,10 +5660,100 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tcgen05.ld.red Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
+                          [NVVMRequiresSMaOrSMf<[101, 110], [101, 103, 110]>]> {
+  let summary = "Tcgen05 tensor memory load and reduce instructions";
+  let arguments = (ins
+    Tcgen05LdStShapeAttr:$shape,
+    ReductionKindAttr:$op,
+    UnitAttr:$abs,
+    UnitAttr:$nan,
+    LLVM_PointerTensor:$addr,
+    Optional<I64>:$offset
+  );
+
+  let results = (outs VectorOfLengthAndType<[2, 4, 8, 16, 32, 64, 128],
+                                            [I32, F32]>:$data,
+                      AnyTypeOf<[I32, F32]>:$redVal);
+
+  let assemblyFormat = [{
+    enum($op) $addr (`,` $offset^)? `shape` `=` enum($shape)
+    oilist(`abs` $abs | `nan` $nan) attr-dict
+    `:` type($data) `,` type($redVal)
+  }];
+
+  let description = [{
+    Instruction `tcgen05.ld.red` asynchronously loads data from the Tensor
+    Memory at the location specified by the 32-bit address operand `addr` into
+    the destination register `data`, collectively across all threads of the
+    warp. The operation also performs reduction operation specified by `op` on
+    the loaded data across columns in each lane and stored into `redVal`
+
+    The `shape` and the `num` attribute together determines the total
+    dimension of the data which is loaded from the Tensor Memory. The `shape`
+    attribute indicates the base dimension of data to be accessed as described
+    in the Data Movement Shape. The `num` attribute indicates the repeat
+    factor on the base dimension resulting in the total dimension of the data
+    that is accessed.
+
+    The shape `16x32bx2` performs two accesses into Tensor Memory of the shape
+    `16x32b`. The base address of the first access is specified by `addr`
+    and the base address of the second access is specified by
+    `addr + offset`, where `offset` is an immediate argument.
+
+    The following table describes the size of the vector for various combinations
+    of `num` and `shape` attributes:
+    ```
+    |=============================================|
+    | num/shape      |     16x32bx2/32x32b        |
+    |=============================================|
+    | x2             |             2              |
+    | x4             |             4              |
+    | x8             |             8              |
+    | x16            |             16             |
+    | x32            |             32             |
+    | x64            |             64             |
+    | x128           |             128            |
+    |=============================================|
+    ```
+
+    Example:
+    ```mlir
+      %data, %redval = nvvm.tcgen05.ld.red min %addr, %offset
+        shape = shape_16x32bx2 : vector<2xi32>, i32
+
+      %data, %redval = nvvm.tcgen05.ld.red min %addr
+        shape = shape_32x32b : vector<2xf32>, f32
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld)
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::Tcgen05LdRedOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    llvm::Value *result = createIntrinsicCall(builder, id, args);
+    $data = builder.CreateExtractValue(result, {0});
+    $redVal = builder.CreateExtractValue(result, {1});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM tcgen05.st Op
 //===----------------------------------------------------------------------===//
 
-def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
+def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "tensor memory store instructions";
   let arguments = (ins
     // Attributes
@@ -3637,13 +5761,13 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
     Tcgen05LdStShapeAttr:$shape,
     // Arguments
     LLVM_PointerTensor:$tmemAddr,
-    AnyTypeOf<[I32, VectorOfLengthAndType<
-                      [2, 4, 8, 16, 32, 64, 128], [I32]>]>:$val,
+    VectorOfLengthAndType<[1, 2, 4, 8, 16, 32, 64, 128], [I32]>:$val,
     Optional<I64>:$offset
   );
 
   let assemblyFormat = [{
-    $tmemAddr `,` $val (`,` $offset^)? (`unpack` $unpack^)? attr-dict `:` type($val)
+    $tmemAddr `,` $val (`,` $offset^)? (`unpack` $unpack^)?
+    `shape` `=` enum($shape) attr-dict `:` type($val)
   }];
 
   let description = [{
@@ -3666,7 +5790,8 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
     in the register into two 16-bit elements and store them in adjacent columns.
 
     The following table describes the size of the vector for various combinations
-    of `num` and `shape` attributes
+    of `num` and `shape` attributes:
+    ```
     |=====================================================================|
     | num/shape      |     16x32bx2/16x64b/32x32b |  16x128b   | 16x256b  |
     |=====================================================================|
@@ -3679,12 +5804,12 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
     | x64            |          64                |    128     |    NA    |
     | x128           |          128               |    NA      |    NA    |
     |=====================================================================|
+    ```
 
     Example:
     ```mlir
-      nvvm.tcgen05.st %tmemAddr, %val, %offset unpack {
-        shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
-      } : <2xi32>
+      nvvm.tcgen05.st %tmemAddr, %val, %offset unpack
+        shape = shape_16x32bx2 : vector<2xi32>
     ```
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-st)
@@ -3695,10 +5820,9 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
     auto Unpack = llvm::ConstantInt::get(Context, llvm::APInt(1, $unpack));
 
     auto valTy = $val->getType();
-    uint32_t num = valTy->isVectorTy() ? llvm::cast<llvm::VectorType>(valTy)
+    uint32_t num = llvm::cast<llvm::VectorType>(valTy)
                                              ->getElementCount()
-                                             .getFixedValue()
-                                       : 1;
+                                             .getFixedValue();
 
     auto ID = getTcgen05StIntrinsicID($shape, num);
     if (ID == llvm::Intrinsic::not_intrinsic)
@@ -3712,26 +5836,14 @@ def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMa<[100, 101]>]> {
 
   let hasVerifier = 1;
 }
+} // let partition = NVVM_Tcgen05Partition
 
 //===----------------------------------------------------------------------===//
 // NVVM dot.accumulate Ops
 //===----------------------------------------------------------------------===//
 
-def DotAccumulateUnsigned : I32EnumAttrCase<"UNSIGNED", 0, "unsigned">;
-def DotAccumulateSigned : I32EnumAttrCase<"SIGNED", 1, "signed">;
-
-def DotAccumulateType : I32EnumAttr<"DotAccumulateType",
-                              "NVVM DotAccumulateType",
-                              [DotAccumulateSigned, DotAccumulateUnsigned]> {
-  let cppNamespace = "::mlir::NVVM";
-  let genSpecializedAttr = 0;
-}
-
-def DotAccumulateTypeAttr : EnumAttr<NVVM_Dialect, DotAccumulateType, "dot_accumulate_type"> {
-  let assemblyFormat = "`<` $value `>`";
-}
-
-def NVVM_DotAccumulate4WayOp : NVVM_Op<"dot.accumulate.4way"> {
+let partition = NVVM_ArithPartition in {
+def NVVM_DotAccumulate4WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.4way"> {
   let summary = "Four-way byte dot product-accumulate instruction";
   let description = [{
     Performs a four-way byte dot-product which is accumulated in a 32-bit
@@ -3763,21 +5875,9 @@ def NVVM_DotAccumulate4WayOp : NVVM_Op<"dot.accumulate.4way"> {
   let results = (outs I32:$res);
 
   let assemblyFormat = "$a $a_type `,` $b $b_type `,` $c attr-dict `:` type($a) `,` type($b)";
-  
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
-  }];
-
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::DotAccumulate4WayOp::getIntrinsicIDAndArgs(
-                        *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 
-def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
+def NVVM_DotAccumulate2WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.2way"> {
   let summary = "Two-way 16-bit to 8-bit dot product-accumulate instruction";
   let description = [{
     Performs a two-way 16-bit to 8-bit dot-product which is accumulated in a 
@@ -3816,8 +5916,46 @@ def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
 
   let results = (outs I32:$res);
 
-  let assemblyFormat = "$a $a_type `,` $b $b_type `,` $c attr-dict `:` type($a) `,` type($b)";
-  
+  let assemblyFormat = [{
+    $a $a_type `,` $b $b_type `,` $c `,` `b_hi` `=` $b_hi
+    attr-dict `:` type($a) `,` type($b)
+  }];
+}
+} // let partition = NVVM_ArithPartition
+
+//===----------------------------------------------------------------------===//
+// NVVM clusterlaunchcontrol Ops.
+//===----------------------------------------------------------------------===//
+
+def NVVM_ClusterLaunchControlTryCancelOp
+    : NVVM_Op<"clusterlaunchcontrol.try.cancel", [NVVMRequiresSM<100>]> {
+  let summary = "Request atomically canceling the launch of a cluster that has not started running yet";
+  let description = [{
+    `clusterlaunchcontrol.try.cancel` requests atomically canceling the launch 
+    of a cluster that has not started running yet. It asynchronously writes an 
+    opaque response to shared memory indicating whether the operation succeeded 
+    or failed.
+
+    Operand `smemAddress` specifies the naturally aligned address of the 
+    16-byte wide shared memory location where the request's response is written.
+
+    Operand `mbarrier` specifies the mbarrier object used to track the 
+    completion of the asynchronous operation.
+
+    If `multicast` is specified, the response is asynchronously written to the 
+    corresponding local shared memory location (specifed by `addr`) of each CTA 
+    in the requesting cluster.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-try-cancel)
+  }];
+  let partition = NVVM_SyncPartition;
+
+  let arguments = (ins UnitAttr:$multicast, 
+                       LLVM_PointerShared: $smemAddress,
+                       LLVM_PointerShared: $mbarrier);
+
+  let assemblyFormat = "(`multicast` $multicast^ `,`)? $smemAddress `,` $mbarrier attr-dict";
+
   let extraClassDeclaration = [{
     static mlir::NVVM::IDArgPair
     getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
@@ -3825,9 +5963,1138 @@ def NVVM_DotAccumulate2WayOp : NVVM_Op<"dot.accumulate.2way"> {
   }];
   
   string llvmBuilder = [{
-    auto [id, args] = NVVM::DotAccumulate2WayOp::getIntrinsicIDAndArgs(
+    auto [id, args] = 
+    NVVM::ClusterLaunchControlTryCancelOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, id, args);
+  }];
+}
+
+def NVVM_ClusterLaunchControlQueryCancelOp
+    : NVVM_Op<"clusterlaunchcontrol.query.cancel",
+              [NVVMRequiresSM<100>, InferTypeOpAdaptor]> {
+  let summary = "Query the response of a clusterlaunchcontrol.try.cancel operation";
+  let description = [{
+    `clusterlaunchcontrol.query.cancel` queries the response of a 
+    `clusterlaunchcontrol.try.cancel` operation specified by operand 
+    `try_cancel_response`.
+
+    Operand `query_type` specifies the type of query to perform and can be one 
+    of the following:
+    - `is_canceled` : Returns true if the try cancel request succeeded, 
+    and false otherwise.
+    - `get_first_cta_id_{x/y/z}` : Returns the x, y, or z coordinate of the 
+    first CTA in the canceled cluster. Behaviour is defined only if the try 
+    cancel request succeeded. 
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-clusterlaunchcontrol-query-cancel)
+  }];
+  let partition = NVVM_SyncPartition;
+
+  let arguments = (ins ClusterLaunchControlQueryTypeAttr:$query_type, 
+                       I128:$try_cancel_response);
+  let results = (outs AnyTypeOf<[I1, I32]>:$res);
+                                 
+  let assemblyFormat = "`query` `=` enum($query_type) `,` "
+                       "$try_cancel_response attr-dict `:` type($res)";
+  
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+  
+  string llvmBuilder = [{
+    auto [id, args] = 
+    NVVM::ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
                         *op, moduleTranslation, builder);
     $res = createIntrinsicCall(builder, id, args);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma Ops
+//===----------------------------------------------------------------------===//
+
+defvar Tcgen05MMANonBlockScaleKindList =
+  [Tcgen05MMAKindF16, Tcgen05MMAKindTF32, Tcgen05MMAKindF8F6F4,
+   Tcgen05MMAKindI8, Tcgen05MMAKindTI16
+  ];
+
+defvar Tcgen05MMABlockScaleKindList =
+  [Tcgen05MMAKindMXF8F6F4, Tcgen05MMAKindMXF4, Tcgen05MMAKindMXF4NVF4];
+
+defvar Tcgen05MMANonBlockScaleKindAttr =
+  ConfinedAttr<Tcgen05MMAKindAttr,
+    [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMANonBlockScaleKindList>]>;
+
+defvar Tcgen05MMABlockScaleKindAttr =
+  ConfinedAttr<Tcgen05MMAKindAttr,
+    [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMABlockScaleKindList>]>;
+
+let partition = NVVM_Tcgen05Partition in {
+def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
+    [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
+  let summary = "Performs MMA operation on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma` operation is an asynchronous tensor core instruction that
+    performs matrix multiplication, accumulation in a single fused operation. It
+    targets 5th-generation tensor cores, providing developers with fine-grained
+    control over execution and scheduling.
+
+    ```
+    D = A * B + (D * 2^ -scaleInputD)    // if `scaleInputD` is provided
+    D = A * B                            // if `enableInputD` is false
+    D = A * B + D                        // otherwise
+    ```
+
+    where:
+    - A is an `M x K` matrix in tensor memory or described using shared memory descriptor
+    - B is a `K x N` matrix described using shared memory descriptor
+    - D is an `M x N` accumulator matrix in tensor memory
+
+    The `shared memory descriptor` can be generated using `tcgen05.mma_smem_desc` Op
+
+    - idesc is a 32-bit value representing the [Instruction Descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor)
+
+    Optional Operands:
+    - `scaleInputD` is an Immediate value operand used for scaling D matrix by 2 ^ (-scaleInputD). The valid range is [0, 15]
+
+    - `disableOutputLane` is a vector mask for selective output
+      * vector<4 x i32> when ctaGroup is CTA_1
+      * vector<8 x i32> when ctaGroup is CTA_2
+
+    Required Attributes:
+    - `kind` is a Tcgen05MMAKind attribute
+
+    - `ctaGroup` specifies CTA group configuration
+      * cta_1: MMA will be performed on the current thread's CTA
+      * cta_2: MMA will be performed on the current thread and it's peer CTA
+
+    Default Attributes:
+    - collectorOp is a Tcgen05MMACollectorOp attribute with matrix A as the collector buffer
+    - collectorOpB is a Tcgen05MMACollectorOp attribute with matrix B as the collector buffer
+
+    - `aShift` shifts the rows of the A matrix down by one row and can only be
+       applied if A is in tensor memory
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
+  }];
+
+  let arguments = (ins
+      Tcgen05MMANonBlockScaleKindAttr:$kind,
+      CTAGroupKindAttr:$ctaGroup,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB,
+      UnitAttr:$aShift,
+      LLVM_PointerTensor:$matrixD,
+      AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+      I64:$matrixB,
+      I32:$idesc,
+      I1:$enableInputD,
+      Optional<I64>:$scaleInputD,
+      Optional<FixedVectorOfLengthAndType<[4, 8], [I32]>>:$disableOutputLane
+    );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD
+    oilist(`scale` `=` $scaleInputD | `mask` `=` $disableOutputLane)
+    `,` `kind` `=` enum($kind)
+    `,` `cta_group` `=` $ctaGroup
+    oilist(
+      `collector_a` `=` enum($collectorOp)
+      | `collector_b` `=` enum($collectorOpB)
+      | `a_shift` $aShift
+    ) attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let hasVerifier = true;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair getIntrinsicIDAndArgs(
+        Operation &op, LLVM::ModuleTranslation &mt,
+        llvm::IRBuilderBase &builder);
+  }];
+
+  let llvmBuilder = [{
+    auto [ID, args] = NVVM::Tcgen05MMAOp::getIntrinsicIDAndArgs(
+        *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, ID, args);
+  }];
+}
+
+def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
+    [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
+  let summary = "Performs MMA operation with sparse A matrix on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma.sp` operation is an asynchronous tensor core instruction
+    that performs matrix multiplication, accumulation with sparse `A` matrix in
+    a single fused operation. It targets 5th-generation tensor cores, providing
+    developers with fine-grained control over execution and scheduling.
+
+    ```
+    D = A * B + (D * 2^ -scaleInputD)    // if `scaleInputD` is provided
+    D = A * B                            // if `enableInputD` is false
+    D = A * B + D                        // otherwise
+    ```
+
+    where:
+    - A is an `M x (K / 2)` matrix in tensor memory or described using shared memory descriptor
+    - B is a `K x N` matrix described using shared memory descriptor
+    - D is an `M x N` accumulator matrix in tensor memory
+    - sparseMetadata located in tensor memory specifies the mapping of the `K / 2`
+    non-zero elements to the K elements before performing the MMA operation
+
+    Other attributes and operands are similar to that of tcgen05.mma Op
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma-sp)
+  }];
+
+  let arguments = (ins
+    Tcgen05MMANonBlockScaleKindAttr:$kind,
+    CTAGroupKindAttr:$ctaGroup,
+    DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                      "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+    DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                      "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB,
+    UnitAttr:$aShift,
+    LLVM_PointerTensor:$matrixD,
+    AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+    I64:$matrixB,
+    I32:$idesc,
+    I1:$enableInputD,
+    LLVM_PointerTensor:$sparseMetadata,
+    Optional<I64>:$scaleInputD,
+    Optional<FixedVectorOfLengthAndType<[4, 8], [I32]>>:$disableOutputLane
+  );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD `,`
+    $sparseMetadata
+    oilist(`scale` `=` $scaleInputD | `mask` `=` $disableOutputLane)
+    `,` `kind` `=` enum($kind)
+    `,` `cta_group` `=` $ctaGroup
+    oilist(
+      `collector_a` `=` enum($collectorOp)
+      | `collector_b` `=` enum($collectorOpB)
+      | `a_shift` $aShift
+    ) attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let hasVerifier = true;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair getIntrinsicIDAndArgs(
+        Operation &op, LLVM::ModuleTranslation &mt,
+        llvm::IRBuilderBase &builder);
+  }];
+
+  let llvmBuilder = [{
+    auto [ID, args] = NVVM::Tcgen05MMASparseOp::getIntrinsicIDAndArgs(
+        *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, ID, args);
+  }];
+}
+
+def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
+  let summary = "Performs block scaled MMA operation on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma.block_scale` operation is an asynchronous tensor core instruction
+    that performs matrix multiplication, accumulation with block scaling in a
+    single fused operation. It targets 5th-generation tensor cores, providing
+    developers with fine-grained control over execution and scheduling.
+
+    ```
+    D = (A * scale_a)  * (B * scale_b)`      // if `enableInputD` is false
+    D = (A * scale_a)  * (B * scale_b) + D`
+    ```
+
+    where:
+    - A is an M x (K / 2) matrix in tensor memory or described using shared memory descriptor
+    - B is a K x N matrix described using shared memory descriptor
+    - D is an M x N accumulator matrix in tensor memory
+    - `scale_a` and `scale_b` are matrices in tensor memory used to scale `A` and `B` respectively
+
+    The `shared memory descriptor` can be generated using `tcgen05.mma_smem_desc` Op
+
+    - `idesc` is a 32 bit value representing the [Instruction Descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor)
+
+    Required Attributes:
+    - `kind` is a Tcgen05MMAKind attribute restricted to mxf8f6f4, mxf4, or mxf4nvf4
+
+    - `ctaGroup` specifies CTA group configuration
+      * cta_1: MMA will be performed on the current thread's CTA
+      * cta_2: MMA will be performed on the current thread and it's peer CTA
+
+    Default Attributes:
+    - collectorOp is a Tcgen05MMACollectorOp attribute with matrix A as the collector buffer
+    - collectorOpB is a Tcgen05MMACollectorOp attribute with matrix B as the collector buffer
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
+  }];
+
+  let arguments = (ins
+      Tcgen05MMABlockScaleKindAttr:$kind,
+      CTAGroupKindAttr:$ctaGroup,
+      DefaultValuedAttr<Tcgen05MMABlockScaleAttr,
+                      "Tcgen05MMABlockScale::DEFAULT">:$blockScale,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB,
+      LLVM_PointerTensor:$matrixD,
+      AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+      I64:$matrixB,
+      I32:$idesc, I1:$enableInputD,
+      LLVM_PointerTensor:$scaleA,
+      LLVM_PointerTensor:$scaleB
+    );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD `,`
+    $scaleA `,` $scaleB `,` `kind` `=` enum($kind)
+    `,` `cta_group` `=` $ctaGroup
+    oilist(
+      `block_scale` `=` enum($blockScale)
+      | `collector_a` `=` enum($collectorOp)
+      | `collector_b` `=` enum($collectorOpB)
+    )
+    attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let hasVerifier = true;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+
+  let llvmBuilder = [{
+    auto [ID, args] = NVVM::Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
+        *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, ID, args);
+  }];
+}
+
+def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
+  let summary = "Performs block scaled MMA operation with sparse A matrix on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma.sp.block_scale` operation is an asynchronous tensor core
+    instruction that performs matrix multiplication, accumulation with block
+    scaling, and sparse `A` matrix in a single fused operation. It targets
+    5th-generation tensor cores, providing developers with fine-grained control
+    over execution, and scheduling.
+
+    ```
+    D = (A * scale_a)  * (B * scale_b)      // if `enableInputD` is specified
+    D = (A * scale_a)  * (B * scale_b) + D  // otherwise
+    ```
+
+    where:
+    - A is an M x (K / 2) matrix in tensor memory or described using shared memory descriptor
+    - B is a K x N matrix described using shared memory descriptor
+    - D is an M x N accumulator matrix in tensor memory
+    - `scale_a` and `scale_b` are matrices in tensor memory used to scale `A` and `B` respectively
+
+    Other attributes and operands are similar to that of tcgen05.mma.block_scale Op
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma-sp)
+  }];
+
+  let arguments = (ins
+    Tcgen05MMABlockScaleKindAttr:$kind,
+    CTAGroupKindAttr:$ctaGroup,
+    DefaultValuedAttr<Tcgen05MMABlockScaleAttr,
+                      "Tcgen05MMABlockScale::DEFAULT">:$blockScale,
+    DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                      "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+    DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                      "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB,
+    LLVM_PointerTensor:$matrixD,
+    AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+    I64:$matrixB,
+    I32:$idesc,
+    I1:$enableInputD,
+    LLVM_PointerTensor:$sparseMetadata,
+    LLVM_PointerTensor:$scaleA,
+    LLVM_PointerTensor:$scaleB
+  );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD `,`
+    $sparseMetadata `,` $scaleA `,` $scaleB `,` `kind` `=` enum($kind)
+    `,` `cta_group` `=` $ctaGroup
+    oilist(
+      `block_scale` `=` enum($blockScale)
+      | `collector_a` `=` enum($collectorOp)
+      | `collector_b` `=` enum($collectorOpB)
+    )
+    attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let hasVerifier = true;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+
+  let llvmBuilder = [{
+    auto [ID, args] = NVVM::Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
+        *op, moduleTranslation, builder);
+    createIntrinsicCall(builder, ID, args);
+  }];
+}
+
+def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
+  let summary = "Performs weight stationary convolution MMA operation on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma.ws` operation is an asynchronous tensor core instruction
+    that performs weight stationary convolution matrix multiplication, accumulation
+    in a single fused operation. It targets 5th-generation tensor cores, providing
+    developers with fine-grained control over execution, and scheduling.
+
+    ```
+    D = A * B`      // if `enableInputD` is false
+    D = A * B + D`  // otherwise
+    ```
+
+    where:
+    - A is an `M x K` matrix in tensor memory or described using shared memory descriptor
+    - B is a `K x N` matrix described using shared memory descriptor
+    - D is an `M x N` accumulator matrix in tensor memory
+
+    The `shared memory descriptor` can be generated using `tcgen05.mma_smem_desc` Op
+
+    - idesc is a 32-bit value representing the [Instruction Descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor)
+
+    Optional Operands:
+    - zeroColMask is a 64 bit value representing the [Zero-column mask descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-zero-column-mask-descriptor)
+
+    Required Attributes:
+    - `kind` is a Tcgen05MMAKind attribute
+
+    Default Valued Attributes:
+    - collectorBBuffer specifies collector buffer for matrix B: b0 (default), b1, b2, b3
+
+    - collectorOp is a Tcgen05MMACollectorOp attribute with matrix B as the collector buffer
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma-ws)
+  }];
+
+  let arguments = (ins
+    Tcgen05MMANonBlockScaleKindAttr:$kind,
+    DefaultValuedAttr<Tcgen05MMACollectorBBufferAttr,
+                      "Tcgen05MMACollectorBBuffer::B0">:$collectorBBuffer,
+    DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                      "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+    LLVM_PointerTensor:$matrixD,
+    AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+    I64:$matrixB,
+    I32:$idesc,
+    I1:$enableInputD,
+    Optional<I64>:$zeroColMask
+  );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD (`,` $zeroColMask^)?
+    `kind` `=` enum($kind)
+    oilist(
+      `collector_b_buffer` `=` enum($collectorBBuffer)
+      | `collector_b` `=` enum($collectorOp)
+    )
+    attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair getIntrinsicIDAndArgs(
+        Operation &op, LLVM::ModuleTranslation &mt,
+        llvm::IRBuilderBase &builder);
+  }];
+
+  let llvmBuilder = [{
+    auto [ID, args] =
+        NVVM::Tcgen05MMAWsOp::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    createIntrinsicCall(builder, ID, args);
+  }];
+}
+
+def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
+    [NVVMRequiresSMf<[100, 101, 110]>]> {
+  let summary = "Performs weight stationary convolution MMA with sparse A matrix on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma.ws.sp` operation is an asynchronous tensor core instruction
+    that performs weight stationary convolution matrix multiplication, accumulation
+    with sparse `A` matrix in a single fused operation. It targets 5th-generation
+    tensor cores, providing developers with fine-grained control over execution,
+    and scheduling.
+
+    ```
+    D = A * B`      // if `enableInputD` is false
+    D = A * B + D`  // otherwise
+    ```
+
+    where:
+    - A is an M x (K / 2) matrix in memory or descriptor format
+    - B is a K x N matrix
+    - D is an M x N accumulator matrix
+    - sparseMetadata located in tensor memory specifies the mapping of the `K / 2`
+    non-zero elements to the K elements before performing the MMA operation
+
+    Other attributes and operands are similar to that of tcgen05.mma.ws Op
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma-ws-sp)
+  }];
+
+  let arguments = (ins
+    Tcgen05MMANonBlockScaleKindAttr:$kind,
+    DefaultValuedAttr<Tcgen05MMACollectorBBufferAttr,
+                      "Tcgen05MMACollectorBBuffer::B0">:$collectorBBuffer,
+    DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                      "Tcgen05MMACollectorOp::DISCARD">:$collectorOp,
+    LLVM_PointerTensor:$matrixD,
+    AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+    I64:$matrixB,
+    I32:$idesc,
+    I1:$enableInputD,
+    LLVM_PointerTensor:$sparseMetadata,
+    Optional<I64>:$zeroColMask
+  );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD `,`
+    $sparseMetadata (`,` $zeroColMask^)? `kind` `=` enum($kind)
+    oilist(
+      `collector_b_buffer` `=` enum($collectorBBuffer)
+      | `collector_b` `=` enum($collectorOp)
+    )
+    attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+
+  let llvmBuilder = [{
+      auto [ID, args] = NVVM::Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
+          *op, moduleTranslation, builder);
+      createIntrinsicCall(builder, ID, args);
+  }];
+}
+
+def NVVM_Tcgen05MMADecompressBOp :
+    NVVM_VoidIntrinsicOp<"tcgen05.mma.decompress_b",
+                         [NVVMRequiresSMf<[107]>]> {
+  let summary = "Performs MMA operation with pre-compressed B matrix on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma.decompress_b` operation is an asynchronous tensor core
+    instruction that decompresses the B matrix and performs matrix
+    multiplication, accumulation in a single fused operation. It targets
+    5th-generation tensor cores, providing developers with fine-grained
+    control over execution and scheduling.
+
+    ```
+    D = A * B                            // if `enableInputD` is false
+    D = A * B + D                        // otherwise
+    ```
+
+    where:
+    - A is an `M x K` matrix in tensor memory or described using shared memory descriptor
+    - B is a `K x N` matrix described using shared memory descriptor
+    - D is an `M x N` accumulator matrix in tensor memory
+
+    The `shared memory descriptor` can be generated using `tcgen05.mma_smem_desc` Op
+
+    - `idesc` is a 32-bit value representing the [Instruction Descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor)
+
+    - `decompressBMetadata` is a decompress metadata of B matrix
+
+    Optional Operands:
+    - `disableOutputLane` is a vector mask for selective output
+      * vector<4 x i32> when ctaGroup is CTA_1
+      * vector<8 x i32> when ctaGroup is CTA_2
+
+    Required Attributes:
+    - `ctaGroup` specifies CTA group configuration
+      * cta_1: MMA will be performed on the current thread's CTA
+      * cta_2: MMA will be performed on the current thread and it's peer CTA
+
+    Default Attributes:
+    - collectorOpA is a Tcgen05MMACollectorOp attribute with matrix A as the collector buffer
+    - collectorOpB is a Tcgen05MMACollectorOp attribute with matrix B as the collector buffer
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
+  }];
+
+  let arguments = (ins
+      LLVM_PointerTensor:$matrixD,
+      AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+      I64:$matrixB,
+      I32:$idesc,
+      I1:$enableInputD,
+      LLVM_PointerTensor:$decompressBMetadata,
+      Optional<FixedVectorOfLengthAndType<[4, 8], [I32]>>:$disableOutputLane,
+      CTAGroupKindAttr:$ctaGroup,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpA,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB
+    );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD
+    `,` $decompressBMetadata (`,` `mask` `=` $disableOutputLane^)?
+    `cta_group` `=` $ctaGroup
+    oilist(`collector_a` `=` enum($collectorOpA)
+      | `collector_b` `=` enum($collectorOpB))
+    attr-dict `:` `(` type(operands) `)`
+  }];
+
+  let hasVerifier = true;
+}
+} // let partition = NVVM_Tcgen05Partition
+
+defvar Tcgen05MMABlockScaleDecompressBScaleList = [
+    Tcgen05MMABlockScaleDefault,
+    Tcgen05MMABlockScaleBlock32
+  ];
+
+defvar Tcgen05MMABlockScaleDecompressBScaleAttr =
+  ConfinedAttr<Tcgen05MMABlockScaleAttr,
+    [EnumAttrIsOneOf<Tcgen05MMABlockScaleAttr,
+                     Tcgen05MMABlockScaleDecompressBScaleList>]>;
+
+def NVVM_Tcgen05MMABlockScaleDecompressBOp :
+    NVVM_VoidIntrinsicOp<"tcgen05.mma.block_scale.decompress_b",
+                         [NVVMRequiresSMf<[107]>]> {
+  let summary = "Performs block scaled MMA operation with pre-compressed B matrix on 5th-gen tensor cores";
+
+  let description = [{
+    The `tcgen05.mma.block_scale.decompress_b` operation is similar to
+    `tcgen05.mma.decompress_b`, but with block scaling support for the A and B
+    matrices.
+
+    ```
+    D = (A * scale_a)  * (B * scale_b)`      // if `enableInputD` is false
+    D = (A * scale_a)  * (B * scale_b) + D`
+    ```
+
+    where:
+    - A is an M x (K / 2) matrix in tensor memory or described using shared memory descriptor
+    - B is a `K x N` matrix described using shared memory descriptor
+    - D is an `M x N` accumulator matrix in tensor memory
+    - `scale_a` and `scale_b` are matrices in tensor memory used to scale `A` and `B` respectively
+
+    The `shared memory descriptor` can be generated using `tcgen05.mma_smem_desc` Op
+
+    - `idesc` is a 32-bit value representing the [Instruction Descriptor](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instruction-descriptor)
+
+    - `decompressBMetadata` is a decompress metadata of B matrix
+
+    Default Attributes:
+    - `blockScale` specifies the block scaling granularity
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-mma-instructions-mma)
+  }];
+  let partition = NVVM_Tcgen05Partition;
+
+  let arguments = (ins
+      LLVM_PointerTensor:$matrixD,
+      AnyTypeOf<[LLVM_PointerTensor, I64]>:$matrixA,
+      I64:$matrixB,
+      I32:$idesc,
+      I1:$enableInputD,
+      LLVM_PointerTensor:$scaleA,
+      LLVM_PointerTensor:$scaleB,
+      LLVM_PointerTensor:$decompressBMetadata,
+      CTAGroupKindAttr:$ctaGroup,
+      DefaultValuedAttr<Tcgen05MMABlockScaleDecompressBScaleAttr,
+                        "Tcgen05MMABlockScale::DEFAULT">:$blockScale,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpA,
+      DefaultValuedAttr<Tcgen05MMACollectorOpAttr,
+                        "Tcgen05MMACollectorOp::DISCARD">:$collectorOpB
+    );
+
+  let assemblyFormat = [{
+    $matrixD `,` $matrixA `,` $matrixB `,` $idesc `,` $enableInputD
+    `,` $scaleA `,` $scaleB `,` $decompressBMetadata
+    `cta_group` `=` $ctaGroup
+    oilist(
+      `block_scale` `=` enum($blockScale)
+      | `collector_a` `=` enum($collectorOpA)
+      | `collector_b` `=` enum($collectorOpB)
+    ) attr-dict `:` `(` type(operands) `)`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM sparse.compress and sparse.decompress Ops
+//===----------------------------------------------------------------------===//
+
+// Size in bits of each structured sparsity metadata index.
+def SPIdxSizeAttr : ConfinedAttr<I32Attr, [IntIsOneOf<[2, 4]>]>;
+
+// Size of each structured sparsity group in the dense data.
+def SPNumTgtAttr : ConfinedAttr<I32Attr, [IntIsOneOf<[2, 4, 8, 16]>]>;
+
+// Dense and compressed data are vectors of 8-bit or 16-bit elements.
+defvar SPElemVectorType = FixedVectorOfRankAndType<[1], [I8, I16]>;
+
+// Metadata is a bundle of 32-bit registers: i32 or a vector of i32. A
+// single-register bundle may be either i32 or vector<1xi32>.
+defvar SPMetadataType = AnyTypeOf<[I32,
+    FixedVectorOfRankAndLengthAndType<[1], [1, 2, 4, 8, 16, 32], [I32]>]>;
+
+let partition = NVVM_DataMovementPartition in {
+def NVVM_SparseCompressOp : NVVM_Op<"sparse.compress",
+    [Pure, NVVMRequiresSMa<[107]>]> {
+  let summary = "Compress dense vector to structured sparse vector";
+  let description = [{
+    Compresses elements from a dense vector `data` into a structured sparse
+    vector `compressed_data` using the 2:4 sparsity pattern: 2 out of every
+    4 elements of `data` are selected. The indices of the selected elements
+    are returned in `metadata`.
+
+    The element size (8 or 16 bits) is given by the element type of `data`
+    and `compressed_data`. `data` must occupy `2 * repFactor` 32-bit
+    registers, where the repeat factor `repFactor` is a power of two from 1
+    to 64.
+
+    Arguments:
+    - `spDesc`: Sparsity descriptor specifying the selection operation and the
+      element data type.
+    - `data`: Dense vector containing the elements to be compressed.
+    - `idxSize`: Size in bits of each metadata index (2 or 4).
+
+    Results:
+    - `metadata`: Indices of the selected elements, stored in
+      `ceil(repFactor * idxSize / elemSize)` 32-bit registers. A single
+      register may be either `i32` or `vector<1xi32>`.
+    - `compressed_data`: Selected elements; half as many as in `data`.
+
+    Examples:
+    ```mlir
+    // 8-bit elements, 2-bit indices, repeat factor of 1.
+    %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data
+        idx_size = 2
+        : i32, vector<8xi8> -> i32, vector<4xi8>
+
+    // 16-bit elements, 4-bit indices, repeat factor of 8.
+    %metadata, %compressed_data = nvvm.sparse.compress %spdesc, %data
+        idx_size = 4
+        : i32, vector<32xi16> -> vector<2xi32>, vector<16xi16>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spcompress)
+  }];
+
+  let arguments = (ins
+    I32:$spDesc,
+    SPElemVectorType:$data,
+    SPIdxSizeAttr:$idxSize);
+
+  let results = (outs
+    SPMetadataType:$metadata,
+    SPElemVectorType:$compressed_data);
+
+  let assemblyFormat = [{
+    $spDesc `,` $data `idx_size` `=` $idxSize attr-dict
+    `:` type(operands) `->` type($metadata) `,` type($compressed_data)
+  }];
+
+  let extraClassDeclaration = [{
+    static void lowerToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
+                              llvm::IRBuilderBase &builder);
+  }];
+
+  let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    NVVM::SparseCompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
+  }];
+}
+
+def NVVM_SparseDecompressOp : NVVM_Op<"sparse.decompress",
+    [Pure, NVVMRequiresSMa<[107]>]> {
+  let summary = "Decompress structured sparse vector to dense vector";
+  let description = [{
+    Decompresses elements from a structured sparse vector `compressed_data`
+    into a dense vector `data`, using the indices stored in `metadata`. Dense
+    positions not selected by `metadata` are set to zero.
+
+    `data` consists of `repFactor` groups of `numTgt` elements, and
+    `compressed_data` holds `numSrc` elements for each group, i.e. the
+    sparsity factor is `numSrc:numTgt`. Both `numSrc` and the repeat factor
+    `repFactor` are derived from the vector lengths. The element size
+    `elemSize` (8 or 16 bits) is given by the element type of `data` and
+    `compressed_data`.
+
+    The following conditions must hold:
+    - `numSrc:numTgt` is one of 1:2, 1:4, 1:8, 1:16, 2:4, 2:8, 2:16, 4:8, or
+      4:16.
+    - `repFactor` is a power of two from 1 to 64.
+    - `numTgt * elemSize * repFactor` is between 32 and 4096.
+    - `numSrc * elemSize` is at most 32.
+    - `idxSize` is 2 only if `numTgt` is at most 4.
+    - `metadata` occupies `ceil(numSrc * idxSize * repFactor / 32)` 32-bit
+      registers. A single register may be either `i32` or `vector<1xi32>`.
+
+    Arguments:
+    - `metadata`: Indices of the selected elements.
+    - `compressed_data`: Compressed vector containing the selected elements.
+    - `idxSize`: Size in bits of each metadata index (2 or 4).
+    - `numTgt`: Size of each group in `data` (2, 4, 8, or 16).
+
+    Results:
+    - `data`: Dense vector containing the decompressed elements.
+
+    Examples:
+    ```mlir
+    // 2:4 sparsity, 8-bit elements, 2-bit indices, repeat factor of 1.
+    %res = nvvm.sparse.decompress %metadata, %compdata idx_size = 2 num_tgt = 4
+        : i32, vector<2xi8> -> vector<4xi8>
+
+    // 2:4 sparsity, 16-bit elements, 4-bit indices, repeat factor of 64.
+    %res = nvvm.sparse.decompress %metadata, %compdata idx_size = 4 num_tgt = 4
+        : vector<16xi32>, vector<128xi16> -> vector<256xi16>
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spdecompress)
+  }];
+
+  let arguments = (ins
+    SPMetadataType:$metadata,
+    SPElemVectorType:$compressed_data,
+    SPIdxSizeAttr:$idxSize,
+    SPNumTgtAttr:$numTgt);
+
+  let results = (outs
+    SPElemVectorType:$data);
+
+  let assemblyFormat = [{
+    $metadata `,` $compressed_data
+    `idx_size` `=` $idxSize `num_tgt` `=` $numTgt attr-dict
+    `:` type($metadata) `,` type($compressed_data) `->` type($data)
+  }];
+
+  let extraClassDeclaration = [{
+    static void lowerToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
+                              llvm::IRBuilderBase &builder);
+  }];
+
+  let hasVerifier = 1;
+
+  string llvmBuilder = [{
+    NVVM::SparseDecompressOp::lowerToLLVMIR(*op, moduleTranslation, builder);
+  }];
+}
+} // let partition = NVVM_DataMovementPartition
+
+def SIMTFloatType : AnyTypeOf<[F16, BF16, F32, F64,
+                      VectorOfLengthAndType<[2], [F16, BF16, F32, F64]>]>;
+
+def SaturationModeSatOrNone : 
+  ConfinedAttr<SaturationModeAttr, [EnumAttrIsOneOf<SaturationModeAttr, 
+                [SaturationModeNone, SaturationModeSat]>]>;
+
+def FPArithRoundingMode : 
+  ConfinedAttr<FPRoundingModeAttr, [EnumAttrIsOneOf<FPRoundingModeAttr, 
+                [FPRoundingModeNone, FPRoundingModeRM, FPRoundingModeRN, 
+                 FPRoundingModeRP, FPRoundingModeRZ]>]>;
+
+class NVVM_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
+    NVVM_Op<mnemonic, traits # [Pure, SameOperandsAndResultType]>,
+    Arguments<(ins SIMTFloatType:$lhs, SIMTFloatType:$rhs,
+      DefaultValuedAttr<FPArithRoundingMode, "FPRoundingMode::NONE">:$rnd,
+      DefaultValuedAttr<SaturationModeSatOrNone, "SaturationMode::NONE">:$sat,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz)>,
+    Results<(outs SIMTFloatType:$res)> {
+  let assemblyFormat = [{
+    $lhs `,` $rhs oilist(
+      `rnd` `=` $rnd | `sat` `=` $sat | `ftz` `=` $ftz
+    )
+    attr-dict `:` type($res)
+  }];
+}
+
+let partition = NVVM_ArithPartition in {
+def NVVM_AddFOp : NVVM_FloatBinaryOp<"addf", [Commutative]> {
+  let summary = [{
+    Performs floating point addition of the given arguments `lhs` and `rhs`
+  }];
+  let description = [{
+    The `nvvm.addf` operation performs floating point addition of two floating 
+    point operands of the same type.
+
+    The rounding mode is specified by the `rnd` attribute, saturation mode by 
+    the `sat` attribute, and flush-to-zero by the `ftz` attribute.
+
+    For more information, see PTX ISA:
+    - [floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-add)
+    - [half-precision floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-add)
+  }];
+  let hasVerifier = 1;
+  
+  let extraClassDeclaration = [{
+    // Shared lowering for nvvm.addf and nvvm.subf (via fneg+add)
+    static void lowerAddFToLLVMIR(
+        llvm::Value *lhs, llvm::Value *rhs, Value res,
+        NVVM::FPRoundingMode rnd, NVVM::SaturationMode sat, bool ftz,
+        LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+  let llvmBuilder = [{
+    NVVM::AddFOp::lowerAddFToLLVMIR($lhs, $rhs, op.getRes(), $rnd, $sat, $ftz,
+                                    moduleTranslation, builder);
+  }];
+}
+
+def NVVM_SubFOp : NVVM_FloatBinaryOp<"subf"> {
+  let summary = [{
+    Performs floating point subtraction of the given arguments `lhs` and `rhs`
+  }];
+  let description = [{
+    The `nvvm.subf` operation performs floating point subtraction of two 
+    operands.
+
+    It supports the same type combinations and modifiers as `nvvm.addf`.
+    This is equivalent to `nvvm.addf(lhs, -rhs)`.
+    
+    For more information, see PTX ISA:
+    - [floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sub) 
+    - [half-precision floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-sub)
+ 
+  }];
+  let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+
+  let llvmBuilder = [{
+    // sub(a, b) = add(a, -b)
+    llvm::Value *rhs = builder.CreateFNeg($rhs);
+    NVVM::AddFOp::lowerAddFToLLVMIR($lhs, rhs, op.getRes(), $rnd, $sat, $ftz,
+                                    moduleTranslation, builder);
+  }];
+}
+
+def NVVM_MulFOp : NVVM_FloatBinaryOp<"mulf", [Commutative]> {
+  let summary = [{
+    Performs floating point multiplication of the given arguments `lhs` and `rhs`
+  }];
+  let description = [{
+    The `nvvm.mulf` operation performs floating point multiplication of two 
+    floating point operands of the same type.
+
+    The rounding mode is specified by the `rnd` attribute, saturation mode by 
+    the `sat` attribute, and flush-to-zero by the `ftz` attribute.
+
+    For more information, see PTX ISA:
+    - [floating point multiplication](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-mul)
+    - [half-precision floating point multiplication](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-mul)
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static void lowerMulFToLLVMIR(
+        llvm::Value *lhs, llvm::Value *rhs, Value res,
+        NVVM::FPRoundingMode rnd, NVVM::SaturationMode sat, bool ftz,
+        LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+  let llvmBuilder = [{
+    NVVM::MulFOp::lowerMulFToLLVMIR($lhs, $rhs, op.getRes(), $rnd, $sat, $ftz,
+                                    moduleTranslation, builder);
+  }];
+}
+
+def NVVM_FmaOp : NVVM_Op<"fma", [Pure, SameOperandsAndResultType]> {
+  let summary = [{
+    Performs floating point fused multiply-add operation with support for mixed 
+    precision operands
+  }];
+  let description = [{
+    The `nvvm.fma` operation performs floating point fused multiply-add of 
+    three operands of the same type.
+
+    The rounding mode is specified by the `rnd` attribute, saturation mode by 
+    the `sat` attribute, flush-to-zero by the `ftz` attribute, and ReLU by the 
+    `relu` attribute.
+    
+    Out-of-bounds (OOB) behavior is controlled by the `oob` attribute. `oob` 
+    clamps the result to 0 if either of the operands is `OOB NaN` (see [Tensors](https://docs.nvidia.com/cuda/parallel-thread-execution/#tensors)).
+
+    For more information, see PTX ISA:
+    - [floating point fused multiply-add](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-fma)
+    - [half-precision floating point fused multiply-add](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-fma)
+  }];
+  let arguments = (ins
+    SIMTFloatType:$a,
+    SIMTFloatType:$b,
+    SIMTFloatType:$c,
+    FPArithRoundingMode:$rnd,
+    DefaultValuedAttr<SaturationModeSatOrNone, "SaturationMode::NONE">:$sat,
+    DefaultValuedAttr<BoolAttr, "false">:$ftz,
+    DefaultValuedAttr<BoolAttr, "false">:$relu,
+    DefaultValuedAttr<BoolAttr, "false">:$oob
+  );
+  let results = (outs SIMTFloatType:$res);
+  let assemblyFormat = [{
+    $a `,` $b `,` $c `,` `rnd` `=` $rnd oilist(
+      `sat` `=` $sat | `ftz` `=` $ftz | `relu` `=` $relu
+      | `oob` `=` $oob
+    )
+    attr-dict `:` type($a)
+  }];
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static void lowerFmaToLLVMIR(
+        Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
+  let llvmBuilder = [{
+    NVVM::FmaOp::lowerFmaToLLVMIR(*op, moduleTranslation, builder);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM sqrt op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_SqrtOp
+    : NVVM_SingleResultIntrinsicOp<"sqrt", [Pure, SameOperandsAndResultType]> {
+  let summary = "Take the square root of a value";
+  let description = [{
+    Compute sqrt(src) and store the result in res.
+
+    For more information, see PTX ISA:
+    [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
+  }];
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$src, FPArithRoundingMode:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = [{
+    $src `,` `rnd` `=` $rnd oilist(`ftz` `=` $ftz)
+    attr-dict `:` type($src)
+  }];
+  let hasVerifier = 1;
+}
+
+def NVVM_SqrtApproxOp : NVVM_F32UnaryApproxOp<"sqrt.approx"> {
+  let summary = "Square root (fast approximation)";
+  let description = [{
+    Computes a fast approximation of the square root of the input value
+    (`res = sqrt(src)`). The maximum relative error over the entire positive
+    finite range is 2^-23.
+
+    The `ftz` attribute, when set, flushes subnormal inputs and results to
+    sign-preserving zero.
+
+    For more information, see PTX ISA:
+    [sqrt](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sqrt)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM div op definitions
+//===----------------------------------------------------------------------===//
+
+def NVVM_DivFOp
+    : NVVM_SingleResultIntrinsicOp<"divf", [Pure, SameOperandsAndResultType]> {
+  let summary = "Divide one value by another";
+  let description = [{
+    Divides lhs by rhs, stores result in res (`res = lhs / rhs`).
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-div)
+  }];
+  let arguments = (ins AnyTypeOf<[F32, F64]>:$lhs, AnyTypeOf<[F32, F64]>:$rhs,
+      DefaultValuedAttr<FPArithRoundingMode, "FPRoundingMode::NONE">:$rnd,
+      DefaultValuedAttr<BoolAttr, "false">:$ftz,
+      DefaultValuedAttr<BoolAttr, "false">:$approx,
+      DefaultValuedAttr<BoolAttr, "false">:$full);
+  let results = (outs AnyTypeOf<[F32, F64]>:$res);
+  let assemblyFormat = [{
+    $lhs `,` $rhs oilist(
+      `rnd` `=` $rnd | `ftz` `=` $ftz | `approx` `=` $approx
+      | `full` `=` $full
+    )
+    attr-dict `:` type($res)
+  }];
+  let hasVerifier = 1;
+}
+} // let partition = NVVM_ArithPartition
+
+//===----------------------------------------------------------------------===//
+// NVVM tensormap.replace Op
+//===----------------------------------------------------------------------===//
+
+def TensormapFieldValueAttr :
+  AnyAttrOf<[TensormapElemtypeAttr, TensormapInterleaveLayoutAttr, 
+    TensormapSwizzleModeAttr, TensormapSwizzleAtomicityAttr, 
+    TensormapFillModeAttr]>;
+
+def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
+    [NVVMRequiresSMaOrSMf<[90, 103], [100, 101, 110, 120]>]> {
+  let summary = "Modifies a field of the tensor-map object";
+  let description = [{
+    The `nvvm.tensormap.replace` replaces the specified field of the tensor-map 
+    object at the location specified by `addr` with a new value (specified by 
+    `new_value` or `new_value_attr`).
+
+    The `field` argument specifies the field of the tensor-map object to 
+    replace.
+
+    `new_value` is an `i32`/`i64` argument that specifies the new value to 
+    replace the `field` with for the `global_address`, `rank`, `box_dim`, 
+    `global_dim`, `global_stride`, and `element_stride` fields. It must be an 
+    `i64` for the `global_address` and `global_stride` fields and `i32` for the 
+    remaining fields.
+    
+    For `rank`, `new_value` must be one less than the desired tensor rank as 
+    this field uses zero-based numbering.
+
+    `new_value_attr` is an attribute that specifies the new value to replace 
+    the `field` with for the `elemtype`, `interleave_layout`, `swizzle_mode`, 
+    `swizzle_atomicity`, and `fill_mode` fields. It takes the place of 
+    `new_value` for these fields. It must be a valid attribute corresponding to 
+    the `field` type.
+
+    The ordinal `ord` is an immediate integer argument that specifies the 
+    ordinal of the `field` across the tensor which needs to be replaced and is 
+    required only for the `box_dim`, `global_dim`, `global_stride`, and 
+    `element_stride` fields.
+
+    [For more information, see PTX ISA.](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace)
+  }];
+  let partition = NVVM_AsyncCopyPartition;
+
+  let hasVerifier = 1;
+  let arguments = (ins
+    TensormapFieldAttr:$field,
+    AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr,
+    Optional<AnyTypeOf<[I64, I32]>>:$new_value,
+    OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<4>]>>:$ord,
+    OptionalAttr<TensormapFieldValueAttr>:$new_value_attr
+  );
+
+  let assemblyFormat = [{
+    `field` `=` enum($field) (`[` $ord^ `]`)? `,` `new_value` `=`
+    ($new_value_attr^):($new_value)? `in` $addr attr-dict `:` type(operands)
   }];
 }
 
@@ -3860,8 +7127,8 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
   let parameters = (ins
     DefaultValuedParameter<"int", "2", "Optimization level to apply.">:$O,
     StringRefParameter<"Target triple.", "\"nvptx64-nvidia-cuda\"">:$triple,
-    StringRefParameter<"Target chip.", "\"sm_50\"">:$chip,
-    StringRefParameter<"Target chip features.", "\"+ptx60\"">:$features,
+    StringRefParameter<"Target chip.", "\"sm_75\"">:$chip,
+    StringRefParameter<"Target chip features.", "\"\"">:$features,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link,
     DefaultValuedParameter<"bool", "true", "Perform SM version check on Ops.">:$verifyTarget
@@ -3872,14 +7139,13 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
   let builders = [
     AttrBuilder<(ins CArg<"int", "2">:$optLevel,
                      CArg<"StringRef", "\"nvptx64-nvidia-cuda\"">:$triple,
-                     CArg<"StringRef", "\"sm_50\"">:$chip,
-                     CArg<"StringRef", "\"+ptx60\"">:$features,
+                     CArg<"StringRef", "\"sm_75\"">:$chip,
+                     CArg<"StringRef", "\"\"">:$features,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles,
                      CArg<"bool", "true">:$verifyTarget), [{
-      return Base::get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles, verifyTarget);
-    }]>
-  ];
+      return $_get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles, verifyTarget);
+    }]>];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
   let extraClassDeclaration = [{

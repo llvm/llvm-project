@@ -130,8 +130,7 @@ subroutine dotprod (b, c, n, block_size, num_teams, block_threads)
  !REF: /dotprod/sum
  sum = 0.0e0
 !$omp target  map(to:b,c)  map(tofrom:sum)
-!$omp teams  num_teams(num_teams) thread_limit(block_threads) reduction(+: sum&
-!$OMP&)
+!$omp teams num_teams(num_teams) thread_limit(block_threads) reduction(+: sum)
 !$omp distribute
  !DEF: /dotprod/OtherConstruct1/OtherConstruct1/OtherConstruct1/i0 (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
  !REF: /dotprod/n

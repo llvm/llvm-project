@@ -1,0 +1,22 @@
+# REQUIRES: python, asserts, !system-windows
+#
+# Test that nothing loads when no safe-auto-load-paths are configured.
+
+# RUN: split-file %s %t
+# RUN: %clang_host %t/main.c -o %t/TestModule.out
+# RUN: mkdir -p %t/safe-path/TestModule
+
+# RUN: cp %t/script.py %t/safe-path/TestModule/TestModule.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file true' \
+# RUN:   -o 'target create %t/TestModule.out' 2>&1 | FileCheck %s
+
+# CHECK-NOT: SHOULD_NOT_LOAD
+
+#--- main.c
+int main() { return 0; }
+
+#--- script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SHOULD_NOT_LOAD", file=sys.stderr)

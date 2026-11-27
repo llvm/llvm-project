@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "DXILResourceImplicitBinding.h"
 #include "DirectX.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
@@ -111,8 +110,7 @@ static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
          RegSlotOp,                /* register slot */
          IB.Call->getOperand(2),   /* size */
          IB.Call->getOperand(3),   /* index */
-         IB.Call->getOperand(4),   /* non-uniform flag */
-         IB.Call->getOperand(5)}); /* name */
+         IB.Call->getOperand(4)}); /* name */
     IB.Call->replaceAllUsesWith(NewCall);
     IB.Call->eraseFromParent();
     Changed = true;
@@ -131,8 +129,8 @@ static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
 
 } // end anonymous namespace
 
-PreservedAnalyses DXILResourceImplicitBinding::run(Module &M,
-                                                   ModuleAnalysisManager &AM) {
+PreservedAnalyses
+DXILResourceImplicitBindingPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   DXILResourceBindingInfo &DRBI = AM.getResult<DXILResourceBindingAnalysis>(M);
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);

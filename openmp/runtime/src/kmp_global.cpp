@@ -135,11 +135,9 @@ int __kmp_tp_cached = 0;
 int __kmp_dispatch_num_buffers = KMP_DFLT_DISP_NUM_BUFF;
 int __kmp_dflt_max_active_levels = 1; // Nesting off by default
 bool __kmp_dflt_max_active_levels_set = false; // Don't override set value
-#if KMP_NESTED_HOT_TEAMS
 int __kmp_hot_teams_mode = 0; /* 0 - free extra threads when reduced */
 /* 1 - keep extra threads when reduced */
 int __kmp_hot_teams_max_level = 1; /* nesting level of hot teams */
-#endif
 enum library_type __kmp_library = library_none;
 enum sched_type __kmp_sched =
     kmp_sch_default; /* scheduling method for runtime scheduling */
@@ -237,9 +235,10 @@ enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
     kmp_sch_dynamic_chunked, // ==> kmp_sched_dynamic           = 2
     kmp_sch_guided_chunked, // ==> kmp_sched_guided            = 3
     kmp_sch_auto, // ==> kmp_sched_auto              = 4
-    kmp_sch_trapezoidal // ==> kmp_sched_trapezoidal       = 101
-    // will likely not be used, introduced here just to debug the code
-    // of public intel extension schedules
+    kmp_sch_trapezoidal, // ==> kmp_sched_trapezoidal       = 101
+#if KMP_STATIC_STEAL_ENABLED
+    kmp_sch_static_steal // ==> kmp_sched_static_steal      = 102
+#endif
 };
 
 #if KMP_MIC_SUPPORTED
@@ -250,10 +249,10 @@ enum mic_type __kmp_mic_type = non_mic;
 
 KMPAffinity *__kmp_affinity_dispatch = NULL;
 
-#if KMP_USE_HWLOC
+#if KMP_HWLOC_ENABLED
 int __kmp_hwloc_error = FALSE;
 hwloc_topology_t __kmp_hwloc_topology = NULL;
-#endif
+#endif // KMP_HWLOC_ENABLED
 
 #if KMP_OS_WINDOWS
 #if KMP_GROUP_AFFINITY
@@ -335,6 +334,8 @@ omp_memspace_handle_t const omp_high_bw_mem_space =
     (omp_memspace_handle_t const)3;
 omp_memspace_handle_t const omp_low_lat_mem_space =
     (omp_memspace_handle_t const)4;
+omp_memspace_handle_t const omp_cgroup_mem_space =
+    (omp_memspace_handle_t const)5;
 omp_memspace_handle_t const llvm_omp_target_host_mem_space =
     (omp_memspace_handle_t const)100;
 omp_memspace_handle_t const llvm_omp_target_shared_mem_space =
@@ -553,17 +554,5 @@ int __kmp_nesting_mode = 0;
 int __kmp_nesting_mode_nlevels = 1;
 int *__kmp_nesting_nth_level;
 
-#if OMPX_TASKGRAPH
-// TDG record & replay
-int __kmp_tdg_dot = 0;
-kmp_int32 __kmp_max_tdgs = 100;
-kmp_tdg_info_t **__kmp_global_tdgs = NULL;
-kmp_int32 __kmp_curr_tdg_idx =
-    0; // Id of the current TDG being recorded or executed
-kmp_int32 __kmp_num_tdg = 0;
-kmp_int32 __kmp_successors_size = 10; // Initial succesor size list for
-                                      // recording
-std::atomic<kmp_int32> __kmp_tdg_task_id = 0;
-#endif
 // end of file //
 

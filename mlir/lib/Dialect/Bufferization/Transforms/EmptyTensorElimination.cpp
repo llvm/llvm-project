@@ -9,14 +9,14 @@
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationDialect.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Interfaces/SubsetOpInterface.h"
-#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/RegionUtils.h"
 
 namespace mlir {
 namespace bufferization {
@@ -106,8 +106,13 @@ Value mlir::bufferization::buildSubsetExtraction(RewriterBase &rewriter,
   // this replacement.
   Operation *insertionPoint =
       findValidInsertionPoint(emptyTensorOp, user, neededValues);
-  if (!insertionPoint)
-    return {};
+  if (!insertionPoint) {
+    // If no already suitable insertion point was found, attempt to move all
+    // needed values before the user.
+    if (failed(moveValueDefinitions(rewriter, neededValues, user)))
+      return {};
+    insertionPoint = user;
+  }
 
   rewriter.setInsertionPoint(insertionPoint);
   Value replacement =
@@ -150,33 +155,38 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
     for (Value v : emptyTensors) {
       auto emptyTensorOp = v.getDefiningOp<tensor::EmptyOp>();
       assert(emptyTensorOp && "expected tensor.empty op");
-      // Find the use to be replaced from the use-def chain.
-      auto iter = llvm::find_if(
-          visitedOpOperands, [&emptyTensorOp](OpOperand *opOperand) {
-            return llvm::count(emptyTensorOp->getUses(), *opOperand);
-          });
-
-      assert(iter != visitedOpOperands.end() && "could not find use");
-      OpOperand *useToBeReplaced = *iter;
-      Operation *user = useToBeReplaced->getOwner();
-      auto replacement = subsetsExtractionFn(rewriter, op, emptyTensorOp, user);
-      if (!replacement)
-        continue;
-      if (emptyTensorOp == replacement.getDefiningOp())
-        continue;
-      if (replacement.getType() != v.getType()) {
-        if (cast<ShapedType>(replacement.getType()).getElementType() !=
-            cast<ShapedType>(v.getType()).getElementType())
-          continue;
-        rewriter.setInsertionPointAfterValue(replacement);
-        replacement = rewriter.create<tensor::CastOp>(v.getLoc(), v.getType(),
-                                                      replacement);
+      // Find all the uses that are in the reverse use-def chain and whose
+      // immediate defining op is the tensor.empty op.
+      SmallVector<OpOperand *> usesForReplacement;
+      for (OpOperand *opOperand : visitedOpOperands) {
+        if (opOperand->get() == v)
+          usesForReplacement.push_back(opOperand);
       }
-      // Replace the specific use of the tensor::EmptyOp.
-      rewriter.modifyOpInPlace(user, [&]() {
-        user->setOperand(useToBeReplaced->getOperandNumber(), replacement);
-      });
-      state.resetCache();
+
+      assert(!usesForReplacement.empty() && "could not find any use");
+      for (OpOperand *useToBeReplaced : usesForReplacement) {
+        Operation *user = useToBeReplaced->getOwner();
+
+        auto replacement =
+            subsetsExtractionFn(rewriter, op, emptyTensorOp, user);
+        if (!replacement)
+          continue;
+        if (emptyTensorOp == replacement.getDefiningOp())
+          continue;
+        if (replacement.getType() != v.getType()) {
+          if (cast<ShapedType>(replacement.getType()).getElementType() !=
+              cast<ShapedType>(v.getType()).getElementType())
+            continue;
+          rewriter.setInsertionPointAfterValue(replacement);
+          replacement = tensor::CastOp::create(rewriter, v.getLoc(),
+                                               v.getType(), replacement);
+        }
+        // Replace the specific use of the tensor::EmptyOp.
+        rewriter.modifyOpInPlace(user, [&]() {
+          user->setOperand(useToBeReplaced->getOperandNumber(), replacement);
+        });
+        state.resetCache();
+      }
     }
 
     return WalkResult::advance();

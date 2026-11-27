@@ -1,9 +1,25 @@
+set(LLVM_TARGET_DEFINITIONS Options.td)
+llvm_tablegen(Options.inc -gen-opt-parser-defs)
+add_public_tablegen_target(LLDBDAPOptionsTableGen)
+
+set(LLDB_DAP_LINK_LIBS lldbDAP lldbHost lldbUtility liblldb)
+
 add_lldb_tool(lldb-dap
   lldb-dap.cpp
 
+  LINK_COMPONENTS
+    Option
+    Support
   LINK_LIBS
-    lldbDAP
+    ${LLDB_DAP_LINK_LIBS}
   )
+
+add_dependencies(lldb-dap
+  LLDBDAPOptionsTableGen
+  ${tablegen_deps}
+)
+
+lldb_prevent_liblldb_symbol_interposition(lldb-dap)
 
 if(APPLE)
   configure_file(
@@ -17,7 +33,7 @@ endif()
 if(LLDB_BUILD_FRAMEWORK)
   # In the build-tree, we know the exact path to the framework directory.
   # The installed framework can be in different locations.
-  lldb_setup_rpaths(lldb-dap
+  lldb_add_rpaths(lldb-dap
     BUILD_RPATH
       "${LLDB_FRAMEWORK_ABSOLUTE_BUILD_DIR}"
     INSTALL_RPATH

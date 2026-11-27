@@ -18,14 +18,14 @@ include "X86InstrFragments.td"
 include "X86InstrFragmentsSIMD.td"
 
 //===----------------------------------------------------------------------===//
-// X86 Operand Definitions.
-//
-include "X86InstrOperands.td"
-
-//===----------------------------------------------------------------------===//
 // X86 Predicate Definitions.
 //
 include "X86InstrPredicates.td"
+
+//===----------------------------------------------------------------------===//
+// X86 Operand Definitions.
+//
+include "X86InstrOperands.td"
 
 //===----------------------------------------------------------------------===//
 // X86 Instruction Format Definitions.
@@ -84,6 +84,12 @@ include "X86InstrKL.td"
 
 // AMX instructions
 include "X86InstrAMX.td"
+
+// AVX10 V2 AUX instructions
+include "X86InstrAVX10_V2_AUX.td"
+
+// ACE instructions
+include "X86InstrACE.td"
 
 // RAO-INT instructions
 include "X86InstrRAOINT.td"

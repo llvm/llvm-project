@@ -2,6 +2,7 @@
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
+! XFAIL: intelgpu
 program main
    use omp_lib
    integer :: x

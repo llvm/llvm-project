@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "TestDialect.h"
-#include "TestOps.h"
-#include "TestTypes.h"
+#include "TestOpsConversion.h"
+#include "TestTypesCore.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -28,7 +27,7 @@ public:
   LogicalResult
   matchAndRewrite(test::TestTypeProducerOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(op, getVoidPtrType());
+    rewriter.replaceOpWithNewOp<LLVM::ZeroOp>(op, getPtrType());
     return success();
   }
 };

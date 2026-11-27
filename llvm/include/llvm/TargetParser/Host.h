@@ -13,6 +13,7 @@
 #ifndef LLVM_TARGETPARSER_HOST_H
 #define LLVM_TARGETPARSER_HOST_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 #include <string>
 
@@ -53,7 +54,7 @@ LLVM_ABI StringRef getHostCPUName();
 /// which features may appear in this map, except that they are all valid LLVM
 /// feature names. The map can be empty, for example if feature detection
 /// fails.
-LLVM_ABI const StringMap<bool, MallocAllocator> getHostCPUFeatures();
+LLVM_ABI StringMap<bool, MallocAllocator> getHostCPUFeatures();
 
 /// This is a function compatible with cl::AddExtraVersionPrinter, which adds
 /// info about the current target triple and detected CPU.
@@ -63,10 +64,17 @@ namespace detail {
 /// Helper functions to extract HostCPUName from /proc/cpuinfo on linux.
 LLVM_ABI StringRef getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent);
 LLVM_ABI StringRef getHostCPUNameForARM(StringRef ProcCpuinfoContent);
+LLVM_ABI StringRef getHostCPUNameForARM(uint64_t PrimaryCpuInfo,
+                                        ArrayRef<uint64_t> UniqueCpuInfos);
 LLVM_ABI StringRef getHostCPUNameForS390x(StringRef ProcCpuinfoContent);
 LLVM_ABI StringRef getHostCPUNameForRISCV(StringRef ProcCpuinfoContent);
 LLVM_ABI StringRef getHostCPUNameForSPARC(StringRef ProcCpuinfoContent);
 LLVM_ABI StringRef getHostCPUNameForBPF();
+
+/// Helper function to extract host CPU features from /proc/cpuinfo on ARM and
+/// AArch64 linux.
+LLVM_ABI StringMap<bool, MallocAllocator>
+getHostCPUFeaturesForARM(StringRef ProcCpuinfoContent);
 
 /// Helper functions to extract CPU details from CPUID on x86.
 namespace x86 {
@@ -74,6 +82,7 @@ enum class VendorSignatures {
   UNKNOWN,
   GENUINE_INTEL,
   AUTHENTIC_AMD,
+  HYGON_GENUINE,
 };
 
 /// Returns the host CPU's vendor.

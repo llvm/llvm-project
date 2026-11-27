@@ -11,7 +11,6 @@
 
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
@@ -32,8 +31,6 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
 using Instr = llvm::cfi_verify::FileAnalysis::Instr;
@@ -377,6 +374,8 @@ Error FileAnalysis::initialiseDisassemblyMembers() {
   MCPU = "";
   std::string ErrorString;
 
+  Triple TheTriple(TripleName);
+
   LLVMSymbolizer::Options Opt;
   Opt.UseSymbolTable = false;
   Symbolizer.reset(new LLVMSymbolizer(Opt));
@@ -389,19 +388,19 @@ Error FileAnalysis::initialiseDisassemblyMembers() {
          "\", failed with error: " + ErrorString)
             .str());
 
-  RegisterInfo.reset(ObjectTarget->createMCRegInfo(TripleName));
+  RegisterInfo.reset(ObjectTarget->createMCRegInfo(TheTriple));
   if (!RegisterInfo)
     return make_error<UnsupportedDisassembly>(
         "Failed to initialise RegisterInfo.");
 
   MCTargetOptions MCOptions;
   AsmInfo.reset(
-      ObjectTarget->createMCAsmInfo(*RegisterInfo, TripleName, MCOptions));
+      ObjectTarget->createMCAsmInfo(*RegisterInfo, TheTriple, MCOptions));
   if (!AsmInfo)
     return make_error<UnsupportedDisassembly>("Failed to initialise AsmInfo.");
 
   SubtargetInfo.reset(ObjectTarget->createMCSubtargetInfo(
-      TripleName, MCPU, Features.getString()));
+      TheTriple, MCPU, Features.getString()));
   if (!SubtargetInfo)
     return make_error<UnsupportedDisassembly>(
         "Failed to initialise SubtargetInfo.");
@@ -410,8 +409,8 @@ Error FileAnalysis::initialiseDisassemblyMembers() {
   if (!MII)
     return make_error<UnsupportedDisassembly>("Failed to initialise MII.");
 
-  Context.reset(new MCContext(Triple(TripleName), AsmInfo.get(),
-                              RegisterInfo.get(), SubtargetInfo.get()));
+  Context.reset(new MCContext(Triple(TripleName), *AsmInfo, *RegisterInfo,
+                              *SubtargetInfo));
 
   Disassembler.reset(
       ObjectTarget->createMCDisassembler(*SubtargetInfo, *Context));

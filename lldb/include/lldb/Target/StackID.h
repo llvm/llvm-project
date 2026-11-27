@@ -10,27 +10,30 @@
 #define LLDB_TARGET_STACKID_H
 
 #include "lldb/Core/AddressRange.h"
-#include "lldb/lldb-private.h"
 
 namespace lldb_private {
 
+class Process;
+
+/// How the call frame addresses of two frames order them.
+enum class CFAComparison { Younger, Older, NoOpinion };
+
 class StackID {
 public:
-  // Constructors and Destructors
   StackID() = default;
 
   explicit StackID(lldb::addr_t pc, lldb::addr_t cfa,
-                   SymbolContextScope *symbol_scope)
-      : m_pc(pc), m_cfa(cfa), m_symbol_scope(symbol_scope) {}
-
-  StackID(const StackID &rhs)
-      : m_pc(rhs.m_pc), m_cfa(rhs.m_cfa), m_symbol_scope(rhs.m_symbol_scope) {}
+                   SymbolContextScope *symbol_scope, Process *process);
 
   ~StackID() = default;
 
   lldb::addr_t GetPC() const { return m_pc; }
 
-  lldb::addr_t GetCallFrameAddress() const { return m_cfa; }
+  lldb::addr_t GetCallFrameAddressWithMetadata() const {
+    return m_cfa_with_metadata;
+  }
+
+  lldb::addr_t GetCallFrameAddressWithoutMetadata() const { return m_cfa; }
 
   SymbolContextScope *GetSymbolContextScope() const { return m_symbol_scope; }
 
@@ -38,10 +41,15 @@ public:
     m_symbol_scope = symbol_scope;
   }
 
+  uint32_t GetTailCallDepth() const { return m_tail_call_depth; }
+
+  void SetTailCallDepth(uint32_t depth) { m_tail_call_depth = depth; }
+
   void Clear() {
     m_pc = LLDB_INVALID_ADDRESS;
     m_cfa = LLDB_INVALID_ADDRESS;
     m_symbol_scope = nullptr;
+    m_tail_call_depth = 0;
   }
 
   bool IsValid() const {
@@ -50,50 +58,48 @@ public:
 
   void Dump(Stream *s);
 
-  // Operators
-  const StackID &operator=(const StackID &rhs) {
-    if (this != &rhs) {
-      m_pc = rhs.m_pc;
-      m_cfa = rhs.m_cfa;
-      m_symbol_scope = rhs.m_symbol_scope;
-    }
-    return *this;
-  }
+  /// Returns true if this StackID corresponds to a frame younger (i.e. higher
+  /// on the call stack) than `other`, and false otherwise (including when the
+  /// frames are not comparable, in some cases where this can be detected).
+  /// \p process and then its language runtimes get the first say, see
+  /// Process::CompareCFAs() and LanguageRuntime::CompareCFAs().
+  bool IsYoungerThan(const StackID &other, Process &process) const;
 
 protected:
   friend class StackFrame;
+  friend class SyntheticStackFrameList;
 
-  void SetPC(lldb::addr_t pc) { m_pc = pc; }
+  void SetPC(lldb::addr_t pc, Process *process);
+  void SetCFA(lldb::addr_t cfa, Process *process);
 
-  void SetCFA(lldb::addr_t cfa) { m_cfa = cfa; }
+  /// The pc value for the function/symbol for this frame. This will only get
+  /// used if the symbol scope is nullptr (the code where we are stopped is not
+  /// represented by any function or symbol in any shared library).
+  lldb::addr_t m_pc = LLDB_INVALID_ADDRESS;
 
-  lldb::addr_t m_pc =
-      LLDB_INVALID_ADDRESS; // The pc value for the function/symbol for this
-                            // frame. This will
-  // only get used if the symbol scope is nullptr (the code where we are
-  // stopped is not represented by any function or symbol in any shared
-  // library).
-  lldb::addr_t m_cfa =
-      LLDB_INVALID_ADDRESS; // The call frame address (stack pointer) value
-                            // at the beginning of the function that uniquely
-                            // identifies this frame (along with m_symbol_scope
-                            // below)
-  SymbolContextScope *m_symbol_scope =
-      nullptr; // If nullptr, there is no block or symbol for this frame.
-               // If not nullptr, this will either be the scope for the
-               // lexical block for the frame, or the scope for the
-               // symbol. Symbol context scopes are always be unique
-               // pointers since the are part of the Block and Symbol
-               // objects and can easily be used to tell if a stack ID
-               // is the same as another.
+  /// The call frame address (stack pointer) value at the beginning of the
+  /// function that uniquely identifies this frame (along with m_symbol_scope
+  /// below)
+  lldb::addr_t m_cfa = LLDB_INVALID_ADDRESS;
+
+  /// The cfa with metadata (i.e. prior to Process::FixAddress).
+  lldb::addr_t m_cfa_with_metadata = LLDB_INVALID_ADDRESS;
+
+  /// If nullptr, there is no block or symbol for this frame. If not nullptr,
+  /// this will either be the scope for the lexical block for the frame, or the
+  /// scope for the symbol. Symbol context scopes are always be unique pointers
+  /// since the are part of the Block and Symbol objects and can easily be used
+  /// to tell if a stack ID is the same as another.
+  SymbolContextScope *m_symbol_scope = nullptr;
+
+  /// For a synthesized tail call frame, which has the CFA of the younger frame
+  /// that replaced it, its position in the chain of tail calls after that
+  /// frame (1, 2, ...). 0 for every other frame.
+  uint32_t m_tail_call_depth = 0;
 };
 
 bool operator==(const StackID &lhs, const StackID &rhs);
 bool operator!=(const StackID &lhs, const StackID &rhs);
-
-// frame_id_1 < frame_id_2 means "frame_id_1 is YOUNGER than frame_id_2"
-bool operator<(const StackID &lhs, const StackID &rhs);
-
 } // namespace lldb_private
 
 #endif // LLDB_TARGET_STACKID_H

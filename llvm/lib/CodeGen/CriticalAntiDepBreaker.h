@@ -30,7 +30,8 @@ class MachineOperand;
 class MachineRegisterInfo;
 class RegisterClassInfo;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
@@ -39,11 +40,6 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
     const TargetInstrInfo *TII;
     const TargetRegisterInfo *TRI;
     const RegisterClassInfo &RegClassInfo;
-
-    /// The set of allocatable registers.
-    /// We'll be ignoring anti-dependencies on non-allocatable registers,
-    /// because they may not be safe to break.
-    const BitVector AllocatableSet;
 
     /// For live regs that are only used in one register class in a
     /// live range, the register class. If the register is not live, the

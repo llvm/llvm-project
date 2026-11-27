@@ -69,7 +69,8 @@ int main(int argc, char **argv) {
       "  - Sampled profile collected from the binary:\n"
       "    - perf data or pre-aggregated profile data (instrumentation profile "
       "not supported)\n"
-      "    - perf data can have basic (IP) or branch-stack (LBR) samples\n\n"
+      "    - perf data can have basic (IP) or branch-stack (brstack) "
+      "samples\n\n"
 
       "  Outputs:\n"
       "  - Heatmaps: colored ASCII (requires a color-capable terminal or a"
@@ -120,8 +121,9 @@ int main(int argc, char **argv) {
       report_error("RewriteInstance", std::move(E));
 
     RewriteInstance &RI = *RIOrErr.get();
-    if (Error E = RI.setProfile(opts::PerfData))
-      report_error(opts::PerfData, std::move(E));
+    for (StringRef Filename : opts::PerfData)
+      if (Error E = RI.setProfile(Filename))
+        report_error(Filename, std::move(E));
 
     if (Error E = RI.run())
       report_error(opts::InputFilename, std::move(E));

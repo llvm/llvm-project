@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC_STDFIX_BITSUHR_H
 
 #include "include/llvm-libc-macros/stdfix-macros.h" // unsigned short fract
-#include "include/llvm-libc-types/stdfix-types.h"   // uint_uhr_t
+#include "include/llvm-libc-types/uint_uhr_t.h"
 #include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {

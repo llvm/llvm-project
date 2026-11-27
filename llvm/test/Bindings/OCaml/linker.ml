@@ -13,7 +13,7 @@
 open Llvm
 open Llvm_linker
 
-let context = global_context ()
+let context = create_context ()
 let void_type = Llvm.void_type context
 
 let diagnostic_handler _ = ()
@@ -37,7 +37,7 @@ let test_linker () =
   let make_module name =
     let m = create_module context name in
     let fn = define_function ("fn_" ^ name) fty m in
-    ignore (build_ret_void (builder_at_end context (entry_block fn)));
+    ignore (build_ret_void (builder_at_end (entry_block fn)));
     m
   in
 
@@ -62,4 +62,5 @@ let test_linker () =
 (*===-- Driver ------------------------------------------------------------===*)
 
 let _ =
-  suite "linker" test_linker
+  suite "linker" test_linker;
+  dispose_context context

@@ -10,6 +10,7 @@ group("unittests") {
     "clang-move:ClangMoveTests",
     "clang-query:ClangQueryTests",
     "clang-tidy:ClangTidyTests",
+    "//clang-tools-extra/include-cleaner/unittests:ClangIncludeCleanerTests",
   ]
   testonly = true
 }

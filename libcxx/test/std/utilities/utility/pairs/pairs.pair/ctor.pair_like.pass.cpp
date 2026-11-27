@@ -45,7 +45,7 @@ struct std::tuple_element<N, my_ns::MyPairLike> {
   using type = int;
 };
 
-// https://github.com/llvm/llvm-project/issues/65620
+// https://llvm.org/PR65620
 // This used to be a hard error
 static_assert(!std::is_constructible_v<std::pair<int,int>, my_ns::MyPairLike const&>);
 

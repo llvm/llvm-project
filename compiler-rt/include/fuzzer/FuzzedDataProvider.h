@@ -265,7 +265,13 @@ T FuzzedDataProvider::ConsumeFloatingPointInRange(T min, T max) {
     range = max - min;
   }
 
-  return result + range * ConsumeProbability<T>();
+  result += range * ConsumeProbability<T>();
+
+  // Rounding can push the result above |max|, although never below |min|. Clamp
+  // it.
+  if (result > max)
+    return max;
+  return result;
 }
 
 // Returns a floating point number in the range [0.0, 1.0]. If there's no
@@ -380,13 +386,13 @@ TS FuzzedDataProvider::ConvertUnsignedToSigned(TU value) {
   static_assert(!std::numeric_limits<TU>::is_signed,
                 "Source type must be unsigned.");
 
-  // TODO(Dor1s): change to `if constexpr` once C++17 becomes mainstream.
-  if (std::numeric_limits<TS>::is_modulo)
+  if constexpr (std::numeric_limits<TS>::is_modulo)
     return static_cast<TS>(value);
 
   // Avoid using implementation-defined unsigned to signed conversions.
   // To learn more, see https://stackoverflow.com/questions/13150449.
-  if (value <= std::numeric_limits<TS>::max()) {
+  constexpr auto TS_max = static_cast<TU>(std::numeric_limits<TS>::max());
+  if (value <= TS_max) {
     return static_cast<TS>(value);
   } else {
     constexpr auto TS_min = std::numeric_limits<TS>::min();

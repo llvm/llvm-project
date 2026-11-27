@@ -34,15 +34,28 @@
 // Define __CUDACC__ early as libstdc++ standard headers with GNU extensions
 // enabled depend on it to avoid using __float128, which is unsupported in
 // CUDA.
-#define __CUDACC__
+#define __CUDACC__ 1
 
 // Include some standard headers to avoid CUDA headers including them
 // while some required macros (like __THROW) are in a weird state.
+#include <climits>
 #include <cmath>
 #include <cstdlib>
 #include <stdlib.h>
 #include <string.h>
 #undef __CUDACC__
+
+// math_functions.h from CUDA 13.2+ defines _NV_RSQRT_SPECIFIER.
+// Clang does not include it, so we need to define it ourselves.
+#if defined(__GNUC__) && defined(__GLIBC_PREREQ)
+#if __GLIBC_PREREQ(2, 42)
+#define _NV_RSQRT_SPECIFIER noexcept(true)
+#endif
+#endif
+
+#ifndef _NV_RSQRT_SPECIFIER
+#define _NV_RSQRT_SPECIFIER
+#endif
 
 // Preserve common macros that will be changed below by us or by CUDA
 // headers.
@@ -90,7 +103,7 @@
 #if CUDA_VERSION < 9000
 #define __CUDABE__
 #else
-#define __CUDACC__
+#define __CUDACC__ 1
 #define __CUDA_LIBDEVICE__
 #endif
 // Disables definitions of device-side runtime support stubs in
@@ -107,7 +120,7 @@
 #define nv_weak weak
 #undef __CUDABE__
 #undef __CUDA_LIBDEVICE__
-#define __CUDACC__
+#define __CUDACC__ 1
 #include "cuda_runtime.h"
 
 #pragma pop_macro("nv_weak")
@@ -253,7 +266,7 @@ static inline __device__ void __brkpt(int __c) { __brkpt(); }
 // branch of #if/else inside.
 #define __host__
 #undef __CUDABE__
-#define __CUDACC__
+#define __CUDACC__ 1
 #if CUDA_VERSION >= 9000
 // Some atomic functions became compiler builtins in CUDA-9 , so we need their
 // declarations.
@@ -385,7 +398,12 @@ __host__ __device__ void __nv_tex_surf_handler(const char *name, T *ptr,
 #endif // CUDA_VERSION
 #endif // __cplusplus >= 201103L && CUDA_VERSION >= 9000
 #include "surface_indirect_functions.h"
+#if CUDA_VERSION < 13000
+// Direct texture fetch functions had been deprecated since CUDA-11.
+// The file in CUDA-12 only carried unused texture types, and is no longer
+// needed.
 #include "texture_fetch_functions.h"
+#endif // CUDA_VERSION < 13000
 #include "texture_indirect_functions.h"
 
 // Restore state of __CUDA_ARCH__ and __THROW we had on entry.
@@ -394,7 +412,7 @@ __host__ __device__ void __nv_tex_surf_handler(const char *name, T *ptr,
 
 // Set up compiler macros expected to be seen during compilation.
 #undef __CUDABE__
-#define __CUDACC__
+#define __CUDACC__ 1
 
 extern "C" {
 // Device-side CUDA system calls.
@@ -477,9 +495,11 @@ __device__ inline __cuda_builtin_gridDim_t::operator uint3() const {
 // curand_mtgp32_kernel helpfully redeclares blockDim and threadIdx in host
 // mode, giving them their "proper" types of dim3 and uint3.  This is
 // incompatible with the types we give in __clang_cuda_builtin_vars.h.  As as
-// hack, force-include the header (nvcc doesn't include it by default) but
-// redefine dim3 and uint3 to our builtin types.  (Thankfully dim3 and uint3 are
-// only used here for the redeclarations of blockDim and threadIdx.)
+// hack, force-include the header when available (nvcc doesn't include it by
+// default) but redefine dim3 and uint3 to our builtin types.  (Thankfully dim3
+// and uint3 are only used here for the redeclarations of blockDim and
+// threadIdx.)
+#if __has_include("curand_mtgp32_kernel.h")
 #pragma push_macro("dim3")
 #pragma push_macro("uint3")
 #define dim3 __cuda_builtin_blockDim_t
@@ -487,6 +507,7 @@ __device__ inline __cuda_builtin_gridDim_t::operator uint3() const {
 #include "curand_mtgp32_kernel.h"
 #pragma pop_macro("dim3")
 #pragma pop_macro("uint3")
+#endif
 #pragma pop_macro("__USE_FAST_MATH__")
 #pragma pop_macro("__CUDA_INCLUDE_COMPILER_INTERNAL_HEADERS__")
 
@@ -499,6 +520,10 @@ extern "C" unsigned __cudaPushCallConfiguration(dim3 gridDim, dim3 blockDim,
                                                 size_t sharedMem = 0,
                                                 void *stream = 0);
 #endif
+
+// Enable libcudacxx cooperative groups cluster functionality when using the
+// Clang CUDA runtime wrapper.
+#define _CG_CLUSTER_INTRINSICS_AVAILABLE 1
 
 #endif // __CUDA__
 #endif // __CLANG_CUDA_RUNTIME_WRAPPER_H__

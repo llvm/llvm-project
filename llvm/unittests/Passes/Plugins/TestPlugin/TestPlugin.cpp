@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 
 #include "../TestPlugin.h"
 
 using namespace llvm;
 
-struct TestModulePass : public PassInfoMixin<TestModulePass> {
+struct TestModulePass : public OptionalPassInfoMixin<TestModulePass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
     return PreservedAnalyses::all();
   }

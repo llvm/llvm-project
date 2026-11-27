@@ -30,11 +30,9 @@ namespace llvm {
 class MachineFunction;
 class MachineRegisterInfo;
 class raw_ostream;
-class TargetInstrInfo;
 
 class VirtRegMap {
   MachineRegisterInfo *MRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineFunction *MF = nullptr;
 
@@ -228,17 +226,17 @@ public:
                           MachineFunctionAnalysisManager &MAM);
 };
 
-class VirtRegMapPrinterPass : public PassInfoMixin<VirtRegMapPrinterPass> {
+class VirtRegMapPrinterPass
+    : public RequiredPassInfoMixin<VirtRegMapPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit VirtRegMapPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
-  static bool isRequired() { return true; }
 };
 
-class VirtRegRewriterPass : public PassInfoMixin<VirtRegRewriterPass> {
+class VirtRegRewriterPass : public RequiredPassInfoMixin<VirtRegRewriterPass> {
   bool ClearVirtRegs = true;
 
 public:
@@ -247,10 +245,14 @@ public:
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);
 
-  static bool isRequired() { return true; }
-
   LLVM_ABI void printPipeline(raw_ostream &OS,
                               function_ref<StringRef(StringRef)>) const;
+
+  MachineFunctionProperties getSetProperties() const {
+    if (ClearVirtRegs)
+      return MachineFunctionProperties().setNoVRegs();
+    return {};
+  }
 };
 
 } // end llvm namespace

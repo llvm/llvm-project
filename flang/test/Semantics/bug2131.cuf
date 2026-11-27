@@ -1,0 +1,26 @@
+!RUN: %python %S/test_errors.py %s %flang_fc1 -x cuda
+module m
+  interface randomNumber
+     module procedure rngScalar, rngArray
+  end interface
+  integer :: host_n = 3
+ contains
+  attributes(device) function rngScalar() result(res)
+    real :: res
+    res = 123.
+  end
+  attributes(device) function rngArray(n) result(res)
+    integer, intent(in) :: n
+    real :: res(n)
+    res = 123.
+  end
+  attributes(device) function randomPointInUnitSphere() result(res)
+    real :: res(3)
+    integer :: n
+    res = randomNumber(3) ! ok, constant
+    n = 3
+    res = randomNumber(n) ! ok, local
+    !ERROR: No specific function of generic 'randomnumber' matches the actual arguments
+    res = randomNumber(host_n)
+  end
+end

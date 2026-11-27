@@ -20,6 +20,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -57,7 +58,7 @@ const char *SBFunction::GetName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
-    return m_opaque_ptr->GetName().AsCString();
+    return StringPool::GetSystemPool().InternNonEmpty(m_opaque_ptr->GetName());
 
   return nullptr;
 }
@@ -66,7 +67,8 @@ const char *SBFunction::GetDisplayName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
-    return m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString();
+    return StringPool::GetSystemPool().InternNonEmpty(
+        m_opaque_ptr->GetMangled().GetDisplayDemangledName());
 
   return nullptr;
 }
@@ -75,8 +77,19 @@ const char *SBFunction::GetMangledName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_ptr)
-    return m_opaque_ptr->GetMangled().GetMangledName().AsCString();
+    return StringPool::GetSystemPool().InternNonEmpty(
+        m_opaque_ptr->GetMangled().GetMangledName());
   return nullptr;
+}
+
+const char *SBFunction::GetBaseName() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (!m_opaque_ptr)
+    return nullptr;
+
+  return StringPool::GetSystemPool().InternNonEmpty(
+      m_opaque_ptr->GetMangled().GetBaseName());
 }
 
 bool SBFunction::operator==(const SBFunction &rhs) const {
@@ -96,10 +109,10 @@ bool SBFunction::GetDescription(SBStream &s) {
 
   if (m_opaque_ptr) {
     s.Printf("SBFunction: id = 0x%8.8" PRIx64 ", name = %s",
-             m_opaque_ptr->GetID(), m_opaque_ptr->GetName().AsCString());
+             m_opaque_ptr->GetID(), m_opaque_ptr->GetName().AsCString(""));
     Type *func_type = m_opaque_ptr->GetType();
     if (func_type)
-      s.Printf(", type = %s", func_type->GetName().AsCString());
+      s.Printf(", type = %s", func_type->GetName().AsCString(""));
     return true;
   }
   s.Printf("No value");
@@ -119,10 +132,12 @@ SBInstructionList SBFunction::GetInstructions(SBTarget target,
   SBInstructionList sb_instructions;
   if (m_opaque_ptr) {
     TargetSP target_sp(target.GetSP());
-    std::unique_lock<std::recursive_mutex> lock;
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
     ModuleSP module_sp(m_opaque_ptr->GetAddress().GetModule());
     if (target_sp && module_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
       const bool force_live_memory = true;
       sb_instructions.SetDisassembler(Disassembler::DisassembleRange(
           module_sp->GetArchitecture(), nullptr, flavor,
@@ -191,7 +206,7 @@ const char *SBFunction::GetArgumentName(uint32_t arg_idx) {
   if (!variable_sp)
     return nullptr;
 
-  return variable_sp->GetName().GetCString();
+  return StringPool::GetSystemPool().Intern(variable_sp->GetName());
 }
 
 uint32_t SBFunction::GetPrologueByteSize() {

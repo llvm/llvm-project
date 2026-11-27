@@ -1,61 +1,65 @@
-import os
+"""
+Test lldb-dap command hooks
+"""
 
-import dap_server
-import lldbdap_testcase
-from lldbsuite.test import lldbtest, lldbutil
-from lldbsuite.test.decorators import *
+from lldbsuite.test.tools.lldb_dap.types import AttachArgs, LaunchArgs
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 
 
-class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_commands(DAPTestCaseBase):
     def test_command_directive_quiet_on_success(self):
         program = self.getBuildArtifact("a.out")
-        command_quiet = (
+        quiet_command = (
             "settings set target.show-hex-variable-values-with-leading-zeroes false"
         )
-        command_not_quiet = (
+        visible_command = (
             "settings set target.show-hex-variable-values-with-leading-zeroes true"
         )
-        self.build_and_launch(
-            program,
-            initCommands=["?" + command_quiet, command_not_quiet],
-            terminateCommands=["?" + command_quiet, command_not_quiet],
-            stopCommands=["?" + command_quiet, command_not_quiet],
-            exitCommands=["?" + command_quiet, command_not_quiet],
+        commands = [f"?{quiet_command}", visible_command]
+        session = self.build_and_create_session()
+        process_event = session.launch(
+            LaunchArgs(
+                program,
+                initCommands=commands,
+                terminateCommands=commands,
+                stopCommands=commands,
+                exitCommands=commands,
+            )
         )
-        full_output = self.collect_console(
-            timeout_secs=1.0,
-            pattern=command_not_quiet,
-        )
-        self.assertNotIn(command_quiet, full_output)
-        self.assertIn(command_not_quiet, full_output)
+        session.verify_process_exited(after=process_event)
+        full_output = session.get_console()
+        self.assertNotIn(quiet_command, full_output)
+        self.assertIn(visible_command, full_output)
 
     def do_test_abort_on_error(
         self,
-        use_init_commands=False,
-        use_launch_commands=False,
-        use_pre_run_commands=False,
-        use_post_run_commands=False,
+        use_init_commands: bool = False,
+        use_launch_commands: bool = False,
+        use_pre_run_commands: bool = False,
+        use_post_run_commands: bool = False,
     ):
         program = self.getBuildArtifact("a.out")
-        command_quiet = (
+        quiet_command = (
             "settings set target.show-hex-variable-values-with-leading-zeroes false"
         )
-        command_abort_on_error = "settings set foo bar"
-        commands = ["?!" + command_quiet, "!" + command_abort_on_error]
-        self.build_and_launch(
-            program,
-            initCommands=commands if use_init_commands else None,
-            launchCommands=commands if use_launch_commands else None,
-            preRunCommands=commands if use_pre_run_commands else None,
-            postRunCommands=commands if use_post_run_commands else None,
-            expectFailure=True,
+        fake_command = "settings set foo bar"
+        commands = [f"?!{quiet_command}", f"!{fake_command}"]
+
+        session = self.build_and_create_session()
+        pending_response = session.initialize_and_launch(
+            LaunchArgs(
+                program,
+                initCommands=commands if use_init_commands else None,
+                launchCommands=commands if use_launch_commands else None,
+                preRunCommands=commands if use_pre_run_commands else None,
+                postRunCommands=commands if use_post_run_commands else None,
+            )
         )
-        full_output = self.collect_console(
-            timeout_secs=1.0,
-            pattern=command_abort_on_error,
-        )
-        self.assertNotIn(command_quiet, full_output)
-        self.assertIn(command_abort_on_error, full_output)
+        session.verify_configuration_done(use_post_run_commands)
+        pending_response.result_or_error()
+        full_output = session.get_console()
+        self.assertNotIn(quiet_command, full_output)
+        self.assertIn(fake_command, full_output)
 
     def test_command_directive_abort_on_error_init_commands(self):
         self.do_test_abort_on_error(use_init_commands=True)
@@ -70,20 +74,20 @@ class TestDAP_commands(lldbdap_testcase.DAPTestCaseBase):
         self.do_test_abort_on_error(use_post_run_commands=True)
 
     def test_command_directive_abort_on_error_attach_commands(self):
-        command_quiet = (
+        program = self.getBuildArtifact("a.out")
+        quiet_command = (
             "settings set target.show-hex-variable-values-with-leading-zeroes false"
         )
-        command_abort_on_error = "settings set foo bar"
-        program = self.build_and_create_debug_adapter_for_attach()
-        resp = self.attach(
+        fake_command = "settings set foo bar"
+        session = self.build_and_create_session()
+        session.initialize_sequence(session.initialize_args)
+        attach_args = AttachArgs(
             program=program,
-            attachCommands=["?!" + command_quiet, "!" + command_abort_on_error],
-            expectFailure=True,
+            attachCommands=[f"?!{quiet_command}", f"!{fake_command}"],
         )
-        self.assertFalse(resp["success"], "expected 'attach' failure")
-        full_output = self.collect_console(
-            timeout_secs=1.0,
-            pattern=command_abort_on_error,
-        )
-        self.assertNotIn(command_quiet, full_output)
-        self.assertIn(command_abort_on_error, full_output)
+        with self.assertRaises(AssertionError):
+            session.attach(attach_args)
+
+        full_output = session.get_console()
+        self.assertNotIn(quiet_command, full_output)
+        self.assertIn(fake_command, full_output)

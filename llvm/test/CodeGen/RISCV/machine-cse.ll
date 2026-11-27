@@ -42,17 +42,17 @@ falseblock:
 define void @commute_add_i64(i64 %x, i64 %y, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_add_i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    add a5, a0, a2
 ; RV32-NEXT:    add a1, a1, a3
-; RV32-NEXT:    add a3, a0, a2
-; RV32-NEXT:    sltu a0, a3, a0
+; RV32-NEXT:    sltu a0, a5, a0
 ; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    sw a3, 0(a4)
+; RV32-NEXT:    sw a5, 0(a4)
 ; RV32-NEXT:    sw a0, 4(a4)
 ; RV32-NEXT:    beqz a6, .LBB1_2
 ; RV32-NEXT:  # %bb.1: # %trueblock
-; RV32-NEXT:    sltu a0, a3, a2
+; RV32-NEXT:    sltu a0, a5, a2
 ; RV32-NEXT:    add a0, a1, a0
-; RV32-NEXT:    sw a3, 0(a4)
+; RV32-NEXT:    sw a5, 0(a4)
 ; RV32-NEXT:    sw a0, 4(a4)
 ; RV32-NEXT:  .LBB1_2: # %falseblock
 ; RV32-NEXT:    ret
@@ -78,8 +78,6 @@ trueblock:
 falseblock:
   ret void
 }
-
-declare half @llvm.fma.f16(half, half, half)
 
 define void @commute_fmadd_f16(half %x, half %y, half %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fmadd_f16:
@@ -114,8 +112,6 @@ falseblock:
   ret void
 }
 
-declare float @llvm.fma.f32(float, float, float)
-
 define void @commute_fmadd_f32(float %x, float %y, float %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fmadd_f32:
 ; RV32:       # %bb.0:
@@ -148,8 +144,6 @@ trueblock:
 falseblock:
   ret void
 }
-
-declare double @llvm.fma.f64(double, double, double)
 
 define void @commute_fmadd_f64(double %x, double %y, double %z, ptr %p1, ptr %p2, i1 zeroext %cond) {
 ; RV32-LABEL: commute_fmadd_f64:

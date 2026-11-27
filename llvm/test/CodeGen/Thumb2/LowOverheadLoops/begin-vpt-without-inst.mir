@@ -33,8 +33,6 @@
 ---
 name:            foo
 alignment:       8
-tracksRegLiveness: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
 frameInfo:
@@ -43,8 +41,8 @@ frameInfo:
   maxCallFrameSize: 0
   cvBytesOfCalleeSavedRegisters: 0
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 callSites:       []

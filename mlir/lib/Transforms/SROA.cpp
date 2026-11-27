@@ -12,6 +12,7 @@
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/Support/DebugLog.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_SROA
@@ -46,7 +47,7 @@ struct MemorySlotDestructuringInfo {
 static std::optional<MemorySlotDestructuringInfo>
 computeDestructuringInfo(DestructurableMemorySlot &slot,
                          const DataLayout &dataLayout) {
-  assert(isa<DestructurableTypeInterface>(slot.elemType));
+  assert(isa<DestructurableTypeInterface>(slot.valueType));
 
   if (slot.ptr.use_empty())
     return {};
@@ -95,6 +96,9 @@ computeDestructuringInfo(DestructurableMemorySlot &slot,
       scheduleAsBlockingUse(subslotUse);
     }
   }
+
+  if (info.userToBlockingUses.empty())
+    return info;
 
   SetVector<Operation *> forwardSlice;
   mlir::getForwardSlice(slot.ptr, &forwardSlice);
@@ -156,7 +160,16 @@ static void destructureSlot(
   SetVector<Operation *> usersToRewire;
   usersToRewire.insert_range(llvm::make_first_range(info.userToBlockingUses));
   usersToRewire.insert_range(info.accessors);
-  usersToRewire = mlir::topologicalSort(usersToRewire);
+  // Topological sorting is only needed when promoting blocking uses (whose
+  // removal relies on erasing users before defs) or when an accessor owns
+  // regions that may nest other accessors.
+  bool needsTopologicalSort =
+      !info.userToBlockingUses.empty() ||
+      llvm::any_of(info.accessors, [](DestructurableAccessorOpInterface op) {
+        return op->getNumRegions() > 0;
+      });
+  if (needsTopologicalSort)
+    usersToRewire = mlir::topologicalSort(usersToRewire);
 
   llvm::SmallVector<Operation *> toErase;
   for (Operation *toRewire : llvm::reverse(usersToRewire)) {
@@ -180,8 +193,7 @@ static void destructureSlot(
   assert(slot.ptr.use_empty() && "after destructuring, the original slot "
                                  "pointer should no longer be used");
 
-  LLVM_DEBUG(llvm::dbgs() << "[sroa] Destructured memory slot: " << slot.ptr
-                          << "\n");
+  LDBG() << "Destructured memory slot: " << slot.ptr;
 
   if (statistics.destructuredAmount)
     (*statistics.destructuredAmount)++;

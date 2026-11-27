@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ABISysV_riscv_h_
-#define liblldb_ABISysV_riscv_h_
+#ifndef LLDB_SOURCE_PLUGINS_ABI_RISCV_ABISYSV_RISCV_H
+#define LLDB_SOURCE_PLUGINS_ABI_RISCV_ABISYSV_RISCV_H
 
 // Other libraries and framework includes
 #include "llvm/TargetParser/Triple.h"
@@ -125,4 +125,4 @@ private:
   bool m_is_rv64; // true if target is riscv64; false if target is riscv32
 };
 
-#endif // liblldb_ABISysV_riscv_h_
+#endif // LLDB_SOURCE_PLUGINS_ABI_RISCV_ABISYSV_RISCV_H

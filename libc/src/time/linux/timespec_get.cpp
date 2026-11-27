@@ -15,7 +15,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, timespec_get, (struct timespec * ts, int base)) {
+LLVM_LIBC_FUNCTION(int, timespec_get, (timespec * ts, int base)) {
   clockid_t clockid;
   switch (base) {
   case TIME_UTC:

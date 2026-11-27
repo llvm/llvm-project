@@ -13,11 +13,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Unicode.h"
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/Support/raw_ostream.h"
@@ -144,7 +146,7 @@ std::vector<StringRef> Input::keys() {
   return Ret;
 }
 
-bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
+bool Input::preflightKey(StringRef Key, bool Required, bool, bool &UseDefault,
                          void *&SaveInfo) {
   UseDefault = false;
   if (EC)
@@ -168,7 +170,7 @@ bool Input::preflightKey(const char *Key, bool Required, bool, bool &UseDefault,
       UseDefault = true;
     return false;
   }
-  MN->ValidKeys.push_back(Key);
+  MN->ValidKeys.push_back(Key.str());
   HNode *Value = MN->Mapping[Key].first;
   if (!Value) {
     if (Required)
@@ -266,7 +268,7 @@ void Input::beginEnumScalar() {
   ScalarMatchFound = false;
 }
 
-bool Input::matchEnumScalar(const char *Str, bool) {
+bool Input::matchEnumScalar(StringRef Str, bool) {
   if (ScalarMatchFound)
     return false;
   if (ScalarHNode *SN = dyn_cast<ScalarHNode>(CurrentNode)) {
@@ -302,7 +304,7 @@ bool Input::beginBitSetScalar(bool &DoClear) {
   return true;
 }
 
-bool Input::bitSetMatch(const char *Str, bool) {
+bool Input::bitSetMatch(StringRef Str, bool) {
   if (EC)
     return false;
   if (SequenceHNode *SQ = dyn_cast<SequenceHNode>(CurrentNode)) {
@@ -397,6 +399,18 @@ void Input::releaseHNodeBuffers() {
   MapHNodeAllocator.DestroyAll();
 }
 
+void Input::saveAliasHNode(Node *N, HNode *HN) {
+  StringRef Anchor = N->getAnchor();
+  if (!Anchor.empty())
+    // YAML 1.2.2 - 3.2.2.2. Anchors and Aliases:
+    //
+    // An alias event refers to the most recent event in the serialization
+    // having the specified anchor. Therefore, anchors need not be unique within
+    // a serialization. In addition, an anchor need not have an alias node
+    // referring to it.
+    AliasMap[Anchor] = HN;
+}
+
 Input::HNode *Input::createHNodes(Node *N) {
   SmallString<128> StringStorage;
   switch (N->getType()) {
@@ -407,12 +421,17 @@ Input::HNode *Input::createHNodes(Node *N) {
       // Copy string to permanent storage
       KeyStr = StringStorage.str().copy(StringAllocator);
     }
-    return new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, KeyStr);
+    auto *SHNode = new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, KeyStr);
+    saveAliasHNode(SN, SHNode);
+    return SHNode;
   }
   case Node::NK_BlockScalar: {
     BlockScalarNode *BSN = dyn_cast<BlockScalarNode>(N);
     StringRef ValueCopy = BSN->getValue().copy(StringAllocator);
-    return new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, ValueCopy);
+    auto *BSHNode =
+        new (ScalarHNodeAllocator.Allocate()) ScalarHNode(N, ValueCopy);
+    saveAliasHNode(BSN, BSHNode);
+    return BSHNode;
   }
   case Node::NK_Sequence: {
     SequenceNode *SQ = dyn_cast<SequenceNode>(N);
@@ -423,6 +442,7 @@ Input::HNode *Input::createHNodes(Node *N) {
         break;
       SQHNode->Entries.push_back(Entry);
     }
+    saveAliasHNode(SQ, SQHNode);
     return SQHNode;
   }
   case Node::NK_Mapping: {
@@ -430,7 +450,7 @@ Input::HNode *Input::createHNodes(Node *N) {
     auto mapHNode = new (MapHNodeAllocator.Allocate()) MapHNode(N);
     for (KeyValueNode &KVN : *Map) {
       Node *KeyNode = KVN.getKey();
-      ScalarNode *Key = dyn_cast_or_null<ScalarNode>(KeyNode);
+      ScalarNode *Key = dyn_cast_if_present<ScalarNode>(KeyNode);
       Node *Value = KVN.getValue();
       if (!Key || !Value) {
         if (!Key)
@@ -456,10 +476,23 @@ Input::HNode *Input::createHNodes(Node *N) {
       mapHNode->Mapping[KeyStr] =
           std::make_pair(std::move(ValueHNode), KeyNode->getSourceRange());
     }
+    saveAliasHNode(Map, mapHNode);
     return std::move(mapHNode);
   }
   case Node::NK_Null:
+    // TODO: Anchor is not set for NullNode in the parser. Update the parser to
+    // faithfully preserve anchors.
     return new (EmptyHNodeAllocator.Allocate()) EmptyHNode(N);
+  case Node::NK_Alias: {
+    AliasNode *AN = dyn_cast<AliasNode>(N);
+    auto AliasName = AN->getName();
+    auto AHN = AliasMap.find(AliasName);
+    if (AHN == AliasMap.end()) {
+      setError(AN, Twine("undefined alias '" + AliasName + "'"));
+      return nullptr;
+    }
+    return AHN->second;
+  }
   default:
     setError(N, "unknown node kind");
     return nullptr;
@@ -541,7 +574,7 @@ std::vector<StringRef> Output::keys() {
   report_fatal_error("invalid call");
 }
 
-bool Output::preflightKey(const char *Key, bool Required, bool SameAsDefault,
+bool Output::preflightKey(StringRef Key, bool Required, bool SameAsDefault,
                           bool &UseDefault, void *&SaveInfo) {
   UseDefault = false;
   SaveInfo = nullptr;
@@ -666,7 +699,7 @@ void Output::beginEnumScalar() {
   EnumerationMatchFound = false;
 }
 
-bool Output::matchEnumScalar(const char *Str, bool Match) {
+bool Output::matchEnumScalar(StringRef Str, bool Match) {
   if (Match && !EnumerationMatchFound) {
     newLineCheck();
     outputUpToEndOfLine(Str);
@@ -695,7 +728,7 @@ bool Output::beginBitSetScalar(bool &DoClear) {
   return true;
 }
 
-bool Output::bitSetMatch(const char *Str, bool Matches) {
+bool Output::bitSetMatch(StringRef Str, bool Matches) {
   if (Matches) {
     if (NeedBitValueComma)
       output(", ");
@@ -721,10 +754,54 @@ void Output::scalarString(StringRef &S, QuotingType MustQuote) {
   outputUpToEndOfLine("");
 }
 
+/// A literal block scalar has no escapes, so it can only hold printable
+/// characters, tab and line feed. That rules out C1 controls, and NEL, LS and
+/// PS, which YAML 1.1 readers take as line breaks. Invalid UTF-8 stays in the
+/// block, since yaml::escape would drop it. Readers take the indentation from
+/// the first non-empty line, so that line cannot start with a space.
+static bool canUseBlockScalar(StringRef S) {
+  if (S.ltrim('\n').starts_with(' '))
+    return false;
+  const UTF8 *Ptr = S.bytes_begin(), *End = S.bytes_end();
+  while (Ptr != End) {
+    if (isASCII(*Ptr)) {
+      if (!isPrint(*Ptr) && *Ptr != '\t' && *Ptr != '\n')
+        return false;
+      ++Ptr;
+      continue;
+    }
+    const UTF8 *Start = Ptr;
+    UTF32 CodePoint;
+    if (convertUTF8Sequence(&Ptr, End, &CodePoint, strictConversion) !=
+        conversionOK) {
+      Ptr = Start + 1;
+      continue;
+    }
+    if (!sys::unicode::isPrintable(CodePoint))
+      return false;
+  }
+  return true;
+}
+
 void Output::blockScalarString(StringRef &S) {
+  // Fall back to a double-quoted scalar, which escapes everything. Input
+  // accepts either form for a block scalar value.
+  if (!canUseBlockScalar(S)) {
+    scalarString(S, QuotingType::Double);
+    return;
+  }
   if (!StateStack.empty())
     newLineCheck();
   output(" |");
+  // The default chomping keeps exactly one trailing line break, so strip or
+  // keep them explicitly to preserve the value.
+  if (!S.empty()) {
+    size_t LineBreaks = S.size() - S.rtrim('\n').size();
+    if (LineBreaks == 0)
+      output("-");
+    else if (LineBreaks > 1)
+      output("+");
+  }
 
   unsigned Indent = StateStack.empty() ? 1 : StateStack.size();
 

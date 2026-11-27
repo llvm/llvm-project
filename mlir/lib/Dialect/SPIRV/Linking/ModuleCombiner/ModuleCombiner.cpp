@@ -12,34 +12,30 @@
 
 #include "mlir/Dialect/SPIRV/Linking/ModuleCombiner.h"
 
-#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/SymbolTable.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 
 using namespace mlir;
 
 static constexpr unsigned maxFreeID = 1 << 20;
 
-/// Returns an unused symbol in `module` for `oldSymbolName` by trying numeric
+/// Returns an unused symbol in `moduleOp` for `oldSymbolName` by trying numeric
 /// suffix in `lastUsedID`.
 static StringAttr renameSymbol(StringRef oldSymName, unsigned &lastUsedID,
-                               spirv::ModuleOp module) {
+                               spirv::ModuleOp moduleOp) {
   SmallString<64> newSymName(oldSymName);
   newSymName.push_back('_');
 
-  MLIRContext *ctx = module->getContext();
+  MLIRContext *ctx = moduleOp->getContext();
 
   while (lastUsedID < maxFreeID) {
     auto possible = StringAttr::get(ctx, newSymName + Twine(++lastUsedID));
-    if (!SymbolTable::lookupSymbolIn(module, possible))
+    if (!SymbolTable::lookupSymbolIn(moduleOp, possible))
       return possible;
   }
 
@@ -74,13 +70,14 @@ static LogicalResult updateSymbolAndAllUses(SymbolOpInterface op,
 /// variable and a spec constant as duplicates because their descriptor set +
 /// binding and spec_id, respectively, happen to hash to the same value.
 static llvm::hash_code computeHash(SymbolOpInterface symbolOp) {
-  auto range =
-      llvm::make_filter_range(symbolOp->getAttrs(), [](NamedAttribute attr) {
-        return attr.getName() != SymbolTable::getSymbolAttrName();
-      });
+  NamedAttrList attrs(symbolOp->getDiscardableAttrDictionary());
+  symbolOp->getName().populateInherentAttrs(symbolOp, attrs);
+  // `populateInherentAttrs` adds the name property back to the list. Remove it
+  // so otherwise-identical symbols still hash equally after being renamed.
+  attrs.erase("sym_name");
 
   return llvm::hash_combine(symbolOp->getName(),
-                            llvm::hash_combine_range(range));
+                            llvm::hash_combine_range(attrs));
 }
 
 namespace mlir {
@@ -99,18 +96,19 @@ OwningOpRef<spirv::ModuleOp> combine(ArrayRef<spirv::ModuleOp> inputModules,
 
   // First check whether there are conflicts between addressing/memory model.
   // Return early if so.
-  for (auto module : inputModules) {
-    if (module.getAddressingModel() != addressingModel ||
-        module.getMemoryModel() != memoryModel ||
-        module.getVceTriple() != vceTriple) {
-      module.emitError("input modules differ in addressing model, memory "
-                       "model, and/or VCE triple");
+  for (auto moduleOp : inputModules) {
+    if (moduleOp.getAddressingModel() != addressingModel ||
+        moduleOp.getMemoryModel() != memoryModel ||
+        moduleOp.getVceTriple() != vceTriple) {
+      moduleOp.emitError("input modules differ in addressing model, memory "
+                         "model, and/or VCE triple");
       return nullptr;
     }
   }
 
-  auto combinedModule = combinedModuleBuilder.create<spirv::ModuleOp>(
-      firstModule.getLoc(), addressingModel, memoryModel, vceTriple);
+  auto combinedModule =
+      spirv::ModuleOp::create(combinedModuleBuilder, firstModule.getLoc(),
+                              addressingModel, memoryModel, vceTriple);
   combinedModuleBuilder.setInsertionPointToStart(combinedModule.getBody());
 
   // In some cases, a symbol in the (current state of the) combined module is

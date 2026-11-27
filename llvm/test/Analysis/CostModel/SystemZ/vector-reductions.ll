@@ -9,7 +9,7 @@ define void @fadd_reductions() {
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fadd_v2f64 = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fadd_v4f64 = call double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fadd_v4f128 = call fp128 @llvm.vector.reduce.fadd.v4f128(fp128 undef, <4 x fp128> undef)
-; Z15-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; Z15-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %fadd_v4f32 = call float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> undef)
   %fadd_v8f32 = call float @llvm.vector.reduce.fadd.v8f32(float 0.0, <8 x float> undef)
@@ -26,7 +26,7 @@ define void @fast_fadd_reductions(ptr %src, ptr %dst) {
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %fadd_v2f64 = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fadd_v4f64 = call fast double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fadd_v4f128 = call fast fp128 @llvm.vector.reduce.fadd.v4f128(fp128 undef, <4 x fp128> undef)
-; Z15-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; Z15-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %fadd_v4f32 = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> undef)
   %fadd_v8f32 = call fast float @llvm.vector.reduce.fadd.v8f32(float 0.0, <8 x float> undef)
@@ -43,7 +43,7 @@ define void @fmul_reductions() {
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fmul_v2f64 = call double @llvm.vector.reduce.fmul.v2f64(double 0.000000e+00, <2 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fmul_v4f64 = call double @llvm.vector.reduce.fmul.v4f64(double 0.000000e+00, <4 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %fmul_v4f128 = call fp128 @llvm.vector.reduce.fmul.v4f128(fp128 undef, <4 x fp128> undef)
-; Z15-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; Z15-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %fmul_v4f32 = call float @llvm.vector.reduce.fmul.v4f32(float 0.0, <4 x float> undef)
   %fmul_v8f32 = call float @llvm.vector.reduce.fmul.v8f32(float 0.0, <8 x float> undef)
@@ -60,7 +60,7 @@ define void @fast_fmul_reductions() {
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %fmul_v2f64 = call fast double @llvm.vector.reduce.fmul.v2f64(double 0.000000e+00, <2 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fmul_v4f64 = call fast double @llvm.vector.reduce.fmul.v4f64(double 0.000000e+00, <4 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %fadd_v4f128 = call fast fp128 @llvm.vector.reduce.fmul.v4f128(fp128 undef, <4 x fp128> undef)
-; Z15-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; Z15-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %fmul_v4f32 = call fast float @llvm.vector.reduce.fmul.v4f32(float 0.0, <4 x float> undef)
   %fmul_v8f32 = call fast float @llvm.vector.reduce.fmul.v8f32(float 0.0, <8 x float> undef)
@@ -78,7 +78,7 @@ define void @fmin_reductions() {
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2f64 = call double @llvm.vector.reduce.fmin.v2f64(<2 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4f64 = call double @llvm.vector.reduce.fmin.v4f64(<4 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4f128 = call fp128 @llvm.vector.reduce.fmin.v4f128(<4 x fp128> undef)
-; Z15-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; Z15-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %V4f32 = call float @llvm.vector.reduce.fmin.v4f32(<4 x float> undef)
   %V8f32 = call float @llvm.vector.reduce.fmin.v8f32(<8 x float> undef)
@@ -95,7 +95,7 @@ define void @fmax_reductions() {
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %V2f64 = call double @llvm.vector.reduce.fmax.v2f64(<2 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4f64 = call double @llvm.vector.reduce.fmax.v4f64(<4 x double> undef)
 ; Z15-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %V4f128 = call fp128 @llvm.vector.reduce.fmax.v4f128(<4 x fp128> undef)
-; Z15-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
+; Z15-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %V4f32 = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> undef)
   %V8f32 = call float @llvm.vector.reduce.fmax.v8f32(<8 x float> undef)

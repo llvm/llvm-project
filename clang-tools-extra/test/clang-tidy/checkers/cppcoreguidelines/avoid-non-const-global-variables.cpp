@@ -1,6 +1,8 @@
 // RUN: %check_clang_tidy %s -check-suffixes=,DEFAULT cppcoreguidelines-avoid-non-const-global-variables %t
 // RUN: %check_clang_tidy %s -check-suffixes=,INTERNAL-LINKAGE cppcoreguidelines-avoid-non-const-global-variables %t -- \
 // RUN: -config="{CheckOptions: {cppcoreguidelines-avoid-non-const-global-variables.AllowInternalLinkage : 'true'}}"
+// RUN: %check_clang_tidy %s -check-suffixes=,THREAD-LOCAL cppcoreguidelines-avoid-non-const-global-variables %t -- \
+// RUN: -config="{CheckOptions: {cppcoreguidelines-avoid-non-const-global-variables.AllowThreadLocal : 'true'}}"
 
 int nonConstInt = 0;
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: variable 'nonConstInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
@@ -42,13 +44,22 @@ namespace {
 int nonConstAnonymousNamespaceInt = 0;
 // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:5: warning: variable 'nonConstAnonymousNamespaceInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 // CHECK-MESSAGES-INTERNAL-LINKAGE-NOT: :[[@LINE-2]]:5: warning: variable 'nonConstAnonymousNamespaceInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
+// CHECK-MESSAGES-THREAD-LOCAL: :[[@LINE-3]]:5: warning: variable 'nonConstAnonymousNamespaceInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 } // namespace
 
 static int nonConstStaticInt = 0;
 // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:12: warning: variable 'nonConstStaticInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 // CHECK-MESSAGES-INTERNAL-LINKAGE-NOT: :[[@LINE-2]]:12: warning: variable 'nonConstStaticInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
+// CHECK-MESSAGES-THREAD-LOCAL: :[[@LINE-3]]:12: warning: variable 'nonConstStaticInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 
 static const int constStaticInt = 0;
+
+thread_local int threadLocalInt = 0;
+// CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:18: warning: variable 'threadLocalInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
+// CHECK-MESSAGES-INTERNAL-LINKAGE: :[[@LINE-2]]:18: warning: variable 'threadLocalInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
+// CHECK-MESSAGES-THREAD-LOCAL-NOT: :[[@LINE-3]]:18: warning: variable 'threadLocalInt' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
+
+thread_local const int threadLocalConstInt = 0;
 
 class DummyClass {
 public:
@@ -137,6 +148,7 @@ DummyEnum nonConstAnonymousNamespaceEnumInstance = DummyEnum::first;
 }
 // CHECK-MESSAGES-DEFAULT: :[[@LINE-2]]:11: warning: variable 'nonConstAnonymousNamespaceEnumInstance' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 // CHECK-MESSAGES-INTERNAL-LINKAGE-NOT: :[[@LINE-2]]:11: warning: variable 'nonConstAnonymousNamespaceEnumInstance' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
+// CHECK-MESSAGES-THREAD-LOCAL: :[[@LINE-4]]:11: warning: variable 'nonConstAnonymousNamespaceEnumInstance' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 
 // CHECKING FOR NON-CONST GLOBAL STRUCT ///////////////////////////////////////
 struct DummyStruct {
@@ -181,6 +193,7 @@ DummyStruct nonConstAnonymousNamespaceStructInstance;
 }
 // CHECK-MESSAGES-DEFAULT: :[[@LINE-2]]:13: warning: variable 'nonConstAnonymousNamespaceStructInstance' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 // CHECK-MESSAGES-INTERNAL-LINKAGE-NOT: :[[@LINE-2]]:11: warning: variable 'nonConstAnonymousNamespaceEnumInstance' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
+// CHECK-MESSAGES-THREAD-LOCAL: :[[@LINE-4]]:13: warning: variable 'nonConstAnonymousNamespaceStructInstance' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 
 // CHECKING FOR NON-CONST GLOBAL UNION ////////////////////////////////////////
 union DummyUnion {
@@ -222,6 +235,7 @@ DummyUnion nonConstAnonymousNamespaceUnionInstance = {0x0};
 }
 // CHECK-MESSAGES-DEFAULT: :[[@LINE-2]]:12: warning: variable 'nonConstAnonymousNamespaceUnionInstance' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 // CHECK-MESSAGES-INTERNAL-LINKAGE-NOT: :[[@LINE-3]]:12: warning: variable 'nonConstAnonymousNamespaceUnionInstance' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
+// CHECK-MESSAGES-THREAD-LOCAL: :[[@LINE-4]]:12: warning: variable 'nonConstAnonymousNamespaceUnionInstance' is non-const and globally accessible, consider making it const [cppcoreguidelines-avoid-non-const-global-variables]
 
 // CHECKING FOR NON-CONST GLOBAL FUNCTION POINTER /////////////////////////////
 int dummyFunction() {

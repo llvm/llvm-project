@@ -83,21 +83,23 @@ private:
 };
 
 template <typename... CheckTypes>
-std::string
-runCheckOnCode(StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
-               const Twine &Filename = "input.cc",
-               ArrayRef<std::string> ExtraArgs = {},
-               const ClangTidyOptions &ExtraOptions = ClangTidyOptions(),
-               std::map<StringRef, StringRef> PathsToContent =
-                   std::map<StringRef, StringRef>()) {
+std::string runCheckOnCode(
+    StringRef Code, std::vector<ClangTidyError> *Errors = nullptr,
+    const Twine &Filename = "input.cc", ArrayRef<std::string> ExtraArgs = {},
+    const ClangTidyOptions &ExtraOptions = ClangTidyOptions(),
+    std::map<StringRef, StringRef> PathsToContent =
+        std::map<StringRef, StringRef>(),
+    const ClangTidyGlobalOptions &GlobalOptions = ClangTidyGlobalOptions()) {
   static_assert(sizeof...(CheckTypes) > 0, "No checks specified");
   ClangTidyOptions Options = ExtraOptions;
   Options.Checks = "*";
-  ClangTidyContext Context(std::make_unique<DefaultOptionsProvider>(
-      ClangTidyGlobalOptions(), Options));
+  ClangTidyContext Context(
+      std::make_unique<DefaultOptionsProvider>(GlobalOptions, Options), false,
+      false, false);
   ClangTidyDiagnosticConsumer DiagConsumer(Context);
   auto DiagOpts = std::make_unique<DiagnosticOptions>();
-  DiagnosticsEngine DE(new DiagnosticIDs(), *DiagOpts, &DiagConsumer, false);
+  DiagnosticsEngine DE(DiagnosticIDs::create(), *DiagOpts, &DiagConsumer,
+                       false);
   Context.setDiagnosticsEngine(std::move(DiagOpts), &DE);
 
   std::vector<std::string> Args(1, "clang-tidy");

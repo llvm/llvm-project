@@ -1,12 +1,12 @@
 ; Test stack pointer restore after setjmp() with the function-call safestack ABI.
 ; RUN: opt -safe-stack -S -mtriple=arm-linux-androideabi < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -S -mtriple=arm-linux-androideabi < %s -o - | FileCheck %s
+; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -S -mtriple=arm-linux-androideabi < %s -o - | FileCheck %s
 
 @env = global [64 x i32] zeroinitializer, align 4
 
 define void @f(i32 %b) safestack {
 entry:
-; CHECK: %[[SPA:.*]] = call ptr @__safestack_pointer_address()
+; CHECK: %[[SPA:.*]] = call arm_aapcscc ptr @__safestack_pointer_address()
 ; CHECK: %[[USP:.*]] = load ptr, ptr %[[SPA]]
 ; CHECK: %[[USDP:.*]] = alloca ptr
 ; CHECK: store ptr %[[USP]], ptr %[[USDP]]

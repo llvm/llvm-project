@@ -47,10 +47,9 @@ public:
   /// `RewritePatternSet::addWithLabel`. Debug names may be empty, but patterns
   /// created with `RewritePattern::create` have their default debug name set to
   /// their type name.
-  FrozenRewritePatternSet(
-      RewritePatternSet &&patterns,
-      ArrayRef<std::string> disabledPatternLabels = std::nullopt,
-      ArrayRef<std::string> enabledPatternLabels = std::nullopt);
+  FrozenRewritePatternSet(RewritePatternSet &&patterns,
+                          ArrayRef<std::string> disabledPatternLabels = {},
+                          ArrayRef<std::string> enabledPatternLabels = {});
 
   /// Return the op specific native patterns held by this list.
   const OpSpecificNativePatternListT &getOpSpecificNativePatterns() const {

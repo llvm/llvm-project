@@ -1,4 +1,7 @@
 // RUN: %clang -O0 --target=powerpc-unknown-linux-gnu -EB -msoft-float -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang -O0 --target=powerpcle-unknown-linux-gnu -EL -msoft-float -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang -O0 --target=powerpcle-unknown-unknown -mcpu=e500 -mhard-float -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang -O0 --target=powerpc-unknown-unknown -mcpu=e500 -mhard-float -S -emit-llvm %s -o - | FileCheck %s
 
 #include <stdarg.h>
 void test(char *fmt, ...) {

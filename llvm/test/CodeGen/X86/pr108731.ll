@@ -93,17 +93,28 @@ Entry:
 }
 
 define i8 @test_i8(i8 %w, i8 %x, i8 %y, i8 %z) {
-; CHECK-LABEL: test_i8:
-; CHECK:       # %bb.0: # %Entry
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    andl %edx, %esi
-; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    andb %dil, %sil
-; CHECK-NEXT:    notb %cl
-; CHECK-NEXT:    orb %cl, %al
-; CHECK-NEXT:    andb %sil, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
+; NOBMI-LABEL: test_i8:
+; NOBMI:       # %bb.0: # %Entry
+; NOBMI-NEXT:    movl %edx, %eax
+; NOBMI-NEXT:    andl %edx, %esi
+; NOBMI-NEXT:    notb %sil
+; NOBMI-NEXT:    andb %dil, %sil
+; NOBMI-NEXT:    notb %cl
+; NOBMI-NEXT:    orb %cl, %al
+; NOBMI-NEXT:    andb %sil, %al
+; NOBMI-NEXT:    # kill: def $al killed $al killed $eax
+; NOBMI-NEXT:    retq
+;
+; BMI-LABEL: test_i8:
+; BMI:       # %bb.0: # %Entry
+; BMI-NEXT:    movl %edx, %eax
+; BMI-NEXT:    andl %edx, %esi
+; BMI-NEXT:    andnl %edi, %esi, %edx
+; BMI-NEXT:    notb %cl
+; BMI-NEXT:    orb %cl, %al
+; BMI-NEXT:    andb %dl, %al
+; BMI-NEXT:    # kill: def $al killed $al killed $eax
+; BMI-NEXT:    retq
 Entry:
   %and1 = and i8 %y, %x
   %xor1 = xor i8 %and1, -1
@@ -148,10 +159,10 @@ define <32 x i8> @test_v32i8(<32 x i8> %w, <32 x i8> %x, <32 x i8> %y, <32 x i8>
 ; NOBMI-NEXT:    andps %xmm5, %xmm3
 ; NOBMI-NEXT:    andnps %xmm1, %xmm3
 ; NOBMI-NEXT:    andnps %xmm0, %xmm2
-; NOBMI-NEXT:    andnps %xmm6, %xmm4
-; NOBMI-NEXT:    andnps %xmm2, %xmm4
 ; NOBMI-NEXT:    andnps %xmm7, %xmm5
 ; NOBMI-NEXT:    andnps %xmm3, %xmm5
+; NOBMI-NEXT:    andnps %xmm6, %xmm4
+; NOBMI-NEXT:    andnps %xmm2, %xmm4
 ; NOBMI-NEXT:    movaps %xmm4, %xmm0
 ; NOBMI-NEXT:    movaps %xmm5, %xmm1
 ; NOBMI-NEXT:    retq
@@ -211,4 +222,3 @@ entry:
   store i64 %and4, ptr null, align 8
   ret void
 }
-

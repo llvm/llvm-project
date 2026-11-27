@@ -1,6 +1,4 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s 2>&1 \
-; RUN:  -polly-invariant-load-hoisting \
-; RUN:  | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -disable-output -plugin-arg=Polly,-polly-invariant-load-hoisting < %s 2>&1 | FileCheck %s
 
 ; CHECK:      Stmt_body1
 ; CHECK-NEXT:       Domain :=

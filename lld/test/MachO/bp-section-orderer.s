@@ -9,8 +9,9 @@
 
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile %t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer 2>&1 | FileCheck %s --check-prefix=STARTUP
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --irpgo-profile=%t/a.profdata --bp-startup-sort=function --verbose-bp-section-orderer --icf=all --bp-compression-sort=none 2>&1 | FileCheck %s --check-prefix=STARTUP-ICF
-# STARTUP: Ordered 5 sections using balanced partitioning
-# STARTUP-ICF: Ordered 4 sections using balanced partitioning
+# STARTUP: Ordered 5 sections ([[#]] bytes) using balanced partitioning
+# STARTUP: Temporal profile function references: 6 / 7 resolved (5 / 6 unique)
+# STARTUP-ICF: Ordered 4 sections ([[#]] bytes) using balanced partitioning
 
 # Check that orderfiles take precedence over BP
 # RUN: %no-fatal-warnings-lld -arch arm64 -lSystem -e _main -o - %t/a.o -order_file %t/a.orderfile --irpgo-profile-sort=%t/a.profdata  | llvm-nm --numeric-sort --format=just-symbols - | FileCheck %s --check-prefix=ORDERFILE
@@ -50,10 +51,10 @@
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --verbose-bp-section-orderer --bp-compression-sort=both 2>&1 | FileCheck %s --check-prefix=COMPRESSION-BOTH
 # RUN: %lld -arch arm64 -lSystem -e _main -o %t/a.out %t/a.o --verbose-bp-section-orderer --bp-compression-sort=both --irpgo-profile=%t/a.profdata --bp-startup-sort=function 2>&1 | FileCheck %s --check-prefix=COMPRESSION-BOTH
 
-# COMPRESSION-FUNC: Ordered 9 sections using balanced partitioning
-# COMPRESSION-ICF-FUNC: Ordered 7 sections using balanced partitioning
-# COMPRESSION-DATA: Ordered 7 sections using balanced partitioning
-# COMPRESSION-BOTH: Ordered 16 sections using balanced partitioning
+# COMPRESSION-FUNC: Ordered 9 sections ([[#]] bytes) using balanced partitioning
+# COMPRESSION-ICF-FUNC: Ordered 7 sections ([[#]] bytes) using balanced partitioning
+# COMPRESSION-DATA: Ordered 7 sections ([[#]] bytes) using balanced partitioning
+# COMPRESSION-BOTH: Ordered 16 sections ([[#]] bytes) using balanced partitioning
 
 #--- a.s
 .text
@@ -106,6 +107,11 @@ r3:
 r4:
   .quad s2
 
+# cstrings are ignored by runBalancedPartitioning()
+.cstring
+cstr:
+  .asciz "this is cstr"
+
 .bss
 bss0:
   .zero 10
@@ -121,7 +127,7 @@ bss0:
 1
 # Weight
 1
-A, B, C.__uniq.555555555555555555555555555555555555555.llvm.6666666666666666666, merged1, merged2
+A, B, A, C.__uniq.555555555555555555555555555555555555555.llvm.6666666666666666666, merged1, merged2, Missing
 
 A
 # Func Hash:
@@ -166,6 +172,14 @@ merged1
 merged2
 # Func Hash:
 6666
+# Num Counters:
+1
+# Counter Values:
+1
+
+Missing
+# Func Hash:
+7777
 # Num Counters:
 1
 # Counter Values:

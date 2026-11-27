@@ -12,16 +12,16 @@ void __f() {}
 
 void f();
 // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: declaration uses identifier 'f', which is not a reserved identifier [bugprone-reserved-identifier]
-// CHECK-FIXES: {{^}}void __f();{{$}}
+// CHECK-FIXES: void __f();
 struct helper {};
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: declaration uses identifier 'helper', which is not a reserved identifier [bugprone-reserved-identifier]
-// CHECK-FIXES: {{^}}struct __helper {};{{$}}
+// CHECK-FIXES: struct __helper {};
 struct Helper {};
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: declaration uses identifier 'Helper', which is not a reserved identifier [bugprone-reserved-identifier]
-// CHECK-FIXES: {{^}}struct _Helper {};{{$}}
+// CHECK-FIXES: struct _Helper {};
 struct _helper2 {};
 // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: declaration uses identifier '_helper2', which is not a reserved identifier [bugprone-reserved-identifier]
-// CHECK-FIXES: {{^}}struct __helper2 {};{{$}}
+// CHECK-FIXES: struct __helper2 {};
 
 template <class _Tp>
 class reference_wrapper {
@@ -53,11 +53,11 @@ ref(reference_wrapper<_Tp> __t) noexcept {
 
 template <class Up>
 // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: declaration uses identifier 'Up', which is not a reserved identifier [bugprone-reserved-identifier]
-// CHECK-FIXES: {{^}}template <class _Up>{{$}}
+// CHECK-FIXES: template <class _Up>
 inline reference_wrapper<const Up>
 cref(const Up &u) noexcept {
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: declaration uses identifier 'u', which is not a reserved identifier [bugprone-reserved-identifier]
-  // CHECK-FIXES: {{^}}cref(const _Up &__u) noexcept {{{$}}
+  // CHECK-FIXES: cref(const _Up &__u) noexcept {
   return reference_wrapper<const Up>(u);
 }
 

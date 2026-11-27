@@ -133,7 +133,7 @@
 #endif
 
 #if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
-     (defined(__MINGW32__) && defined(__clang__)))
+     ((defined(__MINGW32__) || defined(__CYGWIN__)) && defined(__clang__)))
 #define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
 // Clang compilers older then 15 do not support gnu style attributes on
 // namespaces.
@@ -171,32 +171,21 @@
 /// for both functions and classes. On windows its turned in to dllimport for
 /// library consumers, for other platforms its a default visibility attribute.
 ///
-/// LLVM_ABI_FRIEND is for annotating friend function declarations when the
-/// target function's original declaration is annotated with LLVM_ABI. This
-/// macro matches the LLVM_ABI macro on Windows, on other platforms it does
-/// nothing.
+/// LLVM_ABI_FOR_TEST is for annotating symbols that are exported from a
+/// library-internal header solely so that unit tests can link against them.
+/// Symbols in LLVM's public headers are part of the LLVM public interface and
+/// should use LLVM_ABI. LLVM_ABI_FOR_TEST is reserved for internal headers,
+/// whose symbols could be conditionally excluded when not building tests in the
+/// future.
 ///
-/// LLVM_C_ABI is used to annotated functions and data that need to be exported
-/// for the libllvm-c API. This used both for the llvm-c headers and for the
-/// functions declared in the different Target's c++ source files that don't
-/// include the header forward declaring them.
 #ifndef LLVM_ABI_GENERATING_ANNOTATIONS
 // Marker to add to classes or functions in public headers that should not have
 // export macros added to them by the clang tool
 #define LLVM_ABI_NOT_EXPORTED
-#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS) ||       \
-    defined(LLVM_ENABLE_PLUGINS)
-// Some libraries like those for tablegen are linked in to tools that used
-// in the build so can't depend on the llvm shared library. If export macros
-// were left enabled when building these we would get duplicate or
-// missing symbol linker errors on windows.
-#if defined(LLVM_BUILD_STATIC)
-#define LLVM_ABI
-#define LLVM_ABI_FRIEND
-#define LLVM_TEMPLATE_ABI
-#define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT
-#elif defined(_WIN32) && !defined(__MINGW32__)
+// TODO(https://github.com/llvm/llvm-project/issues/145406): eliminate need for
+// two preprocessor definitions to gate LLVM_ABI macro definitions.
+#if defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && !defined(LLVM_BUILD_STATIC)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #if defined(LLVM_EXPORTS)
 #define LLVM_ABI __declspec(dllexport)
 #define LLVM_TEMPLATE_ABI
@@ -206,30 +195,25 @@
 #define LLVM_TEMPLATE_ABI __declspec(dllimport)
 #define LLVM_EXPORT_TEMPLATE
 #endif
-#define LLVM_ABI_FRIEND LLVM_ABI
 #define LLVM_ABI_EXPORT __declspec(dllexport)
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__) || defined(__CYGWIN__)
-#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define LLVM_ABI_FRIEND
-#define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#elif __has_attribute(visibility)
+#if defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||               \
+    defined(__MVS__) || defined(__CYGWIN__) || defined(__MACH__) ||            \
+    defined(__wasm__) || defined(__EMSCRIPTEN__)
+#define LLVM_ABI __attribute__((visibility("default")))
+#define LLVM_TEMPLATE_ABI LLVM_ABI
 #define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
-#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define LLVM_ABI_FRIEND
-#define LLVM_TEMPLATE_ABI
-#define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_ABI_EXPORT LLVM_ABI
 #endif
-#else
+#endif
+#endif
+#if !defined(LLVM_ABI)
 #define LLVM_ABI
-#define LLVM_ABI_FRIEND
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT
 #endif
-#define LLVM_C_ABI LLVM_ABI
+#define LLVM_ABI_FOR_TEST LLVM_ABI
 #endif
 
 #if defined(__GNUC__)
@@ -250,6 +234,12 @@
 #define LLVM_ATTRIBUTE_USED
 #endif
 
+#if LLVM_HAS_CPP_ATTRIBUTE(gnu::warn_unused)
+#define LLVM_ATTRIBUTE_WARN_UNUSED [[gnu::warn_unused]]
+#else
+#define LLVM_ATTRIBUTE_WARN_UNUSED
+#endif
+
 // Only enabled for clang:
 // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99587
 // GCC may produce "warning: 'retain' attribute ignored" (despite
@@ -260,10 +250,13 @@
 #define LLVM_ATTRIBUTE_RETAIN
 #endif
 
+// For deprecations that are not a simple rename, use [[deprecated(MSG)]]
+// instead.
 #if defined(__clang__)
-#define LLVM_DEPRECATED(MSG, FIX) __attribute__((deprecated(MSG, FIX)))
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX)                                   \
+  __attribute__((deprecated(MSG, FIX)))
 #else
-#define LLVM_DEPRECATED(MSG, FIX) [[deprecated(MSG)]]
+#define LLVM_DEPRECATED_WITH_FIXIT(MSG, FIX) [[deprecated(MSG)]]
 #endif
 
 // clang-format off
@@ -275,10 +268,10 @@
   _Pragma("GCC diagnostic pop")
 #elif defined(_MSC_VER)
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH                             \
-  _Pragma("warning(push)")                                                     \
-  _Pragma("warning(disable : 4996)")
+  __pragma(warning(push))                                                     \
+  __pragma(warning(disable : 4996))
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP                              \
-  _Pragma("warning(pop)")
+  __pragma(warning(pop))
 #else
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 #define LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
@@ -315,6 +308,11 @@
 // FIXME: Provide this for PE/COFF targets.
 #if __has_attribute(weak) && !defined(__MINGW32__) && !defined(__CYGWIN__) &&  \
     !defined(_WIN32)
+#define LLVM_HAS_ATTRIBUTE_WEAK 1
+#else
+#define LLVM_HAS_ATTRIBUTE_WEAK 0
+#endif
+#if LLVM_HAS_ATTRIBUTE_WEAK
 #define LLVM_ATTRIBUTE_WEAK __attribute__((__weak__))
 #else
 #define LLVM_ATTRIBUTE_WEAK
@@ -350,6 +348,14 @@
 #define LLVM_UNLIKELY(EXPR) (EXPR)
 #endif
 
+// Indicate that a branch condition is hard to predict, so that the compiler
+// prefers a conditional move or select over a branch.
+#if __has_builtin(__builtin_unpredictable)
+#define LLVM_UNPREDICTABLE(EXPR) __builtin_unpredictable(EXPR)
+#else
+#define LLVM_UNPREDICTABLE(EXPR) (EXPR)
+#endif
+
 /// LLVM_ATTRIBUTE_NOINLINE - On compilers where we have a directive to do so,
 /// mark a method "not for inlining".
 #if __has_attribute(noinline)
@@ -368,6 +374,15 @@
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE __forceinline
 #else
 #define LLVM_ATTRIBUTE_ALWAYS_INLINE inline
+#endif
+
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG - Like
+/// LLVM_ATTRIBUTE_ALWAYS_INLINE but disabled in debug builds to avoid stack
+/// overflow with deep recursion.
+#if defined(NDEBUG)
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG LLVM_ATTRIBUTE_ALWAYS_INLINE
+#else
+#define LLVM_ATTRIBUTE_ALWAYS_INLINE_UNLESS_DEBUG inline
 #endif
 
 /// LLVM_ATTRIBUTE_NO_DEBUG - On compilers where we have a directive to do
@@ -453,6 +468,29 @@
 #define LLVM_CTOR_NODISCARD [[nodiscard]]
 #else
 #define LLVM_CTOR_NODISCARD
+#endif
+
+// Macro to suppress the MSVC warning C4848:
+// "support for attribute [[msvc::no_unique_address]] in C++17 and earlier
+// is a vendor extension".
+// This warning is removed in versions >= 19.43.
+#if !defined(_MSC_VER) || _MSC_VER >= 1943 || defined(__clang__)
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
+#else // MSVC < 19.43
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                             \
+  __pragma(warning(push)) __pragma(warning(disable : 4848))
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP __pragma(warning(pop))
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(no_unique_address)
+#define LLVM_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#elif LLVM_HAS_CPP_ATTRIBUTE(msvc::no_unique_address)
+#define LLVM_NO_UNIQUE_ADDRESS                                                 \
+  LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                                   \
+  [[msvc::no_unique_address]] LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
+#else
+#define LLVM_NO_UNIQUE_ADDRESS
 #endif
 
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
@@ -642,6 +680,18 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_NO_SANITIZE(KIND)
 #endif
 
+/// \macro LLVM_NO_SANITIZE_CFI_UNRELATED_CAST
+/// Disable Clang's cfi-unrelated-cast check for a function (e.g. when casting
+/// raw uninitialized storage to T* before constructing elements in place).
+/// Guarded with __clang__ because GCC supports no_sanitize but warns
+/// (-Wattributes) on Clang-specific CFI sanitizer names.
+#ifdef __clang__
+#define LLVM_NO_SANITIZE_CFI_UNRELATED_CAST                                    \
+  LLVM_NO_SANITIZE("cfi-unrelated-cast")
+#else
+#define LLVM_NO_SANITIZE_CFI_UNRELATED_CAST
+#endif
+
 /// Mark debug helper function definitions like dump() that should not be
 /// stripped from debug builds.
 /// Note that you should also surround dump() functions with
@@ -720,6 +770,15 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_PREFERRED_TYPE(T)
 #endif
 
+#if LLVM_HAS_CPP_ATTRIBUTE(clang::ptrauth_vtable_pointer) &&                   \
+    (defined(__PTRAUTH__) || __has_feature(ptrauth_calls))
+#define LLVM_MOVABLE_POLYMORPHIC_TYPE                                          \
+  [[clang::ptrauth_vtable_pointer(default_key, no_address_discrimination,      \
+                                  default_extra_discrimination)]]
+#else
+#define LLVM_MOVABLE_POLYMORPHIC_TYPE
+#endif
+
 /// \macro LLVM_VIRTUAL_ANCHOR_FUNCTION
 /// This macro is used to adhere to LLVM's policy that each class with a vtable
 /// must have at least one out-of-line virtual function. This macro allows us
@@ -743,5 +802,37 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
     virtual void anchor()
 #endif
 // clang-format on
+
+/// \macro LLVM_IS_X86
+/// Whether the target architecture is x86 / x86-64.
+#if defined(__x86_64__) || defined(__i386__)
+#define LLVM_IS_X86 1
+#else
+#define LLVM_IS_X86 0
+#endif
+
+/// \macro LLVM_TARGET_SSE42
+/// Function attribute to compile a function with SSE4.2 enabled.
+#if defined(__has_attribute) && __has_attribute(target)
+#define LLVM_TARGET_SSE42 __attribute__((target("sse4.2")))
+#else
+#define LLVM_TARGET_SSE42
+#endif
+
+#if __has_builtin(__builtin_cpu_supports) &&                                   \
+    (defined(__linux__) || defined(__APPLE__))
+#define LLVM_CPU_SUPPORTS(feature) __builtin_cpu_supports(feature)
+#else
+#define LLVM_CPU_SUPPORTS(feature) 0
+#endif
+
+/// \macro LLVM_CPU_SUPPORTS_SSE42
+/// Expands to true if the runtime cpu supports SSE4.2, or if compiled with
+/// SSE4.2 enabled.
+#if defined(__SSE4_2__)
+#define LLVM_CPU_SUPPORTS_SSE42 1
+#else
+#define LLVM_CPU_SUPPORTS_SSE42 LLVM_CPU_SUPPORTS("sse4.2")
+#endif
 
 #endif

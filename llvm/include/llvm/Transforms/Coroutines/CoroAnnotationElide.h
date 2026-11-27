@@ -23,13 +23,13 @@
 
 namespace llvm {
 
-struct CoroAnnotationElidePass : PassInfoMixin<CoroAnnotationElidePass> {
-  CoroAnnotationElidePass() {}
+struct CoroAnnotationElidePass
+    : OptionalPassInfoMixin<CoroAnnotationElidePass> {
+  CoroAnnotationElidePass() = default;
 
-  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
-                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
-
-  static bool isRequired() { return false; }
+  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &C,
+                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
+                                 CGSCCUpdateResult &UR);
 };
 } // end namespace llvm
 

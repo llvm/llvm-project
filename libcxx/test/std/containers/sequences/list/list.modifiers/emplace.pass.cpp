@@ -10,7 +10,7 @@
 
 // <list>
 
-// template <class... Args> void emplace(const_iterator p, Args&&... args);
+// template <class... Args> void emplace(const_iterator p, Args&&... args); // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -26,13 +26,13 @@ class A {
   A& operator=(const A&);
 
 public:
-  A(int i, double d) : i_(i), d_(d) {}
+  TEST_CONSTEXPR_CXX20 A(int i, double d) : i_(i), d_(d) {}
 
-  int geti() const { return i_; }
-  double getd() const { return d_; }
+  TEST_CONSTEXPR int geti() const { return i_; }
+  TEST_CONSTEXPR double getd() const { return d_; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::list<A> c;
     c.emplace(c.cbegin(), 2, 3.5);
@@ -59,6 +59,15 @@ int main(int, char**) {
     assert(c.back().geti() == 3);
     assert(c.back().getd() == 4.5);
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

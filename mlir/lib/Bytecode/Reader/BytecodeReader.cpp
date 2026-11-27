@@ -18,7 +18,11 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
@@ -26,10 +30,12 @@
 #include "llvm/Support/SourceMgr.h"
 
 #include <cstddef>
+#include <cstdint>
 #include <list>
 #include <memory>
 #include <numeric>
 #include <optional>
+#include <utility>
 
 #define DEBUG_TYPE "mlir-bytecode-reader"
 
@@ -111,6 +117,9 @@ public:
     };
 
     // Shift the reader position to the next alignment boundary.
+    // Note: this assumes the pointer alignment matches the alignment of the
+    // data from the start of the buffer. In other words, this code is only
+    // valid if `dataIt` is offsetting into an already aligned buffer.
     while (isUnaligned(dataIt)) {
       uint8_t padding;
       if (failed(parseByte(padding)))
@@ -138,6 +147,13 @@ public:
     return ::emitError(fileLoc).append(std::forward<Args>(args)...);
   }
   InFlightDiagnostic emitError() const { return ::emitError(fileLoc); }
+
+  /// Emit a warning using the given arguments.
+  template <typename... Args>
+  InFlightDiagnostic emitWarning(Args &&...args) const {
+    return ::emitWarning(fileLoc).append(std::forward<Args>(args)...);
+  }
+  InFlightDiagnostic emitWarning() const { return ::emitWarning(fileLoc); }
 
   /// Parse a single byte from the stream.
   template <typename T>
@@ -258,9 +274,13 @@ public:
     return success();
   }
 
+  /// Validate that the alignment requested in the section is valid.
+  using ValidateAlignmentFn = function_ref<LogicalResult(unsigned alignment)>;
+
   /// Parse a section header, placing the kind of section in `sectionID` and the
   /// contents of the section in `sectionData`.
   LogicalResult parseSection(bytecode::Section::ID &sectionID,
+                             ValidateAlignmentFn alignmentValidator,
                              ArrayRef<uint8_t> &sectionData) {
     uint8_t sectionIDAndHasAlignment;
     uint64_t length;
@@ -281,8 +301,48 @@ public:
 
     // Process the section alignment if present.
     if (hasAlignment) {
+      // Read the requested alignment from the bytecode parser.
       uint64_t alignment;
-      if (failed(parseVarInt(alignment)) || failed(alignTo(alignment)))
+      if (failed(parseVarInt(alignment)))
+        return failure();
+
+      // Check that the requested alignment must not exceed the alignment of
+      // the root buffer itself. Otherwise we cannot guarantee that pointers
+      // derived from this buffer will actually satisfy the requested alignment
+      // globally.
+      //
+      // Consider a bytecode buffer that is guaranteed to be 8k aligned, but not
+      // 16k aligned (e.g. absolute address 40960. If a section inside this
+      // buffer declares a 16k alignment requirement, two problems can arise:
+      //
+      //   (a) If we "align forward" the current pointer to the next
+      //       16k boundary, the amount of padding we skip depends on the
+      //       buffer's starting address. For example:
+      //
+      //         buffer_start = 40960
+      //         next 16k boundary = 49152
+      //         bytes skipped = 49152 - 40960 = 8192
+      //
+      //       This leaves behind variable padding that could be misinterpreted
+      //       as part of the next section.
+      //
+      //   (b) If we align relative to the buffer start, we may
+      //       obtain addresses that are multiples of "buffer_start +
+      //       section_alignment" rather than truly globally aligned
+      //       addresses. For example:
+      //
+      //         buffer_start = 40960 (5×8k, 8k aligned but not 16k)
+      //         offset       = 16384  (first multiple of 16k)
+      //         section_ptr  = 40960 + 16384 = 57344
+      //
+      //       57344 is 8k aligned but not 16k aligned.
+      //       Any consumer expecting true 16k alignment would see this as a
+      //       violation.
+      if (failed(alignmentValidator(alignment)))
+        return emitError("failed to align section ID: ", unsigned(sectionID));
+
+      // Align the buffer.
+      if (failed(alignTo(alignment)))
         return failure();
     }
 
@@ -782,6 +842,23 @@ namespace {
 /// This class provides support for reading attribute and type entries from the
 /// bytecode. Attribute and Type entries are read lazily on demand, so we use
 /// this reader to manage when to actually parse them from the bytecode.
+///
+/// The parsing of attributes & types are generally recursive, this can lead to
+/// stack overflows for deeply nested structures, so we track a few extra pieces
+/// of information to avoid this:
+///
+/// - `depth`: The current depth while parsing nested attributes. We defer on
+///   parsing deeply nested attributes to avoid potential stack overflows. The
+///   deferred parsing is achieved by reporting a failure when parsing a nested
+///   attribute/type and registering the index of the encountered attribute/type
+///   in the deferred parsing worklist. Hence, a failure with deffered entry
+///   does not constitute a failure, it also requires that folks return on
+///   first failure rather than attempting additional parses.
+/// - `deferredWorklist`: A list of attribute/type indices that we could not
+///   parse due to hitting the depth limit. The worklist is used to capture the
+///   indices of attributes/types that need to be parsed/reparsed when we hit
+///   the depth limit. This enables moving the tracking of what needs to be
+///   parsed to the heap.
 class AttrTypeReader {
   /// This class represents a single attribute or type entry.
   template <typename T>
@@ -793,6 +870,9 @@ class AttrTypeReader {
     /// A flag indicating if the entry was encoded using a custom encoding,
     /// instead of using the textual assembly format.
     bool hasCustomEncoding = false;
+    /// Index of the next custom reader callback to try; callbacks before this
+    /// index already fell through on an earlier attempt.
+    size_t nextCallbackIndex = 0;
     /// The raw data of this entry in the bytecode.
     ArrayRef<uint8_t> data;
   };
@@ -815,6 +895,15 @@ public:
              ArrayRef<uint8_t> sectionData,
              ArrayRef<uint8_t> offsetSectionData);
 
+  LogicalResult readAttribute(uint64_t index, Attribute &result,
+                              uint64_t depth = 0) {
+    return readEntry(attributes, index, result, "attribute", depth);
+  }
+
+  LogicalResult readType(uint64_t index, Type &result, uint64_t depth = 0) {
+    return readEntry(types, index, result, "type", depth);
+  }
+
   /// Resolve the attribute or type at the given index. Returns nullptr on
   /// failure.
   Attribute resolveAttribute(size_t index) {
@@ -822,22 +911,22 @@ public:
   }
   Type resolveType(size_t index) { return resolveEntry(types, index, "Type"); }
 
+  Attribute getAttributeOrSentinel(size_t index) {
+    if (index >= attributes.size())
+      return nullptr;
+    return attributes[index].entry;
+  }
+  Type getTypeOrSentinel(size_t index) {
+    if (index >= types.size())
+      return nullptr;
+    return types[index].entry;
+  }
+
   /// Parse a reference to an attribute or type using the given reader.
   LogicalResult parseAttribute(EncodingReader &reader, Attribute &result) {
     uint64_t attrIdx;
     if (failed(reader.parseVarInt(attrIdx)))
       return failure();
-    result = resolveAttribute(attrIdx);
-    return success(!!result);
-  }
-  LogicalResult parseOptionalAttribute(EncodingReader &reader,
-                                       Attribute &result) {
-    uint64_t attrIdx;
-    bool flag;
-    if (failed(reader.parseVarIntWithFlag(attrIdx, flag)))
-      return failure();
-    if (!flag)
-      return success();
     result = resolveAttribute(attrIdx);
     return success(!!result);
   }
@@ -861,23 +950,129 @@ public:
                             llvm::getTypeName<T>(), ", but got: ", baseResult);
   }
 
+  /// The kind of entry being parsed.
+  enum class EntryKind { Attribute, Type };
+  using WorklistEntry = std::pair<uint64_t, EntryKind>;
+
+  /// Add an index to the deferred worklist for re-parsing.
+  void addDeferredParsing(uint64_t index, EntryKind kind) {
+    deferredWorklist.emplace_back(index, kind);
+  }
+
+  /// Whether currently resolving.
+  bool isResolving() const { return resolving; }
+
+  /// Register `type` as the partial result of the type entry at `index`. The
+  /// partial stays visible to nested reads until the entry finishes parsing (or
+  /// the top-level resolve ends on error). Re-publishing the same instance
+  /// succeeds because deferred entries re-run the dialect reader. Returns the
+  /// bound instance for `index` so the caller can detect conflicts.
+  Type publishPartialType(uint64_t index, Type type) {
+    auto [it, inserted] = partialTypes.try_emplace(index, type);
+    if (inserted) {
+      partialHistory.push_back(index);
+      ++progressGeneration;
+    }
+    return it->second;
+  }
+
+  /// Return the incomplete type published for `index`, or null if none is
+  /// currently active. Consumers may hold this instance safely because the type
+  /// is mutable with stable identity: completing the entry mutates the same
+  /// instance in place before any non-cyclic dependent entry finishes.
+  Type getPartialType(uint64_t index) const {
+    return partialTypes.lookup(index);
+  }
+
 private:
+  /// Snapshot of speculative state recorded before trying a reader callback.
+  struct RollbackPoint {
+    size_t deferredWorklistSize;
+    size_t partialHistorySize;
+    uint64_t resolvedCount;
+  };
+
+  /// Post-order DFS worklist that deduplicates queued entries and supports O(1)
+  /// splicing of dependencies ahead of their dependents.
+  class AttrTypeWorklist {
+  public:
+    bool empty() const { return entries.empty(); }
+
+    void pushFront(WorklistEntry entry) {
+      auto [it, inserted] = positions.try_emplace(entry);
+      if (inserted)
+        it->second = entries.insert(entries.begin(), entry);
+      else
+        entries.splice(entries.begin(), entries, it->second);
+    }
+
+    void pushBack(WorklistEntry entry) {
+      auto [it, inserted] = positions.try_emplace(entry);
+      if (inserted)
+        it->second = entries.insert(entries.end(), entry);
+    }
+
+    WorklistEntry popFront() {
+      assert(!empty() && "cannot pop from an empty worklist");
+      WorklistEntry front = entries.front();
+      positions.erase(front);
+      entries.pop_front();
+      return front;
+    }
+
+  private:
+    std::list<WorklistEntry> entries;
+    DenseMap<WorklistEntry, std::list<WorklistEntry>::iterator> positions;
+  };
+
+  /// Return whether any partial type published at or after
+  /// `partialHistory[start]` is still live.
+  bool hasLivePartialSince(size_t start) const {
+    return llvm::any_of(
+        ArrayRef(partialHistory).drop_front(start),
+        [&](uint64_t idx) { return partialTypes.contains(idx); });
+  }
+
+  void eraseUncommittedPartialType(uint64_t index) {
+    if (partialTypes.erase(index))
+      --progressGeneration;
+  }
+
+  RollbackPoint saveRollbackPoint() const {
+    return {deferredWorklist.size(), partialHistory.size(), resolvedCount};
+  }
+
+  void restoreRollbackPoint(RollbackPoint point) {
+    deferredWorklist.resize(point.deferredWorklistSize);
+    while (partialHistory.size() > point.partialHistorySize) {
+      uint64_t idx = partialHistory.pop_back_val();
+      if (!types[idx].entry)
+        eraseUncommittedPartialType(idx);
+    }
+  }
+
   /// Resolve the given entry at `index`.
   template <typename T>
-  T resolveEntry(SmallVectorImpl<Entry<T>> &entries, size_t index,
+  T resolveEntry(SmallVectorImpl<Entry<T>> &entries, uint64_t index,
                  StringRef entryType);
+
+  /// Read the entry at the given index, returning failure if the entry is not
+  /// yet resolved.
+  template <typename T>
+  LogicalResult readEntry(SmallVectorImpl<Entry<T>> &entries, uint64_t index,
+                          T &result, StringRef entryType, uint64_t depth);
+
+  /// Parse an entry using the given reader that was encoded using a custom
+  /// bytecode format.
+  template <typename T>
+  LogicalResult parseCustomEntry(Entry<T> &entry, EncodingReader &reader,
+                                 uint64_t index, uint64_t depth, T &result);
 
   /// Parse an entry using the given reader that was encoded using the textual
   /// assembly format.
   template <typename T>
   LogicalResult parseAsmEntry(T &result, EncodingReader &reader,
                               StringRef entryType);
-
-  /// Parse an entry using the given reader that was encoded using a custom
-  /// bytecode format.
-  template <typename T>
-  LogicalResult parseCustomEntry(Entry<T> &entry, EncodingReader &reader,
-                                 StringRef entryType);
 
   /// The string section reader used to resolve string references when parsing
   /// custom encoded attribute/type entries.
@@ -895,6 +1090,25 @@ private:
   SmallVector<AttrEntry> attributes;
   SmallVector<TypeEntry> types;
 
+  /// Type entries that have published an incomplete value so a self-reference
+  /// can resolve, and whose custom read has not yet completed.
+  DenseMap<uint64_t, Type> partialTypes;
+  SmallVector<uint64_t, 4> partialHistory;
+
+  /// Entries currently on the active C++ `readEntry` call stack, mapped to
+  /// `partialHistory.size()` when their read began, used to distinguish guarded
+  /// cycles (which defer) from unguarded cycles (which fail).
+  llvm::SmallDenseMap<WorklistEntry, size_t, 8> activeEntries;
+
+  /// Potential counter incremented on each committed entry and each newly
+  /// published partial type, and decremented if an uncommitted partial is
+  /// rolled back or discarded; used to detect non-progressing worklist cycles.
+  uint64_t progressGeneration = 0;
+
+  /// Monotonic count of committed attribute/type entries, used to detect
+  /// speculative partials that escaped into a cached entry before fallthrough.
+  uint64_t resolvedCount = 0;
+
   /// A location used for error emission.
   Location fileLoc;
 
@@ -903,6 +1117,15 @@ private:
 
   /// Reference to the parser configuration.
   const ParserConfig &parserConfig;
+
+  /// Worklist for deferred attribute/type parsing. This is used to handle
+  /// deeply nested structures like CallSiteLoc iteratively.
+  /// - The first element is the index of the attribute/type to parse.
+  /// - The second element is the kind of entry being parsed.
+  std::vector<WorklistEntry> deferredWorklist;
+
+  /// Flag indicating if we are currently resolving an attribute or type.
+  bool resolving = false;
 };
 
 class DialectReader : public DialectBytecodeReader {
@@ -911,13 +1134,28 @@ public:
                 const StringSectionReader &stringReader,
                 const ResourceSectionReader &resourceReader,
                 const llvm::StringMap<BytecodeDialect *> &dialectsMap,
-                EncodingReader &reader, uint64_t &bytecodeVersion)
+                EncodingReader &reader, uint64_t &bytecodeVersion,
+                uint64_t depth = 0,
+                std::optional<uint64_t> cyclicTypeIndex = std::nullopt)
       : attrTypeReader(attrTypeReader), stringReader(stringReader),
         resourceReader(resourceReader), dialectsMap(dialectsMap),
-        reader(reader), bytecodeVersion(bytecodeVersion) {}
+        reader(reader), bytecodeVersion(bytecodeVersion), depth(depth),
+        cyclicTypeIndex(cyclicTypeIndex) {}
+
+  /// See DialectBytecodeReader::tryStartCyclicRead.
+  ///
+  /// The partial is registered against the entry index, deliberately *not*
+  /// stored into the entry itself. An attempt can be abandoned and retried
+  /// by the deferred worklist, and an incomplete type left behind in the
+  /// entry would be handed out as if it were fully resolved.
+  LogicalResult tryStartCyclicRead(Type type) override;
 
   InFlightDiagnostic emitError(const Twine &msg) const override {
     return reader.emitError(msg);
+  }
+
+  InFlightDiagnostic emitWarning(const Twine &msg) const override {
+    return reader.emitWarning(msg);
   }
 
   FailureOr<const DialectVersion *>
@@ -950,14 +1188,30 @@ public:
   // IR
   //===--------------------------------------------------------------------===//
 
+  /// The maximum depth to eagerly parse nested attributes/types before
+  /// deferring.
+  static constexpr uint64_t maxAttrTypeDepth = 5;
+
   LogicalResult readAttribute(Attribute &result) override {
-    return attrTypeReader.parseAttribute(reader, result);
+    uint64_t index;
+    if (failed(reader.parseVarInt(index)))
+      return failure();
+    return readEntryAtIndex(index, result);
   }
   LogicalResult readOptionalAttribute(Attribute &result) override {
-    return attrTypeReader.parseOptionalAttribute(reader, result);
+    uint64_t index;
+    bool hasAttr = false;
+    if (failed(reader.parseVarIntWithFlag(index, hasAttr)))
+      return failure();
+    if (!hasAttr)
+      return success();
+    return readEntryAtIndex(index, result);
   }
   LogicalResult readType(Type &result) override {
-    return attrTypeReader.parseType(reader, result);
+    uint64_t index;
+    if (failed(reader.parseVarInt(index)))
+      return failure();
+    return readEntryAtIndex(index, result);
   }
 
   FailureOr<AsmDialectResourceHandle> readResourceHandle() override {
@@ -1041,12 +1295,63 @@ public:
   }
 
 private:
+  template <typename T>
+  LogicalResult readEntryAtIndex(uint64_t index, T &result) {
+    // If we aren't currently resolving an attribute/type, resolve this entry
+    // eagerly. This is the case when parsing properties, which aren't processed
+    // via the worklist.
+    if (!attrTypeReader.isResolving()) {
+      T resolved;
+      if constexpr (std::is_same_v<T, Type>)
+        resolved = attrTypeReader.resolveType(index);
+      else
+        resolved = attrTypeReader.resolveAttribute(index);
+      if (!resolved)
+        return failure();
+      result = resolved;
+      return success();
+    }
+
+    if constexpr (std::is_same_v<T, Type>) {
+      if (Type type = attrTypeReader.getTypeOrSentinel(index)) {
+        result = type;
+        return success();
+      }
+      if (Type partial = attrTypeReader.getPartialType(index)) {
+        result = partial;
+        return success();
+      }
+      if (depth > maxAttrTypeDepth) {
+        attrTypeReader.addDeferredParsing(index,
+                                          AttrTypeReader::EntryKind::Type);
+        return failure();
+      }
+      return attrTypeReader.readType(index, result, depth + 1);
+    } else {
+      if (Attribute attr = attrTypeReader.getAttributeOrSentinel(index)) {
+        result = attr;
+        return success();
+      }
+      if (depth > maxAttrTypeDepth) {
+        attrTypeReader.addDeferredParsing(index,
+                                          AttrTypeReader::EntryKind::Attribute);
+        return failure();
+      }
+      return attrTypeReader.readAttribute(index, result, depth + 1);
+    }
+  }
+
   AttrTypeReader &attrTypeReader;
   const StringSectionReader &stringReader;
   const ResourceSectionReader &resourceReader;
   const llvm::StringMap<BytecodeDialect *> &dialectsMap;
   EncodingReader &reader;
   uint64_t &bytecodeVersion;
+  uint64_t depth;
+
+  /// Index of the type entry being parsed, when this reader is parsing one.
+  /// Only then can a cyclic read be published.
+  std::optional<uint64_t> cyclicTypeIndex;
 };
 
 /// Wraps the properties section and handles reading properties out of it.
@@ -1152,6 +1457,14 @@ LogicalResult AttrTypeReader::initialize(
 
     // Parse an individual entry.
     auto parseEntryFn = [&](BytecodeDialect *dialect) -> LogicalResult {
+      // Verify that the dialect groups don't contain more entries than were
+      // declared for this range.
+      if (currentIndex == endIndex) {
+        return offsetReader.emitError(
+            "Attribute or Type dialect group entries exceed the declared "
+            "number of entries (",
+            endIndex, ")");
+      }
       auto &entry = range[currentIndex++];
 
       uint64_t entrySize;
@@ -1190,34 +1503,274 @@ LogicalResult AttrTypeReader::initialize(
 }
 
 template <typename T>
-T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries, size_t index,
-                               StringRef entryType) {
+T AttrTypeReader::resolveEntry(SmallVectorImpl<Entry<T>> &entries,
+                               uint64_t index, StringRef entryType) {
+  assert(!resolving && "resolveEntry is not re-entrant");
+  resolving = true;
+  llvm::scope_exit restoreResolving([&]() {
+    resolving = false;
+    // Partials published to break cycles are scoped to one top-level resolve.
+    // Past that point every entry is either fully resolved or the resolve
+    // failed, so keeping them would risk handing out an incomplete type.
+    partialTypes.clear();
+    partialHistory.clear();
+    deferredWorklist.clear();
+  });
+
   if (index >= entries.size()) {
     emitError(fileLoc) << "invalid " << entryType << " index: " << index;
     return {};
   }
 
-  // If the entry has already been resolved, there is nothing left to do.
-  Entry<T> &entry = entries[index];
-  if (entry.entry)
-    return entry.entry;
-
-  // Parse the entry.
-  EncodingReader reader(entry.data, fileLoc);
-
-  // Parse based on how the entry was encoded.
-  if (entry.hasCustomEncoding) {
-    if (failed(parseCustomEntry(entry, reader, entryType)))
-      return T();
-  } else if (failed(parseAsmEntry(entry.entry, reader, entryType))) {
+  // Fast path: Try direct parsing without worklist overhead. This handles the
+  // common case where there are no deferred dependencies.
+  assert(deferredWorklist.empty());
+  T result;
+  if (succeeded(readEntry(entries, index, result, entryType, /*depth=*/0))) {
+    assert(deferredWorklist.empty());
+    assert(partialTypes.empty());
+    return result;
+  }
+  if (deferredWorklist.empty()) {
+    // Failed with no deferred entries is an error.
     return T();
+  }
+
+  // Slow path: Use a post-order DFS worklist to iteratively resolve deferred
+  // dependencies before retrying the entries that depend on them.
+  static_assert((std::is_same_v<T, Type> || std::is_same_v<T, Attribute>) &&
+                "Only support resolving Attributes and Types");
+  constexpr EntryKind rootKind =
+      std::is_same_v<T, Type> ? EntryKind::Type : EntryKind::Attribute;
+
+  AttrTypeWorklist worklist;
+  worklist.pushBack({index, rootKind});
+  for (WorklistEntry dep : llvm::reverse(deferredWorklist))
+    worklist.pushFront(dep);
+  deferredWorklist.clear();
+
+  DenseSet<WorklistEntry> failedInEpoch;
+  uint64_t lastGeneration = progressGeneration;
+
+  while (!worklist.empty()) {
+    WorklistEntry current = worklist.popFront();
+    auto [currentIndex, entryKind] = current;
+
+    // Clear the deferred worklist before parsing to capture any new entries.
+    deferredWorklist.clear();
+
+    LogicalResult parseStatus = failure();
+    if (entryKind == EntryKind::Type) {
+      Type typeResult;
+      parseStatus = readType(currentIndex, typeResult, /*depth=*/0);
+    } else {
+      assert(entryKind == EntryKind::Attribute && "Unexpected entry kind");
+      Attribute attrResult;
+      parseStatus = readAttribute(currentIndex, attrResult, /*depth=*/0);
+    }
+
+    if (succeeded(parseStatus)) {
+      failedInEpoch.clear();
+      lastGeneration = progressGeneration;
+      continue;
+    }
+
+    if (deferredWorklist.empty()) {
+      // Parsing failed with no deferred entries, which implies an error.
+      return T();
+    }
+
+    if (progressGeneration != lastGeneration) {
+      failedInEpoch.clear();
+      lastGeneration = progressGeneration;
+    }
+    if (!failedInEpoch.insert(current).second) {
+      StringRef kindStr = entryKind == EntryKind::Type ? "type" : "attribute";
+      emitError(fileLoc) << "cyclic dependency detected in " << kindStr
+                         << " entry " << currentIndex;
+      deferredWorklist.clear();
+      return T();
+    }
+
+    // Keep `current` ahead of its callers, and splice its newly discovered
+    // dependencies in front of `current` (in reverse to preserve order).
+    worklist.pushFront(current);
+    for (WorklistEntry dep : llvm::reverse(deferredWorklist))
+      worklist.pushFront(dep);
+    deferredWorklist.clear();
+  }
+
+  assert(partialTypes.empty());
+  return entries[index].entry;
+}
+
+LogicalResult DialectReader::tryStartCyclicRead(Type type) {
+  if (!cyclicTypeIndex)
+    return emitError(
+        "tryStartCyclicRead called while not reading a custom type entry");
+  if (!type)
+    return emitError("cannot start cyclic read with null type");
+  if (!type.hasTrait<TypeTrait::IsMutable>())
+    return emitError("cannot start cyclic read on immutable type: ") << type;
+  Type published = attrTypeReader.publishPartialType(*cyclicTypeIndex, type);
+  if (published != type) {
+    return emitError("type entry ")
+           << *cyclicTypeIndex << " already published a different '"
+           << published.getAbstractType().getName() << "' instance";
+  }
+  return success();
+}
+
+template <typename T>
+LogicalResult AttrTypeReader::readEntry(SmallVectorImpl<Entry<T>> &entries,
+                                        uint64_t index, T &result,
+                                        StringRef entryType, uint64_t depth) {
+  if (index >= entries.size()) {
+    deferredWorklist.clear();
+    return emitError(fileLoc) << "invalid " << entryType << " index: " << index;
+  }
+
+  // If the entry has already been resolved, return it.
+  Entry<T> &entry = entries[index];
+  if (entry.entry) {
+    result = entry.entry;
+    return success();
+  }
+
+  constexpr EntryKind kind =
+      std::is_same_v<T, Type> ? EntryKind::Type : EntryKind::Attribute;
+  WorklistEntry activeKey(index, kind);
+  auto [activeIt, firstActivation] =
+      activeEntries.try_emplace(activeKey, partialHistory.size());
+  if (!firstActivation) {
+    // Re-entering an active entry is guarded if a partial type published since
+    // the outer read began is still live: defer so the worklist parses this
+    // entry once using the published partial before completing the mutable
+    // type.
+    if (hasLivePartialSince(activeIt->second)) {
+      addDeferredParsing(index, kind);
+      return failure();
+    }
+    deferredWorklist.clear();
+    StringRef kindStr = std::is_same_v<T, Type> ? "type" : "attribute";
+    return emitError(fileLoc)
+           << "cyclic dependency detected in " << kindStr << " entry " << index;
+  }
+  llvm::scope_exit eraseActive([&]() { activeEntries.erase(activeKey); });
+
+  // If the entry hasn't been resolved, try to parse it.
+  EncodingReader reader(entry.data, fileLoc);
+  T parsedEntry = {};
+  LogicalResult parseResult =
+      entry.hasCustomEncoding
+          ? parseCustomEntry(entry, reader, index, depth, parsedEntry)
+          : parseAsmEntry(parsedEntry, reader, entryType);
+  if (failed(parseResult)) {
+    if constexpr (std::is_same_v<T, Type>) {
+      if (partialTypes.contains(index)) {
+        // If a nested read deferred, keep the partial bound and schedule this
+        // entry to complete once its dependencies are resolved.
+        if (!deferredWorklist.empty())
+          addDeferredParsing(index, EntryKind::Type);
+        else
+          eraseUncommittedPartialType(index);
+      }
+    }
+    return failure();
   }
 
   if (!reader.empty()) {
-    reader.emitError("unexpected trailing bytes after " + entryType + " entry");
-    return T();
+    deferredWorklist.clear();
+    if constexpr (std::is_same_v<T, Type>)
+      eraseUncommittedPartialType(index);
+    return reader.emitError("unexpected trailing bytes after ", entryType,
+                            " entry");
   }
-  return entry.entry;
+
+  if constexpr (std::is_same_v<T, Type>)
+    partialTypes.erase(index);
+  entry.entry = result = parsedEntry;
+  ++progressGeneration;
+  ++resolvedCount;
+  return success();
+}
+
+template <typename T>
+LogicalResult
+AttrTypeReader::parseCustomEntry(Entry<T> &entry, EncodingReader &reader,
+                                 uint64_t index, uint64_t depth, T &result) {
+  std::optional<uint64_t> cyclicTypeIndex;
+  if constexpr (std::is_same_v<T, Type>)
+    cyclicTypeIndex = index;
+  DialectReader dialectReader(*this, stringReader, resourceReader, dialectsMap,
+                              reader, bytecodeVersion, depth, cyclicTypeIndex);
+  if (failed(entry.dialect->load(dialectReader, fileLoc.getContext())))
+    return failure();
+
+  auto verifyPublishedPartial = [&](T parsed) -> LogicalResult {
+    if constexpr (std::is_same_v<T, Type>) {
+      // A dialect or callback that published a partial must return that same
+      // instance: consumers may already hold it.
+      if (Type partial = getPartialType(index)) {
+        if (parsed && parsed != partial) {
+          deferredWorklist.clear();
+          return reader.emitError("custom type reader for dialect '",
+                                  entry.dialect->name,
+                                  "' returned a different type than the one "
+                                  "published with tryStartCyclicRead");
+        }
+      }
+    }
+    return success();
+  };
+
+  // Try parsing with callbacks first if available.
+  ArrayRef<std::unique_ptr<AttrTypeBytecodeReader<T>>> callbacks = [&]() {
+    if constexpr (std::is_same_v<T, Type>)
+      return parserConfig.getBytecodeReaderConfig().getTypeCallbacks();
+    else
+      return parserConfig.getBytecodeReaderConfig().getAttributeCallbacks();
+  }();
+  for (size_t e = callbacks.size(); entry.nextCallbackIndex < e;
+       ++entry.nextCallbackIndex) {
+    const std::unique_ptr<AttrTypeBytecodeReader<T>> &callback =
+        callbacks[entry.nextCallbackIndex];
+    RollbackPoint rollback = saveRollbackPoint();
+    if (failed(callback->read(dialectReader, entry.dialect->name, result)))
+      return failure();
+    if (result)
+      return verifyPublishedPartial(result);
+
+    if (partialHistory.size() > rollback.partialHistorySize &&
+        resolvedCount != rollback.resolvedCount) {
+      restoreRollbackPoint(rollback);
+      deferredWorklist.clear();
+      return reader.emitError(
+          "custom type reader callback published a partial type that may "
+          "have escaped into a resolved nested entry before falling through");
+    }
+
+    // The callback fell through without consuming the encoding. Reset the
+    // reader and restore deferred entries and uncommitted partial types.
+    restoreRollbackPoint(rollback);
+    reader = EncodingReader(entry.data, reader.getLoc());
+  }
+
+  // Ensure that the dialect implements the bytecode interface.
+  if (!entry.dialect->interface) {
+    return reader.emitError("dialect '", entry.dialect->name,
+                            "' does not implement the bytecode interface");
+  }
+
+  if constexpr (std::is_same_v<T, Type>)
+    result = entry.dialect->interface->readType(dialectReader);
+  else
+    result = entry.dialect->interface->readAttribute(dialectReader);
+
+  if (failed(verifyPublishedPartial(result)))
+    return failure();
+
+  return success(static_cast<bool>(result));
 }
 
 template <typename T>
@@ -1245,61 +1798,6 @@ LogicalResult AttrTypeReader::parseAsmEntry(T &result, EncodingReader &reader,
                             " assembly format: ", asmStr.drop_front(numRead));
   }
   return success();
-}
-
-template <typename T>
-LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
-                                               EncodingReader &reader,
-                                               StringRef entryType) {
-  DialectReader dialectReader(*this, stringReader, resourceReader, dialectsMap,
-                              reader, bytecodeVersion);
-  if (failed(entry.dialect->load(dialectReader, fileLoc.getContext())))
-    return failure();
-
-  if constexpr (std::is_same_v<T, Type>) {
-    // Try parsing with callbacks first if available.
-    for (const auto &callback :
-         parserConfig.getBytecodeReaderConfig().getTypeCallbacks()) {
-      if (failed(
-              callback->read(dialectReader, entry.dialect->name, entry.entry)))
-        return failure();
-      // Early return if parsing was successful.
-      if (!!entry.entry)
-        return success();
-
-      // Reset the reader if we failed to parse, so we can fall through the
-      // other parsing functions.
-      reader = EncodingReader(entry.data, reader.getLoc());
-    }
-  } else {
-    // Try parsing with callbacks first if available.
-    for (const auto &callback :
-         parserConfig.getBytecodeReaderConfig().getAttributeCallbacks()) {
-      if (failed(
-              callback->read(dialectReader, entry.dialect->name, entry.entry)))
-        return failure();
-      // Early return if parsing was successful.
-      if (!!entry.entry)
-        return success();
-
-      // Reset the reader if we failed to parse, so we can fall through the
-      // other parsing functions.
-      reader = EncodingReader(entry.data, reader.getLoc());
-    }
-  }
-
-  // Ensure that the dialect implements the bytecode interface.
-  if (!entry.dialect->interface) {
-    return reader.emitError("dialect '", entry.dialect->name,
-                            "' does not implement the bytecode interface");
-  }
-
-  if constexpr (std::is_same_v<T, Type>)
-    entry.entry = entry.dialect->interface->readType(dialectReader);
-  else
-    entry.entry = entry.dialect->interface->readAttribute(dialectReader);
-
-  return success(!!entry.entry);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1343,8 +1841,8 @@ public:
   materialize(Operation *op,
               llvm::function_ref<bool(Operation *)> lazyOpsCallback) {
     this->lazyOpsCallback = lazyOpsCallback;
-    auto resetlazyOpsCallback =
-        llvm::make_scope_exit([&] { this->lazyOpsCallback = nullptr; });
+    llvm::scope_exit resetlazyOpsCallback(
+        [&] { this->lazyOpsCallback = nullptr; });
     auto it = lazyLoadableOpsMap.find(op);
     assert(it != lazyLoadableOpsMap.end() &&
            "materialize called on non-materializable op");
@@ -1395,6 +1893,29 @@ private:
         return failure();
     return success();
   }
+
+  LogicalResult checkSectionAlignment(
+      unsigned alignment,
+      function_ref<InFlightDiagnostic(const Twine &error)> emitError) {
+    // Check that the bytecode buffer meets the requested section alignment.
+    //
+    // If it does not, the virtual address of the item in the section will
+    // not be aligned to the requested alignment.
+    //
+    // The typical case where this is necessary is the resource blob
+    // optimization in `parseAsBlob` where we reference the weights from the
+    // provided buffer instead of copying them to a new allocation.
+    const bool isGloballyAligned =
+        ((uintptr_t)buffer.getBufferStart() & (alignment - 1)) == 0;
+
+    if (!isGloballyAligned)
+      return emitError("expected section alignment ")
+             << alignment << " but bytecode buffer 0x"
+             << Twine::utohexstr((uint64_t)buffer.getBufferStart())
+             << " is not aligned";
+
+    return success();
+  };
 
   /// Return the context for this config.
   MLIRContext *getContext() const { return config.getContext(); }
@@ -1506,7 +2027,7 @@ private:
     UseListOrderStorage(bool isIndexPairEncoding,
                         SmallVector<unsigned, 4> &&indices)
         : indices(std::move(indices)),
-          isIndexPairEncoding(isIndexPairEncoding){};
+          isIndexPairEncoding(isIndexPairEncoding) {};
     /// The vector containing the information required to reorder the
     /// use-list of a value.
     SmallVector<unsigned, 4> indices;
@@ -1625,15 +2146,15 @@ private:
 
   /// The optional owning source manager, which when present may be used to
   /// extend the lifetime of the input buffer.
-  const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef;
+  const std::shared_ptr<llvm::SourceMgr> bufferOwnerRef;
 };
 
 LogicalResult BytecodeReader::Impl::read(
     Block *block, llvm::function_ref<bool(Operation *)> lazyOpsCallback) {
   EncodingReader reader(buffer.getBuffer(), fileLoc);
   this->lazyOpsCallback = lazyOpsCallback;
-  auto resetlazyOpsCallback =
-      llvm::make_scope_exit([&] { this->lazyOpsCallback = nullptr; });
+  llvm::scope_exit resetlazyOpsCallback(
+      [&] { this->lazyOpsCallback = nullptr; });
 
   // Skip over the bytecode header, this should have already been checked.
   if (failed(reader.skipBytes(StringRef("ML\xefR").size())))
@@ -1651,6 +2172,11 @@ LogicalResult BytecodeReader::Impl::read(
     return failure();
   });
 
+  const auto checkSectionAlignment = [&](unsigned alignment) {
+    return this->checkSectionAlignment(
+        alignment, [&](const auto &msg) { return reader.emitError(msg); });
+  };
+
   // Parse the raw data for each of the top-level sections of the bytecode.
   std::optional<ArrayRef<uint8_t>>
       sectionDatas[bytecode::Section::kNumSections];
@@ -1658,7 +2184,8 @@ LogicalResult BytecodeReader::Impl::read(
     // Read the next section from the bytecode.
     bytecode::Section::ID sectionID;
     ArrayRef<uint8_t> sectionData;
-    if (failed(reader.parseSection(sectionID, sectionData)))
+    if (failed(
+            reader.parseSection(sectionID, checkSectionAlignment, sectionData)))
       return failure();
 
     // Check for duplicate sections, we only expect one instance of each.
@@ -1778,6 +2305,12 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
     return failure();
   dialects.resize(numDialects);
 
+  const auto checkSectionAlignment = [&](unsigned alignment) {
+    return this->checkSectionAlignment(alignment, [&](const auto &msg) {
+      return sectionReader.emitError(msg);
+    });
+  };
+
   // Parse each of the dialects.
   for (uint64_t i = 0; i < numDialects; ++i) {
     dialects[i] = std::make_unique<BytecodeDialect>();
@@ -1800,7 +2333,7 @@ BytecodeReader::Impl::parseDialectSection(ArrayRef<uint8_t> sectionData) {
       return failure();
     if (versionAvailable) {
       bytecode::Section::ID sectionID;
-      if (failed(sectionReader.parseSection(sectionID,
+      if (failed(sectionReader.parseSection(sectionID, checkSectionAlignment,
                                             dialects[i]->versionBuffer)))
         return failure();
       if (sectionID != bytecode::Section::kDialectVersions) {
@@ -1998,6 +2531,7 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
   // If the encoding was a pair of indices `(src, dst)` for every permutation,
   // reconstruct the shuffle vector for every use. Initialize the shuffle vector
   // as identity, and then apply the mapping encoded in the indices.
+  // This produces shuffle[oldIdx] = newPos (i.e., old_index -> new_position).
   if (customOrder.isIndexPairEncoding) {
     // Return failure if the number of indices was not representing pairs.
     if (shuffle.size() & 1)
@@ -2026,10 +2560,32 @@ LogicalResult BytecodeReader::Impl::sortUseListOrder(Value value) {
       accumulator != (((numUses - 1) * numUses) >> 1))
     return failure();
 
-  // Apply the current ordering map onto the shuffle vector to get the final
-  // use-list sorting indices before shuffling.
-  shuffle = SmallVector<unsigned, 4>(llvm::map_range(
-      currentOrder, [&](auto item) { return shuffle[item.first]; }));
+  // Compose the shuffle with the current memory layout to produce the final
+  // indices for shuffleUseList. shuffleUseList(indices) places the use at
+  // current position i into position indices[i], so we need to compute
+  // finalShuffle[readerMemIdx] = writerMemIdx.
+  //
+  // The two encoding paths have different shuffle conventions:
+  //
+  // Index-pair encoding (already normalized above):
+  //   shuffle[writerMemIdx] = sortedPos  (old_index -> new_position)
+  //
+  // Full-shuffle encoding (writer's native format):
+  //   shuffle[sortedPos] = writerMemIdx  (new_position -> old_index)
+  //
+  // In both cases, currentOrder[sortedPos].first gives the readerMemIdx for
+  // a given sorted position. We fold the permutation inversion for the
+  // full-shuffle case directly into the composition to avoid an extra pass.
+  SmallVector<unsigned, 4> finalShuffle(numUses);
+  if (customOrder.isIndexPairEncoding) {
+    for (size_t writerMemIdx = 0; writerMemIdx < numUses; ++writerMemIdx)
+      finalShuffle[currentOrder[shuffle[writerMemIdx]].first] = writerMemIdx;
+  } else {
+    for (size_t sortedPos = 0; sortedPos < numUses; ++sortedPos)
+      finalShuffle[currentOrder[sortedPos].first] = shuffle[sortedPos];
+  }
+  shuffle = std::move(finalShuffle);
+
   value.shuffleUseList(shuffle);
   return success();
 }
@@ -2121,6 +2677,11 @@ BytecodeReader::Impl::parseIRSection(ArrayRef<uint8_t> sectionData,
 LogicalResult
 BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
                                    RegionReadState &readState) {
+  const auto checkSectionAlignment = [&](unsigned alignment) {
+    return this->checkSectionAlignment(
+        alignment, [&](const auto &msg) { return emitError(fileLoc, msg); });
+  };
+
   // Process regions, blocks, and operations until the end or if a nested
   // region is encountered. In this case we push a new state in regionStack and
   // return, the processing of the current region will resume afterward.
@@ -2161,7 +2722,8 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
           if (version >= bytecode::kLazyLoading && isIsolatedFromAbove) {
             bytecode::Section::ID sectionID;
             ArrayRef<uint8_t> sectionData;
-            if (failed(reader.parseSection(sectionID, sectionData)))
+            if (failed(reader.parseSection(sectionID, checkSectionAlignment,
+                                           sectionData)))
               return failure();
             if (sectionID != bytecode::Section::kIR)
               return emitError(fileLoc, "expected IR section for region");

@@ -190,9 +190,11 @@ bool AttrOrTypeDef::genVerifyDecl() const {
 }
 
 bool AttrOrTypeDef::genVerifyInvariantsImpl() const {
-  return any_of(parameters, [](const AttrOrTypeParameter &p) {
-    return p.getConstraint() != std::nullopt;
-  });
+  return any_of(parameters,
+                [](const AttrOrTypeParameter &p) {
+                  return p.getConstraint() != std::nullopt;
+                }) ||
+         any_of(traits, [](const Trait &t) { return isa<PredTrait>(&t); });
 }
 
 std::optional<StringRef> AttrOrTypeDef::getExtraDecls() const {
@@ -316,6 +318,13 @@ StringRef AttrOrTypeParameter::getCppStorageType() const {
 
 StringRef AttrOrTypeParameter::getConvertFromStorage() const {
   return getDefValue<StringInit>("convertFromStorage").value_or("$_self");
+}
+
+std::vector<StringRef> AttrOrTypeParameter::getCppIncludes() const {
+  if (const auto *param = dyn_cast<DefInit>(getDef()))
+    if (param->getDef()->getValue("cppIncludes"))
+      return param->getDef()->getValueAsListOfStrings("cppIncludes");
+  return {};
 }
 
 std::optional<StringRef> AttrOrTypeParameter::getParser() const {

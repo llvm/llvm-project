@@ -56,6 +56,7 @@ using Object = tomp::ObjectT<IdTy, ExprTy>;
 
 namespace clause {
 using DefinedOperator = tomp::type::DefinedOperatorT<IdTy, ExprTy>;
+using IntrinsicOperator = tomp::type::IntrinsicOperatorT<IdTy, ExprTy>;
 using ProcedureDesignator = tomp::type::ProcedureDesignatorT<IdTy, ExprTy>;
 using ReductionOperator = tomp::type::ReductionIdentifierT<IdTy, ExprTy>;
 
@@ -88,6 +89,7 @@ using DistSchedule = tomp::clause::DistScheduleT<TypeTy, IdTy, ExprTy>;
 using Doacross = tomp::clause::DoacrossT<TypeTy, IdTy, ExprTy>;
 using DynamicAllocators =
     tomp::clause::DynamicAllocatorsT<TypeTy, IdTy, ExprTy>;
+using DynGroupprivate = tomp::clause::DynGroupprivateT<TypeTy, IdTy, ExprTy>;
 using Enter = tomp::clause::EnterT<TypeTy, IdTy, ExprTy>;
 using Exclusive = tomp::clause::ExclusiveT<TypeTy, IdTy, ExprTy>;
 using Fail = tomp::clause::FailT<TypeTy, IdTy, ExprTy>;
@@ -169,6 +171,11 @@ struct Helper {
     return std::nullopt;
   }
   std::optional<Object> getLoopIterVar() { return std::nullopt; }
+  bool isClauseAllowedOnDirective(llvm::omp::Clause clauseId,
+                                  llvm::omp::Directive dirId,
+                                  llvm::omp::Version version) {
+    return llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version);
+  }
 };
 
 using Clause = tomp::ClauseT<TypeTy, IdTy, ExprTy>;
@@ -276,13 +283,39 @@ struct StringifyClause {
   std::string Str;
 };
 
+std::string stringify(const omp::Clause &C) { //
+  return StringifyClause(C).Str;
+}
+
 std::string stringify(const omp::DirectiveWithClauses &DWC) {
   std::stringstream Stream;
 
   Stream << getOpenMPDirectiveName(DWC.id, llvm::omp::FallbackVersion).str();
   for (const omp::Clause &C : DWC.clauses)
-    Stream << ' ' << StringifyClause(C).Str;
+    Stream << ' ' << stringify(C);
 
+  return Stream.str();
+}
+
+std::string stringify(tomp::ErrorCode E) {
+  switch (E) {
+  case tomp::ErrorCode::NoLeafAllowing:
+    return "no leaf that allows this clause";
+  case tomp::ErrorCode::NoLeafPrivatizing:
+    return "no leaf with a privatizing clause";
+  case tomp::ErrorCode::InvalidDirNameMod:
+    return "invalid directive name modifier";
+  case tomp::ErrorCode::RedModNotApplied:
+    return "the reduction modifier cannot be applied";
+  }
+  return "unrecognized error code " + std::to_string(llvm::to_underlying(E));
+}
+
+std::string stringify(std::pair<const omp::Clause *, tomp::ErrorCode> &ER) {
+  std::stringstream Stream;
+
+  Stream << "error while applying '" << stringify(*ER.first)
+         << "': " << stringify(ER.second);
   return Stream.str();
 }
 
@@ -291,8 +324,9 @@ std::string stringify(const omp::DirectiveWithClauses &DWC) {
 namespace red {
 // Make it easier to construct reduction operators from built-in intrinsics.
 omp::clause::ReductionOperator
-makeOp(omp::clause::DefinedOperator::IntrinsicOperator Op) {
-  return omp::clause::ReductionOperator{omp::clause::DefinedOperator{Op}};
+makeOp(omp::clause::IntrinsicOperator::Operator Op) {
+  return omp::clause::ReductionOperator{
+      omp::clause::DefinedOperator{omp::clause::IntrinsicOperator{Op}}};
 }
 } // namespace red
 
@@ -305,7 +339,7 @@ protected:
   void TearDown() override {}
 
   omp::Helper Helper;
-  uint32_t AnyVersion = 999;
+  llvm::omp::Version AnyVersion = llvm::omp::Version(999);
 };
 
 // PRIVATE
@@ -431,8 +465,8 @@ TEST_F(OpenMPDecompositionTest, Firstprivate3) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  ASSERT_EQ(Dir0, "target map(2, , , , (x))"); // (12), (27)
-  ASSERT_EQ(Dir1, "teams shared(x)");          // (6), (17)
+  ASSERT_EQ(Dir0, "target map(2, , , , , , (x))"); // (12), (27)
+  ASSERT_EQ(Dir1, "teams shared(x)");              // (6), (17)
   ASSERT_EQ(Dir2, "distribute firstprivate(x) lastprivate(, (x))"); // (5), (21)
 }
 
@@ -574,9 +608,9 @@ TEST_F(OpenMPDecompositionTest, Lastprivate3) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  ASSERT_EQ(Dir0, "target map(2, , , , (x))"); // (21), (27)
-  ASSERT_EQ(Dir1, "parallel shared(x)");       // (22)
-  ASSERT_EQ(Dir2, "do lastprivate(, (x))");    // (21)
+  ASSERT_EQ(Dir0, "target map(2, , , , , , (x))"); // (21), (27)
+  ASSERT_EQ(Dir1, "parallel shared(x)");           // (22)
+  ASSERT_EQ(Dir2, "do lastprivate(, (x))");        // (21)
 }
 
 // SHARED
@@ -644,7 +678,7 @@ TEST_F(OpenMPDecompositionTest, ThreadLimit1) {
   omp::Object x{"x"};
 
   omp::List<omp::Clause> Clauses{
-      {OMPC_thread_limit, omp::clause::ThreadLimit{omp::ExprTy{}}},
+      {OMPC_thread_limit, omp::clause::ThreadLimit{{omp::ExprTy{}}}},
   };
 
   omp::ConstructDecomposition Dec(AnyVersion, Helper,
@@ -724,7 +758,7 @@ TEST_F(OpenMPDecompositionTest, Allocate1) {
 
 TEST_F(OpenMPDecompositionTest, Allocate2) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   // Allocate + in_reduction
   omp::List<omp::Clause> Clauses{
@@ -738,8 +772,8 @@ TEST_F(OpenMPDecompositionTest, Allocate2) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "target in_reduction((3), (x)) allocate(, , (x))"); // (33)
-  ASSERT_EQ(Dir1, "parallel");                                        // (33)
+  ASSERT_EQ(Dir0, "target in_reduction(((3)), (x)) allocate(, , (x))"); // (33)
+  ASSERT_EQ(Dir1, "parallel");                                          // (33)
 }
 
 TEST_F(OpenMPDecompositionTest, Allocate3) {
@@ -804,7 +838,7 @@ TEST_F(OpenMPDecompositionTest, Allocate5) {
 
 TEST_F(OpenMPDecompositionTest, Allocate6) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   // Allocate + reduction
   omp::List<omp::Clause> Clauses{
@@ -818,8 +852,8 @@ TEST_F(OpenMPDecompositionTest, Allocate6) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel shared(x)");                               // (33)
-  ASSERT_EQ(Dir1, "sections reduction(, (3), (x)) allocate(, , (x))"); // (33)
+  ASSERT_EQ(Dir0, "parallel shared(x)");                                 // (33)
+  ASSERT_EQ(Dir1, "sections reduction(, ((3)), (x)) allocate(, , (x))"); // (33)
 }
 
 // REDUCTION
@@ -850,7 +884,7 @@ TEST_F(OpenMPDecompositionTest, Allocate6) {
 // tofrom.
 TEST_F(OpenMPDecompositionTest, Reduction1) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -862,13 +896,13 @@ TEST_F(OpenMPDecompositionTest, Reduction1) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel shared(x)");             // (36), (1), (4)
-  ASSERT_EQ(Dir1, "sections reduction(, (3), (x))"); // (36)
+  ASSERT_EQ(Dir0, "parallel shared(x)");               // (36), (1), (4)
+  ASSERT_EQ(Dir1, "sections reduction(, ((3)), (x))"); // (36)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction2) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -880,13 +914,13 @@ TEST_F(OpenMPDecompositionTest, Reduction2) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "parallel reduction(, (3), (x))"); // (36), (1), (4)
-  ASSERT_EQ(Dir1, "masked");                         // (36)
+  ASSERT_EQ(Dir0, "parallel reduction(, ((3)), (x))"); // (36), (1), (4)
+  ASSERT_EQ(Dir1, "masked");                           // (36)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction3) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -897,13 +931,13 @@ TEST_F(OpenMPDecompositionTest, Reduction3) {
 
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
-  ASSERT_EQ(Dir0, "teams shared(x)");            // (36), (3), (4)
-  ASSERT_EQ(Dir1, "loop reduction(, (3), (x))"); // (36)
+  ASSERT_EQ(Dir0, "teams shared(x)");              // (36), (3), (4)
+  ASSERT_EQ(Dir1, "loop reduction(, ((3)), (x))"); // (36)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction4) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -917,15 +951,15 @@ TEST_F(OpenMPDecompositionTest, Reduction4) {
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
   std::string Dir3 = stringify(Dec.output[3]);
-  ASSERT_EQ(Dir0, "teams reduction(, (3), (x))"); // (36), (3)
-  ASSERT_EQ(Dir1, "distribute");                  // (36)
-  ASSERT_EQ(Dir2, "parallel shared(x)");          // (36), (1), (4)
-  ASSERT_EQ(Dir3, "for reduction(, (3), (x))");   // (36)
+  ASSERT_EQ(Dir0, "teams reduction(, ((3)), (x))"); // (36), (3)
+  ASSERT_EQ(Dir1, "distribute");                    // (36)
+  ASSERT_EQ(Dir2, "parallel shared(x)");            // (36), (1), (4)
+  ASSERT_EQ(Dir3, "for reduction(, ((3)), (x))");   // (36)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction5) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
   auto TaskMod = omp::clause::Reduction::ReductionModifier::Task;
 
   omp::List<omp::Clause> Clauses{
@@ -940,15 +974,15 @@ TEST_F(OpenMPDecompositionTest, Reduction5) {
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
   std::string Dir3 = stringify(Dec.output[3]);
-  ASSERT_EQ(Dir0, "teams reduction(, (3), (x))"); // (36), (3), (6)
-  ASSERT_EQ(Dir1, "distribute");                  // (36)
-  ASSERT_EQ(Dir2, "parallel shared(x)");          // (36), (1), (4)
-  ASSERT_EQ(Dir3, "for reduction(2, (3), (x))");  // (36), (6)
+  ASSERT_EQ(Dir0, "teams reduction(, ((3)), (x))"); // (36), (3), (6)
+  ASSERT_EQ(Dir1, "distribute");                    // (36)
+  ASSERT_EQ(Dir2, "parallel shared(x)");            // (36), (1), (4)
+  ASSERT_EQ(Dir3, "for reduction(2, ((3)), (x))");  // (36), (6)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction6) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
   auto InscanMod = omp::clause::Reduction::ReductionModifier::Inscan;
 
   omp::List<omp::Clause> Clauses{
@@ -963,15 +997,15 @@ TEST_F(OpenMPDecompositionTest, Reduction6) {
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
   std::string Dir3 = stringify(Dec.output[3]);
-  ASSERT_EQ(Dir0, "teams reduction(, (3), (x))"); // (36), (3), (8)
-  ASSERT_EQ(Dir1, "distribute");                  // (36)
-  ASSERT_EQ(Dir2, "parallel shared(x)");          // (36), (1), (4)
-  ASSERT_EQ(Dir3, "for reduction(1, (3), (x))");  // (36), (8)
+  ASSERT_EQ(Dir0, "teams reduction(, ((3)), (x))"); // (36), (3), (8)
+  ASSERT_EQ(Dir1, "distribute");                    // (36)
+  ASSERT_EQ(Dir2, "parallel shared(x)");            // (36), (1), (4)
+  ASSERT_EQ(Dir3, "for reduction(1, ((3)), (x))");  // (36), (8)
 }
 
 TEST_F(OpenMPDecompositionTest, Reduction7) {
   omp::Object x{"x"};
-  auto Add = red::makeOp(omp::clause::DefinedOperator::IntrinsicOperator::Add);
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
 
   omp::List<omp::Clause> Clauses{
       {OMPC_reduction, omp::clause::Reduction{{std::nullopt, {Add}, {x}}}},
@@ -984,9 +1018,9 @@ TEST_F(OpenMPDecompositionTest, Reduction7) {
   std::string Dir0 = stringify(Dec.output[0]);
   std::string Dir1 = stringify(Dec.output[1]);
   std::string Dir2 = stringify(Dec.output[2]);
-  ASSERT_EQ(Dir0, "target map(2, , , , (x))"); // (36), (10)
-  ASSERT_EQ(Dir1, "parallel shared(x)");       // (36), (1), (4)
-  ASSERT_EQ(Dir2, "do reduction(, (3), (x))"); // (36)
+  ASSERT_EQ(Dir0, "target map(2, , , , , , (x))"); // (36), (10)
+  ASSERT_EQ(Dir1, "parallel shared(x)");           // (36), (1), (4)
+  ASSERT_EQ(Dir2, "do reduction(, ((3)), (x))");   // (36)
 }
 
 // IF
@@ -1107,5 +1141,82 @@ TEST_F(OpenMPDecompositionTest, Misc1) {
   ASSERT_EQ(Dec.output.size(), 1u);
   std::string Dir0 = stringify(Dec.output[0]);
   ASSERT_EQ(Dir0, "simd linear(, , (x)) lastprivate(, (x))");
+}
+
+// --- Failure/error reporting tests
+
+TEST_F(OpenMPDecompositionTest, Error1) {
+  // "parallel for at(compilation)" is invalid because the "at" clause
+  // does not apply to either "parallel" or "for".
+
+  omp::List<omp::Clause> Clauses{
+      {OMPC_at, omp::clause::At{omp::clause::At::ActionTime::Compilation}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_parallel_for,
+                                  Clauses);
+  ASSERT_EQ(Dec.errors.size(), 1u);
+  std::string Err0 = stringify(Dec.errors[0]);
+  ASSERT_EQ(Err0,
+            "error while applying 'at(0)': no leaf that allows this clause");
+}
+
+TEST_F(OpenMPDecompositionTest, Error2) {
+  // "parallel loop allocate(x) private(x)" is invalid because "allocate"
+  // can only be applied to "parallel", while "private" is applied to "loop".
+  // This violates the requirement that the leaf with an "allocate" also has
+  // a privatizing clause.
+
+  omp::Object x{"x"};
+
+  omp::List<omp::Clause> Clauses{
+      {OMPC_allocate, omp::clause::Allocate{{std::nullopt, std::nullopt, {x}}}},
+      {OMPC_private, omp::clause::Private{{x}}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_parallel_loop,
+                                  Clauses);
+  ASSERT_EQ(Dec.errors.size(), 1u);
+  std::string Err0 = stringify(Dec.errors[0]);
+  ASSERT_EQ(Err0, "error while applying 'allocate(, , (x))': no leaf with a "
+                  "privatizing clause");
+}
+
+TEST_F(OpenMPDecompositionTest, Error3) {
+  // "parallel for if(target: e)" is invalid because the "target" directive-
+  // name-modifier does not refer to a constituent directive.
+
+  omp::ExprTy e;
+
+  omp::List<omp::Clause> Clauses{
+      {OMPC_if, omp::clause::If{{llvm::omp::Directive::OMPD_target, e}}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_parallel_for,
+                                  Clauses);
+  ASSERT_EQ(Dec.errors.size(), 1u);
+  std::string Err0 = stringify(Dec.errors[0]);
+  ASSERT_EQ(Err0, "error while applying 'if(target, expr)': invalid directive "
+                  "name modifier");
+}
+
+TEST_F(OpenMPDecompositionTest, Error4) {
+  // "masked taskloop reduction(+, task: x)" is invalid because the "task"
+  // modifier can only be applied to "parallel" or a worksharing directive.
+
+  omp::Object x{"x"};
+  auto Add = red::makeOp(omp::clause::IntrinsicOperator::Operator::Add);
+  auto TaskMod = omp::clause::Reduction::ReductionModifier::Task;
+
+  omp::List<omp::Clause> Clauses{
+      {OMPC_reduction, omp::clause::Reduction{{TaskMod, {Add}, {x}}}},
+  };
+
+  omp::ConstructDecomposition Dec(AnyVersion, Helper, OMPD_masked_taskloop,
+                                  Clauses);
+  ASSERT_EQ(Dec.errors.size(), 1u);
+  std::string Err0 = stringify(Dec.errors[0]);
+  ASSERT_EQ(Err0, "error while applying 'reduction(2, ((3)), (x))': the "
+                  "reduction modifier cannot be applied");
 }
 } // namespace

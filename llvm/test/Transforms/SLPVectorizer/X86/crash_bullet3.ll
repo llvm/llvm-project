@@ -7,7 +7,7 @@ target triple = "x86_64-apple-macosx10.8.0"
 %class.btVector3.23.221.463.485.507.573.595.683.727.749.815.837.991.1585.1607.1629.1651.1849.2047.2069.2091.2113 = type { [4 x float] }
 
 ; Function Attrs: ssp uwtable
-define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %vertices, i1 %arg) #0 align 2 {
+define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %vertices, i1 %arg) align 2 {
 ; CHECK-LABEL: @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[RETURN:%.*]], label [[IF_END:%.*]]
@@ -24,7 +24,7 @@ define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %ve
 ; CHECK:       for.body233:
 ; CHECK-NEXT:    br i1 [[ARG]], label [[FOR_BODY233]], label [[FOR_END271]]
 ; CHECK:       for.end271:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ splat (float 0x47EFFFFFE0000000), [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x float> [ splat (float f0x7F7FFFFF), [[FOR_END227]] ], [ undef, [[FOR_BODY233]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x float> undef, [[TMP0]]
 ; CHECK-NEXT:    br i1 [[ARG]], label [[IF_THEN291:%.*]], label [[RETURN]]
 ; CHECK:       if.then291:
@@ -41,7 +41,7 @@ define void @_ZN11HullLibrary15CleanupVerticesEjPK9btVector3jRjPS0_fRS0_(ptr %ve
 ; CHECK:       if.then329:
 ; CHECK-NEXT:    br label [[IF_END332]]
 ; CHECK:       if.end332:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP6]], [[IF_THEN329]] ], [ [[TMP6]], [[IF_END327]] ], [ splat (float 0x3F847AE140000000), [[IF_THEN291]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x float> [ [[TMP6]], [[IF_THEN329]] ], [ [[TMP6]], [[IF_END327]] ], [ splat (float f0x3C23D70A), [[IF_THEN291]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x float> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[VERTICES:%.*]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
@@ -128,5 +128,3 @@ if.then17.2:                                      ; preds = %if.end22.1
 if.end22.2:                                       ; preds = %if.then17.2, %if.end22.1
   br i1 %arg, label %for.end36, label %for.body
 }
-
-attributes #0 = { ssp uwtable "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "unsafe-fp-math"="false" "use-soft-float"="false" }

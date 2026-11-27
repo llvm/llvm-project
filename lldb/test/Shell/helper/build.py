@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import os
@@ -9,12 +9,8 @@ import subprocess
 import sys
 
 if sys.platform == "win32":
-    # This module was renamed in Python 3.  Make sure to import it using a
-    # consistent name regardless of python version.
-    try:
-        import winreg
-    except:
-        import _winreg as winreg
+    import winreg
+
 
 if __name__ != "__main__":
     raise RuntimeError("Do not import this script, run it instead")
@@ -247,14 +243,6 @@ def find_executable(binary_name, search_paths):
 
 
 def find_toolchain(compiler, tools_dir):
-    if compiler == "msvc":
-        return ("msvc", find_executable("cl", tools_dir))
-    if compiler == "clang-cl":
-        return ("clang-cl", find_executable("clang-cl", tools_dir))
-    if compiler == "gcc":
-        return ("gcc", find_executable("g++", tools_dir))
-    if compiler == "clang":
-        return ("clang", find_executable("clang++", tools_dir))
     if compiler == "any":
         priorities = []
         if sys.platform == "win32":
@@ -262,26 +250,48 @@ def find_toolchain(compiler, tools_dir):
         else:
             priorities = ["clang", "gcc", "clang-cl"]
         for toolchain in priorities:
-            (type, dir) = find_toolchain(toolchain, tools_dir)
-            if type and dir:
-                return (type, dir)
-        # Could not find any toolchain.
-        return (None, None)
+            (type, c_compiler, cxx_compiler) = find_toolchain(toolchain, tools_dir)
+            if type and c_compiler and cxx_compiler:
+                return (type, c_compiler, cxx_compiler)
+        # Could not find a toolchain.
+        return (None, None, None)
+
+    c_compiler = cxx_compiler = None
+    if compiler == "msvc":
+        c_compiler = "cl"
+    if compiler == "clang-cl":
+        c_compiler = "clang-cl"
+    if compiler == "gcc":
+        c_compiler = "gcc"
+        cxx_compiler = "g++"
+    if compiler == "clang":
+        c_compiler = "clang"
+        cxx_compiler = "clang++"
+
+    if not cxx_compiler:
+        cxx_compiler = c_compiler
+
+    if c_compiler:
+        return (
+            compiler,
+            find_executable(c_compiler, tools_dir),
+            find_executable(cxx_compiler, tools_dir),
+        )
 
     # From here on, assume that |compiler| is a path to a file.
     file = os.path.basename(compiler)
     name, ext = os.path.splitext(file)
     if file.lower() == "cl.exe":
-        return ("msvc", compiler)
+        return ("msvc", compiler, compiler)
     if name == "clang-cl":
-        return ("clang-cl", compiler)
+        return ("clang-cl", compiler, compiler)
     if name.startswith("clang"):
-        return ("clang", compiler)
+        return ("clang", compiler, compiler)
     if name.startswith("gcc") or name.startswith("g++"):
-        return ("gcc", compiler)
+        return ("gcc", compiler, compiler)
     if name == "cc" or name == "c++":
-        return ("generic", compiler)
-    return ("unknown", compiler)
+        return ("generic", compiler, compiler)
+    return ("unknown", compiler, compiler)
 
 
 class Builder(object):
@@ -291,7 +301,8 @@ class Builder(object):
         self.arch = args.arch
         self.opt = args.opt
         self.outdir = args.outdir
-        self.compiler = args.compiler
+        self.c_compiler = args.c_compiler
+        self.cxx_compiler = self.linker = args.cxx_compiler
         self.clean = args.clean
         self.output = args.output
         self.mode = args.mode
@@ -353,6 +364,12 @@ class Builder(object):
             commands.append(self._get_link_command())
         return commands
 
+    def is_c_file(self, filename):
+        return filename.endswith((".c", ".m"))
+
+    def compiler_for_file(self, filename):
+        return self.c_compiler if self.is_c_file(filename) else self.cxx_compiler
+
 
 class MsvcBuilder(Builder):
     def __init__(self, toolchain_type, args):
@@ -366,15 +383,17 @@ class MsvcBuilder(Builder):
         if toolchain_type == "msvc":
             # Make sure we're using the appropriate toolchain for the desired
             # target type.
-            compiler_parent_dir = os.path.dirname(self.compiler)
+            compiler_parent_dir = os.path.dirname(self.cxx_compiler)
             selected_target_version = os.path.basename(compiler_parent_dir)
             if selected_target_version != self.msvc_arch_str:
                 host_dir = os.path.dirname(compiler_parent_dir)
-                self.compiler = os.path.join(host_dir, self.msvc_arch_str, "cl.exe")
+                self.c_compiler = self.cxx_compiler = os.path.join(
+                    host_dir, self.msvc_arch_str, "cl.exe"
+                )
                 if self.verbose:
                     print(
                         'Using alternate compiler "{0}" to match selected target.'.format(
-                            self.compiler
+                            self.cxx_compiler
                         )
                     )
 
@@ -390,7 +409,7 @@ class MsvcBuilder(Builder):
         self.compile_env, self.link_env = self._get_visual_studio_environment()
 
     def _find_linker(self, name, search_paths=[]):
-        compiler_dir = os.path.dirname(self.compiler)
+        compiler_dir = os.path.dirname(self.cxx_compiler)
         linker_path = find_executable(name, [compiler_dir] + search_paths)
         if linker_path is None:
             raise ValueError("Could not find '{}'".format(name))
@@ -581,7 +600,7 @@ class MsvcBuilder(Builder):
 
     def _get_msvc_native_toolchain_dir(self):
         assert self.toolchain_type == "msvc"
-        compiler_dir = os.path.dirname(self.compiler)
+        compiler_dir = os.path.dirname(self.cxx_compiler)
         target_dir = os.path.dirname(compiler_dir)
         host_name = os.path.basename(target_dir)
         host_name = host_name[4:].lower()
@@ -657,9 +676,8 @@ class MsvcBuilder(Builder):
         return os.path.splitext(self.output)[0] + ".pdb"
 
     def _get_compilation_command(self, source, obj):
-        args = []
+        args = [self.compiler_for_file(source)]
 
-        args.append(self.compiler)
         if self.toolchain_type == "clang-cl":
             args.append("-m" + self.arch)
 
@@ -713,15 +731,6 @@ class MsvcBuilder(Builder):
             args,
         )
 
-    def build_commands(self):
-        commands = []
-        if self.mode == "compile" or self.mode == "compile-and-link":
-            for input, output in zip(self.inputs, self._obj_file_names()):
-                commands.append(self._get_compilation_command(input, output))
-        if self.mode == "link" or self.mode == "compile-and-link":
-            commands.append(self._get_link_command())
-        return commands
-
     def output_files(self):
         outputs = []
         if self.mode == "compile" or self.mode == "compile-and-link":
@@ -752,9 +761,7 @@ class GccBuilder(Builder):
         return args
 
     def _get_compilation_command(self, source, obj):
-        args = []
-
-        args.append(self.compiler)
+        args = [self.compiler_for_file(source)]
         args = self._add_m_option_if_needed(args)
 
         args.append("-g")
@@ -790,8 +797,7 @@ class GccBuilder(Builder):
         return ("compiling", [source], obj, None, args)
 
     def _get_link_command(self):
-        args = []
-        args.append(self.compiler)
+        args = [self.linker]
         args = self._add_m_option_if_needed(args)
 
         if self.nodefaultlib:
@@ -808,7 +814,19 @@ class GccBuilder(Builder):
         args.extend(self._obj_file_names())
 
         if sys.platform == "darwin":
+            # By default, macOS doesn't allow injecting the ASAN
+            # runtime into system processes.
+            system_clang = (
+                subprocess.check_output(["xcrun", "-find", "clang"])
+                .strip()
+                .decode("utf-8")
+            )
+            system_liblto = os.path.join(
+                os.path.dirname(os.path.dirname(system_clang)), "lib", "libLTO.dylib"
+            )
             args.extend(["-isysroot", self.apple_sdk])
+            args.extend(["-Wl,-lto_library", "-Wl," + system_liblto])
+
         elif self.objc_gnustep_lib:
             args.extend(["-L", self.objc_gnustep_lib, "-lobjc"])
             if sys.platform == "linux":
@@ -926,9 +944,11 @@ def fix_arguments(args):
 
 fix_arguments(args)
 
-(toolchain_type, toolchain_path) = find_toolchain(args.compiler, args.tools_dir)
-if not toolchain_path or not toolchain_type:
-    print("Unable to find toolchain {0}".format(args.compiler))
+(toolchain_type, c_compiler, cxx_compiler) = find_toolchain(
+    args.compiler, args.tools_dir
+)
+if not toolchain_type:
+    print(f"Unable to find toolchain {args.compiler}")
     sys.exit(1)
 
 if args.verbose:
@@ -948,9 +968,12 @@ if args.verbose:
     print("Script Environment:")
     print_environment(os.environ)
 
-args.compiler = toolchain_path
-if not os.path.exists(args.compiler) and not args.dry:
-    raise ValueError("The toolchain {} does not exist.".format(args.compiler))
+args.c_compiler = c_compiler
+args.cxx_compiler = cxx_compiler
+if not args.dry and not (os.path.exists(c_compiler) and os.path.exists(cxx_compiler)):
+    raise ValueError(
+        f"The toolchain {toolchain_type} compilers {c_compiler} and/or {cxx_compiler} do not exist"
+    )
 
 if toolchain_type == "msvc" or toolchain_type == "clang-cl":
     builder = MsvcBuilder(toolchain_type, args)

@@ -46,12 +46,14 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/ValueTypes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -64,28 +66,12 @@
 using namespace llvm;
 using namespace PatternMatch;
 
-#define DEBUG_TYPE "lower-amx-type"
+#define DEBUG_TYPE "x86-lower-amx-type"
 
 static bool isAMXCast(Instruction *II) {
   return match(II,
                m_Intrinsic<Intrinsic::x86_cast_vector_to_tile>(m_Value())) ||
          match(II, m_Intrinsic<Intrinsic::x86_cast_tile_to_vector>(m_Value()));
-}
-
-// Some instructions may return more than one tiles.
-// e.g: call { x86_amx, x86_amx } @llvm.x86.t2rpntlvwz0.internal
-static unsigned getNumDefTiles(IntrinsicInst *II) {
-  Type *Ty = II->getType();
-  if (Ty->isX86_AMXTy())
-    return 1;
-
-  unsigned Num = 0;
-  for (unsigned i = 0; i < Ty->getNumContainedTypes(); i++) {
-    Type *STy = Ty->getContainedType(i);
-    if (STy->isX86_AMXTy())
-      Num++;
-  }
-  return Num;
 }
 
 static bool isAMXIntrinsic(Value *I) {
@@ -96,7 +82,7 @@ static bool isAMXIntrinsic(Value *I) {
     return false;
   // Check if return type or parameter is x86_amx. If it is x86_amx
   // the intrinsic must be x86 amx intrinsics.
-  if (getNumDefTiles(II) > 0)
+  if (II->getType()->isX86_AMXTy())
     return true;
   for (Value *V : II->args()) {
     if (V->getType()->isX86_AMXTy())
@@ -111,6 +97,55 @@ static bool containsAMXCode(Function &F) {
     for (Instruction &I : BB)
       if (I.getType()->isX86_AMXTy())
         return true;
+  return false;
+}
+
+// Check if the instruction is an ACE-only intrinsic.
+// ACE (Palette 2) doesn't have TILELOADD/TILESTORED instructions,
+// so volatile tile data transformation should skip ACE intrinsics.
+static bool isACEOnlyIntrinsic(Instruction *I) {
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  // ACE outer product intrinsics
+  case Intrinsic::x86_acev1_top2bf16ps_internal:
+  case Intrinsic::x86_acev1_top4buud_internal:
+  case Intrinsic::x86_acev1_top4busd_internal:
+  case Intrinsic::x86_acev1_top4bssd_internal:
+  case Intrinsic::x86_acev1_top4bsud_internal:
+  // ACE mixed precision intrinsics
+  case Intrinsic::x86_acev1_top4mxhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxhbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbssps_internal:
+  // ACE tile movement intrinsics
+  case Intrinsic::x86_acev1_tilemovcolinsert_internal:
+  case Intrinsic::x86_acev1_tilemovrowinsert_internal:
+  // ACE spellings of the AMX-shared intrinsics
+  case Intrinsic::x86_acev1_tilezero_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16h_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16l_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2phh_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2phl_internal:
+  case Intrinsic::x86_acev1_tcvtrowd2ps_internal:
+  case Intrinsic::x86_acev1_tilemovrowextract_internal:
+    return true;
+  default:
+    return false;
+  }
+}
+
+// Check if PHI node has any ACE-only intrinsic as incoming value.
+static bool hasACEIncomingValue(PHINode *PHI) {
+  for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
+    Value *Op = PHI->getIncomingValue(I);
+    if (auto *Inst = dyn_cast<Instruction>(Op)) {
+      if (isACEOnlyIntrinsic(Inst))
+        return true;
+    }
+  }
   return false;
 }
 
@@ -135,27 +170,7 @@ static Instruction *getFirstNonAllocaInTheEntryBlock(Function &F) {
   llvm_unreachable("No terminator in the entry block!");
 }
 
-class ShapeCalculator {
-private:
-  TargetMachine *TM = nullptr;
-
-  // In AMX intrinsics we let Shape = {Row, Col}, but the
-  // RealCol = Col / ElementSize. We may use the RealCol
-  // as a new Row for other new created AMX intrinsics.
-  std::map<Value *, Value *> Col2Row, Row2Col;
-
-public:
-  ShapeCalculator(TargetMachine *TargetM) : TM(TargetM) {}
-  std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo);
-  std::pair<Value *, Value *> getShape(PHINode *Phi);
-  Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity);
-  Value *getColFromRow(Instruction *II, Value *V, unsigned Granularity);
-};
-
-Value *ShapeCalculator::getRowFromCol(Instruction *II, Value *V,
-                                      unsigned Granularity) {
-  if (auto It = Col2Row.find(V); It != Col2Row.end())
-    return It->second;
+static Value *getRowFromCol(Instruction *II, Value *V, unsigned Granularity) {
   IRBuilder<> Builder(II);
   Value *RealRow = nullptr;
   if (isa<ConstantInt>(V))
@@ -184,54 +199,18 @@ Value *ShapeCalculator::getRowFromCol(Instruction *II, Value *V,
         getFirstNonAllocaInTheEntryBlock(*II->getFunction()));
     RealRow = NewBuilder.CreateUDiv(V, NewBuilder.getInt16(Granularity));
   }
-  Col2Row[V] = RealRow;
   return RealRow;
 }
 
-Value *ShapeCalculator::getColFromRow(Instruction *II, Value *V,
-                                      unsigned Granularity) {
-  if (auto It = Row2Col.find(V); It != Row2Col.end())
-    return It->second;
-  IRBuilder<> Builder(II);
-  Value *RealCol = nullptr;
-  if (isa<ConstantInt>(V))
-    RealCol =
-        Builder.getInt16((cast<ConstantInt>(V)->getSExtValue()) * Granularity);
-  else if (isa<Instruction>(V)) {
-    Builder.SetInsertPoint(cast<Instruction>(V));
-    RealCol = Builder.CreateNUWMul(V, Builder.getInt16(Granularity));
-    cast<Instruction>(RealCol)->moveAfter(cast<Instruction>(V));
-  } else {
-    // When it is not a const value and it is a function argument, we create
-    // Row at the entry bb.
-    IRBuilder<> NewBuilder(
-        getFirstNonAllocaInTheEntryBlock(*II->getFunction()));
-    RealCol = NewBuilder.CreateNUWMul(V, NewBuilder.getInt16(Granularity));
-  }
-  Row2Col[V] = RealCol;
-  return RealCol;
-}
-
 // TODO: Refine the row and col-in-bytes of tile to row and col of matrix.
-std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
-                                                      unsigned OpNo) {
-  (void)TM;
-  IRBuilder<> Builder(II);
+std::pair<Value *, Value *> getShape(IntrinsicInst *II, unsigned OpNo) {
   Value *Row = nullptr, *Col = nullptr;
   switch (II->getIntrinsicID()) {
   default:
     llvm_unreachable("Expect amx intrinsics");
-  case Intrinsic::x86_t2rpntlvwz0_internal:
-  case Intrinsic::x86_t2rpntlvwz0t1_internal:
-  case Intrinsic::x86_t2rpntlvwz1_internal:
-  case Intrinsic::x86_t2rpntlvwz1t1_internal:
   case Intrinsic::x86_tileloadd64_internal:
   case Intrinsic::x86_tileloaddt164_internal:
   case Intrinsic::x86_tilestored64_internal:
-  case Intrinsic::x86_t2rpntlvwz0rs_internal:
-  case Intrinsic::x86_t2rpntlvwz0rst1_internal:
-  case Intrinsic::x86_t2rpntlvwz1rs_internal:
-  case Intrinsic::x86_t2rpntlvwz1rst1_internal:
   case Intrinsic::x86_tileloaddrs64_internal:
   case Intrinsic::x86_tileloaddrst164_internal: {
     Row = II->getArgOperand(0);
@@ -248,7 +227,6 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
   case Intrinsic::x86_tdpbuud_internal:
   case Intrinsic::x86_tdpbf16ps_internal:
   case Intrinsic::x86_tdpfp16ps_internal:
-  case Intrinsic::x86_tmmultf32ps_internal:
   case Intrinsic::x86_tdpbf8ps_internal:
   case Intrinsic::x86_tdpbhf8ps_internal:
   case Intrinsic::x86_tdphbf8ps_internal:
@@ -269,44 +247,55 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
     }
     break;
   }
-  case Intrinsic::x86_ttransposed_internal:
-  case Intrinsic::x86_tconjtfp16_internal: {
-    assert((OpNo == 2) && "Illegal Operand Number.");
-    Row = getRowFromCol(II, II->getArgOperand(1), 4);
-    Col = getColFromRow(II, II->getArgOperand(0), 4);
-    break;
-  }
   case Intrinsic::x86_tcvtrowd2ps_internal:
   case Intrinsic::x86_tcvtrowps2bf16h_internal:
   case Intrinsic::x86_tcvtrowps2bf16l_internal:
   case Intrinsic::x86_tcvtrowps2phh_internal:
   case Intrinsic::x86_tcvtrowps2phl_internal:
-  case Intrinsic::x86_tilemovrow_internal: {
+  case Intrinsic::x86_tilemovrow_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16h_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2bf16l_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2phh_internal:
+  case Intrinsic::x86_acev1_tcvtrowps2phl_internal:
+  case Intrinsic::x86_acev1_tcvtrowd2ps_internal:
+  case Intrinsic::x86_acev1_tilemovrowextract_internal: {
     assert(OpNo == 2 && "Illegal Operand Number.");
     Row = II->getArgOperand(0);
     Col = II->getArgOperand(1);
     break;
   }
-  case Intrinsic::x86_ttdpbf16ps_internal:
-  case Intrinsic::x86_ttdpfp16ps_internal:
-  case Intrinsic::x86_ttcmmimfp16ps_internal:
-  case Intrinsic::x86_ttcmmrlfp16ps_internal:
-  case Intrinsic::x86_tconjtcmmimfp16ps_internal:
-  case Intrinsic::x86_ttmmultf32ps_internal: {
-    switch (OpNo) {
-    case 3:
-      Row = II->getArgOperand(0);
-      Col = II->getArgOperand(1);
-      break;
-    case 4:
-      Row = getRowFromCol(II, II->getArgOperand(2), 4);
-      Col = getColFromRow(II, II->getArgOperand(0), 4);
-      break;
-    case 5:
-      Row = getRowFromCol(II, II->getArgOperand(2), 4);
-      Col = II->getArgOperand(1);
-      break;
-    }
+  // ACE internal intrinsics - outer products with ZMM sources
+  // Pattern: (m, n, acc_tile, zmm1, zmm2) -> acc_tile += zmm1 * zmm2
+  // The accumulator is the only tile, so it is the only operand a shape can be
+  // asked for; the sources are ZMMs of a fixed size.
+  case Intrinsic::x86_acev1_top2bf16ps_internal:
+  case Intrinsic::x86_acev1_top4buud_internal:
+  case Intrinsic::x86_acev1_top4busd_internal:
+  case Intrinsic::x86_acev1_top4bssd_internal:
+  case Intrinsic::x86_acev1_top4bsud_internal: {
+    assert(OpNo == 2 && "Illegal Operand Number.");
+    Row = II->getArgOperand(0);
+    Col = II->getArgOperand(1);
+    break;
+  }
+  // ACE TOP4MX intrinsics - mixed precision with BSR index
+  case Intrinsic::x86_acev1_top4mxhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbhf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxhbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbf8ps_internal:
+  case Intrinsic::x86_acev1_top4mxbssps_internal: {
+    assert(OpNo == 3 && "Illegal Operand Number.");
+    Row = II->getArgOperand(0);
+    Col = II->getArgOperand(1);
+    break;
+  }
+  // ACE TILEMOV intrinsics - move ZMM into one row or column of a tile
+  // Pattern: (m, n, tile, zmm_src, idx) -> tile
+  case Intrinsic::x86_acev1_tilemovcolinsert_internal:
+  case Intrinsic::x86_acev1_tilemovrowinsert_internal: {
+    assert(OpNo == 2 && "Illegal Operand Number.");
+    Row = II->getArgOperand(0);
+    Col = II->getArgOperand(1);
     break;
   }
   }
@@ -314,9 +303,11 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(IntrinsicInst *II,
   return std::make_pair(Row, Col);
 }
 
-std::pair<Value *, Value *> ShapeCalculator::getShape(PHINode *Phi) {
+// Walk through casts and PHIs to the intrinsic that will consume the tile,
+// reporting which operand it arrives as.
+static IntrinsicInst *getTileConsumer(PHINode *Phi, unsigned &OpNo) {
   Use &U = *(Phi->use_begin());
-  unsigned OpNo = U.getOperandNo();
+  OpNo = U.getOperandNo();
   User *V = U.getUser();
   // TODO We don't traverse all users. To make the algorithm simple, here we
   // just traverse the first user. If we can find shape, then return the shape,
@@ -330,7 +321,7 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(PHINode *Phi) {
       OpNo = U.getOperandNo();
       V = U.getUser();
     } else if (isAMXIntrinsic(V)) {
-      return getShape(cast<IntrinsicInst>(V), OpNo);
+      return cast<IntrinsicInst>(V);
     } else if (isa<PHINode>(V)) {
       if (V->use_empty())
         break;
@@ -341,21 +332,76 @@ std::pair<Value *, Value *> ShapeCalculator::getShape(PHINode *Phi) {
     }
   }
 
-  return std::make_pair(nullptr, nullptr);
+  return nullptr;
+}
+
+// Which tilezero spelling to synthesize follows from the intrinsic that will
+// consume the tile, not from the subtarget: a function built for an ACE target
+// can still contain plain AMX code, which needs palette 1.
+static Intrinsic::ID getTilezeroIntrinsic(IntrinsicInst *Consumer) {
+  return Consumer && isACEOnlyIntrinsic(Consumer)
+             ? Intrinsic::x86_acev1_tilezero_internal
+             : Intrinsic::x86_tilezero_internal;
+}
+
+// A palette 2 tile is 16 rows of 64 bytes, which is 16 lanes of i32 per row.
+static constexpr unsigned ACENumTileRows = 16;
+static constexpr unsigned ACERowNumElts = 16;
+
+// Palette 2 has no TILELOADD, so build the tile a row at a time.
+static Value *createACETileFromVector(IRBuilder<> &Builder, Value *Vec,
+                                      Value *Row, Value *Col) {
+  Type *RowsTy = FixedVectorType::get(Builder.getInt32Ty(),
+                                      ACENumTileRows * ACERowNumElts);
+  Value *Rows = Builder.CreateBitCast(Vec, RowsTy);
+  // The first write's source is dead, but a constant cannot be an argument.
+  Value *Tile = Builder.CreateIntrinsic(Intrinsic::x86_acev1_tilezero_internal,
+                                        {}, {Row, Col});
+  for (unsigned R = 0; R != ACENumTileRows; ++R) {
+    SmallVector<int, ACERowNumElts> Mask;
+    for (unsigned E = 0; E != ACERowNumElts; ++E)
+      Mask.push_back(R * ACERowNumElts + E);
+    Tile = Builder.CreateIntrinsic(
+        Intrinsic::x86_acev1_tilemovrowinsert_internal, {},
+        {Row, Col, Tile, Builder.CreateShuffleVector(Rows, Mask),
+         Builder.getInt32(R)});
+  }
+  return Tile;
+}
+
+// Palette 2 has no TILESTORED, so read the tile back a row at a time.
+static Value *createVectorFromACETile(IRBuilder<> &Builder, Value *Tile,
+                                      Value *Row, Value *Col, Type *VecTy) {
+  SmallVector<Value *, ACENumTileRows> Rows;
+  for (unsigned R = 0; R != ACENumTileRows; ++R)
+    Rows.push_back(
+        Builder.CreateIntrinsic(Intrinsic::x86_acev1_tilemovrowextract_internal,
+                                {}, {Row, Col, Tile, Builder.getInt32(R)}));
+
+  // Join the rows in pairs, so the shuffles form a tree and not a chain.
+  for (unsigned Width = ACENumTileRows; Width != 1; Width /= 2) {
+    unsigned NumElts =
+        cast<FixedVectorType>(Rows[0]->getType())->getNumElements();
+    SmallVector<int, 2 * ACERowNumElts> Mask;
+    for (unsigned E = 0; E != 2 * NumElts; ++E)
+      Mask.push_back(E);
+    for (unsigned I = 0; I != Width / 2; ++I)
+      Rows[I] = Builder.CreateShuffleVector(Rows[2 * I], Rows[2 * I + 1], Mask);
+  }
+  return Builder.CreateBitCast(Rows[0], VecTy);
 }
 
 namespace {
 class X86LowerAMXType {
   Function &Func;
-  ShapeCalculator *SC;
 
   // In AMX intrinsics we let Shape = {Row, Col}, but the
   // RealCol = Col / ElementSize. We may use the RealCol
   // as a new Row for other new created AMX intrinsics.
-  std::map<Value *, Value *> Col2Row, Row2Col;
+  std::map<Value *, Value *> Col2Row;
 
 public:
-  X86LowerAMXType(Function &F, ShapeCalculator *ShapeC) : Func(F), SC(ShapeC) {}
+  X86LowerAMXType(Function &F) : Func(F) {}
   bool visit();
   void combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast);
   void combineBitcastStore(BitCastInst *Bitcast, StoreInst *ST);
@@ -372,7 +418,7 @@ void X86LowerAMXType::combineLoadBitcast(LoadInst *LD, BitCastInst *Bitcast) {
   Use &U = *(Bitcast->use_begin());
   unsigned OpNo = U.getOperandNo();
   auto *II = cast<IntrinsicInst>(U.getUser());
-  std::tie(Row, Col) = SC->getShape(II, OpNo);
+  std::tie(Row, Col) = getShape(II, OpNo);
   IRBuilder<> Builder(Bitcast);
   // Use the maximun column as stride.
   Value *Stride = Builder.getInt64(64);
@@ -452,7 +498,7 @@ bool X86LowerAMXType::transformBitcast(BitCastInst *Bitcast) {
     Builder.CreateStore(Src, AllocaAddr);
     // TODO we can pick an constant operand for the shape.
     Value *Row = nullptr, *Col = nullptr;
-    std::tie(Row, Col) = SC->getShape(II, OpNo);
+    std::tie(Row, Col) = getShape(II, OpNo);
     std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
     Value *NewInst =
         Builder.CreateIntrinsic(Intrinsic::x86_tileloadd64_internal, Args);
@@ -592,27 +638,19 @@ static Value *getAllocaPos(BasicBlock *BB) {
 
 static Instruction *createTileStore(Instruction *TileDef, Value *Ptr) {
   assert(TileDef->getType()->isX86_AMXTy() && "Not define tile!");
-  auto *II = dyn_cast<IntrinsicInst>(TileDef);
-  unsigned Idx = 0;
-  // Extract tile from multiple tiles' def.
-  if (auto *Extr = dyn_cast<ExtractValueInst>(TileDef)) {
-    assert(Extr->hasIndices() && "Tile extract miss index!");
-    Idx = Extr->getIndices()[0];
-    II = cast<IntrinsicInst>(Extr->getOperand(0));
-  }
+  auto *II = cast<IntrinsicInst>(TileDef);
 
   assert(II && "Not tile intrinsic!");
-  Value *Row = II->getOperand(Idx);
-  Value *Col = II->getOperand(Idx + 1);
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
 
-  BasicBlock *BB = TileDef->getParent();
   BasicBlock::iterator Iter = TileDef->getIterator();
-  IRBuilder<> Builder(BB, ++Iter);
+  IRBuilder<> Builder(++Iter);
   Value *Stride = Builder.getInt64(64);
   std::array<Value *, 5> Args = {Row, Col, Ptr, Stride, TileDef};
 
-  Instruction *TileStore =
-      Builder.CreateIntrinsic(Intrinsic::x86_tilestored64_internal, Args);
+  Instruction *TileStore = Builder.CreateIntrinsicWithoutFolding(
+      Intrinsic::x86_tilestored64_internal, Args);
   return TileStore;
 }
 
@@ -622,20 +660,14 @@ static void replaceWithTileLoad(Use &U, Value *Ptr, bool IsPHI = false) {
 
   // Get tile shape.
   IntrinsicInst *II = nullptr;
-  unsigned Idx = 0;
   if (IsPHI) {
     Value *PhiOp = cast<PHINode>(V)->getIncomingValue(0);
     II = cast<IntrinsicInst>(PhiOp);
-  } else if (auto *Extr = dyn_cast<ExtractValueInst>(V)) {
-    // Extract tile from multiple tiles' def.
-    assert(Extr->hasIndices() && "Tile extract miss index!");
-    Idx = Extr->getIndices()[0];
-    II = cast<IntrinsicInst>(Extr->getOperand(0));
   } else {
     II = cast<IntrinsicInst>(V);
   }
-  Value *Row = II->getOperand(Idx);
-  Value *Col = II->getOperand(Idx + 1);
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
 
   Instruction *UserI = cast<Instruction>(U.getUser());
   IRBuilder<> Builder(UserI);
@@ -759,7 +791,7 @@ void X86VolatileTileData::volatileTilePHI(PHINode *PHI) {
   for (unsigned I = 0, E = PHI->getNumIncomingValues(); I != E; ++I) {
     Value *Op = PHI->getIncomingValue(I);
     Instruction *Inst = dyn_cast<Instruction>(Op);
-    assert(Inst && "We shouldn't fold AMX instrution!");
+    assert(Inst && "We shouldn't fold AMX instruction!");
     Incomings.push_back(Inst);
   }
 
@@ -828,11 +860,18 @@ bool X86VolatileTileData::volatileTileData() {
     for (Instruction *I : AMXDefInsts) {
       if (isIncomingOfPHI(I))
         continue;
+      // Skip ACE-only intrinsics - ACE (Palette 2) doesn't have
+      // TILELOADD/TILESTORED instructions needed for volatile model.
+      if (isACEOnlyIntrinsic(I))
+        continue;
       volatileTileNonPHI(I);
       Changed = true;
     }
 
     for (Instruction *I : PHIInsts) {
+      // Skip PHI nodes with ACE intrinsic incoming values.
+      if (hasACEIncomingValue(dyn_cast<PHINode>(I)))
+        continue;
       volatileTilePHI(dyn_cast<PHINode>(I));
       Changed = true;
     }
@@ -846,14 +885,13 @@ namespace {
 
 class X86LowerAMXCast {
   Function &Func;
-  ShapeCalculator *SC;
   std::unique_ptr<DominatorTree> DT;
 
 public:
-  X86LowerAMXCast(Function &F, ShapeCalculator *ShapeC)
-      : Func(F), SC(ShapeC), DT(nullptr) {}
+  X86LowerAMXCast(Function &F) : Func(F), DT(nullptr) {}
   bool combineCastStore(IntrinsicInst *Cast, StoreInst *ST);
   bool combineLoadCast(IntrinsicInst *Cast, LoadInst *LD);
+  bool combineTilezero(IntrinsicInst *Cast);
   bool combineLdSt(SmallVectorImpl<Instruction *> &Casts);
   bool combineAMXcast(TargetLibraryInfo *TLI);
   bool transformAMXCast(IntrinsicInst *AMXCast);
@@ -926,10 +964,13 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
       // might support const.
       if (isa<Constant>(IncValue)) {
         auto *IncConst = dyn_cast<Constant>(IncValue);
-        if (!isa<UndefValue>(IncValue) && !IncConst->isZeroValue())
+        if (!isa<UndefValue>(IncValue) && !IncConst->isNullValue())
           return false;
         Value *Row = nullptr, *Col = nullptr;
-        std::tie(Row, Col) = SC->getShape(OldPN);
+        unsigned ConsumerOpNo = 0;
+        IntrinsicInst *Consumer = getTileConsumer(OldPN, ConsumerOpNo);
+        if (Consumer)
+          std::tie(Row, Col) = getShape(Consumer, ConsumerOpNo);
         // TODO: If it is not constant the Row and Col must domoniate tilezero
         // that we are going to create.
         if (!Row || !Col || !isa<Constant>(Row) || !isa<Constant>(Col))
@@ -937,11 +978,12 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
         // Create tilezero at the end of incoming block.
         auto *Block = OldPN->getIncomingBlock(I);
         BasicBlock::iterator Iter = Block->getTerminator()->getIterator();
-        Instruction *NewInst = Builder.CreateIntrinsic(
-            Intrinsic::x86_tilezero_internal, {}, {Row, Col});
+        Instruction *NewInst = Builder.CreateIntrinsicWithoutFolding(
+            getTilezeroIntrinsic(Consumer), {}, {Row, Col});
         NewInst->moveBefore(Iter);
-        NewInst = Builder.CreateIntrinsic(Intrinsic::x86_cast_tile_to_vector,
-                                          {IncValue->getType()}, {NewInst});
+        NewInst = Builder.CreateIntrinsicWithoutFolding(
+            Intrinsic::x86_cast_tile_to_vector, {IncValue->getType()},
+            {NewInst});
         NewInst->moveBefore(Iter);
         // Replace InValue with new Value.
         OldPN->setIncomingValue(I, NewInst);
@@ -1060,19 +1102,6 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
   return true;
 }
 
-static Value *getShapeFromAMXIntrinsic(Value *Inst, unsigned ShapeIdx,
-                                       bool IsRow) {
-  if (!isAMXIntrinsic(Inst))
-    return nullptr;
-
-  auto *II = cast<IntrinsicInst>(Inst);
-  if (IsRow)
-    return II->getOperand(0);
-
-  assert(ShapeIdx < 2 && "Currently 2 shapes in 1 instruction at most!");
-  return II->getOperand(ShapeIdx + 1);
-}
-
 // %43 = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %42)
 // store <256 x i32> %43, <256 x i32>* %p, align 64
 // -->
@@ -1087,38 +1116,17 @@ bool X86LowerAMXCast::combineCastStore(IntrinsicInst *Cast, StoreInst *ST) {
   if (!Tile->hasOneUse())
     return false;
 
-  // We don't fetch shape from tilestore, we only get shape from tiledef,
-  // so we can set the max tile shape to tilestore for special cases.
-  IRBuilder<> Builder(ST);
-  Value *Row = nullptr;
-  Value *Col = nullptr;
+  auto *II = cast<IntrinsicInst>(Tile);
+  // ACE v1 doesn't have TILESTORED, so an ACE tile cannot be stored this way.
+  // ACE uses struct-based API with vector load/store.
+  if (isACEOnlyIntrinsic(II))
+    return false;
+  // Tile is output from AMX intrinsic. The first operand of the
+  // intrinsic is row, the second operand of the intrinsic is column.
+  Value *Row = II->getOperand(0);
+  Value *Col = II->getOperand(1);
 
-  if (isAMXIntrinsic(Tile)) {
-    auto *II = cast<IntrinsicInst>(Tile);
-    // Tile is output from AMX intrinsic. The first operand of the
-    // intrinsic is row, the second operand of the intrinsic is column.
-    Row = II->getOperand(0);
-    Col = II->getOperand(1);
-  } else {
-    // Now we supported multi-tiles value in structure, so we may get tile
-    // from extracting multi-tiles structure.
-    // For example:
-    // %6 = call { x86_amx, x86_amx } @llvm.x86.t2rpntlvwz0.internal(i16 %1,
-    //      i16 %2, i16 %3, i8* %4, i64 %5)
-    // %7 = extractvalue { x86_amx, x86_amx } %6, 0
-    // %8 = call <256 x i32> @llvm.x86.cast.tile.to.vector.v256i32(x86_amx %7)
-    // store <256 x i32> %8, <256 x i32>* %0, align 1024
-    //
-    // TODO: Currently we only handle extractvalue case, enhance me for other
-    // cases if possible.
-    auto *II = cast<ExtractValueInst>(Tile);
-    assert(II && "We meet unhandle source in fetching tile value!");
-    unsigned ShapeIdx = II->getIndices()[0];
-    Value *Tiles = II->getOperand(0);
-    Row = getShapeFromAMXIntrinsic(Tiles, ShapeIdx, true);
-    Col = getShapeFromAMXIntrinsic(Tiles, ShapeIdx, false);
-  }
-  assert(Row && Col && "Shape got failed!");
+  IRBuilder<> Builder(ST);
 
   // Stride should be equal to col(measured by bytes)
   Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
@@ -1143,14 +1151,15 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   // shape information through def-use chain.
   if (!isAMXIntrinsic(II))
     return false;
-  std::tie(Row, Col) = SC->getShape(II, OpNo);
+  // ACE v1 doesn't have TILELOADD, so an ACE tile cannot be loaded this way.
+  // ACE uses struct-based API with vector load/store.
+  if (isACEOnlyIntrinsic(II))
+    return false;
+  std::tie(Row, Col) = getShape(II, OpNo);
   IRBuilder<> Builder(LD);
-  // Stride should be equal to col(measured by bytes)
-  Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
   Value *I8Ptr;
 
-  // To save compiling time, we create doninator tree when it is really
-  // needed.
+  // To save compiling time, we create dominator tree when it is really needed.
   if (!DT)
     DT.reset(new DominatorTree(Func));
   if (!DT->dominates(Row, LD) || !DT->dominates(Col, LD)) {
@@ -1166,6 +1175,8 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   } else {
     I8Ptr = Builder.CreateBitCast(LD->getOperand(0), Builder.getPtrTy());
   }
+  // Stride should be equal to col(measured by bytes)
+  Value *Stride = Builder.CreateSExt(Col, Builder.getInt64Ty());
   std::array<Value *, 4> Args = {Row, Col, I8Ptr, Stride};
 
   Value *NewInst =
@@ -1173,6 +1184,26 @@ bool X86LowerAMXCast::combineLoadCast(IntrinsicInst *Cast, LoadInst *LD) {
   Cast->replaceAllUsesWith(NewInst);
 
   return EraseLoad;
+}
+
+// %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> zeroinitializer)
+// -->
+// %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
+bool X86LowerAMXCast::combineTilezero(IntrinsicInst *Cast) {
+  Value *Row = nullptr, *Col = nullptr;
+  Use &U = *(Cast->use_begin());
+  unsigned OpNo = U.getOperandNo();
+  auto *II = cast<IntrinsicInst>(U.getUser());
+  if (!isAMXIntrinsic(II))
+    return false;
+
+  std::tie(Row, Col) = getShape(II, OpNo);
+
+  IRBuilder<> Builder(Cast);
+  Value *NewInst =
+      Builder.CreateIntrinsic(getTilezeroIntrinsic(II), {}, {Row, Col});
+  Cast->replaceAllUsesWith(NewInst);
+  return true;
 }
 
 bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
@@ -1198,6 +1229,14 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
       for (auto *Store : DeadStores)
         Store->eraseFromParent();
     } else { // x86_cast_vector_to_tile
+      //  %19 = tail call x86_amx @llvm.x86.cast.vector.to.tile.v256i32(<256 x i32> zeroinitializer)
+      //  -->
+      //  %19 = tail call x86_amx @llvm.x86.tilezero.internal(i16 %row, i16 %col)
+      if (isa<ConstantAggregateZero>(Cast->getOperand(0))) {
+        Change |= combineTilezero(cast<IntrinsicInst>(Cast));
+        continue;
+      }
+
       auto *Load = dyn_cast<LoadInst>(Cast->getOperand(0));
       if (!Load || !Load->hasOneUse())
         continue;
@@ -1210,6 +1249,7 @@ bool X86LowerAMXCast::combineLdSt(SmallVectorImpl<Instruction *> &Casts) {
         // Set the operand is null so that load instruction can be erased.
         Cast->setOperand(0, nullptr);
         Load->eraseFromParent();
+        Change = true;
       }
     }
   }
@@ -1348,11 +1388,19 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     auto *II = dyn_cast<IntrinsicInst>(U.getUser());
     if (!II)
       return false; // May be bitcast from x86amx to <256 x i32>.
+    if (isACEOnlyIntrinsic(II)) {
+      Value *Row = nullptr, *Col = nullptr;
+      std::tie(Row, Col) = getShape(II, OpNo);
+      Value *NewInst = createACETileFromVector(Builder, Src, Row, Col);
+      AMXCast->replaceAllUsesWith(NewInst);
+      AMXCast->eraseFromParent();
+      return true;
+    }
     Prepare(AMXCast->getOperand(0)->getType());
     Builder.CreateStore(Src, AllocaAddr);
     // TODO we can pick an constant operand for the shape.
     Value *Row = nullptr, *Col = nullptr;
-    std::tie(Row, Col) = SC->getShape(II, OpNo);
+    std::tie(Row, Col) = getShape(II, OpNo);
     std::array<Value *, 4> Args = {
         Row, Col, I8Ptr, Builder.CreateSExt(Col, Builder.getInt64Ty())};
     Value *NewInst =
@@ -1370,6 +1418,14 @@ bool X86LowerAMXCast::transformAMXCast(IntrinsicInst *AMXCast) {
     auto *II = dyn_cast<IntrinsicInst>(Src);
     if (!II)
       return false; // May be bitcast from <256 x i32> to x86amx.
+    if (isACEOnlyIntrinsic(II)) {
+      Value *NewInst =
+          createVectorFromACETile(Builder, Src, II->getOperand(0),
+                                  II->getOperand(1), AMXCast->getType());
+      AMXCast->replaceAllUsesWith(NewInst);
+      AMXCast->eraseFromParent();
+      return true;
+    }
     Prepare(AMXCast->getType());
     Value *Row = II->getOperand(0);
     Value *Col = II->getOperand(1);
@@ -1402,7 +1458,60 @@ bool X86LowerAMXCast::transformAllAMXCast() {
   return Change;
 }
 
+bool lowerAmxType(Function &F, const TargetMachine *TM,
+                  TargetLibraryInfo *TLI) {
+  // Performance optimization: most code doesn't use AMX, so return early if
+  // there are no instructions that produce AMX values. This is sufficient, as
+  // AMX arguments and constants are not allowed -- so any producer of an AMX
+  // value must be an instruction.
+  // TODO: find a cheaper way for this, without looking at all instructions.
+  if (!containsAMXCode(F))
+    return false;
+
+  bool C = false;
+  X86LowerAMXCast LAC(F);
+  C |= LAC.combineAMXcast(TLI);
+  // There might be remaining AMXcast after combineAMXcast and they should be
+  // handled elegantly.
+  C |= LAC.transformAllAMXCast();
+
+  X86LowerAMXType LAT(F);
+  C |= LAT.visit();
+
+  // Prepare for fast register allocation at O0.
+  // Todo: May better check the volatile model of AMX code, not just
+  // by checking Attribute::OptimizeNone and CodeGenOptLevel::None.
+  if (TM->getOptLevel() == CodeGenOptLevel::None) {
+    // If Front End not use O0 but the Mid/Back end use O0, (e.g.
+    // "Clang -O2 -S -emit-llvm t.c" + "llc t.ll") we should make
+    // sure the amx data is volatile, that is necessary for AMX fast
+    // register allocation.
+    // This spills tiles with TILESTORED and reloads them with TILELOADD, which
+    // ACE cannot do under palette 2. volatileTileData leaves ACE tiles alone
+    // per value, so the tile registers stay live and X86FastPreTileConfig
+    // spills them instead.
+    if (!F.hasFnAttribute(Attribute::OptimizeNone)) {
+      X86VolatileTileData VTD(F);
+      C = VTD.volatileTileData() || C;
+    }
+  }
+
+  return C;
+}
+
 } // anonymous namespace
+
+PreservedAnalyses X86LowerAMXTypePass::run(Function &F,
+                                           FunctionAnalysisManager &FAM) {
+  TargetLibraryInfo &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+  bool Changed = lowerAmxType(F, TM, &TLI);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = PreservedAnalyses::none();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
+}
 
 namespace {
 
@@ -1413,44 +1522,10 @@ public:
   X86LowerAMXTypeLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
-    // Performance optimization: most code doesn't use AMX, so return early if
-    // there are no instructions that produce AMX values. This is sufficient, as
-    // AMX arguments and constants are not allowed -- so any producer of an AMX
-    // value must be an instruction.
-    // TODO: find a cheaper way for this, without looking at all instructions.
-    if (!containsAMXCode(F))
-      return false;
-
-    bool C = false;
     TargetMachine *TM = &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
     TargetLibraryInfo *TLI =
         &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-
-    ShapeCalculator SC(TM);
-    X86LowerAMXCast LAC(F, &SC);
-    C |= LAC.combineAMXcast(TLI);
-    // There might be remaining AMXcast after combineAMXcast and they should be
-    // handled elegantly.
-    C |= LAC.transformAllAMXCast();
-
-    X86LowerAMXType LAT(F, &SC);
-    C |= LAT.visit();
-
-    // Prepare for fast register allocation at O0.
-    // Todo: May better check the volatile model of AMX code, not just
-    // by checking Attribute::OptimizeNone and CodeGenOptLevel::None.
-    if (TM->getOptLevel() == CodeGenOptLevel::None) {
-      // If Front End not use O0 but the Mid/Back end use O0, (e.g.
-      // "Clang -O2 -S -emit-llvm t.c" + "llc t.ll") we should make
-      // sure the amx data is volatile, that is nessary for AMX fast
-      // register allocation.
-      if (!F.hasFnAttribute(Attribute::OptimizeNone)) {
-        X86VolatileTileData VTD(F);
-        C = VTD.volatileTileData() || C;
-      }
-    }
-
-    return C;
+    return lowerAmxType(F, TM, TLI);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1471,6 +1546,6 @@ INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_END(X86LowerAMXTypeLegacyPass, DEBUG_TYPE, PassName, false,
                     false)
 
-FunctionPass *llvm::createX86LowerAMXTypePass() {
+FunctionPass *llvm::createX86LowerAMXTypeLegacyPass() {
   return new X86LowerAMXTypeLegacyPass();
 }

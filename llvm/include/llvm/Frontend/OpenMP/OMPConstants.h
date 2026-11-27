@@ -72,7 +72,7 @@ enum class IdentFlag {
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
 // Version of the kernel argument format used by the omp runtime.
-#define OMP_KERNEL_ARG_VERSION 3
+#define OMP_KERNEL_ARG_VERSION 5
 
 // Minimum version of the compiler that generates a kernel dynamic pointer.
 #define OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR 3
@@ -190,8 +190,22 @@ enum class OMPScheduleType {
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue */ ModifierMask)
 };
 
+/// The fallback types for the dyn_groupprivate clause.
+enum class OMPDynGroupprivateFallbackType : uint64_t {
+  /// Abort the execution.
+  Abort = 0,
+  /// Return null pointer.
+  Null = 1,
+  /// Allocate from a implementation defined memory space.
+  DefaultMem = 2
+};
+
 // Default OpenMP mapper name suffix.
-inline constexpr const char *OmpDefaultMapperName = ".omp.default.mapper";
+inline constexpr const char *OmpDefaultMapperName = "_omp_default_mapper";
+
+/// Unroll factor for a partial unroll without an explicit factor, when the
+/// unrolled loop must be materialized.
+constexpr unsigned DefaultPartialUnrollFactor = 2;
 
 /// Values for bit flags used to specify the mapping type for
 /// offloading.
@@ -239,6 +253,13 @@ enum class OpenMPOffloadMappingFlags : uint64_t {
   // dynamic.
   // This is an OpenMP extension for the sake of OpenACC support.
   OMP_MAP_OMPX_HOLD = 0x2000,
+  // Attach pointer and pointee, after processing all other maps.
+  // Applicable to map-entering directives. Does not change ref-count.
+  OMP_MAP_ATTACH = 0x4000,
+  // When a lookup fails, fall back to using null as the translated pointer,
+  // instead of preserving the original pointer's value. Currently only
+  // useful in conjunction with RETURN_PARAM.
+  OMP_MAP_FB_NULLIFY = 0x8000,
   /// Signal that the runtime library should use args as an array of
   /// descriptor_dim pointers and use args_size as dims. Used when we have
   /// non-contiguous list items in target update directive
@@ -268,6 +289,22 @@ enum class OMPInteropType { Unknown, Target, TargetSync };
 
 /// Atomic compare operations. Currently OpenMP only supports ==, >, and <.
 enum class OMPAtomicCompareOp : unsigned { EQ, MIN, MAX };
+
+/// Values of omp_sync_hint_t, including the kmp_ and ompx_ extensions.
+/// \note This needs to be kept in sync with omp_sync_hint_t in omp.h.
+enum class OMPSyncHint : uint64_t {
+  None = 0,
+  Uncontended = 1 << 0,
+  Contended = 1 << 1,
+  Nonspeculative = 1 << 2,
+  Speculative = 1 << 3,
+  KmpHLE = 1 << 16,
+  KmpRTM = 1 << 17,
+  KmpAdaptive = 1 << 18,
+  OMPXFastFPAtomics = 1 << 19,
+  OMPXSafeFPAtomics = 1 << 20,
+  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ OMPXSafeFPAtomics)
+};
 
 /// Fields ids in kmp_depend_info record.
 enum class RTLDependInfoFields { BaseAddr, Len, Flags };

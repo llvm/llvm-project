@@ -35,7 +35,6 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCWinCOFFStreamer.h"
 #include "llvm/Support/AArch64BuildAttributes.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -47,7 +46,6 @@ class AArch64ELFStreamer;
 
 class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   formatted_raw_ostream &OS;
-  std::string VendorTag;
 
   void emitInst(uint32_t Inst) override;
 
@@ -109,6 +107,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void emitARM64WinCFINop() override { OS << "\t.seh_nop\n"; }
   void emitARM64WinCFISaveNext() override { OS << "\t.seh_save_next\n"; }
   void emitARM64WinCFIPrologEnd() override { OS << "\t.seh_endprologue\n"; }
+  void emitARM64WinCFIEndC() override { OS << "\t.seh_end_c\n"; }
   void emitARM64WinCFIEpilogStart() override { OS << "\t.seh_startepilogue\n"; }
   void emitARM64WinCFIEpilogEnd() override { OS << "\t.seh_endepilogue\n"; }
   void emitARM64WinCFITrapFrame() override { OS << "\t.seh_trap_frame\n"; }
@@ -168,12 +167,12 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
     OS << "\t.seh_save_preg\tp" << Reg << ", " << Offset << "\n";
   }
 
-  void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+  void emitAttribute(StringRef VendorName, unsigned Tag, uint64_t Value,
                      std::string String) override {
 
     // AArch64 build attributes for assembly attribute form:
     // .aeabi_attribute tag, value
-    if (unsigned(-1) == Value && "" == String) {
+    if (uint64_t(-1) == Value && "" == String) {
       assert(0 && "Arguments error");
       return;
     }
@@ -182,13 +181,13 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
 
     switch (VendorID) {
     case AArch64BuildAttributes::VENDOR_UNKNOWN:
-      if (unsigned(-1) != Value) {
+      if (uint64_t(-1) != Value) {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << Value;
         AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
       }
       if ("" != String) {
         OS << "\t.aeabi_attribute" << "\t" << Tag << ", " << String;
-        AArch64TargetStreamer::emitAttribute(VendorName, Tag, unsigned(-1),
+        AArch64TargetStreamer::emitAttribute(VendorName, Tag, uint64_t(-1),
                                              String);
       }
       break;
@@ -210,7 +209,7 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
         break;
       }
       break;
-    // Note: AEABI_PAUTHABI takes only unsigned values
+    // Note: AEABI_PAUTHABI takes only uint64_t values
     case AArch64BuildAttributes::AEABI_PAUTHABI:
       switch (Tag) {
       default: // allow emitting any attribute by number
@@ -317,8 +316,7 @@ public:
       : MCELFStreamer(Context, std::move(TAB), std::move(OW),
                       std::move(Emitter)),
         LastEMS(EMS_None) {
-    auto *TO = getContext().getTargetOptions();
-    ImplicitMapSyms = TO && TO->ImplicitMapSyms;
+    ImplicitMapSyms = getContext().getTargetOptions().ImplicitMapSyms;
   }
 
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override {
@@ -418,7 +416,8 @@ private:
   }
 
   MCSymbol *emitMappingSymbol(StringRef Name) {
-    auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+    auto *Symbol =
+        static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
     emitLabel(Symbol);
     return Symbol;
   }
@@ -441,12 +440,12 @@ void AArch64TargetELFStreamer::emitAttributesSubsection(
 }
 
 void AArch64TargetELFStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
-                                             unsigned Value,
+                                             uint64_t Value,
                                              std::string String) {
-  if (unsigned(-1) != Value)
+  if (uint64_t(-1) != Value)
     AArch64TargetStreamer::emitAttribute(VendorName, Tag, Value, "");
   if ("" != String)
-    AArch64TargetStreamer::emitAttribute(VendorName, Tag, unsigned(-1), String);
+    AArch64TargetStreamer::emitAttribute(VendorName, Tag, uint64_t(-1), String);
 }
 
 void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
@@ -455,7 +454,7 @@ void AArch64TargetELFStreamer::emitInst(uint32_t Inst) {
 
 void AArch64TargetELFStreamer::emitDirectiveVariantPCS(MCSymbol *Symbol) {
   getStreamer().getAssembler().registerSymbol(*Symbol);
-  cast<MCSymbolELF>(Symbol)->setOther(ELF::STO_AARCH64_VARIANT_PCS);
+  static_cast<MCSymbolELF *>(Symbol)->setOther(ELF::STO_AARCH64_VARIANT_PCS);
 }
 
 void AArch64TargetELFStreamer::finish() {
@@ -523,17 +522,16 @@ void AArch64TargetELFStreamer::finish() {
   // mark it execute-only if it is empty and there is at least one
   // execute-only section in the object.
   if (any_of(Asm, [](const MCSection &Sec) {
-        return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_AARCH64_PURECODE;
+        return static_cast<const MCSectionELF &>(Sec).getFlags() &
+               ELF::SHF_AARCH64_PURECODE;
       })) {
     auto *Text =
         static_cast<MCSectionELF *>(Ctx.getObjectFileInfo()->getTextSection());
     bool Empty = true;
     for (auto &F : *Text) {
-      if (auto *DF = dyn_cast<MCDataFragment>(&F)) {
-        if (!DF->getContents().empty()) {
-          Empty = false;
-          break;
-        }
+      if (F.getSize()) {
+        Empty = false;
+        break;
       }
     }
     if (Empty)
@@ -542,7 +540,7 @@ void AArch64TargetELFStreamer::finish() {
 
   MCSectionELF *MemtagSec = nullptr;
   for (const MCSymbol &Symbol : Asm.symbols()) {
-    const auto &Sym = cast<MCSymbolELF>(Symbol);
+    auto &Sym = static_cast<const MCSymbolELF &>(Symbol);
     if (Sym.isMemtag()) {
       MemtagSec = Ctx.getELFSection(".memtag.globals.static",
                                     ELF::SHT_AARCH64_MEMTAG_GLOBALS_STATIC, 0);
@@ -557,12 +555,11 @@ void AArch64TargetELFStreamer::finish() {
   S.switchSection(MemtagSec);
   const auto *Zero = MCConstantExpr::create(0, Ctx);
   for (const MCSymbol &Symbol : Asm.symbols()) {
-    const auto &Sym = cast<MCSymbolELF>(Symbol);
+    auto &Sym = static_cast<const MCSymbolELF &>(Symbol);
     if (!Sym.isMemtag())
       continue;
     auto *SRE = MCSymbolRefExpr::create(&Sym, Ctx);
-    (void)S.emitRelocDirective(*Zero, "BFD_RELOC_NONE", SRE, SMLoc(),
-                               *Ctx.getSubtargetInfo());
+    S.emitRelocDirective(*Zero, "BFD_RELOC_NONE", SRE);
   }
 }
 

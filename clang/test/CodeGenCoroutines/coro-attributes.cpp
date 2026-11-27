@@ -15,8 +15,12 @@ struct coro {
 
 // CHECK: void @_Z3foov() #[[FOO_ATTR_NUM:[0-9]+]]
 // CHECK: declare token @llvm.coro.save(ptr) #[[SAVE_ATTR_NUM:[0-9]+]]
+// CHECK: void @_Z3foov.__await_suspend_wrapper__init({{.*}}) #[[WRAPPER_ATTR_NUM:[0-9]+]]
+// CHECK: void @_Z3foov.__await_suspend_wrapper__await({{.*}}) #[[WRAPPER_ATTR_NUM:[0-9]+]]
+// CHECK: void @_Z3foov.__await_suspend_wrapper__final({{.*}}) #[[WRAPPER_ATTR_NUM:[0-9]+]]
 // CHECK: attributes #[[FOO_ATTR_NUM]] = { {{.*}} presplitcoroutine
 // CHECK: attributes #[[SAVE_ATTR_NUM]] = { {{.*}}nomerge
+// CHECK: attributes #[[WRAPPER_ATTR_NUM]] = { {{.*}}"sample-profile-suffix-elision-policy"="selected"
 coro foo() {
   co_await suspend_always{};
 }

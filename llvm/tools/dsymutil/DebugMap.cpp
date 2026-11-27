@@ -22,7 +22,6 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cinttypes>
 #include <cstdint>
 #include <memory>
@@ -40,7 +39,7 @@ using namespace llvm::object;
 DebugMapObject::DebugMapObject(StringRef ObjectFilename,
                                sys::TimePoint<std::chrono::seconds> Timestamp,
                                uint8_t Type)
-    : Filename(std::string(ObjectFilename)), Timestamp(Timestamp), Type(Type) {}
+    : DebugMapObjectFilter(ObjectFilename), Timestamp(Timestamp), Type(Type) {}
 
 bool DebugMapObject::addSymbol(StringRef Name,
                                std::optional<uint64_t> ObjectAddress,
@@ -123,6 +122,9 @@ void DebugMap::print(raw_ostream &OS) const {
 void DebugMap::dump() const { print(errs()); }
 #endif
 
+DebugMapObjectFilter::DebugMapObjectFilter(StringRef ObjectFilename)
+    : Filename(std::string(ObjectFilename)) {}
+
 namespace {
 
 struct YAMLContext {
@@ -135,10 +137,15 @@ struct YAMLContext {
 
 } // end anonymous namespace
 
+DebugMap::DebugMap(const Triple &BinaryTriple, StringRef BinaryPath,
+                   ArrayRef<uint8_t> BinaryUUID)
+    : BinaryTriple(BinaryTriple), BinaryPath(std::string(BinaryPath)),
+      BinaryUUID(BinaryUUID.begin(), BinaryUUID.end()) {}
+
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 DebugMap::parseYAMLDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
                             StringRef PrependPath, bool Verbose) {
-  auto ErrOrFile = MemoryBuffer::getFileOrSTDIN(InputFile);
+  auto ErrOrFile = MemoryBuffer::getFileOrSTDIN(InputFile, /*IsText=*/true);
   if (auto Err = ErrOrFile.getError())
     return Err;
 
@@ -212,6 +219,42 @@ SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObject>>>::element(
     seq[index].reset(new dsymutil::DebugMapObject);
   }
   return *seq[index];
+}
+
+size_t
+SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>>::
+    size(IO &io,
+         std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq) {
+  return seq.size();
+}
+
+dsymutil::DebugMapObjectFilter &
+SequenceTraits<std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>>>::
+    element(IO &io,
+            std::vector<std::unique_ptr<dsymutil::DebugMapObjectFilter>> &seq,
+            size_t index) {
+  if (index >= seq.size()) {
+    seq.resize(index + 1);
+    seq[index].reset(new dsymutil::DebugMapObjectFilter);
+  }
+  return *seq[index];
+}
+
+void MappingTraits<dsymutil::DebugMapObjectFilter>::mapping(
+    IO &io, dsymutil::DebugMapObjectFilter &DMOF) {
+  io.mapRequired("filename", DMOF.Filename);
+}
+
+void MappingTraits<dsymutil::DebugMapFilter>::mapping(
+    IO &io, dsymutil::DebugMapFilter &DMF) {
+  io.mapRequired("objects", DMF.Objects);
+}
+
+void MappingTraits<std::unique_ptr<dsymutil::DebugMapFilter>>::mapping(
+    IO &io, std::unique_ptr<dsymutil::DebugMapFilter> &DMF) {
+  if (!DMF)
+    DMF.reset(new DebugMapFilter());
+  io.mapRequired("objects", DMF->Objects);
 }
 
 void MappingTraits<dsymutil::DebugMap>::mapping(IO &io,

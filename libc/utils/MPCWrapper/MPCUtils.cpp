@@ -8,12 +8,12 @@
 
 #include "MPCUtils.h"
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/macros/config.h"
 #include "utils/MPCWrapper/mpc_inc.h"
 #include "utils/MPFRWrapper/MPCommon.h"
-
-#include <stdint.h>
 
 template <typename T> using FPBits = LIBC_NAMESPACE::fputil::FPBits<T>;
 
@@ -32,6 +32,7 @@ static inline cpp::string str(RoundingMode mode) {
   case RoundingMode::Nearest:
     return "MPFR_RNDN";
   }
+  __builtin_unreachable();
 }
 
 class MPCNumber {
@@ -106,6 +107,20 @@ public:
 
   mpc_t &getValue() { return value; }
 
+  MPCNumber cabs() const {
+    mpfr_t res;
+    MPCNumber result(precision, mpc_rounding);
+
+    mpfr_init2(res, precision);
+
+    mpc_abs(res, value, MPC_RND_RE(mpc_rounding));
+    mpc_set_fr(result.value, res, mpc_rounding);
+
+    mpfr_clear(res);
+
+    return result;
+  }
+
   MPCNumber carg() const {
     mpfr_t res;
     MPCNumber result(precision, mpc_rounding);
@@ -135,6 +150,8 @@ unary_operation(Operation op, InputType input, unsigned int precision,
                 RoundingMode rounding) {
   MPCNumber mpcInput(input, precision, rounding);
   switch (op) {
+  case Operation::Cabs:
+    return mpcInput.cabs();
   case Operation::Carg:
     return mpcInput.carg();
   case Operation::Cproj:

@@ -14,10 +14,10 @@
 @end
 // CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar2" ={{.*}} global i64 24,
 // CHECK-MODERN: @"OBJC_IVAR_$_HighlyAlignedSubclass.ivar" ={{.*}} global i64 16,
-// CHECK-MODERN: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\02\00"
+// CHECK-MODERN: @OBJC_LAYOUT_BITMAP_{{.*}} = {{.*}} c"\02\00"
 // CHECK-MODERN: @"_OBJC_CLASS_RO_$_HighlyAlignedSubclass" = {{.*}} {
 // CHECK-FRAGILE: @OBJC_INSTANCE_VARIABLES_HighlyAlignedSubclass = {{.*}}, i32 8 }, {{.*}}, i32 12 }]
-// CHECK-FRAGILE: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\02\00"
+// CHECK-FRAGILE: @OBJC_LAYOUT_BITMAP_{{.*}} = {{.*}} c"\02\00"
 // CHECK-FRAGILE: @OBJC_CLASS_HighlyAlignedSubclass
 @interface HighlyAlignedSubclass : HighlyAligned {
   __weak id ivar;
@@ -26,14 +26,14 @@
 @end
 @implementation HighlyAlignedSubclass @end
 
-// CHECK-MODERN: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\01\00"
+// CHECK-MODERN: @OBJC_LAYOUT_BITMAP_{{.*}} = {{.*}} c"\01\00"
 // CHECK-MODERN: @"_OBJC_CLASS_RO_$_Foo" = {{.*}} { i32 772
 //   772 == 0x304
 //            ^ HasMRCWeakIvars
 //            ^ HasCXXDestructorOnly
 //              ^ HasCXXStructors
 
-// CHECK-FRAGILE: @OBJC_CLASS_NAME_{{.*}} = {{.*}} c"\01\00"
+// CHECK-FRAGILE: @OBJC_LAYOUT_BITMAP_{{.*}} = {{.*}} c"\01\00"
 // CHECK-FRAGILE: @OBJC_CLASS_Foo = {{.*}} i32 134225921,
 //   134225921 == 0x08002001
 //                   ^ HasMRCWeakIvars

@@ -15,6 +15,8 @@
 #define MLIR_DIALECT_SPIRV_IR_MEMORY_OPS
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/Interfaces/AlignmentAttrInterface.td"
+
 
 // -----
 
@@ -79,10 +81,44 @@ def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
 
 // -----
 
-def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", []> {
+def SPIRV_InBoundsAccessChainOp : SPIRV_Op<"InBoundsAccessChain", [Pure]> {
+  let summary = [{
+    Create a pointer into a composite object that is known to stay within the
+    base object.
+  }];
+
+  let description = [{
+    Has the same operands, result, and type rules as `spirv.AccessChain`, with
+    the additional contract that the resulting pointer points within the base
+    object.
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$base_ptr,
+    Variadic<SPIRV_Integer>:$indices
+  );
+
+  let results = (outs
+    SPIRV_AnyPtr:$component_ptr
+  );
+
+  let builders = [OpBuilder<(ins "Value":$basePtr, "ValueRange":$indices)>];
+
+  let hasCanonicalizer = 1;
+
+  let hasCustomAssemblyFormat = 0;
+
+  let assemblyFormat = [{
+    $base_ptr `[` $indices `]` attr-dict `:` type($base_ptr) `,` type($indices) `->` type(results)
+  }];
+}
+
+// -----
+
+def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = [{
     Copy from the memory pointed to by Source to the memory pointed to by
-    Target. Both operands must be non-void pointers and having the same <id>
+    Target. Both operands must be non-void pointers and having the same `<id>`
     Type operand in their OpTypePointer type declaration.  Matching Storage
     Class is not required.  The amount of memory copied is the size of the
     type pointed to. The copied type must have a fixed size; i.e., it must
@@ -121,9 +157,9 @@ def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", []> {
     SPIRV_AnyPtr:$target,
     SPIRV_AnyPtr:$source,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
-    OptionalAttr<I32Attr>:$alignment,
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$source_memory_access,
-    OptionalAttr<I32Attr>:$source_alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$source_alignment
   );
 
   let results = (outs);
@@ -182,7 +218,7 @@ def SPIRV_InBoundsPtrAccessChainOp : SPIRV_Op<"InBoundsPtrAccessChain", [Pure]> 
 
 // -----
 
-def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
+def SPIRV_LoadOp : SPIRV_Op<"Load", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "Load through a pointer.";
 
   let description = [{
@@ -190,8 +226,9 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
     fixed size; i.e., it cannot be, nor include, any OpTypeRuntimeArray
     types.
 
-    Pointer is the pointer to load through.  Its type must be an
-    OpTypePointer whose Type operand is the same as Result Type.
+    Pointer is the pointer to load through. Its type must be a pointer type.
+    If its type is OpTypePointer, the Type operand must be the same as Result
+    Type.
 
     If present, any Memory Operands must begin with a memory operand
     literal. If not present, it is the same as specifying the memory operand
@@ -205,6 +242,8 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
 
     load-op ::= ssa-id ` = spirv.Load ` storage-class ssa-use
                 (`[` memory-access `]`)? ` : ` spirv-element-type
+              | ssa-id ` = spirv.Load ` ssa-use (`[` memory-access `]`)?
+                ` : ` spirv-untyped-pointer-type ` -> ` spirv-type
     ```
 
     #### Example:
@@ -214,13 +253,14 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
     %1 = spirv.Load "Function" %0 : f32
     %2 = spirv.Load "Function" %0 ["Volatile"] : f32
     %3 = spirv.Load "Function" %0 ["Aligned", 4] : f32
+    %4 = spirv.Load %5 : !spirv.untyped_ptr<Workgroup> -> f32
     ```
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr,
+    SPIRV_AnyPtrOrUntypedPtr:$ptr,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
-    OptionalAttr<I32Attr>:$alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
 
   let results = (outs
@@ -310,12 +350,103 @@ def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [Pure]> {
 
 // -----
 
-def SPIRV_StoreOp : SPIRV_Op<"Store", []> {
+def SPIRV_PtrEqualOp : SPIRV_Op<"PtrEqual", [
+    Pure, AllTypesMatch<["operand1", "operand2"]>]> {
+  let summary = [{
+    Result is true if Operand 1 and Operand 2 have the same value. Result is
+    false if Operand 1 and Operand 2 have different values.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    The types of Operand 1 and Operand 2 must be OpTypePointer of the same
+    type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_4>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$operand1,
+    SPIRV_AnyPtr:$operand2
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
+}
+
+// -----
+
+def SPIRV_PtrNotEqualOp : SPIRV_Op<"PtrNotEqual", [
+    Pure, AllTypesMatch<["operand1", "operand2"]>]> {
+  let summary = [{
+    Result is true if Operand 1 and Operand 2 have different values. Result
+    is false if Operand 1 and Operand 2 have the same value.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type scalar.
+
+    The types of Operand 1 and Operand 2 must be OpTypePointer of the same
+    type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_4>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$operand1,
+    SPIRV_AnyPtr:$operand2
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand1 `,` $operand2 `:` type($operand1) attr-dict";
+}
+
+// -----
+
+def SPIRV_StoreOp : SPIRV_Op<"Store", [DeclareOpInterfaceMethods<AlignmentAttrOpInterface>]> {
   let summary = "Store through a pointer.";
 
   let description = [{
-    Pointer is the pointer to store through.  Its type must be an
-    OpTypePointer whose Type operand is the same as the type of Object.
+    Pointer is the pointer to store through. Its type must be a pointer type.
+    If its type is OpTypePointer, the Type operand must be the same as the
+    type of Object.
 
     Object is the object to store.
 
@@ -328,6 +459,8 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", []> {
     ```
     store-op ::= `spirv.Store ` storage-class ssa-use `, ` ssa-use `, `
                   (`[` memory-access `]`)? `:` spirv-element-type
+               | `spirv.Store ` ssa-use `, ` ssa-use (`[` memory-access `]`)?
+                  `:` spirv-untyped-pointer-type `, ` spirv-type
     ```
 
     #### Example:
@@ -338,14 +471,15 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", []> {
     spirv.Store "Function" %0, %1 : f32
     spirv.Store "Function" %0, %1 ["Volatile"] : f32
     spirv.Store "Function" %0, %1 ["Aligned", 4] : f32
+    spirv.Store %2, %1 : !spirv.untyped_ptr<Workgroup>, f32
     ```
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr,
+    SPIRV_AnyPtrOrUntypedPtr:$ptr,
     SPIRV_Type:$value,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
-    OptionalAttr<I32Attr>:$alignment
+    OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
 
   let results = (outs);
@@ -379,7 +513,7 @@ def SPIRV_VariableOp : SPIRV_Op<"Variable", []> {
 
     Initializer is optional. If Initializer is present, it will be the
     initial value of the variable's memory content. Initializer must be an
-    <id> from a constant instruction or a global (module scope) OpVariable
+    `<id>` from a constant instruction or a global (module scope) OpVariable
     instruction. Initializer must have the same type as the type pointed to
     by Result Type.
 

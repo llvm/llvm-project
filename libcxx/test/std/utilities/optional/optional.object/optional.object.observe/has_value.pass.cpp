@@ -11,9 +11,8 @@
 
 // constexpr bool optional<T>::has_value() const noexcept;
 
-#include <optional>
-#include <type_traits>
 #include <cassert>
+#include <optional>
 
 #include "test_macros.h"
 
@@ -33,6 +32,18 @@ int main(int, char**)
         constexpr optional<int> opt(0);
         static_assert(opt.has_value(), "");
     }
+#if TEST_STD_VER >= 26
+    {
+      static constexpr int i = 0;
+      constexpr optional<const int&> opt{i};
+      ASSERT_NOEXCEPT(opt.has_value());
+      static_assert(opt.has_value());
+    }
+    {
+      constexpr optional<const int&> opt{};
+      static_assert(!opt.has_value());
+    }
+#endif
 
-  return 0;
+    return 0;
 }

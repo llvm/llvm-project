@@ -1,0 +1,218 @@
+//===-- StackFrameListTest.cpp --------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
+#include "Plugins/Platform/Linux/PlatformLinux.h"
+#include "Plugins/Process/Utility/HistoryThread.h"
+#include "Plugins/ScriptInterpreter/None/ScriptInterpreterNone.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileDWARF.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
+#include "TestingSupport/SubsystemRAII.h"
+#include "TestingSupport/TestUtilities.h"
+#include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
+#include "lldb/Host/FileSystem.h"
+#include "lldb/Host/HostInfo.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Utility/ArchSpec.h"
+#include "gtest/gtest.h"
+#include <mutex>
+
+using namespace lldb;
+using namespace lldb_private;
+
+namespace {
+
+class DummyProcess : public Process {
+public:
+  DummyProcess(TargetSP target_sp, ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {}
+  bool CanDebug(TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  size_t DoReadMemory(const ProcessAddress &, void *, size_t,
+                      Status &) override {
+    return 0;
+  }
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+  llvm::StringRef GetPluginName() override { return "Dummy"; }
+};
+
+class StackFrameListTest : public ::testing::Test {
+  SubsystemRAII<FileSystem, HostInfo, TypeSystemClang, ObjectFileELF,
+                plugin::dwarf::SymbolFileDWARF, platform_linux::PlatformLinux,
+                ScriptInterpreterNone>
+      subsystems;
+
+public:
+  void SetUp() override {
+    std::call_once(TestUtilities::g_debugger_initialize_flag,
+                   []() { Debugger::Initialize(nullptr); });
+    ArchSpec arch("x86_64-pc-linux");
+    PlatformSP platform_sp =
+        platform_linux::PlatformLinux::CreateInstance(true, &arch);
+    ASSERT_TRUE(platform_sp);
+    Platform::SetHostPlatform(platform_sp);
+
+    DebuggerSP debugger_sp = Debugger::CreateInstance();
+    ASSERT_TRUE(debugger_sp);
+    PlatformSP target_platform_sp;
+    ASSERT_TRUE(debugger_sp->GetTargetList()
+                    .CreateTarget(*debugger_sp, "", arch, eLoadDependentsNo,
+                                  target_platform_sp, m_target_sp)
+                    .Success());
+    ASSERT_TRUE(m_target_sp);
+
+    llvm::Expected<TestFile> file =
+        TestFile::fromYamlFile("inlined-function.yaml");
+    ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+    m_file.emplace(std::move(*file));
+    ModuleSP module_sp = std::make_shared<Module>(m_file->moduleSpec());
+    ASSERT_TRUE(module_sp);
+    m_target_sp->GetImages().Append(module_sp);
+    bool changed = false;
+    ASSERT_TRUE(module_sp->SetLoadAddress(*m_target_sp, 0,
+                                          /*value_is_offset=*/true, changed));
+  }
+
+protected:
+  std::optional<TestFile> m_file;
+  TargetSP m_target_sp;
+};
+
+// Frames synthesized for an inlined scope share the concrete frame's PC, they
+// should also share its "behaves like frame zero" behavior.
+TEST_F(StackFrameListTest, InlineFramesInheritZerothFrameSymbolication) {
+  // outer() inlines inner() starting at this offset into .text; see the
+  // generation recipe in Inputs/inlined-function.yaml.
+  const addr_t pc = 0xd;
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<DummyProcess>(m_target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+  // HistoryPCType::Returns makes frame zero behave like the zeroth frame.
+  ThreadSP thread_sp = std::make_shared<HistoryThread>(
+      *process_sp, /*tid=*/0x1234, std::vector<addr_t>{pc});
+
+  // An inline chain requires more than the concrete frame.
+  ASSERT_GT(thread_sp->GetStackFrameCount(), 1u)
+      << "no inline frames synthesized at pc " << pc;
+
+  // The YAML object file creates a backtrace like this:
+  //   frame #0: 0x000000000000000d inner() at inl.cpp:2:13 [inlined]
+  //   frame #1: 0x000000000000000d outer() at inl.cpp:6:27
+
+  for (uint32_t i = 0; i < thread_sp->GetStackFrameCount(); ++i) {
+    StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
+    ASSERT_TRUE(frame_sp);
+    if (frame_sp->GetFrameCodeAddress().GetFileAddress() != pc)
+      continue;
+    EXPECT_EQ(frame_sp->GetFrameCodeAddressForSymbolication().GetFileAddress(),
+              frame_sp->GetFrameCodeAddress().GetFileAddress())
+        << "frame " << i << " symbolicates at an adjusted address";
+  }
+}
+
+// A concrete frame and the frames inlined into it share a concrete frame
+// index, so a frame's index is not its concrete frame index once there is an
+// inlined frame below it.
+TEST_F(StackFrameListTest, GetFrameWithConcreteFrameIndex) {
+  // The first PC is in inner(), which is inlined into outer(). The second is
+  // in outer()'s own code; see the generation recipe in
+  // Inputs/inlined-function.yaml.
+  const addr_t inlined_pc = 0xd;
+  const addr_t caller_pc = 0x1d;
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<DummyProcess>(m_target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+  ThreadSP thread_sp = std::make_shared<HistoryThread>(
+      *process_sp, /*tid=*/0x1234, std::vector<addr_t>{inlined_pc, caller_pc});
+
+  // The YAML object file creates a backtrace like this:
+  //   frame #0: 0x000000000000000d inner() at inl.cpp:2:13 [inlined]
+  //   frame #1: 0x000000000000000d outer() at inl.cpp:6:27
+  //   frame #2: 0x000000000000001d outer() at inl.cpp:6:36
+  ASSERT_EQ(thread_sp->GetStackFrameCount(), 3u);
+  const uint32_t concrete_frame_indexes[] = {0, 0, 1};
+  for (uint32_t i = 0; i < 3; ++i) {
+    StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
+    ASSERT_TRUE(frame_sp);
+    ASSERT_EQ(frame_sp->GetConcreteFrameIndex(), concrete_frame_indexes[i])
+        << "frame " << i;
+  }
+
+  // The first frame with the concrete frame index, which is the innermost
+  // inlined one.
+  StackFrameSP frame_sp = thread_sp->GetFrameWithConcreteFrameIndex(0);
+  ASSERT_TRUE(frame_sp);
+  EXPECT_EQ(frame_sp->GetFrameIndex(), 0u);
+
+  frame_sp = thread_sp->GetFrameWithConcreteFrameIndex(1);
+  ASSERT_TRUE(frame_sp);
+  EXPECT_EQ(frame_sp->GetFrameIndex(), 2u);
+  EXPECT_EQ(frame_sp->GetConcreteFrameIndex(), 1u);
+
+  EXPECT_FALSE(thread_sp->GetFrameWithConcreteFrameIndex(2));
+
+  // On a thread with no frames fetched yet, the lookup has to fetch the frames
+  // it searches.
+  ThreadSP unfetched_thread_sp = std::make_shared<HistoryThread>(
+      *process_sp, /*tid=*/0x1235, std::vector<addr_t>{inlined_pc, caller_pc});
+  frame_sp = unfetched_thread_sp->GetFrameWithConcreteFrameIndex(1);
+  ASSERT_TRUE(frame_sp);
+  EXPECT_EQ(frame_sp->GetFrameIndex(), 2u);
+}
+
+// The artificial frames for a tail call have the concrete frame index of the
+// next unwound frame and come before it.
+TEST_F(StackFrameListTest,
+       GetFrameWithConcreteFrameIndexSkipsArtificialFrames) {
+  llvm::Expected<TestFile> file = TestFile::fromYamlFile("tail-call.yaml");
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  ModuleSP module_sp = std::make_shared<Module>(file->moduleSpec());
+  ASSERT_TRUE(module_sp);
+  m_target_sp->GetImages().Append(module_sp);
+  // Load the module clear of the one that SetUp() loaded.
+  const addr_t load_addr = 0x1000;
+  bool changed = false;
+  ASSERT_TRUE(module_sp->SetLoadAddress(*m_target_sp, load_addr,
+                                        /*value_is_offset=*/true, changed));
+
+  // The first PC is in sink(), which tail() calls with a tail call. The second
+  // is the return address of main()'s call to tail(). The generation recipe is
+  // in Inputs/tail-call.yaml.
+  const addr_t sink_pc = load_addr + 0x0;
+  const addr_t main_return_pc = load_addr + 0x26;
+
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<DummyProcess>(m_target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+  ThreadSP thread_sp = std::make_shared<HistoryThread>(
+      *process_sp, /*tid=*/0x1234,
+      std::vector<addr_t>{sink_pc, main_return_pc});
+
+  // The YAML object file creates a backtrace like this:
+  //   frame #0: 0x0000000000001000 sink() at tail.cpp:3:42
+  //   frame #1: 0x0000000000001015 tail() at tail.cpp:5:41 [artificial]
+  //   frame #2: 0x0000000000001026 main at tail.cpp:8:3
+  ASSERT_EQ(thread_sp->GetStackFrameCount(), 3u);
+  StackFrameSP artificial_frame_sp = thread_sp->GetStackFrameAtIndex(1);
+  ASSERT_TRUE(artificial_frame_sp);
+  ASSERT_TRUE(artificial_frame_sp->IsArtificial());
+  ASSERT_EQ(artificial_frame_sp->GetConcreteFrameIndex(), 1u);
+
+  StackFrameSP frame_sp = thread_sp->GetFrameWithConcreteFrameIndex(1);
+  ASSERT_TRUE(frame_sp);
+  EXPECT_EQ(frame_sp->GetFrameIndex(), 2u);
+  EXPECT_FALSE(frame_sp->IsArtificial());
+}
+} // namespace

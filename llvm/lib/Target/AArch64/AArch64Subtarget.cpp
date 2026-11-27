@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/SipHash.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
@@ -35,26 +36,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "AArch64GenSubtargetInfo.inc"
 
-static cl::opt<bool>
-EnableEarlyIfConvert("aarch64-early-ifcvt", cl::desc("Enable the early if "
-                     "converter pass"), cl::init(true), cl::Hidden);
-
-// If OS supports TBI, use this flag to enable it.
-static cl::opt<bool>
-UseAddressTopByteIgnored("aarch64-use-tbi", cl::desc("Assume that top byte of "
-                         "an address is ignored"), cl::init(false), cl::Hidden);
-
-static cl::opt<bool> MachOUseNonLazyBind(
-    "aarch64-macho-enable-nonlazybind",
-    cl::desc("Call nonlazybind functions via direct GOT load for Mach-O"),
-    cl::Hidden);
-
-static cl::opt<bool> UseAA("aarch64-use-aa", cl::init(true),
-                           cl::desc("Enable the use of AA during codegen."));
-
-static cl::opt<unsigned> OverrideVectorInsertExtractBaseCost(
-    "aarch64-insert-extract-base-cost",
-    cl::desc("Base cost of vector insert/extract element"), cl::Hidden);
+#define OPTIONS_STRUCT_DEFS
+#include "AArch64Options.inc"
 
 // Reserve a list of X# registers, so they are unavailable for register
 // allocator, but can still be used as ABI requests, such as passing arguments
@@ -65,47 +48,8 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<AArch64PAuth::AuthCheckMethod>
-    AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",
-                               cl::Hidden,
-                               cl::desc("Override the variant of check applied "
-                                        "to authenticated LR during tail call"),
-                               cl::values(AUTH_CHECK_METHOD_CL_VALUES_LR));
-
-static cl::opt<unsigned> AArch64MinimumJumpTableEntries(
-    "aarch64-min-jump-table-entries", cl::init(13), cl::Hidden,
-    cl::desc("Set minimum number of entries to use a jump table on AArch64"));
-
-static cl::opt<unsigned> AArch64StreamingHazardSize(
-    "aarch64-streaming-hazard-size",
-    cl::desc("Hazard size for streaming mode memory accesses. 0 = disabled."),
-    cl::init(0), cl::Hidden);
-
-static cl::alias AArch64StreamingStackHazardSize(
-    "aarch64-stack-hazard-size",
-    cl::desc("alias for -aarch64-streaming-hazard-size"),
-    cl::aliasopt(AArch64StreamingHazardSize));
-
-static cl::opt<bool> EnableZPRPredicateSpills(
-    "aarch64-enable-zpr-predicate-spills", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Enables spilling/reloading SVE predicates as data vectors (ZPRs)"));
-
-// Subreg liveness tracking is disabled by default for now until all issues
-// are ironed out. This option allows the feature to be used in tests.
-static cl::opt<bool>
-    EnableSubregLivenessTracking("aarch64-enable-subreg-liveness-tracking",
-                                 cl::init(false), cl::Hidden,
-                                 cl::desc("Enable subreg liveness tracking"));
-
-static cl::opt<bool>
-    UseScalarIncVL("sve-use-scalar-inc-vl", cl::init(false), cl::Hidden,
-                   cl::desc("Prefer add+cnt over addvl/inc/dec"));
-
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
-  if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
-    return OverrideVectorInsertExtractBaseCost;
-  return VectorInsertExtractBaseCost;
+  return CLOpts.insert_extract_base_cost.value_or(VectorInsertExtractBaseCost);
 }
 
 AArch64Subtarget &AArch64Subtarget::initializeSubtargetDependencies(
@@ -138,7 +82,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
       AvoidLDAPUR = true;
     break;
   case Carmel:
-    CacheLineSize = 64;
     break;
   case CortexA35:
   case CortexA53:
@@ -150,7 +93,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA57:
-    MaxInterleaveFactor = 4;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
@@ -178,6 +120,7 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA320:
   case CortexA510:
   case CortexA520:
+  case C1Nano:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(16);
@@ -187,10 +130,14 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case CortexA715:
   case CortexA720:
   case CortexA725:
+  case C1Pro:
   case CortexX2:
   case CortexX3:
   case CortexX4:
   case CortexX925:
+  case C1Premium:
+  case C1Ultra:
+  case C2Ultra:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     PrefLoopAlignment = Align(32);
@@ -200,7 +147,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     CacheLineSize = 256;
     PrefFunctionAlignment = Align(8);
     PrefLoopAlignment = Align(4);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
@@ -219,30 +165,18 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case AppleA16:
   case AppleA17:
   case AppleM4:
-    CacheLineSize = 64;
+  case AppleM5:
+  case AppleM6:
     PrefetchDistance = 280;
     MinPrefetchStride = 2048;
     MaxPrefetchIterationsAhead = 3;
-    switch (ARMProcFamily) {
-    case AppleA14:
-    case AppleA15:
-    case AppleA16:
-    case AppleA17:
-    case AppleM4:
-      MaxInterleaveFactor = 4;
-      break;
-    default:
-      break;
-    }
     break;
   case ExynosM3:
-    MaxInterleaveFactor = 4;
     MaxJumpTableSize = 20;
     PrefFunctionAlignment = Align(32);
     PrefLoopAlignment = Align(16);
     break;
   case Falkor:
-    MaxInterleaveFactor = 4;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     CacheLineSize = 128;
@@ -251,7 +185,6 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MaxPrefetchIterationsAhead = 8;
     break;
   case Kryo:
-    MaxInterleaveFactor = 4;
     VectorInsertExtractBaseCost = 2;
     CacheLineSize = 128;
     PrefetchDistance = 740;
@@ -271,12 +204,12 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case NeoverseV2:
   case NeoverseV3:
     EpilogueVectorizationMinVF = 8;
-    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case NeoverseN2:
   case NeoverseN3:
-    PrefFunctionAlignment = Align(16);
+  case NeoverseV3AE:
+    PrefFunctionAlignment = Align(32);
     PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 1;
@@ -291,18 +224,14 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case Neoverse512TVB:
     PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
-    MaxInterleaveFactor = 4;
     break;
   case Saphira:
-    MaxInterleaveFactor = 4;
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     break;
   case ThunderX2T99:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(8);
     PrefLoopAlignment = Align(4);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
@@ -320,15 +249,18 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     MinVectorRegisterBitWidth = 128;
     break;
   case TSV110:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);
     break;
-  case ThunderX3T110:
-    CacheLineSize = 64;
+  case HIP12:
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(4);
-    MaxInterleaveFactor = 4;
+    VScaleForTuning = 2;
+    DefaultSVETFOpts = TailFoldingOpts::Simple;
+    break;
+  case ThunderX3T110:
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(4);
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 4;
@@ -338,21 +270,17 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
   case Ampere1:
   case Ampere1A:
   case Ampere1B:
-    CacheLineSize = 64;
+  case Ampere1C:
     PrefFunctionAlignment = Align(64);
     PrefLoopAlignment = Align(64);
-    MaxInterleaveFactor = 4;
     break;
   case Oryon:
-    CacheLineSize = 64;
     PrefFunctionAlignment = Align(16);
-    MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
     break;
   case Olympus:
     EpilogueVectorizationMinVF = 8;
-    MaxInterleaveFactor = 4;
     ScatterOverhead = 13;
     PrefFunctionAlignment = Align(16);
     PrefLoopAlignment = Align(32);
@@ -361,8 +289,10 @@ void AArch64Subtarget::initializeProperties(bool HasMinSize) {
     break;
   }
 
-  if (AArch64MinimumJumpTableEntries.getNumOccurrences() > 0 || !HasMinSize)
-    MinimumJumpTableEntries = AArch64MinimumJumpTableEntries;
+  if (CLOpts.min_jump_table_entries || !HasMinSize)
+    MinimumJumpTableEntries = CLOpts.min_jump_table_entries.value_or(10);
+  if (CLOpts.sve_vscale_for_tuning)
+    VScaleForTuning = *CLOpts.sve_vscale_for_tuning;
 }
 
 AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
@@ -371,23 +301,36 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
                                    bool IsStreaming, bool IsStreamingCompatible,
-                                   bool HasMinSize)
+                                   bool HasMinSize,
+                                   bool EnableSRLTSubregToRegMitigation)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
+      CLOpts(static_cast<const AArch64TargetMachine &>(TM).getCLOpts()),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian), IsStreaming(IsStreaming),
       IsStreamingCompatible(IsStreamingCompatible),
-      StreamingHazardSize(
-          AArch64StreamingHazardSize.getNumOccurrences() > 0
-              ? std::optional<unsigned>(AArch64StreamingHazardSize)
-              : std::nullopt),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
-      MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
+      MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride),
+      EnableSRLTSubregToRegMitigation(EnableSRLTSubregToRegMitigation),
+      // To benefit from SME2's strided-register multi-vector load/store
+      // instructions we'll need to enable subreg liveness. Our longer
+      // term aim is to make this the default, regardless of streaming
+      // mode, but there are still some outstanding issues, see:
+      //  https://github.com/llvm/llvm-project/pull/174188
+      // and:
+      //  https://github.com/llvm/llvm-project/pull/168353
+      EnableSubregLiveness(IsStreaming ||
+                           CLOpts.enable_subreg_liveness_tracking),
+      TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))
     ReserveXRegister.set(18);
+  if (isLFI()) {
+    ReserveXRegister.set(25, 29);
+    ReserveLRForRA = true;
+  }
 
   CallLoweringInfo.reset(new AArch64CallLowering(*getTargetLowering()));
   InlineAsmLoweringInfo.reset(new InlineAsmLowering(getTargetLowering()));
@@ -415,22 +358,6 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   // X29 is named FP, so we can't use TRI->getName to check X29.
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
-
-  EnableSubregLiveness = EnableSubregLivenessTracking.getValue();
-}
-
-unsigned AArch64Subtarget::getHwModeSet() const {
-  AArch64HwModeBits Modes = AArch64HwModeBits::DefaultMode;
-
-  // Use a special hardware mode in streaming[-compatible] functions with
-  // aarch64-enable-zpr-predicate-spills. This changes the spill size (and
-  // alignment) for the predicate register class.
-  if (EnableZPRPredicateSpills.getValue() &&
-      (isStreaming() || isStreamingCompatible())) {
-    Modes |= AArch64HwModeBits::SMEWithZPRPredicateSpills;
-  }
-
-  return to_underlying(Modes);
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
@@ -474,7 +401,7 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
     if (GV->hasDLLImportStorageClass()) {
       return AArch64II::MO_GOT | AArch64II::MO_DLLIMPORT;
     }
-    if (getTargetTriple().isOSWindows())
+    if (getTargetTriple().isOSWindowsOrUEFI())
       return AArch64II::MO_GOT | AArch64II::MO_COFFSTUB;
     return AArch64II::MO_GOT;
   }
@@ -506,11 +433,11 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 
   // NonLazyBind goes via GOT unless we know it's available locally.
   auto *F = dyn_cast<Function>(GV);
-  if ((!isTargetMachO() || MachOUseNonLazyBind) && F &&
+  if ((!isTargetMachO() || CLOpts.macho_enable_nonlazybind) && F &&
       F->hasFnAttribute(Attribute::NonLazyBind) && !TM.shouldAssumeDSOLocal(GV))
     return AArch64II::MO_GOT;
 
-  if (getTargetTriple().isOSWindows()) {
+  if (getTargetTriple().isOSWindowsOrUEFI()) {
     if (isWindowsArm64EC() && GV->getValueType()->isFunctionTy()) {
       if (GV->hasDLLImportStorageClass()) {
         // On Arm64EC, if we're calling a symbol from the import table
@@ -533,7 +460,7 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
 }
 
 void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                           unsigned NumRegionInstrs) const {
+                                           const SchedRegion &Region) const {
   // LNT run (at least on Cyclone) showed reasonably significant gains for
   // bi-directional scheduling. 253.perlbmk.
   Policy.OnlyTopDown = false;
@@ -584,11 +511,11 @@ void AArch64Subtarget::adjustSchedDependency(
 }
 
 bool AArch64Subtarget::enableEarlyIfConversion() const {
-  return EnableEarlyIfConvert;
+  return CLOpts.early_ifcvt;
 }
 
 bool AArch64Subtarget::supportsAddressTopByteIgnored() const {
-  if (!UseAddressTopByteIgnored)
+  if (!CLOpts.use_tbi)
     return false;
 
   if (TargetTriple.isDriverKit())
@@ -615,14 +542,12 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
     MFI.computeMaxCallFrameSize(MF);
 }
 
-bool AArch64Subtarget::useAA() const { return UseAA; }
+bool AArch64Subtarget::useAA() const { return CLOpts.use_aa; }
 
 bool AArch64Subtarget::useScalarIncVL() const {
-  // If SVE2 or SME is present (we are not SVE-1 only) and UseScalarIncVL
-  // is not otherwise set, enable it by default.
-  if (UseScalarIncVL.getNumOccurrences())
-    return UseScalarIncVL;
-  return hasSVE2() || hasSME();
+  // If SVE2 or SME is present (we are not SVE-1 only) and
+  // -sve-use-scalar-inc-vl is not otherwise set, enable it by default.
+  return valueOr(CLOpts.sve_use_scalar_inc_vl, hasSVE2() || hasSME());
 }
 
 // If return address signing is enabled, tail calls are emitted as follows:
@@ -645,12 +570,10 @@ AArch64PAuth::AuthCheckMethod AArch64Subtarget::getAuthenticatedLRCheckMethod(
   if (MF.getFunction().hasFnAttribute("ptrauth-returns") &&
       MF.getFunction().hasFnAttribute("ptrauth-auth-traps"))
     return AArch64PAuth::AuthCheckMethod::HighBitsNoTBI;
-  if (AuthenticatedLRCheckMethod.getNumOccurrences())
-    return AuthenticatedLRCheckMethod;
-
   // At now, use None by default because checks may introduce an unexpected
   // performance regression or incompatibility with execute-only mappings.
-  return AArch64PAuth::AuthCheckMethod::None;
+  return CLOpts.authenticated_lr_check_method.value_or(
+      AArch64PAuth::AuthCheckMethod::None);
 }
 
 std::optional<uint16_t>
@@ -664,6 +587,59 @@ AArch64Subtarget::getPtrAuthBlockAddressDiscriminatorIfEnabled(
       (Twine(ParentFn.getName()) + " blockaddress").str());
 }
 
+bool AArch64Subtarget::isX16X17Safer() const {
+  // The Darwin kernel implements special protections for x16 and x17 so we
+  // should prefer to use those registers on that platform.
+  return isTargetDarwin();
+}
+
 bool AArch64Subtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
+}
+
+/// Returns a MOVK's shifter operand, or 0 otherwise.
+static unsigned getMOVKShiftImm(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  if (Opc != AArch64::MOVKWi && Opc != AArch64::MOVKXi)
+    return 0;
+  return MI.getOperand(3).getImm();
+}
+
+/// \p HasFirst is false when the 1st instruction is a wildcard.
+static bool fusesMOVImmPairImpl(const AArch64Subtarget &ST, bool HasFirst,
+                                unsigned FirstOpc, unsigned FirstShift,
+                                unsigned SecondOpc, unsigned SecondShift) {
+  assert(ST.hasFuseLiterals() && "the subtarget doesn't fuse move immediate");
+
+  // 32 bit immediate.
+  if ((!HasFirst || FirstOpc == AArch64::MOVZWi) &&
+      SecondOpc == AArch64::MOVKWi && SecondShift == 16)
+    return true;
+
+  // Lower half of 64 bit immediate.
+  if ((!HasFirst || FirstOpc == AArch64::MOVZXi) &&
+      SecondOpc == AArch64::MOVKXi && SecondShift == 16)
+    return true;
+
+  // Upper half of 64 bit immediate.
+  if ((!HasFirst || (FirstOpc == AArch64::MOVKXi && FirstShift == 32)) &&
+      SecondOpc == AArch64::MOVKXi && SecondShift == 48)
+    return true;
+
+  return false;
+}
+
+bool AArch64Subtarget::fusesMOVImmPair(unsigned FirstOpc, unsigned FirstShift,
+                                       unsigned SecondOpc,
+                                       unsigned SecondShift) const {
+  return fusesMOVImmPairImpl(*this, /*HasFirst=*/true, FirstOpc, FirstShift,
+                             SecondOpc, SecondShift);
+}
+
+bool AArch64Subtarget::fusesMOVImmPair(const MachineInstr *FirstMI,
+                                       const MachineInstr &SecondMI) const {
+  return fusesMOVImmPairImpl(*this, FirstMI != nullptr,
+                             FirstMI ? FirstMI->getOpcode() : 0,
+                             FirstMI ? getMOVKShiftImm(*FirstMI) : 0,
+                             SecondMI.getOpcode(), getMOVKShiftImm(SecondMI));
 }

@@ -13,6 +13,9 @@ SYMBOL(consume_header, std::, <codecvt>)
 SYMBOL(generate_header, std::, <codecvt>)
 SYMBOL(little_endian, std::, <codecvt>)
 
+SYMBOL(compare_three_way, std::, <compare>)
+SYMBOL(compare_three_way, std::, <functional>)
+
 SYMBOL(mbstate_t, std::, <cwchar>)
 SYMBOL(mbstate_t, std::, <cuchar>)
 SYMBOL(size_t, std::, <cstddef>)

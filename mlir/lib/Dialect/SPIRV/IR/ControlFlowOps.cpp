@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/InterleavedRange.h"
 
 #include "SPIRVOpUtils.h"
@@ -138,7 +139,7 @@ LogicalResult BranchConditionalOp::verify() {
       return emitOpError("must have exactly two branch weights");
     }
     if (llvm::all_of(*weights, [](Attribute attr) {
-          return llvm::cast<IntegerAttr>(attr).getValue().isZero();
+          return cast<IntegerAttr>(attr).getValue().isZero();
         }))
       return emitOpError("branch weights cannot both be zero");
   }
@@ -151,22 +152,26 @@ LogicalResult BranchConditionalOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult FunctionCallOp::verify() {
+  if (getNumResults() > 1) {
+    return emitOpError(
+               "expected callee function to have 0 or 1 result, but provided ")
+           << getNumResults();
+  }
+  return success();
+}
+
+LogicalResult
+FunctionCallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   auto fnName = getCalleeAttr();
 
-  auto funcOp = dyn_cast_or_null<spirv::FuncOp>(
-      SymbolTable::lookupNearestSymbolFrom((*this)->getParentOp(), fnName));
+  auto funcOp =
+      symbolTable.lookupNearestSymbolFrom<spirv::FuncOp>(*this, fnName);
   if (!funcOp) {
     return emitOpError("callee function '")
            << fnName.getValue() << "' not found in nearest symbol table";
   }
 
   auto functionType = funcOp.getFunctionType();
-
-  if (getNumResults() > 1) {
-    return emitOpError(
-               "expected callee function to have 0 or 1 result, but provided ")
-           << getNumResults();
-  }
 
   if (functionType.getNumInputs() != getNumOperands()) {
     return emitOpError("has incorrect number of operands for callee: expected ")
@@ -200,11 +205,11 @@ LogicalResult FunctionCallOp::verify() {
 }
 
 CallInterfaceCallable FunctionCallOp::getCallableForCallee() {
-  return (*this)->getAttrOfType<SymbolRefAttr>(getCalleeAttrName());
+  return getCalleeAttr();
 }
 
 void FunctionCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
-  (*this)->setAttr(getCalleeAttrName(), cast<SymbolRefAttr>(callee));
+  setCalleeAttr(cast<FlatSymbolRefAttr>(cast<SymbolRefAttr>(callee)));
 }
 
 Operation::operand_range FunctionCallOp::getArgOperands() {
@@ -214,6 +219,152 @@ Operation::operand_range FunctionCallOp::getArgOperands() {
 MutableOperandRange FunctionCallOp::getArgOperandsMutable() {
   return getArgumentsMutable();
 }
+
+//===----------------------------------------------------------------------===//
+// spirv.Switch
+//===----------------------------------------------------------------------===//
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     DenseIntElementsAttr literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  build(builder, result, selector, defaultOperands, targetOperands, literals,
+        defaultTarget, targets);
+}
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     ArrayRef<APInt> literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  DenseIntElementsAttr literalsAttr;
+  if (!literals.empty()) {
+    ShapedType literalType = VectorType::get(
+        static_cast<int64_t>(literals.size()), selector.getType());
+    literalsAttr = DenseIntElementsAttr::get(literalType, literals);
+  }
+  build(builder, result, selector, defaultTarget, defaultOperands, literalsAttr,
+        targets, targetOperands);
+}
+
+void SwitchOp::build(OpBuilder &builder, OperationState &result, Value selector,
+                     Block *defaultTarget, ValueRange defaultOperands,
+                     ArrayRef<int32_t> literals, BlockRange targets,
+                     ArrayRef<ValueRange> targetOperands) {
+  DenseIntElementsAttr literalsAttr;
+  if (!literals.empty()) {
+    ShapedType literalType = VectorType::get(
+        static_cast<int64_t>(literals.size()), selector.getType());
+    literalsAttr = DenseIntElementsAttr::get(literalType, literals);
+  }
+  build(builder, result, selector, defaultTarget, defaultOperands, literalsAttr,
+        targets, targetOperands);
+}
+
+LogicalResult SwitchOp::verify() {
+  std::optional<DenseIntElementsAttr> literals = getLiterals();
+  BlockRange targets = getTargets();
+
+  if (!literals && targets.empty())
+    return success();
+
+  if (literals) {
+    Type selectorType = getSelector().getType();
+    Type literalType = literals->getType().getElementType();
+    if (literalType != selectorType)
+      return emitOpError() << "'selector' type (" << selectorType
+                           << ") should match literals type (" << literalType
+                           << ")";
+  }
+
+  if (literals && literals->size() != static_cast<int64_t>(targets.size()))
+    return emitOpError() << "number of literals (" << literals->size()
+                         << ") should match number of targets ("
+                         << targets.size() << ")";
+  return success();
+}
+
+SuccessorOperands SwitchOp::getSuccessorOperands(unsigned index) {
+  assert(index < getNumSuccessors() && "invalid successor index");
+  return SuccessorOperands(index == 0 ? getDefaultOperandsMutable()
+                                      : getTargetOperandsMutable(index - 1));
+}
+
+Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
+  std::optional<DenseIntElementsAttr> literals = getLiterals();
+
+  if (!literals)
+    return getDefaultTarget();
+
+  SuccessorRange targets = getTargets();
+  if (auto value = dyn_cast_or_null<IntegerAttr>(operands.front())) {
+    for (auto [index, literal] : llvm::enumerate(literals->getValues<APInt>()))
+      if (literal == value.getValue())
+        return targets[index];
+    return getDefaultTarget();
+  }
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.KHR.Abort
+//===----------------------------------------------------------------------===//
+
+/// Returns true if `type` is a numerical scalar, physical pointer, vector,
+/// matrix, or an aggregate recursively containing only such types. Without an
+/// enclosing `moduleOp` any pointer is accepted.
+static bool isConcreteType(Type type, spirv::ModuleOp moduleOp) {
+  return TypeSwitch<Type, bool>(type)
+      .Case([&](spirv::PointerType pointerType) {
+        if (!moduleOp)
+          return true;
+        spirv::AddressingModel addressingModel = moduleOp.getAddressingModel();
+        if (addressingModel == spirv::AddressingModel::Logical)
+          return false;
+        return addressingModel !=
+                   spirv::AddressingModel::PhysicalStorageBuffer64 ||
+               pointerType.getStorageClass() ==
+                   spirv::StorageClass::PhysicalStorageBuffer;
+      })
+      .Case(
+          [](spirv::ScalarType scalarType) { return !scalarType.isInteger(1); })
+      .Case<VectorType, spirv::ArrayType, spirv::MatrixType>(
+          [&](auto compositeType) {
+            return isConcreteType(compositeType.getElementType(), moduleOp);
+          })
+      .Case([&](spirv::StructType structType) {
+        return llvm::all_of(structType.getElementTypes(),
+                            [&](Type elementType) {
+                              return isConcreteType(elementType, moduleOp);
+                            });
+      })
+      .Default(false);
+}
+
+LogicalResult KHRAbortOp::verify() {
+  if (!isConcreteType(getMessage().getType(),
+                      (*this)->getParentOfType<spirv::ModuleOp>()))
+    return emitOpError("message must be of a concrete type (numerical scalar, "
+                       "physical pointer, vector, matrix, or aggregate of such "
+                       "types)");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.LifetimeStart / spirv.LifetimeStop
+//===----------------------------------------------------------------------===//
+
+template <typename LifetimeOpTy>
+static LogicalResult verifyLifetimeOp(LifetimeOpTy op) {
+  auto ptrType = cast<spirv::PointerType>(op.getPointer().getType());
+  if (ptrType.getStorageClass() != spirv::StorageClass::Function)
+    return op.emitOpError("pointer must have the Function storage class");
+
+  return success();
+}
+
+LogicalResult LifetimeStartOp::verify() { return verifyLifetimeOp(*this); }
+
+LogicalResult LifetimeStopOp::verify() { return verifyLifetimeOp(*this); }
 
 //===----------------------------------------------------------------------===//
 // spirv.mlir.loop
@@ -271,6 +422,14 @@ static bool hasOtherMerge(Region &region) {
   return !region.empty() && llvm::any_of(region.getOps(), [&](Operation &op) {
     return isa<spirv::MergeOp>(op) && op.getBlock() != &region.back();
   });
+}
+
+/// Returns true if types yielded by `spirv.mlir.merge` in the region match
+/// those returned by the `op`.
+static bool returnTypesMatch(Region &region, Operation *op) {
+  auto mergeOps = region.getOps<spirv::MergeOp>();
+  Operation *mergeOp = llvm::getSingleElement(mergeOps);
+  return llvm::equal(mergeOp->getOperandTypes(), op->getResultTypes());
 }
 
 LogicalResult LoopOp::verifyRegions() {
@@ -358,6 +517,10 @@ LogicalResult LoopOp::verifyRegions() {
     }
   }
 
+  if (!returnTypesMatch(region, op))
+    return emitOpError(
+        "result types do not match types yielded with `spirv.mlir.merge`");
+
   return success();
 }
 
@@ -391,7 +554,7 @@ void LoopOp::addEntryAndMergeBlock(OpBuilder &builder) {
   builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
-  builder.create<spirv::MergeOp>(getLoc());
+  spirv::MergeOp::create(builder, getLoc());
 }
 
 //===----------------------------------------------------------------------===//
@@ -417,8 +580,8 @@ LogicalResult ReturnValueOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult SelectOp::verify() {
-  if (auto conditionTy = llvm::dyn_cast<VectorType>(getCondition().getType())) {
-    auto resultVectorTy = llvm::dyn_cast<VectorType>(getResult().getType());
+  if (auto conditionTy = dyn_cast<VectorType>(getCondition().getType())) {
+    auto resultVectorTy = dyn_cast<VectorType>(getResult().getType());
     if (!resultVectorTy) {
       return emitOpError("result expected to be of vector type when "
                          "condition is of vector type");
@@ -522,6 +685,10 @@ LogicalResult SelectionOp::verifyRegions() {
   if (region.hasOneBlock())
     return emitOpError("must have a selection header block");
 
+  if (!returnTypesMatch(region, op))
+    return emitOpError(
+        "result types do not match types yielded with `spirv.mlir.merge`");
+
   return success();
 }
 
@@ -543,7 +710,7 @@ void SelectionOp::addMergeBlock(OpBuilder &builder) {
   builder.createBlock(&getBody());
 
   // Add a spirv.mlir.merge op into the merge block.
-  builder.create<spirv::MergeOp>(getLoc());
+  spirv::MergeOp::create(builder, getLoc());
 }
 
 SelectionOp
@@ -551,7 +718,7 @@ SelectionOp::createIfThen(Location loc, Value condition,
                           function_ref<void(OpBuilder &builder)> thenBody,
                           OpBuilder &builder) {
   auto selectionOp =
-      builder.create<spirv::SelectionOp>(loc, spirv::SelectionControl::None);
+      spirv::SelectionOp::create(builder, loc, spirv::SelectionControl::None);
 
   selectionOp.addMergeBlock(builder);
   Block *mergeBlock = selectionOp.getMergeBlock();
@@ -562,17 +729,17 @@ SelectionOp::createIfThen(Location loc, Value condition,
     OpBuilder::InsertionGuard guard(builder);
     thenBlock = builder.createBlock(mergeBlock);
     thenBody(builder);
-    builder.create<spirv::BranchOp>(loc, mergeBlock);
+    spirv::BranchOp::create(builder, loc, mergeBlock);
   }
 
   // Build the header block.
   {
     OpBuilder::InsertionGuard guard(builder);
     builder.createBlock(thenBlock);
-    builder.create<spirv::BranchConditionalOp>(
-        loc, condition, thenBlock,
-        /*trueArguments=*/ArrayRef<Value>(), mergeBlock,
-        /*falseArguments=*/ArrayRef<Value>());
+    spirv::BranchConditionalOp::create(builder, loc, condition, thenBlock,
+                                       /*trueArguments=*/ArrayRef<Value>(),
+                                       mergeBlock,
+                                       /*falseArguments=*/ArrayRef<Value>());
   }
 
   return selectionOp;

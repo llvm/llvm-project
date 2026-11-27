@@ -12,8 +12,8 @@
 
 #include <__assert>
 #include <__config>
-#include <__memory/addressof.h>
 #include <__type_traits/integer_traits.h>
+#include <__utility/checked_int.h>
 #include <__utility/cmp.h>
 #include <limits>
 
@@ -26,14 +26,16 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
-
-template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp __add_sat(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __sum; !__builtin_add_overflow(__x, __y, std::addressof(__sum)))
-    return __sum;
+template <class _Tp>
+_LIBCPP_CONSTEXPR _Tp __saturating_add(_Tp __x, _Tp __y) _NOEXCEPT {
+  static_assert(__is_signed_integer_v<_Tp> || __is_unsigned_integer_v<_Tp>);
+#if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
+  return __builtin_elementwise_add_sat(__x, __y);
+#else
+  if (auto __sum = __checked_int<_Tp>(__x) + __y; !__sum.__overflowed())
+    return __sum.__value();
   // Handle overflow
-  if constexpr (__unsigned_integer<_Tp>) {
+  if _LIBCPP_CONSTEXPR (__is_unsigned_integer_v<_Tp>) {
     return std::numeric_limits<_Tp>::max();
   } else {
     // Signed addition overflow
@@ -44,12 +46,18 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __add_sat(_Tp __x, _Tp __y) noexcept {
       // Overflows if  (x < 0 && y < 0)
       return std::numeric_limits<_Tp>::min();
   }
+#endif
 }
 
+#if _LIBCPP_STD_VER >= 20
+
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp __sub_sat(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __sub; !__builtin_sub_overflow(__x, __y, std::addressof(__sub)))
-    return __sub;
+constexpr _Tp __saturating_sub(_Tp __x, _Tp __y) noexcept {
+#  if defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER >= 2101
+  return __builtin_elementwise_sub_sat(__x, __y);
+#  else
+  if (auto __sub = __checked_int(__x) - __y; !__sub.__overflowed())
+    return __sub.__value();
   // Handle overflow
   if constexpr (__unsigned_integer<_Tp>) {
     // Overflows if (x < y)
@@ -63,12 +71,13 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __sub_sat(_Tp __x, _Tp __y) noexcept {
       // Overflows if (x < 0 && y > 0)
       return std::numeric_limits<_Tp>::min();
   }
+#  endif
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp __mul_sat(_Tp __x, _Tp __y) noexcept {
-  if (_Tp __mul; !__builtin_mul_overflow(__x, __y, std::addressof(__mul)))
-    return __mul;
+constexpr _Tp __saturating_mul(_Tp __x, _Tp __y) noexcept {
+  if (auto __mul = __checked_int(__x) * __y; !__mul.__overflowed())
+    return __mul.__value();
   // Handle overflow
   if constexpr (__unsigned_integer<_Tp>) {
     return std::numeric_limits<_Tp>::max();
@@ -82,7 +91,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __mul_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp __div_sat(_Tp __x, _Tp __y) noexcept {
+constexpr _Tp __saturating_div(_Tp __x, _Tp __y) noexcept {
   _LIBCPP_ASSERT_UNCATEGORIZED(__y != 0, "Division by 0 is undefined");
   if constexpr (__unsigned_integer<_Tp>) {
     return __x / __y;
@@ -95,7 +104,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Tp __div_sat(_Tp __x, _Tp __y) noexcept {
 }
 
 template <__signed_or_unsigned_integer _Rp, __signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Rp __saturate_cast(_Tp __x) noexcept {
+constexpr _Rp __saturating_cast(_Tp __x) noexcept {
   // Saturation is impossible edge case when ((min _Rp) < (min _Tp) && (max _Rp) > (max _Tp)) and it is expected to be
   // optimized out by the compiler.
 
@@ -113,28 +122,28 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Rp __saturate_cast(_Tp __x) noexcept {
 #if _LIBCPP_STD_VER >= 26
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp add_sat(_Tp __x, _Tp __y) noexcept {
-  return std::__add_sat(__x, __y);
+[[nodiscard]] constexpr _Tp saturating_add(_Tp __x, _Tp __y) noexcept {
+  return std::__saturating_add(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp sub_sat(_Tp __x, _Tp __y) noexcept {
-  return std::__sub_sat(__x, __y);
+[[nodiscard]] constexpr _Tp saturating_sub(_Tp __x, _Tp __y) noexcept {
+  return std::__saturating_sub(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp mul_sat(_Tp __x, _Tp __y) noexcept {
-  return std::__mul_sat(__x, __y);
+[[nodiscard]] constexpr _Tp saturating_mul(_Tp __x, _Tp __y) noexcept {
+  return std::__saturating_mul(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Tp div_sat(_Tp __x, _Tp __y) noexcept {
-  return std::__div_sat(__x, __y);
+[[nodiscard]] constexpr _Tp saturating_div(_Tp __x, _Tp __y) noexcept {
+  return std::__saturating_div(__x, __y);
 }
 
 template <__signed_or_unsigned_integer _Rp, __signed_or_unsigned_integer _Tp>
-_LIBCPP_HIDE_FROM_ABI constexpr _Rp saturate_cast(_Tp __x) noexcept {
-  return std::__saturate_cast<_Rp>(__x);
+[[nodiscard]] constexpr _Rp saturating_cast(_Tp __x) noexcept {
+  return std::__saturating_cast<_Rp>(__x);
 }
 
 #endif // _LIBCPP_STD_VER >= 26

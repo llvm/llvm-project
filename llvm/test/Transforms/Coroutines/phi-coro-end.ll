@@ -17,7 +17,7 @@ cleanup:
 
 suspend:
   %r = phi i32 [%n, %entry], [1, %cleanup]
-  call i1 @llvm.coro.end(ptr %hdl, i1 false, token none)  
+  call void @llvm.coro.end(ptr %hdl, i1 false, token none)  
   call void @print(i32 %r)
   ret ptr %hdl
 }
@@ -32,7 +32,6 @@ entry:
 ;CHECK: ret i32 0
 }
 
-declare ptr @llvm.coro.alloc()
 declare i32 @llvm.coro.size.i32()
 declare ptr @llvm.coro.free(token, ptr)
 declare i8  @llvm.coro.suspend(token, i1)
@@ -41,7 +40,7 @@ declare void @llvm.coro.destroy(ptr)
   
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
-declare i1 @llvm.coro.end(ptr, i1, token) 
+declare void @llvm.coro.end(ptr, i1, token) 
 
 declare noalias ptr @malloc(i32)
 declare void @print(i32)

@@ -16,10 +16,10 @@
 #include "PPC.h"
 #include "PPCISelLowering.h"
 #include "PPCMachineFunctionInfo.h"
+#include "PPCSelectionDAGInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -50,7 +50,6 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -87,53 +86,6 @@ STATISTIC(OmittedForNonExtendUses,
 STATISTIC(NumP9Setb,
           "Number of compares lowered to setb.");
 
-// FIXME: Remove this once the bug has been fixed!
-cl::opt<bool> ANDIGlueBug("expose-ppc-andi-glue-bug",
-cl::desc("expose the ANDI glue bug on PPC"), cl::Hidden);
-
-static cl::opt<bool>
-    UseBitPermRewriter("ppc-use-bit-perm-rewriter", cl::init(true),
-                       cl::desc("use aggressive ppc isel for bit permutations"),
-                       cl::Hidden);
-static cl::opt<bool> BPermRewriterNoMasking(
-    "ppc-bit-perm-rewriter-stress-rotates",
-    cl::desc("stress rotate selection in aggressive ppc isel for "
-             "bit permutations"),
-    cl::Hidden);
-
-static cl::opt<bool> EnableBranchHint(
-  "ppc-use-branch-hint", cl::init(true),
-    cl::desc("Enable static hinting of branches on ppc"),
-    cl::Hidden);
-
-static cl::opt<bool> EnableTLSOpt(
-  "ppc-tls-opt", cl::init(true),
-    cl::desc("Enable tls optimization peephole"),
-    cl::Hidden);
-
-enum ICmpInGPRType { ICGPR_All, ICGPR_None, ICGPR_I32, ICGPR_I64,
-  ICGPR_NonExtIn, ICGPR_Zext, ICGPR_Sext, ICGPR_ZextI32,
-  ICGPR_SextI32, ICGPR_ZextI64, ICGPR_SextI64 };
-
-static cl::opt<ICmpInGPRType> CmpInGPR(
-  "ppc-gpr-icmps", cl::Hidden, cl::init(ICGPR_All),
-  cl::desc("Specify the types of comparisons to emit GPR-only code for."),
-  cl::values(clEnumValN(ICGPR_None, "none", "Do not modify integer comparisons."),
-             clEnumValN(ICGPR_All, "all", "All possible int comparisons in GPRs."),
-             clEnumValN(ICGPR_I32, "i32", "Only i32 comparisons in GPRs."),
-             clEnumValN(ICGPR_I64, "i64", "Only i64 comparisons in GPRs."),
-             clEnumValN(ICGPR_NonExtIn, "nonextin",
-                        "Only comparisons where inputs don't need [sz]ext."),
-             clEnumValN(ICGPR_Zext, "zext", "Only comparisons with zext result."),
-             clEnumValN(ICGPR_ZextI32, "zexti32",
-                        "Only i32 comparisons with zext result."),
-             clEnumValN(ICGPR_ZextI64, "zexti64",
-                        "Only i64 comparisons with zext result."),
-             clEnumValN(ICGPR_Sext, "sext", "Only comparisons with sext result."),
-             clEnumValN(ICGPR_SextI32, "sexti32",
-                        "Only i32 comparisons with sext result."),
-             clEnumValN(ICGPR_SextI64, "sexti64",
-                        "Only i64 comparisons with sext result.")));
 namespace {
 
   //===--------------------------------------------------------------------===//
@@ -400,8 +352,9 @@ namespace {
       case InlineAsm::ConstraintCode::Zy:
         // We need to make sure that this one operand does not end up in r0
         // (because we might end up lowering this as 0(%op)).
-        const TargetRegisterInfo *TRI = Subtarget->getRegisterInfo();
-        const TargetRegisterClass *TRC = TRI->getPointerRegClass(*MF, /*Kind=*/1);
+        const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+        const TargetRegisterClass *TRC =
+            TII->getInlineAsmMemoryOperandRegClass(ConstraintID);
         SDLoc dl(Op);
         SDValue RC = CurDAG->getTargetConstant(TRC->getID(), dl, MVT::i32);
         SDValue NewOp =
@@ -880,6 +833,12 @@ bool PPCDAGToDAGISel::tryBitfieldInsert(SDNode *N) {
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
   SDLoc dl(N);
+
+  // If either operand is a constant, let ORI/ORIS/ADDI/ADDIS tablegen
+  // patterns handle it — they produce a single instruction without the
+  // tied-register constraint that RLWIMI requires.
+  if (isa<ConstantSDNode>(Op0) || isa<ConstantSDNode>(Op1))
+    return false;
 
   KnownBits LKnown = CurDAG->computeKnownBits(Op0);
   KnownBits RKnown = CurDAG->computeKnownBits(Op1);
@@ -2159,7 +2118,7 @@ class BitPermutationSelector {
   // better to rotate, mask explicitly (using andi/andis), and then or the
   // result. Select this part of the result first.
   void SelectAndParts32(const SDLoc &dl, SDValue &Res, unsigned *InstCnt) {
-    if (BPermRewriterNoMasking)
+    if (StressRotates)
       return;
 
     for (ValueRotInfo &VRI : ValueRotsVec) {
@@ -2473,7 +2432,7 @@ class BitPermutationSelector {
   }
 
   void SelectAndParts64(const SDLoc &dl, SDValue &Res, unsigned *InstCnt) {
-    if (BPermRewriterNoMasking)
+    if (StressRotates)
       return;
 
     // The idea here is the same as in the 32-bit version, but with additional
@@ -2823,10 +2782,11 @@ class BitPermutationSelector {
   SmallVector<ValueRotInfo, 16> ValueRotsVec;
 
   SelectionDAG *CurDAG = nullptr;
+  bool StressRotates;
 
 public:
-  BitPermutationSelector(SelectionDAG *DAG)
-    : CurDAG(DAG) {}
+  BitPermutationSelector(SelectionDAG *DAG, bool StressRotates)
+      : CurDAG(DAG), StressRotates(StressRotates) {}
 
   // Here we try to match complex bit permutations into a set of
   // rotate-and-shift/shift/and/or instructions, using a set of heuristics
@@ -2880,6 +2840,7 @@ public:
 class IntegerCompareEliminator {
   SelectionDAG *CurDAG;
   PPCDAGToDAGISel *S;
+  PPC::ICmpInGPRType CmpInGPR;
   // Conversion type for interpreting results of a 32-bit instruction as
   // a 64-bit value or vice versa.
   enum ExtOrTruncConversion { Ext, Trunc };
@@ -2921,25 +2882,28 @@ class IntegerCompareEliminator {
   SDValue getSETCCInGPR(SDValue Compare, SetccInGPROpts ConvOpts);
 
 public:
-  IntegerCompareEliminator(SelectionDAG *DAG,
-                           PPCDAGToDAGISel *Sel) : CurDAG(DAG), S(Sel) {
+  IntegerCompareEliminator(SelectionDAG *DAG, PPCDAGToDAGISel *Sel,
+                           PPC::ICmpInGPRType CmpInGPR)
+      : CurDAG(DAG), S(Sel), CmpInGPR(CmpInGPR) {
     assert(CurDAG->getTargetLoweringInfo()
            .getPointerTy(CurDAG->getDataLayout()).getSizeInBits() == 64 &&
            "Only expecting to use this on 64 bit targets.");
   }
   SDNode *Select(SDNode *N) {
-    if (CmpInGPR == ICGPR_None)
+    if (CmpInGPR == PPC::ICmpInGPRType::None)
       return nullptr;
     switch (N->getOpcode()) {
     default: break;
     case ISD::ZERO_EXTEND:
-      if (CmpInGPR == ICGPR_Sext || CmpInGPR == ICGPR_SextI32 ||
-          CmpInGPR == ICGPR_SextI64)
+      if (CmpInGPR == PPC::ICmpInGPRType::Sext ||
+          CmpInGPR == PPC::ICmpInGPRType::SextI32 ||
+          CmpInGPR == PPC::ICmpInGPRType::SextI64)
         return nullptr;
       [[fallthrough]];
     case ISD::SIGN_EXTEND:
-      if (CmpInGPR == ICGPR_Zext || CmpInGPR == ICGPR_ZextI32 ||
-          CmpInGPR == ICGPR_ZextI64)
+      if (CmpInGPR == PPC::ICmpInGPRType::Zext ||
+          CmpInGPR == PPC::ICmpInGPRType::ZextI32 ||
+          CmpInGPR == PPC::ICmpInGPRType::ZextI64)
         return nullptr;
       return tryEXTEND(N);
     case ISD::AND:
@@ -3216,7 +3180,7 @@ SDValue IntegerCompareEliminator::addExtOrTrunc(SDValue NatWidthRes,
   SDLoc dl(NatWidthRes);
 
   // For reinterpreting 32-bit values as 64 bit values, we generate
-  // INSERT_SUBREG IMPLICIT_DEF:i64, <input>, TargetConstant:i32<1>
+  // INSERT_SUBREG IMPLICIT_DEF:i64, <input>, TargetConstant:i32<%subreg.sub_32>
   if (Conv == ExtOrTruncConversion::Ext) {
     SDValue ImDef(CurDAG->getMachineNode(PPC::IMPLICIT_DEF, dl, MVT::i64), 0);
     SDValue SubRegIdx =
@@ -3315,8 +3279,10 @@ SDValue
 IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
                                               ISD::CondCode CC,
                                               int64_t RHSValue, SDLoc dl) {
-  if (CmpInGPR == ICGPR_I64 || CmpInGPR == ICGPR_SextI64 ||
-      CmpInGPR == ICGPR_ZextI64 || CmpInGPR == ICGPR_Sext)
+  if (CmpInGPR == PPC::ICmpInGPRType::I64 ||
+      CmpInGPR == PPC::ICmpInGPRType::SextI64 ||
+      CmpInGPR == PPC::ICmpInGPRType::ZextI64 ||
+      CmpInGPR == PPC::ICmpInGPRType::Sext)
     return SDValue();
   bool IsRHSZero = RHSValue == 0;
   bool IsRHSOne = RHSValue == 1;
@@ -3363,12 +3329,12 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     [[fallthrough]];
   }
   case ISD::SETLE: {
-    if (CmpInGPR == ICGPR_NonExtIn)
+    if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
       return SDValue();
     // (zext (setcc %a, %b, setle)) -> (xor (lshr (sub %b, %a), 63), 1)
     // (zext (setcc %a, 0, setle))  -> (xor (lshr (- %a), 63), 1)
     if(IsRHSZero) {
-      if (CmpInGPR == ICGPR_NonExtIn)
+      if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
         return SDValue();
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::LEZExt);
     }
@@ -3395,7 +3361,7 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::GEZExt);
 
     if (IsRHSZero) {
-      if (CmpInGPR == ICGPR_NonExtIn)
+      if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
         return SDValue();
       // The upper 32-bits of the register can't be undefined for this sequence.
       LHS = signExtendInputIfNeeded(LHS);
@@ -3419,7 +3385,7 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     // (zext (setcc %a, 0, setlt))  -> (lshr %a, 31)
     // Handle SETLT 1 (which is equivalent to SETLE 0).
     if (IsRHSOne) {
-      if (CmpInGPR == ICGPR_NonExtIn)
+      if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
         return SDValue();
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::LEZExt);
     }
@@ -3431,7 +3397,7 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
                                             ShiftOps), 0);
     }
 
-    if (CmpInGPR == ICGPR_NonExtIn)
+    if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
       return SDValue();
     // The upper 32-bits of the register can't be undefined for this sequence.
     LHS = signExtendInputIfNeeded(LHS);
@@ -3448,7 +3414,7 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ISD::SETULE: {
-    if (CmpInGPR == ICGPR_NonExtIn)
+    if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
       return SDValue();
     // The upper 32-bits of the register can't be undefined for this sequence.
     LHS = zeroExtendInputIfNeeded(LHS);
@@ -3468,7 +3434,7 @@ IntegerCompareEliminator::get32BitZExtCompare(SDValue LHS, SDValue RHS,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ISD::SETULT: {
-    if (CmpInGPR == ICGPR_NonExtIn)
+    if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
       return SDValue();
     // The upper 32-bits of the register can't be undefined for this sequence.
     LHS = zeroExtendInputIfNeeded(LHS);
@@ -3488,8 +3454,10 @@ SDValue
 IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
                                               ISD::CondCode CC,
                                               int64_t RHSValue, SDLoc dl) {
-  if (CmpInGPR == ICGPR_I64 || CmpInGPR == ICGPR_SextI64 ||
-      CmpInGPR == ICGPR_ZextI64 || CmpInGPR == ICGPR_Zext)
+  if (CmpInGPR == PPC::ICmpInGPRType::I64 ||
+      CmpInGPR == PPC::ICmpInGPRType::SextI64 ||
+      CmpInGPR == PPC::ICmpInGPRType::ZextI64 ||
+      CmpInGPR == PPC::ICmpInGPRType::Zext)
     return SDValue();
   bool IsRHSZero = RHSValue == 0;
   bool IsRHSOne = RHSValue == 1;
@@ -3547,7 +3515,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     [[fallthrough]];
   }
   case ISD::SETLE: {
-    if (CmpInGPR == ICGPR_NonExtIn)
+    if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
       return SDValue();
     // (sext (setcc %a, %b, setge)) -> (add (lshr (sub %b, %a), 63), -1)
     // (sext (setcc %a, 0, setle))  -> (add (lshr (- %a), 63), -1)
@@ -3574,7 +3542,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     if (IsRHSNegOne)
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::GESExt);
     if (IsRHSZero) {
-      if (CmpInGPR == ICGPR_NonExtIn)
+      if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
         return SDValue();
       // The upper 32-bits of the register can't be undefined for this sequence.
       LHS = signExtendInputIfNeeded(LHS);
@@ -3597,7 +3565,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     // (sext (setcc %a, 1, setgt))  -> (add (lshr (- %a), 63), -1)
     // (sext (setcc %a, 0, setgt))  -> (ashr %a, 31)
     if (IsRHSOne) {
-      if (CmpInGPR == ICGPR_NonExtIn)
+      if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
         return SDValue();
       return getCompoundZeroComparisonInGPR(LHS, dl, ZeroCompare::LESExt);
     }
@@ -3605,7 +3573,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
       return SDValue(CurDAG->getMachineNode(PPC::SRAWI, dl, MVT::i32, LHS,
                                             S->getI32Imm(31, dl)), 0);
 
-    if (CmpInGPR == ICGPR_NonExtIn)
+    if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
       return SDValue();
     // The upper 32-bits of the register can't be undefined for this sequence.
     LHS = signExtendInputIfNeeded(LHS);
@@ -3621,7 +3589,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ISD::SETULE: {
-    if (CmpInGPR == ICGPR_NonExtIn)
+    if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
       return SDValue();
     // The upper 32-bits of the register can't be undefined for this sequence.
     LHS = zeroExtendInputIfNeeded(LHS);
@@ -3641,7 +3609,7 @@ IntegerCompareEliminator::get32BitSExtCompare(SDValue LHS, SDValue RHS,
     std::swap(LHS, RHS);
     [[fallthrough]];
   case ISD::SETULT: {
-    if (CmpInGPR == ICGPR_NonExtIn)
+    if (CmpInGPR == PPC::ICmpInGPRType::NonExtIn)
       return SDValue();
     // The upper 32-bits of the register can't be undefined for this sequence.
     LHS = zeroExtendInputIfNeeded(LHS);
@@ -3660,8 +3628,10 @@ SDValue
 IntegerCompareEliminator::get64BitZExtCompare(SDValue LHS, SDValue RHS,
                                               ISD::CondCode CC,
                                               int64_t RHSValue, SDLoc dl) {
-  if (CmpInGPR == ICGPR_I32 || CmpInGPR == ICGPR_SextI32 ||
-      CmpInGPR == ICGPR_ZextI32 || CmpInGPR == ICGPR_Sext)
+  if (CmpInGPR == PPC::ICmpInGPRType::I32 ||
+      CmpInGPR == PPC::ICmpInGPRType::SextI32 ||
+      CmpInGPR == PPC::ICmpInGPRType::ZextI32 ||
+      CmpInGPR == PPC::ICmpInGPRType::Sext)
     return SDValue();
   bool IsRHSZero = RHSValue == 0;
   bool IsRHSOne = RHSValue == 1;
@@ -3817,8 +3787,10 @@ SDValue
 IntegerCompareEliminator::get64BitSExtCompare(SDValue LHS, SDValue RHS,
                                               ISD::CondCode CC,
                                               int64_t RHSValue, SDLoc dl) {
-  if (CmpInGPR == ICGPR_I32 || CmpInGPR == ICGPR_SextI32 ||
-      CmpInGPR == ICGPR_ZextI32 || CmpInGPR == ICGPR_Zext)
+  if (CmpInGPR == PPC::ICmpInGPRType::I32 ||
+      CmpInGPR == PPC::ICmpInGPRType::SextI32 ||
+      CmpInGPR == PPC::ICmpInGPRType::ZextI32 ||
+      CmpInGPR == PPC::ICmpInGPRType::Zext)
     return SDValue();
   bool IsRHSZero = RHSValue == 0;
   bool IsRHSOne = RHSValue == 1;
@@ -4015,8 +3987,7 @@ SDValue IntegerCompareEliminator::getSETCCInGPR(SDValue Compare,
 
   // The condition code is operand 2 for SETCC and operand 4 for SELECT_CC.
   int CCOpNum = Compare.getOpcode() == ISD::SELECT_CC ? 4 : 2;
-  ISD::CondCode CC =
-    cast<CondCodeSDNode>(Compare.getOperand(CCOpNum))->get();
+  ISD::CondCode CC = Compare.getOperandCondCode(CCOpNum);
   EVT InputVT = LHS.getValueType();
   if (InputVT != MVT::i32 && InputVT != MVT::i64)
     return SDValue();
@@ -4058,7 +4029,8 @@ bool PPCDAGToDAGISel::tryIntCompareInGPR(SDNode *N) {
   // For POWER10, it is more profitable to use the set boolean extension
   // instructions rather than the integer compare elimination codegen.
   // Users can override this via the command line option, `--ppc-gpr-icmps`.
-  if (!(CmpInGPR.getNumOccurrences() > 0) && Subtarget->isISA3_1())
+  std::optional<PPC::ICmpInGPRType> CmpInGPR = Subtarget->getCLOpts().gpr_icmps;
+  if (!CmpInGPR && Subtarget->isISA3_1())
     return false;
 
   switch (N->getOpcode()) {
@@ -4068,7 +4040,8 @@ bool PPCDAGToDAGISel::tryIntCompareInGPR(SDNode *N) {
   case ISD::AND:
   case ISD::OR:
   case ISD::XOR: {
-    IntegerCompareEliminator ICmpElim(CurDAG, this);
+    IntegerCompareEliminator ICmpElim(
+        CurDAG, this, CmpInGPR.value_or(PPC::ICmpInGPRType::All));
     if (SDNode *New = ICmpElim.Select(N)) {
       ReplaceNode(N, New);
       return true;
@@ -4083,7 +4056,7 @@ bool PPCDAGToDAGISel::tryBitPermutation(SDNode *N) {
       N->getValueType(0) != MVT::i64)
     return false;
 
-  if (!UseBitPermRewriter)
+  if (!Subtarget->getCLOpts().use_bit_perm_rewriter)
     return false;
 
   switch (N->getOpcode()) {
@@ -4103,7 +4076,8 @@ bool PPCDAGToDAGISel::tryBitPermutation(SDNode *N) {
   case ISD::SHL:
   case ISD::AND:
   case ISD::OR: {
-    BitPermutationSelector BPS(CurDAG);
+    BitPermutationSelector BPS(
+        CurDAG, Subtarget->getCLOpts().bit_perm_rewriter_stress_rotates);
     if (SDNode *New = BPS.Select(N)) {
       ReplaceNode(N, New);
       return true;
@@ -4471,8 +4445,7 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
   SDLoc dl(N);
   unsigned Imm;
   bool IsStrict = N->isStrictFPOpcode();
-  ISD::CondCode CC =
-      cast<CondCodeSDNode>(N->getOperand(IsStrict ? 3 : 2))->get();
+  ISD::CondCode CC = N->getOperandCondCode(IsStrict ? 3 : 2);
   EVT PtrVT =
       CurDAG->getTargetLoweringInfo().getPointerTy(CurDAG->getDataLayout());
   bool isPPC64 = (PtrVT == MVT::i64);
@@ -4571,6 +4544,20 @@ bool PPCDAGToDAGISel::trySETCC(SDNode *N) {
       return false;
 
     EVT VecVT = LHS.getValueType();
+    // Optimize 'Not equal to zero-vector' comparisons to 'Greater than or
+    // less than' operators.
+    // Example: Consider k to be any non-zero positive value.
+    // * for k != 0, change SETNE to SETUGT (k > 0)
+    // * for 0 != k, change SETNE to SETULT (0 < k)
+    if (CC == ISD::SETNE) {
+      // Only optimize for integer types (avoid FP completely)
+      if (VecVT.getVectorElementType().isInteger()) {
+        if (ISD::isBuildVectorAllZeros(RHS))
+          CC = ISD::SETUGT;
+        else if (ISD::isBuildVectorAllZeros(LHS))
+          CC = ISD::SETULT;
+      }
+    }
     bool Swap, Negate;
     unsigned int VCmpInst =
         getVCmpInst(VecVT.getSimpleVT(), CC, Subtarget->hasVSX(), Swap, Negate);
@@ -4721,8 +4708,7 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
 
   SDValue InnerLHS = SetOrSelCC.getOperand(0);
   SDValue InnerRHS = SetOrSelCC.getOperand(1);
-  ISD::CondCode InnerCC =
-      cast<CondCodeSDNode>(SetOrSelCC.getOperand(InnerIsSel ? 4 : 2))->get();
+  ISD::CondCode InnerCC = SetOrSelCC.getOperandCondCode(InnerIsSel ? 4 : 2);
   // If the inner comparison is a select_cc, make sure the true/false values are
   // 1/-1 and canonicalize it if needed.
   if (InnerIsSel) {
@@ -4841,7 +4827,7 @@ bool PPCDAGToDAGISel::tryFoldSWTestBRCC(SDNode *N) {
   // (br_cc setne, (and SWTestOp, 2), 0) -> (BCC PRED_EQ, SWTestOp)
   // (br_cc setne, (and SWTestOp, 4), 0) -> (BCC PRED_GT, SWTestOp)
   // (br_cc setne, (and SWTestOp, 8), 0) -> (BCC PRED_LT, SWTestOp)
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  ISD::CondCode CC = N->getOperandCondCode(1);
   if (CC != ISD::SETEQ && CC != ISD::SETNE)
     return false;
 
@@ -4891,7 +4877,7 @@ bool PPCDAGToDAGISel::trySelectLoopCountIntrinsic(SDNode *N) {
   // Sometimes the promoted value of the intrinsic is ANDed by some non-zero
   // value, for example when crbits is disabled. If so, select the
   // loop_decrement intrinsics now.
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+  ISD::CondCode CC = N->getOperandCondCode(1);
   SDValue LHS = N->getOperand(2), RHS = N->getOperand(3);
 
   if (LHS.getOpcode() != ISD::AND || !isa<ConstantSDNode>(LHS.getOperand(1)) ||
@@ -4961,6 +4947,21 @@ bool PPCDAGToDAGISel::tryAsSingleRLWINM(SDNode *N) {
   // If this is just a masked value where the input is not handled, and
   // is not a rotate-left (handled by a pattern in the .td file), emit rlwinm
   if (isRunOfOnes(Imm, MB, ME) && Val.getOpcode() != ISD::ROTL) {
+    // The result of LBARX/LHARX do not need to be cleared as the instructions
+    // implicitly clear the upper bits.
+    unsigned AlreadyCleared = 0;
+    if (Val.getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+      auto IntrinsicID = Val.getConstantOperandVal(1);
+      if (IntrinsicID == Intrinsic::ppc_lbarx)
+        AlreadyCleared = 24;
+      else if (IntrinsicID == Intrinsic::ppc_lharx)
+        AlreadyCleared = 16;
+      if (AlreadyCleared != 0 && AlreadyCleared == MB && ME == 31) {
+        ReplaceUses(SDValue(N, 0), N->getOperand(0));
+        return true;
+      }
+    }
+
     SDValue Ops[] = {Val, getI32Imm(0, dl), getI32Imm(MB, dl),
                      getI32Imm(ME, dl)};
     CurDAG->SelectNodeTo(N, PPC::RLWINM, MVT::i32, Ops);
@@ -5147,7 +5148,7 @@ bool PPCDAGToDAGISel::tryAsSingleRLDICL(SDNode *N) {
 
       Val = SDValue(CurDAG->getMachineNode(PPC::INSERT_SUBREG, dl, ResultType,
                                            IDVal, Op0.getOperand(0),
-                                           getI32Imm(1, dl)),
+                                           getI32Imm(PPC::sub_32, dl)),
                     0);
       SH = 64 - Imm;
     }
@@ -5539,7 +5540,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // Change TLS initial-exec (or TLS local-exec on AIX) D-form stores to
     // X-form stores.
     StoreSDNode *ST = cast<StoreSDNode>(N);
-    if (EnableTLSOpt && (Subtarget->isELFv2ABI() || Subtarget->isAIXABI()) &&
+    if (Subtarget->getCLOpts().tls_opt &&
+        (Subtarget->isELFv2ABI() || Subtarget->isAIXABI()) &&
         ST->getAddressingMode() != ISD::PRE_INC)
       if (tryTLSXFormStore(ST))
         return;
@@ -5554,7 +5556,8 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     if (LD->getAddressingMode() != ISD::PRE_INC) {
       // Change TLS initial-exec (or TLS local-exec on AIX) D-form loads to
       // X-form loads.
-      if (EnableTLSOpt && (Subtarget->isELFv2ABI() || Subtarget->isAIXABI()))
+      if (Subtarget->getCLOpts().tls_opt &&
+          (Subtarget->isELFv2ABI() || Subtarget->isAIXABI()))
         if (tryTLSXFormLoad(LD))
           return;
       break;
@@ -5799,7 +5802,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
   // FIXME: Remove this once the ANDI glue bug is fixed:
   case PPCISD::ANDI_rec_1_EQ_BIT:
   case PPCISD::ANDI_rec_1_GT_BIT: {
-    if (!ANDIGlueBug)
+    if (!Subtarget->getCLOpts().expose_andi_glue_bug)
       break;
 
     EVT InVT = N->getOperand(0).getValueType();
@@ -5821,7 +5824,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     return;
   }
   case ISD::SELECT_CC: {
-    ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+    ISD::CondCode CC = N->getOperandCondCode(4);
     EVT PtrVT =
         CurDAG->getTargetLoweringInfo().getPointerTy(CurDAG->getDataLayout());
     bool isPPC64 = (PtrVT == MVT::i64);
@@ -6008,7 +6011,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // Op #4 is the Flag.
     // Prevent PPC::PRED_* from being selected into LI.
     unsigned PCC = N->getConstantOperandVal(1);
-    if (EnableBranchHint)
+    if (Subtarget->getCLOpts().use_branch_hint)
       PCC |= getBranchHint(PCC, *FuncInfo, N->getOperand(3));
 
     SDValue Pred = getI32Imm(PCC, dl);
@@ -6022,7 +6025,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     if (trySelectLoopCountIntrinsic(N))
       return;
-    ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+    ISD::CondCode CC = N->getOperandCondCode(1);
     unsigned PCC =
         getPredicateForSetCC(CC, N->getOperand(2).getValueType(), Subtarget);
 
@@ -6056,7 +6059,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       return;
     }
 
-    if (EnableBranchHint)
+    if (Subtarget->getCLOpts().use_branch_hint)
       PCC |= getBranchHint(PCC, *FuncInfo, N->getOperand(4));
 
     SDValue CondCode = SelectCC(N->getOperand(2), N->getOperand(3), CC, dl);
@@ -6393,8 +6396,7 @@ SDValue PPCDAGToDAGISel::combineToCMPB(SDNode *N) {
                                SDValue &LHS, SDValue &RHS) {
     if (O.getOpcode() != ISD::SELECT_CC)
       return false;
-    ISD::CondCode CC = cast<CondCodeSDNode>(O.getOperand(4))->get();
-
+    ISD::CondCode CC = O.getOperandCondCode(4);
     if (!isa<ConstantSDNode>(O.getOperand(2)) ||
         !isa<ConstantSDNode>(O.getOperand(3)))
       return false;

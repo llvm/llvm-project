@@ -36,7 +36,7 @@ using namespace llvm;
 #define DEBUG_TYPE "lrshrink"
 
 STATISTIC(NumInstrsHoistedToShrinkLiveRange,
-          "Number of insructions hoisted to shrink live range.");
+          "Number of instructions hoisted to shrink live range.");
 
 namespace {
 
@@ -44,9 +44,7 @@ class LiveRangeShrink : public MachineFunctionPass {
 public:
   static char ID;
 
-  LiveRangeShrink() : MachineFunctionPass(ID) {
-    initializeLiveRangeShrinkPass(*PassRegistry::getPassRegistry());
-  }
+  LiveRangeShrink() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

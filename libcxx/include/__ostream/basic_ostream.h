@@ -15,6 +15,9 @@
 
 #  include <__exception/operations.h>
 #  include <__fwd/memory.h>
+#  include <__iterator/ostreambuf_iterator.h>
+#  include <__locale_dir/num.h>
+#  include <__locale_dir/pad_and_output.h>
 #  include <__memory/addressof.h>
 #  include <__memory/unique_ptr.h>
 #  include <__new/exceptions.h>
@@ -27,7 +30,6 @@
 #  include <__utility/declval.h>
 #  include <bitset>
 #  include <ios>
-#  include <locale>
 #  include <streambuf>
 #  include <string_view>
 
@@ -39,6 +41,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _CharT, class _Traits>
 class basic_ostream : virtual public basic_ios<_CharT, _Traits> {
@@ -51,7 +54,7 @@ public:
   typedef typename traits_type::off_type off_type;
 
   // 27.7.2.2 Constructor/destructor:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 explicit basic_ostream(basic_streambuf<char_type, traits_type>* __sb) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 explicit basic_ostream(basic_streambuf<char_type, traits_type>* __sb) {
     this->init(__sb);
   }
   ~basic_ostream() override;
@@ -65,7 +68,7 @@ protected:
   // 27.7.2.3 Assign/swap
   inline _LIBCPP_HIDE_FROM_ABI basic_ostream& operator=(basic_ostream&& __rhs);
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 void swap(basic_ostream& __rhs) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 void swap(basic_ostream& __rhs) {
     basic_ios<char_type, traits_type>::swap(__rhs);
   }
 
@@ -74,17 +77,17 @@ public:
   class sentry;
 
   // 27.7.2.6 Formatted output:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& operator<<(basic_ostream& (*__pf)(basic_ostream&)) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream& operator<<(basic_ostream& (*__pf)(basic_ostream&)) {
     return __pf(*this);
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream&
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream&
   operator<<(basic_ios<char_type, traits_type>& (*__pf)(basic_ios<char_type, traits_type>&)) {
     __pf(*this);
     return *this;
   }
 
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& operator<<(ios_base& (*__pf)(ios_base&)) {
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream& operator<<(ios_base& (*__pf)(ios_base&)) {
     __pf(*this);
     return *this;
   }
@@ -97,7 +100,7 @@ public:
       sentry __s(*this);
       if (__s) {
         using _Fp          = num_put<char_type, ostreambuf_iterator<char_type, traits_type> >;
-        const _Fp& __facet = std::use_facet<_Fp>(this->getloc());
+        const _Fp& __facet = std::use_facet<_Fp>(this->__getloc());
         if (__facet.put(*this, *this, this->fill(), __value).failed())
           this->setstate(ios_base::badbit | ios_base::failbit);
       }
@@ -119,7 +122,7 @@ public:
         ios_base::fmtflags __flags = ios_base::flags() & ios_base::basefield;
 
         using _Fp          = num_put<char_type, ostreambuf_iterator<char_type, traits_type> >;
-        const _Fp& __facet = std::use_facet<_Fp>(this->getloc());
+        const _Fp& __facet = std::use_facet<_Fp>(this->__getloc());
         if (__facet
                 .put(*this,
                      *this,
@@ -172,9 +175,9 @@ public:
   basic_ostream& flush();
 
   // 27.7.2.5 seeks:
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 pos_type tellp();
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& seekp(pos_type __pos);
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_ostream& seekp(off_type __off, ios_base::seekdir __dir);
+  [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 pos_type tellp();
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream& seekp(pos_type __pos);
+  inline _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 basic_ostream& seekp(off_type __off, ios_base::seekdir __dir);
 
 protected:
   _LIBCPP_HIDE_FROM_ABI basic_ostream() {} // extension, intentially does not initialize
@@ -210,9 +213,10 @@ basic_ostream<_CharT, _Traits>::sentry::~sentry() {
     try {
 #  endif // _LIBCPP_HAS_EXCEPTIONS
       if (__os_.rdbuf()->pubsync() == -1)
-        __os_.setstate(ios_base::badbit);
+        __os_.__setstate_nothrow(ios_base::badbit);
 #  if _LIBCPP_HAS_EXCEPTIONS
     } catch (...) {
+      __os_.__setstate_nothrow(ios_base::badbit);
     }
 #  endif // _LIBCPP_HAS_EXCEPTIONS
   }
@@ -610,8 +614,8 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, unique_ptr<_Yp, _Dp> const& __p
 template <class _CharT, class _Traits, size_t _Size>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const bitset<_Size>& __x) {
-  return __os << __x.template to_string<_CharT, _Traits>(std::use_facet<ctype<_CharT> >(__os.getloc()).widen('0'),
-                                                         std::use_facet<ctype<_CharT> >(__os.getloc()).widen('1'));
+  return __os << __x.template to_string<_CharT, _Traits>(std::use_facet<ctype<_CharT> >(__os.__getloc()).widen('0'),
+                                                         std::use_facet<ctype<_CharT> >(__os.__getloc()).widen('1'));
 }
 
 #  if _LIBCPP_STD_VER >= 20
@@ -670,6 +674,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ostream<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

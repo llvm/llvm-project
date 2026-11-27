@@ -25,9 +25,9 @@ add_entrypoint_library(
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.prctl.prctl
-    libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd.close
     libc.src.unistd.read
+    libc.src.unistd.syscall
     libc.src.unistd.sysconf
     libc.src.unistd.write
 )
@@ -45,7 +45,7 @@ target_link_options(
 
 target_link_libraries(libc-scudo-integration-test
   PRIVATE
-  libc_for_scudo_integration_test
+    libc_for_scudo_integration_test
 )
 
 add_executable(
@@ -61,11 +61,11 @@ target_link_options(
 
 target_link_libraries(libc-gwp-asan-uaf-should-crash
   PRIVATE
-  libc_for_scudo_integration_test
+    libc_for_scudo_integration_test
 )
 
 add_custom_command(TARGET libc-scudo-integration-test
-                   POST_BUILD
-                   COMMAND $<TARGET_FILE:libc-scudo-integration-test>
-                   COMMENT "Run the test after it is built."
-                   VERBATIM)
+  POST_BUILD
+  COMMAND $<TARGET_FILE:libc-scudo-integration-test>
+  COMMENT "Run the test after it is built."
+  VERBATIM)

@@ -5,14 +5,14 @@ int test1(float a, int b) {
   return __builtin_isless(a, b);
 }
 int test2(int a, int b) {
-  return __builtin_islessequal(a, b);  // expected-error {{floating point type}}
+  return __builtin_islessequal(a, b);  // expected-error {{floating point comparison requires two arguments of floating point type ('int' and 'int')}}
 }
 
 int test3(double a, float b) {
   return __builtin_isless(a, b);
 }
 int test4(int* a, double b) {
-  return __builtin_islessequal(a, b);  // expected-error {{floating point type}}
+  return __builtin_islessequal(a, b);  // expected-error {{floating point comparison requires two arguments of floating point type ('int *' and 'double')}}
 }
 
 int test5(float a, long double b) {
@@ -20,6 +20,9 @@ int test5(float a, long double b) {
 }
 int test6(float a, long double b) {
   return __builtin_islessequal(a);  // expected-error {{too few arguments}}
+}
+int test6a(int a, int b) {
+  return __builtin_isunordered(a, b);  // expected-error {{floating point comparison requires two arguments of floating point type ('int' and 'int')}}
 }
 
 
@@ -222,14 +225,16 @@ void Test19(void)
         static char b[40];
         static char buf[20];
 
-        strlcpy(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} \\
-                                    // expected-note {{change size argument to be the size of the destination}}
+        strlcpy(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} \
+                                    // expected-note {{change size argument to be the size of the destination}} \
+                                    // expected-warning {{'strlcpy' size argument is too large; destination buffer has size 20, but size argument is 40}}
         __builtin___strlcpy_chk(buf, b, sizeof(b), __builtin_object_size(buf, 0)); // expected-warning {{size argument in '__builtin___strlcpy_chk' call appears to be size of the source; expected the size of the destination}} \
                                     // expected-note {{change size argument to be the size of the destination}} \
 				    // expected-warning {{'strlcpy' will always overflow; destination buffer has size 20, but size argument is 40}}
 
         strlcat(buf, b, sizeof(b)); // expected-warning {{size argument in 'strlcat' call appears to be size of the source; expected the size of the destination}} \
-                                    // expected-note {{change size argument to be the size of the destination}}
+                                    // expected-note {{change size argument to be the size of the destination}} \
+                                    // expected-warning {{'strlcat' size argument is too large; destination buffer has size 20, but size argument is 40}}
 
         __builtin___strlcat_chk(buf, b, sizeof(b), __builtin_object_size(buf, 0)); // expected-warning {{size argument in '__builtin___strlcat_chk' call appears to be size of the source; expected the size of the destination}} \
                                                                                    // expected-note {{change size argument to be the size of the destination}} \

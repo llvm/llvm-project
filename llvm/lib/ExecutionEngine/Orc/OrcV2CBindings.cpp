@@ -11,12 +11,15 @@
 #include "llvm-c/OrcEE.h"
 #include "llvm-c/TargetMachine.h"
 
+#include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -92,7 +95,7 @@ public:
         Name(std::move(Name)), Ctx(Ctx), Materialize(Materialize),
         Discard(Discard), Destroy(Destroy) {}
 
-  ~OrcCAPIMaterializationUnit() {
+  ~OrcCAPIMaterializationUnit() override {
     if (Ctx)
       Destroy(Ctx);
   }
@@ -264,7 +267,7 @@ public:
       LLVMOrcCAPIDefinitionGeneratorTryToGenerateFunction TryToGenerate)
       : Dispose(Dispose), Ctx(Ctx), TryToGenerate(TryToGenerate) {}
 
-  ~CAPIDefinitionGenerator() {
+  ~CAPIDefinitionGenerator() override {
     if (Dispose)
       Dispose(Ctx);
   }
@@ -726,12 +729,12 @@ LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
 }
 
 LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void) {
-  return wrap(new ThreadSafeContext(std::make_unique<LLVMContext>()));
+  return LLVMOrcCreateNewThreadSafeContextFromLLVMContext(LLVMContextCreate());
 }
 
-LLVMContextRef
-LLVMOrcThreadSafeContextGetContext(LLVMOrcThreadSafeContextRef TSCtx) {
-  return wrap(unwrap(TSCtx)->getContext());
+LLVMOrcThreadSafeContextRef
+LLVMOrcCreateNewThreadSafeContextFromLLVMContext(LLVMContextRef Ctx) {
+  return wrap(new ThreadSafeContext(std::unique_ptr<LLVMContext>(unwrap(Ctx))));
 }
 
 void LLVMOrcDisposeThreadSafeContext(LLVMOrcThreadSafeContextRef TSCtx) {
@@ -757,11 +760,20 @@ void LLVMOrcDisposeThreadSafeModule(LLVMOrcThreadSafeModuleRef TSM) {
   delete unwrap(TSM);
 }
 
+// Like JITTargetMachineBuilder::detectHost, but the target machines read the
+// options that LLVMParseCommandLineOptions sets.
+static Expected<JITTargetMachineBuilder> detectHostForCAPI() {
+  auto JTMB = JITTargetMachineBuilder::detectHost();
+  if (JTMB)
+    JTMB->getOptions().MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
+  return JTMB;
+}
+
 LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
     LLVMOrcJITTargetMachineBuilderRef *Result) {
   assert(Result && "Result can not be null");
 
-  auto JTMB = JITTargetMachineBuilder::detectHost();
+  auto JTMB = detectHostForCAPI();
   if (!JTMB) {
     Result = nullptr;
     return wrap(JTMB.takeError());
@@ -911,11 +923,13 @@ void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
 void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
     LLVMOrcLLJITBuilderRef Builder,
     LLVMOrcLLJITBuilderObjectLinkingLayerCreatorFunction F, void *Ctx) {
-  unwrap(Builder)->setObjectLinkingLayerCreator([=](ExecutionSession &ES) {
-    auto TTStr = ES.getTargetTriple().str();
-    return std::unique_ptr<ObjectLayer>(
-        unwrap(F(Ctx, wrap(&ES), TTStr.c_str())));
-  });
+  unwrap(Builder)->setObjectLinkingLayerCreator(
+      [=](ExecutionSession &ES,
+          jitlink::JITLinkMemoryManager &MemMgr /* <- Currently ignored */) {
+        auto TTStr = ES.getTargetTriple().str();
+        return std::unique_ptr<ObjectLayer>(
+            unwrap(F(Ctx, wrap(&ES), TTStr.c_str())));
+      });
 }
 
 LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
@@ -924,6 +938,17 @@ LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
 
   if (!Builder)
     Builder = LLVMOrcCreateLLJITBuilder();
+
+  // Detect the host here, as LLJITBuilder would without a
+  // JITTargetMachineBuilder.
+  if (!unwrap(Builder)->getJITTargetMachineBuilder()) {
+    auto JTMB = detectHostForCAPI();
+    if (!JTMB) {
+      LLVMOrcDisposeLLJITBuilder(Builder);
+      return wrap(JTMB.takeError());
+    }
+    unwrap(Builder)->setJITTargetMachineBuilder(std::move(*JTMB));
+  }
 
   auto J = unwrap(Builder)->create();
   LLVMOrcDisposeLLJITBuilder(Builder);
@@ -1017,6 +1042,17 @@ LLVMOrcLLJITGetObjTransformLayer(LLVMOrcLLJITRef J) {
   return wrap(&unwrap(J)->getObjTransformLayer());
 }
 
+LLVMErrorRef LLVMOrcCreateObjectLinkingLayerWithInProcessMemoryManager(
+    LLVMOrcObjectLayerRef *Result, LLVMOrcExecutionSessionRef ES) {
+  assert(Result && "Result must not be null");
+  assert(ES && "ES must not be null");
+  auto MM = jitlink::InProcessMemoryManager::Create();
+  if (!MM)
+    return wrap(MM.takeError());
+  *Result = wrap(new ObjectLinkingLayer(*unwrap(ES), std::move(*MM)));
+  return LLVMErrorSuccess;
+}
+
 LLVMOrcObjectLayerRef
 LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
     LLVMOrcExecutionSessionRef ES) {
@@ -1024,6 +1060,16 @@ LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManager(
   return wrap(
       new RTDyldObjectLinkingLayer(*unwrap(ES), [](const MemoryBuffer &) {
         return std::make_unique<SectionMemoryManager>();
+      }));
+}
+
+LLVMOrcObjectLayerRef
+LLVMOrcCreateRTDyldObjectLinkingLayerWithSectionMemoryManagerReserveAlloc(
+    LLVMOrcExecutionSessionRef ES, LLVMBool ReserveAlloc) {
+  assert(ES && "ES must not be null");
+  return wrap(new RTDyldObjectLinkingLayer(
+      *unwrap(ES), [ReserveAlloc](const MemoryBuffer &) {
+        return std::make_unique<SectionMemoryManager>(nullptr, ReserveAlloc);
       }));
 }
 

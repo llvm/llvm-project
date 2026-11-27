@@ -12,6 +12,7 @@ add_llvm_unittest(ADTTests
   BitFieldsTest.cpp
   BitmaskEnumTest.cpp
   BitTest.cpp
+  BitsetTest.cpp
   BitVectorTest.cpp
   BreadthFirstIteratorTest.cpp
   BumpPtrListTest.cpp
@@ -29,6 +30,7 @@ add_llvm_unittest(ADTTests
   EditDistanceTest.cpp
   EnumeratedArrayTest.cpp
   EquivalenceClassesTest.cpp
+  EytzingerTest.cpp
   FallibleIteratorTest.cpp
   FloatingPointMode.cpp
   FoldingSet.cpp
@@ -62,7 +64,9 @@ add_llvm_unittest(ADTTests
   PointerUnionTest.cpp
   PostOrderIteratorTest.cpp
   PriorityWorklistTest.cpp
+  RadixTreeTest.cpp
   RangeAdapterTest.cpp
+  RepeatedTest.cpp
   RewriteBufferTest.cpp
   SCCIteratorTest.cpp
   STLExtrasTest.cpp
@@ -78,9 +82,11 @@ add_llvm_unittest(ADTTests
   SmallStringTest.cpp
   SmallVectorExtrasTest.cpp
   SmallVectorTest.cpp
+  SortedVectorMapTest.cpp
   SparseBitVectorTest.cpp
   SparseMultiSetTest.cpp
   SparseSetTest.cpp
+  StableHashingTest.cpp
   StatisticTest.cpp
   StringExtrasTest.cpp
   StringMapTest.cpp

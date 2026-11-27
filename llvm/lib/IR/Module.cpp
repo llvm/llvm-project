@@ -44,6 +44,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <cstdint>
@@ -83,20 +84,25 @@ Module &Module::operator=(Module &&Other) {
   ModuleID = std::move(Other.ModuleID);
   SourceFileName = std::move(Other.SourceFileName);
 
+  // The lists share one symbol table, so erase every global value before
+  // splicing any, or an incoming one would be renamed on a name clash.
   GlobalList.clear();
-  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
-
   FunctionList.clear();
-  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
-
   AliasList.clear();
-  AliasList.splice(AliasList.begin(), Other.AliasList);
-
   IFuncList.clear();
+
+  GlobalList.splice(GlobalList.begin(), Other.GlobalList);
+  FunctionList.splice(FunctionList.begin(), Other.FunctionList);
+  AliasList.splice(AliasList.begin(), Other.AliasList);
   IFuncList.splice(IFuncList.begin(), Other.IFuncList);
 
   NamedMDList.clear();
   NamedMDList.splice(NamedMDList.begin(), Other.NamedMDList);
+  for (NamedMDNode &NMD : NamedMDList)
+    NMD.setParent(this);
+
+  NamedMDSymTab = std::move(Other.NamedMDSymTab);
+  ComdatSymTab = std::move(Other.ComdatSymTab);
   GlobalScopeAsm = std::move(Other.GlobalScopeAsm);
   OwnedMemoryBuffer = std::move(Other.OwnedMemoryBuffer);
   Materializer = std::move(Other.Materializer);
@@ -119,26 +125,30 @@ Module::~Module() {
 }
 
 void Module::removeDebugIntrinsicDeclarations() {
-  auto *DeclareIntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_declare);
-  assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
-         "Debug declare intrinsic should have had uses removed.");
-  DeclareIntrinsicFn->eraseFromParent();
-  auto *ValueIntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_value);
-  assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
-         "Debug value intrinsic should have had uses removed.");
-  ValueIntrinsicFn->eraseFromParent();
-  auto *AssignIntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_assign);
-  assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
-         "Debug assign intrinsic should have had uses removed.");
-  AssignIntrinsicFn->eraseFromParent();
-  auto *LabelntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_label);
-  assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
-         "Debug label intrinsic should have had uses removed.");
-  LabelntrinsicFn->eraseFromParent();
+  if (auto *DeclareIntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_declare)) {
+    assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
+           "Debug declare intrinsic should have had uses removed.");
+    DeclareIntrinsicFn->eraseFromParent();
+  }
+  if (auto *ValueIntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_value)) {
+    assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
+           "Debug value intrinsic should have had uses removed.");
+    ValueIntrinsicFn->eraseFromParent();
+  }
+  if (auto *AssignIntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_assign)) {
+    assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
+           "Debug assign intrinsic should have had uses removed.");
+    AssignIntrinsicFn->eraseFromParent();
+  }
+  if (auto *LabelntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_label)) {
+    assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
+           "Debug label intrinsic should have had uses removed.");
+    LabelntrinsicFn->eraseFromParent();
+  }
 }
 
 std::unique_ptr<RandomNumberGenerator>
@@ -198,21 +208,40 @@ void Module::getOperandBundleTags(SmallVectorImpl<StringRef> &Result) const {
 // it.  This is nice because it allows most passes to get away with not handling
 // the symbol table directly for this common task.
 //
+FunctionCallee
+Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
+                            function_ref<void(Function &)> InitCallback) {
+  assert(InitCallback && "missing init callback");
+  assert(!Name.empty() && !Name.starts_with("llvm.") &&
+         "intrinsics and unnamed functions are not supported");
+
+  Function *New = nullptr;
+  Value *F = ValSymTab->lookupOrInsert(Name, [&] {
+    New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
+                           DL.getProgramAddressSpace(), "", this);
+    return New;
+  });
+  if (New)
+    InitCallback(*New);
+  return {Ty, F};
+}
+
 FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty,
                                            AttributeList AttributeList) {
-  // See if we have a definition for the specified function already.
-  GlobalValue *F = getNamedValue(Name);
-  if (!F) {
-    // Nope, add it
+  // Intrinsics are set up from their name on construction.
+  if (Name.empty() || Name.starts_with("llvm.")) {
+    if (GlobalValue *F = getNamedValue(Name))
+      return {Ty, F};
+
     Function *New = Function::Create(Ty, GlobalVariable::ExternalLinkage,
                                      DL.getProgramAddressSpace(), Name, this);
-    if (!New->isIntrinsic())       // Intrinsics get attrs set on construction
+    if (!New->isIntrinsic()) // Intrinsics get attrs set on construction
       New->setAttributes(AttributeList);
-    return {Ty, New}; // Return the new prototype.
+    return {Ty, New};
   }
 
-  // Otherwise, we just found the existing function or a prototype.
-  return {Ty, F};
+  return getOrInsertFunction(
+      Name, Ty, [&](Function &New) { New.setAttributes(AttributeList); });
 }
 
 FunctionCallee Module::getOrInsertFunction(StringRef Name, FunctionType *Ty) {
@@ -381,6 +410,11 @@ void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
   addModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
 }
 void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint64_t Val) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  addModuleFlag(Behavior, Key, ConstantInt::get(Int64Ty, Val));
+}
+void Module::addModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            uint32_t Val) {
   Type *Int32Ty = Type::getInt32Ty(Context);
   addModuleFlag(Behavior, Key, ConstantInt::get(Int32Ty, Val));
@@ -398,9 +432,14 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Metadata *Val) {
   NamedMDNode *ModFlags = getOrInsertModuleFlagsMetadata();
   // Replace the flag if it already exists.
-  for (MDNode *Flag : ModFlags->operands()) {
+  for (unsigned i = 0; i < ModFlags->getNumOperands(); ++i) {
+    MDNode *Flag = ModFlags->getOperand(i);
     if (cast<MDString>(Flag->getOperand(1))->getString() == Key) {
-      Flag->replaceOperandWith(2, Val);
+      Type *Int32Ty = Type::getInt32Ty(Context);
+      Metadata *Ops[3] = {
+          ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Behavior)),
+          MDString::get(Context, Key), Val};
+      ModFlags->setOperand(i, MDNode::get(Context, Ops));
       return;
     }
   }
@@ -409,6 +448,11 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
 void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Constant *Val) {
   setModuleFlag(Behavior, Key, ConstantAsMetadata::get(Val));
+}
+void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
+                           uint64_t Val) {
+  Type *Int64Ty = Type::getInt64Ty(Context);
+  setModuleFlag(Behavior, Key, ConstantInt::get(Int64Ty, Val));
 }
 void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            uint32_t Val) {
@@ -474,6 +518,7 @@ Error Module::materializeAll() {
 }
 
 Error Module::materializeMetadata() {
+  llvm::TimeTraceScope timeScope("Materialize metadata");
   if (!Materializer)
     return Error::success();
   return Materializer->materializeMetadata();
@@ -656,6 +701,70 @@ void Module::setCodeModel(CodeModel::Model CL) {
   addModuleFlag(ModFlagBehavior::Error, "Code Model", CL);
 }
 
+unsigned Module::getWCharSize() const {
+  if (auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("wchar_size")))
+    return cast<ConstantInt>(Val->getValue())->getZExtValue();
+  return getTargetTriple().getDefaultWCharSize();
+}
+
+LongDoubleFormat Module::getLongDoubleFormat() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("long-double-type"))) {
+    if (std::optional<LongDoubleFormat> Format =
+            parseLongDoubleFormat(Val->getString()))
+      return *Format;
+  }
+
+  return getTargetTriple().getDefaultLongDoubleFormat();
+}
+
+void Module::setLongDoubleFormat(LongDoubleFormat Format) {
+  addModuleFlag(ModFlagBehavior::Error, "long-double-type",
+                MDString::get(getContext(), getLongDoubleFormatName(Format)));
+}
+
+FloatABI::ABIType Module::getFloatABI() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("float-abi")))
+    return *FloatABI::parseABIType(Val->getString());
+  // Without an explicit flag, fall back to the ABI implied by the target
+  // triple.
+  return getTargetTriple().getDefaultFloatABI();
+}
+
+ThreadModel Module::getThreadModel() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("thread-model")))
+    return *parseThreadModel(Val->getString());
+  return getTargetTriple().getDefaultThreadModel();
+}
+
+void Module::setThreadModel(ThreadModel Model) {
+  addModuleFlag(ModFlagBehavior::Error, "thread-model",
+                MDString::get(getContext(), getThreadModelName(Model)));
+}
+
+ExceptionHandling Module::getExceptionModel() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("exception-model")))
+    return *parseExceptionModel(Val->getString());
+  return getTargetTriple().getDefaultExceptionHandling();
+}
+
+DebuggerKind Module::getDebuggerTuning() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("debugger-tuning"))) {
+    if (std::optional<DebuggerKind> Tuning =
+            parseDebuggerTuning(Val->getString()))
+      return *Tuning;
+  }
+
+  return getTargetTriple().getDefaultDebuggerTuning();
+}
+
+void Module::setDebuggerTuning(DebuggerKind Tuning) {
+  assert(Tuning != DebuggerKind::Default &&
+         "removing existing flag not handled");
+
+  addModuleFlag(ModFlagBehavior::Warning, "debugger-tuning",
+                MDString::get(getContext(), getDebuggerTuningName(Tuning)));
+}
+
 std::optional<uint64_t> Module::getLargeDataThreshold() const {
   auto *Val =
       cast_or_null<ConstantAsMetadata>(getModuleFlag("Large Data Threshold"));
@@ -744,6 +853,17 @@ void Module::setFramePointer(FramePointerKind Kind) {
   addModuleFlag(ModFlagBehavior::Max, "frame-pointer", static_cast<int>(Kind));
 }
 
+bool Module::hasStackProtectorGuardRecord() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(
+      getModuleFlag("stack-protector-guard-record"));
+  return Val && cast<ConstantInt>(Val->getValue())->isOne();
+}
+
+void Module::setStackProtectorGuardRecord(bool Flag) {
+  addModuleFlag(ModFlagBehavior::Max, "stack-protector-guard-record",
+                Flag ? 1 : 0);
+}
+
 StringRef Module::getStackProtectorGuard() const {
   Metadata *MD = getModuleFlag("stack-protector-guard");
   if (auto *MDS = dyn_cast_or_null<MDString>(MD))
@@ -789,6 +909,18 @@ int Module::getStackProtectorGuardOffset() const {
 
 void Module::setStackProtectorGuardOffset(int Offset) {
   addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-offset", Offset);
+}
+
+std::optional<unsigned> Module::getStackProtectorGuardValueWidth() const {
+  Metadata *MD = getModuleFlag("stack-protector-guard-value-width");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return CI->getZExtValue();
+  return std::nullopt;
+}
+
+void Module::setStackProtectorGuardValueWidth(unsigned Width) {
+  addModuleFlag(ModFlagBehavior::Error, "stack-protector-guard-value-width",
+                Width);
 }
 
 unsigned Module::getOverrideStackAlignment() const {
@@ -912,8 +1044,48 @@ void Module::setDarwinTargetVariantSDKVersion(VersionTuple Version) {
 
 StringRef Module::getTargetABIFromMD() {
   StringRef TargetABI;
-  if (auto *TargetABIMD =
-          dyn_cast_or_null<MDString>(getModuleFlag("target-abi")))
+  if (auto *TargetABIMD = cast_or_null<MDString>(getModuleFlag("target-abi")))
     TargetABI = TargetABIMD->getString();
   return TargetABI;
+}
+
+WinX64EHUnwindMode Module::getWinX64EHUnwindMode() const {
+  // Check the new unified flag first.
+  if (Metadata *MD = getModuleFlag("winx64-eh-unwind")) {
+    if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+      return static_cast<WinX64EHUnwindMode>(CI->getZExtValue());
+  }
+  // Fall back to the legacy V2 flag.
+  if (Metadata *MD = getModuleFlag("winx64-eh-unwindv2")) {
+    if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+      return static_cast<WinX64EHUnwindMode>(CI->getZExtValue());
+  }
+  return WinX64EHUnwindMode::V1;
+}
+
+ControlFlowGuardMode Module::getControlFlowGuardMode() const {
+  Metadata *MD = getModuleFlag("cfguard");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return static_cast<ControlFlowGuardMode>(CI->getZExtValue());
+  return ControlFlowGuardMode::Disabled;
+}
+
+bool Module::GlobalAsmProperties::set(StringRef Name, std::string Value) {
+  if (Name == "target_features")
+    TargetFeatures = std::move(Value);
+  else if (Name == "target_cpu")
+    TargetCPU = std::move(Value);
+  else
+    return false;
+  return true;
+}
+
+SmallVector<std::pair<StringRef, StringRef>>
+Module::GlobalAsmProperties::getAsStrings() const {
+  SmallVector<std::pair<StringRef, StringRef>> Props;
+  if (!TargetFeatures.empty())
+    Props.emplace_back("target_features", TargetFeatures);
+  if (!TargetCPU.empty())
+    Props.emplace_back("target_cpu", TargetCPU);
+  return Props;
 }

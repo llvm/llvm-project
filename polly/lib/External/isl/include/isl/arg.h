@@ -288,6 +288,8 @@ struct isl_args {
 #define ISL_ARG_ALL		(1 << 0)
 #define ISL_ARG_SKIP_HELP	(1 << 1)
 
+int isl_arg_str_list_append(int *n, const char ***list, const char *s);
+
 void isl_args_set_defaults(struct isl_args *args, void *opt);
 void isl_args_free(struct isl_args *args, void *opt);
 int isl_args_parse(struct isl_args *args, int argc, char **argv, void *opt,

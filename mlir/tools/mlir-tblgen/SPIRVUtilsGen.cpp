@@ -50,7 +50,6 @@ using mlir::tblgen::EnumCase;
 using mlir::tblgen::EnumInfo;
 using mlir::tblgen::NamedAttribute;
 using mlir::tblgen::NamedTypeConstraint;
-using mlir::tblgen::NamespaceEmitter;
 using mlir::tblgen::Operator;
 
 //===----------------------------------------------------------------------===//
@@ -260,8 +259,8 @@ static void emitInterfaceDecl(const Availability &availability,
   std::string interfaceTraitsName =
       std::string(formatv("{0}Traits", interfaceName));
 
-  StringRef cppNamespace = availability.getInterfaceClassNamespace();
-  NamespaceEmitter nsEmitter(os, cppNamespace);
+  llvm::NamespaceEmitter nsEmitter(os,
+                                   availability.getInterfaceClassNamespace());
   os << "class " << interfaceName << ";\n\n";
 
   // Emit the traits struct containing the concept and model declarations.
@@ -397,10 +396,9 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
                   avail.getMergeInstanceType(), avail.getQueryFnName(),
                   enumName);
 
-    os << formatv(
-        "  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
-        " && \"cannot have more than one bit set\");\n",
-        underlyingType);
+    os << formatv("  assert(::llvm::popcount(static_cast<{0}>(value)) <= 1"
+                  " && \"cannot have more than one bit set\");\n",
+                  underlyingType);
 
     os << "  switch (value) {\n";
     for (const auto &caseSpecPair : classCasePair.getValue()) {
@@ -420,15 +418,9 @@ static void emitAvailabilityQueryForBitEnum(const Record &enumDef,
 static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
   StringRef enumName = enumInfo.getEnumClassName();
-  StringRef cppNamespace = enumInfo.getCppNamespace();
   auto enumerants = enumInfo.getAllCases();
 
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
+  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
   llvm::StringSet<> handledClasses;
 
   // Place all availability specifications to their corresponding
@@ -443,9 +435,6 @@ static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
                     enumName);
       handledClasses.insert(className);
     }
-
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
 }
 
 static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
@@ -461,31 +450,19 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
 
 static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
   EnumInfo enumInfo(enumDef);
-  StringRef cppNamespace = enumInfo.getCppNamespace();
+  llvm::NamespaceEmitter ns(os, enumInfo.getCppNamespace());
 
-  llvm::SmallVector<StringRef, 2> namespaces;
-  llvm::SplitString(cppNamespace, namespaces, "::");
-
-  for (auto ns : namespaces)
-    os << "namespace " << ns << " {\n";
-
-  if (enumInfo.isBitEnum()) {
+  if (enumInfo.isBitEnum())
     emitAvailabilityQueryForBitEnum(enumDef, os);
-  } else {
+  else
     emitAvailabilityQueryForIntEnum(enumDef, os);
-  }
-
-  for (auto ns : llvm::reverse(namespaces))
-    os << "} // namespace " << ns << "\n";
-  os << "\n";
 }
 
 static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("SPIR-V Enum Availability Definitions", os,
                              records);
 
-  auto defs = records.getAllDerivedDefinitions("EnumInfo");
-  for (const auto *def : defs)
+  for (const Record *def : records.getAllDerivedDefinitions("EnumInfo"))
     emitEnumDef(*def, os);
 
   return false;
@@ -519,9 +496,17 @@ static mlir::GenRegistration
 // directly use the constant value as attribute in SPIR-V dialect. So need
 // to handle them separately from normal enum attributes.
 constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
-    "SPIRV_ScopeAttr", "SPIRV_KHR_CooperativeMatrixUseAttr",
-    "SPIRV_KHR_CooperativeMatrixLayoutAttr", "SPIRV_MemorySemanticsAttr",
-    "SPIRV_MatrixLayoutAttr"};
+    "SPIRV_ScopeAttr",
+    "SPIRV_KHR_CooperativeMatrixUseAttr",
+    "SPIRV_KHR_CooperativeMatrixLayoutAttr",
+    "SPIRV_MemorySemanticsAttr",
+    "SPIRV_MatrixLayoutAttr",
+    "SPIRV_TosaExtAccTypeAttr",
+    "SPIRV_TosaExtResizeModeAttr",
+    "SPIRV_TosaExtNaNPropagationModeAttr",
+    "SPIRV_TosaExtRoundingModeAttr",
+    "SPIRV_QuadSwapDirectionAttr",
+};
 
 /// Generates code to serialize attributes of a SPIRV_Op `op` into `os`. The
 /// generates code extracts the attribute with name `attrName` from
@@ -529,9 +514,9 @@ constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
 static void emitAttributeSerialization(const Attribute &attr,
                                        ArrayRef<SMLoc> loc, StringRef tabs,
                                        StringRef opVar, StringRef operandList,
-                                       StringRef attrName, raw_ostream &os) {
+                                       StringRef getterName, raw_ostream &os) {
   os << tabs
-     << formatv("if (auto attr = {0}->getAttr(\"{1}\")) {{\n", opVar, attrName);
+     << formatv("if (auto attr = {0}.{1}Attr()) {{\n", opVar, getterName);
   if (llvm::is_contained(constantIdEnumAttrs, attr.getAttrDefName())) {
     EnumInfo baseEnum(attr.getDef().getValueAsDef("enum"));
     os << tabs
@@ -575,6 +560,19 @@ static void emitAttributeSerialization(const Attribute &attr,
     os << tabs << "    return failure();\n";
     os << tabs << "  }\n";
     os << tabs << formatv("  {0}.push_back(attrTypeID);\n", operandList);
+  } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
+                                 "SPIRV_TensorArmAxisAttr",
+                                 "SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr"},
+                                attr.getAttrDefName())) {
+    os << tabs
+       << formatv(
+              "  {0}.push_back(prepareConstantScalar({1}.getLoc(), attr));\n",
+              operandList, opVar);
+  } else if (attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("  {0}.push_back(prepareConstant({1}.getLoc(), "
+                  "llvm::cast<DenseElementsAttr>(attr).getType(), attr));\n",
+                  operandList, opVar);
   } else {
     PrintFatalError(
         loc,
@@ -630,7 +628,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
     for (const NamedAttribute &attr : op.getAttributes()) {
       emitAttributeSerialization(
           (attr.attr.isOptional() ? attr.attr.getBaseAttr() : attr.attr), loc,
-          tabs, opVar, operands, attr.name, os);
+          tabs, opVar, operands, op.getGetterName(attr.name), os);
       os << tabs
          << formatv("{0}.push_back(\"{1}\");\n", elidedAttrs, attr.name);
     }
@@ -661,7 +659,7 @@ static void emitArgumentSerialization(const Operator &op, ArrayRef<SMLoc> loc,
       auto newtabs = tabs.str() + "  ";
       emitAttributeSerialization(
           (attr->attr.isOptional() ? attr->attr.getBaseAttr() : attr->attr),
-          loc, newtabs, opVar, operands, attr->name, os);
+          loc, newtabs, opVar, operands, op.getGetterName(attr->name), os);
       os << newtabs
          << formatv("{0}.push_back(\"{1}\");\n", elidedAttrs, attr->name);
     }
@@ -704,7 +702,10 @@ static void emitDecorationSerialization(const Operator &op, StringRef tabs,
                                         StringRef resultID, raw_ostream &os) {
   if (op.getNumResults() == 1) {
     // All non-argument attributes translated into OpDecorate instruction
-    os << tabs << formatv("for (auto attr : {0}->getAttrs()) {{\n", opVar);
+    os << tabs
+       << formatv("for (auto attr : "
+                  "{0}->getDiscardableAttrDictionary().getValue()) {{\n",
+                  opVar);
     os << tabs
        << formatv("  if (llvm::is_contained({0}, attr.getName())) {{",
                   elidedAttrs);
@@ -796,24 +797,31 @@ static void initDispatchSerializationFn(StringRef opVar, raw_ostream &os) {
       "LogicalResult Serializer::dispatchToAutogenSerialization(Operation "
       "*{0}) {{\n",
       opVar);
+  os << "  using DispatchFn = LogicalResult (*)(Serializer &, Operation *);\n";
+  os << "  static const llvm::DenseMap<TypeID, DispatchFn> dispatchTable = {\n";
 }
 
-/// Generates the body of the dispatch function. This function generates the
-/// check that if satisfied, will call the serialization function generated for
-/// the `op`.
+/// Generates the dispatch table entry that maps the TypeID of `op` to a call
+/// of the serialization function generated for it.
 static void emitSerializationDispatch(const Operator &op, StringRef tabs,
                                       StringRef opVar, raw_ostream &os) {
   os << tabs
-     << formatv("if (isa<{0}>({1})) {{\n", op.getQualCppClassName(), opVar);
-  os << tabs
-     << formatv("  return processOp(cast<{0}>({1}));\n",
+     << formatv("{{TypeID::get<{0}>(), [](Serializer &s, Operation *{1}) {{\n",
                 op.getQualCppClassName(), opVar);
-  os << tabs << "}\n";
+  os << tabs
+     << formatv("   return s.processOp(cast<{0}>({1}));\n",
+                op.getQualCppClassName(), opVar);
+  os << tabs << " }},\n";
 }
 
 /// Generates the epilogue for the function that dispatches the serialization of
 /// the operation.
 static void finalizeDispatchSerializationFn(StringRef opVar, raw_ostream &os) {
+  os << "  };\n";
+  os << formatv("  if (DispatchFn fn = "
+                "dispatchTable.lookup({0}->getName().getTypeID()))\n",
+                opVar);
+  os << formatv("    return fn(*this, {0});\n", opVar);
   os << formatv(
       "  return {0}->emitError(\"unhandled operation serialization\");\n",
       opVar);
@@ -869,6 +877,26 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "TypeAttr::get(getType({2}[{3}++]))));\n",
                   attrList, attrName, words, wordIndex);
+  } else if (llvm::is_contained({"SPIRV_BoolConstAttr",
+                                 "SPIRV_I8OrI16OrF16OrF32OrBF16ConstAttr"},
+                                attr.getAttrDefName()) ||
+             attr.getAttrDefName().contains("TensorArm")) {
+    os << tabs
+       << formatv("std::optional<std::pair<Attribute, Type>> c = "
+                  "getConstant({0}[{1}++]);\n",
+                  words, wordIndex);
+    os << tabs << "if (!c.has_value()) {\n";
+    os << tabs
+       << formatv("  "
+                  "return emitError(unknownLoc, \"could not fetch "
+                  "constant attribute for {0}\") << "
+                  "{1} << \" of \" << {2}.size() << \" processed\";\n",
+                  attrName, wordIndex, words);
+    os << tabs << "}\n";
+    os << tabs
+       << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
+                  "c.value().first));\n",
+                  attrList, attrName);
   } else {
     PrintFatalError(
         loc, llvm::Twine(
@@ -933,7 +961,8 @@ static void emitOperandDeserialization(const Operator &op, ArrayRef<SMLoc> loc,
   // Process operands/attributes
   for (unsigned i = 0, e = op.getNumArgs(); i < e; ++i) {
     auto argument = op.getArg(i);
-    if (auto *valueArg = llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
+    if (auto *valueArg =
+            llvm::dyn_cast_if_present<NamedTypeConstraint *>(argument)) {
       if (valueArg->isVariableLength()) {
         if (i != e - 1) {
           PrintFatalError(
@@ -1044,10 +1073,42 @@ static void emitDeserializationFunction(const Record *attrClass,
   emitDecorationDeserialization(op, "  ", valueID, attributes, os);
 
   os << formatv("  Location loc = createFileLineColLoc(opBuilder);\n");
-  os << formatv("  auto {1} = opBuilder.create<{0}>(loc, {2}, {3}, {4}); "
-                "(void){1};\n",
-                op.getQualCppClassName(), opVar, resultTypes, operands,
-                attributes);
+  if (!op.hasNonEmptyProperties()) {
+    os << formatv("  auto {1} = {0}::create(opBuilder, loc, {2}, {3}, {4}); "
+                  "(void){1};\n",
+                  op.getQualCppClassName(), opVar, resultTypes, operands,
+                  attributes);
+  } else {
+    os << formatv("  {0}::Properties properties{{};\n",
+                  op.getQualCppClassName());
+    os << formatv("  {0}::populateDefaultProperties(\n"
+                  "      OperationName({0}::getOperationName(), "
+                  "opBuilder.getContext()), properties);\n",
+                  op.getQualCppClassName());
+    os << formatv("  if (failed({0}::setPropertiesFromAttr(\n"
+                  "          properties, opBuilder.getDictionaryAttr({1}),\n"
+                  "          [&]() {{ return emitError(loc); })))\n"
+                  "    return failure();\n",
+                  op.getQualCppClassName(), attributes);
+    os << "  SmallVector<NamedAttribute> discardableAttributes;\n";
+    os << formatv("  for (NamedAttribute attr : {0}) {{\n", attributes);
+    os << "    StringRef name = attr.getName().getValue();\n";
+    os << "    (void)name;\n";
+    os << "    if (";
+    bool emittedName = false;
+    for (StringRef name : op.getInherentAttrNames()) {
+      if (emittedName)
+        os << " && ";
+      os << formatv("name != \"{0}\"", name);
+      emittedName = true;
+    }
+    os << ")\n";
+    os << "      discardableAttributes.push_back(attr);\n";
+    os << "  }\n";
+    os << formatv("  auto {1} = {0}::create(opBuilder, loc, {2}, {3}, "
+                  "properties, discardableAttributes); (void){1};\n",
+                  op.getQualCppClassName(), opVar, resultTypes, operands);
+  }
   if (op.getNumResults() == 1) {
     os << formatv("  valueMap[{0}] = {1}.getResult();\n\n", valueID, opVar);
   }
@@ -1300,10 +1361,12 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
   for (const Availability &avail : opAvailabilities)
     availClasses.try_emplace(avail.getClass(), avail);
   for (const NamedAttribute &namedAttr : srcOp.getAttributes()) {
-    if (!namedAttr.attr.isSubClassOf("SPIRV_BitEnumAttr") &&
-        !namedAttr.attr.isSubClassOf("SPIRV_I32EnumAttr"))
+    Attribute attr = namedAttr.attr.isOptional() ? namedAttr.attr.getBaseAttr()
+                                                 : namedAttr.attr;
+    if (!attr.isSubClassOf("SPIRV_BitEnumAttr") &&
+        !attr.isSubClassOf("SPIRV_I32EnumAttr"))
       continue;
-    EnumInfo enumInfo(namedAttr.attr.getDef().getValueAsDef("enum"));
+    EnumInfo enumInfo(attr.getDef().getValueAsDef("enum"));
 
     for (const EnumCase &enumerant : enumInfo.getAllCases())
       for (const Availability &caseAvail :
@@ -1342,10 +1405,13 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
 
     // Update with enum attributes' specific availability spec.
     for (const NamedAttribute &namedAttr : srcOp.getAttributes()) {
-      if (!namedAttr.attr.isSubClassOf("SPIRV_BitEnumAttr") &&
-          !namedAttr.attr.isSubClassOf("SPIRV_I32EnumAttr"))
+      bool isOptional = namedAttr.attr.isOptional();
+      Attribute attr =
+          isOptional ? namedAttr.attr.getBaseAttr() : namedAttr.attr;
+      if (!attr.isSubClassOf("SPIRV_BitEnumAttr") &&
+          !attr.isSubClassOf("SPIRV_I32EnumAttr"))
         continue;
-      EnumInfo enumInfo(namedAttr.attr.getDef().getValueAsDef("enum"));
+      EnumInfo enumInfo(attr.getDef().getValueAsDef("enum"));
 
       // (enumerant, availability specification) pairs for this availability
       // class.
@@ -1363,24 +1429,29 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
       if (caseSpecs.empty())
         continue;
 
+      std::string getter =
+          formatv("this->{0}()", srcOp.getGetterName(namedAttr.name)).str();
+      std::string attrVal = isOptional ? "*" + getter : getter;
+      if (isOptional)
+        os << formatv("  if ({0})\n", getter);
+
       if (enumInfo.isBitEnum()) {
         // For BitEnumAttr, we need to iterate over each bit to query its
         // availability spec.
         os << formatv("  for (unsigned i = 0; "
                       "i < std::numeric_limits<{0}>::digits; ++i) {{\n",
                       enumInfo.getUnderlyingType());
-        os << formatv("    {0}::{1} tblgen_attrVal = this->{2}() & "
+        os << formatv("    {0}::{1} tblgen_attrVal = {2} & "
                       "static_cast<{0}::{1}>(1 << i);\n",
                       enumInfo.getCppNamespace(), enumInfo.getEnumClassName(),
-                      srcOp.getGetterName(namedAttr.name));
+                      attrVal);
         os << formatv(
             "    if (static_cast<{0}>(tblgen_attrVal) == 0) continue;\n",
             enumInfo.getUnderlyingType());
       } else {
         // For IntEnumAttr, we just need to query the value as a whole.
         os << "  {\n";
-        os << formatv("    auto tblgen_attrVal = this->{0}();\n",
-                      srcOp.getGetterName(namedAttr.name));
+        os << formatv("    auto tblgen_attrVal = {0};\n", attrVal);
       }
       os << formatv("    auto tblgen_instance = {0}::{1}(tblgen_attrVal);\n",
                     enumInfo.getCppNamespace(), avail.getQueryFnName());

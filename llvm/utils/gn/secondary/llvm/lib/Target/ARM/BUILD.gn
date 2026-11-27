@@ -20,7 +20,10 @@ tablegen("ARMGenFastISel") {
 
 tablegen("ARMGenGlobalISel") {
   visibility = [ ":LLVMARMCodeGen" ]
-  args = [ "-gen-global-isel" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
   td_file = "ARM.td"
 }
 
@@ -36,6 +39,24 @@ tablegen("ARMGenRegisterBank") {
   td_file = "ARM.td"
 }
 
+tablegen("ARMGenSDNodeInfo") {
+  visibility = [
+    ":LLVMARMCodeGen",
+    "//llvm/unittests/Target/ARM:ARMTests",
+  ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "ARM.td"
+}
+
+tablegen("ARMGenTargetDef") {
+  visibility = [
+    ":LLVMARMCodeGen",
+    "//llvm/unittests/Target/ARM:ARMTests",
+  ]
+  args = [ "-gen-arm-target-def" ]
+  td_file = "ARM.td"
+}
+
 static_library("LLVMARMCodeGen") {
   deps = [
     ":ARMGenCallingConv",
@@ -44,6 +65,8 @@ static_library("LLVMARMCodeGen") {
     ":ARMGenGlobalISel",
     ":ARMGenMCPseudoLowering",
     ":ARMGenRegisterBank",
+    ":ARMGenSDNodeInfo",
+    ":ARMGenTargetDef",
     "MCTargetDesc",
     "TargetInfo",
     "Utils",
@@ -66,6 +89,7 @@ static_library("LLVMARMCodeGen") {
   sources = [
     "A15SDOptimizer.cpp",
     "ARMAsmPrinter.cpp",
+    "ARMAvoidTrailingCall.cpp",
     "ARMBaseInstrInfo.cpp",
     "ARMBaseRegisterInfo.cpp",
     "ARMBasicBlockInfo.cpp",

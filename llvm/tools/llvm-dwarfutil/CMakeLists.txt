@@ -1,5 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
+llvm_tablegen(Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(DwarfutilTableGen)
 
 set(LLVM_LINK_COMPONENTS
@@ -11,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   DWARFLinkerClassic
   DWARFLinkerParallel
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   MC
   ObjCopy
   Object

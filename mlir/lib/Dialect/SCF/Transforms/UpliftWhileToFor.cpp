@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
@@ -22,7 +20,7 @@ using namespace mlir;
 
 namespace {
 struct UpliftWhileOp : public OpRewritePattern<scf::WhileOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(scf::WhileOp loop,
                                 PatternRewriter &rewriter) const override {
@@ -191,7 +189,7 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   // dummy builder instead.
   auto emptyBuilder = [](OpBuilder &, Location, Value, ValueRange) {};
   auto newLoop =
-      rewriter.create<scf::ForOp>(loc, lb, ub, step, newArgs, emptyBuilder);
+      scf::ForOp::create(rewriter, loc, lb, ub, step, newArgs, emptyBuilder);
 
   Block *newBody = newLoop.getBody();
 
@@ -234,22 +232,26 @@ FailureOr<scf::ForOp> mlir::scf::upliftWhileToForLoop(RewriterBase &rewriter,
   rewriter.setInsertionPoint(term);
   rewriter.replaceOpWithNewOp<scf::YieldOp>(term, newArgs);
 
-  // Compute induction var value after loop execution.
+  // Compute the induction variable value after loop execution, clamping the
+  // trip count at zero so loops that never execute yield lb.
   rewriter.setInsertionPointAfter(newLoop);
   Value one;
+  Value zero;
   if (isa<IndexType>(step.getType())) {
-    one = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    one = arith::ConstantIndexOp::create(rewriter, loc, 1);
+    zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
   } else {
-    one = rewriter.create<arith::ConstantIntOp>(loc, 1, step.getType());
+    one = arith::ConstantIntOp::create(rewriter, loc, step.getType(), 1);
+    zero = arith::ConstantIntOp::create(rewriter, loc, step.getType(), 0);
   }
 
-  Value stepDec = rewriter.create<arith::SubIOp>(loc, step, one);
-  Value len = rewriter.create<arith::SubIOp>(loc, ub, lb);
-  len = rewriter.create<arith::AddIOp>(loc, len, stepDec);
-  len = rewriter.create<arith::DivSIOp>(loc, len, step);
-  len = rewriter.create<arith::SubIOp>(loc, len, one);
-  Value res = rewriter.create<arith::MulIOp>(loc, len, step);
-  res = rewriter.create<arith::AddIOp>(loc, lb, res);
+  Value stepDec = arith::SubIOp::create(rewriter, loc, step, one);
+  Value len = arith::SubIOp::create(rewriter, loc, ub, lb);
+  len = arith::AddIOp::create(rewriter, loc, len, stepDec);
+  len = arith::DivSIOp::create(rewriter, loc, len, step);
+  len = arith::MaxSIOp::create(rewriter, loc, len, zero);
+  Value res = arith::MulIOp::create(rewriter, loc, len, step);
+  res = arith::AddIOp::create(rewriter, loc, lb, res);
 
   // Reconstruct `scf.while` results, inserting final induction var value
   // into proper place.

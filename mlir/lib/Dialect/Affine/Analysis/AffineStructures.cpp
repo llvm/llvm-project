@@ -12,17 +12,12 @@
 
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Analysis/Presburger/LinearTransform.h"
-#include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,6 +28,15 @@
 using namespace mlir;
 using namespace affine;
 using namespace presburger;
+
+FailureOr<FlatAffineValueConstraints>
+FlatAffineValueConstraints::create(IntegerSet set, ValueRange operands) {
+  bool error = false;
+  FlatAffineValueConstraints cst(set, operands, &error);
+  if (error)
+    return failure();
+  return cst;
+}
 
 LogicalResult
 FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
@@ -98,13 +102,13 @@ FlatAffineValueConstraints::addAffineForOpDomain(AffineForOp forOp) {
       int64_t lb = forOp.getConstantLowerBound();
       dividend[pos] = 1;
       dividend.back() -= lb;
-      addLocalFloorDiv(dividend, step);
+      unsigned qPos = addLocalFloorDiv(dividend, step);
       // Second constraint: (iv - lb) - step * q = 0.
       SmallVector<int64_t, 8> eq(getNumCols(), 0);
       eq[pos] = 1;
       eq.back() -= lb;
       // For the local var just added above.
-      eq[getNumCols() - 2] = -step;
+      eq[qPos] = -step;
       addEquality(eq);
     }
   }
@@ -138,14 +142,14 @@ LogicalResult FlatAffineValueConstraints::addAffineParallelOpDomain(
     }
 
     AffineMap lowerBound = parallelOp.getLowerBoundMap(ivPos);
-    if (lowerBound.isConstant())
+    if (lowerBound.isSingleConstant())
       addBound(BoundType::LB, pos, lowerBound.getSingleConstantResult());
     else if (failed(addBound(BoundType::LB, pos, lowerBound,
                              parallelOp.getLowerBoundsOperands())))
       return failure();
 
     auto upperBound = parallelOp.getUpperBoundMap(ivPos);
-    if (upperBound.isConstant())
+    if (upperBound.isSingleConstant())
       addBound(BoundType::UB, pos, upperBound.getSingleConstantResult() - 1);
     else if (failed(addBound(BoundType::UB, pos, upperBound,
                              parallelOp.getUpperBoundsOperands())))
@@ -213,13 +217,18 @@ void FlatAffineValueConstraints::addAffineIfOpDomain(AffineIfOp ifOp) {
   canonicalizeSetAndOperands(&set, &operands);
 
   // Create the base constraints from the integer set attached to ifOp.
-  FlatAffineValueConstraints cst(set, operands);
+  FailureOr<FlatAffineValueConstraints> cst =
+      FlatAffineValueConstraints::create(set, operands);
+  if (failed(cst)) {
+    assert(false && "semi-affine integer sets are unsupported here");
+    return;
+  }
 
   // Merge the constraints from ifOp to the current domain. We need first merge
   // and align the IDs from both constraints, and then append the constraints
   // from the ifOp into the current one.
-  mergeAndAlignVarsWithOther(0, &cst);
-  append(cst);
+  mergeAndAlignVarsWithOther(0, &*cst);
+  append(*cst);
 }
 
 LogicalResult FlatAffineValueConstraints::addBound(BoundType type, unsigned pos,
@@ -347,8 +356,7 @@ void FlatAffineValueConstraints::getIneqAsAffineValueMap(
 
   if (inequality[pos] > 0)
     // Lower bound.
-    std::transform(bound.begin(), bound.end(), bound.begin(),
-                   std::negate<int64_t>());
+    llvm::transform(bound, bound.begin(), std::negate<int64_t>());
   else
     // Upper bound (which is exclusive).
     bound.back() += 1;
@@ -526,7 +534,7 @@ LogicalResult mlir::affine::getRelationFromMap(AffineMap &map,
   SmallVector<int64_t, 8> eq(localVarCst.getNumCols());
   for (unsigned i = 0, e = map.getNumResults(); i < e; ++i) {
     // Zero fill.
-    std::fill(eq.begin(), eq.end(), 0);
+    llvm::fill(eq, 0);
     // Fill equality.
     for (unsigned j = 0, f = oldDimNum; j < f; ++j)
       eq[j] = flatExprs[i][j];

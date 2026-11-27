@@ -8,6 +8,7 @@
 
 #include "llvm/TargetParser/Host.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -59,15 +60,27 @@ Serial          : 0000000000000000
 
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(CortexA9ProcCpuinfo),
             "cortex-a9");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x4100c090, ArrayRef<uint64_t>{0x4100c090, 0x4100c090}),
+            "cortex-a9");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xc0f"),
+            "cortex-a15");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(0x4100c0f0,
+                                              ArrayRef<uint64_t>{0x4100c0f0}),
             "cortex-a15");
   // Verify that both CPU implementer and CPU part are checked:
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x40\n"
                                               "CPU part        : 0xc0f"),
             "generic");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(0x4000c0f0,
+                                              ArrayRef<uint64_t>{0x4000c0f0}),
+            "generic");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0x06f"),
+            "krait");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(0x510006f0,
+                                              ArrayRef<uint64_t>{0x510006f0}),
             "krait");
 }
 
@@ -122,6 +135,35 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
                                               "CPU part        : 0xd48"),
             "cortex-x2");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd85\n"
+                                              "CPU part        : 0xd87"),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x4100d850, ArrayRef<uint64_t>{0x4100d850, 0x4100d870}),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd87\n"
+                                              "CPU part        : 0xd85"),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x4100d870, ArrayRef<uint64_t>{0x4100d870, 0x4100d850}),
+            "cortex-x925");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8a"),
+            "c1-nano");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd90"),
+            "c1-premium");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8b"),
+            "c1-pro");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd8c"),
+            "c1-ultra");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x41\n"
+                                              "CPU part        : 0xd96"),
+            "c2-ultra");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0xc00"),
             "falkor");
@@ -140,6 +182,9 @@ TEST(getLinuxHostCPUName, AArch64) {
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
                                               "CPU part        : 0xac5"),
             "ampere1b");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0xc0\n"
+                                              "CPU part        : 0xac7"),
+            "ampere1c");
   EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x51\n"
                                               "CPU part        : 0x001"),
             "oryon-1");
@@ -192,15 +237,24 @@ CPU architecture: 8
                                               "CPU variant     : 0xc\n"
                                               "CPU part        : 0xafe"),
             "exynos-m3");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x53c0afe0, ArrayRef<uint64_t>{0x53c0afe0, 0x5300d050}),
+            "exynos-m3");
   // Verify Exynos M3.
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
                                               "CPU variant     : 0x1\n"
                                               "CPU part        : 0x002"),
             "exynos-m3");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x53100020, ArrayRef<uint64_t>{0x53100020, 0x5300d050}),
+            "exynos-m3");
   // Verify Exynos M4.
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(ExynosProcCpuInfo +
                                               "CPU variant     : 0x1\n"
                                               "CPU part        : 0x003"),
+            "exynos-m4");
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM(
+                0x53100030, ArrayRef<uint64_t>{0x53100030, 0x5300d050}),
             "exynos-m4");
 
   const std::string ThunderX2T99ProcCpuInfo = R"(
@@ -280,6 +334,10 @@ CPU part	: 0x0a1
                                               "CPU part        : 0xd01"),
             "tsv110");
 
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x48\n"
+                                              "CPU part        : 0xd06"),
+            "hip12");
+
   // Verify A64FX.
   const std::string A64FXProcCpuInfo = R"(
 processor       : 0
@@ -316,6 +374,14 @@ CPU revision    : 0
                                               "CPU part        : 0x010"),
             "olympus");
 
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
+                                              "CPU part        : 0x11"),
+            "rigel");
+
+  EXPECT_EQ(sys::detail::getHostCPUNameForARM("CPU implementer : 0x4e\n"
+                                              "CPU part        : 0x011"),
+            "rigel");
+
   // Snapdragon mixed implementer quirk
   const std::string Snapdragon865ProcCPUInfo = R"(
 processor       : 0
@@ -341,6 +407,88 @@ CPU part        : 0xd0d
 CPU revision    : 0
 )";
   EXPECT_EQ(sys::detail::getHostCPUNameForARM(Snapdragon865ProcCPUInfo), "cortex-a77");
+}
+
+#if defined(__aarch64__)
+TEST(getLinuxHostCPUFeatures, AArch64) {
+  const std::string SMEProcCpuinfo = R"(
+processor       : 0
+BogoMIPS        : 200.00
+Features        : fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics sve sve2 sme smef64f64 smei8i32 smef16f32 smeb16f32 smef32f32 smefa64
+CPU implementer : 0x48
+CPU architecture: 8
+CPU variant     : 0x0
+CPU part        : 0xd06
+CPU revision    : 0
+)";
+
+  StringMap<bool> Features =
+      sys::detail::getHostCPUFeaturesForARM(SMEProcCpuinfo);
+  EXPECT_TRUE(Features.lookup("sme"));
+  EXPECT_TRUE(Features.lookup("sme-f64f64"));
+  EXPECT_TRUE(Features.lookup("sme-fa64"));
+  EXPECT_TRUE(Features.contains("sme2"));
+  EXPECT_FALSE(Features.lookup("sme2"));
+  EXPECT_FALSE(Features.contains("sme-i16i64"));
+
+  const std::string SME2ProcCpuinfo =
+      "Features        : fp asimd sme smei16i64 smef64f64 smefa64 sme2 sme2p1 "
+      "smeb16b16 smef16f16 smef8f16 smef8f32 smesf8fma smesf8dp4 smesf8dp2 "
+      "smeaes sme2p2 sme2p3\n";
+
+  Features = sys::detail::getHostCPUFeaturesForARM(SME2ProcCpuinfo);
+  for (StringRef Feature :
+       {"sme", "sme-i16i64", "sme-f64f64", "sme-fa64", "sme2", "sme2p1",
+        "sme-b16b16", "sme-f16f16", "sme-f8f16", "sme-f8f32", "ssve-fp8fma",
+        "ssve-fp8dot4", "ssve-fp8dot2", "ssve-aes", "sme2p2", "sme2p3"})
+    EXPECT_TRUE(Features.lookup(Feature)) << Feature;
+
+  // A core without SME: SME and SME2 must be explicitly disabled.
+  Features = sys::detail::getHostCPUFeaturesForARM(
+      "Features        : fp asimd sve sve2\n");
+  EXPECT_TRUE(Features.contains("sme"));
+  EXPECT_FALSE(Features.lookup("sme"));
+  EXPECT_TRUE(Features.contains("sme2"));
+  EXPECT_FALSE(Features.lookup("sme2"));
+}
+#endif
+
+TEST(getLinuxHostCPUName, PowerPC) {
+  // An MPC7448.
+  EXPECT_EQ(sys::detail::getHostCPUNameForPowerPC(
+                "processor\t: 0\n"
+                "cpu\t\t: 7448, altivec supported\n"
+                "clock\t\t: 1416.666661MHz\n"
+                "revision\t: 2.2 (pvr 8004 0202)\n"),
+            "7450");
+  std::pair<const char *, const char *> Cases[] = {
+      {"7450, altivec supported", "7450"},
+      {"7455, altivec supported", "7450"},
+      {"7447/7457, altivec supported", "7450"},
+      {"7447A, altivec supported", "7450"},
+      {"7400 (1.1), altivec supported", "7400"},
+      {"7410, altivec supported", "7400"},
+      {"740/750", "750"},
+      {"745/755", "750"},
+      {"750CX", "750"},
+      {"750CXe", "750"},
+      {"750CL", "750"},
+      {"750FX", "750"},
+      {"750GX", "750"},
+      {"604r", "604e"},
+      {"82xx", "603e"},
+      {"G2_LE", "603e"},
+      {"e300c1", "603e"},
+      {"e300c2", "generic"},
+      {"e300c3", "603e"},
+      {"e300c4", "603e"},
+      {"POWER9 (raw), altivec supported", "pwr9"},
+      {"(generic PPC)", "generic"}};
+  for (auto [Name, CPU] : Cases)
+    EXPECT_EQ(sys::detail::getHostCPUNameForPowerPC(
+                  (Twine("cpu\t\t: ") + Name + "\n").str()),
+              CPU)
+        << Name;
 }
 
 TEST(getLinuxHostCPUName, s390x) {
@@ -554,6 +702,11 @@ TEST(HostTest, AIXTargetVersionDetect) {
   llvm::Triple ConfiguredTargetTriple(LLVM_DEFAULT_TARGET_TRIPLE);
   if (ConfiguredTargetTriple.getOSMajorVersion())
     GTEST_SKIP(); // The version was configured explicitly; skip.
+
+#ifdef LLVM_TARGET_TRIPLE_ENV
+  if (std::getenv(LLVM_TARGET_TRIPLE_ENV))
+    GTEST_SKIP(); // The target was configured by env; skip.
+#endif
 
   VersionTuple SystemVersion;
   getAIXSystemVersion(SystemVersion);

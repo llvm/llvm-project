@@ -27,7 +27,9 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 class AssumeInst;
+struct OperandBundleUse;
 class Function;
 class raw_ostream;
 class TargetTransformInfo;
@@ -56,6 +58,8 @@ public:
   };
 
 private:
+  const AnalysisOptions &Opts;
+
   /// The function for which this cache is handling assumptions.
   ///
   /// We track this to lazily populate our assumptions.
@@ -65,7 +69,7 @@ private:
 
   /// Vector of weak value handles to calls of the \@llvm.assume
   /// intrinsic.
-  SmallVector<ResultElem, 4> AssumeHandles;
+  SmallVector<WeakVH, 4> AssumeHandles;
 
   class LLVM_ABI AffectedValueCallbackVH final : public CallbackVH {
     AssumptionCache *AC;
@@ -95,6 +99,9 @@ private:
   /// Move affected values in the cache for OV to be affected values for NV.
   void transferAffectedValuesInCache(Value *OV, Value *NV);
 
+  /// Remove the entries in the affected-values cache that point to \p CI.
+  void removeAffectedValues(AssumeInst *CI);
+
   /// Flag tracking whether we have scanned the function yet.
   ///
   /// We want to be as lazy about this as possible, and so we scan the function
@@ -107,8 +114,7 @@ private:
 public:
   /// Construct an AssumptionCache from a function by scanning all of
   /// its instructions.
-  AssumptionCache(Function &F, TargetTransformInfo *TTI = nullptr)
-      : F(F), TTI(TTI) {}
+  LLVM_ABI AssumptionCache(Function &F, TargetTransformInfo *TTI = nullptr);
 
   /// This cache is designed to be self-updating and so it should never be
   /// invalidated.
@@ -126,6 +132,10 @@ public:
   /// Remove an \@llvm.assume intrinsic from this function's cache if it has
   /// been added to the cache earlier.
   LLVM_ABI void unregisterAssumption(AssumeInst *CI);
+
+  /// Replace the assumption referenced by \p Handle (must be a valid handle for
+  /// a registered assumption) with \p New.
+  LLVM_ABI void replaceAssumption(WeakVH &Handle, AssumeInst *New);
 
   /// Update the cache of values being affected by this assumption (i.e.
   /// the values about which this assumption provides information).
@@ -148,13 +158,15 @@ public:
   /// FIXME: We should replace this with pointee_iterator<filter_iterator<...>>
   /// when we can write that to filter out the null values. Then caller code
   /// will become simpler.
-  MutableArrayRef<ResultElem> assumptions() {
+  MutableArrayRef<WeakVH> assumptions() {
     if (!Scanned)
       scanFunction();
     return AssumeHandles;
   }
 
   /// Access the list of assumptions which affect this value.
+  ///
+  /// No more than -max-assumes-per-value of them are cached.
   MutableArrayRef<ResultElem> assumptionsFor(const Value *V) {
     if (!Scanned)
       scanFunction();
@@ -165,6 +177,11 @@ public:
 
     return AVI->second;
   }
+
+  /// Determine which values are affected by this assume operand bundle.
+  LLVM_ABI static void
+  findValuesAffectedByOperandBundle(OperandBundleUse Bundle,
+                                    function_ref<void(Value *)> InsertAffected);
 };
 
 /// A function analysis which provides an \c AssumptionCache.
@@ -183,15 +200,14 @@ public:
 };
 
 /// Printer pass for the \c AssumptionAnalysis results.
-class AssumptionPrinterPass : public PassInfoMixin<AssumptionPrinterPass> {
+class AssumptionPrinterPass
+    : public RequiredPassInfoMixin<AssumptionPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit AssumptionPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// An immutable pass that tracks lazily created \c AssumptionCache
@@ -231,10 +247,6 @@ public:
   /// If no assumptions are cached, this will scan the function. Otherwise, the
   /// existing cache will be returned.
   AssumptionCache &getAssumptionCache(Function &F);
-
-  /// Return the cached assumptions for a function if it has already been
-  /// scanned. Otherwise return nullptr.
-  AssumptionCache *lookupAssumptionCache(Function &F);
 
   AssumptionCacheTracker();
   ~AssumptionCacheTracker() override;

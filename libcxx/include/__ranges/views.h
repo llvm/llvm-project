@@ -16,20 +16,21 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 
-namespace views {}
+namespace views { // NOLINT(libcpp-avoid-empty-namespaces) // This is needed to declare the alias below.
+} // namespace views
 
 } // namespace ranges
 
 namespace views = ranges::views;
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___RANGES_VIEWS

@@ -13,7 +13,8 @@ define i16 @lea16bit(i16 %in) {
 ; NDD-LABEL: lea16bit:
 ; NDD:       # %bb.0:
 ; NDD-NEXT:    # kill: def $edi killed $edi def $rdi
-; NDD-NEXT:    leaw 1(%rdi,%rdi), %ax
+; NDD-NEXT:    leal 1(%rdi,%rdi), %eax
+; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NDD-NEXT:    retq
   %shl = shl i16 %in, 1
   %or = or i16 %shl, 1

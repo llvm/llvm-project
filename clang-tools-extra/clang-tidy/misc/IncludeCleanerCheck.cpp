@@ -1,4 +1,4 @@
-//===--- IncludeCleanerCheck.cpp - clang-tidy -----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,8 +65,8 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
     if (!llvm::Regex{Header}.isValid())
       configurationDiag("Invalid ignore headers regex '%0'") << Header;
     std::string HeaderSuffix{Header.str()};
-    if (!Header.ends_with("$"))
-      HeaderSuffix += "$";
+    if (!Header.ends_with('$'))
+      HeaderSuffix += '$';
     IgnoreHeadersRegex.emplace_back(HeaderSuffix);
   }
 
@@ -111,8 +111,10 @@ bool IncludeCleanerCheck::shouldIgnore(const include_cleaner::Header &H) {
       return R.match(H.standard().name());
     case include_cleaner::Header::Verbatim:
       return R.match(H.verbatim().trim("<>\""));
-    case include_cleaner::Header::Physical:
-      return R.match(H.physical().getFileEntry().tryGetRealPathName());
+    case include_cleaner::Header::Physical: {
+      const StringRef Path = H.physical().getFileEntry().tryGetRealPathName();
+      return R.match(Path) || R.match(llvm::sys::path::convert_to_slash(Path));
+    }
     }
     llvm_unreachable("Unknown Header kind.");
   });
@@ -123,7 +125,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   const FileEntry *MainFile = SM->getFileEntryForID(SM->getMainFileID());
   llvm::DenseSet<const include_cleaner::Include *> Used;
   std::vector<MissingIncludeInfo> Missing;
-  llvm::SmallVector<Decl *> MainFileDecls;
+  SmallVector<Decl *> MainFileDecls;
   for (Decl *D : Result.Nodes.getNodeAs<TranslationUnitDecl>("top")->decls()) {
     if (!SM->isWrittenInMainFile(SM->getExpansionLoc(D->getLocation())))
       continue;
@@ -200,11 +202,11 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     Unused.push_back(&I);
   }
 
-  llvm::StringRef Code = SM->getBufferData(SM->getMainFileID());
-  auto FileStyle =
+  const StringRef Code = SM->getBufferData(SM->getMainFileID());
+  auto FileStyle = llvm::expectedToOptional(
       format::getStyle(format::DefaultFormatStyle, getCurrentMainFile(),
                        format::DefaultFallbackStyle, Code,
-                       &SM->getFileManager().getVirtualFileSystem());
+                       &SM->getFileManager().getVirtualFileSystem()));
   if (!FileStyle)
     FileStyle = format::getLLVMStyle();
 
@@ -220,22 +222,22 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   }
 
   if (MissingIncludes) {
-    tooling::HeaderIncludes HeaderIncludes(getCurrentMainFile(), Code,
-                                           FileStyle->IncludeStyle);
+    const tooling::HeaderIncludes HeaderIncludes(getCurrentMainFile(), Code,
+                                                 FileStyle->IncludeStyle);
     // Deduplicate insertions when running in bulk fix mode.
     llvm::StringSet<> InsertedHeaders{};
     for (const auto &Inc : Missing) {
-      std::string Spelling = include_cleaner::spellHeader(
+      const std::string Spelling = include_cleaner::spellHeader(
           {Inc.Missing, PP->getHeaderSearchInfo(), MainFile});
-      bool Angled = llvm::StringRef{Spelling}.starts_with("<");
+      const bool Angled = StringRef{Spelling}.starts_with('<');
       // We might suggest insertion of an existing include in edge cases, e.g.,
       // include is present in a PP-disabled region, or spelling of the header
       // turns out to be the same as one of the unresolved includes in the
       // main file.
-      if (auto Replacement = HeaderIncludes.insert(
-              llvm::StringRef{Spelling}.trim("\"<>"), Angled,
-              tooling::IncludeDirective::Include)) {
-        DiagnosticBuilder DB =
+      if (auto Replacement =
+              HeaderIncludes.insert(StringRef{Spelling}.trim("\"<>"), Angled,
+                                    tooling::IncludeDirective::Include)) {
+        const DiagnosticBuilder DB =
             diag(SM->getSpellingLoc(Inc.SymRef.RefLocation),
                  "no header providing \"%0\" is directly included")
             << Inc.SymRef.Target.name();

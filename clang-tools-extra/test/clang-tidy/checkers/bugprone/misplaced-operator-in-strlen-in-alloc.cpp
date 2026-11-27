@@ -17,7 +17,7 @@ size_t strlen(const char *);
 void bad_std_malloc_std_strlen(char *name) {
   char *new_name = (char *)std::malloc(std::strlen(name + 1));
   // CHECK-MESSAGES: :[[@LINE-1]]:28: warning: addition operator is applied to the argument of strlen
-  // CHECK-FIXES: {{^  char \*new_name = \(char \*\)std::malloc\(}}std::strlen(name) + 1{{\);$}}
+  // CHECK-FIXES: char *new_name = (char *)std::malloc(std::strlen(name) + 1);
 }
 
 void ignore_non_std_malloc_std_strlen(char *name) {
@@ -35,7 +35,7 @@ void ignore_std_malloc_non_std_strlen(char *name) {
 void bad_new_strlen(char *name) {
   char *new_name = new char[std::strlen(name + 1)];
   // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: addition operator is applied to the argument of strlen
-  // CHECK-FIXES: {{^  char \*new_name = new char\[}}std::strlen(name) + 1{{\];$}}
+  // CHECK-FIXES: char *new_name = new char[std::strlen(name) + 1];
 }
 
 void good_new_strlen(char *name) {
@@ -54,5 +54,5 @@ public:
 void bad_custom_new_strlen(char *name) {
   C *new_name = new C[std::strlen(name + 1)];
   // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: addition operator is applied to the argument of strlen
-  // CHECK-FIXES: {{^  C \*new_name = new C\[}}std::strlen(name) + 1{{\];$}}
+  // CHECK-FIXES: C *new_name = new C[std::strlen(name) + 1];
 }

@@ -78,7 +78,7 @@ subroutine workshare(aa, bb, cc, dd, ee, ff, n)
 
   !$omp workshare
     j = j + 1
-  !ERROR: At most one NOWAIT clause can appear on the END WORKSHARE directive
+  !ERROR: At most one NOWAIT clause can appear on WORKSHARE directive
   !$omp end workshare nowait nowait
 
 end subroutine workshare

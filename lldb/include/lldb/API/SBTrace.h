@@ -20,6 +20,18 @@ public:
   /// Default constructor for an invalid Trace object.
   SBTrace();
 
+  SBTrace(const lldb::SBTrace &rhs);
+
+  lldb::SBTrace &operator=(const lldb::SBTrace &rhs);
+
+#ifndef SWIG
+  SBTrace(lldb::SBTrace &&rhs);
+
+  lldb::SBTrace &operator=(lldb::SBTrace &&rhs);
+#endif
+
+  ~SBTrace();
+
   /// See SBDebugger::LoadTraceFromFile.
   static SBTrace LoadTraceFromFile(SBError &error, SBDebugger &debugger,
                                    const SBFileSpec &trace_description_file);
@@ -39,7 +51,7 @@ public:
   SBTraceCursor CreateNewCursor(SBError &error, SBThread &thread);
 
   /// Save the trace to the specified directory, which will be created if
-  /// needed. This will also create a file \a <directory>/trace.json with the
+  /// needed. This will also create a file <directory>/trace.json with the
   /// main properties of the trace session, along with others files which
   /// contain the actual trace data. The trace.json file can be used later as
   /// input for the "trace load" command to load the trace in LLDB, or for the

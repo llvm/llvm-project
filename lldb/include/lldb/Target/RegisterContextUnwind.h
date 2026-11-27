@@ -21,6 +21,7 @@
 namespace lldb_private {
 
 class UnwindLLDB;
+class ArchitectureArm;
 
 class RegisterContextUnwind : public lldb_private::RegisterContext {
 public:
@@ -72,6 +73,25 @@ public:
   // above asynchronous trap handlers (sigtramp) for instance.
   bool BehavesLikeZerothFrame() const override;
 
+protected:
+  // Provide a location for where THIS function saved the CALLER's register
+  // value, or a frame "below" this one saved it. That is, this function doesn't
+  // modify the register, it may call a function that does & saved it to stack.
+  //
+  // The ConcreteRegisterLocation type may be set to eRegisterNotAvailable --
+  // this will happen for a volatile register being queried mid-stack.  Instead
+  // of floating frame 0's contents of that register up the stack (which may or
+  // may not be the value of that reg when the function was executing), we won't
+  // return any value.
+  //
+  // If a non-volatile register (a "preserved" register, a callee-preserved
+  // register) is requested mid-stack, and no frames "below" the requested stack
+  // have saved the register anywhere, it is safe to assume that frame 0's
+  // register value is the same.
+  lldb_private::UnwindLLDB::RegisterSearchResult SavedLocationForRegister(
+      uint32_t lldb_regnum,
+      lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc);
+
 private:
   enum FrameType {
     eNormalFrame,
@@ -86,6 +106,8 @@ private:
 
   // UnwindLLDB needs to pass around references to ConcreteRegisterLocations
   friend class UnwindLLDB;
+  // Architecture may need to retrieve caller register values from this frame
+  friend class ArchitectureArm;
 
   // Returns true if we have an unwind loop -- the same stack frame unwinding
   // multiple times.
@@ -115,41 +137,17 @@ private:
   // user somehow.
   bool IsSkipFrame() const;
 
-  /// Determines if a SymbolContext is a trap handler or not
-  ///
-  /// Given a SymbolContext, determines if this is a trap handler function
-  /// aka asynchronous signal handler.
+  /// Identify a trap handler from signal-frame CFI at m_current_pc or its
+  /// symbol name provided by platform or user, in order.
   ///
   /// \return
   ///     Returns true if the SymbolContext is a trap handler.
-  bool IsTrapHandlerSymbol(lldb_private::Process *process,
-                           const lldb_private::SymbolContext &m_sym_ctx) const;
+  bool IsTrapHandler(lldb_private::Process *process) const;
 
   /// Check if the given unwind plan indicates a signal trap handler, and
   /// update frame type and symbol context if so.
   void PropagateTrapHandlerFlagFromUnwindPlan(
       std::shared_ptr<const UnwindPlan> unwind_plan);
-
-  // Provide a location for where THIS function saved the CALLER's register
-  // value
-  // Or a frame "below" this one saved it, i.e. a function called by this one,
-  // preserved a register that this
-  // function didn't modify/use.
-  //
-  // The ConcreteRegisterLocation type may be set to eRegisterNotAvailable --
-  // this will happen for a volatile register being queried mid-stack.  Instead
-  // of floating frame 0's contents of that register up the stack (which may or
-  // may not be the value of that reg when the function was executing), we won't
-  // return any value.
-  //
-  // If a non-volatile register (a "preserved" register) is requested mid-stack
-  // and no frames "below" the requested
-  // stack have saved the register anywhere, it is safe to assume that frame 0's
-  // register values are still the same
-  // as the requesting frame's.
-  lldb_private::UnwindLLDB::RegisterSearchResult SavedLocationForRegister(
-      uint32_t lldb_regnum,
-      lldb_private::UnwindLLDB::ConcreteRegisterLocation &regloc);
 
   std::optional<UnwindPlan::Row::AbstractRegisterLocation>
   GetAbstractRegisterLocation(uint32_t lldb_regnum, lldb::RegisterKind &kind);
@@ -202,10 +200,7 @@ private:
 
   std::shared_ptr<const UnwindPlan> GetFullUnwindPlanForFrame();
 
-  void UnwindLogMsg(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
-  void UnwindLogMsgVerbose(const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
+  lldb::UnwindPlanSP TryAdoptArchitectureUnwindPlan();
 
   bool IsUnwindPlanValidForCurrentPC(
       std::shared_ptr<const UnwindPlan> unwind_plan_sp);

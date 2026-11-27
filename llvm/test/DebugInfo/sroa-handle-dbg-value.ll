@@ -4,7 +4,7 @@
 ; RUN: opt %s -S -p=sroa -o - | FileCheck %s
 
 ; CHECK: [[SROA_5_SROA_21:%.*]] = alloca [7 x i8], align 8
-; CHECK-NEXT: #dbg_value(ptr [[SROA_5_SROA_21]], !59, !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 72, 56), [[DBG72:![0-9]+]])
+; CHECK-NEXT: #dbg_value(ptr [[SROA_5_SROA_21]], [[META59:![0-9]+]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 72, 56), [[DBG72:![0-9]+]])
 
 ; CHECK: #dbg_value(ptr [[REG1:%[0-9]+]], [[META54:![0-9]+]], !DIExpression(DW_OP_deref), [[DBG78:![0-9]+]])
 ; CHECK-NEXT: #dbg_value(ptr [[REG2:%[0-9]+]], [[META56:![0-9]+]], !DIExpression(DW_OP_deref), [[DBG78]])
@@ -93,7 +93,7 @@ entry:
 !49 = !DISubroutineType(types: !50)
 !50 = !{ !51}
 !51 = !DICompositeType(tag: DW_TAG_structure_type, identifier: "$s4main1TV13TangentVectorVXMtD")
-!52 = !DISubprogram(spFlags: DISPFlagOptimized)
+!52 = !DISubprogram(type: !49, spFlags: DISPFlagOptimized)
 !53 = !{!54, !56, !57}
 !54 = !DILocalVariable(name: "a", scope: !44, flags: DIFlagArtificial)
 !55 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !46)
@@ -102,7 +102,7 @@ entry:
 !58 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !51)
 !61 = !DILocation(scope: !44)
 !62 = !DILocalVariable(name: "d", scope: !63, type: !72, flags: DIFlagArtificial)
-!63 = distinct !DISubprogram(unit: !16, retainedNodes: !70)
+!63 = distinct !DISubprogram(type: !49, unit: !16, retainedNodes: !70)
 !64 = !DICompositeType(tag: DW_TAG_structure_type, size: 200, identifier: "$s4main1UV13TangentVectorVD")
 !70 = !{}
 !72 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !64)

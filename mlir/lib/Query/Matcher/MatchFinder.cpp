@@ -38,21 +38,23 @@ MatchFinder::collectMatches(Operation *root, DynMatcher matcher) const {
 
 void MatchFinder::printMatch(llvm::raw_ostream &os, QuerySession &qs,
                              Operation *op) const {
-  auto fileLoc = cast<FileLineColLoc>(op->getLoc());
-  SMLoc smloc = qs.getSourceManager().FindLocForLineAndColumn(
-      qs.getBufferId(), fileLoc.getLine(), fileLoc.getColumn());
-  llvm::SMDiagnostic diag =
-      qs.getSourceManager().GetMessage(smloc, llvm::SourceMgr::DK_Note, "");
-  diag.print("", os, true, false, true);
+  if (auto fileLoc = op->getLoc()->findInstanceOf<FileLineColLoc>()) {
+    SMLoc smloc = qs.getSourceManager().FindLocForLineAndColumn(
+        qs.getBufferId(), fileLoc.getLine(), fileLoc.getColumn());
+    llvm::SMDiagnostic diag =
+        qs.getSourceManager().GetMessage(smloc, llvm::SourceMgr::DK_Note, "");
+    diag.print("", os, true, false, true);
+  }
 }
 
 void MatchFinder::printMatch(llvm::raw_ostream &os, QuerySession &qs,
                              Operation *op, const std::string &binding) const {
-  auto fileLoc = cast<FileLineColLoc>(op->getLoc());
-  auto smloc = qs.getSourceManager().FindLocForLineAndColumn(
-      qs.getBufferId(), fileLoc.getLine(), fileLoc.getColumn());
-  qs.getSourceManager().PrintMessage(os, smloc, llvm::SourceMgr::DK_Note,
-                                     "\"" + binding + "\" binds here");
+  if (auto fileLoc = op->getLoc()->findInstanceOf<FileLineColLoc>()) {
+    auto smloc = qs.getSourceManager().FindLocForLineAndColumn(
+        qs.getBufferId(), fileLoc.getLine(), fileLoc.getColumn());
+    qs.getSourceManager().PrintMessage(os, smloc, llvm::SourceMgr::DK_Note,
+                                       "\"" + binding + "\" binds here");
+  }
 }
 
 std::vector<Operation *>

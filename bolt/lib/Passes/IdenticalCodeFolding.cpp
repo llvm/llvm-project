@@ -33,6 +33,8 @@ namespace opts {
 
 extern cl::OptionCategory BoltOptCategory;
 
+extern bool isHotTextMover(const BinaryFunction &Function);
+
 static cl::opt<bool>
     ICFUseDFS("icf-dfs", cl::desc("use DFS ordering when using -icf option"),
               cl::ReallyHidden, cl::cat(BoltOptCategory));
@@ -41,7 +43,6 @@ static cl::opt<bool>
 TimeICF("time-icf",
   cl::desc("time icf steps"),
   cl::ReallyHidden,
-  cl::ZeroOrMore,
   cl::cat(BoltOptCategory));
 
 cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
@@ -61,7 +62,7 @@ cl::opt<bolt::IdenticalCodeFolding::ICFLevel, false,
                               "Disable identical code folding (default)"),
                    clEnumValN(bolt::IdenticalCodeFolding::ICFLevel::Safe,
                               "safe", "Enable safe identical code folding")),
-        cl::ZeroOrMore, cl::ValueOptional, cl::cat(BoltOptCategory));
+        cl::ValueOptional, cl::cat(BoltOptCategory));
 } // namespace opts
 
 bool IdenticalCodeFolding::shouldOptimize(const BinaryFunction &BF) const {
@@ -121,6 +122,95 @@ static bool equalJumpTables(const JumpTable &JumpTableA,
   return true;
 }
 
+/// Return true if \p A and \p B describe the same unwinding rule.
+static bool isCFIEquivalent(const MCCFIInstruction &A,
+                            const MCCFIInstruction &B) {
+  if (A.getOperation() != B.getOperation())
+    return false;
+
+  switch (A.getOperation()) {
+  case MCCFIInstruction::OpRememberState:
+  case MCCFIInstruction::OpRestoreState:
+  case MCCFIInstruction::OpWindowSave:
+  case MCCFIInstruction::OpNegateRAState:
+  case MCCFIInstruction::OpNegateRAStateWithPC:
+    return true;
+  case MCCFIInstruction::OpSameValue:
+  case MCCFIInstruction::OpRestore:
+  case MCCFIInstruction::OpUndefined:
+  case MCCFIInstruction::OpDefCfaRegister:
+    return A.getRegister() == B.getRegister();
+  case MCCFIInstruction::OpRegister:
+    return A.getRegister() == B.getRegister() &&
+           A.getRegister2() == B.getRegister2();
+  case MCCFIInstruction::OpDefCfa:
+  case MCCFIInstruction::OpOffset:
+  case MCCFIInstruction::OpRelOffset:
+  case MCCFIInstruction::OpValOffset:
+    return A.getRegister() == B.getRegister() && A.getOffset() == B.getOffset();
+  case MCCFIInstruction::OpLLVMDefAspaceCfa:
+    return A.getRegister() == B.getRegister() &&
+           A.getOffset() == B.getOffset() &&
+           A.getAddressSpace() == B.getAddressSpace();
+  case MCCFIInstruction::OpDefCfaOffset:
+  case MCCFIInstruction::OpAdjustCfaOffset:
+  case MCCFIInstruction::OpGnuArgsSize:
+    return A.getOffset() == B.getOffset();
+  case MCCFIInstruction::OpEscape:
+    return A.getValues() == B.getValues();
+  default:
+    // Not created when reading .eh_frame. Never fold.
+    return false;
+  }
+}
+
+/// Return true if \p A and \p B have the same unwind and exception handling
+/// state outside of their instruction streams.
+static bool hasEquivalentUnwindInfo(const BinaryFunction &A,
+                                    const BinaryFunction &B,
+                                    bool CongruentSymbols) {
+  // The personality routine runs even when the function has no LSDA.
+  if ((A.getPersonalityEncoding() & dwarf::DW_EH_PE_indirect) !=
+      (B.getPersonalityEncoding() & dwarf::DW_EH_PE_indirect))
+    return false;
+
+  const MCSymbol *PersonalityA = A.getPersonalityFunction();
+  const MCSymbol *PersonalityB = B.getPersonalityFunction();
+  if (PersonalityA != PersonalityB) {
+    if (!PersonalityA || !PersonalityB)
+      return false;
+
+    // Compare personality routines as functions, as if they were call
+    // targets, so that the functions can fold once their personality
+    // routines have folded.
+    const BinaryContext &BC = A.getBinaryContext();
+    uint64_t EntryIDA = 0;
+    uint64_t EntryIDB = 0;
+    const BinaryFunction *FunctionA =
+        BC.getFunctionForSymbol(PersonalityA, &EntryIDA);
+    const BinaryFunction *FunctionB =
+        BC.getFunctionForSymbol(PersonalityB, &EntryIDB);
+    if (!FunctionA || !FunctionB || EntryIDA || EntryIDB)
+      return false;
+
+    if (CongruentSymbols ? FunctionA->getHash() != FunctionB->getHash()
+                         : FunctionA != FunctionB)
+      return false;
+  }
+
+  if (!A.getLSDAAddress() != !B.getLSDAAddress())
+    return false;
+
+  // The return address signing state is compared per instruction.
+  if (A.containedNegateRAState() != B.containedNegateRAState())
+    return false;
+
+  // Rules in effect at the entry: the CIE initial instructions and the FDE
+  // instructions before the first advance. They have no CFI pseudos in the
+  // instruction stream.
+  return llvm::equal(A.cie(), B.cie(), isCFIEquivalent);
+}
+
 /// Helper function that compares an instruction of this function to the
 /// given instruction of the given function. The functions should have
 /// identical CFG.
@@ -132,7 +222,22 @@ static bool isInstrEquivalentWith(const MCInst &InstA,
   if (InstA.getOpcode() != InstB.getOpcode())
     return false;
 
-  const BinaryContext &BC = BBA.getFunction()->getBinaryContext();
+  const BinaryFunction &BFA = *BBA.getFunction();
+  const BinaryFunction &BFB = *BBB.getFunction();
+  const BinaryContext &BC = BFA.getBinaryContext();
+
+  // A CFI pseudo holds an index into its own function's frame instruction
+  // table. Compare the frame instructions instead of the indices.
+  if (BC.MIB->isCFI(InstA)) {
+    const MCCFIInstruction *CFIA = BFA.getCFIFor(InstA);
+    const MCCFIInstruction *CFIB = BFB.getCFIFor(InstB);
+    return CFIA && CFIB && isCFIEquivalent(*CFIA, *CFIB);
+  }
+
+  // Check return address signing state, set by PointerAuthCFIAnalyzer.
+  if (BFA.containedNegateRAState() &&
+      BC.MIB->getRAState(InstA) != BC.MIB->getRAState(InstB))
+    return false;
 
   // In this function we check for special conditions:
   //
@@ -148,6 +253,10 @@ static bool isInstrEquivalentWith(const MCInst &InstA,
   const std::optional<MCPlus::MCLandingPad> EHInfoB = BC.MIB->getEHInfo(InstB);
 
   if (EHInfoA || EHInfoB) {
+    // DW_CFA_GNU_args_size is kept as an annotation on invokes.
+    if (BC.MIB->getGnuArgsSize(InstA) != BC.MIB->getGnuArgsSize(InstB))
+      return false;
+
     if (!EHInfoA && (EHInfoB->first || EHInfoB->second))
       return false;
 
@@ -186,6 +295,11 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
                             bool CongruentSymbols) {
   assert(A.hasCFG() && B.hasCFG() && "both functions should have CFG");
 
+  // Hot text mover functions should not be folded. They need to stay in their
+  // original section to avoid being placed on hot/huge pages.
+  if (opts::isHotTextMover(A) || opts::isHotTextMover(B))
+    return false;
+
   // Compare the two functions, one basic block at a time.
   // Currently we require two identical basic blocks to have identical
   // instruction sequences and the same index in their corresponding
@@ -199,6 +313,9 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     return false;
 
   if (A.hasIslandsInfo() || B.hasIslandsInfo())
+    return false;
+
+  if (!hasEquivalentUnwindInfo(A, B, CongruentSymbols))
     return false;
 
   // Process both functions in either DFS or existing order.
@@ -368,18 +485,18 @@ typedef std::unordered_map<BinaryFunction *, std::set<BinaryFunction *>,
                            KeyHash, KeyCongruent>
     CongruentBucketsMap;
 
-typedef std::unordered_map<BinaryFunction *, std::vector<BinaryFunction *>,
-                           KeyHash, KeyEqual>
+typedef std::unordered_map<BinaryFunction *, BinaryFunctionListType, KeyHash,
+                           KeyEqual>
     IdenticalBucketsMap;
 
 namespace llvm {
 namespace bolt {
 void IdenticalCodeFolding::initVTableReferences(const BinaryContext &BC) {
   for (const auto &[Address, Data] : BC.getBinaryData()) {
-    // Filter out all symbols that are not vtables.
-    if (!Data->getName().starts_with("_ZTV"))
+    if (!Data->isVTable())
       continue;
-    for (uint64_t I = Address, End = I + Data->getSize(); I < End; I += 8)
+    for (uint64_t I = Address, End = I + Data->getSize(); I < End;
+         I += VTableAddressGranularity)
       setAddressUsedInVTable(I);
   }
 }
@@ -437,8 +554,9 @@ void IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
   NamedRegionTimer MarkFunctionsUnsafeToFoldTimer(
       "markFunctionsUnsafeToFold", "markFunctionsUnsafeToFold", "ICF breakdown",
       "ICF breakdown", opts::TimeICF);
-  if (!BC.isX86())
-    BC.outs() << "BOLT-WARNING: safe ICF is only supported for x86\n";
+  if (!BC.isX86() && !BC.isAArch64())
+    BC.outs()
+        << "BOLT-WARNING: safe ICF is only supported for x86 and AArch64\n";
   analyzeDataRelocations(BC);
   analyzeFunctions(BC);
 }
@@ -519,7 +637,7 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
 
       for (auto &IBI : IdenticalBuckets) {
         // Functions identified as identical.
-        std::vector<BinaryFunction *> &Twins = IBI.second;
+        BinaryFunctionListType &Twins = IBI.second;
         if (Twins.size() < 2)
           continue;
 
@@ -560,20 +678,30 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
       LLVM_DEBUG(T.stopTimer());
     };
 
-    // Create a task for each congruent bucket
-    for (auto &Entry : CongruentBuckets) {
-      std::set<BinaryFunction *> &Bucket = Entry.second;
-      if (Bucket.size() < 2)
-        continue;
+    if (opts::NoThreads) {
+      // Sort buckets by address for deterministic folding order when running
+      // single-threaded.
+      SmallVector<std::pair<uint64_t, std::set<BinaryFunction *> *>>
+          SortedBuckets;
+      for (auto &Entry : CongruentBuckets) {
+        if (Entry.second.size() >= 2)
+          SortedBuckets.push_back({Entry.first->getAddress(), &Entry.second});
+      }
+      llvm::sort(SortedBuckets, [](const auto &A, const auto &B) {
+        return A.first < B.first;
+      });
+      for (auto &[Addr, Bucket] : SortedBuckets)
+        processSingleBucket(*Bucket);
+    } else {
+      for (auto &Entry : CongruentBuckets) {
+        std::set<BinaryFunction *> &Bucket = Entry.second;
+        if (Bucket.size() < 2)
+          continue;
 
-      if (opts::NoThreads)
-        processSingleBucket(Bucket);
-      else
-        ThPool->async(processSingleBucket, std::ref(Bucket));
-    }
-
-    if (!opts::NoThreads)
+        ThPool->async(processSingleBucket, std::ref(Entry.second));
+      }
       ThPool->wait();
+    }
 
     LLVM_DEBUG(SinglePass.stopTimer());
   };
@@ -594,6 +722,19 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     ++Iteration;
 
   } while (NumFoldedLastIteration > 0);
+
+  // Flatten folded function chains so FoldedIntoFunction always points
+  // to the root parent.
+  for (auto &BFI : BC.getBinaryFunctions()) {
+    BinaryFunction &BF = BFI.second;
+    if (!BF.isFolded())
+      continue;
+    BinaryFunction *Parent = BF.getFoldedIntoFunction();
+    while (Parent->isFolded())
+      Parent = Parent->getFoldedIntoFunction();
+    if (Parent != BF.getFoldedIntoFunction())
+      BF.setFolded(Parent);
+  }
 
   LLVM_DEBUG({
     // Print functions that are congruent but not identical.

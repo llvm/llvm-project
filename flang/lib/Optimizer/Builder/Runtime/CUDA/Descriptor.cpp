@@ -1,5 +1,4 @@
-
-//===-- Allocatable.cpp -- Allocatable statements lowering ----------------===//
+//===-- Descriptor.cpp -- descriptor related runtime calls ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,7 +29,7 @@ void fir::runtime::cuda::genSyncGlobalDescriptor(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, hostPtr, sourceFile, sourceLine)};
-  builder.create<fir::CallOp>(loc, callee, args);
+  fir::CallOp::create(builder, loc, callee, args);
 }
 
 void fir::runtime::cuda::genDescriptorCheckSection(fir::FirOpBuilder &builder,
@@ -45,5 +44,5 @@ void fir::runtime::cuda::genDescriptorCheckSection(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, fTy.getInput(2));
   llvm::SmallVector<mlir::Value> args{fir::runtime::createArguments(
       builder, loc, fTy, desc, sourceFile, sourceLine)};
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }

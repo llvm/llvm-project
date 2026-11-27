@@ -17,35 +17,28 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/PseudoSourceValue.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-// Temporarily disable FMA mutation by default, since it doesn't handle
-// cross-basic-block intervals well.
-// See: http://lists.llvm.org/pipermail/llvm-dev/2016-February/095669.html
-//      http://reviews.llvm.org/D17087
-static cl::opt<bool> DisableVSXFMAMutate(
-    "disable-ppc-vsx-fma-mutation",
-    cl::desc("Disable VSX FMA instruction mutation"), cl::init(true),
-    cl::Hidden);
-
 #define DEBUG_TYPE "ppc-vsx-fma-mutate"
 
 namespace llvm { namespace PPC {
-  int getAltVSXFMAOpcode(uint16_t Opcode);
+int32_t getAltVSXFMAOpcode(uint32_t Opcode);
 } }
 
 namespace {
@@ -336,7 +329,7 @@ public:
 
       bool Changed = false;
 
-      if (DisableVSXFMAMutate)
+      if (!STI.getCLOpts().vsx_fma_mutation)
         return Changed;
 
       for (MachineBasicBlock &B : llvm::make_early_inc_range(MF))
@@ -349,10 +342,10 @@ public:
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<LiveIntervalsWrapperPass>();
       AU.addPreserved<LiveIntervalsWrapperPass>();
-      AU.addRequired<SlotIndexesWrapperPass>();
       AU.addPreserved<SlotIndexesWrapperPass>();
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addPreserved<MachineDominatorTreeWrapperPass>();
+      AU.addPreserved<MachineBlockFrequencyInfoWrapperPass>();
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
   };
@@ -362,7 +355,6 @@ INITIALIZE_PASS_BEGIN(PPCVSXFMAMutate, DEBUG_TYPE,
                       "PowerPC VSX FMA Mutation", false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(SlotIndexesWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(PPCVSXFMAMutate, DEBUG_TYPE,
                     "PowerPC VSX FMA Mutation", false, false)
 

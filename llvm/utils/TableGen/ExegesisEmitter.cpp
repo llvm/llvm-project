@@ -13,11 +13,14 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cassert>
+#include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
@@ -57,6 +60,14 @@ private:
   // Table of counter name -> counter index.
   const std::map<llvm::StringRef, unsigned> PfmCounterNameTable;
 };
+
+struct ValidationCounterInfo {
+  int64_t EventNumber;
+  StringRef EventName;
+  unsigned PfmCounterID;
+};
+
+} // namespace
 
 static std::map<llvm::StringRef, unsigned>
 collectPfmCounters(const RecordKeeper &Records) {
@@ -106,24 +117,18 @@ ExegesisEmitter::ExegesisEmitter(const RecordKeeper &RK)
   Target = Targets[0]->getName().str();
 }
 
-struct ValidationCounterInfo {
-  int64_t EventNumber;
-  StringRef EventName;
-  unsigned PfmCounterID;
-};
-
-bool EventNumberLess(const ValidationCounterInfo &LHS,
-                     const ValidationCounterInfo &RHS) {
+static bool EventNumberLess(const ValidationCounterInfo &LHS,
+                            const ValidationCounterInfo &RHS) {
   return LHS.EventNumber < RHS.EventNumber;
 }
 
 void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
                                           unsigned &IssueCountersTableOffset,
                                           raw_ostream &OS) const {
-  const auto CycleCounter =
-      Def.getValueAsDef("CycleCounter")->getValueAsString("Counter");
-  const auto UopsCounter =
-      Def.getValueAsDef("UopsCounter")->getValueAsString("Counter");
+  const Record *CycleCounterDef = Def.getValueAsDef("CycleCounter");
+  const auto CycleCounter = CycleCounterDef->getValueAsString("Counter");
+  const Record *UopsCounterDef = Def.getValueAsDef("UopsCounter");
+  const auto UopsCounter = UopsCounterDef->getValueAsString("Counter");
   const size_t NumIssueCounters =
       Def.getValueAsListOfDefs("IssueCounters").size();
   const size_t NumValidationCounters =
@@ -156,18 +161,46 @@ void ExegesisEmitter::emitPfmCountersInfo(const Record &Def,
      << " = {\n";
 
   // Cycle Counter.
-  if (CycleCounter.empty())
+  if (CycleCounterDef->getValueAsInt("EventSelect") != -1) {
+    const int64_t EventSelect = CycleCounterDef->getValueAsInt("EventSelect");
+    if (!isInt<16>(EventSelect))
+      PrintFatalError(CycleCounterDef->getLoc(),
+                      "EventSelect must fit in 16 bits");
+    const int64_t UMask = CycleCounterDef->getValueAsInt("UMask");
+    if (!isInt<8>(UMask))
+      PrintFatalError(CycleCounterDef->getLoc(), "UMask must fit in 8 bits");
+    OS << "  nullptr,  // Cycle counter uses raw encoding below.\n";
+    OS << "  0x" << format_hex_no_prefix(EventSelect, 4) << ", 0x"
+       << format_hex_no_prefix(UMask, 2) << ", // Raw cycle counter\n";
+  } else if (CycleCounter.empty()) {
     OS << "  nullptr,  // No cycle counter.\n";
-  else
+    OS << "  -1, 0, // No raw cycle counter\n";
+  } else {
     OS << "  " << Target << "PfmCounterNames[" << getPfmCounterId(CycleCounter)
        << "],  // Cycle counter\n";
+    OS << "  -1, 0, // No raw cycle counter\n";
+  }
 
   // Uops Counter.
-  if (UopsCounter.empty())
+  if (UopsCounterDef->getValueAsInt("EventSelect") != -1) {
+    const int64_t EventSelect = UopsCounterDef->getValueAsInt("EventSelect");
+    if (!isInt<16>(EventSelect))
+      PrintFatalError(UopsCounterDef->getLoc(),
+                      "EventSelect must fit in 16 bits");
+    const int64_t UMask = UopsCounterDef->getValueAsInt("UMask");
+    if (!isInt<8>(UMask))
+      PrintFatalError(UopsCounterDef->getLoc(), "UMask must fit in 8 bits");
+    OS << "  nullptr,  // Uops counter uses raw encoding below.\n";
+    OS << "  0x" << format_hex_no_prefix(EventSelect, 4) << ", 0x"
+       << format_hex_no_prefix(UMask, 2) << ", // Raw uops counter\n";
+  } else if (UopsCounter.empty()) {
     OS << "  nullptr,  // No uops counter.\n";
-  else
+    OS << "  -1, 0, // No raw uops counter\n";
+  } else {
     OS << "  " << Target << "PfmCounterNames[" << getPfmCounterId(UopsCounter)
        << "],  // Uops counter\n";
+    OS << "  -1, 0, // No raw uops counter\n";
+  }
 
   // Issue Counters
   if (NumIssueCounters == 0)
@@ -221,7 +254,7 @@ void ExegesisEmitter::emitPfmCounters(raw_ostream &OS) const {
     emitPfmCountersInfo(*Def, IssueCountersTableOffset, OS);
 
   OS << "\n";
-} // namespace
+}
 
 void ExegesisEmitter::emitPfmCountersLookupTable(raw_ostream &OS) const {
   std::vector<const Record *> Bindings =
@@ -248,8 +281,6 @@ void ExegesisEmitter::run(raw_ostream &OS) const {
   emitPfmCounters(OS);
   emitPfmCountersLookupTable(OS);
 }
-
-} // end anonymous namespace
 
 static TableGen::Emitter::OptClass<ExegesisEmitter>
     X("gen-exegesis", "Generate llvm-exegesis tables");

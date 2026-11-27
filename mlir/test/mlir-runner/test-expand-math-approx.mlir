@@ -1,10 +1,11 @@
-// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(test-expand-math),convert-vector-to-scf,convert-scf-to-cf,convert-vector-to-llvm,convert-to-llvm,reconcile-unrealized-casts)" \
+// RUN:   mlir-opt %s -pass-pipeline="builtin.module(func.func(math-expand-ops),convert-vector-to-scf,convert-scf-to-cf,convert-vector-to-llvm,convert-to-llvm,reconcile-unrealized-casts)" \
 // RUN: | mlir-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
 // RUN:     -shared-libs=%mlir_c_runner_utils  \
 // RUN:     -shared-libs=%mlir_runner_utils    \
 // RUN:     -shared-libs=%mlir_float16_utils   \
 // RUN: | FileCheck %s
+// XFAIL: system-aix
 
 // -------------------------------------------------------------------------- //
 // exp2f.
@@ -258,6 +259,46 @@ func.func @powf() {
   %l_p = arith.constant -2.0 : f32
   %l_r = math.powf %k, %l_p : f32
   vector.print %l_r : f32
+  return
+}
+
+// -------------------------------------------------------------------------- //
+// fpowi.
+// -------------------------------------------------------------------------- //
+
+func.func @func_fpowi_neg1_f32(%a : f32) {
+  %n = arith.constant -1 : i32
+  %r = math.fpowi %a, %n : f32, i32
+  vector.print %r : f32
+  return
+}
+
+func.func @func_fpowi_neg2_f32(%a : f32) {
+  %n = arith.constant -2 : i32
+  %r = math.fpowi %a, %n : f32, i32
+  vector.print %r : f32
+  return
+}
+
+func.func @fpowi() {
+  %zero = arith.constant 0.0 : f32
+  %neg_zero = arith.constant -0.0 : f32
+  %two = arith.constant 2.0 : f32
+
+  // CHECK-NEXT: {{^}}inf
+  call @func_fpowi_neg1_f32(%zero) : (f32) -> ()
+  // CHECK-NEXT: {{^}}-inf
+  call @func_fpowi_neg1_f32(%neg_zero) : (f32) -> ()
+  // CHECK-NEXT: {{^}}0.5
+  call @func_fpowi_neg1_f32(%two) : (f32) -> ()
+
+  // CHECK-NEXT: {{^}}inf
+  call @func_fpowi_neg2_f32(%zero) : (f32) -> ()
+  // CHECK-NEXT: {{^}}inf
+  call @func_fpowi_neg2_f32(%neg_zero) : (f32) -> ()
+  // CHECK-NEXT: {{^}}0.25
+  call @func_fpowi_neg2_f32(%two) : (f32) -> ()
+
   return
 }
 
@@ -889,6 +930,7 @@ func.func @main() {
   call @exp2f() : () -> ()
   call @roundf() : () -> ()
   call @powf() : () -> ()
+  call @fpowi() : () -> ()
   call @roundeven() : () -> ()
   call @sinh() : () -> ()
   call @cosh() : () -> ()

@@ -21,23 +21,25 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
-#include <string>
+
+#define OPTIONS_STRUCT_DECL
+#include "SparcOptions.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "SparcGenSubtargetInfo.inc"
 
 namespace llvm {
+class SparcTargetMachine;
 class StringRef;
 
 class SparcSubtarget : public SparcGenSubtargetInfo {
+  const SparcOptions &CLOpts;
+
   // ReserveRegister[i] - Register #i is not available as a general purpose
   // register.
   BitVector ReserveRegister;
 
-  Triple TargetTriple;
   virtual void anchor();
-
-  bool Is64Bit;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
@@ -50,9 +52,11 @@ class SparcSubtarget : public SparcGenSubtargetInfo {
 
 public:
   SparcSubtarget(const StringRef &CPU, const StringRef &TuneCPU,
-                 const StringRef &FS, const TargetMachine &TM, bool is64bit);
+                 const StringRef &FS, const SparcTargetMachine &TM);
 
   ~SparcSubtarget() override;
+
+  const SparcOptions &getCLOpts() const { return CLOpts; }
 
   const SparcInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const TargetFrameLowering *getFrameLowering() const override {
@@ -67,6 +71,8 @@ public:
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
 
+  void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
+
   bool enableMachineScheduler() const override;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -79,8 +85,6 @@ public:
   SparcSubtarget &initializeSubtargetDependencies(StringRef CPU,
                                                   StringRef TuneCPU,
                                                   StringRef FS);
-
-  bool is64Bit() const { return Is64Bit; }
 
   /// The 64-bit ABI uses biased stack and frame pointers, so the stack frame
   /// of the current function is the area from [%sp+BIAS] to [%fp+BIAS].
@@ -96,8 +100,6 @@ public:
   /// returns adjusted framesize which includes space for register window
   /// spills and arguments.
   int getAdjustedFrameSize(int stackSize) const;
-
-  bool isTargetLinux() const { return TargetTriple.isOSLinux(); }
 };
 
 } // end namespace llvm

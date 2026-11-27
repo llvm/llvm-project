@@ -11,11 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -33,36 +30,31 @@ inverseTransposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
   return builder.getBoolArrayAttr(newInBoundsValues);
 }
 
-/// Extend the rank of a vector Value by `addedRanks` by adding outer unit
-/// dimensions.
-static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
-                              int64_t addedRank) {
-  auto originalVecType = cast<VectorType>(vec.getType());
-  SmallVector<int64_t> newShape(addedRank, 1);
-  newShape.append(originalVecType.getShape().begin(),
-                  originalVecType.getShape().end());
-
-  SmallVector<bool> newScalableDims(addedRank, false);
-  newScalableDims.append(originalVecType.getScalableDims().begin(),
-                         originalVecType.getScalableDims().end());
-  VectorType newVecType = VectorType::get(
-      newShape, originalVecType.getElementType(), newScalableDims);
-  return builder.create<vector::BroadcastOp>(loc, newVecType, vec);
-}
-
-/// Extend the rank of a vector Value by `addedRanks` by adding inner unit
-/// dimensions.
-static Value extendMaskRank(OpBuilder &builder, Location loc, Value vec,
-                            int64_t addedRank) {
-  Value broadcasted = extendVectorRank(builder, loc, vec, addedRank);
-  SmallVector<int64_t> permutation;
-  for (int64_t i = addedRank,
-               e = cast<VectorType>(broadcasted.getType()).getRank();
-       i < e; ++i)
-    permutation.push_back(i);
-  for (int64_t i = 0; i < addedRank; ++i)
-    permutation.push_back(i);
-  return builder.create<vector::TransposeOp>(loc, broadcasted, permutation);
+/// Insert unit dims into `vec` so that they are at `unitDimPositions` in the
+/// result, e.g. position 1 turns `vector<4x8xf32>` into `vector<4x1x8xf32>`.
+static Value insertUnitDims(OpBuilder &builder, Location loc, Value vec,
+                            ArrayRef<int64_t> unitDimPositions) {
+  auto vecType = cast<VectorType>(vec.getType());
+  int64_t numUnitDims = unitDimPositions.size();
+  // Broadcast to add the unit dims as the outermost dims.
+  SmallVector<int64_t> newDims(numUnitDims, 1);
+  llvm::append_range(newDims, vecType.getShape());
+  SmallVector<bool> newScalableFlags(numUnitDims, false);
+  llvm::append_range(newScalableFlags, vecType.getScalableDims());
+  VectorType newVecType =
+      VectorType::get(newDims, vecType.getElementType(), newScalableFlags);
+  Value broadcast = vector::BroadcastOp::create(builder, loc, newVecType, vec);
+  // Transpose them into place. The other dims keep their order.
+  SmallVector<int64_t> permutation(newDims.size(), -1);
+  for (auto [i, pos] : llvm::enumerate(unitDimPositions))
+    permutation[pos] = i;
+  int64_t nextDim = numUnitDims;
+  for (int64_t &dim : permutation)
+    if (dim == -1)
+      dim = nextDim++;
+  if (isIdentityPermutation(permutation))
+    return broadcast;
+  return vector::TransposeOp::create(builder, loc, broadcast, permutation);
 }
 
 //===----------------------------------------------------------------------===//
@@ -100,9 +92,6 @@ struct TransferReadPermutationLowering
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
-    // TODO: Support transfer_read inside MaskOp case.
-    if (maskOp)
-      return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
@@ -138,15 +127,28 @@ struct TransferReadPermutationLowering
     // Generate new transfer_read operation.
     VectorType newReadType = VectorType::get(
         newVectorShape, op.getVectorType().getElementType(), newScalableDims);
-    Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.getBase(), op.getIndices(),
+    Operation *newRead = vector::TransferReadOp::create(
+        rewriter, op.getLoc(), newReadType, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
 
-    // Transpose result of transfer_read.
     SmallVector<int64_t> transposePerm(permutation.begin(), permutation.end());
-    return rewriter
-        .create<vector::TransposeOp>(op.getLoc(), newRead, transposePerm)
+
+    // Re-apply an enclosing vector.mask. Its mask is indexed in memory order,
+    // so only the passthru has to be transposed.
+    if (maskOp) {
+      Value passthru = maskOp.getPassthru();
+      if (passthru)
+        passthru =
+            vector::TransposeOp::create(rewriter, op.getLoc(), passthru,
+                                        invertPermutationVector(transposePerm));
+      newRead =
+          vector::maskOperation(rewriter, newRead, maskOp.getMask(), passthru);
+    }
+
+    // Transpose result of transfer_read.
+    return vector::TransposeOp::create(rewriter, op.getLoc(),
+                                       newRead->getResult(0), transposePerm)
         .getResult();
   }
 };
@@ -178,9 +180,6 @@ struct TransferWritePermutationLowering
     // TODO: support 0-d corner case.
     if (op.getTransferRank() == 0)
       return rewriter.notifyMatchFailure(op, "0-d corner case not supported");
-    // TODO: Support transfer_write inside MaskOp case.
-    if (maskOp)
-      return rewriter.notifyMatchFailure(op, "Masked case not supported");
 
     SmallVector<unsigned> permutation;
     AffineMap map = op.getPermutationMap();
@@ -209,15 +208,22 @@ struct TransferWritePermutationLowering
         inverseTransposeInBoundsAttr(rewriter, op.getInBounds(), permutation);
 
     // Generate new transfer_write operation.
-    Value newVec = rewriter.create<vector::TransposeOp>(
-        op.getLoc(), op.getVector(), indices);
+    Value newVec = vector::TransposeOp::create(rewriter, op.getLoc(),
+                                               op.getVector(), indices);
     auto newMap = AffineMap::getMinorIdentityMap(
         map.getNumDims(), map.getNumResults(), rewriter.getContext());
-    auto newWrite = rewriter.create<vector::TransferWriteOp>(
-        op.getLoc(), newVec, op.getBase(), op.getIndices(),
+    auto newWrite = vector::TransferWriteOp::create(
+        rewriter, op.getLoc(), newVec, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getMask(), newInBoundsAttr);
+
+    // Re-apply an enclosing vector.mask. Its mask is indexed in memory order,
+    // so transposing the written vector leaves it unchanged.
+    Operation *rewritten = newWrite;
+    if (maskOp)
+      rewritten = vector::maskOperation(rewriter, newWrite, maskOp.getMask());
+
     if (newWrite.hasPureTensorSemantics())
-      return newWrite.getResult();
+      return rewritten->getResult(0);
     // In the memref case there's no return value. Use empty value to signal
     // success.
     return Value();
@@ -268,28 +274,31 @@ struct TransferWriteNonPermutationLowering
     for (AffineExpr exp : map.getResults())
       foundDim[cast<AffineDimExpr>(exp).getPosition()] = true;
     SmallVector<AffineExpr> exprs;
-    bool foundFirstDim = false;
+    std::optional<size_t> firstDim;
     SmallVector<int64_t> missingInnerDim;
     for (size_t i = 0; i < foundDim.size(); i++) {
       if (foundDim[i]) {
-        foundFirstDim = true;
+        if (!firstDim)
+          firstDim = i;
         continue;
       }
-      if (!foundFirstDim)
+      if (!firstDim)
         continue;
       // Once we found one outer dimension existing in the map keep track of all
-      // the missing dimensions after that.
-      missingInnerDim.push_back(i);
+      // the missing dimensions after that, relative to that dimension.
+      missingInnerDim.push_back(i - *firstDim);
       exprs.push_back(rewriter.getAffineDimExpr(i));
     }
     // Vector: add unit dims at the beginning of the shape.
-    Value newVec = extendVectorRank(rewriter, op.getLoc(), op.getVector(),
-                                    missingInnerDim.size());
-    // Mask: add unit dims at the end of the shape.
+    Value newVec = insertUnitDims(
+        rewriter, op.getLoc(), op.getVector(),
+        llvm::to_vector(llvm::seq<int64_t>(missingInnerDim.size())));
+    // Mask: add unit dims at the positions of the missing dimensions. Dim 0 of
+    // the mask is the first written dim.
     Value newMask;
     if (op.getMask())
-      newMask = extendMaskRank(rewriter, op.getLoc(), op.getMask(),
-                               missingInnerDim.size());
+      newMask =
+          insertUnitDims(rewriter, op.getLoc(), op.getMask(), missingInnerDim);
     exprs.append(map.getResults().begin(), map.getResults().end());
     AffineMap newMap =
         AffineMap::get(map.getNumDims(), 0, exprs, op.getContext());
@@ -299,8 +308,8 @@ struct TransferWriteNonPermutationLowering
       newInBoundsValues.push_back(op.isDimInBounds(i));
     }
     ArrayAttr newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
-    auto newWrite = rewriter.create<vector::TransferWriteOp>(
-        op.getLoc(), newVec, op.getBase(), op.getIndices(),
+    auto newWrite = vector::TransferWriteOp::create(
+        rewriter, op.getLoc(), newVec, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), newMask, newInBoundsAttr);
     if (newWrite.hasPureTensorSemantics())
       return newWrite.getResult();
@@ -370,13 +379,13 @@ struct TransferOpReduceRank
             ? rewriter.getArrayAttr(
                   op.getInBoundsAttr().getValue().take_back(reducedShapeRank))
             : ArrayAttr();
-    Value newRead = rewriter.create<vector::TransferReadOp>(
-        op.getLoc(), newReadType, op.getBase(), op.getIndices(),
+    Value newRead = vector::TransferReadOp::create(
+        rewriter, op.getLoc(), newReadType, op.getBase(), op.getIndices(),
         AffineMapAttr::get(newMap), op.getPadding(), op.getMask(),
         newInBoundsAttr);
-    return rewriter
-        .create<vector::BroadcastOp>(op.getLoc(), originalVecType, newRead)
-        .getVector();
+    return vector::BroadcastOp::create(rewriter, op.getLoc(), originalVecType,
+                                       newRead)
+        .getResult();
   }
 };
 
@@ -471,21 +480,21 @@ struct TransferReadToVectorLoadLowering
             read, "vector type is not rank 1, can't create masked load, needs "
                   "VectorToSCF");
 
-      Value fill = rewriter.create<vector::SplatOp>(
-          read.getLoc(), unbroadcastedVectorType, read.getPadding());
-      res = rewriter.create<vector::MaskedLoadOp>(
-          read.getLoc(), unbroadcastedVectorType, read.getBase(),
+      Value fill = vector::BroadcastOp::create(
+          rewriter, read.getLoc(), unbroadcastedVectorType, read.getPadding());
+      res = vector::MaskedLoadOp::create(
+          rewriter, read.getLoc(), unbroadcastedVectorType, read.getBase(),
           read.getIndices(), read.getMask(), fill);
     } else {
-      res = rewriter.create<vector::LoadOp>(read.getLoc(),
-                                            unbroadcastedVectorType,
-                                            read.getBase(), read.getIndices());
+      res = vector::LoadOp::create(rewriter, read.getLoc(),
+                                   unbroadcastedVectorType, read.getBase(),
+                                   read.getIndices());
     }
 
     // Insert a broadcasting op if required.
     if (!broadcastedDims.empty())
-      res = rewriter.create<vector::BroadcastOp>(
-          read.getLoc(), read.getVectorType(), res->getResult(0));
+      res = vector::BroadcastOp::create(
+          rewriter, read.getLoc(), read.getVectorType(), res->getResult(0));
     return res->getResult(0);
   }
 
@@ -569,12 +578,12 @@ struct TransferWriteToVectorStoreLowering
                    << write;
             });
 
-      rewriter.create<vector::MaskedStoreOp>(
-          write.getLoc(), write.getBase(), write.getIndices(), write.getMask(),
-          write.getVector());
+      vector::MaskedStoreOp::create(rewriter, write.getLoc(), write.getBase(),
+                                    write.getIndices(), write.getMask(),
+                                    write.getVector());
     } else {
-      rewriter.create<vector::StoreOp>(write.getLoc(), write.getVector(),
-                                       write.getBase(), write.getIndices());
+      vector::StoreOp::create(rewriter, write.getLoc(), write.getVector(),
+                              write.getBase(), write.getIndices());
     }
     // There's no return value for StoreOps. Use Value() to signal success to
     // matchAndRewrite.

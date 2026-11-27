@@ -6,42 +6,62 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../common/Properties.hpp"
 #include <OffloadAPI.h>
-
-#include "../common/Fixtures.hpp"
 
 using olGetDeviceInfoSizeTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olGetDeviceInfoSizeTest);
 
-TEST_P(olGetDeviceInfoSizeTest, SuccessType) {
+using olGetDeviceInfoSizeEqualTest = olGetHostDeviceInfoPropertyTest;
+using olGetDeviceInfoSizeNonZeroTest = olGetHostDeviceInfoPropertyTest;
+
+DeviceInfoProperties answerSizeEqualToTypeSizeProperties = mergeProperties(
+    {Uint32Properties, Uint64Properties, Uint64MayBeZeroProperties,
+     CapabilitesFlagsProperties, PlatformProperties, DeviceTypeProperties});
+
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
+    olGetDeviceInfoSizeEqualTest, answerSizeEqualToTypeSizeProperties,
+    defaultPropertyTestPrinter<ol_device_info_t>);
+
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
+    olGetDeviceInfoSizeNonZeroTest, NamesProperties,
+    defaultPropertyTestPrinter<ol_device_info_t>);
+
+TEST_P(olGetDeviceInfoSizeEqualTest, Success) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_TYPE, &Size));
-  ASSERT_EQ(Size, sizeof(ol_device_type_t));
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, Property, &Size));
+  ASSERT_EQ(PropertySize, Size);
 }
 
-TEST_P(olGetDeviceInfoSizeTest, SuccessPlatform) {
+TEST_P(olGetDeviceInfoSizeNonZeroTest, Success) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_PLATFORM, &Size));
-  ASSERT_EQ(Size, sizeof(ol_platform_handle_t));
-}
-
-TEST_P(olGetDeviceInfoSizeTest, SuccessName) {
-  size_t Size = 0;
-  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NAME, &Size));
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, Property, &Size));
   ASSERT_NE(Size, 0ul);
 }
 
-TEST_P(olGetDeviceInfoSizeTest, SuccessVendor) {
+TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkGroupSizePerDimension) {
   size_t Size = 0;
-  ASSERT_SUCCESS(olGetDeviceInfoSize(Device, OL_DEVICE_INFO_VENDOR, &Size));
-  ASSERT_NE(Size, 0ul);
+  ASSERT_SUCCESS(olGetDeviceInfoSize(
+      Device, OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION, &Size));
+  ASSERT_EQ(Size, sizeof(ol_dimensions_t));
+  ASSERT_EQ(Size, sizeof(uint32_t) * 3);
 }
 
-TEST_P(olGetDeviceInfoSizeTest, SuccessDriverVersion) {
+TEST_P(olGetDeviceInfoSizeTest, SuccessMaxWorkSizePerDimension) {
   size_t Size = 0;
-  ASSERT_SUCCESS(
-      olGetDeviceInfoSize(Device, OL_DEVICE_INFO_DRIVER_VERSION, &Size));
-  ASSERT_NE(Size, 0ul);
+  ASSERT_SUCCESS(olGetDeviceInfoSize(
+      Device, OL_DEVICE_INFO_MAX_WORK_SIZE_PER_DIMENSION, &Size));
+  ASSERT_EQ(Size, sizeof(ol_dimensions_t));
+  ASSERT_EQ(Size, sizeof(uint32_t) * 3);
+}
+
+TEST(olGetDeviceInfoSizeHostTest, SuccessDriverId) {
+  ol_device_handle_t Host = TestEnvironment::getHostDevice();
+  ASSERT_NE(Host, nullptr);
+
+  size_t Size = 0;
+  ASSERT_SUCCESS(olGetDeviceInfoSize(Host, OL_DEVICE_INFO_DRIVER_ID, &Size));
+  ASSERT_EQ(Size, sizeof(uint32_t));
 }
 
 TEST_P(olGetDeviceInfoSizeTest, InvalidNullHandle) {
@@ -59,4 +79,18 @@ TEST_P(olGetDeviceInfoSizeTest, InvalidDeviceInfoEnumeration) {
 TEST_P(olGetDeviceInfoSizeTest, InvalidNullPointer) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olGetDeviceInfoSize(Device, OL_DEVICE_INFO_TYPE, nullptr));
+}
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessNativeHandle) {
+  size_t Size = 0;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(
+      olGetDeviceInfoSize(Device, OL_DEVICE_INFO_NATIVE_HANDLE, &Size));
+  ASSERT_EQ(Size, sizeof(void *));
+}
+
+TEST_P(olGetDeviceInfoSizeTest, SuccessNativePlatformHandle) {
+  size_t Size = 0;
+  ASSERT_SUCCESS_OR_UNSUPPORTED(olGetDeviceInfoSize(
+      Device, OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE, &Size));
+  ASSERT_EQ(Size, sizeof(void *));
 }

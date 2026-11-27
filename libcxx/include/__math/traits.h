@@ -25,126 +25,113 @@ namespace __math {
 
 // signbit
 
-// TODO(LLVM 22): Remove conditional once support for Clang 19 is dropped.
-#if defined(_LIBCPP_COMPILER_GCC) || __has_constexpr_builtin(__builtin_signbit)
-#  define _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_CONSTEXPR_SINCE_CXX23
-#else
-#  define _LIBCPP_SIGNBIT_CONSTEXPR
-#endif
-
 // The universal C runtime (UCRT) in the WinSDK provides floating point overloads
 // for std::signbit(). By defining our overloads as templates, we can work around
 // this issue as templates are less preferred than non-template functions.
 template <class = void>
-[[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(float __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool signbit(float __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
 template <class = void>
-[[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool signbit(double __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
 template <class = void>
-[[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(long double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool signbit(long double __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_SIGNBIT_CONSTEXPR _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool signbit(_A1 __x) _NOEXCEPT {
   return __x < 0;
 }
 
 // isfinite
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(_A1) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isfinite(_A1) _NOEXCEPT {
   return true;
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(float __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isfinite(float __x) _NOEXCEPT {
   return __builtin_isfinite(__x);
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isfinite(double __x) _NOEXCEPT {
   return __builtin_isfinite(__x);
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(long double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isfinite(long double __x) _NOEXCEPT {
   return __builtin_isfinite(__x);
 }
 
 // isinf
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(_A1) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isinf(_A1) _NOEXCEPT {
   return false;
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(float __x) _NOEXCEPT {
-  return __builtin_isinf(__x);
-}
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isinf(float __x) _NOEXCEPT { return __builtin_isinf(__x); }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23
 #ifdef _LIBCPP_PREFERRED_OVERLOAD
 _LIBCPP_PREFERRED_OVERLOAD
 #endif
-    bool
-    isinf(double __x) _NOEXCEPT {
+    bool isinf(double __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(long double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isinf(long double __x) _NOEXCEPT {
   return __builtin_isinf(__x);
 }
 
 // isnan
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(_A1) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isnan(_A1) _NOEXCEPT {
   return false;
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(float __x) _NOEXCEPT {
-  return __builtin_isnan(__x);
-}
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isnan(float __x) _NOEXCEPT { return __builtin_isnan(__x); }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23
 #ifdef _LIBCPP_PREFERRED_OVERLOAD
 _LIBCPP_PREFERRED_OVERLOAD
 #endif
-    bool
-    isnan(double __x) _NOEXCEPT {
+    bool isnan(double __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(long double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isnan(long double __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
 
 // isnormal
 
 template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
-[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) _NOEXCEPT {
+[[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isnormal(_A1 __x) _NOEXCEPT {
   return __x != 0;
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(float __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isnormal(float __x) _NOEXCEPT {
   return __builtin_isnormal(__x);
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isnormal(double __x) _NOEXCEPT {
   return __builtin_isnormal(__x);
 }
 
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(long double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isnormal(long double __x) _NOEXCEPT {
   return __builtin_isnormal(__x);
 }
 
 // isgreater
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isgreater(_A1 __x, _A2 __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isgreater(_A1 __x, _A2 __y) _NOEXCEPT {
   using type = __promote_t<_A1, _A2>;
   return __builtin_isgreater((type)__x, (type)__y);
 }
@@ -152,7 +139,7 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 // isgreaterequal
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isgreaterequal(_A1 __x, _A2 __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isgreaterequal(_A1 __x, _A2 __y) _NOEXCEPT {
   using type = __promote_t<_A1, _A2>;
   return __builtin_isgreaterequal((type)__x, (type)__y);
 }
@@ -160,7 +147,7 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 // isless
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isless(_A1 __x, _A2 __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isless(_A1 __x, _A2 __y) _NOEXCEPT {
   using type = __promote_t<_A1, _A2>;
   return __builtin_isless((type)__x, (type)__y);
 }
@@ -168,7 +155,7 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 // islessequal
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool islessequal(_A1 __x, _A2 __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool islessequal(_A1 __x, _A2 __y) _NOEXCEPT {
   using type = __promote_t<_A1, _A2>;
   return __builtin_islessequal((type)__x, (type)__y);
 }
@@ -176,7 +163,7 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 // islessgreater
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool islessgreater(_A1 __x, _A2 __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool islessgreater(_A1 __x, _A2 __y) _NOEXCEPT {
   using type = __promote_t<_A1, _A2>;
   return __builtin_islessgreater((type)__x, (type)__y);
 }
@@ -184,10 +171,86 @@ template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_ar
 // isunordered
 
 template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI bool isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
   using type = __promote_t<_A1, _A2>;
   return __builtin_isunordered((type)__x, (type)__y);
 }
+
+// MS UCRT incorrectly defines some functions in a way not working with integer types. Until C++20, this was worked
+// around by -fdelayed-template-parsing. Since C++20, we can use standard feature "requires" instead.
+
+// TODO: Remove the workaround once UCRT fixes these functions. Note that this doesn't seem planned as of 2025-07 per
+// https://developercommunity.visualstudio.com/t/10294165.
+
+#if defined(_LIBCPP_MSVCRT) && _LIBCPP_STD_VER >= 20
+namespace __ucrt {
+template <class _A1>
+  requires is_integral_v<_A1>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isfinite(_A1) noexcept {
+  return true;
+}
+
+template <class _A1>
+  requires is_integral_v<_A1>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isinf(_A1) noexcept {
+  return false;
+}
+
+template <class _A1>
+  requires is_integral_v<_A1>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isnan(_A1) noexcept {
+  return false;
+}
+
+template <class _A1>
+  requires is_integral_v<_A1>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isnormal(_A1 __x) noexcept {
+  return __x != 0;
+}
+
+template <class _A1, class _A2>
+  requires is_arithmetic_v<_A1> && is_arithmetic_v<_A2>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isgreater(_A1 __x, _A2 __y) noexcept {
+  using type = __promote_t<_A1, _A2>;
+  return __builtin_isgreater((type)__x, (type)__y);
+}
+
+template <class _A1, class _A2>
+  requires is_arithmetic_v<_A1> && is_arithmetic_v<_A2>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isgreaterequal(_A1 __x, _A2 __y) noexcept {
+  using type = __promote_t<_A1, _A2>;
+  return __builtin_isgreaterequal((type)__x, (type)__y);
+}
+
+template <class _A1, class _A2>
+  requires is_arithmetic_v<_A1> && is_arithmetic_v<_A2>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isless(_A1 __x, _A2 __y) noexcept {
+  using type = __promote_t<_A1, _A2>;
+  return __builtin_isless((type)__x, (type)__y);
+}
+
+template <class _A1, class _A2>
+  requires is_arithmetic_v<_A1> && is_arithmetic_v<_A2>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool islessequal(_A1 __x, _A2 __y) noexcept {
+  using type = __promote_t<_A1, _A2>;
+  return __builtin_islessequal((type)__x, (type)__y);
+}
+
+template <class _A1, class _A2>
+  requires is_arithmetic_v<_A1> && is_arithmetic_v<_A2>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool islessgreater(_A1 __x, _A2 __y) noexcept {
+  using type = __promote_t<_A1, _A2>;
+  return __builtin_islessgreater((type)__x, (type)__y);
+}
+
+template <class _A1, class _A2>
+  requires is_arithmetic_v<_A1> && is_arithmetic_v<_A2>
+[[nodiscard]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 bool isunordered(_A1 __x, _A2 __y) noexcept {
+  using type = __promote_t<_A1, _A2>;
+  return __builtin_isunordered((type)__x, (type)__y);
+}
+} // namespace __ucrt
+#endif
 
 } // namespace __math
 

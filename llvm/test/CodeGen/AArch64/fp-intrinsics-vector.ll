@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=aarch64 %s -disable-strictnode-mutation -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel=true -global-isel-abort=2 -disable-strictnode-mutation %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; Check that constrained fp vector intrinsics are correctly lowered.
-
 ; CHECK-GI:       warning: Instruction selection used fallback path for add_v4f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sub_v4f32
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for mul_v4f32
@@ -81,6 +79,8 @@
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fcmps_v1f61
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fptrunc_v2f32_v2f64
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fpext_v2f64_v2f32
+
+; Check that constrained fp vector intrinsics are correctly lowered.
 
 ; Single-precision intrinsics
 
@@ -345,22 +345,22 @@ define <4 x i1> @fcmp_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-NEXT:    mov s2, v1.s[1]
 ; CHECK-NEXT:    mov s3, v0.s[1]
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    fcmp s3, s2
-; CHECK-NEXT:    mov s2, v1.s[2]
-; CHECK-NEXT:    mov s3, v0.s[2]
-; CHECK-NEXT:    fmov s4, w8
-; CHECK-NEXT:    mov s1, v1.s[3]
+; CHECK-NEXT:    mov s4, v0.s[2]
 ; CHECK-NEXT:    mov s0, v0.s[3]
 ; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    mov v4.s[1], w8
 ; CHECK-NEXT:    fcmp s3, s2
+; CHECK-NEXT:    mov s3, v1.s[2]
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    mov s1, v1.s[3]
+; CHECK-NEXT:    csetm w8, eq
+; CHECK-NEXT:    mov v2.h[1], w8
+; CHECK-NEXT:    fcmp s4, s3
 ; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    fcmp s0, s1
-; CHECK-NEXT:    mov v4.s[2], w8
+; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    mov v4.s[3], w8
-; CHECK-NEXT:    xtn v0.4h, v4.4s
+; CHECK-NEXT:    mov v2.h[3], w8
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %val = call <4 x i1> @llvm.experimental.constrained.fcmp.v4f64(<4 x float> %x, <4 x float> %y, metadata !"oeq", metadata !"fpexcept.strict")
@@ -373,22 +373,22 @@ define <4 x i1> @fcmps_v4f32(<4 x float> %x, <4 x float> %y) #0 {
 ; CHECK-NEXT:    mov s2, v1.s[1]
 ; CHECK-NEXT:    mov s3, v0.s[1]
 ; CHECK-NEXT:    fcmpe s0, s1
-; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    fcmpe s3, s2
-; CHECK-NEXT:    mov s2, v1.s[2]
-; CHECK-NEXT:    mov s3, v0.s[2]
-; CHECK-NEXT:    fmov s4, w8
-; CHECK-NEXT:    mov s1, v1.s[3]
+; CHECK-NEXT:    mov s4, v0.s[2]
 ; CHECK-NEXT:    mov s0, v0.s[3]
 ; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    mov v4.s[1], w8
 ; CHECK-NEXT:    fcmpe s3, s2
+; CHECK-NEXT:    mov s3, v1.s[2]
+; CHECK-NEXT:    fmov s2, w8
+; CHECK-NEXT:    mov s1, v1.s[3]
+; CHECK-NEXT:    csetm w8, eq
+; CHECK-NEXT:    mov v2.h[1], w8
+; CHECK-NEXT:    fcmpe s4, s3
 ; CHECK-NEXT:    csetm w8, eq
 ; CHECK-NEXT:    fcmpe s0, s1
-; CHECK-NEXT:    mov v4.s[2], w8
+; CHECK-NEXT:    mov v2.h[2], w8
 ; CHECK-NEXT:    csetm w8, eq
-; CHECK-NEXT:    mov v4.s[3], w8
-; CHECK-NEXT:    xtn v0.4h, v4.4s
+; CHECK-NEXT:    mov v2.h[3], w8
+; CHECK-NEXT:    fmov d0, d2
 ; CHECK-NEXT:    ret
 entry:
   %val = call <4 x i1> @llvm.experimental.constrained.fcmps.v4f32(<4 x float> %x, <4 x float> %y, metadata !"oeq", metadata !"fpexcept.strict")
@@ -717,8 +717,7 @@ define <1 x i32> @fptoui_v1i32_v1f64(<1 x double> %x) #0 {
 define <1 x i64> @fptosi_v1i64_v1f64(<1 x double> %x) #0 {
 ; CHECK-LABEL: fptosi_v1i64_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    ret
   %val = call <1 x i64> @llvm.experimental.constrained.fptosi.v1i64.v1f64(<1 x double> %x, metadata !"fpexcept.strict") #0
   ret <1 x i64> %val
@@ -727,8 +726,7 @@ define <1 x i64> @fptosi_v1i64_v1f64(<1 x double> %x) #0 {
 define <1 x i64> @fptoui_v1i64_v1f64(<1 x double> %x) #0 {
 ; CHECK-LABEL: fptoui_v1i64_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzu x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzu d0, d0
 ; CHECK-NEXT:    ret
   %val = call <1 x i64> @llvm.experimental.constrained.fptoui.v1i64.v1f64(<1 x double> %x, metadata !"fpexcept.strict") #0
   ret <1 x i64> %val

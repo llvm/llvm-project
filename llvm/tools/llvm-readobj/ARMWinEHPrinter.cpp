@@ -62,7 +62,6 @@
 // epilogue of the function.
 
 #include "ARMWinEHPrinter.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ARMWinEH.h"
 #include "llvm/Support/Format.h"
@@ -1191,7 +1190,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
 
 bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
                                 const SectionRef Section, uint64_t Offset,
-                                unsigned Index, const RuntimeFunction &RF) {
+                                const RuntimeFunction &RF) {
   assert(RF.Flag() == RuntimeFunctionFlag::RFF_Unpacked &&
          "packed entry cannot be treated as an unpacked entry");
 
@@ -1259,7 +1258,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
 
 bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
                               const SectionRef Section, uint64_t Offset,
-                              unsigned Index, const RuntimeFunction &RF) {
+                              const RuntimeFunction &RF) {
   assert((RF.Flag() == RuntimeFunctionFlag::RFF_Packed ||
           RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment) &&
          "unpacked entry cannot be treated as a packed entry");
@@ -1357,7 +1356,6 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
 
 bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
                                    const SectionRef Section, uint64_t Offset,
-                                   unsigned Index,
                                    const RuntimeFunctionARM64 &RF) {
   assert((RF.Flag() == RuntimeFunctionFlag::RFF_Packed ||
           RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment) &&
@@ -1404,6 +1402,12 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
     FpSZ += 8;
   int SavSZ = (IntSZ + FpSZ + 8 * 8 * RF.H() + 0xf) & ~0xf;
   int LocSZ = (RF.FrameSize() << 4) - SavSZ;
+  bool Homing = RF.H();
+
+  if (RF.H() && RF.RegI() == 0 && RF.RegF() == 0 && RF.CR() != 1) {
+    LocSZ += SavSZ;
+    Homing = false;
+  }
 
   if (RF.CR() == 2 || RF.CR() == 3) {
     SW.startLine() << "mov x29, sp\n";
@@ -1419,18 +1423,11 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
   } else if ((RF.CR() != 3 && RF.CR() != 2 && LocSZ > 0) || LocSZ > 512) {
     SW.startLine() << format("sub sp, sp, #%d\n", LocSZ);
   }
-  if (RF.H()) {
+  if (Homing) {
     SW.startLine() << format("stp x6, x7, [sp, #%d]\n", SavSZ - 16);
     SW.startLine() << format("stp x4, x5, [sp, #%d]\n", SavSZ - 32);
     SW.startLine() << format("stp x2, x3, [sp, #%d]\n", SavSZ - 48);
-    if (RF.RegI() > 0 || RF.RegF() > 0 || RF.CR() == 1) {
-      SW.startLine() << format("stp x0, x1, [sp, #%d]\n", SavSZ - 64);
-    } else {
-      // This case isn't documented; if neither RegI nor RegF nor CR=1
-      // have decremented the stack pointer by SavSZ, we need to do it here
-      // (as the final stack adjustment of LocSZ excludes SavSZ).
-      SW.startLine() << format("stp x0, x1, [sp, #-%d]!\n", SavSZ);
-    }
+    SW.startLine() << format("stp x0, x1, [sp, #%d]\n", SavSZ - 64);
   }
   int FloatRegs = RF.RegF() > 0 ? RF.RegF() + 1 : 0;
   for (int I = (FloatRegs + 1) / 2 - 1; I >= 0; I--) {
@@ -1457,10 +1454,14 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
       // The last register, an odd register without a pair
       if (RF.CR() == 1) {
         if (I == 0) { // If this is the only register pair
-          // CR=1 combined with RegI=1 doesn't map to a documented case;
-          // it doesn't map to any regular unwind info opcode, and the
-          // actual unwinder doesn't support it.
-          SW.startLine() << "INVALID!\n";
+          // CR=1 combined with RegI=1 maps to a special case; there's
+          // no unwind info opcode that saves a GPR together with LR
+          // with writeback to sp (no save_lrpair_x).
+          // Instead, this case expands to two instructions; a preceding
+          // (in prologue execution order) "sub sp, sp, #16", followed
+          // by a regular "stp x19, lr, [sp]" (save_lrpair).
+          SW.startLine() << format("stp x%d, lr, [sp]\n", 19);
+          SW.startLine() << format("sub sp, sp, #%d\n", SavSZ);
         } else
           SW.startLine() << format("stp x%d, lr, [sp, #%d]\n", 19 + 2 * I,
                                    16 * I);
@@ -1478,9 +1479,6 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
                                19 + 2 * I + 1, 16 * I);
     }
   }
-  // CR=2 is yet undocumented, see
-  // https://github.com/MicrosoftDocs/cpp-docs/pull/4202 for upstream
-  // progress on getting it documented.
   if (RF.CR() == 2)
     SW.startLine() << "pacibsp\n";
   SW.startLine() << "end\n";
@@ -1489,36 +1487,51 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
 }
 
 bool Decoder::dumpProcedureDataEntry(const COFFObjectFile &COFF,
-                                     const SectionRef Section, unsigned Index,
+                                     const SectionRef Section, uint64_t Offset,
                                      ArrayRef<uint8_t> Contents) {
-  uint64_t Offset = PDataEntrySize * Index;
   const ulittle32_t *Data =
     reinterpret_cast<const ulittle32_t *>(Contents.data() + Offset);
 
   const RuntimeFunction Entry(Data);
   DictScope RFS(SW, "RuntimeFunction");
   if (Entry.Flag() == RuntimeFunctionFlag::RFF_Unpacked)
-    return dumpUnpackedEntry(COFF, Section, Offset, Index, Entry);
+    return dumpUnpackedEntry(COFF, Section, Offset, Entry);
   if (isAArch64) {
     const RuntimeFunctionARM64 EntryARM64(Data);
-    return dumpPackedARM64Entry(COFF, Section, Offset, Index, EntryARM64);
+    return dumpPackedARM64Entry(COFF, Section, Offset, EntryARM64);
   }
-  return dumpPackedEntry(COFF, Section, Offset, Index, Entry);
+  return dumpPackedEntry(COFF, Section, Offset, Entry);
 }
 
 void Decoder::dumpProcedureData(const COFFObjectFile &COFF,
                                 const SectionRef Section) {
+  const coff_section *COFFSection = COFF.getCOFFSection(Section);
   ArrayRef<uint8_t> Contents;
-  if (COFF.getSectionContents(COFF.getCOFFSection(Section), Contents))
+  if (COFF.getSectionContents(COFFSection, Contents))
     return;
 
-  if (Contents.size() % PDataEntrySize) {
+  // In a linked image, the exception directory describes the extent of the
+  // function table. The section may also contain other data (e.g. if other
+  // sections were merged into it), so only decode the entries covered by the
+  // directory.
+  uint64_t Begin = 0, End = Contents.size();
+  const data_directory *DD = COFF.getDataDirectory(COFF::EXCEPTION_TABLE);
+  if (DD && DD->Size) {
+    uint32_t SectionRVA = COFFSection->VirtualAddress;
+    if (DD->RelativeVirtualAddress >= SectionRVA &&
+        DD->RelativeVirtualAddress - SectionRVA < Contents.size()) {
+      Begin = DD->RelativeVirtualAddress - SectionRVA;
+      End = std::min<uint64_t>(End, Begin + DD->Size);
+    }
+  }
+
+  if ((End - Begin) % PDataEntrySize) {
     errs() << ".pdata content is not " << PDataEntrySize << "-byte aligned\n";
     return;
   }
 
-  for (unsigned EI = 0, EE = Contents.size() / PDataEntrySize; EI < EE; ++EI)
-    if (!dumpProcedureDataEntry(COFF, Section, EI, Contents))
+  for (uint64_t Offset = Begin; Offset < End; Offset += PDataEntrySize)
+    if (!dumpProcedureDataEntry(COFF, Section, Offset, Contents))
       break;
 }
 

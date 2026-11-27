@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO(mordante) Investigate
-// UNSUPPORTED: apple-clang
-
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
@@ -83,17 +80,10 @@ static void test_values() {
   assert(stream_c_locale<CharT>(1'000.123456s) == SV("1000.1235s"));
 
   if constexpr (std::same_as<CharT, char>) {
-#if defined(__APPLE__)
-    assert(stream_fr_FR_locale<CharT>(-1'000'000s) == SV("-1000000s"));
-    assert(stream_fr_FR_locale<CharT>(1'000'000s) == SV("1000000s"));
-    assert(stream_fr_FR_locale<CharT>(-1'000.123456s) == SV("-1000,1235s"));
-    assert(stream_fr_FR_locale<CharT>(1'000.123456s) == SV("1000,1235s"));
-#else
     assert(stream_fr_FR_locale<CharT>(-1'000'000s) == SV("-1 000 000s"));
     assert(stream_fr_FR_locale<CharT>(1'000'000s) == SV("1 000 000s"));
     assert(stream_fr_FR_locale<CharT>(-1'000.123456s) == SV("-1 000,1235s"));
     assert(stream_fr_FR_locale<CharT>(1'000.123456s) == SV("1 000,1235s"));
-#endif
   } else {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     assert(stream_fr_FR_locale<CharT>(-1'000'000s) == L"-1" FR_THOU_SEP "000" FR_THOU_SEP "000s");
@@ -215,7 +205,7 @@ static void test_units() {
 
 template <class CharT>
 static void test_unsigned_types() {
-  // Reported in https://github.com/llvm/llvm-project/issues/96820
+  // Reported in https://llvm.org/PR96820
   using namespace std::literals::chrono_literals;
 
   // C locale

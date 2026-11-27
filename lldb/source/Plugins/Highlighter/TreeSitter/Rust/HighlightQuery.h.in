@@ -1,0 +1,17 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLDB_SOURCE_PLUGINS_HIGHLIGHTER_TREESITTER_RUST_HIGHLIGHTQUERY_H
+#define LLDB_SOURCE_PLUGINS_HIGHLIGHTER_TREESITTER_RUST_HIGHLIGHTQUERY_H
+
+#include "llvm/ADT/StringRef.h"
+
+static constexpr llvm::StringLiteral highlight_query =
+    R"__(@HIGHLIGHT_QUERY@)__";
+
+#endif // LLDB_SOURCE_PLUGINS_HIGHLIGHTER_TREESITTER_RUST_HIGHLIGHTQUERY_H

@@ -7,6 +7,7 @@
 //===-------------------------------------------------------------===//
 
 #include "AMDGPUAsanInstrumentation.h"
+#include "AMDGPUInstrInfo.h"
 
 #define DEBUG_TYPE "amdgpu-asan-instrumentation"
 
@@ -73,7 +74,7 @@ static Instruction *genAMDGPUReportBlock(Module &M, IRBuilder<> &IRB,
 
   Trm = SplitBlockAndInsertIfThen(Cond, Trm, false);
   IRB.SetInsertPoint(Trm);
-  return IRB.CreateIntrinsic(Intrinsic::amdgcn_unreachable, {});
+  return IRB.CreateIntrinsicWithoutFolding(Intrinsic::amdgcn_unreachable, {});
 }
 
 static Value *createSlowPathCmp(Module &M, IRBuilder<> &IRB, Type *IntptrTy,
@@ -208,7 +209,8 @@ void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
   Value *NumBits = IRB.CreateTypeSize(IntptrTy, TypeStoreSize);
   Value *Size = IRB.CreateLShr(NumBits, ConstantInt::get(IntptrTy, 3));
   Value *AddrLong = IRB.CreatePtrToInt(Addr, IntptrTy);
-  Value *SizeMinusOne = IRB.CreateAdd(Size, ConstantInt::get(IntptrTy, -1));
+  Value *SizeMinusOne =
+      IRB.CreateAdd(Size, ConstantInt::getAllOnesValue(IntptrTy));
   Value *LastByte =
       IRB.CreateIntToPtr(IRB.CreateAdd(AddrLong, SizeMinusOne), AddrTy);
   instrumentAddressImpl(M, IRB, OrigIns, InsertBefore, Addr, {}, 8, IsWrite,
@@ -244,11 +246,8 @@ void getInterestingMemoryOperands(
       // Masked store has an initial operand for the value.
       unsigned OpOffset = IsWrite ? 1 : 0;
       Type *Ty = IsWrite ? CI->getArgOperand(0)->getType() : CI->getType();
-      MaybeAlign Alignment = Align(1);
-      // Otherwise no alignment guarantees. We probably got Undef.
-      if (auto *Op = dyn_cast<ConstantInt>(CI->getOperand(1 + OpOffset)))
-        Alignment = Op->getMaybeAlignValue();
-      Value *Mask = CI->getOperand(2 + OpOffset);
+      MaybeAlign Alignment = CI->getParamAlign(OpOffset);
+      Value *Mask = CI->getOperand(1 + OpOffset);
       Interesting.emplace_back(I, OpOffset, IsWrite, Ty, Alignment, Mask);
       break;
     }
@@ -312,19 +311,6 @@ void getInterestingMemoryOperands(
                                VPI->getVectorLengthParam());
       break;
     }
-    case Intrinsic::amdgcn_raw_buffer_load:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load:
-    case Intrinsic::amdgcn_raw_buffer_load_format:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_format:
-    case Intrinsic::amdgcn_raw_tbuffer_load:
-    case Intrinsic::amdgcn_raw_ptr_tbuffer_load:
-    case Intrinsic::amdgcn_struct_buffer_load:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load:
-    case Intrinsic::amdgcn_struct_buffer_load_format:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_format:
-    case Intrinsic::amdgcn_struct_tbuffer_load:
-    case Intrinsic::amdgcn_struct_ptr_tbuffer_load:
-    case Intrinsic::amdgcn_s_buffer_load:
     case Intrinsic::amdgcn_global_load_tr_b64:
     case Intrinsic::amdgcn_global_load_tr_b128: {
       unsigned PtrOpNo = 0;
@@ -335,27 +321,20 @@ void getInterestingMemoryOperands(
       Interesting.emplace_back(I, PtrOpNo, IsWrite, Ty, Alignment);
       break;
     }
-    case Intrinsic::amdgcn_raw_tbuffer_store:
-    case Intrinsic::amdgcn_raw_ptr_tbuffer_store:
-    case Intrinsic::amdgcn_raw_buffer_store:
-    case Intrinsic::amdgcn_raw_ptr_buffer_store:
-    case Intrinsic::amdgcn_raw_buffer_store_format:
-    case Intrinsic::amdgcn_raw_ptr_buffer_store_format:
-    case Intrinsic::amdgcn_struct_buffer_store:
-    case Intrinsic::amdgcn_struct_ptr_buffer_store:
-    case Intrinsic::amdgcn_struct_buffer_store_format:
-    case Intrinsic::amdgcn_struct_ptr_buffer_store_format:
-    case Intrinsic::amdgcn_struct_tbuffer_store:
-    case Intrinsic::amdgcn_struct_ptr_tbuffer_store: {
-      unsigned PtrOpNo = 1;
-      bool IsWrite = true;
-      Value *Ptr = CI->getArgOperand(PtrOpNo);
-      Type *Ty = Ptr->getType();
-      MaybeAlign Alignment = Ptr->getPointerAlignment(DL);
-      Interesting.emplace_back(I, PtrOpNo, IsWrite, Ty, Alignment);
-      break;
-    }
     default:
+      if (const AMDGPU::BufferIntrinsicInfo *BufInfo =
+              AMDGPU::lookupBufferIntrinsic(CI->getIntrinsicID());
+          BufInfo && (BufInfo->Kind == AMDGPU::BufferKindLoad ||
+                      BufInfo->Kind == AMDGPU::BufferKindSLoad ||
+                      BufInfo->Kind == AMDGPU::BufferKindStore)) {
+        unsigned PtrOpNo = BufInfo->RsrcArg;
+        bool IsWrite = BufInfo->Kind == AMDGPU::BufferKindStore;
+        Value *Ptr = CI->getArgOperand(PtrOpNo);
+        Type *Ty = IsWrite ? Ptr->getType() : CI->getType();
+        MaybeAlign Alignment = Ptr->getPointerAlignment(DL);
+        Interesting.emplace_back(I, PtrOpNo, IsWrite, Ty, Alignment);
+        break;
+      }
       for (unsigned ArgNo = 0; ArgNo < CI->arg_size(); ArgNo++) {
         if (Type *Ty = CI->getParamByRefType(ArgNo)) {
           Interesting.emplace_back(I, ArgNo, false, Ty, Align(1));

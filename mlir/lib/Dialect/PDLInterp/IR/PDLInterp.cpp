@@ -9,7 +9,6 @@
 #include "mlir/Dialect/PDLInterp/IR/PDLInterp.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 
 using namespace mlir;
@@ -20,13 +19,6 @@ using namespace mlir::pdl_interp;
 //===----------------------------------------------------------------------===//
 // PDLInterp Dialect
 //===----------------------------------------------------------------------===//
-
-void PDLInterpDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/PDLInterp/IR/PDLInterpOps.cpp.inc"
-      >();
-}
 
 template <typename OpT>
 static LogicalResult verifySwitchOp(OpT op) {
@@ -184,7 +176,7 @@ void ForEachOp::print(OpAsmPrinter &p) {
   BlockArgument arg = getLoopVariable();
   p << ' ' << arg << " : " << arg.getType() << " in " << getValues() << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << " -> ";
   p.printSuccessor(getSuccessor());
 }

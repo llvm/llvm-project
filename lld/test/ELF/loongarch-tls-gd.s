@@ -5,11 +5,11 @@
 ## (a) code sequence can be converted from `pcalau12i+addi.[wd]` to `pcaddi`.
 ## (b) dynamic relocations can be omitted for GD->LE relaxation.
 
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/a.s -o %t/a.32.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax %t/a.s -o %t/a.32.relax.o
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/bc.s -o %t/bc.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=-32s %t/a.s -o %t/a.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s,+relax %t/a.s -o %t/a.32.relax.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s %t/bc.s -o %t/bc.32.o
 # RUN: ld.lld -shared -soname=bc.so %t/bc.32.o -o %t/bc.32.so
-# RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/tga.s -o %t/tga.32.o
+# RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+32s %t/tga.s -o %t/tga.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/a.s -o %t/a.64.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/a.s -mattr=+relax -o %t/a.64.relax.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch64 %t/bc.s -o %t/bc.64.o
@@ -19,10 +19,10 @@
 ## LA32 GD
 # RUN: ld.lld -shared %t/a.32.o %t/bc.32.o -o %t/gd.32.so
 # RUN: llvm-readobj -r %t/gd.32.so | FileCheck --check-prefix=GD32-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/gd.32.so | FileCheck --check-prefix=GD32 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/gd.32.so | FileCheck --check-prefix=GD32 %s
 # RUN: ld.lld -shared %t/a.32.relax.o %t/bc.32.o -o %t/gd.32.relax.so
 # RUN: llvm-readobj -r %t/gd.32.relax.so | FileCheck --check-prefix=GD32-REL-RELAX %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/gd.32.relax.so | FileCheck --check-prefix=GD32-RELAX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/gd.32.relax.so | FileCheck --check-prefix=GD32-RELAX %s
 
 ## LA32 GD -> LE
 # RUN: ld.lld %t/a.32.o %t/bc.32.o %t/tga.32.o -o %t/le.32
@@ -40,10 +40,10 @@
 ## LA64 GD
 # RUN: ld.lld -shared %t/a.64.o %t/bc.64.o -o %t/gd.64.so
 # RUN: llvm-readobj -r %t/gd.64.so | FileCheck --check-prefix=GD64-REL %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/gd.64.so | FileCheck --check-prefix=GD64 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/gd.64.so | FileCheck --check-prefix=GD64 %s
 # RUN: ld.lld -shared %t/a.64.relax.o %t/bc.64.o -o %t/gd.64.relax.so
 # RUN: llvm-readobj -r %t/gd.64.relax.so | FileCheck --check-prefix=GD64-REL-RELAX %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t/gd.64.relax.so | FileCheck --check-prefix=GD64-RELAX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/gd.64.relax.so | FileCheck --check-prefix=GD64-RELAX %s
 
 ## LA64 GD -> LE
 # RUN: ld.lld %t/a.64.o %t/bc.64.o %t/tga.64.o -o %t/le.64
@@ -66,13 +66,13 @@
 # GD32-REL-NEXT: }
 
 ## &DTPMOD(a) - . = 0x20310 - 0x10250: 0x10 pages, page offset 0x310
-# GD32:      10250: pcalau12i $a0, 16
-# GD32-NEXT:        addi.w $a0, $a0, 784
+# GD32:      10250: pcaddu12i $a0, 16
+# GD32-NEXT:        addi.w $a0, $a0, 192
 # GD32-NEXT:        bl 56
 
 ## &DTPMOD(b) - . = 0x20318 - 0x1025c: 0x10 pages, page offset 0x318
-# GD32:      1025c: pcalau12i $a0, 16
-# GD32-NEXT:        addi.w $a0, $a0, 792
+# GD32:      1025c: pcaddu12i $a0, 16
+# GD32-NEXT:        addi.w $a0, $a0, 188
 # GD32-NEXT:        bl 44
 
 # GD32-REL-RELAX:      .rela.dyn {

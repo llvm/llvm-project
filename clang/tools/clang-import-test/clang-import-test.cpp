@@ -48,11 +48,11 @@ static llvm::cl::list<std::string>
             llvm::cl::desc("Path to a file containing declarations to import"));
 
 static llvm::cl::opt<bool>
-    Direct("direct", llvm::cl::Optional,
+    Direct("direct",
            llvm::cl::desc("Use the parsed declarations without indirection"));
 
 static llvm::cl::opt<bool> UseOrigins(
-    "use-origins", llvm::cl::Optional,
+    "use-origins",
     llvm::cl::desc(
         "Use DeclContext origin information for more accurate lookups"));
 
@@ -62,8 +62,7 @@ static llvm::cl::list<std::string>
               llvm::cl::CommaSeparated);
 
 static llvm::cl::opt<std::string>
-    Input("x", llvm::cl::Optional,
-          llvm::cl::desc("The language to parse (default: c++)"),
+    Input("x", llvm::cl::desc("The language to parse (default: c++)"),
           llvm::cl::init("c++"));
 
 static llvm::cl::opt<bool> ObjCARC("objc-arc", llvm::cl::init(false),
@@ -207,15 +206,16 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
 
   auto Ins = std::make_unique<CompilerInstance>(std::move(Inv));
 
-  Ins->createDiagnostics(*llvm::vfs::getRealFileSystem(), DC.release(),
-                         /*ShouldOwnClient=*/true);
+  Ins->createVirtualFileSystem(llvm::vfs::getRealFileSystem(), DC.get());
+  Ins->createDiagnostics(DC.release(), /*ShouldOwnClient=*/true);
 
   TargetInfo *TI = TargetInfo::CreateTargetInfo(
       Ins->getDiagnostics(), Ins->getInvocation().getTargetOpts());
   Ins->setTarget(TI);
-  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts());
+  Ins->getTarget().adjust(Ins->getDiagnostics(), Ins->getLangOpts(),
+                          /*AuxTarget=*/nullptr);
   Ins->createFileManager();
-  Ins->createSourceManager(Ins->getFileManager());
+  Ins->createSourceManager();
   Ins->createPreprocessor(TU_Complete);
 
   return Ins;
@@ -234,10 +234,7 @@ BuildASTContext(CompilerInstance &CI, SelectorTable &ST, Builtin::Context &BC) {
 std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
                                             llvm::LLVMContext &LLVMCtx) {
   StringRef ModuleName("$__module");
-  return std::unique_ptr<CodeGenerator>(CreateLLVMCodeGen(
-      CI.getDiagnostics(), ModuleName, &CI.getVirtualFileSystem(),
-      CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
-      LLVMCtx));
+  return CreateLLVMCodeGen(CI, ModuleName, LLVMCtx);
 }
 } // namespace init_convenience
 
@@ -327,7 +324,7 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
   auto &CG = *static_cast<CodeGenerator *>(ASTConsumers.back().get());
 
   if (ShouldDumpAST)
-    ASTConsumers.push_back(CreateASTDumper(nullptr /*Dump to stdout.*/, "",
+    ASTConsumers.push_back(CreateASTDumper(nullptr /*Dump to stdout.*/, "", "",
                                            true, false, false, false,
                                            clang::ADOF_Default));
 
@@ -340,8 +337,10 @@ llvm::Expected<CIAndOrigins> Parse(const std::string &Path,
   if (llvm::Error PE = ParseSource(Path, CI.getCompilerInstance(), Consumers))
     return std::move(PE);
   CI.getDiagnosticClient().EndSourceFile();
-  if (ShouldDumpIR)
+  if (ShouldDumpIR) {
+    CG.GetModule()->renumberMetadataForAssembly();
     CG.GetModule()->print(llvm::outs(), nullptr);
+  }
   if (CI.getDiagnosticClient().getNumErrors())
     return llvm::make_error<llvm::StringError>(
         "Errors occurred while parsing the expression.", std::error_code());

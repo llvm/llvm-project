@@ -13,6 +13,7 @@
 //   requires range<const V> &&
 //            regular_invocable<const F&, range_reference_t<const V>>;
 
+#include <cassert>
 #include <ranges>
 
 #include "test_macros.h"

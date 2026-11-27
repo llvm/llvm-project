@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-suspicious-memory-comparison %t \
-// RUN: -- -- -target x86_64-unknown-unknown -std=c99
+// RUN: %check_clang_tidy -std=c99-or-later %s bugprone-suspicious-memory-comparison %t \
+// RUN: -- -- -target x86_64-unknown-unknown 
 
 typedef __SIZE_TYPE__ size_t;
 int memcmp(const void *lhs, const void *rhs, size_t count);
@@ -286,9 +286,7 @@ struct AtomicMember {
 };
 
 void Test_AtomicMember(void) {
-  // FIXME: this is a false positive as the list of objects with unique object
-  // representations is incomplete.
+  // _Atomic(int) has the same object representation as int: no warning.
   struct AtomicMember a, b;
   memcmp(&a, &b, sizeof(struct AtomicMember));
-  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: comparing object representation of type 'struct AtomicMember' which does not have a unique object representation; consider comparing the members of the object manually
 }

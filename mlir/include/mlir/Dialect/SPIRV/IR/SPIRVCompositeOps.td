@@ -176,6 +176,40 @@ def SPIRV_CompositeInsertOp : SPIRV_Op<"CompositeInsert",
 
 // -----
 
+def SPIRV_CopyObjectOp : SPIRV_Op<"CopyObject", [
+    Pure, AllTypesMatch<["operand", "result"]>]> {
+  let summary = [{
+    Make a copy of Operand. There are no pointer dereferences involved.
+  }];
+
+  let description = [{
+    Result Type must equal Operand type. Result Type can be any type except
+    OpTypeVoid.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.CopyObject %0 : vector<4xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_Type:$operand
+  );
+
+  let results = (outs
+    SPIRV_Type:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+}
+
+// -----
+
 def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
     Pure,
     TypesMatchWith<"type of 'result' matches element type of 'vector'",
@@ -207,12 +241,12 @@ def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
   }];
 
   let arguments = (ins
-    SPIRV_Vector:$vector,
+    SPIRV_ExtendedVector:$vector,
     SPIRV_Integer:$index
   );
 
   let results = (outs
-    SPIRV_Scalar:$result
+    SPIRV_ExtendedScalar:$result
   );
 
   let hasVerifier = 0;
@@ -255,18 +289,18 @@ def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
 
     ```mlir
     %scalar = ... : f32
-    %2 = spirv.VectorInsertDynamic %scalar %0[%1] : f32, vector<8xf32>, i32
+    %2 = spirv.VectorInsertDynamic %scalar, %0[%1] : vector<8xf32>, i32
     ```
   }];
 
   let arguments = (ins
-    SPIRV_Vector:$vector,
-    SPIRV_Scalar:$component,
+    SPIRV_ExtendedVector:$vector,
+    SPIRV_ExtendedScalar:$component,
     SPIRV_Integer:$index
   );
 
   let results = (outs
-    SPIRV_Vector:$result
+    SPIRV_ExtendedVector:$result
   );
 
   let hasVerifier = 0;
@@ -320,13 +354,13 @@ def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
   }];
 
   let arguments = (ins
-    SPIRV_Vector:$vector1,
-    SPIRV_Vector:$vector2,
+    SPIRV_ExtendedVector:$vector1,
+    SPIRV_ExtendedVector:$vector2,
     I32ArrayAttr:$components
   );
 
   let results = (outs
-    SPIRV_Vector:$result
+    SPIRV_ExtendedVector:$result
   );
 
   let assemblyFormat = [{

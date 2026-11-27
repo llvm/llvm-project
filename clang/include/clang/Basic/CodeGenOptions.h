@@ -20,10 +20,12 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
+#include "llvm/Transforms/Utils/KCFIHash.h"
 #include <map>
 #include <memory>
 #include <string>
@@ -34,6 +36,19 @@ class PassBuilder;
 }
 namespace clang {
 
+/// A target's ABI policy for whether a class's vtable can be assumed to have
+/// a unique address program-wide. This is the basis for the exact dynamic_cast
+/// optimization (and, where a vtable is not assumed unique, for whether it may
+/// be marked unnamed_addr so the platform can duplicate it).
+enum class VTableUniquenessKind {
+  /// Every vtable has a single address program-wide.
+  AlwaysUnique,
+  /// A vtable with strong linkage (e.g., a class with a key function) is
+  /// unique, but a vague-linkage (weak) vtable may be duplicated by the
+  /// platform and so has no unique address.
+  UniqueIfStrongLinkage,
+};
+
 /// Bitfields of CodeGenOptions, split out from CodeGenOptions to ensure
 /// that this large collection of bitfields is a trivial class type.
 class CodeGenOptionsBase {
@@ -41,13 +56,47 @@ class CodeGenOptionsBase {
   friend class CompilerInvocationBase;
 
 public:
-#define CODEGENOPT(Name, Bits, Default) unsigned Name : Bits;
-#define ENUM_CODEGENOPT(Name, Type, Bits, Default)
+  /// For ASTs produced with different option value, signifies their level of
+  /// compatibility.
+  enum class CompatibilityKind {
+    /// Does affect the construction of the AST in a way that does prevent
+    /// module interoperability.
+    NotCompatible,
+    /// Does affect the construction of the AST in a way that doesn't prevent
+    /// interoperability (that is, the value can be different between an
+    /// explicit module and the user of that module).
+    Compatible,
+    /// Does not affect the construction of the AST in any way (that is, the
+    /// value can be different between an implicit module and the user of that
+    /// module).
+    Benign,
+  };
+
+  using CFBranchLabelSchemeKind = clang::CFBranchLabelSchemeKind;
+  using ProfileInstrKind = llvm::driver::ProfileInstrKind;
+  using AsanDetectStackUseAfterReturnMode =
+      llvm::AsanDetectStackUseAfterReturnMode;
+  using AsanDtorKind = llvm::AsanDtorKind;
+  using VectorLibrary = llvm::driver::VectorLibrary;
+  using ZeroCallUsedRegsKind = llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind;
+  using WinX64EHUnwindMode = llvm::WinX64EHUnwindMode;
+  using ControlFlowGuardMechanism = llvm::ControlFlowGuardMechanism;
+
+  using DebugCompressionType = llvm::DebugCompressionType;
+  using EmitDwarfUnwindType = llvm::EmitDwarfUnwindType;
+  using DebugTemplateNamesKind = llvm::codegenoptions::DebugTemplateNamesKind;
+  using DebugInfoKind = llvm::codegenoptions::DebugInfoKind;
+  using DebuggerKind = llvm::DebuggerKind;
+  using RelocSectionSymType = llvm::RelocSectionSymType;
+
+#define CODEGENOPT(Name, Bits, Default, Compatibility) unsigned Name : Bits;
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)
 #include "clang/Basic/CodeGenOptions.def"
 
 protected:
-#define CODEGENOPT(Name, Bits, Default)
-#define ENUM_CODEGENOPT(Name, Type, Bits, Default) unsigned Name : Bits;
+#define CODEGENOPT(Name, Bits, Default, Compatibility)
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  unsigned Name : Bits;
 #include "clang/Basic/CodeGenOptions.def"
 };
 
@@ -93,6 +142,12 @@ public:
     All,
   };
 
+  enum class HLSLSemanticSignaturePackingMode {
+    Default,
+    PrefixStable,
+    Optimized,
+  };
+
   enum InlineAsmDialectKind {
     IAD_ATT,
     IAD_Intel,
@@ -102,6 +157,7 @@ public:
     DSH_MD5,
     DSH_SHA1,
     DSH_SHA256,
+    DSH_NONE,
   };
 
   // This field stores one of the allowed values for the option
@@ -122,10 +178,13 @@ public:
   std::string BinutilsVersion;
 
   enum class FramePointerKind {
-    None,     // Omit all frame pointers.
-    Reserved, // Maintain valid frame pointer chain.
-    NonLeaf,  // Keep non-leaf frame pointers.
-    All,      // Keep all frame pointers.
+    NonLeafNoReserve, // Keep non-leaf frame pointers, allow the FP to be used
+                      // as a GPR in leaf functions.
+    None,             // Omit all frame pointers.
+    Reserved,         // Maintain valid frame pointer chain.
+    NonLeaf, // Keep non-leaf frame pointers, don't allow the FP to be used as a
+             // GPR in leaf functions.
+    All,     // Keep all frame pointers.
   };
 
   static StringRef getFramePointerKindName(FramePointerKind Kind) {
@@ -134,6 +193,8 @@ public:
       return "none";
     case FramePointerKind::Reserved:
       return "reserved";
+    case FramePointerKind::NonLeafNoReserve:
+      return "non-leaf-no-reserve";
     case FramePointerKind::NonLeaf:
       return "non-leaf";
     case FramePointerKind::All:
@@ -141,6 +202,40 @@ public:
     }
 
     llvm_unreachable("invalid FramePointerKind");
+  }
+
+  /// Possible exception handling behavior.
+  enum class ExceptionHandlingKind {
+    Default,
+    None,
+    SjLj,
+    WinEH,
+    DwarfCFI,
+    Wasm,
+    Emscripten
+  };
+
+  /// Translate a clang ExceptionHandlingKind into the corresponding LLVM
+  /// ExceptionHandling model.
+  static llvm::ExceptionHandling
+  toExceptionHandling(ExceptionHandlingKind Kind) {
+    switch (Kind) {
+    case ExceptionHandlingKind::Default:
+      return llvm::ExceptionHandling::Default;
+    case ExceptionHandlingKind::None:
+      return llvm::ExceptionHandling::None;
+    case ExceptionHandlingKind::SjLj:
+      return llvm::ExceptionHandling::SjLj;
+    case ExceptionHandlingKind::WinEH:
+      return llvm::ExceptionHandling::WinEH;
+    case ExceptionHandlingKind::DwarfCFI:
+      return llvm::ExceptionHandling::DwarfCFI;
+    case ExceptionHandlingKind::Wasm:
+      return llvm::ExceptionHandling::Wasm;
+    case ExceptionHandlingKind::Emscripten:
+      return llvm::ExceptionHandling::Emscripten;
+    }
+    llvm_unreachable("invalid ExceptionHandlingKind");
   }
 
   enum class SwiftAsyncFramePointerKind {
@@ -162,6 +257,38 @@ public:
     Forced,
   };
 
+  enum SanitizeDebugTrapReasonKind {
+    None,  ///< Trap Messages are omitted. This offers the smallest debug info
+           ///< size but at the cost of making traps hard to debug.
+    Basic, ///< Trap Message is fixed per SanitizerKind. Produces smaller debug
+           ///< info than `Detailed` but is not as helpful for debugging.
+    Detailed, ///< Trap Message includes more context (e.g. the expression being
+              ///< overflowed). This is more helpful for debugging but produces
+              ///< larger debug info than `Basic`.
+  };
+
+  enum class BoolFromMem {
+    Strict,   ///< In-memory bool values are assumed to be 0 or 1, and any other
+              ///< value is UB.
+    Truncate, ///< Convert in-memory bools to i1 by checking if the least
+              ///< significant bit is 1.
+    NonZero,  ///< Convert in-memory bools to i1 by checking if any bit is set
+              ///< to 1.
+    NonStrictDefault = NonZero
+  };
+
+  enum class NewPMEnablementLevel {
+    Auto,         // Use the target dependent default.
+    ForceEnable,  // Always enable regardless of the target default.
+    ForceDisable, // Always disable regardless of the target default.
+  };
+
+  enum class SmallIntABICompatKind {
+    Platform, // Compat with platform ABI (high bits unspecified).
+    Clang23,  // Compat with old Clang ABI (high bits zero/sign-extended).
+    Both,     // Compat with both. Extend in caller, don't assume in callee.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -176,6 +303,9 @@ public:
 
   /// The filename with path we use for coverage notes files.
   std::string CoverageNotesFile;
+
+  /// Whether to force absolute paths in coverage notes files.
+  bool UseAbsolutePathsInNotesFile;
 
   /// Regexes separated by a semi-colon to filter the files to instrument.
   std::string ProfileFilterFiles;
@@ -202,6 +332,14 @@ public:
   /// The string containing the commandline for the llvm.commandline metadata,
   /// if non-empty.
   std::string RecordCommandLine;
+
+  /// The string containing the commandline for the dx.source.args metadata,
+  /// if non-empty.
+  std::string HLSLRecordCommandLine;
+
+  /// The vector contains parsed commandline for the dx.source.args metadata,
+  /// if parsing was successful.
+  llvm::SmallVector<llvm::SmallString<8>> HLSLParsedCommandLine;
 
   llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
 
@@ -305,9 +443,13 @@ public:
   /// Prefix to use for -save-temps output.
   std::string SaveTempsFilePrefix;
 
-  /// Name of file passed with -fcuda-include-gpubinary option to forward to
-  /// CUDA runtime back-end for incorporating them into host-side object file.
-  std::string CudaGpuBinaryFileName;
+  /// Prefix to use for -save-dynamic-debugging-temps output.
+  std::string SaveDynDbgTempsFilePrefix;
+
+  /// Name of file passed with -foffload-include-binary option to forward to
+  /// offloading runtime back-end for incorporating them into host-side object
+  /// file.
+  std::string OffloadBinaryToEmbedFile;
 
   /// List of filenames passed in using the -fembed-offload-object option. These
   /// are offloading binaries containing device images and metadata.
@@ -399,6 +541,8 @@ public:
   /// with extra debug info.
   SanitizerSet SanitizeAnnotateDebugInfo;
 
+  std::optional<double> AllowRuntimeCheckSkipHotCutoff;
+
   /// List of backend command-line options for -fembed-bitcode.
   std::vector<uint8_t> CmdArgs;
 
@@ -422,6 +566,9 @@ public:
 
   /// List of dynamic shared object files to be loaded as pass plugins.
   std::vector<std::string> PassPlugins;
+
+  /// "<plugin>,<arg>" values of -fpass-plugin-arg=.
+  std::vector<std::string> PassPluginArgs;
 
   /// List of pass builder callbacks.
   std::vector<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks;
@@ -461,10 +608,13 @@ public:
   /// binary metadata pass should not be instrumented.
   std::vector<std::string> SanitizeMetadataIgnorelistFiles;
 
+  /// Hash algorithm to use for KCFI type IDs.
+  llvm::KCFIHashAlgorithm SanitizeKcfiHash;
+
   /// Name of the stack usage file (i.e., .su file) if user passes
   /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
   /// passed on the command line.
-  std::string StackUsageOutput;
+  std::string StackUsageFile;
 
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.
@@ -495,12 +645,19 @@ public:
 
   /// A list of functions that are replacable by the loader.
   std::vector<std::string> LoaderReplaceableFunctionNames;
+  /// The name of a file that contains functions which will be compiled for
+  /// hotpatching. See -fms-secure-hotpatch-functions-file.
+  std::string MSSecureHotPatchFunctionsFile;
+
+  /// A list of functions which will be compiled for hotpatching.
+  /// See -fms-secure-hotpatch-functions-list.
+  std::vector<std::string> MSSecureHotPatchFunctionsList;
 
 public:
   // Define accessors/mutators for code generation options of enumeration type.
-#define CODEGENOPT(Name, Bits, Default)
-#define ENUM_CODEGENOPT(Name, Type, Bits, Default) \
-  Type get##Name() const { return static_cast<Type>(Name); } \
+#define CODEGENOPT(Name, Bits, Default, Compatibility)
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  Type get##Name() const { return static_cast<Type>(Name); }                   \
   void set##Name(Type Value) { Name = static_cast<unsigned>(Value); }
 #include "clang/Basic/CodeGenOptions.def"
 
@@ -508,6 +665,26 @@ public:
 
   const std::vector<std::string> &getNoBuiltinFuncs() const {
     return NoBuiltinFuncs;
+  }
+
+  bool hasSjLjExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::SjLj;
+  }
+
+  bool hasSEHExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::WinEH;
+  }
+
+  bool hasDWARFExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::DwarfCFI;
+  }
+
+  bool hasWasmExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::Wasm;
+  }
+
+  bool hasEmscriptenExceptions() const {
+    return getExceptionHandling() == ExceptionHandlingKind::Emscripten;
   }
 
   /// Check if Clang profile instrumenation is on.
@@ -580,6 +757,29 @@ public:
   bool isLoaderReplaceableFunctionName(StringRef FuncName) const {
     return llvm::is_contained(LoaderReplaceableFunctionNames, FuncName);
   }
+
+  /// Are we building at -O1 or higher?
+  bool isOptimizedBuild() const { return OptimizationLevel > 0; }
+
+  /// When loading a bool from a storage unit larger than i1, should it
+  /// be converted to i1 by comparing to 0 or by truncating to i1?
+  bool isConvertingBoolWithCmp0() const {
+    switch (getLoadBoolFromMem()) {
+    case BoolFromMem::Strict:
+      return !isOptimizedBuild();
+
+    case BoolFromMem::Truncate:
+      return false;
+
+    case BoolFromMem::NonZero:
+      return true;
+    }
+    llvm_unreachable("Unknown BoolFromMem enum");
+  }
+
+  /// Remap specified path prefix using provided DebugPrefixMap map.
+  /// Returns updated path or unchanged if no substitution was found.
+  std::string remapDebugPathPrefix(StringRef Path) const;
 };
 
 }  // end namespace clang

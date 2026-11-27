@@ -306,10 +306,10 @@ void test_variance(NSCovariant1<NSString *> *covariant1,
                    NSContravariant1<NSString *> *contravariant1,
                    NSContravariant1<NSMutableString *> *contravariant2) {
   covariant1 = covariant2; // okay
-  covariant2 = covariant1; // expected-warning{{incompatible pointer types assigning to 'NSCovariant1<NSMutableString *> *' from 'NSCovariant1<NSString *> *'}}
+  covariant2 = covariant1; // expected-error{{incompatible pointer types assigning to 'NSCovariant1<NSMutableString *> *' from 'NSCovariant1<NSString *> *'}}
 
   covariant3 = covariant4; // okay
-  covariant4 = covariant3; // expected-warning{{incompatible pointer types assigning to 'NSCovariant1<NSMutableString *(^)()> *' from 'NSCovariant1<NSString *(^)()> *'}}
+  covariant4 = covariant3; // expected-error{{incompatible pointer types assigning to 'NSCovariant1<NSMutableString *(^)()> *' from 'NSCovariant1<NSString *(^)()> *'}}
 
   covariant5 = covariant1; // okay
   covariant1 = covariant5; // okay: id is promiscuous
@@ -317,7 +317,7 @@ void test_variance(NSCovariant1<NSString *> *covariant1,
   covariant5 = covariant3; // okay
   covariant3 = covariant5; // okay
 
-  contravariant1 = contravariant2; // expected-warning{{incompatible pointer types assigning to 'NSContravariant1<NSString *> *' from 'NSContravariant1<NSMutableString *> *'}}
+  contravariant1 = contravariant2; // expected-error{{incompatible pointer types assigning to 'NSContravariant1<NSString *> *' from 'NSContravariant1<NSMutableString *> *'}}
   contravariant2 = contravariant1; // okay
 }
 

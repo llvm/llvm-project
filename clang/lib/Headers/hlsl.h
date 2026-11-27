@@ -16,16 +16,28 @@
 #pragma clang diagnostic ignored "-Whlsl-dxc-compatability"
 #endif
 
+#define _HLSL_AVAILABILITY(platform, version)                                  \
+  __attribute__((availability(platform, introduced = version)))
+
+#define _HLSL_AVAILABILITY_STAGE(platform, version, stage)                     \
+  __attribute__((                                                              \
+      availability(platform, introduced = version, environment = stage)))
+
+#define _HLSL_BUILTIN_ALIAS(builtin)                                           \
+  __attribute__((clang_builtin_alias(builtin)))
+
 // Basic types, type traits and type-independent templates.
 #include "hlsl/hlsl_basic_types.h"
 #include "hlsl/hlsl_detail.h"
 
 // HLSL standard library function declarations/definitions.
 #include "hlsl/hlsl_alias_intrinsics.h"
+#include "hlsl/hlsl_intrinsics.h"
 #if __HLSL_VERSION <= __HLSL_202x
 #include "hlsl/hlsl_compat_overloads.h"
 #endif
-#include "hlsl/hlsl_intrinsics.h"
+#include "hlsl/hlsl_debugging.h"
+#include "hlsl/hlsl_resources.h"
 
 #ifdef __spirv__
 #include "hlsl/hlsl_spirv.h"

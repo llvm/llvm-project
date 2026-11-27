@@ -9,6 +9,7 @@
 // clang-format on
 
 // REQUIRES: gpu
+// UNSUPPORTED: intelgpu
 
 // Ensure that there is only the kernel function left, not any outlined
 // parallel regions.
