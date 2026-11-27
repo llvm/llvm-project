@@ -51,6 +51,6 @@ body:             |
     Return
   
   bb.2 (%ir-block.5):
-    dead %0:grx32bit = COPY undef %6.subreg_l32
+    dead %0:grx32bit = COPY undef %6.subreg_hl32
 
 ...

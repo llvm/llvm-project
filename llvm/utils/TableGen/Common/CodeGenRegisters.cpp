@@ -236,12 +236,20 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
 
   // Clone inherited subregs and place duplicate entries in Orphans.
   // Here the order is important - earlier subregs take precedence.
-  for (CodeGenRegister *ESR : ExplicitSubRegs) {
+  for (auto [ESR, Idx] : zip_equal(ExplicitSubRegs, ExplicitSubRegIndices)) {
     const SubRegMap &Map = ESR->computeSubRegs(RegBank);
     HasDisjunctSubRegs |= ESR->HasDisjunctSubRegs;
 
+    // An inherited subreg can only keep its index if it is at the same offset
+    // in this register as it is in the explicit subreg that it is inherited
+    // from. That is not the case if the explicit subreg is at a known non-zero
+    // offset, so the inherited subregs are orphans.
+    bool KnownNonZeroOffset = any_of(Idx->Range, [](const auto &ModeAndRange) {
+      return static_cast<int32_t>(ModeAndRange.second.Offset) > 0;
+    });
+
     for (const auto &SR : Map) {
-      if (!SubRegs.insert(SR).second)
+      if (KnownNonZeroOffset || !SubRegs.insert(SR).second)
         Orphans.insert(SR.second);
     }
   }

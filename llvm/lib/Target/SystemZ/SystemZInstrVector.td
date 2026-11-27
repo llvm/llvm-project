@@ -1490,11 +1490,11 @@ let Predicates = [FeatureVector] in {
     }
     def : FPConversion<VCEFB, any_sint_to_fp, v128sb, v128f, 0, 0>;
     def : Pat<(f32 (any_sint_to_fp (i32 (z_vector_extract (v4i32 VR128:$vec), 0)))),
-              (WCEFB (EXTRACT_SUBREG VR128:$vec, subreg_h32), 0, 0)>;
+              (WCEFB (EXTRACT_SUBREG VR128:$vec, subreg_hh32), 0, 0)>;
     def : Pat<(f32 (any_sint_to_fp (i32 (z_vector_extract (v4i32 VR128:$vec),
                                                           imm32zx2:$index)))),
               (WCEFB (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index),
-                                     subreg_h32), 0, 0)>;
+                                     subreg_hh32), 0, 0)>;
   }
 
   // Convert from logical.
@@ -1513,11 +1513,11 @@ let Predicates = [FeatureVector] in {
     }
     def : FPConversion<VCELFB, any_uint_to_fp, v128sb, v128f, 0, 0>;
     def : Pat<(f32 (any_uint_to_fp (i32 (z_vector_extract (v4i32 VR128:$vec), 0)))),
-              (WCELFB (EXTRACT_SUBREG VR128:$vec, subreg_h32), 0, 0)>;
+              (WCELFB (EXTRACT_SUBREG VR128:$vec, subreg_hh32), 0, 0)>;
     def : Pat<(f32 (any_uint_to_fp (i32 (z_vector_extract (v4i32 VR128:$vec),
                                                            imm32zx2:$index)))),
               (WCELFB (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index),
-                                      subreg_h32), 0, 0)>;
+                                      subreg_hh32), 0, 0)>;
   }
 
   // Convert to fixed.
@@ -1539,14 +1539,14 @@ let Predicates = [FeatureVector] in {
     def : FPConversion<VCFEB, any_fp_to_sint, v128f, v128sb, 0, 5>;
     def : Pat<(v4i32 (scalar_to_vector (i32 (any_fp_to_sint FP32:$src)))),
               (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-                             (WCFEB FP32:$src, 0, 5), subreg_h32)>;
+                             (WCFEB FP32:$src, 0, 5), subreg_hh32)>;
     def : Pat<(v4i32 (z_vector_insert (undef),
                                       (i32 (any_fp_to_sint FP32:$src)), 0)),
               (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-                             (WCFEB FP32:$src, 0, 5), subreg_h32)>;
+                             (WCFEB FP32:$src, 0, 5), subreg_hh32)>;
     def : Pat<(v4i32 (z_replicate (i32 (any_fp_to_sint FP32:$src)))),
               (VREPF (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-                                    (WCFEB FP32:$src, 0, 5), subreg_h32), 0)>;
+                                    (WCFEB FP32:$src, 0, 5), subreg_hh32), 0)>;
   }
 
   // Convert to logical.
@@ -1568,14 +1568,14 @@ let Predicates = [FeatureVector] in {
     def : FPConversion<VCLFEB, any_fp_to_uint, v128f, v128sb, 0, 5>;
     def : Pat<(v4i32 (scalar_to_vector (i32 (any_fp_to_uint FP32:$src)))),
               (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-                             (WCLFEB FP32:$src, 0, 5), subreg_h32)>;
+                             (WCLFEB FP32:$src, 0, 5), subreg_hh32)>;
     def : Pat<(v4i32 (z_vector_insert (undef),
                                       (i32 (any_fp_to_uint FP32:$src)), 0)),
               (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-                             (WCLFEB FP32:$src, 0, 5), subreg_h32)>;
+                             (WCLFEB FP32:$src, 0, 5), subreg_hh32)>;
     def : Pat<(v4i32 (z_replicate (i32 (any_fp_to_uint FP32:$src)))),
               (VREPF (INSERT_SUBREG (v4i32 (IMPLICIT_DEF)),
-                                    (WCLFEB FP32:$src, 0, 5), subreg_h32), 0)>;
+                                    (WCLFEB FP32:$src, 0, 5), subreg_hh32), 0)>;
   }
 
   // Divide.
@@ -2311,8 +2311,8 @@ multiclass ScalarToVectorFP<Instruction vrep, ValueType vt, RegisterOperand cls,
             (vrep (INSERT_SUBREG (vt (IMPLICIT_DEF)), cls:$scalar,
                                  subreg), 0)>;
 }
-defm : ScalarToVectorFP<VREPH, v8f16, FP16, subreg_h16>;
-defm : ScalarToVectorFP<VREPF, v4f32, FP32, subreg_h32>;
+defm : ScalarToVectorFP<VREPH, v8f16, FP16, subreg_hhh16>;
+defm : ScalarToVectorFP<VREPF, v4f32, FP32, subreg_hh32>;
 defm : ScalarToVectorFP<VREPG, v2f64, FP64, subreg_h64>;
 
 // Match v2f64 insertions.  The AddedComplexity counters the 3 added by
@@ -2333,14 +2333,14 @@ let AddedComplexity = 4 in {
 // extractions and ensures that this version is strictly better.
 let AddedComplexity = 4 in {
   def : Pat<(f16 (z_vector_extract (v8f16 VR128:$vec), 0)),
-            (EXTRACT_SUBREG VR128:$vec, subreg_h16)>;
+            (EXTRACT_SUBREG VR128:$vec, subreg_hhh16)>;
   def : Pat<(f16 (z_vector_extract (v8f16 VR128:$vec), imm32zx3:$index)),
-            (EXTRACT_SUBREG (VREPH VR128:$vec, imm32zx2:$index), subreg_h16)>;
+            (EXTRACT_SUBREG (VREPH VR128:$vec, imm32zx2:$index), subreg_hhh16)>;
 
   def : Pat<(f32 (z_vector_extract (v4f32 VR128:$vec), 0)),
-            (EXTRACT_SUBREG VR128:$vec, subreg_h32)>;
+            (EXTRACT_SUBREG VR128:$vec, subreg_hh32)>;
   def : Pat<(f32 (z_vector_extract (v4f32 VR128:$vec), imm32zx2:$index)),
-            (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index), subreg_h32)>;
+            (EXTRACT_SUBREG (VREPF VR128:$vec, imm32zx2:$index), subreg_hh32)>;
 
   def : Pat<(f64 (z_vector_extract (v2f64 VR128:$vec), 0)),
             (EXTRACT_SUBREG VR128:$vec, subreg_h64)>;

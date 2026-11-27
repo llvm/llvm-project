@@ -398,7 +398,7 @@ body:             |
     %0:fp32bit = COPY $f0s
     INLINEASM &"", 1, 12, implicit-def dead early-clobber $r0d, 12, implicit-def dead early-clobber $r1d, 12, implicit-def dead early-clobber $r2d, 12, implicit-def dead early-clobber $r3d, 12, implicit-def dead early-clobber $r4d, 12, implicit-def dead early-clobber $r5d, 12, implicit-def dead early-clobber $r6d, 12, implicit-def dead early-clobber $r7d, 12, implicit-def dead early-clobber $r8d, 12, implicit-def dead early-clobber $r9d, 12, implicit-def dead early-clobber $r10d, 12, implicit-def dead early-clobber $r11d, 12, implicit-def dead early-clobber $r12d, 12, implicit-def dead early-clobber $r13d, 12, implicit-def dead early-clobber $r14d, 12, implicit-def dead early-clobber $f0d, 12, implicit-def dead early-clobber $f1d, 12, implicit-def dead early-clobber $f2d, 12, implicit-def dead early-clobber $f3d, 12, implicit-def dead early-clobber $f4d, 12, implicit-def dead early-clobber $f5d, 12, implicit-def dead early-clobber $f6d, 12, implicit-def dead early-clobber $f7d, 12, implicit-def dead early-clobber $f8d, 12, implicit-def dead early-clobber $f9d, 12, implicit-def dead early-clobber $f10d, 12, implicit-def dead early-clobber $f11d, 12, implicit-def dead early-clobber $f12d, 12, implicit-def dead early-clobber $f13d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f14d, 12, implicit-def dead early-clobber $f15d
     %1:vr128bit = VGMF 2, 8
-    nofpexcept WFCSB %0, %1.subreg_h32:vr128bit, implicit-def $cc, implicit $fpc
+    nofpexcept WFCSB %0, %1.subreg_hh32:vr128bit, implicit-def $cc, implicit $fpc
     %4:gr64bit = LGHI 0
     %4:gr64bit = LOCGHI %4, 1, 15, 8, implicit killed $cc
     STG %4, %2, 0, $noreg :: (store (s64) into %ir.Dst)

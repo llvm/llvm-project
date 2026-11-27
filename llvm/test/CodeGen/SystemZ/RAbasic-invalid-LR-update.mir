@@ -77,9 +77,9 @@ body:             |
   
   bb.4:
     %36:vr128bit = VLVGP %25.subreg_l64, %25.subreg_l64
-    %36 = VLVGH %36, %20.subreg_l32, $noreg, 0
-    %36 = VLVGH %36, %34.subreg_l32, $noreg, 1
-    dead %36 = VLVGH %36, %40.subreg_l32, $noreg, 2
+    %36 = VLVGH %36, %20.subreg_hl32, $noreg, 0
+    %36 = VLVGH %36, %34.subreg_hl32, $noreg, 1
+    dead %36 = VLVGH %36, %40.subreg_hl32, $noreg, 2
     %4:gr64bit = LG undef %42:addr64bit, 0, $noreg :: (load (s64) from `ptr undef`)
     undef %57.subreg_h64:gr128bit = LLILL 0
     undef %66.subreg_h64:gr128bit = LLILL 0
@@ -93,25 +93,25 @@ body:             |
     %51:gr64bit = VLGVH undef %7:vr128bit, $noreg, 0
     %53:gr32bit = LLHRMux %51.subreg_l32
     %54:gr64bit = VLGVH undef %1:vr128bit, $noreg, 0
-    %57.subreg_l32 = LLHRMux %54.subreg_l32
+    %57.subreg_hl32 = LLHRMux %54.subreg_l32
     %58:gr128bit = COPY %57
     %58 = DLR %58, %53
     %60:gr64bit = VLGVH undef %7, $noreg, 3
     %62:gr32bit = LLHRMux %60.subreg_l32
     %63:gr64bit = VLGVH undef %1, $noreg, 3
-    %66.subreg_l32 = LLHRMux %63.subreg_l32
+    %66.subreg_hl32 = LLHRMux %63.subreg_l32
     %67:gr128bit = COPY %66
     %67 = DLR %67, %62
     %73:gr64bit = VLGVH undef %7, $noreg, 1
     %75:gr32bit = LLHRMux %73.subreg_l32
     %76:gr64bit = VLGVH undef %1, $noreg, 1
-    %79.subreg_l32 = LLHRMux %76.subreg_l32
+    %79.subreg_hl32 = LLHRMux %76.subreg_l32
     %80:gr128bit = COPY %79
     %80 = DLR %80, %75
     %83:gr64bit = VLGVH undef %7, $noreg, 2
     %85:gr32bit = LLHRMux %83.subreg_l32
     %86:gr64bit = VLGVH undef %1, $noreg, 2
-    %89.subreg_l32 = LLHRMux %86.subreg_l32
+    %89.subreg_hl32 = LLHRMux %86.subreg_l32
     %90:gr128bit = COPY %89
     %90 = DLR %90, %85
     CHIMux %92, 0, implicit-def $cc
@@ -134,9 +134,9 @@ body:             |
   
   bb.9:
     %82:vr128bit = VLVGP %67.subreg_h64, %67.subreg_h64
-    %82 = VLVGH %82, %58.subreg_l32, $noreg, 0
-    %82 = VLVGH %82, %80.subreg_l32, $noreg, 1
-    dead %82 = VLVGH %82, %90.subreg_l32, $noreg, 2
+    %82 = VLVGH %82, %58.subreg_hl32, $noreg, 0
+    %82 = VLVGH %82, %80.subreg_hl32, $noreg, 1
+    dead %82 = VLVGH %82, %90.subreg_hl32, $noreg, 2
     %96 = AFIMux %96, 1879048192, implicit-def dead $cc
     %96 = SRL %96, $noreg, 31
     dead %11 = VLVGF %11, %96, $noreg, 1
