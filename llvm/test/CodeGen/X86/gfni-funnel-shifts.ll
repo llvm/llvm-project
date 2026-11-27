@@ -504,13 +504,13 @@ declare <16 x i8> @llvm.fshr.v16i8(<16 x i8>, <16 x i8>, <16 x i8>)
 define <32 x i8> @var_fshl_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %amt) nounwind {
 ; GFNISSE-LABEL: var_fshl_v32i8:
 ; GFNISSE:       # %bb.0:
+; GFNISSE-NEXT:    movdqa %xmm4, %xmm10
 ; GFNISSE-NEXT:    movdqa %xmm0, %xmm6
 ; GFNISSE-NEXT:    movdqa {{.*#+}} xmm8 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; GFNISSE-NEXT:    pand %xmm8, %xmm4
+; GFNISSE-NEXT:    pand %xmm8, %xmm10
 ; GFNISSE-NEXT:    pxor %xmm7, %xmm7
-; GFNISSE-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
-; GFNISSE-NEXT:    pmovzxbw {{.*#+}} xmm9 = xmm4[0],zero,xmm4[1],zero,xmm4[2],zero,xmm4[3],zero,xmm4[4],zero,xmm4[5],zero,xmm4[6],zero,xmm4[7],zero
-; GFNISSE-NEXT:    movdqa %xmm4, %xmm10
+; GFNISSE-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm10[0],zero,zero,zero,xmm10[1],zero,zero,zero,xmm10[2],zero,zero,zero,xmm10[3],zero,zero,zero
+; GFNISSE-NEXT:    pmovzxbw {{.*#+}} xmm9 = xmm10[0],zero,xmm10[1],zero,xmm10[2],zero,xmm10[3],zero,xmm10[4],zero,xmm10[5],zero,xmm10[6],zero,xmm10[7],zero
 ; GFNISSE-NEXT:    punpckhbw {{.*#+}} xmm10 = xmm10[8],xmm7[8],xmm10[9],xmm7[9],xmm10[10],xmm7[10],xmm10[11],xmm7[11],xmm10[12],xmm7[12],xmm10[13],xmm7[13],xmm10[14],xmm7[14],xmm10[15],xmm7[15]
 ; GFNISSE-NEXT:    pmovzxwd {{.*#+}} xmm11 = xmm10[0],zero,xmm10[1],zero,xmm10[2],zero,xmm10[3],zero
 ; GFNISSE-NEXT:    punpckhwd {{.*#+}} xmm10 = xmm10[4],xmm7[4],xmm10[5],xmm7[5],xmm10[6],xmm7[6],xmm10[7],xmm7[7]

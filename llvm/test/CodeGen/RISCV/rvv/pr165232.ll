@@ -101,7 +101,6 @@ define i1 @main(ptr %var_117, ptr %arrayinit.element3045, ptr %arrayinit.element
 ; CHECK-NEXT:  .LBB0_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
-; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmv.v.i v30, 0
 ; CHECK-NEXT:    vmv1r.v v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m2, tu, ma

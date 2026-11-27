@@ -2721,12 +2721,11 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV32ID-ILP32-NEXT:    fmv.w.x fa5, a1
 ; RV32ID-ILP32-NEXT:    flw fa4, 4(sp) # 4-byte Folded Reload
 ; RV32ID-ILP32-NEXT:    flt.s a1, fa5, fa4
-; RV32ID-ILP32-NEXT:    fmv.s fa5, fa4
 ; RV32ID-ILP32-NEXT:    beqz a1, .LBB12_4
 ; RV32ID-ILP32-NEXT:  # %bb.3:
 ; RV32ID-ILP32-NEXT:    addi a2, a3, -1
 ; RV32ID-ILP32-NEXT:  .LBB12_4: # %start
-; RV32ID-ILP32-NEXT:    feq.s a3, fa5, fa5
+; RV32ID-ILP32-NEXT:    feq.s a3, fa4, fa4
 ; RV32ID-ILP32-NEXT:    neg a4, s0
 ; RV32ID-ILP32-NEXT:    neg a1, a1
 ; RV32ID-ILP32-NEXT:    and a0, a4, a0

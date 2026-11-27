@@ -822,12 +822,10 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    calll __modti3
 ; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    sarl $31, %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    sarl $31, %ebx
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %esi, %ecx
 ; X86-NEXT:    sarl $31, %esi
@@ -890,12 +888,11 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    calll __modti3
 ; X86-NEXT:    subl $4, %esp
 ; X86-NEXT:    movl 40(%ebp), %ecx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    sarl $31, %eax
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    movl %ecx, %ebx
+; X86-NEXT:    sarl $31, %ebx
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl %ebx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl 24(%ebp), %ecx
 ; X86-NEXT:    movl %ecx, %eax

@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=i386-apple-ios9.0.0-simulator --frame-pointer=all -verify-machineinstrs -start-before=greedy -o - %s | FileCheck %s
+# RUN: llc -mtriple=i386-apple-ios9.0.0-simulator --frame-pointer=all -verify-machineinstrs -start-before=greedy -greedy-record-copy-hint-misses=false -greedy-hint-recolor-swap=false -greedy-hint-recolor-queue-partners=false -o - %s | FileCheck %s --check-prefixes=CHECK,DISABLED
 
 # The test used to fail with "Live segment doesn't end at a valid instruction"
 # See PR51655.
@@ -8,7 +9,7 @@
 # CHECK: andl    $-16, %edx
 # CHECK: xorl    %ebx, %ebx
 # CHECK: xorl    %esi, %esi
-# CHECK: movl    %eax, %ecx
+# DISABLED: movl    %eax, %ecx
 
 name:            test
 fixedStack:

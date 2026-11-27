@@ -9305,9 +9305,9 @@ define <8 x i8> @test_pslideupx_v8i8(<8 x i8> %rd, <8 x i8> %rs1, i32 %rs2) {
 define <8 x i8> @test_pslidedownx_v8i8(<8 x i8> %rd, <8 x i8> %rs1, i32 %rs2) {
 ; RV32-LABEL: test_pslidedownx_v8i8:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    mv a6, a1
 ; RV32-NEXT:    slli a5, a4, 3
 ; RV32-NEXT:    srx a0, a1, a5
-; RV32-NEXT:    mv a6, a1
 ; RV32-NEXT:    srx a6, a2, a5
 ; RV32-NEXT:    slli a4, a4, 29
 ; RV32-NEXT:    srx a2, a3, a5
@@ -9361,9 +9361,9 @@ define <4 x i16> @test_pslideupx_v4i16(<4 x i16> %rd, <4 x i16> %rs1, i32 %rs2) 
 define <4 x i16> @test_pslidedownx_v4i16(<4 x i16> %rd, <4 x i16> %rs1, i32 %rs2) {
 ; RV32-LABEL: test_pslidedownx_v4i16:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    mv a6, a1
 ; RV32-NEXT:    slli a5, a4, 4
 ; RV32-NEXT:    srx a0, a1, a5
-; RV32-NEXT:    mv a6, a1
 ; RV32-NEXT:    srx a6, a2, a5
 ; RV32-NEXT:    slli a4, a4, 30
 ; RV32-NEXT:    srx a2, a3, a5

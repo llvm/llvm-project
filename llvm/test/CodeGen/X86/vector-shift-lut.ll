@@ -1138,11 +1138,11 @@ define <32 x i8> @perlane_shl_v32i8(<32 x i8> %a) nounwind {
 define <32 x i8> @perlane_lshr_v32i8(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: perlane_lshr_v32i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psllw $5, %xmm1
-; SSE2-NEXT:    pxor %xmm3, %xmm3
-; SSE2-NEXT:    pcmpgtb %xmm1, %xmm3
 ; SSE2-NEXT:    movdqa %xmm1, %xmm4
-; SSE2-NEXT:    paddb %xmm1, %xmm4
+; SSE2-NEXT:    psllw $5, %xmm4
+; SSE2-NEXT:    pxor %xmm3, %xmm3
+; SSE2-NEXT:    pcmpgtb %xmm4, %xmm3
+; SSE2-NEXT:    paddb %xmm4, %xmm4
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
 ; SSE2-NEXT:    pcmpgtb %xmm4, %xmm1
@@ -1243,11 +1243,11 @@ define <32 x i8> @perlane_lshr_v32i8(<32 x i8> %a) nounwind {
 define <32 x i8> @perlane_ashr_v32i8(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: perlane_ashr_v32i8:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psllw $5, %xmm0
-; SSE2-NEXT:    pxor %xmm4, %xmm4
-; SSE2-NEXT:    pcmpgtb %xmm0, %xmm4
 ; SSE2-NEXT:    movdqa %xmm0, %xmm5
-; SSE2-NEXT:    paddb %xmm0, %xmm5
+; SSE2-NEXT:    psllw $5, %xmm5
+; SSE2-NEXT:    pxor %xmm4, %xmm4
+; SSE2-NEXT:    pcmpgtb %xmm5, %xmm4
+; SSE2-NEXT:    paddb %xmm5, %xmm5
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
 ; SSE2-NEXT:    pxor %xmm6, %xmm6
 ; SSE2-NEXT:    pcmpgtb %xmm5, %xmm6
@@ -1507,11 +1507,11 @@ define <64 x i8> @perlane_lshr_v64i8(<64 x i8> %a) nounwind {
 ; SSE2-LABEL: perlane_lshr_v64i8:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm2, %xmm5
-; SSE2-NEXT:    psllw $5, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm2
-; SSE2-NEXT:    pcmpgtb %xmm1, %xmm2
 ; SSE2-NEXT:    movdqa %xmm1, %xmm6
-; SSE2-NEXT:    paddb %xmm1, %xmm6
+; SSE2-NEXT:    psllw $5, %xmm6
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtb %xmm6, %xmm2
+; SSE2-NEXT:    paddb %xmm6, %xmm6
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
 ; SSE2-NEXT:    pcmpgtb %xmm6, %xmm8

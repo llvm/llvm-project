@@ -17,13 +17,13 @@
 define <4 x float> @test_mul2x2_f32(<4 x float> %a0, <4 x float> %a1) nounwind {
 ; SSE-LABEL: test_mul2x2_f32:
 ; SSE:       # %bb.0: # %entry
+; SSE-NEXT:    movaps %xmm0, %xmm4
 ; SSE-NEXT:    movaps %xmm1, %xmm2
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; SSE-NEXT:    mulps %xmm0, %xmm2
 ; SSE-NEXT:    movaps %xmm1, %xmm3
 ; SSE-NEXT:    unpckhps {{.*#+}} xmm3 = xmm3[2],xmm1[2],xmm3[3],xmm1[3]
 ; SSE-NEXT:    mulps %xmm0, %xmm3
-; SSE-NEXT:    movaps %xmm0, %xmm4
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm4 = xmm4[1],xmm0[1]
 ; SSE-NEXT:    movaps %xmm1, %xmm0
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm1[1,1]
@@ -1134,15 +1134,14 @@ define <16 x double> @test_mul4x4_f64(<16 x double> %a0, <16 x double> %a1) noun
 ; SSE-NEXT:    movapd %xmm4, %xmm14
 ; SSE-NEXT:    mulpd %xmm13, %xmm14
 ; SSE-NEXT:    addpd %xmm10, %xmm14
-; SSE-NEXT:    movapd %xmm6, %xmm4
 ; SSE-NEXT:    mulpd %xmm6, %xmm13
 ; SSE-NEXT:    addpd %xmm15, %xmm13
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm8 = xmm8[1,1]
 ; SSE-NEXT:    movapd %xmm7, %xmm10
 ; SSE-NEXT:    mulpd %xmm8, %xmm10
 ; SSE-NEXT:    addpd %xmm13, %xmm10
-; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
-; SSE-NEXT:    mulpd %xmm6, %xmm8
+; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; SSE-NEXT:    mulpd %xmm4, %xmm8
 ; SSE-NEXT:    addpd %xmm14, %xmm8
 ; SSE-NEXT:    movapd %xmm12, %xmm13
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm13 = xmm13[0],xmm12[0]
@@ -1160,14 +1159,14 @@ define <16 x double> @test_mul4x4_f64(<16 x double> %a0, <16 x double> %a1) noun
 ; SSE-NEXT:    movapd %xmm5, %xmm14
 ; SSE-NEXT:    mulpd %xmm13, %xmm14
 ; SSE-NEXT:    addpd %xmm12, %xmm14
-; SSE-NEXT:    mulpd %xmm4, %xmm13
-; SSE-NEXT:    movapd %xmm4, %xmm2
+; SSE-NEXT:    mulpd %xmm6, %xmm13
+; SSE-NEXT:    movapd %xmm6, %xmm2
 ; SSE-NEXT:    addpd %xmm15, %xmm13
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm9 = xmm9[1,1]
 ; SSE-NEXT:    movapd %xmm7, %xmm12
 ; SSE-NEXT:    mulpd %xmm9, %xmm12
 ; SSE-NEXT:    addpd %xmm13, %xmm12
-; SSE-NEXT:    mulpd %xmm6, %xmm9
+; SSE-NEXT:    mulpd %xmm4, %xmm9
 ; SSE-NEXT:    addpd %xmm14, %xmm9
 ; SSE-NEXT:    movapd %xmm11, %xmm14
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm14 = xmm14[0],xmm11[0]
@@ -1432,6 +1431,7 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    subq $120, %rsp
 ; SSE-NEXT:    movaps %xmm5, %xmm11
+; SSE-NEXT:    movaps %xmm3, %xmm12
 ; SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps %xmm1, %xmm9
 ; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1447,7 +1447,6 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    movaps %xmm14, %xmm0
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm14[1,1]
 ; SSE-NEXT:    movaps %xmm3, %xmm10
-; SSE-NEXT:    movaps %xmm3, %xmm12
 ; SSE-NEXT:    mulps %xmm0, %xmm10
 ; SSE-NEXT:    addps %xmm5, %xmm10
 ; SSE-NEXT:    mulps %xmm2, %xmm0
@@ -1469,25 +1468,23 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    addps %xmm2, %xmm14
 ; SSE-NEXT:    movaps %xmm5, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm5[0,0]
-; SSE-NEXT:    movaps %xmm13, %xmm2
-; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    addps %xmm14, %xmm2
+; SSE-NEXT:    mulps %xmm1, %xmm13
+; SSE-NEXT:    addps %xmm14, %xmm13
 ; SSE-NEXT:    mulps {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    addps %xmm3, %xmm1
 ; SSE-NEXT:    movaps %xmm5, %xmm0
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm5[1,1]
-; SSE-NEXT:    movaps %xmm8, %xmm3
-; SSE-NEXT:    mulps %xmm0, %xmm3
-; SSE-NEXT:    addps %xmm1, %xmm3
+; SSE-NEXT:    mulps %xmm0, %xmm8
+; SSE-NEXT:    addps %xmm1, %xmm8
 ; SSE-NEXT:    mulps {{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    addps %xmm2, %xmm0
+; SSE-NEXT:    addps %xmm13, %xmm0
 ; SSE-NEXT:    movaps %xmm5, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,2],xmm5[2,2]
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
 ; SSE-NEXT:    mulps %xmm1, %xmm2
 ; SSE-NEXT:    addps %xmm0, %xmm2
 ; SSE-NEXT:    mulps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    addps %xmm3, %xmm1
+; SSE-NEXT:    addps %xmm8, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[3,3,3,3]
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    mulps %xmm5, %xmm0
@@ -1537,10 +1534,10 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    addps %xmm3, %xmm1
 ; SSE-NEXT:    movaps %xmm4, %xmm0
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm4[1,1]
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    movaps %xmm11, %xmm3
-; SSE-NEXT:    mulps %xmm0, %xmm3
-; SSE-NEXT:    addps %xmm1, %xmm3
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    movaps %xmm3, %xmm5
+; SSE-NEXT:    mulps %xmm0, %xmm5
+; SSE-NEXT:    addps %xmm1, %xmm5
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    mulps %xmm1, %xmm0
 ; SSE-NEXT:    addps %xmm2, %xmm0
@@ -1550,7 +1547,7 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    mulps %xmm1, %xmm2
 ; SSE-NEXT:    addps %xmm0, %xmm2
 ; SSE-NEXT:    mulps {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    addps %xmm3, %xmm1
+; SSE-NEXT:    addps %xmm5, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[3,3,3,3]
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    mulps %xmm4, %xmm0
@@ -1564,26 +1561,26 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
 ; SSE-NEXT:    movaps %xmm9, %xmm2
 ; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    movaps %xmm0, %xmm3
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[1,1]
+; SSE-NEXT:    movaps %xmm0, %xmm11
+; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[1,1],xmm0[1,1]
 ; SSE-NEXT:    movaps %xmm12, %xmm4
-; SSE-NEXT:    mulps %xmm3, %xmm4
+; SSE-NEXT:    mulps %xmm11, %xmm4
 ; SSE-NEXT:    addps %xmm2, %xmm4
 ; SSE-NEXT:    mulps %xmm10, %xmm1
-; SSE-NEXT:    mulps %xmm13, %xmm3
-; SSE-NEXT:    addps %xmm1, %xmm3
+; SSE-NEXT:    mulps %xmm13, %xmm11
+; SSE-NEXT:    addps %xmm1, %xmm11
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,2],xmm0[2,2]
 ; SSE-NEXT:    movaps %xmm15, %xmm2
 ; SSE-NEXT:    movaps %xmm15, %xmm5
 ; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    addps %xmm3, %xmm2
+; SSE-NEXT:    addps %xmm11, %xmm2
 ; SSE-NEXT:    mulps %xmm8, %xmm1
 ; SSE-NEXT:    addps %xmm4, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE-NEXT:    movaps %xmm7, %xmm3
-; SSE-NEXT:    mulps %xmm0, %xmm3
-; SSE-NEXT:    addps %xmm1, %xmm3
+; SSE-NEXT:    movaps %xmm7, %xmm11
+; SSE-NEXT:    mulps %xmm0, %xmm11
+; SSE-NEXT:    addps %xmm1, %xmm11
 ; SSE-NEXT:    mulps %xmm6, %xmm0
 ; SSE-NEXT:    addps %xmm2, %xmm0
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm4
@@ -1594,10 +1591,9 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    addps %xmm0, %xmm2
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm14
 ; SSE-NEXT:    mulps %xmm14, %xmm1
-; SSE-NEXT:    addps %xmm3, %xmm1
+; SSE-NEXT:    addps %xmm11, %xmm1
 ; SSE-NEXT:    movaps %xmm4, %xmm0
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm4[1,1]
-; SSE-NEXT:    movaps %xmm11, %xmm3
 ; SSE-NEXT:    mulps %xmm0, %xmm3
 ; SSE-NEXT:    addps %xmm1, %xmm3
 ; SSE-NEXT:    mulps {{[0-9]+}}(%rsp), %xmm0
@@ -1641,7 +1637,6 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    mulps %xmm8, %xmm1
 ; SSE-NEXT:    addps %xmm4, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE-NEXT:    movaps %xmm7, %xmm4
 ; SSE-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps %xmm7, %xmm3
 ; SSE-NEXT:    mulps %xmm0, %xmm3
@@ -1682,39 +1677,37 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
-; SSE-NEXT:    movaps %xmm9, %xmm2
 ; SSE-NEXT:    movaps %xmm9, %xmm14
-; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    movaps %xmm9, %xmm2
+; SSE-NEXT:    mulps %xmm1, %xmm14
 ; SSE-NEXT:    movaps %xmm0, %xmm3
 ; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1],xmm0[1,1]
-; SSE-NEXT:    movaps %xmm12, %xmm7
-; SSE-NEXT:    mulps %xmm3, %xmm7
-; SSE-NEXT:    addps %xmm2, %xmm7
+; SSE-NEXT:    movaps %xmm12, %xmm4
+; SSE-NEXT:    mulps %xmm3, %xmm4
+; SSE-NEXT:    addps %xmm14, %xmm4
 ; SSE-NEXT:    mulps %xmm15, %xmm1
 ; SSE-NEXT:    mulps %xmm13, %xmm3
 ; SSE-NEXT:    addps %xmm1, %xmm3
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,2],xmm0[2,2]
 ; SSE-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm5, %xmm2
-; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    addps %xmm3, %xmm2
+; SSE-NEXT:    movaps %xmm5, %xmm13
+; SSE-NEXT:    mulps %xmm1, %xmm13
+; SSE-NEXT:    addps %xmm3, %xmm13
 ; SSE-NEXT:    movaps %xmm8, %xmm9
 ; SSE-NEXT:    mulps %xmm8, %xmm1
-; SSE-NEXT:    addps %xmm7, %xmm1
+; SSE-NEXT:    addps %xmm4, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE-NEXT:    movaps %xmm4, %xmm7
 ; SSE-NEXT:    mulps %xmm0, %xmm7
 ; SSE-NEXT:    addps %xmm1, %xmm7
-; SSE-NEXT:    movaps %xmm6, %xmm3
 ; SSE-NEXT:    mulps %xmm6, %xmm0
-; SSE-NEXT:    addps %xmm2, %xmm0
+; SSE-NEXT:    addps %xmm13, %xmm0
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm4
 ; SSE-NEXT:    movaps %xmm4, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm4[0,0]
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
-; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    addps %xmm0, %xmm2
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    mulps %xmm1, %xmm3
+; SSE-NEXT:    addps %xmm0, %xmm3
 ; SSE-NEXT:    mulps {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    addps %xmm7, %xmm1
 ; SSE-NEXT:    movaps %xmm4, %xmm0
@@ -1724,35 +1717,33 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    addps %xmm1, %xmm7
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    mulps %xmm1, %xmm0
-; SSE-NEXT:    addps %xmm2, %xmm0
+; SSE-NEXT:    addps %xmm3, %xmm0
 ; SSE-NEXT:    movaps %xmm4, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,2],xmm4[2,2]
-; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm2
-; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    addps %xmm0, %xmm2
+; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    mulps %xmm1, %xmm3
+; SSE-NEXT:    addps %xmm0, %xmm3
 ; SSE-NEXT:    mulps {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    addps %xmm7, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[3,3,3,3]
-; SSE-NEXT:    movaps %xmm11, %xmm0
-; SSE-NEXT:    mulps %xmm4, %xmm0
-; SSE-NEXT:    addps %xmm1, %xmm0
-; SSE-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
+; SSE-NEXT:    mulps %xmm4, %xmm11
+; SSE-NEXT:    addps %xmm1, %xmm11
+; SSE-NEXT:    movaps %xmm11, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    mulps {{[0-9]+}}(%rsp), %xmm4
-; SSE-NEXT:    addps %xmm2, %xmm4
+; SSE-NEXT:    addps %xmm3, %xmm4
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
-; SSE-NEXT:    movaps %xmm14, %xmm6
-; SSE-NEXT:    movaps %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm14, %xmm2
-; SSE-NEXT:    mulps %xmm1, %xmm2
+; SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm2, %xmm3
+; SSE-NEXT:    mulps %xmm1, %xmm3
 ; SSE-NEXT:    movaps %xmm0, %xmm14
 ; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[1,1],xmm0[1,1]
 ; SSE-NEXT:    movaps %xmm12, %xmm15
 ; SSE-NEXT:    movaps %xmm12, %xmm13
 ; SSE-NEXT:    movaps %xmm12, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    mulps %xmm14, %xmm15
-; SSE-NEXT:    addps %xmm2, %xmm15
+; SSE-NEXT:    addps %xmm3, %xmm15
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
 ; SSE-NEXT:    mulps %xmm8, %xmm1
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Reload
@@ -1760,20 +1751,20 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    addps %xmm1, %xmm14
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,2],xmm0[2,2]
-; SSE-NEXT:    movaps %xmm5, %xmm2
-; SSE-NEXT:    mulps %xmm1, %xmm2
-; SSE-NEXT:    addps %xmm14, %xmm2
+; SSE-NEXT:    movaps %xmm5, %xmm3
+; SSE-NEXT:    mulps %xmm1, %xmm3
+; SSE-NEXT:    addps %xmm14, %xmm3
 ; SSE-NEXT:    mulps %xmm9, %xmm1
 ; SSE-NEXT:    movaps %xmm9, %xmm11
 ; SSE-NEXT:    addps %xmm15, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
-; SSE-NEXT:    movaps %xmm5, %xmm14
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
+; SSE-NEXT:    movaps %xmm9, %xmm14
 ; SSE-NEXT:    mulps %xmm0, %xmm14
 ; SSE-NEXT:    addps %xmm1, %xmm14
-; SSE-NEXT:    mulps %xmm3, %xmm0
-; SSE-NEXT:    movaps %xmm3, %xmm12
-; SSE-NEXT:    addps %xmm2, %xmm0
+; SSE-NEXT:    mulps %xmm6, %xmm0
+; SSE-NEXT:    movaps %xmm6, %xmm12
+; SSE-NEXT:    addps %xmm3, %xmm0
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm3
 ; SSE-NEXT:    movaps %xmm3, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm3[0,0]
@@ -1806,11 +1797,11 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    movaps %xmm0, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,0]
-; SSE-NEXT:    mulps %xmm1, %xmm6
+; SSE-NEXT:    mulps %xmm1, %xmm2
 ; SSE-NEXT:    movaps %xmm0, %xmm15
 ; SSE-NEXT:    shufps {{.*#+}} xmm15 = xmm15[1,1],xmm0[1,1]
 ; SSE-NEXT:    mulps %xmm15, %xmm13
-; SSE-NEXT:    addps %xmm6, %xmm13
+; SSE-NEXT:    addps %xmm2, %xmm13
 ; SSE-NEXT:    mulps %xmm8, %xmm1
 ; SSE-NEXT:    mulps %xmm7, %xmm15
 ; SSE-NEXT:    addps %xmm1, %xmm15
@@ -1820,14 +1811,12 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    movaps %xmm6, %xmm2
 ; SSE-NEXT:    mulps %xmm1, %xmm2
 ; SSE-NEXT:    addps %xmm15, %xmm2
-; SSE-NEXT:    mulps %xmm9, %xmm1
+; SSE-NEXT:    mulps %xmm11, %xmm1
 ; SSE-NEXT:    addps %xmm13, %xmm1
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE-NEXT:    movaps %xmm5, %xmm9
 ; SSE-NEXT:    mulps %xmm0, %xmm9
 ; SSE-NEXT:    addps %xmm1, %xmm9
 ; SSE-NEXT:    mulps %xmm12, %xmm0
-; SSE-NEXT:    movaps %xmm12, %xmm5
 ; SSE-NEXT:    addps %xmm2, %xmm0
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    movaps %xmm1, %xmm2
@@ -1878,11 +1867,10 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    mulps %xmm11, %xmm2
 ; SSE-NEXT:    addps %xmm8, %xmm2
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
-; SSE-NEXT:    mulps %xmm0, %xmm9
-; SSE-NEXT:    addps %xmm2, %xmm9
-; SSE-NEXT:    movaps %xmm9, %xmm12
-; SSE-NEXT:    mulps %xmm5, %xmm0
+; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm5 # 16-byte Reload
+; SSE-NEXT:    mulps %xmm0, %xmm5
+; SSE-NEXT:    addps %xmm2, %xmm5
+; SSE-NEXT:    mulps %xmm12, %xmm0
 ; SSE-NEXT:    addps %xmm6, %xmm0
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm9
 ; SSE-NEXT:    movaps %xmm9, %xmm2
@@ -1891,7 +1879,7 @@ define <64 x float> @test_mul8x8_f32(<64 x float> %a0, <64 x float> %a1) nounwin
 ; SSE-NEXT:    mulps %xmm2, %xmm13
 ; SSE-NEXT:    addps %xmm0, %xmm13
 ; SSE-NEXT:    mulps {{[0-9]+}}(%rsp), %xmm2
-; SSE-NEXT:    addps %xmm12, %xmm2
+; SSE-NEXT:    addps %xmm5, %xmm2
 ; SSE-NEXT:    movaps %xmm9, %xmm0
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm9[1,1]
 ; SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm12
@@ -2470,6 +2458,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    subq $328, %rsp # imm = 0x148
 ; SSE-NEXT:    movapd %xmm7, %xmm15
+; SSE-NEXT:    movapd %xmm6, %xmm10
 ; SSE-NEXT:    movapd %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movapd %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movapd %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2482,8 +2471,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm13
 ; SSE-NEXT:    movapd %xmm13, %xmm12
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm12 = xmm12[0],xmm13[0]
-; SSE-NEXT:    movapd %xmm3, %xmm10
-; SSE-NEXT:    mulpd %xmm12, %xmm10
+; SSE-NEXT:    mulpd %xmm12, %xmm3
 ; SSE-NEXT:    movapd %xmm2, %xmm8
 ; SSE-NEXT:    mulpd %xmm12, %xmm8
 ; SSE-NEXT:    movapd %xmm1, %xmm9
@@ -2492,24 +2480,21 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm13 = xmm13[1,1]
 ; SSE-NEXT:    movapd %xmm7, %xmm2
 ; SSE-NEXT:    mulpd %xmm13, %xmm2
-; SSE-NEXT:    addpd %xmm10, %xmm2
+; SSE-NEXT:    addpd %xmm3, %xmm2
 ; SSE-NEXT:    movapd %xmm6, %xmm7
-; SSE-NEXT:    movapd %xmm6, %xmm10
 ; SSE-NEXT:    mulpd %xmm13, %xmm7
 ; SSE-NEXT:    addpd %xmm8, %xmm7
-; SSE-NEXT:    movapd %xmm5, %xmm8
-; SSE-NEXT:    mulpd %xmm13, %xmm8
-; SSE-NEXT:    addpd %xmm9, %xmm8
+; SSE-NEXT:    mulpd %xmm13, %xmm5
+; SSE-NEXT:    addpd %xmm9, %xmm5
 ; SSE-NEXT:    mulpd %xmm4, %xmm13
 ; SSE-NEXT:    addpd %xmm12, %xmm13
 ; SSE-NEXT:    movapd %xmm11, %xmm6
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm6 = xmm6[0],xmm11[0]
-; SSE-NEXT:    movapd %xmm14, %xmm1
-; SSE-NEXT:    mulpd %xmm6, %xmm1
-; SSE-NEXT:    addpd %xmm13, %xmm1
+; SSE-NEXT:    mulpd %xmm6, %xmm14
+; SSE-NEXT:    addpd %xmm13, %xmm14
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
 ; SSE-NEXT:    mulpd %xmm6, %xmm3
-; SSE-NEXT:    addpd %xmm8, %xmm3
+; SSE-NEXT:    addpd %xmm5, %xmm3
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm5
 ; SSE-NEXT:    mulpd %xmm6, %xmm5
 ; SSE-NEXT:    addpd %xmm7, %xmm5
@@ -2526,7 +2511,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    mulpd %xmm11, %xmm5
 ; SSE-NEXT:    addpd %xmm3, %xmm5
 ; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm11
-; SSE-NEXT:    addpd %xmm1, %xmm11
+; SSE-NEXT:    addpd %xmm14, %xmm11
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm6
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm6 = xmm6[0],xmm1[0]
@@ -2590,24 +2575,23 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd %xmm11, %xmm3
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; SSE-NEXT:    movapd %xmm15, %xmm8
-; SSE-NEXT:    movapd %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movapd %xmm15, %xmm2
-; SSE-NEXT:    mulpd %xmm1, %xmm2
-; SSE-NEXT:    addpd %xmm3, %xmm2
+; SSE-NEXT:    movapd %xmm15, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movapd %xmm15, %xmm7
+; SSE-NEXT:    mulpd %xmm1, %xmm7
+; SSE-NEXT:    addpd %xmm3, %xmm7
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
 ; SSE-NEXT:    movapd %xmm9, %xmm3
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
-; SSE-NEXT:    movapd %xmm10, %xmm15
 ; SSE-NEXT:    movapd %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movapd %xmm10, %xmm4
 ; SSE-NEXT:    mulpd %xmm1, %xmm4
 ; SSE-NEXT:    addpd %xmm3, %xmm4
-; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; SSE-NEXT:    movapd %xmm13, %xmm3
+; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
+; SSE-NEXT:    movapd %xmm8, %xmm3
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
-; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm10 # 16-byte Reload
-; SSE-NEXT:    movapd %xmm10, %xmm5
+; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
+; SSE-NEXT:    movapd %xmm15, %xmm5
 ; SSE-NEXT:    mulpd %xmm1, %xmm5
 ; SSE-NEXT:    addpd %xmm3, %xmm5
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
@@ -2628,11 +2612,11 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    mulpd %xmm6, %xmm5
 ; SSE-NEXT:    addpd %xmm4, %xmm5
 ; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm6
-; SSE-NEXT:    addpd %xmm2, %xmm6
+; SSE-NEXT:    addpd %xmm7, %xmm6
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
-; SSE-NEXT:    mulpd %xmm0, %xmm2
-; SSE-NEXT:    addpd %xmm6, %xmm2
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm13
+; SSE-NEXT:    mulpd %xmm0, %xmm13
+; SSE-NEXT:    addpd %xmm6, %xmm13
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm4
 ; SSE-NEXT:    mulpd %xmm0, %xmm4
 ; SSE-NEXT:    addpd %xmm5, %xmm4
@@ -2655,7 +2639,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    mulpd %xmm6, %xmm5
 ; SSE-NEXT:    addpd %xmm4, %xmm5
 ; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm6
-; SSE-NEXT:    addpd %xmm2, %xmm6
+; SSE-NEXT:    addpd %xmm13, %xmm6
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    mulpd %xmm1, %xmm0
@@ -2666,15 +2650,15 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm5
 ; SSE-NEXT:    mulpd %xmm1, %xmm5
 ; SSE-NEXT:    addpd %xmm7, %xmm5
-; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
-; SSE-NEXT:    mulpd %xmm2, %xmm1
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm6
+; SSE-NEXT:    mulpd %xmm6, %xmm1
 ; SSE-NEXT:    addpd %xmm3, %xmm1
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm6
 ; SSE-NEXT:    movapd %xmm6, %xmm3
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm6[0]
-; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm2
-; SSE-NEXT:    mulpd %xmm3, %xmm2
-; SSE-NEXT:    addpd %xmm1, %xmm2
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm7
+; SSE-NEXT:    mulpd %xmm3, %xmm7
+; SSE-NEXT:    addpd %xmm1, %xmm7
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    mulpd %xmm3, %xmm1
 ; SSE-NEXT:    addpd %xmm5, %xmm1
@@ -2697,7 +2681,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    addpd %xmm1, %xmm0
 ; SSE-NEXT:    movapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm6
-; SSE-NEXT:    addpd %xmm2, %xmm6
+; SSE-NEXT:    addpd %xmm7, %xmm6
 ; SSE-NEXT:    movapd %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
@@ -2705,24 +2689,20 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd %xmm11, %xmm3
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; SSE-NEXT:    movapd %xmm8, %xmm2
 ; SSE-NEXT:    mulpd %xmm1, %xmm2
 ; SSE-NEXT:    addpd %xmm3, %xmm2
-; SSE-NEXT:    movapd %xmm9, %xmm3
-; SSE-NEXT:    mulpd %xmm0, %xmm3
-; SSE-NEXT:    movapd %xmm15, %xmm4
+; SSE-NEXT:    mulpd %xmm0, %xmm9
+; SSE-NEXT:    movapd %xmm10, %xmm4
 ; SSE-NEXT:    mulpd %xmm1, %xmm4
-; SSE-NEXT:    addpd %xmm3, %xmm4
-; SSE-NEXT:    movapd %xmm13, %xmm8
-; SSE-NEXT:    movapd %xmm13, %xmm3
+; SSE-NEXT:    addpd %xmm9, %xmm4
+; SSE-NEXT:    movapd %xmm8, %xmm3
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
-; SSE-NEXT:    movapd %xmm10, %xmm5
-; SSE-NEXT:    movapd %xmm10, %xmm15
+; SSE-NEXT:    movapd %xmm15, %xmm5
 ; SSE-NEXT:    mulpd %xmm1, %xmm5
 ; SSE-NEXT:    addpd %xmm3, %xmm5
-; SSE-NEXT:    movapd %xmm12, %xmm10
+; SSE-NEXT:    movapd %xmm12, %xmm9
 ; SSE-NEXT:    mulpd %xmm12, %xmm0
-; SSE-NEXT:    movapd %xmm14, %xmm9
+; SSE-NEXT:    movapd %xmm14, %xmm10
 ; SSE-NEXT:    mulpd %xmm14, %xmm1
 ; SSE-NEXT:    addpd %xmm0, %xmm1
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
@@ -2815,30 +2795,27 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    movapd %xmm11, %xmm3
-; SSE-NEXT:    movapd %xmm11, %xmm12
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
 ; SSE-NEXT:    movapd %xmm6, %xmm2
 ; SSE-NEXT:    mulpd %xmm1, %xmm2
 ; SSE-NEXT:    addpd %xmm3, %xmm2
-; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm11 # 16-byte Reload
-; SSE-NEXT:    movapd %xmm11, %xmm3
-; SSE-NEXT:    mulpd %xmm0, %xmm3
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; SSE-NEXT:    movapd %xmm13, %xmm4
+; SSE-NEXT:    movapd %xmm13, %xmm3
+; SSE-NEXT:    mulpd %xmm0, %xmm3
+; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
+; SSE-NEXT:    movapd %xmm12, %xmm4
 ; SSE-NEXT:    mulpd %xmm1, %xmm4
 ; SSE-NEXT:    addpd %xmm3, %xmm4
 ; SSE-NEXT:    movapd %xmm8, %xmm3
-; SSE-NEXT:    movapd %xmm8, %xmm14
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
-; SSE-NEXT:    movapd %xmm15, %xmm8
+; SSE-NEXT:    movapd %xmm15, %xmm14
 ; SSE-NEXT:    movapd %xmm15, %xmm5
 ; SSE-NEXT:    mulpd %xmm1, %xmm5
 ; SSE-NEXT:    addpd %xmm3, %xmm5
-; SSE-NEXT:    mulpd %xmm10, %xmm0
-; SSE-NEXT:    mulpd %xmm9, %xmm1
-; SSE-NEXT:    movapd %xmm9, %xmm10
+; SSE-NEXT:    mulpd %xmm9, %xmm0
+; SSE-NEXT:    mulpd %xmm10, %xmm1
 ; SSE-NEXT:    addpd %xmm0, %xmm1
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    movapd %xmm0, %xmm7
@@ -2926,22 +2903,18 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    movapd %xmm12, %xmm3
-; SSE-NEXT:    mulpd %xmm0, %xmm3
+; SSE-NEXT:    mulpd %xmm0, %xmm11
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    movapd %xmm6, %xmm2
-; SSE-NEXT:    movapd %xmm6, %xmm12
 ; SSE-NEXT:    mulpd %xmm1, %xmm2
-; SSE-NEXT:    addpd %xmm3, %xmm2
-; SSE-NEXT:    mulpd %xmm0, %xmm11
-; SSE-NEXT:    movapd %xmm13, %xmm6
-; SSE-NEXT:    movapd %xmm13, %xmm4
+; SSE-NEXT:    addpd %xmm11, %xmm2
+; SSE-NEXT:    mulpd %xmm0, %xmm13
+; SSE-NEXT:    movapd %xmm12, %xmm4
 ; SSE-NEXT:    mulpd %xmm1, %xmm4
-; SSE-NEXT:    addpd %xmm11, %xmm4
-; SSE-NEXT:    mulpd %xmm0, %xmm14
-; SSE-NEXT:    movapd %xmm8, %xmm7
-; SSE-NEXT:    mulpd %xmm1, %xmm7
-; SSE-NEXT:    addpd %xmm14, %xmm7
+; SSE-NEXT:    addpd %xmm13, %xmm4
+; SSE-NEXT:    mulpd %xmm0, %xmm8
+; SSE-NEXT:    mulpd %xmm1, %xmm14
+; SSE-NEXT:    addpd %xmm8, %xmm14
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 16-byte Reload
 ; SSE-NEXT:    mulpd %xmm8, %xmm0
 ; SSE-NEXT:    movapd %xmm10, %xmm5
@@ -2955,7 +2928,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    addpd %xmm1, %xmm3
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    mulpd %xmm9, %xmm1
-; SSE-NEXT:    addpd %xmm7, %xmm1
+; SSE-NEXT:    addpd %xmm14, %xmm1
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm7
 ; SSE-NEXT:    mulpd %xmm9, %xmm7
 ; SSE-NEXT:    addpd %xmm4, %xmm7
@@ -3035,20 +3008,20 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd %xmm13, %xmm3
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; SSE-NEXT:    movapd %xmm12, %xmm2
+; SSE-NEXT:    movapd %xmm6, %xmm2
 ; SSE-NEXT:    mulpd %xmm1, %xmm2
 ; SSE-NEXT:    addpd %xmm3, %xmm2
-; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
-; SSE-NEXT:    movapd %xmm14, %xmm3
+; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
+; SSE-NEXT:    movapd %xmm6, %xmm3
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
-; SSE-NEXT:    movapd %xmm6, %xmm7
+; SSE-NEXT:    movapd %xmm12, %xmm7
 ; SSE-NEXT:    mulpd %xmm1, %xmm7
 ; SSE-NEXT:    addpd %xmm3, %xmm7
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
 ; SSE-NEXT:    movapd %xmm4, %xmm3
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
-; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
-; SSE-NEXT:    movapd %xmm6, %xmm9
+; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Reload
+; SSE-NEXT:    movapd %xmm14, %xmm9
 ; SSE-NEXT:    mulpd %xmm1, %xmm9
 ; SSE-NEXT:    addpd %xmm3, %xmm9
 ; SSE-NEXT:    mulpd %xmm8, %xmm0
@@ -3141,20 +3114,18 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    movapd %xmm13, %xmm12
-; SSE-NEXT:    mulpd %xmm0, %xmm12
+; SSE-NEXT:    mulpd %xmm0, %xmm13
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
 ; SSE-NEXT:    mulpd %xmm1, %xmm3
-; SSE-NEXT:    addpd %xmm12, %xmm3
-; SSE-NEXT:    movapd %xmm14, %xmm12
-; SSE-NEXT:    movapd %xmm14, %xmm5
+; SSE-NEXT:    addpd %xmm13, %xmm3
+; SSE-NEXT:    movapd %xmm6, %xmm12
+; SSE-NEXT:    movapd %xmm6, %xmm5
 ; SSE-NEXT:    mulpd %xmm0, %xmm12
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
 ; SSE-NEXT:    mulpd %xmm1, %xmm13
 ; SSE-NEXT:    addpd %xmm12, %xmm13
 ; SSE-NEXT:    mulpd %xmm0, %xmm4
-; SSE-NEXT:    movapd %xmm6, %xmm14
 ; SSE-NEXT:    mulpd %xmm1, %xmm14
 ; SSE-NEXT:    addpd %xmm4, %xmm14
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Reload
@@ -3247,17 +3218,16 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    movapd %xmm1, %xmm0
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
-; SSE-NEXT:    mulpd %xmm0, %xmm12
+; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; SSE-NEXT:    mulpd %xmm0, %xmm4
 ; SSE-NEXT:    mulpd %xmm0, %xmm5
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
 ; SSE-NEXT:    mulpd %xmm0, %xmm3
 ; SSE-NEXT:    mulpd %xmm6, %xmm0
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
-; SSE-NEXT:    mulpd %xmm1, %xmm4
-; SSE-NEXT:    addpd %xmm12, %xmm4
-; SSE-NEXT:    movapd %xmm4, %xmm12
+; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
+; SSE-NEXT:    mulpd %xmm1, %xmm12
+; SSE-NEXT:    addpd %xmm4, %xmm12
 ; SSE-NEXT:    movapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
 ; SSE-NEXT:    mulpd %xmm1, %xmm4
 ; SSE-NEXT:    addpd %xmm5, %xmm4
@@ -3281,17 +3251,15 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    mulpd %xmm4, %xmm1
 ; SSE-NEXT:    addpd %xmm5, %xmm1
-; SSE-NEXT:    movapd %xmm1, %xmm5
 ; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm4
 ; SSE-NEXT:    addpd %xmm12, %xmm4
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    mulpd %xmm0, %xmm1
-; SSE-NEXT:    addpd %xmm4, %xmm1
-; SSE-NEXT:    movapd %xmm1, %xmm12
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm12
+; SSE-NEXT:    mulpd %xmm0, %xmm12
+; SSE-NEXT:    addpd %xmm4, %xmm12
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm6
 ; SSE-NEXT:    mulpd %xmm0, %xmm6
-; SSE-NEXT:    addpd %xmm5, %xmm6
+; SSE-NEXT:    addpd %xmm1, %xmm6
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    mulpd %xmm0, %xmm1
 ; SSE-NEXT:    addpd %xmm3, %xmm1
@@ -3304,10 +3272,9 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm5
 ; SSE-NEXT:    mulpd %xmm4, %xmm5
 ; SSE-NEXT:    addpd %xmm0, %xmm5
-; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    mulpd %xmm4, %xmm0
-; SSE-NEXT:    addpd %xmm3, %xmm0
-; SSE-NEXT:    movapd %xmm0, %xmm10
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm10
+; SSE-NEXT:    mulpd %xmm4, %xmm10
+; SSE-NEXT:    addpd %xmm3, %xmm10
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    mulpd %xmm4, %xmm0
 ; SSE-NEXT:    addpd %xmm6, %xmm0
@@ -3315,50 +3282,47 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm4
 ; SSE-NEXT:    addpd %xmm12, %xmm4
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
-; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    mulpd %xmm1, %xmm0
-; SSE-NEXT:    addpd %xmm4, %xmm0
-; SSE-NEXT:    movapd %xmm0, %xmm3
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
+; SSE-NEXT:    mulpd %xmm1, %xmm3
+; SSE-NEXT:    addpd %xmm4, %xmm3
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
 ; SSE-NEXT:    mulpd %xmm1, %xmm0
 ; SSE-NEXT:    addpd %xmm6, %xmm0
-; SSE-NEXT:    movapd %xmm0, %xmm6
-; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    mulpd %xmm1, %xmm0
-; SSE-NEXT:    addpd %xmm10, %xmm0
-; SSE-NEXT:    movapd %xmm0, %xmm10
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm4
+; SSE-NEXT:    mulpd %xmm1, %xmm4
+; SSE-NEXT:    addpd %xmm10, %xmm4
 ; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm1
 ; SSE-NEXT:    addpd %xmm5, %xmm1
-; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    movapd %xmm0, %xmm4
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm4 = xmm4[0],xmm0[0]
+; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm12
+; SSE-NEXT:    movapd %xmm12, %xmm6
+; SSE-NEXT:    unpcklpd {{.*#+}} xmm6 = xmm6[0],xmm12[0]
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm5
-; SSE-NEXT:    mulpd %xmm4, %xmm5
+; SSE-NEXT:    mulpd %xmm6, %xmm5
 ; SSE-NEXT:    addpd %xmm1, %xmm5
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm1
-; SSE-NEXT:    mulpd %xmm4, %xmm1
-; SSE-NEXT:    addpd %xmm10, %xmm1
+; SSE-NEXT:    mulpd %xmm6, %xmm1
+; SSE-NEXT:    addpd %xmm4, %xmm1
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm10
-; SSE-NEXT:    mulpd %xmm4, %xmm10
-; SSE-NEXT:    addpd %xmm6, %xmm10
-; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm4
-; SSE-NEXT:    addpd %xmm3, %xmm4
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    mulpd %xmm6, %xmm10
+; SSE-NEXT:    addpd %xmm0, %xmm10
+; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm6
+; SSE-NEXT:    addpd %xmm3, %xmm6
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm12 = xmm12[1,1]
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm3
-; SSE-NEXT:    mulpd %xmm0, %xmm3
-; SSE-NEXT:    addpd %xmm4, %xmm3
+; SSE-NEXT:    mulpd %xmm12, %xmm3
+; SSE-NEXT:    addpd %xmm6, %xmm3
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm4
-; SSE-NEXT:    mulpd %xmm0, %xmm4
+; SSE-NEXT:    mulpd %xmm12, %xmm4
 ; SSE-NEXT:    addpd %xmm10, %xmm4
 ; SSE-NEXT:    movapd {{[0-9]+}}(%rsp), %xmm6
-; SSE-NEXT:    mulpd %xmm0, %xmm6
+; SSE-NEXT:    mulpd %xmm12, %xmm6
 ; SSE-NEXT:    addpd %xmm1, %xmm6
-; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm0
-; SSE-NEXT:    addpd %xmm5, %xmm0
+; SSE-NEXT:    mulpd {{[0-9]+}}(%rsp), %xmm12
+; SSE-NEXT:    addpd %xmm5, %xmm12
 ; SSE-NEXT:    movapd %xmm3, 496(%rdi)
 ; SSE-NEXT:    movapd %xmm4, 480(%rdi)
 ; SSE-NEXT:    movapd %xmm6, 464(%rdi)
-; SSE-NEXT:    movapd %xmm0, 448(%rdi)
+; SSE-NEXT:    movapd %xmm12, 448(%rdi)
 ; SSE-NEXT:    movapd %xmm14, 432(%rdi)
 ; SSE-NEXT:    movapd %xmm13, 416(%rdi)
 ; SSE-NEXT:    movapd %xmm7, 400(%rdi)
@@ -3417,13 +3381,13 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    andq $-32, %rsp
 ; AVX1OR2-NEXT:    subq $416, %rsp # imm = 0x1A0
 ; AVX1OR2-NEXT:    vmovapd %ymm2, %ymm12
+; AVX1OR2-NEXT:    vmovapd %ymm1, %ymm9
 ; AVX1OR2-NEXT:    vmovapd %ymm0, (%rsp) # 32-byte Spill
 ; AVX1OR2-NEXT:    movq %rdi, %rax
 ; AVX1OR2-NEXT:    vmovapd 144(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm14
 ; AVX1OR2-NEXT:    vbroadcastsd 272(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm1, %ymm10, %ymm8
-; AVX1OR2-NEXT:    vmovapd %ymm1, %ymm9
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm10, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 280(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
@@ -3433,6 +3397,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vbroadcastsd 288(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
+; AVX1OR2-NEXT:    vmovapd %ymm5, %ymm8
 ; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm10, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 296(%rbp), %ymm10
@@ -3466,7 +3431,6 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 344(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm8
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmovapd (%rsp), %ymm15 # 32-byte Reload
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm15, %ymm0
@@ -3476,7 +3440,6 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
 ; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm5, %ymm3
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 360(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm11
@@ -3512,22 +3475,24 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vbroadcastsd 400(%rbp), %ymm0
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 408(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm8, %ymm5
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm11
+; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm15, %ymm0
+; AVX1OR2-NEXT:    vmovapd %ymm12, %ymm5
 ; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm12, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 416(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm2
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm8, %ymm2
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 424(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm11
+; AVX1OR2-NEXT:    vmovapd %ymm7, %ymm8
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd %ymm6, %ymm7
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 432(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm10, %ymm11
@@ -3555,7 +3520,8 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm1
 ; AVX1OR2-NEXT:    vmovapd %ymm9, %ymm13
 ; AVX1OR2-NEXT:    vbroadcastsd 472(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm11
+; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
+; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm6
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm15, %ymm0
 ; AVX1OR2-NEXT:    vmovapd %ymm15, %ymm9
@@ -3563,23 +3529,20 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 480(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vmovapd %ymm4, %ymm3
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
 ; AVX1OR2-NEXT:    vmovapd %ymm2, %ymm15
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm10, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 488(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm7, %ymm8
-; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm11
+; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm8, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
-; AVX1OR2-NEXT:    vmovapd %ymm6, %ymm7
-; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmulpd %ymm7, %ymm10, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 496(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmovapd 48(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm10
+; AVX1OR2-NEXT:    vmovapd 48(%rbp), %ymm3
+; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 504(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm2
@@ -3604,16 +3567,14 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vbroadcastsd 528(%rbp), %ymm0
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm13, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 536(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm5, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vmovapd %ymm5, %ymm6
+; AVX1OR2-NEXT:    vmulpd %ymm6, %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm9, %ymm0
 ; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm12, %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm12, %ymm5
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm10, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 544(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm11
-; AVX1OR2-NEXT:    vmovapd %ymm3, %ymm12
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm11
+; AVX1OR2-NEXT:    vmovapd %ymm4, %ymm12
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
 ; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm15, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
@@ -3625,8 +3586,7 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vbroadcastsd 560(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd 16(%rbp), %ymm10, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm11, %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm4, %ymm3
+; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 568(%rbp), %ymm10
 ; AVX1OR2-NEXT:    vmulpd 112(%rbp), %ymm10, %ymm11
@@ -3685,7 +3645,6 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vmulpd %ymm3, %ymm10, %ymm10
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm10, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 648(%rbp), %ymm10
-; AVX1OR2-NEXT:    vmovapd %ymm14, %ymm4
 ; AVX1OR2-NEXT:    vmulpd %ymm10, %ymm14, %ymm11
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm11, %ymm1
 ; AVX1OR2-NEXT:    vmovapd %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -3696,44 +3655,42 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vmovapd %ymm13, %ymm3
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm13, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 664(%rbp), %ymm0
-; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm6, %ymm14
-; AVX1OR2-NEXT:    vmovapd %ymm6, %ymm10
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm6, %ymm4
+; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm9, %ymm2
 ; AVX1OR2-NEXT:    vmulpd %ymm0, %ymm5, %ymm0
-; AVX1OR2-NEXT:    vmovapd %ymm5, %ymm6
 ; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 672(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm12, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm14, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm12, %ymm4
+; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm15, %ymm2
 ; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 680(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm8, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm1
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm8, %ymm4
+; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm7, %ymm2
 ; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 688(%rbp), %ymm2
 ; AVX1OR2-NEXT:    vmovapd 16(%rbp), %ymm11
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm11, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm14, %ymm0
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm11, %ymm4
+; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vmulpd 48(%rbp), %ymm2, %ymm2
 ; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 696(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm5
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm5, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm1
-; AVX1OR2-NEXT:    vmovapd 80(%rbp), %ymm5
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm5, %ymm2
+; AVX1OR2-NEXT:    vmovapd 112(%rbp), %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm4, %ymm4
+; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm1, %ymm1
+; AVX1OR2-NEXT:    vmovapd 80(%rbp), %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm4, %ymm2
 ; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vbroadcastsd 704(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd 144(%rbp), %ymm2, %ymm14
-; AVX1OR2-NEXT:    vaddpd %ymm0, %ymm14, %ymm0
+; AVX1OR2-NEXT:    vmulpd 144(%rbp), %ymm2, %ymm4
+; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm0, %ymm0
 ; AVX1OR2-NEXT:    vmovapd 176(%rbp), %ymm13
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm13, %ymm2
 ; AVX1OR2-NEXT:    vaddpd %ymm2, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    vbroadcastsd 712(%rbp), %ymm2
-; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm4, %ymm14
+; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm14, %ymm14
 ; AVX1OR2-NEXT:    vaddpd %ymm1, %ymm14, %ymm1
 ; AVX1OR2-NEXT:    vmovapd 208(%rbp), %ymm14
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm14, %ymm2
@@ -3742,9 +3699,9 @@ define <64 x double> @test_mul8x8_f64(<64 x double> %a0, <64 x double> %a1) noun
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm3, %ymm3
 ; AVX1OR2-NEXT:    vmulpd %ymm2, %ymm9, %ymm2
 ; AVX1OR2-NEXT:    vbroadcastsd 728(%rbp), %ymm4
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm10, %ymm5
-; AVX1OR2-NEXT:    vaddpd %ymm5, %ymm3, %ymm3
-; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm6, %ymm4
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm6, %ymm6
+; AVX1OR2-NEXT:    vaddpd %ymm6, %ymm3, %ymm3
+; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm5, %ymm4
 ; AVX1OR2-NEXT:    vaddpd %ymm4, %ymm2, %ymm2
 ; AVX1OR2-NEXT:    vbroadcastsd 736(%rbp), %ymm4
 ; AVX1OR2-NEXT:    vmulpd %ymm4, %ymm12, %ymm5

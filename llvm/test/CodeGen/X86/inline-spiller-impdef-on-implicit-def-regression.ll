@@ -40,8 +40,8 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    andl $1, %r13d
 ; CHECK-NEXT:    movzbl 544(%r13), %r8d
 ; CHECK-NEXT:    andl $1, %r8d
-; CHECK-NEXT:    movl %r15d, %r9d
-; CHECK-NEXT:    andl $1, %r9d
+; CHECK-NEXT:    # kill: def $r15d killed $r15d killed $r15 def $r15
+; CHECK-NEXT:    andl $1, %r15d
 ; CHECK-NEXT:    movl %r14d, %r10d
 ; CHECK-NEXT:    andl $1, %r10d
 ; CHECK-NEXT:    movabsq $17592186044416, %rax # imm = 0x100000000000
@@ -51,11 +51,10 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    shrl %cl, %r10d
 ; CHECK-NEXT:    andl $2, %r10d
 ; CHECK-NEXT:    testb $1, %bl
-; CHECK-NEXT:    cmoveq %r9, %rax
+; CHECK-NEXT:    cmoveq %r15, %rax
 ; CHECK-NEXT:    orl %r8d, %edx
 ; CHECK-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movq %r11, %rcx
-; CHECK-NEXT:    orq $1, %rcx
+; CHECK-NEXT:    orq $1, %r11
 ; CHECK-NEXT:    orl %esi, %r10d
 ; CHECK-NEXT:    movl $1, %r8d
 ; CHECK-NEXT:    je .LBB0_3
@@ -67,7 +66,7 @@ define i32 @decode_sb(ptr %t, i32 %bl, i32 %_msprop1966, i32 %sub.i, i64 %idxpro
 ; CHECK-NEXT:    shlq $7, %rax
 ; CHECK-NEXT:    leaq (%rax,%rdx), %rsi
 ; CHECK-NEXT:    addq $1248, %rsi # imm = 0x4E0
-; CHECK-NEXT:    movq %rcx, 0
+; CHECK-NEXT:    movq %r11, 0
 ; CHECK-NEXT:    movq %rdi, %r15
 ; CHECK-NEXT:    movl %r8d, (%rdi)
 ; CHECK-NEXT:    xorl %eax, %eax

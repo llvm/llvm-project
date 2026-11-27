@@ -140,12 +140,11 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $x0, $x2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $x10 = COPY $xzr
-  ; CHECK-NEXT:   renamable $w8 = LDRWui renamable $x0, 0 :: (load (s32) from %ir.p)
+  ; CHECK-NEXT:   renamable $x8 = COPY $xzr
+  ; CHECK-NEXT:   renamable $w10 = LDRWui renamable $x0, 0 :: (load (s32) from %ir.p)
   ; CHECK-NEXT:   renamable $w9 = LDRWui killed renamable $x0, 1 :: (load (s32) from %ir.arrayidx2)
-  ; CHECK-NEXT:   dead $wzr = SUBSWri renamable $w8, 1, 0, implicit-def $nzcv
-  ; CHECK-NEXT:   renamable $w11 = CSINCWr killed renamable $w8, $wzr, 12, implicit $nzcv
-  ; CHECK-NEXT:   renamable $x8 = lr-split COPY killed renamable $x10
+  ; CHECK-NEXT:   dead $wzr = SUBSWri renamable $w10, 1, 0, implicit-def $nzcv
+  ; CHECK-NEXT:   renamable $w11 = CSINCWr killed renamable $w10, $wzr, 12, implicit $nzcv
   ; CHECK-NEXT:   dead $wzr = SUBSWri renamable $w9, 1, 0, implicit-def $nzcv
   ; CHECK-NEXT:   renamable $w10 = CSINCWr killed renamable $w9, $wzr, 12, implicit $nzcv
   ; CHECK-NEXT:   STRXui renamable $x2, %stack.0, 0 :: (store (s64) into %stack.0)

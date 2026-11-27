@@ -1581,9 +1581,9 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; SSE-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; SSE-NEXT:    movdqa (%rdi), %xmm10
-; SSE-NEXT:    movdqa 16(%rdi), %xmm14
+; SSE-NEXT:    movdqa 16(%rdi), %xmm7
 ; SSE-NEXT:    movdqa (%rsi), %xmm0
-; SSE-NEXT:    movdqa (%rdx), %xmm7
+; SSE-NEXT:    movdqa (%rdx), %xmm14
 ; SSE-NEXT:    movdqa (%rcx), %xmm1
 ; SSE-NEXT:    movdqa (%r8), %xmm8
 ; SSE-NEXT:    movdqa (%r9), %xmm2
@@ -1595,26 +1595,25 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm13 = xmm13[0],xmm2[0],xmm13[1],xmm2[1],xmm13[2],xmm2[2],xmm13[3],xmm2[3]
 ; SSE-NEXT:    movdqa %xmm13, %xmm4
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1]
-; SSE-NEXT:    movdqa %xmm5, %xmm11
 ; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm7, %xmm15
+; SSE-NEXT:    movdqa %xmm14, %xmm15
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm15 = xmm15[0],xmm1[0],xmm15[1],xmm1[1],xmm15[2],xmm1[2],xmm15[3],xmm1[3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm15[1,1,1,1]
+; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm15[1,1,1,1]
 ; SSE-NEXT:    movdqa %xmm10, %xmm12
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm12 = xmm12[0],xmm0[0],xmm12[1],xmm0[1],xmm12[2],xmm0[2],xmm12[3],xmm0[3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm6 = xmm12[1,1,1,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm6 = xmm6[0],xmm11[0],xmm6[1],xmm11[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm4[2,3]
 ; SSE-NEXT:    movaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm11[0,0,0,0]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[0,0,0,0]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm13[0,0,0,0]
 ; SSE-NEXT:    punpckhdq {{.*#+}} xmm5 = xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; SSE-NEXT:    movdqa %xmm12, %xmm4
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm15[0],xmm4[1],xmm15[1]
 ; SSE-NEXT:    movsd {{.*#+}} xmm5 = xmm4[0],xmm5[1]
 ; SSE-NEXT:    movapd %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 16(%rdx), %xmm4
-; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 16(%rdx), %xmm5
+; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm9 = xmm9[4],xmm3[4],xmm9[5],xmm3[5],xmm9[6],xmm3[6],xmm9[7],xmm3[7]
 ; SSE-NEXT:    movdqa 16(%rcx), %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1622,9 +1621,9 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movdqa %xmm8, %xmm2
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm9[0],xmm2[1],xmm9[1]
 ; SSE-NEXT:    movdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    punpckhwd {{.*#+}} xmm7 = xmm7[4],xmm1[4],xmm7[5],xmm1[5],xmm7[6],xmm1[6],xmm7[7],xmm1[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm7[1,1,1,1]
-; SSE-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm14 = xmm14[4],xmm1[4],xmm14[5],xmm1[5],xmm14[6],xmm1[6],xmm14[7],xmm1[7]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm14[1,1,1,1]
+; SSE-NEXT:    movdqa %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm10 = xmm10[4],xmm0[4],xmm10[5],xmm0[5],xmm10[6],xmm0[6],xmm10[7],xmm0[7]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm10[1,1,1,1]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
@@ -1634,22 +1633,18 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm8[0,0,0,0]
 ; SSE-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; SSE-NEXT:    movdqa %xmm10, %xmm0
-; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm7[0],xmm0[1],xmm7[1]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm14[0],xmm0[1],xmm14[1]
 ; SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
 ; SSE-NEXT:    movapd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm4, %xmm1
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1],xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1],xmm5[2],xmm3[2],xmm5[3],xmm3[3]
 ; SSE-NEXT:    movdqa 16(%rsi), %xmm0
 ; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm14, %xmm4
-; SSE-NEXT:    movdqa %xmm14, %xmm3
+; SSE-NEXT:    movdqa %xmm7, %xmm3
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm0[0],xmm3[1],xmm0[1],xmm3[2],xmm0[2],xmm3[3],xmm0[3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
-; SSE-NEXT:    movdqa %xmm1, %xmm5
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,1,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE-NEXT:    movdqa %xmm1, %xmm7
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm5[1,1,1,1]
+; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,1,1,1]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm0[0],xmm4[1],xmm0[1]
 ; SSE-NEXT:    movdqa 16(%r10), %xmm14
 ; SSE-NEXT:    movdqa 16(%rax), %xmm9
 ; SSE-NEXT:    movdqa %xmm14, %xmm6
@@ -1660,26 +1655,24 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm11[0],xmm1[1],xmm11[1],xmm1[2],xmm11[2],xmm1[3],xmm11[3]
 ; SSE-NEXT:    movdqa %xmm1, %xmm0
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm6[0],xmm0[1],xmm6[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm7 = xmm7[0,1],xmm0[2,3]
-; SSE-NEXT:    movaps %xmm7, (%rsp) # 16-byte Spill
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[0,1],xmm0[2,3]
+; SSE-NEXT:    movaps %xmm4, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm7 = xmm1[0,0,0,0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm7 = xmm7[2],xmm0[2],xmm7[3],xmm0[3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[0,0,0,0]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm0[2],xmm4[3],xmm0[3]
 ; SSE-NEXT:    movdqa %xmm3, %xmm0
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm5[0],xmm0[1],xmm5[1]
-; SSE-NEXT:    movsd {{.*#+}} xmm7 = xmm0[0],xmm7[1]
-; SSE-NEXT:    movapd %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movsd {{.*#+}} xmm4 = xmm0[0],xmm4[1]
+; SSE-NEXT:    movapd %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm14 = xmm14[4],xmm9[4],xmm14[5],xmm9[5],xmm14[6],xmm9[6],xmm14[7],xmm9[7]
 ; SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm11[4],xmm2[5],xmm11[5],xmm2[6],xmm11[6],xmm2[7],xmm11[7]
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
-; SSE-NEXT:    punpckhwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Folded Reload
-; SSE-NEXT:    # xmm9 = xmm9[4],mem[4],xmm9[5],mem[5],xmm9[6],mem[6],xmm9[7],mem[7]
-; SSE-NEXT:    movdqa %xmm4, %xmm7
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Reload
+; SSE-NEXT:    punpckhwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
+; SSE-NEXT:    # xmm4 = xmm4[4],mem[4],xmm4[5],mem[5],xmm4[6],mem[6],xmm4[7],mem[7]
 ; SSE-NEXT:    punpckhwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm7 # 16-byte Folded Reload
 ; SSE-NEXT:    # xmm7 = xmm7[4],mem[4],xmm7[5],mem[5],xmm7[6],mem[6],xmm7[7],mem[7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm9[1,1,1,1]
-; SSE-NEXT:    movdqa %xmm9, %xmm4
-; SSE-NEXT:    movdqa %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,1,1]
+; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    pshufd {{.*#+}} xmm11 = xmm7[1,1,1,1]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm11 = xmm11[0],xmm0[0],xmm11[1],xmm0[1]
 ; SSE-NEXT:    movdqa %xmm2, %xmm0
@@ -2258,14 +2251,14 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-NEXT:    vmovdqa64 (%rdi), %ymm20
+; AVX512-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512-NEXT:    vmovdqa (%r8), %ymm9
 ; AVX512-NEXT:    vmovdqa (%r9), %ymm11
 ; AVX512-NEXT:    vmovdqa (%r10), %ymm12
 ; AVX512-NEXT:    vmovdqa (%rax), %ymm13
 ; AVX512-NEXT:    vmovdqa (%rax), %xmm0
 ; AVX512-NEXT:    vmovdqa (%r10), %xmm2
-; AVX512-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; AVX512-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
 ; AVX512-NEXT:    vmovdqa64 %xmm2, %xmm21
 ; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm22
 ; AVX512-NEXT:    vmovdqa (%r9), %xmm0
@@ -2274,7 +2267,7 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-NEXT:    vmovdqa64 %xmm2, %xmm23
 ; AVX512-NEXT:    vmovdqa64 %xmm0, %xmm24
 ; AVX512-NEXT:    vpmovsxbd {{.*#+}} zmm16 = [0,0,0,16,0,0,1,17,2,2,2,18,0,0,3,19]
-; AVX512-NEXT:    vpermt2d %zmm1, %zmm16, %zmm14
+; AVX512-NEXT:    vpermt2d %zmm3, %zmm16, %zmm14
 ; AVX512-NEXT:    vmovdqa (%rcx), %xmm6
 ; AVX512-NEXT:    vmovdqa (%rdx), %xmm7
 ; AVX512-NEXT:    vpunpckhwd {{.*#+}} xmm15 = xmm7[4],xmm6[4],xmm7[5],xmm6[5],xmm7[6],xmm6[6],xmm7[7],xmm6[7]
@@ -2295,7 +2288,6 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-NEXT:    vmovdqa (%rdx), %ymm2
 ; AVX512-NEXT:    vmovdqa (%rcx), %ymm0
 ; AVX512-NEXT:    vpunpcklwd {{.*#+}} ymm3 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
-; AVX512-NEXT:    vmovdqa64 %ymm20, %ymm1
 ; AVX512-NEXT:    vpunpcklwd {{.*#+}} ymm14 = ymm1[0],ymm4[0],ymm1[1],ymm4[1],ymm1[2],ymm4[2],ymm1[3],ymm4[3],ymm1[8],ymm4[8],ymm1[9],ymm4[9],ymm1[10],ymm4[10],ymm1[11],ymm4[11]
 ; AVX512-NEXT:    vpermt2d %zmm3, %zmm19, %zmm14
 ; AVX512-NEXT:    vmovdqa64 %zmm15, %zmm14 {%k1}
@@ -2329,14 +2321,14 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-FCP:       # %bb.0:
 ; AVX512-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512-FCP-NEXT:    vmovdqa64 (%rdi), %ymm20
+; AVX512-FCP-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512-FCP-NEXT:    vmovdqa (%r8), %ymm9
 ; AVX512-FCP-NEXT:    vmovdqa (%r9), %ymm11
 ; AVX512-FCP-NEXT:    vmovdqa (%r10), %ymm12
 ; AVX512-FCP-NEXT:    vmovdqa (%rax), %ymm13
 ; AVX512-FCP-NEXT:    vmovdqa (%rax), %xmm0
 ; AVX512-FCP-NEXT:    vmovdqa (%r10), %xmm2
-; AVX512-FCP-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; AVX512-FCP-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
 ; AVX512-FCP-NEXT:    vmovdqa64 %xmm2, %xmm21
 ; AVX512-FCP-NEXT:    vmovdqa64 %xmm0, %xmm22
 ; AVX512-FCP-NEXT:    vmovdqa (%r9), %xmm0
@@ -2345,7 +2337,7 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-FCP-NEXT:    vmovdqa64 %xmm2, %xmm23
 ; AVX512-FCP-NEXT:    vmovdqa64 %xmm0, %xmm24
 ; AVX512-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm16 = [0,0,0,16,0,0,1,17,2,2,2,18,0,0,3,19]
-; AVX512-FCP-NEXT:    vpermt2d %zmm1, %zmm16, %zmm14
+; AVX512-FCP-NEXT:    vpermt2d %zmm3, %zmm16, %zmm14
 ; AVX512-FCP-NEXT:    vmovdqa (%rcx), %xmm6
 ; AVX512-FCP-NEXT:    vmovdqa (%rdx), %xmm7
 ; AVX512-FCP-NEXT:    vpunpckhwd {{.*#+}} xmm15 = xmm7[4],xmm6[4],xmm7[5],xmm6[5],xmm7[6],xmm6[6],xmm7[7],xmm6[7]
@@ -2366,7 +2358,6 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512-FCP-NEXT:    vmovdqa (%rdx), %ymm2
 ; AVX512-FCP-NEXT:    vmovdqa (%rcx), %ymm0
 ; AVX512-FCP-NEXT:    vpunpcklwd {{.*#+}} ymm3 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
-; AVX512-FCP-NEXT:    vmovdqa64 %ymm20, %ymm1
 ; AVX512-FCP-NEXT:    vpunpcklwd {{.*#+}} ymm14 = ymm1[0],ymm4[0],ymm1[1],ymm4[1],ymm1[2],ymm4[2],ymm1[3],ymm4[3],ymm1[8],ymm4[8],ymm1[9],ymm4[9],ymm1[10],ymm4[10],ymm1[11],ymm4[11]
 ; AVX512-FCP-NEXT:    vpermt2d %zmm3, %zmm19, %zmm14
 ; AVX512-FCP-NEXT:    vmovdqa64 %zmm15, %zmm14 {%k1}
@@ -2400,14 +2391,14 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512DQ-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512DQ-NEXT:    vmovdqa64 (%rdi), %ymm20
+; AVX512DQ-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512DQ-NEXT:    vmovdqa (%r8), %ymm9
 ; AVX512DQ-NEXT:    vmovdqa (%r9), %ymm11
 ; AVX512DQ-NEXT:    vmovdqa (%r10), %ymm12
 ; AVX512DQ-NEXT:    vmovdqa (%rax), %ymm13
 ; AVX512DQ-NEXT:    vmovdqa (%rax), %xmm0
 ; AVX512DQ-NEXT:    vmovdqa (%r10), %xmm2
-; AVX512DQ-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; AVX512DQ-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
 ; AVX512DQ-NEXT:    vmovdqa64 %xmm2, %xmm21
 ; AVX512DQ-NEXT:    vmovdqa64 %xmm0, %xmm22
 ; AVX512DQ-NEXT:    vmovdqa (%r9), %xmm0
@@ -2416,7 +2407,7 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-NEXT:    vmovdqa64 %xmm2, %xmm23
 ; AVX512DQ-NEXT:    vmovdqa64 %xmm0, %xmm24
 ; AVX512DQ-NEXT:    vpmovsxbd {{.*#+}} zmm16 = [0,0,0,16,0,0,1,17,2,2,2,18,0,0,3,19]
-; AVX512DQ-NEXT:    vpermt2d %zmm1, %zmm16, %zmm14
+; AVX512DQ-NEXT:    vpermt2d %zmm3, %zmm16, %zmm14
 ; AVX512DQ-NEXT:    vmovdqa (%rcx), %xmm6
 ; AVX512DQ-NEXT:    vmovdqa (%rdx), %xmm7
 ; AVX512DQ-NEXT:    vpunpckhwd {{.*#+}} xmm15 = xmm7[4],xmm6[4],xmm7[5],xmm6[5],xmm7[6],xmm6[6],xmm7[7],xmm6[7]
@@ -2437,7 +2428,6 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-NEXT:    vmovdqa (%rdx), %ymm2
 ; AVX512DQ-NEXT:    vmovdqa (%rcx), %ymm0
 ; AVX512DQ-NEXT:    vpunpcklwd {{.*#+}} ymm3 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
-; AVX512DQ-NEXT:    vmovdqa64 %ymm20, %ymm1
 ; AVX512DQ-NEXT:    vpunpcklwd {{.*#+}} ymm14 = ymm1[0],ymm4[0],ymm1[1],ymm4[1],ymm1[2],ymm4[2],ymm1[3],ymm4[3],ymm1[8],ymm4[8],ymm1[9],ymm4[9],ymm1[10],ymm4[10],ymm1[11],ymm4[11]
 ; AVX512DQ-NEXT:    vpermt2d %zmm3, %zmm19, %zmm14
 ; AVX512DQ-NEXT:    vmovdqa64 %zmm15, %zmm14 {%k1}
@@ -2471,14 +2461,14 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-FCP:       # %bb.0:
 ; AVX512DQ-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rax
 ; AVX512DQ-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %r10
-; AVX512DQ-FCP-NEXT:    vmovdqa64 (%rdi), %ymm20
+; AVX512DQ-FCP-NEXT:    vmovdqa (%rdi), %ymm1
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%r8), %ymm9
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%r9), %ymm11
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%r10), %ymm12
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rax), %ymm13
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rax), %xmm0
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%r10), %xmm2
-; AVX512DQ-FCP-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; AVX512DQ-FCP-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %xmm2, %xmm21
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %xmm0, %xmm22
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%r9), %xmm0
@@ -2487,7 +2477,7 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %xmm2, %xmm23
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %xmm0, %xmm24
 ; AVX512DQ-FCP-NEXT:    vpmovsxbd {{.*#+}} zmm16 = [0,0,0,16,0,0,1,17,2,2,2,18,0,0,3,19]
-; AVX512DQ-FCP-NEXT:    vpermt2d %zmm1, %zmm16, %zmm14
+; AVX512DQ-FCP-NEXT:    vpermt2d %zmm3, %zmm16, %zmm14
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rcx), %xmm6
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rdx), %xmm7
 ; AVX512DQ-FCP-NEXT:    vpunpckhwd {{.*#+}} xmm15 = xmm7[4],xmm6[4],xmm7[5],xmm6[5],xmm7[6],xmm6[6],xmm7[7],xmm6[7]
@@ -2508,7 +2498,6 @@ define void @store_i16_stride8_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rdx), %ymm2
 ; AVX512DQ-FCP-NEXT:    vmovdqa (%rcx), %ymm0
 ; AVX512DQ-FCP-NEXT:    vpunpcklwd {{.*#+}} ymm3 = ymm2[0],ymm0[0],ymm2[1],ymm0[1],ymm2[2],ymm0[2],ymm2[3],ymm0[3],ymm2[8],ymm0[8],ymm2[9],ymm0[9],ymm2[10],ymm0[10],ymm2[11],ymm0[11]
-; AVX512DQ-FCP-NEXT:    vmovdqa64 %ymm20, %ymm1
 ; AVX512DQ-FCP-NEXT:    vpunpcklwd {{.*#+}} ymm14 = ymm1[0],ymm4[0],ymm1[1],ymm4[1],ymm1[2],ymm4[2],ymm1[3],ymm4[3],ymm1[8],ymm4[8],ymm1[9],ymm4[9],ymm1[10],ymm4[10],ymm1[11],ymm4[11]
 ; AVX512DQ-FCP-NEXT:    vpermt2d %zmm3, %zmm19, %zmm14
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 %zmm15, %zmm14 {%k1}
@@ -2812,9 +2801,8 @@ define void @store_i16_stride8_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm7[0,0,0,0]
 ; SSE-NEXT:    movdqa %xmm0, %xmm6
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm2[0],xmm6[1],xmm2[1],xmm6[2],xmm2[2],xmm6[3],xmm2[3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[0,0,0,0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SSE-NEXT:    movdqa %xmm4, %xmm13
+; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm6[0,0,0,0]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm13 = xmm13[2],xmm3[2],xmm13[3],xmm3[3]
 ; SSE-NEXT:    movdqa 16(%rdx), %xmm3
 ; SSE-NEXT:    movdqa 16(%rcx), %xmm8
 ; SSE-NEXT:    movdqa %xmm3, %xmm10
@@ -2885,9 +2873,8 @@ define void @store_i16_stride8_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movdqa %xmm1, %xmm6
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[0,0,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,0,0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE-NEXT:    movdqa %xmm3, %xmm13
+; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm6[0,0,0,0]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm13 = xmm13[2],xmm2[2],xmm13[3],xmm2[3]
 ; SSE-NEXT:    movdqa 32(%rdx), %xmm2
 ; SSE-NEXT:    movdqa 32(%rcx), %xmm8
 ; SSE-NEXT:    movdqa %xmm2, %xmm10
@@ -3818,9 +3805,9 @@ define void @store_i16_stride8_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FCP-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-FCP-NEXT:    vmovdqa (%r10), %xmm1
 ; AVX2-FCP-NEXT:    vmovdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-FCP-NEXT:    vpunpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; AVX2-FCP-NEXT:    vpunpcklwd {{.*#+}} xmm9 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; AVX2-FCP-NEXT:    vpmovsxbd {{.*#+}} ymm4 = [2,2,2,2,0,0,3,3]
-; AVX2-FCP-NEXT:    vpermd %ymm1, %ymm4, %ymm0
+; AVX2-FCP-NEXT:    vpermd %ymm9, %ymm4, %ymm0
 ; AVX2-FCP-NEXT:    vmovdqa (%r9), %xmm3
 ; AVX2-FCP-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-FCP-NEXT:    vmovdqa (%r8), %xmm2
@@ -3832,9 +3819,9 @@ define void @store_i16_stride8_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FCP-NEXT:    vmovdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-FCP-NEXT:    vmovdqa (%rdx), %xmm3
 ; AVX2-FCP-NEXT:    vmovdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX2-FCP-NEXT:    vpunpcklwd {{.*#+}} xmm3 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
+; AVX2-FCP-NEXT:    vpunpcklwd {{.*#+}} xmm8 = xmm3[0],xmm4[0],xmm3[1],xmm4[1],xmm3[2],xmm4[2],xmm3[3],xmm4[3]
 ; AVX2-FCP-NEXT:    vpmovsxbd {{.*#+}} ymm7 = [2,2,3,3,3,3,0,0]
-; AVX2-FCP-NEXT:    vpermd %ymm3, %ymm7, %ymm4
+; AVX2-FCP-NEXT:    vpermd %ymm8, %ymm7, %ymm4
 ; AVX2-FCP-NEXT:    vmovdqa (%rsi), %xmm6
 ; AVX2-FCP-NEXT:    vmovdqa %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX2-FCP-NEXT:    vmovdqa (%rdi), %xmm5
@@ -3844,15 +3831,13 @@ define void @store_i16_stride8_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FCP-NEXT:    vpblendd {{.*#+}} ymm4 = ymm6[0],ymm4[1],ymm6[2,3,4],ymm4[5],ymm6[6,7]
 ; AVX2-FCP-NEXT:    vpblendd {{.*#+}} ymm0 = ymm4[0,1],ymm0[2,3],ymm4[4,5],ymm0[6,7]
 ; AVX2-FCP-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
-; AVX2-FCP-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [0,0,0,0,0,0,1,1]
-; AVX2-FCP-NEXT:    vpermd %ymm1, %ymm0, %ymm4
-; AVX2-FCP-NEXT:    vmovdqa %ymm0, %ymm1
+; AVX2-FCP-NEXT:    vpmovsxbd {{.*#+}} ymm1 = [0,0,0,0,0,0,1,1]
+; AVX2-FCP-NEXT:    vpermd %ymm9, %ymm1, %ymm4
 ; AVX2-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm7 = [0,0,0,1]
 ; AVX2-FCP-NEXT:    vpermd %ymm2, %ymm7, %ymm2
 ; AVX2-FCP-NEXT:    vpblendd {{.*#+}} ymm4 = ymm2[0,1,2],ymm4[3],ymm2[4,5,6],ymm4[7]
-; AVX2-FCP-NEXT:    vpmovsxbd {{.*#+}} ymm0 = [0,0,1,1,1,1,0,0]
-; AVX2-FCP-NEXT:    vpermd %ymm3, %ymm0, %ymm6
-; AVX2-FCP-NEXT:    vmovdqa %ymm0, %ymm3
+; AVX2-FCP-NEXT:    vpmovsxbd {{.*#+}} ymm3 = [0,0,1,1,1,1,0,0]
+; AVX2-FCP-NEXT:    vpermd %ymm8, %ymm3, %ymm6
 ; AVX2-FCP-NEXT:    vpmovsxbq {{.*#+}} ymm14 = [0,1,1,0]
 ; AVX2-FCP-NEXT:    vpermd %ymm5, %ymm14, %ymm5
 ; AVX2-FCP-NEXT:    vpblendd {{.*#+}} ymm5 = ymm5[0],ymm6[1],ymm5[2,3,4],ymm6[5],ymm5[6,7]
@@ -3907,9 +3892,9 @@ define void @store_i16_stride8_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX2-FCP-NEXT:    vpermd %ymm0, %ymm12, %ymm0
 ; AVX2-FCP-NEXT:    vpermd %ymm1, %ymm12, %ymm1
 ; AVX2-FCP-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1,2],ymm0[3],ymm1[4,5,6],ymm0[7]
+; AVX2-FCP-NEXT:    vmovdqa %ymm15, %ymm9
 ; AVX2-FCP-NEXT:    vpermd %ymm3, %ymm15, %ymm1
 ; AVX2-FCP-NEXT:    vpermd %ymm4, %ymm15, %ymm2
-; AVX2-FCP-NEXT:    vmovdqa %ymm15, %ymm9
 ; AVX2-FCP-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0],ymm1[1],ymm2[2,3,4],ymm1[5],ymm2[6,7]
 ; AVX2-FCP-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
 ; AVX2-FCP-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -5169,9 +5154,8 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[0,0,0,0]
 ; SSE-NEXT:    movdqa %xmm0, %xmm5
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm5[0,0,0,0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE-NEXT:    movdqa %xmm3, %xmm13
+; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm5[0,0,0,0]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm13 = xmm13[2],xmm2[2],xmm13[3],xmm2[3]
 ; SSE-NEXT:    movdqa 16(%rdx), %xmm2
 ; SSE-NEXT:    movdqa 16(%rcx), %xmm8
 ; SSE-NEXT:    movdqa %xmm2, %xmm10
@@ -5242,9 +5226,8 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movdqa %xmm1, %xmm6
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[0,0,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,0,0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE-NEXT:    movdqa %xmm3, %xmm13
+; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm6[0,0,0,0]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm13 = xmm13[2],xmm2[2],xmm13[3],xmm2[3]
 ; SSE-NEXT:    movdqa 32(%rdx), %xmm2
 ; SSE-NEXT:    movdqa 32(%rcx), %xmm8
 ; SSE-NEXT:    movdqa %xmm2, %xmm10
@@ -5315,9 +5298,8 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movdqa %xmm1, %xmm6
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[0,0,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,0,0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE-NEXT:    movdqa %xmm3, %xmm13
+; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm6[0,0,0,0]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm13 = xmm13[2],xmm2[2],xmm13[3],xmm2[3]
 ; SSE-NEXT:    movdqa 48(%rdx), %xmm2
 ; SSE-NEXT:    movdqa 48(%rcx), %xmm8
 ; SSE-NEXT:    movdqa %xmm2, %xmm10
@@ -5388,9 +5370,8 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movdqa %xmm1, %xmm6
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[0,0,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,0,0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE-NEXT:    movdqa %xmm3, %xmm13
+; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm6[0,0,0,0]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm13 = xmm13[2],xmm2[2],xmm13[3],xmm2[3]
 ; SSE-NEXT:    movdqa 64(%rdx), %xmm2
 ; SSE-NEXT:    movdqa 64(%rcx), %xmm8
 ; SSE-NEXT:    movdqa %xmm2, %xmm10
@@ -5461,9 +5442,8 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movdqa %xmm1, %xmm6
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[0,0,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,0,0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE-NEXT:    movdqa %xmm3, %xmm13
+; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm6[0,0,0,0]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm13 = xmm13[2],xmm2[2],xmm13[3],xmm2[3]
 ; SSE-NEXT:    movdqa 80(%rdx), %xmm2
 ; SSE-NEXT:    movdqa 80(%rcx), %xmm8
 ; SSE-NEXT:    movdqa %xmm2, %xmm10
@@ -5534,9 +5514,8 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movdqa %xmm1, %xmm6
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0],xmm5[0],xmm6[1],xmm5[1],xmm6[2],xmm5[2],xmm6[3],xmm5[3]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm7[0,0,0,0]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm6[0,0,0,0]
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm3 = xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE-NEXT:    movdqa %xmm3, %xmm13
+; SSE-NEXT:    pshufd {{.*#+}} xmm13 = xmm6[0,0,0,0]
+; SSE-NEXT:    punpckhdq {{.*#+}} xmm13 = xmm13[2],xmm2[2],xmm13[3],xmm2[3]
 ; SSE-NEXT:    movdqa 96(%rdx), %xmm2
 ; SSE-NEXT:    movdqa 96(%rcx), %xmm8
 ; SSE-NEXT:    movdqa %xmm2, %xmm10
@@ -8680,13 +8659,12 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX512BW-NEXT:    vmovdqa64 (%r8), %zmm1
 ; AVX512BW-NEXT:    vmovdqa64 (%r9), %zmm27
-; AVX512BW-NEXT:    vmovdqa64 (%r10), %zmm2
+; AVX512BW-NEXT:    vmovdqa64 (%r10), %zmm4
 ; AVX512BW-NEXT:    vmovdqa64 64(%r10), %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 (%rax), %zmm30
 ; AVX512BW-NEXT:    vmovdqa64 64(%rax), %zmm28
 ; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} zmm3 = [0,0,0,0,0,0,4,36,0,0,0,0,0,0,5,37,0,0,0,0,0,0,6,38,0,0,0,0,0,0,7,39]
-; AVX512BW-NEXT:    vmovdqa64 %zmm2, %zmm5
-; AVX512BW-NEXT:    vmovdqa64 %zmm2, %zmm4
+; AVX512BW-NEXT:    vmovdqa64 %zmm4, %zmm5
 ; AVX512BW-NEXT:    vpermt2w %zmm30, %zmm3, %zmm5
 ; AVX512BW-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} zmm2 = [0,0,0,0,4,36,0,0,0,0,0,0,5,37,0,0,0,0,0,0,6,38,0,0,0,0,0,0,7,39,0,0]
@@ -8969,13 +8947,12 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512BW-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX512BW-FCP-NEXT:    vmovdqa64 (%r8), %zmm1
 ; AVX512BW-FCP-NEXT:    vmovdqa64 (%r9), %zmm27
-; AVX512BW-FCP-NEXT:    vmovdqa64 (%r10), %zmm2
+; AVX512BW-FCP-NEXT:    vmovdqa64 (%r10), %zmm4
 ; AVX512BW-FCP-NEXT:    vmovdqa64 64(%r10), %zmm0
 ; AVX512BW-FCP-NEXT:    vmovdqa64 (%rax), %zmm30
 ; AVX512BW-FCP-NEXT:    vmovdqa64 64(%rax), %zmm28
 ; AVX512BW-FCP-NEXT:    vpmovsxbw {{.*#+}} zmm3 = [0,0,0,0,0,0,4,36,0,0,0,0,0,0,5,37,0,0,0,0,0,0,6,38,0,0,0,0,0,0,7,39]
-; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm5
-; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm4
+; AVX512BW-FCP-NEXT:    vmovdqa64 %zmm4, %zmm5
 ; AVX512BW-FCP-NEXT:    vpermt2w %zmm30, %zmm3, %zmm5
 ; AVX512BW-FCP-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512BW-FCP-NEXT:    vpmovsxbw {{.*#+}} zmm2 = [0,0,0,0,4,36,0,0,0,0,0,0,5,37,0,0,0,0,0,0,6,38,0,0,0,0,0,0,7,39,0,0]
@@ -9258,13 +9235,12 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-BW-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX512DQ-BW-NEXT:    vmovdqa64 (%r8), %zmm1
 ; AVX512DQ-BW-NEXT:    vmovdqa64 (%r9), %zmm27
-; AVX512DQ-BW-NEXT:    vmovdqa64 (%r10), %zmm2
+; AVX512DQ-BW-NEXT:    vmovdqa64 (%r10), %zmm4
 ; AVX512DQ-BW-NEXT:    vmovdqa64 64(%r10), %zmm0
 ; AVX512DQ-BW-NEXT:    vmovdqa64 (%rax), %zmm30
 ; AVX512DQ-BW-NEXT:    vmovdqa64 64(%rax), %zmm28
 ; AVX512DQ-BW-NEXT:    vpmovsxbw {{.*#+}} zmm3 = [0,0,0,0,0,0,4,36,0,0,0,0,0,0,5,37,0,0,0,0,0,0,6,38,0,0,0,0,0,0,7,39]
-; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm2, %zmm5
-; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm2, %zmm4
+; AVX512DQ-BW-NEXT:    vmovdqa64 %zmm4, %zmm5
 ; AVX512DQ-BW-NEXT:    vpermt2w %zmm30, %zmm3, %zmm5
 ; AVX512DQ-BW-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-NEXT:    vpmovsxbw {{.*#+}} zmm2 = [0,0,0,0,4,36,0,0,0,0,0,0,5,37,0,0,0,0,0,0,6,38,0,0,0,0,0,0,7,39,0,0]
@@ -9547,13 +9523,12 @@ define void @store_i16_stride8_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; AVX512DQ-BW-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%r8), %zmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%r9), %zmm27
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%r10), %zmm2
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%r10), %zmm4
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 64(%r10), %zmm0
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 (%rax), %zmm30
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 64(%rax), %zmm28
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbw {{.*#+}} zmm3 = [0,0,0,0,0,0,4,36,0,0,0,0,0,0,5,37,0,0,0,0,0,0,6,38,0,0,0,0,0,0,7,39]
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm5
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm2, %zmm4
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 %zmm4, %zmm5
 ; AVX512DQ-BW-FCP-NEXT:    vpermt2w %zmm30, %zmm3, %zmm5
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqu64 %zmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 64-byte Spill
 ; AVX512DQ-BW-FCP-NEXT:    vpmovsxbw {{.*#+}} zmm2 = [0,0,0,0,4,36,0,0,0,0,0,0,5,37,0,0,0,0,0,0,6,38,0,0,0,0,0,0,7,39,0,0]

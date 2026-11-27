@@ -657,16 +657,15 @@ define void @atomicrmw_or_v4i16(ptr %p, <4 x i16> %v) nounwind {
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB11_1: # %atomicrmw.start
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    movl %edi, %ecx
 ; X86-NEXT:    movl %edi, (%esp) # 4-byte Spill
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    orl %edi, %ecx
-; X86-NEXT:    shll $16, %ecx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    orl %ecx, %edi
+; X86-NEXT:    shll $16, %edi
 ; X86-NEXT:    movl %eax, %ebx
-; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %edi
-; X86-NEXT:    orl %edi, %ebx
-; X86-NEXT:    movzwl %bx, %ebx
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    orl %ecx, %ebx
+; X86-NEXT:    movzwl %bx, %ebx
+; X86-NEXT:    orl %edi, %ebx
 ; X86-NEXT:    movl %esi, %edi
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    orl %ecx, %edi
@@ -687,9 +686,8 @@ define void @atomicrmw_or_v4i16(ptr %p, <4 x i16> %v) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    lock cmpxchg8b (%esi)
 ; X86-NEXT:    setne %cl
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    shrl $16, %esi
-; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    shrl $16, %edi
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    shrl $16, %esi
 ; X86-NEXT:    testb %cl, %cl
@@ -743,12 +741,11 @@ define void @atomicrmw_xor_v8i8(ptr %p, <8 x i8> %v) nounwind {
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %bl
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    movzbl %bl, %edx
+; X86-NEXT:    movzbl %bl, %esi
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    shll $8, %edx
+; X86-NEXT:    shll $8, %esi
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    orl %eax, %esi
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movl (%esp), %eax # 4-byte Reload
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
@@ -757,18 +754,17 @@ define void @atomicrmw_xor_v8i8(ptr %p, <8 x i8> %v) nounwind {
 ; X86-NEXT:    shll $8, %ebx
 ; X86-NEXT:    movzbl %cl, %eax
 ; X86-NEXT:    orl %eax, %ebx
-; X86-NEXT:    movzwl %dx, %eax
+; X86-NEXT:    movzwl %si, %eax
 ; X86-NEXT:    shll $16, %ebx
 ; X86-NEXT:    orl %eax, %ebx
-; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movb %dh, %cl
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movzbl %cl, %edx
-; X86-NEXT:    shll $8, %edx
+; X86-NEXT:    movzbl %cl, %esi
+; X86-NEXT:    shll $8, %esi
 ; X86-NEXT:    movzbl %al, %eax
-; X86-NEXT:    orl %eax, %edx
+; X86-NEXT:    orl %eax, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
@@ -780,7 +776,7 @@ define void @atomicrmw_xor_v8i8(ptr %p, <8 x i8> %v) nounwind {
 ; X86-NEXT:    shll $8, %ecx
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    orl %eax, %ecx
-; X86-NEXT:    movzwl %dx, %eax
+; X86-NEXT:    movzwl %si, %eax
 ; X86-NEXT:    shll $16, %ecx
 ; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    shll $8, %edi
@@ -788,10 +784,9 @@ define void @atomicrmw_xor_v8i8(ptr %p, <8 x i8> %v) nounwind {
 ; X86-NEXT:    movzbl (%esp), %eax # 1-byte Folded Reload
 ; X86-NEXT:    shll $8, %eax
 ; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-NEXT:    movzwl %di, %edx
+; X86-NEXT:    movzwl %di, %esi
 ; X86-NEXT:    shll $16, %eax
-; X86-NEXT:    orl %edx, %eax
-; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    orl %esi, %eax
 ; X86-NEXT:    movzbl %dl, %edi
 ; X86-NEXT:    movzbl %dh, %esi
 ; X86-NEXT:    shll $8, %esi

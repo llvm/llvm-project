@@ -113,11 +113,10 @@ define i8 @ucmp.8.128(i128 %x, i128 %y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $16, %esp
-; X86-NEXT:    movl 8(%ebp), %eax
+; X86-NEXT:    movl 8(%ebp), %ecx
 ; X86-NEXT:    movl 12(%ebp), %edx
-; X86-NEXT:    movl 28(%ebp), %ecx
-; X86-NEXT:    cmpl %eax, 24(%ebp)
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    movl 28(%ebp), %eax
+; X86-NEXT:    cmpl %ecx, 24(%ebp)
 ; X86-NEXT:    sbbl %edx, %eax
 ; X86-NEXT:    movl 16(%ebp), %ebx
 ; X86-NEXT:    movl 32(%ebp), %eax
@@ -2233,8 +2232,8 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; SSE2-NEXT:    shlq $30, %rdx
 ; SSE2-NEXT:    orq %rcx, %rdx
 ; SSE2-NEXT:    orq %rax, %rdx
-; SSE2-NEXT:    movq %rsi, %rax
 ; SSE2-NEXT:    movl %edx, (%rsi)
+; SSE2-NEXT:    movq %rsi, %rax
 ; SSE2-NEXT:    popq %rbx
 ; SSE2-NEXT:    popq %r12
 ; SSE2-NEXT:    popq %r13
@@ -2859,8 +2858,8 @@ define <17 x i2> @ucmp_uncommon_vectors(<17 x i71> %x, <17 x i71> %y) nounwind {
 ; AVX512-NEXT:    shlq $30, %rdx
 ; AVX512-NEXT:    orq %rax, %rdx
 ; AVX512-NEXT:    orq %rcx, %rdx
-; AVX512-NEXT:    movq %rdi, %rax
 ; AVX512-NEXT:    movl %edx, (%rdi)
+; AVX512-NEXT:    movq %rdi, %rax
 ; AVX512-NEXT:    popq %rbx
 ; AVX512-NEXT:    popq %r12
 ; AVX512-NEXT:    popq %r13

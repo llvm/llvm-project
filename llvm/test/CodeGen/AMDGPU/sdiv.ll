@@ -54,17 +54,15 @@ define amdgpu_kernel void @sdiv_i32(ptr addrspace(1) %out, ptr addrspace(1) %in)
 ;
 ; TONGA-LABEL: sdiv_i32:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
 ; TONGA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; TONGA-NEXT:    s_mov_b32 s7, 0xf000
-; TONGA-NEXT:    s_mov_b32 s6, -1
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
-; TONGA-NEXT:    v_mov_b32_e32 v1, s3
-; TONGA-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
+; TONGA-NEXT:    v_mov_b32_e32 v1, s7
+; TONGA-NEXT:    v_add_u32_e32 v0, vcc, s6, v0
 ; TONGA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; TONGA-NEXT:    flat_load_dwordx2 v[0:1], v[0:1]
-; TONGA-NEXT:    s_mov_b32 s4, s0
-; TONGA-NEXT:    s_mov_b32 s5, s1
+; TONGA-NEXT:    s_mov_b32 s7, 0xf000
+; TONGA-NEXT:    s_mov_b32 s6, -1
 ; TONGA-NEXT:    s_waitcnt vmcnt(0)
 ; TONGA-NEXT:    v_sub_u32_e32 v2, vcc, 0, v1
 ; TONGA-NEXT:    v_max_i32_e32 v2, v2, v1
@@ -1559,20 +1557,18 @@ define amdgpu_kernel void @v_sdiv_i25(ptr addrspace(1) %out, ptr addrspace(1) %i
 ;
 ; TONGA-LABEL: v_sdiv_i25:
 ; TONGA:       ; %bb.0:
-; TONGA-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; TONGA-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x24
 ; TONGA-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; TONGA-NEXT:    s_mov_b32 s7, 0xf000
-; TONGA-NEXT:    s_mov_b32 s6, -1
 ; TONGA-NEXT:    s_waitcnt lgkmcnt(0)
-; TONGA-NEXT:    v_mov_b32_e32 v1, s3
-; TONGA-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
+; TONGA-NEXT:    v_mov_b32_e32 v1, s7
+; TONGA-NEXT:    v_add_u32_e32 v0, vcc, s6, v0
 ; TONGA-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; TONGA-NEXT:    v_add_u32_e32 v2, vcc, 4, v0
 ; TONGA-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
 ; TONGA-NEXT:    flat_load_dword v2, v[2:3]
 ; TONGA-NEXT:    flat_load_dword v0, v[0:1]
-; TONGA-NEXT:    s_mov_b32 s4, s0
-; TONGA-NEXT:    s_mov_b32 s5, s1
+; TONGA-NEXT:    s_mov_b32 s7, 0xf000
+; TONGA-NEXT:    s_mov_b32 s6, -1
 ; TONGA-NEXT:    s_waitcnt vmcnt(1)
 ; TONGA-NEXT:    v_bfe_i32 v1, v2, 0, 25
 ; TONGA-NEXT:    v_sub_u32_e32 v2, vcc, 0, v1

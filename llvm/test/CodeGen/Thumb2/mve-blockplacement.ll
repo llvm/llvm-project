@@ -403,15 +403,13 @@ define i32 @d(i64 %e, i32 %f, i64 %g, i32 %h) {
 ; CHECK-NEXT:    adds r0, #6
 ; CHECK-NEXT:    movt r2, #9362
 ; CHECK-NEXT:    subs r1, r0, r7
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    umull r2, r3, r1, r2
-; CHECK-NEXT:    subs r2, r1, r3
-; CHECK-NEXT:    add.w r2, r3, r2, lsr #1
-; CHECK-NEXT:    lsrs r3, r2, #2
-; CHECK-NEXT:    lsls r3, r3, #3
-; CHECK-NEXT:    sub.w r2, r3, r2, lsr #2
+; CHECK-NEXT:    umull r2, r5, r1, r2
+; CHECK-NEXT:    subs r2, r1, r5
+; CHECK-NEXT:    add.w r2, r5, r2, lsr #1
+; CHECK-NEXT:    lsrs r5, r2, #2
+; CHECK-NEXT:    lsls r5, r5, #3
+; CHECK-NEXT:    sub.w r2, r5, r2, lsr #2
 ; CHECK-NEXT:    subs r1, r2, r1
-; CHECK-NEXT:    mov r3, r5
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:  .LBB1_3: @ %for.cond.cleanup5.loopexit134.split.loop.exit139
 ; CHECK-NEXT:    @ in Loop: Header=BB1_6 Depth=1

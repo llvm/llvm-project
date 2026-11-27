@@ -2466,47 +2466,47 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    ori 9, 10, 13107
 ; BE-NEXT:    ori 10, 11, 61680
 ; BE-NEXT:    ori 11, 12, 3855
-; BE-NEXT:    std 17, -120(1) # 8-byte Folded Spill
+; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 12, 3, 1
 ; BE-NEXT:    rldicl 29, 3, 63, 1
-; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; BE-NEXT:    std 17, -120(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 3, 7, 32
 ; BE-NEXT:    sldi 7, 8, 32
 ; BE-NEXT:    sldi 8, 9, 32
 ; BE-NEXT:    sldi 9, 10, 32
-; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
+; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
 ; BE-NEXT:    oris 3, 3, 43690
 ; BE-NEXT:    oris 7, 7, 21845
-; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 10, 11, 32
 ; BE-NEXT:    oris 11, 9, 61680
 ; BE-NEXT:    ori 18, 3, 43690
 ; BE-NEXT:    ori 20, 7, 21845
-; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
+; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 5, 5, 32
-; BE-NEXT:    ori 7, 11, 61680
-; BE-NEXT:    std 23, -72(1) # 8-byte Folded Spill
+; BE-NEXT:    ori 14, 11, 61680
+; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; BE-NEXT:    and 11, 0, 18
 ; BE-NEXT:    and 0, 30, 20
 ; BE-NEXT:    oris 5, 5, 52428
 ; BE-NEXT:    oris 8, 8, 13107
-; BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
+; BE-NEXT:    std 23, -72(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 11, 0, 11
 ; BE-NEXT:    ori 5, 5, 52428
-; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
+; BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
 ; BE-NEXT:    ori 17, 8, 13107
 ; BE-NEXT:    and 12, 12, 18
 ; BE-NEXT:    and 30, 29, 20
 ; BE-NEXT:    sldi 0, 11, 2
-; BE-NEXT:    std 21, -88(1) # 8-byte Folded Spill
+; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 11, 11, 62, 2
 ; BE-NEXT:    or 12, 30, 12
-; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
+; BE-NEXT:    std 21, -88(1) # 8-byte Folded Spill
 ; BE-NEXT:    and 0, 0, 5
 ; BE-NEXT:    and 11, 11, 17
 ; BE-NEXT:    oris 28, 10, 3855
 ; BE-NEXT:    sldi 30, 12, 2
-; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
+; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 12, 12, 62, 2
 ; BE-NEXT:    or 11, 11, 0
 ; BE-NEXT:    std 16, -128(1) # 8-byte Folded Spill
@@ -2519,14 +2519,14 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    rldicl 11, 11, 60, 4
 ; BE-NEXT:    std 2, -152(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 12, 12, 30
-; BE-NEXT:    and 0, 0, 7
+; BE-NEXT:    and 0, 0, 14
 ; BE-NEXT:    and 11, 11, 4
 ; BE-NEXT:    sldi 30, 12, 4
 ; BE-NEXT:    std 15, -136(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 12, 12, 60, 4
 ; BE-NEXT:    or 11, 11, 0
 ; BE-NEXT:    std 4, -288(1) # 8-byte Folded Spill
-; BE-NEXT:    and 30, 30, 7
+; BE-NEXT:    and 30, 30, 14
 ; BE-NEXT:    and 12, 12, 4
 ; BE-NEXT:    rotlwi 0, 11, 24
 ; BE-NEXT:    or 12, 12, 30
@@ -2560,12 +2560,12 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    ori 24, 0, 34952
 ; BE-NEXT:    ori 28, 30, 17476
 ; BE-NEXT:    and 16, 26, 23
-; BE-NEXT:    and 14, 27, 22
+; BE-NEXT:    and 7, 27, 22
 ; BE-NEXT:    mulld 3, 21, 19
 ; BE-NEXT:    std 3, -160(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldimi 24, 24, 32, 0
 ; BE-NEXT:    rldimi 28, 28, 32, 0
-; BE-NEXT:    mulld 3, 14, 16
+; BE-NEXT:    mulld 3, 7, 16
 ; BE-NEXT:    and 31, 26, 24
 ; BE-NEXT:    std 3, -168(1) # 8-byte Folded Spill
 ; BE-NEXT:    and 2, 27, 28
@@ -2577,7 +2577,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    std 8, -176(1) # 8-byte Folded Spill
 ; BE-NEXT:    mulld 8, 21, 31
 ; BE-NEXT:    std 8, -208(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 14, 19
+; BE-NEXT:    mulld 8, 7, 19
 ; BE-NEXT:    std 8, -216(1) # 8-byte Folded Spill
 ; BE-NEXT:    mulld 8, 2, 15
 ; BE-NEXT:    std 8, -200(1) # 8-byte Folded Spill
@@ -2585,7 +2585,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    std 8, -192(1) # 8-byte Folded Spill
 ; BE-NEXT:    mulld 8, 21, 16
 ; BE-NEXT:    std 8, -248(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 14, 15
+; BE-NEXT:    mulld 8, 7, 15
 ; BE-NEXT:    std 8, -256(1) # 8-byte Folded Spill
 ; BE-NEXT:    mulld 8, 2, 19
 ; BE-NEXT:    std 8, -232(1) # 8-byte Folded Spill
@@ -2600,7 +2600,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    rldicl 6, 6, 63, 1
 ; BE-NEXT:    and 3, 3, 18
 ; BE-NEXT:    and 6, 6, 20
-; BE-NEXT:    mulld 8, 14, 31
+; BE-NEXT:    mulld 8, 7, 31
 ; BE-NEXT:    std 8, -280(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 3, 6, 3
 ; BE-NEXT:    sldi 6, 3, 2
@@ -2615,7 +2615,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    sldi 6, 3, 4
 ; BE-NEXT:    rldicl 3, 3, 60, 4
 ; BE-NEXT:    or 25, 25, 31
-; BE-NEXT:    and 6, 6, 7
+; BE-NEXT:    and 6, 6, 14
 ; BE-NEXT:    and 3, 3, 4
 ; BE-NEXT:    sldi 31, 25, 2
 ; BE-NEXT:    rldicl 25, 25, 62, 2
@@ -2628,7 +2628,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    sldi 31, 25, 4
 ; BE-NEXT:    rldicl 25, 25, 60, 4
 ; BE-NEXT:    rlwimi 6, 3, 8, 24, 31
-; BE-NEXT:    and 31, 31, 7
+; BE-NEXT:    and 31, 31, 14
 ; BE-NEXT:    and 25, 25, 4
 ; BE-NEXT:    rldicl 3, 3, 32, 32
 ; BE-NEXT:    mulld 8, 2, 16
@@ -2644,13 +2644,12 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    rlwimi 31, 25, 8, 24, 31
 ; BE-NEXT:    rotlwi 25, 3, 24
 ; BE-NEXT:    rlwimi 25, 3, 8, 8, 15
-; BE-NEXT:    mr 14, 7
+; BE-NEXT:    mr 19, 5
 ; BE-NEXT:    rlwimi 25, 3, 8, 24, 31
 ; BE-NEXT:    sldi 3, 6, 32
 ; BE-NEXT:    sldi 6, 31, 32
 ; BE-NEXT:    or 3, 3, 2
 ; BE-NEXT:    or 7, 6, 25
-; BE-NEXT:    mr 19, 5
 ; BE-NEXT:    and 25, 3, 22
 ; BE-NEXT:    and 31, 7, 23
 ; BE-NEXT:    and 2, 3, 24
@@ -2681,38 +2680,38 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    ld 3, -208(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 8, 8, 21
 ; BE-NEXT:    xor 5, 5, 26
-; BE-NEXT:    xor 9, 9, 29
 ; BE-NEXT:    ld 4, -216(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 9, 9, 29
 ; BE-NEXT:    xor 6, 8, 6
-; BE-NEXT:    xor 8, 9, 10
 ; BE-NEXT:    ld 26, -200(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 8, 9, 10
 ; BE-NEXT:    xor 3, 4, 3
 ; BE-NEXT:    xor 5, 5, 0
 ; BE-NEXT:    xor 7, 7, 31
-; BE-NEXT:    xor 6, 6, 27
 ; BE-NEXT:    ld 10, -192(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 3, 3, 26
-; BE-NEXT:    xor 5, 5, 30
+; BE-NEXT:    xor 6, 6, 27
 ; BE-NEXT:    ld 4, -248(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 3, 3, 10
-; BE-NEXT:    xor 7, 7, 11
+; BE-NEXT:    xor 5, 5, 30
 ; BE-NEXT:    and 3, 3, 22
-; BE-NEXT:    xor 8, 8, 2
+; BE-NEXT:    xor 7, 7, 11
 ; BE-NEXT:    ld 26, -232(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 4, 15, 4
-; BE-NEXT:    and 6, 6, 23
+; BE-NEXT:    xor 8, 8, 2
 ; BE-NEXT:    ld 29, -184(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 4, 4, 26
+; BE-NEXT:    and 6, 6, 23
 ; BE-NEXT:    and 5, 5, 22
 ; BE-NEXT:    xor 7, 7, 12
-; BE-NEXT:    and 8, 8, 28
 ; BE-NEXT:    ld 10, -224(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 29, 25, 29
-; BE-NEXT:    or 5, 5, 6
+; BE-NEXT:    and 8, 8, 28
 ; BE-NEXT:    ld 15, -272(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 4, 4, 10
-; BE-NEXT:    and 7, 7, 24
+; BE-NEXT:    or 5, 5, 6
 ; BE-NEXT:    and 4, 4, 28
+; BE-NEXT:    and 7, 7, 24
 ; BE-NEXT:    ld 9, -176(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 15, 16, 15
 ; BE-NEXT:    ld 26, -264(1) # 8-byte Folded Reload
@@ -4898,47 +4897,47 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    ori 9, 10, 13107
 ; BE-NEXT:    ori 10, 11, 61680
 ; BE-NEXT:    ori 11, 12, 3855
-; BE-NEXT:    std 17, -120(1) # 8-byte Folded Spill
+; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 12, 3, 1
 ; BE-NEXT:    rldicl 29, 3, 63, 1
-; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; BE-NEXT:    std 17, -120(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 3, 7, 32
 ; BE-NEXT:    sldi 7, 8, 32
 ; BE-NEXT:    sldi 8, 9, 32
 ; BE-NEXT:    sldi 9, 10, 32
-; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
+; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
 ; BE-NEXT:    oris 3, 3, 43690
 ; BE-NEXT:    oris 7, 7, 21845
-; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 10, 11, 32
 ; BE-NEXT:    oris 11, 9, 61680
 ; BE-NEXT:    ori 21, 3, 43690
 ; BE-NEXT:    ori 18, 7, 21845
-; BE-NEXT:    std 23, -72(1) # 8-byte Folded Spill
+; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 5, 5, 32
-; BE-NEXT:    ori 7, 11, 61680
-; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
+; BE-NEXT:    ori 14, 11, 61680
+; BE-NEXT:    std 23, -72(1) # 8-byte Folded Spill
 ; BE-NEXT:    and 11, 0, 21
 ; BE-NEXT:    and 0, 30, 18
 ; BE-NEXT:    oris 5, 5, 52428
 ; BE-NEXT:    oris 8, 8, 13107
-; BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
+; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 11, 0, 11
 ; BE-NEXT:    ori 17, 5, 52428
-; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
+; BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
 ; BE-NEXT:    ori 5, 8, 13107
 ; BE-NEXT:    and 12, 12, 21
 ; BE-NEXT:    and 30, 29, 18
 ; BE-NEXT:    sldi 0, 11, 2
-; BE-NEXT:    std 20, -96(1) # 8-byte Folded Spill
+; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 11, 11, 62, 2
 ; BE-NEXT:    or 12, 30, 12
-; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
+; BE-NEXT:    std 20, -96(1) # 8-byte Folded Spill
 ; BE-NEXT:    and 0, 0, 17
 ; BE-NEXT:    and 11, 11, 5
 ; BE-NEXT:    oris 28, 10, 3855
 ; BE-NEXT:    sldi 30, 12, 2
-; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
+; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 12, 12, 62, 2
 ; BE-NEXT:    or 11, 11, 0
 ; BE-NEXT:    std 16, -128(1) # 8-byte Folded Spill
@@ -4951,14 +4950,14 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    rldicl 11, 11, 60, 4
 ; BE-NEXT:    std 2, -152(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 12, 12, 30
-; BE-NEXT:    and 0, 0, 7
+; BE-NEXT:    and 0, 0, 14
 ; BE-NEXT:    and 11, 11, 4
 ; BE-NEXT:    sldi 30, 12, 4
 ; BE-NEXT:    std 15, -136(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 12, 12, 60, 4
 ; BE-NEXT:    or 11, 11, 0
 ; BE-NEXT:    std 4, -288(1) # 8-byte Folded Spill
-; BE-NEXT:    and 30, 30, 7
+; BE-NEXT:    and 30, 30, 14
 ; BE-NEXT:    and 12, 12, 4
 ; BE-NEXT:    rotlwi 0, 11, 24
 ; BE-NEXT:    or 12, 12, 30
@@ -4992,12 +4991,12 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    ori 19, 0, 34952
 ; BE-NEXT:    ori 29, 26, 17476
 ; BE-NEXT:    and 16, 28, 24
-; BE-NEXT:    and 14, 27, 23
+; BE-NEXT:    and 7, 27, 23
 ; BE-NEXT:    mulld 3, 22, 20
 ; BE-NEXT:    std 3, -160(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldimi 19, 19, 32, 0
 ; BE-NEXT:    rldimi 29, 29, 32, 0
-; BE-NEXT:    mulld 3, 14, 16
+; BE-NEXT:    mulld 3, 7, 16
 ; BE-NEXT:    and 31, 28, 19
 ; BE-NEXT:    std 3, -168(1) # 8-byte Folded Spill
 ; BE-NEXT:    and 2, 27, 29
@@ -5009,7 +5008,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    std 8, -176(1) # 8-byte Folded Spill
 ; BE-NEXT:    mulld 8, 22, 31
 ; BE-NEXT:    std 8, -208(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 14, 20
+; BE-NEXT:    mulld 8, 7, 20
 ; BE-NEXT:    std 8, -216(1) # 8-byte Folded Spill
 ; BE-NEXT:    mulld 8, 2, 15
 ; BE-NEXT:    std 8, -200(1) # 8-byte Folded Spill
@@ -5017,7 +5016,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    std 8, -192(1) # 8-byte Folded Spill
 ; BE-NEXT:    mulld 8, 22, 16
 ; BE-NEXT:    std 8, -248(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 14, 15
+; BE-NEXT:    mulld 8, 7, 15
 ; BE-NEXT:    std 8, -256(1) # 8-byte Folded Spill
 ; BE-NEXT:    mulld 8, 2, 20
 ; BE-NEXT:    std 8, -232(1) # 8-byte Folded Spill
@@ -5032,7 +5031,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    rldicl 6, 6, 63, 1
 ; BE-NEXT:    and 3, 3, 21
 ; BE-NEXT:    and 6, 6, 18
-; BE-NEXT:    mulld 8, 14, 31
+; BE-NEXT:    mulld 8, 7, 31
 ; BE-NEXT:    std 8, -280(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 3, 6, 3
 ; BE-NEXT:    sldi 6, 3, 2
@@ -5047,7 +5046,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    sldi 6, 3, 4
 ; BE-NEXT:    rldicl 3, 3, 60, 4
 ; BE-NEXT:    or 25, 25, 31
-; BE-NEXT:    and 6, 6, 7
+; BE-NEXT:    and 6, 6, 14
 ; BE-NEXT:    and 3, 3, 4
 ; BE-NEXT:    sldi 31, 25, 2
 ; BE-NEXT:    rldicl 25, 25, 62, 2
@@ -5060,7 +5059,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    sldi 31, 25, 4
 ; BE-NEXT:    rldicl 25, 25, 60, 4
 ; BE-NEXT:    rlwimi 6, 3, 8, 24, 31
-; BE-NEXT:    and 31, 31, 7
+; BE-NEXT:    and 31, 31, 14
 ; BE-NEXT:    and 25, 25, 4
 ; BE-NEXT:    rldicl 3, 3, 32, 32
 ; BE-NEXT:    mulld 8, 2, 16
@@ -5116,21 +5115,20 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    ld 4, -208(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 3, 3, 10
 ; BE-NEXT:    ld 5, -216(1) # 8-byte Folded Reload
-; BE-NEXT:    mr 14, 7
 ; BE-NEXT:    mulld 7, 6, 25
 ; BE-NEXT:    mulld 6, 6, 2
 ; BE-NEXT:    ld 28, -200(1) # 8-byte Folded Reload
 ; BE-NEXT:    ld 10, -192(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 4, 5, 4
+; BE-NEXT:    mulld 2, 19, 2
 ; BE-NEXT:    ld 5, -248(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 4, 4, 28
-; BE-NEXT:    mulld 2, 19, 2
 ; BE-NEXT:    xor 4, 4, 10
 ; BE-NEXT:    ld 28, -232(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 5, 15, 5
+; BE-NEXT:    mulld 25, 19, 25
 ; BE-NEXT:    ld 10, -224(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 5, 5, 28
-; BE-NEXT:    mulld 25, 19, 25
 ; BE-NEXT:    lis 19, 2184
 ; BE-NEXT:    ld 15, -272(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 5, 5, 10
@@ -5138,84 +5136,84 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    ori 19, 19, 34952
 ; BE-NEXT:    xor 15, 16, 15
 ; BE-NEXT:    xor 7, 7, 26
-; BE-NEXT:    ld 10, -240(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldimi 19, 19, 32, 0
+; BE-NEXT:    ld 10, -240(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 28, 15, 28
 ; BE-NEXT:    xor 7, 7, 0
 ; BE-NEXT:    and 3, 3, 24
-; BE-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 4, 4, 23
+; BE-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
 ; BE-NEXT:    rlwimi 19, 19, 16, 0, 15
-; BE-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 6, 6, 31
+; BE-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 10, 28, 10
 ; BE-NEXT:    xor 8, 8, 27
-; BE-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 7, 7, 30
-; BE-NEXT:    and 5, 5, 29
 ; BE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; BE-NEXT:    and 5, 5, 29
 ; BE-NEXT:    or 3, 4, 3
+; BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 6, 6, 12
 ; BE-NEXT:    xor 9, 9, 2
 ; BE-NEXT:    and 10, 10, 19
-; BE-NEXT:    ld 2, -152(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 8, 8, 24
+; BE-NEXT:    ld 2, -152(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 7, 7, 23
-; BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
 ; BE-NEXT:    or 3, 3, 5
+; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 6, 6, 25
 ; BE-NEXT:    and 9, 9, 29
 ; BE-NEXT:    or 4, 7, 8
-; BE-NEXT:    ld 7, -288(1) # 8-byte Folded Reload
 ; BE-NEXT:    or 3, 3, 10
+; BE-NEXT:    ld 7, -288(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 6, 6, 19
-; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; BE-NEXT:    or 4, 4, 9
+; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; BE-NEXT:    sldi 5, 3, 1
 ; BE-NEXT:    rldicl 3, 3, 63, 1
 ; BE-NEXT:    or 4, 4, 6
-; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 5, 5, 21
-; BE-NEXT:    and 3, 3, 18
 ; BE-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
+; BE-NEXT:    and 3, 3, 18
 ; BE-NEXT:    sldi 6, 4, 1
+; BE-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 4, 4, 63, 1
 ; BE-NEXT:    or 3, 3, 5
 ; BE-NEXT:    and 6, 6, 21
-; BE-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 4, 4, 18
-; BE-NEXT:    sldi 5, 3, 2
 ; BE-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
+; BE-NEXT:    sldi 5, 3, 2
 ; BE-NEXT:    rldicl 3, 3, 62, 2
+; BE-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
 ; BE-NEXT:    or 4, 4, 6
 ; BE-NEXT:    and 5, 5, 17
 ; BE-NEXT:    and 3, 3, 20
-; BE-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
 ; BE-NEXT:    sldi 6, 4, 2
-; BE-NEXT:    rldicl 4, 4, 62, 2
 ; BE-NEXT:    ld 19, -104(1) # 8-byte Folded Reload
+; BE-NEXT:    rldicl 4, 4, 62, 2
 ; BE-NEXT:    or 3, 3, 5
+; BE-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 6, 6, 17
 ; BE-NEXT:    and 4, 4, 20
 ; BE-NEXT:    sldi 5, 3, 4
-; BE-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 3, 3, 60, 4
+; BE-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
 ; BE-NEXT:    or 4, 4, 6
-; BE-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 5, 5, 14
+; BE-NEXT:    ld 17, -120(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 3, 3, 7
 ; BE-NEXT:    sldi 6, 4, 4
 ; BE-NEXT:    rldicl 4, 4, 60, 4
-; BE-NEXT:    ld 17, -120(1) # 8-byte Folded Reload
 ; BE-NEXT:    or 3, 3, 5
+; BE-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 6, 6, 14
-; BE-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 4, 4, 7
+; BE-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
 ; BE-NEXT:    rotlwi 5, 3, 24
 ; BE-NEXT:    or 4, 4, 6
 ; BE-NEXT:    rlwimi 5, 3, 8, 8, 15
-; BE-NEXT:    ld 14, -144(1) # 8-byte Folded Reload
 ; BE-NEXT:    rotlwi 6, 4, 24
+; BE-NEXT:    ld 14, -144(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 7, 3, 32, 32
 ; BE-NEXT:    rlwimi 5, 3, 8, 24, 31
 ; BE-NEXT:    rldicl 3, 4, 32, 32

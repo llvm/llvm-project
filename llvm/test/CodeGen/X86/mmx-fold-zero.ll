@@ -12,18 +12,17 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X86-NEXT:    andl $-8, %esp
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movq 8(%ebp), %mm0
-; X86-NEXT:    movq 16(%ebp), %mm5
-; X86-NEXT:    movq %mm5, (%esp) # 8-byte Spill
+; X86-NEXT:    movq 16(%ebp), %mm1
+; X86-NEXT:    movq %mm1, (%esp) # 8-byte Spill
 ; X86-NEXT:    movq %mm0, %mm3
-; X86-NEXT:    paddd %mm5, %mm3
-; X86-NEXT:    pxor %mm1, %mm1
+; X86-NEXT:    paddd %mm1, %mm3
+; X86-NEXT:    pxor %mm2, %mm2
 ; X86-NEXT:    movq %mm3, %mm6
-; X86-NEXT:    pmuludq %mm1, %mm6
+; X86-NEXT:    pmuludq %mm2, %mm6
 ; X86-NEXT:    movq 24(%ebp), %mm4
 ; X86-NEXT:    movq %mm6, %mm2
 ; X86-NEXT:    paddd %mm4, %mm2
 ; X86-NEXT:    paddw %mm2, %mm0
-; X86-NEXT:    movq %mm5, %mm1
 ; X86-NEXT:    paddw %mm0, %mm1
 ; X86-NEXT:    movq 32(%ebp), %mm5
 ; X86-NEXT:    movq %mm1, %mm7
@@ -51,18 +50,17 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X64-LABEL: mmx_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movdq2q %xmm0, %mm0
-; X64-NEXT:    movdq2q %xmm1, %mm5
-; X64-NEXT:    movq %mm5, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-NEXT:    movdq2q %xmm1, %mm1
+; X64-NEXT:    movq %mm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq %mm0, %mm3
-; X64-NEXT:    paddd %mm5, %mm3
-; X64-NEXT:    pxor %mm1, %mm1
+; X64-NEXT:    paddd %mm1, %mm3
+; X64-NEXT:    pxor %mm2, %mm2
 ; X64-NEXT:    movq %mm3, %mm6
-; X64-NEXT:    pmuludq %mm1, %mm6
+; X64-NEXT:    pmuludq %mm2, %mm6
 ; X64-NEXT:    movdq2q %xmm2, %mm4
 ; X64-NEXT:    movq %mm6, %mm2
 ; X64-NEXT:    paddd %mm4, %mm2
 ; X64-NEXT:    paddw %mm2, %mm0
-; X64-NEXT:    movq %mm5, %mm1
 ; X64-NEXT:    paddw %mm0, %mm1
 ; X64-NEXT:    movdq2q %xmm3, %mm5
 ; X64-NEXT:    movq %mm1, %mm7
@@ -86,18 +84,17 @@ define double @mmx_zero(double, double, double, double) nounwind {
 ; X64-LARGE-LABEL: mmx_zero:
 ; X64-LARGE:       # %bb.0:
 ; X64-LARGE-NEXT:    movdq2q %xmm0, %mm0
-; X64-LARGE-NEXT:    movdq2q %xmm1, %mm5
-; X64-LARGE-NEXT:    movq %mm5, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-LARGE-NEXT:    movdq2q %xmm1, %mm1
+; X64-LARGE-NEXT:    movq %mm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-LARGE-NEXT:    movq %mm0, %mm3
-; X64-LARGE-NEXT:    paddd %mm5, %mm3
-; X64-LARGE-NEXT:    pxor %mm1, %mm1
+; X64-LARGE-NEXT:    paddd %mm1, %mm3
+; X64-LARGE-NEXT:    pxor %mm2, %mm2
 ; X64-LARGE-NEXT:    movq %mm3, %mm6
-; X64-LARGE-NEXT:    pmuludq %mm1, %mm6
+; X64-LARGE-NEXT:    pmuludq %mm2, %mm6
 ; X64-LARGE-NEXT:    movdq2q %xmm2, %mm4
 ; X64-LARGE-NEXT:    movq %mm6, %mm2
 ; X64-LARGE-NEXT:    paddd %mm4, %mm2
 ; X64-LARGE-NEXT:    paddw %mm2, %mm0
-; X64-LARGE-NEXT:    movq %mm5, %mm1
 ; X64-LARGE-NEXT:    paddw %mm0, %mm1
 ; X64-LARGE-NEXT:    movdq2q %xmm3, %mm5
 ; X64-LARGE-NEXT:    movq %mm1, %mm7

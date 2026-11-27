@@ -402,9 +402,9 @@ define <1 x i64> @test3(ptr %a, ptr %b, i32 %count) nounwind {
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    testl %ecx, %ecx
+; X86-NEXT:    testl %esi, %esi
 ; X86-NEXT:    je .LBB3_1
 ; X86-NEXT:  # %bb.2: # %bb26.preheader
 ; X86-NEXT:    xorl %ebx, %ebx
@@ -414,14 +414,12 @@ define <1 x i64> @test3(ptr %a, ptr %b, i32 %count) nounwind {
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    movl (%edi,%ebx,8), %ebp
-; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    movl 4(%edi,%ebx,8), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    addl (%edi,%ebx,8), %ebp
 ; X86-NEXT:    adcl 4(%edi,%ebx,8), %ecx
 ; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    adcl %ecx, %edx
-; X86-NEXT:    movl %esi, %ecx
 ; X86-NEXT:    incl %ebx
 ; X86-NEXT:    cmpl %esi, %ebx
 ; X86-NEXT:    jb .LBB3_3

@@ -486,14 +486,14 @@ define <16 x i32> @partial_reduce_sumla_i8_v16i32(<16 x i32> %acc, <64 x i8> %a,
 ; SSE2-NEXT:    pmaddwd %xmm14, %xmm3
 ; SSE2-NEXT:    punpcklwd {{.*#+}} xmm6 = xmm6[0,0,1,1,2,2,3,3]
 ; SSE2-NEXT:    pmaddwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm6 # 16-byte Folded Reload
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm4 = xmm4[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    psraw $8, %xmm4
-; SSE2-NEXT:    movdqa %xmm4, %xmm5
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm14 = xmm14[0],xmm4[0],xmm14[1],xmm4[1],xmm14[2],xmm4[2],xmm14[3],xmm4[3],xmm14[4],xmm4[4],xmm14[5],xmm4[5],xmm14[6],xmm4[6],xmm14[7],xmm4[7]
+; SSE2-NEXT:    psraw $8, %xmm14
+; SSE2-NEXT:    movdqa %xmm14, %xmm5
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pmaddwd %xmm15, %xmm5
 ; SSE2-NEXT:    paddd %xmm6, %xmm5
-; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0,0,1,1,2,2,3,3]
-; SSE2-NEXT:    pmaddwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm4 # 16-byte Folded Reload
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm14 = xmm14[0,0,1,1,2,2,3,3]
+; SSE2-NEXT:    pmaddwd {{[-0-9]+}}(%r{{[sb]}}p), %xmm14 # 16-byte Folded Reload
 ; SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm12 # 16-byte Reload
 ; SSE2-NEXT:    punpckhbw {{.*#+}} xmm6 = xmm6[8],xmm12[8],xmm6[9],xmm12[9],xmm6[10],xmm12[10],xmm6[11],xmm12[11],xmm6[12],xmm12[12],xmm6[13],xmm12[13],xmm6[14],xmm12[14],xmm6[15],xmm12[15]
 ; SSE2-NEXT:    psraw $8, %xmm6
@@ -514,10 +514,10 @@ define <16 x i32> @partial_reduce_sumla_i8_v16i32(<16 x i32> %acc, <64 x i8> %a,
 ; SSE2-NEXT:    paddd %xmm10, %xmm9
 ; SSE2-NEXT:    paddd %xmm12, %xmm9
 ; SSE2-NEXT:    paddd %xmm11, %xmm9
-; SSE2-NEXT:    movdqa (%rsp), %xmm6 # 16-byte Reload
-; SSE2-NEXT:    paddd %xmm4, %xmm6
-; SSE2-NEXT:    paddd %xmm5, %xmm6
-; SSE2-NEXT:    paddd %xmm3, %xmm6
+; SSE2-NEXT:    movdqa (%rsp), %xmm4 # 16-byte Reload
+; SSE2-NEXT:    paddd %xmm14, %xmm4
+; SSE2-NEXT:    paddd %xmm5, %xmm4
+; SSE2-NEXT:    paddd %xmm3, %xmm4
 ; SSE2-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm3 # 16-byte Reload
 ; SSE2-NEXT:    paddd %xmm8, %xmm3
 ; SSE2-NEXT:    paddd %xmm0, %xmm3
@@ -528,7 +528,7 @@ define <16 x i32> @partial_reduce_sumla_i8_v16i32(<16 x i32> %acc, <64 x i8> %a,
 ; SSE2-NEXT:    paddd %xmm1, %xmm3
 ; SSE2-NEXT:    paddd %xmm13, %xmm3
 ; SSE2-NEXT:    movdqa %xmm9, %xmm0
-; SSE2-NEXT:    movdqa %xmm6, %xmm1
+; SSE2-NEXT:    movdqa %xmm4, %xmm1
 ; SSE2-NEXT:    addq $56, %rsp
 ; SSE2-NEXT:    .cfi_def_cfa_offset 8
 ; SSE2-NEXT:    retq

@@ -706,19 +706,19 @@ define void @store_i32_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movaps 16(%rsi), %xmm9
 ; SSE-NEXT:    movaps 32(%rsi), %xmm10
 ; SSE-NEXT:    movaps 48(%rsi), %xmm11
-; SSE-NEXT:    movaps 16(%rdx), %xmm0
+; SSE-NEXT:    movaps 16(%rdx), %xmm8
 ; SSE-NEXT:    movaps 32(%rdx), %xmm3
-; SSE-NEXT:    movaps 48(%rdx), %xmm8
+; SSE-NEXT:    movaps 48(%rdx), %xmm0
 ; SSE-NEXT:    movaps %xmm5, %xmm12
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm12 = xmm12[1],xmm11[1]
 ; SSE-NEXT:    movaps %xmm5, %xmm13
 ; SSE-NEXT:    movaps %xmm5, %xmm6
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm6 = xmm6[0],xmm11[0],xmm6[1],xmm11[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[3,3],xmm11[3,3]
-; SSE-NEXT:    movaps %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[1,1],xmm8[1,1]
+; SSE-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[1,1],xmm0[1,1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm11 = xmm11[0,2],xmm12[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[1,1],xmm8[0,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[1,1],xmm0[0,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[0,1],xmm13[2,0]
 ; SSE-NEXT:    movaps %xmm4, %xmm13
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm13 = xmm13[1],xmm10[1]
@@ -737,10 +737,9 @@ define void @store_i32_stride3_vf16(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movaps %xmm2, %xmm13
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm13 = xmm13[0],xmm9[0],xmm13[1],xmm9[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3],xmm9[3,3]
-; SSE-NEXT:    movaps %xmm0, %xmm8
-; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[1,1],xmm0[1,1]
+; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[1,1],xmm8[1,1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[0,2],xmm14[0,2]
-; SSE-NEXT:    shufps {{.*#+}} xmm15 = xmm15[1,1],xmm0[0,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm15 = xmm15[1,1],xmm8[0,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[0,1],xmm15[2,0]
 ; SSE-NEXT:    movaps %xmm1, %xmm14
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm14 = xmm14[1],xmm7[1]
@@ -1184,8 +1183,8 @@ define void @store_i32_stride3_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-LABEL: store_i32_stride3_vf32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $152, %rsp
-; SSE-NEXT:    movaps (%rdi), %xmm1
-; SSE-NEXT:    movaps 16(%rdi), %xmm2
+; SSE-NEXT:    movaps (%rdi), %xmm2
+; SSE-NEXT:    movaps 16(%rdi), %xmm14
 ; SSE-NEXT:    movaps 32(%rdi), %xmm3
 ; SSE-NEXT:    movaps 48(%rdi), %xmm4
 ; SSE-NEXT:    movaps (%rsi), %xmm10
@@ -1193,43 +1192,43 @@ define void @store_i32_stride3_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movaps 32(%rsi), %xmm12
 ; SSE-NEXT:    movaps 48(%rsi), %xmm9
 ; SSE-NEXT:    movaps (%rdx), %xmm11
-; SSE-NEXT:    movaps 16(%rdx), %xmm14
+; SSE-NEXT:    movaps 16(%rdx), %xmm6
 ; SSE-NEXT:    movaps 32(%rdx), %xmm7
 ; SSE-NEXT:    movaps 48(%rdx), %xmm8
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm11[0,3]
 ; SSE-NEXT:    movaps %xmm11, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm1, %xmm5
+; SSE-NEXT:    movaps %xmm2, %xmm5
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm5 = xmm5[0],xmm10[0],xmm5[1],xmm10[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,1],xmm0[2,0]
 ; SSE-NEXT:    movaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm10[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3],xmm10[3,3]
-; SSE-NEXT:    movaps %xmm1, %xmm15
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3],xmm10[3,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[1,1],xmm11[1,1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm10 = xmm10[0,2],xmm0[0,2]
 ; SSE-NEXT:    movaps %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm2, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm14[0,3]
-; SSE-NEXT:    movaps %xmm2, %xmm1
+; SSE-NEXT:    movaps %xmm14, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm6[0,3]
+; SSE-NEXT:    movaps %xmm14, %xmm1
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm13[0],xmm1[1],xmm13[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,0]
 ; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    movaps %xmm14, %xmm0
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm13[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,3],xmm13[3,3]
-; SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[1,1],xmm14[1,1]
+; SSE-NEXT:    shufps {{.*#+}} xmm14 = xmm14[3,3],xmm13[3,3]
+; SSE-NEXT:    movaps %xmm14, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[1,1],xmm6[1,1]
+; SSE-NEXT:    movaps %xmm6, %xmm14
 ; SSE-NEXT:    shufps {{.*#+}} xmm13 = xmm13[0,2],xmm0[0,2]
 ; SSE-NEXT:    movaps %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps %xmm3, %xmm0
 ; SSE-NEXT:    movaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm7[0,3]
-; SSE-NEXT:    movaps %xmm3, %xmm2
-; SSE-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm12[0],xmm2[1],xmm12[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[2,0]
-; SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movaps %xmm3, %xmm1
+; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm12[0],xmm1[1],xmm12[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,0]
+; SSE-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps %xmm3, %xmm0
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm12[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3],xmm12[3,3]
@@ -1252,10 +1251,10 @@ define void @store_i32_stride3_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[0,2],xmm0[0,2]
 ; SSE-NEXT:    movaps %xmm9, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps 64(%rdi), %xmm9
-; SSE-NEXT:    movaps 64(%rdx), %xmm2
+; SSE-NEXT:    movaps 64(%rdx), %xmm3
 ; SSE-NEXT:    movaps %xmm9, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm2[0,3]
-; SSE-NEXT:    movaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],xmm3[0,3]
+; SSE-NEXT:    movaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movaps 64(%rsi), %xmm12
 ; SSE-NEXT:    movaps %xmm9, %xmm1
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm12[0],xmm1[1],xmm12[1]
@@ -1264,7 +1263,7 @@ define void @store_i32_stride3_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movaps %xmm9, %xmm0
 ; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm12[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm9 = xmm9[3,3],xmm12[3,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm12 = xmm12[1,1],xmm2[1,1]
+; SSE-NEXT:    shufps {{.*#+}} xmm12 = xmm12[1,1],xmm3[1,1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm12 = xmm12[0,2],xmm0[0,2]
 ; SSE-NEXT:    movaps 80(%rdi), %xmm10
 ; SSE-NEXT:    movaps 80(%rdx), %xmm1
@@ -1295,18 +1294,17 @@ define void @store_i32_stride3_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    shufps {{.*#+}} xmm5 = xmm5[0,2],xmm0[0,2]
 ; SSE-NEXT:    movaps 112(%rdi), %xmm0
 ; SSE-NEXT:    movaps 112(%rdx), %xmm7
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1],xmm7[0,3]
+; SSE-NEXT:    movaps %xmm0, %xmm15
+; SSE-NEXT:    shufps {{.*#+}} xmm15 = xmm15[1,1],xmm7[0,3]
 ; SSE-NEXT:    movaps 112(%rsi), %xmm1
 ; SSE-NEXT:    movaps %xmm0, %xmm3
 ; SSE-NEXT:    unpcklps {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm2[2,0]
-; SSE-NEXT:    movaps %xmm0, %xmm2
-; SSE-NEXT:    unpckhpd {{.*#+}} xmm2 = xmm2[1],xmm1[1]
+; SSE-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm15[2,0]
+; SSE-NEXT:    movaps %xmm0, %xmm15
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm15 = xmm15[1],xmm1[1]
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,3],xmm1[3,3]
 ; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1],xmm7[1,1]
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
-; SSE-NEXT:    movaps %xmm15, %xmm2
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm15[0,2]
 ; SSE-NEXT:    shufps $233, {{[-0-9]+}}(%r{{[sb]}}p), %xmm2 # 16-byte Folded Reload
 ; SSE-NEXT:    # xmm2 = xmm2[1,2],mem[2,3]
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm15 # 16-byte Reload
@@ -1361,15 +1359,13 @@ define void @store_i32_stride3_vf32(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0,1,3]
 ; SSE-NEXT:    movaps %xmm0, 176(%rcx)
-; SSE-NEXT:    movaps %xmm15, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm15[1,3]
-; SSE-NEXT:    movaps %xmm0, 128(%rcx)
+; SSE-NEXT:    shufps {{.*#+}} xmm15 = xmm15[2,0,1,3]
+; SSE-NEXT:    movaps %xmm15, 128(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0,1,3]
 ; SSE-NEXT:    movaps %xmm0, 80(%rcx)
-; SSE-NEXT:    movaps %xmm2, %xmm0
-; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[1,3]
-; SSE-NEXT:    movaps %xmm0, 32(%rcx)
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0,1,3]
+; SSE-NEXT:    movaps %xmm2, 32(%rcx)
 ; SSE-NEXT:    addq $152, %rsp
 ; SSE-NEXT:    retq
 ;

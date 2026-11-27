@@ -45,39 +45,38 @@ define void @f() nounwind {
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    shldl $30, %ebx, %eax
 ; X86-NEXT:    movl %esi, %edi
-; X86-NEXT:    movl %esi, %ecx
 ; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    shrdl $2, %ebx, %ecx
+; X86-NEXT:    shrdl $2, %ebx, %esi
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    jne .LBB0_1
 ; X86-NEXT:  # %bb.2: # %BB_udiv-special-cases
-; X86-NEXT:    bsrl %ecx, %esi
-; X86-NEXT:    xorl $31, %esi
-; X86-NEXT:    orl $32, %esi
+; X86-NEXT:    bsrl %esi, %ecx
+; X86-NEXT:    xorl $31, %ecx
+; X86-NEXT:    orl $32, %ecx
 ; X86-NEXT:    jmp .LBB0_3
 ; X86-NEXT:  .LBB0_1:
-; X86-NEXT:    bsrl %eax, %esi
-; X86-NEXT:    xorl $31, %esi
+; X86-NEXT:    bsrl %eax, %ecx
+; X86-NEXT:    xorl $31, %ecx
 ; X86-NEXT:  .LBB0_3: # %BB_udiv-special-cases
 ; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    shll $30, %edx
 ; X86-NEXT:    jne .LBB0_4
 ; X86-NEXT:  # %bb.5: # %BB_udiv-special-cases
 ; X86-NEXT:    movl $64, %edx
-; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    orl %eax, %esi
 ; X86-NEXT:    je .LBB0_7
 ; X86-NEXT:    jmp .LBB0_8
 ; X86-NEXT:  .LBB0_4:
 ; X86-NEXT:    bsrl %edx, %edx
 ; X86-NEXT:    xorl $31, %edx
-; X86-NEXT:    orl %eax, %ecx
+; X86-NEXT:    orl %eax, %esi
 ; X86-NEXT:    jne .LBB0_8
 ; X86-NEXT:  .LBB0_7: # %BB_udiv-special-cases
 ; X86-NEXT:    addl $64, %edx
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:  .LBB0_8: # %BB_udiv-special-cases
-; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    addl $-66, %edx
 ; X86-NEXT:    movl $0, %ebx
 ; X86-NEXT:    adcl $-1, %ebx
@@ -113,9 +112,8 @@ define void @f() nounwind {
 ; X86-NEXT:    adcl $0, %esi
 ; X86-NEXT:    andl $3, %esi
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    orl %esi, %eax
-; X86-NEXT:    orl %ebx, %eax
+; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    orl %ebx, %edx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    je .LBB0_15
 ; X86-NEXT:  # %bb.13: # %udiv-preheader

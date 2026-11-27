@@ -109,7 +109,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV7-NEXT:    ldr r8, [sp, #88]
 ; ARMV7-NEXT:    mov r6, r0
 ; ARMV7-NEXT:    ldr r4, [sp, #96]
-; ARMV7-NEXT:    ldr r7, [sp, #80]
+; ARMV7-NEXT:    ldr r7, [sp, #92]
 ; ARMV7-NEXT:    umull r0, r5, r2, r8
 ; ARMV7-NEXT:    ldr lr, [sp, #100]
 ; ARMV7-NEXT:    umull r10, r11, lr, r2
@@ -118,11 +118,10 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) unnamed_addr #0 {
 ; ARMV7-NEXT:    str r1, [sp, #4] @ 4-byte Spill
 ; ARMV7-NEXT:    str r0, [sp, #28] @ 4-byte Spill
 ; ARMV7-NEXT:    umull r0, r9, r4, r2
-; ARMV7-NEXT:    ldr r1, [sp, #92]
-; ARMV7-NEXT:    umull r4, r12, r1, r7
+; ARMV7-NEXT:    ldr r1, [sp, #80]
+; ARMV7-NEXT:    umull r4, r12, r7, r1
 ; ARMV7-NEXT:    str r0, [sp, #36] @ 4-byte Spill
 ; ARMV7-NEXT:    ldr r0, [sp, #84]
-; ARMV7-NEXT:    mov r7, r1
 ; ARMV7-NEXT:    str r4, [sp, #20] @ 4-byte Spill
 ; ARMV7-NEXT:    umull r4, r1, r0, r8
 ; ARMV7-NEXT:    str r4, [sp, #16] @ 4-byte Spill

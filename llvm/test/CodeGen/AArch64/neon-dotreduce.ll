@@ -6271,7 +6271,7 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    ldr w9, [sp, #872]
 ; CHECK-GI-NEXT:    sbfx w10, w10, #8, #8
 ; CHECK-GI-NEXT:    ldr w8, [sp, #880]
-; CHECK-GI-NEXT:    mov v21.s[2], wzr
+; CHECK-GI-NEXT:    add v24.4s, v24.4s, v25.4s
 ; CHECK-GI-NEXT:    mov v13.h[2], w12
 ; CHECK-GI-NEXT:    ldr w12, [sp, #960]
 ; CHECK-GI-NEXT:    mov v11.h[5], w13
@@ -6352,7 +6352,7 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    ldr w14, [sp, #1064]
 ; CHECK-GI-NEXT:    sbfx w9, w9, #8, #8
 ; CHECK-GI-NEXT:    sbfx w10, w10, #8, #8
-; CHECK-GI-NEXT:    mov v16.s[2], wzr
+; CHECK-GI-NEXT:    mov v21.s[2], wzr
 ; CHECK-GI-NEXT:    mov v13.h[7], w12
 ; CHECK-GI-NEXT:    ldr w12, [sp, #1008]
 ; CHECK-GI-NEXT:    lsl w8, w8, #8
@@ -6390,8 +6390,8 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    mov v27.s[3], w13
 ; CHECK-GI-NEXT:    smov w10, v0.h[2]
 ; CHECK-GI-NEXT:    smov w13, v12.h[1]
+; CHECK-GI-NEXT:    mov v16.s[2], wzr
 ; CHECK-GI-NEXT:    mov v18.s[2], wzr
-; CHECK-GI-NEXT:    mov v17.s[2], wzr
 ; CHECK-GI-NEXT:    mov v29.s[1], w11
 ; CHECK-GI-NEXT:    smov w11, v12.h[4]
 ; CHECK-GI-NEXT:    fmov s30, w9
@@ -6403,7 +6403,7 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    mul v15.8h, v11.8h, v15.8h
 ; CHECK-GI-NEXT:    mov v30.s[1], w8
 ; CHECK-GI-NEXT:    smov w8, v12.h[2]
-; CHECK-GI-NEXT:    mov v20.s[2], wzr
+; CHECK-GI-NEXT:    add v25.4s, v26.4s, v27.4s
 ; CHECK-GI-NEXT:    fmov s9, w11
 ; CHECK-GI-NEXT:    smov w11, v13.h[4]
 ; CHECK-GI-NEXT:    mov v29.s[2], w10
@@ -6412,7 +6412,7 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    smov w13, v0.h[3]
 ; CHECK-GI-NEXT:    fmov s10, w12
 ; CHECK-GI-NEXT:    smov w12, v12.h[6]
-; CHECK-GI-NEXT:    mov v6.s[2], wzr
+; CHECK-GI-NEXT:    ldr q27, [sp] // 16-byte Reload
 ; CHECK-GI-NEXT:    mov v30.s[2], w9
 ; CHECK-GI-NEXT:    smov w9, v13.h[5]
 ; CHECK-GI-NEXT:    mov v9.s[1], w14
@@ -6433,7 +6433,7 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    smov w12, v15.h[1]
 ; CHECK-GI-NEXT:    mov v8.s[3], w8
 ; CHECK-GI-NEXT:    smov w8, v13.h[3]
-; CHECK-GI-NEXT:    ldr q0, [sp] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v27.s[1], wzr
 ; CHECK-GI-NEXT:    mov v10.s[2], w10
 ; CHECK-GI-NEXT:    smov w10, v15.h[5]
 ; CHECK-GI-NEXT:    fmov s12, w13
@@ -6442,10 +6442,10 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    mov v9.s[3], w9
 ; CHECK-GI-NEXT:    fmov s13, w14
 ; CHECK-GI-NEXT:    ldr w9, [sp, #288]
-; CHECK-GI-NEXT:    mov v0.s[1], wzr
+; CHECK-GI-NEXT:    smov w13, v15.h[2]
 ; CHECK-GI-NEXT:    mov v12.s[1], w12
 ; CHECK-GI-NEXT:    ldr w12, [sp, #552]
-; CHECK-GI-NEXT:    smov w13, v15.h[2]
+; CHECK-GI-NEXT:    mov v17.s[2], wzr
 ; CHECK-GI-NEXT:    mov v10.s[3], w8
 ; CHECK-GI-NEXT:    smov w8, v15.h[6]
 ; CHECK-GI-NEXT:    sxtb w9, w9
@@ -6454,22 +6454,22 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    mov v11.s[3], w11
 ; CHECK-GI-NEXT:    ldr w11, [sp, #1080]
 ; CHECK-GI-NEXT:    sxtb w12, w12
-; CHECK-GI-NEXT:    mov v7.s[2], wzr
+; CHECK-GI-NEXT:    mov v20.s[2], wzr
 ; CHECK-GI-NEXT:    sxtb w10, w10
+; CHECK-GI-NEXT:    mov v6.s[2], wzr
+; CHECK-GI-NEXT:    mov v7.s[2], wzr
+; CHECK-GI-NEXT:    sxtb w11, w11
 ; CHECK-GI-NEXT:    mov v2.s[2], wzr
 ; CHECK-GI-NEXT:    mov v4.s[2], wzr
-; CHECK-GI-NEXT:    sxtb w11, w11
-; CHECK-GI-NEXT:    mov v3.s[2], wzr
-; CHECK-GI-NEXT:    mov v5.s[2], wzr
 ; CHECK-GI-NEXT:    mov v13.s[2], w8
 ; CHECK-GI-NEXT:    mul w8, w9, w12
-; CHECK-GI-NEXT:    mov v0.s[2], wzr
+; CHECK-GI-NEXT:    mov v3.s[2], wzr
 ; CHECK-GI-NEXT:    mul w9, w10, w11
+; CHECK-GI-NEXT:    mov v5.s[2], wzr
 ; CHECK-GI-NEXT:    add v14.4s, v22.4s, v23.4s
 ; CHECK-GI-NEXT:    mov v12.s[2], w13
 ; CHECK-GI-NEXT:    mov v1.s[2], wzr
-; CHECK-GI-NEXT:    add v24.4s, v24.4s, v25.4s
-; CHECK-GI-NEXT:    add v25.4s, v26.4s, v27.4s
+; CHECK-GI-NEXT:    mov v27.s[2], wzr
 ; CHECK-GI-NEXT:    fmov s22, w8
 ; CHECK-GI-NEXT:    smov w8, v15.h[3]
 ; CHECK-GI-NEXT:    mov v19.s[3], wzr
@@ -6482,7 +6482,6 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    mov v20.s[3], wzr
 ; CHECK-GI-NEXT:    mov v6.s[3], wzr
 ; CHECK-GI-NEXT:    mov v7.s[3], wzr
-; CHECK-GI-NEXT:    mov v27.16b, v0.16b
 ; CHECK-GI-NEXT:    mov v2.s[3], wzr
 ; CHECK-GI-NEXT:    mov v4.s[3], wzr
 ; CHECK-GI-NEXT:    mov v3.s[3], wzr
@@ -6503,32 +6502,32 @@ define i32 @test_sdot_v33i8_double(<33 x i8> %a, <33 x i8> %b, <33 x i8> %c, <33
 ; CHECK-GI-NEXT:    mov v23.s[2], wzr
 ; CHECK-GI-NEXT:    add v26.4s, v28.4s, v31.4s
 ; CHECK-GI-NEXT:    add v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    add v1.4s, v16.4s, v17.4s
 ; CHECK-GI-NEXT:    add v4.4s, v29.4s, v30.4s
+; CHECK-GI-NEXT:    add v1.4s, v16.4s, v17.4s
 ; CHECK-GI-NEXT:    add v5.4s, v8.4s, v9.4s
 ; CHECK-GI-NEXT:    add v7.4s, v10.4s, v11.4s
 ; CHECK-GI-NEXT:    add v16.4s, v12.4s, v13.4s
 ; CHECK-GI-NEXT:    add v6.4s, v27.4s, v6.4s
 ; CHECK-GI-NEXT:    add v2.4s, v2.4s, v3.4s
 ; CHECK-GI-NEXT:    mov v22.s[3], wzr
-; CHECK-GI-NEXT:    add v3.4s, v14.4s, v24.4s
 ; CHECK-GI-NEXT:    mov v23.s[3], wzr
+; CHECK-GI-NEXT:    add v3.4s, v14.4s, v24.4s
 ; CHECK-GI-NEXT:    add v17.4s, v25.4s, v26.4s
 ; CHECK-GI-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    add v1.4s, v4.4s, v5.4s
 ; CHECK-GI-NEXT:    add v4.4s, v7.4s, v16.4s
-; CHECK-GI-NEXT:    ldr x29, [sp, #80] // 8-byte Reload
 ; CHECK-GI-NEXT:    add v2.4s, v6.4s, v2.4s
+; CHECK-GI-NEXT:    ldr x29, [sp, #80] // 8-byte Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    add v3.4s, v3.4s, v17.4s
 ; CHECK-GI-NEXT:    add v0.4s, v22.4s, v0.4s
 ; CHECK-GI-NEXT:    add v1.4s, v1.4s, v4.4s
-; CHECK-GI-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    add v2.4s, v23.4s, v2.4s
-; CHECK-GI-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    add v0.4s, v3.4s, v0.4s
-; CHECK-GI-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    add v1.4s, v1.4s, v2.4s
+; CHECK-GI-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    addv s0, v0.4s
 ; CHECK-GI-NEXT:    addv s1, v1.4s
 ; CHECK-GI-NEXT:    fmov w8, s0

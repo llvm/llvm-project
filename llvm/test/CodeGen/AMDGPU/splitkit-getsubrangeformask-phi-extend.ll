@@ -558,12 +558,11 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_41
 ; CHECK-NEXT:  ; %bb.8: ; %bb0b
 ; CHECK-NEXT:    s_and_saveexec_b64 s[52:53], s[36:37]
-; CHECK-NEXT:    s_mov_b64 s[36:37], s[52:53]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_10
 ; CHECK-NEXT:  ; %bb.9: ; %cond.load
 ; CHECK-NEXT:    flat_load_dwordx2 v[18:19], v[0:1]
 ; CHECK-NEXT:  .LBB0_10: ; %else
-; CHECK-NEXT:    s_or_b64 exec, exec, s[36:37]
+; CHECK-NEXT:    s_or_b64 exec, exec, s[52:53]
 ; CHECK-NEXT:    s_mov_b64 s[36:37], exec
 ; CHECK-NEXT:    buffer_load_dword v14, off, s[0:3], s32 offset:948 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v15, off, s[0:3], s32 offset:952 ; 4-byte Folded Reload
@@ -830,8 +829,7 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    v_or_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 24, v10
 ; CHECK-NEXT:    v_mov_b32_e32 v10, v6
-; CHECK-NEXT:    v_mov_b32_e32 v6, v3
-; CHECK-NEXT:    v_mov_b32_e32 v3, v45
+; CHECK-NEXT:    v_mov_b32_e32 v6, v45
 ; CHECK-NEXT:    v_and_b32_e32 v45, 0x7fffffff, v14
 ; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[0:1] offset:64
 ; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 7, v[44:45]
@@ -858,17 +856,16 @@ define void @f(ptr %p, <16 x i1> %m, <16 x i63> %pt, <16 x i1> %sc,
 ; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[0:1] offset:32
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 28, v16
 ; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 3, v[12:13]
-; CHECK-NEXT:    v_mov_b32_e32 v45, v3
+; CHECK-NEXT:    v_mov_b32_e32 v45, v6
 ; CHECK-NEXT:    v_or_b32_e32 v1, v1, v2
-; CHECK-NEXT:    v_mov_b32_e32 v3, v61
+; CHECK-NEXT:    v_mov_b32_e32 v6, v61
 ; CHECK-NEXT:    v_and_b32_e32 v61, 0x7fffffff, v4
 ; CHECK-NEXT:    flat_store_dwordx2 v[22:23], v[0:1]
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 29, v12
 ; CHECK-NEXT:    v_lshrrev_b64 v[0:1], 2, v[60:61]
 ; CHECK-NEXT:    v_or_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_and_b32_e32 v9, 0x7fffffff, v2
-; CHECK-NEXT:    v_mov_b32_e32 v61, v3
-; CHECK-NEXT:    v_mov_b32_e32 v3, v6
+; CHECK-NEXT:    v_mov_b32_e32 v61, v6
 ; CHECK-NEXT:    flat_store_dwordx2 v[34:35], v[0:1] offset:16
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v1, 30, v60
 ; CHECK-NEXT:    v_mov_b32_e32 v2, v7

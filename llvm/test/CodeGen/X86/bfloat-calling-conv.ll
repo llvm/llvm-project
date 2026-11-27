@@ -272,6 +272,7 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ;
 ; FAST_ISEL_SSE2-LABEL: return_arg_v16bf16:
 ; FAST_ISEL_SSE2:       # %bb.0:
+; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, %xmm8
 ; FAST_ISEL_SSE2-NEXT:    pxor %xmm6, %xmm6
 ; FAST_ISEL_SSE2-NEXT:    pxor %xmm2, %xmm2
 ; FAST_ISEL_SSE2-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm1[4],xmm2[5],xmm1[5],xmm2[6],xmm1[6],xmm2[7],xmm1[7]
@@ -285,7 +286,6 @@ define <16 x bfloat> @return_arg_v16bf16(<16 x bfloat> %x) #0 {
 ; FAST_ISEL_SSE2-NEXT:    pextrw $3, %xmm1, %eax
 ; FAST_ISEL_SSE2-NEXT:    pextrw $2, %xmm1, %ecx
 ; FAST_ISEL_SSE2-NEXT:    pextrw $1, %xmm1, %edx
-; FAST_ISEL_SSE2-NEXT:    movdqa %xmm1, %xmm8
 ; FAST_ISEL_SSE2-NEXT:    pslld $16, %xmm8
 ; FAST_ISEL_SSE2-NEXT:    movd %eax, %xmm1
 ; FAST_ISEL_SSE2-NEXT:    movd %ecx, %xmm7

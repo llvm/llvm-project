@@ -2517,14 +2517,13 @@ define i64 @reduce_ctpop_v16i64(<16 x i64> %a0) nounwind {
 ; X86-SSE4-NEXT:    movdqa 56(%ebp), %xmm5
 ; X86-SSE4-NEXT:    paddb %xmm2, %xmm0
 ; X86-SSE4-NEXT:    paddb %xmm7, %xmm0
-; X86-SSE4-NEXT:    movdqa (%esp), %xmm6 # 16-byte Reload
-; X86-SSE4-NEXT:    movdqa %xmm6, %xmm2
-; X86-SSE4-NEXT:    pand %xmm4, %xmm2
-; X86-SSE4-NEXT:    movdqa %xmm3, %xmm7
-; X86-SSE4-NEXT:    pshufb %xmm2, %xmm7
-; X86-SSE4-NEXT:    psrlw $4, %xmm6
+; X86-SSE4-NEXT:    movdqa (%esp), %xmm2 # 16-byte Reload
+; X86-SSE4-NEXT:    movdqa %xmm2, %xmm6
 ; X86-SSE4-NEXT:    pand %xmm4, %xmm6
-; X86-SSE4-NEXT:    movdqa %xmm6, %xmm2
+; X86-SSE4-NEXT:    movdqa %xmm3, %xmm7
+; X86-SSE4-NEXT:    pshufb %xmm6, %xmm7
+; X86-SSE4-NEXT:    psrlw $4, %xmm2
+; X86-SSE4-NEXT:    pand %xmm4, %xmm2
 ; X86-SSE4-NEXT:    movdqa %xmm3, %xmm6
 ; X86-SSE4-NEXT:    pshufb %xmm2, %xmm6
 ; X86-SSE4-NEXT:    paddb %xmm7, %xmm6
@@ -3819,10 +3818,10 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-SSE2-NEXT:    pand %xmm7, %xmm1
 ; X86-SSE2-NEXT:    psubb %xmm1, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm6
 ; X86-SSE2-NEXT:    pand %xmm0, %xmm1
 ; X86-SSE2-NEXT:    psrlw $2, %xmm2
 ; X86-SSE2-NEXT:    pand %xmm0, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm6
 ; X86-SSE2-NEXT:    paddb %xmm1, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; X86-SSE2-NEXT:    psrlw $4, %xmm1
@@ -3840,9 +3839,9 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-SSE2-NEXT:    psrlw $4, %xmm0
 ; X86-SSE2-NEXT:    paddb %xmm4, %xmm0
 ; X86-SSE2-NEXT:    movdqa 72(%ebp), %xmm2
+; X86-SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSE2-NEXT:    pand %xmm3, %xmm1
 ; X86-SSE2-NEXT:    pand %xmm3, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm3, %xmm4
 ; X86-SSE2-NEXT:    paddb %xmm1, %xmm0
 ; X86-SSE2-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm0
@@ -4455,14 +4454,13 @@ define <8 x i32> @reduce_ctpop_v4i64_buildvector_v8i32(<4 x i64> %a0, <4 x i64> 
 ; X86-SSE4-NEXT:    paddb %xmm2, %xmm4
 ; X86-SSE4-NEXT:    paddb %xmm5, %xmm4
 ; X86-SSE4-NEXT:    movdqa 200(%ebp), %xmm1
-; X86-SSE4-NEXT:    movdqa %xmm1, %xmm2
-; X86-SSE4-NEXT:    movdqa %xmm0, %xmm5
-; X86-SSE4-NEXT:    pand %xmm0, %xmm2
+; X86-SSE4-NEXT:    movdqa %xmm1, %xmm5
+; X86-SSE4-NEXT:    movdqa %xmm0, %xmm2
+; X86-SSE4-NEXT:    pand %xmm0, %xmm5
 ; X86-SSE4-NEXT:    movdqa %xmm3, %xmm0
-; X86-SSE4-NEXT:    pshufb %xmm2, %xmm0
+; X86-SSE4-NEXT:    pshufb %xmm5, %xmm0
 ; X86-SSE4-NEXT:    psrlw $4, %xmm1
-; X86-SSE4-NEXT:    pand %xmm5, %xmm1
-; X86-SSE4-NEXT:    movdqa %xmm5, %xmm2
+; X86-SSE4-NEXT:    pand %xmm2, %xmm1
 ; X86-SSE4-NEXT:    movdqa %xmm3, %xmm5
 ; X86-SSE4-NEXT:    pshufb %xmm1, %xmm5
 ; X86-SSE4-NEXT:    paddb %xmm0, %xmm5

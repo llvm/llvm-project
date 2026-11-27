@@ -149,16 +149,14 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X86-NOBMI-NEXT:    movzbl %bl, %esi
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NOBMI-NEXT:    adcl %esi, %edx
-; X86-NOBMI-NEXT:    movl %ecx, %ebx
-; X86-NOBMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
-; X86-NOBMI-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
+; X86-NOBMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; X86-NOBMI-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Folded Reload
 ; X86-NOBMI-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
 ; X86-NOBMI-NEXT:    adcl $0, %eax
 ; X86-NOBMI-NEXT:    adcl $0, %edx
 ; X86-NOBMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NOBMI-NEXT:    movl %ecx, (%esi,%ebx,8)
-; X86-NOBMI-NEXT:    movl %ebx, %ecx
-; X86-NOBMI-NEXT:    movl %edi, 4(%esi,%ebx,8)
+; X86-NOBMI-NEXT:    movl %ebx, (%esi,%ecx,8)
+; X86-NOBMI-NEXT:    movl %edi, 4(%esi,%ecx,8)
 ; X86-NOBMI-NEXT:    addl $1, %ecx
 ; X86-NOBMI-NEXT:    movl (%esp), %edi # 4-byte Reload
 ; X86-NOBMI-NEXT:    adcl $0, %edi
@@ -218,14 +216,13 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X86-BMI-NEXT:    addl %esi, %edi
 ; X86-BMI-NEXT:    adcl %eax, %ebp
 ; X86-BMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; X86-BMI-NEXT:    mulxl %ecx, %ecx, %eax
-; X86-BMI-NEXT:    setb %dl
+; X86-BMI-NEXT:    mulxl %ecx, %ecx, %edx
+; X86-BMI-NEXT:    setb %al
 ; X86-BMI-NEXT:    addl %ebp, %ecx
 ; X86-BMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-BMI-NEXT:    movzbl %dl, %edx
-; X86-BMI-NEXT:    adcl %edx, %eax
-; X86-BMI-NEXT:    movl %eax, %edx
+; X86-BMI-NEXT:    movzbl %al, %eax
+; X86-BMI-NEXT:    adcl %eax, %edx
 ; X86-BMI-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-BMI-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
 ; X86-BMI-NEXT:    adcl (%esp), %edi # 4-byte Folded Reload
@@ -269,11 +266,11 @@ define i64 @mul1(i64 %n, ptr nocapture %z, ptr nocapture %x, i64 %y) nounwind {
 ; X64-NOBMI-NEXT:    movq %rcx, %rax
 ; X64-NOBMI-NEXT:    mulq (%r8,%r9,8)
 ; X64-NOBMI-NEXT:    addq %r10, %rax
-; X64-NOBMI-NEXT:    adcq $0, %rdx
+; X64-NOBMI-NEXT:    movq %rdx, %r10
+; X64-NOBMI-NEXT:    adcq $0, %r10
 ; X64-NOBMI-NEXT:    movq %rax, (%rsi,%r9,8)
 ; X64-NOBMI-NEXT:    incq %r9
 ; X64-NOBMI-NEXT:    cmpq %r9, %rdi
-; X64-NOBMI-NEXT:    movq %rdx, %r10
 ; X64-NOBMI-NEXT:    jne .LBB1_2
 ; X64-NOBMI-NEXT:  .LBB1_3: # %for.end
 ; X64-NOBMI-NEXT:    xorl %eax, %eax

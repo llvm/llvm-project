@@ -643,9 +643,8 @@ define i512 @bext_i512_vector(<8 x i64> %v0, i512 %idx, i512 %len) nounwind {
 ; AVX2-NEXT:    negl %eax
 ; AVX2-NEXT:    cltq
 ; AVX2-NEXT:    movq (%rsp,%rax), %r8
-; AVX2-NEXT:    movq 8(%rsp,%rax), %rdx
-; AVX2-NEXT:    shldq %cl, %r8, %rdx
-; AVX2-NEXT:    movq %rdx, %r11
+; AVX2-NEXT:    movq 8(%rsp,%rax), %r11
+; AVX2-NEXT:    shldq %cl, %r8, %r11
 ; AVX2-NEXT:    movq -8(%rsp,%rax), %r9
 ; AVX2-NEXT:    shldq %cl, %r9, %r8
 ; AVX2-NEXT:    movq -16(%rsp,%rax), %r10
@@ -984,9 +983,8 @@ define i512 @bext_i512_load(ptr %p0, i512 %idx, i512 %len) nounwind {
 ; AVX2-NEXT:    negl %eax
 ; AVX2-NEXT:    cltq
 ; AVX2-NEXT:    movq (%rsp,%rax), %r8
-; AVX2-NEXT:    movq 8(%rsp,%rax), %rsi
-; AVX2-NEXT:    shldq %cl, %r8, %rsi
-; AVX2-NEXT:    movq %rsi, %r11
+; AVX2-NEXT:    movq 8(%rsp,%rax), %r11
+; AVX2-NEXT:    shldq %cl, %r8, %r11
 ; AVX2-NEXT:    movq -8(%rsp,%rax), %r9
 ; AVX2-NEXT:    shldq %cl, %r9, %r8
 ; AVX2-NEXT:    movq -16(%rsp,%rax), %r10
@@ -1198,9 +1196,9 @@ define i512 @blsi_i512(i512 %a0) nounwind {
 ; SSE-NEXT:    pushq %r12
 ; SSE-NEXT:    pushq %rbx
 ; SSE-NEXT:    movq %rdx, %r12
+; SSE-NEXT:    movq %rsi, %r11
 ; SSE-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SSE-NEXT:    xorl %r10d, %r10d
-; SSE-NEXT:    movq %rsi, %r11
 ; SSE-NEXT:    negq %r11
 ; SSE-NEXT:    movl $0, %ebx
 ; SSE-NEXT:    sbbq %rdx, %rbx
@@ -1251,9 +1249,9 @@ define i512 @blsi_i512(i512 %a0) nounwind {
 ; AVX2-NEXT:    pushq %r13
 ; AVX2-NEXT:    pushq %r12
 ; AVX2-NEXT:    pushq %rbx
+; AVX2-NEXT:    movq %rsi, %r11
 ; AVX2-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX2-NEXT:    xorl %r10d, %r10d
-; AVX2-NEXT:    movq %rsi, %r11
 ; AVX2-NEXT:    negq %r11
 ; AVX2-NEXT:    movl $0, %ebx
 ; AVX2-NEXT:    sbbq %rdx, %rbx
@@ -1303,9 +1301,9 @@ define i512 @blsi_i512(i512 %a0) nounwind {
 ; AVX512F-NEXT:    pushq %r13
 ; AVX512F-NEXT:    pushq %r12
 ; AVX512F-NEXT:    pushq %rbx
+; AVX512F-NEXT:    movq %rsi, %r11
 ; AVX512F-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX512F-NEXT:    xorl %r10d, %r10d
-; AVX512F-NEXT:    movq %rsi, %r11
 ; AVX512F-NEXT:    negq %r11
 ; AVX512F-NEXT:    movl $0, %ebx
 ; AVX512F-NEXT:    sbbq %rdx, %rbx

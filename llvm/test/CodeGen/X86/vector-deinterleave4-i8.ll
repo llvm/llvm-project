@@ -1842,17 +1842,17 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-LABEL: load_i8_stride4_vf64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $136, %rsp
-; SSE-NEXT:    movdqa 64(%rdi), %xmm5
-; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 80(%rdi), %xmm3
-; SSE-NEXT:    movdqa %xmm3, (%rsp) # 16-byte Spill
+; SSE-NEXT:    movdqa 64(%rdi), %xmm8
+; SSE-NEXT:    movdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 80(%rdi), %xmm6
+; SSE-NEXT:    movdqa %xmm6, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    movdqa 96(%rdi), %xmm13
 ; SSE-NEXT:    movdqa %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 112(%rdi), %xmm8
-; SSE-NEXT:    movdqa %xmm8, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 112(%rdi), %xmm5
+; SSE-NEXT:    movdqa %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa (%rdi), %xmm7
-; SSE-NEXT:    movdqa 16(%rdi), %xmm1
-; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 16(%rdi), %xmm3
+; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 32(%rdi), %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 48(%rdi), %xmm0
@@ -1863,24 +1863,22 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    packuswb %xmm0, %xmm4
 ; SSE-NEXT:    movdqa %xmm4, %xmm0
 ; SSE-NEXT:    psrlw $8, %xmm0
-; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm3
 ; SSE-NEXT:    movdqa %xmm7, %xmm10
 ; SSE-NEXT:    pand %xmm2, %xmm10
-; SSE-NEXT:    packuswb %xmm1, %xmm10
+; SSE-NEXT:    packuswb %xmm3, %xmm10
 ; SSE-NEXT:    movdqa %xmm10, %xmm1
 ; SSE-NEXT:    psrlw $8, %xmm1
 ; SSE-NEXT:    packuswb %xmm0, %xmm1
 ; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm8, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm5
 ; SSE-NEXT:    pand %xmm2, %xmm13
-; SSE-NEXT:    packuswb %xmm1, %xmm13
+; SSE-NEXT:    packuswb %xmm5, %xmm13
 ; SSE-NEXT:    movdqa %xmm13, %xmm1
 ; SSE-NEXT:    psrlw $8, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm3
-; SSE-NEXT:    movdqa %xmm5, %xmm8
+; SSE-NEXT:    pand %xmm2, %xmm6
 ; SSE-NEXT:    pand %xmm2, %xmm8
-; SSE-NEXT:    packuswb %xmm3, %xmm8
+; SSE-NEXT:    packuswb %xmm6, %xmm8
 ; SSE-NEXT:    movdqa %xmm8, %xmm0
 ; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
@@ -1938,28 +1936,25 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    pand %xmm2, %xmm14
 ; SSE-NEXT:    pand %xmm2, %xmm3
 ; SSE-NEXT:    packuswb %xmm14, %xmm3
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    psrlw $8, %xmm1
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    psrlw $8, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE-NEXT:    psrlw $8, %xmm1
+; SSE-NEXT:    packuswb %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    psrlw $8, %xmm7
 ; SSE-NEXT:    packuswb %xmm0, %xmm7
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    psrlw $8, %xmm0
+; SSE-NEXT:    psrlw $8, %xmm1
 ; SSE-NEXT:    movdqa %xmm7, %xmm4
 ; SSE-NEXT:    psrlw $8, %xmm4
-; SSE-NEXT:    packuswb %xmm0, %xmm4
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
-; SSE-NEXT:    psrlw $8, %xmm1
+; SSE-NEXT:    packuswb %xmm1, %xmm4
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    psrlw $8, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm1
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; SSE-NEXT:    psrlw $8, %xmm1
+; SSE-NEXT:    packuswb %xmm0, %xmm1
 ; SSE-NEXT:    movdqa (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
@@ -1968,7 +1963,6 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movdqa %xmm1, %xmm9
 ; SSE-NEXT:    psrlw $8, %xmm9
 ; SSE-NEXT:    movdqa %xmm13, %xmm10
-; SSE-NEXT:    movdqa %xmm13, %xmm0
 ; SSE-NEXT:    psrlw $8, %xmm10
 ; SSE-NEXT:    packuswb %xmm9, %xmm10
 ; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm9 # 16-byte Reload
@@ -1979,27 +1973,27 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    psrlw $8, %xmm9
 ; SSE-NEXT:    psrlw $8, %xmm11
 ; SSE-NEXT:    packuswb %xmm9, %xmm11
-; SSE-NEXT:    movdqa %xmm12, %xmm13
-; SSE-NEXT:    psrlw $8, %xmm13
+; SSE-NEXT:    movdqa %xmm12, %xmm0
+; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    movdqa %xmm11, %xmm9
 ; SSE-NEXT:    psrlw $8, %xmm9
-; SSE-NEXT:    packuswb %xmm13, %xmm9
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; SSE-NEXT:    psrlw $8, %xmm13
+; SSE-NEXT:    packuswb %xmm0, %xmm9
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    psrlw $8, %xmm6
-; SSE-NEXT:    packuswb %xmm13, %xmm6
-; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm13 # 16-byte Reload
-; SSE-NEXT:    psrlw $8, %xmm13
+; SSE-NEXT:    packuswb %xmm0, %xmm6
+; SSE-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    psrlw $8, %xmm15
-; SSE-NEXT:    packuswb %xmm13, %xmm15
-; SSE-NEXT:    movdqa %xmm6, %xmm13
-; SSE-NEXT:    psrlw $8, %xmm13
+; SSE-NEXT:    packuswb %xmm0, %xmm15
+; SSE-NEXT:    movdqa %xmm6, %xmm0
+; SSE-NEXT:    psrlw $8, %xmm0
 ; SSE-NEXT:    movdqa %xmm15, %xmm14
 ; SSE-NEXT:    psrlw $8, %xmm14
-; SSE-NEXT:    packuswb %xmm13, %xmm14
+; SSE-NEXT:    packuswb %xmm0, %xmm14
 ; SSE-NEXT:    pand %xmm2, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    packuswb %xmm1, %xmm0
+; SSE-NEXT:    pand %xmm2, %xmm13
+; SSE-NEXT:    packuswb %xmm1, %xmm13
 ; SSE-NEXT:    pand %xmm2, %xmm12
 ; SSE-NEXT:    pand %xmm2, %xmm11
 ; SSE-NEXT:    packuswb %xmm12, %xmm11
@@ -2018,7 +2012,7 @@ define void @load_i8_stride4_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movdqa %xmm15, 48(%rdx)
 ; SSE-NEXT:    movdqa %xmm7, (%rdx)
 ; SSE-NEXT:    movdqa %xmm11, 32(%rdx)
-; SSE-NEXT:    movdqa %xmm0, 16(%rdx)
+; SSE-NEXT:    movdqa %xmm13, 16(%rdx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movaps %xmm0, 48(%rcx)
 ; SSE-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload

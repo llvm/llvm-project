@@ -155,7 +155,7 @@ define i8 @ucmp_8_128(i128 %x, i128 %y) nounwind {
 ; THUMB1-NEXT:    sub sp, #20
 ; THUMB1-NEXT:    str r3, [sp, #16] @ 4-byte Spill
 ; THUMB1-NEXT:    mov r4, r2
-; THUMB1-NEXT:    mov r3, r1
+; THUMB1-NEXT:    mov r2, r1
 ; THUMB1-NEXT:    movs r1, #1
 ; THUMB1-NEXT:    str r1, [sp] @ 4-byte Spill
 ; THUMB1-NEXT:    movs r1, #0
@@ -163,9 +163,9 @@ define i8 @ucmp_8_128(i128 %x, i128 %y) nounwind {
 ; THUMB1-NEXT:    ldr r6, [sp, #52]
 ; THUMB1-NEXT:    add r7, sp, #40
 ; THUMB1-NEXT:    ldm r7, {r1, r5, r7}
-; THUMB1-NEXT:    subs r2, r0, r1
-; THUMB1-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; THUMB1-NEXT:    sbcs r3, r5
+; THUMB1-NEXT:    subs r3, r0, r1
+; THUMB1-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; THUMB1-NEXT:    sbcs r2, r5
 ; THUMB1-NEXT:    str r4, [sp, #12] @ 4-byte Spill
 ; THUMB1-NEXT:    sbcs r4, r7
 ; THUMB1-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload

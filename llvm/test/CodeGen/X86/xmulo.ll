@@ -212,18 +212,18 @@ define zeroext i1 @smuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; WIN32-NEXT:    subl $8, %esp
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; WIN32-NEXT:    movl %edi, %esi
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; WIN32-NEXT:    movl %ecx, %esi
 ; WIN32-NEXT:    sarl $31, %esi
 ; WIN32-NEXT:    imull %ebx, %esi
 ; WIN32-NEXT:    mull %ebx
-; WIN32-NEXT:    movl %edx, %ecx
+; WIN32-NEXT:    movl %edx, %edi
 ; WIN32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; WIN32-NEXT:    movl %edi, %eax
+; WIN32-NEXT:    movl %ecx, %eax
 ; WIN32-NEXT:    mull %ebx
 ; WIN32-NEXT:    movl %edx, %ebx
 ; WIN32-NEXT:    movl %eax, %ebp
-; WIN32-NEXT:    addl %ecx, %ebp
+; WIN32-NEXT:    addl %edi, %ebp
 ; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    adcl %esi, %ebx
 ; WIN32-NEXT:    movl %ebx, %edi
@@ -250,11 +250,10 @@ define zeroext i1 @smuloi64(i64 %v1, i64 %v2, ptr %res) {
 ; WIN32-NEXT:    movl %esi, (%ecx)
 ; WIN32-NEXT:    movl (%esp), %esi # 4-byte Reload
 ; WIN32-NEXT:    movl %esi, 4(%ecx)
-; WIN32-NEXT:    movl %esi, %ecx
-; WIN32-NEXT:    sarl $31, %ecx
-; WIN32-NEXT:    xorl %ecx, %edx
-; WIN32-NEXT:    xorl %eax, %ecx
-; WIN32-NEXT:    orl %edx, %ecx
+; WIN32-NEXT:    sarl $31, %esi
+; WIN32-NEXT:    xorl %esi, %edx
+; WIN32-NEXT:    xorl %eax, %esi
+; WIN32-NEXT:    orl %edx, %esi
 ; WIN32-NEXT:    setne %al
 ; WIN32-NEXT:    addl $8, %esp
 ; WIN32-NEXT:    popl %esi
@@ -1684,11 +1683,10 @@ define zeroext i1 @smuloi64_load(ptr %ptr1, i64 %v2, ptr %res) {
 ; WIN32-NEXT:    movl %esi, (%ecx)
 ; WIN32-NEXT:    movl (%esp), %esi # 4-byte Reload
 ; WIN32-NEXT:    movl %esi, 4(%ecx)
-; WIN32-NEXT:    movl %esi, %ecx
-; WIN32-NEXT:    sarl $31, %ecx
-; WIN32-NEXT:    xorl %ecx, %edx
-; WIN32-NEXT:    xorl %eax, %ecx
-; WIN32-NEXT:    orl %edx, %ecx
+; WIN32-NEXT:    sarl $31, %esi
+; WIN32-NEXT:    xorl %esi, %edx
+; WIN32-NEXT:    xorl %eax, %esi
+; WIN32-NEXT:    orl %edx, %esi
 ; WIN32-NEXT:    setne %al
 ; WIN32-NEXT:    addl $12, %esp
 ; WIN32-NEXT:    popl %esi
@@ -1777,11 +1775,10 @@ define zeroext i1 @smuloi64_load2(i64 %v1, ptr %ptr2, ptr %res) {
 ; WIN32-NEXT:    movl %esi, (%ecx)
 ; WIN32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; WIN32-NEXT:    movl %esi, 4(%ecx)
-; WIN32-NEXT:    movl %esi, %ecx
-; WIN32-NEXT:    sarl $31, %ecx
-; WIN32-NEXT:    xorl %ecx, %edx
-; WIN32-NEXT:    xorl %eax, %ecx
-; WIN32-NEXT:    orl %edx, %ecx
+; WIN32-NEXT:    sarl $31, %esi
+; WIN32-NEXT:    xorl %esi, %edx
+; WIN32-NEXT:    xorl %eax, %esi
+; WIN32-NEXT:    orl %edx, %esi
 ; WIN32-NEXT:    setne %al
 ; WIN32-NEXT:    addl $12, %esp
 ; WIN32-NEXT:    popl %esi

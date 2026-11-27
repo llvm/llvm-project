@@ -3645,6 +3645,7 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; SSE2-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    cmovbq %r12, %rax
 ; SSE2-NEXT:    cmovbq %rbp, %rdx
+; SSE2-NEXT:    movq %rbp, %r13
 ; SSE2-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    cmovaq %r15, %rdx
 ; SSE2-NEXT:    cmovaq %r14, %rax
@@ -3664,7 +3665,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; SSE2-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    cmovbq %r12, %rax
 ; SSE2-NEXT:    cmovbq %rbp, %rdx
-; SSE2-NEXT:    movq %rbp, %r13
 ; SSE2-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE2-NEXT:    cmovaq %r15, %rdx
 ; SSE2-NEXT:    cmovaq %r14, %rax
@@ -3852,6 +3852,7 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; SSE42-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE42-NEXT:    cmovbq %r12, %rax
 ; SSE42-NEXT:    cmovbq %rbp, %rdx
+; SSE42-NEXT:    movq %rbp, %r13
 ; SSE42-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE42-NEXT:    cmovaq %r15, %rdx
 ; SSE42-NEXT:    cmovaq %r14, %rax
@@ -3871,7 +3872,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; SSE42-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE42-NEXT:    cmovbq %r12, %rax
 ; SSE42-NEXT:    cmovbq %rbp, %rdx
-; SSE42-NEXT:    movq %rbp, %r13
 ; SSE42-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE42-NEXT:    cmovaq %r15, %rdx
 ; SSE42-NEXT:    cmovaq %r14, %rax
@@ -4056,6 +4056,7 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX2-NEXT:    cmovbq %r12, %rax
 ; AVX2-NEXT:    cmovbq %rbp, %rdx
+; AVX2-NEXT:    movq %rbp, %r13
 ; AVX2-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX2-NEXT:    cmovaq %r15, %rdx
 ; AVX2-NEXT:    cmovaq %r14, %rax
@@ -4074,7 +4075,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX2-NEXT:    cmovbq %r12, %rax
 ; AVX2-NEXT:    cmovbq %rbp, %rdx
-; AVX2-NEXT:    movq %rbp, %r13
 ; AVX2-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX2-NEXT:    cmovaq %r15, %rdx
 ; AVX2-NEXT:    cmovaq %r14, %rax
@@ -4253,6 +4253,7 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovbq %r12, %rax
 ; AVX512-NEXT:    cmovbq %rbp, %rdx
+; AVX512-NEXT:    movq %rbp, %r13
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax
@@ -4271,7 +4272,6 @@ define <8 x i128> @test_signed_v8i128_v8f16(<8 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovbq %r12, %rax
 ; AVX512-NEXT:    cmovbq %rbp, %rdx
-; AVX512-NEXT:    movq %rbp, %r13
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; AVX512-NEXT:    cmovaq %r15, %rdx
 ; AVX512-NEXT:    cmovaq %r14, %rax

@@ -828,18 +828,16 @@ define i32 @sub_U320_without_i128_or(ptr nocapture dereferenceable(40) %0, i64 %
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $28, %esp
 ; X86-NEXT:    movl 48(%esp), %edi
-; X86-NEXT:    movl 8(%edi), %eax
+; X86-NEXT:    movl 8(%edi), %ecx
 ; X86-NEXT:    movl 12(%edi), %esi
-; X86-NEXT:    movl 20(%edi), %ecx
-; X86-NEXT:    movl %ecx, 4(%esp) # 4-byte Spill
-; X86-NEXT:    movl 16(%edi), %ecx
-; X86-NEXT:    movl %ecx, 12(%esp) # 4-byte Spill
-; X86-NEXT:    movl 28(%edi), %ecx
-; X86-NEXT:    movl %ecx, 8(%esp) # 4-byte Spill
-; X86-NEXT:    subl 60(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    sbbl 64(%esp), %eax
+; X86-NEXT:    movl 20(%edi), %eax
+; X86-NEXT:    movl %eax, 4(%esp) # 4-byte Spill
+; X86-NEXT:    movl 16(%edi), %eax
+; X86-NEXT:    movl %eax, 12(%esp) # 4-byte Spill
+; X86-NEXT:    movl 28(%edi), %eax
+; X86-NEXT:    movl %eax, 8(%esp) # 4-byte Spill
+; X86-NEXT:    subl 60(%esp), %ecx
+; X86-NEXT:    sbbl 64(%esp), %esi
 ; X86-NEXT:    setb 3(%esp) # 1-byte Folded Spill
 ; X86-NEXT:    movl 24(%edi), %ebp
 ; X86-NEXT:    movl 36(%edi), %edx
@@ -847,12 +845,12 @@ define i32 @sub_U320_without_i128_or(ptr nocapture dereferenceable(40) %0, i64 %
 ; X86-NEXT:    movl 32(%edi), %ebx
 ; X86-NEXT:    movl 52(%esp), %edx
 ; X86-NEXT:    subl %edx, (%edi)
-; X86-NEXT:    movl 56(%esp), %esi
-; X86-NEXT:    sbbl %esi, 4(%edi)
+; X86-NEXT:    movl 56(%esp), %eax
+; X86-NEXT:    sbbl %eax, 4(%edi)
 ; X86-NEXT:    sbbl $0, %ecx
 ; X86-NEXT:    movl %ecx, 24(%esp) # 4-byte Spill
-; X86-NEXT:    sbbl $0, %eax
-; X86-NEXT:    movl %eax, 20(%esp) # 4-byte Spill
+; X86-NEXT:    sbbl $0, %esi
+; X86-NEXT:    movl %esi, 20(%esp) # 4-byte Spill
 ; X86-NEXT:    setb %dl
 ; X86-NEXT:    movl 12(%esp), %eax # 4-byte Reload
 ; X86-NEXT:    subl 68(%esp), %eax
@@ -891,9 +889,8 @@ define i32 @sub_U320_without_i128_or(ptr nocapture dereferenceable(40) %0, i64 %
 ; X86-NEXT:    movl %ebp, 24(%edi)
 ; X86-NEXT:    movl %esi, 28(%edi)
 ; X86-NEXT:    movl %ebx, 32(%edi)
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    sbbl $0, %eax
-; X86-NEXT:    movl %eax, 36(%edi)
+; X86-NEXT:    sbbl $0, %edx
+; X86-NEXT:    movl %edx, 36(%edi)
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    orb 8(%esp), %al # 1-byte Folded Reload
 ; X86-NEXT:    movzbl %al, %eax
@@ -967,30 +964,28 @@ define i32 @sub_U320_usubo(ptr nocapture dereferenceable(40) %0, i64 %1, i64 %2,
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $24, %esp
 ; X86-NEXT:    movl 44(%esp), %edx
-; X86-NEXT:    movl 8(%edx), %eax
+; X86-NEXT:    movl 8(%edx), %ecx
 ; X86-NEXT:    movl 12(%edx), %esi
-; X86-NEXT:    movl 20(%edx), %ecx
-; X86-NEXT:    movl %ecx, 12(%esp) # 4-byte Spill
-; X86-NEXT:    movl 16(%edx), %ecx
-; X86-NEXT:    movl %ecx, 8(%esp) # 4-byte Spill
-; X86-NEXT:    movl 28(%edx), %ecx
-; X86-NEXT:    movl %ecx, 4(%esp) # 4-byte Spill
-; X86-NEXT:    subl 56(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    sbbl 60(%esp), %eax
+; X86-NEXT:    movl 20(%edx), %eax
+; X86-NEXT:    movl %eax, 12(%esp) # 4-byte Spill
+; X86-NEXT:    movl 16(%edx), %eax
+; X86-NEXT:    movl %eax, 8(%esp) # 4-byte Spill
+; X86-NEXT:    movl 28(%edx), %eax
+; X86-NEXT:    movl %eax, 4(%esp) # 4-byte Spill
+; X86-NEXT:    subl 56(%esp), %ecx
+; X86-NEXT:    sbbl 60(%esp), %esi
 ; X86-NEXT:    setb 3(%esp) # 1-byte Folded Spill
 ; X86-NEXT:    movl 24(%edx), %edi
 ; X86-NEXT:    movl 36(%edx), %ebp
 ; X86-NEXT:    movl 32(%edx), %ebx
-; X86-NEXT:    movl 48(%esp), %esi
-; X86-NEXT:    subl %esi, (%edx)
-; X86-NEXT:    movl 52(%esp), %esi
-; X86-NEXT:    sbbl %esi, 4(%edx)
+; X86-NEXT:    movl 48(%esp), %eax
+; X86-NEXT:    subl %eax, (%edx)
+; X86-NEXT:    movl 52(%esp), %eax
+; X86-NEXT:    sbbl %eax, 4(%edx)
 ; X86-NEXT:    sbbl $0, %ecx
 ; X86-NEXT:    movl %ecx, 20(%esp) # 4-byte Spill
-; X86-NEXT:    sbbl $0, %eax
-; X86-NEXT:    movl %eax, 16(%esp) # 4-byte Spill
+; X86-NEXT:    sbbl $0, %esi
+; X86-NEXT:    movl %esi, 16(%esp) # 4-byte Spill
 ; X86-NEXT:    setb %al
 ; X86-NEXT:    orb 3(%esp), %al # 1-byte Folded Reload
 ; X86-NEXT:    movl 8(%esp), %ecx # 4-byte Reload

@@ -63,8 +63,8 @@ frameInfo:
 machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: bb.0:
-  ; CHECK:       renamable $ebp = COPY $edi
-  ; CHECK:       MOV32mr %stack.1, 1, $noreg, 0, $noreg, killed renamable $ebp
+  ; CHECK:       renamable [[BAR:\$e[a-z]+]] = COPY $edi
+  ; CHECK:       MOV32mr %stack.1, 1, $noreg, 0, $noreg, killed renamable [[BAR]]
   bb.0:
     successors: %bb.2(0x50000000), %bb.1(0x30000000)
     liveins: $edi, $esi

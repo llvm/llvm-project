@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -greedy-record-copy-hint-misses=false -greedy-hint-recolor-swap=false -greedy-hint-recolor-queue-partners=false < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s --check-prefix=DEFAULT
 
 ; The early return is predicated, and the save-restore code is mixed together:
 ; {
@@ -13,6 +14,14 @@
 ; pair r17:16.
 ;
 
+; Keep the original allocation to exercise save/restore in the same packet.
+; With hint recoloring enabled, the save and restore are in separate packets.
+; DEFAULT: memd{{.*}} = r17:16
+; DEFAULT: }
+; DEFAULT: r17:16 = memd
+; DEFAULT: }
+; DEFAULT-LABEL: LBB0_1:
+;
 ; Validate that store executes before load.
 ; CHECK: memd{{.*}} = r17:16
 ; CHECK: r17:16 = memd

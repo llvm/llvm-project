@@ -452,12 +452,11 @@ define void @simple_urem_to_sel_vec(<2 x i64> %rem_amt) nounwind {
 ; CHECK-NEXT:    movdqa (%rsp), %xmm2 # 16-byte Reload
 ; CHECK-NEXT:    psubq %xmm1, %xmm2
 ; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    movdqa %xmm2, %xmm3
 ; CHECK-NEXT:    pcmpeqd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
-; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    pandn %xmm3, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, (%rsp) # 16-byte Spill
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,0,3,2]
+; CHECK-NEXT:    pand %xmm0, %xmm3
+; CHECK-NEXT:    pandn %xmm2, %xmm3
+; CHECK-NEXT:    movdqa %xmm3, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    movdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    psubq %xmm1, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill

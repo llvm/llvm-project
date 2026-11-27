@@ -67,17 +67,16 @@ define void @test(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1 %arg5
 ; CHECK-NEXT:    shlq $2, %rsi, %r15
 ; CHECK-NEXT:    shlq $2, %rdi, %r11
 ; CHECK-NEXT:    leaq (%r11,%rsi,4), %rsi
-; CHECK-NEXT:    imulq %rdx, %rsi, %r8
+; CHECK-NEXT:    imulq %rdx, %rsi
 ; CHECK-NEXT:    shlq $2, %rdx, %rcx
 ; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    shlq $3, %rdx, %rbx
-; CHECK-NEXT:    shlq $3, %rdi, %rsi
-; CHECK-NEXT:    leaq (%rsi,%rdx,8), %rcx
-; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Folded Reload
+; CHECK-NEXT:    shlq $3, %rdi, %rcx
+; CHECK-NEXT:    leaq (%rcx,%rdx,8), %r8
+; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Folded Reload
 ; CHECK-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    imulq %rdi, %rbx
 ; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Folded Reload
-; CHECK-NEXT:    movq %rcx, %rsi
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
 ; CHECK-NEXT:    leaq (%rcx,%rdx,8), %rcx
 ; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -102,10 +101,10 @@ define void @test(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1 %arg5
 ; CHECK-NEXT:    incq %rdi
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
 ; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Folded Reload
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Folded Reload
-; CHECK-NEXT:    movq (%rsp), %rsi # 8-byte Reload
-; CHECK-NEXT:    addq $8, %rsi
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Folded Reload
+; CHECK-NEXT:    movq (%rsp), %r8 # 8-byte Reload
+; CHECK-NEXT:    addq $8, %r8
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
 ; CHECK-NEXT:    addq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Folded Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
@@ -123,16 +122,14 @@ define void @test(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1 %arg5
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq %rdx, %r9
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; CHECK-NEXT:    movq %rsi, (%rsp) # 8-byte Spill
-; CHECK-NEXT:    movq %rsi, %r12
-; CHECK-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movq %r8, %rsi
+; CHECK-NEXT:    movq %r8, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    jmp .LBB0_5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_9: # %bb63
 ; CHECK-NEXT:    # in Loop: Header=BB0_5 Depth=3
 ; CHECK-NEXT:    addq %r15, %rsi
-; CHECK-NEXT:    addq $8, %r12
+; CHECK-NEXT:    addq $8, %r8
 ; CHECK-NEXT:    addq $8, %rdx
 ; CHECK-NEXT:    addq %r11, %r9
 ; CHECK-NEXT:    testb $1, %r10b
@@ -147,22 +144,22 @@ define void @test(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1 %arg5
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  # %bb.6: # %bb30
 ; CHECK-NEXT:    # in Loop: Header=BB0_5 Depth=3
-; CHECK-NEXT:    movl $1, %r8d
-; CHECK-NEXT:    imulq %r13, %r8
-; CHECK-NEXT:    imulq %rdi, %r8
+; CHECK-NEXT:    movl $1, %ebx
+; CHECK-NEXT:    imulq %r13, %rbx
+; CHECK-NEXT:    imulq %rdi, %rbx, %r12
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
-; CHECK-NEXT:    leaq (%rbx,%r8,8), %r8
-; CHECK-NEXT:    movups %xmm0, 48(%r8,%rax,8)
-; CHECK-NEXT:    movups %xmm0, 32(%r8,%rax,8)
-; CHECK-NEXT:    movups %xmm0, 16(%r8,%rax,8)
-; CHECK-NEXT:    movups %xmm0, (%r8,%rax,8)
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; CHECK-NEXT:    cmpq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Reload
+; CHECK-NEXT:    leaq (%rbx,%r12,8), %rbx
+; CHECK-NEXT:    movups %xmm0, 48(%rbx,%rax,8)
+; CHECK-NEXT:    movups %xmm0, 32(%rbx,%rax,8)
+; CHECK-NEXT:    movups %xmm0, 16(%rbx,%rax,8)
+; CHECK-NEXT:    movups %xmm0, (%rbx,%rax,8)
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
+; CHECK-NEXT:    cmpq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Reload
 ; CHECK-NEXT:    movq %rcx, %rbx
 ; CHECK-NEXT:    je .LBB0_9
 ; CHECK-NEXT:  .LBB0_7: # %bb32.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB0_5 Depth=3
-; CHECK-NEXT:    xorl %r8d, %r8d
+; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_8: # %bb32
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
@@ -170,8 +167,8 @@ define void @test(ptr %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4, i1 %arg5
 ; CHECK-NEXT:    # Parent Loop BB0_5 Depth=3
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=4
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; CHECK-NEXT:    movsd %xmm1, (%r12,%r8,2)
-; CHECK-NEXT:    addq $4, %r8
+; CHECK-NEXT:    movsd %xmm1, (%r8,%r12,2)
+; CHECK-NEXT:    addq $4, %r12
 ; CHECK-NEXT:    testq %rbx, %rbx
 ; CHECK-NEXT:    movl $0, %ebx
 ; CHECK-NEXT:    jg .LBB0_8

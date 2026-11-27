@@ -890,7 +890,6 @@ define i64 @test_v16i64(<16 x i64> %a0) nounwind {
 ; X86-SSE2-NEXT:    pandn %xmm4, %xmm1
 ; X86-SSE2-NEXT:    por %xmm5, %xmm1
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm0, %xmm5
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm7, %xmm4
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm4
@@ -898,34 +897,32 @@ define i64 @test_v16i64(<16 x i64> %a0) nounwind {
 ; X86-SSE2-NEXT:    pcmpgtd %xmm2, %xmm6
 ; X86-SSE2-NEXT:    pcmpeqd %xmm2, %xmm4
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm6[0,0,2,2]
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,3,3]
-; X86-SSE2-NEXT:    pand %xmm2, %xmm0
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[1,1,3,3]
+; X86-SSE2-NEXT:    pand %xmm2, %xmm5
 ; X86-SSE2-NEXT:    movdqa 24(%ebp), %xmm2
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm6[1,1,3,3]
-; X86-SSE2-NEXT:    por %xmm0, %xmm4
+; X86-SSE2-NEXT:    por %xmm5, %xmm4
 ; X86-SSE2-NEXT:    pand %xmm4, %xmm7
-; X86-SSE2-NEXT:    pandn %xmm5, %xmm4
+; X86-SSE2-NEXT:    pandn %xmm0, %xmm4
 ; X86-SSE2-NEXT:    por %xmm7, %xmm4
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm0
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm0
-; X86-SSE2-NEXT:    movdqa (%esp), %xmm5 # 16-byte Reload
-; X86-SSE2-NEXT:    movdqa %xmm5, %xmm2
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm2
-; X86-SSE2-NEXT:    movdqa %xmm2, %xmm6
-; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm6
-; X86-SSE2-NEXT:    pcmpeqd %xmm0, %xmm2
+; X86-SSE2-NEXT:    movdqa (%esp), %xmm5 # 16-byte Reload
+; X86-SSE2-NEXT:    movdqa %xmm5, %xmm7
+; X86-SSE2-NEXT:    pxor %xmm3, %xmm7
+; X86-SSE2-NEXT:    movdqa %xmm7, %xmm6
+; X86-SSE2-NEXT:    pcmpgtd %xmm2, %xmm6
+; X86-SSE2-NEXT:    pcmpeqd %xmm2, %xmm7
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[0,0,2,2]
-; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm2[1,1,3,3]
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[1,1,3,3]
 ; X86-SSE2-NEXT:    pand %xmm0, %xmm7
 ; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm6[1,1,3,3]
 ; X86-SSE2-NEXT:    por %xmm7, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm4, %xmm0
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm5, %xmm6
-; X86-SSE2-NEXT:    pand %xmm2, %xmm6
-; X86-SSE2-NEXT:    movdqa 24(%ebp), %xmm5
-; X86-SSE2-NEXT:    pandn %xmm5, %xmm2
-; X86-SSE2-NEXT:    por %xmm6, %xmm2
+; X86-SSE2-NEXT:    pand %xmm2, %xmm5
+; X86-SSE2-NEXT:    movdqa 24(%ebp), %xmm6
+; X86-SSE2-NEXT:    pandn %xmm6, %xmm2
+; X86-SSE2-NEXT:    por %xmm5, %xmm2
 ; X86-SSE2-NEXT:    movdqa %xmm2, %xmm5
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm5
 ; X86-SSE2-NEXT:    movdqa %xmm5, %xmm6

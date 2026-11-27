@@ -1277,9 +1277,8 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 6, 6, 8
 ; CHECK-NEXT:    evlddx 6, 6, 3
 ; CHECK-NEXT:    efdsub 8, 0, 6
-; CHECK-NEXT:    addi 6, 31, 320
-; CHECK-NEXT:    evstddx 8, 6, 3
-; CHECK-NEXT:    mr 16, 6
+; CHECK-NEXT:    addi 16, 31, 320
+; CHECK-NEXT:    evstddx 8, 16, 3
 ; CHECK-NEXT:    lwz 8, 900(31)
 ; CHECK-NEXT:    lwz 12, 484(31)
 ; CHECK-NEXT:    lwz 0, 908(31)
@@ -1315,9 +1314,8 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 8, 8, 12
 ; CHECK-NEXT:    evlddx 8, 8, 3
 ; CHECK-NEXT:    efdadd 8, 29, 8
-; CHECK-NEXT:    addi 6, 31, 416
-; CHECK-NEXT:    evstddx 8, 6, 3
-; CHECK-NEXT:    mr 12, 6
+; CHECK-NEXT:    addi 12, 31, 416
+; CHECK-NEXT:    evstddx 8, 12, 3
 ; CHECK-NEXT:    lwz 8, 900(31)
 ; CHECK-NEXT:    lwz 0, 484(31)
 ; CHECK-NEXT:    lwz 30, 908(31)
@@ -1353,9 +1351,8 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 8, 8, 0
 ; CHECK-NEXT:    evlddx 8, 8, 3
 ; CHECK-NEXT:    efdsub 0, 28, 8
-; CHECK-NEXT:    addi 6, 31, 336
-; CHECK-NEXT:    evstddx 0, 6, 3
-; CHECK-NEXT:    mr 15, 6
+; CHECK-NEXT:    addi 15, 31, 336
+; CHECK-NEXT:    evstddx 0, 15, 3
 ; CHECK-NEXT:    lwz 30, 900(31)
 ; CHECK-NEXT:    lwz 0, 484(31)
 ; CHECK-NEXT:    lwz 29, 908(31)
@@ -1391,9 +1388,8 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 30, 0, 30
 ; CHECK-NEXT:    evlddx 0, 30, 3
 ; CHECK-NEXT:    efdadd 0, 27, 0
-; CHECK-NEXT:    addi 6, 31, 400
-; CHECK-NEXT:    evstddx 0, 6, 3
-; CHECK-NEXT:    mr 8, 6
+; CHECK-NEXT:    addi 8, 31, 400
+; CHECK-NEXT:    evstddx 0, 8, 3
 ; CHECK-NEXT:    lwz 30, 900(31)
 ; CHECK-NEXT:    lwz 0, 484(31)
 ; CHECK-NEXT:    lwz 28, 908(31)
@@ -1466,9 +1462,8 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 28, 0, 28
 ; CHECK-NEXT:    evlddx 0, 28, 3
 ; CHECK-NEXT:    efdadd 0, 25, 0
-; CHECK-NEXT:    addi 6, 31, 384
-; CHECK-NEXT:    evstddx 0, 6, 3
-; CHECK-NEXT:    mr 27, 6
+; CHECK-NEXT:    addi 27, 31, 384
+; CHECK-NEXT:    evstddx 0, 27, 3
 ; CHECK-NEXT:    lwz 28, 900(31)
 ; CHECK-NEXT:    lwz 0, 484(31)
 ; CHECK-NEXT:    lwz 26, 908(31)
@@ -1637,9 +1632,8 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    efdmul 20, 20, 18
 ; CHECK-NEXT:    efdadd 20, 20, 17
 ; CHECK-NEXT:    evldd 18, 16(9)
-; CHECK-NEXT:    mr 7, 15
-; CHECK-NEXT:    stw 7, 36(31) # 4-byte Folded Spill
-; CHECK-NEXT:    evlddx 17, 7, 3
+; CHECK-NEXT:    stw 15, 36(31) # 4-byte Folded Spill
+; CHECK-NEXT:    evlddx 17, 15, 3
 ; CHECK-NEXT:    efdmul 18, 18, 17
 ; CHECK-NEXT:    efdadd 20, 18, 20
 ; CHECK-NEXT:    evldd 18, 0(9)
@@ -1679,7 +1673,7 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    lwz 16, 908(31)
 ; CHECK-NEXT:    add 20, 17, 20
 ; CHECK-NEXT:    li 17, -16
-; CHECK-NEXT:    evlddx 15, 20, 17
+; CHECK-NEXT:    evlddx 7, 20, 17
 ; CHECK-NEXT:    evldd 14, 0(11)
 ; CHECK-NEXT:    lwz 4, 888(31)
 ; CHECK-NEXT:    efdcfsi 4, 4
@@ -1688,13 +1682,13 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    efdmul 4, 4, 20
 ; CHECK-NEXT:    evlddx 20, 18, 3
 ; CHECK-NEXT:    efdmul 4, 4, 20
-; CHECK-NEXT:    efdmul 20, 15, 14
+; CHECK-NEXT:    efdmul 20, 7, 14
 ; CHECK-NEXT:    efdsub 4, 20, 4
 ; CHECK-NEXT:    lwz 20, 896(31)
-; CHECK-NEXT:    lwz 15, 796(31)
+; CHECK-NEXT:    lwz 7, 796(31)
 ; CHECK-NEXT:    lwz 14, 904(31)
-; CHECK-NEXT:    add 15, 15, 14
-; CHECK-NEXT:    mullw 16, 16, 15
+; CHECK-NEXT:    add 7, 7, 14
+; CHECK-NEXT:    mullw 16, 16, 7
 ; CHECK-NEXT:    add 19, 19, 16
 ; CHECK-NEXT:    slwi 19, 19, 4
 ; CHECK-NEXT:    evstddx 4, 20, 19
@@ -1731,12 +1725,12 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 4, 19, 4
 ; CHECK-NEXT:    li 19, -160
 ; CHECK-NEXT:    evlddx 18, 4, 19
-; CHECK-NEXT:    li 12, 272
-; CHECK-NEXT:    evlddx 17, 31, 12
+; CHECK-NEXT:    li 7, 272
+; CHECK-NEXT:    evlddx 17, 31, 7
 ; CHECK-NEXT:    lwz 16, 888(31)
 ; CHECK-NEXT:    efdcfsi 16, 16
-; CHECK-NEXT:    li 15, -152
-; CHECK-NEXT:    evlddx 4, 4, 15
+; CHECK-NEXT:    li 7, -152
+; CHECK-NEXT:    evlddx 4, 4, 7
 ; CHECK-NEXT:    efdmul 4, 16, 4
 ; CHECK-NEXT:    evlddx 16, 21, 3
 ; CHECK-NEXT:    efdmul 4, 4, 16
@@ -1762,10 +1756,10 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    evlddx 21, 21, 3
 ; CHECK-NEXT:    lwz 18, 888(31)
 ; CHECK-NEXT:    efdcfsi 18, 18
-; CHECK-NEXT:    evlddx 4, 4, 15
+; CHECK-NEXT:    evlddx 4, 4, 7
 ; CHECK-NEXT:    efdmul 4, 18, 4
-; CHECK-NEXT:    li 12, 272
-; CHECK-NEXT:    evlddx 18, 31, 12
+; CHECK-NEXT:    li 7, 272
+; CHECK-NEXT:    evlddx 18, 31, 7
 ; CHECK-NEXT:    efdmul 4, 4, 18
 ; CHECK-NEXT:    efdmul 21, 19, 21
 ; CHECK-NEXT:    efdadd 4, 21, 4
@@ -1847,7 +1841,7 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    efdmul 4, 4, 20
 ; CHECK-NEXT:    efdadd 4, 4, 19
 ; CHECK-NEXT:    evldd 20, 248(10)
-; CHECK-NEXT:    evlddx 19, 7, 3
+; CHECK-NEXT:    evlddx 19, 15, 3
 ; CHECK-NEXT:    efdmul 20, 20, 19
 ; CHECK-NEXT:    efdsub 4, 4, 20
 ; CHECK-NEXT:    evldd 20, 16(9)
@@ -2010,7 +2004,6 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    efdmul 5, 5, 24
 ; CHECK-NEXT:    efdadd 4, 5, 4
 ; CHECK-NEXT:    evlddx 5, 27, 3
-; CHECK-NEXT:    mr 12, 27
 ; CHECK-NEXT:    efdmul 5, 5, 23
 ; CHECK-NEXT:    efdadd 4, 5, 4
 ; CHECK-NEXT:    evlddx 5, 30, 3
@@ -2019,8 +2012,8 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    evlddx 5, 28, 3
 ; CHECK-NEXT:    efdmul 5, 5, 0
 ; CHECK-NEXT:    efdadd 4, 5, 4
-; CHECK-NEXT:    lwz 27, 28(31) # 4-byte Folded Reload
-; CHECK-NEXT:    evlddx 5, 27, 3
+; CHECK-NEXT:    lwz 12, 28(31) # 4-byte Folded Reload
+; CHECK-NEXT:    evlddx 5, 12, 3
 ; CHECK-NEXT:    efdmul 5, 5, 22
 ; CHECK-NEXT:    efdadd 4, 5, 4
 ; CHECK-NEXT:    addi 21, 31, 128
@@ -2218,7 +2211,7 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    evlddx 5, 7, 3
 ; CHECK-NEXT:    efdmul 5, 5, 22
 ; CHECK-NEXT:    efdadd 4, 5, 4
-; CHECK-NEXT:    evlddx 5, 12, 3
+; CHECK-NEXT:    evlddx 5, 27, 3
 ; CHECK-NEXT:    efdmul 5, 5, 24
 ; CHECK-NEXT:    efdadd 4, 5, 4
 ; CHECK-NEXT:    evlddx 5, 30, 3
@@ -2227,7 +2220,7 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    evlddx 5, 28, 3
 ; CHECK-NEXT:    efdmul 5, 5, 23
 ; CHECK-NEXT:    efdadd 4, 5, 4
-; CHECK-NEXT:    evlddx 5, 27, 3
+; CHECK-NEXT:    evlddx 5, 12, 3
 ; CHECK-NEXT:    efdmul 5, 5, 25
 ; CHECK-NEXT:    efdadd 4, 5, 4
 ; CHECK-NEXT:    addi 5, 31, 64

@@ -99,9 +99,9 @@ while.end:                                        ; preds = %while.body, %entry
 define <16 x float> @foo(<16 x float> %x) {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %bb
+; CHECK-NEXT:    movaps %xmm3, %xmm4
 ; CHECK-NEXT:    xorps %xmm5, %xmm5
 ; CHECK-NEXT:    cvttps2dq %xmm3, %xmm8
-; CHECK-NEXT:    movaps %xmm3, %xmm4
 ; CHECK-NEXT:    cmpltps %xmm5, %xmm4
 ; CHECK-NEXT:    movaps {{.*#+}} xmm7 = [13,14,15,16]
 ; CHECK-NEXT:    movaps %xmm4, %xmm6

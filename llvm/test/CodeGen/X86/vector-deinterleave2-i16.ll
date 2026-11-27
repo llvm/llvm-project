@@ -693,8 +693,8 @@ define void @load_i16_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movdqa 128(%rdi), %xmm11
 ; SSE-NEXT:    movdqa 144(%rdi), %xmm4
 ; SSE-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 96(%rdi), %xmm2
-; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 96(%rdi), %xmm3
+; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 112(%rdi), %xmm7
 ; SSE-NEXT:    movdqa 64(%rdi), %xmm10
 ; SSE-NEXT:    movdqa 80(%rdi), %xmm14
@@ -704,33 +704,31 @@ define void @load_i16_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movdqa 48(%rdi), %xmm0
 ; SSE-NEXT:    movdqa %xmm5, %xmm1
 ; SSE-NEXT:    psrad $16, %xmm1
-; SSE-NEXT:    movdqa %xmm9, %xmm3
-; SSE-NEXT:    psrad $16, %xmm3
-; SSE-NEXT:    packssdw %xmm1, %xmm3
-; SSE-NEXT:    movdqa %xmm3, (%rsp) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm9, %xmm2
+; SSE-NEXT:    psrad $16, %xmm2
+; SSE-NEXT:    packssdw %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm0, %xmm1
 ; SSE-NEXT:    psrad $16, %xmm1
-; SSE-NEXT:    movdqa %xmm8, %xmm3
-; SSE-NEXT:    psrad $16, %xmm3
-; SSE-NEXT:    packssdw %xmm1, %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm8, %xmm2
+; SSE-NEXT:    psrad $16, %xmm2
+; SSE-NEXT:    packssdw %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm14, %xmm1
 ; SSE-NEXT:    psrad $16, %xmm1
-; SSE-NEXT:    movdqa %xmm10, %xmm3
-; SSE-NEXT:    psrad $16, %xmm3
-; SSE-NEXT:    packssdw %xmm1, %xmm3
-; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa %xmm10, %xmm2
+; SSE-NEXT:    psrad $16, %xmm2
+; SSE-NEXT:    packssdw %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa %xmm7, %xmm1
 ; SSE-NEXT:    psrad $16, %xmm1
-; SSE-NEXT:    movdqa %xmm2, %xmm3
 ; SSE-NEXT:    psrad $16, %xmm3
 ; SSE-NEXT:    packssdw %xmm1, %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa %xmm4, %xmm1
-; SSE-NEXT:    psrad $16, %xmm1
+; SSE-NEXT:    psrad $16, %xmm4
 ; SSE-NEXT:    movdqa %xmm11, %xmm3
 ; SSE-NEXT:    psrad $16, %xmm3
-; SSE-NEXT:    packssdw %xmm1, %xmm3
+; SSE-NEXT:    packssdw %xmm4, %xmm3
 ; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 176(%rdi), %xmm2
 ; SSE-NEXT:    movdqa %xmm2, %xmm3

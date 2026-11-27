@@ -486,8 +486,9 @@ define i8 @pr187458(<vscale x 64 x i8> %0, <vscale x 64 x i1> %mask) {
 ; RV32-NEXT:  # %bb.1: # %entry
 ; RV32-NEXT:    vmv1r.v v0, v7
 ; RV32-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; RV32-NEXT:    vmv.v.i v16, 0
 ; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vmerge.vvm v24, v8, v24, v0
+; RV32-NEXT:    vmerge.vvm v24, v16, v24, v0
 ; RV32-NEXT:    vredmaxu.vs v24, v24, v24
 ; RV32-NEXT:    vmv.x.s a1, v24
 ; RV32-NEXT:    j .LBB13_3
