@@ -86,4 +86,7 @@ MCAsmInfoDarwin::MCAsmInfoDarwin(const MCTargetOptions &Options)
 
   DwarfUsesRelocationsAcrossSections = Options.MachORelocatableDwarf;
   SetDirectiveSuppressesReloc = true;
+
+  // Defined in MCSectionMachO.cpp.
+  PrintSwitchToSectionFn = printSwitchToSectionImpl;
 }

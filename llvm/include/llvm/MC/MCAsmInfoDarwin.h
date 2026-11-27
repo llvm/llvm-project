@@ -21,8 +21,10 @@ namespace llvm {
 class LLVM_ABI MCAsmInfoDarwin : public MCAsmInfo {
 public:
   explicit MCAsmInfoDarwin(const MCTargetOptions &Options);
-  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
-                            raw_ostream &) const final;
+
+  static void printSwitchToSectionImpl(const MCAsmInfo &, const MCSection &,
+                                       uint32_t, const Triple &,
+                                       raw_ostream &OS);
 
   /// True if the section is atomized using the symbols in it.
   /// This is false if the section is atomized based on its contents (MachO' __TEXT,__cstring for
