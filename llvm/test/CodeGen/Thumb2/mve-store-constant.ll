@@ -88,10 +88,10 @@ define void @i64(ptr %p) {
 ; CHECK-LABEL: i64:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    movs r1, #0
-; CHECK-NEXT:    movs r2, #20
 ; CHECK-NEXT:    movs r3, #10
-; CHECK-NEXT:    strd r2, r1, [r0, #8]
+; CHECK-NEXT:    movs r2, #20
 ; CHECK-NEXT:    strd r3, r1, [r0]
+; CHECK-NEXT:    strd r2, r1, [r0, #8]
 ; CHECK-NEXT:    bx lr
   store <2 x i64> <i64 10, i64 20>, ptr %p, align 8
   ret void

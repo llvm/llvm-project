@@ -20,6 +20,7 @@
 #include "TestOpsInterfaces.h"
 #include "TestOpsPatterns.h"
 #include "TestOpsProperties.h"
+#include "TestOpsSyntax.h"
 #include "TestOpsTraits.h"
 
 #endif // MLIR_TESTOPS_H

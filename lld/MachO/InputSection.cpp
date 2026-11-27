@@ -27,11 +27,7 @@ using namespace llvm::support;
 using namespace lld;
 using namespace lld::macho;
 
-// Verify ConcatInputSection's size on 64-bit builds. The size of std::vector
-// can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
-// so account for that.
-static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) ==
-                                         sizeof(std::vector<Relocation>) + 88,
+static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) == 104,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 

@@ -73,11 +73,7 @@ def IndexDialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::index";
-
-  let extraClassDeclaration = [{
-    /// Register all dialect operations.
-    void registerOperations();
-  }];
+  let useDefaultOperationRegistration = 1;
 
   let hasConstantMaterializer = 1;
   let hasAttributes = 1;

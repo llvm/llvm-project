@@ -43,7 +43,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///
 ///   * pointer-based layout (stable ABI default)
 ///   * size-based layout (unstable ABI alternative)
-//
+///
 /// We describe these layouts below. All vector representations have a pointer that points to where
 /// the memory is allocated (called `__begin_`).
 ///
@@ -75,8 +75,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///
 ///    Figure 1: A visual representation of a pointer-based `std::vector<short>`. This vector has
 ///    four elements, with the capacity to store six. Boxes with numbers are valid elements within
-///    the vector, and boxes with `xx` have been allocated, but aren't being used as elements right
-///    now.
+///    the vector, boxes with `------` have been allocated, but aren't being used as elements right
+///    now, and boxes with `???` are not a part of the vector's allocated buffer.
 ///
 /// This is the default layout for libc++.
 ///
@@ -98,8 +98,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///                    ^
 ///                __begin_
 ///
-///    Figure 2: A visual representation of this a size-based layout. Blank boxes are not a part
-///    of the vector's allocated buffer.
+///    Figure 2: A visual representation of a size-based layout. Boxes are interpreted the same
+///    way as in Figure 1.
 ///
 /// **Class design**
 ///
@@ -130,90 +130,81 @@ public:
 #endif
 
   // Cannot be defaulted, since `_LIBCPP_COMPRESSED_PAIR` isn't an aggregate before C++14.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout()
-      _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout() _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
       : __capacity_() {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type const& __a)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __vector_layout(allocator_type const& __a)
       _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
       : __capacity_(), __alloc_(__a) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type&& __a)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __vector_layout(allocator_type&& __a)
       _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
       : __capacity_(), __alloc_(std::move(__a)) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout(__vector_layout&& __other)
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout(__vector_layout&& __other)
       _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value);
 
   /// Returns a reference to the stored allocator.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI allocator_type& __alloc() _NOEXCEPT {
-    return __alloc_;
-  }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator_type& __alloc() _NOEXCEPT { return __alloc_; }
 
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI allocator_type const&
-  __alloc() const _NOEXCEPT {
-    return __alloc_;
-  }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator_type const& __alloc() const _NOEXCEPT { return __alloc_; }
 
   /// Returns a pointer to the beginning of the buffer.
   ///
   /// `__begin_ptr()` is not called `data()` because `vector::data()` returns `T*`, but `__begin_`
   /// is allowed to be a fancy pointer.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __begin_ptr() _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __begin_ptr() _NOEXCEPT {
     if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
       std::__assume_separate_storage(this, std::__to_address(__begin_));
     return __begin_;
   }
 
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __begin_ptr() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer __begin_ptr() const _NOEXCEPT {
     if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
       std::__assume_separate_storage(this, std::__to_address(__begin_));
     return __begin_;
   }
 
   /// Returns a built-in pointer to the beginning of the buffer.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp* __data() _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* __data() _NOEXCEPT {
     if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
       std::__assume_separate_storage(this, std::__to_address(__begin_));
     return std::__to_address(__begin_);
   }
 
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _Tp const* __data() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp const* __data() const _NOEXCEPT {
     if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
       std::__assume_separate_storage(this, std::__to_address(__begin_));
     return std::__to_address(__begin_);
   }
 
   /// Returns how many elements can be added before a reallocation occurs.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type
-  __remaining_capacity() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __remaining_capacity() const _NOEXCEPT;
 
   /// Sets the member pointing to the first element in the vector to `__new_begin`, the member used
   /// to obtain the vector's bound to the equivalent of `__new_size`, and the member that represents
   /// the vector's capacity to the equivalent to `__new_capacity`.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void
   __set_layout(pointer __new_begin, size_type __new_size, size_type __new_capacity) _NOEXCEPT;
 
   /// Sets the member used to obtain the vector's bound to the equivalent of `__ptr`.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_bound_using_pointer(pointer __ptr) _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void __set_bound_using_pointer(pointer __ptr) _NOEXCEPT;
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __reset_without_allocator() _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap(__vector_layout& __other) _NOEXCEPT;
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __move_assign_without_allocator(__vector_layout& __other) _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void __reset_without_allocator() _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void __swap(__vector_layout& __other) _NOEXCEPT;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void __move_assign_without_allocator(__vector_layout& __other) _NOEXCEPT;
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __relocate(_SplitBuffer& __buffer);
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
-  __relocate_with_pivot(_SplitBuffer& __buffer, pointer __pivot);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void __relocate(_SplitBuffer& __buffer);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __relocate_with_pivot(_SplitBuffer& __buffer, pointer __pivot);
 
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __size() const _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type __capacity() const _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __empty() const _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __end_ptr() _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __end_ptr() const _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __capacity_ptr() _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_pointer __capacity_ptr() const _NOEXCEPT;
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __invariants() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __size() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 size_type __capacity() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __empty() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __end_ptr() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer __end_ptr() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __capacity_ptr() _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 const_pointer __capacity_ptr() const _NOEXCEPT;
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __invariants() const _NOEXCEPT;
 
 private:
   pointer __begin_ = nullptr;
@@ -227,16 +218,16 @@ private:
   _LIBCPP_COMPRESSED_PAIR(pointer, __capacity_ = nullptr, allocator_type, __alloc_);
 #endif
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20
-  _LIBCPP_HIDE_FROM_ABI void __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+  __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     std::__annotate_contiguous_container<_Allocator>(__data(), __data() + __capacity(), __old_mid, __new_mid);
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_new(size_type __current_size) const _NOEXCEPT {
     __annotate_contiguous_container(__data() + __capacity(), __data() + __current_size);
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 void __annotate_delete() const _NOEXCEPT {
     __annotate_contiguous_container(__data() + __size(), __data() + __capacity());
   }
 };

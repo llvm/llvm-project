@@ -76,6 +76,12 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
   string(REPLACE ";" "$<SEMICOLON>" llvm_tablegen_flags
          "${LLVM_TABLEGEN_FLAGS}")
 
+  # The launchers are lists as well, e.g. "ccache;hash_dir=false".
+  string(REPLACE ";" "$<SEMICOLON>" c_compiler_launcher_arg
+         "${CMAKE_C_COMPILER_LAUNCHER}")
+  string(REPLACE ";" "$<SEMICOLON>" cxx_compiler_launcher_arg
+         "${CMAKE_CXX_COMPILER_LAUNCHER}")
+
   set(external_project_source_dirs)
   foreach(project ${LLVM_EXTERNAL_PROJECTS})
     canonicalize_tool_name(${project} name)
@@ -90,8 +96,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
   add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}/CMakeCache.txt
     COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}"
         "-DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
-        "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
-        "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
+        -DCMAKE_C_COMPILER_LAUNCHER="${c_compiler_launcher_arg}"
+        -DCMAKE_CXX_COMPILER_LAUNCHER="${cxx_compiler_launcher_arg}"
         ${CROSS_TOOLCHAIN_FLAGS_${target_name}} ${CMAKE_CURRENT_SOURCE_DIR}
         ${CROSS_TOOLCHAIN_FLAGS_${project_name}_${target_name}}
         -DLLVM_TARGET_IS_CROSSCOMPILE_HOST=TRUE

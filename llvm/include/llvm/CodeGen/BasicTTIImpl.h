@@ -1082,8 +1082,9 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {},
-      const Instruction *CtxI = nullptr) const override {
+      ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr,
+      ArrayRef<const Value *> Scalars = {}) const override {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1091,9 +1092,9 @@ public:
 
     // TODO: Handle more cost kinds.
     if (CostKind != TTI::TCK_RecipThroughput)
-      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                           Opd1Info, Opd2Info,
-                                           Args, CtxI);
+      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                           Opd2Info, Args, CtxI, TLibInfo,
+                                           Scalars);
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -1143,8 +1144,8 @@ public:
     // similarly to what getCastInstrCost() does.
     if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
       InstructionCost Cost = thisT()->getArithmeticInstrCost(
-          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
-          Args, CtxI);
+          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info, Args,
+          CtxI, TLibInfo, Scalars);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);

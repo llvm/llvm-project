@@ -24,7 +24,7 @@ bool TargetInfo::isAggregateTypeForABI(const Type *Ty) const {
 
   // Check for fundamental scalar types.
   if (Ty->isInteger() || Ty->isFloat() || Ty->isOpaqueFloat8() ||
-      Ty->isPointer() || Ty->isVector() || Ty->isTuple())
+      Ty->isSveCount() || Ty->isPointer() || Ty->isVector() || Ty->isTuple())
     return false;
 
   // Data member pointers have scalar evaluation kind.

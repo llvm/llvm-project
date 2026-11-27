@@ -5,7 +5,6 @@
 name: test_min_max_ValK0_K1_f32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -40,7 +39,6 @@ body: |
 name: test_min_max_K0Val_K1_f64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -75,7 +73,6 @@ body: |
 name: test_min_K1max_ValK0_f16
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -116,7 +113,6 @@ body: |
 name: test_min_K1max_K0Val_f16
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -159,7 +155,6 @@ body: |
 name: test_min_max_splat_padded_with_undef
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -237,7 +232,6 @@ body: |
 name: test_max_min_K1Val_K0_f64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -272,7 +266,6 @@ body: |
 name: test_max_K0min_ValK1_f16
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -311,7 +304,6 @@ body: |
 name: test_max_K0min_K1Val_v2f16
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -357,7 +349,6 @@ body: |
 name: test_min_max_K0_gt_K1
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -391,7 +382,6 @@ body: |
 name: test_max_min_K0_gt_K1
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -425,7 +415,6 @@ body: |
 name: test_min_max_maybe_NaN_input_ieee_false
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -460,7 +449,6 @@ body: |
 name: test_min_max_maybe_NaN_input_ieee_true_dx10clamp_false
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -497,7 +485,6 @@ body: |
 name: test_max_min_maybe_NaN_input_ieee_true
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: true
@@ -534,7 +521,6 @@ body: |
 name: test_max_min_maybe_NaN_input_ieee_false
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -569,7 +555,6 @@ body: |
 name: test_min_max_f32_sgpr
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -598,7 +583,6 @@ body: |
 name: test_min_max_f32_sgpr_fma_user
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false

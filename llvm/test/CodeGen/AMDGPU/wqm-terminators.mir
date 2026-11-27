@@ -10,7 +10,6 @@
 
 ---
 name: exit_to_exact
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr0', virtual-reg: '%0' }
 body: |

@@ -589,10 +589,18 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
 }
 
 bool MipsInstrInfo::SafeAfterMflo(const MachineInstr &MI) const {
-  if (IsDIVMULT(MI.getOpcode()))
+  if (MI.isInlineAsm())
     return false;
 
-  return true;
+  // Any instruction that writes HI or LO, such as mult, multu, div, divu,
+  // their 64-bit forms, mthi and mtlo. Register masks on calls are not
+  // writes of HI or LO.
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+  return llvm::none_of(MI.operands(), [&](const MachineOperand &MO) {
+    return MO.isReg() && MO.isDef() && MO.getReg() &&
+           (TRI.regsOverlap(MO.getReg(), Mips::HI0) ||
+            TRI.regsOverlap(MO.getReg(), Mips::LO0));
+  });
 }
 
 /// Predicate for distingushing between control transfer instructions and all

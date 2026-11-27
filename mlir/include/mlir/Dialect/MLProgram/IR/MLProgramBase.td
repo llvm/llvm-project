@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 def MLProgram_Dialect : Dialect {
   let name = "ml_program";
   let cppNamespace = "::mlir::ml_program";
+  let useDefaultOperationRegistration = 1;
   let description = [{
     The MLProgram dialect contains structural operations and types for
     defining a compiled Machine-Learning program, as created from common

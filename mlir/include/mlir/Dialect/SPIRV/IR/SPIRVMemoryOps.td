@@ -226,8 +226,9 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", [DeclareOpInterfaceMethods<AlignmentAttrOpIn
     fixed size; i.e., it cannot be, nor include, any OpTypeRuntimeArray
     types.
 
-    Pointer is the pointer to load through.  Its type must be an
-    OpTypePointer whose Type operand is the same as Result Type.
+    Pointer is the pointer to load through. Its type must be a pointer type.
+    If its type is OpTypePointer, the Type operand must be the same as Result
+    Type.
 
     If present, any Memory Operands must begin with a memory operand
     literal. If not present, it is the same as specifying the memory operand
@@ -241,6 +242,8 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", [DeclareOpInterfaceMethods<AlignmentAttrOpIn
 
     load-op ::= ssa-id ` = spirv.Load ` storage-class ssa-use
                 (`[` memory-access `]`)? ` : ` spirv-element-type
+              | ssa-id ` = spirv.Load ` ssa-use (`[` memory-access `]`)?
+                ` : ` spirv-untyped-pointer-type ` -> ` spirv-type
     ```
 
     #### Example:
@@ -250,11 +253,12 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", [DeclareOpInterfaceMethods<AlignmentAttrOpIn
     %1 = spirv.Load "Function" %0 : f32
     %2 = spirv.Load "Function" %0 ["Volatile"] : f32
     %3 = spirv.Load "Function" %0 ["Aligned", 4] : f32
+    %4 = spirv.Load %5 : !spirv.untyped_ptr<Workgroup> -> f32
     ```
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr,
+    SPIRV_AnyPtrOrUntypedPtr:$ptr,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<IntValidAlignment<I32Attr>>:$alignment
   );
@@ -440,8 +444,9 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", [DeclareOpInterfaceMethods<AlignmentAttrOp
   let summary = "Store through a pointer.";
 
   let description = [{
-    Pointer is the pointer to store through.  Its type must be an
-    OpTypePointer whose Type operand is the same as the type of Object.
+    Pointer is the pointer to store through. Its type must be a pointer type.
+    If its type is OpTypePointer, the Type operand must be the same as the
+    type of Object.
 
     Object is the object to store.
 
@@ -454,6 +459,8 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", [DeclareOpInterfaceMethods<AlignmentAttrOp
     ```
     store-op ::= `spirv.Store ` storage-class ssa-use `, ` ssa-use `, `
                   (`[` memory-access `]`)? `:` spirv-element-type
+               | `spirv.Store ` ssa-use `, ` ssa-use (`[` memory-access `]`)?
+                  `:` spirv-untyped-pointer-type `, ` spirv-type
     ```
 
     #### Example:
@@ -464,11 +471,12 @@ def SPIRV_StoreOp : SPIRV_Op<"Store", [DeclareOpInterfaceMethods<AlignmentAttrOp
     spirv.Store "Function" %0, %1 : f32
     spirv.Store "Function" %0, %1 ["Volatile"] : f32
     spirv.Store "Function" %0, %1 ["Aligned", 4] : f32
+    spirv.Store %2, %1 : !spirv.untyped_ptr<Workgroup>, f32
     ```
   }];
 
   let arguments = (ins
-    SPIRV_AnyPtr:$ptr,
+    SPIRV_AnyPtrOrUntypedPtr:$ptr,
     SPIRV_Type:$value,
     OptionalAttr<SPIRV_MemoryAccessAttr>:$memory_access,
     OptionalAttr<IntValidAlignment<I32Attr>>:$alignment

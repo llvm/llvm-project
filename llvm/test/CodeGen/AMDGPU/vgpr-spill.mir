@@ -7,7 +7,6 @@
 
 ---
 name: spill_v32
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
 machineFunctionInfo:
@@ -55,7 +54,6 @@ body:             |
 
 ---
 name: spill_v32_kill
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
 machineFunctionInfo:
@@ -98,7 +96,6 @@ body:             |
 
 ---
 name: spill_v64
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -148,7 +145,6 @@ body:             |
 
 ---
 name: spill_v64_kill
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -195,7 +191,6 @@ body:             |
 
 ---
 name: spill_v64_undef_sub1_killed
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -240,7 +235,6 @@ body:             |
 
 ---
 name: spill_v64_undef_sub0_killed
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -285,7 +279,6 @@ body:             |
 
 ---
 name: spill_v128_kill
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -334,7 +327,6 @@ body:             |
 
 ---
 name: spill_v32_undef
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 4, alignment: 4 }
 machineFunctionInfo:
@@ -368,7 +360,6 @@ body:             |
 
 ---
 name: spill_v64_undef
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 8, alignment: 4 }
 machineFunctionInfo:
@@ -402,7 +393,6 @@ body:             |
 
 ---
 name: spill_v128_kill_unaligned
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -460,7 +450,6 @@ body:             |
 
 ---
 name: spill_v128_unaligned
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -521,7 +510,6 @@ body:             |
 
 ---
 name: spill_v256_aligned
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
@@ -580,7 +568,6 @@ body:             |
 
 ---
 name: spill_v256_unaligned
-tracksRegLiveness: true
 stack:
   - { id: 0, type: spill-slot, size: 16, alignment: 4 }
 machineFunctionInfo:
