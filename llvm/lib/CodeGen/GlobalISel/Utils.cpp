@@ -1708,9 +1708,7 @@ bool llvm::isNullOrNullSplat(const MachineInstr &MI,
     return FPImm->isZero() && !FPImm->isNegative();
   }
   default:
-    if (!AllowUndefs) // TODO: isBuildVectorAllZeros assumes undef is OK already
-      return false;
-    return isBuildVectorAllZeros(MI, MRI);
+    return isBuildVectorAllZeros(MI, MRI, AllowUndefs);
   }
 }
 
@@ -1723,9 +1721,7 @@ bool llvm::isAllOnesOrAllOnesSplat(const MachineInstr &MI,
   case TargetOpcode::G_CONSTANT:
     return MI.getOperand(1).getCImm()->isAllOnesValue();
   default:
-    if (!AllowUndefs) // TODO: isBuildVectorAllOnes assumes undef is OK already
-      return false;
-    return isBuildVectorAllOnes(MI, MRI);
+    return isBuildVectorAllOnes(MI, MRI, AllowUndefs);
   }
 }
 
