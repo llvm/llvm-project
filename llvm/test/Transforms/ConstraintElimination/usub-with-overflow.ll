@@ -293,3 +293,113 @@ exit.fail:
   ret i8 0
 }
 
+
+define void @usub_operand_cmp_in_later_block(i8 %a) {
+; CHECK-LABEL: @usub_operand_cmp_in_later_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[DOM:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nuw i1 [[C:%.*]], false
+; CHECK-NEXT:    call void @use_i1(i1 [[TMP0]])
+; CHECK-NEXT:    call void @use_i1(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       dom:
+; CHECK-NEXT:    [[C]] = icmp ult i8 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %dom
+
+t:
+  %wo = call { i1, i1 } @llvm.usub.with.overflow.i1(i1 %c, i1 false)
+  %r = extractvalue { i1, i1 } %wo, 0
+  call void @use_i1(i1 %r)
+  %wo.2 = call { i1, i1 } @llvm.usub.with.overflow.i1(i1 %c, i1 false)
+  %r.2 = extractvalue { i1, i1 } %wo.2, 0
+  call void @use_i1(i1 %r.2)
+  ret void
+
+dom:
+  %c = icmp ult i8 %a, 10
+  br i1 %c, label %t, label %exit
+
+exit:
+  ret void
+}
+
+define void @usub_flag_only_operand_cmp_in_later_block(i8 %a) {
+; CHECK-LABEL: @usub_flag_only_operand_cmp_in_later_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[DOM:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    call void @use_i1(i1 false)
+; CHECK-NEXT:    call void @use_i1(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       dom:
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %dom
+
+t:
+  %wo = call { i1, i1 } @llvm.usub.with.overflow.i1(i1 %c, i1 false)
+  %ov = extractvalue { i1, i1 } %wo, 1
+  call void @use_i1(i1 %ov)
+  %wo.2 = call { i1, i1 } @llvm.usub.with.overflow.i1(i1 %c, i1 false)
+  %r.2 = extractvalue { i1, i1 } %wo.2, 0
+  call void @use_i1(i1 %r.2)
+  ret void
+
+dom:
+  %c = icmp ult i8 %a, 10
+  br i1 %c, label %t, label %exit
+
+exit:
+  ret void
+}
+
+define void @usub_struct_user_operand_cmp_in_later_block(i8 %a) {
+; CHECK-LABEL: @usub_struct_user_operand_cmp_in_later_block(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[DOM:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub nuw i1 [[C:%.*]], false
+; CHECK-NEXT:    [[WO:%.*]] = call { i1, i1 } @llvm.usub.with.overflow.i1(i1 true, i1 false)
+; CHECK-NEXT:    call void @use_struct_i1({ i1, i1 } [[WO]])
+; CHECK-NEXT:    call void @use_i1(i1 [[TMP0]])
+; CHECK-NEXT:    call void @use_i1(i1 true)
+; CHECK-NEXT:    ret void
+; CHECK:       dom:
+; CHECK-NEXT:    [[C]] = icmp ult i8 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %dom
+
+t:
+  %wo = call { i1, i1 } @llvm.usub.with.overflow.i1(i1 %c, i1 false)
+  call void @use_struct_i1({ i1, i1 } %wo)
+  %r = extractvalue { i1, i1 } %wo, 0
+  call void @use_i1(i1 %r)
+  %wo.2 = call { i1, i1 } @llvm.usub.with.overflow.i1(i1 %c, i1 false)
+  %r.2 = extractvalue { i1, i1 } %wo.2, 0
+  call void @use_i1(i1 %r.2)
+  ret void
+
+dom:
+  %c = icmp ult i8 %a, 10
+  br i1 %c, label %t, label %exit
+
+exit:
+  ret void
+}
+
+declare void @use_i1(i1)
+declare void @use_struct_i1({ i1, i1 })
