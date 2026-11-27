@@ -22,6 +22,11 @@
 
 // CHECK: JIT result: 0
 
+// glibc only declares Dl_info with _GNU_SOURCE (see dlfcn-host.h).
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+
 #include "orc-rt-c/bedrock/host/posix/dlfcn-host.h"
 
 int main(int argc, char *argv[]) {

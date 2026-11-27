@@ -573,4 +573,103 @@ TEST(NamelistTests, TabAsValueSeparator) {
   EXPECT_EQ(*bDesc->ZeroBasedIndexedElement<int>(0), 3);
 }
 
+// Reads NAMELIST group 'group' with IOSTAT= from an internal file whose
+// records are 'records' (all of the same length); returns the IOSTAT= value.
+static int InputNamelistWithIoStat(
+    const std::vector<std::string> &records, const NamelistGroup &group) {
+  std::string buffer;
+  for (const std::string &record : records) {
+    buffer += record;
+  }
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  SubscriptValue shape{static_cast<SubscriptValue>(records.size())};
+  internalDesc.Establish(1, records.front().size(), buffer.data(), 1, &shape,
+      CFI_attribute_pointer);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  IONAME(EnableHandlers)(inCookie, /*hasIoStat=*/true);
+  IONAME(InputNamelist)(inCookie, group);
+  return IONAME(EndIoStatement)(inCookie);
+}
+
+// NAMELIST input that ends before the group's terminating '/' is not
+// successful.
+TEST(NamelistTests, InputEndsAfterGroupName) {
+  OwningPtr<Descriptor> nDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{-1})};
+  const NamelistGroup::Item items[]{{"n", *nDesc}};
+  const NamelistGroup group{"nl", 1, items};
+  for (const char *input : {"&nl     ", "$nl     "}) {
+    EXPECT_NE(InputNamelistWithIoStat({input}, group), IostatOk) << input;
+    EXPECT_EQ(*nDesc->ZeroBasedIndexedElement<int>(0), -1) << input;
+  }
+}
+
+TEST(NamelistTests, InputEndsAfterItem) {
+  OwningPtr<Descriptor> nDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{-1})};
+  const NamelistGroup::Item items[]{{"n", *nDesc}};
+  const NamelistGroup group{"nl", 1, items};
+  EXPECT_NE(InputNamelistWithIoStat({"&nl n=1 "}, group), IostatOk);
+}
+
+// The terminating '/' may appear on a later record.
+TEST(NamelistTests, TerminatorOnLaterRecord) {
+  OwningPtr<Descriptor> nDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{-1})};
+  const NamelistGroup::Item items[]{{"n", *nDesc}};
+  const NamelistGroup group{"nl", 1, items};
+  EXPECT_EQ(InputNamelistWithIoStat({"&nl n=1", "      /"}, group), IostatOk);
+  EXPECT_EQ(*nDesc->ZeroBasedIndexedElement<int>(0), 1);
+}
+
+// A group may omit its '/' when another group follows (see
+// flang/docs/Extensions.md).
+TEST(NamelistTests, GroupEndsAtNextGroup) {
+  OwningPtr<Descriptor> nDesc{
+      MakeArray<TypeCategory::Integer, static_cast<int>(sizeof(int))>(
+          std::vector<int>{}, std::vector<int>{-1})};
+  const NamelistGroup::Item items[]{{"n", *nDesc}};
+  const NamelistGroup group{"nl", 1, items};
+  EXPECT_EQ(InputNamelistWithIoStat({"&nl n=3 &other m=4/"}, group), IostatOk);
+  EXPECT_EQ(*nDesc->ZeroBasedIndexedElement<int>(0), 3);
+  EXPECT_EQ(InputNamelistWithIoStat({"$nl n=5 $other m=6/"}, group), IostatOk);
+  EXPECT_EQ(*nDesc->ZeroBasedIndexedElement<int>(0), 5);
+}
+
+TEST(NamelistTests, QuoteDelimitedCharacterArray) {
+  OwningPtr<Descriptor> xDesc{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{3}, std::vector<std::string>{"a b", "c\"d", "e  "}, 3)};
+  OwningPtr<Descriptor> aDesc{MakeArray<TypeCategory::Character, 1>(
+      std::vector<int>{}, std::vector<std::string>{"Z"}, 1)};
+  const NamelistGroup::Item items[]{{"x", *xDesc}, {"a", *aDesc}};
+  const NamelistGroup group{"nml", 2, items};
+  char buffer[40];
+  StaticDescriptor<1, true> statDesc;
+  Descriptor &internalDesc{statDesc.descriptor()};
+  internalDesc.Establish(TypeCode{CFI_type_char}, sizeof buffer, buffer, 0,
+      nullptr, CFI_attribute_pointer);
+  auto outCookie{IONAME(BeginInternalArrayListOutput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetDelim)(outCookie, "QUOTE", 5));
+  ASSERT_TRUE(IONAME(OutputNamelist)(outCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(outCookie), IostatOk) << "namelist output";
+  std::string got{buffer, sizeof buffer};
+  got.erase(got.find_last_not_of(' ') + 1);
+  EXPECT_EQ(got, " &NML X= \"a b\" \"c\"\"d\" \"e  \",A= \"Z\"/");
+
+  ClearDescriptorStorage(*xDesc);
+  ClearDescriptorStorage(*aDesc);
+  auto inCookie{IONAME(BeginInternalArrayListInput)(
+      internalDesc, nullptr, 0, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(InputNamelist)(inCookie, group));
+  ASSERT_EQ(IONAME(EndIoStatement)(inCookie), IostatOk) << "namelist input";
+  EXPECT_EQ(std::string(xDesc->OffsetElement<char>(0), 9), "a bc\"de  ");
+  EXPECT_EQ(*aDesc->OffsetElement<char>(0), 'Z');
+}
+
 // TODO: Internal NAMELIST error tests

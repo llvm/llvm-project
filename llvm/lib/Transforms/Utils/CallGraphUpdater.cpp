@@ -58,6 +58,9 @@ bool CallGraphUpdater::finalize() {
       // call graph walk, so only erase the function if we're not using that
       // infrastructure.
       // The function is now really dead and de-attached from everything.
+      // Clear any analyses computed since it was removed.
+      if (FAM)
+        FAM->clear(*DeadFn, DeadFn->getName());
       DeadFn->eraseFromParent();
     }
   }

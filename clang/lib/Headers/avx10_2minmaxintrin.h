@@ -88,7 +88,7 @@
 #define _mm_mask_minmax_ph(W, U, A, B, C)                                      \
   ((__m128h)__builtin_ia32_vminmaxph128_mask(                                  \
       (__v8hf)(__m128h)(A), (__v8hf)(__m128h)(B), (int)(C),                    \
-      (__v8hf)(__m128h)(W), (__mmask16)-1))
+      (__v8hf)(__m128h)(W), (__mmask8)(U)))
 
 #define _mm_maskz_minmax_ph(U, A, B, C)                                        \
   ((__m128h)__builtin_ia32_vminmaxph128_mask(                                  \

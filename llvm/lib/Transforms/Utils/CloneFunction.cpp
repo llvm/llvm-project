@@ -706,6 +706,73 @@ void PruningFunctionCloner::CloneBlock(
       hasStaticAllocas && BB != &BB->getParent()->front();
 }
 
+static void foldPrunedTerminatorsAndMergeBlocks(Function *NewFunc,
+                                                Function::iterator Begin) {
+  // Simplify conditional branches and switches with a constant operand. We try
+  // to prune these out when cloning, but if the simplification required
+  // looking through PHI nodes, those are only available after forming the full
+  // basic block. That may leave some here, and we still want to prune the dead
+  // code as early as possible.
+  for (BasicBlock &BB : make_range(Begin, NewFunc->end()))
+    ConstantFoldTerminator(&BB);
+
+  // Some blocks may have become unreachable as a result. Find and delete them.
+  {
+    SmallPtrSet<BasicBlock *, 16> ReachableBlocks;
+    SmallVector<BasicBlock *, 16> Worklist;
+    Worklist.push_back(&*Begin);
+    while (!Worklist.empty()) {
+      BasicBlock *BB = Worklist.pop_back_val();
+      if (ReachableBlocks.insert(BB).second)
+        append_range(Worklist, successors(BB));
+    }
+
+    SmallVector<BasicBlock *, 16> UnreachableBlocks;
+    for (BasicBlock &BB : make_range(Begin, NewFunc->end()))
+      if (!ReachableBlocks.contains(&BB))
+        UnreachableBlocks.push_back(&BB);
+    DeleteDeadBlocks(UnreachableBlocks);
+  }
+
+  // Now that the inlined function body has been fully constructed, go through
+  // and zap unconditional fall-through branches. This happens all the time when
+  // specializing code: code specialization turns conditional branches into
+  // uncond branches, and this code folds them.
+  Function::iterator I = Begin;
+  while (I != NewFunc->end()) {
+    UncondBrInst *BI = dyn_cast<UncondBrInst>(I->getTerminator());
+    if (!BI) {
+      ++I;
+      continue;
+    }
+
+    BasicBlock *Dest = BI->getSuccessor();
+    if (!Dest->getSinglePredecessor() || Dest->hasAddressTaken()) {
+      ++I;
+      continue;
+    }
+
+    // We shouldn't be able to get single-entry PHI nodes here, as instsimplify
+    // above should have zapped all of them..
+    assert(!isa<PHINode>(Dest->begin()));
+
+    // We know all single-entry PHI nodes in the inlined function have been
+    // removed, so we just need to splice the blocks.
+    BI->eraseFromParent();
+
+    // Make all PHI nodes that referred to Dest now refer to I as their source.
+    Dest->replaceAllUsesWith(&*I);
+
+    // Move all the instructions in the succ to the pred.
+    I->splice(I->end(), Dest);
+
+    // Remove the dest block.
+    Dest->eraseFromParent();
+
+    // Do not increment I, iteratively merge all things this block branches to.
+  }
+}
+
 /// This works like CloneAndPruneFunctionInto, except that it does not clone the
 /// entire function. Instead it starts at an instruction provided by the caller
 /// and copies (and prunes) only the code reachable from that instruction.
@@ -910,69 +977,7 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     }
   }
 
-  // Simplify conditional branches and switches with a constant operand. We try
-  // to prune these out when cloning, but if the simplification required
-  // looking through PHI nodes, those are only available after forming the full
-  // basic block. That may leave some here, and we still want to prune the dead
-  // code as early as possible.
-  for (BasicBlock &BB : make_range(Begin, NewFunc->end()))
-    ConstantFoldTerminator(&BB);
-
-  // Some blocks may have become unreachable as a result. Find and delete them.
-  {
-    SmallPtrSet<BasicBlock *, 16> ReachableBlocks;
-    SmallVector<BasicBlock *, 16> Worklist;
-    Worklist.push_back(&*Begin);
-    while (!Worklist.empty()) {
-      BasicBlock *BB = Worklist.pop_back_val();
-      if (ReachableBlocks.insert(BB).second)
-        append_range(Worklist, successors(BB));
-    }
-
-    SmallVector<BasicBlock *, 16> UnreachableBlocks;
-    for (BasicBlock &BB : make_range(Begin, NewFunc->end()))
-      if (!ReachableBlocks.contains(&BB))
-        UnreachableBlocks.push_back(&BB);
-    DeleteDeadBlocks(UnreachableBlocks);
-  }
-
-  // Now that the inlined function body has been fully constructed, go through
-  // and zap unconditional fall-through branches. This happens all the time when
-  // specializing code: code specialization turns conditional branches into
-  // uncond branches, and this code folds them.
-  Function::iterator I = Begin;
-  while (I != NewFunc->end()) {
-    UncondBrInst *BI = dyn_cast<UncondBrInst>(I->getTerminator());
-    if (!BI) {
-      ++I;
-      continue;
-    }
-
-    BasicBlock *Dest = BI->getSuccessor();
-    if (!Dest->getSinglePredecessor() || Dest->hasAddressTaken()) {
-      ++I;
-      continue;
-    }
-
-    // We shouldn't be able to get single-entry PHI nodes here, as instsimplify
-    // above should have zapped all of them..
-    assert(!isa<PHINode>(Dest->begin()));
-
-    // We know all single-entry PHI nodes in the inlined function have been
-    // removed, so we just need to splice the blocks.
-    BI->eraseFromParent();
-
-    // Make all PHI nodes that referred to Dest now refer to I as their source.
-    Dest->replaceAllUsesWith(&*I);
-
-    // Move all the instructions in the succ to the pred.
-    I->splice(I->end(), Dest);
-
-    // Remove the dest block.
-    Dest->eraseFromParent();
-
-    // Do not increment I, iteratively merge all things this block branches to.
-  }
+  foldPrunedTerminatorsAndMergeBlocks(NewFunc, Begin);
 
   // Make a final pass over the basic blocks from the old function to gather
   // any return instructions which survived folding. We have to do this here

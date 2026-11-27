@@ -1407,16 +1407,8 @@ void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, QualType AllocType) {
 }
 
 llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
-  // The placement news of the enclosing function body are collected once, on
-  // the first allocation call that is not already typed by a sizeof.
-  auto PlacementNewType = [this](const CallExpr *E) -> QualType {
-    if (!AllocTokenPlacementTypes)
-      AllocTokenPlacementTypes = infer_alloc::collectPlacementNewTypes(
-          CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
-    return AllocTokenPlacementTypes->lookup(E);
-  };
-  return buildAllocToken(infer_alloc::inferPossibleType(
-      E, getContext(), CurCast, PlacementNewType));
+  return buildAllocToken(
+      infer_alloc::inferPossibleType(E, getContext(), CurCast));
 }
 
 void CodeGenFunction::EmitAllocToken(llvm::CallBase *CB, const CallExpr *E) {
@@ -4226,6 +4218,21 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
   return llvm::ConstantStruct::getAnon(Data);
 }
 
+llvm::GlobalVariable *
+CodeGenFunction::EmitCheckStaticData(ArrayRef<llvm::Constant *> StaticArgs) {
+  llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
+  auto *InfoPtr = new llvm::GlobalVariable(
+      CGM.getModule(), Info->getType(),
+      // Non-constant global is used in a handler to deduplicate reports.
+      // TODO: change deduplication logic and make it constant.
+      /*isConstant=*/false, llvm::GlobalVariable::PrivateLinkage, Info, "",
+      nullptr, llvm::GlobalVariable::NotThreadLocal,
+      CGM.getDataLayout().getDefaultGlobalsAddressSpace());
+  InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+  return InfoPtr;
+}
+
 namespace {
 /// Specify under what conditions this check can be recovered
 enum class CheckRecoverableKind {
@@ -4412,16 +4419,7 @@ void CodeGenFunction::EmitCheck(
 
   // Emit handler arguments and create handler function type.
   if (!StaticArgs.empty()) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-    auto *InfoPtr = new llvm::GlobalVariable(
-        CGM.getModule(), Info->getType(),
-        // Non-constant global is used in a handler to deduplicate reports.
-        // TODO: change deduplication logic and make it constant.
-        /*isConstant=*/false, llvm::GlobalVariable::PrivateLinkage, Info, "",
-        nullptr, llvm::GlobalVariable::NotThreadLocal,
-        CGM.getDataLayout().getDefaultGlobalsAddressSpace());
-    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+    llvm::GlobalVariable *InfoPtr = EmitCheckStaticData(StaticArgs);
     Args.push_back(Builder.CreateAddrSpaceCast(InfoPtr, CGM.VoidPtrTy));
     ArgTypes.push_back(CGM.VoidPtrTy);
   }
@@ -4477,18 +4475,15 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   llvm::CallInst *CheckCall;
   llvm::FunctionCallee SlowPathFn;
   if (WithDiag) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-    auto *InfoPtr =
-        new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
-                                 llvm::GlobalVariable::PrivateLinkage, Info);
-    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+    llvm::GlobalVariable *InfoPtr = EmitCheckStaticData(StaticArgs);
 
     SlowPathFn = CGM.getModule().getOrInsertFunction(
         "__cfi_slowpath_diag",
         llvm::FunctionType::get(VoidTy, {Int64Ty, Int8PtrTy, Int8PtrTy},
                                 false));
-    CheckCall = Builder.CreateCall(SlowPathFn, {TypeId, Ptr, InfoPtr});
+    CheckCall = Builder.CreateCall(
+        SlowPathFn,
+        {TypeId, Ptr, Builder.CreateAddrSpaceCast(InfoPtr, Int8PtrTy)});
   } else {
     SlowPathFn = CGM.getModule().getOrInsertFunction(
         "__cfi_slowpath",
@@ -4501,6 +4496,16 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   CheckCall->setDoesNotThrow();
 
   EmitBlock(Cont);
+}
+
+std::array<llvm::Constant *, 3>
+CodeGenFunction::EmitCFICheckFailStaticArgs(CFITypeCheckKind CheckKind,
+                                            SourceLocation Loc, QualType Type) {
+  return {
+      llvm::ConstantInt::get(Int8Ty, CheckKind),
+      EmitCheckSourceLocation(Loc),
+      EmitCheckTypeDescriptor(Type),
+  };
 }
 
 // Emit a stub for __cfi_check function so that the linker knows about this
@@ -7244,11 +7249,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
         CGM.getIntrinsic(llvm::Intrinsic::type_test), {CalleePtr, TypeId});
 
     auto CrossDsoTypeId = CGM.CreateCrossDsoCfiTypeId(MD);
-    llvm::Constant *StaticData[] = {
-        llvm::ConstantInt::get(Int8Ty, CFITCK_ICall),
-        EmitCheckSourceLocation(E->getBeginLoc()),
-        EmitCheckTypeDescriptor(QualType(FnType, 0)),
-    };
+    auto StaticData = EmitCFICheckFailStaticArgs(CFITCK_ICall, E->getBeginLoc(),
+                                                 QualType(FnType, 0));
     if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && CrossDsoTypeId) {
       EmitCfiSlowPathCheck(CheckOrdinal, TypeTest, CrossDsoTypeId, CalleePtr,
                            StaticData);

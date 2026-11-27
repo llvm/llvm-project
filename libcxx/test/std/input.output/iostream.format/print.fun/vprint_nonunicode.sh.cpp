@@ -32,14 +32,15 @@
 // RUN: %{exec} %t.exe > %t.actual
 // RUN: diff -u %t.actual %t.expected
 
+#include <cstddef>
 #include <print>
 
 int main(int, char**) {
   // The data is passed as-is so it does not depend on the encoding of the input.
-  int i         = 1234;
-  const char* s = "一二三四";
-  bool b        = true;
-  nullptr_t p   = nullptr;
+  int i            = 1234;
+  const char* s    = "一二三四";
+  bool b           = true;
+  std::nullptr_t p = nullptr;
   std::vprint_nonunicode("{} {} ", std::make_format_args(i, s));
   std::vprint_nonunicode("{} {}", std::make_format_args(b, p));
 

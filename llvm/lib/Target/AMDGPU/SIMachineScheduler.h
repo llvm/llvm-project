@@ -24,7 +24,6 @@
 namespace llvm {
 
 class SIInstrInfo;
-class SIRegisterInfo;
 class SIScheduleDAGMI;
 class SIScheduleBlockCreator;
 
@@ -402,7 +401,6 @@ public:
 
 class SIScheduleDAGMI final : public ScheduleDAGMILive {
   const SIInstrInfo *SITII;
-  const SIRegisterInfo *SITRI;
 
   std::vector<SUnit> SUnitsLinksBackup;
 

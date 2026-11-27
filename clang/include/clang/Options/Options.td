@@ -1199,17 +1199,14 @@ def cl_kernel_arg_info : Flag<["-"], "cl-kernel-arg-info">, Group<opencl_Group>,
   MarshallingInfoFlag<CodeGenOpts<"EmitOpenCLArgMetadata">>;
 def cl_unsafe_math_optimizations : Flag<["-"], "cl-unsafe-math-optimizations">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
-  HelpText<"OpenCL only. Allow unsafe floating-point optimizations.  Also implies -cl-no-signed-zeros and -cl-mad-enable.">,
+  HelpText<"OpenCL only. Allow unsafe floating-point optimizations.  Also implies -cl-no-signed-zeros.">,
   MarshallingInfoFlag<LangOpts<"CLUnsafeMath">>;
 def cl_fast_relaxed_math : Flag<["-"], "cl-fast-relaxed-math">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"OpenCL only. Sets -cl-finite-math-only and -cl-unsafe-math-optimizations, and defines __FAST_RELAXED_MATH__.">,
   MarshallingInfoFlag<LangOpts<"FastRelaxedMath">>;
 def cl_mad_enable : Flag<["-"], "cl-mad-enable">, Group<opencl_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  HelpText<"OpenCL only. Allow use of less precise MAD computations in the generated binary.">,
-  MarshallingInfoFlag<CodeGenOpts<"LessPreciseFPMAD">>,
-  ImpliedByAnyOf<[cl_unsafe_math_optimizations.KeyPath, cl_fast_relaxed_math.KeyPath]>;
+  HelpText<"OpenCL only. Accepted for compatibility and ignored.">;
 def cl_no_signed_zeros : Flag<["-"], "cl-no-signed-zeros">, Group<opencl_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"OpenCL only. Allow use of less precise no signed zeros computations in the generated binary.">,
@@ -1727,12 +1724,13 @@ def falign_loops_EQ : Joined<["-"], "falign-loops=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<N>">,
   HelpText<"N must be a power of two. Align loops to the boundary">,
   MarshallingInfoInt<CodeGenOpts<"LoopAlignment">>;
-def fno_align_functions: Flag<["-"], "fno-align-functions">, Group<f_Group>;
+def fno_align_functions: Flag<["-"], "fno-align-functions">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption]>;
 defm allow_editor_placeholders : BoolFOption<"allow-editor-placeholders",
   LangOpts<"AllowEditorPlaceholders">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  PosFlag<SetTrue, [], [ClangOption, CLOption, CC1Option],
           "Treat editor placeholders as valid source code">,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, CLOption]>>;
 def fallow_unsupported : Flag<["-"], "fallow-unsupported">, Group<f_Group>;
 def fapple_kext : Flag<["-"], "fapple-kext">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -2188,10 +2186,17 @@ defm borland_extensions : BoolFOption<"borland-extensions",
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
           "Accept non-standard constructs supported by the Borland compiler">,
   NegFlag<SetFalse>>;
+def fbpf_no_enum_reloc_EQ : CommaJoined<["-"], "fbpf-no-enum-reloc=">,
+  Group<f_Group>, Flags<[TargetSpecific]>,
+  Visibility<[ClangOption, CC1Option]>, MetaVarName<"<enum>">,
+  HelpText<"Do not relocate the enumerators of the comma-separated enums, "
+           "although the enums have the preserve_access_index attribute "
+           "(BPF only)">,
+  MarshallingInfoStringVector<LangOpts<"BPFNoEnumRelocs">>;
 def fbuiltin : Flag<["-"], "fbuiltin">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption, FC1Option]>;
 def fbuiltin_module_map : Flag <["-"], "fbuiltin-module-map">, Group<f_Group>,
-  Flags<[]>, HelpText<"Load the clang builtins module map file.">;
+  Visibility<[ClangOption, CLOption]>, HelpText<"Load the clang builtins module map file.">;
 defm caret_diagnostics : BoolFOption<"caret-diagnostics",
   DiagnosticOpts<"ShowCarets">, DefaultTrue,
   NegFlag<SetFalse, [], [ClangOption, CC1Option]>,
@@ -2230,7 +2235,7 @@ defm define_target_os_macros : OptInCC1FFlag<"define-target-os-macros",
   "Enable", "Disable", " predefined target OS macros",
   [ClangOption, CC1Option]>;
 def fparse_all_comments : Flag<["-"], "fparse-all-comments">, Group<f_clang_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CLOption, CC1Option]>,
   MarshallingInfoFlag<LangOpts<"CommentOpts.ParseAllComments">>;
 def fretain_comments : Flag<["-"], "fretain-comments">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -2397,7 +2402,8 @@ defm diagnostics_show_inlining_chain
                           "Show inlining chain notes for "
                           "[[gnu::warning/error]] diagnostics">,
                   NegFlag<SetFalse, [], [ClangOption, CLOption, CC1Option]>>;
-def fdiagnostics_format_EQ : Joined<["-"], "fdiagnostics-format=">, Group<f_clang_Group>;
+def fdiagnostics_format_EQ : Joined<["-"], "fdiagnostics-format=">, Group<f_clang_Group>,
+  Visibility<[ClangOption, CLOption]>;
 def fdiagnostics_show_category_EQ : Joined<["-"], "fdiagnostics-show-category=">, Group<f_clang_Group>;
 def fdiagnostics_show_template_tree : Flag<["-"], "fdiagnostics-show-template-tree">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
@@ -3569,6 +3575,11 @@ defm clangir : BoolFOption<"clangir",
   BothFlags<[], [ClangOption, CC1Option], "">>;
 def emit_cir : Flag<["-"], "emit-cir">, Visibility<[ClangOption, CC1Option]>,
   Group<Action_Group>, HelpText<"Build ASTs and then lower to ClangIR">;
+def emit_cir_EQ : Joined<["-"], "emit-cir=">, Visibility<[CC1Option]>,
+  Group<Action_Group>, Values<"pristine">,
+  HelpText<"Build ASTs and then lower to ClangIR, stopping at the named "
+           "point (experimental). 'pristine' is CIRGen's output before any "
+           "ClangIR pass">;
 def emit_cir_bc : Flag<["-"], "emit-cir-bc">,
   Visibility<[CC1Option]>, Group<Action_Group>,
   HelpText<"Build ASTs and then emit ClangIR bytecode">;
@@ -4091,7 +4102,8 @@ def fveclib : Joined<["-"], "fveclib=">, Group<f_Group>,
     MarshallingInfoEnum<CodeGenOpts<"VecLib">, "NoLibrary">;
 def fno_lax_vector_conversions : Flag<["-"], "fno-lax-vector-conversions">, Group<f_Group>,
   Alias<flax_vector_conversions_EQ>, AliasArgs<["none"]>;
-def fno_implicit_module_maps : Flag <["-"], "fno-implicit-module-maps">, Group<f_Group>;
+def fno_implicit_module_maps : Flag <["-"], "fno-implicit-module-maps">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption]>;
 def fno_module_maps : Flag <["-"], "fno-module-maps">, Alias<fno_implicit_module_maps>;
 def fno_modules_strict_decluse : Flag <["-"], "fno-strict-modules-decluse">, Group<f_Group>;
 def fmodule_file_deps : Flag <["-"], "fmodule-file-deps">, Group<f_Group>;
@@ -4553,6 +4565,11 @@ def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   MetaVarName<"<dsopath>">, Flags<[NoArgumentUnused]>,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,
   MarshallingInfoStringVector<CodeGenOpts<"PassPlugins">>;
+def fpass_plugin_arg_EQ : Joined<["-"], "fpass-plugin-arg=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<plugin>,<arg>">, Flags<[NoArgumentUnused]>,
+  HelpText<"Pass <arg> to the pass plugin named <plugin>">,
+  MarshallingInfoStringVector<CodeGenOpts<"PassPluginArgs">>;
 defm tocdata : BoolOption<"m","tocdata",
   CodeGenOpts<"AllTocData">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -4632,8 +4649,8 @@ defm show_source_location : BoolFOption<"show-source-location",
   PosFlag<SetTrue>>;
 defm spell_checking : BoolFOption<"spell-checking",
   LangOpts<"SpellChecking">, DefaultTrue,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option], "Disable spell-checking">,
-  PosFlag<SetTrue>>;
+  NegFlag<SetFalse, [], [ClangOption, CLOption, CC1Option], "Disable spell-checking">,
+  PosFlag<SetTrue, [], [ClangOption, CLOption]>>;
 def fspell_checking_limit_EQ : Joined<["-"], "fspell-checking-limit=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Set the maximum number of times to perform spell checking on unrecognized identifiers (0 = no limit)">,
@@ -5965,6 +5982,18 @@ def mzilsd_word_align : Flag<["-"], "mzilsd-word-align">, Group<m_Group>,
   HelpText<"Allow Zilsd/Zclsd memory accesses to be 4-byte aligned (RISC-V only)">;
 def mzilsd_strict_align : Flag<["-"], "mzilsd-strict-align">, Group<m_Group>,
   HelpText<"Force all Zilsd/Zclsd memory accesses to be 8-byte aligned (RISC-V only)">;
+def mfix_sifive_mal_9174 : Flag<["-"], "mfix-sifive-mal-9174">, Group<m_Group>,
+  HelpText<"Workaround SiFive erratum MAL-9174 by forcing vector indexed loads "
+           "to have non-overlapping source and destination register groups (RISC-V only)">;
+def mno_fix_sifive_mal_9174 : Flag<["-"], "mno-fix-sifive-mal-9174">, Group<m_Group>,
+  HelpText<"Don't workaround SiFive erratum MAL-9174 (RISC-V only)">;
+def mfix_sifive_mal_9191 : Flag<["-"], "mfix-sifive-mal-9191">, Group<m_Group>,
+  Alias<mfix_sifive_mal_9174>,
+  HelpText<"Workaround SiFive erratum MAL-9191 by forcing vector indexed loads "
+           "to have non-overlapping source and destination register groups (RISC-V only)">;
+def mno_fix_sifive_mal_9191 : Flag<["-"], "mno-fix-sifive-mal-9191">, Group<m_Group>,
+  Alias<mno_fix_sifive_mal_9174>,
+  HelpText<"Don't workaround SiFive erratum MAL-9191 (RISC-V only)">;
 def mno_thumb : Flag<["-"], "mno-thumb">, Group<m_arm_Features_Group>;
 def mrestrict_it: Flag<["-"], "mrestrict-it">, Group<m_arm_Features_Group>,
   HelpText<"Disallow generation of complex IT blocks. It is off by default.">;
@@ -6805,7 +6834,7 @@ def pedantic_errors : Flag<["-", "--"], "pedantic-errors">, Group<pedantic_Group
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoFlag<DiagnosticOpts<"PedanticErrors">>;
 def pedantic : Flag<["-", "--"], "pedantic">, Group<pedantic_Group>,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+  Visibility<[ClangOption, CLOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Warn on language extensions">, MarshallingInfoFlag<DiagnosticOpts<"Pedantic">>;
 def p : Flag<["-"], "p">, HelpText<"Enable mcount instrumentation with prof">;
 def pg : Flag<["-"], "pg">, HelpText<"Enable mcount instrumentation">,
@@ -7046,8 +7075,15 @@ def print_supported_cpus : Flag<["-", "--"], "print-supported-cpus">,
            "specified,it will print the supported cpus for the default target)">,
   MarshallingInfoFlag<FrontendOpts<"PrintSupportedCPUs">>;
 
+def print_supported_tune_cpus : Flag<["-", "--"], "print-supported-tune-cpus">,
+  Group<CompileOnly_Group>,
+  HelpText<"Print supported tuning cpu models for the given target (if target "
+           "is not specified, it will print the supported tuning cpus for the "
+           "default target)">,
+  MarshallingInfoFlag<FrontendOpts<"PrintSupportedTuneCPUs">>;
+
 def : Flag<["-"], "mcpu=help">, Alias<print_supported_cpus>;
-def : Flag<["-"], "mtune=help">, Alias<print_supported_cpus>;
+def : Flag<["-"], "mtune=help">, Alias<print_supported_tune_cpus>;
 
 } // let Visibility = [ClangOption, CC1Option, CLOption, FlangOption, FC1Option]
 
@@ -7731,10 +7767,10 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">, Visibility<[ClangOption, CLOption, FlangOption]>;
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
-            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu","jmpabs"]>,
+            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu","jmpabs"]>,
             Group<m_x86_Features_Group>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
-               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu","jmpabs"]>,
+               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu","jmpabs"]>,
                Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;

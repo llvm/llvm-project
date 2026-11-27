@@ -512,3 +512,17 @@ TEST(TinyPtrVectorTest, PolymorphicPointers) {
   ASSERT_EQ(3u, V.size());
   EXPECT_EQ(6, V.front()->get());
 }
+
+TEST(TinyPtrVectorTest, NullPointer) {
+  TinyPtrVector<int *> V;
+  V.push_back(nullptr);
+  EXPECT_TRUE(!V.empty() && V.size() == 1);
+  V.pop_back();
+  EXPECT_TRUE(V.empty() && V.size() == 0);
+  V.insert(V.begin(), nullptr);
+  EXPECT_TRUE(!V.empty() && V.size() == 1);
+  V.push_back(nullptr);
+  EXPECT_TRUE(!V.empty() && V.size() == 2);
+  V.clear();
+  EXPECT_TRUE(V.empty() && V.size() == 0);
+}

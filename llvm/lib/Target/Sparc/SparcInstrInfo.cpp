@@ -652,14 +652,21 @@ void SparcInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
       MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
       MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
+  // Integer and integer pair registers can come in TableGen-inferred
+  // subclasses (e.g. IntPair_with_sub_even_in_IntRegsV8Plus), so match the
+  // register class families and pick the GPR instruction by spill size.
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+  bool IsGPR = SP::IntRegsRegClass.hasSubClassEq(RC) ||
+               SP::I64RegsRegClass.hasSubClassEq(RC);
+
   // On the order of operands here: think "[FrameIdx + 0] = SrcReg".
-  if (RC == &SP::I64RegsRegClass)
+  if (IsGPR && TRI.getSpillSize(*RC) == 8)
     BuildMI(MBB, I, DL, get(SP::STXri)).addFrameIndex(FI).addImm(0)
       .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
-  else if (RC == &SP::IntRegsRegClass)
+  else if (IsGPR)
     BuildMI(MBB, I, DL, get(SP::STri)).addFrameIndex(FI).addImm(0)
       .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
-  else if (RC == &SP::IntPairRegClass)
+  else if (SP::IntPairRegClass.hasSubClassEq(RC))
     BuildMI(MBB, I, DL, get(SP::STDri)).addFrameIndex(FI).addImm(0)
       .addReg(SrcReg, getKillRegState(isKill)).addMemOperand(MMO);
   else if (RC == &SP::FPRegsRegClass)
@@ -692,13 +699,18 @@ void SparcInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
       MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
       MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
 
-  if (RC == &SP::I64RegsRegClass)
+  // See storeRegToStackSlot.
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+  bool IsGPR = SP::IntRegsRegClass.hasSubClassEq(RC) ||
+               SP::I64RegsRegClass.hasSubClassEq(RC);
+
+  if (IsGPR && TRI.getSpillSize(*RC) == 8)
     BuildMI(MBB, I, DL, get(SP::LDXri), DestReg).addFrameIndex(FI).addImm(0)
       .addMemOperand(MMO);
-  else if (RC == &SP::IntRegsRegClass)
+  else if (IsGPR)
     BuildMI(MBB, I, DL, get(SP::LDri), DestReg).addFrameIndex(FI).addImm(0)
       .addMemOperand(MMO);
-  else if (RC == &SP::IntPairRegClass)
+  else if (SP::IntPairRegClass.hasSubClassEq(RC))
     BuildMI(MBB, I, DL, get(SP::LDDri), DestReg).addFrameIndex(FI).addImm(0)
       .addMemOperand(MMO);
   else if (RC == &SP::FPRegsRegClass)
@@ -977,6 +989,50 @@ bool SparcInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
              .addReg(SP::O6)
              .addImm(-1);
     MIBundleBuilder(MBB, InstSTBAR, InstLDSTUB);
+    MBB.erase(MI);
+    return true;
+  }
+  case SP::CASX_V8PLUS: {
+    // Same sequence as GCC's *atomic_compare_and_swapdi_v8plus:
+    //   srl  %new_lo, 0, %rd_lo
+    //   sllx %new_hi, 32, %tmp
+    //   or   %rd_lo, %tmp, %rd_lo    ! %rd_lo = 64-bit new value
+    //   srl  %cmp_lo, 0, %tmp
+    //   sllx %cmp_hi, 32, %rd_hi
+    //   or   %tmp, %rd_hi, %tmp      ! %tmp = 64-bit compare value
+    //   casx [%rs1], %tmp, %rd_lo
+    //   srlx %rd_lo, 32, %rd_hi
+    // The lower 32 bits of %rd_lo hold the low half of the result.
+    assert(Subtarget.isV9() && !Subtarget.is64Bit() &&
+           "CASX_V8PLUS is only used for 32-bit V9 code");
+    MachineBasicBlock &MBB = *MI.getParent();
+    const DebugLoc &DL = MI.getDebugLoc();
+    Register RdHi = MI.getOperand(0).getReg();
+    Register RdLo = MI.getOperand(1).getReg();
+    Register Tmp = MI.getOperand(2).getReg();
+    Register Ptr = MI.getOperand(3).getReg();
+    Register CmpHi = MI.getOperand(4).getReg();
+    Register CmpLo = MI.getOperand(5).getReg();
+    Register NewHi = MI.getOperand(6).getReg();
+    Register NewLo = MI.getOperand(7).getReg();
+
+    BuildMI(MBB, MI, DL, get(SP::SRLri), RdLo).addReg(NewLo).addImm(0);
+    BuildMI(MBB, MI, DL, get(SP::SLLXri), Tmp).addReg(NewHi).addImm(32);
+    BuildMI(MBB, MI, DL, get(SP::ORrr), RdLo)
+        .addReg(RdLo, RegState::Kill)
+        .addReg(Tmp, RegState::Kill);
+    BuildMI(MBB, MI, DL, get(SP::SRLri), Tmp).addReg(CmpLo).addImm(0);
+    BuildMI(MBB, MI, DL, get(SP::SLLXri), RdHi).addReg(CmpHi).addImm(32);
+    BuildMI(MBB, MI, DL, get(SP::ORrr), Tmp)
+        .addReg(Tmp, RegState::Kill)
+        .addReg(RdHi, RegState::Kill);
+    BuildMI(MBB, MI, DL, get(SP::CASXArr), RdLo)
+        .addReg(Ptr)
+        .addReg(Tmp, RegState::Kill)
+        .addReg(RdLo, RegState::Kill)
+        .addImm(0x80) // ASI_PRIMARY
+        .cloneMemRefs(MI);
+    BuildMI(MBB, MI, DL, get(SP::SRLXri), RdHi).addReg(RdLo).addImm(32);
     MBB.erase(MI);
     return true;
   }

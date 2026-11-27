@@ -217,7 +217,7 @@ struct Outer3 nestedArr3[2] = {{1, {222}}, {3, {444}}};
 
 _BitInt(128) get_bi(void) { return l128[1].bi; }
 // CIR-LABEL: cir.func no_inline dso_local @get_bi() -> !s128i_bitint
-// CIR-NEXT: %[[RET_ALLOC:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!s128i_bitint>
+// CIR-NEXT: %[[RET_ALLOC:.*]] = cir.alloca "" align(8) return_slot : !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[GET_GLOB:.*]] = cir.get_global @l128 : !cir.ptr<!cir.array<!rec_Last128 x 2>>
 // CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CIR-NEXT: %[[ARR_GEP:.*]] = cir.get_element inbounds %[[GET_GLOB]][%[[ONE]] : !s64i] : !cir.ptr<!cir.array<!rec_Last128 x 2>> -> !cir.ptr<!rec_Last128>
@@ -231,7 +231,7 @@ _BitInt(128) get_bi(void) { return l128[1].bi; }
 
 _BitInt(128) get_bi2(void) { return arrMem[1].bi[1]; }
 // CIR-LABEL: cir.func no_inline dso_local @get_bi2() -> !s128i_bitint attributes {"cir.target-features" = "+cx8,+mmx,+sse,+sse2,+x87", nothrow, optnone} {
-// CIR-NEXT: %[[RET_ALLOC:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!s128i_bitint>
+// CIR-NEXT: %[[RET_ALLOC:.*]] = cir.alloca "" align(8) return_slot : !cir.ptr<!s128i_bitint>
 // CIR-NEXT: %[[GET_GLOB:.*]] = cir.get_global @arrMem : !cir.ptr<!cir.array<!rec_ArrMem x 2>>
 // CIR-NEXT: %[[ONE_2:.*]] = cir.const #cir.int<1> : !s64i
 // CIR-NEXT: %[[ARR_GEP:.*]] = cir.get_element inbounds %[[GET_GLOB]][%[[ONE_2]] : !s64i] : !cir.ptr<!cir.array<!rec_ArrMem x 2>> -> !cir.ptr<!rec_ArrMem>

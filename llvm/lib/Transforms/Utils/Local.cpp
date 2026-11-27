@@ -498,7 +498,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   }
 
   if (auto *Call = dyn_cast<CallBase>(I)) {
-    if (Value *FreedOp = getFreedOperand(Call, TLI))
+    if (Value *FreedOp = getFreedOperand(Call))
       if (Constant *C = dyn_cast<Constant>(FreedOp))
         return C->isNullValue() || isa<UndefValue>(C);
     if (isMathLibCallNoop(Call, TLI))
@@ -2704,10 +2704,9 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   InvokeInst *II =
       InvokeInst::Create(CI->getFunctionType(), CI->getCalledOperand(), Split,
                          UnwindEdge, InvokeArgs, OpBundles, CI->getName(), BB);
-  II->setDebugLoc(CI->getDebugLoc());
   II->setCallingConv(CI->getCallingConv());
   II->setAttributes(CI->getAttributes());
-  II->setMetadata(LLVMContext::MD_prof, CI->getMetadata(LLVMContext::MD_prof));
+  II->copyMetadata(*CI);
 
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, UnwindEdge}});
@@ -4091,6 +4090,46 @@ Value *llvm::invertCondition(Value *Condition) {
   else
     Inverted->insertBefore(Parent->getFirstInsertionPt());
   return Inverted;
+}
+
+bool llvm::freezeUsesAfterDef(FreezeInst &FI, DominatorTree &DT,
+                              SmallVectorImpl<User *> *Users) {
+  Value *Op = FI.getOperand(0);
+
+  // Move the freeze directly after the definition of its operand, so that
+  // it dominates the maximum number of uses. Note that it may not dominate
+  // *all* uses if the operand is an invoke and the use is in a phi on
+  // the normal/default destination. This is why the domination check in the
+  // replacement below is still necessary.
+  BasicBlock::iterator MoveBefore;
+  if (isa<Argument>(Op)) {
+    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
+  } else {
+    auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
+    if (!MoveBeforeOpt)
+      return false;
+    MoveBefore = *MoveBeforeOpt;
+  }
+
+  // Re-point iterator to come after any debug-info records.
+  MoveBefore.setHeadBit(false);
+
+  bool Changed = false;
+  if (&FI != &*MoveBefore) {
+    FI.moveBefore(*MoveBefore->getParent(), MoveBefore);
+    Changed = true;
+  }
+
+  Changed |= Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
+    if (!DT.dominates(&FI, U))
+      return false;
+
+    if (Users)
+      Users->push_back(U.getUser());
+    return true;
+  });
+
+  return Changed;
 }
 
 bool llvm::inferAttributesFromOthers(Function &F) {

@@ -28,6 +28,24 @@ TEST_F(LlvmLibcStrfromlTest, DecimalFormat) {
 
   result = LIBC_NAMESPACE::strfroml(buff, 10, "%.f", -2.5L);
   EXPECT_STREQ_LEN(result, buff, "-2");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 40, "%f", 0.5L);
+  EXPECT_STREQ_LEN(result, buff, "0.500000");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 40, "%.15f", 0.8125L);
+  EXPECT_STREQ_LEN(result, buff, "0.812500000000000");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 40, "%f", -0.8125L);
+  EXPECT_STREQ_LEN(result, buff, "-0.812500");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 40, "%f", 0x1.fffffep-1L);
+  EXPECT_STREQ_LEN(result, buff, "1.000000");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 40, "%.7f", 0x1.fffffep-1L);
+  EXPECT_STREQ_LEN(result, buff, "0.9999999");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 40, "%f", 0.25L);
+  EXPECT_STREQ_LEN(result, buff, "0.250000");
 }
 
 TEST_F(LlvmLibcStrfromlTest, HexExponentFormat) {
@@ -82,10 +100,28 @@ TEST_F(LlvmLibcStrfromlTest, HexExponentFormat) {
 }
 
 TEST_F(LlvmLibcStrfromlTest, DecimalExponentFormat) {
-#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   char buff[100];
   int result;
 
+  result = LIBC_NAMESPACE::strfroml(buff, 90, "%e", 0.5L);
+  EXPECT_STREQ_LEN(result, buff, "5.000000e-01");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 90, "%e", 0.8125L);
+  EXPECT_STREQ_LEN(result, buff, "8.125000e-01");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 90, "%E", -0.8125L);
+  EXPECT_STREQ_LEN(result, buff, "-8.125000E-01");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 90, "%e", 0x1.fffffep-1L);
+  EXPECT_STREQ_LEN(result, buff, "9.999999e-01");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 90, "%.5e", 0x1.fffffep-1L);
+  EXPECT_STREQ_LEN(result, buff, "1.00000e+00");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 90, "%e", 0.25L);
+  EXPECT_STREQ_LEN(result, buff, "2.500000e-01");
+
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   result = LIBC_NAMESPACE::strfroml(buff, 90, "%.9e", 1000000000500000000.1L);
   EXPECT_STREQ_LEN(result, buff, "1.000000001e+18");
 
@@ -99,10 +135,28 @@ TEST_F(LlvmLibcStrfromlTest, DecimalExponentFormat) {
 }
 
 TEST_F(LlvmLibcStrfromlTest, DecimalAutoFormat) {
-#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   char buff[100];
   int result;
 
+  result = LIBC_NAMESPACE::strfroml(buff, 99, "%g", 0.5L);
+  EXPECT_STREQ_LEN(result, buff, "0.5");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 99, "%.15g", 0.8125L);
+  EXPECT_STREQ_LEN(result, buff, "0.8125");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 99, "%G", -0.8125L);
+  EXPECT_STREQ_LEN(result, buff, "-0.8125");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 99, "%g", 0x1.fffffep-1L);
+  EXPECT_STREQ_LEN(result, buff, "1");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 99, "%.8g", 0x1.fffffep-1L);
+  EXPECT_STREQ_LEN(result, buff, "0.99999994");
+
+  result = LIBC_NAMESPACE::strfroml(buff, 99, "%g", 0.25L);
+  EXPECT_STREQ_LEN(result, buff, "0.25");
+
+#if defined(LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80)
   result =
       LIBC_NAMESPACE::strfroml(buff, 99, "%g", 0xf.fffffffffffffffp+16380L);
   EXPECT_STREQ_LEN(result, buff, "1.18973e+4932");

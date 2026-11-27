@@ -65,11 +65,23 @@ void call_memcpy2(void) {
 // Maybe this could be relaxed if it proves too restrictive.
 void failure_type(void *dest, char val, size_t n) __attribute__((diagnose_as_builtin(__builtin_memset, 1, 2, 3))) {} // expected-error {{'diagnose_as_builtin' attribute parameter types do not match: parameter 2 of function 'failure_type' has type 'char', but parameter 2 of function '__builtin_memset' has type 'int'}}
 
+typedef struct _IO_FILE FILE;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 extern int sscanf(const char *input, const char *format, ...);
+extern void *memccpy(void *dst, const void *src, int c, size_t n);
+extern void *memset_explicit(void *dst, int c, size_t n);
+extern void explicit_bzero(void *dst, size_t n);
+extern size_t fread_unlocked(void *ptr, size_t size, size_t nmemb, FILE *stream);
+extern size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+extern char *fgets_unlocked(char *s, int size, FILE *stream);
+extern int getlogin_r(char *name, size_t namesize);
+extern int ttyname_r(int fd, char *buf, size_t buflen);
+extern int ptsname_r(int fd, char *buf, size_t buflen);
+extern size_t confstr(int name, char *buf, size_t len);
 
 #ifdef __cplusplus
 }
@@ -90,6 +102,62 @@ void warn_my_vsprintf(void) {
   __builtin_va_list list;
   my_vsprintf("hello", buf, list);
   my_vsprintf("hello!", buf, list); // expected-warning{{'vsprintf' will always overflow; destination buffer has size 6, but format string expands to at least 7}}
+}
+
+void *my_memccpy(int extra, void *dst, const void *src, int c, size_t n)
+    __attribute__((diagnose_as_builtin(memccpy, 2, 3, 4, 5)));
+void *my_memset_explicit(int extra, void *dst, int c, size_t n)
+    __attribute__((diagnose_as_builtin(memset_explicit, 2, 3, 4)));
+void my_explicit_bzero(int extra, void *dst, size_t n)
+    __attribute__((diagnose_as_builtin(explicit_bzero, 2, 3)));
+
+void warn_my_mem_zero_and_memccpy(void) {
+  char src[20], dst[10];
+  my_memccpy(0, dst, src, '\0', 10);
+  my_memccpy(0, dst, src, '\0', 11); // expected-warning{{'memccpy' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  my_memset_explicit(0, dst, 0, 10);
+  my_memset_explicit(0, dst, 0, 11); // expected-warning{{'memset_explicit' will always overflow; destination buffer has size 10, but size argument is 11}}
+  my_explicit_bzero(0, dst, 10);
+  my_explicit_bzero(0, dst, 11); // expected-warning{{'explicit_bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
+}
+
+size_t my_fread_unlocked(int extra, void *ptr, size_t size, size_t nmemb, FILE *fp)
+    __attribute__((diagnose_as_builtin(fread_unlocked, 2, 3, 4, 5)));
+size_t my_fwrite_unlocked(int extra, const void *ptr, size_t size, size_t nmemb, FILE *fp)
+    __attribute__((diagnose_as_builtin(fwrite_unlocked, 2, 3, 4, 5)));
+char *my_fgets_unlocked(int extra, char *s, int size, FILE *fp)
+    __attribute__((diagnose_as_builtin(fgets_unlocked, 2, 3, 4)));
+
+void warn_my_stdio_unlocked(FILE *fp) {
+  char buf[4];
+  my_fread_unlocked(0, buf, 2, 2, fp);
+  my_fread_unlocked(0, buf, 2, 3, fp); // expected-warning{{'fread_unlocked' will always overflow; destination buffer has size 4, but size argument is 6}}
+  my_fwrite_unlocked(0, buf, 2, 2, fp);
+  my_fwrite_unlocked(0, buf, 2, 3, fp); // expected-warning{{'fwrite_unlocked' will always read past the end of the source buffer; source buffer has size 4, but the size is 6}}
+  my_fgets_unlocked(0, buf, 4, fp);
+  my_fgets_unlocked(0, buf, 5, fp); // expected-warning{{'fgets_unlocked' size argument is too large; destination buffer has size 4, but size argument is 5}}
+  my_fgets_unlocked(0, buf, -1, fp); // expected-warning{{'fgets_unlocked' size argument is negative}}
+}
+
+int my_getlogin_r(int extra, char *name, size_t namesize)
+    __attribute__((diagnose_as_builtin(getlogin_r, 2, 3)));
+int my_ttyname_r(int extra, int fd, char *buf, size_t buflen)
+    __attribute__((diagnose_as_builtin(ttyname_r, 2, 3, 4)));
+int my_ptsname_r(int extra, int fd, char *buf, size_t buflen)
+    __attribute__((diagnose_as_builtin(ptsname_r, 2, 3, 4)));
+size_t my_confstr(int extra, int name, char *buf, size_t len)
+    __attribute__((diagnose_as_builtin(confstr, 2, 3, 4)));
+
+void warn_my_posix_getters(int fd, int name) {
+  char buf[10];
+  my_getlogin_r(0, buf, 10);
+  my_getlogin_r(0, buf, 11); // expected-warning{{'getlogin_r' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  my_ttyname_r(0, fd, buf, 10);
+  my_ttyname_r(0, fd, buf, 11); // expected-warning{{'ttyname_r' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  my_ptsname_r(0, fd, buf, 10);
+  my_ptsname_r(0, fd, buf, 11); // expected-warning{{'ptsname_r' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  my_confstr(0, name, buf, 10);
+  my_confstr(0, name, buf, 11); // expected-warning{{'confstr' size argument is too large; destination buffer has size 10, but size argument is 11}}
 }
 
 #ifdef __cplusplus

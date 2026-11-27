@@ -25,7 +25,6 @@ TEST(IncrementalCompilerBuilder, SetCompilerArgs) {
   CB.SetCompilerArgs(ClangArgv);
   auto CI = cantFail(CB.CreateCpp());
   EXPECT_TRUE(CI->getFrontendOpts().ASTDumpAll);
-  cleanupRemappedFileBuffers(*CI);
 }
 
 TEST(IncrementalCompilerBuilder, SetTargetTriple) {
@@ -41,7 +40,6 @@ TEST(IncrementalCompilerBuilder, SetTargetTriple) {
   CB.SetTargetTriple("armv6-none-eabi");
   auto CI = cantFail(CB.CreateCpp());
   EXPECT_EQ(CI->getTargetOpts().Triple, "armv6-unknown-none-eabi");
-  cleanupRemappedFileBuffers(*CI);
 }
 
 } // end anonymous namespace

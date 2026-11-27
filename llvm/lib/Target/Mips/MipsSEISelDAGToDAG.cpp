@@ -1074,9 +1074,12 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
     if (!Subtarget->hasMSA() || !BVN->getValueType(0).is128BitVector())
       return false;
 
+    // The result is retyped with COPY_TO_REGCLASS below, which does not
+    // change the register contents. MSA lanes are laid out the same way
+    // on big and little endian (byte 0 is the low byte of word 0), so
+    // get the splat value in little endian order on both.
     if (!BVN->isConstantSplat(SplatValue, SplatUndef, SplatBitSize,
-                              HasAnyUndefs, 8,
-                              !Subtarget->isLittle()))
+                              HasAnyUndefs, 8, /*IsBigEndian=*/false))
       return false;
 
     switch (SplatBitSize) {

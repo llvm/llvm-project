@@ -602,15 +602,15 @@ def Zn3SlowLEA16r : SchedWriteRes<[Zn3ALU0123]> {
 def : InstRW<[Zn3SlowLEA16r], (instrs LEA16r)>;
 
 // Integer multiplication
-defm : Zn3WriteResIntPair<WriteIMul8, [Zn3Multiplier], 3, [3], 1>; // Integer 8-bit multiplication.
-defm : Zn3WriteResIntPair<WriteIMul16, [Zn3Multiplier], 3, [3], 3, /*LoadUOps=*/1>; // Integer 16-bit multiplication.
+defm : Zn3WriteResIntPair<WriteIMul8, [Zn3Multiplier], 3, [1], 1>; // Integer 8-bit multiplication.
+defm : Zn3WriteResIntPair<WriteIMul16, [Zn3Multiplier], 3, [2], 3, /*LoadUOps=*/1>; // Integer 16-bit multiplication.
 defm : Zn3WriteResIntPair<WriteIMul16Imm, [Zn3Multiplier], 4, [4], 2>; // Integer 16-bit multiplication by immediate.
 defm : Zn3WriteResIntPair<WriteIMul16Reg, [Zn3Multiplier], 3, [1], 1>; // Integer 16-bit multiplication by register.
-defm : Zn3WriteResIntPair<WriteIMul32, [Zn3Multiplier], 3, [3], 2>;    // Integer 32-bit multiplication.
+defm : Zn3WriteResIntPair<WriteIMul32, [Zn3Multiplier], 3, [1], 2>;    // Integer 32-bit multiplication.
 defm : Zn3WriteResIntPair<WriteMULX32, [Zn3Multiplier], 3, [1], 2>;    // Integer 32-bit Unsigned Multiply Without Affecting Flags.
 defm : Zn3WriteResIntPair<WriteIMul32Imm, [Zn3Multiplier], 3, [1], 1>; // Integer 32-bit multiplication by immediate.
 defm : Zn3WriteResIntPair<WriteIMul32Reg, [Zn3Multiplier], 3, [1], 1>; // Integer 32-bit multiplication by register.
-defm : Zn3WriteResIntPair<WriteIMul64, [Zn3Multiplier], 3, [3], 2>;    // Integer 64-bit multiplication.
+defm : Zn3WriteResIntPair<WriteIMul64, [Zn3Multiplier], 3, [1], 2>;    // Integer 64-bit multiplication.
 defm : Zn3WriteResIntPair<WriteMULX64, [Zn3Multiplier], 3, [1], 2>;    // Integer 32-bit Unsigned Multiply Without Affecting Flags.
 defm : Zn3WriteResIntPair<WriteIMul64Imm, [Zn3Multiplier], 3, [1], 1>; // Integer 64-bit multiplication by immediate.
 defm : Zn3WriteResIntPair<WriteIMul64Reg, [Zn3Multiplier], 3, [1], 1>; // Integer 64-bit multiplication by register.
@@ -1117,9 +1117,10 @@ defm : Zn3WriteResXMMPair<WritePack, [Zn3FPVShuf01], 1, [1], 1>;
 defm : Zn3WriteResXMMPair<WritePackX, [Zn3FPVShuf01], 1, [1], 1>;
 defm : Zn3WriteResYMMPair<WritePackY, [Zn3FPVShuf01], 1, [1], 1>;
 defm : X86WriteResPairUnsupported<WritePackZ>;
-defm : Zn3WriteResXMMPair<WriteBlend, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends.
-defm : Zn3WriteResYMMPair<WriteBlendY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
-defm : X86WriteResPairUnsupported<WriteBlendZ>; // Vector blends (ZMM).
+defm : Zn3WriteResXMMPair<WritePBLENDDX, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (XMM).
+defm : Zn3WriteResYMMPair<WritePBLENDDY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
+defm : Zn3WriteResXMMPair<WritePBLENDWX, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (XMM).
+defm : Zn3WriteResYMMPair<WritePBLENDWY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
 defm : Zn3WriteResXMMPair<WriteVarBlend, [Zn3FPVMul01], 1, [1], 1>; // Vector variable blends.
 defm : Zn3WriteResYMMPair<WriteVarBlendY, [Zn3FPVMul01], 1, [1], 1>; // Vector variable blends (YMM).
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>; // Vector variable blends (ZMM).

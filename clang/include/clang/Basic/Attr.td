@@ -5517,19 +5517,19 @@ def VTablePointerAuthentication : InheritableAttr {
   let Subjects = SubjectList<[CXXRecord]>;
   let Documentation = [Undocumented];
   let StrictEnumParameters = 1;
-  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ true,
+  let Args = [EnumArgument<"Key", "VPtrAuthKeyType", /*is_string=*/ false,
                 ["default_key", "no_authentication", "process_dependent",
                  "process_independent"],
                 ["DefaultKey", "NoKey", "ProcessDependent",
                  "ProcessIndependent"]>,
               EnumArgument<"AddressDiscrimination", "AddressDiscriminationMode",
-                /*is_string=*/ true,
+                /*is_string=*/ false,
                 ["default_address_discrimination", "no_address_discrimination",
                  "address_discrimination"],
                 ["DefaultAddressDiscrimination", "NoAddressDiscrimination",
                  "AddressDiscrimination"]>,
               EnumArgument<"ExtraDiscrimination", "ExtraDiscrimination",
-                /*is_string=*/ true,
+                /*is_string=*/ false,
                 ["default_extra_discrimination", "no_extra_discrimination",
                  "type_discrimination", "custom_discrimination"],
                 ["DefaultExtraDiscrimination", "NoExtraDiscrimination",

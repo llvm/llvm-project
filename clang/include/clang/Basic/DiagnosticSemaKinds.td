@@ -4376,11 +4376,12 @@ def warn_thread_attribute_ignored : Warning<
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_not_on_non_static_member : Warning<
   "%0 attribute without capability arguments can only be applied to non-static "
-  "methods of a class">,
+  "methods and function pointer members of a class">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_not_on_capability_member : Warning<
-  "%0 attribute without capability arguments refers to 'this', but %1 isn't "
-  "annotated with 'capability' or 'scoped_lockable' attribute">,
+  "%0 attribute without capability arguments refers to "
+  "%select{'this'|the object it is called through}2, but %1 isn't annotated "
+  "with 'capability' or 'scoped_lockable' attribute">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_argument_not_lockable : Warning<
   "%0 attribute requires arguments whose type is annotated "
@@ -7035,6 +7036,8 @@ def note_protected_by_variable_non_pod : Note<
   "jump bypasses initialization of non-POD variable">;
 def note_protected_by_cleanup : Note<
   "jump bypasses initialization of variable with __attribute__((cleanup))">;
+def note_protected_by_omp_allocate : Note<
+  "jump bypasses allocation of variable with '#pragma omp allocate'">;
 def note_protected_by_vla_typedef : Note<
   "jump bypasses initialization of VLA typedef">;
 def note_protected_by_vla_type_alias : Note<
@@ -7095,6 +7098,8 @@ def note_enters_defer_stmt : Note<"jump enters a defer statement">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;
+def note_exits_omp_allocate : Note<
+  "jump exits scope of variable with '#pragma omp allocate'">;
 def note_exits_dtor : Note<
   "jump exits scope of variable with non-trivial destructor">;
 def note_exits_temporary_dtor : Note<
@@ -9960,7 +9965,7 @@ def err_cannot_pass_to_vararg_format : Error<
   "string was %3">;
 
 def err_typecheck_call_invalid_ordered_compare : Error<
-  "ordered compare requires two args of floating point type"
+  "floating point comparison requires two arguments of floating point type"
   "%diff{ ($ and $)|}0,1">;
 def err_typecheck_call_invalid_unary_fp : Error<
   "floating point classification requires argument of floating point type "
@@ -11208,6 +11213,7 @@ def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
 def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
 def note_lifetime_safety_escapes_to_param_here: Note<"escapes to this parameter">;
+def note_lifetime_safety_escapes_to_object_here: Note<"escapes to the object">;
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
 def note_lifetime_safety_aliases_storage_lifetimebound : Note<

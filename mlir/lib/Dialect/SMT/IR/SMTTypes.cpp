@@ -31,13 +31,6 @@ static void printDomainTypes(mlir::AsmPrinter &printer,
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/SMT/IR/SMTTypes.cpp.inc"
 
-void SMTDialect::registerTypes() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/SMT/IR/SMTTypes.cpp.inc"
-      >();
-}
-
 bool smt::isAnyNonFuncSMTValueType(Type type) {
   return isAnySMTValueType(type) && !isa<SMTFuncType>(type);
 }

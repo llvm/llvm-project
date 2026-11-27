@@ -13,7 +13,7 @@ int f19(void) {
 // LLVM-DAG: @[[TEST3_S:.*]] = private unnamed_addr constant %struct.S { i32 1 }
 
 // CIR: cir.func {{.*}} @f19() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[TMP:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[C4:.+]] = cir.const #cir.int<4> : !s32i
@@ -64,7 +64,7 @@ int nested(void) {
 }
 
 // CIR: cir.func {{.*}} @nested() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[TMP_OUTER:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!s32i>
 // CIR:   cir.scope {
 // CIR:     %[[C123_OUTER:.+]] = cir.const #cir.int<123> : !s32i
@@ -227,7 +227,7 @@ void test2() { ({int x = 3; x; }); }
 struct S { int x; };
 int test3() { return ({ struct S s = {1}; s; }).x; }
 // CIR: cir.func {{.*}} @test3() -> !s32i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[REF_TMP0:.+]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   %[[TMP:.+]] = cir.alloca "tmp" {{.*}} : !cir.ptr<!rec_S>
 // CIR:   cir.scope {

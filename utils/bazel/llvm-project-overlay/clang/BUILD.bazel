@@ -3452,6 +3452,7 @@ cc_library(
         ":cir_target_lowering",
         ":cir_transforms",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:TransformUtils",

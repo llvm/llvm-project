@@ -62,6 +62,8 @@ struct Config {
   // that call lto::backend(), lto::thinBackend() or lto::opt() directly must
   // use LoadedPassPlugins.
   std::vector<std::string> PassPluginFilenames;
+  // "<plugin>,<arg>" values that lto::LTO::run() passes to pass plugins.
+  std::vector<std::string> PassPluginArgs;
   std::function<void(PassBuilder &)> PassBuilderCallback;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;

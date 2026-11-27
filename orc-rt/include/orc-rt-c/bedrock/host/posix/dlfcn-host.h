@@ -20,6 +20,11 @@
 |* @rpath (Darwin) or $ORIGIN and DT_RUNPATH (ELF) relative to the runtime's  *|
 |* image.                                                                     *|
 |*                                                                            *|
+|* On glibc and musl, Dl_info is only declared when _GNU_SOURCE is defined    *|
+|* (musl also accepts _BSD_SOURCE), so C code that includes this header there *|
+|* must define it before including any system header. (C++ compilers define   *|
+|* _GNU_SOURCE by default on Linux.)                                          *|
+|*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
 #ifndef ORC_RT_C_BEDROCK_HOST_POSIX_DLFCN_HOST_H

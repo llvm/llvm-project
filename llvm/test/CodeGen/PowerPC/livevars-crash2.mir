@@ -41,7 +41,6 @@
 ...
 ---
 name:            testfloatslt
-tracksRegLiveness: true
 liveins:
   - { reg: '$f1', virtual-reg: '%0' }
   - { reg: '$f2', virtual-reg: '%1' }
@@ -123,7 +122,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 liveins:
   - { reg: '$x3', virtual-reg: '%4' }

@@ -23,8 +23,7 @@ void R600SchedStrategy::initialize(ScheduleDAGMI *dag) {
   assert(dag->hasVRegLiveness() && "R600SchedStrategy needs vreg liveness");
   DAG = static_cast<ScheduleDAGMILive*>(dag);
   const R600Subtarget &ST = DAG->MF.getSubtarget<R600Subtarget>();
-  TII = static_cast<const R600InstrInfo*>(DAG->TII);
-  TRI = static_cast<const R600RegisterInfo*>(DAG->TRI);
+  TII = static_cast<const R600InstrInfo *>(DAG->TII);
   VLIW5 = !ST.hasCaymanISA();
   MRI = &DAG->MRI;
   CurInstKind = IDOther;

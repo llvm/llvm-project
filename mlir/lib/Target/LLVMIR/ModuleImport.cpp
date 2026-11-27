@@ -40,6 +40,7 @@
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2247,6 +2248,9 @@ FailureOr<Value> ModuleImport::convertValue(llvm::Value *value) {
     if (!mdAttr)
       return emitError(mlirModule.getLoc())
              << "unsupported metadata: " << renderMetadata(md);
+    // The mapped metadata value may also be used in a sibling block.
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(constantInsertionBlock);
     Value result =
         MetadataAsValueOp::create(builder, UnknownLoc::get(context), mdAttr)
             .getRes();
@@ -2299,6 +2303,27 @@ ModuleImport::convertValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
+FailureOr<ModuleImport::OperandBundles>
+ModuleImport::convertOperandBundles(ArrayRef<llvm::OperandBundleUse> bundles) {
+  SmallVector<Value> operands;
+  SmallVector<int32_t> sizes;
+  SmallVector<Attribute> tags;
+  sizes.reserve(bundles.size());
+  tags.reserve(bundles.size());
+  for (const llvm::OperandBundleUse &bundle : bundles) {
+    auto converted =
+        convertValues(llvm::to_vector_of<llvm::Value *>(bundle.Inputs));
+    if (failed(converted))
+      return failure();
+    llvm::append_range(operands, *converted);
+    sizes.push_back(converted->size());
+    tags.push_back(builder.getStringAttr(bundle.getTagName()));
+  }
+  return OperandBundles{std::move(operands),
+                        builder.getDenseI32ArrayAttr(sizes),
+                        builder.getArrayAttr(tags)};
+}
+
 LogicalResult ModuleImport::convertIntrinsicArguments(
     ArrayRef<llvm::Value *> values, ArrayRef<llvm::OperandBundleUse> opBundles,
     bool requiresOpBundles, ArrayRef<unsigned> immArgPositions,
@@ -2331,33 +2356,15 @@ LogicalResult ModuleImport::convertIntrinsicArguments(
     valuesOut.push_back(*mlirValue);
   }
 
-  SmallVector<int> opBundleSizes;
-  SmallVector<Attribute> opBundleTagAttrs;
   if (requiresOpBundles) {
-    opBundleSizes.reserve(opBundles.size());
-    opBundleTagAttrs.reserve(opBundles.size());
-
-    for (const llvm::OperandBundleUse &bundle : opBundles) {
-      opBundleSizes.push_back(bundle.Inputs.size());
-      opBundleTagAttrs.push_back(StringAttr::get(context, bundle.getTagName()));
-
-      for (const llvm::Use &opBundleOperand : bundle.Inputs) {
-        auto operandMlirValue = convertValue(opBundleOperand.get());
-        if (failed(operandMlirValue))
-          return failure();
-        valuesOut.push_back(*operandMlirValue);
-      }
-    }
-
-    auto opBundleSizesAttr = DenseI32ArrayAttr::get(context, opBundleSizes);
-    auto opBundleSizesAttrNameAttr =
-        StringAttr::get(context, LLVMDialect::getOpBundleSizesAttrName());
-    attrsOut.push_back({opBundleSizesAttrNameAttr, opBundleSizesAttr});
-
-    auto opBundleTagsAttr = ArrayAttr::get(context, opBundleTagAttrs);
-    auto opBundleTagsAttrNameAttr =
-        StringAttr::get(context, LLVMDialect::getOpBundleTagsAttrName());
-    attrsOut.push_back({opBundleTagsAttrNameAttr, opBundleTagsAttr});
+    FailureOr<OperandBundles> bundles = convertOperandBundles(opBundles);
+    if (failed(bundles))
+      return failure();
+    llvm::append_range(valuesOut, bundles->operands);
+    attrsOut.push_back(builder.getNamedAttr(
+        LLVMDialect::getOpBundleSizesAttrName(), bundles->sizes));
+    attrsOut.push_back(builder.getNamedAttr(
+        LLVMDialect::getOpBundleTagsAttrName(), bundles->tags));
   }
 
   return success();
@@ -2689,6 +2696,8 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
 
     auto callOp = [&]() -> FailureOr<Operation *> {
       if (auto *asmI = dyn_cast<llvm::InlineAsm>(calledOperand)) {
+        if (callInst->hasOperandBundles())
+          emitWarning(loc, "dropping operand bundles on inline assembly");
         Type resultTy = convertType(callInst->getType());
         if (!resultTy)
           return failure();
@@ -2726,6 +2735,15 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
         callee = convertCalleeName(callInst);
       }
       CallOp callOp = CallOp::create(builder, loc, *funcTy, callee, *operands);
+      if (callInst->hasOperandBundles()) {
+        FailureOr<OperandBundles> bundles =
+            convertOperandBundles(llvm::to_vector(callInst->operand_bundles()));
+        if (failed(bundles))
+          return failure();
+        callOp.getOpBundleOperandsMutable().join().assign(bundles->operands);
+        callOp.setOpBundleSizesAttr(bundles->sizes);
+        callOp.setOpBundleTagsAttr(bundles->tags);
+      }
 
       if (failed(convertCallAttributes(callInst, callOp)))
         return failure();
@@ -2823,6 +2841,15 @@ LogicalResult ModuleImport::convertInstruction(llvm::Instruction *inst) {
     auto invokeOp = InvokeOp::create(
         builder, loc, *funcTy, calleeName, *operands, directNormalDest,
         ValueRange(), lookupBlock(invokeInst->getUnwindDest()), unwindArgs);
+    if (invokeInst->hasOperandBundles()) {
+      FailureOr<OperandBundles> bundles =
+          convertOperandBundles(llvm::to_vector(invokeInst->operand_bundles()));
+      if (failed(bundles))
+        return failure();
+      invokeOp.getOpBundleOperandsMutable().join().assign(bundles->operands);
+      invokeOp.setOpBundleSizesAttr(bundles->sizes);
+      invokeOp.setOpBundleTagsAttr(bundles->tags);
+    }
 
     if (failed(convertInvokeAttributes(invokeInst, invokeOp)))
       return failure();
