@@ -487,13 +487,23 @@ public:
       : LexSimplexBase(constraints) {}
 
   /// Return the lexicographically minimum rational solution to the constraints.
-  MaybeOptimum<SmallVector<Fraction, 8>> findRationalLexMin();
+  ///
+  /// The last `numExistentialVars` variables are treated as existentially
+  /// quantified: the lexmin is computed over, and only contains values for,
+  /// the variables before them. In particular, the result is Unbounded only
+  /// if one of those leading variables is unbounded; whether the existentially
+  /// quantified variables themselves are bounded is irrelevant.
+  MaybeOptimum<SmallVector<Fraction, 8>>
+  findRationalLexMin(unsigned numExistentialVars = 0);
 
   /// Return the lexicographically minimum integer solution to the constraints.
   ///
+  /// `numExistentialVars` has the same meaning as in findRationalLexMin.
+  ///
   /// Note: this should be used only when the lexmin is really needed. To obtain
   /// any integer sample, use Simplex::findIntegerSample as that is more robust.
-  MaybeOptimum<SmallVector<DynamicAPInt, 8>> findIntegerLexMin();
+  MaybeOptimum<SmallVector<DynamicAPInt, 8>>
+  findIntegerLexMin(unsigned numExistentialVars = 0);
 
   /// Return whether the specified inequality is redundant/separate for the
   /// polytope. Redundant means every point satisfies the given inequality, and
@@ -504,13 +514,15 @@ public:
   bool isRedundantInequality(ArrayRef<DynamicAPInt> coeffs);
 
 private:
-  /// Returns the current sample point, which may contain non-integer (rational)
-  /// coordinates. Returns an empty optimum when the tableau is empty.
+  /// Returns the current sample point restricted to the first `numVars`
+  /// variables, which may contain non-integer (rational) coordinates. Returns
+  /// an empty optimum when the tableau is empty.
   ///
-  /// Returns an unbounded optimum when the big M parameter is used and a
-  /// variable has a non-zero big M coefficient, meaning its value is infinite
-  /// or unbounded.
-  MaybeOptimum<SmallVector<Fraction, 8>> getRationalSample() const;
+  /// Returns an unbounded optimum when the big M parameter is used and one of
+  /// the first `numVars` variables has a non-zero big M coefficient, meaning
+  /// its value is infinite or unbounded.
+  MaybeOptimum<SmallVector<Fraction, 8>>
+  getRationalSample(unsigned numVars) const;
 
   /// Make the tableau configuration consistent.
   LogicalResult restoreRationalConsistency();
@@ -618,9 +630,16 @@ public:
   /// For some values of the symbols, the lexmin may be unbounded.
   /// These parts of the symbol domain will be stored in `unboundedDomain`.
   ///
+  /// The last `numExistentialVars` non-symbol variables are treated as
+  /// existentially quantified: the lexmin is computed over, and `lexopt` only
+  /// has outputs for, the non-symbol variables before them. The lexmin is
+  /// considered unbounded only if one of those leading variables is unbounded;
+  /// whether the existentially quantified variables themselves are bounded is
+  /// irrelevant.
+  ///
   /// The spaces of the sets in the result are compatible with the symbolDomain
   /// passed in the SymbolicLexSimplex constructor.
-  SymbolicLexOpt computeSymbolicIntegerLexMin();
+  SymbolicLexOpt computeSymbolicIntegerLexMin(unsigned numExistentialVars = 0);
 
 private:
   /// Perform all pivots that do not require branching.
@@ -668,6 +687,9 @@ private:
 
   /// Record a lexmin. The tableau must be consistent with all variables
   /// having symbolic samples with integer coefficients.
+  ///
+  /// Only the first `result.lexopt.getNumOutputs()` non-symbol variables are
+  /// recorded; the remaining ones are existentially quantified.
   void recordOutput(SymbolicLexOpt &result) const;
 
   /// The symbol domain.

@@ -137,40 +137,36 @@ bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
 MaybeOptimum<SmallVector<Fraction, 8>>
 IntegerRelation::findRationalLexMin() const {
   assert(getNumSymbolVars() == 0 && "Symbols are not supported!");
+  // Locals are not actually part of the space and should not be returned in
+  // the result. Moreover, the lexmin over the dimensions exists even if some
+  // local is unbounded. Since the locals are placed last in the list of
+  // variables, they would be minimized last in the lexmin, so we ask the
+  // Simplex to treat them as existentially quantified.
   MaybeOptimum<SmallVector<Fraction, 8>> maybeLexMin =
-      LexSimplex(*this).findRationalLexMin();
+      LexSimplex(*this).findRationalLexMin(
+          /*numExistentialVars=*/getNumLocalVars());
 
-  if (!maybeLexMin.isBounded())
-    return maybeLexMin;
-
-  // The Simplex returns the lexmin over all the variables including locals. But
-  // locals are not actually part of the space and should not be returned in the
-  // result. Since the locals are placed last in the list of variables, they
-  // will be minimized last in the lexmin. So simply truncating out the locals
-  // from the end of the answer gives the desired lexmin over the dimensions.
-  assert(maybeLexMin->size() == getNumVars() &&
+  assert((!maybeLexMin.isBounded() ||
+          maybeLexMin->size() == getNumDimAndSymbolVars()) &&
          "Incorrect number of vars in lexMin!");
-  maybeLexMin->resize(getNumDimAndSymbolVars());
   return maybeLexMin;
 }
 
 MaybeOptimum<SmallVector<DynamicAPInt, 8>>
 IntegerRelation::findIntegerLexMin() const {
   assert(getNumSymbolVars() == 0 && "Symbols are not supported!");
+  // Locals are not actually part of the space and should not be returned in
+  // the result. Moreover, the lexmin over the dimensions exists even if some
+  // local is unbounded. Since the locals are placed last in the list of
+  // variables, they would be minimized last in the lexmin, so we ask the
+  // Simplex to treat them as existentially quantified.
   MaybeOptimum<SmallVector<DynamicAPInt, 8>> maybeLexMin =
-      LexSimplex(*this).findIntegerLexMin();
+      LexSimplex(*this).findIntegerLexMin(
+          /*numExistentialVars=*/getNumLocalVars());
 
-  if (!maybeLexMin.isBounded())
-    return maybeLexMin.getKind();
-
-  // The Simplex returns the lexmin over all the variables including locals. But
-  // locals are not actually part of the space and should not be returned in the
-  // result. Since the locals are placed last in the list of variables, they
-  // will be minimized last in the lexmin. So simply truncating out the locals
-  // from the end of the answer gives the desired lexmin over the dimensions.
-  assert(maybeLexMin->size() == getNumVars() &&
+  assert((!maybeLexMin.isBounded() ||
+          maybeLexMin->size() == getNumDimAndSymbolVars()) &&
          "Incorrect number of vars in lexMin!");
-  maybeLexMin->resize(getNumDimAndSymbolVars());
   return maybeLexMin;
 }
 
@@ -286,22 +282,19 @@ SymbolicLexOpt IntegerRelation::findSymbolicIntegerLexMin() const {
                getVarKindEnd(VarKind::Symbol));
   isSymbol.set(getVarKindOffset(VarKind::Domain),
                getVarKindEnd(VarKind::Domain));
-  // Compute the symbolic lexmin of the dims and locals, with the symbols being
-  // the actual symbols of this set.
-  // The resultant space of lexmin is the space of the relation itself.
-  SymbolicLexOpt result =
-      SymbolicLexSimplex(*this,
-                         IntegerPolyhedron(PresburgerSpace::getSetSpace(
-                             /*numDims=*/getNumDomainVars(),
-                             /*numSymbols=*/getNumSymbolVars())),
-                         isSymbol)
-          .computeSymbolicIntegerLexMin();
-
-  // We want to return only the lexmin over the dims, so strip the locals from
-  // the computed lexmin.
-  result.lexopt.removeOutputs(result.lexopt.getNumOutputs() - getNumLocalVars(),
-                              result.lexopt.getNumOutputs());
-  return result;
+  // Compute the symbolic lexmin of the range vars, with the symbols being the
+  // actual symbols and the domain vars of this relation.
+  //
+  // We want to return only the lexmin over the range vars. The locals are
+  // placed last so they would be minimized last; we ask the Simplex to treat
+  // them as existentially quantified. In particular, the lexmin over the range
+  // vars exists even if some local is unbounded.
+  return SymbolicLexSimplex(*this,
+                            IntegerPolyhedron(PresburgerSpace::getSetSpace(
+                                /*numDims=*/getNumDomainVars(),
+                                /*numSymbols=*/getNumSymbolVars())),
+                            isSymbol)
+      .computeSymbolicIntegerLexMin(/*numExistentialVars=*/getNumLocalVars());
 }
 
 /// findSymbolicIntegerLexMax is implemented using findSymbolicIntegerLexMin as
