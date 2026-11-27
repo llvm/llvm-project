@@ -9,6 +9,7 @@
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/Language.h"
 #include "lldb/lldb-enumerations.h"
@@ -16,53 +17,15 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static constexpr OptionEnumValueElement g_watch_type[] = {
-    {
-        OptionGroupWatchpoint::eWatchRead,
-        "read",
-        "Watch for read",
-    },
-    {
-        OptionGroupWatchpoint::eWatchWrite,
-        "write",
-        "Watch for write",
-    },
-    {
-        OptionGroupWatchpoint::eWatchModify,
-        "modify",
-        "Watch for modifications",
-    },
-    {
-        OptionGroupWatchpoint::eWatchReadWrite,
-        "read_write",
-        "Watch for read/write",
-    },
-};
-
-static constexpr OptionDefinition g_option_table[] = {
-    {LLDB_OPT_SET_1, false, "watch", 'w', OptionParser::eRequiredArgument,
-     nullptr, OptionEnumValues(g_watch_type), 0, eArgTypeWatchType,
-     "Specify the type of watching to perform."},
-    {LLDB_OPT_SET_1, false, "size", 's', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeByteSize, 
-     "Number of bytes to use to watch a region."},
-    {LLDB_OPT_SET_2,
-     false,
-     "language",
-     'l',
-     OptionParser::eRequiredArgument,
-     nullptr,
-     {},
-     0,
-     eArgTypeLanguage,
-     "Language of expression to run"}};
+#define LLDB_OPTIONS_watchpoint
+#include "InterpreterOptions.inc"
 
 Status
 OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
                                       llvm::StringRef option_arg,
                                       ExecutionContext *execution_context) {
   Status error;
-  const int short_option = g_option_table[option_idx].short_option;
+  const int short_option = g_watchpoint_options[option_idx].short_option;
   switch (short_option) {
   case 'l': {
     language_type = Language::GetLanguageTypeFromString(option_arg);
@@ -79,7 +42,7 @@ OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
   case 'w': {
     WatchType tmp_watch_type;
     tmp_watch_type = (WatchType)OptionArgParser::ToOptionEnum(
-        option_arg, g_option_table[option_idx].enum_values, 0, error);
+        option_arg, g_watchpoint_options[option_idx].enum_values, 0, error);
     if (error.Success()) {
       watch_type = tmp_watch_type;
       watch_type_specified = true;
@@ -109,5 +72,5 @@ void OptionGroupWatchpoint::OptionParsingStarting(
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupWatchpoint::GetDefinitions() {
-  return llvm::ArrayRef(g_option_table);
+  return llvm::ArrayRef(g_watchpoint_options);
 }

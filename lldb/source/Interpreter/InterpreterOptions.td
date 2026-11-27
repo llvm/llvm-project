@@ -134,3 +134,18 @@ let Command = "variable" in {
         Arg<"Name">,
         Desc<"Specify a summary string to use to format the variable output.">;
 }
+
+let Command = "watchpoint" in {
+  def watchpoint_language : Option<"language", "l">,
+                            Group<2>,
+                            Arg<"Language">,
+                            Desc<"Language of expression to run">;
+  def watchpoint_size : Option<"size", "s">,
+                        Group<1>,
+                        Arg<"ByteSize">,
+                        Desc<"Number of bytes to use to watch a region.">;
+  def watchpoint_watch : Option<"watch", "w">,
+                         Group<1>,
+                         EnumArg<"WatchType">,
+                         Desc<"Specify the type of watching to perform.">;
+}

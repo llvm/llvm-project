@@ -483,3 +483,18 @@ class HelpCommandTestCase(TestBase):
                 "Write log messages to the operating system log",
             ],
         )
+
+        self.expect(
+            "help <watch-type>",
+            substrs=[
+                "Specify the type for a watchpoint.",
+                "read",
+                "Watch for read",
+                "write",
+                "Watch for write",
+                "modify",
+                "Watch for modifications",
+                "read_write",
+                "Watch for read/write",
+            ],
+        )
