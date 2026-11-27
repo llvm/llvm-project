@@ -10,6 +10,7 @@
 #define LLDB_INTERPRETER_COMMANDOPTIONARGUMENTTABLE_H
 
 #include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/OptionGroupWatchpoint.h"
 
 namespace lldb_private {
 
@@ -252,6 +253,29 @@ static constexpr OptionEnumValueElement g_breakpoint_condition_mode[] = {
      "Use DIL to evaluate the condition, and if it fails, "
      "fall back to UserExpression."}};
 
+static constexpr OptionEnumValueElement g_watch_type[] = {
+    {
+        OptionGroupWatchpoint::eWatchRead,
+        "read",
+        "Watch for read",
+    },
+    {
+        OptionGroupWatchpoint::eWatchWrite,
+        "write",
+        "Watch for write",
+    },
+    {
+        OptionGroupWatchpoint::eWatchModify,
+        "modify",
+        "Watch for modifications",
+    },
+    {
+        OptionGroupWatchpoint::eWatchReadWrite,
+        "read_write",
+        "Watch for read/write",
+    },
+};
+
 llvm::StringRef RegisterNameHelpTextCallback();
 llvm::StringRef BreakpointIDHelpTextCallback();
 llvm::StringRef BreakpointIDRangeHelpTextCallback();
@@ -351,7 +375,7 @@ static constexpr CommandObject::ArgumentTableEntry g_argument_table[] = {
     { lldb::eArgTypePlatform, "platform-name", lldb::ePlatformPluginCompletion, {}, { nullptr, false }, "The name of an installed platform plug-in . Type 'platform list' to see a complete list of installed platforms." },
     { lldb::eArgTypeWatchpointID, "watchpt-id", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Watchpoint IDs are positive integers." },
     { lldb::eArgTypeWatchpointIDRange, "watchpt-id-list", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "For example, '1-3' or '1 to 3'." },
-    { lldb::eArgTypeWatchType, "watch-type", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Specify the type for a watchpoint." },
+    { lldb::eArgTypeWatchType, "watch-type", lldb::CompletionType::eNoCompletion, g_watch_type, { nullptr, false }, "Specify the type for a watchpoint." },
     { lldb::eArgRawInput, "raw-input", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Free-form text passed to a command without prior interpretation, allowing spaces without requiring quotes.  To pass arguments and free form text put two dashes ' -- ' between the last argument and any raw input." },
     { lldb::eArgTypeCommand, "command", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "An LLDB Command line command element." },
     { lldb::eArgTypeColumnNum, "column", lldb::CompletionType::eNoCompletion, {}, { nullptr, false }, "Column number in a source file." },
