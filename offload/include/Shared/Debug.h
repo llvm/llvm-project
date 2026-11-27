@@ -48,6 +48,7 @@
 #include <cstdarg>
 #include <mutex>
 #include <string>
+#include <utility>
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
@@ -217,6 +218,12 @@ private:
       NeedEndNewLine = true;
     }
   }
+  /// Write the buffered message to the underlying stream.
+  void emit() {
+    if (ShouldEmitNewLineOnDestruction && NeedEndNewLine)
+      BufferStrm << '\n';
+    Os << BufferStrm.str();
+  }
   void emitPrefix() { BufferStrm.write(Prefix.c_str(), Prefix.size()); }
   void writeWithPrefix(StringRef Str) {
     if (ShouldPrefixNextString) {
@@ -236,10 +243,12 @@ public:
         BufferStrm(Buffer) {
     SetUnbuffered();
   }
-  ~odbg_ostream() final {
-    if (ShouldEmitNewLineOnDestruction && NeedEndNewLine)
-      BufferStrm << '\n';
-    Os << BufferStrm.str();
+  ~odbg_ostream() final { emit(); }
+  /// Write the message out and abort the program.
+  [[noreturn]] void emitAndAbort() {
+    emit();
+    Os.flush();
+    abort();
   }
   odbg_ostream(const odbg_ostream &) = delete;
   odbg_ostream &operator=(const odbg_ostream &) = delete;
@@ -617,7 +626,7 @@ constexpr const char *ODT_Tool = OLDT_Tool;
 constexpr const char *ODT_Module = OLDT_Module;
 constexpr const char *ODT_Interop = "Interop";
 
-static inline odbg_ostream reportErrorStream() {
+static inline odbg_ostream reportErrorStream(StringRef Infix) {
 #ifdef OMPTARGET_DEBUG
   if (::llvm::offload::debug::isDebugEnabled()) {
     uint32_t RealLevel = ODL_Error;
@@ -630,7 +639,7 @@ static inline odbg_ostream reportErrorStream() {
       return odbg_ostream{"", ::llvm::nulls(), 1};
   }
 #endif
-  return odbg_ostream{GETNAME(TARGET_NAME) " error: ",
+  return odbg_ostream{(GETNAME(TARGET_NAME) + Infix).str(),
                       ::llvm::offload::debug::dbgs(), ODL_Error};
 }
 
@@ -699,8 +708,33 @@ static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
 
 #endif // OMPTARGET_DEBUG
 
-// New REPORT macro in the same style as ODBG
-#define REPORT() ::llvm::omp::target::debug::reportErrorStream()
+/// Stream that aborts on destruction. The destructor is marked noreturn, so
+/// that the compiler knows that the code after a REPORT_FATAL() statement is
+/// unreachable.
+class odbg_fatal_ostream {
+  odbg_ostream Strm;
+
+public:
+  explicit odbg_fatal_ostream(StringRef Infix)
+      : Strm(reportErrorStream(Infix)) {}
+  odbg_fatal_ostream(const odbg_fatal_ostream &) = delete;
+  odbg_fatal_ostream &operator=(const odbg_fatal_ostream &) = delete;
+  [[noreturn]] ~odbg_fatal_ostream() { Strm.emitAndAbort(); }
+
+  template <typename T> odbg_fatal_ostream &operator<<(T &&Value) {
+    Strm << std::forward<T>(Value);
+    return *this;
+  }
+};
+
+// Macro for errors in the same style as ODBG.
+#define REPORT() ::llvm::omp::target::debug::reportErrorStream(" error: ")
+// Macro for warnings in the same style as ODBG.
+#define REPORT_WARN()                                                          \
+  ::llvm::omp::target::debug::reportErrorStream(" warning: ")
+// Macro for fatal errors that abort the program in the same style as ODBG.
+#define REPORT_FATAL()                                                         \
+  ::llvm::omp::target::debug::odbg_fatal_ostream(" fatal error: ")
 
 } // namespace llvm::omp::target::debug
 

@@ -53,14 +53,11 @@ class Value;
 /// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
 /// like).
-LLVM_ABI bool isAllocationFn(const Value *V, const TargetLibraryInfo *TLI);
-LLVM_ABI bool
-isAllocationFn(const Value *V,
-               function_ref<const TargetLibraryInfo &(Function &)> GetTLI);
+LLVM_ABI bool isAllocationFn(const Value *V);
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates memory (either malloc, calloc, or strdup like).
-LLVM_ABI bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI);
+LLVM_ABI bool isAllocLikeFn(const Value *V);
 
 /// Tests if a function is a call or invoke to a library function that
 /// reallocates memory (e.g., realloc).
@@ -79,6 +76,11 @@ LLVM_ABI bool isFreeLikeFn(const Function *F);
 /// If this if a call to a free function, return the freed operand.
 LLVM_ABI Value *getFreedOperand(const CallBase *CB);
 
+/// If this is a call to a free function that returns a value, return the value
+/// that will be returned when it is elided, i.e. when a free(malloc(...)) pair
+/// is eliminated. Returns nullptr on free functions with void return type.
+LLVM_ABI Constant *getElidedFreeResult(const Value *V);
+
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
 //
@@ -92,7 +94,7 @@ LLVM_ABI Value *getFreedOperand(const CallBase *CB);
 /// Note: *Removable* really does mean removable; it does not mean observable.
 /// A language (e.g. C++) can allow removing allocations without allowing
 /// insertion or speculative execution of allocation routines.
-LLVM_ABI bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
+LLVM_ABI bool isRemovableAlloc(const CallBase *V);
 
 /// Gets the alignment argument for an aligned_alloc-like function based on the
 /// allocalign attribute.
@@ -119,8 +121,7 @@ LLVM_ABI Constant *getInitialValueOfAllocation(const Value *V, Type *Ty);
 /// If a function is part of an allocation family (e.g.
 /// malloc/realloc/calloc/free), return the identifier for its family
 /// of functions.
-LLVM_ABI std::optional<StringRef>
-getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI);
+LLVM_ABI std::optional<StringRef> getAllocationFamily(const Value *I);
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.

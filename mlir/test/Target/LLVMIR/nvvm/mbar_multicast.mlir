@@ -1,5 +1,5 @@
 // RUN: mlir-translate --mlir-to-llvmir %s | FileCheck %s --check-prefix=LLVM
-// RUN: %if has_llc_binary && host-supports-nvptx %{ mlir-translate --mlir-to-llvmir %s | %llc-verify -o - -march=nvptx64 -mcpu=sm_107f -mattr=+ptx94 | FileCheck %s --check-prefix=PTX %}
+// RUN: %if has_llc_binary && nvptx-registered-target %{ mlir-translate --mlir-to-llvmir %s | %llc-verify -o - -march=nvptx64 -mcpu=sm_107f -mattr=+ptx94 | FileCheck %s --check-prefix=PTX %}
 
 // PTX-LABEL: multicast(
 llvm.func @multicast(%bar: !llvm.ptr<7>, %count: i32, %mask: i32) {

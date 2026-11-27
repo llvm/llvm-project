@@ -1220,6 +1220,12 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   if (Ptr->isSwiftError())
     return true;
 
+  // Ignore Swift async context addresses. On WebAssembly they lower to a
+  // local, which cannot have regular uses like an instrumentation function.
+  if (auto *II = dyn_cast<IntrinsicInst>(Ptr);
+      II && II->getIntrinsicID() == Intrinsic::swift_async_context_addr)
+    return true;
+
   // Treat memory accesses to promotable allocas as non-interesting since they
   // will not cause memory violations. This greatly speeds up the instrumented
   // executable at -O0.
