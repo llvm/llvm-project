@@ -17,6 +17,11 @@
 
 namespace scudo {
 
+// Returns a description of the error number Err, like strerror(), but without
+// calling into gettext/malloc on glibc, so it is safe to call from within the
+// allocator (see report_linux.cpp).
+const char *getErrorDescription(int Err);
+
 // Report a fatal error when a map call fails. SizeIfOOM shall
 // hold the requested size on an out-of-memory error, 0 otherwise.
 void NORETURN reportMapError(uptr SizeIfOOM = 0);
