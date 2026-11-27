@@ -1052,7 +1052,44 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   lwc1  $f29, (4 * 36 + 8 * 29)($4)
   lwc1  $f30, (4 * 36 + 8 * 30)($4)
   lwc1  $f31, (4 * 36 + 8 * 31)($4)
-#elif __mips_fpr != 64
+#elif __mips_fpr == 32
+  // MIPS I has no ldc1. Each even/odd register pair is in one 8-byte slot,
+  // with the even register in the first half, as getRegister() expects.
+  // The odd registers are used, so allow that even with -mno-odd-spreg.
+  .set oddspreg
+  lwc1  $f0, (4 * 36 + 8 * 0)($4)
+  lwc1  $f1, (4 * 36 + 8 * 0 + 4)($4)
+  lwc1  $f2, (4 * 36 + 8 * 2)($4)
+  lwc1  $f3, (4 * 36 + 8 * 2 + 4)($4)
+  lwc1  $f4, (4 * 36 + 8 * 4)($4)
+  lwc1  $f5, (4 * 36 + 8 * 4 + 4)($4)
+  lwc1  $f6, (4 * 36 + 8 * 6)($4)
+  lwc1  $f7, (4 * 36 + 8 * 6 + 4)($4)
+  lwc1  $f8, (4 * 36 + 8 * 8)($4)
+  lwc1  $f9, (4 * 36 + 8 * 8 + 4)($4)
+  lwc1  $f10, (4 * 36 + 8 * 10)($4)
+  lwc1  $f11, (4 * 36 + 8 * 10 + 4)($4)
+  lwc1  $f12, (4 * 36 + 8 * 12)($4)
+  lwc1  $f13, (4 * 36 + 8 * 12 + 4)($4)
+  lwc1  $f14, (4 * 36 + 8 * 14)($4)
+  lwc1  $f15, (4 * 36 + 8 * 14 + 4)($4)
+  lwc1  $f16, (4 * 36 + 8 * 16)($4)
+  lwc1  $f17, (4 * 36 + 8 * 16 + 4)($4)
+  lwc1  $f18, (4 * 36 + 8 * 18)($4)
+  lwc1  $f19, (4 * 36 + 8 * 18 + 4)($4)
+  lwc1  $f20, (4 * 36 + 8 * 20)($4)
+  lwc1  $f21, (4 * 36 + 8 * 20 + 4)($4)
+  lwc1  $f22, (4 * 36 + 8 * 22)($4)
+  lwc1  $f23, (4 * 36 + 8 * 22 + 4)($4)
+  lwc1  $f24, (4 * 36 + 8 * 24)($4)
+  lwc1  $f25, (4 * 36 + 8 * 24 + 4)($4)
+  lwc1  $f26, (4 * 36 + 8 * 26)($4)
+  lwc1  $f27, (4 * 36 + 8 * 26 + 4)($4)
+  lwc1  $f28, (4 * 36 + 8 * 28)($4)
+  lwc1  $f29, (4 * 36 + 8 * 28 + 4)($4)
+  lwc1  $f30, (4 * 36 + 8 * 30)($4)
+  lwc1  $f31, (4 * 36 + 8 * 30 + 4)($4)
+#elif __mips_fpr == 0
   ldc1  $f0, (4 * 36 + 8 * 0)($4)
   ldc1  $f2, (4 * 36 + 8 * 2)($4)
   ldc1  $f4, (4 * 36 + 8 * 4)($4)
@@ -1106,10 +1143,11 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
 #endif
 #if __mips_isa_rev < 6
   // restore hi and lo
+  // MIPS 1 has load delay slot. Load both values before using them.
   lw    $8, (4 * 33)($4)
+  lw    $9, (4 * 34)($4)
   mthi  $8
-  lw    $8, (4 * 34)($4)
-  mtlo  $8
+  mtlo  $9
 #endif
   // r0 is zero
   lw    $1, (4 * 1)($4)
@@ -1145,9 +1183,12 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   lw    $31, (4 * 32)($4)
   // MIPS 1 has load delay slot. Ensure lw $31 and jr are separated by an instruction.
   lw    $30, (4 * 30)($4)
-  // jump to ra, load a0 in the delay slot
-  jr    $31
+  // Load a0 before the jump, not in the delay slot, as on MIPS 1 the first
+  // instruction at ra could not use it yet.
   lw    $4, (4 * 4)($4)
+  // jump to ra
+  jr    $31
+  nop
   .set pop
 
 #elif defined(__mips64)
