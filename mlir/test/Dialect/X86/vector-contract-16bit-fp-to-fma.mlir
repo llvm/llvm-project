@@ -1226,6 +1226,319 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+!vecA = vector<1x1x1x2xbf16>
+!vecB = vector<1x1x16x2xbf16>
+!vecC = vector<1x16xf32>
+!memrefA = memref<1x4x1x2xbf16>
+!memrefB = memref<1x1x32x2xbf16>
+#map = affine_map<(d0, d4, d1, d2, d3) -> (d0, d1, d3, d4)>
+#map1 = affine_map<(d0, d4, d1, d2, d3) -> (d0, d3, d2, d4)>
+#map2 = affine_map<(d0, d4, d1, d2, d3) -> (d1, d2)>
+func.func @brgemm_to_fma_bf16_fallback_avx512(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !vecC) -> !vecC
+{
+  %c0 = arith.constant 0 : index
+  %0 = ub.poison : bf16
+  %1 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} :
+        !memrefB, !vecB
+  %3 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %arg2
+    : !vecA, !vecB into !vecC
+  return %3 : !vecC
+}
+
+// CHECK-LABEL: @brgemm_to_fma_bf16_fallback_avx512
+// CHECK-DAG:   %[[MASK:.*]] = arith.constant dense<-65536> : vector<16xi32>
+// CHECK-DAG:   %[[C16:.*]] = arith.constant dense<16> : vector<16xi32>
+// CHECK:       %[[A:.*]] = vector.transfer_read %arg0
+// CHECK:       %[[B:.*]] = vector.transfer_read %arg1
+// CHECK:       %[[ACC:.*]] = vector.shape_cast %arg2 : vector<1x16xf32> to vector<16xf32>
+// CHECK:       %[[A2:.*]] = vector.shape_cast %[[A]] : vector<1x1x1x2xbf16> to vector<2xbf16>
+// CHECK:       %[[AI32:.*]] = vector.bitcast %[[A2]] : vector<2xbf16> to vector<1xi32>
+// CHECK:       %[[ABCST:.*]] = vector.broadcast %[[AI32]] : vector<1xi32> to vector<16xi32>
+// CHECK:       %[[B32:.*]] = vector.shape_cast %[[B]] : vector<1x1x16x2xbf16> to vector<32xbf16>
+// CHECK:       %[[BI32:.*]] = vector.bitcast %[[B32]] : vector<32xbf16> to vector<16xi32>
+// CHECK:       %[[AODD:.*]] = arith.andi %[[ABCST]], %[[MASK]] : vector<16xi32>
+// CHECK:       %[[AODDF:.*]] = vector.bitcast %[[AODD]] : vector<16xi32> to vector<16xf32>
+// CHECK:       %[[BODD:.*]] = arith.andi %[[BI32]], %[[MASK]] : vector<16xi32>
+// CHECK:       %[[BODDF:.*]] = vector.bitcast %[[BODD]] : vector<16xi32> to vector<16xf32>
+// CHECK:       %[[FMA0:.*]] = vector.fma %[[AODDF]], %[[BODDF]], %[[ACC]] : vector<16xf32>
+// CHECK:       %[[AEVEN:.*]] = arith.shli %[[ABCST]], %[[C16]] : vector<16xi32>
+// CHECK:       %[[AEVENF:.*]] = vector.bitcast %[[AEVEN]] : vector<16xi32> to vector<16xf32>
+// CHECK:       %[[BEVEN:.*]] = arith.shli %[[BI32]], %[[C16]] : vector<16xi32>
+// CHECK:       %[[BEVENF:.*]] = vector.bitcast %[[BEVEN]] : vector<16xi32> to vector<16xf32>
+// CHECK:       %[[FMA1:.*]] = vector.fma %[[AEVENF]], %[[BEVENF]], %[[FMA0]] : vector<16xf32>
+// CHECK:       vector.shape_cast %[[FMA1]] : vector<16xf32> to vector<1x16xf32>
+// CHECK-NOT:   x86.avx
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_16bit_fp_to_fma bf16_fallback
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1xbf16>
+!vecB = vector<1x16xbf16>
+!vecC = vector<1x16xf32>
+!memrefA = memref<4x1xbf16>
+!memrefB = memref<1x64xbf16>
+!memrefC = memref<2x64xf32>
+#map = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map1 = affine_map<(d0,  d1, d2) -> (d2, d1)>
+#map2 = affine_map<(d0,  d1, d2) -> (d0, d1)>
+func.func @matmul_to_fma_flat_layout_bf16_fallback_avx512(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !memrefC) -> !memrefC
+{
+  %c0 = arith.constant 0 : index
+  %0 = ub.poison : bf16
+  %32 = ub.poison : f32
+  %1 = vector.transfer_read %arg0[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0], %0 {in_bounds = [true, true]} :
+        !memrefB, !vecB
+  %3 = vector.transfer_read %arg2[%c0, %c0], %32 {in_bounds = [true, true]} :
+        !memrefC, !vecC
+  %4 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %3
+    : !vecA, !vecB into !vecC
+  vector.transfer_write %4, %arg2[%c0, %c0] {in_bounds = [true, true]} : !vecC, !memrefC
+  return %arg2 : !memrefC
+}
+
+// CHECK-LABEL: @matmul_to_fma_flat_layout_bf16_fallback_avx512
+// CHECK:       %[[C16:.*]] = arith.constant dense<16> : vector<16xi32>
+// CHECK:       %[[A:.*]] = vector.transfer_read %arg0
+// CHECK:       %[[B:.*]] = vector.transfer_read %arg1
+// CHECK:       %[[ACC:.*]] = vector.transfer_read %arg2
+// CHECK:       %[[ACCF:.*]] = vector.shape_cast %[[ACC]] : vector<1x16xf32> to vector<16xf32>
+// CHECK:       %[[A1:.*]] = vector.shape_cast %[[A]] : vector<1x1xbf16> to vector<1xbf16>
+// CHECK:       %[[AI16:.*]] = vector.bitcast %[[A1]] : vector<1xbf16> to vector<1xi16>
+// CHECK:       %[[AI32:.*]] = arith.extui %[[AI16]] : vector<1xi16> to vector<1xi32>
+// CHECK:       %[[ABCST:.*]] = vector.broadcast %[[AI32]] : vector<1xi32> to vector<16xi32>
+// CHECK:       %[[ASHL:.*]] = arith.shli %[[ABCST]], %[[C16]] : vector<16xi32>
+// CHECK:       %[[AF32:.*]] = vector.bitcast %[[ASHL]] : vector<16xi32> to vector<16xf32>
+// CHECK:       %[[B16:.*]] = vector.shape_cast %[[B]] : vector<1x16xbf16> to vector<16xbf16>
+// CHECK:       %[[BI16:.*]] = vector.bitcast %[[B16]] : vector<16xbf16> to vector<16xi16>
+// CHECK:       %[[BI32:.*]] = arith.extui %[[BI16]] : vector<16xi16> to vector<16xi32>
+// CHECK:       %[[BSHL:.*]] = arith.shli %[[BI32]], %[[C16]] : vector<16xi32>
+// CHECK:       %[[BF32:.*]] = vector.bitcast %[[BSHL]] : vector<16xi32> to vector<16xf32>
+// CHECK:       %[[FMA:.*]] = vector.fma %[[AF32]], %[[BF32]], %[[ACCF]] : vector<16xf32>
+// CHECK:       %[[RES:.*]] = vector.shape_cast %[[FMA]] : vector<16xf32> to vector<1x16xf32>
+// CHECK:       vector.transfer_write %[[RES]], %arg2[%c0, %c0]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_16bit_fp_to_fma bf16_fallback
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1x1x2xbf16>
+!vecB = vector<1x1x16x2xbf16>
+!vecC = vector<1x16xf32>
+!memrefA = memref<1x1x1x2xbf16, strided<[2048, 32, 2, 1], offset: ?>>
+!memrefB = memref<1x1x16x2xbf16, strided<[2048, 128, 2, 1], offset: ?>>
+!memrefC = memref<1x16xf32, strided<[64, 1], offset: ?>>
+#map = affine_map<(d0, d4, d1, d2, d3) -> (d0, d1, d3, d4)>
+#map1 = affine_map<(d0, d4, d1, d2, d3) -> (d0, d3, d2, d4)>
+#map2 = affine_map<(d0, d4, d1, d2, d3) -> (d1, d2)>
+
+func.func @brgemm_to_fma_loop_bf16_fallback_avx512(%arg0: memref<16x64x16x2xbf16>, %arg1: memref<16x16x64x2xbf16>,
+              %arg2: memref<64x64xf32>) -> memref<64x64xf32>  {
+  %0 = ub.poison : f32
+  %1 = ub.poison : bf16
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %c64 = arith.constant 64 : index
+  scf.for %arg3 = %c0 to %c64 step %c1 {
+    scf.for %arg4 = %c0 to %c64 step %c16 {
+      %subview = memref.subview %arg2[%arg3, %arg4] [1, 16] [1, 1] :
+				memref<64x64xf32> to !memrefC
+      %2 = vector.transfer_read %subview[%c0, %c0], %0 {in_bounds = [true, true]} :
+				!memrefC, !vecC
+
+      %3 = scf.for %arg5 = %c0 to %c16 step %c1 iter_args(%arg6 = %2) -> (!vecC) {
+        %4 = scf.for %arg7 = %c0 to %c16 step %c1 iter_args(%arg8 = %arg6) -> (!vecC) {
+
+          %subview_0 = memref.subview %arg0[%arg5, %arg3, %arg7, 0] [1, 1, 1, 2] [1, 1, 1, 1] :
+				memref<16x64x16x2xbf16> to !memrefA
+          %subview_1 = memref.subview %arg1[%arg5, %arg7, %arg4, 0] [1, 1, 16, 2] [1, 1, 1, 1] :
+				memref<16x16x64x2xbf16> to !memrefB
+
+          %5 = vector.transfer_read %subview_0[%c0, %c0, %c0, %c0], %1
+				{in_bounds = [true, true, true, true]} : !memrefA, !vecA
+          %6 = vector.transfer_read %subview_1[%c0, %c0, %c0, %c0], %1
+				{in_bounds = [true, true, true, true]} : !memrefB, !vecB
+
+          %7 = vector.contract {indexing_maps = [#map, #map1, #map2], iterator_types =
+				["reduction", "reduction", "parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+				%5, %6, %arg8 : !vecA, !vecB into !vecC
+
+          scf.yield %7 : !vecC
+        }
+        scf.yield %4 : !vecC
+      }
+
+      vector.transfer_write %3, %subview[%c0, %c0] {in_bounds = [true, true]} :
+				!vecC, !memrefC
+    }
+  }
+
+  return %arg2 : memref<64x64xf32>
+}
+
+// CHECK-LABEL: @brgemm_to_fma_loop_bf16_fallback_avx512
+// CHECK-DAG:   %[[MASK:.*]] = arith.constant dense<-65536> : vector<16xi32>
+// CHECK-DAG:   %[[C16:.*]] = arith.constant dense<16> : vector<16xi32>
+// CHECK-DAG:   %[[ZERO:.*]] = arith.constant dense<0.000000e+00> : vector<1x16xf32>
+// CHECK:       scf.for
+// CHECK:       scf.for
+// CHECK:         %[[C:.*]] = vector.transfer_read %subview[%c0, %c0]
+// CHECK:         %[[R:.*]] = scf.for {{.*}} iter_args(%{{.*}} = %[[ZERO]])
+// CHECK:           scf.for {{.*}} iter_args(%[[ACC:.*]] = %{{.*}})
+// CHECK:             %[[A:.*]] = vector.transfer_read %{{.*}} : {{.*}}, vector<1x1x1x2xbf16>
+// CHECK:             %[[B:.*]] = vector.transfer_read %{{.*}} : {{.*}}, vector<1x1x16x2xbf16>
+// CHECK:             %[[ACCF:.*]] = vector.shape_cast %[[ACC]] : vector<1x16xf32> to vector<16xf32>
+// CHECK:             %[[A2:.*]] = vector.shape_cast %[[A]] : vector<1x1x1x2xbf16> to vector<2xbf16>
+// CHECK:             %[[AI32:.*]] = vector.bitcast %[[A2]] : vector<2xbf16> to vector<1xi32>
+// CHECK:             %[[ABCST:.*]] = vector.broadcast %[[AI32]] : vector<1xi32> to vector<16xi32>
+// CHECK:             %[[B32:.*]] = vector.shape_cast %[[B]] : vector<1x1x16x2xbf16> to vector<32xbf16>
+// CHECK:             %[[BI32:.*]] = vector.bitcast %[[B32]] : vector<32xbf16> to vector<16xi32>
+// CHECK:             %[[AODD:.*]] = arith.andi %[[ABCST]], %[[MASK]] : vector<16xi32>
+// CHECK:             %[[AODDF:.*]] = vector.bitcast %[[AODD]] : vector<16xi32> to vector<16xf32>
+// CHECK:             %[[BODD:.*]] = arith.andi %[[BI32]], %[[MASK]] : vector<16xi32>
+// CHECK:             %[[BODDF:.*]] = vector.bitcast %[[BODD]] : vector<16xi32> to vector<16xf32>
+// CHECK:             %[[FMA0:.*]] = vector.fma %[[AODDF]], %[[BODDF]], %[[ACCF]] : vector<16xf32>
+// CHECK:             %[[AEVEN:.*]] = arith.shli %[[ABCST]], %[[C16]] : vector<16xi32>
+// CHECK:             %[[AEVENF:.*]] = vector.bitcast %[[AEVEN]] : vector<16xi32> to vector<16xf32>
+// CHECK:             %[[BEVEN:.*]] = arith.shli %[[BI32]], %[[C16]] : vector<16xi32>
+// CHECK:             %[[BEVENF:.*]] = vector.bitcast %[[BEVEN]] : vector<16xi32> to vector<16xf32>
+// CHECK:             %[[FMA1:.*]] = vector.fma %[[AEVENF]], %[[BEVENF]], %[[FMA0]] : vector<16xf32>
+// CHECK:             %[[RES:.*]] = vector.shape_cast %[[FMA1]] : vector<16xf32> to vector<1x16xf32>
+// CHECK:             scf.yield %[[RES]] : vector<1x16xf32>
+// CHECK:         %[[SUM:.*]] = arith.addf %[[R]], %[[C]] : vector<1x16xf32>
+// CHECK:         vector.transfer_write %[[SUM]], %subview[%c0, %c0]
+// CHECK-NOT:   x86.avx
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.move_accumulator_for_contract_loop
+      transform.apply_patterns.x86.vector_contract_16bit_fp_to_fma bf16_fallback
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1x1x2xbf16>
+!vecB = vector<1x1x16x2xbf16>
+!vecC = vector<1x16xf32>
+!memrefA = memref<1x4x1x2xbf16>
+!memrefB = memref<1x1x32x2xbf16>
+#map = affine_map<(d0, d4, d1, d2, d3) -> (d0, d1, d3, d4)>
+#map1 = affine_map<(d0, d4, d1, d2, d3) -> (d0, d3, d2, d4)>
+#map2 = affine_map<(d0, d4, d1, d2, d3) -> (d1, d2)>
+// 16-wide contracts are lowered only by the BF16 fallback.
+func.func @negative_16_wide_without_fallback(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !vecC) -> !vecC
+{
+  %c0 = arith.constant 0 : index
+  %0 = ub.poison : bf16
+  %1 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} :
+        !memrefB, !vecB
+  %3 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %arg2
+    : !vecA, !vecB into !vecC
+  return %3 : !vecC
+}
+
+// CHECK-LABEL: @negative_16_wide_without_fallback
+// CHECK-NOT:   vector.fma
+// CHECK:       vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_16bit_fp_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1x1x2xbf16>
+!vecB = vector<1x1x32x2xbf16>
+!vecC = vector<1x32xf32>
+!memrefA = memref<1x4x1x2xbf16>
+!memrefB = memref<1x1x64x2xbf16>
+#map = affine_map<(d0, d4, d1, d2, d3) -> (d0, d1, d3, d4)>
+#map1 = affine_map<(d0, d4, d1, d2, d3) -> (d0, d3, d2, d4)>
+#map2 = affine_map<(d0, d4, d1, d2, d3) -> (d1, d2)>
+// The fallback supports at most 16 lanes (one AVX512 register).
+func.func @negative_32_wide_with_fallback(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !vecC) -> !vecC
+{
+  %c0 = arith.constant 0 : index
+  %0 = ub.poison : bf16
+  %1 = vector.transfer_read %arg0[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0, %c0, %c0], %0 {in_bounds = [true, true, true, true]} :
+        !memrefB, !vecB
+  %3 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %arg2
+    : !vecA, !vecB into !vecC
+  return %3 : !vecC
+}
+
+// CHECK-LABEL: @negative_32_wide_with_fallback
+// CHECK-NOT:   vector.fma
+// CHECK:       vector.contract
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_16bit_fp_to_fma bf16_fallback
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 !vecA = vector<1x1xbf16>
 !vecB = vector<1x8xbf16>
 !vecC = vector<1x8xf32>

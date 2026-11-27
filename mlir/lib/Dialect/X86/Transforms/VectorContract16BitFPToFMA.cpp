@@ -377,7 +377,13 @@ struct VectorContract16BitFPToFMA : public AddContractionOpRewritePattern {
 
     // Non-unit dimensions should match the vector length of BF16.
     unsigned int nonUnitDim = nonUnitDimAcc.front();
-    if (nonUnitDim != 4 && nonUnitDim != 8)
+    // The fallback uses generic vector ops, so it can also target AVX512.
+    if (fallback && nonUnitDim != 4 && nonUnitDim != 8 && nonUnitDim != 16)
+      return rewriter.notifyMatchFailure(
+          contractOp, "BF16 fallback expects non-unit (LHS or RHS) dim and "
+                      "acc dim of size 4/8/16.");
+
+    if (!fallback && nonUnitDim != 4 && nonUnitDim != 8)
       return rewriter.notifyMatchFailure(
           contractOp, "BF16 packed load operation expects non-unit (LHR or "
                       "RHS) dim and acc dim of size 4/8.");

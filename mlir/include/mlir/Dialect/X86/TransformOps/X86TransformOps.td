@@ -46,7 +46,8 @@ def ApplyVectorContract16BitFPToFMAPatternsOp : Op<Transform_Dialect,
         to a FMA via emulation lowering using BF16/F16 packed operations.
 
     With `bf16_fallback`, BF16 operands are instead up-converted to F32 with
-    integer bit operations, for targets without AVX2_BF16 ops.
+    integer bit operations, for targets without AVX2_BF16 ops. This also
+    accepts 16-wide contractions for AVX512 targets.
   }];
 
   let arguments = (ins UnitAttr:$fallback);
