@@ -304,6 +304,9 @@ struct CharSet {
                          "non-ASCII characters.");
 
       case Unicode::Locale:
+        // If we get here with Unicode::Locale, it means the derived writeChar
+        // failed to handle it because the character is not representable.
+        // Escape it instead.
       case Unicode::Escape:
       case Unicode::Highlight: {
         WithColor COS(OS, raw_ostream::RED, false, false,

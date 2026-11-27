@@ -117,14 +117,15 @@ $ llvm-strings -t x test.o
 :::
 
 :::{option} --unicode=<unicode>, -U
-Specifies how non-ASCII characters are presented in the output file. Valid
-arguments are:
+Specifies how non-ASCII characters are handled. Valid arguments are:
 - `default`
 - `utf8` (UTF-8)
+- `invalid` (non-ASCII characters are considered nonprintable)
 - `locale` (current locale's character set)
 - `escape` (code point printed in `\u00a0` notation)
 - `hex` (UTF-8 byte representation printed in `<0xc2a0>` notation)
 - `highlight` (as `escape`, but highlighted)
+
 The default, or `--unicode=default`, is `--unicode=locale` if
 {option}`--encoding=S` is used, otherwise `--unicode=utf8`.
 :::
