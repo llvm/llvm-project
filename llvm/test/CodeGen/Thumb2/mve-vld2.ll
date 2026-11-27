@@ -50,9 +50,9 @@ define void @vld2_v8i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vld20.32 {q2, q3}, [r0]
 ; CHECK-NEXT:    vadd.i32 q0, q0, q1
 ; CHECK-NEXT:    vld21.32 {q2, q3}, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vadd.i32 q1, q2, q3
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
+; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <16 x i32>, ptr %src, align 4
@@ -82,10 +82,10 @@ define void @vld2_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vld21.32 {q1, q2}, [r3]
 ; CHECK-NEXT:    vstrw.32 q3, [r1, #48]
 ; CHECK-NEXT:    vadd.i32 q5, q5, q6
-; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vadd.i32 q1, q1, q2
 ; CHECK-NEXT:    vstrw.32 q5, [r1, #16]
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #32]
+; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -188,9 +188,9 @@ define void @vld2_v16i16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vld20.16 {q2, q3}, [r0]
 ; CHECK-NEXT:    vadd.i16 q0, q0, q1
 ; CHECK-NEXT:    vld21.16 {q2, q3}, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vadd.i16 q1, q2, q3
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
+; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <32 x i16>, ptr %src, align 2
@@ -435,9 +435,9 @@ define void @vld2_v8f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vld20.32 {q2, q3}, [r0]
 ; CHECK-NEXT:    vadd.f32 q0, q0, q1
 ; CHECK-NEXT:    vld21.32 {q2, q3}, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vadd.f32 q1, q2, q3
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #16]
+; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <16 x float>, ptr %src, align 4
@@ -467,10 +467,10 @@ define void @vld2_v16f32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vld21.32 {q1, q2}, [r3]
 ; CHECK-NEXT:    vstrw.32 q3, [r1, #48]
 ; CHECK-NEXT:    vadd.f32 q5, q5, q6
-; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vadd.f32 q1, q1, q2
 ; CHECK-NEXT:    vstrw.32 q5, [r1, #16]
 ; CHECK-NEXT:    vstrw.32 q1, [r1, #32]
+; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    bx lr
 entry:
@@ -584,9 +584,9 @@ define void @vld2_v16f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vld20.16 {q2, q3}, [r0]
 ; CHECK-NEXT:    vadd.f16 q0, q0, q1
 ; CHECK-NEXT:    vld21.16 {q2, q3}, [r0]
-; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    vadd.f16 q2, q2, q3
 ; CHECK-NEXT:    vstrw.32 q2, [r1, #16]
+; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
   %l1 = load <32 x half>, ptr %src, align 2

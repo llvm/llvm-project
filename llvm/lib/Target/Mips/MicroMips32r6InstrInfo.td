@@ -1687,9 +1687,9 @@ defm : SEL_FP_AND1_PATS<FGR64Opnd, SEL_D_MMR6>, ISA_MICROMIPS32R6;
 def : MipsPat<(f32 fpimm0), (MTC1_MMR6 R0)>, ISA_MICROMIPS32R6;
 def : MipsPat<(f32 fpimm0neg), (FNEG_S_MMR6(MTC1_MMR6 R0))>,
       ISA_MICROMIPS32R6;
-def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR64Opnd:$src),
               (TRUNC_W_D_MMR6 FGR64Opnd:$src)>, ISA_MICROMIPS32R6;
-def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR32Opnd:$src),
               (TRUNC_W_S_MMR6 FGR32Opnd:$src)>, ISA_MICROMIPS32R6;
 
 def : MipsPat<(and GPRMM16:$src, immZExtAndi16:$imm),

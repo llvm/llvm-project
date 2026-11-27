@@ -21,6 +21,7 @@ def Builtin_Dialect : Dialect {
     "A dialect containing the builtin Attributes, Operations, and Types";
   let name = "builtin";
   let cppNamespace = "::mlir";
+  let useDefaultOperationRegistration = 1;
   let hasAttributes = 1;
   let hasTypes = 1;
   let useDefaultAttributePrinterParser = 0;

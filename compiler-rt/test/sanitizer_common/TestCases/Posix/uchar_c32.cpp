@@ -1,7 +1,7 @@
 // Test sanitizer_common interception on `mbrtoc32()` and `c32rtomb()`.
 //
 // RUN: %clangxx -O0 -g %s -o %t && %run %t
-// UNSUPPORTED: darwin, android, netbsd
+// UNSUPPORTED: darwin, android, netbsd, target={{.*(solaris|aix).*}}
 
 #include <assert.h>
 #include <locale.h>

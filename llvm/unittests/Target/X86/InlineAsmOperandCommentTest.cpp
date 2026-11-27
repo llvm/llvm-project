@@ -90,7 +90,6 @@ body: |
 ...
 ---
 name: test_mem_m
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi

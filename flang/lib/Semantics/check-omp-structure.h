@@ -587,9 +587,9 @@ private:
   // directive is assumed to be listed.
   std::map<llvm::omp::Directive, parser::CharBlock> ifLeafs_;
 
-  // Track symbols with temporary stack descriptors mapped in TARGET ENTER DATA
-  // and symbols mapped in TARGET EXIT DATA within the current function scope.
-  // Used to warn about potential issues with mapping temporary descriptors.
+  // Track symbols that may leave descriptor mappings behind on TARGET ENTER
+  // DATA, and symbols mapped in TARGET EXIT DATA within the current function
+  // scope. Allocatable components require different guidance from temporaries.
   std::multimap<const Symbol *, parser::CharBlock> tempDescriptorEnterMaps_;
   std::set<const Symbol *> tempDescriptorExitMaps_;
 
@@ -617,6 +617,8 @@ private:
     const parser::OmpDirectiveSpecification *spec;
     bool checkDefaultNoneInAssociatedLoop;
   };
+  std::vector<MetadirectiveLoopVariant> TakeMetadirectiveVariants(
+      std::size_t first);
   std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
   std::vector<std::size_t> metadirectiveVariantScopeStarts_;
   const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{

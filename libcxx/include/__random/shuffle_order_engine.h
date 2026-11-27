@@ -76,40 +76,40 @@ public:
   static _LIBCPP_CONSTEXPR const result_type _Max = _Engine::max();
 #endif
   static_assert(_Min < _Max, "shuffle_order_engine invalid parameters");
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  [[__nodiscard__]] static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
+  [[__nodiscard__]] static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
 
   static _LIBCPP_CONSTEXPR const unsigned long long _Rp = _Max - _Min + 1ull;
 
   // constructors and seeding functions
-  _LIBCPP_HIDE_FROM_ABI shuffle_order_engine() { __init(); }
-  _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(const _Engine& __e) : __e_(__e) { __init(); }
+  shuffle_order_engine() { __init(); }
+  explicit shuffle_order_engine(const _Engine& __e) : __e_(__e) { __init(); }
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(_Engine&& __e) : __e_(std::move(__e)) { __init(); }
+  explicit shuffle_order_engine(_Engine&& __e) : __e_(std::move(__e)) { __init(); }
 #endif // _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(result_type __sd) : __e_(__sd) { __init(); }
+  explicit shuffle_order_engine(result_type __sd) : __e_(__sd) { __init(); }
   template <class _Sseq,
             __enable_if_t<__is_seed_sequence_v<_Sseq, shuffle_order_engine> && !is_convertible<_Sseq, _Engine>::value,
                           int> = 0>
-  _LIBCPP_HIDE_FROM_ABI explicit shuffle_order_engine(_Sseq& __q) : __e_(__q) {
+  explicit shuffle_order_engine(_Sseq& __q) : __e_(__q) {
     __init();
   }
-  _LIBCPP_HIDE_FROM_ABI void seed() {
+  void seed() {
     __e_.seed();
     __init();
   }
-  _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd) {
+  void seed(result_type __sd) {
     __e_.seed(__sd);
     __init();
   }
   template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, shuffle_order_engine>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
+  void seed(_Sseq& __q) {
     __e_.seed(__q);
     __init();
   }
 
   // generating functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()() {
+  [[__nodiscard__]] result_type operator()() {
     if _LIBCPP_CONSTEXPR (_Rp != 0 || !(__k & 1)) {
       using _Ratio = __uratio<__k, _Rp != 0 ? _Rp : 0x8000000000000000ull>;
       if _LIBCPP_CONSTEXPR (_Ratio::num > 0xFFFFFFFFFFFFFFFFull / (_Max - _Min)) {
@@ -124,13 +124,13 @@ public:
       return __evalf<__k, 0>();
   }
 
-  _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
+  void discard(unsigned long long __z) {
     for (; __z; --__z)
       (void)operator()();
   }
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI const _Engine& base() const _NOEXCEPT { return __e_; }
+  [[__nodiscard__]] const _Engine& base() const _NOEXCEPT { return __e_; }
 
 private:
   template <class _Eng, size_t _Kp>
@@ -147,14 +147,14 @@ private:
   friend basic_istream<_CharT, _Traits>&
   operator>>(basic_istream<_CharT, _Traits>& __is, shuffle_order_engine<_Eng, _Kp>& __x);
 
-  _LIBCPP_HIDE_FROM_ABI void __init() {
+  void __init() {
     for (size_t __i = 0; __i < __k; ++__i)
       __v_[__i] = __e_();
     __y_ = __e_();
   }
 
   template <uint64_t __n, uint64_t __d>
-  _LIBCPP_HIDE_FROM_ABI result_type __evalf() {
+  result_type __evalf() {
     const double __fp = __d == 0 ? __n / (2. * 0x8000000000000000ull) : __n / (double)__d;
     const size_t __j  = static_cast<size_t>(__fp * (__y_ - _Min));
     __y_              = __v_[__j];
@@ -164,19 +164,17 @@ private:
 };
 
 template <class _Eng, size_t _Kp>
-_LIBCPP_HIDE_FROM_ABI bool
-operator==(const shuffle_order_engine<_Eng, _Kp>& __x, const shuffle_order_engine<_Eng, _Kp>& __y) {
+bool operator==(const shuffle_order_engine<_Eng, _Kp>& __x, const shuffle_order_engine<_Eng, _Kp>& __y) {
   return __x.__y_ == __y.__y_ && std::equal(__x.__v_, __x.__v_ + _Kp, __y.__v_) && __x.__e_ == __y.__e_;
 }
 
 template <class _Eng, size_t _Kp>
-inline _LIBCPP_HIDE_FROM_ABI bool
-operator!=(const shuffle_order_engine<_Eng, _Kp>& __x, const shuffle_order_engine<_Eng, _Kp>& __y) {
+inline bool operator!=(const shuffle_order_engine<_Eng, _Kp>& __x, const shuffle_order_engine<_Eng, _Kp>& __y) {
   return !(__x == __y);
 }
 
 template <class _CharT, class _Traits, class _Eng, size_t _Kp>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const shuffle_order_engine<_Eng, _Kp>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _Ostream;
@@ -190,8 +188,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const shuffle_order_engine<_Eng
 }
 
 template <class _CharT, class _Traits, class _Eng, size_t _Kp>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, shuffle_order_engine<_Eng, _Kp>& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, shuffle_order_engine<_Eng, _Kp>& __x) {
   typedef typename shuffle_order_engine<_Eng, _Kp>::result_type result_type;
   __save_flags<_CharT, _Traits> __lx(__is);
   typedef basic_istream<_CharT, _Traits> _Istream;

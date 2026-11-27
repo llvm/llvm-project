@@ -1,5 +1,9 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon %s -emit-llvm -o - | FileCheck %s
-// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple arm64-none-linux-gnu -target-feature +neon %s -emit-llvm -o - | FileCheck %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fno-clangir-call-conv-lowering -triple arm64-none-linux-gnu -target-feature +neon %s -emit-llvm -o - | FileCheck %s %}
+
+// CIR calling-convention lowering does not handle __mfp8 yet, so the -fclangir
+// runs disable it. Remove -fno-clangir-call-conv-lowering once that type is
+// supported.
 
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;

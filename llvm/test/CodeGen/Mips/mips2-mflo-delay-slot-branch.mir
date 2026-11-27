@@ -9,7 +9,6 @@
 ---
 name:            mflo_delay_slot_bundle_size
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; MIPS2-LABEL: name: mflo_delay_slot_bundle_size
   ; MIPS2: bb.0:

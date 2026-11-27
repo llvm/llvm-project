@@ -613,7 +613,7 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
         ArchName = "mips64";
       else
         ArchName = "mips";
-      // CPUNames as defined in MipsTargetInfo::getISARev()
+      // CPUs that implement MIPS R6.
       if (CPUName == "mips32r6" || CPUName == "mips64r6" ||
           CPUName == "i6400" || CPUName == "i6500")
         ArchName += "r6";
