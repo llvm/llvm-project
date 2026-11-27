@@ -18,12 +18,10 @@ define amdgpu_ps void @global_load_lds_dword_saddr(ptr addrspace(1) inreg nocapt
 ; GFX942-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; GFX942-NEXT:    global_load_lds_dword v1, s[0:1] offset:32 nt
 ; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x0
-; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-NEXT:    s_mul_i32 s3, s3, 10
-; GFX942-NEXT:    s_mul_i32 s2, s2, 10
-; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
-; GFX942-NEXT:    global_store_dwordx2 v1, v[2:3], s[0:1]
+; GFX942-NEXT:    s_mul_i32 s0, s5, 10
+; GFX942-NEXT:    s_mul_i32 s1, s4, 10
+; GFX942-NEXT:    v_pk_mov_b32 v[2:3], s[0:1], s[0:1] op_sel:[1,0]
+; GFX942-NEXT:    global_store_dwordx2 v1, v[2:3], s[2:3]
 ; GFX942-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: global_load_lds_dword_saddr:
