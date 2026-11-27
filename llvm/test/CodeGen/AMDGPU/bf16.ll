@@ -28974,7 +28974,7 @@ define bfloat @v_neg_rsq_bf16(bfloat %x) #0 {
 ; GFX1250FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250FAKE16-NEXT:    v_rsq_bf16_e32 v0, v0
 ; GFX1250FAKE16-NEXT:    v_nop
-; GFX1250FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX1250FAKE16-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1250FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX1250FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %sqrt = call contract bfloat @llvm.sqrt.bf16(bfloat %x)
@@ -29154,10 +29154,10 @@ define { bfloat, i16 } @v_frexp_bf16_i16(bfloat %a) #0 {
 ; GFX950-LABEL: v_frexp_bf16_i16:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
-; GFX950-NEXT:    v_frexp_mant_f32_e32 v0, v1
+; GFX950-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
+; GFX950-NEXT:    v_frexp_mant_f32_e32 v0, v0
 ; GFX950-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_frexp_bf16_i16:

@@ -9,7 +9,7 @@
 #include "LLVMDialectBytecode.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "llvm/ADT/APFloat.h"

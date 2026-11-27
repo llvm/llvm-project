@@ -55,7 +55,7 @@ public:
                                    uint32_t dump_mask, bool is_json = false);
 
   virtual void DumpAllDescriptions(CommandInterpreter &interpreter,
-                                   Stream &strm) const;
+                                   Stream &strm, bool include_deprecated) const;
 
   void Apropos(llvm::StringRef keyword,
                std::vector<const Property *> &matching_properties,

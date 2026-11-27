@@ -31,7 +31,7 @@ define double @compare_select(double %a, double %b) {
 ; CHECK: .end compare_select
 ;
 ; ISEL-LABEL: name: compare_select
-; ISEL: %[[CMP:[0-9]+]]:fgr64 = CMP_LT_D
+; ISEL: %[[CMP:[0-9]+]]:fgr64 = nofpexcept CMP_LT_D
 ; ISEL-NEXT: %[[CC:[0-9]+]]:gpr32 = COPY %[[CMP]].sub_lo
 ; ISEL: %[[UNDEF:[0-9]+]]:fgr64 = IMPLICIT_DEF
 ; ISEL: %[[EXT:[0-9]+]]:fgr64 = INSERT_SUBREG %[[UNDEF]], %[[CC]], %subreg.sub_lo
@@ -96,7 +96,7 @@ define float @single_compare_select(float %a, float %b) {
 ; CHECK: .end single_compare_select
 ;
 ; ISEL-LABEL: name: single_compare_select
-; ISEL: %[[CMP:[0-9]+]]:fgr32 = CMP_LT_S
+; ISEL: %[[CMP:[0-9]+]]:fgr32 = nofpexcept CMP_LT_S
 ; ISEL-NEXT: %[[CC:[0-9]+]]:fgr32 = COPY %[[CMP]]
 ; ISEL-NEXT: %[[COND:[0-9]+]]:fgr32 = COPY %[[CC]]
 ; ISEL: %{{[0-9]+}}:fgr32 = SEL_S %[[COND]],
@@ -198,7 +198,7 @@ define void @branch_and_store_boolean(double %a, double %b, ptr %out) {
 ; CHECK-DAG: sw
 ;
 ; ISEL-LABEL: name: branch_and_store_boolean
-; ISEL: %[[CMP:[0-9]+]]:fgr64 = CMP_EQ_D
+; ISEL: %[[CMP:[0-9]+]]:fgr64 = nofpexcept CMP_EQ_D
 ; ISEL-NEXT: %[[CC:[0-9]+]]:gpr32 = COPY %[[CMP]].sub_lo
 ; ISEL-NEXT: %[[BOOL:[0-9]+]]:gpr32 = ANDi %[[CC]], 1
 ; ISEL: SW %[[BOOL]],

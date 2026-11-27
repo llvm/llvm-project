@@ -1535,25 +1535,26 @@ bool CommandLineParser::ParseCommandLineOptions(
   bool IgnoreErrors = Errs;
   if (!Errs)
     Errs = &errs();
-  if (!VFS)
-    VFS = vfs::getRealFileSystem().get();
   bool ErrorParsing = false;
 
-  // Expand response files.
+  // Expand response files. Without an @file argument, skip the expansion so
+  // that the I/O sandbox does not reject the real file system default.
   SmallVector<const char *, 20> newArgv(argv, argv + argc);
   BumpPtrAllocator A;
+  if (any_of(newArgv, [](const char *Arg) { return Arg[0] == '@'; })) {
 #ifdef _WIN32
-  auto Tokenize = cl::TokenizeWindowsCommandLine;
+    auto Tokenize = cl::TokenizeWindowsCommandLine;
 #else
-  auto Tokenize = cl::TokenizeGNUCommandLine;
+    auto Tokenize = cl::TokenizeGNUCommandLine;
 #endif
-  ExpansionContext ECtx(A, Tokenize, VFS);
-  if (Error Err = ECtx.expandResponseFiles(newArgv)) {
-    *Errs << toString(std::move(Err)) << '\n';
-    return false;
+    ExpansionContext ECtx(A, Tokenize, VFS);
+    if (Error Err = ECtx.expandResponseFiles(newArgv)) {
+      *Errs << toString(std::move(Err)) << '\n';
+      return false;
+    }
+    argv = &newArgv[0];
+    argc = static_cast<int>(newArgv.size());
   }
-  argv = &newArgv[0];
-  argc = static_cast<int>(newArgv.size());
 
   // Copy the program name into ProgName, making sure not to overflow it.
   ProgramName = std::string(sys::path::filename(StringRef(argv[0])));

@@ -150,18 +150,6 @@ RankedTensorType mlir::tosa::getVariableType(tosa::VariableOp variableOp) {
 //===----------------------------------------------------------------------===//
 
 void TosaDialect::initialize() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Tosa/IR/TosaOpsTypesBase.cpp.inc"
-      >();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc"
-      >();
   addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
   declarePromisedInterfaces<
       shard::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
@@ -440,6 +428,12 @@ LogicalResult mlir::tosa::mxint8Type::convertFromAttribute(
 LogicalResult mlir::tosa::verifyBlockScaledTensorType(
     mlir::Type type, llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     bool allowScaleValues) {
+  if (!llvm::isa<ShapedType>(type)) {
+    if (emitError)
+      emitError() << "non tensor type " << type << " is not allowed";
+    return failure();
+  }
+
   const auto tensorType = llvm::cast<ShapedType>(type);
   const BlockScaledType elemType =
       llvm::dyn_cast<BlockScaledType>(tensorType.getElementType());
@@ -2617,8 +2611,6 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
     inferredReturnShapes.push_back(ShapedTypeComponents(fallback, inputType));
     return success();
   }
-  multiples = convertToMlirShape(multiples);
-
   ShapeAdaptor inputShape(adaptor.getInput1().getType());
   SmallVector<int64_t> outputShape;
   if (!inputShape.hasRank()) {
@@ -2633,7 +2625,9 @@ LogicalResult tosa::TileOp::inferReturnTypeComponents(
   // Any non dynamic dimension can be multiplied to a known size.
   outputShape.reserve(multiples.size());
   for (int i = 0, s = inputShape.getRank(); i < s; i++) {
-    if (multiples[i] == ShapedType::kDynamic) {
+    // Conservatively infer a dynamic dimension for non-positive multiples.
+    // Leave their validation to tosa-validate.
+    if (multiples[i] <= 0) {
       outputShape.push_back(ShapedType::kDynamic);
     } else {
       int64_t dim = inputShape.getDimSize(i);
@@ -2672,12 +2666,6 @@ LogicalResult tosa::TileOp::verify() {
   } else if (outputType.hasRank() && outputType.getRank() != multiplesRank)
     return emitOpError("expect 'multiples' array to have length ")
            << outputType.getRank() << " but got " << multiplesRank << ".";
-
-  SmallVector<int64_t> multiples;
-  if (getConstantMultiples(multiples).succeeded() &&
-      llvm::any_of(multiples, [](int64_t v) { return v <= 0 && v != -1; }))
-    return emitOpError(
-        "expect element of 'multiples' to be positive integer or -1.");
 
   return success();
 }
@@ -2757,6 +2745,15 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     if (cast<tosa::shapeType>(getShape().getType()).getRank() !=
         rankedOutputType.getRank())
       return emitOpError() << "new shape does not match result rank";
+  }
+
+  const TensorType inputType = getInput1().getType();
+  if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
+    const int64_t inputElementsNum = inputType.getNumElements();
+    const int64_t outputElementsNum = outputType.getNumElements();
+    if (inputElementsNum != outputElementsNum)
+      return emitOpError() << "cannot reshape " << inputElementsNum
+                           << " elements into " << outputElementsNum;
   }
 
   return mlir::success();

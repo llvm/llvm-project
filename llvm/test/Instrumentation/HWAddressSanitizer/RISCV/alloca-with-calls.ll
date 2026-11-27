@@ -44,9 +44,9 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-NEXT:    [[TMP23:%.*]] = and i64 [[TMP22]], 72057594037927935
 ; CHECK-NEXT:    [[TMP24:%.*]] = lshr i64 [[TMP23]], 4
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP24]]
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i32 0
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i64 0
 ; CHECK-NEXT:    store i8 4, ptr [[TMP26]], align 1
-; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; CHECK-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[X]], i64 15
 ; CHECK-NEXT:    store i8 [[TMP21]], ptr [[TMP27]], align 1
 ; CHECK-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]])
 ; CHECK-NEXT:    [[TMP28:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8

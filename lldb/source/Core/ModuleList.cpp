@@ -75,6 +75,14 @@ enum {
 #include "CorePropertiesEnum.inc"
 };
 
+#define LLDB_PROPERTIES_modulelist_experimental
+#include "CoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_modulelist_experimental
+#include "CorePropertiesEnum.inc"
+};
+
 } // namespace
 
 ModuleListProperties::ModuleListProperties() {
@@ -82,6 +90,16 @@ ModuleListProperties::ModuleListProperties() {
   m_collection_sp->Initialize(g_modulelist_properties_def);
   m_collection_sp->SetValueChangedCallback(ePropertySymLinkPaths,
                                            [this] { UpdateSymlinkMappings(); });
+
+  m_experimental_properties_sp = std::make_shared<OptionValueProperties>(
+      Properties::GetExperimentalSettingsName());
+  m_experimental_properties_sp->Initialize(
+      g_modulelist_experimental_properties_def);
+  m_collection_sp->AppendProperty(
+      Properties::GetExperimentalSettingsName(),
+      "Experimental settings - setting these won't produce "
+      "errors if the setting is not present.",
+      true, m_experimental_properties_sp);
 
   llvm::SmallString<128> path;
   if (llvm::sys::path::cache_directory(path)) {
@@ -99,6 +117,17 @@ bool ModuleListProperties::GetEnableExternalLookup() const {
 
 bool ModuleListProperties::SetEnableExternalLookup(bool new_value) {
   return SetPropertyAtIndex(ePropertyEnableExternalLookup, new_value);
+}
+
+bool ModuleListProperties::GetEnableTypeSystemClike() const {
+  const uint32_t idx = ePropertyEnableTypeSystemClike;
+  return m_experimental_properties_sp->GetPropertyAtIndexAs<bool>(idx).value_or(
+      g_modulelist_experimental_properties[idx].default_uint_value != 0);
+}
+
+bool ModuleListProperties::SetEnableTypeSystemClike(bool new_value) {
+  return m_experimental_properties_sp->SetPropertyAtIndex(
+      ePropertyEnableTypeSystemClike, new_value);
 }
 
 SymbolDownload ModuleListProperties::GetSymbolAutoDownload() const {
@@ -468,13 +497,13 @@ ModuleSP ModuleList::GetModuleAtIndexUnlocked(size_t idx) const {
   return module_sp;
 }
 
-void ModuleList::FindFunctions(ConstString name,
+void ModuleList::FindFunctions(llvm::StringRef name,
                                FunctionNameType name_type_mask,
                                const ModuleFunctionSearchOptions &options,
                                SymbolContextList &sc_list) const {
   if (name_type_mask & eFunctionNameTypeAuto) {
     std::vector<Module::LookupInfo> lookup_infos =
-        Module::LookupInfo::MakeLookupInfos(name, name_type_mask,
+        Module::LookupInfo::MakeLookupInfos(ConstString(name), name_type_mask,
                                             eLanguageTypeUnknown);
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const auto &lookup_info : lookup_infos) {
@@ -491,18 +520,18 @@ void ModuleList::FindFunctions(ConstString name,
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const ModuleSP &module_sp : m_modules) {
-      module_sp->FindFunctions(name, CompilerDeclContext(), name_type_mask,
-                               options, sc_list);
+      module_sp->FindFunctions(ConstString(name), CompilerDeclContext(),
+                               name_type_mask, options, sc_list);
     }
   }
 }
 
-void ModuleList::FindFunctionSymbols(ConstString name,
+void ModuleList::FindFunctionSymbols(llvm::StringRef name,
                                      lldb::FunctionNameType name_type_mask,
                                      SymbolContextList &sc_list) {
   if (name_type_mask & eFunctionNameTypeAuto) {
     std::vector<Module::LookupInfo> lookup_infos =
-        Module::LookupInfo::MakeLookupInfos(name, name_type_mask,
+        Module::LookupInfo::MakeLookupInfos(ConstString(name), name_type_mask,
                                             eLanguageTypeUnknown);
 
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
@@ -521,7 +550,8 @@ void ModuleList::FindFunctionSymbols(ConstString name,
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const ModuleSP &module_sp : m_modules) {
-      module_sp->FindFunctionSymbols(name, name_type_mask, sc_list);
+      module_sp->FindFunctionSymbols(ConstString(name), name_type_mask,
+                                     sc_list);
     }
   }
 }
@@ -541,12 +571,12 @@ void ModuleList::FindCompileUnits(const FileSpec &path,
     module_sp->FindCompileUnits(path, sc_list);
 }
 
-void ModuleList::FindGlobalVariables(ConstString name, size_t max_matches,
+void ModuleList::FindGlobalVariables(llvm::StringRef name, size_t max_matches,
                                      VariableList &variable_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (const ModuleSP &module_sp : m_modules) {
-    module_sp->FindGlobalVariables(name, CompilerDeclContext(), max_matches,
-                                   variable_list);
+    module_sp->FindGlobalVariables(ConstString(name), CompilerDeclContext(),
+                                   max_matches, variable_list);
   }
 }
 
@@ -558,12 +588,13 @@ void ModuleList::FindGlobalVariables(const RegularExpression &regex,
     module_sp->FindGlobalVariables(regex, max_matches, variable_list);
 }
 
-void ModuleList::FindSymbolsWithNameAndType(ConstString name,
+void ModuleList::FindSymbolsWithNameAndType(llvm::StringRef name,
                                             SymbolType symbol_type,
                                             SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (const ModuleSP &module_sp : m_modules)
-    module_sp->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+    module_sp->FindSymbolsWithNameAndType(ConstString(name), symbol_type,
+                                          sc_list);
 }
 
 void ModuleList::FindSymbolsMatchingRegExAndType(
@@ -1446,6 +1477,7 @@ To run all discovered debug scripts in this session:
   if (scripts_to_load.empty() || !target.RecordScriptingResources(module))
     return true;
 
+  bool loaded = true;
   for (const FileSpec *scripting_fspec : scripts_to_load) {
     LLDB_LOG(log, "Auto-loading {0}", scripting_fspec->GetPath());
 
@@ -1453,11 +1485,18 @@ To run all discovered debug scripts in this session:
                              error)) {
       LLDB_LOG(log, "Failed to load '{0}'. Remaining scripts won't be loaded.",
                scripting_fspec->GetPath());
-      return false;
+      loaded = false;
+      break;
     }
   }
 
-  return true;
+  // Run the stop hooks that __lldb_module_added_to_target added with
+  // --at-initial-stop, if the process is already stopped. When another
+  // module's __lldb_module_added_to_target loaded this module, that function
+  // hasn't returned yet, so the load that called it runs them.
+  if (!target.IsCollectingHooks())
+    target.RunCollectedInitialStopHooks();
+  return loaded;
 }
 
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,

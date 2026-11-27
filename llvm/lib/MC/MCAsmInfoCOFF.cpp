@@ -56,10 +56,6 @@ MCAsmInfoCOFF::MCAsmInfoCOFF(const MCTargetOptions &Options)
   HasCOFFComdatConstants = true;
 }
 
-bool MCAsmInfoCOFF::useCodeAlign(const MCSection &Sec) const {
-  return Sec.isText();
-}
-
 void MCAsmInfoMicrosoft::anchor() {}
 
 MCAsmInfoMicrosoft::MCAsmInfoMicrosoft(const MCTargetOptions &Options)

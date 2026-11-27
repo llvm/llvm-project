@@ -3,6 +3,7 @@
 void f() noexcept;
 
 // CHECK: VarDecl {{.*}} ref 'void (&)()' cinit
+// CHECK-NEXT: value: LValue Base=FunctionDecl
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'void ()' lvalue <NoOp>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'void () noexcept' lvalue Function {{.*}} 'f' 'void () noexcept'
 void (&ref)() = f;

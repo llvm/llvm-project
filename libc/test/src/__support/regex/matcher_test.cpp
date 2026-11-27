@@ -16,20 +16,26 @@
 #include "src/__support/error_or.h"
 #include "src/__support/regex/regex_ast.h"
 #include "src/__support/regex/regex_expr_pool.h"
+#include "src/__support/regex/regex_internal.h"
 #include "src/__support/regex/regex_matcher.h"
 #include "src/__support/regex/regex_parser.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::ErrorOr;
 using LIBC_NAMESPACE::cpp::string_view;
+using LIBC_NAMESPACE::regex::ANCHOR_BOL;
+using LIBC_NAMESPACE::regex::ANCHOR_EOL;
 using LIBC_NAMESPACE::regex::derivative;
 using LIBC_NAMESPACE::regex::EMPTY_SET_ID;
 using LIBC_NAMESPACE::regex::EMPTY_STR_ID;
 using LIBC_NAMESPACE::regex::ExprId;
 using LIBC_NAMESPACE::regex::ExprPool;
+using LIBC_NAMESPACE::regex::INVALID_EXPR_ID;
 using LIBC_NAMESPACE::regex::match;
 using LIBC_NAMESPACE::regex::MatchResult;
+using LIBC_NAMESPACE::regex::nullable;
 using LIBC_NAMESPACE::regex::parse_ere;
+using LIBC_NAMESPACE::regex::RegexInternal;
 
 TEST(LlvmLibcRegexMatcherTest, DerivativeBaseCases) {
   ExprPool pool;
@@ -280,15 +286,17 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   }
 
   const string_view ebrack_patterns[] = {
-      "[", "[^", "[abc", "[]", "a[[.x", "a[[.x.", "a[[:digit:", "a[[:digit"};
+      "[",      "[^",    "[abc",   "[]",         "a[[.x",
+      "a[[.x.", "a[[=x", "a[[=x=", "a[[:digit:", "a[[:digit"};
   for (string_view pat : ebrack_patterns) {
     ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
     EXPECT_EQ(err.error(), REG_EBRACK);
   }
 
-  const string_view erange_patterns[] = {"a[3-1]c", "a[1-3-5]c", "a[1-",
-                                         "a[a-[:digit:]]c", "a[[:alpha:]-z]c"};
+  const string_view erange_patterns[] = {
+      "a[3-1]c",         "a[1-3-5]c",   "a[1-",       "a[a-[:digit:]]c",
+      "a[[:alpha:]-z]c", "a[[=a=]-z]c", "a[a-[=z=]]c"};
   for (string_view pat : erange_patterns) {
     ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -296,7 +304,7 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
   }
 
   const string_view ecollate_patterns[] = {"a[[.notdef.]]b", "a[[.x,.]]",
-                                           "a[[=b,=]]"};
+                                           "a[[=b,=]]", "a[[=b,=]-z]c"};
   for (string_view pat : ecollate_patterns) {
     ErrorOr<ExprId> err = parse_ere(pat, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -318,7 +326,8 @@ TEST(LlvmLibcRegexMatcherTest, ParseEreEscapesAndErrors) {
       R"(\1)", R"(\2)", R"(\3)", R"(\4)", R"(\5)", R"(\6)", R"(\7)", R"(\8)",
       R"(\9)",
       // Unimplemented boundary assertions.
-      R"(\b)", R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\`)", R"(\')"};
+      R"(\b)", R"(\B)", R"(\<)", R"(\>)", R"(\A)", R"(\Z)", R"(\z)", R"(\`)",
+      R"(\')"};
   for (string_view bad : bad_patterns) {
     ErrorOr<ExprId> err = parse_ere(bad, REG_EXTENDED, pool);
     ASSERT_FALSE(err.has_value());
@@ -409,6 +418,34 @@ TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
   ASSERT_TRUE(coll_one.has_value());
   EXPECT_EQ(match(pool, *coll_one, "a1b"), MatchResult::Match);
 
+  // Equivalence classes may combine with literal hyphens or adjacent ranges,
+  // while collating symbols remain valid range endpoints per POSIX 9.3.5.
+  ErrorOr<ExprId> eq_trail_dash = parse_ere("x[[=a=]-]y", REG_EXTENDED, pool);
+  ASSERT_TRUE(eq_trail_dash.has_value());
+  EXPECT_EQ(match(pool, *eq_trail_dash, "xay"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *eq_trail_dash, "x-y"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *eq_trail_dash, "xby"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> eq_lead_dash = parse_ere("x[-[=a=]]y", REG_EXTENDED, pool);
+  ASSERT_TRUE(eq_lead_dash.has_value());
+  EXPECT_EQ(match(pool, *eq_lead_dash, "x-y"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *eq_lead_dash, "xay"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *eq_lead_dash, "xby"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> eq_with_range = parse_ere("x[[=a=]c-e]y", REG_EXTENDED, pool);
+  ASSERT_TRUE(eq_with_range.has_value());
+  EXPECT_EQ(match(pool, *eq_with_range, "xay"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *eq_with_range, "xdy"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *eq_with_range, "xby"), MatchResult::NoMatch);
+  EXPECT_EQ(match(pool, *eq_with_range, "xfy"), MatchResult::NoMatch);
+
+  ErrorOr<ExprId> coll_range = parse_ere("x[[.a.]-[.c.]]y", REG_EXTENDED, pool);
+  ASSERT_TRUE(coll_range.has_value());
+  EXPECT_EQ(match(pool, *coll_range, "xay"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *coll_range, "xby"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *coll_range, "xcy"), MatchResult::Match);
+  EXPECT_EQ(match(pool, *coll_range, "xdy"), MatchResult::NoMatch);
+
   ErrorOr<ExprId> star_range = parse_ere("^[a-c]*$", REG_EXTENDED, pool);
   ASSERT_TRUE(star_range.has_value());
   EXPECT_EQ(match(pool, *star_range, ""), MatchResult::Match);
@@ -449,6 +486,19 @@ TEST(LlvmLibcRegexMatcherTest, BracketMatchingAndRanges) {
   ASSERT_TRUE(multi_class.has_value());
   EXPECT_EQ(match(pool, *multi_class, "Hello World"), MatchResult::Match);
   EXPECT_EQ(match(pool, *multi_class, "Hello1World"), MatchResult::NoMatch);
+
+  // Equivalent bracket permutations deduplicate to the same ByteSet ExprId.
+  {
+    ExprPool dedup_pool;
+    ErrorOr<ExprId> cls_ab =
+        parse_ere("[[:alpha:][:blank:]]", REG_EXTENDED, dedup_pool);
+    ErrorOr<ExprId> cls_ba =
+        parse_ere("[[:blank:][:alpha:]]", REG_EXTENDED, dedup_pool);
+    ASSERT_TRUE(cls_ab.has_value());
+    ASSERT_TRUE(cls_ba.has_value());
+    EXPECT_EQ(*cls_ab, *cls_ba);
+    EXPECT_EQ(dedup_pool.num_byte_sets(), size_t(1));
+  }
 }
 
 TEST(LlvmLibcRegexMatcherTest, PoolExhaustionPropagation) {
@@ -733,4 +783,40 @@ TEST(LlvmLibcRegexMatcherTest, RepeatStabilizationAndRfc2822Grammar) {
       "user@example..com"};
   for (string_view addr : BAD_ADDRS)
     EXPECT_EQ(match(rfc_pool, *addr_spec, addr), MatchResult::NoMatch);
+}
+
+TEST(LlvmLibcRegexMatcherTest, AnchorNullabilityMaskAndInvalidIds) {
+  // Default RegexInternal (root == INVALID_EXPR_ID) and uninitialised pool
+  // queries fail safely without dereferencing null blocks.
+  {
+    RegexInternal empty_internal;
+    EXPECT_EQ(match(empty_internal, "abc"), MatchResult::NoMatch);
+  }
+  {
+    ExprPool fresh;
+    EXPECT_EQ(match(fresh, EMPTY_STR_ID, "abc"), MatchResult::Match);
+    EXPECT_EQ(match(fresh, EMPTY_SET_ID, "abc"), MatchResult::NoMatch);
+    auto bad_d0 = derivative(INVALID_EXPR_ID, 'a', fresh);
+    auto bad_d1 = derivative(999, 'a', fresh);
+    ASSERT_FALSE(bad_d0.has_value());
+    ASSERT_FALSE(bad_d1.has_value());
+    EXPECT_EQ(bad_d0.error(), REG_BADPAT);
+    EXPECT_EQ(bad_d1.error(), REG_BADPAT);
+  }
+
+  // Deep 9,996-anchor chain evaluates nullable() in O(1) via the 4-bit mask
+  // with zero call-stack recursion.
+  ExprPool pool;
+  auto bol = pool.make_anchor(ANCHOR_BOL);
+  ASSERT_TRUE(bol.has_value());
+  ExprId chain = *bol;
+  for (size_t i = 0; i < 9995; ++i) {
+    auto next = pool.make_concat(*bol, chain);
+    ASSERT_TRUE(next.has_value()) << "iteration " << i;
+    chain = *next;
+  }
+  EXPECT_FALSE(nullable(chain, 0, pool));
+  EXPECT_TRUE(nullable(chain, ANCHOR_BOL, pool));
+  EXPECT_FALSE(nullable(chain, ANCHOR_EOL, pool));
+  EXPECT_TRUE(nullable(chain, ANCHOR_BOL | ANCHOR_EOL, pool));
 }

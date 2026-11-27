@@ -44,6 +44,7 @@
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/FunctionLocalMetadata.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
@@ -362,8 +363,15 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
     Out << "aarch64_sme_preservemost_from_x2";
     break;
   case CallingConv::MSP430_INTR:   Out << "msp430_intrcc"; break;
-  case CallingConv::AVR_INTR:      Out << "avr_intrcc "; break;
-  case CallingConv::AVR_SIGNAL:    Out << "avr_signalcc "; break;
+  case CallingConv::AVR_INTR:
+    Out << "avr_intrcc";
+    break;
+  case CallingConv::AVR_SIGNAL:
+    Out << "avr_signalcc";
+    break;
+  case CallingConv::AVR_BUILTIN:
+    Out << "avr_builtincc";
+    break;
   case CallingConv::PTX_Kernel:    Out << "ptx_kernel"; break;
   case CallingConv::PTX_Device:    Out << "ptx_device"; break;
   case CallingConv::X86_64_SysV:   Out << "x86_64_sysvcc"; break;
@@ -1176,6 +1184,13 @@ class MetadataNodeVisitor {
     for (const MDOperand &Op : N->operands())
       if (const auto *OpNode = dyn_cast_or_null<MDNode>(Op.get()))
         visit(OpNode);
+
+    if (auto *FLCtx = dyn_cast<MDFunctionLocalContext>(N)) {
+      SmallVector<const MDNode *> UsedMDNodes;
+      FLCtx->getUsedMDNodes(UsedMDNodes);
+      for (auto *Node : UsedMDNodes)
+        visit(Node);
+    }
   }
 
   void visitGlobalObjectMetadata(const GlobalObject &GO) {
@@ -1469,9 +1484,19 @@ void SlotTracker::CreateMetadataSlot(const MDNode *N) {
   if (!mdnMap.try_emplace(N, ID).second)
     return;
 
+  // Recursively add any MDNodes referenced by operands.
   for (const MDOperand &Op : N->operands())
     if (const auto *OpNode = dyn_cast_or_null<MDNode>(Op.get()))
       CreateMetadataSlot(OpNode);
+
+  // If this is an FLContext, then we have metadata references stored in the
+  // context arrays that must also be added.
+  if (auto *FLContext = dyn_cast<MDFunctionLocalContext>(N)) {
+    SmallVector<const MDNode *> UsedMDNodes;
+    FLContext->getUsedMDNodes(UsedMDNodes);
+    for (auto *Node : UsedMDNodes)
+      CreateMetadataSlot(Node);
+  }
 }
 
 void SlotTracker::CreateAttributeSetSlot(AttributeSet AS) {
@@ -2152,6 +2177,70 @@ static void writeGenericDINode(raw_ostream &Out, const GenericDINode *N,
     }
     Out << "}";
   }
+  Out << ")";
+}
+
+static void writeFLMDNode(raw_ostream &Out, FLScope Scope,
+                          AsmWriterContext &WriterCtx) {
+  Out << "!!scope(scope: ";
+  writeMetadataAsOperand(Out, Scope.Scope, WriterCtx);
+  Out << ")";
+}
+static void writeFLMDNode(raw_ostream &Out, FLSrcLoc SrcLoc,
+                          AsmWriterContext &WriterCtx) {
+  Out << "!!srcLoc(line: " << SrcLoc.Line;
+  if (SrcLoc.Column)
+    Out << ", column: " << SrcLoc.Column;
+  Out << ", scope: " << SrcLoc.ScopeIdx.get() << ")";
+}
+static void writeFLMDNode(raw_ostream &Out, FLInlinedCall InlinedCall,
+                          AsmWriterContext &WriterCtx) {
+  ListSeparator LS;
+  Out << "!!inlinedCall(";
+  if (InlinedCall.SrcLocIdx)
+    Out << LS << "srcLoc: " << InlinedCall.SrcLocIdx.get();
+  if (InlinedCall.InlinedAtIdx)
+    Out << LS << "inlinedAt: " << InlinedCall.InlinedAtIdx.get();
+  if (InlinedCall.Uniquable)
+    Out << LS << "uniquable: true";
+  Out << LS << "inlineeContext: ";
+  writeMetadataAsOperand(Out, InlinedCall.InlineeContext, WriterCtx);
+  Out << ")";
+}
+
+static void writeMDFunctionLocalContext(raw_ostream &Out,
+                                        const MDFunctionLocalContext *FLMD,
+                                        AsmWriterContext &WriterCtx) {
+  Out << "!MDFunctionLocalContext(";
+  ListSeparator LS;
+  if (FLMD->isNonDebug())
+    Out << LS << "nonDebug: true";
+  // Write the entries for each FLMD array type.
+  auto WriteEntries = [&](StringRef Name, auto Nodes) {
+    Out << LS << Name << ": [";
+    if (getIROptions(WriterCtx.Context->getContext()).print_single_flmd_line) {
+      ListSeparator NodeLS;
+      for (auto [Index, Node] : enumerate(Nodes)) {
+        Out << NodeLS;
+        writeFLMDNode(Out, Node, WriterCtx);
+      }
+    } else {
+      Out << "\n";
+      for (auto [Index, Node] : enumerate(Nodes)) {
+        Out << "  ";
+        writeFLMDNode(Out, Node, WriterCtx);
+        Out << ", ; " << Index << "\n";
+      }
+    }
+    Out << "]";
+  };
+  // Print each kind of FLMD, with each entry on a separate line.
+  if (!FLMD->getScopes().empty())
+    WriteEntries("scopes", FLMD->getScopes());
+  if (!FLMD->getSrcLocs().empty())
+    WriteEntries("srcLocs", FLMD->getSrcLocs());
+  if (!FLMD->getInlinedCalls().empty())
+    WriteEntries("inlinedCalls", FLMD->getInlinedCalls());
   Out << ")";
 }
 
@@ -5604,6 +5693,42 @@ void MDNode::printTree(raw_ostream &OS, ModuleSlotTracker &MST,
   printMetadataImpl(OS, *this, MST, M, /* OnlyAsOperand */ false,
                     /*PrintAsTree=*/true);
 }
+
+void MDFunctionLocalContext::printShort(raw_ostream &OS,
+                                        const Module *M) const {
+  ModuleSlotTracker MST(M);
+  printShort(OS, MST, M);
+}
+void MDFunctionLocalContext::printShort(raw_ostream &OS, ModuleSlotTracker &MST,
+                                        const Module *M) const {
+  printMetadataImpl(OS, *this, MST, M, /* OnlyAsOperand */ true);
+  OS << " = distinct !MDFunctionLocalContext(";
+  ListSeparator LS;
+  if (isNonDebug())
+    OS << LS << "nonDebug: true";
+  if (!getScopes().empty())
+    OS << LS << "scopes: [<" << getScopes().size() << " entries>]";
+  if (!getSrcLocs().empty())
+    OS << LS << "srcLocs: [<" << getSrcLocs().size() << " entries>]";
+  if (!getInlinedCalls().empty())
+    OS << LS << "inlinedCalls: [<" << getInlinedCalls().size() << " entries>]";
+  OS << ")";
+}
+
+#define DEFINE_FLMD_NODE_PRINTS(TYPE)                                          \
+  void TYPE::print(raw_ostream &OS, const Module *M) const {                   \
+    ModuleSlotTracker MST(M);                                                  \
+    print(OS, MST, M);                                                         \
+  }                                                                            \
+  void TYPE::print(raw_ostream &OS, ModuleSlotTracker &MST, const Module *M)   \
+      const {                                                                  \
+    formatted_raw_ostream FOS(OS);                                             \
+    AsmWriterContext WriterCtx(nullptr, MST.getMachine(), M, &MST);            \
+    writeFLMDNode(OS, *this, WriterCtx);                                       \
+  }
+DEFINE_FLMD_NODE_PRINTS(FLScope)
+DEFINE_FLMD_NODE_PRINTS(FLSrcLoc)
+DEFINE_FLMD_NODE_PRINTS(FLInlinedCall)
 
 void ModuleSummaryIndex::print(raw_ostream &ROS, bool IsForDebug) const {
   SlotTracker SlotTable(this);

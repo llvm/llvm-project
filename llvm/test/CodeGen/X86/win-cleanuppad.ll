@@ -98,7 +98,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X86: "?dtor$[[cleanup_inner:[0-9]+]]@?0?nested_cleanup@4HA":
 ; X86: LBB1_[[cleanup_inner]]: # %cleanup.inner{{$}}
 ; X86: pushl %ebp
-; X86: leal    {{.*}}(%ebp), %ecx
+; X86: movl    {{.*}}(%ebp), %ecx
 ; X86: calll   "??1Dtor@@QAE@XZ"
 ; X86: popl %ebp
 ; X86: retl
@@ -106,7 +106,7 @@ cleanup.outer:                                      ; preds = %invoke.cont.1, %c
 ; X86: "?dtor$[[cleanup_outer:[0-9]+]]@?0?nested_cleanup@4HA":
 ; X86: LBB1_[[cleanup_outer]]: # %cleanup.outer{{$}}
 ; X86: pushl %ebp
-; X86: leal    {{.*}}(%ebp), %ecx
+; X86: movl    {{.*}}(%ebp), %ecx
 ; X86: calll   "??1Dtor@@QAE@XZ"
 ; X86: popl %ebp
 ; X86: retl

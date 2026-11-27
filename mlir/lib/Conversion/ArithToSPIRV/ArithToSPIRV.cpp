@@ -1489,6 +1489,22 @@ public:
 // MinimumFOp, MaximumFOp
 //===----------------------------------------------------------------------===//
 
+/// Returns whether the sign bit of `value` is set. Reads it through f32 so that
+/// f16 and f64 need no Int16 or Int64.
+static Value createSignBitSet(OpBuilder &builder, Location loc, Value value) {
+  Type f32Type = builder.getF32Type();
+  Type i32Type = builder.getI32Type();
+  if (auto vectorType = dyn_cast<VectorType>(value.getType())) {
+    f32Type = vectorType.clone(f32Type);
+    i32Type = vectorType.clone(i32Type);
+  }
+  if (value.getType() != f32Type)
+    value = spirv::FConvertOp::create(builder, loc, f32Type, value);
+  Value bits = spirv::BitcastOp::create(builder, loc, i32Type, value);
+  Value zero = spirv::ConstantOp::getZero(i32Type, loc, builder);
+  return spirv::SLessThanOp::create(builder, loc, bits, zero);
+}
+
 /// Converts arith.maximumf/minimumf to spirv.GL.FMax/FMin or
 /// spirv.CL.fmax/fmin.
 template <typename Op, typename SPIRVOp>
@@ -1504,7 +1520,10 @@ public:
       return getTypeConversionFailure(rewriter, op);
 
     // arith.maximumf/minimumf:
+    //   "treating -0.0 as less than +0.0."
     //   "if one of the arguments is NaN, then the result is also NaN."
+    // spirv.GL.FMax/FMin and spirv.CL.fmax/fmin return x for equal operands,
+    //   including -0.0 and +0.0.
     // spirv.GL.FMax/FMin
     //   "which operand is the result is undefined if one of the operands
     //   is a NaN."
@@ -1512,21 +1531,34 @@ public:
     //   "If one argument is a NaN, Fmin returns the other argument."
 
     Location loc = op.getLoc();
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
     Value spirvOp =
         SPIRVOp::create(rewriter, loc, dstType, adaptor.getOperands());
+
+    // Equal operands differ at most in the sign of zero, pick by the lhs sign.
+    if (!bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nsz)) {
+      constexpr bool isMax = std::is_same_v<Op, arith::MaximumFOp>;
+      Value lhsNeg = createSignBitSet(rewriter, loc, lhs);
+      Value zero = spirv::SelectOp::create(
+          rewriter, loc, dstType, lhsNeg, isMax ? rhs : lhs, isMax ? lhs : rhs);
+      Value equal = spirv::FOrdEqualOp::create(rewriter, loc, lhs, rhs);
+      spirvOp =
+          spirv::SelectOp::create(rewriter, loc, dstType, equal, zero, spirvOp);
+    }
 
     if (bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
       rewriter.replaceOp(op, spirvOp);
       return success();
     }
 
-    Value lhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getLhs());
-    Value rhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getRhs());
+    Value lhsIsNan = spirv::IsNanOp::create(rewriter, loc, lhs);
+    Value rhsIsNan = spirv::IsNanOp::create(rewriter, loc, rhs);
 
-    Value select1 = spirv::SelectOp::create(rewriter, loc, dstType, lhsIsNan,
-                                            adaptor.getLhs(), spirvOp);
-    Value select2 = spirv::SelectOp::create(rewriter, loc, dstType, rhsIsNan,
-                                            adaptor.getRhs(), select1);
+    Value select1 =
+        spirv::SelectOp::create(rewriter, loc, dstType, lhsIsNan, lhs, spirvOp);
+    Value select2 =
+        spirv::SelectOp::create(rewriter, loc, dstType, rhsIsNan, rhs, select1);
 
     rewriter.replaceOp(op, select2);
     return success();

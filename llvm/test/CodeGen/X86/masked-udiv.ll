@@ -8,12 +8,12 @@
 define <4 x i32> @udiv_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i1> %m) {
 ; SSE2-LABEL: udiv_v4i32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pslld $31, %xmm2
-; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE2-NEXT:    pxor %xmm2, %xmm3
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    psubd %xmm3, %xmm2
+; SSE2-NEXT:    movdqa %xmm2, %xmm3
+; SSE2-NEXT:    pslld $31, %xmm3
+; SSE2-NEXT:    psrad $31, %xmm3
+; SSE2-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    por %xmm3, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm1, %ecx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]
@@ -351,12 +351,12 @@ define <2 x i32> @udiv_v2i32(<2 x i32> %x, <2 x i32> %y, <2 x i1> %m) {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm3, %xmm3
 ; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm3[2,3]
-; SSE2-NEXT:    pslld $31, %xmm2
-; SSE2-NEXT:    psrad $31, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
-; SSE2-NEXT:    pxor %xmm2, %xmm3
-; SSE2-NEXT:    pand %xmm1, %xmm2
-; SSE2-NEXT:    psubd %xmm3, %xmm2
+; SSE2-NEXT:    movaps %xmm2, %xmm3
+; SSE2-NEXT:    pslld $31, %xmm3
+; SSE2-NEXT:    psrad $31, %xmm3
+; SSE2-NEXT:    andnps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    pand %xmm1, %xmm3
+; SSE2-NEXT:    orps %xmm3, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm1, %ecx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[3,3,3,3]

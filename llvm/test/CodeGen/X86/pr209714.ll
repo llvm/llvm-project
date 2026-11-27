@@ -1405,3 +1405,260 @@ define i64 @reduce_umax_v8i64_signbit_not(ptr %pa, ptr %pb) {
   %res = zext i1 %cmp to i64
   ret i64 %res
 }
+
+; PR244613 + PR244753 - ensure xor with a non-allones value doesn't fold.
+define i8 @reduce_umax_v16i8_signbit_xor(<16 x i8> %a, i8 %y) {
+; X86-SSE2-LABEL: reduce_umax_v16i8_signbit_xor:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-SSE2-NEXT:    pmaxub %xmm0, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    pmaxub %xmm1, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
+; X86-SSE2-NEXT:    psrld $16, %xmm1
+; X86-SSE2-NEXT:    pmaxub %xmm0, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE2-NEXT:    psrlw $8, %xmm0
+; X86-SSE2-NEXT:    por %xmm1, %xmm0
+; X86-SSE2-NEXT:    movd %xmm0, %eax
+; X86-SSE2-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X86-SSE2-NEXT:    shrb $7, %al
+; X86-SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE2-LABEL: reduce_umax_v16i8_signbit_xor:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-SSE2-NEXT:    pmaxub %xmm0, %xmm1
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X64-SSE2-NEXT:    pmaxub %xmm1, %xmm0
+; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
+; X64-SSE2-NEXT:    psrld $16, %xmm1
+; X64-SSE2-NEXT:    pmaxub %xmm0, %xmm1
+; X64-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X64-SSE2-NEXT:    psrlw $8, %xmm0
+; X64-SSE2-NEXT:    por %xmm1, %xmm0
+; X64-SSE2-NEXT:    movd %xmm0, %eax
+; X64-SSE2-NEXT:    xorl %edi, %eax
+; X64-SSE2-NEXT:    shrb $7, %al
+; X64-SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; X64-SSE2-NEXT:    retq
+;
+; X86-SSE4-LABEL: reduce_umax_v16i8_signbit_xor:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
+; X86-SSE4-NEXT:    pxor %xmm0, %xmm1
+; X86-SSE4-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE4-NEXT:    psrlw $8, %xmm0
+; X86-SSE4-NEXT:    pminub %xmm1, %xmm0
+; X86-SSE4-NEXT:    phminposuw %xmm0, %xmm0
+; X86-SSE4-NEXT:    movd %xmm0, %eax
+; X86-SSE4-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X86-SSE4-NEXT:    notb %al
+; X86-SSE4-NEXT:    shrb $7, %al
+; X86-SSE4-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: reduce_umax_v16i8_signbit_xor:
+; X64-SSE4:       # %bb.0:
+; X64-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-SSE4-NEXT:    pxor %xmm0, %xmm1
+; X64-SSE4-NEXT:    movdqa %xmm1, %xmm0
+; X64-SSE4-NEXT:    psrlw $8, %xmm0
+; X64-SSE4-NEXT:    pminub %xmm1, %xmm0
+; X64-SSE4-NEXT:    phminposuw %xmm0, %xmm0
+; X64-SSE4-NEXT:    movd %xmm0, %eax
+; X64-SSE4-NEXT:    xorl %edi, %eax
+; X64-SSE4-NEXT:    notb %al
+; X64-SSE4-NEXT:    shrb $7, %al
+; X64-SSE4-NEXT:    # kill: def $al killed $al killed $eax
+; X64-SSE4-NEXT:    retq
+;
+; X86-AVX-LABEL: reduce_umax_v16i8_signbit_xor:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; X86-AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    vphminposuw %xmm0, %xmm0
+; X86-AVX-NEXT:    vmovd %xmm0, %eax
+; X86-AVX-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X86-AVX-NEXT:    notb %al
+; X86-AVX-NEXT:    shrb $7, %al
+; X86-AVX-NEXT:    # kill: def $al killed $al killed $eax
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: reduce_umax_v16i8_signbit_xor:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; X64-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; X64-AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vphminposuw %xmm0, %xmm0
+; X64-AVX-NEXT:    vmovd %xmm0, %eax
+; X64-AVX-NEXT:    xorl %edi, %eax
+; X64-AVX-NEXT:    notb %al
+; X64-AVX-NEXT:    shrb $7, %al
+; X64-AVX-NEXT:    # kill: def $al killed $al killed $eax
+; X64-AVX-NEXT:    retq
+;
+; AVX512BW-LABEL: reduce_umax_v16i8_signbit_xor:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512BW-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorl %edi, %eax
+; AVX512BW-NEXT:    notb %al
+; AVX512BW-NEXT:    shrb $7, %al
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: reduce_umax_v16i8_signbit_xor:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
+; AVX512BWVL-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512BWVL-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vmovd %xmm0, %eax
+; AVX512BWVL-NEXT:    xorl %edi, %eax
+; AVX512BWVL-NEXT:    notb %al
+; AVX512BWVL-NEXT:    shrb $7, %al
+; AVX512BWVL-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BWVL-NEXT:    retq
+  %rdx = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> %a)
+  %xor = xor i8 %y, %rdx
+  %res = lshr i8 %xor, 7
+  ret i8 %res
+}
+
+define i8 @reduce_umax_v16i8_signbit_xor_commute(<16 x i8> %a, i8 %y) {
+; X86-SSE2-LABEL: reduce_umax_v16i8_signbit_xor_commute:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X86-SSE2-NEXT:    pmaxub %xmm0, %xmm1
+; X86-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X86-SSE2-NEXT:    pmaxub %xmm1, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
+; X86-SSE2-NEXT:    psrld $16, %xmm1
+; X86-SSE2-NEXT:    pmaxub %xmm0, %xmm1
+; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE2-NEXT:    psrlw $8, %xmm0
+; X86-SSE2-NEXT:    por %xmm1, %xmm0
+; X86-SSE2-NEXT:    movd %xmm0, %eax
+; X86-SSE2-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X86-SSE2-NEXT:    shrb $7, %al
+; X86-SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE2-LABEL: reduce_umax_v16i8_signbit_xor_commute:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; X64-SSE2-NEXT:    pmaxub %xmm0, %xmm1
+; X64-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; X64-SSE2-NEXT:    pmaxub %xmm1, %xmm0
+; X64-SSE2-NEXT:    movdqa %xmm0, %xmm1
+; X64-SSE2-NEXT:    psrld $16, %xmm1
+; X64-SSE2-NEXT:    pmaxub %xmm0, %xmm1
+; X64-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; X64-SSE2-NEXT:    psrlw $8, %xmm0
+; X64-SSE2-NEXT:    por %xmm1, %xmm0
+; X64-SSE2-NEXT:    movd %xmm0, %eax
+; X64-SSE2-NEXT:    xorl %edi, %eax
+; X64-SSE2-NEXT:    shrb $7, %al
+; X64-SSE2-NEXT:    # kill: def $al killed $al killed $eax
+; X64-SSE2-NEXT:    retq
+;
+; X86-SSE4-LABEL: reduce_umax_v16i8_signbit_xor_commute:
+; X86-SSE4:       # %bb.0:
+; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
+; X86-SSE4-NEXT:    pxor %xmm0, %xmm1
+; X86-SSE4-NEXT:    movdqa %xmm1, %xmm0
+; X86-SSE4-NEXT:    psrlw $8, %xmm0
+; X86-SSE4-NEXT:    pminub %xmm1, %xmm0
+; X86-SSE4-NEXT:    phminposuw %xmm0, %xmm0
+; X86-SSE4-NEXT:    movd %xmm0, %eax
+; X86-SSE4-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X86-SSE4-NEXT:    notb %al
+; X86-SSE4-NEXT:    shrb $7, %al
+; X86-SSE4-NEXT:    # kill: def $al killed $al killed $eax
+; X86-SSE4-NEXT:    retl
+;
+; X64-SSE4-LABEL: reduce_umax_v16i8_signbit_xor_commute:
+; X64-SSE4:       # %bb.0:
+; X64-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
+; X64-SSE4-NEXT:    pxor %xmm0, %xmm1
+; X64-SSE4-NEXT:    movdqa %xmm1, %xmm0
+; X64-SSE4-NEXT:    psrlw $8, %xmm0
+; X64-SSE4-NEXT:    pminub %xmm1, %xmm0
+; X64-SSE4-NEXT:    phminposuw %xmm0, %xmm0
+; X64-SSE4-NEXT:    movd %xmm0, %eax
+; X64-SSE4-NEXT:    xorl %edi, %eax
+; X64-SSE4-NEXT:    notb %al
+; X64-SSE4-NEXT:    shrb $7, %al
+; X64-SSE4-NEXT:    # kill: def $al killed $al killed $eax
+; X64-SSE4-NEXT:    retq
+;
+; X86-AVX-LABEL: reduce_umax_v16i8_signbit_xor_commute:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; X86-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; X86-AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; X86-AVX-NEXT:    vphminposuw %xmm0, %xmm0
+; X86-AVX-NEXT:    vmovd %xmm0, %eax
+; X86-AVX-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X86-AVX-NEXT:    notb %al
+; X86-AVX-NEXT:    shrb $7, %al
+; X86-AVX-NEXT:    # kill: def $al killed $al killed $eax
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-LABEL: reduce_umax_v16i8_signbit_xor_commute:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; X64-AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; X64-AVX-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vphminposuw %xmm0, %xmm0
+; X64-AVX-NEXT:    vmovd %xmm0, %eax
+; X64-AVX-NEXT:    xorl %edi, %eax
+; X64-AVX-NEXT:    notb %al
+; X64-AVX-NEXT:    shrb $7, %al
+; X64-AVX-NEXT:    # kill: def $al killed $al killed $eax
+; X64-AVX-NEXT:    retq
+;
+; AVX512BW-LABEL: reduce_umax_v16i8_signbit_xor_commute:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512BW-NEXT:    vpternlogq {{.*#+}} zmm0 = ~zmm0
+; AVX512BW-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512BW-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BW-NEXT:    vmovd %xmm0, %eax
+; AVX512BW-NEXT:    xorl %edi, %eax
+; AVX512BW-NEXT:    notb %al
+; AVX512BW-NEXT:    shrb $7, %al
+; AVX512BW-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BW-NEXT:    vzeroupper
+; AVX512BW-NEXT:    retq
+;
+; AVX512BWVL-LABEL: reduce_umax_v16i8_signbit_xor_commute:
+; AVX512BWVL:       # %bb.0:
+; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
+; AVX512BWVL-NEXT:    vpsrlw $8, %xmm0, %xmm1
+; AVX512BWVL-NEXT:    vpminub %xmm1, %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vphminposuw %xmm0, %xmm0
+; AVX512BWVL-NEXT:    vmovd %xmm0, %eax
+; AVX512BWVL-NEXT:    xorl %edi, %eax
+; AVX512BWVL-NEXT:    notb %al
+; AVX512BWVL-NEXT:    shrb $7, %al
+; AVX512BWVL-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512BWVL-NEXT:    retq
+  %rdx = call i8 @llvm.vector.reduce.umax.v16i8(<16 x i8> %a)
+  %xor = xor i8 %rdx, %y
+  %res = lshr i8 %xor, 7
+  ret i8 %res
+}

@@ -339,3 +339,58 @@ exit:
   %count.lcssa = phi i32 [ %count, %outer ]
   ret i32 %count.lcssa
 }
+
+; The exit value can reuse %s without dropping nsw from %s.nsw.
+define i64 @exit_value_reuse_value_without_flags(i64 %a, i64 %b, i64 %n, ptr %p) {
+; CHECK-LABEL: define i64 @exit_value_reuse_value_without_flags(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]], i64 [[N:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[S_NSW:%.*]] = add nsw i64 [[A]], [[B]]
+; CHECK-NEXT:    store i64 [[S_NSW]], ptr [[P]], align 4
+; CHECK-NEXT:    [[S:%.*]] = add i64 [[A]], [[B]]
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = sub nuw i64 [[N_VEC]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[S]], [[TMP2]]
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = add i64 [[IV]], [[S]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP11:![0-9]+]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i64 [ [[V]], %[[LOOP]] ], [ [[TMP3]], %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    ret i64 [[V_LCSSA]]
+;
+entry:
+  %s.nsw = add nsw i64 %a, %b
+  store i64 %s.nsw, ptr %p
+  %s = add i64 %a, %b
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %v = add i64 %iv, %s
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %v.lcssa = phi i64 [ %v, %loop ]
+  ret i64 %v.lcssa
+}

@@ -28,7 +28,8 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCodeGenIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryIntrinsicOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1242,7 +1243,7 @@ std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
 
 mlir::Value fir::factory::locationToFilename(fir::FirOpBuilder &builder,
                                              mlir::Location loc) {
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc)) {
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>()) {
     // must be encoded as asciiz, C string
     auto fn = flc.getFilename().str() + '\0';
     return fir::getBase(createStringLiteral(builder, loc, fn));
@@ -1253,7 +1254,7 @@ mlir::Value fir::factory::locationToFilename(fir::FirOpBuilder &builder,
 mlir::Value fir::factory::locationToLineNo(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            mlir::Type type) {
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>())
     return builder.createIntegerConstant(loc, type, flc.getLine());
   return builder.createIntegerConstant(loc, type, 0);
 }

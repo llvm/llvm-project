@@ -1952,9 +1952,27 @@ public:
   void emitAtomicStore(RValue rvalue, LValue dest, bool isInit);
   void emitAtomicStore(RValue rvalue, LValue dest, cir::MemOrder order,
                        bool isVolatile, bool isInit);
+
+  /// An emitted atomic order or scope value with optional constant evaluation.
+  struct EmittedOrderOrScope {
+    mlir::Value value;
+    std::optional<Expr::EvalResult> eval;
+
+    EmittedOrderOrScope() = default;
+    EmittedOrderOrScope(CIRGenFunction &cgf, const Expr *expr)
+        : value(cgf.emitScalarExpr(expr)) {
+      Expr::EvalResult evalResult;
+      if (expr->EvaluateAsInt(evalResult, cgf.getContext()))
+        eval.emplace(std::move(evalResult));
+    }
+  };
+
   void emitAtomicExprWithMemOrder(
-      const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
+      const EmittedOrderOrScope &order, bool isStore, bool isLoad, bool isFence,
       llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
+  void emitAtomicExprWithSyncScope(
+      const AtomicScopeModel *scopeModel, const EmittedOrderOrScope &scope,
+      llvm::function_ref<void(cir::SyncScopeKind)> emitAtomicOp);
 
   mlir::Value makeBinaryAtomicValue(
       cir::AtomicFetchKind kind, const clang::CallExpr *expr,
@@ -2528,6 +2546,10 @@ public:
   std::optional<mlir::Value> emitNVPTXBuiltinExpr(unsigned builtinID,
                                                   const CallExpr *expr);
 
+  /// Emit a call to a SPIR-V builtin function.
+  std::optional<mlir::Value> emitSPIRVBuiltinExpr(unsigned builtinID,
+                                                  const CallExpr *expr);
+
   /// Emit a device-side printf call for GPU targets.
   mlir::Value emitDevicePrintfCallExpr(const CallExpr *expr);
 
@@ -2908,6 +2930,13 @@ public:
   //                         OpenMP Emission
   //===--------------------------------------------------------------------===//
 public:
+  /// Emits a Sema-synthesized OpenMP helper variable (loop counter, iteration
+  /// variable or pre-init capture) without lifetime markers. These variables
+  /// are emitted between nested combined/composite OpenMP ops, which must be
+  /// direct children of each other's regions, so they must not open a
+  /// lifetime cleanup scope.
+  void emitOMPNoLifetimeVarDecl(const VarDecl &d);
+
   mlir::LogicalResult emitOMPScopeDirective(const OMPScopeDirective &s);
   mlir::LogicalResult emitOMPErrorDirective(const OMPErrorDirective &s);
   mlir::LogicalResult emitOMPParallelDirective(const OMPParallelDirective &s);

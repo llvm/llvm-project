@@ -1,83 +1,63 @@
-# RUN: not llvm-mc -triple riscv32 < %s 2>&1 \
-# RUN:   | FileCheck --implicit-check-not=error: %s
+# RUN: llvm-mc --verify -triple riscv32 < %s
 
-# CHECK: :[[#@LINE+1]]:8: error: expected identifier
 .option
+# expected-error@-1:8 {{expected identifier}}
 
-# CHECK: :[[#@LINE+1]]:9: error: expected identifier
-.option 123
+.option 123 # expected-error:9 {{expected identifier}}
 
-# CHECK: :[[#@LINE+1]]:9: error: expected identifier
-.option "str"
+.option "str" # expected-error:9 {{expected identifier}}
 
-# CHECK: :[[#@LINE+1]]:13: error: expected newline
-.option rvc foo
+.option rvc foo # expected-error:13 {{expected newline}}
 
-# CHECK: :[[#@LINE+1]]:23: error: unexpected token, expected + or -
-.option arch, +f, +d, rv32ifd, -d
+.option arch, +f, +d, rv32ifd, -d # expected-error:23 {{unexpected token, expected + or -}}
 
-# CHECK: :[[#@LINE+1]]:22: error: expected newline
-.option arch, rv32ifd, +f, +d
+.option arch, rv32ifd, +f, +d # expected-error:22 {{expected newline}}
 
-# CHECK: :[[#@LINE+1]]:16: error: unexpected token, expected identifier
-.option arch, +"c"
+.option arch, +"c" # expected-error:16 {{unexpected token, expected identifier}}
 
-# CHECK: :[[#@LINE+1]]:16: error: unknown extension feature
-.option arch, +x
+.option arch, +x # expected-error:16 {{unknown extension feature}}
 
-# CHECK: :[[#@LINE+1]]:16: error: unknown extension feature
-.option arch, +relax
+.option arch, +relax # expected-error:16 {{unknown extension feature}}
 
-# CHECK: :[[#@LINE+1]]:16: error: unexpected token, expected identifier
 .option arch, +
+# expected-error@-1:16 {{unexpected token, expected identifier}}
 
-# CHECK: :[[#@LINE+1]]:18: error: expected comma
-.option arch, +c foo
+.option arch, +c foo # expected-error:18 {{expected comma}}
 
-# CHECK: :[[#@LINE+1]]:16: error: extension version number parsing not currently implemented
-.option arch, +c2p0
+.option arch, +c2p0 # expected-error:16 {{extension version number parsing not currently implemented}}
 
 .option arch, +d
-# CHECK: :[[#@LINE+1]]:16: error: can't disable f extension; d extension requires f extension
-.option arch, -f
+.option arch, -f # expected-error:16 {{can't disable f extension; d extension requires f extension}}
 
-# CHECK: :[[#@LINE+1]]:16: error: can't disable zicsr extension; f extension requires zicsr extension
-.option arch, -zicsr
+.option arch, -zicsr # expected-error:16 {{can't disable zicsr extension; f extension requires zicsr extension}}
 
-# CHECK: :[[#@LINE+1]]:20: error: 'f' and 'zfinx' extensions are incompatible
-.option arch, +f, +zfinx
+.option arch, +f, +zfinx # expected-error:20 {{'f' and 'zfinx' extensions are incompatible}}
 
 ## Make sure the above error isn't sticky
 .option arch, +f
 
-# CHECK: :[[#@LINE+1]]:13: error: expected newline
-.option rvc foo
+.option rvc foo # expected-error:13 {{expected newline}}
 
-# CHECK: :[[#@LINE+1]]:12: warning: unknown option, expected 'push', 'pop', 'rvc', 'norvc', 'arch', 'relax', 'norelax', 'exact', or 'noexact'
 .option bar
+# expected-warning@-1:12 {{unknown option, expected 'push', 'pop', 'rvc', 'norvc', 'arch', 'relax', 'norelax', 'exact', or 'noexact'}}
 
-# CHECK: :[[#@LINE+1]]:12: error: .option pop with no .option push
 .option pop
+# expected-error@-1:12 {{.option pop with no .option push}}
 
-# CHECK: :[[#@LINE+1]]:14: error: expected newline
-.option push 123
+.option push 123 # expected-error:14 {{expected newline}}
 
-# CHECK: :[[#@LINE+1]]:13: error: expected newline
-.option pop 123
+.option pop 123 # expected-error:13 {{expected newline}}
 
-# CHECK: :[[#@LINE+1]]:15: error: bad arch string switching from rv32 to rv64
-.option arch, rv64gc
+.option arch, rv64gc # expected-error:15 {{bad arch string switching from rv32 to rv64}}
 
 ## Enabling +zca (or +zca,+zcb,+zcmp,+zcmt) followed by +f should not imply Zcf
 ## (which requires C or Zce).
 .option arch, rv32i
 .option arch, +zca
 .option arch, +f
-# CHECK: :[[#@LINE+1]]:1: error: instruction requires the following: 'C' (Compressed Instructions) and 'F' (Single-Precision Floating-Point) or 'Zcf' (Compressed Single-Precision Floating-Point Instructions){{$}}
-c.flw fa0, 0(a0)
+c.flw fa0, 0(a0) # expected-error:1 {{instruction requires the following: 'C' (Compressed Instructions) and 'F' (Single-Precision Floating-Point) or 'Zcf' (Compressed Single-Precision Floating-Point Instructions)}}
 
 .option arch, rv32i
 .option arch, +zca, +zcb, +zcmp, +zcmt
 .option arch, +f
-# CHECK: :[[#@LINE+1]]:1: error: instruction requires the following: 'C' (Compressed Instructions) and 'F' (Single-Precision Floating-Point) or 'Zcf' (Compressed Single-Precision Floating-Point Instructions){{$}}
-c.flw fa0, 0(a0)
+c.flw fa0, 0(a0) # expected-error:1 {{instruction requires the following: 'C' (Compressed Instructions) and 'F' (Single-Precision Floating-Point) or 'Zcf' (Compressed Single-Precision Floating-Point Instructions)}}

@@ -49,8 +49,6 @@ struct ClassReference {
   SmallVector<const ArgumentInit *, 4> TemplateArgs;
 
   ClassReference() = default;
-
-  bool isInvalid() const { return Rec == nullptr; }
 };
 
 struct MultiClassReference {
@@ -60,7 +58,6 @@ struct MultiClassReference {
 
   MultiClassReference() = default;
 
-  bool isInvalid() const { return MC == nullptr; }
   void dump() const;
 };
 } // end namespace llvm

@@ -33,6 +33,9 @@ template <typename T> class MutableArrayRef;
 class GlobalVariable;
 class ModuleSummaryIndex;
 struct ValueInfo;
+namespace cl {
+class LibraryOptionsContext;
+}
 
 namespace wholeprogramdevirt {
 
@@ -245,16 +248,27 @@ struct VTableSlotSummary {
   uint64_t ByteOffset;
 };
 LLVM_ABI bool
-hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO);
+hasWholeProgramVisibility(const cl::LibraryOptionsContext &LibraryOptions,
+                          bool WholeProgramVisibilityEnabledInLTO);
+/// Convert llvm.public.type.test calls to llvm.type.test when whole program
+/// visibility is available, or otherwise drop them unless speculative
+/// devirtualization is enabled, in which case WPD still needs them to identify
+/// the call sites. Speculative devirtualization is enabled either via the
+/// option, or when \p DevirtSpeculativelyInIndex is true, i.e. it was recorded
+/// in the combined index by the thin link. The latter is only needed by
+/// (distributed) ThinLTO backends; regular LTO runs in the same process as the
+/// option so it can rely on the default.
 LLVM_ABI void
-updatePublicTypeTestCalls(Module &M, bool WholeProgramVisibilityEnabledInLTO);
+updatePublicTypeTestCalls(Module &M, bool WholeProgramVisibilityEnabledInLTO,
+                          bool DevirtSpeculativelyInIndex = false);
 LLVM_ABI void updateVCallVisibilityInModule(
     Module &M, bool WholeProgramVisibilityEnabledInLTO,
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
     bool ValidateAllVtablesHaveTypeInfos,
     function_ref<bool(StringRef)> IsVisibleToRegularObj);
 LLVM_ABI void updateVCallVisibilityInIndex(
-    ModuleSummaryIndex &Index, bool WholeProgramVisibilityEnabledInLTO,
+    const cl::LibraryOptionsContext &LibraryOptions, ModuleSummaryIndex &Index,
+    bool WholeProgramVisibilityEnabledInLTO,
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols,
     const DenseSet<GlobalValue::GUID> &VisibleToRegularObjSymbols);
 
@@ -271,10 +285,10 @@ LLVM_ABI void getVisibleToRegularObjVtableGUIDs(
 /// in case it is exported by cross module importing (in which case the
 /// devirtualized target name will need adjustment).
 LLVM_ABI void runWholeProgramDevirtOnIndex(
+    const cl::LibraryOptionsContext &LibraryOptions,
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
     std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
-    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr,
-    const LLVMContext *Ctx);
+    DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr);
 
 /// Call after cross-module importing to update the recorded single impl
 /// devirt target names for any locals that were exported.

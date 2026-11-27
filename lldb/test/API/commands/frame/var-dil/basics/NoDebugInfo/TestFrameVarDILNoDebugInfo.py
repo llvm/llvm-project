@@ -16,8 +16,6 @@ class TestFrameVarDILNoDebugInfo(TestBase):
         self.build(debug_info="none")
         lldbutil.run_to_name_breakpoint(self, "main")
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         self.expect(
             "frame var 'argc'",
             error=True,

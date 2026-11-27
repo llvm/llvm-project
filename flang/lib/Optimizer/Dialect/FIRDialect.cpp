@@ -16,7 +16,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Transforms/InliningUtils.h"
 
@@ -65,10 +65,6 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
 void fir::FIROpsDialect::initialize() {
   registerTypes();
   registerAttributes();
-  addOperations<
-#define GET_OP_LIST
-#include "flang/Optimizer/Dialect/FIROps.cpp.inc"
-      >();
   registerOpExternalInterfaces();
 }
 
