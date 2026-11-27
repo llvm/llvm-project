@@ -5,7 +5,6 @@
 # After the IMPLICIT_DEF is erased, that value must stay live up to the
 # sub_8bit redef of %3, which reads it and must not become <read-undef>.
 name:            real_lane
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: real_lane
@@ -28,7 +27,6 @@ body:             |
 # the read-undef MOV8rr replaces it. The ADD reads that 7 through %1, so the
 # merged MOV8rr must not keep <read-undef>.
 name:            replace_read_undef
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: replace_read_undef
@@ -50,7 +48,6 @@ body:             |
 # endpoint does not reach the $ax read. That read sees the COPY's value, which
 # still holds 7 in sub_8bit_hi.
 name:            replace_before_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: replace_before_copy
@@ -69,7 +66,6 @@ body:             |
 # %0 is live across the sub_8bit_hi redef, so joining %0 into %1 erases the
 # IMPLICIT_DEF. The redef must end up <read-undef>.
 name:            impdef_live_across_partial_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: impdef_live_across_partial_def
@@ -86,7 +82,6 @@ body:             |
 # IMPLICIT_DEF. The tied and the other read of the bb.0 ADD then have nothing
 # live into them and must become undef.
 name:            tied_and_other_read_of_impdef
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: tied_and_other_read_of_impdef
@@ -118,7 +113,6 @@ body:             |
 # %4.sub_32bit, and reads the erased IMPLICIT_DEF, so it must become
 # <read-undef>.
 name:            srcreg_partial_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: srcreg_partial_def
@@ -150,7 +144,6 @@ body:             |
 # it. The join keeps %0 (it has more segments than %2), so the internal read is
 # an original DstReg operand. It must not become undef.
 name:            dstreg_internal_read_in_bundle
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: dstreg_internal_read_in_bundle
@@ -182,7 +175,6 @@ body:             |
 # The partial COPY of the erasable IMPLICIT_DEF still carries the 7 in
 # sub_8bit_hi, so the $al read of that lane must stay live, not become undef.
 name:            partial_copy_of_impdef_keeps_lane
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: partial_copy_of_impdef_keeps_lane
@@ -201,7 +193,6 @@ body:             |
 # The erased partial IMPLICIT_DEF of %1 carries no defined lane of its own, so
 # the MOV8ri reads nothing live and must become <read-undef>.
 name:            partial_impdef_of_dstreg
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: partial_impdef_of_dstreg
@@ -218,7 +209,6 @@ body:             |
 # The partial IMPLICIT_DEF of %1 still carries the 7 in sub_8bit_hi from the
 # value it redefines, so the $al read of that lane must stay live.
 name:            partial_impdef_carries_lane
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: partial_impdef_carries_lane
