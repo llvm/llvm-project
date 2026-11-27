@@ -710,6 +710,7 @@ set(files
   __pstl/backends/statpart/min_element.h
   __pstl/backends/statpart/minmax_element.h
   __pstl/backends/statpart/mismatch.h
+  __pstl/backends/statpart/partition_copy.h
   __pstl/backends/statpart/reverse.h
   __pstl/backends/statpart/search.h
   __pstl/backends/statpart/search_n.h

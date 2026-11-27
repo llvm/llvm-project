@@ -23,6 +23,7 @@
 #include <__pstl/backends/statpart/min_element.h>
 #include <__pstl/backends/statpart/minmax_element.h>
 #include <__pstl/backends/statpart/mismatch.h>
+#include <__pstl/backends/statpart/partition_copy.h>
 #include <__pstl/backends/statpart/reverse.h>
 #include <__pstl/backends/statpart/search.h>
 #include <__pstl/backends/statpart/search_n.h>

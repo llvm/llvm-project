@@ -84,7 +84,7 @@ The following table shows which algorithms can run in parallel if the
 | std::partial_sort |  |
 | std::partial_sort_copy |  |
 | std::partition | ❌ |
-| std::partition_copy | Planned |
+| std::partition_copy | ✅ |
 | std::reduce | ✅ |
 | std::remove | Planned |
 | std::remove_copy | ✅ |
