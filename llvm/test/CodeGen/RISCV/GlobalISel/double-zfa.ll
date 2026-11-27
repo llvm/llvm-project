@@ -114,3 +114,61 @@ define double @fmvp_d_x(i64 %a) {
   %or = bitcast i64 %a to double
   ret double %or
 }
+
+define double @fli_one() {
+; CHECK-LABEL: fli_one:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, 1.0
+; CHECK-NEXT:    ret
+  ret double 1.0
+}
+
+define double @fli_negone() {
+; CHECK-LABEL: fli_negone:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa0, -1.0
+; CHECK-NEXT:    ret
+  ret double -1.0
+}
+
+; Not directly in the FLI table, so it needs fli + fneg.
+define double @fli_neghalf() {
+; CHECK-LABEL: fli_neghalf:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.d fa5, 0.5
+; CHECK-NEXT:    fneg.d fa0, fa5
+; CHECK-NEXT:    ret
+  ret double -0.5
+}
+
+; Not representable by FLI at all.
+define double @no_fli() {
+; RV32IDZFA-LABEL: no_fli:
+; RV32IDZFA:       # %bb.0:
+; RV32IDZFA-NEXT:    addi sp, sp, -16
+; RV32IDZFA-NEXT:    .cfi_def_cfa_offset 16
+; RV32IDZFA-NEXT:    lui a0, 262290
+; RV32IDZFA-NEXT:    lui a1, 983480
+; RV32IDZFA-NEXT:    addi a0, a0, 505
+; RV32IDZFA-NEXT:    addi a1, a1, 1646
+; RV32IDZFA-NEXT:    sw a1, 8(sp)
+; RV32IDZFA-NEXT:    sw a0, 12(sp)
+; RV32IDZFA-NEXT:    fld fa0, 8(sp)
+; RV32IDZFA-NEXT:    addi sp, sp, 16
+; RV32IDZFA-NEXT:    .cfi_def_cfa_offset 0
+; RV32IDZFA-NEXT:    ret
+;
+; RV64DZFA-LABEL: no_fli:
+; RV64DZFA:       # %bb.0:
+; RV64DZFA-NEXT:    lui a0, 512
+; RV64DZFA-NEXT:    addi a0, a0, 1169
+; RV64DZFA-NEXT:    slli a0, a0, 13
+; RV64DZFA-NEXT:    addi a0, a0, -97
+; RV64DZFA-NEXT:    slli a0, a0, 13
+; RV64DZFA-NEXT:    addi a0, a0, 55
+; RV64DZFA-NEXT:    slli a0, a0, 15
+; RV64DZFA-NEXT:    addi a0, a0, 1646
+; RV64DZFA-NEXT:    fmv.d.x fa0, a0
+; RV64DZFA-NEXT:    ret
+  ret double 3.14159
+}
