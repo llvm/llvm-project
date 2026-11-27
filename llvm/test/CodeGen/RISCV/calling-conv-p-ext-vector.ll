@@ -80,10 +80,10 @@ define <16 x i8> @test_cc_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; RV32-NEXT:    lw t1, 8(a1)
 ; RV32-NEXT:    padd.db a4, a6, a4
 ; RV32-NEXT:    padd.db a2, t1, a2
-; RV32-NEXT:    sw a4, 0(a0)
-; RV32-NEXT:    sw a5, 4(a0)
 ; RV32-NEXT:    sw a2, 8(a0)
 ; RV32-NEXT:    sw a3, 12(a0)
+; RV32-NEXT:    sw a5, 4(a0)
+; RV32-NEXT:    sw a4, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v16i8:
@@ -108,10 +108,10 @@ define <8 x i16> @test_cc_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; RV32-NEXT:    lw t1, 8(a1)
 ; RV32-NEXT:    padd.dh a4, a6, a4
 ; RV32-NEXT:    padd.dh a2, t1, a2
-; RV32-NEXT:    sw a4, 0(a0)
-; RV32-NEXT:    sw a5, 4(a0)
 ; RV32-NEXT:    sw a2, 8(a0)
 ; RV32-NEXT:    sw a3, 12(a0)
+; RV32-NEXT:    sw a5, 4(a0)
+; RV32-NEXT:    sw a4, 0(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v8i16:
