@@ -239,6 +239,8 @@ private:
   // Field order places the traversal-hot fields (left, right, value) first so
   // that in a node that straddles a cache line they land in the earlier line;
   // the cold factory back-pointer (only touched on create/destroy) goes last.
+  // The reference count shares a word with the bit-fields so that it adds no
+  // padding before a pointer-aligned value.
   ImutAVLTree *left;
   ImutAVLTree *right;
 
@@ -249,9 +251,9 @@ private:
   unsigned IsDigestCached : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsCanonicalized : 1;
+  uint32_t refCount = 0;
 
   value_type value;
-  uint32_t refCount = 0;
   LLVM_NO_UNIQUE_ADDRESS ImutAVLDetail::CanonicalDigest<Canonicalize> digest;
   Factory *factory;
 
@@ -479,6 +481,15 @@ public:
     return T;
   }
 
+  /// Returns the tree of the elements of \p T for which \p Pred holds. \p Pred
+  /// is called on the elements in order and must not use this factory.
+  /// Subtrees that keep all of their elements are shared rather than rebuilt.
+  template <typename PredFn> TreeTy *filterTree(TreeTy *T, PredFn Pred) {
+    T = filter_internal(T, Pred);
+    recoverNodes(T);
+    return T;
+  }
+
   TreeTy* getEmptyTree() const { return nullptr; }
 
 protected:
@@ -640,6 +651,7 @@ protected:
   /// Rebuilds \p T with the same shape but each element replaced by
   /// \p Combine applied to it. \p FromB selects which side of \p Combine the
   /// element is passed on (it is the sole non-null argument).
+  /// Subtrees that \p Combine leaves unchanged are shared.
   template <typename CombineFn>
   TreeTy *transformTree(TreeTy *T, CombineFn &Combine, bool FromB) {
     if (isEmpty(T))
@@ -647,8 +659,13 @@ protected:
     TreeTy *L = transformTree(getLeft(T), Combine, FromB);
     TreeTy *R = transformTree(getRight(T), Combine, FromB);
     const value_type &E = getValue(T);
-    return createNode(L, FromB ? Combine(nullptr, &E) : Combine(&E, nullptr),
-                      R);
+    auto NewElem = FromB ? Combine(nullptr, &E) : Combine(&E, nullptr);
+    if (L == getLeft(T) && R == getRight(T) &&
+        ImutInfo::isDataEqual(ImutInfo::DataOfValue(NewElem),
+                              ImutInfo::DataOfValue(E))) {
+      return T;
+    }
+    return createNode(L, NewElem, R);
   }
 
   /// Merges \p A and \p B by recursing over \p A's structure and splitting \p B
@@ -684,18 +701,16 @@ protected:
     TreeTy *NewR =
         merge_internal(getRight(A), BR, Combine, KeepUnmatched, SkipShared);
 
-    if (!BMatch) {
+    if (!BMatch && KeepUnmatched) {
       // Key present only in A.
-      if (KeepUnmatched) {
-        if (NewL == getLeft(A) && NewR == getRight(A))
-          return A;
-        return joinTrees(NewL, AElem, NewR);
-      }
-      return joinTrees(NewL, Combine(&AElem, nullptr), NewR);
+      if (NewL == getLeft(A) && NewR == getRight(A))
+        return A;
+      return joinTrees(NewL, AElem, NewR);
     }
-    // Key present in both: combine the two elements. Preserve sharing when the
-    // combined value is unchanged and neither subtree moved, so that a join
-    // that only touches a few keys does not rebuild the whole spine.
+    // Combine the elements (BMatch is null for a key present only in A).
+    // Preserve sharing when the combined value is unchanged and neither
+    // subtree moved, so that a join that only touches a few keys does not
+    // rebuild the whole spine.
     auto NewElem = Combine(&AElem, BMatch);
     if (NewL == getLeft(A) && NewR == getRight(A) &&
         ImutInfo::isDataEqual(ImutInfo::DataOfValue(NewElem),
@@ -785,6 +800,22 @@ protected:
     }
     return balanceTree(removeMinBinding(getLeft(T), Noderemoved),
                        getValue(T), getRight(T));
+  }
+
+  template <typename PredFn> TreeTy *filter_internal(TreeTy *T, PredFn &Pred) {
+    if (isEmpty(T))
+      return T;
+    TreeTy *L = filter_internal(getLeft(T), Pred);
+    bool Keep = Pred(getValue(T));
+    TreeTy *R = filter_internal(getRight(T), Pred);
+    if (Keep)
+      return L == getLeft(T) && R == getRight(T) ? T
+                                                 : joinTrees(L, getValue(T), R);
+    if (isEmpty(R))
+      return L;
+    TreeTy *Min;
+    R = removeMinBinding(R, Min);
+    return joinTrees(L, getValue(Min), R);
   }
 
 public:

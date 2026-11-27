@@ -116,43 +116,6 @@ STATISTIC(
     "Number of functions with FDO inline stopped due to growth size limit");
 
 namespace llvm {
-
-cl::opt<bool>
-    SortProfiledSCC("sort-profiled-scc-member", cl::init(true), cl::Hidden,
-                    cl::desc("Sort profiled recursion by edge weights."));
-
-cl::opt<int> ProfileInlineGrowthLimit(
-    "sample-profile-inline-growth-limit", cl::Hidden, cl::init(12),
-    cl::desc("The size growth ratio limit for priority-based sample profile "
-             "loader inlining."));
-
-cl::opt<int> ProfileInlineLimitMin(
-    "sample-profile-inline-limit-min", cl::Hidden, cl::init(100),
-    cl::desc("The lower bound of size growth limit for "
-             "priority-based sample profile loader inlining."));
-
-cl::opt<int> ProfileInlineLimitMax(
-    "sample-profile-inline-limit-max", cl::Hidden, cl::init(10000),
-    cl::desc("The upper bound of size growth limit for "
-             "priority-based sample profile loader inlining."));
-
-cl::opt<int> SampleHotCallSiteThreshold(
-    "sample-profile-hot-inline-threshold", cl::Hidden, cl::init(3000),
-    cl::desc("Hot callsite threshold for priority-based sample profile loader "
-             "inlining."));
-
-cl::opt<int> SampleColdCallSiteThreshold(
-    "sample-profile-cold-inline-threshold", cl::Hidden, cl::init(45),
-    cl::desc("Threshold for inlining cold callsites"));
-} // namespace llvm
-
-static cl::opt<bool> PreserveDeferredInlines(
-    "sample-profile-preserve-deferred-inlines", cl::Hidden, cl::init(true),
-    cl::desc(
-        "In ThinLTO pre-link, add import hints for in-module targets of "
-        "deferred indirect calls so they can be imported with the caller."));
-
-namespace llvm {
 extern cl::opt<bool> EnableExtTspBlockPlacement;
 }
 
@@ -323,6 +286,7 @@ protected:
   bool UsePreInlinerDecision;
   bool SalvageStaleProfile;
   bool SalvageUnusedProfile;
+  SampleProfileInlineOptions InlineOpts;
 
   bool runOnFunction(Function &F, ModuleAnalysisManager &AM);
   bool emitAnnotations(Function &F);
@@ -837,7 +801,7 @@ bool SampleProfileLoader::shouldInlineColdCallee(CallBase &CallInst) {
   if (Cost.isAlways())
     return true;
 
-  return Cost.getCost() <= SampleColdCallSiteThreshold;
+  return Cost.getCost() <= InlineOpts.ColdCallSiteThreshold;
 }
 
 void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
@@ -864,8 +828,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
   // The targets of a deferred indirect call are an exception: another module
   // that imports the caller must import them too, and no direct call to them
   // may survive to create a summary edge.
-  bool IncludeLocalTargets =
-      PreserveDeferredInlines && CB && CB->isIndirectCall();
+  bool IncludeLocalTargets = Opts.sample_profile_preserve_deferred_inlines &&
+                             CB && CB->isIndirectCall();
 
   // If ExternalInlineAdvisor(ReplayInlineAdvisor) wants to inline an external
   // function make sure it's imported
@@ -1182,10 +1146,10 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
     return *ReplayCost;
   // Adjust threshold based on call site hotness, only do this for callsite
   // prioritized inliner because otherwise cost-benefit check is done earlier.
-  int SampleThreshold = SampleColdCallSiteThreshold;
+  int SampleThreshold = InlineOpts.ColdCallSiteThreshold;
   if (CallsitePrioritizedInline) {
     if (Candidate.CallsiteCount > PSI->getHotCountThreshold())
-      SampleThreshold = SampleHotCallSiteThreshold;
+      SampleThreshold = InlineOpts.HotCallSiteThreshold;
     else if (!ProfileSizeInline)
       return InlineCost::getNever("cold callsite");
   }
@@ -1234,7 +1198,7 @@ SampleProfileLoader::shouldInlineCandidate(InlineCandidate &Candidate) {
   // even if the function is hot based on sample profile data. This is to
   // prevent huge functions from being inlined.
   if (!CallsitePrioritizedInline) {
-    return InlineCost::get(Cost.getCost(), SampleHotCallSiteThreshold);
+    return InlineCost::get(Cost.getCost(), InlineOpts.HotCallSiteThreshold);
   }
 
   // Otherwise only use the cost from call analyzer, but overwite threshold with
@@ -1267,12 +1231,12 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   // though cost of each inline candidate already accounts for callee size,
   // because with top-down inlining, we can grow inliner size significantly
   // with large number of smaller inlinees each pass the cost check.
-  assert(ProfileInlineLimitMax >= ProfileInlineLimitMin &&
+  assert(InlineOpts.LimitMax >= InlineOpts.LimitMin &&
          "Max inline size limit should not be smaller than min inline size "
          "limit.");
-  unsigned SizeLimit = F.getInstructionCount() * ProfileInlineGrowthLimit;
-  SizeLimit = std::min(SizeLimit, (unsigned)ProfileInlineLimitMax);
-  SizeLimit = std::max(SizeLimit, (unsigned)ProfileInlineLimitMin);
+  unsigned SizeLimit = F.getInstructionCount() * InlineOpts.GrowthLimit;
+  SizeLimit = std::min(SizeLimit, InlineOpts.LimitMax);
+  SizeLimit = std::max(SizeLimit, InlineOpts.LimitMin);
   if (ExternalInlineAdvisor)
     SizeLimit = std::numeric_limits<unsigned>::max();
 
@@ -1357,9 +1321,9 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   }
 
   if (!CQueue.empty()) {
-    if (SizeLimit == (unsigned)ProfileInlineLimitMax)
+    if (SizeLimit == InlineOpts.LimitMax)
       ++NumCSInlinedHitMaxLimit;
-    else if (SizeLimit == (unsigned)ProfileInlineLimitMin)
+    else if (SizeLimit == InlineOpts.LimitMin)
       ++NumCSInlinedHitMinLimit;
     else
       ++NumCSInlinedHitGrowthLimit;
@@ -1762,7 +1726,7 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
     scc_iterator<ProfiledCallGraph *> CGI = scc_begin(ProfiledCG.get());
     while (!CGI.isAtEnd()) {
       auto Range = *CGI;
-      if (SortProfiledSCC) {
+      if (InlineOpts.SortProfiledSCC) {
         // Sort nodes in one SCC based on callsite hotness.
         scc_member_iterator<ProfiledCallGraph *> SI(*CGI);
         Range = *SI;
@@ -1791,6 +1755,8 @@ SampleProfileLoader::buildFunctionOrder(Module &M, LazyCallGraph &CG) {
 bool SampleProfileLoader::doInitialization(Module &M,
                                            FunctionAnalysisManager *FAM) {
   auto &Ctx = M.getContext();
+  InlineOpts =
+      SampleProfileLoaderPass::getInlineOptions(Ctx.getLibraryOptions(), {});
 
   auto ReaderOrErr = SampleProfileReader::create(
       Filename, Ctx, *FS, FSDiscriminatorPass::Base, RemappingFilename);
@@ -1870,10 +1836,12 @@ bool SampleProfileLoader::doInitialization(Module &M,
       // inliner since the contexts in the profile are either all from inlining
       // in the prevoius build or pre-computed by the preinliner with a size
       // cap, thus they are bounded.
-      if (!ProfileInlineLimitMin.getNumOccurrences())
-        ProfileInlineLimitMin = std::numeric_limits<unsigned>::max();
-      if (!ProfileInlineLimitMax.getNumOccurrences())
-        ProfileInlineLimitMax = std::numeric_limits<unsigned>::max();
+      InlineOpts.LimitMin = Opts.sample_profile_inline_limit_min.value_or(
+          std::numeric_limits<unsigned>::max());
+      InlineOpts.LimitMax =
+          std::max(Opts.sample_profile_inline_limit_max.value_or(
+                       std::numeric_limits<unsigned>::max()),
+                   InlineOpts.LimitMin);
     }
   }
 
@@ -2142,6 +2110,27 @@ bool SampleProfileLoader::runOnFunction(Function &F,
 }
 StringRef SampleProfileLoaderPass::getSampleProfileFile(const LLVMContext &C) {
   return getIPOOptions(C).sample_profile_file;
+}
+
+SampleProfileInlineOptions
+SampleProfileLoaderPass::getInlineOptions(const cl::LibraryOptionsContext &C,
+                                          SampleProfileInlineOptions Defaults) {
+  const auto &Opts = C.get<IPOOptions>();
+  Defaults.HotCallSiteThreshold =
+      Opts.sample_profile_hot_inline_threshold.value_or(
+          Defaults.HotCallSiteThreshold);
+  Defaults.ColdCallSiteThreshold =
+      Opts.sample_profile_cold_inline_threshold.value_or(
+          Defaults.ColdCallSiteThreshold);
+  Defaults.GrowthLimit =
+      Opts.sample_profile_inline_growth_limit.value_or(Defaults.GrowthLimit);
+  Defaults.LimitMin =
+      Opts.sample_profile_inline_limit_min.value_or(Defaults.LimitMin);
+  Defaults.LimitMax =
+      Opts.sample_profile_inline_limit_max.value_or(Defaults.LimitMax);
+  Defaults.SortProfiledSCC =
+      valueOr(Opts.sort_profiled_scc_member, Defaults.SortProfiledSCC);
+  return Defaults;
 }
 
 SampleProfileLoaderPass::SampleProfileLoaderPass(

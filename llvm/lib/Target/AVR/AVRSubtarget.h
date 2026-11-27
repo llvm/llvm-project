@@ -105,8 +105,8 @@ private:
 #include "AVRGenSubtargetInfo.inc"
 
   AVRInstrInfo InstrInfo;
-  AVRFrameLowering FrameLowering;
   AVRTargetLowering TLInfo;
+  AVRFrameLowering FrameLowering;
   AVRSelectionDAGInfo TSInfo;
 };
 

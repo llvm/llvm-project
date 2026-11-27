@@ -1506,7 +1506,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
 
 Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
     BasicBlock *BB, BasicBlock *PredPredBB, Value *V, const DataLayout &DL,
-    SmallPtrSet<Value *, 8> &Visited) {
+    SmallPtrSet<Value *, 8> &Visited, const Use *U) {
   if (!Visited.insert(V).second)
     return nullptr;
   llvm::scope_exit _([&Visited, V]() { Visited.erase(V); });
@@ -1521,7 +1521,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
   // Consult LVI if V is not an instruction in BB or PredBB.
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I || (I->getParent() != BB && I->getParent() != PredBB)) {
-    return LVI->getConstantOnEdge(V, PredPredBB, PredBB, nullptr);
+    return LVI->getConstantOnEdge(V, PredPredBB, PredBB, nullptr, U);
   }
 
   // Look into a PHI argument.
@@ -1538,10 +1538,14 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
   // instructions in unreachable code and check before going into recursion.
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(V)) {
     if (CondCmp->getParent() == BB) {
-      Constant *Op0 = evaluateOnPredecessorEdge(
-          BB, PredPredBB, CondCmp->getOperand(0), DL, Visited);
-      Constant *Op1 = evaluateOnPredecessorEdge(
-          BB, PredPredBB, CondCmp->getOperand(1), DL, Visited);
+      // Pass the uses of the operands as well, so as to allow folding of
+      // comparisons, which do not expose pointer provenance.
+      Constant *Op0 =
+          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(0), DL,
+                                    Visited, &CondCmp->getOperandUse(0));
+      Constant *Op1 =
+          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(1), DL,
+                                    Visited, &CondCmp->getOperandUse(1));
       if (Op0 && Op1) {
         return ConstantFoldCompareInstOperands(CondCmp->getPredicate(), Op0,
                                                Op1, DL);

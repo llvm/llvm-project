@@ -60,7 +60,7 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(
     StringRef ABIName, VectorLibrary VecLib)
     : WCharSize(WCharSize ? WCharSize : TT.getDefaultWCharSize()),
       LongDoubleFmt(LDblFormat.value_or(TT.getDefaultLongDoubleFormat())),
-      ABIName(ABIName) {
+      MathErrno(TT.supportsMathErrno()), ABIName(ABIName) {
   // Only an unspecified model resolves to the triple default; None is left as
   // an explicit disable.
   if (ExceptionModel == ExceptionHandling::Default)
@@ -529,8 +529,9 @@ RuntimeLibcallsInfo::getDefaultFunctionTy(
   }
 
   return {FunctionType::get(RetTy, ArgTys, IsVarArg),
-          AttributeList::get(Ctx, getLibcallImplFnAttributes(Ctx, LibcallImpl),
-                             RetAttrs, ArgAttrs)};
+          AttributeList::get(
+              Ctx, getLibcallImplFnAttributes(Ctx, LibcallImpl, MathErrno),
+              RetAttrs, ArgAttrs)};
 }
 
 Type *

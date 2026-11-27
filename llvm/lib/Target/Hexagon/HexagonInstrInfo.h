@@ -30,6 +30,7 @@
 
 namespace llvm {
 
+class AAResults;
 class HexagonSubtarget;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
@@ -281,10 +282,8 @@ public:
 
   /// Measure the specified inline asm to determine an approximation of its
   /// length.
-  unsigned getInlineAsmLength(
-    const char *Str,
-    const MCAsmInfo &MAI,
-    const TargetSubtargetInfo *STI = nullptr) const override;
+  unsigned getInlineAsmLength(const char *Str, const MCAsmInfo &MAI,
+                              unsigned MaxInstLength = 0) const override;
 
   /// Allocate and return a hazard recognizer to use for this target when
   /// scheduling the machine instructions after register allocation.
@@ -318,6 +317,12 @@ public:
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
+
+  /// Return true if the memory accesses of \p MIa and \p MIb may depend on
+  /// each other. Uses \p AA, if not null, for accesses that are not
+  /// trivially disjoint.
+  bool areMemAccessesDependent(AAResults *AA, const MachineInstr *MIa,
+                               const MachineInstr *MIb) const;
 
   /// For instructions with a base and offset, return the position of the
   /// base register and offset operands.
@@ -390,6 +395,21 @@ public:
   bool isDependent(const MachineInstr &ProdMI,
                    const MachineInstr &ConsMI) const;
   bool isDotCurInst(const MachineInstr &MI) const;
+  bool isDotCurOperand(const MachineInstr &MI, unsigned OpIndex) const;
+  bool isDotNewOperand(const MachineInstr &MI, unsigned OpIndex) const;
+  bool isDotTmpInst(const MachineInstr &MI) const;
+  bool isDotTmpOperand(const MachineInstr &MI, unsigned OpIndex) const;
+  /// A use (\p UseMI) can share a bundle with an instruction that redefines the
+  /// same register (\p DefMI), the use still sees the old value (WAR).
+  /// Returns true when that holds: no operand forwarding (.new/.tmp/.cur)
+  /// exposes the new value. Caller ensures same-bundle intent. \p IsPullDown
+  /// (push-down) is not yet supported and always returns false.
+  /// \p DefViaRegMask = true when the def is a regmask clobber (no operand):
+  /// such a def never forwards, so the def-side operand checks are skipped.
+  bool isSafeInBundleWAR(const MachineInstr &DefMI, unsigned DefOpIdx,
+                         const MachineInstr &UseMI, unsigned UseOpIdx,
+                         bool IsPullDown = false,
+                         bool DefViaRegMask = false) const;
   bool isDotNewInst(const MachineInstr &MI) const;
   bool isDuplexPair(const MachineInstr &MIa, const MachineInstr &MIb) const;
   bool isHMXActivateInstr(const MachineInstr &MI) const;

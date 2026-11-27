@@ -13,6 +13,7 @@
 #include "lldb/lldb-defines.h"
 
 #include "lldb/API/SBUnixSignals.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -66,7 +67,8 @@ const char *SBUnixSignals::GetSignalAsCString(int32_t signo) const {
   LLDB_INSTRUMENT_VA(this, signo);
 
   if (auto signals_sp = GetSP())
-    return ConstString(signals_sp->GetSignalAsStringRef(signo)).GetCString();
+    return StringPool::GetSystemPool().Intern(
+        signals_sp->GetSignalAsStringRef(signo));
 
   return nullptr;
 }

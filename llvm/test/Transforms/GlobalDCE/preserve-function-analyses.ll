@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>),globaldce,function(require<domtree>)' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=false -passes='function(require<domtree>),globaldce,function(require<domtree>)' %s 2>&1 | FileCheck %s
 
 ; Deleting @dead should only clear its own analyses, and not invalidate the
 ; analyses of @live.

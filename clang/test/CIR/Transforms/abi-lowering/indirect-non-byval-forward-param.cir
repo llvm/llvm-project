@@ -277,7 +277,7 @@ module attributes {
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     %v = cir.load %spill : !cir.ptr<!rec_Big>, !rec_Big
     cir.call @takes_big_non_byval(%v) : (!rec_Big) -> ()
-    %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %ret = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %ret : !rec_Big, !cir.ptr<!rec_Big>
     %r = cir.load %ret : !cir.ptr<!rec_Big>, !rec_Big
@@ -805,7 +805,7 @@ module attributes {
   // index its classification sits at once the signature is rewritten.
   cir.func @sret_with_unloaded_param(%arg0: !rec_Big) -> !rec_Big
       requires_call_conv_lowering attributes { test_classify = #sret_and_non_byval } {
-    %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %ret = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %spill = cir.alloca "arg0" align(8) init const : !cir.ptr<!rec_Big>
     cir.store %arg0, %spill : !rec_Big, !cir.ptr<!rec_Big>
     cir.call @takes_big_non_byval(%arg0) : (!rec_Big) -> ()

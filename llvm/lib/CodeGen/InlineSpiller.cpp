@@ -85,7 +85,6 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   VirtRegMap &VRM;
   MachineRegisterInfo &MRI;
   const TargetInstrInfo &TII;
-  const TargetRegisterInfo &TRI;
   const MachineBlockFrequencyInfo &MBFI;
   LiveRegMatrix *Matrix;
 
@@ -134,8 +133,7 @@ public:
                    MachineFunction &mf, VirtRegMap &vrm, LiveRegMatrix *matrix)
       : MF(mf), LIS(Analyses.LIS), LSS(Analyses.LSS), MDT(Analyses.MDT),
         VRM(vrm), MRI(mf.getRegInfo()), TII(*mf.getSubtarget().getInstrInfo()),
-        TRI(*mf.getSubtarget().getRegisterInfo()), MBFI(Analyses.MBFI),
-        Matrix(matrix), IPA(LIS, mf.getNumBlockIDs()) {}
+        MBFI(Analyses.MBFI), Matrix(matrix), IPA(LIS, mf.getNumBlockIDs()) {}
 
   void addToMergeableSpills(MachineInstr &Spill, int StackSlot,
                             Register Original);

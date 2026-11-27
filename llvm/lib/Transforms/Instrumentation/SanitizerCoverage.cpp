@@ -13,6 +13,7 @@
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "InstrumentationOptions.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -188,7 +189,7 @@ private:
   GlobalVariable *CreateFunctionLocalArrayInSection(size_t NumElements,
                                                     Function &F, Type *Ty,
                                                     const char *Section);
-  GlobalVariable *CreatePCArray(Function &F, ArrayRef<BasicBlock *> AllBlocks);
+  void CreatePCArray(Function &F, ArrayRef<BasicBlock *> AllBlocks);
   void CreateFunctionLocalArrays(Function &F, ArrayRef<BasicBlock *> AllBlocks);
   Instruction *CreateGateBranch(Function &F, Value *&FunctionGateCmp,
                                 Instruction *I);
@@ -235,7 +236,6 @@ private:
   GlobalVariable *FunctionGuardArray;       // for trace-pc-guard.
   GlobalVariable *Function8bitCounterArray; // for inline-8bit-counters.
   GlobalVariable *FunctionBoolArray;        // for inline-bool-flag.
-  GlobalVariable *FunctionPCsArray;         // for pc-table.
   GlobalVariable *FunctionCFsArray;         // for control flow table
   // Runtime calls inserted into the current function, for
   // addFuncletBundles().
@@ -361,7 +361,6 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   FunctionGuardArray = nullptr;
   Function8bitCounterArray = nullptr;
   FunctionBoolArray = nullptr;
-  FunctionPCsArray = nullptr;
   FunctionCFsArray = nullptr;
   IntptrTy = Type::getIntNTy(*C, DL->getPointerSizeInBits());
   PtrTy = PointerType::getUnqual(*C);
@@ -710,14 +709,15 @@ CallInst *ModuleSanitizerCoverage::createRuntimeCall(IRBuilder<> &IRB,
 // integer or makes an indirect call would lose its body. Give each runtime
 // call the bundle of the funclet it is in.
 void ModuleSanitizerCoverage::addFuncletBundles(Function &F) {
-  SmallVector<CallInst *, 16> Calls;
-  std::swap(Calls, RuntimeCalls);
-  if (Calls.empty() || !F.hasPersonalityFn() ||
+  if (RuntimeCalls.empty())
+    return;
+  llvm::scope_exit ClearCalls([&] { RuntimeCalls.clear(); });
+  if (!F.hasPersonalityFn() ||
       !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     return;
 
   DenseMap<BasicBlock *, ColorVector> BlockColors = colorEHFunclets(F);
-  for (CallInst *CI : Calls) {
+  for (CallInst *CI : RuntimeCalls) {
     const ColorVector &Colors = BlockColors[CI->getParent()];
     // Unreachable blocks have no color; they are deleted later.
     if (Colors.empty())
@@ -729,7 +729,7 @@ void ModuleSanitizerCoverage::addFuncletBundles(Function &F) {
     }
     BasicBlock *Color = Colors.front();
     BasicBlock::iterator Pad = Color->getFirstNonPHIIt();
-    if (Pad == Color->end() || !Pad->isEHPad())
+    if (Pad == Color->end() || !isa<FuncletPadInst>(Pad))
       continue;
     OperandBundleDef OB("funclet", &*Pad);
     CallBase *NewCall = CallBase::addOperandBundle(CI, LLVMContext::OB_funclet,
@@ -771,9 +771,8 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
   return Array;
 }
 
-GlobalVariable *
-ModuleSanitizerCoverage::CreatePCArray(Function &F,
-                                       ArrayRef<BasicBlock *> AllBlocks) {
+void ModuleSanitizerCoverage::CreatePCArray(Function &F,
+                                            ArrayRef<BasicBlock *> AllBlocks) {
   size_t N = AllBlocks.size();
   assert(N);
   SmallVector<Constant *, 32> PCs;
@@ -794,8 +793,6 @@ ModuleSanitizerCoverage::CreatePCArray(Function &F,
   PCArray->setInitializer(
       ConstantArray::get(ArrayType::get(PtrTy, N * 2), PCs));
   PCArray->setConstant(true);
-
-  return PCArray;
 }
 
 void ModuleSanitizerCoverage::CreateFunctionLocalArrays(
@@ -812,7 +809,7 @@ void ModuleSanitizerCoverage::CreateFunctionLocalArrays(
         AllBlocks.size(), F, Int1Ty, SanCovBoolFlagSectionName);
 
   if (Options.PCTable)
-    FunctionPCsArray = CreatePCArray(F, AllBlocks);
+    CreatePCArray(F, AllBlocks);
 }
 
 Value *ModuleSanitizerCoverage::CreateFunctionLocalGateCmp(IRBuilder<> &IRB) {

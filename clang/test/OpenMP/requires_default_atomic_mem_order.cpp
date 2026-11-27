@@ -5,6 +5,9 @@
 // RUN: %clang_cc1 -emit-llvm -fopenmp -triple=x86_64-unknown-linux-gnu \
 // RUN:   -DORDERING=acq_rel -o - %s \
 // RUN: | FileCheck %s --check-prefix=ACQ_REL
+// RUN: %clang_cc1 -emit-llvm -fopenmp -fopenmp-version=50 \
+// RUN:   -triple=x86_64-unknown-linux-gnu -DORDERING=acq_rel -o - %s \
+// RUN: | FileCheck %s --check-prefix=ACQ_REL50
 // RUN: %clang_cc1 -emit-llvm -fopenmp -triple=x86_64-unknown-linux-gnu \
 // RUN:   -DORDERING=relaxed -o - %s \
 // RUN: | FileCheck %s --check-prefix=RELAXED
@@ -18,7 +21,6 @@
 // SEQ_CST-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // SEQ_CST-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
 // SEQ_CST-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[TMP0]], i32 1 seq_cst, align 4
-// SEQ_CST-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1:[0-9]+]])
 // SEQ_CST-NEXT:    ret void
 //
 // ACQ_REL-LABEL: define dso_local void @_Z3fooPi(
@@ -27,9 +29,17 @@
 // ACQ_REL-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
 // ACQ_REL-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
 // ACQ_REL-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
-// ACQ_REL-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[TMP0]], i32 1 release, align 4
-// ACQ_REL-NEXT:    call void @__kmpc_flush(ptr @[[GLOB1:[0-9]+]])
+// ACQ_REL-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[TMP0]], i32 1 acq_rel, align 4
 // ACQ_REL-NEXT:    ret void
+//
+// ACQ_REL50-LABEL: define dso_local void @_Z3fooPi(
+// ACQ_REL50-SAME: ptr noundef [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+// ACQ_REL50-NEXT:  [[ENTRY:.*:]]
+// ACQ_REL50-NEXT:    [[X_ADDR:%.*]] = alloca ptr, align 8
+// ACQ_REL50-NEXT:    store ptr [[X]], ptr [[X_ADDR]], align 8
+// ACQ_REL50-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[X_ADDR]], align 8
+// ACQ_REL50-NEXT:    [[TMP1:%.*]] = atomicrmw add ptr [[TMP0]], i32 1 release, align 4
+// ACQ_REL50-NEXT:    ret void
 //
 // RELAXED-LABEL: define dso_local void @_Z3fooPi(
 // RELAXED-SAME: ptr noundef [[X:%.*]]) #[[ATTR0:[0-9]+]] {

@@ -25,11 +25,22 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
+#include "llvm/ADT/StringSet.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-CommandObjectExpression::CommandOptions::CommandOptions() = default;
+CommandObjectExpression::CommandOptions::CommandOptions() {
+  llvm::StringSet<> plugin_names;
+  Language::ForEach([&](Language *language) {
+    if (!plugin_names.insert(language->GetPluginName()).second)
+      return IterationAction::Continue;
+    if (std::unique_ptr<OptionGroupLanguageExpression> options =
+            language->CreateExpressionOptions())
+      m_language_options.push_back(std::move(options));
+    return IterationAction::Continue;
+  });
+}
 
 CommandObjectExpression::CommandOptions::~CommandOptions() = default;
 
@@ -44,9 +55,6 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
   const int short_option = GetDefinitions()[option_idx].short_option;
 
   switch (short_option) {
-  case 'Q':
-    cpp_ignore_context_qualifiers = true;
-    break;
   case 'l':
     language = Language::GetLanguageTypeFromString(option_arg);
     if (language == eLanguageTypeUnknown) {
@@ -194,7 +202,6 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   top_level = false;
   allow_jit = true;
   suppress_persistent_result = eLazyBoolCalculate;
-  cpp_ignore_context_qualifiers = false;
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -217,7 +224,9 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
   options.SetExecutionPolicy(
       allow_jit ? EvaluateExpressionOptions::default_execution_policy
                 : lldb_private::eExecutionPolicyNever);
-  options.SetCppIgnoreContextQualifiers(cpp_ignore_context_qualifiers);
+  for (const std::shared_ptr<OptionGroupLanguageExpression> &language_options :
+       m_language_options)
+    language_options->Apply(options);
 
   bool auto_apply_fixits;
   if (this->auto_apply_fixits == eLazyBoolCalculate)
@@ -252,6 +261,13 @@ bool CommandObjectExpression::CommandOptions::ShouldSuppressResult(
 
   return display_opts.use_object_desc &&
          m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact;
+}
+
+void CommandObjectExpression::CommandOptions::AppendLanguageOptions(
+    OptionGroupOptions &group) {
+  for (const std::shared_ptr<OptionGroupLanguageExpression> &language_options :
+       m_language_options)
+    group.Append(language_options.get());
 }
 
 CommandObjectExpression::CommandObjectExpression(
@@ -326,6 +342,7 @@ Examples:
                             OptionGroupFormat::OPTION_GROUP_GDB_FMT,
                         LLDB_OPT_SET_1);
   m_option_group.Append(&m_command_options);
+  m_command_options.AppendLanguageOptions(m_option_group);
   m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL,
                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2);
   m_option_group.Append(&m_repl_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_3);

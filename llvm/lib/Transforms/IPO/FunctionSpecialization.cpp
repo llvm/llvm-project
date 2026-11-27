@@ -179,10 +179,9 @@ Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
   LLVM_DEBUG(dbgs() << "FnSpecialization:     {CodeSize = " << CodeSize
                     << "} for user " << *User << "\n");
 
-  for (auto *U : User->users())
-    if (auto *UI = dyn_cast<Instruction>(U))
-      if (UI != User && isBlockExecutable(UI->getParent()))
-        CodeSize += getCodeSizeSavingsForUser(UI, User, C);
+  for (Instruction *UI : User->users())
+    if (UI != User && isBlockExecutable(UI->getParent()))
+      CodeSize += getCodeSizeSavingsForUser(UI, User, C);
 
   return CodeSize;
 }
@@ -1106,9 +1105,9 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
        (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
     return false;
 
-  // SCCP solver does not record an argument that will be constructed on
-  // stack.
-  if (A->hasByValAttr() && !A->getParent()->onlyReadsMemory())
+  // SCCP solver does not propagate byval arguments, as they are implicitly
+  // copied onto the callee's stack.
+  if (A->hasByValAttr())
     return false;
 
   // For non-argument-tracked functions every argument is overdefined.

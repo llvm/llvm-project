@@ -6,7 +6,6 @@ name:            test_intrinsic
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0:

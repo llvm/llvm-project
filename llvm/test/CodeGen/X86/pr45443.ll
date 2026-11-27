@@ -5,20 +5,12 @@
 define <16 x float> @PR45443() {
 ; X86-LABEL: PR45443:
 ; X86:       # %bb.0: # %bb
-; X86-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080]
 ; X86-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm0
-; X86-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm1, %k1
-; X86-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm1, %k1 {%k1}
-; X86-NEXT:    vbroadcastss {{.*#+}} zmm0 {%k1} = [-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: PR45443:
 ; X64:       # %bb.0: # %bb
-; X64-NEXT:    vpbroadcastd {{.*#+}} zmm1 = [2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080,2181038080]
 ; X64-NEXT:    vfmadd231ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm0
-; X64-NEXT:    vpcmpltud {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k1
-; X64-NEXT:    vptestmd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %k1 {%k1}
-; X64-NEXT:    vbroadcastss {{.*#+}} zmm0 {%k1} = [-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf,-Inf]
 ; X64-NEXT:    retq
 bb:
   %tmp = tail call <16 x i32> @llvm.x86.avx512.psll.d.512(<16 x i32> <i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040, i32 1090519040>, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>)

@@ -139,6 +139,9 @@ add_orc_rt_unittest(BedrockTests
   bedrock/host/CPUFeaturesTest.cpp
   bedrock/host/TargetTripleTest.cpp
 
+  bedrock/sys/posix/DlfcnLoaderAdapterCTest.c
+  bedrock/sys/posix/DlfcnLoaderAdapterTest.cpp
+
   ${ORC_RT_BEDROCK_TEST_POSIX_SOURCES}
   ${ORC_RT_BEDROCK_TEST_APPLE_SOURCES}
 

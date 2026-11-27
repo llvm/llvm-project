@@ -3,7 +3,6 @@
 
 ---
 name: test
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:

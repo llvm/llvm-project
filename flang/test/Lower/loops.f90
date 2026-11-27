@@ -64,8 +64,12 @@ subroutine loop_test
   6 continue
   enddo
 
-  ! CHECK-NOT: fir.do_loop
-  ! CHECK-NOT: fir.if
+  ! The computed GOTO's targets are inside the body, so only the body is
+  ! folded into a region, inside the mask test.
+  ! CHECK: fir.do_concurrent.loop (%{{.*}}) = {{.*}}
+  ! CHECK: fir.if
+  ! CHECK: scf.execute_region no_inline {
+  ! CHECK: fir.select
   do concurrent (integer(2)::i=1:5, i.ne.3)
     goto (7, 7) i+1
     ! CHECK: fir.call @_FortranAioBeginExternalListOutput

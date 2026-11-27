@@ -16,7 +16,6 @@
 ---
 name:            SpillGPR
 alignment:       16
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0.entry:
@@ -51,7 +50,6 @@ body:             |
 ---
 name:            SpillFPR
 alignment:       16
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0.entry:
@@ -83,7 +81,6 @@ body:             |
 ---
 name:            SpillVR
 alignment:       16
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0.entry:
@@ -119,7 +116,6 @@ body:             |
 ---
 name:            SpillMixed
 alignment:       16
-tracksRegLiveness: true
 liveins:
 body:             |
   bb.0.entry:

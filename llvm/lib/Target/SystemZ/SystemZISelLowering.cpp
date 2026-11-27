@@ -25,7 +25,6 @@
 #include "llvm/IR/IntrinsicsS390.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Target/TargetMachine.h"
@@ -35,13 +34,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "systemz-lower"
-
-// Temporarily let this be disabled by default until all known problems
-// related to argument extensions are fixed.
-static cl::opt<bool> EnableIntArgExtCheck(
-    "argext-abi-check", cl::init(false),
-    cl::desc("Verify that narrow int args are properly extended per the "
-             "SystemZ ABI."));
 
 namespace {
 // Represents information about a comparison.
@@ -205,6 +197,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SADDO, VT, Custom);
       setOperationAction(ISD::SSUBO, VT, Custom);
 
+      // Support multiplication with overflow (MSC, MSGC, MSRKC, MSGRKC).
+      if (Subtarget.hasMiscellaneousExtensions2())
+        setOperationAction(ISD::SMULO, VT, Custom);
+
       // Support addition/subtraction with carry.
       setOperationAction(ISD::UADDO, VT, Custom);
       setOperationAction(ISD::USUBO, VT, Custom);
@@ -297,6 +293,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          MVT::i128, Legal);
+
+      setOperationAction({ISD::AVGCEILS, ISD::AVGCEILU}, MVT::i128, Legal);
     }
   }
 
@@ -511,6 +509,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VT,
                          Legal);
+      setOperationAction({ISD::AVGCEILS, ISD::AVGCEILU}, VT, Legal);
     }
   }
 
@@ -4989,7 +4988,7 @@ SDValue SystemZTargetLowering::lowerOR(SDValue Op, SelectionDAG &DAG) const {
                                    MVT::i64, HighOp, Low32);
 }
 
-// Lower SADDO/SSUBO/UADDO/USUBO nodes.
+// Lower SADDO/SSUBO/SMULO/UADDO/USUBO nodes.
 SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDNode *N = Op.getNode();
@@ -5037,6 +5036,11 @@ SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
     break;
   case ISD::SSUBO:
     BaseOp = SystemZISD::SSUBO;
+    CCValid = SystemZ::CCMASK_ARITH;
+    CCMask = SystemZ::CCMASK_ARITH_OVERFLOW;
+    break;
+  case ISD::SMULO:
+    BaseOp = SystemZISD::SMULO;
     CCValid = SystemZ::CCMASK_ARITH;
     CCMask = SystemZ::CCMASK_ARITH_OVERFLOW;
     break;
@@ -5738,6 +5742,21 @@ SystemZTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::s390_vmlhg:
   case Intrinsic::s390_vmlhq:
     return DAG.getNode(ISD::MULHU, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+
+  case Intrinsic::s390_vavgb:
+  case Intrinsic::s390_vavgh:
+  case Intrinsic::s390_vavgf:
+  case Intrinsic::s390_vavgg:
+  case Intrinsic::s390_vavgq:
+    return DAG.getNode(ISD::AVGCEILS, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::s390_vavglb:
+  case Intrinsic::s390_vavglh:
+  case Intrinsic::s390_vavglf:
+  case Intrinsic::s390_vavglg:
+  case Intrinsic::s390_vavglq:
+    return DAG.getNode(ISD::AVGCEILU, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
 
   case Intrinsic::s390_vmahb:
@@ -7428,6 +7447,7 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerUDIVREM(Op, DAG);
   case ISD::SADDO:
   case ISD::SSUBO:
+  case ISD::SMULO:
   case ISD::UADDO:
   case ISD::USUBO:
     return lowerXALUO(Op, DAG);
@@ -11621,8 +11641,8 @@ bool SystemZTargetLowering::enableNarrowIntArgsVerification() const {
   if (!Subtarget.isTargetELF())
     return false;
 
-  if (EnableIntArgExtCheck.getNumOccurrences())
-    return EnableIntArgExtCheck;
+  if (auto V = toOptional(Subtarget.getCLOpts().argext_abi_check))
+    return *V;
 
 #ifdef NDEBUG
   return false;

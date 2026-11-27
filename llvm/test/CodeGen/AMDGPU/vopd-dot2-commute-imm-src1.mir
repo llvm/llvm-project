@@ -8,7 +8,6 @@
 ---
 # dot2 is X, the first instruction.
 name:            dot2_imm_src1_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2, $vgpr3, $vgpr4
@@ -25,7 +24,6 @@ body:             |
 ---
 # dot2 is Y, the second instruction.
 name:            dot2_imm_src1_y
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2, $vgpr3, $vgpr4
@@ -42,7 +40,6 @@ body:             |
 ---
 # V_ADD_U32 can only be Y, so the second instruction (dot2) becomes X.
 name:            dot2_imm_src1_second_as_x
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2, $vgpr3, $vgpr4
@@ -59,7 +56,6 @@ body:             |
 ---
 # Both components have the same immediate in src1, so they share one literal.
 name:            dot2_imm_src1_both_same_literal
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2, $vgpr3, $vgpr5
@@ -76,7 +72,6 @@ body:             |
 ---
 # Two different literals cannot be encoded in one VOPD.
 name:            dot2_imm_src1_both_different_literals
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2, $vgpr3, $vgpr5
@@ -94,7 +89,6 @@ body:             |
 ---
 # Immediates in both src0 and src1: commuting would not put a register in src1.
 name:            dot2_imm_src0_and_src1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr2, $vgpr3, $vgpr4
@@ -114,7 +108,6 @@ body:             |
 # the other component (v8), so the pair is rejected. Without the commute only
 # src0 would be compared (v0 and v1), which do not conflict.
 name:            dot2_imm_src1_commuted_bank_conflict
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr8
@@ -134,7 +127,6 @@ body:             |
 # conflict with v4 and v6. Without the commute src0 would be v0, which is in the
 # same bank as v4.
 name:            dot2_imm_src1_commuted_no_bank_conflict
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr2, $vgpr4, $vgpr6

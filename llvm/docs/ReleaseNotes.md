@@ -227,6 +227,12 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Removed `LiveVariables` analysis
 
+* Removed `MemorySSA::ensureOptimizedUses()`, which no longer had any users.
+  Query `MemorySSAWalker::getClobberingMemoryAccess()` instead; it optimizes
+  each `MemoryUse` on demand and caches the result. `print<memoryssa>` no
+  longer optimizes uses before printing, and its `<no-ensure-optimized-uses>`
+  option is removed; use `print<memoryssa-walker>` to print clobbers.
+
 * `IRBuilder::CreateGEP()` and similar methods will now convert the GEP into a
   ptradd-compatible representation, using a sequence of `getelementptr i8` and
   `getelementptr [N x i8]` instructions. The `disableGEPCanonicalization()`
@@ -451,6 +457,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the Windows Target
 
+* On 32-bit Arm, a trap now follows a noreturn call that would otherwise end
+  a function or funclet, so the unwinder finds the right frame.
+
 ### Changes to the X86 Backend
 
 * Added assembler and code generation support for the `AVX10_V2_AUX`
@@ -597,6 +606,11 @@ Makes programs 10x faster by doing Special New Thing.
   sift through. The `-eutf8` is also available to search for UTF-8 strings,
   which is mostly useful on Windows where configuring the system to use UTF-8 is
   more involved than setting an environment variable.
+
+* `llvm-readobj --unwind` now decodes only the part of `.pdata` covered by the
+  exception directory for ARM and ARM64 PE images, instead of the whole
+  section. Previously, other data merged into `.pdata` was decoded as unwind
+  entries, which could cause a fatal error.
 
 ### Changes to LLDB
 

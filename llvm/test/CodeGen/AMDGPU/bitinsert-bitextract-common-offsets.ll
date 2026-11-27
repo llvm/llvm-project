@@ -90,7 +90,7 @@ define i8 @test_bitextract_b16_byte_hi(b16 %src) {
 ; GFX9-LABEL: test_bitextract_b16_byte_hi:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b16_e32 v0, 8, v0
+; GFX9-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-TRUE16-LABEL: test_bitextract_b16_byte_hi:
@@ -110,7 +110,7 @@ define i8 @test_bitextract_b16_byte_hi(b16 %src) {
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    v_lshrrev_b16 v0, 8, v0
+; GFX12-FAKE16-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %result = bitextract i8, b16 %src, i32 8
   ret i8 %result
@@ -199,8 +199,8 @@ define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 ; GFX9-LABEL: test_bitinsert_b16_off8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
-; GFX9-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX9-NEXT:    s_mov_b32 s4, 0xc0c0004
+; GFX9-NEXT:    v_perm_b32 v0, v0, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-TRUE16-LABEL: test_bitinsert_b16_off8:
@@ -223,10 +223,7 @@ define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 ; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX12-FAKE16-NEXT:    v_perm_b32 v0, v0, v1, 0xc0c0004
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b16 %base, i8 %val, i32 8
   ret b16 %result

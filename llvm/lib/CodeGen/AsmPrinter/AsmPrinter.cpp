@@ -464,22 +464,10 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
   EmitStackMaps = [this](Module &M) {
     GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
     assert(MI && "AsmPrinter didn't require GCModuleInfo?");
-    bool NeedsDefault = false;
-    if (MI->begin() == MI->end())
-      // No GC strategy, use the default format.
-      NeedsDefault = true;
-    else
-      for (const auto &I : *MI) {
-        if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*I))
-          if (MP->emitStackMaps(SM, *this))
-            continue;
-        // The strategy doesn't have printer or doesn't emit custom stack maps.
-        // Use the default format.
-        NeedsDefault = true;
-      }
-
-    if (NeedsDefault)
-      SM.serializeToStackMapSection();
+    SmallVector<GCStrategy *, 1> Strategies;
+    for (const auto &I : *MI)
+      Strategies.push_back(I.get());
+    emitStackMapsForGCStrategies(Strategies);
   };
   AssertDebugEHFinalized = [&]() {
     assert(!DD && Handlers.size() == NumUserHandlers &&
@@ -3252,12 +3240,14 @@ bool AsmPrinter::doFinalization(Module &M) {
 
   // If we don't have any trampolines, then we don't require stack memory
   // to be executable. Some targets have a directive to declare this.
-  Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
-  bool HasTrampolineUses =
-      InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
-  MCSection *S = MAI.getStackSection(OutContext, /*Exec=*/HasTrampolineUses);
-  if (S)
-    OutStreamer->switchSection(S);
+  if (MAI.emitELFStackSection()) {
+    Function *InitTrampolineIntrinsic = M.getFunction("llvm.init.trampoline");
+    bool HasTrampolineUses =
+        InitTrampolineIntrinsic && !InitTrampolineIntrinsic->use_empty();
+    OutStreamer->switchSection(
+        OutContext.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS,
+                                 HasTrampolineUses ? ELF::SHF_EXECINSTR : 0U));
+  }
 
   if (TM.Options.EmitAddrsig && MAI.hasAddrsigDirective()) {
     // Emit address-significance attributes for all globals.
@@ -5102,6 +5092,27 @@ isBlockOnlyReachableByFallthrough(const MachineBasicBlock *MBB) const {
   return true;
 }
 
+void AsmPrinter::emitStackMapsForGCStrategies(
+    ArrayRef<GCStrategy *> Strategies) {
+  bool NeedsDefault = false;
+  if (Strategies.empty())
+    // No GC strategy, use the default format.
+    NeedsDefault = true;
+  else {
+    for (GCStrategy *S : Strategies) {
+      if (GCMetadataPrinter *MP = getOrCreateGCPrinter(*S))
+        if (MP->emitStackMaps(SM, *this))
+          continue;
+      // The strategy doesn't have printer or doesn't emit custom stack maps.
+      // Use the default format.
+      NeedsDefault = true;
+    }
+  }
+
+  if (NeedsDefault)
+    SM.serializeToStackMapSection();
+}
+
 GCMetadataPrinter *AsmPrinter::getOrCreateGCPrinter(GCStrategy &S) {
   if (!S.usesMetadata())
     return nullptr;
@@ -5494,7 +5505,12 @@ void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};
   AsmPrinter.FinishGCAssembly = [](Module &M) {};
-  AsmPrinter.EmitStackMaps = [](Module &M) {};
+  AsmPrinter.EmitStackMaps = [&MAM, &AsmPrinter](Module &M) {
+    SmallVector<GCStrategy *, 1> Strategies;
+    for (auto &[Name, S] : MAM.getResult<CollectorMetadataAnalysis>(M))
+      Strategies.push_back(S.get());
+    AsmPrinter.emitStackMapsForGCStrategies(Strategies);
+  };
   AsmPrinter.AssertDebugEHFinalized = []() {};
 }
 
@@ -5535,7 +5551,13 @@ void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
   // TODO(boomanaiden154): Get GC working with the new pass manager.
   AsmPrinter.BeginGCAssembly = [](Module &M) {};
   AsmPrinter.FinishGCAssembly = [](Module &M) {};
-  AsmPrinter.EmitStackMaps = [](Module &M) {};
+  AsmPrinter.EmitStackMaps = [&MAMProxy, &AsmPrinter](Module &M) {
+    SmallVector<GCStrategy *, 1> Strategies;
+    if (auto *Map = MAMProxy.getCachedResult<CollectorMetadataAnalysis>(M))
+      for (auto &[Name, S] : *Map)
+        Strategies.push_back(S.get());
+    AsmPrinter.emitStackMapsForGCStrategies(Strategies);
+  };
   AsmPrinter.AssertDebugEHFinalized = []() {};
 }
 

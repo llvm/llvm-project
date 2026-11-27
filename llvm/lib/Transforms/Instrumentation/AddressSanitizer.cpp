@@ -685,15 +685,13 @@ class ModuleAddressSanitizer {
 public:
   ModuleAddressSanitizer(const InstrumentationOptions &Opts, Module &M,
                          bool InsertVersionCheck, bool CompileKernel = false,
-                         bool Recover = false, bool UseGlobalsGC = true,
-                         bool UseOdrIndicator = true,
+                         bool UseGlobalsGC = true, bool UseOdrIndicator = true,
                          AsanDtorKind DestructorKind = AsanDtorKind::Global,
                          AsanCtorKind ConstructorKind = AsanCtorKind::Global)
       : Opts(Opts), M(M), Inserter(M),
         CompileKernel(valueOr(Opts.asan_kernel, CompileKernel)),
         InsertVersionCheck(valueOr(Opts.asan_guard_against_version_mismatch,
                                    InsertVersionCheck)),
-        Recover(valueOr(Opts.asan_recover, Recover)),
         UseGlobalsGC(UseGlobalsGC && Opts.asan_globals_live_support &&
                      !this->CompileKernel),
         // Enable aliases as they should have no downside with ODR indicators.
@@ -766,7 +764,6 @@ private:
   AsanFunctionInserter Inserter;
   bool CompileKernel;
   bool InsertVersionCheck;
-  bool Recover;
   bool UseGlobalsGC;
   bool UsePrivateAlias;
   bool UseOdrIndicator;
@@ -1057,10 +1054,9 @@ PreservedAnalyses AddressSanitizerPass::run(Module &M,
     return PreservedAnalyses::all();
 
   const InstrumentationOptions &Opts = getInstrumentationOptions(M);
-  ModuleAddressSanitizer ModuleSanitizer(Opts, M, Options.InsertVersionCheck,
-                                         Options.CompileKernel, Options.Recover,
-                                         UseGlobalGC, UseOdrIndicator,
-                                         DestructorKind, ConstructorKind);
+  ModuleAddressSanitizer ModuleSanitizer(
+      Opts, M, Options.InsertVersionCheck, Options.CompileKernel, UseGlobalGC,
+      UseOdrIndicator, DestructorKind, ConstructorKind);
   bool Modified = false;
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   const StackSafetyGlobalInfo *const SSGI =
@@ -1222,6 +1218,12 @@ bool AddressSanitizer::ignoreAccess(Instruction *Inst, Value *Ptr) {
   // selection. As such they cannot have regular uses like an instrumentation
   // function and it makes no sense to track them as memory.
   if (Ptr->isSwiftError())
+    return true;
+
+  // Ignore Swift async context addresses. On WebAssembly they lower to a
+  // local, which cannot have regular uses like an instrumentation function.
+  if (auto *II = dyn_cast<IntrinsicInst>(Ptr);
+      II && II->getIntrinsicID() == Intrinsic::swift_async_context_addr)
     return true;
 
   // Treat memory accesses to promotable allocas as non-interesting since they
@@ -3722,8 +3724,7 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   Value *NewAddressPtr = IRB.CreateIntToPtr(NewAddress, AI->getType());
 
   // Remove lifetime markers now that this is no longer an alloca.
-  for (User *U : make_early_inc_range(AI->users())) {
-    auto *I = cast<Instruction>(U);
+  for (Instruction *I : make_early_inc_range(AI->users())) {
     if (I->isLifetimeStartOrEnd())
       I->eraseFromParent();
   }

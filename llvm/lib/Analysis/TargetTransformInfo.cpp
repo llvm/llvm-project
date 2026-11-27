@@ -288,6 +288,8 @@ ValueUniformity
 llvm::TargetTransformInfo::getValueUniformity(const Value *V) const {
   ValueUniformity VU = TTIImpl->getValueUniformity(V);
   if (const auto *Call = dyn_cast<CallBase>(V)) {
+    if (Call->hasFnAttr(Attribute::AlwaysUniform))
+      return ValueUniformity::AlwaysUniform;
     if (VU == ValueUniformity::NeverUniform &&
         Call->hasFnAttr(Attribute::NoDivergenceSource))
       return ValueUniformity::Default;
@@ -717,6 +719,24 @@ TargetTransformInfo::getBuildVectorContextHint(
   return TTIImpl->getBuildVectorContextHint(Mask, Scalars, GatherUseOps);
 }
 
+bool TargetTransformInfo::isSplatFolded(
+    ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
+    const {
+  Value *Splat = nullptr;
+  SmallVector<int> Mask(Scalars.size(), PoisonMaskElem);
+  for (auto [I, V] : enumerate(Scalars)) {
+    if (isa<PoisonValue>(V))
+      continue;
+    if (isa<Constant>(V) || (Splat && V != Splat))
+      return false;
+    Splat = V;
+    Mask[I] = 0;
+  }
+  return Splat && getBuildVectorContextHint(Mask, Scalars, GatherUseOps) ==
+                      VectorInstrContext::SplatOpFolded;
+}
+
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
     TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
@@ -1102,7 +1122,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueInfo Op1Info, OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CtxI,
-    const TargetLibraryInfo *TLibInfo) const {
+    const TargetLibraryInfo *TLibInfo, ArrayRef<const Value *> Scalars) const {
 
   // Use call cost for frem instructions that have platform specific vector math
   // functions, as those will be replaced with calls later by SelectionDAG or
@@ -1117,7 +1137,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   }
 
   InstructionCost Cost = TTIImpl->getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI);
+      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI, TLibInfo, Scalars);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

@@ -3353,6 +3353,20 @@ const SCEV *ScalarEvolution::getURemExpr(SCEVUse LHS, SCEVUse RHS) {
     }
   }
 
+  // Fold LHS urem X and LHS urem (C * X) to 0 if X is a power of 2 and LHS is
+  // a multiple of C * max(X).
+  const APInt *C = nullptr;
+  const SCEV *X = RHS;
+  match(RHS, m_scev_Mul(m_scev_APInt(C), m_SCEV(X)));
+  if (isKnownToBeAPowerOfTwo(X)) {
+    APInt MaxX = getUnsignedRangeMax(X);
+    bool Overflow = false;
+    APInt MaxRHS = C ? C->umul_ov(MaxX, Overflow) : MaxX;
+    if (MaxX.isPowerOf2() && !Overflow &&
+        getConstantMultiple(LHS).urem(MaxRHS) == 0)
+      return getZero(LHS->getType());
+  }
+
   // Fallback to %a == %x urem %y == %x -<nuw> ((%x udiv %y) *<nuw> %y)
   const SCEV *UDiv = getUDivExpr(LHS, RHS);
   const SCEV *Mult = getMulExpr(UDiv, RHS, SCEV::FlagNUW);
@@ -4708,8 +4722,7 @@ static void PushDefUseChildren(Instruction *I,
                                SmallVectorImpl<Instruction *> &Worklist,
                                SmallPtrSetImpl<Instruction *> &Visited) {
   // Push the def-use children onto the Worklist stack.
-  for (User *U : I->users()) {
-    auto *UserInsn = cast<Instruction>(U);
+  for (Instruction *UserInsn : I->users()) {
     if (Visited.insert(UserInsn).second)
       Worklist.push_back(UserInsn);
   }
@@ -7287,6 +7300,10 @@ bool ScalarEvolution::isGuaranteedToTransferExecutionTo(const Instruction *A,
 }
 
 bool ScalarEvolution::isGuaranteedNotToBePoison(const SCEV *Op) {
+  // Use flags only hold where the expression is used, so Op may be poison
+  // elsewhere if it or any of its operands carries them.
+  if (Op->getCanonical() != Op)
+    return false;
   SCEVPoisonCollector PC(/* LookThroughMaybePoisonBlocking */ true);
   visitAll(Op, PC);
   return PC.MaybePoison.empty();
@@ -14704,7 +14721,7 @@ void ScalarEvolution::verify() const {
     if (It == BackedgeTakenCounts.end())
       continue;
 
-    auto *CurBECount =
+    SCEVUse CurBECount =
         SCM.visit(It->second.getExact(L, const_cast<ScalarEvolution *>(this)));
     auto *NewBECount = SE2.getBackedgeTakenCount(L);
 

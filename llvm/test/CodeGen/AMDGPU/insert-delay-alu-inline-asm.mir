@@ -21,7 +21,7 @@ body: |
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
 ...
 
@@ -42,7 +42,7 @@ body: |
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
-    INLINEASM &"s_nop 0\0As_nop 0", 1 /* sideeffect attdialect */
+    INLINEASM &"s_nop 0\0As_nop 0", sideeffect attdialect
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
 ...
 
@@ -83,7 +83,7 @@ body: |
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     ; CHECK-NEXT: $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
 ...

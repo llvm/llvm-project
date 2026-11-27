@@ -2000,7 +2000,7 @@ bool OccInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
   if (GCNSchedStage::shouldRevertScheduling(WavesAfter))
     return true;
 
-  if (mayCauseSpilling(WavesAfter))
+  if (shouldRevertInitialSchedule(WavesAfter))
     return true;
 
   return false;
@@ -2017,8 +2017,13 @@ bool UnclusteredHighRPStage::shouldRevertScheduling(unsigned WavesAfter) {
     return true;
   }
 
-  // Do not attempt to relax schedule even more if we are already spilling.
-  if (isRegionWithExcessRP())
+  // Do not attempt to relax schedule even more if we are already spilling
+  // VGPRs, or if reverting would spill VGPRs. SGPRs spill to VGPR lanes, which
+  // is cheap, so if only SGPRs are in excess, still check that the new
+  // schedule does not cost too much latency.
+  if (isRegionWithExcessRP() &&
+      (GCNRPTarget(MF, PressureBefore).hasVectorRegisterExcess() ||
+       GCNRPTarget(MF, PressureAfter).hasVectorRegisterExcess()))
     return false;
 
   LLVM_DEBUG(
@@ -2065,7 +2070,7 @@ bool PreRARematStage::shouldRevertScheduling(unsigned WavesAfter) {
 }
 
 bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
-  if (mayCauseSpilling(WavesAfter))
+  if (shouldRevertInitialSchedule(WavesAfter))
     return true;
 
   return false;
@@ -2073,7 +2078,7 @@ bool ILPInitialScheduleStage::shouldRevertScheduling(unsigned WavesAfter) {
 
 bool MemoryClauseInitialScheduleStage::shouldRevertScheduling(
     unsigned WavesAfter) {
-  return mayCauseSpilling(WavesAfter);
+  return shouldRevertInitialSchedule(WavesAfter);
 }
 
 bool LiveIntervalRPStage::initGCNSchedStage() {
@@ -2158,6 +2163,33 @@ bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
     return true;
   }
 
+  return false;
+}
+
+bool GCNSchedStage::reducesLatency() {
+  if (DAG.SUnits.empty())
+    return false;
+
+  ScheduleMetrics MBefore = getScheduleMetrics(DAG.SUnits);
+  ScheduleMetrics MAfter = getScheduleMetrics(DAG);
+  LLVM_DEBUG(dbgs() << "Metric before " << MBefore << "\tMetric after "
+                    << MAfter);
+  return MAfter.getMetric() < MBefore.getMetric();
+}
+
+bool GCNSchedStage::shouldRevertInitialSchedule(unsigned WavesAfter) {
+  if (!mayCauseSpilling(WavesAfter))
+    return false;
+  if (PressureBefore.less(MF, PressureAfter))
+    return true;
+
+  if (!reducesLatency()) {
+    LLVM_DEBUG(dbgs() << "Equivalent RP, new schedule does not reduce "
+                         "latency.\n");
+    return true;
+  }
+  LLVM_DEBUG(dbgs() << "Equivalent RP, keeping schedule with better "
+                       "latency.\n");
   return false;
 }
 

@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -31,21 +32,12 @@
 
 using namespace llvm;
 
-cl::opt<bool>
-    EnableMachineCombinerPass("systemz-machine-combiner",
-                              cl::desc("Enable the machine combiner pass"),
-                              cl::init(true), cl::Hidden);
-
-static cl::opt<bool> GenericSched(
-    "generic-sched", cl::Hidden, cl::init(false),
-    cl::desc("Run the generic pre-ra scheduler instead of the SystemZ "
-             "scheduler."));
-
 // NOLINTNEXTLINE(readability-identifier-naming)
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeSystemZTarget() {
   // Register the target.
   RegisterTargetMachine<SystemZTargetMachine> X(getTheSystemZTarget());
+  static opt::RegisterLibraryOptions<SystemZOptions> O;
   auto &PR = *PassRegistry::getPassRegistry();
   initializeSystemZAlignGlobalsLegacyPass(PR);
   initializeSystemZAsmPrinterPass(PR);
@@ -146,6 +138,8 @@ SystemZTargetMachine::SystemZTargetMachine(const Target &T, const Triple &TT,
           T, TT, CPU, FS, Options, getEffectiveRelocModel(TT, RM),
           getEffectiveSystemZCodeModel(CM, getEffectiveRelocModel(TT, RM), JIT),
           OL),
+      CLOpts(cl::LibraryOptionsContext::get<SystemZOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(createTLOF(getTargetTriple())) {
   initAsmInfo();
 }
@@ -200,7 +194,7 @@ ScheduleDAGInstrs *
 SystemZTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
   // Use GenericScheduler if requested on CL or for Z10 which has no sched
   // model.
-  if (GenericSched ||
+  if (CLOpts.generic_sched ||
       !C->MF->getSubtarget().getSchedModel().hasInstrSchedModel())
     return nullptr;
 
@@ -261,7 +255,7 @@ bool SystemZPassConfig::addInstSelector() {
 bool SystemZPassConfig::addILPOpts() {
   addPass(&EarlyIfConverterLegacyID);
 
-  if (EnableMachineCombinerPass)
+  if (getSystemZTargetMachine().getCLOpts().machine_combiner)
     addPass(&MachineCombinerID);
 
   return true;

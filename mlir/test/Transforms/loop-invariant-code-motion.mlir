@@ -1809,3 +1809,31 @@ func.func @do_not_hoist_from_unreachable_block(%a: i32, %lb: index,
   %late = arith.addi %a, %a : i32
   return %late : i32
 }
+
+// -----
+
+func.func private @consume(i32)
+
+func.func @tensor_pad_region_not_hoisted(
+    %input: tensor<1xi32>, %numerator: i32, %denominator: i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  scf.for %i = %c0 to %c0 step %c1 {
+    %padded = tensor.pad %input low[0] high[1] {
+    ^bb0(%idx: index):
+      %quotient = arith.divsi %numerator, %denominator : i32
+      tensor.yield %quotient : i32
+    } : tensor<1xi32> to tensor<2xi32>
+    %value = tensor.extract %padded[%c1] : tensor<2xi32>
+    func.call @consume(%value) : (i32) -> ()
+  }
+
+  return
+}
+
+// CHECK-LABEL: func.func @tensor_pad_region_not_hoisted
+// CHECK: scf.for
+// CHECK: tensor.pad
+// CHECK: arith.divsi
+// CHECK: tensor.yield

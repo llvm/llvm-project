@@ -6,7 +6,6 @@
 
 ---
 name:            wwm_scratch_reg_spill_reload_of_outgoing_reg
-tracksRegLiveness: true
 machineFunctionInfo:
   wwmReservedRegs: ['$vgpr0']
   isEntryFunction: false
@@ -43,7 +42,6 @@ body:             |
 # The vgpr2 doesn't need the tied-op in the reload as it isn't holding any return value.
 ---
 name:            wwm_scratch_reg_spill_reload_of_outgoing_tuple_subreg
-tracksRegLiveness: true
 machineFunctionInfo:
   wwmReservedRegs: ['$vgpr0', '$vgpr2']
   isEntryFunction: false
@@ -88,7 +86,6 @@ body:             |
 
 ---
 name:            wwm_scratch_reg_spill_reload_different_outgoing_reg
-tracksRegLiveness: true
 machineFunctionInfo:
   wwmReservedRegs: ['$vgpr2']
   isEntryFunction: false
@@ -125,7 +122,6 @@ body:             |
 # Tied op not required in the spill reload of vgpr40 which is in the CSR range.
 ---
 name:            wwm_csr_spill_reload
-tracksRegLiveness: true
 machineFunctionInfo:
   wwmReservedRegs: ['$vgpr40']
   isEntryFunction: false

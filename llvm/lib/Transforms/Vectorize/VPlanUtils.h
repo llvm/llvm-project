@@ -150,8 +150,8 @@ VPIRFlags getFlagsForInduction(const InductionDescriptor &ID,
 
 /// Search \p Start's users for a recipe satisfying \p Pred, looking through
 /// recipes with definitions.
-template <typename PredT>
-inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+template <typename RecipeTy, typename PredT>
+inline RecipeTy *findUserRecursively(VPValue *Start, PredT Pred) {
   SetVector<VPValue *> Worklist;
   Worklist.insert(Start);
   for (unsigned I = 0; I != Worklist.size(); ++I) {
@@ -160,7 +160,7 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
     if (!R)
       continue;
     if (Pred(R))
-      return R;
+      return cast<RecipeTy>(R);
     for (VPUser *U : Cur->users()) {
       for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
         Worklist.insert(V);
@@ -299,8 +299,9 @@ class VPSCEVExpander {
       InsertedExpressions;
 
   /// Try to find a loop-invariant IR value in the plan's entry block whose
-  /// SCEV matches \p S. Returns the corresponding live-in VPValue, or nullptr
-  /// if none is found.
+  /// SCEV matches \p S. Returns the corresponding live-in VPValue, an in-IR
+  /// VPExpandSCEVRecipe if reuse requires dropping flags, or nullptr if none
+  /// is found.
   VPValue *tryToReuseIRValue(const SCEV *S);
 
   /// Returns true if \p S can be expanded in IR, hoisted out of HoistOutOf.
@@ -317,8 +318,9 @@ class VPSCEVExpander {
 
 public:
   VPSCEVExpander(VPBuilder &Builder, ScalarEvolution &SE, DebugLoc DL,
-                 const Loop *HoistOutOf = nullptr)
-      : Builder(Builder), SE(SE), DL(DL), HoistOutOf(HoistOutOf) {}
+                 const Loop *HoistOutOf = nullptr, bool SafeUDivMode = false)
+      : Builder(Builder), SE(SE), DL(DL), SafeUDivMode(SafeUDivMode),
+        HoistOutOf(HoistOutOf) {}
 
   /// Expand \p S into recipes and live-ins using the builder.
   VPValue *expand(const SCEV *S);

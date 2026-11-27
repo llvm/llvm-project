@@ -43,16 +43,12 @@ struct LLVMSCFToControlFlowInterface : SCFToControlFlowDialectInterface {
 
 void LLVMDialect::initialize() {
   addInterfaces<LLVMSCFToControlFlowInterface>();
-  registerAttributes();
 
   // clang-format off
   addTypes<LLVMVoidType,
            LLVMLabelType,
            LLVMMetadataType>();
   // clang-format on
-  registerTypes();
-
-  registerLLVMDialectOperations(this);
 
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();

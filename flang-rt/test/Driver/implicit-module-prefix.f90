@@ -1,8 +1,8 @@
 ! UNSUPPORTED: offload-cuda
 ! RUN: %flang %isysroot -L"%libdir" -fimplicit-module-prefix %s -o %t-enabled
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t-enabled | FileCheck %s --check-prefix=REPAIRED
+! RUN: %t-enabled | FileCheck %s --check-prefix=REPAIRED
 ! RUN: %flang %isysroot -L"%libdir" -fno-implicit-module-prefix -fimplicit-module-prefix %s -o %t-reenabled
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t-reenabled | FileCheck %s --check-prefix=REPAIRED
+! RUN: %t-reenabled | FileCheck %s --check-prefix=REPAIRED
 ! RUN: %flang -c %s -o %t-default.o
 ! RUN: not %flang %isysroot -L"%libdir" %t-default.o -o %t-default
 ! RUN: %flang -Wno-portability -c %s -o %t-suppressed.o

@@ -28,6 +28,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VirtualFileSystemFwd.h"
+#include "llvm/TargetParser/AtomicScope.h"
 #include "llvm/TargetParser/Triple.h"
 #include <forward_list>
 #include <functional>
@@ -1038,7 +1039,7 @@ public:
   ///
   /// Virtual shares DivMod's type and trip-count limits. Intervening code stays
   /// at its level, once per range touching that row; empty ranges skip it.
-  /// Two constant-count loops and direct body-to-preheader/after-to-latch edges
+  /// Two loops and direct body-to-preheader/after-to-latch edges
   /// are required. Controls must retain form and be unobserved after the nest.
   /// Only host static worksharing without chunk or ordered is supported.
   /// SIMD, transforms of the result and logical body/IV access are unsupported.
@@ -1592,7 +1593,13 @@ public:
   /// Generator for '#omp flush'
   ///
   /// \param Loc The location where the flush directive was encountered
-  LLVM_ABI void createFlush(const LocationDescription &Loc);
+  /// \param AO The memory ordering of the flush. NotAtomic is a flush with a
+  /// list, which is treated as seq_cst.
+  /// \param Scope The memory scope of the flush.
+  LLVM_ABI void
+  createFlush(const LocationDescription &Loc,
+              AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent,
+              AtomicScope Scope = AtomicScope::Device);
 
   /// Generate a call to the runtime to emit the diagnostic of an OpenMP
   /// `error` directive with `at(execution)`.
@@ -2614,7 +2621,7 @@ public:
 
   LLVM_ABI CallInst *createRuntimeFunctionCall(FunctionCallee Callee,
                                                ArrayRef<Value *> Args,
-                                               StringRef Name = "");
+                                               const Twine &Name = "");
 
   /// Return the (LLVM-IR) string describing the source location \p LocStr.
   LLVM_ABI Constant *getOrCreateSrcLocStr(StringRef LocStr,
@@ -2685,10 +2692,16 @@ public:
                                           Value *NumThreads, Value *HostPtr,
                                           ArrayRef<Value *> KernelArgs);
 
-  /// Generate a flush runtime call.
+  /// Generate a flush: a fence on a GPU, and a runtime call otherwise.
   ///
   /// \param Loc The location at which the request originated and is fulfilled.
-  LLVM_ABI void emitFlush(const LocationDescription &Loc);
+  /// \param AO The memory ordering of the flush. NotAtomic is a flush with a
+  /// list, which is treated as seq_cst.
+  /// \param Scope The memory scope of the flush.
+  LLVM_ABI void
+  emitFlush(const LocationDescription &Loc,
+            AtomicOrdering AO = AtomicOrdering::SequentiallyConsistent,
+            AtomicScope Scope = AtomicScope::Device);
 
   /// The finalization stack made up of finalize callbacks currently in-flight,
   /// wrapped into FinalizationInfo objects that reference also the finalization
@@ -4124,18 +4137,6 @@ private:
       const function_ref<Expected<Value *>(Value *XOld, IRBuilder<> &IRB)>;
 
 private:
-  enum AtomicKind { Read, Write, Update, Capture, Compare };
-
-  /// Determine whether to emit flush or not
-  ///
-  /// \param Loc    The insert and source location description.
-  /// \param AO     The required atomic ordering
-  /// \param AK     The OpenMP atomic operation kind used.
-  ///
-  /// \returns		wether a flush was emitted or not
-  bool checkAndEmitFlushAfterAtomic(const LocationDescription &Loc,
-                                    AtomicOrdering AO, AtomicKind AK);
-
   /// Emit atomic update for constructs: X = X BinOp Expr ,or X = Expr BinOp X
   /// For complex Operations: X = UpdateOp(X) => CmpExch X, old_X, UpdateOp(X)
   /// Only Scalar data types.
