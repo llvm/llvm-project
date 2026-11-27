@@ -179,8 +179,9 @@ define void @narrow_operand_drop_wrap_flags(ptr %in, i32 %mask, ptr %out) {
 ; CHECK-LABEL: define void @narrow_operand_drop_wrap_flags(
 ; CHECK-SAME: ptr [[IN:%.*]], i32 [[MASK:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[IN]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i64> [[TMP1]], splat (i64 32768)
-; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <4 x i16> [[TMP10]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i16> [[TMP4]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = and <4 x i32> [[TMP5]], splat (i32 255)
@@ -244,8 +245,9 @@ define void @keep_operand_width_for_shared_scalar(
 ; CHECK-LABEL: define void @keep_operand_width_for_shared_scalar(
 ; CHECK-SAME: ptr [[IN:%.*]], i32 [[MASK:%.*]], ptr [[OUT:%.*]], ptr [[EXTRA:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[IN]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i64> [[TMP1]], splat (i64 32768)
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP6]], splat (i32 255)
@@ -254,7 +256,7 @@ define void @keep_operand_width_for_shared_scalar(
 ; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = add nuw nsw <2 x i16> [[TMP11]], <i16 0, i16 1>
+; CHECK-NEXT:    [[TMP12:%.*]] = add <2 x i16> [[TMP11]], <i16 0, i16 1>
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc <2 x i16> [[TMP12]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i8> [[TMP13]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP14]], ptr [[EXTRA]], align 1

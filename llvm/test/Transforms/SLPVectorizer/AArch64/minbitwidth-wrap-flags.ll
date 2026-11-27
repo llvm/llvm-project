@@ -8,8 +8,9 @@ define void @narrow_sub_operand_drop_wrap_flags(ptr %in, i32 %mask, ptr %out) {
 ; CHECK-LABEL: define void @narrow_sub_operand_drop_wrap_flags(
 ; CHECK-SAME: ptr [[IN:%.*]], i32 [[MASK:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[IN]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i64> [[TMP1]], splat (i64 32768)
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub <4 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP6]], splat (i32 255)
@@ -148,8 +149,9 @@ define void @narrow_operand_for_unflagged_scalar_user(ptr %in, i32 %mask, ptr %o
 ; CHECK-LABEL: define void @narrow_operand_for_unflagged_scalar_user(
 ; CHECK-SAME: ptr [[IN:%.*]], i32 [[MASK:%.*]], ptr [[OUT:%.*]], ptr [[EXTRA_OUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[IN]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i64> [[TMP1]], splat (i64 32768)
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP6]], splat (i32 255)
@@ -292,8 +294,9 @@ define void @narrow_operand_for_shared_scalar(ptr %in, i32 %mask, ptr %out, ptr 
 ; CHECK-LABEL: define void @narrow_operand_for_shared_scalar(
 ; CHECK-SAME: ptr [[IN:%.*]], i32 [[MASK:%.*]], ptr [[OUT:%.*]], ptr [[EXTRA:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr [[IN]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i64> [[TMP1]], splat (i64 32768)
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP2]] to <4 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i8>
+; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i8> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = sext <4 x i8> [[TMP3]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i16> [[TMP4]], splat (i16 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = and <4 x i32> [[TMP6]], splat (i32 255)
@@ -302,7 +305,7 @@ define void @narrow_operand_for_shared_scalar(ptr %in, i32 %mask, ptr %out, ptr 
 ; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i32> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[TMP4]], <4 x i16> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = add nuw nsw <2 x i16> [[TMP11]], <i16 0, i16 1>
+; CHECK-NEXT:    [[TMP12:%.*]] = add <2 x i16> [[TMP11]], <i16 0, i16 1>
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc <2 x i16> [[TMP12]] to <2 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i8> [[TMP13]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP14]], ptr [[EXTRA]], align 1
@@ -375,8 +378,9 @@ define void @narrow_addsub_drop_wrap_flags(ptr %in, i32 %mask, ptr %out, i16 %a0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i16> [[TMP3]], i16 [[A3]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = lshr <4 x i16> [[TMP4]], <i16 8, i16 9, i16 10, i16 11>
 ; CHECK-NEXT:    [[TMP6:%.*]] = load <4 x i64>, ptr [[IN]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = or <4 x i64> [[TMP6]], splat (i64 32768)
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc <4 x i64> [[TMP7]] to <4 x i16>
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc <4 x i64> [[TMP6]] to <4 x i8>
+; CHECK-NEXT:    [[TMP8:%.*]] = or <4 x i8> [[TMP7]], zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i8> [[TMP8]] to <4 x i16>
 ; CHECK-NEXT:    [[TMP10:%.*]] = add <4 x i16> [[TMP9]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub <4 x i16> [[TMP9]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <4 x i16> [[TMP10]], <4 x i16> [[TMP11]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
