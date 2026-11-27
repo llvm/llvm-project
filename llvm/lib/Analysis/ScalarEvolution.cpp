@@ -11339,16 +11339,11 @@ bool ScalarEvolution::isKnownViaInduction(CmpPredicate Pred, SCEVUse LHS,
          isLoopEntryGuardedByCond(MDL, Pred, SplitLHS.first, SplitRHS.first);
 }
 
-/// Maximum nesting depth of recursive isKnownPredicateImpl calls.
+/// Maximum nesting depth of recursive isKnownPredicate calls.
 static constexpr unsigned MaxKnownPredicateDepth = 4;
 
 bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
-                                       SCEVUse RHS) {
-  return isKnownPredicateImpl(Pred, LHS, RHS, /*Depth=*/0);
-}
-
-bool ScalarEvolution::isKnownPredicateImpl(CmpPredicate Pred, SCEVUse LHS,
-                                           SCEVUse RHS, unsigned Depth) {
+                                       SCEVUse RHS, unsigned Depth) {
   if (Depth > MaxKnownPredicateDepth)
     return false;
 
@@ -11788,9 +11783,9 @@ bool ScalarEvolution::isKnownPredicateViaSplitting(CmpPredicate Pred,
   // interesting cases seen in practice.  We can consider "upgrading" L >= 0 to
   // use isKnownPredicate later if needed.
   return isKnownNonNegative(RHS) &&
-         isKnownPredicateImpl(CmpInst::ICMP_SGE, LHS, getZero(LHS->getType()),
-                              Depth + 1) &&
-         isKnownPredicateImpl(CmpInst::ICMP_SLT, LHS, RHS, Depth + 1);
+         isKnownPredicate(CmpInst::ICMP_SGE, LHS, getZero(LHS->getType()),
+                          Depth + 1) &&
+         isKnownPredicate(CmpInst::ICMP_SLT, LHS, RHS, Depth + 1);
 }
 
 bool ScalarEvolution::isImpliedViaGuard(const BasicBlock *BB, CmpPredicate Pred,

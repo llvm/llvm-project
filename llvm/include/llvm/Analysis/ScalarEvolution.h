@@ -1341,8 +1341,9 @@ public:
                                     SCEVUse RHS);
 
   /// Test if the given expression is known to satisfy the condition described
-  /// by Pred, LHS, and RHS.
-  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS);
+  /// by Pred, LHS, and RHS. \p Depth is the current recursion depth.
+  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
+                                 unsigned Depth = 0);
 
   /// Check whether the condition described by Pred, LHS, and RHS is true or
   /// false. If we know it, return the evaluation of this condition. If neither
@@ -2433,10 +2434,6 @@ private:
   /// prove them individually.
   bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
                                     unsigned Depth);
-
-  /// Implementation of isKnownPredicate.
-  bool isKnownPredicateImpl(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
-                            unsigned Depth);
 
   /// Try to match the Expr as "(L + R)<Flags>".
   bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R, SCEVFlags &Flags);
