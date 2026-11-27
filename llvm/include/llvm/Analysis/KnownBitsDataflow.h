@@ -105,10 +105,8 @@ struct KnownBitsWithCtxI : public KnownBits {
   KnownBitsWithCtxI(const KnownBits &Known, const Instruction *CtxI)
       : KnownBits(Known), CtxI(const_cast<Instruction *>(CtxI)) {}
   bool canUseWith(const Instruction *Other) const {
-    // If the cached value was computed with a CtxI, and one without a CxtI is
-    // requested, returning the cached value would yield a better optimization
-    // result.
-    return !Other || Other == CtxI;
+    // The WeakVH would be nulled if cached CxtI was removed or replaced.
+    return Other == CtxI;
   }
 };
 

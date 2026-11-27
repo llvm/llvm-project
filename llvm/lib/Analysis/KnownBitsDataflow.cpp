@@ -23,9 +23,9 @@ void KnownBitsVH::anchor() {}
 void KnownBitsVH::deleted() {
   // This is called in the destructor of ValueHandleBase. Carefully avoid
   // constructing a new ValueHandle, and avoid calling virtual functions.
-  [[maybe_unused]] bool Removed = KBD->remove_if(
-      [&](const auto &It) { return It.first.getValPtr() == getValPtr(); });
-  assert(Removed && "Expected to find ValPtr in map");
+  auto It = KBD->find_as(getValPtr());
+  assert(It != KBD->end() && "Expected to find ValPtr in map");
+  KBD->erase(It);
   clearValPtr();
 }
 
