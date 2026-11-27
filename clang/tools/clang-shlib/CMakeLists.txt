@@ -1,8 +1,3 @@
-# Building libclang-cpp.so fails if LLVM_ENABLE_PIC=Off
-if (NOT LLVM_ENABLE_PIC)
-  return()
-endif()
-
 get_property(clang_libs GLOBAL PROPERTY CLANG_STATIC_LIBS)
 
 foreach (lib ${clang_libs})
@@ -54,6 +49,10 @@ add_clang_library(clang-cpp
                   ${_DEPS})
 
 configure_file(simple_version_script.map.in simple_version_script.map)
+
+if (TARGET clang-cpp-cir)
+  target_link_libraries(clang-cpp PUBLIC clang-cpp-cir)
+endif()
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
   target_link_options(clang-cpp PRIVATE LINKER:--version-script,${CMAKE_CURRENT_BINARY_DIR}/simple_version_script.map)
