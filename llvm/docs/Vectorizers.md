@@ -346,10 +346,26 @@ Many of these math functions are only vectorizable if the file has been built
 with a specified target vector library that provides a vector implementation
 of that math function. Using clang, this is handled by the "-fveclib" command
 line option with one of the following vector libraries:
-"Accelerate,libmvec,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM"
+"Accelerate,libmvec,llvm,MASSV,SVML,SLEEF,Darwin_libsystem_m,ArmPL,AMDLIBM"
 
 ```console
 $ clang ... -fno-math-errno -fveclib=libmvec file.c
+```
+
+If using the "-fveclib" option results in a linker error, a linker flag
+which could help resolving the problem needs to be provided. Alternatively, a
+path can be provided to a specific library file exporting a compatible set of
+the vectorized math library functions. In case of LLVM's libc this may be one of
+the following (depending on how the LLVM's libc has been built):
+
+```console
+$ clang ... -fveclib=llvm -o executable file.c -lllvmlibc
+```
+
+...or:
+
+```console
+$ clang ... -fveclib=llvm -o executable file.c llvm-libc/lib/libmvec.a -lm
 ```
 
 #### Partial unrolling during vectorization

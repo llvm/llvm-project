@@ -124,8 +124,8 @@ defm : BoolField<"unique-section-names", "true",
 defm : BoolField<"use-ctors", "false",
   "Use .ctors instead of .init_array">;
 defm : EnumField<"vector-library", "VectorLibrary", "VectorLibrary::NoLibrary",
-  "none,Accelerate,Darwin_libsystem_m,LIBMVEC,MASSV,SVML,sleefgnuabi,ArmPL,AMDLIBM",
-  ["VectorLibrary::NoLibrary", "VectorLibrary::Accelerate", "VectorLibrary::DarwinLibSystemM", "VectorLibrary::LIBMVEC", "VectorLibrary::MASSV", "VectorLibrary::SVML", "VectorLibrary::SLEEFGNUABI", "VectorLibrary::ArmPL", "VectorLibrary::AMDLIBM"],
+  "none,Accelerate,Darwin_libsystem_m,LIBMVEC,LLVM,MASSV,SVML,sleefgnuabi,ArmPL,AMDLIBM",
+  ["VectorLibrary::NoLibrary", "VectorLibrary::Accelerate", "VectorLibrary::DarwinLibSystemM", "VectorLibrary::LIBMVEC", "VectorLibrary::LLVM", "VectorLibrary::MASSV", "VectorLibrary::SVML", "VectorLibrary::SLEEFGNUABI", "VectorLibrary::ArmPL", "VectorLibrary::AMDLIBM"],
   "Vector functions library">;
 defm : BoolField<"xcoff-traceback-table", "true",
   "Emit the XCOFF traceback table">;

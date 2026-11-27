@@ -5501,6 +5501,73 @@ defset list<RuntimeLibcallImpl> LIBMVEC_AARCH64_VECFUNCS = {
 }
 
 //===----------------------------------------------------------------------===//
+// LLVM Vector Math library functions
+//===----------------------------------------------------------------------===//
+
+defvar LLVMPrefix = "LLVM_";
+
+class LlvmLibcall<RuntimeLibcall P>
+    : RuntimeLibcallImpl<P, !substr(NAME, !size(LLVMPrefix))>;
+
+defset list<RuntimeLibcallImpl> LLVM_X86_VECFUNCS = {
+  def LLVM__LMVdN8v_acosf : LlvmLibcall<ACOS_V8F32>;
+  def LLVM__LMVdN8v_acoshf : LlvmLibcall<ACOSH_V8F32>;
+  def LLVM__LMVdN8v_asinf : LlvmLibcall<ASIN_V8F32>;
+  def LLVM__LMVdN8v_asinhf : LlvmLibcall<ASINH_V8F32>;
+  def LLVM__LMVdN8v_atanf : LlvmLibcall<ATAN_V8F32>;
+  def LLVM__LMVdN8v_atanhf : LlvmLibcall<ATANH_V8F32>;
+  def LLVM__LMVdN8v_cbrtf : LlvmLibcall<CBRT_V8F32>;
+  def LLVM__LMVdN8v_cosf : LlvmLibcall<COS_V8F32>;
+  def LLVM__LMVdN8v_coshf : LlvmLibcall<COSH_V8F32>;
+  def LLVM__LMVdN8v_cospif : LlvmLibcall<COSPI_V8F32>;
+  def LLVM__LMVdN8v_erff : LlvmLibcall<ERF_V8F32>;
+  def LLVM__LMVdN8v_exp2f : LlvmLibcall<EXP2_V8F32>;
+  def LLVM__LMVdN8v_exp10f : LlvmLibcall<EXP10_V8F32>;
+  def LLVM__LMVdN8v_expf : LlvmLibcall<EXP_V8F32>;
+  def LLVM__LMVdN8v_expm1f : LlvmLibcall<EXPM1_V8F32>;
+  def LLVM__LMVdN8v_log10f : LlvmLibcall<LOG10_V8F32>;
+  def LLVM__LMVdN8v_log1pf : LlvmLibcall<LOG1P_V8F32>;
+  def LLVM__LMVdN8v_log2f : LlvmLibcall<LOG2_V8F32>;
+  def LLVM__LMVdN8v_logf : LlvmLibcall<LOG_V8F32>;
+  def LLVM__LMVdN8v_sinf : LlvmLibcall<SIN_V8F32>;
+  def LLVM__LMVdN8v_sinhf : LlvmLibcall<SINH_V8F32>;
+  def LLVM__LMVdN8v_sinpif : LlvmLibcall<SINPI_V8F32>;
+  def LLVM__LMVdN8v_sqrtf : LlvmLibcall<SQRT_V8F32>;
+  def LLVM__LMVdN8v_tanf : LlvmLibcall<TAN_V8F32>;
+  def LLVM__LMVdN8v_tanhf : LlvmLibcall<TANH_V8F32>;
+  def LLVM__LMVdN8v_tanpif : LlvmLibcall<TANPI_V8F32>;
+}
+
+defset list<RuntimeLibcallImpl> LLVM_AARCH64_VECFUNCS = {
+  def LLVM__LMVnN4v_acosf : LlvmLibcall<ACOS_V4F32>;
+  def LLVM__LMVnN4v_acoshf : LlvmLibcall<ACOSH_V4F32>;
+  def LLVM__LMVnN4v_asinf : LlvmLibcall<ASIN_V4F32>;
+  def LLVM__LMVnN4v_asinhf : LlvmLibcall<ASINH_V4F32>;
+  def LLVM__LMVnN4v_atanf : LlvmLibcall<ATAN_V4F32>;
+  def LLVM__LMVnN4v_atanhf : LlvmLibcall<ATANH_V4F32>;
+  def LLVM__LMVnN4v_cbrtf : LlvmLibcall<CBRT_V4F32>;
+  def LLVM__LMVnN4v_cosf : LlvmLibcall<COS_V4F32>;
+  def LLVM__LMVnN4v_coshf : LlvmLibcall<COSH_V4F32>;
+  def LLVM__LMVnN4v_cospif : LlvmLibcall<COSPI_V4F32>;
+  def LLVM__LMVnN4v_erff : LlvmLibcall<ERF_V4F32>;
+  def LLVM__LMVnN4v_exp2f : LlvmLibcall<EXP2_V4F32>;
+  def LLVM__LMVnN4v_exp10f : LlvmLibcall<EXP10_V4F32>;
+  def LLVM__LMVnN4v_expf : LlvmLibcall<EXP_V4F32>;
+  def LLVM__LMVnN4v_expm1f : LlvmLibcall<EXPM1_V4F32>;
+  def LLVM__LMVnN4v_log10f : LlvmLibcall<LOG10_V4F32>;
+  def LLVM__LMVnN4v_log1pf : LlvmLibcall<LOG1P_V4F32>;
+  def LLVM__LMVnN4v_log2f : LlvmLibcall<LOG2_V4F32>;
+  def LLVM__LMVnN4v_logf : LlvmLibcall<LOG_V4F32>;
+  def LLVM__LMVnN4v_sinf : LlvmLibcall<SIN_V4F32>;
+  def LLVM__LMVnN4v_sinhf : LlvmLibcall<SINH_V4F32>;
+  def LLVM__LMVnN4v_sinpif : LlvmLibcall<SINPI_V4F32>;
+  def LLVM__LMVnN4v_sqrtf : LlvmLibcall<SQRT_V4F32>;
+  def LLVM__LMVnN4v_tanf : LlvmLibcall<TAN_V4F32>;
+  def LLVM__LMVnN4v_tanhf : LlvmLibcall<TANH_V4F32>;
+  def LLVM__LMVnN4v_tanpif : LlvmLibcall<TANPI_V4F32>;
+}
+
+//===----------------------------------------------------------------------===//
 // IBM MASS vector library (MASSV) functions
 //===----------------------------------------------------------------------===//
 
@@ -6260,6 +6327,16 @@ def LIBMVECAArch64Library : LibcallLibrary<"libmvec",
                       AARCH64_VECTORCALL>,
        !filter(entry, LIBMVEC_AARCH64_VECFUNCS,
                !match(entry.LibCallFuncName, "^_ZGVsMx"))), isAArch64>;
+
+def LLVMX86Library : LibcallLibrary<"llvm",
+  (add LLVM_X86_VECFUNCS), isX86>;
+
+def LLVMAArch64Library : LibcallLibrary<"llvm",
+  (add LibcallsWithCC<(add !filter(entry, LLVM_AARCH64_VECFUNCS,
+                                   !match(entry.LibCallFuncName, "^_LMVnN"))),
+                      AARCH64_VECTORCALL>,
+       !filter(entry, LLVM_AARCH64_VECFUNCS,
+               !match(entry.LibCallFuncName, "^_LMVsMx"))), isAArch64>;
 
 def MASSVLibrary : LibcallLibrary<"massv", (add MASSV_VECFUNCS)>;
 

@@ -2,6 +2,8 @@
 // RUN: %clang -### -c -fveclib=Accelerate %s 2>&1 | FileCheck --check-prefix=CHECK-ACCELERATE %s
 // RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-libmvec %s
 // RUN: %clang -### -c --target=aarch64-linux-gnu -fveclib=libmvec %s 2>&1 | FileCheck --check-prefix=CHECK-LIBMVEC-AARCH64 %s
+// RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=llvm %s 2>&1 | FileCheck --check-prefix=CHECK-llvm %s
+// RUN: %clang -### -c --target=aarch64-linux-gnu -fveclib=llvm %s 2>&1 | FileCheck --check-prefix=CHECK-LLVM-AARCH64 %s
 // RUN: %clang -### -c --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-AMDLIBM %s
 // RUN: %clang -### -c -fveclib=MASSV %s 2>&1 | FileCheck --check-prefix=CHECK-MASSV %s
 // RUN: %clang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck --check-prefix=CHECK-DARWIN_LIBSYSTEM_M %s
@@ -14,6 +16,8 @@
 // CHECK-ACCELERATE: "-fveclib=Accelerate"
 // CHECK-libmvec: "-fveclib=libmvec"
 // CHECK-LIBMVEC-AARCH64: "-fveclib=libmvec"
+// CHECK-llvm: "-fveclib=llvm"
+// CHECK-LLVM-AARCH64: "-fveclib=llvm"
 // CHECK-AMDLIBM: "-fveclib=AMDLIBM"
 // CHECK-MASSV: "-fveclib=MASSV"
 // CHECK-DARWIN_LIBSYSTEM_M: "-fveclib=Darwin_libsystem_m"
@@ -47,6 +51,12 @@
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=libmvec -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBMVEC-AARCH64 %s
 // CHECK-LTO-LIBMVEC-AARCH64: "-plugin-opt=-vector-library=LIBMVEC"
 
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=llvm -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LLVM %s
+// CHECK-LTO-LLVM: "-plugin-opt=-vector-library=LLVM"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=llvm -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LLVM-AARCH64 %s
+// CHECK-LTO-LLVM-AARCH64: "-plugin-opt=-vector-library=LLVM"
+
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-AMDLIBM %s
 // CHECK-LTO-AMDLIBM: "-plugin-opt=-vector-library=AMDLIBM"
 
@@ -76,6 +86,16 @@
 // CHECK-ERRNO-LIBMVEC-AARCH64: "-fveclib=libmvec"
 // CHECK-ERRNO-LIBMVEC-AARCH64-SAME: "-fmath-errno"
 
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=llvm %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-LLVM %s
+// CHECK-ERRNO-LLVM-NOT: "-fmath-errno"
+// CHECK-ERRNO-LLVM: "-fveclib=llvm"
+// CHECK-ERRNO-LLVM-NOT: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=llvm %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-LLVM-AARCH64 %s
+// CHECK-ERRNO-LLVM-AARCH64-NOT: "-fmath-errno"
+// CHECK-ERRNO-LLVM-AARCH64: "-fveclib=llvm"
+// CHECK-ERRNO-LLVM-AARCH64-NOT: "-fmath-errno"
+
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=AMDLIBM %s 2>&1 | FileCheck --check-prefix=CHECK-ERRNO-AMDLIBM %s
 // CHECK-ERRNO-AMDLIBM: "-fveclib=AMDLIBM"
 // CHECK-ERRNO-AMDLIBM-SAME: "-fmath-errno"
@@ -102,6 +122,16 @@
 // CHECK-REENABLE-ERRNO-ARMPL: math errno enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=ArmPL', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
 // CHECK-REENABLE-ERRNO-ARMPL: "-fveclib=ArmPL"
 // CHECK-REENABLE-ERRNO-ARMPL-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fveclib=llvm -fmath-errno %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-LLVM %s
+// CHECK-REENABLE-ERRNO-LLVM: math errno enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=llvm', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
+// CHECK-REENABLE-ERRNO-LLVM: "-fveclib=llvm"
+// CHECK-REENABLE-ERRNO-LLVM-SAME: "-fmath-errno"
+
+// RUN: %clang -### --target=aarch64-linux-gnu -fveclib=llvm -fmath-errno %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-LLVM-AARCH64 %s
+// CHECK-REENABLE-ERRNO-LLVM-AARCH64: math errno enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=llvm', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
+// CHECK-REENABLE-ERRNO-LLVM-AARCH64: "-fveclib=llvm"
+// CHECK-REENABLE-ERRNO-LLVM-AARCH64-SAME: "-fmath-errno"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=SLEEF -fmath-errno %s 2>&1 | FileCheck --check-prefix=CHECK-REENABLE-ERRNO-SLEEF %s
 // CHECK-REENABLE-ERRNO-SLEEF: math errno enabled by '-fmath-errno' after it was implicitly disabled by '-fveclib=SLEEF', this may limit the utilization of the vector library [-Wmath-errno-enabled-with-veclib]
