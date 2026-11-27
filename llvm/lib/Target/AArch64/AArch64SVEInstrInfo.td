@@ -5499,12 +5499,12 @@ let Predicates = [HasSVE2p3_or_SME2p3, HasFPv2] in {
   defm FCMTL_PZZ   : sve_fp_3op_u_pd_totalcomp<0b100, "fcmtl">;
   defm FCMTLMG_PZZ : sve_fp_3op_u_pd_totalcomp<0b101, "fcmtlmg">;
 
-  defm FMAXINM_ZPmZZ   : sve_fp_2op_p_zds_minmax<0b0, 0b00, "fmaxinm">;
-  defm FMININM_ZPmZZ   : sve_fp_2op_p_zds_minmax<0b0, 0b01, "fmininm">;
-  defm FMAXMGINM_ZPmZZ : sve_fp_2op_p_zds_minmax<0b1, 0b00, "fmaxmginm">;
-  defm FMINMGINM_ZPmZZ : sve_fp_2op_p_zds_minmax<0b1, 0b01, "fminmginm">;
-  defm FMAXMG_ZPmZZ    : sve_fp_2op_p_zds_minmax<0b1, 0b10, "fmaxmg">;
-  defm FMINMG_ZPmZZ    : sve_fp_2op_p_zds_minmax<0b1, 0b11, "fminmg">;
+  defm FMAXINM_ZPmZZ   : sve_fp_2op_p_zds_minmax<0b0, 0b00, "fmaxinm", int_aarch64_sve_fmaxinm>;
+  defm FMININM_ZPmZZ   : sve_fp_2op_p_zds_minmax<0b0, 0b01, "fmininm", int_aarch64_sve_fmininm>;
+  defm FMAXMGINM_ZPmZZ : sve_fp_2op_p_zds_minmax<0b1, 0b00, "fmaxmginm", int_aarch64_sve_fmaxmginm>;
+  defm FMINMGINM_ZPmZZ : sve_fp_2op_p_zds_minmax<0b1, 0b01, "fminmginm", int_aarch64_sve_fminmginm>;
+  defm FMAXMG_ZPmZZ    : sve_fp_2op_p_zds_minmax<0b1, 0b10, "fmaxmg", int_aarch64_sve_fmaxmg>;
+  defm FMINMG_ZPmZZ    : sve_fp_2op_p_zds_minmax<0b1, 0b11, "fminmg", int_aarch64_sve_fminmg>;
 
   defm FMAXINMV_VPZ   : sve_fp_fast_red_minmax<0b00, 0b0, "fmaxinmv">;
   defm FMININMV_VPZ   : sve_fp_fast_red_minmax<0b01, 0b0, "fmininmv">;

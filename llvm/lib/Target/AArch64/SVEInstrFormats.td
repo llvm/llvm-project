@@ -6380,10 +6380,16 @@ class sve_fp_2op_p_zds_minmax<bits<2> sz, bits<1> op, bits<2> opc, string asm,
   let Uses = [ FPCR ];
 }
 
-multiclass sve_fp_2op_p_zds_minmax<bits<1> op, bits<2> opc, string asm> {
+multiclass sve_fp_2op_p_zds_minmax<bits<1> op, bits<2> opc, string asm, SDPatternOperator Opc> {
   def _H : sve_fp_2op_p_zds_minmax<0b01, op, opc, asm, ZPR16>;
   def _S : sve_fp_2op_p_zds_minmax<0b10, op, opc, asm, ZPR32>;
   def _D : sve_fp_2op_p_zds_minmax<0b11, op, opc, asm, ZPR64>;
+
+  foreach Opcode = [Opc, !cast<SDPatternOperator>(Opc # _u)] in {
+    def : SVE_3_Op_Pat<nxv8f16, Opcode, nxv8i1, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+    def : SVE_3_Op_Pat<nxv4f32, Opcode, nxv4i1, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+    def : SVE_3_Op_Pat<nxv2f64, Opcode, nxv2i1, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
+  }
 }
 
 class sve_fp_fast_red_minmax<bits<2> sz, bits<2> opc, bit R, string asm,

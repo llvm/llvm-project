@@ -4402,3 +4402,19 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_pmlal_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
       [llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;
 }
+
+// (SVE2p3 | SME2p3) && FPv2 elementwise maximum/minimum
+let TargetPrefix = "aarch64" in {
+  def int_aarch64_sve_fmaxmg      : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fmaxmg_u    : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fminmg      : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fminmg_u    : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fmaxinm     : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fmaxinm_u   : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fmininm     : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fmininm_u   : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fmaxmginm   : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fmaxmginm_u : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fminmginm   : AdvSIMD_Pred2VectorArg_Intrinsic;
+  def int_aarch64_sve_fminmginm_u : AdvSIMD_Pred2VectorArg_Intrinsic;
+}
