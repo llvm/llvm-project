@@ -2134,19 +2134,21 @@ static Register getOrCreateADAVirtualRegister(MachineFunction &MF) {
   return ADAvReg;
 }
 
-// Passing or returning vector types in XPLINK64 is only supported if the
-// vector facility is available. Report an error otherwise.
+// Passing or returning vector types or i128 in XPLINK64 is only supported if
+// the vector facility is available. Report an error otherwise.
 template <typename ArgT>
 static void diagnoseXPLINK64VectorWithoutVF(const SystemZSubtarget &Subtarget,
                                             SelectionDAG &DAG,
                                             const SmallVectorImpl<ArgT> &Args) {
   if (!Subtarget.isTargetXPLINK64() || Subtarget.hasVector())
     return;
-  if (any_of(Args, [](const ArgT &Arg) { return Arg.ArgVT.isVector(); }))
+  if (any_of(Args, [](const ArgT &Arg) {
+        return Arg.ArgVT.isVector() || Arg.ArgVT == MVT::i128;
+      }))
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         DAG.getMachineFunction().getFunction(),
-        "vector types without vector facility are not yet supported in "
-        "XPLINK64"));
+        "vector and i128 types without vector facility are not yet supported "
+        "in XPLINK64"));
 }
 
 SDValue SystemZTargetLowering::LowerFormalArguments(
