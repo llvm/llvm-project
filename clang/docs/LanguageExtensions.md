@@ -4725,21 +4725,21 @@ using the encoding:
 
 | Mask value | Data class         | Macro                    |
 | ---------- | ------------------ | ------------------------ |
-| 0x0001     | Signaling NaN      | `__FPCLASS_SNAN`         |
-| 0x0002     | Quiet NaN          | `__FPCLASS_QNAN`         |
-| 0x0004     | Negative infinity  | `__FPCLASS_NEGINF`       |
-| 0x0008     | Negative normal    | `__FPCLASS_NEGNORMAL`    |
-| 0x0010     | Negative subnormal | `__FPCLASS_NEGSUBNORMAL` |
-| 0x0020     | Negative zero      | `__FPCLASS_NEGZERO`      |
-| 0x0040     | Positive zero      | `__FPCLASS_POSZERO`      |
-| 0x0080     | Positive subnormal | `__FPCLASS_POSSUBNORMAL` |
-| 0x0100     | Positive normal    | `__FPCLASS_POSNORMAL`    |
-| 0x0200     | Positive infinity  | `__FPCLASS_POSINF`       |
+| `0x0001`   | Signaling NaN      | `__FPCLASS_SNAN`         |
+| `0x0002`   | Quiet NaN          | `__FPCLASS_QNAN`         |
+| `0x0004`   | Negative infinity  | `__FPCLASS_NEGINF`       |
+| `0x0008`   | Negative normal    | `__FPCLASS_NEGNORMAL`    |
+| `0x0010`   | Negative subnormal | `__FPCLASS_NEGSUBNORMAL` |
+| `0x0020`   | Negative zero      | `__FPCLASS_NEGZERO`      |
+| `0x0040`   | Positive zero      | `__FPCLASS_POSZERO`      |
+| `0x0080`   | Positive subnormal | `__FPCLASS_POSSUBNORMAL` |
+| `0x0100`   | Positive normal    | `__FPCLASS_POSNORMAL`    |
+| `0x0200`   | Positive infinity  | `__FPCLASS_POSINF`       |
 
 For convenience preprocessor defines macros for these values. The function
 returns 1 if `expr` falls into one of the specified data classes, 0 otherwise.
 
-In the example above the mask value 448 (0x1C0) contains the bits selecting
+In the example above the mask value `448` (`0x1C0`) contains the bits selecting
 positive zero, positive subnormal and positive normal classes.
 `__builtin_isfpclass(x, 448)` would return true only if `x` if of any of
 these data classes. Using suitable mask value, the function can implement any of
