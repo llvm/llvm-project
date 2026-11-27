@@ -15,7 +15,7 @@ is not available on the system, libc++ will run it serially.
 
 The underlying parallelism provider varies between platforms, as libc++ tries to
 integrate well with the OS and other components of the program.
-Currently these provider are used:
+Currently these providers are used:
 - `libdispatch` on Apple platforms ([doc](https://developer.apple.com/documentation/dispatch))
 - `Thread Pool API` on Windows ([doc](https://learn.microsoft.com/en-us/windows/win32/procthread/thread-pool-api))
 - A custom thread pool on platforms that support `std::thread`
