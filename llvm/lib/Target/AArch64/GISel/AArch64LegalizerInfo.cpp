@@ -271,6 +271,11 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_PTRMASK).legalFor({{p0, s64}});
 
+  getActionDefinitionsBuilder(G_VSCALE)
+      .legalFor({i64})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s64, s64);
+
   getActionDefinitionsBuilder({G_SDIV, G_UDIV})
       .legalFor({i32, i64})
       .libcallFor({i128})

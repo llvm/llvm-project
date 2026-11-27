@@ -221,6 +221,7 @@ private:
   bool selectPtrAuthGlobalValue(MachineInstr &I,
                                 MachineRegisterInfo &MRI) const;
   bool selectMOPS(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectVScale(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectUSMovFromExtend(MachineInstr &I, MachineRegisterInfo &MRI);
   void SelectTable(MachineInstr &I, MachineRegisterInfo &MRI, unsigned NumVecs,
                    unsigned Opc1, unsigned Opc2, bool isExt);
@@ -3527,6 +3528,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_MEMSET_INLINE:
     assert(STI.hasMOPS() && "Shouldn't get here without +mops feature");
     return selectMOPS(I, MRI);
+  case TargetOpcode::G_VSCALE:
+    return selectVScale(I, MRI);
   }
 
   return false;
@@ -3537,6 +3540,79 @@ bool AArch64InstructionSelector::selectAndRestoreState(MachineInstr &I) {
   bool Success = select(I);
   MIB.setState(OldMIBState);
   return Success;
+}
+
+bool AArch64InstructionSelector::selectVScale(MachineInstr &I,
+                                              MachineRegisterInfo &MRI) {
+  if (!STI.isSVEorStreamingSVEAvailable())
+    return false;
+
+  Register DstReg = I.getOperand(0).getReg();
+  if (MRI.getType(DstReg).getSizeInBits() != 64)
+    return false;
+
+  // This mirrors the vscale patterns in AArch64SVEInstrInfo.td, which can't
+  // be imported because they use ComplexPatterns.
+  int64_t MulImm = I.getOperand(1).getCImm()->getSExtValue();
+  auto GetImm = [MulImm](int64_t Low, int64_t High,
+                         int64_t Scale) -> std::optional<int64_t> {
+    if (MulImm % Scale != 0)
+      return std::nullopt;
+    int64_t Imm = MulImm / Scale;
+    if (Imm < Low || Imm > High)
+      return std::nullopt;
+    return Imm;
+  };
+
+  auto EmitGPR64 = [&](unsigned Opc, ArrayRef<SrcOp> Srcs) {
+    return MIB.buildInstr(Opc, {&AArch64::GPR64RegClass}, Srcs);
+  };
+
+  MachineInstr *VScale = nullptr;
+  if (std::optional<int64_t> Imm = GetImm(-32, 31, 16)) {
+    VScale = MIB.buildInstr(AArch64::RDVLI_XI, {DstReg}, {}).addImm(*Imm);
+  } else {
+    const std::pair<unsigned, int64_t> CntOps[] = {{AArch64::CNTH_XPiI, 8},
+                                                   {AArch64::CNTW_XPiI, 4},
+                                                   {AArch64::CNTD_XPiI, 2}};
+    for (auto [CntOpc, Scale] : CntOps) {
+      if (std::optional<int64_t> Imm = GetImm(1, 16, Scale)) {
+        VScale = MIB.buildInstr(CntOpc, {DstReg}, {}).addImm(31).addImm(*Imm);
+        break;
+      }
+      if (std::optional<int64_t> Imm = GetImm(-16, -1, Scale)) {
+        auto Cnt = EmitGPR64(CntOpc, {}).addImm(31).addImm(-*Imm);
+        constrainSelectedInstRegOperands(*Cnt, TII, TRI, RBI);
+        VScale = MIB.buildInstr(AArch64::SUBXrs, {DstReg},
+                                {Register(AArch64::XZR), Cnt})
+                     .addImm(0);
+        break;
+      }
+    }
+  }
+
+  if (!VScale) {
+    // vscale is the vector length in bytes divided by 16.
+    if (MulImm == 1 || MulImm == -1) {
+      auto Rdvl = EmitGPR64(AArch64::RDVLI_XI, {}).addImm(MulImm);
+      constrainSelectedInstRegOperands(*Rdvl, TII, TRI, RBI);
+      unsigned ShiftOpc = MulImm == 1 ? AArch64::UBFMXri : AArch64::SBFMXri;
+      VScale = MIB.buildInstr(ShiftOpc, {DstReg}, {Rdvl}).addImm(4).addImm(63);
+    } else {
+      auto Rdvl = EmitGPR64(AArch64::RDVLI_XI, {}).addImm(1);
+      constrainSelectedInstRegOperands(*Rdvl, TII, TRI, RBI);
+      auto Base = EmitGPR64(AArch64::UBFMXri, {Rdvl}).addImm(4).addImm(63);
+      constrainSelectedInstRegOperands(*Base, TII, TRI, RBI);
+      auto Scale = EmitGPR64(AArch64::MOVi64imm, {}).addImm(MulImm);
+      constrainSelectedInstRegOperands(*Scale, TII, TRI, RBI);
+      VScale = MIB.buildInstr(AArch64::MADDXrrr, {DstReg},
+                              {Base, Scale, Register(AArch64::XZR)});
+    }
+  }
+
+  constrainSelectedInstRegOperands(*VScale, TII, TRI, RBI);
+  I.eraseFromParent();
+  return true;
 }
 
 bool AArch64InstructionSelector::selectMOPS(MachineInstr &GI,
