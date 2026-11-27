@@ -68,7 +68,7 @@ class HelpCommandTestCase(TestBase):
     @no_debug_info_test
     def test_help_escape_char(self):
         """Check that the option emitter escapes special characters."""
-        self.expect("help breakpoint set", substrs=["the \"--all-files\" option"])
+        self.expect("help breakpoint set", substrs=['the "--all-files" option'])
 
     @no_debug_info_test
     def test_help_breakpoint_set(self):
