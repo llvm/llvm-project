@@ -27,11 +27,6 @@
 #define OMPT_IF_BUILT_AND_INITIALIZED(stmt)                                    \
   OMPT_IF_BUILT(performIfOmptInitialized(stmt))
 
-#define TargetTaskData                                                         \
-  ((OmptTaskInfoPtr == &OmptTaskInfo) ? nullptr                                \
-                                      : (&(OmptTaskInfoPtr->task_data)))
-#define TargetData (OmptTaskInfoPtr->target_data)
-
 /// Prefix of ompt_task_info_t struct from libomp
 typedef struct ompt_task_info_t {
   ompt_data_t task_data;
@@ -231,13 +226,15 @@ public:
   }
 
   /// Setters for target region and target operation correlation ids
-  void setTargetDataValue(uint64_t DataValue) { TargetData.value = DataValue; }
-  void setTargetDataPtr(void *DataPtr) { TargetData.ptr = DataPtr; }
+  void setTargetDataValue(uint64_t DataValue) {
+    targetData().value = DataValue;
+  }
+  void setTargetDataPtr(void *DataPtr) { targetData().ptr = DataPtr; }
   void setHostOpId(ompt_id_t OpId) { HostOpId = OpId; }
 
   /// Getters for target region and target operation correlation ids
-  uint64_t getTargetDataValue() { return TargetData.value; }
-  void *getTargetDataPtr() { return TargetData.ptr; }
+  uint64_t getTargetDataValue() { return targetData().value; }
+  void *getTargetDataPtr() { return targetData().ptr; }
   ompt_id_t getHostOpId() { return HostOpId; }
 
 private:
@@ -252,6 +249,15 @@ private:
 
   /// Ptr to TaskInfo in OpenMP runtime in case of deferred target tasks
   ompt_task_info_t *OmptTaskInfoPtr{nullptr};
+
+  /// Target region data of the current target region
+  ompt_data_t &targetData() { return OmptTaskInfoPtr->target_data; }
+
+  /// Target task data, or nullptr if there is no target task in libomp
+  ompt_data_t *targetTaskData() {
+    return OmptTaskInfoPtr == &OmptTaskInfo ? nullptr
+                                            : &OmptTaskInfoPtr->task_data;
+  }
 
   /// Flag to indicate whether the target region is for a runtime routine
   bool IsRuntimeRoutine = true;
