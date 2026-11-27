@@ -108,6 +108,33 @@ def GotoElimination : Pass<"cir-goto-elimination", "cir::FuncOp"> {
   ];
 }
 
+def CIRFoldGotoDispatch
+    : Pass<"cir-fold-goto-dispatch", "cir::FuncOp"> {
+  let summary = "Branch straight to goto destinations on a flat CFG";
+  let description = [{
+    Folds the dispatches that `cir-goto-elimination` leaves on a goto's way
+    out of regions: a load of the `goto_dest_slot` alloca followed by
+    a `cir.switch.flat` on it. A forward dataflow over the slot's constant
+    stores gives its value on each edge; on a case edge of FlattenCFG's cleanup
+    dispatch, it is the value stored together with that case's cleanup id.
+    Each edge into a dispatch whose value is known, looking through blocks
+    that only forward to it, is redirected to the block the dispatch would
+    pick. This repeats until nothing changes. Dispatches that
+    nothing reaches any more are erased, and so is the slot once nothing loads
+    it.
+
+    It runs after FlattenCFG, when the dispatches are plain blocks.
+  }];
+  let constructor = "mlir::createCIRFoldGotoDispatchPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+  let statistics = [
+    Statistic<"numThreadedEdges", "threaded-edges",
+              "Edges redirected past a goto dispatch">,
+    Statistic<"numErasedSlots", "erased-slots",
+              "Goto destination slots erased">,
+  ];
+}
+
 def GotoSolver : Pass<"cir-goto-solver", "mlir::ModuleOp"> {
   let summary = "Replaces goto operations with branches";
   let description = [{

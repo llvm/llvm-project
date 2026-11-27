@@ -1,0 +1,299 @@
+// RUN: cir-opt %s -cir-fold-goto-dispatch -o - | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+cir.func private @g()
+
+// Both edges into the dispatch carry a known id, through a forwarding block on
+// the goto path, so each goes straight to its destination and the slot goes.
+// CHECK-LABEL: cir.func @known_ids(
+// CHECK-NOT:     goto_dest_slot
+// CHECK:         cir.brcond %arg0 ^[[GOTO:bb[0-9]+]], ^[[CONT:bb[0-9]+]]
+// CHECK:       ^[[GOTO]]:
+// CHECK-NEXT:    cir.br ^[[OUT:bb[0-9]+]]
+// CHECK:       ^[[CONT]]:
+// CHECK-NEXT:    cir.call @g()
+// CHECK-NEXT:    cir.br ^[[OUT]]
+// CHECK:       ^[[OUT]]:
+// CHECK-NEXT:    cir.return
+// CHECK-NOT:     cir.switch.flat
+cir.func @known_ids(%arg0: !cir.bool) {
+  %slot = cir.alloca "__goto_dest_slot" align(4) goto_dest_slot : !cir.ptr<!s32i>
+  %zero = cir.const #cir.int<0> : !s32i
+  %one = cir.const #cir.int<1> : !s32i
+  cir.store %zero, %slot : !s32i, !cir.ptr<!s32i>
+  cir.brcond %arg0 ^bb1, ^bb3
+^bb1:
+  cir.store %one, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb2
+^bb2:
+  cir.br ^bb4
+^bb3:
+  cir.br ^bb4
+^bb4:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb5 [
+    1: ^bb6
+  ]
+^bb5:
+  cir.call @g() : () -> ()
+  cir.br ^bb6
+^bb6:
+  cir.return
+}
+
+// The slot holds 0 on every path around a loop, so the loop exit is known
+// too.
+// CHECK-LABEL: cir.func @loop_merge(
+// CHECK-NOT:     cir.switch.flat
+// CHECK-NOT:     goto_dest_slot
+cir.func @loop_merge(%arg0: !cir.bool, %arg1: !cir.bool) {
+  %slot = cir.alloca "__goto_dest_slot" align(4) goto_dest_slot : !cir.ptr<!s32i>
+  %zero = cir.const #cir.int<0> : !s32i
+  %one = cir.const #cir.int<1> : !s32i
+  cir.store %zero, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb1
+^bb1:
+  cir.brcond %arg0 ^bb2, ^bb4
+^bb2:
+  cir.store %zero, %slot : !s32i, !cir.ptr<!s32i>
+  cir.brcond %arg1 ^bb3, ^bb1
+^bb3:
+  cir.store %one, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb4
+^bb4:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb5 [
+    1: ^bb6
+  ]
+^bb5:
+  cir.call @g() : () -> ()
+  cir.br ^bb6
+^bb6:
+  cir.return
+}
+
+// A case edge of one dispatch carries that case's id into the next one.
+// CHECK-LABEL: cir.func @chained(
+// CHECK-NOT:     cir.switch.flat
+// CHECK-NOT:     goto_dest_slot
+cir.func @chained(%arg0: !cir.bool) {
+  %slot = cir.alloca "__goto_dest_slot" align(4) goto_dest_slot : !cir.ptr<!s32i>
+  %zero = cir.const #cir.int<0> : !s32i
+  %two = cir.const #cir.int<2> : !s32i
+  cir.store %zero, %slot : !s32i, !cir.ptr<!s32i>
+  cir.brcond %arg0 ^bb1, ^bb2
+^bb1:
+  cir.store %two, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb2
+^bb2:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb4 [
+    2: ^bb3
+  ]
+^bb3:
+  cir.br ^bb4
+^bb4:
+  %id2 = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id2 : !s32i, ^bb5 [
+    2: ^bb6
+  ]
+^bb5:
+  cir.call @g() : () -> ()
+  cir.br ^bb6
+^bb6:
+  cir.return
+}
+
+// Different ids merge in a block that does more than forward, so the
+// dispatch after it stays, and so does the slot.
+// CHECK-LABEL: cir.func @unknown_merge(
+// CHECK:         goto_dest_slot
+// CHECK:         cir.switch.flat
+cir.func @unknown_merge(%arg0: !cir.bool) {
+  %slot = cir.alloca "__goto_dest_slot" align(4) goto_dest_slot : !cir.ptr<!s32i>
+  %zero = cir.const #cir.int<0> : !s32i
+  %one = cir.const #cir.int<1> : !s32i
+  cir.store %zero, %slot : !s32i, !cir.ptr<!s32i>
+  cir.brcond %arg0 ^bb1, ^bb2
+^bb1:
+  cir.store %one, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb2
+^bb2:
+  cir.call @g() : () -> ()
+  cir.br ^bb3
+^bb3:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb4 [
+    1: ^bb5
+  ]
+^bb4:
+  cir.call @g() : () -> ()
+  cir.br ^bb5
+^bb5:
+  cir.return
+}
+
+// A goto and a fallthrough share one cleanup, as FlattenCFG emits it: each
+// exit stores its own id to the cleanup slot, and a switch after the cleanup
+// picks the exit. On each case edge the goto slot holds what it held where
+// that case's id was stored, so the goto dispatch folds and the slot goes.
+// CHECK-LABEL: cir.func @through_cleanup(
+// CHECK-NOT:     goto_dest_slot
+// CHECK:         cir.call @g()
+// CHECK:         cir.switch.flat %{{.*}} : !s32i, ^{{bb[0-9]+}} [
+// CHECK-NEXT:      0: ^[[FALL:bb[0-9]+]],
+// CHECK-NEXT:      1: ^[[GOTO:bb[0-9]+]]
+// CHECK:       ^[[FALL]]:
+// CHECK-NEXT:    cir.call @g()
+// CHECK-NEXT:    cir.br ^[[GOTO]]
+// CHECK:       ^[[GOTO]]:
+// CHECK-NEXT:    cir.return
+cir.func @through_cleanup(%arg0: !cir.bool) {
+  %slot = cir.alloca "__goto_dest_slot" align(4) goto_dest_slot : !cir.ptr<!s32i>
+  %dest = cir.alloca "__cleanup_dest_slot" align(4) cleanup_dest_slot : !cir.ptr<!s32i>
+  %zero = cir.const #cir.int<0> : !s32i
+  %one = cir.const #cir.int<1> : !s32i
+  cir.store %zero, %slot : !s32i, !cir.ptr<!s32i>
+  cir.brcond %arg0 ^bb1, ^bb2
+^bb1:
+  cir.store %one, %slot : !s32i, !cir.ptr<!s32i>
+  cir.store %one, %dest : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb3
+^bb2:
+  cir.store %zero, %dest : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb3
+^bb3:
+  cir.call @g() : () -> ()
+  %which = cir.load %dest : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %which : !s32i, ^bb4 [
+    0: ^bb5,
+    1: ^bb6
+  ]
+^bb4:
+  cir.unreachable
+^bb5:
+  cir.br ^bb7
+^bb6:
+  cir.br ^bb7
+^bb7:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb8 [
+    1: ^bb9
+  ]
+^bb8:
+  cir.call @g() : () -> ()
+  cir.br ^bb9
+^bb9:
+  cir.return
+}
+
+// An alloca without the marker is never touched.
+// CHECK-LABEL: cir.func @unmarked(
+// CHECK:         cir.switch.flat
+cir.func @unmarked() {
+  %slot = cir.alloca "x" align(4) : !cir.ptr<!s32i>
+  %one = cir.const #cir.int<1> : !s32i
+  cir.store %one, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb1
+^bb1:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb2 [
+    1: ^bb3
+  ]
+^bb2:
+  cir.call @g() : () -> ()
+  cir.br ^bb3
+^bb3:
+  cir.return
+}
+
+// One exit of the cleanup stores an unknown cleanup id, which may be any case
+// of the cleanup's dispatch, so no case edge of it is known.
+// CHECK-LABEL: cir.func @unknown_cleanup_exit(
+// CHECK:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
+// CHECK:         cir.switch.flat %{{.*}} : !s32i, ^{{bb[0-9]+}} [
+// CHECK-NEXT:      0: ^[[ZERO:bb[0-9]+]],
+// CHECK:       ^[[ZERO]]:
+// CHECK-NEXT:    cir.br ^[[DISPATCH:bb[0-9]+]]
+// CHECK:       ^[[DISPATCH]]:
+// CHECK-NEXT:    %[[ID:.*]] = cir.load %[[SLOT]]
+// CHECK-NEXT:    cir.switch.flat %[[ID]]
+cir.func @unknown_cleanup_exit(%arg0: !cir.bool, %arg1: !s32i) {
+  %slot = cir.alloca "__goto_dest_slot" align(4) goto_dest_slot : !cir.ptr<!s32i>
+  %dest = cir.alloca "__cleanup_dest_slot" align(4) cleanup_dest_slot : !cir.ptr<!s32i>
+  %zero = cir.const #cir.int<0> : !s32i
+  %one = cir.const #cir.int<1> : !s32i
+  cir.store %zero, %slot : !s32i, !cir.ptr<!s32i>
+  cir.brcond %arg0 ^bb1, ^bb2
+^bb1:
+  cir.store %one, %slot : !s32i, !cir.ptr<!s32i>
+  cir.store %arg1, %dest : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb3
+^bb2:
+  cir.store %zero, %dest : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb3
+^bb3:
+  cir.call @g() : () -> ()
+  %which = cir.load %dest : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %which : !s32i, ^bb4 [
+    0: ^bb5,
+    1: ^bb6
+  ]
+^bb4:
+  cir.unreachable
+^bb5:
+  cir.br ^bb7
+^bb6:
+  cir.br ^bb7
+^bb7:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb8 [
+    1: ^bb9
+  ]
+^bb8:
+  cir.call @g() : () -> ()
+  cir.br ^bb9
+^bb9:
+  cir.return
+}
+
+// A slot that is stored something other than a constant, or stored volatile,
+// is left alone.
+// CHECK-LABEL: cir.func @unknown_store(
+// CHECK:         goto_dest_slot
+// CHECK:         cir.switch.flat
+// CHECK-LABEL: cir.func @volatile_store(
+// CHECK:         goto_dest_slot
+// CHECK:         cir.switch.flat
+cir.func @unknown_store(%arg0: !s32i) {
+  %slot = cir.alloca "__goto_dest_slot" align(4) goto_dest_slot : !cir.ptr<!s32i>
+  cir.store %arg0, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb1
+^bb1:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb2 [
+    1: ^bb3
+  ]
+^bb2:
+  cir.call @g() : () -> ()
+  cir.br ^bb3
+^bb3:
+  cir.return
+}
+cir.func @volatile_store() {
+  %slot = cir.alloca "__goto_dest_slot" align(4) goto_dest_slot : !cir.ptr<!s32i>
+  %one = cir.const #cir.int<1> : !s32i
+  cir.store volatile %one, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb1
+^bb1:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb2 [
+    1: ^bb3
+  ]
+^bb2:
+  cir.call @g() : () -> ()
+  cir.br ^bb3
+^bb3:
+  cir.return
+}

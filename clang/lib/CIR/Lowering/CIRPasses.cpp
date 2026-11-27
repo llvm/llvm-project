@@ -185,6 +185,7 @@ void populateCIRPreLoweringPasses(OpPassManager &pm) {
   pm.addPass(createCIRFlattenCFGPass());
   pm.addPass(createCIREHABILoweringPass());
   pm.addPass(createGotoSolverPass());
+  pm.addNestedPass<cir::FuncOp>(createCIRFoldGotoDispatchPass());
   pm.addPass(createCIRFoldEmptyBranchesPass());
 }
 

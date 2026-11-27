@@ -363,6 +363,7 @@ mlir::LogicalResult CIRAllocaOpABILowering::matchAndRewrite(
       op.getAlignmentAttr(), /*dynAllocSize=*/adaptor.getDynAllocSize());
   loweredOp.setInit(op.getInit());
   loweredOp.setConstant(op.getConstant());
+  loweredOp.setGotoDestSlot(op.getGotoDestSlot());
   loweredOp.setReturnSlot(op.getReturnSlot());
 
   rewriter.replaceOp(op, loweredOp);
