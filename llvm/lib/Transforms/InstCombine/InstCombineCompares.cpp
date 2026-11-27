@@ -4292,19 +4292,17 @@ foldICmpUSubSatOrUAddSatWithConstant(CmpPredicate Pred, SaturatingInst *II,
 
   Combination->getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
 
-  if (EquivOffset.isZero())
-    return new ICmpInst(EquivPred,
-                        Op0 ConstantInt::get(Op1->getType(), EquivInt));
+  // Ensure this fold never increases the number of instructions: Only fold when
+  // we replace the only use of the saturating operation, or when the offset is
+  // zero (so no add instruction is needed).
+  if (!EquivOffset.isZero()) {
+    if (!II->hasOneUse())
+      return nullptr;
+    Op0 = Builder.CreateAdd(Op0, ConstantInt::get(Op1->getType(), EquivOffset));
+  }
 
-  // Only fold when we replace the only use of the saturating operation.
-  // That way this fold never increases the number of instructions.
-  if (!II->hasOneUse())
-    return nullptr;
-
-  return new ICmpInst(
-      EquivPred,
-      Builder.CreateAdd(Op0, ConstantInt::get(Op1->getType(), EquivOffset)),
-      ConstantInt::get(Op1->getType(), EquivInt));
+  return new ICmpInst(EquivPred, Op0,
+                      ConstantInt::get(Op1->getType(), EquivInt));
 }
 
 static Instruction *
