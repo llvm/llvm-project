@@ -103,7 +103,7 @@ def OpD : NS_Op<"op_d"> {
 
 /// Test that an attribute constraint whose summary references $_op only
 /// generates the overload taking op.
-// CHECK:    static ::llvm::LogicalResult [[$SUMMARY_OP_ATTR_CONSTRAINT:__mlir_ods_local_attr_constraint.*]](
+// CHECK:    static ::llvm::LogicalResult __mlir_ods_local_attr_constraint{{.*}}(
 // CHECK-NEXT: ::mlir::Operation *op, ::mlir::Attribute attr, ::llvm::StringRef attrName) {
 // CHECK-NEXT: if (attr && !((attrPredNoOp(attr))))
 // CHECK-NEXT:   return op->emitOpError() << "attribute '" << attrName

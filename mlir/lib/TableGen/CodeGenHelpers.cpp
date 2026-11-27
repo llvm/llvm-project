@@ -194,14 +194,18 @@ static ::llvm::LogicalResult {0}(
 }
 )";
 
-/// Code for an attribute constraint that does not reference `$_op`.
-/// Two overloads are emitted. The first reports errors through `emitError`, so
-/// it can be called before the op exists. The second reports errors on `op`.
-/// These constraints cannot reference anything other than `$_self`.
+/// Code templates for attribute constraints. Attribute constraints cannot
+/// reference anything other than `$_self` and `$_op`. Both templates must be
+/// updated together and accept the same format arguments:
 ///
-/// {0}: name of function
-/// {1}: condition
-/// {2}: constraint summary
+/// {0}: The unique constraint name.
+/// {1}: The constraint code.
+/// {2}: The constraint description.
+///
+/// `attrConstraintCode` is for constraints referencing only `$_self` and emits
+/// an `emitError` overload (usable before the op exists) and an `op` overload.
+/// `attrConstraintWithOpCode` is for constraints also referencing `$_op` and
+/// emits only the `op` overload.
 ///
 /// TODO: Unique constraints for adaptors. However, most Adaptor::verify
 /// functions are stripped anyways.
@@ -220,15 +224,6 @@ static ::llvm::LogicalResult {0}(
   });
 }
 )";
-
-/// Code for an attribute constraint that references `$_op`. Only the overload
-/// taking `op` is emitted because the constraint cannot be evaluated without an
-/// op. These constraints cannot reference anything other than `$_self` and
-/// `$_op`.
-///
-/// {0}: name of function
-/// {1}: condition
-/// {2}: constraint summary
 static const char *const attrConstraintWithOpCode = R"(
 static ::llvm::LogicalResult {0}(
     ::mlir::Operation *op, ::mlir::Attribute attr, ::llvm::StringRef attrName) {{
@@ -510,5 +505,7 @@ bool mlir::tblgen::constraintReferencesOp(const Constraint &constraint) {
   Pred pred = constraint.getPredicate();
   if (!pred.isNull() && StringRef(pred.getCondition()).contains("$_op"))
     return true;
+  // `buildErrorStreamingString` expands `{{...}}` in the summary via `tgfmt`
+  // into diagnostic C++ code, so `$_op` there requires an `op` parameter too.
   return constraint.getSummary().contains("$_op");
 }
