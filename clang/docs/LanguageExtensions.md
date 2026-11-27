@@ -4411,7 +4411,7 @@ builtin, the mangler emits their usual pattern without any special treatment.
 
 ```c
 // Computes a unique stable name for the given type.
-constexpr const char * __builtin_sycl_unique_stable_name(type);
+constexpr const char * __builtin_sycl_unique_stable_name(type-id);
 ```
 
 ### `__builtin_popcountg`
