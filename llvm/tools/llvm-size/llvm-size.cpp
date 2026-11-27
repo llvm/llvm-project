@@ -51,7 +51,7 @@ public:
   SizeOptTable() : OptTable(optionTables()) { setGroupedShortOptions(true); }
 };
 
-enum OutputFormatTy { berkeley, sysv, darwin };
+enum OutputFormatTy { berkeley, gnu, sysv, darwin };
 enum RadixTy { octal = 8, decimal = 10, hexadecimal = 16 };
 enum class SliceKind { None, ExplicitArch, HostArch, AllArchs };
 
@@ -154,7 +154,21 @@ static size_t getNumLengthAsString(uint64_t num) {
 }
 
 // Print Value right-aligned in Width characters using the configured Radix.
-static void printRadixNumber(raw_ostream &OS, uint64_t Value, unsigned Width) {
+// When PrefixZero is true, zero is formatted with an explicit radix prefix
+// ("0x0" for hexadecimal, "00" for octal) to match GNU size -G, while keeping
+// the existing printf "%#x"/"%#o" ("0") formatting for Berkeley and SysV.
+static void printRadixNumber(raw_ostream &OS, uint64_t Value, unsigned Width,
+                             bool PrefixZero = false) {
+  if (PrefixZero && Value == 0) {
+    if (Radix == hexadecimal) {
+      OS << right_justify("0x0", Width);
+      return;
+    }
+    if (Radix == octal) {
+      OS << right_justify("00", Width);
+      return;
+    }
+  }
   int W = static_cast<int>(Width);
   switch (Radix) {
   case octal:
@@ -214,6 +228,32 @@ static SummarySizes getBerkeleySectionSizes(const ObjectFile &Obj) {
   return Sizes;
 }
 
+// Calculate cumulative text, data, and bss sizes using GNU classification
+// (matching GNU binutils size -G: allocatable executable sections -> text,
+// initialized data -> data, uninitialized data -> bss).
+static SummarySizes getGnuSectionSizes(const ObjectFile &Obj) {
+  SummarySizes Sizes;
+  for (SectionRef Section : Obj.sections()) {
+    // ELFObjectFile::isSectionText() does not check SHF_ALLOC, so filter
+    // non-allocatable ELF sections explicitly. For non-ELF formats (such as
+    // COFF and Mach-O), isData() can be true for debug sections, so skip them.
+    if (Obj.isELF()) {
+      if (!(ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC))
+        continue;
+    } else if (Section.isDebugSection()) {
+      continue;
+    }
+    uint64_t Size = Section.getSize();
+    if (Section.isText())
+      Sizes.Text += Size;
+    else if (Section.isData())
+      Sizes.Data += Size;
+    else if (Section.isBSS())
+      Sizes.Bss += Size;
+  }
+  return Sizes;
+}
+
 // Calculate standard Mach-O segment summary sizes.
 static MachOSegmentSizes getMachOSegmentSizes(const MachOObjectFile &MachO) {
   MachOSegmentSizes Sizes;
@@ -265,7 +305,7 @@ public:
   virtual void finish() {}
 };
 
-// Base printer for tabular summary formats (such as Berkeley).
+// Base printer for tabular summary formats (Berkeley and GNU).
 class SummarySizePrinter : public SizePrinter {
 protected:
   bool HeaderPrinted = false;
@@ -285,7 +325,10 @@ protected:
 
   void printObjectName(const ObjectFile &Obj, const ObjectContext &Ctx) {
     if (!Ctx.ArchiveName.empty()) {
-      OS << Obj.getFileName() << " (ex " << Ctx.ArchiveName << ")\n";
+      OS << Obj.getFileName() << " (ex " << Ctx.ArchiveName << ')';
+      if (Ctx.ShowArchInArchive && !Ctx.ArchName.empty())
+        OS << " (for architecture " << Ctx.ArchName << ')';
+      OS << '\n';
     } else {
       OS << Obj.getFileName();
       if (!Ctx.ArchName.empty())
@@ -429,6 +472,33 @@ public:
     }
     SummarySizePrinter::printObject(Obj, Ctx);
   }
+};
+
+// Printer for GNU output format (-G / --format=gnu).
+class GnuSizePrinter final : public SummarySizePrinter {
+protected:
+  SummarySizes getSectionSizes(const ObjectFile &Obj) const override {
+    return getGnuSectionSizes(Obj);
+  }
+
+  void printHeader() override {
+    OS << "      text       data        bss      total filename\n";
+  }
+
+  void printRow(uint64_t Text, uint64_t Data, uint64_t Bss,
+                uint64_t Total) override {
+    printRadixNumber(OS, Text, 10, /*PrefixZero=*/true);
+    OS << ' ';
+    printRadixNumber(OS, Data, 10, /*PrefixZero=*/true);
+    OS << ' ';
+    printRadixNumber(OS, Bss, 10, /*PrefixZero=*/true);
+    OS << ' ';
+    printRadixNumber(OS, Total, 10, /*PrefixZero=*/true);
+    OS << ' ';
+  }
+
+public:
+  using SummarySizePrinter::SummarySizePrinter;
 };
 
 // Printer for System V output format.
@@ -626,6 +696,8 @@ static std::unique_ptr<SizePrinter> createSizePrinter(OutputFormatTy Format,
   switch (Format) {
   case berkeley:
     return std::make_unique<BerkeleySizePrinter>(OS);
+  case gnu:
+    return std::make_unique<GnuSizePrinter>(OS);
   case sysv:
     return std::make_unique<SysVSizePrinter>(OS);
   case darwin:
@@ -831,10 +903,13 @@ int llvm_size_main(int argc, char **argv, const llvm::ToolContext &) {
     OutputFormat = berkeley;
   else if (V == "darwin")
     OutputFormat = darwin;
+  else if (V == "gnu")
+    OutputFormat = gnu;
   else if (V == "sysv")
     OutputFormat = sysv;
   else
-    error("--format value should be one of: 'berkeley', 'darwin', 'sysv'");
+    error(
+        "--format value should be one of: 'berkeley', 'darwin', 'gnu', 'sysv'");
   V = Args.getLastArgValue(OPT_radix_EQ, "10");
   if (V == "8")
     Radix = RadixTy::octal;

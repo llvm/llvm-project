@@ -1,0 +1,116 @@
+## Verify GNU output format (-G / --format=gnu) on Mach-O objects, including
+## excluding debug sections (__debug_*, __apple_*) from data.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-size -G %t.o | FileCheck %s --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+# RUN: llvm-size --format=gnu -t %t.o %t.o | FileCheck %s --check-prefix=TOTALS --match-full-lines --strict-whitespace --implicit-check-not={{.}} -DFILE=%t.o
+
+## text  = __text (16)
+## data  = __const (8) + __data (32) = 40
+## bss   = __bss (64)
+## total = 16 + 40 + 64 = 120
+## ignored: __debug_info, __apple_names
+#      CHECK:      text       data        bss      total filename
+# CHECK-NEXT:        16         40         64        120 [[FILE]]
+
+#      TOTALS:      text       data        bss      total filename
+# TOTALS-NEXT:        16         40         64        120 [[FILE]]
+# TOTALS-NEXT:        16         40         64        120 [[FILE]]
+# TOTALS-NEXT:        32         80        128        240 (TOTALS)
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0x1
+  ncmds:           1
+  sizeofcmds:      552
+  flags:           0x2000
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         552
+    segname:         ''
+    vmaddr:          0
+    vmsize:          504
+    fileoff:         584
+    filesize:        440
+    maxprot:         7
+    initprot:        7
+    nsects:          6
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x0
+        size:            16
+        offset:          0x248
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __const
+        segname:         __TEXT
+        addr:            0x10
+        size:            8
+        offset:          0x258
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x18
+        size:            32
+        offset:          0x260
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __bss
+        segname:         __DATA
+        addr:            0x38
+        size:            64
+        offset:          0x0
+        align:           2
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x1
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __debug_info
+        segname:         __DWARF
+        addr:            0x78
+        size:            128
+        offset:          0x280
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+      - sectname:        __apple_names
+        segname:         __DWARF
+        addr:            0xF8
+        size:            256
+        offset:          0x300
+        align:           0
+        reloff:          0x0
+        nreloc:          0
+        flags:           0x02000000
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0

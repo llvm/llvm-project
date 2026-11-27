@@ -9,6 +9,7 @@
 
 # RUN: llvm-size -B %t1.a | count 0
 # RUN: llvm-size -A %t1.a | count 0
+# RUN: llvm-size -G %t1.a | count 0
 
 ## Case 2: Single member.
 # RUN: rm -f %t2.a
@@ -16,6 +17,7 @@
 
 # RUN: llvm-size -B %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=BERKELEY-1
 # RUN: llvm-size -A %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=SYSV-1
+# RUN: llvm-size -G %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=GNU-1
 # RUN: llvm-size -m %t2.a | FileCheck %s -DARCHIVE=%t2.a --check-prefix=DARWIN-1
 
 ## Case 3: Multiple members.
@@ -24,6 +26,7 @@
 
 # RUN: llvm-size -B %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=BERKELEY-1,BERKELEY-2
 # RUN: llvm-size -A %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=SYSV-1,SYSV-2
+# RUN: llvm-size -G %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=GNU-1,GNU-2
 # RUN: llvm-size -m %t3.a | FileCheck %s -DARCHIVE=%t3.a --check-prefixes=DARWIN-1,DARWIN-2
 
 ## Case 4: Mixing archives and non-archives produces sensible output:
@@ -33,6 +36,9 @@
 # RUN: llvm-size -A %t1 %t2.a %t2 %t3.a \
 # RUN:   | FileCheck %s -DARCHIVE=%t3.a -DARCHIVE2=%t2.a -DFILE1=%t1 -DFILE2=%t2 \
 # RUN:                  --check-prefixes=SYSV-1,SYSV-2,SYSV-3
+# RUN: llvm-size -G %t1 %t2.a %t2 %t3.a \
+# RUN:   | FileCheck %s -DARCHIVE=%t3.a -DARCHIVE2=%t2.a -DFILE1=%t1 -DFILE2=%t2 \
+# RUN:                  --check-prefixes=GNU-1,GNU-2,GNU-3
 # RUN: llvm-size -B %t1 %t2.a %t2 %t3.a \
 # RUN:   | FileCheck %s -DARCHIVE=%t3.a -DARCHIVE2=%t2.a -DFILE1=%t1 -DFILE2=%t2 \
 # RUN:                  --check-prefixes=DARWIN-1,DARWIN-2,DARWIN-3
@@ -93,6 +99,14 @@
 # DARWIN-1-NEXT:   1       2       4       7       7 archive.test.tmp1 (ex [[ARCHIVE]])
 # DARWIN-2-NEXT:   8      16      32      56      38 archive.test.tmp2 (ex [[ARCHIVE]])
 # DARWIN-1-NOT:{{.}}
+
+# GNU-1:           text       data        bss      total filename
+# GNU-3-NEXT:         1          2          4          7 [[FILE1]]
+# GNU-3-NEXT:         1          2          4          7 archive.test.tmp1 (ex [[ARCHIVE2]])
+# GNU-3-NEXT:         8         16         32         56 [[FILE2]]
+# GNU-1-NEXT:         1          2          4          7 archive.test.tmp1 (ex [[ARCHIVE]])
+# GNU-2-NEXT:         8         16         32         56 archive.test.tmp2 (ex [[ARCHIVE]])
+# GNU-1-NOT:{{.}}
 
 --- !ELF
 FileHeader:
