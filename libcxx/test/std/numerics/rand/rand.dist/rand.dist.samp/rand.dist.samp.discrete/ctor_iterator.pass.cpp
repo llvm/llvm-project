@@ -88,5 +88,28 @@ int main(int, char**)
         assert(p[2] == 1);
     }
 
-  return 0;
+#if TEST_STD_VER >= 11
+    {
+      // [rand.dist.samp.discrete] specifies p_k = w_k / S. Here S = 9,
+      // so the final probability must be zero.
+      typedef std::discrete_distribution<> D;
+      double p0[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 0};
+      D d(p0, p0 + 10);
+      std::vector<double> p = d.probabilities();
+      assert(p.size() == 10);
+      assert(p[9] == 0);
+    }
+    {
+      // Zero weights have zero probability, including trailing weights.
+      typedef std::discrete_distribution<> D;
+      double p0[] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0};
+      D d(p0, p0 + 12);
+      std::vector<double> p = d.probabilities();
+      assert(p.size() == 12);
+      assert(p[10] == 0);
+      assert(p[11] == 0);
+    }
+#endif
+
+    return 0;
 }

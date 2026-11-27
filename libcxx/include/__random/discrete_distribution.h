@@ -142,10 +142,11 @@ void discrete_distribution<_IntType>::param_type::__init() {
   if (!__p_.empty()) {
     if (__p_.size() > 1) {
       double __s = std::accumulate(__p_.begin(), __p_.end(), 0.0);
-      for (vector<double>::iterator __i = __p_.begin(), __e = __p_.end(); __i < __e; ++__i)
-        *__i /= __s;
       vector<double> __t(__p_.size() - 1);
       std::partial_sum(__p_.begin(), __p_.end() - 1, __t.begin());
+      // Normalize the cumulative weights so that they remain in [0, 1].
+      for (vector<double>::iterator __i = __t.begin(), __e = __t.end(); __i < __e; ++__i)
+        *__i /= __s;
       swap(__p_, __t);
     } else {
       __p_.clear();

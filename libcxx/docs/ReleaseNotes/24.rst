@@ -63,6 +63,13 @@ Improvements and New Features
 
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
 
+Bug Fixes
+---------
+
+- Fixed ``std::discrete_distribution::probabilities()`` and
+  ``std::discrete_distribution::param_type::probabilities()`` returning negative probabilities
+  or nonzero probabilities for trailing zero weights due to floating-point rounding.
+
 Deprecations and Removals
 -------------------------
 
