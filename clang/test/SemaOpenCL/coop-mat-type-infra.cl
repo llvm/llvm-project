@@ -34,15 +34,14 @@ void test_type_spelling(void) {
 // AST: VarDecl {{.*}} c {{.*}}coop_mat(
 // AST: VarDecl {{.*}} d {{.*}}coop_mat(
 
-// Parameter / return type — type preserved through function boundary.
+// Parameter / return type preserved through function boundary.
 MatA_float16x16 test_param_return(MatA_float16x16 in) {
     return in;
 }
 // AST: FunctionDecl {{.*}} test_param_return
 // AST: ParmVarDecl {{.*}} in {{.*}}coop_mat(
 
-// TypeLoc operand traversal — check if all four operand slots of coop_mat
-// type are populated.
+// Check if all four operand slots of coop_mat type are populated.
 void test_typeloc_operands(void) {
     float __attribute__((coop_mat(SCOPE, 4, 8, USE_C))) local_acc;
     (void)local_acc;

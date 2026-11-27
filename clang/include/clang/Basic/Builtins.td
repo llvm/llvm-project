@@ -1984,67 +1984,67 @@ def MatrixColumnMajorStore : Builtin {
 }
 
 // Cooperative Matrix builtins for cl_khr_cooperative_matrix
-def CoopMatLoad : Builtin {
+def CoopMatLoad : OCLLangBuiltin {
   let Spellings = ["coop_mat_load"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatStore : Builtin {
+def CoopMatStore : OCLLangBuiltin {
   let Spellings = ["coop_mat_store"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatMulAdd : Builtin {
+def CoopMatMulAdd : OCLLangBuiltin {
   let Spellings = ["coop_mat_mulAdd"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatBinaryAdd : Builtin {
+def CoopMatBinaryAdd : OCLLangBuiltin {
   let Spellings = ["coop_mat_binary_add"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatBinarySub : Builtin {
+def CoopMatBinarySub : OCLLangBuiltin {
   let Spellings = ["coop_mat_binary_sub"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatBinaryMul : Builtin {
+def CoopMatBinaryMul : OCLLangBuiltin {
   let Spellings = ["coop_mat_binary_mul"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatBinaryDiv : Builtin {
+def CoopMatBinaryDiv : OCLLangBuiltin {
   let Spellings = ["coop_mat_binary_div"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatScalarMul : Builtin {
+def CoopMatScalarMul : OCLLangBuiltin {
   let Spellings = ["coop_mat_scalar_mul"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatScalarNeg : Builtin {
+def CoopMatScalarNeg : OCLLangBuiltin {
   let Spellings = ["coop_mat_scalar_neg"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatInit : Builtin {
+def CoopMatInit : OCLLangBuiltin {
   let Spellings = ["coop_mat_init"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def CoopMatLength : Builtin {
+def CoopMatLength : OCLLangBuiltin {
   let Spellings = ["coop_mat_length"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "unsigned int(...)";

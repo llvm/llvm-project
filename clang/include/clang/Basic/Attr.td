@@ -3997,6 +3997,7 @@ def CoopMatrixType : TypeAttr {
   let Args = [UnsignedArgument<"CoopMatScope">, UnsignedArgument<"NumRows">,
               UnsignedArgument<"NumColumns">, UnsignedArgument<"CoopMatUse">];
   let Documentation = [CoopMatrixTypeDocs];
+  let LangOpts = [OpenCL];
 }
 
 def Visibility : InheritableAttr {

@@ -7676,34 +7676,3 @@ void CodeGenFunction::FlattenAccessAndTypeLValue(
     }
   }
 }
-
-llvm::Value *
-CodeGenFunction::EmitCoopMatBuiltinCall(llvm::StringRef BuiltinName,
-                                        llvm::ArrayRef<llvm::Value *> Args,
-                                        QualType ResultTy) {
-  assert(!Args.empty() &&
-         "Expected at least one argument for cooperative matrix builtin");
-
-  llvm::Module &Module = CGM.getModule();
-
-  llvm::Type *ResultLLVMType = ConvertType(ResultTy);
-
-  SmallVector<llvm::Type *, 8> ArgTypes;
-  ArgTypes.reserve(Args.size());
-
-  for (llvm::Value *Arg : Args) {
-    assert(Arg && "Cooperative matrix builtin argument must not be null");
-    ArgTypes.push_back(Arg->getType());
-  }
-
-  // Although the frontend builtin is declared as void(...), the LLVM-level
-  // builtin returns the cooperative matrix result directly.
-  llvm::FunctionType *BuiltinType =
-      llvm::FunctionType::get(ResultLLVMType, ArgTypes,
-                              /*IsVarArg=*/false);
-
-  llvm::FunctionCallee Builtin =
-      Module.getOrInsertFunction(BuiltinName, BuiltinType);
-
-  return Builder.CreateCall(Builtin, Args, "coopmat.result");
-}

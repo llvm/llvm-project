@@ -4833,6 +4833,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (!MTy)
       CGM.ErrorUnsupported(E, "coop_mat_load without coop_mat output operand");
 
+    // TODO: Reuse SrcAddr for pointer argument instead of emitting it again.
     auto Ptr = EmitScalarExpr(E->getArg(0));
     auto Layout = EmitScalarExpr(E->getArg(2));
     Layout = Builder.CreateZExtOrTrunc(Layout, Int32Ty);

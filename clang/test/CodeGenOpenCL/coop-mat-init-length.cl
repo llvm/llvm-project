@@ -1,4 +1,4 @@
-// Tests for coop_mat_init and coop_mat_length — CodeGen (IR shape).
+// Tests for coop_mat_init and coop_mat_length.
 //
 // RUN: %clang_cc1 -triple spirv64-unknown-unknown \
 // RUN:   -cl-std=CL2.0 -cl-ext=+cl_khr_cooperative_matrix \
