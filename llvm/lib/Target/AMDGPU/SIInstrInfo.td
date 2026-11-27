@@ -1326,7 +1326,7 @@ def A16 : NamedBitOperand<"a16">;
 def D16 : NamedBitOperand<"d16">;
 def LWE : NamedBitOperand<"lwe">;
 def exp_compr : NamedBitOperand<"compr", "ExpCompr", 1>;
-def exp_vm : NamedBitOperand<"vm", "ExpVM", 1>;
+def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 def exp_done : NamedBitOperand<"done", "Done", 1>;
 def exp_row_en : NamedBitOperand<"row_en", "RowEn", 1>;
 
