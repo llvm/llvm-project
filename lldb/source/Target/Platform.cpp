@@ -1405,11 +1405,8 @@ const char *Platform::GetLocalCacheDirectory() {
 #define LLDB_OPTIONS_platform_ssh
 #include "TargetOptions.inc"
 
-static constexpr OptionDefinition g_caching_option_table[] = {
-    {LLDB_OPT_SET_ALL, false, "local-cache-dir", 'c',
-     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypePath,
-     "Path in which to store local copies of files."},
-};
+#define LLDB_OPTIONS_platform_caching
+#include "TargetOptions.inc"
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformRSync::GetDefinitions() {
   return llvm::ArrayRef(g_platform_rsync_options);
@@ -1495,7 +1492,7 @@ OptionGroupPlatformSSH::SetOptionValue(uint32_t option_idx,
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformCaching::GetDefinitions() {
-  return llvm::ArrayRef(g_caching_option_table);
+  return llvm::ArrayRef(g_platform_caching_options);
 }
 
 void OptionGroupPlatformCaching::OptionParsingStarting(

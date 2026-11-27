@@ -23,3 +23,10 @@ let Command = "platform ssh" in {
         Arg<"CommandName">,
         Desc<"Platform-specific options required for SSH to work.">;
 }
+
+let Command = "platform caching" in {
+  def platform_caching_local_cache_dir
+      : Option<"local-cache-dir", "c">,
+        Arg<"Path">,
+        Desc<"Path in which to store local copies of files.">;
+}
