@@ -16,12 +16,15 @@
 #include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
+#include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Value.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FoldInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
@@ -43,6 +46,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPOpsEnums.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPOpsInterfaces.cpp.inc"
 #include "mlir/Dialect/OpenMP/OpenMPTypeInterfaces.cpp.inc"
+#include "mlir/Support/LLVM.h"
 
 using namespace mlir;
 using namespace mlir::omp;
@@ -2878,6 +2882,15 @@ LogicalResult TargetDataOp::verify() {
   return verifyMapClause(*this, getMapVars(), getMapIterated());
 }
 
+void TargetDataOp::getSuccessorRegions(
+    RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor(getOperation()));
+    return;
+  }
+  regions.push_back(RegionSuccessor(&getRegion()));
+}
+
 //===----------------------------------------------------------------------===//
 // TargetEnterDataOp
 //===----------------------------------------------------------------------===//
@@ -3165,6 +3178,28 @@ LogicalResult TargetOp::verifyRegions() {
   }
 
   return success();
+}
+
+void TargetOp::getSuccessorRegions(RegionBranchPoint point,
+                                   SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor(getOperation()));
+    return;
+  }
+  regions.push_back(RegionSuccessor(&getRegion()));
+}
+
+OperandRange TargetOp::getEntrySuccessorOperands(RegionSuccessor successor) {
+  assert(successor.getSuccessor() == &getRegion());
+  return getHostEvalVars();
+}
+
+mlir::ValueRange TargetOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isOperation())
+    return {};
+  assert(successor == &getRegion());
+  return mlir::cast<BlockArgOpenMPOpInterface>(getOperation())
+      .getHostEvalBlockArgs();
 }
 
 //===----------------------------------------------------------------------===//
