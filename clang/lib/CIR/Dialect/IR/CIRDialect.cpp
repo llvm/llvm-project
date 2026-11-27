@@ -4477,6 +4477,17 @@ LogicalResult cir::CmpOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// CmpThreeWayOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::CmpThreeWayOp::verify() {
+  if (getFenvAttr() && !cir::isAnyFloatingPointType(getLhs().getType()))
+    return emitOpError()
+           << "'fenv' is only valid for floating-point comparisons";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // VecCmpOp
 //===----------------------------------------------------------------------===//
 

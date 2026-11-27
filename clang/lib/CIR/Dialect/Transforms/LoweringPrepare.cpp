@@ -2167,28 +2167,33 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   mlir::Value gtRes =
       builder.getConstantInt(loc, op.getType(), cmpInfo.getGt());
 
+  // A comparison of floating-point values expands into quiet `cir.fcmp`s,
+  // which take the `fenv` attribute of the operation.
+  bool isFloatingPoint = cir::isAnyFloatingPointType(op.getLhs().getType());
+  FenvOpBuilder fp(builder, loc, op.getFenvAttr());
+  auto compare = [&](CmpOpKind kind, FCmpOpKind quietKind) -> mlir::Value {
+    if (isFloatingPoint)
+      return fp.createFCompare(quietKind, op.getLhs(), op.getRhs());
+    return builder.createCompare(loc, kind, op.getLhs(), op.getRhs());
+  };
+
   mlir::Value transformedResult;
   if (cmpInfo.getOrdering() != CmpOrdering::Partial) {
     // Total ordering
-    mlir::Value lt =
-        builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
+    mlir::Value lt = compare(CmpOpKind::lt, FCmpOpKind::olt);
     mlir::Value selectOnLt = builder.createSelect(loc, lt, ltRes, gtRes);
-    mlir::Value eq =
-        builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
+    mlir::Value eq = compare(CmpOpKind::eq, FCmpOpKind::oeq);
     transformedResult = builder.createSelect(loc, eq, eqRes, selectOnLt);
   } else {
     // Partial ordering
     cir::ConstantOp unorderedRes = builder.getConstantInt(
         loc, op.getType(), cmpInfo.getUnordered().value());
 
-    mlir::Value eq =
-        builder.createCompare(loc, CmpOpKind::eq, op.getLhs(), op.getRhs());
+    mlir::Value eq = compare(CmpOpKind::eq, FCmpOpKind::oeq);
     mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, unorderedRes);
-    mlir::Value gt =
-        builder.createCompare(loc, CmpOpKind::gt, op.getLhs(), op.getRhs());
+    mlir::Value gt = compare(CmpOpKind::gt, FCmpOpKind::ogt);
     mlir::Value selectOnGt = builder.createSelect(loc, gt, gtRes, selectOnEq);
-    mlir::Value lt =
-        builder.createCompare(loc, CmpOpKind::lt, op.getLhs(), op.getRhs());
+    mlir::Value lt = compare(CmpOpKind::lt, FCmpOpKind::olt);
     transformedResult = builder.createSelect(loc, lt, ltRes, selectOnGt);
   }
 

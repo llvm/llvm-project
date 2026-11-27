@@ -83,11 +83,11 @@ auto three_way_partial(float x, float y) {
 // AFTER-NEXT:   %[[EQ:.*]] = cir.const #cir.int<0> : !s8i{{.*}}
 // AFTER-NEXT:   %[[GT:.*]] = cir.const #cir.int<1> : !s8i{{.*}}
 // AFTER-NEXT:   %[[UNORDERED:.*]] = cir.const #cir.int<-127> : !s8i{{.*}}
-// AFTER-NEXT:   %[[CMP_EQ:.*]] = cir.cmp eq %[[LHS]], %[[RHS]] : !cir.float{{.*}}
+// AFTER-NEXT:   %[[CMP_EQ:.*]] = cir.fcmp oeq %[[LHS]], %[[RHS]] : !cir.float{{.*}}
 // AFTER-NEXT:   %[[SELECT_1:.*]] = cir.select if %[[CMP_EQ]] then %[[EQ]] else %[[UNORDERED]] : (!cir.bool, !s8i, !s8i) -> !s8i{{.*}}
-// AFTER-NEXT:   %[[CMP_GT:.*]] = cir.cmp gt %[[LHS]], %[[RHS]] : !cir.float{{.*}}
+// AFTER-NEXT:   %[[CMP_GT:.*]] = cir.fcmp ogt %[[LHS]], %[[RHS]] : !cir.float{{.*}}
 // AFTER-NEXT:   %[[SELECT_2:.*]] = cir.select if %[[CMP_GT]] then %[[GT]] else %[[SELECT_1]] : (!cir.bool, !s8i, !s8i) -> !s8i{{.*}}
-// AFTER-NEXT:   %[[CMP_LT:.*]] = cir.cmp lt %[[LHS]], %[[RHS]] : !cir.float{{.*}}
+// AFTER-NEXT:   %[[CMP_LT:.*]] = cir.fcmp olt %[[LHS]], %[[RHS]] : !cir.float{{.*}}
 // AFTER-NEXT:   %[[SELECT_3:.*]] = cir.select if %[[CMP_LT]] then %[[LT]] else %[[SELECT_2]] : (!cir.bool, !s8i, !s8i) -> !s8i{{.*}}
 // AFTER:   %{{.+}} = cir.load %{{.+}} : !cir.ptr<!rec_std3A3A__13A3Apartial_ordering>, !rec_std3A3A__13A3Apartial_ordering{{.*}}
 // AFTER-NEXT:   cir.return %{{.+}} : !rec_std3A3A__13A3Apartial_ordering{{.*}}

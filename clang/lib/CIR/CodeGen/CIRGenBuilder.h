@@ -716,6 +716,19 @@ public:
     return cir::StackRestoreOp::create(*this, loc, v);
   }
 
+  /// A comparison of floating-point values takes the constrained
+  /// floating-point environment currently in effect.
+  cir::CmpThreeWayOp createThreeWayCmp(mlir::Location loc,
+                                       cir::IntType resultTy, mlir::Value lhs,
+                                       mlir::Value rhs,
+                                       cir::CmpThreeWayInfoAttr info) {
+    cir::FenvAttr fenv;
+    if (cir::isAnyFloatingPointType(lhs.getType()))
+      fenv = getConstrainedFPAttr();
+    return cir::CmpThreeWayOp::create(*this, loc, resultTy, lhs, rhs, info,
+                                      fenv);
+  }
+
   cir::CmpThreeWayOp createThreeWayCmpTotalOrdering(
       mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
       const llvm::APSInt &ltRes, const llvm::APSInt &eqRes,
@@ -730,8 +743,7 @@ public:
     auto infoAttr = cir::CmpThreeWayInfoAttr::get(
         getContext(), ordering, ltRes.getSExtValue(), eqRes.getSExtValue(),
         gtRes.getSExtValue());
-    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
-                                      infoAttr);
+    return createThreeWayCmp(loc, cmpResultTy, lhs, rhs, infoAttr);
   }
 
   cir::CmpThreeWayOp createThreeWayCmpPartialOrdering(
@@ -746,8 +758,7 @@ public:
     auto infoAttr = cir::CmpThreeWayInfoAttr::get(
         getContext(), ltRes.getSExtValue(), eqRes.getSExtValue(),
         gtRes.getSExtValue(), unorderedRes.getSExtValue());
-    return cir::CmpThreeWayOp::create(*this, loc, cmpResultTy, lhs, rhs,
-                                      infoAttr);
+    return createThreeWayCmp(loc, cmpResultTy, lhs, rhs, infoAttr);
   }
 
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
