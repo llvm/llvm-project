@@ -677,13 +677,7 @@ bool RuntimeCheckingPtrGroup::addPointer(unsigned Index, const SCEV *Start,
   return true;
 }
 
-/// Test whether the difference between two SCEV expressions is trivial.
-///
-/// Recognizes only SCEVs in the form of, either:
-/// - X vs X
-/// - C1 + X vs X
-/// - X vs C2 + X
-/// - C1 + X vs C2 + X
+/// Return the non-constant operand of an AddExpr, or \p S itself failing that.
 static const SCEV *stripConstant(const SCEV *S) {
   const SCEV *R;
   return match(S, m_scev_Add(m_SCEVConstant(), m_SCEV(R))) ? R : S;
@@ -772,7 +766,7 @@ void RuntimePointerChecking::groupChecks() {
       GroupKey PtrStripped = {stripConstant(Pointers[Pointer].Start),
                               stripConstant(Pointers[Pointer].End)};
 
-      // If after stripping a constant, we can find a group with the same
+      // If, after stripping a constant, we can find a group with the same
       // base we immediately add pointer to this group and skip the greedy
       // path and comparison counting.
       if (auto It = KeyToGroups.find(PtrStripped); It != KeyToGroups.end()) {
