@@ -24,6 +24,7 @@ body: |
   ; GFX12-NEXT: bb.1:
   ; GFX12-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
+  ; GFX12-NEXT:   S_WAITCNT_DEPCTR .VaVdst_1
   ; GFX12-NEXT:   DS_WRITE_B32_gfx9 $vgpr96, $vgpr97, 0, 0, implicit $exec
   ; GFX12-NEXT:   $vgpr32 = V_MOV_B32_e32 $vgpr95, implicit $exec
   ; GFX12-NEXT:   $vgpr33 = V_MOV_B32_e32 $vgpr95, implicit $exec
@@ -46,6 +47,7 @@ body: |
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GFX1250-NEXT: {{  $}}
+  ; GFX1250-NEXT:   S_WAITCNT_DEPCTR .VaVdst_1
   ; GFX1250-NEXT:   DS_WRITE_B32_gfx9 $vgpr96, $vgpr97, 0, 0, implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_MOV_B32_e32 $vgpr95, implicit $exec
   ; GFX1250-NEXT:   $vgpr33 = V_MOV_B32_e32 $vgpr95, implicit $exec
@@ -89,7 +91,7 @@ body: |
   ; GFX12-NEXT: bb.1:
   ; GFX12-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
+  ; GFX12-NEXT:   S_WAITCNT_DEPCTR .VaVdst_1_SaSdst_0
   ; GFX12-NEXT:   DS_WRITE_B32_gfx9 $vgpr96, $vgpr97, 0, 0, implicit $exec
   ; GFX12-NEXT:   $vgpr32 = V_MOV_B32_e32 $vgpr95, implicit $exec
   ; GFX12-NEXT:   $vgpr33 = V_MOV_B32_e32 $vgpr95, implicit $exec
@@ -112,7 +114,7 @@ body: |
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   S_WAITCNT_DEPCTR .SaSdst_0
+  ; GFX1250-NEXT:   S_WAITCNT_DEPCTR .VaVdst_1_SaSdst_0
   ; GFX1250-NEXT:   DS_WRITE_B32_gfx9 $vgpr96, $vgpr97, 0, 0, implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_MOV_B32_e32 $vgpr95, implicit $exec
   ; GFX1250-NEXT:   $vgpr33 = V_MOV_B32_e32 $vgpr95, implicit $exec
@@ -156,7 +158,7 @@ body: |
   ; GFX12-NEXT: bb.1:
   ; GFX12-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   S_WAITCNT_DEPCTR .VaVdst_1
+  ; GFX12-NEXT:   S_WAITCNT_DEPCTR .VaVdst_1_VmVsrc_0
   ; GFX12-NEXT:   DS_WRITE_B32_gfx9 $vgpr96, $vgpr97, 0, 0, implicit $exec
   ; GFX12-NEXT:   $vgpr32 = V_MOV_B32_e32 $vgpr95, implicit $exec
   ; GFX12-NEXT:   $vgpr33 = V_MOV_B32_e32 $vgpr95, implicit $exec
@@ -179,7 +181,7 @@ body: |
   ; GFX1250-NEXT: bb.1:
   ; GFX1250-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; GFX1250-NEXT: {{  $}}
-  ; GFX1250-NEXT:   S_WAITCNT_DEPCTR .VaVdst_1
+  ; GFX1250-NEXT:   S_WAITCNT_DEPCTR .VaVdst_1_VmVsrc_0
   ; GFX1250-NEXT:   DS_WRITE_B32_gfx9 $vgpr96, $vgpr97, 0, 0, implicit $exec
   ; GFX1250-NEXT:   $vgpr32 = V_MOV_B32_e32 $vgpr95, implicit $exec
   ; GFX1250-NEXT:   $vgpr33 = V_MOV_B32_e32 $vgpr95, implicit $exec
