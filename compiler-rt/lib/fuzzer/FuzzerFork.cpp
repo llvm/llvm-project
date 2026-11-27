@@ -228,7 +228,9 @@ struct GlobalEnv {
       auto FeatureBytes = FileToVector(FeatureFile, 0, false);
       assert((FeatureBytes.size() % sizeof(uint32_t)) == 0);
       std::vector<uint32_t> NewFeatures(FeatureBytes.size() / sizeof(uint32_t));
-      memcpy(NewFeatures.data(), FeatureBytes.data(), FeatureBytes.size());
+      if (!NewFeatures.empty()) // Needed in some hardened builds.
+        memcpy(NewFeatures.data(), FeatureBytes.data(),
+               NewFeatures.size() * sizeof(uint32_t));
       for (auto Ft : NewFeatures) {
         if (!Features.count(Ft)) {
           MergeCandidates.push_back(F);

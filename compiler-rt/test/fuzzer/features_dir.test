@@ -5,3 +5,13 @@ RUN: rm -rf %t-C %t-F
 RUN: mkdir %t-C %t-F
 RUN: not %run %t-SimpleTest %t-C -features_dir=%t-F
 RUN: %python -c "import glob; import os; assert all([os.path.exists(f'%t-F/{os.path.basename(file_path)}') for file_path in list(glob.glob('%t-C/*'))])"
+
+# Same with a seed that is reduced more than once.
+RUN: %cpp_compiler %S/ShrinkControlFlowSimpleTest.cpp -o %t-ShrinkControlFlowSimpleTest
+RUN: rm -rf %t-SC %t-SF
+RUN: mkdir %t-SC %t-SF
+RUN: echo -n FxxxxxxxxxxxxxxxxxxxxxxxxUxxxxxxxxxxxxxxxxxxxxxxxxZ > %t-seed
+RUN: %run %t-ShrinkControlFlowSimpleTest -seed_inputs=%t-seed -runs=100000 -seed=1 %t-SC -features_dir=%t-SF
+RUN: ls %t-SC > %t-SC.txt
+RUN: ls %t-SF > %t-SF.txt
+RUN: diff %t-SC.txt %t-SF.txt
