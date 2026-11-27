@@ -402,3 +402,20 @@ define i64 @setcc_fold_i8_slt_max(i8 %x) {
   %e = sext i8 %r to i64
   ret i64 %e
 }
+
+; The xor -1 fold is only valid when the sign extension consumes one bit.
+; Here the SIGN_EXTEND_INREG is from i2, so the other bit of the xor matters.
+define i64 @setcc_fold_sext_i2(i64 %x) {
+; CHECK-LABEL: setcc_fold_sext_i2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ori $a1, $zero, 5
+; CHECK-NEXT:    slt $a0, $a1, $a0
+; CHECK-NEXT:    nor $a0, $a0, $zero
+; CHECK-NEXT:    ret
+  %c = icmp sgt i64 %x, 5
+  %z = zext i1 %c to i64
+  %n = xor i64 %z, 3
+  %s = shl i64 %n, 62
+  %r = ashr i64 %s, 62
+  ret i64 %r
+}

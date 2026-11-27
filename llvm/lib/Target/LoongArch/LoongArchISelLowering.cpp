@@ -7526,9 +7526,19 @@ static SDValue performXORCombine(SDNode *N, SelectionDAG &DAG,
   // inverts the low bit; only fold the latter when the xor feeds a sign
   // extension, which consumes just that bit.
   bool IsNot = isAllOnesConstant(N1);
-  if (IsNot && !(N->hasOneUse() && N->use_begin()->getUser()->getOpcode() ==
-                                       ISD::SIGN_EXTEND_INREG))
-    return SDValue();
+  if (IsNot) {
+    if (!N->hasOneUse())
+      return SDValue();
+    SDNode *User = N->use_begin()->getUser();
+    if (User->getOpcode() != ISD::SIGN_EXTEND_INREG)
+      return SDValue();
+    // The xor -1 only flips the low bit, so it can be folded only when the
+    // sign extension consumes a single bit.  A wider SIGN_EXTEND_INREG (e.g.
+    // from i2) observes the other bits produced by the xor.
+    EVT ExtVT = cast<VTSDNode>(User->getOperand(1))->getVT();
+    if (ExtVT != MVT::i1)
+      return SDValue();
+  }
 
   if (Cmp.getOpcode() == ISD::SETCC && (isOneConstant(N1) || IsNot) &&
       Cmp.hasOneUse()) {
