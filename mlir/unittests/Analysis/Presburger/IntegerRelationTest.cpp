@@ -189,6 +189,64 @@ TEST(IntegerRelationTest, symbolicLexmax) {
   EXPECT_TRUE(lexmax3.lexopt.isEqual(expectedLexmax3));
 }
 
+// The lexmax may only be expressible using floor divisions. The division
+// representations of the pieces must be preserved when the result of the
+// underlying lexmin computation is negated.
+TEST(IntegerRelationTest, symbolicLexmaxFloorDiv) {
+  // The largest x such that 2x <= a is floor(a / 2).
+  SymbolicLexOpt lexmax1 = parseRelationFromSet("(a, x) : (a - 2 * x >= 0)", 1)
+                               .findSymbolicIntegerLexMax();
+
+  PWMAFunction expectedLexmax1 = parsePWMAF({
+      {"(a) : ()", "(a) -> (a floordiv 2)"},
+  });
+
+  EXPECT_TRUE(lexmax1.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax1.lexopt.isEqual(expectedLexmax1));
+
+  // Positive, negative, exactly divisible and non-divisible inputs.
+  auto expectLexmax1At = [&](int64_t a, int64_t expected) {
+    std::optional<SmallVector<DynamicAPInt, 8>> value =
+        lexmax1.lexopt.valueAt({a});
+    ASSERT_TRUE(value.has_value()) << "a = " << a;
+    ASSERT_EQ(value->size(), 1u);
+    EXPECT_EQ((*value)[0], expected) << "a = " << a;
+  };
+  expectLexmax1At(8, 4);
+  expectLexmax1At(7, 3);
+  expectLexmax1At(1, 0);
+  expectLexmax1At(0, 0);
+  expectLexmax1At(-1, -1);
+  expectLexmax1At(-3, -2);
+  expectLexmax1At(-4, -2);
+
+  // The largest x such that 3x <= a + b is floor((a + b) / 3), with a symbol
+  // taking part in the dividend.
+  SymbolicLexOpt lexmax2 =
+      parseRelationFromSet("(a, x)[b] : (a + b - 3 * x >= 0)", 1)
+          .findSymbolicIntegerLexMax();
+
+  PWMAFunction expectedLexmax2 = parsePWMAF({
+      {"(a)[b] : ()", "(a)[b] -> ((a + b) floordiv 3)"},
+  });
+
+  EXPECT_TRUE(lexmax2.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax2.lexopt.isEqual(expectedLexmax2));
+
+  auto expectLexmax2At = [&](int64_t a, int64_t b, int64_t expected) {
+    std::optional<SmallVector<DynamicAPInt, 8>> value =
+        lexmax2.lexopt.valueAt({a, b});
+    ASSERT_TRUE(value.has_value()) << "a = " << a << ", b = " << b;
+    ASSERT_EQ(value->size(), 1u);
+    EXPECT_EQ((*value)[0], expected) << "a = " << a << ", b = " << b;
+  };
+  expectLexmax2At(4, 5, 3);
+  expectLexmax2At(4, 4, 2);
+  expectLexmax2At(-4, -5, -3);
+  expectLexmax2At(-4, -4, -3);
+  expectLexmax2At(5, -6, -1);
+}
+
 TEST(IntegerRelationTest, swapVar) {
   PresburgerSpace space = PresburgerSpace::getRelationSpace(2, 1, 2, 0);
 
