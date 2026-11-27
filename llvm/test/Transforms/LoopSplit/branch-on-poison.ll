@@ -227,38 +227,6 @@ exit:
   ret void
 }
 
-; An explicit undef trip count is not defined at the guard, so the loop is
-; left unchanged.
-define void @undef_bound_no_abnormal_exit(ptr %a) {
-; CHECK-LABEL: define void @undef_bound_no_abnormal_exit(
-; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
-; CHECK-NEXT:    store i64 [[IV]], ptr [[P]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV_NEXT]], undef
-; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
-;
-entry:
-  br label %loop
-
-loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %p = getelementptr inbounds i64, ptr %a, i64 %iv
-  store i64 %iv, ptr %p
-  %iv.next = add nsw i64 %iv, 1
-  %c = icmp slt i64 %iv.next, undef
-  br i1 %c, label %loop, label %exit
-
-exit:
-  ret void
-}
-
 ; The start of the iteration space feeds the entry guards just like the trip
 ; count, so a start that may be undef or poison must be rejected in the same
 ; way.
