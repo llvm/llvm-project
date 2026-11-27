@@ -19,6 +19,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/OptionValueBoolean.h"
@@ -968,17 +969,8 @@ LanguageRuntime *AppleObjCRuntimeV2::CreateInstance(Process *process,
   return nullptr;
 }
 
-static constexpr OptionDefinition g_objc_classtable_dump_options[] = {
-    {LLDB_OPT_SET_ALL,
-     false,
-     "verbose",
-     'v',
-     OptionParser::eNoArgument,
-     nullptr,
-     {},
-     0,
-     eArgTypeNone,
-     "Print ivar and method information in detail"}};
+#define LLDB_OPTIONS_language_objc_class_table_dump
+#include "AppleObjCRuntimeOptions.inc"
 
 class CommandObjectObjC_ClassTable_Dump : public CommandObjectParsed {
 public:
@@ -1012,7 +1004,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_objc_classtable_dump_options);
+      return llvm::ArrayRef(g_language_objc_class_table_dump_options);
     }
 
     OptionValueBoolean m_verbose;
