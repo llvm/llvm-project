@@ -6,7 +6,7 @@ target triple = "aarch64-unknown-linux-gnu"
 define <vscale x 4 x i32> @and_u_eor_m(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @and_u_eor_m(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[INNER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    [[INNER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> splat (i32 -1))
 ; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[INNER]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER]]
 ;
@@ -18,7 +18,7 @@ define <vscale x 4 x i32> @and_u_eor_m(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 define <vscale x 4 x i32> @and_u_eor_m_commuted(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @and_u_eor_m_commuted(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[INNER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[A]])
+; CHECK-NEXT:    [[INNER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> splat (i32 -1))
 ; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[INNER]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER]]
 ;
@@ -42,8 +42,8 @@ define <vscale x 4 x i32> @and_u_eor_m_pred_mismatch(<vscale x 4 x i1> %pg1, <vs
 define <vscale x 4 x i32> @eor_u_and_m(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @eor_u_and_m(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[INNER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[INNER]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> splat (i32 -1))
+; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER]]
 ;
   %inner = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b)
@@ -54,8 +54,8 @@ define <vscale x 4 x i32> @eor_u_and_m(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 define <vscale x 4 x i32> @eor_u_and_m_commuted(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @eor_u_and_m_commuted(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[INNER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[A]])
-; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[INNER]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> splat (i32 -1))
+; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER]]
 ;
   %inner = call <vscale x 4 x i32> @llvm.aarch64.sve.and.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %a)
@@ -78,7 +78,7 @@ define <vscale x 4 x i32> @eor_u_and_m_pred_mismatch(<vscale x 4 x i1> %pg1, <vs
 define <vscale x 4 x i32> @and_u_eor_z(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @and_u_eor_z(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.z.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> splat (i32 -1))
 ; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER]]
 ;
@@ -90,8 +90,8 @@ define <vscale x 4 x i32> @and_u_eor_z(<vscale x 4 x i1> %pg, <vscale x 4 x i32>
 define <vscale x 4 x i32> @and_u_eor_m_outer_commuted(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @and_u_eor_m_outer_commuted(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[INNER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[A]])
-; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[INNER]], <vscale x 4 x i32> [[A]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> splat (i32 -1))
+; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER]]
 ;
   %inner = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %a)
@@ -102,8 +102,8 @@ define <vscale x 4 x i32> @and_u_eor_m_outer_commuted(<vscale x 4 x i1> %pg, <vs
 define <vscale x 4 x i32> @eor_u_and_z_commuted(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @eor_u_and_z_commuted(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[INNER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.z.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[A]])
-; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[INNER]], <vscale x 4 x i32> [[A]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> splat (i32 -1))
+; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER]]
 ;
   %inner = call <vscale x 4 x i32> @llvm.aarch64.sve.and.z.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %b, <vscale x 4 x i32> %a)
@@ -114,7 +114,7 @@ define <vscale x 4 x i32> @eor_u_and_z_commuted(<vscale x 4 x i1> %pg, <vscale x
 define <vscale x 4 x i32> @and_u_not(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @and_u_not(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[INACTIVE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> [[INACTIVE]], <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> splat (i32 -1))
 ; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER]]
 ;
@@ -126,8 +126,8 @@ define <vscale x 4 x i32> @and_u_not(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %
 define <vscale x 4 x i32> @and_u_not_commuted(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %inactive) #0 {
 ; CHECK-LABEL: define <vscale x 4 x i32> @and_u_not_commuted(
 ; CHECK-SAME: <vscale x 4 x i1> [[PG:%.*]], <vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]], <vscale x 4 x i32> [[INACTIVE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[INNER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> [[INACTIVE]], <vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]])
-; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[INNER]], <vscale x 4 x i32> [[A]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.eor.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> splat (i32 -1))
+; CHECK-NEXT:    [[OUTER:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.and.u.nxv4i32(<vscale x 4 x i1> [[PG]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[OUTER]]
 ;
   %inner = call <vscale x 4 x i32> @llvm.aarch64.sve.not.nxv4i32(<vscale x 4 x i32> %inactive, <vscale x 4 x i1> %pg, <vscale x 4 x i32> %b)

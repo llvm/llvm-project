@@ -3674,6 +3674,94 @@ static std::optional<Instruction *> instCombineSVEAnd(InstCombiner &IC,
   return IC.replaceInstUsesWith(II, NewCmphs);
 }
 
+namespace {
+
+template <Intrinsic::ID IntrID, typename Predicate, typename LHS, typename RHS>
+struct PredicatedSVEBinIntrinsicWithEitherDataOrder_match {
+  Predicate P;
+  LHS L;
+  RHS R;
+  PredicatedSVEBinIntrinsicWithEitherDataOrder_match(const Predicate &P,
+                                                     const LHS &L, const RHS &R)
+      : P(P), L(L), R(R) {}
+  template <typename OpTy> bool match(OpTy *V) const {
+    const auto *II = dyn_cast<IntrinsicInst>(V);
+    if (!II || II->getIntrinsicID() != IntrID || II->arg_size() != 3 ||
+        !P.match(II->getArgOperand(0)))
+      return false;
+    return (L.match(II->getArgOperand(1)) && R.match(II->getArgOperand(2))) ||
+           (L.match(II->getArgOperand(2)) && R.match(II->getArgOperand(1)));
+  }
+};
+
+template <Intrinsic::ID IntrID, typename T0, typename T1, typename T2>
+inline PredicatedSVEBinIntrinsicWithEitherDataOrder_match<IntrID, T0, T1, T2>
+m_SVEPredicatedBinIntrinsicWithEitherDataOrder(const T0 &Op0, const T1 &Op1,
+                                               const T2 &Op2) {
+  return PredicatedSVEBinIntrinsicWithEitherDataOrder_match<IntrID, T0, T1, T2>(
+      Op0, Op1, Op2);
+}
+
+} // namespace
+
+/// Canonicalize same-predicate SVE forms of A & (A ^ B) and A ^ (A & B) to
+/// llvm.aarch64.sve.and.u(Pg, A,
+///     llvm.aarch64.sve.eor.u(Pg, B, splat(-1))).
+template <Intrinsic::ID OuterIID>
+static std::optional<Instruction *> instCombineSVEAndEor(InstCombiner &IC,
+                                                         IntrinsicInst &II) {
+  constexpr Intrinsic::ID AndUID = Intrinsic::aarch64_sve_and_u;
+  constexpr Intrinsic::ID EorUID = Intrinsic::aarch64_sve_eor_u;
+  assert(OuterIID == AndUID || OuterIID == EorUID);
+  assert(II.getIntrinsicID() == OuterIID);
+  constexpr Intrinsic::ID InnerMIID = OuterIID == AndUID
+                                          ? Intrinsic::aarch64_sve_eor
+                                          : Intrinsic::aarch64_sve_and;
+  constexpr Intrinsic::ID InnerZIID = OuterIID == AndUID
+                                          ? Intrinsic::aarch64_sve_eor_z
+                                          : Intrinsic::aarch64_sve_and_z;
+  Value *Pg = II.getArgOperand(0);
+  Value *C;
+  // Return true if B is a supported operation using Pg and A. C is set to
+  // the other data operand when the pattern matches.
+  auto MatchInner = [&](Value *A, Value *B) {
+    // The merging intrinsics are not themselves commutative because their
+    // first data operand is the inactive-lane passthrough. Either data order
+    // is valid here because the outer operation observes only lanes active
+    // under the same predicate.
+    if (match(B, m_OneUse(
+                     m_SVEPredicatedBinIntrinsicWithEitherDataOrder<InnerMIID>(
+                         m_Specific(Pg), m_Specific(A), m_Value(C)))))
+      return true;
+    if (match(B, m_OneUse(
+                     m_SVEPredicatedBinIntrinsicWithEitherDataOrder<InnerZIID>(
+                         m_Specific(Pg), m_Specific(A), m_Value(C)))))
+      return true;
+    if (OuterIID == AndUID &&
+        match(B, m_OneUse(m_Intrinsic<Intrinsic::aarch64_sve_not>(
+                     m_Value(), m_Specific(Pg), m_Value(C)))))
+      return true;
+    return false;
+  };
+
+  // Match the pattern and extract the operands to construct the new IR.
+  Value *A = II.getArgOperand(1);
+  Value *B = II.getArgOperand(2);
+  if (!MatchInner(A, B)) {
+    if (!MatchInner(B, A))
+      return std::nullopt;
+    std::swap(A, B);
+  }
+
+  // Canonicalize both identities to A & ~C using undef predication.
+  Constant *AllOnes = Constant::getAllOnesValue(C->getType());
+  Value *NotC =
+      IC.Builder.CreateIntrinsic(EorUID, II.getType(), {Pg, C, AllOnes});
+  Value *NewOuterIntr =
+      IC.Builder.CreateIntrinsic(AndUID, II.getType(), {Pg, A, NotC});
+  return IC.replaceInstUsesWith(II, NewOuterIntr);
+}
+
 std::optional<Instruction *>
 AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
                                      IntrinsicInst &II) const {
@@ -3685,6 +3773,10 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
   switch (IID) {
   default:
     break;
+  case Intrinsic::aarch64_sve_and_u:
+    return instCombineSVEAndEor<Intrinsic::aarch64_sve_and_u>(IC, II);
+  case Intrinsic::aarch64_sve_eor_u:
+    return instCombineSVEAndEor<Intrinsic::aarch64_sve_eor_u>(IC, II);
   case Intrinsic::aarch64_dmb:
     return instCombineDMB(IC, II, ST->getCLOpts().dmb_lookahead_threshold);
   case Intrinsic::aarch64_neon_fmaxnm:
