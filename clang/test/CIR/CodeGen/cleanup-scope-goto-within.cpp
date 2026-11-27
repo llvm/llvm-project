@@ -21,18 +21,31 @@ end:
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z24test_goto_within_cleanupb
+// CIR:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.scope {
 // CIR:             cir.if {{.*}} {
-// CIR:               cir.goto "end"
-// CIR:             }
+// CIR:               %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:          cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:        }
+// CIR:             cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:          1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:           ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:        cir.br ^[[SCOPE_EXIT]]
+// CIR:           ^[[SCOPE_EXIT]]:
+// CIR-NEXT:        cir.yield
 // CIR:           }
-// CIR:           cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
-// CIR:           cir.br ^[[BB_LABEL:bb[0-9]+]]
+// CIR:           cir.switch.flat %{{.+}} : !s32i, ^[[USE_BB:bb[0-9]+]] [
+// CIR-NEXT:        1: ^[[GOTO_DEST:bb[0-9]+]]
+// CIR:         ^[[GOTO_DEST]]:
+// CIR:           cir.store %{{.+}}, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:      cir.br ^[[BB_LABEL:bb[0-9]+]]
+// CIR:         ^[[USE_BB]]:
+// CIR-NEXT:      cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
+// CIR-NEXT:      cir.br ^[[BB_LABEL]]
 // CIR:         ^[[BB_LABEL]]:
-// CIR:           cir.label "end"
-// CIR:           cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
+// CIR-NEXT:      cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
 // CIR:           cir.yield
 // CIR:         } cleanup normal {
 // CIR:           cir.call @_ZN20StructWithDestructorD1Ev(%[[A_ADDR]])
@@ -47,7 +60,7 @@ end:
 // LLVM:         %[[COND_BIT:.*]] = trunc i8 %[[COND_BYTE]] to i1
 // LLVM:         br i1 %[[COND_BIT]], label %[[GOTO_BB:.*]], label %[[FALLTHROUGH:.*]]
 // LLVM:       [[GOTO_BB]]:
-// LLVM:         br label %[[LABEL_BB:[0-9]+]]
+// LLVM-NEXT:    br label %[[LABEL_BB:[0-9]+]]
 // LLVM:       [[FALLTHROUGH]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
 // LLVM:         br label %[[LABEL_BB]]

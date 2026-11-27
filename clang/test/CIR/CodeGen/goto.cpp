@@ -13,30 +13,49 @@ err:
   return -1;
 }
 // CIR:  cir.func {{.*}} @_Z21shouldNotGenBranchReti
-// CIR:    cir.if {{.*}} {
-// CIR:      cir.goto "err"
+// CIR:    [[SLOT:%.*]] = cir.alloca "__goto_dest_slot"
+// CIR:    cir.scope {
+// CIR:      cir.if {{.*}} {
+// CIR:        [[ID:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR:        cir.store [[ID]], [[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR:      }
+// CIR:      [[DEST:%.*]] = cir.load [[SLOT]] : !cir.ptr<!s32i>, !s32i
+// CIR:      cir.switch.flat [[DEST]] : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:   1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR-NEXT: ]
+// CIR:    ^[[LEAVE_SCOPE]]:
+// CIR-NEXT: cir.br ^[[SCOPE_EXIT]]
+// CIR:    ^[[SCOPE_EXIT]]:
+// CIR-NEXT: cir.yield
 // CIR:    }
+// CIR:    [[DEST:%.*]] = cir.load [[SLOT]] : !cir.ptr<!s32i>, !s32i
+// CIR:    cir.switch.flat [[DEST]] : !s32i, ^[[CONT:bb[0-9]+]] [
+// CIR-NEXT: 1: ^[[ERR:bb[0-9]+]]
+// CIR-NEXT: ]
+// CIR:  ^[[ERR]]:
+// CIR-NOT:  cir.label
 // CIR:    [[ZERO:%.*]] = cir.const #cir.int<0> : !s32i
-// CIR:    cir.store [[ZERO]], [[RETVAL:%.*]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:    cir.store [[ZERO]], [[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR:    [[MINUS_ONE:%.*]] = cir.const #cir.int<-1> : !s32i
+// CIR:    cir.store [[MINUS_ONE]], [[RETVAL:%.*]] : !s32i, !cir.ptr<!s32i>
 // CIR:    [[RET:%.*]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:    cir.return [[RET]] : !s32i
-// CIR:  ^bb1:
-// CIR:    cir.label "err"
-// CIR:    [[MINUS_ONE:%.*]] = cir.const #cir.int<-1> : !s32i
-// CIR:    cir.store [[MINUS_ONE]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR:  ^[[CONT]]:
+// CIR:    [[ZERO:%.*]] = cir.const #cir.int<0> : !s32i
+// CIR:    cir.store [[ZERO]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
 // CIR:    [[RET:%.*]] = cir.load [[RETVAL]] : !cir.ptr<!s32i>, !s32i
 // CIR:    cir.return [[RET]] : !s32i
 
 // LLVM: define dso_local noundef i32 @_Z21shouldNotGenBranchReti
 // LLVM:   [[COND:%.*]] = load i32, ptr {{.*}}, align 4
 // LLVM:   [[CMP:%.*]] = icmp sgt i32 [[COND]], 5
-// LLVM:   br i1 [[CMP]], label %[[ERR:.*]], label %[[IFEND:.*]]
-// LLVM: [[IFEND]]:
-// LLVM:   store i32 0, ptr %[[RETVAL:.*]], align 4
+// LLVM:   br i1 [[CMP]], label %[[ERR:.*]], label %[[CONT:.*]]
+// LLVM: [[ERR]]:
+// LLVM:   store i32 -1, ptr %[[RETVAL:.*]], align 4
 // LLVM:   [[RET:%.*]] = load i32, ptr %[[RETVAL]], align 4
 // LLVM:   ret i32 [[RET]]
-// LLVM: [[ERR]]:
-// LLVM:   store i32 -1, ptr %[[RETVAL]], align 4
+// LLVM: [[CONT]]:
+// LLVM:   store i32 0, ptr %[[RETVAL]], align 4
 // LLVM:   [[RET:%.*]] = load i32, ptr %[[RETVAL]], align 4
 // LLVM:   ret i32 [[RET]]
 
@@ -57,18 +76,32 @@ err:
   return -1;
 }
 // CIR:  cir.func {{.*}} @_Z15shouldGenBranchi
+// CIR:    [[SLOT:%.*]] = cir.alloca "__goto_dest_slot"
 // CIR:    cir.if {{.*}} {
-// CIR:      cir.goto "err"
+// CIR:      [[ID:%.*]] = cir.const #cir.int<1> : !s32i
+// CIR:      cir.store [[ID]], [[SLOT]] : !s32i, !cir.ptr<!s32i>
 // CIR:    }
-// CIR:    cir.br ^bb1
-// CIR:  ^bb1:
-// CIR:    cir.label "err"
+// CIR:      cir.yield
+// CIR-NEXT: }
+// CIR-NEXT: [[DEST:%.*]] = cir.load [[SLOT]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT: cir.switch.flat [[DEST]] : !s32i, ^[[CONT:bb[0-9]+]] [
+// CIR-NEXT:   1: ^[[GOTO:bb[0-9]+]]
+// CIR-NEXT: ]
+// CIR:  ^[[GOTO]]:
+// CIR:    cir.br ^[[ERR:bb[0-9]+]]
+// CIR:  ^[[CONT]]:
+// CIR:    cir.inc nsw
+// CIR:    cir.br ^[[ERR]]
+// CIR:  ^[[ERR]]:
+// CIR-NOT:  cir.label
+// CIR:    cir.const #cir.int<-1>
 
 // LLVM: define dso_local noundef i32 @_Z15shouldGenBranchi
-// LLVM:   br i1 [[CMP:%.*]], label %[[IFTHEN:.*]], label %[[IFEND:.*]]
-// LLVM: [[IFTHEN]]:
+// LLVM:   br i1 [[CMP:%.*]], label %[[GOTO:.*]], label %[[CONT:.*]]
+// LLVM: [[GOTO]]:
 // LLVM:   br label %[[ERR:.*]]
-// LLVM: [[IFEND]]:
+// LLVM: [[CONT]]:
+// LLVM:   add nsw i32 {{.*}}, 1
 // LLVM:   br label %[[ERR]]
 // LLVM: [[ERR]]:
 // LLVM:   ret i32 [[RET:%.*]]

@@ -8,6 +8,7 @@
 
 #include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -136,4 +137,18 @@ mlir::Block *cir::replaceThrowWithTryThrow(cir::ThrowOp throwOp,
     rewriter.eraseOp(&throwBlock->back());
 
   return normalDest;
+}
+
+cir::AllocaOp cir::createDestSlot(cir::FuncOp func, mlir::OpBuilder &builder,
+                                  mlir::Location loc, llvm::StringRef name) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(&func.getBody().front());
+  mlir::MLIRContext *context = builder.getContext();
+  auto s32Type = cir::IntType::get(context, 32, /*isSigned=*/true);
+  cir::CIRDataLayout dataLayout(func->getParentOfType<mlir::ModuleOp>());
+  auto ptrType =
+      cir::PointerType::get(s32Type, dataLayout.getAllocaAddrSpace(context));
+  uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
+  return cir::AllocaOp::create(builder, loc, ptrType, name,
+                               builder.getI64IntegerAttr(alignment));
 }

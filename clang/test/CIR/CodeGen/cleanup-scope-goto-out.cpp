@@ -21,39 +21,66 @@ end:;
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z19test_goto_only_exitb
+// CIR:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR:         cir.scope {
 // CIR:           cir.if {{.*}} {
 // CIR:             %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:             cir.cleanup.scope {
 // CIR:               cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
-// CIR:               cir.goto "end"
+// CIR:               %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:          cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:          cir.yield
 // CIR:             } cleanup normal {
 // CIR:               cir.call @_ZN20StructWithDestructorD1Ev(%[[A_ADDR]])
 // CIR:               cir.yield
 // CIR:             }
+// CIR:             cir.switch.flat %{{.+}} : !s32i, ^[[IF_EXIT:bb[0-9]+]] [
+// CIR-NEXT:          1: ^[[LEAVE_IF:bb[0-9]+]]
+// CIR:           ^[[LEAVE_IF]]:
+// CIR-NEXT:        cir.br ^[[IF_EXIT]]
+// CIR:           ^[[IF_EXIT]]:
+// CIR-NEXT:        cir.yield
 // CIR:           }
+// CIR:           cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:        1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:         ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:      cir.br ^[[SCOPE_EXIT]]
+// CIR:         ^[[SCOPE_EXIT]]:
+// CIR-NEXT:      cir.yield
 // CIR:         }
-// CIR:         cir.br ^[[END_BB:bb[0-9]+]]
+// CIR:         cir.switch.flat %{{.+}} : !s32i, ^[[CONT:bb[0-9]+]] [
+// CIR-NEXT:      1: ^[[GOTO_DEST:bb[0-9]+]]
+// CIR:       ^[[GOTO_DEST]]:
+// CIR:         cir.store %{{.+}}, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:    cir.br ^[[END_BB:bb[0-9]+]]
+// CIR:       ^[[CONT]]:
+// CIR-NEXT:    cir.br ^[[END_BB]]
 // CIR:       ^[[END_BB]]:
-// CIR:         cir.label "end"
-// CIR:         cir.return
+// CIR-NEXT:    cir.return
 
 // LLVM-LABEL: define dso_local void @_Z19test_goto_only_exitb(i1 noundef %{{[^,)]+}})
+// LLVM:         %[[DEST_SLOT:.*]] = alloca i32
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[IF_THEN:.*]], label %[[IF_END:.*]]
 // LLVM:       [[IF_THEN]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
-// LLVM:         br label %[[CLEANUP:.*]]
+// LLVM-NEXT:    store i32 0, ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    br label %[[CLEANUP:.*]]
 // LLVM:       [[CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[A_ADDR]])
 // LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
-// LLVM:         switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
-// LLVM:           i32 1, label %[[GOTO_DEST:.*]]
+// LLVM:         [[D:%.*]] = load i32, ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    switch i32 [[D]], label %[[UNREACHABLE:.*]] [
+// LLVM-NEXT:      i32 0, label %[[GOTO_DEST:.*]]
 // LLVM:         ]
+// LLVM:       [[UNREACHABLE]]:
+// LLVM-NEXT:    unreachable
 // LLVM:       [[GOTO_DEST]]:
-// LLVM:         br label %[[END:.*]]
+// LLVM-NEXT:    br label %[[END:.*]]
+// LLVM:       [[IF_END]]:
+// LLVM-NEXT:    br label %[[END]]
 // LLVM:       [[END]]:
-// LLVM:         ret void
+// LLVM-NEXT:    ret void
 
 // OGCG-LABEL: define dso_local void @_Z19test_goto_only_exitb(i1 noundef %{{.*}})
 // OGCG:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
@@ -79,47 +106,77 @@ end:;
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z27test_goto_among_other_exitsb
+// CIR:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR:         cir.scope {
 // CIR:           %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:           cir.cleanup.scope {
 // CIR:             cir.scope {
 // CIR:               cir.if {{.*}} {
-// CIR:                 cir.goto "end"
-// CIR:               }
+// CIR:                 %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:            cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:          }
+// CIR:               cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:            1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:             ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:          cir.br ^[[SCOPE_EXIT]]
+// CIR:             ^[[SCOPE_EXIT]]:
+// CIR-NEXT:          cir.yield
 // CIR:             }
-// CIR:             cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
-// CIR:             cir.yield
+// CIR:             cir.switch.flat %{{.+}} : !s32i, ^[[USE_BB:bb[0-9]+]] [
+// CIR-NEXT:          1: ^[[LEAVE_BODY:bb[0-9]+]]
+// CIR:           ^[[LEAVE_BODY]]:
+// CIR-NEXT:        cir.yield
+// CIR:           ^[[USE_BB]]:
+// CIR-NEXT:        cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
+// CIR-NEXT:        cir.yield
 // CIR:           } cleanup normal {
 // CIR:             cir.call @_ZN20StructWithDestructorD1Ev(%[[A_ADDR]])
 // CIR:             cir.yield
 // CIR:           }
+// CIR:           cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:        1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:         ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:      cir.br ^[[SCOPE_EXIT]]
+// CIR:         ^[[SCOPE_EXIT]]:
+// CIR-NEXT:      cir.yield
 // CIR:         }
-// CIR:         cir.br ^[[END_BB:bb[0-9]+]]
+// CIR:         cir.switch.flat %{{.+}} : !s32i, ^[[CONT:bb[0-9]+]] [
+// CIR-NEXT:      1: ^[[GOTO_DEST:bb[0-9]+]]
+// CIR:       ^[[GOTO_DEST]]:
+// CIR:         cir.store %{{.+}}, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:    cir.br ^[[END_BB:bb[0-9]+]]
+// CIR:       ^[[CONT]]:
+// CIR-NEXT:    cir.br ^[[END_BB]]
 // CIR:       ^[[END_BB]]:
-// CIR:         cir.label "end"
-// CIR:         cir.return
+// CIR-NEXT:    cir.return
 
 // LLVM-LABEL: define dso_local void @_Z27test_goto_among_other_exitsb(i1 noundef %{{[^,)]+}})
+// LLVM:         %[[DEST_SLOT:.*]] = alloca i32
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[GOTO_PATH:.*]], label %[[NORMAL_PATH:.*]]
 // LLVM:       [[GOTO_PATH]]:
-// LLVM:         store i32 1, ptr %{{.*}}
-// LLVM:         br label %[[CLEANUP:.*]]
+// LLVM-NEXT:    store i32 [[GOTO_ID:[0-9]+]], ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    br label %[[CLEANUP:.*]]
 // LLVM:       [[NORMAL_PATH]]:
-// LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
-// LLVM:         store i32 0, ptr %{{.*}}
-// LLVM:         br label %[[CLEANUP]]
+// LLVM-NEXT:    call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
+// LLVM-NEXT:    store i32 [[FALL_ID:[0-9]+]], ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    br label %[[CLEANUP]]
 // LLVM:       [[CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[A_ADDR]])
 // LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
-// LLVM:         switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
-// LLVM:           i32 0, label %[[FALL_DEST:.*]]
-// LLVM:           i32 1, label %[[GOTO_DEST:.*]]
-// LLVM:         ]
+// LLVM:         [[D:%.*]] = load i32, ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    switch i32 [[D]], label %[[UNREACHABLE:.*]] [
+// LLVM-NEXT:      i32 [[GOTO_ID]], label %[[GOTO_DEST:.*]]
+// LLVM-NEXT:      i32 [[FALL_ID]], label %[[FALL_DEST:.*]]
+// LLVM-NEXT:    ]
+// LLVM:       [[UNREACHABLE]]:
+// LLVM-NEXT:    unreachable
+// LLVM:       [[GOTO_DEST]]:
+// LLVM-NEXT:    br label %[[END:.*]]
 // LLVM:       [[FALL_DEST]]:
-// LLVM:         br label %[[END:.*]]
+// LLVM-NEXT:    br label %[[END]]
 // LLVM:       [[END]]:
-// LLVM:         ret void
+// LLVM-NEXT:    ret void
 
 // OGCG-LABEL: define dso_local void @_Z27test_goto_among_other_exitsb(i1 noundef %{{.*}})
 // OGCG:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
@@ -154,6 +211,7 @@ skip:
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z24test_goto_inner_to_outerb
+// CIR:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR:         %[[OUTER_ADDR:.*]] = cir.alloca "outer" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.scope {
@@ -161,21 +219,44 @@ skip:
 // CIR:             cir.cleanup.scope {
 // CIR:               cir.scope {
 // CIR:                 cir.if {{.*}} {
-// CIR:                   cir.goto "skip"
-// CIR:                 }
+// CIR:                   %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:              cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:            }
+// CIR:                 cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:              1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:               ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:            cir.br ^[[SCOPE_EXIT]]
+// CIR:               ^[[SCOPE_EXIT]]:
+// CIR-NEXT:            cir.yield
 // CIR:               }
-// CIR:               cir.call @_Z3useR20StructWithDestructor(%[[INNER_ADDR]])
-// CIR:               cir.yield
+// CIR:               cir.switch.flat %{{.+}} : !s32i, ^[[USE_BB:bb[0-9]+]] [
+// CIR-NEXT:            1: ^[[LEAVE_BODY:bb[0-9]+]]
+// CIR:             ^[[LEAVE_BODY]]:
+// CIR-NEXT:          cir.yield
+// CIR:             ^[[USE_BB]]:
+// CIR-NEXT:          cir.call @_Z3useR20StructWithDestructor(%[[INNER_ADDR]])
+// CIR-NEXT:          cir.yield
 // CIR:             } cleanup normal {
 // CIR:               cir.call @_ZN20StructWithDestructorD1Ev(%[[INNER_ADDR]])
 // CIR:               cir.yield
 // CIR:             }
+// CIR:             cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:          1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:           ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:        cir.br ^[[SCOPE_EXIT]]
+// CIR:           ^[[SCOPE_EXIT]]:
+// CIR-NEXT:        cir.yield
 // CIR:           }
-// CIR:           cir.br ^[[SKIP_BB:bb[0-9]+]]
+// CIR:           cir.switch.flat %{{.+}} : !s32i, ^[[CONT:bb[0-9]+]] [
+// CIR-NEXT:        1: ^[[GOTO_DEST:bb[0-9]+]]
+// CIR:         ^[[GOTO_DEST]]:
+// CIR:           cir.store %{{.+}}, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:      cir.br ^[[SKIP_BB:bb[0-9]+]]
+// CIR:         ^[[CONT]]:
+// CIR-NEXT:      cir.br ^[[SKIP_BB]]
 // CIR:         ^[[SKIP_BB]]:
-// CIR:           cir.label "skip"
-// CIR:           cir.call @_Z3useR20StructWithDestructor(%[[OUTER_ADDR]])
-// CIR:           cir.yield
+// CIR-NEXT:      cir.call @_Z3useR20StructWithDestructor(%[[OUTER_ADDR]])
+// CIR-NEXT:      cir.yield
 // CIR:         } cleanup normal {
 // CIR:           cir.call @_ZN20StructWithDestructorD1Ev(%[[OUTER_ADDR]])
 // CIR:           cir.yield
@@ -183,28 +264,31 @@ skip:
 // CIR:         cir.return
 
 // LLVM-LABEL: define dso_local void @_Z24test_goto_inner_to_outerb(i1 noundef %{{[^,)]+}})
-// LLVM:         alloca %struct.StructWithDestructor
-// LLVM:         alloca %struct.StructWithDestructor
+// LLVM:         %[[DEST_SLOT:.*]] = alloca i32
 // LLVM:         br i1 %{{.*}}, label %[[GOTO_PATH:.*]], label %[[NORMAL_PATH:.*]]
 // LLVM:       [[GOTO_PATH]]:
-// LLVM:         store i32 1, ptr %{{.*}}
-// LLVM:         br label %[[INNER_CLEANUP:.*]]
+// LLVM-NEXT:    store i32 [[GOTO_ID:[0-9]+]], ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    br label %[[INNER_CLEANUP:.*]]
 // LLVM:       [[NORMAL_PATH]]:
-// LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[INNER_ADDR:.*]])
-// LLVM:         store i32 0, ptr %{{.*}}
-// LLVM:         br label %[[INNER_CLEANUP]]
+// LLVM-NEXT:    call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[INNER_ADDR:.*]])
+// LLVM-NEXT:    store i32 [[FALL_ID:[0-9]+]], ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    br label %[[INNER_CLEANUP]]
 // LLVM:       [[INNER_CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[INNER_ADDR]])
-// LLVM:         switch i32 %{{.*}}, label %[[DEFAULT:.*]] [
-// LLVM:           i32 0, label %[[FALL_DEST:.*]]
-// LLVM:           i32 1, label %[[GOTO_DEST:.*]]
-// LLVM:         ]
+// LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
+// LLVM:         [[D:%.*]] = load i32, ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    switch i32 [[D]], label %[[UNREACHABLE:.*]] [
+// LLVM-NEXT:      i32 [[GOTO_ID]], label %[[GOTO_DEST:.*]]
+// LLVM-NEXT:      i32 [[FALL_ID]], label %[[FALL_DEST:.*]]
+// LLVM-NEXT:    ]
+// LLVM:       [[UNREACHABLE]]:
+// LLVM-NEXT:    unreachable
 // LLVM:       [[GOTO_DEST]]:
-// LLVM:         br label %[[USE_OUTER:.*]]
+// LLVM-NEXT:    br label %[[USE_OUTER:.*]]
 // LLVM:       [[FALL_DEST]]:
-// LLVM:         br label %{{.*}}
+// LLVM-NEXT:    br label %[[USE_OUTER]]
 // LLVM:       [[USE_OUTER]]:
-// LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[OUTER_ADDR:.*]])
+// LLVM-NEXT:    call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[OUTER_ADDR:.*]])
 // LLVM:         br label %[[OUTER_DTOR_BB:.*]]
 // LLVM:       [[OUTER_DTOR_BB]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[OUTER_ADDR]])
@@ -249,6 +333,7 @@ end:;
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z27test_goto_out_of_two_nestedb
+// CIR:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
 // CIR:         cir.scope {
 // CIR:           %[[OUTER_ADDR:.*]] = cir.alloca "outer" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:           cir.cleanup.scope {
@@ -257,63 +342,107 @@ end:;
 // CIR:               cir.cleanup.scope {
 // CIR:                 cir.scope {
 // CIR:                   cir.if {{.*}} {
-// CIR:                     cir.goto "end"
-// CIR:                   }
+// CIR:                     %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:                cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:              }
+// CIR:                   cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:                1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:                 ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:              cir.br ^[[SCOPE_EXIT]]
+// CIR:                 ^[[SCOPE_EXIT]]:
+// CIR-NEXT:              cir.yield
 // CIR:                 }
-// CIR:                 cir.call @_Z3useR20StructWithDestructor(%[[INNER_ADDR]])
-// CIR:                 cir.yield
+// CIR:                 cir.switch.flat %{{.+}} : !s32i, ^[[USE_BB:bb[0-9]+]] [
+// CIR-NEXT:              1: ^[[LEAVE_BODY:bb[0-9]+]]
+// CIR:               ^[[LEAVE_BODY]]:
+// CIR-NEXT:            cir.yield
+// CIR:               ^[[USE_BB]]:
+// CIR-NEXT:            cir.call @_Z3useR20StructWithDestructor(%[[INNER_ADDR]])
+// CIR-NEXT:            cir.yield
 // CIR:               } cleanup normal {
 // CIR:                 cir.call @_ZN20StructWithDestructorD1Ev(%[[INNER_ADDR]])
 // CIR:                 cir.yield
 // CIR:               }
+// CIR:               cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:            1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:             ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:          cir.br ^[[SCOPE_EXIT]]
+// CIR:             ^[[SCOPE_EXIT]]:
+// CIR-NEXT:          cir.yield
 // CIR:             }
-// CIR:             cir.call @_Z3useR20StructWithDestructor(%[[OUTER_ADDR]])
-// CIR:             cir.yield
+// CIR:             cir.switch.flat %{{.+}} : !s32i, ^[[USE_BB:bb[0-9]+]] [
+// CIR-NEXT:          1: ^[[LEAVE_BODY:bb[0-9]+]]
+// CIR:           ^[[LEAVE_BODY]]:
+// CIR-NEXT:        cir.yield
+// CIR:           ^[[USE_BB]]:
+// CIR-NEXT:        cir.call @_Z3useR20StructWithDestructor(%[[OUTER_ADDR]])
+// CIR-NEXT:        cir.yield
 // CIR:           } cleanup normal {
 // CIR:             cir.call @_ZN20StructWithDestructorD1Ev(%[[OUTER_ADDR]])
 // CIR:             cir.yield
 // CIR:           }
+// CIR:           cir.switch.flat %{{.+}} : !s32i, ^[[SCOPE_EXIT:bb[0-9]+]] [
+// CIR-NEXT:        1: ^[[LEAVE_SCOPE:bb[0-9]+]]
+// CIR:         ^[[LEAVE_SCOPE]]:
+// CIR-NEXT:      cir.br ^[[SCOPE_EXIT]]
+// CIR:         ^[[SCOPE_EXIT]]:
+// CIR-NEXT:      cir.yield
 // CIR:         }
-// CIR:         cir.br ^[[END_BB:bb[0-9]+]]
+// CIR:         cir.switch.flat %{{.+}} : !s32i, ^[[CONT:bb[0-9]+]] [
+// CIR-NEXT:      1: ^[[GOTO_DEST:bb[0-9]+]]
+// CIR:       ^[[GOTO_DEST]]:
+// CIR:         cir.store %{{.+}}, %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:    cir.br ^[[END_BB:bb[0-9]+]]
+// CIR:       ^[[CONT]]:
+// CIR-NEXT:    cir.br ^[[END_BB]]
 // CIR:       ^[[END_BB]]:
-// CIR:         cir.label "end"
-// CIR:         cir.return
+// CIR-NEXT:    cir.return
 
 // LLVM-LABEL: define dso_local void @_Z27test_goto_out_of_two_nestedb(i1 noundef %{{[^,)]+}})
+// LLVM:         %[[DEST_SLOT:.*]] = alloca i32
 // LLVM:         %[[OUTER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         %[[INNER_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         br i1 %{{.*}}, label %[[GOTO_PATH:.*]], label %[[NORMAL_PATH:.*]]
 // LLVM:       [[GOTO_PATH]]:
-// LLVM:         store i32 1, ptr %{{.*}}
-// LLVM:         br label %[[INNER_CLEANUP:.*]]
+// LLVM-NEXT:    store i32 [[INNER_GOTO_ID:[0-9]+]], ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    br label %[[INNER_CLEANUP:.*]]
 // LLVM:       [[NORMAL_PATH]]:
-// LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[INNER_ADDR]])
-// LLVM:         store i32 0, ptr %{{.*}}
-// LLVM:         br label %[[INNER_CLEANUP]]
+// LLVM-NEXT:    call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[INNER_ADDR]])
+// LLVM-NEXT:    store i32 [[INNER_FALL_ID:[0-9]+]], ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    br label %[[INNER_CLEANUP]]
 // LLVM:       [[INNER_CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[INNER_ADDR]])
-// LLVM:         switch i32 %{{.*}}, label %[[INNER_DEFAULT:.*]] [
-// LLVM:           i32 0, label %[[USE_OUTER:.*]]
-// LLVM:           i32 1, label %[[INNER_GOTO:.*]]
-// LLVM:         ]
+// LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
+// LLVM:         [[D:%.*]] = load i32, ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    switch i32 [[D]], label %[[UNREACHABLE:.*]] [
+// LLVM-NEXT:      i32 [[INNER_GOTO_ID]], label %[[INNER_GOTO:.*]]
+// LLVM-NEXT:      i32 [[INNER_FALL_ID]], label %[[USE_OUTER:.*]]
+// LLVM-NEXT:    ]
+// LLVM:       [[UNREACHABLE]]:
+// LLVM-NEXT:    unreachable
 // LLVM:       [[INNER_GOTO]]:
-// LLVM:         store i32 1, ptr %{{.*}}
-// LLVM:         br label %[[OUTER_CLEANUP:.*]]
+// LLVM-NEXT:    store i32 [[OUTER_GOTO_ID:[0-9]+]], ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    br label %[[OUTER_CLEANUP:.*]]
 // LLVM:       [[USE_OUTER]]:
-// LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[OUTER_ADDR]])
-// LLVM:         store i32 0, ptr %{{.*}}
-// LLVM:         br label %[[OUTER_CLEANUP]]
+// LLVM-NEXT:    call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[OUTER_ADDR]])
+// LLVM-NEXT:    store i32 [[OUTER_FALL_ID:[0-9]+]], ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    br label %[[OUTER_CLEANUP]]
 // LLVM:       [[OUTER_CLEANUP]]:
 // LLVM:         call void @_ZN20StructWithDestructorD1Ev(ptr {{.*}} %[[OUTER_ADDR]])
 // LLVM-NOT:     call void @_ZN20StructWithDestructorD1Ev
-// LLVM:         switch i32 %{{.*}}, label %[[OUTER_DEFAULT:.*]] [
-// LLVM:           i32 0, label %[[OUTER_FALL:.*]]
-// LLVM:           i32 1, label %[[OUTER_GOTO:.*]]
-// LLVM:         ]
-// LLVM:       [[OUTER_FALL]]:
-// LLVM:         br label %[[END:.*]]
+// LLVM:         [[D:%.*]] = load i32, ptr %[[DEST_SLOT]], align 4
+// LLVM-NEXT:    switch i32 [[D]], label %[[UNREACHABLE:.*]] [
+// LLVM-NEXT:      i32 [[OUTER_GOTO_ID]], label %[[GOTO_DEST:.*]]
+// LLVM-NEXT:      i32 [[OUTER_FALL_ID]], label %[[FALL_DEST:.*]]
+// LLVM-NEXT:    ]
+// LLVM:       [[UNREACHABLE]]:
+// LLVM-NEXT:    unreachable
+// LLVM:       [[GOTO_DEST]]:
+// LLVM-NEXT:    br label %[[END:.*]]
+// LLVM:       [[FALL_DEST]]:
+// LLVM-NEXT:    br label %[[END]]
 // LLVM:       [[END]]:
-// LLVM:         ret void
+// LLVM-NEXT:    ret void
 
 // OGCG-LABEL: define dso_local void @_Z27test_goto_out_of_two_nestedb(i1 noundef %{{.*}})
 // OGCG:         %[[OUTER_ADDR:.*]] = alloca %struct.StructWithDestructor
