@@ -13158,6 +13158,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArithUtils",
+        ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":DialectUtils",
         ":FuncDialect",
