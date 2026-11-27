@@ -32,7 +32,6 @@ namespace llvm {
 class HexagonSubtarget;
 
 class HexagonTargetLowering : public TargetLowering {
-  int VarArgsFrameOffset;   // Frame offset to start of varargs area.
   const HexagonTargetMachine &HTM;
   const HexagonSubtarget &Subtarget;
 
@@ -150,6 +149,7 @@ public:
 
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBoolVectorSelect(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG& DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
@@ -276,8 +276,10 @@ public:
                         AtomicOrdering Ord) const override;
   Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
                               AtomicOrdering Ord) const override;
-  AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
-  AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicLoadInIR(const LoadInst *LI) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicStoreInIR(const StoreInst *SI) const override;
   AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
@@ -536,6 +538,25 @@ private:
                                 SelectionDAG &DAG) const;
   void ReplaceHvxNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
                              SelectionDAG &DAG) const;
+
+  void initializeHLXLowering();
+  bool isHlxSingleTy(MVT Ty) const;
+  bool isHlxPairTy(MVT Ty) const;
+  bool isHlxOperation(SDNode *N, SelectionDAG &DAG) const;
+  bool allowsHlxMemoryAccess(MVT VecTy, MachineMemOperand::Flags Flags,
+                             unsigned *Fast) const;
+  TypePair typeHlxSplit(MVT VecTy) const;
+  SDValue splitHlxPairArgLoad(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                              SDValue BaseAddr, MVT PairTy,
+                              MachinePointerInfo PtrInfo) const;
+  void splitHlxPairArgStore(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                            SDValue StoreVal, SDValue BaseAddr, MVT PairTy,
+                            MachinePointerInfo PtrInfo,
+                            SmallVectorImpl<SDValue> &MemOpChains) const;
+  SDValue LowerHlxPairIntrinsic(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHlxMaskedOp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHlxSelect(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHlxOperation(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
 

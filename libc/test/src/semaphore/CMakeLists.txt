@@ -16,7 +16,6 @@ add_libc_test(
     libc.hdr.time_macros
     libc.hdr.types.sem_t
     libc.hdr.types.struct_timespec
-    libc.src.errno.errno
     libc.src.semaphore.sem_clockwait
     libc.src.semaphore.sem_destroy
     libc.src.semaphore.sem_getvalue
@@ -38,11 +37,12 @@ add_libc_test(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.limits_macros
+    libc.hdr.signal_macros
+    libc.hdr.types.struct_sigaction
     libc.hdr.time_macros
     libc.hdr.types.sem_t
     libc.hdr.types.struct_timespec
     libc.src.__support.time.clock_gettime
-    libc.src.errno.errno
     libc.src.semaphore.sem_clockwait
     libc.src.semaphore.sem_destroy
     libc.src.semaphore.sem_getvalue
@@ -51,6 +51,8 @@ add_libc_test(
     libc.src.semaphore.sem_timedwait
     libc.src.semaphore.sem_trywait
     libc.src.semaphore.sem_wait
+    libc.src.signal.sigaction
+    libc.src.unistd.alarm
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
@@ -64,7 +66,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.limits_macros
     libc.hdr.types.sem_t
-    libc.src.errno.errno
     libc.src.semaphore.sem_destroy
     libc.src.semaphore.sem_getvalue
     libc.src.semaphore.sem_init
@@ -85,7 +86,6 @@ add_libc_test(
     libc.hdr.fcntl_macros
     libc.hdr.semaphore_macros
     libc.hdr.types.sem_t
-    libc.src.errno.errno
     libc.src.semaphore.sem_close
     libc.src.semaphore.sem_getvalue
     libc.src.semaphore.sem_open
@@ -107,7 +107,6 @@ add_libc_test(
     libc.hdr.fcntl_macros
     libc.hdr.semaphore_macros
     libc.hdr.types.sem_t
-    libc.src.errno.errno
     libc.src.semaphore.sem_close
     libc.src.semaphore.sem_open
     libc.src.semaphore.sem_post

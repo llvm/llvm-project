@@ -26,6 +26,7 @@
 #include <__memory/unique_ptr.h>
 #include <__system_error/errc.h>
 #include <__type_traits/is_signed.h>
+#include <__utility/checked_int.h>
 #include <cerrno>
 #include <ios>
 #include <streambuf>
@@ -213,8 +214,7 @@ struct __num_get : protected __num_get_base {
 private:
   template <typename _Tp>
   _LIBCPP_HIDE_FROM_ABI const _Tp* __do_widen_p(ios_base& __iob, _Tp* __atoms) const {
-    locale __loc = __iob.getloc();
-    use_facet<ctype<_Tp> >(__loc).widen(__src, __src + __int_chr_cnt, __atoms);
+    use_facet<ctype<_Tp> >(__iob.__getloc()).widen(__src, __src + __int_chr_cnt, __atoms);
     return __atoms;
   }
 
@@ -228,7 +228,7 @@ private:
 template <class _CharT>
 string __num_get<_CharT>::__stage2_float_prep(
     ios_base& __iob, _CharT* __atoms, _CharT& __decimal_point, _CharT& __thousands_sep) {
-  locale __loc = __iob.getloc();
+  const locale& __loc = __iob.__getloc();
   std::use_facet<ctype<_CharT> >(__loc).widen(__src, __src + __fp_chr_cnt, __atoms);
   const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__loc);
   __decimal_point              = __np.decimal_point();
@@ -465,14 +465,14 @@ protected:
     using _Unsigned = __make_unsigned_t<_MaybeSigned>;
 
     // Stage 1
-    int __base = this->__get_base(__iob);
+    unsigned char __base = this->__get_base(__iob);
 
     // Stages 2 & 3
     // These are combined into a single step where we parse the characters and calculate the value in one go instead of
     // storing the relevant characters first (in an allocated buffer) and parse the characters after we extracted them.
     // This makes the whole process significantly faster, since we avoid potential allocations and copies.
 
-    const auto& __numpunct    = use_facet<numpunct<_CharT> >(__iob.getloc());
+    const auto& __numpunct    = use_facet<numpunct<_CharT> >(__iob.__getloc());
     char_type __thousands_sep = __numpunct.thousands_sep();
     string __grouping         = __numpunct.grouping();
 
@@ -555,8 +555,7 @@ protected:
     }
 
     // Calculate the actual number
-    _Unsigned __val   = 0;
-    bool __overflowed = false;
+    __checked_int<_Unsigned> __val(0);
     for (; __first != __last; ++__first) {
       auto __c = *__first;
       if (!__grouping.empty() && __c == __thousands_sep) {
@@ -574,9 +573,7 @@ protected:
         __offset -= 6;
       if (__offset >= __base)
         break;
-      // __val = (__val * __base) + __offset
-      __overflowed |= __builtin_mul_overflow(__val, __base, std::addressof(__val)) ||
-                      __builtin_add_overflow(__val, __offset, std::addressof(__val));
+      __val        = (__val * __base) + static_cast<unsigned short>(__offset);
       __parsed_num = true;
       ++__dc;
     }
@@ -584,29 +581,29 @@ protected:
     if (!__parsed_num) {
       __err |= ios_base::failbit;
       __v = 0;
-    } else if (__overflowed) {
+    } else if (__val.__overflowed()) {
       __err |= ios_base::failbit;
       __v = is_signed<_MaybeSigned>::value && __negate
               ? numeric_limits<_MaybeSigned>::min()
               : numeric_limits<_MaybeSigned>::max();
-    } else if (!__negate) {
-      if (__val > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max())) {
+    } else if (auto __value = __val.__value(); !__negate) {
+      if (__value > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max())) {
         __err |= ios_base::failbit;
         __v = numeric_limits<_MaybeSigned>::max();
       } else {
-        __v = __val;
+        __v = __value;
       }
     } else if (is_signed<_MaybeSigned>::value) {
-      if (__val > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
+      if (__value > static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
         __err |= ios_base::failbit;
         __v = numeric_limits<_MaybeSigned>::min();
-      } else if (__val == static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
+      } else if (__value == static_cast<_Unsigned>(numeric_limits<_MaybeSigned>::max()) + 1) {
         __v = numeric_limits<_MaybeSigned>::min();
       } else {
-        __v = -__val;
+        __v = -__value;
       }
     } else {
-      __v = -__val;
+      __v = -__value;
     }
 
     if (__grouping.size() != 0 && __g_end - __g < __num_get_base::__num_get_buf_sz)
@@ -690,8 +687,8 @@ _InputIterator num_get<_CharT, _InputIterator>::do_get(
     }
     return __b;
   }
-  const ctype<_CharT>& __ct    = std::use_facet<ctype<_CharT> >(__iob.getloc());
-  const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__iob.getloc());
+  const ctype<_CharT>& __ct    = std::use_facet<ctype<_CharT> >(__iob.__getloc());
+  const numpunct<_CharT>& __np = std::use_facet<numpunct<_CharT> >(__iob.__getloc());
   typedef typename numpunct<_CharT>::string_type string_type;
   const string_type __names[2] = {__np.truename(), __np.falsename()};
   const string_type* __i       = std::__scan_keyword(__b, __e, __names, __names + 2, __ct, __err);
@@ -912,7 +909,7 @@ _OutputIterator
 num_put<_CharT, _OutputIterator>::do_put(iter_type __s, ios_base& __iob, char_type __fl, bool __v) const {
   if ((__iob.flags() & ios_base::boolalpha) == 0)
     return do_put(__s, __iob, __fl, (unsigned long)__v);
-  const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.getloc());
+  const numpunct<char_type>& __np = std::use_facet<numpunct<char_type> >(__iob.__getloc());
   typedef typename numpunct<char_type>::string_type string_type;
   string_type __nm = __v ? __np.truename() : __np.falsename();
   return std::copy(__nm.begin(), __nm.end(), __s);
@@ -958,13 +955,16 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
       __basefield != ios_base::hex && __v >= 0)
     *__buffer_ptr++ = '+';
 
+  char* __internal_padding_pos = __buffer_ptr;
+
   // Add base prefix
   if (__v != 0 && __flags & ios_base::showbase) {
     if (__basefield == ios_base::oct) {
       *__buffer_ptr++ = '0';
     } else if (__basefield == ios_base::hex) {
-      *__buffer_ptr++ = '0';
-      *__buffer_ptr++ = (__flags & ios_base::uppercase ? 'X' : 'x');
+      *__buffer_ptr++        = '0';
+      *__buffer_ptr++        = (__flags & ios_base::uppercase ? 'X' : 'x');
+      __internal_padding_pos = __buffer_ptr;
     }
   }
 
@@ -977,12 +977,25 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
       *__buffer_ptr = std::__hex_to_upper(*__buffer_ptr);
   }
 
-  char* __np = this->__identify_padding(__char_buffer, __res.__ptr, __iob);
+  char* __padding_pos;
+  switch (__flags & ios_base::adjustfield) {
+  case ios_base::internal:
+    __padding_pos = __internal_padding_pos;
+    break;
+  case ios_base::left:
+    __padding_pos = __res.__ptr;
+    break;
+  case ios_base::right:
+  default:
+    __padding_pos = __char_buffer;
+    break;
+  }
+
   // Stage 2 - Widen __nar while adding thousands separators
   char_type __o[2 * (__buffer_size - 1) - 1];
   char_type* __op; // pad here
   char_type* __oe; // end of output
-  this->__widen_and_group_int(__char_buffer, __np, __res.__ptr, __o, __op, __oe, __iob.getloc());
+  this->__widen_and_group_int(__char_buffer, __padding_pos, __res.__ptr, __o, __op, __oe, __iob.__getloc());
   // [__o, __oe) contains thousands_sep'd wide number
   // Stage 3 & 4
   return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);
@@ -1055,7 +1068,7 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
   }
   char_type* __op; // pad here
   char_type* __oe; // end of output
-  this->__widen_and_group_float(__nb, __np, __ne, __ob, __op, __oe, __iob.getloc());
+  this->__widen_and_group_float(__nb, __np, __ne, __ob, __op, __oe, __iob.__getloc());
   // [__o, __oe) contains thousands_sep'd wide number
   // Stage 3 & 4
   __s = std::__pad_and_output(__s, __ob, __op, __oe, __iob, __fl);

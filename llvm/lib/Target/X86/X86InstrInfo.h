@@ -71,12 +71,6 @@ CondCode getCondFromSETCC(const MachineInstr &MI);
 // Turn CMOV instruction into condition code.
 CondCode getCondFromCMov(const MachineInstr &MI);
 
-// Turn CFCMOV instruction into condition code.
-CondCode getCondFromCFCMov(const MachineInstr &MI);
-
-// Turn CCMP instruction into condition code.
-CondCode getCondFromCCMP(const MachineInstr &MI);
-
 // Turn condition code into condition flags for CCMP/CTEST.
 int getCCMPCondFlagsFromCondCode(CondCode CC);
 

@@ -1032,7 +1032,8 @@ bool X86AsmBackend::finishLayout() const {
   // decode limited.  It is often better to reduce the number of instructions
   // (i.e. eliminate nops) even at the cost of increasing the size and
   // complexity of others.
-  if (!CLOpts.pad_for_align && !CLOpts.pad_for_branch_align)
+  if (!CLOpts.pad_for_align &&
+      !(AllowAutoPadding && CLOpts.pad_for_branch_align))
     return false;
 
   // The processed regions are delimitered by LabeledFragments. -g may have more

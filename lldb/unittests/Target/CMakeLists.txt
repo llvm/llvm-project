@@ -17,9 +17,11 @@ add_lldb_unittest(TargetTests
   ScratchTypeSystemTest.cpp
   StackFrameListTest.cpp
   StackFrameRecognizerTest.cpp
+  StackIDTest.cpp
   SummaryStatisticsTest.cpp
   TargetAPIMutexTest.cpp
   TargetGroupTest.cpp
+  ThreadPlanStackTest.cpp
   FindFileTest.cpp
 
   LINK_COMPONENTS
@@ -56,5 +58,6 @@ set(test_inputs
   AndroidModule.unstripped.so
   TestModule.so
   inlined-function.yaml
+  tail-call.yaml
   )
 add_unittest_inputs(TargetTests "${test_inputs}")

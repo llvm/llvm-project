@@ -54,5 +54,14 @@
 
 # BAD-PATTERN: --undefined-glob: invalid glob pattern, unmatched '[': [
 
+## Matched members are extracted in symbol table order.
+# RUN: ld.lld -o /dev/null %t.o %t.a --undefined-glob 'foo*' --why-extract=- | FileCheck --check-prefix=WHY %s
+
+# WHY:      reference	extracted	symbol
+# WHY-NEXT: --undefined-glob	{{.*}}.a({{.*}}1.o)	foo1
+# WHY-NEXT: --undefined-glob	{{.*}}.a({{.*}}2.o)	foo2
+# WHY-NEXT: --undefined-glob	{{.*}}.a({{.*}}3.o)	foo32
+# WHY-NOT:  {{.}}
+
 .globl _start
 _start:

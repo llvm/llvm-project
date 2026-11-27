@@ -178,6 +178,7 @@ void UnwrappedLineParser::reset() {
   PP.IncludeGuard = getIncludeGuardState(Style.IndentPPDirectives);
   PP.IncludeGuardToken = nullptr;
   ParsedPPDirectives.clear();
+  TokenAfterIfWithConditionalElse = nullptr;
   Line.reset(new UnwrappedLine);
   CommentsBeforeNextToken.clear();
   FormatTok = nullptr;
@@ -2169,7 +2170,9 @@ void UnwrappedLineParser::parseStructuralElement(
         if (FollowedByNewline &&
             (Text.size() >= 5 ||
              (FunctionLike && FormatTok->isNot(tok::l_paren))) &&
-            tokenCanStartNewLine(*FormatTok) && Text == Text.upper()) {
+            tokenCanStartNewLine(*FormatTok) && Text == Text.upper() &&
+            (!FormatTok->Previous ||
+             FormatTok->Previous->isNot(TT_TrailingCommaVaOptRParen))) {
           if (PreviousToken->isNot(TT_UntouchableMacroFunc))
             PreviousToken->setFinalizedType(TT_FunctionLikeOrFreestandingMacro);
           addUnwrappedLine();
@@ -2509,7 +2512,8 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
     const auto *PrevPrev = Previous->getPreviousNonComment();
     if (Previous->is(tok::star) && PrevPrev && PrevPrev->isTypeName(LangOpts))
       return false;
-    if (Previous->closesScope()) {
+    if (Previous->closesScope() &&
+        Previous->isNot(TT_TrailingCommaVaOptRParen)) {
       // Not a potential C-style cast.
       if (Previous->isNot(tok::r_paren))
         return false;
@@ -2651,6 +2655,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
           parseChildBlock();
         break;
       }
+      if (IsEnum && !Style.AllowShortEnumsOnASingleLine &&
+          FormatTok->Previous &&
+          FormatTok->Previous->is(TT_TrailingCommaVaOptRParen)) {
+        addUnwrappedLine();
+      }
       break;
     case tok::l_brace:
       // Assume there are no blocks inside a braced init list apart
@@ -2781,6 +2790,11 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
         } else if (Prev->is(TT_TypenameMacro)) {
           LParen->setFinalizedType(TT_TypeDeclarationParen);
           RParen->setFinalizedType(TT_TypeDeclarationParen);
+        } else if (IsCpp && Prev->is(Keywords.kw___VA_OPT__) &&
+                   Prev->is(TT_Unknown) && RParen->Previous->is(tok::comma) &&
+                   RParen->Previous->Previous->isNot(tok::kw_operator)) {
+          // TT_Unknown excludes configured macros; exclude `operator,`.
+          RParen->setFinalizedType(TT_TrailingCommaVaOptRParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
           Prev->setFinalizedType(TT_TemplateCloser);
         } else if (FormatTok->is(tok::l_brace) && Prev->is(tok::amp) &&
@@ -2927,11 +2941,120 @@ static FormatToken *getLastNonComment(const UnwrappedLine &Line) {
   return nullptr;
 }
 
+static bool containsPPDirective(const UnwrappedLine &Line) {
+  return llvm::any_of(
+      llvm::drop_begin(Line.Tokens),
+      [](const UnwrappedLineNode &Node) { return Node.Tok->FirstAfterPPLine; });
+}
+
+// Returns whether an `else` in a skipped preprocessor branch may follow. Braces
+// inserted while it is skipped can't be withdrawn by the run that parses it.
+bool UnwrappedLineParser::isFollowedByConditionalElse() const {
+  // Find the last token of the if statement, including already emitted lines.
+  const FormatToken *Last = nullptr;
+  if (!Line->Tokens.empty()) {
+    Last = Line->Tokens.back().Tok;
+  } else {
+    for (const auto &PreviousLine : llvm::reverse(*CurrentLines)) {
+      if (!PreviousLine.InPPDirective) {
+        Last = PreviousLine.Tokens.back().Tok;
+        break;
+      }
+    }
+  }
+  if (!Last)
+    return false;
+
+  // AllTokens also holds the tokens of branches that this run doesn't parse.
+  const auto *It =
+      llvm::lower_bound(AllTokens, Last->Tok.getLocation(),
+                        [](const FormatToken *Tok, SourceLocation Loc) {
+                          return Tok->Tok.getLocation() < Loc;
+                        });
+  if (It == AllTokens.end() || *It != Last)
+    return false;
+
+  // Whether a branch is always taken, for each conditional entered since Last.
+  SmallVector<bool, 4> Conditionals;
+  // Depth of the conditional making this branch unreachable, or 0 if none.
+  size_t UnreachableDepth = 0;
+  bool IsFirstOnLine = false;
+  bool IsFirstAfterDirective = false;
+  for (++It; It != AllTokens.end(); ++It) {
+    const auto &Tok = **It;
+    if (Tok.HasUnescapedNewline)
+      IsFirstOnLine = true;
+    if (Tok.is(tok::comment))
+      continue;
+    if (Tok.is(tok::hash) && IsFirstOnLine) {
+      SmallVector<const FormatToken *, 4> Directive;
+      for (const auto *Next = std::next(It);
+           Next != AllTokens.end() && !(*Next)->HasUnescapedNewline;
+           ++Next, ++It) {
+        if ((*Next)->isNot(tok::comment))
+          Directive.push_back(*Next);
+      }
+      if (!Directive.empty()) {
+        const auto &Keyword = *Directive.front();
+        // Only a condition that is a single literal is decided, as an
+        // expression such as `0 || A` still depends on the configuration.
+        const auto IsLiteral = [&](bool Value) {
+          if (Keyword.isNoneOf(tok::pp_if, tok::pp_elif) ||
+              Directive.size() != 2) {
+            return false;
+          }
+          const auto &Condition = *Directive[1];
+          return Value
+                     ? Condition.is(tok::kw_true) || Condition.TokenText == "1"
+                     : Condition.is(tok::kw_false) ||
+                           Condition.TokenText == "0";
+        };
+        if (Keyword.isOneOf(tok::pp_if, tok::pp_ifdef, tok::pp_ifndef)) {
+          Conditionals.push_back(IsLiteral(true));
+          if (UnreachableDepth == 0 && IsLiteral(false))
+            UnreachableDepth = Conditionals.size();
+        } else if (Keyword.is(tok::pp_endif)) {
+          if (Conditionals.size() == UnreachableDepth)
+            UnreachableDepth = 0;
+          if (!Conditionals.empty())
+            Conditionals.pop_back();
+        } else if (Keyword.isOneOf(tok::pp_else, tok::pp_elif, tok::pp_elifdef,
+                                   tok::pp_elifndef)) {
+          if (Conditionals.size() == UnreachableDepth)
+            UnreachableDepth = 0;
+          // An alternative of a conditional that was entered before Last.
+          if (Conditionals.empty())
+            Conditionals.push_back(false);
+          if (UnreachableDepth == 0 &&
+              (Conditionals.back() || IsLiteral(false))) {
+            UnreachableDepth = Conditionals.size();
+          } else if (IsLiteral(true)) {
+            Conditionals.back() = true;
+          }
+        }
+      }
+      IsFirstAfterDirective = true;
+      continue;
+    }
+    IsFirstOnLine = false;
+    if (UnreachableDepth > 0)
+      continue;
+    // An `else` later in a branch belongs to an `if` in that same branch.
+    if (IsFirstAfterDirective && Tok.is(tok::kw_else))
+      return true;
+    // Stop at ordinary code outside the conditionals tracked by this scan.
+    if (Conditionals.empty())
+      return false;
+    IsFirstAfterDirective = false;
+  }
+  return false;
+}
+
 void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
   FormatToken *Tok = nullptr;
 
   if (Style.InsertBraces && !Line->InPPDirective && !Line->Tokens.empty() &&
-      PreprocessorDirectives.empty() && FormatTok->isNot(tok::semi)) {
+      !containsPPDirective(*Line) && FormatTok->isNot(tok::semi)) {
     Tok = Style.BraceWrapping.AfterControlStatement == FormatStyle::BWACS_Never
               ? getLastNonComment(*Line)
               : Line->Tokens.back().Tok;
@@ -2974,7 +3097,7 @@ void UnwrappedLineParser::parseUnbracedBody(bool CheckEOF) {
             return Node.Tok->FirstAfterPPLine;
           });
     }
-    if (EnclosesPPDirective)
+    if (EnclosesPPDirective || FormatTok == TokenAfterIfWithConditionalElse)
       LBraceTok->BraceCount = 0;
     else
       ++Tok->BraceCount;
@@ -3169,6 +3292,8 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
       parseUnbracedBody(/*CheckEOF=*/true);
     }
   } else {
+    if (Style.InsertBraces && isFollowedByConditionalElse())
+      TokenAfterIfWithConditionalElse = FormatTok;
     KeepIfBraces = KeepIfBraces || IfBlockKind == IfStmtKind::IfElse;
     if (NeedsUnwrappedLine)
       addUnwrappedLine();
@@ -4005,19 +4130,23 @@ bool UnwrappedLineParser::parseEnum() {
   if (Style.Language == FormatStyle::LK_Proto && FormatTok->is(tok::equal))
     return false;
 
-  if (IsCpp) {
-    // Eat up enum class ...
-    if (FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
-      nextToken();
-    while (FormatTok->is(tok::l_square))
-      if (!handleCppAttributes())
-        return false;
-  }
+  // Eat up enum class ...
+  if (IsCpp && FormatTok->isOneOf(tok::kw_class, tok::kw_struct))
+    nextToken();
 
   while (FormatTok->Tok.getIdentifierInfo() ||
          FormatTok->isOneOf(tok::colon, tok::coloncolon, tok::less,
                             tok::greater, tok::comma, tok::question,
                             tok::l_square)) {
+    if (FormatTok->is(TT_AttributeMacro)) {
+      nextToken();
+      continue;
+    }
+    if (IsCpp && FormatTok->is(tok::l_square)) {
+      if (handleCppAttributes())
+        continue;
+      return false;
+    }
     if (FormatTok->is(tok::colon))
       FormatTok->setFinalizedType(TT_EnumUnderlyingTypeColon);
     if (Style.isVerilog()) {
@@ -4030,8 +4159,10 @@ bool UnwrappedLineParser::parseEnum() {
       nextToken();
     }
     // We can have macros or attributes in between 'enum' and the enum name.
-    if (FormatTok->is(tok::l_paren))
+    if (FormatTok->is(tok::l_paren)) {
       parseParens();
+      continue;
+    }
     if (FormatTok->is(tok::identifier)) {
       nextToken();
       // If there are two identifiers in a row, this is likely an elaborate

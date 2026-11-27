@@ -484,12 +484,12 @@ define void @fun1(ptr %Src, ptr %Dst) {
 ; VECTOR-NEXT:    ldr %f0, %f9
 ; VECTOR-NEXT:  .LBB1_4:
 ; VECTOR-NEXT:    brasl %r14, __truncsfhf2@PLT
+; VECTOR-NEXT:    vsteh %v0, 2(%r13), 0
 ; VECTOR-NEXT:    vsteh %v10, 0(%r13), 0
 ; VECTOR-NEXT:    ld %f8, 184(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    ld %f9, 176(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    ld %f10, 168(%r15) # 8-byte Reload
 ; VECTOR-NEXT:    ld %f11, 160(%r15) # 8-byte Reload
-; VECTOR-NEXT:    vsteh %v0, 2(%r13), 0
 ; VECTOR-NEXT:    lmg %r13, %r15, 296(%r15)
 ; VECTOR-NEXT:    br %r14
   %A = load %Ty1, ptr %Src

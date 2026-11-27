@@ -1810,10 +1810,26 @@ foreach op = ["expect_tx", "complete_tx"] in {
     foreach space = ["space_cta", "space_cluster"] in {
       defvar intr = !cast<Intrinsic>(MBAR_UTIL<op, scope, space>.intr_name);
       defvar suffix = StrJoin<"_", [op, scope, space]>.ret;
+      defvar asm_str = MBAR_UTIL<op, scope, space, "relaxed">.asm_str;
+
+      // The shared::cluster form additionally carries a 32-bit CTA mask.
+      defvar is_mc_space = !eq(space, "space_cluster");
+
       def mbar_ # suffix : BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$tx_count),
-                           MBAR_UTIL<op, scope, space, "relaxed">.asm_str,
-                           [(intr addr:$addr, i32:$tx_count)]>,
+                           asm_str,
+                           !if(is_mc_space,
+                               [(intr addr:$addr, i32:$tx_count, (i32 srcvalue), 0)],
+                               [(intr addr:$addr, i32:$tx_count)])>,
                            Requires<[PTX80, SM90]>;
+
+      if is_mc_space then {
+        def mbar_ # suffix # "_MC" : NVPTXInst<(outs),
+                              (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                              !subst(".b64", ".multicast::cluster::32b.b64", asm_str)
+                                # " [$addr], $tx_count, $mc;",
+                              [(intr addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                              Requires<[hasRubinFamilySupport]>;
+      }
     } // space
   } // scope
 } // op
@@ -1842,8 +1858,14 @@ multiclass MBAR_ARR_INTR<string op, string scope, string sem,
   def _CLUSTER : NVPTXInst<(outs),
                  (ins ADDR:$addr, B32:$tx_count),
                  asm_cluster # " _, [$addr], $tx_count;",
-                 [(intr_cluster addr:$addr, i32:$tx_count)]>,
+                 [(intr_cluster addr:$addr, i32:$tx_count, (i32 srcvalue), 0)]>,
                  Requires<pred>;
+  def _CLUSTER_MC : NVPTXInst<(outs),
+                    (ins ADDR:$addr, B32:$tx_count, B32:$mc),
+                    !subst(".b64", ".multicast::cluster::32b.b64", asm_cluster)
+                      # " _, [$addr], $tx_count, $mc;",
+                    [(intr_cluster addr:$addr, i32:$tx_count, i32:$mc, -1)]>,
+                    Requires<[hasRubinFamilySupport]>;
 }
 foreach op = ["arrive", "arrive.expect_tx",
               "arrive_drop", "arrive_drop.expect_tx"] in {
@@ -1974,6 +1996,26 @@ class SADInst<string OpcStr, NVPTXRegClass t_regclass,
               (ins s0_regclass:$src0, s1_regclass:$src1, s2_regclass:$src2), OpcStr,
         [(set t_regclass:$dst, (IntOP s0_regclass:$src0, s1_regclass:$src1, s2_regclass:$src2))]>,
           Requires<Preds>;
+
+multiclass F_MATH_3_RND_TY<string OpcStr, RegTyInfo t, Intrinsic IntOP,
+                           TImmLeaf rnd, list<Predicate> Preds = []> {
+  def NAME : BasicNVPTXInst<(outs t.RC:$dst),
+        (ins t.SrcOp:$src0, t.SrcOp:$src1, t.SrcOp:$src2), OpcStr>;
+  def : Pat<(t.Ty (IntOP t.Ty:$src0, t.Ty:$src1, t.Ty:$src2, rnd)),
+            (!cast<Instruction>(NAME) t.InOp:$src0, t.InOp:$src1, t.InOp:$src2)>,
+        Requires<Preds>;
+}
+
+multiclass F_MATH_3_RNDOP_TY<string OpcStr, RegTyInfo t, Intrinsic IntOP,
+                             list<Predicate> Preds = []> {
+  def NAME : BasicFlagsNVPTXInst<(outs t.RC:$dst),
+        (ins t.SrcOp:$src0, t.SrcOp:$src1, t.SrcOp:$src2),
+        (ins FPRoundingMode:$rnd), OpcStr>;
+  def : Pat<(t.Ty (IntOP t.Ty:$src0, t.Ty:$src1, t.Ty:$src2, timm:$rnd)),
+            (!cast<Instruction>(NAME) t.InOp:$src0, t.InOp:$src1, t.InOp:$src2,
+             $rnd)>,
+        Requires<Preds>;
+}
 
 defvar FPRoundingModes = ["rn", "rz", "rm", "rp"];
 
@@ -2171,7 +2213,7 @@ foreach t = [F16RT, F16X2RT] in
       defm MUL_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
         F_MATH_2_RND_TY<StrJoin<".", ["mul.rn", ftz, sat, t.PtxType]>.ret, t,
                         !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fmul", ftz, sat]>.ret),
-                        fp_rnd_rn_imm>;
+                        fp_rnd_rn_imm, [SM53]>;
 
 // bf16/bf16x2
 foreach t = [BF16RT, BF16X2RT] in
@@ -2244,6 +2286,10 @@ defm DIV_RZ_F64 : F_MATH_2<"div.rz.f64", F64RT, int_nvvm_div_rz_d>;
 defm DIV_RM_F64 : F_MATH_2<"div.rm.f64", F64RT, int_nvvm_div_rm_d>;
 defm DIV_RP_F64 : F_MATH_2<"div.rp.f64", F64RT, int_nvvm_div_rp_d>;
 
+def : Pat<(int_nvvm_div_full fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, NoFTZ)>;
+def : Pat<(int_nvvm_div_full_ftz fpimm_1, f32:$b),
+          (RCP_APPROX_F32 reg_or_fpimm:$b, FTZ)>;
 def : Pat<(int_nvvm_div_full f32:$a, f32:$b),
           (DIV_FULL_F32 reg_or_fpimm:$a, reg_or_fpimm:$b, NoFTZ)>;
 def : Pat<(int_nvvm_div_full_ftz f32:$a, f32:$b),
@@ -2379,72 +2425,82 @@ def : Pat<(int_nvvm_cos_approx_f f32:$a), (COS_APPROX_F32 reg_or_fpimm:$a, NoFTZ
 // Fma
 //
 
-class FMA_TUPLE<string V, Intrinsic I, RegTyInfo RT, list<Predicate> Preds = []> {
-  string Variant = V;
-  Intrinsic Intr = I;
-  RegTyInfo RegType = RT;
-  list<Predicate> Predicates = Preds;
-}
+// f16/f16x2
+foreach t = [F16RT, F16X2RT] in {
+  foreach ftz = ["", "ftz"] in {
+    foreach sat = ["", "sat"] in
+      defm FMA_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
+        F_MATH_3_RND_TY<StrJoin<".", ["fma.rn", ftz, sat, t.PtxType]>.ret, t,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz, sat]>.ret),
+                        fp_rnd_rn_imm, [SM53]>;
 
-multiclass FMA_INST {
-  foreach P = [
-    FMA_TUPLE<"_rn_f64", int_nvvm_fma_rn_d, F64RT>,
-    FMA_TUPLE<"_rz_f64", int_nvvm_fma_rz_d, F64RT>,
-    FMA_TUPLE<"_rm_f64", int_nvvm_fma_rm_d, F64RT>,
-    FMA_TUPLE<"_rp_f64", int_nvvm_fma_rp_d, F64RT>,
-
-    FMA_TUPLE<"_rn_ftz_f32", int_nvvm_fma_rn_ftz_f, F32RT>,
-    FMA_TUPLE<"_rn_ftz_sat_f32", int_nvvm_fma_rn_ftz_sat_f, F32RT>,
-    FMA_TUPLE<"_rn_f32", int_nvvm_fma_rn_f, F32RT>,
-    FMA_TUPLE<"_rn_sat_f32", int_nvvm_fma_rn_sat_f, F32RT>,
-    FMA_TUPLE<"_rz_ftz_f32", int_nvvm_fma_rz_ftz_f, F32RT>,
-    FMA_TUPLE<"_rz_ftz_sat_f32", int_nvvm_fma_rz_ftz_sat_f, F32RT>,
-    FMA_TUPLE<"_rz_f32", int_nvvm_fma_rz_f, F32RT>,
-    FMA_TUPLE<"_rz_sat_f32", int_nvvm_fma_rz_sat_f, F32RT>,
-    FMA_TUPLE<"_rm_f32", int_nvvm_fma_rm_f, F32RT>,
-    FMA_TUPLE<"_rm_sat_f32", int_nvvm_fma_rm_sat_f, F32RT>,
-    FMA_TUPLE<"_rm_ftz_f32", int_nvvm_fma_rm_ftz_f, F32RT>,
-    FMA_TUPLE<"_rm_ftz_sat_f32", int_nvvm_fma_rm_ftz_sat_f, F32RT>,
-    FMA_TUPLE<"_rp_f32", int_nvvm_fma_rp_f, F32RT>,
-    FMA_TUPLE<"_rp_sat_f32", int_nvvm_fma_rp_sat_f, F32RT>,
-    FMA_TUPLE<"_rp_ftz_f32", int_nvvm_fma_rp_ftz_f, F32RT>,
-    FMA_TUPLE<"_rp_ftz_sat_f32", int_nvvm_fma_rp_ftz_sat_f, F32RT>,
-
-    FMA_TUPLE<"_rn_f16", int_nvvm_fma_rn_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_f16", int_nvvm_fma_rn_ftz_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_sat_f16", int_nvvm_fma_rn_sat_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_sat_f16", int_nvvm_fma_rn_ftz_sat_f16, F16RT, [SM53]>,
-    FMA_TUPLE<"_rn_relu_f16", int_nvvm_fma_rn_relu_f16, F16RT, [SM80]>,
-    FMA_TUPLE<"_rn_ftz_relu_f16", int_nvvm_fma_rn_ftz_relu_f16, F16RT, [SM80]>,
-
-    FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, BF16RT, [SM80]>,
-    FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, BF16RT, [SM80]>,
-
-    FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_f16x2", int_nvvm_fma_rn_ftz_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_sat_f16x2", int_nvvm_fma_rn_sat_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_ftz_sat_f16x2", int_nvvm_fma_rn_ftz_sat_f16x2, F16X2RT, [SM53]>,
-    FMA_TUPLE<"_rn_relu_f16x2", int_nvvm_fma_rn_relu_f16x2, F16X2RT, [SM80]>,
-    FMA_TUPLE<"_rn_ftz_relu_f16x2", int_nvvm_fma_rn_ftz_relu_f16x2, F16X2RT, [SM80]>,
-
-    FMA_TUPLE<"_rn_bf16x2", int_nvvm_fma_rn_bf16x2, BF16X2RT, [SM80]>,
-    FMA_TUPLE<"_rn_relu_bf16x2", int_nvvm_fma_rn_relu_bf16x2, BF16X2RT, [SM80]>,
-  ] in {
-    defm !toupper(P.Variant) : F_MATH_3<!strconcat("fma", !subst("_", ".", P.Variant)),
-        P.RegType, P.Intr, P.Predicates>;
+    defm FMA_RN_ # !toupper(StrJoin<"_", [ftz, "relu", t.PtxType]>.ret) :
+      F_MATH_3_RND_TY<StrJoin<".", ["fma.rn", ftz, "relu", t.PtxType]>.ret, t,
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz, "relu"]>.ret),
+                      fp_rnd_rn_imm, [SM80]>;
   }
 }
 
-defm FMA : FMA_INST;
+// bf16/bf16x2
+foreach t = [BF16RT, BF16X2RT] in
+  foreach relu = ["", "relu"] in
+    defm FMA_RN_ # !toupper(StrJoin<"_", [relu, t.PtxType]>.ret) :
+      F_MATH_3_RND_TY<StrJoin<".", ["fma.rn", relu, t.PtxType]>.ret, t,
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", relu]>.ret),
+                      fp_rnd_rn_imm, [hasBF16Math, PTX70, SM80]>;
 
-foreach rnd = FPRoundingModes in
+// f32/f32x2/f64
+// Note: these are prefixed with FMA_RND to avoid clashing with the
+// fixed-rounding fma instructions for the generic fma node (FMA_F32 etc.).
+foreach ftz = ["", "ftz"] in {
+  foreach sat = ["", "sat"] in
+    defm StrJoin<"_", ["FMA_RND", !toupper(ftz), !toupper(sat), "F32"]>.ret :
+      F_MATH_3_RNDOP_TY<StrJoin<".", ["fma.${rnd}", ftz, sat, "f32"]>.ret, F32RT,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz, sat]>.ret)>;
+
+  defm StrJoin<"_", ["FMA_RND", !toupper(ftz), "F32X2"]>.ret :
+    F_MATH_3_RNDOP_TY<StrJoin<".", ["fma.${rnd}", ftz, "f32x2"]>.ret, F32X2RT,
+                      !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", ftz]>.ret),
+                      [hasF32x2Instructions]>;
+}
+
+defm FMA_RND_F64 :
+  F_MATH_3_RNDOP_TY<"fma.${rnd}.f64", F64RT, int_nvvm_fma>;
+
+// Mixed Precision
+foreach rnd = FPRoundingModes in {
+  defvar rnd_imm = !cast<TImmLeaf>("fp_rnd_" # rnd # "_imm");
+
   foreach sat = ["", "sat"] in
     foreach type = [f16, bf16] in
       def FMA_ # !toupper(StrJoin<"_", [rnd, sat, "f32", type.LLVMName]>.ret) :
         BasicNVPTXInst<(outs B32:$dst), (ins B16:$a, B16:$b, B32:$c),
           StrJoin<".", ["fma", rnd, sat, "f32", type.LLVMName]>.ret, [(set f32:$dst,
-           (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", rnd, sat, "f"]>.ret)
-             (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c))]>, Requires<[SM100]>;
+           (!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fma", sat]>.ret)
+             (f32 (fpextend type:$a)), (f32 (fpextend type:$b)), f32:$c, rnd_imm))]>,
+        Requires<[SM100]>;
+
+  let Predicates = [hasFP16x2MixedPrecisionSupport] in {
+    foreach t = [F16X2RT, BF16X2RT] in {
+      def FMA_ # !toupper(rnd # "_f32x2_" # t.PtxType # "_f32x2_f32x2") :
+        BasicNVPTXInst<(outs B64:$dst), (ins B32:$a, B64:$b, B64:$c),
+          "fma." # rnd # ".f32x2." # t.PtxType # ".f32x2.f32x2">;
+
+      defvar Inst = !cast<Instruction>("FMA_" # !toupper(rnd # "_f32x2_" # t.PtxType #
+                                                         "_f32x2_f32x2"));
+
+      def : Pat<(v2f32 (int_nvvm_fma (fpextend_v2f32_from_packed t.Ty:$a),
+                                     v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst $a, $b, $c)>;
+
+      def : Pat<(v2f32 (int_nvvm_fma
+                        (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                    t.Ty.ElementType:$a1),
+                        v2f32:$b, v2f32:$c, rnd_imm)),
+                (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+    }
+  }
+}
 
 // Pattern for llvm.fma.f32 intrinsic when there is no FTZ flag
 let Predicates = [SM100, doNoF32FTZ] in {
@@ -2453,6 +2509,19 @@ let Predicates = [SM100, doNoF32FTZ] in {
   def : Pat<(f32 (fma (f32 (fpextend bf16:$a)), (f32 (fpextend bf16:$b)), f32:$c)),
             (FMA_RN_F32_BF16 B16:$a, B16:$b, B32:$c)>;
 }
+
+let Predicates = [hasFP16x2MixedPrecisionSupport, doNoF32FTZ] in
+  foreach t = [F16X2RT, BF16X2RT] in {
+    defvar Inst = !cast<Instruction>("FMA_RN_F32X2_" # !toupper(t.PtxType) # "_F32X2_F32X2");
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_packed t.Ty:$a), v2f32:$b, v2f32:$c)),
+              (Inst $a, $b, $c)>;
+
+    def : Pat<(v2f32 (fma (fpextend_v2f32_from_lanes t.Ty.ElementType:$a0,
+                                                     t.Ty.ElementType:$a1),
+                          v2f32:$b, v2f32:$c)),
+              (Inst (t.Ty (V2I16toI32 $a0, $a1)), $b, $c)>;
+  }
 
 foreach ty = [F16RT, F16X2RT, BF16RT, BF16X2RT] in {
   foreach relu = ["", "_relu"] in {
@@ -2554,8 +2623,9 @@ foreach t = [F16RT, F16X2RT] in
   foreach ftz = ["", "ftz"] in
     foreach sat = ["", "sat"] in
       defm ADD_RN_ # !toupper(StrJoin<"_", [ftz, sat, t.PtxType]>.ret) :
-        F_MATH_2_RND_TY<StrJoin<".", ["add.rn", ftz, sat, t.PtxType]>.ret, t, !cast<Intrinsic>(
-                            StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret), fp_rnd_rn_imm>;
+        F_MATH_2_RND_TY<StrJoin<".", ["add.rn", ftz, sat, t.PtxType]>.ret, t,
+                        !cast<Intrinsic>(StrJoin<"_", ["int_nvvm_fadd", ftz, sat]>.ret),
+                        fp_rnd_rn_imm, [SM53]>;
 
 // bf16/bf16x2
 foreach t = [BF16RT, BF16X2RT] in
@@ -7299,6 +7369,76 @@ foreach NumSrc = SPNumSrcs in {
 } // NumSrc
 
 //
+// tcgen05.ld{.red}.spcompress
+//
+
+// mdata = ceil(num / 32);
+// cdata = num / 2.
+class Tcgen05LdSPCompressLayout<int RepeatFactor, bit IsRed> {
+  int MetadataSize = SPCeilDiv<RepeatFactor, 32>.Value;
+  int CompressedDataSize = !div(RepeatFactor, 2);
+  int NumResultRegs =
+      !add(MetadataSize, CompressedDataSize, !if(IsRed, 1, 0));
+  // taddr, row_op, abs, [nan]
+  int NumOperands = !if(IsRed, 4, 3);
+}
+
+class Tcgen05LdSPCompressSDNode<int RepeatFactor, bit IsRed,
+                                Tcgen05LdSPCompressLayout Layout>
+    : SDNode<"NVPTXISD::TCGEN05_LD" # !if(IsRed, "_RED", "")
+                 # "_SPCOMPRESS_X" # RepeatFactor,
+             SDTypeProfile<Layout.NumResultRegs, Layout.NumOperands,
+                           !foreach(OpIdx, !range(!add(Layout.NumResultRegs, Layout.NumOperands)),
+                                    SDTCisVT<OpIdx, i32>)>,
+             [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
+
+class Tcgen05LdSPCompressInst<string Red, int RepeatFactor, string RowOp,
+                              string Abs, string Nan>
+    : NVPTXInst<(outs), (ins), "?", []> {
+  defvar IsRed = !not(!empty(Red));
+  defvar Layout = Tcgen05LdSPCompressLayout<RepeatFactor, IsRed>;
+  defvar Results = SPRegList<Layout.NumResultRegs, "r">;
+  defvar Opcode = Tcgen05LdSPCompressSDNode<RepeatFactor, IsRed, Layout>;
+  defvar Args =
+      !listconcat([SPRegList<Layout.MetadataSize, "r">.Asm,
+                   SPRegList<Layout.CompressedDataSize, "r",
+                             Layout.MetadataSize>.Asm],
+                  !if(IsRed, ["$r" # !sub(Layout.NumResultRegs, 1)], []),
+                  ["[$taddr]"]);
+  defvar RowOpVal = !cond(!eq(RowOp, "min") : 0, !eq(RowOp, "max") : 1);
+  defvar AbsVal = !if(!empty(Abs), 0, 1);
+  defvar NanVal = !if(!empty(Nan), 0, 1);
+
+  // The pattern only matches the qualifiers this instruction prints.
+  dag IntrinsicPattern =
+      !con((Opcode i32:$taddr, (i32 RowOpVal), (i32 AbsVal)),
+           !if(IsRed, (Opcode (i32 NanVal)), (Opcode)));
+
+  let OutOperandList = Results.Outs;
+  let InOperandList = (ins B32:$taddr);
+  let AsmString = "tcgen05.ld" # Red
+                  # ".spcompress.sync.aligned.32x32b.x" # RepeatFactor
+                  # "." # RowOp # ".sp::2:4" # Abs # Nan
+                  # ".f32.b2 " # !interleave(Args, ", ") # ";";
+  let Pattern = [!con(Results.Set, (set IntrinsicPattern))];
+  let Predicates = [hasSPCompress];
+}
+
+let isConvergent = true in {
+  foreach Red = ["", ".red"] in {
+    foreach RepeatFactor = [4, 8, 16, 32, 64, 128] in {
+      foreach RowOp = ["min", "max"] in {
+        foreach Abs = ["", ".abs"] in {
+          // .NaN only applies to the reduction.
+          foreach Nan = !if(!empty(Red), [""], ["", ".NaN"]) in
+            def : Tcgen05LdSPCompressInst<Red, RepeatFactor, RowOp, Abs, Nan>;
+        } // Abs
+      } // RowOp
+    } // RepeatFactor
+  } // Red
+} // isConvergent
+
+//
 // tensormap.replace Instructions
 //
 
@@ -7316,14 +7456,32 @@ class TensormapReplaceInst_3<string state_space, string field_name,
     "tensormap.replace.tile." # field_name # "." # state_space # ".b1024." # t.PtxType,
     [(IntrinsicInAS<Intrin, as> addr:$addr, i32:$ord, t.Ty:$val)]>;
 
+defvar TensormapAllocClasses = ["alloc_small", "alloc_large", "alloc_same"];
+
+class TensormapReplaceGlobalAddressInst<string state_space,
+  string alloc_class_str, int alloc_class, NVPTXAddressSpace as> :
+  BasicNVPTXInst<(outs),
+    (ins ADDR:$addr, I64RT.RegOrImm:$val),
+    "tensormap.replace.tile.global_address" # alloc_class_str # "." # state_space
+      # ".b1024.b64",
+    [(IntrinsicInAS<int_nvvm_tensormap_replace_global_address, as>
+        addr:$addr, i64:$val, (i32 alloc_class))]>;
+
+class TensormapReplaceAllocClassInst<string state_space, string qualifier,
+  int alloc_class, NVPTXAddressSpace as> :
+  BasicNVPTXInst<(outs), (ins ADDR:$addr),
+    "tensormap.replace.tile" # qualifier # "." # state_space # ".b1024",
+    [(IntrinsicInAS<int_nvvm_tensormap_replace_alloc_class, as>
+        addr:$addr, (i32 alloc_class))]>;
+
 foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   defvar as = !if(!eq(ss, "GLOBAL"), AddrSpaceGlobal, AddrSpaceShared);
   defvar ss_ptx = !tolower(!subst("_", "::", ss));
-  let Predicates = [hasTensormapReplaceSupport] in {
+  let Predicates = [hasTensormapReplaceSupport, PredNot<PTX95>] in
     def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # ss :
-      TensormapReplaceInst_2<ss_ptx, "global_address", I64RT,
-        int_nvvm_tensormap_replace_global_address, as>;
+      TensormapReplaceGlobalAddressInst<ss_ptx, "", 0, as>;
 
+  let Predicates = [hasTensormapReplaceSupport] in {
     foreach field_name = ["INTERLEAVE_LAYOUT", "FILL_MODE", "RANK"] in {
       defvar intrin = !cast<Intrinsic>("int_nvvm_tensormap_replace_" # !tolower(field_name));
       def TENSORMAP_REPLACE_TILE_ # field_name # _ # ss :
@@ -7355,4 +7513,32 @@ foreach ss = ["GLOBAL", "SHARED_CTA"] in {
   def TENSORMAP_REPLACE_SWIZZLE_MODE_ # ss :
     TensormapReplaceInst_2<ss_ptx, "swizzle_mode", I32RT,
       int_nvvm_tensormap_replace_swizzle_mode, as>;
+
+  let Predicates = [hasTensormapAllocClassSupport] in {
+    foreach alloc_class = [0, 1, 2] in {
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_GLOBAL_ADDRESS_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceGlobalAddressInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
+    }
+
+    foreach alloc_class = [0, 1] in {
+      defvar alloc_class_str = TensormapAllocClasses[alloc_class];
+      def TENSORMAP_REPLACE_TILE_ # !toupper(alloc_class_str) # _ # ss :
+        TensormapReplaceAllocClassInst<ss_ptx, "." # alloc_class_str, alloc_class, as>;
+    }
+  }
 } // state_space
+
+class TensormapQueryAllocClassLargeInst<NVPTXAddressSpace as>
+  : BasicNVPTXInst<(outs B1:$res), (ins ADDR:$addr),
+      "tensormap.query.alloc_class_large"
+        # !if(!eq(as.Name, "shared"), ".shared::cta", as.Suffix) # ".b1024",
+      [(set i1:$res,
+         (IntrinsicInAS<int_nvvm_tensormap_query_alloc_class_large, as>
+            addr:$addr))]>,
+    Requires<[hasTensormapAllocClassSupport]>;
+
+foreach as = [AddrSpaceGeneric, AddrSpaceGlobal, AddrSpaceShared,
+              AddrSpaceConst, AddrSpaceParam] in
+  def TENSORMAP_QUERY_ALLOC_CLASS_LARGE_ # !toupper(as.Name) :
+    TensormapQueryAllocClassLargeInst<as>;

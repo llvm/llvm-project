@@ -2245,6 +2245,8 @@ bool Type::hasAutoForTrailingReturnType() const {
 bool Type::hasIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isIntegerType();
+  if (const auto *MT = dyn_cast<MatrixType>(CanonicalType))
+    return MT->getElementType()->isIntegerType();
   if (CanonicalType->isSveVLSBuiltinType()) {
     const auto *VT = cast<BuiltinType>(CanonicalType);
     return VT->getKind() == BuiltinType::SveBool ||
@@ -2604,7 +2606,12 @@ Type::ScalarTypeKind Type::getScalarTypeKind() const {
   } else if (isa<MemberPointerType>(T)) {
     return STK_MemberPointer;
   } else if (isa<EnumType>(T)) {
-    assert(T->castAsEnumDecl()->isComplete());
+    const EnumDecl *ED = T->castAsEnumDecl();
+    assert(ED->isComplete());
+    // C23 6.7.3.3p16: conversion to an enumerated type with a fixed underlying
+    // type has the same semantics as conversion to the underlying type.
+    if (ED->isFixed() && ED->getIntegerType()->isBooleanType())
+      return STK_Bool;
     return STK_Integral;
   } else if (const auto *CT = dyn_cast<ComplexType>(T)) {
     if (CT->getElementType()->isRealFloatingType())

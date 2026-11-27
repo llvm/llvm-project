@@ -101,6 +101,12 @@ add_header(
 )
 
 add_header(
+  sys_shm_macros
+  HDR
+    sys-shm-macros.h
+)
+
+add_header(
   sys_socket_macros
   HDR
     sys-socket-macros.h
@@ -161,9 +167,23 @@ add_header(
 )
 
 add_header(
+  sys_swap_macros
+  HDR
+    sys-swap-macros.h
+)
+
+add_header(
   sys_time_macros
   HDR
     sys-time-macros.h
+)
+
+add_header(
+  sys_timerfd_macros
+  HDR
+    sys-timerfd-macros.h
+  DEPENDS
+    .fcntl_macros
 )
 
 add_header(

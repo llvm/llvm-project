@@ -11,10 +11,6 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
-#include <__type_traits/is_function.h>
-#include <__type_traits/is_reference.h>
-#include <__type_traits/remove_all_extents.h>
-#include <__utility/declval.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,75 +18,30 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_builtin(__is_destructible)
-
 template <class _Tp>
 struct _LIBCPP_NO_SPECIALIZATIONS is_destructible : _BoolConstant<__is_destructible(_Tp)> {};
 
-#  if _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_destructible_v = __is_destructible(_Tp);
-#  endif
-
-#else // __has_builtin(__is_destructible)
-
-//  if it's a reference, return true
-//  if it's a function, return false
-//  if it's   void,     return false
-//  if it's an array of unknown bound, return false
-//  Otherwise, return "declval<_Up&>().~_Up()" is well-formed
-//    where _Up is remove_all_extents<_Tp>::type
-
-template <class>
-struct __is_destructible_apply {
-  typedef int type;
-};
-
-template <typename _Tp>
-struct __is_destructor_wellformed {
-  template <typename _Tp1>
-  static true_type __test(typename __is_destructible_apply<decltype(std::declval<_Tp1&>().~_Tp1())>::type);
-
-  template <typename _Tp1>
-  static false_type __test(...);
-
-  static const bool value = decltype(__test<_Tp>(12))::value;
-};
-
-template <class _Tp, bool>
-struct __destructible_imp;
+#endif
 
 template <class _Tp>
-struct __destructible_imp<_Tp, false>
-    : integral_constant<bool, __is_destructor_wellformed<__remove_all_extents_t<_Tp> >::value> {};
+struct _LIBCPP_NO_SPECIALIZATIONS is_nothrow_destructible : integral_constant<bool, __is_nothrow_destructible(_Tp)> {};
+
+#if _LIBCPP_STD_VER >= 17
+template <class _Tp>
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_nothrow_destructible_v = __is_nothrow_destructible(_Tp);
+#endif
 
 template <class _Tp>
-struct __destructible_imp<_Tp, true> : true_type {};
+struct _LIBCPP_NO_SPECIALIZATIONS is_trivially_destructible
+    : integral_constant<bool, __is_trivially_destructible(_Tp)> {};
 
-template <class _Tp, bool>
-struct __destructible_false;
-
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
-struct __destructible_false<_Tp, false> : __destructible_imp<_Tp, is_reference<_Tp>::value> {};
-
-template <class _Tp>
-struct __destructible_false<_Tp, true> : false_type {};
-
-template <class _Tp>
-struct is_destructible : __destructible_false<_Tp, is_function<_Tp>::value> {};
-
-template <class _Tp>
-struct is_destructible<_Tp[]> : false_type {};
-
-template <>
-struct is_destructible<void> : false_type {};
-
-#  if _LIBCPP_STD_VER >= 17
-template <class _Tp>
-inline constexpr bool is_destructible_v = is_destructible<_Tp>::value;
-#  endif
-
-#endif // __has_builtin(__is_destructible)
+_LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_destructible_v = __is_trivially_destructible(_Tp);
+#endif
 
 _LIBCPP_END_NAMESPACE_STD
 

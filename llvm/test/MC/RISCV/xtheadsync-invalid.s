@@ -1,8 +1,8 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+xtheadsync < %s 2>&1 | FileCheck %s
-# RUN: not llvm-mc -triple riscv64 -mattr=+xtheadsync < %s 2>&1 | FileCheck %s
+# RUN: llvm-mc --verify -triple riscv32 -mattr=+xtheadsync < %s
+# RUN: llvm-mc --verify -triple riscv64 -mattr=+xtheadsync < %s
 
-th.sfence.vmas t0 # CHECK: :[[@LINE]]:18: error: too few operands for instruction
-th.sync t0 # CHECK: :[[@LINE]]:9: error: unexpected extra operand for instruction
-th.sync.s t0 # CHECK: :[[@LINE]]:11: error: unexpected extra operand for instruction
-th.sync.i t0 # CHECK: :[[@LINE]]:11: error: unexpected extra operand for instruction
-th.sync.is t0 # CHECK: :[[@LINE]]:12: error: unexpected extra operand for instruction
+th.sfence.vmas t0 # expected-error:18 {{too few operands for instruction}}
+th.sync t0 # expected-error:9 {{unexpected extra operand for instruction}}
+th.sync.s t0 # expected-error:11 {{unexpected extra operand for instruction}}
+th.sync.i t0 # expected-error:11 {{unexpected extra operand for instruction}}
+th.sync.is t0 # expected-error:12 {{unexpected extra operand for instruction}}

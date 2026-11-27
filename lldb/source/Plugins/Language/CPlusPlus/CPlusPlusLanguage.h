@@ -67,6 +67,15 @@ public:
   std::unique_ptr<TypeScavenger> GetTypeScavenger() override;
   lldb::TypeCategoryImplSP GetFormatters() override;
 
+  std::vector<lldb::LanguageType>
+  GetFormatterLanguages(lldb::LanguageType language) const override;
+
+  bool IsCategoryApplicable(lldb::LanguageType category_language,
+                            lldb::LanguageType valobj_language) const override;
+
+  std::unique_ptr<OptionGroupLanguageExpression>
+  CreateExpressionOptions() override;
+
   HardcodedFormatters::HardcodedSummaryFinder GetHardcodedSummaries() override;
 
   HardcodedFormatters::HardcodedSyntheticFinder
@@ -88,8 +97,6 @@ public:
   static llvm::StringRef GetPluginNameStatic() { return "cplusplus"; }
 
   bool SymbolNameFitsToLanguage(const Mangled &mangled) const override;
-
-  bool HandlesManglingScheme(Mangled::ManglingScheme scheme) const override;
 
   DemangledName DemangleSymbol(ConstString mangled,
                                Mangled::ManglingScheme scheme,
@@ -241,6 +248,8 @@ public:
   llvm::StringRef GetInstanceName() override { return "this"; }
 
   FormatEntity::Entry GetFunctionNameFormat() const override;
+
+  std::string GetVersionInfo() const override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }

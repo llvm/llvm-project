@@ -30,11 +30,9 @@ namespace llvm {
 class MachineFunction;
 class MachineRegisterInfo;
 class raw_ostream;
-class TargetInstrInfo;
 
 class VirtRegMap {
   MachineRegisterInfo *MRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineFunction *MF = nullptr;
 

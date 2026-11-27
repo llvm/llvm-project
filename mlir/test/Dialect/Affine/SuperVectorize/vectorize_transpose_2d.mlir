@@ -2,6 +2,7 @@
 
 // Permutation maps used in vectorization.
 // CHECK-DAG: #[[map_proj_d0d1d2_d2d1:map[0-9]*]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK-DAG: #[[$map_proj_d0d1_d1d0:map[0-9]*]] = affine_map<(d0, d1) -> (d1, d0)>
 
 func.func @vec2d(%A : memref<?x?x?xf32>) {
   %c0 = arith.constant 0 : index
@@ -25,7 +26,7 @@ func.func @vec2d(%A : memref<?x?x?xf32>) {
   // CHECK: affine.for %{{.*}} = 0 to %{{.*}} step 32
   // CHECK:   affine.for %{{.*}} = 0 to %{{.*}} {
   // CHECK:     affine.for %{{.*}} = 0 to %{{.*}} step 256
-  // CHECK:       {{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[map_proj_d0d1d2_d2d1]]} : memref<?x?x?xf32>, vector<32x256xf32>
+  // CHECK:       {{.*}} = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true, true], permutation_map = #[[map_proj_d0d1d2_d2d1]]} : memref<?x?x?xf32>, vector<32x256xf32> }
   affine.for %i3 = 0 to %M {
     affine.for %i4 = 0 to %N {
       affine.for %i5 = 0 to %P {
@@ -46,12 +47,12 @@ func.func @vec2d_imperfectly_nested(%A : memref<?x?x?xf32>) {
   // CHECK: affine.for %{{.*}} = 0 to %{{.*}} step 32 {
   // CHECK:   affine.for %{{.*}} = 0 to %{{.*}} step 256 {
   // CHECK:     affine.for %{{.*}} = 0 to %{{.*}} {
-  // CHECK:       %{{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[map_proj_d0d1d2_d2d1]]} : memref<?x?x?xf32>, vector<32x256xf32>
+  // CHECK:       %{{.*}} = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true, true], permutation_map = #[[map_proj_d0d1d2_d2d1]]} : memref<?x?x?xf32>, vector<32x256xf32> }
   // CHECK:   affine.for %{{.*}} = 0 to %{{.*}} {
   // CHECK:     affine.for %{{.*}} = 0 to %{{.*}} step 256 {
-  // CHECK:       %{{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[map_proj_d0d1d2_d2d1]]} : memref<?x?x?xf32>, vector<32x256xf32>
+  // CHECK:       %{{.*}} = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true, true], permutation_map = #[[map_proj_d0d1d2_d2d1]]} : memref<?x?x?xf32>, vector<32x256xf32> }
   // CHECK:     affine.for %{{.*}} = 0 to %{{.*}} step 256 {
-  // CHECK:       %{{.*}} = vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}], %{{.*}} {permutation_map = #[[map_proj_d0d1d2_d2d1]]} : memref<?x?x?xf32>, vector<32x256xf32>
+  // CHECK:       %{{.*}} = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}], %{{.*}} {in_bounds = [true, true], permutation_map = #[[map_proj_d0d1d2_d2d1]]} : memref<?x?x?xf32>, vector<32x256xf32> }
   affine.for %i0 = 0 to %0 {
     affine.for %i1 = 0 to %1 {
       affine.for %i2 = 0 to %2 {
@@ -70,3 +71,21 @@ func.func @vec2d_imperfectly_nested(%A : memref<?x?x?xf32>) {
   return
 }
 
+// The map selects the memref dims out of order, but the mask dims are in
+// increasing order.
+
+// CHECK-LABEL: func @transposed_store
+// CHECK:         affine.for %[[I:.*]] = 0 to 128 step 32
+// CHECK:           affine.for %[[J:.*]] = 0 to 512 step 256
+// CHECK:             %[[SIZE0:.*]] = arith.subi %{{.*}}, %[[J]] : index
+// CHECK:             %[[SIZE1:.*]] = arith.subi %{{.*}}, %[[I]] : index
+// CHECK:             %[[MASK:.*]] = vector.create_mask %[[SIZE0]], %[[SIZE1]] : vector<256x32xi1>
+// CHECK:             vector.mask %[[MASK]] { vector.transfer_write %{{.*}}, %{{.*}}[%[[J]], %[[I]]] {{.*}}permutation_map = #[[$map_proj_d0d1_d1d0]]{{.*}} : vector<32x256xf32>
+func.func @transposed_store(%A: memref<512x128xf32>, %f: f32) {
+  affine.for %i = 0 to 128 {
+    affine.for %j = 0 to 512 {
+      affine.store %f, %A[%j, %i] : memref<512x128xf32>
+    }
+  }
+  return
+}

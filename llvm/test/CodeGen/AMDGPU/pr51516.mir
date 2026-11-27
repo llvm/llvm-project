@@ -14,7 +14,6 @@
 
 ---
 name:            global_sextload_v32i32_to_v32i64
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
   stackPtrOffsetReg: '$sgpr32'
@@ -113,7 +112,7 @@ body:             |
     GLOBAL_STORE_DWORDX4_SADDR %3, %13, %2.sub0_sub1, 0, 0, implicit $exec
     %12.sub0:vreg_128 = COPY %11.sub2
     %12.sub2:vreg_128 = COPY %11.sub3
-    GLOBAL_STORE_DWORDX4_SADDR %3, %12, %2.sub0_sub1, 16, 0, implicit $exec, implicit killed %1
+    GLOBAL_STORE_DWORDX4_SADDR %3, %12, %2.sub0_sub1, 16, 0, implicit $exec, implicit %1
     S_ENDPGM 0
 
 ...

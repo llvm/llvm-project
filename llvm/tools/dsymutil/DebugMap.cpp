@@ -22,7 +22,6 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include <algorithm>
 #include <cinttypes>
 #include <cstdint>
 #include <memory>

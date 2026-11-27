@@ -280,11 +280,20 @@ buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
     }
   }
 
+  auto CorrectModuleOnwerModuleShip = [&SemaRef, OriginalTemplate](Decl *D) {
+    if (!SemaRef.getLangOpts().trackLocalOwningModule())
+      return;
+    D->setModuleOwnershipKind(OriginalTemplate->getModuleOwnershipKind());
+    if (D->hasOwningModule())
+      D->setLocalOwningModule(OriginalTemplate->getOwningModule());
+  };
+
   auto *Guide = CXXDeductionGuideDecl::Create(
       SemaRef.Context, DC, LocStart, ES, Name, GuideType, TInfo, LocEnd, Ctor,
       DeductionCandidate::Normal, FunctionTrailingRC);
   Guide->setImplicit(IsImplicit);
   Guide->setParams(Params);
+  CorrectModuleOnwerModuleShip(Guide);
 
   for (auto *Param : Params)
     Param->setDeclContext(Guide);
@@ -302,6 +311,7 @@ buildDeductionGuide(Sema &SemaRef, TemplateDecl *OriginalTemplate,
       SemaRef.Context, DC, Loc, DeductionGuideName, TemplateParams, Guide);
   GuideTemplate->setImplicit(IsImplicit);
   Guide->setDescribedFunctionTemplate(GuideTemplate);
+  CorrectModuleOnwerModuleShip(GuideTemplate);
 
   if (isa<CXXRecordDecl>(DC))
     GuideTemplate->setAccess(AS_public);
@@ -950,7 +960,7 @@ llvm::DenseSet<const NamedDecl *> getSourceDeductionGuides(DeclarationName Name,
       assert(GD->getSourceDeductionGuide() &&
              "deduction guide for alias template must have a source deduction "
              "guide");
-      Result.insert(GD->getSourceDeductionGuide());
+      Result.insert(GD->getSourceDeductionGuide()->getCanonicalDecl());
     }
   }
   return Result;
@@ -1197,8 +1207,9 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     //   template<typename T>
     //   using AliasFoo1 = Foo<T>; // a class/type alias template specialization
     Template = TST->getTemplateName().getAsTemplateDecl();
-    AliasRhsTemplateArgs =
-        TST->getAsNonAliasTemplateSpecializationType()->template_arguments();
+    // Look through RHS until we find a non-alias template.
+    if (auto *NonAlias = TST->getAsNonAliasTemplateSpecializationType())
+      AliasRhsTemplateArgs = NonAlias->template_arguments();
   } else if (const auto *RT = RhsType->getAs<RecordType>()) {
     // Cases where template arguments in the RHS of the alias are not
     // dependent. e.g.
@@ -1495,7 +1506,7 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
 
   for (auto *G : Guides) {
     if (auto *DG = dyn_cast<CXXDeductionGuideDecl>(G)) {
-      if (SourceDeductionGuides.contains(DG))
+      if (SourceDeductionGuides.contains(DG->getCanonicalDecl()))
         continue;
       // The deduction guide is a non-template function decl, we just clone it.
       auto *FunctionType =
@@ -1542,7 +1553,9 @@ void DeclareImplicitDeductionGuidesForTypeAlias(
       continue;
     }
     FunctionTemplateDecl *F = dyn_cast<FunctionTemplateDecl>(G);
-    if (!F || SourceDeductionGuides.contains(F->getTemplatedDecl()))
+    if (!F ||
+        SourceDeductionGuides.contains(
+            F->getTemplatedDecl()->getCanonicalDecl()))
       continue;
     // The **aggregate** deduction guides are handled in a different code path
     // (DeclareAggregateDeductionGuideFromInitList), which involves the tricky

@@ -109,12 +109,6 @@ ObjFile *Defined::getObjectFile() const {
                       : nullptr;
 }
 
-std::string Defined::getSourceLocation() {
-  if (!originalIsec)
-    return {};
-  return originalIsec->getSourceLocation(value);
-}
-
 // Get the canonical InputSection of the symbol.
 InputSection *Defined::isec() const {
   return originalIsec ? originalIsec->canonical() : nullptr;

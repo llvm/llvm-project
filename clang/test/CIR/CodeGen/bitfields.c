@@ -374,3 +374,34 @@ void binOp(S* s) {
 // OGCG:   [[TMP12:%.*]] = shl i64 [[TMP8]], 62
 // OGCG:   [[TMP13:%.*]] = ashr i64 [[TMP12]], 62
 // OGCG:   [[TMP14:%.*]] = trunc i64 [[TMP13]] to i32
+
+int binOpValue(S* s) {
+  return s->d |= 42;
+}
+
+// CIR: cir.func {{.*@binOpValue}}
+// CIR:   [[RETVAL:%.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+// CIR:   [[OR:%.*]] = cir.or {{.*}} : !s32i
+// CIR:   [[NEW:%.*]] = cir.set_bitfield align(4) (#bfi_d, {{.*}} : !cir.ptr<!u64i>, [[OR]] : !s32i) -> !s32i
+// CIR:   cir.store [[NEW]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: define {{.*@binOpValue}}
+// LLVM:   [[RETVAL:%.*]] = alloca i32, align 4
+// LLVM:   [[OR:%.*]] = or i32 {{.*}}, 42
+// LLVM:   [[EXT:%.*]] = zext i32 [[OR]] to i64
+// LLVM:   [[BITS:%.*]] = and i64 [[EXT]], 3
+// LLVM:   store i64 {{.*}}, ptr {{.*}}, align 4
+// LLVM:   [[SHL:%.*]] = shl i64 [[BITS]], 62
+// LLVM:   [[ASHR:%.*]] = ashr i64 [[SHL]], 62
+// LLVM:   [[NEW:%.*]] = trunc i64 [[ASHR]] to i32
+// LLVM:   store i32 [[NEW]], ptr [[RETVAL]], align 4
+
+// OGCG: define {{.*@binOpValue}}
+// OGCG:   [[OR:%.*]] = or i32 {{.*}}, 42
+// OGCG:   [[EXT:%.*]] = zext i32 [[OR]] to i64
+// OGCG:   [[BITS:%.*]] = and i64 [[EXT]], 3
+// OGCG:   store i64 {{.*}}, ptr {{.*}}, align 4
+// OGCG:   [[SHL:%.*]] = shl i64 [[BITS]], 62
+// OGCG:   [[ASHR:%.*]] = ashr i64 [[SHL]], 62
+// OGCG:   [[NEW:%.*]] = trunc i64 [[ASHR]] to i32
+// OGCG:   ret i32 [[NEW]]

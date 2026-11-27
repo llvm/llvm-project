@@ -16,11 +16,11 @@ float function() {
   return a + b;
 }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[FUNC_CONST:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.float}> : !rec_some_struct
-// LLVM-DAG: @[[FUNC_CONST:.*]] = private constant %struct.some_struct { i32 1, float 2.000000e+00 }
+// CIR-DAG: cir.global "private" constant cir_private unnamed_addr @[[FUNC_CONST:.*]] = #cir.const_record<{#cir.int<1> : !s32i, #cir.fp<2.000000e+00> : !cir.float}> : !rec_some_struct
+// LLVM-DAG: @[[FUNC_CONST:.*]] = private unnamed_addr constant %struct.some_struct { i32 1, float 2.000000e+00 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z8functionv() -> (!cir.float {llvm.noundef})
-// CIR:  %[[RETVAL:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.float>
+// CIR:  %[[RETVAL:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.float>
 // CIR:  %[[STRUCT:.+]] = cir.alloca "" {{.*}} init : !cir.ptr<!rec_some_struct>
 // CIR:  %[[CONST:.+]] = cir.get_global @[[FUNC_CONST]] : !cir.ptr<!rec_some_struct>
 // CIR:  cir.copy %[[CONST]] to %[[STRUCT]]

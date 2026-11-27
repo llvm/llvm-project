@@ -716,7 +716,6 @@ void CodeGenPrepare::removeAllAssertingVHReferences(Value *V) {
 
 // Verify BFI has been updated correctly by recomputing BFI and comparing them.
 [[maybe_unused]] void CodeGenPrepare::verifyBFIUpdates(Function &F) {
-  DominatorTree NewDT(F);
   CycleInfo NewCI;
   NewCI.compute(F);
   BranchProbabilityInfo NewBPI(F, NewCI, TLInfo);
@@ -1199,6 +1198,7 @@ simplifyRelocatesOffABase(GCRelocateInst *RelocatedBase,
 
     // Insert after RelocatedBase
     IRBuilder<> Builder(RelocatedBase->getNextNode());
+    Builder.disableGEPCanonicalization();
     Builder.SetCurrentDebugLocation(ToReplace->getDebugLoc());
 
     Value *Replacement = Builder.CreateGEP(Derived->getSourceElementType(),
@@ -1974,7 +1974,7 @@ static bool foldFCmpToFPClassTest(CmpInst *Cmp, const TargetLowering &TLI,
 
 static bool isRemOfLoopIncrementWithLoopInvariant(
     Instruction *Rem, const LoopInfo *LI, Value *&RemAmtOut, Value *&AddInstOut,
-    Value *&AddOffsetOut, PHINode *&LoopIncrPNOut) {
+    Value *&AddOffsetOut, PHINode *&LoopIncrPNOut, Constant *&StepOut) {
   Value *Incr, *RemAmt;
   // NB: If RemAmt is a power of 2 it *should* have been transformed by now.
   if (!match(Rem, m_URem(m_Value(Incr), m_Value(RemAmt))))
@@ -1987,8 +1987,8 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
     AddInst = nullptr;
     AddOffset = nullptr;
   } else {
-    // Search through a NUW add on top of the loop increment.
-    if (!match(Incr, m_c_NUWAdd(m_Phi(PN), m_Value(AddOffset))))
+    // Search through a NUW add (or disjoint or) on top of the loop increment.
+    if (!match(Incr, m_c_NUWAddLike(m_Phi(PN), m_Value(AddOffset))))
       return false;
     AddInst = Incr;
   }
@@ -2023,11 +2023,21 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
   if (!LoopIncrInfo)
     return false;
 
-  // We need remainder_amount % increment_amount to be zero. Increment of one
-  // satisfies that without any special logic and is overwhelmingly the common
-  // case.
-  if (!match(LoopIncrInfo->second, m_One()))
-    return false;
+  // The remainder must wrap at most once per iteration. That needs a known
+  // remainder amount unless the step is one.
+  Constant *Step = LoopIncrInfo->second;
+  if (!match(Step, m_One())) {
+    auto *StepC = dyn_cast<ConstantInt>(Step);
+    auto *RemC = dyn_cast<ConstantInt>(RemAmt);
+    if (!StepC || !RemC || StepC->isZero() ||
+        StepC->getValue().uge(RemC->getValue()))
+      return false;
+    // `rem + Step` must not overflow.
+    bool Overflow;
+    (void)(RemC->getValue() - 1).uadd_ov(StepC->getValue(), Overflow);
+    if (Overflow)
+      return false;
+  }
 
   // Need the increment to not overflow.
   if (!match(LoopIncrInfo->first, m_c_NUWAdd(m_Specific(PN), m_Value())))
@@ -2038,84 +2048,107 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
   LoopIncrPNOut = PN;
   AddInstOut = AddInst;
   AddOffsetOut = AddOffset;
+  StepOut = Step;
 
   return true;
 }
 
 // Try to transform:
 //
-// for(i = Start; i < End; ++i)
+// for(i = Start; i < End; i += Step)
 //    Rem = (i nuw+ IncrLoopInvariant) u% RemAmtLoopInvariant;
 //
 // ->
 //
 // Rem = (Start nuw+ IncrLoopInvariant) % RemAmtLoopInvariant;
-// for(i = Start; i < End; ++i, ++rem)
-//    Rem = rem == RemAmtLoopInvariant ? 0 : Rem;
+// for(i = Start; i < End; i += Step, rem += Step)
+//    Rem = rem u>= RemAmtLoopInvariant ? rem - RemAmtLoopInvariant : rem;
+//
+// Step must be 1 unless RemAmtLoopInvariant is a constant greater than Step.
 static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
-                                    const LoopInfo *LI,
+                                    const LoopInfo *LI, DominatorTree &DT,
                                     SmallPtrSet<BasicBlock *, 32> &FreshBBs,
                                     bool IsHuge) {
   Value *AddOffset, *RemAmt, *AddInst;
   PHINode *LoopIncrPN;
+  Constant *Step;
   if (!isRemOfLoopIncrementWithLoopInvariant(Rem, LI, RemAmt, AddInst,
-                                             AddOffset, LoopIncrPN))
-    return false;
-
-  // Only non-constant remainder as the extra IV is probably not profitable
-  // in that case.
-  //
-  // Potential TODO(1): `urem` of a const ends up as `mul` + `shift` + `add`. If
-  // we can rule out register pressure and ensure this `urem` is executed each
-  // iteration, its probably profitable to handle the const case as well.
-  //
-  // Potential TODO(2): Should we have a check for how "nested" this remainder
-  // operation is? The new code runs every iteration so if the remainder is
-  // guarded behind unlikely conditions this might not be worth it.
-  if (match(RemAmt, m_ImmConstant()))
+                                             AddOffset, LoopIncrPN, Step))
     return false;
 
   Loop *L = LI->getLoopFor(LoopIncrPN->getParent());
+  Type *Ty = Rem->getType();
+
+  // `urem` of a constant ends up as `mul` + `shift` + `sub`, so the extra IV
+  // is only worth it if the `urem` runs every iteration.
+  //
+  // Potential TODO: Should we have a check for how "nested" a non-constant
+  // remainder operation is? The new code runs every iteration so if the
+  // remainder is guarded behind unlikely conditions this might not be worth
+  // it.
+  bool IsConstRem = isa<ConstantInt>(RemAmt);
+  if (match(RemAmt, m_ImmConstant())) {
+    // A power-of-2 `urem` is a single mask.
+    if (!IsConstRem || cast<ConstantInt>(RemAmt)->getValue().isPowerOf2() ||
+        !DT.dominates(Rem->getParent(), L->getLoopLatch()))
+      return false;
+  }
+
   Value *Start = LoopIncrPN->getIncomingValueForBlock(L->getLoopPreheader());
   // If we have add create initial value for remainder.
   // The logic here is:
   // (urem (add nuw Start, IncrLoopInvariant), RemAmtLoopInvariant
   //
-  // Only proceed if the expression simplifies (otherwise we can't fully
-  // optimize out the urem).
+  // For a non-constant remainder amount, only proceed if the expression
+  // simplifies (otherwise we can't fully optimize out the urem). A constant
+  // one is cheap enough to compute once in the preheader.
+  IRBuilder<> PHBuilder(L->getLoopPreheader()->getTerminator());
   if (AddInst) {
     assert(AddOffset && "We found an add but missing values");
     // Without dom-condition/assumption cache we aren't likely to get much out
     // of a context instruction.
-    Start = simplifyAddInst(Start, AddOffset,
-                            match(AddInst, m_NSWAdd(m_Value(), m_Value())),
-                            /*IsNUW=*/true, *DL);
-    if (!Start)
+    Value *NewStart = simplifyAddInst(
+        Start, AddOffset, match(AddInst, m_NSWAdd(m_Value(), m_Value())),
+        /*IsNUW=*/true, *DL);
+    if (!NewStart && !IsConstRem)
       return false;
+    Start = NewStart ? NewStart : PHBuilder.CreateNUWAdd(Start, AddOffset);
   }
 
-  // If we can't fully optimize out the `rem`, skip this transform.
-  Start = simplifyURemInst(Start, RemAmt, *DL);
-  if (!Start)
-    return false;
+  Value *StartRem = simplifyURemInst(Start, RemAmt, *DL);
+  if (!StartRem) {
+    // If we can't fully optimize out the `rem`, skip this transform.
+    if (!IsConstRem)
+      return false;
+    StartRem = PHBuilder.CreateURem(Start, RemAmt);
+  }
 
   // Create new remainder with induction variable.
-  Type *Ty = Rem->getType();
   IRBuilder<> Builder(LoopIncrPN);
   PHINode *NewRem = Builder.CreatePHI(Ty, 2);
 
   Builder.SetInsertPoint(cast<Instruction>(
       LoopIncrPN->getIncomingValueForBlock(L->getLoopLatch())));
-  // `(add (urem x, y), 1)` is always nuw.
-  Value *RemAdd = Builder.CreateNUWAdd(NewRem, ConstantInt::get(Ty, 1));
-  Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
-  Value *RemSel =
-      Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+  // `(add (urem x, y), Step)` is nuw, see
+  // isRemOfLoopIncrementWithLoopInvariant.
+  Value *RemAdd = Builder.CreateNUWAdd(NewRem, Step);
+  Value *RemSel;
+  if (match(Step, m_One())) {
+    Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_EQ, RemAdd, RemAmt);
+    RemSel = Builder.CreateSelect(RemCmp, Constant::getNullValue(Ty), RemAdd);
+  } else {
+    Value *RemCmp = Builder.CreateICmp(ICmpInst::ICMP_UGE, RemAdd, RemAmt);
+    Value *RemSub = Builder.CreateNUWSub(RemAdd, RemAmt);
+    RemSel = Builder.CreateSelect(RemCmp, RemSub, RemAdd);
+  }
+  if (auto *SI = dyn_cast<SelectInst>(RemSel))
+    setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
 
-  NewRem->addIncoming(Start, L->getLoopPreheader());
+  NewRem->addIncoming(StartRem, L->getLoopPreheader());
   NewRem->addIncoming(RemSel, L->getLoopLatch());
 
   // Insert all touched BBs.
+  FreshBBs.insert(L->getLoopPreheader());
   FreshBBs.insert(LoopIncrPN->getParent());
   FreshBBs.insert(L->getLoopLatch());
   FreshBBs.insert(Rem->getParent());
@@ -2129,7 +2162,7 @@ static bool foldURemOfLoopIncrement(Instruction *Rem, const DataLayout *DL,
 }
 
 bool CodeGenPrepare::optimizeURem(Instruction *Rem) {
-  if (foldURemOfLoopIncrement(Rem, DL, LI, FreshBBs, IsHugeFunc))
+  if (foldURemOfLoopIncrement(Rem, DL, LI, getDT(), FreshBBs, IsHugeFunc))
     return true;
   return false;
 }
@@ -5805,6 +5838,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
   Value *SunkAddr = SunkAddrVH.pointsToAliveValue() ? SunkAddrVH : nullptr;
   Type *IntPtrTy = DL->getIntPtrType(Addr->getType());
+  Type *IdxTy = DL->getIndexType(Addr->getType());
 
   // The current BB may be optimized multiple times, we can't guarantee the
   // reuse of Addr happens later, call findInsertPos to find an appropriate
@@ -5839,11 +5873,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       } else
         SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
     }
-  } else if (valueOr(Opts.cgp_addr_sink_using_gep, true) ||
-             (Opts.cgp_addr_sink_using_gep == BoolOrDefault::Default &&
-              SubtargetInfo->addrSinkUsingGEPs())) {
-    // By default, we use the GEP-based method when AA is used later. This
-    // prevents new inttoptr/ptrtoint pairs from degrading AA capabilities.
+  } else {
     LLVM_DEBUG(dbgs() << "CGP: SINKING nonlocal addrmode: " << AddrMode
                       << " for " << *MemoryInst << "\n");
     Value *ResultPtr = nullptr, *ResultIndex = nullptr;
@@ -5873,7 +5903,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     // (See below for code to add the scale.)
     if (AddrMode.Scale) {
       Type *ScaledRegTy = AddrMode.ScaledReg->getType();
-      if (cast<IntegerType>(IntPtrTy)->getBitWidth() >
+      if (cast<IntegerType>(IdxTy)->getBitWidth() >
           cast<IntegerType>(ScaledRegTy)->getBitWidth())
         return Modified;
     }
@@ -5921,8 +5951,8 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       // we'd end up sinking both muls.
       if (AddrMode.BaseReg) {
         Value *V = AddrMode.BaseReg;
-        if (V->getType() != IntPtrTy)
-          V = Builder.CreateIntCast(V, IntPtrTy, /*isSigned=*/true, "sunkaddr");
+        if (V->getType() != IdxTy)
+          V = Builder.CreateIntCast(V, IdxTy, /*isSigned=*/true, "sunkaddr");
 
         ResultIndex = V;
       }
@@ -5930,18 +5960,18 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
       // Add the scale value.
       if (AddrMode.Scale) {
         Value *V = AddrMode.ScaledReg;
-        if (V->getType() == IntPtrTy) {
+        if (V->getType() == IdxTy) {
           // done.
         } else {
-          assert(cast<IntegerType>(IntPtrTy)->getBitWidth() <
+          assert(cast<IntegerType>(IdxTy)->getBitWidth() <
                      cast<IntegerType>(V->getType())->getBitWidth() &&
                  "We can't transform if ScaledReg is too narrow");
-          V = Builder.CreateTrunc(V, IntPtrTy, "sunkaddr");
+          V = Builder.CreateTrunc(V, IdxTy, "sunkaddr");
         }
 
         if (AddrMode.Scale != 1)
           V = Builder.CreateMul(
-              V, ConstantInt::getSigned(IntPtrTy, AddrMode.Scale), "sunkaddr");
+              V, ConstantInt::getSigned(IdxTy, AddrMode.Scale), "sunkaddr");
         if (ResultIndex)
           ResultIndex = Builder.CreateAdd(ResultIndex, V, "sunkaddr");
         else
@@ -5950,7 +5980,7 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 
       // Add in the Base Offset if present.
       if (AddrMode.BaseOffs) {
-        Value *V = ConstantInt::getSigned(IntPtrTy, AddrMode.BaseOffs);
+        Value *V = ConstantInt::getSigned(IdxTy, AddrMode.BaseOffs);
         if (ResultIndex) {
           // We need to add this separately from the scale above to help with
           // SDAG consecutive load/store merging.
@@ -5995,98 +6025,6 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
           SunkAddr = Builder.CreatePointerCast(SunkAddr, Addr->getType());
       }
     }
-  } else {
-    // We'd require a ptrtoint/inttoptr down the line, which we can't do for
-    // non-integral pointers, so in that case bail out now.
-    Type *BaseTy = AddrMode.BaseReg ? AddrMode.BaseReg->getType() : nullptr;
-    Type *ScaleTy = AddrMode.Scale ? AddrMode.ScaledReg->getType() : nullptr;
-    PointerType *BasePtrTy = dyn_cast_or_null<PointerType>(BaseTy);
-    PointerType *ScalePtrTy = dyn_cast_or_null<PointerType>(ScaleTy);
-    if (DL->isNonIntegralPointerType(Addr->getType()) ||
-        (BasePtrTy && DL->isNonIntegralPointerType(BasePtrTy)) ||
-        (ScalePtrTy && DL->isNonIntegralPointerType(ScalePtrTy)) ||
-        (AddrMode.BaseGV &&
-         DL->isNonIntegralPointerType(AddrMode.BaseGV->getType())))
-      return Modified;
-
-    LLVM_DEBUG(dbgs() << "CGP: SINKING nonlocal addrmode: " << AddrMode
-                      << " for " << *MemoryInst << "\n");
-    Type *IntPtrTy = DL->getIntPtrType(Addr->getType());
-    Value *Result = nullptr;
-
-    // Start with the base register. Do this first so that subsequent address
-    // matching finds it last, which will prevent it from trying to match it
-    // as the scaled value in case it happens to be a mul. That would be
-    // problematic if we've sunk a different mul for the scale, because then
-    // we'd end up sinking both muls.
-    if (AddrMode.BaseReg) {
-      Value *V = AddrMode.BaseReg;
-      if (V->getType()->isPointerTy())
-        V = Builder.CreatePtrToInt(V, IntPtrTy, "sunkaddr");
-      if (V->getType() != IntPtrTy)
-        V = Builder.CreateIntCast(V, IntPtrTy, /*isSigned=*/true, "sunkaddr");
-      Result = V;
-    }
-
-    // Add the scale value.
-    if (AddrMode.Scale) {
-      Value *V = AddrMode.ScaledReg;
-      if (V->getType() == IntPtrTy) {
-        // done.
-      } else if (V->getType()->isPointerTy()) {
-        V = Builder.CreatePtrToInt(V, IntPtrTy, "sunkaddr");
-      } else if (cast<IntegerType>(IntPtrTy)->getBitWidth() <
-                 cast<IntegerType>(V->getType())->getBitWidth()) {
-        V = Builder.CreateTrunc(V, IntPtrTy, "sunkaddr");
-      } else {
-        // It is only safe to sign extend the BaseReg if we know that the math
-        // required to create it did not overflow before we extend it. Since
-        // the original IR value was tossed in favor of a constant back when
-        // the AddrMode was created we need to bail out gracefully if widths
-        // do not match instead of extending it.
-        Instruction *I = dyn_cast_or_null<Instruction>(Result);
-        if (I && (Result != AddrMode.BaseReg))
-          I->eraseFromParent();
-        return Modified;
-      }
-      if (AddrMode.Scale != 1)
-        V = Builder.CreateMul(
-            V, ConstantInt::getSigned(IntPtrTy, AddrMode.Scale), "sunkaddr");
-      if (Result)
-        Result = Builder.CreateAdd(Result, V, "sunkaddr");
-      else
-        Result = V;
-    }
-
-    // Add in the BaseGV if present.
-    GlobalValue *BaseGV = AddrMode.BaseGV;
-    if (BaseGV != nullptr) {
-      Value *BaseGVPtr;
-      if (BaseGV->isThreadLocal()) {
-        BaseGVPtr = Builder.CreateThreadLocalAddress(BaseGV);
-      } else {
-        BaseGVPtr = BaseGV;
-      }
-      Value *V = Builder.CreatePtrToInt(BaseGVPtr, IntPtrTy, "sunkaddr");
-      if (Result)
-        Result = Builder.CreateAdd(Result, V, "sunkaddr");
-      else
-        Result = V;
-    }
-
-    // Add in the Base Offset if present.
-    if (AddrMode.BaseOffs) {
-      Value *V = ConstantInt::getSigned(IntPtrTy, AddrMode.BaseOffs);
-      if (Result)
-        Result = Builder.CreateAdd(Result, V, "sunkaddr");
-      else
-        Result = V;
-    }
-
-    if (!Result)
-      SunkAddr = Constant::getNullValue(Addr->getType());
-    else
-      SunkAddr = Builder.CreateIntToPtr(Result, Addr->getType(), "sunkaddr");
   }
 
   MemoryInst->replaceUsesOfWith(Repl, SunkAddr);
@@ -6187,6 +6125,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     auto NumElts = cast<VectorType>(Ptr->getType())->getElementCount();
 
     IRBuilder<> Builder(MemoryInst);
+    Builder.disableGEPCanonicalization();
 
     Type *SourceTy = GEP->getSourceElementType();
     Type *ScalarIndexTy = DL->getIndexType(Ops[0]->getType()->getScalarType());
@@ -6227,6 +6166,7 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     auto NumElts = cast<VectorType>(Ptr->getType())->getElementCount();
 
     IRBuilder<> Builder(MemoryInst);
+    Builder.disableGEPCanonicalization();
 
     // Emit a vector GEP with a scalar pointer and all 0s vector index.
     Type *ScalarIndexTy = DL->getIndexType(V->getType()->getScalarType());
@@ -7522,7 +7462,11 @@ bool CodeGenPrepare::optimizeShiftInst(BinaryOperator *Shift) {
   BinaryOperator::BinaryOps Opcode = Shift->getOpcode();
   Value *NewTVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), TVal);
   Value *NewFVal = Builder.CreateBinOp(Opcode, Shift->getOperand(0), FVal);
-  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  // The new select has the same condition, so it keeps the profile metadata.
+  Value *NewSel = Builder.CreateSelect(
+      Cond, NewTVal, NewFVal, "",
+      ProfcheckDisableMetadataFixes ? nullptr
+                                    : cast<Instruction>(Shift->getOperand(1)));
   replaceAllUsesWith(Shift, NewSel, FreshBBs, IsHugeFunc);
   Shift->eraseFromParent();
   return true;
@@ -7557,7 +7501,10 @@ bool CodeGenPrepare::optimizeFunnelShift(IntrinsicInst *Fsh) {
   Value *X = Fsh->getOperand(0), *Y = Fsh->getOperand(1);
   Value *NewTVal = Builder.CreateIntrinsic(Opcode, Ty, {X, Y, TVal});
   Value *NewFVal = Builder.CreateIntrinsic(Opcode, Ty, {X, Y, FVal});
-  Value *NewSel = Builder.CreateSelect(Cond, NewTVal, NewFVal);
+  Value *NewSel = Builder.CreateSelect(
+      Cond, NewTVal, NewFVal, "",
+      ProfcheckDisableMetadataFixes ? nullptr
+                                    : cast<Instruction>(Fsh->getOperand(2)));
   replaceAllUsesWith(Fsh, NewSel, FreshBBs, IsHugeFunc);
   Fsh->eraseFromParent();
   return true;
@@ -7796,7 +7743,7 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
   // If the operands of I can be folded into a target instruction together with
   // I, duplicate and sink them.
   SmallVector<Use *, 4> OpsToSink;
-  if (!TTI->isProfitableToSinkOperands(I, OpsToSink))
+  if (!TTI->isProfitableToSinkOperands(I, OpsToSink, LI))
     return false;
 
   // OpsToSink can contain multiple uses in a use chain (e.g.
@@ -8468,6 +8415,7 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
 
   // Start to split store.
   IRBuilder<> Builder(&SI);
+  Builder.disableGEPCanonicalization();
 
   // If LValue/HValue is a bitcast in another BB, create a new one in current
   // BB so it may be merged with the splitted stores by dag combiner.
@@ -8501,14 +8449,6 @@ static bool splitMergedValStore(StoreInst &SI, const DataLayout &DL,
   // Delete the old store.
   SI.eraseFromParent();
   return true;
-}
-
-// Return true if the GEP has two operands, the first operand is of a sequential
-// type, and the second operand is a constant.
-static bool GEPSequentialConstIndexed(GetElementPtrInst *GEP) {
-  gep_type_iterator I = gep_type_begin(*GEP);
-  return GEP->getNumOperands() == 2 && I.isSequential() &&
-         isa<ConstantInt>(GEP->getOperand(1));
 }
 
 // Try unmerging GEPs to reduce liveness interference (register pressure) across
@@ -8570,26 +8510,24 @@ static bool GEPSequentialConstIndexed(GetElementPtrInst *GEP) {
 // time.
 static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
                                              const TargetTransformInfo *TTI) {
+  const DataLayout &DL = GEPI->getDataLayout();
   BasicBlock *SrcBlock = GEPI->getParent();
   // Check that SrcBlock ends with an IndirectBr. If not, give up. The common
   // (non-IndirectBr) cases exit early here.
   if (!isa<IndirectBrInst>(SrcBlock->getTerminator()))
     return false;
-  // Check that GEPI is a simple gep with a single constant index.
-  if (!GEPSequentialConstIndexed(GEPI))
+  // Check that GEPI is a constant ptradd with canonical index type.
+  Instruction *GEPIOp;
+  ConstantInt *GEPIIdx;
+  if (!match(GEPI, m_PtrAdd(DL, m_Instruction(GEPIOp), m_ConstantInt(GEPIIdx))))
     return false;
-  ConstantInt *GEPIIdx = cast<ConstantInt>(GEPI->getOperand(1));
   // Check that GEPI is a cheap one.
   if (TTI->getIntImmCost(GEPIIdx->getValue(), GEPIIdx->getType(),
                          TargetTransformInfo::TCK_SizeAndLatency) >
       TargetTransformInfo::TCC_Basic)
     return false;
-  Value *GEPIOp = GEPI->getOperand(0);
-  // Check that GEPIOp is an instruction that's also defined in SrcBlock.
-  if (!isa<Instruction>(GEPIOp))
-    return false;
-  auto *GEPIOpI = cast<Instruction>(GEPIOp);
-  if (GEPIOpI->getParent() != SrcBlock)
+  // Check that GEPIOp is also defined in SrcBlock.
+  if (GEPIOp->getParent() != SrcBlock)
     return false;
   // Check that GEP is used outside the block, meaning it's alive on the
   // IndirectBr edge(s).
@@ -8616,28 +8554,18 @@ static bool tryUnmergingGEPsAcrossIndirectBr(GetElementPtrInst *GEPI,
     // Check if Usr in the same block as GEPIOp, which is fine, skip.
     if (UI->getParent() == SrcBlock)
       continue;
-    // Check if Usr is a GEP. If not, give up.
-    if (!isa<GetElementPtrInst>(Usr))
+    // Check if Usr is also a constant ptradd with GEPIOp as pointer operand.
+    // If so, record it in the vector. If not, give up.
+    ConstantInt *UGEPIIdx;
+    if (!match(Usr, m_PtrAdd(DL, m_Specific(GEPIOp), m_ConstantInt(UGEPIIdx))))
       return false;
-    auto *UGEPI = cast<GetElementPtrInst>(Usr);
-    // Check if UGEPI is a simple gep with a single constant index and GEPIOp is
-    // the pointer operand to it. If so, record it in the vector. If not, give
-    // up.
-    if (!GEPSequentialConstIndexed(UGEPI))
+    if (GEPIIdx->getType() != UGEPIIdx->getType())
       return false;
-    if (UGEPI->getOperand(0) != GEPIOp)
-      return false;
-    if (UGEPI->getSourceElementType() != GEPI->getSourceElementType())
-      return false;
-    if (GEPIIdx->getType() !=
-        cast<ConstantInt>(UGEPI->getOperand(1))->getType())
-      return false;
-    ConstantInt *UGEPIIdx = cast<ConstantInt>(UGEPI->getOperand(1));
     if (TTI->getIntImmCost(UGEPIIdx->getValue(), UGEPIIdx->getType(),
                            TargetTransformInfo::TCK_SizeAndLatency) >
         TargetTransformInfo::TCC_Basic)
       return false;
-    UGEPIs.push_back(UGEPI);
+    UGEPIs.push_back(cast<GetElementPtrInst>(Usr));
   }
   if (UGEPIs.size() == 0)
     return false;
@@ -8746,6 +8674,149 @@ static bool optimizeBranch(CondBrInst *Branch, const TargetLowering &TLI,
   return false;
 }
 
+// Performs very basic loop strength reduction to vector values with a known
+// evolution from one iteration to the next that are used as the value operand
+// for a store.
+// A simple example to illustrate:
+//
+//  %vec.ind = phi <vscale x 2 x i64> [ %start, %vector.ph ],
+//                                    [ %vec.ind.next, %vector.body ]
+//  %data.gep = getelementptr inbounds nuw [72 x i8], ptr %datap,
+//                            <vscale x 2 x i64> %vec.ind
+//  %addr.gep = getelementptr inbounds nuw [8 x i8], ptr %addrp, i64 %index
+//  store <vscale x 2 x ptr> %data.gep, ptr %addr.gep, align 8
+//  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %elt.cnt.splat
+//
+// We want to change this to:
+//  vector.ph:
+//    %base = gep i8, %datap, (<stepvector> * 72)
+//    %stride = splat(elementcount) * 72
+//
+//  vector.body:
+//    %vec.lsr.phi = phi <vscale x 2 x ptr> [ %base, %vector.ph ],
+//                                          [ %vec.lsr.next, %vector.body ]
+//    %addr.gep = gep inbounds nuw [8 x i8], ptr %addrp, i64 %index
+//    store <vscale x 2 x ptr> %vec.lsr.phi, ptr %addr.gep, align 8
+//    %vec.lsr.next = gep i8, %vec.lsr.phi, %stride
+//
+// Doing so will remove a multiply from the loop, and leave the update as just
+// an add.
+//
+static bool strengthReduceVectorPhiUsers(PHINode *Phi, LoopInfo *LI) {
+  // We're only interested in header phis in innermost loops.
+  // We want a loop with an identifiable preheader and single latch.
+  Loop *L = LI->getLoopFor(Phi->getParent());
+  if (!L || !L->isInnermost())
+    return false;
+
+  BasicBlock *Header = L->getHeader();
+  BasicBlock *PreHeader = L->getLoopPreheader();
+  BasicBlock *Latch = L->getLoopLatch();
+  if (!PreHeader || !Latch || Phi->getParent() != Header ||
+      Phi->getNumIncomingValues() != 2)
+    return false;
+
+  // Check the progression of the phi.
+  Value *Start = Phi->getIncomingValueForBlock(PreHeader);
+  Value *Step = Phi->getIncomingValueForBlock(Latch);
+
+  // Check that the elements are integers equal in size to pointers.
+  DataLayout DL = Phi->getFunction()->getDataLayout();
+  VectorType *VTy = dyn_cast<VectorType>(Start->getType());
+  if (!VTy)
+    return false;
+  Type *ITy = VTy->getElementType();
+  if (DL.getTypeStoreSize(ITy) != DL.getPointerSize())
+    return false;
+
+  if (!match(Start, m_CombineOr(m_Intrinsic<Intrinsic::stepvector>(),
+                                m_Add(m_Intrinsic<Intrinsic::stepvector>(),
+                                      m_Splat(m_Value())))))
+    return false;
+
+  Value *LoopStride = nullptr;
+  if (!match(Step, m_OneUse(m_c_Add(m_Specific(Phi), m_Value(LoopStride)))))
+    return false;
+
+  // Make sure the loop stride matches the pointer stride.
+  auto EltCnt = cast<VectorType>(Phi->getType())->getElementCount();
+  const APInt *ShiftAmt = nullptr;
+  Value *PtrStride = nullptr;
+  if (!match(
+          LoopStride,
+          m_Splat(m_Value(PtrStride, m_Shl(m_VScale(), m_APInt(ShiftAmt))))) ||
+      (1ULL << ShiftAmt->getZExtValue()) != EltCnt.getKnownMinValue())
+    return false;
+
+  // Make sure the stride isn't defined inside the loop, so we don't have to
+  // worry about dominance.
+  if (L->contains(cast<Instruction>(PtrStride)))
+    return false;
+
+  // For the simplest case, we're only interested if the phi has two users;
+  // The Step forming the incoming value for the backedge, and a GEP.
+  GetElementPtrInst *GEP = nullptr;
+  Value *Base = nullptr;
+  for (User *U : Phi->users()) {
+    // Skip over the step, handled above.
+    if (Step == U)
+      continue;
+
+    // If we've already found a GEP, bail out.
+    // TODO: Support multiple GEPs.
+    if (GEP)
+      return false;
+
+    // We're only interested in single index GEPs
+    GEP = dyn_cast<GetElementPtrInst>(U);
+    if (!GEP || GEP->getNumOperands() != 2)
+      return false;
+
+    // Reject if the base isn't loop invariant.
+    Base = GEP->getOperand(0);
+    if (!L->isLoopInvariant(Base))
+      return false;
+  }
+
+  // Make sure we found a GEP.
+  if (!GEP)
+    return false;
+
+  // Multiply the start by the size of the struct, and add the base pointer.
+  unsigned Size = DL.getTypeAllocSize(GEP->getSourceElementType());
+  IRBuilder<> Builder(PreHeader->getTerminator());
+  Value *StructSize = ConstantInt::get(ITy, Size);
+  Value *SizeSplat =
+      Builder.CreateVectorSplat(VTy->getElementCount(), StructSize);
+  Value *NewStart = Builder.CreateMul(Start, SizeSplat);
+  NewStart = Builder.CreatePtrAdd(Base, NewStart);
+
+  // Create a new step based on the total size of all struct addresses per
+  // iteration.
+  Value *StructStride = Builder.CreateMul(PtrStride, StructSize);
+  StructStride =
+      Builder.CreateVectorSplat(VTy->getElementCount(), StructStride);
+
+  Builder.SetInsertPoint(Phi);
+  PHINode *NewPhi = Builder.CreatePHI(GEP->getType(), 2, "vec.lsr.phi");
+  Builder.SetInsertPoint(cast<Instruction>(Step));
+  StructStride = Builder.CreatePtrAdd(NewPhi, StructStride);
+
+  // Set up the new PHI.
+  NewPhi->addIncoming(NewStart, PreHeader);
+  NewPhi->addIncoming(StructStride, Latch);
+
+  // Replace the GEP with the new phi.
+  Builder.SetInsertPoint(GEP);
+  GEP->replaceAllUsesWith(NewPhi);
+
+  // Remove old phi, gep, and step.
+  Phi->replaceAllUsesWith(llvm::PoisonValue::get(Phi->getType()));
+  llvm::RecursivelyDeleteTriviallyDeadInstructions(Phi);
+
+  return true;
+}
+
 bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   bool AnyChange = false;
   AnyChange = fixupDbgVariableRecordsOnInst(*I);
@@ -8767,6 +8838,12 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
       ++NumPHIsElim;
       return true;
     }
+
+    // Look for simple GEPs on scalable vectors used as data which may
+    // introduce unnecessary multiplies in the loop.
+    // TODO: Support fixed vectors too.
+    if (P->getType()->isScalableTy())
+      AnyChange |= strengthReduceVectorPhiUsers(P, LI);
     return AnyChange;
   }
 
@@ -8835,10 +8912,12 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   if (StoreInst *SI = dyn_cast<StoreInst>(I)) {
     if (splitMergedValStore(*SI, *DL, *TLI, Opts.cgp_force_split_store))
       return true;
+    bool Modified = tryToSinkFreeOperands(I);
     SI->setMetadata(LLVMContext::MD_invariant_group, nullptr);
     unsigned AS = SI->getPointerAddressSpace();
-    return optimizeMemoryInst(I, SI->getOperand(1),
-                              SI->getOperand(0)->getType(), AS);
+    Modified |= optimizeMemoryInst(I, SI->getOperand(1),
+                                   SI->getOperand(0)->getType(), AS);
+    return Modified;
   }
 
   if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(I)) {

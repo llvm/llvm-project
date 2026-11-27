@@ -10,8 +10,7 @@ define i32 @combine_add_zext_xor(i32 inreg %cond) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
 ; GFX1010-NEXT:    s_mov_b32 s4, 0
-; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
-; GFX1010-NEXT:    s_and_b32 vcc_lo, exec_lo, s5
+; GFX1010-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; GFX1010-NEXT:    s_branch .LBB0_2
 ; GFX1010-NEXT:  .LBB0_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -44,9 +43,7 @@ define i32 @combine_add_zext_xor(i32 inreg %cond) {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX1100-NEXT:    s_mov_b32 s0, 0
-; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
+; GFX1100-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; GFX1100-NEXT:    s_branch .LBB0_2
 ; GFX1100-NEXT:  .LBB0_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB0_2 Depth=1
@@ -107,8 +104,7 @@ define i32 @combine_sub_zext_xor(i32 inreg %cond) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
 ; GFX1010-NEXT:    s_mov_b32 s4, 0
-; GFX1010-NEXT:    s_cselect_b32 s5, -1, 0
-; GFX1010-NEXT:    s_and_b32 vcc_lo, exec_lo, s5
+; GFX1010-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; GFX1010-NEXT:    s_branch .LBB1_2
 ; GFX1010-NEXT:  .LBB1_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB1_2 Depth=1
@@ -141,9 +137,7 @@ define i32 @combine_sub_zext_xor(i32 inreg %cond) {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX1100-NEXT:    s_mov_b32 s0, 0
-; GFX1100-NEXT:    s_cselect_b32 s1, -1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 vcc_lo, exec_lo, s1
+; GFX1100-NEXT:    s_cselect_b32 vcc_lo, exec_lo, 0
 ; GFX1100-NEXT:    s_branch .LBB1_2
 ; GFX1100-NEXT:  .LBB1_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB1_2 Depth=1
@@ -204,8 +198,7 @@ define i32 @combine_add_zext_or(i32 inreg %cond) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
 ; GFX1010-NEXT:    s_mov_b32 s5, 0
-; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX1010-NEXT:    s_and_b32 s4, exec_lo, s4
+; GFX1010-NEXT:    s_cselect_b32 s4, exec_lo, 0
 ; GFX1010-NEXT:    s_branch .LBB2_2
 ; GFX1010-NEXT:  .LBB2_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB2_2 Depth=1
@@ -238,9 +231,7 @@ define i32 @combine_add_zext_or(i32 inreg %cond) {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX1100-NEXT:    s_mov_b32 s1, 0
-; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 s0, exec_lo, s0
+; GFX1100-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX1100-NEXT:    s_branch .LBB2_2
 ; GFX1100-NEXT:  .LBB2_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB2_2 Depth=1
@@ -302,8 +293,7 @@ define i32 @combine_sub_zext_or(i32 inreg %cond) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
 ; GFX1010-NEXT:    s_mov_b32 s5, 0
-; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX1010-NEXT:    s_and_b32 s4, exec_lo, s4
+; GFX1010-NEXT:    s_cselect_b32 s4, exec_lo, 0
 ; GFX1010-NEXT:    s_branch .LBB3_2
 ; GFX1010-NEXT:  .LBB3_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB3_2 Depth=1
@@ -336,9 +326,7 @@ define i32 @combine_sub_zext_or(i32 inreg %cond) {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX1100-NEXT:    s_mov_b32 s1, 0
-; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 s0, exec_lo, s0
+; GFX1100-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX1100-NEXT:    s_branch .LBB3_2
 ; GFX1100-NEXT:  .LBB3_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB3_2 Depth=1
@@ -400,8 +388,7 @@ define i32 @combine_add_zext_and(i32 inreg %cond) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
 ; GFX1010-NEXT:    s_mov_b32 s5, 0
-; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX1010-NEXT:    s_and_b32 s4, exec_lo, s4
+; GFX1010-NEXT:    s_cselect_b32 s4, exec_lo, 0
 ; GFX1010-NEXT:    s_branch .LBB4_2
 ; GFX1010-NEXT:  .LBB4_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB4_2 Depth=1
@@ -436,9 +423,7 @@ define i32 @combine_add_zext_and(i32 inreg %cond) {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX1100-NEXT:    s_mov_b32 s1, 0
-; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 s0, exec_lo, s0
+; GFX1100-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX1100-NEXT:    s_branch .LBB4_2
 ; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB4_1: ; %bb9
@@ -503,8 +488,7 @@ define i32 @combine_sub_zext_and(i32 inreg %cond) {
 ; GFX1010-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1010-NEXT:    s_cmp_eq_u32 s16, 0
 ; GFX1010-NEXT:    s_mov_b32 s5, 0
-; GFX1010-NEXT:    s_cselect_b32 s4, -1, 0
-; GFX1010-NEXT:    s_and_b32 s4, exec_lo, s4
+; GFX1010-NEXT:    s_cselect_b32 s4, exec_lo, 0
 ; GFX1010-NEXT:    s_branch .LBB5_2
 ; GFX1010-NEXT:  .LBB5_1: ; %bb9
 ; GFX1010-NEXT:    ; in Loop: Header=BB5_2 Depth=1
@@ -539,9 +523,7 @@ define i32 @combine_sub_zext_and(i32 inreg %cond) {
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    s_cmp_eq_u32 s0, 0
 ; GFX1100-NEXT:    s_mov_b32 s1, 0
-; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_and_b32 s0, exec_lo, s0
+; GFX1100-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX1100-NEXT:    s_branch .LBB5_2
 ; GFX1100-NEXT:    .p2align 6
 ; GFX1100-NEXT:  .LBB5_1: ; %bb9

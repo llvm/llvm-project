@@ -14,6 +14,7 @@
 #define ORC_RT_SUPPORT_WRAPPERFUNCTION_H
 
 #include "orc-rt-c/support/WrapperFunction.h"
+#include "orc-rt/support/ArgForwardingTraits.h"
 #include "orc-rt/support/CallableTraitsHelper.h"
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/ExecutorAddress.h"
@@ -112,27 +113,10 @@ private:
 namespace detail {
 
 template <typename RetT, typename ReturnT, typename... ArgTs>
-struct WFHandlerTraitsImpl {
+struct WFHandlerTraitsImpl : ArgForwardingTraits<ArgTs...> {
   static_assert(std::is_void_v<RetT>,
                 "Async wrapper function handler must return void");
   typedef ReturnT YieldType;
-  typedef std::tuple<std::decay_t<ArgTs>...> ArgTupleType;
-
-  // Forwards arguments based on the parameter types of the handler.
-  template <typename FnT> class ForwardArgsAsRequested {
-  public:
-    ForwardArgsAsRequested(FnT &&Fn) : Fn(std::move(Fn)) {}
-    void operator()(ArgTs &...Args) { Fn(std::forward<ArgTs>(Args)...); }
-
-  private:
-    FnT Fn;
-  };
-
-  template <typename FnT>
-  static ForwardArgsAsRequested<std::decay_t<FnT>>
-  forwardArgsAsRequested(FnT &&Fn) {
-    return ForwardArgsAsRequested<std::decay_t<FnT>>(std::forward<FnT>(Fn));
-  }
 };
 
 template <bool /* is_const */, bool /* is_noexcept */, typename... Ts>

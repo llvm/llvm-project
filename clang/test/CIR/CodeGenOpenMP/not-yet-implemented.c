@@ -1,10 +1,8 @@
 // RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fclangir %s -verify -emit-cir -o -
 
-void do_things() {
-  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPCriticalDirective}}
-#pragma omp critical
-  {}
+void clash(void);
 
+void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPSingleDirective}}
 #pragma omp single
   {}
@@ -29,4 +27,38 @@ void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP synthesized 'firstprivate' clause from construct decomposition}}
 #pragma omp target
   { i = 1; }
+}
+
+void use_clash() {
+  clash();
+  // A critical name shares the symbol table with functions.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP critical name that clashes with another symbol}}
+#pragma omp critical(clash)
+  {}
+}
+
+void conflicting_hint() {
+  // Sema accepts uncontended (1) together with contended (2), but the omp
+  // dialect rejects it.
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP critical 'hint' combining conflicting sync hints}}
+#pragma omp critical(conflict) hint(3)
+  {}
+}
+
+void loop_continue(int *a) {
+#pragma omp parallel for
+  for (int i = 0; i < 10; ++i) {
+    // expected-error@+1{{ClangIR code gen Not Yet Implemented: continue in an OpenMP loop body}}
+    if (i == 3) continue;
+    a[i] = i;
+  }
+
+  // A continue that targets a loop nested in the body is supported.
+#pragma omp for
+  for (int i = 0; i < 10; ++i) {
+    for (int j = 0; j < 10; ++j) {
+      if (j == 3) continue;
+      a[j] = i;
+    }
+  }
 }
