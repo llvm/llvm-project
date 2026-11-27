@@ -18,12 +18,12 @@ define void @default_edge(i32 %x) {
 ; CHECK-NEXT:    %m = add nsw i64 %n, -1
 ; CHECK-NEXT:    --> (-1 + (zext i2 (trunc i32 %x to i2) to i64))<nsw> U: [-1,3) S: [-1,3)
 ; CHECK-NEXT:    %i = phi i64 [ 0, %loop.ph ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-2 + (zext i2 (trunc i32 %x to i2) to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2) S: [0,2) Exits: (-2 + (zext i2 (trunc i32 %x to i2) to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add nuw i64 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + (zext i2 (trunc i32 %x to i2) to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,3) S: [1,3) Exits: (-1 + (zext i2 (trunc i32 %x to i2) to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @default_edge
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + (zext i2 (trunc i32 %x to i2) to i64))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-2 + (zext i2 (trunc i32 %x to i2) to i64))<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -66,12 +66,12 @@ define void @default_edge_unknown_range(i64 %n) {
 ; CHECK-NEXT:    %m = add i64 %n, -1
 ; CHECK-NEXT:    --> (-1 + %n) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i64 [ 0, %loop.ph ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-2 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: [0,-2) S: [0,-2) Exits: (-2 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add nuw i64 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><%loop> U: [1,-1) S: [1,-1) Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @default_edge_unknown_range
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-2 + %n)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -192,14 +192,14 @@ define void @case_edge(i64 %n) {
 ; CHECK-NEXT:    %m = add nsw i64 %n, -1
 ; CHECK-NEXT:    --> (-1 + %n) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i64 [ 0, %loop.ph ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-2 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,4) S: [0,4) Exits: (-2 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add nuw i64 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,5) S: [1,5) Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @case_edge
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 3
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-2 + %n)
-; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+; CHECK-NEXT:  Loop %loop: Trip multiple is 4
 ;
 entry:
   switch i64 %n, label %exit [
@@ -228,12 +228,12 @@ define void @two_case_edges(i64 %n) {
 ; CHECK-NEXT:    %m = add nsw i64 %n, -1
 ; CHECK-NEXT:    --> (-1 + %n) U: full-set S: full-set
 ; CHECK-NEXT:    %i = phi i64 [ 0, %entry ], [ 0, %entry ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-2 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,2) S: [0,2) Exits: (-2 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add nuw i64 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,3) S: [1,3) Exits: (-1 + %n) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @two_case_edges
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + %n)
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 1
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-2 + %n)
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
@@ -267,12 +267,12 @@ define void @default_edge_hole(i32 %x) {
 ; CHECK-NEXT:    %m = add nsw i64 %n, -1
 ; CHECK-NEXT:    --> (-1 + (zext i3 (trunc i32 %x to i3) to i64))<nsw> U: [-1,7) S: [-1,7)
 ; CHECK-NEXT:    %i = phi i64 [ 0, %loop.ph ], [ %i.next, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: (-2 + (zext i3 (trunc i32 %x to i3) to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,6) S: [0,6) Exits: (-2 + (zext i3 (trunc i32 %x to i3) to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %i.next = add nuw i64 %i, 1
-; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: (-1 + (zext i3 (trunc i32 %x to i3) to i64))<nsw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,7) S: [1,7) Exits: (-1 + (zext i3 (trunc i32 %x to i3) to i64))<nsw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @default_edge_hole
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is (-2 + (zext i3 (trunc i32 %x to i3) to i64))<nsw>
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 -1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i64 5
 ; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is (-2 + (zext i3 (trunc i32 %x to i3) to i64))<nsw>
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;

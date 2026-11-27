@@ -26,49 +26,24 @@ define void @f(ptr noundef %r, i32 noundef %x) #0 {
 ; CHECK-NEXT:      i32 0, label %[[CALL_A:.*]]
 ; CHECK-NEXT:      i32 1, label %[[CALL_B:.*]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[LOOP_PREHEADER]]:
-; CHECK-NEXT:    [[N:%.*]] = zext nneg i32 [[AND]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[N]], -1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 4
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[BODY_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP0]], -4
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[R]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 16
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
-; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[WIDE_LOAD]], splat (i64 1)
-; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[WIDE_LOAD3]], splat (i64 1)
-; CHECK-NEXT:    store <2 x i64> [[TMP3]], ptr [[TMP1]], align 8
-; CHECK-NEXT:    store <2 x i64> [[TMP4]], ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP0]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[BODY_PREHEADER]]
-; CHECK:       [[BODY_PREHEADER]]:
-; CHECK-NEXT:    [[I2_PH:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ], [ [[N_VEC]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = add nsw i64 [[N]], -2
-; CHECK-NEXT:    br label %[[BODY:.*]]
 ; CHECK:       [[CALL_A]]:
 ; CHECK-NEXT:    tail call void @a()
-; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[CALL_B]]:
 ; CHECK-NEXT:    tail call void @b()
 ; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[LOOP_PREHEADER]]:
+; CHECK-NEXT:    [[V1:%.*]] = load i64, ptr [[R]], align 8
+; CHECK-NEXT:    [[V_INC1:%.*]] = add i64 [[V1]], 1
+; CHECK-NEXT:    store i64 [[V_INC1]], ptr [[R]], align 8
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[AND]], 2
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[BODY:.*]]
 ; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[BODY]] ], [ [[I2_PH]], %[[BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[R]], i64 [[I2]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[R]], i64 8
 ; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[V_INC:%.*]] = add i64 [[V]], 1
 ; CHECK-NEXT:    store i64 [[V_INC]], ptr [[GEP]], align 8
-; CHECK-NEXT:    [[I_NEXT]] = add nuw i64 [[I2]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[I2]], [[TMP6]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT]], label %[[BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -112,9 +87,3 @@ declare void @a()
 declare void @b()
 
 attributes #0 = { "target-cpu"="x86-64" }
-;.
-; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-;.

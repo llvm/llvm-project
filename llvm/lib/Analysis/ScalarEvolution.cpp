@@ -15746,6 +15746,57 @@ static const SCEV *applyDivisibilityOnMinMaxExpr(const SCEV *MinMaxExpr,
   return SE.getMinMaxExpr(MinMaxExpr->getSCEVType(), Ops);
 }
 
+/// Append to \p Guards the unsigned bounds on the condition of \p SI that hold
+/// on its edges to \p Dest and are tighter than the range of the condition.
+static void collectSwitchEdgeGuards(
+    ScalarEvolution &SE, const SwitchInst *SI, const BasicBlock *Dest,
+    SmallVectorImpl<std::tuple<CmpInst::Predicate, const SCEV *, const SCEV *>>
+        &Guards) {
+  // Dest is entered with the values of the cases leading to it or, if it is
+  // the default destination, with any value except those of the cases leading
+  // elsewhere.
+  bool IsDefault = SI->getDefaultDest() == Dest;
+  SmallVector<APInt> Values;
+  for (auto Case : SI->cases())
+    if ((Case.getCaseSuccessor() == Dest) != IsDefault)
+      Values.push_back(Case.getCaseValue()->getValue());
+  if (Values.empty())
+    return;
+  llvm::sort(Values, [](const APInt &A, const APInt &B) { return A.ult(B); });
+
+  // Find the smallest interval [Lo, Hi] holding the values the condition can
+  // have on entry to Dest. On the default edge, drop the excluded values from
+  // both ends of the range of the condition; values between them stay.
+  const SCEV *Cond = SE.getSCEV(SI->getCondition());
+  APInt RangeMin = SE.getUnsignedRangeMin(Cond);
+  APInt RangeMax = SE.getUnsignedRangeMax(Cond);
+  APInt Lo = Values.front(), Hi = Values.back();
+  if (IsDefault) {
+    Lo = RangeMin;
+    Hi = RangeMax;
+    for (const APInt &V : Values) {
+      if (V != Lo)
+        continue;
+      // Every value is excluded: the edges cannot be taken.
+      if (Lo == Hi)
+        return;
+      ++Lo;
+    }
+    for (const APInt &V : reverse(Values))
+      if (V == Hi)
+        --Hi;
+  }
+
+  if (Lo == Hi) {
+    Guards.emplace_back(CmpInst::ICMP_EQ, Cond, SE.getConstant(Lo));
+    return;
+  }
+  if (Lo.ugt(RangeMin))
+    Guards.emplace_back(CmpInst::ICMP_UGE, Cond, SE.getConstant(Lo));
+  if (Hi.ult(RangeMax))
+    Guards.emplace_back(CmpInst::ICMP_ULE, Cond, SE.getConstant(Hi));
+}
+
 void ScalarEvolution::LoopGuards::collectFromBlock(
     ScalarEvolution &SE, ScalarEvolution::LoopGuards &Guards,
     const BasicBlock *Block, const BasicBlock *Pred,
@@ -15970,7 +16021,15 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     }
   };
 
-  SmallVector<PointerIntPair<Value *, 1, bool>> Terms;
+  // A condition that holds on entry to Block: either Cond has the value
+  // EnterIfTrue, or Switch takes one of its edges to SwitchDest.
+  struct GuardTerm {
+    Value *Cond;
+    bool EnterIfTrue;
+    const SwitchInst *Switch = nullptr;
+    const BasicBlock *SwitchDest = nullptr;
+  };
+  SmallVector<GuardTerm> Terms;
   // First, collect information from assumptions dominating the loop.
   for (auto &AssumeVH : SE.AC.assumptions()) {
     if (!AssumeVH)
@@ -15978,7 +16037,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
     auto *AssumeI = cast<CallInst>(AssumeVH);
     if (!SE.DT.dominates(AssumeI, Block))
       continue;
-    Terms.emplace_back(AssumeI->getOperand(0), true);
+    Terms.push_back({AssumeI->getOperand(0), true});
   }
 
   // Second, collect information from llvm.experimental.guards dominating the loop.
@@ -15989,7 +16048,7 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       if (const auto *Guard = dyn_cast<IntrinsicInst>(GU))
         if (Guard->getFunction() == Block->getParent() &&
             SE.DT.dominates(Guard, Block))
-          Terms.emplace_back(Guard->getArgOperand(0), true);
+          Terms.push_back({Guard->getArgOperand(0), true});
 
   // Third, collect conditions from dominating branches. Starting at the loop
   // predecessor, climb up the predecessor chain, as long as there are
@@ -15999,6 +16058,9 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // TODO: share this logic with isLoopEntryGuardedByCond.
   unsigned NumCollectedConditions = 0;
   unsigned NumDomTreeSteps = 0;
+  // Limit the compile time spent on large switches.
+  const unsigned MaxSwitchCases =
+      SE.Opts.scalar_evolution_max_switch_cases_for_loop_guards;
   VisitedBlocks.insert(Block);
   std::pair<const BasicBlock *, const BasicBlock *> Pair(Pred, Block);
   for (;; Pair = SE.getPredecessorWithUniqueSuccessorForBB(Pair.first)) {
@@ -16019,13 +16081,15 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
       continue;
     }
     VisitedBlocks.insert(Pair.second);
-    const CondBrInst *LoopEntryPredicate =
-        dyn_cast<CondBrInst>(Pair.first->getTerminator());
-    if (!LoopEntryPredicate)
+    const Instruction *Term = Pair.first->getTerminator();
+    const auto *SI = dyn_cast<SwitchInst>(Term);
+    if (const auto *LoopEntryPredicate = dyn_cast<CondBrInst>(Term))
+      Terms.push_back({LoopEntryPredicate->getCondition(),
+                       LoopEntryPredicate->getSuccessor(0) == Pair.second});
+    else if (SI && SI->getNumCases() <= MaxSwitchCases)
+      Terms.push_back({nullptr, false, SI, Pair.second});
+    else
       continue;
-
-    Terms.emplace_back(LoopEntryPredicate->getCondition(),
-                       LoopEntryPredicate->getSuccessor(0) == Pair.second);
     NumCollectedConditions++;
 
     // If we are recursively collecting guards stop after 2
@@ -16041,7 +16105,11 @@ void ScalarEvolution::LoopGuards::collectFromBlock(
   // shortest dependency chains are constructed first.
   SmallVector<std::tuple<CmpInst::Predicate, const SCEV *, const SCEV *>>
       GuardsToProcess;
-  for (auto [Term, EnterIfTrue] : reverse(Terms)) {
+  for (auto [Term, EnterIfTrue, Switch, SwitchDest] : reverse(Terms)) {
+    if (Switch) {
+      collectSwitchEdgeGuards(SE, Switch, SwitchDest, GuardsToProcess);
+      continue;
+    }
     SmallVector<Value *, 8> Worklist;
     SmallPtrSet<Value *, 8> Visited;
     Worklist.push_back(Term);

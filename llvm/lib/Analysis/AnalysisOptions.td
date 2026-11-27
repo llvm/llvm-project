@@ -442,6 +442,8 @@ defm : ValueField<"scalar-evolution-max-loop-guard-collection-depth", "unsigned"
   "Maximum depth for recursive loop guard collection">;
 defm : ValueField<"scalar-evolution-max-scev-operations-implication-depth", "unsigned", "2",
   "Maximum depth of recursive SCEV operations implication analysis">;
+defm : ValueField<"scalar-evolution-max-switch-cases-for-loop-guards", "unsigned", "64",
+  "Maximum number of cases of a switch to collect loop guards from">;
 defm : ValueField<"scalar-evolution-max-value-compare-depth", "unsigned", "2",
   "Maximum depth of recursive value complexity comparisons">;
 defm : BoolField<"scalar-evolution-use-context-for-no-wrap-flag-strenghening", "true",
