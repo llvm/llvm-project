@@ -4258,6 +4258,7 @@ getInReductionEffects(Operation *op,
 void TaskOp::getEffects(
     llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
         &effects) {
+  // Also covers the memory effects of the DEPEND clause.
   getTaskSchedulingPointEffects(effects);
 
   bool hasUnknownRecipeEffects =
