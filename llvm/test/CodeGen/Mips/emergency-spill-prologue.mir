@@ -9,7 +9,6 @@
 ...
 ---
 name: f
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 32800, alignment: 4 }
 body: |

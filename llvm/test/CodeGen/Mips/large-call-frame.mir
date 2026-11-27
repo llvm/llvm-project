@@ -6,7 +6,6 @@
 
 ---
 name: large_call_frame
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32, preferred-register: '$r30' }
 frameInfo:
@@ -31,7 +30,6 @@ body: |
 
 ---
 name: small_call_frame
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gpr32, preferred-register: '$r30' }
 frameInfo:

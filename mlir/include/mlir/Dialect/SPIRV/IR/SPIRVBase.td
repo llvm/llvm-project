@@ -47,6 +47,7 @@ def SPIRV_Dialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::spirv";
+  let useDefaultOperationRegistration = 1;
   let hasAttributes = 1;
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 1;
@@ -4504,6 +4505,7 @@ class SPIRV_MatrixOf<Type type> :
 
 def SPIRV_ScalarOrVector : AnyTypeOf<[SPIRV_Scalar, SPIRV_Vector]>;
 def SPIRV_ScalarOrVectorOrPtr : AnyTypeOf<[SPIRV_ScalarOrVector, SPIRV_AnyPtr]>;
+def SPIRV_AnyPtrOrUntypedPtr : AnyTypeOf<[SPIRV_AnyPtr, SPIRV_AnyUntypedPtr]>;
 def SPIRV_ScalarOrVectorOrPtrOrCoopMatrix :
     AnyTypeOf<[SPIRV_ScalarOrVectorOrPtr, SPIRV_AnyCooperativeMatrix]>;
 

@@ -55,9 +55,9 @@ define void @f1(<2 x double> %val, ptr %ptr) {
 ; VECTOR-NEXT:    vl %v0, 160(%r15), 3 # 16-byte Reload
 ; VECTOR-NEXT:    # kill: def $f0d killed $f0d killed $v0
 ; VECTOR-NEXT:    brasl %r14, __truncdfhf2@PLT
+; VECTOR-NEXT:    vsteh %v0, 0(%r13), 0
 ; VECTOR-NEXT:    vsteh %v8, 2(%r13), 0
 ; VECTOR-NEXT:    ld %f8, 176(%r15) # 8-byte Reload
-; VECTOR-NEXT:    vsteh %v0, 0(%r13), 0
 ; VECTOR-NEXT:    lmg %r13, %r15, 288(%r15)
 ; VECTOR-NEXT:    br %r14
   %res = fptrunc <2 x double> %val to <2 x half>

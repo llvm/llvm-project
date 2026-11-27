@@ -20,13 +20,6 @@ using namespace mlir::pdl_interp;
 // PDLInterp Dialect
 //===----------------------------------------------------------------------===//
 
-void PDLInterpDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/PDLInterp/IR/PDLInterpOps.cpp.inc"
-      >();
-}
-
 template <typename OpT>
 static LogicalResult verifySwitchOp(OpT op) {
   // Verify that the number of case destinations matches the number of case

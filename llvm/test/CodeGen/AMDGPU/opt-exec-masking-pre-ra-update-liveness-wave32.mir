@@ -10,7 +10,6 @@
 
 ---
 name: subreg_value_undef
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: subreg_value_undef
   ; CHECK: bb.0:
@@ -43,7 +42,6 @@ body:             |
 
 ---
 name: needs_distribute_0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: needs_distribute_0
   ; CHECK: bb.0:
@@ -74,7 +72,6 @@ body:             |
 
 ---
 name: needs_distribute_1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: needs_distribute_1
   ; CHECK: bb.0:
@@ -107,7 +104,6 @@ body:             |
 
 ---
 name: needs_distribute_2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: needs_distribute_2
   ; CHECK: bb.0:
@@ -140,7 +136,6 @@ body:             |
 
 ---
 name: needs_distribute_3
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: needs_distribute_3
   ; CHECK: bb.0:

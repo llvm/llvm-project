@@ -288,8 +288,9 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {},
-      const Instruction *CtxI = nullptr) const override;
+      ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr,
+      ArrayRef<const Value *> Scalars = {}) const override;
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const override {
     return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty));
@@ -468,6 +469,8 @@ public:
     case RecurKind::FMul:
     case RecurKind::FMinNum:
     case RecurKind::FMaxNum:
+    case RecurKind::FMinSelectNoFMF:
+    case RecurKind::FMaxSelectNoFMF:
     case RecurKind::FMinimum:
     case RecurKind::FMaximum:
     case RecurKind::FMinimumNum:

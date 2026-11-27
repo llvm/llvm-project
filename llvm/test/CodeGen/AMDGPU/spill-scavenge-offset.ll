@@ -9936,6 +9936,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def s[4:11]
 ; GFX6-NEXT:    ;;#ASMEND
+; GFX6-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX6-NEXT:    s_mov_b64 exec, 0xff
 ; GFX6-NEXT:    buffer_store_dword v4, off, s[40:43], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -9972,6 +9973,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def s33
 ; GFX6-NEXT:    ;;#ASMEND
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX6-NEXT:    s_and_saveexec_b64 s[34:35], vcc
 ; GFX6-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX6-NEXT:  ; %bb.1: ; %bb0
@@ -10411,6 +10413,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-FLATSCR-NEXT:    ;;#ASMSTART
 ; GFX9-FLATSCR-NEXT:    ; def s33
 ; GFX9-FLATSCR-NEXT:    ;;#ASMEND
+; GFX9-FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-FLATSCR-NEXT:    s_and_saveexec_b64 s[34:35], vcc
 ; GFX9-FLATSCR-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX9-FLATSCR-NEXT:  ; %bb.1: ; %bb0

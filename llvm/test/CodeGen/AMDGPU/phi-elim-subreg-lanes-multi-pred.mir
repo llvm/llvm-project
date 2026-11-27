@@ -8,7 +8,6 @@
 
 ---
 name:            phi_src_lane_read_in_later_pred
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: phi_src_lane_read_in_later_pred
   ; CHECK: bb.0:

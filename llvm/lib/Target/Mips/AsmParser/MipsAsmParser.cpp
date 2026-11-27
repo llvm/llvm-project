@@ -339,8 +339,8 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                    const MCSubtargetInfo *STI);
 
-  bool expandDMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                       const MCSubtargetInfo *STI);
+  bool expandMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                      const MCSubtargetInfo *STI);
 
   bool expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                              const MCSubtargetInfo *STI, bool IsLoad);
@@ -2688,8 +2688,9 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   case Mips::MULOUMacro:
   case Mips::DMULOUMacro:
     return expandMulOU(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::MULMacro:
   case Mips::DMULMacro:
-    return expandDMULMacro(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+    return expandMULMacro(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::LDMacro:
   case Mips::SDMacro:
     return expandLoadStoreDMacro(Inst, IDLoc, Out, STI,
@@ -5414,14 +5415,15 @@ bool MipsAsmParser::expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   return false;
 }
 
-bool MipsAsmParser::expandDMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                                    const MCSubtargetInfo *STI) {
+bool MipsAsmParser::expandMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                                   const MCSubtargetInfo *STI) {
   MipsTargetStreamer &TOut = getTargetStreamer();
   MCRegister DstReg = Inst.getOperand(0).getReg();
   MCRegister SrcReg = Inst.getOperand(1).getReg();
   MCRegister TmpReg = Inst.getOperand(2).getReg();
 
-  TOut.emitRR(Mips::DMULTu, SrcReg, TmpReg, IDLoc, STI);
+  TOut.emitRR(Inst.getOpcode() == Mips::MULMacro ? Mips::MULTu : Mips::DMULTu,
+              SrcReg, TmpReg, IDLoc, STI);
   TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
 
   return false;

@@ -151,6 +151,18 @@ def G_FCVT_XU : RISCVGenericInstruction {
 }
 def : GINodeEquiv<G_FCVT_XU, riscv_fcvt_xu>;
 
+// Pseudo equivalent to a RISCVISD::FROUND. Rounds $src to an integer in the
+// same FP format. $max is the largest integer that can be represented exactly
+// in that format; values at least that large, and NaN, are passed through
+// unchanged. Rounding mode is passed as an untyped immediate using the
+// RISCVFPRndMode enum. Expanded by emitFROUND, shared with SelectionDAG.
+def G_FROUND : RISCVGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, type0:$max, untyped_imm_0:$frm);
+  let hasSideEffects = false;
+}
+def : GINodeEquiv<G_FROUND, riscv_fround>;
+
 // Pseudo equivalent to a RISCVISD::FCLASS.
 def G_FCLASS : RISCVGenericInstruction {
   let OutOperandList = (outs type0:$dst);

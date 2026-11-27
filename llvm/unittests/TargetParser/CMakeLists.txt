@@ -11,6 +11,7 @@ add_llvm_unittest(TargetParserTests
   NVPTXTargetParserTest.cpp
   RISCVISAInfoTest.cpp
   RISCVTargetParserTest.cpp
+  SparcTargetParserTest.cpp
   TargetParserTest.cpp
   TripleTest.cpp
   )

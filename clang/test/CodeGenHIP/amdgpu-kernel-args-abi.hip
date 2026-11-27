@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -fexperimental-abi-lowering -emit-llvm %s -o - | FileCheck %s
 // RUN: %if cir-enabled %{ %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device -fclangir -emit-llvm %s -o - | FileCheck %s %}
 
 // Checks how HIP kernels take arguments through the kernarg segment.

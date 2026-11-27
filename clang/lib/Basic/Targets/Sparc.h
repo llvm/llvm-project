@@ -15,6 +15,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/SparcTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 namespace clang {
 namespace targets {
@@ -23,6 +24,13 @@ class LLVM_LIBRARY_VISIBILITY SparcTargetInfo : public TargetInfo {
   static const TargetInfo::GCCRegAlias GCCRegAliases[];
   static const char *const GCCRegNames[];
   bool SoftFloat;
+
+protected:
+  // Features of the CPU and target features, as defined by the backend.
+  bool IsV9 = false;
+  bool IsLeon = false;
+  bool HasLeonCASA = false;
+  bool SoftMulDiv = false;
 
 public:
   SparcTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -38,13 +46,13 @@ public:
     return -1;
   }
 
+  bool
+  initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
+                 StringRef CPU,
+                 const std::vector<std::string> &FeaturesVec) const override;
+
   bool handleTargetFeatures(std::vector<std::string> &Features,
-                            DiagnosticsEngine &Diags) override {
-    // Check if software floating point is enabled
-    if (llvm::is_contained(Features, "+soft-float"))
-      SoftFloat = true;
-    return true;
-  }
+                            DiagnosticsEngine &Diags) override;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
@@ -81,73 +89,11 @@ public:
   }
   std::string_view getClobbers() const override { return "~{y}"; }
 
-  // No Sparc V7 for now, the backend doesn't support it anyway.
-  enum CPUKind {
-    CK_GENERIC,
-    CK_V8,
-    CK_SUPERSPARC,
-    CK_SPARCLITE,
-    CK_F934,
-    CK_HYPERSPARC,
-    CK_SPARCLITE86X,
-    CK_SPARCLET,
-    CK_TSC701,
-    CK_V9,
-    CK_ULTRASPARC,
-    CK_ULTRASPARC3,
-    CK_NIAGARA,
-    CK_NIAGARA2,
-    CK_NIAGARA3,
-    CK_NIAGARA4,
-    CK_MYRIAD2100,
-    CK_MYRIAD2150,
-    CK_MYRIAD2155,
-    CK_MYRIAD2450,
-    CK_MYRIAD2455,
-    CK_MYRIAD2x5x,
-    CK_MYRIAD2080,
-    CK_MYRIAD2085,
-    CK_MYRIAD2480,
-    CK_MYRIAD2485,
-    CK_MYRIAD2x8x,
-    CK_LEON2,
-    CK_LEON2_AT697E,
-    CK_LEON2_AT697F,
-    CK_LEON3,
-    CK_LEON3_UT699,
-    CK_LEON3_GR712RC,
-    CK_LEON4,
-    CK_LEON4_GR740,
-    CK_LEON5,
-  } CPU = CK_GENERIC;
-
-  enum CPUGeneration {
-    CG_V8,
-    CG_V9,
-  };
-
-  enum CPUFamily {
-    CF_NONE,
-    CF_LEON,
-  };
-
-  CPUGeneration getCPUGeneration(CPUKind Kind) const;
-
-  CPUFamily getCPUFamily(CPUKind Kind) const;
-  static bool hasLeonCASA(CPUKind Kind);
-
-  CPUKind getCPUKind(StringRef Name) const;
-
-  bool isValidCPUName(StringRef Name) const override {
-    return getCPUKind(Name) != CK_GENERIC;
-  }
+  bool isValidCPUName(StringRef Name) const override;
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
-  bool setCPU(StringRef Name) override {
-    CPU = getCPUKind(Name);
-    return CPU != CK_GENERIC;
-  }
+  bool setCPU(StringRef Name) override { return isValidCPUName(Name); }
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);
@@ -203,13 +149,13 @@ public:
   }
 
   void setMaxAtomicWidth() override {
-    if (getCPUGeneration(CPU) == CG_V9)
+    if (IsV9)
       // Like GCC, 64-bit atomics in 32-bit code need V8+ mode, where the
       // %g and %o registers are 64 bits wide.
       MaxAtomicInlineWidth = V8Plus ? 64 : 32;
     else
       // Plain V8 lacks CAS; only the LEON and Myriad 2 CPUs with CASA have it.
-      MaxAtomicInlineWidth = hasLeonCASA(CPU) ? 32 : 0;
+      MaxAtomicInlineWidth = HasLeonCASA ? 32 : 0;
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -256,17 +202,9 @@ public:
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
 
-  bool isValidCPUName(StringRef Name) const override {
-    return getCPUGeneration(SparcTargetInfo::getCPUKind(Name)) == CG_V9;
-  }
+  bool isValidCPUName(StringRef Name) const override;
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
-
-  bool setCPU(StringRef Name) override {
-    if (!SparcTargetInfo::setCPU(Name))
-      return false;
-    return getCPUGeneration(CPU) == CG_V9;
-  }
 
   bool hasBitIntType() const override { return true; }
 };

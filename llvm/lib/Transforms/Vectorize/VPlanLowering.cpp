@@ -1072,7 +1072,10 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                     ->getIRBasicBlock()
                     ->getTerminator()
                     ->getDebugLoc();
-  VPSCEVExpander Expander(Builder, SE, DL);
+  // SCEVs may come from loop code that does not always execute, so expanding
+  // them in the entry block must not introduce a division by zero.
+  VPSCEVExpander Expander(Builder, SE, DL, /*HoistOutOf=*/nullptr,
+                          /*SafeUDivMode=*/true);
 
   // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander.
   for (VPExpandSCEVRecipe &ExpSCEV :

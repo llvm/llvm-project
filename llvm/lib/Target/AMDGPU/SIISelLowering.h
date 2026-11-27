@@ -282,6 +282,7 @@ private:
   SDValue performFSubCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFDivCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFMulCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performFMulExpCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFMACombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSetCCCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performCvtF32UByteNCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -577,6 +578,8 @@ public:
   getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                StringRef Constraint, MVT VT) const override;
   ConstraintType getConstraintType(StringRef Constraint) const override;
+  InlineAsm::ConstraintCode
+  getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
   void LowerAsmOperandForConstraint(SDValue Op, StringRef Constraint,
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
@@ -640,8 +643,10 @@ public:
                                     unsigned Depth = 0) const override;
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
-  AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
-  AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicLoadInIR(const LoadInst *LI) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicStoreInIR(const StoreInst *SI) const override;
   AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 

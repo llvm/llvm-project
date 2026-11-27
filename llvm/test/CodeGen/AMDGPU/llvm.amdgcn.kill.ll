@@ -1662,8 +1662,7 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX12-SDAG-NEXT:    s_cmp_lt_f32 s0, 0x43000000
 ; GFX12-SDAG-NEXT:    s_cselect_b64 s[4:5], -1, 0
 ; GFX12-SDAG-NEXT:    s_cmp_lt_f32 s1, 0x43000000
-; GFX12-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX12-SDAG-NEXT:    s_and_b64 s[0:1], s[4:5], s[0:1]
+; GFX12-SDAG-NEXT:    s_cselect_b64 s[0:1], s[4:5], 0
 ; GFX12-SDAG-NEXT:    s_mov_b32 s4, 1.0
 ; GFX12-SDAG-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GFX12-SDAG-NEXT:    s_cbranch_vccnz .LBB25_5
