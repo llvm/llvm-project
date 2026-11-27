@@ -3925,7 +3925,6 @@ private:
     }
   };
 
-private:
   // Destroy shared and scheduler references before candidate entries.
   CandidateState Candidate;
   SharedGraphState Shared;
