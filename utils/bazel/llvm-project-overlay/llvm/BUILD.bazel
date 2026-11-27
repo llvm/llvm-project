@@ -487,20 +487,6 @@ cc_library(
         "include/llvm/Support/VCSRevision.h",
     ],
     copts = llvm_copts,
-    defines = select({
-        "@platforms//cpu:aarch64": [
-        ],
-        "//conditions:default": ["BLAKE3_USE_NEON=0"],
-    }) + select({
-        "@platforms//cpu:x86_64": [
-        ],
-        "//conditions:default": [
-            "BLAKE3_NO_AVX2",
-            "BLAKE3_NO_AVX512",
-            "BLAKE3_NO_SSE2",
-            "BLAKE3_NO_SSE41",
-        ],
-    }),
     features = ["-parse_headers"],
     includes = ["include"],
     linkopts = select({
@@ -546,6 +532,16 @@ cc_library(
         # LLVM passes such as DSE's dominator-tree traversal.
         "@rules_cc//cc/libc:musl": ["-Wl,-z,stack-size=8388608"],
         "//conditions:default": [],
+    }),
+    local_defines = select({
+        "@platforms//cpu:x86_64": [
+        ],
+        "//conditions:default": [
+            "BLAKE3_NO_AVX2",
+            "BLAKE3_NO_AVX512",
+            "BLAKE3_NO_SSE2",
+            "BLAKE3_NO_SSE41",
+        ],
     }),
     textual_hdrs = glob([
         "include/llvm/Support/*.def",
