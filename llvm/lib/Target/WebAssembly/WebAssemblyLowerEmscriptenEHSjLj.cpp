@@ -262,7 +262,6 @@
 ///===----------------------------------------------------------------------===//
 
 #include "WebAssembly.h"
-#include "WebAssemblyTargetMachine.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringExtras.h"

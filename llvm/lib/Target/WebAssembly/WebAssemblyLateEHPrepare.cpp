@@ -13,7 +13,6 @@
 
 #include "WebAssembly.h"
 #include "WebAssemblySubtarget.h"
-#include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
