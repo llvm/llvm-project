@@ -260,14 +260,25 @@ void OmpStructureChecker::CheckTempDescriptorMappings() {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   for (const auto &[symbol, source] : tempDescriptorEnterMaps_) {
     if (tempDescriptorExitMaps_.find(symbol) == tempDescriptorExitMaps_.end()) {
-      if (version >= 61) {
-        context_.Warn(common::UsageWarning::OpenMPUsage, source,
-            "The map of '%s' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data"_warn_en_US,
-            symbol->name());
+      parser::Message *message{nullptr};
+      if (symbol->owner().IsDerivedType() && IsAllocatable(*symbol)) {
+        // A component's descriptor belongs to the containing object and can
+        // be released from another scope.
+        message = context_.Warn(common::UsageWarning::OpenMPUsage, source,
+            "Mapping allocatable component '%s' may leave its descriptor mapped when only the allocated storage is released"_warn_en_US,
+            source);
+        if (message) {
+          message->Attach(source,
+              "A TARGET EXIT DATA through a nonallocatable assumed-shape dummy does not identify the original descriptor; release the component directly or through an ALLOCATABLE dummy"_en_US);
+        }
       } else {
-        context_.Warn(common::UsageWarning::OpenMPUsage, source,
+        message = context_.Warn(common::UsageWarning::OpenMPUsage, source,
             "The map of '%s' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference"_warn_en_US,
             symbol->name());
+      }
+      if (message && version >= 60) {
+        message->Attach(source,
+            "Use the 'ref_ptee' map modifier to map only the data"_en_US);
       }
     }
   }
@@ -569,6 +580,15 @@ private:
   const UnorderedSymbolSet &iteratorSymbols_;
   bool found_{false};
 };
+
+bool OmpStructureChecker::InExecutionPart() const {
+  return !partStack_.empty() && partStack_.back() == PartKind::ExecutionPart;
+}
+
+bool OmpStructureChecker::InSpecificationPart() const {
+  return !partStack_.empty() &&
+      partStack_.back() == PartKind::SpecificationPart;
+}
 
 bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
   // Do not do clause checks while processing METADIRECTIVE.
@@ -2639,7 +2659,7 @@ void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
   const parser::OmpDirectiveName &dirName{beginSpec.DirName()};
   ++allocateDirectiveLevel_;
 
-  bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
+  bool isExecutable{InExecutionPart()};
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   if (isExecutable && allocateDirectiveLevel_ == 1 && version >= 52) {
@@ -2682,7 +2702,7 @@ void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OmpAllocateDirective &x) {
-  bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
+  bool isExecutable{InExecutionPart()};
   if (isExecutable && allocateDirectiveLevel_ == 1) {
     CheckExecutableAllocateDirective(x);
   }
@@ -5331,8 +5351,8 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
     }
   }
 
-  // Track temporary descriptor maps to warn about enter maps without matching
-  // exits in this scope. Reference modifiers control descriptor mapping
+  // Track descriptor maps to warn about enter maps without matching exits in
+  // this scope. Reference modifiers control descriptor mapping
   // explicitly. Iterator-dependent maps transfer only selected data, so they
   // neither introduce a descriptor map nor release one on exit.
   bool hasRefModifier{
@@ -5369,6 +5389,11 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
           auto maybeSource{GetObjectSource(object)};
           parser::CharBlock source{
               maybeSource.value_or(GetContext().clauseSource)};
+          if (sym->owner().IsDerivedType() && IsAllocatable(*sym)) {
+            if (const auto *designator{GetDesignatorFromObj(object)}) {
+              source = designator->source;
+            }
+          }
           if (llvm::is_contained(leafs, Directive::OMPD_target_enter_data)) {
             tempDescriptorEnterMaps_.emplace(sym, source);
           } else {

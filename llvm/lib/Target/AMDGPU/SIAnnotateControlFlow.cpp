@@ -43,14 +43,10 @@ private:
   Function *F;
   UniformityInfo *UA;
 
-  Type *Boolean;
-  Type *Void;
   Type *IntMask;
-  Type *ReturnStruct;
 
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
-  PoisonValue *BoolPoison;
   Constant *IntMaskZero;
 
   Function *If = nullptr;
@@ -113,15 +109,11 @@ public:
 void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
   LLVMContext &Context = F->getContext();
 
-  Void = Type::getVoidTy(Context);
-  Boolean = Type::getInt1Ty(Context);
-  IntMask = ST.isWave32() ? Type::getInt32Ty(Context)
-                           : Type::getInt64Ty(Context);
-  ReturnStruct = StructType::get(Boolean, IntMask);
+  IntMask =
+      ST.isWave32() ? Type::getInt32Ty(Context) : Type::getInt64Ty(Context);
 
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
-  BoolPoison = PoisonValue::get(Boolean);
   IntMaskZero = ConstantInt::get(IntMask, 0);
 }
 

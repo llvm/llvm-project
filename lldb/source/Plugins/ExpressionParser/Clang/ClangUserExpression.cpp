@@ -143,6 +143,7 @@ void ClangUserExpression::ScanContext(DiagnosticManager &diagnostic_manager,
     case lldb::eLanguageTypeC_plus_plus_03:
     case lldb::eLanguageTypeC_plus_plus_11:
     case lldb::eLanguageTypeC_plus_plus_14:
+    case lldb::eLanguageTypeRust:
       m_in_cplusplus_method = true;
       break;
     case lldb::eLanguageTypeObjC:

@@ -2959,11 +2959,7 @@ void CodeGenFunction::EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T,
     return;
   }
 
-  llvm::Constant *StaticData[] = {
-      llvm::ConstantInt::get(Int8Ty, TCK),
-      EmitCheckSourceLocation(Loc),
-      EmitCheckTypeDescriptor(T),
-  };
+  auto StaticData = EmitCFICheckFailStaticArgs(TCK, Loc, T);
 
   if (CrossDsoTypeId) {
     EmitCfiSlowPathCheck(M, TypeTest, CrossDsoTypeId, VTable, StaticData);
@@ -3000,11 +2996,7 @@ bool CodeGenFunction::ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD) {
 
   // GlobalDCE's virtual function elimination only treats vtable slots as live
   // if they are loaded via llvm.type.checked.load, so it must always be used.
-  if (CGM.getCodeGenOpts().VirtualFunctionElimination)
-    return true;
-
-  return ShouldEmitCFICheck &&
-         CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIVCall);
+  return CGM.getCodeGenOpts().VirtualFunctionElimination || ShouldEmitCFICheck;
 }
 
 llvm::Value *CodeGenFunction::EmitVTableTypeCheckedLoad(

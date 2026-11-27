@@ -37,9 +37,9 @@ entry:
 define void @load_sext_8i8_to_8i16(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_sext_8i8_to_8i16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vsllwil.h.b $vr0, $vr0, 0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
@@ -76,9 +76,9 @@ entry:
 define void @load_sext_4i16_to_4i32(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_sext_4i16_to_4i32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vsllwil.w.h $vr0, $vr0, 0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
@@ -99,9 +99,9 @@ entry:
 define void @load_sext_2i32_to_2i64(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_sext_2i32_to_2i64:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vsllwil.d.w $vr0, $vr0, 0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
@@ -251,9 +251,9 @@ entry:
 define void @load_sext_mask_8i8_to_8i16(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_sext_mask_8i8_to_8i16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vsrai.b $vr0, $vr0, 7
 ; LA32-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
@@ -277,9 +277,9 @@ entry:
 define void @load_sext_mask_4i16_to_4i32(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_sext_mask_4i16_to_4i32:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vsrai.h $vr0, $vr0, 15
 ; LA32-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
@@ -303,9 +303,9 @@ entry:
 define void @load_sext_mask_2i32_to_2i64(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_sext_mask_2i32_to_2i64:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vsrai.w $vr0, $vr0, 31
 ; LA32-NEXT:    vilvl.w $vr0, $vr0, $vr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
@@ -389,9 +389,9 @@ entry:
 define void @load_sext_notmask_8i8_to_8i16(ptr %ptr, ptr %dst) {
 ; LA32-LABEL: load_sext_notmask_8i8_to_8i16:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    ld.w $a2, $a0, 4
 ; LA32-NEXT:    fld.s $fa0, $a0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
+; LA32-NEXT:    ld.w $a0, $a0, 4
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
 ; LA32-NEXT:    vsrai.b $vr0, $vr0, 6
 ; LA32-NEXT:    vsllwil.h.b $vr0, $vr0, 0
 ; LA32-NEXT:    vst $vr0, $a1, 0

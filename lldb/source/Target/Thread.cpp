@@ -1792,7 +1792,14 @@ void Thread::ClearStackFrames() {
 }
 
 lldb::StackFrameSP Thread::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
-  return GetStackFrameList()->GetFrameWithConcreteFrameIndex(unwind_idx);
+  // A concrete frame index is the unwinder's, so search the unwinder's frame
+  // list. A frame provider's list numbers its frames differently. Getting the
+  // thread's frame list first makes sure the unwinder's list exists.
+  StackFrameListSP frames_sp = GetStackFrameList();
+  if (StackFrameListSP unwinder_frames_sp =
+          GetFrameListByIdentifier(LLDB_UNWINDER_FRAME_LIST_ID))
+    return unwinder_frames_sp->GetFrameWithConcreteFrameIndex(unwind_idx);
+  return frames_sp->GetFrameWithConcreteFrameIndex(unwind_idx);
 }
 
 Status Thread::ReturnFromFrameWithIndex(uint32_t frame_idx,

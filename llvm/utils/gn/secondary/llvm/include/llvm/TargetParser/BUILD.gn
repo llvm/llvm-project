@@ -21,6 +21,13 @@ tablegen("RISCVTargetParserDef") {
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
+tablegen("SparcGenTargetFeatures") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-target-features" ]
+  td_file = "//llvm/lib/Target/Sparc/SparcTargetParserDef.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
 tablegen("R600TargetParserDef") {
   visibility = [ ":gen" ]
   args = [ "-gen-amdgpu-target-def" ]
@@ -42,5 +49,6 @@ group("gen") {
     ":PPCGenTargetFeatures",
     ":R600TargetParserDef",
     ":RISCVTargetParserDef",
+    ":SparcGenTargetFeatures",
   ]
 }

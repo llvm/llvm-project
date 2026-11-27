@@ -5,14 +5,20 @@
 ; REQUIRES: target={{.*-linux.*}}, object-emission
 
 @__profn_foo = private constant [3 x i8] c"foo"
+@__profn_nodbg = private constant [5 x i8] c"nodbg"
 ; CHECK:      @__profc_foo =
 ; CHECK-SAME: !dbg ![[EXPR:[0-9]+]]
+; CHECK:      @__profc_nodbg =
+; CHECK-SAME: !dbg ![[NODBG_EXPR:[0-9]+]]
 
 ; CHECK:      ![[EXPR]] = !DIGlobalVariableExpression(var: ![[GLOBAL:[0-9]+]]
 ; CHECK:      ![[GLOBAL]] = {{.*}} !DIGlobalVariable(name: "__profc_foo"
 ; CHECK-SAME: scope: ![[SCOPE:[0-9]+]]
 ; CHECK-SAME: annotations: ![[ANNOTATIONS:[0-9]+]]
 ; CHECK:      ![[SCOPE]] = {{.*}} !DISubprogram(name: "foo"
+; CHECK:      ![[CU:[0-9]+]] = distinct !DICompileUnit(
+; CHECK:      ![[NODBG_EXPR]] = !DIGlobalVariableExpression(var: ![[NODBG_GLOBAL:[0-9]+]]
+; CHECK:      ![[NODBG_GLOBAL]] = {{.*}} !DIGlobalVariable(name: "__profc_nodbg", scope: ![[CU]],
 ; CHECK:      ![[ANNOTATIONS]] = !{![[NAME:[0-9]+]], ![[HASH:[0-9]+]], ![[COUNTERS:[0-9]+]]}
 ; CHECK:      ![[NAME]] = !{!"Function Name", !"foo"}
 ; CHECK:      ![[HASH]] = !{!"CFG Hash", i64 12345678}
@@ -21,6 +27,12 @@
 define void @_Z3foov() !dbg !12 {
   call void @llvm.instrprof.increment(ptr @__profn_foo, i64 12345678, i32 2, i32 0)
   ret void, !dbg !17
+}
+
+; A function without debug info is described at compile unit scope.
+define void @nodbg() {
+  call void @llvm.instrprof.increment(ptr @__profn_nodbg, i64 1, i32 1, i32 0)
+  ret void
 }
 
 declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
@@ -64,6 +76,19 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; CHECK-DWARF:         DW_AT_name	("Num Counters")
 ; CHECK-DWARF:         DW_AT_const_value	(2)
 ; CHECK-DWARF:       NULL
+; CHECK-DWARF:     NULL
+; CHECK-DWARF:   DW_TAG_variable
+; CHECK-DWARF:     DW_AT_name	("__profc_nodbg")
+; CHECK-DWARF:     DW_AT_type	({{.*}} "Profile Data Type")
+; CHECK-DWARF:     DW_TAG_LLVM_annotation
+; CHECK-DWARF:       DW_AT_name	("Function Name")
+; CHECK-DWARF:       DW_AT_const_value	("nodbg")
+; CHECK-DWARF:     DW_TAG_LLVM_annotation
+; CHECK-DWARF:       DW_AT_name	("CFG Hash")
+; CHECK-DWARF:       DW_AT_const_value	(1)
+; CHECK-DWARF:     DW_TAG_LLVM_annotation
+; CHECK-DWARF:       DW_AT_name	("Num Counters")
+; CHECK-DWARF:       DW_AT_const_value	(1)
 ; CHECK-DWARF:     NULL
 ; CHECK-DWARF:   DW_TAG_unspecified_type
 ; CHECK-DWARF:   NULL

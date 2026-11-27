@@ -6,7 +6,6 @@
 
 ---
 name:            fold_bf16_one_into_src0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -27,7 +26,6 @@ body:             |
 
 ---
 name:            fold_bf16_one_into_src1
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -48,7 +46,6 @@ body:             |
 
 ---
 name:            fold_bf16_one_into_src2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

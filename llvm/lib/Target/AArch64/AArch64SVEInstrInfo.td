@@ -2241,6 +2241,32 @@ let Predicates = [HasSVE_or_SME] in {
   defm TRN1_PPP : sve_int_perm_bin_perm_pp<0b100, "trn1", AArch64trn1, int_aarch64_sve_trn1_b16, int_aarch64_sve_trn1_b32, int_aarch64_sve_trn1_b64>;
   defm TRN2_PPP : sve_int_perm_bin_perm_pp<0b101, "trn2", AArch64trn2, int_aarch64_sve_trn2_b16, int_aarch64_sve_trn2_b32, int_aarch64_sve_trn2_b64>;
 
+} // End HasSVE_or_SME
+
+// Select TRNs with a zero vector for deinterleave and zero-extension.
+multiclass unzipAndZeroExtPat<ValueType DstTy, ValueType SrcTy, ValueType SplatTy,
+                            int Mask, dag Zero, Instruction TRN1, Instruction TRN2> {
+  def : Pat<(DstTy (and (AArch64uzp1
+                          (AArch64uunpklo SrcTy:$src),
+                          (AArch64uunpkhi SrcTy:$src)),
+                          (splat_vector (SplatTy Mask)))),
+            (TRN1 ZPR:$src, Zero)>;
+  def : Pat<(DstTy (and (AArch64uzp2
+                          (AArch64uunpklo SrcTy:$src),
+                          (AArch64uunpkhi SrcTy:$src)),
+                          (splat_vector (SplatTy Mask)))),
+            (TRN2 ZPR:$src, Zero)>;
+}
+
+multiclass unzipAndZeroExtPats<dag Zero> {
+  defm : unzipAndZeroExtPat<nxv8i16, nxv16i8, i32, 0xff, Zero, TRN1_ZZZ_B, TRN2_ZZZ_B>;
+  defm : unzipAndZeroExtPat<nxv4i32, nxv8i16, i32, 0xffff, Zero, TRN1_ZZZ_H, TRN2_ZZZ_H>;
+  defm : unzipAndZeroExtPat<nxv2i64, nxv4i32, i64, 0xffffffff, Zero, TRN1_ZZZ_S, TRN2_ZZZ_S>;
+}
+
+let Predicates = [HasSVE_or_SME] in {
+  defm : unzipAndZeroExtPats<(DUP_ZI_B 0, 0)>;
+
   // Extract lo/hi halves of legal predicate types.
   def : Pat<(nxv1i1 (extract_subvector nxv2i1:$Ps, (i64 0))),
             (PUNPKLO_PP PPR:$Ps)>;
@@ -2880,6 +2906,9 @@ let Predicates = [HasSVE_or_SME] in {
 } // End HasSVE_or_SME
 
 let Predicates = [HasSVE, HasNEON], AddedComplexity = 1 in {
+  // Unzip and zero-extend patterns with NEON Zero vector.
+  defm : unzipAndZeroExtPats<(SUBREG_TO_REG (MOVIv2d_ns (i32 0)), zsub)>;
+
   // A common sequence that occurs when promoting nxv8bf16 operations.
   // NOTE: MOVIv2d_ns is not available in streaming-mode.
   def : Pat<(nxv4f32 (AArch64fcvte_mt (SVEAnyPredicate), (extract_subvector nxv8bf16:$Zs, (i64 0)), undef)),
@@ -3139,6 +3168,21 @@ let Predicates = [HasSVE_or_SME] in {
               (DECW_ZPiI ZPR:$op, 31, $imm)>;
     def : Pat<(nxv2i64 (sub ZPR:$op, (nxv2i64 (splat_vector (i64 (vscale (sve_cntd_imm i32:$imm))))))),
               (DECD_ZPiI ZPR:$op, 31, $imm)>;
+
+    // Negative vscale multipliers reverse the increment/decrement direction.
+    def : Pat<(nxv8i16 (add ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm_neg i32:$imm)))))))),
+              (DECH_ZPiI ZPR:$op, 31, $imm)>;
+    def : Pat<(nxv4i32 (add ZPR:$op, (nxv4i32 (splat_vector (i32 (trunc (vscale (sve_cntw_imm_neg i32:$imm)))))))),
+              (DECW_ZPiI ZPR:$op, 31, $imm)>;
+    def : Pat<(nxv2i64 (add ZPR:$op, (nxv2i64 (splat_vector (i64 (vscale (sve_cntd_imm_neg i32:$imm))))))),
+              (DECD_ZPiI ZPR:$op, 31, $imm)>;
+
+    def : Pat<(nxv8i16 (sub ZPR:$op, (nxv8i16 (splat_vector (i32 (trunc (vscale (sve_cnth_imm_neg i32:$imm)))))))),
+              (INCH_ZPiI ZPR:$op, 31, $imm)>;
+    def : Pat<(nxv4i32 (sub ZPR:$op, (nxv4i32 (splat_vector (i32 (trunc (vscale (sve_cntw_imm_neg i32:$imm)))))))),
+              (INCW_ZPiI ZPR:$op, 31, $imm)>;
+    def : Pat<(nxv2i64 (sub ZPR:$op, (nxv2i64 (splat_vector (i64 (vscale (sve_cntd_imm_neg i32:$imm))))))),
+              (INCD_ZPiI ZPR:$op, 31, $imm)>;
   }
 
   // Some INCB/DECB forms have better latency and throughput than ADDVL, so we

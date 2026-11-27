@@ -97,24 +97,21 @@ define void @deinterleave4(ptr %src, ptr %dst0, ptr %dst1, ptr %dst2,
 define void @wide_deinterleave3(ptr %src, ptr %dst0, ptr %dst1, ptr %dst2) {
 ; CHECK-LABEL: wide_deinterleave3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp x9, x12, [x0, #8]
-; CHECK-NEXT:    ldr x11, [x0, #40]
-; CHECK-NEXT:    ldp x8, x10, [x0, #24]
-; CHECK-NEXT:    ldr x13, [x0]
-; CHECK-NEXT:    lsr x15, x9, #32
-; CHECK-NEXT:    str w13, [x1]
-; CHECK-NEXT:    lsr x13, x13, #32
-; CHECK-NEXT:    lsr x14, x10, #32
-; CHECK-NEXT:    stp w15, w8, [x1, #4]
-; CHECK-NEXT:    lsr x8, x8, #32
-; CHECK-NEXT:    str w14, [x1, #12]
-; CHECK-NEXT:    stp w12, w8, [x2, #4]
-; CHECK-NEXT:    lsr x8, x12, #32
-; CHECK-NEXT:    str w13, [x2]
-; CHECK-NEXT:    str w11, [x2, #12]
-; CHECK-NEXT:    stp w9, w8, [x3]
-; CHECK-NEXT:    lsr x9, x11, #32
-; CHECK-NEXT:    stp w10, w9, [x3, #8]
+; CHECK-NEXT:    ldp x9, x8, [x0]
+; CHECK-NEXT:    ldp x11, x10, [x0, #32]
+; CHECK-NEXT:    ldp x13, x14, [x0, #16]
+; CHECK-NEXT:    lsr x12, x8, #32
+; CHECK-NEXT:    lsr x15, x11, #32
+; CHECK-NEXT:    stp w9, w12, [x1]
+; CHECK-NEXT:    lsr x9, x9, #32
+; CHECK-NEXT:    lsr x12, x14, #32
+; CHECK-NEXT:    stp w14, w15, [x1, #8]
+; CHECK-NEXT:    stp w9, w13, [x2]
+; CHECK-NEXT:    lsr x9, x13, #32
+; CHECK-NEXT:    stp w12, w10, [x2, #8]
+; CHECK-NEXT:    stp w8, w9, [x3]
+; CHECK-NEXT:    lsr x8, x10, #32
+; CHECK-NEXT:    stp w11, w8, [x3, #8]
 ; CHECK-NEXT:    ret
   %wide = load <12 x i32>, ptr %src
   %deinterleaved = call { <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave3.v12i32(<12 x i32> %wide)

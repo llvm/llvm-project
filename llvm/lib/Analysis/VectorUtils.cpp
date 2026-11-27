@@ -504,10 +504,12 @@ bool llvm::isSplatValue(const Value *V, int Index, unsigned Depth) {
   if (match(V, m_BinOp(m_Value(X), m_Value(Y))))
     return isSplatValue(X, Index, Depth) && isSplatValue(Y, Index, Depth);
 
-  // If all operands of a select are splats, the result is a splat.
+  // If all operands of a select are splats, the result is a splat. A scalar
+  // condition selects one whole operand, so only a vector condition needs to
+  // be a splat.
   if (match(V, m_Select(m_Value(X), m_Value(Y), m_Value(Z))))
-    return isSplatValue(X, Index, Depth) && isSplatValue(Y, Index, Depth) &&
-           isSplatValue(Z, Index, Depth);
+    return (!isa<VectorType>(X->getType()) || isSplatValue(X, Index, Depth)) &&
+           isSplatValue(Y, Index, Depth) && isSplatValue(Z, Index, Depth);
 
   // TODO: Add support for unary ops (fneg), casts, intrinsics (overflow ops).
 
@@ -549,6 +551,21 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
   }
 
   return true;
+}
+
+bool llvm::getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
+                                  const APInt &DemandedElts, APInt &DemandedLHS,
+                                  APInt &DemandedRHS) {
+  if (isa<ScalableVectorType>(Shuf->getType())) {
+    assert(DemandedElts == APInt(1, 1));
+    DemandedLHS = DemandedRHS = DemandedElts;
+    return true;
+  }
+
+  int NumElts =
+      cast<FixedVectorType>(Shuf->getOperand(0)->getType())->getNumElements();
+  return getShuffleDemandedElts(NumElts, Shuf->getShuffleMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS);
 }
 
 bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
@@ -1407,6 +1424,11 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
+      // The interleave analysis takes strides as int (isStrided,
+      // createInterleaveGroup, InterleaveGroup); treat strides that do not
+      // fit as unknown.
+      if (!isInt<32>(Stride))
+        Stride = 0;
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
@@ -1638,11 +1660,13 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
       // The index of A is the index of B plus A's distance to B in multiples
       // of the size.
-      int IndexA =
+      int64_t IndexA =
           GroupB->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
 
-      // Try to insert A into B's group.
-      if (GroupB->insertMember(A, IndexA, DesA.Alignment)) {
+      // Try to insert A into B's group. insertMember takes an int32_t index, so
+      // reject A if IndexA does not fit.
+      if (isInt<32>(IndexA) &&
+          GroupB->insertMember(A, IndexA, DesA.Alignment)) {
         LLVM_DEBUG(dbgs() << "LV: Inserted:" << *A << '\n'
                           << "    into the interleave group with" << *B
                           << '\n');

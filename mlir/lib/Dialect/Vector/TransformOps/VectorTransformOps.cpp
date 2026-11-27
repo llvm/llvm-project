@@ -284,6 +284,11 @@ void transform::ApplyLowerTransposePatternsOp::populatePatterns(
   }
 }
 
+void transform::ApplyLowerTransposeToInterleavePatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateVectorTransposeToInterleaveLoweringPatterns(patterns);
+}
+
 void transform::ApplyLowerInterleavePatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::populateVectorInterleaveLoweringPatterns(patterns);

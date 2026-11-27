@@ -25,6 +25,10 @@ these extensions.
 
 ## Feature Checking Macros
 
+Selecting an ISO language mode with `-std` still allows some language
+extensions. Use `-pedantic-errors` to report diagnosed language extensions as
+errors.
+
 Language extensions can be very useful, but only if you know you can depend on
 them. In order to allow fine-grained feature checks, we support three builtin
 function-like macros. This allows you to directly test for a feature in your

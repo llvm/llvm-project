@@ -278,6 +278,8 @@ defm : BoolField<"use-lir-code-size-heurs", "true",
   "Use loop idiom recognition code size heuristics when compiling with -Os/-Oz">;
 
 // LoopInterchange.cpp
+defm : ValueField<"loop-interchange-max-address-insts-to-hoist", "unsigned", "8",
+  "Maximum number of address instructions to hoist for an inner-loop reduction">;
 // Maximum loop depth supported.
 defm : ValueField<"loop-interchange-max-loop-nest-depth", "unsigned", "10",
   "Maximum depth of loop nest considered for the transform">;

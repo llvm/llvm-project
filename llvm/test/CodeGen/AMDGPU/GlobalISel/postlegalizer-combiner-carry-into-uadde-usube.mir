@@ -3,7 +3,6 @@
 
 ---
 name: add_zext_uaddo_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -27,7 +26,6 @@ body: |
 
 ---
 name: add_zext_uaddo_carry_commuted
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -51,7 +49,6 @@ body: |
 
 ---
 name: sub_zext_usubo_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -75,7 +72,6 @@ body: |
 
 ---
 name: sub_zext_usubo_carry_lhs_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -99,7 +95,6 @@ body: |
 
 ---
 name: add_zext_uadde_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -127,7 +122,6 @@ body: |
 
 ---
 name: sub_zext_usube_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -155,7 +149,6 @@ body: |
 
 ---
 name: add_zext_usubo_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -181,7 +174,6 @@ body: |
 
 ---
 name: sub_zext_uaddo_carry
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -207,7 +199,6 @@ body: |
 
 ---
 name: add_zext_carry_s64_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -233,7 +224,6 @@ body: |
 
 ---
 name: add_zext_multi_use_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -259,7 +249,6 @@ body: |
 
 ---
 name: add_zext_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -285,7 +274,6 @@ body: |
 
 ---
 name: add_zext_icmp_commuted
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -311,7 +299,6 @@ body: |
 
 ---
 name: add_zext_fcmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -337,7 +324,6 @@ body: |
 
 ---
 name: sub_zext_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -363,7 +349,6 @@ body: |
 
 ---
 name: add_zext_icmp_multi_use_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -395,7 +380,6 @@ body: |
 
 ---
 name: add_zext_trunc_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -419,7 +403,6 @@ body: |
 
 ---
 name: select_inc
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -446,7 +429,6 @@ body: |
 
 ---
 name: select_inc_trunc_cond
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -471,7 +453,6 @@ body: |
 
 ---
 name: select_inc_multi_use_add_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -501,7 +482,6 @@ body: |
 
 ---
 name: select_inc_3_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -529,7 +509,6 @@ body: |
 
 ---
 name: select_inc_swapped
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -556,7 +535,6 @@ body: |
 
 ---
 name: select_inc_other_base_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -586,7 +564,6 @@ body: |
 
 ---
 name: select_inc_s64_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -614,7 +591,6 @@ body: |
 
 ---
 name: add_uadde_zero
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -642,7 +618,6 @@ body: |
 
 ---
 name: add_uadde_zero_commuted
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -670,7 +645,6 @@ body: |
 
 ---
 name: add_uadde_zero_carry_used_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -702,7 +676,6 @@ body: |
 
 ---
 name: add_uadde_zero_multi_use_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -734,7 +707,6 @@ body: |
 
 ---
 name: add_uadde_nonzero_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -762,7 +734,6 @@ body: |
 
 ---
 name: select_inc_chain
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -796,7 +767,6 @@ body: |
 ...
 ---
 name: select_dec
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -822,7 +792,6 @@ body: |
 ...
 ---
 name: select_dec_swapped
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -848,7 +817,6 @@ body: |
 ...
 ---
 name: select_inc_2_swapped_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -875,7 +843,6 @@ body: |
 ...
 ---
 name: add_sext_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -900,7 +867,6 @@ body: |
 ...
 ---
 name: sub_sext_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -925,7 +891,6 @@ body: |
 ...
 ---
 name: sub_sext_icmp_lhs_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -950,7 +915,6 @@ body: |
 ...
 ---
 name: add_zext_and_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -982,7 +946,6 @@ body: |
 ...
 ---
 name: add_zext_xor_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1014,7 +977,6 @@ body: |
 ...
 ---
 name: add_zext_not_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1041,7 +1003,6 @@ body: |
 ...
 ---
 name: add_zext_and_trunc_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1072,7 +1033,6 @@ body: |
 ...
 ---
 name: select_inc_s16
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1100,7 +1060,6 @@ body: |
 ...
 ---
 name: add_zext_icmp_s16
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1127,7 +1086,6 @@ body: |
 ...
 ---
 name: add_uadde_zero_ext_carry_not_reassociated
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1159,7 +1117,6 @@ body: |
 ...
 ---
 name: sub_usube_zero
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1186,7 +1143,6 @@ body: |
 ...
 ---
 name: sub_usube_zero_carry_used_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1219,7 +1175,6 @@ body: |
 ...
 ---
 name: add_anyext_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1244,7 +1199,6 @@ body: |
 ...
 ---
 name: sub_anyext_icmp
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1269,7 +1223,6 @@ body: |
 ...
 ---
 name: add_anyext_and_trunc_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1298,7 +1251,6 @@ body: |
 ...
 ---
 name: add_zext_is_fpclass
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1323,7 +1275,6 @@ body: |
 ...
 ---
 name: sub_sext_is_fpclass
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1348,7 +1299,6 @@ body: |
 ...
 ---
 name: add_zext_amdgcn_class
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1373,7 +1323,6 @@ body: |
 ...
 ---
 name: select_dec_s16_swapped
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1401,7 +1350,6 @@ body: |
 ...
 ---
 name: select_inc_s16_multi_use_trunc
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1434,7 +1382,6 @@ body: |
 ...
 ---
 name: select_inc_s16_multi_use_add_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1469,7 +1416,6 @@ body: |
 ...
 ---
 name: select_inc_s16_other_base_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:
@@ -1500,7 +1446,6 @@ body: |
 ...
 ---
 name: select_inc_s16_zext_step_not_folded
-tracksRegLiveness: true
 legalized: true
 body: |
   bb.0:

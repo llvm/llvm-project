@@ -7,7 +7,6 @@
 
 ---
 name:            insert_subreg_straddling_subrange
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11

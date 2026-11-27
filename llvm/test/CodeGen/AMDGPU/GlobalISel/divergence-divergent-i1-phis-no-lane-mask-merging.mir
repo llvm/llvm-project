@@ -15,7 +15,6 @@
 ---
 name: divergent_i1_phi_uniform_branch
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_phi_uniform_branch
   ; GFX10: bb.0:
@@ -116,7 +115,6 @@ body: |
 ---
 name: divergent_i1_phi_uniform_branch_simple
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_phi_uniform_branch_simple
   ; GFX10: bb.0:
@@ -189,7 +187,6 @@ body: |
 ---
 name: divergent_i1_phi_used_inside_loop
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_phi_used_inside_loop
   ; GFX10: bb.0:
@@ -272,7 +269,6 @@ body: |
 ---
 name: divergent_i1_phi_used_inside_loop_bigger_loop_body
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: divergent_i1_phi_used_inside_loop_bigger_loop_body
   ; GFX10: bb.0:
@@ -440,7 +436,6 @@ body: |
 ---
 name: single_lane_execution_attribute
 legalized: true
-tracksRegLiveness: true
 body: |
   ; GFX10-LABEL: name: single_lane_execution_attribute
   ; GFX10: bb.0:

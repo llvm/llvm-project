@@ -6,10 +6,10 @@ define void @interleave4_consecutive_splats(<4 x i16> %src, ptr %dst0, ptr %dst1
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    stp q0, q0, [x0, #32]
-; CHECK-NEXT:    stp q0, q0, [x1]
+; CHECK-NEXT:    stp q0, q0, [x0]
 ; CHECK-NEXT:    stp q0, q0, [x1, #32]
+; CHECK-NEXT:    stp q0, q0, [x1]
 ; CHECK-NEXT:    ret
   %splat2 = shufflevector <4 x i16> %src, <4 x i16> poison, <8 x i32> splat (i32 2)
   %splat1 = shufflevector <4 x i16> %src, <4 x i16> poison, <8 x i32> splat (i32 1)

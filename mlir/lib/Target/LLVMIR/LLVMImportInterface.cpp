@@ -13,6 +13,7 @@
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -21,33 +22,37 @@ using namespace mlir::LLVM::detail;
 LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
     OpBuilder &builder, llvm::CallInst *inst,
     LLVM::ModuleImport &moduleImport) {
-  StringRef intrinName = inst->getCalledFunction()->getName();
-
+  Location loc = moduleImport.translateLoc(inst->getDebugLoc());
   SmallVector<llvm::Value *> args(inst->args());
-  ArrayRef<llvm::Value *> llvmOperands(args);
-
-  SmallVector<llvm::OperandBundleUse> llvmOpBundles;
-  llvmOpBundles.reserve(inst->getNumOperandBundles());
-  for (unsigned i = 0; i < inst->getNumOperandBundles(); ++i)
-    llvmOpBundles.push_back(inst->getOperandBundleAt(i));
-
   SmallVector<Value> mlirOperands;
   SmallVector<NamedAttribute> mlirAttrs;
   if (failed(moduleImport.convertIntrinsicArguments(
-          llvmOperands, llvmOpBundles, /*requiresOpBundles=*/false,
+          args, llvm::to_vector(inst->operand_bundles()),
+          /*requiresOpBundles=*/true,
           /*immArgPositions=*/{}, /*immArgAttrNames=*/{}, mlirOperands,
           mlirAttrs)))
     return failure();
 
+  CallIntrinsicOp::Properties properties{};
+  properties.setIntrin(
+      builder.getStringAttr(inst->getCalledFunction()->getName()));
+  properties.setOperandSegmentSizes(
+      {static_cast<int32_t>(args.size()),
+       static_cast<int32_t>(mlirOperands.size() - args.size())});
+  if (failed(CallIntrinsicOp::setPropertiesFromAttr(
+          properties, builder.getDictionaryAttr(mlirAttrs),
+          [&] { return emitError(loc); })))
+    return failure();
+
   Type resultType = moduleImport.convertType(inst->getType());
   auto op = CallIntrinsicOp::create(
-      builder, moduleImport.translateLoc(inst->getDebugLoc()),
+      builder, loc,
       isa<LLVMVoidType>(resultType) ? TypeRange{} : TypeRange{resultType},
-      StringAttr::get(builder.getContext(), intrinName),
-      ValueRange{mlirOperands}, FastmathFlagsAttr{});
+      mlirOperands, properties, /*discardableAttributes=*/{});
 
   moduleImport.setFastmathFlagsAttr(inst, op);
   moduleImport.convertArgAndResultAttrs(inst, op);
+  op.setStrictfp(inst->getAttributes().hasFnAttr(llvm::Attribute::StrictFP));
 
   // Update importer tracking of results.
   unsigned numRes = op.getNumResults();

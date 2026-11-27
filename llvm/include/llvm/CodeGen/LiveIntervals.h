@@ -49,7 +49,6 @@ class MachineInstr;
 class MachineRegisterInfo;
 class ProfileSummaryInfo;
 class raw_ostream;
-class TargetInstrInfo;
 class VirtRegMap;
 
 class LiveIntervals {
@@ -59,7 +58,6 @@ class LiveIntervals {
   MachineFunction *MF = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
   SlotIndexes *Indexes = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   std::unique_ptr<LiveIntervalCalc> LICalc;

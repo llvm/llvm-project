@@ -1,4 +1,9 @@
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp -Werror -fopenmp-version=52 -Wno-experimental-option
+! RUN: %flang -fsyntax-only -fopenmp -fopenmp-version=52 -Wno-openmp-usage -Wno-experimental-option %s 2>&1 | FileCheck %s --check-prefix=QUIET --allow-empty
+! QUIET-NOT: {{.}}
+! RUN: %flang -fsyntax-only -fopenmp -fopenmp-version=52 -Wopenmp-usage -Wno-experimental-option %s 2>&1 | FileCheck %s --check-prefix=GUIDANCE --implicit-check-not=ref_ptee
+! GUIDANCE: warning: Mapping allocatable component 'this%arr' may leave its descriptor mapped when only the allocated storage is released
+! GUIDANCE: A TARGET EXIT DATA through a nonallocatable assumed-shape dummy does not identify the original descriptor; release the component directly or through an ALLOCATABLE dummy
 
 ! Check for warning when mapping variables with temporary stack descriptors
 ! (assumed-shape, assumed-rank, local allocatables, local pointers) on
@@ -124,3 +129,36 @@ subroutine test_plain_enter_iterator_exit_warning(arr, n)
   !$omp target enter data map(to: arr)
   !$omp target exit data map(iterator(i = 1:n), from: arr(i))
 end subroutine
+
+! A component descriptor belongs to the containing object. In particular,
+! INTENT(OUT) does not imply a temporary copy of a scalar derived-type dummy.
+! An ordinary assumed-shape exit dummy cannot identify that descriptor.
+module component_descriptor_maps
+  type :: field_t
+    real, allocatable :: arr(:)
+  end type
+contains
+  subroutine init(this)
+    type(field_t), intent(out) :: this
+    allocate(this%arr(4))
+    !WARNING: Mapping allocatable component 'this%arr' may leave its descriptor mapped when only the allocated storage is released [-Wopenmp-usage]
+    !$omp target enter data map(alloc: this%arr)
+  end subroutine
+
+  subroutine finish(this)
+    type(field_t), intent(inout) :: this
+    call device_free(this%arr)
+    deallocate(this%arr)
+  end subroutine
+
+  subroutine device_free(data)
+    real, contiguous, intent(inout) :: data(:)
+    !$omp target exit data map(delete: data)
+  end subroutine
+
+  subroutine matched_component_maps(this)
+    type(field_t), intent(inout) :: this
+    !$omp target enter data map(to: this%arr)
+    !$omp target exit data map(from: this%arr)
+  end subroutine
+end module

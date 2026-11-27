@@ -1436,19 +1436,11 @@ LogicalResult checkErrorIfReshape(Operation *op) {
     }
   }
 
-  // ERROR_IF(the number of elements is not preserved). Every dimension is now
-  // known to be positive, so the product is exact.
+  // ERROR_IF(tensor_size(shape1) != tensor_size(shape));
   if (auto inputType =
           dyn_cast<RankedTensorType>(reshapeOp.getInput1().getType());
       inputType && inputType.hasStaticShape()) {
     int64_t inputElementsNum = inputType.getNumElements();
-    if (outputType && outputType.hasStaticShape()) {
-      int64_t outputElementsNum = outputType.getNumElements();
-      if (inputElementsNum != outputElementsNum)
-        return op->emitOpError() << "cannot reshape " << inputElementsNum
-                                 << " elements into " << outputElementsNum;
-    }
-
     int64_t newShapeElementsNum =
         llvm::accumulate(shapeValues, int64_t(1),
                          [](int64_t acc, int64_t dim) { return acc * dim; });
