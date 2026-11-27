@@ -16,6 +16,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1121,6 +1122,11 @@ bool JumpThreadingPass::processBlock(BasicBlock *BB) {
   if (processImpliedCondition(BB))
     return true;
 
+  if ((CondInst->getOpcode() == Instruction::And ||
+       CondInst->getOpcode() == Instruction::Or) &&
+      CondInst->getParent() == BB && isa<CondBrInst>(Terminator))
+    return processBranchOnAndOr(cast<BinaryOperator>(CondInst));
+
   return false;
 }
 
@@ -1878,6 +1884,38 @@ bool JumpThreadingPass::processBranchOnXOR(BinaryOperator *BO) {
 
   // Try to duplicate BB into PredBB.
   return duplicateCondBranchOnPHIIntoPred(BB, BlocksToFoldInto);
+}
+
+bool JumpThreadingPass::processBranchOnAndOr(BinaryOperator *BO) {
+  BasicBlock *BB = BO->getParent();
+  if (!isa<PHINode>(BB->front()) || BB->isEHPad() ||
+      isa<Constant>(BO->getOperand(0)) || isa<Constant>(BO->getOperand(1)))
+    return false;
+
+  // An AND with a known true operand or an OR with a known false operand
+  // reduces to the other operand. Duplicate the branch on edges where this
+  // simplification is possible.
+  ConstantInt *Identity = ConstantInt::getBool(
+      BO->getContext(), BO->getOpcode() == Instruction::And);
+  for (Value *Op : BO->operands()) {
+    PredValueInfoTy KnownValues;
+    computeValueKnownInPredecessors(Op, BB, KnownValues, WantInteger, BO);
+
+    SmallSetVector<BasicBlock *, 4> Preds;
+    for (const auto &[Known, Pred] : KnownValues)
+      if (Known == Identity && !isa<IndirectBrInst>(Pred->getTerminator()))
+        Preds.insert(Pred);
+
+    if (Preds.empty() || llvm::all_of(predecessors(BB), [&](BasicBlock *Pred) {
+          return Preds.contains(Pred);
+        }))
+      continue;
+
+    if (duplicateCondBranchOnPHIIntoPred(BB, Preds.takeVector()))
+      return true;
+  }
+
+  return false;
 }
 
 /// addPHINodeEntriesForMappedBlock - We're adding 'NewPred' as a new
