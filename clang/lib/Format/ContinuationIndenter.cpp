@@ -420,9 +420,9 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
     // more indented than we would've been. To avoid odd looking breaks, make
     // sure we save at least IndentWidth.
     if (State.Stack.size() > 2 &&
-        State.Stack[State.Stack.size() - 3].Indent +
-                Style.ContinuationIndentWidth + Style.IndentWidth <
-            State.Stack[State.Stack.size() - 2].Indent) {
+        State.Stack[State.Stack.size() - 3].Indent.Total +
+                Style.ContinuationIndentWidth + Style.IndentWidth <=
+            State.Stack[State.Stack.size() - 2].Indent.Total) {
       return false;
     }
 
