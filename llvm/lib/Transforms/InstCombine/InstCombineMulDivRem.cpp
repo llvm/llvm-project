@@ -759,15 +759,13 @@ static bool getFSqrtDivOptPattern(Instruction *Div,
   Value *A;
   if (match(Div, m_FDiv(m_FPOne(), m_Sqrt(m_Value(A)))) ||
       match(Div, m_FDiv(m_SpecificFP(-1.0), m_Sqrt(m_Value(A))))) {
-    for (User *U : Div->users()) {
-      Instruction *I = cast<Instruction>(U);
+    for (Instruction *I : Div->users()) {
       if (match(I, m_FMul(m_Specific(Div), m_Specific(Div))))
         R1.insert(I);
     }
 
     CallInst *CI = cast<CallInst>(Div->getOperand(1));
-    for (User *U : CI->users()) {
-      Instruction *I = cast<Instruction>(U);
+    for (Instruction *I : CI->users()) {
       if (match(I, m_FDiv(m_Specific(A), m_Sqrt(m_Specific(A)))))
         R2.insert(I);
     }

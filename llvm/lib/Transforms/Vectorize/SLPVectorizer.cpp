@@ -9077,8 +9077,8 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
                 continue;
               if (LI->hasNUsesOrMore(UsesLimit))
                 return false;
-              for (User *U : LI->users()) {
-                if (auto *UI = dyn_cast<Instruction>(U); UI && isDeleted(UI))
+              for (Instruction *U : LI->users()) {
+                if (isDeleted(U))
                   continue;
                 for (const TreeEntry *UTE : getTreeEntries(U)) {
                   for (int I : seq<int>(UTE->getNumOperands())) {
@@ -13732,8 +13732,8 @@ bool BoUpSLP::canVectorStoreInsertValue(const TreeEntry *E) const {
       return false;
 
     bool HasExternalUser = false;
-    for (User *U : IV->users()) {
-      if (auto *UI = dyn_cast<Instruction>(U); UI && isDeleted(UI))
+    for (Instruction *U : IV->users()) {
+      if (isDeleted(U))
         continue;
       if (is_contained(E->Scalars, U))
         continue;
@@ -27611,11 +27611,10 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
          TE->UserTreeIndex.UserTE->getOpcode() == Instruction::PHI)) {
       // Insert before all users.
       Instruction *InsertPt = PrevVec->getParent()->getTerminator();
-      for (User *U : PrevVec->users()) {
-        if (U == UserI)
+      for (Instruction *UI : PrevVec->users()) {
+        if (UI == UserI)
           continue;
-        auto *UI = dyn_cast<Instruction>(U);
-        if (!UI || isa<PHINode>(UI) || UI->getParent() != InsertPt->getParent())
+        if (isa<PHINode>(UI) || UI->getParent() != InsertPt->getParent())
           continue;
         if (UI->comesBefore(InsertPt))
           InsertPt = UI;
@@ -29505,15 +29504,14 @@ void BoUpSLP::BlockScheduling::calculateDependencies(
     BundleMember->resetUnscheduledDeps();
     // Handle def-use chain dependencies.
     SmallDenseMap<Value *, unsigned> UserToNumOps;
-    for (User *U : BundleMember->getInst()->users()) {
+    for (Instruction *U : BundleMember->getInst()->users()) {
       if (isa<PHINode>(U))
         continue;
       if (ScheduleData *UseSD = getScheduleData(U)) {
         // The operand is a copyable element - skip.
         if (!ScheduleCopyableDataMap.empty() &&
-            areAllOperandsReplacedByCopyableData(cast<Instruction>(U),
-                                                 BundleMember->getInst(), *SLP,
-                                                 ++UserToNumOps[U]))
+            areAllOperandsReplacedByCopyableData(U, BundleMember->getInst(),
+                                                 *SLP, ++UserToNumOps[U]))
           continue;
         unsigned ExtraDeps = 1;
         // Increment twice, since the operand was expanded in binop.
@@ -30979,10 +30977,9 @@ void BoUpSLP::computeMinimumValueSizes() {
       SmallPtrSet<Instruction *, 8> Visited;
       int NumUsers = 0;
       while (!Worklist.empty()) {
-        for (User *U : Worklist.pop_back_val()->users()) {
+        for (Instruction *UI : Worklist.pop_back_val()->users()) {
           if (++NumUsers > UsesLimit)
             return true;
-          auto *UI = cast<Instruction>(U);
           if (Candidate.UserIgnoreSet.contains(UI) ||
               !UI->getType()->isIntOrIntVectorTy() ||
               !Visited.insert(UI).second || IsDemotedUser(UI))
@@ -31390,13 +31387,13 @@ SLPVectorizerPass::vectorizeStoreChainImpl(ArrayRef<Value *> Chain, BoUpSLP &R,
         return true;
       unsigned Outside = 0;
       bool HasNonBenign = false;
-      for (User *U : I->users()) {
+      for (Instruction *U : I->users()) {
         if (Stores.contains(U))
           continue;
         ++Outside;
         if (Outside > 2)
           return true;
-        if (!IsBenignOutsideUser(cast<Instruction>(U)))
+        if (!IsBenignOutsideUser(U))
           HasNonBenign = true;
         if (Outside == 2 && HasNonBenign)
           return true;
@@ -35844,8 +35841,7 @@ private:
               continue;
             }
             InstructionCost ScalarCost = 0;
-            for (User *U : RdxVal->users()) {
-              auto *RdxOp = cast<Instruction>(U);
+            for (Instruction *RdxOp : RdxVal->users()) {
               // The loop-carried root is not removed: the horizontal form
               // folds the accumulator phi back through it, the accumulator
               // form replaces it with the lane-wise operation, costed by

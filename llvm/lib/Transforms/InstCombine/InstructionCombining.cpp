@@ -2017,8 +2017,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
   bool IdenticalUsers = false;
   if (!AllowMultipleUses && !OneUse) {
     // Walk the use list for the instruction, comparing them to I.
-    for (User *U : PN->users()) {
-      Instruction *UI = cast<Instruction>(U);
+    for (Instruction *UI : PN->users()) {
       if (UI != &I && !I.isIdenticalTo(UI))
         return nullptr;
     }
@@ -2154,8 +2153,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
   if (IdenticalUsers) {
     // Collect and deduplicate users up-front to avoid iterator invalidation.
     SmallSetVector<Instruction *, 4> ToReplace;
-    for (User *U : PN->users()) {
-      Instruction *User = cast<Instruction>(U);
+    for (Instruction *User : PN->users()) {
       if (User == &I)
         continue;
       ToReplace.insert(User);
@@ -3765,8 +3763,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
 
   do {
     Instruction *PI = Worklist.pop_back_val();
-    for (User *U : PI->users()) {
-      Instruction *I = cast<Instruction>(U);
+    for (Instruction *I : PI->users()) {
       if (Users.size() >= MaxUsers)
         return std::nullopt;
       switch (I->getOpcode()) {

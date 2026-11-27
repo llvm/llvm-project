@@ -3724,8 +3724,7 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   Value *NewAddressPtr = IRB.CreateIntToPtr(NewAddress, AI->getType());
 
   // Remove lifetime markers now that this is no longer an alloca.
-  for (User *U : make_early_inc_range(AI->users())) {
-    auto *I = cast<Instruction>(U);
+  for (Instruction *I : make_early_inc_range(AI->users())) {
     if (I->isLifetimeStartOrEnd())
       I->eraseFromParent();
   }
