@@ -1,4 +1,5 @@
-; RUN: opt -S < %s -passes='require<libcall-lowering-info>,atomic-expand' -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -mattr=+ptx87 -verify-each | FileCheck %s
+; RUN: opt -S < %s -passes='require<libcall-lowering-info>,atomic-expand' -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -mattr=+ptx87 -verify-each | FileCheck %s --implicit-check-not='call i1 @llvm.nvvm.isspacep.local'
+; RUN: opt -S < %s -passes='require<libcall-lowering-info>,atomic-expand,atomic-expand' -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90 -mattr=+ptx87 -verify-each | FileCheck %s --implicit-check-not='call i1 @llvm.nvvm.isspacep.local'
 
 ; A generic pointer can designate thread-private local memory. The local path
 ; must preserve the comparison result and alignment without an atomic access.
@@ -62,6 +63,7 @@ define i1 @return_success(ptr %p, i32 %cmp, i32 %new) {
 ; Tail returns still allow normal fence insertion on the native path.
 define i64 @return_old_seq_cst(ptr %p, i64 %cmp, i64 %new) {
 ; CHECK-LABEL: define i64 @return_old_seq_cst(
+; CHECK: call i1 @llvm.nvvm.isspacep.local(ptr %p)
 ; CHECK: cmpxchg.atomic:
 ; CHECK-NEXT: fence syncscope("device") seq_cst
 ; CHECK-NEXT: [[CAS:%.*]] = cmpxchg volatile ptr %p, i64 %cmp, i64 %new syncscope("device") acquire acquire, align 16, !noalias.addrspace ![[NOTLOCAL]]
@@ -83,6 +85,7 @@ declare void @side_effect()
 ; Preserve work after the CAS, executing it once after the paths merge.
 define i32 @return_old_with_side_effect(ptr %p, i32 %cmp, i32 %new) {
 ; CHECK-LABEL: define i32 @return_old_with_side_effect(
+; CHECK: call i1 @llvm.nvvm.isspacep.local(ptr %p)
 ; CHECK: cmpxchg.local:
 ; CHECK: br label %cmpxchg.end
 ; CHECK: cmpxchg.atomic:
@@ -121,9 +124,34 @@ define { i8, i1 } @generic_i8(ptr %p, i8 %cmp, i8 %new) {
 ; CHECK: load i8, ptr %p, align 1
 ; CHECK: store i8 {{%.*}}, ptr %p, align 1
 ; CHECK: cmpxchg.atomic:
-; CHECK: cmpxchg ptr {{%.*}}, i32 {{%.*}}, i32 {{%.*}} monotonic monotonic
+; CHECK: cmpxchg ptr {{%.*}}, i32 {{%.*}}, i32 {{%.*}} monotonic monotonic, align 4, !noalias.addrspace ![[NOTLOCAL]]
   %pair = cmpxchg ptr %p, i8 %cmp, i8 %new monotonic monotonic, align 1
   ret { i8, i1 } %pair
+}
+
+; Revisit a tail-returning partword CAS to insert fences around the native
+; emulation loop. Its replacement CAS must still exclude local memory.
+define i1 @return_success_volatile_i16(ptr %p, i16 %cmp, i16 %new) {
+; CHECK-LABEL: define i1 @return_success_volatile_i16(
+; CHECK: [[ISLOCAL:%.*]] = call i1 @llvm.nvvm.isspacep.local(ptr %p)
+; CHECK-NEXT: br i1 [[ISLOCAL]], label %cmpxchg.local, label %cmpxchg.atomic
+; CHECK: cmpxchg.atomic:
+; CHECK-NEXT: fence syncscope("block") release
+; CHECK: partword.cmpxchg.loop:
+; CHECK: cmpxchg weak volatile ptr {{%.*}}, i32 {{%.*}}, i32 {{%.*}} syncscope("block") monotonic monotonic, align 4, !noalias.addrspace ![[NOTLOCAL]]
+; CHECK: partword.cmpxchg.end:
+; CHECK: fence syncscope("block") acquire
+; CHECK: ret i1
+; CHECK: cmpxchg.local:
+; CHECK-NEXT: [[OLD:%.*]] = load volatile i16, ptr %p, align 2
+; CHECK-NEXT: [[EQUAL:%.*]] = icmp eq i16 [[OLD]], %cmp
+; CHECK-NEXT: [[NEXT:%.*]] = select i1 [[EQUAL]], i16 %new, i16 [[OLD]]
+; CHECK-NEXT: store volatile i16 [[NEXT]], ptr %p, align 2
+; CHECK-NEXT: ret i1 [[EQUAL]]
+; CHECK-NEXT: }
+  %pair = cmpxchg weak volatile ptr %p, i16 %cmp, i16 %new syncscope("block") acq_rel acquire, align 2
+  %success = extractvalue { i16, i1 } %pair, 1
+  ret i1 %success
 }
 
 ; Do not create a result phi when the original result has no users.
@@ -159,6 +187,35 @@ define { ptr, i1 } @noalias_pointer(ptr %p, ptr %cmp, ptr %new) {
 ; CHECK: ret { ptr, i1 }
   %pair = cmpxchg ptr %p, ptr %cmp, ptr %new monotonic monotonic, align 8, !noalias.addrspace !0
   ret { ptr, i1 } %pair
+}
+
+; The stored pointer's address space does not describe the memory being
+; accessed. Integer conversion must retain existing exclusions, and the split
+; must add the local exclusion without dropping those original exclusions.
+define { ptr addrspace(3), i1 } @generic_pointer(ptr %p, ptr addrspace(3) %cmp, ptr addrspace(3) %new) {
+; CHECK-LABEL: define { ptr addrspace(3), i1 } @generic_pointer(
+; CHECK: [[CMP:%.*]] = ptrtoint ptr addrspace(3) %cmp to i64
+; CHECK-NEXT: [[NEW:%.*]] = ptrtoint ptr addrspace(3) %new to i64
+; CHECK-NEXT: [[ISLOCAL:%.*]] = call i1 @llvm.nvvm.isspacep.local(ptr %p)
+; CHECK-NEXT: br i1 [[ISLOCAL]], label %cmpxchg.local, label %cmpxchg.atomic
+; CHECK: cmpxchg.local:
+; CHECK-NEXT: [[OLD:%.*]] = load i64, ptr %p, align 8
+; CHECK-NEXT: [[EQUAL:%.*]] = icmp eq i64 [[OLD]], [[CMP]]
+; CHECK-NEXT: [[NEXT:%.*]] = select i1 [[EQUAL]], i64 [[NEW]], i64 [[OLD]]
+; CHECK-NEXT: store i64 [[NEXT]], ptr %p, align 8
+; CHECK: cmpxchg.atomic:
+; CHECK-NEXT: [[CAS:%.*]] = cmpxchg ptr %p, i64 [[CMP]], i64 [[NEW]] acq_rel acquire, align 8, !noalias.addrspace ![[DISJOINT:[0-9]+]]
+; CHECK-NEXT: br label %cmpxchg.end
+; CHECK: cmpxchg.end:
+; CHECK-NEXT: [[RESULT:%.*]] = phi { i64, i1 } [ {{%.*}}, %cmpxchg.local ], [ [[CAS]], %cmpxchg.atomic ]
+; CHECK-NEXT: [[OLDINT:%.*]] = extractvalue { i64, i1 } [[RESULT]], 0
+; CHECK-NEXT: [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[RESULT]], 1
+; CHECK-NEXT: [[OLDPTR:%.*]] = inttoptr i64 [[OLDINT]] to ptr addrspace(3)
+; CHECK-NEXT: [[PAIR0:%.*]] = insertvalue { ptr addrspace(3), i1 } poison, ptr addrspace(3) [[OLDPTR]], 0
+; CHECK-NEXT: [[PAIR1:%.*]] = insertvalue { ptr addrspace(3), i1 } [[PAIR0]], i1 [[SUCCESS]], 1
+; CHECK-NEXT: ret { ptr addrspace(3), i1 } [[PAIR1]]
+  %pair = cmpxchg ptr %p, ptr addrspace(3) %cmp, ptr addrspace(3) %new acq_rel acquire, align 8, !noalias.addrspace !2
+  ret { ptr addrspace(3), i1 } %pair
 }
 
 define { i32, i1 } @global_i32(ptr addrspace(1) %p) {
@@ -203,7 +260,7 @@ define { i32, i1 } @noalias_disjoint(ptr %p) {
 ; CHECK-LABEL: define { i32, i1 } @noalias_disjoint(
 ; CHECK: call i1 @llvm.nvvm.isspacep.local(ptr %p)
 ; CHECK: cmpxchg.atomic:
-; CHECK-NEXT: {{%.*}} = cmpxchg ptr %p, i32 0, i32 1 monotonic monotonic, align 4, !noalias.addrspace ![[DISJOINT:[0-9]+]]
+; CHECK-NEXT: {{%.*}} = cmpxchg ptr %p, i32 0, i32 1 monotonic monotonic, align 4, !noalias.addrspace ![[DISJOINT]]
   %pair = cmpxchg ptr %p, i32 0, i32 1 monotonic monotonic, align 4, !noalias.addrspace !2
   ret { i32, i1 } %pair
 }

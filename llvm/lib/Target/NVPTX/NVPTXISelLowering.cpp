@@ -8347,10 +8347,11 @@ void NVPTXTargetLowering::emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const {
 
   CI->removeFromParent();
   CI->insertInto(AtomicBB, AtomicBB->end());
-  // AtomicExpand visits the new blocks as well. Exclude local memory on the
-  // remaining atomic so it is not expanded again, while retaining any existing
-  // address-space exclusions. Normal fence/partword lowering then applies only
-  // to the atomic path.
+  // The false edge of isspacep.local proves that this access cannot target an
+  // object allocated in local memory, although Addr still has generic type.
+  // Record that fact while retaining any existing address-space exclusions.
+  // AtomicExpand visits the new blocks as well; this metadata lets the atomic
+  // path proceed to normal fence/partword lowering without another local split.
   MDNode *NotLocal =
       MDBuilder(Ctx).createRange(APInt(32, NVPTXAS::ADDRESS_SPACE_LOCAL),
                                  APInt(32, NVPTXAS::ADDRESS_SPACE_LOCAL + 1));
