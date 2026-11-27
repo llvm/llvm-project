@@ -3228,6 +3228,8 @@ TEST(TripleTest, FileFormat) {
   EXPECT_EQ(Triple::GOFF, Triple("s390-ibm-zos-goff").getObjectFormat());
   EXPECT_EQ(Triple::GOFF, Triple("s390-unknown-zos-goff").getObjectFormat());
   EXPECT_EQ(Triple::GOFF, Triple("s390---goff").getObjectFormat());
+  EXPECT_EQ(Triple::UnknownObjectFormat,
+            Triple("s390-unknown-linux").getObjectFormat());
 
   EXPECT_EQ(Triple::Wasm, Triple("wasm32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::Wasm, Triple("wasm64-unknown-unknown").getObjectFormat());

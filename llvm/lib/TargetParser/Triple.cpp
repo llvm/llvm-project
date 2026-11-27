@@ -1037,7 +1037,9 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
     return Triple::ELF;
 
   case Triple::systemz32:
-    return Triple::GOFF;
+    if (T.isOSzOS())
+      return Triple::GOFF;
+    return Triple::UnknownObjectFormat;
 
   case Triple::wasm32:
   case Triple::wasm64:
