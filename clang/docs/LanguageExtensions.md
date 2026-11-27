@@ -3735,7 +3735,7 @@ Query for this feature with `__has_builtin(__builtin_convertvector)`.
 uint8_t __builtin_bitreverse8(uint8_t x);
 uint16_t __builtin_bitreverse16(uint16_t x);
 uint32_t __builtin_bitreverse32(uint32_t x);
-uint64_t __builtin_bitreverse64(uint32_t x);
+uint64_t __builtin_bitreverse64(uint64_t x);
 T __builtin_bitreverseg(T x);
 ```
 
@@ -3793,7 +3793,7 @@ expressions.
 uint8_t __builtin_rotateright8(uint8_t x, uint8_t y);
 uint16_t __builtin_rotateright16(uint16_t x, uint16_t y);
 uint32_t __builtin_rotateright32(uint32_t x, uint32_t y);
-uint64_t __builtin_rotateright64(uint32_t x, uint64_t y);
+uint64_t __builtin_rotateright64(uint64_t x, uint64_t y);
 ```
 
 **Examples**:
