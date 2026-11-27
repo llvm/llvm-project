@@ -1612,4 +1612,57 @@ TEST_P(UncheckedExpectedAccessTest, AssignUncheckedVoid) {
   )");
 }
 
+// The framework initializes the "has_value" property of a returned expected
+// only for calls with a direct callee.
+TEST_P(UncheckedExpectedAccessTest, CallThroughFunctionPointer) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> (*fp)(), bool cond) {
+      auto e = fp();
+      if (cond) {
+        if (!e)
+          return 0;
+      }
+      if (cond)
+        return *e;
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> (*fp)()) {
+      auto e = fp();
+      if (e)
+        return *e;
+      return 0;
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, CallThroughFunctionPointerUnchecked) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> (*fp)()) {
+      return *fp(); // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> (*fp)(), bool cond) {
+      auto e = fp();
+      if (cond) {
+        if (!e)
+          return 0;
+      }
+      return *e; // [[unsafe]]
+    }
+  )");
+}
+
 } // namespace clang::dataflow::test

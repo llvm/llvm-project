@@ -183,6 +183,8 @@ auto expectedErrorAssignment() {
                              hasArgument(1, hasUnexpectedType()));
 }
 
+auto isCallReturningExpected() { return callExpr(hasExpectedType()); }
+
 /// Ensures that `E` is mapped to a `BoolValue` and returns its formula.
 const Formula &forceBoolValue(Environment &Env, const Expr &E) {
   auto *Value = Env.get<BoolValue>(E);
@@ -363,6 +365,16 @@ void transferErrorAssignment(const CXXOperatorCallExpr *E,
   assignExpected(*E, State.Env.getBoolLiteralValue(false), State.Env);
 }
 
+void transferCallReturningExpected(const CallExpr *E,
+                                   const MatchFinder::MatchResult &,
+                                   LatticeTransferState &State) {
+  // The framework initializes "has_value" only for calls with a direct callee.
+  RecordStorageLocation *Loc = E->isPRValue()
+                                   ? &State.Env.getResultObjectLocation(*E)
+                                   : State.Env.get<RecordStorageLocation>(*E);
+  getHasValue(State.Env, Loc);
+}
+
 // FIXME: Model `swap`.
 auto buildTransferMatchSwitch() {
   return CFGMatchSwitchBuilder<LatticeTransferState>()
@@ -397,6 +409,9 @@ auto buildTransferMatchSwitch() {
                                           transferErrorAssignment)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedAssignment(),
                                           transferValueAssignment)
+      // other cases of returning expected
+      .CaseOfCFGStmt<CallExpr>(isCallReturningExpected(),
+                               transferCallReturningExpected)
       .Build();
 }
 
