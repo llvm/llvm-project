@@ -2314,14 +2314,14 @@ static void finalizeCommonBlockDefinition(
   fir::RecordType commonTy = mlir::cast<fir::RecordType>(global.getType());
   auto initFunc = [&](fir::FirOpBuilder &builder) {
     mlir::Value cb = fir::ZeroOp::create(builder, loc, commonTy);
-    unsigned tupIdx = 0;
+    unsigned fieldIdx = 0;
     std::size_t offset = 0;
     LLVM_DEBUG(llvm::dbgs() << "block {\n");
     for (const Fortran::semantics::MutableSymbolRef &mem : cmnBlkMems) {
       if (const auto *memDet =
               mem->detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
         if (mem->offset() > offset) {
-          ++tupIdx;
+          ++fieldIdx;
           offset = mem->offset();
         }
         if (memDet->init()) {
@@ -2333,14 +2333,14 @@ static void finalizeCommonBlockDefinition(
                   ? Fortran::lower::genInitialDataTarget(
                         converter, loc, converter.genType(*mem), initExpr)
                   : genInitializerExprValue(converter, loc, initExpr);
-          auto [fieldName, fieldTy] = commonTy.getTypeList()[tupIdx];
+          auto [fieldName, fieldTy] = commonTy.getTypeList()[fieldIdx];
           mlir::Value castVal =
               builder.createConvert(loc, fieldTy, fir::getBase(initVal));
           cb = fir::InsertValueOp::create(
               builder, loc, commonTy, cb, castVal,
               builder.getArrayAttr({builder.getStringAttr(fieldName),
                                     mlir::TypeAttr::get(commonTy)}));
-          ++tupIdx;
+          ++fieldIdx;
           offset = mem->offset() + mem->size();
         }
       }
