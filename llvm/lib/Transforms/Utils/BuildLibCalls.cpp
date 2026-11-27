@@ -475,10 +475,13 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_strndup:
+  case LibFunc_dunder_strndup:
     Changed |= setArgNoUndef(F, 1);
     [[fallthrough]];
   case LibFunc_strdup:
+  case LibFunc_dunder_strdup:
     Changed |= setAllocFamily(F, "malloc");
+    Changed |= setAllocKind(F, AllocFnKind::Alloc);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMemOrErrnoMem(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
@@ -1139,16 +1142,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     // Cannot give undef pointer/size
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 3);
-    break;
-  case LibFunc_dunder_strndup:
-    Changed |= setArgNoUndef(F, 1);
-    [[fallthrough]];
-  case LibFunc_dunder_strdup:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setRetDoesNotAlias(F);
-    Changed |= setWillReturn(F);
-    Changed |= setDoesNotCapture(F, 0);
-    Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_dunder_strtok_r:
     Changed |= setDoesNotThrow(F);

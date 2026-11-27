@@ -1041,6 +1041,9 @@ declare i64 @strcspn(ptr, ptr)
 ; CHECK: declare noalias ptr @strdup(ptr readonly captures(none)) [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC:#[0-9]+]]
 declare ptr @strdup(ptr)
 
+; CHECK-LINUX: declare noalias ptr @__strdup(ptr readonly captures(none)) [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
+declare ptr @__strdup(ptr)
+
 ; CHECK: declare i64 @strlen(ptr captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
 declare i64 @strlen(ptr)
 
@@ -1058,6 +1061,9 @@ declare ptr @strncpy(ptr, ptr, i64)
 
 ; CHECK: declare noalias ptr @strndup(ptr readonly captures(none), i64 noundef) [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
 declare ptr @strndup(ptr, i64)
+
+; CHECK-LINUX: declare noalias ptr @__strndup(ptr readonly captures(none), i64 noundef) [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
+declare ptr @__strndup(ptr, i64)
 
 ; CHECK: declare i64 @strnlen(ptr captures(none), i64) [[ARGMEMONLY_NOFREE_NOSYNC_NOUNWIND_READONLY_WILLRETURN]]
 declare i64 @strnlen(ptr, i64)
@@ -1261,7 +1267,7 @@ declare void @memset_pattern16(ptr, ptr, i64)
 ; CHECK-DAG: attributes [[ARGMEMONLY_NOFREE_NOSYNC_NOUNWIND]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE1_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1) memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOUNWIND_WILLRETURN_ALLOCKIND_REALLOC_ALLOCSIZE12_FAMILY_MALLOC]] = { mustprogress nounwind willreturn allockind("realloc") allocsize(1,2) memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
-; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMORERRNOMEMONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]] = { mustprogress nofree nounwind willreturn allockind("alloc") memory(argmem: readwrite, inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CHECK-DAG: attributes [[INACCESSIBLEMEMORARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]] = { mustprogress nofree nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN_NOUNWIND]] = { cold nofree noreturn nounwind }
 ; CHECK-DAG: attributes [[NOFREE_COLD_NORETURN]] = { cold nofree noreturn }
