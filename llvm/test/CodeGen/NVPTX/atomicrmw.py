@@ -57,7 +57,7 @@ REPRESENTATIVE_OPS = [
 
 atomicrmw_func = Template(
     """define ${datatype} @${operation}_${ordering}_${datatype}_${addrspace}_${ptx_scope}(ptr${addrspace_cast} %addr, ${datatype} %val) {
-        %retval = atomicrmw ${operation} ptr ${addrspace_cast} %addr, ${datatype} %val syncscope(\"${llvm_scope}\") ${ordering}
+        %retval = atomicrmw ${operation} ptr ${addrspace_cast} %addr, ${datatype} %val syncscope(\"${llvm_scope}\") ${ordering}${metadata}
         ret $datatype %retval
 }
 """
@@ -65,7 +65,7 @@ atomicrmw_func = Template(
 
 atomicrmw_elementwise_func = Template(
     """define ${datatype} @${operation}_${ordering}_${datatype_name}_${addrspace}_${ptx_scope}(ptr${addrspace_cast} %addr, ${datatype} %val) {
-        %retval = atomicrmw elementwise ${operation} ptr ${addrspace_cast} %addr, ${datatype} %val syncscope(\"${llvm_scope}\") ${ordering}
+        %retval = atomicrmw elementwise ${operation} ptr ${addrspace_cast} %addr, ${datatype} %val syncscope(\"${llvm_scope}\") ${ordering}${metadata}
         ret $datatype %retval
 }
 """
@@ -131,6 +131,7 @@ def print_atomicrmw(
             ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
             llvm_scope=llvm_scope,
             addrspace_cast=get_addrspace_cast(addrspace),
+            metadata=", !noalias.addrspace !999" if addrspace == 0 else "",
         ),
         file=fp,
     )
@@ -232,3 +233,5 @@ if __name__ == "__main__":
                             addrspace,
                             llvm_scope,
                         )
+
+                print("\n; Native atomic instruction tests exclude thread-private local memory.\n!999 = !{i32 5, i32 6}", file=fp)

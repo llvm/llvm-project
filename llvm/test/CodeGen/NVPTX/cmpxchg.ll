@@ -127,7 +127,7 @@ define i8 @relaxed_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:  $L__BB0_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new monotonic monotonic
+  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new monotonic monotonic, !noalias.addrspace !999
   ret i8 %new
 }
 
@@ -253,7 +253,7 @@ define i8 @acquire_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acquire acquire
+  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acquire acquire, !noalias.addrspace !999
   ret i8 %new
 }
 
@@ -379,7 +379,7 @@ define i8 @release_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:  $L__BB2_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new release monotonic
+  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new release monotonic, !noalias.addrspace !999
   ret i8 %new
 }
 
@@ -508,7 +508,7 @@ define i8 @acq_rel_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acq_rel acquire
+  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new acq_rel acquire, !noalias.addrspace !999
   ret i8 %new
 }
 
@@ -637,7 +637,7 @@ define i8 @seq_cst_sys_i8(ptr %addr, i8 %cmp, i8 %new) {
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r13;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new seq_cst seq_cst
+  %pairold = cmpxchg ptr %addr, i8 %cmp, i8 %new seq_cst seq_cst, !noalias.addrspace !999
   ret i8 %new
 }
 
@@ -760,7 +760,7 @@ define i16 @relaxed_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:  $L__BB5_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new monotonic monotonic
+  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new monotonic monotonic, !noalias.addrspace !999
   ret i16 %new
 }
 
@@ -885,7 +885,7 @@ define i16 @acquire_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acquire acquire
+  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acquire acquire, !noalias.addrspace !999
   ret i16 %new
 }
 
@@ -1010,7 +1010,7 @@ define i16 @release_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:  $L__BB7_3: // %partword.cmpxchg.end
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new release monotonic
+  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new release monotonic, !noalias.addrspace !999
   ret i16 %new
 }
 
@@ -1138,7 +1138,7 @@ define i16 @acq_rel_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acq_rel acquire
+  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new acq_rel acquire, !noalias.addrspace !999
   ret i16 %new
 }
 
@@ -1267,7 +1267,7 @@ define i16 @seq_cst_sys_i16(ptr %addr, i16 %cmp, i16 %new) {
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r14;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new seq_cst seq_cst
+  %pairold = cmpxchg ptr %addr, i16 %cmp, i16 %new seq_cst seq_cst, !noalias.addrspace !999
   ret i16 %new
 }
 
@@ -1311,7 +1311,7 @@ define i32 @relaxed_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    atom.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new monotonic monotonic
+  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new monotonic monotonic, !noalias.addrspace !999
   ret i32 %new
 }
 
@@ -1356,7 +1356,7 @@ define i32 @acq_rel_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    atom.acq_rel.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acq_rel acquire
+  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acq_rel acquire, !noalias.addrspace !999
   ret i32 %new
 }
 
@@ -1400,7 +1400,7 @@ define i32 @acquire_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    atom.acquire.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acquire acquire
+  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new acquire acquire, !noalias.addrspace !999
   ret i32 %new
 }
 
@@ -1444,7 +1444,7 @@ define i32 @release_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    atom.release.cas.b32 %r3, [%rd1], %r1, %r2;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new release monotonic
+  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new release monotonic, !noalias.addrspace !999
   ret i32 %new
 }
 
@@ -1492,7 +1492,7 @@ define i32 @seq_cst_sys_i32(ptr %addr, i32 %cmp, i32 %new) {
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new seq_cst seq_cst
+  %pairold = cmpxchg ptr %addr, i32 %cmp, i32 %new seq_cst seq_cst, !noalias.addrspace !999
   ret i32 %new
 }
 
@@ -1533,7 +1533,7 @@ define i64 @relaxed_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    atom.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new monotonic monotonic
+  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new monotonic monotonic, !noalias.addrspace !999
   ret i64 %new
 }
 
@@ -1574,7 +1574,7 @@ define i64 @acquire_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    atom.acquire.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acquire acquire
+  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acquire acquire, !noalias.addrspace !999
   ret i64 %new
 }
 
@@ -1616,7 +1616,7 @@ define i64 @acq_rel_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    atom.acq_rel.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acq_rel acquire
+  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new acq_rel acquire, !noalias.addrspace !999
   ret i64 %new
 }
 
@@ -1657,7 +1657,7 @@ define i64 @release_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    atom.release.cas.b64 %rd4, [%rd1], %rd2, %rd3;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new release monotonic
+  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new release monotonic, !noalias.addrspace !999
   ret i64 %new
 }
 
@@ -1702,9 +1702,12 @@ define i64 @seq_cst_sys_i64(ptr %addr, i64 %cmp, i64 %new) {
 ; SM90-NEXT:    fence.acquire.sys;
 ; SM90-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; SM90-NEXT:    ret;
-  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new seq_cst seq_cst
+  %pairold = cmpxchg ptr %addr, i64 %cmp, i64 %new seq_cst seq_cst, !noalias.addrspace !999
   ret i64 %new
 }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}
+
+; Native atomic instruction tests exclude thread-private local memory.
+!999 = !{i32 5, i32 6}
