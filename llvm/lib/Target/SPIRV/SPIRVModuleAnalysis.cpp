@@ -2808,8 +2808,9 @@ void addInstrRequirements(const MachineInstr &MI,
                           SPIRV::Capability::Shader);
 }
 
-// Returns true if MF accesses a variable decorated BuiltIn PointSize.
-static bool accessesPointSize(const MachineFunction &MF) {
+// Returns the first instruction in MF that uses a variable decorated BuiltIn
+// PointSize, or nullptr.
+static const MachineInstr *findPointSizeUse(const MachineFunction &MF) {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (const MachineBasicBlock &MBB : MF)
     for (const MachineInstr &MI : MBB) {
@@ -2821,9 +2822,9 @@ static bool accessesPointSize(const MachineFunction &MF) {
            MRI.use_nodbg_instructions(MI.getOperand(0).getReg()))
         if (User.getOpcode() != SPIRV::OpDecorate &&
             User.getOpcode() != SPIRV::OpName)
-          return true;
+          return &User;
     }
-  return false;
+  return nullptr;
 }
 
 // Vulkan allows BuiltIn PointSize only in the MeshEXT, MeshNV, Vertex,
@@ -2837,18 +2838,18 @@ static void checkFragmentPointSize(const Module &M,
     if (EntryF.getFnAttribute("hlsl.shader").getValueAsString() != "pixel")
       continue;
 
-    // Walk its static call tree and report the first function that accesses
-    // PointSize.
+    // Walk its static call tree and report the first use of PointSize.
     SmallPtrSet<const Function *, 8> Visited;
     SmallVector<const Function *, 8> Worklist = {&EntryF};
     while (!Worklist.empty()) {
       const Function *F = Worklist.pop_back_val();
       if (!Visited.insert(F).second)
         continue;
-      if (const MachineFunction *MF = GetMF(*F); MF && accessesPointSize(*MF)) {
-        EntryF.getContext().diagnose(DiagnosticInfoUnsupported(
-            EntryF, "BuiltIn PointSize cannot be used in a Fragment entry "
-                    "point (VUID-PointSize-PointSize-04314)"));
+      const MachineFunction *MF = GetMF(*F);
+      if (const MachineInstr *Use = MF ? findPointSizeUse(*MF) : nullptr) {
+        reportUnsupported(*Use,
+                          "BuiltIn PointSize cannot be used in a Fragment "
+                          "entry point (VUID-PointSize-PointSize-04314)");
         break;
       }
 
