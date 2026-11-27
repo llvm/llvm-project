@@ -478,7 +478,7 @@ SmallVector<Value> x86::ace::TileMulIOutProdOp::getIntrinsicOperands(
   x86::amx::TileType accType = getAccTileType();
   SmallVector<Value> tszacc = getTileSizes(loc, accType, rewriter);
 
-  SmallVector<Value> intrinsicOperands = {tszacc[0], tszacc[1], 
+  SmallVector<Value> intrinsicOperands = {tszacc[0], tszacc[1],
                                           adaptor.getAcc(), adaptor.getLhs(),
                                           adaptor.getRhs()};
 
