@@ -2796,7 +2796,8 @@ private:
   StoredDeclsMap *CreateStoredDeclsMap(ASTContext &C) const;
 
   void loadLazyLocalLexicalLookups();
-  void buildLookupImpl(DeclContext *DCtx, bool Internal);
+  void buildLookupImpl(DeclContext *DCtx, bool Internal,
+                       bool LoadExternalTransparent = false);
   void makeDeclVisibleInContextWithFlags(NamedDecl *D, bool Internal,
                                          bool Rediscoverable);
   void makeDeclVisibleInContextImpl(NamedDecl *D, bool Internal);

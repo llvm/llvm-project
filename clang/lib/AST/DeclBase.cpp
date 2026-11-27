@@ -1881,8 +1881,14 @@ StoredDeclsMap *DeclContext::buildLookup() {
       return LookupPtr;
   }
 
+  // In C, the TU has no serialized visible-decls table (see
+  // ASTWriter::GenerateNameLookupTable), so declarations inside transparent
+  // contexts loaded from an AST file can only be found by loading those
+  // contexts' lexical decls here from disk.
+  bool LoadExternalTransparent =
+      isTranslationUnit() && !getParentASTContext().getLangOpts().CPlusPlus;
   for (auto *DC : Contexts)
-    buildLookupImpl(DC, hasExternalVisibleStorage());
+    buildLookupImpl(DC, hasExternalVisibleStorage(), LoadExternalTransparent);
 
   // We no longer have any lazy decls.
   setHasLazyLocalLexicalLookups(false);
@@ -1893,7 +1899,8 @@ StoredDeclsMap *DeclContext::buildLookup() {
 /// declarations contained within DCtx, which will either be this
 /// DeclContext, a DeclContext linked to it, or a transparent context
 /// nested within it.
-void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
+void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal,
+                                  bool LoadExternalTransparent) {
   for (auto *D : DCtx->noload_decls()) {
     // Insert this declaration into the lookup structure, but only if
     // it's semantically within its decl context. Any other decls which
@@ -1914,8 +1921,11 @@ void DeclContext::buildLookupImpl(DeclContext *DCtx, bool Internal) {
     // or inline namespace, add the members of this declaration of that
     // context (recursively).
     if (auto *InnerCtx = dyn_cast<DeclContext>(D))
-      if (InnerCtx->isTransparentContext() || InnerCtx->isInlineNamespace())
-        buildLookupImpl(InnerCtx, Internal);
+      if (InnerCtx->isTransparentContext() || InnerCtx->isInlineNamespace()) {
+        if (LoadExternalTransparent && InnerCtx->hasExternalLexicalStorage())
+          InnerCtx->LoadLexicalDeclsFromExternalStorage();
+        buildLookupImpl(InnerCtx, Internal, LoadExternalTransparent);
+      }
   }
 }
 
