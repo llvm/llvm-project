@@ -2531,9 +2531,7 @@ func.func @test_legacy_const_mxint8_int64(%arg0 : index) -> tensor<2x!tosa.mxint
   return %0 : tensor<2x!tosa.mxint8>
 }
 
-
 // -----
-
 
 !mxint8 = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>
 !mxint8_scale = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8, {1.0, 2.0, 4.0}>
@@ -2575,3 +2573,234 @@ func.func @test_reshape_non_const_invalid_static_size(%arg0: tensor<2x4xf32>) ->
   return %0 : tensor<3x5xf32>
 }
 
+// -----
+
+!block_scaled = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>
+
+func.func @test_decompose_block_scaled_invalid_scale_element_type(%packed: tensor<2x32x!block_scaled>) -> (tensor<2x32xf4E2M1FN>, tensor<2x1xf32>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires scale element type 'f8E8M0FNU', got 'f32'}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x32x!block_scaled>) -> (tensor<2x32xf4E2M1FN>, tensor<2x1xf32>)
+  return %data, %scale : tensor<2x32xf4E2M1FN>, tensor<2x1xf32>
+}
+
+// -----
+
+!block_scaled = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>
+
+func.func @test_decompose_block_scaled_invalid_data_element_type(%packed: tensor<2x32x!block_scaled>) -> (tensor<2x32xi32>, tensor<2x1xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires data element type 'f4E2M1FN', got 'i32'}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x32x!block_scaled>) -> (tensor<2x32xi32>, tensor<2x1xf8E8M0FNU>)
+  return %data, %scale : tensor<2x32xi32>, tensor<2x1xf8E8M0FNU>
+}
+
+// -----
+
+!block_scaled = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>
+
+func.func @test_compose_block_scaled_invalid_scale_element_type(%data: tensor<2x32xf4E2M1FN>, %scale: tensor<2x1xf32>) -> tensor<2x32x!block_scaled> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires scale element type 'f8E8M0FNU', got 'f32'}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x32xf4E2M1FN>, tensor<2x1xf32>) -> tensor<2x32x!block_scaled>
+  return %packed : tensor<2x32x!block_scaled>
+}
+
+// -----
+
+!block_scaled = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>
+
+func.func @test_compose_block_scaled_invalid_data_element_type(%data: tensor<2x32xi32>, %scale: tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!block_scaled> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires data element type 'f4E2M1FN', got 'i32'}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x32xi32>, tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!block_scaled>
+  return %packed : tensor<2x32x!block_scaled>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_invalid_data_rank(%data: tensor<64xf4E2M1FN>, %scale: tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires data shape compatible with the composite tensor}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<64xf4E2M1FN>, tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_invalid_data_outer_dimension(%data: tensor<3x32xf4E2M1FN>, %scale: tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires data shape compatible with the composite tensor}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<3x32xf4E2M1FN>, tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_invalid_data_inner_dimension(%data: tensor<2x64xf4E2M1FN>, %scale: tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires data shape compatible with the composite tensor}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf4E2M1FN>, tensor<2x1xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_invalid_scale_inner_dimension(%data: tensor<2x64xf4E2M1FN>, %scale: tensor<2x1xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires scale shape compatible with 'tensor<2x2xf8E8M0FNU>', got 'tensor<2x1xf8E8M0FNU>'}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf4E2M1FN>, tensor<2x1xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_invalid_scale_shape_unranked_data(%data: tensor<*xf4E2M1FN>, %scale: tensor<2x2xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires scale shape compatible with 'tensor<2x1xf8E8M0FNU>', got 'tensor<2x2xf8E8M0FNU>'}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<*xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) -> tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<2x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_invalid_component_rank_unranked_output(%data: tensor<2x64xf4E2M1FN>, %scale: tensor<4xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires scale shape compatible with 'tensor<2x2xf8E8M0FNU>', got 'tensor<4xf8E8M0FNU>'}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf4E2M1FN>, tensor<4xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_invalid_component_scalar_data(%data: tensor<f4E2M1FN>, %scale: tensor<f8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires data tensor to have rank greater than zero}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<f4E2M1FN>, tensor<f8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_invalid_component_partial_block_unranked_scale(%data: tensor<2x33xf4E2M1FN>, %scale: tensor<*xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires last data dimension to be divisible by block size}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x33xf4E2M1FN>, tensor<*xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_rank0_data_unranked_output(%data: tensor<f4E2M1FN>, %scale: tensor<*xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires data tensor to have rank greater than zero}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<f4E2M1FN>, tensor<*xf8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_compose_block_scaled_rank0_scale_unranked_output(%data: tensor<*xf4E2M1FN>, %scale: tensor<f8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  // expected-error@+1 {{'tosa.compose_block_scaled' op requires scale tensor to have rank greater than zero}}
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<*xf4E2M1FN>, tensor<f8E8M0FNU>) -> tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_data_rank(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<128xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires data shape compatible with}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<128xf4E2M1FN>, tensor<2x2xf8E8M0FNU>)
+  return %data, %scale : tensor<128xf4E2M1FN>, tensor<2x2xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_data_outer_dimension(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<3x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires data shape compatible with}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<3x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>)
+  return %data, %scale : tensor<3x64xf4E2M1FN>, tensor<2x2xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_data_inner_dimension(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x32xf4E2M1FN>, tensor<2x2xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires data shape compatible with}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x32xf4E2M1FN>, tensor<2x2xf8E8M0FNU>)
+  return %data, %scale : tensor<2x32xf4E2M1FN>, tensor<2x2xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_data_scalar(%packed: tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<f4E2M1FN>, tensor<1xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires data tensor to have rank greater than zero}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<f4E2M1FN>, tensor<1xf8E8M0FNU>)
+  return %data, %scale : tensor<f4E2M1FN>, tensor<1xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_scale_rank(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<4xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires scale shape compatible with 'tensor<2x2xf8E8M0FNU>', got 'tensor<4xf8E8M0FNU>'}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<4xf8E8M0FNU>)
+  return %data, %scale : tensor<2x64xf4E2M1FN>, tensor<4xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_scale_outer_dimension(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<3x2xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires scale shape compatible with 'tensor<2x2xf8E8M0FNU>', got 'tensor<3x2xf8E8M0FNU>'}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<3x2xf8E8M0FNU>)
+  return %data, %scale : tensor<2x64xf4E2M1FN>, tensor<3x2xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_scale_inner_dimension(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<2x1xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires scale shape compatible with 'tensor<2x2xf8E8M0FNU>', got 'tensor<2x1xf8E8M0FNU>'}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x64xf4E2M1FN>, tensor<2x1xf8E8M0FNU>)
+  return %data, %scale : tensor<2x64xf4E2M1FN>, tensor<2x1xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_scale_scalar(%packed: tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<32xf4E2M1FN>, tensor<f8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires scale tensor to have rank greater than zero}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<32xf4E2M1FN>, tensor<f8E8M0FNU>)
+  return %data, %scale : tensor<32xf4E2M1FN>, tensor<f8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_scale_shape_unranked_data(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<*xf4E2M1FN>, tensor<2x1xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires scale shape compatible with 'tensor<2x2xf8E8M0FNU>', got 'tensor<2x1xf8E8M0FNU>'}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<*xf4E2M1FN>, tensor<2x1xf8E8M0FNU>)
+  return %data, %scale : tensor<*xf4E2M1FN>, tensor<2x1xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_data_shape_unranked_scale(%packed: tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x32xf4E2M1FN>, tensor<*xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires data shape compatible with}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x32xf4E2M1FN>, tensor<*xf8E8M0FNU>)
+  return %data, %scale : tensor<2x32xf4E2M1FN>, tensor<*xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_scale_dynamic_outer_dimension(%packed: tensor<?x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<?x64xf4E2M1FN>, tensor<?x1xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires scale shape compatible with 'tensor<?x2xf8E8M0FNU>', got 'tensor<?x1xf8E8M0FNU>'}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<?x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<?x64xf4E2M1FN>, tensor<?x1xf8E8M0FNU>)
+  return %data, %scale : tensor<?x64xf4E2M1FN>, tensor<?x1xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_invalid_scale_dynamic_inner_dimension(%packed: tensor<2x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x?xf4E2M1FN>, tensor<3x?xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires scale shape compatible with 'tensor<2x?xf8E8M0FNU>', got 'tensor<3x?xf8E8M0FNU>'}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<2x?x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<2x?xf4E2M1FN>, tensor<3x?xf8E8M0FNU>)
+  return %data, %scale : tensor<2x?xf4E2M1FN>, tensor<3x?xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_rank0_data_unranked_input(%packed: tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<f4E2M1FN>, tensor<*xf8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires data tensor to have rank greater than zero}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<f4E2M1FN>, tensor<*xf8E8M0FNU>)
+  return %data, %scale : tensor<f4E2M1FN>, tensor<*xf8E8M0FNU>
+}
+
+// -----
+
+func.func @test_decompose_block_scaled_rank0_scale_unranked_input(%packed: tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<*xf4E2M1FN>, tensor<f8E8M0FNU>) {
+  // expected-error@+1 {{'tosa.decompose_block_scaled' op requires scale tensor to have rank greater than zero}}
+  %data, %scale = tosa.decompose_block_scaled %packed : (tensor<*x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> (tensor<*xf4E2M1FN>, tensor<f8E8M0FNU>)
+  return %data, %scale : tensor<*xf4E2M1FN>, tensor<f8E8M0FNU>
+}

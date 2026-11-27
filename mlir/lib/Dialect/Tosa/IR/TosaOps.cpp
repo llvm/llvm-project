@@ -5681,6 +5681,108 @@ LogicalResult tosa::SliceShapeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// TOSA Util Operators verify functions.
+//===----------------------------------------------------------------------===//
+static LogicalResult
+verifyBlockScaledComponentTypes(Operation *op, BlockScaledType blockScaledType,
+                                Value data, Value scale) {
+  const Type dataElementType = getElementTypeOrSelf(data);
+  if (dataElementType != blockScaledType.getValueType())
+    return op->emitOpError("requires data element type ")
+           << blockScaledType.getValueType() << ", got " << dataElementType;
+  const Type scaleElementType = getElementTypeOrSelf(scale);
+  if (scaleElementType != blockScaledType.getScaleType())
+    return op->emitOpError("requires scale element type ")
+           << blockScaledType.getScaleType() << ", got " << scaleElementType;
+  return success();
+}
+
+static LogicalResult
+verifyBlockScaledComponentShapes(Operation *op, BlockScaledType blockScaledType,
+                                 ShapedType compositeType, Value data,
+                                 Value scale) {
+  const auto dataType = cast<ShapedType>(data.getType());
+  if (dataType.hasRank() && dataType.getRank() == 0)
+    return op->emitOpError(
+        "requires data tensor to have rank greater than zero");
+  const auto scaleType = dyn_cast<RankedTensorType>(scale.getType());
+  if (scaleType && scaleType.getRank() == 0)
+    return op->emitOpError(
+        "requires scale tensor to have rank greater than zero");
+
+  if (failed(verifyCompatibleShape(dataType, compositeType)))
+    return op->emitOpError(
+               "requires data shape compatible with the composite tensor ")
+           << compositeType << ", got " << dataType;
+
+  const uint32_t blockSize =
+      BlockShapeAttr::getBlockShapeValue(blockScaledType.getBlockShape());
+  if (dataType.hasRank()) {
+    const int64_t lastDim = dataType.getShape().back();
+    if (!ShapedType::isDynamic(lastDim) && lastDim % blockSize != 0)
+      return op->emitOpError(
+                 "requires last data dimension to be divisible by block size ")
+             << blockSize << ", got " << lastDim;
+  }
+
+  if (!scaleType)
+    return success();
+
+  // Check data component type and composite type shape align with scale shape
+  for (ShapedType shapeType : {compositeType, dataType}) {
+    if (!shapeType.hasRank())
+      continue;
+    SmallVector<int64_t> scaleShape(shapeType.getShape());
+    if (!ShapedType::isDynamic(scaleShape.back()))
+      scaleShape.back() /= blockSize;
+    if (failed(verifyCompatibleShape(scaleType.getShape(), scaleShape)))
+      return op->emitOpError("requires scale shape compatible with ")
+             << RankedTensorType::get(scaleShape,
+                                      blockScaledType.getScaleType())
+             << ", got " << scaleType;
+  }
+
+  return success();
+}
+
+LogicalResult tosa::ComposeBlockScaledOp::verify() {
+  Value data = getData();
+  Value scale = getScale();
+  const ShapedType outputType = cast<ShapedType>(getType());
+  const auto blockScaledType =
+      dyn_cast<BlockScaledType>(outputType.getElementType());
+  if (!blockScaledType)
+    return emitOpError("requires output type to be a block scaled type, got ")
+           << outputType;
+
+  if (failed(verifyBlockScaledComponentTypes(getOperation(), blockScaledType,
+                                             data, scale)))
+    return failure();
+
+  return verifyBlockScaledComponentShapes(getOperation(), blockScaledType,
+                                          outputType, data, scale);
+}
+
+LogicalResult tosa::DecomposeBlockScaledOp::verify() {
+  const Type inputElementType =
+      cast<ShapedType>(getInput().getType()).getElementType();
+  const auto blockScaledType =
+      dyn_cast<tosa::BlockScaledType>(inputElementType);
+  if (!blockScaledType)
+    return emitOpError()
+           << "requires input type to be a block scaled type, got "
+           << getInput().getType();
+
+  if (failed(verifyBlockScaledComponentTypes(getOperation(), blockScaledType,
+                                             getData(), getScale())))
+    return failure();
+
+  const auto inputType = cast<ShapedType>(getInput().getType());
+  return verifyBlockScaledComponentShapes(getOperation(), blockScaledType,
+                                          inputType, getData(), getScale());
+}
+
+//===----------------------------------------------------------------------===//
 // TOSA Attribute Definitions.
 //===----------------------------------------------------------------------===//
 
