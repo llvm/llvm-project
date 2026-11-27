@@ -358,7 +358,8 @@ public:
                                cir::ComplexRangeKind rangeKind) {
     auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
     if (cir::isAnyFloatingPointType(complexTy.getElementType()))
-      return cir::ComplexFMulOp::create(*this, loc, lhs, rhs, rangeKind);
+      return cir::ComplexFMulOp::create(*this, loc, lhs, rhs, rangeKind,
+                                        getConstrainedFPAttr());
     return cir::ComplexMulOp::create(*this, loc, lhs, rhs);
   }
 
@@ -367,7 +368,8 @@ public:
                                cir::ComplexRangeKind rangeKind) {
     auto complexTy = mlir::cast<cir::ComplexType>(lhs.getType());
     if (cir::isAnyFloatingPointType(complexTy.getElementType()))
-      return cir::ComplexFDivOp::create(*this, loc, lhs, rhs, rangeKind);
+      return cir::ComplexFDivOp::create(*this, loc, lhs, rhs, rangeKind,
+                                        getConstrainedFPAttr());
     return cir::ComplexDivOp::create(*this, loc, lhs, rhs);
   }
 

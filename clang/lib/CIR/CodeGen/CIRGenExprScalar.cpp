@@ -859,6 +859,9 @@ public:
 
   mlir::Value VisitUnaryPlus(const UnaryOperator *e) {
     QualType promotionType = getPromotionType(e->getSubExpr()->getType());
+    std::optional<CIRGenFunction::CIRGenFPOptionsRAII> fpOptsRAII;
+    if (!promotionType.isNull())
+      fpOptsRAII.emplace(cgf, e);
     mlir::Value result = VisitUnaryPlus(e, promotionType);
     if (result && !promotionType.isNull())
       return emitUnPromotedValue(result, e->getType());
@@ -874,6 +877,9 @@ public:
 
   mlir::Value VisitUnaryMinus(const UnaryOperator *e) {
     QualType promotionType = getPromotionType(e->getSubExpr()->getType());
+    std::optional<CIRGenFunction::CIRGenFPOptionsRAII> fpOptsRAII;
+    if (!promotionType.isNull())
+      fpOptsRAII.emplace(cgf, e);
     mlir::Value result = VisitUnaryMinus(e, promotionType);
     if (result && !promotionType.isNull())
       return emitUnPromotedValue(result, e->getType());
@@ -1252,10 +1258,16 @@ public:
     return QualType();
   }
 
-// Binary operators and binary compound assignment operators.
+  // Binary operators and binary compound assignment operators. An operation
+  // evaluated in a wider type converts its operands to that type and its result
+  // back. The conversions are part of the operation, so they use its
+  // floating-point options.
 #define HANDLEBINOP(OP)                                                        \
   mlir::Value VisitBin##OP(const BinaryOperator *e) {                          \
     QualType promotionTy = getPromotionType(e->getType());                     \
+    std::optional<CIRGenFunction::CIRGenFPOptionsRAII> fpOptsRAII;             \
+    if (!promotionTy.isNull())                                                 \
+      fpOptsRAII.emplace(cgf, e);                                              \
     auto result = emit##OP(emitBinOps(e, promotionTy));                        \
     if (result && !promotionTy.isNull())                                       \
       result = emitUnPromotedValue(result, e->getType());                      \
@@ -1745,10 +1757,14 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   QualType promotionTypeLHS = getPromotionType(e->getComputationLHSType());
   QualType promotionTypeRHS = getPromotionType(e->getRHS()->getType());
 
-  if (!promotionTypeRHS.isNull())
+  if (!promotionTypeRHS.isNull()) {
+    // The promotion is part of the operation, so it uses its floating-point
+    // options.
+    CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, e);
     opInfo.rhs = cgf.emitPromotedScalarExpr(e->getRHS(), promotionTypeRHS);
-  else
+  } else {
     opInfo.rhs = Visit(e->getRHS());
+  }
 
   opInfo.fullType = promotionTypeCR;
   opInfo.compType = opInfo.fullType;
@@ -1769,6 +1785,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
 
   opInfo.lhs = emitLoadOfLValue(lhsLV, e->getExprLoc());
 
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, opInfo.fpFeatures);
   CIRGenFunction::SourceLocRAIIObject sourceloc{cgf, e->getSourceRange()};
   SourceLocation loc = e->getExprLoc();
   if (!promotionTypeLHS.isNull())
