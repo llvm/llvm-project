@@ -7,7 +7,7 @@
 ! UNSUPPORTED: offload-cuda
 !
 ! RUN: %flang %isysroot -L"%libdir" -finit-local=0xAA %s -o %t
-! RUN: env LD_LIBRARY_PATH="$LD_LIBRARY_PATH:%libdir" %t
+! RUN: %t
 
 program test_finit_local_array
   implicit none

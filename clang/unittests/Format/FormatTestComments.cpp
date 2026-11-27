@@ -2879,6 +2879,21 @@ TEST_F(FormatTestComments, AlignTrailingComments) {
                "int a; //");
 }
 
+TEST_F(FormatTestComments, DontAlignCommentAfterNewlyWrappedClosingBrace) {
+  auto Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  verifyFormat("void f()\n"
+               "{\n"
+               "  if (true)\n"
+               "  {\n"
+               "  } /*a*/\n"
+               "  else /*b*/\n"
+               "  {\n"
+               "  }\n"
+               "}",
+               "void f(){if(true){}/*a*/else/*b*/{}}", Style);
+}
+
 TEST_F(FormatTestComments, AlignTrailingCommentsAcrossEmptyLines) {
   FormatStyle Style = getLLVMStyle();
   Style.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;

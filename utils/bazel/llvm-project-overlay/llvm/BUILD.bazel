@@ -5635,14 +5635,33 @@ cc_binary(
     ],
 )
 
+cc_library(
+    name = "UBAwareInterpreter",
+    srcs = glob([
+        "lib/UBAwareInterpreter/*.cpp",
+        "lib/UBAwareInterpreter/*.h",
+    ]),
+    hdrs = glob([
+        "include/llvm/UBAwareInterpreter/*.h",
+    ]),
+    copts = llvm_copts,
+    features = ["-parse_headers"],
+    deps = [
+        ":Analysis",
+        ":AsmParser",
+        ":Core",
+        ":Support",
+        ":TargetParser",
+        ":config",
+    ],
+)
+
 cc_binary(
     name = "llubi",
     srcs = glob([
         "tools/llubi/*.cpp",
-        "tools/llubi/lib/*.cpp",
-        "tools/llubi/lib/*.h",
     ]),
-    features = ["-parse_headers"],
+    copts = llvm_copts,
     stamp = 0,
     deps = [
         ":Analysis",
@@ -5651,6 +5670,7 @@ cc_binary(
         ":IRReader",
         ":Support",
         ":TargetParser",
+        ":UBAwareInterpreter",
         ":config",
     ],
 )

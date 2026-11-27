@@ -51,6 +51,9 @@ llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
     // integer or a short vector.
     Result = llvm::FixedVectorType::get(llvm::Type::getInt8Ty(Context), 1);
     break;
+  case abi::TypeKind::SveCount:
+    Result = llvm::TargetExtType::get(Context, "aarch64.svcount");
+    break;
   case abi::TypeKind::Pointer:
     Result = llvm::PointerType::get(
         Context, cast<abi::PointerType>(ABIType)->getAddrSpace());
@@ -103,9 +106,6 @@ llvm::Type *IRTypeMapper::convertArrayType(const abi::ArrayType *AT) {
 }
 
 llvm::Type *IRTypeMapper::convertVectorType(const abi::VectorType *VT) {
-  if (VT->isSVECount())
-    return llvm::TargetExtType::get(Context, "aarch64.svcount");
-
   llvm::Type *ElementType = convertType(VT->getElementType());
   return llvm::VectorType::get(ElementType, VT->getNumElements());
 }
