@@ -16,8 +16,6 @@ class Triple;
 
 class LLVM_ABI MCAsmInfoELF : public MCAsmInfo {
   virtual void anchor();
-  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
-                            raw_ostream &) const final;
 
 protected:
   MCAsmInfoELF(const Triple &TT, const MCTargetOptions &Options);

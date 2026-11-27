@@ -16,8 +16,6 @@ namespace llvm {
 class LLVM_ABI MCAsmInfoXCOFF : public MCAsmInfo {
 protected:
   MCAsmInfoXCOFF(const MCTargetOptions &Options);
-  void printSwitchToSection(const MCSection &, uint32_t, const Triple &,
-                            raw_ostream &) const final;
 };
 
 } // end namespace llvm

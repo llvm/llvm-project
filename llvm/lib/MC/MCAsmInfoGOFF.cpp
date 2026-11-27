@@ -23,9 +23,9 @@ MCAsmInfoGOFF::MCAsmInfoGOFF(const MCTargetOptions &Options)
   WeakRefDirective = "WXTRN";
   InternalSymbolPrefix = "L#";
   ZeroDirective = "\t.space\t";
-}
 
-void MCAsmInfoGOFF::printSwitchToSection(const MCSection &, uint32_t,
-                                         const Triple &, raw_ostream &) const {
-  llvm_unreachable("GOFF section switching is handled by the HLASM streamer");
+  PrintSwitchToSectionFn = [](const MCAsmInfo &, const MCSection &, uint32_t,
+                              const Triple &, raw_ostream &) {
+    llvm_unreachable("GOFF section switching is handled by the HLASM streamer");
+  };
 }
