@@ -217,8 +217,8 @@ void renderBranchExecutionCounts(raw_ostream &OS,
     while (NextBranch != EndBranch &&
            CurrentLine == NextBranch->getEffectiveLine()) {
       if (!NextBranch->Ignore) {
-        unsigned BC1 = NextBranch->ExecutionCount;
-        unsigned BC2 = NextBranch->FalseExecutionCount;
+        uint64_t BC1 = NextBranch->ExecutionCount;
+        uint64_t BC2 = NextBranch->FalseExecutionCount;
         bool BranchNotExecuted = (BC1 == 0 && BC2 == 0);
 
         for (int I = 0; I < 2; I++, BranchIndex++) {
