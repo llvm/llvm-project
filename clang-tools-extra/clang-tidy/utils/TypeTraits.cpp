@@ -147,6 +147,78 @@ bool hasNonTrivialMoveAssignment(QualType Type) {
          Record->hasNonTrivialMoveAssignment();
 }
 
+bool isCopyConstructible(const CXXRecordDecl &Record) {
+  if (Record.needsOverloadResolutionForCopyConstructor() &&
+      Record.needsImplicitCopyConstructor()) {
+    // unresolved
+    for (const CXXBaseSpecifier &BS : Record.bases()) {
+      const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
+      if (BRD != nullptr && !isCopyConstructible(*BRD))
+        return false;
+    }
+  }
+  if (Record.hasSimpleCopyConstructor())
+    return true;
+  for (const CXXConstructorDecl *Ctor : Record.ctors())
+    if (Ctor->isCopyConstructor())
+      return !Ctor->isDeleted();
+  return false;
+}
+
+bool isMoveConstructible(const CXXRecordDecl &Record) {
+  if (Record.needsOverloadResolutionForMoveConstructor() &&
+      Record.needsImplicitMoveConstructor()) {
+    // unresolved
+    for (const CXXBaseSpecifier &BS : Record.bases()) {
+      const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
+      if (BRD != nullptr && !isMoveConstructible(*BRD))
+        return false;
+    }
+  }
+  if (Record.hasSimpleMoveConstructor())
+    return true;
+  for (const CXXConstructorDecl *Ctor : Record.ctors())
+    if (Ctor->isMoveConstructor())
+      return !Ctor->isDeleted();
+  return false;
+}
+
+bool isCopyAssignable(const CXXRecordDecl &Record) {
+  if (Record.needsOverloadResolutionForCopyAssignment() &&
+      Record.needsImplicitCopyAssignment()) {
+    // unresolved
+    for (const CXXBaseSpecifier &BS : Record.bases()) {
+      const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
+      if (BRD != nullptr && !isCopyAssignable(*BRD))
+        return false;
+    }
+  }
+  if (Record.hasSimpleCopyAssignment())
+    return true;
+  for (const CXXMethodDecl *Method : Record.methods())
+    if (Method->isCopyAssignmentOperator())
+      return !Method->isDeleted();
+  return false;
+}
+
+bool isMoveAssignable(const CXXRecordDecl &Record) {
+  if (Record.needsOverloadResolutionForMoveAssignment() &&
+      Record.needsImplicitMoveAssignment()) {
+    // unresolved
+    for (const CXXBaseSpecifier &BS : Record.bases()) {
+      const CXXRecordDecl *BRD = BS.getType()->getAsCXXRecordDecl();
+      if (BRD != nullptr && !isMoveAssignable(*BRD))
+        return false;
+    }
+  }
+  if (Record.hasSimpleMoveAssignment())
+    return true;
+  for (const CXXMethodDecl *Method : Record.methods())
+    if (Method->isMoveAssignmentOperator())
+      return !Method->isDeleted();
+  return false;
+}
+
 static bool declIsStdInitializerList(const NamedDecl *D) {
   return D->isInStdNamespace() && D->getName() == "initializer_list";
 }

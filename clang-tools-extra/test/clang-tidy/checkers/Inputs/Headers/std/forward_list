@@ -34,6 +34,7 @@ public:
 
   forward_list() = default;
   forward_list(initializer_list<T>) {}
+  forward_list(size_t count, const T &value);
 
   iterator begin();
   const_iterator begin() const;
