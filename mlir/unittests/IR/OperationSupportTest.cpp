@@ -216,6 +216,164 @@ TEST(OperationOrderTest, OrderIsAlwaysValid) {
   containerOp->destroy();
 }
 
+TEST(OperationOrderTest, SpliceSingleOperationWithinBlock) {
+  for (bool useRange : {false, true}) {
+    SCOPED_TRACE(useRange);
+    MLIRContext context;
+    Block block;
+    Operation *a = createOp(&context);
+    Operation *b = createOp(&context);
+    Operation *c = createOp(&context);
+    Operation *d = createOp(&context);
+    for (Operation *op : {a, b, c, d})
+      block.push_back(op);
+    block.recomputeOpOrder();
+
+    auto moveBefore = [&](Operation *op, Block::iterator before) {
+      auto &ops = block.getOperations();
+      if (useRange)
+        ops.splice(before, ops, op->getIterator(),
+                   std::next(op->getIterator()));
+      else
+        ops.splice(before, ops, op->getIterator());
+      // Check before querying the order, since a query may recompute it.
+      EXPECT_TRUE(block.isOpOrderValid());
+      EXPECT_FALSE(block.verifyOpOrder());
+    };
+
+    moveBefore(d, b->getIterator());
+    EXPECT_TRUE(a->isBeforeInBlock(d));
+    EXPECT_TRUE(d->isBeforeInBlock(b));
+    EXPECT_TRUE(b->isBeforeInBlock(c));
+
+    moveBefore(a, block.end());
+    EXPECT_TRUE(c->isBeforeInBlock(a));
+    EXPECT_FALSE(a->isBeforeInBlock(d));
+
+    moveBefore(c, block.begin());
+    EXPECT_TRUE(c->isBeforeInBlock(d));
+    EXPECT_FALSE(d->isBeforeInBlock(c));
+    EXPECT_FALSE(block.verifyOpOrder());
+  }
+}
+
+TEST(OperationOrderTest, SpliceAcrossBlocks) {
+  // Cover a singleton, a range, and the whole-list overload. Adjacent moved
+  // operations may require a full recomputation when their order is queried.
+  for (unsigned count : {1u, 2u, 3u}) {
+    SCOPED_TRACE(count);
+    MLIRContext context;
+    Block source, destination;
+    SmallVector<Operation *> moved;
+    for (unsigned i = 0; i < 3; ++i) {
+      moved.push_back(createOp(&context));
+      source.push_back(moved.back());
+    }
+    Operation *a = createOp(&context);
+    Operation *b = createOp(&context);
+    destination.push_back(a);
+    destination.push_back(b);
+    source.recomputeOpOrder();
+    destination.recomputeOpOrder();
+
+    auto &srcOps = source.getOperations();
+    auto &dstOps = destination.getOperations();
+    if (count == 1)
+      dstOps.splice(b->getIterator(), srcOps, source.begin());
+    else if (count == 2)
+      dstOps.splice(b->getIterator(), srcOps, source.begin(),
+                    moved[count]->getIterator());
+    else
+      dstOps.splice(b->getIterator(), srcOps);
+
+    EXPECT_TRUE(source.isOpOrderValid());
+    EXPECT_TRUE(destination.isOpOrderValid());
+    EXPECT_FALSE(source.verifyOpOrder());
+    EXPECT_FALSE(destination.verifyOpOrder());
+    for (unsigned i = 0; i < moved.size(); ++i)
+      EXPECT_EQ(moved[i]->getBlock(), i < count ? &destination : &source);
+
+    // An order query on untouched operations can reuse their cached indices.
+    EXPECT_TRUE(a->isBeforeInBlock(b));
+    Operation *previous = a;
+    for (Operation *op : ArrayRef(moved).take_front(count)) {
+      EXPECT_TRUE(previous->isBeforeInBlock(op));
+      EXPECT_FALSE(op->isBeforeInBlock(previous));
+      previous = op;
+    }
+    EXPECT_TRUE(previous->isBeforeInBlock(b));
+    EXPECT_EQ(source.empty(), count == moved.size());
+    EXPECT_FALSE(destination.verifyOpOrder());
+  }
+}
+
+TEST(OperationOrderTest, SpliceRangeWithinBlock) {
+  MLIRContext context;
+  Block block;
+  Operation *a = createOp(&context);
+  Operation *b = createOp(&context);
+  Operation *c = createOp(&context);
+  Operation *d = createOp(&context);
+  for (Operation *op : {a, b, c, d})
+    block.push_back(op);
+  block.recomputeOpOrder();
+
+  auto &ops = block.getOperations();
+  ops.splice(block.begin(), ops, c->getIterator(), block.end());
+  EXPECT_TRUE(c->isBeforeInBlock(d));
+  EXPECT_TRUE(d->isBeforeInBlock(a));
+  EXPECT_TRUE(a->isBeforeInBlock(b));
+  EXPECT_FALSE(b->isBeforeInBlock(c));
+  EXPECT_FALSE(block.verifyOpOrder());
+}
+
+TEST(OperationOrderTest, SpliceNoOpPreservesOrderValidity) {
+  MLIRContext context;
+  Block block, empty;
+  Operation *a = createOp(&context);
+  Operation *b = createOp(&context);
+  block.push_back(a);
+  block.push_back(b);
+  block.recomputeOpOrder();
+
+  auto &ops = block.getOperations();
+  ops.splice(a->getIterator(), ops, a->getIterator());
+  EXPECT_TRUE(block.isOpOrderValid());
+  ops.splice(b->getIterator(), ops, a->getIterator());
+  EXPECT_TRUE(block.isOpOrderValid());
+  ops.splice(block.end(), ops, b->getIterator());
+  EXPECT_TRUE(block.isOpOrderValid());
+  ops.splice(block.end(), ops, block.begin(), block.end());
+  EXPECT_TRUE(block.isOpOrderValid());
+  ops.splice(block.begin(), ops, block.end(), block.end());
+  EXPECT_TRUE(block.isOpOrderValid());
+  ops.splice(block.begin(), empty.getOperations());
+  EXPECT_TRUE(block.isOpOrderValid());
+  EXPECT_TRUE(a->isBeforeInBlock(b));
+  EXPECT_FALSE(block.verifyOpOrder());
+}
+
+TEST(OperationOrderTest, MoveAdjacentOperationsPreservesOrderValidity) {
+  MLIRContext context;
+  Block block;
+  Operation *a = createOp(&context);
+  Operation *b = createOp(&context);
+  Operation *c = createOp(&context);
+  Operation *d = createOp(&context);
+  for (Operation *op : {a, b, c, d})
+    block.push_back(op);
+  block.recomputeOpOrder();
+
+  a->moveAfter(d);
+  b->moveBefore(&block, block.end());
+  EXPECT_TRUE(block.isOpOrderValid());
+  EXPECT_TRUE(c->isBeforeInBlock(d));
+  EXPECT_TRUE(d->isBeforeInBlock(a));
+  EXPECT_TRUE(a->isBeforeInBlock(b));
+  EXPECT_FALSE(b->isBeforeInBlock(c));
+  EXPECT_FALSE(block.verifyOpOrder());
+}
+
 TEST(OperationFormatPrintTest, CanUseVariadicFormat) {
   MLIRContext context;
   Builder builder(&context);
