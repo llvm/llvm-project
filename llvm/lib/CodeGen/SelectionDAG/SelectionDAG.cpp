@@ -6249,8 +6249,8 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
     // If the result type is wider than the element type, the top bits are
     // undef.
     return includesUndef(Kind) &&
-           Op.getValueType() !=
-               Op.getOperand(0).getValueType().getVectorElementType();
+           Op.getScalarValueSizeInBits() >
+               Op.getOperand(0).getScalarValueSizeInBits();
 
   default:
     // Allow the target to implement this method for its nodes.
