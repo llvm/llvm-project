@@ -6184,6 +6184,19 @@ TEST_F(FormatTest, HashInMacroDefinition) {
                "}");
 }
 
+TEST_F(FormatTest, WrapsGNUVariadicMacroArguments) {
+  auto Style = getLLVMStyleWithColumns(40);
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
+  verifyFormat("#define F(...) \\\n"
+               "  f(long_argument_name, \\\n"
+               "    \"first string\" \\\n"
+               "    \"second string\", \\\n"
+               "    ##__VA_ARGS__)",
+               "#define F(...) f(long_argument_name, "
+               "\"first string\" \"second string\", ##__VA_ARGS__)",
+               Style);
+}
+
 TEST_F(FormatTest, RespectWhitespaceInMacroDefinitions) {
   verifyFormat("#define A (x)");
   verifyFormat("#define A(x)");
