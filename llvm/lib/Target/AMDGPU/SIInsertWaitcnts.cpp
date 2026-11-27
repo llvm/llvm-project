@@ -154,8 +154,8 @@ protected:
   DenseMap<MachineInstr *, unsigned> DeferredDepctrEncs;
 
   void deferDepctrUpdate(MachineInstr &MI, unsigned Enc) {
-    if (Enc ==
-        static_cast<unsigned>(AMDGPU::DepCtr::getDefaultDepCtrEncoding(ST))) {
+    unsigned DefaultEnc = AMDGPU::DepCtr::getDefaultDepCtrEncoding(ST);
+    if (Enc == DefaultEnc) {
       DeferredDepctrEncs.erase(&MI);
       DeferredErasures.insert(&MI);
       return;
