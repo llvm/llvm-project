@@ -98,20 +98,43 @@ skip:
 }
 
 // CIR-LABEL: cir.func {{.*}} @_Z29test_goto_jump_into_nested_opbb
+// CIR:         %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
+// CIR:         %[[COND2_ADDR:.*]] = cir.alloca "cond2"
 // CIR:         %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_StructWithDestructor>
 // CIR:         cir.cleanup.scope {
 // CIR:           cir.scope {
 // CIR:             cir.if {{.*}} {
-// CIR:               cir.goto "skip"
-// CIR:             }
+// CIR:               %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:          cir.store %[[ID]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:        }
 // CIR:           }
-// CIR:           cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
-// CIR:           cir.scope {
-// CIR:             cir.if {{.*}} {
+// CIR:           cir.switch.flat %{{.+}} : !s32i, ^[[USE_BB:bb[0-9]+]] [
+// CIR-NEXT:        1: ^[[GOTO_SKIP:bb[0-9]+]]
+// CIR:         ^[[GOTO_SKIP]]:
+// CIR-NEXT:      cir.br ^[[PRE_SCOPE:bb[0-9]+]]
+// CIR:         ^[[USE_BB]]:
+// CIR-NEXT:      cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
+// CIR:           cir.br ^[[PRE_SCOPE]]
+// CIR:         ^[[PRE_SCOPE]]:
+// CIR-NEXT:      cir.scope {
+// CIR:             %[[DEST:.*]] = cir.load %[[SLOT]]
+// CIR-NEXT:        cir.switch.flat %[[DEST]] : !s32i, ^[[NORMAL:bb[0-9]+]] [
+// CIR-NEXT:          1: ^[[ENTER_IF:bb[0-9]+]]
+// CIR:           ^[[ENTER_IF]]:
+// CIR-NEXT:        %[[TRUE:.*]] = cir.const #true
+// CIR-NEXT:        cir.br ^[[PRE_IF:bb[0-9]+]](%[[TRUE]] : !cir.bool)
+// CIR:           ^[[NORMAL]]:
+// CIR-NEXT:        %[[COND2:.*]] = cir.load {{.*}} %[[COND2_ADDR]]
+// CIR:             cir.br ^[[PRE_IF]](%[[COND2]] : !cir.bool)
+// CIR:           ^[[PRE_IF]](%[[IF_COND:.*]]: !cir.bool
+// CIR-NEXT:        cir.if %[[IF_COND]] {
+// CIR:               %[[DEST2:.*]] = cir.load %[[SLOT]]
+// CIR-NEXT:          cir.switch.flat %[[DEST2]] : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT:            1: ^[[TO_SKIP:bb[0-9]+]]
+// CIR:             ^[[TO_SKIP]]:
 // CIR:               cir.br ^[[BB_LABEL:bb[0-9]+]]
 // CIR:             ^[[BB_LABEL]]:
-// CIR:               cir.label "skip"
-// CIR:               cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
+// CIR-NEXT:          cir.call @_Z3useR20StructWithDestructor(%[[A_ADDR]])
 // CIR:               cir.yield
 // CIR:             }
 // CIR:           }
@@ -123,23 +146,26 @@ skip:
 // CIR:         cir.return
 
 // LLVM-LABEL: define dso_local void @_Z29test_goto_jump_into_nested_opbb(i1 noundef %{{[^,)]+}}, i1 noundef %{{[^,)]+}})
+// LLVM-NOT:     alloca i32
 // LLVM:         %[[COND1_ADDR:.*]] = alloca i8
 // LLVM:         %[[COND2_ADDR:.*]] = alloca i8
 // LLVM:         %[[A_ADDR:.*]] = alloca %struct.StructWithDestructor
 // LLVM:         %[[COND1_BYTE:.*]] = load i8, ptr %[[COND1_ADDR]]
 // LLVM:         %[[COND1_BIT:.*]] = trunc i8 %[[COND1_BYTE]] to i1
 // LLVM:         br i1 %[[COND1_BIT]], label %[[GOTO_BB:.*]], label %[[FALLTHROUGH:.*]]
-// LLVM:       [[GOTO_BB]]:
-// LLVM:         br label %[[SKIP_BB:[0-9]+]]
 // LLVM:       [[FALLTHROUGH]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
-// LLVM:         br label %[[COND2_BB:.*]]
+// LLVM:         br label %[[COND2_BB:[0-9]+]]
+// LLVM:       [[GOTO_BB]]:
+// LLVM-NEXT:    br label %[[GOTO_EXIT:[0-9]+]]
 // LLVM:       [[COND2_BB]]:
 // LLVM:         %[[COND2_BYTE:.*]] = load i8, ptr %[[COND2_ADDR]]
 // LLVM:         %[[COND2_BIT:.*]] = trunc i8 %[[COND2_BYTE]] to i1
-// LLVM:         br i1 %[[COND2_BIT]], label %[[GOTO_BB2:.*]], label %[[CLEANUP:.*]]
-// LLVM:       [[GOTO_BB2]]:
-// LLVM:         br label %[[SKIP_BB]]
+// LLVM-NEXT:    br i1 %[[COND2_BIT]], label %[[THEN:.*]], label %[[CLEANUP:.*]]
+// LLVM:       [[GOTO_EXIT]]:
+// LLVM-NEXT:    br label %[[SKIP_BB:[0-9]+]]
+// LLVM:       [[THEN]]:
+// LLVM-NEXT:    br label %[[SKIP_BB]]
 // LLVM:       [[SKIP_BB]]:
 // LLVM:         call void @_Z3useR20StructWithDestructor(ptr {{.*}} %[[A_ADDR]])
 // LLVM:         br label %[[CLEANUP]]

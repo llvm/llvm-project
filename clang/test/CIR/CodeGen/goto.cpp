@@ -218,34 +218,53 @@ extern "C" void case_follow_label(int v) {
 }
 
 // CIR: cir.func {{.*}} @case_follow_label
-// CIR: cir.switch
+// CIR: %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
+// CIR: cir.br ^[[PRE_SWITCH:bb[0-9]+]](%{{.+}} : !s32i)
+// CIR: ^[[PRE_SWITCH]](%[[COND:.*]]: !s32i
+// CIR-NEXT: cir.switch(%[[COND]] : !s32i)
 // CIR: cir.case(equal, [#cir.int<1> : !s32i]) {
-// CIR:   cir.br ^bb1
-// CIR: ^bb1:
-// CIR:   cir.label "label"
-// CIR: cir.case(equal, [#cir.int<2> : !s32i]) {
+// CIR:   %[[DEST:.*]] = cir.load %[[SLOT]]
+// CIR-NEXT:   cir.switch.flat %[[DEST]] : !s32i, ^[[NORMAL:bb[0-9]+]] [
+// CIR-NEXT:     1: ^[[TO_LABEL:bb[0-9]+]]
+// CIR: ^[[TO_LABEL]]:
+// CIR:   cir.br ^[[LABEL:bb[0-9]+]]
+// CIR: ^[[NORMAL]]:
+// CIR-NEXT:   cir.br ^[[LABEL]]
+// CIR: ^[[LABEL]]:
+// CIR-NEXT: cir.case(equal, [#cir.int<2> : !s32i]) {
 // CIR:   cir.call @action1()
 // CIR:   cir.break
 // CIR: cir.case(default, []) {
 // CIR:   cir.call @action2()
-// CIR:   cir.goto "label"
+// CIR-NEXT:   %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:   cir.store %[[ID]], %[[SLOT]]
+// CIR-NEXT:   cir.break
+// CIR: cir.switch.flat %{{.+}} : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT:   1: ^[[ENTER_CASE1:bb[0-9]+]]
+// CIR: ^[[ENTER_CASE1]]:
+// CIR-NEXT: %[[CASE1_VAL:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT: cir.br ^[[PRE_SWITCH]](%[[CASE1_VAL]] : !s32i)
 
 // LLVM: define dso_local void @case_follow_label
-// LLVM:  switch i32 {{.*}}, label %[[SWDEFAULT:.*]] [
+// LLVM:  switch i32 %{{.*}}, label %[[SWDEFAULT:.*]] [
 // LLVM:    i32 1, label %[[CASE1:.*]]
 // LLVM:    i32 2, label %[[CASE2:.*]]
 // LLVM:  ]
-// LLVM: [[CASE1]]:
+// LLVM: [[TO_LABEL:[0-9]+]]:
 // LLVM:   br label %[[LABEL:.*]]
+// LLVM: [[CASE1]]:
+// LLVM:   br label %[[LABEL]]
 // LLVM: [[LABEL]]:
 // LLVM:   br label %[[CASE2]]
 // LLVM: [[CASE2]]:
 // LLVM:   call void @action1()
-// LLVM:   br label %[[RET:.*]]
+// LLVM:   br label %[[BREAK:.*]]
 // LLVM: [[SWDEFAULT]]:
 // LLVM:   call void @action2()
-// LLVM:   br label %[[LABEL]]
-// LLVM: [[RET]]:
+// LLVM:   br label %[[GOTO:.*]]
+// LLVM: [[GOTO]]:
+// LLVM:   br label %[[TO_LABEL]]
+// LLVM: [[BREAK]]:
 // LLVM:   ret void
 
 // OGCG: define dso_local void @case_follow_label

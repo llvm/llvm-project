@@ -1,6 +1,7 @@
 // RUN: cir-opt %s -cir-fold-goto-dispatch -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
+!u32i = !cir.int<u, 32>
 
 cir.func private @g()
 
@@ -188,6 +189,52 @@ cir.func @through_cleanup(%arg0: !cir.bool) {
   cir.return
 }
 
+// A goto enters an if: it passes true to the block before the if, which only
+// branches on that argument, through a plain branch. That edge goes straight
+// to the then branch, whose dispatch then folds as well. The block before the
+// if, which only normal execution reaches now, merges into its predecessor.
+// CHECK-LABEL: cir.func @steered(
+// CHECK-NOT:     goto_dest_slot
+// CHECK:         cir.brcond %arg0 ^[[GOTO:bb[0-9]+]], ^[[NORMAL:bb[0-9]+]]
+// CHECK:       ^[[GOTO]]:
+// CHECK-NEXT:    cir.br ^[[LABEL:bb[0-9]+]]
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.brcond %arg1
+// CHECK:       ^[[LABEL]]:
+// CHECK-NEXT:    cir.call @g()
+// CHECK-NOT:     cir.switch.flat
+cir.func @steered(%arg0: !cir.bool, %arg1: !cir.bool) {
+  %slot = cir.alloca "__goto_dest_slot" align(4) goto_dest_slot : !cir.ptr<!s32i>
+  %zero = cir.const #cir.int<0> : !s32i
+  %one = cir.const #cir.int<1> : !s32i
+  %true = cir.const #cir.bool<true> : !cir.bool
+  cir.store %zero, %slot : !s32i, !cir.ptr<!s32i>
+  cir.brcond %arg0 ^bb1, ^bb2
+^bb1:
+  cir.store %one, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb3(%true : !cir.bool)
+^bb2:
+  cir.store %zero, %slot : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb3(%arg1 : !cir.bool)
+^bb3(%c: !cir.bool):
+  cir.br ^bb4
+^bb4:
+  cir.brcond %c ^bb5, ^bb8
+^bb5:
+  %id = cir.load %slot : !cir.ptr<!s32i>, !s32i
+  cir.switch.flat %id : !s32i, ^bb6 [
+    1: ^bb7
+  ]
+^bb6:
+  cir.call @g() : () -> ()
+  cir.br ^bb7
+^bb7:
+  cir.call @g() : () -> ()
+  cir.br ^bb8
+^bb8:
+  cir.return
+}
+
 // An alloca without the marker is never touched.
 // CHECK-LABEL: cir.func @unmarked(
 // CHECK:         cir.switch.flat
@@ -205,6 +252,39 @@ cir.func @unmarked() {
   cir.call @g() : () -> ()
   cir.br ^bb3
 ^bb3:
+  cir.return
+}
+
+// The default of a switch on a steered value checks a case range on that
+// value, so the goto's edge can't skip the block that defines it.
+// CHECK-LABEL: cir.func @steered_range(
+// CHECK:         %[[HUNDRED:.*]] = cir.const #cir.int<100> : !s32i
+// CHECK:         cir.br ^[[PRE:bb[0-9]+]](%[[HUNDRED]] : !s32i)
+// CHECK:       ^[[PRE]](%[[V:.*]]: !s32i):
+// CHECK-NEXT:    cir.switch.flat %[[V]] : !s32i, ^[[RANGE:bb[0-9]+]] [
+// CHECK:       ^[[RANGE]]:
+// CHECK-NEXT:    cir.sub %[[V]]
+cir.func @steered_range(%arg0: !s32i, %arg1: !cir.bool) {
+  %c100 = cir.const #cir.int<100> : !s32i
+  %c900 = cir.const #cir.int<900> : !u32i
+  cir.brcond %arg1 ^bb1, ^bb2
+^bb1:
+  cir.br ^bb3(%c100 : !s32i)
+^bb2:
+  cir.br ^bb3(%arg0 : !s32i)
+^bb3(%v: !s32i):
+  cir.switch.flat %v : !s32i, ^bb4 [
+    0: ^bb6
+  ]
+^bb4:
+  %d = cir.sub %v, %c100 : !s32i
+  %u = cir.cast integral %d : !s32i -> !u32i
+  %in = cir.cmp le %u, %c900 : !u32i
+  cir.brcond %in ^bb5, ^bb6
+^bb5:
+  cir.call @g() : () -> ()
+  cir.br ^bb6
+^bb6:
   cir.return
 }
 

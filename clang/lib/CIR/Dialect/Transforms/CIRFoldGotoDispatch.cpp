@@ -380,6 +380,92 @@ static bool threadDispatches(cir::FuncOp func, Value slot, IRRewriter &rewriter,
   return changed;
 }
 
+/// Whether `branch` is a `cir.brcond` or `cir.switch.flat` on `arg` whose
+/// successors take no operands, and nothing else uses `arg`: a branch past the
+/// block that defines `arg` must not reach a use of it, such as the range
+/// checks FlattenCFG puts in the default of a switch.
+static bool isOnlyBranchedOn(Value arg, Operation &branch) {
+  if (!arg.hasOneUse() || arg.getUses().begin()->getOwner() != &branch)
+    return false;
+  if (auto brCond = dyn_cast<cir::BrCondOp>(branch))
+    return brCond.getDestOperandsTrue().empty() &&
+           brCond.getDestOperandsFalse().empty();
+  if (auto switchOp = dyn_cast<cir::SwitchFlatOp>(branch))
+    return hasNoSuccessorOperands(switchOp);
+  return false;
+}
+
+/// Returns the successor `branch`, a `cir.brcond` or `cir.switch.flat`, takes
+/// when its condition is `value`, or null if `value` has the wrong kind.
+static Block *getBranchDest(Operation &branch, Attribute value) {
+  if (auto brCond = dyn_cast<cir::BrCondOp>(branch)) {
+    auto boolValue = dyn_cast<cir::BoolAttr>(value);
+    if (!boolValue)
+      return nullptr;
+    return boolValue.getValue() ? brCond.getDestTrue() : brCond.getDestFalse();
+  }
+  auto intValue = dyn_cast<cir::IntAttr>(value);
+  return intValue ? getDispatchDest(cast<cir::SwitchFlatOp>(branch),
+                                    intValue.getValue())
+                  : nullptr;
+}
+
+/// Redirects every edge that passes a constant into a block that does nothing
+/// but branch on that argument, possibly after plain branches: the blocks
+/// before an op a goto enters, which take the op's steered condition or
+/// switch value. The goto's edge then
+/// reaches the entered region directly, so its dispatch there folds too.
+/// Returns whether any edge moved.
+static bool
+threadSteeringBlocks(cir::FuncOp func, IRRewriter &rewriter,
+                     unsigned &numThreaded,
+                     llvm::SmallPtrSetImpl<Block *> &steeringBlocks) {
+  bool changed = false;
+  for (Block &block : func.getBody()) {
+    if (block.getNumArguments() != 1)
+      continue;
+    Value arg = block.getArgument(0);
+    // The branch on the argument may follow a chain of plain branches, as
+    // FlattenCFG leaves for a switch.
+    Block *decider = &block;
+    llvm::SmallPtrSet<Block *, 4> chain{decider};
+    while (llvm::hasSingleElement(*decider)) {
+      auto br = dyn_cast<cir::BrOp>(decider->front());
+      if (!br || !br.getDestOperands().empty() ||
+          !chain.insert(br.getDest()).second)
+        break;
+      decider = br.getDest();
+    }
+    if (!llvm::hasSingleElement(*decider) ||
+        !isOnlyBranchedOn(arg, decider->front()))
+      continue;
+
+    for (BlockOperand &edge : llvm::make_early_inc_range(block.getUses())) {
+      auto branch = dyn_cast<BranchOpInterface>(edge.getOwner());
+      if (!branch)
+        continue;
+      SuccessorOperands operands =
+          branch.getSuccessorOperands(edge.getOperandNumber());
+      if (operands.size() != 1 || !operands[0])
+        continue;
+      auto constant = operands[0].getDefiningOp<cir::ConstantOp>();
+      Block *dest = constant
+                        ? getBranchDest(decider->front(), constant.getValue())
+                        : nullptr;
+      if (!dest || dest->getNumArguments() != 0)
+        continue;
+      rewriter.modifyOpInPlace(branch, [&] {
+        operands.erase(0);
+        edge.set(dest);
+      });
+      steeringBlocks.insert(&block);
+      ++numThreaded;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
 void CIRFoldGotoDispatchPass::runOnOperation() {
   cir::FuncOp func = getOperation();
   if (func.getBody().empty())
@@ -394,14 +480,21 @@ void CIRFoldGotoDispatchPass::runOnOperation() {
 
   IRRewriter rewriter(&getContext());
   unsigned numThreaded = 0;
+  llvm::SmallPtrSet<Block *, 8> steeringBlocks;
   // A thread can make a later edge known, for instance an edge that now
   // leaves a case of an earlier dispatch directly.
-  while (threadDispatches(func, slot, rewriter, numThreaded)) {
+  while (true) {
+    bool threaded = threadDispatches(func, slot, rewriter, numThreaded);
+    bool steered =
+        threadSteeringBlocks(func, rewriter, numThreaded, steeringBlocks);
+    if (!threaded && !steered)
+      break;
     // Blocks left without predecessors would otherwise keep their stale
     // values in the dataflow and their loads of the slot; drop them, and the
-    // blocks only they reached, before the next round. A dead block may
-    // still use a value of another one, so drop all of their uses before
-    // erasing any.
+    // blocks only they reached, before the next round.
+    // A dead block may still use a value of another one, such as the
+    // argument of the block before a switch, so drop all of their uses
+    // before erasing any.
     while (true) {
       SmallVector<Block *> dead;
       for (Block &block : func.getBody())
@@ -412,11 +505,27 @@ void CIRFoldGotoDispatchPass::runOnOperation() {
         break;
       for (Block *block : dead)
         block->dropAllDefinedValueUses();
-      for (Block *block : dead)
+      for (Block *block : dead) {
+        steeringBlocks.erase(block);
         rewriter.eraseBlock(block);
+      }
     }
   }
   numThreadedEdges += numThreaded;
+
+  // A steering block that only normal execution still reaches needs no block
+  // argument: merge it into its predecessor.
+  for (Block &block : llvm::make_early_inc_range(func.getBody())) {
+    if (!steeringBlocks.contains(&block))
+      continue;
+    Block *pred = block.getSinglePredecessor();
+    auto br = pred ? dyn_cast<cir::BrOp>(pred->getTerminator()) : cir::BrOp();
+    if (!br)
+      continue;
+    SmallVector<Value> args(br.getDestOperands());
+    rewriter.eraseOp(br);
+    rewriter.mergeBlocks(&block, pred, args);
+  }
 
   // Once no dispatch reads the slot, its stores are dead too.
   if (llvm::any_of(slot->getUsers(),

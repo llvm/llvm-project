@@ -93,24 +93,40 @@ void pre_case_goto() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z13pre_case_gotov
-// CIR: cir.switch({{.*}} : !s32i) {
-// CIR:   cir.goto "end"
+// CIR: %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
+// CIR: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.br ^[[PRE_SWITCH:bb[0-9]+]](%[[ONE]] : !s32i)
+// CIR: ^[[PRE_SWITCH]](%[[COND:.*]]: !s32i
+// CIR-NEXT: cir.switch(%[[COND]] : !s32i) {
+// CIR:   %[[END_ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:   cir.store %[[END_ID]], %[[SLOT]]
+// CIR-NEXT:   cir.break
 // CIR: ^bb1:
 // CIR:   cir.case(equal, [#cir.int<1> : !s32i]) {
-// CIR:     cir.br ^bb1
-// CIR:   ^bb1:
-// CIR:     cir.label "end"
-// CIR:     cir.yield
+// CIR:     %[[DEST:.*]] = cir.load %[[SLOT]]
+// CIR-NEXT:     cir.switch.flat %[[DEST]] : !s32i, ^[[NORMAL:bb[0-9]+]] [
+// CIR-NEXT:       1: ^[[TO_END:bb[0-9]+]]
+// CIR:   ^[[TO_END]]:
+// CIR:     cir.br ^[[END:bb[0-9]+]]
+// CIR:   ^[[NORMAL]]:
+// CIR-NEXT:     cir.br ^[[END]]
+// CIR:   ^[[END]]:
+// CIR-NEXT:     cir.yield
 // CIR:   }
 // CIR:   cir.yield
 // CIR: }
+// CIR: %[[DEST2:.*]] = cir.load %[[SLOT]]
+// CIR-NEXT: cir.switch.flat %[[DEST2]] : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT:   1: ^[[ENTER_CASE:bb[0-9]+]]
+// CIR: ^[[ENTER_CASE]]:
+// CIR-NEXT: %[[CASE_VAL:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT: cir.br ^[[PRE_SWITCH]](%[[CASE_VAL]] : !s32i)
 
-// Classic-codegen manages to remove the switch, but we don't have that sort of
-// analysis working right.  So this variant has a switch still in place.
+// Both ways into the switch pass the constant 1, so once the goto is folded
+// the switch goes away, as in classic codegen.
 // LLVM-LABEL: define{{.*}} @_Z13pre_case_gotov
-// LLVM:  switch i32 1, label %[[END:.*]] [
-// LLVM:    i32 1, label %[[CASE1:.*]]
-// LLVM:  ]
+// LLVM-NOT:  switch
+// LLVM:      ret void
 //
 // OGCG-LABEL: define{{.*}} @_Z13pre_case_gotov
 // OGCG:  br label %[[END:.*]]
