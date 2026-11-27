@@ -451,13 +451,13 @@ def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
               (CVT_S_D32_MM AFGR64Opnd:$src)>, ISA_MICROMIPS, FGR_32;
 def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
               (CVT_D32_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_32;
-def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP AFGR64Opnd:$src),
               (TRUNC_W_MM AFGR64Opnd:$src)>, ISA_MICROMIPS32_NOT_MIPS32R6,
               FGR_32;
-def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR64Opnd:$src),
               (CVT_W_D64_MM FGR64Opnd:$src)>, ISA_MICROMIPS32_NOT_MIPS32R6,
               FGR_64;
-def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR32Opnd:$src),
               (TRUNC_W_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
 // Selects

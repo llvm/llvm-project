@@ -527,7 +527,7 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
 /// at least one copy kept) and a compile-time optimization (to drop duplicate
 /// copies when possible).
 static void resolvePrevailingInIndex(
-    ModuleSummaryIndex &Index,
+    const cl::LibraryOptionsContext &LibraryOptions, ModuleSummaryIndex &Index,
     StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>>
         &ResolvedODR,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
@@ -550,8 +550,8 @@ static void resolvePrevailingInIndex(
 
   // TODO Conf.VisibilityScheme can be lto::Config::ELF for ELF.
   lto::Config Conf;
-  thinLTOResolvePrevailingInIndex(Conf, Index, isPrevailing, recordNewLinkage,
-                                  GUIDPreservedSymbols);
+  thinLTOResolvePrevailingInIndex(LibraryOptions, Conf, Index, isPrevailing,
+                                  recordNewLinkage, GUIDPreservedSymbols);
 }
 
 // Initialize the TargetMachine builder for a given Triple
@@ -677,7 +677,7 @@ struct IsPrevailing {
 } // namespace
 
 static void computeDeadSymbolsInIndex(
-    ModuleSummaryIndex &Index,
+    const cl::LibraryOptionsContext &LibraryOptions, ModuleSummaryIndex &Index,
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   // We have no symbols resolution available. And can't do any better now in the
   // case where the prevailing symbol is in a native object. It can be refined
@@ -685,8 +685,8 @@ static void computeDeadSymbolsInIndex(
   auto isPrevailing = [&](GlobalValue::GUID G) {
     return PrevailingType::Unknown;
   };
-  computeDeadSymbolsWithConstProp(Index, GUIDPreservedSymbols, isPrevailing,
-                                  /* ImportEnabled = */ true);
+  computeDeadSymbolsWithConstProp(LibraryOptions, Index, GUIDPreservedSymbols,
+                                  isPrevailing, /* ImportEnabled = */ true);
 }
 
 /**
@@ -710,7 +710,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   addUsedSymbolToPreservedGUID(File, GUIDPreservedSymbols);
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(LibraryOptions, Index, GUIDPreservedSymbols);
 
   // Compute prevailing symbols
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
@@ -719,14 +719,14 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
   // Generate import/export list
   FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+  ComputeCrossModuleImport(LibraryOptions, Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols,
-                           PrevailingCopy);
+  resolvePrevailingInIndex(LibraryOptions, Index, ResolvedODR,
+                           GUIDPreservedSymbols, PrevailingCopy);
 
   thinLTOFinalizeInModule(TheModule,
                           ModuleToDefinedGVSummaries[ModuleIdentifier],
@@ -762,7 +762,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
   addUsedSymbolToPreservedGUID(File, GUIDPreservedSymbols);
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(LibraryOptions, Index, GUIDPreservedSymbols);
 
   // Compute prevailing symbols
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
@@ -771,7 +771,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
   // Generate import/export list
   FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+  ComputeCrossModuleImport(LibraryOptions, Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
   auto &ImportList = ImportLists[TheModule.getModuleIdentifier()];
@@ -802,7 +802,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
   addUsedSymbolToPreservedGUID(File, GUIDPreservedSymbols);
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(LibraryOptions, Index, GUIDPreservedSymbols);
 
   // Compute prevailing symbols
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
@@ -811,7 +811,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
   // Generate import/export list
   FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+  ComputeCrossModuleImport(LibraryOptions, Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
@@ -840,7 +840,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   addUsedSymbolToPreservedGUID(File, GUIDPreservedSymbols);
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(LibraryOptions, Index, GUIDPreservedSymbols);
 
   // Compute prevailing symbols
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
@@ -849,7 +849,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
   // Generate import/export list
   FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+  ComputeCrossModuleImport(LibraryOptions, Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
@@ -890,7 +890,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   Index.collectDefinedGVSummariesPerModule(ModuleToDefinedGVSummaries);
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbolsInIndex(Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(LibraryOptions, Index, GUIDPreservedSymbols);
 
   // Compute prevailing symbols
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
@@ -899,7 +899,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
   // Generate import/export list
   FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries,
+  ComputeCrossModuleImport(LibraryOptions, Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
   auto &ExportList = ExportLists[ModuleIdentifier];
@@ -911,8 +911,8 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
 
   // Resolve prevailing symbols
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolvePrevailingInIndex(Index, ResolvedODR, GUIDPreservedSymbols,
-                           PrevailingCopy);
+  resolvePrevailingInIndex(LibraryOptions, Index, ResolvedODR,
+                           GUIDPreservedSymbols, PrevailingCopy);
 
   // Promote the exported values in the index, so that they are promoted
   // in the module.
@@ -1064,16 +1064,17 @@ void ThinLTOCodeGenerator::run() {
     addUsedSymbolToPreservedGUID(*M, GUIDPreservedSymbols);
 
   // Compute "dead" symbols, we don't want to import/export these!
-  computeDeadSymbolsInIndex(*Index, GUIDPreservedSymbols);
+  computeDeadSymbolsInIndex(LibraryOptions, *Index, GUIDPreservedSymbols);
 
   // Currently there is no support for enabling whole program visibility via a
   // linker option in the old LTO API, but this call allows it to be specified
   // via the internal option. Must be done before WPD below.
-  if (hasWholeProgramVisibility(/* WholeProgramVisibilityEnabledInLTO */ false))
+  if (hasWholeProgramVisibility(LibraryOptions,
+                                /* WholeProgramVisibilityEnabledInLTO */ false))
     Index->setWithWholeProgramVisibility();
 
   // FIXME: This needs linker information via a TBD new interface
-  updateVCallVisibilityInIndex(*Index,
+  updateVCallVisibilityInIndex(LibraryOptions, *Index,
                                /*WholeProgramVisibilityEnabledInLTO=*/false,
                                // FIXME: These need linker information via a
                                // TBD new interface.
@@ -1085,8 +1086,8 @@ void ThinLTOCodeGenerator::run() {
   // performing IR-based WPD in hybrid regular/thin LTO mode).
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
   std::set<GlobalValue::GUID> ExportedGUIDs;
-  runWholeProgramDevirtOnIndex(*Index, ExportedGUIDs, LocalWPDTargetsMap,
-                               nullptr, nullptr);
+  runWholeProgramDevirtOnIndex(LibraryOptions, *Index, ExportedGUIDs,
+                               LocalWPDTargetsMap, nullptr);
   GUIDPreservedSymbols.insert_range(ExportedGUIDs);
 
   // Compute prevailing symbols
@@ -1097,7 +1098,7 @@ void ThinLTOCodeGenerator::run() {
   // combined index.
   FunctionImporter::ImportListsTy ImportLists(ModuleCount);
   DenseMap<StringRef, FunctionImporter::ExportSetTy> ExportLists(ModuleCount);
-  ComputeCrossModuleImport(*Index, ModuleToDefinedGVSummaries,
+  ComputeCrossModuleImport(LibraryOptions, *Index, ModuleToDefinedGVSummaries,
                            IsPrevailing(PrevailingCopy), ImportLists,
                            ExportLists);
 
@@ -1109,8 +1110,8 @@ void ThinLTOCodeGenerator::run() {
 
   // Resolve prevailing symbols, this has to be computed early because it
   // impacts the caching.
-  resolvePrevailingInIndex(*Index, ResolvedODR, GUIDPreservedSymbols,
-                           PrevailingCopy);
+  resolvePrevailingInIndex(LibraryOptions, *Index, ResolvedODR,
+                           GUIDPreservedSymbols, PrevailingCopy);
 
   // Use global summary-based analysis to identify symbols that can be
   // internalized (because they aren't exported or preserved as per callback).
@@ -1122,7 +1123,8 @@ void ThinLTOCodeGenerator::run() {
       *Index, IsExported(ExportLists, GUIDPreservedSymbols),
       IsPrevailing(PrevailingCopy));
 
-  thinLTOPropagateFunctionAttrs(*Index, IsPrevailing(PrevailingCopy));
+  thinLTOPropagateFunctionAttrs(LibraryOptions, *Index,
+                                IsPrevailing(PrevailingCopy));
 
   // Make sure that every module has an entry in the ExportLists, ImportList,
   // GVSummary and ResolvedODR maps to enable threaded access to these maps

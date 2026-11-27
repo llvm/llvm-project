@@ -2,7 +2,7 @@
 // concurrently by `mbrtoc16()` and `c32rtomb()`.
 //
 // RUN: %clangxx_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
-// UNSUPPORTED: darwin, android, netbsd
+// UNSUPPORTED: darwin, android, netbsd, target={{.*(solaris|aix).*}}
 
 #include <uchar.h>
 

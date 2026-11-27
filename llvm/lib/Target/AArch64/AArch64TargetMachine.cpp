@@ -78,7 +78,6 @@ LLVMInitializeAArch64Target() {
   initializeAArch64BranchTargetsLegacyPass(PR);
   initializeAArch64CollectLOHLegacyPass(PR);
   initializeAArch64CompressJumpTablesLegacyPass(PR);
-  initializeAArch64WinCFILegacyPass(PR);
   initializeAArch64ConditionalComparesLegacyPass(PR);
   initializeAArch64ConditionOptimizerLegacyPass(PR);
   initializeAArch64DeadRegisterDefinitionsLegacyPass(PR);
@@ -813,8 +812,6 @@ void AArch64PassConfig::addPreEmitPass2() {
   // SVE bundles move prefixes with destructive operations. BLR_RVMARKER pseudo
   // instructions are lowered to bundles as well.
   addPass(createUnpackMachineBundlesLegacy(nullptr));
-  if (TM->getTargetTriple().isOSWindows())
-    addPass(createAArch64WinCFIPass());
 }
 
 void AArch64PassConfig::addRegAssignAndRewriteOptimized() {

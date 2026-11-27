@@ -1516,9 +1516,8 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
   // that the result of the allocation is pointer equal to the load ptr.
   if (isa<AllocaInst>(DepInst)) {
     return createConstantExpression(UndefValue::get(LoadType));
-  } else if (auto *InitVal =
-                 getInitialValueOfAllocation(DepInst, TLI, LoadType))
-      return createConstantExpression(InitVal);
+  } else if (auto *InitVal = getInitialValueOfAllocation(DepInst, LoadType))
+    return createConstantExpression(InitVal);
 
   return nullptr;
 }

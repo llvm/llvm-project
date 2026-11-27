@@ -191,6 +191,8 @@ def HasMips5_32r2 :   Predicate<"Subtarget->hasMips5_32r2()">,
                       AssemblerPredicate<(all_of FeatureMips5_32r2)>;
 def HasMips32    :    Predicate<"Subtarget->hasMips32()">,
                       AssemblerPredicate<(all_of FeatureMips32)>;
+def NotMips32    :    Predicate<"!Subtarget->hasMips32()">,
+                      AssemblerPredicate<(none_of FeatureMips32)>;
 def HasMips32r2  :    Predicate<"Subtarget->hasMips32r2()">,
                       AssemblerPredicate<(all_of FeatureMips32r2)>;
 def HasMips32r5  :    Predicate<"Subtarget->hasMips32r5()">,
@@ -2702,6 +2704,14 @@ def SNEIMacro : MipsAsmPseudoInst<(outs GPR32Opnd:$rd),
 def : MipsInstAlias<"sne $rd, $imm",
                     (SNEIMacro GPR32Opnd:$rd, GPR32Opnd:$rd, simm32:$imm), 0>,
                     NOT_ASE_CNMIPS;
+
+// Before MIPS32 there is no mul instruction, so expand it like GAS does.
+def MULMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
+                                              GPR32Opnd:$rt),
+                                 "mul\t$rd, $rs, $rt"> {
+  let InsnPredicates = [NotMips32];
+  let TwoOperandAliasConstraint = "$rd = $rs";
+}
 
 def MULImmMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
                                                  simm32_relaxed:$imm),

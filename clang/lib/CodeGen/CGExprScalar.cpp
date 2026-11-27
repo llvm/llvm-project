@@ -4726,6 +4726,11 @@ static Value* tryEmitFMulAdd(const BinOpInfo &op,
   if (!op.FPFeatures.allowFPContractWithinStatement())
     return nullptr;
 
+  // fmuladd requires all of its operands to have the same type, so an add/sub
+  // with operands of different types can't be fused.
+  if (op.LHS->getType() != op.RHS->getType())
+    return nullptr;
+
   Value *LHS = op.LHS;
   Value *RHS = op.RHS;
 

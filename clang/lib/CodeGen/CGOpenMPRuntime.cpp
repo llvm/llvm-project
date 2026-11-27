@@ -3962,9 +3962,17 @@ getPointerAndSize(CodeGenFunction &CGF, const Expr *E) {
                  dyn_cast<ArraySectionExpr>(E->IgnoreParenImpCasts())) {
     LValue UpAddrLVal = CGF.EmitArraySectionExpr(ASE, /*IsLowerBound=*/false);
     Address UpAddrAddress = UpAddrLVal.getAddress();
-    llvm::Value *UpAddr = CGF.Builder.CreateConstGEP1_32(
-        UpAddrAddress.getElementType(), UpAddrAddress.emitRawPointer(CGF),
-        /*Idx0=*/1);
+    llvm::Value *UpAddr;
+    // The address holds the innermost element of a variable length array
+    // element; step over the whole element, whose size is a run time value.
+    if (UpAddrLVal.getType()->isVariableArrayType())
+      UpAddr =
+          CGF.Builder.CreateGEP(CGF.Int8Ty, UpAddrAddress.emitRawPointer(CGF),
+                                CGF.getTypeSize(UpAddrLVal.getType()));
+    else
+      UpAddr = CGF.Builder.CreateConstGEP1_32(UpAddrAddress.getElementType(),
+                                              UpAddrAddress.emitRawPointer(CGF),
+                                              /*Idx0=*/1);
     SizeVal = CGF.Builder.CreatePtrDiff(UpAddr, Addr, "", /*IsNUW=*/true);
   } else {
     SizeVal = CGF.getTypeSize(Ty);
@@ -8484,8 +8492,24 @@ private:
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
       const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
+      // A non-contiguous section of a shaped array is based on the shaped
+      // pointer. The attach pointer provides it, except after pointer
+      // arithmetic (e.g. `([n])(p + 10)`), which the attach pointer skips.
+      if (OAShE && Next != CE && IsNonContiguous) {
+        if (!BP.isValid() ||
+            isa<BinaryOperator>(OAShE->getBase()->IgnoreParenImpCasts()))
+          BP = Address(CGF.EmitScalarExpr(OAShE->getBase()),
+                       CGF.ConvertTypeForMem(
+                           OAShE->getBase()->getType()->getPointeeType()),
+                       CGF.getContext().getTypeAlignInChars(
+                           OAShE->getBase()->getType()));
+        continue;
+      }
+      // An array shaping expression maps the shaped storage only as the whole
+      // list item; as the base of array sections it just reinterprets the
+      // pointer.
       bool IsPointer =
-          OAShE ||
+          (OAShE && Next == CE) ||
           (OASE && ArraySectionExpr::getBaseOriginalType(OASE)
                        .getCanonicalType()
                        ->isAnyPointerType()) ||
@@ -8780,13 +8804,33 @@ private:
     MapValuesArrayTy CurCounts;
     MapValuesArrayTy CurStrides = {llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
     MapValuesArrayTy DimSizes{llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
-    uint64_t ElementTypeSize;
+    llvm::Value *ElementTypeSize = nullptr;
+
+    // The attach pointer or the array shaping expression and everything past
+    // it belong to the base, not to dimensions of the sectioned array.
+    auto ArrayDimsEnd = llvm::find_if(
+        Components,
+        [AttachPtrExpr](
+            const OMPClauseMappableExprCommon::MappableComponent &Component) {
+          const Expr *E = Component.getAssociatedExpression();
+          return (AttachPtrExpr && E == AttachPtrExpr) ||
+                 isa<OMPArrayShapingExpr>(E);
+        });
+    auto ArrayDimComponents =
+        llvm::make_range(Components.begin(), ArrayDimsEnd);
+    // Only array sections and subscripts add a dimension.
+    unsigned NumArrayDims = llvm::count_if(
+        ArrayDimComponents,
+        [](const OMPClauseMappableExprCommon::MappableComponent &Component) {
+          return isa<ArraySectionExpr, ArraySubscriptExpr>(
+              Component.getAssociatedExpression());
+        });
 
     // Collect Size information for each dimension and get the element size as
     // the first Stride. For example, for `int arr[10][10]`, the DimSizes
     // should be [10, 10] and the first stride is 4 btyes.
     for (const OMPClauseMappableExprCommon::MappableComponent &Component :
-         Components) {
+         ArrayDimComponents) {
       const Expr *AssocExpr = Component.getAssociatedExpression();
       const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
 
@@ -8833,15 +8877,17 @@ private:
           // level of indirection.
           if (&Component != &*Components.begin())
             ElementType = ElementType->getPointeeOrArrayElementType();
-          ElementTypeSize =
-              Context.getTypeSizeInChars(ElementType).getQuantity();
-          CurCounts.push_back(
-              llvm::ConstantInt::get(CGF.Int64Ty, ElementTypeSize));
+          // The element may be a variable length array (a section of fewer
+          // dimensions than the array), whose size is a run time value.
+          ElementTypeSize = CGF.Builder.CreateIntCast(
+              CGF.getTypeSize(QualType(ElementType, 0)), CGF.Int64Ty,
+              /*isSigned=*/false);
+          CurCounts.push_back(ElementTypeSize);
         }
       }
       // Get dimension value except for the last dimension since we don't need
       // it.
-      if (DimSizes.size() < Components.size() - 1) {
+      if (DimSizes.size() < NumArrayDims) {
         if (CAT)
           DimSizes.push_back(
               llvm::ConstantInt::get(CGF.Int64Ty, CAT->getZExtSize()));
@@ -8855,8 +8901,8 @@ private:
     // Skip the dummy dimension since we have already have its information.
     auto *DI = DimSizes.begin() + 1;
     // Product of dimension.
-    llvm::Value *DimProd =
-        llvm::ConstantInt::get(CGF.CGM.Int64Ty, ElementTypeSize);
+    assert(ElementTypeSize && "Element size of the section is not known");
+    llvm::Value *DimProd = ElementTypeSize;
 
     // Collect info for non-contiguous. Notice that offset, count, and stride
     // are only meaningful for array-section, so we insert a null for anything
@@ -8866,7 +8912,7 @@ private:
     // count, and stride are the same as the number of non-contiguous
     // declaration in target update to/from clause.
     for (const OMPClauseMappableExprCommon::MappableComponent &Component :
-         Components) {
+         ArrayDimComponents) {
       const Expr *AssocExpr = Component.getAssociatedExpression();
 
       if (const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr)) {

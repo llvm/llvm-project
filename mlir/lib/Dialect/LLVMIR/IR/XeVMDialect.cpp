@@ -549,10 +549,6 @@ XeVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError, int O,
 }
 
 void XeVMDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/XeVMOps.cpp.inc"
-      >();
   declarePromisedInterface<mlir::gpu::TargetAttrInterface,
                            mlir::xevm::XeVMTargetAttr>();
 }

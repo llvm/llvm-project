@@ -15,6 +15,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
 #include <__algorithm/includes.h>
+#include <__algorithm/inplace_merge.h>
 #include <__algorithm/is_heap_until.h>
 #include <__algorithm/merge.h>
 #include <__algorithm/min_element.h>
@@ -34,6 +35,7 @@
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/swap_ranges.h>
 #include <__algorithm/transform.h>
+#include <__algorithm/unique_copy.h>
 #include <__config>
 #include <__memory/uninitialized_algorithms.h>
 #include <__numeric/transform_exclusive_scan.h>
@@ -118,6 +120,20 @@ struct __for_each<__serial_backend_tag, _ExecutionPolicy> {
   optional<__empty>
   operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Function&& __func) const noexcept {
     std::for_each(std::move(__first), std::move(__last), std::forward<_Function>(__func));
+    return __empty{};
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __inplace_merge<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _BidirectionalIterator, class _Comp>
+  _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&&,
+             _BidirectionalIterator __first,
+             _BidirectionalIterator __middle,
+             _BidirectionalIterator __last,
+             _Comp __comp) const noexcept {
+    std::inplace_merge(std::move(__first), std::move(__middle), std::move(__last), std::move(__comp));
     return __empty{};
   }
 };
@@ -529,6 +545,19 @@ struct __copy_if<__serial_backend_tag, _ExecutionPolicy> {
       _Policy&&, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __out_it, _Predicate __pred)
       const noexcept {
     return std::copy_if(std::move(__first), std::move(__last), std::move(__out_it), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __unique_copy<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first,
+             _ForwardIterator1 __last,
+             _ForwardIterator2 __result,
+             _BinaryPredicate __predicate) const noexcept {
+    return std::unique_copy(std::move(__first), std::move(__last), std::move(__result), std::move(__predicate));
   }
 };
 

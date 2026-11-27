@@ -167,7 +167,7 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
       return build($_builder, $_state, value.getType(), value);
     }]>];
 
-  let summary = "clone a memref";
+  let summary = "clone a buffer";
   let description = [{
     Clones the data in the input view into an implicitly defined output view.
 
@@ -183,9 +183,9 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
     behavior.
   }];
 
-  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "",
+  let arguments = (ins Arg<Bufferization_BufferLikeTypeInterface, "",
                            [MemRead<DefaultResource>]>:$input);
-  let results = (outs Res<AnyRankedOrUnrankedMemRef, "",
+  let results = (outs Res<Bufferization_BufferLikeTypeInterface, "",
                           [MemWrite<DefaultResource>,
                            MemAlloc<DefaultResource>]>:$output);
 
@@ -474,6 +474,10 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     The `memref` operands must be the originally allocated memrefs, however, the
     `retained` memref operands may be arbitrary memrefs.
 
+    The operands may be of any type that implements `BufferLikeType`. The
+    lowering of this operation to the `memref` dialect supports only memrefs
+    and does not lower a dealloc with an operand of any other type.
+
     This operation returns a variadic number of `updatedConditions` operands,
     one updated condition per retained memref. An updated condition indicates
     the ownership of the respective retained memref. It is computed as the
@@ -511,9 +515,10 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     be optimized away by running the `buffer-deallocation-simplification` pass.
   }];
 
-  let arguments = (ins Variadic<AnyRankedOrUnrankedMemRef>:$memrefs,
-                       Variadic<I1>:$conditions,
-                       Variadic<AnyRankedOrUnrankedMemRef>:$retained);
+  let arguments = (ins
+      Variadic<Bufferization_BufferLikeTypeInterface>:$memrefs,
+      Variadic<I1>:$conditions,
+      Variadic<Bufferization_BufferLikeTypeInterface>:$retained);
   let results = (outs Variadic<I1>:$updatedConditions);
 
   let assemblyFormat = [{
