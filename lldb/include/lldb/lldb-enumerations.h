@@ -820,6 +820,7 @@ enum CommandArgumentType {
   eArgTypePluginDomain,
   eArgTypeBreakpointResolverMask,
   eArgTypeScriptedExtension,
+  eArgTypeDynamicValueType,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };

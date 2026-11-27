@@ -11,6 +11,7 @@
 #include "lldb/DataFormatters/ValueObjectPrinter.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Target/Target.h"
 
@@ -19,64 +20,28 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static const OptionDefinition g_option_table[] = {
-    {LLDB_OPT_SET_1, false, "dynamic-type", 'd',
-     OptionParser::eRequiredArgument, nullptr, GetDynamicValueTypes(), 0,
-     eArgTypeNone, "Show the object as its full dynamic type, not its static "
-                   "type, if available."},
-    {LLDB_OPT_SET_1, false, "synthetic-type", 'S',
-     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean,
-     "Show the object obeying its synthetic provider, if available."},
-    {LLDB_OPT_SET_1, false, "depth", 'D', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeCount, "Set the max recurse depth when dumping "
-                                    "aggregate types (default is infinity)."},
-    {LLDB_OPT_SET_1, false, "flat", 'F', OptionParser::eNoArgument, nullptr,
-     {}, 0, eArgTypeNone, "Display results in a flat format that uses "
-                          "expression paths for each variable or member."},
-    {LLDB_OPT_SET_1, false, "location", 'L', OptionParser::eNoArgument, nullptr,
-     {}, 0, eArgTypeNone, "Show variable location information."},
-    {LLDB_OPT_SET_1, false, "object-description", 'O',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
-     "Display using a language-specific description API, if possible."},
-    {LLDB_OPT_SET_1, false, "ptr-depth", 'P', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeCount, "The number of pointers to be traversed "
-                                    "when dumping values (default is zero)."},
-    {LLDB_OPT_SET_1, false, "show-types", 'T', OptionParser::eNoArgument,
-     nullptr, {}, 0, eArgTypeNone,
-     "Show variable types when dumping values."},
-    {LLDB_OPT_SET_1, false, "no-summary-depth", 'Y',
-     OptionParser::eOptionalArgument, nullptr, {}, 0, eArgTypeCount,
-     "Set the depth at which omitting summary information stops (default is "
-     "1)."},
-    {LLDB_OPT_SET_1, false, "raw-output", 'R', OptionParser::eNoArgument,
-     nullptr, {}, 0, eArgTypeNone, "Don't use formatting options."},
-    {LLDB_OPT_SET_1, false, "show-all-children", 'A', OptionParser::eNoArgument,
-     nullptr, {}, 0, eArgTypeNone,
-     "Ignore the upper bound on the number of children to show."},
-    {LLDB_OPT_SET_1, false, "validate", 'V', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeBoolean, "Show results of type validators."},
-    {LLDB_OPT_SET_1, false, "element-count", 'Z',
-     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCount,
-     "Treat the result of the expression as if its type is an array of this "
-     "many values."}};
+#define LLDB_OPTIONS_value_object_display
+#include "InterpreterOptions.inc"
 
 llvm::ArrayRef<OptionDefinition>
 OptionGroupValueObjectDisplay::GetDefinitions() {
-  return llvm::ArrayRef(g_option_table);
+  return llvm::ArrayRef(g_value_object_display_options);
 }
 
 Status OptionGroupValueObjectDisplay::SetOptionValue(
     uint32_t option_idx, llvm::StringRef option_arg,
     ExecutionContext *execution_context) {
   Status error;
-  const int short_option = g_option_table[option_idx].short_option;
+  const int short_option =
+      g_value_object_display_options[option_idx].short_option;
   bool success = false;
 
   switch (short_option) {
   case 'd': {
     int32_t result;
-    result = OptionArgParser::ToOptionEnum(option_arg, GetDynamicValueTypes(),
-                                           2, error);
+    result = OptionArgParser::ToOptionEnum(
+        option_arg, g_value_object_display_options[option_idx].enum_values, 2,
+        error);
     if (error.Success())
       use_dynamic = (lldb::DynamicValueType)result;
   } break;

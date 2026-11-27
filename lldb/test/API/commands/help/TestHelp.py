@@ -498,3 +498,20 @@ class HelpCommandTestCase(TestBase):
                 "Watch for read/write",
             ],
         )
+
+        self.expect(
+            "help dwim-print",
+            substrs=["-d <dynamic-value-type> ( --dynamic-type <dynamic-value-type> )"],
+        )
+        self.expect(
+            "help <dynamic-value-type>",
+            substrs=[
+                "Whether to calculate the dynamic type of values",
+                "no-dynamic-values",
+                "Don't calculate the dynamic type of values",
+                "run-target",
+                "Calculate the dynamic type of values even if you have to run",
+                "no-run-target",
+                "Calculate the dynamic type of values, but don't run",
+            ],
+        )
