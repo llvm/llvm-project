@@ -101,6 +101,7 @@ class CGOpenMPRuntime;
 class CGCUDARuntime;
 class CGHLSLRuntime;
 class CGFunctionInfo;
+struct CodeGenCLOptions;
 class CoverageMappingModuleGen;
 class QualTypeMapper;
 class TargetCodeGenInfo;
@@ -352,6 +353,7 @@ public:
   typedef std::vector<Structor> CtorList;
 
 private:
+  const CodeGenCLOptions &CLOpts;
   ASTContext &Context;
   const LangOptions &LangOpts;
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS; // Only used for debug info.
@@ -908,6 +910,7 @@ public:
     const { return HeaderSearchOpts; }
   const PreprocessorOptions &getPreprocessorOpts()
     const { return PreprocessorOpts; }
+  const CodeGenCLOptions &getCLOpts() const { return CLOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return CodeGenOpts; }
   llvm::Module &getModule() const { return TheModule; }
   DiagnosticsEngine &getDiags() const { return Diags; }

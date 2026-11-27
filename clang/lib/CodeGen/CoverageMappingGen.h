@@ -19,12 +19,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-
-namespace llvm::coverage {
-extern cl::opt<bool> SystemHeadersCoverage;
-}
 
 namespace clang {
 
@@ -72,12 +67,16 @@ class CoverageSourceInfo : public PPCallbacks,
 
   SourceManager &SourceMgr;
 
+  bool EmptyLineCommentCoverage;
+
 public:
   // Location of the token parsed before HandleComment is called. This is
   // updated every time Preprocessor::Lex lexes a new token.
   SourceLocation PrevTokLoc;
 
-  CoverageSourceInfo(SourceManager &SourceMgr) : SourceMgr(SourceMgr) {}
+  CoverageSourceInfo(SourceManager &SourceMgr, bool EmptyLineCommentCoverage)
+      : SourceMgr(SourceMgr),
+        EmptyLineCommentCoverage(EmptyLineCommentCoverage) {}
 
   std::vector<SkippedRange> &getSkippedRanges() { return SkippedRanges; }
 
@@ -94,6 +93,7 @@ public:
 
 namespace CodeGen {
 
+struct CodeGenCLOptions;
 class CodeGenModule;
 class CounterPair;
 
@@ -126,7 +126,8 @@ class CoverageMappingModuleGen {
                                  uint64_t FilenamesRef);
 
 public:
-  static CoverageSourceInfo *setUpCoverageCallbacks(Preprocessor &PP);
+  static CoverageSourceInfo *
+  setUpCoverageCallbacks(const CodeGenCLOptions &CLOpts, Preprocessor &PP);
 
   CoverageMappingModuleGen(CodeGenModule &CGM, CoverageSourceInfo &SourceInfo);
 
