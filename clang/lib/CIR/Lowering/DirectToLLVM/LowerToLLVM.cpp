@@ -214,7 +214,7 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
 
   // Truncate the padded storage integer back to the _BitInt's literal width.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(op.getType());
-      cir::isBitIntType(intTy))
+      intTy && intTy.isBitInt())
     return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
                                    /*toMemory=*/false);
 
@@ -260,7 +260,7 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
 
   // Sign/zero-extend the _BitInt value to its padded storage integer.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(origType);
-      cir::isBitIntType(intTy))
+      intTy && intTy.isBitInt())
     return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
                                    /*toMemory=*/true);
 

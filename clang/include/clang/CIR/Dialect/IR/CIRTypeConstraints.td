@@ -129,7 +129,13 @@ def CIR_SInt128 : CIR_SInt<128>;
 // have a specified set of admissible bitwidths (8, 16, 32, 64).
 // _BitInt types are excluded even when their width matches a fundamental width.
 
-def CIR_IsNotBitIntPred : CPred<"!$_self.getIsBitInt()">;
+def CIR_IsBitIntPred : CPred<"$_self.getIsBitInt()">;
+def CIR_IsNotBitIntPred : Neg<CIR_IsBitIntPred>;
+
+def CIR_AnyBitIntType
+    : CIR_ConfinedType<CIR_AnyIntType, [CIR_IsBitIntPred], "_BitInt type"> {
+    let cppFunctionName = "isBitIntType";
+}
 
 def CIR_AnyFundamentalIntType
     : CIR_ConfinedType<CIR_AnyIntType,
