@@ -1036,8 +1036,7 @@ static bool isFoldableInLoop(const Instruction &I, const Loop *CurLoop,
     // it optimistically assumes that a GEP will fold into addressing mode
     // regardless of its users.
     const BasicBlock *BB = GEP->getParent();
-    for (const User *U : GEP->users()) {
-      const Instruction *UI = cast<Instruction>(U);
+    for (const Instruction *UI : GEP->users()) {
       if (CurLoop->contains(UI) &&
           (BB != UI->getParent() ||
            (!isa<StoreInst>(UI) && !isa<LoadInst>(UI))))
@@ -1060,8 +1059,7 @@ static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
                                       TargetTransformInfo *TTI,
                                       bool &FoldableInLoop, bool LoopNestMode) {
   bool IsFoldable = isFoldableInLoop(I, CurLoop, TTI);
-  for (const User *U : I.users()) {
-    const Instruction *UI = cast<Instruction>(U);
+  for (const Instruction *UI : I.users()) {
     if (const PHINode *PN = dyn_cast<PHINode>(UI)) {
       const BasicBlock *BB = PN->getParent();
       // We cannot sink uses in catchswitches.

@@ -14,7 +14,7 @@
 #ifndef CLANG_SUPPORT_COMPILER_H
 #define CLANG_SUPPORT_COMPILER_H
 
-#include "llvm/Support/Compiler.h"
+#include "clang/Config/clang-config.h"
 
 /// CLANG_ABI is the main export/visibility macro to mark something as
 /// explicitly exported when clang is built as a shared library with everything
@@ -33,41 +33,38 @@
 /// is used where a symbol must be exported by the defining library but must not
 /// be imported by consumers.
 #ifndef CLANG_ABI_GENERATING_ANNOTATIONS
+
 // Marker to add to classes or functions in public headers that should not have
 // export macros added to them by the clang tool
 #define CLANG_ABI_NOT_EXPORTED
-// Some libraries like those for tablegen are linked in to tools that used
-// in the build so can't depend on the llvm shared library. If export macros
-// were left enabled when building these we would get duplicate or
-// missing symbol linker errors on windows.
-#if defined(CLANG_BUILD_STATIC)
-#define CLANG_ABI
-#define CLANG_ABI_EXPORT
-#define CLANG_TEMPLATE_ABI
-#define CLANG_EXPORT_TEMPLATE
-#elif defined(_WIN32) && !defined(__MINGW32__)
-#if defined(CLANG_EXPORTS)
-#define CLANG_ABI __declspec(dllexport)
-#define CLANG_TEMPLATE_ABI
-#define CLANG_EXPORT_TEMPLATE __declspec(dllexport)
+
+// clang-format off
+#if defined(CLANG_ENABLE_CLANG_EXPORT_ANNOTATIONS)
+# if defined(_WIN32) && !defined(__MINGW32__)
+#  if defined(CLANG_EXPORTS)
+#   define CLANG_ABI __declspec(dllexport)
+#   define CLANG_TEMPLATE_ABI
+#   define CLANG_EXPORT_TEMPLATE __declspec(dllexport)
+#  else
+#   define CLANG_ABI __declspec(dllimport)
+#   define CLANG_TEMPLATE_ABI __declspec(dllimport)
+#   define CLANG_EXPORT_TEMPLATE
+#  endif
+#  define CLANG_ABI_EXPORT __declspec(dllexport)
+# else
+#  define CLANG_ABI __attribute__((visibility("default")))
+#  define CLANG_TEMPLATE_ABI CLANG_ABI
+#  define CLANG_EXPORT_TEMPLATE
+#  define CLANG_ABI_EXPORT CLANG_ABI
+# endif
 #else
-#define CLANG_ABI __declspec(dllimport)
-#define CLANG_TEMPLATE_ABI __declspec(dllimport)
-#define CLANG_EXPORT_TEMPLATE
+# define CLANG_ABI
+# define CLANG_TEMPLATE_ABI
+# define CLANG_EXPORT_TEMPLATE
+# define CLANG_ABI_EXPORT
 #endif
-#define CLANG_ABI_EXPORT __declspec(dllexport)
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__) || defined(__CYGWIN__)
-#define CLANG_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define CLANG_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define CLANG_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define CLANG_EXPORT_TEMPLATE
-#elif defined(__MACH__) || defined(__wasm__) || defined(__EMSCRIPTEN__)
-#define CLANG_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define CLANG_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define CLANG_TEMPLATE_ABI
-#define CLANG_EXPORT_TEMPLATE
-#endif
+// clang-format on
+
 #endif
 
 #endif

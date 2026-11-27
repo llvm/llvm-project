@@ -56,11 +56,11 @@ protected:
   ///
   /// \returns the last line of the standard error to be compared for
   /// correctness.
-  std::string run(const VecDesc &VD, const char *IR) {
+  std::string run(EnumStrings<VecDescData, 3> Descs, const char *IR) {
     // Create TLII and register it with FAM so it's preserved when
     // ReplaceWithVeclib pass runs.
     TargetLibraryInfoImpl TLII = TargetLibraryInfoImpl(Triple());
-    TLII.addVectorizableFunctions({VD});
+    TLII.addVectorizableFunctions(Descs);
     FunctionAnalysisManager FAM;
     FAM.registerPass([&TLII]() { return TargetLibraryAnalysis(TLII); });
 
@@ -95,20 +95,26 @@ declare <vscale x 4 x float> @llvm.powi.f32.i32(<vscale x 4 x float>, i32) #0
 // The VFABI prefix in TLI describes signature which is matching the powi
 // intrinsic declaration.
 TEST_F(ReplaceWithVecLibTest, TestValidMapping) {
-  VecDesc CorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvu_powi",
-                       ElementCount::getScalable(4), /*Masked*/ true,
-                       "_ZGVsMxvu", /* CC = */ std::nullopt};
-  EXPECT_EQ(run(CorrectVD, IR),
+  constexpr EnumStringDef<VecDescData, 3> Defs[] = {
+      {{"llvm.powi.f32.i32", "_ZGVsMxvu_powi", "_ZGVsMxvu"},
+       {ElementCount::getScalable(4), /*Masked=*/true,
+        /*CC=*/std::nullopt}},
+  };
+  constexpr auto Table = BUILD_ENUM_STRINGS(Defs);
+  EXPECT_EQ(run(Table, IR),
             "Intrinsic calls replaced with vector libraries: 1");
 }
 
 // The VFABI prefix in TLI describes signature which is not matching the powi
 // intrinsic declaration.
 TEST_F(ReplaceWithVecLibTest, TestInvalidMapping) {
-  VecDesc IncorrectVD = {"llvm.powi.f32.i32", "_ZGVsMxvv_powi",
-                         ElementCount::getScalable(4), /*Masked*/ true,
-                         "_ZGVsMxvv", /* CC = */ std::nullopt};
-  EXPECT_EQ(run(IncorrectVD, IR),
+  constexpr EnumStringDef<VecDescData, 3> Defs[] = {
+      {{"llvm.powi.f32.i32", "_ZGVsMxvv_powi", "_ZGVsMxvv"},
+       {ElementCount::getScalable(4), /*Masked=*/true,
+        /*CC=*/std::nullopt}},
+  };
+  constexpr auto Table = BUILD_ENUM_STRINGS(Defs);
+  EXPECT_EQ(run(Table, IR),
             "replace-with-veclib: Will not replace: llvm.powi.f32.i32. Wrong "
             "type at index 1: i32");
 }

@@ -7201,8 +7201,7 @@ bool InstCombinerImpl::dominatesAllUses(const Instruction *DI,
   // Protect from self-referencing blocks.
   if (DI->getParent() == DB)
     return false;
-  for (const User *U : DI->users()) {
-    auto *Usr = cast<Instruction>(U);
+  for (const Instruction *Usr : DI->users()) {
     if (Usr != UI && !DT.dominates(DB, Usr->getParent()))
       return false;
   }

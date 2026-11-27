@@ -553,6 +553,21 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
+                                  const APInt &DemandedElts, APInt &DemandedLHS,
+                                  APInt &DemandedRHS) {
+  if (isa<ScalableVectorType>(Shuf->getType())) {
+    assert(DemandedElts == APInt(1, 1));
+    DemandedLHS = DemandedRHS = DemandedElts;
+    return true;
+  }
+
+  int NumElts =
+      cast<FixedVectorType>(Shuf->getOperand(0)->getType())->getNumElements();
+  return getShuffleDemandedElts(NumElts, Shuf->getShuffleMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS);
+}
+
 bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
                              std::array<std::pair<int, int>, 2> &SrcInfo) {
   const int SignalValue = NumElts * 2;
@@ -968,13 +983,23 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     }
   }
 
-  // Now we've discovered all values, walk them to see if there are
-  // any users we didn't see. If there are, we can't optimize that
-  // chain.
-  for (auto &I : DBits)
+  // Now we've discovered all values, walk them with the exception for roots
+  // to see if there are any users we didn't see. If there are, we can't
+  // optimize that chain.
+  //
+  // We exclude checking root users because shrinking roots doesn't change
+  // root's type and therefore doesn't affect its users.
+  for (auto &I : DBits) {
+    if (const auto *RI = dyn_cast<Instruction>(I.first);
+        RI && Roots.contains(RI)) {
+      assert((isa<TruncInst, ICmpInst>(RI)) && "Unexpected root type!");
+      continue;
+    }
+
     for (auto *U : I.first->users())
       if (U->getType()->isIntegerTy() && DBits.count(U) == 0)
         DBits[ECs.getOrInsertLeaderValue(I.first)] |= ~0ULL;
+  }
 
   for (const auto &E : ECs) {
     if (!E->isLeader())

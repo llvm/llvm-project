@@ -510,6 +510,11 @@ storage classes. Since the SPIR-V dialect does not model this decoration on
 pointer types, conversion of these two ops rejects base pointers in those
 storage classes rather than assuming a natural stride.
 
+#### `spirv.PtrEqual` and `spirv.PtrNotEqual`
+
+These ops are mapped to `llvm.icmp "eq"` and `llvm.icmp "ne"` on the converted
+pointers.
+
 #### `spirv.CopyMemory`
 
 `spirv.CopyMemory` is converted to the `llvm.intr.memcpy` intrinsic. The number

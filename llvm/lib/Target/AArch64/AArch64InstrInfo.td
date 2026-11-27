@@ -6171,8 +6171,6 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
 // Instructions used for emitting unwind opcodes on ARM64 Windows.
 //===----------------------------------------------------------------------===//
 let isMeta = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0, Size = 0 in {
-  def SEH_StartProc : Pseudo<(outs), (ins), []>, Sched<[]>;
-  def SEH_EndProc : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EndC : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
@@ -6191,9 +6189,7 @@ let isPseudo = 1 in {
   def SEH_SetFP : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_AddFP : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
   def SEH_Nop : Pseudo<(outs), (ins), []>, Sched<[]>;
-  // Windows unwind range insertion supports only one physical prologue.
-  let isNotDuplicable = 1 in
-    def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
@@ -11211,13 +11207,13 @@ def : Pat<(i64 (sext (sra GPR32:$Rn, (i64 imm0_31:$imm)))),
           (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
                    (i64 imm0_31:$imm), 31)>;
 
-def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i8), (i64 imm0_31:$imm)))),
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i8), (i64 imm0_7:$imm)))),
           (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
-                   (i64 imm0_31:$imm), 7)>;
+                   (i64 imm0_7:$imm), 7)>;
 
-def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i16), (i64 imm0_31:$imm)))),
+def : Pat<(i64 (sext (sra (sext_inreg GPR32:$Rn, i16), (i64 imm0_15:$imm)))),
           (SBFMXri (INSERT_SUBREG (i64 (IMPLICIT_DEF)), GPR32:$Rn, sub_32),
-                   (i64 imm0_31:$imm), 15)>;
+                   (i64 imm0_15:$imm), 15)>;
 
 // To truncate, we can simply extract from a subregister.
 def : Pat<(i32 (trunc GPR64sp:$src)),

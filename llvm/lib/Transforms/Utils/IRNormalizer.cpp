@@ -367,10 +367,9 @@ void IRNormalizer::foldInstructionName(Instruction *I) const {
   // instructions (including pre-outputs).
   if (!Options.FoldPreOutputs) {
     // Don't fold if one of the users is an output instruction.
-    for (auto *U : I->users())
-      if (auto *IU = dyn_cast<Instruction>(U))
-        if (isOutput(IU))
-          return;
+    for (Instruction *IU : I->users())
+      if (isOutput(IU))
+        return;
   }
 
   // Don't fold if it is an output instruction or has no op prefix.
@@ -665,13 +664,11 @@ SetVector<int> IRNormalizer::getOutputFootprint(
       return Outputs;
     }
 
-    for (auto *U : I->users()) {
-      if (auto *UI = dyn_cast<Instruction>(U)) {
-        // Vector for outputs which use UI.
-        SetVector<int> OutputsUsingUI = getOutputFootprint(UI, Visited);
-        // Insert the indexes of outputs using UI.
-        Outputs.insert_range(OutputsUsingUI);
-      }
+    for (Instruction *UI : I->users()) {
+      // Vector for outputs which use UI.
+      SetVector<int> OutputsUsingUI = getOutputFootprint(UI, Visited);
+      // Insert the indexes of outputs using UI.
+      Outputs.insert_range(OutputsUsingUI);
     }
   }
 

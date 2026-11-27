@@ -36,7 +36,7 @@ jobs:
     - name: Configure CMake
       shell: freebsd {0}
       run: >
-        cmake -B /tmp/build
+        cmake -B build
         -DCMAKE_CXX_COMPILER=clang++22
         -DCMAKE_C_COMPILER=clang22
         -DCMAKE_BUILD_TYPE=MinSizeRel
@@ -48,7 +48,7 @@ jobs:
       shell: freebsd {0}
       run: >
         cmake 
-        --build /tmp/build
+        --build build
         --parallel 
         --target libc
 
@@ -56,6 +56,6 @@ jobs:
       shell: freebsd {0}
       run: >
         cmake 
-        --build /tmp/build
+        --build build
         --parallel 
         --target check-libc

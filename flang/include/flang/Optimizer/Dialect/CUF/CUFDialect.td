@@ -30,7 +30,9 @@ def CUFDialect : Dialect {
   }];
 
   let hasAttributes = 1;
+  let hasInitializer = 0;
   let cppNamespace = "::cuf";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = ["fir::FIROpsDialect"];
 }
 

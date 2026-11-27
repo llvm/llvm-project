@@ -282,8 +282,7 @@ static bool HasAddressTaken(const Instruction *AI, TypeSize AllocSize,
                             Module *M,
                             PhiMap &VisitedPHIs) {
   const DataLayout &DL = M->getDataLayout();
-  for (const User *U : AI->users()) {
-    const auto *I = cast<Instruction>(U);
+  for (const Instruction *I : AI->users()) {
     // If this instruction accesses memory make sure it doesn't access beyond
     // the bounds of the allocated object.
     std::optional<MemoryLocation> MemLoc = MemoryLocation::getOrNone(I);

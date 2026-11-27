@@ -123,6 +123,16 @@ template <uint16_t ATTR_TYPE> struct AttrInt {
   static constexpr uint16_t TYPE = ATTR_TYPE;
 };
 
+template <uint16_t ATTR_TYPE> struct AttrBytes {
+  cpp::span<const uint8_t> value;
+  size_t payload_len() const { return value.size(); }
+  void write(uint8_t *dest) const {
+    if (!value.empty())
+      inline_memcpy(dest, value.data(), value.size());
+  }
+  static constexpr uint16_t TYPE = ATTR_TYPE;
+};
+
 /// Writes a netlink message of the given type, consisting of the fixed-size
 /// header (e.g. struct ifinfomsg) followed by the attributes, into the buffer.
 /// Returns the length of the message.

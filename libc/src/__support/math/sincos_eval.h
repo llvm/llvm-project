@@ -1,21 +1,29 @@
-//===-- Compute sin + cos for small angles ----------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Compute sin and cos simultaneously for small reduced angles.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SINCOS_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINCOS_EVAL_H
 
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/polyeval.h"
+#include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/cpu_features.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -49,7 +57,8 @@ LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
   double p2 = fputil::multiply_sub(u_hi_sq, p1, 0x1.5555555555555p-3);
   // q2 ~ 1 + u_hi^2 (-1/2 + u_hi^2 / 24)
   double q2 = fputil::multiply_add(u_hi_sq, q1, 1.0);
-  double sin_lo = fputil::multiply_add(u_hi_3, p2, u.lo * q2);
+  double u_lo_q2 = u.lo * q2;
+  double sin_lo = fputil::multiply_add(u_hi_3, p2, u_lo_q2);
   // Overall, |sin(y) - (u_hi + sin_lo)| < 2*ulp(u_hi^3) < 2^-69.
 
   // Evaluate cos(y) = cos(x - k * (pi/128))
@@ -95,8 +104,10 @@ LIBC_INLINE double sincos_eval(const DoubleDouble &u, DoubleDouble &sin_u,
   sin_u = fputil::exact_add(u.hi, sin_lo);
   cos_u = fputil::exact_add(v.hi, cos_lo);
 
+  // Error from range reduction (<= 2^-104 for |x| < 2^16) and polynomial
+  // evaluation (<= |u.hi|^3 * 2^-51).
   return fputil::multiply_add(fputil::FPBits<double>(u_hi_3).abs().get_val(),
-                              0x1.0p-51, 0x1.0p-105);
+                              0x1.0p-51, 0x1.0p-102);
 }
 
 // sin(u) ~ x - x^3/3! + x^5/5! - x^7/7! + x^9/9! - x^11/11! + x^13/13!

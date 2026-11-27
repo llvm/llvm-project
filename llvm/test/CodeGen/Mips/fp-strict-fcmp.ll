@@ -1457,6 +1457,287 @@ define i32 @fcmps_order(float %a, float %b) #0 {
   ret i32 %conv
 }
 
+; On R6, the compare mask is 0 or -1, so selects, sign extensions and branches
+; can use it without the 'andi'.
+define i32 @select_fcmp_olt_f32(float %a, float %b, i32 %x, i32 %y) #0 {
+; CHECK-LABEL: select_fcmp_olt_f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    move $2, $7
+; CHECK-NEXT:    addiu $1, $zero, 1
+; CHECK-NEXT:    c.olt.s $f12, $f14
+; CHECK-NEXT:    movf $1, $zero, $fcc0
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    movn $2, $6, $1
+;
+; R6-LABEL: select_fcmp_olt_f32:
+; R6:       # %bb.0:
+; R6-NEXT:    cmp.lt.s $f0, $f12, $f14
+; R6-NEXT:    mfc1 $1, $f0
+; R6-NEXT:    seleqz $2, $7, $1
+; R6-NEXT:    selnez $1, $6, $1
+; R6-NEXT:    jr $ra
+; R6-NEXT:    or $2, $1, $2
+;
+; R6-64-LABEL: select_fcmp_olt_f32:
+; R6-64:       # %bb.0:
+; R6-64-NEXT:    cmp.lt.s $f0, $f12, $f13
+; R6-64-NEXT:    mfc1 $1, $f0
+; R6-64-NEXT:    sll $2, $7, 0
+; R6-64-NEXT:    seleqz $2, $2, $1
+; R6-64-NEXT:    sll $3, $6, 0
+; R6-64-NEXT:    selnez $1, $3, $1
+; R6-64-NEXT:    jr $ra
+; R6-64-NEXT:    or $2, $1, $2
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %sel = select i1 %cmp, i32 %x, i32 %y
+  ret i32 %sel
+}
+
+define i32 @select_fcmps_olt_f64(double %a, double %b, i32 %x, i32 %y) #0 {
+; CHECK-LABEL: select_fcmps_olt_f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw $2, 20($sp)
+; CHECK-NEXT:    lw $1, 16($sp)
+; CHECK-NEXT:    addiu $3, $zero, 1
+; CHECK-NEXT:    c.lt.d $f12, $f14
+; CHECK-NEXT:    movf $3, $zero, $fcc0
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    movn $2, $1, $3
+;
+; R6-LABEL: select_fcmps_olt_f64:
+; R6:       # %bb.0:
+; R6-NEXT:    lw $1, 16($sp)
+; R6-NEXT:    lw $2, 20($sp)
+; R6-NEXT:    cmp.slt.d $f0, $f12, $f14
+; R6-NEXT:    mfc1 $3, $f0
+; R6-NEXT:    seleqz $2, $2, $3
+; R6-NEXT:    selnez $1, $1, $3
+; R6-NEXT:    jr $ra
+; R6-NEXT:    or $2, $1, $2
+;
+; R6-64-LABEL: select_fcmps_olt_f64:
+; R6-64:       # %bb.0:
+; R6-64-NEXT:    cmp.slt.d $f0, $f12, $f13
+; R6-64-NEXT:    mfc1 $1, $f0
+; R6-64-NEXT:    sll $2, $7, 0
+; R6-64-NEXT:    seleqz $2, $2, $1
+; R6-64-NEXT:    sll $3, $6, 0
+; R6-64-NEXT:    selnez $1, $3, $1
+; R6-64-NEXT:    jr $ra
+; R6-64-NEXT:    or $2, $1, $2
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %sel = select i1 %cmp, i32 %x, i32 %y
+  ret i32 %sel
+}
+
+define i32 @select_zero_fcmp_oeq_f64(double %a, double %b, i32 %x) #0 {
+; CHECK-LABEL: select_zero_fcmp_oeq_f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lw $1, 16($sp)
+; CHECK-NEXT:    addiu $3, $zero, 1
+; CHECK-NEXT:    addiu $2, $zero, 0
+; CHECK-NEXT:    c.eq.d $f12, $f14
+; CHECK-NEXT:    movf $3, $zero, $fcc0
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    movn $2, $1, $3
+;
+; R6-LABEL: select_zero_fcmp_oeq_f64:
+; R6:       # %bb.0:
+; R6-NEXT:    lw $1, 16($sp)
+; R6-NEXT:    cmp.eq.d $f0, $f12, $f14
+; R6-NEXT:    mfc1 $2, $f0
+; R6-NEXT:    jr $ra
+; R6-NEXT:    selnez $2, $1, $2
+;
+; R6-64-LABEL: select_zero_fcmp_oeq_f64:
+; R6-64:       # %bb.0:
+; R6-64-NEXT:    cmp.eq.d $f0, $f12, $f13
+; R6-64-NEXT:    mfc1 $1, $f0
+; R6-64-NEXT:    sll $2, $6, 0
+; R6-64-NEXT:    jr $ra
+; R6-64-NEXT:    selnez $2, $2, $1
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %sel = select i1 %cmp, i32 %x, i32 0
+  ret i32 %sel
+}
+
+define i32 @sext_fcmp_oeq_f32(float %a, float %b) #0 {
+; CHECK-LABEL: sext_fcmp_oeq_f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addiu $1, $zero, 1
+; CHECK-NEXT:    c.eq.s $f12, $f14
+; CHECK-NEXT:    movf $1, $zero, $fcc0
+; CHECK-NEXT:    andi $1, $1, 1
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    negu $2, $1
+;
+; R6-LABEL: sext_fcmp_oeq_f32:
+; R6:       # %bb.0:
+; R6-NEXT:    cmp.eq.s $f0, $f12, $f14
+; R6-NEXT:    jr $ra
+; R6-NEXT:    mfc1 $2, $f0
+;
+; R6-64-LABEL: sext_fcmp_oeq_f32:
+; R6-64:       # %bb.0:
+; R6-64-NEXT:    cmp.eq.s $f0, $f12, $f13
+; R6-64-NEXT:    jr $ra
+; R6-64-NEXT:    mfc1 $2, $f0
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %conv = sext i1 %cmp to i32
+  ret i32 %conv
+}
+
+define i32 @sext_fcmps_ole_f64(double %a, double %b) #0 {
+; CHECK-LABEL: sext_fcmps_ole_f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addiu $1, $zero, 1
+; CHECK-NEXT:    c.le.d $f12, $f14
+; CHECK-NEXT:    movf $1, $zero, $fcc0
+; CHECK-NEXT:    andi $1, $1, 1
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    negu $2, $1
+;
+; R6-LABEL: sext_fcmps_ole_f64:
+; R6:       # %bb.0:
+; R6-NEXT:    cmp.sle.d $f0, $f12, $f14
+; R6-NEXT:    jr $ra
+; R6-NEXT:    mfc1 $2, $f0
+;
+; R6-64-LABEL: sext_fcmps_ole_f64:
+; R6-64:       # %bb.0:
+; R6-64-NEXT:    cmp.sle.d $f0, $f12, $f13
+; R6-64-NEXT:    jr $ra
+; R6-64-NEXT:    mfc1 $2, $f0
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"ole", metadata !"fpexcept.strict") #0
+  %conv = sext i1 %cmp to i32
+  ret i32 %conv
+}
+
+; FP selects read the mask from the FPR.
+define double @fselect_fcmp_olt_f64(double %a, double %b, double %x, double %y) #0 {
+; CHECK-LABEL: fselect_fcmp_olt_f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ldc1 $f0, 24($sp)
+; CHECK-NEXT:    ldc1 $f2, 16($sp)
+; CHECK-NEXT:    addiu $1, $zero, 1
+; CHECK-NEXT:    c.olt.d $f12, $f14
+; CHECK-NEXT:    movf $1, $zero, $fcc0
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    movn.d $f0, $f2, $1
+;
+; R6-LABEL: fselect_fcmp_olt_f64:
+; R6:       # %bb.0:
+; R6-NEXT:    ldc1 $f1, 24($sp)
+; R6-NEXT:    ldc1 $f2, 16($sp)
+; R6-NEXT:    cmp.lt.d $f0, $f12, $f14
+; R6-NEXT:    jr $ra
+; R6-NEXT:    sel.d $f0, $f1, $f2
+;
+; R6-64-LABEL: fselect_fcmp_olt_f64:
+; R6-64:       # %bb.0:
+; R6-64-NEXT:    cmp.lt.d $f0, $f12, $f13
+; R6-64-NEXT:    jr $ra
+; R6-64-NEXT:    sel.d $f0, $f15, $f14
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  %sel = select i1 %cmp, double %x, double %y
+  ret double %sel
+}
+
+define float @fselect_fcmps_oeq_f64(double %a, double %b, float %x, float %y) #0 {
+; CHECK-LABEL: fselect_fcmps_oeq_f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lwc1 $f0, 20($sp)
+; CHECK-NEXT:    lwc1 $f1, 16($sp)
+; CHECK-NEXT:    addiu $1, $zero, 1
+; CHECK-NEXT:    c.seq.d $f12, $f14
+; CHECK-NEXT:    movf $1, $zero, $fcc0
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    movn.s $f0, $f1, $1
+;
+; R6-LABEL: fselect_fcmps_oeq_f64:
+; R6:       # %bb.0:
+; R6-NEXT:    lwc1 $f1, 20($sp)
+; R6-NEXT:    lwc1 $f2, 16($sp)
+; R6-NEXT:    cmp.seq.d $f0, $f12, $f14
+; R6-NEXT:    # kill: def $f0 killed $f0 killed $d0_64
+; R6-NEXT:    jr $ra
+; R6-NEXT:    sel.s $f0, $f1, $f2
+;
+; R6-64-LABEL: fselect_fcmps_oeq_f64:
+; R6-64:       # %bb.0:
+; R6-64-NEXT:    cmp.seq.d $f0, $f12, $f13
+; R6-64-NEXT:    # kill: def $f0 killed $f0 killed $d0_64
+; R6-64-NEXT:    jr $ra
+; R6-64-NEXT:    sel.s $f0, $f15, $f14
+  %cmp = call i1 @llvm.experimental.constrained.fcmps.f64(double %a, double %b, metadata !"oeq", metadata !"fpexcept.strict") #0
+  %sel = select i1 %cmp, float %x, float %y
+  ret float %sel
+}
+
+define void @br_fcmp_olt_f64(double %a, double %b) #0 {
+; CHECK-LABEL: br_fcmp_olt_f64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addiu $1, $zero, 1
+; CHECK-NEXT:    c.olt.d $f12, $f14
+; CHECK-NEXT:    movt $1, $zero, $fcc0
+; CHECK-NEXT:    bnez $1, $BB60_2
+; CHECK-NEXT:    nop
+; CHECK-NEXT:  # %bb.1: # %then
+; CHECK-NEXT:    addiu $sp, $sp, -24
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset 31, -4
+; CHECK-NEXT:    jal before
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; CHECK-NEXT:    addiu $sp, $sp, 24
+; CHECK-NEXT:  $BB60_2: # %end
+; CHECK-NEXT:    jr $ra
+; CHECK-NEXT:    nop
+;
+; R6-LABEL: br_fcmp_olt_f64:
+; R6:       # %bb.0: # %entry
+; R6-NEXT:    cmp.ule.d $f0, $f14, $f12
+; R6-NEXT:    mfc1 $1, $f0
+; R6-NEXT:    bnezc $1, $BB60_2
+; R6-NEXT:  # %bb.1: # %then
+; R6-NEXT:    addiu $sp, $sp, -24
+; R6-NEXT:    .cfi_def_cfa_offset 24
+; R6-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; R6-NEXT:    .cfi_offset 31, -4
+; R6-NEXT:    balc before
+; R6-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
+; R6-NEXT:    addiu $sp, $sp, 24
+; R6-NEXT:  $BB60_2: # %end
+; R6-NEXT:    jrc $ra
+;
+; R6-64-LABEL: br_fcmp_olt_f64:
+; R6-64:       # %bb.0: # %entry
+; R6-64-NEXT:    cmp.ule.d $f0, $f13, $f12
+; R6-64-NEXT:    mfc1 $1, $f0
+; R6-64-NEXT:    bnezc $1, .LBB60_2
+; R6-64-NEXT:  # %bb.1: # %then
+; R6-64-NEXT:    daddiu $sp, $sp, -16
+; R6-64-NEXT:    .cfi_def_cfa_offset 16
+; R6-64-NEXT:    sd $ra, 8($sp) # 8-byte Folded Spill
+; R6-64-NEXT:    .cfi_offset 31, -8
+; R6-64-NEXT:    balc before
+; R6-64-NEXT:    ld $ra, 8($sp) # 8-byte Folded Reload
+; R6-64-NEXT:    daddiu $sp, $sp, 16
+; R6-64-NEXT:  .LBB60_2: # %end
+; R6-64-NEXT:    jrc $ra
+entry:
+  %cmp = call i1 @llvm.experimental.constrained.fcmp.f64(double %a, double %b, metadata !"olt", metadata !"fpexcept.strict") #0
+  br i1 %cmp, label %then, label %end
+
+then:
+  call void @before() #0
+  br label %end
+
+end:
+  ret void
+}
+
 declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)

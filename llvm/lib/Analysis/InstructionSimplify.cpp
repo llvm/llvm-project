@@ -2771,7 +2771,6 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
                                     const SimplifyQuery &Q) {
   assert(LHS->getType() == RHS->getType() && "Must have same types");
   const DataLayout &DL = Q.DL;
-  const TargetLibraryInfo *TLI = Q.TLI;
 
   // We fold equality and unsigned predicates on pointer comparisons, but forbid
   // signed predicates since a GEP with inbounds could cross the sign boundary.
@@ -2861,9 +2860,9 @@ static Constant *computePointerICmp(CmpPredicate Pred, Value *LHS, Value *RHS,
     // the other operand can not be based on the alloc - if it were, then
     // the cmp itself would be a capture.
     Value *MI = nullptr;
-    if (isAllocLikeFn(LHS, TLI) && llvm::isKnownNonZero(RHS, Q))
+    if (isAllocLikeFn(LHS) && llvm::isKnownNonZero(RHS, Q))
       MI = LHS;
-    else if (isAllocLikeFn(RHS, TLI) && llvm::isKnownNonZero(LHS, Q))
+    else if (isAllocLikeFn(RHS) && llvm::isKnownNonZero(LHS, Q))
       MI = RHS;
     if (MI) {
       // FIXME: This is incorrect, see PR54002. While we can assume that the
@@ -8101,9 +8100,9 @@ static bool replaceAndRecursivelySimplifyImpl(
   // If we have an explicit value to collapse to, do that round of the
   // simplification loop by hand initially.
   if (SimpleV) {
-    for (User *U : I->users())
+    for (Instruction *U : I->users())
       if (U != I)
-        Worklist.insert(cast<Instruction>(U));
+        Worklist.insert(U);
 
     // Replace the instruction with its simplified value.
     I->replaceAllUsesWith(SimpleV);
@@ -8131,8 +8130,8 @@ static bool replaceAndRecursivelySimplifyImpl(
     // Stash away all the uses of the old instruction so we can check them for
     // recursive simplifications after a RAUW. This is cheaper than checking all
     // uses of To on the recursive step in most cases.
-    for (User *U : I->users())
-      Worklist.insert(cast<Instruction>(U));
+    for (Instruction *U : I->users())
+      Worklist.insert(U);
 
     // Replace the instruction with its simplified value.
     I->replaceAllUsesWith(SimpleV);

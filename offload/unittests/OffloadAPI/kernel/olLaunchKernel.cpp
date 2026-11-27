@@ -249,6 +249,8 @@ TEST_P(olLaunchKernelByteTest, Success) {
 }
 
 TEST_P(olLaunchKernelLocalMemTest, Success) {
+  SKIP_KNOWN_FAILURE(LevelZero{"unsupported DynSharedMemory"});
+
   LaunchArgs.NumGroups.x = 4;
   LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
 
@@ -274,6 +276,8 @@ TEST_P(olLaunchKernelLocalMemTest, Success) {
 }
 
 TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
+  SKIP_KNOWN_FAILURE(LevelZero{"unsupported DynSharedMemory"});
+
   LaunchArgs.NumGroups.x = 4;
   LaunchArgs.DynSharedMemory = 64 * sizeof(uint32_t);
 
@@ -297,6 +301,8 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
 }
 
 TEST_P(olLaunchKernelLocalMemGroupsTest, Success) {
+  SKIP_KNOWN_FAILURE(LevelZero{"unsupported DynSharedMemory"});
+
   // Test using much more DynSharedMemory, checks if the memory
   // is not reused by different work-groups in a single kernel.
   constexpr uint32_t WordsPerThread = 16;

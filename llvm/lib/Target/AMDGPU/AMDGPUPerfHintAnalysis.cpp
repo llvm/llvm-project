@@ -186,11 +186,9 @@ bool AMDGPUPerfHint::isGlobalLoadUsedInBB(const Instruction &I) const {
   if (!isGlobalAddr(Ld->getPointerOperand()))
     return false;
 
-  for (const User *Usr : Ld->users()) {
-    if (const Instruction *UsrInst = dyn_cast<Instruction>(Usr)) {
-      if (UsrInst->getParent() == I.getParent())
-        return true;
-    }
+  for (const Instruction *UsrInst : Ld->users()) {
+    if (UsrInst->getParent() == I.getParent())
+      return true;
   }
 
   return false;
