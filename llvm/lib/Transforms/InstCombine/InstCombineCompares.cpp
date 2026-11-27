@@ -5564,15 +5564,11 @@ bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
     return BO0->isExact() && BO1->isExact();
   case Instruction::UDiv:
     return !IsSigned && BO0->isExact() && BO1->isExact();
-  case Instruction::SDiv: {
+  case Instruction::SDiv:
     if (!BO0->isExact() || !BO1->isExact())
       return false;
 
-    if (IsEquality)
-      return true;
-
-    return match(B, m_NonNegative());
-  }
+    return IsEquality || match(B, m_NonNegative());
   }
   return false;
 }
