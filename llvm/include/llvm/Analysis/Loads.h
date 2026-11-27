@@ -291,6 +291,9 @@ public:
   /// This does not build the index, so it can be used to check the type without
   /// generating the masking instructions for the index.
   Type *getIndexType() const { return Expr.Index->getType(); }
+
+  /// Returns the constant global that the load instruction reads from.
+  GlobalVariable *getGlobal() const { return GV; }
 };
 }
 

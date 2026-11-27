@@ -5,6 +5,12 @@
 ; value into single loads from an updated table.
 
 ; Read a larger value than the global's element size.
+;
+; The last element of `@test4` is partially out of bounds and read with the
+; missing bytes as zero.
+;
+; In `@overlapping_load` the loads overlap (stride is smaller than the load
+; size), which is currently not handled.
 
 ; elems   = [  0,  5,  6,  1,  7,  8,  2,  9, 10,  3, 11, 12,  4,  4,  4,  4, 13, 14, 15, 16, 17, 18 ]
 ; indices = [  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21 ]
@@ -12,7 +18,7 @@
 
 ;.
 ; CHECK: @table1 = internal unnamed_addr constant [22 x i8] c"\00\05\06\01\07\08\02\09\0A\03\0B\0C\04\04\04\04\0D\0E\0F\10\11\12", align 1
-; CHECK: @switch.table.test4 = private unnamed_addr constant [5 x i32] [i32 17171712, i32 151128071, i32 202048266, i32 67372036, i32 269422093], align 4
+; CHECK: @switch.table.test4 = private unnamed_addr constant [6 x i32] [i32 17171712, i32 151128071, i32 202048266, i32 67372036, i32 269422093, i32 4625], align 4
 ;.
 define i32 @test4(i64 %idx) {
 ; CHECK-LABEL: define i32 @test4(
@@ -45,4 +51,51 @@ sw.default:
 exit:
   %r = phi i32 [ %v, %sw.default ], [ 10, %sw.bb1 ], [ 123, %sw.bb2 ]
   ret i32 %r
+}
+
+define i16 @overlapping_load(i64 %idx) {
+; CHECK-LABEL: define i16 @overlapping_load(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @table1, i64 [[IDX]]
+; CHECK-NEXT:    [[V:%.*]] = load i16, ptr [[GEP]], align 1
+; CHECK-NEXT:    switch i16 [[V]], label %[[SW_DEFAULT:.*]] [
+; CHECK-NEXT:      i16 1280, label %[[EXIT:.*]]
+; CHECK-NEXT:      i16 1541, label %[[SW_BB2:.*]]
+; CHECK-NEXT:      i16 262, label %[[SW_BB3:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[SW_BB2]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[SW_BB3]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[SW_DEFAULT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i16 [ 0, %[[SW_DEFAULT]] ], [ 30, %[[SW_BB3]] ], [ 20, %[[SW_BB2]] ], [ 10, %[[ENTRY]] ]
+; CHECK-NEXT:    ret i16 [[R]]
+;
+entry:
+  %gep = getelementptr inbounds i8, ptr @table1, i64 %idx
+  %v = load i16, ptr %gep, align 1
+  switch i16 %v, label %sw.default [
+  i16 1280, label %sw.bb1
+  i16 1541, label %sw.bb2
+  i16 262, label %sw.bb3
+  ]
+
+sw.bb1:
+  br label %exit
+
+sw.bb2:
+  br label %exit
+
+sw.bb3:
+  br label %exit
+
+sw.default:
+  br label %exit
+
+exit:
+  %r = phi i16 [ 0, %sw.default ], [ 10, %sw.bb1 ], [ 20, %sw.bb2 ], [ 30, %sw.bb3 ]
+  ret i16 %r
 }

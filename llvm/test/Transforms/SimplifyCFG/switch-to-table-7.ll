@@ -5,34 +5,28 @@
 ; value into single loads from an updated table.
 
 ; A regression test: load is out of bounds and the program is UB. This used to
-; cause a crash.
+; cause a crash. Since the program is UB any result is fine; currently the
+; single (partially out of bounds) element is read with the missing bytes as
+; zero.
 
 @table_test_load_size_bug = constant [1 x i32] [i32 0]
 
+; Similar to the above, but the global is empty so there are no elements to
+; read.
+@table_empty = constant [0 x i8] zeroinitializer
+
 ;.
 ; CHECK: @table_test_load_size_bug = constant [1 x i32] zeroinitializer
+; CHECK: @table_empty = constant [0 x i8] zeroinitializer
 ;.
 define i32 @test_load_size_bug(i64 %idx) {
 ; CHECK-LABEL: define i32 @test_load_size_bug(
 ; CHECK-SAME: i64 [[IDX:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr @table_test_load_size_bug, i64 [[IDX]]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr [[GEP]], i64 2
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    switch i32 [[V]], label %[[SW_DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[EXIT:.*]]
-; CHECK-NEXT:      i32 1, label %[[SW_BB2:.*]]
-; CHECK-NEXT:      i32 2, label %[[SW_BB3:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[SW_BB2]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[SW_BB3]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[SW_DEFAULT]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[R:%.*]] = phi i32 [ 30, %[[SW_DEFAULT]] ], [ 20, %[[SW_BB2]] ], [ 40, %[[SW_BB3]] ], [ 10, %[[ENTRY]] ]
-; CHECK-NEXT:    ret i32 [[R]]
+; CHECK-NEXT:    ret i32 10
 ;
 entry:
   %gep = getelementptr inbounds i32, ptr @table_test_load_size_bug, i64 %idx
@@ -59,4 +53,51 @@ sw.default:
 exit:
   %r = phi i32 [ 10, %sw.bb1 ], [ 20, %sw.bb2 ], [ 40, %sw.bb3 ], [ 30, %sw.default ]
   ret i32 %r
+}
+
+define i8 @test_empty_table(i64 %idx) {
+; CHECK-LABEL: define i8 @test_empty_table(
+; CHECK-SAME: i64 [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr @table_empty, i64 [[IDX]]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[GEP]], align 1
+; CHECK-NEXT:    switch i8 [[V]], label %[[SW_DEFAULT:.*]] [
+; CHECK-NEXT:      i8 0, label %[[EXIT:.*]]
+; CHECK-NEXT:      i8 1, label %[[SW_BB2:.*]]
+; CHECK-NEXT:      i8 2, label %[[SW_BB3:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[SW_BB2]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[SW_BB3]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[SW_DEFAULT]]:
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[R:%.*]] = phi i8 [ 30, %[[SW_DEFAULT]] ], [ 20, %[[SW_BB2]] ], [ 40, %[[SW_BB3]] ], [ 10, %[[ENTRY]] ]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+entry:
+  %gep = getelementptr inbounds i8, ptr @table_empty, i64 %idx
+  %v = load i8, ptr %gep
+  switch i8 %v, label %sw.default [
+  i8 0, label %sw.bb1
+  i8 1, label %sw.bb2
+  i8 2, label %sw.bb3
+  ]
+
+sw.bb1:
+  br label %exit
+
+sw.bb2:
+  br label %exit
+
+sw.bb3:
+  br label %exit
+
+sw.default:
+  br label %exit
+
+exit:
+  %r = phi i8 [ 10, %sw.bb1 ], [ 20, %sw.bb2 ], [ 40, %sw.bb3 ], [ 30, %sw.default ]
+  ret i8 %r
 }
