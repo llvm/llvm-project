@@ -166,12 +166,6 @@ def ReadOnlyMemory : MemoryEffects<Ref>;
 def ArgMemOnly : MemoryEffects<NoModRef> { let ArgMem = ModRef; }
 def ArgMemReadOnly : MemoryEffects<NoModRef> { let ArgMem = Ref; }
 def ArgMemWriteOnly : MemoryEffects<NoModRef> { let ArgMem = Mod; }
-def ArgOrErrnoMemWriteOnly : MemoryEffects<NoModRef> {
-  let ArgMem = Mod;
-  let ErrnoMem = Mod;
-}
-
-def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
 def InaccessibleMemOrErrnoWrite : MemoryEffects<NoModRef> {
   let InaccessibleMem = ModRef;
   let ErrnoMem = Mod;
@@ -208,6 +202,10 @@ class NoFPClassAttr<string mask>
     : ValueAttr<[ParamAttr, RetAttr],
                 "Attribute::getWithNoFPClass(C, " # mask # ")">;
 
+class AlignAttr<int alignment>
+    : ValueAttr<[ParamAttr, RetAttr],
+                "Attribute::getWithAlignment(C, Align(" # alignment # "))">;
+
 def CapturesNone
     : ValueAttr<[ParamAttr],
                 "Attribute::getWithCaptureInfo(C, CaptureInfo::none())">;
@@ -232,6 +230,11 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
   list<Attr> RetAttrs = [];
   list<list<Attr>> ParamAttrs = [];
   list<FuncArgType> ParamPointeeTypes = [];
+
+  /// The function reports math errors by writing errno, if the
+  /// target's math library supports it. This adds errnomem write
+  /// effects to Memory.
+  bit MathErrno = false;
 }
 
 class RuntimeLibcallVariable<FuncArgType Ty, bit threadLocal = false>
@@ -247,6 +250,7 @@ class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
   let RetAttrs = unmasked.RetAttrs;
   let ParamAttrs = unmasked.ParamAttrs;
   let ParamPointeeTypes = unmasked.ParamPointeeTypes;
+  let MathErrno = unmasked.MathErrno;
 }
 
 // TODO: NoCallback probably unsafe in general
@@ -283,6 +287,7 @@ class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   list<Attr> RetAttrs = P.RetAttrs;
   list<list<Attr>> ParamAttrs = P.ParamAttrs;
   list<FuncArgType> ParamPointeeTypes = P.ParamPointeeTypes;
+  bit MathErrno = P.MathErrno;
   bit AlignPointeesToElementType = true;
 }
 

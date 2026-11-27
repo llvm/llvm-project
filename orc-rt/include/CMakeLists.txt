@@ -44,6 +44,7 @@ set(ORC_RT_HEADERS
     orc-rt/connect/VettedPeer.h
     orc-rt/connect/sps/SimpleRemoteCA.h
     orc-rt/support/AllocAction.h
+    orc-rt/support/ArgForwardingTraits.h
     orc-rt/support/BitmaskEnum.h
     orc-rt/support/CCallback.h
     orc-rt/support/CallableTraitsHelper.h

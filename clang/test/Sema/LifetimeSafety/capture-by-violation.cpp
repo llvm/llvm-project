@@ -285,3 +285,12 @@ void free_captured_by_global(const int &x [[clang::lifetime_capture_by_global]])
 void deprecated_global(const int &x [[clang::lifetime_capture_by(global)]]) { // expected-warning {{'lifetime_capture_by(global)' is deprecated; use 'lifetime_capture_by_global' instead}}
   global = &x;
 }
+
+struct CapBase {
+  const int *p;
+  CapBase(const int *q [[clang::lifetimebound]]) : p(q) {}
+};
+struct CapDerived : CapBase {
+  CapDerived(Cap &c, const int *q [[clang::lifetime_capture_by(c)]]) : CapBase(q) {} // expected-warning {{'q' is captured by this object but is not marked [[clang::lifetime_capture_by_this]]}}
+  CapDerived(const int *q [[clang::lifetimebound]]) : CapBase(q) {}
+};

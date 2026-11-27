@@ -29154,10 +29154,10 @@ define { bfloat, i16 } @v_frexp_bf16_i16(bfloat %a) #0 {
 ; GFX950-LABEL: v_frexp_bf16_i16:
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX950-NEXT:    v_lshlrev_b32_e32 v1, 16, v0
-; GFX950-NEXT:    v_frexp_mant_f32_e32 v0, v1
+; GFX950-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v0
+; GFX950-NEXT:    v_frexp_mant_f32_e32 v0, v0
 ; GFX950-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
-; GFX950-NEXT:    v_frexp_exp_i32_f32_e32 v1, v1
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_frexp_bf16_i16:

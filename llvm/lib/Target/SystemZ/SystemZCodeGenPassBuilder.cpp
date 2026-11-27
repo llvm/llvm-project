@@ -23,8 +23,6 @@
 
 using namespace llvm;
 
-extern cl::opt<bool> EnableMachineCombinerPass;
-
 namespace {
 
 class SystemZCodeGenPassBuilder : public CodeGenPassBuilder {
@@ -81,7 +79,7 @@ Error SystemZCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
 void SystemZCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
   addMachineFunctionPass(EarlyIfConverterPass(), PMW);
 
-  if (EnableMachineCombinerPass)
+  if (getTM().getCLOpts().machine_combiner)
     addMachineFunctionPass(MachineCombinerPass(), PMW);
 }
 

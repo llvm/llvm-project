@@ -1121,15 +1121,18 @@ void RegisteredOperationName::insert(
   }
   StringRef name = impl->getName().strref();
 
-  // Update the registered info for this operation.
+  // Update the registered info for this operation. Registering an operation
+  // twice, e.g. both by its dialect's generated registration hook and by
+  // `addOperations`, is a fatal error like for attributes and types.
   auto emplaced = ctxImpl.registeredOperations.try_emplace(
       impl->getTypeID(), RegisteredOperationName(impl));
-  assert(emplaced.second && "operation name registration must be successful");
+  if (!emplaced.second)
+    llvm::report_fatal_error("Operation " + name + " is already registered.");
   auto emplacedByName = ctxImpl.registeredOperationsByName.try_emplace(
       name, std::move(ownedImpl));
-  (void)emplacedByName;
-  assert(emplacedByName.second &&
-         "operation name registration must be successful");
+  if (!emplacedByName.second)
+    llvm::report_fatal_error("Operation with name " + name +
+                             " is already registered.");
 
   // Add emplaced operation name to the sorted operations container.
   RegisteredOperationName &value = emplaced.first->second;

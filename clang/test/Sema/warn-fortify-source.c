@@ -58,6 +58,10 @@ void explicit_bzero(void *dst, size_t n);
 size_t fread_unlocked(void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 char *fgets_unlocked(char *s, int size, FILE *stream);
+int getlogin_r(char *name, size_t namesize);
+int ttyname_r(int fd, char *buf, size_t buflen);
+int ptsname_r(int fd, char *buf, size_t buflen);
+size_t confstr(int name, char *buf, size_t len);
 
 #ifdef __cplusplus
 }
@@ -189,6 +193,35 @@ void call_memccpy_explicit_zero(size_t runtime_n) {
   explicit_bzero(dst, 11); // expected-warning {{'explicit_bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
   explicit_bzero(dst, -1); // expected-warning {{'explicit_bzero' will always overflow; destination buffer has size 10, but size argument is 18446744073709551615}}
   explicit_bzero(dst, runtime_n);
+}
+
+void call_getlogin_ttyname_ptsname_confstr(int fd, int name, size_t runtime_n) {
+  char buf[10];
+
+  getlogin_r(buf, 0);
+  getlogin_r(buf, 10);
+  getlogin_r(buf, 11); // expected-warning {{'getlogin_r' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  getlogin_r(buf, -1); // expected-warning {{'getlogin_r' size argument is too large; destination buffer has size 10, but size argument is 18446744073709551615}}
+  getlogin_r(buf, runtime_n);
+
+  ttyname_r(fd, buf, 0);
+  ttyname_r(fd, buf, 10);
+  ttyname_r(fd, buf, 11); // expected-warning {{'ttyname_r' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  ttyname_r(fd, buf, -1); // expected-warning {{'ttyname_r' size argument is too large; destination buffer has size 10, but size argument is 18446744073709551615}}
+  ttyname_r(fd, buf, runtime_n);
+
+  ptsname_r(fd, buf, 0);
+  ptsname_r(fd, buf, 10);
+  ptsname_r(fd, buf, 11); // expected-warning {{'ptsname_r' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  ptsname_r(fd, buf, -1); // expected-warning {{'ptsname_r' size argument is too large; destination buffer has size 10, but size argument is 18446744073709551615}}
+  ptsname_r(fd, buf, runtime_n);
+
+  confstr(name, 0, 0);
+  confstr(name, buf, 0);
+  confstr(name, buf, 10);
+  confstr(name, buf, 11); // expected-warning {{'confstr' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  confstr(name, buf, -1); // expected-warning {{'confstr' size argument is too large; destination buffer has size 10, but size argument is 18446744073709551615}}
+  confstr(name, buf, runtime_n);
 }
 
 void call_fread_fwrite_fgets(FILE *fp) {
@@ -484,6 +517,10 @@ void explicit_bzero(void *dst, size_t n);
 size_t fread_unlocked(void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 char *fgets_unlocked(char *s, int size, FILE *stream);
+int getlogin_r(char *name, size_t namesize);
+int ttyname_r(int fd, char *buf, size_t buflen);
+int ptsname_r(int fd, char *buf, size_t buflen);
+size_t confstr(int name, char *buf, size_t len);
 
 void call_non_builtins(FILE *fp) {
   char src[20], dst[10];
@@ -493,6 +530,10 @@ void call_non_builtins(FILE *fp) {
   non_c_linkage::fread_unlocked(dst, 2, 10, fp);
   non_c_linkage::fwrite_unlocked(dst, 2, 10, fp);
   non_c_linkage::fgets_unlocked(dst, 20, fp);
+  non_c_linkage::getlogin_r(dst, 20);
+  non_c_linkage::ttyname_r(0, dst, 20);
+  non_c_linkage::ptsname_r(0, dst, 20);
+  non_c_linkage::confstr(0, dst, 20);
 }
 } // namespace non_c_linkage
 #endif

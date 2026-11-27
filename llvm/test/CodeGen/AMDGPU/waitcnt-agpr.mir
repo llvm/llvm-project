@@ -185,7 +185,6 @@ body: |
 # GCN-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
 # GCN-NOT: S_WAITCNT
 name: preexisting_waitcnt
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -200,7 +199,6 @@ body: |
 ---
 
 name: bundle_no_waitcnt
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -229,7 +227,6 @@ body: |
 
 # See the waitcnt inside the bundle and don't insert an extra
 name: preexisting_waitcnt_in_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -258,7 +255,6 @@ body: |
 # Def and use inside bundle
 
 name: insert_in_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -284,7 +280,6 @@ body: |
 
 
 name: exit_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -312,7 +307,6 @@ body: |
 
 
 name: cross_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

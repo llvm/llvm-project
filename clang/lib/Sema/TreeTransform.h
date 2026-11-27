@@ -13629,9 +13629,13 @@ StmtResult TreeTransform<Derived>::TransformOpenACCAtomicConstruct(
       getSema().OpenACC(), C->getDirectiveKind(), C->getDirectiveLoc(), {}, {});
 
   StmtResult AssocStmt = getDerived().TransformStmt(C->getAssociatedStmt());
-  AssocStmt = getSema().OpenACC().ActOnAssociatedStmt(
-      C->getBeginLoc(), C->getDirectiveKind(), C->getAtomicKind(), {},
-      AssocStmt);
+
+  // DeclStmt is never valid here. Our pass through this while dependent already
+  // diagnosed it, so there is no reason to check it again.
+  if (!isa<DeclStmt>(C->getAssociatedStmt()))
+    AssocStmt = getSema().OpenACC().ActOnAssociatedStmt(
+        C->getBeginLoc(), C->getDirectiveKind(), C->getAtomicKind(), {},
+        AssocStmt);
 
   return getDerived().RebuildOpenACCAtomicConstruct(
       C->getBeginLoc(), C->getDirectiveLoc(), C->getAtomicKind(),
@@ -13842,7 +13846,7 @@ TreeTransform<Derived>::TransformGenericSelectionExpr(GenericSelectionExpr *E) {
   else
     ControllingType = getDerived().TransformType(E->getControllingType());
 
-  if (ControllingExpr.isInvalid() && !ControllingType)
+  if (!ControllingExpr.isUsable() && !ControllingType)
     return ExprError();
 
   SmallVector<Expr *, 4> AssocExprs;

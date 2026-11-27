@@ -13,18 +13,19 @@
 // template<class... Args>
 //   basic_format_args(const format-arg-store<Context, Args...>& store) noexcept;
 
-#include <format>
 #include <cassert>
+#include <cstddef>
+#include <format>
 #include <type_traits>
 
 #include "test_macros.h"
 
 template <class CharT>
 void test() {
-  int i         = 1;
-  char c        = 'c';
-  nullptr_t p   = nullptr;
-  using Context = std::basic_format_context<CharT*, CharT>;
+  int i            = 1;
+  char c           = 'c';
+  std::nullptr_t p = nullptr;
+  using Context    = std::basic_format_context<CharT*, CharT>;
   static_assert(!std::is_default_constructible_v<std::basic_format_args<Context>>);
   {
     auto store = std::make_format_args<Context>(i);

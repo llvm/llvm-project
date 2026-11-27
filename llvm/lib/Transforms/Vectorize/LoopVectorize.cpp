@@ -1332,8 +1332,7 @@ public:
           InstructionCost NewMemCheckCost = MemCheckCost / BestTripCount;
 
           // Let's ensure the cost is always at least 1.
-          NewMemCheckCost = std::max(NewMemCheckCost.getValue(),
-                                     (InstructionCost::CostType)1);
+          NewMemCheckCost = std::max(NewMemCheckCost, InstructionCost(1));
 
           if (BestTripCount > 1)
             LLVM_DEBUG(dbgs()
@@ -3538,8 +3537,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
         InstructionCost RecipThroughput = R.cost(VF, ThroughputCtx);
         if (StallCycles.isValid() && RecipThroughput.isValid() &&
             StallCycles > 0 && RecipThroughput > 0) {
-          unsigned ThisIC = bit_floor<uint64_t>(
-              1 + (StallCycles / RecipThroughput).getValue());
+          InstructionCost ModifiedCycles = (StallCycles / RecipThroughput) + 1;
+          unsigned ThisIC = bit_floor<uint64_t>(ModifiedCycles.getValue());
           StallsIC = std::max(StallsIC, ThisIC);
         }
       }
@@ -3584,9 +3583,9 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     // We assume that the cost overhead is 1 and we use the cost model
     // to estimate the cost of the loop and interleave until the cost of the
     // loop overhead is about 5% of the cost of the loop.
+    InstructionCost NumLoops = InstructionCost(Opts.small_loop_cost) / LoopCost;
     unsigned SmallIC =
-        std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(Opts.small_loop_cost /
-                                                         LoopCost.getValue()));
+        std::min(IC, (unsigned)llvm::bit_floor<uint64_t>(NumLoops.getValue()));
 
     // Interleave until store/load ports (estimated by max interleave count) are
     // saturated.
@@ -5265,6 +5264,7 @@ VPCostContext::VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
 
 InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
                                              ElementCount VF) const {
+  assert(!Opts.force_vplan_cost_model && "Unexpectedly calling getLegacyCost");
   InstructionCost Cost = CM.getInstructionCost(UI, VF);
   if (Cost.isValid() && Opts.force_target_instruction_cost)
     return InstructionCost(*Opts.force_target_instruction_cost);
@@ -5316,16 +5316,28 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
   // Don't apply special costs when instruction cost is forced to make sure the
   // forced cost is used for each recipe.
-  if (Opts.force_target_instruction_cost)
+  if (Opts.force_target_instruction_cost || Opts.force_vplan_cost_model)
     return Cost;
+
+  // Only charge legacy scalarization costs for instructions VPlan replicates,
+  // and for forced scalars only if VPlan replicates them per lane.
+  SmallPtrSet<Instruction *, 8> Replicated, ReplicatedPerLane;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
+    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB)) {
+      Replicated.insert(RepR.getUnderlyingInstr());
+      if (!RepR.isSingleScalar())
+        ReplicatedPerLane.insert(RepR.getUnderlyingInstr());
+    }
 
   // Pre-compute costs for instructions that are forced-scalar or profitable to
   // scalarize. For most such instructions, their scalarization costs are
   // accounted for here using the legacy cost model. However, some opcodes
-  // are excluded from these precomputed scalarization costs and are instead
-  // modeled later by the VPlan cost model (see UseVPlanCostModel below).
+  // (see UseVPlanCostModel below) and instructions VPlan does not replicate
+  // are excluded and instead modeled by the VPlan cost model.
   for (Instruction *ForcedScalar : CostCtx.CM.ForcedScalars[VF]) {
-    if (CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
+    if (!ReplicatedPerLane.contains(ForcedScalar) ||
+        CostCtx.skipCostComputation(ForcedScalar, VF.isVector()))
       continue;
     CostCtx.SkipCostComputation.insert(ForcedScalar);
     InstructionCost ForcedCost = CostCtx.getLegacyCost(ForcedScalar, VF);
@@ -5352,12 +5364,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       return false;
     }
   };
-  // Only charge legacy scalarization costs for instructions VPlan replicates.
-  SmallPtrSet<Instruction *, 8> Replicated;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry())))
-    for (VPReplicateRecipe &RepR : make_isa_range<VPReplicateRecipe>(*VPBB))
-      Replicated.insert(RepR.getUnderlyingInstr());
   for (const auto &[Scalarized, ScalarCost] : CostCtx.CM.InstsToScalarize[VF]) {
     if (!Replicated.contains(Scalarized) || UseVPlanCostModel(Scalarized) ||
         CostCtx.skipCostComputation(Scalarized, VF.isVector()))
@@ -6355,6 +6361,13 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
     return Plan;
   }
 
+  // Plans for the scalar VF only contain VF=1, as required by hasScalarVFOnly.
+  // Add it up front, so VPlan transforms can check for it.
+  if (Range.Start.isScalar()) {
+    Range.End = Range.Start * 2;
+    Plan->addVF(Range.Start);
+  }
+
   using namespace llvm::VPlanPatternMatch;
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
 
@@ -6447,6 +6460,11 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
                  RecipeBuilder, CostCtx);
 
+  // Form interleave groups before scalarization decisions, so those see the
+  // group's single address use.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, PlanCM.isEpilogueAllowed());
+
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
   // Widened calls may only use the first lane of some operands.
@@ -6470,7 +6488,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                     VPReplicateRecipe, VPWidenLoadRecipe, VPWidenStoreRecipe,
                     VPWidenCallRecipe, VPWidenIntrinsicRecipe,
                     VPVectorPointerRecipe, VPVectorEndPointerRecipe,
-                    VPHistogramRecipe, VPInstruction>) &&
+                    VPHistogramRecipe, VPInterleaveRecipe, VPInstruction>) &&
         "Unexpected recipe");
     for (VPInstruction &VPI :
          make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
@@ -6527,8 +6545,8 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan, ORE,
                       OrigLoop))
     return nullptr;
-  // Apply mandatory transformation to handle FP maxnum/minnum reduction with
-  // NaNs if possible, bail out otherwise.
+  // Apply mandatory transformation to handle FP min/max reductions with NaNs or
+  // signed zeros if possible, bail out otherwise.
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMaxMinNumReductions, *Plan))
     return nullptr;
 
@@ -6546,12 +6564,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                  Range);
 
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, PlanCM.isEpilogueAllowed());
-
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.
   RUN_VPLAN_PASS(VPlanTransforms::convertToStridedAccesses, *Plan, PSE,
@@ -6560,10 +6572,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (Legal->hasUncountableExitWithSideEffects())
     RUN_VPLAN_PASS(VPlanTransforms::expandMaskBeforeFirst, *Plan, CostCtx,
                    Range);
-
-  // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
-  if (Range.Start.isScalar())
-    Range.End = Range.Start * 2;
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
@@ -7147,7 +7155,7 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
   for (VPInstruction &VPI :
        make_isa_range<VPInstruction>(*MainPlan.getMiddleBlock())) {
     VPValue *OrigStart;
-    if (!matchFindIVResult(&VPI, m_VPValue(), m_VPValue(OrigStart)))
+    if (!match(&VPI, m_FindIVResult(m_VPValue(), m_VPValue(OrigStart))))
       continue;
     if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
       continue;
@@ -7301,14 +7309,12 @@ static void preparePlanForEpilogueVectorLoop(
     VPValue *ResumeVPV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      // Find the reduction result by searching users of the phi or its backedge
+      // Find the reduction result by searching users of the phi's backedge
       // value.
-      auto IsReductionResult = [](VPRecipeBase *R) {
-        auto *VPI = dyn_cast<VPInstruction>(R);
-        return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
-      };
-      auto *RdxResult = cast<VPInstruction>(
-          vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
+      using namespace VPlanPatternMatch;
+      auto *RdxResult = vputils::findUserRecursively<VPInstruction>(
+          ReductionPhi->getBackedgeValue(),
+          match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>()));
       assert(RdxResult && "expected to find reduction result");
 
       VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
@@ -7316,7 +7322,6 @@ static void preparePlanForEpilogueVectorLoop(
 
       // Check for FindIV pattern by looking for icmp user of RdxResult.
       // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
-      using namespace VPlanPatternMatch;
       VPValue *SentinelVPV = nullptr;
       bool IsFindIV = any_of(RdxResult->users(), [&](VPUser *U) {
         return match(U, VPlanPatternMatch::m_SpecificICmp(
@@ -7346,9 +7351,8 @@ static void preparePlanForEpilogueVectorLoop(
           // computing the reduction result.
           if (match(BypassOp, m_Freeze(m_VPValue())))
             for (VPUser *U : RdxResult->users()) {
-              auto *VPI = dyn_cast<VPInstruction>(U);
-              if (VPI && matchFindIVResult(VPI, m_VPValue(), m_VPValue()))
-                VPI->setOperand(2, StartV);
+              if (match(U, m_FindIVResult(m_VPValue(), m_VPValue())))
+                U->setOperand(2, StartV);
             }
 
           // Adjust resume: select(icmp eq ResumeVPV, StartV), Sentinel,
@@ -7834,15 +7838,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     IntDiagMsg = {
         "PartialAliasingVectorization",
         "Unable to interleave due to partial aliasing vectorization."};
-    InterleaveLoop = false;
-    IC = 1;
-  }
-
-  // FIXME: Enable interleaving for EE-with-side-effects.
-  if (InterleaveLoop && LVL.hasUncountableExitWithSideEffects()) {
-    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to EE with side effects.\n");
-    IntDiagMsg = {"EEWithSideEffectsPreventsInterleaving",
-                  "Unable to interleave due to early exit with side effects."};
     InterleaveLoop = false;
     IC = 1;
   }

@@ -151,18 +151,18 @@ public:
       return {};
 
     if (mlir::Attribute result = ConstantEmitter(cgf).tryEmitConstantExpr(e)) {
-      if (e->isGLValue()) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "ScalarExprEmitter: constant expr GL Value");
-        return {};
-      }
-
-      return builder.getConstant(cgf.getLoc(e->getSourceRange()),
-                                 mlir::cast<mlir::TypedAttr>(result));
+      mlir::Value val = builder.getConstant(
+          cgf.getLoc(e->getSourceRange()), mlir::cast<mlir::TypedAttr>(result));
+      // This was already converted to an rvalue when it was constant evaluated.
+      if (!e->isGLValue() ||
+          (e->hasAPValueResult() && !e->getAPValueResult().isLValue()))
+        return val;
+      return cgf.emitLoadOfScalar(
+          cgf.makeNaturalAlignPointeeAddrLValue(val, e->getType()),
+          e->getExprLoc());
     }
 
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: constant expr");
-    return {};
+    return Visit(e->getSubExpr());
   }
 
   mlir::Value VisitPackIndexingExpr(PackIndexingExpr *e) {
@@ -1790,7 +1790,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
   // 'An assignment expression has the value of the left operand after the
   // assignment...'.
   if (lhsLV.isBitField())
-    cgf.emitStoreThroughBitfieldLValue(RValue::get(result), lhsLV);
+    result = cgf.emitStoreThroughBitfieldLValue(RValue::get(result), lhsLV);
   else
     cgf.emitStoreThroughLValue(RValue::get(result), lhsLV);
 
@@ -3009,8 +3009,10 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       std::iota(mask.begin(), mask.end(), 0);
       return builder.createVecShuffle(loc, vec, mask);
     }
-    return builder.createExtractElement(loc, vec, /*idx=*/0);
+    mlir::Value idx = builder.getConstInt(loc, cgf.sizeTy, 0);
+    return cir::VecExtractOp::create(builder, loc, vec, idx);
   }
+
   case CK_HLSLMatrixTruncation: {
     assert((destTy->isMatrixType() || destTy->isBuiltinType()) &&
            "Destination type must be a matrix or builtin type.");

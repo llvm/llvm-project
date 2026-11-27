@@ -21,7 +21,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
-#include <memory>
 #include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
@@ -797,15 +796,15 @@ private:
 
   /// @}
 
-  static IEEEFloat &fromRepr(const FloatRepr &R);
+  static IEEEFloat &fromRepr(FloatRepr R);
 
   template <APFloatBase::Semantics S>
-  friend APInt bitcastForSemantics(const FloatRepr &R);
+  friend APInt bitcastForSemantics(FloatRepr R);
 
   template <APFloatBase::Semantics E> APInt convertIEEEFloatToAPInt() const;
 
   template <APFloatBase::Semantics S>
-  friend void initFromAPIntForSemantics(FloatRepr &, const APInt &);
+  friend void initFromAPIntForSemantics(FloatRepr, const APInt &);
 
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
   template <APFloatBase::Semantics E> void initFromIEEEAPInt(const APInt &api);
@@ -1094,8 +1093,13 @@ struct fltSemantics {
      The first three are treated as NaNs, the last one as Normal */
   bool hasExplicitIntegerBit = false;
 
-  void (*initFromAPInt)(FloatRepr &, const APInt &) = nullptr;
-  APInt (*bitcastToAPInt)(const FloatRepr &) = nullptr;
+  /* Decode the sizeInBits wide bit pattern into the given FloatRepr. Must call
+     FloatRepr::initialize with this semantics before using any setter. */
+  void (*initFromAPInt)(FloatRepr, const APInt &) = nullptr;
+
+  /* Encode the value of the given FloatRepr as a sizeInBits wide bit pattern
+     as it would appear in memory. */
+  APInt (*bitcastToAPInt)(FloatRepr) = nullptr;
 };
 
 // This is a interface class that is currently forwarding functionalities from
@@ -1878,8 +1882,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
 
 // We want the following functions to be available in the header for inlining.
 // We cannot define them inline in the class definition of `DoubleAPFloat`
-// because doing so would instantiate `std::unique_ptr<APFloat[]>` before
-// `APFloat` is defined, and that would be undefined behavior.
+// because they subscript `Floats`, which requires `APFloat` to be a complete
+// type.
 namespace detail {
 
 DoubleAPFloat &DoubleAPFloat::operator=(DoubleAPFloat &&RHS) {

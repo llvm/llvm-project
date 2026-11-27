@@ -184,5 +184,3 @@ void llvm::printIRUnitNameForStackTrace<Function>(raw_ostream &OS,
 }
 
 AnalysisSetKey CFGAnalyses::SetKey;
-
-AnalysisSetKey PreservedAnalyses::AllAnalysesKey;

@@ -193,11 +193,11 @@ bool AA::isDynamicallyUnique(Attributor &A, const AbstractAttribute &QueryingAA,
   return InstanceInfoAA && InstanceInfoAA->isAssumedUniqueForAnalysis();
 }
 
-Constant *
-AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
-                          Value &Obj, Type &Ty, const TargetLibraryInfo *TLI,
-                          const DataLayout &DL, AA::RangeTy *RangePtr) {
-  if (Constant *Init = getInitialValueOfAllocation(&Obj, TLI, &Ty))
+Constant *AA::getInitialValueForObj(Attributor &A,
+                                    const AbstractAttribute &QueryingAA,
+                                    Value &Obj, Type &Ty, const DataLayout &DL,
+                                    AA::RangeTy *RangePtr) {
+  if (Constant *Init = getInitialValueOfAllocation(&Obj, &Ty))
     return Init;
   auto *GV = dyn_cast<GlobalVariable>(&Obj);
   if (!GV)
@@ -337,9 +337,6 @@ static bool getPotentialCopiesOfMemoryValue(
   SmallSetVector<Value *, 8> NewCopies;
   SmallSetVector<Instruction *, 8> NewCopyOrigins;
 
-  const auto *TLI =
-      A.getInfoCache().getTargetLibraryInfoForFunction(*I.getFunction());
-
   auto Pred = [&](Value &Obj) {
     LLVM_DEBUG(dbgs() << "Visit underlying object " << Obj << "\n");
     if (isa<UndefValue>(&Obj))
@@ -358,7 +355,7 @@ static bool getPotentialCopiesOfMemoryValue(
     }
     // TODO: Use assumed noalias return.
     if (!isa<AllocaInst>(&Obj) && !isa<GlobalVariable>(&Obj) &&
-        !(IsLoad ? isAllocationFn(&Obj, TLI) : isNoAliasCall(&Obj))) {
+        !(IsLoad ? isAllocationFn(&Obj) : isNoAliasCall(&Obj))) {
       LLVM_DEBUG(dbgs() << "Underlying object is not supported yet: " << Obj
                         << "\n";);
       return false;
@@ -499,8 +496,8 @@ static bool getPotentialCopiesOfMemoryValue(
 
     if (IsLoad && !HasBeenWrittenTo && !Range.isUnassigned()) {
       const DataLayout &DL = A.getDataLayout();
-      Value *InitialValue = AA::getInitialValueForObj(
-          A, QueryingAA, Obj, *I.getType(), TLI, DL, &Range);
+      Value *InitialValue = AA::getInitialValueForObj(A, QueryingAA, Obj,
+                                                      *I.getType(), DL, &Range);
       if (!InitialValue) {
         LLVM_DEBUG(dbgs() << "Could not determine required initial value of "
                              "underlying object, abort!\n");
@@ -953,13 +950,24 @@ Argument *IRPosition::getAssociatedArgument() const {
   if (ArgNo < 0)
     return nullptr;
 
+  const auto &CB = cast<CallBase>(getAnchorValue());
+  auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
+  if (!Callee)
+    return nullptr;
+
+  // Without callbacks, use the direct callee argument if available.
+  if (!Callee->hasMetadata(LLVMContext::MD_callback)) {
+    if (Callee->arg_size() > unsigned(ArgNo))
+      return Callee->getArg(ArgNo);
+    return nullptr;
+  }
+
   // Use abstract call sites to make the connection between the call site
   // values and the ones in callbacks. If a callback was found that makes use
   // of the underlying call site operand, we want the corresponding callback
   // callee argument and not the direct callee argument.
   std::optional<Argument *> CBCandidateArg;
   SmallVector<const Use *, 4> CallbackUses;
-  const auto &CB = cast<CallBase>(getAnchorValue());
   AbstractCallSite::getCallbackUses(CB, CallbackUses);
   for (const Use *U : CallbackUses) {
     AbstractCallSite ACS(U);
@@ -990,8 +998,7 @@ Argument *IRPosition::getAssociatedArgument() const {
 
   // If no callbacks were found, or none used the underlying call site operand
   // exclusively, use the direct callee argument if available.
-  auto *Callee = dyn_cast_if_present<Function>(CB.getCalledOperand());
-  if (Callee && Callee->arg_size() > unsigned(ArgNo))
+  if (Callee->arg_size() > unsigned(ArgNo))
     return Callee->getArg(ArgNo);
 
   return nullptr;
@@ -2791,6 +2798,9 @@ Function *Attributor::internalizeFunction(Function &F, bool Force) {
 
 bool Attributor::internalizeFunctions(SmallPtrSetImpl<Function *> &FnSet,
                                       DenseMap<Function *, Function *> &FnMap) {
+  if (FnSet.empty())
+    return false;
+
   for (Function *F : FnSet)
     if (!Attributor::isInternalizable(*F))
       return false;

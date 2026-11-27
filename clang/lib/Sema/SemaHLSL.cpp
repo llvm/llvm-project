@@ -1031,6 +1031,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return ST == llvm::Triple::Vertex && IsInput;
   case SemanticKind::ViewID:
     return IsInput;
+  case SemanticKind::StencilRef:
+    return ST == llvm::Triple::Pixel && !IsInput;
   default:
     return false;
   }
@@ -1509,6 +1511,7 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
     return;
   case SemanticKind::SampleIndex:
   case SemanticKind::PrimitiveID:
+  case SemanticKind::StencilRef:
     // SPIR-V declares these built-ins as 32-bit integers and converts 16-bit
     // declarations.
     if (!DeclaredTy->isScalarType() || !isIntUpTo32Element(Ctx, DeclaredTy))
@@ -2389,7 +2392,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::Depth:
   case SemanticKind::DepthLessEqual:
   case SemanticKind::DepthGreaterEqual:
-  case SemanticKind::StencilRef:
   case SemanticKind::TessFactor:
   case SemanticKind::InsideTessFactor:
   case SemanticKind::CullPrimitive:
@@ -5669,6 +5671,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     SetElementTypeAsReturnType(&SemaRef, TheCall,
                                getASTContext().UnsignedIntTy);
     break;
+  }
+  case Builtin::BI__builtin_hlsl_isdebuggingenabled: {
+    if (!getASTContext().getTargetInfo().getTriple().isDXIL()) {
+      SemaRef.Diag(TheCall->getBeginLoc(),
+                   diag::err_builtin_target_unsupported);
+      return true;
+    }
+    return false;
   }
   }
   return false;

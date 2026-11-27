@@ -5582,10 +5582,9 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             privateVarsInfo);
 }
 
-/// Select Virtual only for two constant-count host worksharing loops.
+/// Select Virtual only for two host worksharing loops.
 static llvm::OpenMPIRBuilder::CollapseIVMapping
-selectCollapseIVMapping(omp::LoopNestOp loopOp, bool isTargetDevice,
-                        ArrayRef<llvm::CanonicalLoopInfo *> loops) {
+selectCollapseIVMapping(omp::LoopNestOp loopOp, bool isTargetDevice) {
   using Mapping = llvm::OpenMPIRBuilder::CollapseIVMapping;
   if (isTargetDevice || loopOp.getCollapseNumLoops() != 2 ||
       disableVirtualCollapse)
@@ -5596,13 +5595,6 @@ selectCollapseIVMapping(omp::LoopNestOp loopOp, bool isTargetDevice,
           omp::ClauseScheduleKind::Static ||
       wsloop.getScheduleChunk() || wsloop.getOrdered().has_value() ||
       !wsloop.getLinearVars().empty())
-    return Mapping::DivMod;
-  // Use the existing normalized counts; the builder also validates direct
-  // API callers.
-  if (llvm::any_of(loops, [](llvm::CanonicalLoopInfo *loop) {
-        auto *count = llvm::dyn_cast<llvm::ConstantInt>(loop->getTripCount());
-        return !count;
-      }))
     return Mapping::DivMod;
   return Mapping::Virtual;
 }
@@ -5717,8 +5709,7 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::SaveAndRestore<llvm::OpenMPIRBuilder::CollapseIVMapping> mappingGuard(
       ompBuilder->Config.CollapseMapping,
-      selectCollapseIVMapping(loopOp, ompBuilder->Config.isTargetDevice(),
-                              collapseLoopInfos));
+      selectCollapseIVMapping(loopOp, ompBuilder->Config.isTargetDevice()));
   auto newTopLoopInfo =
       ompBuilder->collapseLoops(ompLoc.DL, collapseLoopInfos, {});
 
@@ -6577,13 +6568,6 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
                             llvmAtomicV.IsVolatile);
       }
 
-      // Emit flush after atomic compare if needed (release/acq_rel/seq_cst).
-      if (atomicOrdering == llvm::AtomicOrdering::Release ||
-          atomicOrdering == llvm::AtomicOrdering::AcquireRelease ||
-          atomicOrdering == llvm::AtomicOrdering::SequentiallyConsistent) {
-        llvm::OpenMPIRBuilder::LocationDescription flushLoc(builder);
-        ompBuilder->createFlush(flushLoc);
-      }
       return success();
     }
 
@@ -7017,14 +7001,6 @@ convertOmpAtomicCompare(omp::AtomicCompareOp atomicCompareOp,
     (void)oldComplex;
     (void)cmpOk;
 
-    // Emit flush after atomic compare if needed (for release, acq_rel,
-    // seq_cst orderings).
-    if (atomicOrdering == llvm::AtomicOrdering::Release ||
-        atomicOrdering == llvm::AtomicOrdering::AcquireRelease ||
-        atomicOrdering == llvm::AtomicOrdering::SequentiallyConsistent) {
-      llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-      ompBuilder->createFlush(ompLoc);
-    }
     return success();
   } else {
     AtomicComparePatternInfo patternInfo;

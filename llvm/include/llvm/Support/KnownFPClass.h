@@ -527,8 +527,16 @@ public:
   /// Report known values for sin
   LLVM_ABI static KnownFPClass sin(const KnownFPClass &Src);
 
+  /// Report known values for sinpi
+  LLVM_ABI static KnownFPClass sinpi(const KnownFPClass &Src,
+                                     bool IsMultiUnitFPType);
+
   /// Report known values for cos
   LLVM_ABI static KnownFPClass cos(const KnownFPClass &Src);
+
+  /// Report known values for cospi
+  LLVM_ABI static KnownFPClass cospi(const KnownFPClass &Src,
+                                     bool IsMultiUnitFPType);
 
   /// Report known values for tan
   LLVM_ABI static KnownFPClass tan(const KnownFPClass &Src);
@@ -627,12 +635,13 @@ public:
   fpext(const KnownFPClass &KnownSrc, const fltSemantics &DstTy,
         const fltSemantics &SrcTy, DenormalMode DstMode, DenormalMode SrcMode);
 
-  /// Propagate known class for fptrunc and fptrunc_round. \p DstMode and
-  /// \p SrcMode are the denormal modes of the destination and source types.
+  /// Propagate known class for fptrunc and fptrunc_round. \p RM is the
+  /// rounding mode of the conversion. \p DstMode and \p SrcMode are the
+  /// denormal modes of the destination and source types.
   LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc,
                                        const fltSemantics &DstTy,
                                        const fltSemantics &SrcTy,
-                                       DenormalMode DstMode,
+                                       RoundingMode RM, DenormalMode DstMode,
                                        DenormalMode SrcMode);
 
   /// Propagate known class for rounding intrinsics (rint, nearbyint, round,

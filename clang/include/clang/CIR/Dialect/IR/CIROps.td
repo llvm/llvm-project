@@ -225,6 +225,14 @@ defvar CIR_FenvOpTraits = [
   CIR_FenvOpTrait
 ];
 
+// Base class for operations constrained by an optional `fenv` attribute.
+// Subclasses prepend their own arguments.
+class CIR_FenvOp<string mnemonic, list<Trait> traits = []>
+    : CIR_Op<mnemonic, traits> {
+  let append traits = CIR_FenvOpTraits;
+  let arguments = (ins OptionalAttr<CIR_FenvAttr>:$fenv);
+}
+
 // Passed as CIR_BinaryOp's hasNoMemoryEffect: fenv ops compute effects
 // dynamically via FenvOpTrait, so they must not inherit NoMemoryEffect.
 defvar CIR_DynamicMemoryEffects = 0;
@@ -319,9 +327,9 @@ def CIR_CastKind : CIR_I32Enum<"CastKind", "cast kind", [
 
 def CIR_CastKindAttr : CIR_EnumAttr<CIR_CastKind, "cast">;
 
-def CIR_CastOp : CIR_Op<"cast", !listconcat([
+def CIR_CastOp : CIR_FenvOp<"cast", [
   DeclareOpInterfaceMethods<PromotableOpInterface>
-], CIR_FenvOpTraits)> {
+]> {
   let summary = "Conversion between values of different types";
   let description = [{
     Apply the usual C/C++ conversion rules between values. This operation models
@@ -375,8 +383,7 @@ def CIR_CastOp : CIR_Op<"cast", !listconcat([
     ```
   }];
 
-  let arguments = (ins CIR_CastKindAttr:$kind, CIR_AnyType:$src,
-                       OptionalAttr<CIR_FenvAttr>:$fenv);
+  let prepend arguments = (ins CIR_CastKindAttr:$kind, CIR_AnyType:$src);
   let results = (outs CIR_AnyType:$result);
 
   let assemblyFormat = [{
@@ -1890,7 +1897,7 @@ def CIR_IsConstantOp : CIR_Op<"is_constant", [Pure]> {
 
 def CIR_SwitchFlatOp : CIR_Op<"switch.flat", [
   DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
-  AttrSizedOperandSegments, Terminator
+  AttrSizedOperandSegments, Pure, Terminator
 ]> {
   let summary = "A flattened version of cir.switch";
 
@@ -2697,8 +2704,7 @@ def CIR_CmpOpKind : CIR_I32Enum<"CmpOpKind", "compare operation kind", [
 
 def CIR_CmpOpKindAttr : CIR_EnumAttr<CIR_CmpOpKind, "cmp">;
 
-def CIR_CmpOp : CIR_Op<"cmp",
-    !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
+def CIR_CmpOp : CIR_FenvOp<"cmp", [SameTypeOperands]> {
   let summary = "Compare two values and produce a boolean result";
   let description = [{
     The `cir.cmp` operation compares two operands of the same type and produces
@@ -2733,11 +2739,10 @@ def CIR_CmpOp : CIR_Op<"cmp",
     ```
   }];
 
-  let arguments = (ins
+  let prepend arguments = (ins
     CIR_CmpOpKindAttr:$kind,
     CIR_ComparableType:$lhs,
-    CIR_ComparableType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_ComparableType:$rhs
   );
 
   let results = (outs CIR_BoolType:$result);
@@ -2761,6 +2766,98 @@ def CIR_CmpOp : CIR_Op<"cmp",
   let hasVerifier = 1;
   let isLLVMLoweringRecursive = true;
   let hasCXXABILowering = true;
+}
+
+//===----------------------------------------------------------------------===//
+// FCmpOp
+//===----------------------------------------------------------------------===//
+
+def CIR_FCmpOpKind : CIR_I32Enum<"FCmpOpKind", "floating compare operation kind", [
+  I32EnumCase<"_false", 0, "false">,
+  I32EnumCase<"oeq", 1>,
+  I32EnumCase<"ogt", 2>,
+  I32EnumCase<"oge", 3>,
+  I32EnumCase<"olt", 4>,
+  I32EnumCase<"ole", 5>,
+  I32EnumCase<"one", 6>,
+  I32EnumCase<"ord", 7>,
+  I32EnumCase<"ueq", 8>,
+  I32EnumCase<"ugt", 9>,
+  I32EnumCase<"uge", 10>,
+  I32EnumCase<"ult", 11>,
+  I32EnumCase<"ule", 12>,
+  I32EnumCase<"une", 13>,
+  I32EnumCase<"uno", 14>,
+  I32EnumCase<"_true", 15, "true">
+]>;
+
+def CIR_FCmpOpKindAttr : CIR_EnumAttr<CIR_FCmpOpKind, "fcmp">;
+
+def CIR_FCmpOp : CIR_FenvOp<"fcmp", [SameTypeOperands]> {
+  let summary = "Compare two floating point values and produce a boolean result";
+  let description = [{
+    The `cir.fcmp` operation compares two operands of the same floating type and
+    produces a `!cir.bool` result.
+
+    The following comparison predicates are available:
+
+    - `false`: no comparison, always returns false
+    - `oeq`: ordered and equal
+    - `ogt`: ordered and greater than
+    - `oge`: ordered and greater than or equal
+    - `olt`: ordered and less than
+    - `ole`: ordered and less than or equal
+    - `one`: ordered and not equal
+    - `ord`: ordered (no nans)
+    - `ueq`: unordered or equal
+    - `ugt`: unordered or greater than
+    - `uge`: unordered or greater than or equal
+    - `ult`: unordered or less than
+    - `ule`: unordered or less than or equal
+    - `une`: unordered or not equal
+    - `uno`: unordered (either nans)
+    - `true`: no comparison, always returns true
+
+    The optional `fenv` attribute describes constraints on the floating-point
+    handling of the operation. It is only valid for floating-point
+    comparisons.
+
+    `signaling` attribute overrides whether a floating-point
+    comparison raises an invalid exception for quiet NaN operands if fenv
+    attribute is present.
+
+    ```
+    %0 = cir.fcmp olt %x, %y : !cir.float fenv<>
+    ```
+  }];
+
+  let prepend arguments = (ins
+    CIR_FCmpOpKindAttr:$kind,
+    CIR_AnyFloatType:$lhs,
+    CIR_AnyFloatType:$rhs,
+    UnitAttr:$signaling
+  );
+
+  let results = (outs CIR_BoolType:$result);
+
+  let assemblyFormat = [{
+    enum($kind) $lhs `,` $rhs `:` type($lhs)
+    (`signaling` $signaling^)?
+    (`fenv` `` $fenv^)? attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "cir::FCmpOpKind":$kind, "mlir::Value":$lhs,
+                   "mlir::Value":$rhs), [{
+      build($_builder, $_state, kind, lhs, rhs, /*signaling=*/false,
+        cir::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "mlir::Type":$result, "cir::FCmpOpKind":$kind,
+                   "mlir::Value":$lhs, "mlir::Value":$rhs), [{
+      build($_builder, $_state, result, kind, lhs, rhs, /*signaling=*/false,
+        cir::FenvAttr{});
+    }]>
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -2869,12 +2966,10 @@ class CIR_BinaryOp<string mnemonic, Type type, list<Trait> traits = [],
         DeclareOpInterfaceMethods<CIR_BinaryOpInterface>
       ], traits)>
 {
-  dag commonArgs = (ins
+  let arguments = (ins
     type:$lhs,
     type:$rhs
   );
-
-  let arguments = commonArgs;
 
   let results = (outs type:$result);
 
@@ -3088,9 +3183,10 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
     : CIR_BinaryOp<mnemonic, type,
                    !listconcat(CIR_FenvOpTraits, traits),
                    CIR_DynamicMemoryEffects> {
-  let arguments = !con(commonArgs, (ins
-      OptionalAttr<CIR_FenvAttr>:$fenv,
-      OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags));
+  let append arguments = (ins
+    OptionalAttr<CIR_FenvAttr>:$fenv,
+    OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
+  );
   let assemblyFormat = [{
     $lhs `,` $rhs `:` type($lhs) (`fenv` `` $fenv^)? prop-dict attr-dict
   }];
@@ -5010,11 +5106,7 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
       return getOperand(0);
     }
 
-    /// Set the callee for this operation.
-    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee) {
-      (*this)->setAttr(getCalleeAttrName(),
-                       mlir::cast<mlir::SymbolRefAttr>(callee));
-    }
+    void setCalleeFromCallable(::mlir::CallInterfaceCallable callee);
 
     /// Returns the `cir.func` being called or null if the call is indirect or
     /// cannot be resolved.
@@ -5033,6 +5125,25 @@ class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
 
   let extraClassDefinition = [{
     bool $cppClass::isIndirect() { return !getCallee(); }
+
+    void $cppClass::setCalleeFromCallable(
+        ::mlir::CallInterfaceCallable callee) {
+      bool wasIndirect = isIndirect();
+      if (auto symbol = llvm::dyn_cast<mlir::SymbolRefAttr>(callee)) {
+        if (wasIndirect)
+          (*this)->eraseOperand(0);
+        (*this)->setAttr(getCalleeAttrName(), symbol);
+        return;
+      }
+
+      auto calleeValue = llvm::cast<mlir::Value>(callee);
+      if (wasIndirect) {
+        setOperand(0, calleeValue);
+        return;
+      }
+      (*this)->removeAttr(getCalleeAttrName());
+      (*this)->insertOperands(0, calleeValue);
+    }
 
     cir::FuncOp $cppClass::resolveCalleeInTable(
         mlir::SymbolTableCollection &symbolTable) {
@@ -6709,8 +6820,6 @@ def CIR_VecInsertOp : CIR_Op<"vec.insert", [
     $value `,` $vec `[` $index `:` type($index) `]` attr-dict `:`
     qualified(type($vec))
   }];
-
-  let llvmOp = "InsertElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6742,8 +6851,6 @@ def CIR_VecExtractOp : CIR_Op<"vec.extract", [
   }];
 
   let hasFolder = 1;
-
-  let llvmOp = "ExtractElementOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -6898,29 +7005,7 @@ def CIR_VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
 // VecFCmpOp
 //===----------------------------------------------------------------------===//
 
-def CIR_FCmpOpKind : CIR_I32Enum<"FCmpOpKind", "floating compare operation kind", [
-  I32EnumCase<"_false", 0, "false">,
-  I32EnumCase<"oeq", 1>,
-  I32EnumCase<"ogt", 2>,
-  I32EnumCase<"oge", 3>,
-  I32EnumCase<"olt", 4>,
-  I32EnumCase<"ole", 5>,
-  I32EnumCase<"one", 6>,
-  I32EnumCase<"ord", 7>,
-  I32EnumCase<"ueq", 8>,
-  I32EnumCase<"ugt", 9>,
-  I32EnumCase<"uge", 10>,
-  I32EnumCase<"ult", 11>,
-  I32EnumCase<"ule", 12>,
-  I32EnumCase<"une", 13>,
-  I32EnumCase<"uno", 14>,
-  I32EnumCase<"_true", 15, "true">
-]>;
-
-def CIR_FCmpOpKindAttr : CIR_EnumAttr<CIR_FCmpOpKind, "fcmp">;
-
-def CIR_VecFCmpOp : CIR_Op<"vec.fcmp",
-    !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
+def CIR_VecFCmpOp : CIR_FenvOp<"vec.fcmp", [SameTypeOperands]> {
   let summary = "Compare two floating point vectors";
   let description = [{
     The `cir.vec.fcmp` operation does an element-wise comparison of two vectors
@@ -6941,12 +7026,11 @@ def CIR_VecFCmpOp : CIR_Op<"vec.fcmp",
     ```
   }];
 
-  let arguments = (ins
+  let prepend arguments = (ins
     CIR_FCmpOpKindAttr:$kind,
     CIR_VectorOfFloatType:$lhs,
     CIR_VectorOfFloatType:$rhs,
-    UnitAttr:$signaling,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    UnitAttr:$signaling
   );
 
   let results = (outs CIR_VectorType:$result);
@@ -7835,11 +7919,10 @@ def CIR_ComplexDivOp : CIR_ComplexBinOp<"complex.div"> {
 }
 
 class CIR_ComplexFPBinOp<string mnemonic>
-    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
-  let arguments = (ins
+    : CIR_FenvOp<mnemonic, [SameOperandsAndResultType]> {
+  let prepend arguments = (ins
     CIR_ComplexOfFloatType:$lhs,
-    CIR_ComplexOfFloatType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_ComplexOfFloatType:$rhs
   );
 
   let results = (outs CIR_ComplexOfFloatType:$result);
@@ -8744,11 +8827,8 @@ def CIR_PtrDiffOp : CIR_Op<"ptr_diff", [Pure, SameTypeOperands]> {
 // The optional `fenv` attribute describes constraints on the floating-point
 // handling of the operation.
 class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic,
-             !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
-{
-  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src,
-                       OptionalAttr<CIR_FenvAttr>:$fenv);
+    : CIR_FenvOp<mnemonic, [SameOperandsAndResultType]> {
+  let prepend arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
 
   let assemblyFormat = "$src `:` type($src) (`fenv` `` $fenv^)? attr-dict";
@@ -9070,10 +9150,8 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
 }
 
 class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic, CIR_FenvOpTraits>
-{
-  let arguments = (ins CIR_AnyFloatType:$src,
-                       OptionalAttr<CIR_FenvAttr>:$fenv);
+    : CIR_FenvOp<mnemonic> {
+  let prepend arguments = (ins CIR_AnyFloatType:$src);
   let results = (outs CIR_IntType:$result);
 
   let summary = [{
@@ -9134,16 +9212,14 @@ def CIR_LlrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp"> {
 }
 
 class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic,
-             !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)> {
+    : CIR_FenvOp<mnemonic, [SameOperandsAndResultType]> {
   let summary = [{
     libc builtin equivalent ignoring floating-point exceptions and errno.
   }];
 
-  let arguments = (ins
+  let prepend arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$lhs,
-    CIR_AnyFloatOrVecOfFloatType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_AnyFloatOrVecOfFloatType:$rhs
   );
 
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
@@ -9246,8 +9322,7 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
   let constrainedLLVMIntrinsic = "atan2";
 }
 
-def CIR_LdexpOp : CIR_Op<"ldexp",
-    !listconcat([AllTypesMatch<["src", "result"]>], CIR_FenvOpTraits)> {
+def CIR_LdexpOp : CIR_FenvOp<"ldexp", [AllTypesMatch<["src", "result"]>]> {
   let summary = "Multiplies a floating-point value by an integral power of two";
   let description = [{
     `cir.ldexp` computes `src * 2^exp`.
@@ -9259,10 +9334,9 @@ def CIR_LdexpOp : CIR_Op<"ldexp",
       %r = cir.ldexp %x, %e : !cir.float, !s32i
   }];
 
-  let arguments = (ins
+  let prepend arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$src,
-    CIR_AnyIntOrVecOfIntType:$exp,
-    OptionalAttr<CIR_FenvAttr>:$fenv
+    CIR_AnyIntOrVecOfIntType:$exp
   );
 
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
@@ -9328,14 +9402,13 @@ def CIR_ModfOp : CIR_Op<"modf", [Pure]> {
 // The optional `fastmath_flags` attribute holds the fast-math flags of the
 // operation.
 class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
-    : CIR_Op<mnemonic,
-             !listconcat([SameOperandsAndResultType], CIR_FenvOpTraits)>
-{
-  let arguments = (ins
+    : CIR_FenvOp<mnemonic, [SameOperandsAndResultType]> {
+  let prepend arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$a,
     CIR_AnyFloatOrVecOfFloatType:$b,
-    CIR_AnyFloatOrVecOfFloatType:$c,
-    OptionalAttr<CIR_FenvAttr>:$fenv,
+    CIR_AnyFloatOrVecOfFloatType:$c
+  );
+  let append arguments = (ins
     OptionalAttr<CIR_FastMathFlagsAttr>:$fastmath_flags
   );
 

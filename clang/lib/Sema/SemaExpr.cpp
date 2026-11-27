@@ -473,16 +473,17 @@ void Sema::DiagnoseSentinelCalls(const NamedDecl *D, SourceLocation Loc,
   // The number of arguments which should follow the sentinel.
   unsigned NumArgsAfterSentinel = Attr->getSentinel();
 
-  // If there aren't enough arguments for all the formal parameters,
-  // the sentinel, and the args after the sentinel, complain.
-  if (Args.size() < NumFormalParams + NumArgsAfterSentinel + 1) {
+  // The variadic arguments must include the sentinel and everything after it.
+  // Subtract the formal count since adding the sentinel offset can overflow.
+  if (Args.size() <= NumFormalParams ||
+      Args.size() - NumFormalParams <= NumArgsAfterSentinel) {
     Diag(Loc, diag::warn_not_enough_argument) << D->getDeclName();
     Diag(D->getLocation(), diag::note_sentinel_here) << int(CalleeKind);
     return;
   }
 
   // Otherwise, find the sentinel expression.
-  const Expr *SentinelExpr = Args[Args.size() - NumArgsAfterSentinel - 1];
+  const Expr *SentinelExpr = Args.drop_back(NumArgsAfterSentinel).back();
   if (!SentinelExpr)
     return;
   if (SentinelExpr->isValueDependent())
@@ -5210,6 +5211,14 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
                                            SourceLocation(), /*Length*/ nullptr,
                                            rbLoc);
   }
+
+  // A subscript of an OpenMP array shaping expression is a single-element
+  // array section.
+  if (base && !base->getType().isNull() && ArgExprs.size() == 1 &&
+      base->hasPlaceholderType(BuiltinType::OMPArrayShaping))
+    return OpenMP().ActOnOMPArraySectionExpr(
+        base, lbLoc, ArgExprs.front(), SourceLocation(), SourceLocation(),
+        /*Length=*/nullptr, /*Stride=*/nullptr, rbLoc);
 
   // Since this might be a postfix expression, get rid of ParenListExprs.
   if (isa<ParenListExpr>(base)) {

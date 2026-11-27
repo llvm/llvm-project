@@ -904,12 +904,12 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     if (RecurrenceDescriptor::isReductionPHI(Phi, TheLoop, RedDes, DB, AC, DT,
                                              PSE.getSE())) {
       Requirements->addExactFPMathInst(RedDes.getExactFPMathInst());
-      Reductions[Phi] = std::move(RedDes);
       assert((!RedDes.hasUsesOutsideReductionChain() ||
               RecurrenceDescriptor::isMinMaxRecurrenceKind(
                   RedDes.getRecurrenceKind())) &&
              "Only min/max recurrences are allowed to have multiple uses "
              "currently");
+      Reductions[Phi] = std::move(RedDes);
       return true;
     }
 

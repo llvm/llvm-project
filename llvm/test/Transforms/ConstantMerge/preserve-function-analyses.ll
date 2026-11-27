@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),constmerge,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=false -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),constmerge,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
 
 ; Merging @a into @b should not invalidate the CFG analyses, TargetLibraryInfo
 ; or TargetTransformInfo of @f.

@@ -1,4 +1,4 @@
-// REQUIRES: host-supports-nvptx
+// REQUIRES: nvptx-registered-target
 // RUN: mlir-opt %s --pass-pipeline='builtin.module(gpu-module-to-binary{format=isa})' --remarks-filter-passed=llvm-inline 2>&1 | FileCheck %s
 // RUN: mlir-opt %s --pass-pipeline='builtin.module(ensure-debug-info-scope-on-llvm-func,gpu-module-to-binary{format=isa})' --remarks-filter-passed=llvm-inline 2>&1 | FileCheck %s --check-prefix=CHECK-LOC
 // RUN: mlir-opt %s --pass-pipeline='builtin.module(gpu-module-to-binary{format=isa})' --remarks-filter-passed=llvm-loop-unroll 2>&1 | FileCheck %s --check-prefix=CHECK-NONE

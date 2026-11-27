@@ -64,6 +64,8 @@ public:
     FAM =
         &AM.getResult<FunctionAnalysisManagerCGSCCProxy>(SCC, LCG).getManager();
   }
+
+  void initialize(FunctionAnalysisManager &FAM) { this->FAM = &FAM; }
   ///}
 
   /// Finalizer that will trigger actions like function removal from the CG.

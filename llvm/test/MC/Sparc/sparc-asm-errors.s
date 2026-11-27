@@ -22,11 +22,26 @@
         slx %g1, 64, %g2
 
 ! %r0 - %r31 only; don't truncate the register number to two digits.
-        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid relocation specifier
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
         mov %r32, %g1
-        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid relocation specifier
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
         mov %r100, %g1
-        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid relocation specifier
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
         mov %r145, %g1
-        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid relocation specifier
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
         mov %r310, %g1
+
+! An unknown name after '%' is reported as a register name, or as a
+! relocation specifier when it is followed by '('.
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        mov %foo, %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        mov %1, %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        ldd [%g1], %f33
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        ld [%g1 + %foo], %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid relocation specifier
+        sethi %foo(sym), %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: unexpected relocation specifier
+        sethi %tgd_add(sym), %g1

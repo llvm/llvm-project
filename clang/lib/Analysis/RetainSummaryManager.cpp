@@ -151,8 +151,8 @@ static bool isExactClass(const Decl *D, StringRef ClassName) {
   return !(match(sameClassM, *D, D->getASTContext()).empty());
 }
 
-static bool isOSObjectSubclass(const Decl *D) {
-  return D && isSubclass(D, "OSMetaClassBase") &&
+bool RetainSummaryManager::isOSObjectSubclass(const Decl *D) const {
+  return MayHaveOSObjects && D && isSubclass(D, "OSMetaClassBase") &&
          !isExactClass(D, "OSMetaClass");
 }
 
@@ -166,13 +166,18 @@ static bool isOSObjectThisCast(StringRef S) {
   return S == "metaCast";
 }
 
-
-static bool isOSObjectPtr(QualType QT) {
+bool RetainSummaryManager::isOSObjectPtr(QualType QT) const {
   return isOSObjectSubclass(QT->getPointeeCXXRecordDecl());
 }
 
-static bool isISLObjectRef(QualType Ty) {
-  return StringRef(Ty.getAsString()).starts_with("isl_");
+bool RetainSummaryManager::isISLObjectRef(QualType Ty) const {
+  return MayHaveISLTypes && StringRef(Ty.getAsString()).starts_with("isl_");
+}
+
+bool RetainSummaryManager::hasISLIdentifiers(const IdentifierTable &Idents) {
+  return llvm::any_of(Idents, [](const auto &Entry) {
+    return Entry.getKey().starts_with("isl_");
+  });
 }
 
 static bool isOSIteratorSubclass(const Decl *D) {
@@ -208,7 +213,7 @@ static bool isMakeCollectable(StringRef FName) {
 
 /// A function is OSObject related if it is declared on a subclass
 /// of OSObject, or any of the parameters is a subclass of an OSObject.
-static bool isOSObjectRelated(const CXXMethodDecl *MD) {
+bool RetainSummaryManager::isOSObjectRelated(const CXXMethodDecl *MD) const {
   if (isOSObjectSubclass(MD->getParent()))
     return true;
 

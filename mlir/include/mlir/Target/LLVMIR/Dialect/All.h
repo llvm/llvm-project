@@ -14,6 +14,7 @@
 #ifndef MLIR_TARGET_LLVMIR_DIALECT_ALL_H
 #define MLIR_TARGET_LLVMIR_DIALECT_ALL_H
 
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Target/LLVMIR/Dialect/ArmNeon/ArmNeonToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ArmSME/ArmSMEToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/ArmSVE/ArmSVEToLLVMIRTranslation.h"
@@ -37,6 +38,10 @@ class DialectRegistry;
 /// Registers all dialects that can be translated to LLVM IR and the
 /// corresponding translation interfaces.
 static inline void registerAllToLLVMIRTranslations(DialectRegistry &registry) {
+  // The module translation reads DLTI attributes, and the DLTI dialect has no
+  // translation interface of its own to be registered through.
+  registry.insert<DLTIDialect>();
+
   registerArmNeonDialectTranslation(registry);
   registerArmSMEDialectTranslation(registry);
   registerArmSVEDialectTranslation(registry);
@@ -77,6 +82,9 @@ registerAllGPUToLLVMIRTranslations(DialectRegistry &registry) {
 /// corresponding translation interfaces.
 static inline void
 registerAllFromLLVMIRTranslations(DialectRegistry &registry) {
+  // The import expresses the module's data layout with DLTI attributes.
+  registry.insert<DLTIDialect>();
+
   registerLLVMDialectImport(registry);
   registerNVVMDialectImport(registry);
 }
