@@ -44,7 +44,7 @@ define void @no_family() {
 declare dso_local nonnull ptr @_Znam(i64) #1
 
 ; Function Attrs: nounwind
-declare dso_local void @free(ptr) allockind("free") "alloc-family"="malloc"
+declare dso_local void @free(ptr allocptr) allockind("free") "alloc-family"="malloc"
 
 declare ptr @customalloc(i64) allockind("alloc")
 declare void @customfree(ptr allocptr) allockind("free")
