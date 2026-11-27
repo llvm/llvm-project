@@ -28,12 +28,23 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include <string>
 
+#define OPTIONS_STRUCT_DECL
+#include "WebAssemblyOptions.inc"
+
 #define GET_SUBTARGETINFO_HEADER
 #include "WebAssemblyGenSubtargetInfo.inc"
 
 namespace llvm {
+class LLVMContext;
+class Module;
+class WebAssemblyTargetMachine;
+
+const WebAssemblyOptions &getWebAssemblyOptions(const LLVMContext &C);
+const WebAssemblyOptions &getWebAssemblyOptions(const Module &M);
 
 class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
+  const WebAssemblyOptions &CLOpts;
+
   enum SIMDEnum {
     NoSIMD,
     SIMD128,
@@ -84,7 +95,7 @@ public:
   /// This constructor initializes the data members to match that
   /// of the specified triple.
   WebAssemblySubtarget(const Triple &TT, StringRef CPU, StringRef FS,
-                       const TargetMachine &TM, StringRef ABIName);
+                       const WebAssemblyTargetMachine &TM, StringRef ABIName);
 
   const WebAssemblySelectionDAGInfo *getSelectionDAGInfo() const override {
     return &TSInfo;
@@ -101,6 +112,7 @@ public:
   const WebAssemblyRegisterInfo *getRegisterInfo() const override {
     return &getInstrInfo()->getRegisterInfo();
   }
+  const WebAssemblyOptions &getCLOpts() const { return CLOpts; }
   const Triple &getTargetTriple() const { return TargetTriple; }
   bool enableAtomicExpand() const override;
   bool enableIndirectBrExpand() const override { return true; }

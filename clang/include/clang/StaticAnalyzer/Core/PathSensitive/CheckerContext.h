@@ -191,7 +191,7 @@ public:
   ///        When \p Tag is nullptr, node creation will default to using the
   ///        active checker as the tag -- but if there is no state change,
   ///        the predecessor node may be returned even if it isn't tagged so.
-  ExplodedNode *addTransition(ProgramStateRef State = nullptr,
+  ExplodedNode *addTransition(const ProgramStateRef &State = nullptr,
                               const ProgramPointTag *Tag = nullptr) {
     if ((!State || State == getState()) && !Tag)
       return getPredecessor();
@@ -214,7 +214,7 @@ public:
   ///        used as a workaround when the node wouldn't be unique otherwise.
   ///        When \p Tag is nullptr, node creation will default to using the
   ///        active checker as the tag.
-  ExplodedNode *addTransition(ProgramStateRef State, ExplodedNode *Pred,
+  ExplodedNode *addTransition(const ProgramStateRef &State, ExplodedNode *Pred,
                               const ProgramPointTag *Tag = nullptr) {
     if (!Pred)
       Pred = getPredecessor();
@@ -241,7 +241,7 @@ public:
   /// @param Tag A ProgramPointTag that will be attached to the node; nullptr
   ///        (the default) means using the active checker as the tag. Using
   ///        another tag has no compelling use case (apart from debugging).
-  ExplodedNode *addSink(ProgramStateRef State = nullptr,
+  ExplodedNode *addSink(const ProgramStateRef &State = nullptr,
                         ExplodedNode *Pred = nullptr,
                         const ProgramPointTag *Tag = nullptr) {
     return addTransitionImpl(State, true, Pred, Tag);
@@ -263,7 +263,7 @@ public:
   ///        When \p Tag is nullptr, node creation will default to using the
   ///        active checker as the tag.
   ExplodedNode *
-  generateNonFatalErrorNode(ProgramStateRef State = nullptr,
+  generateNonFatalErrorNode(const ProgramStateRef &State = nullptr,
                             const ProgramPointTag *Tag = nullptr) {
     return addTransitionImpl(State, false, nullptr, Tag);
   }
@@ -284,8 +284,7 @@ public:
   ///        When \p Tag is nullptr, node creation will default to using the
   ///        active checker as the tag.
   ExplodedNode *
-  generateNonFatalErrorNode(ProgramStateRef State,
-                            ExplodedNode *Pred,
+  generateNonFatalErrorNode(const ProgramStateRef &State, ExplodedNode *Pred,
                             const ProgramPointTag *Tag = nullptr) {
     return addTransitionImpl(State, false, Pred, Tag);
   }
@@ -436,19 +435,17 @@ public:
   std::string getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
-  ExplodedNode *addTransitionImpl(ProgramStateRef State, bool MarkAsSink,
+  ExplodedNode *addTransitionImpl(const ProgramStateRef &State, bool MarkAsSink,
                                   ExplodedNode *P, const ProgramPointTag *Tag) {
     Changed = true;
     const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
 
     if (!P)
       P = getPredecessor();
-    if (!State)
-      State = P->getState();
 
     Frontier.erase(P);
-    ExplodedNode *N =
-        Eng.getCoreEngine().makeNode(LocalLoc, State, P, MarkAsSink);
+    ExplodedNode *N = Eng.getCoreEngine().makeNode(
+        LocalLoc, State ? State.get() : P->getState().get(), P, MarkAsSink);
 
     Frontier.insert(N);
     return N;

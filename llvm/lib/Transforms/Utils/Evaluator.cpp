@@ -261,8 +261,43 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
     return false;
   }
 
-  for (Value *Arg : CB.args())
-    Formals.push_back(getVal(Arg));
+  for (unsigned I = 0, E = CB.arg_size(); I != E; ++I) {
+    Constant *Arg = getVal(CB.getArgOperand(I));
+    if (CB.isByValArgument(I)) {
+      constexpr uint64_t MaxByValCopySize = 256;
+      std::optional<Align> ParamAlign = CB.getParamAlign(I);
+      Type *ByValTy = CB.getParamByValType(I);
+      uint64_t Size = DL.getTypeAllocSize(ByValTy);
+      APInt Base(DL.getIndexTypeSizeInBits(Arg->getType()), 0);
+      auto *GV = dyn_cast<GlobalVariable>(
+          Arg->stripAndAccumulateConstantOffsets(DL, Base, true));
+      if (!GV || !ParamAlign || Size > MaxByValCopySize) {
+        LLVM_DEBUG(dbgs() << "Cannot copy the byval argument.\n");
+        return false;
+      }
+      Type *I8Ty = Type::getInt8Ty(CB.getContext());
+      SmallVector<Constant *, 32> Bytes;
+      for (uint64_t Off = 0; Off != Size; ++Off) {
+        Constant *Byte =
+            ComputeLoadResult(GV, I8Ty, Base + APInt(Base.getBitWidth(), Off));
+        if (!Byte) {
+          LLVM_DEBUG(dbgs() << "Cannot read the byval argument.\n");
+          return false;
+        }
+        Bytes.push_back(Byte);
+      }
+      ArrayType *CopyTy = ArrayType::get(I8Ty, Size);
+      auto NewGV = std::make_unique<GlobalVariable>(
+          CopyTy, false, GlobalValue::InternalLinkage,
+          ConstantArray::get(CopyTy, Bytes), "byval.copy",
+          /*TLMode=*/GlobalValue::NotThreadLocal,
+          Arg->getType()->getPointerAddressSpace());
+      NewGV->setAlignment(*ParamAlign);
+      AllocaTmps.push_back(std::move(NewGV));
+      Arg = AllocaTmps.back().get();
+    }
+    Formals.push_back(Arg);
+  }
   return true;
 }
 
@@ -270,7 +305,8 @@ bool Evaluator::getFormalParams(CallBase &CB, Function *F,
 /// if we can't evaluate it.  NewBB returns the next BB that control flows into,
 /// or null upon return. StrippedPointerCastsForAliasAnalysis is set to true if
 /// we looked through pointer casts to evaluate something.
-bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
+bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst,
+                              TargetLibraryInfo *TLI, BasicBlock *&NextBB,
                               bool &StrippedPointerCastsForAliasAnalysis) {
   // This is the main evaluation loop.
   while (true) {
@@ -594,8 +630,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
 /// Evaluate a call to function F, returning true if successful, false if we
 /// can't evaluate it.  ActualArgs contains the formal arguments for the
 /// function.
-bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
-                                 const SmallVectorImpl<Constant*> &ActualArgs) {
+bool Evaluator::EvaluateFunction(
+    Function *F, Constant *&RetVal,
+    const SmallVectorImpl<Constant *> &ActualArgs) {
   assert(ActualArgs.size() == F->arg_size() && "wrong number of arguments");
 
   // Check to see if this function is already executing (recursion).  If so,
@@ -619,13 +656,15 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
 
   BasicBlock::iterator CurInst = CurBB->begin();
 
+  TargetLibraryInfo *TLI = GetTLI ? &GetTLI(*F) : nullptr;
   while (true) {
     BasicBlock *NextBB = nullptr; // Initialized to avoid compiler warnings.
     LLVM_DEBUG(dbgs() << "Trying to evaluate BB: " << *CurBB << "\n");
 
     bool StrippedPointerCastsForAliasAnalysis = false;
 
-    if (!EvaluateBlock(CurInst, NextBB, StrippedPointerCastsForAliasAnalysis))
+    if (!EvaluateBlock(CurInst, TLI, NextBB,
+                       StrippedPointerCastsForAliasAnalysis))
       return false;
 
     if (!NextBB) {

@@ -9,8 +9,9 @@
 ; RUN:    llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=release \
 ; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename %s -o /dev/null
 
-;; A spillable range must not evict an unspillable one. The evicted range would
-;; take the evictor cascade and on requeue find only ranges of that cascade.
+;; An unspillable range evicted by a spillable range takes the evictor's
+;; cascade. On requeue it must still be allowed to evict spillable ranges of
+;; that same cascade to avoid running out of registers.
 
 define void @f(ptr %p, i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i1 %c, i64 %l0) {
   %l01 = load volatile i64, ptr null, align 4

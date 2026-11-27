@@ -6013,7 +6013,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     SmallVector<Value *, 3> Args(CI->args());
     if (NewFn->getIntrinsicID() == Intrinsic::coro_end && Args.size() == 2)
       Args.push_back(ConstantTokenNone::get(CI->getContext()));
-    NewCall = Builder.CreateCall(NewFn, Args);
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    CI->getOperandBundlesAsDefs(OpBundles);
+    NewCall = Builder.CreateCall(NewFn, Args, OpBundles);
 
     if (!CI->getType()->isVoidTy()) {
       if (!CI->use_empty()) {
@@ -8133,9 +8135,10 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
         Res.append("-p9:192:256:256:32");
 
       // Add sizing for address space 10 through 15.
-      // AS 10-14 are reserved and defaulted to 32:32
-      // AS 15 is in use and is 32:32.
-      for (StringRef AS : {"p10", "p11", "p12", "p13", "p14", "p15"}) {
+      // AS 10, 11 and 14 are reserved and defaulted to 32:32
+      // AS 12 is reserved for downstream and keeps the default (64-bit) size.
+      // AS 13 and 15 are in use and are 32:32.
+      for (StringRef AS : {"p10", "p11", "p13", "p14", "p15"}) {
         if (!DL.contains(("-" + AS).str()) && !DL.starts_with(AS))
           Res.append(("-" + AS + ":32:32").str());
       }

@@ -475,10 +475,13 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_strndup:
+  case LibFunc_dunder_strndup:
     Changed |= setArgNoUndef(F, 1);
     [[fallthrough]];
   case LibFunc_strdup:
+  case LibFunc_dunder_strdup:
     Changed |= setAllocFamily(F, "malloc");
+    Changed |= setAllocKind(F, AllocFnKind::Alloc);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMemOrErrnoMem(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
@@ -766,6 +769,17 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
     break;
+  case LibFunc_cheriot_heap_allocate:
+    Changed |= setAllocFamily(F, "cheriot_heap_allocate");
+    Changed |= setAllocKind(F, AllocFnKind::Alloc | AllocFnKind::Zeroed);
+    Changed |= setAllocSize(F, 2, std::nullopt);
+    Changed |= setRetDoesNotAlias(F);
+    break;
+  case LibFunc_cheriot_heap_free:
+    Changed |= setAllocFamily(F, "cheriot_heap_allocate");
+    Changed |= setAllocKind(F, AllocFnKind::Free);
+    Changed |= setAllocatedPointerParam(F, 1);
+    break;
   case LibFunc_chmod:
   case LibFunc_chown:
     Changed |= setRetAndArgsNoUndef(F);
@@ -774,6 +788,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_ctermid:
+    Changed |= setRetAndArgsNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    break;
   case LibFunc_clearerr:
   case LibFunc_closedir:
     Changed |= setRetAndArgsNoUndef(F);
@@ -1126,16 +1143,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 3);
     break;
-  case LibFunc_dunder_strndup:
-    Changed |= setArgNoUndef(F, 1);
-    [[fallthrough]];
-  case LibFunc_dunder_strdup:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setRetDoesNotAlias(F);
-    Changed |= setWillReturn(F);
-    Changed |= setDoesNotCapture(F, 0);
-    Changed |= setOnlyReadsMemory(F, 0);
-    break;
   case LibFunc_dunder_strtok_r:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCallback(F);
@@ -1460,7 +1467,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   }
   // We have to do this step after AllocKind has been inferred on functions so
   // we can reliably identify free-like and realloc-like functions.
-  if (!isLibFreeFunction(&F, TheLibFunc) && !isReallocLikeFn(&F))
+  if (!isFreeLikeFn(&F) && !isReallocLikeFn(&F))
     Changed |= setDoesNotFreeMemory(F);
   return Changed;
 }

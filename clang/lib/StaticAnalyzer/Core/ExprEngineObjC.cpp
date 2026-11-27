@@ -58,7 +58,7 @@ void ExprEngine::populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
       State = State->bindLoc(ElementV, V, SF);
     }
 
-  Dst.insert(Engine.makePostStmtNode(S, State, Pred));
+  Dst.insert(Engine.makePostStmtNode(S, State.get(), Pred));
 }
 
 void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
@@ -184,7 +184,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
       // Receiver is definitely nil, so run ObjCMessageNil callbacks and return.
       if (nilState && !notNilState) {
         PreStmt PS(ME, Pred->getStackFrame(), nullptr);
-        Pred = Engine.makeNode(PS, nilState, Pred);
+        Pred = Engine.makeNode(PS, nilState.get(), Pred);
         if (!Pred)
           return;
 
@@ -199,7 +199,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
       // Generate a transition to the non-nil state, dropping any potential
       // nil flow.
       if (notNilState != State) {
-        Pred = Engine.makePostStmtNode(ME, notNilState, Pred);
+        Pred = Engine.makePostStmtNode(ME, notNilState.get(), Pred);
         if (!Pred)
           return;
       }
@@ -226,7 +226,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
           UpdatedMsg->getReceiverSVal().isUndef())) {
       // If we raise an exception, for now treat it as a sink.
       // Eventually we will want to handle exceptions properly.
-      Engine.makePostStmtNode(ME, State, Pred, /*MarkAsSink=*/true);
+      Engine.makePostStmtNode(ME, State.get(), Pred, /*MarkAsSink=*/true);
       continue;
     }
 

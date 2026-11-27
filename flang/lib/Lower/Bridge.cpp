@@ -85,7 +85,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <set>
 
@@ -160,6 +160,7 @@ struct ConstructContext {
   Fortran::lower::StatementContext &stmtCtx; // construct exit code
   std::optional<hlfir::Entity> selector;     // construct selector, if any.
   bool pushedScope = false; // was a scoped pushed for this construct?
+  fir::LexicalScopeAttr lexicalScope; // scope of the current branch, if any
 };
 
 /// Helper to gather the lower bounds of array components with non deferred
@@ -1258,9 +1259,18 @@ public:
     return mlir::FileLineColLoc::get(&ctx, path.str(), pos.line, pos.column);
   }
 
-  /// Generate a `Location` from the `CharBlock`.
+  /// Generate a `Location` from the `CharBlock`, in the lexical scope of the
+  /// branch being lowered, if any.
   mlir::Location
   genLocation(const Fortran::parser::CharBlock &block) override final {
+    mlir::Location loc = genSourceLocation(block);
+    if (fir::LexicalScopeAttr lexicalScope = getLexicalScope())
+      return mlir::FusedLoc::get(&getMLIRContext(), {loc}, lexicalScope);
+    return loc;
+  }
+
+  /// Generate a `Location` from the `CharBlock`.
+  mlir::Location genSourceLocation(const Fortran::parser::CharBlock &block) {
     mlir::Location mainLocation = genUnknownLocation();
     if (const Fortran::parser::AllCookedSources *cooked =
             bridge.getCookedSource()) {
@@ -2084,6 +2094,29 @@ private:
     activeConstructStack.pop_back();
   }
 
+  /// Start the lexical scope of the branch of the innermost construct that
+  /// begins at the current statement. It lasts until the next branch or the
+  /// end of the construct, and lets debug information make the names that
+  /// the branch associates visible only in the branch.
+  void startLexicalScope() {
+    assert(!activeConstructStack.empty() && "must be inside a construct");
+    ConstructContext &construct = activeConstructStack.back();
+    construct.lexicalScope = {};
+    if (getLoweringOptions().getPreserveUseDebugInfo())
+      construct.lexicalScope = fir::LexicalScopeAttr::get(
+          &getMLIRContext(), genSourceLocation(currentPosition),
+          getLexicalScope());
+  }
+
+  /// Return the lexical scope of the innermost branch being lowered, if any.
+  fir::LexicalScopeAttr getLexicalScope() {
+    for (const ConstructContext &construct :
+         llvm::reverse(activeConstructStack))
+      if (construct.lexicalScope)
+        return construct.lexicalScope;
+    return {};
+  }
+
   //===--------------------------------------------------------------------===//
   // Termination of symbolically referenced execution units
   //===--------------------------------------------------------------------===//
@@ -2161,7 +2194,12 @@ private:
             load = fir::ReboxOp::create(*builder, loc, load.getType(), load,
                                         shiftOp, /*slice=*/mlir::Value{});
           }
-          return load;
+          // The function result type does not carry the volatility of the
+          // result variable, so match it before returning.
+          mlir::Type funcResultType =
+              builder->getFunction().getFunctionType().getResult(0);
+          return builder->createVolatileCast(
+              loc, fir::isa_volatile_type(funcResultType), load);
         },
         [&](const auto &) -> mlir::Value {
           mlir::Value resultRef = resultSymBox.getAddr();
@@ -3955,6 +3993,9 @@ private:
       for (Fortran::lower::pft::Evaluation &e :
            getEval().getNestedEvaluations())
         genFIR(e);
+    // An unstructured acc.loop recorded the DOs whose induction variables it
+    // privatizes; they are all lowered now.
+    Fortran::lower::clearIvPrivatizedDoConstructs(getEval());
 
     if (!isCacheConstruct)
       localSymbols.popScope();
@@ -4057,8 +4098,16 @@ private:
         }
       // The descent lands on the loop the directive takes over, and every
       // level it steps through is one. A construct whose first evaluation is
-      // not a loop takes over none.
-      if (outerDo)
+      // not a loop takes over none. Neither does a DO WHILE lowered
+      // structurally: it has no bounds, so its acc.loop does not iterate, and
+      // the whole loop, condition included, is lowered inside it. The code
+      // below lowers the evaluations nested in curEval; for a loop the
+      // directive takes over, curEval is that loop, so only its body is
+      // lowered. Resetting curEval to the construct's own evaluation lowers
+      // the DO WHILE evaluation itself instead, through genFIR(DoConstruct).
+      if (outerDo && outerDo->IsDoWhile())
+        curEval = &getEval();
+      else if (outerDo)
         absorbedLoop = curEval;
     }
 
@@ -4665,6 +4714,7 @@ private:
         if (eval.lowerAsUnstructured())
           maybeStartBlock(e.block);
         localSymbols.pushScope();
+        startLexicalScope();
         for (const Fortran::parser::Association &assoc :
              std::get<std::list<Fortran::parser::Association>>(stmt->t)) {
           Fortran::semantics::Symbol &sym =
@@ -4896,6 +4946,7 @@ private:
       localSymbols.popScope();
     localSymbols.pushScope();
     activeConstructStack.back().pushedScope = true;
+    startLexicalScope();
     const Fortran::semantics::Symbol &assocEntitySymbol =
         getAssociatingEntitySymbol(
             bridge.getSemanticsContext().FindScope(getEval().position));
@@ -5013,6 +5064,8 @@ private:
     for (Fortran::lower::pft::Evaluation &eval :
          getEval().getNestedEvaluations()) {
       setCurrentPosition(eval.position);
+      if (eval.getIf<Fortran::parser::TypeGuardStmt>())
+        startLexicalScope();
       mlir::Location loc = toLocation();
       if (auto *selectTypeStmt =
               eval.getIf<Fortran::parser::SelectTypeStmt>()) {
@@ -7511,7 +7564,7 @@ Fortran::lower::LoweringBridge::LoweringBridge(
     const Fortran::lower::LoweringOptions &loweringOptions,
     const std::vector<Fortran::lower::EnvironmentDefault> &envDefaults,
     const Fortran::common::LanguageFeatureControl &languageFeatures,
-    const llvm::TargetMachine &targetMachine,
+    llvm::StringRef targetFeatures,
     const Fortran::frontend::TargetOptions &targetOpts,
     const Fortran::frontend::CodeGenOptions &cgOpts)
     : semanticsContext{semanticsContext}, defaultKinds{defaultKinds},
@@ -7572,18 +7625,17 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   assert(*module && "module was not created");
   fir::setTargetTriple(*module, triple);
   fir::setKindMapping(*module, kindMap);
-  fir::setTargetCPU(*module, targetMachine.getTargetCPU());
+  fir::setTargetCPU(*module, targetOpts.cpu);
   fir::setTuneCPU(*module, targetOpts.cpuToTuneFor);
   fir::setAtomicIgnoreDenormalMode(*module,
                                    targetOpts.atomicIgnoreDenormalMode);
   fir::setAtomicFineGrainedMemory(*module, targetOpts.atomicFineGrainedMemory);
   fir::setAtomicRemoteMemory(*module, targetOpts.atomicRemoteMemory);
-  fir::setTargetFeatures(*module, targetMachine.getTargetFeatureString());
+  fir::setTargetFeatures(*module, targetFeatures);
   fir::setTargetABI(*module, targetOpts.abi);
   fir::support::setMLIRDataLayout(
       *module,
-      llvm::DataLayout(
-          targetMachine.getTargetTriple().computeDataLayout(targetOpts.abi)));
+      llvm::DataLayout(llvm::Triple(triple).computeDataLayout(targetOpts.abi)));
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);

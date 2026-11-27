@@ -255,7 +255,7 @@ int test_return_ternary(bool c) {
 // CIR:       %[[GET_B:.*]] = cir.call @_ZN1B3getEv(%[[TMPB]])
 // CIR:       cir.yield %[[GET_B]] : !s32i
 // CIR:     })
-// The result is stored to __retval inside the cleanup scope body.
+// The result is stored to the return slot inside the cleanup scope body.
 // CIR:     cir.store %{{.*}}, %{{.*}} : !s32i, !cir.ptr<!s32i>
 // CIR:     cir.yield
 // CIR:   } cleanup normal {
@@ -269,7 +269,7 @@ int test_return_ternary(bool c) {
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   }
-// Value loaded from __retval and returned.
+// Value loaded from the return slot and returned.
 // CIR:   %[[RET:.*]] = cir.load %{{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.return %[[RET]] : !s32i
 

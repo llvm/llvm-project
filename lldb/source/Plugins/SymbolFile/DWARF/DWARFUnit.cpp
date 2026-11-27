@@ -225,12 +225,22 @@ DWARFUnit::ScopedExtractDIEs::operator=(DWARFUnit::ScopedExtractDIEs &&rhs) {
 void DWARFUnit::ExtractDIEsRWLocked() {
   llvm::sys::ScopedWriter first_die_lock(m_first_die_mutex);
 
-  ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
   LLDB_SCOPED_TIMERF(
       "%s",
       llvm::formatv("{0:x16}: DWARFUnit::ExtractDIEsIfNeeded()", GetOffset())
           .str()
           .c_str());
+
+  ExtractDIEsNoDwoRWLocked();
+
+  // The skeleton and its .dwo unit share a parse time counter, so timing the
+  // .dwo unit inside ExtractDIEsNoDwoRWLocked would count it twice.
+  if (m_dwo)
+    m_dwo->ExtractDIEsIfNeeded();
+}
+
+void DWARFUnit::ExtractDIEsNoDwoRWLocked() {
+  ElapsedTime elapsed(m_dwarf.GetDebugInfoParseTimeRef());
 
   // Set the offset to that of the first DIE and calculate the start of the
   // next compilation unit header.
@@ -336,9 +346,6 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   }
 
   m_die_array.shrink_to_fit();
-
-  if (m_dwo)
-    m_dwo->ExtractDIEsIfNeeded();
 }
 
 // This is used when a split dwarf is enabled.

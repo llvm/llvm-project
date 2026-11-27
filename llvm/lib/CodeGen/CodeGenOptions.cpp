@@ -8,6 +8,8 @@
 
 #include "CodeGenOptions.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineScheduler.h"
+#include "llvm/CodeGen/WindowScheduler.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"

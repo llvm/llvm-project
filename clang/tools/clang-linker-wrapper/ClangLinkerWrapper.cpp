@@ -45,6 +45,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/TargetSelect.h"
@@ -460,7 +461,8 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
   llvm::Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   SmallVector<StringRef> Targets = {
-      Saver.save("-targets=host-" + HostTriple.normalize())};
+      Saver.save("-targets=host-" +
+                 HostTriple.normalize(Triple::CanonicalForm::FOUR_IDENT))};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
     std::string NormalizedTriple =
         clang::normalizeForBundler(Triple(TripleRef), Arch);
@@ -501,6 +503,11 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   // input filename already has the device and architecture.
   std::string OutputFileBase =
       "." + Triple.getArchName().str() + "." + Arch.str();
+  // Two device links can have the same architecture, e.g. igca_30r for
+  // xe-mtl-u and for xe-mtl-h, so add the real devices to the output name.
+  std::vector<std::string> Devices = Args.getAllArgValues(OPT_code_EQ);
+  for (const std::string &Device : Devices)
+    OutputFileBase += "." + Device;
   auto TempFileOrErr = createOutputFile(ExecutableName + OutputFileBase, "img");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
@@ -585,9 +592,12 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
 
   // For linking device code with the SYCL offload kind, special handling is
   // required. Passing --sycl-link to clang results in a call to
-  // clang-sycl-linker.
-  if (ActiveOffloadKindMask & OFK_SYCL)
+  // clang-sycl-linker, which also takes the real devices to compile for.
+  if (ActiveOffloadKindMask & OFK_SYCL) {
     CmdArgs.push_back("--sycl-link");
+    for (const std::string &Device : Devices)
+      CmdArgs.append({"-Xlinker", Args.MakeArgString("--code=" + Device)});
+  }
 
   for (StringRef Arg : Args.getAllArgValues(OPT_linker_arg_EQ))
     CmdArgs.append({"-Xlinker", Args.MakeArgString(Arg)});
@@ -652,15 +662,29 @@ Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
   return Error::success();
 }
 
+/// \return the real devices that \p Binary lists in "code".
+SmallVector<StringRef> getCodeDevices(const OffloadBinary &Binary) {
+  SmallVector<StringRef> Devices;
+  Binary.getString("code").split(Devices, ',', /*MaxSplit=*/-1,
+                                 /*KeepEmpty=*/false);
+  return Devices;
+}
+
+/// \return the name to extract \p Binary to.
+std::string getExtractedFileName(const OffloadBinary &Binary) {
+  std::string Name =
+      (sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier()) +
+       "-" + Binary.getTriple() + "-" + Binary.getArch())
+          .str();
+  for (StringRef Device : getCodeDevices(Binary))
+    Name += ("." + Device).str();
+  return Name;
+}
+
 Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
   const OffloadBinary &Binary = *File.getBinary();
 
-  StringRef Prefix =
-      sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier());
-  SmallString<128> Filename;
-  (Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch())
-      .toVector(Filename);
-  auto TempFileOrErr = createOutputFile(Filename, "o");
+  auto TempFileOrErr = createOutputFile(getExtractedFileName(Binary), "o");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -916,14 +940,63 @@ bundleOmpAcc(ArrayRef<OffloadingImage> Images) {
 Expected<SmallVector<std::unique_ptr<MemoryBuffer>>>
 bundleSYCL(ArrayRef<OffloadingImage> Images) {
   SmallVector<std::unique_ptr<MemoryBuffer>> Buffers;
-  for (const OffloadingImage &Image : Images) {
-    // clang-sycl-linker packs outputs into one binary blob. Therefore, it is
-    // passed to Offload Wrapper as is.
-    StringRef S(Image.Image->getBufferStart(), Image.Image->getBufferSize());
-    Buffers.emplace_back(
-        MemoryBuffer::getMemBufferCopy(S, Image.Image->getBufferIdentifier()));
+  assert(!Images.empty() && "expected at least one linked image");
+  if (Images.size() == 1) {
+    const MemoryBuffer &Image = *Images.front().Image;
+    Buffers.emplace_back(MemoryBuffer::getMemBufferCopy(
+        Image.getBuffer(), Image.getBufferIdentifier()));
+    return std::move(Buffers);
   }
 
+  // The SYCL runtime registers one offload binary per wrapper, so merge the
+  // device images of all device links into one.
+  SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
+  SmallVector<OffloadingImage> Merged;
+  for (const OffloadingImage &Image : Images) {
+    // A dry run has no linked output to read.
+    if (Image.Image->getBufferSize() == 0)
+      continue;
+
+    auto BinariesOrErr = OffloadBinary::create(Image.Image->getMemBufferRef());
+    if (!BinariesOrErr)
+      return BinariesOrErr.takeError();
+    for (std::unique_ptr<OffloadBinary> &Binary : *BinariesOrErr) {
+      OffloadingImage Entry;
+      Entry.TheImageKind = Binary->getImageKind();
+      Entry.TheOffloadKind = Binary->getOffloadKind();
+      Entry.Flags = Binary->getFlags();
+      for (const auto &[Key, Value] : Binary->strings())
+        Entry.StringData[Key] = Value;
+      Entry.Image =
+          MemoryBuffer::getMemBuffer(Binary->getImage(), "",
+                                     /*RequiresNullTerminator=*/false);
+      Merged.push_back(std::move(Entry));
+      Binaries.push_back(std::move(Binary));
+    }
+  }
+
+  SmallString<0> Data;
+  if (!Merged.empty())
+    Data = OffloadBinary::write(Merged);
+
+  // With --save-temps, also write the merged offload binary to its own file,
+  // which --wrapper-verbose passes to llvm-offload-wrapper.
+  StringRef Identifier = Images.front().Image->getBufferIdentifier();
+  if (SaveTemps) {
+    auto FileOrErr = createOutputFile(ExecutableName + ".sycl.merged", "out");
+    if (!FileOrErr)
+      return FileOrErr.takeError();
+    if (!DryRun) {
+      int FD = -1;
+      if (std::error_code EC = sys::fs::openFileForWrite(*FileOrErr, FD))
+        return errorCodeToError(EC);
+      llvm::raw_fd_ostream OS(FD, true);
+      OS << Data;
+    }
+    Identifier = *FileOrErr;
+  }
+  Buffers.emplace_back(std::make_unique<SmallVectorMemoryBuffer>(
+      std::move(Data), Identifier, /*RequiresNullTerminator=*/false));
   return std::move(Buffers);
 }
 
@@ -1013,11 +1086,16 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
 
   // Set the subarchitecture and target triple for this compilation.
   const OptTable &Tbl = getOptTable();
-  StringRef Arch = Args.MakeArgString(Input.front().getBinary()->getArch());
+  const OffloadBinary &Binary = *Input.front().getBinary();
+  StringRef Arch = Args.MakeArgString(Binary.getArch());
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_arch_EQ),
                    Arch == "generic" ? "" : Arch);
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
-                   Args.MakeArgString(Input.front().getBinary()->getTriple()));
+                   Args.MakeArgString(Binary.getTriple()));
+
+  for (StringRef Device : getCodeDevices(Binary))
+    DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_code_EQ),
+                     Args.MakeArgString(Device));
 
   // If every input file is bitcode we have whole program visibility as we
   // do only support static linking with bitcode.
@@ -1182,6 +1260,9 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_triple_EQ));
       TheImage.StringData["arch"] =
           Args.MakeArgString(LinkerArgs.getLastArgValue(OPT_arch_EQ));
+      if (LinkerArgs.hasArg(OPT_code_EQ))
+        TheImage.StringData["code"] = Args.MakeArgString(
+            llvm::join(LinkerArgs.getAllArgValues(OPT_code_EQ), ","));
       TheImage.Image = std::move(*FileOrErr);
 
       Images[Kind].emplace_back(std::move(TheImage));
@@ -1208,6 +1289,10 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
         return TripleA > TripleB;
       if (ArchA != ArchB)
         return ArchA > ArchB;
+      StringRef CodeA = A.StringData.lookup("code");
+      StringRef CodeB = B.StringData.lookup("code");
+      if (CodeA != CodeB)
+        return CodeA > CodeB;
       return A.TheOffloadKind < B.TheOffloadKind;
     });
     auto BundledImagesOrErr = bundleLinkedOutput(Input, Args, WrapperKind);
@@ -1266,11 +1351,15 @@ findFromSearchPaths(StringRef Name, StringRef Root,
 
 std::optional<std::string>
 searchLibraryBaseName(StringRef Name, StringRef Root,
-                      ArrayRef<StringRef> SearchPaths, bool IsWindows) {
+                      ArrayRef<StringRef> SearchPaths,
+                      const llvm::Triple &HostTriple) {
   SmallVector<std::string> Candidates;
-  if (IsWindows)
+  if (HostTriple.isOSWindows())
     Candidates = {"lib" + Name.str() + ".dll.a", Name.str() + ".dll.a",
                   "lib" + Name.str() + ".a", Name.str() + ".lib"};
+  else if (HostTriple.isOSBinFormatMachO())
+    Candidates = {"lib" + Name.str() + ".tbd", "lib" + Name.str() + ".dylib",
+                  "lib" + Name.str() + ".so", "lib" + Name.str() + ".a"};
   else
     Candidates = {"lib" + Name.str() + ".so", "lib" + Name.str() + ".a"};
 
@@ -1285,12 +1374,12 @@ searchLibraryBaseName(StringRef Name, StringRef Root,
 /// `-lfoo` or `-l:libfoo.a`.
 std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
                                          ArrayRef<StringRef> SearchPaths,
-                                         bool IsWindows) {
+                                         const llvm::Triple &HostTriple) {
   if (Input.starts_with(":"))
     return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
   if (Input.ends_with(".lib"))
     return findFromSearchPaths(Input, Root, SearchPaths);
-  return searchLibraryBaseName(Input, Root, SearchPaths, IsWindows);
+  return searchLibraryBaseName(Input, Root, SearchPaths, HostTriple);
 }
 
 /// Search for an input file given by name, e.g. `foo.lib`. COFF linkers use
@@ -1317,6 +1406,13 @@ Error emitExtractCommands(
   StringSaver Saver(Alloc);
   MapVector<StringRef, SmallVector<StringRef>> Commands;
   DenseSet<StringRef> Seen;
+  // Filter on an empty "code" only if some image has one, so that an image
+  // without "code" does not also match one with it for the same architecture.
+  bool AnyCode = llvm::any_of(InputsForTarget, [](const auto &Input) {
+    return llvm::any_of(Input, [](const OffloadFile &File) {
+      return !File.getBinary()->getString("code").empty();
+    });
+  });
   for (const auto &Input : InputsForTarget) {
     for (const OffloadFile &File : Input) {
       const OffloadBinary &Binary = *File.getBinary();
@@ -1325,10 +1421,7 @@ Error emitExtractCommands(
       if (Source.empty())
         Source = Identifier;
 
-      auto OutputOrErr =
-          createOutputFile(sys::path::stem(Identifier) + "-" +
-                               Binary.getTriple() + "-" + Binary.getArch(),
-                           "o");
+      auto OutputOrErr = createOutputFile(getExtractedFileName(Binary), "o");
       if (!OutputOrErr)
         return OutputOrErr.takeError();
 
@@ -1338,6 +1431,11 @@ Error emitExtractCommands(
               .str();
       if (!Binary.getArch().empty())
         ImageArg += (",arch=" + Binary.getArch()).str();
+      SmallVector<StringRef> Devices = getCodeDevices(Binary);
+      if (Devices.empty() && AnyCode)
+        ImageArg += ",code=";
+      for (StringRef Device : Devices)
+        ImageArg += (",code=" + Device).str();
       file_magic Magic;
       if (!identify_magic(Source, Magic) && Magic == file_magic::archive)
         ImageArg += (",member=" + sys::path::filename(Identifier)).str();
@@ -1387,6 +1485,11 @@ getDeviceInput(const ArgList &Args) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
+  // ld64 also searches its default library paths under each -syslibroot.
+  for (StringRef Dir : {"/usr/lib", "/usr/local/lib"})
+    for (const opt::Arg *Arg : Args.filtered(OPT_syslibroot))
+      LibraryPaths.push_back(Saver.save(Twine(Arg->getValue()) + Dir));
+
   // Try to extract device code from the linker input files.
   bool WholeArchive = Args.hasArg(OPT_wholearchive_flag);
   SmallVector<OffloadFile> ObjectFilesToExtract;
@@ -1403,8 +1506,7 @@ getDeviceInput(const ArgList &Args) {
 
     std::optional<std::string> Filename =
         Arg->getOption().matches(OPT_library)
-            ? searchLibrary(Arg->getValue(), Root, LibraryPaths,
-                            HostTriple.isOSWindows())
+            ? searchLibrary(Arg->getValue(), Root, LibraryPaths, HostTriple)
             : searchInput(Arg->getValue(), Root, InputPaths);
 
     if (!Filename && Arg->getOption().matches(OPT_library))
@@ -1496,7 +1598,7 @@ getDeviceInput(const ArgList &Args) {
     for (const auto &[Index, ID] : llvm::enumerate(CompatibleTargets)) {
       // Only extract if we have an object matching this target or it
       // was specifically requested.
-      if (!InputFiles.count(ID) && !ShouldExtract.contains(ID.second))
+      if (!InputFiles.count(ID) && !ShouldExtract.contains(ID.Arch))
         continue;
 
       // If another target needs this binary it must be copied instead.

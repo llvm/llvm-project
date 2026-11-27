@@ -86,7 +86,6 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
   }
 
   if (!NoLibc) {
-    CmdArgs.push_back("-lmoldname");
     CmdArgs.push_back("-lmingwex");
     for (auto Lib : Args.getAllArgValues(options::OPT_l)) {
       if (StringRef(Lib).starts_with("msvcr") ||

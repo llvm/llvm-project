@@ -70,9 +70,9 @@ define void @test_alloca() sanitize_hwaddress {
 ; INLINE-NEXT:    [[TMP23:%.*]] = and i64 [[TMP22]], -9079256848778919937
 ; INLINE-NEXT:    [[TMP24:%.*]] = lshr i64 [[TMP23]], 4
 ; INLINE-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP24]]
-; INLINE-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i32 0
+; INLINE-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i64 0
 ; INLINE-NEXT:    store i8 4, ptr [[TMP26]], align 1
-; INLINE-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; INLINE-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[X]], i64 15
 ; INLINE-NEXT:    store i8 [[TMP21]], ptr [[TMP27]], align 1
 ; INLINE-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]])
 ; INLINE-NEXT:    [[TMP28:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
@@ -156,9 +156,9 @@ define i32 @test_simple(ptr %a) sanitize_hwaddress {
 ; INLINE-NEXT:    [[TMP23:%.*]] = and i64 [[TMP22]], -9079256848778919937
 ; INLINE-NEXT:    [[TMP24:%.*]] = lshr i64 [[TMP23]], 4
 ; INLINE-NEXT:    [[TMP25:%.*]] = getelementptr i8, ptr [[TMP14]], i64 [[TMP24]]
-; INLINE-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i32 0
+; INLINE-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[TMP25]], i64 0
 ; INLINE-NEXT:    store i8 1, ptr [[TMP26]], align 1
-; INLINE-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[BUF_SROA_0]], i32 15
+; INLINE-NEXT:    [[TMP27:%.*]] = getelementptr i8, ptr [[BUF_SROA_0]], i64 15
 ; INLINE-NEXT:    store i8 [[TMP21]], ptr [[TMP27]], align 1
 ; INLINE-NEXT:    [[TMP28:%.*]] = ptrtoint ptr [[BUF_SROA_0_HWASAN]] to i64
 ; INLINE-NEXT:    [[TMP29:%.*]] = lshr i64 [[TMP28]], 57

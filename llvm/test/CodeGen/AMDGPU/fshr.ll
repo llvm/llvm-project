@@ -2,7 +2,6 @@
 ; RUN: llc < %s -mtriple=amdgpu6.00 | FileCheck %s -check-prefixes=GFX89,SI
 ; RUN: llc < %s -mtriple=amdgpu8.02  | FileCheck %s -check-prefixes=GFX89,VI
 ; RUN: llc < %s -mtriple=amdgpu9.00 | FileCheck %s -check-prefixes=GFX89,GFX9
-; RUN: llc < %s -mtriple=r600 -mcpu=redwood  | FileCheck %s --check-prefix=R600
 ; RUN: llc < %s -mtriple=amdgpu10.10 | FileCheck %s -check-prefixes=GFX10
 ; RUN: llc < %s -mtriple=amdgpu11.00 -mattr=+real-true16 | FileCheck %s -check-prefixes=GFX11,GFX11-TRUE16
 ; RUN: llc < %s -mtriple=amdgpu11.00 -mattr=-real-true16 | FileCheck %s -check-prefixes=GFX11,GFX11-FAKE16
@@ -66,17 +65,6 @@ define amdgpu_kernel void @fshr_i32(ptr addrspace(1) %in, i32 %x, i32 %y, i32 %z
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
 ; GFX9-NEXT:    s_endpgm
-;
-; R600-LABEL: fshr_i32:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T1.X, KC0[2].Z, KC0[2].W, KC0[3].X,
 ;
 ; GFX10-LABEL: fshr_i32:
 ; GFX10:       ; %bb.0: ; %entry
@@ -169,18 +157,6 @@ define amdgpu_kernel void @fshr_i32_imm(ptr addrspace(1) %in, i32 %x, i32 %y) {
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; R600-LABEL: fshr_i32_imm:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 3, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T1.X, KC0[2].Z, KC0[2].W, literal.x,
-; R600-NEXT:    7(9.809089e-45), 0(0.000000e+00)
-;
 ; GFX10-LABEL: fshr_i32_imm:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
@@ -265,18 +241,6 @@ define amdgpu_kernel void @fshr_i32_imm_src0(ptr addrspace(1) %in, i32 %x, i32 %
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
-;
-; R600-LABEL: fshr_i32_imm_src0:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 3, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.X, T0.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T1.X, literal.x, KC0[2].W, KC0[2].Z,
-; R600-NEXT:    7(9.809089e-45), 0(0.000000e+00)
 ;
 ; GFX10-LABEL: fshr_i32_imm_src0:
 ; GFX10:       ; %bb.0: ; %entry
@@ -381,20 +345,6 @@ define amdgpu_kernel void @fshr_v2i32(ptr addrspace(1) %in, <2 x i32> %x, <2 x i
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX9-NEXT:    s_endpgm
-;
-; R600-LABEL: fshr_v2i32:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 5, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     MOV * T0.W, KC0[4].X,
-; R600-NEXT:     BIT_ALIGN_INT T0.Y, KC0[3].X, KC0[3].Z, PV.W,
-; R600-NEXT:     MOV * T0.W, KC0[3].W,
-; R600-NEXT:     BIT_ALIGN_INT * T0.X, KC0[2].W, KC0[3].Y, PV.W,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; GFX10-LABEL: fshr_v2i32:
 ; GFX10:       ; %bb.0: ; %entry
@@ -512,20 +462,6 @@ define amdgpu_kernel void @fshr_v2i32_imm(ptr addrspace(1) %in, <2 x i32> %x, <2
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX9-NEXT:    s_endpgm
 ;
-; R600-LABEL: fshr_v2i32_imm:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 5, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     BIT_ALIGN_INT * T0.Y, KC0[3].X, KC0[3].Z, literal.x,
-; R600-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T0.X, KC0[2].W, KC0[3].Y, literal.x,
-; R600-NEXT:    7(9.809089e-45), 0(0.000000e+00)
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
 ; GFX10-LABEL: fshr_v2i32_imm:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_clause 0x1
@@ -641,20 +577,6 @@ define amdgpu_kernel void @fshr_v2i32_imm_src1(ptr addrspace(1) %in, <2 x i32> %
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
 ; GFX9-NEXT:    s_endpgm
-;
-; R600-LABEL: fshr_v2i32_imm_src1:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 5, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     BIT_ALIGN_INT * T0.Y, KC0[3].X, literal.x, KC0[3].Z,
-; R600-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T0.X, KC0[2].W, literal.x, KC0[3].Y,
-; R600-NEXT:    7(9.809089e-45), 0(0.000000e+00)
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; GFX10-LABEL: fshr_v2i32_imm_src1:
 ; GFX10:       ; %bb.0: ; %entry
@@ -807,24 +729,6 @@ define amdgpu_kernel void @fshr_v4i32(ptr addrspace(1) %in, <4 x i32> %x, <4 x i
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
 ; GFX9-NEXT:    s_endpgm
-;
-; R600-LABEL: fshr_v4i32:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 9, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     MOV * T0.W, KC0[6].X,
-; R600-NEXT:     BIT_ALIGN_INT * T0.W, KC0[4].X, KC0[5].X, PV.W,
-; R600-NEXT:     MOV * T1.W, KC0[5].W,
-; R600-NEXT:     BIT_ALIGN_INT * T0.Z, KC0[3].W, KC0[4].W, PV.W,
-; R600-NEXT:     MOV * T1.W, KC0[5].Z,
-; R600-NEXT:     BIT_ALIGN_INT * T0.Y, KC0[3].Z, KC0[4].Z, PV.W,
-; R600-NEXT:     MOV * T1.W, KC0[5].Y,
-; R600-NEXT:     BIT_ALIGN_INT * T0.X, KC0[3].Y, KC0[4].Y, PV.W,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ;
 ; GFX10-LABEL: fshr_v4i32:
 ; GFX10:       ; %bb.0: ; %entry
@@ -988,22 +892,6 @@ define amdgpu_kernel void @fshr_v4i32_imm(ptr addrspace(1) %in, <4 x i32> %x, <4
 ; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[0:1]
 ; GFX9-NEXT:    s_endpgm
 ;
-; R600-LABEL: fshr_v4i32_imm:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 7, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     BIT_ALIGN_INT * T0.W, KC0[4].X, KC0[5].X, 1,
-; R600-NEXT:     BIT_ALIGN_INT * T0.Z, KC0[3].W, KC0[4].W, literal.x,
-; R600-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T0.Y, KC0[3].Z, KC0[4].Z, literal.x,
-; R600-NEXT:    7(9.809089e-45), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T0.X, KC0[3].Y, KC0[4].Y, 1,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
 ; GFX10-LABEL: fshr_v4i32_imm:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_clause 0x1
@@ -1163,23 +1051,6 @@ define amdgpu_kernel void @fshr_v4i32_imm_src0(ptr addrspace(1) %in, <4 x i32> %
 ; GFX9-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
 ; GFX9-NEXT:    s_endpgm
 ;
-; R600-LABEL: fshr_v4i32_imm_src0:
-; R600:       ; %bb.0: ; %entry
-; R600-NEXT:    ALU 8, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     BIT_ALIGN_INT * T0.W, literal.x, KC0[4].X, KC0[5].X,
-; R600-NEXT:    33(4.624285e-44), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T0.Z, literal.x, KC0[3].W, KC0[4].W,
-; R600-NEXT:    9(1.261169e-44), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T0.Y, literal.x, KC0[3].Z, KC0[4].Z,
-; R600-NEXT:    7(9.809089e-45), 0(0.000000e+00)
-; R600-NEXT:     BIT_ALIGN_INT * T0.X, 1, KC0[3].Y, KC0[4].Y,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
 ; GFX10-LABEL: fshr_v4i32_imm_src0:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_clause 0x1
@@ -1274,11 +1145,6 @@ define i32 @v_fshr_i32(i32 %src0, i32 %src1, i32 %src2) {
 ; GFX89-NEXT:    v_alignbit_b32 v0, v0, v1, v2
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
 ;
-; R600-LABEL: v_fshr_i32:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
 ; GFX10-LABEL: v_fshr_i32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1327,11 +1193,6 @@ define <2 x i32> @v_fshr_v2i32(<2 x i32> %src0, <2 x i32> %src1, <2 x i32> %src2
 ; GFX89-NEXT:    v_alignbit_b32 v0, v0, v2, v4
 ; GFX89-NEXT:    v_alignbit_b32 v1, v1, v3, v5
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fshr_v2i32:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 ;
 ; GFX10-LABEL: v_fshr_v2i32:
 ; GFX10:       ; %bb.0:
@@ -1387,11 +1248,6 @@ define <3 x i32> @v_fshr_v3i32(<3 x i32> %src0, <3 x i32> %src1, <3 x i32> %src2
 ; GFX89-NEXT:    v_alignbit_b32 v1, v1, v4, v7
 ; GFX89-NEXT:    v_alignbit_b32 v2, v2, v5, v8
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fshr_v3i32:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 ;
 ; GFX10-LABEL: v_fshr_v3i32:
 ; GFX10:       ; %bb.0:
@@ -1453,11 +1309,6 @@ define <4 x i32> @v_fshr_v4i32(<4 x i32> %src0, <4 x i32> %src1, <4 x i32> %src2
 ; GFX89-NEXT:    v_alignbit_b32 v2, v2, v6, v10
 ; GFX89-NEXT:    v_alignbit_b32 v3, v3, v7, v11
 ; GFX89-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fshr_v4i32:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 ;
 ; GFX10-LABEL: v_fshr_v4i32:
 ; GFX10:       ; %bb.0:
@@ -1543,11 +1394,6 @@ define i16 @v_fshr_i16(i16 %src0, i16 %src1, i16 %src2) {
 ; GFX9-NEXT:    v_lshrrev_b16_e32 v1, v2, v1
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fshr_i16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 ;
 ; GFX10-LABEL: v_fshr_i16:
 ; GFX10:       ; %bb.0:
@@ -1660,11 +1506,6 @@ define <2 x i16> @v_fshr_v2i16(<2 x i16> %src0, <2 x i16> %src1, <2 x i16> %src2
 ; GFX9-NEXT:    v_pk_lshrrev_b16 v1, v2, v1
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fshr_v2i16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 ;
 ; GFX10-LABEL: v_fshr_v2i16:
 ; GFX10:       ; %bb.0:
@@ -1780,11 +1621,6 @@ define <3 x i16> @v_fshr_v3i16(<3 x i16> %src0, <3 x i16> %src1, <3 x i16> %src2
 ; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX9-NEXT:    v_perm_b32 v0, v6, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fshr_v3i16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 ;
 ; GFX10-LABEL: v_fshr_v3i16:
 ; GFX10:       ; %bb.0:
@@ -2004,11 +1840,6 @@ define <4 x i16> @v_fshr_v4i16(<4 x i16> %src0, <4 x i16> %src1, <4 x i16> %src2
 ; GFX9-NEXT:    v_perm_b32 v1, v6, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; R600-LABEL: v_fshr_v4i16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
 ; GFX10-LABEL: v_fshr_v4i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2204,11 +2035,6 @@ define i64 @v_fshr_i64(i64 %src0, i64 %src1, i64 %src2) {
 ; GFX9-NEXT:    v_or_b32_e32 v0, v0, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; R600-LABEL: v_fshr_i64:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
 ; GFX10-LABEL: v_fshr_i64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -2304,11 +2130,6 @@ define <2 x i64> @v_fshr_v2i64(<2 x i64> %src0, <2 x i64> %src1, <2 x i64> %src2
 ; GFX9-NEXT:    v_or_b32_e32 v3, v3, v6
 ; GFX9-NEXT:    v_or_b32_e32 v2, v2, v5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fshr_v2i64:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 ;
 ; GFX10-LABEL: v_fshr_v2i64:
 ; GFX10:       ; %bb.0:
@@ -2413,11 +2234,6 @@ define i24 @v_fshr_i24(i24 %src0, i24 %src1, i24 %src2) {
 ; GFX9-NEXT:    v_add_u32_e32 v2, 8, v2
 ; GFX9-NEXT:    v_alignbit_b32 v0, v0, v1, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fshr_i24:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 ;
 ; GFX10-LABEL: v_fshr_i24:
 ; GFX10:       ; %bb.0:
@@ -2562,11 +2378,6 @@ define <2 x i24> @v_fshr_v2i24(<2 x i24> %src0, <2 x i24> %src1, <2 x i24> %src2
 ; GFX9-NEXT:    v_add_u32_e32 v2, 8, v2
 ; GFX9-NEXT:    v_alignbit_b32 v1, v1, v3, v2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fshr_v2i24:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
 ;
 ; GFX10-LABEL: v_fshr_v2i24:
 ; GFX10:       ; %bb.0:

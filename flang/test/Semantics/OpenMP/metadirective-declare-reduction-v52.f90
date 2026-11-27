@@ -1,6 +1,7 @@
 !RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
 
 subroutine f01
+!WARNING: The declarative form of the METADIRECTIVE directive is not implemented yet and will be ignored [-Wopenmp-usage]
   !$omp metadirective &
   !$omp& when(implementation={vendor(llvm)}: &
 !ERROR: Invalid reduction intrinsic operator in DECLARE REDUCTION directive
@@ -8,6 +9,7 @@ subroutine f01
 end
 
 subroutine f02
+!WARNING: The declarative form of the METADIRECTIVE directive is not implemented yet and will be ignored [-Wopenmp-usage]
   !$omp metadirective &
   !$omp& otherwise(
 !ERROR: Invalid reduction intrinsic operator in DECLARE REDUCTION directive
@@ -28,6 +30,7 @@ subroutine f03
 end
 
 subroutine f04
+!WARNING: The declarative form of the METADIRECTIVE directive is not implemented yet and will be ignored [-Wopenmp-usage]
   !$omp metadirective &
   !$omp& when (implementation={vendor(llvm)}: &
 !ERROR: Invalid reduction intrinsic operator in DECLARE REDUCTION directive
@@ -36,6 +39,7 @@ subroutine f04
 end
 
 subroutine f05
+!WARNING: The declarative form of the METADIRECTIVE directive is not implemented yet and will be ignored [-Wopenmp-usage]
   !$omp metadirective &
   !$omp& when (implementation={vendor(llvm)}: &
 !ERROR: Invalid reduction intrinsic operator in DECLARE REDUCTION directive
@@ -44,6 +48,7 @@ subroutine f05
 end
 
 subroutine f06
+!WARNING: The declarative form of the METADIRECTIVE directive is not implemented yet and will be ignored [-Wopenmp-usage]
   !$omp metadirective &
   !$omp& otherwise( &
 !ERROR: Invalid reduction intrinsic operator in DECLARE REDUCTION directive
@@ -54,6 +59,7 @@ subroutine f07
   type :: t
     integer :: m
   end type
+!WARNING: The declarative form of the METADIRECTIVE directive is not implemented yet and will be ignored [-Wopenmp-usage]
   !$omp metadirective &
   !$omp& otherwise( &
 ! Ok

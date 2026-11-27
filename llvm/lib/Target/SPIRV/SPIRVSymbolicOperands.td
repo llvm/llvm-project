@@ -413,6 +413,9 @@ defm SPV_KHR_relaxed_extended_instruction : ExtensionOperand<142, [EnvVulkan, En
 defm SPV_EXT_shader_subgroup_partitioned : ExtensionOperand<143, [EnvVulkan]>;
 defm SPV_KHR_quad_control : ExtensionOperand<144, [EnvVulkan]>;
 defm SPV_KHR_compute_shader_derivatives : ExtensionOperand<145, [EnvVulkan]>;
+// Legacy name for SPV_EXT_bfloat16_arithmetic. It is kept for consumers
+// that recognize only the INTEL name, until they transition to the EXT name.
+defm SPV_INTEL_bfloat16_arithmetic : ExtensionOperand<146, [EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -531,7 +534,7 @@ defm RoundingModeRTZ : CapabilityOperand<4468, 0x10400, 0, [SPV_KHR_float_contro
 defm Float16ImageAMD : CapabilityOperand<5008, 0, 0, [], [Shader]>;
 defm ImageGatherBiasLodAMD : CapabilityOperand<5009, 0, 0, [], [Shader]>;
 defm FragmentMaskAMD : CapabilityOperand<5010, 0, 0, [], [Shader]>;
-defm StencilExportEXT : CapabilityOperand<5013, 0, 0, [], [Shader]>;
+defm StencilExportEXT : CapabilityOperand<5013, 0, 0, [SPV_EXT_shader_stencil_export], [Shader]>;
 defm ImageReadWriteLodAMD : CapabilityOperand<5015, 0, 0, [], [Shader]>;
 defm Int64ImageEXT : CapabilityOperand<5016, 0, 0, [SPV_EXT_shader_image_int64], [Int64]>;
 defm ShaderClockKHR : CapabilityOperand<5055, 0, 0, [SPV_KHR_shader_clock], []>;
@@ -619,6 +622,7 @@ defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variabl
 defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
 defm BFloat16ArithmeticEXT : CapabilityOperand<6226, 0, 0, [SPV_EXT_bfloat16_arithmetic], []>;
+defm BFloat16ArithmeticINTEL : CapabilityOperand<6226, 0, 0, [SPV_INTEL_bfloat16_arithmetic], []>;
 defm BFloat16ConversionINTEL : CapabilityOperand<6115, 0, 0, [SPV_INTEL_bfloat16_conversion], []>;
 defm GlobalVariableHostAccessINTEL : CapabilityOperand<6187, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
 defm HostAccessINTEL : CapabilityOperand<6188, 0, 0, [SPV_INTEL_global_variable_host_access], []>;
