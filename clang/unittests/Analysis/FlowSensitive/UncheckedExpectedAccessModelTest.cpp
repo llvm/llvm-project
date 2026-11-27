@@ -1386,14 +1386,228 @@ TEST_P(UncheckedExpectedAccessTest, ConstructNestedUnchecked) {
 }
 
 TEST_P(UncheckedExpectedAccessTest, ConstructThenAssignUnexpected) {
-  // FIXME: should warn once converting assignments are modeled.
   ExpectDiagnosticsFor(R"(
     #include "unchecked_expected_access_test.h"
 
     int target() {
       $ns::expected<int, int> e;
       e = $ns::unexpected(1);
+      return *e; // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, Assign) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      e = 5;
       return *e;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      e = {};
+      return *e;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (e)
+        return 0;
+      e = 5;
+      return *e;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      const $ns::unexpected<int> u(1);
+      e = u;
+      return e.error();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      e = $ns::unexpected(1);
+      return e.error();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      return (e = 5).value();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<void, int> e) {
+      e = $ns::unexpected(1);
+      e.error();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (!b)
+        return 0;
+      a = b;
+      return *a;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (!b)
+        return 0;
+      a = std::move(b);
+      return *a;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<long, int> b) {
+      if (!b)
+        return 0;
+      a = b;
+      return *a;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<$ns::expected<int, int>, int> outer) {
+      $ns::expected<int, int> inner($ns::unexpect, 1);
+      outer = inner;
+      outer.value();
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, AssignMakeUnexpected) {
+  // `make_unexpected` is only provided by `tl`.
+  if (GetParam().NamespaceName != "tl")
+    GTEST_SKIP();
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      e = $ns::make_unexpected(1);
+      return e.error();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      e = $ns::make_unexpected(1);
+      return *e; // [[unsafe]]
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, AssignUnchecked) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      e = $ns::unexpected(1);
+      return *e; // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      e = 5;
+      return e.error(); // [[unsafe:error]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e, bool cond) {
+      if (cond)
+        e = 5;
+      return *e; // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      return (e = $ns::unexpected(1)).value(); // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      a = b;
+      return *a; // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<long, int> b) {
+      a = b;
+      return *a; // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<$ns::expected<int, int>, int> outer) {
+      $ns::expected<int, int> inner($ns::unexpect, 1);
+      outer = inner;
+      outer.error(); // [[unsafe:error]]
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, AssignUncheckedVoid) {
+  // `tl::expected<void, E>` has no `value()`.
+  if (GetParam().NamespaceName != "std")
+    GTEST_SKIP();
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<void, int> e) {
+      e = $ns::unexpected(1);
+      e.value(); // [[unsafe]]
     }
   )");
 }
