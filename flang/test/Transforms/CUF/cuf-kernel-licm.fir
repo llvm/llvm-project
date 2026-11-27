@@ -28,9 +28,7 @@
 // CHECK:             fir.store %[[CONVERT_1]] to %[[DECLARE_1]] : !fir.ref<i32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[DECLARE_2]] : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
 // CHECK:             %[[LOAD_0:.*]] = fir.load %[[CONVERT_2]] : !fir.ref<!fir.ptr<i64>>
-// CHECK:             %[[CONVERT_3:.*]] = fir.convert %[[DECLARE_3]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
-// CHECK:             %[[CONVERT_4:.*]] = fir.convert %[[LOAD_0]] : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-// CHECK:             fir.call @_FortranAPointerAssociateScalar(%[[CONVERT_3]], %[[CONVERT_4]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+// CHECK:             fir.box_set_addr %[[LOAD_0]] to %[[DECLARE_3]] : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 // CHECK:             %[[LOAD_1:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
 // CHECK:             %[[CONVERT_5:.*]] = fir.convert %[[LOAD_2]] : (i32) -> i64
@@ -65,9 +63,7 @@ func.func @_QPtest(%arg0: !fir.ref<!fir.array<10xf32>> {cuf.data_attr = #cuf.cud
     fir.store %12 to %5 : !fir.ref<i32>
     %13 = fir.convert %7 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
     %14 = fir.load %13 : !fir.ref<!fir.ptr<i64>>
-    %15 = fir.convert %8 : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<none>>
-    %16 = fir.convert %14 : (!fir.ptr<i64>) -> !fir.llvm_ptr<i8>
-    fir.call @_FortranAPointerAssociateScalar(%15, %16) fastmath<contract> : (!fir.ref<!fir.box<none>>, !fir.llvm_ptr<i8>) -> ()
+    fir.box_set_addr %14 to %8 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     %17 = fir.load %8 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
     %18 = fir.load %5 : !fir.ref<i32>
     %19 = fir.convert %18 : (i32) -> i64

@@ -17,7 +17,7 @@ integer function find(p, n, cur)
   end do
 end function
 ! CHECK-LABEL: define {{.*}}i32 @find_(
-! CHECK-NOT:     call
+! CHECK-NOT:     PointerAssociateScalar
 ! CHECK-NOT:     alloca
 ! CHECK:         ret i32
 

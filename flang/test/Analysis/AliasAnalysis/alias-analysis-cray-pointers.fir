@@ -186,8 +186,10 @@ func.func @_QPtest() {
   %16 = fir.convert %15 : (!fir.ref<f32>) -> i64
   hlfir.assign %16 to %3#0 : i64, !fir.ref<i64>
   %cst = arith.constant 1.000000e+00 : f32
-  // There should be _FortranAPointerAssociateScalar call here, but
-  // we skip it for the test.
+  // Re-associate the Cray pointee with the Cray pointer before the reference.
+  %17 = fir.convert %3#0 : (!fir.ref<i64>) -> !fir.ref<!fir.ptr<i64>>
+  %18 = fir.load %17 : !fir.ref<!fir.ptr<i64>>
+  fir.box_set_addr %18 to %8#0 : !fir.ptr<i64>, !fir.ref<!fir.box<!fir.ptr<f32>>>
   %21 = fir.load %8#0 : !fir.ref<!fir.box<!fir.ptr<f32>>>
   %22 = fir.box_addr %21 {test.ptr = "a.data"} : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
   hlfir.assign %cst to %22 : f32, !fir.ptr<f32>
