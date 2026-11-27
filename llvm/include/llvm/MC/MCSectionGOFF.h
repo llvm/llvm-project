@@ -76,6 +76,18 @@ public:
   // Return the parent section.
   MCSectionGOFF *getParent() const { return Parent; }
 
+  // Return the SD parent.
+  MCSectionGOFF *getParentSD() const {
+    if (isSD())
+      return const_cast<llvm::MCSectionGOFF *>(this);
+    if (isED())
+      return Parent;
+    if (isPR() && Parent)
+      return Parent->getParent();
+
+    return nullptr;
+  }
+
   // Returns true if this is a BSS section.
   bool isBSS() const { return IsBSS; }
 

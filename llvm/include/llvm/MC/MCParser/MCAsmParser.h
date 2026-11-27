@@ -191,6 +191,11 @@ public:
 
   virtual bool discardLTOSymbol(StringRef) const { return false; }
 
+  /// Returns the name of the HLASM label (column-1 name field) most recently
+  /// parsed on the current statement, or an empty string if none.
+  /// Overridden by HLASMAsmParser; returns empty in the base implementation.
+  virtual StringRef getLastHLASMLabelName() const { return {}; }
+
   virtual bool isParsingMasm() const { return false; }
 
   virtual bool defineMacro(StringRef Name, StringRef Value) { return true; }

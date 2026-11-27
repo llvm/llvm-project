@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/SystemZMCFixups.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "SystemZMCAsmInfo.h"
 #include "llvm/MC/MCGOFFObjectWriter.h"
@@ -35,7 +36,11 @@ unsigned SystemZGOFFObjectWriter::getRelocType(const MCValue &Target,
     return Reloc_Type_VCon;
   case SystemZ::S_QCon:
     return Reloc_Type_QCon;
+  case SystemZ::S_JCon:
+    return Reloc_Type_JCon;
   case SystemZ::S_None:
+    if (Fixup.getKind() == SystemZ::FK_390_S20Imm)
+      return Reloc_Type_LDCon;
     if (Fixup.isPCRel())
       return Reloc_Type_RICon;
     return Reloc_Type_ACon;

@@ -14,14 +14,20 @@
 
 using namespace llvm;
 
-constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefsELF[] = {
     {{"DTPOFF"}, SystemZ::S_DTPOFF}, {{"GOT"}, SystemZ::S_GOT},
     {{"GOTENT"}, SystemZ::S_GOTENT}, {{"INDNTPOFF"}, SystemZ::S_INDNTPOFF},
     {{"NTPOFF"}, SystemZ::S_NTPOFF}, {{"PLT"}, SystemZ::S_PLT},
     {{"TLSGD"}, SystemZ::S_TLSGD},   {{"TLSLD"}, SystemZ::S_TLSLD},
     {{"TLSLDM"}, SystemZ::S_TLSLDM},
 };
-constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefsGOFF[] = {
+    {{"AD"}, SystemZ::S_None}, {{"QD"}, SystemZ::S_QCon},
+    {{"RD"}, SystemZ::S_RCon}, {{"VD"}, SystemZ::S_VCon},
+    {{"JD"}, SystemZ::S_JCon},
+};
+constexpr auto atSpecifiersELF = BUILD_ENUM_STRINGS(AtSpecifierDefsELF);
+constexpr auto atSpecifiersGOFF = BUILD_ENUM_STRINGS(AtSpecifierDefsGOFF);
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
                                          const MCTargetOptions &Options)
@@ -36,7 +42,7 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
   UsesELFSectionDirectiveForBSS = true;
   ZeroDirective = "\t.space\t";
 
-  initializeAtSpecifiers(atSpecifiers);
+  initializeAtSpecifiers(atSpecifiersELF);
 }
 
 SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
@@ -56,7 +62,7 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   MaxInstLength = 6;
   SupportsDebugInformation = true;
 
-  initializeAtSpecifiers(atSpecifiers);
+  initializeAtSpecifiers(atSpecifiersGOFF);
 }
 
 const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
@@ -82,6 +88,9 @@ void SystemZMCAsmInfoGOFF::printSpecifierExpr(
     break;
   case SystemZ::S_VCon:
     OS << "VD";
+    break;
+  case SystemZ::S_JCon:
+    OS << "JD";
     break;
   default:
     llvm_unreachable("Invalid kind");

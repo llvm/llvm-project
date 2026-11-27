@@ -314,6 +314,8 @@ private:
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
   StringMap<MCSectionELF *, BumpPtrAllocator &> ELFUniquingMap;
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
+  /// Maps the upper-cased HLASM name to its first-seen spelling.
+  StringMap<StringRef> HLASMNameMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
@@ -485,6 +487,11 @@ public:
   /// For example, parse "a\"b\\" as a"\.
   LLVM_ABI MCSymbol *parseSymbol(const Twine &Name);
 
+  /// HLASM names are case-insensitive. Returns the spelling of the first
+  /// occurrence of \p Name (compared case-insensitively), so that all uses of
+  /// a name map to the same MCSymbol while the original case is preserved.
+  LLVM_ABI StringRef getCanonicalHLASMName(StringRef Name);
+
   /// Gets a symbol that will be defined to the final stack offset of a local
   /// variable after codegen.
   ///
@@ -617,6 +624,10 @@ public:
                                          GOFF::PRAttr PRAttributes,
                                          MCSection *Parent);
 
+  /// Look up a previously created GOFF section whose name begins with
+  /// \p Name (i.e. the section name component of the uniquing key).
+  /// Returns the first matching section, or nullptr if none found.
+  LLVM_ABI MCSectionGOFF *lookupGOFFSection(StringRef Name) const;
   LLVM_ABI MCSectionCOFF *
   getCOFFSection(StringRef Section, unsigned Characteristics,
                  StringRef COMDATSymName, int Selection,

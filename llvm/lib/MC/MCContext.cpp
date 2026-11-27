@@ -179,6 +179,7 @@ void MCContext::reset() {
   COFFUniquingMap.clear();
   WasmUniquingMap.clear();
   XCOFFUniquingMap.clear();
+  HLASMNameMap.clear();
   DXCUniquingMap.clear();
 
   MacroMap.clear();
@@ -253,6 +254,13 @@ MCSymbol *MCContext::parseSymbol(const Twine &Name) {
   }
 
   return getOrCreateSymbol(NameRef);
+}
+
+StringRef MCContext::getCanonicalHLASMName(StringRef Name) {
+  auto [It, Inserted] = HLASMNameMap.try_emplace(Name.upper(), StringRef());
+  if (Inserted)
+    It->second = allocateString(Name);
+  return It->second;
 }
 
 MCSymbol *MCContext::getOrCreateFrameAllocSymbol(const Twine &FuncName,
@@ -764,6 +772,19 @@ MCSectionGOFF *MCContext::getGOFFSection(SectionKind Kind, StringRef Name,
                                          MCSection *Parent) {
   return getGOFFSection<GOFF::PRAttr>(Kind, Name, PRAttributes, Parent,
                                       /*IsVirtual=*/false);
+}
+
+MCSectionGOFF *MCContext::lookupGOFFSection(StringRef Name) const {
+  // The uniquing key is "sectionname" for SD, "sectionname/parentname" for ED,
+  // and "sectionname/edname/sdname" for PR.  We match any entry whose key
+  // starts with Name followed by '\0' or '/'.
+  for (auto &[Key, Sec] : GOFFUniquingMap) {
+    StringRef K(Key);
+    if (K.starts_with(Name) &&
+        (K.size() == Name.size() || K[Name.size()] == '/'))
+      return Sec;
+  }
+  return nullptr;
 }
 
 MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,

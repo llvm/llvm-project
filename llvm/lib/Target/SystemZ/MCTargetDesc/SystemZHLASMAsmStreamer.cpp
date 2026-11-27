@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZHLASMAsmStreamer.h"
+#include "SystemZMCAsmInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
@@ -592,6 +593,15 @@ static void printAddrConstPrefix(raw_ostream &OS, unsigned Size) {
     OS << "AL" << Size << '(';
 }
 
+void SystemZHLASMAsmStreamer::emitAssignment(MCSymbol *Symbol,
+                                             const MCExpr *Value) {
+  Symbol->print(OS, MAI);
+  OS << " EQU ";
+  MAI->printExpr(OS, *Value);
+  EmitEOL();
+  MCStreamer::emitAssignment(Symbol, Value);
+}
+
 bool SystemZHLASMAsmStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                                   MCSymbolAttr Attribute) {
   return static_cast<MCSymbolGOFF *>(Sym)->setSymbolAttribute(Attribute);
@@ -653,11 +663,18 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
       OS << '+';
       break;
     case MCBinaryExpr::Div:
-      OS << '/';
+    case MCBinaryExpr::Mul: {
+      OS << (BE.getOpcode() == MCBinaryExpr::Div ? '/' : '*');
+      // A self-defining term is the only form HLASM accepts here, an
+      // XL<n>'..' constant is not valid as the operand of / and *.
+      if (const auto *C = dyn_cast<MCConstantExpr>(BE.getRHS())) {
+        OS << C->getValue();
+        if (Parens)
+          OS << ')';
+        return;
+      }
       break;
-    case MCBinaryExpr::Mul:
-      OS << '*';
-      break;
+    }
     case MCBinaryExpr::Sub:
       OS << '-';
       break;
@@ -668,6 +685,43 @@ void SystemZHLASMAsmStreamer::emitHLASMValueImpl(const MCExpr *Value,
     emitHLASMValueImpl(BE.getRHS(), Size);
     if (Parens)
       OS << ')';
+    return;
+  }
+  case MCExpr::Specifier: {
+    // A top-level constant is printed with the type that matches its size,
+    // e.g. V(sym) for 4 bytes and VD(sym) for 8 bytes. Nested specifiers are
+    // printed by SystemZMCAsmInfoGOFF::printSpecifierExpr.
+    if (!Parens) {
+      MAI->printExpr(OS, *Value);
+      return;
+    }
+    const auto &SE = cast<MCSpecifierExpr>(*Value);
+    switch (SE.getSpecifier()) {
+    case SystemZ::S_None:
+      OS << 'A';
+      break;
+    case SystemZ::S_QCon:
+      OS << 'Q';
+      break;
+    case SystemZ::S_RCon:
+      OS << 'R';
+      break;
+    case SystemZ::S_VCon:
+      OS << 'V';
+      break;
+    case SystemZ::S_JCon:
+      OS << 'J';
+      break;
+    default:
+      llvm_unreachable("Invalid kind");
+    }
+    if (Size == 8)
+      OS << 'D';
+    else if (Size != 4)
+      OS << 'L' << Size;
+    OS << '(';
+    emitHLASMValueImpl(SE.getSubExpr(), Size);
+    OS << ')';
     return;
   }
   case MCExpr::Target:

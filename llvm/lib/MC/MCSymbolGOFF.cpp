@@ -22,7 +22,7 @@ MCSectionGOFF *MCSymbolGOFF::getSectionForCommonSymbol(MCContext &Ctx,
 
   MCSectionGOFF *ED = Ctx.getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
-      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+      GOFF::EDAttr{false, false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
                    GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
                    GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
       SD);

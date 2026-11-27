@@ -237,6 +237,7 @@ public:
     this->FillByteValue = Attr.FillByteValue;
     SymbolFlags.setFillBytePresence(1);
     SymbolFlags.setReservedQwords(Attr.ReservedQwords);
+    SymbolFlags.setRemovableClass(Attr.IsRemovable);
     // TODO Do we need/should set the "mangled" flag?
     BehavAttrs.setReadOnly(Attr.IsReadOnly);
     BehavAttrs.setRmode(Attr.Rmode);
@@ -447,7 +448,7 @@ void GOFFWriter::defineSymbols() {
 
   // Process all symbols
   for (const MCSymbol &Sym : Asm.symbols()) {
-    if (Sym.isTemporary())
+    if (Sym.isTemporary() || Sym.isVariable())
       continue;
     auto &Symbol = static_cast<const MCSymbolGOFF &>(Sym);
     if (!Symbol.isDefined()) {
@@ -768,35 +769,41 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
                                         uint64_t &FixedValue) {
   const MCFixupKindInfo &FKI =
       Asm->getBackend().getFixupKindInfo(Fixup.getKind());
-  const uint32_t Length = FKI.TargetSize / 8;
-  assert(FKI.TargetSize % 8 == 0 && "Target Size not multiple of 8");
+  // Round up, e.g. a 20-bit long displacement field spans 3 bytes.
+  const uint32_t Length = (FKI.TargetSize + 7) / 8;
   const uint64_t FixupOffset = Asm->getFragmentOffset(F) + Fixup.getOffset();
 
   unsigned RelocType = TargetObjectWriter->getRelocType(Target, Fixup);
 
+  // A variable symbol (e.g. defined by EQU) has no ESD entry of its own, so
+  // resolve it to the symbol it refers to, and fold its constant part into the
+  // addend. Returns false if the symbol cannot be resolved.
+  auto ResolveVariable = [this](const MCSymbolGOFF *&Sym,
+                                int64_t &Addend) -> bool {
+    while (Sym && Sym->isVariable()) {
+      MCValue V;
+      if (!Sym->getVariableValue()->evaluateAsRelocatable(V, Asm) ||
+          V.getSubSym() || !V.getAddSym())
+        return false;
+      Addend += V.getConstant();
+      Sym = static_cast<const MCSymbolGOFF *>(V.getAddSym());
+    }
+    return true;
+  };
+
   const MCSectionGOFF *PSection = static_cast<MCSectionGOFF *>(F.getParent());
-  const auto &A = *static_cast<const MCSymbolGOFF *>(Target.getAddSym());
+  const MCSymbolGOFF *ASym =
+      static_cast<const MCSymbolGOFF *>(Target.getAddSym());
   const MCSymbolGOFF *B = static_cast<const MCSymbolGOFF *>(Target.getSubSym());
+  int64_t Addend = Target.getConstant();
+  int64_t SubAddend = 0;
+  if (!ResolveVariable(ASym, Addend) || !ResolveVariable(B, SubAddend)) {
+    Asm->reportError(Fixup.getLoc(),
+                     "unable to resolve variable symbol in relocation");
+    return;
+  }
+  const MCSymbolGOFF &A = *ASym;
   if (RelocType == MCGOFFObjectTargetWriter::Reloc_Type_RICon) {
-    if (A.isUndefined()) {
-      Asm->reportError(
-          Fixup.getLoc(),
-          Twine("symbol ")
-              .concat(A.getExternalName())
-              .concat(" must be defined for a relative immediate relocation"));
-      return;
-    }
-    if (&A.getSection() != PSection) {
-      MCSectionGOFF &GOFFSection = static_cast<MCSectionGOFF &>(A.getSection());
-      Asm->reportError(Fixup.getLoc(),
-                       Twine("relative immediate relocation section mismatch: ")
-                           .concat(GOFFSection.getExternalName())
-                           .concat(" of symbol ")
-                           .concat(A.getExternalName())
-                           .concat(" <-> ")
-                           .concat(PSection->getExternalName()));
-      return;
-    }
     if (B) {
       Asm->reportError(
           Fixup.getLoc(),
@@ -805,10 +812,12 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
               .concat(" not supported for a relative immediate relocation"));
       return;
     }
-    FixedValue = Asm->getSymbolOffset(A) - FixupOffset + Target.getConstant();
-    return;
+    if (!A.isUndefined() && &A.getSection() == PSection) {
+      FixedValue = Asm->getSymbolOffset(A) - FixupOffset + Addend;
+      return;
+    }
   }
-  FixedValue = Target.getConstant();
+  FixedValue = Addend - SubAddend;
 
   // The symbol only has a section-relative offset if it is a temporary symbol.
   FixedValue += A.isTemporary() ? Asm->getSymbolOffset(A) : 0;
@@ -851,6 +860,12 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
   }
   if (RelocType == MCGOFFObjectTargetWriter::Reloc_Type_RCon)
     ReferenceType = GOFF::RLD_RT_RTypeConstant;
+  if (RelocType == MCGOFFObjectTargetWriter::Reloc_Type_JCon)
+    ReferenceType = GOFF::RLD_RT_RLength;
+  if (RelocType == MCGOFFObjectTargetWriter::Reloc_Type_RICon)
+    ReferenceType = GOFF::RLD_RT_RRelativeImmediate;
+  if (RelocType == MCGOFFObjectTargetWriter::Reloc_Type_LDCon)
+    ReferenceType = GOFF::RLD_RT_RLongDisplacement;
 
   auto DumpReloc = [&PSection, &ReferenceType, &FixupOffset,
                     &FixedValue](const char *N, const MCSymbolGOFF *Sym) {
@@ -862,11 +877,18 @@ void GOFFObjectWriter::recordRelocation(const MCFragment &F,
     case GOFF::RLDReferenceType::RLD_RT_ROffset:
       Con = "QCon";
       break;
+    case GOFF::RLDReferenceType::RLD_RT_RLength:
+      Con = "JCon";
+      break;
     case GOFF::RLDReferenceType::RLD_RT_RTypeConstant:
       Con = "VCon";
       break;
-    default:
-      Con = "(unknown)";
+    case GOFF::RLDReferenceType::RLD_RT_RRelativeImmediate:
+      Con = "RICon";
+      break;
+    case GOFF::RLDReferenceType::RLD_RT_RLongDisplacement:
+      Con = "LDCon";
+      break;
     }
     dbgs() << "Reloc " << N << ": " << Con
            << " Rptr: " << Sym->getExternalName()
