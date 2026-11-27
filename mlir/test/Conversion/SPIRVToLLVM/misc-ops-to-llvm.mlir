@@ -8,9 +8,9 @@
 // CHECK-LABEL: @composite_construct_struct
 // CHECK-SAME: (%[[A:.*]]: f32, %[[B:.*]]: vector<2xi32>)
 spirv.func @composite_construct_struct(%arg0: f32, %arg1: vector<2xi32>) "None" {
-  // CHECK:      %[[P:.*]] = llvm.mlir.poison : !llvm.struct<packed (f32, vector<2xi32>)>
-  // CHECK-NEXT: %[[S:.*]] = llvm.insertvalue %[[A]], %[[P]][0] : !llvm.struct<packed (f32, vector<2xi32>)>
-  // CHECK-NEXT: llvm.insertvalue %[[B]], %[[S]][1] : !llvm.struct<packed (f32, vector<2xi32>)>
+  // CHECK:      %[[P:.*]] = llvm.mlir.poison : !llvm.struct<(f32, vector<2xi32>)>
+  // CHECK-NEXT: %[[S:.*]] = llvm.insertvalue %[[A]], %[[P]][0] : !llvm.struct<(f32, vector<2xi32>)>
+  // CHECK-NEXT: llvm.insertvalue %[[B]], %[[S]][1] : !llvm.struct<(f32, vector<2xi32>)>
   %0 = spirv.CompositeConstruct %arg0, %arg1 : (f32, vector<2xi32>) -> !spirv.struct<(f32, vector<2xi32>)>
   spirv.Return
 }
@@ -68,7 +68,7 @@ spirv.func @composite_extract_vector(%arg: vector<3xf32>) "None" {
 
 // CHECK-LABEL: @composite_insert_struct
 spirv.func @composite_insert_struct(%arg0: i32, %arg1: !spirv.struct<(f32, !spirv.array<4xi32>)>) "None" {
-  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[1, 3] : !llvm.struct<packed (f32, array<4 x i32>)>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[1, 3] : !llvm.struct<(f32, array<4 x i32>)>
   %0 = spirv.CompositeInsert %arg0, %arg1[1 : i32, 3 : i32] : i32 into !spirv.struct<(f32, !spirv.array<4xi32>)>
   spirv.Return
 }

@@ -3105,20 +3105,27 @@ in the same way.
 If an enumerator does not exist in the kernel, libbpf poisons the instruction
 that loads its relocated value, and the verifier rejects the program if that
 instruction is reachable. A relocated case label is compared before the switch,
-so the program is rejected if the switch is reachable. A case label cannot have
-an existence check, so compare an enumerator that may not exist in an `if`
-instead, e.g., with libbpf's `bpf_core_enum_value_exists()`:
+so the program is rejected if the switch is reachable. An explicit
+`__builtin_preserve_enum_value()` call is relocated in a case label in the same
+way, so a case label can check whether an enumerator exists, e.g., with
+libbpf's `bpf_core_enum_value_exists()`:
 
 ```c
-if (bpf_core_enum_value_exists(enum E, B) && x == B)
-  return 1;
 switch (x) {
 case A:
   return 2;
+case bpf_core_enum_value_exists(enum E, B) ? B : -1:
+  return 1;
 default:
   return 0;
 }
 ```
+
+The relocated value of `B` is only loaded if `B` exists, and otherwise the case
+compares `x` with `-1`, so `-1` should not be a value of `x`. The local value of
+an explicit call, i.e., 1 for `bpf_core_enum_value_exists()` and the value in
+the local enum for `bpf_core_enum_value()`, is used for the checks above. An
+explicit call requires -g, as elsewhere.
 
 The `default:` label handles the enumerators that the kernel has but the local
 enum does not. `-fbpf-no-enum-reloc=` below is not an alternative for an enum

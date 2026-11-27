@@ -461,7 +461,8 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
   llvm::Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   SmallVector<StringRef> Targets = {
-      Saver.save("-targets=host-" + HostTriple.normalize())};
+      Saver.save("-targets=host-" +
+                 HostTriple.normalize(Triple::CanonicalForm::FOUR_IDENT))};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
     std::string NormalizedTriple =
         clang::normalizeForBundler(Triple(TripleRef), Arch);
@@ -1350,11 +1351,15 @@ findFromSearchPaths(StringRef Name, StringRef Root,
 
 std::optional<std::string>
 searchLibraryBaseName(StringRef Name, StringRef Root,
-                      ArrayRef<StringRef> SearchPaths, bool IsWindows) {
+                      ArrayRef<StringRef> SearchPaths,
+                      const llvm::Triple &HostTriple) {
   SmallVector<std::string> Candidates;
-  if (IsWindows)
+  if (HostTriple.isOSWindows())
     Candidates = {"lib" + Name.str() + ".dll.a", Name.str() + ".dll.a",
                   "lib" + Name.str() + ".a", Name.str() + ".lib"};
+  else if (HostTriple.isOSBinFormatMachO())
+    Candidates = {"lib" + Name.str() + ".tbd", "lib" + Name.str() + ".dylib",
+                  "lib" + Name.str() + ".so", "lib" + Name.str() + ".a"};
   else
     Candidates = {"lib" + Name.str() + ".so", "lib" + Name.str() + ".a"};
 
@@ -1369,12 +1374,12 @@ searchLibraryBaseName(StringRef Name, StringRef Root,
 /// `-lfoo` or `-l:libfoo.a`.
 std::optional<std::string> searchLibrary(StringRef Input, StringRef Root,
                                          ArrayRef<StringRef> SearchPaths,
-                                         bool IsWindows) {
+                                         const llvm::Triple &HostTriple) {
   if (Input.starts_with(":"))
     return findFromSearchPaths(Input.drop_front(), Root, SearchPaths);
   if (Input.ends_with(".lib"))
     return findFromSearchPaths(Input, Root, SearchPaths);
-  return searchLibraryBaseName(Input, Root, SearchPaths, IsWindows);
+  return searchLibraryBaseName(Input, Root, SearchPaths, HostTriple);
 }
 
 /// Search for an input file given by name, e.g. `foo.lib`. COFF linkers use
@@ -1480,6 +1485,11 @@ getDeviceInput(const ArgList &Args) {
   BumpPtrAllocator Alloc;
   StringSaver Saver(Alloc);
 
+  // ld64 also searches its default library paths under each -syslibroot.
+  for (StringRef Dir : {"/usr/lib", "/usr/local/lib"})
+    for (const opt::Arg *Arg : Args.filtered(OPT_syslibroot))
+      LibraryPaths.push_back(Saver.save(Twine(Arg->getValue()) + Dir));
+
   // Try to extract device code from the linker input files.
   bool WholeArchive = Args.hasArg(OPT_wholearchive_flag);
   SmallVector<OffloadFile> ObjectFilesToExtract;
@@ -1496,8 +1506,7 @@ getDeviceInput(const ArgList &Args) {
 
     std::optional<std::string> Filename =
         Arg->getOption().matches(OPT_library)
-            ? searchLibrary(Arg->getValue(), Root, LibraryPaths,
-                            HostTriple.isOSWindows())
+            ? searchLibrary(Arg->getValue(), Root, LibraryPaths, HostTriple)
             : searchInput(Arg->getValue(), Root, InputPaths);
 
     if (!Filename && Arg->getOption().matches(OPT_library))

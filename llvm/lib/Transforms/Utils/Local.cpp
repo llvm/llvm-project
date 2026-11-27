@@ -498,7 +498,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
   }
 
   if (auto *Call = dyn_cast<CallBase>(I)) {
-    if (Value *FreedOp = getFreedOperand(Call, TLI))
+    if (Value *FreedOp = getFreedOperand(Call))
       if (Constant *C = dyn_cast<Constant>(FreedOp))
         return C->isNullValue() || isa<UndefValue>(C);
     if (isMathLibCallNoop(Call, TLI))
@@ -2704,10 +2704,9 @@ BasicBlock *llvm::changeToInvokeAndSplitBasicBlock(CallInst *CI,
   InvokeInst *II =
       InvokeInst::Create(CI->getFunctionType(), CI->getCalledOperand(), Split,
                          UnwindEdge, InvokeArgs, OpBundles, CI->getName(), BB);
-  II->setDebugLoc(CI->getDebugLoc());
   II->setCallingConv(CI->getCallingConv());
   II->setAttributes(CI->getAttributes());
-  II->setMetadata(LLVMContext::MD_prof, CI->getMetadata(LLVMContext::MD_prof));
+  II->copyMetadata(*CI);
 
   if (DTU)
     DTU->applyUpdates({{DominatorTree::Insert, BB, UnwindEdge}});

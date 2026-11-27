@@ -27,10 +27,6 @@ using namespace mlir::nvgpu;
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
 
 void NVGPUDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc"
-      >();
   declarePromisedInterfaces<memref::IndexedAccessOpInterface, LdMatrixOp>();
   declarePromisedInterfaces<memref::IndexedMemCopyOpInterface,
                             DeviceAsyncCopyOp>();

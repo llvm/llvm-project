@@ -128,8 +128,9 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
                                  ASTCtx.getTypeSize(QT), getTypeAlign(QT));
   }
   case Type::BlockPointer:
-  case Type::Pipe:
     return createPointerTypeForPointee(ASTCtx.VoidPtrTy);
+  case Type::Pipe:
+    return createOpenCLOpaqueType(QT.getTypePtr());
   case Type::ConstantMatrix: {
     const auto *MT = cast<ConstantMatrixType>(QT);
     return Builder.getArrayType(convertType(MT->getElementType()),
@@ -269,7 +270,7 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
   case BuiltinType::OCLClkEvent:
   case BuiltinType::OCLQueue:
   case BuiltinType::OCLReserveID:
-    return createPointerTypeForPointee(QT);
+    return createOpenCLOpaqueType(BT);
 
   // Objective-C builtin types are represented as opaque pointers.
   case BuiltinType::ObjCId:
@@ -286,8 +287,7 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return convertSVEBuiltinType(BT);
 
   case BuiltinType::SveCount:
-    return Builder.getScalablePredicateOrCountVectorType(
-        getTypeAlign(QT), llvm::abi::VectorKind::SVECount);
+    return Builder.getSveCountType(getTypeAlign(QT));
 
   // __mfp8 is an opaque 8-bit float. Vector elements stay 8-bit
   // integers, which is also their representation in LLVM IR.
@@ -627,6 +627,8 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
     RecFlags |= llvm::abi::RecordFlags::CanPassInRegisters;
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD))
     RecFlags |= getCXXRecordFlags(CXXRD);
+  if (RD->hasFlexibleArrayMember())
+    RecFlags |= llvm::abi::RecordFlags::HasFlexibleArrayMember;
 
   return Builder.getUnionType(AllFields, Size, Alignment, UnadjustedAlign,
                               llvm::abi::StructPacking::Default, RecFlags);
@@ -635,6 +637,17 @@ QualTypeMapper::convertUnionType(const clang::RecordDecl *RD) {
 llvm::Align QualTypeMapper::getTypeAlign(QualType QT) const {
 
   return llvm::Align(ASTCtx.getTypeAlignInChars(QT).getQuantity());
+}
+
+const llvm::abi::Type *
+QualTypeMapper::createOpenCLOpaqueType(const clang::Type *T) {
+  // Mirrors CGOpenCLRuntime::getPointerType: the address space comes from the
+  // target hook, not from a qualifier on the type.
+  LangAS AddrSpace = ASTCtx.getOpenCLTypeAddrSpace(T);
+  const clang::TargetInfo &TI = ASTCtx.getTargetInfo();
+  return Builder.getPointerType(TI.getPointerWidth(AddrSpace),
+                                llvm::Align(TI.getPointerAlign(AddrSpace) / 8),
+                                TI.getTargetAddressSpace(AddrSpace));
 }
 
 const llvm::abi::Type *

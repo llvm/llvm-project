@@ -29,6 +29,7 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/Support/Allocator.h"
 #include <cstddef>
 #include <memory>
 
@@ -219,6 +220,10 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 /// An object to hold the factories for immutable collections, ensuring
 /// that all created states share the same underlying memory management.
 struct LifetimeFactory {
+  explicit LifetimeFactory(llvm::BumpPtrAllocator &Alloc)
+      : OriginMapFactory(Alloc), LoanSetFactory(Alloc),
+        MovedLoansMapFactory(Alloc), LivenessMapFactory(Alloc) {}
+
   OriginLoanMap::Factory OriginMapFactory;
   LoanSet::Factory LoanSetFactory;
   MovedLoansMap::Factory MovedLoansMapFactory;
@@ -246,7 +251,9 @@ private:
   AnalysisDeclContext &AC;
   LifetimeSafetySemaHelper *SemaHelper;
   const LifetimeSafetyOpts LSOpts;
-  LifetimeFactory Factory;
+  /// Backs the facts, origins, loans and lattices of the analyzed function.
+  llvm::BumpPtrAllocator Allocator;
+  LifetimeFactory Factory{Allocator};
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;
   std::unique_ptr<LoanPropagationAnalysis> LoanPropagation;

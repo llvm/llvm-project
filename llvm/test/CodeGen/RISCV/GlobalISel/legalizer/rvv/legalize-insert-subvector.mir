@@ -259,10 +259,10 @@ body:             |
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 64 x i1>) = COPY $v8
     ; RV32-NEXT: [[DEF:%[0-9]+]]:_(<vscale x 32 x i1>) = G_IMPLICIT_DEF
-    ; RV32-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[COPY]](<vscale x 64 x i1>)
-    ; RV32-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_BITCAST [[DEF]](<vscale x 32 x i1>)
-    ; RV32-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    ; RV32-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_SUBVECTOR [[DEF1]], [[BITCAST1]](<vscale x 4 x s8>), 0
+    ; RV32-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x i8>) = G_BITCAST [[COPY]](<vscale x 64 x i1>)
+    ; RV32-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 4 x i8>) = G_BITCAST [[DEF]](<vscale x 32 x i1>)
+    ; RV32-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    ; RV32-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 8 x i8>) = G_INSERT_SUBVECTOR [[DEF1]], [[BITCAST1]](<vscale x 4 x i8>), 0
     ; RV32-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
     ; RV32-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x i1>) = G_VMSET_VL [[C]](i64)
     ; RV32-NEXT: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
@@ -281,10 +281,10 @@ body:             |
     ; RV64-NEXT: {{  $}}
     ; RV64-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 64 x i1>) = COPY $v8
     ; RV64-NEXT: [[DEF:%[0-9]+]]:_(<vscale x 32 x i1>) = G_IMPLICIT_DEF
-    ; RV64-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[COPY]](<vscale x 64 x i1>)
-    ; RV64-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_BITCAST [[DEF]](<vscale x 32 x i1>)
-    ; RV64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    ; RV64-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_SUBVECTOR [[DEF1]], [[BITCAST1]](<vscale x 4 x s8>), 0
+    ; RV64-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x i8>) = G_BITCAST [[COPY]](<vscale x 64 x i1>)
+    ; RV64-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 4 x i8>) = G_BITCAST [[DEF]](<vscale x 32 x i1>)
+    ; RV64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    ; RV64-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 8 x i8>) = G_INSERT_SUBVECTOR [[DEF1]], [[BITCAST1]](<vscale x 4 x i8>), 0
     ; RV64-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
     ; RV64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x i1>) = G_VMSET_VL [[C]](i32)
     ; RV64-NEXT: [[READ_VLENB:%[0-9]+]]:_(i32) = G_READ_VLENB
@@ -454,10 +454,10 @@ body:             |
     ; RV32-NEXT: {{  $}}
     ; RV32-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 64 x i1>) = COPY $v8
     ; RV32-NEXT: [[DEF:%[0-9]+]]:_(<vscale x 16 x i1>) = G_IMPLICIT_DEF
-    ; RV32-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[COPY]](<vscale x 64 x i1>)
-    ; RV32-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x s8>) = G_BITCAST [[DEF]](<vscale x 16 x i1>)
-    ; RV32-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    ; RV32-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_SUBVECTOR [[DEF1]], [[BITCAST1]](<vscale x 2 x s8>), 0
+    ; RV32-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x i8>) = G_BITCAST [[COPY]](<vscale x 64 x i1>)
+    ; RV32-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x i8>) = G_BITCAST [[DEF]](<vscale x 16 x i1>)
+    ; RV32-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    ; RV32-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 8 x i8>) = G_INSERT_SUBVECTOR [[DEF1]], [[BITCAST1]](<vscale x 2 x i8>), 0
     ; RV32-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 -1
     ; RV32-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x i1>) = G_VMSET_VL [[C]](i64)
     ; RV32-NEXT: [[READ_VLENB:%[0-9]+]]:_(i64) = G_READ_VLENB
@@ -473,10 +473,10 @@ body:             |
     ; RV64-NEXT: {{  $}}
     ; RV64-NEXT: [[COPY:%[0-9]+]]:_(<vscale x 64 x i1>) = COPY $v8
     ; RV64-NEXT: [[DEF:%[0-9]+]]:_(<vscale x 16 x i1>) = G_IMPLICIT_DEF
-    ; RV64-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x s8>) = G_BITCAST [[COPY]](<vscale x 64 x i1>)
-    ; RV64-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x s8>) = G_BITCAST [[DEF]](<vscale x 16 x i1>)
-    ; RV64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    ; RV64-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 8 x s8>) = G_INSERT_SUBVECTOR [[DEF1]], [[BITCAST1]](<vscale x 2 x s8>), 0
+    ; RV64-NEXT: [[BITCAST:%[0-9]+]]:_(<vscale x 8 x i8>) = G_BITCAST [[COPY]](<vscale x 64 x i1>)
+    ; RV64-NEXT: [[BITCAST1:%[0-9]+]]:_(<vscale x 2 x i8>) = G_BITCAST [[DEF]](<vscale x 16 x i1>)
+    ; RV64-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    ; RV64-NEXT: [[INSERT_SUBVECTOR:%[0-9]+]]:_(<vscale x 8 x i8>) = G_INSERT_SUBVECTOR [[DEF1]], [[BITCAST1]](<vscale x 2 x i8>), 0
     ; RV64-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1
     ; RV64-NEXT: [[VMSET_VL:%[0-9]+]]:_(<vscale x 8 x i1>) = G_VMSET_VL [[C]](i32)
     ; RV64-NEXT: [[READ_VLENB:%[0-9]+]]:_(i32) = G_READ_VLENB

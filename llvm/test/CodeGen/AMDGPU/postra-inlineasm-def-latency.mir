@@ -7,7 +7,6 @@
 
 ---
 name: asm_producer_latency
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: asm_producer_latency

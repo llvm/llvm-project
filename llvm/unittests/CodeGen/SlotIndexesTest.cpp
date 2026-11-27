@@ -44,7 +44,6 @@ public:
 constexpr StringRef TwoBlockMIR = R"(
 ---
 name: func
-tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -182,7 +181,6 @@ TEST_F(SlotIndexesTest, SingleBlockFunction) {
   ASSERT_TRUE(parseMIR(R"(
 ---
 name: func
-tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -235,7 +233,6 @@ TEST_F(SlotIndexesTest, CompactIndexesShrinksSizeToRealDistance) {
   StringRef MIRString = R"(
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -279,7 +276,6 @@ TEST_F(SlotIndexesTest, RemoveUnreferencedIntervalsRetiresOrphanedInterval) {
   StringRef MIRString = R"(
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -337,7 +333,6 @@ TEST_F(SlotIndexesTest, RemoveUnreferencedIntervalsKeepsDebugOnlyRegister) {
 ...
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -371,7 +366,6 @@ TEST_F(SlotIndexesTest, CompactIndexesKeepsBlockBoundaries) {
   StringRef MIRString = R"(
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -417,7 +411,6 @@ TEST_F(SlotIndexesTest, CompactIndexesKeepsStaleIndexesInProgramOrder) {
   StringRef MIRString = R"(
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -460,7 +453,6 @@ body:             |
 constexpr StringRef SpillSlotMIR = R"(
 ---
 name: func
-tracksRegLiveness: true
 body:             |
   bb.0:
     S_NOP 0
@@ -585,7 +577,6 @@ TEST_F(SlotIndexesTest, CompactIndexesFlagsStaleIndexUse) {
   StringRef MIRString = R"(
 ---
 name: func
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

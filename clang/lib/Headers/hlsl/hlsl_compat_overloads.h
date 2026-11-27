@@ -82,6 +82,14 @@ namespace hlsl {
   _DXC_DEPRECATED_64BIT_FN(fn)                                                 \
   constexpr float4 fn(double4 V1, double4 V2, double4 V3) {                    \
     return fn((float4)V1, (float4)V2, (float4)V3);                             \
+  }                                                                            \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_64BIT_FN(fn)                                                 \
+  constexpr matrix<float, R, C> fn(matrix<double, R, C> V1,                    \
+                                   matrix<double, R, C> V2,                    \
+                                   matrix<double, R, C> V3) {                  \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2,                \
+              (matrix<float, R, C>)V3);                                        \
   }
 
 #define _DXC_COMPAT_UNARY_INTEGER_OVERLOADS(fn)                                \
@@ -262,6 +270,36 @@ namespace hlsl {
   _DXC_DEPRECATED_INT_FN(fn)                                                   \
   constexpr float4 fn(uint64_t4 V1, uint64_t4 V2, uint64_t4 V3) {              \
     return fn((float4)V1, (float4)V2, (float4)V3);                             \
+  }                                                                            \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<int, R, C> V1, matrix<int, R, C> V2, \
+                                   matrix<int, R, C> V3) {                     \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2,                \
+              (matrix<float, R, C>)V3);                                        \
+  }                                                                            \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(                                            \
+      matrix<uint, R, C> V1, matrix<uint, R, C> V2, matrix<uint, R, C> V3) {   \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2,                \
+              (matrix<float, R, C>)V3);                                        \
+  }                                                                            \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<int64_t, R, C> V1,                   \
+                                   matrix<int64_t, R, C> V2,                   \
+                                   matrix<int64_t, R, C> V3) {                 \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2,                \
+              (matrix<float, R, C>)V3);                                        \
+  }                                                                            \
+  template <uint R, uint C>                                                    \
+  _DXC_DEPRECATED_INT_FN(fn)                                                   \
+  constexpr matrix<float, R, C> fn(matrix<uint64_t, R, C> V1,                  \
+                                   matrix<uint64_t, R, C> V2,                  \
+                                   matrix<uint64_t, R, C> V3) {                \
+    return fn((matrix<float, R, C>)V1, (matrix<float, R, C>)V2,                \
+              (matrix<float, R, C>)V3);                                        \
   }
 
 #define _DXC_COMPAT_FLOAT_TO_BOOL_OVERLOADS(fn)                                \

@@ -14,6 +14,7 @@ enum ERef1 {
 enum ERef2 {
   ERef2_a = 0,
   ERef2_b,
+  ERef2_paren = ((ERef2_b)),
   ERef2_last = ERef2_b,
 };
 
@@ -37,7 +38,7 @@ enum ERefCross {
   ERefCross_b,
   // CHECK-MESSAGES: :[[@LINE-1]]:3: note: uninitialized enumerator 'ERefCross_b' defined here
   // CHECK-FIXES: ERefCross_b = 1,
-  ERefCross_last = ERefOther_b,
+  ERefCross_last = (ERefOther_b),
 };
 
 // Error: inconsistent even after ignoring self-refs.
