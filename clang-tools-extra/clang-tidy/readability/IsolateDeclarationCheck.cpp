@@ -226,6 +226,33 @@ collectSourceRanges(llvm::ArrayRef<SourceRange> Ranges, const SourceManager &SM,
   return Snippets;
 }
 
+/// Strips leading line (//) and block (/* */) comments from a snippet,
+/// along with surrounding whitespace. Returns the remaining text, or an
+/// empty StringRef if the snippet consists entirely of comments.
+static StringRef stripLeadingComments(StringRef Snippet) {
+  Snippet = Snippet.ltrim();
+  while (!Snippet.empty()) {
+    if (Snippet.starts_with("//")) {
+      const size_t Newline = Snippet.find('\n');
+      if (Newline == StringRef::npos)
+        return ""; // Entire snippet is a comment.
+      Snippet = Snippet.substr(Newline + 1).ltrim();
+    } else if (Snippet.starts_with("/*")) {
+      const size_t End = Snippet.find("*/");
+      if (End == StringRef::npos)
+        return Snippet; // Malformed block comment
+      Snippet = Snippet.substr(End + 2).ltrim();
+    } else {
+      break;
+    }
+  }
+  return Snippet;
+}
+
+/// Constructs isolated declaration strings from extracted snippets.
+/// The first element of Snippets is the type, followed by each declarator.
+/// For subsequent declarations, comments that appear on their own line before
+/// the declarator are moved to the end of the previous declaration.
 /// Expects a vector {TypeSnippet, Firstdecl, SecondDecl, ...}.
 static std::vector<std::string>
 createIsolatedDecls(llvm::ArrayRef<StringRef> Snippets) {
@@ -233,12 +260,38 @@ createIsolatedDecls(llvm::ArrayRef<StringRef> Snippets) {
   assert(Snippets.size() > 2 && "Not enough snippets to create isolated decls");
   std::vector<std::string> Decls(Snippets.size() - 1);
 
-  for (std::size_t I = 1; I < Snippets.size(); ++I)
+  for (std::size_t I = 1; I < Snippets.size(); ++I) {
+    StringRef DeclSnippet = Snippets[I];
+
+    // For subsequent declarations, check if a leading comment belongs to the
+    // previous declaration.
+    if (I > 1) {
+      StringRef FirstLine = DeclSnippet.split('\n').first;
+      StringRef FirstLineStripped = stripLeadingComments(FirstLine);
+
+      // If the first line consists entirely of a comment, it belongs to the
+      // previous declaration.
+      if (FirstLineStripped.trim().empty()) {
+        StringRef FullyStripped = stripLeadingComments(DeclSnippet);
+
+        if (!FullyStripped.ltrim().empty()) {
+          StringRef CommentPart =
+              DeclSnippet.substr(0, DeclSnippet.size() - FullyStripped.size());
+          CommentPart = CommentPart.rtrim();
+
+          if (!CommentPart.empty())
+            Decls[I - 2] += CommentPart.str();
+          DeclSnippet = FullyStripped;
+        }
+      }
+    }
+
     Decls[I - 1] = Twine(Snippets[0])
                        .concat(Snippets[0].ends_with(' ') ? "" : " ")
-                       .concat(Snippets[I].ltrim())
+                       .concat(DeclSnippet.ltrim())
                        .concat(";")
                        .str();
+  }
 
   return Decls;
 }
