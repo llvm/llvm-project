@@ -151,44 +151,9 @@ static const unsigned MinReductionTreeSize = 2048;
 /// Maximum allowed number of operands in the PHI nodes.
 static const unsigned MaxPHINumOperands = 128;
 
-namespace {
-/// A vectorized part of a split reduction, combined into the final reduction
-/// result by the horizontal reduction emitter.
-struct ReductionVectorPart {
-  ReductionVectorPart(Value *Vec, unsigned Scale, bool IsSigned,
-                      bool ReducedInTree, bool Negated,
-                      TTI::CastContextHint Ctx)
-      : Vec(Vec), Scale(Scale), IsSigned(IsSigned),
-        ReducedInTree(ReducedInTree), Negated(Negated), Ctx(Ctx) {}
-
-  /// The vectorized value, tracked in case it is replaced while other parts
-  /// are vectorized.
-  WeakTrackingVH Vec;
-  /// The number of times each lane is repeated in the reduction (emitted as a
-  /// multiplication by the scale for add/fadd reductions).
-  unsigned Scale = 1;
-  /// Signedness of \p Vec for reductions, operating on truncated types.
-  bool IsSigned = false;
-  /// True if the value was already reduced in-tree.
-  bool ReducedInTree = false;
-  /// True if the part contribution is subtracted from (rather than added to)
-  /// the final reduction result. Used for reassociated fadd reductions,
-  /// flattened through fsub/fneg operations.
-  bool Negated = false;
-  /// Cast context hint of the vectorized tree root, selects the i1 reduction
-  /// form.
-  TTI::CastContextHint Ctx = TTI::CastContextHint::None;
-};
-} // namespace
-
-namespace {
+namespace llvm::slpvectorizer {
 class HorizontalReduction;
-} // namespace
-
-static std::pair<size_t, size_t> generateKeySubkey(
-    Value *V, const TargetLibraryInfo *TLI,
-    function_ref<hash_code(size_t, LoadInst *)> LoadsSubkeyGenerator,
-    bool AllowAlternate);
+} // namespace llvm::slpvectorizer
 
 /// Bottom Up SLP Vectorizer.
 class slpvectorizer::BoUpSLP {
@@ -4624,7 +4589,7 @@ private:
 
   friend struct GraphTraits<BoUpSLP *>;
   friend struct DOTGraphTraits<BoUpSLP *>;
-  friend class ::HorizontalReduction;
+  friend class HorizontalReduction;
 
   /// Contains all scheduling data for a basic block.
   /// It does not schedules instructions, which are not memory read/write
@@ -9463,98 +9428,6 @@ void BoUpSLP::tryToVectorizeGatheredLoads(
   if (static_cast<unsigned>(*Candidate.GatheredLoadsEntriesFirst) ==
       Candidate.VectorizableTree.size())
     Candidate.GatheredLoadsEntriesFirst.reset();
-}
-
-/// Generates key/subkey pair for the given value to provide effective sorting
-/// of the values and better detection of the vectorizable values sequences. The
-/// keys/subkeys can be used for better sorting of the values themselves (keys)
-/// and in values subgroups (subkeys).
-static std::pair<size_t, size_t> generateKeySubkey(
-    Value *V, const TargetLibraryInfo *TLI,
-    function_ref<hash_code(size_t, LoadInst *)> LoadsSubkeyGenerator,
-    bool AllowAlternate) {
-  hash_code Key = hash_value(V->getValueID() + 2);
-  hash_code SubKey = hash_value(0);
-  // Sort the loads by the distance between the pointers.
-  if (auto *LI = dyn_cast<LoadInst>(V)) {
-    Key = hash_combine(LI->getType(), hash_value(Instruction::Load), Key);
-    if (LI->isSimple())
-      SubKey = hash_value(LoadsSubkeyGenerator(Key, LI));
-    else
-      Key = SubKey = hash_value(LI);
-  } else if (isVectorLikeInstWithConstOps(V)) {
-    // Sort extracts by the vector operands.
-    if (isa<ExtractElementInst, UndefValue>(V))
-      Key = hash_value(Value::UndefValueVal + 1);
-    if (auto *EI = dyn_cast<ExtractElementInst>(V)) {
-      if (!isUndefVector(EI->getVectorOperand()).all() &&
-          !isa<UndefValue>(EI->getIndexOperand()))
-        SubKey = hash_value(EI->getVectorOperand());
-    }
-  } else if (auto *I = dyn_cast<Instruction>(V)) {
-    // Sort other instructions just by the opcodes except for CMPInst.
-    // For CMP also sort by the predicate kind.
-    if ((isa<BinaryOperator, CastInst>(I)) &&
-        isValidForAlternation(I->getOpcode())) {
-      if (AllowAlternate)
-        Key = hash_value(isa<BinaryOperator>(I) ? 1 : 0);
-      else
-        Key = hash_combine(hash_value(I->getOpcode()), Key);
-      SubKey = hash_combine(
-          hash_value(I->getOpcode()), hash_value(I->getType()),
-          hash_value(isa<BinaryOperator>(I)
-                         ? I->getType()
-                         : cast<CastInst>(I)->getOperand(0)->getType()));
-      // For casts, look through the only operand to improve compile time.
-      if (isa<CastInst>(I)) {
-        std::pair<size_t, size_t> OpVals =
-            generateKeySubkey(I->getOperand(0), TLI, LoadsSubkeyGenerator,
-                              /*AllowAlternate=*/true);
-        Key = hash_combine(OpVals.first, Key);
-        SubKey = hash_combine(OpVals.first, SubKey);
-      }
-    } else if (auto *CI = dyn_cast<CmpInst>(I)) {
-      CmpInst::Predicate Pred = CI->getPredicate();
-      if (CI->isCommutative())
-        Pred = std::min(Pred, CmpInst::getInversePredicate(Pred));
-      CmpInst::Predicate SwapPred = CmpInst::getSwappedPredicate(Pred);
-      SubKey = hash_combine(hash_value(I->getOpcode()), hash_value(Pred),
-                            hash_value(SwapPred),
-                            hash_value(CI->getOperand(0)->getType()));
-    } else if (auto *Call = dyn_cast<CallInst>(I)) {
-      Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, TLI);
-      if (isTriviallyVectorizable(ID)) {
-        if (ID == Intrinsic::fmuladd)
-          ID = Intrinsic::fma;
-        SubKey = hash_combine(hash_value(I->getOpcode()), hash_value(ID),
-                              hash_value(I->getType()));
-      } else if (!VFDatabase(*Call).getMappings(*Call).empty()) {
-        SubKey = hash_combine(hash_value(I->getOpcode()),
-                              hash_value(Call->getCalledFunction()),
-                              hash_value(I->getType()));
-      } else {
-        Key = hash_combine(hash_value(Call), Key);
-        SubKey = hash_combine(hash_value(I->getOpcode()), hash_value(Call));
-      }
-      for (const CallBase::BundleOpInfo &Op : Call->bundle_op_infos())
-        SubKey = hash_combine(hash_value(Op.Begin), hash_value(Op.End),
-                              hash_value(Op.Tag), SubKey);
-    } else if (auto *Gep = dyn_cast<GetElementPtrInst>(I)) {
-      if (Gep->getNumOperands() == 2 && isa<ConstantInt>(Gep->getOperand(1)))
-        SubKey = hash_value(Gep->getPointerOperand());
-      else
-        SubKey = hash_value(Gep);
-    } else if (BinaryOperator::isIntDivRem(I->getOpcode()) &&
-               !isa<ConstantInt>(I->getOperand(1))) {
-      // Do not try to vectorize instructions with potentially high cost.
-      SubKey = hash_value(I);
-    } else {
-      SubKey =
-          hash_combine(hash_value(I->getOpcode()), hash_value(I->getType()));
-    }
-    Key = hash_combine(hash_value(I->getParent()->getNumber()), Key);
-  }
-  return std::make_pair(Key, SubKey);
 }
 
 /// Checks if the specified instruction \p I is an main operation for the given
@@ -32613,7 +32486,7 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   return Changed;
 }
 
-namespace {
+namespace llvm::slpvectorizer {
 
 /// Model horizontal reductions.
 ///
@@ -36620,7 +36493,7 @@ private:
     return nullptr;
   }
 };
-} // end anonymous namespace
+} // namespace llvm::slpvectorizer
 
 static void findBuildAggregateRec(Instruction *LastInsertInst,
                                   TargetTransformInfo *TTI,
