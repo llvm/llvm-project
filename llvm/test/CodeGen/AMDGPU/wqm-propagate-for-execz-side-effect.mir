@@ -12,7 +12,6 @@
 ---
 name:            execz_side_effect_wqm_propagation
 alignment:       4
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 machineFunctionInfo:

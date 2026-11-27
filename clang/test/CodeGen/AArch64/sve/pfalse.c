@@ -43,7 +43,7 @@
 // CPP-LABEL: @_Z15test_svpfalse_bv(
 svbool_t test_svpfalse_b(void) MODE_ATTR
 {
-// CIR:     cir.const #cir.zero : !cir.vector<[16] x !cir.int<u, 1>>
+// CIR:     cir.const #cir.zero : !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>
 
 // LLVM:    ret <vscale x 16 x i1> zeroinitializer
   return SVE_ACLE_FUNC(svpfalse,_b,,)();

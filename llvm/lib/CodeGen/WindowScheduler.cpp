@@ -36,6 +36,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/WindowScheduler.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -46,7 +47,6 @@
 #include "llvm/CodeGen/ModuloSchedule.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Target/TargetMachine.h"
@@ -64,46 +64,7 @@ STATISTIC(NumWindowSchedule,
           "Number of loops that we successfully use window scheduling");
 STATISTIC(NumFailAnalyseII,
           "Window scheduling abort due to the failure of the II analysis");
-
-cl::opt<unsigned>
-    WindowSearchNum("window-search-num",
-                    cl::desc("The number of searches per loop in the window "
-                             "algorithm. 0 means no search number limit."),
-                    cl::Hidden, cl::init(6));
-
-cl::opt<unsigned> WindowSearchRatio(
-    "window-search-ratio",
-    cl::desc("The ratio of searches per loop in the window algorithm. 100 "
-             "means search all positions in the loop, while 0 means not "
-             "performing any search."),
-    cl::Hidden, cl::init(40));
-
-cl::opt<unsigned> WindowIICoeff(
-    "window-ii-coeff",
-    cl::desc(
-        "The coefficient used when initializing II in the window algorithm."),
-    cl::Hidden, cl::init(5));
-
-cl::opt<unsigned> WindowRegionLimit(
-    "window-region-limit",
-    cl::desc(
-        "The lower limit of the scheduling region in the window algorithm."),
-    cl::Hidden, cl::init(3));
-
-cl::opt<unsigned> WindowDiffLimit(
-    "window-diff-limit",
-    cl::desc("The lower limit of the difference between best II and base II in "
-             "the window algorithm. If the difference is smaller than "
-             "this lower limit, window scheduling will not be performed."),
-    cl::Hidden, cl::init(2));
 } // namespace
-
-// WindowIILimit serves as an indicator of abnormal scheduling results and could
-// potentially be referenced by the derived target window scheduler.
-static cl::opt<unsigned>
-    WindowIILimit("window-ii-limit",
-                  cl::desc("The upper limit of II in the window algorithm."),
-                  cl::Hidden, cl::init(1000));
 
 /// Collect the underlying objects and alias metadata for the single memory
 /// operand of MI. Returns false when MI does not have exactly one memory
@@ -237,9 +198,10 @@ public:
 
 WindowScheduler::WindowScheduler(MachineSchedContext *C, MachineLoop &ML,
                                  MachineDominatorTree *MDT)
-    : Context(C), MF(C->MF), MBB(ML.getHeader()), Loop(ML),
-      Subtarget(&MF->getSubtarget()), TII(Subtarget->getInstrInfo()),
-      TRI(Subtarget->getRegisterInfo()), MRI(&MF->getRegInfo()), MDT(MDT) {
+    : Opts(getCodeGenOptions(*C->MF)), Context(C), MF(C->MF),
+      MBB(ML.getHeader()), Loop(ML), Subtarget(&MF->getSubtarget()),
+      TII(Subtarget->getInstrInfo()), TRI(Subtarget->getRegisterInfo()),
+      MRI(&MF->getRegInfo()), MDT(MDT) {
   TripleDAG = std::unique_ptr<ScheduleDAGInstrs>(
       createMachineScheduler(/*OnlyBuildGraph=*/true));
 }
@@ -271,7 +233,8 @@ bool WindowScheduler::run() {
   auto *SchedDAGMI = static_cast<ScheduleDAGMI *>(SchedDAG.get());
   SchedDAGMI->addMutation(std::make_unique<WindowMemDepMutation>(
       LoopCarriedMemDeps, TriToOri, MemDepEdgeFailed));
-  auto SearchIndexes = getSearchIndexes(WindowSearchNum, WindowSearchRatio);
+  auto SearchIndexes =
+      getSearchIndexes(Opts.window_search_num, Opts.window_search_ratio);
   for (unsigned Idx : SearchIndexes) {
     OriToCycle.clear();
     ++NumTryWindowSearch;
@@ -291,7 +254,7 @@ bool WindowScheduler::run() {
       continue;
     }
     unsigned II = analyseII(*SchedDAG, Offset);
-    if (II == WindowIILimit) {
+    if (II == Opts.window_ii_limit) {
       restoreTripleMBB();
       LLVM_DEBUG(dbgs() << "Can't find a valid II. Keep searching...\n");
       ++NumFailAnalyseII;
@@ -395,7 +358,7 @@ bool WindowScheduler::initialize() {
         return false;
       }
   }
-  if (SchedInstrNum <= WindowRegionLimit) {
+  if (SchedInstrNum <= Opts.window_region_limit) {
     LLVM_DEBUG(dbgs() << "There are too few MIs in the window region!\n");
     return false;
   }
@@ -607,7 +570,7 @@ int WindowScheduler::getEstimatedII(ScheduleDAGInstrs &DAG) {
   unsigned MaxDepth = 1;
   for (auto &SU : DAG.SUnits)
     MaxDepth = std::max(SU.getDepth() + SU.Latency, MaxDepth);
-  return MaxDepth * WindowIICoeff;
+  return MaxDepth * Opts.window_ii_coeff;
 }
 
 int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
@@ -637,7 +600,7 @@ int WindowScheduler::calculateMaxCycle(ScheduleDAGInstrs &DAG,
       // current MI and the previously inserted MIs.
       while (!RM.canReserveResources(*SU, CurCycle) || CurCycle < ExpectCycle) {
         ++CurCycle;
-        if (CurCycle == (int)WindowIILimit)
+        if (CurCycle == (int)Opts.window_ii_limit)
           return CurCycle;
       }
       RM.reserveResources(*SU, CurCycle);
@@ -699,7 +662,7 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
       auto *SuccMI = Succ.getSUnit()->getInstr();
       int UseCycle = getOriCycle(SuccMI);
       if (DefCycle < UseCycle)
-        return WindowIILimit;
+        return Opts.window_ii_limit;
       // Get the stall cycle introduced by the register between two trips.
       int StallCycle = DefCycle + (int)Succ.getLatency() - CurrentII - UseCycle;
       MaxStallCycle = std::max(MaxStallCycle, StallCycle);
@@ -712,10 +675,10 @@ int WindowScheduler::calculateStallCycle(unsigned Offset, int MaxCycle) {
 unsigned WindowScheduler::analyseII(ScheduleDAGInstrs &DAG, unsigned Offset) {
   LLVM_DEBUG(dbgs() << "Start analyzing II:\n");
   int MaxCycle = calculateMaxCycle(DAG, Offset);
-  if (MaxCycle == (int)WindowIILimit)
+  if (MaxCycle == (int)Opts.window_ii_limit)
     return MaxCycle;
   int StallCycle = calculateStallCycle(Offset, MaxCycle);
-  if (StallCycle == (int)WindowIILimit)
+  if (StallCycle == (int)Opts.window_ii_limit)
     return StallCycle;
   // The value of II is equal to the maximum execution cycle plus 1.
   return MaxCycle + StallCycle + 1;
@@ -792,7 +755,7 @@ void WindowScheduler::updateScheduleResult(unsigned Offset, unsigned II) {
   }
   // The update will only continue if the II is smaller than BestII and the II
   // is sufficiently small.
-  if ((II >= BestII) || (II + WindowDiffLimit > BaseII))
+  if ((II >= BestII) || (II + Opts.window_diff_limit > BaseII))
     return;
   BestII = II;
   BestOffset = Offset;

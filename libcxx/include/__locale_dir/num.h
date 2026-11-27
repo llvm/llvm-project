@@ -955,13 +955,16 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
       __basefield != ios_base::hex && __v >= 0)
     *__buffer_ptr++ = '+';
 
+  char* __internal_padding_pos = __buffer_ptr;
+
   // Add base prefix
   if (__v != 0 && __flags & ios_base::showbase) {
     if (__basefield == ios_base::oct) {
       *__buffer_ptr++ = '0';
     } else if (__basefield == ios_base::hex) {
-      *__buffer_ptr++ = '0';
-      *__buffer_ptr++ = (__flags & ios_base::uppercase ? 'X' : 'x');
+      *__buffer_ptr++        = '0';
+      *__buffer_ptr++        = (__flags & ios_base::uppercase ? 'X' : 'x');
+      __internal_padding_pos = __buffer_ptr;
     }
   }
 
@@ -974,12 +977,25 @@ _LIBCPP_HIDE_FROM_ABI inline _OutputIterator num_put<_CharT, _OutputIterator>::_
       *__buffer_ptr = std::__hex_to_upper(*__buffer_ptr);
   }
 
-  char* __np = this->__identify_padding(__char_buffer, __res.__ptr, __iob);
+  char* __padding_pos;
+  switch (__flags & ios_base::adjustfield) {
+  case ios_base::internal:
+    __padding_pos = __internal_padding_pos;
+    break;
+  case ios_base::left:
+    __padding_pos = __res.__ptr;
+    break;
+  case ios_base::right:
+  default:
+    __padding_pos = __char_buffer;
+    break;
+  }
+
   // Stage 2 - Widen __nar while adding thousands separators
   char_type __o[2 * (__buffer_size - 1) - 1];
   char_type* __op; // pad here
   char_type* __oe; // end of output
-  this->__widen_and_group_int(__char_buffer, __np, __res.__ptr, __o, __op, __oe, __iob.__getloc());
+  this->__widen_and_group_int(__char_buffer, __padding_pos, __res.__ptr, __o, __op, __oe, __iob.__getloc());
   // [__o, __oe) contains thousands_sep'd wide number
   // Stage 3 & 4
   return std::__pad_and_output(__s, __o, __op, __oe, __iob, __fl);

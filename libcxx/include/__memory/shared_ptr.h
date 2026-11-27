@@ -140,7 +140,9 @@ struct _LIBCPP_HIDE_STRUCT_FROM_ABI __shared_ptr_emplace : __shared_weak_count {
     allocator_traits<_Alloc>::construct(__alloc_, __get_elem(), std::forward<_Args>(__args)...);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT { return reinterpret_cast<__value_type*>(__buffer_); }
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_SANITIZE("cfi-unrelated-cast") __value_type* __get_elem() _NOEXCEPT {
+    return reinterpret_cast<__value_type*>(__buffer_);
+  }
 
 private:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override {
@@ -751,8 +753,7 @@ struct __unbounded_array_control_block<_Tp[], _Alloc> : __shared_weak_count {
     // holds one.
     __checked_int<size_t> __bytes(sizeof(__unbounded_array_control_block));
     if (__elements != 0)
-      __bytes = __checked_int<size_t>(__elements - 1) * sizeof(__unbounded_array_control_block) +
-                sizeof(__unbounded_array_control_block);
+      __bytes = __checked_int<size_t>(__elements - 1) * sizeof(_Tp) + sizeof(__unbounded_array_control_block);
 
     // We use the bitwise formula below to ensure that we allocate enough bytes for the whole
     // allocation to be a multiple of _Tp's alignment. That formula is taken from [1].

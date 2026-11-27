@@ -10,10 +10,13 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/Utils/MemorySlotUtils.h"
 #include "mlir/Parser/Parser.h"
 #include "gtest/gtest.h"
+#include <new> // placement new in ReusePendingBlockAddress
 
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOps.h"
 
 using namespace mlir;
 
@@ -99,6 +102,49 @@ TEST_F(GreedyDeadnessTest, ModifyLastEffect) {
   EXPECT_TRUE(moduleOp->getBody()->empty());
 }
 
+struct WriteToMemRef
+    : MemoryEffectOpInterface::ExternalModel<WriteToMemRef,
+                                             test::TestTokenAnyTypeOp> {
+  void
+  getEffects(Operation *op,
+             SmallVectorImpl<MemoryEffects::EffectInstance> &effects) const {
+    if (isa<MemRefType>(op->getOperand(0).getType()))
+      effects.emplace_back(MemoryEffects::Write::get(), &op->getOpOperand(0));
+  }
+};
+
+TEST_F(GreedyDeadnessTest, ReplacementOwnerChangesBlockArgumentType) {
+  test::TestTokenAnyTypeOp::attachInterface<WriteToMemRef>(context);
+  auto module = parseSourceString<ModuleOp>(R"mlir(
+    %outer = "test.one_region_with_recursive_memory_effects"() ({
+    ^bb0(%arg: tensor<4xi32>):
+      "test.token.any_type"(%arg) : (tensor<4xi32>) -> ()
+      %keep = "test.side_effect_op"() {effects = [{effect = "write"}]} : () -> i32
+      "test.return"() : () -> ()
+    }) : () -> i32
+  )mlir",
+                                            &context);
+  ASSERT_TRUE(module);
+  Operation *outer = &module->getBody()->front();
+  Block &body = outer->getRegion(0).front();
+  Operation *consumer = &body.front();
+  Operation *originalWrite = consumer->getNextNode();
+  run(*module, [&](PatternRewriter &rewriter) {
+    // The consumer gains a write effect when its block argument changes type.
+    // Only the owner receives a modification notification.
+    outer = memoryslot::replaceWithNewResults(rewriter, outer,
+                                              outer->getResultTypes());
+    rewriter.modifyOpInPlace(outer, [&] {
+      body.getArgument(0).setType(MemRefType::get({4}, rewriter.getI32Type()));
+    });
+    rewriter.eraseOp(originalWrite);
+    EXPECT_FALSE(mlir::isOpTriviallyDead(outer));
+  });
+  ASSERT_FALSE(module->getBody()->empty());
+  ASSERT_EQ(&module->getBody()->front(), outer);
+  EXPECT_EQ(&body.front(), consumer);
+}
+
 TEST_F(GreedyDeadnessTest, UsedInnerResultDoesNotPreventOuterDeletion) {
   // Internal uses do not keep the unused outer operation live after its last
   // write effect is removed. Cached summaries must describe effects, not uses.
@@ -168,37 +214,6 @@ TEST_F(GreedyDeadnessTest, MoveEffectBetweenRegions) {
   EXPECT_EQ(&target->getRegion(0).front().front(), write);
 }
 
-TEST_F(GreedyDeadnessTest, InPlaceUpdateOfNestedIR) {
-  // `updateOpInPlace` is also used to change IR nested in the updated op. The
-  // first query caches `inner` as dead (its write was disabled) while the
-  // sibling write keeps `outer` live. The pattern then makes the nested op
-  // write again inside `modifyOpInPlace(outer)` and erases the sibling write.
-  // Invalidating only `outer` and its ancestors leaves `inner` cached as
-  // dead, so `outer` (which now contains a write) would be wrongly erased.
-  std::string disabled = effect.str();
-  disabled.replace(disabled.find("[{"),
-                   disabled.find("}]") - disabled.find("[{") + 2, "[]");
-  auto moduleOp = parseSourceString<ModuleOp>(
-      region(region(disabled) + effect.str()), &context);
-  ASSERT_TRUE(moduleOp);
-  Operation *outer = &moduleOp->getBody()->front();
-  Operation *inner = &outer->getRegion(0).front().front();
-  Operation *nested = &inner->getRegion(0).front().front();
-  Operation *write = inner->getNextNode();
-  run(*moduleOp, [&](PatternRewriter &rewriter) {
-    rewriter.eraseOp(write);
-    rewriter.modifyOpInPlace(outer, [&] {
-      nested->setAttr("effects",
-                      rewriter.getArrayAttr(
-                          {rewriter.getDictionaryAttr(rewriter.getNamedAttr(
-                              "effect", rewriter.getStringAttr("write")))}));
-    });
-  });
-  // The nested write is live, so nothing may be deleted.
-  ASSERT_FALSE(moduleOp->getBody()->empty());
-  EXPECT_EQ(&moduleOp->getBody()->front(), outer);
-}
-
 TEST_F(GreedyDeadnessTest, MoveBlocksBetweenRegions) {
   // Moving whole blocks must update the effects of both enclosing operations,
   // just as moving a write does. Keep the new owner of the live block and
@@ -223,6 +238,30 @@ TEST_F(GreedyDeadnessTest, MoveBlocksBetweenRegions) {
   EXPECT_EQ(outer->getRegion(0).front().getOperations().size(), 2u);
   EXPECT_EQ(&outer->getRegion(0).front().front(), target);
   EXPECT_EQ(&target->getRegion(0).front(), liveBlock);
+}
+
+TEST_F(GreedyDeadnessTest, MoveBlockFromDetachedRegion) {
+  auto module =
+      parseSourceString<ModuleOp>(region(region("") + effect.str()), &context);
+  ASSERT_TRUE(module);
+  Block &body = module->getBody()->front().getRegion(0).front();
+  Operation *target = &body.front();
+  Operation *originalWrite = target->getNextNode();
+  run(*module, [&](PatternRewriter &rewriter) {
+    Region staged;
+    Block *block = rewriter.createBlock(&staged);
+    rewriter.clone(*originalWrite);
+    rewriter.clone(target->getRegion(0).front().back());
+    Region &destination = target->getRegion(0);
+    Block *oldBlock = &destination.front();
+    rewriter.moveBlockBefore(block, &destination, destination.begin());
+    rewriter.eraseBlock(oldBlock);
+    rewriter.eraseOp(originalWrite);
+  });
+  ASSERT_FALSE(module->getBody()->empty());
+  ASSERT_EQ(&body.front(), target);
+  EXPECT_EQ(target->getRegion(0).front().front().getName().getStringRef(),
+            "test.side_effect_op");
 }
 
 TEST_F(GreedyDeadnessTest, MultipleBlocksAgreeWithUncachedQuery) {
@@ -292,5 +331,163 @@ TEST_F(GreedyDeadnessTest, TerminatorsRemainLiveAfterRecursiveQuery) {
   EXPECT_TRUE(cache.isOpTriviallyDead(outer));
   EXPECT_FALSE(cache.isOpTriviallyDead(terminator));
   EXPECT_FALSE(cache.isOpTriviallyDead(*moduleOp));
+}
+
+TEST_F(GreedyDeadnessTest, SubtreeInvalidationSurvivesAncestorRequest) {
+  for (bool fullFirst : {false, true}) {
+    auto module = parseSourceString<ModuleOp>(region(region(effect)), &context);
+    ASSERT_TRUE(module);
+    Operation *outer = &module->getBody()->front();
+    Operation *inner = &outer->getRegion(0).front().front();
+    Operation *write = &inner->getRegion(0).front().front();
+    DeadnessCache cache;
+    ASSERT_FALSE(cache.isOpTriviallyDead(outer));
+    write->removeAttr("effects");
+    if (fullFirst)
+      cache.scheduleInvalidation(inner);
+    cache.scheduleAncestorInvalidation(inner);
+    if (!fullFirst)
+      cache.scheduleInvalidation(inner);
+    cache.scheduleAncestorInvalidation(outer);
+    EXPECT_TRUE(cache.isOpTriviallyDead(outer));
+  }
+}
+
+TEST_F(GreedyDeadnessTest, BlockInvalidationPromotesEarlierAncestorRequest) {
+  auto module = parseSourceString<ModuleOp>(region(effect), &context);
+  ASSERT_TRUE(module);
+  Block *block = module->getBody();
+  Operation *owner = &block->front();
+  Operation *leaf = &owner->getRegion(0).front().front();
+  Attribute effects = leaf->removeAttr("effects");
+  DeadnessCache cache;
+  ASSERT_TRUE(cache.isOpTriviallyDead(leaf));
+
+  // Expanding the block must invalidate the leaf even though the flush has
+  // already processed the ancestor request for its owner.
+  cache.scheduleAncestorInvalidation(owner);
+  leaf->setAttr("effects", effects);
+  cache.scheduleBlockInvalidation(block);
+  ASSERT_FALSE(isOpTriviallyDead(leaf));
+  EXPECT_FALSE(cache.isOpTriviallyDead(leaf));
+}
+
+TEST_F(GreedyDeadnessTest, EraseBlocksAndRegionOwnerBeforeDeadnessQuery) {
+  auto module = parseSourceString<ModuleOp>(region(R"mlir(
+        "test.two_region_op"() ({
+          "test.return"() : () -> ()
+        }, {
+          "test.return"() : () -> ()
+        }) : () -> ()
+      )mlir" + effect.str()),
+                                            &context);
+  ASSERT_TRUE(module);
+  Operation *outer = &module->getBody()->front();
+  Operation *inner = &outer->getRegion(0).front().front();
+  Operation *keep = inner->getNextNode();
+  run(*module, [&](PatternRewriter &rewriter) {
+    for (Region &region : inner->getRegions()) {
+      Block &body = region.front();
+      Block *replacement = rewriter.createBlock(&region);
+      rewriter.moveOpBefore(&body.back(), replacement, replacement->end());
+      rewriter.eraseBlock(&body);
+    }
+    rewriter.eraseOp(inner);
+  });
+  ASSERT_FALSE(module->getBody()->empty());
+  EXPECT_EQ(&outer->getRegion(0).front().front(), keep);
+}
+
+TEST_F(GreedyDeadnessTest, MoveWhileCacheIsEmpty) {
+  auto module = parseSourceString<ModuleOp>(R"mlir(
+    %src = "test.one_region_with_recursive_memory_effects"() ({
+      %first = "test.side_effect_op"() : () -> i32
+      %write = "test.side_effect_op"() {effects = [{effect = "write"}]} : () -> i32
+      "test.return"() : () -> ()
+    }) : () -> i32
+    %dst = "test.one_region_with_recursive_memory_effects"() ({
+      "test.return"() : () -> ()
+    }) : () -> i32
+  )mlir",
+                                            &context);
+  ASSERT_TRUE(module);
+  Operation *source = &module->getBody()->front();
+  Operation *dest = source->getNextNode();
+  Operation *first = &source->getRegion(0).front().front();
+  Operation *write = first->getNextNode();
+  DeadnessCache cache;
+  ASSERT_TRUE(cache.isOpTriviallyDead(first));
+  cache.notifyOperationErased(first);
+  first->erase();
+
+  Operation *previous = source->getParentOp();
+  Block &body = dest->getRegion(0).front();
+  source->moveBefore(&body, body.begin());
+  cache.scheduleAncestorInvalidation(previous);
+  cache.scheduleInvalidation(source);
+
+  // A query below the moved operation must register its new ancestors.
+  ASSERT_FALSE(cache.isOpTriviallyDead(write));
+  write->removeAttr("effects");
+  cache.scheduleInvalidation(dest);
+  EXPECT_TRUE(cache.isOpTriviallyDead(write));
+  EXPECT_TRUE(succeeded(verify(*module)));
+}
+
+TEST_F(GreedyDeadnessTest, ReusePendingBlockAddress) {
+  auto module = parseSourceString<ModuleOp>(region(effect), &context);
+  ASSERT_TRUE(module);
+  Operation *owner = &module->getBody()->front();
+  Operation *write = &owner->getRegion(0).front().front();
+  DeadnessCache cache;
+  ASSERT_FALSE(cache.isOpTriviallyDead(write));
+
+  // Keep the owner requests pending while one block replaces another.
+  cache.scheduleAncestorInvalidation(owner);
+  cache.scheduleAncestorInvalidation(owner->getParentOp());
+
+  Block block;
+  cache.scheduleBlockInvalidation(&block);
+  cache.notifyBlockErased(&block);
+  // Construct the replacement at the cancelled block's address so the test
+  // exercises address reuse on every run.
+  block.~Block();
+  new (&block) Block;
+
+  write->moveBefore(&block, block.end());
+  write->removeAttr("effects");
+  cache.scheduleBlockInvalidation(&block);
+  EXPECT_TRUE(cache.isOpTriviallyDead(write));
+}
+
+TEST_F(GreedyDeadnessTest, CloneEffectIntoAnotherParent) {
+  auto module = parseSourceString<ModuleOp>(R"mlir(
+    %src = "test.one_region_with_recursive_memory_effects"() ({
+      %old = "test.side_effect_op"() {effects = [{effect = "write"}]} : () -> i32
+      %keep = "test.side_effect_op"() {effects = [{effect = "write"}]} : () -> i32
+      "test.return"() : () -> ()
+    }) : () -> i32
+    %dst = "test.one_region_with_recursive_memory_effects"() ({
+      "test.return"() : () -> ()
+    }) : () -> i32
+  )mlir",
+                                            &context);
+  ASSERT_TRUE(module);
+  Operation *source = &module->getBody()->front();
+  Operation *dest = source->getNextNode();
+  Operation *oldWrite = &source->getRegion(0).front().front();
+  Operation *keep = oldWrite->getNextNode();
+  DeadnessCache cache;
+  ASSERT_FALSE(cache.isOpTriviallyDead(source));
+  ASSERT_TRUE(cache.isOpTriviallyDead(dest));
+  cache.scheduleInvalidation(source);
+  cache.notifyOperationErased(oldWrite);
+  oldWrite->erase();
+
+  OpBuilder builder(&context);
+  builder.setInsertionPointToStart(&dest->getRegion(0).front());
+  cache.scheduleInvalidation(builder.clone(*keep));
+  EXPECT_FALSE(cache.isOpTriviallyDead(dest));
+  EXPECT_TRUE(succeeded(verify(*module)));
 }
 } // namespace

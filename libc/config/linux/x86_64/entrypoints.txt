@@ -1333,12 +1333,12 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.roundulk
     libc.src.stdfix.roundulr
     libc.src.stdfix.roundur
-    libc.src.stdfix.sqrtuhk
     libc.src.stdfix.sqrtuhr
-    libc.src.stdfix.sqrtuk
     libc.src.stdfix.sqrtur
-    # libc.src.stdfix.sqrtulk
     libc.src.stdfix.sqrtulr
+    libc.src.stdfix.sqrtuhk
+    libc.src.stdfix.sqrtuk
+    libc.src.stdfix.sqrtulk
     libc.src.stdfix.uhksqrtus
     libc.src.stdfix.uksqrtui
     libc.src.stdfix.hrbits
@@ -1810,6 +1810,13 @@ if(LLVM_LIBC_FULL_BUILD)
     # sys/select.h entrypoints
     libc.src.sys.select.pselect
     libc.src.sys.select.select
+
+    # syslog.h entrypoints
+    libc.src.syslog.closelog
+    libc.src.syslog.openlog
+    libc.src.syslog.setlogmask
+    libc.src.syslog.syslog
+    libc.src.syslog.vsyslog
 
     # wchar.h entrypoints
     libc.src.wchar.mbrlen

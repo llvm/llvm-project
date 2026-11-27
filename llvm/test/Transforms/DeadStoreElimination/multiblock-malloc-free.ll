@@ -12,7 +12,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i32, i1) nounwind
 declare noalias ptr @calloc(i64, i64) #5
 declare noalias ptr @malloc(i64) #0
 declare noalias ptr @strdup(ptr nocapture readonly) #1
-declare void @free(ptr nocapture) #2
+declare void @free(ptr allocptr nocapture) #2
 
 define void @test16(ptr noalias %P) {
 ; CHECK-LABEL: @test16(
@@ -278,7 +278,7 @@ if.then5:                                         ; preds = %if.then
   br label %cleanup
 
 if.end:                                           ; preds = %if.then
-  %call6 = tail call ptr @NodePtrVec_new(i32 %initialSize) #2
+  %call6 = tail call ptr @NodePtrVec_new(i32 %initialSize) #6
   %nodes = getelementptr inbounds i8, ptr %call, i64 16
   store ptr %call6, ptr %nodes, align 8
   %tobool8 = icmp eq ptr %call6, null
@@ -354,3 +354,4 @@ attributes #2 = { nounwind allockind("free") }
 attributes #3 = { allocsize(0,1) }
 attributes #4 = { allocsize(0) }
 attributes #5 = { nofree nounwind allocsize(0,1) allockind("alloc,zeroed") }
+attributes #6 = { nounwind }

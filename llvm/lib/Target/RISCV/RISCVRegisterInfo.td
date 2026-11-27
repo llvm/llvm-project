@@ -811,6 +811,10 @@ foreach Index = !range(0, 32, 1) in {
   def V#Index : RISCVReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]>;
 }
 
+// Give each LMUL group its own PositionOrder so that its registers are
+// contiguous in the register enum. This allows the AsmMatcher to convert
+// between them with simple arithmetic.
+let PositionOrder = 1 in
 foreach Index = !range(0, 32, 2) in {
   def V#Index#M2 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index),
@@ -820,6 +824,7 @@ foreach Index = !range(0, 32, 2) in {
   }
 }
 
+let PositionOrder = 2 in
 foreach Index = !range(0, 32, 4) in {
   def V#Index#M4 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index#"M2"),
@@ -829,6 +834,7 @@ foreach Index = !range(0, 32, 4) in {
   }
 }
 
+let PositionOrder = 3 in
 foreach Index = !range(0, 32, 8) in {
   def V#Index#M8 : RISCVRegWithSubRegs<Index, "v"#Index,
                      [!cast<Register>("V"#Index#"M4"),

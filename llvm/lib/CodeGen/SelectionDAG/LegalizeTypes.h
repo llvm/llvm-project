@@ -50,13 +50,8 @@ public:
 
     // 1+ - This is a node which has this many unprocessed operands.
   };
+
 private:
-
-  /// This is a bitvector that contains two bits for each simple value type,
-  /// where the two bits correspond to the LegalizeAction enum from
-  /// TargetLowering. This can be queried with "getTypeAction(VT)".
-  TargetLowering::ValueTypeActionImpl ValueTypeActions;
-
   /// Return how we should legalize values of this type.
   TargetLowering::LegalizeTypeAction getTypeAction(EVT VT) const {
     // Simple types only need a table lookup, not the type to transform to.
@@ -164,9 +159,7 @@ private:
 
 public:
   explicit DAGTypeLegalizer(SelectionDAG &dag)
-    : TLI(dag.getTargetLoweringInfo()), DAG(dag),
-    ValueTypeActions(TLI.getValueTypeActions()) {
-  }
+      : TLI(dag.getTargetLoweringInfo()), DAG(dag) {}
 
   /// This is the main entry point for the type legalizer.  This does a
   /// top-down traversal of the dag, legalizing types as it goes.  Returns

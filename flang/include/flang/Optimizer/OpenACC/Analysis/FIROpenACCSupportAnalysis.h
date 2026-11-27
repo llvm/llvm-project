@@ -57,6 +57,10 @@ public:
   std::optional<mlir::acc::TypeSizeAndAlignment>
   getTypeSizeAndAlignment(mlir::Type ty, mlir::ModuleOp module,
                           mlir::acc::OpenACCSupport &support);
+
+  /// Returns true when Fortran semantics forbid a procedure from using the
+  /// address of \p v after a call that receives it returns.
+  bool isAddressNotCapturedByCalls(mlir::Value v);
 };
 
 } // namespace acc

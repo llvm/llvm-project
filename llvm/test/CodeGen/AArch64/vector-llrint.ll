@@ -745,8 +745,8 @@ define <32 x i64> @llrint_v32i64_v32f32(<32 x float> %x) nounwind {
 ; CHECK-SD-NEXT:    stp q3, q7, [x8, #96]
 ; CHECK-SD-NEXT:    fcvtzs v3.2d, v5.2d
 ; CHECK-SD-NEXT:    stp q2, q16, [x8, #64]
-; CHECK-SD-NEXT:    stp q0, q4, [x8]
 ; CHECK-SD-NEXT:    stp q3, q1, [x8, #32]
+; CHECK-SD-NEXT:    stp q0, q4, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: llrint_v32i64_v32f32:
@@ -926,9 +926,9 @@ define <32 x i64> @llrint_v32f64(<32 x double> %x) nounwind {
 ; CHECK-SD-NEXT:    stp q4, q5, [x8, #64]
 ; CHECK-SD-NEXT:    stp q6, q7, [x8, #96]
 ; CHECK-SD-NEXT:    stp q2, q3, [x8, #32]
-; CHECK-SD-NEXT:    stp q0, q1, [x8]
 ; CHECK-SD-NEXT:    stp q18, q17, [x8, #128]
 ; CHECK-SD-NEXT:    stp q16, q20, [x8, #160]
+; CHECK-SD-NEXT:    stp q0, q1, [x8]
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: llrint_v32f64:

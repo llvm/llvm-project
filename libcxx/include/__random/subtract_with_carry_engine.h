@@ -33,19 +33,19 @@ template <class _UIntType, size_t __w, size_t __s, size_t __r>
 class subtract_with_carry_engine;
 
 template <class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-_LIBCPP_HIDE_FROM_ABI bool operator==(const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
-                                      const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y);
+bool operator==(const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+                const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y);
 
 template <class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-_LIBCPP_HIDE_FROM_ABI bool operator!=(const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
-                                      const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y);
+bool operator!=(const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+                const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y);
 
 template <class _CharT, class _Traits, class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x);
 
 template <class _CharT, class _Traits, class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x);
 
 template <class _UIntType, size_t __w, size_t __s, size_t __r>
@@ -75,24 +75,25 @@ public:
   static inline _LIBCPP_CONSTEXPR const size_t word_size = __w;
   static inline _LIBCPP_CONSTEXPR const size_t short_lag = __s;
   static inline _LIBCPP_CONSTEXPR const size_t long_lag  = __r;
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
-  static inline _LIBCPP_CONSTEXPR const result_type default_seed = 19780503u;
+  [[__nodiscard__]] static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
+  [[__nodiscard__]] static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  static inline _LIBCPP_CONSTEXPR const uint_least32_t default_seed = 19780503u;
 
   // constructors and seeding functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI subtract_with_carry_engine() : subtract_with_carry_engine(default_seed) {}
-  _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd) { seed(__sd); }
+  subtract_with_carry_engine() : subtract_with_carry_engine(0u) {}
+  explicit subtract_with_carry_engine(result_type __sd) { seed(__sd); }
 #else
-  _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd = default_seed) { seed(__sd); }
+  explicit subtract_with_carry_engine(result_type __sd = 0u) { seed(__sd); }
 #endif
   template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, subtract_with_carry_engine>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(_Sseq& __q) {
+  explicit subtract_with_carry_engine(_Sseq& __q) {
     seed(__q);
   }
 
-  _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd = default_seed) {
-    linear_congruential_engine<result_type, 40014u, 0u, 2147483563u> __e(__sd == 0u ? default_seed : __sd);
+  void seed(result_type __sd = 0u) {
+    linear_congruential_engine<uint_least32_t, 40014u, 0u, 2147483563u> __e(
+        __sd == 0u ? default_seed : static_cast<uint_least32_t>(__sd % 2147483563u));
     for (size_t __i = 0; __i < __r; ++__i) {
       if _LIBCPP_CONSTEXPR ((1 + (__w - 1) / 32) == 1) {
         __x_[__i] = static_cast<result_type>(__e() & _Max);
@@ -106,7 +107,7 @@ public:
   }
 
   template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, subtract_with_carry_engine>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
+  void seed(_Sseq& __q) {
     const unsigned __k = 1 + (__w - 1) / 32;
     static_assert(__k <= 2);
     uint32_t __ar[__r * __k];
@@ -122,8 +123,8 @@ public:
   }
 
   // generating functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()();
-  _LIBCPP_HIDE_FROM_ABI void discard(unsigned long long __z) {
+  [[__nodiscard__]] result_type operator()();
+  void discard(unsigned long long __z) {
     for (; __z; --__z)
       (void)operator()();
   }
@@ -157,8 +158,8 @@ _UIntType subtract_with_carry_engine<_UIntType, __w, __s, __r>::operator()() {
 }
 
 template <class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-_LIBCPP_HIDE_FROM_ABI bool operator==(const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
-                                      const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y) {
+bool operator==(const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+                const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y) {
   if (__x.__c_ != __y.__c_)
     return false;
   if (__x.__i_ == __y.__i_)
@@ -188,13 +189,13 @@ _LIBCPP_HIDE_FROM_ABI bool operator==(const subtract_with_carry_engine<_UInt, _W
 }
 
 template <class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-inline _LIBCPP_HIDE_FROM_ABI bool operator!=(const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
-                                             const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y) {
+inline bool operator!=(const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x,
+                       const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __y) {
   return !(__x == __y);
 }
 
 template <class _CharT, class _Traits, class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _Ostream;
@@ -211,7 +212,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const subtract_with_carry_engin
 }
 
 template <class _CharT, class _Traits, class _UInt, size_t _Wp, size_t _Sp, size_t _Rp>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, subtract_with_carry_engine<_UInt, _Wp, _Sp, _Rp>& __x) {
   __save_flags<_CharT, _Traits> __lx(__is);
   typedef basic_istream<_CharT, _Traits> _Istream;

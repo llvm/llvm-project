@@ -194,7 +194,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
         /*no_inline=*/nullptr, /*always_inline=*/nullptr,
-        /*inline_hint=*/nullptr);
+        /*inline_hint=*/nullptr, /*strictfp=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -235,7 +235,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*access_groups=*/nullptr,
         /*alias_scopes=*/nullptr, /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
         /*no_inline=*/nullptr, /*always_inline=*/nullptr,
-        /*inline_hint=*/nullptr);
+        /*inline_hint=*/nullptr, /*strictfp=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state,
@@ -262,7 +262,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
         /*no_inline=*/nullptr, /*always_inline=*/nullptr,
-        /*inline_hint=*/nullptr);
+        /*inline_hint=*/nullptr, /*strictfp=*/nullptr);
 }
 
 void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
@@ -289,7 +289,7 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*noalias_scopes=*/nullptr, /*tbaa=*/nullptr,
         /*no_inline=*/nullptr, /*always_inline=*/nullptr,
-        /*inline_hint=*/nullptr);
+        /*inline_hint=*/nullptr, /*strictfp=*/nullptr);
 }
 
 CallInterfaceCallable CallOp::getCallableForCallee() {
@@ -776,7 +776,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         getCallOpVarCalleeType(calleeType), SymbolRefAttr::get(func), ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
         nullptr, nullptr, /*default_func_attrs=*/nullptr,
-        /*uniform_work_group_size=*/nullptr, {}, {}, normal, unwind);
+        /*uniform_work_group_size=*/nullptr, /*strictfp=*/nullptr, {}, {},
+        normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
@@ -787,7 +788,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state, TypeRange tys,
         /*var_callee_type=*/nullptr, callee, ops, /*arg_attrs=*/nullptr,
         /*res_attrs=*/nullptr, normalOps, unwindOps, nullptr, nullptr,
         /*default_func_attrs=*/nullptr,
-        /*uniform_work_group_size=*/nullptr, {}, {}, normal, unwind);
+        /*uniform_work_group_size=*/nullptr, /*strictfp=*/nullptr, {}, {},
+        normal, unwind);
 }
 
 void InvokeOp::build(OpBuilder &builder, OperationState &state,
@@ -798,7 +800,8 @@ void InvokeOp::build(OpBuilder &builder, OperationState &state,
         getCallOpVarCalleeType(calleeType), callee, ops,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, normalOps, unwindOps,
         nullptr, nullptr, /*default_func_attrs=*/nullptr,
-        /*uniform_work_group_size=*/nullptr, {}, {}, normal, unwind);
+        /*uniform_work_group_size=*/nullptr, /*strictfp=*/nullptr, {}, {},
+        normal, unwind);
 }
 
 SuccessorOperands InvokeOp::getSuccessorOperands(unsigned index) {

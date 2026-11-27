@@ -626,10 +626,8 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.exp2").getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_log_clampf: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.log.clamp")
+        .getValue();
   }
   case AMDGPU::BI__builtin_amdgcn_ldexp:
   case AMDGPU::BI__builtin_amdgcn_ldexpf:
@@ -665,12 +663,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_fractf:
   case AMDGPU::BI__builtin_amdgcn_fracth:
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.fract").getValue();
-  case AMDGPU::BI__builtin_amdgcn_lerp: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
   case AMDGPU::BI__builtin_amdgcn_ubfe:
     return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.ubfe").getValue();
   case AMDGPU::BI__builtin_amdgcn_sbfe:
@@ -760,10 +752,16 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.fmed3").getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_append:
   case AMDGPU::BI__builtin_amdgcn_ds_consume: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    llvm::StringRef intrinsicName =
+        builtinId == AMDGPU::BI__builtin_amdgcn_ds_append ? "amdgcn.ds.append"
+                                                          : "amdgcn.ds.consume";
+
+    mlir::Value ptr = emitScalarExpr(expr->getArg(0));
+    mlir::Value isVolatile = builder.getFalse(loc);
+    return builder.emitIntrinsicCallOp(loc, intrinsicName,
+                                       convertType(expr->getType()),
+                                       mlir::ValueRange{ptr, isVolatile});
   }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:

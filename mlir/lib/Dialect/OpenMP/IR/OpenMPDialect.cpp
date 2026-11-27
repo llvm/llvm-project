@@ -305,19 +305,6 @@ static std::string generateLoopNestingName(StringRef prefix,
 }
 
 void OpenMPDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/OpenMP/OpenMPOpsAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/OpenMP/OpenMPOpsTypes.cpp.inc"
-      >();
-
   declarePromisedInterface<ConvertToLLVMPatternInterface, OpenMPDialect>();
 
   MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());
@@ -5591,6 +5578,23 @@ LogicalResult AtomicCompareOp::verifyRegions() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// ThreadprivateOp
+//===----------------------------------------------------------------------===//
+
+void ThreadprivateOp::getEffects(
+    llvm::SmallVectorImpl<SideEffects::EffectInstance<MemoryEffects::Effect>>
+        &effects) {
+
+  // Read the primary thread's copy and write to the thread-local versions.
+  effects.emplace_back(MemoryEffects::Read::get(), &getSymAddrMutable());
+  effects.emplace_back(MemoryEffects::Write::get(),
+                       cast<OpResult>(getTlsAddr()));
+  // Threadprivate runtime bookeeping may or may not allocate new storage for
+  // caches or thread-local storage, do not attach this effect to an address to
+  // avoid incorrectly implying it is new storage.
+  effects.emplace_back(MemoryEffects::Allocate::get());
+}
 //===----------------------------------------------------------------------===//
 // CancelOp
 //===----------------------------------------------------------------------===//

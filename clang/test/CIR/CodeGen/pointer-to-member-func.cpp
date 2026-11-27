@@ -62,7 +62,7 @@ auto make_non_virtual() -> void (Foo::*)(int) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z16make_non_virtualv() -> !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<@_ZN3Foo2m1Ei> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
@@ -70,7 +70,7 @@ auto make_non_virtual() -> void (Foo::*)(int) {
 
 // CIR-AFTER-X86: cir.func {{.*}} @_Z16make_non_virtualv() -> !rec_anon_struct{{.*}} attributes {{{.*}}nothrow, optnone} {
 // CIR-AFTER-ARM: cir.func {{.*}} @_Z16make_non_virtualv() -> !cir.array<!u64i x 2> attributes {{{.*}}nothrow, optnone} {
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[NONVIRT_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER-X86: %[[RET:.*]] = cir.load %[[RETVAL]]
@@ -102,7 +102,7 @@ auto make_virtual() -> void (Foo::*)(int) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z12make_virtualv() -> !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<vtable_index = 1> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>, !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
@@ -110,7 +110,7 @@ auto make_virtual() -> void (Foo::*)(int) {
 
 // CIR-AFTER-X86: cir.func {{.*}} @_Z12make_virtualv() -> !rec_anon_struct
 // CIR-AFTER-ARM: cir.func {{.*}} @_Z12make_virtualv() -> !cir.array<!u64i x 2>
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[VIRT_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER-X86: %[[RET:.*]] = cir.load %[[RETVAL]]
@@ -139,7 +139,7 @@ auto make_null() -> void (Foo::*)(int) {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z9make_nullv() -> !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>>
 // CIR-BEFORE:   %[[METHOD_PTR:.*]] = cir.const #cir.method<null> : !cir.method<!cir.func<(!cir.ptr<!rec_Foo>, !s32i)> in !rec_Foo>
 // CIR-BEFORE:   cir.store %[[METHOD_PTR]], %[[RETVAL]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]]
@@ -147,7 +147,7 @@ auto make_null() -> void (Foo::*)(int) {
 
 // CIR-AFTER-X86: cir.func {{.*}} @_Z9make_nullv() -> !rec_anon_struct
 // CIR-AFTER-ARM: cir.func {{.*}} @_Z9make_nullv() -> !cir.array<!u64i x 2>
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_anon_struct>
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   %[[METHOD_PTR:.*]] = cir.get_global @[[NULL_RET]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER:   cir.copy %[[METHOD_PTR]] to %[[RETVAL]] : !cir.ptr<!rec_anon_struct>
 // CIR-AFTER-X86: %[[RET:.*]] = cir.load %[[RETVAL]]

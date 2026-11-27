@@ -33067,7 +33067,7 @@ def V6_vabs_qf16_hf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf16 = vabs($Vu32.hf)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001110;
@@ -33080,7 +33080,7 @@ def V6_vabs_qf16_qf16 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf16 = vabs($Vu32.qf16)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001110;
@@ -33093,7 +33093,7 @@ def V6_vabs_qf32_qf32 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf32 = vabs($Vu32.qf32)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001110;
@@ -33106,7 +33106,7 @@ def V6_vabs_qf32_sf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf32 = vabs($Vu32.sf)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001110;
@@ -33443,7 +33443,7 @@ def V6_vadd_hf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf16 = vadd($Vu32.hf,$Vv32.hf)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111011;
@@ -33482,7 +33482,7 @@ def V6_vadd_qf16 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf16 = vadd($Vu32.qf16,$Vv32.qf16)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111011;
@@ -33495,7 +33495,7 @@ def V6_vadd_qf16_mix : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf16 = vadd($Vu32.qf16,$Vv32.hf)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111011;
@@ -33508,7 +33508,7 @@ def V6_vadd_qf32 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf32 = vadd($Vu32.qf32,$Vv32.qf32)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111101;
@@ -33521,7 +33521,7 @@ def V6_vadd_qf32_mix : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf32 = vadd($Vu32.qf32,$Vv32.sf)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111101;
@@ -33534,7 +33534,7 @@ def V6_vadd_sf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf32 = vadd($Vu32.sf,$Vv32.sf)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111101;
@@ -33800,7 +33800,7 @@ def V6_vaddclbh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vadd(vclb($Vu32.h),$Vv32.h)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -33813,7 +33813,7 @@ def V6_vaddclbw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vadd(vclb($Vu32.w),$Vv32.w)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -34822,7 +34822,7 @@ def V6_vaslhv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vasl($Vu32.h,$Vv32.h)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -34901,7 +34901,7 @@ def V6_vaslwv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vasl($Vu32.w,$Vv32.w)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -35059,7 +35059,7 @@ def V6_vasrhv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vasr($Vu32.h,$Vv32.h)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -35143,7 +35143,7 @@ let Inst{31-21} = 0b00011101000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasUnaryRestriction = 1;
+let isHVXVS3SRC = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vasrvuhubsat : HInst<
@@ -35157,7 +35157,7 @@ let Inst{31-21} = 0b00011101000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasUnaryRestriction = 1;
+let isHVXVS3SRC = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vasrvwuhrndsat : HInst<
@@ -35171,7 +35171,7 @@ let Inst{31-21} = 0b00011101000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasUnaryRestriction = 1;
+let isHVXVS3SRC = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vasrvwuhsat : HInst<
@@ -35185,7 +35185,7 @@ let Inst{31-21} = 0b00011101000;
 let hasNewValue = 1;
 let opNewValue = 0;
 let isCVI = 1;
-let hasUnaryRestriction = 1;
+let isHVXVS3SRC = 1;
 let DecoderNamespace = "EXT_mmvec";
 }
 def V6_vasrw : HInst<
@@ -35311,7 +35311,7 @@ def V6_vasrwv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vasr($Vu32.w,$Vv32.w)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -35726,7 +35726,7 @@ def V6_vcl0h : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.uh = vcl0($Vu32.uh)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -35751,7 +35751,7 @@ def V6_vcl0w : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.uw = vcl0($Vu32.uw)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -35819,7 +35819,7 @@ def V6_vconv_bf_qf32 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxWR:$Vuu32),
 "$Vd32.bf = $Vuu32.qf32",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_a33d04, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_a33d04, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000110;
@@ -35832,7 +35832,7 @@ def V6_vconv_f8_qf16 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.f8 = $Vu32.qf16",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001100;
@@ -35845,7 +35845,7 @@ def V6_vconv_h_hf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = $Vu32.hf",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV73]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV73]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000101;
@@ -35858,7 +35858,7 @@ def V6_vconv_h_hf_rnd : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = $Vu32.hf:rnd",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000110;
@@ -35871,7 +35871,7 @@ def V6_vconv_hf_h : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.hf = $Vu32.h",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV73]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV73]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000101;
@@ -35884,7 +35884,7 @@ def V6_vconv_hf_qf16 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.hf = $Vu32.qf16",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000100;
@@ -35897,7 +35897,7 @@ def V6_vconv_hf_qf32 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxWR:$Vuu32),
 "$Vd32.hf = $Vuu32.qf32",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_a33d04, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_a33d04, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000100;
@@ -35923,7 +35923,7 @@ def V6_vconv_qf16_hf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf16 = $Vu32.hf",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001100;
@@ -35936,7 +35936,7 @@ def V6_vconv_qf16_qf16 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf16 = $Vu32.qf16",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001100;
@@ -35949,7 +35949,7 @@ def V6_vconv_qf32_qf32 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf32 = $Vu32.qf32",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001101;
@@ -35962,7 +35962,7 @@ def V6_vconv_qf32_sf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf32 = $Vu32.sf",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001101;
@@ -35975,7 +35975,7 @@ def V6_vconv_sf_qf32 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.sf = $Vu32.qf32",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000100;
@@ -35988,7 +35988,7 @@ def V6_vconv_sf_w : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.sf = $Vu32.w",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV73]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV73]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000101;
@@ -36001,7 +36001,7 @@ def V6_vconv_w_sf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.w = $Vu32.sf",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV73]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV73]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000000101;
@@ -37994,7 +37994,7 @@ def V6_vilog2_hf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.w = vilog2($Vu32.hf)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001100;
@@ -38007,7 +38007,7 @@ def V6_vilog2_qf16 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.w = vilog2($Vu32.qf16)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001100;
@@ -38020,7 +38020,7 @@ def V6_vilog2_qf32 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.w = vilog2($Vu32.qf32)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001100;
@@ -38033,7 +38033,7 @@ def V6_vilog2_sf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.w = vilog2($Vu32.sf)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001100;
@@ -38122,7 +38122,7 @@ def V6_vlsrhv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vlsr($Vu32.h,$Vv32.h)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -38172,7 +38172,7 @@ def V6_vlsrwv : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.w = vlsr($Vu32.w,$Vv32.w)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111101;
@@ -38537,7 +38537,7 @@ def V6_vmerge_qf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32 = vmerge($Vu32.x,$Vv32.w)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV79,UseHVXQFloat]> {
+tc_V6_vmerge_qf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV79,UseHVXQFloat]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111000;
@@ -40996,7 +40996,7 @@ def V6_vneg_qf16_hf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf16 = vneg($Vu32.hf)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b010;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001110;
@@ -41009,7 +41009,7 @@ def V6_vneg_qf16_qf16 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf16 = vneg($Vu32.qf16)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001110;
@@ -41022,7 +41022,7 @@ def V6_vneg_qf32_qf32 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf32 = vneg($Vu32.qf32)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b001;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001110;
@@ -41035,7 +41035,7 @@ def V6_vneg_qf32_sf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.qf32 = vneg($Vu32.sf)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vabs_qf16_hf, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-16} = 0b0001111000001110;
@@ -41048,7 +41048,7 @@ def V6_vnormamth : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = vnormamt($Vu32.h)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000011;
@@ -41073,7 +41073,7 @@ def V6_vnormamtw : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.w = vnormamt($Vu32.w)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000011;
@@ -41328,7 +41328,7 @@ def V6_vpopcounth : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32),
 "$Vd32.h = vpopcount($Vu32.h)",
-tc_V6_vprefixqb, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
+tc_V6_vcl0h, TypeCVI_VS>, Enc_e7581c, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-16} = 0b0001111000000010;
@@ -42189,7 +42189,7 @@ def V6_vrotr : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uw = vrotr($Vu32.uw,$Vv32.uw)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV66]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV66]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011010100;
@@ -42214,7 +42214,7 @@ def V6_vroundhb : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.b = vround($Vu32.h,$Vv32.h):sat",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -42239,7 +42239,7 @@ def V6_vroundhub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vround($Vu32.h,$Vv32.h):sat",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -42264,7 +42264,7 @@ def V6_vrounduhub : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.ub = vround($Vu32.uh,$Vv32.uh):sat",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
@@ -42289,7 +42289,7 @@ def V6_vrounduwuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vround($Vu32.uw,$Vv32.uw):sat",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV62]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111111;
@@ -42314,7 +42314,7 @@ def V6_vroundwh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.h = vround($Vu32.w,$Vv32.w):sat",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -42339,7 +42339,7 @@ def V6_vroundwuh : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.uh = vround($Vu32.w,$Vv32.w):sat",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV60]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b0;
 let Inst{31-21} = 0b00011111011;
@@ -43017,7 +43017,7 @@ def V6_vsub_hf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf16 = vsub($Vu32.hf,$Vv32.hf)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b110;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111011;
@@ -43056,7 +43056,7 @@ def V6_vsub_hf_mix : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf16 = vsub($Vu32.hf,$Vv32.qf16)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vmerge_qf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011010000;
@@ -43069,7 +43069,7 @@ def V6_vsub_qf16 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf16 = vsub($Vu32.qf16,$Vv32.qf16)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111011;
@@ -43082,7 +43082,7 @@ def V6_vsub_qf16_mix : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf16 = vsub($Vu32.qf16,$Vv32.hf)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b111;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111011;
@@ -43095,7 +43095,7 @@ def V6_vsub_qf32 : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf32 = vsub($Vu32.qf32,$Vv32.qf32)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b011;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111101;
@@ -43108,7 +43108,7 @@ def V6_vsub_qf32_mix : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf32 = vsub($Vu32.qf32,$Vv32.sf)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b101;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111101;
@@ -43121,7 +43121,7 @@ def V6_vsub_sf : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf32 = vsub($Vu32.sf,$Vv32.sf)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
+tc_V6_vadd_hf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV68,UseHVXQFloat]> {
 let Inst{7-5} = 0b100;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011111101;
@@ -43160,7 +43160,7 @@ def V6_vsub_sf_mix : HInst<
 (outs HvxVR:$Vd32),
 (ins HvxVR:$Vu32, HvxVR:$Vv32),
 "$Vd32.qf32 = vsub($Vu32.sf,$Vv32.qf32)",
-tc_V6_vasrvuhubrndsat, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV81,UseHVXQFloat]> {
+tc_V6_vmerge_qf, TypeCVI_VS>, Enc_45364e, Requires<[UseHVXV81,UseHVXQFloat]> {
 let Inst{7-5} = 0b000;
 let Inst{13-13} = 0b1;
 let Inst{31-21} = 0b00011010000;

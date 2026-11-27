@@ -1,5 +1,6 @@
 """
-Test that variables of zero-size types without a location have a value.
+Test that variables of zero-size types without a location have a value, and
+that expressions can use them.
 """
 
 import lldb
@@ -19,3 +20,8 @@ class TestCZeroSizeVariables(TestBase):
         self.expect_var_path("local", type="Empty", children=[])
         self.expect_var_path("zero_len", type="int[0]", children=[])
         self.expect_var_path("x", type="int", value="41")
+
+        self.expect_expr("param", result_type="Empty", result_children=[])
+        self.expect_expr("local", result_type="Empty", result_children=[])
+        self.expect_expr("zero_len", result_type="int[0]", result_children=[])
+        self.expect_expr("param = local", result_type="Empty", result_children=[])

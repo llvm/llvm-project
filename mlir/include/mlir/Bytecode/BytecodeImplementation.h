@@ -164,11 +164,10 @@ public:
   /// publishing a different instance for the same entry fails. There is no
   /// attribute analogue yet; mutable attributes keep the fallback encoding.
   ///
-  /// Returns failure if the reader is not inside a custom type entry, the
-  /// type is null, or a different instance was already published, in which
-  /// case the dialect must fail the read rather than risk unbounded
-  /// recursion.
-  virtual LogicalResult tryStartCyclicRead(Type type) { return failure(); }
+  /// Emits an error and returns failure if the reader is not inside a custom
+  /// type entry, `type` is null or immutable, or a different instance was
+  /// already published for the entry.
+  virtual LogicalResult tryStartCyclicRead(Type type) = 0;
 
   /// Read a reference to the given type.
   virtual LogicalResult readType(Type &result) = 0;

@@ -24,6 +24,13 @@
 #include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMVectorOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMAsyncCopyOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMIndexSRegOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMBarrierOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMiscOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMMiscSRegOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMSyncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 

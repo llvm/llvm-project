@@ -4,10 +4,14 @@
 ; RUN: llc -mtriple=sparcv9 -verify-machineinstrs -disable-strictnode-mutation < %s \
 ; RUN:   | FileCheck %s --check-prefix=SOFT64
 
-;; Every predicate of a constrained soft-quad f128 compare. Quiet compares call
-;; _Q_cmp/_Qp_cmp and signaling compares call _Q_cmpe/_Qp_cmpe; the result,
-;; 0 (equal), 1 (less), 2 (greater) or 3 (unordered), is then decoded per
-;; predicate.
+;; Every predicate of a constrained soft-quad f128 compare. Quiet oeq/une and
+;; signaling olt/ole/ogt/oge call the predicate helpers (_Q[p]_feq, _Q[p]_fne,
+;; _Q[p]_flt, ...), whose exception behaviour matches. Signaling ult/ule/ugt/uge
+;; call the helper for the inverse predicate and test for zero. Signaling
+;; oeq/une test a >= b && a <= b with _Q[p]_fge and _Q[p]_fle, as GCC does for
+;; iseqsig. The rest call _Q[p]_cmp (quiet) or _Q[p]_cmpe (signaling); the
+;; result, 0 (equal), 1 (less), 2 (greater) or 3 (unordered), is then decoded
+;; per predicate.
 
 define i32 @fcmp_oeq(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-LABEL: fcmp_oeq:
@@ -22,10 +26,10 @@ define i32 @fcmp_oeq(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmp
+; SOFT32-NEXT:    call _Q_feq
 ; SOFT32-NEXT:    add %fp, -32, %o1
 ; SOFT32-NEXT:    cmp %o0, 0
-; SOFT32-NEXT:    be .LBB0_2
+; SOFT32-NEXT:    bne .LBB0_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -42,11 +46,11 @@ define i32 @fcmp_oeq(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmp
+; SOFT64-NEXT:    call _Qp_feq
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
 ; SOFT64-NEXT:    cmp %o0, 0
-; SOFT64-NEXT:    move %icc, 1, %i0
+; SOFT64-NEXT:    movne %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -578,7 +582,7 @@ define i32 @fcmp_une(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmp
+; SOFT32-NEXT:    call _Q_fne
 ; SOFT32-NEXT:    add %fp, -32, %o1
 ; SOFT32-NEXT:    cmp %o0, 0
 ; SOFT32-NEXT:    bne .LBB12_2
@@ -598,7 +602,7 @@ define i32 @fcmp_une(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmp
+; SOFT64-NEXT:    call _Qp_fne
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
 ; SOFT64-NEXT:    cmp %o0, 0
@@ -660,42 +664,94 @@ define i32 @fcmp_uno(fp128 %a, fp128 %b) nounwind strictfp {
 define i32 @fcmps_oeq(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-LABEL: fcmps_oeq:
 ; SOFT32:       ! %bb.0:
-; SOFT32-NEXT:    save %sp, -128, %sp
-; SOFT32-NEXT:    ldd [%i0+8], %f0
-; SOFT32-NEXT:    ldd [%i0], %f2
+; SOFT32-NEXT:    save %sp, -192, %sp
+; SOFT32-NEXT:    ldd [%i0+8], %f2
+; SOFT32-NEXT:    std %f2, [%fp+-80] ! 8-byte Folded Spill
+; SOFT32-NEXT:    ldd [%i0], %f6
+; SOFT32-NEXT:    std %f6, [%fp+-96] ! 8-byte Folded Spill
 ; SOFT32-NEXT:    ldd [%i1], %f4
-; SOFT32-NEXT:    ldd [%i1+8], %f6
-; SOFT32-NEXT:    std %f0, [%fp+-8]
-; SOFT32-NEXT:    std %f2, [%fp+-16]
+; SOFT32-NEXT:    std %f4, [%fp+-88] ! 8-byte Folded Spill
+; SOFT32-NEXT:    ldd [%i1+8], %f0
+; SOFT32-NEXT:    std %f0, [%fp+-72] ! 8-byte Folded Spill
+; SOFT32-NEXT:    std %f2, [%fp+-8]
+; SOFT32-NEXT:    std %f6, [%fp+-16]
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
-; SOFT32-NEXT:    std %f6, [%fp+-24]
+; SOFT32-NEXT:    std %f0, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fge
 ; SOFT32-NEXT:    add %fp, -32, %o1
+; SOFT32-NEXT:    ldd [%fp+-96], %f0 ! 8-byte Folded Reload
+; SOFT32-NEXT:    std %f0, [%fp+-48]
+; SOFT32-NEXT:    ldd [%fp+-80], %f0 ! 8-byte Folded Reload
+; SOFT32-NEXT:    std %f0, [%fp+-40]
+; SOFT32-NEXT:    ldd [%fp+-88], %f0 ! 8-byte Folded Reload
+; SOFT32-NEXT:    std %f0, [%fp+-64]
+; SOFT32-NEXT:    mov 1, %i0
 ; SOFT32-NEXT:    cmp %o0, 0
-; SOFT32-NEXT:    be .LBB14_2
-; SOFT32-NEXT:    nop
+; SOFT32-NEXT:    ldd [%fp+-72], %f0 ! 8-byte Folded Reload
+; SOFT32-NEXT:    std %f0, [%fp+-56]
+; SOFT32-NEXT:    bne .LBB14_2
+; SOFT32-NEXT:    mov %i0, %i1
 ; SOFT32-NEXT:  ! %bb.1:
+; SOFT32-NEXT:    mov %g0, %i1
+; SOFT32-NEXT:  .LBB14_2:
+; SOFT32-NEXT:    add %fp, -48, %o0
+; SOFT32-NEXT:    call _Q_fle
+; SOFT32-NEXT:    add %fp, -64, %o1
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    be .LBB14_5
+; SOFT32-NEXT:    mov %i0, %i2
+; SOFT32-NEXT:  ! %bb.3:
+; SOFT32-NEXT:    andcc %i1, %i2, %g0
+; SOFT32-NEXT:    be .LBB14_6
+; SOFT32-NEXT:    nop
+; SOFT32-NEXT:  .LBB14_4:
+; SOFT32-NEXT:    ret
+; SOFT32-NEXT:    restore
+; SOFT32-NEXT:  .LBB14_5:
+; SOFT32-NEXT:    mov %g0, %i2
+; SOFT32-NEXT:    andcc %i1, %i2, %g0
+; SOFT32-NEXT:    bne .LBB14_4
+; SOFT32-NEXT:    nop
+; SOFT32-NEXT:  .LBB14_6:
 ; SOFT32-NEXT:    ret
 ; SOFT32-NEXT:    restore %g0, %g0, %o0
-; SOFT32-NEXT:  .LBB14_2:
-; SOFT32-NEXT:    ret
-; SOFT32-NEXT:    restore %g0, 1, %o0
 ;
 ; SOFT64-LABEL: fcmps_oeq:
 ; SOFT64:       ! %bb.0:
-; SOFT64-NEXT:    save %sp, -208, %sp
+; SOFT64-NEXT:    save %sp, -272, %sp
+; SOFT64-NEXT:    std %f0, [%fp+1967]
+; SOFT64-NEXT:    std %f2, [%fp+1975] ! 16-byte Folded Spill
 ; SOFT64-NEXT:    std %f2, [%fp+2039]
 ; SOFT64-NEXT:    std %f0, [%fp+2031]
+; SOFT64-NEXT:    std %f4, [%fp+1951]
+; SOFT64-NEXT:    std %f6, [%fp+1959] ! 16-byte Folded Spill
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fge
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
+; SOFT64-NEXT:    ldd [%fp+1967], %f0
+; SOFT64-NEXT:    ldd [%fp+1975], %f2 ! 16-byte Folded Reload
+; SOFT64-NEXT:    std %f0, [%fp+1999]
+; SOFT64-NEXT:    std %f2, [%fp+2007]
+; SOFT64-NEXT:    ldd [%fp+1951], %f0
+; SOFT64-NEXT:    ldd [%fp+1959], %f2 ! 16-byte Folded Reload
+; SOFT64-NEXT:    std %f0, [%fp+1983]
+; SOFT64-NEXT:    std %f2, [%fp+1991]
 ; SOFT64-NEXT:    cmp %o0, 0
-; SOFT64-NEXT:    move %icc, 1, %i0
-; SOFT64-NEXT:    srl %i0, 0, %i0
+; SOFT64-NEXT:    movne %icc, 1, %i0
+; SOFT64-NEXT:    add %fp, 1999, %o0
+; SOFT64-NEXT:    call _Qp_fle
+; SOFT64-NEXT:    add %fp, 1983, %o1
+; SOFT64-NEXT:    mov %g0, %i1
+; SOFT64-NEXT:    mov %g0, %i2
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    movne %icc, 1, %i1
+; SOFT64-NEXT:    andcc %i0, %i1, %g0
+; SOFT64-NEXT:    movne %icc, 1, %i2
+; SOFT64-NEXT:    srl %i2, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
   %c = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"oeq", metadata !"fpexcept.strict") strictfp
@@ -716,10 +772,10 @@ define i32 @fcmps_ogt(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fgt
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    cmp %o0, 2
-; SOFT32-NEXT:    be .LBB15_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    bne .LBB15_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -736,11 +792,11 @@ define i32 @fcmps_ogt(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fgt
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    cmp %o0, 2
-; SOFT64-NEXT:    move %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    movne %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -762,10 +818,10 @@ define i32 @fcmps_oge(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fge
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    andcc %o0, 1, %g0
-; SOFT32-NEXT:    be .LBB16_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    bne .LBB16_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -782,11 +838,11 @@ define i32 @fcmps_oge(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fge
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    andcc %o0, 1, %g0
-; SOFT64-NEXT:    move %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    movne %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -808,10 +864,10 @@ define i32 @fcmps_olt(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_flt
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    cmp %o0, 1
-; SOFT32-NEXT:    be .LBB17_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    bne .LBB17_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -828,11 +884,11 @@ define i32 @fcmps_olt(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_flt
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    cmp %o0, 1
-; SOFT64-NEXT:    move %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    movne %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -854,10 +910,10 @@ define i32 @fcmps_ole(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fle
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    cmp %o0, 2
-; SOFT32-NEXT:    bcs .LBB18_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    bne .LBB18_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -874,11 +930,11 @@ define i32 @fcmps_ole(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fle
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    cmp %o0, 2
-; SOFT64-NEXT:    movcs %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    movne %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -1042,10 +1098,10 @@ define i32 @fcmps_ugt(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fle
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    cmp %o0, 1
-; SOFT32-NEXT:    bgu .LBB22_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    be .LBB22_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -1062,11 +1118,11 @@ define i32 @fcmps_ugt(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fle
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    cmp %o0, 1
-; SOFT64-NEXT:    movgu %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    move %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -1088,10 +1144,10 @@ define i32 @fcmps_uge(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_flt
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    cmp %o0, 1
-; SOFT32-NEXT:    bne .LBB23_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    be .LBB23_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -1108,11 +1164,11 @@ define i32 @fcmps_uge(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_flt
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    cmp %o0, 1
-; SOFT64-NEXT:    movne %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    move %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -1134,10 +1190,10 @@ define i32 @fcmps_ult(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fge
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    andcc %o0, 1, %g0
-; SOFT32-NEXT:    bne .LBB24_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    be .LBB24_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -1154,11 +1210,11 @@ define i32 @fcmps_ult(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fge
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    andcc %o0, 1, %g0
-; SOFT64-NEXT:    movne %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    move %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -1180,10 +1236,10 @@ define i32 @fcmps_ule(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
 ; SOFT32-NEXT:    std %f6, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fgt
 ; SOFT32-NEXT:    add %fp, -32, %o1
-; SOFT32-NEXT:    cmp %o0, 2
-; SOFT32-NEXT:    bne .LBB25_2
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    be .LBB25_2
 ; SOFT32-NEXT:    nop
 ; SOFT32-NEXT:  ! %bb.1:
 ; SOFT32-NEXT:    ret
@@ -1200,11 +1256,11 @@ define i32 @fcmps_ule(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fgt
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
-; SOFT64-NEXT:    cmp %o0, 2
-; SOFT64-NEXT:    movne %icc, 1, %i0
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    move %icc, 1, %i0
 ; SOFT64-NEXT:    srl %i0, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
@@ -1216,42 +1272,94 @@ define i32 @fcmps_ule(fp128 %a, fp128 %b) nounwind strictfp {
 define i32 @fcmps_une(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-LABEL: fcmps_une:
 ; SOFT32:       ! %bb.0:
-; SOFT32-NEXT:    save %sp, -128, %sp
-; SOFT32-NEXT:    ldd [%i0+8], %f0
-; SOFT32-NEXT:    ldd [%i0], %f2
+; SOFT32-NEXT:    save %sp, -192, %sp
+; SOFT32-NEXT:    ldd [%i0+8], %f2
+; SOFT32-NEXT:    std %f2, [%fp+-80] ! 8-byte Folded Spill
+; SOFT32-NEXT:    ldd [%i0], %f6
+; SOFT32-NEXT:    std %f6, [%fp+-96] ! 8-byte Folded Spill
 ; SOFT32-NEXT:    ldd [%i1], %f4
-; SOFT32-NEXT:    ldd [%i1+8], %f6
-; SOFT32-NEXT:    std %f0, [%fp+-8]
-; SOFT32-NEXT:    std %f2, [%fp+-16]
+; SOFT32-NEXT:    std %f4, [%fp+-88] ! 8-byte Folded Spill
+; SOFT32-NEXT:    ldd [%i1+8], %f0
+; SOFT32-NEXT:    std %f0, [%fp+-72] ! 8-byte Folded Spill
+; SOFT32-NEXT:    std %f2, [%fp+-8]
+; SOFT32-NEXT:    std %f6, [%fp+-16]
 ; SOFT32-NEXT:    std %f4, [%fp+-32]
-; SOFT32-NEXT:    std %f6, [%fp+-24]
+; SOFT32-NEXT:    std %f0, [%fp+-24]
 ; SOFT32-NEXT:    add %fp, -16, %o0
-; SOFT32-NEXT:    call _Q_cmpe
+; SOFT32-NEXT:    call _Q_fge
 ; SOFT32-NEXT:    add %fp, -32, %o1
+; SOFT32-NEXT:    ldd [%fp+-96], %f0 ! 8-byte Folded Reload
+; SOFT32-NEXT:    std %f0, [%fp+-48]
+; SOFT32-NEXT:    ldd [%fp+-80], %f0 ! 8-byte Folded Reload
+; SOFT32-NEXT:    std %f0, [%fp+-40]
+; SOFT32-NEXT:    ldd [%fp+-88], %f0 ! 8-byte Folded Reload
+; SOFT32-NEXT:    std %f0, [%fp+-64]
+; SOFT32-NEXT:    mov 1, %i0
 ; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    ldd [%fp+-72], %f0 ! 8-byte Folded Reload
+; SOFT32-NEXT:    std %f0, [%fp+-56]
 ; SOFT32-NEXT:    bne .LBB26_2
-; SOFT32-NEXT:    nop
+; SOFT32-NEXT:    mov %i0, %i1
 ; SOFT32-NEXT:  ! %bb.1:
+; SOFT32-NEXT:    mov %g0, %i1
+; SOFT32-NEXT:  .LBB26_2:
+; SOFT32-NEXT:    add %fp, -48, %o0
+; SOFT32-NEXT:    call _Q_fle
+; SOFT32-NEXT:    add %fp, -64, %o1
+; SOFT32-NEXT:    cmp %o0, 0
+; SOFT32-NEXT:    be .LBB26_5
+; SOFT32-NEXT:    mov %i0, %i2
+; SOFT32-NEXT:  ! %bb.3:
+; SOFT32-NEXT:    andcc %i1, %i2, %g0
+; SOFT32-NEXT:    bne .LBB26_6
+; SOFT32-NEXT:    nop
+; SOFT32-NEXT:  .LBB26_4:
+; SOFT32-NEXT:    ret
+; SOFT32-NEXT:    restore
+; SOFT32-NEXT:  .LBB26_5:
+; SOFT32-NEXT:    mov %g0, %i2
+; SOFT32-NEXT:    andcc %i1, %i2, %g0
+; SOFT32-NEXT:    be .LBB26_4
+; SOFT32-NEXT:    nop
+; SOFT32-NEXT:  .LBB26_6:
 ; SOFT32-NEXT:    ret
 ; SOFT32-NEXT:    restore %g0, %g0, %o0
-; SOFT32-NEXT:  .LBB26_2:
-; SOFT32-NEXT:    ret
-; SOFT32-NEXT:    restore %g0, 1, %o0
 ;
 ; SOFT64-LABEL: fcmps_une:
 ; SOFT64:       ! %bb.0:
-; SOFT64-NEXT:    save %sp, -208, %sp
+; SOFT64-NEXT:    save %sp, -272, %sp
+; SOFT64-NEXT:    std %f0, [%fp+1967]
+; SOFT64-NEXT:    std %f2, [%fp+1975] ! 16-byte Folded Spill
 ; SOFT64-NEXT:    std %f2, [%fp+2039]
 ; SOFT64-NEXT:    std %f0, [%fp+2031]
+; SOFT64-NEXT:    std %f4, [%fp+1951]
+; SOFT64-NEXT:    std %f6, [%fp+1959] ! 16-byte Folded Spill
 ; SOFT64-NEXT:    std %f4, [%fp+2015]
 ; SOFT64-NEXT:    std %f6, [%fp+2023]
 ; SOFT64-NEXT:    add %fp, 2031, %o0
-; SOFT64-NEXT:    call _Qp_cmpe
+; SOFT64-NEXT:    call _Qp_fge
 ; SOFT64-NEXT:    add %fp, 2015, %o1
 ; SOFT64-NEXT:    mov %g0, %i0
+; SOFT64-NEXT:    ldd [%fp+1967], %f0
+; SOFT64-NEXT:    ldd [%fp+1975], %f2 ! 16-byte Folded Reload
+; SOFT64-NEXT:    std %f0, [%fp+1999]
+; SOFT64-NEXT:    std %f2, [%fp+2007]
+; SOFT64-NEXT:    ldd [%fp+1951], %f0
+; SOFT64-NEXT:    ldd [%fp+1959], %f2 ! 16-byte Folded Reload
+; SOFT64-NEXT:    std %f0, [%fp+1983]
+; SOFT64-NEXT:    std %f2, [%fp+1991]
 ; SOFT64-NEXT:    cmp %o0, 0
 ; SOFT64-NEXT:    movne %icc, 1, %i0
-; SOFT64-NEXT:    srl %i0, 0, %i0
+; SOFT64-NEXT:    add %fp, 1999, %o0
+; SOFT64-NEXT:    call _Qp_fle
+; SOFT64-NEXT:    add %fp, 1983, %o1
+; SOFT64-NEXT:    mov %g0, %i1
+; SOFT64-NEXT:    mov %g0, %i2
+; SOFT64-NEXT:    cmp %o0, 0
+; SOFT64-NEXT:    movne %icc, 1, %i1
+; SOFT64-NEXT:    andcc %i0, %i1, %g0
+; SOFT64-NEXT:    move %icc, 1, %i2
+; SOFT64-NEXT:    srl %i2, 0, %i0
 ; SOFT64-NEXT:    ret
 ; SOFT64-NEXT:    restore
   %c = call i1 @llvm.experimental.constrained.fcmps.f128(fp128 %a, fp128 %b, metadata !"une", metadata !"fpexcept.strict") strictfp

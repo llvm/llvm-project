@@ -133,7 +133,10 @@ const char *SBValue::GetName() {
   if (!value_sp)
     return nullptr;
 
-  return value_sp->GetName().GetCString();
+  TargetSP target_sp = value_sp->GetTargetSP();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(value_sp->GetName());
 }
 
 const char *SBValue::GetTypeName() {
@@ -144,7 +147,10 @@ const char *SBValue::GetTypeName() {
   if (!value_sp)
     return nullptr;
 
-  return value_sp->GetQualifiedTypeName().GetCString();
+  TargetSP target_sp = value_sp->GetTargetSP();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(value_sp->GetQualifiedTypeName());
 }
 
 const char *SBValue::GetDisplayTypeName() {
@@ -155,7 +161,10 @@ const char *SBValue::GetDisplayTypeName() {
   if (!value_sp)
     return nullptr;
 
-  return value_sp->GetDisplayTypeName().GetCString();
+  TargetSP target_sp = value_sp->GetTargetSP();
+  StringPoolRef pool = target_sp ? GetDebuggerStringPool(*target_sp)
+                                 : StringPool::GetSystemPool();
+  return pool.Intern(value_sp->GetDisplayTypeName());
 }
 
 size_t SBValue::GetByteSize() {

@@ -150,18 +150,6 @@ RankedTensorType mlir::tosa::getVariableType(tosa::VariableOp variableOp) {
 //===----------------------------------------------------------------------===//
 
 void TosaDialect::initialize() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Tosa/IR/TosaOpsTypesBase.cpp.inc"
-      >();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Tosa/IR/TosaAttributes.cpp.inc"
-      >();
   addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
   declarePromisedInterfaces<
       shard::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,
@@ -2757,6 +2745,15 @@ llvm::LogicalResult tosa::ReshapeOp::verify() {
     if (cast<tosa::shapeType>(getShape().getType()).getRank() !=
         rankedOutputType.getRank())
       return emitOpError() << "new shape does not match result rank";
+  }
+
+  const TensorType inputType = getInput1().getType();
+  if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
+    const int64_t inputElementsNum = inputType.getNumElements();
+    const int64_t outputElementsNum = outputType.getNumElements();
+    if (inputElementsNum != outputElementsNum)
+      return emitOpError() << "cannot reshape " << inputElementsNum
+                           << " elements into " << outputElementsNum;
   }
 
   return mlir::success();

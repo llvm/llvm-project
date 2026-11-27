@@ -22,28 +22,6 @@
 
 namespace orc_rt {
 
-Expected<std::unique_ptr<SimpleNativeMemoryMap>>
-SimpleNativeMemoryMap::Create(Session &S, SimpleSymbolTable &ST,
-                              const char *InstanceName,
-                              SimpleSymbolTable::MutatorFn AddInterface) {
-
-  std::unique_ptr<SimpleNativeMemoryMap> Instance(new SimpleNativeMemoryMap(S));
-
-  SimpleSymbolTable SNMMST;
-  if (auto Err = AddInterface(SNMMST))
-    return Err;
-  std::pair<SymbolNameSpec, const void *> InstanceSym[] = {
-      {SymbolNameSpec::c(InstanceName),
-       static_cast<const void *>(Instance.get())}};
-  if (auto Err = SNMMST.addUnique(InstanceSym))
-    return std::move(Err);
-
-  if (auto Err = ST.addUnique(std::move(SNMMST)))
-    return std::move(Err);
-
-  return std::move(Instance);
-}
-
 void SimpleNativeMemoryMap::reserve(OnReserveCompleteFn &&OnComplete,
                                     size_t Size) {
   if (Size % S.processInfo().pageSize()) {

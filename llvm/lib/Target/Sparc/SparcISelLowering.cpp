@@ -1866,10 +1866,11 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Atomics are supported on SparcV9. 32-bit atomics are also
   // supported by some Leon SparcV8 variants. Otherwise, atomics
   // are unsupported.
+  //
+  // 32-bit V9 code can only use 64-bit atomics under the V8+ ABI, which
+  // guarantees that the upper halves of the %g and %o registers are preserved.
   if (Subtarget->isV9()) {
-    // TODO: we _ought_ to be able to support 64-bit atomics on 32-bit sparcv9,
-    // but it hasn't been implemented in the backend yet.
-    if (Subtarget->is64Bit())
+    if (Subtarget->is64Bit() || Subtarget->isV8Plus())
       setMaxAtomicSizeInBitsSupported(64);
     else
       setMaxAtomicSizeInBitsSupported(32);
@@ -1891,6 +1892,13 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Legal);
     setOperationAction(ISD::ATOMIC_SWAP, MVT::i64, Legal);
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
+    setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Custom);
+  } else if (Subtarget->isV9() && Subtarget->isV8Plus()) {
+    // As in GCC, 64-bit atomic loads and stores use ldd/std, and 64-bit
+    // compare-and-swap uses casx on values packed into %g/%o registers.
+    // Everything else is expanded to a compare-and-swap loop.
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Custom);
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Custom);
   }
@@ -2516,29 +2524,60 @@ SDValue SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
   return Result;
 }
 
+// Return the f128 compare helper for SPCC, or nullptr if there is none. This
+// is the same choice GCC makes: _Q_feq, _Q_fne, _Q_flt, _Q_fle, _Q_fgt and
+// _Q_fge (or their _Qp_ forms) for the predicates they implement. An ult, ule,
+// ugt or uge, as produced by inverting a branch, is the inverse of an oge, ogt,
+// ole or olt, so it uses that helper with Invert set. Signaling is set to the
+// helper's exception behaviour: _Q_feq and _Q_fne are quiet like fcmp, and the
+// ordered relational helpers are signaling like fcmpe.
+static const char *getF128PredicateLibCall(unsigned SPCC, bool Is64Bit,
+                                           bool &Invert, bool &Signaling) {
+  Invert = false;
+  Signaling = true;
+  switch (SPCC) {
+  case SPCC::FCC_E:
+    Signaling = false;
+    return Is64Bit ? "_Qp_feq" : "_Q_feq";
+  case SPCC::FCC_NE:
+    Signaling = false;
+    return Is64Bit ? "_Qp_fne" : "_Q_fne";
+  case SPCC::FCC_UGE:
+    Invert = true;
+    [[fallthrough]];
+  case SPCC::FCC_L:
+    return Is64Bit ? "_Qp_flt" : "_Q_flt";
+  case SPCC::FCC_UG:
+    Invert = true;
+    [[fallthrough]];
+  case SPCC::FCC_LE:
+    return Is64Bit ? "_Qp_fle" : "_Q_fle";
+  case SPCC::FCC_ULE:
+    Invert = true;
+    [[fallthrough]];
+  case SPCC::FCC_G:
+    return Is64Bit ? "_Qp_fgt" : "_Q_fgt";
+  case SPCC::FCC_UL:
+    Invert = true;
+    [[fallthrough]];
+  case SPCC::FCC_GE:
+    return Is64Bit ? "_Qp_fge" : "_Q_fge";
+  default:
+    return nullptr;
+  }
+}
+
 SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
                                               unsigned &SPCC, const SDLoc &DL,
                                               SelectionDAG &DAG) const {
 
-  const char *LibCall = nullptr;
   bool is64Bit = Subtarget->is64Bit();
-  switch(SPCC) {
-  default: llvm_unreachable("Unhandled conditional code!");
-  case SPCC::FCC_E  : LibCall = is64Bit? "_Qp_feq" : "_Q_feq"; break;
-  case SPCC::FCC_NE : LibCall = is64Bit? "_Qp_fne" : "_Q_fne"; break;
-  case SPCC::FCC_L  : LibCall = is64Bit? "_Qp_flt" : "_Q_flt"; break;
-  case SPCC::FCC_G  : LibCall = is64Bit? "_Qp_fgt" : "_Q_fgt"; break;
-  case SPCC::FCC_LE : LibCall = is64Bit? "_Qp_fle" : "_Q_fle"; break;
-  case SPCC::FCC_GE : LibCall = is64Bit? "_Qp_fge" : "_Q_fge"; break;
-  case SPCC::FCC_UL :
-  case SPCC::FCC_ULE:
-  case SPCC::FCC_UG :
-  case SPCC::FCC_UGE:
-  case SPCC::FCC_U  :
-  case SPCC::FCC_O  :
-  case SPCC::FCC_LG :
-  case SPCC::FCC_UE : LibCall = is64Bit? "_Qp_cmp" : "_Q_cmp"; break;
-  }
+  bool Invert, Signaling;
+  const char *LibCall =
+      getF128PredicateLibCall(SPCC, is64Bit, Invert, Signaling);
+  bool IsPredicateCall = LibCall != nullptr;
+  if (!IsPredicateCall)
+    LibCall = is64Bit ? "_Qp_cmp" : "_Q_cmp";
 
   auto PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Callee = DAG.getExternalSymbol(LibCall, PtrVT);
@@ -2557,35 +2596,16 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
   // result is in first, and chain is in second result.
   SDValue Result =  CallInfo.first;
 
-  switch(SPCC) {
-  default: {
+  // The predicate helpers return nonzero if the predicate holds.
+  if (IsPredicateCall) {
     SDValue RHS = DAG.getConstant(0, DL, Result.getValueType());
-    SPCC = SPCC::ICC_NE;
-    return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
-  }
-  case SPCC::FCC_UL : {
-    SDValue Mask   = DAG.getConstant(1, DL, Result.getValueType());
-    Result = DAG.getNode(ISD::AND, DL, Result.getValueType(), Result, Mask);
-    SDValue RHS    = DAG.getConstant(0, DL, Result.getValueType());
-    SPCC = SPCC::ICC_NE;
-    return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
-  }
-  case SPCC::FCC_ULE: {
-    SDValue RHS = DAG.getConstant(2, DL, Result.getValueType());
-    SPCC = SPCC::ICC_NE;
-    return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
-  }
-  case SPCC::FCC_UG :  {
-    SDValue RHS = DAG.getConstant(1, DL, Result.getValueType());
-    SPCC = SPCC::ICC_G;
-    return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
-  }
-  case SPCC::FCC_UGE: {
-    SDValue RHS = DAG.getConstant(1, DL, Result.getValueType());
-    SPCC = SPCC::ICC_NE;
+    SPCC = Invert ? SPCC::ICC_E : SPCC::ICC_NE;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, Result, RHS);
   }
 
+  switch (SPCC) {
+  default:
+    llvm_unreachable("Unhandled conditional code!");
   case SPCC::FCC_U  :  {
     SDValue RHS = DAG.getConstant(3, DL, Result.getValueType());
     SPCC = SPCC::ICC_E;
@@ -2617,43 +2637,69 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
   }
 }
 
-// Lower a constrained f128 compare to a call to _Q_cmp/_Qp_cmp (quiet) or
-// _Q_cmpe/_Qp_cmpe (signaling), and decode the result into an integer
-// compare. Unlike the predicate-specific helpers (_Q_flt, _Q_feq, ...), these
-// two let us pick the exception behaviour independently of the predicate.
+// Lower a constrained f128 compare to a libcall. Use the predicate-specific
+// helper when its exception behaviour matches, as GCC does. Otherwise call
+// _Q_cmp/_Qp_cmp (quiet) or _Q_cmpe/_Qp_cmpe (signaling), which let us pick
+// the exception behaviour independently of the predicate, and decode the
+// result into an integer compare.
 SDValue SparcTargetLowering::LowerF128StrictCompare(SDValue &Chain, SDValue LHS,
                                                     SDValue RHS, unsigned &SPCC,
                                                     bool IsSignaling,
                                                     const SDLoc &DL,
                                                     SelectionDAG &DAG) const {
   bool is64Bit = Subtarget->is64Bit();
-  const char *LibCall;
-  if (IsSignaling)
-    LibCall = is64Bit ? "_Qp_cmpe" : "_Q_cmpe";
-  else
-    LibCall = is64Bit ? "_Qp_cmp" : "_Q_cmp";
-
   auto PtrVT = getPointerTy(DAG.getDataLayout());
-  SDValue Callee = DAG.getExternalSymbol(LibCall, PtrVT);
   Type *RetTy = Type::getInt32Ty(*DAG.getContext());
-  ArgListTy Args;
-  Chain = LowerF128_LibCallArg(Chain, Args, LHS, DL, DAG);
-  Chain = LowerF128_LibCallArg(Chain, Args, RHS, DL, DAG);
 
-  TargetLowering::CallLoweringInfo CLI(DAG);
-  CLI.setDebugLoc(DL).setChain(Chain).setCallee(CallingConv::C, RetTy, Callee,
-                                                std::move(Args));
+  auto EmitCall = [&](const char *LibCall) {
+    SDValue Callee = DAG.getExternalSymbol(LibCall, PtrVT);
+    ArgListTy Args;
+    Chain = LowerF128_LibCallArg(Chain, Args, LHS, DL, DAG);
+    Chain = LowerF128_LibCallArg(Chain, Args, RHS, DL, DAG);
 
-  std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
-  Chain = CallInfo.second;
-  SDValue Result = CallInfo.first;
-  EVT ResVT = Result.getValueType();
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(DL).setChain(Chain).setCallee(CallingConv::C, RetTy, Callee,
+                                                  std::move(Args));
+
+    std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
+    Chain = CallInfo.second;
+    return CallInfo.first;
+  };
 
   auto Compare = [&](SDValue V, uint64_t C, unsigned NewSPCC) {
     SPCC = NewSPCC;
     return DAG.getNode(SPISD::CMPICC, DL, MVT::Glue, V,
-                       DAG.getConstant(C, DL, ResVT));
+                       DAG.getConstant(C, DL, V.getValueType()));
   };
+
+  // There is no signaling equality helper. Like GCC does for iseqsig, test
+  // a >= b && a <= b with _Q_fge and _Q_fle, which are both signaling.
+  if (IsSignaling && (SPCC == SPCC::FCC_E || SPCC == SPCC::FCC_NE)) {
+    bool Invert = SPCC == SPCC::FCC_NE;
+    SDValue GE = EmitCall(is64Bit ? "_Qp_fge" : "_Q_fge");
+    SDValue LE = EmitCall(is64Bit ? "_Qp_fle" : "_Q_fle");
+    EVT ResVT = GE.getValueType();
+    SDValue Zero = DAG.getConstant(0, DL, ResVT);
+    SDValue Both = DAG.getNode(ISD::AND, DL, ResVT,
+                               DAG.getSetCC(DL, ResVT, GE, Zero, ISD::SETNE),
+                               DAG.getSetCC(DL, ResVT, LE, Zero, ISD::SETNE));
+    return Compare(Both, 0, Invert ? SPCC::ICC_E : SPCC::ICC_NE);
+  }
+
+  bool Invert, Signaling;
+  const char *LibCall =
+      getF128PredicateLibCall(SPCC, is64Bit, Invert, Signaling);
+  // The predicate helpers return nonzero if the predicate holds.
+  if (LibCall && Signaling == IsSignaling)
+    return Compare(EmitCall(LibCall), 0, Invert ? SPCC::ICC_E : SPCC::ICC_NE);
+
+  if (IsSignaling)
+    LibCall = is64Bit ? "_Qp_cmpe" : "_Q_cmpe";
+  else
+    LibCall = is64Bit ? "_Qp_cmp" : "_Q_cmp";
+  SDValue Result = EmitCall(LibCall);
+  EVT ResVT = Result.getValueType();
+
   auto And = [&](SDValue V, uint64_t C) {
     return DAG.getNode(ISD::AND, DL, ResVT, V, DAG.getConstant(C, DL, ResVT));
   };
@@ -2665,10 +2711,6 @@ SDValue SparcTargetLowering::LowerF128StrictCompare(SDValue &Chain, SDValue LHS,
   switch (SPCC) {
   default:
     llvm_unreachable("Unhandled conditional code!");
-  case SPCC::FCC_E: // 0
-    return Compare(Result, 0, SPCC::ICC_E);
-  case SPCC::FCC_NE: // 1, 2, 3
-    return Compare(Result, 0, SPCC::ICC_NE);
   case SPCC::FCC_L: // 1
     return Compare(Result, 1, SPCC::ICC_E);
   case SPCC::FCC_G: // 2
@@ -3552,7 +3594,21 @@ static SDValue LowerFNEGorFABS(SDValue Op, SelectionDAG &DAG, bool isV9) {
 }
 
 static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
-  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering())) {
+  auto *AN = cast<AtomicSDNode>(Op);
+
+  // 64-bit atomic store in 32-bit V8+ code: like GCC's atomic_storedi_1, use
+  // std, which is atomic for doubleword-aligned addresses. The load side is
+  // handled in ReplaceNodeResults.
+  if (Op.getOpcode() == ISD::ATOMIC_STORE &&
+      Op.getOperand(1).getValueType() == MVT::i64 &&
+      !DAG.getSubtarget<SparcSubtarget>().is64Bit()) {
+    SDLoc DL(Op);
+    SDValue Val = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, Op.getOperand(1));
+    return DAG.getStore(AN->getChain(), DL, Val, AN->getBasePtr(),
+                        AN->getMemOperand());
+  }
+
+  if (isStrongerThanMonotonic(AN->getSuccessOrdering())) {
     // Expand with a fence.
     return SDValue();
   }
@@ -4227,6 +4283,40 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Res = DAG.getNode(ISD::BITCAST, dl, MVT::i64, LoadRes);
     Results.push_back(Res);
     Results.push_back(LoadRes.getValue(1));
+    return;
+  }
+  case ISD::ATOMIC_LOAD: {
+    // 64-bit atomic load in 32-bit V8+ code: like GCC's atomic_loaddi_1, use
+    // ldd, which is atomic for doubleword-aligned addresses. Ordering is
+    // handled by the fences AtomicExpand inserted around it.
+    auto *AN = cast<AtomicSDNode>(N);
+    assert(AN->getMemoryVT() == MVT::i64 && !Subtarget->is64Bit());
+    SDValue LoadRes = DAG.getLoad(MVT::v2i32, dl, AN->getChain(),
+                                  AN->getBasePtr(), AN->getMemOperand());
+    Results.push_back(DAG.getNode(ISD::BITCAST, dl, MVT::i64, LoadRes));
+    Results.push_back(LoadRes.getValue(1));
+    return;
+  }
+  case ISD::ATOMIC_CMP_SWAP: {
+    // 64-bit compare-and-swap in 32-bit V8+ code. See CASX_V8PLUS.
+    auto *AN = cast<AtomicSDNode>(N);
+    assert(AN->getMemoryVT() == MVT::i64 && !Subtarget->is64Bit());
+    auto [CmpLo, CmpHi] =
+        DAG.SplitScalar(N->getOperand(2), dl, MVT::i32, MVT::i32);
+    auto [NewLo, NewHi] =
+        DAG.SplitScalar(N->getOperand(3), dl, MVT::i32, MVT::i32);
+    SDValue Ops[] = {N->getOperand(1), CmpHi, CmpLo, NewHi, NewLo,
+                     N->getOperand(0)};
+    MachineSDNode *CAS = DAG.getMachineNode(
+        SP::CASX_V8PLUS, dl,
+        DAG.getVTList(MVT::i32, MVT::i32, MVT::i32, MVT::Other), Ops);
+    DAG.setNodeMemRefs(CAS, {AN->getMemOperand()});
+    DAG.getMachineFunction()
+        .getInfo<SparcMachineFunctionInfo>()
+        ->setUsesV8PlusRegs();
+    SDValue Hi(CAS, 0), Lo(CAS, 1);
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi));
+    Results.push_back(SDValue(CAS, 3));
     return;
   }
   }

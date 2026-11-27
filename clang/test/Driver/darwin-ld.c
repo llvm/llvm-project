@@ -151,6 +151,10 @@
 // LINK_VERSION_MIN_MACABI-NOT: macosx_version_min
 // LINK_VERSION_MIN_MACABI-NOT: macos_version_min
 
+// RUN: %clang -target x86-64-apple-darwin12 -fuse-ld= -mlinker-version=400 -resource-dir=%S/Inputs/resource_dir -rtlib=none -### %t.o 2>&1 | FileCheck -check-prefix=LINK_RTLIB_NONE %s
+// LINK_RTLIB_NONE: {{ld(.exe)?"}}
+// LINK_RTLIB_NONE-NOT: libclang_rt
+
 // RUN: %clang -target x86_64-apple-darwin12 -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_NO_CRT1 %s < %t.log
 // LINK_NO_CRT1-NOT: crt
