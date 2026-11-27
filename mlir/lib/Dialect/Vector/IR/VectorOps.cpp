@@ -4700,30 +4700,38 @@ foldExtractStridedOpFromInsertChain(ExtractStridedSliceOp op) {
     // extracting a partial chunk of the vector inserted.
     if (extractOffsets.size() > insertOffsets.size())
       return failure();
-    bool patialoverlap = false;
+    bool partialOverlap = false;
     bool disjoint = false;
     SmallVector<int64_t, 4> offsetDiffs;
-    for (unsigned dim = 0, e = extractOffsets.size(); dim < e; ++dim) {
-      if (getElement(extractStrides, dim) != getElement(insertStrides, dim))
+    // Compare the extracted and inserted intervals in every dimension. The
+    // dimensions past the extract offsets are extracted in full.
+    for (unsigned dim = 0, e = insertOffsets.size(); dim < e; ++dim) {
+      bool hasExtractOffset = dim < extractOffsets.size();
+      int64_t extractStride =
+          hasExtractOffset ? getElement(extractStrides, dim) : 1;
+      if (extractStride != getElement(insertStrides, dim))
         return failure();
       int64_t start = getElement(insertOffsets, dim);
       int64_t end = start + insertOp.getSourceVectorType().getDimSize(dim);
-      int64_t offset = getElement(extractOffsets, dim);
-      int64_t size = getElement(extractSizes, dim);
-      // Check if the start of the extract offset is in the interval inserted.
-      if (start <= offset && offset < end) {
-        // If the extract interval overlaps but is not fully included we may
-        // have a partial overlap that will prevent any folding.
-        if (offset + size > end)
-          patialoverlap = true;
-        offsetDiffs.push_back(offset - start);
-        continue;
+      int64_t offset = hasExtractOffset ? getElement(extractOffsets, dim) : 0;
+      int64_t size = hasExtractOffset
+                         ? getElement(extractSizes, dim)
+                         : op.getSourceVectorType().getDimSize(dim);
+      // If the intervals do not intersect in some dimension, the extracted
+      // chunk does not read anything written by this insert.
+      if (offset + size <= start || offset >= end) {
+        disjoint = true;
+        break;
       }
-      disjoint = true;
-      break;
+      // If the extract interval overlaps but is not fully included we have a
+      // partial overlap that will prevent any folding.
+      if (offset < start || offset + size > end)
+        partialOverlap = true;
+      if (hasExtractOffset)
+        offsetDiffs.push_back(offset - start);
     }
     // The extract element chunk is a subset of the insert element.
-    if (!disjoint && !patialoverlap) {
+    if (!disjoint && !partialOverlap) {
       op.setOperand(insertOp.getValueToStore());
       // OpBuilder is only used as a helper to build an I64ArrayAttr.
       OpBuilder b(op.getContext());
