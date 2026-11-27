@@ -87,3 +87,50 @@ let Command = "uuid" in {
                   Arg<"ModuleUUID">,
                   Desc<"A module UUID value.">;
 }
+
+// OptionGroupVariable::GetDefinitions() omits the frame-only options by
+// dropping the leading elements, so their def names must sort first.
+let Command = "variable" in {
+  def variable_frame_no_args : Option<"no-args", "a">,
+                               Groups<[1, 2]>,
+                               Desc<"Omit function arguments.">;
+  def variable_frame_no_locals : Option<"no-locals", "l">,
+                                 Groups<[1, 2]>,
+                                 Desc<"Omit local variables.">;
+  def variable_frame_no_recognized_args
+      : Option<"no-recognized-args", "t">,
+        Groups<[1, 2]>,
+        Desc<"Omit recognized function arguments.">;
+  def variable_frame_show_globals
+      : Option<"show-globals", "g">,
+        Groups<[1, 2]>,
+        Desc<"Show the current frame source file global and static "
+             "variables.">;
+  // Use 'e' for synthEtic - s and y are both taken.
+  def variable_no_synthetic : Option<"no-synthetic", "e">,
+                              Groups<[1, 2]>,
+                              Desc<"Omit synthetic variables.">;
+  def variable_regex : Option<"regex", "r">,
+                       Groups<[1, 2]>,
+                       Desc<"The <variable-name> argument for name lookups are "
+                            "regular expressions.">;
+  def variable_scope
+      : Option<"scope", "s">,
+        Groups<[1, 2]>,
+        Desc<"Show variable scope (argument, local, global, static).">;
+  def variable_show_declaration
+      : Option<"show-declaration", "c">,
+        Groups<[1, 2]>,
+        Desc<"Show variable declaration information (source file and line "
+             "where the variable was declared).">;
+  def variable_summary
+      : Option<"summary", "y">,
+        Group<1>,
+        Arg<"Name">,
+        Desc<"Specify the summary that the variable output should use.">;
+  def variable_summary_string
+      : Option<"summary-string", "z">,
+        Group<2>,
+        Arg<"Name">,
+        Desc<"Specify a summary string to use to format the variable output.">;
+}
