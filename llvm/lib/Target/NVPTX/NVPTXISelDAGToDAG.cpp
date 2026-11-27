@@ -34,7 +34,6 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -46,17 +45,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-isel"
 #define PASS_NAME "NVPTX DAG->DAG Pattern Instruction Selection"
-
-static cl::opt<bool>
-    EnableRsqrtOpt("nvptx-rsqrt-approx-opt", cl::init(true), cl::Hidden,
-                   cl::desc("Enable reciprocal sqrt optimization"));
-
-// FIXME: This is a WAR to recover lost performance from #155024.
-// We still need to investigate the regression and find a more permanent
-// solution.
-static cl::opt<bool> EnableMADWide("nvptx-mad-wide-opt", cl::init(false),
-                                   cl::Hidden,
-                                   cl::desc("Enable MAD wide optimization"));
 
 namespace {
 
@@ -92,6 +80,7 @@ class NVPTXDAGToDAGISel : public SelectionDAGISel {
   NVPTX::DivPrecisionLevel getDivF32Level(const SDNode *N) const;
   bool usePrecSqrtF32(const SDNode *N) const;
   bool useF32FTZ() const;
+  bool useF16FTZ() const;
   bool allowFMA() const;
   bool doRsqrtOpt() const;
   bool doMADWideOpt() const;
@@ -158,11 +147,10 @@ private:
                           const SDLoc &DL, bool EmitDiagnostics = true);
 
   // Returns the Memory Order and Scope that the PTX memory instruction should
-  // use, and inserts appropriate fence instruction before the memory
-  // instruction, if needed to implement the instructions memory order. Required
-  // fences after the instruction need to be handled elsewhere.
+  // use.
   std::pair<NVPTX::Ordering, NVPTX::Scope>
-  insertMemoryInstructionFence(SDLoc DL, SDValue &Chain, MemSDNode *N);
+  getMemInstOrderingScope(MemSDNode *N);
+
   NVPTX::Scope getOperationScope(MemSDNode *N, NVPTX::Ordering O) const;
 
 public:
@@ -218,6 +206,10 @@ bool NVPTXDAGToDAGISel::usePrecSqrtF32(const SDNode *N) const {
   return Subtarget->getTargetLowering()->usePrecSqrtF32(N);
 }
 
+bool NVPTXDAGToDAGISel::useF16FTZ() const {
+  return Subtarget->getTargetLowering()->useF16FTZ(*MF);
+}
+
 bool NVPTXDAGToDAGISel::useF32FTZ() const {
   return Subtarget->getTargetLowering()->useF32FTZ(*MF);
 }
@@ -227,9 +219,13 @@ bool NVPTXDAGToDAGISel::allowFMA() const {
   return TL->allowFMA(*MF, OptLevel);
 }
 
-bool NVPTXDAGToDAGISel::doRsqrtOpt() const { return EnableRsqrtOpt; }
+bool NVPTXDAGToDAGISel::doRsqrtOpt() const {
+  return Subtarget->getCLOpts().rsqrt_approx_opt;
+}
 
-bool NVPTXDAGToDAGISel::doMADWideOpt() const { return EnableMADWide; }
+bool NVPTXDAGToDAGISel::doMADWideOpt() const {
+  return Subtarget->getCLOpts().mad_wide_opt;
+}
 
 /// Select - Select instructions not customized! Used for
 /// expanded, promoted and normal instructions.
@@ -243,12 +239,14 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   case ISD::LOAD:
   case ISD::ATOMIC_LOAD:
+  case NVPTXISD::ATOMIC_LOAD_B128:
   case NVPTXISD::MLoad:
     if (tryLoad(N))
       return;
     break;
   case ISD::STORE:
   case ISD::ATOMIC_STORE:
+  case NVPTXISD::ATOMIC_STORE_B128:
     if (tryStore(N))
       return;
     break;
@@ -548,7 +546,7 @@ bool NVPTXDAGToDAGISel::SelectSETP_F16X2(SDNode *N) {
   SDNode *SetP = CurDAG->getMachineNode(
       NVPTX::SETP_f16x2, DL, MVT::i1, MVT::i1,
       {N->getOperand(0), N->getOperand(1), PTXCmpMode,
-       CurDAG->getTargetConstant(useF32FTZ() ? 1 : 0, DL, MVT::i1)});
+       CurDAG->getTargetConstant(useF16FTZ(), DL, MVT::i1)});
   ReplaceNode(N, SetP);
   return true;
 }
@@ -747,15 +745,8 @@ NVPTX::Scope NVPTXDAGToDAGISel::getAtomicScope(const MemSDNode *N) const {
 
 namespace {
 
-struct OperationOrderings {
-  NVPTX::Ordering InstructionOrdering, FenceOrdering;
-  OperationOrderings(NVPTX::Ordering IO = NVPTX::Ordering::NotAtomic,
-                     NVPTX::Ordering FO = NVPTX::Ordering::NotAtomic)
-      : InstructionOrdering(IO), FenceOrdering(FO) {}
-};
-
-static OperationOrderings
-getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
+static NVPTX::Ordering getInstructionOrdering(MemSDNode *N,
+                                              const NVPTXSubtarget *Subtarget) {
   AtomicOrdering Ordering = N->getSuccessOrdering();
   auto CodeAddrSpace = NVPTXDAGToDAGISel::getAddrSpace(N);
 
@@ -935,18 +926,8 @@ getOperationOrderings(MemSDNode *N, const NVPTXSubtarget *Subtarget) {
     //
     // This sets the ordering of the fence to SequentiallyConsistent, and
     // sets the corresponding ordering for the instruction.
-    NVPTX::Ordering InstrOrder;
-    if (N->readMem())
-      InstrOrder = NVPTX::Ordering::Acquire;
-    else if (N->writeMem())
-      InstrOrder = NVPTX::Ordering::Release;
-    else
-      report_fatal_error(
-          formatv("NVPTX does not support SequentiallyConsistent Ordering on "
-                  "read-modify-writes yet: {}",
-                  N->getOperationName()));
-    return OperationOrderings(InstrOrder,
-                              NVPTX::Ordering::SequentiallyConsistent);
+    llvm_unreachable("seq_cst ordering should not reach this point, "
+                     "is emulated in AtomicExpandPass");
   }
   }
   report_fatal_error(
@@ -1093,15 +1074,21 @@ static unsigned int getFenceOp(NVPTX::Ordering O, NVPTX::Scope S,
   llvm_unreachable("unhandled ordering");
 }
 
-// Returns Memory Order and Scope of a memory instruction, and
-// inserts any fence before the instruction that's required to
-// implement its memory ordering.
+// Returns Memory Order and Scope of a memory instruction.
 std::pair<NVPTX::Ordering, NVPTX::Scope>
-NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
-                                                MemSDNode *N) {
-  auto [InstructionOrdering, FenceOrdering] =
-      getOperationOrderings(N, Subtarget);
+NVPTXDAGToDAGISel::getMemInstOrderingScope(MemSDNode *N) {
+  auto InstructionOrdering = getInstructionOrdering(N, Subtarget);
   auto Scope = getOperationScope(N, InstructionOrdering);
+
+  // b128 loads/stores were introduced in PTX 8.3, but system scope support
+  // requires PTX 8.4. Check the resolved scope, including volatile promotion.
+  if (N->getMemoryVT() == MVT::i128 && Scope == NVPTX::Scope::System &&
+      !Subtarget->hasSysScopeLdStB128())
+    CurDAG->getContext()->diagnose(DiagnosticInfoUnsupported(
+        CurDAG->getMachineFunction().getFunction(),
+        "NVPTX system scope b128 loads and stores require PTX ISA version 8.4 "
+        "or later",
+        N->getDebugLoc()));
 
   // Singlethread scope has no inter-thread synchronization requirements, so
   // the atomic operation is lowered as plain and the fence is skipped.
@@ -1112,20 +1099,6 @@ NVPTXDAGToDAGISel::insertMemoryInstructionFence(SDLoc DL, SDValue &Chain,
       InstructionOrdering != NVPTX::Ordering::Volatile)
     return {NVPTX::Ordering::NotAtomic, Scope};
 
-  // If a fence is required before the operation, insert it:
-  switch (NVPTX::Ordering(FenceOrdering)) {
-  case NVPTX::Ordering::NotAtomic:
-    break;
-  case NVPTX::Ordering::SequentiallyConsistent: {
-    auto Op = getFenceOp(FenceOrdering, Scope, Subtarget);
-    Chain = SDValue(CurDAG->getMachineNode(Op, DL, MVT::Other, Chain), 0);
-    break;
-  }
-  default:
-    report_fatal_error(
-        formatv("Unexpected fence ordering: \"{}\".",
-                OrderingToString(NVPTX::Ordering(FenceOrdering))));
-  }
   return {InstructionOrdering, Scope};
 }
 
@@ -1426,7 +1399,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
 
   SDLoc DL(LD);
   SDValue Chain = N->getOperand(0);
-  const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, LD);
+  const auto [Ordering, Scope] = getMemInstOrderingScope(LD);
 
   const unsigned FromTypeWidth = LD->getMemoryVT().getSizeInBits();
 
@@ -1440,6 +1413,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
   switch (N->getOpcode()) {
   case ISD::LOAD:
   case ISD::ATOMIC_LOAD:
+  case NVPTXISD::ATOMIC_LOAD_B128:
     UsedBytesMask = UINT32_MAX;
     break;
   case NVPTXISD::MLoad:
@@ -1473,19 +1447,38 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                    Chain};
 
   const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
+  // The result of an i128 load is a pair of i64s, so TargetVT is i64 and would
+  // otherwise select LD_i64.
+  const bool IsB128 = N->getOpcode() == NVPTXISD::ATOMIC_LOAD_B128;
   const std::optional<unsigned> Opcode =
-      pickOpcodeForVT(TargetVT, NVPTX::LD_i16, NVPTX::LD_i32, NVPTX::LD_i64);
+      IsB128 ? NVPTX::LD_i128
+             : pickOpcodeForVT(TargetVT, NVPTX::LD_i16, NVPTX::LD_i32,
+                               NVPTX::LD_i64);
   if (!Opcode)
     return false;
 
-  SDNode *NVPTXLD = CurDAG->getMachineNode(*Opcode, DL, LD->getVTList(), Ops);
+  SDVTList VTs =
+      IsB128 ? CurDAG->getVTList(MVT::i128, MVT::Other) : LD->getVTList();
+  SDNode *NVPTXLD = CurDAG->getMachineNode(*Opcode, DL, VTs, Ops);
   if (!NVPTXLD)
     return false;
 
   MachineMemOperand *MemRef = LD->getMemOperand();
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(NVPTXLD), {MemRef});
 
-  ReplaceNode(LD, NVPTXLD);
+  if (IsB128) {
+    SDNode *Unpacked = CurDAG->getMachineNode(
+        NVPTX::I128toV2I64, DL, {MVT::i64, MVT::i64}, SDValue(NVPTXLD, 0));
+    // Replace results directly: DAGCombiner has already run, and emission
+    // does not assign registers to MERGE_VALUES results.
+    SDValue LoadChain(NVPTXLD, 1);
+    SDValue OldResults[] = {SDValue(LD, 0), SDValue(LD, 1), SDValue(LD, 2)};
+    SDValue Results[] = {SDValue(Unpacked, 0), SDValue(Unpacked, 1), LoadChain};
+    ReplaceUses(OldResults, Results, 3);
+    CurDAG->RemoveDeadNode(LD);
+  } else {
+    ReplaceNode(LD, NVPTXLD);
+  }
   return true;
 }
 
@@ -1513,7 +1506,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   const MVT EltVT = LD->getSimpleValueType(0);
   SDLoc DL(LD);
   SDValue Chain = LD->getChain();
-  const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, LD);
+  const auto [Ordering, Scope] = getMemInstOrderingScope(LD);
 
   // Type Setting: fromType + fromTypeWidth
   //
@@ -1700,7 +1693,10 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
   assert(ST->writeMem() && "Expected store");
   StoreSDNode *PlainStore = dyn_cast<StoreSDNode>(ST);
   AtomicSDNode *AtomicStore = dyn_cast<AtomicSDNode>(ST);
-  assert((PlainStore || AtomicStore) && "Expected store");
+  // i128 is not a legal type, so ATOMIC_STORE_B128 is neither of the above: it
+  // carries its value as a pair of 64-bit operands.
+  const bool IsB128 = N->getOpcode() == NVPTXISD::ATOMIC_STORE_B128;
+  assert((PlainStore || AtomicStore || IsB128) && "Expected store");
 
   // do not support pre/post inc/dec
   if (PlainStore && PlainStore->isIndexed())
@@ -1711,13 +1707,22 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
 
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
-  const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
+  const auto [Ordering, Scope] = getMemInstOrderingScope(ST);
 
   // Vector Setting
   const unsigned ToTypeWidth = ST->getMemoryVT().getSizeInBits();
 
   // Create the machine instruction DAG
-  SDValue Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
+  SDValue Value;
+  if (IsB128) {
+    SDNode *Packed =
+        CurDAG->getMachineNode(NVPTX::V2I64toI128, DL, MVT::i128,
+                               {selectPossiblyImm(N->getOperand(2)),
+                                selectPossiblyImm(N->getOperand(3))});
+    Value = SDValue(Packed, 0);
+  } else {
+    Value = PlainStore ? PlainStore->getValue() : AtomicStore->getVal();
+  }
 
   assert(isPowerOf2_32(ToTypeWidth) && ToTypeWidth >= 8 && ToTypeWidth <= 128 &&
          "Invalid width for store");
@@ -1743,8 +1748,9 @@ bool NVPTXDAGToDAGISel::tryStore(SDNode *N) {
                    Chain};
 
   const std::optional<unsigned> Opcode =
-      pickOpcodeForVT(Value.getSimpleValueType().SimpleTy, NVPTX::ST_i16,
-                      NVPTX::ST_i32, NVPTX::ST_i64);
+      IsB128 ? NVPTX::ST_i128
+             : pickOpcodeForVT(Value.getSimpleValueType().SimpleTy,
+                               NVPTX::ST_i16, NVPTX::ST_i32, NVPTX::ST_i64);
   if (!Opcode)
     return false;
 
@@ -1772,7 +1778,7 @@ bool NVPTXDAGToDAGISel::tryStoreVector(SDNode *N) {
 
   SDLoc DL(ST);
   SDValue Chain = ST->getChain();
-  const auto [Ordering, Scope] = insertMemoryInstructionFence(DL, Chain, ST);
+  const auto [Ordering, Scope] = getMemInstOrderingScope(ST);
 
   const unsigned NumElts = getStoreVectorNumElts(ST);
 

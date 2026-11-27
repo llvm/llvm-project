@@ -206,8 +206,7 @@ public:
     SmallVector<std::pair<func::FuncOp, RoutineOp>, 4> accRoutineInfo;
 
     for (RoutineOp routineOp : mod.getOps<RoutineOp>()) {
-      if (routineOp.getBindNameValue() ||
-          routineOp.getBindNameValue(deviceType))
+      if (routineOp.getEffectiveBindName(deviceType))
         continue;
 
       func::FuncOp hostFunc = symTab.lookup<func::FuncOp>(

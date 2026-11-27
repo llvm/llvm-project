@@ -9,16 +9,17 @@
 define range(i64 0, -9223372036854775808) i64 @test_stack_protector_with_vector_clobber(ptr nofree noundef %0) #0 {
 ; RV64V-LABEL: test_stack_protector_with_vector_clobber:
 ; RV64V:       # %bb.0:
-; RV64V-NEXT:    li a1, 2
 ; RV64V-NEXT:    ld t2, 0(a0)
 ; RV64V-NEXT:    #APP
 ; RV64V-NEXT:    #NO_APP
+; RV64V-NEXT:    li a1, 2
 ; RV64V-NEXT:    bge t2, a1, .LBB0_2
 ; RV64V-NEXT:  # %bb.1:
 ; RV64V-NEXT:    li a0, 0
 ; RV64V-NEXT:    ret
 ; RV64V-NEXT:  .LBB0_2:
 ; RV64V-NEXT:    addi sp, sp, -16
+; RV64V-NEXT:    sd zero, 0(sp)
 ; RV64V-NEXT:    csrr t1, vlenb
 ; RV64V-NEXT:    slli t1, t1, 3
 ; RV64V-NEXT:    lui t0, 1
@@ -29,6 +30,7 @@ define range(i64 0, -9223372036854775808) i64 @test_stack_protector_with_vector_
 ; RV64V-NEXT:    bge t1, t0, .LBB0_3
 ; RV64V-NEXT:  # %bb.4:
 ; RV64V-NEXT:    sub sp, sp, t1
+; RV64V-NEXT:    sd zero, 0(sp)
 ; RV64V-NEXT:    vsetivli zero, 8, e64, m8, ta, ma
 ; RV64V-NEXT:    vle64.v v8, (a0)
 ; RV64V-NEXT:    addi a1, sp, 16

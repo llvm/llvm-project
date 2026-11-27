@@ -786,6 +786,12 @@ static Instruction *foldVecExtTruncToExtElt(TruncInst &Trunc,
   auto *VecOpTy = cast<VectorType>(VecOp->getType());
   auto VecElts = VecOpTy->getElementCount();
 
+  // Do not create bitcasts for vectors with a non-power-of-2 element size,
+  // like <4 x i56> to <56 x i4>. Such bitcasts may not be legalizable by the
+  // backend.
+  if (!isPowerOf2_64(SrcBits))
+    return nullptr;
+
   uint64_t BitCastNumElts = VecElts.getKnownMinValue() * TruncRatio;
   // Computed in 64-bit above to avoid a 32-bit overflow. Bail out if the
   // element count exceeds IntegerType::MAX_INT_BITS, as we cannot create a
@@ -1380,6 +1386,13 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     Value *Right = ConstantInt::get(V1->getType(), C1->countr_zero());
     return new ICmpInst(ICmpInst::ICMP_UGE, V1, Right);
   }
+
+  if (DestTy->isIntegerTy(1))
+    if (auto *LI = dyn_cast<LoadInst>(Src))
+      if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
+              LI, ICmpInst::ICMP_NE, ConstantInt::getNullValue(SrcTy), Trunc,
+              ConstantInt::get(cast<IntegerType>(SrcTy), 1)))
+        return Res;
 
   return Changed ? &Trunc : nullptr;
 }
@@ -2418,7 +2431,8 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
     if (auto *FPMO = dyn_cast<FPMathOperator>(Op))
       FMF &= FPMO->getFastMathFlags();
 
-    if (match(Op, m_FNeg(m_Value(X)))) {
+    // TODO: Confirm whether m_FNegOrFSubNegZero is correct.
+    if (match(Op, m_FNegOrFSubNegZero(m_Value(X)))) {
       Value *InnerTrunc = Builder.CreateFPTruncFMF(X, Ty, FMF);
       Value *Neg = Builder.CreateFNegFMF(InnerTrunc, FMF);
       return replaceInstUsesWith(FPT, Neg);

@@ -327,3 +327,20 @@ Sections:
                 AddressOffset: 0x4
                 Size:          0x5
                 Metadata:      0x6
+
+## Check that obj2yaml reports an error for an unsupported feature.
+
+# RUN: yaml2obj --docnum=6 %s -o %t8
+# RUN: not obj2yaml %t8 2>&1 | FileCheck %s -DFILE=%t8 --check-prefix=BAD-FEATURE
+
+# BAD-FEATURE: Error reading file: [[FILE]]: invalid encoding for BBAddrMap::Features: 0x200
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+Sections:
+  - Name:    .llvm_bb_addr_map
+    Type:    SHT_LLVM_BB_ADDR_MAP
+    Content: "050002"

@@ -7,15 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/HLSL/HLSLUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -23,16 +24,6 @@
 
 using namespace llvm;
 using namespace dxil;
-
-cl::OptionCategory DXContainerCategory("DXContainer Options");
-static cl::opt<dxbc::SourceInfo::Contents::CompressionType> CompressSRCI(
-    "compress-srci", cl::ValueOptional,
-    cl::desc("Choose SCRI part compression:"),
-    cl::values(clEnumValN(dxbc::SourceInfo::Contents::CompressionType::None,
-                          "none", "No compression"),
-               clEnumValN(dxbc::SourceInfo::Contents::CompressionType::Zlib,
-                          "zlib", "Use zlib")),
-    cl::cat(DXContainerCategory));
 
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
@@ -53,8 +44,8 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   NamedMDNode *ArgsNode = M.getNamedMetadata("dx.source.args");
   if (ContentsNode && ArgsNode) {
     MMDAI.SourceInfo.emplace();
-    if (CompressSRCI.getNumOccurrences() > 0) {
-      MMDAI.SourceInfo->setCompressionType(CompressSRCI);
+    if (auto Type = getAnalysisOptions(M).compress_srci) {
+      MMDAI.SourceInfo->setCompressionType(*Type);
     } else {
       // If the option is not specified, pick zlib if available.
       MMDAI.SourceInfo->setCompressionType(
@@ -85,38 +76,21 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     StringRef EntryProfile = EntryAttr.getValueAsString();
     Triple T("", "", "", EntryProfile);
     EFP.ShaderStage = T.getEnvironment();
+
     // Get numthreads attribute value, if one exists
     StringRef NumThreadsStr =
         F.getFnAttribute("hlsl.numthreads").getValueAsString();
-    if (!NumThreadsStr.empty()) {
-      SmallVector<StringRef> NumThreadsVec;
-      NumThreadsStr.split(NumThreadsVec, ',');
-      assert(NumThreadsVec.size() == 3 && "Invalid numthreads specified");
-      // Read in the three component values of numthreads
-      [[maybe_unused]] bool Success =
-          llvm::to_integer(NumThreadsVec[0], EFP.NumThreadsX, 10);
-      assert(Success && "Failed to parse X component of numthreads");
-      Success = llvm::to_integer(NumThreadsVec[1], EFP.NumThreadsY, 10);
-      assert(Success && "Failed to parse Y component of numthreads");
-      Success = llvm::to_integer(NumThreadsVec[2], EFP.NumThreadsZ, 10);
-      assert(Success && "Failed to parse Z component of numthreads");
-    }
+    if (!NumThreadsStr.empty())
+      hlsl::parseThreadCounts(NumThreadsStr, EFP.NumThreadsX, EFP.NumThreadsY,
+                              EFP.NumThreadsZ);
+
     // Get wavesize attribute value, if one exists
     StringRef WaveSizeStr =
         F.getFnAttribute("hlsl.wavesize").getValueAsString();
-    if (!WaveSizeStr.empty()) {
-      SmallVector<StringRef> WaveSizeVec;
-      WaveSizeStr.split(WaveSizeVec, ',');
-      assert(WaveSizeVec.size() == 3 && "Invalid wavesize specified");
-      // Read in the three component values of numthreads
-      [[maybe_unused]] bool Success =
-          llvm::to_integer(WaveSizeVec[0], EFP.WaveSizeMin, 10);
-      assert(Success && "Failed to parse Min component of wavesize");
-      Success = llvm::to_integer(WaveSizeVec[1], EFP.WaveSizeMax, 10);
-      assert(Success && "Failed to parse Max component of wavesize");
-      Success = llvm::to_integer(WaveSizeVec[2], EFP.WaveSizePref, 10);
-      assert(Success && "Failed to parse Preferred component of wavesize");
-    }
+    if (!WaveSizeStr.empty())
+      hlsl::parseThreadCounts(WaveSizeStr, EFP.WaveSizeMin, EFP.WaveSizeMax,
+                              EFP.WaveSizePref);
+
     MMDAI.EntryPropertyVec.push_back(EFP);
   }
   return MMDAI;

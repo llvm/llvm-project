@@ -332,9 +332,8 @@ bool Float2IntPass::validateAndTransform(const DataLayout &DL) {
         // Set the type of the conversion while we're here.
         if (!ConvertedToTy)
           ConvertedToTy = I->getType();
-        for (User *U : I->users()) {
-          Instruction *UI = dyn_cast<Instruction>(U);
-          if (!UI || !SeenInsts.contains(UI)) {
+        for (Instruction *U : I->users()) {
+          if (!SeenInsts.contains(U)) {
             LLVM_DEBUG(dbgs() << "F2I: Failing because of " << *U << "\n");
             Fail = true;
             break;
@@ -485,8 +484,7 @@ bool Float2IntPass::runImpl(Function &F, const DominatorTree &DT) {
   Roots.clear();
 
   Ctx = &F.getParent()->getContext();
-  MaxIntegerBW =
-      Ctx->getLibraryOptions().get<ScalarOptions>().float2int_max_integer_bw;
+  MaxIntegerBW = getScalarOptions(*Ctx).float2int_max_integer_bw;
 
   findRoots(F, DT);
 

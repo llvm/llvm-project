@@ -147,12 +147,12 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
 static void collectCastInstrs(Loop *TheLoop, Instruction *Exit,
                               Type *RecurrenceType,
                               SmallPtrSetImpl<Instruction *> &Casts,
-                              unsigned &MinWidthCastToRecurTy) {
+                              Type *&MinWidthCastToRecurTy) {
 
   SmallVector<Instruction *, 8> Worklist;
   SmallPtrSet<Instruction *, 8> Visited;
   Worklist.push_back(Exit);
-  MinWidthCastToRecurTy = -1U;
+  MinWidthCastToRecurTy = nullptr;
 
   while (!Worklist.empty()) {
     Instruction *Val = Worklist.pop_back_val();
@@ -170,8 +170,11 @@ static void collectCastInstrs(Loop *TheLoop, Instruction *Exit,
         // casts on its operands. The minimum width is used by the vectorizer
         // when finding the widest type for in-loop reductions without any
         // loads/stores.
-        MinWidthCastToRecurTy = std::min<unsigned>(
-            MinWidthCastToRecurTy, Cast->getSrcTy()->getScalarSizeInBits());
+        Type *SrcTy = Cast->getSrcTy()->getScalarType();
+        if (!MinWidthCastToRecurTy ||
+            SrcTy->getScalarSizeInBits() <
+                MinWidthCastToRecurTy->getScalarSizeInBits())
+          MinWidthCastToRecurTy = SrcTy;
         continue;
       }
     }
@@ -237,6 +240,15 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
   if (HasRequiredFMF)
     return collectMinMaxFMF(FPOp);
 
+  // Select-based min/max without nnan/nsz require equal non-NaN values to only
+  // differ in the sign of zero, i.e. an IEEE type without flushed denormals.
+  auto *Sel = dyn_cast<SelectInst>(FPOp);
+  Type *Ty = FPOp->getType();
+  if (Sel && (!Ty->isIEEELikeFPTy() ||
+              Sel->getFunction()->getDenormalMode(Ty->getFltSemantics()) !=
+                  DenormalMode::getIEEE()))
+    return std::nullopt;
+
   switch (RK) {
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
@@ -245,19 +257,17 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
     break;
 
   case RecurKind::FMax:
-    if (!match(FPOp, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
-      return std::nullopt;
-    RK = RecurKind::FMaxNum;
+    RK = Sel ? RecurKind::FMaxSelectNoFMF : RecurKind::FMaxNum;
     break;
   case RecurKind::FMin:
-    if (!match(FPOp, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
-      return std::nullopt;
-    RK = RecurKind::FMinNum;
+    RK = Sel ? RecurKind::FMinSelectNoFMF : RecurKind::FMinNum;
     break;
   default:
     return std::nullopt;
   }
-  return collectMinMaxFMF(FPOp);
+  // Only use FPOp's flags, as e.g. nsz on the fcmp of a select-based min/max
+  // does not apply to its result.
+  return FPOp->getFastMathFlags();
 }
 
 static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
@@ -415,6 +425,17 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
       IntermediateStore = SI;
   }
 
+  // The vectorizer replaces the per-iteration store to the invariant address
+  // with a single store of the final reduced value in the middle block. That is
+  // only correct if the store stores the reduction value itself. If it stores a
+  // value derived from it (e.g. `%other = smax(%phi, 42); store %other`), that
+  // value observes the per-iteration running min/max, so replacing it with the
+  // final reduction value would miscompile. Mirrors the check in
+  // AddReductionVar.
+  if (IntermediateStore &&
+      IntermediateStore->getValueOperand() != BackedgeValue)
+    return {};
+
   return RecurrenceDescriptor(
       Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader()),
       cast<Instruction>(BackedgeValue), IntermediateStore, RK, FMF, nullptr,
@@ -491,7 +512,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Data used for determining if the recurrence has been type-promoted.
   Type *RecurrenceType = Phi->getType();
   SmallPtrSet<Instruction *, 4> CastInsts;
-  unsigned MinWidthCastToRecurrenceType;
+  Type *MinWidthCastToRecurrenceType = nullptr;
   Instruction *Start = Phi;
   bool IsSigned = false;
 
@@ -673,9 +694,7 @@ bool RecurrenceDescriptor::AddReductionVar(
     // nodes once we get to them.
     SmallVector<Instruction *, 8> NonPHIs;
     SmallVector<Instruction *, 8> PHIs;
-    for (User *U : Cur->users()) {
-      Instruction *UI = cast<Instruction>(U);
-
+    for (Instruction *UI : Cur->users()) {
       // If the user is a call to llvm.fmuladd then the instruction can only be
       // the final operand.
       if (isFMulAddIntrinsic(UI))
@@ -1226,8 +1245,8 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
   // Try to recursively sink instructions and their users after Previous.
   while (!WorkList.empty()) {
     Instruction *Current = WorkList.pop_back_val();
-    for (User *User : Current->users()) {
-      if (!TryToPushSinkCandidate(cast<Instruction>(User)))
+    for (Instruction *User : Current->users()) {
+      if (!TryToPushSinkCandidate(User))
         return false;
     }
   }
@@ -1305,8 +1324,7 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     ExpectedUses = 2;
 
   auto getNextInstruction = [&](Instruction *Cur) -> Instruction * {
-    for (auto *User : Cur->users()) {
-      Instruction *UI = cast<Instruction>(User);
+    for (Instruction *UI : Cur->users()) {
       if (isa<PHINode>(UI))
         continue;
       if (IsMinMax) {
@@ -1407,7 +1425,7 @@ InductionDescriptor::InductionDescriptor(
          "StartValue is not an integer for integer induction");
 
   // Check the Step Value. It should be non-zero integer value.
-  assert((!getConstIntStepValue() || !getConstIntStepValue()->isZero()) &&
+  assert((!getConstStepValue() || !getConstStepValue()->isZero()) &&
          "Step value is zero");
 
   assert((IK == IK_FpInduction || Step->getType()->isIntegerTy()) &&
@@ -1432,10 +1450,10 @@ InductionDescriptor::getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE) {
                              SE.getOne(Ty));
 }
 
-ConstantInt *InductionDescriptor::getConstIntStepValue() const {
+std::optional<APInt> InductionDescriptor::getConstStepValue() const {
   if (auto *ConstStep = dyn_cast<SCEVConstant>(Step))
-    return ConstStep->getValue();
-  return nullptr;
+    return ConstStep->getValue()->getValue();
+  return {};
 }
 
 bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
@@ -1737,8 +1755,7 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
 
   // Ensure the only users of the backedge PHI are outside the loop or the
   // header PHI (PN).
-  for (User *U : BackedgePHI->users()) {
-    auto *UI = cast<Instruction>(U);
+  for (Instruction *UI : BackedgePHI->users()) {
     if (UI != PN && L->contains(UI))
       return false;
   }
@@ -1757,18 +1774,16 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
   if (!StepInst)
     return false;
 
+  const DataLayout &DL = SE.getDataLayout();
   Value *Step = nullptr;
   bool StepMatch =
       PN->getType()->isPointerTy()
-          ? match(StepInst, m_PtrAdd(m_Specific(PN), m_Value(Step)))
+          ? match(StepInst, m_PtrAdd(DL, m_Specific(PN), m_Value(Step)))
           : match(StepInst, m_c_Add(m_Specific(PN), m_Value(Step)));
   if (!StepMatch || !L->isLoopInvariant(Step))
     return false;
 
-  // Ensure GEP offsets are extended to the size of the PHI.
-  const SCEV *StepSCEV = SE.getTruncateOrSignExtend(
-      SE.getSCEV(Step), SE.getEffectiveSCEVType(PN->getType()));
-
+  const SCEV *StepSCEV = SE.getSCEV(Step);
   if (StepSCEV->isZero())
     return false;
 
@@ -1795,4 +1810,12 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
   Desc = ConditionalInductionDescriptor(PN, BackedgePHI, StepInst, StartSCEV,
                                         StepSCEV, NoWrapFlags);
   return true;
+}
+
+const SCEV *
+ConditionalInductionDescriptor::getUnconditionalAddRec(ScalarEvolution &SE,
+                                                       const Loop &L) const {
+  assert(L.contains(HeaderPHI) &&
+         "The provided loop does not contain this conditional induction");
+  return SE.getAddRecExpr(getStartSCEV(), getStepSCEV(), &L, SCEV::FlagNone);
 }

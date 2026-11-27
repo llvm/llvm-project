@@ -38,6 +38,7 @@ def ArmSMETileType : I32EnumAttr<"ArmSMETileType", "Arm SME tile type",
 }
 
 def ArmSMETileOpInterface : OpInterface<"ArmSMETileOpInterface"> {
+  let cppNamespace = "::mlir::arm_sme";
   let description = [{
     An interface for operations that use Arm SME tiles. These operations need to
     be assigned a tile ID, an i32 attribute, which specifies which virtual tile
@@ -214,7 +215,9 @@ def ArmSME_TypeSizeAttr : EnumAttr<ArmSME_Dialect, TypeSize,
 //===----------------------------------------------------------------------===//
 
 class ArmSME_Op<string mnemonic, list<Trait> traits = []> :
-  Op<ArmSME_Dialect, mnemonic, traits> {}
+  Op<ArmSME_Dialect, mnemonic, traits> {
+  let partition = ArmSME_CorePartition;
+}
 
 def GetTileOp : ArmSME_Op<"get_tile", [ArmSMETileOpInterface, Pure]> {
   let summary = "Creates an undefined value of SME virtual tile type";

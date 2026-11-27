@@ -271,3 +271,63 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [CacheControlsINTEL], [SP
 }
 
 // -----
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.FunctionPointerCall
+//===----------------------------------------------------------------------===//
+
+spirv.func @function_pointer_call(%fp : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, %vfp : !spirv.ptr<() -> (), CodeSectionINTEL>, %arg0 : i32, %arg1 : f32) -> i32 "None" {
+  // CHECK: {{%.*}} = spirv.INTEL.FunctionPointerCall {{%.*}}({{%.*}}, {{%.*}}) : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, (i32, f32) -> i32
+  %0 = spirv.INTEL.FunctionPointerCall %fp(%arg0, %arg1) : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, (i32, f32) -> i32
+  // CHECK: spirv.INTEL.FunctionPointerCall {{%.*}}() : !spirv.ptr<() -> (), CodeSectionINTEL>, () -> ()
+  spirv.INTEL.FunctionPointerCall %vfp() : !spirv.ptr<() -> (), CodeSectionINTEL>, () -> ()
+  spirv.ReturnValue %0 : i32
+}
+
+// -----
+
+spirv.func @function_pointer_call_not_function_type(%fp : !spirv.ptr<i32, CodeSectionINTEL>) "None" {
+  // expected-error @+1 {{operand #0 must be pointer to function type, but got '!spirv.ptr<i32, CodeSectionINTEL>'}}
+  spirv.INTEL.FunctionPointerCall %fp() : !spirv.ptr<i32, CodeSectionINTEL>, () -> ()
+  spirv.Return
+}
+
+// -----
+
+spirv.func @function_pointer_call_operand_count(%fp : !spirv.ptr<(i32, i32) -> (), CodeSectionINTEL>, %arg0 : i32) "None" {
+  // expected-error @+1 {{has incorrect number of operands for callee: expected 2, but provided 1}}
+  spirv.INTEL.FunctionPointerCall %fp(%arg0) : !spirv.ptr<(i32, i32) -> (), CodeSectionINTEL>, (i32) -> ()
+  spirv.Return
+}
+
+// -----
+
+spirv.func @function_pointer_call_operand_type(%fp : !spirv.ptr<(i32, i32) -> (), CodeSectionINTEL>, %arg0 : i32, %arg1 : f32) "None" {
+  // expected-error @+1 {{operand type mismatch: expected operand type 'i32', but provided 'f32' for operand number 1}}
+  spirv.INTEL.FunctionPointerCall %fp(%arg0, %arg1) : !spirv.ptr<(i32, i32) -> (), CodeSectionINTEL>, (i32, f32) -> ()
+  spirv.Return
+}
+
+// -----
+
+spirv.func @function_pointer_call_result_count(%fp : !spirv.ptr<() -> (), CodeSectionINTEL>) "None" {
+  // expected-error @+1 {{has incorrect number of results for callee: expected 0, but provided 1}}
+  %0 = spirv.INTEL.FunctionPointerCall %fp() : !spirv.ptr<() -> (), CodeSectionINTEL>, () -> i32
+  spirv.Return
+}
+
+// -----
+
+spirv.func @function_pointer_call_missing_result(%fp : !spirv.ptr<() -> i32, CodeSectionINTEL>) "None" {
+  // expected-error @+1 {{has incorrect number of results for callee: expected 1, but provided 0}}
+  spirv.INTEL.FunctionPointerCall %fp() : !spirv.ptr<() -> i32, CodeSectionINTEL>, () -> ()
+  spirv.Return
+}
+
+// -----
+
+spirv.func @function_pointer_call_result_type(%fp : !spirv.ptr<() -> i32, CodeSectionINTEL>) "None" {
+  // expected-error @+1 {{result type mismatch: expected 'i32', but provided 'f32'}}
+  %0 = spirv.INTEL.FunctionPointerCall %fp() : !spirv.ptr<() -> i32, CodeSectionINTEL>, () -> f32
+  spirv.Return
+}

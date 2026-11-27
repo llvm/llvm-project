@@ -341,7 +341,7 @@ TEST_F(CIROpenACCPointerLikeTest, testPointerToFunction) {
 
 TEST_F(CIROpenACCPointerLikeTest, testPointerToVector) {
   mlir::Type i32Ty = cir::IntType::get(&context, 32, true);
-  mlir::Type vecTy = cir::VectorType::get(i32Ty, 4);
+  mlir::Type vecTy = cir::VectorType::getFixed(i32Ty, 4);
   testNonScalarType(vecTy);
 }
 

@@ -1,5 +1,29 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
+func.func @extract_slice_scalable_offset(%source: tensor<16xf32>) {
+  // expected-error@below {{scalable indices are not supported}}
+  %0 = tensor.extract_slice %source[[4]] [8] [1] : tensor<16xf32> to tensor<8xf32>
+  return
+}
+
+// -----
+
+func.func @extract_slice_scalable_size(%source: tensor<16xf32>) {
+  // expected-error@below {{scalable indices are not supported}}
+  %0 = tensor.extract_slice %source[4] [[8]] [1] : tensor<16xf32> to tensor<8xf32>
+  return
+}
+
+// -----
+
+func.func @extract_slice_scalable_stride(%source: tensor<16xf32>) {
+  // expected-error@below {{scalable indices are not supported}}
+  %0 = tensor.extract_slice %source[4] [8] [[1]] : tensor<16xf32> to tensor<8xf32>
+  return
+}
+
+// -----
+
 // Asking the dimension of a 0-D shape doesn't make sense.
 func.func @dim_0_ranked(%arg : tensor<f32>, %arg1 : index) {
   tensor.dim %arg, %arg1 : tensor<f32> // expected-error {{'tensor.dim' op operand #0 must be non-0-ranked or unranked tensor, but got 'tensor<f32>'}}
@@ -731,3 +755,59 @@ func.func @no_fold_invalid_collapse() -> tensor<i64> {
     return %0 : tensor<i64>
 }
 
+// -----
+
+func.func @pad_negative_low(%arg0: tensor<10xf32>, %arg1: f32) -> tensor<8xf32> {
+  // expected-error @+1 {{padding must be non-negative, got -2}}
+  %0 = tensor.pad %arg0 low[-2] high[0] {
+  ^bb0(%arg2: index):
+    tensor.yield %arg1 : f32
+  } : tensor<10xf32> to tensor<8xf32>
+  return %0 : tensor<8xf32>
+}
+
+// -----
+
+func.func @pad_negative_high(%arg0: tensor<?x4xf32>, %arg1: f32) -> tensor<?x3xf32> {
+  // expected-error @+1 {{padding must be non-negative, got -1}}
+  %0 = tensor.pad %arg0 low[0, 0] high[0, -1] {
+  ^bb0(%arg2: index, %arg3: index):
+    tensor.yield %arg1 : f32
+  } : tensor<?x4xf32> to tensor<?x3xf32>
+  return %0 : tensor<?x3xf32>
+}
+
+// -----
+
+func.func @pad_negative_dynamic_dim(%arg0: tensor<?xf32>, %arg1: f32) -> tensor<?xf32> {
+  // expected-error @+1 {{padding must be non-negative, got -1}}
+  %0 = tensor.pad %arg0 low[-1] high[0] {
+  ^bb0(%arg2: index):
+    tensor.yield %arg1 : f32
+  } : tensor<?xf32> to tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
+
+func.func @collapse_shape_num_elements_overflow(%arg0: tensor<4611686018427387904x2xf32>) {
+  // expected-error@+1 {{'tensor.collapse_shape' op number of elements exceeds the int64 range}}
+  %0 = tensor.collapse_shape %arg0 [[0], [1]] : tensor<4611686018427387904x2xf32> into tensor<4611686018427387904x2xf32>
+  return
+}
+
+// -----
+
+func.func @collapse_shape_num_elements_overflow_to_scalar(%arg0: tensor<4611686018427387904x2xf32>) {
+  // expected-error@+1 {{'tensor.collapse_shape' op number of elements exceeds the int64 range}}
+  %0 = tensor.collapse_shape %arg0 [] : tensor<4611686018427387904x2xf32> into tensor<f32>
+  return
+}
+
+// -----
+
+func.func @expand_shape_num_elements_overflow(%arg0: tensor<4611686018427387904x2xf32>) {
+  // expected-error@+1 {{'tensor.expand_shape' op number of elements exceeds the int64 range}}
+  %0 = tensor.expand_shape %arg0 [[0], [1]] output_shape [4611686018427387904, 2] : tensor<4611686018427387904x2xf32> into tensor<4611686018427387904x2xf32>
+  return
+}

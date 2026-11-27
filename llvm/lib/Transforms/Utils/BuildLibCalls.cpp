@@ -475,10 +475,13 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotCapture(F, 0);
     break;
   case LibFunc_strndup:
+  case LibFunc_dunder_strndup:
     Changed |= setArgNoUndef(F, 1);
     [[fallthrough]];
   case LibFunc_strdup:
+  case LibFunc_dunder_strdup:
     Changed |= setAllocFamily(F, "malloc");
+    Changed |= setAllocKind(F, AllocFnKind::Alloc);
     Changed |= setOnlyAccessesInaccessibleMemOrArgMemOrErrnoMem(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setRetDoesNotAlias(F);
@@ -766,6 +769,17 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setRetDoesNotAlias(F);
     Changed |= setWillReturn(F);
     break;
+  case LibFunc_cheriot_heap_allocate:
+    Changed |= setAllocFamily(F, "cheriot_heap_allocate");
+    Changed |= setAllocKind(F, AllocFnKind::Alloc | AllocFnKind::Zeroed);
+    Changed |= setAllocSize(F, 2, std::nullopt);
+    Changed |= setRetDoesNotAlias(F);
+    break;
+  case LibFunc_cheriot_heap_free:
+    Changed |= setAllocFamily(F, "cheriot_heap_allocate");
+    Changed |= setAllocKind(F, AllocFnKind::Free);
+    Changed |= setAllocatedPointerParam(F, 1);
+    break;
   case LibFunc_chmod:
   case LibFunc_chown:
     Changed |= setRetAndArgsNoUndef(F);
@@ -774,6 +788,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_ctermid:
+    Changed |= setRetAndArgsNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    break;
   case LibFunc_clearerr:
   case LibFunc_closedir:
     Changed |= setRetAndArgsNoUndef(F);
@@ -1126,16 +1143,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotCapture(F, 3);
     break;
-  case LibFunc_dunder_strndup:
-    Changed |= setArgNoUndef(F, 1);
-    [[fallthrough]];
-  case LibFunc_dunder_strdup:
-    Changed |= setDoesNotThrow(F);
-    Changed |= setRetDoesNotAlias(F);
-    Changed |= setWillReturn(F);
-    Changed |= setDoesNotCapture(F, 0);
-    Changed |= setOnlyReadsMemory(F, 0);
-    break;
   case LibFunc_dunder_strtok_r:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCallback(F);
@@ -1350,7 +1357,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_scalbnf:
   case LibFunc_scalbnl:
   case LibFunc_sin:
-  case LibFunc_sincospif_stret:
   case LibFunc_sinf:
   case LibFunc_sinh:
   case LibFunc_sinhf:
@@ -1419,6 +1425,10 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_roundeven:
   case LibFunc_roundevenf:
   case LibFunc_roundevenl:
+  case LibFunc_sincos_stret:
+  case LibFunc_sincosf_stret:
+  case LibFunc_sincospi_stret:
+  case LibFunc_sincospif_stret:
   case LibFunc_toascii:
   case LibFunc_trunc:
   case LibFunc_truncf:
@@ -1457,7 +1467,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   }
   // We have to do this step after AllocKind has been inferred on functions so
   // we can reliably identify free-like and realloc-like functions.
-  if (!isLibFreeFunction(&F, TheLibFunc) && !isReallocLikeFn(&F))
+  if (!isFreeLikeFn(&F) && !isReallocLikeFn(&F))
     Changed |= setDoesNotFreeMemory(F);
   return Changed;
 }
@@ -2100,18 +2110,18 @@ Value *llvm::emitCalloc(Value *Num, Value *Size, IRBuilderBase &B,
 Value *llvm::emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
                                          const TargetLibraryInfo *TLI,
                                          LibFunc SizeFeedbackNewFunc,
-                                         Value *HotCold) {
+                                         Value *HotCold, Type *RetTy) {
   Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+  if (const Function *F = M->getFunction(Name);
+      F && F->getReturnType() != RetTy)
+    return nullptr;
 
-  // __sized_ptr_t struct return type { void*, size_t }
-  StructType *SizedPtrT =
-      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
-  FunctionCallee Func = getOrInsertLibFunc(
-      M, *TLI, SizeFeedbackNewFunc, SizedPtrT, Num->getType(), B.getInt8Ty());
+  FunctionCallee Func = getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, RetTy,
+                                           Num->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, HotCold}, "sized_ptr");
 
@@ -2125,19 +2135,19 @@ Value *llvm::emitHotColdSizeReturningNewAligned(Value *Num, Value *Align,
                                                 IRBuilderBase &B,
                                                 const TargetLibraryInfo *TLI,
                                                 LibFunc SizeFeedbackNewFunc,
-                                                Value *HotCold) {
+                                                Value *HotCold, Type *RetTy) {
   Module *M = B.getModule();
   if (!isLibFuncEmittable(M, TLI, SizeFeedbackNewFunc))
     return nullptr;
 
   StringRef Name = TLI->getName(SizeFeedbackNewFunc);
+  if (const Function *F = M->getFunction(Name);
+      F && F->getReturnType() != RetTy)
+    return nullptr;
 
-  // __sized_ptr_t struct return type { void*, size_t }
-  StructType *SizedPtrT =
-      StructType::get(M->getContext(), {B.getPtrTy(), Num->getType()});
   FunctionCallee Func =
-      getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, SizedPtrT,
-                         Num->getType(), Align->getType(), B.getInt8Ty());
+      getOrInsertLibFunc(M, *TLI, SizeFeedbackNewFunc, RetTy, Num->getType(),
+                         Align->getType(), B.getInt8Ty());
   inferNonMandatoryLibFuncAttrs(M, Name, *TLI);
   CallInst *CI = B.CreateCall(Func, {Num, Align, HotCold}, "sized_ptr");
 

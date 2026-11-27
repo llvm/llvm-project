@@ -595,27 +595,24 @@ countToEliminateCompares(Loop &L, unsigned MaxPeelCount, ScalarEvolution &SE,
     const SCEV *LeftSCEV = SE.getSCEV(LeftVal);
     const SCEV *RightSCEV = SE.getSCEV(RightVal);
 
+    // Check if we have a condition with one AddRec and one non AddRec
+    // expression. Avoid huge SCEV computations in the loop below, make sure we
+    // only consider AddRecs of the loop we are trying to peel.
+    bool Swap = !isa<SCEVAddRecExpr>(LeftSCEV);
+    const auto *LeftAR = dyn_cast<SCEVAddRecExpr>(Swap ? RightSCEV : LeftSCEV);
+    if (!LeftAR || !LeftAR->isAffine() || LeftAR->getLoop() != &L)
+      return;
+
     // Do not consider predicates that are known to be true or false
     // independently of the loop iteration.
     if (SE.evaluatePredicate(Pred, LeftSCEV, RightSCEV))
       return;
 
-    // Check if we have a condition with one AddRec and one non AddRec
-    // expression. Normalize LeftSCEV to be the AddRec.
-    if (!isa<SCEVAddRecExpr>(LeftSCEV)) {
-      if (isa<SCEVAddRecExpr>(RightSCEV)) {
-        std::swap(LeftSCEV, RightSCEV);
-        Pred = ICmpInst::getSwappedPredicate(Pred);
-      } else
-        return;
+    // Normalize LeftSCEV to be the AddRec.
+    if (Swap) {
+      std::swap(LeftSCEV, RightSCEV);
+      Pred = ICmpInst::getSwappedPredicate(Pred);
     }
-
-    const SCEVAddRecExpr *LeftAR = cast<SCEVAddRecExpr>(LeftSCEV);
-
-    // Avoid huge SCEV computations in the loop below, make sure we only
-    // consider AddRecs of the loop we are trying to peel.
-    if (!LeftAR->isAffine() || LeftAR->getLoop() != &L)
-      return;
     if (!(ICmpInst::isEquality(Pred) && LeftAR->hasNoSelfWrap()) &&
         !SE.getMonotonicPredicateType(LeftAR, Pred))
       return;
@@ -1323,7 +1320,7 @@ void llvm::peelLoop(Loop *L, unsigned PeelCount, bool PeelLast, LoopInfo *LI,
 
     // Remap to use values from the current iteration instead of the
     // previous one.
-    remapInstructionsInBlocks(NewBlocks, VMap);
+    remapInstructionsInBlocks(NewBlocks, VMap, AC);
 
     if (Iter == 0) {
       if (PeelLast) {

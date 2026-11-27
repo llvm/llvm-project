@@ -16,6 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenOptions.h"
 #include "MIRVRegNamerUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -47,7 +48,7 @@ public:
     if (MF.empty())
       return Changed;
 
-    VRegRenamer Renamer(MF.getRegInfo());
+    VRegRenamer Renamer(getCodeGenOptions(MF), MF.getRegInfo());
 
     ReversePostOrderTraversal<MachineBasicBlock *> RPOT(&*MF.begin());
     for (const auto &[BBIndex, MBB] : enumerate(RPOT))

@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/Directive/Spelling.h"
+#include "llvm/Frontend/Directive/Version.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Record.h"
 #include <string>
@@ -105,15 +106,17 @@ private:
 
 class Versioned {
 public:
-  int getMinVersion(const Record *R) const {
+  unsigned getMinVersion(const Record *R) const {
     int64_t Min = R->getValueAsInt("minVersion");
-    assert(llvm::isInt<IntWidth>(Min) && "Value out of range of 'int'");
+    assert(Min >= 0 && llvm::isInt<IntWidth>(Min) &&
+           "Value out of range of non-negative 'int'");
     return Min;
   }
 
-  int getMaxVersion(const Record *R) const {
+  unsigned getMaxVersion(const Record *R) const {
     int64_t Max = R->getValueAsInt("maxVersion");
-    assert(llvm::isInt<IntWidth>(Max) && "Value out of range of 'int'");
+    assert(Max >= 0 && llvm::isInt<IntWidth>(Max) &&
+           "Value out of range of non-negative 'int'");
     return Max;
   }
 
@@ -129,8 +132,9 @@ public:
 
   StringRef getText() const { return Def->getValueAsString("spelling"); }
   llvm::directive::VersionRange getVersions() const {
-    return llvm::directive::VersionRange{getMinVersion(Def),
-                                         getMaxVersion(Def)};
+    return llvm::directive::VersionRange{
+        llvm::directive::Version(getMinVersion(Def)),
+        llvm::directive::Version(getMaxVersion(Def))};
   }
 
   Value get() const { return Value{getText(), getVersions()}; }
@@ -173,7 +177,8 @@ public:
     // This is a suitable spelling for generating an identifier name,
     // since it will remain unchanged when any potential new spellings
     // are added.
-    Spelling::Value Oldest{"not found", {/*Min=*/INT_MAX, 0}};
+    using Version = directive::Version;
+    Spelling::Value Oldest{"not found", {/*Min=*/Version::Max(), Version(0)}};
     for (auto V : getSpellings())
       if (V.Versions.Min < Oldest.Versions.Min)
         Oldest = V;

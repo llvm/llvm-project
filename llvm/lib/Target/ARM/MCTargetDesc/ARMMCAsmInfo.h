@@ -21,21 +21,12 @@
 namespace llvm {
 class Triple;
 
-namespace ARM {
-void printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
-                        const MCSpecifierExpr &Expr);
-}
-
 class ARMMCAsmInfoDarwin : public MCAsmInfoDarwin {
   virtual void anchor();
 
 public:
   explicit ARMMCAsmInfoDarwin(const Triple &TheTriple,
                               const MCTargetOptions &Options);
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override {
-    ARM::printSpecifierExpr(*this, OS, Expr);
-  }
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &,
                                  const MCAssembler *) const override {
     return false;
@@ -48,15 +39,11 @@ class ARMELFMCAsmInfo : public MCAsmInfoELF {
 public:
   explicit ARMELFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options);
 
-  void setUseIntegratedAssembler(bool Value) override;
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override {
-    ARM::printSpecifierExpr(*this, OS, Expr);
-  }
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &,
                                  const MCAssembler *) const override {
     return false;
   }
+  bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const override;
 };
 
 class ARMCOFFMCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
@@ -64,10 +51,6 @@ class ARMCOFFMCAsmInfoMicrosoft : public MCAsmInfoMicrosoft {
 
 public:
   explicit ARMCOFFMCAsmInfoMicrosoft(const MCTargetOptions &Options);
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override {
-    ARM::printSpecifierExpr(*this, OS, Expr);
-  }
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &,
                                  const MCAssembler *) const override {
     return false;
@@ -79,10 +62,6 @@ class ARMCOFFMCAsmInfoGNU : public MCAsmInfoGNUCOFF {
 
 public:
   explicit ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options);
-  void printSpecifierExpr(raw_ostream &OS,
-                          const MCSpecifierExpr &Expr) const override {
-    ARM::printSpecifierExpr(*this, OS, Expr);
-  }
   bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &,
                                  const MCAssembler *) const override {
     return false;

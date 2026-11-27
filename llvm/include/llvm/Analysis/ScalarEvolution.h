@@ -27,9 +27,9 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -46,6 +46,7 @@
 namespace llvm {
 
 class OverflowingBinaryOperator;
+struct AnalysisOptions;
 class AssumptionCache;
 class BasicBlock;
 class Constant;
@@ -135,7 +136,7 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   template <typename OtherPtrT, typename = std::enable_if_t<
                                     std::is_convertible_v<OtherPtrT, SCEVPtrT>>>
   SCEVUseT(const SCEVUseT<OtherPtrT> &Other)
-      : SCEVUseT(Other.getPointer(), Other.getUseNoWrapFlags()) {}
+      : SCEVUseT(Other, Other.getPointer()) {}
 
   operator SCEVPtrT() const { return getPointer(); }
   SCEVPtrT operator->() const { return getPointer(); }
@@ -189,7 +190,18 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
   void dump() const;
 
 private:
+  /// Construct a use of \p S with the use flags of \p Other, which must be a
+  /// use of the same expression.
+  template <typename OtherPtrT>
+  SCEVUseT(const SCEVUseT<OtherPtrT> &Other, SCEVPtrT S)
+      : Base(S, Other.getInt()) {
+    assert(S == Other.getPointer() && "Other must be a use of S");
+  }
+
+  using Base::getInt;
   using Base::setFromOpaqueValue;
+  template <typename> friend struct SCEVUseT;
+  friend struct CastInfo<SCEVUseT, SCEVUseT<const SCEV *>>;
   friend struct PointerLikeTypeTraits<SCEVUseT>;
 };
 
@@ -229,7 +241,7 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 
 template <> struct DenseMapInfo<SCEVUse> {
   static unsigned getHashValue(SCEVUse U) {
-    return hash_value(U.getOpaqueValue());
+    return DenseMapInfo<void *>::getHashValue(U.getOpaqueValue());
   }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
@@ -255,7 +267,7 @@ struct CastInfo<SCEVUseT<ToSCEVPtrT>, SCEVUse,
 
   static bool isPossible(const SCEVUse &U) { return isa<To>(U.getPointer()); }
   static CastReturnType doCast(const SCEVUse &U) {
-    return CastReturnType(cast<To>(U.getPointer()), U.getUseNoWrapFlags());
+    return CastReturnType(U, cast<To>(U.getPointer()));
   }
   static CastReturnType castFailed() { return CastReturnType(nullptr); }
   static CastReturnType doCastIfPossible(const SCEVUse &U) {
@@ -585,9 +597,6 @@ public:
 /// ScalarEvolution::Preds folding set.  This is why the \c add function is sound.
 class LLVM_ABI SCEVUnionPredicate final : public SCEVPredicate {
 private:
-  using PredicateMap =
-      DenseMap<const SCEV *, SmallVector<const SCEVPredicate *, 4>>;
-
   /// Vector with references to all predicates in this union.
   SmallVector<const SCEVPredicate *, 16> Preds;
 
@@ -815,10 +824,10 @@ public:
   /// \p IndexExprs The expressions for the indices.
   LLVM_ABI const SCEV *getGEPExpr(GEPOperator *GEP,
                                   ArrayRef<SCEVUse> IndexExprs);
-  LLVM_ABI const SCEV *getGEPExpr(SCEVUse BaseExpr,
-                                  ArrayRef<SCEVUse> IndexExprs,
-                                  Type *SrcElementTy,
-                                  GEPNoWrapFlags NW = GEPNoWrapFlags::none());
+  LLVM_ABI const SCEV *
+  getGEPExpr(SCEVUse BaseExpr, ArrayRef<SCEVUse> IndexExprs, Type *SrcElementTy,
+             GEPNoWrapFlags BaseNW = GEPNoWrapFlags::none(),
+             GEPNoWrapFlags OffsetNW = GEPNoWrapFlags::none());
   LLVM_ABI const SCEV *getAbsExpr(const SCEV *Op, bool IsNSW);
   LLVM_ABI const SCEV *getMinMaxExpr(SCEVTypes Kind,
                                      SmallVectorImpl<SCEVUse> &Operands);
@@ -1272,6 +1281,9 @@ public:
   /// Returns true if \p Op is guaranteed to not be poison.
   LLVM_ABI static bool isGuaranteedNotToBePoison(const SCEV *Op);
 
+  /// Returns true if \p Op is guaranteed not to cause immediate UB.
+  LLVM_ABI bool isGuaranteedNotToCauseUB(const SCEV *Op);
+
   /// Test if the given expression is known to be a power of 2.  OrNegative
   /// allows matching negative power of 2s, and OrZero allows matching 0.
   LLVM_ABI bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
@@ -1329,8 +1341,9 @@ public:
                                     SCEVUse RHS);
 
   /// Test if the given expression is known to satisfy the condition described
-  /// by Pred, LHS, and RHS.
-  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS);
+  /// by Pred, LHS, and RHS. \p Depth is the current recursion depth.
+  LLVM_ABI bool isKnownPredicate(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
+                                 unsigned Depth = 0);
 
   /// Check whether the condition described by Pred, LHS, and RHS is true or
   /// false. If we know it, return the evaluation of this condition. If neither
@@ -1613,6 +1626,10 @@ public:
         SmallDenseMap<const BasicBlock *, LoopGuards> &IncomingGuards,
         unsigned Depth);
 
+    /// Like rewrite(Expr), but look up rewrites with \p Lookup if set.
+    const SCEV *rewrite(const SCEV *Expr,
+                        function_ref<const SCEV *(const SCEV *)> Lookup) const;
+
   public:
     /// Return loop guards for loop \p L, which are collected on first use.
     static LoopGuards collectOnDemand(const Loop *L, ScalarEvolution &SE) {
@@ -1700,6 +1717,8 @@ private:
   // Needs getWithOperands to rebuild a node from its canonical operands.
   friend void SCEV::computeAndSetCanonical(ScalarEvolution &SE);
 
+  const AnalysisOptions &Opts;
+
   /// The function we are analyzing.
   Function &F;
 
@@ -1733,8 +1752,7 @@ private:
   HasRecMapType HasRecMap;
 
   /// The type for ExprValueMap.
-  using ValueSetVector = SmallSetVector<Value *, 4>;
-  using ExprValueMapType = DenseMap<const SCEV *, ValueSetVector>;
+  using ExprValueMapType = DenseMap<const SCEV *, TinyPtrVector<Value *>>;
 
   /// ExprValueMap -- This map records the original values from which
   /// the SCEV expr is generated from.
@@ -2328,6 +2346,14 @@ private:
                                       const SCEV *FoundLHS,
                                       const SCEV *FoundRHS);
 
+  /// Test whether the condition described by Pred, LHS, and RHS is true
+  /// whenever the condition described by FoundLHS, FoundRHS, and Pred with the
+  /// other signedness is true.
+  bool isImpliedCondViaSignFlippedPred(CmpPredicate Pred, const SCEV *LHS,
+                                       const SCEV *RHS, const SCEV *FoundLHS,
+                                       const SCEV *FoundRHS,
+                                       const Instruction *CtxI);
+
   /// Return true if the condition denoted by \p LHS \p Pred \p RHS is implied
   /// by a call to @llvm.experimental.guard in \p BB.
   bool isImpliedViaGuard(const BasicBlock *BB, CmpPredicate Pred,
@@ -2406,8 +2432,8 @@ private:
 
   /// Try to split Pred LHS RHS into logical conjunctions (and's) and try to
   /// prove them individually.
-  bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS,
-                                    SCEVUse RHS);
+  bool isKnownPredicateViaSplitting(CmpPredicate Pred, SCEVUse LHS, SCEVUse RHS,
+                                    unsigned Depth);
 
   /// Try to match the Expr as "(L + R)<Flags>".
   bool splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R, SCEVFlags &Flags);
@@ -2486,9 +2512,6 @@ private:
   /// prove B must execute given A executes.
   bool isGuaranteedToTransferExecutionTo(const Instruction *A,
                                          const Instruction *B);
-
-  /// Returns true if \p Op is guaranteed not to cause immediate UB.
-  bool isGuaranteedNotToCauseUB(const SCEV *Op);
 
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since

@@ -454,10 +454,9 @@ void MCELFStreamer::finishImpl() {
 
   // Emit .note.GNU-stack, similar to AsmPrinter::doFinalization.
   MCContext &Ctx = getContext();
-  auto *StackSec = Ctx.getAsmInfo().getStackSection(Ctx,
-                                                    /*Exec=*/false);
-  if (StackSec && Ctx.getTargetOptions().MCNoExecStack)
-    switchSection(StackSec);
+  if (Ctx.getAsmInfo().emitELFStackSection() &&
+      Ctx.getTargetOptions().MCNoExecStack)
+    switchSection(Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS, 0U));
 
   // Emit the .gnu attributes section if any attributes have been added.
   if (!GNUAttributes.empty()) {
@@ -475,7 +474,7 @@ void MCELFStreamer::finishImpl() {
   this->MCObjectStreamer::finishImpl();
 }
 
-void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
+void MCELFStreamer::setAttributeItem(unsigned Attribute, uint64_t Value,
                                      bool OverwriteExisting) {
   // Look for existing attribute item
   if (AttributeItem *Item = getAttributeItem(Attribute)) {
@@ -509,7 +508,7 @@ void MCELFStreamer::setAttributeItem(unsigned Attribute, StringRef Value,
   Contents.push_back(Item);
 }
 
-void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
+void MCELFStreamer::setAttributeItems(unsigned Attribute, uint64_t IntValue,
                                       StringRef StringValue,
                                       bool OverwriteExisting) {
   // Look for existing attribute item

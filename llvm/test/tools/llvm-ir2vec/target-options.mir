@@ -1,0 +1,20 @@
+# REQUIRES: amdgpu-registered-target
+# RUN: llvm-ir2vec embeddings --mode=mir -mtriple=amdgcn -mcpu=gfx90a --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s | FileCheck %s
+# RUN: llvm-ir2vec embeddings --mode=mir -mtriple=amdgcn -mcpu=foo --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s 2>&1 | FileCheck %s --check-prefix=BAD-CPU
+# RUN: not llvm-ir2vec embeddings --mode=mir -mtriple=foo --mir2vec-vocab-path=%S/../../CodeGen/MIR2Vec/Inputs/mir2vec_dummy_3D_vocab.json %s 2>&1 | FileCheck %s --check-prefix=BAD-TRIPLE
+
+---
+name:            agpr_copy
+body:             |
+  bb.0:
+    liveins: $vgpr0
+    $agpr0 = COPY $vgpr0
+    S_ENDPGM 0
+...
+
+# CHECK: MIR2Vec embeddings for machine function agpr_copy:
+# CHECK-NEXT: Function vector:  [ 5.30  5.40  5.50 ]
+
+# BAD-CPU: 'foo' is not a recognized processor for this target
+
+# BAD-TRIPLE: error: unable to get target for 'foo'

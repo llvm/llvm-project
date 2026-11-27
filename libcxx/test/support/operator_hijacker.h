@@ -49,12 +49,25 @@ struct std::hash<operator_hijacker> {
 
 template <class T>
 struct operator_hijacker_allocator : std::allocator<T>, operator_hijacker {
-#if TEST_STD_VER <= 17
+  operator_hijacker_allocator() = default;
+  template <class U>
+  TEST_CONSTEXPR explicit operator_hijacker_allocator(const operator_hijacker_allocator<U>) {}
+
+  template <class U>
   struct rebind {
-    typedef operator_hijacker_allocator<T> other;
+    typedef operator_hijacker_allocator<U> other;
   };
-#endif
 };
+
+template <class T, class U>
+TEST_CONSTEXPR bool operator==(const operator_hijacker_allocator<T>&, const operator_hijacker_allocator<U>&) {
+  return true;
+}
+
+template <class T, class U>
+TEST_CONSTEXPR bool operator!=(const operator_hijacker_allocator<T>&, const operator_hijacker_allocator<U>&) {
+  return false;
+}
 
 template <class CharT>
 struct operator_hijacker_char_traits : std::char_traits<CharT>, operator_hijacker {};

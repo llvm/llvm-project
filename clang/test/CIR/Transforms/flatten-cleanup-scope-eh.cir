@@ -190,7 +190,7 @@ cir.func @test_eh_cleanup_nothrow_call() {
 // Test EH cleanup with a call that returns a value.
 cir.func @test_eh_cleanup_call_with_result() -> !s32i {
   %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
-  %1 = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+  %1 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
   cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     %2 = cir.call @get() : () -> !s32i
@@ -236,7 +236,7 @@ cir.func @test_eh_cleanup_call_with_result() -> !s32i {
 // Then the cleanup scope flattening must handle cloning the multi-block
 // cleanup region for the EH path.
 cir.func @test_nrvo() -> !rec_NonTrivial {
-  %0 = cir.alloca "__retval" align(1) : !cir.ptr<!rec_NonTrivial>
+  %0 = cir.alloca "" align(1) return_slot : !cir.ptr<!rec_NonTrivial>
   %1 = cir.alloca "nrvo" align(1) : !cir.ptr<!cir.bool>
   cir.cleanup.scope {
     %2 = cir.const #false

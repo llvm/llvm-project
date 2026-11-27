@@ -17,13 +17,11 @@
 
 using namespace clang::ast_matchers;
 using namespace clang::ast_matchers::internal;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::misc {
 
 namespace {
-// FIXME: This matcher exists in some other code-review as well.
-// It should probably move to ASTMatchers.
-AST_MATCHER(VarDecl, isLocal) { return Node.isLocalVarDecl(); }
 // FIXME: The matcher 'hasName(Name)' asserts that its argument 'Name' is
 // nonempty. Perhaps remove that assertion and replace 'isUnnamed()' with
 // 'hasName("")'.
@@ -155,7 +153,7 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   // Match local variables which could be 'const' if not modified later.
   // Example: `int i = 10` would match `int i`.
   const auto LocalValDecl = varDecl(
-      isLocal(), hasInitializer(anything()),
+      isLocalVarDecl(), hasInitializer(anything()),
       unless(anyOf(ConstType, ConstReference, TemplateType,
                    hasInitializer(isInstantiationDependent()), RValueReference,
                    FunctionPointerRef, isImplicit(), AllowedType,
@@ -197,6 +195,25 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
     Finder->addMatcher(FunctionWithParams, this);
   }
+}
+
+static bool isStdMoveOperandInTemplate(const VarDecl *Variable,
+                                       const FunctionDecl *Func,
+                                       ASTContext &Context) {
+  if (Func->isTemplateInstantiation())
+    if (const Stmt *Body = Func->getBody()) {
+      // Match on the instantiated body where `std::move` is resolved to a
+      // concrete function and the argument references the instantiated
+      // variable.
+      const auto Moves =
+          match(stmt(forEachDescendant(
+                    callExpr(callee(functionDecl(hasName("std::move"))),
+                             hasArgument(0, ignoringParenImpCasts(declRefExpr(
+                                                to(equalsNode(Variable)))))))),
+                *Body, Context);
+      return !Moves.empty();
+    }
+  return false;
 }
 
 static void addConstFixits(const DiagnosticBuilder &Diag,
@@ -255,9 +272,6 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   /// dependent. Variables like 'int x = 42;' in a template that can become
   /// const emit multiple warnings otherwise.
   bool IsNormalVariableInTemplate = Function->isTemplateInstantiation();
-  if (IsNormalVariableInTemplate &&
-      TemplateDiagnosticsCache.contains(Variable->getBeginLoc()))
-    return;
 
   VariableCategory VC = VariableCategory::Value;
   const QualType VT = Variable->getType();
@@ -268,6 +282,14 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   else if (const auto *ArrayT = dyn_cast<ArrayType>(VT);
            ArrayT && ArrayT->getElementType()->isPointerType())
     VC = VariableCategory::Pointer;
+
+  if (IsNormalVariableInTemplate && VC != VariableCategory::Pointer &&
+      isStdMoveOperandInTemplate(Variable, Function, *Result.Context))
+    return;
+
+  if (IsNormalVariableInTemplate &&
+      TemplateDiagnosticsCache.contains(Variable->getBeginLoc()))
+    return;
 
   const auto CheckValue = [&]() {
     // Offload const-analysis to utility function.

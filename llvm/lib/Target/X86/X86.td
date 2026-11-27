@@ -363,6 +363,12 @@ def FeatureAVX10_2_512 : SubtargetFeature<"avx10.2-512", "HasAVX10_2_512", "true
 def FeatureAVX10_V2_AUX : SubtargetFeature<"avx10v2aux", "HasAVX10_V2_AUX", "true",
                                            "Support AVX10 V2 AUX instructions",
                                            [FeatureAVX10_1]>;
+// AMX-TILE is not implied. ACE configures tile palette 2, which supports only
+// LDTILECFG, STTILECFG, TILEZERO and TILERELEASE; those are predicated on
+// HasAMXTILE_Or_ACEV1. A target with both palettes needs -mamx-tile as well.
+def FeatureACEV1 : SubtargetFeature<"acev1", "HasACEV1", "true",
+                                    "Support ACEV1 (AI Compute Extensions v1) instructions",
+                                    [FeatureAVX10_1]>;
 def FeatureEGPR : SubtargetFeature<"egpr", "HasEGPR", "true",
                                    "Support extended general purpose register">;
 def FeaturePush2Pop2 : SubtargetFeature<"push2pop2", "HasPush2Pop2", "true",
@@ -375,9 +381,8 @@ def FeatureCCMP : SubtargetFeature<"ccmp", "HasCCMP", "true",
                                    "Support conditional cmp & test instructions">;
 def FeatureNF : SubtargetFeature<"nf", "HasNF", "true",
                                  "Support status flags update suppression">;
-// FeatureCF is not enabled by default for APXF and targets that support APXF
-// due to performance reason, though it is part of APXF. Users need to enable it
-// manually.
+// Memory-operand CFCMOV (conditional faulting load/store) is only used with
+// TuningPreferCFMemOperand.
 def FeatureCF : SubtargetFeature<"cf", "HasCF", "true",
                                  "Support conditional faulting">;
 def FeatureZU : SubtargetFeature<"zu", "HasZU", "true",
@@ -908,6 +913,12 @@ def TuningPreferLegacySetCC
     : SubtargetFeature<"prefer-legacy-setcc", "PreferLegacySetCC", "true",
                        "Prefer to emit legacy SetCC.", [], InlineIgnore>;
 
+def TuningPreferCFMemOperand
+    : SubtargetFeature<"prefer-cf-mem-operand", "PreferCFMemOperand", "true",
+                       "Use CFCMOV with memory operands (conditional "
+                       "faulting load/store).",
+                       [], InlineIgnore>;
+
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -1309,6 +1320,7 @@ def ProcessorFeatures {
                                                   FeaturePPX,
                                                   FeatureNDD,
                                                   FeatureNF,
+                                                  FeatureCF,
                                                   FeatureJMPABS,
                                                   FeatureMOVRS,
                                                   FeatureAMXMOVRS,
@@ -1482,6 +1494,7 @@ def ProcessorFeatures {
                                                   FeaturePush2Pop2,
                                                   FeaturePPX,
                                                   FeatureNF,
+                                                  FeatureCF,
                                                   FeatureNDD,
                                                   FeatureZU,
                                                   FeatureJMPABS,
@@ -1489,7 +1502,8 @@ def ProcessorFeatures {
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =
       !listconcat(PTLFeatures, NVLAdditionalFeatures);
-  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC];
+  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC,
+                                                TuningPrefer256Bit];
   list<SubtargetFeature> NVLTuning = !listconcat(ADLTuning, NVLAdditionalTuning);
 
   // Clearwaterforest

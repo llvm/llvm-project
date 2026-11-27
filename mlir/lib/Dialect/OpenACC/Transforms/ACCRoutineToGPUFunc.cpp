@@ -155,7 +155,7 @@ static void collectRoutineCandidates(
   };
 
   mod.walk([&](RoutineOp op) {
-    if (op.getBindNameValue() || op.getBindNameValue(deviceType)) {
+    if (op.getEffectiveBindName(deviceType)) {
       bindAccRoutines.insert(op);
       return;
     }

@@ -359,8 +359,6 @@ class LldbGdbServerTestCase(
         self.Hg_fails_on_pid(0)
 
     @add_test_categories(["llgs"])
-    # Flaky in GitHub CI - https://github.com/llvm/llvm-project/issues/138085.
-    @skipIfWindows
     def test_Hg_fails_on_minus_one_pid(self):
         self.build()
         self.set_inferior_startup_launch()
@@ -726,7 +724,7 @@ class LldbGdbServerTestCase(
     def test_software_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={"CFLAGS_EXTRAS": "-marm"})
+            self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-marm"})
         else:
             self.build()
         self.set_inferior_startup_launch()
@@ -737,7 +735,7 @@ class LldbGdbServerTestCase(
     def test_hardware_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={"CFLAGS_EXTRAS": "-marm"})
+            self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-marm"})
         else:
             self.build()
         self.set_inferior_startup_launch()

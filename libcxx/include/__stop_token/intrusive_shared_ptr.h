@@ -43,25 +43,23 @@ struct __intrusive_shared_ptr_traits;
 // When the reference count goes to zero, the destructor of _Tp will be called
 template <class _Tp>
 struct __intrusive_shared_ptr {
-  _LIBCPP_HIDE_FROM_ABI __intrusive_shared_ptr() = default;
+  __intrusive_shared_ptr() = default;
 
-  _LIBCPP_HIDE_FROM_ABI explicit __intrusive_shared_ptr(_Tp* __raw_ptr) : __raw_ptr_(__raw_ptr) {
+  explicit __intrusive_shared_ptr(_Tp* __raw_ptr) : __raw_ptr_(__raw_ptr) {
     if (__raw_ptr_)
       __increment_ref_count(*__raw_ptr_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __intrusive_shared_ptr(const __intrusive_shared_ptr& __other) noexcept
-      : __raw_ptr_(__other.__raw_ptr_) {
+  __intrusive_shared_ptr(const __intrusive_shared_ptr& __other) noexcept : __raw_ptr_(__other.__raw_ptr_) {
     if (__raw_ptr_)
       __increment_ref_count(*__raw_ptr_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI __intrusive_shared_ptr(__intrusive_shared_ptr&& __other) noexcept
-      : __raw_ptr_(__other.__raw_ptr_) {
+  __intrusive_shared_ptr(__intrusive_shared_ptr&& __other) noexcept : __raw_ptr_(__other.__raw_ptr_) {
     __other.__raw_ptr_ = nullptr;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __intrusive_shared_ptr& operator=(const __intrusive_shared_ptr& __other) noexcept {
+  __intrusive_shared_ptr& operator=(const __intrusive_shared_ptr& __other) noexcept {
     if (__other.__raw_ptr_ != __raw_ptr_) {
       if (__other.__raw_ptr_) {
         __increment_ref_count(*__other.__raw_ptr_);
@@ -74,31 +72,28 @@ struct __intrusive_shared_ptr {
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI __intrusive_shared_ptr& operator=(__intrusive_shared_ptr&& __other) noexcept {
+  __intrusive_shared_ptr& operator=(__intrusive_shared_ptr&& __other) noexcept {
     __intrusive_shared_ptr(std::move(__other)).swap(*this);
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~__intrusive_shared_ptr() {
+  ~__intrusive_shared_ptr() {
     if (__raw_ptr_) {
       __decrement_ref_count(*__raw_ptr_);
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI _Tp* operator->() const noexcept { return __raw_ptr_; }
-  _LIBCPP_HIDE_FROM_ABI _Tp& operator*() const noexcept { return *__raw_ptr_; }
-  _LIBCPP_HIDE_FROM_ABI explicit operator bool() const noexcept { return __raw_ptr_ != nullptr; }
+  _Tp* operator->() const noexcept { return __raw_ptr_; }
+  _Tp& operator*() const noexcept { return *__raw_ptr_; }
+  explicit operator bool() const noexcept { return __raw_ptr_ != nullptr; }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(__intrusive_shared_ptr& __other) { std::swap(__raw_ptr_, __other.__raw_ptr_); }
+  void swap(__intrusive_shared_ptr& __other) { std::swap(__raw_ptr_, __other.__raw_ptr_); }
 
-  _LIBCPP_HIDE_FROM_ABI friend void swap(__intrusive_shared_ptr& __lhs, __intrusive_shared_ptr& __rhs) {
-    __lhs.swap(__rhs);
-  }
+  friend void swap(__intrusive_shared_ptr& __lhs, __intrusive_shared_ptr& __rhs) { __lhs.swap(__rhs); }
 
-  _LIBCPP_HIDE_FROM_ABI friend bool constexpr
-  operator==(const __intrusive_shared_ptr&, const __intrusive_shared_ptr&) = default;
+  friend bool constexpr operator==(const __intrusive_shared_ptr&, const __intrusive_shared_ptr&) = default;
 
-  _LIBCPP_HIDE_FROM_ABI friend bool constexpr operator==(const __intrusive_shared_ptr& __ptr, std::nullptr_t) {
+  friend bool constexpr operator==(const __intrusive_shared_ptr& __ptr, std::nullptr_t) {
     return __ptr.__raw_ptr_ == nullptr;
   }
 
@@ -107,17 +102,17 @@ private:
 
   // the memory order for increment/decrement the counter is the same for shared_ptr
   // increment is relaxed and decrement is acq_rel
-  _LIBCPP_HIDE_FROM_ABI static void __increment_ref_count(_Tp& __obj) {
+  static void __increment_ref_count(_Tp& __obj) {
     __get_atomic_ref_count(__obj).fetch_add(1, std::memory_order_relaxed);
   }
 
-  _LIBCPP_HIDE_FROM_ABI static void __decrement_ref_count(_Tp& __obj) {
+  static void __decrement_ref_count(_Tp& __obj) {
     if (__get_atomic_ref_count(__obj).fetch_sub(1, std::memory_order_acq_rel) == 1) {
       delete std::addressof(__obj);
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI static decltype(auto) __get_atomic_ref_count(_Tp& __obj) {
+  static decltype(auto) __get_atomic_ref_count(_Tp& __obj) {
     using __ret_type = decltype(__intrusive_shared_ptr_traits<_Tp>::__get_atomic_ref_count(__obj));
     static_assert(
         std::is_reference_v<__ret_type>, "__get_atomic_ref_count should return a reference to the atomic counter");

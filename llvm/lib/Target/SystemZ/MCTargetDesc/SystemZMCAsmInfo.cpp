@@ -25,16 +25,14 @@ constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT,
                                          const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TT, Options) {
   AssemblerDialect = AD_GNU;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
   Data64bitsDirective = "\t.quad\t";
-  ExceptionsType = ExceptionHandling::DwarfCFI;
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
-  UsesELFSectionDirectiveForBSS = true;
   ZeroDirective = "\t.space\t";
 
   initializeAtSpecifiers(atSpecifiers);
@@ -52,36 +50,44 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT,
   CodePointerSize = 8;
   CommentString = "*";
   UsesSetToEquateSymbol = true;
-  ExceptionsType = ExceptionHandling::ZOS;
   IsHLASM = true;
   IsLittleEndian = false;
   MaxInstLength = 6;
   SupportsDebugInformation = true;
 
   initializeAtSpecifiers(atSpecifiers);
+
+  SpecifierExprPrintFn = [](const MCAsmInfo &MAI, raw_ostream &OS,
+                            const MCSpecifierExpr &Expr) {
+    switch (Expr.getSpecifier()) {
+    case SystemZ::S_None:
+      OS << "AD";
+      break;
+    case SystemZ::S_QCon:
+      OS << "QD";
+      break;
+    case SystemZ::S_RCon:
+      OS << "RD";
+      break;
+    case SystemZ::S_VCon:
+      OS << "VD";
+      break;
+    default:
+      llvm_unreachable("Invalid kind");
+    }
+    OS << '(';
+    MAI.printExpr(OS, *Expr.getSubExpr());
+    OS << ')';
+  };
 }
 
-void SystemZMCAsmInfoGOFF::printSpecifierExpr(
-    raw_ostream &OS, const MCSpecifierExpr &Expr) const {
-  switch (Expr.getSpecifier()) {
-  case SystemZ::S_None:
-    OS << "AD";
-    break;
-  case SystemZ::S_QCon:
-    OS << "QD";
-    break;
-  case SystemZ::S_RCon:
-    OS << "RD";
-    break;
-  case SystemZ::S_VCon:
-    OS << "VD";
-    break;
-  default:
-    llvm_unreachable("Invalid kind");
-  }
-  OS << '(';
-  printExpr(OS, *Expr.getSubExpr());
-  OS << ')';
+const MCExpr *SystemZMCAsmInfoGOFF::getDwarfSectionOffsetExpr(
+    const MCSymbol *Sym, uint64_t Offset, MCContext &Ctx) const {
+  const MCExpr *Expr = MCSpecifierExpr::create(Sym, SystemZ::S_QCon, Ctx);
+  if (Offset)
+    Expr =
+        MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, Ctx), Ctx);
+  return Expr;
 }
 
 bool SystemZMCAsmInfoGOFF::evaluateAsRelocatableImpl(

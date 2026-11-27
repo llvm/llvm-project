@@ -576,6 +576,47 @@ TEST_F(InstrProfTest, test_memprof_getrecord_error) {
       ErrorEquals(instrprof_error::unknown_function, RecordOr.takeError()));
 }
 
+// Adding a second MemProf input to the same writer must merge its frames,
+// call stacks, and records instead of returning after the first new frame.
+TEST_F(InstrProfTest, test_memprof_add_data_merges_multiple_inputs) {
+  Writer.setMemProfVersionRequested(memprof::Version3);
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::MemProf),
+                    Succeeded());
+
+  IndexedMemProfData FirstData = getMemProfDataForTest();
+  const IndexedMemProfRecord FirstRecord = makeRecord(
+      /*AllocFrames=*/{0x111}, /*CallSiteFrames=*/{0x222}, makePartialMIB(),
+      memprof::getHotColdSchema());
+  FirstData.Records.try_emplace(0x9999, FirstRecord);
+  ASSERT_TRUE(Writer.addMemProfData(FirstData, Err));
+
+  IndexedMemProfData SecondData;
+  SecondData.Frames.try_emplace(10, 0xabc, 10, 20, false);
+  SecondData.Frames.try_emplace(11, 0xdef, 30, 40, true);
+  SecondData.CallStacks.try_emplace(
+      0x444, std::initializer_list<memprof::FrameId>{10, 11});
+  const IndexedMemProfRecord SecondRecord = makeRecord(
+      /*AllocFrames=*/{0x444}, /*CallSiteFrames=*/{0x444}, makePartialMIB(),
+      memprof::getHotColdSchema());
+  SecondData.Records.try_emplace(0x8888, SecondRecord);
+  ASSERT_TRUE(Writer.addMemProfData(SecondData, Err));
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  auto FirstRecordOr = Reader->getMemProfRecord(0x9999);
+  ASSERT_THAT_ERROR(FirstRecordOr.takeError(), Succeeded());
+  memprof::IndexedCallstackIdConverter FirstCSIdConv(FirstData);
+  EXPECT_THAT(FirstRecord.toMemProfRecord(FirstCSIdConv),
+              EqualsRecord(FirstRecordOr.get()));
+
+  auto SecondRecordOr = Reader->getMemProfRecord(0x8888);
+  ASSERT_THAT_ERROR(SecondRecordOr.takeError(), Succeeded());
+  memprof::IndexedCallstackIdConverter SecondCSIdConv(SecondData);
+  EXPECT_THAT(SecondRecord.toMemProfRecord(SecondCSIdConv),
+              EqualsRecord(SecondRecordOr.get()));
+}
+
 TEST_F(InstrProfTest, test_memprof_merge) {
   Writer.addRecord({"func1", 0x1234, {42}}, Err);
 
@@ -809,6 +850,60 @@ TEST_F(InstrProfTest, test_symtab_lookup_vtable_with_assigned_guid) {
   EXPECT_EQ(Symtab.getGlobalVariable(
                 GlobalValue::getGUIDAssumingExternalLinkage("_ZTV3Foo")),
             GV);
+}
+
+TEST_F(InstrProfTest, test_symtab_get_canonical_name) {
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.llvm.1234"), "foo");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.part.1"), "foo");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.cfi"), "foo");
+  EXPECT_EQ(
+      InstrProfSymtab::getCanonicalName("foo.__uniq.123.part.1.llvm.9999"),
+      "foo.__uniq.123");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName(
+                "foo.__uniq.123.llvm.13757e0fb71915e385efa4dc9d1e08fd.cfi"),
+            "foo.__uniq.123");
+  EXPECT_EQ(
+      InstrProfSymtab::getCanonicalName("foo.__uniq.123.part.1.llvm.9999.cfi"),
+      "foo.__uniq.123");
+  // Coroutine clone and non-canonical jump-table suffixes are preserved.
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("coro.llvm.1234.resume"),
+            "coro.llvm.1234.resume");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.cfi_jt"), "foo.cfi_jt");
+}
+
+TEST_F(InstrProfTest, test_symtab_def_precedence) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+
+  // Place declaration before the definition in module order.
+  Function::Create(FTy, Function::ExternalLinkage,
+                   "InternalLambda.__uniq.42.llvm.111", M.get());
+
+  auto *Def = Function::Create(FTy, Function::ExternalLinkage,
+                               "InternalLambda.__uniq.42.llvm.222", M.get());
+  IRBuilder<>(BasicBlock::Create(Ctx, "entry", Def)).CreateRetVoid();
+
+  Function::Create(FTy, Function::ExternalLinkage, "CfiFunc", M.get());
+  auto *CfiDef =
+      Function::Create(FTy, Function::ExternalLinkage, "CfiFunc.cfi", M.get());
+  IRBuilder<>(BasicBlock::Create(Ctx, "entry", CfiDef)).CreateRetVoid();
+
+  auto *ExtOnly =
+      Function::Create(FTy, Function::ExternalLinkage, "ExtOnly", M.get());
+
+  InstrProfSymtab Symtab;
+  EXPECT_THAT_ERROR(Symtab.create(*M, /*InLTO=*/true), Succeeded());
+
+  const uint64_t CanonicalGUID =
+      Function::getGUIDAssumingExternalLinkage("InternalLambda.__uniq.42");
+  EXPECT_EQ(Symtab.getFunction(CanonicalGUID), Def);
+  EXPECT_EQ(
+      Symtab.getFunction(Function::getGUIDAssumingExternalLinkage("CfiFunc")),
+      CfiDef);
+  EXPECT_EQ(
+      Symtab.getFunction(Function::getGUIDAssumingExternalLinkage("ExtOnly")),
+      ExtOnly);
 }
 
 // callee1 to callee6 are from vtable1 to vtable6 respectively.

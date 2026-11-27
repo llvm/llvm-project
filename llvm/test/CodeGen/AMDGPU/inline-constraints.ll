@@ -167,21 +167,21 @@ define i32 @inline_A_constraint_F1() {
 }
 
 ; GCN-LABEL: {{^}}inline_A_constraint_F2:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xbf000000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, -0.5
 define i32 @inline_A_constraint_F2() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,A"(i32 bitcast (float -0.5 to i32))
   ret i32 %v0
 }
 
 ; GCN-LABEL: {{^}}inline_A_constraint_F3:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0x40000000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, 2.0
 define i32 @inline_A_constraint_F3() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,A"(i32 bitcast (float 2.0 to i32))
   ret i32 %v0
 }
 
 ; GCN-LABEL: {{^}}inline_A_constraint_F4:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xc0800000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, -4.0
 define i32 @inline_A_constraint_F4() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,A"(float -4.0)
   ret i32 %v0
@@ -189,14 +189,14 @@ define i32 @inline_A_constraint_F4() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_F5:
-; VI: v_mov_b32_e32 {{v[0-9]+}}, 0x3e22f983
+; VI: v_mov_b32_e32 {{v[0-9]+}}, 0.15915494
 define i32 @inline_A_constraint_F5() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,A"(i32 1042479491)
   ret i32 %v0
 }
 
 ; GCN-LABEL: {{^}}inline_A_constraint_F6:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0x3f000000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0.5
 define i32 @inline_A_constraint_F6() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,A"(float 0.5)
   ret i32 %v0
@@ -226,14 +226,14 @@ define i32 @inline_A_constraint_D0() {
 }
 
 ; GCN-LABEL: {{^}}inline_A_constraint_D1:
-; GCN: v_cvt_f32_f64_e32 {{v[0-9]+}}, 0xc000000000000000
+; GCN: v_cvt_f32_f64_e32 {{v[0-9]+}}, -2.0
 define i32 @inline_A_constraint_D1() {
   %v0 = tail call i32 asm "v_cvt_f32_f64_e32 $0, $1", "=v,A"(i64 bitcast (double -2.0 to i64))
   ret i32 %v0
 }
 
 ; GCN-LABEL: {{^}}inline_A_constraint_D2:
-; GCN: v_cvt_f32_f64_e32 {{v[0-9]+}}, 0x3fe0000000000000
+; GCN: v_cvt_f32_f64_e32 {{v[0-9]+}}, 0.5
 define i32 @inline_A_constraint_D2() {
   %v0 = tail call i32 asm "v_cvt_f32_f64_e32 $0, $1", "=v,A"(double 0.5)
   ret i32 %v0
@@ -241,7 +241,7 @@ define i32 @inline_A_constraint_D2() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_D3:
-; VI: v_cvt_f32_f64_e32 {{v[0-9]+}}, 0x3fc45f306dc9c882
+; VI: v_cvt_f32_f64_e32 {{v[0-9]+}}, 0.15915494309189532
 define i32 @inline_A_constraint_D3() {
   %v0 = tail call i32 asm "v_cvt_f32_f64_e32 $0, $1", "=v,A"(double 0.15915494309189532)
   ret i32 %v0
@@ -249,14 +249,14 @@ define i32 @inline_A_constraint_D3() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'A'
 ; VI-LABEL: {{^}}inline_A_constraint_D4:
-; VI: v_cvt_f32_f64_e32 {{v[0-9]+}}, 0x3fc45f306dc9c882
+; VI: v_cvt_f32_f64_e32 {{v[0-9]+}}, 0.15915494309189532
 define i32 @inline_A_constraint_D4() {
   %v0 = tail call i32 asm "v_cvt_f32_f64_e32 $0, $1", "=v,A"(i64 bitcast (double 0.15915494309189532 to i64))
   ret i32 %v0
 }
 
 ; GCN-LABEL: {{^}}inline_A_constraint_D5:
-; GCN: v_cvt_f32_f64_e32 {{v[0-9]+}}, 0xc000000000000000
+; GCN: v_cvt_f32_f64_e32 {{v[0-9]+}}, -2.0
 define i32 @inline_A_constraint_D5() {
   %v0 = tail call i32 asm "v_cvt_f32_f64_e32 $0, $1", "=v,A"(double -2.0)
   ret i32 %v0
@@ -593,7 +593,7 @@ define i32 @inline_J_constraint_D0() {
 }
 
 ; GCN-LABEL: {{^}}inline_J_constraint_D1:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xffffffffffff8000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xffff8000
 define i32 @inline_J_constraint_D1() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,J"(i64 -32768)
   ret i32 %v0
@@ -743,7 +743,7 @@ define i32 @inline_B_constraint_D1() {
 }
 
 ; GCN-LABEL: {{^}}inline_B_constraint_D2:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xffffffff80000000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0x80000000
 define i32 @inline_B_constraint_D2() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,B"(i64 -2147483648)
   ret i32 %v0
@@ -882,7 +882,7 @@ define i32 @inline_C_constraint_F5() {
 ;==============================================================================
 
 ; GCN-LABEL: {{^}}inline_C_constraint_D0:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xffffffff
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, -1
 define i32 @inline_C_constraint_D0() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,C"(i64 4294967295)
   ret i32 %v0
@@ -1034,21 +1034,21 @@ define i32 @inline_DA_constraint_F1() {
 }
 
 ; GCN-LABEL: {{^}}inline_DA_constraint_F2:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xbf000000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, -0.5
 define i32 @inline_DA_constraint_F2() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,^DA"(i32 bitcast (float -0.5 to i32))
   ret i32 %v0
 }
 
 ; GCN-LABEL: {{^}}inline_DA_constraint_F3:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0x40000000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, 2.0
 define i32 @inline_DA_constraint_F3() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,^DA"(i32 bitcast (float 2.0 to i32))
   ret i32 %v0
 }
 
 ; GCN-LABEL: {{^}}inline_DA_constraint_F4:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xc0800000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, -4.0
 define i32 @inline_DA_constraint_F4() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,^DA"(float -4.0)
   ret i32 %v0
@@ -1056,14 +1056,14 @@ define i32 @inline_DA_constraint_F4() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_F5:
-; VI: v_mov_b32_e32 {{v[0-9]+}}, 0x3e22f983
+; VI: v_mov_b32_e32 {{v[0-9]+}}, 0.15915494
 define i32 @inline_DA_constraint_F5() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,^DA"(i32 1042479491)
   ret i32 %v0
 }
 
 ; GCN-LABEL: {{^}}inline_DA_constraint_F6:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0x3f000000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0.5
 define i32 @inline_DA_constraint_F6() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1", "=v,^DA"(float 0.5)
   ret i32 %v0
@@ -1086,14 +1086,14 @@ define i32 @inline_DA_constraint_F8() {
 ;==============================================================================
 
 ; GCN-LABEL: {{^}}inline_DA_constraint_D0:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0x40fffffff0
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, 64
 define i32 @inline_DA_constraint_D0() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1 >> 32", "=v,^DA"(i64 bitcast (double 0x40fffffff0 to i64))
   ret i32 %v0
 }
 
 ; GCN-LABEL: {{^}}inline_DA_constraint_D1:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xfffffff000000040
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, -16
 define i32 @inline_DA_constraint_D1() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1 >> 32", "=v,^DA"(i64 bitcast (double 0xfffffff000000040 to i64))
   ret i32 %v0
@@ -1107,7 +1107,7 @@ define i32 @inline_DA_constraint_D2() {
 }
 
 ; GCN-LABEL: {{^}}inline_DA_constraint_D3:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0xbf000000c0800000
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, -0.5
 define i32 @inline_DA_constraint_D3() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1 >> 32", "=v,^DA"(i64 bitcast (double 0xbf000000c0800000 to i64))
   ret i32 %v0
@@ -1115,7 +1115,7 @@ define i32 @inline_DA_constraint_D3() {
 
 ; NOSI: error: invalid operand for inline asm constraint 'DA'
 ; VI-LABEL: {{^}}inline_DA_constraint_D4:
-; VI: v_mov_b32_e32 {{v[0-9]+}}, 0x3e22f9833e22f983
+; VI: v_mov_b32_e32 {{v[0-9]+}}, 0.15915494
 define i32 @inline_DA_constraint_D4() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1 >> 32", "=v,^DA"(i64 bitcast (double 0x3e22f9833e22f983 to i64))
   ret i32 %v0
@@ -1251,7 +1251,7 @@ define i32 @inline_DB_constraint_D0() {
 }
 
 ; GCN-LABEL: {{^}}inline_DB_constraint_D1:
-; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0x1234567890abcdef
+; GCN: v_mov_b32_e32 {{v[0-9]+}}, 0x12345678
 define i32 @inline_DB_constraint_D1() {
   %v0 = tail call i32 asm "v_mov_b32_e32 $0, $1 >> 32", "=v,^DB"(i64 bitcast (double 0x1234567890abcdef to i64))
   ret i32 %v0

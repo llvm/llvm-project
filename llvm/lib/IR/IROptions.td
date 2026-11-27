@@ -22,6 +22,8 @@ defm : BoolField<"print-inst-debug-locs", "false",
   "Pretty print debug locations of instructions when dumping">;
 defm : BoolField<"print-prof-data", "false",
   "Pretty print perf data (branch weights, etc) when dumping">;
+defm : BoolField<"print-single-flmd-line", "false",
+  "Print the full contents of a function-local context on a single line">;
 
 // AutoUpgrade.cpp
 defm : BoolField<"auto-upgrade-debug-info", "true",
@@ -56,10 +58,6 @@ defm : BoolField<"elide-all-zero-branch-weights", "ElideAllZeroBranchWeightsDefa
 // when verification fails, report a message to the console (for FileCheck
 // usage) and continue execution as if nothing happened.
 defm : BoolField<"safepoint-ir-verifier-print-only", "false", "">;
-
-// Value.cpp
-defm : BoolField<"use-dereferenceable-at-point-semantics", "true",
-  "Deref attributes and metadata infer facts at definition only">;
 
 // Verifier.cpp
 defm : BoolField<"verify-noalias-scope-decl-dom", "false",

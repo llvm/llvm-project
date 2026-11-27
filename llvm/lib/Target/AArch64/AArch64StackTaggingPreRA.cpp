@@ -35,7 +35,6 @@ class AArch64StackTaggingPreRAImpl {
   AArch64FunctionInfo *AFI;
   MachineFrameInfo *MFI;
   MachineRegisterInfo *MRI;
-  const AArch64RegisterInfo *TRI;
   const AArch64InstrInfo *TII;
 
   SmallVector<MachineInstr*, 16> ReTags;
@@ -339,9 +338,8 @@ bool AArch64StackTaggingPreRAImpl::run(MachineFunction &Func) {
   MF = &Func;
   MRI = &MF->getRegInfo();
   AFI = MF->getInfo<AArch64FunctionInfo>();
-  TII = static_cast<const AArch64InstrInfo *>(MF->getSubtarget().getInstrInfo());
-  TRI = static_cast<const AArch64RegisterInfo *>(
-      MF->getSubtarget().getRegisterInfo());
+  TII =
+      static_cast<const AArch64InstrInfo *>(MF->getSubtarget().getInstrInfo());
   MFI = &MF->getFrameInfo();
   ReTags.clear();
 

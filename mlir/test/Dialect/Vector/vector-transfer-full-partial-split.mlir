@@ -349,3 +349,28 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Transfers masked by an enclosing vector.mask are not split.
+
+// CHECK-LABEL: func @negative_split_masked
+//   CHECK-NOT:   memref.alloca
+//       CHECK:   vector.mask {{.*}} { vector.transfer_read
+func.func @negative_split_masked(%A: memref<?x8xf32>, %i: index, %j: index, %m: vector<4x8xi1>) -> vector<4x8xf32> {
+  %f0 = arith.constant 0.0 : f32
+  %r = vector.mask %m {
+    vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32>, vector<4x8xf32>
+  } : vector<4x8xi1> -> vector<4x8xf32>
+  return %r : vector<4x8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root : !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %root : (!transform.any_op) -> !transform.op<"func.func">
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "vector-transfer"
+    } : !transform.op<"func.func">
+    transform.yield
+  }
+}

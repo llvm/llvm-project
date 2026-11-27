@@ -569,8 +569,7 @@ NumericalStabilitySanitizerPass::run(Module &M, ModuleAnalysisManager &MAM) {
       // time. Hook them into the global ctors list in that case:
       [&](Function *Ctor, FunctionCallee) { appendToGlobalCtors(M, Ctor, 0); });
 
-  const InstrumentationOptions &Opts =
-      M.getContext().getLibraryOptions().get<InstrumentationOptions>();
+  const InstrumentationOptions &Opts = getInstrumentationOptions(M);
   NumericalStabilitySanitizer Nsan(Opts, M);
   auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   for (Function &F : M)
@@ -712,6 +711,27 @@ bool NumericalStabilitySanitizer::addrPointsToConstantData(Value *Addr) {
 void NumericalStabilitySanitizer::createShadowArguments(
     Function &F, const TargetLibraryInfo &TLI, ValueToShadowMap &Map) {
   assert(!F.getIntrinsicID() && "found a definition of an intrinsic");
+
+  // The copy of a `byval` argument lives in fresh stack memory that the caller
+  // never populated with shadow values, so it may overlap stale shadow memory
+  // from earlier frames. Reset it to unknown so that loads from it fall back
+  // to the native values instead of reading stale shadow.
+  IRBuilder<> ByValBuilder(F.getEntryBlock().getFirstNonPHIIt());
+  for (Argument &Arg : F.args()) {
+    if (!Arg.hasByValAttr())
+      continue;
+    TypeSize ByValSize = DL.getTypeAllocSize(Arg.getParamByValType());
+    assert(!ByValSize.isScalable() && "scalable byval is rejected by verifier");
+    const uint64_t Size = ByValSize.getFixedValue();
+    if (Size == 0)
+      continue;
+    FunctionCallee SetUnknownFn = NsanSetUnknownFns.getFunctionFor(Size);
+    if (SetUnknownFn.getFunctionType()->getNumParams() == 1)
+      ByValBuilder.CreateCall(SetUnknownFn, {&Arg});
+    else
+      ByValBuilder.CreateCall(SetUnknownFn,
+                              {&Arg, ConstantInt::get(IntptrTy, Size)});
+  }
 
   // Do not bother if there are no FP args.
   if (all_of(F.args(), [this](const Argument &Arg) {

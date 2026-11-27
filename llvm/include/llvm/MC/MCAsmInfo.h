@@ -95,6 +95,10 @@ protected:
   /// True if target stack grow up.  Default is false.
   bool StackGrowsUp = false;
 
+  /// Whether a section indicating a (non-)executable stack should be emitted.
+  /// Used by most ELF platforms.
+  bool EmitELFStackSection = false;
+
   /// True if this target has the MachO .subsections_via_symbols directive.
   /// Default is false.
   bool HasSubsectionsViaSymbols = false;
@@ -212,6 +216,12 @@ protected:
   /// True if full register names are printed.
   bool PPCUseFullRegisterNames = false;
 
+  /// True if the target supports the .addrsig directive.
+  bool HasAddrsigDirective = true;
+
+  void (*SpecifierExprPrintFn)(const MCAsmInfo &, raw_ostream &,
+                               const MCSpecifierExpr &) = nullptr;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -252,12 +262,11 @@ protected:
   /// .section directives.  Defaults to false.
   bool SunStyleELFSectionSwitchSyntax = false;
 
-  /// This is true if this target uses ELF '.section' directive before the
-  /// '.bss' one. It's used for PPC/Linux which doesn't support the '.bss'
-  /// directive only.  Defaults to false.
-  bool UsesELFSectionDirectiveForBSS = false;
-
   bool NeedsDwarfSectionOffsetDirective = false;
+
+  void (*PrintSwitchToSectionFn)(const MCAsmInfo &, const MCSection &,
+                                 uint32_t Subsection, const Triple &,
+                                 raw_ostream &);
 
   //===--- Alignment Information ----------------------------------------===//
 
@@ -353,11 +362,9 @@ protected:
   /// false.
   bool SupportsDebugInformation = false;
 
-  /// Exception handling format for the target.  Defaults to None.
-  ExceptionHandling ExceptionsType = ExceptionHandling::None;
-
   /// True if target uses CFI unwind information for other purposes than EH
-  /// (debugging / sanitizers) when `ExceptionsType == ExceptionHandling::None`.
+  /// (debugging / sanitizers) when the exception model is
+  /// `ExceptionHandling::None`.
   bool UsesCFIWithoutEH = false;
 
   /// Windows exception handling data (.pdata) encoding.  Defaults to Invalid.
@@ -438,6 +445,13 @@ protected:
   // quoted when used as a symbol name.
   llvm::DenseSet<llvm::CachedHashStringRef> ReservedIdentifiers;
 
+  /// Sections whose name also is supported as a directive without an explicit
+  /// ".section" directive.
+  ///
+  /// not contained => .section .text,#alloc,#execinstr
+  /// contained     => .text
+  SmallDenseSet<StringRef, 8> SectionDirectives;
+
   const MCTargetOptions &TargetOptions;
 
 public:
@@ -449,6 +463,8 @@ public:
   MCAsmInfo &operator=(MCAsmInfo const &) = delete;
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
+
+  unsigned getAsmMacroMaxNestingDepth() const;
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
@@ -465,6 +481,8 @@ public:
   /// True if target stack grow up.
   bool isStackGrowthDirectionUp() const { return StackGrowsUp; }
 
+  bool emitELFStackSection() const { return EmitELFStackSection; }
+
   bool hasSubsectionsViaSymbols() const { return HasSubsectionsViaSymbols; }
 
   // Data directive accessors.
@@ -475,19 +493,18 @@ public:
   const char *getData64bitsDirective() const { return Data64bitsDirective; }
   bool supportsSignedData() const { return SupportsSignedData; }
 
-  /// Targets can implement this method to specify a section to switch to
-  /// depending on whether the translation unit has any trampolines that require
-  /// an executable stack.
-  virtual MCSection *getStackSection(MCContext &Ctx, bool Exec) const {
-    return nullptr;
-  }
-
   virtual const MCExpr *getExprForPersonalitySymbol(const MCSymbol *Sym,
                                                     unsigned Encoding,
                                                     MCStreamer &Streamer) const;
 
   const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
                                     MCStreamer &Streamer) const;
+
+  /// Return the expression used to emit the offset of \p Sym + \p Offset from
+  /// the start of its DWARF section. The default is Sym + Offset.
+  virtual const MCExpr *getDwarfSectionOffsetExpr(const MCSymbol *Sym,
+                                                  uint64_t Offset,
+                                                  MCContext &Ctx) const;
 
   /// Return true if C is an acceptable character inside a symbol name.
   bool isAcceptableChar(char C) const;
@@ -504,28 +521,18 @@ public:
     return ReservedIdentifiers;
   }
 
-  virtual void printSwitchToSection(const MCSection &, uint32_t Subsection,
-                                    const Triple &, raw_ostream &) const {}
+  bool isSectionDirective(StringRef SecName) const {
+    return SectionDirectives.contains(SecName);
+  }
 
-  /// Return true if the .section directive should be omitted when
-  /// emitting \p SectionName.  For example:
-  ///
-  /// shouldOmitSectionDirective(".text")
-  ///
-  /// returns false => .section .text,#alloc,#execinstr
-  /// returns true  => .text
-  virtual bool shouldOmitSectionDirective(StringRef SectionName) const;
-
-  // Return true if a .align directive should use "optimized nops" to fill
-  // instead of 0s.
-  virtual bool useCodeAlign(const MCSection &Sec) const { return false; }
+  void printSwitchToSection(const MCSection &Sec, uint32_t Subsection,
+                            const Triple &T, raw_ostream &OS) const {
+    if (PrintSwitchToSectionFn)
+      PrintSwitchToSectionFn(*this, Sec, Subsection, T, OS);
+  }
 
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;
-  }
-
-  bool usesELFSectionDirectiveForBSS() const {
-    return UsesELFSectionDirectiveForBSS;
   }
 
   bool needsDwarfSectionOffsetDirective() const {
@@ -540,11 +547,8 @@ public:
   bool hasCOFFAssociativeComdats() const { return HasCOFFAssociativeComdats; }
   bool hasCOFFComdatConstants() const { return HasCOFFComdatConstants; }
 
-  /// Returns the maximum possible encoded instruction size in bytes. If \p STI
-  /// is null, this should be the maximum size for any subtarget.
-  virtual unsigned getMaxInstLength(const MCSubtargetInfo *STI = nullptr) const {
-    return MaxInstLength;
-  }
+  /// Returns the maximum possible encoded instruction size in bytes.
+  unsigned getMaxInstLength() const { return MaxInstLength; }
 
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
@@ -602,6 +606,8 @@ public:
   bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
   void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
 
+  bool hasAddrsigDirective() const { return HasAddrsigDirective; }
+
   const char *getZeroDirective() const { return ZeroDirective; }
   const char *getAsciiDirective() const { return AsciiDirective; }
   const char *getAscizDirective() const { return AscizDirective; }
@@ -653,24 +659,18 @@ public:
 
   bool doesSupportDebugInformation() const { return SupportsDebugInformation; }
 
-  ExceptionHandling getExceptionHandlingType() const { return ExceptionsType; }
   WinEH::EncodingType getWinEHEncodingType() const { return WinEHEncodingType; }
 
-  void setExceptionsType(ExceptionHandling EH) {
-    ExceptionsType = EH;
+  bool usesCFIWithoutEH(ExceptionHandling EH) const {
+    return EH == ExceptionHandling::None && UsesCFIWithoutEH;
   }
 
-  bool usesCFIWithoutEH() const {
-    return ExceptionsType == ExceptionHandling::None && UsesCFIWithoutEH;
-  }
-
-  /// Returns true if the exception handling method for the platform uses call
-  /// frame information to unwind.
-  bool usesCFIForEH() const {
-    return (ExceptionsType == ExceptionHandling::DwarfCFI ||
-            ExceptionsType == ExceptionHandling::ARM ||
-            ExceptionsType == ExceptionHandling::ZOS ||
-            (ExceptionsType == ExceptionHandling::WinEH && usesWindowsCFI()));
+  /// Returns true if the exception handling method \p EH uses call frame
+  /// information to unwind.
+  bool usesCFIForEH(ExceptionHandling EH) const {
+    return EH == ExceptionHandling::DwarfCFI || EH == ExceptionHandling::ARM ||
+           EH == ExceptionHandling::ZOS ||
+           (EH == ExceptionHandling::WinEH && usesWindowsCFI());
   }
 
   /// Returns true if the object format describes unwind information with
@@ -684,8 +684,8 @@ public:
 
   /// Returns true if the exception tables reference the per-invoke EH labels
   /// emitted around invokes. 32-bit x86 SEH and Wasm do not.
-  bool usesPerInvokeEHLabels() const {
-    switch (ExceptionsType) {
+  bool usesPerInvokeEHLabels(ExceptionHandling EH) const {
+    switch (EH) {
     case ExceptionHandling::WinEH:
       // 32-bit x86 SEH uses a state table, not per-invoke IP-to-state ranges.
       return WinEHEncodingType != WinEH::EncodingType::X86;
@@ -736,9 +736,7 @@ public:
   }
 
   /// Set whether assembly (inline or otherwise) should be parsed.
-  virtual void setUseIntegratedAssembler(bool Value) {
-    UseIntegratedAssembler = Value;
-  }
+  void setUseIntegratedAssembler(bool Value) { UseIntegratedAssembler = Value; }
 
   /// Set whether target want to use AsmParser to parse inlineasm.
   void setParseInlineAsmUsingAsmParser(bool Value) {
@@ -759,12 +757,16 @@ public:
   std::optional<uint32_t> getSpecifierForName(StringRef Name) const;
 
   void printExpr(raw_ostream &, const MCExpr &) const;
-  virtual void printSpecifierExpr(raw_ostream &,
-                                  const MCSpecifierExpr &) const {
-    llvm_unreachable("Need to implement hook if target uses MCSpecifierExpr");
-  }
   virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
                                          const MCAssembler *Asm) const;
+
+  /// True if the instruction is stored in multiple halfwords, with
+  /// the high-order half appearing first in memory regardless of target
+  /// endianness, to distinguish it from instructions occupying only one
+  /// halfword. Examples are the Thumb variant of Arm, microMIPS, and nanoMIPS.
+  virtual bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+    return false;
+  }
 };
 
 } // end namespace llvm

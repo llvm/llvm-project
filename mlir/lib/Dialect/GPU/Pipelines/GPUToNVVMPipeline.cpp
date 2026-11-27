@@ -25,6 +25,7 @@
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Pipelines/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/NVVM/Passes.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
@@ -88,6 +89,10 @@ void buildHostPostPipeline(OpPassManager &pm,
   opt.hostBarePtrCallConv = options.hostUseBarePtrCallConv;
   opt.kernelBarePtrCallConv = options.kernelUseBarePtrCallConv;
   pm.addPass(createGpuToLLVMConversionPass(opt));
+
+  GpuAttachSelectObjectPassOptions gpuAttachSelectObjectPassOptions;
+  gpuAttachSelectObjectPassOptions.priority = options.defaultCtorPriority;
+  pm.addPass(createGpuAttachSelectObjectPass(gpuAttachSelectObjectPassOptions));
 
   GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
   gpuModuleToBinaryPassOptions.compilationTarget = options.cubinFormat;

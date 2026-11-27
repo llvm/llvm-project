@@ -16,3 +16,12 @@ define double @kernel(ptr addrspace(5) %ptr, double %val) {
 ; CHECK-NEXT:   ret double %1
 }
 
+define i32 @underaligned(ptr addrspace(5) %ptr, i32 %val) {
+  %res = atomicrmw add ptr addrspace(5) %ptr, i32 %val monotonic, align 2
+  ret i32 %res
+; CHECK:   %1 = load i32, ptr addrspace(5) %ptr, align 2
+; CHECK-NEXT:   %new = add i32 %1, %val
+; CHECK-NEXT:   store i32 %new, ptr addrspace(5) %ptr, align 2
+; CHECK-NEXT:   ret i32 %1
+}
+

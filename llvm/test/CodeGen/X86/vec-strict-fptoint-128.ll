@@ -3360,4 +3360,44 @@ define <4 x i1> @strict_vector_fptoui_v4f32_to_v4i1(<4 x float> %a) #0 {
   ret <4 x i1> %ret
 }
 
+define <4 x i32> @strict_vector_fptosi_v2f64_to_v2i32_zero_upper(<2 x double> %a) #0 {
+; SSE-32-LABEL: strict_vector_fptosi_v2f64_to_v2i32_zero_upper:
+; SSE-32:       # %bb.0:
+; SSE-32-NEXT:    cvttpd2dq %xmm0, %xmm0
+; SSE-32-NEXT:    retl
+;
+; SSE-64-LABEL: strict_vector_fptosi_v2f64_to_v2i32_zero_upper:
+; SSE-64:       # %bb.0:
+; SSE-64-NEXT:    cvttpd2dq %xmm0, %xmm0
+; SSE-64-NEXT:    retq
+;
+; AVX-LABEL: strict_vector_fptosi_v2f64_to_v2i32_zero_upper:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX-NEXT:    ret{{[l|q]}}
+;
+; AVX512F-LABEL: strict_vector_fptosi_v2f64_to_v2i32_zero_upper:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX512F-NEXT:    ret{{[l|q]}}
+;
+; AVX512VL-LABEL: strict_vector_fptosi_v2f64_to_v2i32_zero_upper:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX512VL-NEXT:    ret{{[l|q]}}
+;
+; AVX512DQ-LABEL: strict_vector_fptosi_v2f64_to_v2i32_zero_upper:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX512DQ-NEXT:    ret{{[l|q]}}
+;
+; AVX512VLDQ-LABEL: strict_vector_fptosi_v2f64_to_v2i32_zero_upper:
+; AVX512VLDQ:       # %bb.0:
+; AVX512VLDQ-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    ret{{[l|q]}}
+  %c = call <2 x i32> @llvm.experimental.constrained.fptosi.v2i32.v2f64(<2 x double> %a, metadata !"fpexcept.strict") #0
+  %r = shufflevector <2 x i32> %c, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %r
+}
+
 attributes #0 = { strictfp }

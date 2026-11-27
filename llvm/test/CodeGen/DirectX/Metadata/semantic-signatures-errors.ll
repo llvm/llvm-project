@@ -15,10 +15,9 @@
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/integer-undefined.ll 2>&1 | FileCheck %s --check-prefix=INTEGER-UNDEFINED
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/vertex-location.ll 2>&1 | FileCheck %s --check-prefix=VERTEX
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/target-location.ll 2>&1 | FileCheck %s --check-prefix=TARGET
+; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/target-integer.ll 2>&1 | FileCheck %s --check-prefix=TARGET-INTEGER
 ; RUN: cat %t/access-common.ll %t/access-id.ll > %t/test.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-ID
-; RUN: cat %t/access-common.ll %t/access-dynamic-id.ll > %t/test.ll
-; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-DYNAMIC-ID
 ; RUN: cat %t/access-common.ll %t/access-component.ll > %t/test.ll
 ; RUN: not opt -disable-output -passes=dxil-translate-metadata %t/test.ll 2>&1 | FileCheck %s --check-prefix=ACCESS-COMPONENT
 ; RUN: cat %t/access-common.ll %t/access-row.ll > %t/test.ll
@@ -237,6 +236,18 @@ attributes #0 = { "hlsl.shader"="pixel" }
 !2 = !{i32 0, !"SV_Target", i32 9, i32 16, !3, i32 0, i32 1, i8 1, i32 1, i8 0, i8 0, i8 0, i32 0}
 !3 = !{i32 3}
 
+;--- target-integer.ll
+; Invalid component type (operand 2): U32 (5), rather than a 16- or 32-bit float.
+target triple = "dxil-pc-shadermodel6.8-pixel"
+define void @main() #0 { ret void }
+attributes #0 = { "hlsl.shader"="pixel" }
+!dx.semantic.signatures = !{!0}
+!0 = !{ptr @main, null, !1}
+!1 = !{!2}
+; TARGET-INTEGER: entry 'main' output signature: SV_Target requires 16- or 32-bit floating-point components
+!2 = !{i32 0, !"SV_Target", i32 5, i32 16, !3, i32 0, i32 1, i8 4, i32 0, i8 0, i8 0, i8 0, i32 0}
+!3 = !{i32 0}
+
 ;--- access-common.ll
 target triple = "dxil-pc-shadermodel6.8-vertex"
 attributes #0 = { "hlsl.shader"="vertex" }
@@ -253,14 +264,6 @@ attributes #0 = { "hlsl.shader"="vertex" }
 ; The intrinsic ID is outside the signature's two-element list.
 define void @main() #0 {
   %x = call float @llvm.dx.load.input.f32(i32 123456789, i32 0, i8 0, i32 poison)
-  ret void
-}
-
-;--- access-dynamic-id.ll
-; ACCESS-DYNAMIC-ID: entry 'main': input signature: signature access requires a constant element ID
-; Signature IDs cannot be selected dynamically.
-define void @main(i32 %id) #0 {
-  %x = call float @llvm.dx.load.input.f32(i32 %id, i32 0, i8 0, i32 poison)
   ret void
 }
 
