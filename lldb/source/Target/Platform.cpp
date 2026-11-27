@@ -24,6 +24,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Interpreter/OptionValueFileSpec.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
@@ -1398,20 +1399,8 @@ const char *Platform::GetLocalCacheDirectory() {
   return m_local_cache_directory.c_str();
 }
 
-static constexpr OptionDefinition g_rsync_option_table[] = {
-    {LLDB_OPT_SET_ALL, false, "rsync", 'r', OptionParser::eNoArgument, nullptr,
-     {}, 0, eArgTypeNone, "Enable rsync."},
-    {LLDB_OPT_SET_ALL, false, "rsync-opts", 'R',
-     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCommandName,
-     "Platform-specific options required for rsync to work."},
-    {LLDB_OPT_SET_ALL, false, "rsync-prefix", 'P',
-     OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCommandName,
-     "Platform-specific rsync prefix put before the remote path."},
-    {LLDB_OPT_SET_ALL, false, "ignore-remote-hostname", 'i',
-     OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone,
-     "Do not automatically fill in the remote hostname when composing the "
-     "rsync command."},
-};
+#define LLDB_OPTIONS_platform_rsync
+#include "TargetOptions.inc"
 
 static constexpr OptionDefinition g_ssh_option_table[] = {
     {LLDB_OPT_SET_ALL, false, "ssh", 's', OptionParser::eNoArgument, nullptr,
@@ -1428,7 +1417,7 @@ static constexpr OptionDefinition g_caching_option_table[] = {
 };
 
 llvm::ArrayRef<OptionDefinition> OptionGroupPlatformRSync::GetDefinitions() {
-  return llvm::ArrayRef(g_rsync_option_table);
+  return llvm::ArrayRef(g_platform_rsync_options);
 }
 
 void OptionGroupPlatformRSync::OptionParsingStarting(
