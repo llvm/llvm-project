@@ -1,0 +1,87 @@
+# RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -run-pass=machine-scheduler \
+# RUN:   -amdgpu-sched-strategy=coexec -verify-misched %s -o - \
+# RUN:   | FileCheck %s --check-prefix=ENABLED
+# RUN: sed 's/ "amdgpu-wmma-schedule"//' %s | llc -x mir \
+# RUN:   -mtriple=amdgpu12.50-amd-amdhsa -run-pass=machine-scheduler \
+# RUN:   -amdgpu-sched-strategy=coexec -verify-misched -o - \
+# RUN:   | FileCheck %s --check-prefix=DISABLED
+
+# Test the WMMA scheduling DAG mutation with the CoExec scheduler. With the
+# mutation enabled, eight WMMAs are scheduled between the two DS load groups;
+# without it, both load groups are scheduled before the WMMAs.
+
+--- |
+  define void @ds_read_window() #0 { ret void }
+  attributes #0 = { "amdgpu-waves-per-eu"="1,1" "amdgpu-wmma-schedule" }
+...
+---
+name: ds_read_window
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; ENABLED-LABEL: name: ds_read_window
+    ; ENABLED: undef %{{[0-9]+}}.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %{{[0-9]+}}, 0,
+    ; ENABLED-COUNT-8: V_WMMA
+    ; ENABLED: undef %{{[0-9]+}}.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %{{[0-9]+}}, 224,
+
+    ; DISABLED-LABEL: name: ds_read_window
+    ; DISABLED: undef %{{[0-9]+}}.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %{{[0-9]+}}, 0,
+    ; DISABLED: undef %{{[0-9]+}}.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %{{[0-9]+}}, 128,
+    ; DISABLED: V_WMMA
+
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vreg_128_lo256_align2 = IMPLICIT_DEF
+    %2:vgpr_32_lo256 = IMPLICIT_DEF
+    %3:vreg_256_align2 = IMPLICIT_DEF
+    %4:vreg_256_align2 = COPY %3
+    %5:vreg_256_align2 = COPY %4
+    %6:vreg_256_align2 = COPY %5
+    %7:vreg_256_align2 = COPY %6
+    %8:vreg_256_align2 = COPY %7
+    %9:vreg_256_align2 = COPY %8
+    %10:vreg_256_align2 = COPY %9
+    %11:vreg_256_align2 = COPY %10
+    %12:vreg_256_align2 = COPY %11
+    %13:vreg_256_align2 = COPY %12
+    %14:vreg_256_align2 = COPY %13
+    %15:vreg_256_align2 = COPY %14
+    %16:vreg_256_align2 = COPY %15
+    %17:vreg_256_align2 = COPY %16
+    %18:vreg_256_align2 = COPY %17
+    %19:vreg_256_align2 = COPY %18
+    %20:vreg_256_align2 = COPY %19
+    %21:vreg_256_align2 = COPY %20
+    %22:vreg_256_align2 = COPY %21
+    %23:vreg_256_align2 = COPY %22
+    %24:vreg_256_align2 = COPY %23
+    %25:vreg_256_align2 = COPY %24
+    %26:vreg_256_align2 = COPY %25
+    %27:vreg_256_align2 = COPY %26
+    %28:vreg_512_align2 = IMPLICIT_DEF
+    undef %29.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %0, 0, 0, implicit $exec :: (load (s128), addrspace 3)
+    %29.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %0, 32, 0, implicit $exec :: (load (s128), addrspace 3)
+    %29.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %0, 64, 0, implicit $exec :: (load (s128), addrspace 3)
+    %29.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %0, 96, 0, implicit $exec :: (load (s128), addrspace 3)
+    undef %30.sub0_sub1_sub2_sub3:vreg_512_align2 = DS_READ_B128_gfx9 %0, 128, 0, implicit $exec :: (load (s128), addrspace 3)
+    %30.sub4_sub5_sub6_sub7:vreg_512_align2 = DS_READ_B128_gfx9 %0, 160, 0, implicit $exec :: (load (s128), addrspace 3)
+    %30.sub8_sub9_sub10_sub11:vreg_512_align2 = DS_READ_B128_gfx9 %0, 192, 0, implicit $exec :: (load (s128), addrspace 3)
+    %30.sub12_sub13_sub14_sub15:vreg_512_align2 = DS_READ_B128_gfx9 %0, 224, 0, implicit $exec :: (load (s128), addrspace 3)
+    dead early-clobber %31:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %32:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %33:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %34:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %35:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %36:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %37:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %38:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %29, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %39:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %40:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %41:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %42:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %43:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %44:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %45:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %46:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %28, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    dead early-clobber %47:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %30, %28, 0, %27, %1.sub0, %2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+    S_ENDPGM 0
+...
