@@ -408,4 +408,4 @@ Martin Abadi, Mihai Budiu, Úlfar Erlingsson, Jay Ligatti.
 Caroline Tice, Tom Roeder, Peter Collingbourne, Stephen Checkoway,
 Úlfar Erlingsson, Luis Lozano, Geoff Pike.
 
-[gold plugin]: https://llvm.org/docs/GoldPlugin.html
+[gold plugin]: inv:llvm:std:doc#GoldPlugin
