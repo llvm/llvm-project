@@ -522,7 +522,8 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
     // Handle vectors of size 3 like size 4 for better performance.
     // TODO(CIR): Use `ABIInfo::getOptimalVectorMemoryType` once it upstreamed
     assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type)
+    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type &&
+        !getTarget().getTriple().isAMDGCN())
       cgm.errorNYI(addr.getPointer().getLoc(),
                    "emitStoreOfScalar Vec3 & PreserveVec3Type disabled");
   }
@@ -783,7 +784,8 @@ mlir::Value CIRGenFunction::emitLoadOfScalar(Address addr, bool isVolatile,
   if (const auto *clangVecTy = ty->getAs<clang::VectorType>()) {
     // Handle vectors of size 3 like size 4 for better performance.
     assert(!cir::MissingFeatures::cirgenABIInfo());
-    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type)
+    if (clangVecTy->getNumElements() == 3 && !getLangOpts().PreserveVec3Type &&
+        !getTarget().getTriple().isAMDGCN())
       cgm.errorNYI(addr.getPointer().getLoc(),
                    "emitLoadOfScalar Vec3 & PreserveVec3Type disabled");
   }
