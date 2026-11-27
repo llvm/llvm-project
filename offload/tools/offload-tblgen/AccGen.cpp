@@ -303,8 +303,8 @@ void EmitAccFModule(const RecordKeeper &Records, raw_ostream &OS) {
   std::map<std::string, std::vector<Func>> Groups;
   std::map<std::string, std::set<std::string>> Aliases;
   for (Func &F : collectFFuncs(Records)) {
-    for (const std::string &A : F.Aliases)
-      Aliases[F.Generic].insert(A);
+    if (!F.Aliases.empty())
+      Aliases[F.Generic].insert(F.Aliases.begin(), F.Aliases.end());
     Groups[F.Generic].push_back(std::move(F));
   }
   for (auto &G : Groups)
