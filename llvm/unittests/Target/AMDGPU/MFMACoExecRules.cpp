@@ -128,6 +128,8 @@ TEST_F(AMDGPUMFMACoExecRules, StartStages) {
                      Info.TotalWindow};
     EXPECT_EQ(Actual, C.Expected)
         << C.CPU << ": " << TM->getMCInstrInfo()->getName(C.Opcode).str();
+    EXPECT_EQ(getFirstStage(Info, CoExecMask::TRANS), Actual[2])
+        << C.CPU << ": " << TM->getMCInstrInfo()->getName(C.Opcode).str();
   }
 }
 

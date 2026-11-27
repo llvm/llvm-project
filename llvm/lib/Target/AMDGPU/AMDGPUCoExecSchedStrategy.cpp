@@ -72,7 +72,7 @@ static CoExecInfo buildMFMACoExecInfo(unsigned SALU, unsigned Mem,
     if (I >= Mem)
       Mask |= CoExecMask::DS | CoExecMask::VMEM;
     if (I >= VALU)
-      Mask |= CoExecMask::VALU;
+      Mask |= CoExecMask::VALU | CoExecMask::TRANS;
     if (I >= MFMA)
       Mask |= CoExecMask::WMMA;
     if (I >= PkF32)
