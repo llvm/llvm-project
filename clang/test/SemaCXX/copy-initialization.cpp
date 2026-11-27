@@ -63,9 +63,6 @@ namespace DR5 {
   namespace Ex2 {
     struct S {
       S(S&&);
-#if __cplusplus <= 199711L // C++03 or earlier modes
-      // expected-warning@-2 {{rvalue references are a C++11 extension}}
-#endif
       S(int);
     };
     const S a(0);

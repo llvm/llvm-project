@@ -20,7 +20,7 @@ union U {
 };
 
 class B {
-  // 'A' here should refer to the declaration above.  
+  // 'A' here should refer to the declaration above.
   friend class A;
 
   friend C;
@@ -34,9 +34,6 @@ class B {
 #endif
 
   friend int;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{non-class friend type 'int' is a C++11 extension}}
-#endif
 
   friend void myfunc();
 

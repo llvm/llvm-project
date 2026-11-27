@@ -251,7 +251,7 @@ multiclass CompatWarning<
 //   - compat_c(xx)11_inline_variable:     'inline variables are incompatible with C(++) standards before C(++)11'
 //   - compat_pre_c(xx)11_inline_variable: 'inline variables are a C(++)11 extension'
 //
-multiclass CXX11Compat<string message, bit ext_warn = true> : CompatWarning<message, 11, /*cxx=*/true, ext_warn>;
+multiclass CXX11Compat<string message, bit ext_warn = false> : CompatWarning<message, 11, /*cxx=*/true, ext_warn>;
 multiclass CXX14Compat<string message, bit ext_warn = true> : CompatWarning<message, 14, /*cxx=*/true, ext_warn>;
 multiclass CXX17Compat<string message, bit ext_warn = true> : CompatWarning<message, 17, /*cxx=*/true, ext_warn>;
 multiclass CXX20Compat<string message, bit ext_warn = true> : CompatWarning<message, 20, /*cxx=*/true, ext_warn>;

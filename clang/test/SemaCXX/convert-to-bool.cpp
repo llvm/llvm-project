@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s 
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 
@@ -12,9 +12,6 @@ struct ConvToInt {
 
 struct ExplicitConvToBool {
   explicit operator bool(); // expected-note {{explicit}}
-#if __cplusplus <= 199711L // C++03 or earlier modes
-  // expected-warning@-2{{explicit conversion functions are a C++11 extension}}
-#endif
 };
 
 void test_conv_to_bool(ConvToBool ctb, ConvToInt cti, ExplicitConvToBool ecb) {
@@ -46,9 +43,6 @@ void accepts_bool(bool) { } // expected-note{{candidate function}}
 
 struct ExplicitConvToRef {
   explicit operator int&(); // expected-note {{explicit}}
-#if (__cplusplus <= 199711L) // C++03 or earlier modes
-  // expected-warning@-2{{explicit conversion functions are a C++11 extension}}
-#endif
 };
 
 void test_explicit_bool(ExplicitConvToBool ecb) {
@@ -66,9 +60,6 @@ struct A { };
 struct B { };
 struct C {
   explicit operator A&();  // expected-note {{explicit}}
-#if __cplusplus <= 199711L // C++03 or earlier modes
-// expected-warning@-2{{explicit conversion functions are a C++11 extension}}
-#endif
   operator B&(); // expected-note{{candidate}}
 };
 

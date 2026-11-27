@@ -17,8 +17,7 @@ defm c23_pp_directive : C23Compat<
 defm c23_pp_embed_directive : C23Compat<"#embed is", /*ext_warn*/true>;
 
 // C++11 compatibility with C++98.
-defm empty_fnmacro_arg : CXX11Compat<
-  "empty macro arguments are", /*ext_warn*/false>;
+defm empty_fnmacro_arg : CXX11Compat<"empty macro arguments are">;
 
 // C++17 compatibility with C++14 and earlier.
 defm hex_literal : CXX17Compat<

@@ -73,9 +73,6 @@ void test3() {
 namespace inline_ns {
   int x; // expected-note 2{{found}}
   inline namespace A {
-#if __cplusplus <= 199711L // C++03 or earlier
-  // expected-warning@-2 {{inline namespaces are a C++11 extension}}
-#endif
 
     int x; // expected-note 2{{found}}
     int y; // expected-note 2{{found}}

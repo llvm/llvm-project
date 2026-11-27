@@ -196,10 +196,6 @@ namespace OverloadUse {
     void f();
     void f(int); // expected-warning {{function 'OverloadUse::(anonymous namespace)::f' has internal linkage but is not defined}}
     void f(int, int); // expected-warning {{function 'OverloadUse::(anonymous namespace)::f' has internal linkage but is not defined}}
-#if __cplusplus < 201103L
-    // expected-note@-3 {{here}}
-    // expected-note@-3 {{here}}
-#endif
   }
   template<void x()> void t() { x(); }
   template<void x(int)> void t(int*) { x(10); }
@@ -207,12 +203,6 @@ namespace OverloadUse {
   void g(int n) {
     t<f>(&n); // expected-note {{used here}}
     t<f>(&n, &n); // expected-note {{used here}}
-#if __cplusplus < 201103L
-    // expected-warning@-3 {{non-type template argument referring to function 'f' with internal linkage}}
-    // expected-note@-4 {{while substituting explicitly-specified template arguments}}
-    // expected-warning@-4 {{non-type template argument referring to function 'f' with internal linkage}}
-    // expected-note@-5 {{while substituting explicitly-specified template arguments}}
-#endif
   }
 }
 

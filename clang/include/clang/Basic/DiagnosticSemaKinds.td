@@ -39,11 +39,10 @@ defm template_outside_of_template : CXX11Compat<
 defm explicit_conversion_functions : CXX11Compat<
   "explicit conversion functions are">;
 defm cast_fn_obj : CXX11Compat<
-  "cast between pointer-to-function and pointer-to-object is",
-  /*ext_warn*/false>;
+  "cast between pointer-to-function and pointer-to-object is">;
 defm array_size_conversion : CXX11Compat<
   "implicit conversion from array size expression of type %0 to "
-  "%select{integral|enumeration}1 type %2 is", /*ext_warn*/false>;
+  "%select{integral|enumeration}1 type %2 is">;
 
 // C++14 compatibility with C++11 and earlier.
 defm constexpr_type_definition : CXX14Compat<

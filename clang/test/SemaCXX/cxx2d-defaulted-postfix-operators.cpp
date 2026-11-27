@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -std=c++03 -verify=expected,cxx03,pre14,pre20,pre23,pre2d %s
-// RUN: %clang_cc1 -std=c++11 -verify=expected,pre14,pre20,pre23,pre2d %s
-// RUN: %clang_cc1 -std=c++14 -verify=expected,pre20,pre23,pre2d %s
-// RUN: %clang_cc1 -std=c++17 -verify=expected,pre20,pre23,pre2d %s
-// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20,pre23,pre2d %s
+// RUN: %clang_cc1 -std=c++03 -verify=expected,pre20,pre2d %s
+// RUN: %clang_cc1 -std=c++11 -verify=expected,pre20,pre2d %s
+// RUN: %clang_cc1 -std=c++14 -verify=expected,pre20,pre2d %s
+// RUN: %clang_cc1 -std=c++17 -verify=expected,pre20,pre2d %s
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx20,pre2d %s
 // RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20,pre2d %s
 // RUN: %clang_cc1 -std=c++26 -verify=expected,cxx20,pre2d %s
 // RUN: %clang_cc1 -std=c++2d -verify=expected,cxx2d %s
@@ -18,11 +18,9 @@ struct S {
   S operator++(int) = default;
   // pre2d-warning@-1 {{defaulted postfix increment and decrement operators are a C++2d extension}}
   // compat-warning@-2 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-  // cxx03-warning@-3 {{defaulted function definitions are a C++11 extension}}
   S operator--(int) = default;
   // pre2d-warning@-1 {{defaulted postfix increment and decrement operators are a C++2d extension}}
   // compat-warning@-2 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-  // cxx03-warning@-3 {{defaulted function definitions are a C++11 extension}}
 };
 void use_s(S s) {
   s++;
@@ -35,7 +33,6 @@ struct N {
 N operator++(N &, int) = default;
 // pre2d-warning@-1 {{defaulted postfix increment and decrement operators are a C++2d extension}}
 // compat-warning@-2 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-// cxx03-warning@-3 {{defaulted function definitions are a C++11 extension}}
 void use_n(N n) { n++; }
 
 // The warning is produced once for a class template, not again for each
@@ -46,7 +43,6 @@ template <typename T> struct W {
   W operator++(int) = default;
   // pre2d-warning@-1 {{defaulted postfix increment and decrement operators are a C++2d extension}}
   // compat-warning@-2 {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-  // cxx03-warning@-3 {{defaulted function definitions are a C++11 extension}}
 };
 void use_w(W<int> w, W<long> x) {
   w++;
@@ -59,10 +55,8 @@ struct Other {
   // pre20-error@-1 {{only special member functions may be defaulted}}
   // cxx20-error@-2 {{only special member functions and comparison operators may be defaulted}}
   // cxx2d-error@-3 {{only special member functions, comparison operators, and postfix increment and decrement operators may be defaulted}}
-  // cxx03-warning@-4 {{defaulted function definitions are a C++11 extension}}
   Other &operator++() = default;
   // expected-error@-1 {{only the postfix form of 'operator++' can be defaulted}}
-  // cxx03-warning@-2 {{defaulted function definitions are a C++11 extension}}
 };
 
 // An implicitly deleted defaulted postfix operator.
@@ -74,7 +68,6 @@ struct Deleted {
   // expected-note@#Deleted {{explicitly defaulted function was implicitly deleted here}}
   // pre2d-warning@#Deleted {{defaulted postfix increment and decrement operators are a C++2d extension}}
   // compat-warning@#Deleted {{defaulted postfix increment and decrement operators are incompatible with C++ standards before C++2d}}
-  // cxx03-warning@#Deleted {{defaulted function definitions are a C++11 extension}}
 };
 void use_deleted(Deleted d) {
   d++; // expected-error {{object of type 'Deleted' cannot be incremented because its defaulted postfix increment operator is implicitly deleted}}

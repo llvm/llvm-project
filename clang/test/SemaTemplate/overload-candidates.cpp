@@ -97,9 +97,6 @@ namespace PR15673 {
 
   template<typename T,
            typename Requires = typename std::enable_if<a_trait<T>::value>::type>
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
-#endif
   // expected-note@+1 {{candidate template ignored: requirement 'PR15673::a_trait<int>::value' was not satisfied [with T = int]}}
   void foo() {}
   void bar() { foo<int>(); } // expected-error {{no matching function for call to 'foo'}}
@@ -114,9 +111,6 @@ namespace PR15673 {
 
   template<typename T,
            typename Requires = typename a_pony<T>::type>
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
-#endif
   // FIXME: The source location here is poor.
   void baz() { } // expected-note {{candidate template ignored: substitution failure [with T = int]: no type named 'type' in 'PR15673::a_pony<int>'}}
   void quux() { baz<int>(); } // expected-error {{no matching function for call to 'baz'}}
@@ -125,26 +119,16 @@ namespace PR15673 {
   // FIXME: This note doesn't make it clear which candidate we rejected.
   template <typename T>
   using unicorns = typename std::enable_if<some_trait<T>::value>::type;
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{alias declarations are a C++11 extension}}
-#endif
-  // expected-note@+7 {{candidate template ignored: requirement 'PR15673::some_trait<int>::value' was not satisfied [with T = int]}}
+  // expected-note@+4 {{candidate template ignored: requirement 'PR15673::some_trait<int>::value' was not satisfied [with T = int]}}
 
   template<typename T,
            typename Requires = unicorns<T> >
-#if __cplusplus <= 199711L
-  // expected-warning@-2 {{default template arguments for a function template are a C++11 extension}}
-#endif
   void wibble() {}
   void wobble() { wibble<int>(); } // expected-error {{no matching function for call to 'wibble'}}
 
   template<typename T>
   struct some_passing_trait : std::true_type {};
 
-#if __cplusplus <= 199711L
-  // expected-warning@+4 {{default template arguments for a function template are a C++11 extension}}
-  // expected-warning@+4 {{default template arguments for a function template are a C++11 extension}}
-#endif
   template<typename T,
            int n = 42,
            typename std::enable_if<n == 43 || (some_passing_trait<T>::value && some_trait<T>::value), int>::type = 0>
@@ -155,10 +139,6 @@ namespace PR15673 {
     int x = 42,                                                         \
     typename std::enable_if<(x == 43) || (__VA_ARGS__)>::type = 0
 
-#if __cplusplus <= 199711L
-  // expected-warning@+4 {{default template arguments for a function template are a C++11 extension}}
-  // expected-warning@+3 {{default template arguments for a function template are a C++11 extension}}
-#endif
   template<typename T,
            CONCEPT_REQUIRES_(some_passing_trait<T>::value && some_trait<T>::value)>
   void rangesv3(); // expected-note{{candidate template ignored: requirement 'PR15673::some_trait<int>::value' was not satisfied [with T = int, x = 42]}}

@@ -119,9 +119,6 @@ namespace rdar8231724 {
     y->N::X1<int>; // expected-error{{'rdar8231724::N::X1' is not a member of class 'Y'}}
     y->Z<int>::n; // expected-error{{'rdar8231724::Z<int>::n' is not a member of class 'Y'}}
     y->template Z<int>::n; // expected-error{{'rdar8231724::Z<int>::n' is not a member of class 'Y'}}
-#if __cplusplus <= 199711L // C++03 or earlier modes
-    // expected-warning@-2{{'template' keyword outside of a template}}
-#endif
   }
 }
 
