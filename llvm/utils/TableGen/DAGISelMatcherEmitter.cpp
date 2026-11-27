@@ -239,8 +239,8 @@ private:
       Entries.push_back(&IdxAndCount);
 
     // Sort by count descending.
-    llvm::sort(Entries,
-               [](EntryPtr A, EntryPtr B) { return A->second > B->second; });
+    llvm::stable_sort(
+        Entries, [](EntryPtr A, EntryPtr B) { return A->second > B->second; });
 
     // Assign new indices (1-based) in frequency order.
     for (unsigned NewIdx = 0; NewIdx < Entries.size(); ++NewIdx)

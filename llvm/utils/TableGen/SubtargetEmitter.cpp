@@ -187,7 +187,7 @@ void SubtargetEmitter::emitSubtargetInfoMacroCalls(raw_ostream &OS) {
 
   std::vector<const Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
-  llvm::sort(FeatureList, LessRecordFieldFieldName());
+  llvm::stable_sort(FeatureList, LessRecordFieldFieldName());
 
   for (const Record *Feature : FeatureList) {
     const StringRef FieldName = Feature->getValueAsString("FieldName");
@@ -2166,7 +2166,7 @@ void SubtargetEmitter::emitInlineFeatures(const std::string &ClassName,
                                           raw_ostream &OS, StringRef Behavior) {
   std::vector<const Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
-  llvm::sort(FeatureList, LessRecordFieldFieldName());
+  llvm::stable_sort(FeatureList, LessRecordFieldFieldName());
 
   OS << "const FeatureBitset &" << ClassName << "::get" << Behavior
      << "Features() const {\n"
