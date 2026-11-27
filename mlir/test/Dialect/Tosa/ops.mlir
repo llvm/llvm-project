@@ -2285,3 +2285,10 @@ func.func @test_unsigned_i16_attributes(%arg0: tensor<1xui16>, %arg1: tensor<1xi
   %2 = tosa.rescale %arg1, %multiplier, %shift, %signed_zp, %unsigned_zp scale32(false) rounding_mode<SINGLE_ROUND> per_channel(false) input_unsigned(false) output_unsigned(true) : (tensor<1xi8>, tensor<1xi16>, tensor<1xi8>, tensor<1xi8>, tensor<1xui16>) -> tensor<1xui16>
   return %0, %1, %2 : tensor<1xf32>, tensor<1xi8>, tensor<1xui16>
 }
+
+// -----
+
+func.func @test_cast_unsigned_bool(%arg0: tensor<1xui1>) -> tensor<1xf32> {
+  %0 = tosa.cast %arg0 : (tensor<1xui1>) -> tensor<1xf32>
+  return %0 : tensor<1xf32>
+}
