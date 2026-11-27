@@ -857,6 +857,7 @@ struct CountedRegionEmitter {
                           CounterValues[Region.FalseCount]);
     }
 
+#ifndef NDEBUG
     // Region lookups assume FileID order.
     auto ByFileID = [](const CountedRegion &L, const CountedRegion &R) {
       return L.FileID < R.FileID;
@@ -865,6 +866,7 @@ struct CountedRegionEmitter {
            "CountedRegions must be sorted by FileID");
     assert(llvm::is_sorted(Function.CountedBranchRegions, ByFileID) &&
            "CountedBranchRegions must be sorted by FileID");
+#endif
 
     return Error::success();
   }
