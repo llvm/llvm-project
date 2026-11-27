@@ -84,6 +84,26 @@ TEST_F(LlvmLibcVecLog1pfTest, TrickyInputs) {
   }
 }
 
+TEST_F(LlvmLibcVecLog1pfTest, MixedSmallAndFallbackInputs) {
+  constexpr float small = 0x1p-8f;
+  constexpr float cutoff = 0x1p-6f;
+  constexpr float above_cutoff = 0x1.000002p-6f;
+  constexpr float hard = 0x1.800006p-21f;
+
+  // Distinct small inputs, including the SIMD path's upper boundary.
+  EXPECT_SIMD_EQ(wrap_ref<Log1pfOp>(small, -cutoff),
+                 wrap_vector<Log1pfOp>(small, -cutoff));
+
+  // Mix a small input with values that force the scalar fallback.
+  constexpr float fallback_inputs[] = {above_cutoff, hard, -0.0f, -1.0f};
+  for (float other : fallback_inputs) {
+    EXPECT_SIMD_EQ(wrap_ref<Log1pfOp>(small, other),
+                   wrap_vector<Log1pfOp>(small, other));
+    EXPECT_SIMD_EQ(wrap_ref<Log1pfOp>(other, small),
+                   wrap_vector<Log1pfOp>(other, small));
+  }
+}
+
 TEST_F(LlvmLibcVecLog1pfTest, InFloatRange) {
   TEST_MATHVEC_FLOAT_RANGE(Log1pfOp);
 }
