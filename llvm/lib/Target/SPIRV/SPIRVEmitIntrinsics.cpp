@@ -1224,8 +1224,8 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
       auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
       if (HandleType->getTargetExtName() == "spirv.Image" ||
           HandleType->getTargetExtName() == "spirv.SignedImage") {
-        for (User *U : II->users()) {
-          Ty = cast<Instruction>(U)->getAccessType();
+        for (Instruction *U : II->users()) {
+          Ty = U->getAccessType();
           if (Ty)
             break;
         }

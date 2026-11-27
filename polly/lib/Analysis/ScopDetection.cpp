@@ -1255,9 +1255,8 @@ bool ScopDetection::isValidInstruction(Instruction &Inst,
     if (isErrorBlock(*OpInst->getParent(), Context.CurRegion)) {
       auto *PHI = dyn_cast<PHINode>(OpInst);
       if (PHI) {
-        for (User *U : PHI->users()) {
-          auto *UI = dyn_cast<Instruction>(U);
-          if (!UI || !UI->isTerminator())
+        for (Instruction *UI : PHI->users()) {
+          if (!UI->isTerminator())
             return false;
         }
       } else {

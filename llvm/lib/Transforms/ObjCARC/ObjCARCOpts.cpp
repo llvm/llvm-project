@@ -2295,8 +2295,7 @@ void ObjCARCOpt::OptimizeWeakCalls(Function &F) {
     CallInst *Call = cast<CallInst>(&Inst);
     Value *Arg = Call->getArgOperand(0);
     if (AllocaInst *Alloca = dyn_cast<AllocaInst>(Arg)) {
-      for (User *U : Alloca->users()) {
-        const Instruction *UserInst = cast<Instruction>(U);
+      for (Instruction *UserInst : Alloca->users()) {
         switch (GetBasicARCInstKind(UserInst)) {
         case ARCInstKind::InitWeak:
         case ARCInstKind::StoreWeak:

@@ -704,8 +704,7 @@ static bool isEphemeralValueOf(const Instruction *I, const Value *E) {
   bool ReachesI = false;
   while (!WorkList.empty()) {
     const Instruction *V = WorkList.pop_back_val();
-    for (const User *U : V->users()) {
-      const auto *UI = cast<Instruction>(U);
+    for (const Instruction *UI : V->users()) {
       if (UI == I) {
         ReachesI = true;
         continue;
@@ -6804,8 +6803,8 @@ bool llvm::mustExecuteUBIfPoisonOnPathTo(Instruction *Root,
       continue;
 
     if (KnownPoison.insert(I).second)
-      for (const User *User : I->users())
-        Worklist.push_back(cast<Instruction>(User));
+      for (const Instruction *User : I->users())
+        Worklist.push_back(User);
   }
 
   // Might be non-UB, or might have a path we couldn't prove must execute on

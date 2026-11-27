@@ -2252,6 +2252,23 @@ SDValue WebAssemblyTargetLowering::LowerVASTART(SDValue Op,
                       MachinePointerInfo(SV));
 }
 
+/// Returns true if \p Addr is only the address of loads and stores of \p VT
+/// values.
+static bool isOnlyLoadStoreAddress(SDValue Addr, EVT VT) {
+  return all_of(Addr->uses(), [&](SDUse &Use) {
+    if (Use.getResNo() != Addr.getResNo())
+      return true;
+    SDNode *User = Use.getUser();
+    if (ISD::isNormalLoad(User))
+      return cast<LoadSDNode>(User)->getMemoryVT() == VT;
+    if (ISD::isNormalStore(User)) {
+      auto *SN = cast<StoreSDNode>(User);
+      return SN->getValue() != Addr && SN->getMemoryVT() == VT;
+    }
+    return false;
+  });
+}
+
 SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
                                                   SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
@@ -2323,6 +2340,42 @@ SDValue WebAssemblyTargetLowering::LowerIntrinsic(SDValue Op,
 
   case Intrinsic::thread_pointer: {
     return SDValue(WebAssembly::getTLSBase(DAG, DL, Subtarget), 0);
+  }
+
+  case Intrinsic::swift_async_context_addr: {
+    auto *FuncInfo = MF.getInfo<WebAssemblyFunctionInfo>();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    EVT PtrVT = getPointerTy(MF.getDataLayout());
+
+    // The swiftasync argument is local 0.
+    bool InLocal0 = MF.getFunction().getAttributes().hasAttrSomewhere(
+        Attribute::SwiftAsync);
+    // Local 0 has no address.
+    if (InLocal0 && !isOnlyLoadStoreAddress(Op.getValue(0), PtrVT)) {
+      fail(DL, DAG,
+           "llvm.swift.async.context.addr can only be the address of loads "
+           "and stores");
+      return DAG.getMergeValues({DAG.getPOISON(PtrVT), Op.getOperand(0)}, DL);
+    }
+
+    std::optional<int> FI = FuncInfo->getSwiftAsyncContextFrameIdx();
+    if (!FI) {
+      if (InLocal0) {
+        FI =
+            MFI.CreateStackObject(1, Align(1), /*isSpillSlot=*/false,
+                                  /*Alloca=*/nullptr, TargetStackID::WasmLocal);
+        MFI.setObjectOffset(*FI, 0);
+      } else {
+        // There is no async context. Use a stack slot, as X86 does without an
+        // extended frame.
+        unsigned PtrSize = PtrVT.getStoreSize();
+        FI = MFI.CreateStackObject(PtrSize, Align(PtrSize),
+                                   /*isSpillSlot=*/false);
+      }
+      FuncInfo->setSwiftAsyncContextFrameIdx(*FI);
+    }
+    return DAG.getMergeValues({DAG.getFrameIndex(*FI, PtrVT), Op.getOperand(0)},
+                              DL);
   }
   }
 }
