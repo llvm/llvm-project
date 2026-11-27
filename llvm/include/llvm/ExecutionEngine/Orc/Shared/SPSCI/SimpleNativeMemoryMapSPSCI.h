@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // SPS controller-interface descriptors for the runtime's SimpleNativeMemoryMap
-// interface. The instance address of the executor-side manager is passed as
-// the first argument to each call.
+// interface. Instances of the executor-side manager are created by calling
+// MemMgrCreate, and the instance address is passed as the first argument to
+// each of the other calls.
 //
 // The names below are the SimpleNativeMemoryMap defaults. Callers may resolve
 // these operations under other names, so a descriptor's Name is a default
@@ -30,9 +31,24 @@
 
 namespace llvm::orc::rt::sps_ci {
 
-/// The executor-side memory-manager instance. This is a data symbol (the
-/// allocator object) -- passed as the first argument to each call below -- not
-/// a wrapper to call.
+/// Create a new executor-side memory-manager instance; returns its address.
+/// The instance is owned by the executor, and lives until the executor shuts
+/// down.
+struct MemMgrCreate {
+  static constexpr SymbolNameSpec Name =
+      SymbolNameSpec::c("orc_rt_ci_sps_SimpleNativeMemoryMap_create");
+  using SPSSig = shared::SPSExpected<shared::SPSExecutorAddr>();
+};
+
+/// A pre-created executor-side memory-manager instance. This is a data symbol
+/// (the allocator object), not a wrapper to call.
+///
+/// This is published by executors that do not provide MemMgrCreate --
+/// currently only LLVM's OrcTargetProcess library, whose wrapper functions
+/// have no context through which a new instance could be registered. Executors
+/// built on the ORC runtime provide MemMgrCreate instead.
+///
+/// FIXME: Remove this once OrcTargetProcess is retired.
 inline constexpr SymbolNameSpec SimpleNativeMemoryMapInstanceName =
     SymbolNameSpec::c("orc_rt_ci_SimpleNativeMemoryMap_Instance");
 

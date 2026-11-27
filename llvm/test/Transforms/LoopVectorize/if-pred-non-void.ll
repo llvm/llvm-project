@@ -1398,6 +1398,104 @@ for.end:
   ret void
 }
 
+; Check that the widened GEP uses each lane's predicated sdiv result as its index.
+define void @predicated_sdiv_used_by_widened_gep(ptr noalias %dst, ptr %src, i1 %c, i64 %x) {
+; CHECK-LABEL: define void @predicated_sdiv_used_by_widened_gep(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr [[SRC:%.*]], i1 [[C:%.*]], i64 [[X:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE2:.*]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
+; CHECK:       [[PRED_SDIV_IF]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = sdiv i64 [[INDEX]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
+; CHECK:       [[PRED_SDIV_CONTINUE]]:
+; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i64> [ poison, %[[VECTOR_BODY]] ], [ [[TMP1]], %[[PRED_SDIV_IF]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2]]
+; CHECK:       [[PRED_SDIV_IF1]]:
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = sdiv i64 [[TMP8]], [[X]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x i64> [[TMP7]], i64 [[TMP4]], i64 1
+; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
+; CHECK:       [[PRED_SDIV_CONTINUE2]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i64> [ [[TMP7]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP5]], %[[PRED_SDIV_IF1]] ]
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = getelementptr [4 x i8], ptr [[SRC]], <2 x i64> [[TMP6]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> splat (ptr null)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[INDEX]]
+; CHECK-NEXT:    store <2 x ptr> [[PREDPHI]], ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP44:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+; UNROLL-NO-VF-LABEL: define void @predicated_sdiv_used_by_widened_gep(
+; UNROLL-NO-VF-SAME: ptr noalias [[DST:%.*]], ptr [[SRC:%.*]], i1 [[C:%.*]], i64 [[X:%.*]]) {
+; UNROLL-NO-VF-NEXT:  [[ENTRY:.*:]]
+; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_PH:.*]]
+; UNROLL-NO-VF:       [[VECTOR_PH]]:
+; UNROLL-NO-VF-NEXT:    br label %[[VECTOR_BODY:.*]]
+; UNROLL-NO-VF:       [[VECTOR_BODY]]:
+; UNROLL-NO-VF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_SDIV_CONTINUE2:.*]] ]
+; UNROLL-NO-VF-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
+; UNROLL-NO-VF-NEXT:    br i1 [[C]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
+; UNROLL-NO-VF:       [[PRED_SDIV_IF]]:
+; UNROLL-NO-VF-NEXT:    [[TMP1:%.*]] = sdiv i64 [[INDEX]], [[X]]
+; UNROLL-NO-VF-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
+; UNROLL-NO-VF:       [[PRED_SDIV_CONTINUE]]:
+; UNROLL-NO-VF-NEXT:    [[TMP2:%.*]] = phi i64 [ poison, %[[VECTOR_BODY]] ], [ [[TMP1]], %[[PRED_SDIV_IF]] ]
+; UNROLL-NO-VF-NEXT:    br i1 [[C]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2]]
+; UNROLL-NO-VF:       [[PRED_SDIV_IF1]]:
+; UNROLL-NO-VF-NEXT:    [[TMP3:%.*]] = sdiv i64 [[TMP0]], [[X]]
+; UNROLL-NO-VF-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
+; UNROLL-NO-VF:       [[PRED_SDIV_CONTINUE2]]:
+; UNROLL-NO-VF-NEXT:    [[TMP4:%.*]] = phi i64 [ poison, %[[PRED_SDIV_CONTINUE]] ], [ [[TMP3]], %[[PRED_SDIV_IF1]] ]
+; UNROLL-NO-VF-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP2]]
+; UNROLL-NO-VF-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[TMP4]]
+; UNROLL-NO-VF-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], ptr [[TMP5]], ptr null
+; UNROLL-NO-VF-NEXT:    [[PREDPHI3:%.*]] = select i1 [[C]], ptr [[TMP6]], ptr null
+; UNROLL-NO-VF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[INDEX]]
+; UNROLL-NO-VF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds ptr, ptr [[DST]], i64 [[TMP0]]
+; UNROLL-NO-VF-NEXT:    store ptr [[PREDPHI]], ptr [[TMP7]], align 8
+; UNROLL-NO-VF-NEXT:    store ptr [[PREDPHI3]], ptr [[TMP8]], align 8
+; UNROLL-NO-VF-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; UNROLL-NO-VF-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; UNROLL-NO-VF-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP44:![0-9]+]]
+; UNROLL-NO-VF:       [[MIDDLE_BLOCK]]:
+; UNROLL-NO-VF-NEXT:    br label %[[EXIT:.*]]
+; UNROLL-NO-VF:       [[EXIT]]:
+; UNROLL-NO-VF-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %c, label %if.then, label %loop.latch
+
+if.then:
+  %sdiv = sdiv i64 %iv, %x
+  %gep1 = getelementptr i32, ptr %src, i64 %sdiv
+  br label %loop.latch
+
+loop.latch:
+  %phi = phi ptr [ null, %loop.header ], [ %gep1, %if.then ]
+  %gep2 = getelementptr inbounds ptr, ptr %dst, i64 %iv
+  store ptr %phi, ptr %gep2, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 128
+  br i1 %exitcond, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
 declare i32 @foo(i32) speculatable willreturn nounwind memory(none)
 declare <4 x i32> @foo_vec(<4 x i32>)
 

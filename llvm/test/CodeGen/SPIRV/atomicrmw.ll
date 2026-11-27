@@ -59,3 +59,15 @@ entry:
 
   ret void
 }
+
+; The zero scope constant is reused as an integer operand.
+define dso_local spir_func i32 @test_atomicrmw_scope_reuse(i32 %x) local_unnamed_addr {
+entry:
+  %0 = atomicrmw add ptr addrspace(1) @ui, i32 42 monotonic
+; CHECK: %[[#Res:]] = OpAtomicIAdd %[[#Int]] %[[#Pointer]] %[[#Scope_CrossDevice]] %[[#MemSem_Monotonic]] %[[#Value]]
+  %1 = sub i32 %x, 0
+; CHECK: %[[#Sub:]] = OpISub %[[#Int]] %[[#]] %[[#Scope_CrossDevice]]
+  %2 = add i32 %1, %0
+; CHECK: %[[#]] = OpIAdd %[[#Int]] %[[#Sub]] %[[#Res]]
+  ret i32 %2
+}

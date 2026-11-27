@@ -155,6 +155,7 @@ enum Kind {
   kw_msp430_intrcc,
   kw_avr_intrcc,
   kw_avr_signalcc,
+  kw_avr_builtincc,
   kw_ptx_kernel,
   kw_ptx_device,
   kw_spir_kernel,
@@ -514,6 +515,7 @@ enum Kind {
   ComdatVar,           // $foo
   LocalVar,            // %foo %"foo"
   MetadataVar,         // !foo
+  FLMDType,            // !!foo
   StringConstant,      // "foo"
   DwarfTag,            // DW_TAG_foo
   DwarfAttEncoding,    // DW_ATE_foo

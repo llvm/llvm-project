@@ -30,10 +30,6 @@ struct MathInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void mlir::math::MathDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Math/IR/MathOps.cpp.inc"
-      >();
   addInterfaces<MathInlinerInterface>();
   declarePromisedInterface<ConvertToEmitCPatternInterface, MathDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, MathDialect>();

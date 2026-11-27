@@ -349,8 +349,8 @@ define void @reg18(ptr %Dst, i8 %val) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vlvgp %v0, %r3, %r3
 ; CHECK-NEXT:    vrepb %v0, %v0, 7
-; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    vsteh %v0, 16(%r2), 0
+; CHECK-NEXT:    vst %v0, 0(%r2), 3
 ; CHECK-NEXT:    br %r14
   call void @llvm.memset.p0.i64(ptr align 8 %Dst, i8 %val, i64 18, i1 false)
   ret void

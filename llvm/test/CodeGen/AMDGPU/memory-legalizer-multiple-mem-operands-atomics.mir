@@ -117,7 +117,6 @@ body:             |
 # scope of agent-one-as and workgroup is agent (cross-AS). Before the fix, the
 # result was MMO-order dependent.
 name: merge_agent_one_as_and_workgroup
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
@@ -138,7 +137,6 @@ body: |
 ...
 ---
 name: merge_agent_one_as_and_workgroup_reversed
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3

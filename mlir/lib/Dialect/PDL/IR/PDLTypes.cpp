@@ -19,17 +19,6 @@ using namespace mlir::pdl;
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/PDL/IR/PDLOpsTypes.cpp.inc"
 
-//===----------------------------------------------------------------------===//
-// PDLDialect
-//===----------------------------------------------------------------------===//
-
-void PDLDialect::registerTypes() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/PDL/IR/PDLOpsTypes.cpp.inc"
-      >();
-}
-
 static Type parsePDLType(AsmParser &parser) {
   StringRef typeTag;
   {

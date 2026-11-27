@@ -1386,6 +1386,22 @@ LogicalResult checkErrorIfPad(Operation *op) {
   return success();
 }
 
+LogicalResult checkErrorIfTile(Operation *op) {
+  auto tileOp = dyn_cast<tosa::TileOp>(op);
+  if (!tileOp)
+    return success();
+
+  SmallVector<int64_t> multiples;
+  if (failed(tileOp.getConstantMultiples(multiples)))
+    return success();
+
+  if (llvm::any_of(multiples, [](int64_t v) { return v <= 0; }))
+    return op->emitOpError("multiples values must be > 0, got [")
+           << multiples << "]";
+
+  return success();
+}
+
 LogicalResult checkErrorIfReshape(Operation *op) {
   auto reshapeOp = dyn_cast<tosa::ReshapeOp>(op);
   if (!reshapeOp)
@@ -1420,19 +1436,11 @@ LogicalResult checkErrorIfReshape(Operation *op) {
     }
   }
 
-  // ERROR_IF(the number of elements is not preserved). Every dimension is now
-  // known to be positive, so the product is exact.
+  // ERROR_IF(tensor_size(shape1) != tensor_size(shape));
   if (auto inputType =
           dyn_cast<RankedTensorType>(reshapeOp.getInput1().getType());
       inputType && inputType.hasStaticShape()) {
     int64_t inputElementsNum = inputType.getNumElements();
-    if (outputType && outputType.hasStaticShape()) {
-      int64_t outputElementsNum = outputType.getNumElements();
-      if (inputElementsNum != outputElementsNum)
-        return op->emitOpError() << "cannot reshape " << inputElementsNum
-                                 << " elements into " << outputElementsNum;
-    }
-
     int64_t newShapeElementsNum =
         llvm::accumulate(shapeValues, int64_t(1),
                          [](int64_t acc, int64_t dim) { return acc * dim; });
@@ -1638,9 +1646,9 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (failed(checkErrorIfResize(op, strictOpSpecAlignment)) ||
       failed(checkErrorIfMul(op)) || failed(checkErrorIfTable(op)) ||
       failed(checkErrorIfRescale(op)) || failed(checkErrorIfPad(op)) ||
-      failed(checkErrorIfReshape(op)) || failed(checkErrorIfSlice(op)) ||
-      failed(checkErrorIfCondIf(op)) || failed(checkErrorIfWhileLoop(op)) ||
-      failed(checkErrorIfScatter(op)))
+      failed(checkErrorIfTile(op)) || failed(checkErrorIfReshape(op)) ||
+      failed(checkErrorIfSlice(op)) || failed(checkErrorIfCondIf(op)) ||
+      failed(checkErrorIfWhileLoop(op)) || failed(checkErrorIfScatter(op)))
     return failure();
   return success();
 }

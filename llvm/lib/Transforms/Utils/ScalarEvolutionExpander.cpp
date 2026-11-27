@@ -519,7 +519,7 @@ Value *SCEVExpander::visitAddExpr(SCEVUseT<const SCEVAddExpr *> S) {
   const SCEV *URemRHS = nullptr;
   if (match(S, m_scev_URem(m_SCEV(URemLHS), m_SCEV(URemRHS), SE))) {
     Value *LHS = expand(URemLHS);
-    Value *RHS = expand(URemRHS);
+    Value *RHS = expandDivisor(URemRHS);
     return InsertBinop(Instruction::URem, LHS, RHS, SCEV::FlagNone,
                        /*IsSafeToHoist*/ false);
   }
@@ -715,23 +715,28 @@ Value *SCEVExpander::visitUDivExpr(SCEVUseT<const SCEVUDivExpr *> S) {
                          SCEV::FlagNone, /*IsSafeToHoist*/ true);
   }
 
-  const SCEV *RHSExpr = S->getRHS();
-  Value *RHS = expand(RHSExpr);
-  if (SafeUDivMode) {
-    bool GuaranteedNotPoison =
-        ScalarEvolution::isGuaranteedNotToBePoison(RHSExpr);
-    if (!GuaranteedNotPoison)
-      RHS = Builder.CreateFreeze(RHS);
-
-    // We need an umax if either RHSExpr is not known to be zero, or if it is
-    // not guaranteed to be non-poison. In the later case, the frozen poison may
-    // be 0.
-    if (!SE.isKnownNonZero(RHSExpr) || !GuaranteedNotPoison)
-      RHS = Builder.CreateIntrinsic(RHS->getType(), Intrinsic::umax,
-                                    {RHS, ConstantInt::get(RHS->getType(), 1)});
-  }
+  Value *RHS = expandDivisor(S->getRHS());
   return InsertBinop(Instruction::UDiv, LHS, RHS, SCEV::FlagNone,
                      /*IsSafeToHoist*/ SE.isKnownNonZero(S->getRHS()));
+}
+
+Value *SCEVExpander::expandDivisor(const SCEV *Divisor) {
+  Value *V = expand(Divisor);
+  if (!SafeDivisorMode)
+    return V;
+
+  bool GuaranteedNotPoison =
+      ScalarEvolution::isGuaranteedNotToBePoison(Divisor);
+  if (!GuaranteedNotPoison)
+    V = Builder.CreateFreeze(V);
+
+  // We need an umax if either Divisor is not known to be non-zero, or if it is
+  // not guaranteed to be non-poison. In the latter case, the frozen poison may
+  // be 0.
+  if (!SE.isKnownNonZero(Divisor) || !GuaranteedNotPoison)
+    V = Builder.CreateIntrinsic(V->getType(), Intrinsic::umax,
+                                {V, ConstantInt::get(V->getType(), 1)});
+  return V;
 }
 
 /// Determine if this is a well-behaved chain of instructions leading back to
@@ -1500,14 +1505,14 @@ SCEVExpander::visitSignExtendExpr(SCEVUseT<const SCEVSignExtendExpr *> S) {
 Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
                                       Intrinsic::ID IntrinID, Twine Name,
                                       bool IsSequential) {
-  bool PrevSafeMode = SafeUDivMode;
-  SafeUDivMode |= IsSequential;
+  bool PrevSafeMode = SafeDivisorMode;
+  SafeDivisorMode |= IsSequential;
   Value *LHS = expand(S->getOperand(S->getNumOperands() - 1));
   Type *Ty = LHS->getType();
   if (IsSequential)
     LHS = Builder.CreateFreeze(LHS);
   for (int i = S->getNumOperands() - 2; i >= 0; --i) {
-    SafeUDivMode = (IsSequential && i != 0) || PrevSafeMode;
+    SafeDivisorMode = (IsSequential && i != 0) || PrevSafeMode;
     Value *RHS = expand(S->getOperand(i));
     if (IsSequential && i != 0)
       RHS = Builder.CreateFreeze(RHS);
@@ -1523,7 +1528,7 @@ Value *SCEVExpander::expandMinMaxExpr(SCEVUseT<const SCEVNAryExpr *> S,
     }
     LHS = Sel;
   }
-  SafeUDivMode = PrevSafeMode;
+  SafeDivisorMode = PrevSafeMode;
   return LHS;
 }
 

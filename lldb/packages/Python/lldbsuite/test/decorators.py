@@ -81,6 +81,8 @@ def _check_expected_version(comparison, expected, actual):
     return op_lookup[comparison](version.parse(actual), version.parse(expected))
 
 
+# xcrun can be very slow and the SDK version is stable during a test run.
+@lru_cache(maxsize=None)
 def _get_macos_sdk_version() -> str | None:
     """ Returns the current macOS SDK version or None if this system doesn't
     use a macOS SDK."""
@@ -1033,11 +1035,11 @@ def skipIfWindows(func=None, windows_version=None):
     return decorator
 
 
-def skipIfWindowsAndLLDBServer(func):
+def skipIfWindowsAndLLDBServer(bugnumber=None, archs=None):
     """Skip tests on Windows when driving lldb-server."""
     if not _usingLLDBServerOnWindows():
-        return func
-    return skipIfPlatform(["windows"])(func)
+        return lambda func: func
+    return skipIf(oslist=["windows"], bugnumber=bugnumber, archs=archs)
 
 
 def skipIfWindowsAndNoLLDBServer(func):

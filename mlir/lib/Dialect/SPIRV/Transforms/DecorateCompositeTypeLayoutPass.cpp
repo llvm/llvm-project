@@ -113,10 +113,10 @@ class DecorateSPIRVCompositeTypeLayoutPass
 } // namespace
 
 void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
-  auto module = getOperation();
-  RewritePatternSet patterns(module.getContext());
+  auto moduleOp = getOperation();
+  RewritePatternSet patterns(moduleOp.getContext());
   populateSPIRVLayoutInfoPatterns(patterns);
-  ConversionTarget target(*(module.getContext()));
+  ConversionTarget target(*(moduleOp.getContext()));
   target.addLegalDialect<spirv::SPIRVDialect>();
   target.addLegalOp<func::FuncOp>();
   target.addDynamicallyLegalOp<spirv::GlobalVariableOp>(
@@ -142,7 +142,7 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   });
 
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  for (auto spirvModule : module.getOps<spirv::ModuleOp>())
+  for (auto spirvModule : moduleOp.getOps<spirv::ModuleOp>())
     if (failed(applyFullConversion(spirvModule, target, frozenPatterns)))
       signalPassFailure();
 }

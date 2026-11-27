@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-linux -no-stack-coloring=false -debug-only=stack-coloring < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc -mtriple=x86_64-linux -stack-coloring=true -debug-only=stack-coloring < %s -o /dev/null 2>&1 | FileCheck %s
 ; REQUIRES: asserts
 
 

@@ -72,7 +72,7 @@ module attributes {
   // CHECK-NEXT: }
 
   cir.func @ret_fam(%arg0: !rec_fam_t) -> !rec_fam_t requires_call_conv_lowering {
-    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_fam_t, target_address_space(5)>
+    %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!rec_fam_t, target_address_space(5)>
     %1 = cir.alloca "s" align(4) init : !cir.ptr<!rec_fam_t, target_address_space(5)>
     %2 = cir.cast address_space %1 : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>
     %3 = cir.cast address_space %0 : !cir.ptr<!rec_fam_t, target_address_space(5)> -> !cir.ptr<!rec_fam_t>

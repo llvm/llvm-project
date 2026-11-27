@@ -7,7 +7,6 @@
 
 ---
 name: sched_barrier_cluster_dep_hang
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: sched_barrier_cluster_dep_hang
   ; CHECK: bb.0:

@@ -189,6 +189,20 @@ BitIntSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// VectorSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+VectorSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       uint32_t maxAlign) {
+  // TargetInfo::getMaxVectorAlign() is a power of two, at least the char
+  // width, when the target imposes a cap. Char width is 8 bits.
+  if (maxAlign < 8 || !llvm::isPowerOf2_32(maxAlign))
+    return emitError() << "max_align must be a power of two of at least 8";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BitFieldDeclAttr definitions
 //===----------------------------------------------------------------------===//
 
@@ -767,10 +781,10 @@ DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 LogicalResult MethodAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                                  cir::MethodType type,
                                  std::optional<FlatSymbolRefAttr> symbol,
-                                 std::optional<uint64_t> vtable_offset) {
-  if (symbol.has_value() && vtable_offset.has_value())
+                                 std::optional<uint64_t> vtable_index) {
+  if (symbol.has_value() && vtable_index.has_value())
     return emitError()
-           << "at most one of symbol and vtable_offset can be present "
+           << "at most one of symbol and vtable_index can be present "
               "in #cir.method";
 
   return success();
@@ -802,30 +816,30 @@ Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
     return get(ty, symbol);
   }
 
-  // Parse a uint64 that represents the vtable offset.
-  std::uint64_t vtableOffset = 0;
-  if (parser.parseKeyword("vtable_offset"))
+  // Parse a uint64 that represents the vtable index.
+  std::uint64_t vtableIndex = 0;
+  if (parser.parseKeyword("vtable_index"))
     return {};
   if (parser.parseEqual())
     return {};
-  if (parser.parseInteger(vtableOffset))
+  if (parser.parseInteger(vtableIndex))
     return {};
 
   if (parser.parseGreater())
     return {};
 
-  return get(ty, vtableOffset);
+  return get(ty, vtableIndex);
 }
 
 void MethodAttr::print(AsmPrinter &printer) const {
   auto symbol = getSymbol();
-  auto vtableOffset = getVtableOffset();
+  auto vtableIndex = getVtableIndex();
 
   printer << '<';
   if (symbol.has_value()) {
     printer << *symbol;
-  } else if (vtableOffset.has_value()) {
-    printer << "vtable_offset = " << *vtableOffset;
+  } else if (vtableIndex.has_value()) {
+    printer << "vtable_index = " << *vtableIndex;
   } else {
     printer << "null";
   }
@@ -1219,15 +1233,4 @@ RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp mod,
   RecordLayoutAttr attr = tryGetRecordLayout(mod, name);
   assert(attr && "record layout entry missing for named record");
   return attr;
-}
-
-//===----------------------------------------------------------------------===//
-// CIR Dialect
-//===----------------------------------------------------------------------===//
-
-void CIRDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
-      >();
 }

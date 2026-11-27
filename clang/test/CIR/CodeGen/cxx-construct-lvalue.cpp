@@ -13,7 +13,7 @@ struct Pt {
 int tempObj(int i) { return Pt(i, i).v; }
 
 // CIR-LABEL: cir.func {{.*}}@_Z7tempObji(%arg0: !s32i
-// CIR:         %[[RET:.*]] = cir.alloca "__retval"
+// CIR:         %[[RET:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR:         %[[I:.*]] = cir.alloca "i"
 // CIR:         %[[TMP:.*]] = cir.alloca "tmp"
 // CIR:         cir.store %arg0, %[[I]]
@@ -46,7 +46,7 @@ struct Conv {
 int construct(int i) { return Conv(i).y; }
 
 // CIR-LABEL: cir.func {{.*}}@_Z9constructi(%arg0: !s32i
-// CIR:         %[[RET:.*]] = cir.alloca "__retval"
+// CIR:         %[[RET:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR:         %[[I:.*]] = cir.alloca "i"
 // CIR:         %[[TMP:.*]] = cir.alloca "tmp"
 // CIR:         cir.store %arg0, %[[I]]

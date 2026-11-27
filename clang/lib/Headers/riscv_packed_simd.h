@@ -554,6 +554,18 @@ __packed_pabs(abs_u64, int64_t, uint64_t)
 #define __riscv_usati_u64(rs1, width) __builtin_riscv_usati_u64(rs1, width)
 #endif
 
+/* Scalar Merge */
+#define __scalar_merge(name, ty, uty)                                           \
+  static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(ty __rs1, ty __rs2,   \
+                                                         uty __rd) {           \
+    return (ty)((__rd & (uty)__rs2) | (~__rd & (uty)__rs1));                   \
+  }
+__scalar_merge(merge_i32, int32_t, uint32_t)
+__scalar_merge(merge_u32, uint32_t, uint32_t)
+__scalar_merge(merge_i64, int64_t, uint64_t)
+__scalar_merge(merge_u64, uint64_t, uint64_t)
+#undef __scalar_merge
+
 /* Scalar Saturating and Rounding Shift */
 __packed_binary_builtin_mixed(ssha_i32, int32_t, int32_t, int, __builtin_riscv_ssha_i32)
 __packed_binary_builtin_mixed(sshar_i32, int32_t, int32_t, int, __builtin_riscv_sshar_i32)
@@ -1225,18 +1237,18 @@ __packed_binary_builtin(pasubu_u16x4, uint16x4_t, __builtin_riscv_pasubu_u16x4)
 __packed_binary_builtin(pasubu_u32x2, uint32x2_t, __builtin_riscv_pasubu_u32x2)
 
 /* Packed Absolute Value and Absolute Difference (32-bit) */
-__packed_pabs(pabs_i8x4, int8x4_t, uint8x4_t)
-__packed_pabs(pabs_i16x2, int16x2_t, uint16x2_t)
-__packed_binary_builtin_cast(pabd_i8x4, int8x4_t, uint8x4_t, __builtin_riscv_pabd_i8x4)
-__packed_binary_builtin_cast(pabd_i16x2, int16x2_t, uint16x2_t, __builtin_riscv_pabd_i16x2)
+__packed_pabs(pabs_u8x4, int8x4_t, uint8x4_t)
+__packed_pabs(pabs_u16x2, int16x2_t, uint16x2_t)
+__packed_binary_builtin_cast(pabd_u8x4, int8x4_t, uint8x4_t, __builtin_riscv_pabd_u8x4)
+__packed_binary_builtin_cast(pabd_u16x2, int16x2_t, uint16x2_t, __builtin_riscv_pabd_u16x2)
 __packed_binary_builtin_cast(pabdu_u8x4, uint8x4_t, uint8x4_t, __builtin_riscv_pabdu_u8x4)
 __packed_binary_builtin_cast(pabdu_u16x2, uint16x2_t, uint16x2_t, __builtin_riscv_pabdu_u16x2)
 
 /* Packed Absolute Value and Absolute Difference (64-bit) */
-__packed_pabs(pabs_i8x8, int8x8_t, uint8x8_t)
-__packed_pabs(pabs_i16x4, int16x4_t, uint16x4_t)
-__packed_binary_builtin_cast(pabd_i8x8, int8x8_t, uint8x8_t, __builtin_riscv_pabd_i8x8)
-__packed_binary_builtin_cast(pabd_i16x4, int16x4_t, uint16x4_t, __builtin_riscv_pabd_i16x4)
+__packed_pabs(pabs_u8x8, int8x8_t, uint8x8_t)
+__packed_pabs(pabs_u16x4, int16x4_t, uint16x4_t)
+__packed_binary_builtin_cast(pabd_u8x8, int8x8_t, uint8x8_t, __builtin_riscv_pabd_u8x8)
+__packed_binary_builtin_cast(pabd_u16x4, int16x4_t, uint16x4_t, __builtin_riscv_pabd_u16x4)
 __packed_binary_builtin_cast(pabdu_u8x8, uint8x8_t, uint8x8_t, __builtin_riscv_pabdu_u8x8)
 __packed_binary_builtin_cast(pabdu_u16x4, uint16x4_t, uint16x4_t, __builtin_riscv_pabdu_u16x4)
 

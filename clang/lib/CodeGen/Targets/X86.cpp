@@ -475,7 +475,7 @@ static CodeGenOptions::SmallIntABICompatKind
 getEffectiveSmallIntABICompat(const CodeGenOptions &Opts,
                               const llvm::Triple &T) {
   if (T.isOSDarwin() || T.isPS())
-    return CodeGenOptions::SmallIntABICompatKind::Clang;
+    return CodeGenOptions::SmallIntABICompatKind::Clang23;
   return Opts.getSmallIntABICompat();
 }
 
@@ -1013,7 +1013,7 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
                    : ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
       }
       break;
-    case CodeGenOptions::SmallIntABICompatKind::Clang:
+    case CodeGenOptions::SmallIntABICompatKind::Clang23:
       return InReg ? ABIArgInfo::getExtendInReg(Ty, CGT.ConvertType(Ty))
                    : ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
     case CodeGenOptions::SmallIntABICompatKind::Both:
@@ -3032,7 +3032,7 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
             return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
           }
           break;
-        case CodeGenOptions::SmallIntABICompatKind::Clang:
+        case CodeGenOptions::SmallIntABICompatKind::Clang23:
           return ABIArgInfo::getExtend(Ty, CGT.ConvertType(Ty));
         case CodeGenOptions::SmallIntABICompatKind::Both:
           return ABIArgInfo::getConservativeExtend(Ty, CGT.ConvertType(Ty));
