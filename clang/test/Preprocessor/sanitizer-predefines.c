@@ -11,3 +11,6 @@
 
 // RUN: %clang_cc1 -E -dM -triple aarch64-unknown-linux -fsanitize=concurrency %s | FileCheck %s --check-prefix=CSAN
 // CSAN: #define __SANITIZE_CONCURRENCY__ 1
+
+// RUN: %clang_cc1 -E -dM -triple aarch64-unknown-linux -fsanitize=daddress %s | FileCheck %s --check-prefix=DASAN
+// DASAN: #define __SANITIZE_DEVICE_ADDRESS__ 1
