@@ -126,7 +126,9 @@ def perf2bolt(args):
     parser.add_argument("bolt", help="Path to llvm-bolt")
     parser.add_argument("path", help="Path containing perf.data files")
     parser.add_argument("binary", help="Input binary")
-    parser.add_argument("--brstack", action="store_true", help="Use branch stack perf2bolt mode")
+    parser.add_argument(
+        "--brstack", action="store_true", help="Use branch stack perf2bolt mode"
+    )
     parser.add_argument("--lbr", action="store_true", help="Use LBR perf2bolt mode")
     opts = parser.parse_args(args)
 
