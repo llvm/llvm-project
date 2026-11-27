@@ -1142,6 +1142,19 @@ Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
   return std::move(Coverage);
 }
 
+/// Return the subrange of \p Regions whose FileID is \p FileID.
+/// \p Regions must be grouped by ascending FileID.
+static ArrayRef<CountedRegion> regionsForFileID(ArrayRef<CountedRegion> Regions,
+                                                unsigned FileID) {
+  auto Begin = llvm::lower_bound(
+      Regions, FileID,
+      [](const CountedRegion &R, unsigned ID) { return R.FileID < ID; });
+  auto End = std::upper_bound(
+      Begin, Regions.end(), FileID,
+      [](unsigned ID, const CountedRegion &R) { return ID < R.FileID; });
+  return ArrayRef<CountedRegion>(Begin, End);
+}
+
 namespace {
 
 /// Distributes functions into instantiation sets.
@@ -1154,11 +1167,10 @@ class FunctionInstantiationSetCollector {
 
 public:
   void insert(const FunctionRecord &Function, unsigned FileID) {
-    auto I = Function.CountedRegions.begin(), E = Function.CountedRegions.end();
-    while (I != E && I->FileID != FileID)
-      ++I;
-    assert(I != E && "function does not cover the given file");
-    auto &Functions = InstantiatedFunctions[I->startLoc()];
+    ArrayRef<CountedRegion> Regions =
+        regionsForFileID(Function.CountedRegions, FileID);
+    assert(!Regions.empty() && "function does not cover the given file");
+    auto &Functions = InstantiatedFunctions[Regions.front().startLoc()];
     Functions.push_back(&Function);
   }
 
@@ -1487,19 +1499,6 @@ findMainViewFileID(StringRef SourceFile, const FunctionRecord &Function) {
 
 static bool isExpansion(const CountedRegion &R, unsigned FileID) {
   return R.Kind == CounterMappingRegion::ExpansionRegion && R.FileID == FileID;
-}
-
-/// Return the subrange of \p Regions whose FileID is \p FileID.
-/// \p Regions must be grouped by ascending FileID.
-static ArrayRef<CountedRegion> regionsForFileID(ArrayRef<CountedRegion> Regions,
-                                                unsigned FileID) {
-  auto Begin = llvm::lower_bound(
-      Regions, FileID,
-      [](const CountedRegion &R, unsigned ID) { return R.FileID < ID; });
-  auto End = std::upper_bound(
-      Begin, Regions.end(), FileID,
-      [](unsigned ID, const CountedRegion &R) { return ID < R.FileID; });
-  return ArrayRef<CountedRegion>(Begin, End);
 }
 
 CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
