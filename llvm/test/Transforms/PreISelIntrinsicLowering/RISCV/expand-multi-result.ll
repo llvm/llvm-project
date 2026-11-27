@@ -71,4 +71,3 @@ define { <2 x float>, <2 x float> } @fixed_vec_sincos_f32(<2 x float> %input) {
   %r = call { <2 x float>, <2 x float> } @llvm.sincos.v2f32(<2 x float> %input)
   ret { <2 x float>, <2 x float> } %r
 }
-
