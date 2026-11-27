@@ -1749,7 +1749,7 @@ let Predicates = [hasMBarrierLayoutSupport] in {
 
 class MBAR_UTIL<string op, string scope,
                 string space = "", string sem = "",
-                bit tl = 0, bit parity = 0> {
+                bit tl = 0, bit parity = 0, string phase = ""> {
   // The mbarrier instructions in PTX ISA are of the general form:
   // mbarrier.op.semantics.scope.space.b64 arg1, arg2 ...
   // where:
@@ -1778,7 +1778,8 @@ class MBAR_UTIL<string op, string scope,
                       true : space);
 
   string _parity = !if(parity, "parity", "");
-  string asm_str = StrJoin<".", ["mbarrier", op, _parity,
+  string _phase_asm = !if(!empty(phase), "", "phase_type::" # phase);
+  string asm_str = StrJoin<".", ["mbarrier", op, _parity, _phase_asm,
                                   sem, _scope_asm, _space_asm, "b64"]>.ret;
 
   string _intr_suffix = StrJoin<"_", [!subst(".", "_", op), _parity,
@@ -1963,12 +1964,8 @@ class MBAR_PHASE_WAIT<string op, string scope, string phase, string sem,
                     (set i1:$complete, i1:$reportSeen, i32:$reportValue,
                      intr_dag));
 
-  defvar asm_inst = StrJoin<".", ["mbarrier", op,
-                                  !if(parity, "parity", ""),
-                                  "phase_type::" # phase, sem,
-                                  MBAR_UTIL<op, scope, "space_cta", sem>._scope_asm,
-                                  MBAR_UTIL<op, scope, "space_cta", sem>._space_asm,
-                                  "b64"]>.ret;
+  defvar asm_inst = MBAR_UTIL<op, scope, "space_cta", sem,
+                              time_limit, parity, phase>.asm_str;
   defvar asm_results = !if(!eq(phase, "conditional"), "$complete",
                            "$complete|$reportSeen" # !if(report, ", %rpt_out", ""));
   string asm_str = !if(report, "\\{\n\t.reg .b8 %rpt_out;\n\t", "") #

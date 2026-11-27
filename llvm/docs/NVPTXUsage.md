@@ -899,7 +899,7 @@ Completion can be tested in the same two ways as for the phase-unqualified
 `test.wait` intrinsics described above: with the `%state` operand returned
 by an `llvm.nvvm.mbarrier.arrive.*` intrinsic on the same mbarrier object,
 or with the phase parity of the requested phase. The `.primary` variants
-accept both forms, while the `.conditional` variants are parity-only and
+accept both forms, while the `.conditional` variants are phase-parity-only and
 take no `%state` operand.
 
 The `.primary` variants return `{i1, i1, i32}`, in this fixed order:
@@ -910,7 +910,7 @@ The `.primary` variants return `{i1, i1, i32}`, in this fixed order:
 - `reportValue`: the 8-bit payload report of the completed phase,
   zero-extended to `i32`. It is only defined when `waitComplete` is true.
 
-The `.conditional` variants return only `waitComplete`, because a wait on
+The `.conditional` variants return only `waitComplete`, a wait on
 the conditional phase does not report a payload.
 
 `reportSeen` is **not** a success predicate. In TMA data-validity reporting

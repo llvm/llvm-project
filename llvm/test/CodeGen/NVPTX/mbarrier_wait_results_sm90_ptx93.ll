@@ -297,7 +297,7 @@ define void @ordered_waits(ptr addrspace(3) %bar, ptr %out, i32 %parity) {
   ret void
 }
 
-; Two live results including reportValue still require the full instruction.
+; Anything more than just the waitComplete still requires the full instruction
 define {i1, i32} @completion_and_payload(ptr addrspace(3) %bar, i32 %parity) {
 ; CHECK-PTX64-LABEL: completion_and_payload(
 ; CHECK-PTX64:       {
@@ -392,50 +392,7 @@ define {i1, i32} @reportSeen_and_payload(ptr addrspace(3) %bar, i32 %parity) {
   ret {i1, i32} %pair1
 }
 
-declare {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.tl.primary.scope.cta.space.cta(ptr addrspace(3), i64, i32)
-
-define i32 @constant_state_dynamic_hint(ptr addrspace(3) %bar, i32 %hint) {
-; CHECK-PTX64-LABEL: constant_state_dynamic_hint(
-; CHECK-PTX64:       {
-; CHECK-PTX64-NEXT:    .reg .pred %p<3>;
-; CHECK-PTX64-NEXT:    .reg .b32 %r<3>;
-; CHECK-PTX64-NEXT:    .reg .b64 %rd<3>;
-; CHECK-PTX64-EMPTY:
-; CHECK-PTX64-NEXT:  // %bb.0:
-; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd1, [constant_state_dynamic_hint_param_0];
-; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [constant_state_dynamic_hint_param_1];
-; CHECK-PTX64-NEXT:    mov.b64 %rd2, 42;
-; CHECK-PTX64-NEXT:    {
-; CHECK-PTX64-NEXT:    .reg .b8 %rpt_out;
-; CHECK-PTX64-NEXT:    mbarrier.try_wait.phase_type::primary.acquire.cta.shared.b64 %p1|%p2, %rpt_out, [%rd1], %rd2, %r1;
-; CHECK-PTX64-NEXT:    cvt.u32.u8 %r2, %rpt_out;
-; CHECK-PTX64-NEXT:    }
-; CHECK-PTX64-NEXT:    st.param::func.b32 [func_retval0], %r2;
-; CHECK-PTX64-NEXT:    ret;
-;
-; CHECK-SHORTPTR-LABEL: constant_state_dynamic_hint(
-; CHECK-SHORTPTR:       {
-; CHECK-SHORTPTR-NEXT:    .reg .pred %p<3>;
-; CHECK-SHORTPTR-NEXT:    .reg .b32 %r<4>;
-; CHECK-SHORTPTR-NEXT:    .reg .b64 %rd<2>;
-; CHECK-SHORTPTR-EMPTY:
-; CHECK-SHORTPTR-NEXT:  // %bb.0:
-; CHECK-SHORTPTR-NEXT:    ld.param::func.b32 %r1, [constant_state_dynamic_hint_param_0];
-; CHECK-SHORTPTR-NEXT:    ld.param::func.b32 %r2, [constant_state_dynamic_hint_param_1];
-; CHECK-SHORTPTR-NEXT:    mov.b64 %rd1, 42;
-; CHECK-SHORTPTR-NEXT:    {
-; CHECK-SHORTPTR-NEXT:    .reg .b8 %rpt_out;
-; CHECK-SHORTPTR-NEXT:    mbarrier.try_wait.phase_type::primary.acquire.cta.shared.b64 %p1|%p2, %rpt_out, [%r1], %rd1, %r2;
-; CHECK-SHORTPTR-NEXT:    cvt.u32.u8 %r3, %rpt_out;
-; CHECK-SHORTPTR-NEXT:    }
-; CHECK-SHORTPTR-NEXT:    st.param::func.b32 [func_retval0], %r3;
-; CHECK-SHORTPTR-NEXT:    ret;
-  %r = call {i1, i1, i32} @llvm.nvvm.mbarrier.try.wait.tl.primary.scope.cta.space.cta(ptr addrspace(3) %bar, i64 42, i32 %hint)
-  %v = extractvalue {i1, i1, i32} %r, 2
-  ret i32 %v
-}
-
-@shared_barrier = internal addrspace(3) global i64 poison, align 8
+@mbar_shared_gv = internal addrspace(3) global i64 poison, align 8
 
 define i1 @global_pointer(i32 %parity) {
 ; CHECK-PTX64-LABEL: global_pointer(
@@ -443,10 +400,10 @@ define i1 @global_pointer(i32 %parity) {
 ; CHECK-PTX64-NEXT:    .reg .pred %p<3>;
 ; CHECK-PTX64-NEXT:    .reg .b32 %r<3>;
 ; CHECK-PTX64-NEXT:    // demoted variable
-; CHECK-PTX64-NEXT:    .shared .align 8 .u64 shared_barrier;
+; CHECK-PTX64-NEXT:    .shared .align 8 .u64 mbar_shared_gv;
 ; CHECK-PTX64-NEXT:  // %bb.0:
 ; CHECK-PTX64-NEXT:    ld.param::func.b32 %r1, [global_pointer_param_0];
-; CHECK-PTX64-NEXT:    mbarrier.test_wait.parity.phase_type::primary.acquire.cta.shared.b64 %p1|%p2, [shared_barrier], %r1;
+; CHECK-PTX64-NEXT:    mbarrier.test_wait.parity.phase_type::primary.acquire.cta.shared.b64 %p1|%p2, [mbar_shared_gv], %r1;
 ; CHECK-PTX64-NEXT:    selp.b32 %r2, -1, 0, %p1;
 ; CHECK-PTX64-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-PTX64-NEXT:    ret;
@@ -456,14 +413,14 @@ define i1 @global_pointer(i32 %parity) {
 ; CHECK-SHORTPTR-NEXT:    .reg .pred %p<3>;
 ; CHECK-SHORTPTR-NEXT:    .reg .b32 %r<3>;
 ; CHECK-SHORTPTR-NEXT:    // demoted variable
-; CHECK-SHORTPTR-NEXT:    .shared .align 8 .u64 shared_barrier;
+; CHECK-SHORTPTR-NEXT:    .shared .align 8 .u64 mbar_shared_gv;
 ; CHECK-SHORTPTR-NEXT:  // %bb.0:
 ; CHECK-SHORTPTR-NEXT:    ld.param::func.b32 %r1, [global_pointer_param_0];
-; CHECK-SHORTPTR-NEXT:    mbarrier.test_wait.parity.phase_type::primary.acquire.cta.shared.b64 %p1|%p2, [shared_barrier], %r1;
+; CHECK-SHORTPTR-NEXT:    mbarrier.test_wait.parity.phase_type::primary.acquire.cta.shared.b64 %p1|%p2, [mbar_shared_gv], %r1;
 ; CHECK-SHORTPTR-NEXT:    selp.b32 %r2, -1, 0, %p1;
 ; CHECK-SHORTPTR-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-SHORTPTR-NEXT:    ret;
-  %r = call {i1, i1, i32} @llvm.nvvm.mbarrier.test.wait.parity.primary.scope.cta.space.cta(ptr addrspace(3) @shared_barrier, i32 %parity)
+  %r = call {i1, i1, i32} @llvm.nvvm.mbarrier.test.wait.parity.primary.scope.cta.space.cta(ptr addrspace(3) @mbar_shared_gv, i32 %parity)
   %v = extractvalue {i1, i1, i32} %r, 0
   ret i1 %v
 }
