@@ -877,6 +877,15 @@ template <class T> struct __remove_cvref_impl<const T &&>  { using type = T; };
 template <class T>
 using __remove_cvref_t = typename __remove_cvref_impl<T>::type;
 
+// Whether `T` can be constructed from `expected<U, G>`, in which case the
+// converting constructors from `expected<U, G>` are disabled.
+template <class T, class U, class G>
+constexpr bool __cons_from_expected =
+    __is_constructible(T, expected<U, G> &) ||
+    __is_constructible(T, expected<U, G>) ||
+    __is_constructible(T, const expected<U, G> &) ||
+    __is_constructible(T, const expected<U, G>);
+
 template <class T, class E> class expected {
 public:
   using value_type = T;
@@ -887,14 +896,21 @@ public:
   expected(const expected &);
   expected(expected &&) noexcept;
 
-  template <class U, class G> expected(const expected<U, G> &x);
-  template <class U, class G> expected(expected<U, G> &&x);
+  template <class U, class G>
+    requires(__is_constructible(T, const U &) &&
+             __is_constructible(E, const G &) &&
+             !__cons_from_expected<T, U, G>)
+  expected(const expected<U, G> &x);
+  template <class U, class G>
+    requires(__is_constructible(T, U) && __is_constructible(E, G) &&
+             !__cons_from_expected<T, U, G>)
+  expected(expected<U, G> &&x);
 
   template <class U = T>
-    requires(!__is_expected<__remove_cvref_t<U>> &&
+    requires(!__is_same(__remove_cvref_t<U>, expected) &&
              !__is_same(__remove_cvref_t<U>, in_place_t) &&
              !__is_same(__remove_cvref_t<U>, unexpect_t) &&
-             !__is_unexpected<__remove_cvref_t<U>>)
+             !__is_unexpected<__remove_cvref_t<U>> && __is_constructible(T, U))
   expected(U &&v);
 
   template <class G> expected(const unexpected<G> &e);
@@ -1060,6 +1076,15 @@ namespace detail {
 template <class> constexpr bool is_unexpected = false;
 template <class E> constexpr bool is_unexpected<unexpected<E>> = true;
 
+// Whether `T` can be constructed from `expected<U, G>`, in which case the
+// converting constructors from `expected<U, G>` are disabled.
+template <class T, class U, class G>
+constexpr bool is_constructible_from_expected =
+    __is_constructible(T, expected<U, G> &) ||
+    __is_constructible(T, expected<U, G> &&) ||
+    __is_constructible(T, const expected<U, G> &) ||
+    __is_constructible(T, const expected<U, G> &&);
+
 } // namespace detail
 
 template <class T, class E> class expected {
@@ -1082,12 +1107,15 @@ public:
   template <class... Args> explicit expected(unexpect_t, Args &&...args);
 
   template <class U, class G,
-            std::enable_if_t<__is_constructible(T, const U &) &&
-                             __is_constructible(E, const G &)> * = nullptr>
+            std::enable_if_t<
+                __is_constructible(T, const U &) &&
+                __is_constructible(E, const G &) &&
+                !detail::is_constructible_from_expected<T, U, G>> * = nullptr>
   expected(const expected<U, G> &rhs);
   template <class U, class G,
-            std::enable_if_t<__is_constructible(T, U &&) &&
-                             __is_constructible(E, G &&)> * = nullptr>
+            std::enable_if_t<
+                __is_constructible(T, U &&) && __is_constructible(E, G &&) &&
+                !detail::is_constructible_from_expected<T, U, G>> * = nullptr>
   expected(expected<U, G> &&rhs);
 
   template <

@@ -1309,6 +1309,82 @@ TEST_P(UncheckedExpectedAccessTest, ConstructUnchecked) {
   )");
 }
 
+TEST_P(UncheckedExpectedAccessTest, ConstructNested) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target() {
+      $ns::expected<int, int> inner($ns::unexpect, 1);
+      $ns::expected<$ns::expected<int, int>, int> outer(inner);
+      outer.value();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target() {
+      $ns::expected<$ns::expected<int, int>, int> outer(
+          $ns::expected<int, int>($ns::unexpect, 1));
+      outer.value();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> inner) {
+      $ns::expected<$ns::expected<int, int>, int> outer(inner);
+      outer.value();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<$ns::expected<long, int>, int> b) {
+      if (!b)
+        return;
+      $ns::expected<$ns::expected<int, int>, int> a(b);
+      a.value();
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    struct FromExpected {
+      FromExpected($ns::expected<int, int>);
+    };
+
+    void target($ns::expected<int, int> b) {
+      $ns::expected<FromExpected, int> a(b);
+      a.value();
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, ConstructNestedUnchecked) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target() {
+      $ns::expected<int, int> inner($ns::unexpect, 1);
+      $ns::expected<$ns::expected<int, int>, int> outer(inner);
+      outer.error(); // [[unsafe:error]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<$ns::expected<long, int>, int> b) {
+      $ns::expected<$ns::expected<int, int>, int> a(b);
+      a.value(); // [[unsafe]]
+    }
+  )");
+}
+
 TEST_P(UncheckedExpectedAccessTest, ConstructThenAssignUnexpected) {
   // FIXME: should warn once converting assignments are modeled.
   ExpectDiagnosticsFor(R"(
