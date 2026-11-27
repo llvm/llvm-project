@@ -437,7 +437,7 @@ static DecodeStatus decodeImm7_22Operand(MCInst &Inst, uint64_t Imm,
 static DecodeStatus decodeSelect_2Operand(MCInst &Inst, uint64_t Imm,
                                           int64_t Address,
                                           const void *Decoder) {
-  assert(isUInt<8>(Imm) && "Invalid immediate");
+  assert(isUInt<1>(Imm) && "Invalid immediate");
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
@@ -445,7 +445,7 @@ static DecodeStatus decodeSelect_2Operand(MCInst &Inst, uint64_t Imm,
 static DecodeStatus decodeSelect_4Operand(MCInst &Inst, uint64_t Imm,
                                           int64_t Address,
                                           const void *Decoder) {
-  assert(isUInt<8>(Imm) && "Invalid immediate");
+  assert(isUInt<2>(Imm) && "Invalid immediate");
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
@@ -453,7 +453,7 @@ static DecodeStatus decodeSelect_4Operand(MCInst &Inst, uint64_t Imm,
 static DecodeStatus decodeSelect_8Operand(MCInst &Inst, uint64_t Imm,
                                           int64_t Address,
                                           const void *Decoder) {
-  assert(isUInt<8>(Imm) && "Invalid immediate");
+  assert(isUInt<3>(Imm) && "Invalid immediate");
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
@@ -461,7 +461,7 @@ static DecodeStatus decodeSelect_8Operand(MCInst &Inst, uint64_t Imm,
 static DecodeStatus decodeSelect_16Operand(MCInst &Inst, uint64_t Imm,
                                            int64_t Address,
                                            const void *Decoder) {
-  assert(isUInt<8>(Imm) && "Invalid immediate");
+  assert(isUInt<4>(Imm) && "Invalid immediate");
   Inst.addOperand(MCOperand::createImm(Imm));
   return MCDisassembler::Success;
 }
