@@ -4780,13 +4780,15 @@ void __builtin_set_flt_rounds(int);
 ```
 
 Returns and sets current floating point rounding mode. The encoding of returned
-values and input parameters is same as the result of FLT_ROUNDS, specified by C
+values and input parameters is same as the result of `FLT_ROUNDS`, specified by C
 standard:
-\- `0` - toward zero
-\- `1` - to nearest, ties to even
-\- `2` - toward positive infinity
-\- `3` - toward negative infinity
-\- `4` - to nearest, ties away from zero
+
+- `0` - toward zero
+- `1` - to nearest, ties to even
+- `2` - toward positive infinity
+- `3` - toward negative infinity
+- `4` - to nearest, ties away from zero
+
 The effect of passing some other value to `__builtin_flt_rounds` is
 implementation-defined. `__builtin_set_flt_rounds` is currently only supported
 to work on x86, x86_64, powerpc, powerpc64, Arm and AArch64 targets. These builtins
