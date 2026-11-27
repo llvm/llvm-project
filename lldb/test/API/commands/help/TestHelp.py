@@ -402,9 +402,9 @@ class HelpCommandTestCase(TestBase):
         self.expect(
             "help memory read",
             substrs=[
-                "[<address-expression>]\n\n       -A ( --show-all-children )",
-                # Starts with the end of the show-all-children line
-                "to show.\n\n       -D",
+                "[<address-expression>]\n\n       --append-outfile",
+                # Starts with the end of the append-outfile line
+                "'--outfile <path>'.\n\n       -A",
             ],
         )
 
