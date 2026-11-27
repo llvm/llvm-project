@@ -2190,9 +2190,10 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
                                      Style.BreakAfterOpenBracketFunction &&
                                      Current.is(tok::l_paren);
     unsigned EnclosingIndent = CurrentState.LastSpace;
-    if (!BreakAfterOpenParen)
+    if (!BreakAfterOpenParen) {
       EnclosingIndent =
           std::max(EnclosingIndent, CurrentState.StartOfFunctionCall);
+    }
     NewIndent = IndentationAndAlignment(EnclosingIndent) +
                 Style.ContinuationIndentWidth;
 
