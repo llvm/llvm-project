@@ -586,15 +586,15 @@ mlir::NVVM::IDArgPair MBarrierTestWaitOp::getIntrinsicIDAndArgs(
 
   // clang-format off
   static constexpr llvm::Intrinsic::ID IDs[] = {
-      llvm::Intrinsic::nvvm_mbarrier_test_wait_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_test_wait_scope_cluster_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_scope_cluster_space_cta};
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_primary_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_primary_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_primary_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_primary_scope_cluster_space_cta};
   static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
-      llvm::Intrinsic::nvvm_mbarrier_test_wait_relaxed_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_relaxed_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_test_wait_relaxed_scope_cluster_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_relaxed_scope_cluster_space_cta};
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_primary_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_primary_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_primary_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_test_wait_parity_primary_relaxed_scope_cluster_space_cta};
   // clang-format on
   auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
 
@@ -622,23 +622,23 @@ mlir::NVVM::IDArgPair MBarrierTryWaitOp::getIntrinsicIDAndArgs(
 
   // clang-format off
   static constexpr llvm::Intrinsic::ID IDs[] = {
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_scope_cluster_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_scope_cluster_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_scope_cluster_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_scope_cluster_space_cta};
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_primary_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_primary_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_primary_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_primary_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_primary_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_primary_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_scope_cluster_space_cta};
   static constexpr llvm::Intrinsic::ID relaxedIDs[] = {
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_relaxed_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_relaxed_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_relaxed_scope_cluster_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_relaxed_scope_cluster_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_relaxed_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_relaxed_scope_cta_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_relaxed_scope_cluster_space_cta,
-      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_relaxed_scope_cluster_space_cta};
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_primary_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_primary_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_primary_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_primary_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_primary_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_relaxed_scope_cta_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_tl_primary_relaxed_scope_cluster_space_cta,
+      llvm::Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_relaxed_scope_cluster_space_cta};
   // clang-format on
   auto id = thisOp.getRelaxed() ? relaxedIDs[index] : IDs[index];
 

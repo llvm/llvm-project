@@ -1749,7 +1749,7 @@ let Predicates = [hasMBarrierLayoutSupport] in {
 
 class MBAR_UTIL<string op, string scope,
                 string space = "", string sem = "",
-                bit tl = 0, bit parity = 0> {
+                bit tl = 0, bit parity = 0, string phase = ""> {
   // The mbarrier instructions in PTX ISA are of the general form:
   // mbarrier.op.semantics.scope.space.b64 arg1, arg2 ...
   // where:
@@ -1778,11 +1778,12 @@ class MBAR_UTIL<string op, string scope,
                       true : space);
 
   string _parity = !if(parity, "parity", "");
-  string asm_str = StrJoin<".", ["mbarrier", op, _parity,
+  string _phase = !if(!eq(phase, ""), "", "phase_type::" # phase);
+  string asm_str = StrJoin<".", ["mbarrier", op, _parity, _phase,
                                   sem, _scope_asm, _space_asm, "b64"]>.ret;
 
   string _intr_suffix = StrJoin<"_", [!subst(".", "_", op), _parity,
-                                      !if(tl, "tl", ""),
+                                      !if(tl, "tl", ""), phase,
                                       sem, scope, space]>.ret;
   string intr_name = "int_nvvm_mbarrier_" # _intr_suffix;
 
@@ -1876,50 +1877,162 @@ foreach op = ["arrive", "arrive.expect_tx",
   } // scope
 } // op
 
+// Patternless wait forms need explicit memory effects matching their intrinsics.
+class MbarrierWaitInst<dag outs, dag ins, string asmstr, bit acquire>
+    : NVPTXInst<outs, ins, asmstr> {
+  let mayLoad = 1;
+  let mayStore = acquire;
+  let hasSideEffects = acquire;
+}
+
+// Map the three-result primary instruction directly to its legacy form.
+class MbarrierLegacyWaitVariant<string name, bit primary> {
+  string MbarrierLegacyWaitName = name;
+  bit IsPrimarySelection = primary;
+}
+
+def getMbarrierLegacyWaitOpcode : InstrMapping {
+  let FilterClass = "MbarrierLegacyWaitVariant";
+  let RowFields = ["MbarrierLegacyWaitName"];
+  let ColFields = ["IsPrimarySelection"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
+}
+
 multiclass MBAR_WAIT_INTR<string op, string scope, string sem, bit time_limit> {
-  // When either of sem or scope is non-default, both have to
-  // be explicitly specified. So, explicitly state that the
-  // semantics is `acquire` when the scope is `cluster`.
-  defvar asm_sem = !if(!and(!empty(sem), !eq(scope, "scope_cluster")),
-                    "acquire", sem);
-
-  defvar asm_parity  = MBAR_UTIL<op, scope, "space_cta", asm_sem,
-                                 time_limit, 1>.asm_str;
-  defvar pred_parity = MBAR_UTIL<op, scope, "space_cta", asm_sem,
-                                 time_limit, 1>.preds;
-  defvar intr_parity = !cast<Intrinsic>(MBAR_UTIL<op, scope, "space_cta",
-                                        sem, time_limit, 1>.intr_name);
-
-  defvar asm_state  = MBAR_UTIL<op, scope, "space_cta", asm_sem,
-                                time_limit>.asm_str;
-  defvar pred_state = MBAR_UTIL<op, scope, "space_cta", asm_sem,
-                                time_limit>.preds;
-  defvar intr_state = !cast<Intrinsic>(MBAR_UTIL<op, scope, "space_cta",
-                                       sem, time_limit>.intr_name);
-
+  defvar acquire = !eq(sem, "acquire");
+  // Preserve the legacy implicit acquire/CTA qualifiers and target support.
+  defvar asm_sem = !if(!and(acquire, !eq(scope, "scope_cta")), "", sem);
+  defvar state = MBAR_UTIL<op, scope, "space_cta", asm_sem, time_limit>;
+  defvar parity = MBAR_UTIL<op, scope, "space_cta", asm_sem, time_limit, 1>;
+  defvar key = StrJoin<"_", [op, scope, !if(time_limit, "tl", ""), sem]>.ret;
   defvar ins_tl_dag = !if(time_limit, (ins B32:$tl), (ins));
   defvar tl_suffix = !if(time_limit, ", $tl;", ";");
-  defvar intr_state_dag = !con((intr_state addr:$addr, i64:$state),
-                               !if(time_limit, (intr_state i32:$tl), (intr_state)));
-  defvar intr_parity_dag = !con((intr_parity addr:$addr, i32:$phase),
-                               !if(time_limit, (intr_parity i32:$tl), (intr_parity)));
 
-  def _STATE : NVPTXInst<(outs B1:$res), !con((ins ADDR:$addr, B64:$state), ins_tl_dag),
-               asm_state # " $res, [$addr], $state" # tl_suffix,
-               [(set i1:$res, intr_state_dag)]>,
-               Requires<pred_state>;
-  def _PARITY : NVPTXInst<(outs B1:$res), !con((ins ADDR:$addr, B32:$phase), ins_tl_dag),
-                asm_parity # " $res, [$addr], $phase" # tl_suffix,
-                [(set i1:$res, intr_parity_dag)]>,
-                Requires<pred_parity>;
+  // No patterns: the custom inserter selects these when both reports are dead.
+  def _STATE : MbarrierWaitInst<
+      (outs B1:$res), !con((ins ADDR:$addr, B64:$state), ins_tl_dag),
+      state.asm_str # " $res, [$addr], $state" # tl_suffix, acquire>,
+      Requires<state.preds>, MbarrierLegacyWaitVariant<key # "_state", false>;
+  def _PARITY : MbarrierWaitInst<
+      (outs B1:$res), !con((ins ADDR:$addr, B32:$phase), ins_tl_dag),
+      parity.asm_str # " $res, [$addr], $phase" # tl_suffix, acquire>,
+      Requires<parity.preds>, MbarrierLegacyWaitVariant<key # "_parity", false>;
 }
 foreach op = ["test_wait", "try_wait"] in {
   foreach scope = ["scope_cta", "scope_cluster"] in {
     foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
       defvar suffix = StrJoin<"_", [op, scope, !if(time_limit, "tl", "")]>.ret;
-      defm mbar_ # suffix # "_acquire" : MBAR_WAIT_INTR<op, scope, "", time_limit>;
+      defm mbar_ # suffix # "_acquire" : MBAR_WAIT_INTR<op, scope, "acquire", time_limit>;
       defm mbar_ # suffix # "_relaxed" : MBAR_WAIT_INTR<op, scope, "relaxed", time_limit>;
     } // time_limit
+  } // scope
+} // op
+
+// This class and the InstrMapping below record each phase-qualified mbarrier
+// wait instruction that produces the optional PTX report value together
+// with its variant without the report. The mapping is used by
+// NVPTXTargetLowering::EmitInstrWithCustomInserter to drop an unused
+// report value from the selected instruction.
+class MbarrierReportVariant<string name, bit report> {
+  string MbarrierWaitName = name;
+  bit HasReport = report;
+}
+
+def getMbarrierNoReportOpcode : InstrMapping {
+  let FilterClass = "MbarrierReportVariant";
+  let RowFields = ["MbarrierWaitName"];
+  let ColFields = ["HasReport"];
+  let KeyCol = ["1"];
+  let ValueCols = [["0"]];
+}
+
+// Select primary waits on legacy targets only when both report results are
+// dead. The intrinsic results are waitComplete (0), reportSeen (1), reportValue
+// (2).
+class MbarrierPrimaryWait<Intrinsic Intrin> : PatFrag<
+    BuildNodeDag<(ops), !size(Intrin.ParamTypes)>.ret,
+    BuildNodeDag<(Intrin), !size(Intrin.ParamTypes)>.ret, [{
+  return (SDValue(N, 1).use_empty() && SDValue(N, 2).use_empty()) ||
+         (Subtarget->hasFeature(NVPTX::PTX93) &&
+          Subtarget->hasFeature(NVPTX::SM90));
+}]>;
+
+class MBAR_PHASE_WAIT<string op, string scope, string phase, string sem,
+                      bit time_limit, bit parity> {
+  bit is_primary = !eq(phase, "primary");
+  bit acquire = !eq(sem, "acquire");
+
+  // Intrinsic names omit acquire; the same record gives legacy predicates.
+  defvar util = MBAR_UTIL<op, scope, "space_cta", !if(acquire, "", sem),
+                         time_limit, parity, phase>;
+  // Phase-qualified PTX explicitly spells out acquire and scope.
+  defvar asm_util = MBAR_UTIL<op, scope, "space_cta", sem,
+                             time_limit, parity, phase>;
+  defvar intr = !cast<Intrinsic>(util.intr_name);
+  defvar match = !if(is_primary, MbarrierPrimaryWait<intr>, intr);
+
+  // Primary selection is guarded by report liveness. Conditional selection
+  // always requires the phase-qualified instruction.
+  list<Predicate> preds = !if(is_primary, util.preds, [PTX93, SM90]);
+  defvar state_dag = !if(parity, (match i32:$state), (match i64:$state));
+  dag intr_dag = !con((match addr:$addr), state_dag,
+                      !if(time_limit, (match i32:$tl), (match)));
+  dag ins_dag = !con((ins ADDR:$addr),
+                     !if(parity, (ins B32:$state), (ins B64:$state)),
+                     !if(time_limit, (ins B32:$tl), (ins)));
+  dag outs_dag = !if(is_primary,
+      (outs B1:$complete, B1:$reportSeen, B32:$reportValue),
+      (outs B1:$complete));
+  dag pattern = !if(is_primary,
+      (set i1:$complete, i1:$reportSeen, i32:$reportValue, intr_dag),
+      (set i1:$complete, intr_dag));
+
+  defvar opcode = asm_util.asm_str;
+  defvar operands = ", [$addr], $state" #
+                    !if(time_limit, ", $tl", "") # ";";
+  string no_report_asm = opcode # " $complete|$reportSeen" # operands;
+  defvar report_asm =
+      "\\{\n\t.reg .b8 %rpt_out;\n\t" #
+      opcode # " $complete|$reportSeen, %rpt_out" # operands #
+      "\n\tcvt.u32.u8 $reportValue, %rpt_out;\n\t\\}";
+  string asm_str = !if(is_primary, report_asm, opcode # " $complete" # operands);
+}
+
+foreach op = ["test_wait", "try_wait"] in {
+  foreach scope = ["scope_cta", "scope_cluster"] in {
+    foreach phase = ["primary", "conditional"] in {
+      foreach parity = !if(!eq(phase, "conditional"), [true], [true, false]) in {
+        foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
+          foreach sem = ["acquire", "relaxed"] in {
+            defvar suffix = StrJoin<"_", [op,
+                                !if(parity, "parity", ""),
+                                !if(time_limit, "tl", ""), phase, sem, scope]>.ret;
+            defvar wait = MBAR_PHASE_WAIT<op, scope, phase, sem, time_limit, parity>;
+            defvar legacy_key = StrJoin<"_", [
+                !if(wait.is_primary, "", "conditional"), op, scope,
+                !if(time_limit, "tl", ""), sem,
+                !if(parity, "parity", "state")]>.ret;
+            def mbar_ # suffix :
+                NVPTXInst<wait.outs_dag, wait.ins_dag, wait.asm_str, [wait.pattern]>,
+                Requires<wait.preds>,
+                MbarrierReportVariant<suffix, wait.is_primary>,
+                MbarrierLegacyWaitVariant<legacy_key, wait.is_primary> {
+              let usesCustomInserter = wait.is_primary;
+            }
+            if wait.is_primary then {
+              // No pattern: only selected by the custom inserter when the
+              // report value result is unused.
+              def mbar_ # suffix # _NO_REPORT :
+                  MbarrierWaitInst<(outs B1:$complete, B1:$reportSeen),
+                                   wait.ins_dag, wait.no_report_asm, wait.acquire>,
+                  Requires<[PTX93, SM90]>,
+                  MbarrierReportVariant<suffix, false>;
+            }
+          } // sem
+        } // time_limit
+      } // parity
+    } // phase
   } // scope
 } // op
 

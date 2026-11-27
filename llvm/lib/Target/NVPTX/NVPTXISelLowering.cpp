@@ -14,6 +14,7 @@
 #include "NVPTXISelLowering.h"
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
+#include "NVPTXInstrInfo.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
@@ -28,10 +29,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -80,7 +84,35 @@
 
 #define DEBUG_TYPE "nvptx-lower"
 
+#define GET_INSTRMAP_INFO
+#include "NVPTXGenInstrInfo.inc"
+
 using namespace llvm;
+
+MachineBasicBlock *
+NVPTXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+                                                 MachineBasicBlock *MBB) const {
+  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
+  int Opcode = NVPTX::getMbarrierNoReportOpcode(MI.getOpcode());
+  if (Opcode == -1)
+    return TargetLowering::EmitInstrWithCustomInserter(MI, MBB);
+
+  Register ReportValue = MI.getOperand(2).getReg();
+  if (!MRI.use_nodbg_empty(ReportValue))
+    return MBB;
+
+  MRI.markUsesInDebugValueAsUndef(ReportValue);
+  MI.removeOperand(2);
+  Register ReportSeen = MI.getOperand(1).getReg();
+  if (MRI.use_nodbg_empty(ReportSeen)) {
+    MRI.markUsesInDebugValueAsUndef(ReportSeen);
+    MI.removeOperand(1);
+    Opcode = NVPTX::getMbarrierLegacyWaitOpcode(MI.getOpcode());
+    assert(Opcode != -1 && "primary wait must have a legacy opcode");
+  }
+  MI.setDesc(STI.getInstrInfo()->get(Opcode));
+  return MBB;
+}
 
 NVPTX::DivPrecisionLevel
 NVPTXTargetLowering::getDivF32Level(const MachineFunction &MF,

@@ -1131,6 +1131,13 @@ def NVVM_MBarrierTestWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.test.wait",
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
 
+  let llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierTestWaitOp::getIntrinsicIDAndArgs(
+        *op, moduleTranslation, builder);
+    llvm::CallInst *call = createIntrinsicCall(builder, id, args);
+    $res = builder.CreateExtractValue(call, 0);
+  }];
+
   let assemblyFormat = [{
     $addr `,` $stateOrPhase oilist(
       `scope` `=` enum($scope) | `relaxed` `=` $relaxed
@@ -1164,6 +1171,13 @@ def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait",
     Optional<I32>:$ticks,
     DefaultValuedAttr<MemScopeKindAttr, "MemScopeKind::CTA">:$scope,
     DefaultValuedAttr<BoolAttr, "false">:$relaxed);
+
+  let llvmBuilder = [{
+    auto [id, args] = NVVM::MBarrierTryWaitOp::getIntrinsicIDAndArgs(
+        *op, moduleTranslation, builder);
+    llvm::CallInst *call = createIntrinsicCall(builder, id, args);
+    $res = builder.CreateExtractValue(call, 0);
+  }];
 
   let assemblyFormat = [{
     $addr `,` $stateOrPhase (`,` $ticks^)? oilist(

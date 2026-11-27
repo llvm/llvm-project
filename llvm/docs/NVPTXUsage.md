@@ -432,34 +432,32 @@ number of barriers per CTA, `mbarrier` objects are user-defined and are
 only limited by the total shared memory size available.
 
 An mbarrier object is an opaque object in shared memory with an
-alignment of 8-bytes. It keeps track of:
+alignment of 8 bytes. It tracks:
 
-- Current phase of the mbarrier object
-- Count of pending arrivals for the current phase of the mbarrier object
-- Count of expected arrivals for the next phase of the mbarrier object
-- Count of pending asynchronous memory operations (or transactions)
-  tracked by the current phase of the mbarrier object. This is also
-  referred to as `tx-count`. The unit of `tx-count` is specified
-  by the asynchronous memory operation (for example,
-  `llvm.nvvm.cp.async.bulk.tensor.g2s.*`).
+- The current primary phase.
+- The count of pending arrivals for the current primary phase.
+- The count of expected arrivals for the next primary phase.
+- The count of pending asynchronous memory operations (or transactions)
+  tracked by the current primary phase, also referred to as `tx-count`.
+  The unit of `tx-count` is specified by the asynchronous memory operation
+  (for example, `llvm.nvvm.cp.async.bulk.tensor.g2s.*`).
 
-The `phase` of an mbarrier object is the number of times the mbarrier
-object has been used to synchronize threads/track async operations.
-In each phase, threads perform:
+A primary phase tracks a round of thread arrivals and asynchronous
+operations. Threads perform `arrive`, `expect.tx`, and `complete.tx`
+operations to progress the phase, and `test.wait` or `try.wait` operations
+to check for completion. The primary phase completes when both the pending
+arrival count and `tx-count` have reached zero. At completion, the following
+updates are performed atomically:
 
-- arrive/expect-tx/complete-tx operations to progress the current phase.
-- test_wait/try_wait operations to check for completion of the current phase.
-
-An mbarrier object completes the current phase when:
-
-- The count of the pending arrivals has reached zero AND
-- The tx-count has reached zero.
-
-When an mbarrier object completes the current phase, below
-actions are performed `atomically`:
-
-- The mbarrier object transitions to the next phase.
+- The primary phase transitions to the next phase.
 - The pending arrival count is reinitialized to the expected arrival count.
+
+An mbarrier object also has a conditional phase. For `layout::v0`, the
+primary and conditional phases always advance together. A `layout::v1`
+object records a payload report for each primary phase; its conditional
+phase advances only when a primary phase completes with a zero payload
+report. The [mbarrier wait intrinsics](#llvmnvvmmbarriertestwaitprimaryconditional)
+select which phase to observe and, for primary waits, return the payload report.
 
 For more information, refer [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#parallel-synchronization-and-communication-instructions-mbarrier).
 
@@ -479,10 +477,10 @@ an mbarrier object located at `addr` with the value `count`.
 `count` is a 32-bit unsigned integer value and must be within
 the range [1...2^20-1]. During initialization:
 
-- The tx-count and the current phase of the mbarrier object are set to 0.
+- The `tx-count`, primary phase, and conditional phase are set to 0.
 - The expected and pending arrival counts are set to `count`.
 - `%layout` is an immediate argument that accepts only
-`0` (`layout::v0`) or `1` (`layout::v1`).
+  `0` (`layout::v0`) or `1` (`layout::v1`).
 
 ##### Semantics:
 
@@ -658,9 +656,10 @@ next phase.
 
 The `.space.{cta/cluster}` indicates the address space where the mbarrier
 object resides. When the mbarrier is in shared::cta space, the intrinsics
-return an opaque 64-bit value capturing the phase of the mbarrier object
-\_prior\_ to this arrive operation. This value can be used with a try_wait
-or test_wait operation to check for the completion of the mbarrier.
+return an opaque 64-bit value capturing the primary phase of the mbarrier
+object before this arrive operation. This value can be passed to the
+[state-based primary waits](#llvmnvvmmbarriertestwaitprimaryconditional)
+to check for completion of that phase.
 
 The `.scope.{cta/cluster}` denotes the set of threads that can directly
 observe the synchronizing effect of the mbarrier operation. When scope is
@@ -673,12 +672,12 @@ If the `addr` does not fall within shared::cta or shared::cluster space,
 then the behavior of this intrinsic is undefined.
 
 These intrinsics have `release` semantics by default. The release semantics
-ensure ordering of operations that occur in program order \_before\_ this arrive
+ensure ordering of operations that occur in program order before this arrive
 instruction, making their effects visible to subsequent operations in other
-threads of the CTA (or cluster, depending on scope). Threads performing
-corresponding acquire operations (such as mbarrier.test.wait) synchronize
-with this release. The `relaxed` variants of these intrinsics do not
-provide any memory ordering or visibility guarantees.
+threads of the CTA (or cluster, depending on scope). Corresponding acquire
+waits synchronize with this release at the specified scope. The `.relaxed`
+variants of these intrinsics do not provide any memory ordering or visibility
+guarantees.
 
 The shared::cluster forms of these intrinsics take the additional `%mc`
 and `%flag_mc` arguments described in
@@ -784,111 +783,184 @@ and `%flag_mc` arguments described in
 The semantics of these intrinsics are identical to those of the
 `llvm.nvvm.mbarrier.arrive.*` intrinsics described above.
 
-#### '`llvm.nvvm.mbarrier.test.wait`'
+(llvmnvvmmbarriertestwaitprimaryconditional)=
+
+#### '`llvm.nvvm.mbarrier.test.wait.{primary,conditional}`'
 
 ##### Syntax:
 
 ```llvm
-declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
-declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
-declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
-declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+; Primary phase: state and parity forms.
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.parity.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.parity.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
 
-declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
-declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
-declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
-declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+; Conditional phase: parity forms only.
+declare i1 @llvm.nvvm.mbarrier.test.wait.parity.conditional{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare i1 @llvm.nvvm.mbarrier.test.wait.parity.conditional{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
 ```
+
+`{.relaxed}` denotes an optional qualifier. Omitting it selects acquire
+semantics.
 
 ##### Overview:
 
-The `@llvm.nvvm.mbarrier.test.wait.*` intrinsics test for the completion
-of the current or the immediately preceding phase of an mbarrier object at
-`%addr`. The test for completion can be done with either the `state` or
-the `phase-parity` of the mbarrier object.
+These intrinsics perform a non-blocking test for completion of the current
+or immediately preceding phase of the mbarrier object at `%addr`. They
+return the completion status immediately, without suspending the executing
+thread.
 
-- When done through the `i64 %state` operand, the state must be
-  returned by an `llvm.nvvm.mbarrier.arrive.*` on the \_same\_
-  mbarrier object.
-- The `.parity` variant of these intrinsics test for completion
-  of the phase indicated by the operand `i32 %phase`, which is
-  the integer parity of either the current phase or the immediately
-  preceding phase of the mbarrier object. An even phase has integer
-  parity 0 and an odd phase has integer parity of 1. So the valid
-  values for phase-parity are 0 and 1.
+The `.primary` variants observe the primary phase and return both its
+completion status and payload report. The `.conditional` variants observe
+the conditional phase and return only its completion status. Primary waits
+always observe the primary phase, regardless of the mbarrier layout or
+which results are used.
+
+Completion is identified by one of two operands:
+
+- The state-based `.primary` variants take an opaque `i64 %state` returned
+  by an `llvm.nvvm.mbarrier.arrive.*` intrinsic on the same mbarrier object
+  during the current or immediately preceding primary phase.
+- The `.parity` variants take an `i32 %phase` specifying the parity of the
+  current or immediately preceding phase being observed: `0` for an even
+  phase and `1` for an odd phase. For `.conditional` waits, this is the
+  conditional phase parity, which can differ from the primary phase parity.
 
 ##### Semantics:
 
-The `.scope.{cta/cluster}` denotes the set of threads that the
-test_wait operation can directly synchronize with.
+The `.scope.{cta/cluster}` qualifier denotes the set of threads that the
+wait can directly synchronize with. For either scope, `%addr` must identify
+an initialized mbarrier object in `shared::cta` memory; otherwise, the
+behavior is undefined.
 
-If the `addr` does not fall within shared::cta space, then the
-the behavior of this intrinsic is undefined.
+For `layout::v0`, the payload report is always zero and the primary and
+conditional phases advance together. For `layout::v1`, the primary phase
+completes when its pending arrival count and `tx-count` reach zero. The
+conditional phase advances with it only if the completing primary phase
+has a zero payload report.
 
-These intrinsics have `acquire` semantics by default. This acquire
-pattern establishes memory ordering for operations occurring in program
-order after this `test_wait` instruction by making operations from
-other threads in the CTA (or cluster, depending on scope) visible to
-subsequent operations in the current thread. When this wait completes,
-it synchronizes with the corresponding release pattern from the
-`mbarrier.arrive` operation. The `relaxed` variants of these intrinsics
-do not provide any memory ordering or visibility guarantees.
+##### Results:
 
-This `test.wait` intrinsic is non-blocking and immediately returns
-the completion status without suspending the executing thread.
+The `.primary` variants return `{ i1, i1, i32 }` with the following fields:
 
-The boolean return value indicates:
+| Index | Name | Type | Meaning |
+| ---: | --- | --- | --- |
+| 0 | `waitComplete` | `i1` | Whether the requested primary phase has completed. |
+| 1 | `reportSeen` | `i1` | Whether the completed phase recorded a nonzero payload report. |
+| 2 | `reportValue` | `i32` | The completed phase's 8-bit payload report, zero-extended to `i32`. |
 
-- True: The immediately preceding phase has completed
-- False: The current phase is still incomplete
+`reportSeen` and `reportValue` are defined only when `waitComplete` is
+`true`. The `.conditional` variants return a single `i1` completion status
+and do not return a payload report.
 
-When this wait returns true, the following ordering guarantees hold:
+For example, a caller that needs only primary completion extracts field 0:
 
-- All memory accesses (except async operations) requested prior to
-  `mbarrier.arrive` having release semantics by participating
-  threads of a CTA (or cluster, depending on scope) are visible to
-  the executing thread.
-- All `cp.async` operations requested prior to `cp.async.mbarrier.arrive`
-  by participating threads of a CTA are visible to the executing thread.
+```llvm
+%wait = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.primary.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+%complete = extractvalue { i1, i1, i32 } %wait, 0
+```
+
+`reportSeen` is not a success predicate. A nonzero payload report can
+describe an error, a warning, or other information. With
+[TMA data-validity reporting](#tma-global-to-shared-data-validity-reporting),
+it indicates that a tracked copy matched the sentinel pattern, so the
+copied data must not be consumed.
+
+A typical reporting pattern uses primary waits in the thread issuing the
+copy to inspect the report and retry the operation if needed. Consumer
+threads use conditional waits; the conditional parity does not advance
+until an attempt completes with a zero payload report.
+
+##### Memory ordering:
+
+An acquire wait with a `true` completion result synchronizes with the
+corresponding release `mbarrier.arrive` operation at the specified CTA or
+cluster scope. The following ordering guarantees hold:
+
+- All memory accesses, except asynchronous operations, requested before a
+  release `mbarrier.arrive` by participating threads of the CTA or cluster
+  are visible to the executing thread.
+- All `cp.async` operations requested before `cp.async.mbarrier.arrive` by
+  participating threads of a CTA are visible to the executing thread.
 - All `cp.async.bulk` operations using the same mbarrier object requested
-  prior to `mbarrier.arrive` having release semantics by participating CTA
-  threads are visible to the executing thread.
-- Memory accesses requested after this wait are not visible to memory
-  accesses performed prior to `mbarrier.arrive` by other participating
-  threads.
+  before a release `mbarrier.arrive` by participating CTA threads are
+  visible to the executing thread.
+- Memory accesses requested after the wait are not visible to memory
+  accesses performed before `mbarrier.arrive` by other participating threads.
 - No ordering guarantee exists for memory accesses by the same thread
-  between an `mbarrier.arrive` and this wait.
+  between `mbarrier.arrive` and the wait.
 
-#### '`llvm.nvvm.mbarrier.try.wait`'
+The `.relaxed` variants provide no memory ordering or visibility guarantees.
+
+##### Target requirements:
+
+Primary waits with both report results unused require the following
+minimum targets. This includes callers that use only `waitComplete` and
+callers that discard all results.
+
+| Primary wait form | Minimum SM | Minimum PTX ISA |
+| --- | --- | --- |
+| `test.wait.primary`, CTA, acquire | `sm_80` | 7.0 |
+| `test.wait.parity.primary`, CTA, acquire | `sm_80` | 7.1 |
+| `try.wait{.parity}{.tl}.primary`, CTA, acquire | `sm_90` | 7.8 |
+| Any acquire cluster wait | `sm_90` | 8.0 |
+| Any relaxed wait | `sm_90` | 8.6 |
+
+Using either `reportSeen` or `reportValue` requires `sm_90` or higher and
+PTX ISA 9.3 or later. Conditional waits always require these targets.
+
+When both report results are unused, the compiler can omit the PTX
+`.phase_type::primary` qualifier and report output operands. The resulting
+wait still observes the primary phase and is valid for both `layout::v0`
+and `layout::v1` mbarrier objects.
+
+For more information, refer to the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#parallel-synchronization-and-communication-instructions-mbarrier-test-wait-try-wait).
+
+#### '`llvm.nvvm.mbarrier.try.wait.{primary,conditional}`'
 
 ##### Syntax:
 
 ```llvm
-declare i1 @llvm.nvvm.mbarrier.try.wait{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
-declare i1 @llvm.nvvm.mbarrier.try.wait{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+; Primary phase: state and parity forms, with an optional time limit.
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.tl.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.tl.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.tl.primary{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+declare { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.tl.primary{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
 
-declare i1 @llvm.nvvm.mbarrier.try.wait.parity{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
-declare i1 @llvm.nvvm.mbarrier.try.wait.parity{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
-
-declare i1 @llvm.nvvm.mbarrier.try.wait.tl{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
-declare i1 @llvm.nvvm.mbarrier.try.wait.tl{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i64 %state, i32 %timelimit)
-
-declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
-declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+; Conditional phase: parity forms only, with an optional time limit.
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.conditional{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.conditional{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.conditional{.relaxed}.scope.cta.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.conditional{.relaxed}.scope.cluster.space.cta(ptr addrspace(3) %addr, i32 %phase, i32 %timelimit)
 ```
 
 ##### Overview:
 
-The `@llvm.nvvm.mbarrier.try.wait.*` intrinsics test for the completion of
-the current or immediately preceding phase of an mbarrier object at `%addr`.
-Unlike the `test.wait` intrinsics, which perform a non-blocking test, these
-intrinsics may block the executing thread until the specified phase completes
-or a system-dependent time limit expires. Suspended threads resume execution
-when the phase completes or the time limit elapses. This time limit is
-configurable through the `.tl` variants of these intrinsics, where the
-`%timelimit` operand (an unsigned integer) specifies the limit in
-nanoseconds. Other semantics are identical to those of the `test.wait`
-intrinsics described above.
+These intrinsics test for completion of the primary or conditional phase
+of the mbarrier object at `%addr`. Their phase selection, operands, return
+values, memory ordering, and target requirements are described with the
+[`test.wait` intrinsics](#llvmnvvmmbarriertestwaitprimaryconditional) above.
+
+Unlike a non-blocking `test.wait`, a `try.wait` can suspend the executing
+thread until the requested phase completes or a time limit elapses.
+
+##### Semantics:
+
+Without `.tl`, the time limit is system-dependent. The `.tl` variants
+instead accept an unsigned `i32 %timelimit` specifying the limit in
+nanoseconds.
+
+A single call performs one attempt and can return a `false` completion
+result if the time limit elapses before the requested phase completes.
+A caller that must wait for completion must repeat the call, for example
+in a loop. As with `test.wait`, the primary report results may be inspected
+only when the completion result is `true`.
 
 ### Electing a thread
 
@@ -2118,6 +2190,10 @@ forms, take an `i32 %flag_valid_pattern` immediate argument in the range \[0, 6)
 When the reporting mechanism is not specified, it defaults to disabled, which emits no qualifier in the PTX instruction and maintains compatibility with older PTX versions. For values 1 through 5, the associated mbarrier must be initialized with `layout::v1` layout; otherwise, the behavior is undefined.
 
 The nonzero report mechanism requires `sm_107f` or later in the same family and is supported only on PTX 9.4 or later.
+
+Use a `.primary` [mbarrier wait](#llvmnvvmmbarriertestwaitprimaryconditional)
+to retrieve the payload report, or a `.conditional` wait to gate data
+consumption on a primary phase completing with a zero payload report.
 
 For more information, refer to the [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#data-movement-and-conversion-instructions-cp-async-bulk-tensor).
 
