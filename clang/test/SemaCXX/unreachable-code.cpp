@@ -130,3 +130,19 @@ namespace gh57123 {
     }
   }
 }
+
+namespace gh39721 {
+  int f1() {
+    [[gsl::suppress("foobar")]]
+    return 1;
+
+    return 2; // expected-warning {{will never be executed}}
+  }
+
+  void f2() {
+    [[gsl::suppress("foo")]]
+    if (true) {
+      throw 1;
+    }
+  }
+}
