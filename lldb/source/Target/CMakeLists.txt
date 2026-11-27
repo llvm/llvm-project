@@ -1,3 +1,7 @@
+lldb_tablegen(TargetOptions.inc -gen-lldb-option-defs
+  SOURCE TargetOptions.td
+  TARGET LLDBTargetOptionsGen)
+
 lldb_tablegen(TargetProperties.inc -gen-lldb-property-defs
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesGen)
@@ -111,5 +115,6 @@ add_lldb_library(lldbTarget
   )
 
 add_dependencies(lldbTarget
+  LLDBTargetOptionsGen
   LLDBTargetPropertiesGen
   LLDBTargetPropertiesEnumGen)
