@@ -919,6 +919,34 @@ func.func @arm_sme_usmops_4way_i16i16_to_i64(%vecA: vector<[8]xi16>, %vecB: vect
 }
 
 //===----------------------------------------------------------------------===//
+// arm_sme.fp8_fmopa_za16
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: arm_sme_fp8_fmopa_za16
+// CHECK: "arm_sme.intr.fp8.fmopa.za16"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
+func.func @arm_sme_fp8_fmopa_za16(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
+  %result = arm_sme.fp8_fmopa_za16 %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[8]x[8]xf16>
+  "test.some_use"(%result) : (vector<[8]x[8]xf16>) -> ()
+  return
+}
+
+//===----------------------------------------------------------------------===//
+// arm_sme.fp8_fmopa_za32
+//===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: arm_sme_fp8_fmopa_za32
+// CHECK: "arm_sme.intr.fp8.fmopa.za32"({{.*}}) <{tile_id = 0 : i32}> : (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
+func.func @arm_sme_fp8_fmopa_za32(%vecA: vector<[16]xi8>, %vecB: vector<[16]xi8>) {
+  %result = arm_sme.fp8_fmopa_za32 %vecA, %vecB : vector<[16]xi8>, vector<[16]xi8> into vector<[4]x[4]xf32>
+  "test.some_use"(%result) : (vector<[4]x[4]xf32>) -> ()
+  return
+}
+
+//===----------------------------------------------------------------------===//
 // Operations on SME tile types allowed after conversion
 //===----------------------------------------------------------------------===//
 

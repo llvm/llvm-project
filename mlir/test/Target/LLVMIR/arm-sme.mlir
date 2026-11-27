@@ -423,3 +423,17 @@ llvm.func @arm_sme_streaming_vl() {
   %svl_d = "arm_sme.intr.cntsd"() : () -> i64
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @arm_sme_fp8_fmopa
+llvm.func @arm_sme_fp8_fmopa(%nxv16i8 : vector<[16]xi8>,
+                             %nxv16i1 : vector<[16]xi1>) {
+  // CHECK: call void @llvm.aarch64.sme.fp8.fmopa.za16
+  "arm_sme.intr.fp8.fmopa.za16"(%nxv16i1, %nxv16i1, %nxv16i8, %nxv16i8) <{tile_id = 0 : i32}> :
+    (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
+  // CHECK: call void @llvm.aarch64.sme.fp8.fmopa.za32
+  "arm_sme.intr.fp8.fmopa.za32"(%nxv16i1, %nxv16i1, %nxv16i8, %nxv16i8) <{tile_id = 0 : i32}> :
+    (vector<[16]xi1>, vector<[16]xi1>, vector<[16]xi8>, vector<[16]xi8>) -> ()
+  llvm.return
+}

@@ -958,7 +958,8 @@ void mlir::configureArmSMEToLLVMConversionLegality(ConversionTarget &target) {
       arm_sme::aarch64_sme_smops_za32, arm_sme::aarch64_sme_umopa_za32,
       arm_sme::aarch64_sme_umops_za32, arm_sme::aarch64_sme_sumopa_wide,
       arm_sme::aarch64_sme_sumops_wide, arm_sme::aarch64_sme_usmopa_wide,
-      arm_sme::aarch64_sme_usmops_wide, arm_sme::aarch64_sme_cntsd>();
+      arm_sme::aarch64_sme_usmops_wide, arm_sme::aarch64_sme_fp8_fmopa_za16,
+      arm_sme::aarch64_sme_fp8_fmopa_za32, arm_sme::aarch64_sme_cntsd>();
   target.addLegalDialect<arith::ArithDialect,
                          /* The following are used to lower tile spills/fills */
                          vector::VectorDialect, scf::SCFDialect,
@@ -1012,6 +1013,10 @@ void mlir::populateArmSMEToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                        arm_sme::aarch64_sme_usmopa_wide>,
       OuterProductWideningOpConversion<arm_sme::UsMops4WayOp,
                                        arm_sme::aarch64_sme_usmops_wide>,
+      OuterProductWideningOpConversion<arm_sme::FP8FmopaZa16Op,
+                                       arm_sme::aarch64_sme_fp8_fmopa_za16>,
+      OuterProductWideningOpConversion<arm_sme::FP8FmopaZa32Op,
+                                       arm_sme::aarch64_sme_fp8_fmopa_za32>,
       ZeroOpConversion>(patterns, converter);
 }
 
