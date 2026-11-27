@@ -218,10 +218,19 @@ class VOP3_Real_Gen <VOP_Pseudo ps, GFXGen Gen, string asm_name = ps.Mnemonic> :
                          !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
 
+class MAIInstInfo {
+  Instruction Opcode = !cast<Instruction>(NAME);
+  code MFMAVariant = [{ MFMAVariant::Unknown }];
+  bit HasMAIInstInfo = true;
+}
+
 // XXX - Is there any reason to distinguish this from regular VOP3
 // here?
 class VOP3P_Real<VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemonic> :
-  VOP3_Real<ps, EncodingFamily, asm_name> {
+  VOP3_Real<ps, EncodingFamily, asm_name>, MAIInstInfo {
+  let HasMAIInstInfo = !isa<MAIInstInfo>(ps);
+  let MFMAVariant = !if(!isa<MAIInstInfo>(ps), !cast<MAIInstInfo>(ps).MFMAVariant,
+                        [{ MFMAVariant::Unknown }]);
 
   // The v_wmma pseudos have extra constraints that we do not want to impose on the real instruction.
   let Constraints        = !if(!eq(!substr(ps.Mnemonic,0,6), "v_wmma"), "", ps.Constraints);
