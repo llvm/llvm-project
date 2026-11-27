@@ -4815,9 +4815,22 @@ bool MipsTargetLowering::isLegalAddImmediate(int64_t Imm) const {
 unsigned MipsTargetLowering::ComputeNumSignBitsForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
     unsigned Depth) const {
-  // cmp.cond.fmt writes 0 or -1.
-  if (Op.getOpcode() == MipsISD::R6FCmp)
+  switch (Op.getOpcode()) {
+  case MipsISD::R6FCmp:
+  case MipsISD::STRICT_FPCmpR6:
+  case MipsISD::STRICT_FPCmpsR6:
+    // cmp.cond.fmt writes 0 or -1.
     return Op.getScalarValueSizeInBits();
+  }
+
+  // The low word of an f64 compare mask is taken with EXTRACT_SUBREG, so that
+  // FP users can read it from the FPR. Each word of a value that is 0 or -1 is
+  // also 0 or -1.
+  if (Op.isMachineOpcode() &&
+      Op.getMachineOpcode() == TargetOpcode::EXTRACT_SUBREG &&
+      Op.getConstantOperandVal(1) == Mips::sub_lo &&
+      DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1) == 64)
+    return 32;
   return 1;
 }
 
