@@ -225,25 +225,41 @@ extern "C" void case_follow_label(int v) {
 // CIR: cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR:   %[[DEST:.*]] = cir.load %[[SLOT]]
 // CIR-NEXT:   cir.switch.flat %[[DEST]] : !s32i, ^[[NORMAL:bb[0-9]+]] [
-// CIR-NEXT:     1: ^[[TO_LABEL:bb[0-9]+]]
+// CIR-NEXT:     [[LABEL_ID:[0-9]+]]: ^[[TO_LABEL:bb[0-9]+]],
+// CIR-NEXT:     [[CASE2:[0-9]+]]: ^[[TO_CASE2:bb[0-9]+]]
 // CIR: ^[[TO_LABEL]]:
 // CIR:   cir.br ^[[LABEL:bb[0-9]+]]
+// CIR: ^[[TO_CASE2]]:
+// CIR:   cir.br ^[[CASE2_BODY:bb[0-9]+]]
 // CIR: ^[[NORMAL]]:
 // CIR-NEXT:   cir.br ^[[LABEL]]
 // CIR: ^[[LABEL]]:
-// CIR-NEXT: cir.case(equal, [#cir.int<2> : !s32i]) {
-// CIR:   cir.call @action1()
-// CIR:   cir.break
+// CIR-NEXT:   cir.br ^[[CASE2_BODY]]
+// CIR: ^[[CASE2_BODY]]:
+// CIR-NEXT:   cir.scope {
+// CIR-NEXT:     cir.call @action1()
+// CIR-NEXT:   }
+// CIR-NEXT:   cir.break
 // CIR: cir.case(default, []) {
 // CIR:   cir.call @action2()
-// CIR-NEXT:   %[[ID:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:   %[[ID:.*]] = cir.const #cir.int<[[LABEL_ID]]> : !s32i
 // CIR-NEXT:   cir.store %[[ID]], %[[SLOT]]
 // CIR-NEXT:   cir.break
+// CIR: cir.break
+// CIR-NEXT: ^{{bb[0-9]+}}:
+// CIR-NEXT: cir.case(equal, [#cir.int<2> : !s32i]) {
+// CIR-NEXT:   %[[CASE2_ID:.*]] = cir.const #cir.int<[[CASE2]]> : !s32i
+// CIR-NEXT:   cir.store %[[CASE2_ID]], %[[SLOT]]
+// CIR-NEXT:   cir.break
 // CIR: cir.switch.flat %{{.+}} : !s32i, ^{{bb[0-9]+}} [
-// CIR-NEXT:   1: ^[[ENTER_CASE1:bb[0-9]+]]
-// CIR: ^[[ENTER_CASE1]]:
-// CIR-NEXT: %[[CASE1_VAL:.*]] = cir.const #cir.int<1> : !s32i
-// CIR-NEXT: cir.br ^[[PRE_SWITCH]](%[[CASE1_VAL]] : !s32i)
+// CIR-NEXT:   [[LABEL_ID]]: ^[[ENTER_CASE1_A:bb[0-9]+]],
+// CIR-NEXT:   [[CASE2]]: ^[[ENTER_CASE1_B:bb[0-9]+]]
+// CIR: ^[[ENTER_CASE1_A]]:
+// CIR-NEXT: %[[CASE1_VAL_A:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT: cir.br ^[[PRE_SWITCH]](%[[CASE1_VAL_A]] : !s32i)
+// CIR: ^[[ENTER_CASE1_B]]:
+// CIR-NEXT: %[[CASE1_VAL_B:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT: cir.br ^[[PRE_SWITCH]](%[[CASE1_VAL_B]] : !s32i)
 
 // LLVM: define dso_local void @case_follow_label
 // LLVM:  switch i32 %{{.*}}, label %[[SWDEFAULT:.*]] [
@@ -252,11 +268,13 @@ extern "C" void case_follow_label(int v) {
 // LLVM:  ]
 // LLVM: [[TO_LABEL:[0-9]+]]:
 // LLVM:   br label %[[LABEL:.*]]
+// LLVM: [[TO_CASE2:[0-9]+]]:
+// LLVM:   br label %[[CASE2_BODY:.*]]
 // LLVM: [[CASE1]]:
 // LLVM:   br label %[[LABEL]]
 // LLVM: [[LABEL]]:
-// LLVM:   br label %[[CASE2]]
-// LLVM: [[CASE2]]:
+// LLVM:   br label %[[CASE2_BODY]]
+// LLVM: [[CASE2_BODY]]:
 // LLVM:   call void @action1()
 // LLVM:   br label %[[BREAK:.*]]
 // LLVM: [[SWDEFAULT]]:
@@ -264,6 +282,8 @@ extern "C" void case_follow_label(int v) {
 // LLVM:   br label %[[GOTO:.*]]
 // LLVM: [[GOTO]]:
 // LLVM:   br label %[[TO_LABEL]]
+// LLVM: [[CASE2]]:
+// LLVM:   br label %[[TO_CASE2]]
 // LLVM: [[BREAK]]:
 // LLVM:   ret void
 
@@ -295,34 +315,54 @@ extern "C" void default_follow_label(int v) {
 }
 
 // CIR: cir.func {{.*}} @default_follow_label
-// CIR: cir.switch
+// CIR: %[[SLOT:.*]] = cir.alloca "__goto_dest_slot"
+// CIR: cir.br ^[[PRE_SWITCH:bb[0-9]+]](%{{.+}} : !s32i)
+// CIR: ^[[PRE_SWITCH]](%[[COND:.*]]: !s32i
+// CIR-NEXT: cir.switch(%[[COND]] : !s32i)
 // CIR: cir.case(equal, [#cir.int<1> : !s32i]) {
 // CIR:   cir.yield
 // CIR: cir.case(equal, [#cir.int<2> : !s32i]) {
+// CIR:   cir.switch.flat %{{.+}} : !s32i, ^[[NORMAL:bb[0-9]+]] [
+// CIR-NEXT:     [[DEFAULT:[0-9]+]]: ^[[TO_DEFAULT:bb[0-9]+]]
+// CIR: ^[[TO_DEFAULT]]:
+// CIR:   cir.br ^[[LABEL:bb[0-9]+]]
+// CIR: ^[[NORMAL]]:
 // CIR:   cir.call @action1()
 // CIR:   cir.break
-// CIR: ^[[LABEL:bb[0-9]+]]:
-// CIR: cir.case(default, []) {
-// CIR:   cir.call @action2()
-// CIR:   cir.yield
-// CIR: }
-// CIR: cir.br ^[[LABEL]]
+// CIR: ^[[LABEL]]:
+// CIR-NEXT: cir.scope {
+// CIR-NEXT:   cir.call @action2()
+// CIR-NEXT: }
+// CIR-NEXT: cir.br ^[[LABEL]]
+// CIR: cir.break
+// CIR-NEXT: ^{{bb[0-9]+}}:
+// CIR-NEXT: cir.case(default, []) {
+// CIR-NEXT:   %[[DEFAULT_ID:.*]] = cir.const #cir.int<[[DEFAULT]]> : !s32i
+// CIR-NEXT:   cir.store %[[DEFAULT_ID]], %[[SLOT]]
+// CIR-NEXT:   cir.break
+// CIR: cir.switch.flat %{{.+}} : !s32i, ^{{bb[0-9]+}} [
+// CIR-NEXT:   [[DEFAULT]]: ^[[ENTER_CASE2:bb[0-9]+]]
+// CIR: ^[[ENTER_CASE2]]:
+// CIR-NEXT: %[[CASE2_VAL:.*]] = cir.const #cir.int<2> : !s32i
+// CIR-NEXT: cir.br ^[[PRE_SWITCH]](%[[CASE2_VAL]] : !s32i)
 
 // LLVM: define dso_local void @default_follow_label
 // LLVM:  switch i32 {{.*}}, label %[[SWDEFAULT:.*]] [
-// LLVM:    i32 1, label %[[CASE1:.*]]
-// LLVM:    i32 2, label %[[CASE2:.*]]
+// LLVM:    i32 1, label %[[CASE2:.*]]
+// LLVM:    i32 2, label %[[CASE2]]
 // LLVM:  ]
-// LLVM: [[CASE1]]:
-// LLVM:   br label %[[CASE2]]
+// LLVM: [[TO_LABEL:[0-9]+]]:
+// LLVM:   br label %[[LABEL:.*]]
 // LLVM: [[CASE2]]:
 // LLVM:   call void @action1()
 // LLVM:   br label %[[RET:.*]]
-// LLVM: [[LABEL:.*]]:
-// LLVM:   br label %[[SWDEFAULT]]
-// LLVM: [[SWDEFAULT]]:
+// LLVM: [[LABEL]]:
 // LLVM:   call void @action2()
+// LLVM:   br label %[[GOTO:.*]]
+// LLVM: [[GOTO]]:
 // LLVM:   br label %[[LABEL]]
+// LLVM: [[SWDEFAULT]]:
+// LLVM:   br label %[[TO_LABEL]]
 // LLVM: [[RET]]:
 // LLVM:   ret void
 

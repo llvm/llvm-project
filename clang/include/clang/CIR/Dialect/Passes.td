@@ -107,6 +107,13 @@ def GotoElimination : Pass<"cir-goto-elimination", "cir::FuncOp"> {
     `cir.switch.flat` on the slot routes it onward. Cleanups and catch
     handlers run as they would for the goto.
 
+    Switches are normalized first. A case that is not a direct child of its
+    switch (as in Duff's device) becomes a label where it was, its body a scope,
+    and a direct case with its values jumps to the label. Code before a
+    switch's first case that holds a label is reached only through gotos, so
+    it moves out of the switch, off the normal path, and jumps into the first
+    case or past the switch where it would have fallen into or left it.
+
     Gotos this cannot route yet are left for `cir-goto-solver`. A label that no
     remaining goto names and that is not `address_taken` is erased.
   }];

@@ -981,7 +981,13 @@ int nested_switch(int a) {
   return 0;
 }
 
-// CIR: cir.switch(%[[COND:.*]] : !s32i) {
+// Cases 9 and 7 sit inside ifs, so each gets a direct case at the end of the
+// switch body that leaves the switch with its own destination id and
+// re-enters it through case 2, the ifs and the scopes that now hold their
+// bodies.
+// CIR: cir.br ^[[SWITCH_BB:.*]](%{{.*}} : !s32i)
+// CIR: ^[[SWITCH_BB]](%[[COND:.*]]: !s32i
+// CIR: cir.switch(%[[COND]] : !s32i) {
 // CIR:   cir.case(equal, [#cir.int<0> : !s32i]) {
 // CIR:     cir.yield
 // CIR:   }
@@ -989,15 +995,53 @@ int nested_switch(int a) {
 // CIR:     cir.return
 // CIR:   }
 // CIR:   cir.case(equal, [#cir.int<2> : !s32i]) {
+// CIR:     %[[DEST2:.*]] = cir.load %[[SLOT:.*]] : !cir.ptr<!s32i>, !s32i
+// CIR:     cir.switch.flat %[[DEST2]] : !s32i, ^{{.*}} [
+// CIR-NEXT:  [[CASE9_ID:[0-9]+]]: ^{{.*}},
+// CIR-NEXT:  [[CASE7_ID:[0-9]+]]: ^{{.*}}
 // CIR:     cir.scope {
-// CIR:     cir.scope {
-// CIR:       cir.if
-// CIR:         cir.case(equal, [#cir.int<9> : !s32i]) {
-// CIR:         cir.yield
-// CIR:     cir.scope {
-// CIR:         cir.if
-// CIR:           cir.case(equal, [#cir.int<7> : !s32i]) {
-// CIR:           cir.return
+// CIR:       cir.scope {
+// CIR:         cir.if %{{.*}} {
+// CIR:           cir.switch.flat %{{.*}} : !s32i, ^{{.*}} [
+// CIR-NEXT:        [[CASE9_ID]]: ^{{.*}}
+// CIR:           cir.scope {
+// CIR:             cir.add nsw
+// CIR:             cir.store align(4) %{{.*}}, %{{.*}} : !s32i, !cir.ptr<!s32i>
+// CIR:           }
+// CIR:       cir.scope {
+// CIR:         cir.if %{{.*}} {
+// CIR:           cir.switch.flat %{{.*}} : !s32i, ^{{.*}} [
+// CIR-NEXT:        [[CASE7_ID]]: ^{{.*}}
+// CIR:           cir.scope {
+// CIR:             cir.add nsw
+// CIR:             cir.return
+// CIR:       cir.break
+// CIR:     cir.yield
+// CIR:   }
+// CIR:   cir.break
+// CIR-NEXT: ^{{.*}}:
+// CIR-NEXT:   cir.case(equal, [#cir.int<9> : !s32i]) {
+// CIR-NEXT:     %[[ID9:.*]] = cir.const #cir.int<[[CASE9_ID]]> : !s32i
+// CIR-NEXT:     cir.store %[[ID9]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:     cir.break
+// CIR-NEXT:   }
+// CIR-NEXT:   cir.case(equal, [#cir.int<7> : !s32i]) {
+// CIR-NEXT:     %[[ID7:.*]] = cir.const #cir.int<[[CASE7_ID]]> : !s32i
+// CIR-NEXT:     cir.store %[[ID7]], %[[SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:     cir.break
+// CIR-NEXT:   }
+// CIR-NEXT:   cir.yield
+// CIR-NEXT: }
+// CIR:   %[[DEST:.*]] = cir.load %[[SLOT]] : !cir.ptr<!s32i>, !s32i
+// CIR:   cir.switch.flat %[[DEST]] : !s32i, ^{{.*}} [
+// CIR-NEXT:  [[CASE9_ID]]: ^[[REENTER9:.*]],
+// CIR-NEXT:  [[CASE7_ID]]: ^[[REENTER7:.*]]
+// CIR: ^[[REENTER9]]:
+// CIR:   %[[TWO9:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:   cir.br ^[[SWITCH_BB]](%[[TWO9]] : !s32i)
+// CIR: ^[[REENTER7]]:
+// CIR:   %[[TWO7:.*]] = cir.const #cir.int<2> : !s32i
+// CIR:   cir.br ^[[SWITCH_BB]](%[[TWO7]] : !s32i)
 
 // LLVM: define{{.*}} i32 @_Z13nested_switchi
 // LLVM:   %[[RES_ADDR:.*]] = alloca i32, align 4
@@ -1033,20 +1077,46 @@ int nested_switch(int a) {
 // LLVM:   %[[B2:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:   %[[B3:.*]] = add nsw i32 %[[B2]], 1
 // LLVM:   store i32 %[[B3]], ptr %[[B_ADDR]], align 4
-// LLVM:   br label %[[CASE2_CONT:.*]]
-// LLVM: [[CASE9]]:
+// LLVM:   br label %[[IF1000:.*]]
+// LLVM: [[CASE9_ENTRY:.*]]:
+// LLVM:   br label %[[CASE9_STEER:.*]]
+// LLVM: [[IF1000]]:
+// LLVM:   %[[A1000:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM:   %[[CMP1000:.*]] = icmp sgt i32 %[[A1000]], 1000
+// LLVM:   br i1 %[[CMP1000]], label %[[IF1000_THEN:.*]], label %[[IF500:.*]]
+// LLVM: [[CASE9_STEER]]:
+// LLVM:   br label %[[CASE9_BODY:.*]]
+// LLVM: [[IF1000_THEN]]:
+// LLVM:   br label %[[CASE9_BODY]]
+// LLVM: [[CASE9_BODY]]:
 // LLVM:   %[[A9:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM:   %[[B4:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:   %[[SUM9:.*]] = add nsw i32 %[[A9]], %[[B4]]
 // LLVM:   store i32 %[[SUM9]], ptr %[[B_ADDR]], align 4
-// LLVM:   br label %[[CASE2_CONT1:.*]]
-// LLVM: [[CASE7]]:
+// LLVM:   br label %[[IF1000_END:.*]]
+// LLVM: [[IF1000_END]]:
+// LLVM:   br label %[[IF500]]
+// LLVM: [[CASE7_ENTRY:.*]]:
+// LLVM:   br label %[[CASE7_STEER:.*]]
+// LLVM: [[IF500]]:
+// LLVM:   %[[A500:.*]] = load i32, ptr %[[A_ADDR]], align 4
+// LLVM:   %[[CMP500:.*]] = icmp sgt i32 %[[A500]], 500
+// LLVM:   br i1 %[[CMP500]], label %[[IF500_THEN:.*]], label %[[EXIT]]
+// LLVM: [[CASE7_STEER]]:
+// LLVM:   br label %[[CASE7_BODY:.*]]
+// LLVM: [[IF500_THEN]]:
+// LLVM:   br label %[[CASE7_BODY]]
+// LLVM: [[CASE7_BODY]]:
 // LLVM:   %[[A7:.*]] = load i32, ptr %[[A_ADDR]], align 4
 // LLVM:   %[[B5:.*]] = load i32, ptr %[[B_ADDR]], align 4
 // LLVM:   %[[SUM7:.*]] = add nsw i32 %[[A7]], %[[B5]]
 // LLVM:   store i32 %[[SUM7]], ptr %[[RES_ADDR]], align 4
 // LLVM:   %[[RET7:.*]] = load i32, ptr %[[RES_ADDR]], align 4
 // LLVM:   ret i32 %[[RET7]]
+// LLVM: [[CASE9]]:
+// LLVM:   br label %[[CASE9_ENTRY]]
+// LLVM: [[CASE7]]:
+// LLVM:   br label %[[CASE7_ENTRY]]
 // LLVM: [[EXIT]]:
 // LLVM:   store i32 0, ptr %[[RES_ADDR]], align 4
 // LLVM:   %[[RET0:.*]] = load i32, ptr %[[RES_ADDR]], align 4
