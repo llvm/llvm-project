@@ -46,10 +46,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "arm-mve-gather-scatter-lowering"
 
-cl::opt<bool> EnableMaskedGatherScatters(
-    "enable-arm-maskedgatscat", cl::Hidden, cl::init(true),
-    cl::desc("Enable the generation of masked gathers and scatters"));
-
 namespace {
 
 class MVEGatherScatterLowering : public FunctionPass {
@@ -1231,12 +1227,10 @@ bool MVEGatherScatterLowering::optimiseAddress(Value *Address, BasicBlock *BB,
 }
 
 bool MVEGatherScatterLowering::runOnFunction(Function &F) {
-  if (!EnableMaskedGatherScatters)
-    return false;
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<TargetMachine>();
   auto *ST = &TM.getSubtarget<ARMSubtarget>(F);
-  if (!ST->hasMVEIntegerOps())
+  if (!ST->getCLOpts().maskedgatscat || !ST->hasMVEIntegerOps())
     return false;
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   DL = &F.getDataLayout();

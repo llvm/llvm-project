@@ -57,6 +57,15 @@ tablegen("ARMGenTargetDef") {
   td_file = "ARM.td"
 }
 
+tablegen("ARMOptions") {
+  visibility = [
+    ":LLVMARMCodeGen",
+    "//llvm/unittests/Target/ARM:ARMTests",
+  ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "ARMOptions.td"
+}
+
 static_library("LLVMARMCodeGen") {
   deps = [
     ":ARMGenCallingConv",
@@ -67,6 +76,7 @@ static_library("LLVMARMCodeGen") {
     ":ARMGenRegisterBank",
     ":ARMGenSDNodeInfo",
     ":ARMGenTargetDef",
+    ":ARMOptions",
     "MCTargetDesc",
     "TargetInfo",
     "Utils",
@@ -78,6 +88,7 @@ static_library("LLVMARMCodeGen") {
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/TargetParser",

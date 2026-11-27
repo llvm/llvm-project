@@ -19,6 +19,12 @@ llvm_tablegen(ARMGenSubtargetInfo.inc -gen-subtarget)
 llvm_tablegen(ARMGenSystemRegister.inc -gen-searchable-tables)
 llvm_tablegen(ARMGenTargetDef.inc -gen-arm-target-def)
 
+set(LLVM_TARGET_DEFINITIONS ARMOptions.td)
+llvm_tablegen(ARMOptions.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/ARMMCOptions.td)
+llvm_tablegen(ARMMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(ARMCommonTableGen)
 
 add_llvm_target(ARMCodeGen
@@ -86,6 +92,7 @@ add_llvm_target(ARMCodeGen
   GlobalISel
   IPO
   MC
+  Option
   Scalar
   SelectionDAG
   Support

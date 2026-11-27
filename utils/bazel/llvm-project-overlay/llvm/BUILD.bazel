@@ -2957,6 +2957,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenDisassemblerTables.inc",
             ),
         ],
+        "tbl_deps": [
+            ":ARMMCOptionsTableGen",
+            ":ARMOptionsTableGen",
+        ],
     },
     {
         "name": "AMDGPU",
@@ -4285,6 +4289,24 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/AArch64/AArch64Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AArch64/AArch64Options.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ARMMCOptionsTableGen",
+    strip_include_prefix = "lib/Target/ARM",
+    tbl_outs = {"lib/Target/ARM/ARMMCOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/ARM/MCTargetDesc/ARMMCOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ARMOptionsTableGen",
+    strip_include_prefix = "lib/Target/ARM",
+    tbl_outs = {"lib/Target/ARM/ARMOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/ARM/ARMOptions.td",
     deps = [":OptParserTdFiles"],
 )
 

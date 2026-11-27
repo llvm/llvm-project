@@ -42,10 +42,10 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
@@ -62,33 +62,13 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-DisableA15SDOptimization("disable-a15-sd-optimization", cl::Hidden,
-                   cl::desc("Inhibit optimization of S->D register accesses on A15"),
-                   cl::init(false));
-
-static cl::opt<bool>
-EnableAtomicTidy("arm-atomic-cfg-tidy", cl::Hidden,
-                 cl::desc("Run SimplifyCFG after expanding atomic operations"
-                          " to make use of cmpxchg flow-based information"),
-                 cl::init(true));
-
-static cl::opt<bool>
-EnableARMLoadStoreOpt("arm-load-store-opt", cl::Hidden,
-                      cl::desc("Enable ARM load/store optimization pass"),
-                      cl::init(true));
-
-// FIXME: Unify control over GlobalMerge.
-static cl::opt<cl::boolOrDefault>
-EnableGlobalMerge("arm-global-merge", cl::Hidden,
-                  cl::desc("Enable the global merge pass"));
-
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   // Register the target.
   RegisterTargetMachine<ARMLETargetMachine> X(getTheARMLETarget());
   RegisterTargetMachine<ARMLETargetMachine> A(getTheThumbLETarget());
   RegisterTargetMachine<ARMBETargetMachine> Y(getTheARMBETarget());
   RegisterTargetMachine<ARMBETargetMachine> B(getTheThumbBETarget());
+  static opt::RegisterLibraryOptions<ARMOptions> O;
 
   PassRegistry &Registry = *PassRegistry::getPassRegistry();
   initializeGlobalISel(Registry);
@@ -151,6 +131,8 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      CLOpts(cl::LibraryOptionsContext::get<ARMOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(createTLOF(getTargetTriple())), isLittle(TT.isLittleEndian()) {
 
   if (TT.isOSBinFormatMachO()) {
@@ -341,9 +323,11 @@ namespace {
 
 /// ARM Code Generator Pass Configuration Options.
 class ARMPassConfig : public TargetPassConfig {
+  const ARMOptions &CLOpts;
+
 public:
   ARMPassConfig(ARMBaseTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM), CLOpts(TM.getCLOpts()) {}
 
   ARMBaseTargetMachine &getARMTargetMachine() const {
     return getTM<ARMBaseTargetMachine>();
@@ -389,7 +373,7 @@ void ARMPassConfig::addIRPasses() {
   // Cmpxchg instructions are often used with a subsequent comparison to
   // determine whether it succeeded. We can exploit existing control-flow in
   // ldrex/strex loops to simplify this, but it needs tidying up.
-  if (TM->getOptLevel() != CodeGenOptLevel::None && EnableAtomicTidy)
+  if (TM->getOptLevel() != CodeGenOptLevel::None && CLOpts.atomic_cfg_tidy)
     addPass(createCFGSimplificationPass(
         SimplifyCFGOptions().hoistCommonInsts(true).sinkCommonInsts(true),
         [this](const Function &F) {
@@ -429,9 +413,8 @@ void ARMPassConfig::addCodeGenPrepare() {
 }
 
 bool ARMPassConfig::addPreISel() {
-  if ((TM->getOptLevel() != CodeGenOptLevel::None &&
-       EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET) ||
-      EnableGlobalMerge == cl::boolOrDefault::BOU_TRUE) {
+  if (valueOr(CLOpts.global_merge,
+              TM->getOptLevel() != CodeGenOptLevel::None)) {
     // FIXME: This is using the thumb1 only constant value for
     // maximal global offset for merging globals. We may want
     // to look into using the old value for non-thumb1 code of
@@ -439,7 +422,7 @@ bool ARMPassConfig::addPreISel() {
     // tricky when doing code gen per function.
     bool OnlyOptimizeForSize =
         (TM->getOptLevel() < CodeGenOptLevel::Aggressive) &&
-        (EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET);
+        (CLOpts.global_merge == BoolOrDefault::Default);
     // Merging of extern globals is enabled by default on non-Mach-O as we
     // expect it to be generally either beneficial or harmless. On Mach-O it
     // is disabled as we emit the .subsections_via_symbols directive which
@@ -496,17 +479,17 @@ void ARMPassConfig::addPreRegAlloc() {
 
     addPass(createMLxExpansionPass());
 
-    if (EnableARMLoadStoreOpt)
+    if (CLOpts.load_store_opt)
       addPass(createARMLoadStoreOptLegacyPass(/* pre-register alloc */ true));
 
-    if (!DisableA15SDOptimization)
+    if (CLOpts.a15_sd_optimization)
       addPass(createA15SDOptimizerPass());
   }
 }
 
 void ARMPassConfig::addPreSched2() {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    if (EnableARMLoadStoreOpt)
+    if (CLOpts.load_store_opt)
       addPass(createARMLoadStoreOptLegacyPass());
 
     addPass(createExecutionDomainFixLegacyPass());

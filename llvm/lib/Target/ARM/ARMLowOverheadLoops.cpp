@@ -72,16 +72,6 @@ using namespace llvm;
 #define DEBUG_TYPE "arm-low-overhead-loops"
 #define ARM_LOW_OVERHEAD_LOOPS_NAME "ARM Low Overhead Loops pass"
 
-static cl::opt<bool>
-DisableTailPredication("arm-loloops-disable-tailpred", cl::Hidden,
-    cl::desc("Disable tail-predication in the ARM LowOverheadLoop pass"),
-    cl::init(false));
-
-static cl::opt<bool>
-    DisableOmitDLS("arm-disable-omit-dls", cl::Hidden,
-                   cl::desc("Disable omitting 'dls lr, lr' instructions"),
-                   cl::init(false));
-
 static bool isVectorPredicated(MachineInstr *MI) {
   int PIdx = llvm::findFirstVPTPredOperandIdx(*MI);
   return PIdx != -1 && MI->getOperand(PIdx + 1).getReg() == ARM::VPR;
@@ -602,7 +592,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
   assert(ML.getBlocks().size() == 1 &&
          "Shouldn't be processing a loop with more than one block");
 
-  if (DisableTailPredication) {
+  if (!TII.getSubtarget().getCLOpts().loloops_tailpred) {
     LLVM_DEBUG(dbgs() << "ARM Loops: tail-predication is disabled\n");
     return false;
   }
@@ -1546,8 +1536,8 @@ MachineInstr* ARMLowOverheadLoops::ExpandLoopStart(LowOverheadLoop &LoLoop) {
 
   // A DLS lr, lr we needn't emit
   MachineInstr* NewStart;
-  if (!DisableOmitDLS && Opc == ARM::t2DLS && Count.isReg() &&
-      Count.getReg() == ARM::LR) {
+  if (TII->getSubtarget().getCLOpts().omit_dls && Opc == ARM::t2DLS &&
+      Count.isReg() && Count.getReg() == ARM::LR) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Didn't insert start: DLS lr, lr");
     NewStart = nullptr;
   } else {

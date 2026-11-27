@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv8.1m.main -mattr=+lob -disable-arm-loloops=false -start-after=hardware-loops -stop-before=arm-low-overhead-loops %s -o - | FileCheck %s --check-prefix=CHECK-MID
+; RUN: llc -mtriple=thumbv8.1m.main -mattr=+lob -arm-loloops=true -start-after=hardware-loops -stop-before=arm-low-overhead-loops %s -o - | FileCheck %s --check-prefix=CHECK-MID
 
 ; Test that the branch targets are correct after isel, even though the loop
 ; will sometimes be reverted anyway.

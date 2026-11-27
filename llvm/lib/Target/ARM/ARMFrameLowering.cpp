@@ -143,7 +143,6 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -160,10 +159,6 @@
 #define DEBUG_TYPE "arm-frame-lowering"
 
 using namespace llvm;
-
-static cl::opt<bool>
-SpillAlignedNEONRegs("align-neon-spills", cl::Hidden, cl::init(true),
-                     cl::desc("Align ARM NEON spills in prolog and epilog"));
 
 static MachineBasicBlock::iterator
 skipAlignedDPRCS2Spills(MachineBasicBlock::iterator MI,
@@ -2652,7 +2647,7 @@ static unsigned estimateRSStackSizeLimit(MachineFunction &MF,
 static void
 checkNumAlignedDPRCS2Regs(MachineFunction &MF, BitVector &SavedRegs) {
   MF.getInfo<ARMFunctionInfo>()->setNumAlignedDPRCS2Regs(0);
-  if (!SpillAlignedNEONRegs)
+  if (!MF.getSubtarget<ARMSubtarget>().getCLOpts().align_neon_spills)
     return;
 
   // Naked functions don't spill callee-saved registers.

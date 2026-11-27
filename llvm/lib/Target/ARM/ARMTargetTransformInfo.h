@@ -39,21 +39,6 @@ class ScalarEvolution;
 class Type;
 class Value;
 
-namespace TailPredication {
-enum Mode {
-  Disabled = 0,
-  EnabledNoReductions,
-  Enabled,
-  ForceEnabledNoReductions,
-  ForceEnabled
-};
-}
-
-// For controlling conversion of memcpy into Tail Predicated loop.
-namespace TPLoop {
-enum MemTransfer { ForceDisabled = 0, ForceEnabled, Allow };
-}
-
 class ARMTTIImpl final : public BasicTTIImplBase<ARMTTIImpl> {
   using BaseT = BasicTTIImplBase<ARMTTIImpl>;
   using TTI = TargetTransformInfo;

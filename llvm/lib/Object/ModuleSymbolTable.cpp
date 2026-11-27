@@ -85,6 +85,7 @@ initializeRecordStreamer(const Module &M,
     return;
 
   MCTargetOptions MCOptions;
+  MCOptions.LibraryOptions = &M.getContext().getLibraryOptions();
   std::unique_ptr<MCAsmInfo> MAI(T->createMCAsmInfo(*MRI, TT, MCOptions));
   if (!MAI)
     return;

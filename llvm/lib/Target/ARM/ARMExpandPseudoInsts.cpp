@@ -34,10 +34,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "arm-pseudo"
 
-static cl::opt<bool>
-VerifyARMPseudo("verify-arm-pseudo-expand", cl::Hidden,
-                cl::desc("Verify machine code after expanding ARM pseudos"));
-
 #define ARM_EXPAND_PSEUDO_NAME "ARM pseudo instruction expansion pass"
 
 namespace {
@@ -3347,7 +3343,7 @@ bool ARMExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   bool Modified = false;
   for (MachineBasicBlock &MBB : MF)
     Modified |= ExpandMBB(MBB);
-  if (VerifyARMPseudo)
+  if (STI->getCLOpts().verify_arm_pseudo_expand)
     MF.verify(this, "After expanding ARM pseudo instructions.");
 
   LLVM_DEBUG(dbgs() << "***************************************************\n");

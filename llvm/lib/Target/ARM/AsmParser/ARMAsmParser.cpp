@@ -12,6 +12,7 @@
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMInstPrinter.h"
 #include "MCTargetDesc/ARMMCAsmInfo.h"
+#include "MCTargetDesc/ARMMCOptions.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
 #include "TargetInfo/ARMTargetInfo.h"
 #include "Utils/ARMBaseInfo.h"
@@ -46,7 +47,6 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ARMEHABI.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -72,23 +72,6 @@ using namespace llvm;
 
 namespace {
 class ARMOperand;
-
-enum class ImplicitItModeTy { Always, Never, ARMOnly, ThumbOnly };
-
-static cl::opt<ImplicitItModeTy> ImplicitItMode(
-    "arm-implicit-it", cl::init(ImplicitItModeTy::ARMOnly),
-    cl::desc("Allow conditional instructions outside of an IT block"),
-    cl::values(clEnumValN(ImplicitItModeTy::Always, "always",
-                          "Accept in both ISAs, emit implicit ITs in Thumb"),
-               clEnumValN(ImplicitItModeTy::Never, "never",
-                          "Warn in ARM, reject in Thumb"),
-               clEnumValN(ImplicitItModeTy::ARMOnly, "arm",
-                          "Accept in ARM, reject in Thumb"),
-               clEnumValN(ImplicitItModeTy::ThumbOnly, "thumb",
-                          "Warn in ARM, emit implicit ITs in Thumb")));
-
-static cl::opt<bool> AddBuildAttributes("arm-add-build-attributes",
-                                        cl::init(false));
 
 enum VectorLaneTy { NoLanes, AllLanes, IndexedLane };
 
@@ -233,6 +216,7 @@ ARMMnemonicSets::ARMMnemonicSets(const MCSubtargetInfo &STI) {
 }
 
 class ARMAsmParser : public MCTargetAsmParser {
+  const ARMMCOptions &CLOpts;
   const MCRegisterInfo *MRI;
   UnwindContext UC;
   ARMMnemonicSets MS;
@@ -250,13 +234,13 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool NextSymbolIsThumb;
 
   bool useImplicitITThumb() const {
-    return ImplicitItMode == ImplicitItModeTy::Always ||
-           ImplicitItMode == ImplicitItModeTy::ThumbOnly;
+    return CLOpts.implicit_it == ImplicitItModeTy::Always ||
+           CLOpts.implicit_it == ImplicitItModeTy::ThumbOnly;
   }
 
   bool useImplicitITARM() const {
-    return ImplicitItMode == ImplicitItModeTy::Always ||
-           ImplicitItMode == ImplicitItModeTy::ARMOnly;
+    return CLOpts.implicit_it == ImplicitItModeTy::Always ||
+           CLOpts.implicit_it == ImplicitItModeTy::ARMOnly;
   }
 
   struct {
@@ -689,7 +673,9 @@ public:
 
   ARMAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                const MCInstrInfo &MII)
-      : MCTargetAsmParser(STI, MII), UC(Parser), MS(STI) {
+      : MCTargetAsmParser(STI, MII),
+        CLOpts(ARM_MC::getCLOpts(Parser.getContext().getTargetOptions())),
+        UC(Parser), MS(STI) {
     MCAsmParserExtension::Initialize(Parser);
 
     // Cache the MCRegisterInfo.
@@ -699,7 +685,7 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
     // Add build attributes based on the selected target.
-    if (AddBuildAttributes)
+    if (CLOpts.add_build_attributes)
       getTargetStreamer().emitTargetAttributes(STI);
 
     // Not in an ITBlock to start with.

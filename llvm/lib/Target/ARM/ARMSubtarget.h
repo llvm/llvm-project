@@ -41,6 +41,22 @@
 #include "ARMGenSubtargetInfo.inc"
 
 namespace llvm {
+enum class TailPredication {
+  Disabled,
+  EnabledNoReductions,
+  Enabled,
+  ForceEnabledNoReductions,
+  ForceEnabled
+};
+
+// For controlling conversion of memcpy into Tail Predicated loop.
+enum class TPLoopMemTransfer { ForceDisabled, ForceEnabled, Allow };
+} // namespace llvm
+
+#define OPTIONS_STRUCT_DECL
+#include "ARMOptions.inc"
+
+namespace llvm {
 
 class ARMBaseTargetMachine;
 class GlobalValue;
@@ -125,6 +141,8 @@ public:
   };
 
 protected:
+  const ARMOptions &CLOpts;
+
 // Bool members corresponding to the SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
   bool ATTRIBUTE = DEFAULT;
@@ -139,18 +157,10 @@ protected:
   /// ARMArch - ARM architecture
   ARMArchEnum ARMArch = ARMv4t;
 
-  /// UseMulOps - True if non-microcoded fused integer multiply-add and
-  /// multiply-subtract instructions should be used.
-  bool UseMulOps = false;
-
   /// SupportsTailCall - True if the OS supports tail call. The dynamic linker
   /// must be able to synthesize call stubs for interworking between ARM and
   /// Thumb.
   bool SupportsTailCall = false;
-
-  /// RestrictIT - If true, the subtarget disallows generation of complex IT
-  ///  blocks.
-  bool RestrictIT = false;
 
   /// stackAlignment - The minimum alignment known to hold of the stack frame on
   /// entry to the function and which must be maintained by every function.
@@ -221,6 +231,8 @@ public:
                const ARMBaseTargetMachine &TM, bool IsLittle,
                FloatABI::ABIType FloatABI, ARM::ARMABI ABI,
                bool MinSize = false, DenormalMode DM = DenormalMode::getIEEE());
+
+  const ARMOptions &getCLOpts() const { return CLOpts; }
 
   /// getMaxInlineSizeThreshold - Returns the maximum memset / memcpy size
   /// that still makes it profitable to inline the call.
@@ -325,7 +337,7 @@ public:
     return HasDataBarrier || (hasV6Ops() && !isThumb());
   }
 
-  bool useMulOps() const { return UseMulOps; }
+  bool useMulOps() const { return CLOpts.use_mulops; }
   bool useFPVMLx() const { return !SlowFPVMLx; }
   bool useFPVFMx() const {
     return !isTargetDarwin() && hasVFP4Base() && !SlowFPVFMx;
@@ -428,7 +440,7 @@ public:
 
   bool allowsUnalignedMem() const { return !StrictAlign; }
 
-  bool restrictIT() const { return RestrictIT; }
+  bool restrictIT() const { return CLOpts.restrict_it; }
 
   const std::string & getCPUString() const { return CPUString; }
 

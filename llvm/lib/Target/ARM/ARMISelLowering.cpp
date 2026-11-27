@@ -93,7 +93,6 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -124,35 +123,6 @@ STATISTIC(NumMovwMovt, "Number of GAs materialized with movw + movt");
 STATISTIC(NumLoopByVals, "Number of loops generated for byval arguments");
 STATISTIC(NumConstpoolPromoted,
   "Number of constants with their storage promoted into constant pools");
-
-static cl::opt<bool>
-ARMInterworking("arm-interworking", cl::Hidden,
-  cl::desc("Enable / disable ARM interworking (for debugging only)"),
-  cl::init(true));
-
-static cl::opt<bool> EnableConstpoolPromotion(
-    "arm-promote-constant", cl::Hidden,
-    cl::desc("Enable / disable promotion of unnamed_addr constants into "
-             "constant pools"),
-    cl::init(false)); // FIXME: set to true by default once PR32780 is fixed
-static cl::opt<unsigned> ConstpoolPromotionMaxSize(
-    "arm-promote-constant-max-size", cl::Hidden,
-    cl::desc("Maximum size of constant to promote into a constant pool"),
-    cl::init(64));
-static cl::opt<unsigned> ConstpoolPromotionMaxTotal(
-    "arm-promote-constant-max-total", cl::Hidden,
-    cl::desc("Maximum size of ALL constants to promote into a constant pool"),
-    cl::init(128));
-
-cl::opt<unsigned>
-MVEMaxSupportedInterleaveFactor("mve-max-interleave-factor", cl::Hidden,
-  cl::desc("Maximum interleave factor for MVE VLDn to generate."),
-  cl::init(2));
-
-cl::opt<unsigned> ArmMaxBaseUpdatesToCheck(
-    "arm-max-base-updates-to-check", cl::Hidden,
-    cl::desc("Maximum number of base-updates to check generating postindex."),
-    cl::init(64));
 
 /// Value type used for "flags" operands / results (either CPSR or FPSCR_NZCV).
 constexpr MVT FlagsVT = MVT::i32;
@@ -2564,7 +2534,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       bool isDef = GVal->isStrongDefinitionForLinker();
 
       // ARM call to a local ARM function is predicable.
-      isLocalARMFunc = !Subtarget->isThumb() && (isDef || !ARMInterworking);
+      isLocalARMFunc = !Subtarget->isThumb() &&
+                       (isDef || !Subtarget->getCLOpts().interworking);
       // tBX takes a register source operand.
       if (isStub && Subtarget->isThumb1Only() && !Subtarget->hasV5TOps()) {
         assert(TT.isOSBinFormatMachO() && "WrapperPIC use on non-MachO?");
@@ -3603,6 +3574,7 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
   // need to be duplicated) or duplicating the constant wouldn't increase code
   // size (implying the constant is no larger than 4 bytes).
   const Function &F = DAG.getMachineFunction().getFunction();
+  const ARMOptions &CLOpts = DAG.getSubtarget<ARMSubtarget>().getCLOpts();
 
   // We rely on this decision to inline being idempotent and unrelated to the
   // use-site. We know that if we inline a variable at one use site, we'll
@@ -3610,9 +3582,9 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
   // doesn't know about this optimization, so bail out if it's enabled else
   // we could decide to inline here (and thus never emit the GV) but require
   // the GV from fast-isel generated code.
-  if (!EnableConstpoolPromotion ||
+  if (!CLOpts.promote_constant ||
       DAG.getMachineFunction().getTarget().Options.EnableFastISel)
-      return SDValue();
+    return SDValue();
 
   auto *GVar = dyn_cast<GlobalVariable>(GV);
   if (!GVar || !GVar->hasInitializer() ||
@@ -3639,8 +3611,8 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
   unsigned RequiredPadding = 4 - (Size % 4);
   bool PaddingPossible =
     RequiredPadding == 4 || (CDAInit && CDAInit->isString());
-  if (!PaddingPossible || PrefAlign > 4 || Size > ConstpoolPromotionMaxSize ||
-      Size == 0)
+  if (!PaddingPossible || PrefAlign > 4 ||
+      Size > CLOpts.promote_constant_max_size || Size == 0)
     return SDValue();
 
   unsigned PaddedSize = Size + ((RequiredPadding == 4) ? 0 : RequiredPadding);
@@ -3653,7 +3625,7 @@ static SDValue promoteToConstantPool(const ARMTargetLowering *TLI,
   // > 4), ensure we have space to do so up to MaxTotal.
   if (!AFI->getGlobalsPromotedToConstantPool().count(GVar) && Size > 4)
     if (AFI->getPromotedConstpoolIncrease() + PaddedSize - 4 >=
-        ConstpoolPromotionMaxTotal)
+        CLOpts.promote_constant_max_total)
       return SDValue();
 
   // This is only valid if all users are in a single function; we can't clone
@@ -16443,7 +16415,9 @@ static SDValue CombineBaseUpdate(SDNode *N,
 
   // Limit the number of possible base-updates we look at to prevent degenerate
   // cases.
-  unsigned MaxBaseUpdates = ArmMaxBaseUpdatesToCheck;
+  unsigned MaxBaseUpdates = DCI.DAG.getSubtarget<ARMSubtarget>()
+                                .getCLOpts()
+                                .max_base_updates_to_check;
 
   SDValue Addr = N->getOperand(AddrOpIdx);
 
@@ -22326,7 +22300,7 @@ unsigned ARMTargetLowering::getMaxSupportedInterleaveFactor() const {
   if (Subtarget->hasNEON())
     return 4;
   if (Subtarget->hasMVEIntegerOps())
-    return MVEMaxSupportedInterleaveFactor;
+    return Subtarget->getCLOpts().mve_max_interleave_factor;
   return TargetLoweringBase::getMaxSupportedInterleaveFactor();
 }
 

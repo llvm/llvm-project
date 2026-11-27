@@ -41,7 +41,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -70,19 +69,6 @@ STATISTIC(NumCBZ,        "Number of CBZ / CBNZ formed");
 STATISTIC(NumJTMoved,    "Number of jump table destination blocks moved");
 STATISTIC(NumJTInserted, "Number of jump table intermediate blocks inserted");
 STATISTIC(NumLEInserted, "Number of LE backwards branches inserted");
-
-static cl::opt<bool>
-AdjustJumpTableBlocks("arm-adjust-jump-tables", cl::Hidden, cl::init(true),
-          cl::desc("Adjust basic block layout to better use TB[BH]"));
-
-static cl::opt<unsigned>
-CPMaxIteration("arm-constant-island-max-iteration", cl::Hidden, cl::init(30),
-          cl::desc("The max number of iteration for converge"));
-
-static cl::opt<bool> SynthesizeThumb1TBB(
-    "arm-synthesize-thumb-1-tbb", cl::Hidden, cl::init(true),
-    cl::desc("Use compressed jump tables in Thumb-1 by synthesizing an "
-             "equivalent to the TBB/TBH instructions"));
 
 namespace {
 
@@ -399,7 +385,8 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   isThumb1 = AFI->isThumb1OnlyFunction();
   isThumb2 = AFI->isThumb2Function();
 
-  bool GenerateTBB = isThumb2 || (isThumb1 && SynthesizeThumb1TBB);
+  bool GenerateTBB =
+      isThumb2 || (isThumb1 && STI->getCLOpts().synthesize_thumb_1_tbb);
   // TBB generation code in this constant island pass has not been adapted to
   // deal with speculation barriers.
   if (STI->hardenSlsRetBr())
@@ -412,7 +399,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   // Try to reorder and otherwise adjust the block layout to make good use
   // of the TB[BH] instructions.
   bool MadeChange = false;
-  if (GenerateTBB && AdjustJumpTableBlocks) {
+  if (GenerateTBB && STI->getCLOpts().adjust_jump_tables) {
     scanFunctionJumpTables();
     MadeChange |= reorderThumb2JumpTables();
     // Data is out of date, so clear it. It'll be re-computed later.
@@ -466,6 +453,7 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
 
   // Iteratively place constant pool entries and fix up branches until there
   // is no change.
+  unsigned CPMaxIteration = STI->getCLOpts().constant_island_max_iteration;
   unsigned NoCPIters = 0, NoBRIters = 0;
   while (true) {
     LLVM_DEBUG(dbgs() << "Beginning CP iteration #" << NoCPIters << '\n');

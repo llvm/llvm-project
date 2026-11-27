@@ -42,14 +42,6 @@ using namespace PatternMatch;
 
 STATISTIC(NumSMLAD , "Number of smlad instructions generated");
 
-static cl::opt<bool>
-DisableParallelDSP("disable-arm-parallel-dsp", cl::Hidden, cl::init(false),
-                   cl::desc("Disable the ARM Parallel DSP pass"));
-
-static cl::opt<unsigned>
-NumLoadLimit("arm-parallel-dsp-load-limit", cl::Hidden, cl::init(16),
-             cl::desc("Limit the number of loads analysed"));
-
 namespace {
   struct MulCandidate;
   class Reduction;
@@ -212,6 +204,7 @@ namespace {
     DominatorTree     *DT;
     const DataLayout  *DL;
     Module            *M;
+    const ARMOptions *CLOpts;
     std::map<LoadInst*, LoadInst*> LoadPairs;
     SmallPtrSet<LoadInst*, 4> OffsetLoads;
     std::map<LoadInst*, std::unique_ptr<WidenedLoad>> WideLoads;
@@ -250,8 +243,6 @@ namespace {
     }
 
     bool runOnFunction(Function &F) override {
-      if (DisableParallelDSP)
-        return false;
       if (skipFunction(F))
         return false;
 
@@ -266,6 +257,9 @@ namespace {
 
       auto &TM = TPC.getTM<TargetMachine>();
       auto *ST = &TM.getSubtarget<ARMSubtarget>(F);
+      CLOpts = &ST->getCLOpts();
+      if (CLOpts->disable_arm_parallel_dsp)
+        return false;
 
       if (!ST->allowsUnalignedMem()) {
         LLVM_DEBUG(dbgs() << "Unaligned memory access not supported: not "
@@ -354,7 +348,7 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
     Loads.push_back(Ld);
   }
 
-  if (Loads.empty() || Loads.size() > NumLoadLimit)
+  if (Loads.empty() || Loads.size() > CLOpts->parallel_dsp_load_limit)
     return false;
 
   using InstSet = std::set<Instruction*>;

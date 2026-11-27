@@ -15,6 +15,7 @@
 #include "ARMBaseInfo.h"
 #include "ARMInstPrinter.h"
 #include "ARMMCAsmInfo.h"
+#include "ARMMCOptions.h"
 #include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -27,6 +28,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
@@ -138,6 +140,9 @@ static bool getARMLoadDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 
 #define GET_SUBTARGETINFO_MC_DESC
 #include "ARMGenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "ARMMCOptions.inc"
 
 std::string ARM_MC::ParseARMTriple(const Triple &TT, StringRef CPU) {
   std::string ARMArchFeature;
@@ -764,6 +769,7 @@ bool ARM::isCDECoproc(size_t Coproc, const MCSubtargetInfo &STI) {
 
 // Force static initialization.
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTargetMC() {
+  static opt::RegisterLibraryOptions<ARMMCOptions> O;
   for (Target *T : {&getTheARMLETarget(), &getTheARMBETarget(),
                     &getTheThumbLETarget(), &getTheThumbBETarget()}) {
     // Register the MC asm info.

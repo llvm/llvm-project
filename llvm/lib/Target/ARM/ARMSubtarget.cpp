@@ -33,8 +33,8 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -47,27 +47,8 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "ARMGenSubtargetInfo.inc"
 
-static cl::opt<bool>
-UseFusedMulOps("arm-use-mulops",
-               cl::init(true), cl::Hidden);
-
-enum ITMode {
-  DefaultIT,
-  RestrictedIT
-};
-
-static cl::opt<ITMode>
-    IT(cl::desc("IT block support"), cl::Hidden, cl::init(DefaultIT),
-       cl::values(clEnumValN(DefaultIT, "arm-default-it",
-                             "Generate any type of IT block"),
-                  clEnumValN(RestrictedIT, "arm-restrict-it",
-                             "Disallow complex IT blocks")));
-
-/// ForceFastISel - Use the fast-isel, even for subtargets where it is not
-/// currently supported (for testing only).
-static cl::opt<bool>
-ForceFastISel("arm-force-fast-isel",
-               cl::init(false), cl::Hidden);
+#define OPTIONS_STRUCT_DEFS
+#include "ARMOptions.inc"
 
 /// initializeSubtargetDependencies - Initializes using a CPU and feature string
 /// so that we can use initializer lists for subtarget initialization.
@@ -91,11 +72,10 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const ARMBaseTargetMachine &TM, bool IsLittle,
                            FloatABI::ABIType FloatABI, ARM::ARMABI ABI,
                            bool MinSize, DenormalMode DM)
-    : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
-      UseMulOps(UseFusedMulOps), CPUString(CPU), OptMinSize(MinSize),
-      IsLittle(IsLittle), DM(DM), TargetTriple(TT), Options(TM.Options), TM(TM),
-      FloatABIType(FloatABI), ABI(ABI),
-      FrameLowering(initializeFrameLowering(CPU, FS)),
+    : ARMGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), CLOpts(TM.getCLOpts()),
+      CPUString(CPU), OptMinSize(MinSize), IsLittle(IsLittle), DM(DM),
+      TargetTriple(TT), Options(TM.Options), TM(TM), FloatABIType(FloatABI),
+      ABI(ABI), FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only() ? (ARMBaseInstrInfo *)new Thumb1InstrInfo(*this)
@@ -359,15 +339,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
 
   SupportsTailCall = !isThumb1Only() || hasV8MBaselineOps();
 
-  switch (IT) {
-  case DefaultIT:
-    RestrictIT = false;
-    break;
-  case RestrictedIT:
-    RestrictIT = true;
-    break;
-  }
-
   // NEON f32 ops are non-IEEE 754 compliant. Darwin is ok with it by default.
   const FeatureBitset &Bits = getFeatureBits();
   if ((Bits[ARM::ProcA5] || Bits[ARM::ProcA8]) && // Where this matters
@@ -542,7 +513,7 @@ bool ARMSubtarget::useMovt() const {
 
 bool ARMSubtarget::useFastISel() const {
   // Enable fast-isel for any target, for testing only.
-  if (ForceFastISel)
+  if (CLOpts.force_fast_isel)
     return true;
 
   // Limit fast-isel to the targets that are or have been tested.

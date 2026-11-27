@@ -44,29 +44,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "armtti"
 
-static cl::opt<bool> EnableMaskedLoadStores(
-  "enable-arm-maskedldst", cl::Hidden, cl::init(true),
-  cl::desc("Enable the generation of masked loads and stores"));
-
-static cl::opt<bool> DisableLowOverheadLoops(
-  "disable-arm-loloops", cl::Hidden, cl::init(false),
-  cl::desc("Disable the generation of low-overhead loops"));
-
-static cl::opt<bool>
-    AllowWLSLoops("allow-arm-wlsloops", cl::Hidden, cl::init(true),
-                  cl::desc("Enable the generation of WLS loops"));
-
-extern cl::opt<TailPredication::Mode> EnableTailPredication;
-
-extern cl::opt<bool> EnableMaskedGatherScatters;
-
-extern cl::opt<unsigned> MVEMaxSupportedInterleaveFactor;
-
-static cl::opt<int> ArmForceUnrollThreshold(
-    "arm-force-unroll-threshold", cl::init(12), cl::Hidden,
-    cl::desc(
-        "Threshold for forced unrolling of small loops in Arm architecture"));
-
 /// Convert a vector load intrinsic into a simple llvm load instruction.
 /// This is beneficial when the underlying object being addressed comes
 /// from a constant, since we get constant-folding for free.
@@ -1111,7 +1088,7 @@ bool ARMTTIImpl::isProfitableLSRChainElement(Instruction *I) const {
 bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
                                    unsigned /*AddressSpace*/,
                                    TTI::MaskKind /*MaskKind*/) const {
-  if (!EnableMaskedLoadStores || !ST->hasMVEIntegerOps())
+  if (!ST->getCLOpts().maskedldst || !ST->hasMVEIntegerOps())
     return false;
 
   if (auto *VecTy = dyn_cast<FixedVectorType>(DataTy)) {
@@ -1131,7 +1108,7 @@ bool ARMTTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment,
 }
 
 bool ARMTTIImpl::isLegalMaskedGather(Type *Ty, Align Alignment) const {
-  if (!EnableMaskedGatherScatters || !ST->hasMVEIntegerOps())
+  if (!ST->getCLOpts().maskedgatscat || !ST->hasMVEIntegerOps())
     return false;
 
   unsigned EltWidth = Ty->getScalarSizeInBits();
@@ -1727,7 +1704,7 @@ ARMTTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
   const Instruction *I = MICA.getInst();
 
   using namespace PatternMatch;
-  if (!ST->hasMVEIntegerOps() || !EnableMaskedGatherScatters)
+  if (!ST->hasMVEIntegerOps() || !ST->getCLOpts().maskedgatscat)
     return BaseT::getMemIntrinsicInstrCost(MICA, CostKind);
 
   assert(DataTy->isVectorTy() && "Can't do gather/scatters on scalar!");
@@ -2337,7 +2314,7 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                           HardwareLoopInfo &HWLoopInfo) const {
   // Low-overhead branches are only supported in the 'low-overhead branch'
   // extension of v8.1-m.
-  if (!ST->hasV8_1MMainlineOps() || !ST->hasLOB() || DisableLowOverheadLoops) {
+  if (!ST->hasV8_1MMainlineOps() || !ST->hasLOB() || !ST->getCLOpts().loloops) {
     LLVM_DEBUG(dbgs() << "ARMHWLoops: Disabled\n");
     return false;
   }
@@ -2420,7 +2397,8 @@ bool ARMTTIImpl::isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
   LLVMContext &C = L->getHeader()->getContext();
   HWLoopInfo.CounterInReg = true;
   HWLoopInfo.IsNestingLegal = false;
-  HWLoopInfo.PerformEntryTest = AllowWLSLoops && !IsTailPredLoop;
+  HWLoopInfo.PerformEntryTest =
+      ST->getCLOpts().allow_wlsloops && !IsTailPredLoop;
   HWLoopInfo.CountType = Type::getInt32Ty(C);
   HWLoopInfo.LoopDecrement = ConstantInt::get(HWLoopInfo.CountType, 1);
   return true;
@@ -2477,7 +2455,8 @@ static bool canTailPredicateInstruction(Instruction &I, int &ICmpCount) {
 // 3) we don't want elements to be reversed or shuffled, to make sure the
 //    tail-predication masks/predicates the right lanes.
 //
-static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
+static bool canTailPredicateLoop(const ARMOptions &CLOpts, Loop *L,
+                                 LoopInfo *LI, ScalarEvolution &SE,
                                  const DataLayout &DL,
                                  const LoopAccessInfo *LAI,
                                  const DominatorTree &DT) {
@@ -2493,8 +2472,8 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
   SmallVector< Instruction *, 8 > LiveOuts;
   LiveOuts = llvm::findDefsUsedOutsideOfLoop(L);
   bool ReductionsDisabled =
-      EnableTailPredication == TailPredication::EnabledNoReductions ||
-      EnableTailPredication == TailPredication::ForceEnabledNoReductions;
+      CLOpts.tail_predication == TailPredication::EnabledNoReductions ||
+      CLOpts.tail_predication == TailPredication::ForceEnabledNoReductions;
 
   for (auto *I : LiveOuts) {
     if (!I->getType()->isIntegerTy() && !I->getType()->isFloatTy() &&
@@ -2538,14 +2517,14 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
           // for now.
           continue;
         } else if (NextStride == -1 ||
-                   (NextStride == 2 && MVEMaxSupportedInterleaveFactor >= 2) ||
-                   (NextStride == 4 && MVEMaxSupportedInterleaveFactor >= 4)) {
+                   (NextStride == 2 && CLOpts.mve_max_interleave_factor >= 2) ||
+                   (NextStride == 4 && CLOpts.mve_max_interleave_factor >= 4)) {
           LLVM_DEBUG(dbgs()
                      << "Consecutive strides of 2 found, vld2/vstr2 can't "
                         "be tail-predicated\n.");
           return false;
           // TODO: don't tail predicate if there is a reversed load?
-        } else if (EnableMaskedGatherScatters) {
+        } else if (CLOpts.maskedgatscat) {
           // Gather/scatters do allow loading from arbitrary strides, at
           // least if they are loop invariant.
           // TODO: Loop variant strides should in theory work, too, but
@@ -2569,7 +2548,7 @@ static bool canTailPredicateLoop(Loop *L, LoopInfo *LI, ScalarEvolution &SE,
 }
 
 bool ARMTTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
-  if (!EnableTailPredication) {
+  if (ST->getCLOpts().tail_predication == TailPredication::Disabled) {
     LLVM_DEBUG(dbgs() << "Tail-folding not enabled.\n");
     return false;
   }
@@ -2619,12 +2598,13 @@ bool ARMTTIImpl::preferTailFoldingOverEpilogue(TailFoldingInfo *TFI) const {
     return false;
   }
 
-  return canTailPredicateLoop(L, LI, *SE, DL, LVL->getLAI(),
+  return canTailPredicateLoop(ST->getCLOpts(), L, LI, *SE, DL, LVL->getLAI(),
                               *LVL->getDominatorTree());
 }
 
 TailFoldingStyle ARMTTIImpl::getPreferredTailFoldingStyle() const {
-  if (!ST->hasMVEIntegerOps() || !EnableTailPredication)
+  if (!ST->hasMVEIntegerOps() ||
+      ST->getCLOpts().tail_predication == TailPredication::Disabled)
     return TailFoldingStyle::DataWithoutLaneMask;
 
   // Intrinsic @llvm.get.active.lane.mask is supported.
@@ -2759,7 +2739,7 @@ void ARMTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
 
   // Force unrolling small loops can be very useful because of the branch
   // taken cost of the backedge.
-  if (Cost < ArmForceUnrollThreshold)
+  if (Cost < ST->getCLOpts().force_unroll_threshold)
     UP.Force = true;
 }
 

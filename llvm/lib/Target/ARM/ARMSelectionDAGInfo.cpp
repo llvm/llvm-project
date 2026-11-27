@@ -11,9 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMSelectionDAGInfo.h"
-#include "ARMTargetTransformInfo.h"
+#include "ARMSubtarget.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/Support/CommandLine.h"
 
 #define GET_SDNODE_DESC
 #include "ARMGenSDNodeInfo.inc"
@@ -21,19 +20,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "arm-selectiondag-info"
-
-static cl::opt<TPLoop::MemTransfer> EnableMemtransferTPLoop(
-    "arm-memtransfer-tploop", cl::Hidden,
-    cl::desc("Control conversion of memcpy to "
-             "Tail predicated loops (WLSTP)"),
-    cl::init(TPLoop::ForceDisabled),
-    cl::values(clEnumValN(TPLoop::ForceDisabled, "force-disabled",
-                          "Don't convert memcpy to TP loop."),
-               clEnumValN(TPLoop::ForceEnabled, "force-enabled",
-                          "Always convert memcpy to TP loop."),
-               clEnumValN(TPLoop::Allow, "allow",
-                          "Allow (may be subject to certain conditions) "
-                          "conversion of memcpy to TP loop.")));
 
 ARMSelectionDAGInfo::ARMSelectionDAGInfo()
     : SelectionDAGGenTargetInfo(ARMGenSDNodeInfo) {}
@@ -236,9 +222,10 @@ static bool shouldGenerateInlineTPLoop(const ARMSubtarget &Subtarget,
                                        ConstantSDNode *ConstantSize,
                                        Align Alignment, bool IsMemcpy) {
   auto &F = DAG.getMachineFunction().getFunction();
-  if (!EnableMemtransferTPLoop)
+  TPLoopMemTransfer Mode = Subtarget.getCLOpts().memtransfer_tploop;
+  if (Mode == TPLoopMemTransfer::ForceDisabled)
     return false;
-  if (EnableMemtransferTPLoop == TPLoop::ForceEnabled)
+  if (Mode == TPLoopMemTransfer::ForceEnabled)
     return true;
   // Do not generate inline TP loop if optimizations is disabled,
   // or if optimization for size (-Os or -Oz) is on.

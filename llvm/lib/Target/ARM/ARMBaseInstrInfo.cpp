@@ -143,9 +143,12 @@ ScheduleHazardRecognizer *ARMBaseInstrInfo::CreateTargetMIHazardRecognizer(
   // track VRegLiveness.
   // Cortex-M7: TRM indicates that there is a single ITCM bank and two DTCM
   //            banks banked on bit 2.  Assume that TCMs are in use.
-  if (Subtarget.isCortexM7() && !DAG->hasVRegLiveness())
-    MHR->AddHazardRecognizer(
-        std::make_unique<ARMBankConflictHazardRecognizer>(DAG, 0x4, true));
+  if (Subtarget.isCortexM7() && !DAG->hasVRegLiveness()) {
+    const ARMOptions &CLOpts = Subtarget.getCLOpts();
+    MHR->AddHazardRecognizer(std::make_unique<ARMBankConflictHazardRecognizer>(
+        DAG, CLOpts.data_bank_mask.value_or(0x4),
+        valueOr(CLOpts.assume_itcm_bankconflict, true)));
+  }
 
   // Not inserting ARMHazardRecognizerFPMLx because that would change
   // legacy behavior
