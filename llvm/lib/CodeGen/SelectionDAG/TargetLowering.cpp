@@ -14272,12 +14272,10 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
     return Load;
 
   EVT PopcountVT = ScalarVT.changeTypeToInteger();
-  SDValue Popcount = DAG.getNode(
-      ISD::TRUNCATE, DL,
-      MaskVT.changeVectorElementType(*DAG.getContext(), MVT::i1), Mask);
-  Popcount = DAG.getNode(
-      ISD::ZERO_EXTEND, DL,
-      MaskVT.changeVectorElementType(*DAG.getContext(), PopcountVT), Popcount);
+  SDValue Popcount = DAG.getAnyExtOrTrunc(
+      Mask, DL, MaskVT.changeVectorElementType(*DAG.getContext(), PopcountVT));
+  Popcount = DAG.getZeroExtendInReg(
+      Popcount, DL, MaskVT.changeVectorElementType(*DAG.getContext(), MVT::i1));
   Popcount = DAG.getNode(ISD::VECREDUCE_ADD, DL, PopcountVT, Popcount);
 
   SDValue Zero = DAG.getConstant(0, DL, PopcountVT);
