@@ -269,10 +269,9 @@ bool PointerReplacer::collectUsers() {
   SmallSetVector<Instruction *, 32> ValuesToRevisit;
 
   auto PushUsersToWorklist = [&](Instruction *Inst) {
-    for (auto *U : Inst->users())
-      if (auto *I = dyn_cast<Instruction>(U))
-        if (!isAvailable(I) && !ValuesToRevisit.contains(I))
-          Worklist.emplace_back(I);
+    for (Instruction *I : Inst->users())
+      if (!isAvailable(I) && !ValuesToRevisit.contains(I))
+        Worklist.emplace_back(I);
   };
 
   auto TryPushInstOperand = [&](Instruction *InstOp) {
@@ -384,8 +383,7 @@ void PointerReplacer::replacePointer(Value *V) {
     // If I has not been processed before, push each of its
     // replacable users into the worklist.
     if (Visited.insert(I).second) {
-      for (auto *U : I->users()) {
-        auto *UserInst = cast<Instruction>(U);
+      for (Instruction *UserInst : I->users()) {
         if (UsersToReplace.contains(UserInst) && !Visited.contains(UserInst))
           Worklist.push_back(UserInst);
       }

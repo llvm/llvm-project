@@ -2681,11 +2681,10 @@ bool SelectionDAGBuilder::shouldKeepJumpConditionsTogether(
   // is.
   Value *BrCond = I.getCondition();
   auto ShouldCountInsn = [&RhsDeps, &BrCond](const Instruction *Ins) {
-    for (const auto *U : Ins->users()) {
+    for (const Instruction *UIns : Ins->users()) {
       // If user is independent of RHS calculation we don't need to count it.
-      if (auto *UIns = dyn_cast<Instruction>(U))
-        if (UIns != BrCond && !RhsDeps.contains(UIns))
-          return false;
+      if (UIns != BrCond && !RhsDeps.contains(UIns))
+        return false;
     }
     return true;
   };

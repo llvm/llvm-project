@@ -686,9 +686,9 @@ simplifyAndDCEInstruction(Instruction *I,
   if (Value *SimpleV = simplifyInstruction(I, DL)) {
     // Add the users to the worklist. CAREFUL: an instruction can use itself,
     // in the case of a phi node.
-    for (User *U : I->users()) {
+    for (Instruction *U : I->users()) {
       if (U != I) {
-        WorkList.insert(cast<Instruction>(U));
+        WorkList.insert(U);
       }
     }
 

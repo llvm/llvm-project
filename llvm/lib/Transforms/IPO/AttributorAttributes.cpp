@@ -4229,8 +4229,8 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
         A.deleteAfterManifest(*I);
         for (size_t i = 0; i < AssumeOnlyInst.size(); ++i) {
           Instruction *AOI = AssumeOnlyInst[i];
-          for (auto *Usr : AOI->users())
-            AssumeOnlyInst.insert(cast<Instruction>(Usr));
+          for (Instruction *Usr : AOI->users())
+            AssumeOnlyInst.insert(Usr);
           A.deleteAfterManifest(*AOI);
         }
         return ChangeStatus::CHANGED;

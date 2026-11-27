@@ -2176,9 +2176,8 @@ bool VectorCombine::scalarizeLoad(Instruction &I) {
   // Check what type of users we have (must either all be extracts or
   // bitcasts) and ensure no memory modifications between the load and
   // its users.
-  for (User *U : LI->users()) {
-    auto *UI = dyn_cast<Instruction>(U);
-    if (!UI || UI->getParent() != LI->getParent())
+  for (Instruction *UI : LI->users()) {
+    if (UI->getParent() != LI->getParent())
       return false;
 
     // If any user is waiting to be erased, then bail out as this will
@@ -2417,7 +2416,7 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
                            TTI::CastContextHint::None, CostKind, Ext);
   unsigned ExtCnt = 0;
   bool ExtLane0 = false;
-  for (User *U : Ext->users()) {
+  for (Instruction *U : Ext->users()) {
     uint64_t Idx;
     if (!match(U, m_ExtractElt(m_Value(), m_ConstantInt(Idx))))
       return false;
@@ -2425,7 +2424,7 @@ bool VectorCombine::scalarizeExtExtract(Instruction &I) {
     // than computing a shift amount that overflows the packed type.
     if (Idx >= SrcTy->getNumElements())
       return false;
-    if (cast<Instruction>(U)->use_empty())
+    if (U->use_empty())
       continue;
     ExtCnt += 1;
     ExtLane0 |= !Idx;
@@ -5438,8 +5437,7 @@ static bool feedsIntoVectorReduction(ShuffleVectorInst *SVI) {
   WorkList.push_back(SVI);
   while (!WorkList.empty()) {
     Instruction *I = WorkList.pop_back_val();
-    for (User *U : I->users()) {
-      auto *UI = cast<Instruction>(U);
+    for (Instruction *UI : I->users()) {
       if (!UI || !Visited.insert(UI).second)
         continue;
       if (Visited.size() > MaxVisited)

@@ -1011,12 +1011,11 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
   // Check that each user of each old PHI node is something that we can
   // rewrite, so that all of the old PHI nodes can be cleaned up afterwards.
   for (auto *OldPN : OldPhiNodes) {
-    for (User *V : OldPN->users()) {
-      Instruction *ACI = dyn_cast<Instruction>(V);
-      if (ACI && isAMXCast(ACI)) {
+    for (Instruction *V : OldPN->users()) {
+      if (isAMXCast(V)) {
         // Verify it's a B->A cast.
-        Type *TyB = ACI->getOperand(0)->getType();
-        Type *TyA = ACI->getType();
+        Type *TyB = V->getOperand(0)->getType();
+        Type *TyA = V->getType();
         if (TyA != DestTy || TyB != SrcTy)
           return false;
       } else if (auto *PHI = dyn_cast<PHINode>(V)) {
@@ -1080,16 +1079,15 @@ bool X86LowerAMXCast::optimizeAMXCastFromPhi(
   // later to get rid of a closure formed by OldPHI nodes.
   for (auto *OldPN : OldPhiNodes) {
     PHINode *NewPN = NewPNodes[OldPN];
-    for (User *V : make_early_inc_range(OldPN->users())) {
-      Instruction *ACI = dyn_cast<Instruction>(V);
-      if (ACI && isAMXCast(ACI)) {
-        Type *TyB = ACI->getOperand(0)->getType();
-        Type *TyA = ACI->getType();
+    for (Instruction *V : make_early_inc_range(OldPN->users())) {
+      if (isAMXCast(V)) {
+        Type *TyB = V->getOperand(0)->getType();
+        Type *TyA = V->getType();
         assert(TyA == DestTy && TyB == SrcTy);
         (void)TyA;
         (void)TyB;
-        ACI->replaceAllUsesWith(NewPN);
-        DeadInst.insert(ACI);
+        V->replaceAllUsesWith(NewPN);
+        DeadInst.insert(V);
       } else if (auto *PHI = dyn_cast<PHINode>(V)) {
         // We don't need to push PHINode into DeadInst since they are operands
         // of rootPN DCE can safely delete rootPN's operands if rootPN is dead.

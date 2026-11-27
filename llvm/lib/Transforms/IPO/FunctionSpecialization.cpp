@@ -179,10 +179,9 @@ Cost InstCostVisitor::getCodeSizeSavingsForUser(Instruction *User, Value *Use,
   LLVM_DEBUG(dbgs() << "FnSpecialization:     {CodeSize = " << CodeSize
                     << "} for user " << *User << "\n");
 
-  for (auto *U : User->users())
-    if (auto *UI = dyn_cast<Instruction>(U))
-      if (UI != User && isBlockExecutable(UI->getParent()))
-        CodeSize += getCodeSizeSavingsForUser(UI, User, C);
+  for (Instruction *UI : User->users())
+    if (UI != User && isBlockExecutable(UI->getParent()))
+      CodeSize += getCodeSizeSavingsForUser(UI, User, C);
 
   return CodeSize;
 }

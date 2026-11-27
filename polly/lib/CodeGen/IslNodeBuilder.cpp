@@ -1365,10 +1365,9 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
     Instruction *MAAccInst = MA->getAccessInstruction();
     // Use the escape system to get the correct value to users outside the SCoP.
     BlockGenerator::EscapeUserVectorTy EscapeUsers;
-    for (auto *U : MAAccInst->users())
-      if (Instruction *UI = dyn_cast<Instruction>(U))
-        if (!S.contains(UI))
-          EscapeUsers.push_back(UI);
+    for (Instruction *UI : MAAccInst->users())
+      if (!S.contains(UI))
+        EscapeUsers.push_back(UI);
 
     if (EscapeUsers.empty())
       continue;
