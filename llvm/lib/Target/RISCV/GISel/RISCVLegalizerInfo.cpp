@@ -240,7 +240,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST)
       .legalIf(all(isScalar(0), isScalar(1), scalarNarrowerThan(0, XLen + 1)))
       // Wider ones (i128/f128, or f64/i64 on RV32) are split into XLen pieces.
       .narrowScalarIf(all(isScalar(0), isScalar(1), scalarWiderThan(0, XLen)),
-                      LegalizeMutations::changeTo(0, sXLen));
+                      LegalizeMutations::changeTo(0, iXLen));
 
   auto &BSWAPActions = getActionDefinitionsBuilder(G_BSWAP);
   if (ST.hasStdExtZbb() || ST.hasStdExtZbkb())
