@@ -252,6 +252,14 @@ __device__ void test_log_f32(float* out, float a) {
   *out = __builtin_amdgcn_logf(a);
 }
 
+// CIR-LABEL: @_Z18test_log_clamp_f32Pff
+// CIR: cir.call_llvm_intrinsic "amdgcn.log.clamp" {{.*}} : (!cir.float) -> !cir.float
+// LLVM: define{{.*}} void @_Z18test_log_clamp_f32Pff
+// LLVM: call{{.*}} float @llvm.amdgcn.log.clamp.f32(float %{{.*}})
+__device__ void test_log_clamp_f32(float* out, float a) {
+  *out = __builtin_amdgcn_log_clampf(a);
+}
+
 // CIR-LABEL: @_Z19test_frexp_mant_f32Pff
 // CIR: cir.call_llvm_intrinsic "amdgcn.frexp.mant" {{.*}} : (!cir.float) -> !cir.float
 // LLVM: define{{.*}} void @_Z19test_frexp_mant_f32Pff
