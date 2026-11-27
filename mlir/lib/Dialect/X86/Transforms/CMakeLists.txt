@@ -11,6 +11,7 @@ add_mlir_dialect_library(MLIRX86Transforms
   MoveAccumulatorForContractLoop.cpp
   VectorContractMultiLevelUnroll.cpp
   PrepareVectorContractLoops.cpp
+  VectorContractToACEOuterProduct.cpp
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
