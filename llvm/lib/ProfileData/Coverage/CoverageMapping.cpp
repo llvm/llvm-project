@@ -1493,11 +1493,12 @@ static bool isExpansion(const CountedRegion &R, unsigned FileID) {
 /// \p Regions must be grouped by ascending FileID.
 static ArrayRef<CountedRegion> regionsForFileID(ArrayRef<CountedRegion> Regions,
                                                 unsigned FileID) {
-  const CountedRegion *Begin = llvm::partition_point(
-      Regions, [FileID](const CountedRegion &R) { return R.FileID < FileID; });
-  const CountedRegion *End = std::partition_point(
-      Begin, Regions.end(),
-      [FileID](const CountedRegion &R) { return R.FileID <= FileID; });
+  auto Begin = llvm::lower_bound(
+      Regions, FileID,
+      [](const CountedRegion &R, unsigned ID) { return R.FileID < ID; });
+  auto End = std::upper_bound(
+      Begin, Regions.end(), FileID,
+      [](unsigned ID, const CountedRegion &R) { return ID < R.FileID; });
   return ArrayRef<CountedRegion>(Begin, End);
 }
 
