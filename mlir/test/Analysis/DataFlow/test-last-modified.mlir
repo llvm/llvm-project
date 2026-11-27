@@ -359,3 +359,19 @@ func.func private @unreachable_private(%arg0: i32) {
   %cond = arith.index_cast %arg0 {tag = "tag_in_unreachable_private"} : i32 to index
   return
 }
+
+// CHECK-LABEL: test_tag: affine_parallel:
+// CHECK:      operand #0
+// CHECK-DAG:   - pre
+// CHECK-DAG:   - inner
+func.func @affine_parallel_store(%arg0: memref<4xf32>) {
+  %c0 = arith.constant 0 : index
+  %0 = arith.constant 0.0 : f32
+  %1 = arith.constant 1.0 : f32
+  memref.store %0, %arg0[%c0] {tag_name = "pre"} : memref<4xf32>
+  affine.parallel (%i) = (0) to (4) {
+    affine.store %1, %arg0[%i] {tag_name = "inner"} : memref<4xf32>
+  }
+  memref.load %arg0[%c0] {tag = "affine_parallel"} : memref<4xf32>
+  return
+}

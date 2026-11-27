@@ -106,7 +106,8 @@ public:
 
 private:
   const Kind kind;
-  mutable std::optional<RegionOffset> cachedOffset;
+  /// Invalid (null region) until computed; a computed offset is always valid.
+  mutable RegionOffset cachedOffset;
 
 protected:
   MemRegion(Kind k) : kind(k) {}
