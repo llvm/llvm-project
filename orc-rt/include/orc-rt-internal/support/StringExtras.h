@@ -78,6 +78,12 @@ public:
     bool Left;
   };
 
+  /// A string to be printed in double quotes (see quote). A Str with null
+  /// data (e.g. a default-constructed std::string_view) prints as NULL.
+  struct Quoted {
+    std::string_view Str;
+  };
+
   StringOutputStream &operator<<(char C) {
     S.push_back(C);
     return *this;
@@ -129,6 +135,21 @@ public:
     return *this;
   }
 
+  StringOutputStream &operator<<(Quoted Q) {
+    if (!Q.Str.data()) {
+      S.append("NULL");
+      return *this;
+    }
+    S.push_back('"');
+    for (char C : Q.Str) {
+      if (C == '"' || C == '\\')
+        S.push_back('\\');
+      S.push_back(C);
+    }
+    S.push_back('"');
+    return *this;
+  }
+
   /// Access the accumulated string (mirrors std::ostringstream::str()).
   const std::string &str() const & { return S; }
   std::string str() && { return std::move(S); }
@@ -172,6 +193,18 @@ inline StringOutputStream::Justified ljust(std::string_view Str,
 inline StringOutputStream::Justified rjust(std::string_view Str,
                                            std::size_t Width, char Fill = ' ') {
   return {Str, Width, Fill, /*Left=*/false};
+}
+
+/// Wrap Str so StringOutputStream prints it in double quotes, with any '"' or
+/// '\' in it escaped with a backslash (as std::quoted does). A null Str (or a
+/// std::string_view with null data, e.g. a default-constructed one) prints as
+/// NULL, unquoted, so nullable strings can be printed without a separate check.
+/// An empty string prints as "".
+inline StringOutputStream::Quoted quote(std::string_view Str) { return {Str}; }
+
+/// As above, for C strings.
+inline StringOutputStream::Quoted quote(const char *Str) {
+  return {Str ? std::string_view(Str) : std::string_view()};
 }
 
 } // namespace orc_rt

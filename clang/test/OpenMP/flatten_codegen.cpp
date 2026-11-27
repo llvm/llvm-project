@@ -102,6 +102,34 @@ extern "C" void both_neg() {
       body(i, j);
 }
 
+// A floating-point expression that initializes an integer loop counter can
+// make the calculated trip count floating-point. Flatten converts such counts
+// to an integer type before building its flattened induction variable.
+// CHECK-LABEL: define {{.*}}void @floating_init(
+// CHECK:   %.flatten.iv = alloca i32
+// CHECK:   icmp slt i32
+// CHECK:   sdiv i32
+// CHECK:   srem i32
+extern "C" void floating_init() {
+#pragma omp flatten
+  for (int i = 0; i < 2; ++i)
+    for (int j = 0.; j < 2; ++j)
+      body(i, j);
+}
+
+// long and double are the same width, so the count is not narrowed to the
+// variable. Signedness still follows the signed loop variable (i64, not u64).
+// CHECK-LABEL: define {{.*}}void @floating_long(
+// CHECK:   %.flatten.iv = alloca i64
+// CHECK:   icmp slt i64
+// CHECK:   sdiv i64
+extern "C" void floating_long() {
+#pragma omp flatten
+  for (long i = 0.; i < 2; ++i)
+    for (int j = 0; j < 2; ++j)
+      body(0, 0);
+}
+
 // Mixed signed/unsigned trip counts: the flattened IV is unsigned, and the
 // signed inner count is converted into that type for (N == 0 ? 1 : N).
 // CHECK-LABEL: define {{.*}}void @mixed_sign(
@@ -112,6 +140,25 @@ extern "C" void mixed_sign(int n) {
   for (size_t i = 0; i < (size_t)n; ++i)
     for (int j = 0; j < n; ++j)
       body((int)i, j);
+}
+
+// Empty outer loop: outer I = 0 always runs; inner J = 0 is gated on the
+// outer PreCond, same idea as gated Finals leftover writes.
+// CHECK-LABEL: define {{.*}}void @empty_outer(
+// CHECK:       store i32 0, ptr %I,
+// CHECK:       %[[HAS_OUTER:.+]] = icmp slt i32 0, %{{.+}}
+// CHECK-NEXT:  br i1 %[[HAS_OUTER]], label %[[J_INIT:[^,]+]], label %[[AFTER_J:[^,]+]]
+// CHECK:     [[J_INIT]]:
+// CHECK:       store i32 0, ptr %J,
+// CHECK-NEXT:  br label %[[AFTER_J]]
+extern "C" void empty_outer() {
+  int I = -1;
+  int J = -1;
+  int Zero = 0;
+#pragma omp flatten
+  for (I = 0; I < Zero; ++I)
+    for (J = 0; J < 3; ++J)
+      body(I, J);
 }
 
 #endif

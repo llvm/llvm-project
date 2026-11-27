@@ -296,8 +296,7 @@ private:
   shouldInstrumentCall(const CallBase &CB, const TargetLibraryInfo &TLI) const;
 
   /// Returns true for functions that are eligible for instrumentation.
-  bool isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
-                               const TargetLibraryInfo &TLI) const;
+  bool isInstrumentableLibFunc(LibFunc Func, const CallBase &CB) const;
 
   /// Returns true for isAllocationFn() functions that we should ignore.
   static bool ignoreInstrumentableLibFunc(LibFunc Func);
@@ -405,7 +404,7 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   // returning false for nobuiltin calls.
   LibFunc Func = TLI.getLibFunc(*Callee);
   if (Func != NotLibFunc) {
-    if (isInstrumentableLibFunc(Func, CB, TLI))
+    if (isInstrumentableLibFunc(Func, CB))
       return Func;
   } else if (Options.Extended && CB.getMetadata(LLVMContext::MD_alloc_token)) {
     return NotLibFunc;
@@ -414,12 +413,12 @@ AllocToken::shouldInstrumentCall(const CallBase &CB,
   return std::nullopt;
 }
 
-bool AllocToken::isInstrumentableLibFunc(LibFunc Func, const CallBase &CB,
-                                         const TargetLibraryInfo &TLI) const {
+bool AllocToken::isInstrumentableLibFunc(LibFunc Func,
+                                         const CallBase &CB) const {
   if (ignoreInstrumentableLibFunc(Func))
     return false;
 
-  if (isAllocationFn(&CB, &TLI))
+  if (isAllocationFn(&CB))
     return true;
 
   switch (Func) {
@@ -507,13 +506,16 @@ bool AllocToken::replaceAllocationCall(CallBase *CB, LibFunc Func,
   NewArgs.push_back(ConstantInt::get(IntPtrTy, TokenID));
   assert(TokenAlloc.getFunctionType()->getNumParams() == NewArgs.size());
 
+  SmallVector<OperandBundleDef, 2> Bundles;
+  CB->getOperandBundlesAsDefs(Bundles);
+
   // Preserve invoke vs call semantics for exception handling.
   CallBase *NewCall;
   if (auto *II = dyn_cast<InvokeInst>(CB)) {
     NewCall = IRB.CreateInvoke(TokenAlloc, II->getNormalDest(),
-                               II->getUnwindDest(), NewArgs);
+                               II->getUnwindDest(), NewArgs, Bundles);
   } else {
-    NewCall = IRB.CreateCall(TokenAlloc, NewArgs);
+    NewCall = IRB.CreateCall(TokenAlloc, NewArgs, Bundles);
     cast<CallInst>(NewCall)->setTailCall(CB->isTailCall());
   }
   NewCall->setCallingConv(CB->getCallingConv());
@@ -578,15 +580,26 @@ AllocTokenPass::AllocTokenPass(AllocTokenOptions Opts)
     : Options(std::move(Opts)) {}
 
 PreservedAnalyses AllocTokenPass::run(Module &M, ModuleAnalysisManager &MAM) {
-  AllocToken Pass(InstrumentationOptions::Global, Options, M, MAM);
+  const InstrumentationOptions &CLOpts = getInstrumentationOptions(M);
+  AllocToken Pass(CLOpts, Options, M, MAM);
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   bool Modified = false;
 
   for (Function &F : M) {
     if (F.empty())
       continue; // declaration
-    Modified |= Pass.instrumentFunction(F);
+    if (Pass.instrumentFunction(F)) {
+      FAM.invalidate(F, PreservedAnalyses::none().preserveSet<CFGAnalyses>());
+      Modified = true;
+    }
   }
 
-  return Modified ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
-                  : PreservedAnalyses::all();
+  if (!Modified)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

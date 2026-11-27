@@ -55,17 +55,6 @@ Value *createWidenedStridedCast(IRBuilderBase &Builder, Value *V, Type *DstTy,
       Builder.CreatePtrToInt(V, DL.getIntPtrType(V->getType())), DstTy);
 }
 
-ConstantInt *getStrideBytesIfConstant(Value *Stride, Type *ScalarTy,
-                                      const DataLayout &DL, bool IsReverse) {
-  auto *CI = dyn_cast_or_null<ConstantInt>(Stride);
-  if (!CI)
-    return nullptr;
-
-  uint64_t ElementSize = DL.getTypeAllocSize(ScalarTy).getFixedValue();
-  APInt Bytes = CI->getValue() * ElementSize;
-  return ConstantInt::get(CI->getContext(), IsReverse ? -Bytes : Bytes);
-}
-
 bool arePointersCompatible(Value *Ptr1, Value *Ptr2,
                            const TargetLibraryInfo &TLI, unsigned MaxDepth,
                            bool CompareOpcodes) {
@@ -195,13 +184,76 @@ const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   return Stride;
 }
 
+std::optional<int64_t>
+SLPAnalysisCache::getPointersDiff(Type *ElemTyA, Value *PtrA, Type *ElemTyB,
+                                  Value *PtrB, const DataLayout &DL,
+                                  ScalarEvolution &SE, bool StrictCheck,
+                                  bool CheckType) {
+  if (PtrA == PtrB)
+    return 0;
+  unsigned Flags = unsigned(StrictCheck) | (unsigned(CheckType) << 1);
+  PtrsDiffKeyT Key(ElemTyA, PtrA, ElemTyB, PtrB, Flags);
+  auto [It, Inserted] = PtrsDiffCache.try_emplace(Key);
+  if (!Inserted)
+    return It->second;
+  std::optional<int64_t> Diff = llvm::getPointersDiff(
+      ElemTyA, PtrA, ElemTyB, PtrB, DL, SE, StrictCheck, CheckType);
+  // Set before the reverse insertion below, which may rehash.
+  It->second = Diff;
+  // The distance is counted in elements of ElemTyA, so querying the pair the
+  // other way round gives the negation, provided both elements have the same
+  // size. A failed query is recorded for this order only.
+  if (Diff && *Diff != std::numeric_limits<int64_t>::min() &&
+      DL.getTypeStoreSize(ElemTyA) == DL.getTypeStoreSize(ElemTyB))
+    PtrsDiffCache.try_emplace(PtrsDiffKeyT(ElemTyB, PtrB, ElemTyA, PtrA, Flags),
+                              -*Diff);
+  return Diff;
+}
+
+bool SLPAnalysisCache::sortPtrAccesses(
+    ArrayRef<Value *> VL, Type *ElemTy, const DataLayout &DL,
+    ScalarEvolution &SE, SmallVectorImpl<unsigned> &SortedIndices) {
+  using DistOrdPair = std::pair<int64_t, unsigned>;
+  auto Compare = less_first();
+  std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
+  Offsets.emplace(0, 0);
+  bool IsConsecutive = true;
+  for (auto [Idx, Ptr] : drop_begin(enumerate(VL))) {
+    std::optional<int64_t> Diff =
+        getPointersDiff(ElemTy, VL.front(), ElemTy, Ptr, DL, SE,
+                        /*StrictCheck=*/true);
+    if (!Diff)
+      return false;
+    auto [It, IsInserted] = Offsets.emplace(*Diff, Idx);
+    if (!IsInserted)
+      return false;
+    IsConsecutive &= std::next(It) == Offsets.end();
+  }
+  SortedIndices.clear();
+  if (!IsConsecutive) {
+    SortedIndices.resize(VL.size());
+    for (auto [Idx, Off] : enumerate(Offsets))
+      SortedIndices[Idx] = Off.second;
+  }
+  return true;
+}
+
+bool SLPAnalysisCache::isGuaranteedNotToBePoison(const Value *V,
+                                                 AssumptionCache *AC) {
+  auto [It, Inserted] = NotPoisonCache.try_emplace(V, false);
+  if (Inserted)
+    It->second = llvm::isGuaranteedNotToBePoison(V, AC);
+  return It->second;
+}
+
 /// Builds compress-like mask for shuffles for the given \p PointerOps, ordered
 /// with \p Order.
 /// \return true if the mask represents strided access, false - otherwise.
 static bool buildCompressMask(ArrayRef<Value *> PointerOps,
                               ArrayRef<unsigned> Order, Type *ScalarTy,
                               const DataLayout &DL, ScalarEvolution &SE,
-                              SmallVectorImpl<int> &CompressMask) {
+                              SmallVectorImpl<int> &CompressMask,
+                              SLPAnalysisCache &Cache) {
   const unsigned Sz = PointerOps.size();
   CompressMask.assign(Sz, PoisonMaskElem);
   // The first element always set.
@@ -212,7 +264,7 @@ static bool buildCompressMask(ArrayRef<Value *> PointerOps,
   for (unsigned I : seq<unsigned>(1, Sz)) {
     Value *Ptr = Order.empty() ? PointerOps[I] : PointerOps[Order[I]];
     std::optional<int64_t> OptPos =
-        getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+        Cache.getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
     if (!OptPos || OptPos > std::numeric_limits<unsigned>::max())
       return false;
     unsigned Pos = static_cast<unsigned>(*OptPos);
@@ -238,9 +290,8 @@ bool isMaskedLoadCompress(
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
     const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
-    bool &IsMasked, unsigned &InterleaveFactor,
-    SmallVectorImpl<int> &CompressMask, VectorType *&LoadVecTy) {
-  InterleaveFactor = 0;
+    CompressedLoadInfo &Info, SLPAnalysisCache &Cache) {
+  Info.InterleaveFactor = 0;
   Type *ScalarTy = VL.front()->getType();
   const size_t Sz = VL.size();
   auto *VecTy = cast<VectorType>(getWidenedType(ScalarTy, Sz));
@@ -269,7 +320,7 @@ bool isMaskedLoadCompress(
     PtrN = PointerOps[Order.back()];
   }
   std::optional<int64_t> Diff =
-      getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
+      Cache.getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
   if (!Diff)
     return false;
   const size_t MaxRegSize =
@@ -278,27 +329,28 @@ bool isMaskedLoadCompress(
   // Check for very large distances between elements.
   if (*Diff / Sz >= MaxRegSize / 8)
     return false;
-  LoadVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
+  Info.LoadVecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, *Diff + 1));
   auto *LI = cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()]);
   Align CommonAlignment = LI->getAlign();
   SimplifyQuery SQ(
       DL, &TLI, &DT, &AC,
       cast<LoadInst>(Order.empty() ? VL.back() : VL[Order.back()]));
-  IsMasked = !isSafeToLoadUnconditionally(Ptr0, LoadVecTy, CommonAlignment, SQ);
-  if (IsMasked && !TTI.isLegalMaskedLoad(LoadVecTy, CommonAlignment,
-                                         LI->getPointerAddressSpace()))
+  Info.IsMasked =
+      !isSafeToLoadUnconditionally(Ptr0, Info.LoadVecTy, CommonAlignment, SQ);
+  if (Info.IsMasked && !TTI.isLegalMaskedLoad(Info.LoadVecTy, CommonAlignment,
+                                              LI->getPointerAddressSpace()))
     return false;
   // TODO: perform the analysis of each scalar load for better
   // safe-load-unconditionally analysis.
-  bool IsStrided =
-      buildCompressMask(PointerOps, Order, ScalarTy, DL, SE, CompressMask);
-  assert(CompressMask.size() >= 2 && "At least two elements are required");
+  bool IsStrided = buildCompressMask(PointerOps, Order, ScalarTy, DL, SE,
+                                     Info.CompressMask, Cache);
+  assert(Info.CompressMask.size() >= 2 && "At least two elements are required");
   SmallVector<Value *> OrderedPointerOps(PointerOps);
   if (!Order.empty())
     reorderScalars(OrderedPointerOps, Mask);
   auto [ScalarGEPCost, VectorGEPCost] =
       getGEPCosts(TTI, OrderedPointerOps, OrderedPointerOps.front(),
-                  Instruction::Load, CostKind, ScalarTy, LoadVecTy);
+                  Instruction::Load, CostKind, ScalarTy, Info.LoadVecTy);
   // The cost of scalar loads.
   InstructionCost ScalarLoadsCost =
       accumulate(VL, InstructionCost(),
@@ -314,19 +366,19 @@ bool isMaskedLoadCompress(
                                /*Extract=*/false, CostKind) +
       ScalarLoadsCost;
   InstructionCost LoadCost = 0;
-  if (IsMasked) {
+  if (Info.IsMasked) {
     LoadCost = TTI.getMemIntrinsicInstrCost(
-        MemIntrinsicCostAttributes(Intrinsic::masked_load, LoadVecTy,
+        MemIntrinsicCostAttributes(Intrinsic::masked_load, Info.LoadVecTy,
                                    CommonAlignment,
                                    LI->getPointerAddressSpace()),
         CostKind);
   } else {
     LoadCost =
-        TTI.getMemoryOpCost(Instruction::Load, LoadVecTy, CommonAlignment,
+        TTI.getMemoryOpCost(Instruction::Load, Info.LoadVecTy, CommonAlignment,
                             LI->getPointerAddressSpace(), CostKind,
                             TTI::getOperandInfo(LI->getPointerOperand()));
   }
-  if (IsStrided && !IsMasked && Order.empty()) {
+  if (IsStrided && !Info.IsMasked && Order.empty()) {
     // Check for potential segmented(interleaved) loads.
     VectorType *AlignedLoadVecTy = cast<VectorType>(getWidenedType(
         ScalarTy,
@@ -334,21 +386,29 @@ bool isMaskedLoadCompress(
     SimplifyQuery SQ(DL, &TLI, &DT, &AC, cast<LoadInst>(VL.back()));
     if (!isSafeToLoadUnconditionally(Ptr0, AlignedLoadVecTy, CommonAlignment,
                                      SQ))
-      AlignedLoadVecTy = LoadVecTy;
-    if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, CompressMask[1],
+      AlignedLoadVecTy = Info.LoadVecTy;
+    if (TTI.isLegalInterleavedAccessType(AlignedLoadVecTy, Info.CompressMask[1],
                                          CommonAlignment,
                                          LI->getPointerAddressSpace())) {
       InstructionCost InterleavedCost =
           VectorGEPCost + TTI.getInterleavedMemoryOpCost(
                               Instruction::Load, AlignedLoadVecTy,
-                              CompressMask[1], {}, CommonAlignment,
-                              LI->getPointerAddressSpace(), CostKind, IsMasked);
+                              Info.CompressMask[1], {}, CommonAlignment,
+                              LI->getPointerAddressSpace(), CostKind,
+                              Info.IsMasked);
       if (InterleavedCost < GatherCost) {
-        InterleaveFactor = CompressMask[1];
-        LoadVecTy = AlignedLoadVecTy;
+        Info.InterleaveFactor = Info.CompressMask[1];
+        Info.LoadVecTy = AlignedLoadVecTy;
         return true;
       }
     }
+  }
+  SmallVector<int> CostMask(Info.CompressMask.begin(), Info.CompressMask.end());
+  if (!Order.empty()) {
+    SmallVector<int> NewMask(Sz, PoisonMaskElem);
+    for (unsigned I : seq<unsigned>(Sz))
+      NewMask[I] = Info.CompressMask[Mask[I]];
+    Info.CompressMask.swap(NewMask);
   }
   // Estimating the compression shuffle cost below can be extremely expensive
   // for a very wide LoadVecTy, which is split into a large number of vector
@@ -358,15 +418,11 @@ bool isMaskedLoadCompress(
   // shuffle cost estimation in that case.
   if (VectorGEPCost + LoadCost >= GatherCost)
     return false;
+  // For REVEC the scalars are vectors, and the emitted shuffle uses the
+  // compress mask expanded to the individual elements. Cost that mask.
+  transformScalarShuffleIndiciesToVector(getNumElements(ScalarTy), CostMask);
   InstructionCost CompressCost = getShuffleCost(
-      TTI, TTI::SK_PermuteSingleSrc, LoadVecTy, CostKind, CompressMask);
-  if (!Order.empty()) {
-    SmallVector<int> NewMask(Sz, PoisonMaskElem);
-    for (unsigned I : seq<unsigned>(Sz)) {
-      NewMask[I] = CompressMask[Mask[I]];
-    }
-    CompressMask.swap(NewMask);
-  }
+      TTI, TTI::SK_PermuteSingleSrc, Info.LoadVecTy, CostKind, CostMask);
   InstructionCost TotalVecCost = VectorGEPCost + LoadCost + CompressCost;
   return TotalVecCost < GatherCost;
 }
@@ -379,14 +435,12 @@ bool isMaskedLoadCompress(
     const DataLayout &DL, ScalarEvolution &SE, AssumptionCache &AC,
     const DominatorTree &DT, const TargetLibraryInfo &TLI,
     const TargetTransformInfo::TargetCostKind CostKind,
-    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec) {
-  bool IsMasked;
-  unsigned InterleaveFactor;
-  SmallVector<int> CompressMask;
-  VectorType *LoadVecTy;
+    const function_ref<bool(Value *)> AreAllUsersVectorized, bool ReVec,
+    SLPAnalysisCache &Cache) {
+  CompressedLoadInfo Info;
   return isMaskedLoadCompress(VL, PointerOps, Order, TTI, DL, SE, AC, DT, TLI,
-                              CostKind, AreAllUsersVectorized, ReVec, IsMasked,
-                              InterleaveFactor, CompressMask, LoadVecTy);
+                              CostKind, AreAllUsersVectorized, ReVec, Info,
+                              Cache);
 }
 
 bool canWidenLoadsOverUndefLanes(ArrayRef<Value *> VL, const DataLayout &DL,
@@ -451,7 +505,8 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                            const TargetTransformInfo &TTI, const DataLayout &DL,
                            ScalarEvolution &SE, Align CommonAlignment,
                            SmallVectorImpl<int> &ReuseShuffleIndices,
-                           FixedVectorType *&StoreVecTy) {
+                           FixedVectorType *&StoreVecTy,
+                           SLPAnalysisCache &Cache) {
   Type *ScalarTy = cast<StoreInst>(VL.front())->getValueOperand()->getType();
   const size_t Sz = VL.size();
   // Only simple scalar element types are supported.
@@ -460,7 +515,7 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
   Value *Ptr0 = Order.empty() ? PointerOps.front() : PointerOps[Order.front()];
   Value *PtrN = Order.empty() ? PointerOps.back() : PointerOps[Order.back()];
   std::optional<int64_t> Diff =
-      getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
+      Cache.getPointersDiff(ScalarTy, Ptr0, ScalarTy, PtrN, DL, SE);
   if (!Diff || *Diff <= 0)
     return false;
   // Avoid widened vectors with very large gaps between the stored elements.
@@ -483,7 +538,7 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
   for (unsigned I : seq<unsigned>(Sz)) {
     Value *Ptr = Order.empty() ? PointerOps[I] : PointerOps[Order[I]];
     std::optional<int64_t> Off =
-        getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
+        Cache.getPointersDiff(ScalarTy, Ptr0, ScalarTy, Ptr, DL, SE);
     if (!Off || *Off <= Prev || *Off > *Diff)
       return false;
     ReuseShuffleIndices[*Off] = static_cast<int>(I);
@@ -495,7 +550,8 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
 bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
                             Type *ElemTy, const DataLayout &DL,
                             ScalarEvolution &SE, unsigned MaxDepth,
-                            SmallVectorImpl<unsigned> &SortedIndices) {
+                            SmallVectorImpl<unsigned> &SortedIndices,
+                            SLPAnalysisCache &Cache) {
   assert(
       all_of(VL, [](const Value *V) { return V->getType()->isPointerTy(); }) &&
       "Expected list of pointer operands.");
@@ -517,10 +573,9 @@ bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
     auto Key = std::make_pair(BBs[Cnt + 1], getUnderlyingObject(Ptr, MaxDepth));
     bool Found = any_of(Bases.try_emplace(Key).first->second,
                         [&, &Cnt = Cnt, &Ptr = Ptr](auto &Base) {
-                          std::optional<int64_t> Diff =
-                              getPointersDiff(ElemTy, std::get<0>(Base.front()),
-                                              ElemTy, Ptr, DL, SE,
-                                              /*StrictCheck=*/true);
+                          std::optional<int64_t> Diff = Cache.getPointersDiff(
+                              ElemTy, std::get<0>(Base.front()), ElemTy, Ptr,
+                              DL, SE, /*StrictCheck=*/true);
                           if (!Diff)
                             return false;
 

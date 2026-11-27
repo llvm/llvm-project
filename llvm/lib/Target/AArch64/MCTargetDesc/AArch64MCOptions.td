@@ -8,7 +8,7 @@
 
 include "llvm/Option/LibraryOptions.td"
 
-def AArch64MCOptions : OptionsStruct<prefix = "aarch64-", perContext = false>;
+def AArch64MCOptions : OptionsStruct<prefix = "aarch64-">;
 
 // AArch64MCAsmInfo.cpp
 defm : EnumField<"aarch64-neon-syntax", "std::optional<AArch64::AsmWriterVariantTy>", "std::nullopt",

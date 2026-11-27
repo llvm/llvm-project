@@ -12,6 +12,7 @@
 #include "MCTargetDesc/ARMMCAsmInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -41,6 +42,7 @@ void ARMElfTargetObjectFile::initialize(MCContext &Ctx, const TargetMachine &TM,
       ARM_TM.getMCSubtargetInfo().hasFeature(ARM::FeatureExecuteOnly);
 
   TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
+  UsesARMEH = M.getExceptionModel() == ExceptionHandling::ARM;
 
   // Make code section unreadable when in execute-only mode
   if (genExecuteOnly) {
@@ -81,7 +83,7 @@ getIndirectSymViaRWPI(const MCSymbol *Sym) const {
 const MCExpr *ARMElfTargetObjectFile::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
     MachineModuleInfo *MMI, MCStreamer &Streamer) const {
-  if (TM.getMCAsmInfo().getExceptionHandlingType() != ExceptionHandling::ARM)
+  if (!UsesARMEH)
     return TargetLoweringObjectFileELF::getTTypeGlobalReference(
         GV, Encoding, TM, MMI, Streamer);
 

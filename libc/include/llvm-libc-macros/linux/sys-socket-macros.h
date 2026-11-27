@@ -18,6 +18,7 @@
 #define AF_INET 2     // Internet IPv4 Protocol
 #define AF_INET6 10   // IP version 6
 #define AF_NETLINK 16 // Netlink sockets
+#define AF_PACKET 17  // Low-level packet interface
 
 // 4.2BSD protocol families
 #define PF_UNSPEC AF_UNSPEC
@@ -26,6 +27,7 @@
 #define PF_INET AF_INET
 #define PF_INET6 AF_INET6
 #define PF_NETLINK AF_NETLINK
+#define PF_PACKET AF_PACKET
 
 #define SOCK_STREAM 1
 #define SOCK_DGRAM 2
@@ -143,6 +145,9 @@
 #define SHUT_RDWR 2
 
 #define SCM_RIGHTS 1
+#define SCM_TIMESTAMP SO_TIMESTAMP
+#define SCM_TIMESTAMPNS SO_TIMESTAMPNS
+#define SCM_TIMESTAMPING SO_TIMESTAMPING
 
 #define MSG_OOB 0x01
 #define MSG_PEEK 0x02

@@ -17,7 +17,6 @@
 ...
 ---
 name:            regalloc_introduces_s_to_a_copy
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'

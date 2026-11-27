@@ -7,7 +7,7 @@
 ; CHECK-DAG: OpCapability GroupNonUniformVote
 
 ; CHECK-LABEL: Begin function test_wave_any
-define i1 @test_wave_any(i1 %p1) #0 {
+define i1 @test_wave_any(i1 %p1) #1 {
 entry:
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#bool]]
 ; CHECK: %{{.+}} = OpGroupNonUniformAny %[[#bool]] %[[#scope]] %[[#param]]
@@ -19,3 +19,4 @@ entry:
 declare i1 @llvm.spv.wave.any(i1) #0
 
 attributes #0 = { convergent }
+attributes #1 = { convergent noinline optnone }

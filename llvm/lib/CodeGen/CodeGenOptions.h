@@ -13,7 +13,34 @@
 #include <cstdint>
 #include <optional>
 
+namespace llvm {
+#ifdef EXPENSIVE_CHECKS
+constexpr bool MachineCombinerVerifyPatternOrderDefault = true;
+#else
+constexpr bool MachineCombinerVerifyPatternOrderDefault = false;
+#endif
+
+namespace MISched {
+enum Direction : unsigned;
+} // namespace MISched
+enum class WindowSchedulingFlag;
+} // namespace llvm
+
 #define OPTIONS_STRUCT_DECL
 #include "CodeGenOptions.inc"
+
+namespace llvm {
+
+class Function;
+class LLVMContext;
+class MachineFunction;
+class Module;
+
+const CodeGenOptions &getCodeGenOptions(const LLVMContext &C);
+const CodeGenOptions &getCodeGenOptions(const Function &F);
+const CodeGenOptions &getCodeGenOptions(const Module &M);
+const CodeGenOptions &getCodeGenOptions(const MachineFunction &MF);
+
+} // namespace llvm
 
 #endif // LLVM_LIB_CODEGEN_CODEGENOPTIONS_H

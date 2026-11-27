@@ -2237,12 +2237,19 @@ void ConversionPatternRewriter::replaceAllUsesWith(Value from, ValueRange to) {
   impl->replaceValueUses(from, to, impl->currentTypeConverter);
 }
 
-void ConversionPatternRewriter::replaceUsesWithIf(
+bool ConversionPatternRewriter::replaceUsesWithIf(
     Value from, ValueRange to, function_ref<bool(OpOperand &)> functor,
     bool *allUsesReplaced) {
   assert(!allUsesReplaced &&
          "allUsesReplaced is not supported in a dialect conversion");
-  impl->replaceValueUses(from, to, impl->currentTypeConverter, functor);
+  bool replaced = false;
+  impl->replaceValueUses(from, to, impl->currentTypeConverter,
+                         [&](OpOperand &operand) {
+                           bool replace = functor(operand);
+                           replaced |= replace;
+                           return replace;
+                         });
+  return replaced;
 }
 
 Value ConversionPatternRewriter::getRemappedValue(Value key) {
@@ -3922,7 +3929,7 @@ struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
 
 struct AnyFunctionOpInterfaceSignatureConversion
     : public OpInterfaceConversionPattern<FunctionOpInterface> {
-  using OpInterfaceConversionPattern::OpInterfaceConversionPattern;
+  using Base::Base;
 
   LogicalResult
   matchAndRewrite(FunctionOpInterface funcOp, ArrayRef<Value> /*operands*/,
@@ -4195,18 +4202,19 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 // Op Conversion Entry Points
 //===----------------------------------------------------------------------===//
 
+namespace {
 /// This is the type of Action that is dispatched when a conversion is applied.
 class ApplyConversionAction
     : public tracing::ActionImpl<ApplyConversionAction> {
 public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(ApplyConversionAction)
   using Base = tracing::ActionImpl<ApplyConversionAction>;
   ApplyConversionAction(ArrayRef<IRUnit> irUnits) : Base(irUnits) {}
   static constexpr StringLiteral tag = "apply-conversion";
-  static constexpr StringLiteral desc =
-      "Encapsulate the application of a dialect conversion";
 
   void print(raw_ostream &os) const override { os << tag; }
 };
+} // namespace
 
 static LogicalResult applyConversion(ArrayRef<Operation *> ops,
                                      const ConversionTarget &target,

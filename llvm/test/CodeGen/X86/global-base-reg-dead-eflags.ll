@@ -18,7 +18,7 @@ define i32 @use_global() {
   ; LARGE: bb.0 (%ir-block.0):
   ; LARGE-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r $rip, 0, $noreg, <mcsymbol .L0$pb>, $noreg, pre-instr-symbol <mcsymbol .L0$pb>
   ; LARGE-NEXT:   [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri target-flags(x86-pic-base-offset) &_GLOBAL_OFFSET_TABLE_
-  ; LARGE-NEXT:   [[ADD64rr:%[0-9]+]]:gr64_nosp = ADD64rr killed [[LEA64r]], killed [[MOV64ri]], implicit-def dead $eflags
+  ; LARGE-NEXT:   [[ADD64rr:%[0-9]+]]:gr64_nosp = ADD64rr [[LEA64r]], [[MOV64ri]], implicit-def dead $eflags
   ; LARGE-NEXT:   [[MOV64ri1:%[0-9]+]]:gr64_nosp = MOV64ri target-flags(x86-got) @g
   ; LARGE-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm [[ADD64rr]], 1, [[MOV64ri1]], 0, $noreg :: (load (s64) from got)
   ; LARGE-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[MOV64rm]], 1, $noreg, 0, $noreg :: (dereferenceable load (s32) from @g)

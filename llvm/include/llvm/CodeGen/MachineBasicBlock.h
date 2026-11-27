@@ -513,6 +513,11 @@ public:
   LLVM_ABI bool isLiveIn(MCRegister Reg,
                          LaneBitmask LaneMask = LaneBitmask::getAll()) const;
 
+  /// Return true if any part of \p Reg is live in, accounting for live-ins of
+  /// overlapping registers and their lane masks.
+  LLVM_ABI bool isLiveInOverlappedWith(MCRegister Reg,
+                                       const TargetRegisterInfo &TRI) const;
+
   // Iteration support for live in sets.  These sets are kept in sorted
   // order by their register number.
   using livein_iterator = LiveInVector::const_iterator;
@@ -1459,11 +1464,11 @@ inline auto pred_end(const MachineBasicBlock *BB) { return BB->pred_end(); }
 /// at some point after the MachineInstrSpan is constructed.
 class MachineInstrSpan {
   MachineBasicBlock &MBB;
-  MachineBasicBlock::iterator I, B, E;
+  MachineBasicBlock::iterator B, E;
 
 public:
   MachineInstrSpan(MachineBasicBlock::iterator I, MachineBasicBlock *BB)
-      : MBB(*BB), I(I), B(I == MBB.begin() ? MBB.end() : std::prev(I)),
+      : MBB(*BB), B(I == MBB.begin() ? MBB.end() : std::prev(I)),
         E(std::next(I)) {
     assert(I == BB->end() || I->getParent() == BB);
   }

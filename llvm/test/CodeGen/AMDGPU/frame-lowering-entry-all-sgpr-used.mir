@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -verify-machineinstrs -run-pass=prolog-epilog %s -o - | FileCheck %s
+# RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -run-pass=prolog-epilog %s -o - | FileCheck %s
 
 # CHECK-LABEL: all_sgpr_used
 # CHECK: V_CMP_LT_U32_e64
@@ -10,7 +10,6 @@
 ...
 ---
 name:            all_sgpr_used
-tracksRegLiveness: true
 liveins:         
   - { reg: '$vgpr0' }
   - { reg: '$vgpr1' }

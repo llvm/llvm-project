@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lib/Context.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -20,12 +19,12 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/UBAwareInterpreter/Context.h"
 
 using namespace llvm;
 
@@ -201,7 +200,9 @@ public:
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
 
-  cl::ParseCommandLineOptions(argc, argv, "llvm ub-aware interpreter\n");
+  LLVMContext Context;
+  cl::parseCommandLineOptions(Context.getLibraryOptions(), ArrayRef(argv, argc),
+                              "llvm ub-aware interpreter\n");
 
   if (EntryFunc.empty()) {
     WithColor::error() << "--entry-function name cannot be empty\n";
@@ -217,8 +218,6 @@ int main(int argc, char **argv) {
     WithColor::error() << "--vscale value must be a power of 2\n";
     return 1;
   }
-
-  LLVMContext Context;
 
   // Load the bitcode...
   SMDiagnostic Err;

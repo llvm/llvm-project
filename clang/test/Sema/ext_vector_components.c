@@ -72,3 +72,10 @@ float2 lo(float3 x) { return x.lo; }
 float2 hi(float3 x) { return x.hi; }
 float2 ev(float3 x) { return x.even; }
 float2 od(float3 x) { return x.odd; }
+
+// A component gets the qualifiers of the vector, also when accessed via '->'.
+void const_vector(const float4 *p, float2 v) {
+  (*p).x = 1; // expected-error {{read-only variable is not assignable}}
+  p->x = 1;   // expected-error {{read-only variable is not assignable}}
+  p->xy = v;  // expected-error {{read-only variable is not assignable}}
+}

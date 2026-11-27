@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=riscv64 -run-pass=early-machinelicm -o - %s | FileCheck %s
 ---
 name: dont_hoist_lifetime_start_end
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4 }
 body: |

@@ -29,21 +29,15 @@ void acc_loop() {
 // CHECK: acc.reduction.recipe @reduction_add__ZTS18HasOperatorsInline : !cir.ptr<!rec_HasOperatorsInline> reduction_operator <add> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsInline>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<25> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[ALLOCA]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[ALLOCA]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
@@ -196,21 +190,15 @@ void acc_loop() {
 // CHECK: acc.reduction.recipe @reduction_ior__ZTS18HasOperatorsInline : !cir.ptr<!rec_HasOperatorsInline> reduction_operator <ior> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsInline>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<25> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[ALLOCA]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[ALLOCA]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
@@ -227,21 +215,15 @@ void acc_loop() {
 // CHECK: acc.reduction.recipe @reduction_xor__ZTS18HasOperatorsInline : !cir.ptr<!rec_HasOperatorsInline> reduction_operator <xor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsInline>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<25> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[ALLOCA]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[ALLOCA]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
@@ -290,21 +272,15 @@ void acc_loop() {
 // CHECK: acc.reduction.recipe @reduction_lor__ZTS18HasOperatorsInline : !cir.ptr<!rec_HasOperatorsInline> reduction_operator <lor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_HasOperatorsInline>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<25> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[ALLOCA]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[ALLOCA]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[ALLOCA]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[ALLOCA]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[ALLOCA]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: acc.yield
 //
 // CHECK-NEXT: } combiner {
@@ -324,6 +300,10 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>
 // CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca "arrayinit.temp" {{.*}} : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<160> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
@@ -331,20 +311,10 @@ void acc_loop() {
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[TEMP_LOAD]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[TEMP_LOAD]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[TEMP_LOAD]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[TEMP_LOAD]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride %[[TEMP_LOAD]], %[[ONE]] : (!cir.ptr<!rec_HasOperatorsInline>, !s64i) -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: cir.store {{.*}} %[[NEXT_ITEM]], %[[TEMP_ITR]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
@@ -387,7 +357,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -530,7 +500,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -679,7 +649,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -828,7 +798,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -971,7 +941,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -993,6 +963,10 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>
 // CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca "arrayinit.temp" {{.*}} : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<160> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
@@ -1000,20 +974,10 @@ void acc_loop() {
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[TEMP_LOAD]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[TEMP_LOAD]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[TEMP_LOAD]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[TEMP_LOAD]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride %[[TEMP_LOAD]], %[[ONE]] : (!cir.ptr<!rec_HasOperatorsInline>, !s64i) -> !cir.ptr<!rec_HasOperatorsInline>
@@ -1056,7 +1020,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -1078,6 +1042,10 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>
 // CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca "arrayinit.temp" {{.*}} : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<160> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
@@ -1085,20 +1053,10 @@ void acc_loop() {
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[TEMP_LOAD]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[TEMP_LOAD]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[TEMP_LOAD]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[TEMP_LOAD]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride %[[TEMP_LOAD]], %[[ONE]] : (!cir.ptr<!rec_HasOperatorsInline>, !s64i) -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: cir.store {{.*}} %[[NEXT_ITEM]], %[[TEMP_ITR]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
@@ -1140,7 +1098,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -1287,7 +1245,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -1309,6 +1267,10 @@ void acc_loop() {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>{{.*}})
 // CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca "openacc.reduction.init" {{.*}} init : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>>
 // CHECK-NEXT: %[[TEMP_ITR:.*]] = cir.alloca "arrayinit.temp" {{.*}} : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<160> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: cir.store {{.*}} %[[DECAY]], %[[TEMP_ITR]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !s64i
@@ -1316,20 +1278,10 @@ void acc_loop() {
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[TEMP_LOAD:.*]] = cir.load {{.*}} %[[TEMP_ITR]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[TEMP_LOAD]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[TEMP_LOAD]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[TEMP_LOAD]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[TEMP_LOAD]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[TEMP_LOAD]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 //
 // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s64i
 // CHECK-NEXT: %[[NEXT_ITEM:.*]] = cir.ptr_stride %[[TEMP_LOAD]], %[[ONE]] : (!cir.ptr<!rec_HasOperatorsInline>, !s64i) -> !cir.ptr<!rec_HasOperatorsInline>
@@ -1375,7 +1327,7 @@ void acc_loop() {
 // CHECK-NEXT: %[[SIZE:.*]] = cir.const #cir.int<5>  : !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ARG]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[LAST_ELT:.*]] = cir.ptr_stride %[[DECAY]], %[[SIZE]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
-// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(1) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
+// CHECK-NEXT: %[[IDX:.*]] = cir.alloca "__array_idx" align(8) : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.store %[[LAST_ELT]], %[[IDX]] : !cir.ptr<!rec_HasOperatorsInline>, !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>
 // CHECK-NEXT: cir.do {
 // CHECK-NEXT: %[[CUR:.*]] = cir.load %[[IDX]] : !cir.ptr<!cir.ptr<!rec_HasOperatorsInline>>, !cir.ptr<!rec_HasOperatorsInline>
@@ -1412,21 +1364,15 @@ void acc_loop() {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[STRIDE]] : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<25> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[STRIDE]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[STRIDE]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -1939,21 +1885,15 @@ void acc_loop() {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[STRIDE]] : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<25> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[STRIDE]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[STRIDE]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2042,21 +1982,15 @@ void acc_loop() {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[STRIDE]] : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<25> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[STRIDE]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[STRIDE]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
@@ -2251,21 +2185,15 @@ void acc_loop() {
 // CHECK-NEXT: %[[ITR_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i
 // CHECK-NEXT: %[[DECAY:.*]] = cir.cast array_to_ptrdecay %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_HasOperatorsInline x 5>> -> !cir.ptr<!rec_HasOperatorsInline>
 // CHECK-NEXT: %[[STRIDE:.*]] = cir.ptr_stride %[[DECAY]], %[[ITR_LOAD]] : (!cir.ptr<!rec_HasOperatorsInline>, !u64i) -> !cir.ptr<!rec_HasOperatorsInline>
+// CHECK-NEXT: %[[MEMSET_PTR:.*]] = cir.cast bitcast %[[STRIDE]] : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!void>
+// CHECK-NEXT: %[[MEMSET_ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK-NEXT: %[[MEMSET_SIZE:.*]] = cir.const #cir.int<25> : !u64i
+// CHECK-NEXT: cir.libc.memset %[[MEMSET_SIZE]] bytes at %[[MEMSET_PTR]] {{.*}}to %[[MEMSET_ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 // CHECK-NEXT: %[[GET_I:.*]] = cir.get_member %[[STRIDE]][0] {name = "i"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!s32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_I]] : !s32i, !cir.ptr<!s32i>
 // CHECK-NEXT: %[[GET_U:.*]] = cir.get_member %[[STRIDE]][1] {name = "u"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!u32i>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_U]] : !u32i, !cir.ptr<!u32i>
 // CHECK-NEXT: %[[GET_F:.*]] = cir.get_member %[[STRIDE]][2] {name = "f"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.float>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.float
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_F]] : !cir.float, !cir.ptr<!cir.float>
 // CHECK-NEXT: %[[GET_D:.*]] = cir.get_member %[[STRIDE]][4] {name = "d"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.double>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #cir.fp<0{{.*}}> : !cir.double
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_D]] : !cir.double, !cir.ptr<!cir.double>
 // CHECK-NEXT: %[[GET_B:.*]] = cir.get_member %[[STRIDE]][5] {name = "b"} : !cir.ptr<!rec_HasOperatorsInline> -> !cir.ptr<!cir.bool>
-// CHECK-NEXT: %[[ZERO:.*]] = cir.const #false
-// CHECK-NEXT: cir.store {{.*}} %[[ZERO]], %[[GET_B]] : !cir.bool, !cir.ptr<!cir.bool>
 // CHECK-NEXT: cir.yield
 // CHECK-NEXT: } step {
 // CHECK-NEXT: %[[ITR_LOAD]] = cir.load %[[ITR]] : !cir.ptr<!u64i>, !u64i

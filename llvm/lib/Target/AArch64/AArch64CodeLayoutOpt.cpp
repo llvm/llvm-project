@@ -72,8 +72,6 @@ public:
   }
 
 private:
-  const AArch64InstrInfo *TII = nullptr;
-
   /// Align each fusible CMP/CMN-CSEL or FCMP-FCSEL pair in \p MBB by emitting
   /// .p2align before the lead instruction (splitting the block if needed).
   /// \returns true iff at least one pair was found and aligned.
@@ -163,10 +161,8 @@ bool AArch64CodeLayoutOpt::runOnMachineFunction(MachineFunction &MF) {
   const auto *Subtarget = &MF.getSubtarget<AArch64Subtarget>();
 
   // Aligning basic blocks currently isn't compatible with Windows unwind info.
-  if (Subtarget->isTargetWindows())
+  if (Subtarget->isTargetWindowsOrUEFI())
     return false;
-
-  TII = Subtarget->getInstrInfo();
 
   CodeLayoutOpt CLO = None;
   if (EnableCodeAlignment.getNumOccurrences()) {

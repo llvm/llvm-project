@@ -460,11 +460,19 @@ def powf_finite : TargetLibCall<"__powf_finite", Flt, [Flt, Flt]>;
 /// long double __powl_finite(long double x, long double y);
 def powl_finite : TargetLibCall<"__powl_finite", LDbl, [LDbl, LDbl]>;
 
-/// double __sincospi_stret(double x);
+/// { double, double } __sincos_stret(double x);
+def sincos_stret
+    : TargetLibCall<"__sincos_stret", ? /* Checked manually. */>;
+
+/// { float, float } __sincosf_stret(float x);
+def sincosf_stret
+    : TargetLibCall<"__sincosf_stret", ? /* Checked manually. */>;
+
+/// { double, double } __sincospi_stret(double x);
 def sincospi_stret
     : TargetLibCall<"__sincospi_stret", ? /* Checked manually. */>;
 
-/// float __sincospif_stret(float x);
+/// { float, float } __sincospif_stret(float x);
 def sincospif_stret
     : TargetLibCall<"__sincospif_stret", ? /* Checked manually. */>;
 
@@ -683,6 +691,18 @@ def ceilf : TargetLibCall<"ceilf", Flt, [Flt]>;
 
 /// long double ceill(long double x);
 def ceill : TargetLibCall<"ceill", LDbl, [LDbl]>;
+
+/// void *heap_allocate(Timeout *timeout,
+///                     AllocatorCapability heapCapability, size_t size,
+///                     uint32_t flags);
+def cheriot_heap_allocate
+    : TargetLibCall<"_Z13heap_allocateP7TimeoutU19__sealed_capabilityP24AllocatorCapabilityStatejj",
+                    Ptr, [Ptr, Ptr, SizeT, Int32]>;
+
+/// int heap_free(AllocatorCapability heapCapability, void *ptr);
+def cheriot_heap_free
+    : TargetLibCall<"_Z9heap_freeU19__sealed_capabilityP24AllocatorCapabilityStatePv",
+                    Int, [Ptr, Ptr]>;
 
 /// int chmod(const char *path, mode_t mode);
 def chmod : TargetLibCall<"chmod", Int, [Ptr, IntX]>;

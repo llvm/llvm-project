@@ -686,8 +686,7 @@ void ClangASTSource::FillNamespaceMap(
     // disambiguation for function calls are handled separately in
     // SearchFunctionsInSymbolContexts.
     const bool find_root_namespaces =
-        context.m_decl_context &&
-        context.m_decl_context->shouldUseQualifiedLookup();
+        context.m_decl_context && IsInQualifiedLookup(context.m_decl_context);
     found_namespace_decl = symbol_file->FindNamespace(
         name, namespace_decl, /* only root namespaces */ find_root_namespaces);
 
@@ -933,12 +932,10 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     StreamString ms;
     ms.Format("-[{0} {1}]", interface_name, selector_name);
     ms.Flush();
-    ConstString instance_method_name(ms.GetString());
 
     sc_list.Clear();
-    m_target->GetImages().FindFunctions(instance_method_name,
-                                        lldb::eFunctionNameTypeFull,
-                                        function_options, sc_list);
+    m_target->GetImages().FindFunctions(
+        ms.GetString(), lldb::eFunctionNameTypeFull, function_options, sc_list);
 
     if (sc_list.GetSize())
       break;
@@ -946,12 +943,10 @@ void ClangASTSource::FindObjCMethodDecls(NameSearchContext &context) {
     ms.Clear();
     ms.Format("+[{0} {1}]", interface_name, selector_name);
     ms.Flush();
-    ConstString class_method_name(ms.GetString());
 
     sc_list.Clear();
-    m_target->GetImages().FindFunctions(class_method_name,
-                                        lldb::eFunctionNameTypeFull,
-                                        function_options, sc_list);
+    m_target->GetImages().FindFunctions(
+        ms.GetString(), lldb::eFunctionNameTypeFull, function_options, sc_list);
 
     if (sc_list.GetSize())
       break;

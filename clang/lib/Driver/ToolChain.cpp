@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/ToolChain.h"
+#include "ClangCLArgs.h"
 #include "ToolChains/Arch/AArch64.h"
 #include "ToolChains/Arch/AMDGPU.h"
 #include "ToolChains/Arch/ARM.h"
@@ -178,6 +179,8 @@ bool ToolChain::loadMultilibsFromYAML(const llvm::opt::ArgList &Args,
                           std::string(FilePath));
     ++FileInsertPos;
     if (RuntimeDir) {
+      // The builtin runtime directories include the multilib path, as the
+      // compiler-rt library files come from a runtimes build.
       SmallString<128> LibPath(*RuntimeDir);
       llvm::sys::path::append(LibPath, M.gccSuffix());
       getLibraryPaths().insert(getLibraryPaths().begin() + LibInsertPos,
@@ -876,6 +879,8 @@ StringRef ToolChain::getOSLibName() const {
 std::string ToolChain::getCompilerRTPath() const {
   SmallString<128> Path(getDriver().ResourceDir);
   if (isBareMetal()) {
+    // The builtin compiler-rt directories include the multilib path, as the
+    // compiler-rt library files come from a runtimes build.
     llvm::sys::path::append(Path, "lib", getOSLibName());
     if (!SelectedMultilibs.empty()) {
       Path += SelectedMultilibs.back().gccSuffix();
@@ -1133,6 +1138,15 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
     // Try legacy architecture name.
     AMDGPUTriple.setArchName("amdgcn");
     if (auto Path = getPathForTriple(AMDGPUTriple))
+      return *Path;
+  }
+
+  // Short SPIR-V spellings like "spirv64" are installed under the three-part
+  // name, "spirv64-unknown-unknown".
+  if (T.isSPIRV()) {
+    llvm::Triple SPIRVTriple(
+        T.normalize(llvm::Triple::CanonicalForm::THREE_IDENT));
+    if (auto Path = getPathForTriple(SPIRVTriple))
       return *Path;
   }
 
@@ -1580,7 +1594,9 @@ ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
   StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_RTLIB;
 
   // Only use "platform" in tests to override CLANG_DEFAULT_RTLIB!
-  if (LibName == "compiler-rt")
+  if (LibName == "none")
+    runtimeLibType = ToolChain::RLT_None;
+  else if (LibName == "compiler-rt")
     runtimeLibType = ToolChain::RLT_CompilerRT;
   else if (LibName == "libgcc")
     runtimeLibType = ToolChain::RLT_Libgcc;
@@ -1609,7 +1625,9 @@ ToolChain::UnwindLibType ToolChain::GetUnwindLibType(
     unwindLibType = ToolChain::UNW_None;
   else if (LibName == "platform" || LibName == "") {
     ToolChain::RuntimeLibType RtLibType = GetRuntimeLibType(Args);
-    if (RtLibType == ToolChain::RLT_CompilerRT) {
+    if (RtLibType == ToolChain::RLT_None)
+      unwindLibType = ToolChain::UNW_None;
+    else if (RtLibType == ToolChain::RLT_CompilerRT) {
       if (getTriple().isAndroid() || getTriple().isOSAIX() ||
           getTriple().isOSSerenity())
         unwindLibType = ToolChain::UNW_CompilerRT;
@@ -2008,11 +2026,12 @@ ToolChain::computeMSVCVersion(const Driver *D,
 }
 
 llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
-    const llvm::opt::DerivedArgList &Args, bool SameTripleAsHost,
+    const llvm::opt::DerivedArgList &Args, const llvm::Triple &HostTriple,
     SmallVectorImpl<llvm::opt::Arg *> &AllocatedArgs) const {
   DerivedArgList *DAL = new DerivedArgList(Args.getBaseArgs());
   const OptTable &Opts = getDriver().getOpts();
   bool Modified = false;
+  bool SameTripleAsHost = getTriple() == HostTriple;
 
   // Handle -Xopenmp-target flags
   for (auto *A : Args) {
@@ -2074,13 +2093,25 @@ llvm::opt::DerivedArgList *ToolChain::TranslateOpenMPTargetArgs(
     }
     XOpenMPTargetArg->setBaseArg(A);
     A = XOpenMPTargetArg.release();
+    if (A->getOption().matches(options::OPT_D) &&
+        (getDriver().IsCLMode() || HostTriple.isWindowsMSVCEnvironment()))
+      A->getValues()[0] =
+          ClangCLArgs::translateMacroDefinition(A->getValue(), Args);
     AllocatedArgs.push_back(A);
     DAL->append(A);
     Modified = true;
   }
 
-  if (Modified)
+  if (Modified) {
+    // GNU-mode Clang targeting MSVC also accepts forwarded clang-cl options.
+    if (!getDriver().IsCLMode() && HostTriple.isWindowsMSVCEnvironment()) {
+      DerivedArgList *Translated =
+          ClangCLArgs::translateArgs(*DAL, HostTriple, Args);
+      delete DAL;
+      return Translated;
+    }
     return DAL;
+  }
 
   delete DAL;
   return nullptr;
@@ -2154,6 +2185,14 @@ void ToolChain::TranslateXarchArgs(
     DAL->AddSynthesizedArg(A);
   else
     AllocatedArgs->push_back(A);
+
+  // Forwarded macros are parsed after the shared input translation.
+  if (A->getOption().matches(options::OPT_D) &&
+      (getDriver().IsCLMode() ||
+       llvm::Triple(llvm::Triple::normalize(getDriver().getTargetTriple()))
+           .isWindowsMSVCEnvironment()))
+    A->getValues()[0] =
+        ClangCLArgs::translateMacroDefinition(A->getValue(), Args);
 }
 
 /// Match any triple recognized arch aliases.

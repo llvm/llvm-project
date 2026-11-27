@@ -54,7 +54,8 @@ def ModuleOp : Builtin_Op<"module", [
     ```
 
     A module may have an inherent `dlti` attribute implementing
-    `DLTIQueryInterface`, for example `dlti = #dlti.map<"chip" = "sm_90">`.
+    `DLTIQueryInterface`, for example
+    `module <{dlti = #dlti.map<"chip" = "sm_90">}> {}`.
     When the DLTI dialect is loaded, the module implements
     `DLTIQueryOpInterface` and provides values for scoped DLTI queries.
   }];

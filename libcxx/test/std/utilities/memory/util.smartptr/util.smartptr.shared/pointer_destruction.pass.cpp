@@ -15,12 +15,13 @@
 // XFAIL: FROZEN-CXX03-HEADERS-FIXME
 
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <utility>
 
 #include "test_macros.h"
 
-static size_t pointer_count = 0;
+static std::size_t pointer_count = 0;
 
 template <class T>
 struct Pointer {
@@ -28,7 +29,7 @@ struct Pointer {
 
   Pointer() : ptr_(nullptr) { ++pointer_count; }
   Pointer(T* ptr) : ptr_(ptr) { ++pointer_count; }
-  Pointer(nullptr_t) : ptr_(nullptr) { ++pointer_count; }
+  Pointer(std::nullptr_t) : ptr_(nullptr) { ++pointer_count; }
   Pointer(const Pointer& other) : ptr_(other.ptr_) { ++pointer_count; }
   Pointer& operator=(const Pointer& other) {
     ptr_ = other.ptr_;
@@ -36,7 +37,7 @@ struct Pointer {
   }
   ~Pointer() { --pointer_count; }
 
-  Pointer& operator=(nullptr_t) {
+  Pointer& operator=(std::nullptr_t) {
     ptr_ = nullptr;
     return *this;
   }
@@ -50,8 +51,8 @@ struct Pointer {
 
   friend bool operator==(const Pointer& lhs, const Pointer& rhs) { return lhs.ptr_ == rhs.ptr_; }
   friend bool operator!=(const Pointer& lhs, const Pointer& rhs) { return !(lhs == rhs); }
-  friend bool operator==(const Pointer& lhs, nullptr_t) { return lhs == Pointer(nullptr); }
-  friend bool operator!=(const Pointer& lhs, nullptr_t) { return !(lhs == nullptr); }
+  friend bool operator==(const Pointer& lhs, std::nullptr_t) { return lhs == Pointer(nullptr); }
+  friend bool operator!=(const Pointer& lhs, std::nullptr_t) { return !(lhs == nullptr); }
 
   static Pointer pointer_to(T& ref) { return Pointer(std::addressof(ref)); }
 };

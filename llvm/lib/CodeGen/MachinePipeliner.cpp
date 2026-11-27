@@ -30,6 +30,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachinePipeliner.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -77,7 +78,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -112,119 +112,6 @@ STATISTIC(NumFailNoSchedule, "Pipeliner abort due to no schedule found");
 STATISTIC(NumFailZeroStage, "Pipeliner abort due to zero stage");
 STATISTIC(NumFailLargeMaxStage, "Pipeliner abort due to too many stages");
 STATISTIC(NumFailTooManyStores, "Pipeliner abort due to too many stores");
-
-/// A command line option to turn software pipelining on or off.
-static cl::opt<bool> EnableSWP("enable-pipeliner", cl::Hidden, cl::init(true),
-                               cl::desc("Enable Software Pipelining"));
-
-/// A command line option to enable SWP at -Os.
-static cl::opt<bool> EnableSWPOptSize("enable-pipeliner-opt-size",
-                                      cl::desc("Enable SWP at Os."), cl::Hidden,
-                                      cl::init(false));
-
-/// A command line argument to limit minimum initial interval for pipelining.
-static cl::opt<int> SwpMaxMii("pipeliner-max-mii",
-                              cl::desc("Size limit for the MII."),
-                              cl::Hidden, cl::init(27));
-
-/// A command line argument to force pipeliner to use specified initial
-/// interval.
-static cl::opt<int> SwpForceII("pipeliner-force-ii",
-                               cl::desc("Force pipeliner to use specified II."),
-                               cl::Hidden, cl::init(-1));
-
-/// A command line argument to limit the number of stages in the pipeline.
-static cl::opt<int>
-    SwpMaxStages("pipeliner-max-stages",
-                 cl::desc("Maximum stages allowed in the generated scheduled."),
-                 cl::Hidden, cl::init(3));
-
-/// A command line option to disable the pruning of chain dependences due to
-/// an unrelated Phi.
-static cl::opt<bool>
-    SwpPruneDeps("pipeliner-prune-deps",
-                 cl::desc("Prune dependences between unrelated Phi nodes."),
-                 cl::Hidden, cl::init(true));
-
-/// A command line option to disable the pruning of loop carried order
-/// dependences.
-static cl::opt<bool>
-    SwpPruneLoopCarried("pipeliner-prune-loop-carried",
-                        cl::desc("Prune loop carried order dependences."),
-                        cl::Hidden, cl::init(true));
-
-#ifndef NDEBUG
-static cl::opt<int> SwpLoopLimit("pipeliner-max", cl::Hidden, cl::init(-1));
-#endif
-
-static cl::opt<bool> SwpIgnoreRecMII("pipeliner-ignore-recmii",
-                                     cl::ReallyHidden,
-                                     cl::desc("Ignore RecMII"));
-
-static cl::opt<bool> SwpShowResMask("pipeliner-show-mask", cl::Hidden,
-                                    cl::init(false));
-static cl::opt<bool> SwpDebugResource("pipeliner-dbg-res", cl::Hidden,
-                                      cl::init(false));
-
-static cl::opt<bool> EmitTestAnnotations(
-    "pipeliner-annotate-for-testing", cl::Hidden, cl::init(false),
-    cl::desc("Instead of emitting the pipelined code, annotate instructions "
-             "with the generated schedule for feeding into the "
-             "-modulo-schedule-test pass"));
-
-static cl::opt<bool> ExperimentalCodeGen(
-    "pipeliner-experimental-cg", cl::Hidden, cl::init(false),
-    cl::desc(
-        "Use the experimental peeling code generator for software pipelining"));
-
-static cl::opt<int> SwpIISearchRange("pipeliner-ii-search-range",
-                                     cl::desc("Range to search for II"),
-                                     cl::Hidden, cl::init(10));
-
-static cl::opt<bool>
-    LimitRegPressure("pipeliner-register-pressure", cl::Hidden, cl::init(false),
-                     cl::desc("Limit register pressure of scheduled loop"));
-
-static cl::opt<int>
-    RegPressureMargin("pipeliner-register-pressure-margin", cl::Hidden,
-                      cl::init(5),
-                      cl::desc("Margin representing the unused percentage of "
-                               "the register pressure limit"));
-
-static cl::opt<bool>
-    MVECodeGen("pipeliner-mve-cg", cl::Hidden, cl::init(false),
-               cl::desc("Use the MVE code generator for software pipelining"));
-
-/// A command line argument to limit the number of store instructions in the
-/// target basic block.
-static cl::opt<unsigned> SwpMaxNumStores(
-    "pipeliner-max-num-stores",
-    cl::desc("Maximum number of stores allwed in the target loop."), cl::Hidden,
-    cl::init(200));
-
-// A command line option to enable the CopyToPhi DAG mutation.
-static cl::opt<bool>
-    SwpEnableCopyToPhi("pipeliner-enable-copytophi", cl::ReallyHidden,
-                       cl::init(true),
-                       cl::desc("Enable CopyToPhi DAG Mutation"));
-
-/// A command line argument to force pipeliner to use specified issue
-/// width.
-static cl::opt<int> SwpForceIssueWidth(
-    "pipeliner-force-issue-width",
-    cl::desc("Force pipeliner to use specified issue width."), cl::Hidden,
-    cl::init(-1));
-
-/// A command line argument to set the window scheduling option.
-static cl::opt<WindowSchedulingFlag> WindowSchedulingOption(
-    "window-sched", cl::Hidden, cl::init(WindowSchedulingFlag::WS_On),
-    cl::desc("Set how to use window scheduling algorithm."),
-    cl::values(clEnumValN(WindowSchedulingFlag::WS_Off, "off",
-                          "Turn off window algorithm."),
-               clEnumValN(WindowSchedulingFlag::WS_On, "on",
-                          "Use window algorithm after SMS algorithm fails."),
-               clEnumValN(WindowSchedulingFlag::WS_Force, "force",
-                          "Use window algorithm instead of SMS algorithm.")));
 
 unsigned SwingSchedulerDAG::Circuits::MaxPaths = 5;
 char MachinePipelinerLegacy::ID = 0;
@@ -322,12 +209,10 @@ class LoopCarriedOrderDepsTracker {
   std::vector<TaggedSUnit> TaggedSUnits;
 
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
 
 public:
   LoopCarriedOrderDepsTracker(SwingSchedulerDAG *SSD, BatchAAResults *BAA,
-                              const TargetInstrInfo *TII,
-                              const TargetRegisterInfo *TRI);
+                              const TargetInstrInfo *TII);
 
   /// The main function to compute loop-carried order-dependencies.
   void computeDependencies();
@@ -359,6 +244,7 @@ private:
 /// software pipeliner pass.
 class MachinePipelinerImpl {
 public:
+  const CodeGenOptions &Opts;
   MachineFunction *MF = nullptr;
   MachineOptimizationRemarkEmitter *ORE = nullptr;
   const MachineLoopInfo *MLI = nullptr;
@@ -367,6 +253,7 @@ public:
   RegisterClassInfo *RegClassInfo = nullptr;
   LiveIntervals *LIS = nullptr;
   AAResults *AA = nullptr;
+  MachineDominatorTree *MDT = nullptr;
   const TargetMachine *TM = nullptr;
   bool disabledByPragma = false;
   unsigned II_setByPragma = 0;
@@ -390,7 +277,8 @@ public:
   MachinePipelinerImpl(MachineFunction &MF, const MachineLoopInfo &MLI,
                        LiveIntervals &LIS, AAResults &AA,
                        MachineOptimizationRemarkEmitter &ORE,
-                       RegisterClassInfo &RegClassInfo);
+                       RegisterClassInfo &RegClassInfo,
+                       MachineDominatorTree *MDT);
 
   /// Run the software pipeliner over all loops in the function.
   bool run();
@@ -415,9 +303,10 @@ int MachinePipelinerImpl::NumTries = 0;
 MachinePipelinerImpl::MachinePipelinerImpl(
     MachineFunction &MF, const MachineLoopInfo &MLI, LiveIntervals &LIS,
     AAResults &AA, MachineOptimizationRemarkEmitter &ORE,
-    RegisterClassInfo &RegClassInfo)
-    : MF(&MF), ORE(&ORE), MLI(&MLI), TII(MF.getSubtarget().getInstrInfo()),
-      RegClassInfo(&RegClassInfo), LIS(&LIS), AA(&AA), TM(&MF.getTarget()) {}
+    RegisterClassInfo &RegClassInfo, MachineDominatorTree *MDT)
+    : Opts(getCodeGenOptions(MF)), MF(&MF), ORE(&ORE), MLI(&MLI),
+      TII(MF.getSubtarget().getInstrInfo()), RegClassInfo(&RegClassInfo),
+      LIS(&LIS), AA(&AA), MDT(MDT), TM(&MF.getTarget()) {}
 
 /// The "main" function for implementing Swing Modulo Scheduling.
 bool MachinePipelinerImpl::run() {
@@ -432,12 +321,10 @@ static bool runMachinePipeliner(
     MachineFunction &MF, function_ref<const MachineLoopInfo &()> GetMLI,
     function_ref<LiveIntervals &()> GetLIS, function_ref<AAResults &()> GetAA,
     function_ref<MachineOptimizationRemarkEmitter &()> GetORE,
-    function_ref<RegisterClassInfo &()> GetRCI) {
-  if (!EnableSWP)
-    return false;
-
+    function_ref<RegisterClassInfo &()> GetRCI,
+    function_ref<MachineDominatorTree *()> GetMDT) {
   if (MF.getFunction().getAttributes().hasFnAttr(Attribute::OptimizeForSize) &&
-      !EnableSWPOptSize.getPosition())
+      !getCodeGenOptions(MF).pipeliner_opt_size)
     return false;
 
   if (!MF.getSubtarget().enableMachinePipeliner())
@@ -450,7 +337,9 @@ static bool runMachinePipeliner(
        MF.getSubtarget().getInstrItineraryData()->isEmpty()))
     return false;
 
-  MachinePipelinerImpl MP(MF, GetMLI(), GetLIS(), GetAA(), GetORE(), GetRCI());
+  LiveIntervals &LIS = GetLIS();
+  MachinePipelinerImpl MP(MF, GetMLI(), LIS, GetAA(), GetORE(), GetRCI(),
+                          GetMDT());
   return MP.run();
 }
 
@@ -474,6 +363,11 @@ bool MachinePipelinerLegacy::runOnMachineFunction(MachineFunction &MF) {
       },
       [&]() -> RegisterClassInfo & {
         return getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+      },
+      [&]() -> MachineDominatorTree * {
+        auto *MDTWrapper =
+            getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+        return MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
       });
 }
 
@@ -499,11 +393,15 @@ MachinePipelinerPass::run(MachineFunction &MF,
           },
           [&]() -> RegisterClassInfo & {
             return MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+          },
+          [&]() -> MachineDominatorTree * {
+            return MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
           }))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<MachineRegisterClassAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
   return PA;
 }
 
@@ -518,9 +416,9 @@ bool MachinePipelinerImpl::scheduleLoop(MachineLoop &L) {
 
 #ifndef NDEBUG
   // Stop trying after reaching the limit (if any).
-  int Limit = SwpLoopLimit;
+  int Limit = Opts.pipeliner_max;
   if (Limit >= 0) {
-    if (NumTries >= SwpLoopLimit)
+    if (NumTries >= Limit)
       return Changed;
     NumTries++;
   }
@@ -546,6 +444,11 @@ bool MachinePipelinerImpl::scheduleLoop(MachineLoop &L) {
   if (useWindowScheduler(Changed))
     Changed = runWindowScheduler(L);
 
+#ifdef EXPENSIVE_CHECKS
+  assert((!Changed || !MDT || MDT->verify()) &&
+         "Dominator tree not updated for the pipelined loop");
+#endif
+
   LI.LoopPipelinerInfo.reset();
   return Changed;
 }
@@ -565,9 +468,6 @@ void MachinePipelinerImpl::setPragmaPipelineOptions(MachineLoop &L) {
     return;
 
   const Instruction *TI = BBLK->getTerminator();
-  if (TI == nullptr)
-    return;
-
   MDNode *LoopID = TI->getMetadata(LLVMContext::MD_loop);
   if (LoopID == nullptr)
     return;
@@ -726,7 +626,7 @@ bool MachinePipelinerImpl::canPipelineLoop(MachineLoop &L) {
   for (MachineInstr &MI : *L.getHeader())
     if (MI.mayStore())
       ++NumStores;
-  if (NumStores > SwpMaxNumStores) {
+  if (NumStores > Opts.pipeliner_max_num_stores) {
     LLVM_DEBUG(dbgs() << "Too many stores\n");
     NumFailTooManyStores++;
     ORE->emit([&]() {
@@ -734,7 +634,8 @@ bool MachinePipelinerImpl::canPipelineLoop(MachineLoop &L) {
                                                L.getStartLoc(), L.getHeader())
              << "Too many store instructions in the loop: "
              << ore::NV("NumStores", NumStores) << " > "
-             << ore::NV("SwpMaxNumStores", SwpMaxNumStores) << ".";
+             << ore::NV("SwpMaxNumStores", Opts.pipeliner_max_num_stores)
+             << ".";
     });
     return false;
   }
@@ -782,7 +683,7 @@ bool MachinePipelinerImpl::swingModuloScheduler(MachineLoop &L) {
   assert(L.getBlocks().size() == 1 && "SMS works on single blocks only.");
 
   SwingSchedulerDAG SMS(*MF, MLI, ORE, L, *LIS, *RegClassInfo, II_setByPragma,
-                        LI.LoopPipelinerInfo.get(), AA);
+                        LI.LoopPipelinerInfo.get(), AA, MDT);
 
   MachineBasicBlock *MBB = L.getHeader();
   // The kernel should not include any terminator instructions.  These
@@ -813,6 +714,7 @@ void MachinePipelinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<MachineOptimizationRemarkEmitterPass>();
   AU.addRequired<MachineRegisterClassInfoWrapperPass>();
   AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
   AU.addRequired<TargetPassConfig>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -825,13 +727,13 @@ bool MachinePipelinerImpl::runWindowScheduler(MachineLoop &L) {
   Context.AA = AA;
   Context.LIS = LIS;
   Context.RegClassInfo = RegClassInfo;
-  WindowScheduler WS(&Context, L);
+  WindowScheduler WS(&Context, L, MDT);
   return WS.run();
 }
 
 bool MachinePipelinerImpl::useSwingModuloScheduler() {
   // SwingModuloScheduler does not work when WindowScheduler is forced.
-  return WindowSchedulingOption != WindowSchedulingFlag::WS_Force;
+  return Opts.window_sched != WindowSchedulingFlag::Force;
 }
 
 bool MachinePipelinerImpl::useWindowScheduler(bool Changed) {
@@ -845,13 +747,13 @@ bool MachinePipelinerImpl::useWindowScheduler(bool Changed) {
     return false;
   }
 
-  return WindowSchedulingOption == WindowSchedulingFlag::WS_Force ||
-         (WindowSchedulingOption == WindowSchedulingFlag::WS_On && !Changed);
+  return Opts.window_sched == WindowSchedulingFlag::Force ||
+         (Opts.window_sched == WindowSchedulingFlag::On && !Changed);
 }
 
 void SwingSchedulerDAG::setMII(unsigned ResMII, unsigned RecMII) {
-  if (SwpForceII > 0)
-    MII = SwpForceII;
+  if (Opts.pipeliner_force_ii > 0)
+    MII = Opts.pipeliner_force_ii;
   else if (II_setByPragma > 0)
     MII = II_setByPragma;
   else
@@ -859,12 +761,12 @@ void SwingSchedulerDAG::setMII(unsigned ResMII, unsigned RecMII) {
 }
 
 void SwingSchedulerDAG::setMAX_II() {
-  if (SwpForceII > 0)
-    MAX_II = SwpForceII;
+  if (Opts.pipeliner_force_ii > 0)
+    MAX_II = Opts.pipeliner_force_ii;
   else if (II_setByPragma > 0)
     MAX_II = II_setByPragma;
   else
-    MAX_II = MII + SwpIISearchRange;
+    MAX_II = MII + Opts.pipeliner_ii_search_range;
 }
 
 SwingSchedulerDAG::SwingSchedulerDAG(MachineFunction &MF,
@@ -873,13 +775,14 @@ SwingSchedulerDAG::SwingSchedulerDAG(MachineFunction &MF,
                                      MachineLoop &L, LiveIntervals &lis,
                                      const RegisterClassInfo &rci, unsigned II,
                                      TargetInstrInfo::PipelinerLoopInfo *PLI,
-                                     AliasAnalysis *AA)
+                                     AliasAnalysis *AA,
+                                     MachineDominatorTree *MDT)
     : ScheduleDAGInstrs(MF, MLI, false), ORE(ORE), Loop(L), LIS(lis),
       RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
-      Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
+      Topo(SUnits, &ExitSU), AA(AA), BAA(*AA), MDT(MDT) {
   initPolicy();
   MF.getSubtarget().getSMSMutations(Mutations);
-  if (SwpEnableCopyToPhi)
+  if (Opts.pipeliner_enable_copytophi)
     Mutations.push_back(std::make_unique<CopyToPhiMutation>());
   BAA.enableCrossIterationMode();
 }
@@ -913,7 +816,7 @@ void SwingSchedulerDAG::schedule() {
   fuseRecs(NodeSets);
 
   // This flag is used for testing and can cause correctness problems.
-  if (SwpIgnoreRecMII)
+  if (Opts.pipeliner_ignore_recmii)
     RecMII = 0;
 
   setMII(ResMII, RecMII);
@@ -935,8 +838,8 @@ void SwingSchedulerDAG::schedule() {
   }
 
   // Don't pipeline large loops.
-  if (SwpMaxMii != -1 && (int)MII > SwpMaxMii) {
-    LLVM_DEBUG(dbgs() << "MII > " << SwpMaxMii
+  if (Opts.pipeliner_max_mii != -1 && (int)MII > Opts.pipeliner_max_mii) {
+    LLVM_DEBUG(dbgs() << "MII > " << Opts.pipeliner_max_mii
                       << ", we don't pipeline large loops\n");
     NumFailLargeMaxMII++;
     ORE->emit([&]() {
@@ -944,7 +847,7 @@ void SwingSchedulerDAG::schedule() {
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Minimal Initiation Interval too large: "
              << ore::NV("MII", (int)MII) << " > "
-             << ore::NV("SwpMaxMii", SwpMaxMii) << "."
+             << ore::NV("SwpMaxMii", Opts.pipeliner_max_mii) << "."
              << "Refer to -pipeliner-max-mii.";
     });
     return;
@@ -1010,8 +913,10 @@ void SwingSchedulerDAG::schedule() {
     return;
   }
   // Check that the maximum stage count is less than user-defined limit.
-  if (SwpMaxStages > -1 && (int)numStages > SwpMaxStages) {
-    LLVM_DEBUG(dbgs() << "numStages:" << numStages << ">" << SwpMaxStages
+  if (Opts.pipeliner_max_stages > -1 &&
+      (int)numStages > Opts.pipeliner_max_stages) {
+    LLVM_DEBUG(dbgs() << "numStages:" << numStages << ">"
+                      << Opts.pipeliner_max_stages
                       << " : too many stages, abort\n");
     NumFailLargeMaxStage++;
     ORE->emit([&]() {
@@ -1019,7 +924,7 @@ void SwingSchedulerDAG::schedule() {
                  DEBUG_TYPE, "schedule", Loop.getStartLoc(), Loop.getHeader())
              << "Too many stages in schedule: "
              << ore::NV("numStages", (int)numStages) << " > "
-             << ore::NV("SwpMaxStages", SwpMaxStages)
+             << ore::NV("SwpMaxStages", Opts.pipeliner_max_stages)
              << ". Refer to -pipeliner-max-stages.";
     });
     return;
@@ -1051,7 +956,7 @@ void SwingSchedulerDAG::schedule() {
 
   ModuloSchedule MS(MF, &Loop, std::move(OrderedInsts), std::move(Cycles),
                     std::move(Stages));
-  if (EmitTestAnnotations) {
+  if (Opts.pipeliner_annotate_for_testing) {
     assert(NewInstrChanges.empty() &&
            "Cannot serialize a schedule with InstrChanges!");
     ModuloScheduleTestAnnotater MSTI(MF, MS);
@@ -1059,16 +964,16 @@ void SwingSchedulerDAG::schedule() {
     return;
   }
   // The experimental code generator can't work if there are InstChanges.
-  if (ExperimentalCodeGen && NewInstrChanges.empty()) {
-    PeelingModuloScheduleExpander MSE(MF, MS, &LIS);
+  if (Opts.pipeliner_experimental_cg && NewInstrChanges.empty()) {
+    PeelingModuloScheduleExpander MSE(MF, MS, &LIS, MDT);
     MSE.expand();
-  } else if (MVECodeGen && NewInstrChanges.empty() &&
+  } else if (Opts.pipeliner_mve_cg && NewInstrChanges.empty() &&
              LoopPipelinerInfo->isMVEExpanderSupported() &&
              ModuloScheduleExpanderMVE::canApply(Loop)) {
-    ModuloScheduleExpanderMVE MSE(MF, MS, LIS);
+    ModuloScheduleExpanderMVE MSE(MF, MS, LIS, MDT);
     MSE.expand();
   } else {
-    ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges));
+    ModuloScheduleExpander MSE(MF, MS, LIS, std::move(NewInstrChanges), MDT);
     MSE.expand();
     MSE.cleanup();
   }
@@ -1087,7 +992,7 @@ void SwingSchedulerDAG::finishBlock() {
 
 /// Return the register values for  the operands of a Phi instruction.
 /// This function assume the instruction is a Phi.
-static void getPhiRegs(MachineInstr &Phi, MachineBasicBlock *Loop,
+static void getPhiRegs(const MachineInstr &Phi, const MachineBasicBlock *Loop,
                        Register &InitVal, Register &LoopVal) {
   assert(Phi.isPHI() && "Expecting a Phi.");
 
@@ -1181,9 +1086,7 @@ bool SUnitWithMemInfo::getUnderlyingObjects() {
 static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
                                  const SUnitWithMemInfo &Dst,
                                  BatchAAResults &BAA,
-                                 const TargetInstrInfo *TII,
-                                 const TargetRegisterInfo *TRI,
-                                 const SwingSchedulerDAG *SSD) {
+                                 const TargetInstrInfo *TII) {
   if (Src.isTriviallyDisjoint(Dst))
     return false;
   if (isSuccOrder(Src.SU, Dst.SU))
@@ -1192,7 +1095,9 @@ static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
   MachineInstr &SrcMI = *Src.SU->getInstr();
   MachineInstr &DstMI = *Dst.SU->getInstr();
 
-  if (!SSD->mayOverlapInLaterIter(&SrcMI, &DstMI))
+  const MachineBasicBlock *LoopBB = SrcMI.getParent();
+  const MachineRegisterInfo &MRI = LoopBB->getParent()->getRegInfo();
+  if (!mayOverlapInLaterIter(&SrcMI, &DstMI, LoopBB, MRI, *TII))
     return false;
 
   // Second, the more expensive check that uses alias analysis on the
@@ -1233,10 +1138,9 @@ void LoopCarriedOrderDepsTracker::NoBarrierInstsChunk::append(SUnit *SU) {
 }
 
 LoopCarriedOrderDepsTracker::LoopCarriedOrderDepsTracker(
-    SwingSchedulerDAG *SSD, BatchAAResults *BAA, const TargetInstrInfo *TII,
-    const TargetRegisterInfo *TRI)
+    SwingSchedulerDAG *SSD, BatchAAResults *BAA, const TargetInstrInfo *TII)
     : DAG(SSD), BAA(BAA), SUnits(DAG->SUnits), N(SUnits.size()),
-      LoopCarried(N, BitVector(N)), TII(TII), TRI(TRI) {}
+      LoopCarried(N, BitVector(N)), TII(TII) {}
 
 void LoopCarriedOrderDepsTracker::computeDependencies() {
   // Traverse all instructions and extract only what we are targetting.
@@ -1274,7 +1178,7 @@ void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
   if (Src.SU == Dst.SU)
     return;
 
-  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG))
+  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII))
     setLoopCarriedDep(Src.SU, Dst.SU);
 }
 
@@ -1383,7 +1287,7 @@ LoopCarriedEdges SwingSchedulerDAG::addLoopCarriedDependences() {
   LoopCarriedEdges LCE;
 
   // Add loop-carried order-dependencies
-  LoopCarriedOrderDepsTracker LCODTracker(this, &BAA, TII, TRI);
+  LoopCarriedOrderDepsTracker LCODTracker(this, &BAA, TII);
   LCODTracker.computeDependencies();
   for (unsigned I = 0; I != SUnits.size(); I++)
     for (const int Succ : LCODTracker.getLoopCarried(I).set_bits())
@@ -1475,7 +1379,7 @@ void SwingSchedulerDAG::updatePhiDependences() {
       }
     }
     // Remove order dependences from an unrelated Phi.
-    if (!SwpPruneDeps)
+    if (!Opts.pipeliner_prune_deps)
       continue;
     for (auto &PI : I.Preds) {
       MachineInstr *PMI = PI.getSUnit()->getInstr();
@@ -1654,7 +1558,7 @@ struct FuncUnitSorter {
   // Compute the critical resources needed by the instruction. This
   // function records the functional units needed by instructions that
   // must use only one functional unit. We use this as a tie breaker
-  // for computing the resource MII. The instrutions that require
+  // for computing the resource MII. The instructions that require
   // the same, highly used, functional unit have high priority.
   void calcCriticalResources(MachineInstr &MI) {
     unsigned SchedClass = MI.getDesc().getSchedClass();
@@ -1999,6 +1903,7 @@ public:
   // exceed the limit
   bool detect(const SwingSchedulerDAG *SSD, SMSchedule &Schedule,
               const unsigned MaxStage) const {
+    const int RegPressureMargin = SSD->Opts.pipeliner_register_pressure_margin;
     assert(0 <= RegPressureMargin && RegPressureMargin <= 100 &&
            "the percentage of the margin must be between 0 to 100");
 
@@ -2888,8 +2793,8 @@ void SwingSchedulerDAG::initPolicy() {
   MF.getSubtarget().overridePipelinerPolicy(Policy);
 
   // After subtarget overrides, apply command line options.
-  if (LimitRegPressure.getNumOccurrences())
-    Policy.ShouldLimitRegPressure = LimitRegPressure;
+  Policy.ShouldLimitRegPressure =
+      valueOr(Opts.pipeliner_register_pressure, Policy.ShouldLimitRegPressure);
 }
 
 /// Process the nodes in the computed order and create the pipelined schedule
@@ -2963,8 +2868,8 @@ bool SwingSchedulerDAG::schedulePipeline(SMSchedule &Schedule) {
       // Even if we find a schedule, make sure the schedule doesn't exceed the
       // allowable number of stages. We keep trying if this happens.
       if (scheduleFound)
-        if (SwpMaxStages > -1 &&
-            Schedule.getMaxStageCount() > (unsigned)SwpMaxStages)
+        if (Opts.pipeliner_max_stages > -1 &&
+            Schedule.getMaxStageCount() > (unsigned)Opts.pipeliner_max_stages)
           scheduleFound = false;
 
       LLVM_DEBUG({
@@ -3065,7 +2970,7 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
     if (!CurReg.isValid() || !CurReg.isVirtual())
       return false;
     MachineInstr *Def = MRI.getVRegDef(CurReg);
-    if (Def->getParent() != LoopBB)
+    if (!Def || Def->getParent() != LoopBB)
       return false;
 
     if (Def->isCopy()) {
@@ -3115,11 +3020,12 @@ static bool findLoopIncrementValue(const MachineInstr &MI,
 
 /// Return true if we can compute the amount the instruction changes
 /// during each iteration. Set Delta to the amount of the change.
-bool SwingSchedulerDAG::computeDelta(const MachineInstr &MI, int &Delta) const {
+static bool computeDelta(const MachineInstr &MI, const TargetInstrInfo &TII,
+                         int &Delta) {
   const MachineOperand *BaseOp;
   int64_t Offset;
   bool OffsetIsScalable;
-  if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
+  if (!TII.getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable))
     return false;
 
   // FIXME: This algorithm assumes instructions have fixed-size offsets.
@@ -3249,21 +3155,24 @@ MachineInstr *SwingSchedulerDAG::findDefInLoop(Register Reg) {
 
 /// Return false if there is no overlap between the region accessed by BaseMI in
 /// an iteration and the region accessed by OtherMI in subsequent iterations.
-bool SwingSchedulerDAG::mayOverlapInLaterIter(
-    const MachineInstr *BaseMI, const MachineInstr *OtherMI) const {
+bool llvm::mayOverlapInLaterIter(const MachineInstr *BaseMI,
+                                 const MachineInstr *OtherMI,
+                                 const MachineBasicBlock *LoopBB,
+                                 const MachineRegisterInfo &MRI,
+                                 const TargetInstrInfo &TII) {
   int DeltaB, DeltaO, Delta;
-  if (!computeDelta(*BaseMI, DeltaB) || !computeDelta(*OtherMI, DeltaO) ||
-      DeltaB != DeltaO)
+  if (!computeDelta(*BaseMI, TII, DeltaB) ||
+      !computeDelta(*OtherMI, TII, DeltaO) || DeltaB != DeltaO)
     return true;
   Delta = DeltaB;
 
   const MachineOperand *BaseOpB, *BaseOpO;
   int64_t OffsetB, OffsetO;
   bool OffsetBIsScalable, OffsetOIsScalable;
-  if (!TII->getMemOperandWithOffset(*BaseMI, BaseOpB, OffsetB,
-                                    OffsetBIsScalable) ||
-      !TII->getMemOperandWithOffset(*OtherMI, BaseOpO, OffsetO,
-                                    OffsetOIsScalable))
+  if (!TII.getMemOperandWithOffset(*BaseMI, BaseOpB, OffsetB,
+                                   OffsetBIsScalable) ||
+      !TII.getMemOperandWithOffset(*OtherMI, BaseOpO, OffsetO,
+                                   OffsetOIsScalable))
     return true;
 
   if (OffsetBIsScalable || OffsetOIsScalable)
@@ -3279,24 +3188,24 @@ bool SwingSchedulerDAG::mayOverlapInLaterIter(
     if (!RegB.isVirtual() || !RegO.isVirtual())
       return true;
 
-    MachineInstr *DefB = MRI.getVRegDef(BaseOpB->getReg());
-    MachineInstr *DefO = MRI.getVRegDef(BaseOpO->getReg());
+    MachineInstr *DefB = MRI.getVRegDef(RegB);
+    MachineInstr *DefO = MRI.getVRegDef(RegO);
     if (!DefB || !DefO || !DefB->isPHI() || !DefO->isPHI())
       return true;
 
-    Register InitValB;
-    Register LoopValB;
-    Register InitValO;
-    Register LoopValO;
-    getPhiRegs(*DefB, BB, InitValB, LoopValB);
-    getPhiRegs(*DefO, BB, InitValO, LoopValO);
+    Register InitValB, LoopValB, InitValO, LoopValO;
+    getPhiRegs(*DefB, LoopBB, InitValB, LoopValB);
+    getPhiRegs(*DefO, LoopBB, InitValO, LoopValO);
+    if (!InitValB.isValid() || !InitValO.isValid())
+      return true;
     MachineInstr *InitDefB = MRI.getVRegDef(InitValB);
     MachineInstr *InitDefO = MRI.getVRegDef(InitValO);
-
-    if (!InitDefB->isIdenticalTo(*InitDefO))
+    if (!InitDefB || !InitDefO || !InitDefB->isIdenticalTo(*InitDefO))
       return true;
   }
 
+  if (BaseMI->memoperands_empty() || OtherMI->memoperands_empty())
+    return true;
   LocationSize AccessSizeB = (*BaseMI->memoperands_begin())->getSize();
   LocationSize AccessSizeO = (*OtherMI->memoperands_begin())->getSize();
 
@@ -4018,8 +3927,8 @@ ResourceManager::ResourceManager(const TargetSubtargetInfo *ST,
   if (IssueWidth <= 0)
     // If IssueWidth is not specified, set a sufficiently large value
     IssueWidth = 100;
-  if (SwpForceIssueWidth > 0)
-    IssueWidth = SwpForceIssueWidth;
+  if (DAG->Opts.pipeliner_force_issue_width > 0)
+    IssueWidth = DAG->Opts.pipeliner_force_issue_width;
 }
 
 void ResourceManager::initProcResourceVectors(
@@ -4051,7 +3960,7 @@ void ResourceManager::initProcResourceVectors(
     ProcResourceID++;
   }
   LLVM_DEBUG({
-    if (SwpShowResMask) {
+    if (DAG->Opts.pipeliner_show_mask) {
       dbgs() << "ProcResourceDesc:\n";
       for (unsigned I = 1, E = SM.getNumProcResourceKinds(); I < E; ++I) {
         const MCProcResourceDesc *ProcResource = SM.getProcResource(I);
@@ -4066,7 +3975,7 @@ void ResourceManager::initProcResourceVectors(
 
 bool ResourceManager::canReserveResources(SUnit &SU, int Cycle) {
   LLVM_DEBUG({
-    if (SwpDebugResource)
+    if (DAG->Opts.pipeliner_dbg_res)
       dbgs() << "canReserveResources:\n";
   });
   if (UseDFA)
@@ -4086,13 +3995,14 @@ bool ResourceManager::canReserveResources(SUnit &SU, int Cycle) {
   bool Result = !isOverbooked();
   unreserveResources(SCDesc, Cycle);
 
-  LLVM_DEBUG(if (SwpDebugResource) dbgs() << "return " << Result << "\n\n");
+  LLVM_DEBUG(if (DAG->Opts.pipeliner_dbg_res) dbgs()
+             << "return " << Result << "\n\n");
   return Result;
 }
 
 void ResourceManager::reserveResources(SUnit &SU, int Cycle) {
   LLVM_DEBUG({
-    if (SwpDebugResource)
+    if (DAG->Opts.pipeliner_dbg_res)
       dbgs() << "reserveResources:\n";
   });
   if (UseDFA)
@@ -4111,7 +4021,7 @@ void ResourceManager::reserveResources(SUnit &SU, int Cycle) {
   reserveResources(SCDesc, Cycle);
 
   LLVM_DEBUG({
-    if (SwpDebugResource) {
+    if (DAG->Opts.pipeliner_dbg_res) {
       dumpMRT();
       dbgs() << "reserveResources: done!\n\n";
     }
@@ -4204,7 +4114,7 @@ int ResourceManager::calculateResMIIDFA() const {
                       << ", NumCycles:" << NumCycles << "\n");
     // Add new DFAs, if needed, to reserve resources.
     for (unsigned C = ReservedCycles; C < NumCycles; ++C) {
-      LLVM_DEBUG(if (SwpDebugResource) dbgs()
+      LLVM_DEBUG(if (DAG->Opts.pipeliner_dbg_res) dbgs()
                  << "NewResource created to reserve resources"
                  << "\n");
       auto *NewResource = TII->CreateTargetScheduleState(*ST);
@@ -4237,7 +4147,7 @@ int ResourceManager::calculateResMII() const {
       continue;
 
     LLVM_DEBUG({
-      if (SwpDebugResource) {
+      if (DAG->Opts.pipeliner_dbg_res) {
         DAG->dumpNode(SU);
         dbgs() << "  #Mops: " << SCDesc->NumMicroOps << "\n"
                << "  WriteProcRes: ";
@@ -4248,7 +4158,7 @@ int ResourceManager::calculateResMII() const {
          make_range(STI->getWriteProcResBegin(SCDesc),
                     STI->getWriteProcResEnd(SCDesc))) {
       LLVM_DEBUG({
-        if (SwpDebugResource) {
+        if (DAG->Opts.pipeliner_dbg_res) {
           const MCProcResourceDesc *Desc =
               SM.getProcResource(PRE.ProcResourceIdx);
           dbgs() << Desc->Name << ": " << PRE.ReleaseAtCycle << ", ";
@@ -4256,19 +4166,19 @@ int ResourceManager::calculateResMII() const {
       });
       ResourceCount[PRE.ProcResourceIdx] += PRE.ReleaseAtCycle;
     }
-    LLVM_DEBUG(if (SwpDebugResource) dbgs() << "\n");
+    LLVM_DEBUG(if (DAG->Opts.pipeliner_dbg_res) dbgs() << "\n");
   }
 
   int Result = (NumMops + IssueWidth - 1) / IssueWidth;
   LLVM_DEBUG({
-    if (SwpDebugResource)
+    if (DAG->Opts.pipeliner_dbg_res)
       dbgs() << "#Mops: " << NumMops << ", "
              << "IssueWidth: " << IssueWidth << ", "
              << "Cycles: " << Result << "\n";
   });
 
   LLVM_DEBUG({
-    if (SwpDebugResource) {
+    if (DAG->Opts.pipeliner_dbg_res) {
       std::stringstream SS;
       SS << std::setw(2) << "ID" << std::setw(16) << "Name" << std::setw(10)
          << "Units" << std::setw(10) << "Consumed" << std::setw(10) << "Cycles"
@@ -4280,7 +4190,7 @@ int ResourceManager::calculateResMII() const {
     const MCProcResourceDesc *Desc = SM.getProcResource(I);
     int Cycles = (ResourceCount[I] + Desc->NumUnits - 1) / Desc->NumUnits;
     LLVM_DEBUG({
-      if (SwpDebugResource) {
+      if (DAG->Opts.pipeliner_dbg_res) {
         std::stringstream SS;
         SS << std::setw(2) << I << std::setw(16) << Desc->Name << std::setw(10)
            << Desc->NumUnits << std::setw(10) << ResourceCount[I]

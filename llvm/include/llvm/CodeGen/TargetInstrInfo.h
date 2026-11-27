@@ -112,6 +112,9 @@ struct ExtAddrMode {
 ///
 /// TargetInstrInfo - Interface to description of machine instruction set
 ///
+/// Virtual methods here should express a fundamental property of the
+/// target. These should be reusable in different contexts, and not be used to
+/// control a specific transformation.
 class LLVM_ABI TargetInstrInfo : public MCInstrInfo {
 protected:
   const TargetRegisterInfo &TRI;
@@ -2421,8 +2424,8 @@ public:
   /// Fills in the necessary MachineOperands to refer to a frame index.
   /// The best way to understand this is to print `asm(""::"m"(x));` after
   /// finalize-isel. Example:
-  /// INLINEASM ... 262190 /* mem:m */, %stack.0.x.addr, 1, $noreg, 0, $noreg
-  /// we would add placeholders for:                     ^  ^       ^  ^
+  /// INLINEASM ... mem:m, %stack.0.x.addr, 1, $noreg, 0, $noreg
+  /// we would add placeholders for:        ^  ^       ^  ^
   virtual void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
                                      int FI) const {
     llvm_unreachable("unknown number of operands necessary");

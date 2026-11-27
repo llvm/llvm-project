@@ -133,9 +133,9 @@ protected:
 public:
   /// Create a new ProgramPoint object that is the same as the original
   /// except for using the specified tag value.
-  ProgramPoint withTag(const ProgramPointTag *tag) const {
+  ProgramPoint withTag(const ProgramPointTag *NewTag) const {
     return ProgramPoint(getData1(), getData2(), getKind(), getStackFrame(),
-                        tag);
+                        NewTag, getElementRef());
   }
 
   /// Convert to the specified ProgramPoint type, asserting that this

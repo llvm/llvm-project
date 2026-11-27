@@ -84,6 +84,23 @@ define dso_local spir_func void @umulo_v2i64(<2 x i64> %a, <2 x i64> %b, ptr %p)
   ret void
 }
 
+; CHECK: OpFunction
+; CHECK: OpBranchConditional
+; CHECK: OpLabel
+; CHECK: OpUMulExtended %[[StructChar]]
+; CHECK: OpReturnValue
+define spir_func i8 @non_entry(i8 %a, i8 %b, i1 %c) {
+entry:
+  br i1 %c, label %bb, label %exit
+bb:
+  %r = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %a, i8 %b)
+  %v = extractvalue { i8, i1 } %r, 0
+  br label %exit
+exit:
+  %p = phi i8 [ 0, %entry ], [ %v, %bb ]
+  ret i8 %p
+}
+
 declare {i8, i1} @llvm.umul.with.overflow.i8(i8, i8)
 declare {i32, i1} @llvm.umul.with.overflow.i32(i32, i32)
 declare {<2 x i64>, <2 x i1>} @llvm.umul.with.overflow.v2i64(<2 x i64>, <2 x i64>)

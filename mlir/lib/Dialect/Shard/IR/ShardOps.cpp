@@ -16,7 +16,6 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
@@ -29,7 +28,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -119,21 +117,7 @@ struct ShardInlinerinterface : public DialectInlinerInterface {
 // Shard dialect
 //===----------------------------------------------------------------------===//
 
-void ShardDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Shard/IR/ShardOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Shard/IR/ShardAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Shard/IR/ShardTypes.cpp.inc"
-      >();
-  addInterface<ShardInlinerinterface>();
-}
+void ShardDialect::initialize() { addInterface<ShardInlinerinterface>(); }
 
 Operation *ShardDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
@@ -870,7 +854,9 @@ public:
     for (auto &use : value.getUses()) {
       if (use.getOwner() != op.getOperation()) {
         auto otherOp = dyn_cast<ShardOp>(use.getOwner());
-        if (!otherOp || !otherOp->isBeforeInBlock(op)) {
+        // Only fold duplicates in the same block; isBeforeInBlock requires it.
+        if (!otherOp || otherOp->getBlock() != op->getBlock() ||
+            !otherOp->isBeforeInBlock(op)) {
           return failure();
         }
         // Create a Sharding object for the current and the other ShardOp

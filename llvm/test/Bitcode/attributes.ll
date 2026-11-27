@@ -562,6 +562,11 @@ define void @f94() nodivergencesource {
   ret void;
 }
 
+; CHECK: define void @f95() [[ALWAYSUNIFORM:#[0-9]+]]
+define void @f95() alwaysuniform {
+  ret void;
+}
+
 ; CHECK: define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a)
 define range(i32 -1, 42) i32 @range_attribute(<4 x i32> range(i32 -1, 42) %a) {
   ret i32 0
@@ -605,6 +610,16 @@ define void @noipa() noipa {
 ; CHECK: define nofreeobj ptr @nofreeobj(ptr nofreeobj %p)
 define nofreeobj ptr @nofreeobj(ptr nofreeobj %p) {
   ret ptr %p
+}
+
+; CHECK: define void @f_sanitize_concurrency() [[SANITIZE_CONCURRENCY:#[0-9]+]]
+define void @f_sanitize_concurrency() sanitize_concurrency {
+  ret void
+}
+
+; CHECK: define linkonce_odr void @likely_module_local() [[LIKELYMODULELOCAL:#[0-9]+]]
+define linkonce_odr void @likely_module_local() likely_module_local {
+  ret void
 }
 
 ; CHECK: attributes #0 = { noreturn }
@@ -670,5 +685,8 @@ define nofreeobj ptr @nofreeobj(ptr nofreeobj %p) {
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
 ; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes [[NODIVERGENCESOURCE]] = { nodivergencesource }
+; CHECK: attributes [[ALWAYSUNIFORM]] = { alwaysuniform }
 ; CHECK: attributes [[NOIPA]] = { noipa }
+; CHECK: attributes [[SANITIZE_CONCURRENCY]] = { sanitize_concurrency }
+; CHECK: attributes [[LIKELYMODULELOCAL]] = { likely_module_local }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

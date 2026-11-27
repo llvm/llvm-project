@@ -34,17 +34,27 @@
 
 namespace llvm {
 class AssumptionCache;
+class BasicBlock;
 class Constant;
 class DataLayout;
+class DebugLoc;
+class DominatorTree;
+class InsertElementInst;
 class Instruction;
 class IRBuilderBase;
 class LoadInst;
+class Loop;
+class PHINode;
+class ScalarEvolution;
+class SelectInst;
 class TargetLibraryInfo;
 class Type;
 class Value;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
+
+class SLPAnalysisCache;
 
 /// Limit of the number of uses for potentially transformed instructions/values,
 /// used in checks to avoid compile-time explode.
@@ -54,11 +64,16 @@ inline constexpr int UsesLimit = 64;
 /// expressions).
 bool isConstant(Value *V);
 
-/// \returns True if \p V is the integer identity constant for binary \p Opcode
-/// (e.g. 0 for add, 1 for mul, all-ones for and). Floating-point identities are
-/// excluded: a ConstantInt never matches the ConstantFP getBinOpIdentity()
-/// returns for FAdd/FMul, whose identity fast-math may break anyway.
-bool isBinOpIdentityConstant(const Value *V, unsigned Opcode);
+/// \returns the identity constant of type \p Ty for the operands of the
+/// binary \p Opcode chain (e.g. 0 for add, 1 for mul, all-ones for and, -0.0
+/// for fadd, 1.0 for fmul). If \p Negated, the identity of an operand
+/// subtracted from the chain, which is +0.0 for fadd.
+Constant *getReassocIdentity(unsigned Opcode, Type *Ty, bool Negated);
+
+/// \returns True if \p V is the identity constant for the operands of the
+/// binary \p Opcode chain, subtracted from the chain if \p Negated.
+bool isBinOpIdentityConstant(const Value *V, unsigned Opcode,
+                             bool Negated = false);
 
 /// \returns True if \p V is an integer binary operator, which gives an undef
 /// result for the undef operands: neither a shift nor a division.
@@ -283,7 +298,7 @@ SmallVector<int> calculateShufflevectorMask(ArrayRef<Value *> VL);
 /// equivalent shuffle mask.
 std::optional<TargetTransformInfo::ShuffleKind>
 isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
-                     AssumptionCache *AC);
+                     AssumptionCache *AC, SLPAnalysisCache &Cache);
 
 /// Creates subvector insert. Generates shuffle using \p Generator or
 /// using default shuffle.
@@ -294,6 +309,19 @@ Value *createInsertVector(
 /// Generates subvector extract.
 Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
                            unsigned SubVecVF, unsigned Index);
+
+/// \returns true if \p InsertPt dominates all the uses of \p I from the block
+/// of \p InsertPt. Returns false if \p I precedes \p InsertPt and has too many
+/// uses to check.
+bool dominatesAllUses(const DominatorTree &DT, const Instruction &InsertPt,
+                      const Instruction &I);
+
+/// \returns the division of \p X by \p Y in the block \p BB, paired with the
+/// remainder \p Opcode of the same operands, for which \p Pred holds, or
+/// nullptr.
+Instruction *findPairedDivision(unsigned Opcode, Value *X, Value *Y,
+                                const BasicBlock *BB,
+                                function_ref<bool(Instruction *)> Pred);
 
 /// Specifies the way the mask should be analyzed for undefs/poisonous elements
 /// in the shuffle mask.
@@ -351,6 +379,10 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
 /// the loads \p VL.
 Align computeBlendedLoadBaseAlignment(ArrayRef<Value *> VL,
                                       const DataLayout &DL);
+
+/// Returns the select instruction picking between the candidate base pointers
+/// of the blended loads \p VL.
+SelectInst *getBlendedLoadSelect(ArrayRef<Value *> VL);
 
 /// Returns the common type for the indices of the single-index GEP lanes of
 /// a GEP node with the main op \p VL0, or nullptr if no such type exists.
@@ -517,6 +549,33 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
 /// \p To. The clone is skipped if it would pass a record of the same variable,
 /// otherwise the variable would show a stale value.
 void redirectDbgValues(Instruction &From, Value &To);
+/// \returns true if \p IE1 is inserted before \p IE2 in their build-vector
+/// chain. Both must have constant insert indices and belong to one chain.
+bool isFirstInsertElement(const InsertElementInst *IE1,
+                          const InsertElementInst *IE2);
+
+/// \returns the debug location of \p PN, or an unknown location if it has
+/// none.
+DebugLoc getDebugLocFromPHI(const PHINode &PN);
+
+/// \returns the number of elements of the homogeneous aggregate built by
+/// \p InsertInst (insertelement or insertvalue), or std::nullopt if it is not
+/// a homogeneous aggregate.
+std::optional<unsigned> getAggregateSize(Instruction *InsertInst);
+
+/// \returns the innermost loop starting from \p L for which at least one value
+/// in \p VL is not loop-invariant.
+const Loop *findInnermostNonInvariantLoop(const Loop *L, ArrayRef<Value *> VL);
+
+/// \returns an estimated trip count for \p L, bounded by the loop-aware budget
+/// \p LoopAwareTripCount. Returns 1 when the budget is 0.
+unsigned getLoopTripCount(const Loop *L, ScalarEvolution &SE,
+                          unsigned LoopAwareTripCount);
+
+/// Check if two insertelement instructions are from the same buildvector.
+bool areTwoInsertFromSameBuildVector(
+    InsertElementInst *VU, InsertElementInst *V,
+    function_ref<Value *(InsertElementInst *)> GetBaseOperand);
 
 } // namespace llvm::slpvectorizer
 

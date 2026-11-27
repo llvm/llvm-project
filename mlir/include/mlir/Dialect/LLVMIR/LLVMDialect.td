@@ -14,9 +14,12 @@ include "mlir/IR/DialectBase.td"
 def LLVM_Dialect : Dialect {
   let name = "llvm";
   let cppNamespace = "::mlir::LLVM";
+  let useDefaultOperationRegistration = 1;
 
   let hasConstantMaterializer = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
+  let useDefaultTypePrinterParser = 0;
   let hasRegionArgAttrVerify = 1;
   let hasRegionResultAttrVerify = 1;
   let hasOperationAttrVerify = 1;
@@ -39,6 +42,8 @@ def LLVM_Dialect : Dialect {
     static StringRef getModuleFlags() { return "llvm.module.flags"; }
     static StringRef getCommandlineAttrName() { return "llvm.commandline"; }
     static StringRef getMmraAttrName() { return "llvm.mmra"; }
+    static StringRef getMemProfAttrName() { return "llvm.memprof"; }
+    static StringRef getCallsiteAttrName() { return "llvm.callsite"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }
@@ -55,6 +60,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNestAttrName() { return "llvm.nest"; }
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
     static StringRef getNoCaptureAttrName() { return "llvm.nocapture"; }
+    static StringRef getNoExtAttrName() { return "llvm.noext"; }
     static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
     static StringRef getNoFreeObjAttrName() { return "llvm.nofreeobj"; }
     static StringRef getNonNullAttrName() { return "llvm.nonnull"; }
@@ -122,16 +128,10 @@ def LLVM_Dialect : Dialect {
                                            Type paramType,
                                            NamedAttribute paramAttr);
 
-    /// Register all types.
-    void registerTypes();
-
     /// A cache storing compatible LLVM types that have been verified. This
     /// can save us lots of verification time if there are many occurrences
     /// of some deeply-nested aggregate types in the program.
     ThreadLocalCache<DenseSet<Type>> compatibleTypes;
-
-    /// Register the attributes of this dialect.
-    void registerAttributes();
   }];
 }
 

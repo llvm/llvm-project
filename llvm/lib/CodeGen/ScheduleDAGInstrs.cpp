@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "CodeGenOptions.h"
 
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/MapVector.h"
@@ -39,14 +40,11 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -63,55 +61,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
-static cl::opt<bool>
-    EnableAASchedMI("enable-aa-sched-mi", cl::Hidden,
-                    cl::desc("Enable use of AA during MI DAG construction"));
-
-static cl::opt<bool> UseTBAA("use-tbaa-in-sched-mi", cl::Hidden,
-    cl::init(true), cl::desc("Enable use of TBAA during MI DAG construction"));
-
-static cl::opt<bool>
-    EnableSchedModel("schedmodel", cl::Hidden, cl::init(true),
-                     cl::desc("Use TargetSchedModel for latency lookup"));
-
-static cl::opt<bool>
-    EnableSchedItins("scheditins", cl::Hidden, cl::init(true),
-                     cl::desc("Use InstrItineraryData for latency lookup"));
-
-// Note: the two options below might be used in tuning compile time vs
-// output quality. Setting HugeRegion so large that it will never be
-// reached means best-effort, but may be slow.
-
-// When Stores and Loads maps together hold this many SUs, a reduction of maps
-// will be done.
-static cl::opt<unsigned>
-    HugeRegion("dag-maps-huge-region", cl::Hidden, cl::init(500),
-               cl::desc("The limit to use while constructing the DAG "
-                        "prior to scheduling, at which point a trade-off "
-                        "is made to avoid excessive compile time."));
-
-static cl::opt<bool> EnableStoreSequencing(
-    "enable-store-sequencing", cl::Hidden, cl::init(false),
-    cl::desc("Enable the store-sequencing DAG construction algorithm. This can "
-             "eliminate a large number of redundant control dependencies and "
-             "spurious alias analysis queries at the cost of some unnecessary "
-             "dependencies."));
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-static cl::opt<bool> SchedPrintCycles(
-    "sched-print-cycles", cl::Hidden, cl::init(false),
-    cl::desc("Report top/bottom cycles when dumping SUnit instances"));
-#endif
-
 ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
                                      const MachineLoopInfo *mli,
                                      bool RemoveKillFlags)
-    : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
-      RemoveKillFlags(RemoveKillFlags), Topo(SUnits, &ExitSU) {
+    : ScheduleDAG(mf), Opts(getCodeGenOptions(mf)), MLI(mli),
+      MFI(mf.getFrameInfo()), RemoveKillFlags(RemoveKillFlags),
+      Topo(SUnits, &ExitSU) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
-  SchedModel.init(&ST, EnableSchedModel, EnableSchedItins);
+  SchedModel.init(&ST, Opts.schedmodel, Opts.scheditins);
 }
 
 /// If this machine instruction has memory reference information, collect the
@@ -245,8 +204,13 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   // Only use any non-zero latency for real defs/uses, in contrast to
   // "fake" operands added by regalloc.
   const MCInstrDesc &DefMIDesc = SU->getInstr()->getDesc();
-  bool ImplicitPseudoDef = (OperIdx >= DefMIDesc.getNumOperands() &&
-                            !DefMIDesc.hasImplicitDefOfPhysReg(Reg));
+  // Recognize asm outputs and clobbers by their operand groups, excluding
+  // trailing register bookkeeping operands.
+  bool IsInlineAsmDef = SU->getInstr()->isInlineAsm() &&
+                        SU->getInstr()->findInlineAsmFlagIdx(OperIdx) >= 0;
+  bool ImplicitPseudoDef = OperIdx >= DefMIDesc.getNumOperands() &&
+                           !DefMIDesc.hasImplicitDefOfPhysReg(Reg) &&
+                           !IsInlineAsmDef;
   for (MCRegUnit Unit : TRI->regunits(Reg)) {
     for (RegUnit2SUnitsMap::iterator I = Uses.find(Unit); I != Uses.end();
          ++I) {
@@ -270,8 +234,13 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
         UseInstr = UseSU->getInstr();
         Register UseReg = UseInstr->getOperand(UseOpIdx).getReg();
         const MCInstrDesc &UseMIDesc = UseInstr->getDesc();
+        // Recognize asm inputs by their operand groups, excluding trailing
+        // register bookkeeping operands.
+        bool IsInlineAsmUse = UseInstr->isInlineAsm() &&
+                              UseInstr->findInlineAsmFlagIdx(UseOpIdx) >= 0;
         ImplicitPseudoUse = UseOpIdx >= ((int)UseMIDesc.getNumOperands()) &&
-                            !UseMIDesc.hasImplicitUseOfPhysReg(UseReg);
+                            !UseMIDesc.hasImplicitUseOfPhysReg(UseReg) &&
+                            !IsInlineAsmUse;
 
         Dep = SDep(SU, SDep::Data, UseReg);
       }
@@ -616,6 +585,7 @@ using SUList = std::list<SUnit *>;
 namespace llvm {
 class ScheduleDAGDependencyBuilder {
 private:
+  const CodeGenOptions &Opts;
   ScheduleDAGInstrs &DAG;
 
   BatchAAResults *AA;
@@ -698,13 +668,8 @@ private:
     /// #BaseObjects.
     bool SeenSequencingLoad = false;
 
-    /// Given a store instruction with underlying objects \p Objs, returns true
-    /// if the store should be promoted to a sequencing store and false
-    /// otherwise.
-    bool shouldUpdate(const UnderlyingObjectsVector &Objs);
-
     /// Returns true if any of \p Objs does not belong to #BaseObjects.
-    bool escapesBaseObjects(const UnderlyingObjectsVector &Objs);
+    bool escapesBaseObjects(const UnderlyingObjectsVector &Objs) const;
 
     /// Clears the frontier and resets the associated state.
     void clear();
@@ -723,11 +688,16 @@ private:
 
   unsigned MemOpsProcessed = 0;
 
+  /// Tracks the total occupancy of all memop frontiers, including sequencing
+  /// stores.
+  unsigned MemopsInFlight = 0;
+
 public:
   ScheduleDAGDependencyBuilder(ScheduleDAGInstrs &DAG, BatchAAResults *AA,
                                RegPressureTracker *RPTracker,
                                PressureDiffs *PDiffs, LiveIntervals *LIS)
-      : DAG(DAG), AA(AA), RPTracker(RPTracker), PDiffs(PDiffs), LIS(LIS) {}
+      : Opts(DAG.Opts), DAG(DAG), AA(AA), RPTracker(RPTracker), PDiffs(PDiffs),
+        LIS(LIS) {}
 
 private:
   /// Adds a chain edge between SUa and SUb, but only if both
@@ -747,8 +717,21 @@ private:
   /// and clear the memop frontiers.
   void addBarrierMemoryDeps();
 
+  /// Returns true if the next store should be promoted to a sequencing store
+  /// in the frontier \p F and false otherwise.
+  bool shouldUpdate(const MemopFrontier &F) const;
+
+  /// Given a store instruction with underlying objects \p Objs, returns true
+  /// if the store should be promoted to a sequencing store in the frontier
+  /// \p UF and false otherwise.
+  bool shouldUpdate(const UnanalyzableMemopFrontier &UF,
+                    const UnderlyingObjectsVector &Objs) const;
+
   /// Promote the store \p SU to be a new sequencing store in the frontier \p F.
-  void updateSequencingStore(MemopFrontier &F, SUnit *SU);
+  /// If \p PreserveNoAliasLoads is true, loads in the frontier that do not
+  /// alias with \p SU will be retained after promotion.
+  void updateSequencingStore(MemopFrontier &F, SUnit *SU,
+                             bool PreserveNoAliasLoads = false);
 
   /// Promote the store \p SU with underlying objects \p Objs to be a new
   /// sequencing store in the frontier \p UF.
@@ -770,16 +753,23 @@ void ScheduleDAGDependencyBuilder::MemopFrontier::clear() {
   Loads.clear();
 }
 
-bool ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::shouldUpdate(
-    const UnderlyingObjectsVector &Objs) {
-  if (!EnableStoreSequencing)
+bool ScheduleDAGDependencyBuilder::shouldUpdate(const MemopFrontier &F) const {
+  if (!Opts.store_sequencing)
     return false;
-  return !Frontier.SequencingStore || SeenSequencingLoad ||
-         escapesBaseObjects(Objs);
+  return F.size() >= Opts.store_sequencing_max_frontier_size;
+}
+
+bool ScheduleDAGDependencyBuilder::shouldUpdate(
+    const UnanalyzableMemopFrontier &UF,
+    const UnderlyingObjectsVector &Objs) const {
+  if (!Opts.store_sequencing)
+    return false;
+  return shouldUpdate(UF.Frontier) || !UF.Frontier.SequencingStore ||
+         UF.SeenSequencingLoad || UF.escapesBaseObjects(Objs);
 }
 
 bool ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::
-    escapesBaseObjects(const UnderlyingObjectsVector &Objs) {
+    escapesBaseObjects(const UnderlyingObjectsVector &Objs) const {
   for (const ValueType V : Objs) {
     if (!is_contained(BaseObjects, V))
       return true;
@@ -796,7 +786,7 @@ void ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::clear() {
 
 bool ScheduleDAGDependencyBuilder::addChainDependency(SUnit *SUa, SUnit *SUb,
                                                       unsigned Latency) {
-  if (!SUa->getInstr()->mayAlias(AA, *SUb->getInstr(), UseTBAA))
+  if (!SUa->getInstr()->mayAlias(AA, *SUb->getInstr(), Opts.sched_mi_tbaa))
     return false;
 
   SDep Dep(SUa, SDep::MayAliasMem);
@@ -852,16 +842,25 @@ void ScheduleDAGDependencyBuilder::addBarrierMemoryDeps() {
   for (auto &[_, AF] : AnalyzableFrontiers)
     addBarrierChain(AF);
   AnalyzableFrontiers.clear();
+
+  MemopsInFlight = 0;
 }
 
-void ScheduleDAGDependencyBuilder::updateSequencingStore(MemopFrontier &F,
-                                                         SUnit *SU) {
+void ScheduleDAGDependencyBuilder::updateSequencingStore(
+    MemopFrontier &F, SUnit *SU, bool PreserveNoAliasLoads) {
   assert(SU->getInstr()->mayStore() &&
          "Only store instructions should be used as sequencing stores");
   LLVM_DEBUG(dbgs() << "Promoting " << *SU << " to sequencing store\n");
 
-  if (F.SequencingStore)
+  // Discount the memops we plan to clear.
+  MemopsInFlight -= F.size();
+
+  if (F.SequencingStore) {
     F.SequencingStore->addPredBarrier(SU);
+  } else {
+    // Account for the new sequencing store.
+    ++MemopsInFlight;
+  }
 
   // Sequence all stores against the sequencing store and clear the map.
   for (SUnit *S : F.Stores)
@@ -869,16 +868,28 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(MemopFrontier &F,
 
   F.Stores.clear();
 
-  // For loads, we can do slightly better. Rather than naively adding pred
-  // barriers and clearing the map, we check whether each load genuinely needs
-  // to sequence against the new sequencing store. Wherever an edge is not
-  // required, we retain the load and avoid the spurious control dependency.
-  for (auto It = F.Loads.begin(); It != F.Loads.end();) {
-    if (addChainDependency(SU, *It, /*TrueMemOrderLatency=*/1)) {
-      It = F.Loads.erase(It);
-    } else {
-      ++It;
+  if (PreserveNoAliasLoads) {
+    // If asked, for loads, we can do slightly better. Rather than naively
+    // adding pred barriers and clearing the map, we check whether each load
+    // genuinely needs to sequence against the new sequencing store. Wherever an
+    // edge is not required, we retain the load and avoid the spurious control
+    // dependency.
+    for (auto It = F.Loads.begin(); It != F.Loads.end();) {
+      if (addChainDependency(SU, *It, /*TrueMemOrderLatency=*/1)) {
+        It = F.Loads.erase(It);
+      } else {
+        ++It;
+      }
     }
+
+    // Re-account for the potentially remaining loads.
+    MemopsInFlight += F.Loads.size();
+  } else {
+    // Sequence all loads against the sequencing store and clear the map.
+    for (SUnit *S : F.Loads)
+      S->addPredBarrier(SU);
+
+    F.Loads.clear();
   }
 
   F.SequencingStore = SU;
@@ -888,7 +899,11 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
     UnanalyzableMemopFrontier &UF, SUnit *SU, UnderlyingObjectsVector &&Objs) {
   assert(SU->getInstr()->mayStore() &&
          "Only store instructions should be used as sequencing stores");
-  updateSequencingStore(UF.Frontier, SU);
+  // If the underlying MemopFrontier wants updating, we're over size and
+  // therefore shouldn't try to preserve no alias loads.
+  bool ShouldPreserveNoAliasLoads = !shouldUpdate(UF.Frontier);
+  updateSequencingStore(UF.Frontier, SU,
+                        /*PreserveNoAliasLoads=*/ShouldPreserveNoAliasLoads);
   UF.BaseObjects = std::move(Objs);
   UF.SeenSequencingLoad = false;
 }
@@ -1024,7 +1039,8 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       if (BarrierChain)
         BarrierChain->addPredBarrier(SU);
 
-      if (FPExceptions.size() + 1 >= HugeRegion) {
+      if (!Opts.store_sequencing &&
+          FPExceptions.size() + 1 >= Opts.dag_maps_huge_region) {
         LLVM_DEBUG(
             dbgs()
             << "Creating barrier chain and clearing FPExceptions map.\n");
@@ -1047,20 +1063,28 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       BarrierChain->addPredBarrier(SU);
 
     // Reduce maps if they grow huge.
-    //
-    // FIXME(@cofibrant): With store-sequencing, this condition can be relaxed
-    // and improved. Specifically, we are not so worried about `Stores` and
-    // `Loads` growing too large, but more interested in making sure that the
-    // frontier(s) themselves stay sufficiently small. This is best achieved by
-    // measuring the size of the frontier(s) and, if sufficiently large,
-    // promoting the next store to a sequencing store.
-    if (MemOpsProcessed >= HugeRegion) {
+    if (!Opts.store_sequencing &&
+        MemOpsProcessed >= Opts.dag_maps_huge_region) {
       LLVM_DEBUG(dbgs() << "Creating barrier chain and clearing maps.\n");
 
       BarrierChain = SU;
       addBarrierMemoryDeps();
 
       MemOpsProcessed = 0;
+      continue;
+    }
+
+    // If the frontier occupancy exceeds the maximum threshold, promote SU to a
+    // global memory barrier and clear the frontiers.
+    if (Opts.store_sequencing &&
+        MemopsInFlight >= Opts.store_sequencing_max_memops_in_flight) {
+      LLVM_DEBUG(dbgs() << "Number of in-flight memory operations reached "
+                        << Opts.store_sequencing_max_memops_in_flight
+                        << ", promoting " << *SU
+                        << " to barrier chain and clearing maps.\n");
+
+      BarrierChain = SU;
+      addBarrierMemoryDeps();
       continue;
     }
 
@@ -1077,7 +1101,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       for (auto &[_, AF] : AnalyzableFrontiers)
         addChainDependencies(SU, AF, IsStore);
 
-      if (IsStore && UnanalyzableFrontier.shouldUpdate(Objs)) {
+      if (IsStore && shouldUpdate(UnanalyzableFrontier, Objs)) {
         updateSequencingStore(UnanalyzableFrontier, SU, std::move(Objs));
       } else {
         if (!IsStore && UnanalyzableFrontier.escapesBaseObjects(Objs))
@@ -1086,6 +1110,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
         (IsStore ? UnanalyzableFrontier.Frontier.Stores
                  : UnanalyzableFrontier.Frontier.Loads)
             .push_back(SU);
+        ++MemopsInFlight;
       }
     } else {
       // Add precise dependencies against all previously seen memory
@@ -1097,8 +1122,14 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
           continue;
 
         MemopFrontier &Frontier = AnalyzableFrontiers[V];
-        addChainDependencies(SU, Frontier, IsStore);
-        (IsStore ? Frontier.Stores : Frontier.Loads).push_back(SU);
+
+        if (IsStore && shouldUpdate(Frontier)) {
+          updateSequencingStore(Frontier, SU);
+        } else {
+          addChainDependencies(SU, Frontier, IsStore);
+          (IsStore ? Frontier.Stores : Frontier.Loads).push_back(SU);
+          ++MemopsInFlight;
+        }
       }
 
       // The memop may have dependencies to unanalyzable stores.
@@ -1116,8 +1147,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
                                         LiveIntervals *LIS,
                                         bool TrackLaneMasks) {
   const TargetSubtargetInfo &ST = MF.getSubtarget();
-  bool UseAA =
-      EnableAASchedMI.getNumOccurrences() > 0 ? EnableAASchedMI : ST.useAA();
+  bool UseAA = valueOr(Opts.sched_mi_aa, ST.useAA());
   this->TrackLaneMasks = TrackLaneMasks;
   MISUnitMap.clear();
   ScheduleDAG::clearDAG();
@@ -1239,9 +1269,11 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
 void ScheduleDAGInstrs::dumpNode(const SUnit &SU) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dumpNodeName(SU);
-  if (SchedPrintCycles)
+#ifndef NDEBUG
+  if (Opts.sched_print_cycles)
     dbgs() << " [TopReadyCycle = " << SU.TopReadyCycle
            << ", BottomReadyCycle = " << SU.BotReadyCycle << "]";
+#endif
   dbgs() << ": ";
   SU.getInstr()->dump();
 #endif

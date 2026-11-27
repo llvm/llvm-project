@@ -3,7 +3,7 @@
 # architecture-specific code in various subdirectories.
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  cmake_minimum_required(VERSION 3.20.0)
+  cmake_minimum_required(VERSION 3.31.0)
 
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
   project(CompilerRTBuiltins C CXX ASM)
@@ -42,8 +42,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(MINGW)
     # Simplified version of what's set in cmake/config-ix.cmake; not including
     # builtins, which are linked separately.
-    set(MINGW_LIBRARIES mingw32 moldname mingwex msvcrt advapi32 shell32
-                        user32 kernel32 mingw32 moldname mingwex msvcrt)
+    set(MINGW_LIBRARIES mingw32 mingwex msvcrt advapi32 shell32
+                        user32 kernel32 mingw32 mingwex msvcrt)
    endif()
 endif()
 
@@ -292,6 +292,9 @@ if(COMPILER_RT_USE_LIBC_MATH)
   use_libc_builtin(GENERIC_SOURCES    divsf3)
   use_libc_builtin(GENERIC_TF_SOURCES divtf3)
   use_libc_builtin(GENERIC_TF_SOURCES extenddftf2)
+  use_libc_builtin(GENERIC_SOURCES    extendhfsf2)
+  use_libc_builtin(GENERIC_SOURCES    extendhfdf2)
+  use_libc_builtin(GENERIC_TF_SOURCES extendhftf2)
   use_libc_builtin(GENERIC_SOURCES    extendsfdf2)
   use_libc_builtin(GENERIC_TF_SOURCES extendsftf2)
   use_libc_builtin(x86_80_BIT_SOURCES extendxftf2)
@@ -329,6 +332,9 @@ if(COMPILER_RT_USE_LIBC_MATH)
   use_libc_builtin(GENERIC_TF_SOURCES subtf3)
   use_libc_builtin(GENERIC_SOURCES    truncdfsf2)  
   use_libc_builtin(GENERIC_TF_SOURCES trunctfdf2)
+  use_libc_builtin(GENERIC_SOURCES    truncsfhf2)
+  use_libc_builtin(GENERIC_SOURCES    truncdfhf2)
+  use_libc_builtin(GENERIC_TF_SOURCES trunctfhf2)
   use_libc_builtin(GENERIC_TF_SOURCES trunctfsf2)
   use_libc_builtin(x86_80_BIT_SOURCES trunctfxf2)
 endif()
@@ -437,6 +443,9 @@ if (NOT MSVC)
 
   # Darwin x86_64 Haswell
   set(x86_64h_SOURCES ${x86_64_SOURCES})
+
+  # x86_64 LFI
+  set(x86_64_lfi_SOURCES ${x86_64_SOURCES})
 
   if (WIN32)
     set(x86_64_SOURCES
@@ -891,6 +900,7 @@ set(arm64e_SOURCES ${aarch64_SOURCES})
 set(arm64_32_SOURCES ${aarch64_SOURCES})
 set(arm64ec_SOURCES ${aarch64_SOURCES})
 set(aarch64_lfi_SOURCES ${aarch64_SOURCES})
+set(aarch64_be_SOURCES ${aarch64_SOURCES})
 
 # macho_embedded archs
 set(armv6m_SOURCES ${thumb1_SOURCES})

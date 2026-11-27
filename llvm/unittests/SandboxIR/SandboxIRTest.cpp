@@ -1425,6 +1425,18 @@ define i32 @foo() {
   // Check classof(), creation.
   [[maybe_unused]] auto *ConstExpr =
       cast<sandboxir::ConstantExpr>(Ret->getReturnValue());
+  auto *Int32Ty = sandboxir::Type::getInt32Ty(Ctx);
+  auto *Int64Ty = sandboxir::Type::getInt64Ty(Ctx);
+  auto *FloatTy = sandboxir::Type::getFloatTy(Ctx);
+  auto *PtrTy = sandboxir::PointerType::get(Ctx, 0);
+  auto *CInt = sandboxir::ConstantInt::get(Int32Ty, 1);
+  EXPECT_TRUE(isa<sandboxir::ConstantFP>(
+      sandboxir::ConstantExpr::getBitCast(CInt, FloatTy)));
+  EXPECT_TRUE(isa<sandboxir::Constant>(
+      sandboxir::ConstantExpr::getIntToPtr(CInt, PtrTy)));
+  auto *NullPtr = sandboxir::ConstantPointerNull::get(PtrTy);
+  EXPECT_TRUE(isa<sandboxir::ConstantInt>(
+      sandboxir::ConstantExpr::getPtrToInt(NullPtr, Int64Ty)));
 }
 
 TEST_F(SandboxIRTest, BlockAddress) {
@@ -6299,13 +6311,39 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
   sandboxir::Argument *Val = F.getArg(1);
   sandboxir::Instruction *Ret = &BB.front();
 
+  // Registering a callback with an existing name should trigger an assertion.
+  Ctx.registerCreateInstrCallback([](sandboxir::Instruction *I) {}, "NAME");
+#ifndef NDEBUG
+  EXPECT_DEATH(
+      Ctx.registerCreateInstrCallback([](sandboxir::Instruction *I) {}, "NAME"),
+      ".*exists.*");
+#endif
+  Ctx.save();
+  // We can safely register multiple same-named callbacks as long as we set
+  // AllowDuplicateNames to true.
+  bool SameName1 = false;
+  Ctx.registerCreateInstrCallback(
+      [&SameName1](sandboxir::Instruction *I) { SameName1 = true; }, "SameName",
+      /*AllowDuplicateNames=*/true);
+  bool SameName2 = false;
+  Ctx.registerCreateInstrCallback(
+      [&SameName2](sandboxir::Instruction *I) { SameName2 = true; }, "SameName",
+      /*AllowDuplicateNames=*/true);
+  sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
+                               Ret->getIterator(), Ctx);
+  Ctx.revert();
+  // Check that both callbacks ran.
+  EXPECT_TRUE(SameName1);
+  EXPECT_TRUE(SameName2);
+
   SmallVector<sandboxir::Instruction *> Inserted;
   auto InsertCbId = Ctx.registerCreateInstrCallback(
-      [&Inserted](sandboxir::Instruction *I) { Inserted.push_back(I); });
+      [&Inserted](sandboxir::Instruction *I) { Inserted.push_back(I); },
+      "Test");
 
   SmallVector<sandboxir::Instruction *> Removed;
   auto RemoveCbId = Ctx.registerEraseInstrCallback(
-      [&Removed](sandboxir::Instruction *I) { Removed.push_back(I); });
+      [&Removed](sandboxir::Instruction *I) { Removed.push_back(I); }, "Test");
 
   // Keep the moved instruction and the instruction pointed by the Where
   // iterator so we can check both callback arguments work as expected.
@@ -6319,16 +6357,17 @@ TEST_F(SandboxIRTest, InstructionCallbacks) {
           Moved.push_back(std::make_pair(I, nullptr));
         else
           Moved.push_back(std::make_pair(I, &*Where));
-      });
+      },
+      "Test");
 
   // Two more insertion callbacks, to check that they're called in registration
   // order.
   SmallVector<int> Order;
   auto CheckOrderInsertCbId1 = Ctx.registerCreateInstrCallback(
-      [&Order](sandboxir::Instruction *I) { Order.push_back(1); });
+      [&Order](sandboxir::Instruction *I) { Order.push_back(1); }, "Test1");
 
   auto CheckOrderInsertCbId2 = Ctx.registerCreateInstrCallback(
-      [&Order](sandboxir::Instruction *I) { Order.push_back(2); });
+      [&Order](sandboxir::Instruction *I) { Order.push_back(2); }, "Test2");
 
   Ctx.save();
   auto *NewI = sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
@@ -6407,13 +6446,14 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
     CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerEraseInstrCallback(
-        [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); });
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); }, "Test1");
     // This callback is placed after the first.
     [[maybe_unused]] auto CB1 = Ctx.registerEraseInstrCallback(
-        [&CBs](sandboxir::Instruction *I) { CBs.push_back(1); });
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(1); }, "Test2");
     // This should insert this callback before the first.
     [[maybe_unused]] auto CB2 = Ctx.registerEraseInstrCallback(
-        [&CBs](sandboxir::Instruction *I) { CBs.push_back(2); },
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(2); }, "Test3",
+        /*AllowDuplicateNames=*/false,
         /*BeforeID=*/CB0);
     Ctx.save();
     Ret->eraseFromParent();
@@ -6425,13 +6465,14 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
     CBs.clear();
     // The first callback.
     auto CB0 = Ctx.registerCreateInstrCallback(
-        [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); });
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(0); }, "Test1");
     // This callback is placed after the first.
     [[maybe_unused]] auto CB1 = Ctx.registerCreateInstrCallback(
-        [&CBs](sandboxir::Instruction *I) { CBs.push_back(1); });
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(1); }, "Test2");
     // This should insert this callback before the first.
     [[maybe_unused]] auto CB2 = Ctx.registerCreateInstrCallback(
-        [&CBs](sandboxir::Instruction *I) { CBs.push_back(2); },
+        [&CBs](sandboxir::Instruction *I) { CBs.push_back(2); }, "Test3",
+        /*AllowDuplicateNames=*/false,
         /*BeforeID=*/CB0);
     Ctx.save();
     sandboxir::StoreInst::create(Val, Ptr, /*Align=*/std::nullopt,
@@ -6446,12 +6487,15 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
     auto CB0 = Ctx.registerMoveInstrCallback(
         [&CBs](sandboxir::Instruction *I, const sandboxir::BBIterator &Where) {
           CBs.push_back(10);
-        });
+        },
+        "Test1");
     // This should insert this callback before the first.
     [[maybe_unused]] auto CB1 = Ctx.registerMoveInstrCallback(
         [&CBs](sandboxir::Instruction *I, const sandboxir::BBIterator &Where) {
           CBs.push_back(11);
         },
+        "Test2",
+        /*AllowDuplicateNames=*/false,
         /*BeforeID=*/CB0);
     Ctx.save();
     Ret->moveBefore(Add0);
@@ -6465,12 +6509,15 @@ TEST_F(SandboxIRTest, InstructionCallbacks_BeforeID) {
     auto CB0 = Ctx.registerSetUseCallback(
         [&CBs](sandboxir::Use U, sandboxir::Value *NewSrc) {
           CBs.push_back(100);
-        });
+        },
+        "Test1");
     // This should insert this callback before the first.
     [[maybe_unused]] auto CB1 = Ctx.registerSetUseCallback(
         [&CBs](sandboxir::Use U, sandboxir::Value *NewSrc) {
           CBs.push_back(101);
         },
+        "Test2",
+        /*AllowDuplicateNames=*/false,
         /*BeforeID=*/CB0);
     Ctx.save();
     Add0->setOperand(0, Arg0);
@@ -6501,7 +6548,8 @@ define void @foo(i8 %v0, i8 %v1) {
   auto Id = Ctx.registerSetUseCallback(
       [&UsesSet](sandboxir::Use U, sandboxir::Value *NewSrc) {
         UsesSet.push_back({U, NewSrc});
-      });
+      },
+      "Test");
 
   // Now change %add1 operand to not use %add0.
   Add1->setOperand(0, Arg0);
@@ -6587,3 +6635,25 @@ define void @foo() {
   auto *AsmOp0 = Asm->getOperand(0);
   EXPECT_TRUE(isa<sandboxir::OpaqueValue>(AsmOp0));
 }
+
+#if !defined(NDEBUG) && defined(EXPENSIVE_CHECKS)
+TEST_F(SandboxIRTest, Hash) {
+  parseIR(C, R"IR(
+define void @foo(i32 %arg) {
+  ret void
+}
+)IR");
+  Function &LLVMFn = *M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto &Fn = *Ctx.createFunction(&LLVMFn);
+  auto *Arg = Fn.getArg(0);
+  auto &BB = *Fn.begin();
+
+  auto FnHashBefore = Fn.hash();
+  auto BBHashBefore = BB.hash();
+  sandboxir::BinaryOperator::create(sandboxir::Instruction::Opcode::Add, Arg,
+                                    Arg, BB.end(), Ctx, "Folded");
+  EXPECT_NE(Fn.hash(), FnHashBefore);
+  EXPECT_NE(BB.hash(), BBHashBefore);
+}
+#endif

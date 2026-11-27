@@ -12,8 +12,9 @@
 
 #include "CIRGenModule.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
@@ -54,8 +55,10 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlirContext->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
                            cir::CIRDialect>();
   const LangOptions &langOpts = astContext.getLangOpts();
+  // OpenACC lowering emits Arith constants for bounds and clause operands.
   if (langOpts.OpenACC)
-    mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
+    mlirContext
+        ->loadDialect<mlir::acc::OpenACCDialect, mlir::arith::ArithDialect>();
   if (langOpts.OpenMP)
     mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 
@@ -64,7 +67,9 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlir::ModuleOp mod = cgm->getModule();
   llvm::DataLayout layout =
       llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
-  cir::setMLIRDataLayout(mod, layout);
+  cir::setMLIRDataLayout(mod, layout,
+                         astContext.getTargetInfo().getBitIntMaxAlign(),
+                         astContext.getTargetInfo().getMaxVectorAlign());
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }

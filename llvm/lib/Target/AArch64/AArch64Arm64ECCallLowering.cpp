@@ -71,6 +71,7 @@ public:
   bool runOnModule(Module &M) override;
 
 private:
+  const AArch64Options *CLOpts = nullptr;
   ControlFlowGuardMode CFGuardModuleFlag = ControlFlowGuardMode::Disabled;
   FunctionType *GuardFnType = nullptr;
   FunctionType *DispatchFnType = nullptr;
@@ -205,7 +206,7 @@ void AArch64Arm64ECCallLowering::getThunkArgTypes(
     Align ParamAlign = AttrList.getParamAlignment(I).valueOrOne();
 #else
     uint64_t ArgSizeBytes = 0;
-    Align ParamAlign = Align();
+    Align ParamAlign = M->getDataLayout().getABITypeAlign(FT->getParamType(I));
 #endif
     auto [Arm64Ty, X64Ty, ArgTranslation] =
         canonicalizeThunkType(FT->getParamType(I), ParamAlign,
@@ -566,8 +567,8 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
   bool TransformDirectToSRet = X64RetType->isVoidTy() && !RetTy->isVoidTy();
   unsigned ThunkArgOffset = TransformDirectToSRet ? 2 : 1;
   unsigned PassthroughArgSize =
-      (F->isVarArg() ? 5 : Thunk->arg_size()) - ThunkArgOffset;
-  assert(ArgTranslations.size() == (F->isVarArg() ? 5 : PassthroughArgSize));
+      Thunk->arg_size() - F->isVarArg() - ThunkArgOffset;
+  assert(ArgTranslations.size() == PassthroughArgSize + F->isVarArg());
 
   // Translate arguments to call.
   SmallVector<Value *> Args;
@@ -591,16 +592,19 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
   }
 
   if (F->isVarArg()) {
-    // The 5th argument to variadic entry thunks is used to model the x64 sp
+    // The last argument to variadic entry thunks is used to model the x64 sp
     // which is passed to the thunk in x4, this can be passed to the callee as
     // the variadic argument start address after skipping over the 32 byte
     // shadow store.
 
     // The EC thunk CC will assign any argument marked as InReg to x4.
-    Thunk->addParamAttr(5, Attribute::InReg);
-    Value *Arg = Thunk->getArg(5);
-    Arg = IRB.CreatePtrAdd(Arg, IRB.getInt64(0x20));
-    Args.push_back(Arg);
+    Thunk->addParamAttr(Thunk->arg_size() - 1, Attribute::InReg);
+    Value *StackArgs = Thunk->getArg(Thunk->arg_size() - 1);
+
+    // The first variadic stack argument is at X4+0x20, or X4+0x28 if the x64
+    // hidden sret pointer pushed the 4th integer argument onto the stack.
+    uint64_t StackOffset = TransformDirectToSRet ? 0x28 : 0x20;
+    Args.push_back(IRB.CreatePtrAddWithUnsignedOffset(StackArgs, StackOffset));
 
     // Pass in a zero variadic argument size (in x5).
     Args.push_back(IRB.getInt64(0));
@@ -820,7 +824,8 @@ void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
 }
 
 bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
-  if (!AArch64Options::Global.arm64ec_generate_thunks)
+  CLOpts = &Mod.getContext().getLibraryOptions().get<AArch64Options>();
+  if (!CLOpts->arm64ec_generate_thunks)
     return false;
 
   M = &Mod;
@@ -1032,9 +1037,8 @@ bool AArch64Arm64ECCallLowering::processFunction(
       // FIXME: getCalledFunction() fails if there's a bitcast (e.g.
       // unprototyped functions in C)
       if (Function *F = CB->getCalledFunction()) {
-        if (!AArch64Options::Global.arm64ec_lower_direct_to_indirect ||
-            F->hasLocalLinkage() || F->isIntrinsic() ||
-            !F->isDeclarationForLinker())
+        if (!CLOpts->arm64ec_lower_direct_to_indirect || F->hasLocalLinkage() ||
+            F->isIntrinsic() || !F->isDeclarationForLinker())
           continue;
 
         DirectCalledFns.insert(F);

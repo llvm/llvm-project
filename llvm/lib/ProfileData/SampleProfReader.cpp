@@ -65,6 +65,13 @@ static cl::opt<bool>
                       cl::Hidden,
                       cl::desc("Lazy load the name table from the profile."));
 
+// FIXME: Remove this temporary option once performance testing of #230386 is
+// complete.
+static cl::opt<bool> AllowRereadLoadedProfile(
+    "sample-profile-allow-reread-loaded-profile", cl::init(false), cl::Hidden,
+    cl::desc("Allow incremental reads with a remapper to re-read already "
+             "loaded profiles and accumulate duplicate vtable counts."));
+
 /// Dump the function profile for \p FName.
 ///
 /// \param FContext Name + context of the function to print.
@@ -697,8 +704,9 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
 
     // Without FS discriminators, the source profile should not have duplicate
     // vtable records at the same location. Emit a warning about duplicate
-    // vtables and continue processing the profile.
-    if (!ProfileIsFS) {
+    // vtables and continue processing the profile, unless re-reading already
+    // loaded profiles is explicitly allowed.
+    if (!ProfileIsFS && !AllowRereadLoadedProfile) {
       Ctx.diagnose(DiagnosticInfoSampleProfile(
           Buffer->getBufferIdentifier(), 0,
           "Duplicate vtable type " + VTableType->str() +
@@ -1280,6 +1288,15 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
       auto FuncName = FContext.getFunction();
       StringRef FuncNameStr = FuncName.stringRef();
       if (!FuncsToUse.count(FuncNameStr) && !Remapper->exist(FuncNameStr))
+        continue;
+      // This function may be called more than once on the same reader: once
+      // for the module's functions and then incrementally (e.g. by
+      // SampleProfileMatcher) for additional candidates. The remapper is
+      // cumulative, so names inserted by an earlier call still match here.
+      // Skip profiles that are already loaded; otherwise they would be read
+      // again and merged into themselves.
+      if (!AllowRereadLoadedProfile &&
+          Profiles.find(FContext) != Profiles.end())
         continue;
       const uint8_t *FuncProfileAddr = Start + NameOffset.second;
       if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))

@@ -10,6 +10,7 @@
 #define MLIR_CONVERSION_OPENACCTOLLVM_ACCTOLLVMUTILS_H
 
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCRuntimeUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -145,12 +146,6 @@ emitValueSelectedByIfCond(Location loc, Value ifCond, RewriterBase &rewriter,
 /// its blocks.
 void spliceConstructRegion(Operation *op, Region &region,
                            RewriterBase &rewriter);
-
-/// The clauses of a construct can be given once per device type. Of the values
-/// that reach a given device type, the ones naming it are the most specific,
-/// then the ones naming every device type, then the ones given before any
-/// device_type clause.
-SmallVector<DeviceType, 3> getDeviceTypesByPrecedence(DeviceType deviceType);
 
 namespace detail {
 /// The constructs carrying a `device_type` clause hold their async and wait

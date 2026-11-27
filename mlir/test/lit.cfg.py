@@ -5,6 +5,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 import lit.formats
@@ -177,6 +178,7 @@ for dirs in tool_dirs:
     llvm_config.with_environment("PATH", dirs, append_path=True)
 
 tools = [
+    "llvm-objdump",
     "llvm-strings",
     "mlir-tblgen",
     "mlir-translate",
@@ -357,6 +359,12 @@ if config.enable_bindings_python:
         append_path=True,
     )
 
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
+
+# Expose the LLVM targets that were built as "<arch>-registered-target".
+for arch in config.targets_to_build.split():
+    config.available_features.add(arch.lower() + "-registered-target")
+
 if config.enable_assertions:
     config.available_features.add("asserts")
 else:
@@ -391,12 +399,6 @@ def have_host_jit_feature_support(feature_name):
 
 if have_host_jit_feature_support("jit"):
     config.available_features.add("host-supports-jit")
-
-if config.run_nvptx_tests:
-    config.available_features.add("host-supports-nvptx")
-
-if config.run_rocm_tests:
-    config.available_features.add("host-supports-amdgpu")
 
 if config.arm_emulator_executable:
     config.available_features.add("arm-emulator")

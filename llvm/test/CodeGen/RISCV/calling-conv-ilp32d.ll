@@ -79,8 +79,8 @@ define i32 @callee_double_in_gpr_exhausted_fprs(double %a, double %b, double %c,
 ; RV32-ILP32D-NEXT:    addi sp, sp, -16
 ; RV32-ILP32D-NEXT:    sw a0, 8(sp)
 ; RV32-ILP32D-NEXT:    sw a1, 12(sp)
-; RV32-ILP32D-NEXT:    fld fa5, 8(sp)
 ; RV32-ILP32D-NEXT:    fcvt.w.d a0, fa7, rtz
+; RV32-ILP32D-NEXT:    fld fa5, 8(sp)
 ; RV32-ILP32D-NEXT:    fcvt.w.d a1, fa5, rtz
 ; RV32-ILP32D-NEXT:    add a0, a0, a1
 ; RV32-ILP32D-NEXT:    addi sp, sp, 16

@@ -11,7 +11,6 @@ class GlobalVariablesCppTestCase(TestBase):
         TestBase.setUp(self)
         self.source = lldb.SBFileSpec("main.cpp")
 
-    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         self.build()
 
@@ -76,7 +75,9 @@ class GlobalVariablesCppTestCase(TestBase):
         )
         self.assertEqual(var.GetValue(), "100")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
+    @expectedFailureAll(
+        oslist=["windows"], bugnumber="llvm.org/pr149498", debug_info=["pdb"]
+    )
     def test_access_by_mangled_name(self):
         self.build()
 
