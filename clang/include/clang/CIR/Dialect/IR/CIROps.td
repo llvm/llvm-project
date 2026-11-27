@@ -366,11 +366,12 @@ def CIR_CastOp : CIR_FenvOp<"cast", [
     - `bool_to_float`
 
     The optional `fenv` attribute describes constraints on the floating-point
-    handling of the operation. It is only valid for floating-point cast kinds:
-    `floating`, `int_to_float`, `float_to_int`, `float_to_bool`,
-    `bool_to_float`, `float_to_complex`, `float_complex_to_real`,
-    `float_complex_to_bool`, `float_complex`, `float_complex_to_int_complex`,
-    and `int_complex_to_float_complex`.
+    handling of the operation. It is only valid for the cast kinds that convert
+    floating-point values: `floating`, `int_to_float`, `float_to_int`,
+    `float_to_bool`, `bool_to_float`, `float_complex_to_bool`, `float_complex`,
+    `float_complex_to_int_complex`, and `int_complex_to_float_complex`.
+    `float_to_complex` and `float_complex_to_real` only pack or select a part
+    of a complex value and take no attribute.
 
     Example:
 

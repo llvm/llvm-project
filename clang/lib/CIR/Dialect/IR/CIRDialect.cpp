@@ -1032,6 +1032,9 @@ OpFoldResult cir::ConstantOp::fold(FoldAdaptor /*adaptor*/) {
 // CastOp
 //===----------------------------------------------------------------------===//
 
+/// Returns true for the cast kinds that convert floating-point values.
+/// `float_to_complex` and `float_complex_to_real` only pack or select a part
+/// of a complex value, so they have no floating-point operation to constrain.
 static bool isFloatingPointCastKind(cir::CastKind kind) {
   switch (kind) {
   case cir::CastKind::floating:
@@ -1039,8 +1042,6 @@ static bool isFloatingPointCastKind(cir::CastKind kind) {
   case cir::CastKind::float_to_int:
   case cir::CastKind::float_to_bool:
   case cir::CastKind::bool_to_float:
-  case cir::CastKind::float_to_complex:
-  case cir::CastKind::float_complex_to_real:
   case cir::CastKind::float_complex_to_bool:
   case cir::CastKind::float_complex:
   case cir::CastKind::float_complex_to_int_complex:

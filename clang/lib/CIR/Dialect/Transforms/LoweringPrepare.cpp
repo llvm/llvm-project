@@ -712,10 +712,13 @@ static mlir::Value lowerComplexToScalarCast(mlir::MLIRContext &ctx,
   mlir::Value srcImag = builder.createComplexImag(op.getLoc(), src);
 
   cir::BoolType boolTy = builder.getBoolTy();
+  // The scalar casts get the `fenv` attribute of the complex cast, so a
+  // constrained cast expands into constrained ones.
+  cir::FenvAttr fenv = op.getFenvAttr();
   mlir::Value srcRealToBool =
-      builder.createCast(op.getLoc(), elemToBoolKind, srcReal, boolTy);
+      builder.createCast(op.getLoc(), elemToBoolKind, srcReal, boolTy, fenv);
   mlir::Value srcImagToBool =
-      builder.createCast(op.getLoc(), elemToBoolKind, srcImag, boolTy);
+      builder.createCast(op.getLoc(), elemToBoolKind, srcImag, boolTy, fenv);
   return builder.createLogicalOr(op.getLoc(), srcRealToBool, srcImagToBool);
 }
 
@@ -732,10 +735,13 @@ static mlir::Value lowerComplexToComplexCast(mlir::MLIRContext &ctx,
   mlir::Value srcReal = builder.createComplexReal(op.getLoc(), src);
   mlir::Value srcImag = builder.createComplexImag(op.getLoc(), src);
 
+  // The scalar casts get the `fenv` attribute of the complex cast, so a
+  // constrained cast expands into constrained ones.
+  cir::FenvAttr fenv = op.getFenvAttr();
   mlir::Value dstReal = builder.createCast(op.getLoc(), scalarCastKind, srcReal,
-                                           dstComplexElemTy);
+                                           dstComplexElemTy, fenv);
   mlir::Value dstImag = builder.createCast(op.getLoc(), scalarCastKind, srcImag,
-                                           dstComplexElemTy);
+                                           dstComplexElemTy, fenv);
   return builder.createComplexCreate(op.getLoc(), dstReal, dstImag);
 }
 

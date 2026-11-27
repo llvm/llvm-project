@@ -689,18 +689,22 @@ public:
   // Cast/Conversion Operators
   //===--------------------------------------------------------------------===//
 
+  /// \p fenv is the floating-point environment of a cast that converts
+  /// floating-point values. It is null for an unconstrained cast and for a
+  /// cast kind that does no floating-point conversion.
   mlir::Value createCast(mlir::Location loc, cir::CastKind kind,
-                         mlir::Value src, mlir::Type newTy) {
+                         mlir::Value src, mlir::Type newTy,
+                         cir::FenvAttr fenv = {}) {
     if (newTy == src.getType())
       return src;
-    return cir::CastOp::create(*this, loc, newTy, kind, src);
+    return cir::CastOp::create(*this, loc, newTy, kind, src, fenv);
   }
 
-  mlir::Value createCast(cir::CastKind kind, mlir::Value src,
-                         mlir::Type newTy) {
+  mlir::Value createCast(cir::CastKind kind, mlir::Value src, mlir::Type newTy,
+                         cir::FenvAttr fenv = {}) {
     if (newTy == src.getType())
       return src;
-    return createCast(src.getLoc(), kind, src, newTy);
+    return createCast(src.getLoc(), kind, src, newTy, fenv);
   }
 
   // Creates a cast from bool or int to an integer type.
