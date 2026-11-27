@@ -278,13 +278,22 @@ struct DeviceTy {
   /// Rectangular versions of submitData, retrieveData and dataExchange. A null
   /// \p AsyncInfo makes the copy synchronous.
   llvm::Error submitDataRect(void *TgtPtr, const void *HstPtr,
-                             const MemcpyRectTy &Rect, AsyncInfoTy *AsyncInfo);
+                             const MemcpyRectTy &Rect, AsyncInfoTy *AsyncInfo) {
+    return dataMemcpyRect(CopyDirTy::HostToDevice, TgtPtr, HstPtr, Rect,
+                          /*DstDevice=*/nullptr, AsyncInfo);
+  }
   llvm::Error retrieveDataRect(void *HstPtr, const void *TgtPtr,
                                const MemcpyRectTy &Rect,
-                               AsyncInfoTy *AsyncInfo);
+                               AsyncInfoTy *AsyncInfo) {
+    return dataMemcpyRect(CopyDirTy::DeviceToHost, HstPtr, TgtPtr, Rect,
+                          /*DstDevice=*/nullptr, AsyncInfo);
+  }
   llvm::Error dataExchangeRect(const void *SrcPtr, DeviceTy &DstDev,
                                void *DstPtr, const MemcpyRectTy &Rect,
-                               AsyncInfoTy *AsyncInfo);
+                               AsyncInfoTy *AsyncInfo) {
+    return dataMemcpyRect(CopyDirTy::DeviceToDevice, DstPtr, SrcPtr, Rect,
+                          &DstDev, AsyncInfo);
+  }
 
   /// Register (and, if \p LockMemory, page-lock) the host buffer \p HstPtr
   /// with \p Size bytes, returning the device-accessible pointer.
@@ -419,21 +428,12 @@ private:
   /// This device is the destination of HostToDevice and the source otherwise.
   enum class CopyDirTy { HostToDevice, DeviceToHost, DeviceToDevice };
 
-  /// Single liboffload 2D/3D copy; \p PeerDev is the destination of a
-  /// DeviceToDevice copy. Returns false if another path is needed.
-  llvm::Expected<bool> dataMemcpy3D(CopyDirTy Dir, void *DstPtr,
-                                    const ol_memcpy3d_layout_t &DstLayout,
-                                    const void *SrcPtr,
-                                    const ol_memcpy3d_layout_t &SrcLayout,
-                                    ol_dimensions_t Size, DeviceTy *PeerDev,
-                                    AsyncInfoTy *AsyncInfo);
-
-  /// Implementation of the rectangular copies; \p CopyRow copies one row.
-  llvm::Error dataMemcpyRect(
-      CopyDirTy Dir, void *Dst, const void *Src, const MemcpyRectTy &Rect,
-      DeviceTy *PeerDev, AsyncInfoTy *AsyncInfo,
-      llvm::function_ref<int32_t(void *, const void *, size_t, AsyncInfoTy &)>
-          CopyRow);
+  /// Implementation of the rectangular copies; \p DstDevice is the destination
+  /// of a DeviceToDevice copy. The copy is reported to tools as a single data
+  /// operation.
+  llvm::Error dataMemcpyRect(CopyDirTy Dir, void *Dst, const void *Src,
+                             const MemcpyRectTy &Rect, DeviceTy *DstDevice,
+                             AsyncInfoTy *AsyncInfo);
 
   /// Query the properties used to compute the launch geometry of a kernel.
   llvm::Error initGeometryProps();

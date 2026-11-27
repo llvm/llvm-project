@@ -146,6 +146,46 @@ void Interface::endTargetDataSubmit(int64_t SrcDeviceId, void *SrcPtrBegin,
   endTargetDataOperation();
 }
 
+void Interface::beginTargetDataTransferRect(int64_t SrcDeviceId,
+                                            void *SrcPtrBegin,
+                                            int64_t DstDeviceId,
+                                            void *DstPtrBegin, size_t Size,
+                                            void *Code) {
+  beginTargetDataOperation();
+  if (ompt_callback_target_data_op_emi_fn) {
+    // HostOpId will be set by the tool. Invoke the tool supplied data op EMI
+    // callback
+    ompt_callback_target_data_op_emi_fn(
+        ompt_scope_begin, TargetTaskData, &TargetData, &HostOpId,
+        ompt_target_data_transfer_rect, SrcPtrBegin, SrcDeviceId, DstPtrBegin,
+        DstDeviceId, Size, Code);
+  } else if (ompt_callback_target_data_op_fn) {
+    // HostOpId is set by the runtime
+    HostOpId = createOpId();
+    // Invoke the tool supplied data op callback
+    ompt_callback_target_data_op_fn(
+        TargetData.value, HostOpId, ompt_target_data_transfer_rect, SrcPtrBegin,
+        SrcDeviceId, DstPtrBegin, DstDeviceId, Size, Code);
+  }
+}
+
+void Interface::endTargetDataTransferRect(int64_t SrcDeviceId,
+                                          void *SrcPtrBegin,
+                                          int64_t DstDeviceId,
+                                          void *DstPtrBegin, size_t Size,
+                                          void *Code) {
+  // Only EMI callback handles end scope
+  if (ompt_callback_target_data_op_emi_fn) {
+    // HostOpId will be set by the tool. Invoke the tool supplied data op EMI
+    // callback
+    ompt_callback_target_data_op_emi_fn(
+        ompt_scope_end, TargetTaskData, &TargetData, &HostOpId,
+        ompt_target_data_transfer_rect, SrcPtrBegin, SrcDeviceId, DstPtrBegin,
+        DstDeviceId, Size, Code);
+  }
+  endTargetDataOperation();
+}
+
 void Interface::beginTargetDataDelete(int64_t DeviceId, void *TgtPtrBegin,
                                       void *Code) {
   beginTargetDataOperation();

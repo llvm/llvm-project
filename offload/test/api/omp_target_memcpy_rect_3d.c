@@ -135,6 +135,22 @@ int main() {
     return 1;
   }
 
+  // Passing NULL for both pointers queries the supported number of dimensions
+  // and does not copy.
+  int dev = omp_get_default_device();
+  int host = omp_get_initial_device();
+  if (dev < 0 || dev >= omp_get_num_devices())
+    dev = host;
+  if (omp_target_memcpy_rect(NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL,
+                             dev, host) < 3 ||
+      omp_target_memcpy_rect(NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL,
+                             host, dev) < 3 ||
+      omp_target_memcpy_rect(NULL, NULL, 0, 0, NULL, NULL, NULL, NULL, NULL,
+                             host, host) < 3) {
+    printf("dimension query failed\n");
+    return 1;
+  }
+
   printf("PASS\n");
   return 0;
 }
