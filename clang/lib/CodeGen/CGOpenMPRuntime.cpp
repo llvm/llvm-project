@@ -2373,20 +2373,41 @@ static llvm::Value *emitCopyprivateCopyFunction(
 }
 
 void CGOpenMPRuntime::emitCopyprivateCall(
-    CodeGenFunction &CGF, SourceLocation Loc, Address CopyprivateList,
-    QualType CopyprivateArrayTy, llvm::Value *CpyFn, llvm::Value *DidIt) {
+    CodeGenFunction &CGF, SourceLocation Loc,
+    ArrayRef<std::pair<llvm::Type *, CharUnits>> VarTypes,
+    llvm::function_ref<llvm::Value *(CodeGenFunction &, unsigned)> EmitVarPtr,
+    CopyprivateCopyGenTy CopyGen, Address DidIt) {
+  ASTContext &C = CGM.getContext();
+  llvm::APInt ArraySize(/*unsigned int numBits=*/32, VarTypes.size());
+  QualType CopyprivateArrayTy = C.getConstantArrayType(
+      C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
+      /*IndexTypeQuals=*/0);
+  // Create a list of all private variables for copyprivate.
+  Address CopyprivateList = CGF.CreateMemTempWithoutCast(
+      CopyprivateArrayTy, ".omp.copyprivate.cpr_list");
+  for (unsigned I = 0, E = VarTypes.size(); I < E; ++I) {
+    Address Elem = CGF.Builder.CreateConstArrayGEP(CopyprivateList, I);
+    CGF.Builder.CreateStore(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
+                                EmitVarPtr(CGF, I), CGF.VoidPtrTy),
+                            Elem);
+  }
+  // Build function that copies private values from single region to all other
+  // threads in the corresponding parallel region.
+  llvm::Value *CpyFn = emitCopyprivateCopyFunction(
+      CGM, CGF.ConvertTypeForMem(CopyprivateArrayTy), VarTypes, CopyGen, Loc);
   // call __kmpc_copyprivate(ident_t *, gtid, <buf_size>, <copyprivate list>,
   // <copy_func>, did_it);
   llvm::Value *BufSize = CGF.getTypeSize(CopyprivateArrayTy);
   Address CL = CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
       CopyprivateList, CGF.VoidPtrTy, CGF.Int8Ty);
+  llvm::Value *DidItVal = CGF.Builder.CreateLoad(DidIt);
   llvm::Value *Args[] = {
       emitUpdateLocation(CGF, Loc), // ident_t *<loc>
       getThreadID(CGF, Loc),        // i32 <gtid>
       BufSize,                      // size_t <buf_size>
       CL.emitRawPointer(CGF),       // void *<copyprivate list>
       CpyFn,                        // void (*) (void *, void *) <copy_func>
-      DidIt                         // i32 did_it
+      DidItVal                      // i32 did_it
   };
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                           CGM.getModule(), OMPRTL___kmpc_copyprivate),
@@ -2397,33 +2418,23 @@ void CGOpenMPRuntime::emitCopyprivateBroadcast(CodeGenFunction &CGF,
                                                SourceLocation Loc,
                                                ArrayRef<Address> Addrs,
                                                Address DidIt) {
-  if (!CGF.HaveInsertPoint())
+  if (!CGF.HaveInsertPoint() || Addrs.empty())
     return;
-  ASTContext &C = CGM.getContext();
-  llvm::APInt ArraySize(/*unsigned int numBits=*/32, Addrs.size());
-  QualType CopyprivateArrayTy = C.getConstantArrayType(
-      C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
-      /*IndexTypeQuals=*/0);
-  Address CopyprivateList = CGF.CreateMemTempWithoutCast(
-      CopyprivateArrayTy, ".omp.copyprivate.cpr_list");
   SmallVector<std::pair<llvm::Type *, CharUnits>, 4> VarTypes;
-  for (unsigned I = 0, E = Addrs.size(); I < E; ++I) {
-    assert(Addrs[I].getElementType()->isSingleValueType() &&
+  for (const Address &Addr : Addrs) {
+    assert(Addr.getElementType()->isSingleValueType() &&
            "Expected a scalar copyprivate variable.");
-    Address Elem = CGF.Builder.CreateConstArrayGEP(CopyprivateList, I);
-    CGF.Builder.CreateStore(CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-                                Addrs[I].emitRawPointer(CGF), CGF.VoidPtrTy),
-                            Elem);
-    VarTypes.emplace_back(Addrs[I].getElementType(), Addrs[I].getAlignment());
+    VarTypes.emplace_back(Addr.getElementType(), Addr.getAlignment());
   }
-  llvm::Value *CpyFn = emitCopyprivateCopyFunction(
-      CGM, CGF.ConvertTypeForMem(CopyprivateArrayTy), VarTypes,
+  emitCopyprivateCall(
+      CGF, Loc, VarTypes,
+      [Addrs](CodeGenFunction &CGF, unsigned I) {
+        return Addrs[I].emitRawPointer(CGF);
+      },
       [](CodeGenFunction &CGF, unsigned, Address DestAddr, Address SrcAddr) {
         CGF.Builder.CreateStore(CGF.Builder.CreateLoad(SrcAddr), DestAddr);
       },
-      Loc);
-  emitCopyprivateCall(CGF, Loc, CopyprivateList, CopyprivateArrayTy, CpyFn,
-                      CGF.Builder.CreateLoad(DidIt));
+      DidIt);
 }
 
 llvm::Value *CGOpenMPRuntime::emitAllocCall(CodeGenFunction &CGF,
@@ -2498,32 +2509,19 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
   // call __kmpc_copyprivate(ident_t *, gtid, <buf_size>, <copyprivate list>,
   // <copy_func>, did_it);
   if (DidIt.isValid()) {
-    llvm::APInt ArraySize(/*unsigned int numBits=*/32, CopyprivateVars.size());
-    QualType CopyprivateArrayTy = C.getConstantArrayType(
-        C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
-        /*IndexTypeQuals=*/0);
-    // Create a list of all private variables for copyprivate.
-    Address CopyprivateList = CGF.CreateMemTempWithoutCast(
-        CopyprivateArrayTy, ".omp.copyprivate.cpr_list");
+    // The pseudo destination and source variables have the same type.
     SmallVector<std::pair<llvm::Type *, CharUnits>, 4> VarTypes;
-    for (unsigned I = 0, E = CopyprivateVars.size(); I < E; ++I) {
-      Address Elem = CGF.Builder.CreateConstArrayGEP(CopyprivateList, I);
-      CGF.Builder.CreateStore(
-          CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
-              CGF.EmitLValue(CopyprivateVars[I]).getPointer(CGF),
-              CGF.VoidPtrTy),
-          Elem);
-      // The pseudo destination and source variables have the same type.
-      const auto *DestVar =
-          cast<VarDecl>(cast<DeclRefExpr>(DestExprs[I])->getDecl());
+    for (const Expr *E : DestExprs) {
+      const auto *DestVar = cast<VarDecl>(cast<DeclRefExpr>(E)->getDecl());
       VarTypes.emplace_back(
           CGM.getTypes().ConvertTypeForMem(DestVar->getType()),
           C.getDeclAlign(DestVar));
     }
-    // Build function that copies private values from single region to all other
-    // threads in the corresponding parallel region.
-    llvm::Value *CpyFn = emitCopyprivateCopyFunction(
-        CGM, CGF.ConvertTypeForMem(CopyprivateArrayTy), VarTypes,
+    emitCopyprivateCall(
+        CGF, Loc, VarTypes,
+        [&](CodeGenFunction &CGF, unsigned I) {
+          return CGF.EmitLValue(CopyprivateVars[I]).getPointer(CGF);
+        },
         [&](CodeGenFunction &CGF, unsigned I, Address DestAddr,
             Address SrcAddr) {
           const auto *DestVar =
@@ -2535,9 +2533,7 @@ void CGOpenMPRuntime::emitSingleRegion(CodeGenFunction &CGF,
           CGF.EmitOMPCopy(Type, DestAddr, SrcAddr, DestVar, SrcVar,
                           AssignmentOps[I]);
         },
-        Loc);
-    emitCopyprivateCall(CGF, Loc, CopyprivateList, CopyprivateArrayTy, CpyFn,
-                        CGF.Builder.CreateLoad(DidIt));
+        DidIt);
   }
 }
 
@@ -13632,6 +13628,25 @@ void CGOpenMPSIMDRuntime::emitSingleRegion(
     SourceLocation Loc, ArrayRef<const Expr *> CopyprivateVars,
     ArrayRef<const Expr *> DestExprs, ArrayRef<const Expr *> SrcExprs,
     ArrayRef<const Expr *> AssignmentOps) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitCopyprivateBroadcast(CodeGenFunction &CGF,
+                                                   SourceLocation Loc,
+                                                   ArrayRef<Address> Addrs,
+                                                   Address DidIt) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+llvm::Value *CGOpenMPSIMDRuntime::emitAllocCall(CodeGenFunction &CGF,
+                                                SourceLocation Loc,
+                                                llvm::Value *Size,
+                                                CharUnits Alignment) {
+  llvm_unreachable("Not supported in SIMD-only mode");
+}
+
+void CGOpenMPSIMDRuntime::emitFreeCall(CodeGenFunction &CGF, SourceLocation Loc,
+                                       llvm::Value *Ptr) {
   llvm_unreachable("Not supported in SIMD-only mode");
 }
 

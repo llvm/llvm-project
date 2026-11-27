@@ -430,6 +430,15 @@ getEffectiveDirectiveKind(const OMPExecutableDirective &S) {
   }
 }
 
+/// Returns true if the directive has a 'reduction' clause with the 'inscan'
+/// modifier.
+static bool hasInscanReduction(const OMPExecutableDirective &S) {
+  return llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
+                      [](const OMPReductionClause *C) {
+                        return C->getModifier() == OMPC_REDUCTION_inscan;
+                      });
+}
+
 static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
                                          const OMPExecutableDirective &S,
                                          const RegionCodeGenTy &CodeGen);
@@ -3126,10 +3135,7 @@ void CodeGenFunction::EmitOMPSimdInit(const OMPLoopDirective &D) {
   OpenMPDirectiveKind EKind = getEffectiveDirectiveKind(D);
   if ((EKind == OMPD_simd ||
        (getLangOpts().OpenMPSimd && isOpenMPSimdDirective(EKind))) &&
-      llvm::any_of(D.getClausesOfKind<OMPReductionClause>(),
-                   [](const OMPReductionClause *C) {
-                     return C->getModifier() == OMPC_REDUCTION_inscan;
-                   }))
+      hasInscanReduction(D))
     // Disable parallel access in case of prefix sum.
     LoopStack.setParallel(/*Enable=*/false);
 }
@@ -4325,15 +4331,6 @@ emitDispatchForLoopBounds(CodeGenFunction &CGF, const OMPExecutableDirective &S,
   return {LBVal, UBVal};
 }
 
-/// Returns true if the directive has a 'reduction' clause with the 'inscan'
-/// modifier.
-static bool hasInscanReduction(const OMPExecutableDirective &S) {
-  return llvm::any_of(S.getClausesOfKind<OMPReductionClause>(),
-                      [](const OMPReductionClause *C) {
-                        return C->getModifier() == OMPC_REDUCTION_inscan;
-                      });
-}
-
 /// Emits internal temp array declarations for the directive with inscan
 /// reductions.
 /// The code is the following:
@@ -4440,12 +4437,14 @@ static Address emitScanBasedDirectiveSharedDecls(
           CGF, S.getBeginLoc(), CGF.getTypeSize(Ty), Align);
       CGF.Builder.CreateStore(Ptr, TempPtrAddrs[I]);
       const Expr *Init = TempVD->getInit();
+      LValue Dst =
+          CGF.MakeAddrLValue(Address(Ptr, CGF.ConvertTypeForMem(Ty), Align), Ty,
+                             AlignmentSource::Decl);
       if (Init && !CGF.isTrivialInitializer(Init))
-        CGF.EmitExprAsInit(
-            Init, TempVD,
-            CGF.MakeAddrLValue(Address(Ptr, CGF.ConvertTypeForMem(Ty), Align),
-                               Ty, AlignmentSource::Decl),
-            /*capturedByInit=*/false);
+        CGF.EmitExprAsInit(Init, TempVD, Dst, /*capturedByInit=*/false);
+      else if (!Init && Ty.isNonTrivialToPrimitiveDefaultInitialize() ==
+                            QualType::PDIK_Struct)
+        CGF.defaultInitNonTrivialCStructVar(Dst);
     }
     CGF.Builder.CreateStore(CGF.Builder.getInt32(1), DidIt);
   };
@@ -4610,7 +4609,7 @@ static void emitScanBasedDirective(
     FirstGen(CGF);
   }
   auto &&CodeGen = [&S, OMPScanNumIterations, &LHSs, &RHSs, &CopyArrayElems,
-                    &ReductionOps, &Privates, NumIteratorsGen, IsStandalone](
+                    &ReductionOps, &Privates, IsStandalone](
                        CodeGenFunction &CGF, PrePostActionTy &Action) {
     Action.Enter(CGF);
     // Emit prefix reduction:
@@ -4701,8 +4700,12 @@ static void emitScanBasedDirective(
     CGF.Builder.CreateCondBr(Cmp, LoopBB, ExitBB);
     auto DL1 = ApplyDebugLocation::CreateDefaultArtificial(CGF, S.getEndLoc());
     CGF.EmitBlock(ExitBB);
-    if (IsStandalone)
-      emitScanBasedDirectiveFinals(CGF, S, NumIteratorsGen);
+    if (IsStandalone) {
+      auto CachedNumIters = [OMPScanNumIterations](CodeGenFunction &) {
+        return OMPScanNumIterations;
+      };
+      emitScanBasedDirectiveFinals(CGF, S, CachedNumIters);
+    }
   };
   // #pragma omp master
   CGF.CGM.getOpenMPRuntime().emitMasterRegion(CGF, CodeGen, S.getBeginLoc());
@@ -4730,10 +4733,9 @@ static bool emitWorksharingDirective(CodeGenFunction &CGF,
     // EmitOMPParallelForDirective); otherwise they are allocated once per team
     // here and released after the barrier at the end of the directive.
     bool IsStandalone = !isOpenMPParallelDirective(EKind);
-    // No team-shared buffers on the device: its runtime has no
-    // __kmpc_copyprivate, __kmpc_aligned_alloc or __kmpc_free. Lift once
-    // CGOpenMPRuntimeGPU implements them.
-    if (IsStandalone && CGF.CGM.getLangOpts().OpenMPIsTargetDevice) {
+    // The GPU runtime lacks __kmpc_copyprivate, __kmpc_aligned_alloc and
+    // __kmpc_free.
+    if (IsStandalone && CGF.CGM.getOpenMPRuntime().isGPU()) {
       CGF.CGM.ErrorUnsupported(
           &S, "'inscan' reduction on a worksharing loop in a target region");
       return false;
@@ -4751,8 +4753,10 @@ static bool emitWorksharingDirective(CodeGenFunction &CGF,
                                          emitDispatchForLoopBounds);
       }
       // Emit an implicit barrier at the end, reached by cancelled threads too.
-      CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(), OMPD_for,
-                                                 /*EmitChecks=*/false);
+      // A cancellation observed here leaves the scan: the buffers are
+      // incomplete.
+      CGF.CGM.getOpenMPRuntime().emitBarrierCall(CGF, S.getBeginLoc(),
+                                                 OMPD_for);
     };
     const auto &&SecondGen = [&S, HasCancel, EKind,
                               &HasLastprivates](CodeGenFunction &CGF) {
@@ -4762,12 +4766,21 @@ static bool emitWorksharingDirective(CodeGenFunction &CGF,
                                                    emitDispatchForLoopBounds);
     };
     if (IsStandalone) {
+      llvm::Value *NumIters = CGF.Builder.CreateIntCast(
+          NumIteratorsGen(CGF), CGF.SizeTy, /*isSigned=*/false);
+      auto CachedNumIters = [NumIters](CodeGenFunction &) { return NumIters; };
       CodeGenFunction::OMPPrivateScope TempsScope(CGF);
-      Address DidIt = emitScanBasedDirectiveSharedDecls(CGF, S, NumIteratorsGen,
-                                                        TempsScope);
-      emitScanBasedDirective(CGF, S, NumIteratorsGen, FirstGen, SecondGen);
+      Address DidIt =
+          emitScanBasedDirectiveSharedDecls(CGF, S, CachedNumIters, TempsScope);
+      {
+        CodeGenFunction::OMPCancelStackRAII OuterCancelRegion(CGF, EKind,
+                                                              HasCancel);
+        emitScanBasedDirective(CGF, S, CachedNumIters, FirstGen, SecondGen);
+      }
       emitScanBasedDirectiveSharedDeclsFree(CGF, S, DidIt);
     } else {
+      CodeGenFunction::OMPCancelStackRAII OuterCancelRegion(CGF, EKind,
+                                                            HasCancel);
       emitScanBasedDirective(CGF, S, NumIteratorsGen, FirstGen, SecondGen);
     }
   } else {

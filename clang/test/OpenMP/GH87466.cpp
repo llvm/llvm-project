@@ -166,3 +166,45 @@ void combined(int n) {
 // CHECK: call i32 @__kmpc_master(
 // CHECK-NOT: call void @__kmpc_free(
 // CHECK: ret void
+
+// A cancellation seen at the barrier after the input loop skips the prefix and
+// scan phases; the buffer is released after a barrier every thread reaches.
+// CHECK-LABEL: define {{.*}}void @_Z18cancel_in_paralleli(
+// CHECK: call void {{.*}}@__kmpc_fork_call(ptr @{{.+}}, i32 {{[0-9]+}}, ptr [[OUTLINED_CANCEL:@[^,]+]],
+void cancel_in_parallel(int n) {
+  int curr_scan = 0;
+#pragma omp parallel
+  {
+#pragma omp for reduction(inscan, + : curr_scan)
+    for (int i = 0; i < n; ++i) {
+      curr_scan += thread_data[i];
+      if (thread_data[i] < 0) {
+#pragma omp cancel for
+      }
+#pragma omp scan inclusive(curr_scan)
+      scan[i] = curr_scan;
+    }
+  }
+}
+
+// CHECK: define internal void [[OUTLINED_CANCEL]](
+// CHECK: call i32 @__kmpc_single(
+// CHECK: call void @__kmpc_copyprivate(
+// CHECK: call void @__kmpc_for_static_init_4(
+// CHECK: call i32 @__kmpc_cancel(ptr @{{.+}}, i32 %{{.+}}, i32 2)
+// CHECK: call void @__kmpc_for_static_fini(
+// CHECK: [[RES:%.+]] = call i32 @__kmpc_cancel_barrier(
+// CHECK: [[CANCELLED:%.+]] = icmp ne i32 [[RES]], 0
+// CHECK: br i1 [[CANCELLED]], label %[[CANCEL_EXIT:[^,]+]], label %[[CONT:[^,]+]]
+// CHECK: [[CANCEL_EXIT]]:
+// CHECK: br label %[[SCAN_EXIT:[^,]+]]
+// CHECK: [[CONT]]:
+// CHECK: call i32 @__kmpc_master(
+// CHECK: call void @__kmpc_end_master(
+// CHECK: call void @__kmpc_barrier(
+// CHECK: call void @__kmpc_for_static_init_4(
+// CHECK: call void @__kmpc_for_static_fini(
+// CHECK: [[SCAN_EXIT]]:
+// CHECK: call i32 @__kmpc_cancel_barrier(
+// CHECK: call void @__kmpc_free(
+// CHECK: ret void
