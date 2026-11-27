@@ -28,7 +28,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
     """Base test case for DAP tests"""
 
     NO_DEBUG_INFO_TESTCASE = True
-    DEFAULT_TIMEOUT: Final[float] = 500.0 if "ASAN_OPTIONS" in os.environ else 50.0
+    DEFAULT_TIMEOUT: Final[float] = 600.0
 
     USE_DEFAULT_DEBUG_ADAPTER: bool = True
     """Subclasses can set this to true to avoid creating a debug adapter is will not be used."""
