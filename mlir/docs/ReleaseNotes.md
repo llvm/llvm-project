@@ -96,6 +96,18 @@ Each header provides its own registration function (for example
 to match, e.g. `mlirCreateGPUGpuNVVMAttachTarget` is now
 `mlirCreateGPUNVVMGpuNVVMAttachTarget`.
 
+### Execution Engine C API
+
+`mlirExecutionEngineCreate` no longer registers the OpenMP dialect translation
+and `MLIRCAPIExecutionEngine` no longer links it, matching the C++
+`ExecutionEngine`, which registers no translations at all. Only the builtin and
+LLVM dialect translations are still registered automatically. C API clients
+that JIT IR containing `omp` operations must register the translation
+themselves, e.g. with `mlirRegisterAllLLVMTranslations`. Python packages built
+with `_mlirRegisterEverything` are unaffected since it registers all LLVM
+translations for every context; custom site initializers must register the
+OpenMP translation themselves.
+
 ## LLVM 21
 
 ### GPU/NVVM Changes

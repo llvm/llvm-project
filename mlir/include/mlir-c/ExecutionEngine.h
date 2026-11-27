@@ -41,6 +41,10 @@ DEFINE_C_API_STRUCT(MlirExecutionEngine, void);
 /// generation. The number and array of paths corresponding to shared libraries
 /// that will be loaded are specified via `numPaths` and `sharedLibPaths`
 /// respectively.
+/// The translations of the builtin and LLVM dialects are registered in the
+/// module's context automatically. Translations of any other dialect in the
+/// module must be registered by the caller beforehand, e.g. with
+/// `mlirRegisterAllLLVMTranslations`.
 /// The `enablePIC` arguments controls the relocation model, when true the
 /// generated code is emitted as "position independent", making it possible to
 /// save it and reload it as a shared object in another process.
