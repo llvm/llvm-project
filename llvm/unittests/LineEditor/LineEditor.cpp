@@ -80,3 +80,84 @@ TEST_F(LineEditorTest, ListCompleters) {
   EXPECT_EQ(LineEditor::CompletionAction::AK_Insert, CA.Kind);
   EXPECT_EQ("f", CA.Text);
 }
+
+
+#ifdef __linux__
+
+#include <cstdlib>
+
+TEST(LineEditorDefaultHistoryPath, DefaultHistoryPathUsesXDGStateHome) {
+  SmallString<128> TempDir;
+  ASSERT_FALSE(sys::fs::createUniqueDirectory("xdg-state", TempDir));
+
+  setenv("XDG_STATE_HOME", TempDir.c_str(), 1);
+
+  std::string Path = LineEditor::getDefaultHistoryPath("clang-repl");
+
+  EXPECT_EQ((TempDir + "/clang-repl-history").str().str(), Path);
+
+  unsetenv("XDG_STATE_HOME");
+  sys::fs::remove_directories(TempDir);
+}
+
+#endif
+
+#ifdef __linux__
+
+TEST(LineEditorDefaultHistoryPath, ExistingLegacyHistoryTakesPrecedence) {
+  SmallString<128> HomeDir;
+  ASSERT_FALSE(sys::fs::createUniqueDirectory("lineeditor-home", HomeDir));
+
+  SmallString<128> Legacy(HomeDir);
+  sys::path::append(Legacy, ".clang-repl-history");
+
+  std::error_code EC;
+  raw_fd_ostream OS(Legacy, EC);
+  ASSERT_FALSE(EC);
+  OS.close();
+
+  setenv("HOME", HomeDir.c_str(), 1);
+
+  SmallString<128> XDGDir;
+  ASSERT_FALSE(sys::fs::createUniqueDirectory("xdg-state", XDGDir));
+  setenv("XDG_STATE_HOME", XDGDir.c_str(), 1);
+
+  EXPECT_EQ(Legacy.str(), LineEditor::getDefaultHistoryPath("clang-repl"));
+
+  unsetenv("HOME");
+  unsetenv("XDG_STATE_HOME");
+  sys::fs::remove_directories(HomeDir);
+  sys::fs::remove_directories(XDGDir);
+}
+
+#endif
+
+#ifdef __linux__
+
+TEST(LineEditorDefaultHistoryPath, ExistingLegacyHistoryTakesPrecedence) {
+  SmallString<128> HomeDir;
+  ASSERT_FALSE(sys::fs::createUniqueDirectory("lineeditor-home", HomeDir));
+
+  SmallString<128> Legacy(HomeDir);
+  sys::path::append(Legacy, ".clang-repl-history");
+
+  std::error_code EC;
+  raw_fd_ostream OS(Legacy, EC);
+  ASSERT_FALSE(EC);
+  OS.close();
+
+  setenv("HOME", HomeDir.c_str(), 1);
+
+  SmallString<128> XDGDir;
+  ASSERT_FALSE(sys::fs::createUniqueDirectory("xdg-state", XDGDir));
+  setenv("XDG_STATE_HOME", XDGDir.c_str(), 1);
+
+  EXPECT_EQ(Legacy.str(), LineEditor::getDefaultHistoryPath("clang-repl"));
+
+  unsetenv("HOME");
+  unsetenv("XDG_STATE_HOME");
+  sys::fs::remove_directories(HomeDir);
+  sys::fs::remove_directories(XDGDir);
+}
+
+#endif
