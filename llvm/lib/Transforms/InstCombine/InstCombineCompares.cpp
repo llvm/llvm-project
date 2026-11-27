@@ -4222,11 +4222,6 @@ static Instruction *
 foldICmpUSubSatOrUAddSatWithConstant(CmpPredicate Pred, SaturatingInst *II,
                                      const APInt &C,
                                      InstCombiner::BuilderTy &Builder) {
-  // This transform may end up producing more than one instruction for the
-  // intrinsic, so limit it to one user of the intrinsic.
-  if (!II->hasOneUse())
-    return nullptr;
-
   // Let Y        = [add/sub]_sat(X, C) pred C2
   //     SatVal   = The saturating value for the operation
   //     WillWrap = Whether or not the operation will underflow / overflow
@@ -4296,6 +4291,12 @@ foldICmpUSubSatOrUAddSatWithConstant(CmpPredicate Pred, SaturatingInst *II,
   APInt EquivOffset;
 
   Combination->getEquivalentICmp(EquivPred, EquivInt, EquivOffset);
+
+  // Ensure this fold never increases the number of instructions: Only fold when
+  // we replace the only use of the saturating operation, or when the offset is
+  // zero (so no add instruction is needed).
+  if (!II->hasOneUse() && !EquivOffset.isZero())
+    return nullptr;
 
   return new ICmpInst(
       EquivPred,

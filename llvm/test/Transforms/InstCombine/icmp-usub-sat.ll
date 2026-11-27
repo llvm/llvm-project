@@ -242,12 +242,40 @@ define i1 @icmp_eq_multiuse_positive(i8 %arg) {
 ; CHECK-LABEL: define i1 @icmp_eq_multiuse_positive
 ; CHECK-SAME: (i8 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG]], i8 2)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[SUB]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ARG]], 7
 ; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = call i8 @llvm.usub.sat.i8(i8 %arg, i8 2)
   %cmp = icmp eq i8 %sub, 5
+  call void @use.i8(i8 %sub)
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_multiuse_positive(i64 %arg) {
+; CHECK-LABEL: define i1 @icmp_ult_multiuse_positive
+; CHECK-SAME: (i64 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[ARG]], i64 4)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[ARG]], 6
+; CHECK-NEXT:    call void @use.i64(i64 [[SUB]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sub = call i64 @llvm.usub.sat.i64(i64 %arg, i64 4)
+  %cmp = icmp ult i64 %sub, 2
+  call void @use.i64(i64 %sub)
+  ret i1 %cmp
+}
+
+define i1 @icmp_slt_multiuse_positive(i8 %arg) {
+; CHECK-LABEL: define i1 @icmp_slt_multiuse_positive
+; CHECK-SAME: (i8 [[ARG:%.*]]) {
+; CHECK-NEXT:    [[SUB:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[ARG]], i8 2)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[SUB]], 5
+; CHECK-NEXT:    call void @use.i8(i8 [[SUB]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sub = call i8 @llvm.usub.sat.i8(i8 %arg, i8 2)
+  %cmp = icmp slt i8 %sub, 5
   call void @use.i8(i8 %sub)
   ret i1 %cmp
 }
@@ -398,7 +426,7 @@ define <2 x i1> @icmp_eq_vector_multiuse_positive_equal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_multiuse_positive_equal
 ; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> splat (i8 2))
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SUB]], splat (i8 5)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], splat (i8 7)
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[SUB]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -415,7 +443,7 @@ define <2 x i1> @icmp_eq_vector_multiuse_negative_equal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_multiuse_negative_equal
 ; CHECK-SAME: (<2 x i8> [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.usub.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> splat (i8 -20))
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[SUB]], splat (i8 5)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], splat (i8 -15)
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[SUB]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;

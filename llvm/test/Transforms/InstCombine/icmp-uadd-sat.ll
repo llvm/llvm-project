@@ -126,7 +126,7 @@ define i1 @icmp_eq_multiuse(i8 %arg) {
 ; CHECK-LABEL: define i1 @icmp_eq_multiuse(
 ; CHECK-SAME: i8 [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = call i8 @llvm.uadd.sat.i8(i8 [[ARG]], i8 2)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ADD]], 5
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[ARG]], 3
 ; CHECK-NEXT:    call void @use.i8(i8 [[ADD]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -238,7 +238,7 @@ define <2 x i1> @icmp_eq_vector_multiuse_equal(<2 x i8> %arg) {
 ; CHECK-LABEL: define <2 x i1> @icmp_eq_vector_multiuse_equal(
 ; CHECK-SAME: <2 x i8> [[ARG:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = call <2 x i8> @llvm.uadd.sat.v2i8(<2 x i8> [[ARG]], <2 x i8> splat (i8 2))
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ADD]], splat (i8 5)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[ARG]], splat (i8 3)
 ; CHECK-NEXT:    call void @use.v2i8(<2 x i8> [[ADD]])
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
