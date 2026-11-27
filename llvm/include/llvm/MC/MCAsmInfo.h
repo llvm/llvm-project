@@ -741,7 +741,7 @@ public:
   }
 
   /// Set whether assembly (inline or otherwise) should be parsed.
-  virtual void setUseIntegratedAssembler(bool Value) {
+  void setUseIntegratedAssembler(bool Value) {
     UseIntegratedAssembler = Value;
   }
 

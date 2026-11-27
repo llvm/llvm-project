@@ -294,16 +294,16 @@ declare void @_ZSt9terminatev()
 ; CHECK-THUMB-V7-FP-NOIAS:   .cfi_startproc
 ; CHECK-THUMB-V7-FP-NOIAS:   push   {r7, lr}
 ; CHECK-THUMB-V7-FP-NOIAS:   .cfi_def_cfa_offset 8
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 14, -4
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 7, -8
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset lr, -4
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset r7, -8
 ; CHECK-THUMB-V7-FP-NOIAS:   mov    r7, sp
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_def_cfa_register 7
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_def_cfa_register r7
 ; CHECK-THUMB-V7-FP-NOIAS:   vpush  {d8, d9, d10, d11, d12}
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 268, -16
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 267, -24
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 266, -32
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 265, -40
-; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset 264, -48
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset d12, -16
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset d11, -24
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset d10, -32
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset d9, -40
+; CHECK-THUMB-V7-FP-NOIAS:   .cfi_offset d8, -48
 ; CHECK-THUMB-V7-FP-NOIAS:   sub    sp, #24
 ; CHECK-THUMB-V7-FP-NOIAS:   .cfi_endproc
 
