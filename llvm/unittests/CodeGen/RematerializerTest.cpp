@@ -1476,8 +1476,15 @@ TEST_F(RematerializerTest, RollbackZeroGapRegion) {
         ASSERT_EQ(RW->getRegion(MBB0Top).second, RW->getRegion(MBB0Bot).first);
         ASSERT_REGION_SIZES();
 
-        RW->rematerializeToRegion(Cst, MBB0Bot, DRI);
+        RegisterIdx R1 = RW->rematerializeToRegion(Cst, MBB0Bot, DRI);
         RW.removeMIs(MBB0Top, 1).addMIs(MBB0Bot, 1);
+        ASSERT_REGION_SIZES();
+
+        // Rematerialize the rematerialization in the same region. This
+        // invalidates %cst's re-creation position (the first rematerialization)
+        // in the rollbacker and replaces it with the next valid position (the
+        // second rematerialization).
+        RW->rematerializeToRegion(R1, MBB0Bot, DRI.clear());
         ASSERT_REGION_SIZES();
 
         // Rolling back must leave region sizes and boundaries identical to the

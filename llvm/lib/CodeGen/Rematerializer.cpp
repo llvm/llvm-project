@@ -1200,10 +1200,11 @@ void Rollbacker::rematerializerNoteRegWillBeDeleted(
       // If we hit the deleted register's own rematerializations we should not
       // move over them; this ensures that the register is always re-created
       // before its rematerializations in the same block. It is safe because
-      // regisetrs are re-created before their rematerializations are deleted.
+      // registers are re-created before their rematerializations are deleted.
       RegisterIdx CandRegIdx = Remater.getDefRegIdx(CandMI);
       if ((CandRegIdx != Rematerializer::NoReg &&
-           Remater.getOriginOrSelf(CandRegIdx) == RegIdx) ||
+           Remater.getOriginOrSelf(CandRegIdx) ==
+               Remater.getOriginOrSelf(RegIdx)) ||
           !isRollbackableRegIdx(CandRegIdx, Remater))
         break;
 
