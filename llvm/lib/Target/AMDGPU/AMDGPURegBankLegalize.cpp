@@ -96,17 +96,16 @@ FunctionPass *llvm::createAMDGPURegBankLegalizeLegacyPass() {
   return new AMDGPURegBankLegalizeLegacy();
 }
 
-const RegBankLegalizeRules &getRules(const GCNSubtarget &ST,
-                                     MachineRegisterInfo &MRI) {
+const RegBankLegalizeRules &getRules(const GCNSubtarget &ST) {
   static std::mutex GlobalMutex;
   static SmallDenseMap<unsigned, std::unique_ptr<RegBankLegalizeRules>>
       CacheForRuleSet;
   std::lock_guard<std::mutex> Lock(GlobalMutex);
   auto [It, Inserted] = CacheForRuleSet.try_emplace(ST.getGeneration());
   if (Inserted)
-    It->second = std::make_unique<RegBankLegalizeRules>(ST, MRI);
+    It->second = std::make_unique<RegBankLegalizeRules>(ST);
   else
-    It->second->refreshRefs(ST, MRI);
+    It->second->refreshRefs(ST);
   return *It->second;
 }
 
@@ -441,11 +440,10 @@ runRegBankLegalize(MachineFunction &MF,
   RAIIMFObserverInstaller MFObserverInstaller(MF, Observer);
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
 
   // RegBankLegalizeRules is initialized with assigning sets of IDs to opcodes.
-  const RegBankLegalizeRules &RBLRules = getRules(ST, MRI);
+  const RegBankLegalizeRules &RBLRules = getRules(ST);
 
   // Logic that does legalization based on IDs assigned to Opcode.
   RegBankLegalizeHelper RBLHelper(B, MUI, &VT, RBI, RBLRules);
@@ -504,7 +502,7 @@ runRegBankLegalize(MachineFunction &MF,
     }
   }
 
-  assert(!getAnySgprS1(MRI).isValid() &&
+  assert(!getAnySgprS1(MF.getRegInfo()).isValid() &&
          "Registers with sgpr reg bank and S1 LLT are not legal after "
          "AMDGPURegBankLegalize. Should lower to sgpr S32");
 

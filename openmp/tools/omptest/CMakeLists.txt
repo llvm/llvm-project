@@ -13,6 +13,8 @@ option(LIBOMPTEST_BUILD_UNITTESTS
        "Build ompTest's unit tests, requires GoogleTest." OFF)
 option(LIBOMPTEST_INSTALL_COMPONENTS
        "Install ompTest library, headers and package files." OFF)
+option(LIBOMPTEST_USE_SYSTEM_GTEST
+       "Use the system GoogleTest instead of the one vendored by LLVM." OFF)
 
 # Exit early if OMPT support or LLVM-tests were disabled by the user.
 if((NOT LIBOMP_OMPT_SUPPORT) OR (NOT LLVM_INCLUDE_TESTS))
@@ -73,25 +75,32 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
     set(LIBOMPTEST_BUILD_STANDALONE OFF)
   endif()
 
-  message(STATUS "omptest build mode: GTest-based")
+  if(LIBOMPTEST_USE_SYSTEM_GTEST)
+    message(STATUS "omptest build mode: GTest-based (system GoogleTest)")
 
-  # Add GoogleTest-based header and embed GTest symbols into the shared lib.
-  # Merging of GTest is desired, such that omptest is self-contained and
-  # independent of external GTest installations.
-  target_sources(omptest PRIVATE
-    $<TARGET_OBJECTS:default_gtest>
-  )
+    find_package(GTest REQUIRED)
+    target_link_libraries(omptest PUBLIC GTest::gtest)
+  else()
+    message(STATUS "omptest build mode: GTest-based")
 
-  # Take GTest's include directories and compile definitions, and make them
-  # available to dependent targets such as the unit tests. BUILD_INTERFACE
-  # keeps default_gtest out of the link interface, which install(EXPORT)
-  # would otherwise require to be in an export set.
-  target_include_directories(omptest PUBLIC
-    $<BUILD_INTERFACE:$<TARGET_PROPERTY:default_gtest,INCLUDE_DIRECTORIES>>
-  )
-  target_compile_definitions(omptest PUBLIC
-    $<BUILD_INTERFACE:$<TARGET_PROPERTY:default_gtest,COMPILE_DEFINITIONS>>
-  )
+    # Add GoogleTest-based header and embed GTest symbols into the shared lib.
+    # Merging of GTest is desired, such that omptest is self-contained and
+    # independent of external GTest installations.
+    target_sources(omptest PRIVATE
+      $<TARGET_OBJECTS:default_gtest>
+    )
+
+    # Take GTest's include directories and compile definitions, and make them
+    # available to dependent targets such as the unit tests. BUILD_INTERFACE
+    # keeps default_gtest out of the link interface, which install(EXPORT)
+    # would otherwise require to be in an export set.
+    target_include_directories(omptest PUBLIC
+      $<BUILD_INTERFACE:$<TARGET_PROPERTY:default_gtest,INCLUDE_DIRECTORIES>>
+    )
+    target_compile_definitions(omptest PUBLIC
+      $<BUILD_INTERFACE:$<TARGET_PROPERTY:default_gtest,COMPILE_DEFINITIONS>>
+    )
+  endif()
 
   # Link against Threads, which may be required for GTest.
   # But keep it out of the link interface to avoid transitive dependencies.
@@ -107,9 +116,8 @@ if ((NOT LIBOMPTEST_BUILD_STANDALONE) OR LIBOMPTEST_BUILD_UNITTESTS)
 else()
   message(STATUS "omptest build mode: standalone")
 
-  # Add 'standalone' compile definitions
-  target_compile_definitions(omptest PRIVATE
-    -DOPENMP_LIBOMPTEST_BUILD_STANDALONE)
+  set(OPENMP_LIBOMPTEST_BUILD_STANDALONE ON)
+  set(LIBOMPTEST_USE_SYSTEM_GTEST OFF)
 
   # Add 'standalone' source files
   target_sources(omptest PRIVATE
@@ -130,9 +138,13 @@ endif()
 
 openmp_register_meta_dep(omptest)
 
+configure_file(./include/OmptestConfig.h.cmake
+               ${CMAKE_CURRENT_BINARY_DIR}/include/OmptestConfig.h)
+
 # Add common include directories.
 target_include_directories(omptest PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
   $<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${LIBOMP_HEADERS_INSTALL_PATH}/omptest>
 )
 
@@ -157,6 +169,8 @@ if(LIBOMPTEST_INSTALL_COMPONENTS)
   install(DIRECTORY ./include/
           DESTINATION "${OMPTEST_HEADER_INSTALL_DIR}"
           FILES_MATCHING PATTERN "*.h")
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/include/OmptestConfig.h
+          DESTINATION "${OMPTEST_HEADER_INSTALL_DIR}")
 
   # Install library and export targets.
   # Note: find_package(omptest) may require setting of PATH_SUFFIXES

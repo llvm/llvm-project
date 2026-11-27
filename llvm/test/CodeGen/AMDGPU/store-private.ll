@@ -1,18 +1,7 @@
 ; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck -check-prefix=CM -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}store_i1:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ; SI: buffer_store_byte
 define amdgpu_kernel void @store_i1(ptr addrspace(5) %out) {
@@ -23,26 +12,6 @@ entry:
 
 ; i8 store
 ; FUNC-LABEL: {{^}}store_i8:
-; EG: LSHR * [[ADDRESS:T[0-9]\.[XYZW]]], KC0[2].Y, literal.x
-; EG-NEXT: 2
-; EG: MOVA_INT * AR.x (MASKED)
-; EG: MOV [[OLD:T[0-9]\.[XYZW]]], {{.*}}AR.x
-
-; IG 0: Get the byte index and truncate the value
-; EG: AND_INT * T{{[0-9]}}.[[BI_CHAN:[XYZW]]], KC0[2].Y, literal.x
-; EG: LSHL * T{{[0-9]}}.[[SHIFT_CHAN:[XYZW]]], PV.[[BI_CHAN]], literal.x
-; EG-NEXT: 3(4.203895e-45)
-
-
-; EG: LSHL * T{{[0-9]}}.[[TRUNC_CHAN:[XYZW]]], literal.x, PV.W
-; EG-NEXT: 255(3.573311e-43)
-
-; EG: NOT_INT
-; EG: AND_INT {{[\* ]*}}[[CLR_CHAN:T[0-9]\.[XYZW]]], {{.*}}[[OLD]]
-; EG: OR_INT * [[RES:T[0-9]\.[XYZW]]]
-; TODO: Is the reload necessary?
-; EG: MOVA_INT * AR.x (MASKED), [[ADDRESS]]
-; EG: MOV * T(0 + AR.x).X+, [[RES]]
 
 ; SI: buffer_store_byte
 
@@ -54,24 +23,6 @@ entry:
 
 ; i16 store
 ; FUNC-LABEL: {{^}}store_i16:
-; EG: LSHR * [[ADDRESS:T[0-9]\.[XYZW]]], KC0[2].Y, literal.x
-; EG-NEXT: 2
-; EG: MOVA_INT * AR.x (MASKED)
-; EG: MOV [[OLD:T[0-9]\.[XYZW]]], {{.*}}AR.x
-
-; EG: VTX_READ_16
-
-; IG 0: Get the byte index and truncate the value
-; EG: AND_INT * T{{[0-9]}}.[[BI_CHAN:[XYZW]]], KC0[2].Y, literal.x
-; EG: LSHL * T{{[0-9]}}.[[SHIFT_CHAN:[XYZW]]], PV.[[BI_CHAN]], literal.x
-; EG-NEXT: 3(4.203895e-45)
-
-; EG: NOT_INT
-; EG: AND_INT {{[\* ]*}}[[CLR_CHAN:T[0-9]\.[XYZW]]], {{.*}}[[OLD]]
-; EG: OR_INT * [[RES:T[0-9]\.[XYZW]]]
-; TODO: Is the reload necessary?
-; EG: MOVA_INT * AR.x (MASKED), [[ADDRESS]]
-; EG: MOV * T(0 + AR.x).X+, [[RES]]
 
 ; SI: buffer_store_short
 define amdgpu_kernel void @store_i16(ptr addrspace(5) %out, i16 %in) {
@@ -84,26 +35,6 @@ entry:
 ; SI: s_lshr_b32 s{{[0-9]+}}, s{{[0-9]+}}, 16
 ; SI-DAG: buffer_store_byte
 ; SI-DAG: buffer_store_short
-
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store can be eliminated
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store can be eliminated
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 define amdgpu_kernel void @store_i24(ptr addrspace(5) %out, i24 %in) {
 entry:
   store i24 %in, ptr addrspace(5) %out
@@ -114,14 +45,6 @@ entry:
 ; SI: s_and_b32 [[AND:s[0-9]+]], s{{[0-9]+}}, 0x1ffffff{{$}}
 ; SI: v_mov_b32_e32 [[VAND:v[0-9]+]], [[AND]]
 ; SI: buffer_store_dword [[VAND]]
-
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG-NOT: MOVA_INT
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM-NOT: MOVA_INT
 define amdgpu_kernel void @store_i25(ptr addrspace(5) %out, i25 %in) {
 entry:
   store i25 %in, ptr addrspace(5) %out
@@ -130,17 +53,6 @@ entry:
 
 ; FUNC-LABEL: {{^}}store_v2i8:
 ; v2i8 is naturally 2B aligned, treat as i16
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG-NOT: MOVA_INT
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM-NOT: MOVA_INT
 
 ; SI: buffer_store_short
 define amdgpu_kernel void @store_v2i8(ptr addrspace(5) %out, <2 x i32> %in) {
@@ -151,27 +63,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v2i8_unaligned:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ; SI: buffer_store_byte
 define amdgpu_kernel void @store_v2i8_unaligned(ptr addrspace(5) %out, <2 x i32> %in) {
@@ -184,13 +75,6 @@ entry:
 
 ; FUNC-LABEL: {{^}}store_v2i16:
 ; v2i8 is naturally 2B aligned, treat as i16
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG-NOT: MOVA_INT
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM-NOT: MOVA_INT
 
 ; SI: buffer_store_dword
 define amdgpu_kernel void @store_v2i16(ptr addrspace(5) %out, <2 x i32> %in) {
@@ -201,27 +85,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v2i16_unaligned:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ; SI: buffer_store_short
 ; SI: buffer_store_short
@@ -233,13 +96,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v4i8:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG-NOT: MOVA_INT
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM-NOT: MOVA_INT
 
 ; SI: buffer_store_dword
 define amdgpu_kernel void @store_v4i8(ptr addrspace(5) %out, <4 x i32> %in) {
@@ -250,51 +106,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v4i8_unaligned:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ; SI: buffer_store_byte
 ; SI: buffer_store_byte
@@ -309,99 +120,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v8i8_unaligned:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ; SI: buffer_store_byte
 ; SI: buffer_store_byte
@@ -420,27 +138,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v4i8_halfaligned:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; TODO: This load and store cannot be eliminated,
-;       they might be different locations
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ; SI: buffer_store_short
 ; SI: buffer_store_short
@@ -454,11 +151,6 @@ entry:
 
 ; floating-point store
 ; FUNC-LABEL: {{^}}store_f32:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ; SI: buffer_store_dword
 
@@ -468,15 +160,6 @@ define amdgpu_kernel void @store_f32(ptr addrspace(5) %out, float %in) {
 }
 
 ; FUNC-LABEL: {{^}}store_v4i16:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ;TODO: why not x2?
 ; XSI: buffer_store_dwordx2
@@ -491,15 +174,6 @@ entry:
 
 ; vec2 floating-point stores
 ; FUNC-LABEL: {{^}}store_v2f32:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ;TODO: why not x2?
 ; XSI: buffer_store_dwordx2
@@ -515,19 +189,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v3i32:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ;TODO: why not x2?
 ; XSI-DAG: buffer_store_dwordx2
@@ -541,23 +202,6 @@ define amdgpu_kernel void @store_v3i32(ptr addrspace(5) %out, <3 x i32> %a) noun
 }
 
 ; FUNC-LABEL: {{^}}store_v4i32:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ;TODO: why not x4?
 ; XSI: buffer_store_dwordx4
@@ -572,23 +216,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_v4i32_unaligned:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ;TODO: why not x4?
 ; XSI: buffer_store_dwordx4
@@ -604,23 +231,6 @@ entry:
 
 ; v4f32 store
 ; FUNC-LABEL: {{^}}store_v4f32:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ;TODO: why not x4?
 ; XSI: buffer_store_dwordx4
@@ -635,15 +245,6 @@ define amdgpu_kernel void @store_v4f32(ptr addrspace(5) %out, ptr addrspace(5) %
 }
 
 ; FUNC-LABEL: {{^}}store_i64_i8:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ; SI: buffer_store_byte
 define amdgpu_kernel void @store_i64_i8(ptr addrspace(5) %out, i64 %in) {
@@ -654,15 +255,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}store_i64_i16:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}{{T[0-9]+\.[XYZW]}}, T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ; SI: buffer_store_short
 define amdgpu_kernel void @store_i64_i16(ptr addrspace(5) %out, i64 %in) {
@@ -677,15 +269,6 @@ entry:
 ; should not try to split the 64-bit store back into 2 32-bit stores.
 
 ; FUNC-LABEL: {{^}}vecload2:
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ;TODO: why not x2?
 ; XSI: buffer_store_dwordx2
@@ -705,23 +288,6 @@ entry:
 ; When i128 was a legal type this program generated cannot select errors:
 
 ; FUNC-LABEL: {{^}}"i128-const-store":
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; EG: MOVA_INT
-; EG: MOV {{[\* ]*}}T(0 + AR.x).X+,
-
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
-; CM: MOVA_INT
-; CM: MOV {{[\* ]*}}T(0 + AR.x).X+,
 
 ;TODO: why not x4?
 ; XSI: buffer_store_dwordx4

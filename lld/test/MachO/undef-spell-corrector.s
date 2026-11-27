@@ -19,7 +19,7 @@
 # RUN: %lld %t/test.o -dylib -o %t.dylib
 # RUN: not %lld %t.dylib %t/bcde-abcd-abde.o -o /dev/null 2>&1 | FileCheck --check-prefix=INSERT %s -DFILE=%t.dylib
 
-# INSERT:      error: undefined symbol: abde
+# INSERT:      error: undefined symbol: bcde
 # INSERT-NEXT: >>> referenced by {{.*}}
 # INSERT-NEXT: >>> did you mean: abcde
 # INSERT-NEXT: >>> defined in: [[FILE]]
@@ -27,27 +27,27 @@
 # INSERT-NEXT: >>> referenced by {{.*}}
 # INSERT-NEXT: >>> did you mean: abcde
 # INSERT-NEXT: >>> defined in: [[FILE]]
-# INSERT:      error: undefined symbol: bcde
+# INSERT:      error: undefined symbol: abde
 # INSERT-NEXT: >>> referenced by {{.*}}
 # INSERT-NOT:  >>>
 
 ## Substitute a character.
 # RUN: not %lld %t/test.o %t/bbcde-abcdd.o -o /dev/null 2>&1 | FileCheck --check-prefix=SUBST %s
 
-# SUBST:      error: undefined symbol: abcdd
+# SUBST:      error: undefined symbol: bbcde
 # SUBST-NEXT: >>> referenced by {{.*}}
 # SUBST-NEXT: >>> did you mean: abcde
-# SUBST:      error: undefined symbol: bbcde
+# SUBST:      error: undefined symbol: abcdd
 # SUBST-NEXT: >>> referenced by {{.*}}
 # SUBST-NEXT: >>> did you mean: abcde
 
 ## Delete a character.
 # RUN: not %lld %t/test.o %t/aabcde-abcdee.o -o /dev/null 2>&1 | FileCheck --check-prefix=DELETE %s
 
-# DELETE:      error: undefined symbol: abcdee
+# DELETE:      error: undefined symbol: aabcde
 # DELETE-NEXT: >>> referenced by {{.*}}
 # DELETE-NEXT: >>> did you mean: abcde
-# DELETE:      error: undefined symbol: aabcde
+# DELETE:      error: undefined symbol: abcdee
 # DELETE-NEXT: >>> referenced by {{.*}}
 # DELETE-NEXT: >>> did you mean: abcde
 

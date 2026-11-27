@@ -17,6 +17,6 @@ body: |
     %0:gr64 = COPY $rdi
     %1:gr64 = COPY $rsi
     %2:gr32 = COPY $edx
-    INLINEASM &"", attdialect, regdef:GR64 foldable, def %3:gr64, regdef-ec:GR64 foldable, def early-clobber %4:gr64, regdef:GR64, def %5:gr64, regdef foldable, def %6:gr64, reguse:GR64 foldable, %0, 1076101129 /* reguse:GR32 foldable */, %2, reguse foldable, %0, reguse tiedto:$0, %1(tied-def 3)
+    INLINEASM &"", attdialect, regdef:GR64 foldable, def %3:gr64, regdef-ec:GR64 foldable, def early-clobber %4:gr64, regdef:GR64, def %5:gr64, regdef foldable, def %6:gr64, reguse:GR64 foldable, %0, reguse:GR32 foldable, %2, reguse foldable, %0, reguse tiedto:$0, %1(tied-def 3)
     RET64
 ...

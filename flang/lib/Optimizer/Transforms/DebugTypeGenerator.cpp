@@ -20,6 +20,7 @@
 #include "mlir/Pass/Pass.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace fir {
 
@@ -456,6 +457,24 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   if (getModuleScope && sourceName.procs.empty() && !sourceName.modules.empty())
     scope = getModuleScope(sourceName.modules);
 
+  // The instances of a parameterized type differ only in their kind values,
+  // so those must be part of the name. A debugger can only look up a name made
+  // of identifier characters. Follow gfortran, which names `pdt(4)` `PDTpdt_4`
+  // so that it cannot take the name of a plain type such as `pdt_4`. A negative
+  // value is spelled as in the uniqued name: `PDTpdt_N1` for `pdt(-1)`.
+  std::string name = sourceName.name;
+  if (!sourceName.kinds.empty()) {
+    name = "PDT" + name;
+    llvm::raw_string_ostream os(name);
+    for (std::int64_t kind : sourceName.kinds) {
+      os << '_';
+      if (kind < 0)
+        os << 'N' << -kind;
+      else
+        os << kind;
+    }
+  }
+
   // The fir.type_info is at the derived type definition, so it names the file
   // the type is written in. That is not the file being compiled when the
   // definition was read through an INCLUDE statement. A type with no
@@ -486,6 +505,11 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   for (auto [fieldName, fieldTy] : Ty.getTypeList()) {
     derivedTypeCache.preComponentVisitUpdate();
     auto [byteSize, byteAlign] = getFieldSizeAndAlign(fieldTy);
+    // The components of a packed type are not aligned, but each still takes up
+    // its allocation size.
+    std::uint64_t allocSize = llvm::alignTo(byteSize, byteAlign);
+    if (Ty.isPacked())
+      byteAlign = 1;
     std::optional<llvm::ArrayRef<int64_t>> lowerBounds =
         fir::getComponentLowerBoundsIfNonDefault(Ty, fieldName, module,
                                                  symbolTable);
@@ -526,14 +550,18 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
         /*flags=*/mlir::LLVM::DIFlags::Zero,
         /*extra data=*/nullptr);
     elements.push_back(tyAttr);
-    offset += llvm::alignTo(byteSize, byteAlign);
+    offset += allocSize;
     derivedTypeCache.postComponentVisitUpdate(nestedRecursions);
   }
+  // A debugger steps through an array of the type by its size, so the size
+  // must include the padding that keeps the next element aligned. Take it from
+  // the data layout, as for a component.
+  std::uint64_t typeSize = getFieldSizeAndAlign(Ty).first;
 
   auto finalAttr = mlir::LLVM::DICompositeTypeAttr::get(
       context, recId, /*isRecSelf=*/false, llvm::dwarf::DW_TAG_structure_type,
-      mlir::StringAttr::get(context, sourceName.name), fileAttr, line, scope,
-      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
+      mlir::StringAttr::get(context, name), fileAttr, line, scope,
+      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, typeSize * 8,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
       /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
       /*discriminator=*/nullptr, elements);
@@ -574,11 +602,12 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertTupleType(
     offset += llvm::alignTo(byteSize, byteAlign);
     derivedTypeCache.postComponentVisitUpdate(nestedRecursions);
   }
+  std::uint64_t typeSize = getFieldSizeAndAlign(Ty).first;
 
   auto typeAttr = mlir::LLVM::DICompositeTypeAttr::get(
       context, llvm::dwarf::DW_TAG_structure_type,
       mlir::StringAttr::get(context, ""), fileAttr, /*line=*/0, scope,
-      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, offset * 8,
+      /*baseType=*/nullptr, mlir::LLVM::DIFlags::Zero, typeSize * 8,
       /*alignInBits=*/0, /*dataLocation=*/nullptr, /*rank=*/nullptr,
       /*allocated=*/nullptr, /*associated=*/nullptr, /*identifier=*/nullptr,
       /*discriminator=*/nullptr, elements);

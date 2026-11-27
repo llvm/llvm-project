@@ -4,21 +4,29 @@
 
 ; The operands of the replaced division are not extracted.
 ; YAML-LABEL: Function: urem_udiv_lane0
-; YAML:       Cost: '-82'
+; YAML:       Cost: '-98'
 ; The vector remainder does not pair with the scalar division.
 ; YAML-LABEL: Function: urem_udiv_use_before
-; YAML:       Cost: '-82'
+; YAML:       Cost: '-74'
+; The operand extracts of the replaced division are neither costed nor credited.
+; YAML-LABEL: Function: urem_udiv_ymm_lane5
+; YAML:       Cost: '-201'
+; The extract for the vectorized user does not depend on the operand order.
+; YAML-LABEL: Function: urem_udiv_operand_vectorized_user
+; YAML:       Cost: '-103'
+; The extract for the user out of the loop is not scaled by the loop.
+; YAML-LABEL: Function: urem_udiv_loop_exit_user
+; YAML:       Cost: '-195'
 
 define void @urem_udiv_lane0(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-LABEL: define void @urem_udiv_lane0(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -58,14 +66,11 @@ define void @srem_sdiv_lane2(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-LABEL: define void @srem_sdiv_lane2(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PA2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
-; CHECK-NEXT:    [[PB2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A2:%.*]] = load i32, ptr [[PA2]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B2:%.*]] = load i32, ptr [[PB2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = srem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[D2:%.*]] = sdiv i32 [[A2]], [[B2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D2:%.*]] = extractelement <4 x i32> [[TMP3]], i64 2
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    store i32 [[D2]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
@@ -108,9 +113,8 @@ define void @urem_udiv_reordered(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = udiv <2 x i32> [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[Q]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 2, i32 0, i32 3, i32 1>
 ; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[R]], align 4
@@ -400,10 +404,9 @@ define void @urem_udiv_phi_operands(ptr %p, ptr %r, ptr %q, i1 %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ [[TMP1]], %[[ENTRY]] ], [ [[TMP1]], %[[ENTRY]] ]
 ; CHECK-NEXT:    [[PR0:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = urem <4 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = udiv <4 x i32> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP5]], i64 0
 ; CHECK-NEXT:    store <4 x i32> [[TMP4]], ptr [[PR0]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP3]], i64 0
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -467,8 +470,9 @@ define void @urem_udiv_arg_operands(i32 %a0, i32 %b0, i32 %a1, i32 %b1, i32 %a2,
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[B2]], i64 2
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[B3]], i64 3
 ; CHECK-NEXT:    [[TMP8:%.*]] = urem <4 x i32> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = udiv <4 x i32> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP9]], i64 0
 ; CHECK-NEXT:    store <4 x i32> [[TMP8]], ptr [[PR0]], align 4
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -496,9 +500,9 @@ define void @urem_udiv_uniform_const(ptr %a, ptr %r, ptr %q) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem <4 x i32> [[TMP0]], splat (i32 7)
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], 7
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <4 x i32> [[TMP0]], splat (i32 7)
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -533,9 +537,9 @@ define void @urem_udiv_nonuniform_const(ptr %a, ptr %r, ptr %q) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = urem <4 x i32> [[TMP0]], <i32 3, i32 5, i32 7, i32 9>
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <4 x i32> [[TMP0]], <i32 3, i32 5, i32 7, i32 9>
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP2]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP1]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -571,10 +575,10 @@ define void @urem_udiv_mixed_const(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> <i32 poison, i32 7, i32 7, i32 7>, i32 [[B0]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -614,7 +618,6 @@ define void @urem_udiv_dividend_many_uses(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
 ; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
 ; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
 ; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
@@ -624,7 +627,8 @@ define void @urem_udiv_dividend_many_uses(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
 ; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -718,11 +722,10 @@ define void @srem_sdiv_exact(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = srem <4 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[D0:%.*]] = sdiv exact i32 [[A0]], [[B0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = sdiv <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP3]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -780,11 +783,11 @@ define void @urem_udiv_operand_other_user(ptr %x, ptr %y, ptr %r, ptr %q, ptr %o
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[Y0]], i64 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i32> [[TMP8]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP9]], i64 0
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = urem <4 x i32> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = udiv <4 x i32> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP11]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP5]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP12]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -835,14 +838,11 @@ define void @urem_udiv_ymm_lane5(ptr %a, ptr %b, ptr %r, ptr %q) {
 ; CHECK-LABEL: define void @urem_udiv_ymm_lane5(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[PA5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 5
-; CHECK-NEXT:    [[PB5:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[A]], align 4
-; CHECK-NEXT:    [[A5:%.*]] = load i32, ptr [[PA5]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B5:%.*]] = load i32, ptr [[PB5]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = urem <8 x i32> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[D5:%.*]] = udiv i32 [[A5]], [[B5]]
+; CHECK-NEXT:    [[TMP3:%.*]] = udiv <8 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D5:%.*]] = extractelement <8 x i32> [[TMP3]], i64 5
 ; CHECK-NEXT:    store i32 [[D5]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <8 x i32> [[TMP2]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -914,15 +914,14 @@ define void @urem_udiv_operand_vectorized_user(ptr %x, ptr %b, ptr %r, ptr %q, p
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = urem <4 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[TMP4]], [[B0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP4]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP1]], splat (i32 5)
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP4]], 5
 ; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i32> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP5]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[R]], align 4
 ; CHECK-NEXT:    ret void
@@ -983,17 +982,17 @@ define void @urem_udiv_loop_exit_user(ptr %x, ptr %b, ptr %r, ptr %q, ptr %out, 
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = urem <4 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
-; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[TMP4]], [[B0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = udiv <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[D0:%.*]] = extractelement <4 x i32> [[TMP4]], i64 0
 ; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
 ; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[R]], align 4
 ; CHECK-NEXT:    [[INEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INEXT]], [[N]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[A0_LCSSA:%.*]] = phi i32 [ [[TMP4]], %[[LOOP]] ]
+; CHECK-NEXT:    [[A0_LCSSA:%.*]] = phi i32 [ [[TMP5]], %[[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[A0_LCSSA]], ptr [[OUT]], align 4
 ; CHECK-NEXT:    ret void
 ;

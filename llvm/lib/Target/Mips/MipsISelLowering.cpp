@@ -231,7 +231,6 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
   setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i32,   Custom);
-  setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i32,   Custom);
 
   setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
@@ -280,7 +279,6 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
       setOperationAction(ISD::STORE,              MVT::i64,   Custom);
     }
     setOperationAction(ISD::FP_TO_SINT,         MVT::i64,   Custom);
-    setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i64,   Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i64,   Custom);
     setOperationAction(ISD::SHL_PARTS,          MVT::i64,   Custom);
     setOperationAction(ISD::SRA_PARTS,          MVT::i64,   Custom);
@@ -363,6 +361,12 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FP_TO_FP16,        MVT::f32,   Expand);
   setOperationAction(ISD::FP16_TO_FP,        MVT::f64,   Expand);
   setOperationAction(ISD::FP_TO_FP16,        MVT::f64,   Expand);
+  // The constrained f16 conversions default to Legal. Use libcalls for them,
+  // extending to f64 through f32.
+  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f32, LibCall);
+  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f32, LibCall);
+  setOperationAction(ISD::STRICT_FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::STRICT_FP_TO_FP16, MVT::f64, LibCall);
 
   setOperationAction(ISD::EH_RETURN, MVT::Other, Custom);
 
@@ -417,13 +421,14 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   // Sink shifts into their users' blocks to expose extract patterns.
   setHasExtractBitsInsn(Subtarget.hasExtractInsert());
 
-  // R5900 has no LL/SC instructions for atomic operations
-  if (Subtarget.isR5900())
-    setMaxAtomicSizeInBitsSupported(0);
-  else if (Subtarget.isGP64bit())
+  // MIPS I and the R5900 have no LL/SC instructions for atomic operations.
+  bool HasLLSC = Subtarget.hasMips2() && !Subtarget.isR5900();
+  if (HasLLSC && Subtarget.isGP64bit())
     setMaxAtomicSizeInBitsSupported(64);
-  else
+  else if (HasLLSC)
     setMaxAtomicSizeInBitsSupported(32);
+  else
+    setMaxAtomicSizeInBitsSupported(0);
 
   setMinFunctionAlignment(Subtarget.isGP64bit() ? Align(8) : Align(4));
 
@@ -1308,8 +1313,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::STORE:              return lowerSTORE(Op, DAG);
   case ISD::EH_DWARF_CFA:       return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::STRICT_FP_TO_SINT:
-  case ISD::STRICT_FP_TO_UINT:
-    return lowerSTRICT_FP_TO_INT(Op, DAG);
+    return lowerSTRICT_FP_TO_SINT(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
@@ -3202,18 +3206,20 @@ SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
   return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op.getValueType(), Trunc);
 }
 
-SDValue MipsTargetLowering::lowerSTRICT_FP_TO_INT(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  assert(Op->isStrictFPOpcode());
-  SDValue SrcVal = Op.getOperand(1);
-  SDLoc Loc(Op);
+SDValue MipsTargetLowering::lowerSTRICT_FP_TO_SINT(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  if (Op.getValueSizeInBits() > 32 && Subtarget.isSingleFloat())
+    return SDValue();
 
-  SDValue Result =
-      DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
-                                                           : ISD::FP_TO_UINT,
-                  Loc, Op.getValueType(), SrcVal);
-
-  return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
+  // Keep the conversion on the chain so that it is not removed or reordered
+  // with respect to other operations that access the FP environment.
+  SDLoc DL(Op);
+  EVT FPTy = EVT::getFloatingPointVT(Op.getValueSizeInBits());
+  SDValue Trunc = DAG.getNode(MipsISD::STRICT_TruncIntFP, DL,
+                              DAG.getVTList(FPTy, MVT::Other), Op.getOperand(0),
+                              Op.getOperand(1));
+  SDValue Res = DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Trunc);
+  return DAG.getMergeValues({Res, Trunc.getValue(1)}, DL);
 }
 
 // FCSR.RM uses 0, 1, 2 and 3 for to nearest, toward zero, toward +inf and
@@ -4809,9 +4815,22 @@ bool MipsTargetLowering::isLegalAddImmediate(int64_t Imm) const {
 unsigned MipsTargetLowering::ComputeNumSignBitsForTargetNode(
     SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
     unsigned Depth) const {
-  // cmp.cond.fmt writes 0 or -1.
-  if (Op.getOpcode() == MipsISD::R6FCmp)
+  switch (Op.getOpcode()) {
+  case MipsISD::R6FCmp:
+  case MipsISD::STRICT_FPCmpR6:
+  case MipsISD::STRICT_FPCmpsR6:
+    // cmp.cond.fmt writes 0 or -1.
     return Op.getScalarValueSizeInBits();
+  }
+
+  // The low word of an f64 compare mask is taken with EXTRACT_SUBREG, so that
+  // FP users can read it from the FPR. Each word of a value that is 0 or -1 is
+  // also 0 or -1.
+  if (Op.isMachineOpcode() &&
+      Op.getMachineOpcode() == TargetOpcode::EXTRACT_SUBREG &&
+      Op.getConstantOperandVal(1) == Mips::sub_lo &&
+      DAG.ComputeNumSignBits(Op.getOperand(0), Depth + 1) == 64)
+    return 32;
   return 1;
 }
 

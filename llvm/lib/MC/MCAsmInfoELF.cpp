@@ -36,10 +36,6 @@ MCSection *MCAsmInfoELF::getStackSection(MCContext &Ctx, bool Exec) const {
                            Exec ? ELF::SHF_EXECINSTR : 0U);
 }
 
-bool MCAsmInfoELF::useCodeAlign(const MCSection &Sec) const {
-  return static_cast<const MCSectionELF &>(Sec).getFlags() & ELF::SHF_EXECINSTR;
-}
-
 MCAsmInfoELF::MCAsmInfoELF(const MCTargetOptions &Options)
     : MCAsmInfo(Options) {
   HasIdentDirective = true;

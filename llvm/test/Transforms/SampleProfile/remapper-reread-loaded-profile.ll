@@ -20,28 +20,43 @@
 ;
 ; readFuncProfiles now skips profiles that are already loaded, so foo keeps the
 ; same counts with and without the remapping file and no warning is emitted.
+; Passing -sample-profile-allow-reread-loaded-profile restores the legacy
+; re-read behavior while accumulating duplicate vtable counts without emitting
+; the "Duplicate vtable type" warning.
 ;
-; bar(int) is read exactly once in both cases (51).
+; bar(int) is read exactly once in all cases (51).
 ;
 ; RUN: llvm-profdata merge -sample -extbinary -extbinary-write-vtable-type-prof \
 ; RUN:   %S/Inputs/remapper-reread-loaded-profile.prof -o %t.afdo
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo \
 ; RUN:   -salvage-stale-profile -salvage-unused-profile -S 2>&1 \
-; RUN:   | FileCheck %s --implicit-check-not='Duplicate vtable type'
+; RUN:   | FileCheck %s --check-prefixes=CHECK,DEFAULT \
+; RUN:       --implicit-check-not='Duplicate vtable type'
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo \
 ; RUN:   -sample-profile-remapping-file=%S/Inputs/remapper-reread-loaded-profile.map \
 ; RUN:   -salvage-stale-profile -salvage-unused-profile -S 2>&1 \
-; RUN:   | FileCheck %s --implicit-check-not='Duplicate vtable type'
+; RUN:   | FileCheck %s --check-prefixes=CHECK,DEFAULT \
+; RUN:       --implicit-check-not='Duplicate vtable type'
+; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.afdo \
+; RUN:   -sample-profile-remapping-file=%S/Inputs/remapper-reread-loaded-profile.map \
+; RUN:   -sample-profile-allow-reread-loaded-profile \
+; RUN:   -salvage-stale-profile -salvage-unused-profile -S 2>&1 \
+; RUN:   | FileCheck %s --check-prefixes=CHECK,REREAD \
+; RUN:       --implicit-check-not='Duplicate vtable type'
 
 ; CHECK: define {{.*}} @_Z3fooP4Basei({{.*}} !prof ![[FOO_ENTRY:[0-9]+]]
 ; CHECK: br i1 %cmp, label %if.then, label %if.end, {{.*}} !prof ![[FOO_BR:[0-9]+]]
 ; CHECK: define {{.*}} @_ZN2ns3barEl({{.*}} !prof ![[BAR_ENTRY:[0-9]+]]
 
 ; foo has 100 head samples and 100 body samples on the branch at line 3; neither
-; is doubled by the incremental read, with or without the remapping file.
-; CHECK-DAG: ![[FOO_ENTRY]] = !{!"function_entry_count", i64 101}
-; CHECK-DAG: ![[FOO_BR]] = !{!"branch_weights", i32 101, i32 2}
-; CHECK-DAG: ![[BAR_ENTRY]] = !{!"function_entry_count", i64 51}
+; is doubled by the incremental read by default, with or without the remapping
+; file. With -sample-profile-allow-reread-loaded-profile, foo is read twice and
+; its counts are doubled without emitting a duplicate vtable warning.
+; DEFAULT-DAG: ![[FOO_ENTRY]] = !{!"function_entry_count", i64 101}
+; DEFAULT-DAG: ![[FOO_BR]] = !{!"branch_weights", i32 101, i32 2}
+; REREAD-DAG:  ![[FOO_ENTRY]] = !{!"function_entry_count", i64 201}
+; REREAD-DAG:  ![[FOO_BR]] = !{!"branch_weights", i32 201, i32 2}
+; CHECK-DAG:   ![[BAR_ENTRY]] = !{!"function_entry_count", i64 51}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

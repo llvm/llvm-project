@@ -1104,7 +1104,6 @@ Function *GCOVProfiler::insertCounterWriteout(
 
   BasicBlock *BB = BasicBlock::Create(*Ctx, "entry", WriteoutF);
   IRBuilder<> Builder(BB);
-  Builder.disableGEPCanonicalization();
 
   auto *TLI = &GetTLI(*WriteoutF);
 

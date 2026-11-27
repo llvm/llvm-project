@@ -1818,10 +1818,10 @@ public:
                                     const MachineFunction &MF) const;
 
   /// Measure the specified inline asm to determine an approximation of its
-  /// length.
-  virtual unsigned getInlineAsmLength(
-    const char *Str, const MCAsmInfo &MAI,
-    const TargetSubtargetInfo *STI = nullptr) const;
+  /// length. MaxInstLength can be used to override the maximum instruction
+  /// length from MAI when more information is available.
+  virtual unsigned getInlineAsmLength(const char *Str, const MCAsmInfo &MAI,
+                                      unsigned MaxInstLength = 0) const;
 
   /// Allocate and return a hazard recognizer to use for this target when
   /// scheduling the machine instructions before register allocation.
@@ -2424,8 +2424,8 @@ public:
   /// Fills in the necessary MachineOperands to refer to a frame index.
   /// The best way to understand this is to print `asm(""::"m"(x));` after
   /// finalize-isel. Example:
-  /// INLINEASM ... 262190 /* mem:m */, %stack.0.x.addr, 1, $noreg, 0, $noreg
-  /// we would add placeholders for:                     ^  ^       ^  ^
+  /// INLINEASM ... mem:m, %stack.0.x.addr, 1, $noreg, 0, $noreg
+  /// we would add placeholders for:        ^  ^       ^  ^
   virtual void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
                                      int FI) const {
     llvm_unreachable("unknown number of operands necessary");
