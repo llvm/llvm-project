@@ -427,3 +427,16 @@ void test21(long double x, int y) {
   asm ("fabs" : "=t" (st) : "0" (x));
   asm ("nop" : : : "17", "flags", "fpsr", "dirflag");
 }
+
+// GH204773
+void test22(int x) {
+  asm ("{cmpl{l}\t$d,%c0;je\t1f;addw{l}\t$d,%c0;jmp\t2f;1:decl\t%c0;2:}" : : "g"(x)); // expected-error {{nested assembler dialect alternatives in inline assembly string}}
+  asm ("{addl %0, %0|add %0, %0}" : : "r"(x)); // ok
+  asm ("{a|b}{c|d}" : : "r"(x)); // ok
+  asm ("{a|b" : : "r"(x)); // expected-error {{unterminated assembler dialect alternative in inline assembly string}}
+  asm ("{" : : "r"(x)); // expected-error {{unterminated assembler dialect alternative in inline assembly string}}
+  asm ("a}b|c" : : "r"(x)); // ok
+  asm ("%{%{%}%}" : : "r"(x)); // ok, escaped braces
+  asm ("{%{a%}|b}" : : "r"(x)); // ok
+  asm ("{{"); // ok, simple asm
+}
