@@ -228,6 +228,9 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
 
   initializeAtSpecifiers(ELFAtSpecifiers);
   UseAtForSpecifier = false;
+
+  // .bss is supported without .section.
+  SectionDirectives.insert(".bss");
 }
 
 void AArch64MCAsmInfoELF::printSpecifierExpr(
