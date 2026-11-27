@@ -1,26 +1,35 @@
-//===-- Double-precision log2(x) function ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Double-precision log2 function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG2_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG2_H
 
-#include "common_constants.h"
-#include "log_range_reduction.h"
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h"
+#include "src/__support/math/common_constants.h"
+#include "src/__support/math/log_range_reduction.h"
+#include "src/__support/sign.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -879,19 +888,27 @@ LIBC_INLINE double log2(double x) {
 
   if (LIBC_UNLIKELY(xbits.uintval() < FPBits_t::min_normal().uintval() ||
                     xbits.uintval() > FPBits_t::max_normal().uintval())) {
+    if (xbits.is_inf_or_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits_t::quiet_nan().get_val();
+      }
+      if (xbits.is_neg() && !xbits.is_nan()) {
+        fputil::set_errno_if_required(EDOM);
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits_t::quiet_nan().get_val();
+      }
+      return x;
+    }
     if (x == 0.0) {
-      // return -Inf and raise FE_DIVBYZERO.
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
       return FPBits_t::inf(Sign::NEG).get_val();
     }
-    if (xbits.is_neg() && !xbits.is_nan()) {
+    if (xbits.is_neg()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits_t::quiet_nan().get_val();
-    }
-    if (xbits.is_inf_or_nan()) {
-      return x;
     }
     // Normalize denormal inputs.
     xbits = FPBits_t(x * 0x1.0p52);
@@ -921,7 +938,7 @@ LIBC_INLINE double log2(double x) {
 
   // Perform exact range reduction
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double u = fputil::multiply_add(r, m, -1.0); // exact
+  double u = fputil::multiply_sub(r, m, 1.0); // exact
 #else
   uint64_t c_m = x_m & 0x3FFF'E000'0000'0000ULL;
   double c = FPBits_t(c_m).get_val();

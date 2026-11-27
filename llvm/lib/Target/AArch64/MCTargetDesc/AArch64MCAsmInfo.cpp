@@ -198,7 +198,7 @@ bool AArch64MCAsmInfoDarwin::evaluateAsRelocatableImpl(
 
 AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T,
                                          const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(T, Options) {
   if (T.getArch() == Triple::aarch64_be)
     IsLittleEndian = false;
 

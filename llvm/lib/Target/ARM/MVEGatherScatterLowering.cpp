@@ -942,18 +942,15 @@ static bool hasAllGatScatUsers(Instruction *I, const DataLayout &DL) {
     return false;
   }
   bool Gatscat = true;
-  for (User *U : I->users()) {
-    if (!isa<Instruction>(U))
-      return false;
+  for (Instruction *U : I->users()) {
     if (isa<GetElementPtrInst>(U) ||
         isGatherScatter(dyn_cast<IntrinsicInst>(U))) {
       return Gatscat;
     } else {
-      unsigned OpCode = cast<Instruction>(U)->getOpcode();
+      unsigned OpCode = U->getOpcode();
       if ((OpCode == Instruction::Add || OpCode == Instruction::Mul ||
-           OpCode == Instruction::Shl ||
-           isAddLikeOr(cast<Instruction>(U), DL)) &&
-          hasAllGatScatUsers(cast<Instruction>(U), DL)) {
+           OpCode == Instruction::Shl || isAddLikeOr(U, DL)) &&
+          hasAllGatScatUsers(U, DL)) {
         continue;
       }
       return false;

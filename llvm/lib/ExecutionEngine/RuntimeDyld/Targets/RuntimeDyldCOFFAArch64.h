@@ -95,11 +95,6 @@ static void write32AArch64Addr(void *T, uint64_t s, uint64_t p, int shift) {
 class RuntimeDyldCOFFAArch64 : public RuntimeDyldCOFF {
 
 private:
-  // When a module is loaded we save the SectionID of the unwind
-  // sections in a table until we receive a request to register all
-  // unregisteredEH frame sections with the memory manager.
-  SmallVector<SID, 2> UnregisteredEHFrameSections;
-  SmallVector<SID, 2> RegisteredEHFrameSections;
   uint64_t ImageBase;
 
   // Fake an __ImageBase pointer by returning the section with the lowest adress
@@ -108,10 +103,10 @@ private:
       ImageBase = std::numeric_limits<uint64_t>::max();
       for (const SectionEntry &Section : Sections)
         // The Sections list may contain sections that weren't loaded for
-        // whatever reason: they may be debug sections, and ProcessAllSections
-        // is false, or they may be sections that contain 0 bytes. If the
-        // section isn't loaded, the load address will be 0, and it should not
-        // be included in the ImageBase calculation.
+        // whatever reason, e.g. discardable sections (such as debug sections)
+        // when ProcessAllSections is false. If the section isn't loaded, the
+        // load address will be 0, and it should not be included in the
+        // ImageBase calculation.
         if (Section.getLoadAddress() != 0)
           ImageBase = std::min(ImageBase, Section.getLoadAddress());
     }

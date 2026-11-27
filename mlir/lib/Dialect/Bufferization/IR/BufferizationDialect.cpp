@@ -68,10 +68,6 @@ struct BuiltinMemRefExternalModel
 //===----------------------------------------------------------------------===//
 
 void mlir::bufferization::BufferizationDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Bufferization/IR/BufferizationOps.cpp.inc"
-      >();
   addInterfaces<BufferizationInlinerInterface>();
 
   // Note: Unlike with other external models, declaring bufferization's

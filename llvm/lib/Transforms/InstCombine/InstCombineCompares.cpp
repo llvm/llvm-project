@@ -7201,8 +7201,7 @@ bool InstCombinerImpl::dominatesAllUses(const Instruction *DI,
   // Protect from self-referencing blocks.
   if (DI->getParent() == DB)
     return false;
-  for (const User *U : DI->users()) {
-    auto *Usr = cast<Instruction>(U);
+  for (const Instruction *Usr : DI->users()) {
     if (Usr != UI && !DT.dominates(DB, Usr->getParent()))
       return false;
   }
@@ -7985,42 +7984,38 @@ static Instruction *foldReductionIdiom(ICmpInst &I,
 Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
                                                    Value *Op0, Value *Op1,
                                                    ICmpInst &CtxI) {
-  // Try to optimize 'icmp GEP, P' or 'icmp P, GEP'.
-  if (auto *GEP = dyn_cast<GEPOperator>(Op0))
-    if (Instruction *NI = foldGEPICmp(GEP, Op1, Pred, CtxI))
-      return NI;
+  // Each fold below requires Op0 to be a particular operator, so dispatch on
+  // its opcode and only try the folds that can apply.
+  switch (Operator::getOpcode(Op0)) {
+  default:
+    return nullptr;
 
-  if (auto *SI = dyn_cast<SelectInst>(Op0))
-    if (Instruction *NI = foldSelectICmp(Pred, SI, Op1, CtxI))
-      return NI;
+  case Instruction::GetElementPtr:
+    // Try to optimize 'icmp GEP, P' or 'icmp P, GEP'.
+    return foldGEPICmp(cast<GEPOperator>(Op0), Op1, Pred, CtxI);
 
-  if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op0)) {
-    if (Instruction *Res = foldICmpWithMinMax(CtxI, MinMax, Op1, Pred))
-      return Res;
+  case Instruction::Select:
+    return foldSelectICmp(Pred, cast<SelectInst>(Op0), Op1, CtxI);
 
-    if (Instruction *Res = foldICmpWithClamp(CtxI, Op1, MinMax))
-      return Res;
-  }
+  case Instruction::Call: {
+    if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(Op0)) {
+      if (Instruction *Res = foldICmpWithMinMax(CtxI, MinMax, Op1, Pred))
+        return Res;
 
-  {
-    Value *X;
-    const APInt *C;
-    // icmp X+Cst, X
-    if (match(Op0, m_Add(m_Value(X), m_APInt(C))) && Op1 == X)
-      return foldICmpAddOpConst(X, *C, Pred);
-  }
+      if (Instruction *Res = foldICmpWithClamp(CtxI, Op1, MinMax))
+        return Res;
+    }
 
-  // abs(X) >=  X --> true
-  // abs(X) u<= X --> true
-  // abs(X) <   X --> false
-  // abs(X) u>  X --> false
-  // abs(X) u>= X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
-  // abs(X) <=  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
-  // abs(X) ==  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
-  // abs(X) u<  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
-  // abs(X) >   X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
-  // abs(X) !=  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
-  {
+    // abs(X) >=  X --> true
+    // abs(X) u<= X --> true
+    // abs(X) <   X --> false
+    // abs(X) u>  X --> false
+    // abs(X) u>= X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
+    // abs(X) <=  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
+    // abs(X) ==  X --> IsIntMinPosion ? `X > -1`: `X u<= INTMIN`
+    // abs(X) u<  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
+    // abs(X) >   X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
+    // abs(X) !=  X --> IsIntMinPosion ? `X < 0` : `X >   INTMIN`
     Value *X;
     Constant *C;
     if (match(Op0, m_Intrinsic<Intrinsic::abs>(m_Value(X), m_Constant(C))) &&
@@ -8059,9 +8054,7 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
         llvm_unreachable("Invalid predicate!");
       }
     }
-  }
 
-  {
     // For a nonzero constant C:
     // usub.sat(X, C) == X  --> X == 0
     // usub.sat(X, C) != X  --> X != 0
@@ -8073,15 +8066,30 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
           CmpInst::isEquality(Pred) ? Pred.dropSameSign() : ICmpInst::ICMP_NE;
       return new ICmpInst(NewPred, Op1, Constant::getNullValue(Op1->getType()));
     }
+    return nullptr;
   }
 
-  const SimplifyQuery Q = SQ.getWithInstruction(&CtxI);
-  if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, *this))
-    return replaceInstUsesWith(CtxI, V);
+  case Instruction::Add: {
+    Value *X;
+    const APInt *C;
+    // icmp X+Cst, X
+    if (match(Op0, m_Add(m_Value(X), m_APInt(C))) && Op1 == X)
+      return foldICmpAddOpConst(X, *C, Pred);
+    return nullptr;
+  }
 
-  // Folding (X / Y) pred X => X swap(pred) 0 for constant Y other than 0 or 1
-  auto CheckUGT1 = [](const APInt &Divisor) { return Divisor.ugt(1); };
-  {
+  case Instruction::And:
+  case Instruction::Or: {
+    const SimplifyQuery Q = SQ.getWithInstruction(&CtxI);
+    if (Value *V = foldICmpWithLowBitMaskedVal(Pred, Op0, Op1, Q, *this))
+      return replaceInstUsesWith(CtxI, V);
+    return nullptr;
+  }
+
+  case Instruction::UDiv:
+  case Instruction::SDiv: {
+    // Folding (X / Y) pred X => X swap(pred) 0 for constant Y other than 0 or 1
+    auto CheckUGT1 = [](const APInt &Divisor) { return Divisor.ugt(1); };
     if (match(Op0, m_UDiv(m_Specific(Op1), m_CheckedInt(CheckUGT1)))) {
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
@@ -8092,11 +8100,13 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
     }
+    return nullptr;
   }
 
-  // Another case of this fold is (X >> Y) pred X => X swap(pred) 0 if Y != 0
-  auto CheckNE0 = [](const APInt &Shift) { return !Shift.isZero(); };
-  {
+  case Instruction::LShr:
+  case Instruction::AShr: {
+    // Another case of this fold is (X >> Y) pred X => X swap(pred) 0 if Y != 0
+    auto CheckNE0 = [](const APInt &Shift) { return !Shift.isZero(); };
     if (match(Op0, m_LShr(m_Specific(Op1), m_CheckedInt(CheckNE0)))) {
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
@@ -8107,37 +8117,41 @@ Instruction *InstCombinerImpl::foldICmpCommutative(CmpPredicate Pred,
       return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), Op1,
                           Constant::getNullValue(Op1->getType()));
     }
+    return nullptr;
   }
 
-  // icmp (shl nsw/nuw X, L), (add nsw/nuw (shl nsw/nuw Y, L), K)
-  //   -> icmp X, (add nsw/nuw Y, K >> L)
-  // We use AShr for nsw and LShr for nuw to safely peel off the shift.
-  Value *X;
-  uint64_t ShAmt;
-  if (match(Op0, m_NUWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
-      !CtxI.isSigned()) {
-    if (ShAmt >= X->getType()->getScalarSizeInBits())
-      return nullptr;
-    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
-                           ShiftSemantics::Unsigned, &CtxI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
-                                      ShiftSemantics::Unsigned);
-      return new ICmpInst(Pred, X, NewOp1);
+  case Instruction::Shl: {
+    // icmp (shl nsw/nuw X, L), (add nsw/nuw (shl nsw/nuw Y, L), K)
+    //   -> icmp X, (add nsw/nuw Y, K >> L)
+    // We use AShr for nsw and LShr for nuw to safely peel off the shift.
+    Value *X;
+    uint64_t ShAmt;
+    if (match(Op0, m_NUWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+        !CtxI.isSigned()) {
+      if (ShAmt >= X->getType()->getScalarSizeInBits())
+        return nullptr;
+      if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                             ShiftSemantics::Unsigned, &CtxI)) {
+        Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                        ShiftSemantics::Unsigned);
+        return new ICmpInst(Pred, X, NewOp1);
+      }
     }
-  }
 
-  if (match(Op0, m_NSWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
-      !CtxI.isUnsigned()) {
-    if (ShAmt >= X->getType()->getScalarSizeInBits())
-      return nullptr;
-    if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
-                           ShiftSemantics::Signed, &CtxI)) {
-      Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
-                                      ShiftSemantics::Signed);
-      return new ICmpInst(Pred, X, NewOp1);
+    if (match(Op0, m_NSWShl(m_Value(X), m_ConstantInt(ShAmt))) &&
+        !CtxI.isUnsigned()) {
+      if (ShAmt >= X->getType()->getScalarSizeInBits())
+        return nullptr;
+      if (canEvaluateShifted(Op1, ShAmt, /*IsLeftShift=*/false,
+                             ShiftSemantics::Signed, &CtxI)) {
+        Value *NewOp1 = getShiftedValue(Op1, ShAmt, /*IsLeftShift=*/false,
+                                        ShiftSemantics::Signed);
+        return new ICmpInst(Pred, X, NewOp1);
+      }
     }
+    return nullptr;
   }
-  return nullptr;
+  }
 }
 
 Instruction *InstCombinerImpl::visitICmpInst(ICmpInst &I) {

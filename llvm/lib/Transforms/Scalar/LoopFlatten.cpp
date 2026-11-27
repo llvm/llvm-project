@@ -644,8 +644,7 @@ static OverflowResult checkOverflow(FlattenInfo &FI, DominatorTree *DT,
     return OR;
 
   auto CheckGEP = [&](GetElementPtrInst *GEP, Value *GEPOperand) {
-    for (Value *GEPUser : GEP->users()) {
-      auto *GEPUserInst = cast<Instruction>(GEPUser);
+    for (Instruction *GEPUserInst : GEP->users()) {
       if (!isa<LoadInst>(GEPUserInst) &&
           !(isa<StoreInst>(GEPUserInst) && GEP == GEPUserInst->getOperand(1)))
         continue;

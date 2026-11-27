@@ -95,7 +95,7 @@ namespace __formatter {
 // small). Therefore a duration uses its own conversion.
 template <class _CharT, class _Rep, class _Period>
 void __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::duration<_Rep, _Period>& __value) {
-  __sstr << std::use_facet<numpunct<_CharT>>(__sstr.getloc()).decimal_point();
+  __sstr << std::use_facet<numpunct<_CharT>>(__sstr.__getloc()).decimal_point();
 
   using __duration = chrono::duration<_Rep, _Period>;
 
@@ -134,7 +134,7 @@ void __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const _Tp& __value
 
 template <class _CharT, class _Duration>
 void __format_sub_seconds(basic_stringstream<_CharT>& __sstr, const chrono::hh_mm_ss<_Duration>& __value) {
-  __sstr << std::use_facet<numpunct<_CharT>>(__sstr.getloc()).decimal_point();
+  __sstr << std::use_facet<numpunct<_CharT>>(__sstr.__getloc()).decimal_point();
   if constexpr (chrono::treat_as_floating_point_v<typename _Duration::rep>)
     std::format_to(std::ostreambuf_iterator<_CharT>{__sstr},
                    _LIBCPP_STATICALLY_WIDEN(_CharT, "{:0{}.0f}"),
@@ -251,7 +251,7 @@ void __format_chrono_using_chrono_specs(
     basic_stringstream<_CharT>& __sstr, const _Tp& __value, basic_string_view<_CharT> __chrono_specs) {
   tm __t              = std::__convert_to_tm<tm>(__value);
   __time_zone __z     = __formatter::__convert_to_time_zone(__value);
-  const auto& __facet = std::use_facet<time_put<_CharT>>(__sstr.getloc());
+  const auto& __facet = std::use_facet<time_put<_CharT>>(__sstr.__getloc());
   for (auto __it = __chrono_specs.begin(); __it != __chrono_specs.end(); ++__it) {
     if (*__it == _CharT('%')) {
       auto __s = __it;

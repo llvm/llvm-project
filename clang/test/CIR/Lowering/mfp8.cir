@@ -1,0 +1,90 @@
+// RUN: cir-translate %s -cir-to-llvmir --target aarch64-none-linux-gnu --disable-cc-lowering | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.global external @g = #cir.zero : !cir.mfp8
+  cir.global external @gv = #cir.zero : !cir.vector<16 x !cir.mfp8>
+  cir.global external @gv2 = #cir.zero : !cir.vector<8 x !cir.mfp8>
+
+  cir.func @zero_store() {
+    %0 = cir.alloca "z" align(1) : !cir.ptr<!cir.mfp8>
+    %1 = cir.const #cir.zero : !cir.mfp8
+    cir.store align(1) %1, %0 : !cir.mfp8, !cir.ptr<!cir.mfp8>
+    cir.return
+  }
+
+  cir.func @extract(%arg0: !s32i) {
+    %0 = cir.get_global @gv : !cir.ptr<!cir.vector<16 x !cir.mfp8>>
+    %1 = cir.load align(16) %0 : !cir.ptr<!cir.vector<16 x !cir.mfp8>>, !cir.vector<16 x !cir.mfp8>
+    %2 = cir.vec.extract %1[%arg0 : !s32i] : !cir.vector<16 x !cir.mfp8>
+    %3 = cir.get_global @g : !cir.ptr<!cir.mfp8>
+    cir.store align(1) %2, %3 : !cir.mfp8, !cir.ptr<!cir.mfp8>
+    cir.return
+  }
+
+  cir.func @insert(%arg0: !s32i) {
+    %0 = cir.get_global @g : !cir.ptr<!cir.mfp8>
+    %1 = cir.load align(1) %0 : !cir.ptr<!cir.mfp8>, !cir.mfp8
+    %2 = cir.get_global @gv : !cir.ptr<!cir.vector<16 x !cir.mfp8>>
+    %3 = cir.load align(16) %2 : !cir.ptr<!cir.vector<16 x !cir.mfp8>>, !cir.vector<16 x !cir.mfp8>
+    %4 = cir.vec.insert %1, %3[%arg0 : !s32i] : !cir.vector<16 x !cir.mfp8>
+    cir.store align(16) %4, %2 : !cir.vector<16 x !cir.mfp8>, !cir.ptr<!cir.vector<16 x !cir.mfp8>>
+    cir.return
+  }
+
+  cir.func @create() {
+    %0 = cir.get_global @g : !cir.ptr<!cir.mfp8>
+    %1 = cir.load align(1) %0 : !cir.ptr<!cir.mfp8>, !cir.mfp8
+    %2 = cir.vec.create(%1, %1, %1, %1, %1, %1, %1, %1 : !cir.mfp8, !cir.mfp8, !cir.mfp8, !cir.mfp8, !cir.mfp8, !cir.mfp8, !cir.mfp8, !cir.mfp8) : !cir.vector<8 x !cir.mfp8>
+    %3 = cir.get_global @gv2 : !cir.ptr<!cir.vector<8 x !cir.mfp8>>
+    cir.store align(8) %2, %3 : !cir.vector<8 x !cir.mfp8>, !cir.ptr<!cir.vector<8 x !cir.mfp8>>
+    cir.return
+  }
+
+  cir.func @splat() {
+    %0 = cir.get_global @g : !cir.ptr<!cir.mfp8>
+    %1 = cir.load align(1) %0 : !cir.ptr<!cir.mfp8>, !cir.mfp8
+    %2 = cir.vec.splat %1 : !cir.mfp8, !cir.vector<16 x !cir.mfp8>
+    %3 = cir.get_global @gv : !cir.ptr<!cir.vector<16 x !cir.mfp8>>
+    cir.store align(16) %2, %3 : !cir.vector<16 x !cir.mfp8>, !cir.ptr<!cir.vector<16 x !cir.mfp8>>
+    cir.return
+  }
+}
+
+// CHECK: @g = global <1 x i8> zeroinitializer
+// CHECK: @gv = global <16 x i8> zeroinitializer
+// CHECK: @gv2 = global <8 x i8> zeroinitializer
+
+// CHECK-LABEL: define void @zero_store()
+// CHECK:         %[[Z:.*]] = alloca <1 x i8>, align 1
+// CHECK:         store <1 x i8> zeroinitializer, ptr %[[Z]], align 1
+
+// CHECK-LABEL: define void @extract(
+// CHECK:         %[[VEC:.*]] = load <16 x i8>, ptr @gv, align 16
+// CHECK:         %[[EXT:.*]] = extractelement <16 x i8> %[[VEC]], i32 %{{.*}}
+// CHECK:         %[[CAST:.*]] = insertelement <1 x i8> poison, i8 %[[EXT]], i64 0
+// CHECK:         store <1 x i8> %[[CAST]], ptr @g, align 1
+
+// CHECK-LABEL: define void @insert(
+// CHECK:         %[[VAL:.*]] = load <1 x i8>, ptr @g, align 1
+// CHECK:         %[[VEC:.*]] = load <16 x i8>, ptr @gv, align 16
+// CHECK:         %[[ELT:.*]] = bitcast <1 x i8> %[[VAL]] to i8
+// CHECK:         %[[INS:.*]] = insertelement <16 x i8> %[[VEC]], i8 %[[ELT]], i32 %{{.*}}
+// CHECK:         store <16 x i8> %[[INS]], ptr @gv, align 16
+
+// CHECK-LABEL: define void @create()
+// CHECK:         %[[VAL:.*]] = load <1 x i8>, ptr @g, align 1
+// CHECK:         %[[ELT0:.*]] = bitcast <1 x i8> %[[VAL]] to i8
+// CHECK:         %[[V0:.*]] = insertelement <8 x i8> poison, i8 %[[ELT0]], i64 0
+// CHECK:         %[[ELT1:.*]] = bitcast <1 x i8> %[[VAL]] to i8
+// CHECK:         %[[V1:.*]] = insertelement <8 x i8> %[[V0]], i8 %[[ELT1]], i64 1
+// CHECK:         %[[V7:.*]] = insertelement <8 x i8> %{{.*}}, i8 %{{.*}}, i64 7
+// CHECK:         store <8 x i8> %[[V7]], ptr @gv2, align 8
+
+// CHECK-LABEL: define void @splat()
+// CHECK:         %[[VAL:.*]] = load <1 x i8>, ptr @g, align 1
+// CHECK:         %[[ELT:.*]] = bitcast <1 x i8> %[[VAL]] to i8
+// CHECK:         %[[INS:.*]] = insertelement <16 x i8> poison, i8 %[[ELT]], i64 0
+// CHECK:         %[[SPLAT:.*]] = shufflevector <16 x i8> %[[INS]], <16 x i8> poison, <16 x i32> zeroinitializer
+// CHECK:         store <16 x i8> %[[SPLAT]], ptr @gv, align 16

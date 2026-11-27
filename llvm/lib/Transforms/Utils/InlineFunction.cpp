@@ -287,15 +287,15 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
           BasicBlock *HandlerBlock = *HI;
           auto *CatchPad =
               cast<CatchPadInst>(&*HandlerBlock->getFirstNonPHIIt());
-          for (User *Child : CatchPad->users()) {
+          for (Instruction *ChildPad : CatchPad->users()) {
             // Intentionally ignore invokes here -- since the catchswitch is
             // marked "unwind to caller", it would be a verifier error if it
             // contained an invoke which unwinds out of it, so any invoke we'd
             // encounter must unwind to some child of the catch.
-            if (!isa<CleanupPadInst>(Child) && !isa<CatchSwitchInst>(Child))
+            if (!isa<CleanupPadInst>(ChildPad) &&
+                !isa<CatchSwitchInst>(ChildPad))
               continue;
 
-            Instruction *ChildPad = cast<Instruction>(Child);
             auto Memo = MemoMap.find(ChildPad);
             if (Memo == MemoMap.end()) {
               // Haven't figured out this child pad yet; queue it.
@@ -321,7 +321,7 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
       }
     } else {
       auto *CleanupPad = cast<CleanupPadInst>(CurrentPad);
-      for (User *U : CleanupPad->users()) {
+      for (Instruction *U : CleanupPad->users()) {
         if (auto *CleanupRet = dyn_cast<CleanupReturnInst>(U)) {
           if (BasicBlock *RetUnwindDest = CleanupRet->getUnwindDest())
             UnwindDestToken = &*RetUnwindDest->getFirstNonPHIIt();
@@ -333,7 +333,7 @@ static Value *getUnwindDestTokenHelper(Instruction *EHPad,
         if (auto *Invoke = dyn_cast<InvokeInst>(U)) {
           ChildUnwindDestToken = &*Invoke->getUnwindDest()->getFirstNonPHIIt();
         } else if (isa<CleanupPadInst>(U) || isa<CatchSwitchInst>(U)) {
-          Instruction *ChildPad = cast<Instruction>(U);
+          Instruction *ChildPad = U;
           auto Memo = MemoMap.find(ChildPad);
           if (Memo == MemoMap.end()) {
             // Haven't resolved this child yet; queue it and keep searching.
@@ -521,19 +521,19 @@ static Value *getUnwindDestToken(Instruction *EHPad,
       assert(CatchSwitch->getUnwindDest() == nullptr && "Expected useless pad");
       for (BasicBlock *HandlerBlock : CatchSwitch->handlers()) {
         auto *CatchPad = &*HandlerBlock->getFirstNonPHIIt();
-        for (User *U : CatchPad->users()) {
+        for (Instruction *U : CatchPad->users()) {
           assert((!isa<InvokeInst>(U) ||
                   (getParentPad(&*cast<InvokeInst>(U)
                                       ->getUnwindDest()
                                       ->getFirstNonPHIIt()) == CatchPad)) &&
                  "Expected useless pad");
           if (isa<CatchSwitchInst>(U) || isa<CleanupPadInst>(U))
-            Worklist.push_back(cast<Instruction>(U));
+            Worklist.push_back(U);
         }
       }
     } else {
       assert(isa<CleanupPadInst>(UselessPad));
-      for (User *U : UselessPad->users()) {
+      for (Instruction *U : UselessPad->users()) {
         assert(!isa<CleanupReturnInst>(U) && "Expected useless pad");
         assert(
             (!isa<InvokeInst>(U) ||
@@ -542,7 +542,7 @@ static Value *getUnwindDestToken(Instruction *EHPad,
               UselessPad)) &&
             "Expected useless pad");
         if (isa<CatchSwitchInst>(U) || isa<CleanupPadInst>(U))
-          Worklist.push_back(cast<Instruction>(U));
+          Worklist.push_back(U);
       }
     }
   }
@@ -1923,7 +1923,8 @@ static DebugLoc inlineDebugLoc(
           : InlinedAt;
   DILocation *Result = DILocation::getDistinct(
       Ctx, OrigDL.getLine(), OrigDL.getCol(), OrigDL.getScope(), IA,
-      OrigDL.isImplicitCode(), OrigDL->getAtomGroup(), OrigDL->getAtomRank());
+      OrigDL.isImplicitCode(), OrigDL->getAtomGroup(), OrigDL->getAtomRank(),
+      OrigDL.getRawIRLayers());
   InlineLocs[OrigDL.get()] = Result;
   return DebugLoc(Result);
 }
@@ -1960,9 +1961,13 @@ static void fixupLineNumbers(Function *Fn, Function::iterator FI,
 
   // Create a unique call site, not to be confused with any other call from the
   // same location.
+  // Keep the call site's irlayers: this node ends the inlinedAt chain of
+  // every location inlined here.
   InlinedAtNode = DILocation::getDistinct(
       Ctx, InlinedAtNode->getLine(), InlinedAtNode->getColumn(),
-      InlinedAtNode->getScope(), InlinedAtNode->getInlinedAt());
+      InlinedAtNode->getScope(), InlinedAtNode->getInlinedAt(),
+      /*ImplicitCode=*/false, /*AtomGroup=*/0, /*AtomRank=*/0,
+      InlinedAtNode->getRawIRLayers());
 
   // Cache the inlined-at nodes as they're built so they are reused, without
   // this every instruction's inlined-at chain would become distinct from each

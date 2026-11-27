@@ -54,6 +54,7 @@
 #include "clang/Basic/StackExhaustionHandler.h"
 #include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/AnalysisBasedWarnings.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/CleanupInfo.h"
@@ -1146,6 +1147,13 @@ private:
   /// DiagStateSystemClass value; bit 0 is unused.
   uint8_t DocDiagsExactComputed = 0;
   uint8_t DocDiagsExactEnabled = 0;
+
+  // Returns if a warning suppression mapping is active and affects
+  // documentation warnings.
+  bool areDocumentationDiagsSourceLocationDependent();
+
+  /// Lazily computed cache for areDocumentationDiagsSourceLocationDependent().
+  std::optional<bool> DocDiagsInSuppressionMapping;
 
 public:
   /// Returns true if a comment at \p Loc should be retained in the AST
@@ -5336,6 +5344,12 @@ public:
   bool ProcessAccessDeclAttributeList(AccessSpecDecl *ASDecl,
                                       const ParsedAttributesView &AttrList);
 
+  /// Check that \p Record is a capability if a thread safety attribute without
+  /// capability arguments on one of its fields refers to it. Called once the
+  /// record's own attributes are applied; the attributes checked are those
+  /// already on its fields, which were applied before the record's.
+  void CheckFieldCapabilityAttrs(const RecordDecl *Record);
+
   /// checkUnusedDeclAttributes - Given a declarator which is not being
   /// used to build a declaration, complain about any decl attributes
   /// which might be lying around on it.
@@ -7322,6 +7336,12 @@ public:
   /// variable will have in the given scope.
   QualType getCapturedDeclRefType(ValueDecl *Var, SourceLocation Loc);
 
+  /// Handle a use of the variably modified type \p T in the current context.
+  /// Array bounds evaluated in an enclosing context are captured by the
+  /// lambdas in between; if a local class or a block is in between instead,
+  /// the use is diagnosed. Returns false if the use is invalid.
+  bool CheckVariablyModifiedTypeUse(QualType T, SourceLocation Loc);
+
   /// Mark all of the declarations referenced within a particular AST node as
   /// referenced. Used when template instantiation instantiates a non-dependent
   /// type -- entities referenced by the type are now referenced.
@@ -7370,7 +7390,7 @@ public:
 
   ExprResult ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
                                SourceLocation TemplateKWLoc, UnqualifiedId &Id,
-                               bool HasTrailingLParen, bool IsAddressOfOperand,
+                               bool IsCall, bool IsAddressOfOperand,
                                CorrectionCandidateCallback *CCC = nullptr,
                                bool IsInlineAsmIdentifier = false);
 
@@ -7433,7 +7453,7 @@ public:
                    const TemplateArgumentListInfo *TemplateArgs = nullptr);
 
   bool UseArgumentDependentLookup(const CXXScopeSpec &SS, const LookupResult &R,
-                                  bool HasTrailingLParen);
+                                  bool IsCall);
 
   /// BuildQualifiedDeclarationNameExpr - Build a C++ qualified
   /// declaration name, generally during template instantiation.
@@ -7483,7 +7503,8 @@ public:
   /// from multiple tokens.  However, the common case is that StringToks points
   /// to one string.
   ExprResult ActOnStringLiteral(ArrayRef<Token> StringToks,
-                                Scope *UDLScope = nullptr);
+                                Scope *UDLScope = nullptr,
+                                ConversionAction Action = CA_ToLiteralEncoding);
 
   ExprResult ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks);
 
@@ -8536,6 +8557,10 @@ public:
 
 private:
   static BinaryOperatorKind ConvertTokenKindToBinaryOpcode(tok::TokenKind Kind);
+
+  /// Maps the size expression of each VLA type created inside a function,
+  /// block or lambda to the context in which that size is evaluated.
+  llvm::DenseMap<const Expr *, const DeclContext *> VLASizeExprOwners;
 
   /// Methods for marking which expressions involve dereferencing a pointer
   /// marked with the 'noderef' attribute. Expressions are checked bottom up as
@@ -11530,7 +11555,8 @@ private:
   ///@{
 
 public:
-  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel);
+  ExprResult ActOnGCCAsmStmtString(Expr *Stm, bool ForAsmLabel,
+                                   bool IsConstexpr = false);
   StmtResult ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
                              bool IsVolatile, unsigned NumOutputs,
                              unsigned NumInputs, IdentifierInfo **Names,
@@ -14035,14 +14061,6 @@ public:
                   const MultiLevelTemplateArgumentList &TemplateArgs,
                   SourceLocation Loc, DeclarationName Entity);
 
-  /// A form of SubstType intended specifically for instantiating the
-  /// type of a FunctionDecl.  Its purpose is solely to force the
-  /// instantiation of default-argument expressions and to avoid
-  /// instantiating an exception-specification.
-  TypeSourceInfo *SubstFunctionDeclType(
-      TypeSourceInfo *T, const MultiLevelTemplateArgumentList &TemplateArgs,
-      SourceLocation Loc, DeclarationName Entity, CXXRecordDecl *ThisContext,
-      Qualifiers ThisTypeQuals, bool EvaluateConstraints = true);
   void SubstExceptionSpec(FunctionDecl *New, const FunctionProtoType *Proto,
                           const MultiLevelTemplateArgumentList &Args);
   bool SubstExceptionSpec(SourceLocation Loc,
@@ -14062,6 +14080,20 @@ public:
   };
   typedef SmallVector<LateInstantiatedAttribute, 1> LateInstantiatedAttrVec;
 
+  /// A form of SubstType intended specifically for instantiating the
+  /// type of a FunctionDecl.  Its purpose is solely to force the
+  /// instantiation of default-argument expressions and to avoid
+  /// instantiating an exception-specification.
+  ///
+  /// If \p ParamAttrs is not null, the late-parsed attributes of the parameters
+  /// of \p Fn are deferred to it, to be instantiated later.
+  TypeSourceInfo *SubstFunctionDeclType(
+      TypeSourceInfo *T, const MultiLevelTemplateArgumentList &TemplateArgs,
+      SourceLocation Loc, DeclarationName Entity, CXXRecordDecl *ThisContext,
+      Qualifiers ThisTypeQuals, bool EvaluateConstraints = true,
+      const FunctionDecl *Fn = nullptr,
+      LateInstantiatedAttrVec *ParamAttrs = nullptr);
+
   /// Substitute into a function parameter. If \p LateAttrs is given, its
   /// late-parsed attributes are deferred there, since they may name a
   /// parameter that is not substituted yet; see \ref InstantiateLateAttrs.
@@ -14078,6 +14110,9 @@ public:
   /// substitute (a null entry of \p Params, as from a typedef'd function
   /// type), its type needs to come from \p OldParamTypes instead, which must
   /// then be passed, and \p OutParams gets null for it.
+  ///
+  /// If \p ParamAttrs is not null, the late-parsed attributes of the parameters
+  /// of \p Fn are deferred to it, as for SubstFunctionDeclType.
   bool SubstParmTypes(SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
                       const FunctionProtoType::ExtParameterInfo *ExtParamInfos,
                       const MultiLevelTemplateArgumentList &TemplateArgs,
@@ -14085,7 +14120,9 @@ public:
                       SmallVectorImpl<ParmVarDecl *> *OutParams,
                       ExtParameterInfoBuilder &ParamInfos,
                       const QualType *OldParamTypes = nullptr,
-                      bool EvaluateConstraints = true);
+                      bool EvaluateConstraints = true,
+                      const FunctionDecl *Fn = nullptr,
+                      LateInstantiatedAttrVec *ParamAttrs = nullptr);
 
   /// Substitute the given template arguments into the default argument.
   bool SubstDefaultArgument(SourceLocation Loc, ParmVarDecl *Param,

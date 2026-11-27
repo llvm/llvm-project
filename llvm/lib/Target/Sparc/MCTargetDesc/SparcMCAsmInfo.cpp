@@ -24,7 +24,7 @@ void SparcELFMCAsmInfo::anchor() {}
 
 SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple,
                                      const MCTargetOptions &Options)
-    : MCAsmInfoELF(Options) {
+    : MCAsmInfoELF(TheTriple, Options) {
   bool isV9 = TheTriple.isSPARC64();
   IsLittleEndian = (TheTriple.getArch() == Triple::sparcel);
 

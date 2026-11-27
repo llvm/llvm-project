@@ -27,6 +27,12 @@ if(TARGET omp)
   set(OMP_DEPEND omp)
 endif()
 
+# Tests using -foffload-via-llvm link against libLLVMOffloadKernel.
+set(OFFLOAD_KERNEL_DEPEND)
+if(TARGET LLVMOffloadKernel)
+  set(OFFLOAD_KERNEL_DEPEND LLVMOffloadKernel)
+endif()
+
 set(OMPTEST_DEPEND)
 set(LIBOMPTARGET_OMPTEST_FLAGS_FILE)
 if(TARGET omptarget)
@@ -50,7 +56,8 @@ $<TARGET_LINKER_FILE:omptest>
     add_offload_testsuite(check-libomptarget-${CURRENT_TARGET}
       "Running libomptarget tests"
       ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET}
-      DEPENDS omptarget ${OMP_DEPEND} ${OMPTEST_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
+      DEPENDS omptarget ${OMP_DEPEND} ${OMPTEST_DEPEND} ${OFFLOAD_KERNEL_DEPEND}
+              ${LIBOMPTARGET_TESTED_PLUGINS}
       ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
     list(APPEND LIBOMPTARGET_LIT_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CURRENT_TARGET})
 
@@ -66,7 +73,8 @@ $<TARGET_LINKER_FILE:omptest>
     "Running libomptarget tests"
     ${LIBOMPTARGET_LIT_TESTSUITES}
     EXCLUDE_FROM_CHECK_ALL
-    DEPENDS ${OFFLOAD_TOOLS} omptarget ${OMP_DEPEND} ${OMPTEST_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
+    DEPENDS ${OFFLOAD_TOOLS} omptarget ${OMP_DEPEND} ${OMPTEST_DEPEND}
+            ${OFFLOAD_KERNEL_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
     ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 else()
   message(STATUS "Skipping libomptarget lit suites because libomptarget was not built.")
@@ -86,7 +94,8 @@ set(CHECK_OFFLOAD_ARGS "")
 
 if(TARGET omptarget)
   list(APPEND CHECK_OFFLOAD_SUITES ${LIBOMPTARGET_LIT_TESTSUITES})
-  list(APPEND CHECK_OFFLOAD_DEPS omptarget ${OMP_DEPEND} ${OMPTEST_DEPEND})
+  list(APPEND CHECK_OFFLOAD_DEPS omptarget ${OMP_DEPEND} ${OMPTEST_DEPEND}
+       ${OFFLOAD_KERNEL_DEPEND})
   list(APPEND CHECK_OFFLOAD_ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 endif()
 

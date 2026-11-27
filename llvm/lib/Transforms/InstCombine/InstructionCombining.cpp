@@ -2017,8 +2017,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
   bool IdenticalUsers = false;
   if (!AllowMultipleUses && !OneUse) {
     // Walk the use list for the instruction, comparing them to I.
-    for (User *U : PN->users()) {
-      Instruction *UI = cast<Instruction>(U);
+    for (Instruction *UI : PN->users()) {
       if (UI != &I && !I.isIdenticalTo(UI))
         return nullptr;
     }
@@ -2154,8 +2153,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
   if (IdenticalUsers) {
     // Collect and deduplicate users up-front to avoid iterator invalidation.
     SmallSetVector<Instruction *, 4> ToReplace;
-    for (User *U : PN->users()) {
-      Instruction *User = cast<Instruction>(U);
+    for (Instruction *User : PN->users()) {
       if (User == &I)
         continue;
       ToReplace.insert(User);
@@ -3723,14 +3721,13 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
   return nullptr;
 }
 
-static bool isNeverEqualToUnescapedAlloc(Value *V, const TargetLibraryInfo &TLI,
-                                         Instruction *AI) {
+static bool isNeverEqualToUnescapedAlloc(Value *V, Instruction *AI) {
   if (isa<ConstantPointerNull>(V))
     return true;
   if (auto *LI = dyn_cast<LoadInst>(V))
     return isa<GlobalVariable>(LI->getPointerOperand());
   // Two distinct allocations will never be equal.
-  return isAllocLikeFn(V, &TLI) && V != AI;
+  return isAllocLikeFn(V) && V != AI;
 }
 
 /// Given a call CB which uses an address UsedV, return true if we can prove the
@@ -3760,14 +3757,13 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
                      const TargetLibraryInfo &TLI, bool KnowInit,
                      unsigned MaxUsers) {
   SmallVector<Instruction*, 4> Worklist;
-  const std::optional<StringRef> Family = getAllocationFamily(AI, &TLI);
+  const std::optional<StringRef> Family = getAllocationFamily(AI);
   Worklist.push_back(AI);
   ModRefInfo Access = KnowInit ? ModRefInfo::NoModRef : ModRefInfo::Mod;
 
   do {
     Instruction *PI = Worklist.pop_back_val();
-    for (User *U : PI->users()) {
-      Instruction *I = cast<Instruction>(U);
+    for (Instruction *I : PI->users()) {
       if (Users.size() >= MaxUsers)
         return std::nullopt;
       switch (I->getOpcode()) {
@@ -3790,7 +3786,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
         if (!ICI->isEquality())
           return std::nullopt;
         unsigned OtherIndex = (ICI->getOperand(0) == PI) ? 1 : 0;
-        if (!isNeverEqualToUnescapedAlloc(ICI->getOperand(OtherIndex), TLI, AI))
+        if (!isNeverEqualToUnescapedAlloc(ICI->getOperand(OtherIndex), AI))
           return std::nullopt;
 
         // Do not fold compares to aligned_alloc calls, as they may have to
@@ -3852,14 +3848,14 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
           }
         }
 
-        if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
-            getAllocationFamily(I, &TLI) == Family) {
+        if (Family && getFreedOperand(cast<CallBase>(I)) == PI &&
+            getAllocationFamily(I) == Family) {
           Users.emplace_back(I);
           continue;
         }
 
         if (Family && getReallocatedOperand(cast<CallBase>(I)) == PI &&
-            getAllocationFamily(I, &TLI) == Family) {
+            getAllocationFamily(I) == Family) {
           Users.emplace_back(I);
           Worklist.push_back(I);
           continue;
@@ -3905,7 +3901,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
 }
 
 Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
-  assert(isa<AllocaInst>(MI) || isRemovableAlloc(&cast<CallBase>(MI), &TLI));
+  assert(isa<AllocaInst>(MI) || isRemovableAlloc(&cast<CallBase>(MI)));
 
   // If we have a malloc call which is only used in any amount of comparisons to
   // null and free calls, delete the calls and replace the comparisons with true
@@ -3937,7 +3933,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   bool KnowInitUndef = false;
   bool KnowInitZero = false;
   Constant *Init =
-      getInitialValueOfAllocation(&MI, &TLI, Type::getInt8Ty(MI.getContext()));
+      getInitialValueOfAllocation(&MI, Type::getInt8Ty(MI.getContext()));
   if (Init) {
     if (isa<UndefValue>(Init))
       KnowInitUndef = true;
@@ -4010,7 +4006,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
           assert(KnowInitZero || KnowInitUndef);
           Replace = KnowInitUndef ? UndefValue::get(I->getType())
                                   : Constant::getNullValue(I->getType());
-        } else
+        } else if (Constant *Result = getElidedFreeResult(I))
+          Replace = Result;
+        else
           Replace = PoisonValue::get(I->getType());
         replaceInstUsesWith(*I, Replace);
       }
@@ -4165,12 +4163,13 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
   if (isa<UndefValue>(Op)) {
     // Leave a marker since we can't modify the CFG here.
     CreateNonTerminatorUnreachable(&FI);
+    replaceInstUsesWith(FI, PoisonValue::get(FI.getType()));
     return eraseInstFromFunction(FI);
   }
 
   // If we have 'free null' delete the instruction.  This can happen in stl code
   // when lots of inlining happens.
-  if (isa<ConstantPointerNull>(Op))
+  if (isa<ConstantPointerNull>(Op) && FI.use_empty())
     return eraseInstFromFunction(FI);
 
   // If we had free(realloc(...)) with no intervening uses, then eliminate the
@@ -5387,57 +5386,6 @@ Instruction *InstCombinerImpl::foldFreezeIntoRecurrence(FreezeInst &FI,
   return replaceInstUsesWith(FI, PN);
 }
 
-bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
-  Value *Op = FI.getOperand(0);
-
-  if (isa<Constant>(Op) || Op->hasOneUse())
-    return false;
-
-  // Move the freeze directly after the definition of its operand, so that
-  // it dominates the maximum number of uses. Note that it may not dominate
-  // *all* uses if the operand is an invoke/callbr and the use is in a phi on
-  // the normal/default destination. This is why the domination check in the
-  // replacement below is still necessary.
-  BasicBlock::iterator MoveBefore;
-  if (isa<Argument>(Op)) {
-    MoveBefore = FI.getFunction()->getEntryBlock().getFirstNonPHIOrAlloca();
-  } else {
-    auto MoveBeforeOpt = cast<Instruction>(Op)->getInsertionPointAfterDef();
-    if (!MoveBeforeOpt)
-      return false;
-    MoveBefore = *MoveBeforeOpt;
-  }
-
-  // Re-point iterator to come after any debug-info records.
-  MoveBefore.setHeadBit(false);
-
-  bool Changed = false;
-  if (&FI != &*MoveBefore) {
-    FI.moveBefore(*MoveBefore->getParent(), MoveBefore);
-    Changed = true;
-  }
-
-  SmallVector<User *> Users;
-  Changed |= Op->replaceUsesWithIf(&FI, [&](Use &U) -> bool {
-    if (!DT.dominates(&FI, U))
-      return false;
-
-    Users.push_back(U.getUser());
-    return true;
-  });
-
-  for (auto *U : Users) {
-    // Re-queue U and its users: freezing U's operand can expose a fold on a
-    // user of U (e.g. a freeze of U can now be pushed through it) that would
-    // otherwise only fire on a later iteration, tripping the fixpoint verifier.
-    auto *UI = cast<Instruction>(U);
-    Worklist.pushUsersToWorkList(*UI);
-    Worklist.push(UI);
-  }
-
-  return Changed;
-}
-
 // Check if any direct or bitcast user of this value is a shuffle instruction.
 static bool isUsedWithinShuffleVector(Value *V) {
   for (auto *U : V->users()) {
@@ -5559,8 +5507,23 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   }
 
   // Replace uses of Op with freeze(Op).
-  if (freezeOtherUses(I))
-    return &I;
+  if (!isa<Constant>(Op0) && !Op0->hasOneUse()) {
+    SmallVector<User *> Users;
+    bool Changed = freezeUsesAfterDef(I, DT, &Users);
+
+    for (auto *U : Users) {
+      // Re-queue U and its users: freezing U's operand can expose a fold on a
+      // user of U (e.g. a freeze of U can now be pushed through it) that would
+      // otherwise only fire on a later iteration, tripping the fixpoint
+      // verifier.
+      auto *UI = cast<Instruction>(U);
+      Worklist.pushUsersToWorkList(*UI);
+      Worklist.push(UI);
+    }
+
+    if (Changed)
+      return &I;
+  }
 
   return nullptr;
 }
@@ -6161,14 +6124,20 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
       if (!Inst.use_empty() &&
           (Inst.getNumOperands() == 0 || isa<Constant>(Inst.getOperand(0))))
         if (Constant *C = ConstantFoldInstruction(&Inst, DL, &TLI)) {
-          LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
-                            << '\n');
-          Inst.replaceAllUsesWith(C);
-          ++NumConstProp;
-          if (isInstructionTriviallyDead(&Inst, &TLI))
-            Inst.eraseFromParent();
-          MadeIRChange = true;
-          continue;
+          bool IsDead = wouldInstructionBeTriviallyDead(&Inst, &TLI);
+          auto *CB = dyn_cast<CallBase>(&Inst);
+          if (!CB || !CB->isMustTailCall() || IsDead) {
+            LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
+                              << '\n');
+            Inst.replaceAllUsesWith(C);
+            MadeIRChange = true;
+            ++NumConstProp;
+            if (IsDead) {
+              // Omit the instruction from the worklist only if we deleted it.
+              Inst.eraseFromParent();
+              continue;
+            }
+          }
         }
 
       // See if we can constant fold its operands.

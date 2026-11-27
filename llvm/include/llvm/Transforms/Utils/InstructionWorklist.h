@@ -104,8 +104,8 @@ public:
   /// When an instruction is simplified, add all users of the instruction
   /// to the work lists because they might get more simplified now.
   void pushUsersToWorkList(Instruction &I) {
-    for (User *U : I.users())
-      push(cast<Instruction>(U));
+    for (Instruction *U : I.users())
+      push(U);
   }
 
   /// Should be called *after* decrementing the use-count on V.

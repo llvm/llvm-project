@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "hlx-expand-pseudos"
 

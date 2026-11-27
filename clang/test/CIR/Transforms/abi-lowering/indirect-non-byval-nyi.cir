@@ -2,6 +2,11 @@
 // RUN:     -cir-call-conv-lowering="classification-attr=test_classify" \
 // RUN:     2>&1 | FileCheck %s
 
+// In the call-site cases Big cannot be passed in registers, as for a C++ class
+// with a non-trivial copy constructor, so a non-byval call site must pass the
+// caller's storage.  indirect-non-byval-copy.cir has the same call sites for a
+// record that can be passed in registers.
+
 !s64i = !cir.int<s, 64>
 !rec_Big = !cir.struct<"Big" {data !s64i, data !s64i, data !s64i, data !s64i}>
 
@@ -17,7 +22,11 @@
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
@@ -54,7 +63,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
@@ -94,7 +107,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
@@ -136,7 +153,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
@@ -179,7 +200,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   cir.func private @takes_big_non_byval16(%arg0: !rec_Big)
@@ -222,7 +247,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // A return slot holds the object the caller reads after the call, not one it
@@ -230,7 +259,7 @@ module attributes {
   // parameter carrying llvm.align.
   cir.func @caller_non_byval_from_sret_slot() -> !rec_Big
       requires_call_conv_lowering attributes { test_classify = #sret_return } {
-    %ret = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %ret = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %ret : !rec_Big, !cir.ptr<!rec_Big>
     %retslot = cir.load %ret : !cir.ptr<!rec_Big>, !rec_Big
@@ -266,7 +295,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // A byval parameter is the callee's own copy, which nothing else destroys,
@@ -306,7 +339,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // A non-byval parameter states less alignment than the callee it is handed to
@@ -347,7 +384,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   // The same rejection with the callee declared first, so the call is reached
@@ -390,7 +431,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)
@@ -434,7 +479,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   cir.func private @takes_big_non_byval16(%arg0: !rec_Big)
@@ -477,7 +526,11 @@ module attributes {
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<
-    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>,
+  cir.record_layouts = {
+    Big = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+                             has_trivial_dtor = true, record_align = 8>
+  }
 } {
 
   cir.func private @takes_big_non_byval(%arg0: !rec_Big)

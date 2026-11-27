@@ -56,6 +56,33 @@ func.func @depthwise_conv2d_as_mul_q(%arg0: tensor<4x10x10x2xi8>, %arg1: tensor<
 
 // -----
 
+// CHECK-LABEL: @depthwise_conv2d_as_mul_ui8
+func.func @depthwise_conv2d_as_mul_ui8(%arg0: tensor<4x10x10x2xui8>, %arg1: tensor<1x1x2x3xui8>, %arg2: tensor<6xi32>) -> tensor<4x10x10x6xi32> {
+  // CHECK-DAG: %[[CONST0:.+]] = tosa.const_shape values(dense<[4, 10, 10, 2, 1]> : tensor<5xindex>)
+  // CHECK-DAG: %[[INPUT_ZP:.+]] = tosa.const values(dense<7> : tensor<1x1x1x1x1xi32>)
+  // CHECK-DAG: %[[WEIGHT_ZP:.+]] = tosa.const values(dense<11> : tensor<1x1x1x1xi32>)
+  // CHECK-DAG: %[[CONST3:.+]] = tosa.const_shape values(dense<[1, 1, 1, 2, 3]> : tensor<5xindex>)
+  // CHECK-DAG: %[[CONST4:.+]] = tosa.const_shape values(dense<[4, 10, 10, 6]> : tensor<4xindex>)
+  // CHECK-DAG: %[[CONST5:.+]] = tosa.const_shape values(dense<[1, 1, 1, 6]> : tensor<4xindex>)
+  // CHECK-DAG: %[[SHIFT:.*]] = tosa.const values(dense<0> : tensor<1xi8>) : () -> tensor<1xi8>
+  // CHECK: %[[RESHAPE_I:.+]] = tosa.reshape %arg0, %[[CONST0]]
+  // CHECK: %[[CAST_I:.+]] = tosa.cast %[[RESHAPE_I]] input_unsigned(true) : (tensor<4x10x10x2x1xui8>) -> tensor<4x10x10x2x1xi32>
+  // CHECK: %[[CAST_W:.+]] = tosa.cast %arg1 input_unsigned(true) : (tensor<1x1x2x3xui8>) -> tensor<1x1x2x3xi32>
+  // CHECK: %[[SUB_I:.+]] = tosa.sub %[[CAST_I]], %[[INPUT_ZP]]
+  // CHECK: %[[SUB_W:.+]] = tosa.sub %[[CAST_W]], %[[WEIGHT_ZP]]
+  // CHECK: %[[RESHAPE_W:.+]] = tosa.reshape %[[SUB_W]], %[[CONST3]]
+  // CHECK: %[[MUL:.+]] = tosa.mul %[[SUB_I]], %[[RESHAPE_W]], %[[SHIFT]]
+  // CHECK: %[[RESHAPE_O:.+]] = tosa.reshape %[[MUL]], %[[CONST4]]
+  // CHECK: %[[RESHAPE_ARG2:.+]] = tosa.reshape %arg2, %[[CONST5]]
+  // CHECK: %[[ADD:.+]] = tosa.add %[[RESHAPE_O]], %[[RESHAPE_ARG2]]
+  %input_zp = "tosa.const"() <{values = dense<7> : tensor<1xui8>}> : () -> tensor<1xui8>
+  %weight_zp = "tosa.const"() <{values = dense<11> : tensor<1xui8>}> : () -> tensor<1xui8>
+  %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp pad([0, 0, 0, 0]) stride([1, 1]) dilation([1, 1]) acc_type(i32) : (tensor<4x10x10x2xui8>, tensor<1x1x2x3xui8>, tensor<6xi32>, tensor<1xui8>, tensor<1xui8>) -> tensor<4x10x10x6xi32>
+  return %0 : tensor<4x10x10x6xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @depthwise_conv2d_as_mul_padded
 func.func @depthwise_conv2d_as_mul_padded(%arg0: tensor<4x10x10x2xf32>, %arg1: tensor<1x1x2x3xf32>, %arg2: tensor<6xf32>) -> tensor<4x12x12x6xf32> {
   // CHECK-DAG: %[[CONST0:.+]] = tosa.const_shape values(dense<[4, 10, 10, 2, 1]> : tensor<5xindex>)

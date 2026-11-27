@@ -30,16 +30,18 @@ function(clang_tablegen)
   endif()
 endfunction(clang_tablegen)
 
-macro(set_clang_windows_version_resource_properties name)
-  if(DEFINED windows_resource_file)
-    set_windows_version_resource_properties(${name} ${windows_resource_file}
+function(set_clang_windows_version_resource_properties name)
+  get_target_property(resource_file ${name} LLVM_WINDOWS_VERSION_RESOURCE_FILE)
+  if(resource_file)
+    set_windows_version_resource_properties(${name} ${resource_file}
       VERSION_MAJOR ${CLANG_VERSION_MAJOR}
       VERSION_MINOR ${CLANG_VERSION_MINOR}
       VERSION_PATCHLEVEL ${CLANG_VERSION_PATCHLEVEL}
       VERSION_STRING "${CLANG_VERSION}"
-      PRODUCT_NAME "clang")
+      PRODUCT_NAME "clang"
+      ${ARGN})
   endif()
-endmacro()
+endfunction()
 
 macro(add_clang_subdirectory name)
   add_llvm_subdirectory(CLANG TOOL ${name})
@@ -48,7 +50,7 @@ endmacro()
 macro(add_clang_library name)
   cmake_parse_arguments(ARG
     "SHARED;STATIC;INSTALL_WITH_TOOLCHAIN"
-    ""
+    "FILE_DESCRIPTION"
     "ADDITIONAL_HEADERS"
     ${ARGN})
   set(srcs)
@@ -108,16 +110,14 @@ macro(add_clang_library name)
   endif()
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
-  if((WIN32 AND NOT MINGW) AND NOT CLANG_LINK_CLANG_DYLIB)
-    # Make sure all consumers also turn off visibility macros so they're not
-    # trying to dllimport symbols.
-    target_compile_definitions(${name} PUBLIC CLANG_BUILD_STATIC)
+  if(NOT ARG_SHARED AND NOT ARG_STATIC)
+    # Add the CLANG_COMPONENT_LIB_DEFINITIONS to the compile definitions for
+    # this target. These set whether the Clang API is annotated for export.
+    target_compile_definitions(${name} PRIVATE ${CLANG_COMPONENT_LIB_DEFINITIONS})
     if(TARGET "obj.${name}")
-      target_compile_definitions("obj.${name}" PUBLIC CLANG_BUILD_STATIC)
+      target_compile_definitions("obj.${name}" PRIVATE
+                                 ${CLANG_COMPONENT_LIB_DEFINITIONS})
     endif()
-  elseif(TARGET "obj.${name}" AND NOT ARG_SHARED AND NOT ARG_STATIC)
-    # Clang component libraries linked to clang-cpp are declared without SHARED or STATIC
-    target_compile_definitions("obj.${name}" PUBLIC CLANG_EXPORTS)
   endif()
 
   set(libs ${name})
@@ -153,7 +153,8 @@ macro(add_clang_library name)
     endif()
   endforeach()
 
-  set_clang_windows_version_resource_properties(${name})
+  set_clang_windows_version_resource_properties(${name}
+    FILE_DESCRIPTION "${ARG_FILE_DESCRIPTION}")
 endmacro(add_clang_library)
 
 macro(add_clang_executable name)

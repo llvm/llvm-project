@@ -197,7 +197,7 @@ const int &test_cond_const_true_throw_true() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z31test_cond_const_true_throw_truev(
-// CIR:  %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:  %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:  %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init const : !cir.ptr<!s32i>
 // CIR:  %[[CONST_30:.*]] = cir.const #cir.int<30> : !s32i
 // CIR:  cir.store{{.*}} %[[CONST_30]], %[[A_ADDR]] : !s32i, !cir.ptr<!s32i>
@@ -732,7 +732,7 @@ int &test_ref_cond_throw(bool c, int &x) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z19test_ref_cond_throwbRi(
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[C:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR:   %[[X_REF:.*]] = cir.alloca "x" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[C_VAL:.*]] = cir.load{{.*}} %[[C]] : !cir.ptr<!cir.bool>, !cir.bool

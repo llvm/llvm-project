@@ -156,14 +156,14 @@ void registerToSPIRVTranslation() {
 // Round-trip registration
 //===----------------------------------------------------------------------===//
 
-static LogicalResult roundTripModule(spirv::ModuleOp module, bool emitDebugInfo,
-                                     raw_ostream &output) {
+static LogicalResult roundTripModule(spirv::ModuleOp moduleOp,
+                                     bool emitDebugInfo, raw_ostream &output) {
   SmallVector<uint32_t, 0> binary;
-  MLIRContext *context = module->getContext();
+  MLIRContext *context = moduleOp->getContext();
 
   spirv::SerializationOptions options;
   options.emitDebugInfo = emitDebugInfo;
-  if (failed(spirv::serialize(module, binary, options)))
+  if (failed(spirv::serialize(moduleOp, binary, options)))
     return failure();
 
   MLIRContext deserializationContext(context->getDialectRegistry());
@@ -183,8 +183,8 @@ namespace mlir {
 void registerTestRoundtripSPIRV() {
   TranslateFromMLIRRegistration roundtrip(
       "test-spirv-roundtrip", "test roundtrip in SPIR-V dialect",
-      [](spirv::ModuleOp module, raw_ostream &output) {
-        return roundTripModule(module, /*emitDebugInfo=*/false, output);
+      [](spirv::ModuleOp moduleOp, raw_ostream &output) {
+        return roundTripModule(moduleOp, /*emitDebugInfo=*/false, output);
       },
       [](DialectRegistry &registry) {
         registry.insert<spirv::SPIRVDialect>();
@@ -194,8 +194,8 @@ void registerTestRoundtripSPIRV() {
 void registerTestRoundtripDebugSPIRV() {
   TranslateFromMLIRRegistration roundtrip(
       "test-spirv-roundtrip-debug", "test roundtrip debug in SPIR-V",
-      [](spirv::ModuleOp module, raw_ostream &output) {
-        return roundTripModule(module, /*emitDebugInfo=*/true, output);
+      [](spirv::ModuleOp moduleOp, raw_ostream &output) {
+        return roundTripModule(moduleOp, /*emitDebugInfo=*/true, output);
       },
       [](DialectRegistry &registry) {
         registry.insert<spirv::SPIRVDialect>();

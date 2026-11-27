@@ -1,6 +1,6 @@
 ## This test verifies that llvm-objcopy can add multiple sections to a Mach-O binary.
 
-# RUN: yaml2obj %s -o %t
+# RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: echo -n FOOabcdefg > %t.foo.data
 # RUN: echo -n BARabcdefg > %t.bar.data
 
@@ -20,13 +20,212 @@
 # RUN: llvm-readobj --sections --section-data %t.foo.bar.3 \
 # RUN:   | FileCheck %s -check-prefix=CASE3
 
+## Object file (MH_OBJECT): one segment holds all sections.
+# RUN: yaml2obj --docnum=2 %s -o %t.o
+
+## Case 4: Add two new sections with different segment names into an existing
+## segment.
+# RUN: llvm-objcopy --add-section __FOO,__foo=%t.foo.data --add-section __BAR,__bar=%t.bar.data %t.o %t.foo.bar.4
+# RUN: llvm-readobj --sections --macho-segment %t.foo.bar.4 \
+# RUN:   | FileCheck %s -check-prefix=CASE4
+
 --- !mach-o
 IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
   cpusubtype:      0x00000003
-  filetype:        0x00000001
+  filetype:        MH_EXECUTE
+  ncmds:           3
+  sizeofcmds:      248
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    segname:         __TEXT
+    vmaddr:          0x100000000
+    vmsize:          0x1000
+    fileoff:         0
+    filesize:        1028
+    maxprot:         5
+    initprot:        5
+    nsects:          1
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            0x100000400
+        content:         'AABBCCDD'
+        size:            4
+        offset:          1024
+        align:           0
+        reloff:          0x00000000
+        nreloc:          0
+        flags:           0x80000400
+        reserved1:       0x00000000
+        reserved2:       0x00000000
+        reserved3:       0x00000000
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __LINKEDIT
+    vmaddr:          0x100001000
+    vmsize:          0x1000
+    fileoff:         1028
+    filesize:        4
+    maxprot:         1
+    initprot:        1
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0
+    stroff:          1028
+    strsize:         4
+LinkEditData:
+  StringTable:
+    - ''
+    - ''
+    - ''
+
+# CASE1:        Sections [
+# CASE1-NEXT:    Section {
+# CASE1-NEXT:      Index: 0
+# CASE1-NEXT:      Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# CASE1-NEXT:      Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# CASE1-NEXT:      Address: 0x100000400
+# CASE1-NEXT:      Size: 0x4
+# CASE1-NEXT:      Offset: 1024
+# CASE1-NEXT:      Alignment: 0
+# CASE1-NEXT:      RelocationOffset: 0x0
+# CASE1-NEXT:      RelocationCount: 0
+# CASE1-NEXT:      Type: Regular (0x0)
+# CASE1-NEXT:      Attributes [ (0x800004)
+# CASE1-NEXT:        PureInstructions (0x800000)
+# CASE1-NEXT:        SomeInstructions (0x4)
+# CASE1-NEXT:      ]
+# CASE1-NEXT:      Reserved1: 0x0
+# CASE1-NEXT:      Reserved2: 0x0
+# CASE1-NEXT:      Reserved3: 0x0
+# CASE1-NEXT:      SectionData (
+# CASE1-NEXT:        0000: AABBCCDD                             |....|
+# CASE1-NEXT:      )
+# CASE1-NEXT:    }
+# CASE1-NEXT:    Section {
+# CASE1-NEXT:      Index: 1
+# CASE1-NEXT:      Name: __foo (5F 5F 66 6F 6F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE1-NEXT:      Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# CASE1-NEXT:      Address: 0x100000404
+# CASE1-NEXT:      Size: 0xA
+# CASE1-NEXT:      Offset: 1028
+# CASE1-NEXT:      Alignment: 0
+# CASE1-NEXT:      RelocationOffset: 0x0
+# CASE1-NEXT:      RelocationCount: 0
+# CASE1-NEXT:      Type: Regular (0x0)
+# CASE1-NEXT:      Attributes [ (0x0)
+# CASE1-NEXT:      ]
+# CASE1-NEXT:      Reserved1: 0x0
+# CASE1-NEXT:      Reserved2: 0x0
+# CASE1-NEXT:      Reserved3: 0x0
+# CASE1-NEXT:      SectionData (
+# CASE1-NEXT:        0000: 464F4F61 62636465 6667               |FOOabcdefg|
+# CASE1-NEXT:      )
+# CASE1-NEXT:    }
+# CASE1-NEXT:    Section {
+# CASE1-NEXT:      Index: 2
+# CASE1-NEXT:      Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
+# CASE1-NEXT:      Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# CASE1-NEXT:      Address: 0x10000040E
+# CASE1-NEXT:      Size: 0xA
+# CASE1-NEXT:      Offset: 1038
+# CASE1-NEXT:      Alignment: 0
+# CASE1-NEXT:      RelocationOffset: 0x0
+# CASE1-NEXT:      RelocationCount: 0
+# CASE1-NEXT:      Type: Regular (0x0)
+# CASE1-NEXT:      Attributes [ (0x0)
+# CASE1-NEXT:      ]
+# CASE1-NEXT:      Reserved1: 0x0
+# CASE1-NEXT:      Reserved2: 0x0
+# CASE1-NEXT:      Reserved3: 0x0
+# CASE1-NEXT:      SectionData (
+# CASE1-NEXT:        0000: 42415261 62636465 6667               |BARabcdefg|
+# CASE1-NEXT:      )
+# CASE1-NEXT:    }
+# CASE1-NEXT:  ]
+
+# CASE3:        Sections [
+# CASE3-NEXT:    Section {
+# CASE3-NEXT:      Index: 0
+# CASE3-NEXT:      Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:      Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:      Address: 0x100000400
+# CASE3-NEXT:      Size: 0x4
+# CASE3-NEXT:      Offset: 1024
+# CASE3-NEXT:      Alignment: 0
+# CASE3-NEXT:      RelocationOffset: 0x0
+# CASE3-NEXT:      RelocationCount: 0
+# CASE3-NEXT:      Type: Regular (0x0)
+# CASE3-NEXT:      Attributes [ (0x800004)
+# CASE3-NEXT:        PureInstructions (0x800000)
+# CASE3-NEXT:        SomeInstructions (0x4)
+# CASE3-NEXT:      ]
+# CASE3-NEXT:      Reserved1: 0x0
+# CASE3-NEXT:      Reserved2: 0x0
+# CASE3-NEXT:      Reserved3: 0x0
+# CASE3-NEXT:      SectionData (
+# CASE3-NEXT:        0000: AABBCCDD                             |....|
+# CASE3-NEXT:      )
+# CASE3-NEXT:    }
+# CASE3-NEXT:    Section {
+# CASE3-NEXT:      Index: 1
+# CASE3-NEXT:      Name: __foo (5F 5F 66 6F 6F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:      Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:      Address: 0x100002000
+# CASE3-NEXT:      Size: 0xA
+# CASE3-NEXT:      Offset: 4096
+# CASE3-NEXT:      Alignment: 0
+# CASE3-NEXT:      RelocationOffset: 0x0
+# CASE3-NEXT:      RelocationCount: 0
+# CASE3-NEXT:      Type: Regular (0x0)
+# CASE3-NEXT:      Attributes [ (0x0)
+# CASE3-NEXT:      ]
+# CASE3-NEXT:      Reserved1: 0x0
+# CASE3-NEXT:      Reserved2: 0x0
+# CASE3-NEXT:      Reserved3: 0x0
+# CASE3-NEXT:      SectionData (
+# CASE3-NEXT:        0000: 464F4F61 62636465 6667               |FOOabcdefg|
+# CASE3-NEXT:      )
+# CASE3-NEXT:    }
+# CASE3-NEXT:    Section {
+# CASE3-NEXT:      Index: 2
+# CASE3-NEXT:      Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:      Segment: __BAR (5F 5F 42 41 52 00 00 00 00 00 00 00 00 00 00 00)
+# CASE3-NEXT:      Address: 0x100006000
+# CASE3-NEXT:      Size: 0xA
+# CASE3-NEXT:      Offset: 8192
+# CASE3-NEXT:      Alignment: 0
+# CASE3-NEXT:      RelocationOffset: 0x0
+# CASE3-NEXT:      RelocationCount: 0
+# CASE3-NEXT:      Type: Regular (0x0)
+# CASE3-NEXT:      Attributes [ (0x0)
+# CASE3-NEXT:      ]
+# CASE3-NEXT:      Reserved1: 0x0
+# CASE3-NEXT:      Reserved2: 0x0
+# CASE3-NEXT:      Reserved3: 0x0
+# CASE3-NEXT:      SectionData (
+# CASE3-NEXT:        0000: 42415261 62636465 6667               |BARabcdefg|
+# CASE3-NEXT:      )
+# CASE3-NEXT:    }
+# CASE3-NEXT:  ]
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        MH_OBJECT
   ncmds:           1
   sizeofcmds:      152
   flags:           0x00002000
@@ -58,133 +257,13 @@ LoadCommands:
         reserved2:       0x00000000
         reserved3:       0x00000000
 
-# CASE1:        Sections [
-# CASE1-NEXT:    Section {
-# CASE1-NEXT:      Index: 0
-# CASE1-NEXT:      Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
-# CASE1-NEXT:      Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
-# CASE1-NEXT:      Address: 0x0
-# CASE1-NEXT:      Size: 0x4
-# CASE1-NEXT:      Offset: 344
-# CASE1-NEXT:      Alignment: 0
-# CASE1-NEXT:      RelocationOffset: 0x0
-# CASE1-NEXT:      RelocationCount: 0
-# CASE1-NEXT:      Type: Regular (0x0)
-# CASE1-NEXT:      Attributes [ (0x800004)
-# CASE1-NEXT:        PureInstructions (0x800000)
-# CASE1-NEXT:        SomeInstructions (0x4)
-# CASE1-NEXT:      ]
-# CASE1-NEXT:      Reserved1: 0x0
-# CASE1-NEXT:      Reserved2: 0x0
-# CASE1-NEXT:      Reserved3: 0x0
-# CASE1-NEXT:      SectionData (
-# CASE1-NEXT:        0000: AABBCCDD                             |....|
-# CASE1-NEXT:      )
-# CASE1-NEXT:    }
-# CASE1-NEXT:    Section {
-# CASE1-NEXT:      Index: 1
-# CASE1-NEXT:      Name: __foo (5F 5F 66 6F 6F 00 00 00 00 00 00 00 00 00 00 00)
-# CASE1-NEXT:      Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
-# CASE1-NEXT:      Address: 0x4
-# CASE1-NEXT:      Size: 0xA
-# CASE1-NEXT:      Offset: 348
-# CASE1-NEXT:      Alignment: 0
-# CASE1-NEXT:      RelocationOffset: 0x0
-# CASE1-NEXT:      RelocationCount: 0
-# CASE1-NEXT:      Type: Regular (0x0)
-# CASE1-NEXT:      Attributes [ (0x0)
-# CASE1-NEXT:      ]
-# CASE1-NEXT:      Reserved1: 0x0
-# CASE1-NEXT:      Reserved2: 0x0
-# CASE1-NEXT:      Reserved3: 0x0
-# CASE1-NEXT:      SectionData (
-# CASE1-NEXT:        0000: 464F4F61 62636465 6667               |FOOabcdefg|
-# CASE1-NEXT:      )
-# CASE1-NEXT:    }
-# CASE1-NEXT:    Section {
-# CASE1-NEXT:      Index: 2
-# CASE1-NEXT:      Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
-# CASE1-NEXT:      Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
-# CASE1-NEXT:      Address: 0xE
-# CASE1-NEXT:      Size: 0xA
-# CASE1-NEXT:      Offset: 358
-# CASE1-NEXT:      Alignment: 0
-# CASE1-NEXT:      RelocationOffset: 0x0
-# CASE1-NEXT:      RelocationCount: 0
-# CASE1-NEXT:      Type: Regular (0x0)
-# CASE1-NEXT:      Attributes [ (0x0)
-# CASE1-NEXT:      ]
-# CASE1-NEXT:      Reserved1: 0x0
-# CASE1-NEXT:      Reserved2: 0x0
-# CASE1-NEXT:      Reserved3: 0x0
-# CASE1-NEXT:      SectionData (
-# CASE1-NEXT:        0000: 42415261 62636465 6667               |BARabcdefg|
-# CASE1-NEXT:      )
-# CASE1-NEXT:    }
-# CASE1-NEXT:  ]
+# CASE4:          Name: __foo (5F 5F 66 6F 6F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE4-NEXT:     Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
+# CASE4:          Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
+# CASE4-NEXT:     Segment: __BAR (5F 5F 42 41 52 00 00 00 00 00 00 00 00 00 00 00)
 
-# CASE3:        Sections [
-# CASE3-NEXT:    Section {
-# CASE3-NEXT:      Index: 0
-# CASE3-NEXT:      Name: __text (5F 5F 74 65 78 74 00 00 00 00 00 00 00 00 00 00)
-# CASE3-NEXT:      Segment: __TEXT (5F 5F 54 45 58 54 00 00 00 00 00 00 00 00 00 00)
-# CASE3-NEXT:      Address: 0x0
-# CASE3-NEXT:      Size: 0x4
-# CASE3-NEXT:      Offset: 488
-# CASE3-NEXT:      Alignment: 0
-# CASE3-NEXT:      RelocationOffset: 0x0
-# CASE3-NEXT:      RelocationCount: 0
-# CASE3-NEXT:      Type: Regular (0x0)
-# CASE3-NEXT:      Attributes [ (0x800004)
-# CASE3-NEXT:        PureInstructions (0x800000)
-# CASE3-NEXT:        SomeInstructions (0x4)
-# CASE3-NEXT:      ]
-# CASE3-NEXT:      Reserved1: 0x0
-# CASE3-NEXT:      Reserved2: 0x0
-# CASE3-NEXT:      Reserved3: 0x0
-# CASE3-NEXT:      SectionData (
-# CASE3-NEXT:        0000: AABBCCDD                             |....|
-# CASE3-NEXT:      )
-# CASE3-NEXT:    }
-# CASE3-NEXT:    Section {
-# CASE3-NEXT:      Index: 1
-# CASE3-NEXT:      Name: __foo (5F 5F 66 6F 6F 00 00 00 00 00 00 00 00 00 00 00)
-# CASE3-NEXT:      Segment: __FOO (5F 5F 46 4F 4F 00 00 00 00 00 00 00 00 00 00 00)
-# CASE3-NEXT:      Address: 0xB8
-# CASE3-NEXT:      Size: 0xA
-# CASE3-NEXT:      Offset: 492
-# CASE3-NEXT:      Alignment: 0
-# CASE3-NEXT:      RelocationOffset: 0x0
-# CASE3-NEXT:      RelocationCount: 0
-# CASE3-NEXT:      Type: Regular (0x0)
-# CASE3-NEXT:      Attributes [ (0x0)
-# CASE3-NEXT:      ]
-# CASE3-NEXT:      Reserved1: 0x0
-# CASE3-NEXT:      Reserved2: 0x0
-# CASE3-NEXT:      Reserved3: 0x0
-# CASE3-NEXT:      SectionData (
-# CASE3-NEXT:        0000: 464F4F61 62636465 6667               |FOOabcdefg|
-# CASE3-NEXT:      )
-# CASE3-NEXT:    }
-# CASE3-NEXT:    Section {
-# CASE3-NEXT:      Index: 2
-# CASE3-NEXT:      Name: __bar (5F 5F 62 61 72 00 00 00 00 00 00 00 00 00 00 00)
-# CASE3-NEXT:      Segment: __BAR (5F 5F 42 41 52 00 00 00 00 00 00 00 00 00 00 00)
-# CASE3-NEXT:      Address: 0x40B8
-# CASE3-NEXT:      Size: 0xA
-# CASE3-NEXT:      Offset: 502
-# CASE3-NEXT:      Alignment: 0
-# CASE3-NEXT:      RelocationOffset: 0x0
-# CASE3-NEXT:      RelocationCount: 0
-# CASE3-NEXT:      Type: Regular (0x0)
-# CASE3-NEXT:      Attributes [ (0x0)
-# CASE3-NEXT:      ]
-# CASE3-NEXT:      Reserved1: 0x0
-# CASE3-NEXT:      Reserved2: 0x0
-# CASE3-NEXT:      Reserved3: 0x0
-# CASE3-NEXT:      SectionData (
-# CASE3-NEXT:        0000: 42415261 62636465 6667               |BARabcdefg|
-# CASE3-NEXT:      )
-# CASE3-NEXT:    }
-# CASE3-NEXT:  ]
-
+# CASE4:        Segment {
+# CASE4-NEXT:     Cmd: LC_SEGMENT_64
+# CASE4-NEXT:     Name: __TEXT{{$}}
+# CASE4:          nsects: 3
+# CASE4-NOT:    Segment {
