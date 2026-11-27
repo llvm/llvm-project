@@ -230,36 +230,102 @@ long double test_powil(long double x, int y) {
 // OGCG:         call x86_fp80 @llvm.powi.f80.i32(x86_fp80 %{{.*}}, i32 %{{.*}})
 // OGCG:         ret x86_fp80
 
+// ldexp: float, double, long double, __float128
+
+float test_ldexpf(float x, int e) {
+  return __builtin_ldexpf(x, e);
+}
+
+// CIR-LABEL: cir.func {{.*}} @test_ldexpf
+// CIR:         %{{.*}} = cir.ldexp %{{.*}}, %{{.*}} : !cir.float, !s32i
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}} float @test_ldexpf
+// LLVM:         call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
+// LLVM:         ret float
+
+// OGCG-LABEL: define {{.*}} float @test_ldexpf
+// OGCG:         call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
+// OGCG:         ret float
+
+double test_ldexp(double x, int e) {
+  return __builtin_ldexp(x, e);
+}
+
+// CIR-LABEL: cir.func {{.*}} @test_ldexp
+// CIR:         %{{.*}} = cir.ldexp %{{.*}}, %{{.*}} : !cir.double, !s32i
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}} double @test_ldexp
+// LLVM:         call double @llvm.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}})
+// LLVM:         ret double
+
+// OGCG-LABEL: define {{.*}} double @test_ldexp
+// OGCG:         call double @llvm.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}})
+// OGCG:         ret double
+
+long double test_ldexpl(long double x, int e) {
+  return __builtin_ldexpl(x, e);
+}
+
+// CIR-LABEL: cir.func {{.*}} @test_ldexpl
+// CIR:         %{{.*}} = cir.ldexp %{{.*}}, %{{.*}} : !cir.long_double<!cir.f80>, !s32i
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}} x86_fp80 @test_ldexpl
+// LLVM:         call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %{{.*}}, i32 %{{.*}})
+// LLVM:         ret x86_fp80
+
+// OGCG-LABEL: define {{.*}} x86_fp80 @test_ldexpl
+// OGCG:         call x86_fp80 @llvm.ldexp.f80.i32(x86_fp80 %{{.*}}, i32 %{{.*}})
+// OGCG:         ret x86_fp80
+
+__float128 test_ldexpf128(__float128 x, int e) {
+  return __builtin_ldexpf128(x, e);
+}
+
+// CIR-LABEL: cir.func {{.*}} @test_ldexpf128
+// CIR:         %{{.*}} = cir.ldexp %{{.*}}, %{{.*}} : !cir.f128, !s32i
+// CIR:         cir.return
+
+// LLVM-LABEL: define {{.*}} fp128 @test_ldexpf128
+// LLVM:         call fp128 @llvm.ldexp.f128.i32(fp128 %{{.*}}, i32 %{{.*}})
+// LLVM:         ret fp128
+
+// OGCG-LABEL: define {{.*}} fp128 @test_ldexpf128
+// OGCG:         call fp128 @llvm.ldexp.f128.i32(fp128 %{{.*}}, i32 %{{.*}})
+// OGCG:         ret fp128
+
 // FP comparison builtins: float
 
 void test_floats(float x, float y, int *out) {
   out[0] = __builtin_isgreater(x, y);
-  // CIR: cir.cmp gt %{{.*}}, %{{.*}} : !cir.float
+  // CIR: cir.fcmp ogt %{{.*}}, %{{.*}} : !cir.float
   // LLVM: fcmp ogt float
   // OGCG: fcmp ogt float
 
   out[1] = __builtin_isgreaterequal(x, y);
-  // CIR: cir.cmp ge %{{.*}}, %{{.*}} : !cir.float
+  // CIR: cir.fcmp oge %{{.*}}, %{{.*}} : !cir.float
   // LLVM: fcmp oge float
   // OGCG: fcmp oge float
 
   out[2] = __builtin_isless(x, y);
-  // CIR: cir.cmp lt %{{.*}}, %{{.*}} : !cir.float
+  // CIR: cir.fcmp olt %{{.*}}, %{{.*}} : !cir.float
   // LLVM: fcmp olt float
   // OGCG: fcmp olt float
 
   out[3] = __builtin_islessequal(x, y);
-  // CIR: cir.cmp le %{{.*}}, %{{.*}} : !cir.float
+  // CIR: cir.fcmp ole %{{.*}}, %{{.*}} : !cir.float
   // LLVM: fcmp ole float
   // OGCG: fcmp ole float
 
   out[4] = __builtin_islessgreater(x, y);
-  // CIR: cir.cmp one %{{.*}}, %{{.*}} : !cir.float
+  // CIR: cir.fcmp one %{{.*}}, %{{.*}} : !cir.float
   // LLVM: fcmp one float
   // OGCG: fcmp one float
 
   out[5] = __builtin_isunordered(x, y);
-  // CIR: cir.cmp uno %{{.*}}, %{{.*}} : !cir.float
+  // CIR: cir.fcmp uno %{{.*}}, %{{.*}} : !cir.float
   // LLVM: fcmp uno float
   // OGCG: fcmp uno float
 }
@@ -268,32 +334,32 @@ void test_floats(float x, float y, int *out) {
 
 void test_doubles(double x, double y, int *out) {
   out[0] = __builtin_isgreater(x, y);
-  // CIR: cir.cmp gt %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp ogt %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fcmp ogt double
   // OGCG: fcmp ogt double
 
   out[1] = __builtin_isgreaterequal(x, y);
-  // CIR: cir.cmp ge %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp oge %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fcmp oge double
   // OGCG: fcmp oge double
 
   out[2] = __builtin_isless(x, y);
-  // CIR: cir.cmp lt %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp olt %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fcmp olt double
   // OGCG: fcmp olt double
 
   out[3] = __builtin_islessequal(x, y);
-  // CIR: cir.cmp le %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp ole %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fcmp ole double
   // OGCG: fcmp ole double
 
   out[4] = __builtin_islessgreater(x, y);
-  // CIR: cir.cmp one %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp one %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fcmp one double
   // OGCG: fcmp one double
 
   out[5] = __builtin_isunordered(x, y);
-  // CIR: cir.cmp uno %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp uno %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fcmp uno double
   // OGCG: fcmp uno double
 }
@@ -303,7 +369,7 @@ void test_doubles(double x, double y, int *out) {
 void test_mixed(double x, float y, int *out) {
   out[0] = __builtin_isgreater(x, y);
   // CIR: cir.cast floating %{{.*}} : !cir.float -> !cir.double
-  // CIR: cir.cmp gt %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp ogt %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fpext float %{{.*}} to double
   // LLVM: fcmp ogt double
   // OGCG: fpext float %{{.*}} to double
@@ -311,7 +377,7 @@ void test_mixed(double x, float y, int *out) {
 
   out[1] = __builtin_isgreaterequal(x, y);
   // CIR: cir.cast floating %{{.*}} : !cir.float -> !cir.double
-  // CIR: cir.cmp ge %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp oge %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fpext float %{{.*}} to double
   // LLVM: fcmp oge double
   // OGCG: fpext float %{{.*}} to double
@@ -319,7 +385,7 @@ void test_mixed(double x, float y, int *out) {
 
   out[2] = __builtin_isless(x, y);
   // CIR: cir.cast floating %{{.*}} : !cir.float -> !cir.double
-  // CIR: cir.cmp lt %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp olt %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fpext float %{{.*}} to double
   // LLVM: fcmp olt double
   // OGCG: fpext float %{{.*}} to double
@@ -327,7 +393,7 @@ void test_mixed(double x, float y, int *out) {
 
   out[3] = __builtin_islessequal(x, y);
   // CIR: cir.cast floating %{{.*}} : !cir.float -> !cir.double
-  // CIR: cir.cmp le %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp ole %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fpext float %{{.*}} to double
   // LLVM: fcmp ole double
   // OGCG: fpext float %{{.*}} to double
@@ -335,7 +401,7 @@ void test_mixed(double x, float y, int *out) {
 
   out[4] = __builtin_islessgreater(x, y);
   // CIR: cir.cast floating %{{.*}} : !cir.float -> !cir.double
-  // CIR: cir.cmp one %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp one %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fpext float %{{.*}} to double
   // LLVM: fcmp one double
   // OGCG: fpext float %{{.*}} to double
@@ -343,7 +409,7 @@ void test_mixed(double x, float y, int *out) {
 
   out[5] = __builtin_isunordered(x, y);
   // CIR: cir.cast floating %{{.*}} : !cir.float -> !cir.double
-  // CIR: cir.cmp uno %{{.*}}, %{{.*}} : !cir.double
+  // CIR: cir.fcmp uno %{{.*}}, %{{.*}} : !cir.double
   // LLVM: fpext float %{{.*}} to double
   // LLVM: fcmp uno double
   // OGCG: fpext float %{{.*}} to double
@@ -359,7 +425,7 @@ int test_isgreater_half(__fp16 *a, __fp16 *b) {
 // CIR-LABEL: cir.func {{.*}} @test_isgreater_half
 // CIR:         cir.cast floating %{{.*}} : !cir.f16 -> !cir.float
 // CIR:         cir.cast floating %{{.*}} : !cir.f16 -> !cir.float
-// CIR:         cir.cmp gt %{{.*}}, %{{.*}} : !cir.float
+// CIR:         cir.fcmp ogt %{{.*}}, %{{.*}} : !cir.float
 
 // LLVM-LABEL: define {{.*}} i32 @test_isgreater_half
 // LLVM:         fpext half %{{.*}} to float

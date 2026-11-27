@@ -6,9 +6,6 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX900,GCN-SDAG,GFX900-SDAG %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX900,GCN-GISEL,GFX900-GISEL %s
 
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 %s
-; RUN: llc -mtriple=r600 -mcpu=cayman < %s | FileCheck -check-prefix=CM %s
-
 define amdgpu_kernel void @s_exp2_f32(ptr addrspace(1) %out, float %in) {
 ; SI-SDAG-LABEL: s_exp2_f32:
 ; SI-SDAG:       ; %bb.0:
@@ -123,54 +120,11 @@ define amdgpu_kernel void @s_exp2_f32(ptr addrspace(1) %out, float %in) {
 ; GFX900-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-GISEL-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GFX900-GISEL-NEXT:    s_endpgm
-;
-; R600-LABEL: s_exp2_f32:
-; R600:       ; %bb.0:
-; R600-NEXT:    ALU 10, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     SETGT * T0.W, literal.x, KC0[2].Z,
-; R600-NEXT:    -1023672320(-1.260000e+02), 0(0.000000e+00)
-; R600-NEXT:     CNDE * T1.W, PV.W, 0.0, literal.x,
-; R600-NEXT:    1115684864(6.400000e+01), 0(0.000000e+00)
-; R600-NEXT:     ADD T1.W, KC0[2].Z, PV.W,
-; R600-NEXT:     CNDE * T0.W, T0.W, 1.0, literal.x,
-; R600-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; R600-NEXT:     EXP_IEEE * T0.X, PV.W,
-; R600-NEXT:     MUL_IEEE T0.X, PS, T0.W,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: s_exp2_f32:
-; CM:       ; %bb.0:
-; CM-NEXT:    ALU 13, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T1.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     SETGT * T0.W, literal.x, KC0[2].Z,
-; CM-NEXT:    -1023672320(-1.260000e+02), 0(0.000000e+00)
-; CM-NEXT:     CNDE * T1.W, PV.W, 0.0, literal.x,
-; CM-NEXT:    1115684864(6.400000e+01), 0(0.000000e+00)
-; CM-NEXT:     CNDE T0.Z, T0.W, 1.0, literal.x,
-; CM-NEXT:     ADD * T0.W, KC0[2].Z, PV.W,
-; CM-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; CM-NEXT:     EXP_IEEE T0.X, T0.W,
-; CM-NEXT:     EXP_IEEE T0.Y (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T0.W,
-; CM-NEXT:     MUL_IEEE * T0.X, PV.X, T0.Z,
-; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %result = call float @llvm.exp2.f32(float %in)
   store float %result, ptr addrspace(1) %out
   ret void
 }
 
-; FIXME: We should be able to merge these packets together on Cayman so we
-; have a maximum of 4 instructions.
 define amdgpu_kernel void @s_exp2_v2f32(ptr addrspace(1) %out, <2 x float> %in) {
 ; SI-SDAG-LABEL: s_exp2_v2f32:
 ; SI-SDAG:       ; %bb.0:
@@ -323,65 +277,6 @@ define amdgpu_kernel void @s_exp2_v2f32(ptr addrspace(1) %out, <2 x float> %in) 
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v1, v1, s0
 ; GFX900-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX900-GISEL-NEXT:    s_endpgm
-;
-; R600-LABEL: s_exp2_v2f32:
-; R600:       ; %bb.0:
-; R600-NEXT:    ALU 18, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XY, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     SETGT T0.W, literal.x, KC0[3].X,
-; R600-NEXT:     SETGT * T1.W, literal.x, KC0[2].W,
-; R600-NEXT:    -1023672320(-1.260000e+02), 0(0.000000e+00)
-; R600-NEXT:     CNDE * T2.W, PV.W, 0.0, literal.x,
-; R600-NEXT:    1115684864(6.400000e+01), 0(0.000000e+00)
-; R600-NEXT:     ADD T2.W, KC0[3].X, PV.W,
-; R600-NEXT:     CNDE * T3.W, T1.W, 0.0, literal.x,
-; R600-NEXT:    1115684864(6.400000e+01), 0(0.000000e+00)
-; R600-NEXT:     ADD T0.Z, KC0[2].W, PS,
-; R600-NEXT:     CNDE T0.W, T0.W, 1.0, literal.x,
-; R600-NEXT:     EXP_IEEE * T0.X, PV.W,
-; R600-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; R600-NEXT:     MUL_IEEE T0.Y, PS, PV.W,
-; R600-NEXT:     CNDE T0.W, T1.W, 1.0, literal.x,
-; R600-NEXT:     EXP_IEEE * T0.X, PV.Z,
-; R600-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; R600-NEXT:     MUL_IEEE T0.X, PS, PV.W,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: s_exp2_v2f32:
-; CM:       ; %bb.0:
-; CM-NEXT:    ALU 23, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T1, T0.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     SETGT * T0.W, literal.x, KC0[3].X,
-; CM-NEXT:    -1023672320(-1.260000e+02), 0(0.000000e+00)
-; CM-NEXT:     CNDE T0.Z, PV.W, 0.0, literal.x,
-; CM-NEXT:     SETGT * T1.W, literal.y, KC0[2].W,
-; CM-NEXT:    1115684864(6.400000e+01), -1023672320(-1.260000e+02)
-; CM-NEXT:     CNDE T0.Y, PV.W, 0.0, literal.x,
-; CM-NEXT:     CNDE T1.Z, T0.W, 1.0, literal.y,
-; CM-NEXT:     ADD * T0.W, KC0[3].X, PV.Z,
-; CM-NEXT:    1115684864(6.400000e+01), 528482304(5.421011e-20)
-; CM-NEXT:     EXP_IEEE T0.X, T0.W,
-; CM-NEXT:     EXP_IEEE T0.Y (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T0.W,
-; CM-NEXT:     MUL_IEEE T1.Y, PV.X, T1.Z,
-; CM-NEXT:     CNDE T0.Z, T1.W, 1.0, literal.x,
-; CM-NEXT:     ADD * T0.W, KC0[2].W, T0.Y,
-; CM-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; CM-NEXT:     EXP_IEEE T0.X, T0.W,
-; CM-NEXT:     EXP_IEEE T0.Y (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T0.W,
-; CM-NEXT:     MUL_IEEE * T1.X, PV.X, T0.Z,
-; CM-NEXT:     LSHR * T0.X, KC0[2].Y, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %result = call <2 x float> @llvm.exp2.v2f32(<2 x float> %in)
   store <2 x float> %result, ptr addrspace(1) %out
   ret void
@@ -592,93 +487,11 @@ define amdgpu_kernel void @s_exp2_v3f32(ptr addrspace(1) %out, <3 x float> %in) 
 ; GFX900-GISEL-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX900-GISEL-NEXT:    global_store_dwordx3 v3, v[0:2], s[2:3]
 ; GFX900-GISEL-NEXT:    s_endpgm
-;
-; R600-LABEL: s_exp2_v3f32:
-; R600:       ; %bb.0:
-; R600-NEXT:    ALU 27, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.X, T3.X, 0
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T1.XY, T2.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     SETGT T0.W, literal.x, KC0[3].Z,
-; R600-NEXT:     SETGT * T1.W, literal.x, KC0[3].Y,
-; R600-NEXT:    -1023672320(-1.260000e+02), 0(0.000000e+00)
-; R600-NEXT:     CNDE * T2.W, PV.W, 0.0, literal.x,
-; R600-NEXT:    1115684864(6.400000e+01), 0(0.000000e+00)
-; R600-NEXT:     ADD T0.Z, KC0[3].Z, PV.W,
-; R600-NEXT:     SETGT T2.W, literal.x, KC0[3].W,
-; R600-NEXT:     CNDE * T3.W, T1.W, 0.0, literal.y,
-; R600-NEXT:    -1023672320(-1.260000e+02), 1115684864(6.400000e+01)
-; R600-NEXT:     ADD T0.Y, KC0[3].Y, PS,
-; R600-NEXT:     CNDE T1.Z, PV.W, 0.0, literal.x,
-; R600-NEXT:     CNDE T0.W, T0.W, 1.0, literal.y,
-; R600-NEXT:     EXP_IEEE * T0.X, PV.Z,
-; R600-NEXT:    1115684864(6.400000e+01), 528482304(5.421011e-20)
-; R600-NEXT:     MUL_IEEE T1.Y, PS, PV.W,
-; R600-NEXT:     ADD T0.Z, KC0[3].W, PV.Z,
-; R600-NEXT:     CNDE T0.W, T1.W, 1.0, literal.x,
-; R600-NEXT:     EXP_IEEE * T0.X, PV.Y,
-; R600-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; R600-NEXT:     MUL_IEEE T1.X, PS, PV.W,
-; R600-NEXT:     CNDE T0.W, T2.W, 1.0, literal.x,
-; R600-NEXT:     EXP_IEEE * T0.X, PV.Z,
-; R600-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; R600-NEXT:     MUL_IEEE T0.X, PS, PV.W,
-; R600-NEXT:     LSHR * T2.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; R600-NEXT:     ADD_INT * T3.X, PS, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: s_exp2_v3f32:
-; CM:       ; %bb.0:
-; CM-NEXT:    ALU 35, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T3, T1.X
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0.X, T2.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     SETGT * T0.W, literal.x, KC0[3].W,
-; CM-NEXT:    -1023672320(-1.260000e+02), 0(0.000000e+00)
-; CM-NEXT:     CNDE * T1.W, PV.W, 0.0, literal.x,
-; CM-NEXT:    1115684864(6.400000e+01), 0(0.000000e+00)
-; CM-NEXT:     SETGT T0.Y, literal.x, KC0[3].Z,
-; CM-NEXT:     CNDE T0.Z, T0.W, 1.0, literal.y,
-; CM-NEXT:     ADD * T0.W, KC0[3].W, PV.W,
-; CM-NEXT:    -1023672320(-1.260000e+02), 528482304(5.421011e-20)
-; CM-NEXT:     EXP_IEEE T0.X, T0.W,
-; CM-NEXT:     EXP_IEEE T0.Y (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T0.W,
-; CM-NEXT:     MUL_IEEE T0.X, PV.X, T0.Z,
-; CM-NEXT:     CNDE T0.Z, T0.Y, 0.0, literal.x,
-; CM-NEXT:     SETGT * T0.W, literal.y, KC0[3].Y,
-; CM-NEXT:    1115684864(6.400000e+01), -1023672320(-1.260000e+02)
-; CM-NEXT:     LSHR T1.X, KC0[2].Y, literal.x,
-; CM-NEXT:     CNDE T1.Y, PV.W, 0.0, literal.y,
-; CM-NEXT:     CNDE T1.Z, T0.Y, 1.0, literal.z,
-; CM-NEXT:     ADD * T1.W, KC0[3].Z, PV.Z,
-; CM-NEXT:    2(2.802597e-45), 1115684864(6.400000e+01)
-; CM-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; CM-NEXT:     EXP_IEEE T0.X (MASKED), T1.W,
-; CM-NEXT:     EXP_IEEE T0.Y, T1.W,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T1.W,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T1.W,
-; CM-NEXT:     ADD_INT T2.X, T1.X, literal.x,
-; CM-NEXT:     MUL_IEEE T3.Y, PV.Y, T1.Z,
-; CM-NEXT:     CNDE T0.Z, T0.W, 1.0, literal.y,
-; CM-NEXT:     ADD * T0.W, KC0[3].Y, T1.Y,
-; CM-NEXT:    2(2.802597e-45), 528482304(5.421011e-20)
-; CM-NEXT:     EXP_IEEE T0.X (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE T0.Y, T0.W,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T0.W,
-; CM-NEXT:     MUL_IEEE * T3.X, PV.Y, T0.Z,
   %result = call <3 x float> @llvm.exp2.v3f32(<3 x float> %in)
   store <3 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
-; FIXME: We should be able to merge these packets together on Cayman so we
-; have a maximum of 4 instructions.
 define amdgpu_kernel void @s_exp2_v4f32(ptr addrspace(1) %out, <4 x float> %in) {
 ; SI-SDAG-LABEL: s_exp2_v4f32:
 ; SI-SDAG:       ; %bb.0:
@@ -926,100 +739,6 @@ define amdgpu_kernel void @s_exp2_v4f32(ptr addrspace(1) %out, <4 x float> %in) 
 ; GFX900-GISEL-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX900-GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
 ; GFX900-GISEL-NEXT:    s_endpgm
-;
-; R600-LABEL: s_exp2_v4f32:
-; R600:       ; %bb.0:
-; R600-NEXT:    ALU 33, @4, KC0[CB0:0-32], KC1[]
-; R600-NEXT:    MEM_RAT_CACHELESS STORE_RAW T0.XYZW, T1.X, 1
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-; R600-NEXT:    ALU clause starting at 4:
-; R600-NEXT:     SETGT T0.W, literal.x, KC0[4].X,
-; R600-NEXT:     SETGT * T1.W, literal.x, KC0[3].W,
-; R600-NEXT:    -1023672320(-1.260000e+02), 0(0.000000e+00)
-; R600-NEXT:     CNDE * T2.W, PV.W, 0.0, literal.x,
-; R600-NEXT:    1115684864(6.400000e+01), 0(0.000000e+00)
-; R600-NEXT:     ADD T0.Z, KC0[4].X, PV.W,
-; R600-NEXT:     SETGT T2.W, literal.x, KC0[3].Z,
-; R600-NEXT:     CNDE * T3.W, T1.W, 0.0, literal.y,
-; R600-NEXT:    -1023672320(-1.260000e+02), 1115684864(6.400000e+01)
-; R600-NEXT:     ADD T0.X, KC0[3].W, PS,
-; R600-NEXT:     CNDE T0.Y, T0.W, 1.0, literal.x,
-; R600-NEXT:     SETGT T1.Z, literal.y, KC0[3].Y,
-; R600-NEXT:     CNDE T0.W, PV.W, 0.0, literal.z,
-; R600-NEXT:     EXP_IEEE * T0.Z, PV.Z,
-; R600-NEXT:    528482304(5.421011e-20), -1023672320(-1.260000e+02)
-; R600-NEXT:    1115684864(6.400000e+01), 0(0.000000e+00)
-; R600-NEXT:     ADD T1.X, KC0[3].Z, PV.W,
-; R600-NEXT:     CNDE T1.Y, T1.W, 1.0, literal.x,
-; R600-NEXT:     CNDE T2.Z, PV.Z, 0.0, literal.y,
-; R600-NEXT:     MUL_IEEE T0.W, PS, PV.Y,
-; R600-NEXT:     EXP_IEEE * T0.X, PV.X,
-; R600-NEXT:    528482304(5.421011e-20), 1115684864(6.400000e+01)
-; R600-NEXT:     ADD T2.Y, KC0[3].Y, PV.Z,
-; R600-NEXT:     MUL_IEEE T0.Z, PS, PV.Y,
-; R600-NEXT:     CNDE T1.W, T2.W, 1.0, literal.x,
-; R600-NEXT:     EXP_IEEE * T0.X, PV.X,
-; R600-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; R600-NEXT:     MUL_IEEE T0.Y, PS, PV.W,
-; R600-NEXT:     CNDE T1.W, T1.Z, 1.0, literal.x,
-; R600-NEXT:     EXP_IEEE * T0.X, PV.Y,
-; R600-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; R600-NEXT:     MUL_IEEE T0.X, PS, PV.W,
-; R600-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; R600-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-;
-; CM-LABEL: s_exp2_v4f32:
-; CM:       ; %bb.0:
-; CM-NEXT:    ALU 43, @4, KC0[CB0:0-32], KC1[]
-; CM-NEXT:    MEM_RAT_CACHELESS STORE_DWORD T0, T1.X
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
-; CM-NEXT:    ALU clause starting at 4:
-; CM-NEXT:     SETGT * T0.W, literal.x, KC0[4].X,
-; CM-NEXT:    -1023672320(-1.260000e+02), 0(0.000000e+00)
-; CM-NEXT:     CNDE T0.Y, PV.W, 0.0, literal.x,
-; CM-NEXT:     SETGT T0.Z, literal.y, KC0[3].W,
-; CM-NEXT:     SETGT * T1.W, literal.y, KC0[3].Z,
-; CM-NEXT:    1115684864(6.400000e+01), -1023672320(-1.260000e+02)
-; CM-NEXT:     CNDE T0.X, PV.W, 0.0, literal.x,
-; CM-NEXT:     CNDE T1.Y, T0.W, 1.0, literal.y,
-; CM-NEXT:     CNDE T1.Z, PV.Z, 0.0, literal.x,
-; CM-NEXT:     ADD * T0.W, KC0[4].X, PV.Y,
-; CM-NEXT:    1115684864(6.400000e+01), 528482304(5.421011e-20)
-; CM-NEXT:     EXP_IEEE T0.X (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE T0.Y, T0.W,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T0.W,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T0.W,
-; CM-NEXT:     CNDE T1.X, T0.Z, 1.0, literal.x,
-; CM-NEXT:     SETGT T2.Y, literal.y, KC0[3].Y,
-; CM-NEXT:     ADD T0.Z, KC0[3].W, T1.Z,
-; CM-NEXT:     MUL_IEEE * T0.W, PV.Y, T1.Y,
-; CM-NEXT:    528482304(5.421011e-20), -1023672320(-1.260000e+02)
-; CM-NEXT:     EXP_IEEE T0.X (MASKED), T0.Z,
-; CM-NEXT:     EXP_IEEE T0.Y, T0.Z,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T0.Z,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T0.Z,
-; CM-NEXT:     CNDE T2.X, T2.Y, 0.0, literal.x,
-; CM-NEXT:     CNDE T1.Y, T1.W, 1.0, literal.y,
-; CM-NEXT:     MUL_IEEE T0.Z, PV.Y, T1.X,
-; CM-NEXT:     ADD * T1.W, KC0[3].Z, T0.X, BS:VEC_021/SCL_122
-; CM-NEXT:    1115684864(6.400000e+01), 528482304(5.421011e-20)
-; CM-NEXT:     EXP_IEEE T0.X, T1.W,
-; CM-NEXT:     EXP_IEEE T0.Y (MASKED), T1.W,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T1.W,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T1.W,
-; CM-NEXT:     MUL_IEEE T0.Y, PV.X, T1.Y,
-; CM-NEXT:     CNDE T1.Z, T2.Y, 1.0, literal.x,
-; CM-NEXT:     ADD * T1.W, KC0[3].Y, T2.X,
-; CM-NEXT:    528482304(5.421011e-20), 0(0.000000e+00)
-; CM-NEXT:     EXP_IEEE T0.X, T1.W,
-; CM-NEXT:     EXP_IEEE T0.Y (MASKED), T1.W,
-; CM-NEXT:     EXP_IEEE T0.Z (MASKED), T1.W,
-; CM-NEXT:     EXP_IEEE * T0.W (MASKED), T1.W,
-; CM-NEXT:     MUL_IEEE * T0.X, PV.X, T1.Z,
-; CM-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; CM-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %result = call <4 x float> @llvm.exp2.v4f32(<4 x float> %in)
   store <4 x float> %result, ptr addrspace(1) %out
   ret void
@@ -1109,16 +828,6 @@ define float @v_exp2_f32(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -1207,16 +916,6 @@ define float @v_exp2_fabs_f32(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_fabs_f32:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_fabs_f32:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fabs = call float @llvm.fabs.f32(float %in)
   %result = call float @llvm.exp2.f32(float %fabs)
   ret float %result
@@ -1306,16 +1005,6 @@ define float @v_exp2_fneg_fabs_f32(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_fneg_fabs_f32:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_fneg_fabs_f32:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fabs = call float @llvm.fabs.f32(float %in)
   %fneg.fabs = fneg float %fabs
   %result = call float @llvm.exp2.f32(float %fneg.fabs)
@@ -1406,16 +1095,6 @@ define float @v_exp2_fneg_f32(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_fneg_f32:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_fneg_f32:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fneg = fneg float %in
   %result = call float @llvm.exp2.f32(float %fneg)
   ret float %result
@@ -1505,16 +1184,6 @@ define float @v_exp2_f32_fast(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_fast:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_fast:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call fast float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -1603,16 +1272,6 @@ define float @v_exp2_f32_unsafe_math_attr(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_unsafe_math_attr:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_unsafe_math_attr:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -1701,16 +1360,6 @@ define float @v_exp2_f32_ninf(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_ninf:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_ninf:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call ninf float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -1799,16 +1448,6 @@ define float @v_exp2_f32_afn(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_afn:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_afn:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call afn float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -1819,16 +1458,6 @@ define float @v_exp2_f32_afn_daz(float %in) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_afn_daz:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_afn_daz:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call afn float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -1917,16 +1546,6 @@ define float @v_exp2_f32_afn_dynamic(float %in) #1 {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_afn_dynamic:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_afn_dynamic:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call afn float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2015,16 +1634,6 @@ define float @v_fabs_exp2_f32_afn(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_fabs_exp2_f32_afn:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_fabs_exp2_f32_afn:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fabs = call float @llvm.fabs.f32(float %in)
   %result = call afn float @llvm.exp2.f32(float %fabs)
   ret float %result
@@ -2036,16 +1645,6 @@ define float @v_exp2_f32_daz(float %in) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_daz:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_daz:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2134,16 +1733,6 @@ define float @v_exp2_f32_nnan(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_nnan:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_nnan:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call nnan float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2154,16 +1743,6 @@ define float @v_exp2_f32_nnan_daz(float %in) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_nnan_daz:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_nnan_daz:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call nnan float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2252,16 +1831,6 @@ define float @v_exp2_f32_nnan_dynamic(float %in) #1 {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_nnan_dynamic:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_nnan_dynamic:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call nnan float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2272,16 +1841,6 @@ define float @v_exp2_f32_ninf_daz(float %in) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_ninf_daz:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_ninf_daz:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call ninf float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2370,16 +1929,6 @@ define float @v_exp2_f32_ninf_dynamic(float %in) #1 {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_ninf_dynamic:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_ninf_dynamic:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call ninf float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2468,16 +2017,6 @@ define float @v_exp2_f32_nnan_ninf(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_nnan_ninf:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_nnan_ninf:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call nnan ninf float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2488,16 +2027,6 @@ define float @v_exp2_f32_nnan_ninf_daz(float %in) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_nnan_ninf_daz:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_nnan_ninf_daz:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call nnan ninf float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2586,16 +2115,6 @@ define float @v_exp2_f32_nnan_ninf_dynamic(float %in) #1 {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_nnan_ninf_dynamic:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_nnan_ninf_dynamic:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call nnan ninf float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2606,16 +2125,6 @@ define float @v_exp2_f32_fast_daz(float %in) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_fast_daz:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_fast_daz:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call fast float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2704,16 +2213,6 @@ define float @v_exp2_f32_dynamic_mode(float %in) #1 {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_dynamic_mode:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_dynamic_mode:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -2723,16 +2222,6 @@ define float @v_exp2_f32_undef() {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_undef:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_undef:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call float @llvm.exp2.f32(float poison)
   ret float %result
 }
@@ -2743,16 +2232,6 @@ define float @v_exp2_f32_0() {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_0:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_0:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call float @llvm.exp2.f32(float 0.0)
   ret float %result
 }
@@ -2764,16 +2243,6 @@ define float @v_exp2_f32_from_fpext_f16(i16 %src.i) {
 ; GCN-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_from_fpext_f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_from_fpext_f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %src = bitcast i16 %src.i to half
   %fpext = fpext half %src to float
   %result = call float @llvm.exp2.f32(float %fpext)
@@ -2818,16 +2287,6 @@ define float @v_exp2_f32_from_fpext_math_f16(i16 %src0.i, i16 %src1.i) {
 ; GFX900-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX900-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_from_fpext_math_f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_from_fpext_math_f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %src0 = bitcast i16 %src0.i to half
   %src1 = bitcast i16 %src1.i to half
   %fadd = fadd half %src0, %src1
@@ -2902,10 +2361,10 @@ define float @v_exp2_f32_from_fpext_bf16(bfloat %src) {
 ; GFX900-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX900-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GFX900-SDAG-NEXT:    v_mov_b32_e32 v1, 0x42800000
 ; GFX900-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
-; GFX900-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
-; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
-; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
+; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
+; GFX900-SDAG-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX900-SDAG-NEXT:    v_exp_f32_e32 v0, v0
 ; GFX900-SDAG-NEXT:    v_not_b32_e32 v1, 63
 ; GFX900-SDAG-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
@@ -2926,16 +2385,6 @@ define float @v_exp2_f32_from_fpext_bf16(bfloat %src) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_from_fpext_bf16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_from_fpext_bf16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fpext = fpext bfloat %src to float
   %result = call float @llvm.exp2.f32(float %fpext)
   ret float %result
@@ -2962,16 +2411,6 @@ define half @v_exp2_f16(half %in) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_exp_f16_e32 v0, v0
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call half @llvm.exp2.f16(half %in)
   ret half %result
 }
@@ -2996,16 +2435,6 @@ define half @v_exp2_fabs_f16(half %in) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_exp_f16_e64 v0, |v0|
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_fabs_f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_fabs_f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fabs = call half @llvm.fabs.f16(half %in)
   %result = call half @llvm.exp2.f16(half %fabs)
   ret half %result
@@ -3031,16 +2460,6 @@ define half @v_exp2_fneg_fabs_f16(half %in) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_exp_f16_e64 v0, -|v0|
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_fneg_fabs_f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_fneg_fabs_f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fabs = call half @llvm.fabs.f16(half %in)
   %fneg.fabs = fneg half %fabs
   %result = call half @llvm.exp2.f16(half %fneg.fabs)
@@ -3067,16 +2486,6 @@ define half @v_exp2_fneg_f16(half %in) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_exp_f16_e64 v0, -v0
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_fneg_f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_fneg_f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fneg = fneg half %in
   %result = call half @llvm.exp2.f16(half %fneg)
   ret half %result
@@ -3102,16 +2511,6 @@ define half @v_exp2_f16_fast(half %in) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_exp_f16_e32 v0, v0
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f16_fast:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f16_fast:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call fast half @llvm.exp2.f16(half %in)
   ret half %result
 }
@@ -3180,16 +2579,6 @@ define <2 x half> @v_exp2_v2f16(<2 x half> %in) {
 ; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_v2f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_v2f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call <2 x half> @llvm.exp2.v2f16(<2 x half> %in)
   ret <2 x half> %result
 }
@@ -3261,16 +2650,6 @@ define <2 x half> @v_exp2_fabs_v2f16(<2 x half> %in) {
 ; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_fabs_v2f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_fabs_v2f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %result = call <2 x half> @llvm.exp2.v2f16(<2 x half> %fabs)
   ret <2 x half> %result
@@ -3344,16 +2723,6 @@ define <2 x half> @v_exp2_fneg_fabs_v2f16(<2 x half> %in) {
 ; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_fneg_fabs_v2f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_fneg_fabs_v2f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %in)
   %fneg.fabs = fneg <2 x half> %fabs
   %result = call <2 x half> @llvm.exp2.v2f16(<2 x half> %fneg.fabs)
@@ -3428,16 +2797,6 @@ define <2 x half> @v_exp2_fneg_v2f16(<2 x half> %in) {
 ; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_fneg_v2f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_fneg_v2f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %fneg = fneg <2 x half> %in
   %result = call <2 x half> @llvm.exp2.v2f16(<2 x half> %fneg)
   ret <2 x half> %result
@@ -3507,16 +2866,6 @@ define <2 x half> @v_exp2_v2f16_fast(<2 x half> %in) {
 ; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_v2f16_fast:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_v2f16_fast:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call fast <2 x half> @llvm.exp2.v2f16(<2 x half> %in)
   ret <2 x half> %result
 }
@@ -3596,18 +2945,7 @@ define <3 x half> @v_exp_v3f16(<3 x half> %in) {
 ; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v1
 ; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v1, s4, 16, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp_v3f16:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp_v3f16:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call <3 x half> @llvm.exp2.v3f16(<3 x half> %in)
   ret <3 x half> %result
 }
@@ -3687,18 +3025,7 @@ define <3 x half> @v_exp2_v3f16_afn(<3 x half> %in) {
 ; GFX900-GISEL-NEXT:    v_exp_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; GFX900-GISEL-NEXT:    v_exp_f16_e32 v1, v1
 ; GFX900-GISEL-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
-; GFX900-GISEL-NEXT:    v_lshl_or_b32 v1, s4, 16, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_v3f16_afn:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_v3f16_afn:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call afn <3 x half> @llvm.exp2.v3f16(<3 x half> %in)
   ret <3 x half> %result
 }
@@ -3787,16 +3114,6 @@ define float @v_exp2_f32_contract(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_contract:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_contract:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call contract float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -3807,16 +3124,6 @@ define float @v_exp2_f32_contract_daz(float %in) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_exp_f32_e32 v0, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_contract_daz:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_contract_daz:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call contract float @llvm.exp2.f32(float %in)
   ret float %result
 }
@@ -3905,16 +3212,6 @@ define float @v_exp2_f32_contract_nnan_ninf(float %in) {
 ; GFX900-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
 ; GFX900-GISEL-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GFX900-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; R600-LABEL: v_exp2_f32_contract_nnan_ninf:
-; R600:       ; %bb.0:
-; R600-NEXT:    CF_END
-; R600-NEXT:    PAD
-;
-; CM-LABEL: v_exp2_f32_contract_nnan_ninf:
-; CM:       ; %bb.0:
-; CM-NEXT:    CF_END
-; CM-NEXT:    PAD
   %result = call contract nnan ninf float @llvm.exp2.f32(float %in)
   ret float %result
 }

@@ -1,0 +1,31 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s
+
+// An undef or poison aggregate constant lowers to llvm.mlir.undef or
+// llvm.mlir.poison of the whole type, before the per-type lowering.
+
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data !cir.float}>
+
+module {
+  // CHECK-LABEL: llvm.func @undef_aggregates
+  cir.func @undef_aggregates() {
+    // CHECK: llvm.mlir.undef : !llvm.array<4 x i32>
+    %0 = cir.const #cir.undef : !cir.array<!s32i x 4>
+    // CHECK: llvm.mlir.undef : !llvm.struct<"struct.S", (i32, f32)>
+    %1 = cir.const #cir.undef : !rec_S
+    // CHECK: llvm.mlir.undef : !llvm.struct<(f32, f32)>
+    %2 = cir.const #cir.undef : !cir.complex<!cir.float>
+    cir.return
+  }
+
+  // CHECK-LABEL: llvm.func @poison_aggregates
+  cir.func @poison_aggregates() {
+    // CHECK: llvm.mlir.poison : !llvm.array<4 x i32>
+    %0 = cir.const #cir.poison : !cir.array<!s32i x 4>
+    // CHECK: llvm.mlir.poison : !llvm.struct<"struct.S", (i32, f32)>
+    %1 = cir.const #cir.poison : !rec_S
+    // CHECK: llvm.mlir.poison : !llvm.struct<(f32, f32)>
+    %2 = cir.const #cir.poison : !cir.complex<!cir.float>
+    cir.return
+  }
+}

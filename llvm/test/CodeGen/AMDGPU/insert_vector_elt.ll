@@ -2,7 +2,6 @@
 ; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -mattr=-flat-for-global,+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI %s
 ; RUN: llc -mtriple=amdgpu8.02-amd-amdhsa -mattr=-flat-for-global -mattr=+max-private-element-size-16 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI %s
 
-; FIXME: Broken on evergreen
 ; FIXME: For some reason the 8 and 16 vectors are being stored as
 ; individual elements instead of 128-bit stores.
 

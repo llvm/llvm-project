@@ -49,6 +49,7 @@ syn keyword llvmKeyword
       \ alignstack
       \ allocsize
       \ alwaysinline
+      \ alwaysuniform
       \ appending
       \ argmemonly
       \ arm_aapcs_vfpcc
@@ -109,6 +110,7 @@ syn keyword llvmKeyword
       \ inteldialect
       \ internal
       \ jumptable
+      \ likely_module_local
       \ linkonce
       \ linkonce_odr
       \ local_unnamed_addr
@@ -128,6 +130,7 @@ syn keyword llvmKeyword
       \ nocapture
       \ nocf_check
       \ no_cfi
+      \ nodivergencesource
       \ noduplicate
       \ nofree
       \ noimplicitfloat

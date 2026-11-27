@@ -36,6 +36,7 @@ static std::optional<CompileUnit> CreateCompileUnit(lldb::SBCompileUnit unit) {
             lldb::SBLanguageRuntime::GetNameForLanguageType(language))
       result.language = name;
   }
+  result.isOptimized = unit.GetIsOptimized();
   return result;
 }
 

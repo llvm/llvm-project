@@ -1,8 +1,6 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s| FileCheck -check-prefixes=GCN,SI %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,VI %s
 
-; XXX: Merge this into setcc, once R600 supports 64-bit operations
-
 ;;;==========================================================================;;;
 ;; Double comparisons
 ;;;==========================================================================;;;

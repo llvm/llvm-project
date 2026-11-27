@@ -960,6 +960,12 @@ bool AttributeImpl::operator<(const AttributeImpl &AI) const {
 // AttributeSet Definition
 //===----------------------------------------------------------------------===//
 
+AttributeSet::AttributeSet(AttributeSetNode *ASN) : SetNode(ASN) {}
+
+AttributeSetNode *AttributeSet::getNode() const {
+  return static_cast<AttributeSetNode *>(SetNode);
+}
+
 AttributeSet AttributeSet::get(LLVMContext &C, const AttrBuilder &B) {
   return AttributeSet(AttributeSetNode::get(C, B));
 }
@@ -1027,11 +1033,11 @@ AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
 
 AttributeSet AttributeSet::removeAttributes(LLVMContext &C,
                                             const AttributeMask &Attrs) const {
-  AttrBuilder B(C, *this);
   // If there is nothing to remove, directly return the original set.
-  if (!B.overlaps(Attrs))
+  if (none_of(*this, [&](Attribute A) { return Attrs.contains(A); }))
     return *this;
 
+  AttrBuilder B(C, *this);
   B.remove(Attrs);
   return get(C, B);
 }
@@ -1167,120 +1173,119 @@ AttributeSet::intersectWith(LLVMContext &C, AttributeSet Other) const {
 }
 
 unsigned AttributeSet::getNumAttributes() const {
-  return SetNode ? SetNode->getNumAttributes() : 0;
+  return SetNode ? getNode()->getNumAttributes() : 0;
 }
 
-bool AttributeSet::hasAttribute(Attribute::AttrKind Kind) const {
-  return SetNode ? SetNode->hasAttribute(Kind) : false;
-}
 
 bool AttributeSet::hasAttribute(StringRef Kind) const {
-  return SetNode ? SetNode->hasAttribute(Kind) : false;
+  return SetNode ? getNode()->hasAttribute(Kind) : false;
 }
 
 Attribute AttributeSet::getAttribute(Attribute::AttrKind Kind) const {
-  return SetNode ? SetNode->getAttribute(Kind) : Attribute();
+  return SetNode ? getNode()->getAttribute(Kind) : Attribute();
 }
 
 Attribute AttributeSet::getAttribute(StringRef Kind) const {
-  return SetNode ? SetNode->getAttribute(Kind) : Attribute();
+  return SetNode ? getNode()->getAttribute(Kind) : Attribute();
 }
 
 MaybeAlign AttributeSet::getAlignment() const {
-  return SetNode ? SetNode->getAlignment() : std::nullopt;
+  return SetNode ? getNode()->getAlignment() : std::nullopt;
 }
 
 MaybeAlign AttributeSet::getStackAlignment() const {
-  return SetNode ? SetNode->getStackAlignment() : std::nullopt;
+  return SetNode ? getNode()->getStackAlignment() : std::nullopt;
 }
 
 uint64_t AttributeSet::getDereferenceableBytes() const {
-  return SetNode ? SetNode->getDereferenceableBytes() : 0;
+  return SetNode ? getNode()->getDereferenceableBytes() : 0;
 }
 
 DeadOnReturnInfo AttributeSet::getDeadOnReturnInfo() const {
-  return SetNode ? SetNode->getDeadOnReturnInfo() : DeadOnReturnInfo(0);
+  return SetNode ? getNode()->getDeadOnReturnInfo() : DeadOnReturnInfo(0);
 }
 
 uint64_t AttributeSet::getDereferenceableOrNullBytes() const {
-  return SetNode ? SetNode->getDereferenceableOrNullBytes() : 0;
+  return SetNode ? getNode()->getDereferenceableOrNullBytes() : 0;
 }
 
 Type *AttributeSet::getByRefType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::ByRef) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::ByRef) : nullptr;
 }
 
 Type *AttributeSet::getByValType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::ByVal) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::ByVal) : nullptr;
 }
 
 Type *AttributeSet::getStructRetType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::StructRet) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::StructRet) : nullptr;
 }
 
 Type *AttributeSet::getPreallocatedType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::Preallocated) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::Preallocated)
+                 : nullptr;
 }
 
 Type *AttributeSet::getInAllocaType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::InAlloca) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::InAlloca) : nullptr;
 }
 
 Type *AttributeSet::getElementType() const {
-  return SetNode ? SetNode->getAttributeType(Attribute::ElementType) : nullptr;
+  return SetNode ? getNode()->getAttributeType(Attribute::ElementType)
+                 : nullptr;
 }
 
 std::optional<std::pair<unsigned, std::optional<unsigned>>>
 AttributeSet::getAllocSizeArgs() const {
   if (SetNode)
-    return SetNode->getAllocSizeArgs();
+    return getNode()->getAllocSizeArgs();
   return std::nullopt;
 }
 
 unsigned AttributeSet::getVScaleRangeMin() const {
-  return SetNode ? SetNode->getVScaleRangeMin() : 1;
+  return SetNode ? getNode()->getVScaleRangeMin() : 1;
 }
 
 std::optional<unsigned> AttributeSet::getVScaleRangeMax() const {
-  return SetNode ? SetNode->getVScaleRangeMax() : std::nullopt;
+  return SetNode ? getNode()->getVScaleRangeMax() : std::nullopt;
 }
 
 UWTableKind AttributeSet::getUWTableKind() const {
-  return SetNode ? SetNode->getUWTableKind() : UWTableKind::None;
+  return SetNode ? getNode()->getUWTableKind() : UWTableKind::None;
 }
 
 AllocFnKind AttributeSet::getAllocKind() const {
-  return SetNode ? SetNode->getAllocKind() : AllocFnKind::Unknown;
+  return SetNode ? getNode()->getAllocKind() : AllocFnKind::Unknown;
 }
 
 MemoryEffects AttributeSet::getMemoryEffects() const {
-  return SetNode ? SetNode->getMemoryEffects() : MemoryEffects::unknown();
+  return SetNode ? getNode()->getMemoryEffects() : MemoryEffects::unknown();
 }
 
 CaptureInfo AttributeSet::getCaptureInfo() const {
-  return SetNode ? SetNode->getCaptureInfo() : CaptureInfo::all();
+  return SetNode ? getNode()->getCaptureInfo() : CaptureInfo::all();
 }
 
 FPClassTest AttributeSet::getNoFPClass() const {
-  return SetNode ? SetNode->getNoFPClass() : fcNone;
+  return SetNode ? getNode()->getNoFPClass() : fcNone;
 }
 
 std::string AttributeSet::getAsString(bool InAttrGrp) const {
-  return SetNode ? SetNode->getAsString(InAttrGrp) : "";
+  return SetNode ? getNode()->getAsString(InAttrGrp) : "";
 }
 
 bool AttributeSet::hasParentContext(LLVMContext &C) const {
   assert(hasAttributes() && "empty AttributeSet doesn't refer to any context");
   FoldingSetInsertToken Token;
-  return C.pImpl->AttrsSetNodes.lookup(SetNode->getKey(), Token) == SetNode;
+  return C.pImpl->AttrsSetNodes.lookup(getNode()->getKey(), Token) == SetNode;
 }
 
 AttributeSet::iterator AttributeSet::begin() const {
-  return SetNode ? SetNode->begin() : nullptr;
+  return SetNode ? getNode()->begin() : nullptr;
 }
 
 AttributeSet::iterator AttributeSet::end() const {
-  return SetNode ? SetNode->end() : nullptr;
+  return SetNode ? getNode()->end() : nullptr;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1562,6 +1567,12 @@ LLVM_DUMP_METHOD void AttributeListImpl::dump() const {
 //===----------------------------------------------------------------------===//
 // AttributeList Construction and Mutation Methods
 //===----------------------------------------------------------------------===//
+
+AttributeList::AttributeList(AttributeListImpl *LI) : pImpl(LI) {}
+
+AttributeListImpl *AttributeList::getListImpl() const {
+  return static_cast<AttributeListImpl *>(pImpl);
+}
 
 AttributeList AttributeList::getImpl(LLVMContext &C,
                                      ArrayRef<AttributeSet> AttrSets) {
@@ -1974,9 +1985,6 @@ bool AttributeList::hasAttributesAtIndex(unsigned Index) const {
   return getAttributes(Index).hasAttributes();
 }
 
-bool AttributeList::hasFnAttr(Attribute::AttrKind Kind) const {
-  return pImpl && pImpl->hasFnAttribute(Kind);
-}
 
 bool AttributeList::hasFnAttr(StringRef Kind) const {
   return hasAttributeAtIndex(AttributeList::FunctionIndex, Kind);
@@ -1984,7 +1992,7 @@ bool AttributeList::hasFnAttr(StringRef Kind) const {
 
 bool AttributeList::hasAttrSomewhere(Attribute::AttrKind Attr,
                                      unsigned *Index) const {
-  return pImpl && pImpl->hasAttrSomewhere(Attr, Index);
+  return pImpl && getListImpl()->hasAttrSomewhere(Attr, Index);
 }
 
 Attribute AttributeList::getAttributeAtIndex(unsigned Index,
@@ -2098,21 +2106,21 @@ AttributeSet AttributeList::getAttributes(unsigned Index) const {
   Index = attrIdxToArrayIdx(Index);
   if (!pImpl || Index >= getNumAttrSets())
     return {};
-  return pImpl->begin()[Index];
+  return getListImpl()->begin()[Index];
 }
 
 bool AttributeList::hasParentContext(LLVMContext &C) const {
   assert(!isEmpty() && "an empty attribute list has no parent context");
   FoldingSetInsertToken Token;
-  return C.pImpl->AttrsLists.lookup(pImpl->getKey(), Token) == pImpl;
+  return C.pImpl->AttrsLists.lookup(getListImpl()->getKey(), Token) == pImpl;
 }
 
 AttributeList::iterator AttributeList::begin() const {
-  return pImpl ? pImpl->begin() : nullptr;
+  return pImpl ? getListImpl()->begin() : nullptr;
 }
 
 AttributeList::iterator AttributeList::end() const {
-  return pImpl ? pImpl->end() : nullptr;
+  return pImpl ? getListImpl()->end() : nullptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2120,7 +2128,7 @@ AttributeList::iterator AttributeList::end() const {
 //===----------------------------------------------------------------------===//
 
 unsigned AttributeList::getNumAttrSets() const {
-  return pImpl ? pImpl->NumAttrSets : 0;
+  return pImpl ? getListImpl()->NumAttrSets : 0;
 }
 
 void AttributeList::print(raw_ostream &O) const {
@@ -2621,9 +2629,15 @@ static bool denormModeCompatible(DenormalMode CallerMode,
   return false;
 }
 
-static bool checkDenormMode(const Function &Caller, const Function &Callee) {
-  DenormalFPEnv CallerEnv = Caller.getDenormalFPEnv();
-  DenormalFPEnv CalleeEnv = Callee.getDenormalFPEnv();
+static DenormalFPEnv getDenormalFPEnv(AttributeSet FnAttrs) {
+  Attribute Attr = FnAttrs.getAttribute(Attribute::DenormalFPEnv);
+  return Attr.isValid() ? Attr.getDenormalFPEnv() : DenormalFPEnv::getDefault();
+}
+
+static bool checkDenormMode(AttributeSet CallerAttrs,
+                            AttributeSet CalleeAttrs) {
+  DenormalFPEnv CallerEnv = getDenormalFPEnv(CallerAttrs);
+  DenormalFPEnv CalleeEnv = getDenormalFPEnv(CalleeAttrs);
 
   if (denormModeCompatible(CallerEnv.DefaultMode, CalleeEnv.DefaultMode)) {
     DenormalMode CallerModeF32 = CallerEnv.F32Mode;
@@ -2638,22 +2652,23 @@ static bool checkDenormMode(const Function &Caller, const Function &Callee) {
   return false;
 }
 
-static bool checkStrictFP(const Function &Caller, const Function &Callee) {
+static bool checkStrictFP(AttributeSet CallerAttrs, AttributeSet CalleeAttrs) {
   // Do not inline strictfp function into non-strictfp one. It would require
   // conversion of all FP operations in host function to constrained intrinsics.
-  return !Callee.getAttributes().hasFnAttr(Attribute::StrictFP) ||
-         Caller.getAttributes().hasFnAttr(Attribute::StrictFP);
+  return !CalleeAttrs.hasAttribute(Attribute::StrictFP) ||
+         CallerAttrs.hasAttribute(Attribute::StrictFP);
 }
 
-template<typename AttrClass>
-static bool isEqual(const Function &Caller, const Function &Callee) {
-  return Caller.getFnAttribute(AttrClass::getKind()) ==
-         Callee.getFnAttribute(AttrClass::getKind());
+template <typename AttrClass>
+static bool isEqual(AttributeSet CallerAttrs, AttributeSet CalleeAttrs) {
+  return CallerAttrs.getAttribute(AttrClass::getKind()) ==
+         CalleeAttrs.getAttribute(AttrClass::getKind());
 }
 
-static bool isEqual(const Function &Caller, const Function &Callee,
-                    const StringRef &AttrName) {
-  return Caller.getFnAttribute(AttrName) == Callee.getFnAttribute(AttrName);
+static bool isEqual(AttributeSet CallerAttrs, AttributeSet CalleeAttrs,
+                    StringRef AttrName) {
+  return CallerAttrs.getAttribute(AttrName) ==
+         CalleeAttrs.getAttribute(AttrName);
 }
 
 /// Compute the logical AND of the attributes of the caller and the
@@ -2829,7 +2844,8 @@ bool AttributeFuncs::areInlineCompatible(const Function &Caller,
 
 bool AttributeFuncs::isStrictFPInlineCompatible(const Function &Caller,
                                                 const Function &Callee) {
-  return checkStrictFP(Caller, Callee);
+  return checkStrictFP(Caller.getAttributes().getFnAttrs(),
+                       Callee.getAttributes().getFnAttrs());
 }
 
 bool AttributeFuncs::areOutlineCompatible(const Function &A,
@@ -2864,4 +2880,16 @@ void AttributeFuncs::updateMinLegalVectorWidthAttr(Function &Fn,
     if (Width > OldWidth)
       Fn.addFnAttr("min-legal-vector-width", llvm::utostr(Width));
   }
+}
+
+AttributeSet AttributeFuncs::dropRetOnlyCaptureComponents(
+    LLVMContext &C, AttributeSet ParamAttrs, Type *RetTy) {
+  if (RetTy->isPointerTy())
+    return ParamAttrs;
+  CaptureInfo CI = ParamAttrs.getCaptureInfo();
+  if (capturesNothing(CI.getRetComponents() & ~CI.getOtherComponents()))
+    return ParamAttrs;
+  AttrBuilder B(C, ParamAttrs);
+  B.addCapturesAttr(CaptureInfo(CI.getOtherComponents()));
+  return AttributeSet::get(C, B);
 }

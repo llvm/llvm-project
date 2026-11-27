@@ -212,6 +212,9 @@ protected:
   /// True if full register names are printed.
   bool PPCUseFullRegisterNames = false;
 
+  /// True if the target supports the .addrsig directive.
+  bool HasAddrsigDirective = true;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -448,6 +451,8 @@ public:
 
   const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
 
+  unsigned getAsmMacroMaxNestingDepth() const;
+
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }
 
@@ -487,6 +492,12 @@ public:
   const MCExpr *getExprForFDESymbol(const MCSymbol *Sym, unsigned Encoding,
                                     MCStreamer &Streamer) const;
 
+  /// Return the expression used to emit the offset of \p Sym + \p Offset from
+  /// the start of its DWARF section. The default is Sym + Offset.
+  virtual const MCExpr *getDwarfSectionOffsetExpr(const MCSymbol *Sym,
+                                                  uint64_t Offset,
+                                                  MCContext &Ctx) const;
+
   /// Return true if C is an acceptable character inside a symbol name.
   bool isAcceptableChar(char C) const;
 
@@ -514,10 +525,6 @@ public:
   /// returns true  => .text
   virtual bool shouldOmitSectionDirective(StringRef SectionName) const;
 
-  // Return true if a .align directive should use "optimized nops" to fill
-  // instead of 0s.
-  virtual bool useCodeAlign(const MCSection &Sec) const { return false; }
-
   bool usesSunStyleELFSectionSwitchSyntax() const {
     return SunStyleELFSectionSwitchSyntax;
   }
@@ -538,11 +545,8 @@ public:
   bool hasCOFFAssociativeComdats() const { return HasCOFFAssociativeComdats; }
   bool hasCOFFComdatConstants() const { return HasCOFFComdatConstants; }
 
-  /// Returns the maximum possible encoded instruction size in bytes. If \p STI
-  /// is null, this should be the maximum size for any subtarget.
-  virtual unsigned getMaxInstLength(const MCSubtargetInfo *STI = nullptr) const {
-    return MaxInstLength;
-  }
+  /// Returns the maximum possible encoded instruction size in bytes.
+  unsigned getMaxInstLength() const { return MaxInstLength; }
 
   unsigned getMinInstAlignment() const { return MinInstAlignment; }
   bool getDollarIsPC() const { return DollarIsPC; }
@@ -599,6 +603,8 @@ public:
 
   bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
   void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
+
+  bool hasAddrsigDirective() const { return HasAddrsigDirective; }
 
   const char *getZeroDirective() const { return ZeroDirective; }
   const char *getAsciiDirective() const { return AsciiDirective; }
@@ -757,6 +763,14 @@ public:
   }
   virtual bool evaluateAsRelocatableImpl(const MCSpecifierExpr &, MCValue &Res,
                                          const MCAssembler *Asm) const;
+
+  /// True if the instruction is stored in multiple halfwords, with
+  /// the high-order half appearing first in memory regardless of target
+  /// endianness, to distinguish it from instructions occupying only one
+  /// halfword. Examples are the Thumb variant of Arm, microMIPS, and nanoMIPS.
+  virtual bool usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+    return false;
+  }
 };
 
 } // end namespace llvm

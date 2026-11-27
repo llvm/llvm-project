@@ -20,10 +20,15 @@ class GCNSubtarget;
 class GISelValueTracking;
 class LLT;
 class MachineFunction;
+class MachineInstr;
 class MachineIRBuilder;
 class RegisterBankInfo;
 
 namespace AMDGPU {
+
+/// Return whether div.fmas can use ordinary FMA without changing denormals.
+bool isUnscaledIEEEDivFmas(const MachineInstr &MI,
+                           const MachineRegisterInfo &MRI);
 
 /// Returns base register and constant offset.
 std::pair<Register, unsigned>
@@ -39,7 +44,6 @@ getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
 // reg class after instruction-select, don't search for all of them.
 class IntrinsicLaneMaskAnalyzer {
   SmallDenseSet<Register, 8> S32S64LaneMask;
-  MachineRegisterInfo &MRI;
 
 public:
   IntrinsicLaneMaskAnalyzer(MachineFunction &MF);

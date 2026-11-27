@@ -563,6 +563,21 @@ void error_fflush_on_null_stream_clear_error_states(void) {
     fclose(F1);
 }
 
+void non_eof_possible_after_successful_fflush_with_eof_or_no_error_before(int X) {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  int Ret = fscanf(F, "%d", &X);
+  // 'fscanf' can return EOF and not set 'feof' and 'ferror' flags
+  if (Ret != EOF || ferror(F)) {
+    fclose(F);
+    return;
+  }
+  if (fflush(F) != EOF)
+    clang_analyzer_eval(feof(F)); // expected-warning{{TRUE}} expected-warning{{FALSE}}
+  fclose(F);
+}
+
 void error_indeterminate(void) {
   FILE *F = fopen("file", "r+");
   if (!F)

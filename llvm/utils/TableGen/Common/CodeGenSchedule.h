@@ -403,10 +403,6 @@ public:
   STIPredicateFunction(const Record *Rec) : FunctionDeclaration(Rec) {}
   STIPredicateFunction(STIPredicateFunction &&Other) = default;
 
-  bool isCompatibleWith(const STIPredicateFunction &Other) const {
-    return FunctionDeclaration == Other.FunctionDeclaration;
-  }
-
   void addDefinition(const Record *Def) { Definitions.push_back(Def); }
   void addOpcode(const Record *OpcodeRec, OpcodeInfo &&Info) {
     if (Groups.empty() ||

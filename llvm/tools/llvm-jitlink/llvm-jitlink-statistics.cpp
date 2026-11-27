@@ -85,7 +85,6 @@ private:
   std::mutex M;
   std::optional<uint64_t> PrePruneTotalBlockSize;
   std::optional<uint64_t> PostFixupTotalBlockSize;
-  std::optional<DenseMap<size_t, size_t>> EdgeCountDetails;
 };
 
 void StatsPlugin::publish(raw_ostream &OS) {

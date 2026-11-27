@@ -1253,7 +1253,7 @@ def Tensor_PadOp : Tensor_Op<"pad", [
     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface, [
       "reifyResultShapes"]>,
     AttrSizedOperandSegments,
-    Pure,
+    RecursiveMemoryEffects,
     SingleBlockImplicitTerminator<"mlir::tensor::YieldOp">]> {
   let summary = "tensor pad operation";
   let description = [{
@@ -1820,6 +1820,7 @@ def Tensor_SplatOp : Tensor_Op<"splat", [
 
   let hasFolder = 1;
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

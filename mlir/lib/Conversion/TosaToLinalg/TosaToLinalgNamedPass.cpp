@@ -13,6 +13,7 @@
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlow.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/LinalgDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -39,9 +40,9 @@ public:
       : impl::TosaToLinalgNamedBase<TosaToLinalgNamed>(options) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry
-        .insert<arith::ArithDialect, linalg::LinalgDialect, math::MathDialect,
-                tensor::TensorDialect, scf::SCFDialect>();
+    registry.insert<arith::ArithDialect, cf::ControlFlowDialect,
+                    linalg::LinalgDialect, math::MathDialect,
+                    tensor::TensorDialect, scf::SCFDialect>();
   }
 
   void runOnOperation() override {
@@ -50,8 +51,9 @@ public:
 
     RewritePatternSet patterns(&getContext());
     ConversionTarget target(getContext());
-    target.addLegalDialect<linalg::LinalgDialect, tosa::TosaDialect,
-                           tensor::TensorDialect, scf::SCFDialect>();
+    target.addLegalDialect<cf::ControlFlowDialect, linalg::LinalgDialect,
+                           tosa::TosaDialect, tensor::TensorDialect,
+                           scf::SCFDialect>();
 
     // Not every TOSA op can be legalized to linalg.
     target.addIllegalOp<tosa::Conv2DOp>();
@@ -71,6 +73,17 @@ public:
       return succeeded(aZp) && succeeded(bZp) && (*aZp != 0 || *bZp != 0);
     });
     target.addIllegalOp<tosa::TransposeOp>();
+
+    // TOSA elementwise ops are legal unless they can be lowered to a
+    // linalg.elementwise named op.
+    target.addDynamicallyLegalOp<
+        tosa::AbsOp, tosa::CeilOp, tosa::FloorOp, tosa::ExpOp, tosa::LogOp,
+        tosa::RsqrtOp, tosa::SinOp, tosa::CosOp, tosa::TanhOp, tosa::ErfOp,
+        tosa::ReciprocalOp, tosa::PowOp, tosa::AddOp, tosa::SubOp,
+        tosa::IntDivOp, tosa::MulOp, tosa::NegateOp, tosa::MaximumOp,
+        tosa::MinimumOp, tosa::SelectOp>([](Operation *op) {
+      return !tosa::isConvertibleToLinalgElementwise(op).has_value();
+    });
 
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 

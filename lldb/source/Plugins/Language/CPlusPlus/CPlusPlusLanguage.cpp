@@ -17,6 +17,7 @@
 #include <mutex>
 #include <set>
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
@@ -33,9 +34,12 @@
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
+#include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/OptionGroupLanguageExpression.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -55,18 +59,37 @@
 #include "MsvcStl.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "clang/Basic/Version.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
 LLDB_PLUGIN_DEFINE(CPlusPlusLanguage)
 
+static Mangled::ManglingScheme g_itanium_scheme = Mangled::eManglingSchemeNone;
+static Mangled::ManglingScheme g_msvc_scheme = Mangled::eManglingSchemeNone;
+
+static bool IsCPlusPlusManglingScheme(Mangled::ManglingScheme scheme) {
+  // A scheme that couldn't be registered, because the registry was full, is
+  // eManglingSchemeNone.
+  return scheme != Mangled::eManglingSchemeNone &&
+         (scheme == g_itanium_scheme || scheme == g_msvc_scheme);
+}
+
 void CPlusPlusLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "C++ Language",
                                 CreateInstance, &DebuggerInitialize);
+  // "___Z" is a clang extension for block invocations.
+  g_itanium_scheme =
+      Mangled::RegisterManglingScheme({"_Z", "___Z"}, eLanguageTypeC_plus_plus);
+  g_msvc_scheme =
+      Mangled::RegisterManglingScheme({"?"}, eLanguageTypeC_plus_plus);
 }
 
 void CPlusPlusLanguage::Terminate() {
+  Mangled::UnregisterManglingScheme(g_msvc_scheme);
+  Mangled::UnregisterManglingScheme(g_itanium_scheme);
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
@@ -109,15 +132,8 @@ CPlusPlusLanguage::GetFunctionNameInfo(ConstString name) const {
 }
 
 bool CPlusPlusLanguage::SymbolNameFitsToLanguage(const Mangled &mangled) const {
-  auto mangling_scheme =
-      Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef());
-  return HandlesManglingScheme(mangling_scheme);
-}
-
-bool CPlusPlusLanguage::HandlesManglingScheme(
-    Mangled::ManglingScheme scheme) const {
-  return scheme == Mangled::eManglingSchemeItanium ||
-         scheme == Mangled::eManglingSchemeMSVC;
+  return IsCPlusPlusManglingScheme(
+      Mangled::GetManglingScheme(mangled.GetMangledName().GetStringRef()));
 }
 
 static char *GetMSVCDemangledStr(llvm::StringRef M) {
@@ -180,8 +196,7 @@ CPlusPlusLanguage::DemangleSymbol(ConstString mangled,
                                   Mangled::ManglingScheme scheme,
                                   const DemangleOptions &options) const {
   DemangledName demangled;
-  switch (scheme) {
-  case Mangled::eManglingSchemeItanium: {
+  if (scheme == g_itanium_scheme) {
     auto [demangled_cstr, info] = GetItaniumDemangledStr(mangled.GetCString());
     if (demangled_cstr) {
       demangled.name = demangled_cstr;
@@ -189,16 +204,11 @@ CPlusPlusLanguage::DemangleSymbol(ConstString mangled,
     }
     if (options.want_info)
       demangled.info = std::move(info);
-    break;
-  }
-  case Mangled::eManglingSchemeMSVC:
+  } else if (scheme == g_msvc_scheme) {
     if (char *demangled_cstr = GetMSVCDemangledStr(mangled.GetStringRef())) {
       demangled.name = demangled_cstr;
       std::free(demangled_cstr);
     }
-    break;
-  default:
-    break;
   }
   return demangled;
 }
@@ -257,7 +267,7 @@ public:
 private:
   bool ParseRichManglingInfo(const Mangled &mangled) {
     ConstString mangled_name = mangled.GetMangledName();
-    if (m_scheme == Mangled::eManglingSchemeItanium)
+    if (m_scheme == g_itanium_scheme)
       return !SkipItaniumName(mangled_name) &&
              m_rmc.FromItaniumName(mangled_name);
 
@@ -277,7 +287,7 @@ private:
 std::unique_ptr<Language::MangledNameParser>
 CPlusPlusLanguage::CreateMangledNameParser(
     Mangled::ManglingScheme scheme) const {
-  if (!HandlesManglingScheme(scheme))
+  if (!IsCPlusPlusManglingScheme(scheme))
     return nullptr;
   return std::make_unique<CPlusPlusMangledNameParser>(scheme);
 }
@@ -2440,6 +2450,67 @@ lldb::TypeCategoryImplSP CPlusPlusLanguage::GetFormatters() {
   return g_category;
 }
 
+std::vector<lldb::LanguageType>
+CPlusPlusLanguage::GetFormatterLanguages(lldb::LanguageType language) const {
+  // The C++ formatters also apply to C values.
+  if (Language::LanguageIsC(language) ||
+      (Language::LanguageIsCPlusPlus(language) &&
+       language != lldb::eLanguageTypeObjC_plus_plus))
+    return {lldb::eLanguageTypeC_plus_plus};
+  return {};
+}
+
+bool CPlusPlusLanguage::IsCategoryApplicable(
+    lldb::LanguageType category_language,
+    lldb::LanguageType valobj_language) const {
+  if (category_language != lldb::eLanguageTypeC_plus_plus)
+    return Language::IsCategoryApplicable(category_language, valobj_language);
+  return Language::LanguageIsC(valobj_language) ||
+         valobj_language == lldb::eLanguageTypeC_plus_plus ||
+         valobj_language == lldb::eLanguageTypeRust;
+}
+
+#define LLDB_OPTIONS_expression_cplusplus
+#include "LanguageCPlusPlusOptions.inc"
+
+namespace {
+/// The options that C++ adds to the commands that evaluate expressions.
+class CPlusPlusExpressionOptions : public OptionGroupLanguageExpression {
+public:
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+    return llvm::ArrayRef(g_expression_cplusplus_options);
+  }
+
+  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                        ExecutionContext *execution_context) override {
+    switch (GetDefinitions()[option_idx].short_option) {
+    case 'Q':
+      m_ignore_context_qualifiers = true;
+      break;
+    default:
+      llvm_unreachable("Unimplemented option");
+    }
+    return {};
+  }
+
+  void OptionParsingStarting(ExecutionContext *execution_context) override {
+    m_ignore_context_qualifiers = false;
+  }
+
+  void Apply(EvaluateExpressionOptions &options) const override {
+    options.SetCppIgnoreContextQualifiers(m_ignore_context_qualifiers);
+  }
+
+private:
+  bool m_ignore_context_qualifiers = false;
+};
+} // namespace
+
+std::unique_ptr<OptionGroupLanguageExpression>
+CPlusPlusLanguage::CreateExpressionOptions() {
+  return std::make_unique<CPlusPlusExpressionOptions>();
+}
+
 HardcodedFormatters::HardcodedSummaryFinder
 CPlusPlusLanguage::GetHardcodedSummaries() {
   static llvm::once_flag g_initialize;
@@ -2954,6 +3025,17 @@ static PluginProperties &GetGlobalPluginProperties() {
 
 FormatEntity::Entry CPlusPlusLanguage::GetFunctionNameFormat() const {
   return GetGlobalPluginProperties().GetFunctionNameFormat();
+}
+
+std::string CPlusPlusLanguage::GetVersionInfo() const {
+  llvm::SmallVector<std::string, 2> lines;
+  std::string clang_rev = clang::getClangRevision();
+  if (!clang_rev.empty())
+    lines.push_back("  clang revision " + clang_rev);
+  std::string llvm_rev = clang::getLLVMRevision();
+  if (!llvm_rev.empty())
+    lines.push_back("  llvm revision " + llvm_rev);
+  return llvm::join(lines, "\n");
 }
 
 void CPlusPlusLanguage::DebuggerInitialize(Debugger &debugger) {

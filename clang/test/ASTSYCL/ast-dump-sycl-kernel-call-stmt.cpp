@@ -263,6 +263,7 @@ void skep5(int unused1, K<5> k, int unused2, int p, int unused3) {
 // CHECK-NEXT: | |   `-CompoundStmt {{.*}}
 // CHECK-NEXT: | |     |-DeclStmt {{.*}}
 // CHECK-NEXT: | |     | `-VarDecl {{.*}} used slv 'int' static cinit
+// CHECK-NEXT: | |     |   |-value: Int 0
 // CHECK-NEXT: | |     |   `-IntegerLiteral {{.*}} 'int' 0
 // CHECK-NEXT: | |     |-DeclStmt {{.*}}
 // CHECK-NEXT: | |     | `-VarDecl {{.*}} used lv 'int' cinit

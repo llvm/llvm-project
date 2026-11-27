@@ -320,7 +320,7 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
   }
 
   // Call the get byte size accessor so we resolve our byte size
-  if (GetByteSize(exe_scope))
+  if (llvm::expectedToOptional(GetByteSize(exe_scope)))
     s->Printf(", byte-size = %" PRIu64, m_byte_size);
   bool show_fullpaths = (level == lldb::eDescriptionLevelVerbose);
   m_decl.Dump(s, show_fullpaths);
@@ -637,8 +637,9 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         break;
 
       case eEncodingIsPointerUID:
-        m_compiler_type =
-            encoding_type->GetForwardCompilerType().GetPointerType();
+        m_compiler_type = encoding_type->GetForwardCompilerType()
+                              .AddAddressSpaceModifier(m_payload)
+                              .GetPointerType();
         break;
 
       case eEncodingIsLValueReferenceUID:
@@ -701,7 +702,9 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
           break;
 
         case eEncodingIsPointerUID:
-          m_compiler_type = void_compiler_type.GetPointerType();
+          m_compiler_type =
+              void_compiler_type.AddAddressSpaceModifier(m_payload)
+                  .GetPointerType();
           break;
 
         case eEncodingIsLValueReferenceUID:

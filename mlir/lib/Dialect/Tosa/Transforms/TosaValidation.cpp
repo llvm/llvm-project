@@ -1106,7 +1106,8 @@ LogicalResult TosaValidation::applyVariableCheck(Operation *op) {
   return success();
 }
 
-LogicalResult checkErrorIfResize(Operation *op) {
+LogicalResult checkErrorIfResize(Operation *op,
+                                 bool checkStrictSpecConformance) {
   auto resize = dyn_cast<tosa::ResizeOp>(op);
   if (!resize)
     return success();
@@ -1123,7 +1124,8 @@ LogicalResult checkErrorIfResize(Operation *op) {
 
   // Ensure the image size is supported by GPU APIs and that for integer
   // implementations, position * stride does not overflow int32_t.
-  if (inputType.hasStaticShape() && outputType.hasStaticShape()) {
+  if (checkStrictSpecConformance && inputType.hasStaticShape() &&
+      outputType.hasStaticShape()) {
     const SmallVector<int64_t, 4> sizes = {
         outputType.getDimSize(1), outputType.getDimSize(2),
         inputType.getDimSize(1), inputType.getDimSize(2)};
@@ -1166,27 +1168,30 @@ LogicalResult checkErrorIfResize(Operation *op) {
 
   const int64_t offsetY = offset[0];
   const int64_t offsetX = offset[1];
-  // Set a consistent lower limit of 1/16 downscale to simplify
-  // implementations
-  if (offsetY < -scaleYN || offsetY >= 16 * scaleYN)
-    return op->emitOpError(
-               "expect offsetY / scaleYNumerator to be in range [-1, 16), got ")
-           << offsetY << "/" << scaleYN;
-  if (offsetX < -scaleXN || offsetX >= 16 * scaleXN)
-    return op->emitOpError(
-               "expect offsetX / scaleXNumerator to be in range [-1, 16), got ")
-           << offsetX << "/" << scaleXN;
-
   const int64_t borderY = border[0];
   const int64_t borderX = border[1];
-  if (borderY < -16 * scaleYN || borderY >= scaleYN)
-    return op->emitOpError(
-               "expect borderY / scaleYNumerator to be in range [-16, 1), got ")
-           << borderY << "/" << scaleYN;
-  if (borderX < -16 * scaleXN || borderX >= scaleXN)
-    return op->emitOpError(
-               "expect borderX / scaleXNumerator to be in range [-16, 1), got ")
-           << borderX << "/" << scaleXN;
+
+  // Set a consistent lower limit of 1/16 downscale to simplify
+  // implementations
+  if (checkStrictSpecConformance) {
+    if (offsetY < -scaleYN || offsetY >= 16 * scaleYN)
+      return op->emitOpError("expect offsetY / scaleYNumerator to be in range "
+                             "[-1, 16), got ")
+             << offsetY << "/" << scaleYN;
+    if (offsetX < -scaleXN || offsetX >= 16 * scaleXN)
+      return op->emitOpError("expect offsetX / scaleXNumerator to be in range "
+                             "[-1, 16), got ")
+             << offsetX << "/" << scaleXN;
+
+    if (borderY < -16 * scaleYN || borderY >= scaleYN)
+      return op->emitOpError("expect borderY / scaleYNumerator to be in range "
+                             "[-16, 1), got ")
+             << borderY << "/" << scaleYN;
+    if (borderX < -16 * scaleXN || borderX >= scaleXN)
+      return op->emitOpError("expect borderX / scaleXNumerator to be in range "
+                             "[-16, 1), got ")
+             << borderX << "/" << scaleXN;
+  }
 
   // In TOSA specification, we do not support broadcast behavior. Here is a
   // strict check to conform to the specification.
@@ -1381,6 +1386,22 @@ LogicalResult checkErrorIfPad(Operation *op) {
   return success();
 }
 
+LogicalResult checkErrorIfTile(Operation *op) {
+  auto tileOp = dyn_cast<tosa::TileOp>(op);
+  if (!tileOp)
+    return success();
+
+  SmallVector<int64_t> multiples;
+  if (failed(tileOp.getConstantMultiples(multiples)))
+    return success();
+
+  if (llvm::any_of(multiples, [](int64_t v) { return v <= 0; }))
+    return op->emitOpError("multiples values must be > 0, got [")
+           << multiples << "]";
+
+  return success();
+}
+
 LogicalResult checkErrorIfReshape(Operation *op) {
   auto reshapeOp = dyn_cast<tosa::ReshapeOp>(op);
   if (!reshapeOp)
@@ -1391,11 +1412,42 @@ LogicalResult checkErrorIfReshape(Operation *op) {
                                  shapeValues))
     return success();
 
-  if (llvm::is_contained(shapeValues, kInferableDimSize))
-    return op->emitOpError("shape input contains inferable dimension (")
-           << kInferableDimSize
-           << ") "
-              "which does not conform to the TOSA specification";
+  // ERROR_IF(any(shape < 1)): shape dimensions must be positive. This also
+  // rejects the legacy inferable dimension (-1) and zero-sized dimensions, and
+  // makes the `ShapedType::kDynamic` sentinel (INT64_MIN) invalid. Dynamic
+  // dimensions must be expressed with `tosa.dim`, not -1.
+  for (int64_t dim : shapeValues)
+    if (dim < 1)
+      return op->emitOpError()
+             << "new shape has invalid tensor dimension size " << dim;
+
+  auto outputType = dyn_cast<RankedTensorType>(reshapeOp.getType());
+
+  // ERROR_IF(shape disagrees with the statically known result shape)
+  if (outputType &&
+      outputType.getRank() == static_cast<int64_t>(shapeValues.size())) {
+    for (auto [newShapeDim, outputShapeDim] :
+         llvm::zip_equal(shapeValues, outputType.getShape())) {
+      if (ShapedType::isDynamic(outputShapeDim))
+        continue;
+      if (newShapeDim != outputShapeDim)
+        return op->emitOpError()
+               << "new shape is inconsistent with result shape";
+    }
+  }
+
+  // ERROR_IF(tensor_size(shape1) != tensor_size(shape));
+  if (auto inputType =
+          dyn_cast<RankedTensorType>(reshapeOp.getInput1().getType());
+      inputType && inputType.hasStaticShape()) {
+    int64_t inputElementsNum = inputType.getNumElements();
+    int64_t newShapeElementsNum =
+        llvm::accumulate(shapeValues, int64_t(1),
+                         [](int64_t acc, int64_t dim) { return acc * dim; });
+    if (inputElementsNum != newShapeElementsNum)
+      return op->emitOpError() << "cannot reshape " << inputElementsNum
+                               << " elements into " << newShapeElementsNum;
+  }
 
   return success();
 }
@@ -1442,6 +1494,28 @@ LogicalResult checkErrorIfSlice(Operation *op) {
         return op->emitOpError(
                    "expected output shape to match size values, got ")
                << outputType << " vs [" << sizeValues << "]";
+    }
+  }
+
+  // ERROR_IF(any(start + size > shape1))
+  if (hasStartValues && hasSizeValues) {
+    if (const auto inputType =
+            dyn_cast<RankedTensorType>(sliceOp.getInput1().getType())) {
+      for (const auto &[index, vals] : llvm::enumerate(llvm::zip_equal(
+               startValues, sizeValues, inputType.getShape()))) {
+        const auto &[start, size, inputDim] = vals;
+        if (ShapedType::isDynamic(inputDim))
+          continue;
+        // Earlier checks already ensured that start and slice are non-negative.
+        // Avoid overflowing start + size.
+        if (start > inputDim || size > inputDim - start)
+          return op->emitOpError(
+                     "start + size must be less than or equal to input "
+                     "dimension size, got start=")
+                 << start << ", size=" << size
+                 << " vs input dim size=" << inputDim << " at dimension "
+                 << index;
+      }
     }
   }
 
@@ -1569,9 +1643,10 @@ LogicalResult checkErrorIfScatter(Operation *op) {
 }
 
 LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
-  if (failed(checkErrorIfResize(op)) || failed(checkErrorIfMul(op)) ||
-      failed(checkErrorIfTable(op)) || failed(checkErrorIfRescale(op)) ||
-      failed(checkErrorIfPad(op)) || failed(checkErrorIfReshape(op)) ||
+  if (failed(checkErrorIfResize(op, strictOpSpecAlignment)) ||
+      failed(checkErrorIfMul(op)) || failed(checkErrorIfTable(op)) ||
+      failed(checkErrorIfRescale(op)) || failed(checkErrorIfPad(op)) ||
+      failed(checkErrorIfTile(op)) || failed(checkErrorIfReshape(op)) ||
       failed(checkErrorIfSlice(op)) || failed(checkErrorIfCondIf(op)) ||
       failed(checkErrorIfWhileLoop(op)) || failed(checkErrorIfScatter(op)))
     return failure();
@@ -1656,7 +1731,7 @@ LogicalResult TosaValidation::validateValidElementType(Operation *op, Type type,
     }
   } else if (isa<tosa::shapeType>(type))
     return success();
-  else if (isa<tosa::mxint8Type, tosa::BlockScaledType>(type))
+  else if (isa<MXI8Type, tosa::mxint8Type, tosa::BlockScaledType>(type))
     return success();
 
   return op->emitOpError() << "is not profile-aligned: element type " << type
@@ -1763,7 +1838,7 @@ void TosaValidation::runOnOperation() {
       return signalPassFailure();
 
     // do error if checks
-    if (strictOpSpecAlignment && failed(applyErrorIfCheck(op)))
+    if (failed(applyErrorIfCheck(op)))
       return signalPassFailure();
   });
 }

@@ -523,21 +523,34 @@ and Types with no parameters need not use either of these fields, in which case
 the syntax for the Attribute or Type is simply the mnemonic.
 
 For each dialect, two "dispatch" functions will be created: one for parsing and
-one for printing. These static functions placed alongside the class definitions
-and have the following function signatures:
+one for printing. These static functions are placed alongside the class
+definitions in the C++ namespace of the dialect and have the following function
+signatures, where `<DialectClass>` is the C++ class name of the dialect:
 
 ```c++
-static ParseResult generatedAttributeParser(DialectAsmParser& parser, StringRef *mnemonic, Type attrType, Attribute &result);
-static LogicalResult generatedAttributePrinter(Attribute attr, DialectAsmPrinter& printer);
+static OptionalParseResult generated<DialectClass>AttributeParser(
+    AsmParser &parser, StringRef *mnemonic, Type type, Attribute &value);
+static LogicalResult generated<DialectClass>AttributePrinter(
+    Attribute def, AsmPrinter &printer);
 
-static ParseResult generatedTypeParser(DialectAsmParser& parser, StringRef *mnemonic, Type &result);
-static LogicalResult generatedTypePrinter(Type type, DialectAsmPrinter& printer);
+static OptionalParseResult generated<DialectClass>TypeParser(
+    AsmParser &parser, StringRef *mnemonic, Type &value);
+static LogicalResult generated<DialectClass>TypePrinter(
+    Type def, AsmPrinter &printer);
 ```
 
-The above functions should be added to the respective in your
-`Dialect::printType` and `Dialect::parseType` methods, or consider using the
-`useDefaultAttributePrinterParser` and `useDefaultTypePrinterParser` ODS Dialect
-options if all attributes or types define a mnemonic.
+If `*mnemonic` is empty, the parsers first parse the mnemonic. Otherwise, they
+use `*mnemonic` without parsing it. If an attribute or type has the mnemonic,
+they call its parser and return whether it succeeded. Otherwise, they set
+`*mnemonic` to the mnemonic and return `std::nullopt`, so that the dialect can
+try to parse it in other ways. The printers return `failure` if the attribute
+or type is not one of the generated ones with a mnemonic.
+
+The above functions should be called from your `Dialect::parseAttribute`,
+`Dialect::printAttribute`, `Dialect::parseType` and `Dialect::printType`
+methods, or consider using the `useDefaultAttributePrinterParser` and
+`useDefaultTypePrinterParser` ODS Dialect options if all attributes or types
+define a mnemonic.
 
 The mnemonic, hasCustomAssemblyFormat, and assemblyFormat fields are optional.
 If none are defined, the generated code will not include any parsing or printing
@@ -1005,7 +1018,7 @@ without tearing down loaded dialects.
 
 In most cases the storage class is auto generated, but if necessary it can be
 manually defined by setting the `genStorageClass` field to 0. The name and
-namespace (defaults to `detail`) can additionally be controlled via the The
+namespace (defaults to `detail`) can additionally be controlled via the
 `storageClass` and `storageNamespace` fields.
 
 #### Defining a storage class
@@ -1223,22 +1236,76 @@ generates an `getAlias` implementation using the Attribute or Type's mnemonic.
 ### Registering with the Dialect
 
 Once the attributes and types have been defined, they must then be registered
-with the parent `Dialect`. This is done via the `addAttributes` and `addTypes`
-methods. Note that when registering, the full definition of the storage classes
-must be visible.
+with the parent `Dialect`. A dialect defining attributes (or types) in ODS
+should set its `hasAttributes` (or `hasTypes`) field:
+
+```tablegen
+def MyDialect : Dialect {
+  ...
+  let hasAttributes = 1;
+  let hasTypes = 1;
+}
+```
+
+The generated declarations then declare `register<DialectClass>Attributes` (or
+`register<DialectClass>Types`), which registers all attributes (or types) of the
+generated file. It is defined alongside the attribute (or type) classes in the
+generated definitions and called by the dialect constructor by default.
+
+`hasAttributes` (or `hasTypes`) defaults to `0` and provides the default of
+`useDefaultAttributeRegistration` (or `useDefaultTypeRegistration`), which
+controls the above, and of `useDefaultAttributePrinterParser` (or
+`useDefaultTypePrinterParser`). A dialect whose
+`useDefaultAttributeRegistration` (or `useDefaultTypeRegistration`) is `0` gets
+no hook and must register its attributes (or types) itself, e.g. if registering
+them requires more than their definitions:
 
 ```c++
 void MyDialect::initialize() {
-    /// Add the defined attributes to the dialect.
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "MyDialect/Attributes.cpp.inc"
-  >();
-
-    /// Add the defined types to the dialect.
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "MyDialect/Types.cpp.inc"
-  >();
+      >();
 }
 ```
+
+If the attributes (or types) of a dialect are generated into more than one
+file, e.g. by dialect extensions, each file must name its hook differently to
+avoid multiple definitions. `-attrdefs-registration-name=<Name>` (or
+`-typedefs-registration-name=<Name>`) names the hook
+`register<Name>Attributes` (or `register<Name>Types`). The option must be
+passed to both the declaration and the definition generator. Hooks with a
+custom name are never called by the generated dialect constructor.
+
+#### Logical Sharding with Partitions
+
+Like [ops](Operations.md/#logical-sharding-with-op-partitions), attributes and
+types can be grouped into named partitions by setting their `partition` to a
+`Partition` record, so that each partition is generated into its own
+declaration and definition files:
+
+```tablegen
+def MyDialect_CoreAttrs : Partition<"Core">;
+def MyDialect_LayoutAttrs : Partition<"Layout">;
+
+class MyDialect_Attr<string name, string attrMnemonic>
+    : AttrDef<MyDialect, name> {
+  let mnemonic = attrMnemonic;
+  // Attributes are in partition `Core`, unless they set another partition.
+  let partition = MyDialect_CoreAttrs;
+}
+
+def MyIntAttr : MyDialect_Attr<"MyInt", "int"> { ... }
+
+def MyLayoutAttr : MyDialect_Attr<"MyLayout", "layout"> {
+  let partition = MyDialect_LayoutAttrs;
+  ...
+}
+```
+
+Passing `-attrdef-partition=<partition>` (or `-typedef-partition=<partition>`)
+with a partition name to `-gen-attrdef-decls` and `-gen-attrdef-defs` (or
+`-gen-typedef-decls` and `-gen-typedef-defs`) generates only the attributes (or
+types) of that partition. Every generated attribute or type must then be in a
+partition, and the specified partition must have attributes or types. Without
+the option, `partition` is ignored.

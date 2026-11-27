@@ -20,11 +20,14 @@
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
@@ -56,6 +59,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
+  case Intrinsic::sshl_sat:
+  case Intrinsic::ushl_sat:
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
@@ -286,6 +291,28 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
   return Intrinsic::not_intrinsic;
 }
 
+bool llvm::shouldSplitVectorSinCos(const TargetLibraryInfo &TLI, Type *ScalarTy,
+                                   ElementCount EC, Module *M) {
+  auto HasIntrinsicMapping = [&](Intrinsic::ID ID) {
+    return TLI.isFunctionVectorizable(Intrinsic::getName(ID, ScalarTy, M), EC);
+  };
+  // If a vector sincos mapping exists for the intrinsic name (e.g.
+  // "llvm.sincos.f32") or for the scalar libcall name ("sincos"/"sincosf"),
+  // SelectionDAG legalization handles it via expandMultipleResultFPLibCall
+  // when the runtime libcall impl is enabled.
+  if (HasIntrinsicMapping(Intrinsic::sincos))
+    return false;
+  LibFunc LF = NotLibFunc;
+  if (ScalarTy->isFloatTy())
+    LF = LibFunc_sincosf;
+  else if (ScalarTy->isDoubleTy())
+    LF = LibFunc_sincos;
+  if (LF != NotLibFunc && TLI.isFunctionVectorizable(TLI.getName(LF), EC))
+    return false;
+  return HasIntrinsicMapping(Intrinsic::sin) &&
+         HasIntrinsicMapping(Intrinsic::cos);
+}
+
 unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::vector_interleave2:
@@ -477,10 +504,12 @@ bool llvm::isSplatValue(const Value *V, int Index, unsigned Depth) {
   if (match(V, m_BinOp(m_Value(X), m_Value(Y))))
     return isSplatValue(X, Index, Depth) && isSplatValue(Y, Index, Depth);
 
-  // If all operands of a select are splats, the result is a splat.
+  // If all operands of a select are splats, the result is a splat. A scalar
+  // condition selects one whole operand, so only a vector condition needs to
+  // be a splat.
   if (match(V, m_Select(m_Value(X), m_Value(Y), m_Value(Z))))
-    return isSplatValue(X, Index, Depth) && isSplatValue(Y, Index, Depth) &&
-           isSplatValue(Z, Index, Depth);
+    return (!isa<VectorType>(X->getType()) || isSplatValue(X, Index, Depth)) &&
+           isSplatValue(Y, Index, Depth) && isSplatValue(Z, Index, Depth);
 
   // TODO: Add support for unary ops (fneg), casts, intrinsics (overflow ops).
 
@@ -522,6 +551,21 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
   }
 
   return true;
+}
+
+bool llvm::getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
+                                  const APInt &DemandedElts, APInt &DemandedLHS,
+                                  APInt &DemandedRHS) {
+  if (isa<ScalableVectorType>(Shuf->getType())) {
+    assert(DemandedElts == APInt(1, 1));
+    DemandedLHS = DemandedRHS = DemandedElts;
+    return true;
+  }
+
+  int NumElts =
+      cast<FixedVectorType>(Shuf->getOperand(0)->getType())->getNumElements();
+  return getShuffleDemandedElts(NumElts, Shuf->getShuffleMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS);
 }
 
 bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
@@ -939,13 +983,23 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
     }
   }
 
-  // Now we've discovered all values, walk them to see if there are
-  // any users we didn't see. If there are, we can't optimize that
-  // chain.
-  for (auto &I : DBits)
+  // Now we've discovered all values, walk them with the exception for roots
+  // to see if there are any users we didn't see. If there are, we can't
+  // optimize that chain.
+  //
+  // We exclude checking root users because shrinking roots doesn't change
+  // root's type and therefore doesn't affect its users.
+  for (auto &I : DBits) {
+    if (const auto *RI = dyn_cast<Instruction>(I.first);
+        RI && Roots.contains(RI)) {
+      assert((isa<TruncInst, ICmpInst>(RI)) && "Unexpected root type!");
+      continue;
+    }
+
     for (auto *U : I.first->users())
       if (U->getType()->isIntegerTy() && DBits.count(U) == 0)
         DBits[ECs.getOrInsertLeaderValue(I.first)] |= ~0ULL;
+  }
 
   for (const auto &E : ECs) {
     if (!E->isLeader())
@@ -994,8 +1048,7 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
                 isa<ShlOperator, LShrOperator, AShrOperator>(U.getUser()) &&
                 U.getOperandNo() == 1)
               return CI->uge(MinBW);
-            uint64_t BW = bit_width(DB.getDemandedBits(&U).getZExtValue());
-            return bit_ceil(BW) > MinBW;
+            return bit_ceil(DB.getDemandedBits(&U).getActiveBits()) > MinBW;
           }))
         continue;
 
@@ -1118,6 +1171,11 @@ void llvm::getMetadataToPropagate(
 Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   if (VL.empty())
     return Inst;
+
+  // Keep cache hints out of getMetadataToPropagate(): VPlan changes operand
+  // layouts without remapping cache-hint indices.
+  propagateMemCacheHint(*Inst, VL);
+
   SmallVector<std::pair<unsigned, MDNode *>> Metadata;
   getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
@@ -1376,6 +1434,11 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
                                     /*ShouldCheckWrap=*/false, Predicates)
                            .value_or(0);
+      // The interleave analysis takes strides as int (isStrided,
+      // createInterleaveGroup, InterleaveGroup); treat strides that do not
+      // fit as unknown.
+      if (!isInt<32>(Stride))
+        Stride = 0;
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, TheLoop, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
@@ -1607,11 +1670,13 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
       // The index of A is the index of B plus A's distance to B in multiples
       // of the size.
-      int IndexA =
+      int64_t IndexA =
           GroupB->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
 
-      // Try to insert A into B's group.
-      if (GroupB->insertMember(A, IndexA, DesA.Alignment)) {
+      // Try to insert A into B's group. insertMember takes an int32_t index, so
+      // reject A if IndexA does not fit.
+      if (isInt<32>(IndexA) &&
+          GroupB->insertMember(A, IndexA, DesA.Alignment)) {
         LLVM_DEBUG(dbgs() << "LV: Inserted:" << *A << '\n'
                           << "    into the interleave group with" << *B
                           << '\n');

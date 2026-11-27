@@ -67,7 +67,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -155,7 +154,7 @@ static Error processModule(Module &M, raw_ostream &OS) {
   if (EmbeddingsSubCmd) {
     // Initialize vocabulary for embedding generation
     // Note: Requires --ir2vec-vocab-path option to be set
-    // and this value will be populated in the var VocabFile
+    StringRef VocabFile = ir2vec::getVocabFile(M.getContext());
     if (VocabFile.empty()) {
       return createStringError(
           errc::invalid_argument,
@@ -191,6 +190,10 @@ static Error processModule(Module &M, raw_ostream &OS) {
 
 namespace mir2vec {
 
+static cl::opt<std::string>
+    TargetTriple("mtriple", cl::desc("Override target triple for module"),
+                 cl::cat(MIR2VecCategory));
+
 /// Setup MIR context from input file
 static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
   SMDiagnostic Err;
@@ -205,6 +208,8 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
   auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
                            StringRef OldDLStr) -> std::optional<std::string> {
     std::string IRTargetTriple = DataLayoutTargetTriple.str();
+    if (!TargetTriple.empty())
+      IRTargetTriple = Triple::normalize(TargetTriple);
     Triple TheTriple = Triple(IRTargetTriple);
     if (TheTriple.getTriple().empty())
       TheTriple.setTriple(sys::getDefaultTargetTriple());
@@ -212,7 +217,8 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
     auto TMOrErr = codegen::createTargetMachineForTriple(
         Ctx.Context.getLibraryOptions(), TheTriple);
     if (!TMOrErr) {
-      Err.print(ToolName, errs());
+      WithColor::error(errs(), ToolName)
+          << toString(TMOrErr.takeError()) << "\n";
       exit(1); // Match original behavior
     }
     Ctx.TM = std::move(*TMOrErr);
@@ -350,12 +356,12 @@ int main(int argc, char **argv) {
   using namespace llvm::mir2vec;
 
   InitLLVM X(argc, argv);
-  // Show Common, IR2Vec and MIR2Vec option categories
+  // Show Common and MIR2Vec option categories
   cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *>{
-      &CommonCategory, &ir2vec::IR2VecCategory, &mir2vec::MIR2VecCategory});
+      &CommonCategory, &mir2vec::MIR2VecCategory});
   cl::LibraryOptionsContext LibraryOptions;
   cl::parseCommandLineOptions(
-      LibraryOptions, ArrayRef(argv, argc),
+      LibraryOptions, codegen::getToolOptions(), ArrayRef(argv, argc),
       "IR2Vec/MIR2Vec - Embedding Generation Tool\n"
       "Generates embeddings for a given LLVM IR or MIR and "
       "supports triplet generation for vocabulary "
@@ -402,7 +408,6 @@ int main(int argc, char **argv) {
     InitializeAllTargetMCs();
     InitializeAllAsmParsers();
     InitializeAllAsmPrinters();
-    static codegen::RegisterCodeGenFlags CGF;
 
     if (Error Err = mir2vec::processModule(LibraryOptions, InputFilename, OS)) {
       handleAllErrors(std::move(Err), [&](const ErrorInfoBase &EIB) {

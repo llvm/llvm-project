@@ -88,6 +88,8 @@ and the module declaration within a module unit.
 
 ### How to build projects using modules
 
+(quick-start)=
+
 #### Quick Start
 
 Let's see a "hello world" example that uses modules.
@@ -183,6 +185,15 @@ $ clang++ User.o M-interface_part.o  M-impl_part.o M.o Impl.o -o a.out
 ```
 
 We explain the options in the following sections.
+
+Clang also offers the experimental `-fmodules-driver` flag which allows the Clang
+driver to determine and manage the order in which modules are built.
+See {ref}`Compiling Modules using the Clang Modules-Driver <modules-driver>`
+for more details.
+
+```console
+$ clang++ -std=c++20 -fmodules-driver interface_part.cppm impl_part.cppm M.cppm Impl.cpp User.cpp
+```
 
 #### How to enable standard C++ modules
 
@@ -494,6 +505,135 @@ fragment is disabled by default. These checks can be enabled by specifying
 `-Xclang -fno-skip-odr-check-in-gmf` when compiling. If the check is enabled
 and you encounter incorrect or missing diagnostics, please report them via the
 [community issue tracker](https://github.com/llvm/llvm-project/issues/).
+
+(modules-driver)=
+
+#### Compiling Modules using the Clang Modules-Driver
+
+:::{warning}
+The `-fmodules-driver` feature is experimental.
+:::
+
+The `-fmodules-driver` option enables the Clang driver to automatically discover
+module dependencies and manage the entire compilation process for builds using
+Standard C++ named modules. This includes support for importing the C++
+Standard library modules `std` and `std.compat`, which requires libc++ 19 or
+later, or libstdc++ 15 or later.
+
+For Clang modules, see
+{ref}`Driver-managed module builds <modules-driver-clang-modules>`.
+
+##### Examples
+
+Let's use the simple "hello world" example from the
+{ref}`Quick Start <quick-start>` section to demonstrate the usage with
+`-fmodules-driver`.
+Because the C++ Standard library modules can be used in combination with
+`-fmodules-driver`, we import `std` instead of including `<iostream>`:
+
+```c++
+// HelloWorld.cppm
+export module HelloWorld;
+import std;
+
+export void helloWorld() {
+  std::cout << "Hello World!\n";
+}
+
+// use.cpp
+import HelloWorld;
+int main() {
+  helloWorld();
+}
+```
+
+Then, invoke Clang like:
+
+```console
+$ clang++ -std=c++20 -fmodules-driver HelloWorld.cppm use.cpp
+```
+
+For the more complex example from the Quick Start section, invoke Clang like:
+
+```console
+$ clang++ -std=c++20 -fmodules-driver interface_part.cppm impl_part.cppm M.cppm Impl.cpp User.cpp
+```
+
+The build graph for any `-fmodules-driver` invocation can be printed in DOT
+format using the `-Rmodules-driver` remark:
+
+```console
+$ clang++ -std=c++20 -fmodules-driver -Rmodules-driver interface_part.cppm impl_part.cppm M.cppm Impl.cpp User.cpp
+```
+
+In the resulting DOT graph, Standard C++ named modules are labeled just as
+"Named module".
+
+```{graphviz}
+digraph "Module Dependency Graph" {
+     rankdir="BT";
+     label="Module Dependency Graph";
+     node [shape=Mrecord, colorscheme=set23, style=filled];
+
+     "M:interface_part-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: interface_part.cppm | Module type: Named module | Module name: M:interface_part | Triple: x86_64-unknown-linux-gnu }"];
+     "M:impl_part-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: impl_part.cppm | Module type: Named module | Module name: M:impl_part | Triple: x86_64-unknown-linux-gnu }"];
+     "M-x86_64-unknown-linux-gnu" [fillcolor=2, label="{ Filename: M.cppm | Module type: Named module | Module name: M | Triple: x86_64-unknown-linux-gnu }"];
+     "Impl.cpp-x86_64-unknown-linux-gnu" [fillcolor=3, label="{ Filename: Impl.cpp | Triple: x86_64-unknown-linux-gnu }"];
+     "User.cpp-x86_64-unknown-linux-gnu" [fillcolor=3, label="{ Filename: User.cpp | Triple: x86_64-unknown-linux-gnu }"];
+
+     "M:interface_part-x86_64-unknown-linux-gnu" -> "M:impl_part-x86_64-unknown-linux-gnu";
+     "M:interface_part-x86_64-unknown-linux-gnu" -> "M-x86_64-unknown-linux-gnu";
+     "M:impl_part-x86_64-unknown-linux-gnu" -> "M-x86_64-unknown-linux-gnu";
+     "M-x86_64-unknown-linux-gnu" -> "Impl.cpp-x86_64-unknown-linux-gnu";
+     "M-x86_64-unknown-linux-gnu" -> "User.cpp-x86_64-unknown-linux-gnu";
+}
+```
+
+##### Implementation
+
+Clang's dependency scanning tooling needs to be invoked on a `-cc1` command line
+for each input. The Clang driver is therefore first run as it would be without
+`-fmodules-driver`, to create these command lines for all user inputs. By
+default, compilation jobs are also created for the C++ Standard library modules,
+because they too need to be scanned for dependencies if imported by any input
+specified on the command line.
+
+The Clang driver then:
+
+1. Scans all inputs for module dependencies.
+   C++ Standard library modules are scanned on demand, only if any user input
+   imports them.
+
+2. Builds the dependency graph, where each node represents one compilation job.
+   This also generates `-cc1` command lines for any discovered Clang modules.
+   The compilation jobs created for C++ Standard library modules are removed if
+   they are not imported.
+   This is the graph printed by `-Rmodules-driver`.
+
+3. Updates each job's command line to explicitly pass in its module
+   dependencies.
+
+4. Runs the jobs in topological order of the dependency graph.
+
+`-fmodules-driver` currently requires Reduced BMIs, which are enabled by
+default. With Reduced BMIs, the BMI of a module unit is emitted as a by-product
+of the job compiling it to an object file, so the driver only needs to add
+`-fmodule-output` instead of creating a separate precompile job.
+
+##### Limitations
+
+- Modules are recompiled on each invocation. Caching support is planned for a
+  future release.
+- Combining Standard C++ named modules and Clang modules in the same
+  compilation is not recommended. For example, using `-fmodules-driver` with
+  `-stdlib=libc++` and `-fmodules` currently doesn't work correctly when
+  importing `std`.
+  See [discussion in PR #193312](https://github.com/llvm/llvm-project/pull/193312).
+- `-fno-modules-reduced-bmi` is not supported.
+- BMIs are always written as temporary files, and flags which influence the
+  output location of BMIs, such as `-fmodule-output=`, are ignored.
+- Flags such as `-fsyntax-only` are not supported when compiling multiple
+  input files. Using such flags would not be supported for the above examples.
 
 ### Privacy Issue
 

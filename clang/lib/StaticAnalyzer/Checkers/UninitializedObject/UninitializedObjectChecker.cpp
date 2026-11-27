@@ -235,6 +235,7 @@ void UninitializedObjectChecker::checkDeadSymbols(SymbolReaper &SR,
     if (!SR.isLiveRegion(R))
       State = State->remove<AnalyzedRegions>(R);
   }
+  C.addTransition(State);
 }
 
 //===----------------------------------------------------------------------===//

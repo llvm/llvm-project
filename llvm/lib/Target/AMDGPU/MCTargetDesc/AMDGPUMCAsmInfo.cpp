@@ -74,23 +74,3 @@ bool AMDGPUMCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
          SectionName == ".hsarodata_readonly_agent" ||
          MCAsmInfo::shouldOmitSectionDirective(SectionName);
 }
-
-unsigned AMDGPUMCAsmInfo::getMaxInstLength(const MCSubtargetInfo *STI) const {
-  if (!STI || STI->getTargetTriple().getArch() == Triple::r600)
-    return MaxInstLength;
-
-  // Maximum for NSA encoded images
-  if (STI->hasFeature(AMDGPU::FeatureNSAEncoding))
-    return 20;
-
-  // VOP3PX/VOP3PX2 encoding.
-  if (STI->hasFeature(AMDGPU::FeatureGFX950Insts) ||
-      STI->hasFeature(AMDGPU::FeatureGFX1250Insts))
-    return 16;
-
-  // 64-bit instruction with 32-bit literal.
-  if (STI->hasFeature(AMDGPU::FeatureVOP3Literal))
-    return 12;
-
-  return 8;
-}

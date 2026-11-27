@@ -261,7 +261,6 @@ private:
 
   MachineRegisterInfo *MRI = nullptr;
   const X86InstrInfo *TII = nullptr;
-  const X86RegisterInfo *TRI = nullptr;
 };
 
 class X86OptimizeLEAsLegacy : public MachineFunctionPass {
@@ -520,9 +519,6 @@ bool X86OptimizeLEAsImpl::removeRedundantAddrCalc(MemOpMap &LEAs) {
              "Instruction positioning is broken");
     }
 
-    // Since we can possibly extend register lifetime, clear kill flags.
-    MRI->clearKillFlags(DefMI->getOperand(0).getReg());
-
     ++NumSubstLEAs;
     LLVM_DEBUG(dbgs() << "OptimizeLEAs: Candidate to replace: "; MI.dump(););
 
@@ -655,9 +651,6 @@ bool X86OptimizeLEAsImpl::removeRedundantLEAs(MemOpMap &LEAs) {
             Op.setOffset(Op.getOffset() + AddrDispShift);
         }
 
-        // Since we can possibly extend register lifetime, clear kill flags.
-        MRI->clearKillFlags(FirstVReg);
-
         ++NumRedundantLEAs;
         LLVM_DEBUG(dbgs() << "OptimizeLEAs: Remove redundant LEA: ";
                    Last.dump(););
@@ -691,7 +684,6 @@ bool X86OptimizeLEAsImpl::runOnMachineFunction(
 
   MRI = &MF.getRegInfo();
   TII = ST.getInstrInfo();
-  TRI = ST.getRegisterInfo();
 
   // Process all basic blocks.
   for (auto &MBB : MF) {

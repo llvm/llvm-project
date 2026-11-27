@@ -12,6 +12,7 @@
 
 #include "orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h"
 
+#include "orc-rt/bedrock/Session.h"
 #include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
 #include "orc-rt/support/sps/SPSAllocAction.h"
 #include "orc-rt/support/sps/SPSMemoryFlags.h"
@@ -59,7 +60,23 @@ public:
   }
 };
 
-namespace sps_ci {
+namespace sps::ci {
+
+// Unlike the operations below, create takes no instance address: the new
+// instance is owned by the calling Session, which is passed to every wrapper.
+extern "C" ORC_RT_SPS_WRAPPER_SIG(orc_rt_ci_sps_SimpleNativeMemoryMap_create) {
+  assert(S && "Session pointer must not be null");
+  SPSWrapperFunction<SPSExpected<SPSExecutorAddr>()>::handle(
+      S, ArgBytes, Return, CallId,
+      [S](move_only_function<void(Expected<void *>)> SendResult) {
+        // Calls from the controller hold a keepalive, so the Session cannot
+        // have started shutting down its services yet: the new instance will
+        // be notified of shutdown, and will free any memory it still holds.
+        auto &Ses = *unwrap(S);
+        auto &SNMM = Ses.createService<SimpleNativeMemoryMap>(Ses);
+        SendResult(static_cast<void *>(&SNMM));
+      });
+}
 
 ORC_RT_SPS_WRAPPER_IMPL(
     orc_rt_ci_sps_SimpleNativeMemoryMap_reserve,
@@ -85,6 +102,7 @@ ORC_RT_SPS_WRAPPER_IMPL(
 
 static std::pair<SymbolNameSpec, const void *>
     orc_rt_ci_SimpleNativeMemoryMap_sps_interface[] = {
+        ORC_RT_SYMTAB_C_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_create),
         ORC_RT_SYMTAB_C_PAIR(orc_rt_ci_sps_SimpleNativeMemoryMap_reserve),
         ORC_RT_SYMTAB_C_PAIR(
             orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple),
@@ -96,5 +114,5 @@ Error addSimpleNativeMemoryMap(SimpleSymbolTable &ST) {
   return ST.addUnique(orc_rt_ci_SimpleNativeMemoryMap_sps_interface);
 }
 
-} // namespace sps_ci
+} // namespace sps::ci
 } // namespace orc_rt

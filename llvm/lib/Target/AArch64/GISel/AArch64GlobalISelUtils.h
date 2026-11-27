@@ -28,6 +28,12 @@ namespace AArch64GISelUtils {
 bool isCMN(const MachineInstr *MaybeSub, const CmpInst::Predicate &Pred,
            const MachineRegisterInfo &MRI);
 
+/// \returns true if \p Reg is a valid immediate for a vector shift right of
+/// type \p Ty: a constant splat with 1 <= value <= element bits, stored in
+/// \p Cnt. Undef lanes (e.g. from widening odd-sized vectors) are allowed.
+bool isVShiftRImm(Register Reg, const MachineRegisterInfo &MRI, LLT Ty,
+                  int64_t &Cnt);
+
 /// Replace a G_MEMSET with a value of 0 with a G_BZERO instruction if it is
 /// supported and beneficial to do so.
 ///
@@ -39,6 +45,12 @@ bool matchEmitBZero(const MachineInstr &MI, const MachineRegisterInfo &MRI,
 ///
 /// Replace \p MI with a G_BZERO.
 void applyEmitBZero(MachineInstr &MI, MachineIRBuilder &MIRBuilder);
+
+/// Detect and apply Mul(And(Srl(X, 15), 0x10001), 0xffff) to CMLTz pattern.
+bool matchCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         Register &SrcReg);
+void applyCombineMulCMLT(MachineInstr &MI, MachineRegisterInfo &MRI,
+                         MachineIRBuilder &B, Register &SrcReg);
 
 /// Analyze a ptrauth discriminator value to try to find the constant integer
 /// and address parts, cracking a ptrauth_blend intrinsic if there is one.

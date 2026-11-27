@@ -27,6 +27,9 @@ class GlobalValueSummary;
 class ModuleSummaryIndex;
 class Function;
 class Module;
+namespace cl {
+class LibraryOptionsContext;
+}
 
 /// Returns the memory access properties of this copy of the function.
 LLVM_ABI MemoryEffects computeFunctionBodyMemoryAccess(Function &F,
@@ -35,7 +38,7 @@ LLVM_ABI MemoryEffects computeFunctionBodyMemoryAccess(Function &F,
 /// Propagate function attributes for function summaries along the index's
 /// callgraph during thinlink
 LLVM_ABI bool thinLTOPropagateFunctionAttrs(
-    ModuleSummaryIndex &Index,
+    const cl::LibraryOptionsContext &LibraryOptions, ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing);
 

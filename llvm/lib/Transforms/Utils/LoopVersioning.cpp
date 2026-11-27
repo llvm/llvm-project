@@ -177,8 +177,8 @@ void LoopVersioning::addPHINodes(
       PN = PHINode::Create(Inst->getType(), 2, Inst->getName() + ".lver");
       PN->insertBefore(PHIBlock->begin());
       SmallVector<User*, 8> UsersToUpdate;
-      for (User *U : Inst->users())
-        if (!VersionedLoop->contains(cast<Instruction>(U)->getParent()))
+      for (Instruction *U : Inst->users())
+        if (!VersionedLoop->contains(U->getParent()))
           UsersToUpdate.push_back(U);
       for (User *U : UsersToUpdate)
         U->replaceUsesOfWith(Inst, PN);

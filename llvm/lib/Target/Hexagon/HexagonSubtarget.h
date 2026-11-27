@@ -19,6 +19,7 @@
 #include "HexagonInstrInfo.h"
 #include "HexagonRegisterInfo.h"
 #include "HexagonSelectionDAGInfo.h"
+#include "llvm/ADT/BoolOrDefault.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
@@ -27,8 +28,12 @@
 #include "llvm/Support/Alignment.h"
 #include <bitset>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
+
+#define OPTIONS_STRUCT_DECL
+#include "HexagonOptions.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "HexagonGenSubtargetInfo.inc"
@@ -43,6 +48,8 @@ class TargetMachine;
 class Triple;
 
 class HexagonSubtarget : public HexagonGenSubtargetInfo {
+  const HexagonOptions &CLOpts;
+
   virtual void anchor();
 
   bool UseHVX64BOps = false;
@@ -57,6 +64,8 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueStores = false;
   bool UseSmallData = false;
   bool UseZRegOps = false;
+  bool UseHMXOps = false;
+  bool UseHLXOps = false;
   bool UseHVXIEEEFPOps = false;
   bool UseHVXQFloatOps = false;
   bool UseHVXFloatingPoint = false;
@@ -87,6 +96,9 @@ public:
   struct HVXMemLatencyMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };
+  struct HMXActivateWeightMutation : public ScheduleDAGMutation {
+    void apply(ScheduleDAGInstrs *DAG) override;
+  };
   struct CallMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   private:
@@ -96,9 +108,15 @@ public:
   struct BankConflictMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };
+  bool mayHaveBankConflict(const MachineInstr &MI0, const MachineInstr &MI1,
+                           const HexagonInstrInfo &HII,
+                           bool IgnoreSameLine = true) const;
+  struct HLXPseudoMutation : public ScheduleDAGMutation {
+    void apply(ScheduleDAGInstrs *DAG) override;
+  };
 
 private:
-  enum HexagonProcFamilyEnum { Others, TinyCore };
+  enum HexagonProcFamilyEnum { Others, TinyCore, HLX2048B };
 
   std::string CPUString;
   HexagonProcFamilyEnum HexagonProcFamily = Others;
@@ -117,6 +135,7 @@ public:
                    const TargetMachine &TM);
 
   const Triple &getTargetTriple() const { return TargetTriple; }
+  const HexagonOptions &getCLOpts() const { return CLOpts; }
   bool isEnvironmentMusl() const {
     return TargetTriple.getEnvironment() == Triple::Musl;
   }
@@ -244,6 +263,24 @@ public:
   bool useHVXV81Ops() const {
     return HexagonHVXVersion >= Hexagon::ArchEnum::V81;
   }
+  bool hasV83Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V83;
+  }
+  bool hasV83OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V83;
+  }
+  bool useHVXV83Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V83;
+  }
+  bool hasV85Ops() const {
+    return getHexagonArchVersion() >= Hexagon::ArchEnum::V85;
+  }
+  bool hasV85OpsOnly() const {
+    return getHexagonArchVersion() == Hexagon::ArchEnum::V85;
+  }
+  bool useHVXV85Ops() const {
+    return HexagonHVXVersion >= Hexagon::ArchEnum::V85;
+  }
 
   bool useAudioOps() const { return UseAudioOps; }
   bool useCompound() const { return UseCompound; }
@@ -254,6 +291,11 @@ public:
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
   bool useZRegOps() const { return UseZRegOps; }
+  bool useHMXOps() const { return UseHMXOps; }
+  bool useHLXOps() const { return UseHLXOps; }
+  bool useHLX2048BOps() const {
+    return UseHLXOps && HexagonProcFamily == HLX2048B;
+  }
   bool useCabac() const { return UseCabac; }
 
   bool isTinyCore() const { return HexagonProcFamily == TinyCore; }
@@ -378,6 +420,23 @@ public:
   bool isHVXVectorType(EVT VecTy, bool IncludeBool = false) const;
   bool isTypeForHVX(Type *VecTy, bool IncludeBool = false) const;
 
+  unsigned getHLXVectorLength() const {
+    assert(useHLXOps());
+    if (useHLX2048BOps())
+      return 2048;
+    llvm_unreachable("Invalid HLX vector length settings");
+  }
+
+  ArrayRef<MVT> getHLXElementTypes() const {
+    static MVT Types[] = {MVT::i8, MVT::i16, MVT::i32};
+
+    return ArrayRef(Types);
+  }
+
+  bool isHLXElementType(MVT Ty) const;
+  bool isHLXVectorType(EVT VecTy) const;
+  bool isTypeForHLX(Type *VecTy) const;
+
   Align getTypeAlignment(MVT Ty) const {
     if (isHVXVectorType(Ty, true))
       return Align(getVectorLength());
@@ -389,10 +448,11 @@ public:
 
   Intrinsic::ID getIntrinsicId(unsigned Opc) const;
 
-private:
   // Helper function responsible for increasing the latency only.
   int updateLatency(MachineInstr &SrcInst, MachineInstr &DstInst,
                     bool IsArtificial, int Latency) const;
+
+private:
   void restoreLatency(SUnit *Src, SUnit *Dst) const;
   void changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat) const;
   bool isBestZeroLatency(SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII,

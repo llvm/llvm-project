@@ -283,6 +283,12 @@ public:
     ForceDisable, // Always disable regardless of the target default.
   };
 
+  enum class SmallIntABICompatKind {
+    Platform, // Compat with platform ABI (high bits unspecified).
+    Clang23,  // Compat with old Clang ABI (high bits zero/sign-extended).
+    Both,     // Compat with both. Extend in caller, don't assume in callee.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
@@ -560,6 +566,9 @@ public:
 
   /// List of dynamic shared object files to be loaded as pass plugins.
   std::vector<std::string> PassPlugins;
+
+  /// "<plugin>,<arg>" values of -fpass-plugin-arg=.
+  std::vector<std::string> PassPluginArgs;
 
   /// List of pass builder callbacks.
   std::vector<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks;

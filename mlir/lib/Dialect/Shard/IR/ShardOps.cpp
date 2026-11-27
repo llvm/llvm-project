@@ -16,7 +16,6 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/PatternMatch.h"
@@ -29,7 +28,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -119,21 +117,7 @@ struct ShardInlinerinterface : public DialectInlinerInterface {
 // Shard dialect
 //===----------------------------------------------------------------------===//
 
-void ShardDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Shard/IR/ShardOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Shard/IR/ShardAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Shard/IR/ShardTypes.cpp.inc"
-      >();
-  addInterface<ShardInlinerinterface>();
-}
+void ShardDialect::initialize() { addInterface<ShardInlinerinterface>(); }
 
 Operation *ShardDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,
