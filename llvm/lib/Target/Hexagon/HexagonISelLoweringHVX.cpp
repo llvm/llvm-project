@@ -623,9 +623,9 @@ HexagonTargetLowering::getPreferredHvxVectorAction(MVT VecTy) const {
     if (VecWidth > 2*HwWidth)
       return TargetLoweringBase::TypeSplitVector;
 
-    bool HaveThreshold = Subtarget.getCLOpts().hexagon_hvx_widen.has_value();
+    bool HaveThreshold = Subtarget.getCLOpts().hvx_widen.has_value();
     if (HaveThreshold &&
-        8 * *Subtarget.getCLOpts().hexagon_hvx_widen <= VecWidth)
+        8 * *Subtarget.getCLOpts().hvx_widen <= VecWidth)
       return TargetLoweringBase::TypeWidenVector;
     if (VecWidth >= HwWidth/2 && VecWidth < HwWidth)
       return TargetLoweringBase::TypeWidenVector;
@@ -2512,25 +2512,25 @@ HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
     const char *Name = nullptr;
     switch (IntNo) {
     case Intrinsic::hexagon_V6_vcvt_b_hf_128B: {
-      Name = Subtarget.getCLOpts().hexagon_qf_fast_convert
+      Name = Subtarget.getCLOpts().qf_fast_convert
                  ? "__qf_fast_convert_hf_to_b_rne"
                  : "__qf_convert_hf_to_b_rne";
       break;
     }
     case Intrinsic::hexagon_V6_vcvt_h_hf_128B: {
-      Name = Subtarget.getCLOpts().hexagon_qf_fast_convert
+      Name = Subtarget.getCLOpts().qf_fast_convert
                  ? "__qf_fast_convert_hf_to_h_rne"
                  : "__qf_convert_hf_to_h_rne";
       break;
     }
     case Intrinsic::hexagon_V6_vcvt_ub_hf_128B: {
-      Name = Subtarget.getCLOpts().hexagon_qf_fast_convert
+      Name = Subtarget.getCLOpts().qf_fast_convert
                  ? "__qf_fast_convert_hf_to_ub_rne"
                  : "__qf_convert_hf_to_ub_rne";
       break;
     }
     case Intrinsic::hexagon_V6_vcvt_uh_hf_128B: {
-      Name = Subtarget.getCLOpts().hexagon_qf_fast_convert
+      Name = Subtarget.getCLOpts().qf_fast_convert
                  ? "__qf_fast_convert_hf_to_uh_rne"
                  : "__qf_convert_hf_to_uh_rne";
       break;
@@ -3294,13 +3294,13 @@ HexagonTargetLowering::ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
         SDValue ConvVec =
             getInstr(Hexagon::V6_vconv_h_hf_rnd, dl, ResTy, {Op0}, DAG);
         return ConvVec;
-      } else if (Subtarget.getCLOpts().hexagon_fp_fast_convert) {
+      } else if (Subtarget.getCLOpts().fp_fast_convert) {
         // Vd32.h=Vu32.hf same as Q6_Vh_equals_Vhf
         SDValue ConvVec =
             getInstr(Hexagon::V6_vconv_h_hf, dl, ResTy, {Op0}, DAG);
         return ConvVec;
       }
-    } else if (Subtarget.getCLOpts().hexagon_fp_fast_convert &&
+    } else if (Subtarget.getCLOpts().fp_fast_convert &&
                InpTy == MVT::v32f32) {
       // Vd32.w=Vu32.sf same as Q6_Vw_equals_Vsf
       SDValue ConvVec = getInstr(Hexagon::V6_vconv_w_sf, dl, ResTy, {Op0}, DAG);

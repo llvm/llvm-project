@@ -103,7 +103,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
   DenseMap<unsigned, unsigned> PeepholeMap;
   DenseMap<unsigned, std::pair<unsigned, unsigned> > PeepholeDoubleRegsMap;
 
-  if (!CLOpts.enable_hexagon_peephole)
+  if (!CLOpts.peephole)
     return false;
 
   // Loop over all of the basic blocks.
@@ -115,7 +115,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
       // Look for sign extends:
       // %170 = SXTW %166
-      if (CLOpts.hexagon_optszext && MI.getOpcode() == Hexagon::A2_sxtw) {
+      if (CLOpts.optszext && MI.getOpcode() == Hexagon::A2_sxtw) {
         assert(MI.getNumOperands() == 2);
         MachineOperand &Dst = MI.getOperand(0);
         MachineOperand &Src = MI.getOperand(1);
@@ -132,7 +132,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
       // Look for  %170 = COMBINE_ir_V4 (0, %169)
       // %170:DoublRegs, %169:IntRegs
-      if (CLOpts.hexagon_opt_ext_to_64 &&
+      if (CLOpts.opt_ext_to_64 &&
           MI.getOpcode() == Hexagon::A4_combineir) {
         assert(MI.getNumOperands() == 3);
         MachineOperand &Dst = MI.getOperand(0);
@@ -164,7 +164,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Look for P=NOT(P).
-      if (CLOpts.hexagon_pnotp && MI.getOpcode() == Hexagon::C2_not) {
+      if (CLOpts.pnotp && MI.getOpcode() == Hexagon::C2_not) {
         assert(MI.getNumOperands() == 2);
         MachineOperand &Dst = MI.getOperand(0);
         MachineOperand &Src = MI.getOperand(1);
@@ -181,7 +181,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
 
       // Look for copy:
       // %176 = COPY %170:isub_lo
-      if (CLOpts.hexagon_optszext && MI.isCopy()) {
+      if (CLOpts.optszext && MI.isCopy()) {
         assert(MI.getNumOperands() == 2);
         MachineOperand &Dst = MI.getOperand(0);
         MachineOperand &Src = MI.getOperand(1);
@@ -216,7 +216,7 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Look for Predicated instructions.
-      if (CLOpts.hexagon_pnotp) {
+      if (CLOpts.pnotp) {
         bool Done = false;
         if (QII->isPredicated(MI)) {
           MachineOperand &Op0 = MI.getOperand(0);
@@ -271,12 +271,12 @@ bool HexagonPeephole::runOnMachineFunction(MachineFunction &MF) {
           } // if (NewOp)
         } // if (!Done)
 
-      } // if (CLOpts.hexagon_pnotp)
+      } // if (CLOpts.pnotp)
 
     } // Instruction
   } // Basic Block
 
-  if (CLOpts.hexagon_fuse_intrinsic_vminub)
+  if (CLOpts.fuse_intrinsic_vminub)
     Changed |= fuseIntrinsicVMinUB(MF);
 
   return Changed;

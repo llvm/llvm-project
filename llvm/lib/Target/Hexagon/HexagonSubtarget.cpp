@@ -140,15 +140,14 @@ HexagonSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
     LLVM_DEBUG(
         dbgs() << "Behavior is undefined for simultaneous qfloat and ieee hvx codegen...");
 
-  if (CLOpts.hexagon_long_calls != BoolOrDefault::Default)
-    UseLongCalls = valueOr(CLOpts.hexagon_long_calls, false);
+  UseLongCalls = valueOr(CLOpts.long_calls, UseLongCalls);
 
-  UseBSBScheduling = hasV60Ops() && valueOr(CLOpts.enable_bsb_sched, true);
+  UseBSBScheduling = hasV60Ops() && valueOr(CLOpts.bsb_sched, true);
 
   if (isTinyCore()) {
     // Tiny core has a single thread, so back-to-back scheduling is enabled by
     // default.
-    if (CLOpts.enable_bsb_sched == BoolOrDefault::Default)
+    if (CLOpts.bsb_sched == BoolOrDefault::Default)
       UseBSBScheduling = false;
   }
 
@@ -643,7 +642,7 @@ bool HexagonSubtarget::mayHaveBankConflict(const MachineInstr &MI0,
                                            bool IgnoreSameLine) {
   const auto &CLOpts =
       MI0.getMF()->getSubtarget<HexagonSubtarget>().getCLOpts();
-  if (!CLOpts.hexagon_check_bank_conflict)
+  if (!CLOpts.check_bank_conflict)
     return false;
   std::optional<BankAddr> A0 = getBankAddr(MI0, HII);
   // Skip accesses as large as the L1 cache line.
@@ -685,7 +684,7 @@ bool HexagonSubtarget::mayHaveBankConflict(const MachineInstr &MI0,
 
 void HexagonSubtarget::BankConflictMutation::apply(ScheduleDAGInstrs *DAG) {
   const auto &CLOpts = DAG->MF.getSubtarget<HexagonSubtarget>().getCLOpts();
-  if (!CLOpts.hexagon_check_bank_conflict)
+  if (!CLOpts.check_bank_conflict)
     return;
 
   const auto &HII = static_cast<const HexagonInstrInfo&>(*DAG->TII);
@@ -822,7 +821,7 @@ void HexagonSubtarget::adjustSchedDependency(
   // Try to schedule uses near definitions to generate .cur.
   ExclSrc.clear();
   ExclDst.clear();
-  if (CLOpts.enable_cur_sched && QII->isToBeScheduledASAP(*SrcInst, *DstInst) &&
+  if (CLOpts.cur_sched && QII->isToBeScheduledASAP(*SrcInst, *DstInst) &&
       isBestZeroLatency(Src, Dst, QII, ExclSrc, ExclDst)) {
     Dep.setLatency(0);
     return;
@@ -853,11 +852,11 @@ void HexagonSubtarget::getSMSMutations(
 void HexagonSubtarget::anchor() {}
 
 bool HexagonSubtarget::enableMachineScheduler() const {
-  return CLOpts.hexagon_misched;
+  return CLOpts.misched;
 }
 
 bool HexagonSubtarget::usePredicatedCalls() const {
-  return CLOpts.hexagon_pred_calls;
+  return CLOpts.pred_calls;
 }
 
 int HexagonSubtarget::updateLatency(MachineInstr &SrcInst,

@@ -1236,9 +1236,9 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
 
 #ifndef NDEBUG
   // Stop trying after reaching the limit (if any).
-  int Limit = CLOpts->hexagon_max_hwloop;
+  int Limit = CLOpts->max_hwloop;
   if (Limit >= 0) {
-    if (Counter >= CLOpts->hexagon_max_hwloop)
+    if (Counter >= CLOpts->max_hwloop)
       return false;
     Counter++;
   }
@@ -1963,7 +1963,7 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
   if (MachineBasicBlock *TmpPH =
           MLI->findLoopPreheader(L, CLOpts->hwloop_spec_preheader))
     return TmpPH;
-  if (!CLOpts->hexagon_hwloop_preheader)
+  if (!CLOpts->hwloop_preheader)
     return nullptr;
 
   MachineBasicBlock *Header = L->getHeader();
@@ -1973,8 +1973,7 @@ MachineBasicBlock *HexagonHardwareLoops::createPreheaderForLoop(
   DebugLoc DL;
 
 #ifndef NDEBUG
-  if ((!CLOpts->hexagon_hwloop_phfn.empty()) &&
-      (CLOpts->hexagon_hwloop_phfn != MF->getName()))
+  if (!CLOpts->hwloop_phfn.empty() && CLOpts->hwloop_phfn != MF->getName())
     return nullptr;
 #endif
 

@@ -455,7 +455,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (!Subtarget.getCLOpts().hexagon_args_min_alignment)
+  if (!Subtarget.getCLOpts().args_min_alignment)
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeCallOperands(Outs, CC_Hexagon);
@@ -869,7 +869,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, TreatAsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  if (!Subtarget.getCLOpts().hexagon_args_min_alignment)
+  if (!Subtarget.getCLOpts().args_min_alignment)
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon_Legacy);
   else
     CCInfo.AnalyzeFormalArguments(Ins, CC_Hexagon);
@@ -1544,7 +1544,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setMaxAtomicSizeInBitsSupported(64);
   setMinCmpXchgSizeInBits(32);
 
-  if (ST.getCLOpts().enable_hexagon_sdnode_sched)
+  if (ST.getCLOpts().sdnode_sched)
     setSchedulingPreference(Sched::VLIW);
   else
     setSchedulingPreference(Sched::Source);
@@ -1636,7 +1636,7 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Custom);
 
-  if (ST.getCLOpts().hexagon_emit_jump_tables)
+  if (ST.getCLOpts().emit_jump_tables)
     setMinimumJumpTableEntries(ST.getCLOpts().minimum_jump_tables);
   else
     setMinimumJumpTableEntries(std::numeric_limits<unsigned>::max());
@@ -3271,7 +3271,7 @@ HexagonTargetLowering::LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG)
   if (!LN->isUnindexed())
     DoDefault = true;
 
-  if (!Subtarget.getCLOpts().hexagon_align_loads) {
+  if (!Subtarget.getCLOpts().align_loads) {
     if (allowsMemoryAccessForAlignment(Ctx, DL, LN->getMemoryVT(),
                                        *LN->getMemOperand()))
       return Op;

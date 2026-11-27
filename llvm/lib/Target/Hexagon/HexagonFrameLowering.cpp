@@ -49,7 +49,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -261,16 +260,6 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
   if (MF.needsFrameMoves())
     CFIInstBuilder(MBB, MI, MachineInstr::FrameDestroy).buildRestore(SCSPReg);
 }
-
-static cl::opt<unsigned> HLXVectorStackLimit(
-    "hlx-vector-stack-limit", cl::Hidden,
-    cl::init(std::numeric_limits<unsigned>::max()),
-    cl::desc("Maximum HLX vector (VTCM) stack frame size in bytes"));
-
-static cl::opt<bool> SaveParentVSP(
-    "hexagon-save-parent-vsp", cl::Hidden, cl::init(false),
-    cl::desc("Save the caller's VSP on the stack in functions with an HLX "
-             "vector stack frame, for debuggers"));
 
 #ifndef NDEBUG
 static unsigned SpillOptCount = 0;
@@ -595,7 +584,7 @@ void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
   const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
   MachineBasicBlock *PrologB = &MF.front(), *EpilogB = nullptr;
-  if (MF.getSubtarget<HexagonSubtarget>().getCLOpts().hexagon_shrink_frame)
+  if (MF.getSubtarget<HexagonSubtarget>().getCLOpts().shrink_frame)
     findShrunkPrologEpilog(MF, PrologB, EpilogB);
 
   bool PrologueStubs = false;
@@ -856,7 +845,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
     // If the stack-checking is enabled, and we spilled the callee-saved
     // registers inline (i.e. did not use a spill function), then call
     // the stack checker directly.
-    if (HST.getCLOpts().enable_stackovf_sanitizer && !PrologueStubs)
+    if (HST.getCLOpts().stackovf_sanitizer && !PrologueStubs)
       BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::PS_call_stk))
              .addExternalSymbol("__runtime_stack_check");
   } else if (NumBytes > 0) {
@@ -1008,7 +997,7 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
     // If the returning instruction is PS_jmpret, replace it with
     // dealloc_return, otherwise just add deallocframe. The function
     // could be returning via a tail call.
-    if (RetOpc != Hexagon::PS_jmpret || !HST.getCLOpts().hexagon_dealloc_ret ||
+    if (RetOpc != Hexagon::PS_jmpret || !HST.getCLOpts().dealloc_ret ||
         NeedsSCS) {
       BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::L2_deallocframe))
       .addDef(Hexagon::D15)
@@ -1529,11 +1518,11 @@ bool HexagonFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   // gated on stack size: the user/ABI-requested frame pointer is needed
   // regardless of whether the function currently has a stack frame.
   // Every other target checks DisableFramePointerElim unconditionally.
-  if (MF.disableFramePointerElim() || !CLOpts.hexagon_fp_elim)
+  if (MF.disableFramePointerElim() || !CLOpts.fp_elim)
     return true;
 
   if (MFI.getStackSize() > 0) {
-    if (CLOpts.enable_stackovf_sanitizer)
+    if (CLOpts.stackovf_sanitizer)
       return true;
   }
 
@@ -1743,13 +1732,13 @@ MachineBasicBlock::iterator HexagonFrameLowering::insertCSRSpillsInBlock(
   if (useSpillFunction(MF, CSI)) {
     PrologueStubs = true;
     Register MaxReg = getMaxCalleeSavedReg(CSI, HRI);
-    bool StkOvrFlowEnabled = HST.getCLOpts().enable_stackovf_sanitizer;
+    bool StkOvrFlowEnabled = HST.getCLOpts().stackovf_sanitizer;
     const char *SpillFun = getSpillFunctionFor(MaxReg, SK_ToMem,
                                                StkOvrFlowEnabled);
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
     bool IsPIC = HTM.isPositionIndependent();
     bool LongCalls =
-        HST.useLongCalls() || HST.getCLOpts().enable_save_restore_long;
+        HST.useLongCalls() || HST.getCLOpts().save_restore_long;
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc() : DebugLoc();
@@ -1815,7 +1804,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
     bool IsPIC = HTM.isPositionIndependent();
     bool LongCalls =
-        HST.useLongCalls() || HST.getCLOpts().enable_save_restore_long;
+        HST.useLongCalls() || HST.getCLOpts().save_restore_long;
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc()
@@ -1926,8 +1915,9 @@ void HexagonFrameLowering::computeVTCMStackOffsets(MachineFunction &MF) const {
 
   // The "hlx-vector-stack-limit" function attribute overrides the option.
   const Function &F = MF.getFunction();
-  uint64_t Limit = F.getFnAttributeAsParsedInteger("hlx-vector-stack-limit",
-                                                   HLXVectorStackLimit);
+  uint64_t Limit = F.getFnAttributeAsParsedInteger(
+      "hlx-vector-stack-limit",
+      MF.getSubtarget<HexagonSubtarget>().getCLOpts().hlx_vector_stack_limit);
   if (StackSize > Limit)
     F.getContext().diagnose(DiagnosticInfoResourceLimit(
         F, "HLX vector stack size", StackSize, Limit, DS_Error));
@@ -1940,7 +1930,8 @@ void HexagonFrameLowering::processFunctionBeforeFrameFinalized(
     return;
   computeVTCMStackOffsets(MF);
   auto &HMFI = *MF.getInfo<HexagonMachineFunctionInfo>();
-  if (SaveParentVSP && HMFI.getVTCMFrameInfo().getStackSize())
+  if (HST.getCLOpts().save_parent_vsp &&
+      HMFI.getVTCMFrameInfo().getStackSize())
     HMFI.setVSPFrameIndex(
         MF.getFrameInfo().CreateSpillStackObject(4, Align(4)));
 }
@@ -2705,7 +2696,7 @@ void HexagonFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Replace predicate register pseudo spill code.
   SmallVector<Register,8> NewRegs;
   expandSpillMacros(MF, NewRegs);
-  if (CLOpts.hexagon_opt_spill && !isOptNone(MF))
+  if (CLOpts.opt_spill && !isOptNone(MF))
     optimizeSpillSlots(MF, NewRegs);
 
   // We need to reserve a spill slot if scavenging could potentially require

@@ -1054,7 +1054,7 @@ bool HexagonEarlyIfConversion::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  MBPI = CLOpts->enable_hexagon_br_prob
+  MBPI = CLOpts->br_prob
              ? &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI()
              : nullptr;
 

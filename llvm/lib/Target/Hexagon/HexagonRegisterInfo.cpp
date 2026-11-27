@@ -377,9 +377,9 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     // This will give us a chance to avoid creating a new register.
     Register ReuseBP;
 
-    if (ReuseCount < HST.getCLOpts().hexagon_frame_index_reuse_limit) {
+    if (ReuseCount < HST.getCLOpts().frame_index_reuse_limit) {
       unsigned SearchCount = 0,
-               SearchRange = HST.getCLOpts().hexagon_frame_index_search_range;
+               SearchRange = HST.getCLOpts().frame_index_search_range;
       SmallSet<Register,2> SeenVRegs;
       bool PassedCall = false;
       LiveRegUnits Defs(*this), Uses(*this);

@@ -1820,8 +1820,8 @@ bool HCE::replaceInstrExpr(const ExtDesc &ED, const ExtenderInit &ExtI,
 }
 
 bool HCE::replaceInstr(unsigned Idx, Register ExtR, const ExtenderInit &ExtI) {
-  if (HST->getCLOpts().hexagon_cext_limit) {
-    if (*HST->getCLOpts().hexagon_cext_limit <= ReplaceCounter)
+  if (HST->getCLOpts().cext_limit) {
+    if (*HST->getCLOpts().cext_limit <= ReplaceCounter)
       return false;
     ++ReplaceCounter;
   }
@@ -1893,7 +1893,7 @@ bool HCE::replaceExtenders(const AssignmentMap &IMap) {
 
   for (const std::pair<const ExtenderInit, IndexList> &P : IMap) {
     const IndexList &Idxs = P.second;
-    if (Idxs.size() < HST->getCLOpts().hexagon_cext_threshold)
+    if (Idxs.size() < HST->getCLOpts().cext_threshold)
       continue;
 
     Defs.clear();
