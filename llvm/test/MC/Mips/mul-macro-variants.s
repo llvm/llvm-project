@@ -30,6 +30,13 @@ text_label:
 # CHECK-TRAP:   addiu   $1, $zero, 1            # encoding: [0x24,0x01,0x00,0x01]
 # CHECK-TRAP:   mult    $5, $1                  # encoding: [0x00,0xa1,0x00,0x18]
 # CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
+  mul   $4, 1
+# CHECK:        addiu   $1, $zero, 1            # encoding: [0x24,0x01,0x00,0x01]
+# CHECK:        mult    $4, $1                  # encoding: [0x00,0x81,0x00,0x18]
+# CHECK:        mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
+# CHECK-TRAP:   addiu   $1, $zero, 1            # encoding: [0x24,0x01,0x00,0x01]
+# CHECK-TRAP:   mult    $4, $1                  # encoding: [0x00,0x81,0x00,0x18]
+# CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
   mul  $4, $5, 0x8000
 # CHECK:        ori     $1, $zero, 32768        # encoding: [0x34,0x01,0x80,0x00]
 # CHECK:        mult    $5, $1                  # encoding: [0x00,0xa1,0x00,0x18]
@@ -119,12 +126,24 @@ text_label:
 # CHECK:        mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
 # CHECK-TRAP:   dmultu  $5, $6                  # encoding: [0x00,0xa6,0x00,0x1d]
 # CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
+ dmul $4, $5
+# CHECK:        dmultu  $4, $5                  # encoding: [0x00,0x85,0x00,0x1d]
+# CHECK:        mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
+# CHECK-TRAP:   dmultu  $4, $5                  # encoding: [0x00,0x85,0x00,0x1d]
+# CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
  dmul $4, $5, 1
 # CHECK:        addiu   $1, $zero, 1            # encoding: [0x24,0x01,0x00,0x01]
 # CHECK:        dmult   $5, $1                  # encoding: [0x00,0xa1,0x00,0x1c]
 # CHECK:        mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
 # CHECK-TRAP:   addiu   $1, $zero, 1            # encoding: [0x24,0x01,0x00,0x01]
 # CHECK-TRAP:   dmult   $5, $1                  # encoding: [0x00,0xa1,0x00,0x1c]
+# CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
+ dmul $4, 1
+# CHECK:        addiu   $1, $zero, 1            # encoding: [0x24,0x01,0x00,0x01]
+# CHECK:        dmult   $4, $1                  # encoding: [0x00,0x81,0x00,0x1c]
+# CHECK:        mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
+# CHECK-TRAP:   addiu   $1, $zero, 1            # encoding: [0x24,0x01,0x00,0x01]
+# CHECK-TRAP:   dmult   $4, $1                  # encoding: [0x00,0x81,0x00,0x1c]
 # CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
  dmulo $4, $5, $6
 # CHECK:        dmult   $5, $6                  # encoding: [0x00,0xa6,0x00,0x1c]

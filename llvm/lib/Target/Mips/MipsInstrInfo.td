@@ -2716,7 +2716,9 @@ def MULMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
 def MULImmMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
                                                  simm32_relaxed:$imm),
                                     "mul\t$rd, $rs, $imm">,
-                  ISA_MIPS1_NOT_32R6_64R6;
+                  ISA_MIPS1_NOT_32R6_64R6 {
+  let TwoOperandAliasConstraint = "$rd = $rs";
+}
 def MULOMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
                                                GPR32Opnd:$rt),
                                   "mulo\t$rd, $rs, $rt">,
