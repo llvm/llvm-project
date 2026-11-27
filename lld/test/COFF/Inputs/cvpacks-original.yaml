@@ -1,0 +1,36 @@
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_MODIFIER
+        Modifier:
+          ModifiedType:    116
+          Modifiers:       [ None ]
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_UDT
+            UDTSym:
+              Type:            4096
+              UDTName:         abc
+          - Kind:            S_CONSTANT
+            ConstantSym:
+              Type:            116
+              Value:           7
+              Name:            K
+symbols:
+  - Name:            '@feat.00'
+    Value:           0
+    SectionNumber:   -1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+...

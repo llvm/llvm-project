@@ -1,0 +1,129 @@
+## Objects that share type records are packed against a new base pack, which
+## holds the shared records. A packed object restores to its original bytes.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj a.yaml -o a.obj
+# RUN: yaml2obj b.yaml -o b.obj
+# RUN: llvm-cvpack pack --threads=2 --pack-path=packs --out-dir=stage a.obj b.obj
+# RUN: FileCheck %s --check-prefix=MANIFEST < stage/cvpacks.json
+# MANIFEST:      "staged": "a.obj",
+# MANIFEST-NEXT: "packs": [
+# MANIFEST-NEXT:   "[[ID:[0-9a-f]+]]"
+# MANIFEST:      "staged": "b.obj",
+# MANIFEST-NEXT: "packs": [
+# MANIFEST-NEXT:   "[[ID]]"
+# MANIFEST:      "new_packs": [
+# MANIFEST-NEXT:   "[[ID]]"
+# MANIFEST:      "base": "[[ID]]"
+
+## The packed object names the pack, and keeps the record that is its own.
+# RUN: llvm-readobj --codeview stage/a.obj | FileCheck %s --check-prefix=PACKED
+# PACKED:      Magic: 0x31505643
+# PACKED:      LF_CVPACK_LIST {
+# PACKED:      LF_CVPACK_ORIGIN {
+# PACKED:      LF_CVPACK_MAP {
+# PACKED:      BitField (0x1001) {
+# PACKED:        BitSize: 2
+# PACKED-NOT:  BitField
+
+# RUN: llvm-cvpack materialize --pack-path=packs stage/a.obj -o a.restored.obj
+# RUN: cmp a.obj a.restored.obj
+# RUN: llvm-cvpack materialize --pack-path=packs stage/b.obj -o - > b.restored.obj
+# RUN: cmp b.obj b.restored.obj
+
+## The pack holds the shared record.
+# RUN: %python -c "import json,shutil; p=json.load(open('stage/cvpacks.json'))['base']; shutil.copyfile('packs/' + p + '.cvp', 'pack.cvp')"
+# RUN: llvm-cvpack dump pack.cvp | FileCheck %s --check-prefix=DUMP
+# DUMP:      Machine: 0x8664
+# DUMP-NEXT: Types: 1
+# DUMP-NEXT: Symbols: 0
+# DUMP:      BitField (0x1000) {
+# DUMP:        BitSize: 1
+# DUMP-NOT:  BitField
+
+## A second run packs against the base, and writes no pack.
+# RUN: llvm-cvpack pack --pack-path=packs --out-dir=stage2 a.obj b.obj
+# RUN: FileCheck %s --check-prefix=AGAIN < stage2/cvpacks.json
+# AGAIN: "new_packs": [],
+# RUN: cmp stage/a.obj stage2/a.obj
+
+## A packed input whose pack is not found, next to it or in a pack directory,
+## cannot be restored: it is staged as it is, with a warning.
+# RUN: llvm-cvpack pack --pack-path=other --out-dir=stage3 stage/a.obj 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=UNRESTORED
+# UNRESTORED: warning: stage/a.obj: staged still packed: cannot materialize packed input: missing CodeView pack {{[0-9a-f]+}}.cvp; searched: stage, other
+# RUN: cmp stage/a.obj stage3/a.obj
+
+## Without --pack-path, the pack is written next to the packed objects, which
+## is where it is searched first: a packed object is restored without an
+## option.
+# RUN: llvm-cvpack pack --out-dir=near a.obj b.obj
+# RUN: %python -c "import json,os,sys; p=json.load(open('near/cvpacks.json'))['base']; sys.exit(0 if os.path.exists('near/' + p + '.cvp') else 1)"
+# RUN: llvm-cvpack materialize near/a.obj -o a.near.obj
+# RUN: cmp a.obj a.near.obj
+
+## A later run finds the base there. Packed inputs that come from another
+## directory are restored from the pack next to them, and packed again.
+# RUN: llvm-cvpack pack --out-dir=near a.obj b.obj
+# RUN: FileCheck %s --check-prefix=AGAIN < near/cvpacks.json
+# RUN: llvm-cvpack pack --out-dir=near2 near/a.obj near/b.obj 2>&1 | count 0
+# RUN: cmp near/a.obj near2/a.obj
+# RUN: llvm-cvpack materialize near2/b.obj -o b.near.obj
+# RUN: cmp b.obj b.near.obj
+
+## An object that is not packed, a pack that is not found, and a missing option.
+# RUN: not llvm-cvpack materialize --pack-path=packs a.obj -o x.obj 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOTPACKED
+# NOTPACKED: error: 'a.obj': object has no CodeView pack stream
+# RUN: not llvm-cvpack materialize --pack-path=nowhere stage/a.obj -o x.obj 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOPACK
+# NOPACK: error: 'stage/a.obj': missing CodeView pack {{[0-9a-f]+}}.cvp; searched: stage, nowhere
+# RUN: not llvm-cvpack pack --pack-path=packs a.obj 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=NOOUT
+# NOOUT: for the --out-dir option: must be specified at least once!
+
+#--- a.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         1
+          BitOffset:       0
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         2
+          BitOffset:       0
+symbols:         []
+...
+
+#--- b.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         3
+          BitOffset:       0
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         1
+          BitOffset:       0
+symbols:         []
+...

@@ -1,0 +1,18 @@
+# REQUIRES: gnutar
+
+# A reproducer holds the packs of its link. They are in the directory that the
+# reproduced link runs from, which is searched for packs, wherever the link
+# found them.
+
+# RUN: rm -rf %t && mkdir -p %t/orig && cd %t
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/a.obj
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/b.obj
+# RUN: llvm-cvpack pack --pack-path=%t/packs --out-dir=%t/stage \
+# RUN:   %t/orig/a.obj %t/orig/b.obj
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /libpath:%t/packs \
+# RUN:   /reproduce:repro.tar /out:%t/a.dll %t/stage/a.obj %t/stage/b.obj
+# RUN: tar tf repro.tar | FileCheck %s
+
+# CHECK-DAG: {{^}}repro/{{[0-9a-f]+}}.cvp{{$}}
+# CHECK-DAG: {{^}}repro/response.txt{{$}}
+# CHECK-DAG: stage/a.obj

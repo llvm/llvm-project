@@ -1,0 +1,88 @@
+## The CodeView pack subsections for function debug info round-trip through
+## structured YAML: a COMDAT .debug$S section that references a pack function,
+## and a pack's files and functions. None of them needs a string table.
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: obj2yaml %t.obj > %t.yaml
+# RUN: FileCheck %s < %t.yaml
+# RUN: yaml2obj %t.yaml -o %t.2.obj
+# RUN: cmp %t.obj %t.2.obj
+
+# CHECK:      - !CVPackFunctionRef
+# CHECK-NEXT:   Slot:            0
+# CHECK-NEXT:   Ordinal:         7
+# CHECK-NEXT:   OriginalSize:    208
+# CHECK:      - !CVPackFiles
+# CHECK-NEXT:   Files:
+# CHECK-NEXT:     - FileName:        'c:\src\fn.h'
+# CHECK-NEXT:       Kind:            MD5
+# CHECK-NEXT:       Checksum:        29A18D9AB35C8973CBE2A1FA6759CAF7
+# CHECK-NEXT:     - FileName:        'c:\src\other.h'
+# CHECK-NEXT:       Kind:            None
+# CHECK-NEXT:       Checksum:        ''
+# CHECK:      - !CVPackFunctions
+# CHECK-NEXT:   Functions:
+# CHECK-NEXT:     - F1000000040000000200064F
+# CHECK-NEXT:     - F2000000180000000000000000000000000000000000000001000000000000000C000000
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.text$mn'
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     C3
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !CVPackFunctionRef
+        Slot:            0
+        Ordinal:         7
+        OriginalSize:    208
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !CVPackFiles
+        Files:
+          - FileName:        'c:\src\fn.h'
+            Kind:            MD5
+            Checksum:        29A18D9AB35C8973CBE2A1FA6759CAF7
+          - FileName:        'c:\src\other.h'
+            Kind:            None
+            Checksum:        ''
+      - !CVPackFunctions
+        Functions:
+          - F1000000040000000200064F
+          - F2000000180000000000000000000000000000000000000001000000000000000C000000
+symbols:
+  - Name:            '.text$mn'
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          1
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          0
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          24
+      NumberOfRelocations: 0
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+...

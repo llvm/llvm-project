@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
@@ -1299,7 +1300,8 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
     BinaryStreamReader Reader(*ContentsOrErr, llvm::endianness::little);
     if (auto EC = Reader.readInteger(Magic))
       return EC;
-    if (Magic != COFF::DEBUG_SECTION_MAGIC)
+    if (Magic != COFF::DEBUG_SECTION_MAGIC &&
+        !cvpack::isPackedTypeStreamMagic(SectionName, Magic))
       return make_error<StringError>("Invalid CodeView debug section.",
                                      inconvertibleErrorCode());
 

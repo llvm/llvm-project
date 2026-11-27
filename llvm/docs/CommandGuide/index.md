@@ -19,6 +19,7 @@ llvm-calc-occupancy
 llvm-cgdata
 llvm-config
 llvm-cov
+llvm-cvpack
 llvm-cxxfilt
 llvm-cxxmap
 llvm-debuginfo-analyzer
@@ -142,6 +143,7 @@ interested in.
 * {doc}`llvm-ifs`
 * {doc}`llvm-locstats`
 * {doc}`llvm-test-mustache-spec`
+* {doc}`llvm-cvpack`
 * {doc}`llvm-pdbutil`
 * {doc}`llvm-profgen`
 * {doc}`llvm-tli-checker`

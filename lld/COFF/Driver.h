@@ -94,6 +94,10 @@ public:
 
   MemoryBufferRef takeBuffer(std::unique_ptr<MemoryBuffer> mb);
 
+  // The directories searched for a file given without one. The first is ""
+  // (the current directory).
+  ArrayRef<StringRef> getSearchPaths() const { return searchPaths; }
+
   void enqueuePath(StringRef path, bool lazy,
                    InputOpt inputOpt = InputOpt::None);
 

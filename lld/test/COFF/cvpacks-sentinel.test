@@ -1,0 +1,80 @@
+Packed objects carry two safeguards against tools that do not know CodeView
+packs: their .debug$T has its own signature, and their .drectve names a
+sentinel symbol through /INCLUDE:, so that another linker fails with an error
+naming it. LLD ignores the sentinel, and restoring an object removes both.
+
+a.obj has no .drectve: packing adds one as its last section. b.obj has one,
+ending with NUL padding: the directive goes before the padding.
+
+RUN: rm -rf %t && mkdir -p %t/orig
+RUN: yaml2obj %S/Inputs/cvpacks-src-a.yaml -o %t/orig/a.obj
+RUN: %python %S/Inputs/cvpacks-add-drectve.py %S/Inputs/cvpacks-src-b.yaml \
+RUN:   %t/b.yaml " /DEFAULTLIB:foo.lib"
+RUN: yaml2obj %t/b.yaml -o %t/orig/b.obj
+
+RUN: llvm-cvpack pack --out-dir=%t/stage %t/orig/a.obj %t/orig/b.obj
+RUN: FileCheck %s --check-prefix=PACK < %t/stage/cvpacks.json
+PACK-NOT: "packs": []
+
+RUN: llvm-readobj --file-headers %t/orig/a.obj | FileCheck %s --check-prefix=COUNT-ORIG
+RUN: llvm-readobj --file-headers %t/stage/a.obj | FileCheck %s --check-prefix=COUNT-PACKED
+COUNT-ORIG: SectionCount: 10
+COUNT-PACKED: SectionCount: 11
+
+RUN: llvm-readobj --string-dump=.drectve %t/stage/a.obj | FileCheck %s --check-prefix=DIRECTIVE-A
+DIRECTIVE-A: /INCLUDE:__cvpack_object_needs_lld_link_or_cvpack_materialize
+RUN: llvm-readobj --string-dump=.drectve %t/stage/b.obj | FileCheck %s --check-prefix=DIRECTIVE-B
+DIRECTIVE-B: /DEFAULTLIB:foo.lib /INCLUDE:__cvpack_object_needs_lld_link_or_cvpack_materialize
+
+RUN: llvm-readobj --codeview %t/stage/a.obj | FileCheck %s --check-prefix=MAGIC
+MAGIC:      CodeViewTypes [
+MAGIC-NEXT:   Section: .debug$T
+MAGIC-NEXT:   Magic: 0x31505643
+MAGIC:        TypeLeafKind: LF_CVPACK_LIST (0x1700)
+
+Staged objects, with either kind of directive edit, round-trip through obj2yaml
+and yaml2obj.
+RUN: obj2yaml %t/stage/a.obj -o %t/a.staged.yaml
+RUN: obj2yaml %t/stage/b.obj -o %t/b.staged.yaml
+RUN: FileCheck %s --check-prefix=YAML-A < %t/a.staged.yaml
+RUN: FileCheck %s --check-prefix=YAML-B < %t/b.staged.yaml
+YAML-A: Kind: AddedDirectiveSection
+YAML-B: Kind: Directive
+RUN: yaml2obj %t/a.staged.yaml -o %t/a.staged.obj
+RUN: yaml2obj %t/b.staged.yaml -o %t/b.staged.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/stage/a.obj %t/a.staged.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/stage/b.obj %t/b.staged.obj
+
+Restoring removes the directive and the added section, and the signature.
+RUN: llvm-cvpack materialize %t/stage/a.obj -o %t/a.restored.obj
+RUN: llvm-cvpack materialize %t/stage/b.obj -o %t/b.restored.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig/a.obj %t/a.restored.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig/b.obj %t/b.restored.obj
+
+Packing packed objects again recognizes them by their signature and leaves
+them unchanged.
+RUN: llvm-cvpack pack --pack-path=%t/stage --out-dir=%t/stage2 \
+RUN:   %t/stage/a.obj %t/stage/b.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/stage/a.obj %t/stage2/a.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/stage/b.obj %t/stage2/b.obj
+
+LLD links the packed objects without resolving the sentinel, and gives the same
+PDB type stream as a link of the originals.
+RUN: env LLD_IN_TEST=1 lld-link /noentry /dll /nodefaultlib /debug \
+RUN:   /out:%t/packed.dll %t/stage/a.obj %t/stage/b.obj
+RUN: env LLD_IN_TEST=1 lld-link /noentry /dll /nodefaultlib /debug \
+RUN:   /out:%t/orig.dll %t/orig/a.obj %t/orig/b.obj
+RUN: llvm-pdbutil dump -types %t/orig.pdb > %t/orig-types.txt
+RUN: llvm-pdbutil dump -types %t/packed.pdb > %t/packed-types.txt
+RUN: %python %S/Inputs/check-files-equal.py %t/orig-types.txt %t/packed-types.txt
+
+Without the CodeView pack signature's leading pack list, an object is rejected,
+and so is a pack list without the signature.
+RUN: %python -c "d=bytearray(open(r'%t/orig/a.obj','rb').read()); i=d.find(b'.debug$T'); p=int.from_bytes(d[i+20:i+24],'little'); d[p:p+4]=(0x31505643).to_bytes(4,'little'); open(r'%t/bad.obj','wb').write(d)"
+RUN: env LLD_IN_TEST=1 not lld-link /noentry /dll /nodefaultlib /debug \
+RUN:   /out:%t/bad.dll %t/bad.obj 2>&1 | FileCheck %s --check-prefix=BAD
+BAD: invalid packed CodeView types in {{.*}}bad.obj: the type stream does not start with LF_CVPACK_LIST
+RUN: %python -c "d=bytearray(open(r'%t/stage/a.obj','rb').read()); i=d.find(b'.debug$T'); p=int.from_bytes(d[i+20:i+24],'little'); d[p:p+4]=(4).to_bytes(4,'little'); open(r'%t/bad2.obj','wb').write(d)"
+RUN: env LLD_IN_TEST=1 not lld-link /noentry /dll /nodefaultlib /debug \
+RUN:   /out:%t/bad2.dll %t/bad2.obj 2>&1 | FileCheck %s --check-prefix=BAD2
+BAD2: invalid packed CodeView types in {{.*}}bad2.obj: LF_CVPACK_LIST in a type stream without the CodeView pack signature

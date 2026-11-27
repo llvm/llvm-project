@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
@@ -137,6 +138,10 @@ private:
   StringRef getFileNameForFileOffset(uint32_t FileOffset);
   void printFileNameForOffset(StringRef Label, uint32_t FileOffset);
   void printTypeIndex(StringRef FieldName, TypeIndex TI) {
+    if (CVPacksPresent) {
+      Writer.printHex(FieldName, TI.getIndex());
+      return;
+    }
     // Forward to CVTypeDumper for simplicity.
     codeview::printTypeIndex(Writer, FieldName, TI, Types);
   }
@@ -197,6 +202,7 @@ private:
 
   ScopedPrinter &Writer;
   LazyRandomTypeCollection Types;
+  bool CVPacksPresent = false;
 };
 
 class COFFObjectDumpDelegate : public SymbolDumpDelegate {
@@ -1442,7 +1448,8 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
   auto CODD = std::make_unique<COFFObjectDumpDelegate>(*this, Section, Obj,
                                                        SectionContents);
   CVSymbolDumper CVSD(W, Types, CodeViewContainer::ObjectFile, std::move(CODD),
-                      CompilationCPUType, opts::CodeViewSubsectionBytes);
+                      CompilationCPUType, opts::CodeViewSubsectionBytes,
+                      CVPacksPresent);
   CVSymbolArray Symbols;
   BinaryStreamReader Reader(BinaryData, llvm::endianness::little);
   if (Error E = Reader.readArray(Symbols, Reader.getLength())) {
@@ -1578,14 +1585,31 @@ void COFFDumper::printCodeViewTypeSection(StringRef SectionName,
     reportError(std::move(E), Obj->getFileName());
 
   W.printHex("Magic", Magic);
-  if (Magic != COFF::DEBUG_SECTION_MAGIC)
+  if (Magic != COFF::DEBUG_SECTION_MAGIC &&
+      !cvpack::isPackedTypeStreamMagic(SectionName, Magic))
     reportError(errorCodeToError(object_error::parse_failed),
                 Obj->getFileName());
 
   Types.reset(Data, 100);
 
+  // CodeView pack headers and maps are physical records in the COFF type
+  // stream, but do not consume type indices. LazyRandomTypeCollection assigns
+  // an index to every physical record, so use the raw record array when dumping
+  // a packed stream. TypeDumpVisitor understands the packed index adjustment
+  // and avoids resolving references that live in external packs.
+  CVTypeArray TypeRecords;
+  BinaryStreamReader Reader(Data, llvm::endianness::little);
+  if (Error E = Reader.readArray(TypeRecords, Reader.getLength()))
+    reportError(std::move(E), Obj->getFileName());
+
+  bool IsPacked = TypeRecords.begin() != TypeRecords.end() &&
+                  (*TypeRecords.begin()).kind() == TypeLeafKind::LF_CVPACK_LIST;
+  CVPacksPresent |= IsPacked;
+
   TypeDumpVisitor TDV(Types, &W, opts::CodeViewSubsectionBytes);
-  if (Error E = codeview::visitTypeStream(Types, TDV))
+  Error E = IsPacked ? codeview::visitTypeStream(TypeRecords, TDV)
+                     : codeview::visitTypeStream(Types, TDV);
+  if (E)
     reportError(std::move(E), Obj->getFileName());
 
   W.flush();

@@ -1,0 +1,20 @@
+The function debug info of an inline function moves to the pack. An undefined
+symbol that the function references is still reported with the file and line
+of the reference, with and without /debug.
+
+RUN: rm -rf %t && mkdir -p %t/orig
+RUN: yaml2obj %S/Inputs/cvpacks-undefined.yaml -o %t/orig/a.obj
+RUN: yaml2obj %S/Inputs/cvpacks-undefined.yaml -o %t/orig/b.obj
+RUN: llvm-cvpack pack --out-dir=%t/stage %t/orig/a.obj %t/orig/b.obj
+RUN: llvm-readobj --sections %t/stage/a.obj | FileCheck %s --check-prefix=STUB
+STUB: RawDataSize: 0x18{{$}}
+
+RUN: not lld-link /noentry /dll /nodefaultlib /debug /out:%t/a.dll \
+RUN:   %t/orig/a.obj 2>&1 | FileCheck %s
+RUN: not lld-link /noentry /dll /nodefaultlib /debug /out:%t/a.dll \
+RUN:   %t/stage/a.obj 2>&1 | FileCheck %s
+RUN: not lld-link /noentry /dll /nodefaultlib /out:%t/a.dll \
+RUN:   %t/stage/a.obj 2>&1 | FileCheck %s
+CHECK:      error: undefined symbol: int __cdecl ext(int)
+CHECK-NEXT: >>> referenced by .\undef.h:2
+CHECK-NEXT: >>>               {{.*}}a.obj:(int __cdecl callsExt(int))

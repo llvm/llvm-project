@@ -1,0 +1,113 @@
+## A base comes with a key index, <id>.cvpx, so that objects can be packed
+## against it one at a time without keying the whole pack. --base names the
+## base explicitly, and such a run never rebases.
+
+# RUN: rm -rf %t && split-file %s %t && cd %t
+# RUN: yaml2obj x.yaml -o a.obj
+# RUN: yaml2obj x.yaml -o b.obj
+# RUN: yaml2obj y.yaml -o c.obj
+# RUN: yaml2obj y.yaml -o d.obj
+
+## A rebase writes the base and its index.
+# RUN: llvm-cvpack rebase --pack-path=packs --out-dir=stage a.obj b.obj
+# RUN: %python -c "import json; p=json.load(open('stage/cvpacks.json'))['packs'][0]; open('base.rsp','w').write('--base='+p); open('id.txt','w').write(p)"
+# RUN: %python -c "import os,sys; p=open('id.txt').read(); sys.exit(0 if os.path.exists(os.path.join('packs', p+'.cvpx')) else 1)"
+
+## One object against the base, through its index, gives the bytes of the
+## batch run.
+# RUN: llvm-cvpack pack @base.rsp --verbose --pack-path=packs --out-dir=one \
+# RUN:   a.obj 2>&1 | FileCheck %s --check-prefix=LOADED
+# LOADED: 1 pack indexes loaded, 0 built
+# RUN: cmp stage/a.obj one/a.obj
+
+## An object that uses a third of the base is packed against it, and the run
+## does not rebase.
+# RUN: llvm-cvpack pack @base.rsp --verbose --pack-path=packs --out-dir=little \
+# RUN:   c.obj 2>&1 | FileCheck %s --check-prefix=LITTLE --implicit-check-not=rebasing
+# LITTLE: 1 objects, 1 packed (1 reusing existing packs)
+# RUN: llvm-cvpack materialize --pack-path=packs little/c.obj -o c.restored.obj
+# RUN: cmp c.obj c.restored.obj
+
+## Without its index, the run keys the pack, writes the index again, and packs
+## the same bytes.
+# RUN: %python -c "import os; p=open('id.txt').read(); os.remove(os.path.join('packs', p+'.cvpx'))"
+# RUN: llvm-cvpack pack @base.rsp --verbose --pack-path=packs --out-dir=two \
+# RUN:   a.obj 2>&1 | FileCheck %s --check-prefix=BUILT
+# BUILT: 0 pack indexes loaded, 1 built
+# RUN: %python -c "import os,sys; p=open('id.txt').read(); sys.exit(0 if os.path.exists(os.path.join('packs', p+'.cvpx')) else 1)"
+# RUN: cmp stage/a.obj two/a.obj
+
+## An index that cannot be read is ignored and built again.
+# RUN: %python -c "import os; p=open('id.txt').read(); open(os.path.join('packs', p+'.cvpx'),'wb').write(b'CVPX'+bytes(100))"
+# RUN: llvm-cvpack pack @base.rsp --verbose --pack-path=packs --out-dir=three \
+# RUN:   a.obj 2>&1 | FileCheck %s --check-prefix=CORRUPT
+# CORRUPT: ignoring {{.*}}.cvpx: unsupported CodeView pack index version
+# CORRUPT: 0 pack indexes loaded, 1 built
+# RUN: cmp stage/a.obj three/a.obj
+
+## Invalid uses of --base.
+# RUN: not llvm-cvpack pack --base=xyz --pack-path=packs --out-dir=bad a.obj \
+# RUN:   2>&1 | FileCheck %s --check-prefix=BADID
+# BADID: --base: expected a 64-digit content id, got xyz
+# RUN: not llvm-cvpack rebase @base.rsp --pack-path=packs --out-dir=bad a.obj \
+# RUN:   2>&1 | FileCheck %s --check-prefix=REBASE
+# REBASE: Unknown command line argument '--base=
+# RUN: not llvm-cvpack pack \
+# RUN:   --base=0000000000000000000000000000000000000000000000000000000000000000 \
+# RUN:   --pack-path=packs --out-dir=bad a.obj 2>&1 | FileCheck %s --check-prefix=MISSING
+# MISSING: missing CodeView pack 0000000000000000000000000000000000000000000000000000000000000000.cvp
+
+## Pruning after a rebase to a new base removes the old base and its index.
+# RUN: llvm-cvpack rebase --prune --pack-path=packs --out-dir=stage2 c.obj d.obj
+# RUN: %python -c "import json,os,sys; old=open('id.txt').read(); new=json.load(open('stage2/cvpacks.json'))['packs'][0]; names=sorted(os.listdir('packs')); sys.exit(0 if new != old and names == sorted([new+'.cvp', new+'.cvpx']) else 1)"
+
+#--- x.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         1
+          BitOffset:       0
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         2
+          BitOffset:       0
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         3
+          BitOffset:       0
+symbols:         []
+...
+
+#--- y.yaml
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         9
+          BitOffset:       0
+      - Kind:            LF_BITFIELD
+        BitField:
+          Type:            116
+          BitSize:         1
+          BitOffset:       0
+symbols:         []
+...

@@ -1,0 +1,76 @@
+The debug info of inline functions, member functions and templates, the COMDAT
+.debug$S sections that every object emitting the function repeats, moves to
+the pack: each object keeps a 24-byte reference and the section's relocations.
+Packed objects materialize back to their exact bytes, and links of the packed
+objects are byte-identical to links of the originals.
+
+The inputs were compiled with
+  clang-cl /c /Z7 -gcodeview-ghash /Od /GS- /Zl /GR- /Brepro
+from these sources (fn.h, a.cpp, b.cpp):
+
+  // fn.h
+  struct Counter { int n; int bump(int by) { n += by; return n; } };
+  inline int twice(int x) { int y = x * 2; return y; }
+  template <typename T> T pick(T a, T b) { return a < b ? b : a; }
+  // a.cpp
+  #include "fn.h"
+  int fa(Counter &c, int x) { return c.bump(twice(x)) + pick(x, 3); }
+  // b.cpp
+  #include "fn.h"
+  int fb(Counter *c, int x) { return pick(c->bump(x), twice(x)); }
+
+RUN: rm -rf %t && mkdir -p %t/orig %t/work
+RUN: yaml2obj %S/Inputs/cvpacks-fn-a.yaml -o %t/orig/a.obj
+RUN: yaml2obj %S/Inputs/cvpacks-fn-b.yaml -o %t/orig/b.obj
+
+Counter::bump, twice and pick<int> are in both objects: six sections, three
+pack functions.
+RUN: llvm-cvpack pack --pack-path=%t/packs \
+RUN:   --out-dir=%t/stage %t/orig/a.obj %t/orig/b.obj
+
+RUN: llvm-readobj --sections %t/stage/a.obj | FileCheck %s --check-prefix=STUB
+RUN: llvm-readobj --sections %t/stage/b.obj | FileCheck %s --check-prefix=STUB
+STUB-COUNT-3: RawDataSize: 0x18{{$}}
+STUB-NOT:     RawDataSize: 0x18{{$}}
+
+RUN: %python -c "import json,shutil; p=json.load(open(r'%t/stage/cvpacks.json'))['packs'][0]; shutil.copyfile(r'%t/packs/' + p + '.cvp', r'%t/pack.cvp')"
+RUN: llvm-cvpack dump %t/pack.cvp | FileCheck %s --check-prefix=DUMP
+DUMP:      Types:
+DUMP-NEXT: Symbols:
+DUMP-NEXT: Files: 1
+DUMP-NEXT: Functions: 3
+
+Packed objects materialize back to their original bytes.
+RUN: llvm-cvpack materialize --pack-path=%t/packs %t/stage/a.obj -o %t/a.restored.obj
+RUN: llvm-cvpack materialize --pack-path=%t/packs %t/stage/b.obj -o %t/b.restored.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig/a.obj %t/a.restored.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig/b.obj %t/b.restored.obj
+
+Links of the packed objects, with and without global type hashing, are
+byte-identical to links of the originals. The packs are in a directory of their
+own, which the links search as they search for a library.
+RUN: %python -c "import shutil; [shutil.copyfile(r'%t/orig/' + f, r'%t/work/' + f) for f in ('a.obj', 'b.obj')]"
+RUN: lld-link /noentry /dll /nodefaultlib /debug /timestamp:0 /pdbaltpath:fn.pdb \
+RUN:   /libpath:%t/packs /pdb:%t/work/out.pdb /out:%t/work/out.dll %t/work/a.obj %t/work/b.obj
+RUN: %python -c "import shutil; shutil.copyfile(r'%t/work/out.pdb', r'%t/orig.pdb'); shutil.copyfile(r'%t/work/out.dll', r'%t/orig.dll')"
+RUN: lld-link /noentry /dll /nodefaultlib /debug:noghash /timestamp:0 /pdbaltpath:fn.pdb \
+RUN:   /libpath:%t/packs /pdb:%t/work/out.pdb /out:%t/work/out.dll %t/work/a.obj %t/work/b.obj
+RUN: %python -c "import shutil; shutil.copyfile(r'%t/work/out.pdb', r'%t/orig-noghash.pdb')"
+RUN: %python -c "import shutil; [shutil.copyfile(r'%t/stage/' + f, r'%t/work/' + f) for f in ('a.obj', 'b.obj')]"
+RUN: lld-link /noentry /dll /nodefaultlib /debug /timestamp:0 /pdbaltpath:fn.pdb \
+RUN:   /libpath:%t/packs /pdb:%t/work/out.pdb /out:%t/work/out.dll %t/work/a.obj %t/work/b.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig.pdb %t/work/out.pdb
+RUN: %python %S/Inputs/check-files-equal.py %t/orig.dll %t/work/out.dll
+RUN: lld-link /noentry /dll /nodefaultlib /debug:noghash /timestamp:0 /pdbaltpath:fn.pdb \
+RUN:   /libpath:%t/packs /pdb:%t/work/out.pdb /out:%t/work/out.dll %t/work/a.obj %t/work/b.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig-noghash.pdb %t/work/out.pdb
+
+Packing the originals again against the dedup set reuses the pack, function
+debug info included, and stages the same objects.
+RUN: llvm-cvpack pack --pack-path=%t/packs \
+RUN:   --out-dir=%t/stage2 %t/orig/a.obj %t/orig/b.obj
+RUN: FileCheck %s --check-prefix=REUSE < %t/stage2/cvpacks.json
+REUSE-NOT: "packs": []
+REUSE:     "new_packs": [],
+RUN: %python %S/Inputs/check-files-equal.py %t/stage/a.obj %t/stage2/a.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/stage/b.obj %t/stage2/b.obj

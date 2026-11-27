@@ -10,10 +10,14 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPEDUMPVISITOR_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/Compiler.h"
+#include <cstdint>
+#include <utility>
+#include <vector>
 
 namespace llvm {
 class ScopedPrinter;
@@ -74,12 +78,27 @@ private:
     return IpiTypes ? *IpiTypes : TpiTypes;
   }
 
+  /// The index of the next inline record of a packed object's type stream.
+  Expected<TypeIndex> nextCVPackInlineIndex();
+
   ScopedPrinter *W;
 
   bool PrintRecordBytes = false;
 
   TypeCollection &TpiTypes;
   TypeCollection *IpiTypes = nullptr;
+
+  /// The type stream of a packed object starts with CodeView pack records,
+  /// which consume no type index; its range map then gives the index of each
+  /// inline record.
+  bool HasCVPacks = false;
+  cvpack::RangeMap CVPackMap;
+  /// Once the inline records begin: the runs of inline records of the map, as
+  /// (first index, count), and the position of the next inline record.
+  bool CVPackRunsReady = false;
+  std::vector<std::pair<uint64_t, uint64_t>> CVPackInlineRuns;
+  size_t CVPackRun = 0;
+  uint64_t CVPackInRun = 0;
 };
 
 } // end namespace codeview

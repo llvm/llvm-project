@@ -30,10 +30,10 @@ public:
   CVSymbolDumper(ScopedPrinter &W, TypeCollection &Types,
                  CodeViewContainer Container,
                  std::unique_ptr<SymbolDumpDelegate> ObjDelegate, CPUType CPU,
-                 bool PrintRecordBytes)
+                 bool PrintRecordBytes, bool HasCVPacks = false)
       : W(W), Types(Types), Container(Container),
         ObjDelegate(std::move(ObjDelegate)), CompilationCPUType(CPU),
-        PrintRecordBytes(PrintRecordBytes) {}
+        PrintRecordBytes(PrintRecordBytes), HasCVPacks(HasCVPacks) {}
 
   /// Dumps one type record.  Returns false if there was a type parsing error,
   /// and true otherwise.  This should be called in order, since the dumper
@@ -54,6 +54,7 @@ private:
   std::unique_ptr<SymbolDumpDelegate> ObjDelegate;
   CPUType CompilationCPUType;
   bool PrintRecordBytes;
+  bool HasCVPacks;
 };
 } // end namespace codeview
 } // end namespace llvm

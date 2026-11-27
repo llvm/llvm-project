@@ -8,6 +8,7 @@
 
 #include "Driver.h"
 #include "COFFLinkerContext.h"
+#include "CVPacks.h"
 #include "Config.h"
 #include "DebugTypes.h"
 #include "ICF.h"
@@ -613,9 +614,11 @@ void LinkerDriver::parseDirectives(InputFile *file) {
     file->symtab.exports.push_back(exp);
   }
 
-  // Handle /include: in bulk.
+  // Handle /include: in bulk. Packed objects name the CodeView pack sentinel so
+  // that other linkers reject them; it is not a symbol.
   for (StringRef inc : directives.includes)
-    file->symtab.addGCRoot(inc);
+    if (inc != llvm::codeview::cvpack::PackedObjectSentinel)
+      file->symtab.addGCRoot(inc);
 
   // Handle /exclude-symbols: in bulk.
   for (StringRef e : directives.excludes) {
@@ -657,7 +660,10 @@ void LinkerDriver::parseDirectives(InputFile *file) {
       checkFailIfMismatch(arg->getValue(), file);
       break;
     case OPT_incl:
-      file->symtab.addGCRoot(arg->getValue());
+      // Packed objects name this symbol so that other linkers reject them.
+      if (StringRef(arg->getValue()) !=
+          llvm::codeview::cvpack::PackedObjectSentinel)
+        file->symtab.addGCRoot(arg->getValue());
       break;
     case OPT_manifestdependency:
       ctx.config.manifestDependencies.insert(arg->getValue());

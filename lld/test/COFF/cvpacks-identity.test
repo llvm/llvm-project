@@ -1,0 +1,29 @@
+# Links of packed objects are byte-identical to links of the originals, with and
+# without global type hashes.
+
+# RUN: rm -rf %t && mkdir -p %t/orig %t/work
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/a.obj
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/b.obj
+# RUN: llvm-cvpack pack --out-dir=%t/stage %t/orig/a.obj %t/orig/b.obj
+# RUN: llvm-readobj --codeview %t/stage/a.obj | FileCheck %s --check-prefix=PACKED
+# PACKED: TypeLeafKind: LF_CVPACK_LIST
+
+# The PDB records its own name: every link writes out.pdb.
+# RUN: cp %t/orig/a.obj %t/orig/b.obj %t/work
+# RUN: cd %t/work && lld-link /noentry /dll /nodefaultlib /debug /timestamp:0 \
+# RUN:   /pdbaltpath:compare.pdb /pdb:out.pdb /out:out.dll a.obj b.obj
+# RUN: cp %t/work/out.pdb %t/orig.pdb
+# RUN: cp %t/work/out.dll %t/orig.dll
+# RUN: cd %t/work && lld-link /noentry /dll /nodefaultlib /debug:noghash \
+# RUN:   /timestamp:0 /pdbaltpath:compare.pdb /pdb:out.pdb /out:out.dll a.obj b.obj
+# RUN: cp %t/work/out.pdb %t/orig-noghash.pdb
+
+# The pack is next to the staged objects, and is copied with them.
+# RUN: cp %t/stage/a.obj %t/stage/b.obj %t/stage/*.cvp %t/work
+# RUN: cd %t/work && lld-link /noentry /dll /nodefaultlib /debug /timestamp:0 \
+# RUN:   /pdbaltpath:compare.pdb /pdb:out.pdb /out:out.dll a.obj b.obj
+# RUN: %python %S/Inputs/check-files-equal.py %t/orig.pdb %t/work/out.pdb
+# RUN: %python %S/Inputs/check-files-equal.py %t/orig.dll %t/work/out.dll
+# RUN: cd %t/work && lld-link /noentry /dll /nodefaultlib /debug:noghash \
+# RUN:   /timestamp:0 /pdbaltpath:compare.pdb /pdb:out.pdb /out:out.dll a.obj b.obj
+# RUN: %python %S/Inputs/check-files-equal.py %t/orig-noghash.pdb %t/work/out.pdb

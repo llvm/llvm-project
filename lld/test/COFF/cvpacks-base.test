@@ -1,0 +1,90 @@
+llvm-cvpack pack keeps one base pack: objects only reference records that the
+base holds and never another pack, the rest stays in the objects, and the run
+rebases by itself when the base no longer fits the inputs. The inputs are the
+clang-generated objects of cvpacks-pack-shared.test.
+
+An object staged unchanged lists no pack: "packs": [] only matches the entry of
+such an object.
+
+RUN: rm -rf %t && mkdir -p %t/orig %t/work
+RUN: yaml2obj %S/Inputs/cvpacks-src-a.yaml -o %t/orig/a.obj
+RUN: yaml2obj %S/Inputs/cvpacks-src-b.yaml -o %t/orig/b.obj
+RUN: yaml2obj %S/Inputs/cvpacks-src-c.yaml -o %t/orig/c.obj
+RUN: yaml2obj %S/Inputs/cvpacks-src-d.yaml -o %t/orig/d.obj
+
+Without a pack, the first run writes the base.
+RUN: llvm-cvpack pack --pack-path=%t/packs \
+RUN:   --out-dir=%t/stage1 %t/orig/a.obj %t/orig/b.obj
+RUN: FileCheck %s --check-prefix=MANIFEST1 < %t/stage1/cvpacks.json
+MANIFEST1-NOT:  "packs": []
+MANIFEST1:      "new_packs": [
+MANIFEST1-NEXT:   "[[BASE:[0-9a-f]+]]"
+MANIFEST1-NEXT: ],
+MANIFEST1-NEXT: "base": "[[BASE]]"
+
+c.obj and d.obj share Segment, which the base lacks: it stays in them, and no
+pack is written. The manifest says how far the base is from a rebase: the
+inputs use all of it, and a rebase would pack more.
+RUN: llvm-cvpack pack --auto-rebase=no \
+RUN:   --pack-path=%t/packs --out-dir=%t/stage2 %t/orig/a.obj %t/orig/b.obj \
+RUN:   %t/orig/c.obj %t/orig/d.obj
+RUN: FileCheck %s --check-prefix=MANIFEST2 < %t/stage2/cvpacks.json
+MANIFEST2-NOT:  "packs": []
+MANIFEST2:      "new_packs": [],
+MANIFEST2-NEXT: "base": "{{[0-9a-f]+}}",
+MANIFEST2-NEXT: "base_bytes": [[BYTES:[1-9][0-9]*]],
+MANIFEST2-NEXT: "base_used_bytes": [[BYTES]],
+MANIFEST2-NEXT: "missing_bytes": {{[1-9][0-9]*}}
+RUN: %python -c "import glob; print(len(glob.glob(r'%t/packs/*.cvp')))" \
+RUN:   | FileCheck %s --check-prefix=ONEPACK
+ONEPACK: {{^}}1{{$}}
+
+Objects packed against the base materialize back to their original bytes, and
+link to the same PDB as the originals. The packs are in a directory of their
+own, which the links search as they search for a library.
+RUN: llvm-cvpack materialize --pack-path=%t/packs %t/stage2/c.obj -o %t/c.restored.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig/c.obj %t/c.restored.obj
+RUN: %python -c "import shutil; [shutil.copyfile(r'%t/orig/' + f, r'%t/work/' + f) for f in ('a.obj', 'b.obj', 'c.obj', 'd.obj')]"
+RUN: lld-link /noentry /dll /nodefaultlib /debug /timestamp:0 /pdbaltpath:base.pdb \
+RUN:   /libpath:%t/packs /pdb:%t/work/out.pdb /out:%t/work/out.dll \
+RUN:   %t/work/a.obj %t/work/b.obj %t/work/c.obj %t/work/d.obj
+RUN: %python -c "import shutil; shutil.copyfile(r'%t/work/out.pdb', r'%t/orig.pdb')"
+RUN: %python -c "import shutil; [shutil.copyfile(r'%t/stage2/' + f, r'%t/work/' + f) for f in ('a.obj', 'b.obj', 'c.obj', 'd.obj')]"
+RUN: lld-link /noentry /dll /nodefaultlib /debug /timestamp:0 /pdbaltpath:base.pdb \
+RUN:   /libpath:%t/packs /pdb:%t/work/out.pdb /out:%t/work/out.dll \
+RUN:   %t/work/a.obj %t/work/b.obj %t/work/c.obj %t/work/d.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/orig.pdb %t/work/out.pdb
+
+With the default thresholds the missing bytes are over 25% of the base: the
+run rebases, and --prune deletes the previous base.
+RUN: llvm-cvpack pack --prune \
+RUN:   --pack-path=%t/packs --out-dir=%t/stage3 %t/orig/a.obj %t/orig/b.obj \
+RUN:   %t/orig/c.obj %t/orig/d.obj
+RUN: FileCheck %s --check-prefix=MANIFEST3 < %t/stage3/cvpacks.json
+MANIFEST3-NOT:  "packs": []
+MANIFEST3:      "new_packs": [
+MANIFEST3-NEXT:   "[[NEW:[0-9a-f]+]]"
+MANIFEST3-NEXT: ],
+MANIFEST3-NEXT: "base": "[[NEW]]",
+MANIFEST3-NEXT: "rebased_because": "{{[0-9]+}} bytes that a rebase would pack are not in the base, over 25% of it"
+RUN: %python -c "import glob; print(len(glob.glob(r'%t/packs/*.cvp')))" \
+RUN:   | FileCheck %s --check-prefix=ONEPACK
+
+Restored objects packed against the base are staged unchanged, count towards
+its use, and the other inputs stage as before.
+RUN: llvm-cvpack pack --pack-path=%t/packs \
+RUN:   --out-dir=%t/stage4 %t/stage3/a.obj %t/stage3/b.obj %t/stage3/c.obj \
+RUN:   %t/orig/d.obj
+RUN: FileCheck %s --check-prefix=HITS < %t/stage4/cvpacks.json
+HITS-NOT:  "packs": []
+HITS:      "new_packs": [],
+HITS-NEXT: "base": "{{[0-9a-f]+}}",
+HITS-NEXT: "base_bytes": [[BYTES4:[1-9][0-9]*]],
+HITS-NEXT: "base_used_bytes": [[BYTES4]],
+HITS-NEXT: "missing_bytes": 0
+RUN: %python %S/Inputs/check-files-equal.py %t/stage3/a.obj %t/stage4/a.obj
+RUN: %python %S/Inputs/check-files-equal.py %t/stage3/d.obj %t/stage4/d.obj
+
+RUN: not llvm-cvpack pack --auto-rebase=25 --pack-path=%t/packs \
+RUN:   --out-dir=%t/stage5 %t/orig/a.obj 2>&1 | FileCheck %s --check-prefix=BADARG
+BADARG: --auto-rebase: expected <missing>,<used> percentages or 'no', got 25

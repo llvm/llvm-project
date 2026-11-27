@@ -1,0 +1,289 @@
+## Compiled with
+##   clang-cl /c /Z7 /Od /GS- /Zl /GR- /Brepro -fdebug-compilation-dir=. a.cpp
+## then reduced: no .data, .bss or .debug$H, and no build info.
+##   // undef.h
+##   int ext(int);
+##   inline int callsExt(int x) { return ext(x) + 1; }
+##   // a.cpp
+##   #include "undef.h"
+##   int fa(int x) { return callsExt(x); }
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     4883EC28894C24248B4C2424E8000000004883C428C3
+    Relocations:
+      - VirtualAddress:  13
+        SymbolName:      '?callsExt@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_REL32
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    Alignment:       16
+    SectionData:     4883EC28894C24248B4C2424E80000000083C0014883C428C3
+    Relocations:
+      - VirtualAddress:  13
+        SymbolName:      '?ext@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_REL32
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_OBJNAME
+            ObjNameSym:
+              Signature:       0
+              ObjectName:      a.obj
+          - Kind:            S_COMPILE3
+            Compile3Sym:
+              Flags:           [  ]
+              Language:        Cpp
+              Machine:         X64
+              FrontendMajor:   23
+              FrontendMinor:   1
+              FrontendBuild:   0
+              FrontendQFE:     0
+              BackendMajor:    23010
+              BackendMinor:    0
+              BackendBuild:    0
+              BackendQFE:      0
+              Version:         'clang version 23.1.0 (https://github.com/llvm/llvm-project ea7d852a70e8bdfaf601d6626a760f9771b2c4b4)'
+      - !Symbols
+        Records:
+          - Kind:            S_GPROC32_ID
+            ProcSym:
+              CodeSize:        22
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    4098
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     fa
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 40
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [ IsParameter ]
+              VarName:         x
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          36
+              Range:
+                OffsetStart:     8
+                ISectStart:      0
+                Range:           14
+              Gaps:            []
+          - Kind:            S_PROC_ID_END
+            ScopeEndSym:     {}
+      - !Lines
+        CodeSize:        22
+        Flags:           [  ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        '.\a.cpp'
+            Lines:
+              - Offset:          0
+                LineStart:       2
+                IsStatement:     false
+                EndDelta:        0
+            Columns:         []
+      - !FileChecksums
+        Checksums:
+          - FileName:        '.\a.cpp'
+            Kind:            MD5
+            Checksum:        A08247AA6683A68B97280F1ED8CBB242
+          - FileName:        '.\undef.h'
+            Kind:            MD5
+            Checksum:        530CE1286E36AA90ED6490D02AAADDA7
+      - !StringTable
+        Strings:
+          - '.\a.cpp'
+          - '.\undef.h'
+          - ''
+    Relocations:
+      - VirtualAddress:  196
+        SymbolName:      '?fa@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  200
+        SymbolName:      '?fa@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_SECTION
+      - VirtualAddress:  260
+        SymbolTableIndex: 0
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  264
+        SymbolTableIndex: 0
+        Type:            IMAGE_REL_AMD64_SECTION
+      - VirtualAddress:  280
+        SymbolName:      '?fa@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  284
+        SymbolName:      '?fa@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_SECTION
+  - Name:            '.debug$T'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Types:
+      - Kind:            LF_ARGLIST
+        ArgList:
+          ArgIndices:      [ 116 ]
+      - Kind:            LF_PROCEDURE
+        Procedure:
+          ReturnType:      116
+          CallConv:        NearC
+          Options:         [ None ]
+          ParameterCount:  1
+          ArgumentList:    4096
+      - Kind:            LF_FUNC_ID
+        FuncId:
+          ParentScope:     0
+          FunctionType:    4097
+          Name:            fa
+      - Kind:            LF_FUNC_ID
+        FuncId:
+          ParentScope:     0
+          FunctionType:    4097
+          Name:            callsExt
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_LNK_COMDAT, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    Subsections:
+      - !Symbols
+        Records:
+          - Kind:            S_GPROC32_ID
+            ProcSym:
+              CodeSize:        25
+              DbgStart:        0
+              DbgEnd:          0
+              FunctionType:    4099
+              Flags:           [ IsNoInline, HasOptimizedDebugInfo ]
+              DisplayName:     callsExt
+          - Kind:            S_FRAMEPROC
+            FrameProcSym:
+              TotalFrameBytes: 40
+              PaddingFrameBytes: 0
+              OffsetToPadding: 0
+              BytesOfCalleeSavedRegisters: 0
+              OffsetOfExceptionHandler: 0
+              SectionIdOfExceptionHandler: 0
+              Flags:           [ SafeBuffers ]
+              LocalFramePtrReg: StackPtr
+              ParamFramePtrReg: StackPtr
+          - Kind:            S_LOCAL
+            LocalSym:
+              Type:            116
+              Flags:           [ IsParameter ]
+              VarName:         x
+          - Kind:            S_DEFRANGE_FRAMEPOINTER_REL
+            DefRangeFramePointerRelSym:
+              Offset:          36
+              Range:
+                OffsetStart:     8
+                ISectStart:      0
+                Range:           17
+              Gaps:            []
+          - Kind:            S_PROC_ID_END
+            ScopeEndSym:     {}
+      - !Lines
+        CodeSize:        25
+        Flags:           [  ]
+        RelocOffset:     0
+        RelocSegment:    0
+        Blocks:
+          - FileName:        '.\undef.h'
+            Lines:
+              - Offset:          0
+                LineStart:       2
+                IsStatement:     false
+                EndDelta:        0
+            Columns:         []
+    Relocations:
+      - VirtualAddress:  44
+        SymbolName:      '?callsExt@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  48
+        SymbolName:      '?callsExt@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_SECTION
+      - VirtualAddress:  112
+        SymbolTableIndex: 2
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  116
+        SymbolTableIndex: 2
+        Type:            IMAGE_REL_AMD64_SECTION
+      - VirtualAddress:  132
+        SymbolName:      '?callsExt@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_SECREL
+      - VirtualAddress:  136
+        SymbolName:      '?callsExt@@YAHH@Z'
+        Type:            IMAGE_REL_AMD64_SECTION
+symbols:
+  - Name:            .text
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          22
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          1
+  - Name:            .text
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          25
+      NumberOfRelocations: 1
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+      Selection:       IMAGE_COMDAT_SELECT_ANY
+  - Name:            '?callsExt@@YAHH@Z'
+    Value:           0
+    SectionNumber:   2
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '.debug$S'
+    Value:           0
+    SectionNumber:   5
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_STATIC
+    SectionDefinition:
+      Length:          164
+      NumberOfRelocations: 6
+      NumberOfLinenumbers: 0
+      CheckSum:        0
+      Number:          2
+      Selection:       IMAGE_COMDAT_SELECT_ASSOCIATIVE
+  - Name:            '?fa@@YAHH@Z'
+    Value:           0
+    SectionNumber:   1
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_FUNCTION
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+  - Name:            '?ext@@YAHH@Z'
+    Value:           0
+    SectionNumber:   0
+    SimpleType:      IMAGE_SYM_TYPE_NULL
+    ComplexType:     IMAGE_SYM_DTYPE_NULL
+    StorageClass:    IMAGE_SYM_CLASS_EXTERNAL
+...

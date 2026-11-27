@@ -9,7 +9,9 @@
 #include "llvm/DebugInfo/CodeView/TypeDumpVisitor.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/CodeView/CVPacks.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
+#include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
 #include "llvm/DebugInfo/CodeView/TypeCollection.h"
@@ -28,6 +30,12 @@ static StringRef getLeafTypeName(TypeLeafKind LT) {
   case ename:                                                                  \
     return #name;
 #include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
+  case TypeLeafKind::LF_CVPACK_LIST:
+    return "LF_CVPACK_LIST";
+  case TypeLeafKind::LF_CVPACK_ORIGIN:
+    return "LF_CVPACK_ORIGIN";
+  case TypeLeafKind::LF_CVPACK_MAP:
+    return "LF_CVPACK_MAP";
   default:
     break;
   }
@@ -35,10 +43,18 @@ static StringRef getLeafTypeName(TypeLeafKind LT) {
 }
 
 void TypeDumpVisitor::printTypeIndex(StringRef FieldName, TypeIndex TI) const {
+  if (HasCVPacks) {
+    W->printHex(FieldName, TI.getIndex());
+    return;
+  }
   codeview::printTypeIndex(*W, FieldName, TI, TpiTypes);
 }
 
 void TypeDumpVisitor::printItemIndex(StringRef FieldName, TypeIndex TI) const {
+  if (HasCVPacks) {
+    W->printHex(FieldName, TI.getIndex());
+    return;
+  }
   codeview::printTypeIndex(*W, FieldName, TI, getSourceTypes());
 }
 
@@ -46,9 +62,48 @@ Error TypeDumpVisitor::visitTypeBegin(CVType &Record) {
   return visitTypeBegin(Record, TypeIndex::fromArrayIndex(TpiTypes.size()));
 }
 
+Expected<TypeIndex> TypeDumpVisitor::nextCVPackInlineIndex() {
+  // The map records precede the inline records: the map is complete.
+  if (!CVPackRunsReady) {
+    auto Segments =
+        cvpack::expandRangeMap(CVPackMap, uint64_t(UINT32_MAX) + 1, UINT32_MAX,
+                               TypeIndex::FirstNonSimpleIndex);
+    if (!Segments)
+      return Segments.takeError();
+    uint64_t Index = TypeIndex::FirstNonSimpleIndex;
+    for (const cvpack::RangeMapSegment &Segment : *Segments) {
+      if (!Segment.IsPackReference)
+        CVPackInlineRuns.push_back({Index, Segment.Count});
+      Index += Segment.Count;
+    }
+    CVPackRunsReady = true;
+  }
+  while (CVPackRun != CVPackInlineRuns.size() &&
+         CVPackInRun == CVPackInlineRuns[CVPackRun].second) {
+    ++CVPackRun;
+    CVPackInRun = 0;
+  }
+  if (CVPackRun == CVPackInlineRuns.size())
+    return make_error<CodeViewError>("too many CodeView pack inline records");
+  return TypeIndex(CVPackInlineRuns[CVPackRun].first + CVPackInRun++);
+}
+
 Error TypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
-  W->startLine() << getLeafTypeName(Record.kind());
-  W->getOStream() << " (" << HexNumber(Index.getIndex()) << ")";
+  TypeLeafKind Kind = Record.kind();
+  bool IsCVPackRecord = Kind == TypeLeafKind::LF_CVPACK_LIST ||
+                        Kind == TypeLeafKind::LF_CVPACK_ORIGIN ||
+                        Kind == TypeLeafKind::LF_CVPACK_MAP;
+  if (IsCVPackRecord) {
+    HasCVPacks = true;
+  } else if (HasCVPacks) {
+    auto InlineIndex = nextCVPackInlineIndex();
+    if (!InlineIndex)
+      return InlineIndex.takeError();
+    Index = *InlineIndex;
+  }
+  W->startLine() << getLeafTypeName(Kind);
+  if (!IsCVPackRecord)
+    W->getOStream() << " (" << HexNumber(Index.getIndex()) << ")";
   W->getOStream() << " {\n";
   W->indent();
   W->printEnum("TypeLeafKind", unsigned(Record.kind()), getTypeLeafNames());
@@ -328,6 +383,53 @@ Error TypeDumpVisitor::visitUnknownMember(CVMemberRecord &Record) {
 }
 
 Error TypeDumpVisitor::visitUnknownType(CVType &Record) {
+  switch (Record.kind()) {
+  case TypeLeafKind::LF_CVPACK_LIST: {
+    auto Id = cvpack::decodePackList(Record);
+    if (!Id)
+      return Id.takeError();
+    W->printBinaryBlock("PackId", toStringRef(ArrayRef<uint8_t>(*Id)));
+    return Error::success();
+  }
+  case TypeLeafKind::LF_CVPACK_ORIGIN: {
+    auto Origin = cvpack::decodeOrigin(Record);
+    if (!Origin)
+      return Origin.takeError();
+    W->printNumber("OriginalFileSize", Origin->OriginalFileSize);
+    W->printBinaryBlock("OriginalFileBlake3", toStringRef(ArrayRef<uint8_t>(
+                                                  Origin->OriginalFileHash)));
+    W->printNumber("DebugHHeaderSize", Origin->DebugHHeader.size());
+    W->printNumber("EditCount", Origin->Edits.size());
+    for (const cvpack::OriginEdit &Edit : Origin->Edits) {
+      ListScope S(*W, "Edit");
+      W->printNumber("SectionIndex", Edit.SectionIndex);
+      W->printNumber("Kind", static_cast<uint16_t>(Edit.Kind));
+      W->printNumber("OriginalOffset", Edit.OriginalOffset);
+      W->printNumber("OriginalLength", Edit.OriginalLength);
+      W->printNumber("PackedLength", Edit.PackedLength);
+      W->printNumber("RestorationFragments", Edit.RestorationFragments.size());
+    }
+    return Error::success();
+  }
+  case TypeLeafKind::LF_CVPACK_MAP: {
+    CVType MapRecord[] = {Record};
+    auto Map = cvpack::decodeTypeMap(MapRecord);
+    if (!Map)
+      return Map.takeError();
+    W->printNumber("RangeCount", Map->Entries.size());
+    for (const cvpack::RangeMapEntry &Entry : Map->Entries) {
+      ListScope S(*W, "Range");
+      W->printNumber("Skip", Entry.Skip);
+      W->printNumber("Slot", Entry.Slot);
+      W->printNumber("Count", Entry.Count);
+      W->printNumber("FirstDelta", Entry.FirstDelta);
+    }
+    llvm::append_range(CVPackMap.Entries, Map->Entries);
+    return Error::success();
+  }
+  default:
+    break;
+  }
   W->printEnum("Kind", uint16_t(Record.kind()), getTypeLeafNames());
   W->printNumber("Length", uint32_t(Record.content().size()));
   return Error::success();

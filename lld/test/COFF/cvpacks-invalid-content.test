@@ -1,0 +1,14 @@
+# A pack whose content does not match its content id, its file name, is
+# rejected.
+
+# RUN: rm -rf %t && mkdir -p %t/orig
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/a.obj
+# RUN: yaml2obj %S/Inputs/cvpacks-original.yaml -o %t/orig/b.obj
+# RUN: llvm-cvpack pack --out-dir=%t/stage %t/orig/a.obj %t/orig/b.obj
+
+# Flip one bit of the pack, keeping its file name.
+# RUN: %python -c "import json; from pathlib import Path; p=Path(r'%t/stage') / (json.load(open(r'%t/stage/cvpacks.json'))['packs'][0] + '.cvp'); d=p.read_bytes(); p.write_bytes(d[:-1] + bytes([d[-1] ^ 1]))"
+# RUN: env LLD_IN_TEST=1 not lld-link /noentry /dll /nodefaultlib /debug \
+# RUN:   /out:%t/a.dll %t/stage/a.obj 2>&1 | FileCheck %s
+
+# CHECK: error: CodeView pack content id does not match its file; required by {{.*}}a.obj

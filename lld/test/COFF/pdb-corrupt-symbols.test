@@ -1,0 +1,24 @@
+## A corrupt symbol record in an object is reported once, and the global
+## records that precede it are kept.
+
+# RUN: yaml2obj %s -o %t.obj
+# RUN: lld-link /noentry /dll /nodefaultlib /debug /out:%t.dll %t.obj 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning
+# RUN: llvm-pdbutil dump -globals %t.pdb | FileCheck %s --check-prefix=GLOBALS
+
+# CHECK: warning: corrupt symbol records in {{.*}}.obj
+# GLOBALS: S_UDT [size = 12] `a`
+
+## One symbols subsection: an S_UDT of int named "a", then a record whose
+## length runs past the end of the subsection.
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            '.debug$S'
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       4
+    SectionData:     04000000F1000000100000000800081174000000610040000811000000000000
+symbols:         []
+...

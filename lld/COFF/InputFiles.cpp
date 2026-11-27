@@ -8,6 +8,7 @@
 
 #include "InputFiles.h"
 #include "COFFLinkerContext.h"
+#include "CVPacks.h"
 #include "Chunks.h"
 #include "Config.h"
 #include "DebugTypes.h"
@@ -42,6 +43,7 @@
 using namespace llvm;
 using namespace llvm::COFF;
 using namespace llvm::codeview;
+using namespace llvm::codeview::cvpack;
 using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace lld;
@@ -1064,6 +1066,50 @@ void ObjFile::initializeDependencies() {
 
   // Remember the .debug$T or .debug$P section.
   debugTypes = data;
+
+  // The type stream of a packed object has its own signature, and starts with
+  // its pack list.
+  bool packedSignature = false;
+  if (!isPCH) {
+    SectionChunk *sec = SectionChunk::findByName(debugChunks, ".debug$T");
+    packedSignature = sec && sec->getContents().size() >= 4 &&
+                      support::endian::read32le(sec->getContents().data()) ==
+                          COFF::DEBUG_CVPACK_SECTION_MAGIC;
+  }
+  bool packList = firstType->kind() == TypeLeafKind::LF_CVPACK_LIST;
+  if (packedSignature && !packList)
+    Fatal(ctx) << "invalid packed CodeView types in " << toString(this)
+               << ": the type stream does not start with LF_CVPACK_LIST";
+  if (packList && !packedSignature)
+    Fatal(ctx) << "invalid packed CodeView types in " << toString(this)
+               << ": LF_CVPACK_LIST in a type stream without the CodeView "
+                  "pack signature";
+  if (packedSignature) {
+    hasCVPackData = true;
+    auto id = decodePackList(*firstType);
+    if (!id)
+      Fatal(ctx) << "invalid CodeView pack list in " << toString(this) << ": "
+                 << id.takeError();
+    auto pack = loadCVPack(ctx, *id, this);
+    if (!pack)
+      Fatal(ctx) << pack.takeError();
+    cvPack = *pack;
+    // Without global hashes, the types are merged from the restored stream.
+    // With them, the stream is expanded later, as runs of the object's records
+    // and of pack records.
+    if (!ctx.config.debugGHashes) {
+      if (Error e =
+              expandPackedTypeStream(data, *cvPack, true, packedTypes,
+                                     expandedPackedTypes, packTypeIndexMap))
+        Fatal(ctx) << "invalid packed CodeView types in " << toString(this)
+                   << ": " << std::move(e);
+      debugTypes = expandedPackedTypes;
+    } else {
+      cvPackExpansionPending = true;
+    }
+    debugTypesObj = makeTpiSource(ctx, this);
+    return;
+  }
 
   // This object file is a PCH file that others will depend on.
   if (isPCH) {
