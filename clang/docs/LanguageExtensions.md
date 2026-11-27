@@ -4793,29 +4793,27 @@ have unexpected behavior. Please see the section on [Accessing the floating poin
 
 ### String builtins
 
+```c
+void    *__builtin_memchr(const void *, int, size_t);
+int      __builtin_memcmp(const void *, const void *, size_t);
+int      __builtin_bcmp(const void *, const void *, size_t); // deprecated BSD / POSIX alias
+char    *__builtin_strchr(const char *, int);
+int      __builtin_strcmp(const char *, const char *);
+size_t   __builtin_strlen(const char *);
+int      __builtin_strncmp(const char *, const char *, size_t);
+
+wchar_t *__builtin_wmemchr(const wchar_t *, wchar_t, size_t);
+int      __builtin_wmemcmp(const wchar_t *, const wchar_t *, size_t);
+wchar_t *__builtin_wcschr(const wchar_t *, wchar_t);
+int      __builtin_wcscmp(const wchar_t *, const wchar_t *);
+size_t   __builtin_wcslen(const wchar_t *);
+int      __builtin_wcsncmp(const wchar_t *, const wchar_t *, size_t);
+wchar_t *__builtin_wmemchr(const wchar_t *, wchar_t, size_t);
+```
+
 Clang provides constant expression evaluation support for builtins forms of
 the following functions from the C standard library headers
-`<string.h>` and `<wchar.h>`:
-
-- `memchr`
-- `memcmp` (and its deprecated BSD / POSIX alias `bcmp`)
-- `strchr`
-- `strcmp`
-- `strlen`
-- `strncmp`
-- `wcschr`
-- `wcscmp`
-- `wcslen`
-- `wcsncmp`
-- `wmemchr`
-- `wmemcmp`
-
-In each case, the builtin form has the name of the C library function prefixed
-by `__builtin_`. Example:
-
-```c
-void *p = __builtin_memchr("foobar", 'b', 5);
-```
+`<string.h>` and `<wchar.h>`.
 
 In addition to the above, one further builtin is provided:
 
