@@ -928,6 +928,7 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
       values.size() - (labelLevel.empty() ? 0 : labelLevel.back().stackIdx);
   LDBG() << "Popping from ValueStack\n"
          << "  Elements to pop: " << operandTypes.size() << "\n"
+         << "  Current stack size: " << values.size() << "\n"
          << "  Current frame size: " << frameSize;
   if (operandTypes.size() > frameSize)
     return emitError(*opLoc, "operand stack underflow: expected ")
@@ -946,7 +947,8 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
     res.push_back(operand);
   }
   values.resize(values.size() - operandTypes.size());
-  LDBG() << "  Updated frame size: " << frameSize - operandTypes.size();
+  LDBG() << "  Updated stack size: " << values.size() << "\n"
+         << "  Updated frame size: " << frameSize - operandTypes.size();
   return res;
 }
 
