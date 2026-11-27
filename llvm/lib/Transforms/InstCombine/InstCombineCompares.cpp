@@ -126,7 +126,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     return nullptr;
 
   // Don't blow up on huge arrays.
-  const uint64_t ArrayElementCount = GlobalIter->size();
+  const uint64_t ArrayElementCount = GlobalIter->elementCount();
   if (ArrayElementCount > CLOpts.maxarray_size)
     return nullptr;
 
